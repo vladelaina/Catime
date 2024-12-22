@@ -101,7 +101,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                 FormatTime(remaining_time, time_text);
             }
 
-            SetTextColor(hdc, RGB(251, 168, 176));  // 设置文本颜色
+            SetTextColor(hdc, RGB(243, 139, 168));  // 设置文本颜色
             SetBkMode(hdc, TRANSPARENT);  // 设置背景透明
             RECT rect;
             GetClientRect(hwnd, &rect);
