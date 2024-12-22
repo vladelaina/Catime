@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "rightClickMenu.h"
+
 #define DEFAULT_TIME 1500  // 默认倒计时时长为 25 分钟 = 1500 秒
 #define ID_TRAY_APP_ICON  1001
 #define WM_TRAYICON        (WM_USER + 1)  // 自定义消息 ID
@@ -78,21 +80,6 @@ void ExitProgram(HWND hwnd) {
     PostQuitMessage(0);
 }
 
-// 托盘图标的右键菜单响应函数
-void ShowContextMenu(HWND hwnd) {
-    HMENU hMenu = CreatePopupMenu();
-    // 添加选项：5, 10, 25 分钟
-    AppendMenu(hMenu, MF_STRING, 101, "Customize");
-    AppendMenu(hMenu, MF_STRING, 102, "5");
-    AppendMenu(hMenu, MF_STRING, 103, "10");
-    AppendMenu(hMenu, MF_STRING, 104, "25");
-
-    POINT pt;
-    GetCursorPos(&pt);
-    SetForegroundWindow(hwnd);  // 确保菜单显示在应用程序的窗口上
-    TrackPopupMenu(hMenu, TPM_BOTTOMALIGN | TPM_LEFTALIGN, pt.x, pt.y, 0, hwnd, NULL);
-    DestroyMenu(hMenu);
-}
 
 // 处理消息的窗口过程函数
 LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
