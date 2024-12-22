@@ -101,12 +101,13 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                 FormatTime(remaining_time, time_text);
             }
 
-            SetTextColor(hdc, RGB(255, 255, 255));  // 设置文本颜色
+            SetTextColor(hdc, RGB(251, 168, 176));  // 设置文本颜色
             SetBkMode(hdc, TRANSPARENT);  // 设置背景透明
             RECT rect;
             GetClientRect(hwnd, &rect);
             FillRect(hdc, &rect, (HBRUSH)GetStockObject(BLACK_BRUSH));
-            TextOutA(hdc, 10, 10, time_text, strlen(time_text));
+            //// 绘制倒计时文本
+            TextOutA(hdc, 1, 15, time_text, strlen(time_text));
             EndPaint(hwnd, &ps);
             break;
         }
