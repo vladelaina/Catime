@@ -1,12 +1,9 @@
-# 设置编译器
+# 设置编译器为 MinGW
 CC = x86_64-w64-mingw32-gcc
 WINDRES = x86_64-w64-mingw32-windres
 
-# 获取当前时间，格式为 MM_DD-HH_MM_SS
-DATE = $(shell date +%m_%d-%H_%M_%S)
-
 # 设置目标文件夹路径
-OUTPUT_DIR = /mnt/c/Users/vladelaina/Desktop/$(DATE)
+OUTPUT_DIR = /mnt/d/Sundries/exe/Catime
 ASSET_DIR = $(OUTPUT_DIR)/asset
 
 # 设置源文件路径
@@ -20,11 +17,16 @@ RC_FILE = $(RESOURCE_DIR)/resource.rc
 OBJ_FILE = $(BUILD_DIR)/resource.o
 IMAGE_DIR = $(RESOURCE_DIR)/images
 
+# 创建目标文件夹和资源文件夹
+$(shell mkdir -p $(OUTPUT_DIR) $(ASSET_DIR))
+
 # 编译选项
 CFLAGS = -mwindows
 
 # 生成目标
 all: $(OUTPUT_DIR)/catime.exe
+	# 转换路径并启动
+	@cmd.exe /C start "" "$(shell wslpath -w $(OUTPUT_DIR))/catime.exe"
 
 # 编译资源文件，将 .o 放到 build 目录
 $(OBJ_FILE): $(RC_FILE)
@@ -32,8 +34,6 @@ $(OBJ_FILE): $(RC_FILE)
 
 # 链接编译目标文件，输出到输出目录
 $(OUTPUT_DIR)/catime.exe: $(SRC_FILES) $(OBJ_FILE)
-	@mkdir -p $(OUTPUT_DIR)  # 创建输出目录
-	@mkdir -p $(ASSET_DIR)    # 创建资产目录
 	@$(CC) -o $(OUTPUT_DIR)/catime.exe $(SRC_FILES) $(OBJ_FILE) $(CFLAGS)
 	@cp -r $(IMAGE_DIR) $(ASSET_DIR)  # 复制 images 文件夹到 asset 目录
 
