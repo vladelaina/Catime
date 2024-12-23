@@ -4,8 +4,42 @@
 #include <stdio.h>
 #include <windows.h>
 #include <shellapi.h>
+#include <dirent.h>
+#include <string.h>
+#include <stdlib.h>
 
-// 修改入口函数为 WinMain
+// 常量定义
+#define IMAGE_DIR "./cat"       // 图片文件夹目录
+#define SWITCH_INTERVAL 50     // 图片切换时间（毫秒）
+
+// 判断文件是否为 PNG 格式
+int is_png(const char *filename) {
+    const char *ext = strrchr(filename, '.');
+    return ext != NULL && strcmp(ext, ".png") == 0;
+}
+
+// 获取指定目录下的所有 PNG 文件
+int get_png_files(const char *dir, char ***image_files) {
+    DIR *d = opendir(dir);
+    if (d == NULL) {
+        fprintf(stderr, "Failed to open directory: %s\n", dir);
+        return 0;
+    }
+
+    struct dirent *entry;
+    int count = 0;
+    while ((entry = readdir(d)) != NULL) {
+        if (is_png(entry->d_name)) {
+            (*image_files) = realloc(*image_files, sizeof(char*) * (count + 1));
+            (*image_files)[count] = malloc(strlen(dir) + strlen(entry->d_name) + 2);
+            sprintf((*image_files)[count], "%s/%s", dir, entry->d_name);
+            count++;
+        }
+    }
+    closedir(d);
+    return count;
+}
+
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     // 初始化 SDL
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -20,8 +54,18 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         return 1;
     }
 
-    // 加载图片
-    SDL_Surface *image = IMG_Load("./cat/1.png");
+    // 获取 IMAGE_DIR 目录下的所有 PNG 文件
+    char **image_files = NULL;
+    int image_count = get_png_files(IMAGE_DIR, &image_files);
+    if (image_count == 0) {
+        fprintf(stderr, "No PNG files found in %s\n", IMAGE_DIR);
+        IMG_Quit();
+        SDL_Quit();
+        return 1;
+    }
+
+    // 获取第一张图片的宽高
+    SDL_Surface *image = IMG_Load(image_files[0]);
     if (image == NULL) {
         fprintf(stderr, "IMG_Load Error: %s\n", IMG_GetError());
         IMG_Quit();
@@ -29,7 +73,6 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         return 1;
     }
 
-    // 获取图片的原始宽高
     int imgWidth = image->w;
     int imgHeight = image->h;
 
@@ -90,12 +133,6 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         return 1;
     }
 
-    // 渲染图片（使用图片原始的宽高）
-    SDL_RenderClear(renderer);
-    SDL_Rect dstRect = {0, 0, imgWidth, imgHeight}; // 目标矩形，指定显示的图片大小
-    SDL_RenderCopy(renderer, texture, NULL, &dstRect); // 使用指定大小渲染
-    SDL_RenderPresent(renderer);
-
     // 设置托盘图标
     NOTIFYICONDATA nid;
     ZeroMemory(&nid, sizeof(NOTIFYICONDATA));
@@ -116,12 +153,48 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     // 事件循环
     SDL_Event e;
     int quit = 0;
+    int current_image_index = 0;
+    Uint32 last_time = SDL_GetTicks();
+
     while (!quit) {
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT) {
                 quit = 1;
             }
         }
+
+        // 每隔SWITCH_INTERVAL切换一次图片
+        Uint32 current_time = SDL_GetTicks();
+        if (current_time - last_time >= SWITCH_INTERVAL) {
+            last_time = current_time;
+            current_image_index = (current_image_index + 1) % image_count;
+
+            // 加载下一张图片
+            SDL_Surface *new_image = IMG_Load(image_files[current_image_index]);
+            if (new_image == NULL) {
+                fprintf(stderr, "IMG_Load Error: %s\n", IMG_GetError());
+                continue;
+            }
+
+            // 创建新纹理
+            SDL_Texture *new_texture = SDL_CreateTextureFromSurface(renderer, new_image);
+            SDL_FreeSurface(new_image);
+
+            if (new_texture == NULL) {
+                fprintf(stderr, "SDL_CreateTextureFromSurface Error: %s\n", SDL_GetError());
+                continue;
+            }
+
+            SDL_DestroyTexture(texture);  // 销毁旧纹理
+            texture = new_texture;        // 更新为新纹理
+        }
+
+        // 渲染图片
+        SDL_RenderClear(renderer);
+        SDL_Rect dstRect = {0, 0, imgWidth, imgHeight}; // 目标矩形，指定显示的图片大小
+        SDL_RenderCopy(renderer, texture, NULL, &dstRect); // 使用指定大小渲染
+        SDL_RenderPresent(renderer);
+
         SDL_Delay(10); // 防止占用过多 CPU
     }
 
@@ -132,6 +205,12 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     SDL_DestroyWindow(window);
     IMG_Quit();
     SDL_Quit();
+
+    // 释放图片文件名数组
+    for (int i = 0; i < image_count; i++) {
+        free(image_files[i]);
+    }
+    free(image_files);
 
     return 0;
 }
