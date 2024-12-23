@@ -1,0 +1,14 @@
+prefix=/tmp/tardir/SDL2_image-2.8.3/build-mingw/install-x86_64-w64-mingw32
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: SDL2_image
+Description: image loading library for Simple DirectMedia Layer
+Version: 2.8.3
+Requires: sdl2 >= 2.0.9
+Libs: -L${libdir} -lSDL2_image
+Requires.private: 
+Libs.private: 
+Cflags: -I${includedir}/SDL2
+
