@@ -13,6 +13,7 @@
 #define SCALE_FACTOR 20        // 图片缩放比例（20 表示 20%）
 #define IMAGE_DIR "./cat"      // 图片文件夹目录
 #define FPS 30                 // 设置期望的帧率
+#define REFRESH_RATE 60        // 图片刷新率（每秒刷新次数）
 #define SPEED_MULTIPLIER 1.0   // 播放速度倍数（1.0为正常速度，2.0为两倍速，0.5为半速）
 #define EDGE_SIZE 0           // 边缘处理的像素大小
 #define MARGIN_LEFT 500       // 距离屏幕左边的距离（像素）
@@ -286,9 +287,11 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     int quit = 0;
     int current_image_index = 0;
     Uint32 last_time = SDL_GetTicks();
+    Uint32 last_refresh_time = last_time;
     
-    // 计算每帧的时间间隔（毫秒），考虑播放速度倍数
+    // 计算帧时间和刷新时间间隔
     const Uint32 frame_time = (Uint32)(1000.0 / (FPS * SPEED_MULTIPLIER));
+    const Uint32 refresh_time = (Uint32)(1000.0 / REFRESH_RATE);
 
     while (!quit) {
         while (SDL_PollEvent(&e)) {
@@ -298,9 +301,16 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         }
 
         Uint32 current_time = SDL_GetTicks();
+
+        // 处理动画帧更新
         if (current_time - last_time >= frame_time) {
             last_time = current_time;
             current_image_index = (current_image_index + 1) % image_count;
+        }
+
+        // 处理图片刷新
+        if (current_time - last_refresh_time >= refresh_time) {
+            last_refresh_time = current_time;
             process_and_display_image(image_files[current_image_index], 
                                    window, hdcScreen, hdcMemory, 
                                    imgWidth, imgHeight);
