@@ -12,10 +12,11 @@
 // 常量定义
 #define SCALE_FACTOR 20        // 图片缩放比例（20 表示 20%）
 #define IMAGE_DIR "./cat"      // 图片文件夹目录
-#define SWITCH_INTERVAL 30    // 图片切换时间（毫秒）
-#define EDGE_SIZE 1           // 边缘处理的像素大小
-#define MARGIN_LEFT 500       // 距离屏幕左边的距离（像素），负值表示超出屏幕
-#define MARGIN_TOP 50        // 距离屏幕顶部的距离（像素），负值表示超出屏幕
+#define FPS 30                 // 设置期望的帧率
+#define SPEED_MULTIPLIER 1.0   // 播放速度倍数（1.0为正常速度，2.0为两倍速，0.5为半速）
+#define EDGE_SIZE 0           // 边缘处理的像素大小
+#define MARGIN_LEFT 500       // 距离屏幕左边的距离（像素）
+#define MARGIN_TOP 50         // 距离屏幕顶部的距离（像素）
 
 // 判断文件是否为 PNG 格式
 int is_png(const char *filename) {
@@ -282,6 +283,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     int quit = 0;
     int current_image_index = 0;
     Uint32 last_time = SDL_GetTicks();
+    
+    // 计算每帧的时间间隔（毫秒），考虑播放速度倍数
+    const Uint32 frame_time = (Uint32)(1000.0 / (FPS * SPEED_MULTIPLIER));
 
     while (!quit) {
         while (SDL_PollEvent(&e)) {
@@ -291,7 +295,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         }
 
         Uint32 current_time = SDL_GetTicks();
-        if (current_time - last_time >= SWITCH_INTERVAL) {
+        if (current_time - last_time >= frame_time) {
             last_time = current_time;
             current_image_index = (current_image_index + 1) % image_count;
             process_and_display_image(image_files[current_image_index], 
@@ -299,7 +303,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                                    imgWidth, imgHeight);
         }
 
-        SDL_Delay(10);
+        SDL_Delay(1);
     }
 
     // 清理资源
