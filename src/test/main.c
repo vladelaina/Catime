@@ -12,7 +12,7 @@
 // 常量定义
 #define SCALE_FACTOR 20        // 图片缩放比例（20 表示 20%）
 #define IMAGE_DIR "./cat"      // 图片文件夹目录
-#define SWITCH_INTERVAL 300    // 图片切换时间（毫秒）
+#define SWITCH_INTERVAL 30    // 图片切换时间（毫秒）
 #define EDGE_SIZE 1           // 边缘处理的像素大小
 #define MARGIN_LEFT 500       // 距离屏幕左边的距离（像素），负值表示超出屏幕
 #define MARGIN_TOP 50        // 距离屏幕顶部的距离（像素），负值表示超出屏幕
@@ -70,9 +70,7 @@ SDL_Surface* process_alpha(SDL_Surface* surface) {
             Uint8 r, g, b, a;
             SDL_GetRGBA(src[idx], surface->format, &r, &g, &b, &a);
             
-            // 检查当前像素是否有颜色（非透明）
             if (a > 0) {
-                // 检查周围是否有透明像素
                 const int dx[] = {-EDGE_SIZE , 0, EDGE_SIZE , -EDGE_SIZE , EDGE_SIZE , -EDGE_SIZE , 0, EDGE_SIZE };
                 const int dy[] = {-EDGE_SIZE , -EDGE_SIZE , -EDGE_SIZE , 0, 0, EDGE_SIZE , EDGE_SIZE , EDGE_SIZE };
                 
@@ -84,7 +82,6 @@ SDL_Surface* process_alpha(SDL_Surface* surface) {
                         Uint8 nr, ng, nb, na;
                         SDL_GetRGBA(src[ny * surface->w + nx], surface->format, &nr, &ng, &nb, &na);
                         
-                        // 如果周围有透明像素，将当前像素也设为透明
                         if (na == 0) {
                             dst[idx] = SDL_MapRGBA(result->format, 0, 0, 0, 0);
                             break;
@@ -134,6 +131,7 @@ HBITMAP SDLSurfaceToWinBitmap(SDL_Surface* surface, HDC hdc) {
     SDL_UnlockSurface(surface);
     return hBitmap;
 }
+
 // 处理和显示图像
 void process_and_display_image(const char* image_path, SDL_Window* window, HDC hdcScreen, HDC hdcMemory, int imgWidth, int imgHeight) {
     SDL_Surface *image = IMG_Load(image_path);
@@ -170,7 +168,7 @@ void process_and_display_image(const char* image_path, SDL_Window* window, HDC h
 
                     POINT ptSrc = {0, 0};
                     SIZE sizeWnd = {imgWidth, imgHeight};
-                    POINT ptDst = {MARGIN_LEFT, MARGIN_TOP};  // 直接使用边距值
+                    POINT ptDst = {MARGIN_LEFT, MARGIN_TOP};
 
                     UpdateLayeredWindow(hwnd, hdcScreen, &ptDst, &sizeWnd, 
                                      hdcMemory, &ptSrc, 0, &blend, ULW_ALPHA);
@@ -218,8 +216,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     SDL_FreeSurface(image);
 
     SDL_Window *window = SDL_CreateWindow("SDL2 Image Display", 
-        MARGIN_LEFT,          // 直接使用边距值
-        MARGIN_TOP,           // 直接使用边距值
+        MARGIN_LEFT,
+        MARGIN_TOP,
         imgWidth, 
         imgHeight, 
         SDL_WINDOW_SHOWN | SDL_WINDOW_BORDERLESS);
@@ -244,8 +242,15 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     HWND hwnd = wmInfo.info.win.window;
     SetWindowLongPtr(hwnd, GWL_EXSTYLE, 
         WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST);
+
+    // 设置初始透明
+    HDC hdcScreen = GetDC(NULL);
+    BLENDFUNCTION blend = {0};
+    blend.BlendOp = AC_SRC_OVER;
+    blend.SourceConstantAlpha = 0;  // 完全透明
+    blend.AlphaFormat = AC_SRC_ALPHA;
+    UpdateLayeredWindow(hwnd, hdcScreen, NULL, NULL, NULL, NULL, 0, &blend, ULW_ALPHA);
     
-    // 直接使用边距值设置窗口位置
     SetWindowPos(hwnd, HWND_TOPMOST, 
         MARGIN_LEFT, 
         MARGIN_TOP, 
@@ -253,7 +258,6 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         imgHeight, 
         SWP_NOACTIVATE);
 
-    HDC hdcScreen = GetDC(NULL);
     HDC hdcMemory = CreateCompatibleDC(hdcScreen);
 
     // 设置托盘图标
