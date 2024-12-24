@@ -12,9 +12,7 @@
 // 常量定义
 #define SCALE_FACTOR 20        // 图片缩放比例（20 表示 20%）
 #define IMAGE_DIR "./cat"      // 图片文件夹目录
-#define FPS 30                 // 设置期望的帧率
-#define REFRESH_RATE 60        // 图片刷新率（每秒刷新次数）
-#define SPEED_MULTIPLIER 1.0   // 播放速度倍数（1.0为正常速度，2.0为两倍速，0.5为半速）
+#define SWITCH_INTERVAL 1000    // 切换到下一张图片的间隔时间（毫秒）
 #define EDGE_SIZE 0           // 边缘处理的像素大小
 #define MARGIN_LEFT 500       // 距离屏幕左边的距离（像素）
 #define MARGIN_TOP 50         // 距离屏幕顶部的距离（像素）
@@ -246,11 +244,10 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     SetWindowLongPtr(hwnd, GWL_EXSTYLE, 
         WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST | WS_EX_TOOLWINDOW);
 
-    // 设置初始透明
     HDC hdcScreen = GetDC(NULL);
     BLENDFUNCTION blend = {0};
     blend.BlendOp = AC_SRC_OVER;
-    blend.SourceConstantAlpha = 0;  // 完全透明
+    blend.SourceConstantAlpha = 0;
     blend.AlphaFormat = AC_SRC_ALPHA;
     UpdateLayeredWindow(hwnd, hdcScreen, NULL, NULL, NULL, NULL, 0, &blend, ULW_ALPHA);
     
@@ -264,7 +261,6 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     HDC hdcMemory = CreateCompatibleDC(hdcScreen);
 
     #if SHOW_TRAY_ICON
-    // 设置托盘图标
     NOTIFYICONDATA nid;
     ZeroMemory(&nid, sizeof(NOTIFYICONDATA));
     nid.cbSize = sizeof(NOTIFYICONDATA);
@@ -279,19 +275,12 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     Shell_NotifyIcon(NIM_ADD, &nid);
     #endif
 
-    // 显示第一帧
     process_and_display_image(image_files[0], window, hdcScreen, hdcMemory, imgWidth, imgHeight);
 
-    // 事件循环
     SDL_Event e;
     int quit = 0;
     int current_image_index = 0;
     Uint32 last_time = SDL_GetTicks();
-    Uint32 last_refresh_time = last_time;
-    
-    // 计算帧时间和刷新时间间隔
-    const Uint32 frame_time = (Uint32)(1000.0 / (FPS * SPEED_MULTIPLIER));
-    const Uint32 refresh_time = (Uint32)(1000.0 / REFRESH_RATE);
 
     while (!quit) {
         while (SDL_PollEvent(&e)) {
@@ -302,15 +291,10 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
         Uint32 current_time = SDL_GetTicks();
 
-        // 处理动画帧更新
-        if (current_time - last_time >= frame_time) {
+        // 使用 SWITCH_INTERVAL 来控制切换速度
+        if (current_time - last_time >= SWITCH_INTERVAL) {
             last_time = current_time;
             current_image_index = (current_image_index + 1) % image_count;
-        }
-
-        // 处理图片刷新
-        if (current_time - last_refresh_time >= refresh_time) {
-            last_refresh_time = current_time;
             process_and_display_image(image_files[current_image_index], 
                                    window, hdcScreen, hdcMemory, 
                                    imgWidth, imgHeight);
@@ -319,7 +303,6 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         SDL_Delay(1);
     }
 
-    // 清理资源
     #if SHOW_TRAY_ICON
     Shell_NotifyIcon(NIM_DELETE, &nid);
     #endif
