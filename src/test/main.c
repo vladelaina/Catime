@@ -9,7 +9,7 @@
 #include <stdlib.h>
 
 // 常量定义
-#define SCALE_FACTOR 20        // 图片缩放比例（80 表示 80%）
+#define SCALE_FACTOR 20        // 图片缩放比例（20 表示 20%）
 #define IMAGE_DIR "./cat"      // 图片文件夹目录
 #define SWITCH_INTERVAL 150    // 图片切换时间（毫秒）
 
@@ -41,9 +41,92 @@ int get_png_files(const char *dir, char ***image_files) {
     return count;
 }
 
+// 处理 alpha 通道和边缘
+SDL_Surface* process_alpha(SDL_Surface* surface) {
+    SDL_Surface* result = SDL_CreateRGBSurface(0, surface->w, surface->h, 32,
+        0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
+    
+    if (!result) return NULL;
+    
+    SDL_LockSurface(surface);
+    SDL_LockSurface(result);
+    
+    Uint32* src = (Uint32*)surface->pixels;
+    Uint32* dst = (Uint32*)result->pixels;
+    
+    // 第一遍：复制原始数据
+    for (int i = 0; i < surface->w * surface->h; i++) {
+        dst[i] = src[i];
+    }
+    
+    // 第二遍：处理边缘像素
+    for (int y = 0; y < surface->h; y++) {
+        for (int x = 0; x < surface->w; x++) {
+            int idx = y * surface->w + x;
+            Uint8 r, g, b, a;
+            SDL_GetRGBA(src[idx], surface->format, &r, &g, &b, &a);
+            
+            // 如果是半透明像素（边缘）
+            if (a > 0 && a < 255) {
+                int total_r = 0, total_g = 0, total_b = 0;
+                int count = 0;
+                int max_alpha = 0;
+                Uint8 max_alpha_r = 0, max_alpha_g = 0, max_alpha_b = 0;
+                
+                // 搜索周围像素
+                for (int dy = -1; dy <= 1; dy++) {
+                    for (int dx = -1; dx <= 1; dx++) {
+                        if (dx == 0 && dy == 0) continue;
+                        
+                        int nx = x + dx;
+                        int ny = y + dy;
+                        
+                        if (nx >= 0 && nx < surface->w && ny >= 0 && ny < surface->h) {
+                            Uint8 nr, ng, nb, na;
+                            SDL_GetRGBA(src[ny * surface->w + nx], surface->format, &nr, &ng, &nb, &na);
+                            
+                            // 记录最高 alpha 值的颜色
+                            if (na > max_alpha) {
+                                max_alpha = na;
+                                max_alpha_r = nr;
+                                max_alpha_g = ng;
+                                max_alpha_b = nb;
+                            }
+                            
+                            // 只累加不完全透明的像素
+                            if (na > 0) {
+                                total_r += nr;
+                                total_g += ng;
+                                total_b += nb;
+                                count++;
+                            }
+                        }
+                    }
+                }
+                
+                // 使用最高 alpha 值对应的颜色
+                if (max_alpha > 0) {
+                    dst[idx] = SDL_MapRGBA(result->format, max_alpha_r, max_alpha_g, max_alpha_b, a);
+                }
+                // 如果没有找到不透明像素，使用平均值
+                else if (count > 0) {
+                    dst[idx] = SDL_MapRGBA(result->format, 
+                        total_r / count,
+                        total_g / count,
+                        total_b / count,
+                        a);
+                }
+            }
+        }
+    }
+    
+    SDL_UnlockSurface(result);
+    SDL_UnlockSurface(surface);
+    
+    return result;
+}
 // 将SDL表面转换为Windows位图
 HBITMAP SDLSurfaceToWinBitmap(SDL_Surface* surface, HDC hdc) {
-    // 创建与设备兼容的位图信息
     BITMAPINFO bmi;
     ZeroMemory(&bmi, sizeof(BITMAPINFO));
     bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
@@ -53,12 +136,10 @@ HBITMAP SDLSurfaceToWinBitmap(SDL_Surface* surface, HDC hdc) {
     bmi.bmiHeader.biBitCount = 32;
     bmi.bmiHeader.biCompression = BI_RGB;
 
-    // 创建DIB section
     void* bits;
     HBITMAP hBitmap = CreateDIBSection(hdc, &bmi, DIB_RGB_COLORS, &bits, NULL, 0);
     if (!hBitmap) return NULL;
 
-    // 复制并转换SDL表面数据到位图
     SDL_LockSurface(surface);
     Uint32* src = (Uint32*)surface->pixels;
     Uint32* dst = (Uint32*)bits;
@@ -67,34 +148,87 @@ HBITMAP SDLSurfaceToWinBitmap(SDL_Surface* surface, HDC hdc) {
         Uint8 r, g, b, a;
         SDL_GetRGBA(src[i], surface->format, &r, &g, &b, &a);
         
-        // 预乘 alpha
-        r = (r * a) / 255;
-        g = (g * a) / 255;
-        b = (b * a) / 255;
-        
-        // BGRA 格式
-        dst[i] = (a << 24) | (r << 16) | (g << 8) | b;
+        if (a == 0) {
+            dst[i] = 0;
+        } else {
+            // 保持原始颜色值，不进行预乘
+            dst[i] = (a << 24) | (r << 16) | (g << 8) | b;
+        }
     }
     
     SDL_UnlockSurface(surface);
     return hBitmap;
 }
 
+// 处理和显示图像
+void process_and_display_image(const char* image_path, SDL_Window* window, HDC hdcScreen, HDC hdcMemory, int imgWidth, int imgHeight) {
+    SDL_Surface *image = IMG_Load(image_path);
+    if (!image) return;
+
+    // 创建缩放后的表面
+    SDL_Surface *scaled = SDL_CreateRGBSurface(0, imgWidth, imgHeight, 32,
+        0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
+    
+    if (scaled) {
+        SDL_BlitScaled(image, NULL, scaled, NULL);
+        SDL_FreeSurface(image);
+
+        // 处理边缘
+        SDL_Surface *processed = process_alpha(scaled);
+        SDL_FreeSurface(scaled);
+
+        if (processed) {
+            // 转换格式
+            SDL_Surface *converted = SDL_ConvertSurfaceFormat(processed, SDL_PIXELFORMAT_RGBA32, 0);
+            SDL_FreeSurface(processed);
+
+            if (converted) {
+                HBITMAP hBitmap = SDLSurfaceToWinBitmap(converted, hdcMemory);
+                if (hBitmap) {
+                    SDL_SysWMinfo wmInfo;
+                    SDL_VERSION(&wmInfo.version);
+                    SDL_GetWindowWMInfo(window, &wmInfo);
+                    HWND hwnd = wmInfo.info.win.window;
+
+                    HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcMemory, hBitmap);
+
+                    BLENDFUNCTION blend = {0};
+                    blend.BlendOp = AC_SRC_OVER;
+                    blend.SourceConstantAlpha = 255;
+                    blend.AlphaFormat = AC_SRC_ALPHA;
+
+                    POINT ptSrc = {0, 0};
+                    SIZE sizeWnd = {imgWidth, imgHeight};
+                    POINT ptDst = {0, 0};
+                    RECT rcWindow;
+                    GetWindowRect(hwnd, &rcWindow);
+                    ptDst.x = rcWindow.left;
+                    ptDst.y = rcWindow.top;
+                    
+                    UpdateLayeredWindow(hwnd, hdcScreen, &ptDst, &sizeWnd, 
+                                     hdcMemory, &ptSrc, 0, &blend, ULW_ALPHA);
+
+                    SelectObject(hdcMemory, hOldBitmap);
+                    DeleteObject(hBitmap);
+                }
+                SDL_FreeSurface(converted);
+            }
+        }
+    }
+}
+
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-    // 初始化 SDL
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         fprintf(stderr, "SDL_Init Error: %s\n", SDL_GetError());
         return 1;
     }
 
-    // 初始化 SDL_image
     if (IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG == 0) {
         fprintf(stderr, "IMG_Init Error: %s\n", IMG_GetError());
         SDL_Quit();
         return 1;
     }
 
-    // 获取 IMAGE_DIR 目录下的所有 PNG 文件
     char **image_files = NULL;
     int image_count = get_png_files(IMAGE_DIR, &image_files);
     if (image_count == 0) {
@@ -104,20 +238,18 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         return 1;
     }
 
-    // 获取第一张图片的宽高
     SDL_Surface *image = IMG_Load(image_files[0]);
-    if (image == NULL) {
+    if (!image) {
         fprintf(stderr, "IMG_Load Error: %s\n", IMG_GetError());
         IMG_Quit();
         SDL_Quit();
         return 1;
     }
 
-    // 应用缩放比例
     int imgWidth = (image->w * SCALE_FACTOR) / 100;
     int imgHeight = (image->h * SCALE_FACTOR) / 100;
+    SDL_FreeSurface(image);
 
-    // 创建窗口
     SDL_Window *window = SDL_CreateWindow("SDL2 Image Display", 
         SDL_WINDOWPOS_UNDEFINED, 
         SDL_WINDOWPOS_UNDEFINED, 
@@ -125,36 +257,28 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         imgHeight, 
         SDL_WINDOW_SHOWN | SDL_WINDOW_BORDERLESS);
 
-    if (window == NULL) {
+    if (!window) {
         fprintf(stderr, "SDL_CreateWindow Error: %s\n", SDL_GetError());
-        SDL_FreeSurface(image);
         IMG_Quit();
         SDL_Quit();
         return 1;
     }
 
-    // 获取窗口的原始窗口句柄
     SDL_SysWMinfo wmInfo;
     SDL_VERSION(&wmInfo.version);
     if (SDL_GetWindowWMInfo(window, &wmInfo) != 1) {
         fprintf(stderr, "SDL_GetWindowWMInfo failed\n");
         SDL_DestroyWindow(window);
-        SDL_FreeSurface(image);
         IMG_Quit();
         SDL_Quit();
         return 1;
     }
 
     HWND hwnd = wmInfo.info.win.window;
-
-    // 设置窗口属性
     SetWindowLongPtr(hwnd, GWL_EXSTYLE, 
         WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST);
-
-    // 设置窗口为置顶
     SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 
-    // 获取DC
     HDC hdcScreen = GetDC(NULL);
     HDC hdcMemory = CreateCompatibleDC(hdcScreen);
 
@@ -167,47 +291,13 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
     nid.uCallbackMessage = WM_APP;
     nid.hIcon = (HICON)LoadImage(NULL, "icon.ico", IMAGE_ICON, 0, 0, LR_LOADFROMFILE);
-
     wchar_t szTip[128];
     wcsncpy(szTip, L"My Tray Icon", sizeof(szTip) / sizeof(wchar_t));
     wcscpy((wchar_t*)nid.szTip, szTip);
-
     Shell_NotifyIcon(NIM_ADD, &nid);
 
-    // 初始化第一帧
-    SDL_Surface *scaled = SDL_CreateRGBSurface(0, imgWidth, imgHeight, 32,
-        0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
-    SDL_BlitScaled(image, NULL, scaled, NULL);
-    SDL_Surface *converted = SDL_ConvertSurfaceFormat(scaled, SDL_PIXELFORMAT_RGBA32, 0);
-    SDL_FreeSurface(scaled);
-    SDL_FreeSurface(image);
-    
-    if (converted) {
-        HBITMAP hBitmap = SDLSurfaceToWinBitmap(converted, hdcMemory);
-        if (hBitmap) {
-            HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcMemory, hBitmap);
-            
-            BLENDFUNCTION blend = {0};
-            blend.BlendOp = AC_SRC_OVER;
-            blend.SourceConstantAlpha = 255;
-            blend.AlphaFormat = AC_SRC_ALPHA;
-
-            POINT ptSrc = {0, 0};
-            SIZE sizeWnd = {imgWidth, imgHeight};
-            POINT ptDst = {0, 0};
-            RECT rcWindow;
-            GetWindowRect(hwnd, &rcWindow);
-            ptDst.x = rcWindow.left;
-            ptDst.y = rcWindow.top;
-            
-            UpdateLayeredWindow(hwnd, hdcScreen, &ptDst, &sizeWnd, 
-                             hdcMemory, &ptSrc, 0, &blend, ULW_ALPHA);
-
-            SelectObject(hdcMemory, hOldBitmap);
-            DeleteObject(hBitmap);
-        }
-        SDL_FreeSurface(converted);
-    }
+    // 显示第一帧
+    process_and_display_image(image_files[0], window, hdcScreen, hdcMemory, imgWidth, imgHeight);
 
     // 事件循环
     SDL_Event e;
@@ -222,49 +312,13 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             }
         }
 
-        // 每隔SWITCH_INTERVAL切换一次图片
         Uint32 current_time = SDL_GetTicks();
         if (current_time - last_time >= SWITCH_INTERVAL) {
             last_time = current_time;
             current_image_index = (current_image_index + 1) % image_count;
-
-            // 加载下一张图片
-            SDL_Surface *new_image = IMG_Load(image_files[current_image_index]);
-            if (new_image != NULL) {
-                SDL_Surface *scaled = SDL_CreateRGBSurface(0, imgWidth, imgHeight, 32,
-                    0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
-                SDL_BlitScaled(new_image, NULL, scaled, NULL);
-                SDL_Surface *converted = SDL_ConvertSurfaceFormat(scaled, SDL_PIXELFORMAT_RGBA32, 0);
-                SDL_FreeSurface(scaled);
-                SDL_FreeSurface(new_image);
-
-                if (converted != NULL) {
-                    HBITMAP hBitmap = SDLSurfaceToWinBitmap(converted, hdcMemory);
-                    if (hBitmap) {
-                        HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcMemory, hBitmap);
-
-                        BLENDFUNCTION blend = {0};
-                        blend.BlendOp = AC_SRC_OVER;
-                        blend.SourceConstantAlpha = 255;
-                        blend.AlphaFormat = AC_SRC_ALPHA;
-
-                        POINT ptSrc = {0, 0};
-                        SIZE sizeWnd = {imgWidth, imgHeight};
-                        POINT ptDst = {0, 0};
-                        RECT rcWindow;
-                        GetWindowRect(hwnd, &rcWindow);
-                        ptDst.x = rcWindow.left;
-                        ptDst.y = rcWindow.top;
-                        
-                        UpdateLayeredWindow(hwnd, hdcScreen, &ptDst, &sizeWnd, 
-                                         hdcMemory, &ptSrc, 0, &blend, ULW_ALPHA);
-
-                        SelectObject(hdcMemory, hOldBitmap);
-                        DeleteObject(hBitmap);
-                    }
-                    SDL_FreeSurface(converted);
-                }
-            }
+            process_and_display_image(image_files[current_image_index], 
+                                   window, hdcScreen, hdcMemory, 
+                                   imgWidth, imgHeight);
         }
 
         SDL_Delay(10);
@@ -278,7 +332,6 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     IMG_Quit();
     SDL_Quit();
 
-    // 释放图片文件名数组
     for (int i = 0; i < image_count; i++) {
         free(image_files[i]);
     }
