@@ -63,7 +63,7 @@ SDL_Surface* process_alpha(SDL_Surface* surface) {
     Uint32* src = (Uint32*)surface->pixels;
     Uint32* dst = (Uint32*)result->pixels;
     
-    // 第一遍：复制原始数据并找出主要颜色
+    // 第一遍：复制原始数据
     for (int i = 0; i < surface->w * surface->h; i++) {
         dst[i] = src[i];
     }
@@ -75,35 +75,40 @@ SDL_Surface* process_alpha(SDL_Surface* surface) {
             Uint8 r, g, b, a;
             SDL_GetRGBA(src[idx], surface->format, &r, &g, &b, &a);
             
-            // 如果是半透明像素（边缘）
-            if (a > 0 && a < 255) {
+            // 检测是否是边缘像素（半透明或暗色）
+            if ((a > 0 && a < 255) || (a > 0 && r < 50 && g < 50 && b < 50)) {
                 Uint8 inner_r = 0, inner_g = 0, inner_b = 0;
-                int found_inner = 0;
                 float min_distance = 1000000.0f;
+                int found_inner = 0;
                 
-                // 搜索周围像素找到最合适的颜色
-                for (int radius = 1; radius <= 3 && !found_inner; radius++) {
-                    for (int dy = -radius; dy <= radius; dy++) {
-                        for (int dx = -radius; dx <= radius; dx++) {
-                            if (dx == 0 && dy == 0) continue;
+                // 扩大搜索范围并使用多个方向
+                const int directions[8][2] = {
+                    {-1, 0}, {1, 0}, {0, -1}, {0, 1},  // 上下左右
+                    {-1, -1}, {-1, 1}, {1, -1}, {1, 1} // 对角线
+                };
+                
+                // 在每个方向上搜索
+                for (int dir = 0; dir < 8; dir++) {
+                    for (int dist = 1; dist <= 4; dist++) {
+                        int nx = x + directions[dir][0] * dist;
+                        int ny = y + directions[dir][1] * dist;
+                        
+                        if (nx >= 0 && nx < surface->w && ny >= 0 && ny < surface->h) {
+                            Uint8 nr, ng, nb, na;
+                            SDL_GetRGBA(src[ny * surface->w + nx], surface->format, &nr, &ng, &nb, &na);
                             
-                            int nx = x + dx;
-                            int ny = y + dy;
-                            
-                            if (nx >= 0 && nx < surface->w && ny >= 0 && ny < surface->h) {
-                                Uint8 nr, ng, nb, na;
-                                SDL_GetRGBA(src[ny * surface->w + nx], surface->format, &nr, &ng, &nb, &na);
-                                
-                                // 寻找完全不透明且非白色的像素
-                                if (na == 255 && !(nr > 240 && ng > 240 && nb > 240)) {
-                                    float dist = color_distance(r, g, b, nr, ng, nb);
-                                    if (dist < min_distance) {
-                                        min_distance = dist;
-                                        inner_r = nr;
-                                        inner_g = ng;
-                                        inner_b = nb;
-                                        found_inner = 1;
-                                    }
+                            // 寻找完全不透明且非黑白的有效颜色
+                            if (na == 255 && 
+                                !(nr > 240 && ng > 240 && nb > 240) && // 不是白色
+                                !(nr < 30 && ng < 30 && nb < 30))      // 不是黑色
+                            {
+                                float dist = color_distance(r, g, b, nr, ng, nb);
+                                if (dist < min_distance) {
+                                    min_distance = dist;
+                                    inner_r = nr;
+                                    inner_g = ng;
+                                    inner_b = nb;
+                                    found_inner = 1;
                                 }
                             }
                         }
@@ -112,11 +117,12 @@ SDL_Surface* process_alpha(SDL_Surface* surface) {
                 
                 // 如果找到合适的颜色，使用它
                 if (found_inner) {
-                    // 根据原始alpha值进行颜色混合
+                    // 根据原始alpha值和距离进行颜色混合
                     float alpha = a / 255.0f;
-                    Uint8 final_r = (Uint8)(inner_r * alpha);
-                    Uint8 final_g = (Uint8)(inner_g * alpha);
-                    Uint8 final_b = (Uint8)(inner_b * alpha);
+                    float blend = alpha * (1.0f - min_distance / 1000.0f);
+                    Uint8 final_r = (Uint8)(inner_r * blend);
+                    Uint8 final_g = (Uint8)(inner_g * blend);
+                    Uint8 final_b = (Uint8)(inner_b * blend);
                     dst[idx] = SDL_MapRGBA(result->format, final_r, final_g, final_b, a);
                 }
             }
@@ -155,6 +161,7 @@ HBITMAP SDLSurfaceToWinBitmap(SDL_Surface* surface, HDC hdc) {
         if (a == 0) {
             dst[i] = 0;
         } else {
+            // 保持原始颜色值，不进行预乘
             dst[i] = (a << 24) | (r << 16) | (g << 8) | b;
         }
     }
