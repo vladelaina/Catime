@@ -12,7 +12,8 @@
 // 常量定义
 #define SCALE_FACTOR 20        // 图片缩放比例（20 表示 20%）
 #define IMAGE_DIR "./cat"      // 图片文件夹目录
-#define SWITCH_INTERVAL 150    // 图片切换时间（毫秒）
+#define SWITCH_INTERVAL 300    // 图片切换时间（毫秒）
+#define EDGE_SIZE 1           // 边缘处理的像素大小
 
 // 判断文件是否为 PNG 格式
 int is_png(const char *filename) {
@@ -70,8 +71,8 @@ SDL_Surface* process_alpha(SDL_Surface* surface) {
             // 检查当前像素是否有颜色（非透明）
             if (a > 0) {
                 // 检查周围是否有透明像素
-                const int dx[] = {-1, 0, 1, -1, 1, -1, 0, 1};
-                const int dy[] = {-1, -1, -1, 0, 0, 1, 1, 1};
+                const int dx[] = {-EDGE_SIZE , 0, EDGE_SIZE , -EDGE_SIZE , EDGE_SIZE , -EDGE_SIZE , 0, EDGE_SIZE };
+                const int dy[] = {-EDGE_SIZE , -EDGE_SIZE , -EDGE_SIZE , 0, 0, EDGE_SIZE , EDGE_SIZE , EDGE_SIZE };
                 
                 for (int i = 0; i < 8; i++) {
                     int nx = x + dx[i];
