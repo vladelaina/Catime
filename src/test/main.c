@@ -9,8 +9,9 @@
 #include <stdlib.h>
 
 // 常量定义
-#define IMAGE_DIR "./cat"       // 图片文件夹目录
-#define SWITCH_INTERVAL 150     // 图片切换时间（毫秒）
+#define SCALE_FACTOR 20        // 图片缩放比例（80 表示 80%）
+#define IMAGE_DIR "./cat"      // 图片文件夹目录
+#define SWITCH_INTERVAL 150    // 图片切换时间（毫秒）
 
 // 判断文件是否为 PNG 格式
 int is_png(const char *filename) {
@@ -112,8 +113,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         return 1;
     }
 
-    int imgWidth = image->w;
-    int imgHeight = image->h;
+    // 应用缩放比例
+    int imgWidth = (image->w * SCALE_FACTOR) / 100;
+    int imgHeight = (image->h * SCALE_FACTOR) / 100;
 
     // 创建窗口
     SDL_Window *window = SDL_CreateWindow("SDL2 Image Display", 
@@ -173,7 +175,11 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     Shell_NotifyIcon(NIM_ADD, &nid);
 
     // 初始化第一帧
-    SDL_Surface *converted = SDL_ConvertSurfaceFormat(image, SDL_PIXELFORMAT_RGBA32, 0);
+    SDL_Surface *scaled = SDL_CreateRGBSurface(0, imgWidth, imgHeight, 32,
+        0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
+    SDL_BlitScaled(image, NULL, scaled, NULL);
+    SDL_Surface *converted = SDL_ConvertSurfaceFormat(scaled, SDL_PIXELFORMAT_RGBA32, 0);
+    SDL_FreeSurface(scaled);
     SDL_FreeSurface(image);
     
     if (converted) {
@@ -187,7 +193,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             blend.AlphaFormat = AC_SRC_ALPHA;
 
             POINT ptSrc = {0, 0};
-            SIZE sizeWnd = {converted->w, converted->h};
+            SIZE sizeWnd = {imgWidth, imgHeight};
             POINT ptDst = {0, 0};
             RECT rcWindow;
             GetWindowRect(hwnd, &rcWindow);
@@ -225,8 +231,11 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             // 加载下一张图片
             SDL_Surface *new_image = IMG_Load(image_files[current_image_index]);
             if (new_image != NULL) {
-                SDL_Surface *converted = SDL_ConvertSurfaceFormat(new_image, 
-                    SDL_PIXELFORMAT_RGBA32, 0);
+                SDL_Surface *scaled = SDL_CreateRGBSurface(0, imgWidth, imgHeight, 32,
+                    0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
+                SDL_BlitScaled(new_image, NULL, scaled, NULL);
+                SDL_Surface *converted = SDL_ConvertSurfaceFormat(scaled, SDL_PIXELFORMAT_RGBA32, 0);
+                SDL_FreeSurface(scaled);
                 SDL_FreeSurface(new_image);
 
                 if (converted != NULL) {
@@ -240,7 +249,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                         blend.AlphaFormat = AC_SRC_ALPHA;
 
                         POINT ptSrc = {0, 0};
-                        SIZE sizeWnd = {converted->w, converted->h};
+                        SIZE sizeWnd = {imgWidth, imgHeight};
                         POINT ptDst = {0, 0};
                         RECT rcWindow;
                         GetWindowRect(hwnd, &rcWindow);
