@@ -14,6 +14,8 @@
 #define IMAGE_DIR "./cat"      // 图片文件夹目录
 #define SWITCH_INTERVAL 300    // 图片切换时间（毫秒）
 #define EDGE_SIZE 1           // 边缘处理的像素大小
+#define MARGIN_LEFT 500       // 距离屏幕左边的距离（像素），负值表示超出屏幕
+#define MARGIN_TOP 50        // 距离屏幕顶部的距离（像素），负值表示超出屏幕
 
 // 判断文件是否为 PNG 格式
 int is_png(const char *filename) {
@@ -98,6 +100,7 @@ SDL_Surface* process_alpha(SDL_Surface* surface) {
     
     return result;
 }
+
 // 将SDL表面转换为Windows位图
 HBITMAP SDLSurfaceToWinBitmap(SDL_Surface* surface, HDC hdc) {
     BITMAPINFO bmi;
@@ -131,13 +134,11 @@ HBITMAP SDLSurfaceToWinBitmap(SDL_Surface* surface, HDC hdc) {
     SDL_UnlockSurface(surface);
     return hBitmap;
 }
-
 // 处理和显示图像
 void process_and_display_image(const char* image_path, SDL_Window* window, HDC hdcScreen, HDC hdcMemory, int imgWidth, int imgHeight) {
     SDL_Surface *image = IMG_Load(image_path);
     if (!image) return;
 
-    // 创建缩放后的表面
     SDL_Surface *scaled = SDL_CreateRGBSurface(0, imgWidth, imgHeight, 32,
         0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
     
@@ -145,12 +146,10 @@ void process_and_display_image(const char* image_path, SDL_Window* window, HDC h
         SDL_BlitScaled(image, NULL, scaled, NULL);
         SDL_FreeSurface(image);
 
-        // 处理边缘
         SDL_Surface *processed = process_alpha(scaled);
         SDL_FreeSurface(scaled);
 
         if (processed) {
-            // 转换格式
             SDL_Surface *converted = SDL_ConvertSurfaceFormat(processed, SDL_PIXELFORMAT_RGBA32, 0);
             SDL_FreeSurface(processed);
 
@@ -171,12 +170,8 @@ void process_and_display_image(const char* image_path, SDL_Window* window, HDC h
 
                     POINT ptSrc = {0, 0};
                     SIZE sizeWnd = {imgWidth, imgHeight};
-                    POINT ptDst = {0, 0};
-                    RECT rcWindow;
-                    GetWindowRect(hwnd, &rcWindow);
-                    ptDst.x = rcWindow.left;
-                    ptDst.y = rcWindow.top;
-                    
+                    POINT ptDst = {MARGIN_LEFT, MARGIN_TOP};  // 直接使用边距值
+
                     UpdateLayeredWindow(hwnd, hdcScreen, &ptDst, &sizeWnd, 
                                      hdcMemory, &ptSrc, 0, &blend, ULW_ALPHA);
 
@@ -223,8 +218,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     SDL_FreeSurface(image);
 
     SDL_Window *window = SDL_CreateWindow("SDL2 Image Display", 
-        SDL_WINDOWPOS_UNDEFINED, 
-        SDL_WINDOWPOS_UNDEFINED, 
+        MARGIN_LEFT,          // 直接使用边距值
+        MARGIN_TOP,           // 直接使用边距值
         imgWidth, 
         imgHeight, 
         SDL_WINDOW_SHOWN | SDL_WINDOW_BORDERLESS);
@@ -249,7 +244,14 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     HWND hwnd = wmInfo.info.win.window;
     SetWindowLongPtr(hwnd, GWL_EXSTYLE, 
         WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST);
-    SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+    
+    // 直接使用边距值设置窗口位置
+    SetWindowPos(hwnd, HWND_TOPMOST, 
+        MARGIN_LEFT, 
+        MARGIN_TOP, 
+        imgWidth, 
+        imgHeight, 
+        SWP_NOACTIVATE);
 
     HDC hdcScreen = GetDC(NULL);
     HDC hdcMemory = CreateCompatibleDC(hdcScreen);
