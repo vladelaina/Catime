@@ -7,6 +7,7 @@
 #include <dirent.h>
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 
 // 常量定义
 #define SCALE_FACTOR 20        // 图片缩放比例（20 表示 20%）
@@ -41,6 +42,14 @@ int get_png_files(const char *dir, char ***image_files) {
     return count;
 }
 
+// 计算两个颜色的距离
+float color_distance(Uint8 r1, Uint8 g1, Uint8 b1, Uint8 r2, Uint8 g2, Uint8 b2) {
+    float dr = (float)r1 - r2;
+    float dg = (float)g1 - g2;
+    float db = (float)b1 - b2;
+    return sqrt(dr * dr + dg * dg + db * db);
+}
+
 // 处理 alpha 通道和边缘
 SDL_Surface* process_alpha(SDL_Surface* surface) {
     SDL_Surface* result = SDL_CreateRGBSurface(0, surface->w, surface->h, 32,
@@ -54,7 +63,7 @@ SDL_Surface* process_alpha(SDL_Surface* surface) {
     Uint32* src = (Uint32*)surface->pixels;
     Uint32* dst = (Uint32*)result->pixels;
     
-    // 第一遍：复制原始数据
+    // 第一遍：复制原始数据并找出主要颜色
     for (int i = 0; i < surface->w * surface->h; i++) {
         dst[i] = src[i];
     }
@@ -68,53 +77,47 @@ SDL_Surface* process_alpha(SDL_Surface* surface) {
             
             // 如果是半透明像素（边缘）
             if (a > 0 && a < 255) {
-                int total_r = 0, total_g = 0, total_b = 0;
-                int count = 0;
-                int max_alpha = 0;
-                Uint8 max_alpha_r = 0, max_alpha_g = 0, max_alpha_b = 0;
+                Uint8 inner_r = 0, inner_g = 0, inner_b = 0;
+                int found_inner = 0;
+                float min_distance = 1000000.0f;
                 
-                // 搜索周围像素
-                for (int dy = -1; dy <= 1; dy++) {
-                    for (int dx = -1; dx <= 1; dx++) {
-                        if (dx == 0 && dy == 0) continue;
-                        
-                        int nx = x + dx;
-                        int ny = y + dy;
-                        
-                        if (nx >= 0 && nx < surface->w && ny >= 0 && ny < surface->h) {
-                            Uint8 nr, ng, nb, na;
-                            SDL_GetRGBA(src[ny * surface->w + nx], surface->format, &nr, &ng, &nb, &na);
+                // 搜索周围像素找到最合适的颜色
+                for (int radius = 1; radius <= 3 && !found_inner; radius++) {
+                    for (int dy = -radius; dy <= radius; dy++) {
+                        for (int dx = -radius; dx <= radius; dx++) {
+                            if (dx == 0 && dy == 0) continue;
                             
-                            // 记录最高 alpha 值的颜色
-                            if (na > max_alpha) {
-                                max_alpha = na;
-                                max_alpha_r = nr;
-                                max_alpha_g = ng;
-                                max_alpha_b = nb;
-                            }
+                            int nx = x + dx;
+                            int ny = y + dy;
                             
-                            // 只累加不完全透明的像素
-                            if (na > 0) {
-                                total_r += nr;
-                                total_g += ng;
-                                total_b += nb;
-                                count++;
+                            if (nx >= 0 && nx < surface->w && ny >= 0 && ny < surface->h) {
+                                Uint8 nr, ng, nb, na;
+                                SDL_GetRGBA(src[ny * surface->w + nx], surface->format, &nr, &ng, &nb, &na);
+                                
+                                // 寻找完全不透明且非白色的像素
+                                if (na == 255 && !(nr > 240 && ng > 240 && nb > 240)) {
+                                    float dist = color_distance(r, g, b, nr, ng, nb);
+                                    if (dist < min_distance) {
+                                        min_distance = dist;
+                                        inner_r = nr;
+                                        inner_g = ng;
+                                        inner_b = nb;
+                                        found_inner = 1;
+                                    }
+                                }
                             }
                         }
                     }
                 }
                 
-                // 使用最高 alpha 值对应的颜色
-                if (max_alpha > 0) {
-                    dst[idx] = SDL_MapRGBA(result->format, max_alpha_r, max_alpha_g, max_alpha_b, a);
-                }
-                // 如果没有找到不透明像素，使用平均值
-                else if (count > 0) {
-                    dst[idx] = SDL_MapRGBA(result->format, 
-                        total_r / count,
-                        total_g / count,
-                        total_b / count,
-                        a);
+                // 如果找到合适的颜色，使用它
+                if (found_inner) {
+                    // 根据原始alpha值进行颜色混合
+                    float alpha = a / 255.0f;
+                    Uint8 final_r = (Uint8)(inner_r * alpha);
+                    Uint8 final_g = (Uint8)(inner_g * alpha);
+                    Uint8 final_b = (Uint8)(inner_b * alpha);
+                    dst[idx] = SDL_MapRGBA(result->format, final_r, final_g, final_b, a);
                 }
             }
         }
@@ -125,6 +128,7 @@ SDL_Surface* process_alpha(SDL_Surface* surface) {
     
     return result;
 }
+
 // 将SDL表面转换为Windows位图
 HBITMAP SDLSurfaceToWinBitmap(SDL_Surface* surface, HDC hdc) {
     BITMAPINFO bmi;
@@ -151,7 +155,6 @@ HBITMAP SDLSurfaceToWinBitmap(SDL_Surface* surface, HDC hdc) {
         if (a == 0) {
             dst[i] = 0;
         } else {
-            // 保持原始颜色值，不进行预乘
             dst[i] = (a << 24) | (r << 16) | (g << 8) | b;
         }
     }
