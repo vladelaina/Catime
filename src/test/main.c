@@ -17,6 +17,7 @@
 #define EDGE_SIZE 0           // 边缘处理的像素大小
 #define MARGIN_LEFT 500       // 距离屏幕左边的距离（像素）
 #define MARGIN_TOP 50         // 距离屏幕顶部的距离（像素）
+#define SHOW_TRAY_ICON 0      // 控制是否显示托盘图标（0为不显示，1为显示）
 
 // 判断文件是否为 PNG 格式
 int is_png(const char *filename) {
@@ -242,7 +243,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
     HWND hwnd = wmInfo.info.win.window;
     SetWindowLongPtr(hwnd, GWL_EXSTYLE, 
-        WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST);
+        WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST | WS_EX_TOOLWINDOW);
 
     // 设置初始透明
     HDC hdcScreen = GetDC(NULL);
@@ -261,6 +262,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
     HDC hdcMemory = CreateCompatibleDC(hdcScreen);
 
+    #if SHOW_TRAY_ICON
     // 设置托盘图标
     NOTIFYICONDATA nid;
     ZeroMemory(&nid, sizeof(NOTIFYICONDATA));
@@ -274,6 +276,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     wcsncpy(szTip, L"My Tray Icon", sizeof(szTip) / sizeof(wchar_t));
     wcscpy((wchar_t*)nid.szTip, szTip);
     Shell_NotifyIcon(NIM_ADD, &nid);
+    #endif
 
     // 显示第一帧
     process_and_display_image(image_files[0], window, hdcScreen, hdcMemory, imgWidth, imgHeight);
@@ -307,7 +310,10 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     }
 
     // 清理资源
+    #if SHOW_TRAY_ICON
     Shell_NotifyIcon(NIM_DELETE, &nid);
+    #endif
+    
     DeleteDC(hdcMemory);
     ReleaseDC(NULL, hdcScreen);
     SDL_DestroyWindow(window);
