@@ -67,12 +67,9 @@ SDL_Surface* process_alpha(SDL_Surface* surface) {
             Uint8 r, g, b, a;
             SDL_GetRGBA(src[idx], surface->format, &r, &g, &b, &a);
             
-            // 检查是否是黑色像素
-            if (r < 30 && g < 30 && b < 30) {
-                // 检查周围是否有透明像素，如果有，说明这是交界处
-                int is_border = 0;
-                
-                // 检查8个方向
+            // 检查当前像素是否有颜色（非透明）
+            if (a > 0) {
+                // 检查周围是否有透明像素
                 const int dx[] = {-1, 0, 1, -1, 1, -1, 0, 1};
                 const int dy[] = {-1, -1, -1, 0, 0, 1, 1, 1};
                 
@@ -84,17 +81,12 @@ SDL_Surface* process_alpha(SDL_Surface* surface) {
                         Uint8 nr, ng, nb, na;
                         SDL_GetRGBA(src[ny * surface->w + nx], surface->format, &nr, &ng, &nb, &na);
                         
-                        // 如果周围有透明像素
+                        // 如果周围有透明像素，将当前像素也设为透明
                         if (na == 0) {
-                            is_border = 1;
+                            dst[idx] = SDL_MapRGBA(result->format, 0, 0, 0, 0);
                             break;
                         }
                     }
-                }
-                
-                // 如果是交界处的黑色像素，将其设置为透明
-                if (is_border) {
-                    dst[idx] = SDL_MapRGBA(result->format, 0, 0, 0, 0);
                 }
             }
         }
