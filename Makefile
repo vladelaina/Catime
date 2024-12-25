@@ -13,9 +13,9 @@ BUILD_DIR = build
 INCLUDE_DIR = include  # 包含 include 目录
 
 # 设置文件名
-SRC_FILES = $(SRC_DIR)/main.c $(SRC_DIR)/rightClickMenu.c
+SRC_FILES = $(SRC_DIR)/main.c  # 只保留 main.c
 RC_FILE = $(RESOURCE_DIR)/resource.rc
-OBJ_FILES = $(BUILD_DIR)/main.o $(BUILD_DIR)/rightClickMenu.o
+OBJ_FILES = $(BUILD_DIR)/main.o  # 只保留 main.o
 IMAGE_DIR = $(RESOURCE_DIR)/images
 
 # 创建目标文件夹和资源文件夹
@@ -37,10 +37,6 @@ $(BUILD_DIR)/resource.o: $(RC_FILE)
 $(BUILD_DIR)/main.o: $(SRC_DIR)/main.c
 	@$(CC) -c $(SRC_DIR)/main.c -o $(BUILD_DIR)/main.o $(CFLAGS)
 
-# 编译 rightClickMenu.c
-$(BUILD_DIR)/rightClickMenu.o: $(SRC_DIR)/rightClickMenu.c
-	@$(CC) -c $(SRC_DIR)/rightClickMenu.c -o $(BUILD_DIR)/rightClickMenu.o $(CFLAGS)
-
 # 链接编译目标文件，输出到输出目录
 $(OUTPUT_DIR)/catime.exe: $(OBJ_FILES) $(BUILD_DIR)/resource.o
 	@$(CC) -o $(OUTPUT_DIR)/catime.exe $(OBJ_FILES) $(BUILD_DIR)/resource.o $(CFLAGS)
@@ -49,4 +45,3 @@ $(OUTPUT_DIR)/catime.exe: $(OBJ_FILES) $(BUILD_DIR)/resource.o
 # 清理构建文件，只删除 .o 文件，不删除 build 目录
 clean:
 	@rm -rf $(BUILD_DIR)/*.o $(OUTPUT_DIR)/*.exe
-

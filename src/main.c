@@ -3,8 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "rightClickMenu.h"
-
 // 窗口和显示相关的定义
 #define TEXT_COLOR "#F5DAE3"   
 
@@ -86,6 +84,22 @@ void FormatTime(int remaining_time, char* time_text) {
 void ExitProgram(HWND hwnd) {
     Shell_NotifyIcon(NIM_DELETE, &nid);
     PostQuitMessage(0);
+}
+
+// 托盘图标的右键菜单响应函数
+void ShowContextMenu(HWND hwnd) {
+    HMENU hMenu = CreatePopupMenu();
+    // 添加选项：5, 10, 25 分钟
+    AppendMenu(hMenu, MF_STRING, 101, "Customize");
+    AppendMenu(hMenu, MF_STRING, 102, "5");
+    AppendMenu(hMenu, MF_STRING, 103, "10");
+    AppendMenu(hMenu, MF_STRING, 104, "25");
+
+    POINT pt;
+    GetCursorPos(&pt);
+    SetForegroundWindow(hwnd);  // 确保菜单显示在应用程序的窗口上
+    TrackPopupMenu(hMenu, TPM_BOTTOMALIGN | TPM_LEFTALIGN, pt.x, pt.y, 0, hwnd, NULL);
+    DestroyMenu(hMenu);
 }
 
 // 处理消息的窗口过程函数
