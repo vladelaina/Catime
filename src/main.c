@@ -24,7 +24,7 @@
 #define FONT_SCALE_FACTOR 1.0  // 字体缩放因子（相对于窗口大小）
 #define FONT_SIZE (int)(BASE_FONT_SIZE * FONT_SCALE_FACTOR * WINDOW_SCALE)  // 实际使用的字体大小
 
-#define DEFAULT_TIME 1500  // 默认倒计时时长为 25 分钟 = 1500 秒
+#define DEFAULT_START_TIME 1500  // 默认启动时的倒计时时长为 25 分钟 = 1500 秒
 #define ID_TRAY_APP_ICON  1001
 #define WM_TRAYICON        (WM_USER + 1)  // 自定义消息 ID
 #define WINDOW_CLASS_NAME  "CatimeWindow"  // 确保窗口类名唯一
@@ -34,13 +34,13 @@
 #define IDD_DIALOG1 1002  // 确保与 .rc 文件中的 ID 一致
 
 // 定义时间选项
-#define TIME_OPTIONS {5, 10, 25}  // 定义时间选项为数组
+#define TIME_OPTIONS {8, 10, 25}  // 定义时间选项为数组
 
 // 全局变量用于保存输入内容
 char inputText[256] = {0};  // 设置全局变量
 
 static int elapsed_time = 0;  // 已经过的时间，全局变量
-static int TOTAL_TIME = DEFAULT_TIME;  // 全局倒计时总时间
+static int TOTAL_TIME = DEFAULT_START_TIME;  // 全局倒计时总时间
 NOTIFYICONDATA nid;  // 托盘图标数据
 
 // 用于存储时间选项
@@ -96,13 +96,15 @@ void ExitProgram(HWND hwnd) {
 // 托盘图标的右键菜单响应函数
 void ShowContextMenu(HWND hwnd) {
     HMENU hMenu = CreatePopupMenu();
+    // 将 "Customize" 选项放在最上面
+    AppendMenu(hMenu, MF_STRING, 101, "Customize");
+
     // 添加选项：根据 TIME_OPTIONS 的值动态生成菜单项
     for (int i = 0; i < time_options_count; i++) {
         char menu_item[10];
         sprintf(menu_item, "%d", time_options[i]);
         AppendMenu(hMenu, MF_STRING, 102 + i, menu_item);  // 动态添加菜单项
     }
-    AppendMenu(hMenu, MF_STRING, 101, "Customize");
 
     POINT pt;
     GetCursorPos(&pt);
@@ -210,7 +212,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                     int input_time = 0;
 
                     if (inputText[0] == '\0') {
-                        TOTAL_TIME = 25 * 60;
+                        TOTAL_TIME = DEFAULT_START_TIME;  // 使用定义的默认启动时间
                     }
                     else if (inputText[strlen(inputText) - 1] == 's') {
                         inputText[strlen(inputText) - 1] = '\0';
@@ -256,12 +258,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             time_str[length - 1] = '\0';
             TOTAL_TIME = atoi(time_str);
             if (TOTAL_TIME <= 0) {
-                TOTAL_TIME = DEFAULT_TIME;
+                TOTAL_TIME = DEFAULT_START_TIME;  // 使用定义的默认启动时间
             }
         } else {
             TOTAL_TIME = atoi(time_str) * 60;
             if (TOTAL_TIME <= 0) {
-                TOTAL_TIME = DEFAULT_TIME;
+                TOTAL_TIME = DEFAULT_START_TIME;  // 使用定义的默认启动时间
             }
         }
     }
