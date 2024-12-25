@@ -5,6 +5,8 @@
 #include <fcntl.h>  // 添加文件操作相关的头文件
 #include <io.h>     // 添加文件操作相关的头文件
 #include <sys/stat.h> // 添加文件状态相关的头文件
+#include <sys/types.h> // 添加文件类型相关的头文件
+#include <time.h>      // 添加时间相关的头文件
 
 // 全局变量
 char CLOCK_TEXT_COLOR[10];  // 时钟文本颜色
@@ -35,6 +37,7 @@ char inputText[256] = {0};  // 设置全局变量
 static int elapsed_time = 0;  // 已经过的时间，全局变量
 static int CLOCK_TOTAL_TIME = 0;  // 全局倒计时总时间
 NOTIFYICONDATA nid;  // 托盘图标数据
+time_t last_config_time;  // 记录上次配置文件的修改时间
 
 // 函数声明
 LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
@@ -48,6 +51,10 @@ void ReadConfig() {
         fprintf(stderr, "无法打开配置文件: %s\n", config_path);
         return;
     }
+
+    // 清空时间选项数组
+    time_options_count = 0;  // 重置时间选项计数
+    memset(time_options, 0, sizeof(time_options));  // 清空数组
 
     char line[256];
     while (fgets(line, sizeof(line), file)) {
@@ -82,6 +89,13 @@ void ReadConfig() {
     }
 
     fclose(file);
+    last_config_time = time(NULL);  // 记录读取配置时的时间
+
+    // 更新窗口位置
+    HWND hwnd = FindWindow("CatimeWindow", "Catime"); // 获取窗口句柄
+    if (hwnd) {
+        SetWindowPos(hwnd, NULL, CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+    }
 }
 
 // 对话框过程函数
@@ -217,13 +231,22 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             break;
         }
         case WM_TIMER: {
-            if (elapsed_time < CLOCK_TOTAL_TIME) {
-                elapsed_time++;
-                InvalidateRect(hwnd, NULL, TRUE);
+            if (wp == 2) {  // 检查配置文件的定时器
+                struct stat file_stat;
+                if (stat("./asset/config.txt", &file_stat) == 0) {
+                    if (file_stat.st_mtime > last_config_time) {  // 如果文件被修改
+                        ReadConfig();  // 重新读取配置
+                    }
+                }
             } else {
-                InvalidateRect(hwnd, NULL, TRUE);
-                MessageBox(hwnd, "Time's up! The specified time has passed.", "Catime", MB_OK);
-                KillTimer(hwnd, 1);
+                if (elapsed_time < CLOCK_TOTAL_TIME) {
+                    elapsed_time++;
+                    InvalidateRect(hwnd, NULL, TRUE);
+                } else {
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    MessageBox(hwnd, "Time's up! The specified time has passed.", "Catime", MB_OK);
+                    KillTimer(hwnd, 1);
+                }
             }
             break;
         }
@@ -298,15 +321,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     if (GetLastError() == ERROR_ALREADY_EXISTS) {
         HWND hwnd = FindWindow("CatimeWindow", "Catime");
         if (hwnd) {
-            COPYDATASTRUCT cds;
-            cds.dwData = 1;
-            char time_str[10];
-            sprintf(time_str, "%d", CLOCK_TOTAL_TIME);
-            cds.lpData = time_str;
-            cds.cbData = strlen(time_str) + 1;
-            SendMessage(hwnd, WM_COPYDATA, (WPARAM)hwnd, (LPARAM)&cds);
+            // 关闭旧的实例
+            SendMessage(hwnd, WM_CLOSE, 0, 0);  // 发送关闭消息
         }
-        return 0;
+        // 等待旧实例关闭
+        Sleep(50);  // 等待一段时间以确保旧实例已关闭
     }
 
     WNDCLASS wc = {0};
@@ -350,6 +369,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     if (SetTimer(hwnd, 1, 1000, NULL) == 0) {
         MessageBox(hwnd, "Failed to set timer!", "Error", MB_OK);
     }
+
+    // 设置定时器以检查配置文件的更改
+    SetTimer(hwnd, 2, 500, NULL);  // 每5秒检查一次
 
     ShowWindow(hwnd, nCmdShow);
     UpdateWindow(hwnd);
