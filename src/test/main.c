@@ -17,7 +17,7 @@
 #define MARGIN_LEFT 500        // 距离屏幕左边的距离（像素）
 #define MARGIN_TOP 50          // 距离屏幕顶部的距离（像素）
 #define SHOW_TRAY_ICON 0       // 控制是否显示托盘图标（0为不显示，1为显示）
-#define DISPLAY_DURATION 100     // 显示持续时间（秒）
+#define DISPLAY_DURATION 5     // 显示持续时间（秒）
 
 // 判断文件是否为 PNG 格式
 int is_png(const char *filename) {

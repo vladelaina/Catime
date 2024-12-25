@@ -6,10 +6,10 @@
 #include "rightClickMenu.h"
 
 // 窗口和显示相关的定义
-#define TEXT_COLOR 0xF38B00    // 橙色 (#F38B00)
+#define TEXT_COLOR "#F5DAE3"   
 
 // 窗口尺寸定义
-#define BASE_WINDOW_WIDTH 90    // 基础窗口宽度
+#define BASE_WINDOW_WIDTH 200    // 基础窗口宽度
 #define BASE_WINDOW_HEIGHT 65   // 基础窗口高度
 #define WINDOW_SCALE 1.0       // 窗口尺寸缩放因子
 
@@ -87,6 +87,7 @@ void ExitProgram(HWND hwnd) {
     Shell_NotifyIcon(NIM_DELETE, &nid);
     PostQuitMessage(0);
 }
+
 // 处理消息的窗口过程函数
 LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     static char time_text[50];
@@ -125,12 +126,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             
             HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
             
-            // 设置颜色和背景
-            COLORREF color = RGB(
-                (TEXT_COLOR >> 16) & 0xFF,
-                (TEXT_COLOR >> 8) & 0xFF,
-                TEXT_COLOR & 0xFF
-            );
+            // 解析颜色字符串
+            int r, g, b;
+            sscanf(TEXT_COLOR + 1, "%02x%02x%02x", &r, &g, &b); // 跳过 '#' 并解析 RGB 值
+            
+            COLORREF color = RGB(r, g, b);
             SetTextColor(hdc, color);
             SetBkMode(hdc, TRANSPARENT);
             
