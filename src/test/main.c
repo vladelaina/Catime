@@ -12,7 +12,7 @@
 // 常量定义
 #define SCALE_FACTOR 20        // 图片缩放比例（20 表示 20%）
 #define IMAGE_DIR "./cat"      // 图片文件夹目录
-#define SWITCH_INTERVAL 1000    // 切换到下一张图片的间隔时间（毫秒）
+#define SWITCH_INTERVAL 10    // 切换到下一张图片的间隔时间（毫秒）
 #define EDGE_SIZE 0           // 边缘处理的像素大小
 #define MARGIN_LEFT 500       // 距离屏幕左边的距离（像素）
 #define MARGIN_TOP 50         // 距离屏幕顶部的距离（像素）
@@ -22,6 +22,18 @@
 int is_png(const char *filename) {
     const char *ext = strrchr(filename, '.');
     return ext != NULL && strcmp(ext, ".png") == 0;
+}
+
+// 比较函数，用于 qsort
+int compare(const void *a, const void *b) {
+    const char *fileA = *(const char **)a;
+    const char *fileB = *(const char **)b;
+
+    // 提取数字部分进行比较
+    int numA = atoi(strrchr(fileA, '/') + 1); // 获取文件名中的数字
+    int numB = atoi(strrchr(fileB, '/') + 1); // 获取文件名中的数字
+
+    return numA - numB; // 返回比较结果
 }
 
 // 获取指定目录下的所有 PNG 文件
@@ -43,6 +55,10 @@ int get_png_files(const char *dir, char ***image_files) {
         }
     }
     closedir(d);
+
+    // 对文件名进行排序
+    qsort(*image_files, count, sizeof(char*), compare);
+
     return count;
 }
 
