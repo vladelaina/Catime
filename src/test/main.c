@@ -10,14 +10,14 @@
 #include <math.h>
 
 // 常量定义
-#define SCALE_FACTOR 20        // 图片缩放比例（20 表示 20%）
-#define IMAGE_DIR "./cat"      // 图片文件夹目录
-#define SWITCH_INTERVAL 0.1      // 切换到下一张图片的间隔时间（毫秒）
-#define EDGE_SIZE 0            // 边缘处理的像素大小
-#define MARGIN_LEFT 500        // 距离屏幕左边的距离（像素）
-#define MARGIN_TOP 50          // 距离屏幕顶部的距离（像素）
-#define SHOW_TRAY_ICON 0       // 控制是否显示托盘图标（0为不显示，1为显示）
-#define DISPLAY_DURATION 5     // 显示持续时间（秒）
+#define IMAGE_CAROUSEL_SCALE_FACTOR 20        // 图片缩放比例（20 表示 20%）
+#define IMAGE_CAROUSEL_IMAGE_DIR "./cat"      // 图片文件夹目录
+#define IMAGE_CAROUSEL_SWITCH_INTERVAL 20      // 切换到下一张图片的间隔时间（毫秒）
+#define IMAGE_CAROUSEL_EDGE_SIZE 0            // 边缘处理的像素大小
+#define IMAGE_CAROUSEL_MARGIN_LEFT 500        // 距离屏幕左边的距离（像素）
+#define IMAGE_CAROUSEL_MARGIN_TOP 50          // 距离屏幕顶部的距离（像素）
+#define IMAGE_CAROUSEL_SHOW_TRAY_ICON 0       // 控制是否显示托盘图标（0为不显示，1为显示）
+#define IMAGE_CAROUSEL_DISPLAY_DURATION 5     // 显示持续时间（秒）
 
 // 判断文件是否为 PNG 格式
 int is_png(const char *filename) {
@@ -89,8 +89,8 @@ SDL_Surface* process_alpha(SDL_Surface* surface) {
             SDL_GetRGBA(src[idx], surface->format, &r, &g, &b, &a);
             
             if (a > 0) {
-                const int dx[] = {-EDGE_SIZE , 0, EDGE_SIZE , -EDGE_SIZE , EDGE_SIZE , -EDGE_SIZE , 0, EDGE_SIZE };
-                const int dy[] = {-EDGE_SIZE , -EDGE_SIZE , -EDGE_SIZE , 0, 0, EDGE_SIZE , EDGE_SIZE , EDGE_SIZE };
+                const int dx[] = {-IMAGE_CAROUSEL_EDGE_SIZE , 0, IMAGE_CAROUSEL_EDGE_SIZE , -IMAGE_CAROUSEL_EDGE_SIZE , IMAGE_CAROUSEL_EDGE_SIZE , -IMAGE_CAROUSEL_EDGE_SIZE , 0, IMAGE_CAROUSEL_EDGE_SIZE };
+                const int dy[] = {-IMAGE_CAROUSEL_EDGE_SIZE , -IMAGE_CAROUSEL_EDGE_SIZE , -IMAGE_CAROUSEL_EDGE_SIZE , 0, 0, IMAGE_CAROUSEL_EDGE_SIZE , IMAGE_CAROUSEL_EDGE_SIZE , IMAGE_CAROUSEL_EDGE_SIZE };
                 
                 for (int i = 0; i < 8; i++) {
                     int nx = x + dx[i];
@@ -186,7 +186,7 @@ void process_and_display_image(const char* image_path, SDL_Window* window, HDC h
 
                     POINT ptSrc = {0, 0};
                     SIZE sizeWnd = {imgWidth, imgHeight};
-                    POINT ptDst = {MARGIN_LEFT, MARGIN_TOP};
+                    POINT ptDst = {IMAGE_CAROUSEL_MARGIN_LEFT, IMAGE_CAROUSEL_MARGIN_TOP};
 
                     UpdateLayeredWindow(hwnd, hdcScreen, &ptDst, &sizeWnd, 
                                      hdcMemory, &ptSrc, 0, &blend, ULW_ALPHA);
@@ -213,9 +213,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     }
 
     char **image_files = NULL;
-    int image_count = get_png_files(IMAGE_DIR, &image_files);
+    int image_count = get_png_files(IMAGE_CAROUSEL_IMAGE_DIR, &image_files);
     if (image_count == 0) {
-        fprintf(stderr, "No PNG files found in %s\n", IMAGE_DIR);
+        fprintf(stderr, "No PNG files found in %s\n", IMAGE_CAROUSEL_IMAGE_DIR);
         IMG_Quit();
         SDL_Quit();
         return 1;
@@ -229,13 +229,13 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         return 1;
     }
 
-    int imgWidth = (image->w * SCALE_FACTOR) / 100;
-    int imgHeight = (image->h * SCALE_FACTOR) / 100;
+    int imgWidth = (image->w * IMAGE_CAROUSEL_SCALE_FACTOR) / 100;
+    int imgHeight = (image->h * IMAGE_CAROUSEL_SCALE_FACTOR) / 100;
     SDL_FreeSurface(image);
 
     SDL_Window *window = SDL_CreateWindow("SDL2 Image Display", 
-        MARGIN_LEFT,
-        MARGIN_TOP,
+        IMAGE_CAROUSEL_MARGIN_LEFT,
+        IMAGE_CAROUSEL_MARGIN_TOP,
         imgWidth, 
         imgHeight, 
         SDL_WINDOW_SHOWN | SDL_WINDOW_BORDERLESS);
@@ -269,15 +269,15 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     UpdateLayeredWindow(hwnd, hdcScreen, NULL, NULL, NULL, NULL, 0, &blend, ULW_ALPHA);
     
     SetWindowPos(hwnd, HWND_TOPMOST, 
-        MARGIN_LEFT, 
-        MARGIN_TOP, 
+        IMAGE_CAROUSEL_MARGIN_LEFT, 
+        IMAGE_CAROUSEL_MARGIN_TOP, 
         imgWidth, 
         imgHeight, 
         SWP_NOACTIVATE);
 
     HDC hdcMemory = CreateCompatibleDC(hdcScreen);
 
-    #if SHOW_TRAY_ICON
+    #if IMAGE_CAROUSEL_SHOW_TRAY_ICON
     NOTIFYICONDATA nid;
     ZeroMemory(&nid, sizeof(NOTIFYICONDATA));
     nid.cbSize = sizeof(NOTIFYICONDATA);
@@ -309,8 +309,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
         Uint32 current_time = SDL_GetTicks();
 
-        // 使用 SWITCH_INTERVAL 来控制切换速度
-        if (current_time - last_time >= SWITCH_INTERVAL) {
+        // 使用 IMAGE_CAROUSEL_SWITCH_INTERVAL 来控制切换速度
+        if (current_time - last_time >= IMAGE_CAROUSEL_SWITCH_INTERVAL) {
             last_time = current_time;
             current_image_index = (current_image_index + 1) % image_count;
             process_and_display_image(image_files[current_image_index], 
@@ -319,14 +319,14 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         }
 
         // 检查是否超过显示持续时间
-        if ((current_time - start_time) / 1000 >= DISPLAY_DURATION) {
+        if ((current_time - start_time) / 1000 >= IMAGE_CAROUSEL_DISPLAY_DURATION) {
             quit = 1; // 超过时间后退出
         }
 
         SDL_Delay(1);
     }
 
-    #if SHOW_TRAY_ICON
+    #if IMAGE_CAROUSEL_SHOW_TRAY_ICON
     Shell_NotifyIcon(NIM_DELETE, &nid);
     #endif
     
