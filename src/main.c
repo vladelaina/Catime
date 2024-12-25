@@ -270,17 +270,19 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                 case 101:   // Customize  
                     DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc);  
 
+                    // 检查输入文本是否为空
+                    if (inputText[0] == '\0') {
+                        // 如果没有输入值，直接忽略
+                        return TRUE;
+                    }
+
                     int input_time = 0;
 
-                    if (inputText[0] == '\0') {
-                        CLOCK_TOTAL_TIME = CLOCK_DEFAULT_START_TIME;  // 使用定义的默认启动时间
-                    }
-                    else if (inputText[strlen(inputText) - 1] == 's') {
+                    if (inputText[strlen(inputText) - 1] == 's') {
                         inputText[strlen(inputText) - 1] = '\0';
                         input_time = atoi(inputText);
                         CLOCK_TOTAL_TIME = input_time;
-                    }
-                    else {
+                    } else {
                         input_time = atoi(inputText);
                         if (input_time == 0) {
                             CLOCK_TOTAL_TIME = 0;

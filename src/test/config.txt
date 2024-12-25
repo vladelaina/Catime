@@ -1,23 +1,56 @@
+# 这是一个配置文件，用于设置 Catime 应用程序的参数
+
+# 窗口和显示相关的定义
+CLOCK_TEXT_COLOR=#F5DAE3  # 时钟文本颜色
+CLOCK_TEXT_LAYER_COUNT=4    # 时钟文本层数
+
+# 窗口尺寸定义
+CLOCK_BASE_WINDOW_WIDTH=200 # 基础窗口宽度
+CLOCK_BASE_WINDOW_HEIGHT=65   # 基础窗口高度
+CLOCK_WINDOW_SCALE=2.0       # 窗口尺寸缩放因子
+
+# 字体相关定义
+CLOCK_BASE_FONT_SIZE=58      # 基准字体大小
+CLOCK_FONT_SCALE_FACTOR=1.0   # 字体缩放因子（相对于窗口大小）
+
+# 默认启动时的倒计时时长
+CLOCK_DEFAULT_START_TIME=100  # 默认启动时的倒计时时长（单位：秒）
+
+# 窗口位置定义
+CLOCK_WINDOW_POS_X=100           # 窗口 X 坐标
+CLOCK_WINDOW_POS_Y=300          # 窗口 Y 坐标
+
+# 控件ID
+CLOCK_IDC_EDIT=108             # 编辑框控件ID
+CLOCK_IDC_BUTTON_OK=109        # 确定按钮控件ID
+CLOCK_IDD_DIALOG1=1002         # 对话框ID
+CLOCK_ID_TRAY_APP_ICON=1001    # 托盘图标ID
+
+# 定义时间选项
+CLOCK_TIME_OPTIONS=88,10,25,120,1
+
+
+
 # 图片缩放比例（20 表示 20%）
 IMAGE_CAROUSEL_SCALE_FACTOR=20
 
 # 图片文件夹目录
-IMAGE_CAROUSEL_IMAGE_DIR=./cat
+IMAGE_CAROUSEL_IMAGE_DIR=./asset/images/moving/1
 
 # 切换到下一张图片的间隔时间（毫秒）
-IMAGE_CAROUSEL_SWITCH_INTERVAL=20
+IMAGE_CAROUSEL_SWITCH_INTERVAL=1
 
 # 边缘处理的像素大小
 IMAGE_CAROUSEL_EDGE_SIZE=0
 
 # 距离屏幕左边的距离（像素）
-IMAGE_CAROUSEL_MARGIN_LEFT=500
+IMAGE_CAROUSEL_MARGIN_LEFT=200
 
 # 距离屏幕顶部的距离（像素）
-IMAGE_CAROUSEL_MARGIN_TOP=50
+IMAGE_CAROUSEL_MARGIN_TOP=-10
 
 # 控制是否显示托盘图标（0为不显示，1为显示）
 IMAGE_CAROUSEL_SHOW_TRAY_ICON=0
 
 # 显示持续时间（秒）
-IMAGE_CAROUSEL_DISPLAY_DURATION=5
+IMAGE_CAROUSEL_DISPLAY_DURATION=100
