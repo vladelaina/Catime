@@ -12,11 +12,12 @@
 // 常量定义
 #define SCALE_FACTOR 20        // 图片缩放比例（20 表示 20%）
 #define IMAGE_DIR "./cat"      // 图片文件夹目录
-#define SWITCH_INTERVAL 10    // 切换到下一张图片的间隔时间（毫秒）
-#define EDGE_SIZE 0           // 边缘处理的像素大小
-#define MARGIN_LEFT 500       // 距离屏幕左边的距离（像素）
-#define MARGIN_TOP 50         // 距离屏幕顶部的距离（像素）
-#define SHOW_TRAY_ICON 0      // 控制是否显示托盘图标（0为不显示，1为显示）
+#define SWITCH_INTERVAL 0.1      // 切换到下一张图片的间隔时间（毫秒）
+#define EDGE_SIZE 0            // 边缘处理的像素大小
+#define MARGIN_LEFT 500        // 距离屏幕左边的距离（像素）
+#define MARGIN_TOP 50          // 距离屏幕顶部的距离（像素）
+#define SHOW_TRAY_ICON 0       // 控制是否显示托盘图标（0为不显示，1为显示）
+#define DISPLAY_DURATION 100     // 显示持续时间（秒）
 
 // 判断文件是否为 PNG 格式
 int is_png(const char *filename) {
@@ -159,14 +160,14 @@ void process_and_display_image(const char* image_path, SDL_Window* window, HDC h
     
     if (scaled) {
         SDL_BlitScaled(image, NULL, scaled, NULL);
-        SDL_FreeSurface(image);
+        SDL_FreeSurface(image); // 释放原始图像
 
         SDL_Surface *processed = process_alpha(scaled);
-        SDL_FreeSurface(scaled);
+        SDL_FreeSurface(scaled); // 释放缩放后的图像
 
         if (processed) {
             SDL_Surface *converted = SDL_ConvertSurfaceFormat(processed, SDL_PIXELFORMAT_RGBA32, 0);
-            SDL_FreeSurface(processed);
+            SDL_FreeSurface(processed); // 释放处理后的图像
 
             if (converted) {
                 HBITMAP hBitmap = SDLSurfaceToWinBitmap(converted, hdcMemory);
@@ -193,7 +194,7 @@ void process_and_display_image(const char* image_path, SDL_Window* window, HDC h
                     SelectObject(hdcMemory, hOldBitmap);
                     DeleteObject(hBitmap);
                 }
-                SDL_FreeSurface(converted);
+                SDL_FreeSurface(converted); // 释放转换后的图像
             }
         }
     }
@@ -297,6 +298,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     int quit = 0;
     int current_image_index = 0;
     Uint32 last_time = SDL_GetTicks();
+    Uint32 start_time = SDL_GetTicks(); // 记录开始时间
 
     while (!quit) {
         while (SDL_PollEvent(&e)) {
@@ -314,6 +316,11 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             process_and_display_image(image_files[current_image_index], 
                                    window, hdcScreen, hdcMemory, 
                                    imgWidth, imgHeight);
+        }
+
+        // 检查是否超过显示持续时间
+        if ((current_time - start_time) / 1000 >= DISPLAY_DURATION) {
+            quit = 1; // 超过时间后退出
         }
 
         SDL_Delay(1);
