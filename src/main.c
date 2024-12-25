@@ -25,9 +25,10 @@ int CLOCK_ID_TRAY_APP_ICON;  // 托盘图标ID
 // 自定义消息 ID
 #define CLOCK_WM_TRAYICON        (WM_USER + 2)  // 自定义消息 ID
 
-// 定义时间选项
-int time_options[3];  // 时间选项数组
-int time_options_count = sizeof(time_options) / sizeof(time_options[0]);  // 计算时间选项的数量
+// 定义最大时间选项数量
+#define MAX_TIME_OPTIONS 10  // 定义最大时间选项数量
+int time_options[MAX_TIME_OPTIONS];  // 时间选项数组
+int time_options_count = 0;  // 初始化时间选项数量
 
 // 全局变量用于保存输入内容
 char inputText[256] = {0};  // 设置全局变量
@@ -49,14 +50,21 @@ void ReadConfig() {
     }
 
     char line[256];
-    int option_index = 0;  // 用于存储时间选项的索引
     while (fgets(line, sizeof(line), file)) {
         // 跳过空行和注释行
         if (line[0] == '\n' || line[0] == '#') {
             continue;
         }
 
-        // 读取配置项
+        // 读取时间选项
+        if (sscanf(line, "CLOCK_TIME_OPTIONS=%[^\n]", line) == 1) {
+            char *token = strtok(line, ",");
+            while (token != NULL && time_options_count < MAX_TIME_OPTIONS) {
+                time_options[time_options_count++] = atoi(token);  // 将字符串转换为整数并存储
+                token = strtok(NULL, ",");
+            }
+            continue;
+        }
         if (sscanf(line, "CLOCK_TEXT_COLOR=%s", CLOCK_TEXT_COLOR) == 1) continue;
         if (sscanf(line, "CLOCK_TEXT_LAYER_COUNT=%d", &CLOCK_TEXT_LAYER_COUNT) == 1) continue;
         if (sscanf(line, "CLOCK_BASE_WINDOW_WIDTH=%d", &CLOCK_BASE_WINDOW_WIDTH) == 1) continue;
@@ -71,12 +79,6 @@ void ReadConfig() {
         if (sscanf(line, "CLOCK_IDC_BUTTON_OK=%d", &CLOCK_IDC_BUTTON_OK) == 1) continue;
         if (sscanf(line, "CLOCK_IDD_DIALOG1=%d", &CLOCK_IDD_DIALOG1) == 1) continue;
         if (sscanf(line, "CLOCK_ID_TRAY_APP_ICON=%d", &CLOCK_ID_TRAY_APP_ICON) == 1) continue;
-
-        // 读取时间选项
-        if (option_index < time_options_count) {
-            sscanf(line, "CLOCK_TIME_OPTION_%d=%d", &option_index, &time_options[option_index - 1]);
-            option_index++;
-        }
     }
 
     fclose(file);
