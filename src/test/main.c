@@ -10,14 +10,43 @@
 #include <math.h>
 
 // 常量定义
-#define IMAGE_CAROUSEL_SCALE_FACTOR 20        // 图片缩放比例（20 表示 20%）
-#define IMAGE_CAROUSEL_IMAGE_DIR "./cat"      // 图片文件夹目录
-#define IMAGE_CAROUSEL_SWITCH_INTERVAL 20      // 切换到下一张图片的间隔时间（毫秒）
-#define IMAGE_CAROUSEL_EDGE_SIZE 0            // 边缘处理的像素大小
-#define IMAGE_CAROUSEL_MARGIN_LEFT 500        // 距离屏幕左边的距离（像素）
-#define IMAGE_CAROUSEL_MARGIN_TOP 50          // 距离屏幕顶部的距离（像素）
-#define IMAGE_CAROUSEL_SHOW_TRAY_ICON 0       // 控制是否显示托盘图标（0为不显示，1为显示）
-#define IMAGE_CAROUSEL_DISPLAY_DURATION 5     // 显示持续时间（秒）
+int IMAGE_CAROUSEL_SCALE_FACTOR;        // 图片缩放比例
+char IMAGE_CAROUSEL_IMAGE_DIR[256];     // 图片文件夹目录
+int IMAGE_CAROUSEL_SWITCH_INTERVAL;      // 切换到下一张图片的间隔时间（毫秒）
+int IMAGE_CAROUSEL_EDGE_SIZE;            // 边缘处理的像素大小
+int IMAGE_CAROUSEL_MARGIN_LEFT;          // 距离屏幕左边的距离（像素）
+int IMAGE_CAROUSEL_MARGIN_TOP;           // 距离屏幕顶部的距离（像素）
+int IMAGE_CAROUSEL_SHOW_TRAY_ICON;       // 控制是否显示托盘图标（0为不显示，1为显示）
+int IMAGE_CAROUSEL_DISPLAY_DURATION;     // 显示持续时间（秒）
+
+// 读取配置文件
+void load_config(const char *filename) {
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        fprintf(stderr, "无法打开配置文件: %s\n", filename);
+        return;
+    }
+
+    char line[256];
+    while (fgets(line, sizeof(line), file)) {
+        // 忽略空行和以 # 开头的行
+        if (line[0] == '\n' || line[0] == '#') {
+            continue;
+        }
+
+        // 读取配置项
+        if (sscanf(line, "IMAGE_CAROUSEL_SCALE_FACTOR=%d", &IMAGE_CAROUSEL_SCALE_FACTOR) == 1) continue;
+        if (sscanf(line, "IMAGE_CAROUSEL_IMAGE_DIR=%s", IMAGE_CAROUSEL_IMAGE_DIR) == 1) continue;
+        if (sscanf(line, "IMAGE_CAROUSEL_SWITCH_INTERVAL=%d", &IMAGE_CAROUSEL_SWITCH_INTERVAL) == 1) continue;
+        if (sscanf(line, "IMAGE_CAROUSEL_EDGE_SIZE=%d", &IMAGE_CAROUSEL_EDGE_SIZE) == 1) continue;
+        if (sscanf(line, "IMAGE_CAROUSEL_MARGIN_LEFT=%d", &IMAGE_CAROUSEL_MARGIN_LEFT) == 1) continue;
+        if (sscanf(line, "IMAGE_CAROUSEL_MARGIN_TOP=%d", &IMAGE_CAROUSEL_MARGIN_TOP) == 1) continue;
+        if (sscanf(line, "IMAGE_CAROUSEL_SHOW_TRAY_ICON=%d", &IMAGE_CAROUSEL_SHOW_TRAY_ICON) == 1) continue;
+        if (sscanf(line, "IMAGE_CAROUSEL_DISPLAY_DURATION=%d", &IMAGE_CAROUSEL_DISPLAY_DURATION) == 1) continue;
+    }
+
+    fclose(file);
+}
 
 // 判断文件是否为 PNG 格式
 int is_png(const char *filename) {
@@ -201,6 +230,9 @@ void process_and_display_image(const char* image_path, SDL_Window* window, HDC h
 }
 
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+    // 加载配置
+    load_config("config.txt");
+
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         fprintf(stderr, "SDL_Init Error: %s\n", SDL_GetError());
         return 1;
