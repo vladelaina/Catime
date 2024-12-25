@@ -33,12 +33,19 @@
 #define IDC_BUTTON_OK 109
 #define IDD_DIALOG1 1002  // 确保与 .rc 文件中的 ID 一致
 
+// 定义时间选项
+#define TIME_OPTIONS {5, 10, 25}  // 定义时间选项为数组
+
 // 全局变量用于保存输入内容
 char inputText[256] = {0};  // 设置全局变量
 
 static int elapsed_time = 0;  // 已经过的时间，全局变量
 static int TOTAL_TIME = DEFAULT_TIME;  // 全局倒计时总时间
 NOTIFYICONDATA nid;  // 托盘图标数据
+
+// 用于存储时间选项
+int time_options[] = TIME_OPTIONS;  // 使用定义的时间选项
+int time_options_count = sizeof(time_options) / sizeof(time_options[0]);  // 计算时间选项的数量
 
 LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);  // 函数声明
 
@@ -89,11 +96,13 @@ void ExitProgram(HWND hwnd) {
 // 托盘图标的右键菜单响应函数
 void ShowContextMenu(HWND hwnd) {
     HMENU hMenu = CreatePopupMenu();
-    // 添加选项：5, 10, 25 分钟
+    // 添加选项：根据 TIME_OPTIONS 的值动态生成菜单项
+    for (int i = 0; i < time_options_count; i++) {
+        char menu_item[10];
+        sprintf(menu_item, "%d", time_options[i]);
+        AppendMenu(hMenu, MF_STRING, 102 + i, menu_item);  // 动态添加菜单项
+    }
     AppendMenu(hMenu, MF_STRING, 101, "Customize");
-    AppendMenu(hMenu, MF_STRING, 102, "5");
-    AppendMenu(hMenu, MF_STRING, 103, "10");
-    AppendMenu(hMenu, MF_STRING, 104, "25");
 
     POINT pt;
     GetCursorPos(&pt);
@@ -218,17 +227,13 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                     }
                     elapsed_time = 0;  
                     break;
-                case 102:  // 5 minutes
-                    TOTAL_TIME = 5 * 60;
-                    elapsed_time = 0;
-                    break;
-                case 103:  // 10 minutes
-                    TOTAL_TIME = 10 * 60;
-                    elapsed_time = 0;
-                    break;
-                case 104:  // 25 minutes
-                    TOTAL_TIME = 25 * 60;
-                    elapsed_time = 0;
+                // 根据菜单项的索引设置 TOTAL_TIME
+                default:
+                    if (LOWORD(wp) >= 102 && LOWORD(wp) < 102 + time_options_count) {
+                        int index = LOWORD(wp) - 102;  // 计算选中的菜单项索引
+                        TOTAL_TIME = time_options[index] * 60;  // 将分钟转换为秒
+                        elapsed_time = 0;
+                    }
                     break;
             }
             if (SetTimer(hwnd, 1, 1000, NULL) == 0) {
