@@ -1,29 +1,48 @@
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
-#include <SDL2/SDL_syswm.h>
-#include <stdio.h>
 #include <windows.h>
-#include <shellapi.h>
-#include <dirent.h>
-#include <string.h>
+#include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
-#include <time.h>
-#include <sys/stat.h> // 添加此行以包含 stat 函数和 struct stat
+#include <string.h>
+#include <fcntl.h>  // 添加文件操作相关的头文件
+#include <io.h>     // 添加文件操作相关的头文件
+#include <sys/stat.h> // 添加文件状态相关的头文件
 
-// 常量定义
-int IMAGE_CAROUSEL_SCALE_FACTOR;        // 图片缩放比例
-char IMAGE_CAROUSEL_IMAGE_DIR[256];     // 图片文件夹目录
-int IMAGE_CAROUSEL_SWITCH_INTERVAL;      // 切换到下一张图片的间隔时间（毫秒）
-int IMAGE_CAROUSEL_EDGE_SIZE;            // 边缘处理的像素大小
-int IMAGE_CAROUSEL_MARGIN_LEFT;          // 距离屏幕左边的距离（像素）
-int IMAGE_CAROUSEL_MARGIN_TOP;           // 距离屏幕顶部的距离（像素）
-int IMAGE_CAROUSEL_SHOW_TRAY_ICON;       // 控制是否显示托盘图标（0为不显示，1为显示）
-int IMAGE_CAROUSEL_DISPLAY_DURATION;     // 显示持续时间（秒）
+// 全局变量
+char CLOCK_TEXT_COLOR[10];  // 时钟文本颜色
+int CLOCK_TEXT_LAYER_COUNT;  // 时钟文本层数
+int CLOCK_BASE_WINDOW_WIDTH;  // 基础窗口宽度
+int CLOCK_BASE_WINDOW_HEIGHT;  // 基础窗口高度
+float CLOCK_WINDOW_SCALE;  // 窗口尺寸缩放因子
+int CLOCK_BASE_FONT_SIZE;  // 基准字体大小
+float CLOCK_FONT_SCALE_FACTOR;  // 字体缩放因子
+int CLOCK_DEFAULT_START_TIME;  // 默认启动时的倒计时时长
+int CLOCK_WINDOW_POS_X;  // 窗口 X 坐标
+int CLOCK_WINDOW_POS_Y;  // 窗口 Y 坐标
+int CLOCK_IDC_EDIT;  // 编辑框控件ID
+int CLOCK_IDC_BUTTON_OK;  // 确定按钮控件ID
+int CLOCK_IDD_DIALOG1;  // 对话框ID
+int CLOCK_ID_TRAY_APP_ICON;  // 托盘图标ID
 
-// 读取配置文件
-void load_config(const char *filename) {
-    const char *config_path = "./asset/config.txt"; // 新的配置文件路径
+// 自定义消息 ID
+#define CLOCK_WM_TRAYICON        (WM_USER + 2)  // 自定义消息 ID
+
+// 定义最大时间选项数量
+#define MAX_TIME_OPTIONS 10  // 定义最大时间选项数量
+int time_options[MAX_TIME_OPTIONS];  // 时间选项数组
+int time_options_count = 0;  // 初始化时间选项数量
+
+// 全局变量用于保存输入内容
+char inputText[256] = {0};  // 设置全局变量
+static int elapsed_time = 0;  // 已经过的时间，全局变量
+static int CLOCK_TOTAL_TIME = 0;  // 全局倒计时总时间
+NOTIFYICONDATA nid;  // 托盘图标数据
+
+// 函数声明
+LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
+void ReadConfig();
+
+// 读取配置文件的函数
+void ReadConfig() {
+    const char *config_path = "./asset/config.txt"; // 配置文件路径
     FILE *file = fopen(config_path, "r");
     if (!file) {
         fprintf(stderr, "无法打开配置文件: %s\n", config_path);
@@ -32,369 +51,311 @@ void load_config(const char *filename) {
 
     char line[256];
     while (fgets(line, sizeof(line), file)) {
-        // 忽略空行和以 # 开头的行
+        // 跳过空行和注释行
         if (line[0] == '\n' || line[0] == '#') {
             continue;
         }
 
-        // 读取配置项
-        if (sscanf(line, "IMAGE_CAROUSEL_SCALE_FACTOR=%d", &IMAGE_CAROUSEL_SCALE_FACTOR) == 1) continue;
-        if (sscanf(line, "IMAGE_CAROUSEL_IMAGE_DIR=%s", IMAGE_CAROUSEL_IMAGE_DIR) == 1) continue;
-        if (sscanf(line, "IMAGE_CAROUSEL_SWITCH_INTERVAL=%d", &IMAGE_CAROUSEL_SWITCH_INTERVAL) == 1) continue;
-        if (sscanf(line, "IMAGE_CAROUSEL_EDGE_SIZE=%d", &IMAGE_CAROUSEL_EDGE_SIZE) == 1) continue;
-        if (sscanf(line, "IMAGE_CAROUSEL_MARGIN_LEFT=%d", &IMAGE_CAROUSEL_MARGIN_LEFT) == 1) continue;
-        if (sscanf(line, "IMAGE_CAROUSEL_MARGIN_TOP=%d", &IMAGE_CAROUSEL_MARGIN_TOP) == 1) continue;
-        if (sscanf(line, "IMAGE_CAROUSEL_SHOW_TRAY_ICON=%d", &IMAGE_CAROUSEL_SHOW_TRAY_ICON) == 1) continue;
-        if (sscanf(line, "IMAGE_CAROUSEL_DISPLAY_DURATION=%d", &IMAGE_CAROUSEL_DISPLAY_DURATION) == 1) continue;
+        // 读取时间选项
+        if (sscanf(line, "CLOCK_TIME_OPTIONS=%[^\n]", line) == 1) {
+            char *token = strtok(line, ",");
+            while (token != NULL && time_options_count < MAX_TIME_OPTIONS) {
+                time_options[time_options_count++] = atoi(token);  // 将字符串转换为整数并存储
+                token = strtok(NULL, ",");
+            }
+            continue;
+        }
+        if (sscanf(line, "CLOCK_TEXT_COLOR=%s", CLOCK_TEXT_COLOR) == 1) continue;
+        if (sscanf(line, "CLOCK_TEXT_LAYER_COUNT=%d", &CLOCK_TEXT_LAYER_COUNT) == 1) continue;
+        if (sscanf(line, "CLOCK_BASE_WINDOW_WIDTH=%d", &CLOCK_BASE_WINDOW_WIDTH) == 1) continue;
+        if (sscanf(line, "CLOCK_BASE_WINDOW_HEIGHT=%d", &CLOCK_BASE_WINDOW_HEIGHT) == 1) continue;
+        if (sscanf(line, "CLOCK_WINDOW_SCALE=%f", &CLOCK_WINDOW_SCALE) == 1) continue;
+        if (sscanf(line, "CLOCK_BASE_FONT_SIZE=%d", &CLOCK_BASE_FONT_SIZE) == 1) continue;
+        if (sscanf(line, "CLOCK_FONT_SCALE_FACTOR=%f", &CLOCK_FONT_SCALE_FACTOR) == 1) continue;
+        if (sscanf(line, "CLOCK_DEFAULT_START_TIME=%d", &CLOCK_DEFAULT_START_TIME) == 1) continue;
+        if (sscanf(line, "CLOCK_WINDOW_POS_X=%d", &CLOCK_WINDOW_POS_X) == 1) continue;
+        if (sscanf(line, "CLOCK_WINDOW_POS_Y=%d", &CLOCK_WINDOW_POS_Y) == 1) continue;
+        if (sscanf(line, "CLOCK_IDC_EDIT=%d", &CLOCK_IDC_EDIT) == 1) continue;
+        if (sscanf(line, "CLOCK_IDC_BUTTON_OK=%d", &CLOCK_IDC_BUTTON_OK) == 1) continue;
+        if (sscanf(line, "CLOCK_IDD_DIALOG1=%d", &CLOCK_IDD_DIALOG1) == 1) continue;
+        if (sscanf(line, "CLOCK_ID_TRAY_APP_ICON=%d", &CLOCK_ID_TRAY_APP_ICON) == 1) continue;
     }
 
     fclose(file);
 }
 
-// 获取文件的最后修改时间
-time_t get_file_modification_time(const char *filename) {
-    struct stat fileInfo; // 使用标准的 struct stat
-    if (stat(filename, &fileInfo) == 0) { // 使用 stat 函数
-        return fileInfo.st_mtime; // 返回最后修改时间
+// 对话框过程函数
+INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    switch (msg) {
+        case WM_INITDIALOG:
+            SendMessage(hwndDlg, DM_SETDEFID, CLOCK_IDC_BUTTON_OK, 0);
+            return TRUE;
+
+        case WM_COMMAND:
+            if (LOWORD(wParam) == CLOCK_IDC_BUTTON_OK || HIWORD(wParam) == BN_CLICKED) {
+                GetDlgItemText(hwndDlg, CLOCK_IDC_EDIT, inputText, sizeof(inputText));
+                EndDialog(hwndDlg, 0);
+                return TRUE;
+            }
+            break;
+
+        case WM_KEYDOWN:
+            if (wParam == VK_RETURN) {
+                SendMessage(hwndDlg, WM_COMMAND, CLOCK_IDC_BUTTON_OK, 0);
+                return TRUE;
+            }
+            break;
     }
-    return -1; // 返回-1表示获取失败
+    return FALSE;
 }
 
-// 判断文件是否为 PNG 格式
-int is_png(const char *filename) {
-    const char *ext = strrchr(filename, '.');
-    return ext != NULL && strcmp(ext, ".png") == 0;
+// 格式化倒计时文本的函数
+void FormatTime(int remaining_time, char* time_text) {
+    int minutes = remaining_time / 60;
+    int seconds = remaining_time % 60;
+    if (minutes == 0 && seconds < 10) {
+        sprintf(time_text, "%d", seconds);  // 只显示秒数
+    } else if (minutes == 0) {
+        sprintf(time_text, "%d", seconds);
+    } else {
+        sprintf(time_text, "%d:%02d", minutes, seconds);
+    }
 }
 
-// 比较函数，用于 qsort
-int compare(const void *a, const void *b) {
-    const char *fileA = *(const char **)a;
-    const char *fileB = *(const char **)b;
-
-    // 提取数字部分进行比较
-    int numA = atoi(strrchr(fileA, '/') + 1); // 获取文件名中的数字
-    int numB = atoi(strrchr(fileB, '/') + 1); // 获取文件名中的数字
-
-    return numA - numB; // 返回比较结果
+// 退出程序的函数
+void ExitProgram(HWND hwnd) {
+    Shell_NotifyIcon(NIM_DELETE, &nid);
+    PostQuitMessage(0);
 }
 
-// 获取指定目录下的所有 PNG 文件
-int get_png_files(const char *dir, char ***image_files) {
-    DIR *d = opendir(dir);
-    if (d == NULL) {
-        fprintf(stderr, "Failed to open directory: %s\n", dir);
+// 托盘图标的右键菜单响应函数
+void ShowContextMenu(HWND hwnd) {
+    HMENU hMenu = CreatePopupMenu();
+    // 将 "Customize" 选项放在最上面
+    AppendMenu(hMenu, MF_STRING, 101, "Customize");
+
+    // 添加选项：根据时间选项动态生成菜单项
+    for (int i = 0; i < time_options_count; i++) {
+        char menu_item[10];
+        sprintf(menu_item, "%d", time_options[i]);
+        AppendMenu(hMenu, MF_STRING, 102 + i, menu_item);  // 动态添加菜单项
+    }
+
+    POINT pt;
+    GetCursorPos(&pt);
+    SetForegroundWindow(hwnd);  // 确保菜单显示在应用程序的窗口上
+    TrackPopupMenu(hMenu, TPM_BOTTOMALIGN | TPM_LEFTALIGN, pt.x, pt.y, 0, hwnd, NULL);
+    DestroyMenu(hMenu);
+}
+
+// 处理消息的窗口过程函数
+LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
+    static char time_text[50];
+    UINT uID;
+    UINT uMouseMsg;
+
+    switch (msg) {
+        case WM_PAINT: {
+            PAINTSTRUCT ps;
+            HDC hdc = BeginPaint(hwnd, &ps);
+            int remaining_time = CLOCK_TOTAL_TIME - elapsed_time;
+
+            if (elapsed_time >= CLOCK_TOTAL_TIME) {
+                sprintf(time_text, "Time's up!");
+            } else {
+                FormatTime(remaining_time, time_text);
+            }
+
+            // 创建字体，使用等比例缩放
+            HFONT hFont = CreateFont(
+                -CLOCK_BASE_FONT_SIZE * CLOCK_FONT_SCALE_FACTOR,                 
+                0,                          
+                0,                          
+                0,                          
+                FW_BOLD,                    
+                FALSE,                      
+                FALSE,                      
+                FALSE,                      
+                DEFAULT_CHARSET,            
+                OUT_TT_PRECIS,             
+                CLIP_DEFAULT_PRECIS,        
+                ANTIALIASED_QUALITY,        
+                FF_DONTCARE | DEFAULT_PITCH,
+                "Arial"                     
+            );
+            
+            HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
+            
+            // 解析颜色字符串
+            int r, g, b;
+            sscanf(CLOCK_TEXT_COLOR + 1, "%02x%02x%02x", &r, &g, &b); 
+            
+            COLORREF color = RGB(r, g, b);
+            SetTextColor(hdc, color);
+            SetBkMode(hdc, TRANSPARENT);
+            
+            RECT rect;
+            GetClientRect(hwnd, &rect);
+            FillRect(hdc, &rect, (HBRUSH)GetStockObject(BLACK_BRUSH));
+            
+            // 计算文本位置以居中显示
+            SIZE textSize;
+            GetTextExtentPoint32(hdc, time_text, strlen(time_text), &textSize);
+            int x = (CLOCK_BASE_WINDOW_WIDTH - textSize.cx) / 2;
+            int y = (CLOCK_BASE_WINDOW_HEIGHT - textSize.cy) / 2;
+
+            // 绘制多层文本
+            for (int i = 0; i < CLOCK_TEXT_LAYER_COUNT; i++) {
+                TextOutA(hdc, x, y, time_text, strlen(time_text));
+            }
+            
+            // 清理资源
+            SelectObject(hdc, hOldFont);
+            DeleteObject(hFont);
+            
+            EndPaint(hwnd, &ps);
+            break;
+        }
+        case WM_TIMER: {
+            if (elapsed_time < CLOCK_TOTAL_TIME) {
+                elapsed_time++;
+                InvalidateRect(hwnd, NULL, TRUE);
+            } else {
+                InvalidateRect(hwnd, NULL, TRUE);
+                MessageBox(hwnd, "Time's up! The specified time has passed.", "Catime", MB_OK);
+                KillTimer(hwnd, 1);
+            }
+            break;
+        }
+        case WM_DESTROY: {
+            ExitProgram(hwnd);
+            break;
+        }
+        case CLOCK_WM_TRAYICON: {
+            uID = (UINT)wp;
+            uMouseMsg = (UINT)lp;
+
+            if (uMouseMsg == WM_LBUTTONDOWN) {
+                ExitProgram(hwnd);
+            } else if (uMouseMsg == WM_RBUTTONUP) {
+                ShowContextMenu(hwnd);
+            }
+            break;
+        }
+        case WM_COMMAND: {
+            switch (LOWORD(wp)) {
+                case 101:   // Customize  
+                    DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc);  
+
+                    int input_time = 0;
+
+                    if (inputText[0] == '\0') {
+                        CLOCK_TOTAL_TIME = CLOCK_DEFAULT_START_TIME;  // 使用定义的默认启动时间
+                    }
+                    else if (inputText[strlen(inputText) - 1] == 's') {
+                        inputText[strlen(inputText) - 1] = '\0';
+                        input_time = atoi(inputText);
+                        CLOCK_TOTAL_TIME = input_time;
+                    }
+                    else {
+                        input_time = atoi(inputText);
+                        if (input_time == 0) {
+                            CLOCK_TOTAL_TIME = 0;
+                        } else {
+                            CLOCK_TOTAL_TIME = input_time * 60;
+                        }
+                    }
+                    elapsed_time = 0;  
+                    break;
+                // 根据菜单项的索引设置 CLOCK_TOTAL_TIME
+                default:
+                    if (LOWORD(wp) >= 102 && LOWORD(wp) < 102 + time_options_count) {
+                        int index = LOWORD(wp) - 102;  // 计算选中的菜单项索引
+                        CLOCK_TOTAL_TIME = time_options[index] * 60;  // 将分钟转换为秒
+                        elapsed_time = 0;
+                    }
+                    break;
+            }
+            if (SetTimer(hwnd, 1, 1000, NULL) == 0) {
+                MessageBox(hwnd, "Failed to set timer!", "Error", MB_OK);
+            }
+            break;
+        }
+        default:
+            return DefWindowProc(hwnd, msg, wp, lp);
+    }
+    return 0;
+}
+
+// GUI 程序的入口点 WinMain
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+    ReadConfig();  // 读取配置文件
+
+    // 设置默认倒计时时长
+    CLOCK_TOTAL_TIME = CLOCK_DEFAULT_START_TIME;
+
+    HANDLE hMutex = CreateMutex(NULL, TRUE, "CatimeMutex");
+    if (GetLastError() == ERROR_ALREADY_EXISTS) {
+        HWND hwnd = FindWindow("CatimeWindow", "Catime");
+        if (hwnd) {
+            // 关闭旧的实例
+            SendMessage(hwnd, WM_CLOSE, 0, 0);  // 发送关闭消息
+        }
+        // 等待旧实例关闭
+        Sleep(100);  // 等待一段时间以确保旧实例已关闭
+    }
+
+    WNDCLASS wc = {0};
+    wc.lpfnWndProc = WindowProcedure;
+    wc.hInstance = hInstance;
+    wc.lpszClassName = "CatimeWindow";
+    if (!RegisterClass(&wc)) {
+        MessageBox(NULL, "Window Registration Failed!", "Error", MB_ICONEXCLAMATION | MB_OK);
         return 0;
     }
 
-    struct dirent *entry;
-    int count = 0;
-    while ((entry = readdir(d)) != NULL) {
-        if (is_png(entry->d_name)) {
-            (*image_files) = realloc(*image_files, sizeof(char*) * (count + 1));
-            (*image_files)[count] = malloc(strlen(dir) + strlen(entry->d_name) + 2);
-            sprintf((*image_files)[count], "%s/%s", dir, entry->d_name);
-            count++;
-        }
-    }
-    closedir(d);
+    HWND hwnd = CreateWindowEx(
+        WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
+        "CatimeWindow",
+        "Catime",
+        WS_POPUP,
+        CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y,
+        CLOCK_BASE_WINDOW_WIDTH, CLOCK_BASE_WINDOW_HEIGHT,
+        NULL,
+        NULL,
+        hInstance,
+        NULL
+    );
 
-    // 对文件名进行排序
-    qsort(*image_files, count, sizeof(char*), compare);
-
-    return count;
-}
-
-// 处理 alpha 通道和边缘
-SDL_Surface* process_alpha(SDL_Surface* surface) {
-    SDL_Surface* result = SDL_CreateRGBSurface(0, surface->w, surface->h, 32,
-        0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
-    
-    if (!result) return NULL;
-    
-    SDL_LockSurface(surface);
-    SDL_LockSurface(result);
-    
-    Uint32* src = (Uint32*)surface->pixels;
-    Uint32* dst = (Uint32*)result->pixels;
-    
-    // 第一遍：复制原始数据
-    for (int i = 0; i < surface->w * surface->h; i++) {
-        dst[i] = src[i];
-    }
-    
-    // 第二遍：处理边缘像素
-    for (int y = 0; y < surface->h; y++) {
-        for (int x = 0; x < surface->w; x++) {
-            int idx = y * surface->w + x;
-            Uint8 r, g, b, a;
-            SDL_GetRGBA(src[idx], surface->format, &r, &g, &b, &a);
-            
-            if (a > 0) {
-                const int dx[] = {-IMAGE_CAROUSEL_EDGE_SIZE , 0, IMAGE_CAROUSEL_EDGE_SIZE , -IMAGE_CAROUSEL_EDGE_SIZE , IMAGE_CAROUSEL_EDGE_SIZE , -IMAGE_CAROUSEL_EDGE_SIZE , 0, IMAGE_CAROUSEL_EDGE_SIZE };
-                const int dy[] = {-IMAGE_CAROUSEL_EDGE_SIZE , -IMAGE_CAROUSEL_EDGE_SIZE , -IMAGE_CAROUSEL_EDGE_SIZE , 0, 0, IMAGE_CAROUSEL_EDGE_SIZE , IMAGE_CAROUSEL_EDGE_SIZE , IMAGE_CAROUSEL_EDGE_SIZE };
-                
-                for (int i = 0; i < 8; i++) {
-                    int nx = x + dx[i];
-                    int ny = y + dy[i];
-                    
-                    if (nx >= 0 && nx < surface->w && ny >= 0 && ny < surface->h) {
-                        Uint8 nr, ng, nb, na;
-                        SDL_GetRGBA(src[ny * surface->w + nx], surface->format, &nr, &ng, &nb, &na);
-                        
-                        if (na == 0) {
-                            dst[idx] = SDL_MapRGBA(result->format, 0, 0, 0, 0);
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    SDL_UnlockSurface(result);
-    SDL_UnlockSurface(surface);
-    
-    return result;
-}
-
-// 将SDL表面转换为Windows位图
-HBITMAP SDLSurfaceToWinBitmap(SDL_Surface* surface, HDC hdc) {
-    BITMAPINFO bmi;
-    ZeroMemory(&bmi, sizeof(BITMAPINFO));
-    bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-    bmi.bmiHeader.biWidth = surface->w;
-    bmi.bmiHeader.biHeight = -surface->h;  // 负值表示从上到下
-    bmi.bmiHeader.biPlanes = 1;
-    bmi.bmiHeader.biBitCount = 32;
-    bmi.bmiHeader.biCompression = BI_RGB;
-
-    void* bits;
-    HBITMAP hBitmap = CreateDIBSection(hdc, &bmi, DIB_RGB_COLORS, &bits, NULL, 0);
-    if (!hBitmap) return NULL;
-
-    SDL_LockSurface(surface);
-    Uint32* src = (Uint32*)surface->pixels;
-    Uint32* dst = (Uint32*)bits;
-    
-    for (int i = 0; i < surface->w * surface->h; i++) {
-        Uint8 r, g, b, a;
-        SDL_GetRGBA(src[i], surface->format, &r, &g, &b, &a);
-        
-        if (a == 0) {
-            dst[i] = 0;
-        } else {
-            dst[i] = (a << 24) | (r << 16) | (g << 8) | b;
-        }
-    }
-    
-    SDL_UnlockSurface(surface);
-    return hBitmap;
-}
-
-// 处理和显示图像
-void process_and_display_image(const char* image_path, SDL_Window* window, HDC hdcScreen, HDC hdcMemory, int imgWidth, int imgHeight) {
-    SDL_Surface *image = IMG_Load(image_path);
-    if (!image) return;
-
-    SDL_Surface *scaled = SDL_CreateRGBSurface(0, imgWidth, imgHeight, 32,
-        0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
-    
-    if (scaled) {
-        SDL_BlitScaled(image, NULL, scaled, NULL);
-        SDL_FreeSurface(image); // 释放原始图像
-
-        SDL_Surface *processed = process_alpha(scaled);
-        SDL_FreeSurface(scaled); // 释放缩放后的图像
-
-        if (processed) {
-            SDL_Surface *converted = SDL_ConvertSurfaceFormat(processed, SDL_PIXELFORMAT_RGBA32, 0);
-            SDL_FreeSurface(processed); // 释放处理后的图像
-
-            if (converted) {
-                HBITMAP hBitmap = SDLSurfaceToWinBitmap(converted, hdcMemory);
-                if (hBitmap) {
-                    SDL_SysWMinfo wmInfo;
-                    SDL_VERSION(&wmInfo.version);
-                    SDL_GetWindowWMInfo(window, &wmInfo);
-                    HWND hwnd = wmInfo.info.win.window;
-
-                    HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcMemory, hBitmap);
-
-                    BLENDFUNCTION blend = {0};
-                    blend.BlendOp = AC_SRC_OVER;
-                    blend.SourceConstantAlpha = 255;
-                    blend.AlphaFormat = AC_SRC_ALPHA;
-
-                    POINT ptSrc = {0, 0};
-                    SIZE sizeWnd = {imgWidth, imgHeight};
-                    POINT ptDst = {IMAGE_CAROUSEL_MARGIN_LEFT, IMAGE_CAROUSEL_MARGIN_TOP};
-
-                    UpdateLayeredWindow(hwnd, hdcScreen, &ptDst, &sizeWnd, 
-                                     hdcMemory, &ptSrc, 0, &blend, ULW_ALPHA);
-
-                    SelectObject(hdcMemory, hOldBitmap);
-                    DeleteObject(hBitmap);
-                }
-                SDL_FreeSurface(converted); // 释放转换后的图像
-            }
-        }
-    }
-}
-
-int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-    // 加载配置
-    load_config("config.txt");
-
-    // 获取配置文件的最后修改时间
-    time_t last_mod_time = get_file_modification_time("./asset/config.txt"); // 更新路径
-
-    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-        fprintf(stderr, "SDL_Init Error: %s\n", SDL_GetError());
-        return 1;
+    if (hwnd == NULL) {
+        MessageBox(NULL, "Window Creation Failed!", "Error", MB_ICONEXCLAMATION | MB_OK);
+        return 0;
     }
 
-    if (IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG == 0) {
-        fprintf(stderr, "IMG_Init Error: %s\n", IMG_GetError());
-        SDL_Quit();
-        return 1;
-    }
+    SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), 0, LWA_COLORKEY);
 
-    char **image_files = NULL;
-    int image_count = get_png_files(IMAGE_CAROUSEL_IMAGE_DIR, &image_files);
-    if (image_count == 0) {
-        fprintf(stderr, "No PNG files found in %s\n", IMAGE_CAROUSEL_IMAGE_DIR);
-        IMG_Quit();
-        SDL_Quit();
-        return 1;
-    }
-
-    SDL_Surface *image = IMG_Load(image_files[0]);
-    if (!image) {
-        fprintf(stderr, "IMG_Load Error: %s\n", IMG_GetError());
-        IMG_Quit();
-        SDL_Quit();
-        return 1;
-    }
-
-    int imgWidth = (image->w * IMAGE_CAROUSEL_SCALE_FACTOR) / 100;
-    int imgHeight = (image->h * IMAGE_CAROUSEL_SCALE_FACTOR) / 100;
-    SDL_FreeSurface(image);
-
-    SDL_Window *window = SDL_CreateWindow("SDL2 Image Display", 
-        IMAGE_CAROUSEL_MARGIN_LEFT,
-        IMAGE_CAROUSEL_MARGIN_TOP,
-        imgWidth, 
-        imgHeight, 
-        SDL_WINDOW_SHOWN | SDL_WINDOW_BORDERLESS);
-
-    if (!window) {
-        fprintf(stderr, "SDL_CreateWindow Error: %s\n", SDL_GetError());
-        IMG_Quit();
-        SDL_Quit();
-        return 1;
-    }
-
-    SDL_SysWMinfo wmInfo;
-    SDL_VERSION(&wmInfo.version);
-    if (SDL_GetWindowWMInfo(window, &wmInfo) != 1) {
-        fprintf(stderr, "SDL_GetWindowWMInfo failed\n");
-        SDL_DestroyWindow(window);
-        IMG_Quit();
-        SDL_Quit();
-        return 1;
-    }
-
-    HWND hwnd = wmInfo.info.win.window;
-    SetWindowLongPtr(hwnd, GWL_EXSTYLE, 
-        WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST | WS_EX_TOOLWINDOW);
-
-    HDC hdcScreen = GetDC(NULL);
-    BLENDFUNCTION blend = {0};
-    blend.BlendOp = AC_SRC_OVER;
-    blend.SourceConstantAlpha = 0;
-    blend.AlphaFormat = AC_SRC_ALPHA;
-    UpdateLayeredWindow(hwnd, hdcScreen, NULL, NULL, NULL, NULL, 0, &blend, ULW_ALPHA);
-    
-    SetWindowPos(hwnd, HWND_TOPMOST, 
-        IMAGE_CAROUSEL_MARGIN_LEFT, 
-        IMAGE_CAROUSEL_MARGIN_TOP, 
-        imgWidth, 
-        imgHeight, 
-        SWP_NOACTIVATE);
-
-    HDC hdcMemory = CreateCompatibleDC(hdcScreen);
-
-    #if IMAGE_CAROUSEL_SHOW_TRAY_ICON
-    NOTIFYICONDATA nid;
-    ZeroMemory(&nid, sizeof(NOTIFYICONDATA));
-    nid.cbSize = sizeof(NOTIFYICONDATA);
-    nid.hWnd = hwnd;
-    nid.uID = 1;
+    nid.cbSize = sizeof(nid);
+    nid.uID = CLOCK_ID_TRAY_APP_ICON;
     nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
-    nid.uCallbackMessage = WM_APP;
-    nid.hIcon = (HICON)LoadImage(NULL, "icon.ico", IMAGE_ICON, 0, 0, LR_LOADFROMFILE);
-    wchar_t szTip[128];
-    wcsncpy(szTip, L"My Tray Icon", sizeof(szTip) / sizeof(wchar_t));
-    wcscpy((wchar_t*)nid.szTip, szTip);
+    nid.hIcon = (HICON)LoadImage(NULL, "asset/images/catime.ico", IMAGE_ICON, 0, 0, LR_LOADFROMFILE);
+    nid.hWnd = hwnd;
+    nid.uCallbackMessage = CLOCK_WM_TRAYICON;
+    strcpy(nid.szTip, "Catime");
     Shell_NotifyIcon(NIM_ADD, &nid);
-    #endif
 
-    process_and_display_image(image_files[0], window, hdcScreen, hdcMemory, imgWidth, imgHeight);
-
-    SDL_Event e;
-    int quit = 0;
-    int current_image_index = 0;
-    Uint32 last_time = SDL_GetTicks();
-    Uint32 start_time = SDL_GetTicks(); // 记录开始时间
-
-    while (!quit) {
-        while (SDL_PollEvent(&e)) {
-            if (e.type == SDL_QUIT) {
-                quit = 1;
-            }
-        }
-
-        // 检查配置文件是否被修改
-        time_t current_mod_time = get_file_modification_time("./asset/config.txt"); // 更新路径
-        if (current_mod_time != last_mod_time) {
-            last_mod_time = current_mod_time; // 更新最后修改时间
-            load_config("config.txt"); // 重新加载配置
-            start_time = SDL_GetTicks(); // 重新计时
-        }
-
-        Uint32 current_time = SDL_GetTicks();
-
-        // 使用 IMAGE_CAROUSEL_SWITCH_INTERVAL 来控制切换速度
-        if (current_time - last_time >= IMAGE_CAROUSEL_SWITCH_INTERVAL) {
-            last_time = current_time;
-            current_image_index = (current_image_index + 1) % image_count;
-            process_and_display_image(image_files[current_image_index], 
-                                   window, hdcScreen, hdcMemory, 
-                                   imgWidth, imgHeight);
-        }
-
-        // 检查是否超过显示持续时间
-        if ((current_time - start_time) / 1000 >= IMAGE_CAROUSEL_DISPLAY_DURATION) {
-            quit = 1; // 超过时间后退出
-        }
-
-        SDL_Delay(1);
+    if (SetTimer(hwnd, 1, 1000, NULL) == 0) {
+        MessageBox(hwnd, "Failed to set timer!", "Error", MB_OK);
     }
 
-    #if IMAGE_CAROUSEL_SHOW_TRAY_ICON
-    Shell_NotifyIcon(NIM_DELETE, &nid);
-    #endif
-    
-    DeleteDC(hdcMemory);
-    ReleaseDC(NULL, hdcScreen);
-    SDL_DestroyWindow(window);
-    IMG_Quit();
-    SDL_Quit();
+    ShowWindow(hwnd, nCmdShow);
+    UpdateWindow(hwnd);
 
-    for (int i = 0; i < image_count; i++) {
-        free(image_files[i]);
+    MSG msg;
+    while (GetMessage(&msg, NULL, 0, 0) > 0) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
     }
-    free(image_files);
 
-    return 0;
+    CloseHandle(hMutex);
+    return (int)msg.wParam;
 }
