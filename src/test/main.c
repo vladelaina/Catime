@@ -8,6 +8,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
+#include <sys/stat.h> // 添加此行以包含 stat 函数和 struct stat
 
 // 常量定义
 int IMAGE_CAROUSEL_SCALE_FACTOR;        // 图片缩放比例
@@ -46,6 +48,15 @@ void load_config(const char *filename) {
     }
 
     fclose(file);
+}
+
+// 获取文件的最后修改时间
+time_t get_file_modification_time(const char *filename) {
+    struct stat fileInfo; // 使用标准的 struct stat
+    if (stat(filename, &fileInfo) == 0) { // 使用 stat 函数
+        return fileInfo.st_mtime; // 返回最后修改时间
+    }
+    return -1; // 返回-1表示获取失败
 }
 
 // 判断文件是否为 PNG 格式
@@ -233,6 +244,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     // 加载配置
     load_config("config.txt");
 
+    // 获取配置文件的最后修改时间
+    time_t last_mod_time = get_file_modification_time("config.txt");
+
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         fprintf(stderr, "SDL_Init Error: %s\n", SDL_GetError());
         return 1;
@@ -337,6 +351,14 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             if (e.type == SDL_QUIT) {
                 quit = 1;
             }
+        }
+
+        // 检查配置文件是否被修改
+        time_t current_mod_time = get_file_modification_time("config.txt");
+        if (current_mod_time != last_mod_time) {
+            last_mod_time = current_mod_time; // 更新最后修改时间
+            load_config("config.txt"); // 重新加载配置
+            start_time = SDL_GetTicks(); // 重新计时
         }
 
         Uint32 current_time = SDL_GetTicks();
