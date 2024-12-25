@@ -23,9 +23,10 @@ int IMAGE_CAROUSEL_DISPLAY_DURATION;     // 显示持续时间（秒）
 
 // 读取配置文件
 void load_config(const char *filename) {
-    FILE *file = fopen(filename, "r");
+    const char *config_path = "./asset/config.txt"; // 新的配置文件路径
+    FILE *file = fopen(config_path, "r");
     if (!file) {
-        fprintf(stderr, "无法打开配置文件: %s\n", filename);
+        fprintf(stderr, "无法打开配置文件: %s\n", config_path);
         return;
     }
 
@@ -245,7 +246,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     load_config("config.txt");
 
     // 获取配置文件的最后修改时间
-    time_t last_mod_time = get_file_modification_time("config.txt");
+    time_t last_mod_time = get_file_modification_time("./asset/config.txt"); // 更新路径
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         fprintf(stderr, "SDL_Init Error: %s\n", SDL_GetError());
@@ -354,7 +355,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         }
 
         // 检查配置文件是否被修改
-        time_t current_mod_time = get_file_modification_time("config.txt");
+        time_t current_mod_time = get_file_modification_time("./asset/config.txt"); // 更新路径
         if (current_mod_time != last_mod_time) {
             last_mod_time = current_mod_time; // 更新最后修改时间
             load_config("config.txt"); // 重新加载配置
