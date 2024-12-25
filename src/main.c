@@ -6,6 +6,9 @@
 // 窗口和显示相关的定义
 #define TEXT_COLOR "#F5DAE3"   
 
+// 定义绘制的同样图层的个数
+#define TEXT_LAYER_COUNT 4  // 设置为 2 层
+
 // 窗口尺寸定义
 #define BASE_WINDOW_WIDTH 200    // 基础窗口宽度
 #define BASE_WINDOW_HEIGHT 65   // 基础窗口高度
@@ -133,27 +136,27 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 
             // 创建字体，使用等比例缩放
             HFONT hFont = CreateFont(
-                -FONT_SIZE,                 // 高度（负值表示使用字符的实际高度）
-                0,                          // 宽度（0表示自动按照高度等比例缩放）
-                0,                          // 文本角度
-                0,                          // 基线角度
-                FW_BOLD,                    // 字体粗细
-                FALSE,                      // 斜体
-                FALSE,                      // 下划线
-                FALSE,                      // 删除线
-                DEFAULT_CHARSET,            // 字符集
-                OUT_TT_PRECIS,             // 输出精度
-                CLIP_DEFAULT_PRECIS,        // 裁剪精度
-                ANTIALIASED_QUALITY,        // 输出质量
-                FF_DONTCARE | DEFAULT_PITCH,// 字体族
-                "Arial"                     // 字体名称
+                -FONT_SIZE,                 
+                0,                          
+                0,                          
+                0,                          
+                FW_BOLD,                    
+                FALSE,                      
+                FALSE,                      
+                FALSE,                      
+                DEFAULT_CHARSET,            
+                OUT_TT_PRECIS,             
+                CLIP_DEFAULT_PRECIS,        
+                ANTIALIASED_QUALITY,        
+                FF_DONTCARE | DEFAULT_PITCH,
+                "Arial"                     
             );
             
             HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
             
             // 解析颜色字符串
             int r, g, b;
-            sscanf(TEXT_COLOR + 1, "%02x%02x%02x", &r, &g, &b); // 跳过 '#' 并解析 RGB 值
+            sscanf(TEXT_COLOR + 1, "%02x%02x%02x", &r, &g, &b); 
             
             COLORREF color = RGB(r, g, b);
             SetTextColor(hdc, color);
@@ -168,8 +171,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             GetTextExtentPoint32(hdc, time_text, strlen(time_text), &textSize);
             int x = (WINDOW_WIDTH - textSize.cx) / 2;
             int y = (WINDOW_HEIGHT - textSize.cy) / 2;
-            
-            TextOutA(hdc, x, y, time_text, strlen(time_text));
+
+            // 绘制多层文本
+            for (int i = 0; i < TEXT_LAYER_COUNT; i++) {
+                TextOutA(hdc, x, y, time_text, strlen(time_text));
+            }
             
             // 清理资源
             SelectObject(hdc, hOldFont);
