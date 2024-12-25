@@ -4,7 +4,7 @@ CFLAGS = -I/home/vladelaina/code/catime/src/test/libs/SDL2/include \
          -I/home/vladelaina/code/catime/src/test/libs/SDL2_image/include
 LDFLAGS = -L/home/vladelaina/code/catime/src/test/libs/SDL2/lib \
           -L/home/vladelaina/code/catime/src/test/libs/SDL2_image/lib
-LIBS = -lSDL2 -lSDL2_image
+LIBS = -lSDL2main -lSDL2_image -lSDL2 -static -lole32 -luuid -lsetupapi -lcomdlg32 -lwinmm -limm32 -lmsimg32 -lversion -loleaut32  # 添加必要的 Windows 库
 OUT = /mnt/c/Users/vladelaina/Desktop/main.exe
 SRC = main.c
 
@@ -18,4 +18,3 @@ $(OUT): $(SRC)
 # 清理目标
 clean:
 	rm -f $(OUT)
-
