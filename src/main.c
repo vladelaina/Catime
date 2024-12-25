@@ -4,50 +4,50 @@
 #include <string.h>
 
 // 窗口和显示相关的定义
-#define TEXT_COLOR "#F5DAE3"   
+#define CLOCK_TEXT_COLOR "#F5DAE3"   
 
 // 定义绘制的同样图层的个数
-#define TEXT_LAYER_COUNT 4  // 设置为 2 层
+#define CLOCK_TEXT_LAYER_COUNT 4  // 设置为 2 层
 
 // 窗口尺寸定义
-#define BASE_WINDOW_WIDTH 200    // 基础窗口宽度
-#define BASE_WINDOW_HEIGHT 65   // 基础窗口高度
-#define WINDOW_SCALE 1.0       // 窗口尺寸缩放因子
+#define CLOCK_BASE_WINDOW_WIDTH 200    // 基础窗口宽度
+#define CLOCK_BASE_WINDOW_HEIGHT 65   // 基础窗口高度
+#define CLOCK_WINDOW_SCALE 1.0       // 窗口尺寸缩放因子
 
 // 计算实际窗口尺寸
-#define WINDOW_WIDTH (int)(BASE_WINDOW_WIDTH * WINDOW_SCALE)
-#define WINDOW_HEIGHT (int)(BASE_WINDOW_HEIGHT * WINDOW_SCALE)
+#define CLOCK_WINDOW_WIDTH (int)(CLOCK_BASE_WINDOW_WIDTH * CLOCK_WINDOW_SCALE)
+#define CLOCK_WINDOW_HEIGHT (int)(CLOCK_BASE_WINDOW_HEIGHT * CLOCK_WINDOW_SCALE)
 
 // 窗口位置定义
-#define WINDOW_POS_X 1
-#define WINDOW_POS_Y 15
+#define CLOCK_WINDOW_POS_X 1
+#define CLOCK_WINDOW_POS_Y 15
 
 // 字体相关定义
-#define BASE_FONT_SIZE 48      // 基准字体大小
-#define FONT_SCALE_FACTOR 1.0  // 字体缩放因子（相对于窗口大小）
-#define FONT_SIZE (int)(BASE_FONT_SIZE * FONT_SCALE_FACTOR * WINDOW_SCALE)  // 实际使用的字体大小
+#define CLOCK_BASE_FONT_SIZE 48      // 基准字体大小
+#define CLOCK_FONT_SCALE_FACTOR 1.0  // 字体缩放因子（相对于窗口大小）
+#define CLOCK_FONT_SIZE (int)(CLOCK_BASE_FONT_SIZE * CLOCK_FONT_SCALE_FACTOR * CLOCK_WINDOW_SCALE)  // 实际使用的字体大小
 
-#define DEFAULT_START_TIME 1500  // 默认启动时的倒计时时长为 25 分钟 = 1500 秒
-#define ID_TRAY_APP_ICON  1001
-#define WM_TRAYICON        (WM_USER + 1)  // 自定义消息 ID
-#define WINDOW_CLASS_NAME  "CatimeWindow"  // 确保窗口类名唯一
+#define CLOCK_DEFAULT_START_TIME 1500  // 默认启动时的倒计时时长为 25 分钟 = 1500 秒
+#define CLOCK_ID_TRAY_APP_ICON  1001
+#define CLOCK_WM_TRAYICON        (WM_USER + 1)  // 自定义消息 ID
+#define CLOCK_WINDOW_CLASS_NAME  "CatimeWindow"  // 确保窗口类名唯一
 // 定义控件ID
-#define IDC_EDIT 108
-#define IDC_BUTTON_OK 109
-#define IDD_DIALOG1 1002  // 确保与 .rc 文件中的 ID 一致
+#define CLOCK_IDC_EDIT 108
+#define CLOCK_IDC_BUTTON_OK 109
+#define CLOCK_IDD_DIALOG1 1002  // 确保与 .rc 文件中的 ID 一致
 
 // 定义时间选项
-#define TIME_OPTIONS {8, 10, 25}  // 定义时间选项为数组
+#define CLOCK_TIME_OPTIONS {8, 10, 25}  // 定义时间选项为数组
 
 // 全局变量用于保存输入内容
 char inputText[256] = {0};  // 设置全局变量
 
 static int elapsed_time = 0;  // 已经过的时间，全局变量
-static int TOTAL_TIME = DEFAULT_START_TIME;  // 全局倒计时总时间
+static int CLOCK_TOTAL_TIME = CLOCK_DEFAULT_START_TIME;  // 全局倒计时总时间
 NOTIFYICONDATA nid;  // 托盘图标数据
 
 // 用于存储时间选项
-int time_options[] = TIME_OPTIONS;  // 使用定义的时间选项
+int time_options[] = CLOCK_TIME_OPTIONS;  // 使用定义的时间选项
 int time_options_count = sizeof(time_options) / sizeof(time_options[0]);  // 计算时间选项的数量
 
 LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);  // 函数声明
@@ -56,12 +56,12 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);  //
 INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_INITDIALOG:
-            SendMessage(hwndDlg, DM_SETDEFID, IDC_BUTTON_OK, 0);
+            SendMessage(hwndDlg, DM_SETDEFID, CLOCK_IDC_BUTTON_OK, 0);
             return TRUE;
 
         case WM_COMMAND:
-            if (LOWORD(wParam) == IDC_BUTTON_OK || HIWORD(wParam) == BN_CLICKED) {
-                GetDlgItemText(hwndDlg, IDC_EDIT, inputText, sizeof(inputText));
+            if (LOWORD(wParam) == CLOCK_IDC_BUTTON_OK || HIWORD(wParam) == BN_CLICKED) {
+                GetDlgItemText(hwndDlg, CLOCK_IDC_EDIT, inputText, sizeof(inputText));
                 EndDialog(hwndDlg, 0);
                 return TRUE;
             }
@@ -69,7 +69,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 
         case WM_KEYDOWN:
             if (wParam == VK_RETURN) {
-                SendMessage(hwndDlg, WM_COMMAND, IDC_BUTTON_OK, 0);
+                SendMessage(hwndDlg, WM_COMMAND, CLOCK_IDC_BUTTON_OK, 0);
                 return TRUE;
             }
             break;
@@ -102,7 +102,7 @@ void ShowContextMenu(HWND hwnd) {
     // 将 "Customize" 选项放在最上面
     AppendMenu(hMenu, MF_STRING, 101, "Customize");
 
-    // 添加选项：根据 TIME_OPTIONS 的值动态生成菜单项
+    // 添加选项：根据 CLOCK_TIME_OPTIONS 的值动态生成菜单项
     for (int i = 0; i < time_options_count; i++) {
         char menu_item[10];
         sprintf(menu_item, "%d", time_options[i]);
@@ -126,9 +126,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         case WM_PAINT: {
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hwnd, &ps);
-            int remaining_time = TOTAL_TIME - elapsed_time;
+            int remaining_time = CLOCK_TOTAL_TIME - elapsed_time;
 
-            if (elapsed_time >= TOTAL_TIME) {
+            if (elapsed_time >= CLOCK_TOTAL_TIME) {
                 sprintf(time_text, "Time's up!");
             } else {
                 FormatTime(remaining_time, time_text);
@@ -136,7 +136,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 
             // 创建字体，使用等比例缩放
             HFONT hFont = CreateFont(
-                -FONT_SIZE,                 
+                -CLOCK_FONT_SIZE,                 
                 0,                          
                 0,                          
                 0,                          
@@ -156,7 +156,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             
             // 解析颜色字符串
             int r, g, b;
-            sscanf(TEXT_COLOR + 1, "%02x%02x%02x", &r, &g, &b); 
+            sscanf(CLOCK_TEXT_COLOR + 1, "%02x%02x%02x", &r, &g, &b); 
             
             COLORREF color = RGB(r, g, b);
             SetTextColor(hdc, color);
@@ -169,11 +169,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             // 计算文本位置以居中显示
             SIZE textSize;
             GetTextExtentPoint32(hdc, time_text, strlen(time_text), &textSize);
-            int x = (WINDOW_WIDTH - textSize.cx) / 2;
-            int y = (WINDOW_HEIGHT - textSize.cy) / 2;
+            int x = (CLOCK_WINDOW_WIDTH - textSize.cx) / 2;
+            int y = (CLOCK_WINDOW_HEIGHT - textSize.cy) / 2;
 
             // 绘制多层文本
-            for (int i = 0; i < TEXT_LAYER_COUNT; i++) {
+            for (int i = 0; i < CLOCK_TEXT_LAYER_COUNT; i++) {
                 TextOutA(hdc, x, y, time_text, strlen(time_text));
             }
             
@@ -185,7 +185,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             break;
         }
         case WM_TIMER: {
-            if (elapsed_time < TOTAL_TIME) {
+            if (elapsed_time < CLOCK_TOTAL_TIME) {
                 elapsed_time++;
                 InvalidateRect(hwnd, NULL, TRUE);
             } else {
@@ -199,7 +199,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             ExitProgram(hwnd);
             break;
         }
-        case WM_TRAYICON: {
+        case CLOCK_WM_TRAYICON: {
             uID = (UINT)wp;
             uMouseMsg = (UINT)lp;
 
@@ -213,33 +213,33 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         case WM_COMMAND: {
             switch (LOWORD(wp)) {
                 case 101:   // Customize  
-                    DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_DIALOG1), NULL, DlgProc);  
+                    DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc);  
 
                     int input_time = 0;
 
                     if (inputText[0] == '\0') {
-                        TOTAL_TIME = DEFAULT_START_TIME;  // 使用定义的默认启动时间
+                        CLOCK_TOTAL_TIME = CLOCK_DEFAULT_START_TIME;  // 使用定义的默认启动时间
                     }
                     else if (inputText[strlen(inputText) - 1] == 's') {
                         inputText[strlen(inputText) - 1] = '\0';
                         input_time = atoi(inputText);
-                        TOTAL_TIME = input_time;
+                        CLOCK_TOTAL_TIME = input_time;
                     }
                     else {
                         input_time = atoi(inputText);
                         if (input_time == 0) {
-                            TOTAL_TIME = 0;
+                            CLOCK_TOTAL_TIME = 0;
                         } else {
-                            TOTAL_TIME = input_time * 60;
+                            CLOCK_TOTAL_TIME = input_time * 60;
                         }
                     }
                     elapsed_time = 0;  
                     break;
-                // 根据菜单项的索引设置 TOTAL_TIME
+                // 根据菜单项的索引设置 CLOCK_TOTAL_TIME
                 default:
                     if (LOWORD(wp) >= 102 && LOWORD(wp) < 102 + time_options_count) {
                         int index = LOWORD(wp) - 102;  // 计算选中的菜单项索引
-                        TOTAL_TIME = time_options[index] * 60;  // 将分钟转换为秒
+                        CLOCK_TOTAL_TIME = time_options[index] * 60;  // 将分钟转换为秒
                         elapsed_time = 0;
                     }
                     break;
@@ -262,26 +262,26 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         int length = strlen(time_str);
         if (length > 1 && time_str[length - 1] == 's') {
             time_str[length - 1] = '\0';
-            TOTAL_TIME = atoi(time_str);
-            if (TOTAL_TIME <= 0) {
-                TOTAL_TIME = DEFAULT_START_TIME;  // 使用定义的默认启动时间
+            CLOCK_TOTAL_TIME = atoi(time_str);
+            if (CLOCK_TOTAL_TIME <= 0) {
+                CLOCK_TOTAL_TIME = CLOCK_DEFAULT_START_TIME;  // 使用定义的默认启动时间
             }
         } else {
-            TOTAL_TIME = atoi(time_str) * 60;
-            if (TOTAL_TIME <= 0) {
-                TOTAL_TIME = DEFAULT_START_TIME;  // 使用定义的默认启动时间
+            CLOCK_TOTAL_TIME = atoi(time_str) * 60;
+            if (CLOCK_TOTAL_TIME <= 0) {
+                CLOCK_TOTAL_TIME = CLOCK_DEFAULT_START_TIME;  // 使用定义的默认启动时间
             }
         }
     }
 
     HANDLE hMutex = CreateMutex(NULL, TRUE, "CatimeMutex");
     if (GetLastError() == ERROR_ALREADY_EXISTS) {
-        HWND hwnd = FindWindow(WINDOW_CLASS_NAME, "Catime");
+        HWND hwnd = FindWindow(CLOCK_WINDOW_CLASS_NAME, "Catime");
         if (hwnd) {
             COPYDATASTRUCT cds;
             cds.dwData = 1;
             char time_str[10];
-            sprintf(time_str, "%d", TOTAL_TIME);
+            sprintf(time_str, "%d", CLOCK_TOTAL_TIME);
             cds.lpData = time_str;
             cds.cbData = strlen(time_str) + 1;
             SendMessage(hwnd, WM_COPYDATA, (WPARAM)hwnd, (LPARAM)&cds);
@@ -292,7 +292,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     WNDCLASS wc = {0};
     wc.lpfnWndProc = WindowProcedure;
     wc.hInstance = hInstance;
-    wc.lpszClassName = WINDOW_CLASS_NAME;
+    wc.lpszClassName = CLOCK_WINDOW_CLASS_NAME;
     if (!RegisterClass(&wc)) {
         MessageBox(NULL, "Window Registration Failed!", "Error", MB_ICONEXCLAMATION | MB_OK);
         return 0;
@@ -300,11 +300,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     HWND hwnd = CreateWindowEx(
         WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
-        WINDOW_CLASS_NAME,
+        CLOCK_WINDOW_CLASS_NAME,
         "Catime",
         WS_POPUP,
-        WINDOW_POS_X, WINDOW_POS_Y,
-        WINDOW_WIDTH, WINDOW_HEIGHT,
+        CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y,
+        CLOCK_WINDOW_WIDTH, CLOCK_WINDOW_HEIGHT,
         NULL,
         NULL,
         hInstance,
@@ -319,11 +319,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), 0, LWA_COLORKEY);
 
     nid.cbSize = sizeof(nid);
-    nid.uID = ID_TRAY_APP_ICON;
+    nid.uID = CLOCK_ID_TRAY_APP_ICON;
     nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
     nid.hIcon = (HICON)LoadImage(NULL, "asset/images/catime.ico", IMAGE_ICON, 0, 0, LR_LOADFROMFILE);
     nid.hWnd = hwnd;
-    nid.uCallbackMessage = WM_TRAYICON;
+    nid.uCallbackMessage = CLOCK_WM_TRAYICON;
     strcpy(nid.szTip, "Catime");
     Shell_NotifyIcon(NIM_ADD, &nid);
 
