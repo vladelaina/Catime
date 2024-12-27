@@ -52,9 +52,7 @@ void load_config(const char *filename) {
         if (sscanf(line, "IMAGE_CAROUSEL_IMAGE_DIR=%s", IMAGE_CAROUSEL_IMAGE_DIR) == 1) {
             // 检查路径是否发生变化
             if (strcmp(previous_image_dir, IMAGE_CAROUSEL_IMAGE_DIR) != 0) {
-                // 路径发生变化，执行退出播放的逻辑
-                // quit = 1; // 设置退出标志（需要在主循环中处理）
-                // 重新获取新的图片文件并调整窗口大小
+                // 路径发生变化，释放之前的图片文件
                 for (int i = 0; i < image_count; i++) {
                     free(image_files[i]);
                 }
@@ -395,31 +393,28 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             last_mod_time = current_mod_time; // 更新最后修改时间
             load_config("config.txt"); // 重新加载配置
 
-            // 检查是否需要更新缩放比例
-            SDL_Surface *image = IMG_Load(image_files[current_image_index]);
-            if (image) {
-                int newWidth = (image->w * IMAGE_CAROUSEL_SCALE_FACTOR) / 100;
-                int newHeight = (image->h * IMAGE_CAROUSEL_SCALE_FACTOR) / 100;
-
-                // 如果宽高发生变化，更新窗口大小
-                if (newWidth != imgWidth || newHeight != imgHeight) {
-                    imgWidth = newWidth;
-                    imgHeight = newHeight;
-                    SDL_SetWindowSize(window, imgWidth, imgHeight); // 调整窗口大小
+            // 检查路径是否发生变化
+            if (strcmp(previous_image_dir, IMAGE_CAROUSEL_IMAGE_DIR) != 0) {
+                // 路径发生变化，释放之前的图片文件
+                for (int i = 0; i < image_count; i++) {
+                    free(image_files[i]);
                 }
-                SDL_FreeSurface(image);
-            }
+                free(image_files);
+                image_files = NULL; // 清空之前的文件列表
+                image_count = get_png_files(IMAGE_CAROUSEL_IMAGE_DIR, &image_files); // 重新获取图片文件
 
-            // 重新获取新的图片文件
-            for (int i = 0; i < image_count; i++) {
-                free(image_files[i]);
+                // 更新窗口大小
+                if (image_count > 0) {
+                    SDL_Surface *image = IMG_Load(image_files[0]);
+                    if (image) {
+                        imgWidth = (image->w * IMAGE_CAROUSEL_SCALE_FACTOR) / 100;
+                        imgHeight = (image->h * IMAGE_CAROUSEL_SCALE_FACTOR) / 100;
+                        SDL_FreeSurface(image);
+                        SDL_SetWindowSize(window, imgWidth, imgHeight); // 调整窗口大小
+                    }
+                }
+                strcpy(previous_image_dir, IMAGE_CAROUSEL_IMAGE_DIR); // 更新之前的路径
             }
-            free(image_files);
-            image_files = NULL; // 清空之前的文件列表
-            image_count = get_png_files(IMAGE_CAROUSEL_IMAGE_DIR, &image_files); // 重新获取图片文件
-
-            current_image_index = 0; // 重置当前图片索引
-            start_time = SDL_GetTicks(); // 重新计时
         }
 
         Uint32 current_time = SDL_GetTicks();
