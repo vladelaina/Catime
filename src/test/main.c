@@ -35,6 +35,7 @@ SDL_Window *window;
 int previous_scale_factor;
 int previous_display_duration;
 Uint32 start_time;
+HWND hwnd; // 添加全局 HWND 变量
 
 // 移动相关的全局变量
 static Uint32 move_start_time = 0;
@@ -53,15 +54,23 @@ int get_current_x_position(Uint32 current_time) {
     current_progress = fmodf(time_diff / IMAGE_CAROUSEL_CONTROL_TIME, 2.0f);
     
     if (current_progress > 1.0f) {
-        // 返回路径
         float reverse_progress = 2.0f - current_progress;
         return IMAGE_CAROUSEL_POSITIONS[1] - 
                (IMAGE_CAROUSEL_POSITIONS[1] - IMAGE_CAROUSEL_POSITIONS[0]) * reverse_progress;
     } else {
-        // 前进路径
         return IMAGE_CAROUSEL_POSITIONS[0] + 
                (IMAGE_CAROUSEL_POSITIONS[1] - IMAGE_CAROUSEL_POSITIONS[0]) * current_progress;
     }
+}
+
+// 确保窗口在最顶层
+void ensure_window_top_most() {
+    SetWindowPos(hwnd, HWND_TOPMOST, 
+        IMAGE_CAROUSEL_SWITCH ? get_current_x_position(SDL_GetTicks()) : IMAGE_CAROUSEL_MARGIN_LEFT,
+        IMAGE_CAROUSEL_MARGIN_TOP, 
+        imgWidth, 
+        imgHeight, 
+        SWP_NOACTIVATE | SWP_SHOWWINDOW);
 }
 
 // 读取配置文件
@@ -96,6 +105,7 @@ void load_config(const char *filename) {
                         imgHeight = (image->h * IMAGE_CAROUSEL_SCALE_FACTOR) / 100;
                         SDL_FreeSurface(image);
                         SDL_SetWindowSize(window, imgWidth, imgHeight);
+                        ensure_window_top_most(); // 更新窗口大小后确保在最顶层
                     }
                 }
             }
@@ -124,6 +134,7 @@ void load_config(const char *filename) {
                 imgHeight = (image->h * IMAGE_CAROUSEL_SCALE_FACTOR) / 100;
                 SDL_FreeSurface(image);
                 SDL_SetWindowSize(window, imgWidth, imgHeight);
+                ensure_window_top_most(); // 更新窗口大小后确保在最顶层
             }
         }
     }
@@ -289,11 +300,6 @@ void process_and_display_image(const char* image_path, SDL_Window* window, HDC h
             if (converted) {
                 HBITMAP hBitmap = SDLSurfaceToWinBitmap(converted, hdcMemory);
                 if (hBitmap) {
-                    SDL_SysWMinfo wmInfo;
-                    SDL_VERSION(&wmInfo.version);
-                    SDL_GetWindowWMInfo(window, &wmInfo);
-                    HWND hwnd = wmInfo.info.win.window;
-
                     HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcMemory, hBitmap);
 
                     BLENDFUNCTION blend = {0};
@@ -316,6 +322,9 @@ void process_and_display_image(const char* image_path, SDL_Window* window, HDC h
 
                     SelectObject(hdcMemory, hOldBitmap);
                     DeleteObject(hBitmap);
+                    
+                    // 确保窗口在最顶层
+                    ensure_window_top_most();
                 }
                 SDL_FreeSurface(converted);
             }
@@ -362,7 +371,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         IMAGE_CAROUSEL_MARGIN_TOP,
         imgWidth, 
         imgHeight, 
-        SDL_WINDOW_SHOWN | SDL_WINDOW_BORDERLESS);
+        SDL_WINDOW_SHOWN | SDL_WINDOW_BORDERLESS | SDL_WINDOW_ALWAYS_ON_TOP);
 
     if (!window) {
         fprintf(stderr, "SDL_CreateWindow Error: %s\n", SDL_GetError());
@@ -381,9 +390,19 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         return 1;
     }
 
-    HWND hwnd = wmInfo.info.win.window;
+    hwnd = wmInfo.info.win.window;
+    
+    // 设置窗口样式，确保始终在最顶层
     SetWindowLongPtr(hwnd, GWL_EXSTYLE, 
         WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST | WS_EX_TOOLWINDOW);
+    
+    // 初始设置窗口位置和层级
+    SetWindowPos(hwnd, HWND_TOPMOST, 
+        IMAGE_CAROUSEL_MARGIN_LEFT, 
+        IMAGE_CAROUSEL_MARGIN_TOP, 
+        imgWidth, 
+        imgHeight, 
+        SWP_NOACTIVATE | SWP_SHOWWINDOW);
 
     HDC hdcScreen = GetDC(NULL);
     BLENDFUNCTION blend = {0};
@@ -414,7 +433,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     int current_image_index = 0;
     Uint32 last_time = SDL_GetTicks();
     start_time = SDL_GetTicks();
-    move_start_time = SDL_GetTicks(); // 初始化移动开始时间
+    move_start_time = SDL_GetTicks();
 
     while (!quit) {
         while (SDL_PollEvent(&e)) {
@@ -440,6 +459,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                                    window, hdcScreen, hdcMemory, 
                                    imgWidth, imgHeight);
         }
+
+        // 确保窗口始终在最顶层
+        ensure_window_top_most();
 
         // 检查显示持续时间
         if ((current_time - start_time) / 1000 >= IMAGE_CAROUSEL_DISPLAY_DURATION) {
