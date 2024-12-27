@@ -418,6 +418,14 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                                    imgWidth, imgHeight);
         }
 
+        // 确保窗口始终在最上层
+        SetWindowPos(hwnd, HWND_TOPMOST, 
+            IMAGE_CAROUSEL_MARGIN_LEFT, 
+            IMAGE_CAROUSEL_MARGIN_TOP, 
+            imgWidth, 
+            imgHeight, 
+            SWP_NOACTIVATE);
+
         // 检查是否超过显示持续时间
         if ((current_time - start_time) / 1000 >= IMAGE_CAROUSEL_DISPLAY_DURATION) {
             quit = 1; // 超过时间后退出
