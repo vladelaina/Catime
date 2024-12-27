@@ -22,6 +22,14 @@ int IMAGE_CAROUSEL_MARGIN_TOP;           // 距离屏幕顶部的距离（像素
 int IMAGE_CAROUSEL_SHOW_TRAY_ICON;       // 控制是否显示托盘图标（0为不显示，1为显示）
 int IMAGE_CAROUSEL_DISPLAY_DURATION;     // 显示持续时间（秒）
 
+// 声明全局变量
+int image_count; // 图片数量
+char **image_files = NULL; // 图片文件列表
+int imgWidth, imgHeight; // 图片宽度和高度
+SDL_Window *window; // SDL 窗口
+
+// 函数声明
+int get_png_files(const char *dir, char ***image_files); // 前向声明
 
 // 读取配置文件
 void load_config(const char *filename) {
@@ -46,6 +54,24 @@ void load_config(const char *filename) {
             if (strcmp(previous_image_dir, IMAGE_CAROUSEL_IMAGE_DIR) != 0) {
                 // 路径发生变化，执行退出播放的逻辑
                 // quit = 1; // 设置退出标志（需要在主循环中处理）
+                // 重新获取新的图片文件并调整窗口大小
+                for (int i = 0; i < image_count; i++) {
+                    free(image_files[i]);
+                }
+                free(image_files);
+                image_files = NULL; // 清空之前的文件列表
+                image_count = get_png_files(IMAGE_CAROUSEL_IMAGE_DIR, &image_files); // 重新获取图片文件
+
+                // 更新窗口大小
+                if (image_count > 0) {
+                    SDL_Surface *image = IMG_Load(image_files[0]);
+                    if (image) {
+                        imgWidth = (image->w * IMAGE_CAROUSEL_SCALE_FACTOR) / 100;
+                        imgHeight = (image->h * IMAGE_CAROUSEL_SCALE_FACTOR) / 100;
+                        SDL_FreeSurface(image);
+                        SDL_SetWindowSize(window, imgWidth, imgHeight); // 调整窗口大小
+                    }
+                }
             }
             strcpy(previous_image_dir, IMAGE_CAROUSEL_IMAGE_DIR); // 更新之前的路径
             continue;
@@ -269,8 +295,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         return 1;
     }
 
-    char **image_files = NULL;
-    int image_count = get_png_files(IMAGE_CAROUSEL_IMAGE_DIR, &image_files);
+    image_count = get_png_files(IMAGE_CAROUSEL_IMAGE_DIR, &image_files);
     if (image_count == 0) {
         fprintf(stderr, "No PNG files found in %s\n", IMAGE_CAROUSEL_IMAGE_DIR);
         IMG_Quit();
@@ -286,11 +311,11 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         return 1;
     }
 
-    int imgWidth = (image->w * IMAGE_CAROUSEL_SCALE_FACTOR) / 100;
-    int imgHeight = (image->h * IMAGE_CAROUSEL_SCALE_FACTOR) / 100;
+    imgWidth = (image->w * IMAGE_CAROUSEL_SCALE_FACTOR) / 100;
+    imgHeight = (image->h * IMAGE_CAROUSEL_SCALE_FACTOR) / 100;
     SDL_FreeSurface(image);
 
-    SDL_Window *window = SDL_CreateWindow("SDL2 Image Display", 
+    window = SDL_CreateWindow("SDL2 Image Display", 
         IMAGE_CAROUSEL_MARGIN_LEFT,
         IMAGE_CAROUSEL_MARGIN_TOP,
         imgWidth, 
