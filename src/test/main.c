@@ -27,6 +27,7 @@ int image_count; // 图片数量
 char **image_files = NULL; // 图片文件列表
 int imgWidth, imgHeight; // 图片宽度和高度
 SDL_Window *window; // SDL 窗口
+int previous_scale_factor; // 添加变量以存储上一个缩放因子
 
 // 函数声明
 int get_png_files(const char *dir, char ***image_files); // 前向声明
@@ -83,6 +84,20 @@ void load_config(const char *filename) {
     }
 
     fclose(file);
+
+    // 检查是否需要更新窗口大小
+    if (IMAGE_CAROUSEL_SCALE_FACTOR != previous_scale_factor) {
+        previous_scale_factor = IMAGE_CAROUSEL_SCALE_FACTOR; // 更新之前的缩放因子
+        if (image_count > 0) {
+            SDL_Surface *image = IMG_Load(image_files[0]);
+            if (image) {
+                imgWidth = (image->w * IMAGE_CAROUSEL_SCALE_FACTOR) / 100;
+                imgHeight = (image->h * IMAGE_CAROUSEL_SCALE_FACTOR) / 100;
+                SDL_FreeSurface(image);
+                SDL_SetWindowSize(window, imgWidth, imgHeight); // 调整窗口大小
+            }
+        }
+    }
 }
 
 // 获取文件的最后修改时间
