@@ -28,6 +28,8 @@ char **image_files = NULL; // 图片文件列表
 int imgWidth, imgHeight; // 图片宽度和高度
 SDL_Window *window; // SDL 窗口
 int previous_scale_factor; // 添加变量以存储上一个缩放因子
+int previous_display_duration; // 添加变量以存储上一个显示持续时间
+Uint32 start_time; // 添加变量以存储开始时间
 
 // 函数声明
 int get_png_files(const char *dir, char ***image_files); // 前向声明
@@ -97,6 +99,12 @@ void load_config(const char *filename) {
                 SDL_SetWindowSize(window, imgWidth, imgHeight); // 调整窗口大小
             }
         }
+    }
+
+    // 检查是否需要更新显示持续时间
+    if (IMAGE_CAROUSEL_DISPLAY_DURATION != previous_display_duration) {
+        previous_display_duration = IMAGE_CAROUSEL_DISPLAY_DURATION; // 更新之前的持续时间
+        start_time = SDL_GetTicks(); // 重新开始计时
     }
 }
 
@@ -393,7 +401,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     int quit = 0; // 退出标志
     int current_image_index = 0; // 当前图片索引
     Uint32 last_time = SDL_GetTicks();
-    Uint32 start_time = SDL_GetTicks(); // 记录开始时间
+    start_time = SDL_GetTicks(); // 记录开始时间
 
     while (!quit) {
         while (SDL_PollEvent(&e)) {
