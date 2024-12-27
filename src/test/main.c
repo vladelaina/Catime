@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
-#include <sys/stat.h> // 添加此行以包含 stat 函数和 struct stat
+#include <sys/stat.h>
 
 // 常量定义
 int IMAGE_CAROUSEL_SCALE_FACTOR;        // 图片缩放比例
@@ -21,6 +21,11 @@ int IMAGE_CAROUSEL_MARGIN_LEFT;          // 距离屏幕左边的距离（像素
 int IMAGE_CAROUSEL_MARGIN_TOP;           // 距离屏幕顶部的距离（像素）
 int IMAGE_CAROUSEL_SHOW_TRAY_ICON;       // 控制是否显示托盘图标（0为不显示，1为显示）
 int IMAGE_CAROUSEL_DISPLAY_DURATION;     // 显示持续时间（秒）
+
+// 新增全局变量
+int IMAGE_CAROUSEL_SWITCH;                // 开关（0为关闭，1为开启）
+int IMAGE_CAROUSEL_CONTROL_TIME;          // 控制时间（毫秒）
+int IMAGE_CAROUSEL_POSITIONS[2];          // 控制数组（两个像素值）
 
 // 声明全局变量
 int image_count; // 图片数量
@@ -83,6 +88,11 @@ void load_config(const char *filename) {
         if (sscanf(line, "IMAGE_CAROUSEL_MARGIN_TOP=%d", &IMAGE_CAROUSEL_MARGIN_TOP) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_SHOW_TRAY_ICON=%d", &IMAGE_CAROUSEL_SHOW_TRAY_ICON) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_DISPLAY_DURATION=%d", &IMAGE_CAROUSEL_DISPLAY_DURATION) == 1) continue;
+
+        // 读取新配置项
+        if (sscanf(line, "IMAGE_CAROUSEL_SWITCH=%d", &IMAGE_CAROUSEL_SWITCH) == 1) continue;
+        if (sscanf(line, "IMAGE_CAROUSEL_CONTROL_TIME=%d", &IMAGE_CAROUSEL_CONTROL_TIME) == 1) continue;
+        if (sscanf(line, "IMAGE_CAROUSEL_POSITIONS=%d,%d", &IMAGE_CAROUSEL_POSITIONS[0], &IMAGE_CAROUSEL_POSITIONS[1]) == 2) continue;
     }
 
     fclose(file);
@@ -462,6 +472,33 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         // 检查是否超过显示持续时间
         if ((current_time - start_time) / 1000 >= IMAGE_CAROUSEL_DISPLAY_DURATION) {
             quit = 1; // 超过时间后退出
+        }
+
+        // 如果开关开启，处理图片移动逻辑
+        if (IMAGE_CAROUSEL_SWITCH) {
+            static Uint32 move_start_time = 0;
+
+            if (move_start_time == 0) {
+                move_start_time = current_time; // 记录开始时间
+            }
+
+            // 计算当前移动位置
+            float progress = (float)(current_time - move_start_time) / IMAGE_CAROUSEL_CONTROL_TIME;
+            if (progress >= 1.0f) {
+                progress = 1.0f; // 确保不超过1
+                move_start_time = 0; // 重置开始时间
+            }
+
+            int current_position = IMAGE_CAROUSEL_POSITIONS[0] + 
+                                   (IMAGE_CAROUSEL_POSITIONS[1] - IMAGE_CAROUSEL_POSITIONS[0]) * progress;
+
+            // 更新窗口位置
+            SetWindowPos(hwnd, HWND_TOPMOST, 
+                current_position, 
+                IMAGE_CAROUSEL_MARGIN_TOP, 
+                imgWidth, 
+                imgHeight, 
+                SWP_NOACTIVATE);
         }
 
         SDL_Delay(1);
