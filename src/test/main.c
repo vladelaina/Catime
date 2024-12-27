@@ -26,6 +26,7 @@ int IMAGE_CAROUSEL_DISPLAY_DURATION;
 int IMAGE_CAROUSEL_SWITCH;                
 int IMAGE_CAROUSEL_CONTROL_TIME;          
 int IMAGE_CAROUSEL_POSITIONS[2];          
+int IMAGE_CAROUSEL_DEBUG_MODE;           // 新增：调试模式开关
 
 // 声明全局变量
 int image_count;
@@ -35,7 +36,7 @@ SDL_Window *window;
 int previous_scale_factor;
 int previous_display_duration;
 Uint32 start_time;
-HWND hwnd; // 添加全局 HWND 变量
+HWND hwnd;
 
 // 移动相关的全局变量
 static Uint32 move_start_time = 0;
@@ -46,27 +47,49 @@ static float current_progress = 0.0f;
 int get_png_files(const char *dir, char ***image_files);
 // 获取当前的X坐标位置
 int get_current_x_position(Uint32 current_time) {
-    if (move_start_time == 0) {
-        move_start_time = current_time;
+    // 如果处于调试模式
+    if (IMAGE_CAROUSEL_DEBUG_MODE) {
+        // 在两个位置之间切换显示
+        return (current_time / IMAGE_CAROUSEL_SWITCH_INTERVAL) % 2 == 0 ? 
+               IMAGE_CAROUSEL_POSITIONS[0] : IMAGE_CAROUSEL_POSITIONS[1];
     }
-
-    float time_diff = (float)(current_time - move_start_time);
-    current_progress = fmodf(time_diff / IMAGE_CAROUSEL_CONTROL_TIME, 2.0f);
     
-    if (current_progress > 1.0f) {
-        float reverse_progress = 2.0f - current_progress;
-        return IMAGE_CAROUSEL_POSITIONS[1] - 
-               (IMAGE_CAROUSEL_POSITIONS[1] - IMAGE_CAROUSEL_POSITIONS[0]) * reverse_progress;
-    } else {
-        return IMAGE_CAROUSEL_POSITIONS[0] + 
-               (IMAGE_CAROUSEL_POSITIONS[1] - IMAGE_CAROUSEL_POSITIONS[0]) * current_progress;
+    // 非调试模式下的正常逻辑
+    if (IMAGE_CAROUSEL_SWITCH) {
+        if (move_start_time == 0) {
+            move_start_time = current_time;
+        }
+
+        float time_diff = (float)(current_time - move_start_time);
+        current_progress = fmodf(time_diff / IMAGE_CAROUSEL_CONTROL_TIME, 2.0f);
+        
+        if (current_progress > 1.0f) {
+            float reverse_progress = 2.0f - current_progress;
+            return IMAGE_CAROUSEL_POSITIONS[1] - 
+                   (IMAGE_CAROUSEL_POSITIONS[1] - IMAGE_CAROUSEL_POSITIONS[0]) * reverse_progress;
+        } else {
+            return IMAGE_CAROUSEL_POSITIONS[0] + 
+                   (IMAGE_CAROUSEL_POSITIONS[1] - IMAGE_CAROUSEL_POSITIONS[0]) * current_progress;
+        }
     }
+    
+    // 如果不是移动模式，返回固定位置
+    return IMAGE_CAROUSEL_MARGIN_LEFT;
 }
 
 // 确保窗口在最顶层
 void ensure_window_top_most() {
+    int current_x;
+    Uint32 current_time = SDL_GetTicks();
+    
+    if (IMAGE_CAROUSEL_DEBUG_MODE || IMAGE_CAROUSEL_SWITCH) {
+        current_x = get_current_x_position(current_time);
+    } else {
+        current_x = IMAGE_CAROUSEL_MARGIN_LEFT;
+    }
+
     SetWindowPos(hwnd, HWND_TOPMOST, 
-        IMAGE_CAROUSEL_SWITCH ? get_current_x_position(SDL_GetTicks()) : IMAGE_CAROUSEL_MARGIN_LEFT,
+        current_x,
         IMAGE_CAROUSEL_MARGIN_TOP, 
         imgWidth, 
         imgHeight, 
@@ -105,7 +128,7 @@ void load_config(const char *filename) {
                         imgHeight = (image->h * IMAGE_CAROUSEL_SCALE_FACTOR) / 100;
                         SDL_FreeSurface(image);
                         SDL_SetWindowSize(window, imgWidth, imgHeight);
-                        ensure_window_top_most(); // 更新窗口大小后确保在最顶层
+                        ensure_window_top_most();
                     }
                 }
             }
@@ -121,10 +144,11 @@ void load_config(const char *filename) {
         if (sscanf(line, "IMAGE_CAROUSEL_SWITCH=%d", &IMAGE_CAROUSEL_SWITCH) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_CONTROL_TIME=%d", &IMAGE_CAROUSEL_CONTROL_TIME) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_POSITIONS=%d,%d", &IMAGE_CAROUSEL_POSITIONS[0], &IMAGE_CAROUSEL_POSITIONS[1]) == 2) continue;
+        if (sscanf(line, "IMAGE_CAROUSEL_DEBUG_MODE=%d", &IMAGE_CAROUSEL_DEBUG_MODE) == 1) continue;  // 新增：读取调试模式开关
     }
 
     fclose(file);
-
+    // load_config函数的后半部分
     if (IMAGE_CAROUSEL_SCALE_FACTOR != previous_scale_factor) {
         previous_scale_factor = IMAGE_CAROUSEL_SCALE_FACTOR;
         if (image_count > 0) {
@@ -134,7 +158,7 @@ void load_config(const char *filename) {
                 imgHeight = (image->h * IMAGE_CAROUSEL_SCALE_FACTOR) / 100;
                 SDL_FreeSurface(image);
                 SDL_SetWindowSize(window, imgWidth, imgHeight);
-                ensure_window_top_most(); // 更新窗口大小后确保在最顶层
+                ensure_window_top_most();
             }
         }
     }
@@ -144,6 +168,7 @@ void load_config(const char *filename) {
         start_time = SDL_GetTicks();
     }
 }
+
 // 获取文件的最后修改时间
 time_t get_file_modification_time(const char *filename) {
     struct stat fileInfo;
@@ -209,7 +234,7 @@ SDL_Surface* process_alpha(SDL_Surface* surface) {
     for (int i = 0; i < surface->w * surface->h; i++) {
         dst[i] = src[i];
     }
-    
+    // process_alpha函数的后半部分
     // 第二遍：处理边缘像素
     for (int y = 0; y < surface->h; y++) {
         for (int x = 0; x < surface->w; x++) {
@@ -244,6 +269,7 @@ SDL_Surface* process_alpha(SDL_Surface* surface) {
     
     return result;
 }
+
 // 将SDL表面转换为Windows位图
 HBITMAP SDLSurfaceToWinBitmap(SDL_Surface* surface, HDC hdc) {
     BITMAPINFO bmi;
@@ -285,7 +311,7 @@ void process_and_display_image(const char* image_path, SDL_Window* window, HDC h
 
     SDL_Surface *scaled = SDL_CreateRGBSurface(0, imgWidth, imgHeight, 32,
         0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
-    
+      // process_and_display_image函数的后半部分
     if (scaled) {
         SDL_BlitScaled(image, NULL, scaled, NULL);
         SDL_FreeSurface(image);
@@ -311,9 +337,7 @@ void process_and_display_image(const char* image_path, SDL_Window* window, HDC h
                     SIZE sizeWnd = {imgWidth, imgHeight};
                     
                     // 获取当前X坐标位置
-                    int current_x = IMAGE_CAROUSEL_SWITCH ? 
-                        get_current_x_position(SDL_GetTicks()) : 
-                        IMAGE_CAROUSEL_MARGIN_LEFT;
+                    int current_x = get_current_x_position(SDL_GetTicks());
                     
                     POINT ptDst = {current_x, IMAGE_CAROUSEL_MARGIN_TOP};
 
@@ -331,6 +355,7 @@ void process_and_display_image(const char* image_path, SDL_Window* window, HDC h
         }
     }
 }
+
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     load_config("config.txt");
     time_t last_mod_time = get_file_modification_time("./asset/config.txt");
@@ -365,7 +390,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     imgWidth = (image->w * IMAGE_CAROUSEL_SCALE_FACTOR) / 100;
     imgHeight = (image->h * IMAGE_CAROUSEL_SCALE_FACTOR) / 100;
     SDL_FreeSurface(image);
-
+    // WinMain函数的后半部分
     window = SDL_CreateWindow("SDL2 Image Display", 
         IMAGE_CAROUSEL_MARGIN_LEFT,
         IMAGE_CAROUSEL_MARGIN_TOP,
