@@ -395,6 +395,21 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             last_mod_time = current_mod_time; // 更新最后修改时间
             load_config("config.txt"); // 重新加载配置
 
+            // 检查是否需要更新缩放比例
+            SDL_Surface *image = IMG_Load(image_files[current_image_index]);
+            if (image) {
+                int newWidth = (image->w * IMAGE_CAROUSEL_SCALE_FACTOR) / 100;
+                int newHeight = (image->h * IMAGE_CAROUSEL_SCALE_FACTOR) / 100;
+
+                // 如果宽高发生变化，更新窗口大小
+                if (newWidth != imgWidth || newHeight != imgHeight) {
+                    imgWidth = newWidth;
+                    imgHeight = newHeight;
+                    SDL_SetWindowSize(window, imgWidth, imgHeight); // 调整窗口大小
+                }
+                SDL_FreeSurface(image);
+            }
+
             // 重新获取新的图片文件
             for (int i = 0; i < image_count; i++) {
                 free(image_files[i]);
