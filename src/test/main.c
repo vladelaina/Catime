@@ -14,12 +14,14 @@
 // 常量定义
 int IMAGE_CAROUSEL_SCALE_FACTOR;        // 图片缩放比例
 char IMAGE_CAROUSEL_IMAGE_DIR[256];     // 图片文件夹目录
+char previous_image_dir[256];            // 添加一个变量来存储之前的图片目录
 int IMAGE_CAROUSEL_SWITCH_INTERVAL;      // 切换到下一张图片的间隔时间（毫秒）
 int IMAGE_CAROUSEL_EDGE_SIZE;            // 边缘处理的像素大小
 int IMAGE_CAROUSEL_MARGIN_LEFT;          // 距离屏幕左边的距离（像素）
 int IMAGE_CAROUSEL_MARGIN_TOP;           // 距离屏幕顶部的距离（像素）
 int IMAGE_CAROUSEL_SHOW_TRAY_ICON;       // 控制是否显示托盘图标（0为不显示，1为显示）
 int IMAGE_CAROUSEL_DISPLAY_DURATION;     // 显示持续时间（秒）
+
 
 // 读取配置文件
 void load_config(const char *filename) {
@@ -39,7 +41,15 @@ void load_config(const char *filename) {
 
         // 读取配置项
         if (sscanf(line, "IMAGE_CAROUSEL_SCALE_FACTOR=%d", &IMAGE_CAROUSEL_SCALE_FACTOR) == 1) continue;
-        if (sscanf(line, "IMAGE_CAROUSEL_IMAGE_DIR=%s", IMAGE_CAROUSEL_IMAGE_DIR) == 1) continue;
+        if (sscanf(line, "IMAGE_CAROUSEL_IMAGE_DIR=%s", IMAGE_CAROUSEL_IMAGE_DIR) == 1) {
+            // 检查路径是否发生变化
+            if (strcmp(previous_image_dir, IMAGE_CAROUSEL_IMAGE_DIR) != 0) {
+                // 路径发生变化，执行退出播放的逻辑
+                // quit = 1; // 设置退出标志（需要在主循环中处理）
+            }
+            strcpy(previous_image_dir, IMAGE_CAROUSEL_IMAGE_DIR); // 更新之前的路径
+            continue;
+        }
         if (sscanf(line, "IMAGE_CAROUSEL_SWITCH_INTERVAL=%d", &IMAGE_CAROUSEL_SWITCH_INTERVAL) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_EDGE_SIZE=%d", &IMAGE_CAROUSEL_EDGE_SIZE) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_MARGIN_LEFT=%d", &IMAGE_CAROUSEL_MARGIN_LEFT) == 1) continue;
@@ -342,8 +352,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     process_and_display_image(image_files[0], window, hdcScreen, hdcMemory, imgWidth, imgHeight);
 
     SDL_Event e;
-    int quit = 0;
-    int current_image_index = 0;
+    int quit = 0; // 退出标志
+    int current_image_index = 0; // 当前图片索引
     Uint32 last_time = SDL_GetTicks();
     Uint32 start_time = SDL_GetTicks(); // 记录开始时间
 
@@ -359,6 +369,16 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         if (current_mod_time != last_mod_time) {
             last_mod_time = current_mod_time; // 更新最后修改时间
             load_config("config.txt"); // 重新加载配置
+
+            // 重新获取新的图片文件
+            for (int i = 0; i < image_count; i++) {
+                free(image_files[i]);
+            }
+            free(image_files);
+            image_files = NULL; // 清空之前的文件列表
+            image_count = get_png_files(IMAGE_CAROUSEL_IMAGE_DIR, &image_files); // 重新获取图片文件
+
+            current_image_index = 0; // 重置当前图片索引
             start_time = SDL_GetTicks(); // 重新计时
         }
 
