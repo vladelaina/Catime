@@ -14,6 +14,7 @@
 // 基础显示配置
 int IMAGE_CAROUSEL_SCALE_FACTOR;        
 char IMAGE_CAROUSEL_IMAGE_DIR[256];     
+char IMAGE_CAROUSEL_MOVING_DIR[256];    // 新增：移动模式下的图片目录
 int IMAGE_CAROUSEL_SWITCH_INTERVAL;      
 int IMAGE_CAROUSEL_EDGE_SIZE;            
 int IMAGE_CAROUSEL_MARGIN_LEFT;          
@@ -173,6 +174,7 @@ void update_window_context(WindowContext* context, const char* dir, int scale_fa
 
     // 加载新的图片
     context->image_count = get_png_files(dir, &context->image_files);
+    context->current_index = 0;  // 重置图片索引
     
     // 更新窗口尺寸
     if (context->image_count > 0) {
@@ -227,10 +229,13 @@ void load_config(const char *filename) {
     int old_scale_factor = IMAGE_CAROUSEL_SCALE_FACTOR;
     int old_moving_scale = IMAGE_CAROUSEL_MOVING_SCALE_FACTOR;
     int old_moving_interval = IMAGE_CAROUSEL_MOVING_INTERVAL;
+    int old_switch_mode = IMAGE_CAROUSEL_SWITCH;
     int old_positions[2] = {IMAGE_CAROUSEL_POSITIONS[0], IMAGE_CAROUSEL_POSITIONS[1]};
     int old_debug_mode = IMAGE_CAROUSEL_DEBUG_MODE;
     char old_image_dir[256] = {0};
+    char old_moving_dir[256] = {0};
     strcpy(old_image_dir, IMAGE_CAROUSEL_IMAGE_DIR);
+    strcpy(old_moving_dir, IMAGE_CAROUSEL_MOVING_DIR);
     
     char line[256];
     while (fgets(line, sizeof(line), file)) {
@@ -241,6 +246,7 @@ void load_config(const char *filename) {
         // 读取配置
         if (sscanf(line, "IMAGE_CAROUSEL_SCALE_FACTOR=%d", &IMAGE_CAROUSEL_SCALE_FACTOR) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_IMAGE_DIR=%s", IMAGE_CAROUSEL_IMAGE_DIR) == 1) continue;
+        if (sscanf(line, "IMAGE_CAROUSEL_MOVING_DIR=%s", IMAGE_CAROUSEL_MOVING_DIR) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_SWITCH_INTERVAL=%d", &IMAGE_CAROUSEL_SWITCH_INTERVAL) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_EDGE_SIZE=%d", &IMAGE_CAROUSEL_EDGE_SIZE) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_MARGIN_LEFT=%d", &IMAGE_CAROUSEL_MARGIN_LEFT) == 1) continue;
@@ -262,29 +268,38 @@ void load_config(const char *filename) {
         start_time = SDL_GetTicks();
     }
 
+    // 检查移动模式相关的更改
+    if (IMAGE_CAROUSEL_SWITCH) {
+        // 检查移动模式下的目录变化
+        if (strcmp(old_moving_dir, IMAGE_CAROUSEL_MOVING_DIR) != 0) {
+            update_window_context(&main_context, IMAGE_CAROUSEL_MOVING_DIR, IMAGE_CAROUSEL_MOVING_SCALE_FACTOR);
+        }
+        // 检查移动模式下的缩放比例变化
+        else if (old_moving_scale != IMAGE_CAROUSEL_MOVING_SCALE_FACTOR) {
+            update_window_context(&main_context, IMAGE_CAROUSEL_MOVING_DIR, IMAGE_CAROUSEL_MOVING_SCALE_FACTOR);
+        }
+    } else {
+        // 检查普通模式下的目录和缩放比例变化
+        if (strcmp(old_image_dir, IMAGE_CAROUSEL_IMAGE_DIR) != 0 || 
+            old_scale_factor != IMAGE_CAROUSEL_SCALE_FACTOR) {
+            update_window_context(&main_context, IMAGE_CAROUSEL_IMAGE_DIR, IMAGE_CAROUSEL_SCALE_FACTOR);
+        }
+    }
+
+    // 检查模式切换
+    if (old_switch_mode != IMAGE_CAROUSEL_SWITCH) {
+        const char* current_dir = IMAGE_CAROUSEL_SWITCH ? IMAGE_CAROUSEL_MOVING_DIR : IMAGE_CAROUSEL_IMAGE_DIR;
+        int current_scale = IMAGE_CAROUSEL_SWITCH ? IMAGE_CAROUSEL_MOVING_SCALE_FACTOR : IMAGE_CAROUSEL_SCALE_FACTOR;
+        update_window_context(&main_context, current_dir, current_scale);
+    }
+
     // 检查调试模式变化
     if (old_debug_mode != IMAGE_CAROUSEL_DEBUG_MODE || 
         (IMAGE_CAROUSEL_DEBUG_MODE && 
          (old_positions[0] != IMAGE_CAROUSEL_POSITIONS[0] || 
           old_positions[1] != IMAGE_CAROUSEL_POSITIONS[1]))) {
-        // 调试模式状态改变或位置改变时重置
         main_context.last_switch_time = SDL_GetTicks() - IMAGE_CAROUSEL_SWITCH_INTERVAL;
-        position_index = 0;  // 重置位置索引
-    }
-
-    // 根据当前模式更新窗口上下文
-    int current_scale;
-    if (IMAGE_CAROUSEL_DEBUG_MODE) {
-        current_scale = IMAGE_CAROUSEL_SCALE_FACTOR;
-    } else if (IMAGE_CAROUSEL_SWITCH) {
-        current_scale = IMAGE_CAROUSEL_MOVING_SCALE_FACTOR;
-    } else {
-        current_scale = IMAGE_CAROUSEL_SCALE_FACTOR;
-    }
-
-    if (strcmp(old_image_dir, IMAGE_CAROUSEL_IMAGE_DIR) != 0 || 
-        current_scale != old_scale_factor) {
-        update_window_context(&main_context, IMAGE_CAROUSEL_IMAGE_DIR, current_scale);
+        position_index = 0;
     }
 }
 // 处理 alpha 通道和边缘
@@ -391,6 +406,16 @@ void process_and_display_image(const char* image_path, WindowContext* context, H
         current_scale = IMAGE_CAROUSEL_SCALE_FACTOR;
     }
     
+    // 更新窗口尺寸（如果需要）
+    int new_width = (image->w * current_scale) / 100;
+    int new_height = (image->h * current_scale) / 100;
+    
+    if (new_width != context->imgWidth || new_height != context->imgHeight) {
+        context->imgWidth = new_width;
+        context->imgHeight = new_height;
+        SDL_SetWindowSize(context->window, context->imgWidth, context->imgHeight);
+    }
+    
     SDL_Surface *scaled = SDL_CreateRGBSurface(0, context->imgWidth, context->imgHeight, 32,
         0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
     
@@ -451,13 +476,14 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     }
 
     // 初始化主窗口上下文
+    const char* initial_dir = IMAGE_CAROUSEL_SWITCH ? IMAGE_CAROUSEL_MOVING_DIR : IMAGE_CAROUSEL_IMAGE_DIR;
     int initial_scale = IMAGE_CAROUSEL_DEBUG_MODE ? IMAGE_CAROUSEL_SCALE_FACTOR :
                        (IMAGE_CAROUSEL_SWITCH ? IMAGE_CAROUSEL_MOVING_SCALE_FACTOR : 
                         IMAGE_CAROUSEL_SCALE_FACTOR);
     
-    update_window_context(&main_context, IMAGE_CAROUSEL_IMAGE_DIR, initial_scale);
+    update_window_context(&main_context, initial_dir, initial_scale);
     if (main_context.image_count == 0) {
-        fprintf(stderr, "No PNG files found in %s\n", IMAGE_CAROUSEL_IMAGE_DIR);
+        fprintf(stderr, "No PNG files found in %s\n", initial_dir);
         IMG_Quit();
         SDL_Quit();
         return 1;
@@ -525,8 +551,12 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             
             // 更新图片
             main_context.current_index = (main_context.current_index + 1) % main_context.image_count;
-            process_and_display_image(main_context.image_files[main_context.current_index],
-                                   &main_context, hdcScreen, hdcMemory);
+            const char* current_dir = IMAGE_CAROUSEL_SWITCH ? IMAGE_CAROUSEL_MOVING_DIR : IMAGE_CAROUSEL_IMAGE_DIR;
+            char full_path[512];
+            sprintf(full_path, "%s/%s", current_dir, 
+                   strrchr(main_context.image_files[main_context.current_index], '/') + 1);
+            
+            process_and_display_image(full_path, &main_context, hdcScreen, hdcMemory);
 
             // 调试模式优先级最高
             if (IMAGE_CAROUSEL_DEBUG_MODE) {
