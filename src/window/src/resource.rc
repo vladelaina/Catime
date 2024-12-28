@@ -1,0 +1,4 @@
+#include "resource.h"
+
+MINIMIZE_ICON PNG "resources/icons/minimize.png"
+CLOSE_ICON PNG "resources/icons/close.png"
