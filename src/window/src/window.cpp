@@ -76,7 +76,7 @@ bool init() {
     int posY = (dm.h - WINDOW_HEIGHT) / 2;
 
     // 创建一个隐藏的窗口
-    window = SDL_CreateWindow("我的窗口",
+    window = SDL_CreateWindow("catime",
         posX, posY,
         WINDOW_WIDTH, WINDOW_HEIGHT,
         SDL_WINDOW_BORDERLESS | SDL_WINDOW_HIDDEN);
