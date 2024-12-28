@@ -18,6 +18,7 @@ const int ICONS_Y = 10;
 struct Icon {
     SDL_Texture* texture;
     SDL_Rect bounds;
+    bool isHovered;  // 新增悬停状态
 };
 
 // 全局变量
@@ -25,6 +26,7 @@ SDL_Window* window = nullptr;
 SDL_Renderer* renderer = nullptr;
 Icon minimizeIcon;
 Icon closeIcon;
+SDL_Texture* backgroundTexture = nullptr;  // 新增背景纹理
 bool isDragging = false;
 int dragStartX, dragStartY;
 
@@ -109,6 +111,7 @@ bool loadMedia() {
     }
     minimizeIcon.texture = SDL_CreateTextureFromSurface(renderer, surface);
     minimizeIcon.bounds = {MINIMIZE_X, ICONS_Y, ICON_SIZE, ICON_SIZE};
+    minimizeIcon.isHovered = false;  // 初始化悬停状态
     SDL_FreeSurface(surface);
 
     // 加载关闭图标
@@ -118,9 +121,18 @@ bool loadMedia() {
     }
     closeIcon.texture = SDL_CreateTextureFromSurface(renderer, surface);
     closeIcon.bounds = {CLOSE_X, ICONS_Y, ICON_SIZE, ICON_SIZE};
+    closeIcon.isHovered = false;  // 初始化悬停状态
     SDL_FreeSurface(surface);
 
-    if (!minimizeIcon.texture || !closeIcon.texture) {
+    // 加载背景纹理
+    surface = LoadSurfaceFromResource(BACKGROUND_ICON);
+    if (!surface) {
+        return false;
+    }
+    backgroundTexture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_FreeSurface(surface);
+
+    if (!minimizeIcon.texture || !closeIcon.texture || !backgroundTexture) {
         MessageBox(NULL, "Failed to create texture from surface!", "Texture Creation Error", MB_OK | MB_ICONERROR);
         return false;
     }
@@ -132,6 +144,7 @@ void close() {
     // 释放资源
     if (minimizeIcon.texture) SDL_DestroyTexture(minimizeIcon.texture);
     if (closeIcon.texture) SDL_DestroyTexture(closeIcon.texture);
+    if (backgroundTexture) SDL_DestroyTexture(backgroundTexture);  // 新增释放背景纹理
     if (renderer) SDL_DestroyRenderer(renderer);
     if (window) SDL_DestroyWindow(window);
     IMG_Quit();
@@ -147,6 +160,14 @@ void render() {
     // 清除渲染器并设置为白色背景
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     SDL_RenderClear(renderer);
+
+    // 如果有图标被悬停，渲染背景
+    if (minimizeIcon.isHovered) {
+        SDL_RenderCopy(renderer, backgroundTexture, NULL, &minimizeIcon.bounds);
+    }
+    if (closeIcon.isHovered) {
+        SDL_RenderCopy(renderer, backgroundTexture, NULL, &closeIcon.bounds);
+    }
 
     // 渲染图标
     SDL_RenderCopy(renderer, minimizeIcon.texture, NULL, &minimizeIcon.bounds);
@@ -211,20 +232,29 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
                     break;
 
                 case SDL_MOUSEMOTION:
-                    if (isDragging) {
-                        int mouseX, mouseY;
-                        SDL_GetGlobalMouseState(&mouseX, &mouseY);
-                        int deltaX = mouseX - dragStartX;
-                        int deltaY = mouseY - dragStartY;
+                    {
+                        int mouseX = e.motion.x;
+                        int mouseY = e.motion.y;
                         
-                        int windowX, windowY;
-                        SDL_GetWindowPosition(window, &windowX, &windowY);
-                        SDL_SetWindowPosition(window, 
-                            windowX + deltaX, 
-                            windowY + deltaY);
-                        
-                        dragStartX = mouseX;
-                        dragStartY = mouseY;
+                        // 更新图标悬停状态
+                        minimizeIcon.isHovered = isInRect(mouseX, mouseY, minimizeIcon.bounds);
+                        closeIcon.isHovered = isInRect(mouseX, mouseY, closeIcon.bounds);
+
+                        if (isDragging) {
+                            int mouseX, mouseY;
+                            SDL_GetGlobalMouseState(&mouseX, &mouseY);
+                            int deltaX = mouseX - dragStartX;
+                            int deltaY = mouseY - dragStartY;
+                            
+                            int windowX, windowY;
+                            SDL_GetWindowPosition(window, &windowX, &windowY);
+                            SDL_SetWindowPosition(window, 
+                                windowX + deltaX, 
+                                windowY + deltaY);
+                            
+                            dragStartX = mouseX;
+                            dragStartY = mouseY;
+                        }
                     }
                     break;
             }

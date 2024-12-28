@@ -3,5 +3,6 @@
 
 #define MINIMIZE_ICON 101
 #define CLOSE_ICON 102
+#define BACKGROUND_ICON 103
 
 #endif // RESOURCE_H

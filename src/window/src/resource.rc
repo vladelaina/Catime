@@ -2,3 +2,4 @@
 
 MINIMIZE_ICON PNG "resources/icons/minimize.png"
 CLOSE_ICON PNG "resources/icons/close.png"
+BACKGROUND_ICON PNG "resources/icons/background.png"
