@@ -14,14 +14,14 @@
 // 基础显示配置
 int IMAGE_CAROUSEL_SCALE_FACTOR;        
 char IMAGE_CAROUSEL_IMAGE_DIR[256];     
-char IMAGE_CAROUSEL_MOVING_DIR[256];    // 移动模式下的图片目录
+char IMAGE_CAROUSEL_MOVING_DIR[256];    
 int IMAGE_CAROUSEL_SWITCH_INTERVAL;      
 int IMAGE_CAROUSEL_EDGE_SIZE;            
 int IMAGE_CAROUSEL_MARGIN_LEFT;          
 int IMAGE_CAROUSEL_MARGIN_TOP;           
-int IMAGE_CAROUSEL_MOVING_MARGIN_TOP;    // 移动模式下的上边距
+int IMAGE_CAROUSEL_MOVING_MARGIN_TOP;    
 int IMAGE_CAROUSEL_SHOW_TRAY_ICON;       
-int IMAGE_CAROUSEL_DISPLAY_DURATION;     
+int IMAGE_CAROUSEL_DISPLAY_DURATION;     // 现在以毫秒为单位
 int IMAGE_CAROUSEL_SWITCH;                
 int IMAGE_CAROUSEL_CONTROL_TIME;          
 int IMAGE_CAROUSEL_POSITIONS[2];          
@@ -45,16 +45,9 @@ typedef struct {
 WindowContext main_context = {0};
 
 // 其他全局变量
-int previous_scale_factor;
-int previous_switch_interval;
-int previous_moving_interval;
-int previous_moving_scale;
 Uint32 start_time;
-int previous_duration;
+Uint32 move_start_time = 0;
 static int position_index = 0;
-
-// 移动相关的全局变量
-static Uint32 move_start_time = 0;
 static int direction = 1;
 static float current_progress = 0.0f;
 
@@ -73,7 +66,8 @@ int get_current_x_position(Uint32 current_time);
 void ensure_window_top_most(WindowContext* context, int x_pos);
 // 获取当前的X坐标位置
 int get_current_x_position(Uint32 current_time) {
-    if (IMAGE_CAROUSEL_SWITCH && !IMAGE_CAROUSEL_DEBUG_MODE) {  // 只在非调试模式下使用移动逻辑
+    if ((IMAGE_CAROUSEL_SWITCH || IMAGE_CAROUSEL_DEBUG_MODE) && !IMAGE_CAROUSEL_DEBUG_MODE) {  
+        // 只在非调试模式下使用移动逻辑
         if (move_start_time == 0) {
             move_start_time = current_time;
         }
@@ -98,9 +92,12 @@ int get_current_x_position(Uint32 current_time) {
 void ensure_window_top_most(WindowContext* context, int x_pos) {
     if (!context || !context->hwnd) return;
     
-    int current_margin_top = IMAGE_CAROUSEL_SWITCH ? 
-                            IMAGE_CAROUSEL_MOVING_MARGIN_TOP : 
-                            IMAGE_CAROUSEL_MARGIN_TOP;
+    int current_margin_top;
+    if (IMAGE_CAROUSEL_DEBUG_MODE || IMAGE_CAROUSEL_SWITCH) {
+        current_margin_top = IMAGE_CAROUSEL_MOVING_MARGIN_TOP;
+    } else {
+        current_margin_top = IMAGE_CAROUSEL_MARGIN_TOP;
+    }
     
     SetWindowPos(context->hwnd, HWND_TOPMOST, 
         x_pos,
@@ -136,9 +133,12 @@ int compare(const void *a, const void *b) {
 
 // 创建窗口
 SDL_Window* create_window(const char* title, int x_pos, int width, int height, HWND* out_hwnd) {
-    int initial_margin_top = IMAGE_CAROUSEL_SWITCH ? 
-                            IMAGE_CAROUSEL_MOVING_MARGIN_TOP : 
-                            IMAGE_CAROUSEL_MARGIN_TOP;
+    int initial_margin_top;
+    if (IMAGE_CAROUSEL_DEBUG_MODE || IMAGE_CAROUSEL_SWITCH) {
+        initial_margin_top = IMAGE_CAROUSEL_MOVING_MARGIN_TOP;
+    } else {
+        initial_margin_top = IMAGE_CAROUSEL_MARGIN_TOP;
+    }
                             
     SDL_Window* win = SDL_CreateWindow(title, 
         x_pos,
@@ -152,11 +152,9 @@ SDL_Window* create_window(const char* title, int x_pos, int width, int height, H
         SDL_VERSION(&wmInfo.version);
         if (SDL_GetWindowWMInfo(win, &wmInfo) == 1) {
             *out_hwnd = wmInfo.info.win.window;
-            // 设置窗口样式
             SetWindowLongPtr(*out_hwnd, GWL_EXSTYLE, 
                 WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST | WS_EX_TOOLWINDOW);
             
-            // 初始设置窗口完全透明
             HDC hdcScreen = GetDC(NULL);
             BLENDFUNCTION blend = {0};
             blend.BlendOp = AC_SRC_OVER;
@@ -240,8 +238,8 @@ void load_config(const char *filename) {
     int old_moving_interval = IMAGE_CAROUSEL_MOVING_INTERVAL;
     int old_moving_margin_top = IMAGE_CAROUSEL_MOVING_MARGIN_TOP;
     int old_switch_mode = IMAGE_CAROUSEL_SWITCH;
-    int old_positions[2] = {IMAGE_CAROUSEL_POSITIONS[0], IMAGE_CAROUSEL_POSITIONS[1]};
     int old_debug_mode = IMAGE_CAROUSEL_DEBUG_MODE;
+    int old_positions[2] = {IMAGE_CAROUSEL_POSITIONS[0], IMAGE_CAROUSEL_POSITIONS[1]};
     char old_image_dir[256] = {0};
     char old_moving_dir[256] = {0};
     strcpy(old_image_dir, IMAGE_CAROUSEL_IMAGE_DIR);
@@ -274,13 +272,34 @@ void load_config(const char *filename) {
 
     fclose(file);
 
-    // 检查并应用更改
-    if (old_display_duration != IMAGE_CAROUSEL_DISPLAY_DURATION) {
-        start_time = SDL_GetTicks();
+    // 检查调试模式变化
+    if (old_debug_mode != IMAGE_CAROUSEL_DEBUG_MODE) {
+        if (old_debug_mode == 1 && IMAGE_CAROUSEL_DEBUG_MODE == 0) {
+            // 从调试模式切换到非调试模式，设置退出标志
+            SDL_Event quit_event;
+            quit_event.type = SDL_QUIT;
+            SDL_PushEvent(&quit_event);  // 推送退出事件到事件队列
+            return;  // 直接返回，不执行其他更新
+        }
+        main_context.last_switch_time = SDL_GetTicks() - IMAGE_CAROUSEL_SWITCH_INTERVAL;
+        position_index = 0;
     }
 
-    // 检查移动模式相关的更改
-    if (IMAGE_CAROUSEL_SWITCH) {
+    // 检查显示时间和模式变化
+    Uint32 current_time = SDL_GetTicks();
+    if (old_display_duration != IMAGE_CAROUSEL_DISPLAY_DURATION || 
+        old_switch_mode != IMAGE_CAROUSEL_SWITCH) {
+        if (IMAGE_CAROUSEL_SWITCH || IMAGE_CAROUSEL_DEBUG_MODE) {
+            // 切换到移动模式，开始计算移动时间
+            move_start_time = current_time;
+        } else {
+            // 切换到固定模式，重新开始计算显示时间
+            start_time = current_time;
+        }
+    }
+
+    // 检查移动模式或调试模式相关的更改
+    if (IMAGE_CAROUSEL_SWITCH || IMAGE_CAROUSEL_DEBUG_MODE) {
         // 检查移动模式下的目录变化
         if (strcmp(old_moving_dir, IMAGE_CAROUSEL_MOVING_DIR) != 0) {
             update_window_context(&main_context, IMAGE_CAROUSEL_MOVING_DIR, IMAGE_CAROUSEL_MOVING_SCALE_FACTOR);
@@ -292,7 +311,7 @@ void load_config(const char *filename) {
         
         // 检查移动模式下的上边距变化
         if (old_moving_margin_top != IMAGE_CAROUSEL_MOVING_MARGIN_TOP) {
-            ensure_window_top_most(&main_context, get_current_x_position(SDL_GetTicks()));
+            ensure_window_top_most(&main_context, get_current_x_position(current_time));
         }
     } else {
         // 检查普通模式下的目录和缩放比例变化
@@ -300,23 +319,6 @@ void load_config(const char *filename) {
             old_scale_factor != IMAGE_CAROUSEL_SCALE_FACTOR) {
             update_window_context(&main_context, IMAGE_CAROUSEL_IMAGE_DIR, IMAGE_CAROUSEL_SCALE_FACTOR);
         }
-    }
-
-    // 检查模式切换
-    if (old_switch_mode != IMAGE_CAROUSEL_SWITCH) {
-        const char* current_dir = IMAGE_CAROUSEL_SWITCH ? IMAGE_CAROUSEL_MOVING_DIR : IMAGE_CAROUSEL_IMAGE_DIR;
-        int current_scale = IMAGE_CAROUSEL_SWITCH ? IMAGE_CAROUSEL_MOVING_SCALE_FACTOR : IMAGE_CAROUSEL_SCALE_FACTOR;
-        update_window_context(&main_context, current_dir, current_scale);
-        ensure_window_top_most(&main_context, get_current_x_position(SDL_GetTicks()));
-    }
-
-    // 检查调试模式变化
-    if (old_debug_mode != IMAGE_CAROUSEL_DEBUG_MODE || 
-        (IMAGE_CAROUSEL_DEBUG_MODE && 
-         (old_positions[0] != IMAGE_CAROUSEL_POSITIONS[0] || 
-          old_positions[1] != IMAGE_CAROUSEL_POSITIONS[1]))) {
-        main_context.last_switch_time = SDL_GetTicks() - IMAGE_CAROUSEL_SWITCH_INTERVAL;
-        position_index = 0;
     }
 }
 // 处理 alpha 通道和边缘
@@ -415,9 +417,8 @@ void process_and_display_image(const char* image_path, WindowContext* context, H
 
     // 根据当前模式选择缩放比例
     int current_scale;
-    if (IMAGE_CAROUSEL_DEBUG_MODE) {
-        current_scale = IMAGE_CAROUSEL_SCALE_FACTOR;
-    } else if (IMAGE_CAROUSEL_SWITCH) {
+    if (IMAGE_CAROUSEL_DEBUG_MODE || IMAGE_CAROUSEL_SWITCH) {
+        // 调试模式或移动模式下使用移动模式的缩放比例
         current_scale = IMAGE_CAROUSEL_MOVING_SCALE_FACTOR;
     } else {
         current_scale = IMAGE_CAROUSEL_SCALE_FACTOR;
@@ -493,10 +494,16 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     }
 
     // 初始化主窗口上下文
-    const char* initial_dir = IMAGE_CAROUSEL_SWITCH ? IMAGE_CAROUSEL_MOVING_DIR : IMAGE_CAROUSEL_IMAGE_DIR;
-    int initial_scale = IMAGE_CAROUSEL_DEBUG_MODE ? IMAGE_CAROUSEL_SCALE_FACTOR :
-                       (IMAGE_CAROUSEL_SWITCH ? IMAGE_CAROUSEL_MOVING_SCALE_FACTOR : 
-                        IMAGE_CAROUSEL_SCALE_FACTOR);
+    const char* initial_dir;
+    int initial_scale;
+    
+    if (IMAGE_CAROUSEL_DEBUG_MODE || IMAGE_CAROUSEL_SWITCH) {
+        initial_dir = IMAGE_CAROUSEL_MOVING_DIR;
+        initial_scale = IMAGE_CAROUSEL_MOVING_SCALE_FACTOR;
+    } else {
+        initial_dir = IMAGE_CAROUSEL_IMAGE_DIR;
+        initial_scale = IMAGE_CAROUSEL_SCALE_FACTOR;
+    }
     
     update_window_context(&main_context, initial_dir, initial_scale);
     if (main_context.image_count == 0) {
@@ -539,6 +546,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     SDL_Event e;
     int quit = 0;
     start_time = SDL_GetTicks();
+    move_start_time = SDL_GetTicks();  // 初始化移动开始时间
     main_context.last_switch_time = SDL_GetTicks();
 
     // 主循环
@@ -546,8 +554,11 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT) {
                 quit = 1;
+                break;  // 立即退出事件循环
             }
         }
+
+        if (quit) break;  // 如果收到退出信号，立即退出主循环
 
         Uint32 current_time = SDL_GetTicks();
 
@@ -556,6 +567,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         if (current_mod_time != last_mod_time) {
             last_mod_time = current_mod_time;
             load_config("config.txt");
+            if (!IMAGE_CAROUSEL_DEBUG_MODE) {
+                continue;  // 如果调试模式被关闭，跳过后续处理
+            }
         }
 
         // 更新图片和位置
@@ -568,7 +582,13 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             
             // 更新图片
             main_context.current_index = (main_context.current_index + 1) % main_context.image_count;
-            const char* current_dir = IMAGE_CAROUSEL_SWITCH ? IMAGE_CAROUSEL_MOVING_DIR : IMAGE_CAROUSEL_IMAGE_DIR;
+            const char* current_dir;
+            if (IMAGE_CAROUSEL_DEBUG_MODE || IMAGE_CAROUSEL_SWITCH) {
+                current_dir = IMAGE_CAROUSEL_MOVING_DIR;
+            } else {
+                current_dir = IMAGE_CAROUSEL_IMAGE_DIR;
+            }
+            
             char full_path[512];
             sprintf(full_path, "%s/%s", current_dir, 
                    strrchr(main_context.image_files[main_context.current_index], '/') + 1);
@@ -588,10 +608,20 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             }
         }
 
-        // 检查显示持续时间
-        if (!IMAGE_CAROUSEL_DEBUG_MODE && 
-            (current_time - start_time) / 1000 >= IMAGE_CAROUSEL_DISPLAY_DURATION) {
-            quit = 1;
+        // 检查退出条件
+        if (!IMAGE_CAROUSEL_DEBUG_MODE) {
+            if (IMAGE_CAROUSEL_SWITCH) {
+                // 移动模式：检查移动时间是否到达
+                if ((current_time - move_start_time) >= IMAGE_CAROUSEL_CONTROL_TIME) {
+                    quit = 1;
+                }
+            } else {
+                // 固定模式：检查显示时间是否到达（毫秒）
+                if (IMAGE_CAROUSEL_DISPLAY_DURATION > 0 && 
+                    (current_time - start_time) >= IMAGE_CAROUSEL_DISPLAY_DURATION) {
+                    quit = 1;
+                }
+            }
         }
 
         SDL_Delay(1);
