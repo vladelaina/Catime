@@ -14,11 +14,12 @@
 // 基础显示配置
 int IMAGE_CAROUSEL_SCALE_FACTOR;        
 char IMAGE_CAROUSEL_IMAGE_DIR[256];     
-char IMAGE_CAROUSEL_MOVING_DIR[256];    // 新增：移动模式下的图片目录
+char IMAGE_CAROUSEL_MOVING_DIR[256];    // 移动模式下的图片目录
 int IMAGE_CAROUSEL_SWITCH_INTERVAL;      
 int IMAGE_CAROUSEL_EDGE_SIZE;            
 int IMAGE_CAROUSEL_MARGIN_LEFT;          
 int IMAGE_CAROUSEL_MARGIN_TOP;           
+int IMAGE_CAROUSEL_MOVING_MARGIN_TOP;    // 移动模式下的上边距
 int IMAGE_CAROUSEL_SHOW_TRAY_ICON;       
 int IMAGE_CAROUSEL_DISPLAY_DURATION;     
 int IMAGE_CAROUSEL_SWITCH;                
@@ -97,9 +98,13 @@ int get_current_x_position(Uint32 current_time) {
 void ensure_window_top_most(WindowContext* context, int x_pos) {
     if (!context || !context->hwnd) return;
     
+    int current_margin_top = IMAGE_CAROUSEL_SWITCH ? 
+                            IMAGE_CAROUSEL_MOVING_MARGIN_TOP : 
+                            IMAGE_CAROUSEL_MARGIN_TOP;
+    
     SetWindowPos(context->hwnd, HWND_TOPMOST, 
         x_pos,
-        IMAGE_CAROUSEL_MARGIN_TOP, 
+        current_margin_top, 
         context->imgWidth, 
         context->imgHeight, 
         SWP_NOACTIVATE | SWP_SHOWWINDOW);
@@ -131,9 +136,13 @@ int compare(const void *a, const void *b) {
 
 // 创建窗口
 SDL_Window* create_window(const char* title, int x_pos, int width, int height, HWND* out_hwnd) {
+    int initial_margin_top = IMAGE_CAROUSEL_SWITCH ? 
+                            IMAGE_CAROUSEL_MOVING_MARGIN_TOP : 
+                            IMAGE_CAROUSEL_MARGIN_TOP;
+                            
     SDL_Window* win = SDL_CreateWindow(title, 
         x_pos,
-        IMAGE_CAROUSEL_MARGIN_TOP,
+        initial_margin_top,
         width, 
         height, 
         SDL_WINDOW_SHOWN | SDL_WINDOW_BORDERLESS | SDL_WINDOW_ALWAYS_ON_TOP);
@@ -229,6 +238,7 @@ void load_config(const char *filename) {
     int old_scale_factor = IMAGE_CAROUSEL_SCALE_FACTOR;
     int old_moving_scale = IMAGE_CAROUSEL_MOVING_SCALE_FACTOR;
     int old_moving_interval = IMAGE_CAROUSEL_MOVING_INTERVAL;
+    int old_moving_margin_top = IMAGE_CAROUSEL_MOVING_MARGIN_TOP;
     int old_switch_mode = IMAGE_CAROUSEL_SWITCH;
     int old_positions[2] = {IMAGE_CAROUSEL_POSITIONS[0], IMAGE_CAROUSEL_POSITIONS[1]};
     int old_debug_mode = IMAGE_CAROUSEL_DEBUG_MODE;
@@ -251,6 +261,7 @@ void load_config(const char *filename) {
         if (sscanf(line, "IMAGE_CAROUSEL_EDGE_SIZE=%d", &IMAGE_CAROUSEL_EDGE_SIZE) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_MARGIN_LEFT=%d", &IMAGE_CAROUSEL_MARGIN_LEFT) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_MARGIN_TOP=%d", &IMAGE_CAROUSEL_MARGIN_TOP) == 1) continue;
+        if (sscanf(line, "IMAGE_CAROUSEL_MOVING_MARGIN_TOP=%d", &IMAGE_CAROUSEL_MOVING_MARGIN_TOP) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_SHOW_TRAY_ICON=%d", &IMAGE_CAROUSEL_SHOW_TRAY_ICON) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_DISPLAY_DURATION=%d", &IMAGE_CAROUSEL_DISPLAY_DURATION) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_SWITCH=%d", &IMAGE_CAROUSEL_SWITCH) == 1) continue;
@@ -278,6 +289,11 @@ void load_config(const char *filename) {
         else if (old_moving_scale != IMAGE_CAROUSEL_MOVING_SCALE_FACTOR) {
             update_window_context(&main_context, IMAGE_CAROUSEL_MOVING_DIR, IMAGE_CAROUSEL_MOVING_SCALE_FACTOR);
         }
+        
+        // 检查移动模式下的上边距变化
+        if (old_moving_margin_top != IMAGE_CAROUSEL_MOVING_MARGIN_TOP) {
+            ensure_window_top_most(&main_context, get_current_x_position(SDL_GetTicks()));
+        }
     } else {
         // 检查普通模式下的目录和缩放比例变化
         if (strcmp(old_image_dir, IMAGE_CAROUSEL_IMAGE_DIR) != 0 || 
@@ -291,6 +307,7 @@ void load_config(const char *filename) {
         const char* current_dir = IMAGE_CAROUSEL_SWITCH ? IMAGE_CAROUSEL_MOVING_DIR : IMAGE_CAROUSEL_IMAGE_DIR;
         int current_scale = IMAGE_CAROUSEL_SWITCH ? IMAGE_CAROUSEL_MOVING_SCALE_FACTOR : IMAGE_CAROUSEL_SCALE_FACTOR;
         update_window_context(&main_context, current_dir, current_scale);
+        ensure_window_top_most(&main_context, get_current_x_position(SDL_GetTicks()));
     }
 
     // 检查调试模式变化
