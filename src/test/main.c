@@ -11,6 +11,26 @@
 #include <time.h>
 #include <sys/stat.h>
 
+// 配置状态结构
+typedef struct {
+    int scale_factor;
+    int moving_scale_factor;
+    char image_dir[256];
+    char moving_dir[256];
+    int switch_interval;
+    int edge_size;
+    int margin_left;
+    int margin_top;
+    int moving_margin_top;
+    int show_tray_icon;
+    int display_duration;
+    int switch_mode;
+    int control_time;
+    int positions[2];
+    int debug_mode;
+    int moving_interval;
+} ConfigState;
+
 // 基础显示配置
 int IMAGE_CAROUSEL_SCALE_FACTOR;        
 char IMAGE_CAROUSEL_IMAGE_DIR[256];     
@@ -58,6 +78,9 @@ typedef struct {
 // 主窗口上下文
 WindowContext main_context = {0};
 
+// 当前配置状态
+ConfigState current_config_state = {0};
+
 // 其他全局变量
 Uint32 start_time;
 Uint32 move_start_time = 0;
@@ -78,6 +101,63 @@ void init_image_cache(WindowContext* context);
 void clear_image_cache(WindowContext* context);
 void update_window_context(WindowContext* context, const char* dir, int scale_factor);
 void preload_next_image(WindowContext* context);
+int check_config_changes(ConfigState* old_state);
+void save_config_state(ConfigState* state);
+// 保存当前配置状态
+void save_config_state(ConfigState* state) {
+    state->scale_factor = IMAGE_CAROUSEL_SCALE_FACTOR;
+    state->moving_scale_factor = IMAGE_CAROUSEL_MOVING_SCALE_FACTOR;
+    strcpy(state->image_dir, IMAGE_CAROUSEL_IMAGE_DIR);
+    strcpy(state->moving_dir, IMAGE_CAROUSEL_MOVING_DIR);
+    state->switch_interval = IMAGE_CAROUSEL_SWITCH_INTERVAL;
+    state->edge_size = IMAGE_CAROUSEL_EDGE_SIZE;
+    state->margin_left = IMAGE_CAROUSEL_MARGIN_LEFT;
+    state->margin_top = IMAGE_CAROUSEL_MARGIN_TOP;
+    state->moving_margin_top = IMAGE_CAROUSEL_MOVING_MARGIN_TOP;
+    state->show_tray_icon = IMAGE_CAROUSEL_SHOW_TRAY_ICON;
+    state->display_duration = IMAGE_CAROUSEL_DISPLAY_DURATION;
+    state->switch_mode = IMAGE_CAROUSEL_SWITCH;
+    state->control_time = IMAGE_CAROUSEL_CONTROL_TIME;
+    state->positions[0] = IMAGE_CAROUSEL_POSITIONS[0];
+    state->positions[1] = IMAGE_CAROUSEL_POSITIONS[1];
+    state->debug_mode = IMAGE_CAROUSEL_DEBUG_MODE;
+    state->moving_interval = IMAGE_CAROUSEL_MOVING_INTERVAL;
+}
+
+// 检查配置变化
+int check_config_changes(ConfigState* old_state) {
+    int needs_window_update = 0;
+    int needs_cache_clear = 0;
+    
+    // 检查可能需要重新加载图片的配置项
+    if (old_state->scale_factor != IMAGE_CAROUSEL_SCALE_FACTOR ||
+        old_state->moving_scale_factor != IMAGE_CAROUSEL_MOVING_SCALE_FACTOR) {
+        needs_window_update = 1;
+        needs_cache_clear = 1;
+    }
+    
+    // 检查目录变化
+    if (strcmp(old_state->image_dir, IMAGE_CAROUSEL_IMAGE_DIR) != 0 ||
+        strcmp(old_state->moving_dir, IMAGE_CAROUSEL_MOVING_DIR) != 0) {
+        needs_window_update = 1;
+        needs_cache_clear = 1;
+    }
+    
+    // 检查其他可能影响显示的配置项
+    if (old_state->margin_top != IMAGE_CAROUSEL_MARGIN_TOP ||
+        old_state->moving_margin_top != IMAGE_CAROUSEL_MOVING_MARGIN_TOP ||
+        old_state->margin_left != IMAGE_CAROUSEL_MARGIN_LEFT ||
+        old_state->positions[0] != IMAGE_CAROUSEL_POSITIONS[0] ||
+        old_state->positions[1] != IMAGE_CAROUSEL_POSITIONS[1]) {
+        needs_window_update = 1;
+    }
+    
+    // 更新配置状态
+    save_config_state(old_state);
+    
+    return needs_window_update;
+}
+
 // 处理 alpha 通道
 SDL_Surface* process_alpha(SDL_Surface* surface) {
     SDL_Surface* result = SDL_CreateRGBSurface(0, surface->w, surface->h, 32,
@@ -134,7 +214,6 @@ SDL_Surface* process_alpha(SDL_Surface* surface) {
     
     return result;
 }
-
 // SDL表面转换为Windows位图
 HBITMAP SDLSurfaceToWinBitmap(SDL_Surface* surface, HDC hdc) {
     BITMAPINFO bmi;
@@ -190,7 +269,6 @@ int get_png_files(const char *dir, char ***image_files) {
     }
     closedir(d);
 
-    // 按文件名排序
     if (count > 0) {
         qsort(*image_files, count, sizeof(char*), 
               (int (*)(const void*, const void*))strcmp);
@@ -198,6 +276,7 @@ int get_png_files(const char *dir, char ***image_files) {
 
     return count;
 }
+
 // 获取文件修改时间
 time_t get_file_modification_time(const char *filename) {
     struct stat fileInfo;
@@ -255,7 +334,6 @@ void ensure_window_top_most(WindowContext* context, int x_pos) {
         context->imgHeight, 
         SWP_NOACTIVATE | SWP_SHOWWINDOW);
 }
-
 // 获取当前X位置
 int get_current_x_position(Uint32 current_time) {
     if ((IMAGE_CAROUSEL_SWITCH || IMAGE_CAROUSEL_DEBUG_MODE) && !IMAGE_CAROUSEL_DEBUG_MODE) {
@@ -311,6 +389,7 @@ void load_config(const char *filename) {
 
     fclose(file);
 }
+
 // 初始化图片缓存
 void init_image_cache(WindowContext* context) {
     if (context->image_cache) {
@@ -371,7 +450,6 @@ void update_window_context(WindowContext* context, const char* dir, int scale_fa
         }
     }
 }
-
 // 处理和显示图像
 void process_and_display_image(const char* image_path, WindowContext* context, HDC hdcScreen, HDC hdcMemory) {
     if (!context || !context->window || !context->hwnd) return;
@@ -463,6 +541,7 @@ void process_and_display_image(const char* image_path, WindowContext* context, H
         }
     }
 }
+
 // 预加载下一张图片
 void preload_next_image(WindowContext* context) {
     if (!context || context->image_count <= 1) return;
@@ -520,12 +599,12 @@ void preload_next_image(WindowContext* context) {
         }
     }
 }
-
 // 主函数
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     // 初始化配置
     load_config("config.txt");
     time_t last_mod_time = get_file_modification_time("./asset/config.txt");
+    save_config_state(&current_config_state);  // 保存初始配置状态
 
     // 初始化SDL
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -620,8 +699,24 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         if (current_mod_time != last_mod_time) {
             last_mod_time = current_mod_time;
             load_config("config.txt");
-            if (!IMAGE_CAROUSEL_DEBUG_MODE) {
-                continue;
+            
+            // 检查配置变化并更新窗口
+            if (check_config_changes(&current_config_state)) {
+                // 获取当前应该使用的目录和缩放因子
+                const char* current_dir = (IMAGE_CAROUSEL_DEBUG_MODE || IMAGE_CAROUSEL_SWITCH) ? 
+                                        IMAGE_CAROUSEL_MOVING_DIR : IMAGE_CAROUSEL_IMAGE_DIR;
+                int current_scale = (IMAGE_CAROUSEL_DEBUG_MODE || IMAGE_CAROUSEL_SWITCH) ? 
+                                  IMAGE_CAROUSEL_MOVING_SCALE_FACTOR : IMAGE_CAROUSEL_SCALE_FACTOR;
+                
+                // 更新窗口上下文
+                update_window_context(&main_context, current_dir, current_scale);
+                
+                // 立即显示更新后的图片
+                if (main_context.image_count > 0) {
+                    process_and_display_image(main_context.image_files[main_context.current_index], 
+                                           &main_context, hdcScreen, hdcMemory);
+                    preload_next_image(&main_context);
+                }
             }
         }
 
