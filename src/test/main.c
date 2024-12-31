@@ -127,10 +127,10 @@ int get_png_files(const char *dir, char ***image_files) {
     int count = 0;
     while ((entry = readdir(d)) != NULL) {
         const char *ext = strrchr(entry->d_name, '.');
-        if (ext && strcmp(ext, ".png") == 0) {
+        if (ext && (strcmp(ext, ".png") == 0 || strcmp(ext, ".PNG") == 0)) { // 支持大小写
             (*image_files) = realloc(*image_files, sizeof(char*) * (count + 1));
             (*image_files)[count] = malloc(strlen(dir) + strlen(entry->d_name) + 2);
-            sprintf((*image_files)[count], "%s/%s", dir, entry->d_name);
+            sprintf((*image_files)[count], "%s\\%s", dir, entry->d_name); // 使用反斜杠
             count++;
         }
     }
@@ -166,7 +166,7 @@ void load_config(const char *filename) {
         if (line[0] == '\n' || line[0] == '#') continue;
 
         if (sscanf(line, "IMAGE_CAROUSEL_SCALE_FACTOR=%d", &current_config_state.scale_factor) == 1) continue;
-        if (sscanf(line, "IMAGE_CAROUSEL_IMAGE_DIR=%s", current_config_state.image_dir) == 1) continue;
+        if (sscanf(line, "IMAGE_CAROUSEL_IMAGE_DIR=%255s", current_config_state.image_dir) == 1) continue; // 限制最大长度
         if (sscanf(line, "IMAGE_CAROUSEL_SWITCH_INTERVAL=%d", &current_config_state.switch_interval) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_EDGE_SIZE=%d", &current_config_state.edge_size) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_MARGIN_LEFT=%d", &current_config_state.margin_left) == 1) continue;
@@ -179,6 +179,7 @@ void load_config(const char *filename) {
         if (sscanf(line, "IMAGE_CAROUSEL_POSITIONS=%d,%d", &current_config_state.positions[0], &current_config_state.positions[1]) == 2) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_DEBUG_MODE=%d", &current_config_state.debug_mode) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_MOVING_SCALE_FACTOR=%d", &current_config_state.moving_scale_factor) == 1) continue;
+        if (sscanf(line, "IMAGE_CAROUSEL_MOVING_DIR=%255s", current_config_state.moving_dir) == 1) continue; // 添加移动目录解析
         if (sscanf(line, "IMAGE_CAROUSEL_MOVING_INTERVAL=%d", &current_config_state.moving_interval) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_Current_Mode=%d", &current_config_state.current_mode) == 1) continue;
     }
@@ -407,6 +408,9 @@ void ensure_window_top_most(WindowContext* context, int x_pos) {
         default:
             current_margin_top = current_config_state.margin_top;
     }
+
+    // 避免负值导致窗口位置异常
+    if (current_margin_top < 0) current_margin_top = 0;
 
     SetWindowPos(context->hwnd, HWND_TOPMOST, 
         x_pos,
@@ -785,6 +789,17 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         default:
             initial_dir = current_config_state.image_dir;
             initial_scale = current_config_state.scale_factor;
+    }
+
+    // 检查目录是否存在
+    DIR *dir = opendir(initial_dir);
+    if (dir) {
+        closedir(dir);
+    } else {
+        fprintf(stderr, "Directory does not exist: %s\n", initial_dir);
+        IMG_Quit();
+        SDL_Quit();
+        return 1;
     }
 
     update_window_context(&main_context, initial_dir, initial_scale);
