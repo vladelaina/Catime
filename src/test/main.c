@@ -24,8 +24,6 @@ typedef struct {
     int moving_margin_top;
     int show_tray_icon;
     int display_duration;
-    // int switch_mode; // 已移除
-    // int debug_mode;  // 已移除
     int control_time;
     int positions[2];
     int moving_interval;
@@ -56,6 +54,16 @@ typedef struct {
     int cache_size;
 } WindowContext;
 
+// 全局变量
+ConfigState current_config_state = {0};
+#define MAX_CACHE_SIZE 4501
+WindowContext main_context = {0};
+Uint32 start_time;
+Uint32 move_start_time = 0;
+static int position_index = 0;
+static int direction = 1;
+static float current_progress = 0.0f;
+
 // 函数声明
 void clear_image_cache(WindowContext* context);
 void save_config_state(ConfigState* state);
@@ -72,20 +80,6 @@ void update_window_context(WindowContext* context, const char* dir, int scale_fa
 void preload_next_image(WindowContext* context);
 int check_config_changes(ConfigState* old_state, ConfigState* new_state);
 void process_and_display_image(const char* image_path, WindowContext* context, HDC hdcScreen, HDC hdcMemory);
-
-// 基础显示配置
-ConfigState current_config_state = {0};
-#define MAX_CACHE_SIZE 4501
-
-// 主窗口上下文
-WindowContext main_context = {0};
-
-// 其他全局变量
-Uint32 start_time;
-Uint32 move_start_time = 0;
-static int position_index = 0;
-static int direction = 1;
-static float current_progress = 0.0f;
 
 // 提取文件名中的数字
 int extract_number(const char* filename) {
@@ -124,9 +118,19 @@ int get_png_files(const char *dir, char ***image_files) {
     int count = 0;
     while ((entry = readdir(d)) != NULL) {
         const char *ext = strrchr(entry->d_name, '.');
-        if (ext && (strcasecmp(ext, ".png") == 0)) { // 支持大小写
+        if (ext && strcasecmp(ext, ".png") == 0) { // 支持大小写
             (*image_files) = realloc(*image_files, sizeof(char*) * (count + 1));
+            if ((*image_files) == NULL) {
+                fprintf(stderr, "内存分配失败\n");
+                closedir(d);
+                return count;
+            }
             (*image_files)[count] = malloc(strlen(dir) + strlen(entry->d_name) + 2);
+            if ((*image_files)[count] == NULL) {
+                fprintf(stderr, "内存分配失败\n");
+                closedir(d);
+                return count;
+            }
             sprintf((*image_files)[count], "%s\\%s", dir, entry->d_name); // 使用反斜杠
             count++;
         }
@@ -229,11 +233,11 @@ SDL_Surface* process_alpha(SDL_Surface* surface) {
 
             if (a > 0) {
                 const int dx[] = {-current_config_state.edge_size, 0, current_config_state.edge_size, 
-                                 -current_config_state.edge_size, current_config_state.edge_size, 
-                                 -current_config_state.edge_size, 0, current_config_state.edge_size};
+                                -current_config_state.edge_size, current_config_state.edge_size, 
+                                -current_config_state.edge_size, 0, current_config_state.edge_size};
                 const int dy[] = {-current_config_state.edge_size, -current_config_state.edge_size, -current_config_state.edge_size,
-                                 0, 0,
-                                 current_config_state.edge_size, current_config_state.edge_size, current_config_state.edge_size};
+                                0, 0,
+                                current_config_state.edge_size, current_config_state.edge_size, current_config_state.edge_size};
 
                 for (int i = 0; i < 8; i++) {
                     int nx = x + dx[i];
@@ -399,7 +403,7 @@ void ensure_window_top_most(WindowContext* context, int x_pos) {
             current_margin_top = current_config_state.margin_top;
     }
 
-    // 避免负值导致窗口位置异常
+    // 防止负值
     if (current_margin_top < 0) current_margin_top = 0;
 
     SetWindowPos(context->hwnd, HWND_TOPMOST, 
@@ -412,7 +416,7 @@ void ensure_window_top_most(WindowContext* context, int x_pos) {
 
 // 获取当前X位置
 int get_current_x_position(Uint32 current_time, ConfigState* config) {
-    if ((config->current_mode == 2)) { // 只有移动模式需要计算位置
+    if (config->current_mode == 2) { // 移动模式
         if (move_start_time == 0) {
             move_start_time = current_time;
         }
@@ -435,41 +439,26 @@ int get_current_x_position(Uint32 current_time, ConfigState* config) {
 
 // 检查配置变化
 int check_config_changes(ConfigState* old_state, ConfigState* new_state) {
-    int needs_window_update = 0;
-    int needs_cache_clear = 0;
-
-    if (old_state->current_mode != new_state->current_mode) {
-        needs_window_update = 1;
-        needs_cache_clear = 1;
+    if (old_state->current_mode != new_state->current_mode ||
+        old_state->scale_factor != new_state->scale_factor ||
+        old_state->moving_scale_factor != new_state->moving_scale_factor ||
+        strcmp(old_state->image_dir, new_state->image_dir) != 0 ||
+        strcmp(old_state->moving_dir, new_state->moving_dir) != 0 ||
+        old_state->switch_interval != new_state->switch_interval ||
+        old_state->moving_interval != new_state->moving_interval ||
+        old_state->edge_size != new_state->edge_size ||
+        old_state->margin_left != new_state->margin_left ||
+        old_state->margin_top != new_state->margin_top ||
+        old_state->moving_margin_top != new_state->moving_margin_top ||
+        old_state->control_time != new_state->control_time ||
+        old_state->positions[0] != new_state->positions[0] ||
+        old_state->positions[1] != new_state->positions[1] ||
+        old_state->display_duration != new_state->display_duration ||
+        old_state->show_tray_icon != new_state->show_tray_icon) {
+        return 1;
     }
 
-    switch (new_state->current_mode) {
-        case 1: // 固定模式
-            if (old_state->scale_factor != new_state->scale_factor ||
-                strcmp(old_state->image_dir, new_state->image_dir) != 0 ||
-                old_state->margin_left != new_state->margin_left ||
-                old_state->margin_top != new_state->margin_top) {
-                needs_window_update = 1;
-                needs_cache_clear = 1;
-            }
-            break;
-        case 2: // 移动模式
-            if (old_state->moving_scale_factor != new_state->moving_scale_factor ||
-                strcmp(old_state->moving_dir, new_state->moving_dir) != 0 ||
-                old_state->moving_interval != new_state->moving_interval ||
-                old_state->positions[0] != new_state->positions[0] ||
-                old_state->positions[1] != new_state->positions[1] ||
-                old_state->control_time != new_state->control_time ||
-                old_state->moving_margin_top != new_state->moving_margin_top) {
-                needs_window_update = 1;
-                needs_cache_clear = 1;
-            }
-            break;
-        default:
-            break;
-    }
-
-    return needs_window_update;
+    return 0;
 }
 
 // 处理和显示图像
@@ -723,15 +712,28 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     HDC hdcScreen = GetDC(NULL);
     HDC hdcMemory = CreateCompatibleDC(hdcScreen);
 
+    // 是否显示托盘图标
+    NOTIFYICONDATA nid;
+    if (current_config_state.show_tray_icon) {
+        ZeroMemory(&nid, sizeof(NOTIFYICONDATA));
+        nid.cbSize = sizeof(NOTIFYICONDATA);
+        nid.hWnd = main_context.hwnd;
+        nid.uID = 1;
+        nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
+        nid.uCallbackMessage = WM_APP;
+        nid.hIcon = (HICON)LoadImage(NULL, "icon.ico", IMAGE_ICON, 0, 0, LR_LOADFROMFILE);
+        wchar_t szTip[128];
+        wcsncpy(szTip, L"Image Carousel", sizeof(szTip) / sizeof(wchar_t));
+        wcscpy((wchar_t*)nid.szTip, szTip);
+        Shell_NotifyIcon(NIM_ADD, &nid);
+    }
+
     // 主循环变量
     SDL_Event e;
     int quit = 0;
     start_time = SDL_GetTicks();
     move_start_time = SDL_GetTicks();
     main_context.last_switch_time = SDL_GetTicks();
-    Uint32 last_frame_time = SDL_GetTicks();
-    const int TARGET_FPS = 60;
-    const int FRAME_DELAY = 1000 / TARGET_FPS;
 
     // 预加载第一张图片
     process_and_display_image(main_context.image_files[main_context.current_index], 
@@ -799,8 +801,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             }
 
             if (current_time - main_context.last_switch_time >= current_interval) {
-                main_context.last_switch_time = current_time;
-                
+                main_context.last_switch_time += current_interval; // 累加间隔
+
                 main_context.current_index = (main_context.current_index + 1) % main_context.image_count;
                 
                 process_and_display_image(main_context.image_files[main_context.current_index], 
@@ -824,14 +826,18 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             }
         }
 
-        // 帧率控制
-        Uint32 frame_time = SDL_GetTicks() - frame_start;
-        if (frame_time < FRAME_DELAY) {
-            SDL_Delay(FRAME_DELAY - frame_time);
-        }
+        // 移除帧率控制，以提高切换速度
+        // Uint32 frame_time = SDL_GetTicks() - frame_start;
+        // if (frame_time < FRAME_DELAY) {
+        //     SDL_Delay(FRAME_DELAY - frame_time);
+        // }
     }
 
     // 清理资源
+    if (current_config_state.show_tray_icon) {
+        Shell_NotifyIcon(NIM_DELETE, &nid);
+    }
+    
     clear_image_cache(&main_context);
     DeleteDC(hdcMemory);
     ReleaseDC(NULL, hdcScreen);
