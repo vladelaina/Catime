@@ -27,62 +27,61 @@ CLOCK_IDD_DIALOG1=1002         # 对话框ID
 CLOCK_ID_TRAY_APP_ICON=1001    # 托盘图标ID
 
 # 定义时间选项
-CLOCK_TIME_OPTIONS=88,10,25,120,1
+CLOCK_TIME_OPTIONS=88,10,25,120,19
 
 
 #=========================================
 # 基础显示配置
 #=========================================
 # 固定位置显示时的图片缩放比例（20表示20%）
-IMAGE_CAROUSEL_SCALE_FACTOR=10
+IMAGE_CAROUSEL_SCALE_FACTOR=20
 
 # 固定位置显示时的图片文件夹目录
-IMAGE_CAROUSEL_IMAGE_DIR=./asset/images/moving/5
+IMAGE_CAROUSEL_IMAGE_DIR=./asset/images/moving/gdyg3
 
 # 固定位置显示时切换图片的间隔时间（毫秒）
 IMAGE_CAROUSEL_SWITCH_INTERVAL=1
+
+# 左边距（像素）
+IMAGE_CAROUSEL_MARGIN_LEFT=23
+
+# 上边距（像素）
+IMAGE_CAROUSEL_MARGIN_TOP=50
 
 #=========================================
 # 移动显示配置
 #=========================================
 # 移动时的图片缩放比例
-IMAGE_CAROUSEL_MOVING_SCALE_FACTOR=10
+IMAGE_CAROUSEL_MOVING_SCALE_FACTOR=30
 
 # 移动时的图片文件夹目录
-IMAGE_CAROUSEL_MOVING_DIR=./asset/images/moving/5
+IMAGE_CAROUSEL_MOVING_DIR=./asset/images/moving/gdyg2
 
 # 移动时切换图片的间隔时间（毫秒）
-IMAGE_CAROUSEL_MOVING_INTERVAL=1
+IMAGE_CAROUSEL_MOVING_INTERVAL=3000
 
 # 移动模式下的上边距（像素）
-IMAGE_CAROUSEL_MOVING_MARGIN_TOP=10
+IMAGE_CAROUSEL_MOVING_MARGIN_TOP=50
 
 #=========================================
 # 其他配置
 #=========================================
 # 边缘处理的像素大小
-IMAGE_CAROUSEL_EDGE_SIZE=0
 
-# 左边距（像素）
-IMAGE_CAROUSEL_MARGIN_LEFT=100
+IMAGE_CAROUSEL_EDGE_SIZE=1
 
-# 上边距（像素）
-IMAGE_CAROUSEL_MARGIN_TOP=19
 
 # 是否显示托盘图标（0为不显示，1为显示）
 IMAGE_CAROUSEL_SHOW_TRAY_ICON=0
 
 # 显示持续时间（毫秒）
-IMAGE_CAROUSEL_DISPLAY_DURATION=1000000
-
-# 移动功能开关（1为开启，0为关闭）
-IMAGE_CAROUSEL_SWITCH=0
+IMAGE_CAROUSEL_DISPLAY_DURATION=1500000000
 
 # 移动循环时间（毫秒）
-IMAGE_CAROUSEL_CONTROL_TIME=50000
+IMAGE_CAROUSEL_CONTROL_TIME=150000
 
 # 移动范围数组，两个像素值
-IMAGE_CAROUSEL_POSITIONS=-10,1400
+IMAGE_CAROUSEL_POSITIONS=35,1000
 
-# 调试模式开关（0为关闭，1为开启）
-IMAGE_CAROUSEL_DEBUG_MODE=0
+# 当前模式（1-固定模式，2-移动模式）
+IMAGE_CAROUSEL_Current_Mode=1
