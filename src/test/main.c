@@ -11,6 +11,9 @@
 #include <time.h>
 #include <sys/stat.h>
 
+// 配置文件路径（全局变量）
+const char* config_path = "./asset/config.txt";
+
 // 配置状态结构
 typedef struct {
     int scale_factor;
@@ -28,6 +31,7 @@ typedef struct {
     int positions[2];
     int moving_interval;
     int current_mode; // 当前模式：1-固定，2-移动
+    int enable_dragging; // 新增：是否启用拖动窗口
 } ConfigState;
 
 // 图片缓存结构
@@ -52,6 +56,10 @@ typedef struct {
     Uint32 last_switch_time;
     ImageCache* image_cache;
     int cache_size;
+    // 新增：拖动窗口相关变量
+    int is_dragging;
+    int drag_offset_x;
+    int drag_offset_y;
 } WindowContext;
 
 // 全局变量
@@ -66,7 +74,8 @@ static float current_progress = 0.0f;
 
 // 函数声明
 void clear_image_cache(WindowContext* context);
-void save_config_state(ConfigState* state);
+void save_config_state(const char *filename, ConfigState* state);
+void write_config(const char *filename, ConfigState* state);
 void init_image_cache(WindowContext* context);
 SDL_Surface* process_alpha(SDL_Surface* surface);
 HBITMAP SDLSurfaceToWinBitmap(SDL_Surface* surface, HDC hdc);
@@ -110,7 +119,7 @@ int compare_numbers(const void* a, const void* b) {
 int get_png_files(const char *dir, char ***image_files) {
     DIR *d = opendir(dir);
     if (d == NULL) {
-        fprintf(stderr, "Failed to open directory: %s\n", dir);
+        fprintf(stderr, "无法打开目录: %s\n", dir);
         return 0;
     }
 
@@ -121,14 +130,14 @@ int get_png_files(const char *dir, char ***image_files) {
         if (ext && (strcasecmp(ext, ".png") == 0 || strcasecmp(ext, ".PNG") == 0)) {
             char *full_path = malloc(strlen(dir) + strlen(entry->d_name) + 2);
             if (!full_path) {
-                fprintf(stderr, "Memory allocation failed\n");
+                fprintf(stderr, "内存分配失败\n");
                 closedir(d);
                 return count;
             }
             sprintf(full_path, "%s\\%s", dir, entry->d_name);
             (*image_files) = realloc(*image_files, sizeof(char*) * (count + 1));
             if (!(*image_files)) {
-                fprintf(stderr, "Memory reallocation failed\n");
+                fprintf(stderr, "内存重新分配失败\n");
                 free(full_path);
                 closedir(d);
                 return count;
@@ -160,7 +169,7 @@ time_t get_file_modification_time(const char *filename) {
 void load_config(const char *filename) {
     FILE *file = fopen(filename, "r");
     if (!file) {
-        fprintf(stderr, "Cannot open config file: %s\n", filename);
+        fprintf(stderr, "无法打开配置文件: %s\n", filename);
         return;
     }
 
@@ -183,14 +192,44 @@ void load_config(const char *filename) {
         if (sscanf(line, "IMAGE_CAROUSEL_CONTROL_TIME=%d", &current_config_state.control_time) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_POSITIONS=%d,%d", &current_config_state.positions[0], &current_config_state.positions[1]) == 2) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_Current_Mode=%d", &current_config_state.current_mode) == 1) continue;
+        if (sscanf(line, "IMAGE_CAROUSEL_ENABLE_DRAGGING=%d", &current_config_state.enable_dragging) == 1) continue;
     }
 
     fclose(file);
 }
 
-// 保存配置状态
-void save_config_state(ConfigState* state) {
-    *state = current_config_state;
+// 保存配置状态到配置文件
+void write_config(const char *filename, ConfigState* state) {
+    FILE *file = fopen(filename, "w");
+    if (!file) {
+        fprintf(stderr, "无法打开配置文件进行写入: %s\n", filename);
+        return;
+    }
+
+    fprintf(file, "# Image Carousel Configuration\n");
+    fprintf(file, "IMAGE_CAROUSEL_SCALE_FACTOR=%d\n", state->scale_factor);
+    fprintf(file, "IMAGE_CAROUSEL_IMAGE_DIR=%s\n", state->image_dir);
+    fprintf(file, "IMAGE_CAROUSEL_SWITCH_INTERVAL=%d\n", state->switch_interval);
+    fprintf(file, "IMAGE_CAROUSEL_MOVING_SCALE_FACTOR=%d\n", state->moving_scale_factor);
+    fprintf(file, "IMAGE_CAROUSEL_MOVING_DIR=%s\n", state->moving_dir);
+    fprintf(file, "IMAGE_CAROUSEL_MOVING_INTERVAL=%d\n", state->moving_interval);
+    fprintf(file, "IMAGE_CAROUSEL_MOVING_MARGIN_TOP=%d\n", state->moving_margin_top);
+    fprintf(file, "IMAGE_CAROUSEL_EDGE_SIZE=%d\n", state->edge_size);
+    fprintf(file, "IMAGE_CAROUSEL_MARGIN_LEFT=%d\n", state->margin_left);
+    fprintf(file, "IMAGE_CAROUSEL_MARGIN_TOP=%d\n", state->margin_top);
+    fprintf(file, "IMAGE_CAROUSEL_SHOW_TRAY_ICON=%d\n", state->show_tray_icon);
+    fprintf(file, "IMAGE_CAROUSEL_DISPLAY_DURATION=%d\n", state->display_duration);
+    fprintf(file, "IMAGE_CAROUSEL_CONTROL_TIME=%d\n", state->control_time);
+    fprintf(file, "IMAGE_CAROUSEL_POSITIONS=%d,%d\n", state->positions[0], state->positions[1]);
+    fprintf(file, "IMAGE_CAROUSEL_Current_Mode=%d\n", state->current_mode);
+    fprintf(file, "IMAGE_CAROUSEL_ENABLE_DRAGGING=%d\n", state->enable_dragging);
+
+    fclose(file);
+}
+
+// 保存配置状态（复制并写入配置文件）
+void save_config_state(const char *filename, ConfigState* state) {
+    write_config(filename, state);
 }
 
 // 处理 alpha 通道
@@ -296,7 +335,7 @@ void init_image_cache(WindowContext* context) {
     context->cache_size = context->image_count < MAX_CACHE_SIZE ? context->image_count : MAX_CACHE_SIZE;
     context->image_cache = (ImageCache*)calloc(context->cache_size, sizeof(ImageCache));
     if (!context->image_cache) {
-        fprintf(stderr, "Failed to allocate image cache\n");
+        fprintf(stderr, "无法分配图片缓存\n");
     }
 }
 
@@ -366,9 +405,14 @@ SDL_Window* create_window(const char* title, int x_pos, int y_pos, int width, in
         SDL_VERSION(&wmInfo.version);
         if (SDL_GetWindowWMInfo(win, &wmInfo)) {
             *out_hwnd = wmInfo.info.win.window;
-            SetWindowLongPtr(*out_hwnd, GWL_EXSTYLE, 
-                WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST | WS_EX_TOOLWINDOW);
-            
+
+            // 根据拖动开关设置窗口样式
+            LONG_PTR exStyle = WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW;
+            if (!current_config_state.enable_dragging) {
+                exStyle |= WS_EX_TRANSPARENT;
+            }
+            SetWindowLongPtr(*out_hwnd, GWL_EXSTYLE, exStyle);
+
             HDC hdcScreen = GetDC(NULL);
             BLENDFUNCTION blend = {0};
             blend.BlendOp = AC_SRC_OVER;
@@ -609,7 +653,8 @@ int check_config_changes(ConfigState* old_state, ConfigState* new_state, WindowC
             if (old_state->scale_factor != new_state->scale_factor ||
                 strcmp(old_state->image_dir, new_state->image_dir) != 0 ||
                 old_state->margin_left != new_state->margin_left ||
-                old_state->margin_top != new_state->margin_top) {
+                old_state->margin_top != new_state->margin_top ||
+                old_state->enable_dragging != new_state->enable_dragging) { // 拖动开关检测
                 needs_window_update = 1;
                 needs_cache_clear = 1;
             }
@@ -630,6 +675,11 @@ int check_config_changes(ConfigState* old_state, ConfigState* new_state, WindowC
             break;
     }
 
+    // 检查拖动开关变化
+    if (old_state->enable_dragging != new_state->enable_dragging) {
+        needs_window_update = 1;
+    }
+
     if (needs_cache_clear) {
         clear_image_cache(context);
     }
@@ -640,19 +690,18 @@ int check_config_changes(ConfigState* old_state, ConfigState* new_state, WindowC
 // 主函数
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     // 初始化配置
-    const char* config_path = "./asset/config.txt";
     load_config(config_path);
     time_t last_mod_time = get_file_modification_time(config_path);
-    save_config_state(&current_config_state);
+    save_config_state(config_path, &current_config_state);
 
     // 初始化SDL
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-        fprintf(stderr, "SDL_Init Error: %s\n", SDL_GetError());
+        fprintf(stderr, "SDL_Init 错误: %s\n", SDL_GetError());
         return 1;
     }
 
     if ((IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG) == 0) {
-        fprintf(stderr, "IMG_Init Error: %s\n", IMG_GetError());
+        fprintf(stderr, "IMG_Init 错误: %s\n", IMG_GetError());
         SDL_Quit();
         return 1;
     }
@@ -679,7 +728,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     if (dir) {
         closedir(dir);
     } else {
-        fprintf(stderr, "Directory does not exist: %s\n", initial_dir);
+        fprintf(stderr, "目录不存在: %s\n", initial_dir);
         IMG_Quit();
         SDL_Quit();
         return 1;
@@ -687,7 +736,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
     update_window_context(&main_context, initial_dir, initial_scale);
     if (main_context.image_count == 0) {
-        fprintf(stderr, "No PNG files found in %s\n", initial_dir);
+        fprintf(stderr, "在 %s 中找不到PNG文件\n", initial_dir);
         IMG_Quit();
         SDL_Quit();
         return 1;
@@ -715,7 +764,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         main_context.imgWidth, main_context.imgHeight, 
         &main_context.hwnd);
     if (!main_context.window) {
-        fprintf(stderr, "Failed to create main window\n");
+        fprintf(stderr, "创建主窗口失败\n");
         IMG_Quit();
         SDL_Quit();
         return 1;
@@ -724,30 +773,17 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     HDC hdcScreen = GetDC(NULL);
     HDC hdcMemory = CreateCompatibleDC(hdcScreen);
 
-    #if 0 // IMAGE_CAROUSEL_SHOW_TRAY_ICON 已移除
-    NOTIFYICONDATA nid;
-    ZeroMemory(&nid, sizeof(NOTIFYICONDATA));
-    nid.cbSize = sizeof(NOTIFYICONDATA);
-    nid.hWnd = main_context.hwnd;
-    nid.uID = 1;
-    nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
-    nid.uCallbackMessage = WM_APP;
-    nid.hIcon = (HICON)LoadImage(NULL, "icon.ico", IMAGE_ICON, 0, 0, LR_LOADFROMFILE);
-    wchar_t szTip[128];
-    wcsncpy(szTip, L"Image Carousel", sizeof(szTip) / sizeof(wchar_t));
-    wcscpy((wchar_t*)nid.szTip, szTip);
-    Shell_NotifyIcon(NIM_ADD, &nid);
-    #endif
-
     // 主循环变量
     SDL_Event e;
     int quit = 0;
     start_time = SDL_GetTicks();
     move_start_time = SDL_GetTicks();
     main_context.last_switch_time = SDL_GetTicks();
-    // Uint32 last_frame_time = SDL_GetTicks(); // 已移除
-    // const int TARGET_FPS = 60; // 已移除
-    // const int FRAME_DELAY = 1000 / TARGET_FPS; // 已移除
+
+    // 初始化拖动相关变量
+    main_context.is_dragging = 0;
+    main_context.drag_offset_x = 0;
+    main_context.drag_offset_y = 0;
 
     // 预加载第一张图片
     process_and_display_image(main_context.image_files[main_context.current_index], 
@@ -758,9 +794,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
     // 主循环
     while (!quit) {
-        Uint32 frame_start = SDL_GetTicks();
-
-        // 计算等待时间
+        // 等待事件或超时
         Uint32 current_time = SDL_GetTicks();
         Uint32 time_since_last_switch = current_time - main_context.last_switch_time;
         int current_interval = (current_config_state.current_mode == 1) ? 
@@ -777,7 +811,43 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                 quit = 1;
                 break;
             }
-            // 处理其他事件（如果有）
+            // 处理鼠标事件
+            if (current_config_state.enable_dragging) {
+                if (e.type == SDL_MOUSEBUTTONDOWN) {
+                    if (e.button.button == SDL_BUTTON_LEFT) {
+                        main_context.is_dragging = 1;
+                        POINT cursor_pos;
+                        GetCursorPos(&cursor_pos);
+                        RECT rect;
+                        GetWindowRect(main_context.hwnd, &rect);
+                        main_context.drag_offset_x = cursor_pos.x - rect.left;
+                        main_context.drag_offset_y = cursor_pos.y - rect.top;
+                    }
+                }
+                else if (e.type == SDL_MOUSEBUTTONUP) {
+                    if (e.button.button == SDL_BUTTON_LEFT) {
+                        if (main_context.is_dragging) {
+                            main_context.is_dragging = 0;
+                            // 获取新窗口位置（无需在此保存，已在拖动过程中保存）
+                        }
+                    }
+                }
+                else if (e.type == SDL_MOUSEMOTION) {
+                    if (main_context.is_dragging) {
+                        POINT cursor_pos;
+                        GetCursorPos(&cursor_pos);
+                        int new_x = cursor_pos.x - main_context.drag_offset_x;
+                        int new_y = cursor_pos.y - main_context.drag_offset_y;
+                        SetWindowPos(main_context.hwnd, HWND_TOPMOST, new_x, new_y,
+                            main_context.imgWidth, main_context.imgHeight, SWP_NOACTIVATE | SWP_SHOWWINDOW);
+                        
+                        // 实时更新配置
+                        current_config_state.margin_left = new_x;
+                        current_config_state.margin_top = new_y;
+                        save_config_state(config_path, &current_config_state);
+                    }
+                }
+            }
         }
 
         current_time = SDL_GetTicks();
@@ -831,6 +901,21 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                                               &main_context, hdcScreen, hdcMemory);
                     preload_next_image(&main_context);
                 }
+
+                // 更新窗口样式 based on enable_dragging
+                LONG_PTR exStyle = WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW;
+                if (!current_config_state.enable_dragging) {
+                    exStyle |= WS_EX_TRANSPARENT;
+                }
+                SetWindowLongPtr(main_context.hwnd, GWL_EXSTYLE, exStyle);
+
+                HDC hdcScreenUpdate = GetDC(NULL);
+                BLENDFUNCTION blend = {0};
+                blend.BlendOp = AC_SRC_OVER;
+                blend.SourceConstantAlpha = 255;
+                blend.AlphaFormat = AC_SRC_ALPHA;
+                UpdateLayeredWindow(main_context.hwnd, hdcScreenUpdate, NULL, NULL, NULL, NULL, 0, &blend, ULW_ALPHA);
+                ReleaseDC(NULL, hdcScreenUpdate);
             }
         }
 
@@ -839,22 +924,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             (current_time - start_time) >= current_config_state.display_duration) {
             quit = 1;
         }
-
-        // 已移除帧率控制
-        /*
-        // 帧率控制
-        Uint32 frame_time = SDL_GetTicks() - frame_start;
-        if (frame_time < FRAME_DELAY) {
-            SDL_Delay(FRAME_DELAY - frame_time);
-        }
-        */
     }
 
     // 清理资源
-    #if 0 // IMAGE_CAROUSEL_SHOW_TRAY_ICON 已移除
-    Shell_NotifyIcon(NIM_DELETE, &nid);
-    #endif
-    
     clear_image_cache(&main_context);
     DeleteDC(hdcMemory);
     ReleaseDC(NULL, hdcScreen);
