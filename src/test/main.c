@@ -200,14 +200,6 @@ void load_config(const char *filename) {
     }
 
     fclose(file);
-
-    // 设置默认最小和最大缩放比例如果未在配置文件中设置
-    if (current_config_state.min_scale_factor == 0) {
-        current_config_state.min_scale_factor = 50; // 默认最小50%
-    }
-    if (current_config_state.max_scale_factor == 0) {
-        current_config_state.max_scale_factor = 200; // 默认最大200%
-    }
 }
 
 // 保存配置状态到配置文件
