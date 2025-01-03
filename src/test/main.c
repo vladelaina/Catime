@@ -708,6 +708,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                         GetWindowRect(main_context.hwnd, &rect);
                         main_context.drag_offset_x = cursor_pos.x - rect.left;
                         main_context.drag_offset_y = cursor_pos.y - rect.top;
+
+                        // 激活窗口以响应拖动
+                        SetForegroundWindow(main_context.hwnd);
                     }
                 }
                 else if (e.type == SDL_MOUSEBUTTONUP) {
@@ -764,6 +767,20 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
                         // 保存配置
                         save_config_state(config_path, &current_config_state);
+                    }
+                }
+            }
+            // 处理鼠标悬停以激活窗口拖动
+            if (current_config_state.enable_dragging) {
+                if (e.type == SDL_MOUSEMOTION || e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP) {
+                    POINT cursor_pos;
+                    GetCursorPos(&cursor_pos);
+                    RECT rect;
+                    GetWindowRect(main_context.hwnd, &rect);
+                    if (cursor_pos.x >= rect.left && cursor_pos.x <= rect.right &&
+                        cursor_pos.y >= rect.top && cursor_pos.y <= rect.bottom) {
+                        // 激活窗口，使其可拖动
+                        SetForegroundWindow(main_context.hwnd);
                     }
                 }
             }
