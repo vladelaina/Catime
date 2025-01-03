@@ -791,7 +791,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         int current_interval = current_config_state.switch_interval;
 
         if (time_since_last_switch >= current_interval) {
-            main_context.last_switch_time += current_interval; // 累加间隔
+            // 修正last_switch_time以保持恒定速度
+            main_context.last_switch_time = current_time;
 
             main_context.current_index = (main_context.current_index + 1) % main_context.image_count;
             
