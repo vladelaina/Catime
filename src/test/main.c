@@ -31,7 +31,7 @@ typedef struct {
     int positions[2];
     int moving_interval;
     int current_mode; // 当前模式：1-固定，2-移动
-    int enable_dragging; // 新增：是否启用拖动窗口
+    int enable_dragging; // 是否启用拖动窗口
 } ConfigState;
 
 // 图片缓存结构
@@ -56,7 +56,7 @@ typedef struct {
     Uint32 last_switch_time;
     ImageCache* image_cache;
     int cache_size;
-    // 新增：拖动窗口相关变量
+    // 拖动窗口相关变量
     int is_dragging;
     int drag_offset_x;
     int drag_offset_y;
@@ -198,7 +198,7 @@ void load_config(const char *filename) {
     fclose(file);
 }
 
-// 保存配置状态到配置文件
+// 保存配置到配置文件
 void write_config(const char *filename, ConfigState* state) {
     FILE *file = fopen(filename, "w");
     if (!file) {
@@ -227,7 +227,7 @@ void write_config(const char *filename, ConfigState* state) {
     fclose(file);
 }
 
-// 保存配置状态（复制并写入配置文件）
+// 保存配置状态到配置文件
 void save_config_state(const char *filename, ConfigState* state) {
     write_config(filename, state);
 }
@@ -780,11 +780,6 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     move_start_time = SDL_GetTicks();
     main_context.last_switch_time = SDL_GetTicks();
 
-    // 初始化拖动相关变量
-    main_context.is_dragging = 0;
-    main_context.drag_offset_x = 0;
-    main_context.drag_offset_y = 0;
-
     // 预加载第一张图片
     process_and_display_image(main_context.image_files[main_context.current_index], 
                               &main_context, hdcScreen, hdcMemory);
@@ -794,6 +789,24 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
     // 主循环
     while (!quit) {
+        // 获取当前鼠标位置
+        int mouse_x, mouse_y;
+        SDL_GetMouseState(&mouse_x, &mouse_y);
+        SDL_Window* current_window = SDL_GetMouseFocus();
+        HWND mouse_focus_hwnd = NULL;
+        if (current_window) {
+            SDL_SysWMinfo wmInfoMouse;
+            SDL_VERSION(&wmInfoMouse.version);
+            if (SDL_GetWindowWMInfo(current_window, &wmInfoMouse)) {
+                mouse_focus_hwnd = wmInfoMouse.info.win.window;
+            }
+        }
+
+        // 自动激活窗口如果鼠标在窗口上方且拖动启用
+        if (current_config_state.enable_dragging && mouse_focus_hwnd == main_context.hwnd) {
+            SDL_RaiseWindow(main_context.window);
+        }
+
         // 等待事件或超时
         Uint32 current_time = SDL_GetTicks();
         Uint32 time_since_last_switch = current_time - main_context.last_switch_time;
@@ -828,7 +841,6 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                     if (e.button.button == SDL_BUTTON_LEFT) {
                         if (main_context.is_dragging) {
                             main_context.is_dragging = 0;
-                            // 获取新窗口位置（无需在此保存，已在拖动过程中保存）
                         }
                     }
                 }
