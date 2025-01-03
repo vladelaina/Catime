@@ -32,6 +32,9 @@ typedef struct {
     int moving_interval;
     int current_mode; // 当前模式：1-固定，2-移动
     int enable_dragging; // 是否启用拖动窗口
+    int zoom_step; // 放大缩小步长（百分比）
+    int min_scale_factor; // 最小缩放比例
+    int max_scale_factor; // 最大缩放比例
 } ConfigState;
 
 // 图片缓存结构
@@ -193,12 +196,23 @@ void load_config(const char *filename) {
         if (sscanf(line, "IMAGE_CAROUSEL_POSITIONS=%d,%d", &current_config_state.positions[0], &current_config_state.positions[1]) == 2) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_Current_Mode=%d", &current_config_state.current_mode) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_ENABLE_DRAGGING=%d", &current_config_state.enable_dragging) == 1) continue;
+        if (sscanf(line, "IMAGE_CAROUSEL_ZOOM_STEP=%d", &current_config_state.zoom_step) == 1) continue;
+        if (sscanf(line, "IMAGE_CAROUSEL_MIN_SCALE_FACTOR=%d", &current_config_state.min_scale_factor) == 1) continue;
+        if (sscanf(line, "IMAGE_CAROUSEL_MAX_SCALE_FACTOR=%d", &current_config_state.max_scale_factor) == 1) continue;
     }
 
     fclose(file);
+
+    // 设置默认最小和最大缩放比例如果未在配置文件中设置
+    if (current_config_state.min_scale_factor == 0) {
+        current_config_state.min_scale_factor = 50; // 默认最小50%
+    }
+    if (current_config_state.max_scale_factor == 0) {
+        current_config_state.max_scale_factor = 200; // 默认最大200%
+    }
 }
 
-// 保存配置到配置文件
+// 保存配置状态到配置文件
 void write_config(const char *filename, ConfigState* state) {
     FILE *file = fopen(filename, "w");
     if (!file) {
@@ -223,11 +237,14 @@ void write_config(const char *filename, ConfigState* state) {
     fprintf(file, "IMAGE_CAROUSEL_POSITIONS=%d,%d\n", state->positions[0], state->positions[1]);
     fprintf(file, "IMAGE_CAROUSEL_Current_Mode=%d\n", state->current_mode);
     fprintf(file, "IMAGE_CAROUSEL_ENABLE_DRAGGING=%d\n", state->enable_dragging);
+    fprintf(file, "IMAGE_CAROUSEL_ZOOM_STEP=%d\n", state->zoom_step);
+    fprintf(file, "IMAGE_CAROUSEL_MIN_SCALE_FACTOR=%d\n", state->min_scale_factor);
+    fprintf(file, "IMAGE_CAROUSEL_MAX_SCALE_FACTOR=%d\n", state->max_scale_factor);
 
     fclose(file);
 }
 
-// 保存配置状态到配置文件
+// 保存配置状态到配置文件（复制并写入配置文件）
 void save_config_state(const char *filename, ConfigState* state) {
     write_config(filename, state);
 }
@@ -654,7 +671,10 @@ int check_config_changes(ConfigState* old_state, ConfigState* new_state, WindowC
                 strcmp(old_state->image_dir, new_state->image_dir) != 0 ||
                 old_state->margin_left != new_state->margin_left ||
                 old_state->margin_top != new_state->margin_top ||
-                old_state->enable_dragging != new_state->enable_dragging) { // 拖动开关检测
+                old_state->enable_dragging != new_state->enable_dragging ||
+                old_state->zoom_step != new_state->zoom_step ||
+                old_state->min_scale_factor != new_state->min_scale_factor ||
+                old_state->max_scale_factor != new_state->max_scale_factor) { // 拖动开关和缩放相关检测
                 needs_window_update = 1;
                 needs_cache_clear = 1;
             }
@@ -676,7 +696,10 @@ int check_config_changes(ConfigState* old_state, ConfigState* new_state, WindowC
     }
 
     // 检查拖动开关变化
-    if (old_state->enable_dragging != new_state->enable_dragging) {
+    if (old_state->enable_dragging != new_state->enable_dragging ||
+        old_state->zoom_step != new_state->zoom_step ||
+        old_state->min_scale_factor != new_state->min_scale_factor ||
+        old_state->max_scale_factor != new_state->max_scale_factor) {
         needs_window_update = 1;
     }
 
@@ -789,24 +812,6 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
     // 主循环
     while (!quit) {
-        // 获取当前鼠标位置
-        int mouse_x, mouse_y;
-        SDL_GetMouseState(&mouse_x, &mouse_y);
-        SDL_Window* current_window = SDL_GetMouseFocus();
-        HWND mouse_focus_hwnd = NULL;
-        if (current_window) {
-            SDL_SysWMinfo wmInfoMouse;
-            SDL_VERSION(&wmInfoMouse.version);
-            if (SDL_GetWindowWMInfo(current_window, &wmInfoMouse)) {
-                mouse_focus_hwnd = wmInfoMouse.info.win.window;
-            }
-        }
-
-        // 自动激活窗口如果鼠标在窗口上方且拖动启用
-        if (current_config_state.enable_dragging && mouse_focus_hwnd == main_context.hwnd) {
-            SDL_RaiseWindow(main_context.window);
-        }
-
         // 等待事件或超时
         Uint32 current_time = SDL_GetTicks();
         Uint32 time_since_last_switch = current_time - main_context.last_switch_time;
@@ -856,6 +861,40 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                         // 实时更新配置
                         current_config_state.margin_left = new_x;
                         current_config_state.margin_top = new_y;
+                        save_config_state(config_path, &current_config_state);
+                    }
+                }
+                else if (e.type == SDL_MOUSEWHEEL) {
+                    // 检查鼠标是否在窗口上方
+                    POINT cursor_pos;
+                    GetCursorPos(&cursor_pos);
+                    RECT rect;
+                    GetWindowRect(main_context.hwnd, &rect);
+                    if (cursor_pos.x >= rect.left && cursor_pos.x <= rect.right &&
+                        cursor_pos.y >= rect.top && cursor_pos.y <= rect.bottom) {
+                        // 根据滚轮方向调整缩放比例
+                        if (e.wheel.y > 0) { // 向前滚动，放大
+                            current_config_state.scale_factor += current_config_state.zoom_step;
+                            if (current_config_state.scale_factor > current_config_state.max_scale_factor) {
+                                current_config_state.scale_factor = current_config_state.max_scale_factor;
+                            }
+                        }
+                        else if (e.wheel.y < 0) { // 向后滚动，缩小
+                            current_config_state.scale_factor -= current_config_state.zoom_step;
+                            if (current_config_state.scale_factor < current_config_state.min_scale_factor) {
+                                current_config_state.scale_factor = current_config_state.min_scale_factor;
+                            }
+                        }
+
+                        // 更新当前窗口上下文
+                        update_window_context(&main_context, current_config_state.image_dir, current_config_state.scale_factor);
+                        if (main_context.image_count > 0) {
+                            process_and_display_image(main_context.image_files[main_context.current_index], 
+                                                      &main_context, hdcScreen, hdcMemory);
+                            preload_next_image(&main_context);
+                        }
+
+                        // 保存配置
                         save_config_state(config_path, &current_config_state);
                     }
                 }
