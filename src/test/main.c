@@ -20,7 +20,7 @@ typedef struct {
     int moving_scale_factor;
     char image_dir[256];
     char moving_dir[256];
-    int switch_interval;
+    int switch_interval; // 单位：毫秒
     int edge_size;
     int margin_left;
     int margin_top;
@@ -390,7 +390,7 @@ void update_window_context(WindowContext* context, const char* dir, int scale_fa
 
     // 加载新图片列表
     context->image_count = get_png_files(dir, &context->image_files);
-    context->current_index = saved_index; // 恢复索引
+    context->current_index = saved_index % (context->image_count > 0 ? context->image_count : 1); // 确保索引在范围内
 
     // 初始化新缓存
     init_image_cache(context);
@@ -494,106 +494,6 @@ int get_current_x_position(Uint32 current_time, ConfigState* config) {
     }
 
     return config->margin_left;
-}
-
-// 更新窗口上下文和重新加载图片
-void process_and_display_image(const char* image_path, WindowContext* context, HDC hdcScreen, HDC hdcMemory) {
-    if (!context || !context->window || !context->hwnd) return;
-
-    // 检查缓存
-    ImageCache* cache = &context->image_cache[context->current_index % context->cache_size];
-    if (cache->is_valid) {
-        HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcMemory, cache->bitmap);
-        
-        BLENDFUNCTION blend = {0};
-        blend.BlendOp = AC_SRC_OVER;
-        blend.SourceConstantAlpha = 255;
-        blend.AlphaFormat = AC_SRC_ALPHA;
-
-        POINT ptSrc = {0, 0};
-        SIZE sizeWnd = {context->imgWidth, context->imgHeight};
-        RECT rect;
-        GetWindowRect(context->hwnd, &rect);
-        POINT ptDst = {rect.left, rect.top};
-
-        UpdateLayeredWindow(context->hwnd, hdcScreen, &ptDst, &sizeWnd, 
-                          hdcMemory, &ptSrc, 0, &blend, ULW_ALPHA);
-
-        SelectObject(hdcMemory, hOldBitmap);
-        return;
-    }
-
-    // 加载和处理新图片
-    SDL_Surface *image = IMG_Load(image_path);
-    if (!image) return;
-
-    int current_scale;
-    switch (current_config_state.current_mode) {
-        case 1: // 固定模式
-            current_scale = current_config_state.scale_factor;
-            break;
-        case 2: // 移动模式
-            current_scale = current_config_state.moving_scale_factor;
-            break;
-        default:
-            current_scale = current_config_state.scale_factor;
-    }
-    
-    int new_width = (image->w * current_scale) / 100;
-    int new_height = (image->h * current_scale) / 100;
-
-    if (new_width != context->imgWidth || new_height != context->imgHeight) {
-        context->imgWidth = new_width;
-        context->imgHeight = new_height;
-        SDL_SetWindowSize(context->window, context->imgWidth, context->imgHeight);
-    }
-
-    SDL_Surface *scaled = SDL_CreateRGBSurface(0, context->imgWidth, context->imgHeight, 32,
-        0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
-    
-    if (scaled) {
-        SDL_BlitScaled(image, NULL, scaled, NULL);
-        SDL_FreeSurface(image);
-
-        SDL_Surface *processed = process_alpha(scaled);
-        SDL_FreeSurface(scaled);
-
-        if (processed) {
-            SDL_Surface *converted = SDL_ConvertSurfaceFormat(processed, SDL_PIXELFORMAT_RGBA32, 0);
-            SDL_FreeSurface(processed);
-
-            if (converted) {
-                HBITMAP hBitmap = SDLSurfaceToWinBitmap(converted, hdcMemory);
-                if (hBitmap) {
-                    // 更新缓存
-                    cache->surface = converted;
-                    cache->bitmap = hBitmap;
-                    cache->width = context->imgWidth;
-                    cache->height = context->imgHeight;
-                    cache->last_used = time(NULL);
-                    cache->is_valid = 1;
-
-                    HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcMemory, hBitmap);
-
-                    BLENDFUNCTION blend = {0};
-                    blend.BlendOp = AC_SRC_OVER;
-                    blend.SourceConstantAlpha = 255;
-                    blend.AlphaFormat = AC_SRC_ALPHA;
-
-                    POINT ptSrc = {0, 0};
-                    SIZE sizeWnd = {context->imgWidth, context->imgHeight};
-                    RECT rect;
-                    GetWindowRect(context->hwnd, &rect);
-                    POINT ptDst = {rect.left, rect.top};
-
-                    UpdateLayeredWindow(context->hwnd, hdcScreen, &ptDst, &sizeWnd, 
-                                     hdcMemory, &ptSrc, 0, &blend, ULW_ALPHA);
-
-                    SelectObject(hdcMemory, hOldBitmap);
-                }
-            }
-        }
-    }
 }
 
 // 预加载下一张图片
@@ -715,6 +615,106 @@ int check_config_changes(ConfigState* old_state, ConfigState* new_state, WindowC
     return needs_window_update;
 }
 
+// 处理并显示图片
+void process_and_display_image(const char* image_path, WindowContext* context, HDC hdcScreen, HDC hdcMemory) {
+    if (!context || !context->window || !context->hwnd) return;
+
+    // 检查缓存
+    ImageCache* cache = &context->image_cache[context->current_index % context->cache_size];
+    if (cache->is_valid) {
+        HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcMemory, cache->bitmap);
+        
+        BLENDFUNCTION blend = {0};
+        blend.BlendOp = AC_SRC_OVER;
+        blend.SourceConstantAlpha = 255;
+        blend.AlphaFormat = AC_SRC_ALPHA;
+
+        POINT ptSrc = {0, 0};
+        SIZE sizeWnd = {context->imgWidth, context->imgHeight};
+        RECT rect;
+        GetWindowRect(context->hwnd, &rect);
+        POINT ptDst = {rect.left, rect.top};
+
+        UpdateLayeredWindow(context->hwnd, hdcScreen, &ptDst, &sizeWnd, 
+                          hdcMemory, &ptSrc, 0, &blend, ULW_ALPHA);
+
+        SelectObject(hdcMemory, hOldBitmap);
+        return;
+    }
+
+    // 加载和处理新图片
+    SDL_Surface *image = IMG_Load(image_path);
+    if (!image) return;
+
+    int current_scale;
+    switch (current_config_state.current_mode) {
+        case 1: // 固定模式
+            current_scale = current_config_state.scale_factor;
+            break;
+        case 2: // 移动模式
+            current_scale = current_config_state.moving_scale_factor;
+            break;
+        default:
+            current_scale = current_config_state.scale_factor;
+    }
+    
+    int new_width = (image->w * current_scale) / 100;
+    int new_height = (image->h * current_scale) / 100;
+
+    if (new_width != context->imgWidth || new_height != context->imgHeight) {
+        context->imgWidth = new_width;
+        context->imgHeight = new_height;
+        SDL_SetWindowSize(context->window, context->imgWidth, context->imgHeight);
+    }
+
+    SDL_Surface *scaled = SDL_CreateRGBSurface(0, context->imgWidth, context->imgHeight, 32,
+        0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
+    
+    if (scaled) {
+        SDL_BlitScaled(image, NULL, scaled, NULL);
+        SDL_FreeSurface(image);
+
+        SDL_Surface *processed = process_alpha(scaled);
+        SDL_FreeSurface(scaled);
+
+        if (processed) {
+            SDL_Surface *converted = SDL_ConvertSurfaceFormat(processed, SDL_PIXELFORMAT_RGBA32, 0);
+            SDL_FreeSurface(processed);
+
+            if (converted) {
+                HBITMAP hBitmap = SDLSurfaceToWinBitmap(converted, hdcMemory);
+                if (hBitmap) {
+                    // 更新缓存
+                    cache->surface = converted;
+                    cache->bitmap = hBitmap;
+                    cache->width = context->imgWidth;
+                    cache->height = context->imgHeight;
+                    cache->last_used = time(NULL);
+                    cache->is_valid = 1;
+
+                    HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcMemory, hBitmap);
+
+                    BLENDFUNCTION blend = {0};
+                    blend.BlendOp = AC_SRC_OVER;
+                    blend.SourceConstantAlpha = 255;
+                    blend.AlphaFormat = AC_SRC_ALPHA;
+
+                    POINT ptSrc = {0, 0};
+                    SIZE sizeWnd = {context->imgWidth, context->imgHeight};
+                    RECT rect;
+                    GetWindowRect(context->hwnd, &rect);
+                    POINT ptDst = {rect.left, rect.top};
+
+                    UpdateLayeredWindow(context->hwnd, hdcScreen, &ptDst, &sizeWnd, 
+                                     hdcMemory, &ptSrc, 0, &blend, ULW_ALPHA);
+
+                    SelectObject(hdcMemory, hOldBitmap);
+                }
+            }
+        }
+    }
+}
+
 // 主函数
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     // 初始化配置
@@ -817,18 +817,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
     // 主循环
     while (!quit) {
-        // 等待事件或超时
-        Uint32 current_time = SDL_GetTicks();
-        Uint32 time_since_last_switch = current_time - main_context.last_switch_time;
-        int current_interval = (current_config_state.current_mode == 1) ? 
-                               current_config_state.switch_interval : 
-                               current_config_state.moving_interval;
-
-        // 计算等待时间
-        int wait_time = current_interval - time_since_last_switch;
-        if (wait_time < 0) wait_time = 0;
-
-        // 处理所有待处理事件
+        // 处理所有待处理的事件
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT) {
                 quit = 1;
@@ -919,8 +908,11 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             }
         }
 
-        current_time = SDL_GetTicks();
-        time_since_last_switch = current_time - main_context.last_switch_time;
+        Uint32 current_time = SDL_GetTicks();
+        Uint32 time_since_last_switch = current_time - main_context.last_switch_time;
+        int current_interval = (current_config_state.current_mode == 1) ? 
+                               current_config_state.switch_interval : 
+                               current_config_state.moving_interval;
 
         if (time_since_last_switch >= current_interval) {
             main_context.last_switch_time += current_interval; // 累加间隔
@@ -995,8 +987,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             quit = 1;
         }
 
-        // 延时以避免高CPU占用
-        SDL_Delay(10);
+        // 延时以避免高CPU占用，设置为1毫秒以支持高频率
+        SDL_Delay(1);
     }
 
     // 清理资源
