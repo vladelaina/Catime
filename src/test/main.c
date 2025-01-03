@@ -824,7 +824,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         if (wait_time < 0) wait_time = 0;
 
         // 等待事件或超时
-        if (SDL_WaitEventTimeout(&e, wait_time)) {
+        while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT) {
                 quit = 1;
                 break;
@@ -898,6 +898,19 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                         save_config_state(config_path, &current_config_state);
                     }
                 }
+            }
+        }
+
+        // 检查并激活窗口当鼠标悬停时
+        if (current_config_state.enable_dragging) {
+            POINT cursor_pos;
+            GetCursorPos(&cursor_pos);
+            RECT rect;
+            GetWindowRect(main_context.hwnd, &rect);
+            if (cursor_pos.x >= rect.left && cursor_pos.x <= rect.right &&
+                cursor_pos.y >= rect.top && cursor_pos.y <= rect.bottom) {
+                // 激活窗口
+                SetForegroundWindow(main_context.hwnd);
             }
         }
 
@@ -975,6 +988,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             (current_time - start_time) >= current_config_state.display_duration) {
             quit = 1;
         }
+
+        // 延时以避免高CPU占用
+        SDL_Delay(10);
     }
 
     // 清理资源
