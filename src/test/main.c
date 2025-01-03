@@ -71,8 +71,6 @@ ConfigState current_config_state = {0};
 WindowContext main_context = {0};
 Uint32 start_time;
 Uint32 move_start_time = 0;
-static int position_index = 0;
-static int direction = 1;
 static float current_progress = 0.0f;
 
 // 函数声明
@@ -88,7 +86,7 @@ time_t get_file_modification_time(const char *filename);
 SDL_Window* create_window(const char* title, int x_pos, int y_pos, int width, int height, HWND* out_hwnd);
 void ensure_window_top_most(WindowContext* context, int x_pos);
 int get_current_x_position(Uint32 current_time, ConfigState* config);
-void update_window_context(WindowContext* context, const char* dir, int scale_factor);
+void update_window_context(WindowContext* context, const char* dir, int scale_factor, int preserve_index, int current_index);
 void preload_next_image(WindowContext* context);
 int check_config_changes(ConfigState* old_state, ConfigState* new_state, WindowContext* context);
 void process_and_display_image(const char* image_path, WindowContext* context, HDC hdcScreen, HDC hdcMemory);
@@ -373,8 +371,12 @@ void clear_image_cache(WindowContext* context) {
 }
 
 // 更新窗口上下文
-void update_window_context(WindowContext* context, const char* dir, int scale_factor) {
+void update_window_context(WindowContext* context, const char* dir, int scale_factor, int preserve_index, int current_index) {
     if (!context) return;
+
+    // 保存当前索引和切换时间
+    int saved_index = preserve_index ? current_index : 0;
+    Uint32 saved_switch_time = preserve_index ? context->last_switch_time : SDL_GetTicks();
 
     // 清理旧资源
     clear_image_cache(context);
@@ -388,14 +390,14 @@ void update_window_context(WindowContext* context, const char* dir, int scale_fa
 
     // 加载新图片列表
     context->image_count = get_png_files(dir, &context->image_files);
-    context->current_index = 0;
+    context->current_index = saved_index; // 恢复索引
 
     // 初始化新缓存
     init_image_cache(context);
 
     // 更新窗口尺寸
     if (context->image_count > 0) {
-        SDL_Surface *image = IMG_Load(context->image_files[0]);
+        SDL_Surface *image = IMG_Load(context->image_files[context->current_index]);
         if (image) {
             context->imgWidth = (image->w * scale_factor) / 100;
             context->imgHeight = (image->h * scale_factor) / 100;
@@ -406,6 +408,9 @@ void update_window_context(WindowContext* context, const char* dir, int scale_fa
             }
         }
     }
+
+    // 恢复切换时间
+    context->last_switch_time = saved_switch_time;
 }
 
 // 创建窗口
@@ -757,7 +762,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         return 1;
     }
 
-    update_window_context(&main_context, initial_dir, initial_scale);
+    update_window_context(&main_context, initial_dir, initial_scale, 0, 0);
     if (main_context.image_count == 0) {
         fprintf(stderr, "在 %s 中找不到PNG文件\n", initial_dir);
         IMG_Quit();
@@ -823,7 +828,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         int wait_time = current_interval - time_since_last_switch;
         if (wait_time < 0) wait_time = 0;
 
-        // 等待事件或超时
+        // 处理所有待处理事件
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT) {
                 quit = 1;
@@ -886,8 +891,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                             }
                         }
 
-                        // 更新当前窗口上下文
-                        update_window_context(&main_context, current_config_state.image_dir, current_config_state.scale_factor);
+                        // 更新当前窗口上下文，保留当前索引
+                        update_window_context(&main_context, current_config_state.image_dir, current_config_state.scale_factor, 1, main_context.current_index);
                         if (main_context.image_count > 0) {
                             process_and_display_image(main_context.image_files[main_context.current_index], 
                                                       &main_context, hdcScreen, hdcMemory);
@@ -958,7 +963,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                         current_scale = current_config_state.scale_factor;
                 }
                 
-                update_window_context(&main_context, current_dir, current_scale);
+                // 保留当前索引
+                update_window_context(&main_context, current_dir, current_scale, 1, main_context.current_index);
                 
                 if (main_context.image_count > 0) {
                     process_and_display_image(main_context.image_files[main_context.current_index], 
