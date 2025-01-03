@@ -77,6 +77,12 @@ void load_config(const char *filename);
 time_t get_file_modification_time(const char *filename);
 SDL_Window* create_window(const char* title, int x_pos, int y_pos, int width, int height, HWND* out_hwnd);
 void ensure_window_top_most(WindowContext* context);
+int extract_number(const char* filename);
+int compare_numbers(const void* a, const void* b);
+void preload_next_image(WindowContext* context);
+int check_config_changes(ConfigState* old_state, ConfigState* new_state, WindowContext* context);
+void process_and_display_image(const char* image_path, WindowContext* context, HDC hdcScreen, HDC hdcMemory);
+void update_window_context(WindowContext* context, const char* dir, int scale_factor, int preserve_index, int current_index);
 
 // 提取文件名中的数字
 int extract_number(const char* filename) {
