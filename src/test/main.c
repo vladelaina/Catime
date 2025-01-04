@@ -128,13 +128,14 @@ int get_png_files(const char *dir, char ***image_files) {
                 return count;
             }
             sprintf(full_path, "%s\\%s", dir, entry->d_name);
-            (*image_files) = realloc(*image_files, sizeof(char*) * (count + 1));
-            if (!(*image_files)) {
+            char **temp = realloc(*image_files, sizeof(char*) * (count + 1));
+            if (!temp) {
                 fprintf(stderr, "内存重新分配失败\n");
                 free(full_path);
                 closedir(d);
                 return count;
             }
+            *image_files = temp;
             (*image_files)[count] = full_path;
             count++;
         }
@@ -330,9 +331,11 @@ void clear_image_cache(WindowContext* context) {
         for (int i = 0; i < context->cache_size; i++) {
             if (context->image_cache[i].surface) {
                 SDL_FreeSurface(context->image_cache[i].surface);
+                context->image_cache[i].surface = NULL;
             }
             if (context->image_cache[i].bitmap) {
                 DeleteObject(context->image_cache[i].bitmap);
+                context->image_cache[i].bitmap = NULL;
             }
             context->image_cache[i].is_valid = 0;
         }
@@ -445,7 +448,7 @@ void preload_next_image(WindowContext* context) {
     if (!image) return;
 
     int current_scale = current_config_state.scale_factor;
-    
+
     int new_width = (image->w * current_scale) / 100;
     int new_height = (image->h * current_scale) / 100;
 
@@ -475,12 +478,20 @@ void preload_next_image(WindowContext* context) {
                     context->image_cache[cache_index].height = new_height;
                     context->image_cache[cache_index].last_used = time(NULL);
                     context->image_cache[cache_index].is_valid = 1;
+                } else {
+                    SDL_FreeSurface(converted); // 确保在失败时释放资源
                 }
                 
                 DeleteDC(hdcMemory);
                 ReleaseDC(NULL, hdcScreen);
+            } else {
+                SDL_FreeSurface(processed);
             }
+        } else {
+            SDL_FreeSurface(scaled);
         }
+    } else {
+        SDL_FreeSurface(image);
     }
 }
 
@@ -592,9 +603,17 @@ void process_and_display_image(const char* image_path, WindowContext* context, H
                                      hdcMemory, &ptSrc, 0, &blend, ULW_ALPHA);
 
                     SelectObject(hdcMemory, hOldBitmap);
+                } else {
+                    SDL_FreeSurface(converted); // 确保在失败时释放资源
                 }
+            } else {
+                SDL_FreeSurface(processed);
             }
+        } else {
+            SDL_FreeSurface(scaled);
         }
+    } else {
+        SDL_FreeSurface(image);
     }
 }
 
