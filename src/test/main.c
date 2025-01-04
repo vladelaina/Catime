@@ -61,7 +61,6 @@ typedef struct {
 
 // 全局变量
 ConfigState current_config_state = {0};
-#define MAX_CACHE_SIZE 4501
 WindowContext main_context = {0};
 Uint32 start_time;
 
@@ -318,7 +317,7 @@ void init_image_cache(WindowContext* context) {
     if (context->image_cache) {
         clear_image_cache(context);
     }
-    context->cache_size = context->image_count < MAX_CACHE_SIZE ? context->image_count : MAX_CACHE_SIZE;
+    context->cache_size = context->image_count; // 设置缓存大小为图片数量
     context->image_cache = (ImageCache*)calloc(context->cache_size, sizeof(ImageCache));
     if (!context->image_cache) {
         fprintf(stderr, "无法分配图片缓存\n");
@@ -335,6 +334,7 @@ void clear_image_cache(WindowContext* context) {
             if (context->image_cache[i].bitmap) {
                 DeleteObject(context->image_cache[i].bitmap);
             }
+            context->image_cache[i].is_valid = 0;
         }
         free(context->image_cache);
         context->image_cache = NULL;
@@ -513,7 +513,7 @@ void process_and_display_image(const char* image_path, WindowContext* context, H
     if (!context || !context->window || !context->hwnd) return;
 
     // 检查缓存
-    ImageCache* cache = &context->image_cache[context->current_index % context->cache_size];
+    ImageCache* cache = &context->image_cache[context->current_index];
     if (cache->is_valid) {
         HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcMemory, cache->bitmap);
         
