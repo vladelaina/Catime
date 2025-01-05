@@ -64,6 +64,11 @@ ConfigState current_config_state = {0};
 WindowContext main_context = {0};
 Uint32 start_time;
 
+// 新增：存储所有子目录
+char **image_dirs = NULL;
+int image_dir_count = 0;
+int current_dir_index = 0;
+
 // 函数声明
 void clear_image_cache(WindowContext* context);
 void save_config_state(const char *filename, ConfigState* state);
@@ -72,6 +77,7 @@ void init_image_cache(WindowContext* context);
 SDL_Surface* process_alpha(SDL_Surface* surface);
 HBITMAP SDLSurfaceToWinBitmap(SDL_Surface* surface, HDC hdc);
 int get_png_files(const char *dir, char ***image_files);
+int get_subdirectories(const char *dir, char ***subdirs);
 void load_config(const char *filename);
 time_t get_file_modification_time(const char *filename);
 SDL_Window* create_window(const char* title, int x_pos, int y_pos, int width, int height, HWND* out_hwnd);
@@ -83,12 +89,14 @@ int check_config_changes(ConfigState* old_state, ConfigState* new_state, WindowC
 void process_and_display_image(const char* image_path, WindowContext* context, HDC hdcScreen, HDC hdcMemory);
 void update_window_context(WindowContext* context, const char* dir, int scale_factor, int preserve_index, int current_index);
 void toggle_dragging(WindowContext* context, HDC hdcScreen, HDC hdcMemory);
+void switch_to_next_directory();
+void switch_to_previous_directory(); // 新增函数
 
 // 提取文件名中的数字
 int extract_number(const char* filename) {
-    const char* name = strrchr(filename, '\\');
+    const char* name = strrchr(filename, '/');
     if (name) {
-        name++; // 跳过'\\'
+        name++; // 跳过'/'
     } else {
         name = filename;
     }
@@ -128,7 +136,7 @@ int get_png_files(const char *dir, char ***image_files) {
                 closedir(d);
                 return count;
             }
-            sprintf(full_path, "%s\\%s", dir, entry->d_name);
+            sprintf(full_path, "%s/%s", dir, entry->d_name);
             char **temp = realloc(*image_files, sizeof(char*) * (count + 1));
             if (!temp) {
                 fprintf(stderr, "内存重新分配失败\n");
@@ -146,6 +154,61 @@ int get_png_files(const char *dir, char ***image_files) {
     if (count > 0) {
         // 使用数字排序
         qsort(*image_files, count, sizeof(char*), compare_numbers);
+    }
+
+    return count;
+}
+
+// 新增：获取所有子目录
+int get_subdirectories(const char *dir, char ***subdirs) {
+    DIR *d = opendir(dir);
+    if (d == NULL) {
+        fprintf(stderr, "无法打开目录: %s\n", dir);
+        return 0;
+    }
+
+    struct dirent *entry;
+    int count = 0;
+    while ((entry = readdir(d)) != NULL) {
+        // 兼容性修正：使用 stat 来判断是否是目录
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+            continue;
+
+        // 构造完整路径
+        char *full_path = malloc(strlen(dir) + strlen(entry->d_name) + 2);
+        if (!full_path) {
+            fprintf(stderr, "内存分配失败\n");
+            closedir(d);
+            return count;
+        }
+        sprintf(full_path, "%s\\%s", dir, entry->d_name);
+
+        // 使用 stat 检查是否为目录
+        struct stat st;
+        if (stat(full_path, &st) == 0) {
+            if (st.st_mode & S_IFDIR) {
+                char **temp = realloc(*subdirs, sizeof(char*) * (count + 1));
+                if (!temp) {
+                    fprintf(stderr, "内存重新分配失败\n");
+                    free(full_path);
+                    closedir(d);
+                    return count;
+                }
+                *subdirs = temp;
+                (*subdirs)[count] = full_path;
+                count++;
+            } else {
+                free(full_path);
+            }
+        } else {
+            free(full_path);
+        }
+    }
+    closedir(d);
+
+    // 根据名称排序
+    if (count > 0) {
+        qsort(*subdirs, count, sizeof(char*), compare_numbers);
     }
 
     return count;
@@ -641,6 +704,54 @@ void toggle_dragging(WindowContext* context, HDC hdcScreen, HDC hdcMemory) {
     }
 }
 
+// 切换到下一个目录
+void switch_to_next_directory() {
+    if (image_dir_count == 0) return;
+
+    current_dir_index = (current_dir_index + 1) % image_dir_count;
+    strncpy(current_config_state.image_dir, image_dirs[current_dir_index], sizeof(current_config_state.image_dir) - 1);
+    current_config_state.image_dir[sizeof(current_config_state.image_dir) - 1] = '\0';
+    save_config_state(config_path, &current_config_state);
+
+    // 重新加载图片
+    update_window_context(&main_context, current_config_state.image_dir, current_config_state.scale_factor, 0, 0);
+    if (main_context.image_count > 0) {
+        HDC hdcScreen = GetDC(NULL);
+        HDC hdcMemory = CreateCompatibleDC(hdcScreen);
+        process_and_display_image(main_context.image_files[main_context.current_index], 
+                                  &main_context, hdcScreen, hdcMemory);
+        preload_next_image(&main_context);
+        ReleaseDC(NULL, hdcScreen);
+        DeleteDC(hdcMemory);
+    }
+
+    printf("切换到目录: %s\n", current_config_state.image_dir);
+}
+
+// 新增：切换到上一个目录
+void switch_to_previous_directory() {
+    if (image_dir_count == 0) return;
+
+    current_dir_index = (current_dir_index - 1 + image_dir_count) % image_dir_count;
+    strncpy(current_config_state.image_dir, image_dirs[current_dir_index], sizeof(current_config_state.image_dir) - 1);
+    current_config_state.image_dir[sizeof(current_config_state.image_dir) - 1] = '\0';
+    save_config_state(config_path, &current_config_state);
+
+    // 重新加载图片
+    update_window_context(&main_context, current_config_state.image_dir, current_config_state.scale_factor, 0, 0);
+    if (main_context.image_count > 0) {
+        HDC hdcScreen = GetDC(NULL);
+        HDC hdcMemory = CreateCompatibleDC(hdcScreen);
+        process_and_display_image(main_context.image_files[main_context.current_index], 
+                                  &main_context, hdcScreen, hdcMemory);
+        preload_next_image(&main_context);
+        ReleaseDC(NULL, hdcScreen);
+        DeleteDC(hdcMemory);
+    }
+
+    printf("切换到目录: %s\n", current_config_state.image_dir);
+}
+
 // 主函数
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     // 初始化配置
@@ -673,6 +784,25 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         IMG_Quit();
         SDL_Quit();
         return 1;
+    }
+
+    // 获取所有子目录
+    image_dir_count = get_subdirectories("./asset/images/moving", &image_dirs);
+    if (image_dir_count == 0) {
+        fprintf(stderr, "在 ./asset/images/moving 中找不到子目录\n");
+        IMG_Quit();
+        SDL_Quit();
+        return 1;
+    }
+
+    // 设置当前目录索引
+    // 如果当前 image_dir 在 image_dirs 中，设置 current_dir_index ；否则，设置为0
+    current_dir_index = 0;
+    for (int i = 0; i < image_dir_count; i++) {
+        if (strcmp(current_config_state.image_dir, image_dirs[i]) == 0) {
+            current_dir_index = i;
+            break;
+        }
     }
 
     // 加载图片列表并初始化缓存
@@ -740,6 +870,15 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                 quit = 1;
                 break;
             }
+            // 处理键盘事件
+            if (e.type == SDL_KEYDOWN) {
+                if (e.key.keysym.sym == SDLK_RIGHT) {
+                    switch_to_next_directory();
+                }
+                else if (e.key.keysym.sym == SDLK_LEFT) {
+                    switch_to_previous_directory();
+                }
+            }
             // 处理鼠标事件
             if (current_config_state.enable_dragging) {
                 if (e.type == SDL_MOUSEBUTTONDOWN) {
@@ -783,38 +922,31 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                     }
                 }
                 else if (e.type == SDL_MOUSEWHEEL) {
-                    // 检查鼠标是否在窗口上方
-                    POINT cursor_pos;
-                    GetCursorPos(&cursor_pos);
-                    RECT rect;
-                    GetWindowRect(main_context.hwnd, &rect);
-                    if (cursor_pos.x >= rect.left && cursor_pos.x <= rect.right &&
-                        cursor_pos.y >= rect.top && cursor_pos.y <= rect.bottom) {
-                        // 根据滚轮方向调整缩放比例
-                        if (e.wheel.y > 0) { // 向前滚动，放大
-                            current_config_state.scale_factor += current_config_state.zoom_step;
-                            if (current_config_state.scale_factor > current_config_state.max_scale_factor) {
-                                current_config_state.scale_factor = current_config_state.max_scale_factor;
-                            }
+                    // 仅处理缩放，不再处理目录切换
+                    // 根据滚轮方向调整缩放比例
+                    if (e.wheel.y > 0) { // 向前滚动，放大
+                        current_config_state.scale_factor += current_config_state.zoom_step;
+                        if (current_config_state.scale_factor > current_config_state.max_scale_factor) {
+                            current_config_state.scale_factor = current_config_state.max_scale_factor;
                         }
-                        else if (e.wheel.y < 0) { // 向后滚动，缩小
-                            current_config_state.scale_factor -= current_config_state.zoom_step;
-                            if (current_config_state.scale_factor < current_config_state.min_scale_factor) {
-                                current_config_state.scale_factor = current_config_state.min_scale_factor;
-                            }
-                        }
-
-                        // 更新当前窗口上下文，保留当前索引
-                        update_window_context(&main_context, current_config_state.image_dir, current_config_state.scale_factor, 1, main_context.current_index);
-                        if (main_context.image_count > 0) {
-                            process_and_display_image(main_context.image_files[main_context.current_index], 
-                                                      &main_context, hdcScreen, hdcMemory);
-                            preload_next_image(&main_context);
-                        }
-
-                        // 保存配置
-                        save_config_state(config_path, &current_config_state);
                     }
+                    else if (e.wheel.y < 0) { // 向后滚动，缩小
+                        current_config_state.scale_factor -= current_config_state.zoom_step;
+                        if (current_config_state.scale_factor < current_config_state.min_scale_factor) {
+                            current_config_state.scale_factor = current_config_state.min_scale_factor;
+                        }
+                    }
+
+                    // 更新当前窗口上下文，保留当前索引
+                    update_window_context(&main_context, current_config_state.image_dir, current_config_state.scale_factor, 1, main_context.current_index);
+                    if (main_context.image_count > 0) {
+                        process_and_display_image(main_context.image_files[main_context.current_index], 
+                                                  &main_context, hdcScreen, hdcMemory);
+                        preload_next_image(&main_context);
+                    }
+
+                    // 保存配置
+                    save_config_state(config_path, &current_config_state);
                 }
             }
             // 处理鼠标悬停以激活窗口拖动
@@ -935,6 +1067,12 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         free(main_context.image_files[i]);
     }
     free(main_context.image_files);
+
+    // 清理子目录列表
+    for (int i = 0; i < image_dir_count; i++) {
+        free(image_dirs[i]);
+    }
+    free(image_dirs);
 
     IMG_Quit();
     SDL_Quit();
