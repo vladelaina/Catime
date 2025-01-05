@@ -805,6 +805,19 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             }
         }
 
+        // 获取当前鼠标位置并激活窗口（新增部分）
+        if (current_config_state.enable_dragging) {
+            POINT cursor_pos;
+            GetCursorPos(&cursor_pos);
+            RECT rect;
+            GetWindowRect(main_context.hwnd, &rect);
+            if (cursor_pos.x >= rect.left && cursor_pos.x <= rect.right &&
+                cursor_pos.y >= rect.top && cursor_pos.y <= rect.bottom) {
+                // 鼠标悬停在窗口上时激活窗口
+                SetForegroundWindow(main_context.hwnd);
+            }
+        }
+
         Uint32 current_time = SDL_GetTicks();
         Uint32 time_since_last_switch = current_time - main_context.last_switch_time;
         int current_interval = current_config_state.switch_interval;
