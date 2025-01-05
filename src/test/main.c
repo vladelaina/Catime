@@ -19,6 +19,7 @@ typedef struct {
     int scale_factor;
     char image_dir[256];
     int switch_interval; // 单位：毫秒
+    int switch_speed_step; // 切换速度调整步长
     int edge_size;
     int margin_left;
     int margin_top;
@@ -91,6 +92,8 @@ void update_window_context(WindowContext* context, const char* dir, int scale_fa
 void toggle_dragging(WindowContext* context, HDC hdcScreen, HDC hdcMemory);
 void switch_to_next_directory();
 void switch_to_previous_directory(); // 新增函数
+void increase_switch_speed(); // 新增函数
+void decrease_switch_speed(); // 新增函数
 
 // 提取文件名中的数字
 int extract_number(const char* filename) {
@@ -238,6 +241,7 @@ void load_config(const char *filename) {
         if (sscanf(line, "IMAGE_CAROUSEL_SCALE_FACTOR=%d", &current_config_state.scale_factor) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_IMAGE_DIR=%255s", current_config_state.image_dir) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_SWITCH_INTERVAL=%d", &current_config_state.switch_interval) == 1) continue;
+        if (sscanf(line, "IMAGE_CAROUSEL_SWITCH_SPEED_STEP=%d", &current_config_state.switch_speed_step) == 1) continue; // 新增
         if (sscanf(line, "IMAGE_CAROUSEL_EDGE_SIZE=%d", &current_config_state.edge_size) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_MARGIN_LEFT=%d", &current_config_state.margin_left) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_MARGIN_TOP=%d", &current_config_state.margin_top) == 1) continue;
@@ -264,6 +268,7 @@ void write_config(const char *filename, ConfigState* state) {
     fprintf(file, "IMAGE_CAROUSEL_SCALE_FACTOR=%d\n", state->scale_factor);
     fprintf(file, "IMAGE_CAROUSEL_IMAGE_DIR=%s\n", state->image_dir);
     fprintf(file, "IMAGE_CAROUSEL_SWITCH_INTERVAL=%d\n", state->switch_interval);
+    fprintf(file, "IMAGE_CAROUSEL_SWITCH_SPEED_STEP=%d\n", state->switch_speed_step); // 新增
     fprintf(file, "IMAGE_CAROUSEL_EDGE_SIZE=%d\n", state->edge_size);
     fprintf(file, "IMAGE_CAROUSEL_MARGIN_LEFT=%d\n", state->margin_left);
     fprintf(file, "IMAGE_CAROUSEL_MARGIN_TOP=%d\n", state->margin_top);
@@ -571,7 +576,8 @@ int check_config_changes(ConfigState* old_state, ConfigState* new_state, WindowC
         old_state->enable_dragging != new_state->enable_dragging ||
         old_state->zoom_step != new_state->zoom_step ||
         old_state->min_scale_factor != new_state->min_scale_factor ||
-        old_state->max_scale_factor != new_state->max_scale_factor) { // 拖动开关和缩放相关检测
+        old_state->max_scale_factor != new_state->max_scale_factor ||
+        old_state->switch_interval != new_state->switch_interval) { // 新增 switch_interval 比较
         needs_window_update = 1;
         needs_cache_clear = 1;
     }
@@ -752,6 +758,23 @@ void switch_to_previous_directory() {
     printf("切换到目录: %s\n", current_config_state.image_dir);
 }
 
+// 新增：增加切换速度（减少 switch_interval）
+void increase_switch_speed() {
+    current_config_state.switch_interval -= current_config_state.switch_speed_step;
+    if (current_config_state.switch_interval < 1) { // 设置最小间隔为1ms
+        current_config_state.switch_interval = 1;
+    }
+    save_config_state(config_path, &current_config_state);
+    printf("切换速度已增加，当前切换间隔: %d 毫秒\n", current_config_state.switch_interval);
+}
+
+// 新增：减少切换速度（增加 switch_interval）
+void decrease_switch_speed() {
+    current_config_state.switch_interval += current_config_state.switch_speed_step;
+    save_config_state(config_path, &current_config_state);
+    printf("切换速度已减少，当前切换间隔: %d 毫秒\n", current_config_state.switch_interval);
+}
+
 // 主函数
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     // 初始化配置
@@ -878,6 +901,12 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                 else if (e.key.keysym.sym == SDLK_LEFT) {
                     switch_to_previous_directory();
                 }
+                else if (e.key.keysym.sym == SDLK_UP) { // 新增：增加切换速度
+                    increase_switch_speed();
+                }
+                else if (e.key.keysym.sym == SDLK_DOWN) { // 新增：减少切换速度
+                    decrease_switch_speed();
+                }
             }
             // 处理鼠标事件
             if (current_config_state.enable_dragging) {
@@ -935,18 +964,18 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                         if (current_config_state.scale_factor < current_config_state.min_scale_factor) {
                             current_config_state.scale_factor = current_config_state.min_scale_factor;
                         }
+    
+                        // 更新当前窗口上下文，保留当前索引
+                        update_window_context(&main_context, current_config_state.image_dir, current_config_state.scale_factor, 1, main_context.current_index);
+                        if (main_context.image_count > 0) {
+                            process_and_display_image(main_context.image_files[main_context.current_index], 
+                                                      &main_context, hdcScreen, hdcMemory);
+                            preload_next_image(&main_context);
+                        }
+    
+                        // 保存配置
+                        save_config_state(config_path, &current_config_state);
                     }
-
-                    // 更新当前窗口上下文，保留当前索引
-                    update_window_context(&main_context, current_config_state.image_dir, current_config_state.scale_factor, 1, main_context.current_index);
-                    if (main_context.image_count > 0) {
-                        process_and_display_image(main_context.image_files[main_context.current_index], 
-                                                  &main_context, hdcScreen, hdcMemory);
-                        preload_next_image(&main_context);
-                    }
-
-                    // 保存配置
-                    save_config_state(config_path, &current_config_state);
                 }
             }
             // 处理鼠标悬停以激活窗口拖动
