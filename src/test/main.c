@@ -11,6 +11,9 @@
 #include <time.h>
 #include <sys/stat.h>
 
+// 定义滚动多少是加减一次
+#define ZOOM_SCROLL_DELTA 1
+
 // 配置文件路径（全局变量）
 const char* config_path = "./asset/config.txt";
 
@@ -301,9 +304,7 @@ SDL_Surface* process_alpha(SDL_Surface* surface) {
     Uint32* dst = (Uint32*)result->pixels;
 
     // 复制原始数据
-    for (int i = 0; i < surface->w * surface->h; i++) {
-        dst[i] = src[i];
-    }
+    memcpy(dst, src, surface->w * surface->h * sizeof(Uint32));
 
     // 处理边缘像素
     for (int y = 0; y < surface->h; y++) {
@@ -953,18 +954,31 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                     }
                 }
                 else if (e.type == SDL_MOUSEWHEEL) {
-                    // 仅处理缩放，不再处理目录切换
-                    // 根据滚轮方向调整缩放比例
-                    if (e.wheel.y > 0) { // 向前滚动，放大
-                        current_config_state.scale_factor += current_config_state.zoom_step;
-                        if (current_config_state.scale_factor > current_config_state.max_scale_factor) {
-                            current_config_state.scale_factor = current_config_state.max_scale_factor;
+                    // 仅在启用拖动且鼠标位于图片上方时处理缩放
+                    POINT pt;
+                    GetCursorPos(&pt);
+                    RECT rect;
+                    GetWindowRect(main_context.hwnd, &rect);
+                    if (pt.x >= rect.left && pt.x <= rect.right &&
+                        pt.y >= rect.top && pt.y <= rect.bottom) {
+                        
+                        if (e.wheel.y > 0) { // 向前滚动，放大
+                            int steps = e.wheel.y / ZOOM_SCROLL_DELTA;
+                            for(int i = 0; i < steps; i++) {
+                                current_config_state.scale_factor += current_config_state.zoom_step;
+                                if (current_config_state.scale_factor > current_config_state.max_scale_factor) {
+                                    current_config_state.scale_factor = current_config_state.max_scale_factor;
+                                }
+                            }
                         }
-                    }
-                    else if (e.wheel.y < 0) { // 向后滚动，缩小
-                        current_config_state.scale_factor -= current_config_state.zoom_step;
-                        if (current_config_state.scale_factor < current_config_state.min_scale_factor) {
-                            current_config_state.scale_factor = current_config_state.min_scale_factor;
+                        else if (e.wheel.y < 0) { // 向后滚动，缩小
+                            int steps = (-e.wheel.y) / ZOOM_SCROLL_DELTA;
+                            for(int i = 0; i < steps; i++) {
+                                current_config_state.scale_factor -= current_config_state.zoom_step;
+                                if (current_config_state.scale_factor < current_config_state.min_scale_factor) {
+                                    current_config_state.scale_factor = current_config_state.min_scale_factor;
+                                }
+                            }
                         }
 
                         // 更新当前窗口上下文，保留当前索引
