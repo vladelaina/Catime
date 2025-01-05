@@ -620,28 +620,25 @@ void process_and_display_image(const char* image_path, WindowContext* context, H
 
 // 切换拖动功能
 void toggle_dragging(WindowContext* context, HDC hdcScreen, HDC hdcMemory) {
-    current_config_state.enable_dragging = !current_config_state.enable_dragging;
-    save_config_state(config_path, &current_config_state);
+    if (current_config_state.enable_dragging) {
+        current_config_state.enable_dragging = 0;
+        save_config_state(config_path, &current_config_state);
 
-    // 更新窗口样式
-    LONG_PTR exStyle = WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW;
-    if (!current_config_state.enable_dragging) {
-        exStyle |= WS_EX_TRANSPARENT;
-    }
-    SetWindowLongPtr(context->hwnd, GWL_EXSTYLE, exStyle);
+        // 更新窗口样式
+        LONG_PTR exStyle = WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_TRANSPARENT;
+        SetWindowLongPtr(context->hwnd, GWL_EXSTYLE, exStyle);
 
-    BLENDFUNCTION blend = {0};
-    blend.BlendOp = AC_SRC_OVER;
-    blend.SourceConstantAlpha = 255;
-    blend.AlphaFormat = AC_SRC_ALPHA;
-    UpdateLayeredWindow(context->hwnd, hdcScreen, NULL, NULL, NULL, NULL, 0, &blend, ULW_ALPHA);
+        BLENDFUNCTION blend = {0};
+        blend.BlendOp = AC_SRC_OVER;
+        blend.SourceConstantAlpha = 255;
+        blend.AlphaFormat = AC_SRC_ALPHA;
+        UpdateLayeredWindow(context->hwnd, hdcScreen, NULL, NULL, NULL, NULL, 0, &blend, ULW_ALPHA);
 
-    if (!current_config_state.enable_dragging) {
         // 如果禁用拖动，重置拖动状态
         context->is_dragging = 0;
-    }
 
-    printf("拖动功能已切换到: %d\n", current_config_state.enable_dragging);
+        printf("拖动功能已禁用\n");
+    }
 }
 
 // 主函数
@@ -759,7 +756,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                         SetForegroundWindow(main_context.hwnd);
                     }
                     else if (e.button.button == SDL_BUTTON_RIGHT) {
-                        // 右键点击时切换拖动功能
+                        // 右键点击时禁用拖动功能
                         toggle_dragging(&main_context, hdcScreen, hdcMemory);
                     }
                 }
