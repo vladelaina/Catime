@@ -1,4 +1,3 @@
-// WinMain 函数及相关功能
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_syswm.h>
@@ -92,9 +91,9 @@ void process_and_display_image(const char* image_path, WindowContext* context, H
 void update_window_context(WindowContext* context, const char* dir, int scale_factor, int preserve_index, int current_index);
 void toggle_dragging(WindowContext* context, HDC hdcScreen, HDC hdcMemory);
 void switch_to_next_directory();
-void switch_to_previous_directory(); 
-void increase_switch_speed(); 
-void decrease_switch_speed();
+void switch_to_previous_directory(); // 新增函数
+void increase_switch_speed(); // 新增函数
+void decrease_switch_speed(); // 新增函数
 
 // 提取文件名中的数字
 int extract_number(const char* filename) {
@@ -302,7 +301,9 @@ SDL_Surface* process_alpha(SDL_Surface* surface) {
     Uint32* dst = (Uint32*)result->pixels;
 
     // 复制原始数据
-    memcpy(dst, src, surface->w * surface->h * sizeof(Uint32));
+    for (int i = 0; i < surface->w * surface->h; i++) {
+        dst[i] = src[i];
+    }
 
     // 处理边缘像素
     for (int y = 0; y < surface->h; y++) {
@@ -366,7 +367,16 @@ HBITMAP SDLSurfaceToWinBitmap(SDL_Surface* surface, HDC hdc) {
     Uint32* src = (Uint32*)surface->pixels;
     Uint32* dst = (Uint32*)bits;
 
-    memcpy(dst, src, surface->w * surface->h * sizeof(Uint32));
+    for (int i = 0; i < surface->w * surface->h; i++) {
+        Uint8 r, g, b, a;
+        SDL_GetRGBA(src[i], surface->format, &r, &g, &b, &a);
+
+        if (a == 0) {
+            dst[i] = 0;
+        } else {
+            dst[i] = (a << 24) | (r << 16) | (g << 8) | b;
+        }
+    }
 
     SDL_UnlockSurface(surface);
     return hBitmap;
@@ -636,6 +646,7 @@ void process_and_display_image(const char* image_path, WindowContext* context, H
             SDL_FreeSurface(processed);
 
             if (converted) {
+                HDC hdcMemory = CreateCompatibleDC(hdcScreen);
                 HBITMAP hBitmap = SDLSurfaceToWinBitmap(converted, hdcMemory);
                 if (hBitmap) {
                     // 更新缓存
@@ -663,6 +674,7 @@ void process_and_display_image(const char* image_path, WindowContext* context, H
                                      hdcMemory, &ptSrc, 0, &blend, ULW_ALPHA);
 
                     SelectObject(hdcMemory, hOldBitmap);
+                    DeleteDC(hdcMemory);
                 } else {
                     SDL_FreeSurface(converted); // 确保在失败时释放资源
                 }
@@ -954,18 +966,18 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                         if (current_config_state.scale_factor < current_config_state.min_scale_factor) {
                             current_config_state.scale_factor = current_config_state.min_scale_factor;
                         }
-                    }
 
-                    // 更新当前窗口上下文，保留当前索引
-                    update_window_context(&main_context, current_config_state.image_dir, current_config_state.scale_factor, 1, main_context.current_index);
-                    if (main_context.image_count > 0) {
-                        process_and_display_image(main_context.image_files[main_context.current_index], 
-                                                  &main_context, hdcScreen, hdcMemory);
-                        preload_next_image(&main_context);
-                    }
+                        // 更新当前窗口上下文，保留当前索引
+                        update_window_context(&main_context, current_config_state.image_dir, current_config_state.scale_factor, 1, main_context.current_index);
+                        if (main_context.image_count > 0) {
+                            process_and_display_image(main_context.image_files[main_context.current_index], 
+                                                      &main_context, hdcScreen, hdcMemory);
+                            preload_next_image(&main_context);
+                        }
 
-                    // 保存配置
-                    save_config_state(config_path, &current_config_state);
+                        // 保存配置
+                        save_config_state(config_path, &current_config_state);
+                    }
                 }
             }
             // 处理鼠标悬停以激活窗口拖动
