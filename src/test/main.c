@@ -11,8 +11,6 @@
 #include <time.h>
 #include <sys/stat.h>
 
-// 定义滚动多少是加减一次
-#define ZOOM_SCROLL_DELTA 1
 
 // 配置文件路径（全局变量）
 const char* config_path = "./asset/config.txt";
@@ -963,7 +961,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                         pt.y >= rect.top && pt.y <= rect.bottom) {
                         
                         if (e.wheel.y > 0) { // 向前滚动，放大
-                            int steps = e.wheel.y / ZOOM_SCROLL_DELTA;
+                            int steps = e.wheel.y / 1;
                             for(int i = 0; i < steps; i++) {
                                 current_config_state.scale_factor += current_config_state.zoom_step;
                                 if (current_config_state.scale_factor > current_config_state.max_scale_factor) {
@@ -972,7 +970,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                             }
                         }
                         else if (e.wheel.y < 0) { // 向后滚动，缩小
-                            int steps = (-e.wheel.y) / ZOOM_SCROLL_DELTA;
+                            int steps = (-e.wheel.y) / 1;
                             for(int i = 0; i < steps; i++) {
                                 current_config_state.scale_factor -= current_config_state.zoom_step;
                                 if (current_config_state.scale_factor < current_config_state.min_scale_factor) {
