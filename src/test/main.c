@@ -82,6 +82,7 @@ void preload_next_image(WindowContext* context);
 int check_config_changes(ConfigState* old_state, ConfigState* new_state, WindowContext* context);
 void process_and_display_image(const char* image_path, WindowContext* context, HDC hdcScreen, HDC hdcMemory);
 void update_window_context(WindowContext* context, const char* dir, int scale_factor, int preserve_index, int current_index);
+void toggle_dragging(WindowContext* context, HDC hdcScreen, HDC hdcMemory);
 
 // 提取文件名中的数字
 int extract_number(const char* filename) {
@@ -617,6 +618,32 @@ void process_and_display_image(const char* image_path, WindowContext* context, H
     }
 }
 
+// 切换拖动功能
+void toggle_dragging(WindowContext* context, HDC hdcScreen, HDC hdcMemory) {
+    current_config_state.enable_dragging = !current_config_state.enable_dragging;
+    save_config_state(config_path, &current_config_state);
+
+    // 更新窗口样式
+    LONG_PTR exStyle = WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW;
+    if (!current_config_state.enable_dragging) {
+        exStyle |= WS_EX_TRANSPARENT;
+    }
+    SetWindowLongPtr(context->hwnd, GWL_EXSTYLE, exStyle);
+
+    BLENDFUNCTION blend = {0};
+    blend.BlendOp = AC_SRC_OVER;
+    blend.SourceConstantAlpha = 255;
+    blend.AlphaFormat = AC_SRC_ALPHA;
+    UpdateLayeredWindow(context->hwnd, hdcScreen, NULL, NULL, NULL, NULL, 0, &blend, ULW_ALPHA);
+
+    if (!current_config_state.enable_dragging) {
+        // 如果禁用拖动，重置拖动状态
+        context->is_dragging = 0;
+    }
+
+    printf("拖动功能已切换到: %d\n", current_config_state.enable_dragging);
+}
+
 // 主函数
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     // 初始化配置
@@ -730,6 +757,10 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
                         // 激活窗口以响应拖动
                         SetForegroundWindow(main_context.hwnd);
+                    }
+                    else if (e.button.button == SDL_BUTTON_RIGHT) {
+                        // 右键点击时切换拖动功能
+                        toggle_dragging(&main_context, hdcScreen, hdcMemory);
                     }
                 }
                 else if (e.type == SDL_MOUSEBUTTONUP) {
@@ -863,13 +894,11 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                 }
                 SetWindowLongPtr(main_context.hwnd, GWL_EXSTYLE, exStyle);
 
-                HDC hdcScreenUpdate = GetDC(NULL);
                 BLENDFUNCTION blend = {0};
                 blend.BlendOp = AC_SRC_OVER;
                 blend.SourceConstantAlpha = 255;
                 blend.AlphaFormat = AC_SRC_ALPHA;
-                UpdateLayeredWindow(main_context.hwnd, hdcScreenUpdate, NULL, NULL, NULL, NULL, 0, &blend, ULW_ALPHA);
-                ReleaseDC(NULL, hdcScreenUpdate);
+                UpdateLayeredWindow(main_context.hwnd, hdcScreen, NULL, NULL, NULL, NULL, 0, &blend, ULW_ALPHA);
             }
         }
 
@@ -881,6 +910,22 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
         // 延时以避免高CPU占用，设置为1毫秒以支持高频率
         SDL_Delay(1);
+    }
+
+    // 软件退出时确保拖动功能关闭
+    if (current_config_state.enable_dragging) {
+        current_config_state.enable_dragging = 0;
+        save_config_state(config_path, &current_config_state);
+
+        // 更新窗口样式
+        LONG_PTR exStyle = WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_TRANSPARENT;
+        SetWindowLongPtr(main_context.hwnd, GWL_EXSTYLE, exStyle);
+
+        BLENDFUNCTION blend = {0};
+        blend.BlendOp = AC_SRC_OVER;
+        blend.SourceConstantAlpha = 255;
+        blend.AlphaFormat = AC_SRC_ALPHA;
+        UpdateLayeredWindow(main_context.hwnd, hdcScreen, NULL, NULL, NULL, NULL, 0, &blend, ULW_ALPHA);
     }
 
     // 清理资源
