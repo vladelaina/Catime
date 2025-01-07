@@ -13,6 +13,30 @@ typedef struct {
     int height;
 } ImageBuffer;
 
+// 打印进度条
+void print_progress_bar(int current, int total) {
+    const int bar_width = 50;
+    float progress = (float)current / total;
+    int filled = (int)(bar_width * progress);
+
+    printf("\r[");
+    for (int i = 0; i < bar_width; i++) {
+        if (i < filled) {
+            printf("=");
+        } else if (i == filled) {
+            printf(">");
+        } else {
+            printf(" ");
+        }
+    }
+    printf("] %.1f%%", progress * 100);
+    fflush(stdout);
+
+    if (current == total) {
+        printf("\n");
+    }
+}
+
 // 初始化图像缓冲区
 ImageBuffer* create_buffer(int width, int height) {
     ImageBuffer* buffer = (ImageBuffer*)malloc(sizeof(ImageBuffer));
@@ -123,8 +147,13 @@ void process_gif(const char* gif_path) {
         }
     }
 
+    printf("%s\n", gif_path);
+
     // 处理每一帧
     for (int i = 0; i < gif->ImageCount; i++) {
+        // 显示进度条
+        print_progress_bar(i + 1, gif->ImageCount);
+
         // 复制前一帧的内容到当前缓冲区
         memcpy(buffer->buffer, prev_buffer->buffer, buffer->width * buffer->height * 4);
 
@@ -155,11 +184,9 @@ void process_gif(const char* gif_path) {
 
         // 保存为PNG
         char output_path[512];
-        snprintf(output_path, sizeof(output_path), "%s/frame_%04d.png", 
-                dir_name, i);
+        snprintf(output_path, sizeof(output_path), "%s/%d.png", 
+                dir_name, i + 1);
         save_buffer_as_png(buffer, output_path);
-        
-        printf("已保存帧 %d/%d: %s\n", i + 1, gif->ImageCount, output_path);
 
         // 保存当前帧作为下一帧的背景
         memcpy(prev_buffer->buffer, buffer->buffer, buffer->width * buffer->height * 4);
@@ -180,7 +207,6 @@ int main() {
     struct dirent* entry;
     while ((entry = readdir(dir)) != NULL) {
         if (strstr(entry->d_name, ".gif") || strstr(entry->d_name, ".GIF")) {
-            printf("正在处理: %s\n", entry->d_name);
             process_gif(entry->d_name);
         }
     }

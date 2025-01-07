@@ -4,7 +4,7 @@
 OUT = /mnt/c/Users/vladelaina/Desktop
 
 # 目标可执行文件路径
-TARGET = $(OUT)/output.exe
+TARGET = $(OUT)/GIF_to_PNG.exe
 
 # 编译器
 CC = x86_64-w64-mingw32-gcc
