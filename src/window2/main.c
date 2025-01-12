@@ -8,7 +8,13 @@
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
 #define SCALE_FACTOR 0.7
-#define BLUR_ALPHA 192
+#define BLUR_ALPHA 255
+
+// 模糊相关的参数定义
+#define BLUR_RADIUS 40          // 高斯模糊的半径
+#define BLUR_ITERATIONS 6       // 模糊处理的次数
+#define BLUR_DOWNSCALE 4       // 降采样比例（1/4）
+#define BLUR_RENDER_PASSES 4    // 渲染叠加的次数
 
 // 高斯模糊函数
 void gaussianBlur(SDL_Surface* surface, int radius) {
@@ -90,11 +96,11 @@ void gaussianBlur(SDL_Surface* surface, int radius) {
     free(temp);
 }
 
-// 优化后的创建模糊纹理函数
+// 创建模糊纹理
 SDL_Texture* createBlurTexture(SDL_Renderer* renderer, SDL_Surface* original) {
     // 先创建较小尺寸的表面
-    int smallWidth = original->w / 4;  // 降至1/4大小
-    int smallHeight = original->h / 4;
+    int smallWidth = original->w / BLUR_DOWNSCALE;
+    int smallHeight = original->h / BLUR_DOWNSCALE;
     
     SDL_Surface* smallSurface = SDL_CreateRGBSurfaceWithFormat(
         0, smallWidth, smallHeight,
@@ -104,8 +110,8 @@ SDL_Texture* createBlurTexture(SDL_Renderer* renderer, SDL_Surface* original) {
     SDL_BlitScaled(original, NULL, smallSurface, NULL);
     
     // 对小图像进行多次模糊
-    for (int i = 0; i < 3; i++) {  // 3次模糊叠加
-        gaussianBlur(smallSurface, 10);  // 使用较小的半径
+    for (int i = 0; i < BLUR_ITERATIONS; i++) {
+        gaussianBlur(smallSurface, BLUR_RADIUS);
     }
     
     // 创建最终尺寸的纹理
@@ -214,22 +220,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
         SDL_RenderClear(renderer);
 
-        // 渲染模糊背景（多次渲染叠加以增强模糊效果）
-        SDL_Rect bgRect = {-50, -50, WINDOW_WIDTH + 100, WINDOW_HEIGHT + 100};
-        
-        // 第一次渲染 - 基础模糊层
-        SDL_SetTextureAlphaMod(blurTexture, BLUR_ALPHA);
-        SDL_RenderCopy(renderer, blurTexture, NULL, &bgRect);
-        
-        // 第二次渲染 - 增强模糊效果
-        SDL_SetTextureAlphaMod(blurTexture, BLUR_ALPHA / 2);
-        SDL_Rect bgRect2 = {-60, -60, WINDOW_WIDTH + 120, WINDOW_HEIGHT + 120};
-        SDL_RenderCopy(renderer, blurTexture, NULL, &bgRect2);
-
-        // 第三次渲染 - 进一步增强模糊
-        SDL_SetTextureAlphaMod(blurTexture, BLUR_ALPHA / 3);
-        SDL_Rect bgRect3 = {-70, -70, WINDOW_WIDTH + 140, WINDOW_HEIGHT + 140};
-        SDL_RenderCopy(renderer, blurTexture, NULL, &bgRect3);
+        // 渲染模糊背景
+        for (int i = 0; i < BLUR_RENDER_PASSES; i++) {
+            SDL_SetTextureAlphaMod(blurTexture, BLUR_ALPHA / (i + 1));
+            SDL_Rect bgRect = {
+                -50 - (i * 10), 
+                -50 - (i * 10), 
+                WINDOW_WIDTH + 100 + (i * 20), 
+                WINDOW_HEIGHT + 100 + (i * 20)
+            };
+            SDL_RenderCopy(renderer, blurTexture, NULL, &bgRect);
+        }
 
         // 渲染清晰的中心图片
         SDL_Rect centerRect = {centerX, centerY, centerWidth, centerHeight};
