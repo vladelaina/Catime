@@ -2,6 +2,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <windows.h>
+#include <math.h>
 
 // 定义参数
 #define WINDOW_WIDTH 800
@@ -9,46 +10,106 @@
 #define SCALE_FACTOR 0.7
 #define BLUR_ALPHA 192
 
-// 降采样来实现模糊效果
-SDL_Texture* createBlurTexture(SDL_Renderer* renderer, SDL_Surface* original) {
-    // 创建小尺寸的表面（降采样）
-    int smallWidth = original->w / 4;
-    int smallHeight = original->h / 4;
+// 高斯模糊函数
+void gaussianBlur(SDL_Surface* surface, int radius) {
+    Uint32* pixels = (Uint32*)surface->pixels;
+    int width = surface->w;
+    int height = surface->h;
     
-    SDL_Surface* smallSurface = SDL_CreateRGBSurfaceWithFormat(
-        0, smallWidth, smallHeight,
+    // 创建临时缓冲区
+    Uint32* temp = (Uint32*)malloc(width * height * sizeof(Uint32));
+    
+    // 计算高斯核
+    float sigma = radius / 2.0f;
+    float* kernel = (float*)malloc((radius * 2 + 1) * sizeof(float));
+    float sum = 0.0f;
+    
+    for (int i = -radius; i <= radius; i++) {
+        kernel[i + radius] = exp(-(i * i) / (2 * sigma * sigma));
+        sum += kernel[i + radius];
+    }
+    
+    // 归一化核
+    for (int i = 0; i <= radius * 2; i++) {
+        kernel[i] /= sum;
+    }
+    
+    // 水平方向模糊
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            float r = 0, g = 0, b = 0, a = 0;
+            
+            for (int i = -radius; i <= radius; i++) {
+                int px = x + i;
+                if (px < 0) px = 0;
+                if (px >= width) px = width - 1;
+                
+                Uint32 pixel = pixels[y * width + px];
+                Uint8 pr, pg, pb, pa;
+                SDL_GetRGBA(pixel, surface->format, &pr, &pg, &pb, &pa);
+                
+                float k = kernel[i + radius];
+                r += pr * k;
+                g += pg * k;
+                b += pb * k;
+                a += pa * k;
+            }
+            
+            temp[y * width + x] = SDL_MapRGBA(surface->format, 
+                (Uint8)r, (Uint8)g, (Uint8)b, (Uint8)a);
+        }
+    }
+    
+    // 垂直方向模糊
+    for (int x = 0; x < width; x++) {
+        for (int y = 0; y < height; y++) {
+            float r = 0, g = 0, b = 0, a = 0;
+            
+            for (int i = -radius; i <= radius; i++) {
+                int py = y + i;
+                if (py < 0) py = 0;
+                if (py >= height) py = height - 1;
+                
+                Uint32 pixel = temp[py * width + x];
+                Uint8 pr, pg, pb, pa;
+                SDL_GetRGBA(pixel, surface->format, &pr, &pg, &pb, &pa);
+                
+                float k = kernel[i + radius];
+                r += pr * k;
+                g += pg * k;
+                b += pb * k;
+                a += pa * k;
+            }
+            
+            pixels[y * width + x] = SDL_MapRGBA(surface->format, 
+                (Uint8)r, (Uint8)g, (Uint8)b, (Uint8)a);
+        }
+    }
+    
+    free(kernel);
+    free(temp);
+}
+
+// 创建模糊纹理
+SDL_Texture* createBlurTexture(SDL_Renderer* renderer, SDL_Surface* original) {
+    // 创建一个副本用于模糊处理
+    SDL_Surface* blurSurface = SDL_CreateRGBSurfaceWithFormat(
+        0, original->w, original->h,
         32, SDL_PIXELFORMAT_RGBA32);
     
-    // 缩放到小尺寸（这会产生初步的模糊效果）
-    SDL_BlitScaled(original, NULL, smallSurface, NULL);
+    SDL_BlitSurface(original, NULL, blurSurface, NULL);
     
-    // 创建临时纹理
-    SDL_Texture* smallTexture = SDL_CreateTextureFromSurface(renderer, smallSurface);
-    SDL_SetTextureBlendMode(smallTexture, SDL_BLENDMODE_BLEND);
-    SDL_SetTextureScaleMode(smallTexture, SDL_ScaleModeLinear);
+    // 应用高斯模糊
+    gaussianBlur(blurSurface, 200); // 半径可以调整，越大越模糊
     
-    SDL_FreeSurface(smallSurface);
+    // 创建纹理
+    SDL_Texture* blurTexture = SDL_CreateTextureFromSurface(renderer, blurSurface);
+    SDL_SetTextureBlendMode(blurTexture, SDL_BLENDMODE_BLEND);
+    SDL_SetTextureScaleMode(blurTexture, SDL_ScaleModeLinear);
     
-    // 创建最终尺寸的纹理
-    SDL_Texture* finalTexture = SDL_CreateTexture(
-        renderer,
-        SDL_PIXELFORMAT_RGBA32,
-        SDL_TEXTUREACCESS_TARGET,
-        original->w, original->h
-    );
+    SDL_FreeSurface(blurSurface);
     
-    // 设置混合模式和缩放质量
-    SDL_SetTextureBlendMode(finalTexture, SDL_BLENDMODE_BLEND);
-    SDL_SetTextureScaleMode(finalTexture, SDL_ScaleModeLinear);
-    
-    // 将小纹理放大到最终尺寸（这会产生第二次模糊效果）
-    SDL_SetRenderTarget(renderer, finalTexture);
-    SDL_RenderCopy(renderer, smallTexture, NULL, NULL);
-    SDL_SetRenderTarget(renderer, NULL);
-    
-    SDL_DestroyTexture(smallTexture);
-    
-    return finalTexture;
+    return blurTexture;
 }
 
 #ifdef __cplusplus
