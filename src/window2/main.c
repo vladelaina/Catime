@@ -11,6 +11,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     SDL_Init(SDL_INIT_VIDEO);
     IMG_Init(IMG_INIT_PNG);
 
+    // 设置纹理的缩放质量为最佳
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "2");
+
     // 创建窗口，设置为无边框
     SDL_Window* window = SDL_CreateWindow(
         "Transparent Window",
@@ -21,7 +24,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         SDL_WINDOW_SHOWN | SDL_WINDOW_BORDERLESS
     );
 
-    // 创建渲染器，启用透明支持
+    // 创建渲染器，启用透明支持和垂直同步
     SDL_Renderer* renderer = SDL_CreateRenderer(
         window,
         -1,
