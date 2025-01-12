@@ -11,7 +11,8 @@
 #include <time.h>
 #include <sys/stat.h>
 
-
+// 基础路径定义
+const char* BASE_IMAGE_PATH = "./asset/images/moving";
 // 配置文件路径（全局变量）
 const char* config_path = "./asset/config.txt";
 
@@ -70,7 +71,6 @@ Uint32 start_time;
 char **image_dirs = NULL;
 int image_dir_count = 0;
 int current_dir_index = 0;
-
 // 函数声明
 void clear_image_cache(WindowContext* context);
 void save_config_state(const char *filename, ConfigState* state);
@@ -92,9 +92,9 @@ void process_and_display_image(const char* image_path, WindowContext* context, H
 void update_window_context(WindowContext* context, const char* dir, int scale_factor, int preserve_index, int current_index);
 void toggle_dragging(WindowContext* context, HDC hdcScreen, HDC hdcMemory);
 void switch_to_next_directory();
-void switch_to_previous_directory(); // 新增函数
-void increase_switch_speed(); // 新增函数
-void decrease_switch_speed(); // 新增函数
+void switch_to_previous_directory();
+void increase_switch_speed();
+void decrease_switch_speed();
 
 // 提取文件名中的数字
 int extract_number(const char* filename) {
@@ -156,14 +156,12 @@ int get_png_files(const char *dir, char ***image_files) {
     closedir(d);
 
     if (count > 0) {
-        // 使用数字排序
         qsort(*image_files, count, sizeof(char*), compare_numbers);
     }
 
     return count;
 }
-
-// 新增：获取所有子目录
+// 获取所有子目录
 int get_subdirectories(const char *dir, char ***subdirs) {
     DIR *d = opendir(dir);
     if (d == NULL) {
@@ -174,11 +172,9 @@ int get_subdirectories(const char *dir, char ***subdirs) {
     struct dirent *entry;
     int count = 0;
     while ((entry = readdir(d)) != NULL) {
-        // 兼容性修正：使用 stat 来判断是否是目录
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
             continue;
 
-        // 构造完整路径
         char *full_path = malloc(strlen(dir) + strlen(entry->d_name) + 2);
         if (!full_path) {
             fprintf(stderr, "内存分配失败\n");
@@ -187,7 +183,6 @@ int get_subdirectories(const char *dir, char ***subdirs) {
         }
         sprintf(full_path, "%s\\%s", dir, entry->d_name);
 
-        // 使用 stat 检查是否为目录
         struct stat st;
         if (stat(full_path, &st) == 0) {
             if (st.st_mode & S_IFDIR) {
@@ -210,7 +205,6 @@ int get_subdirectories(const char *dir, char ***subdirs) {
     }
     closedir(d);
 
-    // 根据名称排序
     if (count > 0) {
         qsort(*subdirs, count, sizeof(char*), compare_numbers);
     }
@@ -236,13 +230,25 @@ void load_config(const char *filename) {
     }
 
     char line[256];
+    char temp_image_dir[256] = {0};
+    
     while (fgets(line, sizeof(line), file)) {
         if (line[0] == '\n' || line[0] == '#') continue;
 
         if (sscanf(line, "IMAGE_CAROUSEL_SCALE_FACTOR=%d", &current_config_state.scale_factor) == 1) continue;
-        if (sscanf(line, "IMAGE_CAROUSEL_IMAGE_DIR=%255s", current_config_state.image_dir) == 1) continue;
+        if (sscanf(line, "IMAGE_CAROUSEL_IMAGE_DIR=%255s", temp_image_dir) == 1) {
+            // 检查是否是完整路径
+            if (strstr(temp_image_dir, BASE_IMAGE_PATH) == NULL) {
+                // 如果不是完整路径，添加基础路径
+                snprintf(current_config_state.image_dir, sizeof(current_config_state.image_dir),
+                        "%s\\%s", BASE_IMAGE_PATH, temp_image_dir);
+            } else {
+                strncpy(current_config_state.image_dir, temp_image_dir, sizeof(current_config_state.image_dir) - 1);
+            }
+            continue;
+        }
         if (sscanf(line, "IMAGE_CAROUSEL_SWITCH_INTERVAL=%d", &current_config_state.switch_interval) == 1) continue;
-        if (sscanf(line, "IMAGE_CAROUSEL_SWITCH_SPEED_STEP=%d", &current_config_state.switch_speed_step) == 1) continue; // 新增
+        if (sscanf(line, "IMAGE_CAROUSEL_SWITCH_SPEED_STEP=%d", &current_config_state.switch_speed_step) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_EDGE_SIZE=%d", &current_config_state.edge_size) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_MARGIN_LEFT=%d", &current_config_state.margin_left) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_MARGIN_TOP=%d", &current_config_state.margin_top) == 1) continue;
@@ -256,8 +262,7 @@ void load_config(const char *filename) {
 
     fclose(file);
 }
-
-// 保存配置状态到配置文件
+// 写入配置
 void write_config(const char *filename, ConfigState* state) {
     FILE *file = fopen(filename, "w");
     if (!file) {
@@ -265,11 +270,20 @@ void write_config(const char *filename, ConfigState* state) {
         return;
     }
 
+    char simplified_dir[256];
+    if (strstr(state->image_dir, BASE_IMAGE_PATH) != NULL) {
+        // 如果包含基础路径，只保存子文件夹名称
+        const char* subdir = state->image_dir + strlen(BASE_IMAGE_PATH) + 1; // +1 跳过反斜杠
+        strcpy(simplified_dir, subdir);
+    } else {
+        strcpy(simplified_dir, state->image_dir);
+    }
+
     fprintf(file, "# Image Carousel Configuration\n");
     fprintf(file, "IMAGE_CAROUSEL_SCALE_FACTOR=%d\n", state->scale_factor);
-    fprintf(file, "IMAGE_CAROUSEL_IMAGE_DIR=%s\n", state->image_dir);
+    fprintf(file, "IMAGE_CAROUSEL_IMAGE_DIR=%s\n", simplified_dir);
     fprintf(file, "IMAGE_CAROUSEL_SWITCH_INTERVAL=%d\n", state->switch_interval);
-    fprintf(file, "IMAGE_CAROUSEL_SWITCH_SPEED_STEP=%d\n", state->switch_speed_step); // 新增
+    fprintf(file, "IMAGE_CAROUSEL_SWITCH_SPEED_STEP=%d\n", state->switch_speed_step);
     fprintf(file, "IMAGE_CAROUSEL_EDGE_SIZE=%d\n", state->edge_size);
     fprintf(file, "IMAGE_CAROUSEL_MARGIN_LEFT=%d\n", state->margin_left);
     fprintf(file, "IMAGE_CAROUSEL_MARGIN_TOP=%d\n", state->margin_top);
@@ -283,7 +297,7 @@ void write_config(const char *filename, ConfigState* state) {
     fclose(file);
 }
 
-// 保存配置状态到配置文件（复制并写入配置文件）
+// 保存配置状态
 void save_config_state(const char *filename, ConfigState* state) {
     write_config(filename, state);
 }
@@ -301,10 +315,8 @@ SDL_Surface* process_alpha(SDL_Surface* surface) {
     Uint32* src = (Uint32*)surface->pixels;
     Uint32* dst = (Uint32*)result->pixels;
 
-    // 复制原始数据
     memcpy(dst, src, surface->w * surface->h * sizeof(Uint32));
 
-    // 处理边缘像素
     for (int y = 0; y < surface->h; y++) {
         for (int x = 0; x < surface->w; x++) {
             int idx = y * surface->w + x;
@@ -346,7 +358,6 @@ SDL_Surface* process_alpha(SDL_Surface* surface) {
 
     return result;
 }
-
 // SDL表面转换为Windows位图
 HBITMAP SDLSurfaceToWinBitmap(SDL_Surface* surface, HDC hdc) {
     BITMAPINFO bmi;
@@ -386,7 +397,7 @@ void init_image_cache(WindowContext* context) {
     if (context->image_cache) {
         clear_image_cache(context);
     }
-    context->cache_size = context->image_count; // 设置缓存大小为图片数量
+    context->cache_size = context->image_count;
     context->image_cache = (ImageCache*)calloc(context->cache_size, sizeof(ImageCache));
     if (!context->image_cache) {
         fprintf(stderr, "无法分配图片缓存\n");
@@ -412,49 +423,6 @@ void clear_image_cache(WindowContext* context) {
     }
 }
 
-// 更新窗口上下文
-void update_window_context(WindowContext* context, const char* dir, int scale_factor, int preserve_index, int current_index) {
-    if (!context) return;
-
-    // 保存当前索引和切换时间
-    int saved_index = preserve_index ? current_index : 0;
-    Uint32 saved_switch_time = preserve_index ? context->last_switch_time : SDL_GetTicks();
-
-    // 清理旧资源
-    clear_image_cache(context);
-    if (context->image_files) {
-        for (int i = 0; i < context->image_count; i++) {
-            free(context->image_files[i]);
-        }
-        free(context->image_files);
-        context->image_files = NULL;
-    }
-
-    // 加载新图片列表
-    context->image_count = get_png_files(dir, &context->image_files);
-    context->current_index = saved_index % (context->image_count > 0 ? context->image_count : 1); // 确保索引在范围内
-
-    // 初始化新缓存
-    init_image_cache(context);
-
-    // 更新窗口尺寸
-    if (context->image_count > 0) {
-        SDL_Surface *image = IMG_Load(context->image_files[context->current_index]);
-        if (image) {
-            context->imgWidth = (image->w * scale_factor) / 100;
-            context->imgHeight = (image->h * scale_factor) / 100;
-            SDL_FreeSurface(image);
-
-            if (context->window) {
-                SDL_SetWindowSize(context->window, context->imgWidth, context->imgHeight);
-            }
-        }
-    }
-
-    // 恢复切换时间
-    context->last_switch_time = saved_switch_time;
-}
-
 // 创建窗口
 SDL_Window* create_window(const char* title, int x_pos, int y_pos, int width, int height, HWND* out_hwnd) {
     SDL_Window* win = SDL_CreateWindow(title, 
@@ -470,7 +438,6 @@ SDL_Window* create_window(const char* title, int x_pos, int y_pos, int width, in
         if (SDL_GetWindowWMInfo(win, &wmInfo)) {
             *out_hwnd = wmInfo.info.win.window;
 
-            // 根据拖动开关设置窗口样式
             LONG_PTR exStyle = WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW;
             if (!current_config_state.enable_dragging) {
                 exStyle |= WS_EX_TRANSPARENT;
@@ -488,7 +455,6 @@ SDL_Window* create_window(const char* title, int x_pos, int y_pos, int width, in
     }
     return win;
 }
-
 // 确保窗口在最顶层
 void ensure_window_top_most(WindowContext* context) {
     if (!context || !context->hwnd) return;
@@ -547,19 +513,13 @@ void preload_next_image(WindowContext* context) {
                     context->image_cache[cache_index].last_used = time(NULL);
                     context->image_cache[cache_index].is_valid = 1;
                 } else {
-                    SDL_FreeSurface(converted); // 确保在失败时释放资源
+                    SDL_FreeSurface(converted);
                 }
                 
                 DeleteDC(hdcMemory);
                 ReleaseDC(NULL, hdcScreen);
-            } else {
-                SDL_FreeSurface(processed);
             }
-        } else {
-            SDL_FreeSurface(scaled);
         }
-    } else {
-        SDL_FreeSurface(image);
     }
 }
 
@@ -576,7 +536,7 @@ int check_config_changes(ConfigState* old_state, ConfigState* new_state, WindowC
         old_state->zoom_step != new_state->zoom_step ||
         old_state->min_scale_factor != new_state->min_scale_factor ||
         old_state->max_scale_factor != new_state->max_scale_factor ||
-        old_state->switch_interval != new_state->switch_interval) { // 新增 switch_interval 比较
+        old_state->switch_interval != new_state->switch_interval) {
         needs_window_update = 1;
         needs_cache_clear = 1;
     }
@@ -587,7 +547,6 @@ int check_config_changes(ConfigState* old_state, ConfigState* new_state, WindowC
 
     return needs_window_update;
 }
-
 // 处理并显示图片
 void process_and_display_image(const char* image_path, WindowContext* context, HDC hdcScreen, HDC hdcMemory) {
     if (!context || !context->window || !context->hwnd) return;
@@ -675,17 +634,47 @@ void process_and_display_image(const char* image_path, WindowContext* context, H
                     SelectObject(hdcMemory, hOldBitmap);
                     DeleteDC(hdcMemory);
                 } else {
-                    SDL_FreeSurface(converted); // 确保在失败时释放资源
+                    SDL_FreeSurface(converted);
                 }
-            } else {
-                SDL_FreeSurface(processed);
             }
-        } else {
-            SDL_FreeSurface(scaled);
         }
-    } else {
-        SDL_FreeSurface(image);
     }
+}
+// 更新窗口上下文
+void update_window_context(WindowContext* context, const char* dir, int scale_factor, int preserve_index, int current_index) {
+    if (!context) return;
+
+    int saved_index = preserve_index ? current_index : 0;
+    Uint32 saved_switch_time = preserve_index ? context->last_switch_time : SDL_GetTicks();
+
+    clear_image_cache(context);
+    if (context->image_files) {
+        for (int i = 0; i < context->image_count; i++) {
+            free(context->image_files[i]);
+        }
+        free(context->image_files);
+        context->image_files = NULL;
+    }
+
+    context->image_count = get_png_files(dir, &context->image_files);
+    context->current_index = saved_index % (context->image_count > 0 ? context->image_count : 1);
+
+    init_image_cache(context);
+
+    if (context->image_count > 0) {
+        SDL_Surface *image = IMG_Load(context->image_files[context->current_index]);
+        if (image) {
+            context->imgWidth = (image->w * scale_factor) / 100;
+            context->imgHeight = (image->h * scale_factor) / 100;
+            SDL_FreeSurface(image);
+
+            if (context->window) {
+                SDL_SetWindowSize(context->window, context->imgWidth, context->imgHeight);
+            }
+        }
+    }
+
+    context->last_switch_time = saved_switch_time;
 }
 
 // 切换拖动功能
@@ -694,7 +683,6 @@ void toggle_dragging(WindowContext* context, HDC hdcScreen, HDC hdcMemory) {
         current_config_state.enable_dragging = 0;
         save_config_state(config_path, &current_config_state);
 
-        // 更新窗口样式
         LONG_PTR exStyle = WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_TRANSPARENT;
         SetWindowLongPtr(context->hwnd, GWL_EXSTYLE, exStyle);
 
@@ -704,7 +692,6 @@ void toggle_dragging(WindowContext* context, HDC hdcScreen, HDC hdcMemory) {
         blend.AlphaFormat = AC_SRC_ALPHA;
         UpdateLayeredWindow(context->hwnd, hdcScreen, NULL, NULL, NULL, NULL, 0, &blend, ULW_ALPHA);
 
-        // 如果禁用拖动，重置拖动状态
         context->is_dragging = 0;
 
         printf("拖动功能已禁用\n");
@@ -720,7 +707,6 @@ void switch_to_next_directory() {
     current_config_state.image_dir[sizeof(current_config_state.image_dir) - 1] = '\0';
     save_config_state(config_path, &current_config_state);
 
-    // 重新加载图片
     update_window_context(&main_context, current_config_state.image_dir, current_config_state.scale_factor, 0, 0);
     if (main_context.image_count > 0) {
         HDC hdcScreen = GetDC(NULL);
@@ -734,8 +720,7 @@ void switch_to_next_directory() {
 
     printf("切换到目录: %s\n", current_config_state.image_dir);
 }
-
-// 新增：切换到上一个目录
+// 切换到上一个目录
 void switch_to_previous_directory() {
     if (image_dir_count == 0) return;
 
@@ -744,7 +729,6 @@ void switch_to_previous_directory() {
     current_config_state.image_dir[sizeof(current_config_state.image_dir) - 1] = '\0';
     save_config_state(config_path, &current_config_state);
 
-    // 重新加载图片
     update_window_context(&main_context, current_config_state.image_dir, current_config_state.scale_factor, 0, 0);
     if (main_context.image_count > 0) {
         HDC hdcScreen = GetDC(NULL);
@@ -759,17 +743,17 @@ void switch_to_previous_directory() {
     printf("切换到目录: %s\n", current_config_state.image_dir);
 }
 
-// 新增：增加切换速度（减少 switch_interval）
+// 增加切换速度
 void increase_switch_speed() {
     current_config_state.switch_interval -= current_config_state.switch_speed_step;
-    if (current_config_state.switch_interval < 1) { // 设置最小间隔为1ms
+    if (current_config_state.switch_interval < 1) {
         current_config_state.switch_interval = 1;
     }
     save_config_state(config_path, &current_config_state);
     printf("切换速度已增加，当前切换间隔: %d 毫秒\n", current_config_state.switch_interval);
 }
 
-// 新增：减少切换速度（增加 switch_interval）
+// 减少切换速度
 void decrease_switch_speed() {
     current_config_state.switch_interval += current_config_state.switch_speed_step;
     save_config_state(config_path, &current_config_state);
@@ -795,32 +779,16 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         return 1;
     }
 
-    // 初始化主窗口上下文
-    const char* initial_dir = current_config_state.image_dir;
-    int initial_scale = current_config_state.scale_factor;
-
-    // 检查目录是否存在
-    DIR *dir = opendir(initial_dir);
-    if (dir) {
-        closedir(dir);
-    } else {
-        fprintf(stderr, "目录不存在: %s\n", initial_dir);
-        IMG_Quit();
-        SDL_Quit();
-        return 1;
-    }
-
     // 获取所有子目录
-    image_dir_count = get_subdirectories("./asset/images/moving", &image_dirs);
+    image_dir_count = get_subdirectories(BASE_IMAGE_PATH, &image_dirs);
     if (image_dir_count == 0) {
-        fprintf(stderr, "在 ./asset/images/moving 中找不到子目录\n");
+        fprintf(stderr, "在 %s 中找不到子目录\n", BASE_IMAGE_PATH);
         IMG_Quit();
         SDL_Quit();
         return 1;
     }
 
     // 设置当前目录索引
-    // 如果当前 image_dir 在 image_dirs 中，设置 current_dir_index ；否则，设置为0
     current_dir_index = 0;
     for (int i = 0; i < image_dir_count; i++) {
         if (strcmp(current_config_state.image_dir, image_dirs[i]) == 0) {
@@ -828,25 +796,23 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             break;
         }
     }
-
     // 加载图片列表并初始化缓存
-    main_context.image_count = get_png_files(initial_dir, &main_context.image_files);
+    main_context.image_count = get_png_files(current_config_state.image_dir, &main_context.image_files);
     if (main_context.image_count == 0) {
-        fprintf(stderr, "在 %s 中找不到PNG文件\n", initial_dir);
+        fprintf(stderr, "在 %s 中找不到PNG文件\n", current_config_state.image_dir);
         IMG_Quit();
         SDL_Quit();
         return 1;
     }
 
     init_image_cache(&main_context);
-
     main_context.current_index = 0;
 
     // 设置窗口尺寸
     SDL_Surface *image = IMG_Load(main_context.image_files[main_context.current_index]);
     if (image) {
-        main_context.imgWidth = (image->w * initial_scale) / 100;
-        main_context.imgHeight = (image->h * initial_scale) / 100;
+        main_context.imgWidth = (image->w * current_config_state.scale_factor) / 100;
+        main_context.imgHeight = (image->h * current_config_state.scale_factor) / 100;
         SDL_FreeSurface(image);
     } else {
         fprintf(stderr, "无法加载图片: %s\n", main_context.image_files[main_context.current_index]);
@@ -888,13 +854,11 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
     // 主循环
     while (!quit) {
-        // 处理所有待处理的事件
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT) {
                 quit = 1;
                 break;
             }
-            // 处理键盘事件
             if (e.type == SDL_KEYDOWN) {
                 if (e.key.keysym.sym == SDLK_RIGHT) {
                     switch_to_next_directory();
@@ -902,14 +866,13 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                 else if (e.key.keysym.sym == SDLK_LEFT) {
                     switch_to_previous_directory();
                 }
-                else if (e.key.keysym.sym == SDLK_UP) { // 新增：增加切换速度
+                else if (e.key.keysym.sym == SDLK_UP) {
                     increase_switch_speed();
                 }
-                else if (e.key.keysym.sym == SDLK_DOWN) { // 新增：减少切换速度
+                else if (e.key.keysym.sym == SDLK_DOWN) {
                     decrease_switch_speed();
                 }
             }
-            // 处理鼠标事件
             if (current_config_state.enable_dragging) {
                 if (e.type == SDL_MOUSEBUTTONDOWN) {
                     if (e.button.button == SDL_BUTTON_LEFT) {
@@ -920,20 +883,15 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                         GetWindowRect(main_context.hwnd, &rect);
                         main_context.drag_offset_x = cursor_pos.x - rect.left;
                         main_context.drag_offset_y = cursor_pos.y - rect.top;
-
-                        // 激活窗口以响应拖动
                         SetForegroundWindow(main_context.hwnd);
                     }
                     else if (e.button.button == SDL_BUTTON_RIGHT) {
-                        // 右键点击时禁用拖动功能
                         toggle_dragging(&main_context, hdcScreen, hdcMemory);
                     }
                 }
                 else if (e.type == SDL_MOUSEBUTTONUP) {
                     if (e.button.button == SDL_BUTTON_LEFT) {
-                        if (main_context.is_dragging) {
-                            main_context.is_dragging = 0;
-                        }
+                        main_context.is_dragging = 0;
                     }
                 }
                 else if (e.type == SDL_MOUSEMOTION) {
@@ -945,14 +903,12 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                         SetWindowPos(main_context.hwnd, HWND_TOPMOST, new_x, new_y,
                             main_context.imgWidth, main_context.imgHeight, SWP_NOACTIVATE | SWP_SHOWWINDOW);
                         
-                        // 实时更新配置
                         current_config_state.margin_left = new_x;
                         current_config_state.margin_top = new_y;
                         save_config_state(config_path, &current_config_state);
                     }
                 }
                 else if (e.type == SDL_MOUSEWHEEL) {
-                    // 仅在启用拖动且鼠标位于图片上方时处理缩放
                     POINT pt;
                     GetCursorPos(&pt);
                     RECT rect;
@@ -960,7 +916,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                     if (pt.x >= rect.left && pt.x <= rect.right &&
                         pt.y >= rect.top && pt.y <= rect.bottom) {
                         
-                        if (e.wheel.y > 0) { // 向前滚动，放大
+                        if (e.wheel.y > 0) {
                             int steps = e.wheel.y / 1;
                             for(int i = 0; i < steps; i++) {
                                 current_config_state.scale_factor += current_config_state.zoom_step;
@@ -969,7 +925,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                                 }
                             }
                         }
-                        else if (e.wheel.y < 0) { // 向后滚动，缩小
+                        else if (e.wheel.y < 0) {
                             int steps = (-e.wheel.y) / 1;
                             for(int i = 0; i < steps; i++) {
                                 current_config_state.scale_factor -= current_config_state.zoom_step;
@@ -979,36 +935,20 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                             }
                         }
 
-                        // 更新当前窗口上下文，保留当前索引
-                        update_window_context(&main_context, current_config_state.image_dir, current_config_state.scale_factor, 1, main_context.current_index);
+                        update_window_context(&main_context, current_config_state.image_dir, 
+                                           current_config_state.scale_factor, 1, main_context.current_index);
                         if (main_context.image_count > 0) {
                             process_and_display_image(main_context.image_files[main_context.current_index], 
                                                       &main_context, hdcScreen, hdcMemory);
                             preload_next_image(&main_context);
                         }
 
-                        // 保存配置
                         save_config_state(config_path, &current_config_state);
-                    }
-                }
-            }
-            // 处理鼠标悬停以激活窗口拖动
-            if (current_config_state.enable_dragging) {
-                if (e.type == SDL_MOUSEMOTION || e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP) {
-                    POINT cursor_pos;
-                    GetCursorPos(&cursor_pos);
-                    RECT rect;
-                    GetWindowRect(main_context.hwnd, &rect);
-                    if (cursor_pos.x >= rect.left && cursor_pos.x <= rect.right &&
-                        cursor_pos.y >= rect.top && cursor_pos.y <= rect.bottom) {
-                        // 激活窗口，使其可拖动
-                        SetForegroundWindow(main_context.hwnd);
                     }
                 }
             }
         }
 
-        // 获取当前鼠标位置并激活窗口（新增部分）
         if (current_config_state.enable_dragging) {
             POINT cursor_pos;
             GetCursorPos(&cursor_pos);
@@ -1016,7 +956,6 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             GetWindowRect(main_context.hwnd, &rect);
             if (cursor_pos.x >= rect.left && cursor_pos.x <= rect.right &&
                 cursor_pos.y >= rect.top && cursor_pos.y <= rect.bottom) {
-                // 鼠标悬停在窗口上时激活窗口
                 SetForegroundWindow(main_context.hwnd);
             }
         }
@@ -1026,20 +965,16 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         int current_interval = current_config_state.switch_interval;
 
         if (time_since_last_switch >= current_interval) {
-            // 修正last_switch_time以保持恒定速度
             main_context.last_switch_time = current_time;
-
             main_context.current_index = (main_context.current_index + 1) % main_context.image_count;
             
             process_and_display_image(main_context.image_files[main_context.current_index], 
                                       &main_context, hdcScreen, hdcMemory);
             
             preload_next_image(&main_context);
-
             ensure_window_top_most(&main_context);
         }
 
-        // 检查配置文件修改
         time_t current_mod_time = get_file_modification_time(config_path);
         if (current_mod_time != last_mod_time) {
             last_mod_time = current_mod_time;
@@ -1047,11 +982,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             load_config(config_path);
 
             if (check_config_changes(&old_state, &current_config_state, &main_context)) {
-                const char* current_dir = current_config_state.image_dir;
-                int current_scale = current_config_state.scale_factor;
-                
-                // 保留当前索引
-                update_window_context(&main_context, current_dir, current_scale, 1, main_context.current_index);
+                update_window_context(&main_context, current_config_state.image_dir, 
+                                   current_config_state.scale_factor, 1, main_context.current_index);
                 
                 if (main_context.image_count > 0) {
                     process_and_display_image(main_context.image_files[main_context.current_index], 
@@ -1059,7 +991,6 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                     preload_next_image(&main_context);
                 }
 
-                // 更新窗口样式 based on enable_dragging
                 LONG_PTR exStyle = WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW;
                 if (!current_config_state.enable_dragging) {
                     exStyle |= WS_EX_TRANSPARENT;
@@ -1074,22 +1005,19 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             }
         }
 
-        // 检查退出条件
         if (current_config_state.display_duration > 0 && 
             (current_time - start_time) >= current_config_state.display_duration) {
             quit = 1;
         }
 
-        // 延时以避免高CPU占用，设置为1毫秒以支持高频率
         SDL_Delay(1);
     }
 
-    // 软件退出时确保拖动功能关闭
+    // 清理资源
     if (current_config_state.enable_dragging) {
         current_config_state.enable_dragging = 0;
         save_config_state(config_path, &current_config_state);
 
-        // 更新窗口样式
         LONG_PTR exStyle = WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_TRANSPARENT;
         SetWindowLongPtr(main_context.hwnd, GWL_EXSTYLE, exStyle);
 
@@ -1100,7 +1028,6 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         UpdateLayeredWindow(main_context.hwnd, hdcScreen, NULL, NULL, NULL, NULL, 0, &blend, ULW_ALPHA);
     }
 
-    // 清理资源
     clear_image_cache(&main_context);
     DeleteDC(hdcMemory);
     ReleaseDC(NULL, hdcScreen);
@@ -1111,7 +1038,6 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     }
     free(main_context.image_files);
 
-    // 清理子目录列表
     for (int i = 0; i < image_dir_count; i++) {
         free(image_dirs[i]);
     }
