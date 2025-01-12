@@ -71,6 +71,7 @@ Uint32 start_time;
 char **image_dirs = NULL;
 int image_dir_count = 0;
 int current_dir_index = 0;
+
 // 函数声明
 void clear_image_cache(WindowContext* context);
 void save_config_state(const char *filename, ConfigState* state);
@@ -161,6 +162,7 @@ int get_png_files(const char *dir, char ***image_files) {
 
     return count;
 }
+
 // 获取所有子目录
 int get_subdirectories(const char *dir, char ***subdirs) {
     DIR *d = opendir(dir);
@@ -229,13 +231,15 @@ void load_config(const char *filename) {
         return;
     }
 
-    char line[256];
+    char line[512];
     char temp_image_dir[256] = {0};
-    
-    while (fgets(line, sizeof(line), file)) {
-        if (line[0] == '\n' || line[0] == '#') continue;
+    char temp_margins[256] = {0};
+    int margins_values[4] = {0}; // 左边距, 上边距, 切换间隔, 缩放因子
 
-        if (sscanf(line, "IMAGE_CAROUSEL_SCALE_FACTOR=%d", &current_config_state.scale_factor) == 1) continue;
+    while (fgets(line, sizeof(line), file)) {
+        // 忽略空行和注释
+        if (line[0] == '\n' || line[0] == '#' || line[0] == '\r') continue;
+
         if (sscanf(line, "IMAGE_CAROUSEL_IMAGE_DIR=%255s", temp_image_dir) == 1) {
             // 检查是否是完整路径
             if (strstr(temp_image_dir, BASE_IMAGE_PATH) == NULL) {
@@ -247,21 +251,33 @@ void load_config(const char *filename) {
             }
             continue;
         }
-        if (sscanf(line, "IMAGE_CAROUSEL_SWITCH_INTERVAL=%d", &current_config_state.switch_interval) == 1) continue;
+
         if (sscanf(line, "IMAGE_CAROUSEL_SWITCH_SPEED_STEP=%d", &current_config_state.switch_speed_step) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_EDGE_SIZE=%d", &current_config_state.edge_size) == 1) continue;
-        if (sscanf(line, "IMAGE_CAROUSEL_MARGIN_LEFT=%d", &current_config_state.margin_left) == 1) continue;
-        if (sscanf(line, "IMAGE_CAROUSEL_MARGIN_TOP=%d", &current_config_state.margin_top) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_SHOW_TRAY_ICON=%d", &current_config_state.show_tray_icon) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_DISPLAY_DURATION=%d", &current_config_state.display_duration) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_ZOOM_STEP=%d", &current_config_state.zoom_step) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_MIN_SCALE_FACTOR=%d", &current_config_state.min_scale_factor) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_MAX_SCALE_FACTOR=%d", &current_config_state.max_scale_factor) == 1) continue;
         if (sscanf(line, "IMAGE_CAROUSEL_ENABLE_DRAGGING=%d", &current_config_state.enable_dragging) == 1) continue;
+
+        // 解析轮播区域设置
+        if (sscanf(line, "IMAGE_CAROUSEL_MARGINS=%255[^'\n']", temp_margins) == 1) {
+            // 将逗号分隔的值解析为整数
+            if (sscanf(temp_margins, "%d,%d,%d,%d", &margins_values[0], &margins_values[1],
+                       &margins_values[2], &margins_values[3]) == 4) {
+                current_config_state.margin_left = margins_values[0];
+                current_config_state.margin_top = margins_values[1];
+                current_config_state.switch_interval = margins_values[2];
+                current_config_state.scale_factor = margins_values[3];
+            }
+            continue;
+        }
     }
 
     fclose(file);
 }
+
 // 写入配置
 void write_config(const char *filename, ConfigState* state) {
     FILE *file = fopen(filename, "w");
@@ -270,6 +286,7 @@ void write_config(const char *filename, ConfigState* state) {
         return;
     }
 
+    // 提取子目录名称
     char simplified_dir[256];
     if (strstr(state->image_dir, BASE_IMAGE_PATH) != NULL) {
         // 如果包含基础路径，只保存子文件夹名称
@@ -279,20 +296,24 @@ void write_config(const char *filename, ConfigState* state) {
         strcpy(simplified_dir, state->image_dir);
     }
 
-    fprintf(file, "# Image Carousel Configuration\n");
-    fprintf(file, "IMAGE_CAROUSEL_SCALE_FACTOR=%d\n", state->scale_factor);
+    fprintf(file, "# 图片轮播配置\n");
     fprintf(file, "IMAGE_CAROUSEL_IMAGE_DIR=%s\n", simplified_dir);
-    fprintf(file, "IMAGE_CAROUSEL_SWITCH_INTERVAL=%d\n", state->switch_interval);
     fprintf(file, "IMAGE_CAROUSEL_SWITCH_SPEED_STEP=%d\n", state->switch_speed_step);
     fprintf(file, "IMAGE_CAROUSEL_EDGE_SIZE=%d\n", state->edge_size);
-    fprintf(file, "IMAGE_CAROUSEL_MARGIN_LEFT=%d\n", state->margin_left);
-    fprintf(file, "IMAGE_CAROUSEL_MARGIN_TOP=%d\n", state->margin_top);
     fprintf(file, "IMAGE_CAROUSEL_SHOW_TRAY_ICON=%d\n", state->show_tray_icon);
     fprintf(file, "IMAGE_CAROUSEL_DISPLAY_DURATION=%d\n", state->display_duration);
     fprintf(file, "IMAGE_CAROUSEL_ZOOM_STEP=%d\n", state->zoom_step);
     fprintf(file, "IMAGE_CAROUSEL_MIN_SCALE_FACTOR=%d\n", state->min_scale_factor);
     fprintf(file, "IMAGE_CAROUSEL_MAX_SCALE_FACTOR=%d\n", state->max_scale_factor);
     fprintf(file, "IMAGE_CAROUSEL_ENABLE_DRAGGING=%d\n", state->enable_dragging);
+
+    // 写入轮播区域设置
+    fprintf(file, "\n# 轮播区域设置（左边距,上边距,切换间隔,缩放因子）\n");
+    fprintf(file, "IMAGE_CAROUSEL_MARGINS=%d,%d,%d,%d\n",
+            state->margin_left,
+            state->margin_top,
+            state->switch_interval,
+            state->scale_factor);
 
     fclose(file);
 }
@@ -358,6 +379,7 @@ SDL_Surface* process_alpha(SDL_Surface* surface) {
 
     return result;
 }
+
 // SDL表面转换为Windows位图
 HBITMAP SDLSurfaceToWinBitmap(SDL_Surface* surface, HDC hdc) {
     BITMAPINFO bmi;
@@ -455,6 +477,7 @@ SDL_Window* create_window(const char* title, int x_pos, int y_pos, int width, in
     }
     return win;
 }
+
 // 确保窗口在最顶层
 void ensure_window_top_most(WindowContext* context) {
     if (!context || !context->hwnd) return;
@@ -547,6 +570,7 @@ int check_config_changes(ConfigState* old_state, ConfigState* new_state, WindowC
 
     return needs_window_update;
 }
+
 // 处理并显示图片
 void process_and_display_image(const char* image_path, WindowContext* context, HDC hdcScreen, HDC hdcMemory) {
     if (!context || !context->window || !context->hwnd) return;
@@ -640,6 +664,7 @@ void process_and_display_image(const char* image_path, WindowContext* context, H
         }
     }
 }
+
 // 更新窗口上下文
 void update_window_context(WindowContext* context, const char* dir, int scale_factor, int preserve_index, int current_index) {
     if (!context) return;
@@ -720,6 +745,7 @@ void switch_to_next_directory() {
 
     printf("切换到目录: %s\n", current_config_state.image_dir);
 }
+
 // 切换到上一个目录
 void switch_to_previous_directory() {
     if (image_dir_count == 0) return;
@@ -933,6 +959,16 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                                     current_config_state.scale_factor = current_config_state.min_scale_factor;
                                 }
                             }
+
+                            update_window_context(&main_context, current_config_state.image_dir, 
+                                               current_config_state.scale_factor, 1, main_context.current_index);
+                            if (main_context.image_count > 0) {
+                                process_and_display_image(main_context.image_files[main_context.current_index], 
+                                                          &main_context, hdcScreen, hdcMemory);
+                                preload_next_image(&main_context);
+                            }
+
+                            save_config_state(config_path, &current_config_state);
                         }
 
                         update_window_context(&main_context, current_config_state.image_dir, 
