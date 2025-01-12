@@ -9,11 +9,15 @@
 #define WINDOW_HEIGHT 600
 #define SCALE_FACTOR 0.7
 
+// 增加抗锯齿相关参数
+#define MSAA_SAMPLES 64         // 增加 MSAA 采样数
+#define SUPERSAMPLING_SCALE 2.0 // 超采样比例
+
 // 模糊相关的参数定义
-#define BLUR_RADIUS 40          // 高斯模糊的半径
-#define BLUR_ITERATIONS 6       // 模糊处理的次数
-#define BLUR_DOWNSCALE 4       // 降采样比例（1/4）
-#define BLUR_RENDER_PASSES 4    // 渲染叠加的次数
+#define BLUR_RADIUS 40
+#define BLUR_ITERATIONS 8       // 增加模糊迭代次数
+#define BLUR_DOWNSCALE 2       // 减小降采样比例以提高质量
+#define BLUR_RENDER_PASSES 6    // 增加渲染叠加次数
 
 // 高斯模糊函数
 void gaussianBlur(SDL_Surface* surface, int radius) {
@@ -148,21 +152,36 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     SDL_Init(SDL_INIT_VIDEO);
     IMG_Init(IMG_INIT_PNG);
 
-    // 设置OpenGL属性
+    // 增强 OpenGL 设置
     SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
-    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 16);
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, MSAA_SAMPLES);
     SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+    
+    // 设置额外的 OpenGL 属性
+    SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
+    SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengl");
+    SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
+
+    // 创建更大的窗口用于超采样
+    int supersampledWidth = (int)(WINDOW_WIDTH * SUPERSAMPLING_SCALE);
+    int supersampledHeight = (int)(WINDOW_HEIGHT * SUPERSAMPLING_SCALE);
 
     SDL_Window* window = SDL_CreateWindow(
         "Transparent Window",
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
-        WINDOW_WIDTH,
-        WINDOW_HEIGHT,
-        SDL_WINDOW_SHOWN | SDL_WINDOW_BORDERLESS | SDL_WINDOW_OPENGL
+        WINDOW_WIDTH,    // 使用原始尺寸
+        WINDOW_HEIGHT,   // 使用原始尺寸
+        SDL_WINDOW_SHOWN | SDL_WINDOW_BORDERLESS | SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI
     );
 
     SDL_Renderer* renderer = SDL_CreateRenderer(
@@ -170,6 +189,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         -1,
         SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_TARGETTEXTURE
     );
+
+    // 创建超采样渲染目标
+    SDL_Texture* renderTarget = SDL_CreateTexture(
+        renderer,
+        SDL_PIXELFORMAT_RGBA32,
+        SDL_TEXTUREACCESS_TARGET,
+        supersampledWidth,
+        supersampledHeight
+    );
+    SDL_SetTextureScaleMode(renderTarget, SDL_ScaleModeLinear);
 
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
@@ -186,24 +215,26 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     // 计算缩放尺寸
     float scale = WINDOW_HEIGHT * SCALE_FACTOR / imgHeight;
-    int centerWidth = (int)(imgWidth * scale);
-    int centerHeight = (int)(imgHeight * scale);
+    int centerWidth = (int)(imgWidth * scale * SUPERSAMPLING_SCALE);
+    int centerHeight = (int)(imgHeight * scale * SUPERSAMPLING_SCALE);
 
-    // 创建纹理
+    // 创建纹理并设置增强的属性
     SDL_Texture* originalTexture = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_Texture* blurTexture = createBlurTexture(renderer, surface);
     
-    // 设置纹理属性
+    // 设置增强的纹理属性
     SDL_SetTextureBlendMode(originalTexture, SDL_BLENDMODE_BLEND);
     SDL_SetTextureScaleMode(originalTexture, SDL_ScaleModeLinear);
+    SDL_SetTextureBlendMode(blurTexture, SDL_BLENDMODE_BLEND);
+    SDL_SetTextureScaleMode(blurTexture, SDL_ScaleModeLinear);
     
     SDL_FreeSurface(surface);
 
     SDL_SetWindowHitTest(window, NULL, NULL);
 
-    // 计算居中位置
-    int centerX = (WINDOW_WIDTH - centerWidth) / 2;
-    int centerY = (WINDOW_HEIGHT - centerHeight) / 2;
+    // 计算居中位置（考虑超采样）
+    int centerX = (int)((supersampledWidth - centerWidth) / 2);
+    int centerY = (int)((supersampledHeight - centerHeight) / 2);
 
     // 主循环
     SDL_Event event;
@@ -216,16 +247,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             }
         }
 
+        // 设置渲染目标为超采样纹理
+        SDL_SetRenderTarget(renderer, renderTarget);
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
         SDL_RenderClear(renderer);
 
         // 渲染模糊背景
         for (int i = 0; i < BLUR_RENDER_PASSES; i++) {
             SDL_Rect bgRect = {
-                -50 - (i * 10), 
-                -50 - (i * 10), 
-                WINDOW_WIDTH + 100 + (i * 20), 
-                WINDOW_HEIGHT + 100 + (i * 20)
+                (int)(-50 * SUPERSAMPLING_SCALE - (i * 10 * SUPERSAMPLING_SCALE)), 
+                (int)(-50 * SUPERSAMPLING_SCALE - (i * 10 * SUPERSAMPLING_SCALE)), 
+                (int)((WINDOW_WIDTH + 100) * SUPERSAMPLING_SCALE + (i * 20 * SUPERSAMPLING_SCALE)), 
+                (int)((WINDOW_HEIGHT + 100) * SUPERSAMPLING_SCALE + (i * 20 * SUPERSAMPLING_SCALE))
             };
             SDL_RenderCopy(renderer, blurTexture, NULL, &bgRect);
         }
@@ -234,11 +267,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         SDL_Rect centerRect = {centerX, centerY, centerWidth, centerHeight};
         SDL_SetTextureAlphaMod(originalTexture, 255);
         SDL_RenderCopy(renderer, originalTexture, NULL, &centerRect);
+
+        // 将超采样纹理缩放渲染到屏幕
+        SDL_SetRenderTarget(renderer, NULL);
+        SDL_RenderCopy(renderer, renderTarget, NULL, NULL);
         
         SDL_RenderPresent(renderer);
     }
 
     // 清理资源
+    SDL_DestroyTexture(renderTarget);
     SDL_DestroyTexture(originalTexture);
     SDL_DestroyTexture(blurTexture);
     SDL_DestroyRenderer(renderer);
