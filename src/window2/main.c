@@ -8,7 +8,6 @@
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
 #define SCALE_FACTOR 0.7
-#define BLUR_ALPHA 255
 
 // 模糊相关的参数定义
 #define BLUR_RADIUS 40          // 高斯模糊的半径
@@ -222,7 +221,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
         // 渲染模糊背景
         for (int i = 0; i < BLUR_RENDER_PASSES; i++) {
-            SDL_SetTextureAlphaMod(blurTexture, BLUR_ALPHA / (i + 1));
             SDL_Rect bgRect = {
                 -50 - (i * 10), 
                 -50 - (i * 10), 
