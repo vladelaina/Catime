@@ -11,6 +11,10 @@ SDL_LIB = -L/home/vladelaina/code/catime/src/test/libs/SDL2/lib \
           -L/home/vladelaina/code/catime/src/test/libs/SDL2_image/lib \
           -L/usr/x86_64-w64-mingw32/lib
 
+# SDL2_gfx 路径
+GFX_INCLUDE = -I/usr/x86_64-w64-mingw32/include/SDL2
+GFX_LIB = -L/usr/x86_64-w64-mingw32/lib
+
 # 链接库
 LIBS = -lSDL2 -lSDL2_image -lSDL2_gfx
 
@@ -22,7 +26,7 @@ all: $(OUTPUT)
 
 # 编译规则
 $(OUTPUT): main.c
-	$(CC) $(CFLAGS) $(SDL_INCLUDE) main.c -o $(OUTPUT) $(SDL_LIB) $(LIBS)
+	$(CC) $(CFLAGS) $(SDL_INCLUDE) $(GFX_INCLUDE) main.c -o $(OUTPUT) $(SDL_LIB) $(GFX_LIB) $(LIBS)
 
 # 清理规则
 clean:
