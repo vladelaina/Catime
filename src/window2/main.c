@@ -10,7 +10,6 @@
 // 定义参数
 #define WINDOW_WIDTH 600          // 窗口宽度
 #define WINDOW_HEIGHT 400         // 窗口高度
-#define FG_SCALE 0.5f             // 前景图片等比例缩放因子
 #define BLUR_RADIUS 5             // 高斯模糊半径
 #define BLUR_ITERATIONS 2         // 高斯模糊迭代次数
 
@@ -219,8 +218,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 1;
     }
 
-    // 计算缩放因子为 FG_SCALE
-    float fgScale = FG_SCALE; // 前景缩放因子
+    // 计算缩放因子，使前景图片占窗口的60%
+    float targetWidth = WINDOW_WIDTH * 0.6;
+    float targetHeight = WINDOW_HEIGHT * 0.6;
+    float scaleX_fg = targetWidth / foregroundSurface->w;
+    float scaleY_fg = targetHeight / foregroundSurface->h;
+    float fgScale = (scaleX_fg < scaleY_fg) ? scaleX_fg : scaleY_fg;  // 取较小值以保持纵横比
 
     // 使用 SDL2_gfx 进行抗锯齿缩放前景
     SDL_Surface* scaledForeground = rotozoomSurface(foregroundSurface, 0, fgScale, SMOOTHING_ON);
