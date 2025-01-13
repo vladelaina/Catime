@@ -8,8 +8,8 @@
 #include <math.h>
 
 // 定义参数
-#define WINDOW_WIDTH 800          // 窗口宽度
-#define WINDOW_HEIGHT 600         // 窗口高度
+#define WINDOW_WIDTH 600          // 窗口宽度
+#define WINDOW_HEIGHT 400         // 窗口高度
 #define FG_SCALE 0.5f             // 前景图片等比例缩放因子
 #define BLUR_RADIUS 5             // 高斯模糊半径
 #define BLUR_ITERATIONS 2         // 高斯模糊迭代次数
