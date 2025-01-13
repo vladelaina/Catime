@@ -8,10 +8,11 @@
 #include <math.h>
 
 // 定义参数
-#define WINDOW_WIDTH 800
-#define WINDOW_HEIGHT 600
-#define BLUR_RADIUS 5
-#define BLUR_ITERATIONS 2
+#define WINDOW_WIDTH 800          // 窗口宽度
+#define WINDOW_HEIGHT 600         // 窗口高度
+#define FG_SCALE 0.5f             // 前景图片等比例缩放因子
+#define BLUR_RADIUS 5             // 高斯模糊半径
+#define BLUR_ITERATIONS 2         // 高斯模糊迭代次数
 
 // 高斯模糊函数
 void gaussianBlur(SDL_Surface* surface, int radius) {
@@ -204,8 +205,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 1;
     }
 
-    // 加载前景图片
-    SDL_Surface* foregroundSurface = IMG_Load("Foreground.png");
+    // 加载前景图片（设置为与背景相同的图片 Background.png）
+    SDL_Surface* foregroundSurface = IMG_Load("Background.png"); // 修改为 Background.png
     if (!foregroundSurface) {
         printf("Failed to load foreground image: %s\n", IMG_GetError());
         SDL_DestroyTexture(backgroundTexture);
@@ -218,8 +219,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 1;
     }
 
-    // 计算缩放因子为0.5 (使前景比背景小)
-    float fgScale = 0.5f; // 可根据需要调整
+    // 计算缩放因子为 FG_SCALE
+    float fgScale = FG_SCALE; // 前景缩放因子
 
     // 使用 SDL2_gfx 进行抗锯齿缩放前景
     SDL_Surface* scaledForeground = rotozoomSurface(foregroundSurface, 0, fgScale, SMOOTHING_ON);
