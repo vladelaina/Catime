@@ -218,9 +218,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 1;
     }
 
-    // 计算缩放因子，使前景图片占窗口的60%
-    float targetWidth = WINDOW_WIDTH * 0.6;
-    float targetHeight = WINDOW_HEIGHT * 0.6;
+    // 计算缩放因子，使前景图片占窗口的66%
+    float targetWidth = WINDOW_WIDTH * 0.66;
+    float targetHeight = WINDOW_HEIGHT * 0.66;
     float scaleX_fg = targetWidth / foregroundSurface->w;
     float scaleY_fg = targetHeight / foregroundSurface->h;
     float fgScale = (scaleX_fg < scaleY_fg) ? scaleX_fg : scaleY_fg;  // 取较小值以保持纵横比
