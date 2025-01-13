@@ -8,9 +8,11 @@
 #include <math.h>
 
 // 定义参数
-#define WINDOW_WIDTH 600          // 窗口宽度
+#define WINDOW_WIDTH  600         // 窗口宽度
 #define WINDOW_HEIGHT 400         // 窗口高度
-#define BLUR_RADIUS 5             // 高斯模糊半径
+
+// 根据需求调整，数值过大会导致背景变得过于模糊
+#define BLUR_RADIUS   5           // 高斯模糊半径
 #define BLUR_ITERATIONS 2         // 高斯模糊迭代次数
 
 // 高斯模糊函数
@@ -48,12 +50,12 @@ void gaussianBlur(SDL_Surface* surface, int radius) {
         sum += kernel[i + radius];
     }
 
-    // 归一化核
+    // 归一化
     for (int i = 0; i < kernelSize; i++) {
         kernel[i] /= sum;
     }
 
-    // 水平方向模糊
+    // 水平模糊
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
             float r = 0, g = 0, b = 0, a = 0;
@@ -79,7 +81,7 @@ void gaussianBlur(SDL_Surface* surface, int radius) {
         }
     }
 
-    // 垂直方向模糊
+    // 垂直模糊
     memcpy(temp, pixels, size * sizeof(Uint32)); // 更新临时缓冲区
 
     for (int x = 0; x < width; x++) {
@@ -116,11 +118,16 @@ extern "C"
 #endif
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
+    // 在 SDL 初始化之前，设置渲染器的缩放质量提示
+    // 可尝试 "best"、"linear"、"2" 等字符串，根据你的 SDL 版本实际支持情况决定
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "2");
+
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         printf("SDL_Init Error: %s\n", SDL_GetError());
         return 1;
     }
 
+    // 初始化 PNG 支持
     if (!(IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG)) {
         printf("IMG_Init Error: %s\n", IMG_GetError());
         SDL_Quit();
@@ -136,7 +143,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         WINDOW_HEIGHT,
         SDL_WINDOW_SHOWN | SDL_WINDOW_BORDERLESS | SDL_WINDOW_ALLOW_HIGHDPI
     );
-
     if (!window) {
         printf("SDL_CreateWindow Error: %s\n", SDL_GetError());
         IMG_Quit();
@@ -144,8 +150,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 1;
     }
 
-    // 创建渲染器
-    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    // 创建渲染器（使用硬件加速 + 垂直同步）
+    SDL_Renderer* renderer = SDL_CreateRenderer(
+        window, -1, 
+        SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC
+    );
     if (!renderer) {
         printf("SDL_CreateRenderer Error: %s\n", SDL_GetError());
         SDL_DestroyWindow(window);
@@ -154,7 +163,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 1;
     }
 
-    // 加载背景图片
+    // 加载背景图片（分辨率 3980&times;2488）
     SDL_Surface* backgroundSurface = IMG_Load("Background.png");
     if (!backgroundSurface) {
         printf("Failed to load background image: %s\n", IMG_GetError());
@@ -169,13 +178,19 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     int bgWidth = backgroundSurface->w;
     int bgHeight = backgroundSurface->h;
 
-    // 计算缩放因子以覆盖整个窗口
+    // 计算缩放因子以覆盖窗口
     float scaleX = (float)WINDOW_WIDTH / bgWidth;
     float scaleY = (float)WINDOW_HEIGHT / bgHeight;
     float scaleBg = (scaleX > scaleY) ? scaleX : scaleY;
 
-    // 使用 SDL2_gfx 进行抗锯齿缩放背景
-    SDL_Surface* scaledBackground = rotozoomSurface(backgroundSurface, 0, scaleBg, SMOOTHING_ON);
+    // 使用 SDL2_gfx (rotozoomSurface) 进行抗锯齿缩放
+    // SMOOTHING_ON 表示使用双线性插值
+    SDL_Surface* scaledBackground = rotozoomSurface(
+        backgroundSurface,    // 原图
+        0,                    // 旋转角度（此处不旋转）
+        scaleBg,              // 缩放因子
+        SMOOTHING_ON          // 开启抗锯齿
+    );
     if (!scaledBackground) {
         printf("Failed to scale background image: %s\n", SDL_GetError());
         SDL_FreeSurface(backgroundSurface);
@@ -186,7 +201,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 1;
     }
 
-    // 应用高斯模糊到背景
+    // 若想让背景保留更清晰，可以把 BLUR_RADIUS 或 BLUR_ITERATIONS 设为 0，去掉模糊
     for (int i = 0; i < BLUR_ITERATIONS; i++) {
         gaussianBlur(scaledBackground, BLUR_RADIUS);
     }
@@ -204,8 +219,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 1;
     }
 
-    // 加载前景图片（设置为与背景相同的图片 Background.png）
-    SDL_Surface* foregroundSurface = IMG_Load("Background.png"); // 修改为 Background.png
+    // 加载前景图片（本示例里也用 "Background.png" 测试）
+    SDL_Surface* foregroundSurface = IMG_Load("Background.png");
     if (!foregroundSurface) {
         printf("Failed to load foreground image: %s\n", IMG_GetError());
         SDL_DestroyTexture(backgroundTexture);
@@ -218,15 +233,20 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 1;
     }
 
-    // 计算缩放因子，使前景图片占窗口的66%
-    float targetWidth = WINDOW_WIDTH * 0.66;
-    float targetHeight = WINDOW_HEIGHT * 0.66;
+    // 计算缩放因子，使前景图片占窗口的 66%
+    float targetWidth = WINDOW_WIDTH * 0.66f;
+    float targetHeight = WINDOW_HEIGHT * 0.66f;
     float scaleX_fg = targetWidth / foregroundSurface->w;
     float scaleY_fg = targetHeight / foregroundSurface->h;
-    float fgScale = (scaleX_fg < scaleY_fg) ? scaleX_fg : scaleY_fg;  // 取较小值以保持纵横比
+    float fgScale = (scaleX_fg < scaleY_fg) ? scaleX_fg : scaleY_fg;  // 取较小值保持纵横比
 
     // 使用 SDL2_gfx 进行抗锯齿缩放前景
-    SDL_Surface* scaledForeground = rotozoomSurface(foregroundSurface, 0, fgScale, SMOOTHING_ON);
+    SDL_Surface* scaledForeground = rotozoomSurface(
+        foregroundSurface,
+        0,
+        fgScale,
+        SMOOTHING_ON
+    );
     if (!scaledForeground) {
         printf("Failed to scale foreground image: %s\n", SDL_GetError());
         SDL_FreeSurface(foregroundSurface);
@@ -256,11 +276,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 1;
     }
 
-    // 获取前景缩放后的尺寸
+    // 前景缩放后的尺寸
     int scaledFgWidth = scaledForeground->w;
     int scaledFgHeight = scaledForeground->h;
 
-    // 计算前景的居中位置
+    // 计算前景居中位置
     int fgCenterX = (WINDOW_WIDTH - scaledFgWidth) / 2;
     int fgCenterY = (WINDOW_HEIGHT - scaledFgHeight) / 2;
 
@@ -281,19 +301,19 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             }
         }
 
-        // 清理渲染器
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255); // 设置背景颜色为黑色
+        // 清理渲染器（填充黑色）
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
 
-        // 渲染背景
-        SDL_Rect bgRect = {0, 0, WINDOW_WIDTH, WINDOW_HEIGHT};
+        // 渲染背景（填满窗口区域）
+        SDL_Rect bgRect = { 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT };
         SDL_RenderCopy(renderer, backgroundTexture, NULL, &bgRect);
 
-        // 渲染前景
+        // 渲染前景（居中）
         SDL_Rect fgRect = { fgCenterX, fgCenterY, scaledFgWidth, scaledFgHeight };
         SDL_RenderCopy(renderer, foregroundTexture, NULL, &fgRect);
 
-        // 显示渲染内容
+        // 显示渲染结果
         SDL_RenderPresent(renderer);
     }
 
