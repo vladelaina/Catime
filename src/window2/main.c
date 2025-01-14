@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <SDL2/SDL.h>
@@ -8,12 +9,12 @@
 #include <math.h>
 
 // ============== 配置区域：可根据实际需求进行调整 ============== //
-#define WINDOW_WIDTH   600    // 窗口宽度
-#define WINDOW_HEIGHT  400    // 窗口高度
+#define WINDOW_WIDTH     600    // 窗口宽度
+#define WINDOW_HEIGHT    400    // 窗口高度
 
 // 下面两个值越大，背景就越模糊
-#define BLUR_RADIUS    50     // 高斯模糊半径（原先5，可增大）
-#define BLUR_ITERATIONS 5     // 高斯模糊迭代次数（原先2，可增大）
+#define BLUR_RADIUS         50     // 高斯模糊半径（原先5，可增大）
+#define BLUR_ITERATIONS     5      // 高斯模糊迭代次数（原先2，可增大）
 // ============================================================ //
 
 // 高斯模糊函数
@@ -36,7 +37,6 @@ void gaussianBlur(SDL_Surface* surface, int radius) {
     memcpy(temp, pixels, size * sizeof(Uint32));
 
     // 高斯核计算
-    // 如果想让模糊更柔和，可改为 float sigma = (float)radius; 等
     float sigma = radius / 2.0f;
     int kernelSize = radius * 2 + 1;
     float* kernel = (float*)malloc(kernelSize * sizeof(float));
@@ -128,7 +128,6 @@ extern "C"
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
     // 在 SDL 初始化之前，设置渲染器的缩放质量提示
-    // 可尝试 "best"、"linear"、"2" 等字符串，根据你的 SDL 版本实际支持情况决定
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "2");
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -143,14 +142,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 1;
     }
 
-    // 创建窗口
+    // 创建窗口，初始时隐藏
     SDL_Window* window = SDL_CreateWindow(
         "Transparent Window",
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
         WINDOW_WIDTH,
         WINDOW_HEIGHT,
-        SDL_WINDOW_SHOWN | SDL_WINDOW_BORDERLESS | SDL_WINDOW_ALLOW_HIGHDPI
+        SDL_WINDOW_BORDERLESS | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_HIDDEN
     );
     if (!window) {
         printf("SDL_CreateWindow Error: %s\n", SDL_GetError());
@@ -172,7 +171,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 1;
     }
 
-    // 加载背景图片（比如分辨率 3980&times;2488）
+    // 加载背景图片（比如分辨率 3980×2488）
     SDL_Surface* backgroundSurface = IMG_Load("Background.png");
     if (!backgroundSurface) {
         printf("Failed to load background image: %s\n", IMG_GetError());
@@ -298,6 +297,26 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     SDL_FreeSurface(scaledBackground);
     SDL_FreeSurface(backgroundSurface);
 
+    // 在主循环开始前，立即 render 一次以显示背景和前景
+    SDL_RenderClear(renderer); // 清理渲染器
+
+    // 渲染背景
+    SDL_Rect bgRect = { 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT };
+    if (SDL_RenderCopy(renderer, backgroundTexture, NULL, &bgRect) != 0) {
+        printf("SDL_RenderCopy Error (background): %s\n", SDL_GetError());
+    }
+
+    // 渲染前景
+    SDL_Rect fgRect = { fgCenterX, fgCenterY, scaledFgWidth, scaledFgHeight };
+    if (SDL_RenderCopy(renderer, foregroundTexture, NULL, &fgRect) != 0) {
+        printf("SDL_RenderCopy Error (foreground): %s\n", SDL_GetError());
+    }
+
+    SDL_RenderPresent(renderer); // 呈现更新
+
+    // 显示窗口，此时已经渲染好内容
+    SDL_ShowWindow(window);
+
     // =============== 主循环 ===============
     SDL_Event event;
     int running = 1;
@@ -309,17 +328,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             }
         }
 
-        // 清理渲染器（黑色背景）
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        SDL_RenderClear(renderer);
+        // 清理渲染器（如果需要动态更新，保留渲染逻辑）
+        // 如果图像不需要动态更新，可以 skip 这部分
 
         // =============== 渲染背景 ===============
-        SDL_Rect bgRect = { 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT };
-        SDL_RenderCopy(renderer, backgroundTexture, NULL, &bgRect);
+        if (SDL_RenderCopy(renderer, backgroundTexture, NULL, &bgRect) != 0) {
+            printf("SDL_RenderCopy Error (background): %s\n", SDL_GetError());
+        }
 
         // =============== 渲染前景(居中) ===============
-        SDL_Rect fgRect = { fgCenterX, fgCenterY, scaledFgWidth, scaledFgHeight };
-        SDL_RenderCopy(renderer, foregroundTexture, NULL, &fgRect);
+        if (SDL_RenderCopy(renderer, foregroundTexture, NULL, &fgRect) != 0) {
+            printf("SDL_RenderCopy Error (foreground): %s\n", SDL_GetError());
+        }
 
         // 呈现
         SDL_RenderPresent(renderer);
