@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <SDL2/SDL.h>
@@ -14,7 +13,7 @@
 
 // 下面两个值越大，背景就越模糊
 #define BLUR_RADIUS         50     // 高斯模糊半径（原先5，可增大）
-#define BLUR_ITERATIONS     5      // 高斯模糊迭代次数（原先2，可增大）
+#define BLUR_ITERATIONS     5      // 高斯模糊迭代次数（原先2，可增大)
 // ============================================================ //
 
 // 高斯模糊函数
@@ -128,6 +127,7 @@ extern "C"
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
     // 在 SDL 初始化之前，设置渲染器的缩放质量提示
+    // "2" 表示启用各向异性过滤，提供更好的缩放质量
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "2");
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -226,8 +226,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 1;
     }
 
-    // 加载前景图片（此处演示也用同一张图 "Background.png"）
-    SDL_Surface* foregroundSurface = IMG_Load("Background.png");
+    // 加载前景图片（替换为实际前景图片路径）
+    SDL_Surface* foregroundSurface = IMG_Load("Foreground.png");
     if (!foregroundSurface) {
         printf("Failed to load foreground image: %s\n", IMG_GetError());
         SDL_DestroyTexture(backgroundTexture);
