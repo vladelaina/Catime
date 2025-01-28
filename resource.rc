@@ -1,0 +1,24 @@
+#include <windows.h>
+#include "resource.h"
+
+#define IDC_EDIT 108
+#define IDC_BUTTON_OK 109
+#define IDD_DIALOG1 1002
+
+IDD_DIALOG1 DIALOGEX 0, 0, 100, 26
+STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP 
+FONT 10, "MS Shell Dlg"
+BEGIN
+    EDITTEXT        IDC_EDIT, 0, 0, 100, 15, ES_AUTOHSCROLL | ES_MULTILINE
+    PUSHBUTTON      "OK", IDC_BUTTON_OK, 40, 16, 20, 10
+END
+
+IDI_CATIME ICON "catime.ico"
+
+IDR_FONT_BEDSTEAD         FONT "font/Bedstead Condensed.ttf"
+IDR_FONT_DEPARTURE_MONO   FONT "font/Departure Mono.ttf"
+IDR_FONT_GOHUFONT         FONT "font/Gohufont.ttf"
+IDR_FONT_HERMIT           FONT "font/Hermit.ttf"
+IDR_FONT_MONOCRAFT        FONT "font/Monocraft.ttf"
+IDR_FONT_PRESS_START_2P   FONT "font/Press Start 2P.ttf"
+IDR_FONT_SCIENTIFICA      FONT "font/Scientifica.ttf"
