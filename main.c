@@ -284,7 +284,7 @@ RecentFile CLOCK_RECENT_FILES[MAX_RECENT_FILES];
 int CLOCK_RECENT_FILES_COUNT = 0;
 
 // 在文件开头的宏定义部分添加
-#define CLOCK_ABOUT_URL "https://www.youtube.com"
+#define CLOCK_ABOUT_URL "https://github.com/vladelaina/Catime"
 #define CLOCK_IDM_ABOUT 130  // 添加菜单ID
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
