@@ -1,22 +1,24 @@
 #define IDI_CATIME 101 
 
 // Font Menu IDs
-#define CLOCK_IDC_FONT_BEDSTEAD        300  // Font 选项: Bedstead Condensed.ttf
-#define CLOCK_IDC_FONT_DEPARTURE_MONO  301  // Font 选项: Departure Mono.ttf
-#define CLOCK_IDC_FONT_GOHUFONT          303  // Font 选项: Gohufont.ttf
-#define CLOCK_IDC_FONT_HERMIT            304  // Font 选项: Hermit.ttf
-#define CLOCK_IDC_FONT_MONOCRAFT         305  // Font 选项: Monocraft.ttf
-#define CLOCK_IDC_FONT_PRESS_START_2P    306  // Font 选项: Press Start 2P.ttf
-#define CLOCK_IDC_FONT_SCIENTIFICA        307  // Font 选项: Scientifica.ttf 
+#define CLOCK_IDC_FONT_AGAVE           300  // Font 选项: Agave Nerd Font.ttf
+#define CLOCK_IDC_FONT_ANONYMICE       301  // Font 选项: AnonymiceProNerdFont-Regular.ttf
+#define CLOCK_IDC_FONT_AURULENT        302  // Font 选项: AurulentSansM Nerd Font.ttf
+#define CLOCK_IDC_FONT_BIGBLUE         303  // Font 选项: BigBlueTermPlus Nerd Font.ttf
+#define CLOCK_IDC_FONT_COMIC_SHANNS    304  // Font 选项: ComicShannsMono Nerd Font.ttf
+#define CLOCK_IDC_FONT_HACK            305  // Font 选项: Hack Nerd Font.ttf
+#define CLOCK_IDC_FONT_HEAVYDATA       306  // Font 选项: HeavyData Nerd Font.ttf
+#define CLOCK_IDC_FONT_PROFONT         307  // Font 选项: ProFont IIx Nerd Font.ttf
 
 // Font Resource IDs
-#define IDR_FONT_BEDSTEAD         400
-#define IDR_FONT_DEPARTURE_MONO   401
-#define IDR_FONT_GOHUFONT         403
-#define IDR_FONT_HERMIT           404
-#define IDR_FONT_MONOCRAFT        405
-#define IDR_FONT_PRESS_START_2P   406
-#define IDR_FONT_SCIENTIFICA      407
+#define IDR_FONT_AGAVE           400
+#define IDR_FONT_ANONYMICE       401
+#define IDR_FONT_AURULENT        402
+#define IDR_FONT_BIGBLUE         403
+#define IDR_FONT_COMIC_SHANNS    404
+#define IDR_FONT_HACK            405
+#define IDR_FONT_HEAVYDATA       406
+#define IDR_FONT_PROFONT         407
 
 #define CLOCK_IDD_DIALOG1                1002 // 已经在 main.c 中定义
 #define CLOCK_IDC_EDIT                   108  // 已经在 main.c 中定义
