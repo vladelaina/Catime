@@ -1047,8 +1047,31 @@ int ParseInput(const char* input, int* total_seconds) {
             minutes = atoi(tokens[0]);
         }
     } else if (token_count == 2) {
-        minutes = atoi(tokens[0]);
-        seconds = atoi(tokens[1]);
+        // 检查第二个token是否带有单位
+        char unit = tolower((unsigned char)tokens[1][strlen(tokens[1]) - 1]);
+        if (unit == 'h' || unit == 'm' || unit == 's') {
+            tokens[1][strlen(tokens[1]) - 1] = '\0';  // Remove unit character
+            int value1 = atoi(tokens[0]);
+            int value2 = atoi(tokens[1]);
+            switch (unit) {
+                case 'h': 
+                    minutes = value1;
+                    hours = value2;
+                    break;
+                case 'm': 
+                    hours = value1;
+                    minutes = value2;
+                    break;
+                case 's':
+                    minutes = value1;
+                    seconds = value2;
+                    break;
+            }
+        } else {
+            // 没有单位，默认为分和秒
+            minutes = atoi(tokens[0]);
+            seconds = atoi(tokens[1]);
+        }
     } else if (token_count == 3) {
         hours = atoi(tokens[0]);
         minutes = atoi(tokens[1]);
