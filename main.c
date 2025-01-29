@@ -2029,8 +2029,8 @@ void AdjustWindowPosition(HWND hwnd) {
     int newX = windowRect.left;
     int newY = windowRect.top;
     
-    // 允许窗口最多四分之一在屏幕外
-    int maxOutside = windowWidth / 4;
+    // Allow the window to be half off the screen
+    int maxOutside = windowWidth / 2;
     if (newX < workArea.left - maxOutside) {
         newX = workArea.left - maxOutside;
     }
@@ -2038,7 +2038,7 @@ void AdjustWindowPosition(HWND hwnd) {
         newX = workArea.right + maxOutside - windowWidth;
     }
     
-    maxOutside = windowHeight / 4;
+    maxOutside = windowHeight / 2;
     if (newY < workArea.top - maxOutside) {
         newY = workArea.top - maxOutside;
     }
