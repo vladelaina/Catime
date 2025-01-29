@@ -1021,64 +1021,51 @@ int ParseInput(const char* input, int* total_seconds) {
     strncpy(input_copy, input, sizeof(input_copy)-1);
     input_copy[sizeof(input_copy)-1] = '\0';
 
-    // 处理单个时间单位的情况 (如 "1h", "30m", "45s")
-    size_t len = strlen(input_copy);
-    if (len > 0) {
-        char unit = tolower((unsigned char)input_copy[len-1]);
-        if (unit == 'h' || unit == 'm' || unit == 's') {
-            input_copy[len-1] = '\0';  // 移除单位字符
-            int value = atoi(input_copy);
-            
-            switch(unit) {
-                case 'h':
-                    hours = value;
-                    break;
-                case 'm':
-                    minutes = value;
-                    break;
-                case 's':
-                    seconds = value;
-                    break;
-            }
-        } else {
-            // 如果没有单位，默认为分钟
-            minutes = atoi(input_copy);
-        }
+    // Handle space-separated format for hours, minutes, and seconds
+    char *tokens[3] = {0};
+    int token_count = 0;
+
+    char *token = strtok(input_copy, " ");
+    while (token && token_count < 3) {
+        tokens[token_count++] = token;
+        token = strtok(NULL, " ");
     }
 
-    // 如果没有匹配到单位格式，尝试原来的空格分隔格式
-    if (hours == 0 && minutes == 0 && seconds == 0) {
-        char *tokens[3] = {0};
-        int token_count = 0;
-
-        char *token = strtok(input_copy, " ");
-        while (token && token_count < 3) {
-            tokens[token_count++] = token;
-            token = strtok(NULL, " ");
-        }
-
-        if (token_count == 2) {
+    if (token_count == 1) {
+        // Single token, check for unit
+        char unit = tolower((unsigned char)tokens[0][strlen(tokens[0]) - 1]);
+        if (unit == 'h' || unit == 'm' || unit == 's') {
+            tokens[0][strlen(tokens[0]) - 1] = '\0';  // Remove unit character
+            int value = atoi(tokens[0]);
+            switch (unit) {
+                case 'h': hours = value; break;
+                case 'm': minutes = value; break;
+                case 's': seconds = value; break;
+            }
+        } else {
+            // No unit, interpret as minutes
             minutes = atoi(tokens[0]);
-            seconds = atoi(tokens[1]);
         }
-        else if (token_count == 3) {
-            hours = atoi(tokens[0]);
-            minutes = atoi(tokens[1]);
-            seconds = atoi(tokens[2]);
-        }
+    } else if (token_count == 2) {
+        minutes = atoi(tokens[0]);
+        seconds = atoi(tokens[1]);
+    } else if (token_count == 3) {
+        hours = atoi(tokens[0]);
+        minutes = atoi(tokens[1]);
+        seconds = atoi(tokens[2]);
     }
 
     *total_seconds = hours * 3600 + minutes * 60 + seconds;
     if (*total_seconds <= 0) return 0;
 
-    // 检查各个时间值的合理性
-    if (hours < 0 || hours > 99 ||    // 限制小时在0-99之间
-        minutes < 0 || minutes > 59 || // 限制分钟在0-59之间
-        seconds < 0 || seconds > 59) { // 限制秒在0-59之间
+    // Check for reasonable time values
+    if (hours < 0 || hours > 99 ||    // Limit hours to 0-99
+        minutes < 0 || minutes > 59 || // Limit minutes to 0-59
+        seconds < 0 || seconds > 59) { // Limit seconds to 0-59
         return 0;
     }
 
-    // 检查总时间是否会溢出
+    // Check for overflow
     if (hours > INT_MAX/3600 || 
         (*total_seconds) > INT_MAX) {
         return 0;
