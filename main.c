@@ -1491,12 +1491,20 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             HFONT hFont = CreateFont(
                 -CLOCK_BASE_FONT_SIZE * CLOCK_FONT_SCALE_FACTOR,
                 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
-                DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
-                CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,
-                DEFAULT_PITCH | FF_DONTCARE, 
+                DEFAULT_CHARSET, OUT_TT_PRECIS,
+                CLIP_DEFAULT_PRECIS, NONANTIALIASED_QUALITY,  // 改为 NONANTIALIASED_QUALITY
+                VARIABLE_PITCH | FF_SWISS,
                 IS_PREVIEWING ? PREVIEW_INTERNAL_NAME : FONT_INTERNAL_NAME
             );
             HFONT oldFont = (HFONT)SelectObject(memDC, hFont);
+
+            // 设置文本渲染质量
+            SetTextAlign(memDC, TA_LEFT | TA_TOP);
+            SetBkMode(memDC, TRANSPARENT);
+            
+            // 启用高质量渲染模式
+            SetTextCharacterExtra(memDC, 0);
+            SetMapMode(memDC, MM_TEXT);
 
             int r = 255, g = 255, b = 255;
             const char* colorToUse = IS_COLOR_PREVIEWING ? PREVIEW_COLOR : CLOCK_TEXT_COLOR;
