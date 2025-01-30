@@ -327,6 +327,11 @@ int CLOCK_RECENT_FILES_COUNT = 0;
 #define CLOCK_ABOUT_URL "https://github.com/vladelaina/Catime"
 #define CLOCK_IDM_ABOUT 130  // 添加菜单ID
 
+// 在全局变量区域添加
+char PREVIEW_FONT_NAME[100] = "";  // 用于存储预览的字体名称
+char PREVIEW_INTERNAL_NAME[100] = "";    // 用于存储预览的字体内部名称
+BOOL IS_PREVIEWING = FALSE;        // 标记是否正在预览
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     ReadConfig();
 
@@ -1477,12 +1482,15 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 FormatTime(remaining_time, time_text);
             }
 
+            // 修改字体创建部分
+            const char* fontToUse = IS_PREVIEWING ? PREVIEW_FONT_NAME : FONT_FILE_NAME;
             HFONT hFont = CreateFont(
                 -CLOCK_BASE_FONT_SIZE * CLOCK_FONT_SCALE_FACTOR,
                 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
                 DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
                 CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,
-                DEFAULT_PITCH | FF_DONTCARE, FONT_INTERNAL_NAME
+                DEFAULT_PITCH | FF_DONTCARE, 
+                IS_PREVIEWING ? PREVIEW_INTERNAL_NAME : FONT_INTERNAL_NAME
             );
             HFONT oldFont = (HFONT)SelectObject(memDC, hFont);
 
@@ -2369,6 +2377,58 @@ refresh_window:
                 }
             }
             return FALSE;
+        }
+        case WM_MENUSELECT: {
+            UINT menuItem = LOWORD(wp);
+            UINT flags = HIWORD(wp);
+            HMENU hMenu = (HMENU)lp;
+
+            // 检查是否是字体菜单项
+            if (!(flags & MF_POPUP) && hMenu != NULL) {
+                // 查找对应的字体资源
+                for (int i = 0; i < sizeof(fontResources) / sizeof(FontResource); i++) {
+                    if (fontResources[i].menuId == menuItem) {
+                        // 设置预览字体
+                        strncpy(PREVIEW_FONT_NAME, fontResources[i].fontName, sizeof(PREVIEW_FONT_NAME) - 1);
+                        PREVIEW_FONT_NAME[sizeof(PREVIEW_FONT_NAME) - 1] = '\0';
+                        
+                        // 设置预览字体的内部名称（去掉.ttf后缀）
+                        strncpy(PREVIEW_INTERNAL_NAME, PREVIEW_FONT_NAME, sizeof(PREVIEW_INTERNAL_NAME) - 1);
+                        PREVIEW_INTERNAL_NAME[sizeof(PREVIEW_INTERNAL_NAME) - 1] = '\0';
+                        char* dot = strrchr(PREVIEW_INTERNAL_NAME, '.');
+                        if (dot) *dot = '\0';
+                        
+                        // 加载预览字体
+                        LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), 
+                                     fontResources[i].fontName);
+                        
+                        IS_PREVIEWING = TRUE;
+                        InvalidateRect(hwnd, NULL, TRUE);
+                        return 0;
+                    }
+                }
+                
+                // 如果不是字体菜单项，取消预览
+                if (IS_PREVIEWING) {
+                    IS_PREVIEWING = FALSE;
+                    InvalidateRect(hwnd, NULL, TRUE);
+                }
+            } else if (flags & MF_POPUP) {
+                // 当选中子菜单时，取消预览
+                if (IS_PREVIEWING) {
+                    IS_PREVIEWING = FALSE;
+                    InvalidateRect(hwnd, NULL, TRUE);
+                }
+            }
+            break;
+        }
+        case WM_EXITMENULOOP: {
+            // 退出菜单时取消预览
+            if (IS_PREVIEWING) {
+                IS_PREVIEWING = FALSE;
+                InvalidateRect(hwnd, NULL, TRUE);
+            }
+            break;
         }
         default:
             return DefWindowProc(hwnd, msg, wp, lp);
