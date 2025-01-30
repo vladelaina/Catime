@@ -1494,7 +1494,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 -CLOCK_BASE_FONT_SIZE * CLOCK_FONT_SCALE_FACTOR,
                 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
                 DEFAULT_CHARSET, OUT_TT_PRECIS,
-                CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,  // 使用标准抗锯齿
+                CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,  // 改用标准抗锯齿
                 VARIABLE_PITCH | FF_SWISS,
                 IS_PREVIEWING ? PREVIEW_INTERNAL_NAME : FONT_INTERNAL_NAME
             );
