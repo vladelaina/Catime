@@ -1471,6 +1471,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
             SetGraphicsMode(memDC, GM_ADVANCED);
             SetBkMode(memDC, TRANSPARENT);
+            SetStretchBltMode(memDC, HALFTONE);
+            SetBrushOrgEx(memDC, 0, 0, NULL);
 
             int remaining_time = CLOCK_TOTAL_TIME - elapsed_time;
             if (elapsed_time >= CLOCK_TOTAL_TIME) {
@@ -1492,7 +1494,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 -CLOCK_BASE_FONT_SIZE * CLOCK_FONT_SCALE_FACTOR,
                 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
                 DEFAULT_CHARSET, OUT_TT_PRECIS,
-                CLIP_DEFAULT_PRECIS, NONANTIALIASED_QUALITY,  // 改为 NONANTIALIASED_QUALITY
+                CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,  // 使用标准抗锯齿
                 VARIABLE_PITCH | FF_SWISS,
                 IS_PREVIEWING ? PREVIEW_INTERNAL_NAME : FONT_INTERNAL_NAME
             );
@@ -1500,11 +1502,12 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
             // 设置文本渲染质量
             SetTextAlign(memDC, TA_LEFT | TA_TOP);
-            SetBkMode(memDC, TRANSPARENT);
-            
-            // 启用高质量渲染模式
             SetTextCharacterExtra(memDC, 0);
             SetMapMode(memDC, MM_TEXT);
+
+            // 启用平滑模式
+            DWORD quality = SetICMMode(memDC, ICM_ON);
+            SetLayout(memDC, 0);
 
             int r = 255, g = 255, b = 255;
             const char* colorToUse = IS_COLOR_PREVIEWING ? PREVIEW_COLOR : CLOCK_TEXT_COLOR;
