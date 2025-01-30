@@ -476,7 +476,7 @@ void CreateDefaultConfig(const char* config_path) {
     // Write default configuration with the specified values
     fprintf(file, "CLOCK_TEXT_COLOR=#FFB6C1\n");
     fprintf(file, "CLOCK_BASE_FONT_SIZE=20\n");
-    fprintf(file, "FONT_FILE_NAME=Monocraft.ttf\n");
+    fprintf(file, "FONT_FILE_NAME=GohuFont uni11 Nerd Font Mono.ttf\n");  // 修改这里
     fprintf(file, "CLOCK_WINDOW_POS_X=%d\n", centerX);  // 使用屏幕中心位置
     fprintf(file, "CLOCK_WINDOW_POS_Y=0\n");
     fprintf(file, "WINDOW_SCALE=2.14\n");
@@ -1763,7 +1763,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     // 确保重新加载默认字体
                     HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
                     for (int i = 0; i < sizeof(fontResources) / sizeof(FontResource); i++) {
-                        if (strcmp(fontResources[i].fontName, FONT_FILE_NAME) == 0) {
+                        if (strcmp(fontResources[i].fontName, "GohuFont uni11 Nerd Font Mono.ttf") == 0) {  // 修改这里
                             LoadFontFromResource(hInstance, fontResources[i].resourceId);
                             break;
                         }
