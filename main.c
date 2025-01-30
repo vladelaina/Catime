@@ -332,6 +332,10 @@ char PREVIEW_FONT_NAME[100] = "";  // 用于存储预览的字体名称
 char PREVIEW_INTERNAL_NAME[100] = "";    // 用于存储预览的字体内部名称
 BOOL IS_PREVIEWING = FALSE;        // 标记是否正在预览
 
+// 在全局变量区域添加颜色预览相关变量
+char PREVIEW_COLOR[10] = "";  // 用于存储预览的颜色
+BOOL IS_COLOR_PREVIEWING = FALSE;  // 标记是否正在预览颜色
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     ReadConfig();
 
@@ -1495,13 +1499,15 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             HFONT oldFont = (HFONT)SelectObject(memDC, hFont);
 
             int r = 255, g = 255, b = 255;
-            if (strlen(CLOCK_TEXT_COLOR) > 0) {
-                if (CLOCK_TEXT_COLOR[0] == '#') {
-                    if (strlen(CLOCK_TEXT_COLOR) == 7) {
-                        sscanf(CLOCK_TEXT_COLOR + 1, "%02x%02x%02x", &r, &g, &b);
+            const char* colorToUse = IS_COLOR_PREVIEWING ? PREVIEW_COLOR : CLOCK_TEXT_COLOR;
+            
+            if (strlen(colorToUse) > 0) {
+                if (colorToUse[0] == '#') {
+                    if (strlen(colorToUse) == 7) {
+                        sscanf(colorToUse + 1, "%02x%02x%02x", &r, &g, &b);
                     }
                 } else {
-                    sscanf(CLOCK_TEXT_COLOR, "%d,%d,%d", &r, &g, &b);
+                    sscanf(colorToUse, "%d,%d,%d", &r, &g, &b);
                 }
             }
             SetTextColor(memDC, RGB(r, g, b));
@@ -2385,6 +2391,17 @@ refresh_window:
 
             // 检查是否是字体菜单项
             if (!(flags & MF_POPUP) && hMenu != NULL) {
+                // 检查是否是颜色菜单项
+                int colorIndex = menuItem - 201;
+                if (colorIndex >= 0 && colorIndex < COLOR_OPTIONS_COUNT) {
+                    // 设置预览颜色
+                    strncpy(PREVIEW_COLOR, COLOR_OPTIONS[colorIndex].hexColor, sizeof(PREVIEW_COLOR) - 1);
+                    PREVIEW_COLOR[sizeof(PREVIEW_COLOR) - 1] = '\0';
+                    IS_COLOR_PREVIEWING = TRUE;
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    return 0;
+                }
+
                 // 查找对应的字体资源
                 for (int i = 0; i < sizeof(fontResources) / sizeof(FontResource); i++) {
                     if (fontResources[i].menuId == menuItem) {
@@ -2408,15 +2425,17 @@ refresh_window:
                     }
                 }
                 
-                // 如果不是字体菜单项，取消预览
-                if (IS_PREVIEWING) {
+                // 如果不是菜单项，取消所有预览
+                if (IS_PREVIEWING || IS_COLOR_PREVIEWING) {
                     IS_PREVIEWING = FALSE;
+                    IS_COLOR_PREVIEWING = FALSE;
                     InvalidateRect(hwnd, NULL, TRUE);
                 }
             } else if (flags & MF_POPUP) {
-                // 当选中子菜单时，取消预览
-                if (IS_PREVIEWING) {
+                // 当选中子菜单时，取消所有预览
+                if (IS_PREVIEWING || IS_COLOR_PREVIEWING) {
                     IS_PREVIEWING = FALSE;
+                    IS_COLOR_PREVIEWING = FALSE;
                     InvalidateRect(hwnd, NULL, TRUE);
                 }
             }
@@ -2424,8 +2443,9 @@ refresh_window:
         }
         case WM_EXITMENULOOP: {
             // 退出菜单时取消预览
-            if (IS_PREVIEWING) {
+            if (IS_PREVIEWING || IS_COLOR_PREVIEWING) {
                 IS_PREVIEWING = FALSE;
+                IS_COLOR_PREVIEWING = FALSE;
                 InvalidateRect(hwnd, NULL, TRUE);
             }
             break;
