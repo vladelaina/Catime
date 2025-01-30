@@ -1753,7 +1753,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     CreateDefaultConfig(config_path);  // 创建新的默认配置文件
                     
                     // 读取新配置
-                    ReadConfig();
+                    ReadConfig();  // 这会加载默认的窗口位置
                     
                     // 确保重新加载默认字体
                     HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
@@ -1794,8 +1794,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     DeleteObject(hFont);
                     ReleaseDC(hwnd, hdc);
                     
-                    // 获取屏幕宽度和高度
-                    int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+                    // 获取屏幕高度
                     int screenHeight = GetSystemMetrics(SM_CYSCREEN);
                     
                     // 计算默认的缩放比例
@@ -1803,13 +1802,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     CLOCK_WINDOW_SCALE = defaultScale;
                     CLOCK_FONT_SCALE_FACTOR = defaultScale;
                     
-                    // 更新窗口位置和大小
-                    int newX = (screenWidth - textSize.cx) / 2;  // 水平居中
-                    int newY = -7;  // 使用默认的Y位置
-                    
-                    // 更新全局变量
-                    CLOCK_WINDOW_POS_X = newX;
-                    CLOCK_WINDOW_POS_Y = newY;
+                    // 使用配置文件中的默认位置
+                    // CLOCK_WINDOW_POS_X 和 CLOCK_WINDOW_POS_Y 已经由 ReadConfig() 设置为默认值
                     
                     // 更新窗口位置和大小
                     SetWindowPos(hwnd, NULL, 
@@ -1817,9 +1811,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         textSize.cx * defaultScale, textSize.cy * defaultScale,
                         SWP_NOZORDER | SWP_NOACTIVATE
                     );
-                    
-                    // 保存新的窗口设置
-                    SaveWindowSettings(hwnd);
                     
                     // 允许重绘并刷新
                     SendMessage(hwnd, WM_SETREDRAW, TRUE, 0);
