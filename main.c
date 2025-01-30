@@ -1747,39 +1747,22 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     SetClickThrough(hwnd, TRUE);
                     SendMessage(hwnd, WM_SETREDRAW, FALSE, 0);
                     
-                    // 保存当前窗口位置
-                    RECT currentRect;
-                    GetWindowRect(hwnd, &currentRect);
-                    
-                    // 重置配置
+                    // 删除并重新创建配置文件
                     char config_path[MAX_PATH];
                     GetConfigPath(config_path, MAX_PATH);
-                    remove(config_path);
-                    CreateDefaultConfig(config_path);
+                    remove(config_path);  // 删除现有配置文件
+                    CreateDefaultConfig(config_path);  // 创建新的默认配置文件
                     
-                    // 设置默认值
-                    CLOCK_WINDOW_SCALE = 2.14f;
-                    CLOCK_FONT_SCALE_FACTOR = 2.14f;
-                    CLOCK_BASE_FONT_SIZE = 20;
-                    
-                    // 读取新配置但保持窗口位置
-                    int old_x = CLOCK_WINDOW_POS_X;
-                    int old_y = CLOCK_WINDOW_POS_Y;
+                    // 读取新配置
                     ReadConfig();
-
+                    
                     // 确保重新加载默认字体
                     HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
                     for (int i = 0; i < sizeof(fontResources) / sizeof(FontResource); i++) {
-                        if (strcmp(fontResources[i].fontName, "GohuFont uni11 Nerd Font Mono.ttf") == 0) {  // 修改这里
+                        if (strcmp(fontResources[i].fontName, "GohuFont uni11 Nerd Font Mono.ttf") == 0) {
                             LoadFontFromResource(hInstance, fontResources[i].resourceId);
                             break;
                         }
-                    }
-                    
-                    if (was_edit_mode) {
-                        // 如果在Edit Mode下，保持原来的位置
-                        CLOCK_WINDOW_POS_X = old_x;
-                        CLOCK_WINDOW_POS_Y = old_y;
                     }
                     
                     // 恢复计时状态
@@ -1809,8 +1792,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     ReleaseDC(hwnd, hdc);
                     
                     // 更新窗口位置和大小
-                    int newX = was_edit_mode ? currentRect.left : (GetSystemMetrics(SM_CXSCREEN) - textSize.cx) / 2;
-                    int newY = was_edit_mode ? currentRect.top : 0;
+                    int newX = (GetSystemMetrics(SM_CXSCREEN) - textSize.cx) / 2;
+                    int newY = -7;  // 使用默认的Y位置
                     
                     SetWindowPos(hwnd, NULL, 
                         newX, newY,
@@ -1818,20 +1801,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         SWP_NOZORDER | SWP_NOACTIVATE
                     );
                     
-                    // 恢复Edit Mode状态
-                    if (was_edit_mode) {
-                        CLOCK_EDIT_MODE = TRUE;
-                        WriteConfigEditMode("TRUE");
-                        SetClickThrough(hwnd, FALSE);
-                        SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
-                        SetBlurBehind(hwnd, TRUE);
-                    }
-                    
                     // 确保窗口位置在屏幕范围内
                     AdjustWindowPosition(hwnd);
-                    
-                    // 保存最终位置
-                    SaveWindowSettings(hwnd);
                     
                     // 允许重绘并刷新
                     SendMessage(hwnd, WM_SETREDRAW, TRUE, 0);
