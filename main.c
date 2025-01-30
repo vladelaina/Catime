@@ -1740,7 +1740,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     int current_elapsed = elapsed_time;
                     int current_total = CLOCK_TOTAL_TIME;
                     BOOL was_timing = (current_elapsed < current_total);
-                    BOOL was_edit_mode = CLOCK_EDIT_MODE;
                     
                     // 临时禁用Edit Mode和重绘
                     CLOCK_EDIT_MODE = FALSE;
@@ -1791,18 +1790,26 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     DeleteObject(hFont);
                     ReleaseDC(hwnd, hdc);
                     
+                    // 获取屏幕宽度
+                    int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+                    
                     // 更新窗口位置和大小
-                    int newX = (GetSystemMetrics(SM_CXSCREEN) - textSize.cx) / 2;
+                    int newX = (screenWidth - textSize.cx) / 2;
                     int newY = -7;  // 使用默认的Y位置
                     
+                    // 直接更新全局变量
+                    CLOCK_WINDOW_POS_X = newX;
+                    CLOCK_WINDOW_POS_Y = newY;
+                    
+                    // 更新窗口位置
                     SetWindowPos(hwnd, NULL, 
-                        newX, newY,
+                        CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y,
                         textSize.cx, textSize.cy,
                         SWP_NOZORDER | SWP_NOACTIVATE
                     );
                     
-                    // 确保窗口位置在屏幕范围内
-                    AdjustWindowPosition(hwnd);
+                    // 保存新的窗口设置
+                    SaveWindowSettings(hwnd);
                     
                     // 允许重绘并刷新
                     SendMessage(hwnd, WM_SETREDRAW, TRUE, 0);
