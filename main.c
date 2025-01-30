@@ -469,17 +469,24 @@ void CreateDefaultConfig(const char* config_path) {
         return;
     }
 
-    // 获取屏幕宽度并计算中心位置
+    // 获取屏幕宽度和高度
     int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
     int centerX = screenWidth / 2;
+    
+    // 计算合适的缩放比例
+    // 基础字体大小是20，我们要让窗口高度为屏幕高度的3%
+    // screenHeight * 0.03 = 20 * scale
+    // scale = (screenHeight * 0.03) / 20
+    float scale = (screenHeight * 0.03f) / 20.0f;
 
     // Write default configuration with the specified values
     fprintf(file, "CLOCK_TEXT_COLOR=#FFB6C1\n");
     fprintf(file, "CLOCK_BASE_FONT_SIZE=20\n");
     fprintf(file, "FONT_FILE_NAME=GohuFont uni11 Nerd Font Mono.ttf\n");
-    fprintf(file, "CLOCK_WINDOW_POS_X=%d\n", centerX);  // 使用屏幕中心位置
-    fprintf(file, "CLOCK_WINDOW_POS_Y=-9\n");  // 修改这里，将默认值设为-9
-    fprintf(file, "WINDOW_SCALE=2.14\n");
+    fprintf(file, "CLOCK_WINDOW_POS_X=%d\n", centerX);
+    fprintf(file, "CLOCK_WINDOW_POS_Y=-7\n");  // 修改这里，将默认值改为-7
+    fprintf(file, "WINDOW_SCALE=%.2f\n", scale);
     fprintf(file, "CLOCK_DEFAULT_START_TIME=1500\n");
     fprintf(file, "CLOCK_TIME_OPTIONS=25,10,5\n");
     fprintf(file, "CLOCK_TIMEOUT_TEXT=0\n");
