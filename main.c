@@ -206,7 +206,46 @@ FontResource fontResources[] = {
     {CLOCK_IDC_FONT_COMIC_SHANNS, IDR_FONT_COMIC_SHANNS, "ComicShannsMono Nerd Font.ttf"},
     {CLOCK_IDC_FONT_HACK, IDR_FONT_HACK, "Hack Nerd Font.ttf"},
     {CLOCK_IDC_FONT_HEAVYDATA, IDR_FONT_HEAVYDATA, "HeavyData Nerd Font.ttf"},
-    {CLOCK_IDC_FONT_PROFONT, IDR_FONT_PROFONT, "ProFont IIx Nerd Font.ttf"}
+    {CLOCK_IDC_FONT_PROFONT, IDR_FONT_PROFONT, "ProFont IIx Nerd Font.ttf"},
+    {CLOCK_IDC_FONT_ARIMO, IDR_FONT_ARIMO, "Arimo Nerd Font.ttf"},
+    {CLOCK_IDC_FONT_COUSINE, IDR_FONT_COUSINE, "Cousine Nerd Font.ttf"},
+    {CLOCK_IDC_FONT_DROIDSANS, IDR_FONT_DROIDSANS, "DroidSansM Nerd Font Mono.ttf"},
+    {CLOCK_IDC_FONT_ROBOTOMONO, IDR_FONT_ROBOTOMONO, "RobotoMono Nerd Font Propo Md.ttf"},
+    {CLOCK_IDC_FONT_0XPROTO, IDR_FONT_0XPROTO, "0xProto Nerd Font.ttf"},
+    {CLOCK_IDC_FONT_PROGGYCLEAN, IDR_FONT_PROGGYCLEAN, "ProggyCleanSZ Nerd Font Propo.ttf"},
+    {CLOCK_IDC_FONT_BLEX, IDR_FONT_BLEX, "BlexMono Nerd Font.ttf"},
+    {CLOCK_IDC_FONT_CASKAYDIA_COVE, IDR_FONT_CASKAYDIA_COVE, "CaskaydiaCove NF SemiLight.ttf"},
+    {CLOCK_IDC_FONT_CASKAYDIA_MONO, IDR_FONT_CASKAYDIA_MONO, "CaskaydiaMono NF SemiLight.ttf"},
+    {CLOCK_IDC_FONT_CODENEWROMAN, IDR_FONT_CODENEWROMAN, "CodeNewRoman Nerd Font.ttf"},
+    {CLOCK_IDC_FONT_D2CODING, IDR_FONT_D2CODING, "D2CodingLigature Nerd Font.ttf"},
+    {CLOCK_IDC_FONT_DADDYTIME, IDR_FONT_DADDYTIME, "DaddyTimeMono Nerd Font Propo.ttf"},
+    {CLOCK_IDC_FONT_DEPARTURE, IDR_FONT_DEPARTURE, "DepartureMono Nerd Font Propo.ttf"},
+    {CLOCK_IDC_FONT_ENVYCODE, IDR_FONT_ENVYCODE, "EnvyCodeR Nerd Font.ttf"},
+    {CLOCK_IDC_FONT_FANTASQUE, IDR_FONT_FANTASQUE, "FantasqueSansM Nerd Font.ttf"},
+    {CLOCK_IDC_FONT_FIRACODE, IDR_FONT_FIRACODE, "FiraCode Nerd Font.ttf"},
+    {CLOCK_IDC_FONT_FIRAMONO, IDR_FONT_FIRAMONO, "FiraMono Nerd Font Propo.ttf"},
+    {CLOCK_IDC_FONT_GEIST, IDR_FONT_GEIST, "GeistMono NFM.ttf"},
+    {CLOCK_IDC_FONT_HASKLUG, IDR_FONT_HASKLUG, "Hasklug Nerd Font.ttf"},
+    {CLOCK_IDC_FONT_HURMIT, IDR_FONT_HURMIT, "Hurmit Nerd Font Propo.ttf"},
+    {CLOCK_IDC_FONT_IMWRITING, IDR_FONT_IMWRITING, "iMWritingQuat Nerd Font.ttf"},
+    {CLOCK_IDC_FONT_INCONSOLATA_GO, IDR_FONT_INCONSOLATA_GO, "InconsolataGo Nerd Font.ttf"},
+    {CLOCK_IDC_FONT_INCONSOLATA_LGC, IDR_FONT_INCONSOLATA_LGC, "Inconsolata LGC Nerd Font.ttf"},
+    {CLOCK_IDC_FONT_INCONSOLATA, IDR_FONT_INCONSOLATA, "Inconsolata Nerd Font.ttf"},
+    {CLOCK_IDC_FONT_INTONE, IDR_FONT_INTONE, "IntoneMono NF.ttf"},
+    {CLOCK_IDC_FONT_IOSEVKA, IDR_FONT_IOSEVKA, "Iosevka NF SemiBold.ttf"},
+    {CLOCK_IDC_FONT_IOSEVKA_TERM, IDR_FONT_IOSEVKA_TERM, "IosevkaTermSlab NFP Medium.ttf"},
+    {CLOCK_IDC_FONT_JETBRAINS, IDR_FONT_JETBRAINS, "JetBrainsMonoNL NFP SemiBold.ttf"},
+    {CLOCK_IDC_FONT_LEKTON, IDR_FONT_LEKTON, "Lekton Nerd Font.ttf"},
+    {CLOCK_IDC_FONT_LILEX, IDR_FONT_LILEX, "Lilex Nerd Font.ttf"},
+    {CLOCK_IDC_FONT_LIBERATION, IDR_FONT_LIBERATION, "LiterationSerif Nerd Font.ttf"},
+    {CLOCK_IDC_FONT_MARTIAN, IDR_FONT_MARTIAN, "MartianMono NFM Cond.ttf"},
+    {CLOCK_IDC_FONT_MONONOKI, IDR_FONT_MONONOKI, "Mononoki Nerd Font.ttf"},
+    {CLOCK_IDC_FONT_OVERPASS, IDR_FONT_OVERPASS, "OverpassM Nerd Font Mono SemBd.ttf"},
+    {CLOCK_IDC_FONT_RECMONO, IDR_FONT_RECMONO, "RecMonoCasual Nerd Font Mono.ttf"},
+    {CLOCK_IDC_FONT_TERMINESS, IDR_FONT_TERMINESS, "Terminess Nerd Font Propo.ttf"},
+    {CLOCK_IDC_FONT_VICTORMONO, IDR_FONT_VICTORMONO, "VictorMono NFP Medium.ttf"},
+    {CLOCK_IDC_FONT_ZEDMONO, IDR_FONT_ZEDMONO, "ZedMono NF.ttf"},
+    {CLOCK_IDC_FONT_GOHUFONT, IDR_FONT_GOHUFONT, "GohuFont uni11 Nerd Font Mono.ttf"}
 };
 
 BOOL LoadFontFromResource(HINSTANCE hInstance, int resourceId) {
@@ -1939,6 +1978,318 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     WriteConfigFont("ProFont IIx Nerd Font.ttf");
                     if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "ProFont IIx Nerd Font.ttf")) {
                         MessageBox(hwnd, "Failed to load font: ProFont IIx Nerd Font.ttf", "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_ARIMO:
+                    WriteConfigFont("Arimo Nerd Font.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "Arimo Nerd Font.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: Arimo Nerd Font.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_COUSINE:
+                    WriteConfigFont("Cousine Nerd Font.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "Cousine Nerd Font.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: Cousine Nerd Font.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_DROIDSANS:
+                    WriteConfigFont("DroidSansM Nerd Font Mono.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "DroidSansM Nerd Font Mono.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: DroidSansM Nerd Font Mono.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_ROBOTOMONO:
+                    WriteConfigFont("RobotoMono Nerd Font Propo Md.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "RobotoMono Nerd Font Propo Md.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: RobotoMono Nerd Font Propo Md.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_0XPROTO:
+                    WriteConfigFont("0xProto Nerd Font.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "0xProto Nerd Font.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: 0xProto Nerd Font.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_PROGGYCLEAN:
+                    WriteConfigFont("ProggyCleanSZ Nerd Font Propo.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "ProggyCleanSZ Nerd Font Propo.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: ProggyCleanSZ Nerd Font Propo.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_BLEX:
+                    WriteConfigFont("BlexMono Nerd Font.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "BlexMono Nerd Font.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: BlexMono Nerd Font.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_CASKAYDIA_COVE:
+                    WriteConfigFont("CaskaydiaCove NF SemiLight.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "CaskaydiaCove NF SemiLight.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: CaskaydiaCove NF SemiLight.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_CASKAYDIA_MONO:
+                    WriteConfigFont("CaskaydiaMono NF SemiLight.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "CaskaydiaMono NF SemiLight.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: CaskaydiaMono NF SemiLight.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_CODENEWROMAN:
+                    WriteConfigFont("CodeNewRoman Nerd Font.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "CodeNewRoman Nerd Font.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: CodeNewRoman Nerd Font.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_D2CODING:
+                    WriteConfigFont("D2CodingLigature Nerd Font.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "D2CodingLigature Nerd Font.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: D2CodingLigature Nerd Font.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_DADDYTIME:
+                    WriteConfigFont("DaddyTimeMono Nerd Font Propo.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "DaddyTimeMono Nerd Font Propo.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: DaddyTimeMono Nerd Font Propo.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_DEPARTURE:
+                    WriteConfigFont("DepartureMono Nerd Font Propo.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "DepartureMono Nerd Font Propo.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: DepartureMono Nerd Font Propo.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_ENVYCODE:
+                    WriteConfigFont("EnvyCodeR Nerd Font.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "EnvyCodeR Nerd Font.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: EnvyCodeR Nerd Font.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_FANTASQUE:
+                    WriteConfigFont("FantasqueSansM Nerd Font.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "FantasqueSansM Nerd Font.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: FantasqueSansM Nerd Font.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_FIRACODE:
+                    WriteConfigFont("FiraCode Nerd Font.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "FiraCode Nerd Font.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: FiraCode Nerd Font.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_FIRAMONO:
+                    WriteConfigFont("FiraMono Nerd Font Propo.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "FiraMono Nerd Font Propo.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: FiraMono Nerd Font Propo.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_GEIST:
+                    WriteConfigFont("GeistMono NFM.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "GeistMono NFM.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: GeistMono NFM.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_HASKLUG:
+                    WriteConfigFont("Hasklug Nerd Font.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "Hasklug Nerd Font.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: Hasklug Nerd Font.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_HURMIT:
+                    WriteConfigFont("Hurmit Nerd Font Propo.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "Hurmit Nerd Font Propo.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: Hurmit Nerd Font Propo.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_IMWRITING:
+                    WriteConfigFont("iMWritingQuat Nerd Font.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "iMWritingQuat Nerd Font.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: iMWritingQuat Nerd Font.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_INCONSOLATA_GO:
+                    WriteConfigFont("InconsolataGo Nerd Font.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "InconsolataGo Nerd Font.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: InconsolataGo Nerd Font.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_INCONSOLATA_LGC:
+                    WriteConfigFont("Inconsolata LGC Nerd Font.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "Inconsolata LGC Nerd Font.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: Inconsolata LGC Nerd Font.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_INCONSOLATA:
+                    WriteConfigFont("Inconsolata Nerd Font.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "Inconsolata Nerd Font.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: Inconsolata Nerd Font.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_INTONE:
+                    WriteConfigFont("IntoneMono NF.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "IntoneMono NF.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: IntoneMono NF.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_IOSEVKA:
+                    WriteConfigFont("Iosevka NF SemiBold.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "Iosevka NF SemiBold.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: Iosevka NF SemiBold.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_IOSEVKA_TERM:
+                    WriteConfigFont("IosevkaTermSlab NFP Medium.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "IosevkaTermSlab NFP Medium.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: IosevkaTermSlab NFP Medium.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_JETBRAINS:
+                    WriteConfigFont("JetBrainsMonoNL NFP SemiBold.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "JetBrainsMonoNL NFP SemiBold.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: JetBrainsMonoNL NFP SemiBold.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_LEKTON:
+                    WriteConfigFont("Lekton Nerd Font.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "Lekton Nerd Font.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: Lekton Nerd Font.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_LILEX:
+                    WriteConfigFont("Lilex Nerd Font.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "Lilex Nerd Font.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: Lilex Nerd Font.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_LIBERATION:
+                    WriteConfigFont("LiterationSerif Nerd Font.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "LiterationSerif Nerd Font.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: LiterationSerif Nerd Font.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_MARTIAN:
+                    WriteConfigFont("MartianMono NFM Cond.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "MartianMono NFM Cond.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: MartianMono NFM Cond.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_MONONOKI:
+                    WriteConfigFont("Mononoki Nerd Font.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "Mononoki Nerd Font.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: Mononoki Nerd Font.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_OVERPASS:
+                    WriteConfigFont("OverpassM Nerd Font Mono SemBd.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "OverpassM Nerd Font Mono SemBd.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: OverpassM Nerd Font Mono SemBd.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_RECMONO:
+                    WriteConfigFont("RecMonoCasual Nerd Font Mono.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "RecMonoCasual Nerd Font Mono.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: RecMonoCasual Nerd Font Mono.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_TERMINESS:
+                    WriteConfigFont("Terminess Nerd Font Propo.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "Terminess Nerd Font Propo.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: Terminess Nerd Font Propo.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_VICTORMONO:
+                    WriteConfigFont("VictorMono NFP Medium.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "VictorMono NFP Medium.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: VictorMono NFP Medium.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_ZEDMONO:
+                    WriteConfigFont("ZedMono NF.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "ZedMono NF.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: ZedMono NF.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
+                    }
+                    goto refresh_window;
+                case CLOCK_IDC_FONT_GOHUFONT:
+                    WriteConfigFont("GohuFont uni11 Nerd Font Mono.ttf");
+                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "GohuFont uni11 Nerd Font Mono.ttf")) {
+                        char errorMsg[256];
+                        snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: GohuFont uni11 Nerd Font Mono.ttf");
+                        MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
                     }
                     goto refresh_window;
             }
