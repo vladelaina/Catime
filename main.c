@@ -1469,6 +1469,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             HBITMAP memBitmap = CreateCompatibleBitmap(hdc, rect.right, rect.bottom);
             HBITMAP oldBitmap = (HBITMAP)SelectObject(memDC, memBitmap);
 
+            // 设置高级图形模式和抗锯齿
             SetGraphicsMode(memDC, GM_ADVANCED);
             SetBkMode(memDC, TRANSPARENT);
             SetStretchBltMode(memDC, HALFTONE);
@@ -1494,7 +1495,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 -CLOCK_BASE_FONT_SIZE * CLOCK_FONT_SCALE_FACTOR,
                 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
                 DEFAULT_CHARSET, OUT_TT_PRECIS,
-                CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,  // 改用标准抗锯齿
+                CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,  // 改回 ANTIALIASED_QUALITY
                 VARIABLE_PITCH | FF_SWISS,
                 IS_PREVIEWING ? PREVIEW_INTERNAL_NAME : FONT_INTERNAL_NAME
             );
@@ -1553,6 +1554,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
                 SetTextColor(memDC, RGB(r, g, b));
                 
+                // 恢复简单的多次绘制
                 for (int i = 0; i < 8; i++) {
                     TextOutA(memDC, x, y, time_text, strlen(time_text));
                 }
