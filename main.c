@@ -1770,10 +1770,14 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         CLOCK_TOTAL_TIME = current_total;
                     }
                     
+                    // 重置窗口缩放
+                    CLOCK_WINDOW_SCALE = 1.0f;
+                    CLOCK_FONT_SCALE_FACTOR = 1.0f;
+                    
                     // 计算新的窗口大小
                     HDC hdc = GetDC(hwnd);
                     HFONT hFont = CreateFont(
-                        -CLOCK_BASE_FONT_SIZE * CLOCK_FONT_SCALE_FACTOR,
+                        -CLOCK_BASE_FONT_SIZE,  // 使用未缩放的基础字体大小
                         0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
                         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
                         CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,
@@ -1790,21 +1794,27 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     DeleteObject(hFont);
                     ReleaseDC(hwnd, hdc);
                     
-                    // 获取屏幕宽度
+                    // 获取屏幕宽度和高度
                     int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+                    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+                    
+                    // 计算默认的缩放比例
+                    float defaultScale = (screenHeight * 0.03f) / 20.0f;
+                    CLOCK_WINDOW_SCALE = defaultScale;
+                    CLOCK_FONT_SCALE_FACTOR = defaultScale;
                     
                     // 更新窗口位置和大小
-                    int newX = (screenWidth - textSize.cx) / 2;
+                    int newX = (screenWidth - textSize.cx) / 2;  // 水平居中
                     int newY = -7;  // 使用默认的Y位置
                     
-                    // 直接更新全局变量
+                    // 更新全局变量
                     CLOCK_WINDOW_POS_X = newX;
                     CLOCK_WINDOW_POS_Y = newY;
                     
-                    // 更新窗口位置
+                    // 更新窗口位置和大小
                     SetWindowPos(hwnd, NULL, 
                         CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y,
-                        textSize.cx, textSize.cy,
+                        textSize.cx * defaultScale, textSize.cy * defaultScale,
                         SWP_NOZORDER | SWP_NOACTIVATE
                     );
                     
