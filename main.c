@@ -476,9 +476,9 @@ void CreateDefaultConfig(const char* config_path) {
     // Write default configuration with the specified values
     fprintf(file, "CLOCK_TEXT_COLOR=#FFB6C1\n");
     fprintf(file, "CLOCK_BASE_FONT_SIZE=20\n");
-    fprintf(file, "FONT_FILE_NAME=GohuFont uni11 Nerd Font Mono.ttf\n");  // 修改这里
+    fprintf(file, "FONT_FILE_NAME=GohuFont uni11 Nerd Font Mono.ttf\n");
     fprintf(file, "CLOCK_WINDOW_POS_X=%d\n", centerX);  // 使用屏幕中心位置
-    fprintf(file, "CLOCK_WINDOW_POS_Y=0\n");
+    fprintf(file, "CLOCK_WINDOW_POS_Y=-9\n");  // 修改这里，将默认值设为-9
     fprintf(file, "WINDOW_SCALE=2.14\n");
     fprintf(file, "CLOCK_DEFAULT_START_TIME=1500\n");
     fprintf(file, "CLOCK_TIME_OPTIONS=25,10,5\n");
