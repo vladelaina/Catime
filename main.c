@@ -25,10 +25,12 @@ static const PredefinedColor COLOR_OPTIONS[] = {
     {"#FFFFFF"},  // White
     {"#FFB6C1"},  // Light Pink
     {"#6495ED"},  // Cornflower Blue
-    {"#87CEEB"},  // Sky Blue
     {"#5EFFFF"},  // Bright Cyan
     {"#98FB98"},  // Pale Green
-    {"#9370DB"}   // Medium Purple
+    {"#9370DB"},  // Medium Purple
+    {"#7FFFD4"},  // Aquamarine
+    {"#F08080"},  // Light Coral
+    {"#FF7F50"}   // Coral
 };
 
 #define COLOR_OPTIONS_COUNT (sizeof(COLOR_OPTIONS) / sizeof(COLOR_OPTIONS[0]))
