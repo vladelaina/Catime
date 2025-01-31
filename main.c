@@ -338,6 +338,12 @@ BOOL IS_PREVIEWING = FALSE;        // 标记是否正在预览
 char PREVIEW_COLOR[10] = "";  // 用于存储预览的颜色
 BOOL IS_COLOR_PREVIEWING = FALSE;  // 标记是否正在预览颜色
 
+// 在文件开头添加以下宏定义
+#define WM_USER_SHELLICON WM_USER + 1
+
+// 在其他函数声明的地方添加这个声明（在 WinMain 函数之前）
+void ShowToastNotification(HWND hwnd, const char* message);
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     ReadConfig();
 
@@ -1602,7 +1608,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     if (!message_shown) {
                         switch (CLOCK_TIMEOUT_ACTION) {
                             case TIMEOUT_ACTION_MESSAGE:
-                                MessageBox(hwnd, CLOCK_MESSAGEBOX_TEXT, "Catime", MB_OK);
+                                ShowToastNotification(hwnd, CLOCK_MESSAGEBOX_TEXT);
                                 break;
                             case TIMEOUT_ACTION_LOCK:
                                 PauseMediaPlayback();
@@ -2825,4 +2831,21 @@ void SaveRecentFile(const char* filePath) {
     
     free(config_content);
     free(new_config);
+}
+
+// 在文件末尾添加以下函数实现
+void ShowToastNotification(HWND hwnd, const char* message) {
+    // 更新托盘图标的提示气泡
+    nid.uFlags = NIF_INFO;
+    nid.dwInfoFlags = NIIF_NONE;  // 不显示任何图标
+    strncpy(nid.szInfo, "Time is up!", sizeof(nid.szInfo) - 1);
+    nid.szInfoTitle[0] = '\0';  // 不显示标题
+    nid.uTimeout = 10000;  // 显示10秒
+
+    Shell_NotifyIcon(NIM_MODIFY, &nid);
+
+    // 重置通知图标的状态
+    nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
+    nid.szInfo[0] = '\0';
+    nid.szInfoTitle[0] = '\0';
 }
