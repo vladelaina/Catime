@@ -1688,8 +1688,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                                 "25 30m = 25h 30m\n"
                                 "1 30 20 = 1h 30m 20s",
                                 "Input Format",
-                                MB_OK | MB_ICONINFORMATION
-                            );
+                                MB_OK);  // 移除了 MB_ICONINFORMATION
                         }
                     }
                     break;
@@ -1947,7 +1946,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                                 "Enter color as:\n"
                                 "HEX: FF5733 or #FF5733\n"
                                 "RGB: 255,87,51",
-                                "Invalid Color", MB_OK | MB_ICONWARNING);
+                                "Input Format", MB_OK);  // 移除了 MB_ICONWARNING 标志
                         }
                     }
                     break;
