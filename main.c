@@ -1681,12 +1681,12 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         } else {
                             MessageBox(hwnd, 
                                 "Format:\n"
-                                "25    = 25m\n"
-                                "25h   = 25h\n"
-                                "25s   = 25s\n"
-                                "25 30 = 25m 30s\n"
-                                "25 30m = 25h 30m\n"
-                                "1 30 20 = 1h 30m 20s",
+                                "25    = 25 minutes \n"
+                                "25h   = 25 hours \n"
+                                "25s   = 25 seconds \n"
+                                "25 30 = 25 minutes 30 seconds \n"
+                                "25 30m = 25 hours 30 minutes \n"
+                                "1 30 20 = 1 hour 30 minutes 20 seconds",
                                 "Input Format",
                                 MB_OK);  // 移除了 MB_ICONINFORMATION
                         }
