@@ -1924,16 +1924,21 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         }
 
                         if (isValidColor(inputText)) {
+                            char hex_color[10] = "#";  // 添加 # 作为前缀
                             if (strchr(inputText, ',') != NULL) {
+                                // RGB 格式转换为 HEX
                                 int r, g, b;
                                 sscanf(inputText, "%d,%d,%d", &r, &g, &b);
-                                char hex_color[8];
-                                snprintf(hex_color, sizeof(hex_color), "%02X%02X%02X", r, g, b);
+                                snprintf(hex_color + 1, sizeof(hex_color) - 1, "%02X%02X%02X", r, g, b);
                                 WriteConfigColor(hex_color);
                             } else {
-                                const char* color = inputText;
-                                if (color[0] == '#') color++;
-                                WriteConfigColor(color);
+                                // HEX 格式处理
+                                if (inputText[0] == '#') {
+                                    WriteConfigColor(inputText);  // 已经包含 #
+                                } else {
+                                    snprintf(hex_color + 1, sizeof(hex_color) - 1, "%s", inputText);
+                                    WriteConfigColor(hex_color);
+                                }
                             }
                             InvalidateRect(hwnd, NULL, TRUE);
                             break;
