@@ -166,8 +166,6 @@ POINT CLOCK_LAST_MOUSE_POS = {0, 0};
 RECT CLOCK_TEXT_RECT = {0, 0, 0, 0};
 BOOL CLOCK_TEXT_RECT_VALID = FALSE;
 
-char CLOCK_MESSAGEBOX_TEXT[100] = "Time's up! The specified time has passed.";
-
 // 在 TimeoutActionType 枚举定义之前添加
 BOOL OpenFileDialog(HWND hwnd, char* filePath, DWORD maxPath);
 
@@ -498,7 +496,6 @@ void CreateDefaultConfig(const char* config_path) {
     fprintf(file, "CLOCK_DEFAULT_START_TIME=1500\n");
     fprintf(file, "CLOCK_TIME_OPTIONS=25,10,5\n");
     fprintf(file, "CLOCK_TIMEOUT_TEXT=0\n");
-    fprintf(file, "CLOCK_MESSAGEBOX_TEXT=ok\n");
     fprintf(file, "CLOCK_EDIT_MODE=FALSE\n");
     fprintf(file, "CLOCK_TIMEOUT_ACTION=LOCK\n");
 
@@ -725,9 +722,6 @@ void ReadConfig() {
         }
         else if (strncmp(line, "CLOCK_TIMEOUT_TEXT=", 19) == 0) {
             sscanf(line + 19, "%49[^\n]", CLOCK_TIMEOUT_TEXT);
-        }
-        else if (strncmp(line, "CLOCK_MESSAGEBOX_TEXT=", 22) == 0) {
-            sscanf(line + 22, "%99[^\n]", CLOCK_MESSAGEBOX_TEXT);
         }
         else if (strncmp(line, "CLOCK_TIMEOUT_ACTION=", 20) == 0) {
             char action[8] = {0};
@@ -1608,7 +1602,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     if (!message_shown) {
                         switch (CLOCK_TIMEOUT_ACTION) {
                             case TIMEOUT_ACTION_MESSAGE:
-                                ShowToastNotification(hwnd, CLOCK_MESSAGEBOX_TEXT);
+                                ShowToastNotification(hwnd, "Time's up!");
                                 break;
                             case TIMEOUT_ACTION_LOCK:
                                 PauseMediaPlayback();
