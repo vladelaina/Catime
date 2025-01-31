@@ -1680,7 +1680,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             break;
                         } else {
                             MessageBox(hwnd, 
-                                "Format:\n"
                                 "25    = 25 minutes \n"
                                 "25h   = 25 hours \n"
                                 "25s   = 25 seconds \n"
@@ -1943,7 +1942,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             break;
                         } else {
                             MessageBox(hwnd, 
-                                "Enter color as:\n"
                                 "HEX: FF5733 or #FF5733\n"
                                 "RGB: 255,87,51",
                                 "Input Format", MB_OK);  // 移除了 MB_ICONWARNING 标志
