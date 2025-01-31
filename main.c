@@ -9,12 +9,10 @@
 #include <dwmapi.h>
 #include "resource.h"
 
-// 在文件开头，其他宏定义的地方添加这些定义
 #define VK_MEDIA_PLAY_PAUSE 0xB3
 #define VK_MEDIA_STOP 0xB2
 #define KEYEVENTF_KEYUP 0x0002
 
-// 添加函数声明
 void PauseMediaPlayback(void);
 
 typedef struct {
@@ -166,7 +164,6 @@ POINT CLOCK_LAST_MOUSE_POS = {0, 0};
 RECT CLOCK_TEXT_RECT = {0, 0, 0, 0};
 BOOL CLOCK_TEXT_RECT_VALID = FALSE;
 
-// 在 TimeoutActionType 枚举定义之前添加
 BOOL OpenFileDialog(HWND hwnd, char* filePath, DWORD maxPath);
 
 typedef enum {
@@ -279,12 +276,10 @@ BOOL LoadFontByName(HINSTANCE hInstance, const char* fontName) {
     return FALSE;
 }
 
-// 在其他函数声明的地方添加这两个函数的声明（在 WinMain 函数之前）
 
 void LoadRecentFiles(void);
 void SaveRecentFile(const char* filePath);
 
-// 其他函数声明...
 LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
 INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 void ReadConfig();
@@ -323,23 +318,18 @@ typedef struct {
 RecentFile CLOCK_RECENT_FILES[MAX_RECENT_FILES];
 int CLOCK_RECENT_FILES_COUNT = 0;
 
-// 在文件开头的宏定义部分添加
 #define CLOCK_ABOUT_URL "https://github.com/vladelaina/Catime"
 #define CLOCK_IDM_ABOUT 130  // 添加菜单ID
 
-// 在全局变量区域添加
 char PREVIEW_FONT_NAME[100] = "";  // 用于存储预览的字体名称
 char PREVIEW_INTERNAL_NAME[100] = "";    // 用于存储预览的字体内部名称
 BOOL IS_PREVIEWING = FALSE;        // 标记是否正在预览
 
-// 在全局变量区域添加颜色预览相关变量
 char PREVIEW_COLOR[10] = "";  // 用于存储预览的颜色
 BOOL IS_COLOR_PREVIEWING = FALSE;  // 标记是否正在预览颜色
 
-// 在文件开头添加以下宏定义
 #define WM_USER_SHELLICON WM_USER + 1
 
-// 在其他函数声明的地方添加这个声明（在 WinMain 函数之前）
 void ShowToastNotification(HWND hwnd, const char* message);
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
@@ -439,19 +429,15 @@ void GetConfigPath(char* path, size_t size) {
 
     char* appdata_path = getenv("LOCALAPPDATA");
     if (appdata_path) {
-        // 使用安全的字符串函数
         if (snprintf(path, size, "%s\\Catime\\config.txt", appdata_path) >= size) {
-            // 路径被截断，使用备用路径
             strncpy(path, ".\\asset\\config.txt", size - 1);
             path[size - 1] = '\0';
             return;
         }
         
-        // 创建目录时添加错误处理
         char dir_path[MAX_PATH];
         if (snprintf(dir_path, sizeof(dir_path), "%s\\Catime", appdata_path) < sizeof(dir_path)) {
             if (!CreateDirectoryA(dir_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
-                // 如果创建目录失败且不是因为已存在，使用备用路径
                 strncpy(path, ".\\asset\\config.txt", size - 1);
                 path[size - 1] = '\0';
             }
@@ -475,18 +461,12 @@ void CreateDefaultConfig(const char* config_path) {
         return;
     }
 
-    // 获取屏幕宽度和高度
     int screenWidth = GetSystemMetrics(SM_CXSCREEN);
     int screenHeight = GetSystemMetrics(SM_CYSCREEN);
     int centerX = screenWidth / 2;
     
-    // 计算合适的缩放比例
-    // 基础字体大小是20，我们要让窗口高度为屏幕高度的3%
-    // screenHeight * 0.03 = 20 * scale
-    // scale = (screenHeight * 0.03) / 20
     float scale = (screenHeight * 0.03f) / 20.0f;
 
-    // Write default configuration with the specified values
     fprintf(file, "CLOCK_TEXT_COLOR=#FFB6C1\n");
     fprintf(file, "CLOCK_BASE_FONT_SIZE=20\n");
     fprintf(file, "FONT_FILE_NAME=GohuFont uni11 Nerd Font Mono.ttf\n");
@@ -517,7 +497,6 @@ void SaveWindowSettings(HWND hwnd) {
     FILE *fp = fopen(config_path, "r");
     if (!fp) return;
     
-    // 使用动态分配以处理大文件
     size_t buffer_size = 8192;  // 初始缓冲区大小
     char *config = malloc(buffer_size);
     char *new_config = malloc(buffer_size);
@@ -535,7 +514,6 @@ void SaveWindowSettings(HWND hwnd) {
     while (fgets(line, sizeof(line), fp)) {
         size_t line_len = strlen(line);
         if (total_len + line_len >= buffer_size - 1) {
-            // 需要扩展缓冲区
             size_t new_size = buffer_size * 2;
             char *temp_config = realloc(config, new_size);
             char *temp_new_config = realloc(new_config, new_size);
@@ -602,7 +580,6 @@ void SaveWindowSettings(HWND hwnd) {
         if (start > end) break;
     }
     
-    // 添加缺失的配置项
     if (!has_edit_mode && buffer_size - new_config_len > 50) {
         new_config_len += snprintf(new_config + new_config_len,
             buffer_size - new_config_len,
@@ -614,14 +591,12 @@ void SaveWindowSettings(HWND hwnd) {
             "WINDOW_SCALE=%.2f\n", CLOCK_WINDOW_SCALE);
     }
     
-    // 确保字符串正确终止
     if (new_config_len < buffer_size) {
         new_config[new_config_len] = '\0';
     } else {
         new_config[buffer_size - 1] = '\0';
     }
     
-    // 写入新配置
     fp = fopen(config_path, "w");
     if (fp) {
         fputs(new_config, fp);
@@ -752,17 +727,13 @@ void ReadConfig() {
         }
         else if (strncmp(line, "CLOCK_TIMEOUT_FILE=", 19) == 0) {
             char *path = line + 19;
-            // 移除换行符、引号和多余的等号
             char *newline = strchr(path, '\n');
             if (newline) *newline = '\0';
             
-            // 移除开头的引号
             if (path[0] == '"') path++;
-            // 移除结尾的引号
             size_t len = strlen(path);
             if (len > 0 && path[len-1] == '"') path[len-1] = '\0';
             
-            // 移除多余的等号
             while (*path == '=') path++;
             
             strncpy(CLOCK_TIMEOUT_FILE_PATH, path, sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1);
@@ -934,7 +905,6 @@ void WriteConfigTimeoutAction(const char* action) {
         }
         else if (strncmp(line, "CLOCK_TIMEOUT_FILE=", 19) == 0) {
             if (strcmp(action, "OPEN_FILE") == 0) {
-                // 在写入文件路径时添加引号
                 if (fprintf(temp, "CLOCK_TIMEOUT_FILE=\"%s\"\n", CLOCK_TIMEOUT_FILE_PATH) < 0) {
                     success = 0;
                     break;
@@ -950,7 +920,6 @@ void WriteConfigTimeoutAction(const char* action) {
         }
     }
 
-    // 如果没有写入过这些配置，添加它们
     if (!timeout_action_written && success) {
         if (fprintf(temp, "CLOCK_TIMEOUT_ACTION=%s\n", action) < 0) {
             success = 0;
@@ -958,7 +927,6 @@ void WriteConfigTimeoutAction(const char* action) {
     }
     
     if (!timeout_file_written && strcmp(action, "OPEN_FILE") == 0 && success) {
-        // 在写入文件路径时添加引号
         if (fprintf(temp, "CLOCK_TIMEOUT_FILE=\"%s\"\n", CLOCK_TIMEOUT_FILE_PATH) < 0) {
             success = 0;
         }
@@ -1057,7 +1025,6 @@ void WriteConfigTimeOptions(const char* options) {
 int isValidInput(const char* input) {
     if (input == NULL || strlen(input) == 0) return 0;
 
-    // 检查是否只包含数字、h/m/s单位和空格
     BOOL hasDigit = FALSE;
     for (size_t i = 0; i < strlen(input); i++) {
         char c = tolower((unsigned char)input[i]);
@@ -1079,7 +1046,6 @@ int ParseInput(const char* input, int* total_seconds) {
     strncpy(input_copy, input, sizeof(input_copy)-1);
     input_copy[sizeof(input_copy)-1] = '\0';
 
-    // Handle space-separated format for hours, minutes, and seconds
     char *tokens[3] = {0};
     int token_count = 0;
 
@@ -1090,7 +1056,6 @@ int ParseInput(const char* input, int* total_seconds) {
     }
 
     if (token_count == 1) {
-        // Single token, check for unit
         char unit = tolower((unsigned char)tokens[0][strlen(tokens[0]) - 1]);
         if (unit == 'h' || unit == 'm' || unit == 's') {
             tokens[0][strlen(tokens[0]) - 1] = '\0';  // Remove unit character
@@ -1101,11 +1066,9 @@ int ParseInput(const char* input, int* total_seconds) {
                 case 's': seconds = value; break;
             }
         } else {
-            // No unit, interpret as minutes
             minutes = atoi(tokens[0]);
         }
     } else if (token_count == 2) {
-        // 检查第二个token是否带有单位
         char unit = tolower((unsigned char)tokens[1][strlen(tokens[1]) - 1]);
         if (unit == 'h' || unit == 'm' || unit == 's') {
             tokens[1][strlen(tokens[1]) - 1] = '\0';  // Remove unit character
@@ -1126,7 +1089,6 @@ int ParseInput(const char* input, int* total_seconds) {
                     break;
             }
         } else {
-            // 没有单位，默认为分和秒
             minutes = atoi(tokens[0]);
             seconds = atoi(tokens[1]);
         }
@@ -1139,14 +1101,12 @@ int ParseInput(const char* input, int* total_seconds) {
     *total_seconds = hours * 3600 + minutes * 60 + seconds;
     if (*total_seconds <= 0) return 0;
 
-    // Check for reasonable time values
     if (hours < 0 || hours > 99 ||    // Limit hours to 0-99
         minutes < 0 || minutes > 59 || // Limit minutes to 0-59
         seconds < 0 || seconds > 59) { // Limit seconds to 0-59
         return 0;
     }
 
-    // Check for overflow
     if (hours > INT_MAX/3600 || 
         (*total_seconds) > INT_MAX) {
         return 0;
@@ -1162,12 +1122,9 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 
     switch (msg) {
         case WM_INITDIALOG: {
-            // Set window to be topmost
             SetWindowPos(hwndDlg, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-            // Set focus to the edit control
             SetFocus(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT));
             SendMessage(hwndDlg, DM_SETDEFID, CLOCK_IDC_BUTTON_OK, 0);
-            // Create brushes
             hBackgroundBrush = CreateSolidBrush(RGB(0xF3, 0xF3, 0xF3));
             hEditBrush = CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF));
             hButtonBrush = CreateSolidBrush(RGB(0xFD, 0xFD, 0xFD));
@@ -1249,7 +1206,6 @@ void FormatTime(int remaining_time, char* time_text) {
             sprintf(time_text, "    %d:%02d", minutes, seconds);  // 添加四个空格以对齐小时格式
         }
     } else {
-        // 在秒数前添加空格
         if (seconds < 10) {
             sprintf(time_text, "          %d", seconds);  // 10个空格（改为10个）
         } else {
@@ -1295,7 +1251,6 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenu(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_MESSAGE ? MF_CHECKED : MF_UNCHECKED), 
                CLOCK_IDM_SHOW_MESSAGE, "Show Message");
 
-    // 创建并添加 Open File 子菜单
     HMENU hOpenFileMenu = CreatePopupMenu();
     if (CLOCK_RECENT_FILES_COUNT > 0) {
         for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
@@ -1318,7 +1273,6 @@ void ShowColorMenu(HWND hwnd) {
         }
     }
 
-    // 将 Open File 选项移到 Show Message 和 Lock Screen 之间
     AppendMenu(hTimeoutMenu, MF_POPUP | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE ? MF_CHECKED : MF_UNCHECKED),
                (UINT_PTR)hOpenFileMenu, menuText);
                
@@ -1460,7 +1414,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 
                 CLOCK_LAST_MOUSE_POS = currentPos;
                 
-                // 使用 UpdateWindow 代替完整的重绘
                 UpdateWindow(hwnd);
                 
                 return 0;
@@ -1478,7 +1431,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             HBITMAP memBitmap = CreateCompatibleBitmap(hdc, rect.right, rect.bottom);
             HBITMAP oldBitmap = (HBITMAP)SelectObject(memDC, memBitmap);
 
-            // 设置高级图形模式和抗锯齿
             SetGraphicsMode(memDC, GM_ADVANCED);
             SetBkMode(memDC, TRANSPARENT);
             SetStretchBltMode(memDC, HALFTONE);
@@ -1498,7 +1450,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 FormatTime(remaining_time, time_text);
             }
 
-            // 修改字体创建部分
             const char* fontToUse = IS_PREVIEWING ? PREVIEW_FONT_NAME : FONT_FILE_NAME;
             HFONT hFont = CreateFont(
                 -CLOCK_BASE_FONT_SIZE * CLOCK_FONT_SCALE_FACTOR,
@@ -1510,12 +1461,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             );
             HFONT oldFont = (HFONT)SelectObject(memDC, hFont);
 
-            // 设置文本渲染质量
             SetTextAlign(memDC, TA_LEFT | TA_TOP);
             SetTextCharacterExtra(memDC, 0);
             SetMapMode(memDC, MM_TEXT);
 
-            // 启用平滑模式
             DWORD quality = SetICMMode(memDC, ICM_ON);
             SetLayout(memDC, 0);
 
@@ -1563,7 +1512,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
                 SetTextColor(memDC, RGB(r, g, b));
                 
-                // 恢复简单的多次绘制
                 for (int i = 0; i < 8; i++) {
                     TextOutA(memDC, x, y, time_text, strlen(time_text));
                 }
@@ -1617,12 +1565,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                                 break;
                             case TIMEOUT_ACTION_OPEN_FILE:
                                 if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
-                                    // 修改这里：使用CreateProcess代替ShellExecute
                                     STARTUPINFO si = {sizeof(si)};
                                     PROCESS_INFORMATION pi;
                                     char cmdLine[MAX_PATH + 2];  // 额外空间用于引号
                                     
-                                    // 将路径用引号括起来以处理包含空格的路径
                                     snprintf(cmdLine, sizeof(cmdLine), "\"%s\"", CLOCK_TIMEOUT_FILE_PATH);
                                     
                                     if (CreateProcessA(NULL, cmdLine, NULL, NULL, FALSE, 
@@ -1630,7 +1576,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                                         CloseHandle(pi.hProcess);
                                         CloseHandle(pi.hThread);
                                     } else {
-                                        // 如果CreateProcess失败，尝试使用ShellExecute
                                         ShellExecuteA(NULL, "open", CLOCK_TIMEOUT_FILE_PATH, 
                                                     NULL, NULL, SW_SHOWNORMAL);
                                     }
@@ -1701,7 +1646,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             break;
                         }
 
-                        // Split input by spaces and validate numbers
                         char* token = strtok(inputText, " ");
                         char options[256] = {0};
                         int valid = 1;
@@ -1736,26 +1680,21 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case 200: {  // Reset case
-                    // 保存当前状态
                     int current_elapsed = elapsed_time;
                     int current_total = CLOCK_TOTAL_TIME;
                     BOOL was_timing = (current_elapsed < current_total);
                     
-                    // 临时禁用Edit Mode和重绘
                     CLOCK_EDIT_MODE = FALSE;
                     SetClickThrough(hwnd, TRUE);
                     SendMessage(hwnd, WM_SETREDRAW, FALSE, 0);
                     
-                    // 删除并重新创建配置文件
                     char config_path[MAX_PATH];
                     GetConfigPath(config_path, MAX_PATH);
                     remove(config_path);  // 删除现有配置文件
                     CreateDefaultConfig(config_path);  // 创建新的默认配置文件
                     
-                    // 读取新配置
                     ReadConfig();  // 这会加载默认的窗口位置
                     
-                    // 确保重新加载默认字体
                     HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
                     for (int i = 0; i < sizeof(fontResources) / sizeof(FontResource); i++) {
                         if (strcmp(fontResources[i].fontName, "GohuFont uni11 Nerd Font Mono.ttf") == 0) {
@@ -1764,17 +1703,14 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         }
                     }
                     
-                    // 恢复计时状态
                     if (was_timing) {
                         elapsed_time = current_elapsed;
                         CLOCK_TOTAL_TIME = current_total;
                     }
                     
-                    // 重置窗口缩放
                     CLOCK_WINDOW_SCALE = 1.0f;
                     CLOCK_FONT_SCALE_FACTOR = 1.0f;
                     
-                    // 计算新的窗口大小
                     HDC hdc = GetDC(hwnd);
                     HFONT hFont = CreateFont(
                         -CLOCK_BASE_FONT_SIZE,  // 使用未缩放的基础字体大小
@@ -1794,25 +1730,19 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     DeleteObject(hFont);
                     ReleaseDC(hwnd, hdc);
                     
-                    // 获取屏幕高度
                     int screenHeight = GetSystemMetrics(SM_CYSCREEN);
                     
-                    // 计算默认的缩放比例
                     float defaultScale = (screenHeight * 0.03f) / 20.0f;
                     CLOCK_WINDOW_SCALE = defaultScale;
                     CLOCK_FONT_SCALE_FACTOR = defaultScale;
                     
-                    // 使用配置文件中的默认位置
-                    // CLOCK_WINDOW_POS_X 和 CLOCK_WINDOW_POS_Y 已经由 ReadConfig() 设置为默认值
                     
-                    // 更新窗口位置和大小
                     SetWindowPos(hwnd, NULL, 
                         CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y,
                         textSize.cx * defaultScale, textSize.cy * defaultScale,
                         SWP_NOZORDER | SWP_NOACTIVATE
                     );
                     
-                    // 允许重绘并刷新
                     SendMessage(hwnd, WM_SETREDRAW, TRUE, 0);
                     RedrawWindow(hwnd, NULL, NULL, 
                         RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
@@ -1924,13 +1854,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         if (isValidColor(inputText)) {
                             char hex_color[10] = "#";  // 添加 # 作为前缀
                             if (strchr(inputText, ',') != NULL) {
-                                // RGB 格式转换为 HEX
                                 int r, g, b;
                                 sscanf(inputText, "%d,%d,%d", &r, &g, &b);
                                 snprintf(hex_color + 1, sizeof(hex_color) - 1, "%02X%02X%02X", r, g, b);
                                 WriteConfigColor(hex_color);
                             } else {
-                                // HEX 格式处理
                                 if (inputText[0] == '#') {
                                     WriteConfigColor(inputText);  // 已经包含 #
                                 } else {
@@ -2392,12 +2320,9 @@ refresh_window:
             UINT flags = HIWORD(wp);
             HMENU hMenu = (HMENU)lp;
 
-            // 检查是否是字体菜单项
             if (!(flags & MF_POPUP) && hMenu != NULL) {
-                // 检查是否是颜色菜单项
                 int colorIndex = menuItem - 201;
                 if (colorIndex >= 0 && colorIndex < COLOR_OPTIONS_COUNT) {
-                    // 设置预览颜色
                     strncpy(PREVIEW_COLOR, COLOR_OPTIONS[colorIndex].hexColor, sizeof(PREVIEW_COLOR) - 1);
                     PREVIEW_COLOR[sizeof(PREVIEW_COLOR) - 1] = '\0';
                     IS_COLOR_PREVIEWING = TRUE;
@@ -2405,20 +2330,16 @@ refresh_window:
                     return 0;
                 }
 
-                // 查找对应的字体资源
                 for (int i = 0; i < sizeof(fontResources) / sizeof(FontResource); i++) {
                     if (fontResources[i].menuId == menuItem) {
-                        // 设置预览字体
                         strncpy(PREVIEW_FONT_NAME, fontResources[i].fontName, sizeof(PREVIEW_FONT_NAME) - 1);
                         PREVIEW_FONT_NAME[sizeof(PREVIEW_FONT_NAME) - 1] = '\0';
                         
-                        // 设置预览字体的内部名称（去掉.ttf后缀）
                         strncpy(PREVIEW_INTERNAL_NAME, PREVIEW_FONT_NAME, sizeof(PREVIEW_INTERNAL_NAME) - 1);
                         PREVIEW_INTERNAL_NAME[sizeof(PREVIEW_INTERNAL_NAME) - 1] = '\0';
                         char* dot = strrchr(PREVIEW_INTERNAL_NAME, '.');
                         if (dot) *dot = '\0';
                         
-                        // 加载预览字体
                         LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), 
                                      fontResources[i].fontName);
                         
@@ -2428,14 +2349,12 @@ refresh_window:
                     }
                 }
                 
-                // 如果不是菜单项，取消所有预览
                 if (IS_PREVIEWING || IS_COLOR_PREVIEWING) {
                     IS_PREVIEWING = FALSE;
                     IS_COLOR_PREVIEWING = FALSE;
                     InvalidateRect(hwnd, NULL, TRUE);
                 }
             } else if (flags & MF_POPUP) {
-                // 当选中子菜单时，取消所有预览
                 if (IS_PREVIEWING || IS_COLOR_PREVIEWING) {
                     IS_PREVIEWING = FALSE;
                     IS_COLOR_PREVIEWING = FALSE;
@@ -2445,7 +2364,6 @@ refresh_window:
             break;
         }
         case WM_EXITMENULOOP: {
-            // 退出菜单时取消预览
             if (IS_PREVIEWING || IS_COLOR_PREVIEWING) {
                 IS_PREVIEWING = FALSE;
                 IS_COLOR_PREVIEWING = FALSE;
@@ -2480,7 +2398,6 @@ void AdjustWindowPosition(HWND hwnd) {
     int newX = windowRect.left;
     int newY = windowRect.top;
     
-    // Allow the window to be half off the screen
     int maxOutside = windowWidth / 2;
     if (newX < workArea.left - maxOutside) {
         newX = workArea.left - maxOutside;
@@ -2642,7 +2559,6 @@ void SetBlurBehind(HWND hwnd, BOOL enable) {
         }
     }
     
-    // 如果DWM blur失败，使用传统透明度
     if (!success) {
         if (enable) {
             SetLayeredWindowAttributes(hwnd, 0, BLUR_OPACITY, LWA_ALPHA);
@@ -2652,15 +2568,12 @@ void SetBlurBehind(HWND hwnd, BOOL enable) {
     }
 }
 
-// 在文件末尾添加函数实现
 void PauseMediaPlayback(void) {
-    // 先发送停止命令
     keybd_event(VK_MEDIA_STOP, 0, 0, 0);
     Sleep(2);  // 最小延迟
     keybd_event(VK_MEDIA_STOP, 0, KEYEVENTF_KEYUP, 0);
     Sleep(5);  // 减少命令间延迟
 
-    // 然后发送多次暂停命令
     for (int i = 0; i < 2; i++) {  // 改回2次循环
         keybd_event(VK_MEDIA_PLAY_PAUSE, 0, 0, 0);
         Sleep(2);  // 最小延迟
@@ -2669,7 +2582,6 @@ void PauseMediaPlayback(void) {
     }
 }
 
-// 添加新函数用于打开文件选择对话框
 BOOL OpenFileDialog(HWND hwnd, char* filePath, DWORD maxPath) {
     OPENFILENAMEA ofn = {0};
     ofn.lStructSize = sizeof(OPENFILENAMEA);
@@ -2685,7 +2597,6 @@ BOOL OpenFileDialog(HWND hwnd, char* filePath, DWORD maxPath) {
     return GetOpenFileNameA(&ofn);
 }
 
-// ... 在其他函数定义之前添加这些新函数 ...
 
 void LoadRecentFiles(void) {
     char config_path[MAX_PATH];
@@ -2700,13 +2611,11 @@ void LoadRecentFiles(void) {
     while (fgets(line, sizeof(line), file) && CLOCK_RECENT_FILES_COUNT < MAX_RECENT_FILES) {
         if (strncmp(line, "CLOCK_RECENT_FILE=", 17) == 0) {
             char *path = line + 17;
-            // 移除换行符
             char *newline = strchr(path, '\n');
             if (newline) *newline = '\0';
             
             strncpy(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path, path, MAX_PATH - 1);
             
-            // 提取文件名
             char *filename = strrchr(path, '\\');
             if (filename) {
                 filename++; // 跳过反斜杠
@@ -2723,10 +2632,8 @@ void LoadRecentFiles(void) {
 }
 
 void SaveRecentFile(const char* filePath) {
-    // 检查文件是否已经在列表中
     for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
         if (strcmp(CLOCK_RECENT_FILES[i].path, filePath) == 0) {
-            // 如果已存在，将其移到最前面
             RecentFile temp = CLOCK_RECENT_FILES[i];
             for (int j = i; j > 0; j--) {
                 CLOCK_RECENT_FILES[j] = CLOCK_RECENT_FILES[j-1];
@@ -2736,7 +2643,6 @@ void SaveRecentFile(const char* filePath) {
         }
     }
     
-    // 移动现有项目
     if (CLOCK_RECENT_FILES_COUNT < MAX_RECENT_FILES) {
         CLOCK_RECENT_FILES_COUNT++;
     }
@@ -2744,7 +2650,6 @@ void SaveRecentFile(const char* filePath) {
         CLOCK_RECENT_FILES[i] = CLOCK_RECENT_FILES[i-1];
     }
     
-    // 添加新项目到开头
     strncpy(CLOCK_RECENT_FILES[0].path, filePath, MAX_PATH - 1);
     CLOCK_RECENT_FILES[0].path[MAX_PATH - 1] = '\0';
     
@@ -2757,11 +2662,9 @@ void SaveRecentFile(const char* filePath) {
     strncpy(CLOCK_RECENT_FILES[0].name, filename, MAX_PATH - 1);
     CLOCK_RECENT_FILES[0].name[MAX_PATH - 1] = '\0';
     
-    // 保存到配置文件
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    // 读取现有配置
     FILE *file = fopen(config_path, "r");
     if (!file) return;
     
@@ -2782,7 +2685,6 @@ void SaveRecentFile(const char* filePath) {
     config_content[bytes_read] = '\0';
     fclose(file);
     
-    // 移除旧的最近文件记录和超出的等号
     char *new_config = (char *)malloc(strlen(config_content) + MAX_RECENT_FILES * (MAX_PATH + 20));
     if (!new_config) {
         free(config_content);
@@ -2800,7 +2702,6 @@ void SaveRecentFile(const char* filePath) {
         line = strtok(NULL, "\n");
     }
     
-    // 添加新的最近文件记录
     for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
         char recent_file_line[MAX_PATH + 20];
         snprintf(recent_file_line, sizeof(recent_file_line), 
@@ -2808,7 +2709,6 @@ void SaveRecentFile(const char* filePath) {
         strcat(new_config, recent_file_line);
     }
     
-    // 添加当前超时文件
     if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
         char timeout_file_line[MAX_PATH + 20];
         snprintf(timeout_file_line, sizeof(timeout_file_line),
@@ -2816,7 +2716,6 @@ void SaveRecentFile(const char* filePath) {
         strcat(new_config, timeout_file_line);
     }
     
-    // 写回配置文件
     file = fopen(config_path, "w");
     if (file) {
         fputs(new_config, file);
@@ -2827,9 +2726,7 @@ void SaveRecentFile(const char* filePath) {
     free(new_config);
 }
 
-// 在文件末尾添加以下函数实现
 void ShowToastNotification(HWND hwnd, const char* message) {
-    // 更新托盘图标的提示气泡
     nid.uFlags = NIF_INFO;
     nid.dwInfoFlags = NIIF_NONE;  // 不显示任何图标
     strncpy(nid.szInfo, "Time is up!", sizeof(nid.szInfo) - 1);
@@ -2838,7 +2735,6 @@ void ShowToastNotification(HWND hwnd, const char* message) {
 
     Shell_NotifyIcon(NIM_MODIFY, &nid);
 
-    // 重置通知图标的状态
     nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
     nid.szInfo[0] = '\0';
     nid.szInfoTitle[0] = '\0';
