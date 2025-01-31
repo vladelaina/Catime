@@ -1730,7 +1730,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             MessageBox(hwnd,
                                 "Enter numbers separated by spaces\n"
                                 "Example: 25 10 45",
-                                "Invalid Input", MB_OK | MB_ICONWARNING);
+                                "Invalid Input", MB_OK);  // 移除了 MB_ICONWARNING
                         }
                     }
                     break;
