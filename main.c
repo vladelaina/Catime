@@ -1278,7 +1278,9 @@ void ShowContextMenu(HWND hwnd) {
     AppendMenu(hTimeMenu, MF_STRING | (CLOCK_SHOW_SECONDS ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_SHOW_SECONDS, "Show Seconds");
     
-    AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hTimeMenu, "Time Display");
+    // 添加Time Display菜单项，并根据CLOCK_SHOW_CURRENT_TIME设置选中状态
+    AppendMenu(hMenu, MF_POPUP | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
+               (UINT_PTR)hTimeMenu, "Time Display");
     AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
 
     for (int i = 0; i < time_options_count; i++) {
