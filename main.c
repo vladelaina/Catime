@@ -1607,7 +1607,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         }
         case WM_COMMAND: {
             switch (LOWORD(wp)) {
-                case 101: {
+                case 101: {  // Set Time case
                     while (1) {
                         memset(inputText, 0, sizeof(inputText));
                         DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc);
@@ -1621,7 +1621,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             CLOCK_TOTAL_TIME = total_seconds;
                             elapsed_time = 0;
                             message_shown = 0;
-                            SetTimer(hwnd, 1, 1000, NULL);
+                            InvalidateRect(hwnd, NULL, TRUE);  // 立即更新显示
+                            SetTimer(hwnd, 1, 1000, NULL);  // 设置定时器在显示更新后
                             break;
                         } else {
                             MessageBox(hwnd, 
@@ -1758,7 +1759,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     if (cmd >= 102 && cmd < 102 + time_options_count) {
                         int index = cmd - 102;
                         CLOCK_TOTAL_TIME = time_options[index] * 60;
-                        goto start_timer;
+                        elapsed_time = 0;
+                        message_shown = 0;
+                        InvalidateRect(hwnd, NULL, TRUE);  // 立即更新显示
+                        SetTimer(hwnd, 1, 1000, NULL);  // 设置定时器在显示更新后
+                        break;  // 移除 goto start_timer
                     }
                     
                     if (cmd >= 201 && cmd < 201 + COLOR_OPTIONS_COUNT) {
@@ -2238,13 +2243,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     }
                     goto refresh_window;
             }
-            break;
-
-start_timer:
-            elapsed_time = 0;
-            message_shown = 0;
-            SetTimer(hwnd, 1, 1000, NULL);
-            InvalidateRect(hwnd, NULL, TRUE);
             break;
 
 refresh_window:
