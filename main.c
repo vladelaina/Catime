@@ -1368,14 +1368,30 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 int delta = GET_WHEEL_DELTA_WPARAM(wp);
                 float old_scale = CLOCK_FONT_SCALE_FACTOR;
                 
+                // 获取鼠标在屏幕上的位置
+                POINT mousePos;
+                GetCursorPos(&mousePos);
+                
+                // 获取窗口位置和大小
+                RECT windowRect;
+                GetWindowRect(hwnd, &windowRect);
+                int oldWidth = windowRect.right - windowRect.left;
+                int oldHeight = windowRect.bottom - windowRect.top;
+                
+                // 计算鼠标相对于窗口左上角的偏移比例
+                float relativeX = (float)(mousePos.x - windowRect.left) / oldWidth;
+                float relativeY = (float)(mousePos.y - windowRect.top) / oldHeight;
+                
+                // 使用更小的缩放步长使动画更平滑
                 if (delta > 0) {
-                    CLOCK_FONT_SCALE_FACTOR *= 1.1f;
+                    CLOCK_FONT_SCALE_FACTOR *= 1.05f;  // 改为更小的缩放比例
                     CLOCK_WINDOW_SCALE = CLOCK_FONT_SCALE_FACTOR;
                 } else {
-                    CLOCK_FONT_SCALE_FACTOR /= 1.1f;
+                    CLOCK_FONT_SCALE_FACTOR /= 1.05f;  // 改为更小的缩放比例
                     CLOCK_WINDOW_SCALE = CLOCK_FONT_SCALE_FACTOR;
                 }
                 
+                // 限制缩放范围
                 if (CLOCK_FONT_SCALE_FACTOR < MIN_SCALE_FACTOR) {
                     CLOCK_FONT_SCALE_FACTOR = MIN_SCALE_FACTOR;
                     CLOCK_WINDOW_SCALE = MIN_SCALE_FACTOR;
@@ -1386,8 +1402,29 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 
                 if (old_scale != CLOCK_FONT_SCALE_FACTOR) {
-                    SaveWindowSettings(hwnd);
-                    InvalidateRect(hwnd, NULL, TRUE);
+                    // 直接使用缩放比例计算新的窗口大小，而不是重新创建字体测量
+                    int newWidth = (int)(oldWidth * (CLOCK_FONT_SCALE_FACTOR / old_scale));
+                    int newHeight = (int)(oldHeight * (CLOCK_FONT_SCALE_FACTOR / old_scale));
+                    
+                    // 计算新的窗口位置，保持鼠标位置相对不变
+                    int newX = mousePos.x - (int)(relativeX * newWidth);
+                    int newY = mousePos.y - (int)(relativeY * newHeight);
+                    
+                    // 使用 SWP_NOREDRAW 标志来减少闪烁
+                    SetWindowPos(hwnd, NULL, 
+                        newX, newY,
+                        newWidth, newHeight,
+                        SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOREDRAW);
+                    
+                    // 延迟重绘和保存设置
+                    static UINT_PTR timerId = 0;
+                    if (timerId) {
+                        KillTimer(hwnd, timerId);
+                    }
+                    timerId = SetTimer(hwnd, 3, 50, NULL);  // 50ms后更新
+                    
+                    // 立即更新窗口内容
+                    RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE | RDW_UPDATENOW);
                 }
             }
             break;
@@ -1529,15 +1566,55 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             break;
         }
         case WM_TIMER: {
-            if (wp == 2) {
-                struct stat file_stat;
-                char config_path[MAX_PATH];
-                GetConfigPath(config_path, MAX_PATH);
-                
-                if (stat(config_path, &file_stat) == 0) {
-                    if (file_stat.st_mtime > last_config_time) {
-                        ReadConfig();
+            if (wp == 3) {  // 缩放更新计时器
+                KillTimer(hwnd, 3);
+                SaveWindowSettings(hwnd);
+            } else if (wp == 2) {
+                if (elapsed_time < CLOCK_TOTAL_TIME) {
+                    elapsed_time++;
+                    InvalidateRect(hwnd, NULL, TRUE);
+                } else if (elapsed_time == CLOCK_TOTAL_TIME) {
+                    KillTimer(hwnd, 1);
+                    InvalidateRect(hwnd, NULL, TRUE);
+
+                    if (!message_shown) {
+                        switch (CLOCK_TIMEOUT_ACTION) {
+                            case TIMEOUT_ACTION_MESSAGE:
+                                ShowToastNotification(hwnd, "Time's up!");
+                                break;
+                            case TIMEOUT_ACTION_LOCK:
+                                PauseMediaPlayback();
+                                Sleep(10);
+                                LockWorkStation();
+                                break;
+                            case TIMEOUT_ACTION_SHUTDOWN:
+                                system("shutdown /s /t 0");
+                                break;
+                            case TIMEOUT_ACTION_RESTART:
+                                system("shutdown /r /t 0");
+                                break;
+                            case TIMEOUT_ACTION_OPEN_FILE:
+                                if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
+                                    STARTUPINFO si = {sizeof(si)};
+                                    PROCESS_INFORMATION pi;
+                                    char cmdLine[MAX_PATH + 2];  // 额外空间用于引号
+                                    
+                                    snprintf(cmdLine, sizeof(cmdLine), "\"%s\"", CLOCK_TIMEOUT_FILE_PATH);
+                                    
+                                    if (CreateProcessA(NULL, cmdLine, NULL, NULL, FALSE, 
+                                                     0, NULL, NULL, &si, &pi)) {
+                                        CloseHandle(pi.hProcess);
+                                        CloseHandle(pi.hThread);
+                                    } else {
+                                        ShellExecuteA(NULL, "open", CLOCK_TIMEOUT_FILE_PATH, 
+                                                    NULL, NULL, SW_SHOWNORMAL);
+                                    }
+                                }
+                                break;
+                        }
+                        message_shown = 1;
                     }
+                    elapsed_time++;
                 }
             } else if (wp == 1) {
                 if (elapsed_time < CLOCK_TOTAL_TIME) {
