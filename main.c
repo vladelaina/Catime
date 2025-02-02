@@ -1208,19 +1208,14 @@ void FormatTime(int remaining_time, char* time_text) {
         time_t now = time(NULL);
         struct tm *tm_info = localtime(&now);
         int hour = tm_info->tm_hour;
-        char ampm[3] = "";
         
         if (!CLOCK_USE_24HOUR) {
             if (hour == 0) {
                 hour = 12;
-                strcpy(ampm, "AM");
-            } else if (hour == 12) {
-                strcpy(ampm, "PM");
             } else if (hour > 12) {
                 hour -= 12;
-                strcpy(ampm, "PM");
-            } else {
-                strcpy(ampm, "AM");
+            } else if (hour == 12) {
+                // 保持12
             }
         }
 
@@ -1229,16 +1224,16 @@ void FormatTime(int remaining_time, char* time_text) {
                 sprintf(time_text, "%02d:%02d:%02d", 
                         hour, tm_info->tm_min, tm_info->tm_sec);
             } else {
-                sprintf(time_text, "%02d:%02d:%02d %s", 
-                        hour, tm_info->tm_min, tm_info->tm_sec, ampm);
+                sprintf(time_text, "%02d:%02d:%02d", 
+                        hour, tm_info->tm_min, tm_info->tm_sec);
             }
         } else {
             if (CLOCK_USE_24HOUR) {
                 sprintf(time_text, "%02d:%02d", 
                         hour, tm_info->tm_min);
             } else {
-                sprintf(time_text, "%02d:%02d %s", 
-                        hour, tm_info->tm_min, ampm);
+                sprintf(time_text, "%02d:%02d", 
+                        hour, tm_info->tm_min);
             }
         }
         return;
@@ -1636,14 +1631,15 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 SaveWindowSettings(hwnd);
             } else if (wp == 2) {
                 if (CLOCK_SHOW_CURRENT_TIME) {
-                    InvalidateRect(hwnd, NULL, TRUE);  // 每次都更新显示
+                    static DWORD lastTick = 0;
+                    DWORD currentTick = GetTickCount();
+                    
+                    // 确保大约每秒更新一次
+                    if (currentTick - lastTick >= 1000) {
+                        lastTick = currentTick;
+                        InvalidateRect(hwnd, NULL, TRUE);
+                    }
                 } else if (elapsed_time < CLOCK_TOTAL_TIME) {
-                    elapsed_time++;
-                    InvalidateRect(hwnd, NULL, TRUE);
-                }
-                // ... 其余定时器代码 ...
-            } else if (wp == 1) {
-                if (elapsed_time < CLOCK_TOTAL_TIME) {
                     elapsed_time++;
                     InvalidateRect(hwnd, NULL, TRUE);
                 } else if (elapsed_time == CLOCK_TOTAL_TIME) {
