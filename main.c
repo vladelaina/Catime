@@ -332,6 +332,10 @@ BOOL IS_COLOR_PREVIEWING = FALSE;  // 标记是否正在预览颜色
 
 void ShowToastNotification(HWND hwnd, const char* message);
 
+// 在全局变量区域添加
+BOOL CLOCK_SHOW_CURRENT_TIME = FALSE;
+time_t CLOCK_LAST_TIME_UPDATE = 0;
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     ReadConfig();
 
@@ -1193,6 +1197,19 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 }
 
 void FormatTime(int remaining_time, char* time_text) {
+    if (CLOCK_SHOW_CURRENT_TIME) {
+        time_t now = time(NULL);
+        struct tm *tm_info = localtime(&now);
+        if (tm_info->tm_hour > 0) {
+            sprintf(time_text, "%2d:%02d:%02d", 
+                    tm_info->tm_hour, tm_info->tm_min, tm_info->tm_sec);
+        } else {
+            sprintf(time_text, "    %d:%02d", 
+                    tm_info->tm_min, tm_info->tm_sec);
+        }
+        return;
+    }
+
     int hours = remaining_time / 3600;
     int minutes = (remaining_time % 3600) / 60;
     int seconds = remaining_time % 60;
@@ -1223,6 +1240,8 @@ void ExitProgram(HWND hwnd) {
 void ShowContextMenu(HWND hwnd) {
     HMENU hMenu = CreatePopupMenu();
     AppendMenu(hMenu, MF_STRING, 101, "Set Time");
+    AppendMenu(hMenu, MF_STRING | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
+               110, "Show Current Time");  // 添加新选项
     AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
 
     for (int i = 0; i < time_options_count; i++) {
@@ -1572,7 +1591,13 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 KillTimer(hwnd, 3);
                 SaveWindowSettings(hwnd);
             } else if (wp == 2) {
-                if (elapsed_time < CLOCK_TOTAL_TIME) {
+                if (CLOCK_SHOW_CURRENT_TIME) {
+                    time_t current = time(NULL);
+                    if (current != CLOCK_LAST_TIME_UPDATE) {
+                        CLOCK_LAST_TIME_UPDATE = current;
+                        InvalidateRect(hwnd, NULL, TRUE);
+                    }
+                } else if (elapsed_time < CLOCK_TOTAL_TIME) {
                     elapsed_time++;
                     InvalidateRect(hwnd, NULL, TRUE);
                 } else if (elapsed_time == CLOCK_TOTAL_TIME) {
@@ -1687,6 +1712,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         case WM_COMMAND: {
             switch (LOWORD(wp)) {
                 case 101: {  // Set Time case
+                    if (CLOCK_SHOW_CURRENT_TIME) {
+                        CLOCK_SHOW_CURRENT_TIME = FALSE;
+                        CLOCK_LAST_TIME_UPDATE = 0;
+                    }
                     while (1) {
                         memset(inputText, 0, sizeof(inputText));
                         DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc);
@@ -2321,6 +2350,16 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         MessageBox(hwnd, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
                     }
                     goto refresh_window;
+                case 110: { // Show Current Time toggle
+                    CLOCK_SHOW_CURRENT_TIME = !CLOCK_SHOW_CURRENT_TIME;
+                    if (CLOCK_SHOW_CURRENT_TIME) {
+                        KillTimer(hwnd, 1);  // 停止倒计时定时器
+                        elapsed_time = 0;
+                        CLOCK_LAST_TIME_UPDATE = time(NULL);
+                    }
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    break;
+                }
             }
             break;
 
