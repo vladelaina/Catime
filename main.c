@@ -419,8 +419,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     if (SetTimer(hwnd, 1, 1000, NULL) == 0) {
     }
-    if (SetTimer(hwnd, 2, 2000, NULL) == 0) {
-    }
 
     ShowWindow(hwnd, nCmdShow);
     UpdateWindow(hwnd);
@@ -1629,7 +1627,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             if (wp == 3) {  // 缩放更新计时器
                 KillTimer(hwnd, 3);
                 SaveWindowSettings(hwnd);
-            } else if (wp == 2) {
+            } else if (wp == 1) {  // 使用定时器1来处理所有时间更新
                 if (CLOCK_SHOW_CURRENT_TIME) {
                     static DWORD lastTick = 0;
                     DWORD currentTick = GetTickCount();
@@ -2351,6 +2349,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         KillTimer(hwnd, 1);  // 停止倒计时定时器
                         elapsed_time = 0;
                         CLOCK_LAST_TIME_UPDATE = time(NULL);
+                        SetTimer(hwnd, 1, 1000, NULL);  // 重新启动定时器
                     }
                     InvalidateRect(hwnd, NULL, TRUE);
                     break;
