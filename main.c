@@ -1706,6 +1706,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc);
 
                         if (inputText[0] == '\0') {
+                            // 如果输入为空，不要开始倒计时，直接返回
                             break;
                         }
 
@@ -1714,8 +1715,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             CLOCK_TOTAL_TIME = total_seconds;
                             elapsed_time = 0;
                             message_shown = 0;
-                            InvalidateRect(hwnd, NULL, TRUE);  // 立即更新显示
-                            SetTimer(hwnd, 1, 1000, NULL);  // 设置定时器在显示更新后
+                            InvalidateRect(hwnd, NULL, TRUE);
+                            SetTimer(hwnd, 1, 1000, NULL);
                             break;
                         } else {
                             MessageBox(hwnd, 
@@ -1726,7 +1727,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                                 "25 30m = 25 hours 30 minutes \n"
                                 "1 30 20 = 1 hour 30 minutes 20 seconds",
                                 "Input Format",
-                                MB_OK);  // 移除了 MB_ICONINFORMATION
+                                MB_OK);
                         }
                     }
                     break;
@@ -1850,13 +1851,20 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 default: {
                     int cmd = LOWORD(wp);
                     if (cmd >= 102 && cmd < 102 + time_options_count) {
+                        // 如果当前是显示时间模式，先关闭它
+                        if (CLOCK_SHOW_CURRENT_TIME) {
+                            CLOCK_SHOW_CURRENT_TIME = FALSE;
+                            CLOCK_LAST_TIME_UPDATE = 0;
+                        }
+                        
+                        // 设置倒计时
                         int index = cmd - 102;
                         CLOCK_TOTAL_TIME = time_options[index] * 60;
                         elapsed_time = 0;
                         message_shown = 0;
-                        InvalidateRect(hwnd, NULL, TRUE);  // 立即更新显示
-                        SetTimer(hwnd, 1, 1000, NULL);  // 设置定时器在显示更新后
-                        break;  // 移除 goto start_timer
+                        InvalidateRect(hwnd, NULL, TRUE);
+                        SetTimer(hwnd, 1, 1000, NULL);
+                        break;
                     }
                     
                     if (cmd >= 201 && cmd < 201 + COLOR_OPTIONS_COUNT) {
