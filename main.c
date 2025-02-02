@@ -1382,12 +1382,13 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 float relativeX = (float)(mousePos.x - windowRect.left) / oldWidth;
                 float relativeY = (float)(mousePos.y - windowRect.top) / oldHeight;
                 
-                // 使用更小的缩放步长使动画更平滑
+                // 使用更合适的缩放步长
+                float scaleFactor = 1.1f;  // 改回更大的缩放比例
                 if (delta > 0) {
-                    CLOCK_FONT_SCALE_FACTOR *= 1.05f;  // 改为更小的缩放比例
+                    CLOCK_FONT_SCALE_FACTOR *= scaleFactor;
                     CLOCK_WINDOW_SCALE = CLOCK_FONT_SCALE_FACTOR;
                 } else {
-                    CLOCK_FONT_SCALE_FACTOR /= 1.05f;  // 改为更小的缩放比例
+                    CLOCK_FONT_SCALE_FACTOR /= scaleFactor;
                     CLOCK_WINDOW_SCALE = CLOCK_FONT_SCALE_FACTOR;
                 }
                 
@@ -1402,7 +1403,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 
                 if (old_scale != CLOCK_FONT_SCALE_FACTOR) {
-                    // 直接使用缩放比例计算新的窗口大小，而不是重新创建字体测量
+                    // 直接使用缩放比例计算新的窗口大小
                     int newWidth = (int)(oldWidth * (CLOCK_FONT_SCALE_FACTOR / old_scale));
                     int newHeight = (int)(oldHeight * (CLOCK_FONT_SCALE_FACTOR / old_scale));
                     
@@ -1410,21 +1411,22 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     int newX = mousePos.x - (int)(relativeX * newWidth);
                     int newY = mousePos.y - (int)(relativeY * newHeight);
                     
-                    // 使用 SWP_NOREDRAW 标志来减少闪烁
+                    // 使用 SWP_NOREDRAW 来避免闪烁
                     SetWindowPos(hwnd, NULL, 
                         newX, newY,
                         newWidth, newHeight,
                         SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOREDRAW);
                     
-                    // 延迟重绘和保存设置
+                    // 使用累积计时器来延迟保存设置
                     static UINT_PTR timerId = 0;
                     if (timerId) {
                         KillTimer(hwnd, timerId);
                     }
-                    timerId = SetTimer(hwnd, 3, 50, NULL);  // 50ms后更新
+                    timerId = SetTimer(hwnd, 3, 200, NULL);  // 增加延迟到200ms
                     
-                    // 立即更新窗口内容
-                    RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE | RDW_UPDATENOW);
+                    // 立即重绘窗口
+                    InvalidateRect(hwnd, NULL, FALSE);
+                    UpdateWindow(hwnd);
                 }
             }
             break;
