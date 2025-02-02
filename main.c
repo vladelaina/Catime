@@ -2342,6 +2342,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         elapsed_time = 0;
                         CLOCK_LAST_TIME_UPDATE = time(NULL);
                         SetTimer(hwnd, 1, 1000, NULL);  // 重新启动定时器
+                    } else {
+                        KillTimer(hwnd, 1);  // 停止当前时间定时器
+                        elapsed_time = CLOCK_TOTAL_TIME;  // 设置为总时间，这样就不会显示任何内容
+                        message_shown = 1;  // 防止触发超时动作
                     }
                     InvalidateRect(hwnd, NULL, TRUE);
                     break;
