@@ -1218,21 +1218,11 @@ void FormatTime(int remaining_time, char* time_text) {
         }
 
         if (CLOCK_SHOW_SECONDS) {
-            if (CLOCK_USE_24HOUR) {
-                sprintf(time_text, "%02d:%02d:%02d", 
-                        hour, tm_info->tm_min, tm_info->tm_sec);
-            } else {
-                sprintf(time_text, "%02d:%02d:%02d", 
-                        hour, tm_info->tm_min, tm_info->tm_sec);
-            }
+            sprintf(time_text, "%d:%02d:%02d", 
+                    hour, tm_info->tm_min, tm_info->tm_sec);
         } else {
-            if (CLOCK_USE_24HOUR) {
-                sprintf(time_text, "%02d:%02d", 
-                        hour, tm_info->tm_min);
-            } else {
-                sprintf(time_text, "%02d:%02d", 
-                        hour, tm_info->tm_min);
-            }
+            sprintf(time_text, "%d:%02d", 
+                    hour, tm_info->tm_min);
         }
         return;
     }
