@@ -15,12 +15,6 @@ END
 
 IDI_CATIME ICON "catime.ico"
 
-// Apache License 2.0 fonts
-IDR_FONT_ARIMO              FONT "font/Apache License 2.0/Arimo Nerd Font.ttf"
-IDR_FONT_COUSINE            FONT "font/Apache License 2.0/Cousine Nerd Font.ttf"
-IDR_FONT_DROIDSANS         FONT "font/Apache License 2.0/DroidSansM Nerd Font Mono.ttf"
-IDR_FONT_ROBOTOMONO        FONT "font/Apache License 2.0/RobotoMono Nerd Font Propo Md.ttf"
-
 // CC BY-SA 4.0 fonts
 IDR_FONT_BIGBLUE           FONT "font/CC BY-SA 4.0/BigBlueTermPlus Nerd Font.ttf"
 
@@ -28,46 +22,15 @@ IDR_FONT_BIGBLUE           FONT "font/CC BY-SA 4.0/BigBlueTermPlus Nerd Font.ttf
 IDR_FONT_HEAVYDATA         FONT "font/HeavyData Nerd Font.ttf"
 
 // MIT fonts
-IDR_FONT_AGAVE             FONT "font/MIT/Agave Nerd Font.ttf"
-IDR_FONT_COMICSHANNS       FONT "font/MIT/ComicShannsMono Nerd Font.ttf"
-IDR_FONT_HACK              FONT "font/MIT/Hack Nerd Font.ttf"
 IDR_FONT_PROFONT           FONT "font/MIT/ProFont IIx Nerd Font.ttf"
 IDR_FONT_PROGGYCLEAN       FONT "font/MIT/ProggyCleanSZ Nerd Font Propo.ttf"
 
-// OFL fonts
-IDR_FONT_0XPROTO           FONT "font/OFL/0xProto Nerd Font.ttf"
-IDR_FONT_ANONYMICE         FONT "font/OFL/AnonymiceProNerdFont-Regular.ttf"
-
 // SIL fonts
-IDR_FONT_AURULENT          FONT "font/SIL/AurulentSansM Nerd Font.ttf"
-IDR_FONT_BLEX              FONT "font/SIL/BlexMono Nerd Font.ttf"
-IDR_FONT_CASKAYDIA_COVE    FONT "font/SIL/CaskaydiaCove NF SemiLight.ttf"
-IDR_FONT_CASKAYDIA_MONO    FONT "font/SIL/CaskaydiaMono NF SemiLight.ttf"
-IDR_FONT_CODENEWROMAN      FONT "font/SIL/CodeNewRoman Nerd Font.ttf"
-IDR_FONT_D2CODING          FONT "font/SIL/D2CodingLigature Nerd Font.ttf"
 IDR_FONT_DADDYTIME         FONT "font/SIL/DaddyTimeMono Nerd Font Propo.ttf"
 IDR_FONT_DEPARTURE         FONT "font/SIL/DepartureMono Nerd Font Propo.ttf"
 IDR_FONT_ENVYCODE          FONT "font/SIL/EnvyCodeR Nerd Font.ttf"
-IDR_FONT_FANTASQUE         FONT "font/SIL/FantasqueSansM Nerd Font.ttf"
-IDR_FONT_FIRACODE          FONT "font/SIL/FiraCode Nerd Font.ttf"
-IDR_FONT_FIRAMONO          FONT "font/SIL/FiraMono Nerd Font Propo.ttf"
-IDR_FONT_GEIST             FONT "font/SIL/GeistMono NFM.ttf"
-IDR_FONT_HASKLUG           FONT "font/SIL/Hasklug Nerd Font.ttf"
-IDR_FONT_HURMIT            FONT "font/SIL/Hurmit Nerd Font Propo.ttf"
-IDR_FONT_IMWRITING         FONT "font/SIL/iMWritingQuat Nerd Font.ttf"
-IDR_FONT_INCONSOLATA_GO    FONT "font/SIL/InconsolataGo Nerd Font.ttf"
-IDR_FONT_INCONSOLATA_LGC   FONT "font/SIL/Inconsolata LGC Nerd Font.ttf"
-IDR_FONT_INCONSOLATA       FONT "font/SIL/Inconsolata Nerd Font.ttf"
-IDR_FONT_INTONE            FONT "font/SIL/IntoneMono NF.ttf"
-IDR_FONT_IOSEVKA           FONT "font/SIL/Iosevka NF SemiBold.ttf"
 IDR_FONT_IOSEVKA_TERM      FONT "font/SIL/IosevkaTermSlab NFP Medium.ttf"
-IDR_FONT_JETBRAINS         FONT "font/SIL/JetBrainsMonoNL NFP SemiBold.ttf"
-IDR_FONT_LEKTON            FONT "font/SIL/Lekton Nerd Font.ttf"
-IDR_FONT_LILEX             FONT "font/SIL/Lilex Nerd Font.ttf"
 IDR_FONT_LIBERATION        FONT "font/SIL/LiterationSerif Nerd Font.ttf"
-IDR_FONT_MARTIAN           FONT "font/SIL/MartianMono NFM Cond.ttf"
-IDR_FONT_MONONOKI          FONT "font/SIL/Mononoki Nerd Font.ttf"
-IDR_FONT_OVERPASS          FONT "font/SIL/OverpassM Nerd Font Mono SemBd.ttf"
 IDR_FONT_RECMONO           FONT "font/SIL/RecMonoCasual Nerd Font Mono.ttf"
 IDR_FONT_TERMINESS         FONT "font/SIL/Terminess Nerd Font Propo.ttf"
 IDR_FONT_VICTORMONO        FONT "font/SIL/VictorMono NFP Medium.ttf"
