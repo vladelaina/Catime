@@ -1860,8 +1860,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_VERSION: {
                     char versionMsg[256];
-                    snprintf(versionMsg, sizeof(versionMsg), "Catime Version %s", CATIME_VERSION);
-                    MessageBox(hwnd, versionMsg, "Version Information", MB_OK | MB_ICONINFORMATION);
+                    snprintf(versionMsg, sizeof(versionMsg), "Current version  %s", CATIME_VERSION);
+                    MessageBox(hwnd, versionMsg, "Version Information", MB_OK);  // 移除 MB_ICONINFORMATION 标志
                     break;
                 }
                 case CLOCK_IDM_GITHUB: {
