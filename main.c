@@ -9,7 +9,7 @@
 #include <dwmapi.h>
 #include "resource.h"
 
-#define CATIME_VERSION "1.0.1"  
+#define CATIME_VERSION "1.0.2"  
 #define VK_MEDIA_PLAY_PAUSE 0xB3
 #define VK_MEDIA_STOP 0xB2
 #define KEYEVENTF_KEYUP 0x0002
@@ -1325,8 +1325,20 @@ void ShowColorMenu(HWND hwnd) {
 
     for (int i = 0; i < sizeof(fontResources) / sizeof(fontResources[0]); i++) {
         BOOL isCurrentFont = strcmp(FONT_FILE_NAME, fontResources[i].fontName) == 0;
+        
+        // 创建一个临时缓冲区来存储没有.ttf后缀的字体名称
+        char displayName[100];
+        strncpy(displayName, fontResources[i].fontName, sizeof(displayName) - 1);
+        displayName[sizeof(displayName) - 1] = '\0';
+        
+        // 移除.ttf后缀
+        char* dot = strstr(displayName, ".ttf");
+        if (dot) {
+            *dot = '\0';
+        }
+        
         AppendMenu(hFontSubMenu, MF_STRING | (isCurrentFont ? MF_CHECKED : MF_UNCHECKED),
-                  fontResources[i].menuId, fontResources[i].fontName);
+                  fontResources[i].menuId, displayName);
     }
 
     AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hColorSubMenu, "Color");
