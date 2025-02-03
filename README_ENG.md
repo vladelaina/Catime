@@ -4,7 +4,7 @@ Catime is a simple Windows countdown timer (Pomodoro clock) with a transparent i
 
 ![Catime](Images/catime.gif)
 
-**Simplified Chinese** | [**English**](./README_ENG.md)
+[**中文简体**](./README.md) | **English**
 
 ## Features
 
