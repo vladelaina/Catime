@@ -27,6 +27,5 @@ Settings are saved in `%LOCALAPPDATA%\Catime\config.txt`
 
 ## 💖[Support](support.md)
 
-If you like this project, consider buying the author a coffee (*ゝω・)ﾉ Thanks!
-
+If you really like this project, feel free to donate any amount. Your support is my motivation (*ゝω・)ﾉ Thanks!
 
