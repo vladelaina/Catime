@@ -18,6 +18,7 @@
 // 添加菜单ID定义
 #define CLOCK_IDM_VERSION 131
 #define CLOCK_IDM_GITHUB 132
+#define CLOCK_IDM_CHECK_UPDATE 133  // 添加新的菜单ID
 
 void PauseMediaPlayback(void);
 
@@ -1340,7 +1341,10 @@ void ShowColorMenu(HWND hwnd) {
     
     // 创建About子菜单
     HMENU hAboutMenu = CreatePopupMenu();
-    AppendMenu(hAboutMenu, MF_STRING, CLOCK_IDM_VERSION, "Version");
+    char version_text[32];
+    snprintf(version_text, sizeof(version_text), "Version: %s", CATIME_VERSION);  // 添加Version:前缀
+    AppendMenu(hAboutMenu, MF_STRING | MF_DISABLED, 0, version_text);  // 使用格式化后的版本文本
+    AppendMenu(hAboutMenu, MF_STRING, CLOCK_IDM_CHECK_UPDATE, "Check for Updates");
     AppendMenu(hAboutMenu, MF_STRING, CLOCK_IDM_GITHUB, "GitHub");
     
     // 将About作为弹出式菜单
@@ -1838,6 +1842,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_GITHUB: {
                     ShellExecuteA(NULL, "open", CLOCK_ABOUT_URL, NULL, NULL, SW_SHOWNORMAL);
+                    break;
+                }
+                case CLOCK_IDM_CHECK_UPDATE: {
+                    ShellExecuteA(NULL, "open", "https://github.com/vladelaina/Catime/releases", NULL, NULL, SW_SHOWNORMAL);
                     break;
                 }
                 default: {
