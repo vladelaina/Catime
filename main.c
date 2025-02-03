@@ -9,7 +9,7 @@
 #include <dwmapi.h>
 #include "resource.h"
 
-#define CATIME_VERSION "1.0.1"  
+#define CATIME_VERSION "1.0.2"  
 #define VK_MEDIA_PLAY_PAUSE 0xB3
 #define VK_MEDIA_STOP 0xB2
 #define KEYEVENTF_KEYUP 0x0002
@@ -201,52 +201,19 @@ typedef struct {
 } FontResource;
 
 FontResource fontResources[] = {
-    {CLOCK_IDC_FONT_AGAVE, IDR_FONT_AGAVE, "Agave Nerd Font.ttf"},
-    {CLOCK_IDC_FONT_ANONYMICE, IDR_FONT_ANONYMICE, "AnonymiceProNerdFont-Regular.ttf"},
-    {CLOCK_IDC_FONT_AURULENT, IDR_FONT_AURULENT, "AurulentSansM Nerd Font.ttf"},
-    {CLOCK_IDC_FONT_BIGBLUE, IDR_FONT_BIGBLUE, "BigBlueTermPlus Nerd Font.ttf"},
-    {CLOCK_IDC_FONT_COMIC_SHANNS, IDR_FONT_COMIC_SHANNS, "ComicShannsMono Nerd Font.ttf"},
-    {CLOCK_IDC_FONT_HACK, IDR_FONT_HACK, "Hack Nerd Font.ttf"},
-    {CLOCK_IDC_FONT_HEAVYDATA, IDR_FONT_HEAVYDATA, "HeavyData Nerd Font.ttf"},
-    {CLOCK_IDC_FONT_PROFONT, IDR_FONT_PROFONT, "ProFont IIx Nerd Font.ttf"},
-    {CLOCK_IDC_FONT_ARIMO, IDR_FONT_ARIMO, "Arimo Nerd Font.ttf"},
-    {CLOCK_IDC_FONT_COUSINE, IDR_FONT_COUSINE, "Cousine Nerd Font.ttf"},
-    {CLOCK_IDC_FONT_DROIDSANS, IDR_FONT_DROIDSANS, "DroidSansM Nerd Font Mono.ttf"},
-    {CLOCK_IDC_FONT_ROBOTOMONO, IDR_FONT_ROBOTOMONO, "RobotoMono Nerd Font Propo Md.ttf"},
-    {CLOCK_IDC_FONT_0XPROTO, IDR_FONT_0XPROTO, "0xProto Nerd Font.ttf"},
-    {CLOCK_IDC_FONT_PROGGYCLEAN, IDR_FONT_PROGGYCLEAN, "ProggyCleanSZ Nerd Font Propo.ttf"},
-    {CLOCK_IDC_FONT_BLEX, IDR_FONT_BLEX, "BlexMono Nerd Font.ttf"},
-    {CLOCK_IDC_FONT_CASKAYDIA_COVE, IDR_FONT_CASKAYDIA_COVE, "CaskaydiaCove NF SemiLight.ttf"},
-    {CLOCK_IDC_FONT_CASKAYDIA_MONO, IDR_FONT_CASKAYDIA_MONO, "CaskaydiaMono NF SemiLight.ttf"},
-    {CLOCK_IDC_FONT_CODENEWROMAN, IDR_FONT_CODENEWROMAN, "CodeNewRoman Nerd Font.ttf"},
-    {CLOCK_IDC_FONT_D2CODING, IDR_FONT_D2CODING, "D2CodingLigature Nerd Font.ttf"},
-    {CLOCK_IDC_FONT_DADDYTIME, IDR_FONT_DADDYTIME, "DaddyTimeMono Nerd Font Propo.ttf"},
-    {CLOCK_IDC_FONT_DEPARTURE, IDR_FONT_DEPARTURE, "DepartureMono Nerd Font Propo.ttf"},
-    {CLOCK_IDC_FONT_ENVYCODE, IDR_FONT_ENVYCODE, "EnvyCodeR Nerd Font.ttf"},
-    {CLOCK_IDC_FONT_FANTASQUE, IDR_FONT_FANTASQUE, "FantasqueSansM Nerd Font.ttf"},
-    {CLOCK_IDC_FONT_FIRACODE, IDR_FONT_FIRACODE, "FiraCode Nerd Font.ttf"},
-    {CLOCK_IDC_FONT_FIRAMONO, IDR_FONT_FIRAMONO, "FiraMono Nerd Font Propo.ttf"},
-    {CLOCK_IDC_FONT_GEIST, IDR_FONT_GEIST, "GeistMono NFM.ttf"},
-    {CLOCK_IDC_FONT_HASKLUG, IDR_FONT_HASKLUG, "Hasklug Nerd Font.ttf"},
-    {CLOCK_IDC_FONT_HURMIT, IDR_FONT_HURMIT, "Hurmit Nerd Font Propo.ttf"},
-    {CLOCK_IDC_FONT_IMWRITING, IDR_FONT_IMWRITING, "iMWritingQuat Nerd Font.ttf"},
-    {CLOCK_IDC_FONT_INCONSOLATA_GO, IDR_FONT_INCONSOLATA_GO, "InconsolataGo Nerd Font.ttf"},
-    {CLOCK_IDC_FONT_INCONSOLATA_LGC, IDR_FONT_INCONSOLATA_LGC, "Inconsolata LGC Nerd Font.ttf"},
-    {CLOCK_IDC_FONT_INCONSOLATA, IDR_FONT_INCONSOLATA, "Inconsolata Nerd Font.ttf"},
-    {CLOCK_IDC_FONT_INTONE, IDR_FONT_INTONE, "IntoneMono NF.ttf"},
-    {CLOCK_IDC_FONT_IOSEVKA, IDR_FONT_IOSEVKA, "Iosevka NF SemiBold.ttf"},
-    {CLOCK_IDC_FONT_IOSEVKA_TERM, IDR_FONT_IOSEVKA_TERM, "IosevkaTermSlab NFP Medium.ttf"},
-    {CLOCK_IDC_FONT_JETBRAINS, IDR_FONT_JETBRAINS, "JetBrainsMonoNL NFP SemiBold.ttf"},
-    {CLOCK_IDC_FONT_LEKTON, IDR_FONT_LEKTON, "Lekton Nerd Font.ttf"},
-    {CLOCK_IDC_FONT_LILEX, IDR_FONT_LILEX, "Lilex Nerd Font.ttf"},
-    {CLOCK_IDC_FONT_LIBERATION, IDR_FONT_LIBERATION, "LiterationSerif Nerd Font.ttf"},
-    {CLOCK_IDC_FONT_MARTIAN, IDR_FONT_MARTIAN, "MartianMono NFM Cond.ttf"},
-    {CLOCK_IDC_FONT_MONONOKI, IDR_FONT_MONONOKI, "Mononoki Nerd Font.ttf"},
-    {CLOCK_IDC_FONT_OVERPASS, IDR_FONT_OVERPASS, "OverpassM Nerd Font Mono SemBd.ttf"},
-    {CLOCK_IDC_FONT_RECMONO, IDR_FONT_RECMONO, "RecMonoCasual Nerd Font Mono.ttf"},
-    {CLOCK_IDC_FONT_TERMINESS, IDR_FONT_TERMINESS, "Terminess Nerd Font Propo.ttf"},
     {CLOCK_IDC_FONT_VICTORMONO, IDR_FONT_VICTORMONO, "VictorMono NFP Medium.ttf"},
+    {CLOCK_IDC_FONT_LIBERATION, IDR_FONT_LIBERATION, "LiterationSerif Nerd Font.ttf"},
     {CLOCK_IDC_FONT_ZEDMONO, IDR_FONT_ZEDMONO, "ZedMono NF.ttf"},
+    {CLOCK_IDC_FONT_RECMONO, IDR_FONT_RECMONO, "RecMonoCasual Nerd Font Mono.ttf"},
+    {CLOCK_IDC_FONT_IOSEVKA_TERM, IDR_FONT_IOSEVKA_TERM, "IosevkaTermSlab NFP Medium.ttf"},
+    {CLOCK_IDC_FONT_ENVYCODE, IDR_FONT_ENVYCODE, "EnvyCodeR Nerd Font.ttf"},
+    {CLOCK_IDC_FONT_DADDYTIME, IDR_FONT_DADDYTIME, "DaddyTimeMono Nerd Font Propo.ttf"},
+    {CLOCK_IDC_FONT_PROFONT, IDR_FONT_PROFONT, "ProFont IIx Nerd Font.ttf"},
+    {CLOCK_IDC_FONT_HEAVYDATA, IDR_FONT_HEAVYDATA, "HeavyData Nerd Font.ttf"},
+    {CLOCK_IDC_FONT_BIGBLUE, IDR_FONT_BIGBLUE, "BigBlueTermPlus Nerd Font.ttf"},
+    {CLOCK_IDC_FONT_PROGGYCLEAN, IDR_FONT_PROGGYCLEAN, "ProggyCleanSZ Nerd Font Propo.ttf"},
+    {CLOCK_IDC_FONT_DEPARTURE, IDR_FONT_DEPARTURE, "DepartureMono Nerd Font Propo.ttf"},
+    {CLOCK_IDC_FONT_TERMINESS, IDR_FONT_TERMINESS, "Terminess Nerd Font Propo.ttf"},
     {CLOCK_IDC_FONT_GOHUFONT, IDR_FONT_GOHUFONT, "GohuFont uni11 Nerd Font Mono.ttf"}
 };
 
