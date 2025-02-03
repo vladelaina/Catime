@@ -14,9 +14,17 @@
 #define VK_MEDIA_STOP 0xB2
 #define KEYEVENTF_KEYUP 0x0002
 
+// 添加更新地址定义
+#define UPDATE_URL_GITHUB    "https://github.com/vladelaina/Catime/releases"
+#define UPDATE_URL_123PAN    "https://www.123684.com/s/ruESjv-2CZUA"
+#define UPDATE_URL_LANZOU    "https://wwrx.lanzoup.com/b00hqiiskj"
+
 // 添加菜单ID定义
 #define CLOCK_IDM_VERSION 131
 #define CLOCK_IDM_CHECK_UPDATE 133  // 添加新的菜单ID
+#define CLOCK_IDM_UPDATE_GITHUB    134
+#define CLOCK_IDM_UPDATE_123PAN    135
+#define CLOCK_IDM_UPDATE_LANZOU    136
 
 void PauseMediaPlayback(void);
 
@@ -1351,7 +1359,15 @@ void ShowColorMenu(HWND hwnd) {
     char version_text[32];
     snprintf(version_text, sizeof(version_text), "Version: %s", CATIME_VERSION);  // 添加Version:前缀
     AppendMenu(hAboutMenu, MF_STRING | MF_DISABLED, 0, version_text);  // 使用格式化后的版本文本
-    AppendMenu(hAboutMenu, MF_STRING, CLOCK_IDM_CHECK_UPDATE, "Check for Updates");
+
+    // 创建Check for Updates子菜单
+    HMENU hUpdateMenu = CreatePopupMenu();
+    AppendMenu(hUpdateMenu, MF_STRING, CLOCK_IDM_UPDATE_GITHUB, "GitHub");
+    AppendMenu(hUpdateMenu, MF_STRING, CLOCK_IDM_UPDATE_123PAN, "123pan");
+    AppendMenu(hUpdateMenu, MF_STRING, CLOCK_IDM_UPDATE_LANZOU, "Lanzouyun (pwd: 1234)");
+
+    // 将Check for Updates作为子菜单
+    AppendMenu(hAboutMenu, MF_POPUP, (UINT_PTR)hUpdateMenu, "Check for Updates");
     
     // 将About作为弹出式菜单
     AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hAboutMenu, "About");
@@ -1839,7 +1855,19 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_CHECK_UPDATE: {
-                    ShellExecuteA(NULL, "open", "https://github.com/vladelaina/Catime/releases", NULL, NULL, SW_SHOWNORMAL);
+                    ShellExecuteA(NULL, "open", UPDATE_URL_GITHUB, NULL, NULL, SW_SHOWNORMAL);
+                    break;
+                }
+                case CLOCK_IDM_UPDATE_GITHUB: {
+                    ShellExecuteA(NULL, "open", UPDATE_URL_GITHUB, NULL, NULL, SW_SHOWNORMAL);
+                    break;
+                }
+                case CLOCK_IDM_UPDATE_123PAN: {
+                    ShellExecuteA(NULL, "open", UPDATE_URL_123PAN, NULL, NULL, SW_SHOWNORMAL);  // 修正拼写错误
+                    break;
+                }
+                case CLOCK_IDM_UPDATE_LANZOU: {
+                    ShellExecuteA(NULL, "open", UPDATE_URL_LANZOU, NULL, NULL, SW_SHOWNORMAL);
                     break;
                 }
                 default: {
