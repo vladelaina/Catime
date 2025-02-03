@@ -10,6 +10,7 @@
 #include "resource.h"
 
 #define CATIME_VERSION "1.0.2"  
+#define CATIME_RELEASE_DATE "2024-01-14"  // 添加发布日期
 #define VK_MEDIA_PLAY_PAUSE 0xB3
 #define VK_MEDIA_STOP 0xB2
 #define KEYEVENTF_KEYUP 0x0002
@@ -1828,9 +1829,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_VERSION: {
-                    char versionMsg[256];
-                    snprintf(versionMsg, sizeof(versionMsg), "Current version  %s", CATIME_VERSION);
-                    MessageBox(hwnd, versionMsg, "Version Information", MB_OK);  // 移除 MB_ICONINFORMATION 标志
+                    char version_info[256];
+                    snprintf(version_info, sizeof(version_info), 
+                        "Catime %s\nReleased: %s", 
+                        CATIME_VERSION, CATIME_RELEASE_DATE);
+                    MessageBox(hwnd, version_info, "Version Info", MB_OK);
                     break;
                 }
                 case CLOCK_IDM_GITHUB: {
