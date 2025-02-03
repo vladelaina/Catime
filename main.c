@@ -9,9 +9,14 @@
 #include <dwmapi.h>
 #include "resource.h"
 
+#define CATIME_VERSION "1.0.1"  
 #define VK_MEDIA_PLAY_PAUSE 0xB3
 #define VK_MEDIA_STOP 0xB2
 #define KEYEVENTF_KEYUP 0x0002
+
+// 添加菜单ID定义
+#define CLOCK_IDM_VERSION 131
+#define CLOCK_IDM_GITHUB 132
 
 void PauseMediaPlayback(void);
 
@@ -342,10 +347,6 @@ BOOL CLOCK_SHOW_SECONDS = TRUE;
 #define CLOCK_IDM_SHOW_CURRENT_TIME 150
 #define CLOCK_IDM_24HOUR_FORMAT    151
 #define CLOCK_IDM_SHOW_SECONDS     152
-
-// 在文件开头的宏定义区域添加版本信息
-#define CATIME_VERSION "1.0.0"
-#define CLOCK_IDM_VERSION 131  // 添加新的菜单ID
 
 // 在宏定义区域添加新的菜单ID
 #define CLOCK_IDM_GITHUB 132  // 添加GitHub菜单ID
