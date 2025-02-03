@@ -1,4 +1,4 @@
-# <img src="Images/catime.png" width="5%" style="vertical-align: middle;"> Catime
+# Catime
 
 Catime 是一个简洁的 Windows 倒计时工具(番茄时钟)，具有透明界面和丰富的自定义选项。
 
