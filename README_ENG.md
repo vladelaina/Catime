@@ -23,6 +23,8 @@ Catime is a simple Windows countdown timer (Pomodoro clock) with a transparent i
 ### Configuration File
 Settings are saved in `%LOCALAPPDATA%\Catime\config.txt`
 
+### Reference Video: <img src="https://www.bilibili.com/favicon.ico" width="20" height="20"> [BiliBii](https://www.bilibili.com/video/BV1ztFeeQEYP)
+
 ## 💖[Support](support.md)
 
 If you like this project, consider buying the author a coffee (*ゝω・)ﾉ Thanks!
