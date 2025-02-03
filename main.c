@@ -1831,7 +1831,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDM_VERSION: {
                     char version_info[256];
                     snprintf(version_info, sizeof(version_info), 
-                        "Catime %s\nReleased: %s", 
+                        "Version: %s\nReleased: %s", 
                         CATIME_VERSION, CATIME_RELEASE_DATE);
                     MessageBox(hwnd, version_info, "Version Info", MB_OK);
                     break;
