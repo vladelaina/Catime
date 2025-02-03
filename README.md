@@ -1,6 +1,7 @@
 # Catime
 
 Catime 是一个简洁的 Windows 倒计时工具(番茄时钟)，具有透明界面和丰富的自定义选项。
+Catime is a minimalist Windows countdown timer (Pomodoro clock) with transparent interface and rich customization options.
 
 ![Catime](Images/catime.gif)
 
