@@ -9,7 +9,7 @@
 #include <dwmapi.h>
 #include "resource.h"
 
-#define CATIME_VERSION "1.0.2"  
+#define CATIME_VERSION "1.0.1"  
 #define VK_MEDIA_PLAY_PAUSE 0xB3
 #define VK_MEDIA_STOP 0xB2
 #define KEYEVENTF_KEYUP 0x0002
