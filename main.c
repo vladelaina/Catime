@@ -2411,17 +2411,23 @@ void SetBlurBehind(HWND hwnd, BOOL enable) {
 }
 
 void PauseMediaPlayback(void) {
+    // 先发送停止命令
     keybd_event(VK_MEDIA_STOP, 0, 0, 0);
-    Sleep(2);  // 最小延迟
+    Sleep(50);  // 增加延迟确保命令被处理
     keybd_event(VK_MEDIA_STOP, 0, KEYEVENTF_KEYUP, 0);
-    Sleep(5);  // 减少命令间延迟
+    Sleep(50);  // 增加延迟
 
-    for (int i = 0; i < 2; i++) {  // 改回2次循环
-        keybd_event(VK_MEDIA_PLAY_PAUSE, 0, 0, 0);
-        Sleep(2);  // 最小延迟
-        keybd_event(VK_MEDIA_PLAY_PAUSE, 0, KEYEVENTF_KEYUP, 0);
-        Sleep(5);  // 减少命令间延迟
-    }
+    // 再发送暂停命令
+    keybd_event(VK_MEDIA_PLAY_PAUSE, 0, 0, 0);
+    Sleep(50);  // 增加延迟确保命令被处理
+    keybd_event(VK_MEDIA_PLAY_PAUSE, 0, KEYEVENTF_KEYUP, 0);
+    Sleep(50);  // 增加延迟
+
+    // 再发送一次暂停命令以确保
+    keybd_event(VK_MEDIA_PLAY_PAUSE, 0, 0, 0);
+    Sleep(50);
+    keybd_event(VK_MEDIA_PLAY_PAUSE, 0, KEYEVENTF_KEYUP, 0);
+    Sleep(100);  // 最后增加一个较长的延迟，确保命令完全执行完毕
 }
 
 BOOL OpenFileDialog(HWND hwnd, char* filePath, DWORD maxPath) {
