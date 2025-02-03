@@ -10,7 +10,7 @@
 #include "resource.h"
 
 #define CATIME_VERSION "1.0.2"  
-#define CATIME_RELEASE_DATE "2024-01-14"  // 添加发布日期
+#define CATIME_RELEASE_DATE "2024-01-14 (UTC+8)"  // 添加时区说明
 #define VK_MEDIA_PLAY_PAUSE 0xB3
 #define VK_MEDIA_STOP 0xB2
 #define KEYEVENTF_KEYUP 0x0002
