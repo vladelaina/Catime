@@ -9,15 +9,13 @@
 #include <dwmapi.h>
 #include "resource.h"
 
-#define CATIME_VERSION "1.0.2"  
-#define CATIME_RELEASE_DATE "2024-01-14 (UTC+8)"  // 添加时区说明
+#define CATIME_VERSION "1.0.1"  
 #define VK_MEDIA_PLAY_PAUSE 0xB3
 #define VK_MEDIA_STOP 0xB2
 #define KEYEVENTF_KEYUP 0x0002
 
 // 添加菜单ID定义
 #define CLOCK_IDM_VERSION 131
-#define CLOCK_IDM_GITHUB 132
 #define CLOCK_IDM_CHECK_UPDATE 133  // 添加新的菜单ID
 
 void PauseMediaPlayback(void);
@@ -316,9 +314,6 @@ BOOL CLOCK_SHOW_SECONDS = TRUE;
 #define CLOCK_IDM_SHOW_CURRENT_TIME 150
 #define CLOCK_IDM_24HOUR_FORMAT    151
 #define CLOCK_IDM_SHOW_SECONDS     152
-
-// 在宏定义区域添加新的菜单ID
-#define CLOCK_IDM_GITHUB 132  // 添加GitHub菜单ID
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     ReadConfig();
@@ -1345,7 +1340,6 @@ void ShowColorMenu(HWND hwnd) {
     snprintf(version_text, sizeof(version_text), "Version: %s", CATIME_VERSION);  // 添加Version:前缀
     AppendMenu(hAboutMenu, MF_STRING | MF_DISABLED, 0, version_text);  // 使用格式化后的版本文本
     AppendMenu(hAboutMenu, MF_STRING, CLOCK_IDM_CHECK_UPDATE, "Check for Updates");
-    AppendMenu(hAboutMenu, MF_STRING, CLOCK_IDM_GITHUB, "GitHub");
     
     // 将About作为弹出式菜单
     AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hAboutMenu, "About");
@@ -1830,18 +1824,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     RedrawWindow(hwnd, NULL, NULL, 
                         RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
                     
-                    break;
-                }
-                case CLOCK_IDM_VERSION: {
-                    char version_info[256];
-                    snprintf(version_info, sizeof(version_info), 
-                        "Version: %s\nReleased: %s", 
-                        CATIME_VERSION, CATIME_RELEASE_DATE);
-                    MessageBox(hwnd, version_info, "Version Info", MB_OK);
-                    break;
-                }
-                case CLOCK_IDM_GITHUB: {
-                    ShellExecuteA(NULL, "open", CLOCK_ABOUT_URL, NULL, NULL, SW_SHOWNORMAL);
                     break;
                 }
                 case CLOCK_IDM_CHECK_UPDATE: {
