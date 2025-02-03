@@ -18,6 +18,7 @@
 #define UPDATE_URL_GITHUB    "https://github.com/vladelaina/Catime/releases"
 #define UPDATE_URL_123PAN    "https://www.123684.com/s/ruESjv-2CZUA"
 #define UPDATE_URL_LANZOU    "https://wwrx.lanzoup.com/b00hqiiskj"
+#define FEEDBACK_URL        "https://www.bilibili.com/video/BV1ztFeeQEYP"
 
 // 添加菜单ID定义
 #define CLOCK_IDM_VERSION 131
@@ -25,6 +26,7 @@
 #define CLOCK_IDM_UPDATE_GITHUB    134
 #define CLOCK_IDM_UPDATE_123PAN    135
 #define CLOCK_IDM_UPDATE_LANZOU    136
+#define CLOCK_IDM_FEEDBACK 132  // 添加新的菜单ID
 
 void PauseMediaPlayback(void);
 
@@ -1360,6 +1362,9 @@ void ShowColorMenu(HWND hwnd) {
     snprintf(version_text, sizeof(version_text), "Current version: %s", CATIME_VERSION);  // 添加Version:前缀
     AppendMenu(hAboutMenu, MF_STRING | MF_DISABLED, 0, version_text);  // 使用格式化后的版本文本
 
+    // 添加反馈选项
+    AppendMenu(hAboutMenu, MF_STRING, CLOCK_IDM_FEEDBACK, "Feedback");
+
     // 创建Check for Updates子菜单
     HMENU hUpdateMenu = CreatePopupMenu();
     AppendMenu(hUpdateMenu, MF_STRING, CLOCK_IDM_UPDATE_GITHUB, "GitHub");
@@ -1868,6 +1873,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_UPDATE_LANZOU: {
                     ShellExecuteA(NULL, "open", UPDATE_URL_LANZOU, NULL, NULL, SW_SHOWNORMAL);
+                    break;
+                }
+                case CLOCK_IDM_FEEDBACK: {
+                    ShellExecuteA(NULL, "open", FEEDBACK_URL, NULL, NULL, SW_SHOWNORMAL);
                     break;
                 }
                 default: {
