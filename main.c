@@ -14,19 +14,19 @@
 #define VK_MEDIA_STOP 0xB2
 #define KEYEVENTF_KEYUP 0x0002
 
-// 添加更新地址定义
+ 
 #define UPDATE_URL_GITHUB    "https://github.com/vladelaina/Catime/releases"
 #define UPDATE_URL_123PAN    "https://www.123684.com/s/ruESjv-2CZUA"
 #define UPDATE_URL_LANZOU    "https://wwrx.lanzoup.com/b00hqiiskj"
 #define FEEDBACK_URL        "https://www.bilibili.com/video/BV1ztFeeQEYP"
 
-// 添加菜单ID定义
+ 
 #define CLOCK_IDM_VERSION 131
-#define CLOCK_IDM_CHECK_UPDATE 133  // 添加新的菜单ID
+#define CLOCK_IDM_CHECK_UPDATE 133   
 #define CLOCK_IDM_UPDATE_GITHUB    134
 #define CLOCK_IDM_UPDATE_123PAN    135
 #define CLOCK_IDM_UPDATE_LANZOU    136
-#define CLOCK_IDM_FEEDBACK 132  // 添加新的菜单ID
+#define CLOCK_IDM_FEEDBACK 132   
 
 void PauseMediaPlayback(void);
 
@@ -35,15 +35,15 @@ typedef struct {
 } PredefinedColor;
 
 static const PredefinedColor COLOR_OPTIONS[] = {
-    {"#FFFFFF"},  // White
-    {"#FFB6C1"},  // Light Pink
-    {"#6495ED"},  // Cornflower Blue
-    {"#5EFFFF"},  // Bright Cyan
-    {"#98FB98"},  // Pale Green
-    {"#9370DB"},  // Medium Purple
-    {"#7FFFD4"},  // Aquamarine
-    {"#F08080"},  // Light Coral
-    {"#FF7F50"}   // Coral
+    {"#FFFFFF"},   
+    {"#FFB6C1"},   
+    {"#6495ED"},   
+    {"#5EFFFF"},   
+    {"#98FB98"},   
+    {"#9370DB"},   
+    {"#7FFFD4"},   
+    {"#F08080"},   
+    {"#FF7F50"}    
 };
 
 #define COLOR_OPTIONS_COUNT (sizeof(COLOR_OPTIONS) / sizeof(COLOR_OPTIONS[0]))
@@ -186,7 +186,7 @@ typedef enum {
     TIMEOUT_ACTION_LOCK = 1,
     TIMEOUT_ACTION_SHUTDOWN = 2,
     TIMEOUT_ACTION_RESTART = 3,
-    TIMEOUT_ACTION_OPEN_FILE = 4  // 新增
+    TIMEOUT_ACTION_OPEN_FILE = 4   
 } TimeoutActionType;
 
 TimeoutActionType CLOCK_TIMEOUT_ACTION;
@@ -198,7 +198,7 @@ NOTIFYICONDATA nid;
 time_t last_config_time = 0;
 int message_shown = 0;
 char CLOCK_TIMEOUT_TEXT[50] = "";
-char CLOCK_TIMEOUT_FILE_PATH[MAX_PATH] = "";  // 添加这一行
+char CLOCK_TIMEOUT_FILE_PATH[MAX_PATH] = "";   
 
 char FONT_FILE_NAME[100] = "Hack Nerd Font.ttf";
 
@@ -272,7 +272,7 @@ void WriteConfigColor(const char* color_input);
 void WriteConfigFont(const char* font_filename);
 void WriteConfigTimeoutAction(const char* action);
 void WriteConfigEditMode(const char* mode);
-void WriteConfigTimeOptions(const char* options);  // Add this line
+void WriteConfigTimeOptions(const char* options);   
 void FormatTime(int remaining_time, char* time_text);
 void ExitProgram(HWND hwnd);
 void ShowContextMenu(HWND hwnd);
@@ -291,7 +291,7 @@ int CALLBACK EnumFontFamExProc(
     LPARAM lParam
 );
 
-#define MAX_RECENT_FILES 3  // 最多保存3个最近文件
+#define MAX_RECENT_FILES 3   
 typedef struct {
     char path[MAX_PATH];
     char name[MAX_PATH];
@@ -301,26 +301,26 @@ RecentFile CLOCK_RECENT_FILES[MAX_RECENT_FILES];
 int CLOCK_RECENT_FILES_COUNT = 0;
 
 #define CLOCK_ABOUT_URL "https://github.com/vladelaina/Catime"
-#define CLOCK_IDM_ABOUT 130  // 添加菜单ID
+#define CLOCK_IDM_ABOUT 130   
 
-char PREVIEW_FONT_NAME[100] = "";  // 用于存储预览的字体名称
-char PREVIEW_INTERNAL_NAME[100] = "";    // 用于存储预览的字体内部名称
-BOOL IS_PREVIEWING = FALSE;        // 标记是否正在预览
+char PREVIEW_FONT_NAME[100] = "";   
+char PREVIEW_INTERNAL_NAME[100] = "";     
+BOOL IS_PREVIEWING = FALSE;         
 
-char PREVIEW_COLOR[10] = "";  // 用于存储预览的颜色
-BOOL IS_COLOR_PREVIEWING = FALSE;  // 标记是否正在预览颜色
+char PREVIEW_COLOR[10] = "";   
+BOOL IS_COLOR_PREVIEWING = FALSE;   
 
 #define WM_USER_SHELLICON WM_USER + 1
 
 void ShowToastNotification(HWND hwnd, const char* message);
 
-// 在全局变量区域添加
+ 
 BOOL CLOCK_SHOW_CURRENT_TIME = FALSE;
 time_t CLOCK_LAST_TIME_UPDATE = 0;
 BOOL CLOCK_USE_24HOUR = TRUE;
 BOOL CLOCK_SHOW_SECONDS = TRUE;
 
-// 在文件开头的宏定义区域添加新的菜单ID
+ 
 #define CLOCK_IDM_SHOW_CURRENT_TIME 150
 #define CLOCK_IDM_24HOUR_FORMAT    151
 #define CLOCK_IDM_SHOW_SECONDS     152
@@ -443,7 +443,7 @@ void CreateDefaultConfig(const char* config_path) {
     FILE *file = fopen(config_path, "r");
     if (file) {
         fclose(file);
-        return;  // Config file already exists
+        return;   
     }
 
     file = fopen(config_path, "w");
@@ -462,7 +462,7 @@ void CreateDefaultConfig(const char* config_path) {
     fprintf(file, "CLOCK_BASE_FONT_SIZE=20\n");
     fprintf(file, "FONT_FILE_NAME=GohuFont uni11 Nerd Font Mono.ttf\n");
     fprintf(file, "CLOCK_WINDOW_POS_X=%d\n", centerX);
-    fprintf(file, "CLOCK_WINDOW_POS_Y=-7\n");  // 修改这里，将默认值改为-7
+    fprintf(file, "CLOCK_WINDOW_POS_Y=-7\n");   
     fprintf(file, "WINDOW_SCALE=%.2f\n", scale);
     fprintf(file, "CLOCK_DEFAULT_START_TIME=1500\n");
     fprintf(file, "CLOCK_TIME_OPTIONS=25,10,5\n");
@@ -488,7 +488,7 @@ void SaveWindowSettings(HWND hwnd) {
     FILE *fp = fopen(config_path, "r");
     if (!fp) return;
     
-    size_t buffer_size = 8192;  // 初始缓冲区大小
+    size_t buffer_size = 8192;   
     char *config = malloc(buffer_size);
     char *new_config = malloc(buffer_size);
     if (!config || !new_config) {
@@ -741,7 +741,7 @@ void ReadConfig() {
         InvalidateRect(hwnd, NULL, TRUE);
     }
 
-    LoadRecentFiles();  // 添加这一行
+    LoadRecentFiles();   
 }
 
 void WriteConfigColor(const char* color_input) {
@@ -1026,7 +1026,7 @@ int isValidInput(const char* input) {
         }
     }
 
-    return hasDigit;  // 确保至少有一个数字
+    return hasDigit;   
 }
 
 int ParseInput(const char* input, int* total_seconds) {
@@ -1049,7 +1049,7 @@ int ParseInput(const char* input, int* total_seconds) {
     if (token_count == 1) {
         char unit = tolower((unsigned char)tokens[0][strlen(tokens[0]) - 1]);
         if (unit == 'h' || unit == 'm' || unit == 's') {
-            tokens[0][strlen(tokens[0]) - 1] = '\0';  // Remove unit character
+            tokens[0][strlen(tokens[0]) - 1] = '\0';   
             int value = atoi(tokens[0]);
             switch (unit) {
                 case 'h': hours = value; break;
@@ -1062,7 +1062,7 @@ int ParseInput(const char* input, int* total_seconds) {
     } else if (token_count == 2) {
         char unit = tolower((unsigned char)tokens[1][strlen(tokens[1]) - 1]);
         if (unit == 'h' || unit == 'm' || unit == 's') {
-            tokens[1][strlen(tokens[1]) - 1] = '\0';  // Remove unit character
+            tokens[1][strlen(tokens[1]) - 1] = '\0';   
             int value1 = atoi(tokens[0]);
             int value2 = atoi(tokens[1]);
             switch (unit) {
@@ -1092,9 +1092,9 @@ int ParseInput(const char* input, int* total_seconds) {
     *total_seconds = hours * 3600 + minutes * 60 + seconds;
     if (*total_seconds <= 0) return 0;
 
-    if (hours < 0 || hours > 99 ||    // Limit hours to 0-99
-        minutes < 0 || minutes > 59 || // Limit minutes to 0-59
-        seconds < 0 || seconds > 59) { // Limit seconds to 0-59
+    if (hours < 0 || hours > 99 ||     
+        minutes < 0 || minutes > 59 ||  
+        seconds < 0 || seconds > 59) {  
         return 0;
     }
 
@@ -1119,7 +1119,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
             hBackgroundBrush = CreateSolidBrush(RGB(0xF3, 0xF3, 0xF3));
             hEditBrush = CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF));
             hButtonBrush = CreateSolidBrush(RGB(0xFD, 0xFD, 0xFD));
-            return FALSE; // Return FALSE to keep focus on edit control
+            return FALSE;  
         }
 
         case WM_CTLCOLORDLG:
@@ -1195,7 +1195,7 @@ void FormatTime(int remaining_time, char* time_text) {
             } else if (hour > 12) {
                 hour -= 12;
             } else if (hour == 12) {
-                // 保持12
+                 
             }
         }
 
@@ -1217,15 +1217,15 @@ void FormatTime(int remaining_time, char* time_text) {
         sprintf(time_text, "%d:%02d:%02d", hours, minutes, seconds);
     } else if (minutes > 0) {
         if (minutes >= 10) {
-            sprintf(time_text, "    %d:%02d", minutes, seconds);  // 添加四个空格以对齐小时格式
+            sprintf(time_text, "    %d:%02d", minutes, seconds);   
         } else {
-            sprintf(time_text, "    %d:%02d", minutes, seconds);  // 添加四个空格以对齐小时格式
+            sprintf(time_text, "    %d:%02d", minutes, seconds);   
         }
     } else {
         if (seconds < 10) {
-            sprintf(time_text, "          %d", seconds);  // 10个空格（改为10个）
+            sprintf(time_text, "          %d", seconds);   
         } else {
-            sprintf(time_text, "        %d", seconds);  // 8个空格
+            sprintf(time_text, "        %d", seconds);   
         }
     }
 }
@@ -1240,7 +1240,7 @@ void ShowContextMenu(HWND hwnd) {
     HMENU hMenu = CreatePopupMenu();
     AppendMenu(hMenu, MF_STRING, 101, "Set Time");
     
-    // 创建时间显示子菜单
+     
     HMENU hTimeMenu = CreatePopupMenu();
     AppendMenu(hTimeMenu, MF_STRING | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
                CLOCK_IDM_SHOW_CURRENT_TIME, "Show Current Time");
@@ -1250,7 +1250,7 @@ void ShowContextMenu(HWND hwnd) {
     AppendMenu(hTimeMenu, MF_STRING | (CLOCK_SHOW_SECONDS ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_SHOW_SECONDS, "Show Seconds");
     
-    // 添加Time Display菜单项，并根据CLOCK_SHOW_CURRENT_TIME设置选中状态
+     
     AppendMenu(hMenu, MF_POPUP | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
                (UINT_PTR)hTimeMenu, "Time Display");
     AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
@@ -1336,12 +1336,12 @@ void ShowColorMenu(HWND hwnd) {
     for (int i = 0; i < sizeof(fontResources) / sizeof(fontResources[0]); i++) {
         BOOL isCurrentFont = strcmp(FONT_FILE_NAME, fontResources[i].fontName) == 0;
         
-        // 创建一个临时缓冲区来存储没有.ttf后缀的字体名称
+         
         char displayName[100];
         strncpy(displayName, fontResources[i].fontName, sizeof(displayName) - 1);
         displayName[sizeof(displayName) - 1] = '\0';
         
-        // 移除.ttf后缀
+         
         char* dot = strstr(displayName, ".ttf");
         if (dot) {
             *dot = '\0';
@@ -1356,25 +1356,25 @@ void ShowColorMenu(HWND hwnd) {
 
     AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
     
-    // 创建About子菜单
+     
     HMENU hAboutMenu = CreatePopupMenu();
     char version_text[32];
-    snprintf(version_text, sizeof(version_text), "Current version: %s", CATIME_VERSION);  // 添加Version:前缀
-    AppendMenu(hAboutMenu, MF_STRING | MF_DISABLED, 0, version_text);  // 使用格式化后的版本文本
+    snprintf(version_text, sizeof(version_text), "Current version: %s", CATIME_VERSION);   
+    AppendMenu(hAboutMenu, MF_STRING | MF_DISABLED, 0, version_text);   
 
-    // 添加反馈选项
+     
     AppendMenu(hAboutMenu, MF_STRING, CLOCK_IDM_FEEDBACK, "Feedback");
 
-    // 创建Check for Updates子菜单
+     
     HMENU hUpdateMenu = CreatePopupMenu();
     AppendMenu(hUpdateMenu, MF_STRING, CLOCK_IDM_UPDATE_GITHUB, "GitHub");
     AppendMenu(hUpdateMenu, MF_STRING, CLOCK_IDM_UPDATE_123PAN, "123pan");
     AppendMenu(hUpdateMenu, MF_STRING, CLOCK_IDM_UPDATE_LANZOU, "Lanzouyun (pwd: 1234)");
 
-    // 将Check for Updates作为子菜单
+     
     AppendMenu(hAboutMenu, MF_POPUP, (UINT_PTR)hUpdateMenu, "Check for Updates");
     
-    // 将About作为弹出式菜单
+     
     AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hAboutMenu, "About");
     AppendMenu(hMenu, MF_STRING, 200, "Reset");
     AppendMenu(hMenu, MF_STRING, 109, "Exit");
@@ -1430,22 +1430,22 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 int delta = GET_WHEEL_DELTA_WPARAM(wp);
                 float old_scale = CLOCK_FONT_SCALE_FACTOR;
                 
-                // 获取鼠标在屏幕上的位置
+                 
                 POINT mousePos;
                 GetCursorPos(&mousePos);
                 
-                // 获取窗口位置和大小
+                 
                 RECT windowRect;
                 GetWindowRect(hwnd, &windowRect);
                 int oldWidth = windowRect.right - windowRect.left;
                 int oldHeight = windowRect.bottom - windowRect.top;
                 
-                // 计算鼠标相对于窗口左上角的偏移比例
+                 
                 float relativeX = (float)(mousePos.x - windowRect.left) / oldWidth;
                 float relativeY = (float)(mousePos.y - windowRect.top) / oldHeight;
                 
-                // 使用更合适的缩放步长
-                float scaleFactor = 1.1f;  // 改回更大的缩放比例
+                 
+                float scaleFactor = 1.1f;   
                 if (delta > 0) {
                     CLOCK_FONT_SCALE_FACTOR *= scaleFactor;
                     CLOCK_WINDOW_SCALE = CLOCK_FONT_SCALE_FACTOR;
@@ -1454,7 +1454,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     CLOCK_WINDOW_SCALE = CLOCK_FONT_SCALE_FACTOR;
                 }
                 
-                // 限制缩放范围
+                 
                 if (CLOCK_FONT_SCALE_FACTOR < MIN_SCALE_FACTOR) {
                     CLOCK_FONT_SCALE_FACTOR = MIN_SCALE_FACTOR;
                     CLOCK_WINDOW_SCALE = MIN_SCALE_FACTOR;
@@ -1465,28 +1465,28 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 
                 if (old_scale != CLOCK_FONT_SCALE_FACTOR) {
-                    // 直接使用缩放比例计算新的窗口大小
+                     
                     int newWidth = (int)(oldWidth * (CLOCK_FONT_SCALE_FACTOR / old_scale));
                     int newHeight = (int)(oldHeight * (CLOCK_FONT_SCALE_FACTOR / old_scale));
                     
-                    // 计算新的窗口位置，保持鼠标位置相对不变
+                     
                     int newX = mousePos.x - (int)(relativeX * newWidth);
                     int newY = mousePos.y - (int)(relativeY * newHeight);
                     
-                    // 使用 SWP_NOREDRAW 来避免闪烁
+                     
                     SetWindowPos(hwnd, NULL, 
                         newX, newY,
                         newWidth, newHeight,
                         SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOREDRAW);
                     
-                    // 使用累积计时器来延迟保存设置
+                     
                     static UINT_PTR timerId = 0;
                     if (timerId) {
                         KillTimer(hwnd, timerId);
                     }
-                    timerId = SetTimer(hwnd, 3, 200, NULL);  // 增加延迟到200ms
+                    timerId = SetTimer(hwnd, 3, 200, NULL);   
                     
-                    // 立即重绘窗口
+                     
                     InvalidateRect(hwnd, NULL, FALSE);
                     UpdateWindow(hwnd);
                 }
@@ -1508,9 +1508,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 SetWindowPos(hwnd, NULL,
                     windowRect.left + deltaX,
                     windowRect.top + deltaY,
-                    windowRect.right - windowRect.left,  // 保持当前窗口大小
-                    windowRect.bottom - windowRect.top,  // 保持当前窗口大小
-                    SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOREDRAW  // 添加 SWP_NOREDRAW 标志
+                    windowRect.right - windowRect.left,   
+                    windowRect.bottom - windowRect.top,   
+                    SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOREDRAW   
                 );
                 
                 CLOCK_LAST_MOUSE_POS = currentPos;
@@ -1556,7 +1556,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 -CLOCK_BASE_FONT_SIZE * CLOCK_FONT_SCALE_FACTOR,
                 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
                 DEFAULT_CHARSET, OUT_TT_PRECIS,
-                CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,  // 改回 ANTIALIASED_QUALITY
+                CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,   
                 VARIABLE_PITCH | FF_SWISS,
                 IS_PREVIEWING ? PREVIEW_INTERNAL_NAME : FONT_INTERNAL_NAME
             );
@@ -1630,15 +1630,15 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             break;
         }
         case WM_TIMER: {
-            if (wp == 3) {  // 缩放更新计时器
+            if (wp == 3) {   
                 KillTimer(hwnd, 3);
                 SaveWindowSettings(hwnd);
-            } else if (wp == 1) {  // 使用定时器1来处理所有时间更新
+            } else if (wp == 1) {   
                 if (CLOCK_SHOW_CURRENT_TIME) {
                     static DWORD lastTick = 0;
                     DWORD currentTick = GetTickCount();
                     
-                    // 确保大约每秒更新一次
+                     
                     if (currentTick - lastTick >= 1000) {
                         lastTick = currentTick;
                         InvalidateRect(hwnd, NULL, TRUE);
@@ -1670,7 +1670,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                                 if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
                                     STARTUPINFO si = {sizeof(si)};
                                     PROCESS_INFORMATION pi;
-                                    char cmdLine[MAX_PATH + 2];  // 额外空间用于引号
+                                    char cmdLine[MAX_PATH + 2];   
                                     
                                     snprintf(cmdLine, sizeof(cmdLine), "\"%s\"", CLOCK_TIMEOUT_FILE_PATH);
                                     
@@ -1711,7 +1711,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         case WM_COMMAND: {
             WORD cmd = LOWORD(wp);
             switch (cmd) {
-                case 101: {  // Set Time case
+                case 101: {   
                     if (CLOCK_SHOW_CURRENT_TIME) {
                         CLOCK_SHOW_CURRENT_TIME = FALSE;
                         CLOCK_LAST_TIME_UPDATE = 0;
@@ -1721,7 +1721,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc);
 
                         if (inputText[0] == '\0') {
-                            // 如果输入为空，不要开始倒计时，直接返回
+                             
                             break;
                         }
 
@@ -1784,12 +1784,12 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             MessageBox(hwnd,
                                 "Enter numbers separated by spaces\n"
                                 "Example: 25 10 5",
-                                "Invalid Input", MB_OK);  // 移除了 MB_ICONWARNING
+                                "Invalid Input", MB_OK);   
                         }
                     }
                     break;
                 }
-                case 200: {  // Reset case
+                case 200: {   
                     int current_elapsed = elapsed_time;
                     int current_total = CLOCK_TOTAL_TIME;
                     BOOL was_timing = (current_elapsed < current_total);
@@ -1800,10 +1800,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     
                     char config_path[MAX_PATH];
                     GetConfigPath(config_path, MAX_PATH);
-                    remove(config_path);  // 删除现有配置文件
-                    CreateDefaultConfig(config_path);  // 创建新的默认配置文件
+                    remove(config_path);   
+                    CreateDefaultConfig(config_path);   
                     
-                    ReadConfig();  // 这会加载默认的窗口位置
+                    ReadConfig();   
                     
                     HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
                     for (int i = 0; i < sizeof(fontResources) / sizeof(FontResource); i++) {
@@ -1823,7 +1823,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     
                     HDC hdc = GetDC(hwnd);
                     HFONT hFont = CreateFont(
-                        -CLOCK_BASE_FONT_SIZE,  // 使用未缩放的基础字体大小
+                        -CLOCK_BASE_FONT_SIZE,   
                         0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
                         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
                         CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,
@@ -1868,7 +1868,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_UPDATE_123PAN: {
-                    ShellExecuteA(NULL, "open", UPDATE_URL_123PAN, NULL, NULL, SW_SHOWNORMAL);  // 修正拼写错误
+                    ShellExecuteA(NULL, "open", UPDATE_URL_123PAN, NULL, NULL, SW_SHOWNORMAL);   
                     break;
                 }
                 case CLOCK_IDM_UPDATE_LANZOU: {
@@ -1882,13 +1882,13 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 default: {
                     int cmd = LOWORD(wp);
                     if (cmd >= 102 && cmd < 102 + time_options_count) {
-                        // 如果当前是显示时间模式，先关闭它
+                         
                         if (CLOCK_SHOW_CURRENT_TIME) {
                             CLOCK_SHOW_CURRENT_TIME = FALSE;
                             CLOCK_LAST_TIME_UPDATE = 0;
                         }
                         
-                        // 设置倒计时
+                         
                         int index = cmd - 102;
                         CLOCK_TOTAL_TIME = time_options[index] * 60;
                         elapsed_time = 0;
@@ -1989,7 +1989,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         }
 
                         if (isValidColor(inputText)) {
-                            char hex_color[10] = "#";  // 添加 # 作为前缀
+                            char hex_color[10] = "#";   
                             if (strchr(inputText, ',') != NULL) {
                                 int r, g, b;
                                 sscanf(inputText, "%d,%d,%d", &r, &g, &b);
@@ -1997,7 +1997,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                                 WriteConfigColor(hex_color);
                             } else {
                                 if (inputText[0] == '#') {
-                                    WriteConfigColor(inputText);  // 已经包含 #
+                                    WriteConfigColor(inputText);   
                                 } else {
                                     snprintf(hex_color + 1, sizeof(hex_color) - 1, "%s", inputText);
                                     WriteConfigColor(hex_color);
@@ -2009,7 +2009,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             MessageBox(hwnd, 
                                 "HEX: FF5733 or #FF5733\n"
                                 "RGB: 255,87,51",
-                                "Input Format", MB_OK);  // 移除了 MB_ICONWARNING 标志
+                                "Input Format", MB_OK);   
                         }
                     }
                     break;
@@ -2098,27 +2098,27 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         MessageBox(hwnd, "Failed to load font: GohuFont uni11 Nerd Font Mono.ttf", "Error", MB_ICONEXCLAMATION | MB_OK);
                     }
                     goto refresh_window;
-                case CLOCK_IDM_SHOW_CURRENT_TIME: { // Show Current Time toggle
+                case CLOCK_IDM_SHOW_CURRENT_TIME: {  
                     CLOCK_SHOW_CURRENT_TIME = !CLOCK_SHOW_CURRENT_TIME;
                     if (CLOCK_SHOW_CURRENT_TIME) {
-                        KillTimer(hwnd, 1);  // 停止倒计时定时器
+                        KillTimer(hwnd, 1);   
                         elapsed_time = 0;
                         CLOCK_LAST_TIME_UPDATE = time(NULL);
-                        SetTimer(hwnd, 1, 1000, NULL);  // 重新启动定时器
+                        SetTimer(hwnd, 1, 1000, NULL);   
                     } else {
-                        KillTimer(hwnd, 1);  // 停止当前时间定时器
-                        elapsed_time = CLOCK_TOTAL_TIME;  // 设置为总时间，这样就不会显示任何内容
-                        message_shown = 1;  // 防止触发超时动作
+                        KillTimer(hwnd, 1);   
+                        elapsed_time = CLOCK_TOTAL_TIME;   
+                        message_shown = 1;   
                     }
                     InvalidateRect(hwnd, NULL, TRUE);
                     break;
                 }
-                case CLOCK_IDM_24HOUR_FORMAT: { // 24-Hour Format toggle
+                case CLOCK_IDM_24HOUR_FORMAT: {  
                     CLOCK_USE_24HOUR = !CLOCK_USE_24HOUR;
                     InvalidateRect(hwnd, NULL, TRUE);
                     break;
                 }
-                case CLOCK_IDM_SHOW_SECONDS: { // Show Seconds toggle
+                case CLOCK_IDM_SHOW_SECONDS: {  
                     CLOCK_SHOW_SECONDS = !CLOCK_SHOW_SECONDS;
                     InvalidateRect(hwnd, NULL, TRUE);
                     break;
@@ -2448,23 +2448,23 @@ void SetBlurBehind(HWND hwnd, BOOL enable) {
 }
 
 void PauseMediaPlayback(void) {
-    // 先发送停止命令
+     
     keybd_event(VK_MEDIA_STOP, 0, 0, 0);
-    Sleep(50);  // 增加延迟确保命令被处理
+    Sleep(50);   
     keybd_event(VK_MEDIA_STOP, 0, KEYEVENTF_KEYUP, 0);
-    Sleep(50);  // 增加延迟
+    Sleep(50);   
 
-    // 再发送暂停命令
+     
     keybd_event(VK_MEDIA_PLAY_PAUSE, 0, 0, 0);
-    Sleep(50);  // 增加延迟确保命令被处理
+    Sleep(50);   
     keybd_event(VK_MEDIA_PLAY_PAUSE, 0, KEYEVENTF_KEYUP, 0);
-    Sleep(50);  // 增加延迟
+    Sleep(50);   
 
-    // 再发送一次暂停命令以确保
+     
     keybd_event(VK_MEDIA_PLAY_PAUSE, 0, 0, 0);
     Sleep(50);
     keybd_event(VK_MEDIA_PLAY_PAUSE, 0, KEYEVENTF_KEYUP, 0);
-    Sleep(100);  // 最后增加一个较长的延迟，确保命令完全执行完毕
+    Sleep(100);   
 }
 
 BOOL OpenFileDialog(HWND hwnd, char* filePath, DWORD maxPath) {
@@ -2503,7 +2503,7 @@ void LoadRecentFiles(void) {
             
             char *filename = strrchr(path, '\\');
             if (filename) {
-                filename++; // 跳过反斜杠
+                filename++;  
             } else {
                 filename = path;
             }
@@ -2540,7 +2540,7 @@ void SaveRecentFile(const char* filePath) {
     
     char *filename = strrchr(filePath, '\\');
     if (filename) {
-        filename++; // 跳过反斜杠
+        filename++;  
     } else {
         filename = (char*)filePath;
     }
@@ -2613,10 +2613,10 @@ void SaveRecentFile(const char* filePath) {
 
 void ShowToastNotification(HWND hwnd, const char* message) {
     nid.uFlags = NIF_INFO;
-    nid.dwInfoFlags = NIIF_NONE;  // 不显示任何图标
+    nid.dwInfoFlags = NIIF_NONE;   
     strncpy(nid.szInfo, "Time is up!", sizeof(nid.szInfo) - 1);
-    nid.szInfoTitle[0] = '\0';  // 不显示标题
-    nid.uTimeout = 10000;  // 显示10秒
+    nid.szInfoTitle[0] = '\0';   
+    nid.uTimeout = 10000;   
 
     Shell_NotifyIcon(NIM_MODIFY, &nid);
 
