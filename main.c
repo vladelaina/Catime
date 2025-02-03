@@ -1357,7 +1357,7 @@ void ShowColorMenu(HWND hwnd) {
     // 创建About子菜单
     HMENU hAboutMenu = CreatePopupMenu();
     char version_text[32];
-    snprintf(version_text, sizeof(version_text), "Version: %s", CATIME_VERSION);  // 添加Version:前缀
+    snprintf(version_text, sizeof(version_text), "Current version: %s", CATIME_VERSION);  // 添加Version:前缀
     AppendMenu(hAboutMenu, MF_STRING | MF_DISABLED, 0, version_text);  // 使用格式化后的版本文本
 
     // 创建Check for Updates子菜单
