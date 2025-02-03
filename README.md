@@ -26,6 +26,8 @@ Catime 是一个简洁的 Windows 倒计时工具(番茄时钟)，具有透明�
 ### 配置文件
 设置保存在 `%LOCALAPPDATA%\Catime\config.txt`
 
+### 视频地址：[BiliBii](https://www.bilibili.com/video/BV1ztFeeQEYP)
+
 ## 💖[支持](support.md)
 
 如果你喜欢该项目可以考虑给作者买杯咖啡(*ゝω・)ﾉThanks!
