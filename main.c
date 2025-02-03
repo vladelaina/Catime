@@ -343,6 +343,13 @@ BOOL CLOCK_SHOW_SECONDS = TRUE;
 #define CLOCK_IDM_24HOUR_FORMAT    151
 #define CLOCK_IDM_SHOW_SECONDS     152
 
+// 在文件开头的宏定义区域添加版本信息
+#define CATIME_VERSION "1.0.0"
+#define CLOCK_IDM_VERSION 131  // 添加新的菜单ID
+
+// 在宏定义区域添加新的菜单ID
+#define CLOCK_IDM_GITHUB 132  // 添加GitHub菜单ID
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     ReadConfig();
 
@@ -1361,7 +1368,14 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hFontSubMenu, "Font");
 
     AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
-    AppendMenu(hMenu, MF_STRING, CLOCK_IDM_ABOUT, "About");  // 移到Reset前面
+    
+    // 创建About子菜单
+    HMENU hAboutMenu = CreatePopupMenu();
+    AppendMenu(hAboutMenu, MF_STRING, CLOCK_IDM_VERSION, "Version");
+    AppendMenu(hAboutMenu, MF_STRING, CLOCK_IDM_GITHUB, "GitHub");
+    
+    // 将About作为弹出式菜单
+    AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hAboutMenu, "About");
     AppendMenu(hMenu, MF_STRING, 200, "Reset");
     AppendMenu(hMenu, MF_STRING, 109, "Exit");
 
@@ -1844,7 +1858,13 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     
                     break;
                 }
-                case CLOCK_IDM_ABOUT: {
+                case CLOCK_IDM_VERSION: {
+                    char versionMsg[256];
+                    snprintf(versionMsg, sizeof(versionMsg), "Catime Version %s", CATIME_VERSION);
+                    MessageBox(hwnd, versionMsg, "Version Information", MB_OK | MB_ICONINFORMATION);
+                    break;
+                }
+                case CLOCK_IDM_GITHUB: {
                     ShellExecuteA(NULL, "open", CLOCK_ABOUT_URL, NULL, NULL, SW_SHOWNORMAL);
                     break;
                 }
