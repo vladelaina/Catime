@@ -1927,7 +1927,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                                     L"25    = 25 minutes\n"
                                     L"25h   = 25 hours\n"
                                     L"25s   = 25 seconds\n"
-                                    L"25 30 = 25 minutes 30 seconds\n" 
+                                    L"25 30 = 25 minutes 30 seconds\n"  // 修复这行的引号
                                     L"25 30m = 25 hours 30 minutes\n"
                                     L"1 30 20 = 1 hour 30 minutes 20 seconds"),
                                 GetLocalizedString(L"输入格式", L"Input Format"),
@@ -1990,6 +1990,49 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     CLOCK_EDIT_MODE = FALSE;
                     SetClickThrough(hwnd, TRUE);
                     SendMessage(hwnd, WM_SETREDRAW, FALSE, 0);
+                    
+                    // 检查并重置语言到系统默认
+                    AppLanguage defaultLanguage;
+                    LANGID langId = GetUserDefaultUILanguage();
+                    WORD primaryLangId = PRIMARYLANGID(langId);
+                    WORD subLangId = SUBLANGID(langId);
+                    
+                    // 根据系统语言设置默认语言
+                    switch (primaryLangId) {
+                        case LANG_CHINESE:
+                            defaultLanguage = (subLangId == SUBLANG_CHINESE_SIMPLIFIED) ? 
+                                             APP_LANG_CHINESE_SIMP : APP_LANG_CHINESE_TRAD;
+                            break;
+                        case LANG_SPANISH:
+                            defaultLanguage = APP_LANG_SPANISH;
+                            break;
+                        case LANG_FRENCH:
+                            defaultLanguage = APP_LANG_FRENCH;
+                            break;
+                        case LANG_GERMAN:
+                            defaultLanguage = APP_LANG_GERMAN;
+                            break;
+                        case LANG_RUSSIAN:
+                            defaultLanguage = APP_LANG_RUSSIAN;
+                            break;
+                        case LANG_PORTUGUESE:
+                            defaultLanguage = APP_LANG_PORTUGUESE;
+                            break;
+                        case LANG_JAPANESE:
+                            defaultLanguage = APP_LANG_JAPANESE;
+                            break;
+                        case LANG_KOREAN:
+                            defaultLanguage = APP_LANG_KOREAN;
+                            break;
+                        default:
+                            defaultLanguage = APP_LANG_ENGLISH;
+                            break;
+                    }
+                    
+                    // 如果当前语言不是系统默认语言，则重置
+                    if (CURRENT_LANGUAGE != defaultLanguage) {
+                        CURRENT_LANGUAGE = defaultLanguage;
+                    }
                     
                     char config_path[MAX_PATH];
                     GetConfigPath(config_path, MAX_PATH);
