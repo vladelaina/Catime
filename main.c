@@ -1289,27 +1289,25 @@ void ExitProgram(HWND hwnd) {
 void ShowContextMenu(HWND hwnd) {
     HMENU hMenu = CreatePopupMenu();
     
-    // 使用 L 前缀的宽字符串
     AppendMenuW(hMenu, MF_STRING, 101, L"设置时间");
     
     HMENU hTimeMenu = CreatePopupMenu();
     AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
                CLOCK_IDM_SHOW_CURRENT_TIME, L"显示当前时间");
+    AppendMenuW(hTimeMenu, MF_SEPARATOR, 0, NULL);
+    AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_USE_24HOUR ? MF_CHECKED : MF_UNCHECKED),
+               CLOCK_IDM_24HOUR_FORMAT, L"24小时制");
+    AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_SHOW_SECONDS ? MF_CHECKED : MF_UNCHECKED),
+               CLOCK_IDM_SHOW_SECONDS, L"显示秒数");
     
-    AppendMenu(hTimeMenu, MF_SEPARATOR, 0, NULL);
-    AppendMenu(hTimeMenu, MF_STRING | (CLOCK_USE_24HOUR ? MF_CHECKED : MF_UNCHECKED),
-               CLOCK_IDM_24HOUR_FORMAT, "24小时制");
-    AppendMenu(hTimeMenu, MF_STRING | (CLOCK_SHOW_SECONDS ? MF_CHECKED : MF_UNCHECKED),
-               CLOCK_IDM_SHOW_SECONDS, "显示秒数");
-    
-    AppendMenu(hMenu, MF_POPUP | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
-               (UINT_PTR)hTimeMenu, "时间显示");
-    AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
+    AppendMenuW(hMenu, MF_POPUP | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
+               (UINT_PTR)hTimeMenu, L"时间显示");
+    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
     for (int i = 0; i < time_options_count; i++) {
-        char menu_item[20];
-        snprintf(menu_item, sizeof(menu_item), "%d", time_options[i]);
-        AppendMenu(hMenu, MF_STRING, 102 + i, menu_item);
+        wchar_t menu_item[20];
+        _snwprintf(menu_item, sizeof(menu_item)/sizeof(wchar_t), L"%d", time_options[i]);
+        AppendMenuW(hMenu, MF_STRING, 102 + i, menu_item);
     }
 
     POINT pt;
@@ -1324,53 +1322,51 @@ void ShowColorMenu(HWND hwnd) {
     HMENU hColorSubMenu = CreatePopupMenu();
     HMENU hFontSubMenu = CreatePopupMenu();
 
-    char* menuText = UTF8ToANSI("编辑模式");
-    AppendMenu(hMenu, MF_STRING | (CLOCK_EDIT_MODE ? MF_CHECKED : MF_UNCHECKED),
-               CLOCK_IDC_EDIT_MODE, menuText);
-    free(menuText);
-    
-    AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
+    AppendMenuW(hMenu, MF_STRING | (CLOCK_EDIT_MODE ? MF_CHECKED : MF_UNCHECKED),
+               CLOCK_IDC_EDIT_MODE, L"编辑模式");
+    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
     HMENU hTimeoutMenu = CreatePopupMenu();
-    AppendMenu(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_MESSAGE ? MF_CHECKED : MF_UNCHECKED), 
-               CLOCK_IDM_SHOW_MESSAGE, "显示消息");
+    AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_MESSAGE ? MF_CHECKED : MF_UNCHECKED), 
+               CLOCK_IDM_SHOW_MESSAGE, L"显示消息");
 
     HMENU hOpenFileMenu = CreatePopupMenu();
     if (CLOCK_RECENT_FILES_COUNT > 0) {
         for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
             BOOL isCurrentFile = (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE && 
                                 strcmp(CLOCK_RECENT_FILES[i].path, CLOCK_TIMEOUT_FILE_PATH) == 0);
-            AppendMenu(hOpenFileMenu, MF_STRING | (isCurrentFile ? MF_CHECKED : MF_UNCHECKED), 
+            AppendMenuW(hOpenFileMenu, MF_STRING | (isCurrentFile ? MF_CHECKED : MF_UNCHECKED), 
                       CLOCK_IDM_RECENT_FILE_1 + i, 
-                      CLOCK_RECENT_FILES[i].name);
+                      (LPCWSTR)CLOCK_RECENT_FILES[i].name);
         }
-        AppendMenu(hOpenFileMenu, MF_SEPARATOR, 0, NULL);
+        AppendMenuW(hOpenFileMenu, MF_SEPARATOR, 0, NULL);
     }
-    AppendMenu(hOpenFileMenu, MF_STRING, CLOCK_IDM_BROWSE_FILE, "浏览...");
+    AppendMenuW(hOpenFileMenu, MF_STRING, CLOCK_IDM_BROWSE_FILE, L"浏览...");
 
-    menuText = UTF8ToANSI("打开文件");
+    const wchar_t* menuText = L"打开文件";
     if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE && strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
+        wchar_t displayText[MAX_PATH];
         char *filename = strrchr(CLOCK_TIMEOUT_FILE_PATH, '\\');
         if (filename) {
             filename++;
-            snprintf(menuText, sizeof(menuText), "打开: %s", filename);
+            _snwprintf(displayText, MAX_PATH, L"打开: %hs", filename);
+            menuText = displayText;
         }
     }
-    AppendMenu(hTimeoutMenu, MF_POPUP | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE ? MF_CHECKED : MF_UNCHECKED),
+
+    AppendMenuW(hTimeoutMenu, MF_POPUP | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE ? MF_CHECKED : MF_UNCHECKED),
                (UINT_PTR)hOpenFileMenu, menuText);
-    free(menuText);
                
-    AppendMenu(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_LOCK ? MF_CHECKED : MF_UNCHECKED), 
-               CLOCK_IDM_LOCK_SCREEN, "锁定屏幕");
-    AppendMenu(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SHUTDOWN ? MF_CHECKED : MF_UNCHECKED), 
-               CLOCK_IDM_SHUTDOWN, "关机");
-    AppendMenu(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_RESTART ? MF_CHECKED : MF_UNCHECKED), 
-               CLOCK_IDM_RESTART, "重启");
+    AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_LOCK ? MF_CHECKED : MF_UNCHECKED), 
+               CLOCK_IDM_LOCK_SCREEN, L"锁定屏幕");
+    AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SHUTDOWN ? MF_CHECKED : MF_UNCHECKED), 
+               CLOCK_IDM_SHUTDOWN, L"关机");
+    AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_RESTART ? MF_CHECKED : MF_UNCHECKED), 
+               CLOCK_IDM_RESTART, L"重启");
 
-    AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hTimeoutMenu, "超时动作");
-
-    AppendMenu(hMenu, MF_STRING, CLOCK_IDC_MODIFY_OPTIONS, "修改时间选项");
-    AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
+    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeoutMenu, L"超时动作");
+    AppendMenuW(hMenu, MF_STRING, CLOCK_IDC_MODIFY_OPTIONS, L"修改时间选项");
+    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
     for (int i = 0; i < COLOR_OPTIONS_COUNT; i++) {
         const char* hexColor = COLOR_OPTIONS[i].hexColor;
@@ -1384,8 +1380,8 @@ void ShowColorMenu(HWND hwnd) {
         
         InsertMenuItem(hColorSubMenu, i, TRUE, &mii);
     }
-    AppendMenu(hColorSubMenu, MF_SEPARATOR, 0, NULL);
-    AppendMenu(hColorSubMenu, MF_STRING, CLOCK_IDC_CUSTOMIZE_LEFT, "自定义");
+    AppendMenuW(hColorSubMenu, MF_SEPARATOR, 0, NULL);
+    AppendMenuW(hColorSubMenu, MF_STRING, CLOCK_IDC_CUSTOMIZE_LEFT, L"自定义");
 
     for (int i = 0; i < sizeof(fontResources) / sizeof(fontResources[0]); i++) {
         BOOL isCurrentFont = strcmp(FONT_FILE_NAME, fontResources[i].fontName) == 0;
@@ -1405,28 +1401,28 @@ void ShowColorMenu(HWND hwnd) {
                   fontResources[i].menuId, displayName);
     }
 
-    AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hColorSubMenu, "颜色");
-    AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hFontSubMenu, "字体");
+    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hColorSubMenu, L"颜色");
+    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hFontSubMenu, L"字体");
 
-    AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
+    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
     
     HMENU hAboutMenu = CreatePopupMenu();
-    char version_text[32];
-    snprintf(version_text, sizeof(version_text), "当前版本: %s", CATIME_VERSION);
-    AppendMenu(hAboutMenu, MF_STRING | MF_DISABLED, 0, version_text);
+    wchar_t version_text[32];
+    _snwprintf(version_text, sizeof(version_text)/sizeof(wchar_t), L"当前版本: %hs", CATIME_VERSION);
+    AppendMenuW(hAboutMenu, MF_STRING | MF_DISABLED, 0, version_text);
 
-    AppendMenu(hAboutMenu, MF_STRING, CLOCK_IDM_FEEDBACK, "反馈");
+    AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_FEEDBACK, L"反馈");
 
     HMENU hUpdateMenu = CreatePopupMenu();
-    AppendMenu(hUpdateMenu, MF_STRING, CLOCK_IDM_UPDATE_GITHUB, "GitHub");
-    AppendMenu(hUpdateMenu, MF_STRING, CLOCK_IDM_UPDATE_123PAN, "123云盘");
-    AppendMenu(hUpdateMenu, MF_STRING, CLOCK_IDM_UPDATE_LANZOU, "蓝奏云 (密码: 1234)");
+    AppendMenuW(hUpdateMenu, MF_STRING, CLOCK_IDM_UPDATE_GITHUB, L"GitHub");
+    AppendMenuW(hUpdateMenu, MF_STRING, CLOCK_IDM_UPDATE_123PAN, L"123云盘");
+    AppendMenuW(hUpdateMenu, MF_STRING, CLOCK_IDM_UPDATE_LANZOU, L"蓝奏云 (密码: 1234)");
 
-    AppendMenu(hAboutMenu, MF_POPUP, (UINT_PTR)hUpdateMenu, "检查更新");
+    AppendMenuW(hAboutMenu, MF_POPUP, (UINT_PTR)hUpdateMenu, L"检查更新");
     
-    AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hAboutMenu, "关于");
-    AppendMenu(hMenu, MF_STRING, 200, "重置");
-    AppendMenu(hMenu, MF_STRING, 109, "退出");
+    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hAboutMenu, L"关于");
+    AppendMenuW(hMenu, MF_STRING, 200, L"重置");
+    AppendMenuW(hMenu, MF_STRING, 109, L"退出");
 
     POINT pt;
     GetCursorPos(&pt);
