@@ -28,6 +28,12 @@
 #define CLOCK_IDM_UPDATE_123PAN    135
 #define CLOCK_IDM_UPDATE_LANZOU    136
 #define CLOCK_IDM_FEEDBACK 132   
+#define CLOCK_IDM_LANGUAGE_MENU    160
+#define CLOCK_IDM_LANG_CHINESE     161
+#define CLOCK_IDM_LANG_ENGLISH     162
+
+// 全局变量声明区域
+BOOL USE_CHINESE = TRUE;  // 默认使用中文
 
 void PauseMediaPlayback(void);
 
@@ -1289,19 +1295,24 @@ void ExitProgram(HWND hwnd) {
 void ShowContextMenu(HWND hwnd) {
     HMENU hMenu = CreatePopupMenu();
     
-    AppendMenuW(hMenu, MF_STRING, 101, L"设置时间");
+    AppendMenuW(hMenu, MF_STRING, 101, 
+                USE_CHINESE ? L"设置时间" : L"Set Time");
     
     HMENU hTimeMenu = CreatePopupMenu();
     AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
-               CLOCK_IDM_SHOW_CURRENT_TIME, L"显示当前时间");
+               CLOCK_IDM_SHOW_CURRENT_TIME,
+               USE_CHINESE ? L"显示当前时间" : L"Show Current Time");
     AppendMenuW(hTimeMenu, MF_SEPARATOR, 0, NULL);
     AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_USE_24HOUR ? MF_CHECKED : MF_UNCHECKED),
-               CLOCK_IDM_24HOUR_FORMAT, L"24小时制");
+               CLOCK_IDM_24HOUR_FORMAT,
+               USE_CHINESE ? L"24小时制" : L"24-Hour Format");
     AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_SHOW_SECONDS ? MF_CHECKED : MF_UNCHECKED),
-               CLOCK_IDM_SHOW_SECONDS, L"显示秒数");
+               CLOCK_IDM_SHOW_SECONDS,
+               USE_CHINESE ? L"显示秒数" : L"Show Seconds");
     
     AppendMenuW(hMenu, MF_POPUP | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
-               (UINT_PTR)hTimeMenu, L"时间显示");
+               (UINT_PTR)hTimeMenu,
+               USE_CHINESE ? L"时间显示" : L"Time Display");
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
     for (int i = 0; i < time_options_count; i++) {
@@ -1408,21 +1419,39 @@ void ShowColorMenu(HWND hwnd) {
     
     HMENU hAboutMenu = CreatePopupMenu();
     wchar_t version_text[32];
-    _snwprintf(version_text, sizeof(version_text)/sizeof(wchar_t), L"当前版本: %hs", CATIME_VERSION);
+    _snwprintf(version_text, sizeof(version_text)/sizeof(wchar_t), 
+               USE_CHINESE ? L"当前版本: %hs" : L"Version: %hs", 
+               CATIME_VERSION);
     AppendMenuW(hAboutMenu, MF_STRING | MF_DISABLED, 0, version_text);
 
-    AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_FEEDBACK, L"反馈");
+    AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_FEEDBACK, 
+                USE_CHINESE ? L"反馈" : L"Feedback");
+
+    // 添加语言选择子菜单
+    HMENU hLangMenu = CreatePopupMenu();
+    AppendMenuW(hLangMenu, MF_STRING | (USE_CHINESE ? MF_CHECKED : MF_UNCHECKED),
+                CLOCK_IDM_LANG_CHINESE, L"中文");
+    AppendMenuW(hLangMenu, MF_STRING | (USE_CHINESE ? MF_UNCHECKED : MF_CHECKED),
+                CLOCK_IDM_LANG_ENGLISH, L"English");
+    AppendMenuW(hAboutMenu, MF_POPUP, (UINT_PTR)hLangMenu, 
+                USE_CHINESE ? L"语言" : L"Language");
 
     HMENU hUpdateMenu = CreatePopupMenu();
     AppendMenuW(hUpdateMenu, MF_STRING, CLOCK_IDM_UPDATE_GITHUB, L"GitHub");
-    AppendMenuW(hUpdateMenu, MF_STRING, CLOCK_IDM_UPDATE_123PAN, L"123云盘");
-    AppendMenuW(hUpdateMenu, MF_STRING, CLOCK_IDM_UPDATE_LANZOU, L"蓝奏云 (密码: 1234)");
+    AppendMenuW(hUpdateMenu, MF_STRING, CLOCK_IDM_UPDATE_123PAN,
+                USE_CHINESE ? L"123云盘" : L"123Pan");
+    AppendMenuW(hUpdateMenu, MF_STRING, CLOCK_IDM_UPDATE_LANZOU,
+                USE_CHINESE ? L"蓝奏云 (密码: 1234)" : L"LanzouCloud (pwd: 1234)");
 
-    AppendMenuW(hAboutMenu, MF_POPUP, (UINT_PTR)hUpdateMenu, L"检查更新");
+    AppendMenuW(hAboutMenu, MF_POPUP, (UINT_PTR)hUpdateMenu,
+                USE_CHINESE ? L"检查更新" : L"Check for Updates");
     
-    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hAboutMenu, L"关于");
-    AppendMenuW(hMenu, MF_STRING, 200, L"重置");
-    AppendMenuW(hMenu, MF_STRING, 109, L"退出");
+    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hAboutMenu,
+                USE_CHINESE ? L"关于" : L"About");
+    AppendMenuW(hMenu, MF_STRING, 200,
+                USE_CHINESE ? L"重置" : L"Reset");
+    AppendMenuW(hMenu, MF_STRING, 109,
+                USE_CHINESE ? L"退出" : L"Exit");
 
     POINT pt;
     GetCursorPos(&pt);
@@ -1922,6 +1951,16 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_FEEDBACK: {
                     ShellExecuteA(NULL, "open", FEEDBACK_URL, NULL, NULL, SW_SHOWNORMAL);
+                    break;
+                }
+                case CLOCK_IDM_LANG_CHINESE: {
+                    USE_CHINESE = TRUE;
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    break;
+                }
+                case CLOCK_IDM_LANG_ENGLISH: {
+                    USE_CHINESE = FALSE;
+                    InvalidateRect(hwnd, NULL, TRUE);
                     break;
                 }
                 default: {
