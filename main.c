@@ -1422,9 +1422,14 @@ void ShowColorMenu(HWND hwnd) {
         for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
             BOOL isCurrentFile = (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE && 
                                 strcmp(CLOCK_RECENT_FILES[i].path, CLOCK_TIMEOUT_FILE_PATH) == 0);
+            
+            // 转换文件名到宽字符
+            wchar_t wFileName[MAX_PATH];
+            MultiByteToWideChar(CP_UTF8, 0, CLOCK_RECENT_FILES[i].name, -1, wFileName, MAX_PATH);
+            
             AppendMenuW(hOpenFileMenu, MF_STRING | (isCurrentFile ? MF_CHECKED : MF_UNCHECKED), 
                       CLOCK_IDM_RECENT_FILE_1 + i, 
-                      (LPCWSTR)CLOCK_RECENT_FILES[i].name);
+                      wFileName);  // 使用转换后的宽字符文件名
         }
         AppendMenuW(hOpenFileMenu, MF_SEPARATOR, 0, NULL);
     }
@@ -1433,13 +1438,17 @@ void ShowColorMenu(HWND hwnd) {
 
     const wchar_t* menuText = GetLocalizedString(L"打开文件", L"Open File");
     if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE && strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
-        static wchar_t displayText[MAX_PATH];  // 改为静态以确保内存安全
+        static wchar_t displayText[MAX_PATH];
         char *filename = strrchr(CLOCK_TIMEOUT_FILE_PATH, '\\');
         if (filename) {
             filename++;
+            // 转换文件名到宽字符
+            wchar_t wFileName[MAX_PATH];
+            MultiByteToWideChar(CP_UTF8, 0, filename, -1, wFileName, MAX_PATH);
+            
             _snwprintf(displayText, MAX_PATH, 
-                      GetLocalizedString(L"打开: %hs", L"Open: %hs"), 
-                      filename);
+                      GetLocalizedString(L"打开: %ls", L"Open: %ls"), 
+                      wFileName);  // 使用%ls而不是%hs，并使用转换后的宽字符文件名
             menuText = displayText;
         }
     }
