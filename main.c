@@ -8,9 +8,11 @@
 #include <ctype.h>
 #include <dwmapi.h>
 #include "resource.h"
+#include <winnls.h>
 
 // 函数声明
 const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english);
+void InitializeDefaultLanguage(void);
 
 #define CATIME_VERSION "1.0.1"  
 #define VK_MEDIA_PLAY_PAUSE 0xB3
@@ -402,7 +404,50 @@ char* UTF8ToANSI(const char* utf8Str) {
     return str;
 }
 
+void InitializeDefaultLanguage(void) {
+    LANGID langId = GetUserDefaultUILanguage();
+    WORD primaryLangId = PRIMARYLANGID(langId);
+    WORD subLangId = SUBLANGID(langId);
+    
+    switch (primaryLangId) {
+        case LANG_CHINESE:
+            if (subLangId == SUBLANG_CHINESE_SIMPLIFIED) {
+                CURRENT_LANGUAGE = APP_LANG_CHINESE_SIMP;
+            } else if (subLangId == SUBLANG_CHINESE_TRADITIONAL) {
+                CURRENT_LANGUAGE = APP_LANG_CHINESE_TRAD;
+            }
+            break;
+        case LANG_SPANISH:
+            CURRENT_LANGUAGE = APP_LANG_SPANISH;
+            break;
+        case LANG_FRENCH:
+            CURRENT_LANGUAGE = APP_LANG_FRENCH;
+            break;
+        case LANG_GERMAN:
+            CURRENT_LANGUAGE = APP_LANG_GERMAN;
+            break;
+        case LANG_RUSSIAN:
+            CURRENT_LANGUAGE = APP_LANG_RUSSIAN;
+            break;
+        case LANG_PORTUGUESE:
+            CURRENT_LANGUAGE = APP_LANG_PORTUGUESE;
+            break;
+        case LANG_JAPANESE:
+            CURRENT_LANGUAGE = APP_LANG_JAPANESE;
+            break;
+        case LANG_KOREAN:
+            CURRENT_LANGUAGE = APP_LANG_KOREAN;
+            break;
+        default:
+            CURRENT_LANGUAGE = APP_LANG_ENGLISH;
+            break;
+    }
+}
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+    // 在程序启动时调用初始化语言函数
+    InitializeDefaultLanguage();
+    
     // 设置代码页为 GBK
     SetConsoleOutputCP(936);
     SetConsoleCP(936);
