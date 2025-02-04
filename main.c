@@ -1918,7 +1918,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             MessageBoxW(hwnd, 
                                 GetLocalizedString(
                                     L"25    = 25分钟\n"
-                                    L"25h   = 25小时\n" 
+                                    L"25h   = 25小时\n"
                                     L"25s   = 25秒\n"
                                     L"25 30 = 25分钟30秒\n"
                                     L"25 30m = 25小时30分钟\n"
@@ -1927,7 +1927,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                                     L"25    = 25 minutes\n"
                                     L"25h   = 25 hours\n"
                                     L"25s   = 25 seconds\n"
-                                    L"25 30 = 25 minutes 30 seconds\n"  // 修复这行的引号
+                                    L"25 30 = 25 minutes 30 seconds\n"
                                     L"25 30m = 25 hours 30 minutes\n"
                                     L"1 30 20 = 1 hour 30 minutes 20 seconds"),
                                 GetLocalizedString(L"输入格式", L"Input Format"),
@@ -3035,6 +3035,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Version: %hs") == 0) return L"版本: %hs";
             if (wcscmp(english, L"Check for Updates") == 0) return L"检查更新";
             if (wcscmp(english, L"Language") == 0) return english;
+            if (wcscmp(english, L"Reset") == 0) return english; // Return English "Reset" instead of Chinese
             return chinese;
             
         case APP_LANG_CHINESE_TRAD:
@@ -3055,6 +3056,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Version: %hs") == 0) return L"版本: %hs";
             if (wcscmp(english, L"Check for Updates") == 0) return L"檢查更新";
             if (wcscmp(english, L"Language") == 0) return english;
+            if (wcscmp(english, L"Reset") == 0) return english; // Return English "Reset" instead of Traditional Chinese
             return chinese;
 
         case APP_LANG_SPANISH:
@@ -3081,7 +3083,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Language") == 0) return english;
             if (wcscmp(english, L"Check for Updates") == 0) return L"Buscar actualizaciones";
             if (wcscmp(english, L"About") == 0) return L"Acerca de";
-            if (wcscmp(english, L"Reset") == 0) return L"Restablecer";
+            if (wcscmp(english, L"Reset") == 0) return english; // Return English "Reset" instead of "Restablecer"
             if (wcscmp(english, L"Exit") == 0) return L"Salir";
             if (wcscmp(english, L"¡Tiempo terminado!") == 0) return L"¡Tiempo terminado!";
             if (wcscmp(english, L"Formato de entrada") == 0) return L"Formato de entrada";
@@ -3126,7 +3128,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Language") == 0) return english;
             if (wcscmp(english, L"Check for Updates") == 0) return L"Vérifier les mises à jour";
             if (wcscmp(english, L"About") == 0) return L"À propos";
-            if (wcscmp(english, L"Reset") == 0) return L"Réinitialiser";
+            if (wcscmp(english, L"Reset") == 0) return english; // Return English "Reset" instead of "Réinitialiser"
             if (wcscmp(english, L"Exit") == 0) return L"Quitter";
             if (wcscmp(english, L"Temps écoulé !") == 0) return L"Temps écoulé !";
             if (wcscmp(english, L"Format d'entrée") == 0) return L"Format d'entrée";
@@ -3171,7 +3173,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Language") == 0) return english;
             if (wcscmp(english, L"Check for Updates") == 0) return L"Nach Updates suchen";
             if (wcscmp(english, L"About") == 0) return L"Über";
-            if (wcscmp(english, L"Reset") == 0) return L"Zurücksetzen";
+            if (wcscmp(english, L"Reset") == 0) return english; // Return English "Reset" instead of "Zurücksetzen"
             if (wcscmp(english, L"Exit") == 0) return L"Beenden";
             if (wcscmp(english, L"Zeit ist um!") == 0) return L"Zeit ist um!";
             if (wcscmp(english, L"Eingabeformat") == 0) return L"Eingabeformat";
@@ -3216,7 +3218,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Language") == 0) return english;
             if (wcscmp(english, L"Check for Updates") == 0) return L"Проверить обновления";
             if (wcscmp(english, L"About") == 0) return L"О программе";
-            if (wcscmp(english, L"Reset") == 0) return L"Сброс";
+            if (wcscmp(english, L"Reset") == 0) return english; // Return English "Reset" instead of "Сброс"
             if (wcscmp(english, L"Exit") == 0) return L"Выход";
             if (wcscmp(english, L"Время вышло!") == 0) return L"Время вышло!";
             if (wcscmp(english, L"Формат ввода") == 0) return L"Формат ввода";
@@ -3261,7 +3263,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Language") == 0) return english;
             if (wcscmp(english, L"Check for Updates") == 0) return L"Verificar atualizações";
             if (wcscmp(english, L"About") == 0) return L"Sobre";
-            if (wcscmp(english, L"Reset") == 0) return L"Redefinir";
+            if (wcscmp(english, L"Reset") == 0) return english; // Return English "Reset" instead of "Redefinir"
             if (wcscmp(english, L"Exit") == 0) return L"Sair";
             if (wcscmp(english, L"Tempo esgotado!") == 0) return L"Tempo esgotado!";
             if (wcscmp(english, L"Formato de entrada") == 0) return L"Formato de entrada";
@@ -3306,7 +3308,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Language") == 0) return english;
             if (wcscmp(english, L"Check for Updates") == 0) return L"更新を確認";
             if (wcscmp(english, L"About") == 0) return L"について";
-            if (wcscmp(english, L"Reset") == 0) return L"リセット";
+            if (wcscmp(english, L"Reset") == 0) return english; // Return English "Reset" instead of "リセット"
             if (wcscmp(english, L"Exit") == 0) return L"終了";
             if (wcscmp(english, L"時間切れです!") == 0) return L"時間切れです!";
             if (wcscmp(english, L"入力形式") == 0) return L"入力形式";
@@ -3351,7 +3353,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Language") == 0) return english;
             if (wcscmp(english, L"Check for Updates") == 0) return L"업데이트 확인";
             if (wcscmp(english, L"About") == 0) return L"정보";
-            if (wcscmp(english, L"Reset") == 0) return L"초기화";
+            if (wcscmp(english, L"Reset") == 0) return english; // Return English "Reset" instead of "초기화"
             if (wcscmp(english, L"Exit") == 0) return L"종료";
             if (wcscmp(english, L"시간이 종료되었습니다!") == 0) return L"시간이 종료되었습니다!";
             if (wcscmp(english, L"입력 형식") == 0) return L"입력 형식";
