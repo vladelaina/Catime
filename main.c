@@ -2914,7 +2914,7 @@ void ShowToastNotification(HWND hwnd, const char* message) {
 const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english) {
     switch (CURRENT_LANGUAGE) {
         case APP_LANG_CHINESE_SIMP:
-            if (wcscmp(english, L"Time's up!") == 0) return L"时间到了!";
+            if (wcscmp(english, L"Time's up!") == 0) return L"时间到啦！";
             if (wcscmp(english, L"Input Format") == 0) return L"输入格式";
             if (wcscmp(english, L"Invalid Input") == 0) return L"无效输入";
             if (wcscmp(english, L"Error") == 0) return L"错误";
@@ -2934,7 +2934,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             return chinese;
             
         case APP_LANG_CHINESE_TRAD:
-            if (wcscmp(english, L"Time's up!") == 0) return L"時間到了!";
+            if (wcscmp(english, L"Time's up!") == 0) return L"時間到啦！";
             if (wcscmp(english, L"Input Format") == 0) return L"輸入格式";
             if (wcscmp(english, L"Invalid Input") == 0) return L"無效輸入";
             if (wcscmp(english, L"Error") == 0) return L"錯誤";
