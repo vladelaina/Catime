@@ -9,6 +9,9 @@
 #include <dwmapi.h>
 #include "resource.h"
 
+// 函数声明
+const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english);
+
 #define CATIME_VERSION "1.0.1"  
 #define VK_MEDIA_PLAY_PAUSE 0xB3
 #define VK_MEDIA_STOP 0xB2
@@ -31,9 +34,31 @@
 #define CLOCK_IDM_LANGUAGE_MENU    160
 #define CLOCK_IDM_LANG_CHINESE     161
 #define CLOCK_IDM_LANG_ENGLISH     162
+#define CLOCK_IDM_LANG_CHINESE_TRAD  163
+#define CLOCK_IDM_LANG_SPANISH       164
+#define CLOCK_IDM_LANG_FRENCH        165
+#define CLOCK_IDM_LANG_GERMAN        166
+#define CLOCK_IDM_LANG_RUSSIAN       167
+#define CLOCK_IDM_LANG_PORTUGUESE    168
+#define CLOCK_IDM_LANG_JAPANESE      169
+#define CLOCK_IDM_LANG_KOREAN        170
+
+// 语言枚举
+typedef enum {
+    APP_LANG_CHINESE_SIMP,    // 简体中文
+    APP_LANG_CHINESE_TRAD,    // 繁体中文
+    APP_LANG_ENGLISH,         // 英语
+    APP_LANG_SPANISH,         // 西班牙语
+    APP_LANG_FRENCH,          // 法语
+    APP_LANG_GERMAN,          // 德语
+    APP_LANG_RUSSIAN,         // 俄语
+    APP_LANG_PORTUGUESE,      // 葡萄牙语
+    APP_LANG_JAPANESE,        // 日语
+    APP_LANG_KOREAN           // 韩语
+} AppLanguage;
 
 // 全局变量声明区域
-BOOL USE_CHINESE = TRUE;  // 默认使用中文
+AppLanguage CURRENT_LANGUAGE = APP_LANG_CHINESE_SIMP;  // 默认使用简体中文
 
 void PauseMediaPlayback(void);
 
@@ -1296,23 +1321,23 @@ void ShowContextMenu(HWND hwnd) {
     HMENU hMenu = CreatePopupMenu();
     
     AppendMenuW(hMenu, MF_STRING, 101, 
-                USE_CHINESE ? L"设置时间" : L"Set Time");
+                GetLocalizedString(L"设置时间", L"Set Time"));
     
     HMENU hTimeMenu = CreatePopupMenu();
     AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
                CLOCK_IDM_SHOW_CURRENT_TIME,
-               USE_CHINESE ? L"显示当前时间" : L"Show Current Time");
+               GetLocalizedString(L"显示当前时间", L"Show Current Time"));
     AppendMenuW(hTimeMenu, MF_SEPARATOR, 0, NULL);
     AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_USE_24HOUR ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_24HOUR_FORMAT,
-               USE_CHINESE ? L"24小时制" : L"24-Hour Format");
+               GetLocalizedString(L"24小时制", L"24-Hour Format"));
     AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_SHOW_SECONDS ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_SHOW_SECONDS,
-               USE_CHINESE ? L"显示秒数" : L"Show Seconds");
+               GetLocalizedString(L"显示秒数", L"Show Seconds"));
     
     AppendMenuW(hMenu, MF_POPUP | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
                (UINT_PTR)hTimeMenu,
-               USE_CHINESE ? L"时间显示" : L"Time Display");
+               GetLocalizedString(L"时间显示", L"Time Display"));
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
     for (int i = 0; i < time_options_count; i++) {
@@ -1335,13 +1360,13 @@ void ShowColorMenu(HWND hwnd) {
 
     AppendMenuW(hMenu, MF_STRING | (CLOCK_EDIT_MODE ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDC_EDIT_MODE, 
-               USE_CHINESE ? L"编辑模式" : L"Edit Mode");
+               GetLocalizedString(L"编辑模式", L"Edit Mode"));
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
     HMENU hTimeoutMenu = CreatePopupMenu();
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_MESSAGE ? MF_CHECKED : MF_UNCHECKED), 
                CLOCK_IDM_SHOW_MESSAGE, 
-               USE_CHINESE ? L"显示消息" : L"Show Message");
+               GetLocalizedString(L"显示消息", L"Show Message"));
 
     HMENU hOpenFileMenu = CreatePopupMenu();
     if (CLOCK_RECENT_FILES_COUNT > 0) {
@@ -1355,16 +1380,16 @@ void ShowColorMenu(HWND hwnd) {
         AppendMenuW(hOpenFileMenu, MF_SEPARATOR, 0, NULL);
     }
     AppendMenuW(hOpenFileMenu, MF_STRING, CLOCK_IDM_BROWSE_FILE, 
-                USE_CHINESE ? L"浏览..." : L"Browse...");
+                GetLocalizedString(L"浏览...", L"Browse..."));
 
-    const wchar_t* menuText = USE_CHINESE ? L"打开文件" : L"Open File";
+    const wchar_t* menuText = GetLocalizedString(L"打开文件", L"Open File");
     if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE && strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
         static wchar_t displayText[MAX_PATH];  // 改为静态以确保内存安全
         char *filename = strrchr(CLOCK_TIMEOUT_FILE_PATH, '\\');
         if (filename) {
             filename++;
             _snwprintf(displayText, MAX_PATH, 
-                      USE_CHINESE ? L"打开: %hs" : L"Open: %hs", 
+                      GetLocalizedString(L"打开: %hs", L"Open: %hs"), 
                       filename);
             menuText = displayText;
         }
@@ -1375,18 +1400,18 @@ void ShowColorMenu(HWND hwnd) {
                
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_LOCK ? MF_CHECKED : MF_UNCHECKED), 
                CLOCK_IDM_LOCK_SCREEN, 
-               USE_CHINESE ? L"锁定屏幕" : L"Lock Screen");
+               GetLocalizedString(L"锁定屏幕", L"Lock Screen"));
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SHUTDOWN ? MF_CHECKED : MF_UNCHECKED), 
                CLOCK_IDM_SHUTDOWN, 
-               USE_CHINESE ? L"关机" : L"Shutdown");
+               GetLocalizedString(L"关机", L"Shutdown"));
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_RESTART ? MF_CHECKED : MF_UNCHECKED), 
                CLOCK_IDM_RESTART, 
-               USE_CHINESE ? L"重启" : L"Restart");
+               GetLocalizedString(L"重启", L"Restart"));
 
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeoutMenu, 
-                USE_CHINESE ? L"超时动作" : L"Timeout Action");
+                GetLocalizedString(L"超时动作", L"Timeout Action"));
     AppendMenuW(hMenu, MF_STRING, CLOCK_IDC_MODIFY_OPTIONS, 
-                USE_CHINESE ? L"修改时间选项" : L"Modify Time Options");
+                GetLocalizedString(L"修改时间选项", L"Modify Time Options"));
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
     // 颜色选项保持不变，因为是用颜色块显示的
@@ -1404,7 +1429,7 @@ void ShowColorMenu(HWND hwnd) {
     }
     AppendMenuW(hColorSubMenu, MF_SEPARATOR, 0, NULL);
     AppendMenuW(hColorSubMenu, MF_STRING, CLOCK_IDC_CUSTOMIZE_LEFT, 
-                USE_CHINESE ? L"自定义" : L"Customize");
+                GetLocalizedString(L"自定义", L"Customize"));
 
     // 字体菜单项
     for (int i = 0; i < sizeof(fontResources) / sizeof(fontResources[0]); i++) {
@@ -1424,47 +1449,63 @@ void ShowColorMenu(HWND hwnd) {
     }
 
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hColorSubMenu, 
-                USE_CHINESE ? L"颜色" : L"Color");
+                GetLocalizedString(L"颜色", L"Color"));
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hFontSubMenu, 
-                USE_CHINESE ? L"字体" : L"Font");
+                GetLocalizedString(L"字体", L"Font"));
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
     
     HMENU hAboutMenu = CreatePopupMenu();
     wchar_t version_text[32];
     _snwprintf(version_text, sizeof(version_text)/sizeof(wchar_t), 
-               USE_CHINESE ? L"当前版本: %hs" : L"Version: %hs", 
+               GetLocalizedString(L"当前版本: %hs", L"Version: %hs"), 
                CATIME_VERSION);
     AppendMenuW(hAboutMenu, MF_STRING | MF_DISABLED, 0, version_text);
 
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_FEEDBACK, 
-                USE_CHINESE ? L"反馈" : L"Feedback");
+                GetLocalizedString(L"反馈", L"Feedback"));
 
     // 添加语言选择子菜单
     HMENU hLangMenu = CreatePopupMenu();
-    AppendMenuW(hLangMenu, MF_STRING | (USE_CHINESE ? MF_CHECKED : MF_UNCHECKED),
-                CLOCK_IDM_LANG_CHINESE, L"中文");
-    AppendMenuW(hLangMenu, MF_STRING | (USE_CHINESE ? MF_UNCHECKED : MF_CHECKED),
+    AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_CHINESE_SIMP ? MF_CHECKED : MF_UNCHECKED),
+                CLOCK_IDM_LANG_CHINESE, L"简体中文");
+    AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_CHINESE_TRAD ? MF_CHECKED : MF_UNCHECKED),
+                CLOCK_IDM_LANG_CHINESE_TRAD, L"繁體中文");
+    AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_ENGLISH ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDM_LANG_ENGLISH, L"English");
-    AppendMenuW(hAboutMenu, MF_POPUP, (UINT_PTR)hLangMenu, 
-                USE_CHINESE ? L"语言" : L"Language");
+    AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_SPANISH ? MF_CHECKED : MF_UNCHECKED),
+                CLOCK_IDM_LANG_SPANISH, L"Español");
+    AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_FRENCH ? MF_CHECKED : MF_UNCHECKED),
+                CLOCK_IDM_LANG_FRENCH, L"Français");
+    AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_GERMAN ? MF_CHECKED : MF_UNCHECKED),
+                CLOCK_IDM_LANG_GERMAN, L"Deutsch");
+    AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_RUSSIAN ? MF_CHECKED : MF_UNCHECKED),
+                CLOCK_IDM_LANG_RUSSIAN, L"Русский");
+    AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_PORTUGUESE ? MF_CHECKED : MF_UNCHECKED),
+                CLOCK_IDM_LANG_PORTUGUESE, L"Português");
+    AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_JAPANESE ? MF_CHECKED : MF_UNCHECKED),
+                CLOCK_IDM_LANG_JAPANESE, L"日本語");
+    AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_KOREAN ? MF_CHECKED : MF_UNCHECKED),
+                CLOCK_IDM_LANG_KOREAN, L"한국어");
+
+    AppendMenuW(hAboutMenu, MF_POPUP, (UINT_PTR)hLangMenu, GetLocalizedString(L"语言", L"Language"));
 
     HMENU hUpdateMenu = CreatePopupMenu();
     AppendMenuW(hUpdateMenu, MF_STRING, CLOCK_IDM_UPDATE_GITHUB, L"GitHub");
     AppendMenuW(hUpdateMenu, MF_STRING, CLOCK_IDM_UPDATE_123PAN,
-                USE_CHINESE ? L"123云盘" : L"123Pan");
+                GetLocalizedString(L"123云盘", L"123Pan"));
     AppendMenuW(hUpdateMenu, MF_STRING, CLOCK_IDM_UPDATE_LANZOU,
-                USE_CHINESE ? L"蓝奏云 (密码: 1234)" : L"LanzouCloud (pwd: 1234)");
+                GetLocalizedString(L"蓝奏云 (密码: 1234)", L"LanzouCloud (pwd: 1234)"));
 
     AppendMenuW(hAboutMenu, MF_POPUP, (UINT_PTR)hUpdateMenu,
-                USE_CHINESE ? L"检查更新" : L"Check for Updates");
+                GetLocalizedString(L"检查更新", L"Check for Updates"));
     
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hAboutMenu,
-                USE_CHINESE ? L"关于" : L"About");
+                GetLocalizedString(L"关于", L"About"));
     AppendMenuW(hMenu, MF_STRING, 200,
-                USE_CHINESE ? L"重置" : L"Reset");
+                GetLocalizedString(L"重置", L"Reset"));
     AppendMenuW(hMenu, MF_STRING, 109,
-                USE_CHINESE ? L"退出" : L"Exit");
+                GetLocalizedString(L"退出", L"Exit"));
 
     POINT pt;
     GetCursorPos(&pt);
@@ -1967,12 +2008,52 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_LANG_CHINESE: {
-                    USE_CHINESE = TRUE;
+                    CURRENT_LANGUAGE = APP_LANG_CHINESE_SIMP;
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    break;
+                }
+                case CLOCK_IDM_LANG_CHINESE_TRAD: {
+                    CURRENT_LANGUAGE = APP_LANG_CHINESE_TRAD;
                     InvalidateRect(hwnd, NULL, TRUE);
                     break;
                 }
                 case CLOCK_IDM_LANG_ENGLISH: {
-                    USE_CHINESE = FALSE;
+                    CURRENT_LANGUAGE = APP_LANG_ENGLISH;
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    break;
+                }
+                case CLOCK_IDM_LANG_SPANISH: {
+                    CURRENT_LANGUAGE = APP_LANG_SPANISH;
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    break;
+                }
+                case CLOCK_IDM_LANG_FRENCH: {
+                    CURRENT_LANGUAGE = APP_LANG_FRENCH;
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    break;
+                }
+                case CLOCK_IDM_LANG_GERMAN: {
+                    CURRENT_LANGUAGE = APP_LANG_GERMAN;
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    break;
+                }
+                case CLOCK_IDM_LANG_RUSSIAN: {
+                    CURRENT_LANGUAGE = APP_LANG_RUSSIAN;
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    break;
+                }
+                case CLOCK_IDM_LANG_PORTUGUESE: {
+                    CURRENT_LANGUAGE = APP_LANG_PORTUGUESE;
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    break;
+                }
+                case CLOCK_IDM_LANG_JAPANESE: {
+                    CURRENT_LANGUAGE = APP_LANG_JAPANESE;
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    break;
+                }
+                case CLOCK_IDM_LANG_KOREAN: {
+                    CURRENT_LANGUAGE = APP_LANG_KOREAN;
                     InvalidateRect(hwnd, NULL, TRUE);
                     break;
                 }
@@ -2720,4 +2801,240 @@ void ShowToastNotification(HWND hwnd, const char* message) {
     nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
     nid.szInfo[0] = '\0';
     nid.szInfoTitle[0] = '\0';
+}
+
+// 添加获取本地化字符串的函数
+const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english) {
+    switch (CURRENT_LANGUAGE) {
+        case APP_LANG_CHINESE_SIMP:
+            return chinese;
+            
+        case APP_LANG_CHINESE_TRAD:
+            if (wcscmp(chinese, L"设置时间") == 0) return L"設置時間";
+            if (wcscmp(chinese, L"编辑模式") == 0) return L"編輯模式";
+            if (wcscmp(chinese, L"显示当前时间") == 0) return L"顯示當前時間";
+            if (wcscmp(chinese, L"24小时制") == 0) return L"24小時制";
+            if (wcscmp(chinese, L"显示秒数") == 0) return L"顯示秒數";
+            if (wcscmp(chinese, L"时间显示") == 0) return L"時間顯示";
+            if (wcscmp(chinese, L"超时动作") == 0) return L"超時動作";
+            if (wcscmp(chinese, L"显示消息") == 0) return L"顯示消息";
+            if (wcscmp(chinese, L"浏览...") == 0) return L"瀏覽...";
+            if (wcscmp(chinese, L"打开文件") == 0) return L"打開文件";
+            if (wcscmp(chinese, L"打开: %hs") == 0) return L"打開: %hs";
+            if (wcscmp(chinese, L"锁定屏幕") == 0) return L"鎖定屏幕";
+            if (wcscmp(chinese, L"关机") == 0) return L"關機";
+            if (wcscmp(chinese, L"重启") == 0) return L"重啟";
+            if (wcscmp(chinese, L"修改时间选项") == 0) return L"修改時間選項";
+            if (wcscmp(chinese, L"自定义") == 0) return L"自定義";
+            if (wcscmp(chinese, L"颜色") == 0) return L"顏色";
+            if (wcscmp(chinese, L"字体") == 0) return L"字體";
+            if (wcscmp(chinese, L"当前版本: %hs") == 0) return L"當前版本: %hs";
+            if (wcscmp(chinese, L"反馈") == 0) return L"反饋";
+            if (wcscmp(chinese, L"语言") == 0) return L"語言";
+            if (wcscmp(chinese, L"检查更新") == 0) return L"檢查更新";
+            if (wcscmp(chinese, L"关于") == 0) return L"關於";
+            if (wcscmp(chinese, L"重置") == 0) return L"重置";
+            if (wcscmp(chinese, L"退出") == 0) return L"退出";
+            return chinese;
+            
+        case APP_LANG_SPANISH:
+            if (wcscmp(english, L"Set Time") == 0) return L"Establecer tiempo";
+            if (wcscmp(english, L"Edit Mode") == 0) return L"Modo de edición";
+            if (wcscmp(english, L"Show Current Time") == 0) return L"Mostrar hora actual";
+            if (wcscmp(english, L"24-Hour Format") == 0) return L"Formato 24 horas";
+            if (wcscmp(english, L"Show Seconds") == 0) return L"Mostrar segundos";
+            if (wcscmp(english, L"Time Display") == 0) return L"Visualización de tiempo";
+            if (wcscmp(english, L"Timeout Action") == 0) return L"Acción de tiempo";
+            if (wcscmp(english, L"Show Message") == 0) return L"Mostrar mensaje";
+            if (wcscmp(english, L"Browse...") == 0) return L"Explorar...";
+            if (wcscmp(english, L"Open File") == 0) return L"Abrir archivo";
+            if (wcscmp(english, L"Open: %hs") == 0) return L"Abrir: %hs";
+            if (wcscmp(english, L"Lock Screen") == 0) return L"Bloquear pantalla";
+            if (wcscmp(english, L"Shutdown") == 0) return L"Apagar";
+            if (wcscmp(english, L"Restart") == 0) return L"Reiniciar";
+            if (wcscmp(english, L"Modify Time Options") == 0) return L"Modificar opciones";
+            if (wcscmp(english, L"Customize") == 0) return L"Personalizar";
+            if (wcscmp(english, L"Color") == 0) return L"Color";
+            if (wcscmp(english, L"Font") == 0) return L"Fuente";
+            if (wcscmp(english, L"Version: %hs") == 0) return L"Versión: %hs";
+            if (wcscmp(english, L"Feedback") == 0) return L"Comentarios";
+            if (wcscmp(english, L"Language") == 0) return L"Idioma";
+            if (wcscmp(english, L"Check for Updates") == 0) return L"Buscar actualizaciones";
+            if (wcscmp(english, L"About") == 0) return L"Acerca de";
+            if (wcscmp(english, L"Reset") == 0) return L"Restablecer";
+            if (wcscmp(english, L"Exit") == 0) return L"Salir";
+            return english;
+
+        case APP_LANG_FRENCH:
+            if (wcscmp(english, L"Set Time") == 0) return L"Régler l'heure";
+            if (wcscmp(english, L"Edit Mode") == 0) return L"Mode édition";
+            if (wcscmp(english, L"Show Current Time") == 0) return L"Afficher l'heure actuelle";
+            if (wcscmp(english, L"24-Hour Format") == 0) return L"Format 24 heures";
+            if (wcscmp(english, L"Show Seconds") == 0) return L"Afficher les secondes";
+            if (wcscmp(english, L"Time Display") == 0) return L"Affichage de l'heure";
+            if (wcscmp(english, L"Timeout Action") == 0) return L"Action de temporisation";
+            if (wcscmp(english, L"Show Message") == 0) return L"Afficher le message";
+            if (wcscmp(english, L"Browse...") == 0) return L"Parcourir...";
+            if (wcscmp(english, L"Open File") == 0) return L"Ouvrir le fichier";
+            if (wcscmp(english, L"Open: %hs") == 0) return L"Ouvrir: %hs";
+            if (wcscmp(english, L"Lock Screen") == 0) return L"Verrouiller l'écran";
+            if (wcscmp(english, L"Shutdown") == 0) return L"Arrêter";
+            if (wcscmp(english, L"Restart") == 0) return L"Redémarrer";
+            if (wcscmp(english, L"Modify Time Options") == 0) return L"Modifier les options";
+            if (wcscmp(english, L"Customize") == 0) return L"Personnaliser";
+            if (wcscmp(english, L"Color") == 0) return L"Couleur";
+            if (wcscmp(english, L"Font") == 0) return L"Police";
+            if (wcscmp(english, L"Version: %hs") == 0) return L"Version: %hs";
+            if (wcscmp(english, L"Feedback") == 0) return L"Retour";
+            if (wcscmp(english, L"Language") == 0) return L"Langue";
+            if (wcscmp(english, L"Check for Updates") == 0) return L"Vérifier les mises à jour";
+            if (wcscmp(english, L"About") == 0) return L"À propos";
+            if (wcscmp(english, L"Reset") == 0) return L"Réinitialiser";
+            if (wcscmp(english, L"Exit") == 0) return L"Quitter";
+            return english;
+
+        case APP_LANG_GERMAN:
+            if (wcscmp(english, L"Set Time") == 0) return L"Zeit einstellen";
+            if (wcscmp(english, L"Edit Mode") == 0) return L"Bearbeitungsmodus";
+            if (wcscmp(english, L"Show Current Time") == 0) return L"Aktuelle Zeit anzeigen";
+            if (wcscmp(english, L"24-Hour Format") == 0) return L"24-Stunden-Format";
+            if (wcscmp(english, L"Show Seconds") == 0) return L"Sekunden anzeigen";
+            if (wcscmp(english, L"Time Display") == 0) return L"Zeitanzeige";
+            if (wcscmp(english, L"Timeout Action") == 0) return L"Zeitüberschreitungsaktion";
+            if (wcscmp(english, L"Show Message") == 0) return L"Nachricht anzeigen";
+            if (wcscmp(english, L"Browse...") == 0) return L"Durchsuchen...";
+            if (wcscmp(english, L"Open File") == 0) return L"Datei öffnen";
+            if (wcscmp(english, L"Open: %hs") == 0) return L"Öffnen: %hs";
+            if (wcscmp(english, L"Lock Screen") == 0) return L"Bildschirm sperren";
+            if (wcscmp(english, L"Shutdown") == 0) return L"Herunterfahren";
+            if (wcscmp(english, L"Restart") == 0) return L"Neustart";
+            if (wcscmp(english, L"Modify Time Options") == 0) return L"Zeitoptionen ändern";
+            if (wcscmp(english, L"Customize") == 0) return L"Anpassen";
+            if (wcscmp(english, L"Color") == 0) return L"Farbe";
+            if (wcscmp(english, L"Font") == 0) return L"Schriftart";
+            if (wcscmp(english, L"Version: %hs") == 0) return L"Version: %hs";
+            if (wcscmp(english, L"Feedback") == 0) return L"Feedback";
+            if (wcscmp(english, L"Language") == 0) return L"Sprache";
+            if (wcscmp(english, L"Check for Updates") == 0) return L"Nach Updates suchen";
+            if (wcscmp(english, L"About") == 0) return L"Über";
+            if (wcscmp(english, L"Reset") == 0) return L"Zurücksetzen";
+            if (wcscmp(english, L"Exit") == 0) return L"Beenden";
+            return english;
+
+        case APP_LANG_RUSSIAN:
+            if (wcscmp(english, L"Set Time") == 0) return L"Установить время";
+            if (wcscmp(english, L"Edit Mode") == 0) return L"Режим редактирования";
+            if (wcscmp(english, L"Show Current Time") == 0) return L"Показать текущее время";
+            if (wcscmp(english, L"24-Hour Format") == 0) return L"24-часовой формат";
+            if (wcscmp(english, L"Show Seconds") == 0) return L"Показать секунды";
+            if (wcscmp(english, L"Time Display") == 0) return L"Отображение времени";
+            if (wcscmp(english, L"Timeout Action") == 0) return L"Действие по таймауту";
+            if (wcscmp(english, L"Show Message") == 0) return L"Показать сообщение";
+            if (wcscmp(english, L"Browse...") == 0) return L"Обзор...";
+            if (wcscmp(english, L"Open File") == 0) return L"Открыть файл";
+            if (wcscmp(english, L"Open: %hs") == 0) return L"Открыть: %hs";
+            if (wcscmp(english, L"Lock Screen") == 0) return L"Заблокировать экран";
+            if (wcscmp(english, L"Shutdown") == 0) return L"Выключение";
+            if (wcscmp(english, L"Restart") == 0) return L"Перезагрузка";
+            if (wcscmp(english, L"Modify Time Options") == 0) return L"Изменить параметры времени";
+            if (wcscmp(english, L"Customize") == 0) return L"Настроить";
+            if (wcscmp(english, L"Color") == 0) return L"Цвет";
+            if (wcscmp(english, L"Font") == 0) return L"Шрифт";
+            if (wcscmp(english, L"Version: %hs") == 0) return L"Версия: %hs";
+            if (wcscmp(english, L"Feedback") == 0) return L"Обратная связь";
+            if (wcscmp(english, L"Language") == 0) return L"Язык";
+            if (wcscmp(english, L"Check for Updates") == 0) return L"Проверить обновления";
+            if (wcscmp(english, L"About") == 0) return L"О программе";
+            if (wcscmp(english, L"Reset") == 0) return L"Сброс";
+            if (wcscmp(english, L"Exit") == 0) return L"Выход";
+            return english;
+
+        case APP_LANG_PORTUGUESE:
+            if (wcscmp(english, L"Set Time") == 0) return L"Definir tempo";
+            if (wcscmp(english, L"Edit Mode") == 0) return L"Modo de edição";
+            if (wcscmp(english, L"Show Current Time") == 0) return L"Mostrar hora atual";
+            if (wcscmp(english, L"24-Hour Format") == 0) return L"Formato 24 horas";
+            if (wcscmp(english, L"Show Seconds") == 0) return L"Mostrar segundos";
+            if (wcscmp(english, L"Time Display") == 0) return L"Exibição de tempo";
+            if (wcscmp(english, L"Timeout Action") == 0) return L"Ação de timeout";
+            if (wcscmp(english, L"Show Message") == 0) return L"Mostrar mensagem";
+            if (wcscmp(english, L"Browse...") == 0) return L"Navegar...";
+            if (wcscmp(english, L"Open File") == 0) return L"Abrir arquivo";
+            if (wcscmp(english, L"Open: %hs") == 0) return L"Abrir: %hs";
+            if (wcscmp(english, L"Lock Screen") == 0) return L"Bloquear tela";
+            if (wcscmp(english, L"Shutdown") == 0) return L"Desligar";
+            if (wcscmp(english, L"Restart") == 0) return L"Reiniciar";
+            if (wcscmp(english, L"Modify Time Options") == 0) return L"Modificar opções";
+            if (wcscmp(english, L"Customize") == 0) return L"Personalizar";
+            if (wcscmp(english, L"Color") == 0) return L"Cor";
+            if (wcscmp(english, L"Font") == 0) return L"Fonte";
+            if (wcscmp(english, L"Version: %hs") == 0) return L"Versão: %hs";
+            if (wcscmp(english, L"Feedback") == 0) return L"Feedback";
+            if (wcscmp(english, L"Language") == 0) return L"Idioma";
+            if (wcscmp(english, L"Check for Updates") == 0) return L"Verificar atualizações";
+            if (wcscmp(english, L"About") == 0) return L"Sobre";
+            if (wcscmp(english, L"Reset") == 0) return L"Redefinir";
+            if (wcscmp(english, L"Exit") == 0) return L"Sair";
+            return english;
+
+        case APP_LANG_JAPANESE:
+            if (wcscmp(english, L"Set Time") == 0) return L"時間設定";
+            if (wcscmp(english, L"Edit Mode") == 0) return L"編集モード";
+            if (wcscmp(english, L"Show Current Time") == 0) return L"現在時刻を表示";
+            if (wcscmp(english, L"24-Hour Format") == 0) return L"24時間表示";
+            if (wcscmp(english, L"Show Seconds") == 0) return L"秒を表示";
+            if (wcscmp(english, L"Time Display") == 0) return L"時間表示";
+            if (wcscmp(english, L"Timeout Action") == 0) return L"タイムアウト動作";
+            if (wcscmp(english, L"Show Message") == 0) return L"メッセージを表示";
+            if (wcscmp(english, L"Browse...") == 0) return L"参照...";
+            if (wcscmp(english, L"Open File") == 0) return L"ファイルを開く";
+            if (wcscmp(english, L"Open: %hs") == 0) return L"開く: %hs";
+            if (wcscmp(english, L"Lock Screen") == 0) return L"画面をロック";
+            if (wcscmp(english, L"Shutdown") == 0) return L"シャットダウン";
+            if (wcscmp(english, L"Restart") == 0) return L"再起動";
+            if (wcscmp(english, L"Modify Time Options") == 0) return L"時間オプションを変更";
+            if (wcscmp(english, L"Customize") == 0) return L"カスタマイズ";
+            if (wcscmp(english, L"Color") == 0) return L"色";
+            if (wcscmp(english, L"Font") == 0) return L"フォント";
+            if (wcscmp(english, L"Version: %hs") == 0) return L"バージョン: %hs";
+            if (wcscmp(english, L"Feedback") == 0) return L"フィードバック";
+            if (wcscmp(english, L"Language") == 0) return L"言語";
+            if (wcscmp(english, L"Check for Updates") == 0) return L"更新を確認";
+            if (wcscmp(english, L"About") == 0) return L"について";
+            if (wcscmp(english, L"Reset") == 0) return L"リセット";
+            if (wcscmp(english, L"Exit") == 0) return L"終了";
+            return english;
+
+        case APP_LANG_KOREAN:
+            if (wcscmp(english, L"Set Time") == 0) return L"시간 설정";
+            if (wcscmp(english, L"Edit Mode") == 0) return L"편집 모드";
+            if (wcscmp(english, L"Show Current Time") == 0) return L"현재 시간 표시";
+            if (wcscmp(english, L"24-Hour Format") == 0) return L"24시간 형식";
+            if (wcscmp(english, L"Show Seconds") == 0) return L"초 표시";
+            if (wcscmp(english, L"Time Display") == 0) return L"시간 표시";
+            if (wcscmp(english, L"Timeout Action") == 0) return L"시간 초과 동작";
+            if (wcscmp(english, L"Show Message") == 0) return L"메시지 표시";
+            if (wcscmp(english, L"Browse...") == 0) return L"찾아보기...";
+            if (wcscmp(english, L"Open File") == 0) return L"파일 열기";
+            if (wcscmp(english, L"Open: %hs") == 0) return L"열기: %hs";
+            if (wcscmp(english, L"Lock Screen") == 0) return L"화면 잠금";
+            if (wcscmp(english, L"Shutdown") == 0) return L"시스템 종료";
+            if (wcscmp(english, L"Restart") == 0) return L"다시 시작";
+            if (wcscmp(english, L"Modify Time Options") == 0) return L"시간 옵션 수정";
+            if (wcscmp(english, L"Customize") == 0) return L"사용자 지정";
+            if (wcscmp(english, L"Color") == 0) return L"색상";
+            if (wcscmp(english, L"Font") == 0) return L"글꼴";
+            if (wcscmp(english, L"Version: %hs") == 0) return L"버전: %hs";
+            if (wcscmp(english, L"Feedback") == 0) return L"피드백";
+            if (wcscmp(english, L"Language") == 0) return L"언어";
+            if (wcscmp(english, L"Check for Updates") == 0) return L"업데이트 확인";
+            if (wcscmp(english, L"About") == 0) return L"정보";
+            if (wcscmp(english, L"Reset") == 0) return L"초기화";
+            if (wcscmp(english, L"Exit") == 0) return L"종료";
+            return english;
+
+        case APP_LANG_ENGLISH:
+        default:
+            return english;
+    }
 }
