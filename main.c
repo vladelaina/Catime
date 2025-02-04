@@ -14,13 +14,14 @@
 #define VK_MEDIA_STOP 0xB2
 #define KEYEVENTF_KEYUP 0x0002
 
- 
+#define UNICODE
+#define _UNICODE
+
 #define UPDATE_URL_GITHUB    "https://github.com/vladelaina/Catime/releases"
 #define UPDATE_URL_123PAN    "https://www.123684.com/s/ruESjv-2CZUA"
 #define UPDATE_URL_LANZOU    "https://wwrx.lanzoup.com/b00hqiiskj"
 #define FEEDBACK_URL        "https://www.bilibili.com/video/BV1ztFeeQEYP"
 
- 
 #define CLOCK_IDM_VERSION 131
 #define CLOCK_IDM_CHECK_UPDATE 133   
 #define CLOCK_IDM_UPDATE_GITHUB    134
@@ -325,7 +326,56 @@ BOOL CLOCK_SHOW_SECONDS = TRUE;
 #define CLOCK_IDM_24HOUR_FORMAT    151
 #define CLOCK_IDM_SHOW_SECONDS     152
 
+// 修改 UTF8ToANSI 函数的实现
+char* UTF8ToANSI(const char* utf8Str) {
+    // 先获取需要的缓冲区大小
+    int wlen = MultiByteToWideChar(CP_UTF8, 0, utf8Str, -1, NULL, 0);
+    if (wlen == 0) {
+        return _strdup(utf8Str); // 如果转换失败，返回原始字符串的副本
+    }
+
+    // 分配 UTF-16 缓冲区
+    wchar_t* wstr = (wchar_t*)malloc(sizeof(wchar_t) * wlen);
+    if (!wstr) {
+        return _strdup(utf8Str);
+    }
+
+    // 转换到 UTF-16
+    if (MultiByteToWideChar(CP_UTF8, 0, utf8Str, -1, wstr, wlen) == 0) {
+        free(wstr);
+        return _strdup(utf8Str);
+    }
+
+    // 获取 ANSI 所需的缓冲区大小
+    int len = WideCharToMultiByte(936, 0, wstr, -1, NULL, 0, NULL, NULL);
+    if (len == 0) {
+        free(wstr);
+        return _strdup(utf8Str);
+    }
+
+    // 分配 ANSI 缓冲区
+    char* str = (char*)malloc(len);
+    if (!str) {
+        free(wstr);
+        return _strdup(utf8Str);
+    }
+
+    // 转换到 ANSI (GB2312/GBK)
+    if (WideCharToMultiByte(936, 0, wstr, -1, str, len, NULL, NULL) == 0) {
+        free(wstr);
+        free(str);
+        return _strdup(utf8Str);
+    }
+
+    free(wstr);
+    return str;
+}
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+    // 设置代码页为 GBK
+    SetConsoleOutputCP(936);
+    SetConsoleCP(936);
+    
     ReadConfig();
 
     int defaultFontIndex = -1;
@@ -1238,11 +1288,14 @@ void ExitProgram(HWND hwnd) {
 
 void ShowContextMenu(HWND hwnd) {
     HMENU hMenu = CreatePopupMenu();
-    AppendMenu(hMenu, MF_STRING, 101, "设置时间");
+    
+    // 使用 L 前缀的宽字符串
+    AppendMenuW(hMenu, MF_STRING, 101, L"设置时间");
     
     HMENU hTimeMenu = CreatePopupMenu();
-    AppendMenu(hTimeMenu, MF_STRING | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
-               CLOCK_IDM_SHOW_CURRENT_TIME, "显示当前时间");
+    AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
+               CLOCK_IDM_SHOW_CURRENT_TIME, L"显示当前时间");
+    
     AppendMenu(hTimeMenu, MF_SEPARATOR, 0, NULL);
     AppendMenu(hTimeMenu, MF_STRING | (CLOCK_USE_24HOUR ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_24HOUR_FORMAT, "24小时制");
@@ -1271,8 +1324,11 @@ void ShowColorMenu(HWND hwnd) {
     HMENU hColorSubMenu = CreatePopupMenu();
     HMENU hFontSubMenu = CreatePopupMenu();
 
+    char* menuText = UTF8ToANSI("编辑模式");
     AppendMenu(hMenu, MF_STRING | (CLOCK_EDIT_MODE ? MF_CHECKED : MF_UNCHECKED),
-               CLOCK_IDC_EDIT_MODE, "编辑模式");
+               CLOCK_IDC_EDIT_MODE, menuText);
+    free(menuText);
+    
     AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
 
     HMENU hTimeoutMenu = CreatePopupMenu();
@@ -1292,7 +1348,7 @@ void ShowColorMenu(HWND hwnd) {
     }
     AppendMenu(hOpenFileMenu, MF_STRING, CLOCK_IDM_BROWSE_FILE, "浏览...");
 
-    char menuText[32] = "打开文件";
+    menuText = UTF8ToANSI("打开文件");
     if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE && strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
         char *filename = strrchr(CLOCK_TIMEOUT_FILE_PATH, '\\');
         if (filename) {
@@ -1300,9 +1356,9 @@ void ShowColorMenu(HWND hwnd) {
             snprintf(menuText, sizeof(menuText), "打开: %s", filename);
         }
     }
-
     AppendMenu(hTimeoutMenu, MF_POPUP | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE ? MF_CHECKED : MF_UNCHECKED),
                (UINT_PTR)hOpenFileMenu, menuText);
+    free(menuText);
                
     AppendMenu(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_LOCK ? MF_CHECKED : MF_UNCHECKED), 
                CLOCK_IDM_LOCK_SCREEN, "锁定屏幕");
