@@ -1862,14 +1862,22 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             SetTimer(hwnd, 1, 1000, NULL);
                             break;
                         } else {
-                            MessageBox(hwnd, 
-                                "25    = 25 minutes \n"
-                                "25h   = 25 hours \n"
-                                "25s   = 25 seconds \n"
-                                "25 30 = 25 minutes 30 seconds \n"
-                                "25 30m = 25 hours 30 minutes \n"
-                                "1 30 20 = 1 hour 30 minutes 20 seconds",
-                                "Input Format",
+                            MessageBoxW(hwnd, 
+                                GetLocalizedString(
+                                    L"25    = 25分钟\n"
+                                    L"25h   = 25小时\n" 
+                                    L"25s   = 25秒\n"
+                                    L"25 30 = 25分钟30秒\n"
+                                    L"25 30m = 25小时30分钟\n"
+                                    L"1 30 20 = 1小时30分钟20秒",
+                                    
+                                    L"25    = 25 minutes\n"
+                                    L"25h   = 25 hours\n"
+                                    L"25s   = 25 seconds\n"
+                                    L"25 30 = 25 minutes 30 seconds\n" 
+                                    L"25 30m = 25 hours 30 minutes\n"
+                                    L"1 30 20 = 1 hour 30 minutes 20 seconds"),
+                                GetLocalizedString(L"输入格式", L"Input Format"),
                                 MB_OK);
                         }
                     }
@@ -1909,10 +1917,14 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             ReadConfig();
                             break;
                         } else {
-                            MessageBox(hwnd,
-                                "Enter numbers separated by spaces\n"
-                                "Example: 25 10 5",
-                                "Invalid Input", MB_OK);   
+                            MessageBoxW(hwnd,
+                                GetLocalizedString(
+                                    L"请输入用空格分隔的数字\n"
+                                    L"例如: 25 10 5",
+                                    L"Enter numbers separated by spaces\n"
+                                    L"Example: 25 10 5"),
+                                GetLocalizedString(L"无效输入", L"Invalid Input"), 
+                                MB_OK);
                         }
                     }
                     break;
@@ -2184,10 +2196,14 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             InvalidateRect(hwnd, NULL, TRUE);
                             break;
                         } else {
-                            MessageBox(hwnd, 
-                                "HEX: FF5733 or #FF5733\n"
-                                "RGB: 255,87,51",
-                                "Input Format", MB_OK);   
+                            MessageBoxW(hwnd,
+                                GetLocalizedString(
+                                    L"十六进制: FF5733 或 #FF5733\n"
+                                    L"RGB: 255,87,51",
+                                    L"HEX: FF5733 or #FF5733\n"
+                                    L"RGB: 255,87,51"),
+                                GetLocalizedString(L"输入格式", L"Input Format"),
+                                MB_OK);
                         }
                     }
                     break;
@@ -2195,85 +2211,169 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDC_FONT_VICTORMONO:
                     WriteConfigFont("VictorMono NFP Medium.ttf");
                     if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "VictorMono NFP Medium.ttf")) {
-                        MessageBox(hwnd, "Failed to load font: VictorMono NFP Medium.ttf", "Error", MB_ICONEXCLAMATION | MB_OK);
+                        wchar_t errorMsg[256];
+                        _snwprintf(errorMsg, sizeof(errorMsg)/sizeof(wchar_t),
+                            GetLocalizedString(L"无法加载字体: %hs", L"Failed to load font: %hs"),
+                            "VictorMono NFP Medium.ttf");
+                        MessageBoxW(hwnd, errorMsg, 
+                            GetLocalizedString(L"错误", L"Error"),
+                            MB_ICONEXCLAMATION | MB_OK);
                     }
                     goto refresh_window;
                 case CLOCK_IDC_FONT_LIBERATION:
                     WriteConfigFont("LiterationSerif Nerd Font.ttf");
                     if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "LiterationSerif Nerd Font.ttf")) {
-                        MessageBox(hwnd, "Failed to load font: LiterationSerif Nerd Font.ttf", "Error", MB_ICONEXCLAMATION | MB_OK);
+                        wchar_t errorMsg[256];
+                        _snwprintf(errorMsg, sizeof(errorMsg)/sizeof(wchar_t),
+                            GetLocalizedString(L"无法加载字体: %hs", L"Failed to load font: %hs"),
+                            "LiterationSerif Nerd Font.ttf");
+                        MessageBoxW(hwnd, errorMsg, 
+                            GetLocalizedString(L"错误", L"Error"),
+                            MB_ICONEXCLAMATION | MB_OK);
                     }
                     goto refresh_window;
                 case CLOCK_IDC_FONT_ZEDMONO:
                     WriteConfigFont("ZedMono NF.ttf");
                     if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "ZedMono NF.ttf")) {
-                        MessageBox(hwnd, "Failed to load font: ZedMono NF.ttf", "Error", MB_ICONEXCLAMATION | MB_OK);
+                        wchar_t errorMsg[256];
+                        _snwprintf(errorMsg, sizeof(errorMsg)/sizeof(wchar_t),
+                            GetLocalizedString(L"无法加载字体: %hs", L"Failed to load font: %hs"),
+                            "ZedMono NF.ttf");
+                        MessageBoxW(hwnd, errorMsg, 
+                            GetLocalizedString(L"错误", L"Error"),
+                            MB_ICONEXCLAMATION | MB_OK);
                     }
                     goto refresh_window;
                 case CLOCK_IDC_FONT_RECMONO:
                     WriteConfigFont("RecMonoCasual Nerd Font Mono.ttf");
                     if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "RecMonoCasual Nerd Font Mono.ttf")) {
-                        MessageBox(hwnd, "Failed to load font: RecMonoCasual Nerd Font Mono.ttf", "Error", MB_ICONEXCLAMATION | MB_OK);
+                        wchar_t errorMsg[256];
+                        _snwprintf(errorMsg, sizeof(errorMsg)/sizeof(wchar_t),
+                            GetLocalizedString(L"无法加载字体: %hs", L"Failed to load font: %hs"),
+                            "RecMonoCasual Nerd Font Mono.ttf");
+                        MessageBoxW(hwnd, errorMsg, 
+                            GetLocalizedString(L"错误", L"Error"),
+                            MB_ICONEXCLAMATION | MB_OK);
                     }
                     goto refresh_window;
                 case CLOCK_IDC_FONT_IOSEVKA_TERM:
                     WriteConfigFont("IosevkaTermSlab NFP Medium.ttf");
                     if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "IosevkaTermSlab NFP Medium.ttf")) {
-                        MessageBox(hwnd, "Failed to load font: IosevkaTermSlab NFP Medium.ttf", "Error", MB_ICONEXCLAMATION | MB_OK);
+                        wchar_t errorMsg[256];
+                        _snwprintf(errorMsg, sizeof(errorMsg)/sizeof(wchar_t),
+                            GetLocalizedString(L"无法加载字体: %hs", L"Failed to load font: %hs"),
+                            "IosevkaTermSlab NFP Medium.ttf");
+                        MessageBoxW(hwnd, errorMsg, 
+                            GetLocalizedString(L"错误", L"Error"),
+                            MB_ICONEXCLAMATION | MB_OK);
                     }
                     goto refresh_window;
                 case CLOCK_IDC_FONT_ENVYCODE:
                     WriteConfigFont("EnvyCodeR Nerd Font.ttf");
                     if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "EnvyCodeR Nerd Font.ttf")) {
-                        MessageBox(hwnd, "Failed to load font: EnvyCodeR Nerd Font.ttf", "Error", MB_ICONEXCLAMATION | MB_OK);
+                        wchar_t errorMsg[256];
+                        _snwprintf(errorMsg, sizeof(errorMsg)/sizeof(wchar_t),
+                            GetLocalizedString(L"无法加载字体: %hs", L"Failed to load font: %hs"),
+                            "EnvyCodeR Nerd Font.ttf");
+                        MessageBoxW(hwnd, errorMsg, 
+                            GetLocalizedString(L"错误", L"Error"),
+                            MB_ICONEXCLAMATION | MB_OK);
                     }
                     goto refresh_window;
                 case CLOCK_IDC_FONT_DADDYTIME:
                     WriteConfigFont("DaddyTimeMono Nerd Font Propo.ttf");
                     if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "DaddyTimeMono Nerd Font Propo.ttf")) {
-                        MessageBox(hwnd, "Failed to load font: DaddyTimeMono Nerd Font Propo.ttf", "Error", MB_ICONEXCLAMATION | MB_OK);
+                        wchar_t errorMsg[256];
+                        _snwprintf(errorMsg, sizeof(errorMsg)/sizeof(wchar_t),
+                            GetLocalizedString(L"无法加载字体: %hs", L"Failed to load font: %hs"),
+                            "DaddyTimeMono Nerd Font Propo.ttf");
+                        MessageBoxW(hwnd, errorMsg, 
+                            GetLocalizedString(L"错误", L"Error"),
+                            MB_ICONEXCLAMATION | MB_OK);
                     }
                     goto refresh_window;
                 case CLOCK_IDC_FONT_PROFONT:
                     WriteConfigFont("ProFont IIx Nerd Font.ttf");
                     if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "ProFont IIx Nerd Font.ttf")) {
-                        MessageBox(hwnd, "Failed to load font: ProFont IIx Nerd Font.ttf", "Error", MB_ICONEXCLAMATION | MB_OK);
+                        wchar_t errorMsg[256];
+                        _snwprintf(errorMsg, sizeof(errorMsg)/sizeof(wchar_t),
+                            GetLocalizedString(L"无法加载字体: %hs", L"Failed to load font: %hs"),
+                            "ProFont IIx Nerd Font.ttf");
+                        MessageBoxW(hwnd, errorMsg, 
+                            GetLocalizedString(L"错误", L"Error"),
+                            MB_ICONEXCLAMATION | MB_OK);
                     }
                     goto refresh_window;
                 case CLOCK_IDC_FONT_HEAVYDATA:
                     WriteConfigFont("HeavyData Nerd Font.ttf");
                     if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "HeavyData Nerd Font.ttf")) {
-                        MessageBox(hwnd, "Failed to load font: HeavyData Nerd Font.ttf", "Error", MB_ICONEXCLAMATION | MB_OK);
+                        wchar_t errorMsg[256];
+                        _snwprintf(errorMsg, sizeof(errorMsg)/sizeof(wchar_t),
+                            GetLocalizedString(L"无法加载字体: %hs", L"Failed to load font: %hs"),
+                            "HeavyData Nerd Font.ttf");
+                        MessageBoxW(hwnd, errorMsg, 
+                            GetLocalizedString(L"错误", L"Error"),
+                            MB_ICONEXCLAMATION | MB_OK);
                     }
                     goto refresh_window;
                 case CLOCK_IDC_FONT_BIGBLUE:
                     WriteConfigFont("BigBlueTermPlus Nerd Font.ttf");
                     if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "BigBlueTermPlus Nerd Font.ttf")) {
-                        MessageBox(hwnd, "Failed to load font: BigBlueTermPlus Nerd Font.ttf", "Error", MB_ICONEXCLAMATION | MB_OK);
+                        wchar_t errorMsg[256];
+                        _snwprintf(errorMsg, sizeof(errorMsg)/sizeof(wchar_t),
+                            GetLocalizedString(L"无法加载字体: %hs", L"Failed to load font: %hs"),
+                            "BigBlueTermPlus Nerd Font.ttf");
+                        MessageBoxW(hwnd, errorMsg, 
+                            GetLocalizedString(L"错误", L"Error"),
+                            MB_ICONEXCLAMATION | MB_OK);
                     }
                     goto refresh_window;
                 case CLOCK_IDC_FONT_PROGGYCLEAN:
                     WriteConfigFont("ProggyCleanSZ Nerd Font Propo.ttf");
                     if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "ProggyCleanSZ Nerd Font Propo.ttf")) {
-                        MessageBox(hwnd, "Failed to load font: ProggyCleanSZ Nerd Font Propo.ttf", "Error", MB_ICONEXCLAMATION | MB_OK);
+                        wchar_t errorMsg[256];
+                        _snwprintf(errorMsg, sizeof(errorMsg)/sizeof(wchar_t),
+                            GetLocalizedString(L"无法加载字体: %hs", L"Failed to load font: %hs"),
+                            "ProggyCleanSZ Nerd Font Propo.ttf");
+                        MessageBoxW(hwnd, errorMsg, 
+                            GetLocalizedString(L"错误", L"Error"),
+                            MB_ICONEXCLAMATION | MB_OK);
                     }
                     goto refresh_window;
                 case CLOCK_IDC_FONT_DEPARTURE:
                     WriteConfigFont("DepartureMono Nerd Font Propo.ttf");
                     if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "DepartureMono Nerd Font Propo.ttf")) {
-                        MessageBox(hwnd, "Failed to load font: DepartureMono Nerd Font Propo.ttf", "Error", MB_ICONEXCLAMATION | MB_OK);
+                        wchar_t errorMsg[256];
+                        _snwprintf(errorMsg, sizeof(errorMsg)/sizeof(wchar_t),
+                            GetLocalizedString(L"无法加载字体: %hs", L"Failed to load font: %hs"),
+                            "DepartureMono Nerd Font Propo.ttf");
+                        MessageBoxW(hwnd, errorMsg, 
+                            GetLocalizedString(L"错误", L"Error"),
+                            MB_ICONEXCLAMATION | MB_OK);
                     }
                     goto refresh_window;
                 case CLOCK_IDC_FONT_TERMINESS:
                     WriteConfigFont("Terminess Nerd Font Propo.ttf");
                     if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "Terminess Nerd Font Propo.ttf")) {
-                        MessageBox(hwnd, "Failed to load font: Terminess Nerd Font Propo.ttf", "Error", MB_ICONEXCLAMATION | MB_OK);
+                        wchar_t errorMsg[256];
+                        _snwprintf(errorMsg, sizeof(errorMsg)/sizeof(wchar_t),
+                            GetLocalizedString(L"无法加载字体: %hs", L"Failed to load font: %hs"),
+                            "Terminess Nerd Font Propo.ttf");
+                        MessageBoxW(hwnd, errorMsg, 
+                            GetLocalizedString(L"错误", L"Error"),
+                            MB_ICONEXCLAMATION | MB_OK);
                     }
                     goto refresh_window;
                 case CLOCK_IDC_FONT_GOHUFONT:
                     WriteConfigFont("GohuFont uni11 Nerd Font Mono.ttf");
                     if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "GohuFont uni11 Nerd Font Mono.ttf")) {
-                        MessageBox(hwnd, "Failed to load font: GohuFont uni11 Nerd Font Mono.ttf", "Error", MB_ICONEXCLAMATION | MB_OK);
+                        wchar_t errorMsg[256];
+                        _snwprintf(errorMsg, sizeof(errorMsg)/sizeof(wchar_t),
+                            GetLocalizedString(L"无法加载字体: %hs", L"Failed to load font: %hs"),
+                            "GohuFont uni11 Nerd Font Mono.ttf");
+                        MessageBoxW(hwnd, errorMsg, 
+                            GetLocalizedString(L"错误", L"Error"),
+                            MB_ICONEXCLAMATION | MB_OK);
                     }
                     goto refresh_window;
                 case CLOCK_IDM_SHOW_CURRENT_TIME: {  
@@ -2791,10 +2891,14 @@ void SaveRecentFile(const char* filePath) {
 
 void ShowToastNotification(HWND hwnd, const char* message) {
     nid.uFlags = NIF_INFO;
-    nid.dwInfoFlags = NIIF_NONE;   
-    strncpy(nid.szInfo, "Time is up!", sizeof(nid.szInfo) - 1);
-    nid.szInfoTitle[0] = '\0';   
-    nid.uTimeout = 10000;   
+    nid.dwInfoFlags = NIIF_NONE;
+    strncpy(nid.szInfo, 
+        (CURRENT_LANGUAGE == APP_LANG_CHINESE_SIMP || 
+         CURRENT_LANGUAGE == APP_LANG_CHINESE_TRAD) ? 
+            "时间到了!" : "Time's up!", 
+        sizeof(nid.szInfo) - 1);
+    nid.szInfoTitle[0] = '\0';
+    nid.uTimeout = 10000;
 
     Shell_NotifyIcon(NIM_MODIFY, &nid);
 
