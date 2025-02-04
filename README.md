@@ -11,6 +11,9 @@
 <a href="https://github.com/vladelaina/Catime/releases/latest" target="_blank">
  <img alt="Latest GitHub release" src="https://img.shields.io/github/release/vladelaina/Catime.svg" />
 </a>
+ <a href="https://github.com/vladelaina/Catime/releases" target="_self">
+ <img alt="Downloads" src="https://img.shields.io/github/downloads/vladelaina/Catime/total" />
+</a>
 </p>
 
 # Catime
