@@ -26,6 +26,8 @@ void InitializeDefaultLanguage(void);
 #define UPDATE_URL_123PAN    "https://www.123684.com/s/ruESjv-2CZUA"
 #define UPDATE_URL_LANZOU    "https://wwrx.lanzoup.com/b00hqiiskj"
 #define FEEDBACK_URL        "https://www.bilibili.com/video/BV1ztFeeQEYP"
+#define FEEDBACK_URL_GITHUB  "https://github.com/vladelaina/Catime/issues"
+#define FEEDBACK_URL_BILIBILI "https://message.bilibili.com/#/whisper/mid1862395225"
 
 #define CLOCK_IDM_VERSION 131
 #define CLOCK_IDM_CHECK_UPDATE 133   
@@ -44,6 +46,8 @@ void InitializeDefaultLanguage(void);
 #define CLOCK_IDM_LANG_PORTUGUESE    168
 #define CLOCK_IDM_LANG_JAPANESE      169
 #define CLOCK_IDM_LANG_KOREAN        170
+#define CLOCK_IDM_FEEDBACK_GITHUB 137
+#define CLOCK_IDM_FEEDBACK_BILIBILI 138
 
 // 语言枚举
 typedef enum {
@@ -1507,7 +1511,11 @@ void ShowColorMenu(HWND hwnd) {
                CATIME_VERSION);
     AppendMenuW(hAboutMenu, MF_STRING | MF_DISABLED, 0, version_text);
 
-    AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_FEEDBACK, 
+    // 创建反馈子菜单
+    HMENU hFeedbackMenu = CreatePopupMenu();
+    AppendMenuW(hFeedbackMenu, MF_STRING, CLOCK_IDM_FEEDBACK_GITHUB, L"GitHub");
+    AppendMenuW(hFeedbackMenu, MF_STRING, CLOCK_IDM_FEEDBACK_BILIBILI, L"BiliBili");
+    AppendMenuW(hAboutMenu, MF_POPUP, (UINT_PTR)hFeedbackMenu, 
                 GetLocalizedString(L"反馈", L"Feedback"));
 
     // 添加语言选择子菜单
@@ -2444,6 +2452,14 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDM_SHOW_SECONDS: {  
                     CLOCK_SHOW_SECONDS = !CLOCK_SHOW_SECONDS;
                     InvalidateRect(hwnd, NULL, TRUE);
+                    break;
+                }
+                case CLOCK_IDM_FEEDBACK_GITHUB: {
+                    ShellExecuteA(NULL, "open", FEEDBACK_URL_GITHUB, NULL, NULL, SW_SHOWNORMAL);
+                    break;
+                }
+                case CLOCK_IDM_FEEDBACK_BILIBILI: {
+                    ShellExecuteA(NULL, "open", FEEDBACK_URL_BILIBILI, NULL, NULL, SW_SHOWNORMAL);
                     break;
                 }
             }
