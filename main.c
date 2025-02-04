@@ -2892,11 +2892,14 @@ void SaveRecentFile(const char* filePath) {
 void ShowToastNotification(HWND hwnd, const char* message) {
     nid.uFlags = NIF_INFO;
     nid.dwInfoFlags = NIIF_NONE;
-    strncpy(nid.szInfo, 
-        (CURRENT_LANGUAGE == APP_LANG_CHINESE_SIMP || 
-         CURRENT_LANGUAGE == APP_LANG_CHINESE_TRAD) ? 
-            "时间到了!" : "Time's up!", 
-        sizeof(nid.szInfo) - 1);
+    
+    const wchar_t* timeUpMsg = GetLocalizedString(L"时间到了!", L"Time's up!");
+    wchar_t wTimeUpMsg[64];
+    wcscpy(wTimeUpMsg, timeUpMsg);
+    
+    WideCharToMultiByte(CP_ACP, 0, wTimeUpMsg, -1, 
+                        nid.szInfo, sizeof(nid.szInfo), NULL, NULL);
+    
     nid.szInfoTitle[0] = '\0';
     nid.uTimeout = 10000;
 
@@ -2911,34 +2914,19 @@ void ShowToastNotification(HWND hwnd, const char* message) {
 const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english) {
     switch (CURRENT_LANGUAGE) {
         case APP_LANG_CHINESE_SIMP:
+            if (wcscmp(english, L"Time's up!") == 0) return L"时间到了!";
+            if (wcscmp(english, L"Input Format") == 0) return L"输入格式";
+            if (wcscmp(english, L"Invalid Input") == 0) return L"无效输入";
+            if (wcscmp(english, L"Error") == 0) return L"错误";
+            if (wcscmp(english, L"Failed to load font: %hs") == 0) return L"无法加载字体: %hs";
             return chinese;
             
         case APP_LANG_CHINESE_TRAD:
-            if (wcscmp(chinese, L"设置时间") == 0) return L"設置時間";
-            if (wcscmp(chinese, L"编辑模式") == 0) return L"編輯模式";
-            if (wcscmp(chinese, L"显示当前时间") == 0) return L"顯示當前時間";
-            if (wcscmp(chinese, L"24小时制") == 0) return L"24小時制";
-            if (wcscmp(chinese, L"显示秒数") == 0) return L"顯示秒數";
-            if (wcscmp(chinese, L"时间显示") == 0) return L"時間顯示";
-            if (wcscmp(chinese, L"超时动作") == 0) return L"超時動作";
-            if (wcscmp(chinese, L"显示消息") == 0) return L"顯示消息";
-            if (wcscmp(chinese, L"浏览...") == 0) return L"瀏覽...";
-            if (wcscmp(chinese, L"打开文件") == 0) return L"打開文件";
-            if (wcscmp(chinese, L"打开: %hs") == 0) return L"打開: %hs";
-            if (wcscmp(chinese, L"锁定屏幕") == 0) return L"鎖定屏幕";
-            if (wcscmp(chinese, L"关机") == 0) return L"關機";
-            if (wcscmp(chinese, L"重启") == 0) return L"重啟";
-            if (wcscmp(chinese, L"修改时间选项") == 0) return L"修改時間選項";
-            if (wcscmp(chinese, L"自定义") == 0) return L"自定義";
-            if (wcscmp(chinese, L"颜色") == 0) return L"顏色";
-            if (wcscmp(chinese, L"字体") == 0) return L"字體";
-            if (wcscmp(chinese, L"当前版本: %hs") == 0) return L"當前版本: %hs";
-            if (wcscmp(chinese, L"反馈") == 0) return L"反饋";
-            if (wcscmp(chinese, L"语言") == 0) return L"語言";
-            if (wcscmp(chinese, L"检查更新") == 0) return L"檢查更新";
-            if (wcscmp(chinese, L"关于") == 0) return L"關於";
-            if (wcscmp(chinese, L"重置") == 0) return L"重置";
-            if (wcscmp(chinese, L"退出") == 0) return L"退出";
+            if (wcscmp(english, L"Time's up!") == 0) return L"時間到了!";
+            if (wcscmp(english, L"Input Format") == 0) return L"輸入格式";
+            if (wcscmp(english, L"Invalid Input") == 0) return L"無效輸入";
+            if (wcscmp(english, L"Error") == 0) return L"錯誤";
+            if (wcscmp(english, L"Failed to load font: %hs") == 0) return L"無法加載字體: %hs";
             return chinese;
             
         case APP_LANG_SPANISH:
@@ -2967,6 +2955,11 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"About") == 0) return L"Acerca de";
             if (wcscmp(english, L"Reset") == 0) return L"Restablecer";
             if (wcscmp(english, L"Exit") == 0) return L"Salir";
+            if (wcscmp(english, L"¡Se acabó el tiempo!") == 0) return L"¡Se acabó el tiempo!";
+            if (wcscmp(english, L"Formato de entrada") == 0) return L"Formato de entrada";
+            if (wcscmp(english, L"Entrada inválida") == 0) return L"Entrada inválida";
+            if (wcscmp(english, L"Error") == 0) return L"Error";
+            if (wcscmp(english, L"Error al cargar la fuente: %hs") == 0) return L"Error al cargar la fuente: %hs";
             return english;
 
         case APP_LANG_FRENCH:
@@ -2995,6 +2988,11 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"About") == 0) return L"À propos";
             if (wcscmp(english, L"Reset") == 0) return L"Réinitialiser";
             if (wcscmp(english, L"Exit") == 0) return L"Quitter";
+            if (wcscmp(english, L"Temps écoulé !") == 0) return L"Temps écoulé !";
+            if (wcscmp(english, L"Format d'entrée") == 0) return L"Format d'entrée";
+            if (wcscmp(english, L"Entrée invalide") == 0) return L"Entrée invalide";
+            if (wcscmp(english, L"Erreur") == 0) return L"Erreur";
+            if (wcscmp(english, L"Échec du chargement de la police: %hs") == 0) return L"Échec du chargement de la police: %hs";
             return english;
 
         case APP_LANG_GERMAN:
@@ -3023,6 +3021,11 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"About") == 0) return L"Über";
             if (wcscmp(english, L"Reset") == 0) return L"Zurücksetzen";
             if (wcscmp(english, L"Exit") == 0) return L"Beenden";
+            if (wcscmp(english, L"Zeit ist um!") == 0) return L"Zeit ist um!";
+            if (wcscmp(english, L"Eingabeformat") == 0) return L"Eingabeformat";
+            if (wcscmp(english, L"Ungültige Eingabe") == 0) return L"Ungültige Eingabe";
+            if (wcscmp(english, L"Fehler") == 0) return L"Fehler";
+            if (wcscmp(english, L"Schriftart konnte nicht geladen werden: %hs") == 0) return L"Schriftart konnte nicht geladen werden: %hs";
             return english;
 
         case APP_LANG_RUSSIAN:
@@ -3051,6 +3054,11 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"About") == 0) return L"О программе";
             if (wcscmp(english, L"Reset") == 0) return L"Сброс";
             if (wcscmp(english, L"Exit") == 0) return L"Выход";
+            if (wcscmp(english, L"Время вышло!") == 0) return L"Время вышло!";
+            if (wcscmp(english, L"Формат ввода") == 0) return L"Формат ввода";
+            if (wcscmp(english, L"Неверный ввод") == 0) return L"Неверный ввод";
+            if (wcscmp(english, L"Ошибка") == 0) return L"Ошибка";
+            if (wcscmp(english, L"Не удалось загрузить шрифт: %hs") == 0) return L"Не удалось загрузить шрифт: %hs";
             return english;
 
         case APP_LANG_PORTUGUESE:
@@ -3079,6 +3087,11 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"About") == 0) return L"Sobre";
             if (wcscmp(english, L"Reset") == 0) return L"Redefinir";
             if (wcscmp(english, L"Exit") == 0) return L"Sair";
+            if (wcscmp(english, L"Tempo esgotado!") == 0) return L"Tempo esgotado!";
+            if (wcscmp(english, L"Formato de entrada") == 0) return L"Formato de entrada";
+            if (wcscmp(english, L"Entrada inválida") == 0) return L"Entrada inválida";
+            if (wcscmp(english, L"Erro") == 0) return L"Erro";
+            if (wcscmp(english, L"Falha ao carregar fonte: %hs") == 0) return L"Falha ao carregar fonte: %hs";
             return english;
 
         case APP_LANG_JAPANESE:
@@ -3107,6 +3120,11 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"About") == 0) return L"について";
             if (wcscmp(english, L"Reset") == 0) return L"リセット";
             if (wcscmp(english, L"Exit") == 0) return L"終了";
+            if (wcscmp(english, L"時間切れ！") == 0) return L"時間切れ！";
+            if (wcscmp(english, L"入力形式") == 0) return L"入力形式";
+            if (wcscmp(english, L"無効な入力") == 0) return L"無効な入力";
+            if (wcscmp(english, L"エラー") == 0) return L"エラー";
+            if (wcscmp(english, L"フォントの読み込みに失敗しました: %hs") == 0) return L"フォントの読み込みに失敗しました: %hs";
             return english;
 
         case APP_LANG_KOREAN:
@@ -3135,6 +3153,11 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"About") == 0) return L"정보";
             if (wcscmp(english, L"Reset") == 0) return L"초기화";
             if (wcscmp(english, L"Exit") == 0) return L"종료";
+            if (wcscmp(english, L"시간이 다 되었습니다!") == 0) return L"시간이 다 되었습니다!";
+            if (wcscmp(english, L"입력 형식") == 0) return L"입력 형식";
+            if (wcscmp(english, L"잘못된 입력") == 0) return L"잘못된 입력";
+            if (wcscmp(english, L"오류") == 0) return L"오류";
+            if (wcscmp(english, L"글꼴을 불러올 수 없습니다: %hs") == 0) return L"글꼴을 불러올 수 없습니다: %hs";
             return english;
 
         case APP_LANG_ENGLISH:
