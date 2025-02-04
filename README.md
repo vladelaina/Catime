@@ -4,6 +4,15 @@
 </a>
 </p>
 
+<p align="center">
+<a href="https://github.com/vladelaina/Catime/blob/main/LICENSE" target="_self">
+ <img alt="Latest GitHub release" src="https://img.shields.io/github/license/vladelaina/Catime" />
+</a>
+<a href="https://github.com/vladelaina/Catime/releases/latest" target="_blank">
+ <img alt="Latest GitHub release" src="https://img.shields.io/github/release/vladelaina/Catime.svg" />
+</a>
+</p>
+
 # Catime
 
 Catime 是一个简洁的 Windows 倒计时工具(番茄时钟)，具有透明界面和丰富的自定义选项。
