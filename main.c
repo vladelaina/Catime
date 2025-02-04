@@ -859,6 +859,11 @@ void ReadConfig() {
             
             strncpy(CLOCK_TIMEOUT_FILE_PATH, path, sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1);
             CLOCK_TIMEOUT_FILE_PATH[sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1] = '\0';
+            
+            // Add this line to set the timeout action when file path exists
+            if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
+                CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
+            }
         }
     }
 
@@ -1999,6 +2004,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     CLOCK_EDIT_MODE = FALSE;
                     SetClickThrough(hwnd, TRUE);
                     SendMessage(hwnd, WM_SETREDRAW, FALSE, 0);
+                    
+                    // Add this line to clear timeout file path
+                    memset(CLOCK_TIMEOUT_FILE_PATH, 0, sizeof(CLOCK_TIMEOUT_FILE_PATH));
                     
                     // 检查并重置语言到系统默认
                     AppLanguage defaultLanguage;
