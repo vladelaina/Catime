@@ -2975,7 +2975,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"About") == 0) return L"关于";
             if (wcscmp(english, L"Version: %hs") == 0) return L"版本: %hs";
             if (wcscmp(english, L"Check for Updates") == 0) return L"检查更新";
-            if (wcscmp(english, L"Language") == 0) return L"语言";
+            if (wcscmp(english, L"Language") == 0) return english;
             return chinese;
             
         case APP_LANG_CHINESE_TRAD:
@@ -2995,7 +2995,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"About") == 0) return L"關於";
             if (wcscmp(english, L"Version: %hs") == 0) return L"版本: %hs";
             if (wcscmp(english, L"Check for Updates") == 0) return L"檢查更新";
-            if (wcscmp(english, L"Language") == 0) return L"語言";
+            if (wcscmp(english, L"Language") == 0) return english;
             return chinese;
 
         case APP_LANG_SPANISH:
@@ -3019,7 +3019,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Font") == 0) return L"Fuente";
             if (wcscmp(english, L"Version: %hs") == 0) return L"Versión: %hs";
             if (wcscmp(english, L"Feedback") == 0) return L"Comentarios";
-            if (wcscmp(english, L"Language") == 0) return L"Idioma";
+            if (wcscmp(english, L"Language") == 0) return english;
             if (wcscmp(english, L"Check for Updates") == 0) return L"Buscar actualizaciones";
             if (wcscmp(english, L"About") == 0) return L"Acerca de";
             if (wcscmp(english, L"Reset") == 0) return L"Restablecer";
@@ -3040,7 +3040,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"About") == 0) return L"Acerca de";
             if (wcscmp(english, L"Version: %hs") == 0) return L"Versión: %hs";
             if (wcscmp(english, L"Check for Updates") == 0) return L"Buscar actualizaciones";
-            if (wcscmp(english, L"Language") == 0) return L"Idioma";
+            if (wcscmp(english, L"Language") == 0) return english;
             return english;
 
         case APP_LANG_FRENCH:
@@ -3064,7 +3064,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Font") == 0) return L"Police";
             if (wcscmp(english, L"Version: %hs") == 0) return L"Version: %hs";
             if (wcscmp(english, L"Feedback") == 0) return L"Retour";
-            if (wcscmp(english, L"Language") == 0) return L"Langue";
+            if (wcscmp(english, L"Language") == 0) return english;
             if (wcscmp(english, L"Check for Updates") == 0) return L"Vérifier les mises à jour";
             if (wcscmp(english, L"About") == 0) return L"À propos";
             if (wcscmp(english, L"Reset") == 0) return L"Réinitialiser";
@@ -3085,7 +3085,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"About") == 0) return L"À propos";
             if (wcscmp(english, L"Version: %hs") == 0) return L"Version: %hs";
             if (wcscmp(english, L"Check for Updates") == 0) return L"Vérifier les mises à jour";
-            if (wcscmp(english, L"Language") == 0) return L"Langue";
+            if (wcscmp(english, L"Language") == 0) return english;
             return english;
 
         case APP_LANG_GERMAN:
@@ -3109,7 +3109,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Font") == 0) return L"Schriftart";
             if (wcscmp(english, L"Version: %hs") == 0) return L"Version: %hs";
             if (wcscmp(english, L"Feedback") == 0) return L"Feedback";
-            if (wcscmp(english, L"Language") == 0) return L"Sprache";
+            if (wcscmp(english, L"Language") == 0) return english;
             if (wcscmp(english, L"Check for Updates") == 0) return L"Nach Updates suchen";
             if (wcscmp(english, L"About") == 0) return L"Über";
             if (wcscmp(english, L"Reset") == 0) return L"Zurücksetzen";
@@ -3130,7 +3130,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"About") == 0) return L"Über";
             if (wcscmp(english, L"Version: %hs") == 0) return L"Version: %hs";
             if (wcscmp(english, L"Check for Updates") == 0) return L"Nach Updates suchen";
-            if (wcscmp(english, L"Language") == 0) return L"Sprache";
+            if (wcscmp(english, L"Language") == 0) return english;
             return english;
 
         case APP_LANG_RUSSIAN:
@@ -3154,7 +3154,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Font") == 0) return L"Шрифт";
             if (wcscmp(english, L"Version: %hs") == 0) return L"Версия: %hs";
             if (wcscmp(english, L"Feedback") == 0) return L"Обратная связь";
-            if (wcscmp(english, L"Language") == 0) return L"Язык";
+            if (wcscmp(english, L"Language") == 0) return english;
             if (wcscmp(english, L"Check for Updates") == 0) return L"Проверить обновления";
             if (wcscmp(english, L"About") == 0) return L"О программе";
             if (wcscmp(english, L"Reset") == 0) return L"Сброс";
@@ -3175,7 +3175,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"About") == 0) return L"О программе";
             if (wcscmp(english, L"Version: %hs") == 0) return L"Версия: %hs";
             if (wcscmp(english, L"Check for Updates") == 0) return L"Проверить обновления";
-            if (wcscmp(english, L"Language") == 0) return L"Язык";
+            if (wcscmp(english, L"Language") == 0) return english;
             return english;
 
         case APP_LANG_PORTUGUESE:
@@ -3199,7 +3199,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Font") == 0) return L"Fonte";
             if (wcscmp(english, L"Version: %hs") == 0) return L"Versão: %hs";
             if (wcscmp(english, L"Feedback") == 0) return L"Feedback";
-            if (wcscmp(english, L"Language") == 0) return L"Idioma";
+            if (wcscmp(english, L"Language") == 0) return english;
             if (wcscmp(english, L"Check for Updates") == 0) return L"Verificar atualizações";
             if (wcscmp(english, L"About") == 0) return L"Sobre";
             if (wcscmp(english, L"Reset") == 0) return L"Redefinir";
@@ -3220,7 +3220,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"About") == 0) return L"Sobre";
             if (wcscmp(english, L"Version: %hs") == 0) return L"Versão: %hs";
             if (wcscmp(english, L"Check for Updates") == 0) return L"Verificar atualizações";
-            if (wcscmp(english, L"Language") == 0) return L"Idioma";
+            if (wcscmp(english, L"Language") == 0) return english;
             return english;
 
         case APP_LANG_JAPANESE:
@@ -3244,7 +3244,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Font") == 0) return L"フォント";
             if (wcscmp(english, L"Version: %hs") == 0) return L"バージョン: %hs";
             if (wcscmp(english, L"Feedback") == 0) return L"フィードバック";
-            if (wcscmp(english, L"Language") == 0) return L"言語";
+            if (wcscmp(english, L"Language") == 0) return english;
             if (wcscmp(english, L"Check for Updates") == 0) return L"更新を確認";
             if (wcscmp(english, L"About") == 0) return L"について";
             if (wcscmp(english, L"Reset") == 0) return L"リセット";
@@ -3265,7 +3265,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"About") == 0) return L"について";
             if (wcscmp(english, L"Version: %hs") == 0) return L"バージョン: %hs";
             if (wcscmp(english, L"Check for Updates") == 0) return L"更新を確認";
-            if (wcscmp(english, L"Language") == 0) return L"言語";
+            if (wcscmp(english, L"Language") == 0) return english;
             return english;
 
         case APP_LANG_KOREAN:
@@ -3289,7 +3289,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Font") == 0) return L"글꼴";
             if (wcscmp(english, L"Version: %hs") == 0) return L"버전: %hs";
             if (wcscmp(english, L"Feedback") == 0) return L"피드백";
-            if (wcscmp(english, L"Language") == 0) return L"언어";
+            if (wcscmp(english, L"Language") == 0) return english;
             if (wcscmp(english, L"Check for Updates") == 0) return L"업데이트 확인";
             if (wcscmp(english, L"About") == 0) return L"정보";
             if (wcscmp(english, L"Reset") == 0) return L"초기화";
@@ -3310,7 +3310,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"About") == 0) return L"정보";
             if (wcscmp(english, L"Version: %hs") == 0) return L"버전: %hs";
             if (wcscmp(english, L"Check for Updates") == 0) return L"업데이트 확인";
-            if (wcscmp(english, L"Language") == 0) return L"언어";
+            if (wcscmp(english, L"Language") == 0) return english;
             return english;
 
         case APP_LANG_ENGLISH:
