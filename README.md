@@ -4,8 +4,6 @@ Catime 是一个简洁的 Windows 倒计时工具(番茄时钟)，具有透明�
 
 ![Catime](Images/catime.gif)
 
-
-
 **中文简体** | [**English**](./README_ENG.md)
 
 ## 特点
@@ -38,6 +36,6 @@ Catime 是一个简洁的 Windows 倒计时工具(番茄时钟)，具有透明�
 
 本项目采用 Apache License 2.0 开源协议发布。
 
-图标版权声明：
-- 程序图标 `catime.ico` 由 [猫屋敷梨梨Official](https://space.bilibili.com/26087398) 创作并保留所有权利
-- 未经原作者明确授权，不得将此图标用于任何商业用途
+图片版权声明：
+- 程序图标 `catime.ico` 和演示图片 `catime.gif` 由 [猫屋敷梨梨Official](https://space.bilibili.com/26087398) 创作并保留所有权利
+- 未经原作者明确授权，不得将这些图片用于任何商业用途
