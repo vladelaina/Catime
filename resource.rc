@@ -13,6 +13,9 @@ BEGIN
     PUSHBUTTON      "OK", IDC_BUTTON_OK, 40, 16, 20, 10
 END
 
+// Copyright (c) 猫屋敷梨梨Official (https://space.bilibili.com/26087398). All rights reserved.
+// catime.ico is created by 猫屋敷梨梨Official and may not be used, copied, modified, merged, published, 
+// distributed, sublicensed, and/or sold without explicit permission from the copyright holder.
 IDI_CATIME ICON "catime.ico"
 
 // CC BY-SA 4.0 fonts

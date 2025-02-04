@@ -33,3 +33,9 @@ Catime 是一个简洁的 Windows 倒计时工具(番茄时钟)，具有透明�
 ## 💖[支持](support.md)
 
 如果您喜欢本项目, 欢迎打赏, 金额随意. 您的支持是我的动力(*ゝω・)ﾉThanks!
+
+## 版权声明
+
+本项目采用 Apache License 2.0 开源协议，但以下内容除外：
+
+- `catime.ico` 图标版权所有 © 猫屋敷梨梨Official (https://space.bilibili.com/26087398)，保留所有权利。未经原作者明确授权，不得使用、复制、修改或分发此图标。
