@@ -15,7 +15,7 @@
     <img alt="Downloads" src="https://img.shields.io/github/downloads/vladelaina/Catime/total" />
   </a>
   <a href="https://space.bilibili.com/1862395225" target="_blank">
-    <img alt="Bilibili" src="https://img.shields.io/badge/Bilibili-空间-ff69b4?logo=bilibili" />
+    <img alt="Bilibili" src="https://img.shields.io/badge/Bilibili-space-ff69b4?logo=bilibili" />
   </a>
 </p>
 
