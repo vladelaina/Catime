@@ -1334,12 +1334,14 @@ void ShowColorMenu(HWND hwnd) {
     HMENU hFontSubMenu = CreatePopupMenu();
 
     AppendMenuW(hMenu, MF_STRING | (CLOCK_EDIT_MODE ? MF_CHECKED : MF_UNCHECKED),
-               CLOCK_IDC_EDIT_MODE, L"编辑模式");
+               CLOCK_IDC_EDIT_MODE, 
+               USE_CHINESE ? L"编辑模式" : L"Edit Mode");
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
     HMENU hTimeoutMenu = CreatePopupMenu();
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_MESSAGE ? MF_CHECKED : MF_UNCHECKED), 
-               CLOCK_IDM_SHOW_MESSAGE, L"显示消息");
+               CLOCK_IDM_SHOW_MESSAGE, 
+               USE_CHINESE ? L"显示消息" : L"Show Message");
 
     HMENU hOpenFileMenu = CreatePopupMenu();
     if (CLOCK_RECENT_FILES_COUNT > 0) {
@@ -1352,15 +1354,18 @@ void ShowColorMenu(HWND hwnd) {
         }
         AppendMenuW(hOpenFileMenu, MF_SEPARATOR, 0, NULL);
     }
-    AppendMenuW(hOpenFileMenu, MF_STRING, CLOCK_IDM_BROWSE_FILE, L"浏览...");
+    AppendMenuW(hOpenFileMenu, MF_STRING, CLOCK_IDM_BROWSE_FILE, 
+                USE_CHINESE ? L"浏览..." : L"Browse...");
 
-    const wchar_t* menuText = L"打开文件";
+    const wchar_t* menuText = USE_CHINESE ? L"打开文件" : L"Open File";
     if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE && strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
-        wchar_t displayText[MAX_PATH];
+        static wchar_t displayText[MAX_PATH];  // 改为静态以确保内存安全
         char *filename = strrchr(CLOCK_TIMEOUT_FILE_PATH, '\\');
         if (filename) {
             filename++;
-            _snwprintf(displayText, MAX_PATH, L"打开: %hs", filename);
+            _snwprintf(displayText, MAX_PATH, 
+                      USE_CHINESE ? L"打开: %hs" : L"Open: %hs", 
+                      filename);
             menuText = displayText;
         }
     }
@@ -1369,16 +1374,22 @@ void ShowColorMenu(HWND hwnd) {
                (UINT_PTR)hOpenFileMenu, menuText);
                
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_LOCK ? MF_CHECKED : MF_UNCHECKED), 
-               CLOCK_IDM_LOCK_SCREEN, L"锁定屏幕");
+               CLOCK_IDM_LOCK_SCREEN, 
+               USE_CHINESE ? L"锁定屏幕" : L"Lock Screen");
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SHUTDOWN ? MF_CHECKED : MF_UNCHECKED), 
-               CLOCK_IDM_SHUTDOWN, L"关机");
+               CLOCK_IDM_SHUTDOWN, 
+               USE_CHINESE ? L"关机" : L"Shutdown");
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_RESTART ? MF_CHECKED : MF_UNCHECKED), 
-               CLOCK_IDM_RESTART, L"重启");
+               CLOCK_IDM_RESTART, 
+               USE_CHINESE ? L"重启" : L"Restart");
 
-    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeoutMenu, L"超时动作");
-    AppendMenuW(hMenu, MF_STRING, CLOCK_IDC_MODIFY_OPTIONS, L"修改时间选项");
+    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeoutMenu, 
+                USE_CHINESE ? L"超时动作" : L"Timeout Action");
+    AppendMenuW(hMenu, MF_STRING, CLOCK_IDC_MODIFY_OPTIONS, 
+                USE_CHINESE ? L"修改时间选项" : L"Modify Time Options");
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
+    // 颜色选项保持不变，因为是用颜色块显示的
     for (int i = 0; i < COLOR_OPTIONS_COUNT; i++) {
         const char* hexColor = COLOR_OPTIONS[i].hexColor;
         
@@ -1392,17 +1403,17 @@ void ShowColorMenu(HWND hwnd) {
         InsertMenuItem(hColorSubMenu, i, TRUE, &mii);
     }
     AppendMenuW(hColorSubMenu, MF_SEPARATOR, 0, NULL);
-    AppendMenuW(hColorSubMenu, MF_STRING, CLOCK_IDC_CUSTOMIZE_LEFT, L"自定义");
+    AppendMenuW(hColorSubMenu, MF_STRING, CLOCK_IDC_CUSTOMIZE_LEFT, 
+                USE_CHINESE ? L"自定义" : L"Customize");
 
+    // 字体菜单项
     for (int i = 0; i < sizeof(fontResources) / sizeof(fontResources[0]); i++) {
         BOOL isCurrentFont = strcmp(FONT_FILE_NAME, fontResources[i].fontName) == 0;
         
-         
         char displayName[100];
         strncpy(displayName, fontResources[i].fontName, sizeof(displayName) - 1);
         displayName[sizeof(displayName) - 1] = '\0';
         
-         
         char* dot = strstr(displayName, ".ttf");
         if (dot) {
             *dot = '\0';
@@ -1412,8 +1423,10 @@ void ShowColorMenu(HWND hwnd) {
                   fontResources[i].menuId, displayName);
     }
 
-    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hColorSubMenu, L"颜色");
-    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hFontSubMenu, L"字体");
+    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hColorSubMenu, 
+                USE_CHINESE ? L"颜色" : L"Color");
+    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hFontSubMenu, 
+                USE_CHINESE ? L"字体" : L"Font");
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
     
