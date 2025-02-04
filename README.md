@@ -21,9 +21,6 @@
 <p align="center">一款简洁的 Windows 倒计时工具，支持番茄时钟功能，具有透明界面和丰富的自定义选项。</p>
 
 ---
-# Catime
-
-Catime 是一个简洁的 Windows 倒计时工具(番茄时钟)，具有透明界面和丰富的自定义选项。
 
 ![Catime](Images/catime.gif)
 
