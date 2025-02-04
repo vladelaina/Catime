@@ -2927,6 +2927,10 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
                 return L"十六进制: FF5733 或 #FF5733\nRGB: 255,87,51";
             if (wcscmp(english, L"123Pan") == 0) return L"123云盘";
             if (wcscmp(english, L"LanzouCloud (pwd: 1234)") == 0) return L"蓝奏云 (密码: 1234)";
+            if (wcscmp(english, L"About") == 0) return L"关于";
+            if (wcscmp(english, L"Version: %hs") == 0) return L"版本: %hs";
+            if (wcscmp(english, L"Check for Updates") == 0) return L"检查更新";
+            if (wcscmp(english, L"Language") == 0) return L"语言";
             return chinese;
             
         case APP_LANG_CHINESE_TRAD:
@@ -2943,6 +2947,10 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
                 return L"十六進制: FF5733 或 #FF5733\nRGB: 255,87,51";
             if (wcscmp(english, L"123Pan") == 0) return L"123雲盤";
             if (wcscmp(english, L"LanzouCloud (pwd: 1234)") == 0) return L"藍奏雲 (密碼: 1234)";
+            if (wcscmp(english, L"About") == 0) return L"關於";
+            if (wcscmp(english, L"Version: %hs") == 0) return L"版本: %hs";
+            if (wcscmp(english, L"Check for Updates") == 0) return L"檢查更新";
+            if (wcscmp(english, L"Language") == 0) return L"語言";
             return chinese;
 
         case APP_LANG_SPANISH:
@@ -2971,7 +2979,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"About") == 0) return L"Acerca de";
             if (wcscmp(english, L"Reset") == 0) return L"Restablecer";
             if (wcscmp(english, L"Exit") == 0) return L"Salir";
-            if (wcscmp(english, L"¡Se acabó el tiempo!") == 0) return L"¡Se acabó el tiempo!";
+            if (wcscmp(english, L"¡Tiempo terminado!") == 0) return L"¡Tiempo terminado!";
             if (wcscmp(english, L"Formato de entrada") == 0) return L"Formato de entrada";
             if (wcscmp(english, L"Entrada inválida") == 0) return L"Entrada inválida";
             if (wcscmp(english, L"Error") == 0) return L"Error";
@@ -2984,6 +2992,10 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
                 return L"HEX: FF5733 o #FF5733\nRGB: 255,87,51";
             if (wcscmp(english, L"123Pan") == 0) return L"123Pan";
             if (wcscmp(english, L"LanzouCloud (pwd: 1234)") == 0) return L"LanzouCloud (contraseña: 1234)";
+            if (wcscmp(english, L"About") == 0) return L"Acerca de";
+            if (wcscmp(english, L"Version: %hs") == 0) return L"Versión: %hs";
+            if (wcscmp(english, L"Check for Updates") == 0) return L"Buscar actualizaciones";
+            if (wcscmp(english, L"Language") == 0) return L"Idioma";
             return english;
 
         case APP_LANG_FRENCH:
@@ -3025,6 +3037,10 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
                 return L"HEX : FF5733 ou #FF5733\nRGB : 255,87,51";
             if (wcscmp(english, L"123Pan") == 0) return L"123Pan";
             if (wcscmp(english, L"LanzouCloud (pwd: 1234)") == 0) return L"LanzouCloud (mdp : 1234)";
+            if (wcscmp(english, L"About") == 0) return L"À propos";
+            if (wcscmp(english, L"Version: %hs") == 0) return L"Version: %hs";
+            if (wcscmp(english, L"Check for Updates") == 0) return L"Vérifier les mises à jour";
+            if (wcscmp(english, L"Language") == 0) return L"Langue";
             return english;
 
         case APP_LANG_GERMAN:
@@ -3066,6 +3082,10 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
                 return L"HEX: FF5733 oder #FF5733\nRGB: 255,87,51";
             if (wcscmp(english, L"123Pan") == 0) return L"123Pan";
             if (wcscmp(english, L"LanzouCloud (pwd: 1234)") == 0) return L"LanzouCloud (Kennwort: 1234)";
+            if (wcscmp(english, L"About") == 0) return L"Über";
+            if (wcscmp(english, L"Version: %hs") == 0) return L"Version: %hs";
+            if (wcscmp(english, L"Check for Updates") == 0) return L"Nach Updates suchen";
+            if (wcscmp(english, L"Language") == 0) return L"Sprache";
             return english;
 
         case APP_LANG_RUSSIAN:
@@ -3107,6 +3127,10 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
                 return L"HEX: FF5733 или #FF5733\nRGB: 255,87,51";
             if (wcscmp(english, L"123Pan") == 0) return L"123Pan";
             if (wcscmp(english, L"LanzouCloud (pwd: 1234)") == 0) return L"LanzouCloud (пароль: 1234)";
+            if (wcscmp(english, L"About") == 0) return L"О программе";
+            if (wcscmp(english, L"Version: %hs") == 0) return L"Версия: %hs";
+            if (wcscmp(english, L"Check for Updates") == 0) return L"Проверить обновления";
+            if (wcscmp(english, L"Language") == 0) return L"Язык";
             return english;
 
         case APP_LANG_PORTUGUESE:
@@ -3148,6 +3172,10 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
                 return L"HEX: FF5733 o #FF5733\nRGB: 255,87,51";
             if (wcscmp(english, L"123Pan") == 0) return L"123Pan";
             if (wcscmp(english, L"LanzouCloud (pwd: 1234)") == 0) return L"LanzouCloud (senha: 1234)";
+            if (wcscmp(english, L"About") == 0) return L"Sobre";
+            if (wcscmp(english, L"Version: %hs") == 0) return L"Versão: %hs";
+            if (wcscmp(english, L"Check for Updates") == 0) return L"Verificar atualizações";
+            if (wcscmp(english, L"Language") == 0) return L"Idioma";
             return english;
 
         case APP_LANG_JAPANESE:
@@ -3176,7 +3204,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"About") == 0) return L"について";
             if (wcscmp(english, L"Reset") == 0) return L"リセット";
             if (wcscmp(english, L"Exit") == 0) return L"終了";
-            if (wcscmp(english, L"時間切れ！") == 0) return L"時間切れ！";
+            if (wcscmp(english, L"時間切れです!") == 0) return L"時間切れです!";
             if (wcscmp(english, L"入力形式") == 0) return L"入力形式";
             if (wcscmp(english, L"無効な入力") == 0) return L"無効な入力";
             if (wcscmp(english, L"エラー") == 0) return L"エラー";
@@ -3189,6 +3217,10 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
                 return L"HEX: FF5733 o #FF5733\nRGB: 255,87,51";
             if (wcscmp(english, L"123Pan") == 0) return L"123Pan";
             if (wcscmp(english, L"LanzouCloud (pwd: 1234)") == 0) return L"LanzouCloud (パスワード: 1234)";
+            if (wcscmp(english, L"About") == 0) return L"について";
+            if (wcscmp(english, L"Version: %hs") == 0) return L"バージョン: %hs";
+            if (wcscmp(english, L"Check for Updates") == 0) return L"更新を確認";
+            if (wcscmp(english, L"Language") == 0) return L"言語";
             return english;
 
         case APP_LANG_KOREAN:
@@ -3217,7 +3249,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"About") == 0) return L"정보";
             if (wcscmp(english, L"Reset") == 0) return L"초기화";
             if (wcscmp(english, L"Exit") == 0) return L"종료";
-            if (wcscmp(english, L"시간이 다 되었습니다!") == 0) return L"시간이 다 되었습니다!";
+            if (wcscmp(english, L"시간이 종료되었습니다!") == 0) return L"시간이 종료되었습니다!";
             if (wcscmp(english, L"입력 형식") == 0) return L"입력 형식";
             if (wcscmp(english, L"잘못된 입력") == 0) return L"잘못된 입력";
             if (wcscmp(english, L"오류") == 0) return L"오류";
@@ -3230,6 +3262,10 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
                 return L"HEX: FF5733 o #FF5733\nRGB: 255,87,51";
             if (wcscmp(english, L"123Pan") == 0) return L"123Pan";
             if (wcscmp(english, L"LanzouCloud (pwd: 1234)") == 0) return L"LanzouCloud (비밀번호: 1234)";
+            if (wcscmp(english, L"About") == 0) return L"정보";
+            if (wcscmp(english, L"Version: %hs") == 0) return L"버전: %hs";
+            if (wcscmp(english, L"Check for Updates") == 0) return L"업데이트 확인";
+            if (wcscmp(english, L"Language") == 0) return L"언어";
             return english;
 
         case APP_LANG_ENGLISH:
