@@ -1238,21 +1238,19 @@ void ExitProgram(HWND hwnd) {
 
 void ShowContextMenu(HWND hwnd) {
     HMENU hMenu = CreatePopupMenu();
-    AppendMenu(hMenu, MF_STRING, 101, "Set Time");
+    AppendMenu(hMenu, MF_STRING, 101, "设置时间");
     
-     
     HMENU hTimeMenu = CreatePopupMenu();
     AppendMenu(hTimeMenu, MF_STRING | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
-               CLOCK_IDM_SHOW_CURRENT_TIME, "Show Current Time");
+               CLOCK_IDM_SHOW_CURRENT_TIME, "显示当前时间");
     AppendMenu(hTimeMenu, MF_SEPARATOR, 0, NULL);
     AppendMenu(hTimeMenu, MF_STRING | (CLOCK_USE_24HOUR ? MF_CHECKED : MF_UNCHECKED),
-               CLOCK_IDM_24HOUR_FORMAT, "24-Hour Format");
+               CLOCK_IDM_24HOUR_FORMAT, "24小时制");
     AppendMenu(hTimeMenu, MF_STRING | (CLOCK_SHOW_SECONDS ? MF_CHECKED : MF_UNCHECKED),
-               CLOCK_IDM_SHOW_SECONDS, "Show Seconds");
+               CLOCK_IDM_SHOW_SECONDS, "显示秒数");
     
-     
     AppendMenu(hMenu, MF_POPUP | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
-               (UINT_PTR)hTimeMenu, "Time Display");
+               (UINT_PTR)hTimeMenu, "时间显示");
     AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
 
     for (int i = 0; i < time_options_count; i++) {
@@ -1274,12 +1272,12 @@ void ShowColorMenu(HWND hwnd) {
     HMENU hFontSubMenu = CreatePopupMenu();
 
     AppendMenu(hMenu, MF_STRING | (CLOCK_EDIT_MODE ? MF_CHECKED : MF_UNCHECKED),
-               CLOCK_IDC_EDIT_MODE, "Edit Mode");
+               CLOCK_IDC_EDIT_MODE, "编辑模式");
     AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
 
     HMENU hTimeoutMenu = CreatePopupMenu();
     AppendMenu(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_MESSAGE ? MF_CHECKED : MF_UNCHECKED), 
-               CLOCK_IDM_SHOW_MESSAGE, "Show Message");
+               CLOCK_IDM_SHOW_MESSAGE, "显示消息");
 
     HMENU hOpenFileMenu = CreatePopupMenu();
     if (CLOCK_RECENT_FILES_COUNT > 0) {
@@ -1292,14 +1290,14 @@ void ShowColorMenu(HWND hwnd) {
         }
         AppendMenu(hOpenFileMenu, MF_SEPARATOR, 0, NULL);
     }
-    AppendMenu(hOpenFileMenu, MF_STRING, CLOCK_IDM_BROWSE_FILE, "Browse...");
+    AppendMenu(hOpenFileMenu, MF_STRING, CLOCK_IDM_BROWSE_FILE, "浏览...");
 
-    char menuText[32] = "Open File";
+    char menuText[32] = "打开文件";
     if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE && strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
         char *filename = strrchr(CLOCK_TIMEOUT_FILE_PATH, '\\');
         if (filename) {
             filename++;
-            snprintf(menuText, sizeof(menuText), "Open: %s", filename);
+            snprintf(menuText, sizeof(menuText), "打开: %s", filename);
         }
     }
 
@@ -1307,15 +1305,15 @@ void ShowColorMenu(HWND hwnd) {
                (UINT_PTR)hOpenFileMenu, menuText);
                
     AppendMenu(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_LOCK ? MF_CHECKED : MF_UNCHECKED), 
-               CLOCK_IDM_LOCK_SCREEN, "Lock Screen");
+               CLOCK_IDM_LOCK_SCREEN, "锁定屏幕");
     AppendMenu(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SHUTDOWN ? MF_CHECKED : MF_UNCHECKED), 
-               CLOCK_IDM_SHUTDOWN, "Shutdown");
+               CLOCK_IDM_SHUTDOWN, "关机");
     AppendMenu(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_RESTART ? MF_CHECKED : MF_UNCHECKED), 
-               CLOCK_IDM_RESTART, "Restart");
+               CLOCK_IDM_RESTART, "重启");
 
-    AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hTimeoutMenu, "Timeout Action");
+    AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hTimeoutMenu, "超时动作");
 
-    AppendMenu(hMenu, MF_STRING, CLOCK_IDC_MODIFY_OPTIONS, "Modify Time Options");
+    AppendMenu(hMenu, MF_STRING, CLOCK_IDC_MODIFY_OPTIONS, "修改时间选项");
     AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
 
     for (int i = 0; i < COLOR_OPTIONS_COUNT; i++) {
@@ -1331,7 +1329,7 @@ void ShowColorMenu(HWND hwnd) {
         InsertMenuItem(hColorSubMenu, i, TRUE, &mii);
     }
     AppendMenu(hColorSubMenu, MF_SEPARATOR, 0, NULL);
-    AppendMenu(hColorSubMenu, MF_STRING, CLOCK_IDC_CUSTOMIZE_LEFT, "Customize");
+    AppendMenu(hColorSubMenu, MF_STRING, CLOCK_IDC_CUSTOMIZE_LEFT, "自定义");
 
     for (int i = 0; i < sizeof(fontResources) / sizeof(fontResources[0]); i++) {
         BOOL isCurrentFont = strcmp(FONT_FILE_NAME, fontResources[i].fontName) == 0;
@@ -1351,33 +1349,28 @@ void ShowColorMenu(HWND hwnd) {
                   fontResources[i].menuId, displayName);
     }
 
-    AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hColorSubMenu, "Color");
-    AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hFontSubMenu, "Font");
+    AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hColorSubMenu, "颜色");
+    AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hFontSubMenu, "字体");
 
     AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
     
-     
     HMENU hAboutMenu = CreatePopupMenu();
     char version_text[32];
-    snprintf(version_text, sizeof(version_text), "Current version: %s", CATIME_VERSION);   
-    AppendMenu(hAboutMenu, MF_STRING | MF_DISABLED, 0, version_text);   
+    snprintf(version_text, sizeof(version_text), "当前版本: %s", CATIME_VERSION);
+    AppendMenu(hAboutMenu, MF_STRING | MF_DISABLED, 0, version_text);
 
-     
-    AppendMenu(hAboutMenu, MF_STRING, CLOCK_IDM_FEEDBACK, "Feedback");
+    AppendMenu(hAboutMenu, MF_STRING, CLOCK_IDM_FEEDBACK, "反馈");
 
-     
     HMENU hUpdateMenu = CreatePopupMenu();
     AppendMenu(hUpdateMenu, MF_STRING, CLOCK_IDM_UPDATE_GITHUB, "GitHub");
-    AppendMenu(hUpdateMenu, MF_STRING, CLOCK_IDM_UPDATE_123PAN, "123pan");
-    AppendMenu(hUpdateMenu, MF_STRING, CLOCK_IDM_UPDATE_LANZOU, "Lanzouyun (pwd: 1234)");
+    AppendMenu(hUpdateMenu, MF_STRING, CLOCK_IDM_UPDATE_123PAN, "123云盘");
+    AppendMenu(hUpdateMenu, MF_STRING, CLOCK_IDM_UPDATE_LANZOU, "蓝奏云 (密码: 1234)");
 
-     
-    AppendMenu(hAboutMenu, MF_POPUP, (UINT_PTR)hUpdateMenu, "Check for Updates");
+    AppendMenu(hAboutMenu, MF_POPUP, (UINT_PTR)hUpdateMenu, "检查更新");
     
-     
-    AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hAboutMenu, "About");
-    AppendMenu(hMenu, MF_STRING, 200, "Reset");
-    AppendMenu(hMenu, MF_STRING, 109, "Exit");
+    AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hAboutMenu, "关于");
+    AppendMenu(hMenu, MF_STRING, 200, "重置");
+    AppendMenu(hMenu, MF_STRING, 109, "退出");
 
     POINT pt;
     GetCursorPos(&pt);
