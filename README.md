@@ -1,3 +1,9 @@
+<p align="center">
+<a href="https://github.com/zggsong/STranslate" target="_blank">
+<img align="center" alt="catime" width="230" src="Images/catime.png" />
+</a>
+</p>
+
 # Catime
 
 Catime 是一个简洁的 Windows 倒计时工具(番茄时钟)，具有透明界面和丰富的自定义选项。
