@@ -31,7 +31,9 @@ If you really like this project, feel free to donate any amount. Your support is
 
 ## Copyright Notice
 
-This project is licensed under the Apache License 2.0, with the following exception:
+This project is released under the Apache License 2.0.
 
-- `catime.ico` icon is copyrighted © 猫屋敷梨梨Official ( https://space.bilibili.com/26087398 ). All rights reserved. This icon may not be used for any commercial purposes without explicit permission from the original author.
+Icon copyright notice:
+- Program icon `catime.ico` is created by [猫屋敷梨梨Official](https://space.bilibili.com/26087398) with all rights reserved
+- This icon may not be used for any commercial purposes without explicit permission from the original author
 
