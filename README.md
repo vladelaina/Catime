@@ -44,7 +44,7 @@
 - **编辑模式(Edit Mode)**：拖拽调整位置，滚轮调整大小
 
 
-### 配置文件
+### 🛠️配置文件
 设置保存在 `%LOCALAPPDATA%\Catime\config.txt`
 
 ### 参考视频：<img src="https://www.bilibili.com/favicon.ico" width="20" height="20"> [BiliBii](https://www.bilibili.com/video/BV1ztFeeQEYP)
