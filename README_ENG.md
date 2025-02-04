@@ -34,6 +34,6 @@ If you really like this project, feel free to donate any amount. Your support is
 This project is released under the Apache License 2.0.
 
 Image copyright notice:
-- Program icon `catime.ico` and demo image `catime.gif` are created by [猫屋敷梨梨Official](https://space.bilibili.com/26087398) with all rights reserved
+- Program icon `catime.ico` and demo image `Images/catime.png` are created by [猫屋敷梨梨Official](https://space.bilibili.com/26087398) with all rights reserved
 - These images may not be used for any commercial purposes without explicit permission from the original author
 
