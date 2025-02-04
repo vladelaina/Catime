@@ -79,6 +79,7 @@ static const PredefinedColor COLOR_OPTIONS[] = {
     {"#5EFFFF"},   
     {"#98FB98"},   
     {"#9370DB"},   
+    {"#3E3A55"},   
     {"#7FFFD4"},   
     {"#F08080"},   
     {"#FF7F50"}    
