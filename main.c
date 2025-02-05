@@ -852,16 +852,19 @@ void ReadConfig() {
             char *newline = strchr(path, '\n');
             if (newline) *newline = '\0';
             
+            // 移除所有前导的等号和空格
+            while (*path == '=' || *path == ' ') {
+                path++;
+            }
+            
+            // 移除引号（如果存在）
             if (path[0] == '"') path++;
             size_t len = strlen(path);
             if (len > 0 && path[len-1] == '"') path[len-1] = '\0';
             
-            while (*path == '=') path++;
-            
             strncpy(CLOCK_TIMEOUT_FILE_PATH, path, sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1);
             CLOCK_TIMEOUT_FILE_PATH[sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1] = '\0';
             
-            // Add this line to set the timeout action when file path exists
             if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
                 CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
             }
@@ -1022,24 +1025,10 @@ void WriteConfigTimeoutAction(const char* action) {
     int timeout_file_written = 0;
     int success = 1;
 
+    // 先读取所有非超时相关的配置
     while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, "CLOCK_TIMEOUT_ACTION=", 20) == 0) {
-            if (fprintf(temp, "CLOCK_TIMEOUT_ACTION=%s\n", action) < 0) {
-                success = 0;
-                break;
-            }
-            timeout_action_written = 1;
-        }
-        else if (strncmp(line, "CLOCK_TIMEOUT_FILE=", 19) == 0) {
-            if (strcmp(action, "OPEN_FILE") == 0) {
-                if (fprintf(temp, "CLOCK_TIMEOUT_FILE=\"%s\"\n", CLOCK_TIMEOUT_FILE_PATH) < 0) {
-                    success = 0;
-                    break;
-                }
-            }
-            timeout_file_written = 1;
-        }
-        else {
+        if (strncmp(line, "CLOCK_TIMEOUT_ACTION=", 20) != 0 && 
+            strncmp(line, "CLOCK_TIMEOUT_FILE=", 19) != 0) {
             if (fputs(line, temp) == EOF) {
                 success = 0;
                 break;
@@ -1047,14 +1036,16 @@ void WriteConfigTimeoutAction(const char* action) {
         }
     }
 
-    if (!timeout_action_written && success) {
+    // 写入新的超时动作配置
+    if (success) {
         if (fprintf(temp, "CLOCK_TIMEOUT_ACTION=%s\n", action) < 0) {
             success = 0;
         }
     }
     
-    if (!timeout_file_written && strcmp(action, "OPEN_FILE") == 0 && success) {
-        if (fprintf(temp, "CLOCK_TIMEOUT_FILE=\"%s\"\n", CLOCK_TIMEOUT_FILE_PATH) < 0) {
+    // 如果是打开文件动作，写入文件路径
+    if (success && strcmp(action, "OPEN_FILE") == 0 && strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
+        if (fprintf(temp, "CLOCK_TIMEOUT_FILE=%s\n", CLOCK_TIMEOUT_FILE_PATH) < 0) {
             success = 0;
         }
     }
@@ -1063,11 +1054,8 @@ void WriteConfigTimeoutAction(const char* action) {
     fclose(temp);
 
     if (success) {
-        if (remove(config_path) == 0) {
-            if (rename(temp_path, config_path) != 0) {
-                rename(temp_path, config_path);
-            }
-        }
+        remove(config_path);
+        rename(temp_path, config_path);
     } else {
         remove(temp_path);
     }
@@ -2979,25 +2967,41 @@ void SaveRecentFile(const char* filePath) {
     
     char *line = strtok(config_content, "\n");
     while (line) {
+        // 保留所有非文件相关的配置
         if (strncmp(line, "CLOCK_RECENT_FILE", 16) != 0 && 
-            strncmp(line, "CLOCK_TIMEOUT_FILE", 17) != 0) {
+            strncmp(line, "CLOCK_TIMEOUT_FILE", 17) != 0 &&
+            strncmp(line, "CLOCK_TIMEOUT_ACTION", 19) != 0) {  // 也排除 action 配置
             strcat(new_config, line);
             strcat(new_config, "\n");
         }
         line = strtok(NULL, "\n");
     }
     
+    // 添加最近文件记录
     for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
         char recent_file_line[MAX_PATH + 20];
         snprintf(recent_file_line, sizeof(recent_file_line), 
                 "CLOCK_RECENT_FILE=%s\n", CLOCK_RECENT_FILES[i].path);
         strcat(new_config, recent_file_line);
     }
-    
+
+    // 添加超时文件路径（如果存在）
     if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
+        // 先写入动作配置
+        strcat(new_config, "CLOCK_TIMEOUT_ACTION=OPEN_FILE\n");
+        
+        // 然后写入文件路径，确保没有多余的等号
         char timeout_file_line[MAX_PATH + 20];
+        char clean_path[MAX_PATH];
+        strncpy(clean_path, CLOCK_TIMEOUT_FILE_PATH, MAX_PATH - 1);
+        clean_path[MAX_PATH - 1] = '\0';
+        
+        // 移除路径中可能存在的等号
+        char* p = clean_path;
+        while (*p == '=' || *p == ' ') p++;
+        
         snprintf(timeout_file_line, sizeof(timeout_file_line),
-                "CLOCK_TIMEOUT_FILE=%s\n", CLOCK_TIMEOUT_FILE_PATH);
+                "CLOCK_TIMEOUT_FILE=%s\n", p);
         strcat(new_config, timeout_file_line);
     }
     
