@@ -852,21 +852,24 @@ void ReadConfig() {
             char *newline = strchr(path, '\n');
             if (newline) *newline = '\0';
             
-            // Remove all leading '=' and spaces
-            while (*path == '=' || *path == ' ') {
-                path++;
-            }
-            
-            // Remove quotes if present
-            if (path[0] == '"') path++;
+            // 清理路径
+            while (*path == '=' || *path == ' ' || *path == '"') path++;
             size_t len = strlen(path);
             if (len > 0 && path[len-1] == '"') path[len-1] = '\0';
             
-            strncpy(CLOCK_TIMEOUT_FILE_PATH, path, sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1);
-            CLOCK_TIMEOUT_FILE_PATH[sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1] = '\0';
-            
-            if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
-                CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
+            // 验证文件是否存在
+            if (GetFileAttributes(path) != INVALID_FILE_ATTRIBUTES) {
+                strncpy(CLOCK_TIMEOUT_FILE_PATH, path, sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1);
+                CLOCK_TIMEOUT_FILE_PATH[sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1] = '\0';
+                
+                // 确保动作设置正确
+                if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
+                    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
+                }
+            } else {
+                // 如果文件不存在，清空路径
+                memset(CLOCK_TIMEOUT_FILE_PATH, 0, sizeof(CLOCK_TIMEOUT_FILE_PATH));
+                CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE; // 默认回退到消息提示
             }
         }
     }
@@ -1023,7 +1026,7 @@ void WriteConfigTimeoutAction(const char* action) {
     char line[MAX_PATH];
     int success = 1;
 
-    // Read all non-timeout related configurations first
+    // 读取所有非超时相关的配置
     while (fgets(line, sizeof(line), file)) {
         if (strncmp(line, "CLOCK_TIMEOUT_ACTION=", 20) != 0 && 
             strncmp(line, "CLOCK_TIMEOUT_FILE=", 19) != 0) {
@@ -1034,25 +1037,20 @@ void WriteConfigTimeoutAction(const char* action) {
         }
     }
 
-    // Write new timeout action configuration
+    // 写入新的超时动作配置
     if (success) {
         if (fprintf(temp, "CLOCK_TIMEOUT_ACTION=%s\n", action) < 0) {
             success = 0;
         }
     }
     
-    // If the action is to open a file, write the file path
+    // 如果动作是打开文件且文件路径存在，写入文件路径
     if (success && strcmp(action, "OPEN_FILE") == 0 && strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
-        // Ensure no leading '=' or spaces
-        char clean_path[MAX_PATH];
-        strncpy(clean_path, CLOCK_TIMEOUT_FILE_PATH, MAX_PATH - 1);
-        clean_path[MAX_PATH - 1] = '\0';
-        
-        char* p = clean_path;
-        while (*p == '=' || *p == ' ') p++;
-        
-        if (fprintf(temp, "CLOCK_TIMEOUT_FILE=%s\n", p) < 0) {
-            success = 0;
+        // 验证文件是否存在
+        if (GetFileAttributes(CLOCK_TIMEOUT_FILE_PATH) != INVALID_FILE_ATTRIBUTES) {
+            if (fprintf(temp, "CLOCK_TIMEOUT_FILE=%s\n", CLOCK_TIMEOUT_FILE_PATH) < 0) {
+                success = 0;
+            }
         }
     }
 
@@ -2517,6 +2515,50 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     ShellExecuteA(NULL, "open", FEEDBACK_URL_BILIBILI, NULL, NULL, SW_SHOWNORMAL);
                     break;
                 }
+                case CLOCK_IDM_RECENT_FILE_1:
+                case CLOCK_IDM_RECENT_FILE_2:
+                case CLOCK_IDM_RECENT_FILE_3: {
+                    int index = LOWORD(wp) - CLOCK_IDM_RECENT_FILE_1;
+                    if (index < CLOCK_RECENT_FILES_COUNT) {
+                        // 验证文件是否存在
+                        if (GetFileAttributes(CLOCK_RECENT_FILES[index].path) != INVALID_FILE_ATTRIBUTES) {
+                            // 更新超时文件路径
+                            strncpy(CLOCK_TIMEOUT_FILE_PATH, CLOCK_RECENT_FILES[index].path, 
+                                    sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1);
+                            CLOCK_TIMEOUT_FILE_PATH[sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1] = '\0';
+                            
+                            // 设置动作为打开文件
+                            CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
+                            
+                            // 保存配置
+                            WriteConfigTimeoutAction("OPEN_FILE");
+                            
+                            // 将选中的文件移到最近文件列表的首位
+                            SaveRecentFile(CLOCK_RECENT_FILES[index].path);
+                            
+                            // 重新加载配置以确保所有设置都正确
+                            ReadConfig();
+                        } else {
+                            // 如果文件不存在，显示错误消息
+                            MessageBoxW(hwnd, 
+                                GetLocalizedString(L"所选文件不存在", L"Selected file does not exist"),
+                                GetLocalizedString(L"错误", L"Error"),
+                                MB_ICONERROR);
+                            
+                            // 清除无效的文件路径
+                            memset(CLOCK_TIMEOUT_FILE_PATH, 0, sizeof(CLOCK_TIMEOUT_FILE_PATH));
+                            CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
+                            WriteConfigTimeoutAction("MESSAGE");
+                            
+                            // 从最近文件列表中移除无效文件
+                            for (int i = index; i < CLOCK_RECENT_FILES_COUNT - 1; i++) {
+                                CLOCK_RECENT_FILES[i] = CLOCK_RECENT_FILES[i + 1];
+                            }
+                            CLOCK_RECENT_FILES_COUNT--;
+                        }
+                    }
+                    break;
+                }
             }
             break;
 
@@ -2893,21 +2935,43 @@ void LoadRecentFiles(void) {
             char *newline = strchr(path, '\n');
             if (newline) *newline = '\0';
             
-            strncpy(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path, path, MAX_PATH - 1);
-            
-            char *filename = strrchr(path, '\\');
-            if (filename) {
-                filename++;  
-            } else {
-                filename = path;
+            // 清理路径（移除前导和尾随的空格、引号等）
+            while (*path == '=' || *path == ' ' || *path == '"') path++;
+            size_t len = strlen(path);
+            while (len > 0 && (path[len-1] == ' ' || path[len-1] == '"' || path[len-1] == '\n' || path[len-1] == '\r')) {
+                path[--len] = '\0';
             }
-            strncpy(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].name, filename, MAX_PATH - 1);
             
-            CLOCK_RECENT_FILES_COUNT++;
+            // 验证文件是否存在
+            if (GetFileAttributes(path) != INVALID_FILE_ATTRIBUTES) {
+                strncpy(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path, path, MAX_PATH - 1);
+                CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path[MAX_PATH - 1] = '\0';
+                
+                // 获取文件名
+                char *filename = strrchr(path, '\\');
+                if (filename) {
+                    filename++;  // 跳过反斜杠
+                } else {
+                    filename = path;
+                }
+                strncpy(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].name, filename, MAX_PATH - 1);
+                CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].name[MAX_PATH - 1] = '\0';
+                
+                CLOCK_RECENT_FILES_COUNT++;
+            }
+            // 如果文件不存在，我们直接跳过，不添加到列表中
         }
     }
     
     fclose(file);
+    
+    // 如果当前设置的超时文件不存在，清除它
+    if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0 && 
+        GetFileAttributes(CLOCK_TIMEOUT_FILE_PATH) == INVALID_FILE_ATTRIBUTES) {
+        memset(CLOCK_TIMEOUT_FILE_PATH, 0, sizeof(CLOCK_TIMEOUT_FILE_PATH));
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
+        WriteConfigTimeoutAction("MESSAGE");
+    }
 }
 
 void SaveRecentFile(const char* filePath) {
