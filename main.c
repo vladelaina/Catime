@@ -1821,57 +1821,60 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             break;
         }
         case WM_TIMER: {
-            if (CLOCK_SHOW_CURRENT_TIME) {
-                time_t now = time(NULL);
-                if (now != CLOCK_LAST_TIME_UPDATE) {
-                    CLOCK_LAST_TIME_UPDATE = now;
-                    InvalidateRect(hwnd, NULL, TRUE);
-                }
-                break;
-            }
+            if (wp == 1) {
+                if (CLOCK_SHOW_CURRENT_TIME) {
+                    time_t current_time = time(NULL);
+                    if (current_time != CLOCK_LAST_TIME_UPDATE) {
+                        CLOCK_LAST_TIME_UPDATE = current_time;
+                        InvalidateRect(hwnd, NULL, TRUE);
+                    }
+                } else {
+                    if (elapsed_time < CLOCK_TOTAL_TIME && !message_shown) {
+                        elapsed_time++;
+                        InvalidateRect(hwnd, NULL, TRUE);
+                    } else if (elapsed_time >= CLOCK_TOTAL_TIME && !message_shown) {
+                        message_shown = 1;
+                        KillTimer(hwnd, 1);
+                        PauseMediaPlayback();
 
-            elapsed_time++;
-            if (elapsed_time >= CLOCK_TOTAL_TIME && !message_shown) {
-                message_shown = 1;
-                KillTimer(hwnd, 1);
-                PauseMediaPlayback();
-
-                switch (CLOCK_TIMEOUT_ACTION) {
-                    case TIMEOUT_ACTION_MESSAGE:
-                        ShowToastNotification(hwnd, "Time's up!");
-                        break;
-                    case TIMEOUT_ACTION_LOCK:
-                        LockWorkStation();
-                        break;
-                    case TIMEOUT_ACTION_SHUTDOWN:
-                        system("shutdown /s /t 60");
-                        break;
-                    case TIMEOUT_ACTION_RESTART:
-                        system("shutdown /r /t 60");
-                        break;
-                    case TIMEOUT_ACTION_OPEN_FILE: {
-                        if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
-                            // 转换为 Unicode 路径
-                            wchar_t wPath[MAX_PATH];
-                            MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_FILE_PATH, -1, wPath, MAX_PATH);
-                            
-                            // 使用 ShellExecuteW 打开文件
-                            HINSTANCE result = ShellExecuteW(NULL, L"open", wPath, NULL, NULL, SW_SHOWNORMAL);
-                            
-                            // 检查是否成功打开文件
-                            if ((INT_PTR)result <= 32) {
-                                // 如果打开失败，显示错误消息
-                                MessageBoxW(hwnd, 
-                                    GetLocalizedString(L"无法打开文件", L"Failed to open file"),
-                                    GetLocalizedString(L"错误", L"Error"),
-                                    MB_ICONERROR);
+                        switch (CLOCK_TIMEOUT_ACTION) {
+                            case TIMEOUT_ACTION_MESSAGE:
+                                ShowToastNotification(hwnd, "Time's up!");
+                                break;
+                            case TIMEOUT_ACTION_LOCK:
+                                LockWorkStation();
+                                break;
+                            case TIMEOUT_ACTION_SHUTDOWN:
+                                system("shutdown /s /t 60");
+                                break;
+                            case TIMEOUT_ACTION_RESTART:
+                                system("shutdown /r /t 60");
+                                break;
+                            case TIMEOUT_ACTION_OPEN_FILE: {
+                                if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
+                                    // 转换为 Unicode 路径
+                                    wchar_t wPath[MAX_PATH];
+                                    MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_FILE_PATH, -1, wPath, MAX_PATH);
+                                    
+                                    // 使用 ShellExecuteW 打开文件
+                                    HINSTANCE result = ShellExecuteW(NULL, L"open", wPath, NULL, NULL, SW_SHOWNORMAL);
+                                    
+                                    // 检查是否成功打开文件
+                                    if ((INT_PTR)result <= 32) {
+                                        // 如果打开失败，显示错误消息
+                                        MessageBoxW(hwnd, 
+                                            GetLocalizedString(L"无法打开文件", L"Failed to open file"),
+                                            GetLocalizedString(L"错误", L"Error"),
+                                            MB_ICONERROR);
+                                    }
+                                }
+                                break;
                             }
                         }
-                        break;
                     }
+                    InvalidateRect(hwnd, NULL, TRUE);
                 }
             }
-            InvalidateRect(hwnd, NULL, TRUE);
             break;
         }
         case WM_DESTROY: {
@@ -1897,18 +1900,19 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     if (CLOCK_SHOW_CURRENT_TIME) {
                         CLOCK_SHOW_CURRENT_TIME = FALSE;
                         CLOCK_LAST_TIME_UPDATE = 0;
+                        KillTimer(hwnd, 1);  // 添加这行，确保先关闭已有计时器
                     }
                     while (1) {
                         memset(inputText, 0, sizeof(inputText));
                         DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc);
 
                         if (inputText[0] == '\0') {
-                             
                             break;
                         }
 
                         int total_seconds = 0;
                         if (ParseInput(inputText, &total_seconds)) {
+                            KillTimer(hwnd, 1);  // 添加这行，确保先关闭已有计时器
                             CLOCK_TOTAL_TIME = total_seconds;
                             elapsed_time = 0;
                             message_shown = 0;
