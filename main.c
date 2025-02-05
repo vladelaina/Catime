@@ -49,6 +49,9 @@ void InitializeDefaultLanguage(void);
 #define CLOCK_IDM_FEEDBACK_GITHUB 137
 #define CLOCK_IDM_FEEDBACK_BILIBILI 138
 
+// 在文件开头的宏定义区域添加
+#define CLOCK_IDC_TIMEOUT_BROWSE 140
+
 // 语言枚举
 typedef enum {
     APP_LANG_CHINESE_SIMP,    // 简体中文
@@ -1818,66 +1821,57 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             break;
         }
         case WM_TIMER: {
-            if (wp == 3) {   
-                KillTimer(hwnd, 3);
-                SaveWindowSettings(hwnd);
-            } else if (wp == 1) {   
-                if (CLOCK_SHOW_CURRENT_TIME) {
-                    static DWORD lastTick = 0;
-                    DWORD currentTick = GetTickCount();
-                    
-                     
-                    if (currentTick - lastTick >= 1000) {
-                        lastTick = currentTick;
-                        InvalidateRect(hwnd, NULL, TRUE);
-                    }
-                } else if (elapsed_time < CLOCK_TOTAL_TIME) {
-                    elapsed_time++;
+            if (CLOCK_SHOW_CURRENT_TIME) {
+                time_t now = time(NULL);
+                if (now != CLOCK_LAST_TIME_UPDATE) {
+                    CLOCK_LAST_TIME_UPDATE = now;
                     InvalidateRect(hwnd, NULL, TRUE);
-                } else if (elapsed_time == CLOCK_TOTAL_TIME) {
-                    KillTimer(hwnd, 1);
-                    InvalidateRect(hwnd, NULL, TRUE);
+                }
+                break;
+            }
 
-                    if (!message_shown) {
-                        switch (CLOCK_TIMEOUT_ACTION) {
-                            case TIMEOUT_ACTION_MESSAGE:
-                                ShowToastNotification(hwnd, "Time's up!");
-                                break;
-                            case TIMEOUT_ACTION_LOCK:
-                                PauseMediaPlayback();
-                                Sleep(10);
-                                LockWorkStation();
-                                break;
-                            case TIMEOUT_ACTION_SHUTDOWN:
-                                system("shutdown /s /t 0");
-                                break;
-                            case TIMEOUT_ACTION_RESTART:
-                                system("shutdown /r /t 0");
-                                break;
-                            case TIMEOUT_ACTION_OPEN_FILE:
-                                if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
-                                    STARTUPINFO si = {sizeof(si)};
-                                    PROCESS_INFORMATION pi;
-                                    char cmdLine[MAX_PATH + 2];   
-                                    
-                                    snprintf(cmdLine, sizeof(cmdLine), "\"%s\"", CLOCK_TIMEOUT_FILE_PATH);
-                                    
-                                    if (CreateProcessA(NULL, cmdLine, NULL, NULL, FALSE, 
-                                                     0, NULL, NULL, &si, &pi)) {
-                                        CloseHandle(pi.hProcess);
-                                        CloseHandle(pi.hThread);
-                                    } else {
-                                        ShellExecuteA(NULL, "open", CLOCK_TIMEOUT_FILE_PATH, 
-                                                    NULL, NULL, SW_SHOWNORMAL);
-                                    }
-                                }
-                                break;
+            elapsed_time++;
+            if (elapsed_time >= CLOCK_TOTAL_TIME && !message_shown) {
+                message_shown = 1;
+                KillTimer(hwnd, 1);
+                PauseMediaPlayback();
+
+                switch (CLOCK_TIMEOUT_ACTION) {
+                    case TIMEOUT_ACTION_MESSAGE:
+                        ShowToastNotification(hwnd, "Time's up!");
+                        break;
+                    case TIMEOUT_ACTION_LOCK:
+                        LockWorkStation();
+                        break;
+                    case TIMEOUT_ACTION_SHUTDOWN:
+                        system("shutdown /s /t 60");
+                        break;
+                    case TIMEOUT_ACTION_RESTART:
+                        system("shutdown /r /t 60");
+                        break;
+                    case TIMEOUT_ACTION_OPEN_FILE: {
+                        if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
+                            // 转换为 Unicode 路径
+                            wchar_t wPath[MAX_PATH];
+                            MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_FILE_PATH, -1, wPath, MAX_PATH);
+                            
+                            // 使用 ShellExecuteW 打开文件
+                            HINSTANCE result = ShellExecuteW(NULL, L"open", wPath, NULL, NULL, SW_SHOWNORMAL);
+                            
+                            // 检查是否成功打开文件
+                            if ((INT_PTR)result <= 32) {
+                                // 如果打开失败，显示错误消息
+                                MessageBoxW(hwnd, 
+                                    GetLocalizedString(L"无法打开文件", L"Failed to open file"),
+                                    GetLocalizedString(L"错误", L"Error"),
+                                    MB_ICONERROR);
+                            }
                         }
-                        message_shown = 1;
+                        break;
                     }
-                    elapsed_time++;
                 }
             }
+            InvalidateRect(hwnd, NULL, TRUE);
             break;
         }
         case WM_DESTROY: {
@@ -2249,11 +2243,13 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     else if (cmd >= CLOCK_IDM_RECENT_FILE_1 && cmd <= CLOCK_IDM_RECENT_FILE_3) {
                         int index = cmd - CLOCK_IDM_RECENT_FILE_1;
                         if (index < CLOCK_RECENT_FILES_COUNT) {
-                            strncpy(CLOCK_TIMEOUT_FILE_PATH, CLOCK_RECENT_FILES[index].path, 
-                                    sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1);
-                            CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
-                            WriteConfigTimeoutAction("OPEN_FILE");
-                            SaveRecentFile(CLOCK_RECENT_FILES[index].path);
+                            // 使用 Unicode 函数检查文件是否存在
+                            wchar_t wPath[MAX_PATH];
+                            MultiByteToWideChar(CP_UTF8, 0, CLOCK_RECENT_FILES[index].path, -1, wPath, MAX_PATH);
+                            if (GetFileAttributesW(wPath) != INVALID_FILE_ATTRIBUTES) {
+                                // 使用 ShellExecuteW 打开文件
+                                ShellExecuteW(NULL, L"open", wPath, NULL, NULL, SW_SHOWNORMAL);
+                            }
                         }
                         break;
                     }
@@ -2556,6 +2552,37 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             }
                             CLOCK_RECENT_FILES_COUNT--;
                         }
+                    }
+                    break;
+                }
+                case CLOCK_IDC_TIMEOUT_BROWSE: {
+                    OPENFILENAMEW ofn;
+                    wchar_t szFile[MAX_PATH] = L"";
+                    
+                    ZeroMemory(&ofn, sizeof(ofn));
+                    ofn.lStructSize = sizeof(ofn);
+                    ofn.hwndOwner = hwnd;
+                    ofn.lpstrFile = szFile;
+                    ofn.nMaxFile = sizeof(szFile);
+                    ofn.lpstrFilter = L"All Files (*.*)\0*.*\0";
+                    ofn.nFilterIndex = 1;
+                    ofn.lpstrFileTitle = NULL;
+                    ofn.nMaxFileTitle = 0;
+                    ofn.lpstrInitialDir = NULL;
+                    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+
+                    if (GetOpenFileNameW(&ofn)) {
+                        // 将 Unicode 路径转换为 UTF-8
+                        WideCharToMultiByte(CP_UTF8, 0, szFile, -1, 
+                                           CLOCK_TIMEOUT_FILE_PATH, 
+                                           sizeof(CLOCK_TIMEOUT_FILE_PATH), 
+                                           NULL, NULL);
+                        
+                        // 更新配置文件
+                        char config_path[MAX_PATH];
+                        GetConfigPath(config_path, MAX_PATH);
+                        WriteConfigTimeoutAction("OPEN_FILE");  // 使用 WriteConfigTimeoutAction 而不是 WriteConfig
+                        SaveRecentFile(CLOCK_TIMEOUT_FILE_PATH);  // 保存到最近文件列表
                     }
                     break;
                 }
@@ -2904,18 +2931,26 @@ void PauseMediaPlayback(void) {
 }
 
 BOOL OpenFileDialog(HWND hwnd, char* filePath, DWORD maxPath) {
-    OPENFILENAMEA ofn = {0};
-    ofn.lStructSize = sizeof(OPENFILENAMEA);
+    OPENFILENAMEW ofn = {0};
+    wchar_t szFile[MAX_PATH] = L"";
+    
+    ofn.lStructSize = sizeof(OPENFILENAMEW);
     ofn.hwndOwner = hwnd;
-    ofn.lpstrFilter = "All Files\0*.*\0"
-                      "Audio Files\0*.mp3;*.wav;*.m4a;*.wma\0"
-                      "Video Files\0*.mp4;*.avi;*.mkv;*.wmv\0"
-                      "Applications\0*.exe\0";
-    ofn.lpstrFile = filePath;
-    ofn.nMaxFile = maxPath;
+    ofn.lpstrFilter = L"All Files\0*.*\0"
+                      L"Audio Files\0*.mp3;*.wav;*.m4a;*.wma\0"
+                      L"Video Files\0*.mp4;*.avi;*.mkv;*.wmv\0"
+                      L"Applications\0*.exe\0";
+    ofn.lpstrFile = szFile;
+    ofn.nMaxFile = MAX_PATH;
     ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
     
-    return GetOpenFileNameA(&ofn);
+    if (GetOpenFileNameW(&ofn)) {
+        // 将 Unicode 路径转换为 UTF-8
+        WideCharToMultiByte(CP_UTF8, 0, szFile, -1, 
+                           filePath, maxPath, NULL, NULL);
+        return TRUE;
+    }
+    return FALSE;
 }
 
 
@@ -3470,4 +3505,46 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
         default:
             return english;
     }
+}
+
+void WriteConfig(const char* config_path) {
+    FILE* file = fopen(config_path, "w");
+    if (!file) return;
+    
+    // 写入所有配置项
+    fprintf(file, "CLOCK_TEXT_COLOR=%s\n", CLOCK_TEXT_COLOR);
+    fprintf(file, "FONT_FILE_NAME=%s\n", FONT_FILE_NAME);
+    fprintf(file, "CLOCK_DEFAULT_START_TIME=%d\n", CLOCK_DEFAULT_START_TIME);
+    fprintf(file, "CLOCK_WINDOW_POS_X=%d\n", CLOCK_WINDOW_POS_X);
+    fprintf(file, "CLOCK_WINDOW_POS_Y=%d\n", CLOCK_WINDOW_POS_Y);
+    fprintf(file, "CLOCK_EDIT_MODE=%s\n", CLOCK_EDIT_MODE ? "TRUE" : "FALSE");
+    fprintf(file, "WINDOW_SCALE=%.2f\n", CLOCK_WINDOW_SCALE);
+    
+    // 写入超时动作配置
+    if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE && strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
+        fprintf(file, "CLOCK_TIMEOUT_ACTION=OPEN_FILE\n");
+        fprintf(file, "CLOCK_TIMEOUT_FILE=%s\n", CLOCK_TIMEOUT_FILE_PATH);
+    } else {
+        switch (CLOCK_TIMEOUT_ACTION) {
+            case TIMEOUT_ACTION_MESSAGE:
+                fprintf(file, "CLOCK_TIMEOUT_ACTION=MESSAGE\n");
+                break;
+            case TIMEOUT_ACTION_LOCK:
+                fprintf(file, "CLOCK_TIMEOUT_ACTION=LOCK\n");
+                break;
+            case TIMEOUT_ACTION_SHUTDOWN:
+                fprintf(file, "CLOCK_TIMEOUT_ACTION=SHUTDOWN\n");
+                break;
+            case TIMEOUT_ACTION_RESTART:
+                fprintf(file, "CLOCK_TIMEOUT_ACTION=RESTART\n");
+                break;
+        }
+    }
+    
+    // 写入最近文件列表
+    for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
+        fprintf(file, "CLOCK_RECENT_FILE=%s\n", CLOCK_RECENT_FILES[i].path);
+    }
+    
+    fclose(file);
 }
