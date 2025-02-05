@@ -2970,48 +2970,64 @@ void LoadRecentFiles(void) {
             char *newline = strchr(path, '\n');
             if (newline) *newline = '\0';
             
-            // 清理路径（移除前导和尾随的空格、引号等）
+            // 清理路径
             while (*path == '=' || *path == ' ' || *path == '"') path++;
             size_t len = strlen(path);
             while (len > 0 && (path[len-1] == ' ' || path[len-1] == '"' || path[len-1] == '\n' || path[len-1] == '\r')) {
                 path[--len] = '\0';
             }
             
-            // 验证文件是否存在
-            if (GetFileAttributes(path) != INVALID_FILE_ATTRIBUTES) {
+            // 转换为宽字符以验证文件是否存在
+            wchar_t wPath[MAX_PATH];
+            MultiByteToWideChar(CP_UTF8, 0, path, -1, wPath, MAX_PATH);
+            
+            if (GetFileAttributesW(wPath) != INVALID_FILE_ATTRIBUTES) {
                 strncpy(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path, path, MAX_PATH - 1);
                 CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path[MAX_PATH - 1] = '\0';
                 
                 // 获取文件名
-                char *filename = strrchr(path, '\\');
-                if (filename) {
-                    filename++;  // 跳过反斜杠
+                wchar_t* wFilename = wcsrchr(wPath, L'\\');
+                if (wFilename) {
+                    wFilename++;  // 跳过反斜杠
+                    // 将文件名转换回UTF-8
+                    WideCharToMultiByte(CP_UTF8, 0, wFilename, -1,
+                                      CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].name,
+                                      MAX_PATH, NULL, NULL);
                 } else {
-                    filename = path;
+                    WideCharToMultiByte(CP_UTF8, 0, wPath, -1,
+                                      CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].name,
+                                      MAX_PATH, NULL, NULL);
                 }
-                strncpy(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].name, filename, MAX_PATH - 1);
-                CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].name[MAX_PATH - 1] = '\0';
                 
                 CLOCK_RECENT_FILES_COUNT++;
             }
-            // 如果文件不存在，我们直接跳过，不添加到列表中
         }
     }
     
     fclose(file);
     
-    // 如果当前设置的超时文件不存在，清除它
-    if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0 && 
-        GetFileAttributes(CLOCK_TIMEOUT_FILE_PATH) == INVALID_FILE_ATTRIBUTES) {
-        memset(CLOCK_TIMEOUT_FILE_PATH, 0, sizeof(CLOCK_TIMEOUT_FILE_PATH));
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
-        WriteConfigTimeoutAction("MESSAGE");
+    // 检查当前超时文件是否存在
+    if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
+        wchar_t wTimeoutPath[MAX_PATH];
+        MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_FILE_PATH, -1, wTimeoutPath, MAX_PATH);
+        if (GetFileAttributesW(wTimeoutPath) == INVALID_FILE_ATTRIBUTES) {
+            memset(CLOCK_TIMEOUT_FILE_PATH, 0, sizeof(CLOCK_TIMEOUT_FILE_PATH));
+            CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
+            WriteConfigTimeoutAction("MESSAGE");
+        }
     }
 }
 
 void SaveRecentFile(const char* filePath) {
+    // 先转换为宽字符进行比较
+    wchar_t wFilePath[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wFilePath, MAX_PATH);
+    
     for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
-        if (strcmp(CLOCK_RECENT_FILES[i].path, filePath) == 0) {
+        wchar_t wExistingPath[MAX_PATH];
+        MultiByteToWideChar(CP_UTF8, 0, CLOCK_RECENT_FILES[i].path, -1, wExistingPath, MAX_PATH);
+        
+        if (wcscmp(wExistingPath, wFilePath) == 0) {
             RecentFile temp = CLOCK_RECENT_FILES[i];
             for (int j = i; j > 0; j--) {
                 CLOCK_RECENT_FILES[j] = CLOCK_RECENT_FILES[j-1];
@@ -3031,14 +3047,18 @@ void SaveRecentFile(const char* filePath) {
     strncpy(CLOCK_RECENT_FILES[0].path, filePath, MAX_PATH - 1);
     CLOCK_RECENT_FILES[0].path[MAX_PATH - 1] = '\0';
     
-    char *filename = strrchr(filePath, '\\');
-    if (filename) {
-        filename++;  
+    // 使用宽字符处理文件名
+    wchar_t* wFilename = wcsrchr(wFilePath, L'\\');
+    if (wFilename) {
+        wFilename++;  
+        WideCharToMultiByte(CP_UTF8, 0, wFilename, -1,
+                           CLOCK_RECENT_FILES[0].name,
+                           MAX_PATH, NULL, NULL);
     } else {
-        filename = (char*)filePath;
+        WideCharToMultiByte(CP_UTF8, 0, wFilePath, -1,
+                           CLOCK_RECENT_FILES[0].name,
+                           MAX_PATH, NULL, NULL);
     }
-    strncpy(CLOCK_RECENT_FILES[0].name, filename, MAX_PATH - 1);
-    CLOCK_RECENT_FILES[0].name[MAX_PATH - 1] = '\0';
     
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
