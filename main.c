@@ -2243,12 +2243,44 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     else if (cmd >= CLOCK_IDM_RECENT_FILE_1 && cmd <= CLOCK_IDM_RECENT_FILE_3) {
                         int index = cmd - CLOCK_IDM_RECENT_FILE_1;
                         if (index < CLOCK_RECENT_FILES_COUNT) {
-                            // 使用 Unicode 函数检查文件是否存在
+                            // 将路径转换为宽字符
                             wchar_t wPath[MAX_PATH];
                             MultiByteToWideChar(CP_UTF8, 0, CLOCK_RECENT_FILES[index].path, -1, wPath, MAX_PATH);
+                            
                             if (GetFileAttributesW(wPath) != INVALID_FILE_ATTRIBUTES) {
-                                // 使用 ShellExecuteW 打开文件
-                                ShellExecuteW(NULL, L"open", wPath, NULL, NULL, SW_SHOWNORMAL);
+                                // 更新超时文件路径
+                                strncpy(CLOCK_TIMEOUT_FILE_PATH, CLOCK_RECENT_FILES[index].path, 
+                                        sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1);
+                                CLOCK_TIMEOUT_FILE_PATH[sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1] = '\0';
+                                
+                                // 设置动作为打开文件
+                                CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
+                                
+                                // 保存配置
+                                WriteConfigTimeoutAction("OPEN_FILE");
+                                
+                                // 将选中的文件移到最近文件列表的首位
+                                SaveRecentFile(CLOCK_RECENT_FILES[index].path);
+                                
+                                // 重新加载配置以确保所有设置都正确
+                                ReadConfig();
+                            } else {
+                                // 如果文件不存在，显示错误消息
+                                MessageBoxW(hwnd, 
+                                    GetLocalizedString(L"所选文件不存在", L"Selected file does not exist"),
+                                    GetLocalizedString(L"错误", L"Error"),
+                                    MB_ICONERROR);
+                                
+                                // 清除无效的文件路径
+                                memset(CLOCK_TIMEOUT_FILE_PATH, 0, sizeof(CLOCK_TIMEOUT_FILE_PATH));
+                                CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
+                                WriteConfigTimeoutAction("MESSAGE");
+                                
+                                // 从最近文件列表中移除无效文件
+                                for (int i = index; i < CLOCK_RECENT_FILES_COUNT - 1; i++) {
+                                    CLOCK_RECENT_FILES[i] = CLOCK_RECENT_FILES[i + 1];
+                                }
+                                CLOCK_RECENT_FILES_COUNT--;
                             }
                         }
                         break;
@@ -2514,10 +2546,13 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDM_RECENT_FILE_1:
                 case CLOCK_IDM_RECENT_FILE_2:
                 case CLOCK_IDM_RECENT_FILE_3: {
-                    int index = LOWORD(wp) - CLOCK_IDM_RECENT_FILE_1;
+                    int index = cmd - CLOCK_IDM_RECENT_FILE_1;
                     if (index < CLOCK_RECENT_FILES_COUNT) {
-                        // 验证文件是否存在
-                        if (GetFileAttributes(CLOCK_RECENT_FILES[index].path) != INVALID_FILE_ATTRIBUTES) {
+                        // 将路径转换为宽字符
+                        wchar_t wPath[MAX_PATH];
+                        MultiByteToWideChar(CP_UTF8, 0, CLOCK_RECENT_FILES[index].path, -1, wPath, MAX_PATH);
+                        
+                        if (GetFileAttributesW(wPath) != INVALID_FILE_ATTRIBUTES) {
                             // 更新超时文件路径
                             strncpy(CLOCK_TIMEOUT_FILE_PATH, CLOCK_RECENT_FILES[index].path, 
                                     sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1);
