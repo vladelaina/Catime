@@ -39,7 +39,7 @@
 ### 🛠️配置文件
 设置保存在 `%LOCALAPPDATA%\Catime\config.txt`
 
-### 参考视频：<img src="https://www.bilibili.com/favicon.ico" width="20" height="20"> [BiliBili](https://www.bilibili.com/video/BV1ztFeeQEYP)
+### 参考视频(基于V1.0.0)：<img src="https://www.bilibili.com/favicon.ico" width="20" height="20"> [BiliBili](https://www.bilibili.com/video/BV1ztFeeQEYP)
 
 ## 💖[支持](support.md)
 
