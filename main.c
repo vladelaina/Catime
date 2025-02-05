@@ -852,12 +852,12 @@ void ReadConfig() {
             char *newline = strchr(path, '\n');
             if (newline) *newline = '\0';
             
-            // 移除所有前导的等号和空格
+            // Remove all leading '=' and spaces
             while (*path == '=' || *path == ' ') {
                 path++;
             }
             
-            // 移除引号（如果存在）
+            // Remove quotes if present
             if (path[0] == '"') path++;
             size_t len = strlen(path);
             if (len > 0 && path[len-1] == '"') path[len-1] = '\0';
@@ -1021,11 +1021,9 @@ void WriteConfigTimeoutAction(const char* action) {
     }
 
     char line[MAX_PATH];
-    int timeout_action_written = 0;
-    int timeout_file_written = 0;
     int success = 1;
 
-    // 先读取所有非超时相关的配置
+    // Read all non-timeout related configurations first
     while (fgets(line, sizeof(line), file)) {
         if (strncmp(line, "CLOCK_TIMEOUT_ACTION=", 20) != 0 && 
             strncmp(line, "CLOCK_TIMEOUT_FILE=", 19) != 0) {
@@ -1036,16 +1034,24 @@ void WriteConfigTimeoutAction(const char* action) {
         }
     }
 
-    // 写入新的超时动作配置
+    // Write new timeout action configuration
     if (success) {
         if (fprintf(temp, "CLOCK_TIMEOUT_ACTION=%s\n", action) < 0) {
             success = 0;
         }
     }
     
-    // 如果是打开文件动作，写入文件路径
+    // If the action is to open a file, write the file path
     if (success && strcmp(action, "OPEN_FILE") == 0 && strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
-        if (fprintf(temp, "CLOCK_TIMEOUT_FILE=%s\n", CLOCK_TIMEOUT_FILE_PATH) < 0) {
+        // Ensure no leading '=' or spaces
+        char clean_path[MAX_PATH];
+        strncpy(clean_path, CLOCK_TIMEOUT_FILE_PATH, MAX_PATH - 1);
+        clean_path[MAX_PATH - 1] = '\0';
+        
+        char* p = clean_path;
+        while (*p == '=' || *p == ' ') p++;
+        
+        if (fprintf(temp, "CLOCK_TIMEOUT_FILE=%s\n", p) < 0) {
             success = 0;
         }
     }
