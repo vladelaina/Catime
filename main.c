@@ -333,7 +333,7 @@ int CALLBACK EnumFontFamExProc(
     LPARAM lParam
 );
 
-#define MAX_RECENT_FILES 3   
+#define MAX_RECENT_FILES 5   
 typedef struct {
     char path[MAX_PATH];
     char name[MAX_PATH];
