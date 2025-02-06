@@ -3648,7 +3648,7 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
             
         case WM_LBUTTONDOWN:
             isColorSelecting = TRUE;
-            // 故意不加 break，继续执行下面的代码
+            // 继续执行下面的代码
             
         case WM_MOUSEMOVE:
             if (isColorSelecting) {
@@ -3663,13 +3663,8 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
                 COLORREF color = GetPixel(hdc, pt.x, pt.y);
                 ReleaseDC(hdlg, hdc);
                 
-                if (color != CLR_INVALID) {
-                    // 删除日志记录
-                    // WriteLog("ColorDialog: Mouse position color: #%02X%02X%02X", 
-                    //     GetRValue(color),
-                    //     GetGValue(color),
-                    //     GetBValue(color));
-                        
+                // 只在颜色有效时更新预览
+                if (color != CLR_INVALID && color != RGB(240, 240, 240)) { // 排除对话框背景色
                     char colorStr[20];
                     sprintf(colorStr, "#%02X%02X%02X", 
                         GetRValue(color),
