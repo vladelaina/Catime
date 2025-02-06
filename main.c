@@ -9,10 +9,12 @@
 #include <dwmapi.h>
 #include "resource.h"
 #include <winnls.h>
+#include <commdlg.h>  // 用于 CHOOSECOLOR 结构体和 ChooseColor 函数
 
 // 函数声明
 const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english);
 void InitializeDefaultLanguage(void);
+COLORREF ShowColorDialog(HWND hwnd);  // 添加这一行
 
 #define CATIME_VERSION "1.0.2"  
 #define VK_MEDIA_PLAY_PAUSE 0xB3
@@ -111,6 +113,7 @@ void SetClickThrough(HWND hwnd, BOOL enable) {
 #pragma comment(lib, "dwmapi.lib")
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "gdi32.lib")
+#pragma comment(lib, "comdlg32.lib")
 
 typedef HRESULT (WINAPI *pfnDwmEnableBlurBehindWindow)(HWND hWnd, const DWM_BLURBEHIND* pBlurBehind);
 static pfnDwmEnableBlurBehindWindow _DwmEnableBlurBehindWindow = NULL;
@@ -2308,41 +2311,13 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDC_CUSTOMIZE_LEFT: {
-                    while (1) {
-                        memset(inputText, 0, sizeof(inputText));
-                        DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc);
-
-                        if (inputText[0] == '\0') {
-                            break;
-                        }
-
-                        if (isValidColor(inputText)) {
-                            char hex_color[10] = "#";   
-                            if (strchr(inputText, ',') != NULL) {
-                                int r, g, b;
-                                sscanf(inputText, "%d,%d,%d", &r, &g, &b);
-                                snprintf(hex_color + 1, sizeof(hex_color) - 1, "%02X%02X%02X", r, g, b);
-                                WriteConfigColor(hex_color);
-                            } else {
-                                if (inputText[0] == '#') {
-                                    WriteConfigColor(inputText);   
-                                } else {
-                                    snprintf(hex_color + 1, sizeof(hex_color) - 1, "%s", inputText);
-                                    WriteConfigColor(hex_color);
-                                }
-                            }
-                            InvalidateRect(hwnd, NULL, TRUE);
-                            break;
-                        } else {
-                            MessageBoxW(hwnd,
-                                GetLocalizedString(
-                                    L"十六进制: FF5733 或 #FF5733\n"
-                                    L"RGB: 255,87,51",
-                                    L"HEX: FF5733 or #FF5733\n"
-                                    L"RGB: 255,87,51"),
-                                GetLocalizedString(L"输入格式", L"Input Format"),
-                                MB_OK);
-                        }
+                    COLORREF color = ShowColorDialog(hwnd);
+                    if (color != (COLORREF)-1) {
+                        char hex_color[10];
+                        snprintf(hex_color, sizeof(hex_color), "#%02X%02X%02X", 
+                                GetRValue(color), GetGValue(color), GetBValue(color));
+                        WriteConfigColor(hex_color);
+                        ReadConfig();
                     }
                     break;
                 }
@@ -3606,4 +3581,23 @@ void WriteConfig(const char* config_path) {
     }
     
     fclose(file);
+}
+
+COLORREF ShowColorDialog(HWND hwnd) {
+    CHOOSECOLOR cc;
+    static COLORREF acrCustClr[16];
+    static DWORD rgbCurrent;
+
+    ZeroMemory(&cc, sizeof(cc));
+    cc.lStructSize = sizeof(cc);
+    cc.hwndOwner = hwnd;
+    cc.lpCustColors = (LPCOLORREF)acrCustClr;
+    cc.rgbResult = rgbCurrent;
+    cc.Flags = CC_FULLOPEN | CC_RGBINIT;
+
+    if (ChooseColor(&cc)) {
+        rgbCurrent = cc.rgbResult;
+        return rgbCurrent;
+    }
+    return (COLORREF)-1;
 }
