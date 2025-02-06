@@ -1845,10 +1845,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                                 LockWorkStation();
                                 break;
                             case TIMEOUT_ACTION_SHUTDOWN:
-                                system("shutdown /s /t 60");
+                                system("shutdown /s /t 0");  // Changed from 60 to 0
                                 break;
                             case TIMEOUT_ACTION_RESTART:
-                                system("shutdown /r /t 60");
+                                system("shutdown /r /t 0");  // Changed from 60 to 0
                                 break;
                             case TIMEOUT_ACTION_OPEN_FILE: {
                                 if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
