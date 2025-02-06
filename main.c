@@ -17,6 +17,9 @@ void InitializeDefaultLanguage(void);
 COLORREF ShowColorDialog(HWND hwnd);  // 添加这一行
 UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM lParam);
 
+// 在文件开头的函数声明区域添加（其他函数声明的地方）
+void WriteLog(const char* format, ...);
+
 #define CATIME_VERSION "1.0.2"  
 #define VK_MEDIA_PLAY_PAUSE 0xB3
 #define VK_MEDIA_STOP 0xB2
@@ -3585,8 +3588,10 @@ void WriteConfig(const char* config_path) {
 }
 
 COLORREF ShowColorDialog(HWND hwnd) {
-    CHOOSECOLOR cc;
-    static COLORREF acrCustClr[16];
+    WriteLog("ShowColorDialog: Started");
+    
+    CHOOSECOLOR cc = {0};
+    static COLORREF acrCustClr[16] = {0};
     static DWORD rgbCurrent;
     
     // 将当前颜色转换为 COLORREF
@@ -3597,66 +3602,164 @@ COLORREF ShowColorDialog(HWND hwnd) {
         sscanf(CLOCK_TEXT_COLOR, "%d,%d,%d", &r, &g, &b);
     }
     rgbCurrent = RGB(r, g, b);
+    
+    WriteLog("ShowColorDialog: Current color: %s", CLOCK_TEXT_COLOR);
 
-    ZeroMemory(&cc, sizeof(cc));
-    cc.lStructSize = sizeof(cc);
+    cc.lStructSize = sizeof(CHOOSECOLOR);
     cc.hwndOwner = hwnd;
-    cc.lpCustColors = (LPCOLORREF)acrCustClr;
+    cc.lpCustColors = acrCustClr;
     cc.rgbResult = rgbCurrent;
     cc.Flags = CC_FULLOPEN | CC_RGBINIT | CC_ENABLEHOOK;
     cc.lpfnHook = ColorDialogHookProc;
 
     if (ChooseColor(&cc)) {
+        WriteLog("ShowColorDialog: Color chosen successfully");
         rgbCurrent = cc.rgbResult;
-        IS_COLOR_PREVIEWING = FALSE;  // 清除预览状态
+        IS_COLOR_PREVIEWING = FALSE;
         InvalidateRect(hwnd, NULL, TRUE);
+        UpdateWindow(hwnd);
         return rgbCurrent;
     }
     
-    IS_COLOR_PREVIEWING = FALSE;  // 如果用户取消，也清除预览状态
+    WriteLog("ShowColorDialog: Dialog cancelled or failed");
+    IS_COLOR_PREVIEWING = FALSE;
     InvalidateRect(hwnd, NULL, TRUE);
+    UpdateWindow(hwnd);
     return (COLORREF)-1;
 }
 
 // 添加颜色对话框钩子函数
 UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM lParam) {
     static HWND hwndParent;
-    CHOOSECOLOR* cc;
+    static CHOOSECOLOR* pcc;
     
     switch (uiMsg) {
         case WM_INITDIALOG:
-            hwndParent = ((LPCHOOSECOLOR)lParam)->hwndOwner;
-            SetProp(hdlg, "CHOOSECOLOR", (HANDLE)lParam);
+            WriteLog("ColorDialog: WM_INITDIALOG received");
+            pcc = (CHOOSECOLOR*)lParam;
+            hwndParent = pcc->hwndOwner;
             return TRUE;
             
-        case WM_CTLCOLORMSGBOX:
-        case WM_CTLCOLOREDIT:
-        case WM_CTLCOLORLISTBOX:
-        case WM_CTLCOLORBTN:
-        case WM_CTLCOLORDLG:
-        case WM_CTLCOLORSCROLLBAR:
-        case WM_CTLCOLORSTATIC:
         case WM_COMMAND:
-            cc = (CHOOSECOLOR*)GetProp(hdlg, "CHOOSECOLOR");
-            if (cc != NULL) {
-                char colorStr[20];
-                COLORREF color = cc->rgbResult;
-                sprintf(colorStr, "#%02X%02X%02X", 
-                    GetRValue(color),
-                    GetGValue(color),
-                    GetBValue(color));
+            WriteLog("ColorDialog: WM_COMMAND received, wParam=0x%x", wParam);
+            if (pcc) {
+                // 直接从 CHOOSECOLOR 结构获取当前颜色
+                COLORREF newColor = pcc->rgbResult;
+                WriteLog("ColorDialog: Current dialog color: #%02X%02X%02X", 
+                    GetRValue(newColor),
+                    GetGValue(newColor),
+                    GetBValue(newColor));
                 
-                // 发送预览消息到主窗口
+                char colorStr[20];
+                sprintf(colorStr, "#%02X%02X%02X", 
+                    GetRValue(newColor),
+                    GetGValue(newColor),
+                    GetBValue(newColor));
+                
+                WriteLog("ColorDialog: Updating preview color to %s", colorStr);
                 strncpy(PREVIEW_COLOR, colorStr, sizeof(PREVIEW_COLOR) - 1);
                 PREVIEW_COLOR[sizeof(PREVIEW_COLOR) - 1] = '\0';
                 IS_COLOR_PREVIEWING = TRUE;
+                
                 InvalidateRect(hwndParent, NULL, TRUE);
+                UpdateWindow(hwndParent);
+            }
+            break;
+            
+        case WM_DRAWITEM:
+            if (pcc) {
+                COLORREF newColor = pcc->rgbResult;
+                WriteLog("ColorDialog: WM_DRAWITEM color: #%02X%02X%02X", 
+                    GetRValue(newColor),
+                    GetGValue(newColor),
+                    GetBValue(newColor));
+            }
+            break;
+            
+        case WM_PAINT:
+            if (pcc) {
+                COLORREF newColor = pcc->rgbResult;
+                WriteLog("ColorDialog: WM_PAINT color: #%02X%02X%02X", 
+                    GetRValue(newColor),
+                    GetGValue(newColor),
+                    GetBValue(newColor));
+            }
+            break;
+            
+        case WM_LBUTTONDOWN:
+        case WM_LBUTTONUP:
+        case WM_MOUSEMOVE:
+            if (pcc && (wParam & MK_LBUTTON)) {
+                WriteLog("ColorDialog: Mouse event received");
+                // 获取鼠标位置下的颜色
+                POINT pt;
+                GetCursorPos(&pt);
+                ScreenToClient(hdlg, &pt);
+                
+                HDC hdc = GetDC(hdlg);
+                COLORREF color = GetPixel(hdc, pt.x, pt.y);
+                ReleaseDC(hdlg, hdc);
+                
+                if (color != CLR_INVALID) {
+                    WriteLog("ColorDialog: Mouse position color: #%02X%02X%02X", 
+                        GetRValue(color),
+                        GetGValue(color),
+                        GetBValue(color));
+                        
+                    char colorStr[20];
+                    sprintf(colorStr, "#%02X%02X%02X", 
+                        GetRValue(color),
+                        GetGValue(color),
+                        GetBValue(color));
+                    
+                    strncpy(PREVIEW_COLOR, colorStr, sizeof(PREVIEW_COLOR) - 1);
+                    PREVIEW_COLOR[sizeof(PREVIEW_COLOR) - 1] = '\0';
+                    IS_COLOR_PREVIEWING = TRUE;
+                    
+                    InvalidateRect(hwndParent, NULL, TRUE);
+                    UpdateWindow(hwndParent);
+                }
             }
             break;
             
         case WM_DESTROY:
-            RemoveProp(hdlg, "CHOOSECOLOR");
+            WriteLog("ColorDialog: WM_DESTROY received");
+            pcc = NULL;
+            break;
+            
+        default:
+            if (uiMsg >= WM_USER) {
+                WriteLog("ColorDialog: Custom message received: 0x%x", uiMsg);
+            }
             break;
     }
     return 0;
+}
+
+// 添加日志文件路径宏定义
+#define LOG_FILE_PATH "C:\\Users\\vladelaina\\Desktop\\catime_color_dialog.log"
+
+// 添加日志写入函数
+void WriteLog(const char* format, ...) {
+    FILE* logFile = fopen(LOG_FILE_PATH, "a");
+    if (!logFile) return;
+    
+    // 获取当前时间
+    time_t now;
+    time(&now);
+    char timeStr[26];
+    ctime_s(timeStr, sizeof(timeStr), &now);
+    timeStr[24] = '\0'; // 移除换行符
+    
+    // 写入时间戳
+    fprintf(logFile, "[%s] ", timeStr);
+    
+    // 写入日志内容
+    va_list args;
+    va_start(args, format);
+    vfprintf(logFile, format, args);
+    va_end(args);
+    
+    fprintf(logFile, "\n");
+    fclose(logFile);
 }
