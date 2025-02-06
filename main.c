@@ -15,6 +15,7 @@
 const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english);
 void InitializeDefaultLanguage(void);
 COLORREF ShowColorDialog(HWND hwnd);  // 添加这一行
+UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM lParam);
 
 #define CATIME_VERSION "1.0.2"  
 #define VK_MEDIA_PLAY_PAUSE 0xB3
@@ -3587,17 +3588,75 @@ COLORREF ShowColorDialog(HWND hwnd) {
     CHOOSECOLOR cc;
     static COLORREF acrCustClr[16];
     static DWORD rgbCurrent;
+    
+    // 将当前颜色转换为 COLORREF
+    int r, g, b;
+    if (CLOCK_TEXT_COLOR[0] == '#') {
+        sscanf(CLOCK_TEXT_COLOR + 1, "%02x%02x%02x", &r, &g, &b);
+    } else {
+        sscanf(CLOCK_TEXT_COLOR, "%d,%d,%d", &r, &g, &b);
+    }
+    rgbCurrent = RGB(r, g, b);
 
     ZeroMemory(&cc, sizeof(cc));
     cc.lStructSize = sizeof(cc);
     cc.hwndOwner = hwnd;
     cc.lpCustColors = (LPCOLORREF)acrCustClr;
     cc.rgbResult = rgbCurrent;
-    cc.Flags = CC_FULLOPEN | CC_RGBINIT;
+    cc.Flags = CC_FULLOPEN | CC_RGBINIT | CC_ENABLEHOOK;
+    cc.lpfnHook = ColorDialogHookProc;
 
     if (ChooseColor(&cc)) {
         rgbCurrent = cc.rgbResult;
+        IS_COLOR_PREVIEWING = FALSE;  // 清除预览状态
+        InvalidateRect(hwnd, NULL, TRUE);
         return rgbCurrent;
     }
+    
+    IS_COLOR_PREVIEWING = FALSE;  // 如果用户取消，也清除预览状态
+    InvalidateRect(hwnd, NULL, TRUE);
     return (COLORREF)-1;
+}
+
+// 添加颜色对话框钩子函数
+UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM lParam) {
+    static HWND hwndParent;
+    CHOOSECOLOR* cc;
+    
+    switch (uiMsg) {
+        case WM_INITDIALOG:
+            hwndParent = ((LPCHOOSECOLOR)lParam)->hwndOwner;
+            SetProp(hdlg, "CHOOSECOLOR", (HANDLE)lParam);
+            return TRUE;
+            
+        case WM_CTLCOLORMSGBOX:
+        case WM_CTLCOLOREDIT:
+        case WM_CTLCOLORLISTBOX:
+        case WM_CTLCOLORBTN:
+        case WM_CTLCOLORDLG:
+        case WM_CTLCOLORSCROLLBAR:
+        case WM_CTLCOLORSTATIC:
+        case WM_COMMAND:
+            cc = (CHOOSECOLOR*)GetProp(hdlg, "CHOOSECOLOR");
+            if (cc != NULL) {
+                char colorStr[20];
+                COLORREF color = cc->rgbResult;
+                sprintf(colorStr, "#%02X%02X%02X", 
+                    GetRValue(color),
+                    GetGValue(color),
+                    GetBValue(color));
+                
+                // 发送预览消息到主窗口
+                strncpy(PREVIEW_COLOR, colorStr, sizeof(PREVIEW_COLOR) - 1);
+                PREVIEW_COLOR[sizeof(PREVIEW_COLOR) - 1] = '\0';
+                IS_COLOR_PREVIEWING = TRUE;
+                InvalidateRect(hwndParent, NULL, TRUE);
+            }
+            break;
+            
+        case WM_DESTROY:
+            RemoveProp(hdlg, "CHOOSECOLOR");
+            break;
+    }
+    return 0;
 }
