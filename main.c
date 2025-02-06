@@ -3632,6 +3632,7 @@ COLORREF ShowColorDialog(HWND hwnd) {
 UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM lParam) {
     static HWND hwndParent;
     static CHOOSECOLOR* pcc;
+    static BOOL isColorSelecting = FALSE;
     
     switch (uiMsg) {
         case WM_INITDIALOG:
@@ -3640,56 +3641,12 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
             hwndParent = pcc->hwndOwner;
             return TRUE;
             
-        case WM_COMMAND:
-            WriteLog("ColorDialog: WM_COMMAND received, wParam=0x%x", wParam);
-            if (pcc) {
-                // 直接从 CHOOSECOLOR 结构获取当前颜色
-                COLORREF newColor = pcc->rgbResult;
-                WriteLog("ColorDialog: Current dialog color: #%02X%02X%02X", 
-                    GetRValue(newColor),
-                    GetGValue(newColor),
-                    GetBValue(newColor));
-                
-                char colorStr[20];
-                sprintf(colorStr, "#%02X%02X%02X", 
-                    GetRValue(newColor),
-                    GetGValue(newColor),
-                    GetBValue(newColor));
-                
-                WriteLog("ColorDialog: Updating preview color to %s", colorStr);
-                strncpy(PREVIEW_COLOR, colorStr, sizeof(PREVIEW_COLOR) - 1);
-                PREVIEW_COLOR[sizeof(PREVIEW_COLOR) - 1] = '\0';
-                IS_COLOR_PREVIEWING = TRUE;
-                
-                InvalidateRect(hwndParent, NULL, TRUE);
-                UpdateWindow(hwndParent);
-            }
-            break;
-            
-        case WM_DRAWITEM:
-            if (pcc) {
-                COLORREF newColor = pcc->rgbResult;
-                WriteLog("ColorDialog: WM_DRAWITEM color: #%02X%02X%02X", 
-                    GetRValue(newColor),
-                    GetGValue(newColor),
-                    GetBValue(newColor));
-            }
-            break;
-            
-        case WM_PAINT:
-            if (pcc) {
-                COLORREF newColor = pcc->rgbResult;
-                WriteLog("ColorDialog: WM_PAINT color: #%02X%02X%02X", 
-                    GetRValue(newColor),
-                    GetGValue(newColor),
-                    GetBValue(newColor));
-            }
-            break;
-            
         case WM_LBUTTONDOWN:
-        case WM_LBUTTONUP:
+            isColorSelecting = TRUE;
+            // 故意不加 break，继续执行下面的代码
+            
         case WM_MOUSEMOVE:
-            if (pcc && (wParam & MK_LBUTTON)) {
+            if (isColorSelecting) {
                 WriteLog("ColorDialog: Mouse event received");
                 // 获取鼠标位置下的颜色
                 POINT pt;
@@ -3712,6 +3669,11 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
                         GetGValue(color),
                         GetBValue(color));
                     
+                    // 更新 CHOOSECOLOR 结构体中的颜色
+                    if (pcc) {
+                        pcc->rgbResult = color;
+                    }
+                    
                     strncpy(PREVIEW_COLOR, colorStr, sizeof(PREVIEW_COLOR) - 1);
                     PREVIEW_COLOR[sizeof(PREVIEW_COLOR) - 1] = '\0';
                     IS_COLOR_PREVIEWING = TRUE;
@@ -3722,15 +3684,30 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
             }
             break;
             
+        case WM_LBUTTONUP:
+            isColorSelecting = FALSE;
+            break;
+            
+        case WM_COMMAND:
+            if (HIWORD(wParam) == BN_CLICKED) {
+                // 处理按钮点击事件
+                WriteLog("ColorDialog: Button clicked, wParam=0x%x", wParam);
+                if (pcc) {
+                    COLORREF color = pcc->rgbResult;
+                    char colorStr[20];
+                    sprintf(colorStr, "#%02X%02X%02X", 
+                        GetRValue(color),
+                        GetGValue(color),
+                        GetBValue(color));
+                    
+                    WriteLog("ColorDialog: Selected color: %s", colorStr);
+                }
+            }
+            break;
+            
         case WM_DESTROY:
             WriteLog("ColorDialog: WM_DESTROY received");
             pcc = NULL;
-            break;
-            
-        default:
-            if (uiMsg >= WM_USER) {
-                WriteLog("ColorDialog: Custom message received: 0x%x", uiMsg);
-            }
             break;
     }
     return 0;
