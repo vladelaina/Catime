@@ -3588,7 +3588,8 @@ void WriteConfig(const char* config_path) {
 }
 
 COLORREF ShowColorDialog(HWND hwnd) {
-    WriteLog("ShowColorDialog: Started");
+    // 删除日志记录
+    // WriteLog("ShowColorDialog: Started");
     
     CHOOSECOLOR cc = {0};
     static COLORREF acrCustClr[16] = {0};
@@ -3603,7 +3604,8 @@ COLORREF ShowColorDialog(HWND hwnd) {
     }
     rgbCurrent = RGB(r, g, b);
     
-    WriteLog("ShowColorDialog: Current color: %s", CLOCK_TEXT_COLOR);
+    // 删除日志记录
+    // WriteLog("ShowColorDialog: Current color: %s", CLOCK_TEXT_COLOR);
 
     cc.lStructSize = sizeof(CHOOSECOLOR);
     cc.hwndOwner = hwnd;
@@ -3613,7 +3615,8 @@ COLORREF ShowColorDialog(HWND hwnd) {
     cc.lpfnHook = ColorDialogHookProc;
 
     if (ChooseColor(&cc)) {
-        WriteLog("ShowColorDialog: Color chosen successfully");
+        // 删除日志记录
+        // WriteLog("ShowColorDialog: Color chosen successfully");
         rgbCurrent = cc.rgbResult;
         IS_COLOR_PREVIEWING = FALSE;
         InvalidateRect(hwnd, NULL, TRUE);
@@ -3621,7 +3624,8 @@ COLORREF ShowColorDialog(HWND hwnd) {
         return rgbCurrent;
     }
     
-    WriteLog("ShowColorDialog: Dialog cancelled or failed");
+    // 删除日志记录
+    // WriteLog("ShowColorDialog: Dialog cancelled or failed");
     IS_COLOR_PREVIEWING = FALSE;
     InvalidateRect(hwnd, NULL, TRUE);
     UpdateWindow(hwnd);
@@ -3636,7 +3640,8 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
     
     switch (uiMsg) {
         case WM_INITDIALOG:
-            WriteLog("ColorDialog: WM_INITDIALOG received");
+            // 删除日志记录
+            // WriteLog("ColorDialog: WM_INITDIALOG received");
             pcc = (CHOOSECOLOR*)lParam;
             hwndParent = pcc->hwndOwner;
             return TRUE;
@@ -3647,7 +3652,8 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
             
         case WM_MOUSEMOVE:
             if (isColorSelecting) {
-                WriteLog("ColorDialog: Mouse event received");
+                // 删除日志记录
+                // WriteLog("ColorDialog: Mouse event received");
                 // 获取鼠标位置下的颜色
                 POINT pt;
                 GetCursorPos(&pt);
@@ -3658,10 +3664,11 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
                 ReleaseDC(hdlg, hdc);
                 
                 if (color != CLR_INVALID) {
-                    WriteLog("ColorDialog: Mouse position color: #%02X%02X%02X", 
-                        GetRValue(color),
-                        GetGValue(color),
-                        GetBValue(color));
+                    // 删除日志记录
+                    // WriteLog("ColorDialog: Mouse position color: #%02X%02X%02X", 
+                    //     GetRValue(color),
+                    //     GetGValue(color),
+                    //     GetBValue(color));
                         
                     char colorStr[20];
                     sprintf(colorStr, "#%02X%02X%02X", 
@@ -3690,8 +3697,8 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
             
         case WM_COMMAND:
             if (HIWORD(wParam) == BN_CLICKED) {
-                // 处理按钮点击事件
-                WriteLog("ColorDialog: Button clicked, wParam=0x%x", wParam);
+                // 删除日志记录
+                // WriteLog("ColorDialog: Button clicked, wParam=0x%x", wParam);
                 if (pcc) {
                     COLORREF color = pcc->rgbResult;
                     char colorStr[20];
@@ -3700,43 +3707,17 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
                         GetGValue(color),
                         GetBValue(color));
                     
-                    WriteLog("ColorDialog: Selected color: %s", colorStr);
+                    // 删除日志记录
+                    // WriteLog("ColorDialog: Selected color: %s", colorStr);
                 }
             }
             break;
             
         case WM_DESTROY:
-            WriteLog("ColorDialog: WM_DESTROY received");
+            // 删除日志记录
+            // WriteLog("ColorDialog: WM_DESTROY received");
             pcc = NULL;
             break;
     }
     return 0;
-}
-
-// 添加日志文件路径宏定义
-#define LOG_FILE_PATH "C:\\Users\\vladelaina\\Desktop\\catime_color_dialog.log"
-
-// 添加日志写入函数
-void WriteLog(const char* format, ...) {
-    FILE* logFile = fopen(LOG_FILE_PATH, "a");
-    if (!logFile) return;
-    
-    // 获取当前时间
-    time_t now;
-    time(&now);
-    char timeStr[26];
-    ctime_s(timeStr, sizeof(timeStr), &now);
-    timeStr[24] = '\0'; // 移除换行符
-    
-    // 写入时间戳
-    fprintf(logFile, "[%s] ", timeStr);
-    
-    // 写入日志内容
-    va_list args;
-    va_start(args, format);
-    vfprintf(logFile, format, args);
-    va_end(args);
-    
-    fprintf(logFile, "\n");
-    fclose(logFile);
 }
