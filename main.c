@@ -3588,8 +3588,7 @@ void WriteConfig(const char* config_path) {
 }
 
 COLORREF ShowColorDialog(HWND hwnd) {
-    // 删除日志记录
-    // WriteLog("ShowColorDialog: Started");
+    WriteLog("ShowColorDialog: Started");
     
     CHOOSECOLOR cc = {0};
     static COLORREF acrCustClr[16] = {0};
@@ -3604,8 +3603,8 @@ COLORREF ShowColorDialog(HWND hwnd) {
     }
     rgbCurrent = RGB(r, g, b);
     
-    // 删除日志记录
-    // WriteLog("ShowColorDialog: Current color: %s", CLOCK_TEXT_COLOR);
+    WriteLog("ShowColorDialog: Current color: %s (RGB: %d,%d,%d)", 
+             CLOCK_TEXT_COLOR, r, g, b);
 
     cc.lStructSize = sizeof(CHOOSECOLOR);
     cc.hwndOwner = hwnd;
@@ -3615,8 +3614,11 @@ COLORREF ShowColorDialog(HWND hwnd) {
     cc.lpfnHook = ColorDialogHookProc;
 
     if (ChooseColor(&cc)) {
-        // 删除日志记录
-        // WriteLog("ShowColorDialog: Color chosen successfully");
+        WriteLog("ShowColorDialog: Color chosen successfully - Color=#%02X%02X%02X",
+                GetRValue(cc.rgbResult),
+                GetGValue(cc.rgbResult),
+                GetBValue(cc.rgbResult));
+        
         rgbCurrent = cc.rgbResult;
         IS_COLOR_PREVIEWING = FALSE;
         InvalidateRect(hwnd, NULL, TRUE);
@@ -3624,8 +3626,7 @@ COLORREF ShowColorDialog(HWND hwnd) {
         return rgbCurrent;
     }
     
-    // 删除日志记录
-    // WriteLog("ShowColorDialog: Dialog cancelled or failed");
+    WriteLog("ShowColorDialog: Dialog cancelled or failed");
     IS_COLOR_PREVIEWING = FALSE;
     InvalidateRect(hwnd, NULL, TRUE);
     UpdateWindow(hwnd);
@@ -3640,21 +3641,17 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
     
     switch (uiMsg) {
         case WM_INITDIALOG:
-            // 删除日志记录
-            // WriteLog("ColorDialog: WM_INITDIALOG received");
+            WriteLog("ColorDialog: Initialized");
             pcc = (CHOOSECOLOR*)lParam;
             hwndParent = pcc->hwndOwner;
             return TRUE;
             
         case WM_LBUTTONDOWN:
+            WriteLog("ColorDialog: Mouse button down - Starting color selection");
             isColorSelecting = TRUE;
-            // 继续执行下面的代码
             
         case WM_MOUSEMOVE:
             if (isColorSelecting) {
-                // 删除日志记录
-                // WriteLog("ColorDialog: Mouse event received");
-                // 获取鼠标位置下的颜色
                 POINT pt;
                 GetCursorPos(&pt);
                 ScreenToClient(hdlg, &pt);
@@ -3663,15 +3660,19 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
                 COLORREF color = GetPixel(hdc, pt.x, pt.y);
                 ReleaseDC(hdlg, hdc);
                 
-                // 只在颜色有效时更新预览
-                if (color != CLR_INVALID && color != RGB(240, 240, 240)) { // 排除对话框背景色
+                if (color != CLR_INVALID && color != RGB(240, 240, 240)) {
+                    WriteLog("ColorDialog: Mouse preview - Position(%d,%d) Color=#%02X%02X%02X", 
+                            pt.x, pt.y, 
+                            GetRValue(color), 
+                            GetGValue(color), 
+                            GetBValue(color));
+                    
                     char colorStr[20];
                     sprintf(colorStr, "#%02X%02X%02X", 
                         GetRValue(color),
                         GetGValue(color),
                         GetBValue(color));
                     
-                    // 更新 CHOOSECOLOR 结构体中的颜色
                     if (pcc) {
                         pcc->rgbResult = color;
                     }
@@ -3686,36 +3687,30 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
             }
             break;
             
-        case WM_LBUTTONUP:
-            isColorSelecting = FALSE;
-            break;
-            
         case WM_COMMAND:
             if (HIWORD(wParam) == EN_CHANGE) {
-                // 获取红、绿、蓝输入框的句柄
-                HWND hwndRed = GetDlgItem(hdlg, 0x02c0);    // RGB Red 输入框
-                HWND hwndGreen = GetDlgItem(hdlg, 0x02c1);  // RGB Green 输入框
-                HWND hwndBlue = GetDlgItem(hdlg, 0x02c2);   // RGB Blue 输入框
+                HWND hwndRed = GetDlgItem(hdlg, 0x02c0);
+                HWND hwndGreen = GetDlgItem(hdlg, 0x02c1);
+                HWND hwndBlue = GetDlgItem(hdlg, 0x02c2);
                 
                 if (hwndRed && hwndGreen && hwndBlue) {
                     char redStr[4], greenStr[4], blueStr[4];
                     
-                    // 获取各个输入框的值
                     GetWindowTextA(hwndRed, redStr, 4);
                     GetWindowTextA(hwndGreen, greenStr, 4);
                     GetWindowTextA(hwndBlue, blueStr, 4);
                     
-                    // 转换为数值
                     int r = atoi(redStr);
                     int g = atoi(greenStr);
                     int b = atoi(blueStr);
                     
-                    // 确保值在有效范围内
                     r = min(255, max(0, r));
                     g = min(255, max(0, g));
                     b = min(255, max(0, b));
                     
-                    // 创建颜色值并更新预览
+                    WriteLog("ColorDialog: RGB input change - R:%d G:%d B:%d (Control ID: 0x%x)", 
+                            r, g, b, LOWORD(wParam));
+                    
                     COLORREF color = RGB(r, g, b);
                     if (pcc) {
                         pcc->rgbResult = color;
@@ -3732,15 +3727,38 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
                     UpdateWindow(hwndParent);
                 }
             } else if (HIWORD(wParam) == BN_CLICKED) {
-                // 保持现有的按钮点击处理代码...
+                WriteLog("ColorDialog: Button clicked - Control ID: 0x%x", LOWORD(wParam));
             }
             break;
             
         case WM_DESTROY:
-            // 删除日志记录
-            // WriteLog("ColorDialog: WM_DESTROY received");
+            WriteLog("ColorDialog: Dialog destroyed");
             pcc = NULL;
             break;
     }
     return 0;
+}
+
+// 在文件开头的函数声明区域添加（其他函数声明的地方）
+void WriteLog(const char* format, ...) {
+    char logPath[MAX_PATH];
+    snprintf(logPath, MAX_PATH, "%s\\Desktop\\catime_color.log", getenv("USERPROFILE"));
+    
+    FILE* logFile = fopen(logPath, "a");
+    if (!logFile) return;
+    
+    // 添加时间戳
+    time_t now = time(NULL);
+    char timeStr[26];
+    ctime_s(timeStr, sizeof(timeStr), &now);
+    timeStr[24] = '\0'; // 移除换行符
+    fprintf(logFile, "[%s] ", timeStr);
+    
+    va_list args;
+    va_start(args, format);
+    vfprintf(logFile, format, args);
+    va_end(args);
+    
+    fprintf(logFile, "\n");
+    fclose(logFile);
 }
