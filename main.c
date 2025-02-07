@@ -3638,86 +3638,63 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
     static HWND hwndParent;
     static CHOOSECOLOR* pcc;
     static BOOL isColorSelecting = FALSE;
-    
+    static BOOL isColorLocked = FALSE;  // New flag to lock the color selection
+
     switch (uiMsg) {
         case WM_INITDIALOG:
             WriteLog("ColorDialog: Initialized");
             pcc = (CHOOSECOLOR*)lParam;
             hwndParent = pcc->hwndOwner;
             return TRUE;
-            
+
         case WM_LBUTTONDOWN:
-            WriteLog("ColorDialog: Mouse button down - Starting color selection");
-            isColorSelecting = TRUE;
-            
+            if (!isColorLocked) {  // Only start selecting if not locked
+                WriteLog("ColorDialog: Mouse button down - Starting color selection");
+                isColorSelecting = TRUE;
+            }
+            break;
+
+        case WM_RBUTTONDOWN:
+            WriteLog("ColorDialog: Right-click - Locking color selection");
+            isColorLocked = !isColorLocked;  // Toggle the lock state
+            break;
+
         case WM_MOUSEMOVE:
-            if (isColorSelecting) {
+            if (isColorSelecting && !isColorLocked) {
                 POINT pt;
                 GetCursorPos(&pt);
                 ScreenToClient(hdlg, &pt);
-                
+
                 HDC hdc = GetDC(hdlg);
                 COLORREF color = GetPixel(hdc, pt.x, pt.y);
                 ReleaseDC(hdlg, hdc);
-                
+
                 if (color != CLR_INVALID && color != RGB(240, 240, 240)) {
-                    // 确定鼠标所在的区域
-                    const char* areaName;
-                    BOOL isPreviewArea = FALSE;
-                    
-                    if (pt.y < 200) {
-                        areaName = "Basic Colors";
-                    } else if (pt.y < 250) {
-                        areaName = "Custom Colors";
-                    } else if (pt.x > 280) {
-                        if (pt.y > 340) {
-                            areaName = "Color Preview";
-                            isPreviewArea = TRUE;
-                        } else {
-                            areaName = "Color Matrix";
-                        }
-                    } else if (pt.x > 260) {
-                        areaName = "Luminance Bar";
-                    } else {
-                        areaName = "Color Picker";
-                    }
-                    
-                    WriteLog("ColorDialog: Mouse preview - Area: %s, Position(%d,%d) Color=#%02X%02X%02X", 
-                            areaName,
-                            pt.x, pt.y, 
-                            GetRValue(color), 
-                            GetGValue(color), 
+                    WriteLog("ColorDialog: Mouse preview - Position(%d,%d) Color=#%02X%02X%02X",
+                            pt.x, pt.y,
+                            GetRValue(color),
+                            GetGValue(color),
                             GetBValue(color));
-                    
-                    // 获取预览区域的颜色
-                    POINT previewPt = {290, 350}; // 预览区域的固定点
-                    HDC hdcPreview = GetDC(hdlg);
-                    COLORREF previewColor = GetPixel(hdcPreview, previewPt.x, previewPt.y);
-                    ReleaseDC(hdlg, hdcPreview);
-                    
-                    // 使用预览区域的颜色进行预览
-                    if (previewColor != CLR_INVALID && previewColor != RGB(240, 240, 240)) {
-                        char colorStr[20];
-                        sprintf(colorStr, "#%02X%02X%02X", 
-                            GetRValue(previewColor),
-                            GetGValue(previewColor),
-                            GetBValue(previewColor));
-                        
-                        if (pcc) {
-                            pcc->rgbResult = previewColor;
-                        }
-                        
-                        strncpy(PREVIEW_COLOR, colorStr, sizeof(PREVIEW_COLOR) - 1);
-                        PREVIEW_COLOR[sizeof(PREVIEW_COLOR) - 1] = '\0';
-                        IS_COLOR_PREVIEWING = TRUE;
-                        
-                        InvalidateRect(hwndParent, NULL, TRUE);
-                        UpdateWindow(hwndParent);
+
+                    if (pcc) {
+                        pcc->rgbResult = color;
                     }
+
+                    char colorStr[20];
+                    sprintf(colorStr, "#%02X%02X%02X",
+                            GetRValue(color),
+                            GetGValue(color));
+
+                    strncpy(PREVIEW_COLOR, colorStr, sizeof(PREVIEW_COLOR) - 1);
+                    PREVIEW_COLOR[sizeof(PREVIEW_COLOR) - 1] = '\0';
+                    IS_COLOR_PREVIEWING = TRUE;
+
+                    InvalidateRect(hwndParent, NULL, TRUE);
+                    UpdateWindow(hwndParent);
                 }
             }
             break;
-            
+
         case WM_COMMAND:
             if (HIWORD(wParam) == EN_CHANGE) {
                 const char* controlName;
@@ -3793,7 +3770,7 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
                         buttonName, LOWORD(wParam));
             }
             break;
-            
+
         case WM_DESTROY:
             WriteLog("ColorDialog: Dialog destroyed");
             pcc = NULL;
