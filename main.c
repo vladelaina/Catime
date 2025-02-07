@@ -3691,20 +3691,48 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
             break;
             
         case WM_COMMAND:
-            if (HIWORD(wParam) == BN_CLICKED) {
-                // 删除日志记录
-                // WriteLog("ColorDialog: Button clicked, wParam=0x%x", wParam);
-                if (pcc) {
-                    COLORREF color = pcc->rgbResult;
-                    char colorStr[20];
-                    sprintf(colorStr, "#%02X%02X%02X", 
-                        GetRValue(color),
-                        GetGValue(color),
-                        GetBValue(color));
+            if (HIWORD(wParam) == EN_CHANGE) {
+                // 获取红、绿、蓝输入框的句柄
+                HWND hwndRed = GetDlgItem(hdlg, 0x02c0);    // RGB Red 输入框
+                HWND hwndGreen = GetDlgItem(hdlg, 0x02c1);  // RGB Green 输入框
+                HWND hwndBlue = GetDlgItem(hdlg, 0x02c2);   // RGB Blue 输入框
+                
+                if (hwndRed && hwndGreen && hwndBlue) {
+                    char redStr[4], greenStr[4], blueStr[4];
                     
-                    // 删除日志记录
-                    // WriteLog("ColorDialog: Selected color: %s", colorStr);
+                    // 获取各个输入框的值
+                    GetWindowTextA(hwndRed, redStr, 4);
+                    GetWindowTextA(hwndGreen, greenStr, 4);
+                    GetWindowTextA(hwndBlue, blueStr, 4);
+                    
+                    // 转换为数值
+                    int r = atoi(redStr);
+                    int g = atoi(greenStr);
+                    int b = atoi(blueStr);
+                    
+                    // 确保值在有效范围内
+                    r = min(255, max(0, r));
+                    g = min(255, max(0, g));
+                    b = min(255, max(0, b));
+                    
+                    // 创建颜色值并更新预览
+                    COLORREF color = RGB(r, g, b);
+                    if (pcc) {
+                        pcc->rgbResult = color;
+                    }
+                    
+                    char colorStr[20];
+                    sprintf(colorStr, "#%02X%02X%02X", r, g, b);
+                    
+                    strncpy(PREVIEW_COLOR, colorStr, sizeof(PREVIEW_COLOR) - 1);
+                    PREVIEW_COLOR[sizeof(PREVIEW_COLOR) - 1] = '\0';
+                    IS_COLOR_PREVIEWING = TRUE;
+                    
+                    InvalidateRect(hwndParent, NULL, TRUE);
+                    UpdateWindow(hwndParent);
                 }
+            } else if (HIWORD(wParam) == BN_CLICKED) {
+                // 保持现有的按钮点击处理代码...
             }
             break;
             
