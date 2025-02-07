@@ -3653,6 +3653,42 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
         case WM_RBUTTONDOWN:
             WriteLog("ColorDialog: Click - Toggling color lock state");
             isColorLocked = !isColorLocked;  // Toggle the lock state on any click
+
+            // Immediately update the color preview on click
+            if (!isColorLocked) {
+                POINT pt;
+                GetCursorPos(&pt);
+                ScreenToClient(hdlg, &pt);
+
+                HDC hdc = GetDC(hdlg);
+                COLORREF color = GetPixel(hdc, pt.x, pt.y);
+                ReleaseDC(hdlg, hdc);
+
+                if (color != CLR_INVALID && color != RGB(240, 240, 240)) {
+                    WriteLog("ColorDialog: Click preview - Position(%d,%d) Color=#%02X%02X%02X",
+                            pt.x, pt.y,
+                            GetRValue(color),
+                            GetGValue(color),
+                            GetBValue(color));
+
+                    if (pcc) {
+                        pcc->rgbResult = color;
+                    }
+
+                    char colorStr[20];
+                    sprintf(colorStr, "#%02X%02X%02X",
+                            GetRValue(color),
+                            GetGValue(color),
+                            GetBValue(color));
+
+                    strncpy(PREVIEW_COLOR, colorStr, sizeof(PREVIEW_COLOR) - 1);
+                    PREVIEW_COLOR[sizeof(PREVIEW_COLOR) - 1] = '\0';
+                    IS_COLOR_PREVIEWING = TRUE;
+
+                    InvalidateRect(hwndParent, NULL, TRUE);
+                    UpdateWindow(hwndParent);
+                }
+            }
             break;
 
         case WM_MOUSEMOVE:
