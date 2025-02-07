@@ -3661,7 +3661,26 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
                 ReleaseDC(hdlg, hdc);
                 
                 if (color != CLR_INVALID && color != RGB(240, 240, 240)) {
-                    WriteLog("ColorDialog: Mouse preview - Position(%d,%d) Color=#%02X%02X%02X", 
+                    // 确定鼠标所在的区域
+                    const char* areaName;
+                    if (pt.y < 200) {
+                        areaName = "Basic Colors";  // 基本颜色区域
+                    } else if (pt.y < 250) {
+                        areaName = "Custom Colors"; // 自定义颜色区域
+                    } else if (pt.x > 280) {
+                        if (pt.y > 340) {
+                            areaName = "Color Preview";  // 颜色预览区
+                        } else {
+                            areaName = "Color Matrix";   // 颜色矩阵/色谱区
+                        }
+                    } else if (pt.x > 260) {
+                        areaName = "Luminance Bar"; // 亮度条
+                    } else {
+                        areaName = "Color Picker";   // 颜色选择区
+                    }
+                    
+                    WriteLog("ColorDialog: Mouse preview - Area: %s, Position(%d,%d) Color=#%02X%02X%02X", 
+                            areaName,
                             pt.x, pt.y, 
                             GetRValue(color), 
                             GetGValue(color), 
@@ -3689,6 +3708,23 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
             
         case WM_COMMAND:
             if (HIWORD(wParam) == EN_CHANGE) {
+                const char* controlName;
+                switch(LOWORD(wParam)) {
+                    case 0x02c0:
+                        controlName = "Red Input";
+                        break;
+                    case 0x02c1:
+                        controlName = "Green Input";
+                        break;
+                    case 0x02c2:
+                        controlName = "Blue Input";
+                        break;
+                    default:
+                        controlName = "Unknown";
+                }
+                WriteLog("ColorDialog: Control changed - %s (ID: 0x%x)", 
+                        controlName, LOWORD(wParam));
+                
                 HWND hwndRed = GetDlgItem(hdlg, 0x02c0);
                 HWND hwndGreen = GetDlgItem(hdlg, 0x02c1);
                 HWND hwndBlue = GetDlgItem(hdlg, 0x02c2);
@@ -3727,7 +3763,22 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
                     UpdateWindow(hwndParent);
                 }
             } else if (HIWORD(wParam) == BN_CLICKED) {
-                WriteLog("ColorDialog: Button clicked - Control ID: 0x%x", LOWORD(wParam));
+                const char* buttonName;
+                switch (LOWORD(wParam)) {
+                    case 0x1:
+                        buttonName = "OK";
+                        break;
+                    case 0x2:
+                        buttonName = "Cancel";
+                        break;
+                    case 0x02c8:
+                        buttonName = "Add to Custom Colors";
+                        break;
+                    default:
+                        buttonName = "Unknown";
+                }
+                WriteLog("ColorDialog: Button clicked - %s button (Control ID: 0x%x)", 
+                        buttonName, LOWORD(wParam));
             }
             break;
             
