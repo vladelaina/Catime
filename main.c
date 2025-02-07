@@ -3649,13 +3649,9 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
             return TRUE;
 
         case WM_LBUTTONDOWN:
-            WriteLog("ColorDialog: Mouse button down - Starting color selection");
-            isColorLocked = FALSE;  // Unlock on left-click to allow immediate preview
-            break;
-
         case WM_RBUTTONDOWN:
-            WriteLog("ColorDialog: Right-click - Locking color selection");
-            isColorLocked = !isColorLocked;  // Toggle the lock state
+            WriteLog("ColorDialog: Click - Toggling color lock state");
+            isColorLocked = !isColorLocked;  // Toggle the lock state on any click
             break;
 
         case WM_MOUSEMOVE:
@@ -3704,7 +3700,6 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
                         // Apply the current color, whether locked or not
                         rgbCurrent = pcc->rgbResult;
                         // Ensure the color is applied to the application
-                        // Example: Update the global color variable or UI element
                         strcpy(CLOCK_TEXT_COLOR, PREVIEW_COLOR);  // Update the global color variable
                         EndDialog(hdlg, 0);
                         return TRUE;
