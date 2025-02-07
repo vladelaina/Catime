@@ -3663,20 +3663,23 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
                 if (color != CLR_INVALID && color != RGB(240, 240, 240)) {
                     // 确定鼠标所在的区域
                     const char* areaName;
+                    BOOL isPreviewArea = FALSE;
+                    
                     if (pt.y < 200) {
-                        areaName = "Basic Colors";  // 基本颜色区域
+                        areaName = "Basic Colors";
                     } else if (pt.y < 250) {
-                        areaName = "Custom Colors"; // 自定义颜色区域
+                        areaName = "Custom Colors";
                     } else if (pt.x > 280) {
                         if (pt.y > 340) {
-                            areaName = "Color Preview";  // 颜色预览区
+                            areaName = "Color Preview";
+                            isPreviewArea = TRUE;
                         } else {
-                            areaName = "Color Matrix";   // 颜色矩阵/色谱区
+                            areaName = "Color Matrix";
                         }
                     } else if (pt.x > 260) {
-                        areaName = "Luminance Bar"; // 亮度条
+                        areaName = "Luminance Bar";
                     } else {
-                        areaName = "Color Picker";   // 颜色选择区
+                        areaName = "Color Picker";
                     }
                     
                     WriteLog("ColorDialog: Mouse preview - Area: %s, Position(%d,%d) Color=#%02X%02X%02X", 
@@ -3686,22 +3689,31 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
                             GetGValue(color), 
                             GetBValue(color));
                     
-                    char colorStr[20];
-                    sprintf(colorStr, "#%02X%02X%02X", 
-                        GetRValue(color),
-                        GetGValue(color),
-                        GetBValue(color));
+                    // 获取预览区域的颜色
+                    POINT previewPt = {290, 350}; // 预览区域的固定点
+                    HDC hdcPreview = GetDC(hdlg);
+                    COLORREF previewColor = GetPixel(hdcPreview, previewPt.x, previewPt.y);
+                    ReleaseDC(hdlg, hdcPreview);
                     
-                    if (pcc) {
-                        pcc->rgbResult = color;
+                    // 使用预览区域的颜色进行预览
+                    if (previewColor != CLR_INVALID && previewColor != RGB(240, 240, 240)) {
+                        char colorStr[20];
+                        sprintf(colorStr, "#%02X%02X%02X", 
+                            GetRValue(previewColor),
+                            GetGValue(previewColor),
+                            GetBValue(previewColor));
+                        
+                        if (pcc) {
+                            pcc->rgbResult = previewColor;
+                        }
+                        
+                        strncpy(PREVIEW_COLOR, colorStr, sizeof(PREVIEW_COLOR) - 1);
+                        PREVIEW_COLOR[sizeof(PREVIEW_COLOR) - 1] = '\0';
+                        IS_COLOR_PREVIEWING = TRUE;
+                        
+                        InvalidateRect(hwndParent, NULL, TRUE);
+                        UpdateWindow(hwndParent);
                     }
-                    
-                    strncpy(PREVIEW_COLOR, colorStr, sizeof(PREVIEW_COLOR) - 1);
-                    PREVIEW_COLOR[sizeof(PREVIEW_COLOR) - 1] = '\0';
-                    IS_COLOR_PREVIEWING = TRUE;
-                    
-                    InvalidateRect(hwndParent, NULL, TRUE);
-                    UpdateWindow(hwndParent);
                 }
             }
             break;
