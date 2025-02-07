@@ -3637,21 +3637,20 @@ COLORREF ShowColorDialog(HWND hwnd) {
 UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM lParam) {
     static HWND hwndParent;
     static CHOOSECOLOR* pcc;
-    static BOOL isColorSelecting = FALSE;
     static BOOL isColorLocked = FALSE;  // New flag to lock the color selection
+    static DWORD rgbCurrent;  // Declare rgbCurrent as static to maintain its value
 
     switch (uiMsg) {
         case WM_INITDIALOG:
             WriteLog("ColorDialog: Initialized");
             pcc = (CHOOSECOLOR*)lParam;
             hwndParent = pcc->hwndOwner;
+            rgbCurrent = pcc->rgbResult;  // Initialize rgbCurrent with the initial color
             return TRUE;
 
         case WM_LBUTTONDOWN:
-            if (!isColorLocked) {  // Only start selecting if not locked
-                WriteLog("ColorDialog: Mouse button down - Starting color selection");
-                isColorSelecting = TRUE;
-            }
+            WriteLog("ColorDialog: Mouse button down - Starting color selection");
+            isColorLocked = FALSE;  // Unlock on left-click to allow immediate preview
             break;
 
         case WM_RBUTTONDOWN:
@@ -3660,7 +3659,7 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
             break;
 
         case WM_MOUSEMOVE:
-            if (isColorSelecting && !isColorLocked) {
+            if (!isColorLocked) {  // Update color only if not locked
                 POINT pt;
                 GetCursorPos(&pt);
                 ScreenToClient(hdlg, &pt);
@@ -3683,7 +3682,8 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
                     char colorStr[20];
                     sprintf(colorStr, "#%02X%02X%02X",
                             GetRValue(color),
-                            GetGValue(color));
+                            GetGValue(color),
+                            GetBValue(color));
 
                     strncpy(PREVIEW_COLOR, colorStr, sizeof(PREVIEW_COLOR) - 1);
                     PREVIEW_COLOR[sizeof(PREVIEW_COLOR) - 1] = '\0';
@@ -3696,71 +3696,20 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
             break;
 
         case WM_COMMAND:
-            if (HIWORD(wParam) == EN_CHANGE) {
-                const char* controlName;
-                switch(LOWORD(wParam)) {
-                    case 0x02c0:
-                        controlName = "Red Input";
-                        break;
-                    case 0x02c1:
-                        controlName = "Green Input";
-                        break;
-                    case 0x02c2:
-                        controlName = "Blue Input";
-                        break;
-                    default:
-                        controlName = "Unknown";
-                }
-                WriteLog("ColorDialog: Control changed - %s (ID: 0x%x)", 
-                        controlName, LOWORD(wParam));
-                
-                HWND hwndRed = GetDlgItem(hdlg, 0x02c0);
-                HWND hwndGreen = GetDlgItem(hdlg, 0x02c1);
-                HWND hwndBlue = GetDlgItem(hdlg, 0x02c2);
-                
-                if (hwndRed && hwndGreen && hwndBlue) {
-                    char redStr[4], greenStr[4], blueStr[4];
-                    
-                    GetWindowTextA(hwndRed, redStr, 4);
-                    GetWindowTextA(hwndGreen, greenStr, 4);
-                    GetWindowTextA(hwndBlue, blueStr, 4);
-                    
-                    int r = atoi(redStr);
-                    int g = atoi(greenStr);
-                    int b = atoi(blueStr);
-                    
-                    r = min(255, max(0, r));
-                    g = min(255, max(0, g));
-                    b = min(255, max(0, b));
-                    
-                    WriteLog("ColorDialog: RGB input change - R:%d G:%d B:%d (Control ID: 0x%x)", 
-                            r, g, b, LOWORD(wParam));
-                    
-                    COLORREF color = RGB(r, g, b);
-                    if (pcc) {
-                        pcc->rgbResult = color;
-                    }
-                    
-                    char colorStr[20];
-                    sprintf(colorStr, "#%02X%02X%02X", r, g, b);
-                    
-                    strncpy(PREVIEW_COLOR, colorStr, sizeof(PREVIEW_COLOR) - 1);
-                    PREVIEW_COLOR[sizeof(PREVIEW_COLOR) - 1] = '\0';
-                    IS_COLOR_PREVIEWING = TRUE;
-                    
-                    InvalidateRect(hwndParent, NULL, TRUE);
-                    UpdateWindow(hwndParent);
-                }
-            } else if (HIWORD(wParam) == BN_CLICKED) {
+            if (HIWORD(wParam) == BN_CLICKED) {
                 const char* buttonName;
                 switch (LOWORD(wParam)) {
-                    case 0x1:
-                        buttonName = "OK";
-                        break;
-                    case 0x2:
-                        buttonName = "Cancel";
-                        break;
-                    case 0x02c8:
+                    case 0x1:  // OK button
+                        WriteLog("ColorDialog: OK button clicked - Applying color");
+                        // Apply the current color, whether locked or not
+                        rgbCurrent = pcc->rgbResult;
+                        EndDialog(hdlg, 0);
+                        return TRUE;
+                    case 0x2:  // Cancel button
+                        WriteLog("ColorDialog: Cancel button clicked");
+                        EndDialog(hdlg, 0);
+                        return TRUE;
+                    case 0x02c8:  // Add to Custom Colors button
                         buttonName = "Add to Custom Colors";
                         break;
                     default:
