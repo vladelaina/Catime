@@ -3646,6 +3646,7 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
             pcc = (CHOOSECOLOR*)lParam;
             hwndParent = pcc->hwndOwner;
             rgbCurrent = pcc->rgbResult;  // Initialize rgbCurrent with the initial color
+            isColorLocked = FALSE;  // Reset lock state on dialog initialization
             return TRUE;
 
         case WM_LBUTTONDOWN:
