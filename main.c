@@ -17,7 +17,7 @@ void InitializeDefaultLanguage(void);
 COLORREF ShowColorDialog(HWND hwnd);  // 添加这一行
 UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM lParam);
 
-#define CATIME_VERSION "1.0.2"  
+#define CATIME_VERSION "1.0.2.1"  
 #define VK_MEDIA_PLAY_PAUSE 0xB3
 #define VK_MEDIA_STOP 0xB2
 #define KEYEVENTF_KEYUP 0x0002
