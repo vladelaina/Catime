@@ -19,7 +19,7 @@
 
 ![Catime](../Images/catime.gif)
 
-  [**简体中文**](../README.md) | **繁體中文** | [English](i18n/README-en.md) | [**日本語**](i18n/README_ja.md) |[**Español**](i18n/README_es.md) | [**Português**](i18n/README_pt-br.md) | [**한국어**](i18n/README_ko-kr.md) | [**Deutsch**](i18n/README_de.md) | [**French**](i18n/README_fr.md)
+  [**简体中文**](../README.md) |  [**繁體中文**](README_zh-tw.md) | [English](README-en.md) | [**日本語**](README_ja.md) |[**Español**](README_es.md) | [**Português**](README_pt-br.md) | [**한국어**](README_ko-kr.md) | [**Deutsch**](README_de.md) | [**French**](README_fr.md)
 
 ## 🌟特色
 
@@ -40,7 +40,7 @@
 
 ### 參考影片（基於 V1.0.0）：<img src="https://www.bilibili.com/favicon.ico" width="20" height="20"> [BiliBili](https://www.bilibili.com/video/BV1ztFeeQEYP)
 
-## 💖[支持](support.md)
+## 💖[支持](../support.md)
 
 如果您喜歡本專案，歡迎打賞，金額隨意。您的支持是我的動力 (*ゝω・)ﾉ Thanks!
 
