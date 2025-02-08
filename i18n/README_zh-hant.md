@@ -19,7 +19,7 @@
 
 ![Catime](../Images/catime.gif)
 
-  [**简体中文**](../README.md) |  [**繁體中文**](README_zh-hant.md) | [English](README-en.md) | [**日本語**](README_ja.md) |[**Español**](README_es.md) | [**Português**](README_pt-br.md) | [**한국어**](README_ko-kr.md) | [**Deutsch**](README_de.md) | [**French**](README_fr.md)
+  [**简体中文**](https://github.com/vladelaina/Catime) |  [**繁體中文**](README_zh-hant.md) | [English](README-en.md) | [**日本語**](README_ja.md) |[**Español**](README_es.md) | [**Português**](README_pt-br.md) | [**한국어**](README_ko-kr.md) | [**Deutsch**](README_de.md) | [**French**](README_fr.md)
 
 ## 🌟特色
 
