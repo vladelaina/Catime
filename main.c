@@ -346,7 +346,6 @@ typedef struct {
 RecentFile CLOCK_RECENT_FILES[MAX_RECENT_FILES];
 int CLOCK_RECENT_FILES_COUNT = 0;
 
-#define CLOCK_ABOUT_URL "https://github.com/vladelaina/Catime"
 #define CLOCK_IDM_ABOUT 130   
 
 char PREVIEW_FONT_NAME[100] = "";   
