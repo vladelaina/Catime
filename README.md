@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://github.com/vladelaina/Catime/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/github/license/vladelaina/Catime" /></a>
   <a href="https://github.com/vladelaina/Catime/releases/latest"><img alt="Release" src="https://img.shields.io/github/release/vladelaina/Catime.svg" /></a>
-  <a href="https://github.com/vladelaina/Catime/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/vladelaina/Catime/total" /></a>
+  <a href="https://github.com/vladelaina/Catime/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/vladelaina/Catime/total" /></a> 
   <a href="https://space.bilibili.com/1862395225"><img alt="Bilibili" src="https://img.shields.io/badge/Bilibili-space-ff69b4?logo=bilibili" /></a>
 </p>
 
@@ -19,7 +19,8 @@
 
 ![Catime](Images/catime.gif)
 
- [简体中文](i18n/README_zh-cn.md) | [繁體中文](i18n/README_zh-tw.md) | [English](i18n/README-en.md) | [日本語](i18n/README_ja.md) |[Español](i18n/README_es.md) | [Português](i18n/README_pt-br.md) | [한국어](i18n/README_ko-kr.md) | [Deutsch](i18n/README_de.md) | [French](i18n/README_fr.md)
+[**简体中文**](../i18n/README_zh-cn.md) | [**繁體中文**](i18n/README_zh-tw.md)  | [English](i18n/README-en.md) | [**日本語**](i18n/README_ja.md) | [**Español**](i18n/README_es.md) | [**Português**](i18n/README_pt-br.md) | [**한국어**](i18n/README_ko-kr.md) | [**Deutsch**](i18n/README_de.md) | [**French**](i18n/README_fr.md)
+
 
 ## 🌟特点
 
