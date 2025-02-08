@@ -19,7 +19,7 @@
 
 ![Catime](Images/catime.gif)
 
-**中文简体** | [**English**](./README_ENG.md)
+Select language  ❯  [**简体中文**](README-zh_CN.md) • [**繁体中文**](README-zh_Hant.md) • [**English**](README-en.md) • [**Español**](README-es.md) • [**Français**](README-fr.md) • [**Deutsch**](README-de.md) • [**Русский**](README-ru.md) • [**Português**](README-pt.md) • [**日本語**](README-ja.md) • [**한국어**](README-ko.md)
 
 ## 🌟特点
 
