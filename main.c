@@ -3612,7 +3612,11 @@ COLORREF ShowColorDialog(HWND hwnd) {
 
     if (ChooseColor(&cc)) {
         rgbCurrent = cc.rgbResult;
-        IS_COLOR_PREVIEWING = FALSE;
+        // 更新 CLOCK_TEXT_COLOR
+        snprintf(CLOCK_TEXT_COLOR, sizeof(CLOCK_TEXT_COLOR), "#%02X%02X%02X", 
+                 GetRValue(rgbCurrent), GetGValue(rgbCurrent), GetBValue(rgbCurrent));
+        // 保存新颜色到配置文件
+        WriteConfigColor(CLOCK_TEXT_COLOR);
         InvalidateRect(hwnd, NULL, TRUE);
         UpdateWindow(hwnd);
         return rgbCurrent;
@@ -3711,8 +3715,11 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
                     case 0x1:  // OK button
                         // Apply the current color, whether locked or not
                         rgbCurrent = pcc->rgbResult;
-                        // Ensure the color is applied to the application
-                        strcpy(CLOCK_TEXT_COLOR, PREVIEW_COLOR);  // Update the global color variable
+                        // 确保颜色被应用到应用程序
+                        snprintf(CLOCK_TEXT_COLOR, sizeof(CLOCK_TEXT_COLOR), "#%02X%02X%02X", 
+                                 GetRValue(rgbCurrent), GetGValue(rgbCurrent), GetBValue(rgbCurrent));
+                        // 保存新颜色到配置文件
+                        WriteConfigColor(CLOCK_TEXT_COLOR);
                         EndDialog(hdlg, 0);
                         return TRUE;
                     case 0x2:  // Cancel button
