@@ -16,6 +16,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
 void InitializeDefaultLanguage(void);
 COLORREF ShowColorDialog(HWND hwnd);  // 添加这一行
 UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM lParam);
+void CreateDefaultConfig(const char* config_path);  // 添加这一行
 
 #define CATIME_VERSION "1.0.2.1"  
 #define VK_MEDIA_PLAY_PAUSE 0xB3
@@ -78,20 +79,9 @@ typedef struct {
     const char* hexColor;
 } PredefinedColor;
 
-static const PredefinedColor COLOR_OPTIONS[] = {
-    {"#FFFFFF"},   
-    {"#FFB6C1"},   
-    {"#6495ED"},   
-    {"#5EFFFF"},   
-    {"#98FB98"},   
-    {"#9370DB"},   
-    {"#3E3A55"},   
-    {"#7FFFD4"},   
-    {"#F08080"},   
-    {"#FF7F50"}    
-};
-
-#define COLOR_OPTIONS_COUNT (sizeof(COLOR_OPTIONS) / sizeof(COLOR_OPTIONS[0]))
+// 添加动态数组和计数
+PredefinedColor* COLOR_OPTIONS = NULL;
+size_t COLOR_OPTIONS_COUNT = 0;
 
 void SetClickThrough(HWND hwnd, BOOL enable);
 
@@ -415,11 +405,54 @@ char* UTF8ToANSI(const char* utf8Str) {
     return str;
 }
 
+// 在文件开头添加默认颜色选项
+static const char* DEFAULT_COLOR_OPTIONS[] = {
+    "#FFFFFF",   
+    "#FFB6C1",   
+    "#6495ED",   
+    "#5EFFFF",   
+    "#98FB98",   
+    "#9370DB",   
+    "#3E3A55",   
+    "#7FFFD4",   
+    "#F08080",   
+    "#FF7F50"
+};
+
+#define DEFAULT_COLOR_OPTIONS_COUNT (sizeof(DEFAULT_COLOR_OPTIONS) / sizeof(DEFAULT_COLOR_OPTIONS[0]))
+
 void InitializeDefaultLanguage(void) {
     LANGID langId = GetUserDefaultUILanguage();
     WORD primaryLangId = PRIMARYLANGID(langId);
     WORD subLangId = SUBLANGID(langId);
     
+    // 检查配置文件是否存在
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    FILE *file = fopen(config_path, "r");
+    
+    if (!file) {
+        // 如果配置文件不存在，创建默认配置
+        CreateDefaultConfig(config_path);
+        
+        // 写入默认颜色选项
+        file = fopen(config_path, "a"); // 以追加模式打开
+        if (file) {
+            fprintf(file, "COLOR_OPTIONS=");
+            for (size_t i = 0; i < DEFAULT_COLOR_OPTIONS_COUNT; i++) {
+                fprintf(file, "%s", DEFAULT_COLOR_OPTIONS[i]);
+                if (i < DEFAULT_COLOR_OPTIONS_COUNT - 1) {
+                    fprintf(file, ",");
+                }
+            }
+            fprintf(file, "\n");
+            fclose(file);
+        }
+    } else {
+        fclose(file);
+    }
+
+    // 现有的语言初始化逻辑
     switch (primaryLangId) {
         case LANG_CHINESE:
             if (subLangId == SUBLANG_CHINESE_SIMPLIFIED) {
@@ -589,23 +622,28 @@ void CreateDefaultConfig(const char* config_path) {
         return;
     }
 
-    int screenWidth = GetSystemMetrics(SM_CXSCREEN);
-    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
-    int centerX = screenWidth / 2;
-    
-    float scale = (screenHeight * 0.03f) / 20.0f;
-
+    // 这里是创建默认配置的逻辑
     fprintf(file, "CLOCK_TEXT_COLOR=#FFB6C1\n");
     fprintf(file, "CLOCK_BASE_FONT_SIZE=20\n");
     fprintf(file, "FONT_FILE_NAME=GohuFont uni11 Nerd Font Mono.ttf\n");
-    fprintf(file, "CLOCK_WINDOW_POS_X=%d\n", centerX);
-    fprintf(file, "CLOCK_WINDOW_POS_Y=-7\n");   
-    fprintf(file, "WINDOW_SCALE=%.2f\n", scale);
+    fprintf(file, "CLOCK_WINDOW_POS_X=960\n");
+    fprintf(file, "CLOCK_WINDOW_POS_Y=-7\n");
+    fprintf(file, "WINDOW_SCALE=1.62\n");
     fprintf(file, "CLOCK_DEFAULT_START_TIME=1500\n");
     fprintf(file, "CLOCK_TIME_OPTIONS=25,10,5\n");
     fprintf(file, "CLOCK_TIMEOUT_TEXT=0\n");
     fprintf(file, "CLOCK_EDIT_MODE=FALSE\n");
     fprintf(file, "CLOCK_TIMEOUT_ACTION=LOCK\n");
+
+    // 写入默认颜色选项
+    fprintf(file, "COLOR_OPTIONS=");
+    for (size_t i = 0; i < DEFAULT_COLOR_OPTIONS_COUNT; i++) {
+        fprintf(file, "%s", DEFAULT_COLOR_OPTIONS[i]);
+        if (i < DEFAULT_COLOR_OPTIONS_COUNT - 1) {
+            fprintf(file, ",");
+        }
+    }
+    fprintf(file, "\n");
 
     fclose(file);
 }
@@ -876,6 +914,17 @@ void ReadConfig() {
                 // 如果文件不存在，清空路径
                 memset(CLOCK_TIMEOUT_FILE_PATH, 0, sizeof(CLOCK_TIMEOUT_FILE_PATH));
                 CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE; // 默认回退到消息提示
+            }
+        }
+        else if (strncmp(line, "COLOR_OPTIONS=", 14) == 0) {
+            char* token = strtok(line + 14, ",");
+            while (token) {
+                COLOR_OPTIONS = realloc(COLOR_OPTIONS, sizeof(PredefinedColor) * (COLOR_OPTIONS_COUNT + 1));
+                if (COLOR_OPTIONS) {
+                    COLOR_OPTIONS[COLOR_OPTIONS_COUNT].hexColor = strdup(token);
+                    COLOR_OPTIONS_COUNT++;
+                }
+                token = strtok(NULL, ",");
             }
         }
     }
@@ -3584,6 +3633,16 @@ void WriteConfig(const char* config_path) {
     for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
         fprintf(file, "CLOCK_RECENT_FILE=%s\n", CLOCK_RECENT_FILES[i].path);
     }
+    
+    // 写入颜色选项
+    fprintf(file, "COLOR_OPTIONS=");
+    for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
+        fprintf(file, "%s", COLOR_OPTIONS[i].hexColor);
+        if (i < COLOR_OPTIONS_COUNT - 1) {
+            fprintf(file, ",");
+        }
+    }
+    fprintf(file, "\n");
     
     fclose(file);
 }
