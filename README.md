@@ -19,7 +19,7 @@
 
 ![Catime](Images/catime.gif)
 
-[**简体中文**](README_zh-cn.md) |[**繁體中文**](i18n/README_zh-hant.md)  | [English](i18n/README-en.md) | [**日本語**](i18n/README_ja.md) | [**Español**](i18n/README_es.md) | [**Português**](i18n/README_pt-br.md) | [**한국어**](i18n/README_ko-kr.md) | [**Deutsch**](i18n/README_de.md) | [**French**](i18n/README_fr.md)
+[**简体中文**](README.md) |[**繁體中文**](i18n/README_zh-hant.md)  | [English](i18n/README-en.md) | [**日本語**](i18n/README_ja.md) | [**Español**](i18n/README_es.md) | [**Português**](i18n/README_pt-br.md) | [**한국어**](i18n/README_ko-kr.md) | [**Deutsch**](i18n/README_de.md) | [**French**](i18n/README_fr.md)
 
 
 ## 🌟特点
