@@ -315,7 +315,7 @@ void GetConfigPath(char* path, size_t size);
 void SaveWindowSettings(HWND hwnd);
 void LoadWindowSettings(HWND hwnd);
 void WriteConfigColor(const char* color_input);
-void WriteConfigFont(const char* font_filename);
+void WriteConfigFont(const char* font_file_name);
 void WriteConfigTimeoutAction(const char* action);
 void WriteConfigEditMode(const char* mode);
 void WriteConfigTimeOptions(const char* options);   
@@ -953,7 +953,7 @@ void WriteConfigColor(const char* color_input) {
     ReadConfig();
 }
 
-void WriteConfigFont(const char* font_filename) {
+void WriteConfigFont(const char* font_file_name) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
@@ -989,7 +989,7 @@ void WriteConfigFont(const char* font_filename) {
     while (line) {
         if (strncmp(line, "FONT_FILE_NAME=", 15) == 0) {
             strcat(new_config, "FONT_FILE_NAME=");
-            strcat(new_config, font_filename);
+            strcat(new_config, font_file_name);
             strcat(new_config, "\n");
         } else {
             strcat(new_config, line);
@@ -997,6 +997,11 @@ void WriteConfigFont(const char* font_filename) {
         }
         line = strtok(NULL, "\n");
     }
+
+    // 在这里添加对 CLOCK_TEXT_COLOR 的写入
+    strcat(new_config, "CLOCK_TEXT_COLOR=");
+    strcat(new_config, CLOCK_TEXT_COLOR);
+    strcat(new_config, "\n");
 
     free(config_content);
 
