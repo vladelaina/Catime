@@ -17,9 +17,6 @@ void InitializeDefaultLanguage(void);
 COLORREF ShowColorDialog(HWND hwnd);  // 添加这一行
 UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM lParam);
 
-// 在文件开头的函数声明区域添加（其他函数声明的地方）
-void WriteLog(const char* format, ...);
-
 #define CATIME_VERSION "1.0.2"  
 #define VK_MEDIA_PLAY_PAUSE 0xB3
 #define VK_MEDIA_STOP 0xB2
@@ -3588,8 +3585,7 @@ void WriteConfig(const char* config_path) {
 }
 
 COLORREF ShowColorDialog(HWND hwnd) {
-    WriteLog("ShowColorDialog: Started");
-    
+    // Removed WriteLog calls
     CHOOSECOLOR cc = {0};
     static COLORREF acrCustClr[16] = {0};
     static DWORD rgbCurrent;
@@ -3603,9 +3599,6 @@ COLORREF ShowColorDialog(HWND hwnd) {
     }
     rgbCurrent = RGB(r, g, b);
     
-    WriteLog("ShowColorDialog: Current color: %s (RGB: %d,%d,%d)", 
-             CLOCK_TEXT_COLOR, r, g, b);
-
     cc.lStructSize = sizeof(CHOOSECOLOR);
     cc.hwndOwner = hwnd;
     cc.lpCustColors = acrCustClr;
@@ -3614,19 +3607,13 @@ COLORREF ShowColorDialog(HWND hwnd) {
     cc.lpfnHook = ColorDialogHookProc;
 
     if (ChooseColor(&cc)) {
-        WriteLog("ShowColorDialog: Color chosen successfully - Color=#%02X%02X%02X",
-                GetRValue(cc.rgbResult),
-                GetGValue(cc.rgbResult),
-                GetBValue(cc.rgbResult));
-        
         rgbCurrent = cc.rgbResult;
         IS_COLOR_PREVIEWING = FALSE;
         InvalidateRect(hwnd, NULL, TRUE);
         UpdateWindow(hwnd);
         return rgbCurrent;
     }
-    
-    WriteLog("ShowColorDialog: Dialog cancelled or failed");
+
     IS_COLOR_PREVIEWING = FALSE;
     InvalidateRect(hwnd, NULL, TRUE);
     UpdateWindow(hwnd);
@@ -3642,7 +3629,6 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
 
     switch (uiMsg) {
         case WM_INITDIALOG:
-            WriteLog("ColorDialog: Initialized");
             pcc = (CHOOSECOLOR*)lParam;
             hwndParent = pcc->hwndOwner;
             rgbCurrent = pcc->rgbResult;  // Initialize rgbCurrent with the initial color
@@ -3651,7 +3637,6 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
 
         case WM_LBUTTONDOWN:
         case WM_RBUTTONDOWN:
-            WriteLog("ColorDialog: Click - Toggling color lock state");
             isColorLocked = !isColorLocked;  // Toggle the lock state on any click
 
             // Immediately update the color preview on click
@@ -3665,12 +3650,6 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
                 ReleaseDC(hdlg, hdc);
 
                 if (color != CLR_INVALID && color != RGB(240, 240, 240)) {
-                    WriteLog("ColorDialog: Click preview - Position(%d,%d) Color=#%02X%02X%02X",
-                            pt.x, pt.y,
-                            GetRValue(color),
-                            GetGValue(color),
-                            GetBValue(color));
-
                     if (pcc) {
                         pcc->rgbResult = color;
                     }
@@ -3702,12 +3681,6 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
                 ReleaseDC(hdlg, hdc);
 
                 if (color != CLR_INVALID && color != RGB(240, 240, 240)) {
-                    WriteLog("ColorDialog: Mouse preview - Position(%d,%d) Color=#%02X%02X%02X",
-                            pt.x, pt.y,
-                            GetRValue(color),
-                            GetGValue(color),
-                            GetBValue(color));
-
                     if (pcc) {
                         pcc->rgbResult = color;
                     }
@@ -3730,10 +3703,8 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
 
         case WM_COMMAND:
             if (HIWORD(wParam) == BN_CLICKED) {
-                const char* buttonName;
                 switch (LOWORD(wParam)) {
                     case 0x1:  // OK button
-                        WriteLog("ColorDialog: OK button clicked - Applying color");
                         // Apply the current color, whether locked or not
                         rgbCurrent = pcc->rgbResult;
                         // Ensure the color is applied to the application
@@ -3741,48 +3712,15 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
                         EndDialog(hdlg, 0);
                         return TRUE;
                     case 0x2:  // Cancel button
-                        WriteLog("ColorDialog: Cancel button clicked");
                         EndDialog(hdlg, 0);
                         return TRUE;
-                    case 0x02c8:  // Add to Custom Colors button
-                        buttonName = "Add to Custom Colors";
-                        break;
-                    default:
-                        buttonName = "Unknown";
                 }
-                WriteLog("ColorDialog: Button clicked - %s button (Control ID: 0x%x)", 
-                        buttonName, LOWORD(wParam));
             }
             break;
 
         case WM_DESTROY:
-            WriteLog("ColorDialog: Dialog destroyed");
             pcc = NULL;
             break;
     }
     return 0;
-}
-
-// 在文件开头的函数声明区域添加（其他函数声明的地方）
-void WriteLog(const char* format, ...) {
-    char logPath[MAX_PATH];
-    snprintf(logPath, MAX_PATH, "%s\\Desktop\\catime_color.log", getenv("USERPROFILE"));
-    
-    FILE* logFile = fopen(logPath, "a");
-    if (!logFile) return;
-    
-    // 添加时间戳
-    time_t now = time(NULL);
-    char timeStr[26];
-    ctime_s(timeStr, sizeof(timeStr), &now);
-    timeStr[24] = '\0'; // 移除换行符
-    fprintf(logFile, "[%s] ", timeStr);
-    
-    va_list args;
-    va_start(args, format);
-    vfprintf(logFile, format, args);
-    va_end(args);
-    
-    fprintf(logFile, "\n");
-    fclose(logFile);
 }
