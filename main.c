@@ -3709,12 +3709,24 @@ void WriteConfig(const char* config_path) {
     
     // 写入所有配置项
     fprintf(file, "CLOCK_TEXT_COLOR=%s\n", CLOCK_TEXT_COLOR);
+    fprintf(file, "CLOCK_BASE_FONT_SIZE=%d\n", CLOCK_BASE_FONT_SIZE);  // 添加这行
     fprintf(file, "FONT_FILE_NAME=%s\n", FONT_FILE_NAME);
     fprintf(file, "CLOCK_DEFAULT_START_TIME=%d\n", CLOCK_DEFAULT_START_TIME);
     fprintf(file, "CLOCK_WINDOW_POS_X=%d\n", CLOCK_WINDOW_POS_X);
     fprintf(file, "CLOCK_WINDOW_POS_Y=%d\n", CLOCK_WINDOW_POS_Y);
     fprintf(file, "CLOCK_EDIT_MODE=%s\n", CLOCK_EDIT_MODE ? "TRUE" : "FALSE");
     fprintf(file, "WINDOW_SCALE=%.2f\n", CLOCK_WINDOW_SCALE);
+    
+    // 写入时间选项
+    fprintf(file, "CLOCK_TIME_OPTIONS=");  // 添加这行
+    for (int i = 0; i < time_options_count; i++) {
+        if (i > 0) fprintf(file, ",");
+        fprintf(file, "%d", time_options[i]);
+    }
+    fprintf(file, "\n");
+    
+    // 写入超时文本
+    fprintf(file, "CLOCK_TIMEOUT_TEXT=%s\n", CLOCK_TIMEOUT_TEXT);  // 添加这行
     
     // 写入超时动作配置
     if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE && strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
@@ -3742,12 +3754,10 @@ void WriteConfig(const char* config_path) {
         fprintf(file, "CLOCK_RECENT_FILE=%s\n", CLOCK_RECENT_FILES[i].path);
     }
     
-    // 写入颜色选项前先去重
+    // 写入颜色选项
     fprintf(file, "COLOR_OPTIONS=");
     for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
-        if (i > 0) {
-            fprintf(file, ",");
-        }
+        if (i > 0) fprintf(file, ",");
         fprintf(file, "%s", COLOR_OPTIONS[i].hexColor);
     }
     fprintf(file, "\n");
