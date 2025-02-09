@@ -1697,24 +1697,7 @@ void ShowColorMenu(HWND hwnd) {
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
-    // 颜色选项保持不变，因为是用颜色块显示的
-    for (int i = 0; i < COLOR_OPTIONS_COUNT; i++) {
-        const char* hexColor = COLOR_OPTIONS[i].hexColor;
-        
-        MENUITEMINFO mii = { sizeof(MENUITEMINFO) };
-        mii.fMask = MIIM_STRING | MIIM_ID | MIIM_STATE | MIIM_FTYPE;
-        mii.fType = MFT_STRING | MFT_OWNERDRAW;
-        mii.fState = strcmp(CLOCK_TEXT_COLOR, hexColor) == 0 ? MFS_CHECKED : MFS_UNCHECKED;
-        mii.wID = 201 + i;
-        mii.dwTypeData = (LPSTR)hexColor;
-        
-        InsertMenuItem(hColorSubMenu, i, TRUE, &mii);
-    }
-    AppendMenuW(hColorSubMenu, MF_SEPARATOR, 0, NULL);
-    AppendMenuW(hColorSubMenu, MF_STRING, CLOCK_IDC_CUSTOMIZE_LEFT, 
-                GetLocalizedString(L"自定义", L"Customize"));
-
-    // 字体菜单项
+    // 先添加字体菜单
     for (int i = 0; i < sizeof(fontResources) / sizeof(fontResources[0]); i++) {
         BOOL isCurrentFont = strcmp(FONT_FILE_NAME, fontResources[i].fontName) == 0;
         
@@ -1731,10 +1714,28 @@ void ShowColorMenu(HWND hwnd) {
                   fontResources[i].menuId, displayName);
     }
 
-    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hColorSubMenu, 
-                GetLocalizedString(L"颜色", L"Color"));
+    // 然后添加颜色选项
+    for (int i = 0; i < COLOR_OPTIONS_COUNT; i++) {
+        const char* hexColor = COLOR_OPTIONS[i].hexColor;
+        
+        MENUITEMINFO mii = { sizeof(MENUITEMINFO) };
+        mii.fMask = MIIM_STRING | MIIM_ID | MIIM_STATE | MIIM_FTYPE;
+        mii.fType = MFT_STRING | MFT_OWNERDRAW;
+        mii.fState = strcmp(CLOCK_TEXT_COLOR, hexColor) == 0 ? MFS_CHECKED : MFS_UNCHECKED;
+        mii.wID = 201 + i;
+        mii.dwTypeData = (LPSTR)hexColor;
+        
+        InsertMenuItem(hColorSubMenu, i, TRUE, &mii);
+    }
+    AppendMenuW(hColorSubMenu, MF_SEPARATOR, 0, NULL);
+    AppendMenuW(hColorSubMenu, MF_STRING, CLOCK_IDC_CUSTOMIZE_LEFT, 
+                GetLocalizedString(L"自定义", L"Customize"));
+
+    // 先添加字体菜单项，再添加颜色菜单项
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hFontSubMenu, 
                 GetLocalizedString(L"字体", L"Font"));
+    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hColorSubMenu, 
+                GetLocalizedString(L"颜色", L"Color"));
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
     
