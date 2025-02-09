@@ -451,15 +451,35 @@ void InitializeDefaultLanguage(void) {
         
         while (fgets(line, sizeof(line), file)) {
             if (strncmp(line, "COLOR_OPTIONS=", 13) == 0) {
+                // 去除行尾的换行符
+                char* newline = strchr(line, '\n');
+                if (newline) *newline = '\0';
+                
+                // 分割颜色字符串
                 char* colors = line + 13;
-                char* token = strtok(colors, ",\n");
+                char* saveptr;
+                char* token = strtok_r(colors, ",", &saveptr);
+                
                 while (token) {
-                    // 去除可能的空格和换行符
-                    while (*token == ' ' || *token == '\n' || *token == '\r') token++;
-                    if (*token) {
-                        AddColorOption(token);
+                    // 去除前后空格
+                    while (*token == ' ') token++;
+                    char* end = token + strlen(token) - 1;
+                    while (end > token && *end == ' ') {
+                        *end = '\0';
+                        end--;
                     }
-                    token = strtok(NULL, ",\n");
+                    
+                    if (*token) {
+                        // 确保颜色格式正确
+                        if (token[0] != '#') {
+                            char colorWithHash[10];
+                            snprintf(colorWithHash, sizeof(colorWithHash), "#%s", token);
+                            AddColorOption(colorWithHash);
+                        } else {
+                            AddColorOption(token);
+                        }
+                    }
+                    token = strtok_r(NULL, ",", &saveptr);
                 }
                 found_colors = TRUE;
                 break;
@@ -474,14 +494,53 @@ void InitializeDefaultLanguage(void) {
             }
         }
     }
+}
 
-    // 移除这部分代码，因为它可能导致重复添加颜色
-    // 确保所有默认颜色都存在
-    // for (size_t i = 0; i < DEFAULT_COLOR_OPTIONS_COUNT; i++) {
-    //     if (!IsColorExists(DEFAULT_COLOR_OPTIONS[i])) {
-    //         AddColorOption(DEFAULT_COLOR_OPTIONS[i]);
-    //     }
-    // }
+// 修改 AddColorOption 函数
+void AddColorOption(const char* hexColor) {
+    // 跳过空值
+    if (!hexColor || !*hexColor) {
+        return;
+    }
+    
+    // 规范化颜色格式（确保大写）
+    char normalizedColor[10];
+    const char* hex = (hexColor[0] == '#') ? hexColor + 1 : hexColor;
+    
+    // 验证十六进制字符串的有效性
+    size_t len = strlen(hex);
+    if (len != 6) {
+        return;  // 无效的十六进制颜色
+    }
+    
+    for (int i = 0; i < 6; i++) {
+        if (!isxdigit((unsigned char)hex[i])) {
+            return;  // 无效的十六进制颜色
+        }
+    }
+    
+    unsigned int color;
+    if (sscanf(hex, "%x", &color) != 1) {
+        return;  // 转换失败
+    }
+    
+    snprintf(normalizedColor, sizeof(normalizedColor), "#%06X", color);
+    
+    // 检查颜色是否已存在
+    for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
+        if (strcasecmp(normalizedColor, COLOR_OPTIONS[i].hexColor) == 0) {
+            return;
+        }
+    }
+    
+    // 扩展数组
+    PredefinedColor* newArray = realloc(COLOR_OPTIONS, 
+                                      (COLOR_OPTIONS_COUNT + 1) * sizeof(PredefinedColor));
+    if (newArray) {
+        COLOR_OPTIONS = newArray;
+        COLOR_OPTIONS[COLOR_OPTIONS_COUNT].hexColor = _strdup(normalizedColor);
+        COLOR_OPTIONS_COUNT++;
+    }
 }
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
@@ -3799,50 +3858,6 @@ BOOL IsColorExists(const char* hexColor) {
         }
     }
     return FALSE;
-}
-
-// 添加颜色到 COLOR_OPTIONS
-void AddColorOption(const char* hexColor) {
-    // 跳过空值
-    if (!hexColor || !*hexColor) {
-        return;
-    }
-    
-    // 规范化颜色格式（确保大写）
-    char normalizedColor[10];
-    if (hexColor[0] == '#') {
-        snprintf(normalizedColor, sizeof(normalizedColor), "#%06X", 
-                (unsigned int)strtol(hexColor + 1, NULL, 16));
-    } else {
-        snprintf(normalizedColor, sizeof(normalizedColor), "#%06X", 
-                (unsigned int)strtol(hexColor, NULL, 16));
-    }
-    
-    // 检查颜色是否已存在
-    for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
-        char existingNormalized[10];
-        const char* existing = COLOR_OPTIONS[i].hexColor;
-        if (existing[0] == '#') {
-            snprintf(existingNormalized, sizeof(existingNormalized), "#%06X", 
-                    (unsigned int)strtol(existing + 1, NULL, 16));
-        } else {
-            snprintf(existingNormalized, sizeof(existingNormalized), "#%06X", 
-                    (unsigned int)strtol(existing, NULL, 16));
-        }
-        
-        if (strcmp(normalizedColor, existingNormalized) == 0) {
-            return;
-        }
-    }
-    
-    // 扩展数组
-    PredefinedColor* newArray = realloc(COLOR_OPTIONS, 
-                                      (COLOR_OPTIONS_COUNT + 1) * sizeof(PredefinedColor));
-    if (newArray) {
-        COLOR_OPTIONS = newArray;
-        COLOR_OPTIONS[COLOR_OPTIONS_COUNT].hexColor = _strdup(normalizedColor);
-        COLOR_OPTIONS_COUNT++;
-    }
 }
 
 // 清理 COLOR_OPTIONS
