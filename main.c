@@ -1531,13 +1531,14 @@ void ShowContextMenu(HWND hwnd) {
                
     // 创建正计时子菜单
     HMENU hCountUpMenu = CreatePopupMenu();
-    AppendMenuW(hCountUpMenu, MF_STRING, 
-               CLOCK_IDM_COUNT_UP_START,
-               GetLocalizedString(CLOCK_COUNT_UP ? L"暂停" : L"开始", 
-                                CLOCK_COUNT_UP ? L"Pause" : L"Start"));
-    AppendMenuW(hCountUpMenu, MF_STRING,
-               CLOCK_IDM_COUNT_UP_RESET,
-               GetLocalizedString(L"重新开始", L"Restart"));
+    AppendMenuW(hCountUpMenu, MF_STRING, CLOCK_IDM_COUNT_UP_START,
+        CLOCK_COUNT_UP ? 
+            (CLOCK_IS_PAUSED ? 
+                GetLocalizedString(L"继续", L"Resume") : 
+                GetLocalizedString(L"暂停", L"Pause")) :
+            GetLocalizedString(L"开始", L"Start"));
+    AppendMenuW(hCountUpMenu, MF_STRING, CLOCK_IDM_COUNT_UP_RESET,
+        GetLocalizedString(L"重新开始", L"Restart"));  // 改回"重新开始"
                
     // 将正计时子菜单添加到主菜单
     AppendMenuW(hMenu, MF_POPUP | (CLOCK_COUNT_UP ? MF_CHECKED : MF_UNCHECKED),
