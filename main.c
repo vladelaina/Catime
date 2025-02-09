@@ -57,6 +57,8 @@ void ClearColorOptions(void);
 #define CLOCK_IDM_LANG_KOREAN        170
 #define CLOCK_IDM_FEEDBACK_GITHUB 137
 #define CLOCK_IDM_FEEDBACK_BILIBILI 138
+#define CLOCK_IDM_COUNT_UP_START     171
+#define CLOCK_IDM_COUNT_UP_RESET     172
 
 // 在文件开头的宏定义区域添加
 #define CLOCK_IDC_TIMEOUT_BROWSE 140
@@ -1523,15 +1525,24 @@ void ShowContextMenu(HWND hwnd) {
                CLOCK_IDM_SHOW_SECONDS,
                GetLocalizedString(L"显示秒数", L"Show Seconds"));
     
-    AppendMenuW(hMenu, MF_POPUP | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
-               (UINT_PTR)hTimeMenu,
+    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeMenu,
                GetLocalizedString(L"时间显示", L"Time Display"));
                
-    // 将正计时选项移到这里
-    AppendMenuW(hMenu, MF_STRING | (CLOCK_COUNT_UP ? MF_CHECKED : MF_UNCHECKED),
-               CLOCK_IDM_COUNT_UP,
-               GetLocalizedString(L"正计时", L"Count Up"));
+    // 创建正计时子菜单
+    HMENU hCountUpMenu = CreatePopupMenu();
+    AppendMenuW(hCountUpMenu, MF_STRING, 
+               CLOCK_IDM_COUNT_UP_START,
+               GetLocalizedString(CLOCK_COUNT_UP ? L"暂停" : L"开始", 
+                                CLOCK_COUNT_UP ? L"Pause" : L"Start"));
+    AppendMenuW(hCountUpMenu, MF_STRING,
+               CLOCK_IDM_COUNT_UP_RESET,
+               GetLocalizedString(L"重新开始", L"Restart"));
                
+    // 将正计时子菜单添加到主菜单
+    AppendMenuW(hMenu, MF_POPUP | (CLOCK_COUNT_UP ? MF_CHECKED : MF_UNCHECKED),
+               (UINT_PTR)hCountUpMenu,
+               GetLocalizedString(L"正计时", L"Count Up"));
+
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
     for (int i = 0; i < time_options_count; i++) {
@@ -2802,23 +2813,38 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_COUNT_UP: {
+                    // 移除此 case 或保留为空，因为现在通过子菜单控制
+                    break;
+                }
+                case CLOCK_IDM_COUNT_UP_START: {
                     CLOCK_COUNT_UP = !CLOCK_COUNT_UP;
                     if (CLOCK_COUNT_UP) {
-                        // 切换到正计时时，关闭显示当前时间
-                        if (CLOCK_SHOW_CURRENT_TIME) {
-                            CLOCK_SHOW_CURRENT_TIME = FALSE;
-                            CLOCK_LAST_TIME_UPDATE = 0;
+                        // 开始正计时
+                        CLOCK_SHOW_CURRENT_TIME = FALSE;
+                        KillTimer(hwnd, 1);
+                        if (elapsed_time == 0) {  // 只有在初始状态才重置
+                            message_shown = 0;
                         }
-                        elapsed_time = 0;
-                        message_shown = 0;
                         SetTimer(hwnd, 1, 1000, NULL);
                     } else {
-                        // 关闭正计时时重置计时器
+                        // 暂停，只停止计时器，保持当前值
                         KillTimer(hwnd, 1);
-                        elapsed_time = 0;
-                        message_shown = 0;
                     }
                     InvalidateRect(hwnd, NULL, TRUE);
+                    break;
+                }
+                case CLOCK_IDM_COUNT_UP_RESET: {
+                    if (CLOCK_COUNT_UP) {
+                        // 重置计时器
+                        elapsed_time = 0;
+                        message_shown = 0;
+                        // 如果计时器正在运行，继续计时
+                        if (IsWindow(GetDlgItem(hwnd, 1))) {
+                            KillTimer(hwnd, 1);
+                        }
+                        SetTimer(hwnd, 1, 1000, NULL);
+                        InvalidateRect(hwnd, NULL, TRUE);
+                    }
                     break;
                 }
             }
