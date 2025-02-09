@@ -3756,9 +3756,8 @@ void WriteConfig(const char* config_path) {
 }
 
 COLORREF ShowColorDialog(HWND hwnd) {
-    // Removed WriteLog calls
     CHOOSECOLOR cc = {0};
-    static COLORREF acrCustClr[16] = {0};
+    static COLORREF acrCustClr[16] = {0};  // 自定义颜色数组
     static DWORD rgbCurrent;
     
     // 将当前颜色转换为 COLORREF
@@ -3769,6 +3768,16 @@ COLORREF ShowColorDialog(HWND hwnd) {
         sscanf(CLOCK_TEXT_COLOR, "%d,%d,%d", &r, &g, &b);
     }
     rgbCurrent = RGB(r, g, b);
+    
+    // 从配置文件的颜色选项加载自定义颜色
+    for (size_t i = 0; i < COLOR_OPTIONS_COUNT && i < 16; i++) {
+        const char* hexColor = COLOR_OPTIONS[i].hexColor;
+        if (hexColor[0] == '#') {
+            int r, g, b;
+            sscanf(hexColor + 1, "%02x%02x%02x", &r, &g, &b);
+            acrCustClr[i] = RGB(r, g, b);
+        }
+    }
     
     cc.lStructSize = sizeof(CHOOSECOLOR);
     cc.hwndOwner = hwnd;
