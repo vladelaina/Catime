@@ -446,21 +446,17 @@ void InitializeDefaultLanguage(void) {
     }
     
     if (file) {
-        // 读取配置文件中的颜色选项
         char line[1024];
         BOOL found_colors = FALSE;
         
         while (fgets(line, sizeof(line), file)) {
             if (strncmp(line, "COLOR_OPTIONS=", 13) == 0) {
-                // 首先添加白色
-                AddColorOption("#FFFFFF");
-                
                 char* colors = line + 13;
                 char* token = strtok(colors, ",\n");
                 while (token) {
                     // 去除可能的空格和换行符
                     while (*token == ' ' || *token == '\n' || *token == '\r') token++;
-                    if (*token && strcmp(token, "#FFFFFF") != 0) {  // 不重复添加白色
+                    if (*token) {
                         AddColorOption(token);
                     }
                     token = strtok(NULL, ",\n");
@@ -479,47 +475,13 @@ void InitializeDefaultLanguage(void) {
         }
     }
 
+    // 移除这部分代码，因为它可能导致重复添加颜色
     // 确保所有默认颜色都存在
-    for (size_t i = 0; i < DEFAULT_COLOR_OPTIONS_COUNT; i++) {
-        if (!IsColorExists(DEFAULT_COLOR_OPTIONS[i])) {
-            AddColorOption(DEFAULT_COLOR_OPTIONS[i]);
-        }
-    }
-
-    // 现有的语言初始化逻辑
-    switch (primaryLangId) {
-        case LANG_CHINESE:
-            if (subLangId == SUBLANG_CHINESE_SIMPLIFIED) {
-                CURRENT_LANGUAGE = APP_LANG_CHINESE_SIMP;
-            } else if (subLangId == SUBLANG_CHINESE_TRADITIONAL) {
-                CURRENT_LANGUAGE = APP_LANG_CHINESE_TRAD;
-            }
-            break;
-        case LANG_SPANISH:
-            CURRENT_LANGUAGE = APP_LANG_SPANISH;
-            break;
-        case LANG_FRENCH:
-            CURRENT_LANGUAGE = APP_LANG_FRENCH;
-            break;
-        case LANG_GERMAN:
-            CURRENT_LANGUAGE = APP_LANG_GERMAN;
-            break;
-        case LANG_RUSSIAN:
-            CURRENT_LANGUAGE = APP_LANG_RUSSIAN;
-            break;
-        case LANG_PORTUGUESE:
-            CURRENT_LANGUAGE = APP_LANG_PORTUGUESE;
-            break;
-        case LANG_JAPANESE:
-            CURRENT_LANGUAGE = APP_LANG_JAPANESE;
-            break;
-        case LANG_KOREAN:
-            CURRENT_LANGUAGE = APP_LANG_KOREAN;
-            break;
-        default:
-            CURRENT_LANGUAGE = APP_LANG_ENGLISH;
-            break;
-    }
+    // for (size_t i = 0; i < DEFAULT_COLOR_OPTIONS_COUNT; i++) {
+    //     if (!IsColorExists(DEFAULT_COLOR_OPTIONS[i])) {
+    //         AddColorOption(DEFAULT_COLOR_OPTIONS[i]);
+    //     }
+    // }
 }
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
@@ -3841,9 +3803,36 @@ BOOL IsColorExists(const char* hexColor) {
 
 // 添加颜色到 COLOR_OPTIONS
 void AddColorOption(const char* hexColor) {
-    // 检查颜色是否已存在
-    if (IsColorExists(hexColor)) {
+    // 跳过空值
+    if (!hexColor || !*hexColor) {
         return;
+    }
+    
+    // 规范化颜色格式（确保大写）
+    char normalizedColor[10];
+    if (hexColor[0] == '#') {
+        snprintf(normalizedColor, sizeof(normalizedColor), "#%06X", 
+                (unsigned int)strtol(hexColor + 1, NULL, 16));
+    } else {
+        snprintf(normalizedColor, sizeof(normalizedColor), "#%06X", 
+                (unsigned int)strtol(hexColor, NULL, 16));
+    }
+    
+    // 检查颜色是否已存在
+    for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
+        char existingNormalized[10];
+        const char* existing = COLOR_OPTIONS[i].hexColor;
+        if (existing[0] == '#') {
+            snprintf(existingNormalized, sizeof(existingNormalized), "#%06X", 
+                    (unsigned int)strtol(existing + 1, NULL, 16));
+        } else {
+            snprintf(existingNormalized, sizeof(existingNormalized), "#%06X", 
+                    (unsigned int)strtol(existing, NULL, 16));
+        }
+        
+        if (strcmp(normalizedColor, existingNormalized) == 0) {
+            return;
+        }
     }
     
     // 扩展数组
@@ -3851,7 +3840,7 @@ void AddColorOption(const char* hexColor) {
                                       (COLOR_OPTIONS_COUNT + 1) * sizeof(PredefinedColor));
     if (newArray) {
         COLOR_OPTIONS = newArray;
-        COLOR_OPTIONS[COLOR_OPTIONS_COUNT].hexColor = _strdup(hexColor);
+        COLOR_OPTIONS[COLOR_OPTIONS_COUNT].hexColor = _strdup(normalizedColor);
         COLOR_OPTIONS_COUNT++;
     }
 }
