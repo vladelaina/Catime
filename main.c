@@ -411,18 +411,24 @@ char* UTF8ToANSI(const char* utf8Str) {
     return str;
 }
 
-// 修改默认颜色选项的顺序，将白色放在第一位
+// 修改默认颜色选项的顺序和颜色值
 static const char* DEFAULT_COLOR_OPTIONS[] = {
-    "#FFFFFF",   // 白色放在第一位
-    "#FFB6C1",   
-    "#6495ED",   
-    "#5EFFFF",   
-    "#98FB98",   
-    "#9370DB",   
-    "#3E3A55",   
-    "#7FFFD4",   
-    "#F08080",   
-    "#FF7F50"
+    "#FFFFFF",   // 白色
+    "#F9DB91",   // 浅黄色
+    "#F4CAE0",   // 淡粉色
+    "#FFB6C1",   // 浅粉红
+    "#A8E7DF",   // 浅青色
+    "#A3CFB3",   // 浅绿色
+    "#92CBFC",   // 浅蓝色
+    "#BDA5E7",   // 淡紫色
+    "#9370DB",   // 中等紫罗兰色
+    "#8C92CF",   // 柔和蓝紫色
+    "#72A9A5",   // 青绿色
+    "#EB99A7",   // 柔和红色
+    "#EB96BD",   // 粉红色
+    "#FFAE8B",   // 橙粉色
+    "#FF7F50",   // 珊瑚色
+    "#CA6174"    // 暗玫瑰色
 };
 
 #define DEFAULT_COLOR_OPTIONS_COUNT (sizeof(DEFAULT_COLOR_OPTIONS) / sizeof(DEFAULT_COLOR_OPTIONS[0]))
