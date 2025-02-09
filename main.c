@@ -2691,6 +2691,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDM_SHOW_CURRENT_TIME: {  
                     CLOCK_SHOW_CURRENT_TIME = !CLOCK_SHOW_CURRENT_TIME;
                     if (CLOCK_SHOW_CURRENT_TIME) {
+                        // 切换到显示当前时间时，关闭正计时模式
+                        CLOCK_COUNT_UP = FALSE;
                         KillTimer(hwnd, 1);   
                         elapsed_time = 0;
                         CLOCK_LAST_TIME_UPDATE = time(NULL);
