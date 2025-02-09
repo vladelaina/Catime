@@ -1528,7 +1528,7 @@ void ShowContextMenu(HWND hwnd) {
     
     // 将时间选项子菜单添加到主菜单
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeOptionsMenu,
-                GetLocalizedString(L"时间选项设置", L"Time Options Settings"));
+                GetLocalizedString(L"预设管理", L"Preset Manager"));
     
     HMENU hTimeMenu = CreatePopupMenu();
     AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
