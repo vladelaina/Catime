@@ -2371,13 +2371,17 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 default: {
                     int cmd = LOWORD(wp);
                     if (cmd >= 102 && cmd < 102 + time_options_count) {
-                         
+                        // 当选择一个新的倒计时选项时
                         if (CLOCK_SHOW_CURRENT_TIME) {
                             CLOCK_SHOW_CURRENT_TIME = FALSE;
                             CLOCK_LAST_TIME_UPDATE = 0;
                         }
                         
-                         
+                        // 如果正在正计时，先关闭正计时模式
+                        if (CLOCK_COUNT_UP) {
+                            CLOCK_COUNT_UP = FALSE;
+                        }
+                        
                         int index = cmd - 102;
                         CLOCK_TOTAL_TIME = time_options[index] * 60;
                         elapsed_time = 0;
@@ -2794,16 +2798,20 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_COUNT_UP: {
                     CLOCK_COUNT_UP = !CLOCK_COUNT_UP;
-                    if (!CLOCK_COUNT_UP) {
-                        // 关闭正计时时，停止计时并清空显示
-                        KillTimer(hwnd, 1);
-                        elapsed_time = CLOCK_TOTAL_TIME;
-                        message_shown = 1;
-                    } else {
-                        // 开启正计时时，重置计时并开始
+                    if (CLOCK_COUNT_UP) {
+                        // 切换到正计时时，关闭显示当前时间
+                        if (CLOCK_SHOW_CURRENT_TIME) {
+                            CLOCK_SHOW_CURRENT_TIME = FALSE;
+                            CLOCK_LAST_TIME_UPDATE = 0;
+                        }
                         elapsed_time = 0;
                         message_shown = 0;
                         SetTimer(hwnd, 1, 1000, NULL);
+                    } else {
+                        // 关闭正计时时重置计时器
+                        KillTimer(hwnd, 1);
+                        elapsed_time = 0;
+                        message_shown = 0;
                     }
                     InvalidateRect(hwnd, NULL, TRUE);
                     break;
