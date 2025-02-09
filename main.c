@@ -410,9 +410,9 @@ char* UTF8ToANSI(const char* utf8Str) {
     return str;
 }
 
-// 在文件开头添加默认颜色选项
+// 修改默认颜色选项的顺序，将白色放在第一位
 static const char* DEFAULT_COLOR_OPTIONS[] = {
-    "#FFFFFF",   
+    "#FFFFFF",   // 白色放在第一位
     "#FFB6C1",   
     "#6495ED",   
     "#5EFFFF",   
@@ -452,12 +452,15 @@ void InitializeDefaultLanguage(void) {
         
         while (fgets(line, sizeof(line), file)) {
             if (strncmp(line, "COLOR_OPTIONS=", 13) == 0) {
+                // 首先添加白色
+                AddColorOption("#FFFFFF");
+                
                 char* colors = line + 13;
                 char* token = strtok(colors, ",\n");
                 while (token) {
                     // 去除可能的空格和换行符
                     while (*token == ' ' || *token == '\n' || *token == '\r') token++;
-                    if (*token) {  // 确保不是空字符串
+                    if (*token && strcmp(token, "#FFFFFF") != 0) {  // 不重复添加白色
                         AddColorOption(token);
                     }
                     token = strtok(NULL, ",\n");
