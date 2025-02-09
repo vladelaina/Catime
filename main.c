@@ -3848,53 +3848,47 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
                             }
                         }
                         
-                        // 更新配置文件
-                        FILE* file = fopen(config_path, "r");
-                        if (file) {
-                            char* content = NULL;
-                            size_t size = 0;
-                            char line[1024];
-                            
-                            while (fgets(line, sizeof(line), file)) {
-                                size_t len = strlen(line);
-                                content = realloc(content, size + len + 1);
-                                if (content) {
-                                    if (size == 0) {
-                                        strcpy(content, line);
-                                    } else {
-                                        strcat(content, line);
-                                    }
-                                    size += len;
-                                }
-                            }
-                            fclose(file);
-                            
-                            if (content) {
-                                file = fopen(config_path, "w");
-                                if (file) {
-                                    char* line = strtok(content, "\n");
-                                    while (line) {
-                                        if (strncmp(line, "COLOR_OPTIONS=", 13) != 0) {
-                                            fprintf(file, "%s\n", line);
-                                        }
-                                        line = strtok(NULL, "\n");
-                                    }
-                                    
-                                    // 写入新的颜色选项
-                                    fprintf(file, "COLOR_OPTIONS=");
-                                    for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
-                                        if (i > 0) fprintf(file, ",");
-                                        fprintf(file, "%s", COLOR_OPTIONS[i].hexColor);
-                                    }
-                                    fprintf(file, "\n");
-                                    
-                                    fclose(file);
-                                }
-                                free(content);
-                            }
-                        }
+                        WriteConfig(config_path);  // 使用 WriteConfig 来更新配置文件
                         break;
                     }
+                }
+            }
+            break;
+
+        // 添加对颜色修改的监听
+        case WM_CTLCOLORBTN:
+        case WM_CTLCOLOREDIT:
+        case WM_CTLCOLORSTATIC:
+            if (pcc) {
+                BOOL colorsChanged = FALSE;
+                for (int i = 0; i < 16; i++) {
+                    if (lastCustomColors[i] != pcc->lpCustColors[i]) {
+                        colorsChanged = TRUE;
+                        lastCustomColors[i] = pcc->lpCustColors[i];
+                    }
+                }
+                
+                if (colorsChanged) {
+                    // 更新配置文件
+                    char config_path[MAX_PATH];
+                    GetConfigPath(config_path, MAX_PATH);
+                    
+                    // 清理现有的颜色选项
+                    ClearColorOptions();
+                    
+                    // 添加所有非零的自定义颜色
+                    for (int i = 0; i < 16; i++) {
+                        if (pcc->lpCustColors[i] != 0) {
+                            char hexColor[10];
+                            snprintf(hexColor, sizeof(hexColor), "#%02X%02X%02X",
+                                GetRValue(pcc->lpCustColors[i]),
+                                GetGValue(pcc->lpCustColors[i]),
+                                GetBValue(pcc->lpCustColors[i]));
+                            AddColorOption(hexColor);
+                        }
+                    }
+                    
+                    WriteConfig(config_path);
                 }
             }
             break;
