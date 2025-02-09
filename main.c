@@ -359,11 +359,13 @@ BOOL CLOCK_SHOW_CURRENT_TIME = FALSE;
 time_t CLOCK_LAST_TIME_UPDATE = 0;
 BOOL CLOCK_USE_24HOUR = TRUE;
 BOOL CLOCK_SHOW_SECONDS = TRUE;
+BOOL CLOCK_COUNT_UP = FALSE;  // 添加正计时标志
 
  
 #define CLOCK_IDM_SHOW_CURRENT_TIME 150
 #define CLOCK_IDM_24HOUR_FORMAT    151
 #define CLOCK_IDM_SHOW_SECONDS     152
+#define CLOCK_IDM_COUNT_UP         153  // 添加正计时菜单ID
 
 // 修改 UTF8ToANSI 函数的实现
 char* UTF8ToANSI(const char* utf8Str) {
@@ -1460,6 +1462,22 @@ void FormatTime(int remaining_time, char* time_text) {
         return;
     }
 
+    if (CLOCK_COUNT_UP) {
+        // 正计时模式
+        int hours = elapsed_time / 3600;
+        int minutes = (elapsed_time % 3600) / 60;
+        int seconds = elapsed_time % 60;
+
+        if (hours > 0) {
+            sprintf(time_text, "%d:%02d:%02d", hours, minutes, seconds);
+        } else if (minutes > 0) {
+            sprintf(time_text, "    %d:%02d", minutes, seconds);
+        } else {
+            sprintf(time_text, "        %d", seconds);
+        }
+        return;
+    }
+
     int hours = remaining_time / 3600;
     int minutes = (remaining_time % 3600) / 60;
     int seconds = remaining_time % 60;
@@ -1508,6 +1526,12 @@ void ShowContextMenu(HWND hwnd) {
     AppendMenuW(hMenu, MF_POPUP | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
                (UINT_PTR)hTimeMenu,
                GetLocalizedString(L"时间显示", L"Time Display"));
+               
+    // 将正计时选项移到这里
+    AppendMenuW(hMenu, MF_STRING | (CLOCK_COUNT_UP ? MF_CHECKED : MF_UNCHECKED),
+               CLOCK_IDM_COUNT_UP,
+               GetLocalizedString(L"正计时", L"Count Up"));
+               
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
     for (int i = 0; i < time_options_count; i++) {
@@ -2768,6 +2792,19 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     }
                     break;
                 }
+                case CLOCK_IDM_COUNT_UP:
+                    CLOCK_COUNT_UP = !CLOCK_COUNT_UP;
+                    if (CLOCK_COUNT_UP) {
+                        CLOCK_SHOW_CURRENT_TIME = FALSE;  // 关闭当前时间显示
+                        KillTimer(hwnd, 1);  // 停止现有计时器
+                        elapsed_time = 0;     // 重置计时
+                        SetTimer(hwnd, 1, 1000, NULL);  // 启动计时器
+                    } else {
+                        KillTimer(hwnd, 1);  // 停止计时器
+                        elapsed_time = 0;
+                    }
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    break;
             }
             break;
 
