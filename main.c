@@ -2107,10 +2107,13 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
                         int total_seconds = 0;
                         if (ParseInput(inputText, &total_seconds)) {
-                            KillTimer(hwnd, 1);  // 添加这行，确保先关闭已有计时器
+                            KillTimer(hwnd, 1);  // 先关闭已有计时器
                             CLOCK_TOTAL_TIME = total_seconds;
                             elapsed_time = 0;
                             message_shown = 0;
+                            // 设置新的时间时，确保切换到倒计时模式
+                            CLOCK_COUNT_UP = FALSE;
+                            CLOCK_SHOW_CURRENT_TIME = FALSE;
                             InvalidateRect(hwnd, NULL, TRUE);
                             SetTimer(hwnd, 1, 1000, NULL);
                             break;
