@@ -18,6 +18,11 @@ COLORREF ShowColorDialog(HWND hwnd);  // 添加这一行
 UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM lParam);
 void CreateDefaultConfig(const char* config_path);  // 添加这一行
 
+// 颜色选项管理函数声明
+BOOL IsColorExists(const char* hexColor);
+void AddColorOption(const char* hexColor);
+void ClearColorOptions(void);
+
 #define CATIME_VERSION "1.0.2.1"  
 #define VK_MEDIA_PLAY_PAUSE 0xB3
 #define VK_MEDIA_STOP 0xB2
@@ -429,27 +434,53 @@ void InitializeDefaultLanguage(void) {
     // 检查配置文件是否存在
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    FILE *file = fopen(config_path, "r");
     
+    // 清理现有颜色选项
+    ClearColorOptions();
+    
+    FILE *file = fopen(config_path, "r");
     if (!file) {
         // 如果配置文件不存在，创建默认配置
         CreateDefaultConfig(config_path);
+        file = fopen(config_path, "r");
+    }
+    
+    if (file) {
+        // 读取配置文件中的颜色选项
+        char line[1024];
+        BOOL found_colors = FALSE;
         
-        // 写入默认颜色选项
-        file = fopen(config_path, "a"); // 以追加模式打开
-        if (file) {
-            fprintf(file, "COLOR_OPTIONS=");
-            for (size_t i = 0; i < DEFAULT_COLOR_OPTIONS_COUNT; i++) {
-                fprintf(file, "%s", DEFAULT_COLOR_OPTIONS[i]);
-                if (i < DEFAULT_COLOR_OPTIONS_COUNT - 1) {
-                    fprintf(file, ",");
+        while (fgets(line, sizeof(line), file)) {
+            if (strncmp(line, "COLOR_OPTIONS=", 13) == 0) {
+                char* colors = line + 13;
+                char* token = strtok(colors, ",\n");
+                while (token) {
+                    // 去除可能的空格和换行符
+                    while (*token == ' ' || *token == '\n' || *token == '\r') token++;
+                    if (*token) {  // 确保不是空字符串
+                        AddColorOption(token);
+                    }
+                    token = strtok(NULL, ",\n");
                 }
+                found_colors = TRUE;
+                break;
             }
-            fprintf(file, "\n");
-            fclose(file);
         }
-    } else {
         fclose(file);
+        
+        // 如果没有找到颜色选项或颜色列表为空，添加默认颜色
+        if (!found_colors || COLOR_OPTIONS_COUNT == 0) {
+            for (size_t i = 0; i < DEFAULT_COLOR_OPTIONS_COUNT; i++) {
+                AddColorOption(DEFAULT_COLOR_OPTIONS[i]);
+            }
+        }
+    }
+
+    // 确保所有默认颜色都存在
+    for (size_t i = 0; i < DEFAULT_COLOR_OPTIONS_COUNT; i++) {
+        if (!IsColorExists(DEFAULT_COLOR_OPTIONS[i])) {
+            AddColorOption(DEFAULT_COLOR_OPTIONS[i]);
+        }
     }
 
     // 现有的语言初始化逻辑
@@ -489,13 +520,14 @@ void InitializeDefaultLanguage(void) {
 }
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-    // 在程序启动时调用初始化语言函数
-    InitializeDefaultLanguage();
-    
     // 设置代码页为 GBK
     SetConsoleOutputCP(936);
     SetConsoleCP(936);
     
+    // 先初始化语言和颜色选项
+    InitializeDefaultLanguage();
+    
+    // 然后读取其他配置
     ReadConfig();
 
     int defaultFontIndex = -1;
@@ -610,19 +642,13 @@ void GetConfigPath(char* path, size_t size) {
 }
 
 void CreateDefaultConfig(const char* config_path) {
-    FILE *file = fopen(config_path, "r");
-    if (file) {
-        fclose(file);
-        return;   
-    }
-
-    file = fopen(config_path, "w");
+    FILE *file = fopen(config_path, "w");
     if (!file) {
         fprintf(stderr, "Failed to create config file: %s\n", config_path);
         return;
     }
 
-    // 这里是创建默认配置的逻辑
+    // 写入基本配置
     fprintf(file, "CLOCK_TEXT_COLOR=#FFB6C1\n");
     fprintf(file, "CLOCK_BASE_FONT_SIZE=20\n");
     fprintf(file, "FONT_FILE_NAME=GohuFont uni11 Nerd Font Mono.ttf\n");
@@ -635,7 +661,7 @@ void CreateDefaultConfig(const char* config_path) {
     fprintf(file, "CLOCK_EDIT_MODE=FALSE\n");
     fprintf(file, "CLOCK_TIMEOUT_ACTION=LOCK\n");
 
-    // 写入默认颜色选项
+    // 写入默认颜色选项，但不添加到 COLOR_OPTIONS
     fprintf(file, "COLOR_OPTIONS=");
     for (size_t i = 0; i < DEFAULT_COLOR_OPTIONS_COUNT; i++) {
         fprintf(file, "%s", DEFAULT_COLOR_OPTIONS[i]);
@@ -827,6 +853,11 @@ void ReadConfig() {
             line[len-1] = '\0';
         }
 
+        // 跳过颜色选项的处理，因为它已经在 InitializeDefaultLanguage 中处理了
+        if (strncmp(line, "COLOR_OPTIONS=", 13) == 0) {
+            continue;
+        }
+
         if (strncmp(line, "CLOCK_TIME_OPTIONS=", 19) == 0) {
             char *token = strtok(line + 19, ",");
             while (token && time_options_count < MAX_TIME_OPTIONS) {
@@ -938,7 +969,7 @@ void ReadConfig() {
         InvalidateRect(hwnd, NULL, TRUE);
     }
 
-    LoadRecentFiles();   
+    LoadRecentFiles();
 }
 
 void WriteConfigColor(const char* color_input) {
@@ -3634,13 +3665,13 @@ void WriteConfig(const char* config_path) {
         fprintf(file, "CLOCK_RECENT_FILE=%s\n", CLOCK_RECENT_FILES[i].path);
     }
     
-    // 写入颜色选项
+    // 写入颜色选项前先去重
     fprintf(file, "COLOR_OPTIONS=");
     for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
-        fprintf(file, "%s", COLOR_OPTIONS[i].hexColor);
-        if (i < COLOR_OPTIONS_COUNT - 1) {
+        if (i > 0) {
             fprintf(file, ",");
         }
+        fprintf(file, "%s", COLOR_OPTIONS[i].hexColor);
     }
     fprintf(file, "\n");
     
@@ -3793,4 +3824,43 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
             break;
     }
     return 0;
+}
+
+// 检查颜色是否已存在
+BOOL IsColorExists(const char* hexColor) {
+    for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
+        if (strcmp(COLOR_OPTIONS[i].hexColor, hexColor) == 0) {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+// 添加颜色到 COLOR_OPTIONS
+void AddColorOption(const char* hexColor) {
+    // 检查颜色是否已存在
+    if (IsColorExists(hexColor)) {
+        return;
+    }
+    
+    // 扩展数组
+    PredefinedColor* newArray = realloc(COLOR_OPTIONS, 
+                                      (COLOR_OPTIONS_COUNT + 1) * sizeof(PredefinedColor));
+    if (newArray) {
+        COLOR_OPTIONS = newArray;
+        COLOR_OPTIONS[COLOR_OPTIONS_COUNT].hexColor = _strdup(hexColor);
+        COLOR_OPTIONS_COUNT++;
+    }
+}
+
+// 清理 COLOR_OPTIONS
+void ClearColorOptions() {
+    if (COLOR_OPTIONS) {
+        for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
+            free((void*)COLOR_OPTIONS[i].hexColor);
+        }
+        free(COLOR_OPTIONS);
+        COLOR_OPTIONS = NULL;
+        COLOR_OPTIONS_COUNT = 0;
+    }
 }
