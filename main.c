@@ -1693,8 +1693,6 @@ void ShowColorMenu(HWND hwnd) {
 
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeoutMenu, 
                 GetLocalizedString(L"超时动作", L"Timeout Action"));
-    AppendMenuW(hMenu, MF_STRING, CLOCK_IDC_MODIFY_OPTIONS, 
-                GetLocalizedString(L"修改时间选项", L"Modify Time Options"));
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
     // 颜色选项保持不变，因为是用颜色块显示的
