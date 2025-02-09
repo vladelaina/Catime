@@ -1519,16 +1519,7 @@ void ShowContextMenu(HWND hwnd) {
     AppendMenuW(hMenu, MF_STRING, 101, 
                 GetLocalizedString(L"设置时间", L"Set Time"));
     
-    // 创建时间选项子菜单
-    HMENU hTimeOptionsMenu = CreatePopupMenu();
-    AppendMenuW(hTimeOptionsMenu, MF_STRING, CLOCK_IDC_MODIFY_TIME_OPTIONS,
-                GetLocalizedString(L"修改快捷时间选项", L"Modify Time Options"));
-    AppendMenuW(hTimeOptionsMenu, MF_STRING, CLOCK_IDC_MODIFY_DEFAULT_TIME,
-                GetLocalizedString(L"修改默认启动时间", L"Modify Default Start Time"));
-    
-    // 将时间选项子菜单添加到主菜单
-    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeOptionsMenu,
-                GetLocalizedString(L"预设管理", L"Preset Manager"));
+    // 删除时间选项子菜单的相关代码，它会被移到右键菜单中
     
     HMENU hTimeMenu = CreatePopupMenu();
     AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
@@ -1631,6 +1622,18 @@ void ShowColorMenu(HWND hwnd) {
     HMENU hMenu = CreatePopupMenu();
     HMENU hColorSubMenu = CreatePopupMenu();
     HMENU hFontSubMenu = CreatePopupMenu();
+
+    // 添加时间选项子菜单到右键菜单的开始位置
+    HMENU hTimeOptionsMenu = CreatePopupMenu();
+    AppendMenuW(hTimeOptionsMenu, MF_STRING, CLOCK_IDC_MODIFY_TIME_OPTIONS,
+                GetLocalizedString(L"修改快捷时间选项", L"Modify Time Options"));
+    AppendMenuW(hTimeOptionsMenu, MF_STRING, CLOCK_IDC_MODIFY_DEFAULT_TIME,
+                GetLocalizedString(L"修改默认启动时间", L"Modify Default Start Time"));
+    
+    // 将时间选项子菜单添加到右键菜单
+    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeOptionsMenu,
+                GetLocalizedString(L"预设管理", L"Preset Manager"));
+    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
     AppendMenuW(hMenu, MF_STRING | (CLOCK_EDIT_MODE ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDC_EDIT_MODE, 
