@@ -2977,33 +2977,7 @@ int CALLBACK EnumFontFamExProc(
 
 int isValidColor(const char* input) {
     if (input == NULL) return 0;
-    
-    char temp[20];
-    strncpy(temp, input, sizeof(temp) - 1);
-    temp[sizeof(temp) - 1] = '\0';
-    
-    for (char *p = temp; *p; p++) {
-        *p = tolower(*p);
-    }
-
-    const char* ptr = temp;
-    if (*ptr == '#') ptr++;
-
-    if (strlen(ptr) == 6) {
-        for (int i = 0; i < 6; i++) {
-            if (!isxdigit((unsigned char)ptr[i])) return 0;
-        }
-        return 1;
-    }
-
-    int r, g, b;
-    if (sscanf(temp, "%d,%d,%d", &r, &g, &b) == 3) {
-        if (r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255) {
-            return 1;
-        }
-    }
-
-    return 0;
+    return 1;  // 简单返回有效，不再进行复杂验证
 }
 
 INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -3357,10 +3331,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
                 return L"25    = 25分钟\n25h   = 25小时\n25s   = 25秒\n25 30 = 25分钟30秒\n25 30m = 25小时30分钟\n1 30 20 = 1小时30分钟20秒";
             if (wcscmp(english, L"Enter numbers separated by spaces\nExample: 25 10 5") == 0)
                 return L"请输入用空格分隔的数字\n例如: 25 10 5";
-            if (wcscmp(english, L"HEX: FF5733 or #FF5733\nRGB: 255,87,51") == 0)
-                return L"十六进制: FF5733 或 #FF5733\nRGB: 255,87,51";
-            if (wcscmp(english, L"123Pan") == 0) return L"123云盘";
-            if (wcscmp(english, L"LanzouCloud (pwd: 1234)") == 0) return L"蓝奏云 (密码: 1234)";
+            if (wcscmp(english, L"Invalid Color Format") == 0) return L"";  // 返回空字符串
             if (wcscmp(english, L"About") == 0) return L"关于";
             if (wcscmp(english, L"Version: %hs") == 0) return L"版本: %hs";
             if (wcscmp(english, L"Check for Updates") == 0) return L"检查更新";
@@ -3378,10 +3349,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
                 return L"25    = 25分鐘\n25h   = 25小時\n25s   = 25秒\n25 30 = 25分鐘30秒\n25 30m = 25小時30分鐘\n1 30 20 = 1小時30分鐘20秒";
             if (wcscmp(english, L"Enter numbers separated by spaces\nExample: 25 10 5") == 0)
                 return L"請輸入用空格分隔的數字\n例如: 25 10 5";
-            if (wcscmp(english, L"HEX: FF5733 or #FF5733\nRGB: 255,87,51") == 0)
-                return L"十六進制: FF5733 或 #FF5733\nRGB: 255,87,51";
-            if (wcscmp(english, L"123Pan") == 0) return L"123雲盤";
-            if (wcscmp(english, L"LanzouCloud (pwd: 1234)") == 0) return L"藍奏雲 (密碼: 1234)";
+            if (wcscmp(english, L"Invalid Color Format") == 0) return L"";
             if (wcscmp(english, L"About") == 0) return L"關於";
             if (wcscmp(english, L"Version: %hs") == 0) return L"版本: %hs";
             if (wcscmp(english, L"Check for Updates") == 0) return L"檢查更新";
@@ -3424,10 +3392,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
                 return L"25    = 25 minutos\n25h   = 25 horas\n25s   = 25 segundos\n25 30 = 25 minutos 30 segundos\n25 30m = 25 horas 30 minutos\n1 30 20 = 1 hora 30 minutos 20 segundos";
             if (wcscmp(english, L"Enter numbers separated by spaces\nExample: 25 10 5") == 0)
                 return L"Ingrese números separados por espacios\nEjemplo: 25 10 5";
-            if (wcscmp(english, L"HEX: FF5733 or #FF5733\nRGB: 255,87,51") == 0)
-                return L"HEX: FF5733 o #FF5733\nRGB: 255,87,51";
-            if (wcscmp(english, L"123Pan") == 0) return L"123Pan";
-            if (wcscmp(english, L"LanzouCloud (pwd: 1234)") == 0) return L"LanzouCloud (contraseña: 1234)";
+            if (wcscmp(english, L"Invalid Color Format") == 0) return L"";
             if (wcscmp(english, L"About") == 0) return L"Acerca de";
             if (wcscmp(english, L"Version: %hs") == 0) return L"Versión: %hs";
             if (wcscmp(english, L"Check for Updates") == 0) return L"Buscar actualizaciones";
@@ -3469,10 +3434,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
                 return L"25    = 25 minutes\n25h   = 25 heures\n25s   = 25 secondes\n25 30 = 25 minutes 30 secondes\n25 30m = 25 heures 30 minutes\n1 30 20 = 1 heure 30 minutes 20 secondes";
             if (wcscmp(english, L"Enter numbers separated by spaces\nExample: 25 10 5") == 0)
                 return L"Entrez des nombres séparés par des espaces\nExemple : 25 10 5";
-            if (wcscmp(english, L"HEX: FF5733 or #FF5733\nRGB: 255,87,51") == 0)
-                return L"HEX : FF5733 ou #FF5733\nRGB : 255,87,51";
-            if (wcscmp(english, L"123Pan") == 0) return L"123Pan";
-            if (wcscmp(english, L"LanzouCloud (pwd: 1234)") == 0) return L"LanzouCloud (mdp : 1234)";
+            if (wcscmp(english, L"Invalid Color Format") == 0) return L"";
             if (wcscmp(english, L"About") == 0) return L"À propos";
             if (wcscmp(english, L"Version: %hs") == 0) return L"Version: %hs";
             if (wcscmp(english, L"Check for Updates") == 0) return L"Vérifier les mises à jour";
@@ -3514,10 +3476,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
                 return L"25    = 25 Minuten\n25h   = 25 Stunden\n25s   = 25 Sekunden\n25 30 = 25 Minuten 30 Sekunden\n25 30m = 25 Stunden 30 Minuten\n1 30 20 = 1 Stunde 30 Minuten 20 Sekunden";
             if (wcscmp(english, L"Enter numbers separated by spaces\nExample: 25 10 5") == 0)
                 return L"Geben Sie durch Leerzeichen getrennte Zahlen ein\nBeispiel: 25 10 5";
-            if (wcscmp(english, L"HEX: FF5733 or #FF5733\nRGB: 255,87,51") == 0)
-                return L"HEX: FF5733 oder #FF5733\nRGB: 255,87,51";
-            if (wcscmp(english, L"123Pan") == 0) return L"123Pan";
-            if (wcscmp(english, L"LanzouCloud (pwd: 1234)") == 0) return L"LanzouCloud (Kennwort: 1234)";
+            if (wcscmp(english, L"Invalid Color Format") == 0) return L"";
             if (wcscmp(english, L"About") == 0) return L"Über";
             if (wcscmp(english, L"Version: %hs") == 0) return L"Version: %hs";
             if (wcscmp(english, L"Check for Updates") == 0) return L"Nach Updates suchen";
@@ -3559,10 +3518,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
                 return L"25    = 25 минут\n25h   = 25 часов\n25s   = 25 секунд\n25 30 = 25 минут 30 секунд\n25 30m = 25 часов 30 минут\n1 30 20 = 1 час 30 минут 20 секунд";
             if (wcscmp(english, L"Enter numbers separated by spaces\nExample: 25 10 5") == 0)
                 return L"Введите числа, разделенные пробелами\nПример: 25 10 5";
-            if (wcscmp(english, L"HEX: FF5733 or #FF5733\nRGB: 255,87,51") == 0)
-                return L"HEX: FF5733 или #FF5733\nRGB: 255,87,51";
-            if (wcscmp(english, L"123Pan") == 0) return L"123Pan";
-            if (wcscmp(english, L"LanzouCloud (pwd: 1234)") == 0) return L"LanzouCloud (пароль: 1234)";
+            if (wcscmp(english, L"Invalid Color Format") == 0) return L"";
             if (wcscmp(english, L"About") == 0) return L"О программе";
             if (wcscmp(english, L"Version: %hs") == 0) return L"Версия: %hs";
             if (wcscmp(english, L"Check for Updates") == 0) return L"Проверить обновления";
@@ -3604,10 +3560,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
                 return L"25    = 25 minutos\n25h   = 25 horas\n25s   = 25 segundos\n25 30 = 25 minutos 30 segundos\n25 30m = 25 horas 30 minutos\n1 30 20 = 1 hora 30 minutos 20 segundos";
             if (wcscmp(english, L"Enter numbers separated by spaces\nExample: 25 10 5") == 0)
                 return L"Insira números separados por espaços\nExemplo: 25 10 5";
-            if (wcscmp(english, L"HEX: FF5733 or #FF5733\nRGB: 255,87,51") == 0)
-                return L"HEX: FF5733 o #FF5733\nRGB: 255,87,51";
-            if (wcscmp(english, L"123Pan") == 0) return L"123Pan";
-            if (wcscmp(english, L"LanzouCloud (pwd: 1234)") == 0) return L"LanzouCloud (senha: 1234)";
+            if (wcscmp(english, L"Invalid Color Format") == 0) return L"";
             if (wcscmp(english, L"About") == 0) return L"Sobre";
             if (wcscmp(english, L"Version: %hs") == 0) return L"Versão: %hs";
             if (wcscmp(english, L"Check for Updates") == 0) return L"Verificar atualizações";
@@ -3649,10 +3602,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
                 return L"25    = 25分\n25h   = 25時間\n25s   = 25秒\n25 30 = 25分30秒\n25 30m = 25時間30分\n1 30 20 = 1時間30分20秒";
             if (wcscmp(english, L"Enter numbers separated by spaces\nExample: 25 10 5") == 0)
                 return L"日本語で入力してください\n例: 25 10 5";
-            if (wcscmp(english, L"HEX: FF5733 or #FF5733\nRGB: 255,87,51") == 0)
-                return L"HEX: FF5733 o #FF5733\nRGB: 255,87,51";
-            if (wcscmp(english, L"123Pan") == 0) return L"123Pan";
-            if (wcscmp(english, L"LanzouCloud (pwd: 1234)") == 0) return L"LanzouCloud (パスワード: 1234)";
+            if (wcscmp(english, L"Invalid Color Format") == 0) return L"";
             if (wcscmp(english, L"About") == 0) return L"について";
             if (wcscmp(english, L"Version: %hs") == 0) return L"バージョン: %hs";
             if (wcscmp(english, L"Check for Updates") == 0) return L"更新を確認";
@@ -3694,10 +3644,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
                 return L"25    = 25분\n25h   = 25시간\n25s   = 25초\n25 30 = 25분30초\n25 30m = 25시간30분\n1 30 20 = 1시간30분20초";
             if (wcscmp(english, L"Enter numbers separated by spaces\nExample: 25 10 5") == 0)
                 return L"한국어로 입력해주세요\n예: 25 10 5";
-            if (wcscmp(english, L"HEX: FF5733 or #FF5733\nRGB: 255,87,51") == 0)
-                return L"HEX: FF5733 o #FF5733\nRGB: 255,87,51";
-            if (wcscmp(english, L"123Pan") == 0) return L"123Pan";
-            if (wcscmp(english, L"LanzouCloud (pwd: 1234)") == 0) return L"LanzouCloud (비밀번호: 1234)";
+            if (wcscmp(english, L"Invalid Color Format") == 0) return L"";
             if (wcscmp(english, L"About") == 0) return L"정보";
             if (wcscmp(english, L"Version: %hs") == 0) return L"버전: %hs";
             if (wcscmp(english, L"Check for Updates") == 0) return L"업데이트 확인";
@@ -3706,6 +3653,21 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
 
         case APP_LANG_ENGLISH:
         default:
+            if (wcscmp(english, L"Time's up!") == 0) return L"Time's up!";
+            if (wcscmp(english, L"Input Format") == 0) return L"Input Format";
+            if (wcscmp(english, L"Invalid Input") == 0) return L"Invalid Input";
+            if (wcscmp(english, L"Error") == 0) return L"Error";
+            if (wcscmp(english, L"Failed to load font: %hs") == 0) return L"Failed to load font: %hs";
+            if (wcscmp(english, L"25    = 25 minutes\n25h   = 25 hours\n25s   = 25 seconds\n25 30 = 25 minutes 30 seconds\n25 30m = 25 hours 30 minutes\n1 30 20 = 1 hour 30 minutes 20 seconds") == 0)
+                return L"25    = 25 minutes\n25h   = 25 hours\n25s   = 25 seconds\n25 30 = 25 minutes 30 seconds\n25 30m = 25 hours 30 minutes\n1 30 20 = 1 hour 30 minutes 20 seconds";
+            if (wcscmp(english, L"Enter numbers separated by spaces\nExample: 25 10 5") == 0)
+                return L"Enter numbers separated by spaces\nExample: 25 10 5";
+            if (wcscmp(english, L"Invalid Color Format") == 0) return L"";
+            if (wcscmp(english, L"About") == 0) return L"About";
+            if (wcscmp(english, L"Version: %hs") == 0) return L"Version: %hs";
+            if (wcscmp(english, L"Check for Updates") == 0) return L"Check for Updates";
+            if (wcscmp(english, L"Language") == 0) return english;
+            if (wcscmp(english, L"Reset") == 0) return L"Reset";
             return english;
     }
 }
