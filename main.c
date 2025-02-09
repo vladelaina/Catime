@@ -17,6 +17,7 @@ void InitializeDefaultLanguage(void);
 COLORREF ShowColorDialog(HWND hwnd);  // 添加这一行
 UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM lParam);
 void CreateDefaultConfig(const char* config_path);  // 添加这一行
+void LogColor(const char* event, const char* color, COLORREF rgbColor);  // 添加这一行
 
 // 颜色选项管理函数声明
 BOOL IsColorExists(const char* hexColor);
@@ -3767,7 +3768,7 @@ void WriteConfig(const char* config_path) {
 
 COLORREF ShowColorDialog(HWND hwnd) {
     CHOOSECOLOR cc = {0};
-    static COLORREF acrCustClr[16] = {0};  // 自定义颜色数组
+    static COLORREF acrCustClr[16] = {0};
     static DWORD rgbCurrent;
     
     // 将当前颜色转换为 COLORREF
@@ -3783,7 +3784,6 @@ COLORREF ShowColorDialog(HWND hwnd) {
     for (size_t i = 0; i < COLOR_OPTIONS_COUNT && i < 16; i++) {
         const char* hexColor = COLOR_OPTIONS[i].hexColor;
         if (hexColor[0] == '#') {
-            int r, g, b;
             sscanf(hexColor + 1, "%02x%02x%02x", &r, &g, &b);
             acrCustClr[i] = RGB(r, g, b);
         }
@@ -3797,15 +3797,33 @@ COLORREF ShowColorDialog(HWND hwnd) {
     cc.lpfnHook = ColorDialogHookProc;
 
     if (ChooseColor(&cc)) {
-        rgbCurrent = cc.rgbResult;
+        // 使用预览时的颜色值（如果有）
+        COLORREF finalColor;
+        if (IS_COLOR_PREVIEWING && PREVIEW_COLOR[0] == '#') {
+            int r, g, b;
+            sscanf(PREVIEW_COLOR + 1, "%02x%02x%02x", &r, &g, &b);
+            finalColor = RGB(r, g, b);
+        } else {
+            finalColor = cc.rgbResult;
+        }
+        
         // 更新 CLOCK_TEXT_COLOR
-        snprintf(CLOCK_TEXT_COLOR, sizeof(CLOCK_TEXT_COLOR), "#%02X%02X%02X", 
-                 GetRValue(rgbCurrent), GetGValue(rgbCurrent), GetBValue(rgbCurrent));
+        snprintf(CLOCK_TEXT_COLOR, sizeof(CLOCK_TEXT_COLOR), "#%02X%02X%02X",
+                GetRValue(finalColor),
+                GetGValue(finalColor),
+                GetBValue(finalColor));
+        
+        LogColor("Final Color Selected", CLOCK_TEXT_COLOR, finalColor);
+        
         // 保存新颜色到配置文件
         WriteConfigColor(CLOCK_TEXT_COLOR);
+        
+        // 清理颜色预览状态
+        IS_COLOR_PREVIEWING = FALSE;
+        
         InvalidateRect(hwnd, NULL, TRUE);
         UpdateWindow(hwnd);
-        return rgbCurrent;
+        return finalColor;
     }
 
     IS_COLOR_PREVIEWING = FALSE;
@@ -3828,6 +3846,8 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
             hwndParent = pcc->hwndOwner;
             rgbCurrent = pcc->rgbResult;
             isColorLocked = FALSE;
+            
+            LogColor("Dialog Initialized", CLOCK_TEXT_COLOR, rgbCurrent);
             
             // 保存初始的自定义颜色状态
             for (int i = 0; i < 16; i++) {
@@ -3864,6 +3884,8 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
                     PREVIEW_COLOR[sizeof(PREVIEW_COLOR) - 1] = '\0';
                     IS_COLOR_PREVIEWING = TRUE;
                     
+                    LogColor("Preview Color", PREVIEW_COLOR, color);
+                    
                     InvalidateRect(hwndParent, NULL, TRUE);
                     UpdateWindow(hwndParent);
                 }
@@ -3895,6 +3917,8 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
                     PREVIEW_COLOR[sizeof(PREVIEW_COLOR) - 1] = '\0';
                     IS_COLOR_PREVIEWING = TRUE;
                     
+                    LogColor("Preview Color", PREVIEW_COLOR, color);
+                    
                     InvalidateRect(hwndParent, NULL, TRUE);
                     UpdateWindow(hwndParent);
                 }
@@ -3905,28 +3929,29 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
             if (HIWORD(wParam) == BN_CLICKED) {
                 switch (LOWORD(wParam)) {
                     case IDOK: {
-                        // 检查自定义颜色是否有变化
-                        char config_path[MAX_PATH];
-                        GetConfigPath(config_path, MAX_PATH);
+                        // 记录确定前的预览颜色
+                        LogColor("Before OK - Preview", PREVIEW_COLOR, pcc->rgbResult);
                         
-                        // 清理现有的颜色选项
-                        ClearColorOptions();
-                        
-                        // 添加所有非零的自定义颜色到 COLOR_OPTIONS
-                        for (int i = 0; i < 16; i++) {
-                            if (pcc->lpCustColors[i] != 0) {
-                                char hexColor[10];
-                                snprintf(hexColor, sizeof(hexColor), "#%02X%02X%02X",
-                                    GetRValue(pcc->lpCustColors[i]),
-                                    GetGValue(pcc->lpCustColors[i]),
-                                    GetBValue(pcc->lpCustColors[i]));
-                                AddColorOption(hexColor);
-                            }
+                        // 保存当前预览的颜色
+                        if (IS_COLOR_PREVIEWING && PREVIEW_COLOR[0] == '#') {
+                            // 保持预览的颜色不变
+                            LogColor("After OK - Final", PREVIEW_COLOR, pcc->rgbResult);
+                        } else {
+                            // 如果没有预览颜色，使用对话框的颜色
+                            snprintf(PREVIEW_COLOR, sizeof(PREVIEW_COLOR), "#%02X%02X%02X",
+                                    GetRValue(pcc->rgbResult),
+                                    GetGValue(pcc->rgbResult),
+                                    GetBValue(pcc->rgbResult));
+                            LogColor("After OK - Final", PREVIEW_COLOR, pcc->rgbResult);
                         }
-                        
-                        WriteConfig(config_path);
                         break;
                     }
+                    
+                    case IDCANCEL:
+                        IS_COLOR_PREVIEWING = FALSE;
+                        InvalidateRect(hwndParent, NULL, TRUE);
+                        UpdateWindow(hwndParent);
+                        break;
                 }
             }
             break;
@@ -3940,6 +3965,14 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
                     if (lastCustomColors[i] != pcc->lpCustColors[i]) {
                         colorsChanged = TRUE;
                         lastCustomColors[i] = pcc->lpCustColors[i];
+                        
+                        char colorStr[20];
+                        snprintf(colorStr, sizeof(colorStr), "#%02X%02X%02X",
+                            GetRValue(pcc->lpCustColors[i]),
+                            GetGValue(pcc->lpCustColors[i]),
+                            GetBValue(pcc->lpCustColors[i]));
+                        
+                        LogColor("Custom Color Changed", colorStr, pcc->lpCustColors[i]);
                     }
                 }
                 
@@ -3990,5 +4023,27 @@ void ClearColorOptions() {
         free(COLOR_OPTIONS);
         COLOR_OPTIONS = NULL;
         COLOR_OPTIONS_COUNT = 0;
+    }
+}
+
+// 添加日志函数
+void LogColor(const char* event, const char* color, COLORREF rgbColor) {
+    char logPath[MAX_PATH];
+    snprintf(logPath, MAX_PATH, "%s\\Desktop\\catime_color.log", getenv("USERPROFILE"));
+    
+    FILE* logFile = fopen(logPath, "a");
+    if (logFile) {
+        time_t now;
+        time(&now);
+        char timeStr[26];
+        ctime_s(timeStr, sizeof(timeStr), &now);
+        timeStr[24] = '\0';  // 移除换行符
+        
+        fprintf(logFile, "[%s] %s: HEX=%s, RGB=(%d,%d,%d)\n",
+                timeStr, event, color,
+                GetRValue(rgbColor),
+                GetGValue(rgbColor),
+                GetBValue(rgbColor));
+        fclose(logFile);
     }
 }
