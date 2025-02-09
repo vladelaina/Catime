@@ -79,6 +79,7 @@ typedef enum {
 
 // 全局变量声明区域
 AppLanguage CURRENT_LANGUAGE = APP_LANG_CHINESE_SIMP;  // 默认使用简体中文
+BOOL CLOCK_IS_PAUSED = FALSE;  // 移动到这里
 
 void PauseMediaPlayback(void);
 
@@ -1465,7 +1466,7 @@ void FormatTime(int remaining_time, char* time_text) {
     }
 
     if (CLOCK_COUNT_UP) {
-        // 正计时模式
+        // 正计时模式 - 无论是否暂停都显示当前记录的时间
         int hours = elapsed_time / 3600;
         int minutes = (elapsed_time % 3600) / 60;
         int seconds = elapsed_time % 60;
@@ -2035,50 +2036,57 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         InvalidateRect(hwnd, NULL, TRUE);
                     }
                 } else {
-                    if (elapsed_time < CLOCK_TOTAL_TIME && !message_shown) {
-                        elapsed_time++;
-                        InvalidateRect(hwnd, NULL, TRUE);
-                    } else if (elapsed_time >= CLOCK_TOTAL_TIME && !message_shown) {
-                        message_shown = 1;
-                        KillTimer(hwnd, 1);
-                        PauseMediaPlayback();
+                    if (CLOCK_COUNT_UP) {
+                        if (!CLOCK_IS_PAUSED) {
+                            elapsed_time++;
+                            InvalidateRect(hwnd, NULL, TRUE);
+                        }
+                    } else {
+                        if (elapsed_time < CLOCK_TOTAL_TIME && !message_shown) {
+                            elapsed_time++;
+                            InvalidateRect(hwnd, NULL, TRUE);
+                        } else if (elapsed_time >= CLOCK_TOTAL_TIME && !message_shown) {
+                            message_shown = 1;
+                            KillTimer(hwnd, 1);
+                            PauseMediaPlayback();
 
-                        switch (CLOCK_TIMEOUT_ACTION) {
-                            case TIMEOUT_ACTION_MESSAGE:
-                                ShowToastNotification(hwnd, "Time's up!");
-                                break;
-                            case TIMEOUT_ACTION_LOCK:
-                                LockWorkStation();
-                                break;
-                            case TIMEOUT_ACTION_SHUTDOWN:
-                                system("shutdown /s /t 0");  // Changed from 60 to 0
-                                break;
-                            case TIMEOUT_ACTION_RESTART:
-                                system("shutdown /r /t 0");  // Changed from 60 to 0
-                                break;
-                            case TIMEOUT_ACTION_OPEN_FILE: {
-                                if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
-                                    // 转换为 Unicode 路径
-                                    wchar_t wPath[MAX_PATH];
-                                    MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_FILE_PATH, -1, wPath, MAX_PATH);
-                                    
-                                    // 使用 ShellExecuteW 打开文件
-                                    HINSTANCE result = ShellExecuteW(NULL, L"open", wPath, NULL, NULL, SW_SHOWNORMAL);
-                                    
-                                    // 检查是否成功打开文件
-                                    if ((INT_PTR)result <= 32) {
-                                        // 如果打开失败，显示错误消息
-                                        MessageBoxW(hwnd, 
-                                            GetLocalizedString(L"无法打开文件", L"Failed to open file"),
-                                            GetLocalizedString(L"错误", L"Error"),
-                                            MB_ICONERROR);
+                            switch (CLOCK_TIMEOUT_ACTION) {
+                                case TIMEOUT_ACTION_MESSAGE:
+                                    ShowToastNotification(hwnd, "Time's up!");
+                                    break;
+                                case TIMEOUT_ACTION_LOCK:
+                                    LockWorkStation();
+                                    break;
+                                case TIMEOUT_ACTION_SHUTDOWN:
+                                    system("shutdown /s /t 0");  // Changed from 60 to 0
+                                    break;
+                                case TIMEOUT_ACTION_RESTART:
+                                    system("shutdown /r /t 0");  // Changed from 60 to 0
+                                    break;
+                                case TIMEOUT_ACTION_OPEN_FILE: {
+                                    if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
+                                        // 转换为 Unicode 路径
+                                        wchar_t wPath[MAX_PATH];
+                                        MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_FILE_PATH, -1, wPath, MAX_PATH);
+                                        
+                                        // 使用 ShellExecuteW 打开文件
+                                        HINSTANCE result = ShellExecuteW(NULL, L"open", wPath, NULL, NULL, SW_SHOWNORMAL);
+                                        
+                                        // 检查是否成功打开文件
+                                        if ((INT_PTR)result <= 32) {
+                                            // 如果打开失败，显示错误消息
+                                            MessageBoxW(hwnd, 
+                                                GetLocalizedString(L"无法打开文件", L"Failed to open file"),
+                                                GetLocalizedString(L"错误", L"Error"),
+                                                MB_ICONERROR);
+                                        }
                                     }
+                                    break;
                                 }
-                                break;
                             }
                         }
+                        InvalidateRect(hwnd, NULL, TRUE);
                     }
-                    InvalidateRect(hwnd, NULL, TRUE);
                 }
             }
             break;
@@ -2817,18 +2825,23 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_COUNT_UP_START: {
-                    CLOCK_COUNT_UP = !CLOCK_COUNT_UP;
-                    if (CLOCK_COUNT_UP) {
-                        // 开始正计时
+                    if (!CLOCK_COUNT_UP) {
+                        // 开始新的正计时
+                        CLOCK_COUNT_UP = TRUE;
                         CLOCK_SHOW_CURRENT_TIME = FALSE;
-                        KillTimer(hwnd, 1);
-                        // 如果是切换到正计时模式，重置计时器
+                        CLOCK_IS_PAUSED = FALSE;
                         elapsed_time = 0;
                         message_shown = 0;
+                        KillTimer(hwnd, 1);
                         SetTimer(hwnd, 1, 1000, NULL);
                     } else {
-                        // 暂停，只停止计时器，保持当前值
-                        KillTimer(hwnd, 1);
+                        // 切换暂停/继续状态
+                        CLOCK_IS_PAUSED = !CLOCK_IS_PAUSED;
+                        if (CLOCK_IS_PAUSED) {
+                            KillTimer(hwnd, 1);
+                        } else {
+                            SetTimer(hwnd, 1, 1000, NULL);
+                        }
                     }
                     InvalidateRect(hwnd, NULL, TRUE);
                     break;
