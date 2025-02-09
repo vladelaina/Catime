@@ -2175,7 +2175,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     }
                     break;
                 }
-                case CLOCK_IDC_MODIFY_OPTIONS: {
+                case CLOCK_IDC_MODIFY_TIME_OPTIONS: {
                     while (1) {
                         memset(inputText, 0, sizeof(inputText));
                         DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc);
@@ -2569,7 +2569,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     WriteConfigEditMode(CLOCK_EDIT_MODE ? "TRUE" : "FALSE");
                     
                     if (CLOCK_EDIT_MODE) {
-                        SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
                         SetBlurBehind(hwnd, TRUE);
                     } else {
                         SetBlurBehind(hwnd, FALSE);
