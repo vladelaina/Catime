@@ -17,6 +17,7 @@ void InitializeDefaultLanguage(void);
 COLORREF ShowColorDialog(HWND hwnd);  // 添加这一行
 UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM lParam);
 void CreateDefaultConfig(const char* config_path);  // 添加这一行
+void WriteConfigDefaultStartTime(int seconds);  // 添加这一行
 
 // 颜色选项管理函数声明
 BOOL IsColorExists(const char* hexColor);
@@ -62,6 +63,10 @@ void ClearColorOptions(void);
 
 // 在文件开头的宏定义区域添加
 #define CLOCK_IDC_TIMEOUT_BROWSE 140
+
+// 在文件开头的宏定义区域添加这些定义
+#define CLOCK_IDC_MODIFY_TIME_OPTIONS 156
+#define CLOCK_IDC_MODIFY_DEFAULT_TIME 157
 
 // 语言枚举
 typedef enum {
@@ -1514,6 +1519,17 @@ void ShowContextMenu(HWND hwnd) {
     AppendMenuW(hMenu, MF_STRING, 101, 
                 GetLocalizedString(L"设置时间", L"Set Time"));
     
+    // 创建时间选项子菜单
+    HMENU hTimeOptionsMenu = CreatePopupMenu();
+    AppendMenuW(hTimeOptionsMenu, MF_STRING, CLOCK_IDC_MODIFY_TIME_OPTIONS,
+                GetLocalizedString(L"修改快捷时间选项", L"Modify Time Options"));
+    AppendMenuW(hTimeOptionsMenu, MF_STRING, CLOCK_IDC_MODIFY_DEFAULT_TIME,
+                GetLocalizedString(L"修改默认启动时间", L"Modify Default Start Time"));
+    
+    // 将时间选项子菜单添加到主菜单
+    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeOptionsMenu,
+                GetLocalizedString(L"时间选项设置", L"Time Options Settings"));
+    
     HMENU hTimeMenu = CreatePopupMenu();
     AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
                CLOCK_IDM_SHOW_CURRENT_TIME,
@@ -2200,6 +2216,42 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                                     L"Enter numbers separated by spaces\n"
                                     L"Example: 25 10 5"),
                                 GetLocalizedString(L"无效输入", L"Invalid Input"), 
+                                MB_OK);
+                        }
+                    }
+                    break;
+                }
+                case CLOCK_IDC_MODIFY_DEFAULT_TIME: {
+                    while (1) {
+                        memset(inputText, 0, sizeof(inputText));
+                        DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc);
+
+                        if (inputText[0] == '\0') {
+                            break;
+                        }
+
+                        int total_seconds = 0;
+                        if (ParseInput(inputText, &total_seconds)) {
+                            WriteConfigDefaultStartTime(total_seconds);
+                            ReadConfig();
+                            break;
+                        } else {
+                            MessageBoxW(hwnd, 
+                                GetLocalizedString(
+                                    L"25    = 25分钟\n"
+                                    L"25h   = 25小时\n"
+                                    L"25s   = 25秒\n"
+                                    L"25 30 = 25分钟30秒\n"
+                                    L"25 30m = 25小时30分钟\n"
+                                    L"1 30 20 = 1小时30分钟20秒",
+                                    
+                                    L"25    = 25 minutes\n"
+                                    L"25h   = 25 hours\n"
+                                    L"25s   = 25 seconds\n"
+                                    L"25 30 = 25 minutes 30 seconds\n"
+                                    L"25 30m = 25 hours 30 minutes\n"
+                                    L"1 30 20 = 1 hour 30 minutes 20 seconds"),
+                                GetLocalizedString(L"输入格式", L"Input Format"),
                                 MB_OK);
                         }
                     }
@@ -4071,4 +4123,43 @@ void ClearColorOptions() {
         COLOR_OPTIONS = NULL;
         COLOR_OPTIONS_COUNT = 0;
     }
+}
+
+// 添加写入默认启动时间的函数
+void WriteConfigDefaultStartTime(int seconds) {
+    char config_path[MAX_PATH];
+    char temp_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    snprintf(temp_path, MAX_PATH, "%s.tmp", config_path);
+    FILE *file, *temp_file;
+    char line[256];
+    int found = 0;
+    
+    file = fopen(config_path, "r");
+    temp_file = fopen(temp_path, "w");
+    
+    if (!file || !temp_file) {
+        if (file) fclose(file);
+        if (temp_file) fclose(temp_file);
+        return;
+    }
+    
+    while (fgets(line, sizeof(line), file)) {
+        if (strncmp(line, "CLOCK_DEFAULT_START_TIME=", 24) == 0) {
+            fprintf(temp_file, "CLOCK_DEFAULT_START_TIME=%d\n", seconds);
+            found = 1;
+        } else {
+            fputs(line, temp_file);
+        }
+    }
+    
+    if (!found) {
+        fprintf(temp_file, "CLOCK_DEFAULT_START_TIME=%d\n", seconds);
+    }
+    
+    fclose(file);
+    fclose(temp_file);
+    
+    remove(config_path);
+    rename(temp_path, config_path);
 }
