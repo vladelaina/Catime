@@ -2792,19 +2792,22 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     }
                     break;
                 }
-                case CLOCK_IDM_COUNT_UP:
+                case CLOCK_IDM_COUNT_UP: {
                     CLOCK_COUNT_UP = !CLOCK_COUNT_UP;
-                    if (CLOCK_COUNT_UP) {
-                        CLOCK_SHOW_CURRENT_TIME = FALSE;  // 关闭当前时间显示
-                        KillTimer(hwnd, 1);  // 停止现有计时器
-                        elapsed_time = 0;     // 重置计时
-                        SetTimer(hwnd, 1, 1000, NULL);  // 启动计时器
+                    if (!CLOCK_COUNT_UP) {
+                        // 关闭正计时时，停止计时并清空显示
+                        KillTimer(hwnd, 1);
+                        elapsed_time = CLOCK_TOTAL_TIME;
+                        message_shown = 1;
                     } else {
-                        KillTimer(hwnd, 1);  // 停止计时器
+                        // 开启正计时时，重置计时并开始
                         elapsed_time = 0;
+                        message_shown = 0;
+                        SetTimer(hwnd, 1, 1000, NULL);
                     }
                     InvalidateRect(hwnd, NULL, TRUE);
                     break;
+                }
             }
             break;
 
