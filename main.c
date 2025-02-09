@@ -2822,9 +2822,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         // 开始正计时
                         CLOCK_SHOW_CURRENT_TIME = FALSE;
                         KillTimer(hwnd, 1);
-                        if (elapsed_time == 0) {  // 只有在初始状态才重置
-                            message_shown = 0;
-                        }
+                        // 如果是切换到正计时模式，重置计时器
+                        elapsed_time = 0;
+                        message_shown = 0;
                         SetTimer(hwnd, 1, 1000, NULL);
                     } else {
                         // 暂停，只停止计时器，保持当前值
