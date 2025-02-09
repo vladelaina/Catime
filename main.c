@@ -427,14 +427,6 @@ static const char* DEFAULT_COLOR_OPTIONS[] = {
 #define DEFAULT_COLOR_OPTIONS_COUNT (sizeof(DEFAULT_COLOR_OPTIONS) / sizeof(DEFAULT_COLOR_OPTIONS[0]))
 
 void InitializeDefaultLanguage(void) {
-    // 添加日志文件
-    FILE *log_file = fopen("C:\\Users\\vladelaina\\Desktop\\catime_color_log.txt", "w");
-    if (!log_file) {
-        return;
-    }
-    
-    fprintf(log_file, "Starting color initialization...\n");
-    
     LANGID langId = GetUserDefaultUILanguage();
     WORD primaryLangId = PRIMARYLANGID(langId);
     WORD subLangId = SUBLANGID(langId);
@@ -442,15 +434,11 @@ void InitializeDefaultLanguage(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    fprintf(log_file, "Config path: %s\n", config_path);
-    
     // 清理现有颜色选项
     ClearColorOptions();
-    fprintf(log_file, "Cleared existing color options\n");
     
     FILE *file = fopen(config_path, "r");
     if (!file) {
-        fprintf(log_file, "Config file not found, creating default config\n");
         CreateDefaultConfig(config_path);
         file = fopen(config_path, "r");
     }
@@ -461,11 +449,8 @@ void InitializeDefaultLanguage(void) {
         
         while (fgets(line, sizeof(line), file)) {
             if (strncmp(line, "COLOR_OPTIONS=", 13) == 0) {
-                fprintf(log_file, "Found COLOR_OPTIONS line: %s", line);
-                
                 // 清理现有的颜色选项
                 ClearColorOptions();
-                fprintf(log_file, "Cleared color options before parsing\n");
                 
                 // 跳过"COLOR_OPTIONS="前缀，并确保没有多余的等号
                 char* colors = line + 13;
@@ -477,8 +462,6 @@ void InitializeDefaultLanguage(void) {
                 char* newline = strchr(colors, '\n');
                 if (newline) *newline = '\0';
                 
-                fprintf(log_file, "Processing colors string: %s\n", colors);
-                
                 char* token = strtok(colors, ",");
                 while (token) {
                     // 去除前后空格
@@ -489,17 +472,13 @@ void InitializeDefaultLanguage(void) {
                         end--;
                     }
                     
-                    fprintf(log_file, "Processing token: '%s'\n", token);
-                    
                     if (*token) {
                         // 确保颜色格式正确
                         if (token[0] != '#') {
                             char colorWithHash[10];
                             snprintf(colorWithHash, sizeof(colorWithHash), "#%s", token);
-                            fprintf(log_file, "Adding color with hash: %s\n", colorWithHash);
                             AddColorOption(colorWithHash);
                         } else {
-                            fprintf(log_file, "Adding color directly: %s\n", token);
                             AddColorOption(token);
                         }
                     }
@@ -511,41 +490,18 @@ void InitializeDefaultLanguage(void) {
         }
         fclose(file);
         
-        fprintf(log_file, "After parsing, COLOR_OPTIONS_COUNT = %zu\n", COLOR_OPTIONS_COUNT);
-        fprintf(log_file, "Current color options:\n");
-        for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
-            fprintf(log_file, "[%zu] %s\n", i, COLOR_OPTIONS[i].hexColor);
-        }
-        
         // 如果没有找到颜色选项或颜色列表为空，添加默认颜色
         if (!found_colors || COLOR_OPTIONS_COUNT == 0) {
-            fprintf(log_file, "No colors found or empty list, adding default colors\n");
             for (size_t i = 0; i < DEFAULT_COLOR_OPTIONS_COUNT; i++) {
                 AddColorOption(DEFAULT_COLOR_OPTIONS[i]);
-                fprintf(log_file, "Added default color: %s\n", DEFAULT_COLOR_OPTIONS[i]);
             }
         }
     }
-    
-    fprintf(log_file, "Final COLOR_OPTIONS_COUNT = %zu\n", COLOR_OPTIONS_COUNT);
-    fprintf(log_file, "Final color options:\n");
-    for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
-        fprintf(log_file, "[%zu] %s\n", i, COLOR_OPTIONS[i].hexColor);
-    }
-    
-    fclose(log_file);
 }
 
-// 修改 AddColorOption 函数
 void AddColorOption(const char* hexColor) {
-    static FILE* log_file = NULL;
-    if (!log_file) {
-        log_file = fopen("C:\\Users\\vladelaina\\Desktop\\catime_color_log.txt", "a");
-    }
-    
     // 跳过空值
     if (!hexColor || !*hexColor) {
-        if (log_file) fprintf(log_file, "Skipping empty color\n");
         return;
     }
     
@@ -556,13 +512,11 @@ void AddColorOption(const char* hexColor) {
     // 验证十六进制字符串的有效性
     size_t len = strlen(hex);
     if (len != 6) {
-        if (log_file) fprintf(log_file, "Invalid color length for: %s\n", hexColor);
         return;  // 无效的十六进制颜色
     }
     
     for (int i = 0; i < 6; i++) {
         if (!isxdigit((unsigned char)hex[i])) {
-            if (log_file) fprintf(log_file, "Invalid hex character in color: %s\n", hexColor);
             return;  // 无效的十六进制颜色
         }
     }
@@ -588,11 +542,6 @@ void AddColorOption(const char* hexColor) {
         COLOR_OPTIONS = newArray;
         COLOR_OPTIONS[COLOR_OPTIONS_COUNT].hexColor = _strdup(normalizedColor);
         COLOR_OPTIONS_COUNT++;
-    }
-    
-    if (log_file) {
-        fprintf(log_file, "Successfully added color: %s\n", normalizedColor);
-        fflush(log_file);
     }
 }
 
