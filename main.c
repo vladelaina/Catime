@@ -1518,6 +1518,57 @@ void ShowContextMenu(HWND hwnd) {
 }
 
 void ShowColorMenu(HWND hwnd) {
+    // 重新读取配置文件以更新颜色选项
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    
+    FILE *file = fopen(config_path, "r");
+    if (file) {
+        char line[1024];
+        while (fgets(line, sizeof(line), file)) {
+            if (strncmp(line, "COLOR_OPTIONS=", 13) == 0) {
+                // 清理现有的颜色选项
+                ClearColorOptions();
+                
+                // 跳过"COLOR_OPTIONS="前缀，并确保没有多余的等号
+                char* colors = line + 13;
+                while (*colors == '=' || *colors == ' ') {
+                    colors++;
+                }
+                
+                // 去除可能的换行符
+                char* newline = strchr(colors, '\n');
+                if (newline) *newline = '\0';
+                
+                char* token = strtok(colors, ",");
+                while (token) {
+                    // 去除前后空格
+                    while (*token == ' ') token++;
+                    char* end = token + strlen(token) - 1;
+                    while (end > token && *end == ' ') {
+                        *end = '\0';
+                        end--;
+                    }
+                    
+                    if (*token) {
+                        // 确保颜色格式正确
+                        if (token[0] != '#') {
+                            char colorWithHash[10];
+                            snprintf(colorWithHash, sizeof(colorWithHash), "#%s", token);
+                            AddColorOption(colorWithHash);
+                        } else {
+                            AddColorOption(token);
+                        }
+                    }
+                    token = strtok(NULL, ",");
+                }
+                break;
+            }
+        }
+        fclose(file);
+    }
+
+    // 创建菜单
     HMENU hMenu = CreatePopupMenu();
     HMENU hColorSubMenu = CreatePopupMenu();
     HMENU hFontSubMenu = CreatePopupMenu();
