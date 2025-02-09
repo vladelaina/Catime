@@ -3810,7 +3810,7 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
     static CHOOSECOLOR* pcc;
     static BOOL isColorLocked = FALSE;
     static DWORD rgbCurrent;
-    static COLORREF lastCustomColors[16] = {0};  // 用于跟踪自定义颜色的变化
+    static COLORREF lastCustomColors[16] = {0};
 
     switch (uiMsg) {
         case WM_INITDIALOG:
@@ -3824,6 +3824,72 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
                 lastCustomColors[i] = pcc->lpCustColors[i];
             }
             return TRUE;
+
+        case WM_LBUTTONDOWN:
+        case WM_RBUTTONDOWN:
+            isColorLocked = !isColorLocked;
+            
+            // 立即更新颜色预览
+            if (!isColorLocked) {
+                POINT pt;
+                GetCursorPos(&pt);
+                ScreenToClient(hdlg, &pt);
+                
+                HDC hdc = GetDC(hdlg);
+                COLORREF color = GetPixel(hdc, pt.x, pt.y);
+                ReleaseDC(hdlg, hdc);
+                
+                if (color != CLR_INVALID && color != RGB(240, 240, 240)) {
+                    if (pcc) {
+                        pcc->rgbResult = color;
+                    }
+                    
+                    char colorStr[20];
+                    sprintf(colorStr, "#%02X%02X%02X",
+                            GetRValue(color),
+                            GetGValue(color),
+                            GetBValue(color));
+                    
+                    strncpy(PREVIEW_COLOR, colorStr, sizeof(PREVIEW_COLOR) - 1);
+                    PREVIEW_COLOR[sizeof(PREVIEW_COLOR) - 1] = '\0';
+                    IS_COLOR_PREVIEWING = TRUE;
+                    
+                    InvalidateRect(hwndParent, NULL, TRUE);
+                    UpdateWindow(hwndParent);
+                }
+            }
+            break;
+
+        case WM_MOUSEMOVE:
+            if (!isColorLocked) {
+                POINT pt;
+                GetCursorPos(&pt);
+                ScreenToClient(hdlg, &pt);
+                
+                HDC hdc = GetDC(hdlg);
+                COLORREF color = GetPixel(hdc, pt.x, pt.y);
+                ReleaseDC(hdlg, hdc);
+                
+                if (color != CLR_INVALID && color != RGB(240, 240, 240)) {
+                    if (pcc) {
+                        pcc->rgbResult = color;
+                    }
+                    
+                    char colorStr[20];
+                    sprintf(colorStr, "#%02X%02X%02X",
+                            GetRValue(color),
+                            GetGValue(color),
+                            GetBValue(color));
+                    
+                    strncpy(PREVIEW_COLOR, colorStr, sizeof(PREVIEW_COLOR) - 1);
+                    PREVIEW_COLOR[sizeof(PREVIEW_COLOR) - 1] = '\0';
+                    IS_COLOR_PREVIEWING = TRUE;
+                    
+                    InvalidateRect(hwndParent, NULL, TRUE);
+                    UpdateWindow(hwndParent);
+                }
+            }
+            break;
 
         case WM_COMMAND:
             if (HIWORD(wParam) == BN_CLICKED) {
@@ -3848,14 +3914,13 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
                             }
                         }
                         
-                        WriteConfig(config_path);  // 使用 WriteConfig 来更新配置文件
+                        WriteConfig(config_path);
                         break;
                     }
                 }
             }
             break;
 
-        // 添加对颜色修改的监听
         case WM_CTLCOLORBTN:
         case WM_CTLCOLOREDIT:
         case WM_CTLCOLORSTATIC:
