@@ -3808,105 +3808,95 @@ COLORREF ShowColorDialog(HWND hwnd) {
 UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM lParam) {
     static HWND hwndParent;
     static CHOOSECOLOR* pcc;
-    static BOOL isColorLocked = FALSE;  // New flag to lock the color selection
-    static DWORD rgbCurrent;  // Declare rgbCurrent as static to maintain its value
+    static BOOL isColorLocked = FALSE;
+    static DWORD rgbCurrent;
+    static COLORREF lastCustomColors[16] = {0};  // 用于跟踪自定义颜色的变化
 
     switch (uiMsg) {
         case WM_INITDIALOG:
             pcc = (CHOOSECOLOR*)lParam;
             hwndParent = pcc->hwndOwner;
-            rgbCurrent = pcc->rgbResult;  // Initialize rgbCurrent with the initial color
-            isColorLocked = FALSE;  // Reset lock state on dialog initialization
+            rgbCurrent = pcc->rgbResult;
+            isColorLocked = FALSE;
+            
+            // 保存初始的自定义颜色状态
+            for (int i = 0; i < 16; i++) {
+                lastCustomColors[i] = pcc->lpCustColors[i];
+            }
             return TRUE;
-
-        case WM_LBUTTONDOWN:
-        case WM_RBUTTONDOWN:
-            isColorLocked = !isColorLocked;  // Toggle the lock state on any click
-
-            // Immediately update the color preview on click
-            if (!isColorLocked) {
-                POINT pt;
-                GetCursorPos(&pt);
-                ScreenToClient(hdlg, &pt);
-
-                HDC hdc = GetDC(hdlg);
-                COLORREF color = GetPixel(hdc, pt.x, pt.y);
-                ReleaseDC(hdlg, hdc);
-
-                if (color != CLR_INVALID && color != RGB(240, 240, 240)) {
-                    if (pcc) {
-                        pcc->rgbResult = color;
-                    }
-
-                    char colorStr[20];
-                    sprintf(colorStr, "#%02X%02X%02X",
-                            GetRValue(color),
-                            GetGValue(color),
-                            GetBValue(color));
-
-                    strncpy(PREVIEW_COLOR, colorStr, sizeof(PREVIEW_COLOR) - 1);
-                    PREVIEW_COLOR[sizeof(PREVIEW_COLOR) - 1] = '\0';
-                    IS_COLOR_PREVIEWING = TRUE;
-
-                    InvalidateRect(hwndParent, NULL, TRUE);
-                    UpdateWindow(hwndParent);
-                }
-            }
-            break;
-
-        case WM_MOUSEMOVE:
-            if (!isColorLocked) {  // Update color only if not locked
-                POINT pt;
-                GetCursorPos(&pt);
-                ScreenToClient(hdlg, &pt);
-
-                HDC hdc = GetDC(hdlg);
-                COLORREF color = GetPixel(hdc, pt.x, pt.y);
-                ReleaseDC(hdlg, hdc);
-
-                if (color != CLR_INVALID && color != RGB(240, 240, 240)) {
-                    if (pcc) {
-                        pcc->rgbResult = color;
-                    }
-
-                    char colorStr[20];
-                    sprintf(colorStr, "#%02X%02X%02X",
-                            GetRValue(color),
-                            GetGValue(color),
-                            GetBValue(color));
-
-                    strncpy(PREVIEW_COLOR, colorStr, sizeof(PREVIEW_COLOR) - 1);
-                    PREVIEW_COLOR[sizeof(PREVIEW_COLOR) - 1] = '\0';
-                    IS_COLOR_PREVIEWING = TRUE;
-
-                    InvalidateRect(hwndParent, NULL, TRUE);
-                    UpdateWindow(hwndParent);
-                }
-            }
-            break;
 
         case WM_COMMAND:
             if (HIWORD(wParam) == BN_CLICKED) {
                 switch (LOWORD(wParam)) {
-                    case 0x1:  // OK button
-                        // Apply the current color, whether locked or not
-                        rgbCurrent = pcc->rgbResult;
-                        // 确保颜色被应用到应用程序
-                        snprintf(CLOCK_TEXT_COLOR, sizeof(CLOCK_TEXT_COLOR), "#%02X%02X%02X", 
-                                 GetRValue(rgbCurrent), GetGValue(rgbCurrent), GetBValue(rgbCurrent));
-                        // 保存新颜色到配置文件
-                        WriteConfigColor(CLOCK_TEXT_COLOR);
-                        EndDialog(hdlg, 0);
-                        return TRUE;
-                    case 0x2:  // Cancel button
-                        EndDialog(hdlg, 0);
-                        return TRUE;
+                    case IDOK: {
+                        // 检查自定义颜色是否有变化
+                        char config_path[MAX_PATH];
+                        GetConfigPath(config_path, MAX_PATH);
+                        
+                        // 清理现有的颜色选项
+                        ClearColorOptions();
+                        
+                        // 添加所有非零的自定义颜色到 COLOR_OPTIONS
+                        for (int i = 0; i < 16; i++) {
+                            if (pcc->lpCustColors[i] != 0) {
+                                char hexColor[10];
+                                snprintf(hexColor, sizeof(hexColor), "#%02X%02X%02X",
+                                    GetRValue(pcc->lpCustColors[i]),
+                                    GetGValue(pcc->lpCustColors[i]),
+                                    GetBValue(pcc->lpCustColors[i]));
+                                AddColorOption(hexColor);
+                            }
+                        }
+                        
+                        // 更新配置文件
+                        FILE* file = fopen(config_path, "r");
+                        if (file) {
+                            char* content = NULL;
+                            size_t size = 0;
+                            char line[1024];
+                            
+                            while (fgets(line, sizeof(line), file)) {
+                                size_t len = strlen(line);
+                                content = realloc(content, size + len + 1);
+                                if (content) {
+                                    if (size == 0) {
+                                        strcpy(content, line);
+                                    } else {
+                                        strcat(content, line);
+                                    }
+                                    size += len;
+                                }
+                            }
+                            fclose(file);
+                            
+                            if (content) {
+                                file = fopen(config_path, "w");
+                                if (file) {
+                                    char* line = strtok(content, "\n");
+                                    while (line) {
+                                        if (strncmp(line, "COLOR_OPTIONS=", 13) != 0) {
+                                            fprintf(file, "%s\n", line);
+                                        }
+                                        line = strtok(NULL, "\n");
+                                    }
+                                    
+                                    // 写入新的颜色选项
+                                    fprintf(file, "COLOR_OPTIONS=");
+                                    for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
+                                        if (i > 0) fprintf(file, ",");
+                                        fprintf(file, "%s", COLOR_OPTIONS[i].hexColor);
+                                    }
+                                    fprintf(file, "\n");
+                                    
+                                    fclose(file);
+                                }
+                                free(content);
+                            }
+                        }
+                        break;
+                    }
                 }
             }
-            break;
-
-        case WM_DESTROY:
-            pcc = NULL;
             break;
     }
     return 0;
