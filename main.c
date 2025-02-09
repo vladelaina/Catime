@@ -17,7 +17,6 @@ void InitializeDefaultLanguage(void);
 COLORREF ShowColorDialog(HWND hwnd);  // 添加这一行
 UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM lParam);
 void CreateDefaultConfig(const char* config_path);  // 添加这一行
-void LogColor(const char* event, const char* color, COLORREF rgbColor);  // 添加这一行
 
 // 颜色选项管理函数声明
 BOOL IsColorExists(const char* hexColor);
@@ -3781,8 +3780,6 @@ COLORREF ShowColorDialog(HWND hwnd) {
                 GetGValue(finalColor),
                 GetBValue(finalColor));
         
-        LogColor("Final Color Selected", CLOCK_TEXT_COLOR, finalColor);
-        
         // 保存新颜色到配置文件
         WriteConfigColor(CLOCK_TEXT_COLOR);
         
@@ -3814,8 +3811,6 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
             hwndParent = pcc->hwndOwner;
             rgbCurrent = pcc->rgbResult;
             isColorLocked = FALSE;
-            
-            LogColor("Dialog Initialized", CLOCK_TEXT_COLOR, rgbCurrent);
             
             // 保存初始的自定义颜色状态
             for (int i = 0; i < 16; i++) {
@@ -3852,8 +3847,6 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
                     PREVIEW_COLOR[sizeof(PREVIEW_COLOR) - 1] = '\0';
                     IS_COLOR_PREVIEWING = TRUE;
                     
-                    LogColor("Preview Color", PREVIEW_COLOR, color);
-                    
                     InvalidateRect(hwndParent, NULL, TRUE);
                     UpdateWindow(hwndParent);
                 }
@@ -3885,8 +3878,6 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
                     PREVIEW_COLOR[sizeof(PREVIEW_COLOR) - 1] = '\0';
                     IS_COLOR_PREVIEWING = TRUE;
                     
-                    LogColor("Preview Color", PREVIEW_COLOR, color);
-                    
                     InvalidateRect(hwndParent, NULL, TRUE);
                     UpdateWindow(hwndParent);
                 }
@@ -3898,19 +3889,15 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
                 switch (LOWORD(wParam)) {
                     case IDOK: {
                         // 记录确定前的预览颜色
-                        LogColor("Before OK - Preview", PREVIEW_COLOR, pcc->rgbResult);
-                        
                         // 保存当前预览的颜色
                         if (IS_COLOR_PREVIEWING && PREVIEW_COLOR[0] == '#') {
                             // 保持预览的颜色不变
-                            LogColor("After OK - Final", PREVIEW_COLOR, pcc->rgbResult);
                         } else {
                             // 如果没有预览颜色，使用对话框的颜色
                             snprintf(PREVIEW_COLOR, sizeof(PREVIEW_COLOR), "#%02X%02X%02X",
                                     GetRValue(pcc->rgbResult),
                                     GetGValue(pcc->rgbResult),
                                     GetBValue(pcc->rgbResult));
-                            LogColor("After OK - Final", PREVIEW_COLOR, pcc->rgbResult);
                         }
                         break;
                     }
@@ -3940,7 +3927,6 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
                             GetGValue(pcc->lpCustColors[i]),
                             GetBValue(pcc->lpCustColors[i]));
                         
-                        LogColor("Custom Color Changed", colorStr, pcc->lpCustColors[i]);
                     }
                 }
                 
@@ -3991,27 +3977,5 @@ void ClearColorOptions() {
         free(COLOR_OPTIONS);
         COLOR_OPTIONS = NULL;
         COLOR_OPTIONS_COUNT = 0;
-    }
-}
-
-// 添加日志函数
-void LogColor(const char* event, const char* color, COLORREF rgbColor) {
-    char logPath[MAX_PATH];
-    snprintf(logPath, MAX_PATH, "%s\\Desktop\\catime_color.log", getenv("USERPROFILE"));
-    
-    FILE* logFile = fopen(logPath, "a");
-    if (logFile) {
-        time_t now;
-        time(&now);
-        char timeStr[26];
-        ctime_s(timeStr, sizeof(timeStr), &now);
-        timeStr[24] = '\0';  // 移除换行符
-        
-        fprintf(logFile, "[%s] %s: HEX=%s, RGB=(%d,%d,%d)\n",
-                timeStr, event, color,
-                GetRValue(rgbColor),
-                GetGValue(rgbColor),
-                GetBValue(rgbColor));
-        fclose(logFile);
     }
 }
