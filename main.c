@@ -3697,10 +3697,10 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Check for Updates") == 0) return L"檢查更新";
             if (wcscmp(english, L"Language") == 0) return english;
             if (wcscmp(english, L"Reset") == 0) return english; // Return English "Reset" instead of Traditional Chinese
-            if (wcscmp(english, L"Set to No Display on Startup") == 0) return L"已设置为启动时不显示";
-            if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"已设置为启动时正计时";
-            if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"已设置为启动时倒计时";
-            if (wcscmp(english, L"Settings") == 0) return L"设置";
+            if (wcscmp(english, L"Set to No Display on Startup") == 0) return L"已設置為啟動時不顯示";  // 修正为繁体中文
+            if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"已設置為啟動時正計時";  // 修正为繁体中文
+            if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"已設置為啟動時倒計時";  // 修正为繁体中文
+            if (wcscmp(english, L"Settings") == 0) return L"設置";  // 修正为繁体中文
             if (wcscmp(english, L"Preset Manager") == 0) return L"預設管理";
             if (wcscmp(english, L"Count Up") == 0) return L"正計時";
             if (wcscmp(english, L"Startup Settings") == 0) return L"啟動設置";
