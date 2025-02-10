@@ -3675,6 +3675,8 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"已设置为启动时正计时";
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"已设置为启动时倒计时";
             if (wcscmp(english, L"Settings") == 0) return L"设置";
+            if (wcscmp(english, L"Preset Manager") == 0) return L"预设管理";
+            if (wcscmp(english, L"Count Up") == 0) return L"正计时";
             return chinese;
             
         case APP_LANG_CHINESE_TRAD:
@@ -3697,6 +3699,8 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"已设置为启动时正计时";
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"已设置为启动时倒计时";
             if (wcscmp(english, L"Settings") == 0) return L"设置";
+            if (wcscmp(english, L"Preset Manager") == 0) return L"預設管理";
+            if (wcscmp(english, L"Count Up") == 0) return L"正計時";
             return chinese;
 
         case APP_LANG_SPANISH:
@@ -3743,6 +3747,8 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"已设置为启动时正计时";
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"已设置为启动时倒计时";
             if (wcscmp(english, L"Settings") == 0) return L"设置";
+            if (wcscmp(english, L"Preset Manager") == 0) return L"Gestor de preajustes";
+            if (wcscmp(english, L"Count Up") == 0) return L"Contar hacia arriba";
             return english;
 
         case APP_LANG_FRENCH:
@@ -3789,6 +3795,8 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"已设置为启动时正计时";
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"已设置为启动时倒计时";
             if (wcscmp(english, L"Settings") == 0) return L"设置";
+            if (wcscmp(english, L"Preset Manager") == 0) return L"Gestionnaire de préréglages";
+            if (wcscmp(english, L"Count Up") == 0) return L"Compte à rebours positif";
             return english;
 
         case APP_LANG_GERMAN:
@@ -3835,6 +3843,8 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"已设置为启动时正计时";
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"已设置为启动时倒计时";
             if (wcscmp(english, L"Settings") == 0) return L"设置";
+            if (wcscmp(english, L"Preset Manager") == 0) return L"Voreinstellungen";
+            if (wcscmp(english, L"Count Up") == 0) return L"Aufwärtszählen";
             return english;
 
         case APP_LANG_RUSSIAN:
@@ -3881,6 +3891,8 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"已设置为启动时正计时";
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"已设置为启动时倒计时";
             if (wcscmp(english, L"Settings") == 0) return L"设置";
+            if (wcscmp(english, L"Preset Manager") == 0) return L"Настроить";
+            if (wcscmp(english, L"Count Up") == 0) return L"Счетчик";
             return english;
 
         case APP_LANG_PORTUGUESE:
@@ -3927,6 +3939,8 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"已设置为启动时正计时";
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"已设置为启动时倒计时";
             if (wcscmp(english, L"Settings") == 0) return L"设置";
+            if (wcscmp(english, L"Preset Manager") == 0) return L"Gerenciador de pré-ajustes";
+            if (wcscmp(english, L"Count Up") == 0) return L"Contagem ascendente";
             return english;
 
         case APP_LANG_JAPANESE:
@@ -3973,6 +3987,8 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"已设置为启动时正计时";
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"已设置为启动时倒计时";
             if (wcscmp(english, L"Settings") == 0) return L"设置";
+            if (wcscmp(english, L"Preset Manager") == 0) return L"プリセット管理";
+            if (wcscmp(english, L"Count Up") == 0) return L"カウントアップ";
             return english;
 
         case APP_LANG_KOREAN:
@@ -4019,6 +4035,8 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"已设置为启动时正计时";
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"已设置为启动时倒计时";
             if (wcscmp(english, L"Settings") == 0) return L"设置";
+            if (wcscmp(english, L"Preset Manager") == 0) return L"프리셋 관리";
+            if (wcscmp(english, L"Count Up") == 0) return L"카운트업";
             return english;
 
         case APP_LANG_ENGLISH:
@@ -4042,6 +4060,8 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"已设置为启动时正计时";
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"已设置为启动时倒计时";
             if (wcscmp(english, L"Settings") == 0) return L"设置";
+            if (wcscmp(english, L"Preset Manager") == 0) return L"Preset Manager";
+            if (wcscmp(english, L"Count Up") == 0) return L"Count Up";
             return english;
     }
     return english;
