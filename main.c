@@ -114,6 +114,12 @@ typedef enum {
 AppLanguage CURRENT_LANGUAGE = APP_LANG_CHINESE_SIMP;  // 默认使用简体中文
 BOOL CLOCK_IS_PAUSED = FALSE;  // 移动到这里
 
+// 在全局变量区域添加新变量
+int countdown_elapsed_time = 0;  // 用于倒计时的计时
+int countup_elapsed_time = 0;    // 用于正计时的计时
+BOOL countdown_message_shown = FALSE;  // 用于倒计时的消息标记
+BOOL countup_message_shown = FALSE;    // 用于正计时的消息标记
+
 void PauseMediaPlayback(void);
 
 typedef struct {
@@ -1539,10 +1545,10 @@ void FormatTime(int remaining_time, char* time_text) {
     }
 
     if (CLOCK_COUNT_UP) {
-        // 正计时模式 - 无论是否暂停都显示当前记录的时间
-        int hours = elapsed_time / 3600;
-        int minutes = (elapsed_time % 3600) / 60;
-        int seconds = elapsed_time % 60;
+        // 正计时模式 - 使用专用计数器
+        int hours = countup_elapsed_time / 3600;
+        int minutes = (countup_elapsed_time % 3600) / 60;
+        int seconds = countup_elapsed_time % 60;
 
         if (hours > 0) {
             sprintf(time_text, "%d:%02d:%02d", hours, minutes, seconds);
@@ -1554,23 +1560,27 @@ void FormatTime(int remaining_time, char* time_text) {
         return;
     }
 
-    int hours = remaining_time / 3600;
-    int minutes = (remaining_time % 3600) / 60;
-    int seconds = remaining_time % 60;
+    // 倒计时模式
+    int remaining = CLOCK_TOTAL_TIME - countdown_elapsed_time;
+    if (remaining < 0) remaining = 0;
+
+    int hours = remaining / 3600;
+    int minutes = (remaining % 3600) / 60;
+    int seconds = remaining % 60;
 
     if (hours > 0) {
         sprintf(time_text, "%d:%02d:%02d", hours, minutes, seconds);
     } else if (minutes > 0) {
         if (minutes >= 10) {
-            sprintf(time_text, "    %d:%02d", minutes, seconds);   
+            sprintf(time_text, "    %d:%02d", minutes, seconds);
         } else {
-            sprintf(time_text, "    %d:%02d", minutes, seconds);   
+            sprintf(time_text, "    %d:%02d", minutes, seconds);
         }
     } else {
         if (seconds < 10) {
-            sprintf(time_text, "          %d", seconds);   
+            sprintf(time_text, "          %d", seconds);
         } else {
-            sprintf(time_text, "        %d", seconds);   
+            sprintf(time_text, "        %d", seconds);
         }
     }
 }
@@ -2165,26 +2175,23 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         case WM_TIMER: {
             if (wp == 1) {
                 if (CLOCK_SHOW_CURRENT_TIME) {
-                    time_t current_time = time(NULL);
-                    if (current_time != CLOCK_LAST_TIME_UPDATE) {
-                        CLOCK_LAST_TIME_UPDATE = current_time;
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    break;
+                }
+
+                if (CLOCK_COUNT_UP) {
+                    if (!CLOCK_IS_PAUSED) {
+                        countup_elapsed_time++;  // 使用正计时专用计数器
                         InvalidateRect(hwnd, NULL, TRUE);
                     }
                 } else {
-                    if (CLOCK_COUNT_UP) {
-                        if (!CLOCK_IS_PAUSED) {
-                            elapsed_time++;
-                            InvalidateRect(hwnd, NULL, TRUE);
-                        }
-                    } else {
-                        if (elapsed_time < CLOCK_TOTAL_TIME && !message_shown) {
-                            elapsed_time++;
-                            InvalidateRect(hwnd, NULL, TRUE);
-                        } else if (elapsed_time >= CLOCK_TOTAL_TIME && !message_shown) {
-                            message_shown = 1;
-                            KillTimer(hwnd, 1);
-                            PauseMediaPlayback();
-
+                    // 倒计时逻辑
+                    if (countdown_elapsed_time < CLOCK_TOTAL_TIME) {
+                        countdown_elapsed_time++;  // 使用倒计时专用计数器
+                        if (countdown_elapsed_time >= CLOCK_TOTAL_TIME && !countdown_message_shown) {
+                            countdown_message_shown = TRUE;
+                            
+                            // 处理倒计时结束的动作
                             switch (CLOCK_TIMEOUT_ACTION) {
                                 case TIMEOUT_ACTION_MESSAGE:
                                     ShowToastNotification(hwnd, "Time's up!");
@@ -2263,9 +2270,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         if (ParseInput(inputText, &total_seconds)) {
                             KillTimer(hwnd, 1);  // 先关闭已有计时器
                             CLOCK_TOTAL_TIME = total_seconds;
-                            elapsed_time = 0;
-                            message_shown = 0;
-                            // 设置新的时间时，确保切换到倒计时模式
+                            countdown_elapsed_time = 0;  // 重置倒计时计数器
+                            countdown_message_shown = FALSE;
                             CLOCK_COUNT_UP = FALSE;
                             CLOCK_SHOW_CURRENT_TIME = FALSE;
                             InvalidateRect(hwnd, NULL, TRUE);
@@ -2996,16 +3002,16 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_COUNT_UP_START: {
                     if (!CLOCK_COUNT_UP) {
-                        // 开始新的正计时
+                        // 切换到正计时模式
                         CLOCK_COUNT_UP = TRUE;
                         CLOCK_SHOW_CURRENT_TIME = FALSE;
                         CLOCK_IS_PAUSED = FALSE;
-                        elapsed_time = 0;
-                        message_shown = 0;
+                        countup_elapsed_time = 0;  // 重置正计时计数器
+                        countup_message_shown = FALSE;
                         KillTimer(hwnd, 1);
                         SetTimer(hwnd, 1, 1000, NULL);
                     } else {
-                        // 切换暂停/继续状态
+                        // 暂停/继续正计时
                         CLOCK_IS_PAUSED = !CLOCK_IS_PAUSED;
                         if (CLOCK_IS_PAUSED) {
                             KillTimer(hwnd, 1);
@@ -3018,14 +3024,12 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_COUNT_UP_RESET: {
                     if (CLOCK_COUNT_UP) {
-                        // 重置计时器
-                        elapsed_time = 0;
-                        message_shown = 0;
-                        // 如果计时器正在运行，继续计时
-                        if (IsWindow(GetDlgItem(hwnd, 1))) {
+                        countup_elapsed_time = 0;  // 重置正计时计数器
+                        countup_message_shown = FALSE;
+                        if (!CLOCK_IS_PAUSED) {
                             KillTimer(hwnd, 1);
+                            SetTimer(hwnd, 1, 1000, NULL);
                         }
-                        SetTimer(hwnd, 1, 1000, NULL);
                         InvalidateRect(hwnd, NULL, TRUE);
                     }
                     break;
