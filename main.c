@@ -3026,10 +3026,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     if (CLOCK_COUNT_UP) {
                         countup_elapsed_time = 0;  // 重置正计时计数器
                         countup_message_shown = FALSE;
-                        if (!CLOCK_IS_PAUSED) {
-                            KillTimer(hwnd, 1);
-                            SetTimer(hwnd, 1, 1000, NULL);
-                        }
+                        CLOCK_IS_PAUSED = FALSE;  // 取消暂停状态
+                        KillTimer(hwnd, 1);  // 无论之前是否暂停，都重新启动计时器
+                        SetTimer(hwnd, 1, 1000, NULL);
                         InvalidateRect(hwnd, NULL, TRUE);
                     }
                     break;
