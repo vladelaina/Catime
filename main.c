@@ -71,6 +71,7 @@ void ClearColorOptions(void);
 #define CLOCK_IDC_SET_COUNTDOWN_TIME 173  // Define a unique ID for setting countdown time
 #define CLOCK_IDC_START_NO_DISPLAY   174  // Define a unique ID for starting with no display
 #define CLOCK_IDC_START_COUNT_UP     175  // Define a unique ID for starting count up
+#define CLOCK_IDC_AUTO_START         160  // 添加开机自启动菜单ID
 
 // 语言枚举
 typedef enum {
@@ -1729,9 +1730,9 @@ void ShowColorMenu(HWND hwnd) {
     
     // 读取当前启动模式
     char currentStartupMode[20] = "COUNTDOWN";  // Set default to COUNTDOWN
-    char configPath[MAX_PATH];  // Use a different variable name
+    char configPath[MAX_PATH];  
     GetConfigPath(configPath, MAX_PATH);
-    FILE *configFile = fopen(configPath, "r");  // Use a different variable name
+    FILE *configFile = fopen(configPath, "r");  
     if (configFile) {
         char line[256];
         while (fgets(line, sizeof(line), configFile)) {
@@ -1761,10 +1762,19 @@ void ShowColorMenu(HWND hwnd) {
                 CLOCK_IDC_START_NO_DISPLAY,
                 GetLocalizedString(L"不显示", L"No Display"));
     
-    // 将子菜单添加到"启动设置"选项
+    // 添加分隔线
+    AppendMenuW(hStartupSettingsMenu, MF_SEPARATOR, 0, NULL);
+
+    // 添加开机自启动选项
+    AppendMenuW(hStartupSettingsMenu, MF_STRING | MF_UNCHECKED,
+                CLOCK_IDC_AUTO_START,
+                GetLocalizedString(L"开机自启动", L"Start with Windows"));
+
+    // 将启动设置子菜单添加到预设管理菜单
     AppendMenuW(hTimeOptionsMenu, MF_POPUP, (UINT_PTR)hStartupSettingsMenu,
                 GetLocalizedString(L"启动设置", L"Startup Settings"));
 
+    // 将预设管理菜单添加到主菜单
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeOptionsMenu,
                 GetLocalizedString(L"预设管理", L"Preset Manager"));
 
