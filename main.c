@@ -1562,7 +1562,11 @@ void FormatTime(int remaining_time, char* time_text) {
 
     // 倒计时模式
     int remaining = CLOCK_TOTAL_TIME - countdown_elapsed_time;
-    if (remaining < 0) remaining = 0;
+    if (remaining <= 0) {
+        // 当倒计时结束时，返回空字符串而不是显示 0
+        time_text[0] = '\0';
+        return;
+    }
 
     int hours = remaining / 3600;
     int minutes = (remaining % 3600) / 60;
