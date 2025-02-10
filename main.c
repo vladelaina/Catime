@@ -1694,24 +1694,24 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hTimeOptionsMenu, MF_STRING, CLOCK_IDC_MODIFY_TIME_OPTIONS,
                 GetLocalizedString(L"修改快捷时间选项", L"Modify Time Options"));
     
-    // 创建"修改默认启动时间"的子菜单
-    HMENU hModifyDefaultTimeMenu = CreatePopupMenu();
+    // 创建"启动设置"的子菜单
+    HMENU hStartupSettingsMenu = CreatePopupMenu();
     
-    // 新增子选项：设置倒计时时间
-    AppendMenuW(hModifyDefaultTimeMenu, MF_STRING, CLOCK_IDC_SET_COUNTDOWN_TIME,
-                GetLocalizedString(L"设置倒计时时间", L"Set Countdown Time"));
+    // 新增子选项：倒计时
+    AppendMenuW(hStartupSettingsMenu, MF_STRING, CLOCK_IDC_SET_COUNTDOWN_TIME,
+                GetLocalizedString(L"倒计时", L"Countdown"));
     
-    // 新增子选项：启动时不显示
-    AppendMenuW(hModifyDefaultTimeMenu, MF_STRING, CLOCK_IDC_START_NO_DISPLAY,
-                GetLocalizedString(L"启动时不显示", L"Start with No Display"));
+    // 新增子选项：正计时
+    AppendMenuW(hStartupSettingsMenu, MF_STRING, CLOCK_IDC_START_COUNT_UP,
+                GetLocalizedString(L"正计时", L"Stopwatch"));
     
-    // 新增子选项：启动后开始正计时
-    AppendMenuW(hModifyDefaultTimeMenu, MF_STRING, CLOCK_IDC_START_COUNT_UP,
-                GetLocalizedString(L"启动后开始正计时", L"Start Count Up"));
+    // 新增子选项：不显示
+    AppendMenuW(hStartupSettingsMenu, MF_STRING, CLOCK_IDC_START_NO_DISPLAY,
+                GetLocalizedString(L"不显示", L"No Display"));
     
-    // 将子菜单添加到"修改默认启动时间"选项
-    AppendMenuW(hTimeOptionsMenu, MF_POPUP, (UINT_PTR)hModifyDefaultTimeMenu,
-                GetLocalizedString(L"修改默认启动时间", L"Modify Default Start Time"));
+    // 将子菜单添加到"启动设置"选项
+    AppendMenuW(hTimeOptionsMenu, MF_POPUP, (UINT_PTR)hStartupSettingsMenu,
+                GetLocalizedString(L"启动设置", L"Startup Settings"));
 
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeOptionsMenu,
                 GetLocalizedString(L"预设管理", L"Preset Manager"));
