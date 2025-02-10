@@ -1718,7 +1718,7 @@ void ShowColorMenu(HWND hwnd) {
     HMENU hStartupSettingsMenu = CreatePopupMenu();
     
     // 读取当前启动模式
-    char currentStartupMode[20] = "";
+    char currentStartupMode[20] = "COUNTDOWN";  // Set default to COUNTDOWN
     char configPath[MAX_PATH];  // Use a different variable name
     GetConfigPath(configPath, MAX_PATH);
     FILE *configFile = fopen(configPath, "r");  // Use a different variable name
