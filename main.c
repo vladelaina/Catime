@@ -372,6 +372,7 @@ time_t CLOCK_LAST_TIME_UPDATE = 0;
 BOOL CLOCK_USE_24HOUR = TRUE;
 BOOL CLOCK_SHOW_SECONDS = TRUE;
 BOOL CLOCK_COUNT_UP = FALSE;  // 添加正计时标志
+char CLOCK_STARTUP_MODE[20] = "COUNTDOWN";  // 添加启动模式变量
 
  
 #define CLOCK_IDM_SHOW_CURRENT_TIME 150
@@ -660,18 +661,24 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     if (file) {
         char line[256];
         while (fgets(line, sizeof(line), file)) {
-            if (strncmp(line, "STARTUP_MODE=COUNT_UP", 20) == 0) {
-                CLOCK_COUNT_UP = TRUE;
-                SetTimer(hwnd, 1, 1000, NULL);
-            } else if (strncmp(line, "STARTUP_MODE=NO_DISPLAY", 23) == 0) {
-                CLOCK_SHOW_CURRENT_TIME = FALSE;
-            } else if (strncmp(line, "STARTUP_MODE=COUNTDOWN", 21) == 0) {
-                // Handle countdown mode on startup
-                // You might need to set a timer or initialize countdown logic here
+            if (strncmp(line, "STARTUP_MODE=", 13) == 0) {
+                sscanf(line, "STARTUP_MODE=%19s", CLOCK_STARTUP_MODE);
+                break;
             }
         }
         fclose(file);
     }
+
+    // 根据启动模式设置初始状态
+    if (strcmp(CLOCK_STARTUP_MODE, "COUNT_UP") == 0) {
+        CLOCK_COUNT_UP = TRUE;
+        elapsed_time = 0;
+    } else if (strcmp(CLOCK_STARTUP_MODE, "NO_DISPLAY") == 0) {
+        ShowWindow(hwnd, SW_HIDE);  // 隐藏窗口
+        // 删除 return 0 语句，让程序继续运行
+        // 只是不显示窗口，但保持系统托盘图标
+    } 
+    // COUNTDOWN 模式使用默认的倒计时行为
 
     MSG msg;
     while (GetMessage(&msg, NULL, 0, 0) > 0) {
@@ -1023,6 +1030,9 @@ void ReadConfig() {
                 }
                 token = strtok(NULL, ",");
             }
+        }
+        else if (strncmp(line, "STARTUP_MODE=", 13) == 0) {
+            sscanf(line, "STARTUP_MODE=%19s", CLOCK_STARTUP_MODE);
         }
     }
 
