@@ -1949,6 +1949,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             LoadWindowSettings(hwnd);
             SetClickThrough(hwnd, !CLOCK_EDIT_MODE);
             AdjustWindowPosition(hwnd);
+            
+            // 添加以下代码确保窗口置顶
+            SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
             break;
         }
 
@@ -2235,6 +2238,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     }
                 }
             }
+            // 每次计时器触发时确保窗口置顶
+            SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
             break;
         }
         case WM_DESTROY: {
@@ -3114,6 +3119,8 @@ refresh_window:
             if (CLOCK_EDIT_MODE) {
                 SaveWindowSettings(hwnd);
             }
+            // 确保窗口位置改变后仍然置顶
+            SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
             break;
         }
         case WM_RBUTTONUP: {
