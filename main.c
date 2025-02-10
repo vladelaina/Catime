@@ -47,7 +47,7 @@ BOOL IsAutoStartEnabled(void);
 BOOL CreateShortcut(void);
 BOOL RemoveShortcut(void);
 
-#define CATIME_VERSION "1.0.2.1"  
+#define CATIME_VERSION "1.0.3.1"  
 #define VK_MEDIA_PLAY_PAUSE 0xB3
 #define VK_MEDIA_STOP 0xB2
 #define KEYEVENTF_KEYUP 0x0002
