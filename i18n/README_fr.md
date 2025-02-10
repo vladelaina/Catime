@@ -75,6 +75,14 @@ Un grand merci aux contributeurs :
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/1708573954"><img src="https://i1.hdslb.com/bfs/face/7fe7cfba25dd086f9b4dbb8433b5db237a5ff98b.jpg@240w_240h_1c_1s_!web-avatar-space-header.avif" width="100px;" alt="我是无名吖"/><br /><sub><b>我是无名吖</b></sub></a><br /></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/flying-hilichurl"><img src="https://avatars.githubusercontent.com/u/187168840?v=4" width="100px;" alt="flying-hilichurl"/><br /><sub><b>flying-hilichurl</b></sub></a><br /></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/161061562"><img src="https://i1.hdslb.com/bfs/face/ffbffc12d4cb51d158210f26f45bb1b369eaf730.jpg@240w_240h_1c_1s_!web-avatar-space-header.avif" width="100px;" alt="双脚猫"/><br /><sub><b>双脚猫</b></sub></a><br /></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/161061562"><img src="https://i1.hdslb.com/bfs/face/ffbffc12d4cb51d158210f26f45bb1b369eaf730.jpg@240w_240h_1c_1s_!web-avatar-space-header.avif" width="100px;" alt="双脚猫"/><br /><sub><b>双脚猫</b></sub></a><br />
+</td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/rsyqvthv"><img src="https://avatars.githubusercontent.com/u/2230369?v=4" width="100px;" alt="rsyqvthv"/><br /><sub><b>rsyqvthv</b></sub></a><br /></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/297146893"><img src="https://i1.hdslb.com/bfs/face/60bd4649e39b9324998c0fede4dbc18a5baa7311.jpg@240w_240h_1c_1s_!web-avatar-space-header.avif" width="100px;" alt="洋仓鼠"/><br /><sub><b>洋仓鼠</b></sub></a><br /></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/3546380188519387"><img src="https://i1.hdslb.com/bfs/face/a6396d677f543a173aa11f3d3cd2943a96121dda.jpg@240w_240h_1c_1s_!web-avatar-space-header.avif" width="100px;" alt="学习马楼"/><br /><sub><b>学习马楼</b></sub></a><br /></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/8010065"><img src="https://i2.hdslb.com/bfs/face/118e5f530477e11326dbfb3692a0878fc92d303d.jpg@240w_240h_1c_1s_!web-avatar-space-header.avif" width="100px;" alt="睡着的火山"/><br /><sub><b>睡着的火山</b></sub></a><br /></td>
+      <tr>
+         <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/5549978"><img src="https://i2.hdslb.com/bfs/face/8da0d17a9d45bb66fb8758c4da378a145e1856ca.jpg@240w_240h_1c_1s_!web-avatar-space-header.avif" width="100px;" alt="星空下数羊"/><br /><sub><b>星空下数羊</b></sub></a><br /></td>
+      </tr>
   </tbody>
 </table>
