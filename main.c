@@ -10,6 +10,25 @@
 #include "resource.h"
 #include <winnls.h>
 #include <commdlg.h>  // 用于 CHOOSECOLOR 结构体和 ChooseColor 函数
+#include <shlobj.h>     // For SHGetFolderPath
+#include <objbase.h>    // For COM functions
+#include <shobjidl.h>   // For IShellLink
+#include <shlguid.h>    // For CLSID_ShellLink
+
+// 如果编译器找不到这些定义，手动添加
+#ifndef CSIDL_STARTUP
+#define CSIDL_STARTUP 0x0007
+#endif
+
+#ifndef CLSID_ShellLink
+// CLSID_ShellLink definition
+EXTERN_C const CLSID CLSID_ShellLink;
+#endif
+
+#ifndef IID_IShellLinkW
+// IID_IShellLinkW definition
+EXTERN_C const IID IID_IShellLinkW;
+#endif
 
 // 函数声明
 const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english);
@@ -23,6 +42,10 @@ void WriteConfigStartupMode(const char* mode);
 BOOL IsColorExists(const char* hexColor);
 void AddColorOption(const char* hexColor);
 void ClearColorOptions(void);
+// 开机自启动相关函数声明
+BOOL IsAutoStartEnabled(void);
+BOOL CreateShortcut(void);
+BOOL RemoveShortcut(void);
 
 #define CATIME_VERSION "1.0.2.1"  
 #define VK_MEDIA_PLAY_PAUSE 0xB3
@@ -568,6 +591,13 @@ void AddColorOption(const char* hexColor) {
 }
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+    // 初始化 COM
+    HRESULT hr = CoInitialize(NULL);
+    if (FAILED(hr)) {
+        MessageBox(NULL, "COM initialization failed!", "Error", MB_ICONERROR);
+        return 1;
+    }
+
     // 设置代码页为 GBK
     SetConsoleOutputCP(936);
     SetConsoleCP(936);
@@ -688,6 +718,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     }
 
     CloseHandle(hMutex);
+
+    // 清理 COM
+    CoUninitialize();
     return (int)msg.wParam;
 }
 
@@ -1766,9 +1799,10 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hStartupSettingsMenu, MF_SEPARATOR, 0, NULL);
 
     // 添加开机自启动选项
-    AppendMenuW(hStartupSettingsMenu, MF_STRING | MF_UNCHECKED,
-                CLOCK_IDC_AUTO_START,
-                GetLocalizedString(L"开机自启动", L"Start with Windows"));
+    AppendMenuW(hStartupSettingsMenu, MF_STRING | 
+            (IsAutoStartEnabled() ? MF_CHECKED : MF_UNCHECKED),
+            CLOCK_IDC_AUTO_START,
+            GetLocalizedString(L"开机自启动", L"Start with Windows"));
 
     // 将启动设置子菜单添加到预设管理菜单
     AppendMenuW(hTimeOptionsMenu, MF_POPUP, (UINT_PTR)hStartupSettingsMenu,
@@ -3042,6 +3076,21 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDC_START_COUNT_UP: {
                     // 将启动时正计时的选择写入配置文件
                     WriteConfigStartupMode("COUNT_UP");
+                    break;
+                }
+                case CLOCK_IDC_AUTO_START: {
+                    BOOL isEnabled = IsAutoStartEnabled();
+                    if (isEnabled) {
+                        if (RemoveShortcut()) {
+                            // 更新菜单项的选中状态
+                            CheckMenuItem(GetMenu(hwnd), CLOCK_IDC_AUTO_START, MF_UNCHECKED);
+                        }
+                    } else {
+                        if (CreateShortcut()) {
+                            // 更新菜单项的选中状态
+                            CheckMenuItem(GetMenu(hwnd), CLOCK_IDC_AUTO_START, MF_CHECKED);
+                        }
+                    }
                     break;
                 }
             }
@@ -4386,4 +4435,76 @@ void WriteConfigStartupMode(const char* mode) {
     
     free(config_content);
     free(new_config);
+}
+
+// 检查是否已设置开机自启动
+BOOL IsAutoStartEnabled(void) {
+    wchar_t startupPath[MAX_PATH];
+    wchar_t shortcutPath[MAX_PATH];
+    
+    // 获取启动文件夹路径
+    if (SUCCEEDED(SHGetFolderPathW(NULL, CSIDL_STARTUP, NULL, 0, startupPath))) {
+        // 构建快捷方式完整路径
+        wcscat(startupPath, L"\\Catime.lnk");
+        return GetFileAttributesW(startupPath) != INVALID_FILE_ATTRIBUTES;
+    }
+    return FALSE;
+}
+
+// 创建快捷方式
+BOOL CreateShortcut(void) {
+    wchar_t startupPath[MAX_PATH];
+    wchar_t exePath[MAX_PATH];
+    IShellLinkW* pShellLink = NULL;
+    IPersistFile* pPersistFile = NULL;
+    BOOL success = FALSE;
+    
+    // 获取当前程序路径
+    GetModuleFileNameW(NULL, exePath, MAX_PATH);
+    
+    // 获取启动文件夹路径
+    if (SUCCEEDED(SHGetFolderPathW(NULL, CSIDL_STARTUP, NULL, 0, startupPath))) {
+        // 构建快捷方式完整路径
+        wcscat(startupPath, L"\\Catime.lnk");
+        
+        // 创建 ShellLink 对象
+        HRESULT hr = CoCreateInstance(&CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER,
+                                    &IID_IShellLinkW, (void**)&pShellLink);
+        if (SUCCEEDED(hr)) {
+            // 设置目标路径
+            hr = pShellLink->lpVtbl->SetPath(pShellLink, exePath);
+            if (SUCCEEDED(hr)) {
+                // 获取 IPersistFile 接口
+                hr = pShellLink->lpVtbl->QueryInterface(pShellLink,
+                                                      &IID_IPersistFile,
+                                                      (void**)&pPersistFile);
+                if (SUCCEEDED(hr)) {
+                    // 保存快捷方式
+                    hr = pPersistFile->lpVtbl->Save(pPersistFile, startupPath, TRUE);
+                    if (SUCCEEDED(hr)) {
+                        success = TRUE;
+                    }
+                    pPersistFile->lpVtbl->Release(pPersistFile);
+                }
+            }
+            pShellLink->lpVtbl->Release(pShellLink);
+        }
+    }
+    
+    return success;
+}
+
+// 删除快捷方式
+BOOL RemoveShortcut(void) {
+    wchar_t startupPath[MAX_PATH];
+    
+    // 获取启动文件夹路径
+    if (SUCCEEDED(SHGetFolderPathW(NULL, CSIDL_STARTUP, NULL, 0, startupPath))) {
+        // 构建快捷方式完整路径
+        wcscat(startupPath, L"\\Catime.lnk");
+        
+        // 删除快捷方式文件
+        return DeleteFileW(startupPath);
+    }
+    return FALSE;
 }

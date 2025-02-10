@@ -17,6 +17,9 @@ $(shell mkdir -p $(OUTPUT_DIR) $(ASSET_DIR))
 # 编译选项
 CFLAGS = -mwindows
 
+# 链接选项 - 添加必要的库
+LDFLAGS = -lole32 -lshell32 -lcomdlg32 -luuid
+
 # 生成目标
 all: $(OUTPUT_DIR)/catime.exe
 	@rm -f *.o  # 编译完成后删除所有 .o 文件
@@ -31,7 +34,7 @@ main.o: $(SRC_FILES)
 
 # 链接编译目标文件，输出到输出目录
 $(OUTPUT_DIR)/catime.exe: $(OBJ_FILES) resource.o
-	@$(CC) -o $(OUTPUT_DIR)/catime.exe $(OBJ_FILES) resource.o $(CFLAGS)
+	@$(CC) -o $(OUTPUT_DIR)/catime.exe $(OBJ_FILES) resource.o $(CFLAGS) $(LDFLAGS)
 
 # 清理构建文件
 clean:
