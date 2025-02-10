@@ -2999,11 +2999,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         int total_seconds = 0;
                         if (ParseInput(inputText, &total_seconds)) {
                             WriteConfigDefaultStartTime(total_seconds);
-                            WriteConfigStartupMode("COUNTDOWN");  // Update the startup mode to COUNTDOWN
-                            MessageBoxW(hwnd, 
-                                GetLocalizedString(L"已设置为启动时倒计时", L"Set to Countdown on Startup"),
-                                GetLocalizedString(L"设置", L"Settings"),
-                                MB_OK);
+                            WriteConfigStartupMode("COUNTDOWN");  // 设置启动模式为倒计时
                             ReadConfig();
                             break;
                         } else {
@@ -3023,7 +3019,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                                     L"25 30m = 25 hours 30 minutes\n"
                                     L"1 30 20 = 1 hour 30 minutes 20 seconds"),
                                 GetLocalizedString(L"输入格式", L"Input Format"),
-                                MB_OK);
+                                MB_OK | MB_ICONINFORMATION);
                         }
                     }
                     break;
@@ -3031,19 +3027,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDC_START_NO_DISPLAY: {
                     // 将启动时不显示的选择写入配置文件
                     WriteConfigStartupMode("NO_DISPLAY");
-                    MessageBoxW(hwnd, 
-                        GetLocalizedString(L"已设置为启动时不显示", L"Set to No Display on Startup"),
-                        GetLocalizedString(L"设置", L"Settings"),
-                        MB_OK);
                     break;
                 }
                 case CLOCK_IDC_START_COUNT_UP: {
                     // 将启动时正计时的选择写入配置文件
                     WriteConfigStartupMode("COUNT_UP");
-                    MessageBoxW(hwnd, 
-                        GetLocalizedString(L"已设置为启动时正计时", L"Set to Stopwatch on Startup"),
-                        GetLocalizedString(L"设置", L"Settings"),
-                        MB_OK);
                     break;
                 }
             }
@@ -3614,6 +3602,10 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Check for Updates") == 0) return L"检查更新";
             if (wcscmp(english, L"Language") == 0) return english;
             if (wcscmp(english, L"Reset") == 0) return english; // Return English "Reset" instead of Chinese
+            if (wcscmp(english, L"Set to No Display on Startup") == 0) return L"已设置为启动时不显示";
+            if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"已设置为启动时正计时";
+            if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"已设置为启动时倒计时";
+            if (wcscmp(english, L"Settings") == 0) return L"设置";
             return chinese;
             
         case APP_LANG_CHINESE_TRAD:
@@ -3632,6 +3624,10 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Check for Updates") == 0) return L"檢查更新";
             if (wcscmp(english, L"Language") == 0) return english;
             if (wcscmp(english, L"Reset") == 0) return english; // Return English "Reset" instead of Traditional Chinese
+            if (wcscmp(english, L"Set to No Display on Startup") == 0) return L"已设置为启动时不显示";
+            if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"已设置为启动时正计时";
+            if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"已设置为启动时倒计时";
+            if (wcscmp(english, L"Settings") == 0) return L"设置";
             return chinese;
 
         case APP_LANG_SPANISH:
@@ -3674,6 +3670,10 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Version: %hs") == 0) return L"Versión: %hs";
             if (wcscmp(english, L"Check for Updates") == 0) return L"Buscar actualizaciones";
             if (wcscmp(english, L"Language") == 0) return english;
+            if (wcscmp(english, L"Set to No Display on Startup") == 0) return L"已设置为启动时不显示";
+            if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"已设置为启动时正计时";
+            if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"已设置为启动时倒计时";
+            if (wcscmp(english, L"Settings") == 0) return L"设置";
             return english;
 
         case APP_LANG_FRENCH:
@@ -3716,6 +3716,10 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Version: %hs") == 0) return L"Version: %hs";
             if (wcscmp(english, L"Check for Updates") == 0) return L"Vérifier les mises à jour";
             if (wcscmp(english, L"Language") == 0) return english;
+            if (wcscmp(english, L"Set to No Display on Startup") == 0) return L"已设置为启动时不显示";
+            if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"已设置为启动时正计时";
+            if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"已设置为启动时倒计时";
+            if (wcscmp(english, L"Settings") == 0) return L"设置";
             return english;
 
         case APP_LANG_GERMAN:
@@ -3758,6 +3762,10 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Version: %hs") == 0) return L"Version: %hs";
             if (wcscmp(english, L"Check for Updates") == 0) return L"Nach Updates suchen";
             if (wcscmp(english, L"Language") == 0) return english;
+            if (wcscmp(english, L"Set to No Display on Startup") == 0) return L"已设置为启动时不显示";
+            if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"已设置为启动时正计时";
+            if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"已设置为启动时倒计时";
+            if (wcscmp(english, L"Settings") == 0) return L"设置";
             return english;
 
         case APP_LANG_RUSSIAN:
@@ -3800,6 +3808,10 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Version: %hs") == 0) return L"Версия: %hs";
             if (wcscmp(english, L"Check for Updates") == 0) return L"Проверить обновления";
             if (wcscmp(english, L"Language") == 0) return english;
+            if (wcscmp(english, L"Set to No Display on Startup") == 0) return L"已设置为启动时不显示";
+            if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"已设置为启动时正计时";
+            if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"已设置为启动时倒计时";
+            if (wcscmp(english, L"Settings") == 0) return L"设置";
             return english;
 
         case APP_LANG_PORTUGUESE:
@@ -3842,6 +3854,10 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Version: %hs") == 0) return L"Versão: %hs";
             if (wcscmp(english, L"Check for Updates") == 0) return L"Verificar atualizações";
             if (wcscmp(english, L"Language") == 0) return english;
+            if (wcscmp(english, L"Set to No Display on Startup") == 0) return L"已设置为启动时不显示";
+            if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"已设置为启动时正计时";
+            if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"已设置为启动时倒计时";
+            if (wcscmp(english, L"Settings") == 0) return L"设置";
             return english;
 
         case APP_LANG_JAPANESE:
@@ -3884,6 +3900,10 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Version: %hs") == 0) return L"バージョン: %hs";
             if (wcscmp(english, L"Check for Updates") == 0) return L"更新を確認";
             if (wcscmp(english, L"Language") == 0) return english;
+            if (wcscmp(english, L"Set to No Display on Startup") == 0) return L"已设置为启动时不显示";
+            if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"已设置为启动时正计时";
+            if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"已设置为启动时倒计时";
+            if (wcscmp(english, L"Settings") == 0) return L"设置";
             return english;
 
         case APP_LANG_KOREAN:
@@ -3926,6 +3946,10 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Version: %hs") == 0) return L"버전: %hs";
             if (wcscmp(english, L"Check for Updates") == 0) return L"업데이트 확인";
             if (wcscmp(english, L"Language") == 0) return english;
+            if (wcscmp(english, L"Set to No Display on Startup") == 0) return L"已设置为启动时不显示";
+            if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"已设置为启动时正计时";
+            if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"已设置为启动时倒计时";
+            if (wcscmp(english, L"Settings") == 0) return L"设置";
             return english;
 
         case APP_LANG_ENGLISH:
@@ -3945,8 +3969,13 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Check for Updates") == 0) return L"Check for Updates";
             if (wcscmp(english, L"Language") == 0) return english;
             if (wcscmp(english, L"Reset") == 0) return L"Reset";
+            if (wcscmp(english, L"Set to No Display on Startup") == 0) return L"已设置为启动时不显示";
+            if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"已设置为启动时正计时";
+            if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"已设置为启动时倒计时";
+            if (wcscmp(english, L"Settings") == 0) return L"设置";
             return english;
     }
+    return english;
 }
 
 void WriteConfig(const char* config_path) {
