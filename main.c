@@ -3677,6 +3677,8 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Settings") == 0) return L"设置";
             if (wcscmp(english, L"Preset Manager") == 0) return L"预设管理";
             if (wcscmp(english, L"Count Up") == 0) return L"正计时";
+            if (wcscmp(english, L"Startup Settings") == 0) return L"启动设置";
+            if (wcscmp(english, L"Start with Windows") == 0) return L"开机自启动";
             return chinese;
             
         case APP_LANG_CHINESE_TRAD:
@@ -3701,6 +3703,8 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Settings") == 0) return L"设置";
             if (wcscmp(english, L"Preset Manager") == 0) return L"預設管理";
             if (wcscmp(english, L"Count Up") == 0) return L"正計時";
+            if (wcscmp(english, L"Startup Settings") == 0) return L"啟動設置";
+            if (wcscmp(english, L"Start with Windows") == 0) return L"開機自啟動";
             return chinese;
 
         case APP_LANG_SPANISH:
@@ -3749,6 +3753,8 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Settings") == 0) return L"设置";
             if (wcscmp(english, L"Preset Manager") == 0) return L"Gestor de preajustes";
             if (wcscmp(english, L"Count Up") == 0) return L"Contar hacia arriba";
+            if (wcscmp(english, L"Startup Settings") == 0) return L"Configuración de inicio";
+            if (wcscmp(english, L"Start with Windows") == 0) return L"Iniciar con Windows";
             return english;
 
         case APP_LANG_FRENCH:
@@ -3797,6 +3803,8 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Settings") == 0) return L"设置";
             if (wcscmp(english, L"Preset Manager") == 0) return L"Gestionnaire de préréglages";
             if (wcscmp(english, L"Count Up") == 0) return L"Compte à rebours positif";
+            if (wcscmp(english, L"Startup Settings") == 0) return L"Paramètres de démarrage";
+            if (wcscmp(english, L"Start with Windows") == 0) return L"Démarrer avec Windows";
             return english;
 
         case APP_LANG_GERMAN:
@@ -3845,6 +3853,8 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Settings") == 0) return L"设置";
             if (wcscmp(english, L"Preset Manager") == 0) return L"Voreinstellungen";
             if (wcscmp(english, L"Count Up") == 0) return L"Aufwärtszählen";
+            if (wcscmp(english, L"Startup Settings") == 0) return L"Starteinstellungen";
+            if (wcscmp(english, L"Start with Windows") == 0) return L"Mit Windows starten";
             return english;
 
         case APP_LANG_RUSSIAN:
@@ -3893,6 +3903,8 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Settings") == 0) return L"设置";
             if (wcscmp(english, L"Preset Manager") == 0) return L"Настроить";
             if (wcscmp(english, L"Count Up") == 0) return L"Счетчик";
+            if (wcscmp(english, L"Startup Settings") == 0) return L"Настройки запуска";
+            if (wcscmp(english, L"Start with Windows") == 0) return L"Запускать с Windows";
             return english;
 
         case APP_LANG_PORTUGUESE:
@@ -3941,6 +3953,8 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Settings") == 0) return L"设置";
             if (wcscmp(english, L"Preset Manager") == 0) return L"Gerenciador de pré-ajustes";
             if (wcscmp(english, L"Count Up") == 0) return L"Contagem ascendente";
+            if (wcscmp(english, L"Startup Settings") == 0) return L"Configurações de inicialização";
+            if (wcscmp(english, L"Start with Windows") == 0) return L"Iniciar com o Windows";
             return english;
 
         case APP_LANG_JAPANESE:
@@ -3989,6 +4003,8 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Settings") == 0) return L"设置";
             if (wcscmp(english, L"Preset Manager") == 0) return L"プリセット管理";
             if (wcscmp(english, L"Count Up") == 0) return L"カウントアップ";
+            if (wcscmp(english, L"Startup Settings") == 0) return L"起動設定";
+            if (wcscmp(english, L"Start with Windows") == 0) return L"Windowsと同時に起動";
             return english;
 
         case APP_LANG_KOREAN:
@@ -4037,6 +4053,8 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Settings") == 0) return L"设置";
             if (wcscmp(english, L"Preset Manager") == 0) return L"프리셋 관리";
             if (wcscmp(english, L"Count Up") == 0) return L"카운트업";
+            if (wcscmp(english, L"Startup Settings") == 0) return L"시간 옵션 수정";
+            if (wcscmp(english, L"Start with Windows") == 0) return L"Windows와 동시에 시작";
             return english;
 
         case APP_LANG_ENGLISH:
@@ -4062,6 +4080,8 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Settings") == 0) return L"设置";
             if (wcscmp(english, L"Preset Manager") == 0) return L"Preset Manager";
             if (wcscmp(english, L"Count Up") == 0) return L"Count Up";
+            if (wcscmp(english, L"Startup Settings") == 0) return L"Startup Settings";
+            if (wcscmp(english, L"Start with Windows") == 0) return L"Start with Windows";
             return english;
     }
     return english;
