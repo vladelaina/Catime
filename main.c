@@ -68,6 +68,10 @@ void ClearColorOptions(void);
 #define CLOCK_IDC_MODIFY_TIME_OPTIONS 156
 #define CLOCK_IDC_MODIFY_DEFAULT_TIME 157
 
+#define CLOCK_IDC_SET_COUNTDOWN_TIME 173  // Define a unique ID for setting countdown time
+#define CLOCK_IDC_START_NO_DISPLAY   174  // Define a unique ID for starting with no display
+#define CLOCK_IDC_START_COUNT_UP     175  // Define a unique ID for starting count up
+
 // 语言枚举
 typedef enum {
     APP_LANG_CHINESE_SIMP,    // 简体中文
@@ -1689,9 +1693,26 @@ void ShowColorMenu(HWND hwnd) {
     HMENU hTimeOptionsMenu = CreatePopupMenu();
     AppendMenuW(hTimeOptionsMenu, MF_STRING, CLOCK_IDC_MODIFY_TIME_OPTIONS,
                 GetLocalizedString(L"修改快捷时间选项", L"Modify Time Options"));
-    AppendMenuW(hTimeOptionsMenu, MF_STRING, CLOCK_IDC_MODIFY_DEFAULT_TIME,
-                GetLocalizedString(L"修改默认启动时间", L"Modify Default Start Time"));
     
+    // 创建"修改默认启动时间"的子菜单
+    HMENU hModifyDefaultTimeMenu = CreatePopupMenu();
+    
+    // 新增子选项：设置倒计时时间
+    AppendMenuW(hModifyDefaultTimeMenu, MF_STRING, CLOCK_IDC_SET_COUNTDOWN_TIME,
+                GetLocalizedString(L"设置倒计时时间", L"Set Countdown Time"));
+    
+    // 新增子选项：启动时不显示
+    AppendMenuW(hModifyDefaultTimeMenu, MF_STRING, CLOCK_IDC_START_NO_DISPLAY,
+                GetLocalizedString(L"启动时不显示", L"Start with No Display"));
+    
+    // 新增子选项：启动后开始正计时
+    AppendMenuW(hModifyDefaultTimeMenu, MF_STRING, CLOCK_IDC_START_COUNT_UP,
+                GetLocalizedString(L"启动后开始正计时", L"Start Count Up"));
+    
+    // 将子菜单添加到"修改默认启动时间"选项
+    AppendMenuW(hTimeOptionsMenu, MF_POPUP, (UINT_PTR)hModifyDefaultTimeMenu,
+                GetLocalizedString(L"修改默认启动时间", L"Modify Default Start Time"));
+
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeOptionsMenu,
                 GetLocalizedString(L"预设管理", L"Preset Manager"));
 
@@ -2911,6 +2932,59 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         SetTimer(hwnd, 1, 1000, NULL);
                         InvalidateRect(hwnd, NULL, TRUE);
                     }
+                    break;
+                }
+                case CLOCK_IDC_SET_COUNTDOWN_TIME: {
+                    // 处理设置倒计时时间的逻辑
+                    while (1) {
+                        memset(inputText, 0, sizeof(inputText));
+                        DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc);
+
+                        if (inputText[0] == '\0') {
+                            break;
+                        }
+
+                        int total_seconds = 0;
+                        if (ParseInput(inputText, &total_seconds)) {
+                            WriteConfigDefaultStartTime(total_seconds);
+                            ReadConfig();
+                            break;
+                        } else {
+                            MessageBoxW(hwnd, 
+                                GetLocalizedString(
+                                    L"25    = 25分钟\n"
+                                    L"25h   = 25小时\n"
+                                    L"25s   = 25秒\n"
+                                    L"25 30 = 25分钟30秒\n"
+                                    L"25 30m = 25小时30分钟\n"
+                                    L"1 30 20 = 1小时30分钟20秒",
+                                    
+                                    L"25    = 25 minutes\n"
+                                    L"25h   = 25 hours\n"
+                                    L"25s   = 25 seconds\n"
+                                    L"25 30 = 25 minutes 30 seconds\n"
+                                    L"25 30m = 25 hours 30 minutes\n"
+                                    L"1 30 20 = 1 hour 30 minutes 20 seconds"),
+                                GetLocalizedString(L"输入格式", L"Input Format"),
+                                MB_OK);
+                        }
+                    }
+                    break;
+                }
+                case CLOCK_IDC_START_NO_DISPLAY: {
+                    // 处理启动时不显示的逻辑
+                    CLOCK_SHOW_CURRENT_TIME = FALSE;
+                    CLOCK_COUNT_UP = FALSE;
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    break;
+                }
+                case CLOCK_IDC_START_COUNT_UP: {
+                    // 处理启动后开始正计时的逻辑
+                    CLOCK_COUNT_UP = TRUE;
+                    CLOCK_SHOW_CURRENT_TIME = FALSE;
+                    elapsed_time = 0;
+                    SetTimer(hwnd, 1, 1000, NULL);
+                    InvalidateRect(hwnd, NULL, TRUE);
                     break;
                 }
             }
