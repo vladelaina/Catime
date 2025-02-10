@@ -2588,8 +2588,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         int index = cmd - 102;
                         CLOCK_TOTAL_TIME = time_options[index] * 60;
                         elapsed_time = 0;
+                        countdown_elapsed_time = 0;  // 添加这行
                         message_shown = 0;
+                        countdown_message_shown = FALSE;  // 添加这行
                         InvalidateRect(hwnd, NULL, TRUE);
+                        KillTimer(hwnd, 1);  // 添加这行
                         SetTimer(hwnd, 1, 1000, NULL);
                         break;
                     }
