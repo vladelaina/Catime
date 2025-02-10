@@ -665,6 +665,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
                 SetTimer(hwnd, 1, 1000, NULL);
             } else if (strncmp(line, "STARTUP_MODE=NO_DISPLAY", 23) == 0) {
                 CLOCK_SHOW_CURRENT_TIME = FALSE;
+            } else if (strncmp(line, "STARTUP_MODE=COUNTDOWN", 21) == 0) {
+                // Handle countdown mode on startup
+                // You might need to set a timer or initialize countdown logic here
             }
         }
         fclose(file);
@@ -1714,16 +1717,38 @@ void ShowColorMenu(HWND hwnd) {
     // 创建"启动设置"的子菜单
     HMENU hStartupSettingsMenu = CreatePopupMenu();
     
+    // 读取当前启动模式
+    char currentStartupMode[20] = "";
+    char configPath[MAX_PATH];  // Use a different variable name
+    GetConfigPath(configPath, MAX_PATH);
+    FILE *configFile = fopen(configPath, "r");  // Use a different variable name
+    if (configFile) {
+        char line[256];
+        while (fgets(line, sizeof(line), configFile)) {
+            if (strncmp(line, "STARTUP_MODE=", 13) == 0) {
+                sscanf(line, "STARTUP_MODE=%19s", currentStartupMode);
+                break;
+            }
+        }
+        fclose(configFile);
+    }
+    
     // 新增子选项：倒计时
-    AppendMenuW(hStartupSettingsMenu, MF_STRING, CLOCK_IDC_SET_COUNTDOWN_TIME,
+    AppendMenuW(hStartupSettingsMenu, MF_STRING | 
+                (strcmp(currentStartupMode, "COUNTDOWN") == 0 ? MF_CHECKED : 0),
+                CLOCK_IDC_SET_COUNTDOWN_TIME,
                 GetLocalizedString(L"倒计时", L"Countdown"));
     
     // 新增子选项：正计时
-    AppendMenuW(hStartupSettingsMenu, MF_STRING, CLOCK_IDC_START_COUNT_UP,
+    AppendMenuW(hStartupSettingsMenu, MF_STRING | 
+                (strcmp(currentStartupMode, "COUNT_UP") == 0 ? MF_CHECKED : 0),
+                CLOCK_IDC_START_COUNT_UP,
                 GetLocalizedString(L"正计时", L"Stopwatch"));
     
     // 新增子选项：不显示
-    AppendMenuW(hStartupSettingsMenu, MF_STRING, CLOCK_IDC_START_NO_DISPLAY,
+    AppendMenuW(hStartupSettingsMenu, MF_STRING | 
+                (strcmp(currentStartupMode, "NO_DISPLAY") == 0 ? MF_CHECKED : 0),
+                CLOCK_IDC_START_NO_DISPLAY,
                 GetLocalizedString(L"不显示", L"No Display"));
     
     // 将子菜单添加到"启动设置"选项
@@ -2964,6 +2989,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         int total_seconds = 0;
                         if (ParseInput(inputText, &total_seconds)) {
                             WriteConfigDefaultStartTime(total_seconds);
+                            WriteConfigStartupMode("COUNTDOWN");  // Update the startup mode to COUNTDOWN
+                            MessageBoxW(hwnd, 
+                                GetLocalizedString(L"已设置为启动时倒计时", L"Set to Countdown on Startup"),
+                                GetLocalizedString(L"设置", L"Settings"),
+                                MB_OK);
                             ReadConfig();
                             break;
                         } else {
