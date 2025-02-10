@@ -14,11 +14,11 @@
 // 函数声明
 const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english);
 void InitializeDefaultLanguage(void);
-COLORREF ShowColorDialog(HWND hwnd);  // 添加这一行
+COLORREF ShowColorDialog(HWND hwnd); 
 UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM lParam);
-void CreateDefaultConfig(const char* config_path);  // 添加这一行
-void WriteConfigDefaultStartTime(int seconds);  // 添加这一行
-
+void CreateDefaultConfig(const char* config_path);  
+void WriteConfigDefaultStartTime(int seconds); 
+void WriteConfigStartupMode(const char* mode); 
 // 颜色选项管理函数声明
 BOOL IsColorExists(const char* hexColor);
 void AddColorOption(const char* hexColor);
@@ -652,6 +652,23 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     ShowWindow(hwnd, nCmdShow);
     UpdateWindow(hwnd);
+
+    // 读取配置文件以确定启动模式
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    FILE *file = fopen(config_path, "r");
+    if (file) {
+        char line[256];
+        while (fgets(line, sizeof(line), file)) {
+            if (strncmp(line, "STARTUP_MODE=COUNT_UP", 20) == 0) {
+                CLOCK_COUNT_UP = TRUE;
+                SetTimer(hwnd, 1, 1000, NULL);
+            } else if (strncmp(line, "STARTUP_MODE=NO_DISPLAY", 23) == 0) {
+                CLOCK_SHOW_CURRENT_TIME = FALSE;
+            }
+        }
+        fclose(file);
+    }
 
     MSG msg;
     while (GetMessage(&msg, NULL, 0, 0) > 0) {
@@ -2972,19 +2989,21 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDC_START_NO_DISPLAY: {
-                    // 处理启动时不显示的逻辑
-                    CLOCK_SHOW_CURRENT_TIME = FALSE;
-                    CLOCK_COUNT_UP = FALSE;
-                    InvalidateRect(hwnd, NULL, TRUE);
+                    // 将启动时不显示的选择写入配置文件
+                    WriteConfigStartupMode("NO_DISPLAY");
+                    MessageBoxW(hwnd, 
+                        GetLocalizedString(L"已设置为启动时不显示", L"Set to No Display on Startup"),
+                        GetLocalizedString(L"设置", L"Settings"),
+                        MB_OK);
                     break;
                 }
                 case CLOCK_IDC_START_COUNT_UP: {
-                    // 处理启动后开始正计时的逻辑
-                    CLOCK_COUNT_UP = TRUE;
-                    CLOCK_SHOW_CURRENT_TIME = FALSE;
-                    elapsed_time = 0;
-                    SetTimer(hwnd, 1, 1000, NULL);
-                    InvalidateRect(hwnd, NULL, TRUE);
+                    // 将启动时正计时的选择写入配置文件
+                    WriteConfigStartupMode("COUNT_UP");
+                    MessageBoxW(hwnd, 
+                        GetLocalizedString(L"已设置为启动时正计时", L"Set to Stopwatch on Startup"),
+                        GetLocalizedString(L"设置", L"Settings"),
+                        MB_OK);
                     break;
                 }
             }
@@ -4236,4 +4255,56 @@ void WriteConfigDefaultStartTime(int seconds) {
     
     remove(config_path);
     rename(temp_path, config_path);
+}
+
+void WriteConfigStartupMode(const char* mode) {
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    
+    FILE *file = fopen(config_path, "r");
+    if (!file) return;
+    
+    char *config_content = NULL;
+    long file_size;
+    
+    fseek(file, 0, SEEK_END);
+    file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    
+    config_content = (char *)malloc(file_size + 256);
+    if (!config_content) {
+        fclose(file);
+        return;
+    }
+    
+    size_t bytes_read = fread(config_content, 1, file_size, file);
+    config_content[bytes_read] = '\0';
+    fclose(file);
+    
+    char *new_config = (char *)malloc(strlen(config_content) + 256);
+    if (!new_config) {
+        free(config_content);
+        return;
+    }
+    new_config[0] = '\0';
+    
+    char *line = strtok(config_content, "\n");
+    while (line) {
+        if (strncmp(line, "STARTUP_MODE=", 13) != 0) {
+            strcat(new_config, line);
+            strcat(new_config, "\n");
+        }
+        line = strtok(NULL, "\n");
+    }
+    
+    snprintf(new_config + strlen(new_config), 256, "STARTUP_MODE=%s\n", mode);
+    
+    file = fopen(config_path, "w");
+    if (file) {
+        fputs(new_config, file);
+        fclose(file);
+    }
+    
+    free(config_content);
+    free(new_config);
 }
