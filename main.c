@@ -96,6 +96,10 @@ BOOL RemoveShortcut(void);
 #define CLOCK_IDC_START_COUNT_UP     175  // Define a unique ID for starting count up
 #define CLOCK_IDC_AUTO_START         160  // 添加开机自启动菜单ID
 
+// 添加新的颜色相关的控件ID
+#define CLOCK_IDC_COLOR_VALUE        1301
+#define CLOCK_IDC_COLOR_PANEL        1302
+
 // 语言枚举
 typedef enum {
     APP_LANG_CHINESE_SIMP,    // 简体中文
@@ -1859,7 +1863,21 @@ void ShowColorMenu(HWND hwnd) {
         InsertMenuItem(hColorSubMenu, i, TRUE, &mii);
     }
     AppendMenuW(hColorSubMenu, MF_SEPARATOR, 0, NULL);
-    AppendMenuW(hColorSubMenu, MF_STRING, CLOCK_IDC_CUSTOMIZE_LEFT, 
+
+    // 创建自定义子菜单
+    HMENU hCustomizeMenu = CreatePopupMenu();
+    AppendMenuW(hCustomizeMenu, MF_STRING, CLOCK_IDC_COLOR_VALUE, 
+                GetLocalizedString(L"颜色值", L"Color Value"));
+    AppendMenuW(hCustomizeMenu, MF_STRING, CLOCK_IDC_COLOR_PANEL, 
+                GetLocalizedString(L"颜色面板", L"Color Panel"));
+
+    // 将自定义子菜单添加到颜色菜单
+    AppendMenuW(hColorSubMenu, MF_POPUP, (UINT_PTR)hCustomizeMenu, 
+                GetLocalizedString(L"自定义", L"Customize"));
+
+    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
+
+    AppendMenuW(hMenu, MF_STRING, CLOCK_IDC_CUSTOMIZE_LEFT, 
                 GetLocalizedString(L"自定义", L"Customize"));
 
     // 先添加字体菜单项，再添加颜色菜单项
@@ -3100,6 +3118,22 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             // 更新菜单项的选中状态
                             CheckMenuItem(GetMenu(hwnd), CLOCK_IDC_AUTO_START, MF_CHECKED);
                         }
+                    }
+                    break;
+                }
+                case CLOCK_IDC_COLOR_VALUE: {
+                    // 处理颜色值输入
+                    DialogBox(GetModuleHandle(NULL), 
+                             MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), 
+                             hwnd, 
+                             (DLGPROC)ColorDlgProc);
+                    break;
+                }
+                case CLOCK_IDC_COLOR_PANEL: {
+                    // 原来的颜色对话框处理代码
+                    COLORREF color = ShowColorDialog(hwnd);
+                    if (color != (COLORREF)-1) {
+                        InvalidateRect(hwnd, NULL, TRUE);
                     }
                     break;
                 }
