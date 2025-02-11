@@ -557,7 +557,7 @@ void InitializeDefaultLanguage(void) {
                 
                 // 跳过"COLOR_OPTIONS="前缀，并确保没有多余的等号
                 char* colors = line + 13;
-                while (*colors == '=' || *colors == ' ') {  // 跳过多余的等号和空格
+                while (*colors == '=' || *colors == ' ') {
                     colors++;
                 }
                 
@@ -3433,7 +3433,7 @@ int isValidColor(const char* input) {
         return 0;
     }
     
-    // 检查 RGB 格式 (带括号或不带括号)
+    // 检查 RGB 格式 (带括号、逗号分隔或空格分隔)
     if (strncmp(color, "rgb(", 4) == 0 && color[len-1] == ')') {
         int r, g, b;
         char* content = color + 4;
@@ -3448,9 +3448,10 @@ int isValidColor(const char* input) {
             }
         }
     } else {
-        // 直接尝试解析三个数字（不带rgb()前缀）
+        // 尝试解析三个数字（不带rgb()前缀，支持逗号或空格分隔）
         int r, g, b;
-        if (sscanf(color, "%d,%d,%d", &r, &g, &b) == 3) {
+        if (sscanf(color, "%d,%d,%d", &r, &g, &b) == 3 ||
+            sscanf(color, "%d %d %d", &r, &g, &b) == 3) {
             if (r >= 0 && r <= 255 &&
                 g >= 0 && g <= 255 &&
                 b >= 0 && b <= 255) {
@@ -3483,13 +3484,14 @@ void normalizeColor(const char* input, char* output, size_t output_size) {
         }
     }
     
-    // 处理 RGB 格式（带括号或不带括号）
+    // 处理 RGB 格式（带括号、逗号分隔或空格分隔）
     int r, g, b;
     if (strncmp(color, "rgb(", 4) == 0) {
         sscanf(color + 4, "%d,%d,%d", &r, &g, &b);
         snprintf(output, output_size, "#%02X%02X%02X", r, g, b);
         return;
-    } else if (sscanf(color, "%d,%d,%d", &r, &g, &b) == 3) {
+    } else if (sscanf(color, "%d,%d,%d", &r, &g, &b) == 3 ||
+               sscanf(color, "%d %d %d", &r, &g, &b) == 3) {
         snprintf(output, output_size, "#%02X%02X%02X", r, g, b);
         return;
     }
