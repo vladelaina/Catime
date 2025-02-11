@@ -3548,14 +3548,51 @@ void normalizeColor(const char* input, char* output, size_t output_size) {
 WNDPROC g_OldEditProc;
 
 LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-    if (msg == WM_KEYDOWN && wParam == VK_RETURN) {
-        // 获取父对话框句柄
-        HWND hwndDlg = GetParent(hwnd);
-        if (hwndDlg) {
-            SendMessage(hwndDlg, WM_COMMAND, CLOCK_IDC_BUTTON_OK, 0);
-            return 0;
-        }
+    switch (msg) {
+        case WM_KEYDOWN:
+            if (wParam == VK_RETURN) {
+                HWND hwndDlg = GetParent(hwnd);
+                if (hwndDlg) {
+                    SendMessage(hwndDlg, WM_COMMAND, CLOCK_IDC_BUTTON_OK, 0);
+                    return 0;
+                }
+            }
+            break;
+
+        case WM_CHAR:
+        case WM_PASTE:
+        case WM_CUT:
+            // 让默认处理先执行
+            LRESULT result = CallWindowProc(g_OldEditProc, hwnd, msg, wParam, lParam);
+            
+            // 然后处理颜色预览
+            char color[32];
+            GetWindowTextA(hwnd, color, sizeof(color));
+            
+            // 规范化颜色值
+            char normalized[32];
+            normalizeColor(color, normalized, sizeof(normalized));
+            
+            // 如果是有效的颜色值，更新预览
+            if (normalized[0] == '#') {
+                strncpy(PREVIEW_COLOR, normalized, sizeof(PREVIEW_COLOR)-1);
+                PREVIEW_COLOR[sizeof(PREVIEW_COLOR)-1] = '\0';
+                IS_COLOR_PREVIEWING = TRUE;
+                
+                // 获取主窗口并刷新
+                HWND hwndMain = GetParent(GetParent(hwnd));
+                InvalidateRect(hwndMain, NULL, TRUE);
+                UpdateWindow(hwndMain);
+            } else {
+                IS_COLOR_PREVIEWING = FALSE;
+                HWND hwndMain = GetParent(GetParent(hwnd));
+                InvalidateRect(hwndMain, NULL, TRUE);
+                UpdateWindow(hwndMain);
+            }
+            
+            return result;
     }
+    
     return CallWindowProc(g_OldEditProc, hwnd, msg, wParam, lParam);
 }
 
@@ -3579,6 +3616,11 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             if (hwndEdit) {
                 g_OldEditProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, 
                                                          (LONG_PTR)ColorEditSubclassProc);
+                
+                // 如果有当前颜色，显示在编辑框中
+                if (CLOCK_TEXT_COLOR[0] != '\0') {
+                    SetWindowTextA(hwndEdit, CLOCK_TEXT_COLOR);
+                }
             }
             return TRUE;
         }
