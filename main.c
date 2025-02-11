@@ -3422,7 +3422,7 @@ int isValidColor(const char* input) {
         }
     }
     
-    // 检查十六进制格式 (#RGB 或 #RRGGBB)
+    // 检查十六进制格式 (#RGB 或 #RRGGBB 或 RGB 或 RRGGBB)
     if (color[0] == '#') {
         if (len == 4 || len == 7) {  // #RGB 或 #RRGGBB
             for (size_t i = 1; i < len; i++) {
@@ -3431,6 +3431,11 @@ int isValidColor(const char* input) {
             return 1;
         }
         return 0;
+    } else if (len == 3 || len == 6) {  // RGB 或 RRGGBB
+        for (size_t i = 0; i < len; i++) {
+            if (!isxdigit(color[i])) return 0;
+        }
+        return 1;
     }
     
     // 检查 RGB 格式 (带括号、逗号分隔或空格分隔)
@@ -3505,6 +3510,27 @@ void normalizeColor(const char* input, char* output, size_t output_size) {
     
     // 其他情况直接复制
     strncpy(output, color, output_size);
+    
+    // 处理纯十六进制格式（不带#）
+    size_t len = strlen(color);
+    if (len == 3 || len == 6) {
+        BOOL isHex = TRUE;
+        for (size_t i = 0; i < len; i++) {
+            if (!isxdigit(color[i])) {
+                isHex = FALSE;
+                break;
+            }
+        }
+        if (isHex) {
+            if (len == 3) {  // RGB 格式
+                snprintf(output, output_size, "#%c%c%c%c%c%c",
+                    color[0], color[0], color[1], color[1], color[2], color[2]);
+            } else {  // RRGGBB 格式
+                snprintf(output, output_size, "#%s", color);
+            }
+            return;
+        }
+    }
 }
 
 // 添加编辑控件子类化处理函数
