@@ -3668,7 +3668,7 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                             L"- rgb(r,g,b)\n"
                             L"- Color name (e.g. red, blue)"),
                         GetLocalizedString(L"颜色格式错误", L"Color Format Error"),
-                        MB_ICONERROR | MB_OK);
+                        MB_OK);  // 移除了 MB_ICONERROR 标志
                 }
             }
             break;
