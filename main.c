@@ -1547,7 +1547,14 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 
         case WM_KEYDOWN:
             if (wParam == VK_RETURN) {
-                SendMessage(hwndDlg, WM_COMMAND, CLOCK_IDC_BUTTON_OK, 0);
+                // 获取当前对话框的ID
+                int dlgId = GetDlgCtrlID((HWND)lParam);
+                // 根据对话框ID执行相应的确认操作
+                if (dlgId == CLOCK_IDD_COLOR_DIALOG) {
+                    SendMessage(hwndDlg, WM_COMMAND, CLOCK_IDC_BUTTON_OK, 0);
+                } else {
+                    SendMessage(hwndDlg, WM_COMMAND, CLOCK_IDC_BUTTON_OK, 0);
+                }
                 return TRUE;
             }
             break;
@@ -3485,7 +3492,22 @@ void normalizeColor(const char* input, char* output, size_t output_size) {
     strncpy(output, color, output_size);
 }
 
-// 修改颜色对话框处理函数
+// 添加编辑控件子类化处理函数
+WNDPROC g_OldEditProc;
+
+LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    if (msg == WM_KEYDOWN && wParam == VK_RETURN) {
+        // 获取父对话框句柄
+        HWND hwndDlg = GetParent(hwnd);
+        if (hwndDlg) {
+            SendMessage(hwndDlg, WM_COMMAND, CLOCK_IDC_BUTTON_OK, 0);
+            return 0;
+        }
+    }
+    return CallWindowProc(g_OldEditProc, hwnd, msg, wParam, lParam);
+}
+
+// 修改 ColorDlgProc 函数
 INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_INITDIALOG: {
@@ -3499,10 +3521,17 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 L"- Hex: #RGB or #RRGGBB\n"
                 L"- RGB: rgb(r,g,b)\n"
                 L"- CSS color names: red, blue, etc."));
+
+            // 子类化编辑控件
+            HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
+            if (hwndEdit) {
+                g_OldEditProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, 
+                                                         (LONG_PTR)ColorEditSubclassProc);
+            }
             return TRUE;
         }
         
-        case WM_COMMAND:
+        case WM_COMMAND: {
             if (LOWORD(wParam) == CLOCK_IDC_BUTTON_OK) {
                 char color[32];
                 GetDlgItemTextA(hwndDlg, CLOCK_IDC_EDIT, color, sizeof(color));
@@ -3515,6 +3544,7 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                     
                     WriteConfigColor(CLOCK_TEXT_COLOR);
                     EndDialog(hwndDlg, IDOK);
+                    return TRUE;
                 } else {
                     MessageBoxW(hwndDlg, 
                         GetLocalizedString(
@@ -3533,9 +3563,9 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                         GetLocalizedString(L"颜色格式错误", L"Color Format Error"),
                         MB_ICONERROR | MB_OK);
                 }
-                return TRUE;
             }
             break;
+        }
     }
     return FALSE;
 }
