@@ -3144,7 +3144,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                                     L"25 30m = 25 hours 30 minutes\n"
                                     L"1 30 20 = 1 hour 30 minutes 20 seconds"),
                                 GetLocalizedString(L"输入格式", L"Input Format"),
-                                MB_OK | MB_ICONINFORMATION);
+                                MB_OK);
                         }
                     }
                     break;
