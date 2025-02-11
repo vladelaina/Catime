@@ -459,7 +459,51 @@ char* UTF8ToANSI(const char* utf8Str) {
     return str;
 }
 
-// 修改默认颜色选项的顺序和颜色值
+// 在文件最开头的宏定义区域添加（在其他 #include 语句之后，但在其他代码之前）
+#define CLOCK_IDC_STATIC 1001  // 添加静态文本控件的ID
+
+// 在全局变量和结构体定义区域添加（在其他全局变量之前）
+typedef struct {
+    const char* name;
+    const char* hex;
+} CSSColor;
+
+static const CSSColor CSS_COLORS[] = {
+    {"white", "#FFFFFF"},
+    {"black", "#000000"},
+    {"red", "#FF0000"},
+    {"lime", "#00FF00"},
+    {"blue", "#0000FF"},
+    {"yellow", "#FFFF00"},
+    {"cyan", "#00FFFF"},
+    {"magenta", "#FF00FF"},
+    {"silver", "#C0C0C0"},
+    {"gray", "#808080"},
+    {"maroon", "#800000"},
+    {"olive", "#808000"},
+    {"green", "#008000"},
+    {"purple", "#800080"},
+    {"teal", "#008080"},
+    {"navy", "#000080"},
+    {"orange", "#FFA500"},
+    {"pink", "#FFC0CB"},
+    {"brown", "#A52A2A"},
+    {"violet", "#EE82EE"},
+    {"indigo", "#4B0082"},
+    {"gold", "#FFD700"},
+    {"coral", "#FF7F50"},
+    {"salmon", "#FA8072"},
+    {"khaki", "#F0E68C"},
+    {"plum", "#DDA0DD"},
+    {"azure", "#F0FFFF"},
+    {"ivory", "#FFFFF0"},
+    {"wheat", "#F5DEB3"},
+    {"snow", "#FFFAFA"}
+};
+
+#define CSS_COLORS_COUNT (sizeof(CSS_COLORS) / sizeof(CSS_COLORS[0]))
+
+// 默认颜色选项
 static const char* DEFAULT_COLOR_OPTIONS[] = {
     "#FFFFFF",   // 白色
     "#F9DB91",   // 浅黄色
@@ -478,6 +522,10 @@ static const char* DEFAULT_COLOR_OPTIONS[] = {
     "#FF7F50",   // 珊瑚色
     "#CA6174"    // 暗玫瑰色
 };
+
+#define DEFAULT_COLOR_OPTIONS_COUNT (sizeof(DEFAULT_COLOR_OPTIONS) / sizeof(DEFAULT_COLOR_OPTIONS[0]))
+
+// 删除文件末尾的重复定义
 
 #define DEFAULT_COLOR_OPTIONS_COUNT (sizeof(DEFAULT_COLOR_OPTIONS) / sizeof(DEFAULT_COLOR_OPTIONS[0]))
 
@@ -3342,26 +3390,149 @@ int CALLBACK EnumFontFamExProc(
 }
 
 int isValidColor(const char* input) {
-    if (input == NULL) return 0;
-    return 1;  // 简单返回有效，不再进行复杂验证
+    if (!input || strlen(input) == 0) return 0;
+    
+    // 去除前后空格
+    while (isspace(*input)) input++;
+    char* end = (char*)input + strlen(input) - 1;
+    while (end > input && isspace(*end)) end--;
+    size_t len = end - input + 1;
+    
+    // 复制输入以便处理
+    char color[32];
+    strncpy(color, input, sizeof(color)-1);
+    color[sizeof(color)-1] = '\0';
+    
+    // 转换为小写以便比较
+    for (char* p = color; *p; p++) {
+        *p = tolower(*p);
+    }
+    
+    // 检查 CSS 颜色名称
+    for (size_t i = 0; i < CSS_COLORS_COUNT; i++) {
+        if (strcmp(color, CSS_COLORS[i].name) == 0) {
+            return 1;
+        }
+    }
+    
+    // 检查十六进制格式 (#RGB 或 #RRGGBB)
+    if (color[0] == '#') {
+        if (len == 4 || len == 7) {  // #RGB 或 #RRGGBB
+            for (size_t i = 1; i < len; i++) {
+                if (!isxdigit(color[i])) return 0;
+            }
+            return 1;
+        }
+        return 0;
+    }
+    
+    // 检查 RGB 格式
+    if (strncmp(color, "rgb(", 4) == 0 && color[len-1] == ')') {
+        int r, g, b;
+        char* content = color + 4;
+        content[len-5] = '\0';  // 移除结尾的 ')'
+        
+        // 尝试解析三个数字
+        if (sscanf(content, "%d,%d,%d", &r, &g, &b) == 3) {
+            if (r >= 0 && r <= 255 &&
+                g >= 0 && g <= 255 &&
+                b >= 0 && b <= 255) {
+                return 1;
+            }
+        }
+    }
+    
+    return 0;
 }
 
+// 添加一个函数来转换颜色格式为标准的十六进制格式
+void normalizeColor(const char* input, char* output, size_t output_size) {
+    // 去除前后空格
+    while (isspace(*input)) input++;
+    
+    // 复制并转换为小写
+    char color[32];
+    strncpy(color, input, sizeof(color)-1);
+    color[sizeof(color)-1] = '\0';
+    for (char* p = color; *p; p++) {
+        *p = tolower(*p);
+    }
+    
+    // 检查 CSS 颜色名称
+    for (size_t i = 0; i < CSS_COLORS_COUNT; i++) {
+        if (strcmp(color, CSS_COLORS[i].name) == 0) {
+            strncpy(output, CSS_COLORS[i].hex, output_size);
+            return;
+        }
+    }
+    
+    // 处理 RGB 格式
+    if (strncmp(color, "rgb(", 4) == 0) {
+        int r, g, b;
+        sscanf(color + 4, "%d,%d,%d", &r, &g, &b);
+        snprintf(output, output_size, "#%02X%02X%02X", r, g, b);
+        return;
+    }
+    
+    // 处理 #RGB 简写格式
+    if (strlen(color) == 4 && color[0] == '#') {
+        snprintf(output, output_size, "#%c%c%c%c%c%c",
+                color[1], color[1], color[2], color[2], color[3], color[3]);
+        return;
+    }
+    
+    // 其他情况直接复制
+    strncpy(output, color, output_size);
+}
+
+// 修改颜色对话框处理函数
 INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
-        case WM_INITDIALOG:
+        case WM_INITDIALOG: {
+            // 设置提示文本
+            SetDlgItemTextW(hwndDlg, CLOCK_IDC_STATIC, GetLocalizedString(
+                L"支持的格式:\n"
+                L"- 十六进制: #RGB 或 #RRGGBB\n"
+                L"- RGB: rgb(r,g,b)\n"
+                L"- CSS颜色名称: red, blue 等",
+                L"Supported formats:\n"
+                L"- Hex: #RGB or #RRGGBB\n"
+                L"- RGB: rgb(r,g,b)\n"
+                L"- CSS color names: red, blue, etc."));
             return TRUE;
-
+        }
+        
         case WM_COMMAND:
-            if (LOWORD(wParam) == CLOCK_IDC_BUTTON_OK || HIWORD(wParam) == BN_CLICKED) {
-                GetDlgItemText(hwndDlg, CLOCK_IDC_EDIT, inputText, sizeof(inputText));
-                EndDialog(hwndDlg, 0);
-                return TRUE;
-            }
-            break;
-
-        case WM_KEYDOWN:
-            if (wParam == VK_RETURN) {
-                SendMessage(hwndDlg, WM_COMMAND, CLOCK_IDC_BUTTON_OK, 0);
+            if (LOWORD(wParam) == CLOCK_IDC_BUTTON_OK) {
+                char color[32];
+                GetDlgItemTextA(hwndDlg, CLOCK_IDC_EDIT, color, sizeof(color));
+                
+                if (isValidColor(color)) {
+                    char normalized_color[10];
+                    normalizeColor(color, normalized_color, sizeof(normalized_color));
+                    strncpy(CLOCK_TEXT_COLOR, normalized_color, sizeof(CLOCK_TEXT_COLOR)-1);
+                    CLOCK_TEXT_COLOR[sizeof(CLOCK_TEXT_COLOR)-1] = '\0';
+                    
+                    WriteConfigColor(CLOCK_TEXT_COLOR);
+                    EndDialog(hwndDlg, IDOK);
+                } else {
+                    MessageBoxW(hwndDlg, 
+                        GetLocalizedString(
+                            L"无效的颜色格式。\n"
+                            L"请使用以下格式之一：\n"
+                            L"- #RGB\n"
+                            L"- #RRGGBB\n"
+                            L"- rgb(r,g,b)\n"
+                            L"- 颜色名称 (如 red, blue)",
+                            L"Invalid color format.\n"
+                            L"Please use one of these formats:\n"
+                            L"- #RGB\n"
+                            L"- #RRGGBB\n"
+                            L"- rgb(r,g,b)\n"
+                            L"- Color name (e.g. red, blue)"),
+                        GetLocalizedString(L"颜色格式错误", L"Color Format Error"),
+                        MB_ICONERROR | MB_OK);
+                }
                 return TRUE;
             }
             break;
@@ -4250,14 +4421,14 @@ COLORREF ShowColorDialog(HWND hwnd) {
 }
 
 // 添加颜色对话框钩子函数
-UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM lParam) {
+UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     static HWND hwndParent;
     static CHOOSECOLOR* pcc;
     static BOOL isColorLocked = FALSE;
     static DWORD rgbCurrent;
     static COLORREF lastCustomColors[16] = {0};
 
-    switch (uiMsg) {
+    switch (msg) {
         case WM_INITDIALOG:
             pcc = (CHOOSECOLOR*)lParam;
             hwndParent = pcc->hwndOwner;
@@ -4594,3 +4765,4 @@ BOOL RemoveShortcut(void) {
     }
     return FALSE;
 }
+
