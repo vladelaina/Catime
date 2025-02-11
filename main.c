@@ -3422,53 +3422,53 @@ int isValidColor(const char* input) {
         }
     }
     
-    // 检查十六进制格式 (#RGB 或 #RRGGBB 或 RGB 或 RRGGBB)
+    // 检查十六进制格式
     if (color[0] == '#') {
-        if (len == 4 || len == 7) {  // #RGB 或 #RRGGBB
-            for (size_t i = 1; i < len; i++) {
-                if (!isxdigit(color[i])) return 0;
+        // 检查长度是否为4（#RGB）或7（#RRGGBB）
+        if (strlen(color) == 7 || strlen(color) == 4) {
+            // 验证所有字符是否为有效的十六进制数字
+            for (size_t i = 1; i < strlen(color); i++) {
+                if (!isxdigit((unsigned char)color[i])) {
+                    goto try_rgb;
+                }
             }
             return 1;
         }
-        return 0;
-    } else if (len == 3 || len == 6) {  // RGB 或 RRGGBB
-        for (size_t i = 0; i < len; i++) {
-            if (!isxdigit(color[i])) return 0;
+    } else if (strlen(color) == 6 || strlen(color) == 3) {
+        // 检查不带#的十六进制格式
+        for (size_t i = 0; i < strlen(color); i++) {
+            if (!isxdigit((unsigned char)color[i])) {
+                goto try_rgb;
+            }
         }
         return 1;
     }
     
-    // 检查 RGB 格式 (带括号、逗号分隔或空格分隔)
-    if (strncmp(color, "rgb(", 4) == 0 && color[len-1] == ')') {
-        int r, g, b;
-        char* content = color + 4;
-        content[len-5] = '\0';  // 移除结尾的 ')'
+try_rgb:
+    // 尝试解析RGB格式
+    int r = -1, g = -1, b = -1;
+    char* rgb_str = color;
+    
+    // 跳过可能的 "rgb" 前缀
+    if (strncmp(rgb_str, "rgb", 3) == 0) {
+        rgb_str += 3;
+        while (*rgb_str && (*rgb_str == '(' || isspace(*rgb_str))) rgb_str++;
+    }
+    
+    // 尝试多种分隔符格式（包括中文分隔符）
+    if (sscanf(rgb_str, "%d,%d,%d", &r, &g, &b) == 3 ||
+        sscanf(rgb_str, "%d，%d，%d", &r, &g, &b) == 3 ||  // 中文逗号
+        sscanf(rgb_str, "%d;%d;%d", &r, &g, &b) == 3 ||
+        sscanf(rgb_str, "%d；%d；%d", &r, &g, &b) == 3 ||  // 中文分号
+        sscanf(rgb_str, "%d %d %d", &r, &g, &b) == 3 ||
+        sscanf(rgb_str, "%d|%d|%d", &r, &g, &b) == 3) {
         
-        // 尝试解析三个数字
-        if (sscanf(content, "%d,%d,%d", &r, &g, &b) == 3) {
-            if (r >= 0 && r <= 255 &&
-                g >= 0 && g <= 255 &&
-                b >= 0 && b <= 255) {
-                return 1;
-            }
-        }
-    } else {
-        // 尝试解析三个数字（不带rgb()前缀，支持逗号或空格分隔）
-        int r, g, b;
-        if (sscanf(color, "%d,%d,%d", &r, &g, &b) == 3 ||
-            sscanf(color, "%d %d %d", &r, &g, &b) == 3) {
-            if (r >= 0 && r <= 255 &&
-                g >= 0 && g <= 255 &&
-                b >= 0 && b <= 255) {
-                return 1;
-            }
-        }
+        return (r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255);
     }
     
     return 0;
 }
 
-// 同时也需要修改 normalizeColor 函数来处理这种格式
 void normalizeColor(const char* input, char* output, size_t output_size) {
     // 去除前后空格
     while (isspace(*input)) input++;
@@ -3489,48 +3489,59 @@ void normalizeColor(const char* input, char* output, size_t output_size) {
         }
     }
     
-    // 处理 RGB 格式（带括号、逗号分隔或空格分隔）
-    int r, g, b;
-    if (strncmp(color, "rgb(", 4) == 0) {
-        sscanf(color + 4, "%d,%d,%d", &r, &g, &b);
-        snprintf(output, output_size, "#%02X%02X%02X", r, g, b);
-        return;
-    } else if (sscanf(color, "%d,%d,%d", &r, &g, &b) == 3 ||
-               sscanf(color, "%d %d %d", &r, &g, &b) == 3) {
-        snprintf(output, output_size, "#%02X%02X%02X", r, g, b);
-        return;
-    }
-    
-    // 处理 #RGB 简写格式
-    if (strlen(color) == 4 && color[0] == '#') {
-        snprintf(output, output_size, "#%c%c%c%c%c%c",
-                color[1], color[1], color[2], color[2], color[3], color[3]);
-        return;
-    }
-    
-    // 其他情况直接复制
-    strncpy(output, color, output_size);
-    
-    // 处理纯十六进制格式（不带#）
-    size_t len = strlen(color);
-    if (len == 3 || len == 6) {
-        BOOL isHex = TRUE;
-        for (size_t i = 0; i < len; i++) {
-            if (!isxdigit(color[i])) {
-                isHex = FALSE;
-                break;
-            }
+    // 清理输入字符串
+    char cleaned[32] = {0};
+    int j = 0;
+    for (int i = 0; color[i]; i++) {
+        if (!isspace(color[i]) && color[i] != ',' && color[i] != '(' && color[i] != ')') {
+            cleaned[j++] = color[i];
         }
-        if (isHex) {
-            if (len == 3) {  // RGB 格式
-                snprintf(output, output_size, "#%c%c%c%c%c%c",
-                    color[0], color[0], color[1], color[1], color[2], color[2]);
-            } else {  // RRGGBB 格式
-                snprintf(output, output_size, "#%s", color);
-            }
+    }
+    cleaned[j] = '\0';
+    
+    // 处理十六进制格式
+    if (cleaned[0] == '#') {
+        memmove(cleaned, cleaned + 1, strlen(cleaned));
+    }
+    
+    if (strlen(cleaned) == 3) {
+        // 扩展3位十六进制
+        snprintf(output, output_size, "#%c%c%c%c%c%c",
+            cleaned[0], cleaned[0], cleaned[1], cleaned[1], cleaned[2], cleaned[2]);
+        return;
+    }
+    
+    if (strlen(cleaned) == 6 && strspn(cleaned, "0123456789abcdefABCDEF") == 6) {
+        snprintf(output, output_size, "#%s", cleaned);
+        return;
+    }
+    
+    // 尝试解析RGB格式
+    int r = -1, g = -1, b = -1;
+    char* rgb_str = color;
+    
+    // 跳过可能的 "rgb" 前缀
+    if (strncmp(rgb_str, "rgb", 3) == 0) {
+        rgb_str += 3;
+        while (*rgb_str && (*rgb_str == '(' || isspace(*rgb_str))) rgb_str++;
+    }
+    
+    // 尝试多种分隔符格式（包括中文分隔符）
+    if (sscanf(rgb_str, "%d,%d,%d", &r, &g, &b) == 3 ||
+        sscanf(rgb_str, "%d，%d，%d", &r, &g, &b) == 3 ||  // 中文逗号
+        sscanf(rgb_str, "%d;%d;%d", &r, &g, &b) == 3 ||
+        sscanf(rgb_str, "%d；%d；%d", &r, &g, &b) == 3 ||  // 中文分号
+        sscanf(rgb_str, "%d %d %d", &r, &g, &b) == 3 ||
+        sscanf(rgb_str, "%d|%d|%d", &r, &g, &b) == 3) {
+        
+        if (r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255) {
+            snprintf(output, output_size, "#%02X%02X%02X", r, g, b);
             return;
         }
     }
+    
+    // 如果所有尝试都失败，返回原始输入
+    strncpy(output, input, output_size);
 }
 
 // 添加编辑控件子类化处理函数
