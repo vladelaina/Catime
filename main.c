@@ -3550,6 +3550,10 @@ WNDPROC g_OldEditProc;
 LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_KEYDOWN:
+            if (wParam == 'A' && GetKeyState(VK_CONTROL) < 0) {
+                SendMessage(hwnd, EM_SETSEL, 0, -1);
+                return 0;
+            }
             if (wParam == VK_RETURN) {
                 HWND hwndDlg = GetParent(hwnd);
                 if (hwndDlg) {
@@ -3560,12 +3564,14 @@ LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
             break;
 
         case WM_CHAR:
-        case WM_PASTE:
-        case WM_CUT:
-            // 让默认处理先执行
+            // 阻止 Ctrl+A 产生的字符消息
+            if (GetKeyState(VK_CONTROL) < 0 && (wParam == 1 || wParam == 'a' || wParam == 'A')) {
+                return 0;
+            }
+            // 让其他字符消息继续处理
             LRESULT result = CallWindowProc(g_OldEditProc, hwnd, msg, wParam, lParam);
             
-            // 然后处理颜色预览
+            // 处理颜色预览
             char color[32];
             GetWindowTextA(hwnd, color, sizeof(color));
             
@@ -3591,6 +3597,36 @@ LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
             }
             
             return result;
+
+        case WM_PASTE:
+        case WM_CUT: {  // 添加花括号创建新的作用域
+            // 让默认处理先执行
+            LRESULT result = CallWindowProc(g_OldEditProc, hwnd, msg, wParam, lParam);
+            
+            // 然后处理颜色预览
+            char color[32];
+            GetWindowTextA(hwnd, color, sizeof(color));
+            
+            // 规范化颜色值
+            char normalized[32];
+            normalizeColor(color, normalized, sizeof(normalized));
+            
+            // 如果是有效的颜色值，更新预览
+            if (normalized[0] == '#') {
+                strncpy(PREVIEW_COLOR, normalized, sizeof(PREVIEW_COLOR)-1);
+                PREVIEW_COLOR[sizeof(PREVIEW_COLOR)-1] = '\0';
+                IS_COLOR_PREVIEWING = TRUE;
+            } else {
+                IS_COLOR_PREVIEWING = FALSE;
+            }
+            
+            // 获取主窗口并刷新
+            HWND hwndMain = GetParent(GetParent(hwnd));
+            InvalidateRect(hwndMain, NULL, TRUE);
+            UpdateWindow(hwndMain);
+            
+            return result;
+        }
     }
     
     return CallWindowProc(g_OldEditProc, hwnd, msg, wParam, lParam);
