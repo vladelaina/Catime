@@ -3602,14 +3602,8 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
         case WM_INITDIALOG: {
             // 设置提示文本
             SetDlgItemTextW(hwndDlg, CLOCK_IDC_STATIC, GetLocalizedString(
-                L"支持的格式:\n"
-                L"- 十六进制: #RGB 或 #RRGGBB\n"
-                L"- RGB: rgb(r,g,b)\n"
-                L"- CSS颜色名称: red, blue 等",
-                L"Supported formats:\n"
-                L"- Hex: #RGB or #RRGGBB\n"
-                L"- RGB: rgb(r,g,b)\n"
-                L"- CSS color names: red, blue, etc."));
+                L"支持：HEX RGB 颜色名字",
+                L"Supported: HEX RGB Color Names"));
 
             // 子类化编辑控件
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
@@ -3655,20 +3649,10 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 } else {
                     MessageBoxW(hwndDlg, 
                         GetLocalizedString(
-                            L"无效的颜色格式。\n"
-                            L"请使用以下格式之一：\n"
-                            L"- #RGB\n"
-                            L"- #RRGGBB\n"
-                            L"- rgb(r,g,b)\n"
-                            L"- 颜色名称 (如 red, blue)",
-                            L"Invalid color format.\n"
-                            L"Please use one of these formats:\n"
-                            L"- #RGB\n"
-                            L"- #RRGGBB\n"
-                            L"- rgb(r,g,b)\n"
-                            L"- Color name (e.g. red, blue)"),
+                            L"支持：HEX RGB 颜色名字",
+                            L"Supported: HEX RGB Color Names"),
                         GetLocalizedString(L"颜色格式错误", L"Color Format Error"),
-                        MB_OK);  // 移除了 MB_ICONERROR 标志
+                        MB_OK);
                 }
             }
             break;
