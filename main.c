@@ -3536,6 +3536,19 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 char color[32];
                 GetDlgItemTextA(hwndDlg, CLOCK_IDC_EDIT, color, sizeof(color));
                 
+                // 如果输入为空或全是空格，直接关闭对话框
+                BOOL isAllSpaces = TRUE;
+                for (int i = 0; color[i]; i++) {
+                    if (!isspace((unsigned char)color[i])) {
+                        isAllSpaces = FALSE;
+                        break;
+                    }
+                }
+                if (color[0] == '\0' || isAllSpaces) {
+                    EndDialog(hwndDlg, IDCANCEL);
+                    return TRUE;
+                }
+                
                 if (isValidColor(color)) {
                     char normalized_color[10];
                     normalizeColor(color, normalized_color, sizeof(normalized_color));
