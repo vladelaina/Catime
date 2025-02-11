@@ -3433,7 +3433,7 @@ int isValidColor(const char* input) {
         return 0;
     }
     
-    // 检查 RGB 格式
+    // 检查 RGB 格式 (带括号或不带括号)
     if (strncmp(color, "rgb(", 4) == 0 && color[len-1] == ')') {
         int r, g, b;
         char* content = color + 4;
@@ -3447,12 +3447,22 @@ int isValidColor(const char* input) {
                 return 1;
             }
         }
+    } else {
+        // 直接尝试解析三个数字（不带rgb()前缀）
+        int r, g, b;
+        if (sscanf(color, "%d,%d,%d", &r, &g, &b) == 3) {
+            if (r >= 0 && r <= 255 &&
+                g >= 0 && g <= 255 &&
+                b >= 0 && b <= 255) {
+                return 1;
+            }
+        }
     }
     
     return 0;
 }
 
-// 添加一个函数来转换颜色格式为标准的十六进制格式
+// 同时也需要修改 normalizeColor 函数来处理这种格式
 void normalizeColor(const char* input, char* output, size_t output_size) {
     // 去除前后空格
     while (isspace(*input)) input++;
@@ -3473,10 +3483,13 @@ void normalizeColor(const char* input, char* output, size_t output_size) {
         }
     }
     
-    // 处理 RGB 格式
+    // 处理 RGB 格式（带括号或不带括号）
+    int r, g, b;
     if (strncmp(color, "rgb(", 4) == 0) {
-        int r, g, b;
         sscanf(color + 4, "%d,%d,%d", &r, &g, &b);
+        snprintf(output, output_size, "#%02X%02X%02X", r, g, b);
+        return;
+    } else if (sscanf(color, "%d,%d,%d", &r, &g, &b) == 3) {
         snprintf(output, output_size, "#%02X%02X%02X", r, g, b);
         return;
     }
