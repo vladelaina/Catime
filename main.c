@@ -1875,10 +1875,8 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hColorSubMenu, MF_POPUP, (UINT_PTR)hCustomizeMenu, 
                 GetLocalizedString(L"自定义", L"Customize"));
 
-    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
-
-    AppendMenuW(hMenu, MF_STRING, CLOCK_IDC_CUSTOMIZE_LEFT, 
-                GetLocalizedString(L"自定义", L"Customize"));
+    // 删除这个分隔线
+    // AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
     // 先添加字体菜单项，再添加颜色菜单项
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hFontSubMenu, 
