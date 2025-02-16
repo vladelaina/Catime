@@ -95,7 +95,7 @@ BOOL RemoveShortcut(void);
 #define CLOCK_IDC_START_NO_DISPLAY   174  // Define a unique ID for starting with no display
 #define CLOCK_IDC_START_COUNT_UP     175  // Define a unique ID for starting count up
 #define CLOCK_IDC_AUTO_START         160  // 添加开机自启动菜单ID
-#define CLOCK_IDC_START_SHOW_TIME    176  // Define a unique ID for showing current time on startup
+#define CLOCK_IDC_START_SHOW_TIME    176  // 修改为新的未使用的ID值
 
 // 添加新的颜色相关的控件ID
 #define CLOCK_IDC_COLOR_VALUE        1301
@@ -1875,8 +1875,13 @@ void ShowColorMenu(HWND hwnd) {
                 CLOCK_IDM_SHOW_SECONDS,
                 GetLocalizedString(L"显示秒数", L"Show Seconds"));
     
-    AppendMenuW(hStartupSettingsMenu, MF_POPUP | 
-                (strcmp(currentStartupMode, "SHOW_TIME") == 0 ? MF_CHECKED : 0),
+    AppendMenuW(hShowCurrentTimeSubMenu, MF_SEPARATOR, 0, NULL);
+
+    AppendMenuW(hShowCurrentTimeSubMenu, MF_STRING | (strcmp(currentStartupMode, "SHOW_TIME") == 0 ? MF_CHECKED : 0),
+                CLOCK_IDC_START_SHOW_TIME,
+                GetLocalizedString(L"启动时显示", L"Show on Startup"));
+
+    AppendMenuW(hStartupSettingsMenu, MF_POPUP,
                 (UINT_PTR)hShowCurrentTimeSubMenu,
                 GetLocalizedString(L"显示当前时间", L"Show Current Time"));
 
@@ -3168,8 +3173,16 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDC_START_SHOW_TIME: {
-                    // 将启动时显示当前时间的选择写入配置文件
                     WriteConfigStartupMode("SHOW_TIME");
+                    // 更新菜单项的选中状态
+                    HMENU hMenu = GetMenu(hwnd);
+                    HMENU hTimeOptionsMenu = GetSubMenu(hMenu, GetMenuItemCount(hMenu) - 2); // 获取倒数第二个菜单项
+                    HMENU hStartupSettingsMenu = GetSubMenu(hTimeOptionsMenu, 0); // 获取第一个子菜单
+                    
+                    CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_SET_COUNTDOWN_TIME, MF_UNCHECKED);
+                    CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_START_COUNT_UP, MF_UNCHECKED);
+                    CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_START_NO_DISPLAY, MF_UNCHECKED);
+                    CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_START_SHOW_TIME, MF_CHECKED);
                     break;
                 }
                 case CLOCK_IDC_START_COUNT_UP: {
