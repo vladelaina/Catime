@@ -3164,6 +3164,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     WriteConfigStartupMode("SHOW_TIME");
                     break;
                 }
+                case CLOCK_IDC_START_COUNT_UP: {
+                    // 将启动时正计时的选择写入配置文件
+                    WriteConfigStartupMode("COUNT_UP");
+                    break;
+                }
                 case CLOCK_IDC_START_NO_DISPLAY: {
                     // 将启动时不显示的选择写入配置文件
                     WriteConfigStartupMode("NO_DISPLAY");
