@@ -1871,6 +1871,14 @@ void ShowColorMenu(HWND hwnd) {
                 (strcmp(currentStartupMode, "SHOW_TIME") == 0 ? MF_CHECKED : 0),
                 CLOCK_IDC_START_SHOW_TIME,
                 GetLocalizedString(L"显示当前时间", L"Show Current Time"));
+
+    // Remove the submenu logic and directly add options to the main menu
+    AppendMenuW(hStartupSettingsMenu, MF_STRING | (CLOCK_USE_24HOUR ? MF_CHECKED : MF_UNCHECKED),
+                    CLOCK_IDM_24HOUR_FORMAT,
+                    GetLocalizedString(L"24小时制", L"24-Hour Format"));
+    AppendMenuW(hStartupSettingsMenu, MF_STRING | (CLOCK_SHOW_SECONDS ? MF_CHECKED : MF_UNCHECKED),
+                    CLOCK_IDM_SHOW_SECONDS,
+                    GetLocalizedString(L"显示秒数", L"Show Seconds"));
     
     // 新增子选项：不显示
     AppendMenuW(hStartupSettingsMenu, MF_STRING | 
