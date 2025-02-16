@@ -1837,7 +1837,8 @@ void ShowColorMenu(HWND hwnd) {
     
     // 创建"启动设置"的子菜单
     HMENU hStartupSettingsMenu = CreatePopupMenu();
-    
+    HMENU hShowCurrentTimeSubMenu = CreatePopupMenu();  // 新增子菜单
+
     // 读取当前启动模式
     char currentStartupMode[20] = "COUNTDOWN";  // Set default to COUNTDOWN
     char configPath[MAX_PATH];  
@@ -1867,19 +1868,18 @@ void ShowColorMenu(HWND hwnd) {
                 GetLocalizedString(L"正计时", L"Stopwatch"));
     
     // 新增子选项：显示当前时间
-    AppendMenuW(hStartupSettingsMenu, MF_STRING | 
+    AppendMenuW(hShowCurrentTimeSubMenu, MF_STRING | (CLOCK_USE_24HOUR ? MF_CHECKED : MF_UNCHECKED),
+                CLOCK_IDM_24HOUR_FORMAT,
+                GetLocalizedString(L"24小时制", L"24-Hour Format"));
+    AppendMenuW(hShowCurrentTimeSubMenu, MF_STRING | (CLOCK_SHOW_SECONDS ? MF_CHECKED : MF_UNCHECKED),
+                CLOCK_IDM_SHOW_SECONDS,
+                GetLocalizedString(L"显示秒数", L"Show Seconds"));
+    
+    AppendMenuW(hStartupSettingsMenu, MF_POPUP | 
                 (strcmp(currentStartupMode, "SHOW_TIME") == 0 ? MF_CHECKED : 0),
-                CLOCK_IDC_START_SHOW_TIME,
+                (UINT_PTR)hShowCurrentTimeSubMenu,
                 GetLocalizedString(L"显示当前时间", L"Show Current Time"));
 
-    // Remove the submenu logic and directly add options to the main menu
-    AppendMenuW(hStartupSettingsMenu, MF_STRING | (CLOCK_USE_24HOUR ? MF_CHECKED : MF_UNCHECKED),
-                    CLOCK_IDM_24HOUR_FORMAT,
-                    GetLocalizedString(L"24小时制", L"24-Hour Format"));
-    AppendMenuW(hStartupSettingsMenu, MF_STRING | (CLOCK_SHOW_SECONDS ? MF_CHECKED : MF_UNCHECKED),
-                    CLOCK_IDM_SHOW_SECONDS,
-                    GetLocalizedString(L"显示秒数", L"Show Seconds"));
-    
     // 新增子选项：不显示
     AppendMenuW(hStartupSettingsMenu, MF_STRING | 
                 (strcmp(currentStartupMode, "NO_DISPLAY") == 0 ? MF_CHECKED : 0),
