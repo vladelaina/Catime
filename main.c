@@ -95,6 +95,7 @@ BOOL RemoveShortcut(void);
 #define CLOCK_IDC_START_NO_DISPLAY   174  // Define a unique ID for starting with no display
 #define CLOCK_IDC_START_COUNT_UP     175  // Define a unique ID for starting count up
 #define CLOCK_IDC_AUTO_START         160  // 添加开机自启动菜单ID
+#define CLOCK_IDC_START_SHOW_TIME    176  // Define a unique ID for showing current time on startup
 
 // 添加新的颜色相关的控件ID
 #define CLOCK_IDC_COLOR_VALUE        1301
@@ -766,6 +767,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         ShowWindow(hwnd, SW_HIDE);  // 隐藏窗口
         // 删除 return 0 语句，让程序继续运行
         // 只是不显示窗口，但保持系统托盘图标
+    } else if (strcmp(CLOCK_STARTUP_MODE, "SHOW_TIME") == 0) {
+        CLOCK_SHOW_CURRENT_TIME = TRUE;
+        CLOCK_LAST_TIME_UPDATE = 0;
     } 
     // COUNTDOWN 模式使用默认的倒计时行为
 
@@ -1861,6 +1865,12 @@ void ShowColorMenu(HWND hwnd) {
                 (strcmp(currentStartupMode, "COUNT_UP") == 0 ? MF_CHECKED : 0),
                 CLOCK_IDC_START_COUNT_UP,
                 GetLocalizedString(L"正计时", L"Stopwatch"));
+    
+    // 新增子选项：显示当前时间
+    AppendMenuW(hStartupSettingsMenu, MF_STRING | 
+                (strcmp(currentStartupMode, "SHOW_TIME") == 0 ? MF_CHECKED : 0),
+                CLOCK_IDC_START_SHOW_TIME,
+                GetLocalizedString(L"显示当前时间", L"Show Current Time"));
     
     // 新增子选项：不显示
     AppendMenuW(hStartupSettingsMenu, MF_STRING | 
@@ -3149,14 +3159,14 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     }
                     break;
                 }
+                case CLOCK_IDC_START_SHOW_TIME: {
+                    // 将启动时显示当前时间的选择写入配置文件
+                    WriteConfigStartupMode("SHOW_TIME");
+                    break;
+                }
                 case CLOCK_IDC_START_NO_DISPLAY: {
                     // 将启动时不显示的选择写入配置文件
                     WriteConfigStartupMode("NO_DISPLAY");
-                    break;
-                }
-                case CLOCK_IDC_START_COUNT_UP: {
-                    // 将启动时正计时的选择写入配置文件
-                    WriteConfigStartupMode("COUNT_UP");
                     break;
                 }
                 case CLOCK_IDC_AUTO_START: {
