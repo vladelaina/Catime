@@ -2985,6 +2985,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDM_SHOW_CURRENT_TIME: {  
                     CLOCK_SHOW_CURRENT_TIME = !CLOCK_SHOW_CURRENT_TIME;
                     if (CLOCK_SHOW_CURRENT_TIME) {
+                        // 显示窗口
+                        ShowWindow(hwnd, SW_SHOW);
+                        
                         // 切换到显示当前时间时，关闭正计时模式
                         CLOCK_COUNT_UP = FALSE;
                         KillTimer(hwnd, 1);   
@@ -3144,7 +3147,16 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_COUNT_UP: {
-                    // 移除此 case 或保留为空，因为现在通过子菜单控制
+                    CLOCK_COUNT_UP = !CLOCK_COUNT_UP;
+                    if (CLOCK_COUNT_UP) {
+                        // 显示窗口
+                        ShowWindow(hwnd, SW_SHOW);
+                        
+                        elapsed_time = 0;
+                        KillTimer(hwnd, 1);
+                        SetTimer(hwnd, 1, 1000, NULL);
+                    }
+                    InvalidateRect(hwnd, NULL, TRUE);
                     break;
                 }
                 case CLOCK_IDM_COUNT_UP_START: {
@@ -3155,6 +3167,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         CLOCK_IS_PAUSED = FALSE;
                         countup_elapsed_time = 0;  // 重置正计时计数器
                         countup_message_shown = FALSE;
+                        
+                        // 显示窗口
+                        ShowWindow(hwnd, SW_SHOW);
+                        
                         KillTimer(hwnd, 1);
                         SetTimer(hwnd, 1, 1000, NULL);
                     } else {
