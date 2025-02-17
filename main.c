@@ -416,6 +416,8 @@ char CLOCK_STARTUP_MODE[20] = "COUNTDOWN";  // 添加启动模式变量
 #define CLOCK_IDM_24HOUR_FORMAT    151
 #define CLOCK_IDM_SHOW_SECONDS     152
 #define CLOCK_IDM_COUNT_UP         153  // 添加正计时菜单ID
+#define CLOCK_IDM_COUNTDOWN_START_PAUSE 154  // Changed from 151
+#define CLOCK_IDM_COUNTDOWN_RESET 155        // Changed from 152
 
 // 修改 UTF8ToANSI 函数的实现
 char* UTF8ToANSI(const char* utf8Str) {
@@ -1707,6 +1709,22 @@ void ShowContextMenu(HWND hwnd) {
                (UINT_PTR)hCountUpMenu,
                GetLocalizedString(L"正计时", L"Count Up"));
 
+    // Add countdown submenu
+    HMENU hCountdownMenu = CreatePopupMenu();
+    AppendMenuW(hCountdownMenu, MF_STRING,
+        CLOCK_IDM_COUNTDOWN_START_PAUSE,
+        CLOCK_IS_PAUSED ? 
+            GetLocalizedString(L"继续", L"Resume") :
+            GetLocalizedString(L"暂停", L"Pause"));
+    
+    AppendMenuW(hCountdownMenu, MF_STRING,
+        CLOCK_IDM_COUNTDOWN_RESET,
+        GetLocalizedString(L"重新开始", L"Restart"));
+
+    // Add countdown submenu to main menu
+    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hCountdownMenu,
+        GetLocalizedString(L"倒计时", L"Countdown"));
+
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
     for (int i = 0; i < time_options_count; i++) {
@@ -1846,8 +1864,7 @@ void ShowColorMenu(HWND hwnd) {
                 GetLocalizedString(L"修改快捷时间选项", L"Modify Time Options"));
     
     // 创建"启动设置"的子菜单
-    HMENU hStartupSettingsMenu = CreatePopupMenu();
-    HMENU hShowCurrentTimeSubMenu = CreatePopupMenu();  // 新增子菜单
+    HMENU hStartupSettingsMenu = CreatePopupMenu();  // 新增子菜单
 
     // 读取当前启动模式
     char currentStartupMode[20] = "COUNTDOWN";  // Set default to COUNTDOWN
@@ -3294,6 +3311,32 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     // 原来的颜色对话框处理代码
                     COLORREF color = ShowColorDialog(hwnd);
                     if (color != (COLORREF)-1) {
+                        InvalidateRect(hwnd, NULL, TRUE);
+                    }
+                    break;
+                }
+                case CLOCK_IDM_COUNTDOWN_START_PAUSE: {
+                    if (CLOCK_COUNT_UP) {
+                        CLOCK_COUNT_UP = FALSE;  // Switch to countdown mode
+                    }
+                    // Toggle pause state
+                    CLOCK_IS_PAUSED = !CLOCK_IS_PAUSED;
+                    if (CLOCK_IS_PAUSED) {
+                        KillTimer(hwnd, 1);
+                    } else {
+                        SetTimer(hwnd, 1, 1000, NULL);
+                    }
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    break;
+                }
+                case CLOCK_IDM_COUNTDOWN_RESET: {
+                    if (!CLOCK_COUNT_UP) {  // Only if in countdown mode
+                        elapsed_time = 0;
+                        countdown_elapsed_time = 0;
+                        countdown_message_shown = FALSE;
+                        CLOCK_IS_PAUSED = FALSE;
+                        KillTimer(hwnd, 1);
+                        SetTimer(hwnd, 1, 1000, NULL);
                         InvalidateRect(hwnd, NULL, TRUE);
                     }
                     break;
