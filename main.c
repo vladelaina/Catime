@@ -1679,8 +1679,6 @@ void ShowContextMenu(HWND hwnd) {
     AppendMenuW(hMenu, MF_STRING, 101, 
                 GetLocalizedString(L"设置时间", L"Set Time"));
     
-    // 删除时间选项子菜单的相关代码，它会被移到右键菜单中
-    
     HMENU hTimeMenu = CreatePopupMenu();
     AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
                CLOCK_IDM_SHOW_CURRENT_TIME,
@@ -1693,7 +1691,8 @@ void ShowContextMenu(HWND hwnd) {
                CLOCK_IDM_SHOW_SECONDS,
                GetLocalizedString(L"显示秒数", L"Show Seconds"));
     
-    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeMenu,
+    AppendMenuW(hMenu, MF_POPUP | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
+               (UINT_PTR)hTimeMenu,
                GetLocalizedString(L"时间显示", L"Time Display"));
                
     // 创建正计时子菜单
