@@ -3004,7 +3004,28 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     {
                         char config_path[MAX_PATH];
                         GetConfigPath(config_path, MAX_PATH);
-                        WriteConfig(config_path);
+                        
+                        // 保存当前的启动模式
+                        char currentStartupMode[20];
+                        FILE *fp = fopen(config_path, "r");
+                        if (fp) {
+                            char line[256];
+                            while (fgets(line, sizeof(line), fp)) {
+                                if (strncmp(line, "STARTUP_MODE=", 13) == 0) {
+                                    sscanf(line, "STARTUP_MODE=%19s", currentStartupMode);
+                                    break;
+                                }
+                            }
+                            fclose(fp);
+                            
+                            // 写入所有配置，包括启动模式
+                            WriteConfig(config_path);
+                            
+                            // 重新写入启动模式
+                            WriteConfigStartupMode(currentStartupMode);
+                        } else {
+                            WriteConfig(config_path);
+                        }
                     }
                     InvalidateRect(hwnd, NULL, TRUE);
                     break;
@@ -3014,7 +3035,28 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     {
                         char config_path[MAX_PATH];
                         GetConfigPath(config_path, MAX_PATH);
-                        WriteConfig(config_path);
+                        
+                        // 保存当前的启动模式
+                        char currentStartupMode[20];
+                        FILE *fp = fopen(config_path, "r");
+                        if (fp) {
+                            char line[256];
+                            while (fgets(line, sizeof(line), fp)) {
+                                if (strncmp(line, "STARTUP_MODE=", 13) == 0) {
+                                    sscanf(line, "STARTUP_MODE=%19s", currentStartupMode);
+                                    break;
+                                }
+                            }
+                            fclose(fp);
+                            
+                            // 写入所有配置，包括启动模式
+                            WriteConfig(config_path);
+                            
+                            // 重新写入启动模式
+                            WriteConfigStartupMode(currentStartupMode);
+                        } else {
+                            WriteConfig(config_path);
+                        }
                     }
                     InvalidateRect(hwnd, NULL, TRUE);
                     break;
