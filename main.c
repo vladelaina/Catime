@@ -127,6 +127,9 @@ int countup_elapsed_time = 0;    // 用于正计时的计时
 BOOL countdown_message_shown = FALSE;  // 用于倒计时的消息标记
 BOOL countup_message_shown = FALSE;    // 用于正计时的消息标记
 
+// 在其他全局变量定义附近添加
+int default_countdown_time = 0;  // 将从配置文件中读取
+
 void PauseMediaPlayback(void);
 
 typedef struct {
@@ -1713,13 +1716,18 @@ void ShowContextMenu(HWND hwnd) {
     HMENU hCountdownMenu = CreatePopupMenu();
     AppendMenuW(hCountdownMenu, MF_STRING,
         CLOCK_IDM_COUNTDOWN_START_PAUSE,
-        CLOCK_IS_PAUSED ? 
-            GetLocalizedString(L"继续", L"Resume") :
-            GetLocalizedString(L"暂停", L"Pause"));
+        CLOCK_COUNT_UP ? 
+            GetLocalizedString(L"开始", L"Start") :  // 如果是正计时模式，显示"开始"
+            (CLOCK_IS_PAUSED ? 
+                GetLocalizedString(L"继续", L"Resume") :
+                GetLocalizedString(L"暂停", L"Pause")));
     
-    AppendMenuW(hCountdownMenu, MF_STRING,
-        CLOCK_IDM_COUNTDOWN_RESET,
-        GetLocalizedString(L"重新开始", L"Restart"));
+    // 如果不是正计时模式才显示重置选项
+    if (!CLOCK_COUNT_UP) {
+        AppendMenuW(hCountdownMenu, MF_STRING,
+            CLOCK_IDM_COUNTDOWN_RESET,
+            GetLocalizedString(L"重新开始", L"Restart"));
+    }
 
     // Add countdown submenu to main menu
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hCountdownMenu,
@@ -3317,14 +3325,21 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_COUNTDOWN_START_PAUSE: {
                     if (CLOCK_COUNT_UP) {
-                        CLOCK_COUNT_UP = FALSE;  // Switch to countdown mode
-                    }
-                    // Toggle pause state
-                    CLOCK_IS_PAUSED = !CLOCK_IS_PAUSED;
-                    if (CLOCK_IS_PAUSED) {
-                        KillTimer(hwnd, 1);
-                    } else {
+                        // 如果当前是正计时模式，切换到默认倒计时
+                        CLOCK_COUNT_UP = FALSE;
+                        elapsed_time = default_countdown_time; // 使用默认倒计时时间
+                        countdown_elapsed_time = 0;
+                        countdown_message_shown = FALSE;
+                        CLOCK_IS_PAUSED = FALSE;
                         SetTimer(hwnd, 1, 1000, NULL);
+                    } else {
+                        // 正常的暂停/继续逻辑
+                        CLOCK_IS_PAUSED = !CLOCK_IS_PAUSED;
+                        if (CLOCK_IS_PAUSED) {
+                            KillTimer(hwnd, 1);
+                        } else {
+                            SetTimer(hwnd, 1, 1000, NULL);
+                        }
                     }
                     InvalidateRect(hwnd, NULL, TRUE);
                     break;
