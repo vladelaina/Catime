@@ -1734,7 +1734,8 @@ void ShowContextMenu(HWND hwnd) {
     }
 
     // Add countdown submenu to main menu
-    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hCountdownMenu,
+    AppendMenuW(hMenu, MF_POPUP | (!CLOCK_COUNT_UP && !CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED),
+        (UINT_PTR)hCountdownMenu,
         GetLocalizedString(L"倒计时", L"Countdown"));
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
