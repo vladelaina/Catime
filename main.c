@@ -2677,16 +2677,21 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             CLOCK_COUNT_UP = FALSE;
                         }
                         
+                        // 显示窗口（添加这行）
+                        ShowWindow(hwnd, SW_SHOW);
+                        
                         int index = cmd - 102;
                         CLOCK_TOTAL_TIME = time_options[index] * 60;
                         elapsed_time = 0;
-                        countdown_elapsed_time = 0;  // 添加这行
+                        countdown_elapsed_time = 0;
                         message_shown = 0;
-                        countdown_message_shown = FALSE;  // 添加这行
-                        InvalidateRect(hwnd, NULL, TRUE);
-                        KillTimer(hwnd, 1);  // 添加这行
+                        countdown_message_shown = FALSE;
+                        
+                        // 重置计时器
+                        KillTimer(hwnd, 1);
                         SetTimer(hwnd, 1, 1000, NULL);
-                        break;
+                        
+                        InvalidateRect(hwnd, NULL, TRUE);
                     }
                     
                     if (cmd >= 201 && cmd < 201 + COLOR_OPTIONS_COUNT) {
@@ -3210,6 +3215,27 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         if (ParseInput(inputText, &total_seconds)) {
                             WriteConfigDefaultStartTime(total_seconds);
                             WriteConfigStartupMode("COUNTDOWN");  // 设置启动模式为倒计时
+                            
+                            // 设置倒计时并显示窗口
+                            CLOCK_TOTAL_TIME = total_seconds;
+                            elapsed_time = 0;
+                            message_shown = 0;
+                            CLOCK_COUNT_UP = FALSE;
+                            CLOCK_SHOW_CURRENT_TIME = FALSE;
+                            CLOCK_EDIT_MODE = FALSE;  // 关闭编辑模式
+                            
+                            // 显示窗口
+                            ShowWindow(hwnd, SW_SHOW);
+                            SetForegroundWindow(hwnd);  // 将窗口带到前台
+                            
+                            // 重置计时器
+                            KillTimer(hwnd, 1);
+                            SetTimer(hwnd, 1, 1000, NULL);
+                            
+                            // 保存编辑模式状态
+                            WriteConfigEditMode("FALSE");
+                            
+                            InvalidateRect(hwnd, NULL, TRUE);
                             ReadConfig();
                             break;
                         } else {
