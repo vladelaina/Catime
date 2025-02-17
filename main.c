@@ -1704,8 +1704,12 @@ void ShowContextMenu(HWND hwnd) {
                 GetLocalizedString(L"继续", L"Resume") : 
                 GetLocalizedString(L"暂停", L"Pause")) :
             GetLocalizedString(L"开始", L"Start"));
-    AppendMenuW(hCountUpMenu, MF_STRING, CLOCK_IDM_COUNT_UP_RESET,
-        GetLocalizedString(L"重新开始", L"Restart"));  // 改回"重新开始"
+            
+    // 只在正计时已经开始后才显示"重新开始"选项
+    if (CLOCK_COUNT_UP) {
+        AppendMenuW(hCountUpMenu, MF_STRING, CLOCK_IDM_COUNT_UP_RESET,
+            GetLocalizedString(L"重新开始", L"Restart"));
+    }
                
     // 将正计时子菜单添加到主菜单
     AppendMenuW(hMenu, MF_POPUP | (CLOCK_COUNT_UP ? MF_CHECKED : MF_UNCHECKED),
