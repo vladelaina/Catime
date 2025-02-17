@@ -1716,14 +1716,14 @@ void ShowContextMenu(HWND hwnd) {
     HMENU hCountdownMenu = CreatePopupMenu();
     AppendMenuW(hCountdownMenu, MF_STRING,
         CLOCK_IDM_COUNTDOWN_START_PAUSE,
-        CLOCK_COUNT_UP ? 
-            GetLocalizedString(L"开始", L"Start") :  // 如果是正计时模式，显示"开始"
+        (CLOCK_COUNT_UP || CLOCK_SHOW_CURRENT_TIME) ?  // 修改判断条件
+            GetLocalizedString(L"开始", L"Start") :  // 如果是正计时或显示当前时间模式，显示"开始"
             (CLOCK_IS_PAUSED ? 
                 GetLocalizedString(L"继续", L"Resume") :
                 GetLocalizedString(L"暂停", L"Pause")));
     
-    // 如果不是正计时模式才显示重置选项
-    if (!CLOCK_COUNT_UP) {
+    // 只在倒计时模式下显示重置选项
+    if (!CLOCK_COUNT_UP && !CLOCK_SHOW_CURRENT_TIME) {  // 修改判断条件
         AppendMenuW(hCountdownMenu, MF_STRING,
             CLOCK_IDM_COUNTDOWN_RESET,
             GetLocalizedString(L"重新开始", L"Restart"));
@@ -3324,10 +3324,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_COUNTDOWN_START_PAUSE: {
-                    if (CLOCK_COUNT_UP) {
-                        // 如果当前是正计时模式，切换到默认倒计时
+                    if (CLOCK_COUNT_UP || CLOCK_SHOW_CURRENT_TIME) {  // 修改判断条件
+                        // 如果当前是正计时或显示当前时间模式，切换到默认倒计时
                         CLOCK_COUNT_UP = FALSE;
-                        elapsed_time = default_countdown_time; // 使用默认倒计时时间
+                        CLOCK_SHOW_CURRENT_TIME = FALSE;  // 关闭显示当前时间
+                        elapsed_time = default_countdown_time;
                         countdown_elapsed_time = 0;
                         countdown_message_shown = FALSE;
                         CLOCK_IS_PAUSED = FALSE;
@@ -3345,7 +3346,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_COUNTDOWN_RESET: {
-                    if (!CLOCK_COUNT_UP) {  // Only if in countdown mode
+                    if (!CLOCK_COUNT_UP && !CLOCK_SHOW_CURRENT_TIME) {  // 修改判断条件
                         elapsed_time = 0;
                         countdown_elapsed_time = 0;
                         countdown_message_shown = FALSE;
