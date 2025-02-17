@@ -3217,29 +3217,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
                         int total_seconds = 0;
                         if (ParseInput(inputText, &total_seconds)) {
+                            // 只保存配置，不改变当前状态
                             WriteConfigDefaultStartTime(total_seconds);
                             WriteConfigStartupMode("COUNTDOWN");  // 设置启动模式为倒计时
-                            
-                            // 设置倒计时并显示窗口
-                            CLOCK_TOTAL_TIME = total_seconds;
-                            elapsed_time = 0;
-                            message_shown = 0;
-                            CLOCK_COUNT_UP = FALSE;
-                            CLOCK_SHOW_CURRENT_TIME = FALSE;
-                            CLOCK_EDIT_MODE = FALSE;  // 关闭编辑模式
-                            
-                            // 显示窗口
-                            ShowWindow(hwnd, SW_SHOW);
-                            SetForegroundWindow(hwnd);  // 将窗口带到前台
-                            
-                            // 重置计时器
-                            KillTimer(hwnd, 1);
-                            SetTimer(hwnd, 1, 1000, NULL);
-                            
-                            // 保存编辑模式状态
-                            WriteConfigEditMode("FALSE");
-                            
-                            InvalidateRect(hwnd, NULL, TRUE);
                             ReadConfig();
                             break;
                         } else {
