@@ -2677,8 +2677,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             CLOCK_COUNT_UP = FALSE;
                         }
                         
-                        // 显示窗口（添加这行）
+                        // 显示窗口，但不进入编辑模式
                         ShowWindow(hwnd, SW_SHOW);
+                        CLOCK_EDIT_MODE = FALSE;  // 确保不进入编辑模式
+                        WriteConfigEditMode("FALSE");  // 保存编辑模式状态到配置文件
+                        SetClickThrough(hwnd, TRUE);  // 保持点击穿透
                         
                         int index = cmd - 102;
                         CLOCK_TOTAL_TIME = time_options[index] * 60;
@@ -2692,6 +2695,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         SetTimer(hwnd, 1, 1000, NULL);
                         
                         InvalidateRect(hwnd, NULL, TRUE);
+                        return 0;  // 添加 return 语句防止继续处理
                     }
                     
                     if (cmd >= 201 && cmd < 201 + COLOR_OPTIONS_COUNT) {
