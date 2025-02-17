@@ -46,6 +46,8 @@ void ClearColorOptions(void);
 BOOL IsAutoStartEnabled(void);
 BOOL CreateShortcut(void);
 BOOL RemoveShortcut(void);
+// 添加 WriteConfig 函数声明
+void WriteConfig(const char* config_path);
 
 #define CATIME_VERSION "1.0.3.1"  
 #define VK_MEDIA_PLAY_PAUSE 0xB3
@@ -829,6 +831,8 @@ void CreateDefaultConfig(const char* config_path) {
     fprintf(file, "CLOCK_TIMEOUT_TEXT=0\n");
     fprintf(file, "CLOCK_EDIT_MODE=FALSE\n");
     fprintf(file, "CLOCK_TIMEOUT_ACTION=LOCK\n");
+    fprintf(file, "CLOCK_USE_24HOUR=FALSE\n");  // 添加24小时制配置
+    fprintf(file, "CLOCK_SHOW_SECONDS=FALSE\n"); // 添加显示秒数配置
 
     // 写入默认颜色选项，但不添加到 COLOR_OPTIONS
     fprintf(file, "COLOR_OPTIONS=");
@@ -1129,6 +1133,12 @@ void ReadConfig() {
         }
         else if (strncmp(line, "STARTUP_MODE=", 13) == 0) {
             sscanf(line, "STARTUP_MODE=%19s", CLOCK_STARTUP_MODE);
+        }
+        else if (strncmp(line, "CLOCK_USE_24HOUR=", 17) == 0) {
+            CLOCK_USE_24HOUR = (strncmp(line + 17, "TRUE", 4) == 0);
+        }
+        else if (strncmp(line, "CLOCK_SHOW_SECONDS=", 19) == 0) {
+            CLOCK_SHOW_SECONDS = (strncmp(line + 19, "TRUE", 4) == 0);
         }
     }
 
@@ -2991,11 +3001,21 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_24HOUR_FORMAT: {  
                     CLOCK_USE_24HOUR = !CLOCK_USE_24HOUR;
+                    {
+                        char config_path[MAX_PATH];
+                        GetConfigPath(config_path, MAX_PATH);
+                        WriteConfig(config_path);
+                    }
                     InvalidateRect(hwnd, NULL, TRUE);
                     break;
                 }
                 case CLOCK_IDM_SHOW_SECONDS: {  
                     CLOCK_SHOW_SECONDS = !CLOCK_SHOW_SECONDS;
+                    {
+                        char config_path[MAX_PATH];
+                        GetConfigPath(config_path, MAX_PATH);
+                        WriteConfig(config_path);
+                    }
                     InvalidateRect(hwnd, NULL, TRUE);
                     break;
                 }
@@ -4484,6 +4504,8 @@ void WriteConfig(const char* config_path) {
     fprintf(file, "CLOCK_WINDOW_POS_Y=%d\n", CLOCK_WINDOW_POS_Y);
     fprintf(file, "CLOCK_EDIT_MODE=%s\n", CLOCK_EDIT_MODE ? "TRUE" : "FALSE");
     fprintf(file, "WINDOW_SCALE=%.2f\n", CLOCK_WINDOW_SCALE);
+    fprintf(file, "CLOCK_USE_24HOUR=%s\n", CLOCK_USE_24HOUR ? "TRUE" : "FALSE");
+    fprintf(file, "CLOCK_SHOW_SECONDS=%s\n", CLOCK_SHOW_SECONDS ? "TRUE" : "FALSE");
     
     // 写入时间选项
     fprintf(file, "CLOCK_TIME_OPTIONS=");  // 添加这行
