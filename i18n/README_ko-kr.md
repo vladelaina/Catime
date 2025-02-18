@@ -15,9 +15,7 @@
 
 <p align="center">간단한 Windows 타이머 도구로, 토마토 시계 기능을 지원하며 투명한 인터페이스와 다양한 사용자 설정 옵션을 제공합니다.</p>
 
----
-
-![Catime](../Images/catime.gif)
+<video src="https://github.com/user-attachments/assets/3bd56d5e-3c3f-4c06-a07b-b6cf72e7dcfb.mp4" autoplay loop></video>
 
   [**简体中文**](https://github.com/vladelaina/Catime) |  [**繁體中文**](README_zh-hant.md) | [English](README-en.md) | [**日本語**](README_ja.md) |[**Español**](README_es.md) | [**Português**](README_pt-br.md) | [**한국어**](README_ko-kr.md) | [**Deutsch**](README_de.md) | [**French**](README_fr.md)
 
