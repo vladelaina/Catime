@@ -15,9 +15,7 @@
 
 <p align="center">Una herramienta sencilla de cuenta regresiva para Windows, compatible con la técnica Pomodoro, con una interfaz transparente y múltiples opciones de personalización.</p>
 
----
-
-![Catime](../Images/catime.gif)
+<video src="https://github.com/user-attachments/assets/3bd56d5e-3c3f-4c06-a07b-b6cf72e7dcfb.mp4" autoplay loop></video>
 
   [**简体中文**](https://github.com/vladelaina/Catime) |  [**繁體中文**](README_zh-hant.md) | [English](README-en.md) | [**日本語**](README_ja.md) |[**Español**](README_es.md) | [**Português**](README_pt-br.md) | [**한국어**](README_ko-kr.md) | [**Deutsch**](README_de.md) | [**French**](README_fr.md)
 
