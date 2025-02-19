@@ -5,7 +5,7 @@
   
 </p>
 <p align="center">
- <a href="https://github.com/vladelaina/Catime/blob/main/LICENSE.txt"><img alt="License" src="https://img.shields.io/github/license/vladelaina/Catime?label=License" /></a>
+ <a href="https://github.com/vladelaina/Catime/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/github/license/vladelaina/Catime?label=License" /></a>
  <a href="https://github.com/vladelaina/Catime/releases/latest"><img alt="Release" src="https://img.shields.io/github/release/vladelaina/Catime.svg?label=Release" /></a>
  <a href="https://github.com/vladelaina/Catime/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/vladelaina/Catime/total?label=Downloads" /></a>
  <a href="https://discord.gg/W3tW2gtp6g"><img alt="Discord" src="https://img.shields.io/badge/Join-Catime-7289da?logo=discord&logoColor=white&color=7289da"/></a>
