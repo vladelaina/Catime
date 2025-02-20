@@ -33,7 +33,7 @@ pikaへ／|
 
 // 如果编译器找不到这些定义，手动添加
 #ifndef CSIDL_STARTUP
-#define CSIDL_STARTUP 0x0007
+
 #endif
 
 #ifndef CLSID_ShellLink
@@ -116,8 +116,6 @@ void SetClickThrough(HWND hwnd, BOOL enable) {
     SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
 }
 
-#define MIN_SCALE_FACTOR 0.5f
-#define MAX_SCALE_FACTOR 100.0f
 
 
 
@@ -196,7 +194,7 @@ typedef struct _ACCENT_POLICY {
 void SetBlurBehind(HWND hwnd, BOOL enable);
 
 
-#define CLOCK_WM_TRAYICON (WM_USER + 2)
+
 
 
 int time_options[MAX_TIME_OPTIONS];
@@ -331,7 +329,7 @@ int CALLBACK EnumFontFamExProc(
     LPARAM lParam
 );
 
-#define MAX_RECENT_FILES 5   
+
 typedef struct {
     char path[MAX_PATH];
     char name[MAX_PATH];
@@ -361,13 +359,7 @@ BOOL CLOCK_SHOW_SECONDS = TRUE;
 BOOL CLOCK_COUNT_UP = FALSE;  // 添加正计时标志
 char CLOCK_STARTUP_MODE[20] = "COUNTDOWN";  // 添加启动模式变量
 
- 
-#define CLOCK_IDM_SHOW_CURRENT_TIME 150
-#define CLOCK_IDM_24HOUR_FORMAT    151
-#define CLOCK_IDM_SHOW_SECONDS     152
-#define CLOCK_IDM_COUNT_UP         153  // 添加正计时菜单ID
-#define CLOCK_IDM_COUNTDOWN_START_PAUSE 154  // Changed from 151
-#define CLOCK_IDM_COUNTDOWN_RESET 155        // Changed from 152
+
 
 // 修改 UTF8ToANSI 函数的实现
 char* UTF8ToANSI(const char* utf8Str) {
@@ -415,7 +407,7 @@ char* UTF8ToANSI(const char* utf8Str) {
 }
 
 // 在文件最开头的宏定义区域添加（在其他 #include 语句之后，但在其他代码之前）
-#define CLOCK_IDC_STATIC 1001  // 添加静态文本控件的ID
+
 
 // 在全局变量和结构体定义区域添加（在其他全局变量之前）
 typedef struct {
