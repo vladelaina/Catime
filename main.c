@@ -49,20 +49,6 @@ BOOL RemoveShortcut(void);
 // 添加 WriteConfig 函数声明
 void WriteConfig(const char* config_path);
 
-#define CATIME_VERSION "1.0.3.1"  
-#define VK_MEDIA_PLAY_PAUSE 0xB3
-#define VK_MEDIA_STOP 0xB2
-#define KEYEVENTF_KEYUP 0x0002
-
-#define UNICODE
-#define _UNICODE
-
-#define UPDATE_URL_GITHUB    "https://github.com/vladelaina/Catime/releases"
-#define UPDATE_URL_123PAN    "https://www.123684.com/s/ruESjv-2CZUA"
-#define UPDATE_URL_LANZOU    "https://wwrx.lanzoup.com/b00hqiiskj"
-#define FEEDBACK_URL        "https://www.bilibili.com/video/BV1ztFeeQEYP"
-#define FEEDBACK_URL_GITHUB  "https://github.com/vladelaina/Catime/issues"
-#define FEEDBACK_URL_BILIBILI "https://message.bilibili.com/#/whisper/mid1862395225"
 
 
 // 语言枚举
