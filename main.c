@@ -1696,6 +1696,20 @@ void ShowContextMenu(HWND hwnd) {
                (UINT_PTR)hTimeMenu,
                GetLocalizedString(L"时间显示", L"Time Display"));
 
+    // +++ 新增番茄时钟菜单项 +++
+    HMENU hPomodoroMenu = CreatePopupMenu();
+    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_START, GetLocalizedString(L"开始", L"Start"));
+    AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
+    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_WORK, GetLocalizedString(L"工作时间设置", L"Work Time"));
+    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_BREAK, GetLocalizedString(L"短休息设置", L"Short Break"));
+    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_LBREAK, GetLocalizedString(L"长休息设置", L"Long Break"));
+    AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
+    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_RESET, GetLocalizedString(L"重新开始", L"Reset"));
+    
+    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hPomodoroMenu,
+               GetLocalizedString(L"🍅 番茄时钟", L"🍅 Pomodoro"));
+    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
+
     // 创建正计时子菜单
     HMENU hCountUpMenu = CreatePopupMenu();
     AppendMenuW(hCountUpMenu, MF_STRING, CLOCK_IDM_COUNT_UP_START,
@@ -1745,19 +1759,6 @@ void ShowContextMenu(HWND hwnd) {
         _snwprintf(menu_item, sizeof(menu_item)/sizeof(wchar_t), L"%d", time_options[i]);
         AppendMenuW(hMenu, MF_STRING, 102 + i, menu_item);
     }
-
-    // 创建番茄时钟子菜单
-    HMENU hPomodoroMenu = CreatePopupMenu();
-    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_START, GetLocalizedString(L"开始", L"Start"));
-    AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
-    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_WORK, GetLocalizedString(L"工作时间设置", L"Work Time"));
-    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_BREAK, GetLocalizedString(L"短休息设置", L"Short Break"));
-    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_LBREAK, GetLocalizedString(L"长休息设置", L"Long Break"));
-    AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
-    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_RESET, GetLocalizedString(L"重新开始", L"Reset"));
-    
-    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hPomodoroMenu,
-               GetLocalizedString(L"🍅 番茄时钟", L"🍅 Pomodoro"));
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
@@ -1995,9 +1996,6 @@ void ShowColorMenu(HWND hwnd) {
     // 将自定义子菜单添加到颜色菜单
     AppendMenuW(hColorSubMenu, MF_POPUP, (UINT_PTR)hCustomizeMenu, 
                 GetLocalizedString(L"自定义", L"Customize"));
-
-    // 删除这个分隔线
-    // AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
     // 先添加字体菜单项，再添加颜色菜单项
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hFontSubMenu, 
