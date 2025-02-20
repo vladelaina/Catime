@@ -47,3 +47,11 @@
 #define CLOCK_IDM_RECENT_FILE_3    128
 #define CLOCK_IDM_BROWSE_FILE      129 
 #define CLOCK_IDM_ABOUT            130 
+
+// 番茄时钟菜单项
+#define CLOCK_IDM_POMODORO            500  // 主菜单项
+#define CLOCK_IDM_POMODORO_START      501  // 开始/暂停
+#define CLOCK_IDM_POMODORO_WORK       502  // 工作时间设置
+#define CLOCK_IDM_POMODORO_BREAK      503  // 短休息设置
+#define CLOCK_IDM_POMODORO_LBREAK     504  // 长休息设置
+#define CLOCK_IDM_POMODORO_RESET      505  // 重新开始

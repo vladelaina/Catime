@@ -1745,6 +1745,20 @@ void ShowContextMenu(HWND hwnd) {
         AppendMenuW(hMenu, MF_STRING, 102 + i, menu_item);
     }
 
+    // 创建番茄时钟子菜单
+    HMENU hPomodoroMenu = CreatePopupMenu();
+    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_START, GetLocalizedString(L"开始", L"Start"));
+    AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
+    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_WORK, GetLocalizedString(L"工作时间: 25分钟", L"Work: 25m")); 
+    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_BREAK, GetLocalizedString(L"短休息: 5分钟", L"Break: 5m"));
+    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_LBREAK, GetLocalizedString(L"长休息: 20分钟", L"Long Break: 20m"));
+    AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
+    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_RESET, GetLocalizedString(L"重新开始", L"Reset"));
+
+    // 将番茄时钟菜单添加到主菜单（建议放在颜色菜单之后）
+    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hPomodoroMenu, GetLocalizedString(L"番茄时钟", L"Pomodoro"));
+    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
+
     POINT pt;
     GetCursorPos(&pt);
     SetForegroundWindow(hwnd);
@@ -2021,10 +2035,6 @@ void ShowColorMenu(HWND hwnd) {
                 CLOCK_IDM_LANG_GERMAN, L"Deutsch");
     AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_RUSSIAN ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDM_LANG_RUSSIAN, L"Русский");
-    AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_PORTUGUESE ? MF_CHECKED : MF_UNCHECKED),
-                CLOCK_IDM_LANG_PORTUGUESE, L"Português");
-    AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_JAPANESE ? MF_CHECKED : MF_UNCHECKED),
-                CLOCK_IDM_LANG_JAPANESE, L"日本語");
     AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_KOREAN ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDM_LANG_KOREAN, L"한국어");
 
@@ -3361,6 +3371,25 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     }
                     break;
                 }
+                case CLOCK_IDM_POMODORO_START:
+                    // 处理开始/暂停逻辑
+                    break;
+                
+                case CLOCK_IDM_POMODORO_WORK:
+                    // 弹出输入框修改工作时间
+                    break;
+
+                case CLOCK_IDM_POMODORO_BREAK:
+                    // 弹出输入框修改短休息时间 
+                    break;
+
+                case CLOCK_IDM_POMODORO_LBREAK:
+                    // 弹出输入框修改长休息时间
+                    break;
+
+                case CLOCK_IDM_POMODORO_RESET:
+                    // 重置计时器逻辑
+                    break;
             }
             break;
 
@@ -5095,4 +5124,12 @@ BOOL RemoveShortcut(void) {
     }
     return FALSE;
 }
+
+// 番茄时钟相关配置
+int CLOCK_POMODORO_WORK = 1500;      // 默认25分钟
+int CLOCK_POMODORO_BREAK = 300;      // 默认5分钟
+int CLOCK_POMODORO_LONG_BREAK = 1200; // 默认20分钟
+int CLOCK_POMODORO_CYCLE = 0;        // 完成的工作周期数
+BOOL CLOCK_POMODORO_IS_WORKING = FALSE; // 是否在工作阶段
+BOOL CLOCK_POMODORO_IS_RUNNING = FALSE;  // 是否正在计时
 
