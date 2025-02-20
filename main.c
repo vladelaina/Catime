@@ -1708,7 +1708,6 @@ void ShowContextMenu(HWND hwnd) {
     
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hPomodoroMenu,
                GetLocalizedString(L"🍅 番茄时钟", L"🍅 Pomodoro"));
-    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
     // 创建正计时子菜单
     HMENU hCountUpMenu = CreatePopupMenu();
