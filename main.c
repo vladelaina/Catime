@@ -1679,6 +1679,7 @@ void ShowContextMenu(HWND hwnd) {
     AppendMenuW(hMenu, MF_STRING, 101, 
                 GetLocalizedString(L"设置时间", L"Set Time"));
     
+    // 时间显示子菜单
     HMENU hTimeMenu = CreatePopupMenu();
     AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
                CLOCK_IDM_SHOW_CURRENT_TIME,
@@ -1694,7 +1695,7 @@ void ShowContextMenu(HWND hwnd) {
     AppendMenuW(hMenu, MF_POPUP | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
                (UINT_PTR)hTimeMenu,
                GetLocalizedString(L"时间显示", L"Time Display"));
-               
+
     // 创建正计时子菜单
     HMENU hCountUpMenu = CreatePopupMenu();
     AppendMenuW(hCountUpMenu, MF_STRING, CLOCK_IDM_COUNT_UP_START,
@@ -1749,14 +1750,15 @@ void ShowContextMenu(HWND hwnd) {
     HMENU hPomodoroMenu = CreatePopupMenu();
     AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_START, GetLocalizedString(L"开始", L"Start"));
     AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
-    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_WORK, GetLocalizedString(L"工作时间: 25分钟", L"Work: 25m")); 
-    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_BREAK, GetLocalizedString(L"短休息: 5分钟", L"Break: 5m"));
-    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_LBREAK, GetLocalizedString(L"长休息: 20分钟", L"Long Break: 20m"));
+    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_WORK, GetLocalizedString(L"工作时间设置", L"Work Time"));
+    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_BREAK, GetLocalizedString(L"短休息设置", L"Short Break"));
+    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_LBREAK, GetLocalizedString(L"长休息设置", L"Long Break"));
     AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
     AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_RESET, GetLocalizedString(L"重新开始", L"Reset"));
+    
+    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hPomodoroMenu,
+               GetLocalizedString(L"🍅 番茄时钟", L"🍅 Pomodoro"));
 
-    // 将番茄时钟菜单添加到主菜单（建议放在颜色菜单之后）
-    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hPomodoroMenu, GetLocalizedString(L"番茄时钟", L"Pomodoro"));
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
     POINT pt;
