@@ -64,44 +64,6 @@ void WriteConfig(const char* config_path);
 #define FEEDBACK_URL_GITHUB  "https://github.com/vladelaina/Catime/issues"
 #define FEEDBACK_URL_BILIBILI "https://message.bilibili.com/#/whisper/mid1862395225"
 
-#define CLOCK_IDM_VERSION 131
-#define CLOCK_IDM_CHECK_UPDATE 133   
-#define CLOCK_IDM_UPDATE_GITHUB    134
-#define CLOCK_IDM_UPDATE_123PAN    135
-#define CLOCK_IDM_UPDATE_LANZOU    136
-#define CLOCK_IDM_FEEDBACK 132   
-#define CLOCK_IDM_LANGUAGE_MENU    160
-#define CLOCK_IDM_LANG_CHINESE     161
-#define CLOCK_IDM_LANG_ENGLISH     162
-#define CLOCK_IDM_LANG_CHINESE_TRAD  163
-#define CLOCK_IDM_LANG_SPANISH       164
-#define CLOCK_IDM_LANG_FRENCH        165
-#define CLOCK_IDM_LANG_GERMAN        166
-#define CLOCK_IDM_LANG_RUSSIAN       167
-#define CLOCK_IDM_LANG_PORTUGUESE    168
-#define CLOCK_IDM_LANG_JAPANESE      169
-#define CLOCK_IDM_LANG_KOREAN        170
-#define CLOCK_IDM_FEEDBACK_GITHUB 137
-#define CLOCK_IDM_FEEDBACK_BILIBILI 138
-#define CLOCK_IDM_COUNT_UP_START     171
-#define CLOCK_IDM_COUNT_UP_RESET     172
-
-// 在文件开头的宏定义区域添加
-#define CLOCK_IDC_TIMEOUT_BROWSE 140
-
-// 在文件开头的宏定义区域添加这些定义
-#define CLOCK_IDC_MODIFY_TIME_OPTIONS 156
-#define CLOCK_IDC_MODIFY_DEFAULT_TIME 157
-
-#define CLOCK_IDC_SET_COUNTDOWN_TIME 173  // Define a unique ID for setting countdown time
-#define CLOCK_IDC_START_NO_DISPLAY   174  // Define a unique ID for starting with no display
-#define CLOCK_IDC_START_COUNT_UP     175  // Define a unique ID for starting count up
-#define CLOCK_IDC_AUTO_START         160  // 添加开机自启动菜单ID
-#define CLOCK_IDC_START_SHOW_TIME    176  // 修改为新的未使用的ID值
-
-// 添加新的颜色相关的控件ID
-#define CLOCK_IDC_COLOR_VALUE        1301
-#define CLOCK_IDC_COLOR_PANEL        1302
 
 // 语言枚举
 typedef enum {
@@ -155,8 +117,7 @@ void SetClickThrough(HWND hwnd, BOOL enable) {
 #define MIN_SCALE_FACTOR 0.5f
 #define MAX_SCALE_FACTOR 100.0f
 
-#define BLUR_OPACITY 192
-#define BLUR_TRANSITION_MS 200
+
 
 #pragma comment(lib, "dwmapi.lib")
 #pragma comment(lib, "user32.lib")
@@ -232,26 +193,10 @@ typedef struct _ACCENT_POLICY {
 
 void SetBlurBehind(HWND hwnd, BOOL enable);
 
-#define CLOCK_IDC_EDIT               108
-#define CLOCK_IDC_BUTTON_OK          109
-#define CLOCK_IDD_DIALOG1            1002
-#define CLOCK_ID_TRAY_APP_ICON       1001
-#define CLOCK_IDC_CUSTOMIZE_LEFT     112
-#define CLOCK_IDC_EDIT_MODE          113
-#define CLOCK_IDC_MODIFY_OPTIONS     114
-
-#define CLOCK_IDM_TIMEOUT_ACTION     120
-#define CLOCK_IDM_SHOW_MESSAGE       121
-#define CLOCK_IDM_LOCK_SCREEN        122
-#define CLOCK_IDM_SHUTDOWN           123
-#define CLOCK_IDM_RESTART            124
-#define CLOCK_IDM_OPEN_FILE          125
-
-#define CLOCK_IDC_FONT_MENU           113
 
 #define CLOCK_WM_TRAYICON (WM_USER + 2)
 
-#define MAX_TIME_OPTIONS 10
+
 int time_options[MAX_TIME_OPTIONS];
 int time_options_count = 0;
 
@@ -393,7 +338,7 @@ typedef struct {
 RecentFile CLOCK_RECENT_FILES[MAX_RECENT_FILES];
 int CLOCK_RECENT_FILES_COUNT = 0;
 
-#define CLOCK_IDM_ABOUT 130   
+ 
 
 char PREVIEW_FONT_NAME[100] = "";   
 char PREVIEW_INTERNAL_NAME[100] = "";     
