@@ -7,7 +7,7 @@
 #include <time.h>
 #include <ctype.h>
 #include <dwmapi.h>
-#include "resource.h"
+#include "resource/resource.h"
 #include <winnls.h>
 #include <commdlg.h>  // 用于 CHOOSECOLOR 结构体和 ChooseColor 函数
 #include <shlobj.h>     // For SHGetFolderPath

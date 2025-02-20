@@ -8,7 +8,7 @@ ASSET_DIR = $(OUTPUT_DIR)/asset
 
 # 设置文件名
 SRC_FILES = main.c
-RC_FILE = resource.rc
+RC_FILE = resource/resource.rc
 OBJ_FILES = main.o
 
 # 创建目标文件夹和资源文件夹
