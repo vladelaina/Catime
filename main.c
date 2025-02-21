@@ -1,19 +1,3 @@
-/*
-pikaへ／|
-　　/＼7　　　 ∠＿/
-　 /　│　　 ／　／
-　│　Z ＿,＜　／　　 /`ヽ
-　│ヽ　　 /　　〉
-　 Y`　 /　　/
-　ｲ●　､　●　　⊂⊃〈　　/
-　()　 へ　　　　|　＼〈   代码正在拆分中~
-　　>ｰ ､_　 ィ　 │ ／／    The code is working hard to split~
-　 / へ　　 /　ﾉ＜| ＼＼
-　 ヽ_ﾉ　　(_／　 │／／
-　　7|／
-　　＞―r￣￣`ｰ―＿6
-*/
-
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
