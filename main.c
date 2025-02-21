@@ -1540,6 +1540,9 @@ void ShowContextMenu(HWND hwnd) {
     AppendMenuW(hMenu, MF_STRING, 101, 
                 GetLocalizedString(L"设置时间", L"Set Time"));
     
+    // 添加分隔线
+    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
+    
     HMENU hTimeMenu = CreatePopupMenu();
     AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
                CLOCK_IDM_SHOW_CURRENT_TIME,
