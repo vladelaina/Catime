@@ -25,11 +25,11 @@ pikaへ／|
 #include <dwmapi.h>
 #include "resource/resource.h"
 #include <winnls.h>
-#include <commdlg.h>  // 用于 CHOOSECOLOR 结构体和 ChooseColor 函数
-#include <shlobj.h>     // For SHGetFolderPath
-#include <objbase.h>    // For COM functions
-#include <shobjidl.h>   // For IShellLink
-#include <shlguid.h>    // For CLSID_ShellLink
+#include <commdlg.h>
+#include <shlobj.h>
+#include <objbase.h>
+#include <shobjidl.h>
+#include <shlguid.h>
 
 #ifndef CSIDL_STARTUP
 
@@ -61,27 +61,27 @@ void WriteConfig(const char* config_path);
 
 
 typedef enum {
-    APP_LANG_CHINESE_SIMP,    // 简体中文
-    APP_LANG_CHINESE_TRAD,    // 繁体中文
-    APP_LANG_ENGLISH,         // 英语
-    APP_LANG_SPANISH,         // 西班牙语
-    APP_LANG_FRENCH,          // 法语
-    APP_LANG_GERMAN,          // 德语
-    APP_LANG_RUSSIAN,         // 俄语
-    APP_LANG_PORTUGUESE,      // 葡萄牙语
-    APP_LANG_JAPANESE,        // 日语
-    APP_LANG_KOREAN           // 韩语
+    APP_LANG_CHINESE_SIMP,
+    APP_LANG_CHINESE_TRAD,
+    APP_LANG_ENGLISH,
+    APP_LANG_SPANISH,
+    APP_LANG_FRENCH,
+    APP_LANG_GERMAN,
+    APP_LANG_RUSSIAN,
+    APP_LANG_PORTUGUESE,
+    APP_LANG_JAPANESE,
+    APP_LANG_KOREAN
 } AppLanguage;
 
-AppLanguage CURRENT_LANGUAGE = APP_LANG_CHINESE_SIMP;  // 默认使用简体中文
-BOOL CLOCK_IS_PAUSED = FALSE;  // 移动到这里
+AppLanguage CURRENT_LANGUAGE = APP_LANG_CHINESE_SIMP;
+BOOL CLOCK_IS_PAUSED = FALSE;
 
-int countdown_elapsed_time = 0;  // 用于倒计时的计时
-int countup_elapsed_time = 0;    // 用于正计时的计时
-BOOL countdown_message_shown = FALSE;  // 用于倒计时的消息标记
-BOOL countup_message_shown = FALSE;    // 用于正计时的消息标记
+int countdown_elapsed_time = 0;
+int countup_elapsed_time = 0;
+BOOL countdown_message_shown = FALSE;
+BOOL countup_message_shown = FALSE;
 
-int default_countdown_time = 0;  // 将从配置文件中读取
+int default_countdown_time = 0;
 
 void PauseMediaPlayback(void);
 
@@ -344,15 +344,15 @@ BOOL CLOCK_SHOW_CURRENT_TIME = FALSE;
 time_t CLOCK_LAST_TIME_UPDATE = 0;
 BOOL CLOCK_USE_24HOUR = TRUE;
 BOOL CLOCK_SHOW_SECONDS = TRUE;
-BOOL CLOCK_COUNT_UP = FALSE;  // 添加正计时标志
-char CLOCK_STARTUP_MODE[20] = "COUNTDOWN";  // 添加启动模式变量
+BOOL CLOCK_COUNT_UP = FALSE;
+char CLOCK_STARTUP_MODE[20] = "COUNTDOWN";
 
 
 
 char* UTF8ToANSI(const char* utf8Str) {
     int wlen = MultiByteToWideChar(CP_UTF8, 0, utf8Str, -1, NULL, 0);
     if (wlen == 0) {
-        return _strdup(utf8Str); // 如果转换失败，返回原始字符串的副本
+        return _strdup(utf8Str);
     }
 
     wchar_t* wstr = (wchar_t*)malloc(sizeof(wchar_t) * wlen);
@@ -430,22 +430,22 @@ static const CSSColor CSS_COLORS[] = {
 #define CSS_COLORS_COUNT (sizeof(CSS_COLORS) / sizeof(CSS_COLORS[0]))
 
 static const char* DEFAULT_COLOR_OPTIONS[] = {
-    "#FFFFFF",   // 白色
-    "#F9DB91",   // 浅黄色
-    "#F4CAE0",   // 淡粉色
-    "#FFB6C1",   // 浅粉红
-    "#A8E7DF",   // 浅青色
-    "#A3CFB3",   // 浅绿色
-    "#92CBFC",   // 浅蓝色
-    "#BDA5E7",   // 淡紫色
-    "#9370DB",   // 中等紫罗兰色
-    "#8C92CF",   // 柔和蓝紫色
-    "#72A9A5",   // 青绿色
-    "#EB99A7",   // 柔和红色
-    "#EB96BD",   // 粉红色
-    "#FFAE8B",   // 橙粉色
-    "#FF7F50",   // 珊瑚色
-    "#CA6174"    // 暗玫瑰色
+    "#FFFFFF",
+    "#F9DB91",
+    "#F4CAE0",
+    "#FFB6C1",
+    "#A8E7DF",
+    "#A3CFB3",
+    "#92CBFC",
+    "#BDA5E7",
+    "#9370DB",
+    "#8C92CF",
+    "#72A9A5",
+    "#EB99A7",
+    "#EB96BD",
+    "#FFAE8B",
+    "#FF7F50",
+    "#CA6174"
 };
 
 #define DEFAULT_COLOR_OPTIONS_COUNT (sizeof(DEFAULT_COLOR_OPTIONS) / sizeof(DEFAULT_COLOR_OPTIONS[0]))
@@ -529,18 +529,18 @@ void AddColorOption(const char* hexColor) {
     
     size_t len = strlen(hex);
     if (len != 6) {
-        return;  // 无效的十六进制颜色
+        return;
     }
     
     for (int i = 0; i < 6; i++) {
         if (!isxdigit((unsigned char)hex[i])) {
-            return;  // 无效的十六进制颜色
+            return;
         }
     }
     
     unsigned int color;
     if (sscanf(hex, "%x", &color) != 1) {
-        return;  // 转换失败
+        return;
     }
     
     snprintf(normalizedColor, sizeof(normalizedColor), "#%06X", color);
@@ -669,7 +669,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         CLOCK_COUNT_UP = TRUE;
         elapsed_time = 0;
     } else if (strcmp(CLOCK_STARTUP_MODE, "NO_DISPLAY") == 0) {
-        ShowWindow(hwnd, SW_HIDE);  // 隐藏窗口
+        ShowWindow(hwnd, SW_HIDE);
     } else if (strcmp(CLOCK_STARTUP_MODE, "SHOW_TIME") == 0) {
         CLOCK_SHOW_CURRENT_TIME = TRUE;
         CLOCK_LAST_TIME_UPDATE = 0;
@@ -729,8 +729,8 @@ void CreateDefaultConfig(const char* config_path) {
     fprintf(file, "CLOCK_TIMEOUT_TEXT=0\n");
     fprintf(file, "CLOCK_EDIT_MODE=FALSE\n");
     fprintf(file, "CLOCK_TIMEOUT_ACTION=LOCK\n");
-    fprintf(file, "CLOCK_USE_24HOUR=FALSE\n");  // 添加24小时制配置
-    fprintf(file, "CLOCK_SHOW_SECONDS=FALSE\n"); // 添加显示秒数配置
+    fprintf(file, "CLOCK_USE_24HOUR=FALSE\n");
+    fprintf(file, "CLOCK_SHOW_SECONDS=FALSE\n");
 
     fprintf(file, "COLOR_OPTIONS=");
     for (size_t i = 0; i < DEFAULT_COLOR_OPTIONS_COUNT; i++) {
@@ -1009,7 +1009,7 @@ void ReadConfig() {
                 }
             } else {
                 memset(CLOCK_TIMEOUT_FILE_PATH, 0, sizeof(CLOCK_TIMEOUT_FILE_PATH));
-                CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE; // 默认回退到消息提示
+                CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
             }
         }
         else if (strncmp(line, "COLOR_OPTIONS=", 14) == 0) {
@@ -1604,13 +1604,13 @@ void ShowContextMenu(HWND hwnd) {
     HMENU hCountdownMenu = CreatePopupMenu();
     AppendMenuW(hCountdownMenu, MF_STRING,
         CLOCK_IDM_COUNTDOWN_START_PAUSE,
-        (CLOCK_COUNT_UP || CLOCK_SHOW_CURRENT_TIME) ?  // 修改判断条件
-            GetLocalizedString(L"开始", L"Start") :  // 如果是正计时或显示当前时间模式，显示"开始"
+        (CLOCK_COUNT_UP || CLOCK_SHOW_CURRENT_TIME) ?
+            GetLocalizedString(L"开始", L"Start") :
             (CLOCK_IS_PAUSED ? 
                 GetLocalizedString(L"继续", L"Resume") :
                 GetLocalizedString(L"暂停", L"Pause")));
     
-    if (!CLOCK_COUNT_UP && !CLOCK_SHOW_CURRENT_TIME) {  // 修改判断条件
+    if (!CLOCK_COUNT_UP && !CLOCK_SHOW_CURRENT_TIME) {
         AppendMenuW(hCountdownMenu, MF_STRING,
             CLOCK_IDM_COUNTDOWN_RESET,
             GetLocalizedString(L"重新开始", L"Restart"));
@@ -1707,7 +1707,7 @@ void ShowColorMenu(HWND hwnd) {
             
             AppendMenuW(hOpenFileMenu, MF_STRING | (isCurrentFile ? MF_CHECKED : MF_UNCHECKED), 
                       CLOCK_IDM_RECENT_FILE_1 + i, 
-                      wFileName);  // 使用转换后的宽字符文件名
+                      wFileName);
         }
         AppendMenuW(hOpenFileMenu, MF_SEPARATOR, 0, NULL);
     }
@@ -1725,7 +1725,7 @@ void ShowColorMenu(HWND hwnd) {
             
             _snwprintf(displayText, MAX_PATH, 
                       GetLocalizedString(L"打开: %ls", L"Open: %ls"), 
-                      wFileName);  // 使用%ls而不是%hs，并使用转换后的宽字符文件名
+                      wFileName);
             menuText = displayText;
         }
     }
@@ -1750,9 +1750,9 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hTimeOptionsMenu, MF_STRING, CLOCK_IDC_MODIFY_TIME_OPTIONS,
                 GetLocalizedString(L"修改快捷时间选项", L"Modify Time Options"));
     
-    HMENU hStartupSettingsMenu = CreatePopupMenu();  // 新增子菜单
+    HMENU hStartupSettingsMenu = CreatePopupMenu();
 
-    char currentStartupMode[20] = "COUNTDOWN";  // Set default to COUNTDOWN
+    char currentStartupMode[20] = "COUNTDOWN";
     char configPath[MAX_PATH];  
     GetConfigPath(configPath, MAX_PATH);
     FILE *configFile = fopen(configPath, "r");  
@@ -2157,12 +2157,12 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
                 if (CLOCK_COUNT_UP) {
                     if (!CLOCK_IS_PAUSED) {
-                        countup_elapsed_time++;  // 使用正计时专用计数器
+                        countup_elapsed_time++;
                         InvalidateRect(hwnd, NULL, TRUE);
                     }
                 } else {
                     if (countdown_elapsed_time < CLOCK_TOTAL_TIME) {
-                        countdown_elapsed_time++;  // 使用倒计时专用计数器
+                        countdown_elapsed_time++;
                         if (countdown_elapsed_time >= CLOCK_TOTAL_TIME && !countdown_message_shown) {
                             countdown_message_shown = TRUE;
                             
@@ -2174,10 +2174,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                                     LockWorkStation();
                                     break;
                                 case TIMEOUT_ACTION_SHUTDOWN:
-                                    system("shutdown /s /t 0");  // Changed from 60 to 0
+                                    system("shutdown /s /t 0");
                                     break;
                                 case TIMEOUT_ACTION_RESTART:
-                                    system("shutdown /r /t 0");  // Changed from 60 to 0
+                                    system("shutdown /r /t 0");
                                     break;
                                 case TIMEOUT_ACTION_OPEN_FILE: {
                                     if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
@@ -2226,7 +2226,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     if (CLOCK_SHOW_CURRENT_TIME) {
                         CLOCK_SHOW_CURRENT_TIME = FALSE;
                         CLOCK_LAST_TIME_UPDATE = 0;
-                        KillTimer(hwnd, 1);  // 添加这行，确保先关闭已有计时器
+                        KillTimer(hwnd, 1);
                     }
                     while (1) {
                         memset(inputText, 0, sizeof(inputText));
@@ -2238,9 +2238,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
                         int total_seconds = 0;
                         if (ParseInput(inputText, &total_seconds)) {
-                            KillTimer(hwnd, 1);  // 先关闭已有计时器
+                            KillTimer(hwnd, 1);
                             CLOCK_TOTAL_TIME = total_seconds;
-                            countdown_elapsed_time = 0;  // 重置倒计时计数器
+                            countdown_elapsed_time = 0;
                             countdown_message_shown = FALSE;
                             CLOCK_COUNT_UP = FALSE;
                             CLOCK_SHOW_CURRENT_TIME = FALSE;
@@ -2546,9 +2546,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         }
                         
                         ShowWindow(hwnd, SW_SHOW);
-                        CLOCK_EDIT_MODE = FALSE;  // 确保不进入编辑模式
-                        WriteConfigEditMode("FALSE");  // 保存编辑模式状态到配置文件
-                        SetClickThrough(hwnd, TRUE);  // 保持点击穿透
+                        CLOCK_EDIT_MODE = FALSE;
+                        WriteConfigEditMode("FALSE");
+                        SetClickThrough(hwnd, TRUE);
                         
                         int index = cmd - 102;
                         CLOCK_TOTAL_TIME = time_options[index] * 60;
@@ -2561,7 +2561,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         SetTimer(hwnd, 1, 1000, NULL);
                         
                         InvalidateRect(hwnd, NULL, TRUE);
-                        return 0;  // 添加 return 语句防止继续处理
+                        return 0;
                     }
                     
                     if (cmd >= 201 && cmd < 201 + COLOR_OPTIONS_COUNT) {
@@ -2988,8 +2988,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         
                         char config_path[MAX_PATH];
                         GetConfigPath(config_path, MAX_PATH);
-                        WriteConfigTimeoutAction("OPEN_FILE");  // 使用 WriteConfigTimeoutAction 而不是 WriteConfig
-                        SaveRecentFile(CLOCK_TIMEOUT_FILE_PATH);  // 保存到最近文件列表
+                        WriteConfigTimeoutAction("OPEN_FILE");
+                        SaveRecentFile(CLOCK_TIMEOUT_FILE_PATH);
                     }
                     break;
                 }
@@ -3010,7 +3010,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         CLOCK_COUNT_UP = TRUE;
                         CLOCK_SHOW_CURRENT_TIME = FALSE;
                         CLOCK_IS_PAUSED = FALSE;
-                        countup_elapsed_time = 0;  // 重置正计时计数器
+                        countup_elapsed_time = 0;
                         countup_message_shown = FALSE;
                         
                         ShowWindow(hwnd, SW_SHOW);
@@ -3030,10 +3030,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_COUNT_UP_RESET: {
                     if (CLOCK_COUNT_UP) {
-                        countup_elapsed_time = 0;  // 重置正计时计数器
+                        countup_elapsed_time = 0;
                         countup_message_shown = FALSE;
-                        CLOCK_IS_PAUSED = FALSE;  // 取消暂停状态
-                        KillTimer(hwnd, 1);  // 无论之前是否暂停，都重新启动计时器
+                        CLOCK_IS_PAUSED = FALSE;
+                        KillTimer(hwnd, 1);
                         SetTimer(hwnd, 1, 1000, NULL);
                         InvalidateRect(hwnd, NULL, TRUE);
                     }
@@ -3051,7 +3051,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         int total_seconds = 0;
                         if (ParseInput(inputText, &total_seconds)) {
                             WriteConfigDefaultStartTime(total_seconds);
-                            WriteConfigStartupMode("COUNTDOWN");  // 设置启动模式为倒计时
+                            WriteConfigStartupMode("COUNTDOWN");
                             ReadConfig();
                             break;
                         } else {
@@ -3079,8 +3079,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDC_START_SHOW_TIME: {
                     WriteConfigStartupMode("SHOW_TIME");
                     HMENU hMenu = GetMenu(hwnd);
-                    HMENU hTimeOptionsMenu = GetSubMenu(hMenu, GetMenuItemCount(hMenu) - 2); // 获取倒数第二个菜单项
-                    HMENU hStartupSettingsMenu = GetSubMenu(hTimeOptionsMenu, 0); // 获取第一个子菜单
+                    HMENU hTimeOptionsMenu = GetSubMenu(hMenu, GetMenuItemCount(hMenu) - 2);
+                    HMENU hStartupSettingsMenu = GetSubMenu(hTimeOptionsMenu, 0);
                     
                     CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_SET_COUNTDOWN_TIME, MF_UNCHECKED);
                     CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_START_COUNT_UP, MF_UNCHECKED);
@@ -3124,9 +3124,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_COUNTDOWN_START_PAUSE: {
-                    if (CLOCK_COUNT_UP || CLOCK_SHOW_CURRENT_TIME) {  // 修改判断条件
+                    if (CLOCK_COUNT_UP || CLOCK_SHOW_CURRENT_TIME) {
                         CLOCK_COUNT_UP = FALSE;
-                        CLOCK_SHOW_CURRENT_TIME = FALSE;  // 关闭显示当前时间
+                        CLOCK_SHOW_CURRENT_TIME = FALSE;
                         elapsed_time = default_countdown_time;
                         countdown_elapsed_time = 0;
                         countdown_message_shown = FALSE;
@@ -3144,7 +3144,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_COUNTDOWN_RESET: {
-                    if (!CLOCK_COUNT_UP && !CLOCK_SHOW_CURRENT_TIME) {  // 修改判断条件
+                    if (!CLOCK_COUNT_UP && !CLOCK_SHOW_CURRENT_TIME) {
                         elapsed_time = 0;
                         countdown_elapsed_time = 0;
                         countdown_message_shown = FALSE;
@@ -3425,9 +3425,9 @@ try_rgb:
     }
     
     if (sscanf(rgb_str, "%d,%d,%d", &r, &g, &b) == 3 ||
-        sscanf(rgb_str, "%d，%d，%d", &r, &g, &b) == 3 ||  // 中文逗号
+        sscanf(rgb_str, "%d，%d，%d", &r, &g, &b) == 3 ||
         sscanf(rgb_str, "%d;%d;%d", &r, &g, &b) == 3 ||
-        sscanf(rgb_str, "%d；%d；%d", &r, &g, &b) == 3 ||  // 中文分号
+        sscanf(rgb_str, "%d；%d；%d", &r, &g, &b) == 3 ||
         sscanf(rgb_str, "%d %d %d", &r, &g, &b) == 3 ||
         sscanf(rgb_str, "%d|%d|%d", &r, &g, &b) == 3) {
         
@@ -3487,9 +3487,9 @@ void normalizeColor(const char* input, char* output, size_t output_size) {
     }
     
     if (sscanf(rgb_str, "%d,%d,%d", &r, &g, &b) == 3 ||
-        sscanf(rgb_str, "%d，%d，%d", &r, &g, &b) == 3 ||  // 中文逗号
+        sscanf(rgb_str, "%d，%d，%d", &r, &g, &b) == 3 ||
         sscanf(rgb_str, "%d;%d;%d", &r, &g, &b) == 3 ||
-        sscanf(rgb_str, "%d；%d；%d", &r, &g, &b) == 3 ||  // 中文分号
+        sscanf(rgb_str, "%d；%d；%d", &r, &g, &b) == 3 ||
         sscanf(rgb_str, "%d %d %d", &r, &g, &b) == 3 ||
         sscanf(rgb_str, "%d|%d|%d", &r, &g, &b) == 3) {
         
@@ -3550,7 +3550,7 @@ LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
             return result;
 
         case WM_PASTE:
-        case WM_CUT: {  // 添加花括号创建新的作用域
+        case WM_CUT: {
             LRESULT result = CallWindowProc(g_OldEditProc, hwnd, msg, wParam, lParam);
             
             char color[32];
@@ -3776,7 +3776,7 @@ void LoadRecentFiles(void) {
                 
                 wchar_t* wFilename = wcsrchr(wPath, L'\\');
                 if (wFilename) {
-                    wFilename++;  // 跳过反斜杠
+                    wFilename++;
                     WideCharToMultiByte(CP_UTF8, 0, wFilename, -1,
                                       CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].name,
                                       MAX_PATH, NULL, NULL);
@@ -3878,7 +3878,7 @@ void SaveRecentFile(const char* filePath) {
     while (line) {
         if (strncmp(line, "CLOCK_RECENT_FILE", 16) != 0 && 
             strncmp(line, "CLOCK_TIMEOUT_FILE", 17) != 0 &&
-            strncmp(line, "CLOCK_TIMEOUT_ACTION", 19) != 0) {  // 也排除 action 配置
+            strncmp(line, "CLOCK_TIMEOUT_ACTION", 19) != 0) {
             strcat(new_config, line);
             strcat(new_config, "\n");
         }
@@ -3951,12 +3951,12 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
                 return L"25    = 25分钟\n25h   = 25小时\n25s   = 25秒\n25 30 = 25分钟30秒\n25 30m = 25小时30分钟\n1 30 20 = 1小时30分钟20秒";
             if (wcscmp(english, L"Enter numbers separated by spaces\nExample: 25 10 5") == 0)
                 return L"请输入用空格分隔的数字\n例如: 25 10 5";
-            if (wcscmp(english, L"Invalid Color Format") == 0) return L"";  // 返回空字符串
+            if (wcscmp(english, L"Invalid Color Format") == 0) return L"";
             if (wcscmp(english, L"About") == 0) return L"关于";
             if (wcscmp(english, L"Version: %hs") == 0) return L"版本: %hs";
             if (wcscmp(english, L"Check for Updates") == 0) return L"检查更新";
             if (wcscmp(english, L"Language") == 0) return english;
-            if (wcscmp(english, L"Reset") == 0) return english; // Return English "Reset" instead of Chinese
+            if (wcscmp(english, L"Reset") == 0) return english;
             if (wcscmp(english, L"Set to No Display on Startup") == 0) return L"已设置为启动时不显示";
             if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"已设置为启动时正计时";
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"已设置为启动时倒计时";
@@ -3982,11 +3982,11 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Version: %hs") == 0) return L"版本: %hs";
             if (wcscmp(english, L"Check for Updates") == 0) return L"檢查更新";
             if (wcscmp(english, L"Language") == 0) return english;
-            if (wcscmp(english, L"Reset") == 0) return english; // Return English "Reset" instead of Traditional Chinese
-            if (wcscmp(english, L"Set to No Display on Startup") == 0) return L"已設置為啟動時不顯示";  // 修正为繁体中文
-            if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"已設置為啟動時正計時";  // 修正为繁体中文
-            if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"已設置為啟動時倒計時";  // 修正为繁体中文
-            if (wcscmp(english, L"Settings") == 0) return L"設置";  // 修正为繁体中文
+            if (wcscmp(english, L"Reset") == 0) return english;
+            if (wcscmp(english, L"Set to No Display on Startup") == 0) return L"已設置為啟動時不顯示";
+            if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"已設置為啟動時正計時";
+            if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"已設置為啟動時倒計時";
+            if (wcscmp(english, L"Settings") == 0) return L"設置";
             if (wcscmp(english, L"Preset Manager") == 0) return L"預設管理";
             if (wcscmp(english, L"Count Up") == 0) return L"正計時";
             if (wcscmp(english, L"Startup Settings") == 0) return L"啟動設置";
@@ -4017,7 +4017,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Language") == 0) return english;
             if (wcscmp(english, L"Check for Updates") == 0) return L"Buscar actualizaciones";
             if (wcscmp(english, L"About") == 0) return L"Acerca de";
-            if (wcscmp(english, L"Reset") == 0) return english; // Return English "Reset" instead of "Restablecer"
+            if (wcscmp(english, L"Reset") == 0) return english;
             if (wcscmp(english, L"Exit") == 0) return L"Salir";
             if (wcscmp(english, L"¡Tiempo terminado!") == 0) return L"¡Tiempo terminado!";
             if (wcscmp(english, L"Formato de entrada") == 0) return L"Formato de entrada";
@@ -4067,7 +4067,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Language") == 0) return english;
             if (wcscmp(english, L"Check for Updates") == 0) return L"Vérifier les mises à jour";
             if (wcscmp(english, L"About") == 0) return L"À propos";
-            if (wcscmp(english, L"Reset") == 0) return english; // Return English "Reset" instead of "Réinitialiser"
+            if (wcscmp(english, L"Reset") == 0) return english;
             if (wcscmp(english, L"Exit") == 0) return L"Quitter";
             if (wcscmp(english, L"Temps écoulé !") == 0) return L"Temps écoulé !";
             if (wcscmp(english, L"Format d'entrée") == 0) return L"Format d'entrée";
@@ -4094,7 +4094,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Set to No Display on Startup") == 0) return L"Configuré pour ne pas afficher au démarrage";
             if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"Configuré comme chronomètre au démarrage";
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"Configuré comme compte à rebours au démarrage";
-            if (wcscmp(english, L"Settings") == 0) return L"Paramètres";  // 修正为法语
+            if (wcscmp(english, L"Settings") == 0) return L"Paramètres";
             return english;
 
         case APP_LANG_GERMAN:
@@ -4121,7 +4121,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Language") == 0) return english;
             if (wcscmp(english, L"Check for Updates") == 0) return L"Nach Updates suchen";
             if (wcscmp(english, L"About") == 0) return L"Über";
-            if (wcscmp(english, L"Reset") == 0) return english; // Return English "Reset" instead of "Zurücksetzen"
+            if (wcscmp(english, L"Reset") == 0) return english;
             if (wcscmp(english, L"Exit") == 0) return L"Beenden";
             if (wcscmp(english, L"Zeit ist um!") == 0) return L"Zeit ist um!";
             if (wcscmp(english, L"Eingabeformat") == 0) return L"Eingabeformat";
@@ -4140,7 +4140,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Set to No Display on Startup") == 0) return L"Beim Start nicht anzeigen eingestellt";
             if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"Als Stoppuhr beim Start eingestellt";
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"Als Countdown beim Start eingestellt";
-            if (wcscmp(english, L"Settings") == 0) return L"Einstellungen";  // 修正为德语
+            if (wcscmp(english, L"Settings") == 0) return L"Einstellungen";
             if (wcscmp(english, L"Preset Manager") == 0) return L"Voreinstellungen";
             if (wcscmp(english, L"Count Up") == 0) return L"Aufwärtszählen";
             if (wcscmp(english, L"Startup Settings") == 0) return L"Starteinstellungen";
@@ -4171,7 +4171,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Language") == 0) return english;
             if (wcscmp(english, L"Check for Updates") == 0) return L"Проверить обновления";
             if (wcscmp(english, L"About") == 0) return L"О программе";
-            if (wcscmp(english, L"Reset") == 0) return english; // Return English "Reset" instead of "Сброс"
+            if (wcscmp(english, L"Reset") == 0) return english;
             if (wcscmp(english, L"Exit") == 0) return L"Выход";
             if (wcscmp(english, L"Время вышло!") == 0) return L"Время вышло!";
             if (wcscmp(english, L"Формат ввода") == 0) return L"Формат ввода";
@@ -4190,7 +4190,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Set to No Display on Startup") == 0) return L"Настроено на скрытый запуск";
             if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"Настроено на запуск секундомера";
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"Настроено на запуск обратного отсчета";
-            if (wcscmp(english, L"Settings") == 0) return L"Настройки";  // 修正为俄语
+            if (wcscmp(english, L"Settings") == 0) return L"Настройки";
             if (wcscmp(english, L"Preset Manager") == 0) return L"Настроить";
             if (wcscmp(english, L"Count Up") == 0) return L"Счетчик";
             if (wcscmp(english, L"Startup Settings") == 0) return L"Настройки запуска";
@@ -4221,7 +4221,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Language") == 0) return english;
             if (wcscmp(english, L"Check for Updates") == 0) return L"Verificar atualizações";
             if (wcscmp(english, L"About") == 0) return L"Sobre";
-            if (wcscmp(english, L"Reset") == 0) return english; // Return English "Reset" instead of "Redefinir"
+            if (wcscmp(english, L"Reset") == 0) return english;
             if (wcscmp(english, L"Exit") == 0) return L"Sair";
             if (wcscmp(english, L"Tempo esgotado!") == 0) return L"Tempo esgotado!";
             if (wcscmp(english, L"Formato de entrada") == 0) return L"Formato de entrada";
@@ -4240,7 +4240,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Set to No Display on Startup") == 0) return L"Configurado para não exibir na inicialização";
             if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"Configurado como cronômetro na inicialização";
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"Configurado como contagem regressiva na inicialização";
-            if (wcscmp(english, L"Settings") == 0) return L"Configurações";  // 修正为葡萄牙语
+            if (wcscmp(english, L"Settings") == 0) return L"Configurações";
             if (wcscmp(english, L"Preset Manager") == 0) return L"Gerenciador de pré-ajustes";
             if (wcscmp(english, L"Count Up") == 0) return L"Contagem ascendente";
             if (wcscmp(english, L"Startup Settings") == 0) return L"Configurações de inicialização";
@@ -4271,7 +4271,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Language") == 0) return english;
             if (wcscmp(english, L"Check for Updates") == 0) return L"更新を確認";
             if (wcscmp(english, L"About") == 0) return L"について";
-            if (wcscmp(english, L"Reset") == 0) return english; // Return English "Reset" instead of "リセット"
+            if (wcscmp(english, L"Reset") == 0) return english;
             if (wcscmp(english, L"Exit") == 0) return L"終了";
             if (wcscmp(english, L"時間切れです!") == 0) return L"時間切れです!";
             if (wcscmp(english, L"入力形式") == 0) return L"入力形式";
@@ -4290,7 +4290,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Set to No Display on Startup") == 0) return L"起動時に非表示に設定";
             if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"起動時にストップウォッチに設定";
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"起動時にカウントダウンに設定";
-            if (wcscmp(english, L"Settings") == 0) return L"設定";  // 修正为日语
+            if (wcscmp(english, L"Settings") == 0) return L"設定";
             if (wcscmp(english, L"Preset Manager") == 0) return L"プリセット管理";
             if (wcscmp(english, L"Count Up") == 0) return L"カウントアップ";
             if (wcscmp(english, L"Startup Settings") == 0) return L"起動設定";
@@ -4321,7 +4321,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Language") == 0) return english;
             if (wcscmp(english, L"Check for Updates") == 0) return L"업데이트 확인";
             if (wcscmp(english, L"About") == 0) return L"정보";
-            if (wcscmp(english, L"Reset") == 0) return english; // Return English "Reset" instead of "초기화"
+            if (wcscmp(english, L"Reset") == 0) return english;
             if (wcscmp(english, L"Exit") == 0) return L"종료";
             if (wcscmp(english, L"시간이 종료되었습니다!") == 0) return L"시간이 종료되었습니다!";
             if (wcscmp(english, L"입력 형식") == 0) return L"입력 형식";
@@ -4340,7 +4340,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Set to No Display on Startup") == 0) return L"시작 시 표시하지 않도록 설정";
             if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"시작 시 스톱워치로 설정";
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"시작 시 카운트다운으로 설정";
-            if (wcscmp(english, L"Settings") == 0) return L"설정";  // 修正为韩语
+            if (wcscmp(english, L"Settings") == 0) return L"설정";
             if (wcscmp(english, L"Preset Manager") == 0) return L"프리셋 관리";
             if (wcscmp(english, L"Count Up") == 0) return L"카운트업";
             if (wcscmp(english, L"Startup Settings") == 0) return L"시작 설정";
@@ -4367,7 +4367,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Set to No Display on Startup") == 0) return L"Set to No Display on Startup";
             if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"Set to Stopwatch on Startup";
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"Set to Countdown on Startup";
-            if (wcscmp(english, L"Settings") == 0) return L"Settings";  // 英语保持不变
+            if (wcscmp(english, L"Settings") == 0) return L"Settings";
             if (wcscmp(english, L"Preset Manager") == 0) return L"Preset Manager";
             if (wcscmp(english, L"Count Up") == 0) return L"Count Up";
             if (wcscmp(english, L"Startup Settings") == 0) return L"Startup Settings";
@@ -4382,7 +4382,7 @@ void WriteConfig(const char* config_path) {
     if (!file) return;
     
     fprintf(file, "CLOCK_TEXT_COLOR=%s\n", CLOCK_TEXT_COLOR);
-    fprintf(file, "CLOCK_BASE_FONT_SIZE=%d\n", CLOCK_BASE_FONT_SIZE);  // 添加这行
+    fprintf(file, "CLOCK_BASE_FONT_SIZE=%d\n", CLOCK_BASE_FONT_SIZE);
     fprintf(file, "FONT_FILE_NAME=%s\n", FONT_FILE_NAME);
     fprintf(file, "CLOCK_DEFAULT_START_TIME=%d\n", CLOCK_DEFAULT_START_TIME);
     fprintf(file, "CLOCK_WINDOW_POS_X=%d\n", CLOCK_WINDOW_POS_X);
@@ -4392,14 +4392,14 @@ void WriteConfig(const char* config_path) {
     fprintf(file, "CLOCK_USE_24HOUR=%s\n", CLOCK_USE_24HOUR ? "TRUE" : "FALSE");
     fprintf(file, "CLOCK_SHOW_SECONDS=%s\n", CLOCK_SHOW_SECONDS ? "TRUE" : "FALSE");
     
-    fprintf(file, "CLOCK_TIME_OPTIONS=");  // 添加这行
+    fprintf(file, "CLOCK_TIME_OPTIONS=");
     for (int i = 0; i < time_options_count; i++) {
         if (i > 0) fprintf(file, ",");
         fprintf(file, "%d", time_options[i]);
     }
     fprintf(file, "\n");
     
-    fprintf(file, "CLOCK_TIMEOUT_TEXT=%s\n", CLOCK_TIMEOUT_TEXT);  // 添加这行
+    fprintf(file, "CLOCK_TIMEOUT_TEXT=%s\n", CLOCK_TIMEOUT_TEXT);
     
     if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE && strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
         fprintf(file, "CLOCK_TIMEOUT_ACTION=OPEN_FILE\n");
@@ -4811,10 +4811,10 @@ BOOL RemoveShortcut(void) {
     return FALSE;
 }
 
-int CLOCK_POMODORO_WORK = 1500;      // 默认25分钟
-int CLOCK_POMODORO_BREAK = 300;      // 默认5分钟
-int CLOCK_POMODORO_LONG_BREAK = 1200; // 默认20分钟
-int CLOCK_POMODORO_CYCLE = 0;        // 完成的工作周期数
-BOOL CLOCK_POMODORO_IS_WORKING = FALSE; // 是否在工作阶段
-BOOL CLOCK_POMODORO_IS_RUNNING = FALSE;  // 是否正在计时
+int CLOCK_POMODORO_WORK = 1500;
+int CLOCK_POMODORO_BREAK = 300;
+int CLOCK_POMODORO_LONG_BREAK = 1200;
+int CLOCK_POMODORO_CYCLE = 0;
+BOOL CLOCK_POMODORO_IS_WORKING = FALSE;
+BOOL CLOCK_POMODORO_IS_RUNNING = FALSE;
 
