@@ -2258,6 +2258,12 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         CLOCK_LAST_TIME_UPDATE = 0;
                         KillTimer(hwnd, 1);
                     }
+                    // 新增：如果番茄钟在运行，先停止它
+                    if (CLOCK_POMODORO_RUNNING) {
+                        CLOCK_POMODORO_RUNNING = FALSE;
+                        CLOCK_POMODORO_PAUSED = FALSE;
+                        KillTimer(hwnd, 2);
+                    }
                     while (1) {
                         memset(inputText, 0, sizeof(inputText));
                         DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc);
@@ -2300,6 +2306,12 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDC_MODIFY_TIME_OPTIONS: {
+                    // 新增：如果番茄钟在运行，先停止它
+                    if (CLOCK_POMODORO_RUNNING) {
+                        CLOCK_POMODORO_RUNNING = FALSE;
+                        CLOCK_POMODORO_PAUSED = FALSE;
+                        KillTimer(hwnd, 2);
+                    }
                     while (1) {
                         memset(inputText, 0, sizeof(inputText));
                         DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc);
@@ -2346,6 +2358,12 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDC_MODIFY_DEFAULT_TIME: {
+                    // 新增：如果番茄钟在运行，先停止它
+                    if (CLOCK_POMODORO_RUNNING) {
+                        CLOCK_POMODORO_RUNNING = FALSE;
+                        CLOCK_POMODORO_PAUSED = FALSE;
+                        KillTimer(hwnd, 2);
+                    }
                     while (1) {
                         memset(inputText, 0, sizeof(inputText));
                         DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc);
