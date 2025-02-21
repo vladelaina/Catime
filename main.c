@@ -1615,7 +1615,6 @@ void ShowContextMenu(HWND hwnd) {
         AppendMenuW(hMenu, MF_STRING, 102 + i, menu_item);
     }
 
-    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
     POINT pt;
     GetCursorPos(&pt);
