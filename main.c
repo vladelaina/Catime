@@ -1610,19 +1610,19 @@ void ShowContextMenu(HWND hwnd) {
     HMENU hCountdownMenu = CreatePopupMenu();
     AppendMenuW(hCountdownMenu, MF_STRING,
         CLOCK_IDM_COUNTDOWN_START_PAUSE,
-        (CLOCK_COUNT_UP || CLOCK_SHOW_CURRENT_TIME) ?
+        (CLOCK_COUNT_UP || CLOCK_SHOW_CURRENT_TIME || CLOCK_POMODORO_RUNNING) ?  // 添加 CLOCK_POMODORO_RUNNING 检查
             GetLocalizedString(L"开始", L"Start") :
             (CLOCK_IS_PAUSED ? 
                 GetLocalizedString(L"继续", L"Resume") :
                 GetLocalizedString(L"暂停", L"Pause")));
     
-    if (!CLOCK_COUNT_UP && !CLOCK_SHOW_CURRENT_TIME) {
+    if (!CLOCK_COUNT_UP && !CLOCK_SHOW_CURRENT_TIME && !CLOCK_POMODORO_RUNNING) {  // 添加 !CLOCK_POMODORO_RUNNING 检查
         AppendMenuW(hCountdownMenu, MF_STRING,
             CLOCK_IDM_COUNTDOWN_RESET,
             GetLocalizedString(L"重新开始", L"Restart"));
     }
 
-    AppendMenuW(hMenu, MF_POPUP | (!CLOCK_COUNT_UP && !CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED),
+    AppendMenuW(hMenu, MF_POPUP | (!CLOCK_COUNT_UP && !CLOCK_SHOW_CURRENT_TIME && !CLOCK_POMODORO_RUNNING ? MF_CHECKED : MF_UNCHECKED),  // 添加 !CLOCK_POMODORO_RUNNING 检查
         (UINT_PTR)hCountdownMenu,
         GetLocalizedString(L"倒计时", L"Countdown"));
 
@@ -3160,7 +3160,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_COUNTDOWN_START_PAUSE: {
-                    if (CLOCK_COUNT_UP || CLOCK_SHOW_CURRENT_TIME) {
+                    if (CLOCK_COUNT_UP || CLOCK_SHOW_CURRENT_TIME || CLOCK_POMODORO_RUNNING) {  // 添加 CLOCK_POMODORO_RUNNING 检查
                         CLOCK_COUNT_UP = FALSE;
                         CLOCK_SHOW_CURRENT_TIME = FALSE;
                         elapsed_time = default_countdown_time;
@@ -3180,7 +3180,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_COUNTDOWN_RESET: {
-                    if (!CLOCK_COUNT_UP && !CLOCK_SHOW_CURRENT_TIME) {
+                    if (!CLOCK_COUNT_UP && !CLOCK_SHOW_CURRENT_TIME && !CLOCK_POMODORO_RUNNING) {  // 添加 !CLOCK_POMODORO_RUNNING 检查
                         elapsed_time = 0;
                         countdown_elapsed_time = 0;
                         countdown_message_shown = FALSE;
