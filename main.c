@@ -1566,7 +1566,7 @@ void ShowContextMenu(HWND hwnd) {
     AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_RESET, GetLocalizedString(L"重新开始", L"Reset"));
     
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hPomodoroMenu,
-               GetLocalizedString(L"🍅 番茄时钟", L"🍅 Pomodoro"));
+               GetLocalizedString(L"番茄时钟", L"Pomodoro"));
 
     HMENU hCountUpMenu = CreatePopupMenu();
     AppendMenuW(hCountUpMenu, MF_STRING, CLOCK_IDM_COUNT_UP_START,
