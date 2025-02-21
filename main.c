@@ -1573,7 +1573,7 @@ void ShowContextMenu(HWND hwnd) {
                GetLocalizedString(L"时间显示", L"Time Display"));
 
     HMENU hPomodoroMenu = CreatePopupMenu();
-    AppendMenuW(hPomodoroMenu, MF_STRING | (CLOCK_POMODORO_RUNNING ? MF_CHECKED : 0), 
+    AppendMenuW(hPomodoroMenu, MF_STRING | (CLOCK_POMODORO_RUNNING ? 0 : 0), 
           CLOCK_IDM_POMODORO_START,
           CLOCK_POMODORO_RUNNING ? 
               (CLOCK_POMODORO_PAUSED ? 
