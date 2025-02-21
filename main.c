@@ -31,22 +31,18 @@ pikaへ／|
 #include <shobjidl.h>   // For IShellLink
 #include <shlguid.h>    // For CLSID_ShellLink
 
-// 如果编译器找不到这些定义，手动添加
 #ifndef CSIDL_STARTUP
 
 #endif
 
 #ifndef CLSID_ShellLink
-// CLSID_ShellLink definition
 EXTERN_C const CLSID CLSID_ShellLink;
 #endif
 
 #ifndef IID_IShellLinkW
-// IID_IShellLinkW definition
 EXTERN_C const IID IID_IShellLinkW;
 #endif
 
-// 函数声明
 const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english);
 void InitializeDefaultLanguage(void);
 COLORREF ShowColorDialog(HWND hwnd); 
@@ -54,20 +50,16 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
 void CreateDefaultConfig(const char* config_path);  
 void WriteConfigDefaultStartTime(int seconds); 
 void WriteConfigStartupMode(const char* mode); 
-// 颜色选项管理函数声明
 BOOL IsColorExists(const char* hexColor);
 void AddColorOption(const char* hexColor);
 void ClearColorOptions(void);
-// 开机自启动相关函数声明
 BOOL IsAutoStartEnabled(void);
 BOOL CreateShortcut(void);
 BOOL RemoveShortcut(void);
-// 添加 WriteConfig 函数声明
 void WriteConfig(const char* config_path);
 
 
 
-// 语言枚举
 typedef enum {
     APP_LANG_CHINESE_SIMP,    // 简体中文
     APP_LANG_CHINESE_TRAD,    // 繁体中文
@@ -81,17 +73,14 @@ typedef enum {
     APP_LANG_KOREAN           // 韩语
 } AppLanguage;
 
-// 全局变量声明区域
 AppLanguage CURRENT_LANGUAGE = APP_LANG_CHINESE_SIMP;  // 默认使用简体中文
 BOOL CLOCK_IS_PAUSED = FALSE;  // 移动到这里
 
-// 在全局变量区域添加新变量
 int countdown_elapsed_time = 0;  // 用于倒计时的计时
 int countup_elapsed_time = 0;    // 用于正计时的计时
 BOOL countdown_message_shown = FALSE;  // 用于倒计时的消息标记
 BOOL countup_message_shown = FALSE;    // 用于正计时的消息标记
 
-// 在其他全局变量定义附近添加
 int default_countdown_time = 0;  // 将从配置文件中读取
 
 void PauseMediaPlayback(void);
@@ -100,7 +89,6 @@ typedef struct {
     const char* hexColor;
 } PredefinedColor;
 
-// 添加动态数组和计数
 PredefinedColor* COLOR_OPTIONS = NULL;
 size_t COLOR_OPTIONS_COUNT = 0;
 
@@ -361,41 +349,34 @@ char CLOCK_STARTUP_MODE[20] = "COUNTDOWN";  // 添加启动模式变量
 
 
 
-// 修改 UTF8ToANSI 函数的实现
 char* UTF8ToANSI(const char* utf8Str) {
-    // 先获取需要的缓冲区大小
     int wlen = MultiByteToWideChar(CP_UTF8, 0, utf8Str, -1, NULL, 0);
     if (wlen == 0) {
         return _strdup(utf8Str); // 如果转换失败，返回原始字符串的副本
     }
 
-    // 分配 UTF-16 缓冲区
     wchar_t* wstr = (wchar_t*)malloc(sizeof(wchar_t) * wlen);
     if (!wstr) {
         return _strdup(utf8Str);
     }
 
-    // 转换到 UTF-16
     if (MultiByteToWideChar(CP_UTF8, 0, utf8Str, -1, wstr, wlen) == 0) {
         free(wstr);
         return _strdup(utf8Str);
     }
 
-    // 获取 ANSI 所需的缓冲区大小
     int len = WideCharToMultiByte(936, 0, wstr, -1, NULL, 0, NULL, NULL);
     if (len == 0) {
         free(wstr);
         return _strdup(utf8Str);
     }
 
-    // 分配 ANSI 缓冲区
     char* str = (char*)malloc(len);
     if (!str) {
         free(wstr);
         return _strdup(utf8Str);
     }
 
-    // 转换到 ANSI (GB2312/GBK)
     if (WideCharToMultiByte(936, 0, wstr, -1, str, len, NULL, NULL) == 0) {
         free(wstr);
         free(str);
@@ -406,10 +387,8 @@ char* UTF8ToANSI(const char* utf8Str) {
     return str;
 }
 
-// 在文件最开头的宏定义区域添加（在其他 #include 语句之后，但在其他代码之前）
 
 
-// 在全局变量和结构体定义区域添加（在其他全局变量之前）
 typedef struct {
     const char* name;
     const char* hex;
@@ -450,7 +429,6 @@ static const CSSColor CSS_COLORS[] = {
 
 #define CSS_COLORS_COUNT (sizeof(CSS_COLORS) / sizeof(CSS_COLORS[0]))
 
-// 默认颜色选项
 static const char* DEFAULT_COLOR_OPTIONS[] = {
     "#FFFFFF",   // 白色
     "#F9DB91",   // 浅黄色
@@ -472,7 +450,6 @@ static const char* DEFAULT_COLOR_OPTIONS[] = {
 
 #define DEFAULT_COLOR_OPTIONS_COUNT (sizeof(DEFAULT_COLOR_OPTIONS) / sizeof(DEFAULT_COLOR_OPTIONS[0]))
 
-// 删除文件末尾的重复定义
 
 #define DEFAULT_COLOR_OPTIONS_COUNT (sizeof(DEFAULT_COLOR_OPTIONS) / sizeof(DEFAULT_COLOR_OPTIONS[0]))
 
@@ -484,7 +461,6 @@ void InitializeDefaultLanguage(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    // 清理现有颜色选项
     ClearColorOptions();
     
     FILE *file = fopen(config_path, "r");
@@ -499,22 +475,18 @@ void InitializeDefaultLanguage(void) {
         
         while (fgets(line, sizeof(line), file)) {
             if (strncmp(line, "COLOR_OPTIONS=", 13) == 0) {
-                // 清理现有的颜色选项
                 ClearColorOptions();
                 
-                // 跳过"COLOR_OPTIONS="前缀，并确保没有多余的等号
                 char* colors = line + 13;
                 while (*colors == '=' || *colors == ' ') {
                     colors++;
                 }
                 
-                // 去除可能的换行符
                 char* newline = strchr(colors, '\n');
                 if (newline) *newline = '\0';
                 
                 char* token = strtok(colors, ",");
                 while (token) {
-                    // 去除前后空格
                     while (*token == ' ') token++;
                     char* end = token + strlen(token) - 1;
                     while (end > token && *end == ' ') {
@@ -523,7 +495,6 @@ void InitializeDefaultLanguage(void) {
                     }
                     
                     if (*token) {
-                        // 确保颜色格式正确
                         if (token[0] != '#') {
                             char colorWithHash[10];
                             snprintf(colorWithHash, sizeof(colorWithHash), "#%s", token);
@@ -540,7 +511,6 @@ void InitializeDefaultLanguage(void) {
         }
         fclose(file);
         
-        // 如果没有找到颜色选项或颜色列表为空，添加默认颜色
         if (!found_colors || COLOR_OPTIONS_COUNT == 0) {
             for (size_t i = 0; i < DEFAULT_COLOR_OPTIONS_COUNT; i++) {
                 AddColorOption(DEFAULT_COLOR_OPTIONS[i]);
@@ -550,16 +520,13 @@ void InitializeDefaultLanguage(void) {
 }
 
 void AddColorOption(const char* hexColor) {
-    // 跳过空值
     if (!hexColor || !*hexColor) {
         return;
     }
     
-    // 规范化颜色格式（确保大写）
     char normalizedColor[10];
     const char* hex = (hexColor[0] == '#') ? hexColor + 1 : hexColor;
     
-    // 验证十六进制字符串的有效性
     size_t len = strlen(hex);
     if (len != 6) {
         return;  // 无效的十六进制颜色
@@ -578,14 +545,12 @@ void AddColorOption(const char* hexColor) {
     
     snprintf(normalizedColor, sizeof(normalizedColor), "#%06X", color);
     
-    // 检查颜色是否已存在
     for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
         if (strcasecmp(normalizedColor, COLOR_OPTIONS[i].hexColor) == 0) {
             return;
         }
     }
     
-    // 扩展数组
     PredefinedColor* newArray = realloc(COLOR_OPTIONS, 
                                       (COLOR_OPTIONS_COUNT + 1) * sizeof(PredefinedColor));
     if (newArray) {
@@ -596,21 +561,17 @@ void AddColorOption(const char* hexColor) {
 }
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-    // 初始化 COM
     HRESULT hr = CoInitialize(NULL);
     if (FAILED(hr)) {
         MessageBox(NULL, "COM initialization failed!", "Error", MB_ICONERROR);
         return 1;
     }
 
-    // 设置代码页为 GBK
     SetConsoleOutputCP(936);
     SetConsoleCP(936);
     
-    // 先初始化语言和颜色选项
     InitializeDefaultLanguage();
     
-    // 然后读取其他配置
     ReadConfig();
 
     int defaultFontIndex = -1;
@@ -690,7 +651,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     ShowWindow(hwnd, nCmdShow);
     UpdateWindow(hwnd);
 
-    // 读取配置文件以确定启动模式
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     FILE *file = fopen(config_path, "r");
@@ -705,19 +665,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         fclose(file);
     }
 
-    // 根据启动模式设置初始状态
     if (strcmp(CLOCK_STARTUP_MODE, "COUNT_UP") == 0) {
         CLOCK_COUNT_UP = TRUE;
         elapsed_time = 0;
     } else if (strcmp(CLOCK_STARTUP_MODE, "NO_DISPLAY") == 0) {
         ShowWindow(hwnd, SW_HIDE);  // 隐藏窗口
-        // 删除 return 0 语句，让程序继续运行
-        // 只是不显示窗口，但保持系统托盘图标
     } else if (strcmp(CLOCK_STARTUP_MODE, "SHOW_TIME") == 0) {
         CLOCK_SHOW_CURRENT_TIME = TRUE;
         CLOCK_LAST_TIME_UPDATE = 0;
     } 
-    // COUNTDOWN 模式使用默认的倒计时行为
 
     MSG msg;
     while (GetMessage(&msg, NULL, 0, 0) > 0) {
@@ -727,7 +683,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     CloseHandle(hMutex);
 
-    // 清理 COM
     CoUninitialize();
     return (int)msg.wParam;
 }
@@ -763,7 +718,6 @@ void CreateDefaultConfig(const char* config_path) {
         return;
     }
 
-    // 写入基本配置
     fprintf(file, "CLOCK_TEXT_COLOR=#FFB6C1\n");
     fprintf(file, "CLOCK_BASE_FONT_SIZE=20\n");
     fprintf(file, "FONT_FILE_NAME=GohuFont uni11 Nerd Font Mono.ttf\n");
@@ -778,7 +732,6 @@ void CreateDefaultConfig(const char* config_path) {
     fprintf(file, "CLOCK_USE_24HOUR=FALSE\n");  // 添加24小时制配置
     fprintf(file, "CLOCK_SHOW_SECONDS=FALSE\n"); // 添加显示秒数配置
 
-    // 写入默认颜色选项，但不添加到 COLOR_OPTIONS
     fprintf(file, "COLOR_OPTIONS=");
     for (size_t i = 0; i < DEFAULT_COLOR_OPTIONS_COUNT; i++) {
         fprintf(file, "%s", DEFAULT_COLOR_OPTIONS[i]);
@@ -970,7 +923,6 @@ void ReadConfig() {
             line[len-1] = '\0';
         }
 
-        // 跳过颜色选项的处理，因为它已经在 InitializeDefaultLanguage 中处理了
         if (strncmp(line, "COLOR_OPTIONS=", 13) == 0) {
             continue;
         }
@@ -1044,22 +996,18 @@ void ReadConfig() {
             char *newline = strchr(path, '\n');
             if (newline) *newline = '\0';
             
-            // 清理路径
             while (*path == '=' || *path == ' ' || *path == '"') path++;
             size_t len = strlen(path);
             if (len > 0 && path[len-1] == '"') path[len-1] = '\0';
             
-            // 验证文件是否存在
             if (GetFileAttributes(path) != INVALID_FILE_ATTRIBUTES) {
                 strncpy(CLOCK_TIMEOUT_FILE_PATH, path, sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1);
                 CLOCK_TIMEOUT_FILE_PATH[sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1] = '\0';
                 
-                // 确保动作设置正确
                 if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
                     CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
                 }
             } else {
-                // 如果文件不存在，清空路径
                 memset(CLOCK_TIMEOUT_FILE_PATH, 0, sizeof(CLOCK_TIMEOUT_FILE_PATH));
                 CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE; // 默认回退到消息提示
             }
@@ -1204,7 +1152,6 @@ void WriteConfigFont(const char* font_file_name) {
         line = strtok(NULL, "\n");
     }
 
-    // 在这里添加对 CLOCK_TEXT_COLOR 的写入
     strcat(new_config, "CLOCK_TEXT_COLOR=");
     strcat(new_config, CLOCK_TEXT_COLOR);
     strcat(new_config, "\n");
@@ -1243,7 +1190,6 @@ void WriteConfigTimeoutAction(const char* action) {
     char line[MAX_PATH];
     int success = 1;
 
-    // 读取所有非超时相关的配置
     while (fgets(line, sizeof(line), file)) {
         if (strncmp(line, "CLOCK_TIMEOUT_ACTION=", 20) != 0 && 
             strncmp(line, "CLOCK_TIMEOUT_FILE=", 19) != 0) {
@@ -1254,16 +1200,13 @@ void WriteConfigTimeoutAction(const char* action) {
         }
     }
 
-    // 写入新的超时动作配置
     if (success) {
         if (fprintf(temp, "CLOCK_TIMEOUT_ACTION=%s\n", action) < 0) {
             success = 0;
         }
     }
     
-    // 如果动作是打开文件且文件路径存在，写入文件路径
     if (success && strcmp(action, "OPEN_FILE") == 0 && strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
-        // 验证文件是否存在
         if (GetFileAttributes(CLOCK_TIMEOUT_FILE_PATH) != INVALID_FILE_ATTRIBUTES) {
             if (fprintf(temp, "CLOCK_TIMEOUT_FILE=%s\n", CLOCK_TIMEOUT_FILE_PATH) < 0) {
                 success = 0;
@@ -1505,9 +1448,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 
         case WM_KEYDOWN:
             if (wParam == VK_RETURN) {
-                // 获取当前对话框的ID
                 int dlgId = GetDlgCtrlID((HWND)lParam);
-                // 根据对话框ID执行相应的确认操作
                 if (dlgId == CLOCK_IDD_COLOR_DIALOG) {
                     SendMessage(hwndDlg, WM_COMMAND, CLOCK_IDC_BUTTON_OK, 0);
                 } else {
@@ -1562,7 +1503,6 @@ void FormatTime(int remaining_time, char* time_text) {
     }
 
     if (CLOCK_COUNT_UP) {
-        // 正计时模式 - 使用专用计数器
         int hours = countup_elapsed_time / 3600;
         int minutes = (countup_elapsed_time % 3600) / 60;
         int seconds = countup_elapsed_time % 60;
@@ -1577,10 +1517,8 @@ void FormatTime(int remaining_time, char* time_text) {
         return;
     }
 
-    // 倒计时模式
     int remaining = CLOCK_TOTAL_TIME - countdown_elapsed_time;
     if (remaining <= 0) {
-        // 当倒计时结束时，返回空字符串而不是显示 0
         time_text[0] = '\0';
         return;
     }
@@ -1618,7 +1556,6 @@ void ShowContextMenu(HWND hwnd) {
     AppendMenuW(hMenu, MF_STRING, 101, 
                 GetLocalizedString(L"设置时间", L"Set Time"));
     
-    // 时间显示子菜单
     HMENU hTimeMenu = CreatePopupMenu();
     AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
                CLOCK_IDM_SHOW_CURRENT_TIME,
@@ -1635,7 +1572,6 @@ void ShowContextMenu(HWND hwnd) {
                (UINT_PTR)hTimeMenu,
                GetLocalizedString(L"时间显示", L"Time Display"));
 
-    // +++ 新增番茄时钟菜单项 +++
     HMENU hPomodoroMenu = CreatePopupMenu();
     AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_START, GetLocalizedString(L"开始", L"Start"));
     AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
@@ -1648,7 +1584,6 @@ void ShowContextMenu(HWND hwnd) {
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hPomodoroMenu,
                GetLocalizedString(L"🍅 番茄时钟", L"🍅 Pomodoro"));
 
-    // 创建正计时子菜单
     HMENU hCountUpMenu = CreatePopupMenu();
     AppendMenuW(hCountUpMenu, MF_STRING, CLOCK_IDM_COUNT_UP_START,
         CLOCK_COUNT_UP ? 
@@ -1657,18 +1592,15 @@ void ShowContextMenu(HWND hwnd) {
                 GetLocalizedString(L"暂停", L"Pause")) :
             GetLocalizedString(L"开始", L"Start"));
             
-    // 只在正计时已经开始后才显示"重新开始"选项
     if (CLOCK_COUNT_UP) {
         AppendMenuW(hCountUpMenu, MF_STRING, CLOCK_IDM_COUNT_UP_RESET,
             GetLocalizedString(L"重新开始", L"Restart"));
     }
                
-    // 将正计时子菜单添加到主菜单
     AppendMenuW(hMenu, MF_POPUP | (CLOCK_COUNT_UP ? MF_CHECKED : MF_UNCHECKED),
                (UINT_PTR)hCountUpMenu,
                GetLocalizedString(L"正计时", L"Count Up"));
 
-    // Add countdown submenu
     HMENU hCountdownMenu = CreatePopupMenu();
     AppendMenuW(hCountdownMenu, MF_STRING,
         CLOCK_IDM_COUNTDOWN_START_PAUSE,
@@ -1678,14 +1610,12 @@ void ShowContextMenu(HWND hwnd) {
                 GetLocalizedString(L"继续", L"Resume") :
                 GetLocalizedString(L"暂停", L"Pause")));
     
-    // 只在倒计时模式下显示重置选项
     if (!CLOCK_COUNT_UP && !CLOCK_SHOW_CURRENT_TIME) {  // 修改判断条件
         AppendMenuW(hCountdownMenu, MF_STRING,
             CLOCK_IDM_COUNTDOWN_RESET,
             GetLocalizedString(L"重新开始", L"Restart"));
     }
 
-    // Add countdown submenu to main menu
     AppendMenuW(hMenu, MF_POPUP | (!CLOCK_COUNT_UP && !CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED),
         (UINT_PTR)hCountdownMenu,
         GetLocalizedString(L"倒计时", L"Countdown"));
@@ -1708,7 +1638,6 @@ void ShowContextMenu(HWND hwnd) {
 }
 
 void ShowColorMenu(HWND hwnd) {
-    // 重新读取配置文件以更新颜色选项
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
@@ -1717,22 +1646,18 @@ void ShowColorMenu(HWND hwnd) {
         char line[1024];
         while (fgets(line, sizeof(line), file)) {
             if (strncmp(line, "COLOR_OPTIONS=", 13) == 0) {
-                // 清理现有的颜色选项
                 ClearColorOptions();
                 
-                // 跳过"COLOR_OPTIONS="前缀，并确保没有多余的等号
                 char* colors = line + 13;
                 while (*colors == '=' || *colors == ' ') {
                     colors++;
                 }
                 
-                // 去除可能的换行符
                 char* newline = strchr(colors, '\n');
                 if (newline) *newline = '\0';
                 
                 char* token = strtok(colors, ",");
                 while (token) {
-                    // 去除前后空格
                     while (*token == ' ') token++;
                     char* end = token + strlen(token) - 1;
                     while (end > token && *end == ' ') {
@@ -1741,7 +1666,6 @@ void ShowColorMenu(HWND hwnd) {
                     }
                     
                     if (*token) {
-                        // 确保颜色格式正确
                         if (token[0] != '#') {
                             char colorWithHash[10];
                             snprintf(colorWithHash, sizeof(colorWithHash), "#%s", token);
@@ -1758,7 +1682,6 @@ void ShowColorMenu(HWND hwnd) {
         fclose(file);
     }
 
-    // 创建菜单
     HMENU hMenu = CreatePopupMenu();
     HMENU hColorSubMenu = CreatePopupMenu();
     HMENU hFontSubMenu = CreatePopupMenu();
@@ -1779,7 +1702,6 @@ void ShowColorMenu(HWND hwnd) {
             BOOL isCurrentFile = (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE && 
                                 strcmp(CLOCK_RECENT_FILES[i].path, CLOCK_TIMEOUT_FILE_PATH) == 0);
             
-            // 转换文件名到宽字符
             wchar_t wFileName[MAX_PATH];
             MultiByteToWideChar(CP_UTF8, 0, CLOCK_RECENT_FILES[i].name, -1, wFileName, MAX_PATH);
             
@@ -1798,7 +1720,6 @@ void ShowColorMenu(HWND hwnd) {
         char *filename = strrchr(CLOCK_TIMEOUT_FILE_PATH, '\\');
         if (filename) {
             filename++;
-            // 转换文件名到宽字符
             wchar_t wFileName[MAX_PATH];
             MultiByteToWideChar(CP_UTF8, 0, filename, -1, wFileName, MAX_PATH);
             
@@ -1825,15 +1746,12 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeoutMenu, 
                 GetLocalizedString(L"超时动作", L"Timeout Action"));
 
-    // 在超时动作后添加预设管理菜单
     HMENU hTimeOptionsMenu = CreatePopupMenu();
     AppendMenuW(hTimeOptionsMenu, MF_STRING, CLOCK_IDC_MODIFY_TIME_OPTIONS,
                 GetLocalizedString(L"修改快捷时间选项", L"Modify Time Options"));
     
-    // 创建"启动设置"的子菜单
     HMENU hStartupSettingsMenu = CreatePopupMenu();  // 新增子菜单
 
-    // 读取当前启动模式
     char currentStartupMode[20] = "COUNTDOWN";  // Set default to COUNTDOWN
     char configPath[MAX_PATH];  
     GetConfigPath(configPath, MAX_PATH);
@@ -1849,50 +1767,41 @@ void ShowColorMenu(HWND hwnd) {
         fclose(configFile);
     }
     
-    // 新增子选项：倒计时
     AppendMenuW(hStartupSettingsMenu, MF_STRING | 
                 (strcmp(currentStartupMode, "COUNTDOWN") == 0 ? MF_CHECKED : 0),
                 CLOCK_IDC_SET_COUNTDOWN_TIME,
                 GetLocalizedString(L"倒计时", L"Countdown"));
     
-    // 新增子选项：正计时
     AppendMenuW(hStartupSettingsMenu, MF_STRING | 
                 (strcmp(currentStartupMode, "COUNT_UP") == 0 ? MF_CHECKED : 0),
                 CLOCK_IDC_START_COUNT_UP,
                 GetLocalizedString(L"正计时", L"Stopwatch"));
     
-    // 新增子选项：显示当前时间
     AppendMenuW(hStartupSettingsMenu, MF_STRING | 
                 (strcmp(currentStartupMode, "SHOW_TIME") == 0 ? MF_CHECKED : 0),
                 CLOCK_IDC_START_SHOW_TIME,
                 GetLocalizedString(L"显示当前时间", L"Show Current Time"));
     
-    // 新增子选项：不显示
     AppendMenuW(hStartupSettingsMenu, MF_STRING | 
                 (strcmp(currentStartupMode, "NO_DISPLAY") == 0 ? MF_CHECKED : 0),
                 CLOCK_IDC_START_NO_DISPLAY,
                 GetLocalizedString(L"不显示", L"No Display"));
     
-    // 添加分隔线
     AppendMenuW(hStartupSettingsMenu, MF_SEPARATOR, 0, NULL);
 
-    // 添加开机自启动选项
     AppendMenuW(hStartupSettingsMenu, MF_STRING | 
             (IsAutoStartEnabled() ? MF_CHECKED : MF_UNCHECKED),
             CLOCK_IDC_AUTO_START,
             GetLocalizedString(L"开机自启动", L"Start with Windows"));
 
-    // 将启动设置子菜单添加到预设管理菜单
     AppendMenuW(hTimeOptionsMenu, MF_POPUP, (UINT_PTR)hStartupSettingsMenu,
                 GetLocalizedString(L"启动设置", L"Startup Settings"));
 
-    // 将预设管理菜单添加到主菜单
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeOptionsMenu,
                 GetLocalizedString(L"预设管理", L"Preset Manager"));
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
-    // 先添加字体菜单
     for (int i = 0; i < sizeof(fontResources) / sizeof(fontResources[0]); i++) {
         BOOL isCurrentFont = strcmp(FONT_FILE_NAME, fontResources[i].fontName) == 0;
         
@@ -1909,7 +1818,6 @@ void ShowColorMenu(HWND hwnd) {
                   fontResources[i].menuId, displayName);
     }
 
-    // 然后添加颜色选项
     for (int i = 0; i < COLOR_OPTIONS_COUNT; i++) {
         const char* hexColor = COLOR_OPTIONS[i].hexColor;
         
@@ -1924,18 +1832,15 @@ void ShowColorMenu(HWND hwnd) {
     }
     AppendMenuW(hColorSubMenu, MF_SEPARATOR, 0, NULL);
 
-    // 创建自定义子菜单
     HMENU hCustomizeMenu = CreatePopupMenu();
     AppendMenuW(hCustomizeMenu, MF_STRING, CLOCK_IDC_COLOR_VALUE, 
                 GetLocalizedString(L"颜色值", L"Color Value"));
     AppendMenuW(hCustomizeMenu, MF_STRING, CLOCK_IDC_COLOR_PANEL, 
                 GetLocalizedString(L"颜色面板", L"Color Panel"));
 
-    // 将自定义子菜单添加到颜色菜单
     AppendMenuW(hColorSubMenu, MF_POPUP, (UINT_PTR)hCustomizeMenu, 
                 GetLocalizedString(L"自定义", L"Customize"));
 
-    // 先添加字体菜单项，再添加颜色菜单项
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hFontSubMenu, 
                 GetLocalizedString(L"字体", L"Font"));
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hColorSubMenu, 
@@ -1950,14 +1855,12 @@ void ShowColorMenu(HWND hwnd) {
                CATIME_VERSION);
     AppendMenuW(hAboutMenu, MF_STRING | MF_DISABLED, 0, version_text);
 
-    // 创建反馈子菜单
     HMENU hFeedbackMenu = CreatePopupMenu();
     AppendMenuW(hFeedbackMenu, MF_STRING, CLOCK_IDM_FEEDBACK_GITHUB, L"GitHub");
     AppendMenuW(hFeedbackMenu, MF_STRING, CLOCK_IDM_FEEDBACK_BILIBILI, L"BiliBili");
     AppendMenuW(hAboutMenu, MF_POPUP, (UINT_PTR)hFeedbackMenu, 
                 GetLocalizedString(L"反馈", L"Feedback"));
 
-    // 添加语言选择子菜单
     HMENU hLangMenu = CreatePopupMenu();
     AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_CHINESE_SIMP ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDM_LANG_CHINESE, L"简体中文");
@@ -2258,13 +2161,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         InvalidateRect(hwnd, NULL, TRUE);
                     }
                 } else {
-                    // 倒计时逻辑
                     if (countdown_elapsed_time < CLOCK_TOTAL_TIME) {
                         countdown_elapsed_time++;  // 使用倒计时专用计数器
                         if (countdown_elapsed_time >= CLOCK_TOTAL_TIME && !countdown_message_shown) {
                             countdown_message_shown = TRUE;
                             
-                            // 处理倒计时结束的动作
                             switch (CLOCK_TIMEOUT_ACTION) {
                                 case TIMEOUT_ACTION_MESSAGE:
                                     ShowToastNotification(hwnd, "Time's up!");
@@ -2280,16 +2181,12 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                                     break;
                                 case TIMEOUT_ACTION_OPEN_FILE: {
                                     if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
-                                        // 转换为 Unicode 路径
                                         wchar_t wPath[MAX_PATH];
                                         MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_FILE_PATH, -1, wPath, MAX_PATH);
                                         
-                                        // 使用 ShellExecuteW 打开文件
                                         HINSTANCE result = ShellExecuteW(NULL, L"open", wPath, NULL, NULL, SW_SHOWNORMAL);
                                         
-                                        // 检查是否成功打开文件
                                         if ((INT_PTR)result <= 32) {
-                                            // 如果打开失败，显示错误消息
                                             MessageBoxW(hwnd, 
                                                 GetLocalizedString(L"无法打开文件", L"Failed to open file"),
                                                 GetLocalizedString(L"错误", L"Error"),
@@ -2463,16 +2360,13 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     SetClickThrough(hwnd, TRUE);
                     SendMessage(hwnd, WM_SETREDRAW, FALSE, 0);
                     
-                    // Add this line to clear timeout file path
                     memset(CLOCK_TIMEOUT_FILE_PATH, 0, sizeof(CLOCK_TIMEOUT_FILE_PATH));
                     
-                    // 检查并重置语言到系统默认
                     AppLanguage defaultLanguage;
                     LANGID langId = GetUserDefaultUILanguage();
                     WORD primaryLangId = PRIMARYLANGID(langId);
                     WORD subLangId = SUBLANGID(langId);
                     
-                    // 根据系统语言设置默认语言
                     switch (primaryLangId) {
                         case LANG_CHINESE:
                             defaultLanguage = (subLangId == SUBLANG_CHINESE_SIMPLIFIED) ? 
@@ -2504,7 +2398,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             break;
                     }
                     
-                    // 如果当前语言不是系统默认语言，则重置
                     if (CURRENT_LANGUAGE != defaultLanguage) {
                         CURRENT_LANGUAGE = defaultLanguage;
                     }
@@ -2643,18 +2536,15 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 default: {
                     int cmd = LOWORD(wp);
                     if (cmd >= 102 && cmd < 102 + time_options_count) {
-                        // 当选择一个新的倒计时选项时
                         if (CLOCK_SHOW_CURRENT_TIME) {
                             CLOCK_SHOW_CURRENT_TIME = FALSE;
                             CLOCK_LAST_TIME_UPDATE = 0;
                         }
                         
-                        // 如果正在正计时，先关闭正计时模式
                         if (CLOCK_COUNT_UP) {
                             CLOCK_COUNT_UP = FALSE;
                         }
                         
-                        // 显示窗口，但不进入编辑模式
                         ShowWindow(hwnd, SW_SHOW);
                         CLOCK_EDIT_MODE = FALSE;  // 确保不进入编辑模式
                         WriteConfigEditMode("FALSE");  // 保存编辑模式状态到配置文件
@@ -2667,7 +2557,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         message_shown = 0;
                         countdown_message_shown = FALSE;
                         
-                        // 重置计时器
                         KillTimer(hwnd, 1);
                         SetTimer(hwnd, 1, 1000, NULL);
                         
@@ -2730,40 +2619,31 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     else if (cmd >= CLOCK_IDM_RECENT_FILE_1 && cmd <= CLOCK_IDM_RECENT_FILE_3) {
                         int index = cmd - CLOCK_IDM_RECENT_FILE_1;
                         if (index < CLOCK_RECENT_FILES_COUNT) {
-                            // 将路径转换为宽字符
                             wchar_t wPath[MAX_PATH];
                             MultiByteToWideChar(CP_UTF8, 0, CLOCK_RECENT_FILES[index].path, -1, wPath, MAX_PATH);
                             
                             if (GetFileAttributesW(wPath) != INVALID_FILE_ATTRIBUTES) {
-                                // 更新超时文件路径
                                 strncpy(CLOCK_TIMEOUT_FILE_PATH, CLOCK_RECENT_FILES[index].path, 
                                         sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1);
                                 CLOCK_TIMEOUT_FILE_PATH[sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1] = '\0';
                                 
-                                // 设置动作为打开文件
                                 CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
                                 
-                                // 保存配置
                                 WriteConfigTimeoutAction("OPEN_FILE");
                                 
-                                // 将选中的文件移到最近文件列表的首位
                                 SaveRecentFile(CLOCK_RECENT_FILES[index].path);
                                 
-                                // 重新加载配置以确保所有设置都正确
                                 ReadConfig();
                             } else {
-                                // 如果文件不存在，显示错误消息
                                 MessageBoxW(hwnd, 
                                     GetLocalizedString(L"所选文件不存在", L"Selected file does not exist"),
                                     GetLocalizedString(L"错误", L"Error"),
                                     MB_ICONERROR);
                                 
-                                // 清除无效的文件路径
                                 memset(CLOCK_TIMEOUT_FILE_PATH, 0, sizeof(CLOCK_TIMEOUT_FILE_PATH));
                                 CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
                                 WriteConfigTimeoutAction("MESSAGE");
                                 
-                                // 从最近文件列表中移除无效文件
                                 for (int i = index; i < CLOCK_RECENT_FILES_COUNT - 1; i++) {
                                     CLOCK_RECENT_FILES[i] = CLOCK_RECENT_FILES[i + 1];
                                 }
@@ -2971,10 +2851,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDM_SHOW_CURRENT_TIME: {  
                     CLOCK_SHOW_CURRENT_TIME = !CLOCK_SHOW_CURRENT_TIME;
                     if (CLOCK_SHOW_CURRENT_TIME) {
-                        // 显示窗口
                         ShowWindow(hwnd, SW_SHOW);
                         
-                        // 切换到显示当前时间时，关闭正计时模式
                         CLOCK_COUNT_UP = FALSE;
                         KillTimer(hwnd, 1);   
                         elapsed_time = 0;
@@ -2994,7 +2872,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         char config_path[MAX_PATH];
                         GetConfigPath(config_path, MAX_PATH);
                         
-                        // 保存当前的启动模式
                         char currentStartupMode[20];
                         FILE *fp = fopen(config_path, "r");
                         if (fp) {
@@ -3007,10 +2884,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             }
                             fclose(fp);
                             
-                            // 写入所有配置，包括启动模式
                             WriteConfig(config_path);
                             
-                            // 重新写入启动模式
                             WriteConfigStartupMode(currentStartupMode);
                         } else {
                             WriteConfig(config_path);
@@ -3025,7 +2900,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         char config_path[MAX_PATH];
                         GetConfigPath(config_path, MAX_PATH);
                         
-                        // 保存当前的启动模式
                         char currentStartupMode[20];
                         FILE *fp = fopen(config_path, "r");
                         if (fp) {
@@ -3038,10 +2912,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             }
                             fclose(fp);
                             
-                            // 写入所有配置，包括启动模式
                             WriteConfig(config_path);
                             
-                            // 重新写入启动模式
                             WriteConfigStartupMode(currentStartupMode);
                         } else {
                             WriteConfig(config_path);
@@ -3059,40 +2931,31 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDM_RECENT_FILE_3: {
                     int index = cmd - CLOCK_IDM_RECENT_FILE_1;
                     if (index < CLOCK_RECENT_FILES_COUNT) {
-                        // 将路径转换为宽字符
                         wchar_t wPath[MAX_PATH];
                         MultiByteToWideChar(CP_UTF8, 0, CLOCK_RECENT_FILES[index].path, -1, wPath, MAX_PATH);
                         
                         if (GetFileAttributesW(wPath) != INVALID_FILE_ATTRIBUTES) {
-                            // 更新超时文件路径
                             strncpy(CLOCK_TIMEOUT_FILE_PATH, CLOCK_RECENT_FILES[index].path, 
                                     sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1);
                             CLOCK_TIMEOUT_FILE_PATH[sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1] = '\0';
                             
-                            // 设置动作为打开文件
                             CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
                             
-                            // 保存配置
                             WriteConfigTimeoutAction("OPEN_FILE");
                             
-                            // 将选中的文件移到最近文件列表的首位
                             SaveRecentFile(CLOCK_RECENT_FILES[index].path);
                             
-                            // 重新加载配置以确保所有设置都正确
                             ReadConfig();
                         } else {
-                            // 如果文件不存在，显示错误消息
                             MessageBoxW(hwnd, 
                                 GetLocalizedString(L"所选文件不存在", L"Selected file does not exist"),
                                 GetLocalizedString(L"错误", L"Error"),
                                 MB_ICONERROR);
                             
-                            // 清除无效的文件路径
                             memset(CLOCK_TIMEOUT_FILE_PATH, 0, sizeof(CLOCK_TIMEOUT_FILE_PATH));
                             CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
                             WriteConfigTimeoutAction("MESSAGE");
                             
-                            // 从最近文件列表中移除无效文件
                             for (int i = index; i < CLOCK_RECENT_FILES_COUNT - 1; i++) {
                                 CLOCK_RECENT_FILES[i] = CLOCK_RECENT_FILES[i + 1];
                             }
@@ -3118,13 +2981,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 
                     if (GetOpenFileNameW(&ofn)) {
-                        // 将 Unicode 路径转换为 UTF-8
                         WideCharToMultiByte(CP_UTF8, 0, szFile, -1, 
                                            CLOCK_TIMEOUT_FILE_PATH, 
                                            sizeof(CLOCK_TIMEOUT_FILE_PATH), 
                                            NULL, NULL);
                         
-                        // 更新配置文件
                         char config_path[MAX_PATH];
                         GetConfigPath(config_path, MAX_PATH);
                         WriteConfigTimeoutAction("OPEN_FILE");  // 使用 WriteConfigTimeoutAction 而不是 WriteConfig
@@ -3135,7 +2996,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDM_COUNT_UP: {
                     CLOCK_COUNT_UP = !CLOCK_COUNT_UP;
                     if (CLOCK_COUNT_UP) {
-                        // 显示窗口
                         ShowWindow(hwnd, SW_SHOW);
                         
                         elapsed_time = 0;
@@ -3147,20 +3007,17 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_COUNT_UP_START: {
                     if (!CLOCK_COUNT_UP) {
-                        // 切换到正计时模式
                         CLOCK_COUNT_UP = TRUE;
                         CLOCK_SHOW_CURRENT_TIME = FALSE;
                         CLOCK_IS_PAUSED = FALSE;
                         countup_elapsed_time = 0;  // 重置正计时计数器
                         countup_message_shown = FALSE;
                         
-                        // 显示窗口
                         ShowWindow(hwnd, SW_SHOW);
                         
                         KillTimer(hwnd, 1);
                         SetTimer(hwnd, 1, 1000, NULL);
                     } else {
-                        // 暂停/继续正计时
                         CLOCK_IS_PAUSED = !CLOCK_IS_PAUSED;
                         if (CLOCK_IS_PAUSED) {
                             KillTimer(hwnd, 1);
@@ -3183,7 +3040,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDC_SET_COUNTDOWN_TIME: {
-                    // 处理设置倒计时时间的逻辑
                     while (1) {
                         memset(inputText, 0, sizeof(inputText));
                         DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc);
@@ -3194,7 +3050,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
                         int total_seconds = 0;
                         if (ParseInput(inputText, &total_seconds)) {
-                            // 只保存配置，不改变当前状态
                             WriteConfigDefaultStartTime(total_seconds);
                             WriteConfigStartupMode("COUNTDOWN");  // 设置启动模式为倒计时
                             ReadConfig();
@@ -3223,7 +3078,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDC_START_SHOW_TIME: {
                     WriteConfigStartupMode("SHOW_TIME");
-                    // 更新菜单项的选中状态
                     HMENU hMenu = GetMenu(hwnd);
                     HMENU hTimeOptionsMenu = GetSubMenu(hMenu, GetMenuItemCount(hMenu) - 2); // 获取倒数第二个菜单项
                     HMENU hStartupSettingsMenu = GetSubMenu(hTimeOptionsMenu, 0); // 获取第一个子菜单
@@ -3235,12 +3089,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDC_START_COUNT_UP: {
-                    // 将启动时正计时的选择写入配置文件
                     WriteConfigStartupMode("COUNT_UP");
                     break;
                 }
                 case CLOCK_IDC_START_NO_DISPLAY: {
-                    // 将启动时不显示的选择写入配置文件
                     WriteConfigStartupMode("NO_DISPLAY");
                     break;
                 }
@@ -3248,19 +3100,16 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     BOOL isEnabled = IsAutoStartEnabled();
                     if (isEnabled) {
                         if (RemoveShortcut()) {
-                            // 更新菜单项的选中状态
                             CheckMenuItem(GetMenu(hwnd), CLOCK_IDC_AUTO_START, MF_UNCHECKED);
                         }
                     } else {
                         if (CreateShortcut()) {
-                            // 更新菜单项的选中状态
                             CheckMenuItem(GetMenu(hwnd), CLOCK_IDC_AUTO_START, MF_CHECKED);
                         }
                     }
                     break;
                 }
                 case CLOCK_IDC_COLOR_VALUE: {
-                    // 处理颜色值输入
                     DialogBox(GetModuleHandle(NULL), 
                              MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), 
                              hwnd, 
@@ -3268,7 +3117,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDC_COLOR_PANEL: {
-                    // 原来的颜色对话框处理代码
                     COLORREF color = ShowColorDialog(hwnd);
                     if (color != (COLORREF)-1) {
                         InvalidateRect(hwnd, NULL, TRUE);
@@ -3277,7 +3125,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_COUNTDOWN_START_PAUSE: {
                     if (CLOCK_COUNT_UP || CLOCK_SHOW_CURRENT_TIME) {  // 修改判断条件
-                        // 如果当前是正计时或显示当前时间模式，切换到默认倒计时
                         CLOCK_COUNT_UP = FALSE;
                         CLOCK_SHOW_CURRENT_TIME = FALSE;  // 关闭显示当前时间
                         elapsed_time = default_countdown_time;
@@ -3286,7 +3133,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         CLOCK_IS_PAUSED = FALSE;
                         SetTimer(hwnd, 1, 1000, NULL);
                     } else {
-                        // 正常的暂停/继续逻辑
                         CLOCK_IS_PAUSED = !CLOCK_IS_PAUSED;
                         if (CLOCK_IS_PAUSED) {
                             KillTimer(hwnd, 1);
@@ -3310,23 +3156,18 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_POMODORO_START:
-                    // 处理开始/暂停逻辑
                     break;
                 
                 case CLOCK_IDM_POMODORO_WORK:
-                    // 弹出输入框修改工作时间
                     break;
 
                 case CLOCK_IDM_POMODORO_BREAK:
-                    // 弹出输入框修改短休息时间 
                     break;
 
                 case CLOCK_IDM_POMODORO_LBREAK:
-                    // 弹出输入框修改长休息时间
                     break;
 
                 case CLOCK_IDM_POMODORO_RESET:
-                    // 重置计时器逻辑
                     break;
             }
             break;
@@ -3537,34 +3378,27 @@ int CALLBACK EnumFontFamExProc(
 int isValidColor(const char* input) {
     if (!input || strlen(input) == 0) return 0;
     
-    // 去除前后空格
     while (isspace(*input)) input++;
     char* end = (char*)input + strlen(input) - 1;
     while (end > input && isspace(*end)) end--;
     size_t len = end - input + 1;
     
-    // 复制输入以便处理
     char color[32];
     strncpy(color, input, sizeof(color)-1);
     color[sizeof(color)-1] = '\0';
     
-    // 转换为小写以便比较
     for (char* p = color; *p; p++) {
         *p = tolower(*p);
     }
     
-    // 检查 CSS 颜色名称
     for (size_t i = 0; i < CSS_COLORS_COUNT; i++) {
         if (strcmp(color, CSS_COLORS[i].name) == 0) {
             return 1;
         }
     }
     
-    // 检查十六进制格式
     if (color[0] == '#') {
-        // 检查长度是否为4（#RGB）或7（#RRGGBB）
         if (strlen(color) == 7 || strlen(color) == 4) {
-            // 验证所有字符是否为有效的十六进制数字
             for (size_t i = 1; i < strlen(color); i++) {
                 if (!isxdigit((unsigned char)color[i])) {
                     goto try_rgb;
@@ -3573,7 +3407,6 @@ int isValidColor(const char* input) {
             return 1;
         }
     } else if (strlen(color) == 6 || strlen(color) == 3) {
-        // 检查不带#的十六进制格式
         for (size_t i = 0; i < strlen(color); i++) {
             if (!isxdigit((unsigned char)color[i])) {
                 goto try_rgb;
@@ -3583,17 +3416,14 @@ int isValidColor(const char* input) {
     }
     
 try_rgb:
-    // 尝试解析RGB格式
     int r = -1, g = -1, b = -1;
     char* rgb_str = color;
     
-    // 跳过可能的 "rgb" 前缀
     if (strncmp(rgb_str, "rgb", 3) == 0) {
         rgb_str += 3;
         while (*rgb_str && (*rgb_str == '(' || isspace(*rgb_str))) rgb_str++;
     }
     
-    // 尝试多种分隔符格式（包括中文分隔符）
     if (sscanf(rgb_str, "%d,%d,%d", &r, &g, &b) == 3 ||
         sscanf(rgb_str, "%d，%d，%d", &r, &g, &b) == 3 ||  // 中文逗号
         sscanf(rgb_str, "%d;%d;%d", &r, &g, &b) == 3 ||
@@ -3608,10 +3438,8 @@ try_rgb:
 }
 
 void normalizeColor(const char* input, char* output, size_t output_size) {
-    // 去除前后空格
     while (isspace(*input)) input++;
     
-    // 复制并转换为小写
     char color[32];
     strncpy(color, input, sizeof(color)-1);
     color[sizeof(color)-1] = '\0';
@@ -3619,7 +3447,6 @@ void normalizeColor(const char* input, char* output, size_t output_size) {
         *p = tolower(*p);
     }
     
-    // 检查 CSS 颜色名称
     for (size_t i = 0; i < CSS_COLORS_COUNT; i++) {
         if (strcmp(color, CSS_COLORS[i].name) == 0) {
             strncpy(output, CSS_COLORS[i].hex, output_size);
@@ -3627,7 +3454,6 @@ void normalizeColor(const char* input, char* output, size_t output_size) {
         }
     }
     
-    // 清理输入字符串
     char cleaned[32] = {0};
     int j = 0;
     for (int i = 0; color[i]; i++) {
@@ -3637,13 +3463,11 @@ void normalizeColor(const char* input, char* output, size_t output_size) {
     }
     cleaned[j] = '\0';
     
-    // 处理十六进制格式
     if (cleaned[0] == '#') {
         memmove(cleaned, cleaned + 1, strlen(cleaned));
     }
     
     if (strlen(cleaned) == 3) {
-        // 扩展3位十六进制
         snprintf(output, output_size, "#%c%c%c%c%c%c",
             cleaned[0], cleaned[0], cleaned[1], cleaned[1], cleaned[2], cleaned[2]);
         return;
@@ -3654,17 +3478,14 @@ void normalizeColor(const char* input, char* output, size_t output_size) {
         return;
     }
     
-    // 尝试解析RGB格式
     int r = -1, g = -1, b = -1;
     char* rgb_str = color;
     
-    // 跳过可能的 "rgb" 前缀
     if (strncmp(rgb_str, "rgb", 3) == 0) {
         rgb_str += 3;
         while (*rgb_str && (*rgb_str == '(' || isspace(*rgb_str))) rgb_str++;
     }
     
-    // 尝试多种分隔符格式（包括中文分隔符）
     if (sscanf(rgb_str, "%d,%d,%d", &r, &g, &b) == 3 ||
         sscanf(rgb_str, "%d，%d，%d", &r, &g, &b) == 3 ||  // 中文逗号
         sscanf(rgb_str, "%d;%d;%d", &r, &g, &b) == 3 ||
@@ -3678,11 +3499,9 @@ void normalizeColor(const char* input, char* output, size_t output_size) {
         }
     }
     
-    // 如果所有尝试都失败，返回原始输入
     strncpy(output, input, output_size);
 }
 
-// 添加编辑控件子类化处理函数
 WNDPROC g_OldEditProc;
 
 LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -3702,28 +3521,22 @@ LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
             break;
 
         case WM_CHAR:
-            // 阻止 Ctrl+A 产生的字符消息
             if (GetKeyState(VK_CONTROL) < 0 && (wParam == 1 || wParam == 'a' || wParam == 'A')) {
                 return 0;
             }
-            // 让其他字符消息继续处理
             LRESULT result = CallWindowProc(g_OldEditProc, hwnd, msg, wParam, lParam);
             
-            // 处理颜色预览
             char color[32];
             GetWindowTextA(hwnd, color, sizeof(color));
             
-            // 规范化颜色值
             char normalized[32];
             normalizeColor(color, normalized, sizeof(normalized));
             
-            // 如果是有效的颜色值，更新预览
             if (normalized[0] == '#') {
                 strncpy(PREVIEW_COLOR, normalized, sizeof(PREVIEW_COLOR)-1);
                 PREVIEW_COLOR[sizeof(PREVIEW_COLOR)-1] = '\0';
                 IS_COLOR_PREVIEWING = TRUE;
                 
-                // 获取主窗口并刷新
                 HWND hwndMain = GetParent(GetParent(hwnd));
                 InvalidateRect(hwndMain, NULL, TRUE);
                 UpdateWindow(hwndMain);
@@ -3738,18 +3551,14 @@ LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
 
         case WM_PASTE:
         case WM_CUT: {  // 添加花括号创建新的作用域
-            // 让默认处理先执行
             LRESULT result = CallWindowProc(g_OldEditProc, hwnd, msg, wParam, lParam);
             
-            // 然后处理颜色预览
             char color[32];
             GetWindowTextA(hwnd, color, sizeof(color));
             
-            // 规范化颜色值
             char normalized[32];
             normalizeColor(color, normalized, sizeof(normalized));
             
-            // 如果是有效的颜色值，更新预览
             if (normalized[0] == '#') {
                 strncpy(PREVIEW_COLOR, normalized, sizeof(PREVIEW_COLOR)-1);
                 PREVIEW_COLOR[sizeof(PREVIEW_COLOR)-1] = '\0';
@@ -3758,7 +3567,6 @@ LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
                 IS_COLOR_PREVIEWING = FALSE;
             }
             
-            // 获取主窗口并刷新
             HWND hwndMain = GetParent(GetParent(hwnd));
             InvalidateRect(hwndMain, NULL, TRUE);
             UpdateWindow(hwndMain);
@@ -3770,22 +3578,18 @@ LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
     return CallWindowProc(g_OldEditProc, hwnd, msg, wParam, lParam);
 }
 
-// 修改 ColorDlgProc 函数
 INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_INITDIALOG: {
-            // 设置提示文本
             SetDlgItemTextW(hwndDlg, CLOCK_IDC_STATIC, GetLocalizedString(
                 L"支持：HEX RGB 颜色名字",
                 L"Supported: HEX RGB Color Names"));
 
-            // 子类化编辑控件
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
             if (hwndEdit) {
                 g_OldEditProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, 
                                                          (LONG_PTR)ColorEditSubclassProc);
                 
-                // 如果有当前颜色，显示在编辑框中
                 if (CLOCK_TEXT_COLOR[0] != '\0') {
                     SetWindowTextA(hwndEdit, CLOCK_TEXT_COLOR);
                 }
@@ -3798,7 +3602,6 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 char color[32];
                 GetDlgItemTextA(hwndDlg, CLOCK_IDC_EDIT, color, sizeof(color));
                 
-                // 如果输入为空或全是空格，直接关闭对话框
                 BOOL isAllSpaces = TRUE;
                 for (int i = 0; color[i]; i++) {
                     if (!isspace((unsigned char)color[i])) {
@@ -3934,7 +3737,6 @@ BOOL OpenFileDialog(HWND hwnd, char* filePath, DWORD maxPath) {
     ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
     
     if (GetOpenFileNameW(&ofn)) {
-        // 将 Unicode 路径转换为 UTF-8
         WideCharToMultiByte(CP_UTF8, 0, szFile, -1, 
                            filePath, maxPath, NULL, NULL);
         return TRUE;
@@ -3959,14 +3761,12 @@ void LoadRecentFiles(void) {
             char *newline = strchr(path, '\n');
             if (newline) *newline = '\0';
             
-            // 清理路径
             while (*path == '=' || *path == ' ' || *path == '"') path++;
             size_t len = strlen(path);
             while (len > 0 && (path[len-1] == ' ' || path[len-1] == '"' || path[len-1] == '\n' || path[len-1] == '\r')) {
                 path[--len] = '\0';
             }
             
-            // 转换为宽字符以验证文件是否存在
             wchar_t wPath[MAX_PATH];
             MultiByteToWideChar(CP_UTF8, 0, path, -1, wPath, MAX_PATH);
             
@@ -3974,11 +3774,9 @@ void LoadRecentFiles(void) {
                 strncpy(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path, path, MAX_PATH - 1);
                 CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path[MAX_PATH - 1] = '\0';
                 
-                // 获取文件名
                 wchar_t* wFilename = wcsrchr(wPath, L'\\');
                 if (wFilename) {
                     wFilename++;  // 跳过反斜杠
-                    // 将文件名转换回UTF-8
                     WideCharToMultiByte(CP_UTF8, 0, wFilename, -1,
                                       CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].name,
                                       MAX_PATH, NULL, NULL);
@@ -3995,7 +3793,6 @@ void LoadRecentFiles(void) {
     
     fclose(file);
     
-    // 检查当前超时文件是否存在
     if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
         wchar_t wTimeoutPath[MAX_PATH];
         MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_FILE_PATH, -1, wTimeoutPath, MAX_PATH);
@@ -4008,7 +3805,6 @@ void LoadRecentFiles(void) {
 }
 
 void SaveRecentFile(const char* filePath) {
-    // 先转换为宽字符进行比较
     wchar_t wFilePath[MAX_PATH];
     MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wFilePath, MAX_PATH);
     
@@ -4036,7 +3832,6 @@ void SaveRecentFile(const char* filePath) {
     strncpy(CLOCK_RECENT_FILES[0].path, filePath, MAX_PATH - 1);
     CLOCK_RECENT_FILES[0].path[MAX_PATH - 1] = '\0';
     
-    // 使用宽字符处理文件名
     wchar_t* wFilename = wcsrchr(wFilePath, L'\\');
     if (wFilename) {
         wFilename++;  
@@ -4081,7 +3876,6 @@ void SaveRecentFile(const char* filePath) {
     
     char *line = strtok(config_content, "\n");
     while (line) {
-        // 保留所有非文件相关的配置
         if (strncmp(line, "CLOCK_RECENT_FILE", 16) != 0 && 
             strncmp(line, "CLOCK_TIMEOUT_FILE", 17) != 0 &&
             strncmp(line, "CLOCK_TIMEOUT_ACTION", 19) != 0) {  // 也排除 action 配置
@@ -4091,7 +3885,6 @@ void SaveRecentFile(const char* filePath) {
         line = strtok(NULL, "\n");
     }
     
-    // 添加最近文件记录
     for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
         char recent_file_line[MAX_PATH + 20];
         snprintf(recent_file_line, sizeof(recent_file_line), 
@@ -4099,18 +3892,14 @@ void SaveRecentFile(const char* filePath) {
         strcat(new_config, recent_file_line);
     }
 
-    // 添加超时文件路径（如果存在）
     if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
-        // 先写入动作配置
         strcat(new_config, "CLOCK_TIMEOUT_ACTION=OPEN_FILE\n");
         
-        // 然后写入文件路径，确保没有多余的等号
         char timeout_file_line[MAX_PATH + 20];
         char clean_path[MAX_PATH];
         strncpy(clean_path, CLOCK_TIMEOUT_FILE_PATH, MAX_PATH - 1);
         clean_path[MAX_PATH - 1] = '\0';
         
-        // 移除路径中可能存在的等号
         char* p = clean_path;
         while (*p == '=' || *p == ' ') p++;
         
@@ -4150,7 +3939,6 @@ void ShowToastNotification(HWND hwnd, const char* message) {
     nid.szInfoTitle[0] = '\0';
 }
 
-// 添加获取本地化字符串的函数
 const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english) {
     switch (CURRENT_LANGUAGE) {
         case APP_LANG_CHINESE_SIMP:
@@ -4593,7 +4381,6 @@ void WriteConfig(const char* config_path) {
     FILE* file = fopen(config_path, "w");
     if (!file) return;
     
-    // 写入所有配置项
     fprintf(file, "CLOCK_TEXT_COLOR=%s\n", CLOCK_TEXT_COLOR);
     fprintf(file, "CLOCK_BASE_FONT_SIZE=%d\n", CLOCK_BASE_FONT_SIZE);  // 添加这行
     fprintf(file, "FONT_FILE_NAME=%s\n", FONT_FILE_NAME);
@@ -4605,7 +4392,6 @@ void WriteConfig(const char* config_path) {
     fprintf(file, "CLOCK_USE_24HOUR=%s\n", CLOCK_USE_24HOUR ? "TRUE" : "FALSE");
     fprintf(file, "CLOCK_SHOW_SECONDS=%s\n", CLOCK_SHOW_SECONDS ? "TRUE" : "FALSE");
     
-    // 写入时间选项
     fprintf(file, "CLOCK_TIME_OPTIONS=");  // 添加这行
     for (int i = 0; i < time_options_count; i++) {
         if (i > 0) fprintf(file, ",");
@@ -4613,10 +4399,8 @@ void WriteConfig(const char* config_path) {
     }
     fprintf(file, "\n");
     
-    // 写入超时文本
     fprintf(file, "CLOCK_TIMEOUT_TEXT=%s\n", CLOCK_TIMEOUT_TEXT);  // 添加这行
     
-    // 写入超时动作配置
     if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE && strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
         fprintf(file, "CLOCK_TIMEOUT_ACTION=OPEN_FILE\n");
         fprintf(file, "CLOCK_TIMEOUT_FILE=%s\n", CLOCK_TIMEOUT_FILE_PATH);
@@ -4637,12 +4421,10 @@ void WriteConfig(const char* config_path) {
         }
     }
     
-    // 写入最近文件列表
     for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
         fprintf(file, "CLOCK_RECENT_FILE=%s\n", CLOCK_RECENT_FILES[i].path);
     }
     
-    // 写入颜色选项
     fprintf(file, "COLOR_OPTIONS=");
     for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
         if (i > 0) fprintf(file, ",");
@@ -4658,7 +4440,6 @@ COLORREF ShowColorDialog(HWND hwnd) {
     static COLORREF acrCustClr[16] = {0};
     static DWORD rgbCurrent;
     
-    // 将当前颜色转换为 COLORREF
     int r, g, b;
     if (CLOCK_TEXT_COLOR[0] == '#') {
         sscanf(CLOCK_TEXT_COLOR + 1, "%02x%02x%02x", &r, &g, &b);
@@ -4667,7 +4448,6 @@ COLORREF ShowColorDialog(HWND hwnd) {
     }
     rgbCurrent = RGB(r, g, b);
     
-    // 从配置文件的颜色选项加载自定义颜色
     for (size_t i = 0; i < COLOR_OPTIONS_COUNT && i < 16; i++) {
         const char* hexColor = COLOR_OPTIONS[i].hexColor;
         if (hexColor[0] == '#') {
@@ -4684,7 +4464,6 @@ COLORREF ShowColorDialog(HWND hwnd) {
     cc.lpfnHook = ColorDialogHookProc;
 
     if (ChooseColor(&cc)) {
-        // 使用预览时的颜色值（如果有）
         COLORREF finalColor;
         if (IS_COLOR_PREVIEWING && PREVIEW_COLOR[0] == '#') {
             int r, g, b;
@@ -4694,16 +4473,13 @@ COLORREF ShowColorDialog(HWND hwnd) {
             finalColor = cc.rgbResult;
         }
         
-        // 更新 CLOCK_TEXT_COLOR
         snprintf(CLOCK_TEXT_COLOR, sizeof(CLOCK_TEXT_COLOR), "#%02X%02X%02X",
                 GetRValue(finalColor),
                 GetGValue(finalColor),
                 GetBValue(finalColor));
         
-        // 保存新颜色到配置文件
         WriteConfigColor(CLOCK_TEXT_COLOR);
         
-        // 清理颜色预览状态
         IS_COLOR_PREVIEWING = FALSE;
         
         InvalidateRect(hwnd, NULL, TRUE);
@@ -4717,7 +4493,6 @@ COLORREF ShowColorDialog(HWND hwnd) {
     return (COLORREF)-1;
 }
 
-// 添加颜色对话框钩子函数
 UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     static HWND hwndParent;
     static CHOOSECOLOR* pcc;
@@ -4732,7 +4507,6 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT msg, WPARAM wParam, LPARAM
             rgbCurrent = pcc->rgbResult;
             isColorLocked = FALSE;
             
-            // 保存初始的自定义颜色状态
             for (int i = 0; i < 16; i++) {
                 lastCustomColors[i] = pcc->lpCustColors[i];
             }
@@ -4742,7 +4516,6 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT msg, WPARAM wParam, LPARAM
         case WM_RBUTTONDOWN:
             isColorLocked = !isColorLocked;
             
-            // 立即更新颜色预览
             if (!isColorLocked) {
                 POINT pt;
                 GetCursorPos(&pt);
@@ -4808,12 +4581,8 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT msg, WPARAM wParam, LPARAM
             if (HIWORD(wParam) == BN_CLICKED) {
                 switch (LOWORD(wParam)) {
                     case IDOK: {
-                        // 记录确定前的预览颜色
-                        // 保存当前预览的颜色
                         if (IS_COLOR_PREVIEWING && PREVIEW_COLOR[0] == '#') {
-                            // 保持预览的颜色不变
                         } else {
-                            // 如果没有预览颜色，使用对话框的颜色
                             snprintf(PREVIEW_COLOR, sizeof(PREVIEW_COLOR), "#%02X%02X%02X",
                                     GetRValue(pcc->rgbResult),
                                     GetGValue(pcc->rgbResult),
@@ -4851,14 +4620,11 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT msg, WPARAM wParam, LPARAM
                 }
                 
                 if (colorsChanged) {
-                    // 更新配置文件
                     char config_path[MAX_PATH];
                     GetConfigPath(config_path, MAX_PATH);
                     
-                    // 清理现有的颜色选项
                     ClearColorOptions();
                     
-                    // 添加所有非零的自定义颜色
                     for (int i = 0; i < 16; i++) {
                         if (pcc->lpCustColors[i] != 0) {
                             char hexColor[10];
@@ -4878,7 +4644,6 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT msg, WPARAM wParam, LPARAM
     return 0;
 }
 
-// 检查颜色是否已存在
 BOOL IsColorExists(const char* hexColor) {
     for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
         if (strcmp(COLOR_OPTIONS[i].hexColor, hexColor) == 0) {
@@ -4888,7 +4653,6 @@ BOOL IsColorExists(const char* hexColor) {
     return FALSE;
 }
 
-// 清理 COLOR_OPTIONS
 void ClearColorOptions() {
     if (COLOR_OPTIONS) {
         for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
@@ -4900,7 +4664,6 @@ void ClearColorOptions() {
     }
 }
 
-// 添加写入默认启动时间的函数
 void WriteConfigDefaultStartTime(int seconds) {
     char config_path[MAX_PATH];
     char temp_path[MAX_PATH];
@@ -4991,21 +4754,17 @@ void WriteConfigStartupMode(const char* mode) {
     free(new_config);
 }
 
-// 检查是否已设置开机自启动
 BOOL IsAutoStartEnabled(void) {
     wchar_t startupPath[MAX_PATH];
     wchar_t shortcutPath[MAX_PATH];
     
-    // 获取启动文件夹路径
     if (SUCCEEDED(SHGetFolderPathW(NULL, CSIDL_STARTUP, NULL, 0, startupPath))) {
-        // 构建快捷方式完整路径
         wcscat(startupPath, L"\\Catime.lnk");
         return GetFileAttributesW(startupPath) != INVALID_FILE_ATTRIBUTES;
     }
     return FALSE;
 }
 
-// 创建快捷方式
 BOOL CreateShortcut(void) {
     wchar_t startupPath[MAX_PATH];
     wchar_t exePath[MAX_PATH];
@@ -5013,27 +4772,20 @@ BOOL CreateShortcut(void) {
     IPersistFile* pPersistFile = NULL;
     BOOL success = FALSE;
     
-    // 获取当前程序路径
     GetModuleFileNameW(NULL, exePath, MAX_PATH);
     
-    // 获取启动文件夹路径
     if (SUCCEEDED(SHGetFolderPathW(NULL, CSIDL_STARTUP, NULL, 0, startupPath))) {
-        // 构建快捷方式完整路径
         wcscat(startupPath, L"\\Catime.lnk");
         
-        // 创建 ShellLink 对象
         HRESULT hr = CoCreateInstance(&CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER,
                                     &IID_IShellLinkW, (void**)&pShellLink);
         if (SUCCEEDED(hr)) {
-            // 设置目标路径
             hr = pShellLink->lpVtbl->SetPath(pShellLink, exePath);
             if (SUCCEEDED(hr)) {
-                // 获取 IPersistFile 接口
                 hr = pShellLink->lpVtbl->QueryInterface(pShellLink,
                                                       &IID_IPersistFile,
                                                       (void**)&pPersistFile);
                 if (SUCCEEDED(hr)) {
-                    // 保存快捷方式
                     hr = pPersistFile->lpVtbl->Save(pPersistFile, startupPath, TRUE);
                     if (SUCCEEDED(hr)) {
                         success = TRUE;
@@ -5048,22 +4800,17 @@ BOOL CreateShortcut(void) {
     return success;
 }
 
-// 删除快捷方式
 BOOL RemoveShortcut(void) {
     wchar_t startupPath[MAX_PATH];
     
-    // 获取启动文件夹路径
     if (SUCCEEDED(SHGetFolderPathW(NULL, CSIDL_STARTUP, NULL, 0, startupPath))) {
-        // 构建快捷方式完整路径
         wcscat(startupPath, L"\\Catime.lnk");
         
-        // 删除快捷方式文件
         return DeleteFileW(startupPath);
     }
     return FALSE;
 }
 
-// 番茄时钟相关配置
 int CLOCK_POMODORO_WORK = 1500;      // 默认25分钟
 int CLOCK_POMODORO_BREAK = 300;      // 默认5分钟
 int CLOCK_POMODORO_LONG_BREAK = 1200; // 默认20分钟
