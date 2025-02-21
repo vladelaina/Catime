@@ -2881,6 +2881,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDM_SHOW_CURRENT_TIME: {  
                     CLOCK_SHOW_CURRENT_TIME = !CLOCK_SHOW_CURRENT_TIME;
                     if (CLOCK_SHOW_CURRENT_TIME) {
+                        // 新增：关闭番茄钟
+                        CLOCK_POMODORO_RUNNING = FALSE;
+                        KillTimer(hwnd, 2);
                         ShowWindow(hwnd, SW_SHOW);
                         
                         CLOCK_COUNT_UP = FALSE;
@@ -3037,6 +3040,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_COUNT_UP_START: {
                     if (!CLOCK_COUNT_UP) {
+                        // 新增：关闭番茄钟
+                        CLOCK_POMODORO_RUNNING = FALSE;
+                        KillTimer(hwnd, 2);
                         CLOCK_COUNT_UP = TRUE;
                         CLOCK_SHOW_CURRENT_TIME = FALSE;
                         CLOCK_IS_PAUSED = FALSE;
@@ -3187,7 +3193,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_POMODORO_START: {
                     if (!CLOCK_POMODORO_RUNNING) {
-                        // 开始新的番茄钟
+                        // 新增：取消其他模式的勾选
+                        HMENU hMenu = GetMenu(hwnd);
+                        CheckMenuItem(hMenu, CLOCK_IDM_SHOW_CURRENT_TIME, MF_UNCHECKED);
+                        CheckMenuItem(hMenu, CLOCK_IDM_COUNT_UP_START, MF_UNCHECKED);
+                        // 原有代码...
                         CLOCK_POMODORO_RUNNING = TRUE;
                         CLOCK_POMODORO_PAUSED = FALSE;
                         pomodoro_remaining_time = POMODORO_WORK_DURATION;
