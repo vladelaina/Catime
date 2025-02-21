@@ -1,4 +1,3 @@
-#include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1588,7 +1587,7 @@ void ShowContextMenu(HWND hwnd) {
     AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
     AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_RESET, GetLocalizedString(L"重新开始", L"Reset"));
     
-    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hPomodoroMenu,
+    AppendMenuW(hMenu, MF_POPUP | (CLOCK_POMODORO_RUNNING ? MF_CHECKED : 0), (UINT_PTR)hPomodoroMenu,
                GetLocalizedString(L"番茄时钟", L"Pomodoro"));
 
     HMENU hCountUpMenu = CreatePopupMenu();
