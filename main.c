@@ -330,15 +330,6 @@ BOOL CLOCK_SHOW_SECONDS = TRUE;
 BOOL CLOCK_COUNT_UP = FALSE;
 char CLOCK_STARTUP_MODE[20] = "COUNTDOWN";
 
-// 在全局变量部分添加
-BOOL CLOCK_POMODORO_RUNNING = FALSE;
-BOOL CLOCK_POMODORO_PAUSED = FALSE;
-int pomodoro_remaining_time = 25 * 60;  // 剩余时间（秒）
-int POMODORO_WORK_DURATION = 25 * 60;  // 工作时间（25分钟）
-int POMODORO_BREAK_DURATION = 5 * 60;  // 短休息时间
-int POMODORO_LONG_BREAK_DURATION = 15 * 60; // 长休息时间
-int pomodoro_cycle_count = 0;          // 完成的工作周期数
-
 char* UTF8ToANSI(const char* utf8Str) {
     int wlen = MultiByteToWideChar(CP_UTF8, 0, utf8Str, -1, NULL, 0);
     if (wlen == 0) {
@@ -1507,13 +1498,6 @@ void FormatTime(int remaining_time, char* time_text) {
         return;
     }
 
-    if (CLOCK_POMODORO_RUNNING) {
-        int minutes = pomodoro_remaining_time / 60;
-        int seconds = pomodoro_remaining_time % 60;
-        sprintf(time_text, "%02d:%02d", minutes, seconds);
-        return;
-    }
-
     int remaining = CLOCK_TOTAL_TIME - countdown_elapsed_time;
     if (remaining <= 0) {
         time_text[0] = '\0';
@@ -1572,24 +1556,6 @@ void ShowContextMenu(HWND hwnd) {
                (UINT_PTR)hTimeMenu,
                GetLocalizedString(L"时间显示", L"Time Display"));
 
-    HMENU hPomodoroMenu = CreatePopupMenu();
-    AppendMenuW(hPomodoroMenu, MF_STRING | (CLOCK_POMODORO_RUNNING ? 0 : 0), 
-          CLOCK_IDM_POMODORO_START,
-          CLOCK_POMODORO_RUNNING ? 
-              (CLOCK_POMODORO_PAUSED ? 
-                  GetLocalizedString(L"继续", L"Resume") : 
-                  GetLocalizedString(L"暂停", L"Pause")) :
-              GetLocalizedString(L"开始工作", L"Start Work"));
-    AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
-    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_WORK, GetLocalizedString(L"工作时间设置", L"Work Time"));
-    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_BREAK, GetLocalizedString(L"短休息设置", L"Short Break"));
-    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_LBREAK, GetLocalizedString(L"长休息设置", L"Long Break"));
-    AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
-    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_RESET, GetLocalizedString(L"重新开始", L"Reset"));
-    
-    AppendMenuW(hMenu, MF_POPUP | (CLOCK_POMODORO_RUNNING ? MF_CHECKED : 0), (UINT_PTR)hPomodoroMenu,
-               GetLocalizedString(L"番茄时钟", L"Pomodoro"));
-
     HMENU hCountUpMenu = CreatePopupMenu();
     AppendMenuW(hCountUpMenu, MF_STRING, CLOCK_IDM_COUNT_UP_START,
         CLOCK_COUNT_UP ? 
@@ -1610,19 +1576,19 @@ void ShowContextMenu(HWND hwnd) {
     HMENU hCountdownMenu = CreatePopupMenu();
     AppendMenuW(hCountdownMenu, MF_STRING,
         CLOCK_IDM_COUNTDOWN_START_PAUSE,
-        (CLOCK_COUNT_UP || CLOCK_SHOW_CURRENT_TIME || CLOCK_POMODORO_RUNNING) ?  // 添加 CLOCK_POMODORO_RUNNING 检查
+        (CLOCK_COUNT_UP || CLOCK_SHOW_CURRENT_TIME) ? 
             GetLocalizedString(L"开始", L"Start") :
             (CLOCK_IS_PAUSED ? 
                 GetLocalizedString(L"继续", L"Resume") :
                 GetLocalizedString(L"暂停", L"Pause")));
     
-    if (!CLOCK_COUNT_UP && !CLOCK_SHOW_CURRENT_TIME && !CLOCK_POMODORO_RUNNING) {  // 添加 !CLOCK_POMODORO_RUNNING 检查
+    if (!CLOCK_COUNT_UP && !CLOCK_SHOW_CURRENT_TIME) {
         AppendMenuW(hCountdownMenu, MF_STRING,
             CLOCK_IDM_COUNTDOWN_RESET,
             GetLocalizedString(L"重新开始", L"Restart"));
     }
 
-    AppendMenuW(hMenu, MF_POPUP | (!CLOCK_COUNT_UP && !CLOCK_SHOW_CURRENT_TIME && !CLOCK_POMODORO_RUNNING ? MF_CHECKED : MF_UNCHECKED),  // 添加 !CLOCK_POMODORO_RUNNING 检查
+    AppendMenuW(hMenu, MF_POPUP | (!CLOCK_COUNT_UP && !CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
         (UINT_PTR)hCountdownMenu,
         GetLocalizedString(L"倒计时", L"Countdown"));
 
@@ -2206,31 +2172,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     }
                 }
             }
-            if (wp == 2 && CLOCK_POMODORO_RUNNING && !CLOCK_POMODORO_PAUSED) {
-                pomodoro_remaining_time--;
-                
-                if (pomodoro_remaining_time <= 0) {
-                    // 工作时间结束
-                    KillTimer(hwnd, 2);
-                    CLOCK_POMODORO_RUNNING = FALSE;
-                    pomodoro_cycle_count++;
-                    
-                    // 根据周期数决定休息时间
-                    int break_time = (pomodoro_cycle_count % 4 == 0) ? 
-                        POMODORO_LONG_BREAK_DURATION : POMODORO_BREAK_DURATION;
-                    
-                    MessageBoxW(hwnd, 
-                        GetLocalizedString(L"工作时间结束，开始休息！", L"Work time finished! Start break!"),
-                        GetLocalizedString(L"番茄钟", L"Pomodoro"), 
-                        MB_OK);
-                    
-                    // 自动开始休息倒计时
-                    CLOCK_POMODORO_RUNNING = TRUE;
-                    pomodoro_remaining_time = break_time;
-                    SetTimer(hwnd, 2, 1000, NULL);
-                }
-                InvalidateRect(hwnd, NULL, TRUE);
-            }
             break;
         }
         case WM_DESTROY: {
@@ -2257,12 +2198,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         CLOCK_SHOW_CURRENT_TIME = FALSE;
                         CLOCK_LAST_TIME_UPDATE = 0;
                         KillTimer(hwnd, 1);
-                    }
-                    // 新增：如果番茄钟在运行，先停止它
-                    if (CLOCK_POMODORO_RUNNING) {
-                        CLOCK_POMODORO_RUNNING = FALSE;
-                        CLOCK_POMODORO_PAUSED = FALSE;
-                        KillTimer(hwnd, 2);
                     }
                     while (1) {
                         memset(inputText, 0, sizeof(inputText));
@@ -2306,12 +2241,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDC_MODIFY_TIME_OPTIONS: {
-                    // 新增：如果番茄钟在运行，先停止它
-                    if (CLOCK_POMODORO_RUNNING) {
-                        CLOCK_POMODORO_RUNNING = FALSE;
-                        CLOCK_POMODORO_PAUSED = FALSE;
-                        KillTimer(hwnd, 2);
-                    }
                     while (1) {
                         memset(inputText, 0, sizeof(inputText));
                         DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc);
@@ -2358,12 +2287,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDC_MODIFY_DEFAULT_TIME: {
-                    // 新增：如果番茄钟在运行，先停止它
-                    if (CLOCK_POMODORO_RUNNING) {
-                        CLOCK_POMODORO_RUNNING = FALSE;
-                        CLOCK_POMODORO_PAUSED = FALSE;
-                        KillTimer(hwnd, 2);
-                    }
                     while (1) {
                         memset(inputText, 0, sizeof(inputText));
                         DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc);
@@ -2900,10 +2823,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     CLOCK_SHOW_CURRENT_TIME = !CLOCK_SHOW_CURRENT_TIME;
                     if (CLOCK_SHOW_CURRENT_TIME) {
                         // 新增：关闭番茄钟
-                        CLOCK_POMODORO_RUNNING = FALSE;
-                        KillTimer(hwnd, 2);
-                        ShowWindow(hwnd, SW_SHOW);
-                        
                         CLOCK_COUNT_UP = FALSE;
                         KillTimer(hwnd, 1);   
                         elapsed_time = 0;
@@ -3058,9 +2977,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_COUNT_UP_START: {
                     if (!CLOCK_COUNT_UP) {
-                        // 新增：关闭番茄钟
-                        CLOCK_POMODORO_RUNNING = FALSE;
-                        KillTimer(hwnd, 2);
                         CLOCK_COUNT_UP = TRUE;
                         CLOCK_SHOW_CURRENT_TIME = FALSE;
                         CLOCK_IS_PAUSED = FALSE;
@@ -3178,7 +3094,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_COUNTDOWN_START_PAUSE: {
-                    if (CLOCK_COUNT_UP || CLOCK_SHOW_CURRENT_TIME || CLOCK_POMODORO_RUNNING) {  // 添加 CLOCK_POMODORO_RUNNING 检查
+                    if (CLOCK_COUNT_UP || CLOCK_SHOW_CURRENT_TIME) {
                         CLOCK_COUNT_UP = FALSE;
                         CLOCK_SHOW_CURRENT_TIME = FALSE;
                         elapsed_time = default_countdown_time;
@@ -3198,7 +3114,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_COUNTDOWN_RESET: {
-                    if (!CLOCK_COUNT_UP && !CLOCK_SHOW_CURRENT_TIME && !CLOCK_POMODORO_RUNNING) {  // 添加 !CLOCK_POMODORO_RUNNING 检查
+                    if (!CLOCK_COUNT_UP && !CLOCK_SHOW_CURRENT_TIME) {
                         elapsed_time = 0;
                         countdown_elapsed_time = 0;
                         countdown_message_shown = FALSE;
@@ -3207,53 +3123,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         SetTimer(hwnd, 1, 1000, NULL);
                         InvalidateRect(hwnd, NULL, TRUE);
                     }
-                    break;
-                }
-                case CLOCK_IDM_POMODORO_START: {
-                    if (!CLOCK_POMODORO_RUNNING) {
-                        // 新增：取消其他模式的勾选
-                        HMENU hMenu = GetMenu(hwnd);
-                        CheckMenuItem(hMenu, CLOCK_IDM_SHOW_CURRENT_TIME, MF_UNCHECKED);
-                        CheckMenuItem(hMenu, CLOCK_IDM_COUNT_UP_START, MF_UNCHECKED);
-                        // 原有代码...
-                        CLOCK_POMODORO_RUNNING = TRUE;
-                        CLOCK_POMODORO_PAUSED = FALSE;
-                        pomodoro_remaining_time = POMODORO_WORK_DURATION;
-                        CLOCK_COUNT_UP = FALSE;
-                        CLOCK_SHOW_CURRENT_TIME = FALSE;
-                        SetTimer(hwnd, 2, 1000, NULL);  // 使用独立的计时器ID
-                    } else {
-                        // 暂停/继续切换
-                        CLOCK_POMODORO_PAUSED = !CLOCK_POMODORO_PAUSED;
-                        if (CLOCK_POMODORO_PAUSED) {
-                            KillTimer(hwnd, 2);
-                        } else {
-                            SetTimer(hwnd, 2, 1000, NULL);
-                        }
-                    }
-                    InvalidateRect(hwnd, NULL, TRUE);
-                    break;
-                }
-                case CLOCK_IDM_POMODORO_RESET: {
-                    CLOCK_POMODORO_RUNNING = FALSE;
-                    CLOCK_POMODORO_PAUSED = FALSE;
-                    pomodoro_remaining_time = 0;
-                    pomodoro_cycle_count = 0;
-                    KillTimer(hwnd, 2);
-                    SetTimer(hwnd, 2, 1000, NULL);
-                    InvalidateRect(hwnd, NULL, TRUE);
-                    break;
-                }
-                case CLOCK_IDM_POMODORO_WORK: {
-                    // 工作时间设置处理（需要添加输入对话框）
-                    break;
-                }
-                case CLOCK_IDM_POMODORO_BREAK: {
-                    // 短休息时间设置处理
-                    break;
-                }
-                case CLOCK_IDM_POMODORO_LBREAK: {
-                    // 长休息时间设置处理
                     break;
                 }
             }
@@ -4897,11 +4766,4 @@ BOOL RemoveShortcut(void) {
     }
     return FALSE;
 }
-
-int CLOCK_POMODORO_WORK = 1500;
-int CLOCK_POMODORO_BREAK = 300;
-int CLOCK_POMODORO_LONG_BREAK = 1200;
-int CLOCK_POMODORO_CYCLE = 0;
-BOOL CLOCK_POMODORO_IS_WORKING = FALSE;
-BOOL CLOCK_POMODORO_IS_RUNNING = FALSE;
 
