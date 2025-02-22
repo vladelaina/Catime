@@ -220,15 +220,7 @@ typedef struct {
 } FontResource;
 
 FontResource fontResources[] = {
-    {CLOCK_IDC_FONT_VICTORMONO, IDR_FONT_VICTORMONO, "VictorMono NFP Medium.ttf"},
-    {CLOCK_IDC_FONT_LIBERATION, IDR_FONT_LIBERATION, "LiterationSerif Nerd Font.ttf"},
-    {CLOCK_IDC_FONT_ZEDMONO, IDR_FONT_ZEDMONO, "ZedMono NF.ttf"},
     {CLOCK_IDC_FONT_RECMONO, IDR_FONT_RECMONO, "RecMonoCasual Nerd Font Mono.ttf"},
-    {CLOCK_IDC_FONT_IOSEVKA_TERM, IDR_FONT_IOSEVKA_TERM, "IosevkaTermSlab NFP Medium.ttf"},
-    {CLOCK_IDC_FONT_ENVYCODE, IDR_FONT_ENVYCODE, "EnvyCodeR Nerd Font.ttf"},
-    {CLOCK_IDC_FONT_DADDYTIME, IDR_FONT_DADDYTIME, "DaddyTimeMono Nerd Font Propo.ttf"},
-    {CLOCK_IDC_FONT_PROFONT, IDR_FONT_PROFONT, "ProFont IIx Nerd Font.ttf"},
-    {CLOCK_IDC_FONT_HEAVYDATA, IDR_FONT_HEAVYDATA, "HeavyData Nerd Font.ttf"},
     {CLOCK_IDC_FONT_BIGBLUE, IDR_FONT_BIGBLUE, "BigBlueTermPlus Nerd Font.ttf"},
     {CLOCK_IDC_FONT_PROGGYCLEAN, IDR_FONT_PROGGYCLEAN, "ProggyCleanSZ Nerd Font Propo.ttf"},
     {CLOCK_IDC_FONT_DEPARTURE, IDR_FONT_DEPARTURE, "DepartureMono Nerd Font Propo.ttf"},
@@ -2651,42 +2643,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     }
                     break;
                 }
-                case CLOCK_IDC_FONT_VICTORMONO:
-                    WriteConfigFont("VictorMono NFP Medium.ttf");
-                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "VictorMono NFP Medium.ttf")) {
-                        wchar_t errorMsg[256];
-                        _snwprintf(errorMsg, sizeof(errorMsg)/sizeof(wchar_t),
-                            GetLocalizedString(L"无法加载字体: %hs", L"Failed to load font: %hs"),
-                            "VictorMono NFP Medium.ttf");
-                        MessageBoxW(hwnd, errorMsg, 
-                            GetLocalizedString(L"错误", L"Error"),
-                            MB_ICONEXCLAMATION | MB_OK);
-                    }
-                    goto refresh_window;
-                case CLOCK_IDC_FONT_LIBERATION:
-                    WriteConfigFont("LiterationSerif Nerd Font.ttf");
-                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "LiterationSerif Nerd Font.ttf")) {
-                        wchar_t errorMsg[256];
-                        _snwprintf(errorMsg, sizeof(errorMsg)/sizeof(wchar_t),
-                            GetLocalizedString(L"无法加载字体: %hs", L"Failed to load font: %hs"),
-                            "LiterationSerif Nerd Font.ttf");
-                        MessageBoxW(hwnd, errorMsg, 
-                            GetLocalizedString(L"错误", L"Error"),
-                            MB_ICONEXCLAMATION | MB_OK);
-                    }
-                    goto refresh_window;
-                case CLOCK_IDC_FONT_ZEDMONO:
-                    WriteConfigFont("ZedMono NF.ttf");
-                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "ZedMono NF.ttf")) {
-                        wchar_t errorMsg[256];
-                        _snwprintf(errorMsg, sizeof(errorMsg)/sizeof(wchar_t),
-                            GetLocalizedString(L"无法加载字体: %hs", L"Failed to load font: %hs"),
-                            "ZedMono NF.ttf");
-                        MessageBoxW(hwnd, errorMsg, 
-                            GetLocalizedString(L"错误", L"Error"),
-                            MB_ICONEXCLAMATION | MB_OK);
-                    }
-                    goto refresh_window;
                 case CLOCK_IDC_FONT_RECMONO:
                     WriteConfigFont("RecMonoCasual Nerd Font Mono.ttf");
                     if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "RecMonoCasual Nerd Font Mono.ttf")) {
@@ -2694,66 +2650,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         _snwprintf(errorMsg, sizeof(errorMsg)/sizeof(wchar_t),
                             GetLocalizedString(L"无法加载字体: %hs", L"Failed to load font: %hs"),
                             "RecMonoCasual Nerd Font Mono.ttf");
-                        MessageBoxW(hwnd, errorMsg, 
-                            GetLocalizedString(L"错误", L"Error"),
-                            MB_ICONEXCLAMATION | MB_OK);
-                    }
-                    goto refresh_window;
-                case CLOCK_IDC_FONT_IOSEVKA_TERM:
-                    WriteConfigFont("IosevkaTermSlab NFP Medium.ttf");
-                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "IosevkaTermSlab NFP Medium.ttf")) {
-                        wchar_t errorMsg[256];
-                        _snwprintf(errorMsg, sizeof(errorMsg)/sizeof(wchar_t),
-                            GetLocalizedString(L"无法加载字体: %hs", L"Failed to load font: %hs"),
-                            "IosevkaTermSlab NFP Medium.ttf");
-                        MessageBoxW(hwnd, errorMsg, 
-                            GetLocalizedString(L"错误", L"Error"),
-                            MB_ICONEXCLAMATION | MB_OK);
-                    }
-                    goto refresh_window;
-                case CLOCK_IDC_FONT_ENVYCODE:
-                    WriteConfigFont("EnvyCodeR Nerd Font.ttf");
-                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "EnvyCodeR Nerd Font.ttf")) {
-                        wchar_t errorMsg[256];
-                        _snwprintf(errorMsg, sizeof(errorMsg)/sizeof(wchar_t),
-                            GetLocalizedString(L"无法加载字体: %hs", L"Failed to load font: %hs"),
-                            "EnvyCodeR Nerd Font.ttf");
-                        MessageBoxW(hwnd, errorMsg, 
-                            GetLocalizedString(L"错误", L"Error"),
-                            MB_ICONEXCLAMATION | MB_OK);
-                    }
-                    goto refresh_window;
-                case CLOCK_IDC_FONT_DADDYTIME:
-                    WriteConfigFont("DaddyTimeMono Nerd Font Propo.ttf");
-                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "DaddyTimeMono Nerd Font Propo.ttf")) {
-                        wchar_t errorMsg[256];
-                        _snwprintf(errorMsg, sizeof(errorMsg)/sizeof(wchar_t),
-                            GetLocalizedString(L"无法加载字体: %hs", L"Failed to load font: %hs"),
-                            "DaddyTimeMono Nerd Font Propo.ttf");
-                        MessageBoxW(hwnd, errorMsg, 
-                            GetLocalizedString(L"错误", L"Error"),
-                            MB_ICONEXCLAMATION | MB_OK);
-                    }
-                    goto refresh_window;
-                case CLOCK_IDC_FONT_PROFONT:
-                    WriteConfigFont("ProFont IIx Nerd Font.ttf");
-                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "ProFont IIx Nerd Font.ttf")) {
-                        wchar_t errorMsg[256];
-                        _snwprintf(errorMsg, sizeof(errorMsg)/sizeof(wchar_t),
-                            GetLocalizedString(L"无法加载字体: %hs", L"Failed to load font: %hs"),
-                            "ProFont IIx Nerd Font.ttf");
-                        MessageBoxW(hwnd, errorMsg, 
-                            GetLocalizedString(L"错误", L"Error"),
-                            MB_ICONEXCLAMATION | MB_OK);
-                    }
-                    goto refresh_window;
-                case CLOCK_IDC_FONT_HEAVYDATA:
-                    WriteConfigFont("HeavyData Nerd Font.ttf");
-                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "HeavyData Nerd Font.ttf")) {
-                        wchar_t errorMsg[256];
-                        _snwprintf(errorMsg, sizeof(errorMsg)/sizeof(wchar_t),
-                            GetLocalizedString(L"无法加载字体: %hs", L"Failed to load font: %hs"),
-                            "HeavyData Nerd Font.ttf");
                         MessageBoxW(hwnd, errorMsg, 
                             GetLocalizedString(L"错误", L"Error"),
                             MB_ICONEXCLAMATION | MB_OK);
