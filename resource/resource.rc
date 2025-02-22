@@ -21,23 +21,13 @@ IDI_CATIME ICON "catime.ico"
 // CC BY-SA 4.0 fonts
 IDR_FONT_BIGBLUE           FONT "font/CC BY-SA 4.0/BigBlueTermPlus Nerd Font.ttf"
 
-// Root directory font
-IDR_FONT_HEAVYDATA         FONT "font/HeavyData Nerd Font.ttf"
-
 // MIT fonts
-IDR_FONT_PROFONT           FONT "font/MIT/ProFont IIx Nerd Font.ttf"
 IDR_FONT_PROGGYCLEAN       FONT "font/MIT/ProggyCleanSZ Nerd Font Propo.ttf"
 
 // SIL fonts
-IDR_FONT_DADDYTIME         FONT "font/SIL/DaddyTimeMono Nerd Font Propo.ttf"
 IDR_FONT_DEPARTURE         FONT "font/SIL/DepartureMono Nerd Font Propo.ttf"
-IDR_FONT_ENVYCODE          FONT "font/SIL/EnvyCodeR Nerd Font.ttf"
-IDR_FONT_IOSEVKA_TERM      FONT "font/SIL/IosevkaTermSlab NFP Medium.ttf"
-IDR_FONT_LIBERATION        FONT "font/SIL/LiterationSerif Nerd Font.ttf"
 IDR_FONT_RECMONO           FONT "font/SIL/RecMonoCasual Nerd Font Mono.ttf"
 IDR_FONT_TERMINESS         FONT "font/SIL/Terminess Nerd Font Propo.ttf"
-IDR_FONT_VICTORMONO        FONT "font/SIL/VictorMono NFP Medium.ttf"
-IDR_FONT_ZEDMONO           FONT "font/SIL/ZedMono NF.ttf"
 
 // WTFPL fonts
 IDR_FONT_GOHUFONT          FONT "font/WTFPL/GohuFont uni11 Nerd Font Mono.ttf"
