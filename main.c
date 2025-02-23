@@ -734,35 +734,32 @@ void GetConfigPath(char* path, size_t size) {
 
 void CreateDefaultConfig(const char* config_path) {
     FILE *file = fopen(config_path, "w");
-    if (!file) {
-        fprintf(stderr, "Failed to create config file: %s\n", config_path);
-        return;
-    }
+    if (file) {
+        fprintf(file, "FONT_FILE_NAME=Wallpoet.ttf\n");  // 修改默认字体
+        fprintf(file, "CLOCK_TEXT_COLOR=#FFB6C1\n");
+        fprintf(file, "CLOCK_BASE_FONT_SIZE=20\n");
+        fprintf(file, "CLOCK_WINDOW_POS_X=960\n");
+        fprintf(file, "CLOCK_WINDOW_POS_Y=-7\n");
+        fprintf(file, "WINDOW_SCALE=1.62\n");
+        fprintf(file, "CLOCK_DEFAULT_START_TIME=1500\n");
+        fprintf(file, "CLOCK_TIME_OPTIONS=25,10,5\n");
+        fprintf(file, "CLOCK_TIMEOUT_TEXT=0\n");
+        fprintf(file, "CLOCK_EDIT_MODE=FALSE\n");
+        fprintf(file, "CLOCK_TIMEOUT_ACTION=LOCK\n");
+        fprintf(file, "CLOCK_USE_24HOUR=FALSE\n");
+        fprintf(file, "CLOCK_SHOW_SECONDS=FALSE\n");
 
-    fprintf(file, "CLOCK_TEXT_COLOR=#FFB6C1\n");
-    fprintf(file, "CLOCK_BASE_FONT_SIZE=20\n");
-    fprintf(file, "FONT_FILE_NAME=GohuFont uni11 Nerd Font Mono.ttf\n");
-    fprintf(file, "CLOCK_WINDOW_POS_X=960\n");
-    fprintf(file, "CLOCK_WINDOW_POS_Y=-7\n");
-    fprintf(file, "WINDOW_SCALE=1.62\n");
-    fprintf(file, "CLOCK_DEFAULT_START_TIME=1500\n");
-    fprintf(file, "CLOCK_TIME_OPTIONS=25,10,5\n");
-    fprintf(file, "CLOCK_TIMEOUT_TEXT=0\n");
-    fprintf(file, "CLOCK_EDIT_MODE=FALSE\n");
-    fprintf(file, "CLOCK_TIMEOUT_ACTION=LOCK\n");
-    fprintf(file, "CLOCK_USE_24HOUR=FALSE\n");
-    fprintf(file, "CLOCK_SHOW_SECONDS=FALSE\n");
-
-    fprintf(file, "COLOR_OPTIONS=");
-    for (size_t i = 0; i < DEFAULT_COLOR_OPTIONS_COUNT; i++) {
-        fprintf(file, "%s", DEFAULT_COLOR_OPTIONS[i]);
-        if (i < DEFAULT_COLOR_OPTIONS_COUNT - 1) {
-            fprintf(file, ",");
+        fprintf(file, "COLOR_OPTIONS=");
+        for (size_t i = 0; i < DEFAULT_COLOR_OPTIONS_COUNT; i++) {
+            fprintf(file, "%s", DEFAULT_COLOR_OPTIONS[i]);
+            if (i < DEFAULT_COLOR_OPTIONS_COUNT - 1) {
+                fprintf(file, ",");
+            }
         }
-    }
-    fprintf(file, "\n");
+        fprintf(file, "\n");
 
-    fclose(file);
+        fclose(file);
+    }
 }
 
 void SaveWindowSettings(HWND hwnd) {
@@ -2472,7 +2469,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     
                     HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
                     for (int i = 0; i < sizeof(fontResources) / sizeof(FontResource); i++) {
-                        if (strcmp(fontResources[i].fontName, "GohuFont uni11 Nerd Font Mono.ttf") == 0) {
+                        if (strcmp(fontResources[i].fontName, "Wallpoet.ttf") == 0) {  // 改为检查 Wallpoet
                             LoadFontFromResource(hInstance, fontResources[i].resourceId);
                             break;
                         }
