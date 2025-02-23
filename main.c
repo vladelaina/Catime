@@ -221,8 +221,6 @@ typedef struct {
 
 FontResource fontResources[] = {
     {CLOCK_IDC_FONT_RECMONO, IDR_FONT_RECMONO, "RecMonoCasual Nerd Font Mono.ttf"},
-    {CLOCK_IDC_FONT_BIGBLUE, IDR_FONT_BIGBLUE, "BigBlueTermPlus Nerd Font.ttf"},
-    {CLOCK_IDC_FONT_PROGGYCLEAN, IDR_FONT_PROGGYCLEAN, "ProggyCleanSZ Nerd Font Propo.ttf"},
     {CLOCK_IDC_FONT_DEPARTURE, IDR_FONT_DEPARTURE, "DepartureMono Nerd Font Propo.ttf"},
     {CLOCK_IDC_FONT_TERMINESS, IDR_FONT_TERMINESS, "Terminess Nerd Font Propo.ttf"},
     {CLOCK_IDC_FONT_GOHUFONT, IDR_FONT_GOHUFONT, "GohuFont uni11 Nerd Font Mono.ttf"},
@@ -232,11 +230,9 @@ FontResource fontResources[] = {
     {CLOCK_IDC_FONT_CREEPSTER, IDR_FONT_CREEPSTER, "Creepster.ttf"},
     {CLOCK_IDC_FONT_DOTGOTHIC, IDR_FONT_DOTGOTHIC, "DotGothic16.ttf"},
     {CLOCK_IDC_FONT_DOTO, IDR_FONT_DOTO, "Doto ExtraBold.ttf"},
-    {CLOCK_IDC_FONT_FLAVORS, IDR_FONT_FLAVORS, "Flavors.ttf"},
     {CLOCK_IDC_FONT_FOLDIT, IDR_FONT_FOLDIT, "Foldit SemiBold.ttf"},
     {CLOCK_IDC_FONT_FREDERICKA, IDR_FONT_FREDERICKA, "Fredericka the Great.ttf"},
     {CLOCK_IDC_FONT_FRIJOLE, IDR_FONT_FRIJOLE, "Frijole.ttf"},
-    {CLOCK_IDC_FONT_GRIFFY, IDR_FONT_GRIFFY, "Griffy.ttf"},
     {CLOCK_IDC_FONT_GWENDOLYN, IDR_FONT_GWENDOLYN, "Gwendolyn.ttf"},
     {CLOCK_IDC_FONT_HANDJET, IDR_FONT_HANDJET, "Handjet.ttf"},
     {CLOCK_IDC_FONT_INKNUT, IDR_FONT_INKNUT, "Inknut Antiqua Medium.ttf"},
@@ -254,7 +250,6 @@ FontResource fontResources[] = {
     {CLOCK_IDC_FONT_PIEDRA, IDR_FONT_PIEDRA, "Piedra.ttf"},
     {CLOCK_IDC_FONT_PIXELIFY, IDR_FONT_PIXELIFY, "Pixelify Sans Medium.ttf"},
     {CLOCK_IDC_FONT_PRESS_START, IDR_FONT_PRESS_START, "Press Start 2P.ttf"},
-    {CLOCK_IDC_FONT_RUBIK_BEASTLY, IDR_FONT_RUBIK_BEASTLY, "Rubik Beastly.ttf"},
     {CLOCK_IDC_FONT_RUBIK_BUBBLES, IDR_FONT_RUBIK_BUBBLES, "Rubik Bubbles.ttf"},
     {CLOCK_IDC_FONT_RUBIK_BURNED, IDR_FONT_RUBIK_BURNED, "Rubik Burned.ttf"},
     {CLOCK_IDC_FONT_RUBIK_GLITCH_POP, IDR_FONT_RUBIK_GLITCH_POP, "Rubik Glitch Pop.ttf"},
@@ -2335,6 +2330,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         int total_seconds = 0;
                         if (ParseInput(inputText, &total_seconds)) {
                             WriteConfigDefaultStartTime(total_seconds);
+                            WriteConfigStartupMode("COUNTDOWN");
                             ReadConfig();
                             break;
                         } else {
@@ -2692,14 +2688,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     WriteConfigFont("RecMonoCasual Nerd Font Mono.ttf");
                     goto refresh_window;
                 }
-                case CLOCK_IDC_FONT_BIGBLUE: {
-                    WriteConfigFont("BigBlueTermPlus Nerd Font.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_PROGGYCLEAN: {
-                    WriteConfigFont("ProggyCleanSZ Nerd Font Propo.ttf");
-                    goto refresh_window;
-                }
                 case CLOCK_IDC_FONT_DEPARTURE: {
                     WriteConfigFont("DepartureMono Nerd Font Propo.ttf");
                     goto refresh_window;
@@ -2736,10 +2724,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     WriteConfigFont("Doto ExtraBold.ttf");
                     goto refresh_window;
                 }
-                case CLOCK_IDC_FONT_FLAVORS: {
-                    WriteConfigFont("Flavors.ttf");
-                    goto refresh_window;
-                }
                 case CLOCK_IDC_FONT_FOLDIT: {
                     WriteConfigFont("Foldit SemiBold.ttf");
                     goto refresh_window;
@@ -2750,10 +2734,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDC_FONT_FRIJOLE: {
                     WriteConfigFont("Frijole.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_GRIFFY: {
-                    WriteConfigFont("Griffy.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_GWENDOLYN: {
@@ -2822,10 +2802,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDC_FONT_PRESS_START: {
                     WriteConfigFont("Press Start 2P.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_RUBIK_BEASTLY: {
-                    WriteConfigFont("Rubik Beastly.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_RUBIK_BUBBLES: {

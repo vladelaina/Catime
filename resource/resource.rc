@@ -19,10 +19,10 @@ END
 IDI_CATIME ICON "catime.ico"
 
 // CC BY-SA 4.0 fonts
-IDR_FONT_BIGBLUE           FONT "font/CC BY-SA 4.0/BigBlueTermPlus Nerd Font.ttf"
+// IDR_FONT_BIGBLUE           FONT "font/CC BY-SA 4.0/BigBlueTermPlus Nerd Font.ttf"
 
 // MIT fonts
-IDR_FONT_PROGGYCLEAN       FONT "font/MIT/ProggyCleanSZ Nerd Font Propo.ttf"
+// IDR_FONT_PROGGYCLEAN       FONT "font/MIT/ProggyCleanSZ Nerd Font Propo.ttf"
 
 // SIL fonts
 IDR_FONT_DEPARTURE         FONT "font/SIL/DepartureMono Nerd Font Propo.ttf"
@@ -30,7 +30,7 @@ IDR_FONT_RECMONO           FONT "font/SIL/RecMonoCasual Nerd Font Mono.ttf"
 IDR_FONT_TERMINESS         FONT "font/SIL/Terminess Nerd Font Propo.ttf"
 
 // WTFPL fonts
-IDR_FONT_GOHUFONT          FONT "font/WTFPL/GohuFont uni11 Nerd Font Mono.ttf"
+// IDR_FONT_GOHUFONT          FONT "font/WTFPL/GohuFont uni11 Nerd Font Mono.ttf"
 
 // 新增字体资源加载
 IDR_FONT_ARBUTUS           FONT "font/OFL/Arbutus.ttf"
@@ -39,11 +39,11 @@ IDR_FONT_CAVEAT            FONT "font/OFL/Caveat Brush.ttf"
 IDR_FONT_CREEPSTER         FONT "font/OFL/Creepster.ttf"
 IDR_FONT_DOTGOTHIC         FONT "font/OFL/DotGothic16.ttf"
 IDR_FONT_DOTO              FONT "font/OFL/Doto ExtraBold.ttf"
-IDR_FONT_FLAVORS           FONT "font/OFL/Flavors.ttf"
+// IDR_FONT_FLAVORS           FONT "font/OFL/Flavors.ttf"
 IDR_FONT_FOLDIT            FONT "font/OFL/Foldit SemiBold.ttf"
 IDR_FONT_FREDERICKA       FONT "font/OFL/Fredericka the Great.ttf"
 IDR_FONT_FRIJOLE           FONT "font/OFL/Frijole.ttf"
-IDR_FONT_GRIFFY            FONT "font/OFL/Griffy.ttf"
+// IDR_FONT_GRIFFY            FONT "font/OFL/Griffy.ttf"
 IDR_FONT_GWENDOLYN         FONT "font/OFL/Gwendolyn.ttf"
 IDR_FONT_HANDJET           FONT "font/OFL/Handjet.ttf"
 IDR_FONT_INKNUT            FONT "font/OFL/Inknut Antiqua Medium.ttf"
@@ -61,7 +61,7 @@ IDR_FONT_NOTO_NASTALIQ     FONT "font/OFL/Noto Nastaliq Urdu Medium.ttf"
 IDR_FONT_PIEDRA            FONT "font/OFL/Piedra.ttf"
 IDR_FONT_PIXELIFY          FONT "font/OFL/Pixelify Sans Medium.ttf"
 IDR_FONT_PRESS_START       FONT "font/OFL/Press Start 2P.ttf"
-IDR_FONT_RUBIK_BEASTLY     FONT "font/OFL/Rubik Beastly.ttf"
+// IDR_FONT_RUBIK_BEASTLY     FONT "font/OFL/Rubik Beastly.ttf"
 IDR_FONT_RUBIK_BUBBLES     FONT "font/OFL/Rubik Bubbles.ttf"
 IDR_FONT_RUBIK_BURNED      FONT "font/OFL/Rubik Burned.ttf"
 IDR_FONT_RUBIK_GLITCH_POP   FONT "font/OFL/Rubik Glitch Pop.ttf"
