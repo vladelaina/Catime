@@ -63,6 +63,14 @@
 - SIL Open Font License: DaddyTimeMono, DepartureMono, EnvyCodeR, IosevkaTermSlab, LiterationSerif, RecMonoCasual, Terminess, VictorMono, ZedMono
 - WTFPL: GohuFont
 
+  
+## ⭐Star History
+
+<a href="https://star-history.com/#vladelaina/Catime&Date">
+    <img src="https://api.star-history.com/svg?repos=vladelaina/Catime&type=Date" height="420" alt="Star History Chart">
+</a>
+
+
 ## ✨贡献者 
 
 非常感谢各位大佬的帮助:
@@ -91,3 +99,4 @@
       </tr>
   </tbody>
 </table>
+
