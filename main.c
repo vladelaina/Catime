@@ -2688,78 +2688,210 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     }
                     break;
                 }
-                case CLOCK_IDC_FONT_RECMONO:
+                case CLOCK_IDC_FONT_RECMONO: {
                     WriteConfigFont("RecMonoCasual Nerd Font Mono.ttf");
-                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "RecMonoCasual Nerd Font Mono.ttf")) {
-                        wchar_t errorMsg[256];
-                        _snwprintf(errorMsg, sizeof(errorMsg)/sizeof(wchar_t),
-                            GetLocalizedString(L"无法加载字体: %hs", L"Failed to load font: %hs"),
-                            "RecMonoCasual Nerd Font Mono.ttf");
-                        MessageBoxW(hwnd, errorMsg, 
-                            GetLocalizedString(L"错误", L"Error"),
-                            MB_ICONEXCLAMATION | MB_OK);
-                    }
                     goto refresh_window;
-                case CLOCK_IDC_FONT_BIGBLUE:
+                }
+                case CLOCK_IDC_FONT_BIGBLUE: {
                     WriteConfigFont("BigBlueTermPlus Nerd Font.ttf");
-                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "BigBlueTermPlus Nerd Font.ttf")) {
-                        wchar_t errorMsg[256];
-                        _snwprintf(errorMsg, sizeof(errorMsg)/sizeof(wchar_t),
-                            GetLocalizedString(L"无法加载字体: %hs", L"Failed to load font: %hs"),
-                            "BigBlueTermPlus Nerd Font.ttf");
-                        MessageBoxW(hwnd, errorMsg, 
-                            GetLocalizedString(L"错误", L"Error"),
-                            MB_ICONEXCLAMATION | MB_OK);
-                    }
                     goto refresh_window;
-                case CLOCK_IDC_FONT_PROGGYCLEAN:
+                }
+                case CLOCK_IDC_FONT_PROGGYCLEAN: {
                     WriteConfigFont("ProggyCleanSZ Nerd Font Propo.ttf");
-                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "ProggyCleanSZ Nerd Font Propo.ttf")) {
-                        wchar_t errorMsg[256];
-                        _snwprintf(errorMsg, sizeof(errorMsg)/sizeof(wchar_t),
-                            GetLocalizedString(L"无法加载字体: %hs", L"Failed to load font: %hs"),
-                            "ProggyCleanSZ Nerd Font Propo.ttf");
-                        MessageBoxW(hwnd, errorMsg, 
-                            GetLocalizedString(L"错误", L"Error"),
-                            MB_ICONEXCLAMATION | MB_OK);
-                    }
                     goto refresh_window;
-                case CLOCK_IDC_FONT_DEPARTURE:
+                }
+                case CLOCK_IDC_FONT_DEPARTURE: {
                     WriteConfigFont("DepartureMono Nerd Font Propo.ttf");
-                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "DepartureMono Nerd Font Propo.ttf")) {
-                        wchar_t errorMsg[256];
-                        _snwprintf(errorMsg, sizeof(errorMsg)/sizeof(wchar_t),
-                            GetLocalizedString(L"无法加载字体: %hs", L"Failed to load font: %hs"),
-                            "DepartureMono Nerd Font Propo.ttf");
-                        MessageBoxW(hwnd, errorMsg, 
-                            GetLocalizedString(L"错误", L"Error"),
-                            MB_ICONEXCLAMATION | MB_OK);
-                    }
                     goto refresh_window;
-                case CLOCK_IDC_FONT_TERMINESS:
+                }
+                case CLOCK_IDC_FONT_TERMINESS: {
                     WriteConfigFont("Terminess Nerd Font Propo.ttf");
-                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "Terminess Nerd Font Propo.ttf")) {
-                        wchar_t errorMsg[256];
-                        _snwprintf(errorMsg, sizeof(errorMsg)/sizeof(wchar_t),
-                            GetLocalizedString(L"无法加载字体: %hs", L"Failed to load font: %hs"),
-                            "Terminess Nerd Font Propo.ttf");
-                        MessageBoxW(hwnd, errorMsg, 
-                            GetLocalizedString(L"错误", L"Error"),
-                            MB_ICONEXCLAMATION | MB_OK);
-                    }
                     goto refresh_window;
-                case CLOCK_IDC_FONT_GOHUFONT:
+                }
+                case CLOCK_IDC_FONT_GOHUFONT: {
                     WriteConfigFont("GohuFont uni11 Nerd Font Mono.ttf");
-                    if (!LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), "GohuFont uni11 Nerd Font Mono.ttf")) {
-                        wchar_t errorMsg[256];
-                        _snwprintf(errorMsg, sizeof(errorMsg)/sizeof(wchar_t),
-                            GetLocalizedString(L"无法加载字体: %hs", L"Failed to load font: %hs"),
-                            "GohuFont uni11 Nerd Font Mono.ttf");
-                        MessageBoxW(hwnd, errorMsg, 
-                            GetLocalizedString(L"错误", L"Error"),
-                            MB_ICONEXCLAMATION | MB_OK);
-                    }
                     goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_ARBUTUS: {
+                    WriteConfigFont("Arbutus.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_BERKSHIRE: {
+                    WriteConfigFont("Berkshire Swash.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_CAVEAT: {
+                    WriteConfigFont("Caveat Brush.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_CREEPSTER: {
+                    WriteConfigFont("Creepster.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_DOTGOTHIC: {
+                    WriteConfigFont("DotGothic16.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_DOTO: {
+                    WriteConfigFont("Doto ExtraBold.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_FLAVORS: {
+                    WriteConfigFont("Flavors.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_FOLDIT: {
+                    WriteConfigFont("Foldit SemiBold.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_FREDERICKA: {
+                    WriteConfigFont("Fredericka the Great.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_FRIJOLE: {
+                    WriteConfigFont("Frijole.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_GRIFFY: {
+                    WriteConfigFont("Griffy.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_GWENDOLYN: {
+                    WriteConfigFont("Gwendolyn.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_HANDJET: {
+                    WriteConfigFont("Handjet.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_INKNUT: {
+                    WriteConfigFont("Inknut Antiqua Medium.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_JACQUARD: {
+                    WriteConfigFont("Jacquard 12.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_JACQUARDA: {
+                    WriteConfigFont("Jacquarda Bastarda 9.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_KAVOON: {
+                    WriteConfigFont("Kavoon.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_KUMAR_ONE_OUTLINE: {
+                    WriteConfigFont("Kumar One Outline.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_KUMAR_ONE: {
+                    WriteConfigFont("Kumar One.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_LAKKI_REDDY: {
+                    WriteConfigFont("Lakki Reddy.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_LICORICE: {
+                    WriteConfigFont("Licorice.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_MA_SHAN_ZHENG: {
+                    WriteConfigFont("Ma Shan Zheng.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_MOIRAI_ONE: {
+                    WriteConfigFont("Moirai One.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_MYSTERY_QUEST: {
+                    WriteConfigFont("Mystery Quest.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_NOTO_NASTALIQ: {
+                    WriteConfigFont("Noto Nastaliq Urdu Medium.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_PIEDRA: {
+                    WriteConfigFont("Piedra.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_PIXELIFY: {
+                    WriteConfigFont("Pixelify Sans Medium.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_PRESS_START: {
+                    WriteConfigFont("Press Start 2P.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_RUBIK_BEASTLY: {
+                    WriteConfigFont("Rubik Beastly.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_RUBIK_BUBBLES: {
+                    WriteConfigFont("Rubik Bubbles.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_RUBIK_BURNED: {
+                    WriteConfigFont("Rubik Burned.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_RUBIK_GLITCH_POP: {
+                    WriteConfigFont("Rubik Glitch Pop.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_RUBIK_GLITCH: {
+                    WriteConfigFont("Rubik Glitch.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_RUBIK_MARKER_HATCH: {
+                    WriteConfigFont("Rubik Marker Hatch.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_RUBIK_PUDDLES: {
+                    WriteConfigFont("Rubik Puddles.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_RUBIK_VINYL: {
+                    WriteConfigFont("Rubik Vinyl.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_RUBIK_WET_PAINT: {
+                    WriteConfigFont("Rubik Wet Paint.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_RUGE_BOOGIE: {
+                    WriteConfigFont("Ruge Boogie.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_SEVILLANA: {
+                    WriteConfigFont("Sevillana.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_SILKSCREEN: {
+                    WriteConfigFont("Silkscreen.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_STICK: {
+                    WriteConfigFont("Stick.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_UNDERDOG: {
+                    WriteConfigFont("Underdog.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_WALLPOET: {
+                    WriteConfigFont("Wallpoet.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_YESTERYEAR: {
+                    WriteConfigFont("Yesteryear.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_ZCOOL_KUAILE: {
+                    WriteConfigFont("ZCOOL KuaiLe.ttf");
+                    goto refresh_window;
+                }
                 case CLOCK_IDM_SHOW_CURRENT_TIME: {  
                     CLOCK_SHOW_CURRENT_TIME = !CLOCK_SHOW_CURRENT_TIME;
                     if (CLOCK_SHOW_CURRENT_TIME) {
