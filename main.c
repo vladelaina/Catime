@@ -267,7 +267,16 @@ FontResource fontResources[] = {
     {CLOCK_IDC_FONT_YESTERYEAR, IDR_FONT_YESTERYEAR, "Yesteryear.ttf"},
     {CLOCK_IDC_FONT_ZCOOL_KUAILE, IDR_FONT_ZCOOL_KUAILE, "ZCOOL KuaiLe.ttf"},
     {CLOCK_IDC_FONT_PROFONT, IDR_FONT_PROFONT, "ProFont IIx Nerd Font.ttf"},
-    {CLOCK_IDC_FONT_DADDYTIME, IDR_FONT_DADDYTIME, "DaddyTimeMono Nerd Font Propo.ttf"}
+    {CLOCK_IDC_FONT_DADDYTIME, IDR_FONT_DADDYTIME, "DaddyTimeMono Nerd Font Propo.ttf"},
+    {CLOCK_IDC_FONT_FOLDIT, IDR_FONT_FOLDIT, "Foldit SemiBold.ttf"},
+    {CLOCK_IDC_FONT_JACQUARDA, IDR_FONT_JACQUARDA, "Jacquarda Bastarda 9.ttf"},
+    {CLOCK_IDC_FONT_MOIRAI_ONE, IDR_FONT_MOIRAI_ONE, "Moirai One.ttf"},
+    {CLOCK_IDC_FONT_RUBIK_BURNED, IDR_FONT_RUBIK_BURNED, "Rubik Burned.ttf"},
+    {CLOCK_IDC_FONT_RUBIK_GLITCH, IDR_FONT_RUBIK_GLITCH, "Rubik Glitch.ttf"},
+    {CLOCK_IDC_FONT_PROFONT, IDR_FONT_PROFONT, "ProFont IIx Nerd Font.ttf"},
+    {CLOCK_IDC_FONT_WALLPOET, IDR_FONT_WALLPOET, "Wallpoet.ttf"},
+    {CLOCK_IDC_FONT_RUBIK_PUDDLES, IDR_FONT_RUBIK_PUDDLES, "Rubik Puddles.ttf"},
+    {CLOCK_IDC_FONT_RUBIK_VINYL, IDR_FONT_RUBIK_VINYL, "Rubik Vinyl.ttf"}
 };
 
 BOOL LoadFontFromResource(HINSTANCE hInstance, int resourceId) {
@@ -1818,9 +1827,19 @@ void ShowColorMenu(HWND hwnd) {
     for (int i = 0; i < sizeof(fontResources) / sizeof(fontResources[0]); i++) {
         // 这些字体保留在主菜单
         if (strcmp(fontResources[i].fontName, "Terminess Nerd Font Propo.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "DaddyTimeMono Nerd Font Propo.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Foldit SemiBold.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Jacquarda Bastarda 9.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Moirai One.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Silkscreen.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Pixelify Sans Medium.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Rubik Glitch Pop.ttf") == 0) {
+            strcmp(fontResources[i].fontName, "Rubik Glitch Pop.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Rubik Burned.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Rubik Glitch.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "ProFont IIx Nerd Font.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Wallpoet.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Rubik Puddles.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Rubik Vinyl.ttf") == 0) {
             
             BOOL isCurrentFont = strcmp(FONT_FILE_NAME, fontResources[i].fontName) == 0;
             char displayName[100];
@@ -1840,9 +1859,19 @@ void ShowColorMenu(HWND hwnd) {
     for (int i = 0; i < sizeof(fontResources) / sizeof(fontResources[0]); i++) {
         // 排除已经添加到主菜单的字体
         if (strcmp(fontResources[i].fontName, "Terminess Nerd Font Propo.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "DaddyTimeMono Nerd Font Propo.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Foldit SemiBold.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Jacquarda Bastarda 9.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Moirai One.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Silkscreen.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Pixelify Sans Medium.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Rubik Glitch Pop.ttf") == 0) {
+            strcmp(fontResources[i].fontName, "Rubik Glitch Pop.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Rubik Burned.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Rubik Glitch.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "ProFont IIx Nerd Font.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Wallpoet.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Rubik Puddles.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Rubik Vinyl.ttf") == 0) {
             continue;
         }
 
