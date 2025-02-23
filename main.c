@@ -1811,21 +1811,54 @@ void ShowColorMenu(HWND hwnd) {
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
+    // 创建"更多"子菜单
+    HMENU hMoreFontsMenu = CreatePopupMenu();
+
+    // 先添加常用字体到主菜单
     for (int i = 0; i < sizeof(fontResources) / sizeof(fontResources[0]); i++) {
+        // 这些字体保留在主菜单
+        if (strcmp(fontResources[i].fontName, "Terminess Nerd Font Propo.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Silkscreen.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Pixelify Sans Medium.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Rubik Glitch Pop.ttf") == 0) {
+            
+            BOOL isCurrentFont = strcmp(FONT_FILE_NAME, fontResources[i].fontName) == 0;
+            char displayName[100];
+            strncpy(displayName, fontResources[i].fontName, sizeof(displayName) - 1);
+            displayName[sizeof(displayName) - 1] = '\0';
+            char* dot = strstr(displayName, ".ttf");
+            if (dot) *dot = '\0';
+            
+            AppendMenu(hFontSubMenu, MF_STRING | (isCurrentFont ? MF_CHECKED : MF_UNCHECKED),
+                      fontResources[i].menuId, displayName);
+        }
+    }
+
+    AppendMenuW(hFontSubMenu, MF_SEPARATOR, 0, NULL);
+
+    // 将其他字体添加到"更多"子菜单
+    for (int i = 0; i < sizeof(fontResources) / sizeof(fontResources[0]); i++) {
+        // 排除已经添加到主菜单的字体
+        if (strcmp(fontResources[i].fontName, "Terminess Nerd Font Propo.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Silkscreen.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Pixelify Sans Medium.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Rubik Glitch Pop.ttf") == 0) {
+            continue;
+        }
+
         BOOL isCurrentFont = strcmp(FONT_FILE_NAME, fontResources[i].fontName) == 0;
-        
         char displayName[100];
         strncpy(displayName, fontResources[i].fontName, sizeof(displayName) - 1);
         displayName[sizeof(displayName) - 1] = '\0';
-        
         char* dot = strstr(displayName, ".ttf");
-        if (dot) {
-            *dot = '\0';
-        }
+        if (dot) *dot = '\0';
         
-        AppendMenu(hFontSubMenu, MF_STRING | (isCurrentFont ? MF_CHECKED : MF_UNCHECKED),
+        AppendMenu(hMoreFontsMenu, MF_STRING | (isCurrentFont ? MF_CHECKED : MF_UNCHECKED),
                   fontResources[i].menuId, displayName);
     }
+
+    // 将"更多"子菜单添加到主字体菜单
+    AppendMenuW(hFontSubMenu, MF_POPUP, (UINT_PTR)hMoreFontsMenu, GetLocalizedString(L"更多", L"More"));
 
     for (int i = 0; i < COLOR_OPTIONS_COUNT; i++) {
         const char* hexColor = COLOR_OPTIONS[i].hexColor;
@@ -2724,10 +2757,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDC_FONT_DOTGOTHIC: {
                     WriteConfigFont("DotGothic16.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_DOTO: {
-                    WriteConfigFont("Doto ExtraBold.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_FOLDIT: {
@@ -4247,7 +4276,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Entrada inválida") == 0) return L"Entrada inválida";
             if (wcscmp(english, L"Erro") == 0) return L"Erro";
             if (wcscmp(english, L"Falha ao carregar fonte: %hs") == 0) return L"Falha ao carregar fonte: %hs";
-            if (wcscmp(english, L"25    = 25 minutes\n25h   = 25 hours\n25s   = 25 seconds\n25 30 = 25 minutes 30 seconds\n25 30m = 25 hours 30 minutes\n1 30 20 = 1 hour 30 minutes 20 seconds") == 0)
+            if (wcscmp(english, L"25    = 25 minutes\n25h   = 25 hours\n25s   = 25 seconds\n25 30 = 25 minutes 30 seconds\n25 30m = 25 hours 30 minutes\n1 30 20 = 1 hora 30 minutos 20 segundos") == 0)
                 return L"25    = 25 minutos\n25h   = 25 horas\n25s   = 25 segundos\n25 30 = 25 minutos 30 segundos\n25 30m = 25 horas 30 minutos\n1 30 20 = 1 hora 30 minutos 20 segundos";
             if (wcscmp(english, L"Enter numbers separated by spaces\nExample: 25 10 5") == 0)
                 return L"Insira números separados por espaços\nExemplo: 25 10 5";
