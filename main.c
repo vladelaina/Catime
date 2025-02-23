@@ -268,8 +268,8 @@ FontResource fontResources[] = {
     {CLOCK_IDC_FONT_ZCOOL_KUAILE, IDR_FONT_ZCOOL_KUAILE, "ZCOOL KuaiLe.ttf"},
     {CLOCK_IDC_FONT_PROFONT, IDR_FONT_PROFONT, "ProFont IIx Nerd Font.ttf"},
     {CLOCK_IDC_FONT_DADDYTIME, IDR_FONT_DADDYTIME, "DaddyTimeMono Nerd Font Propo.ttf"},
-    {CLOCK_IDC_FONT_RUBIK_PUDDLES, IDR_FONT_RUBIK_PUDDLES, "Rubik Puddles.ttf"},
-    {CLOCK_IDC_FONT_RUBIK_VINYL, IDR_FONT_RUBIK_VINYL, "Rubik Vinyl.ttf"}
+    {CLOCK_IDC_FONT_PROFONT, IDR_FONT_PROFONT, "ProFont IIx Nerd Font.ttf"},
+    {CLOCK_IDC_FONT_DADDYTIME, IDR_FONT_DADDYTIME, "DaddyTimeMono Nerd Font Propo.ttf"}
 };
 
 BOOL LoadFontFromResource(HINSTANCE hInstance, int resourceId) {
@@ -1830,9 +1830,7 @@ void ShowColorMenu(HWND hwnd) {
             strcmp(fontResources[i].fontName, "Rubik Burned.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Rubik Glitch.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "ProFont IIx Nerd Font.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Wallpoet.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Rubik Puddles.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Rubik Vinyl.ttf") == 0) {
+            strcmp(fontResources[i].fontName, "Wallpoet.ttf") == 0) {
             
             BOOL isCurrentFont = strcmp(FONT_FILE_NAME, fontResources[i].fontName) == 0;
             char displayName[100];
@@ -1862,9 +1860,7 @@ void ShowColorMenu(HWND hwnd) {
             strcmp(fontResources[i].fontName, "Rubik Burned.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Rubik Glitch.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "ProFont IIx Nerd Font.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Wallpoet.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Rubik Puddles.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Rubik Vinyl.ttf") == 0) {
+            strcmp(fontResources[i].fontName, "Wallpoet.ttf") == 0) {
             continue;
         }
 
