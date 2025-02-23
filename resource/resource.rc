@@ -23,9 +23,11 @@ IDI_CATIME ICON "catime.ico"
 
 // MIT fonts
 // IDR_FONT_PROGGYCLEAN       FONT "font/MIT/ProggyCleanSZ Nerd Font Propo.ttf"
+IDR_FONT_PROFONT         FONT "font/MIT/ProFont IIx Nerd Font.ttf"
 
 // SIL fonts
 IDR_FONT_DEPARTURE         FONT "font/SIL/DepartureMono Nerd Font Propo.ttf"
+IDR_FONT_DADDYTIME        FONT "font/SIL/DaddyTimeMono Nerd Font Propo.ttf"
 IDR_FONT_RECMONO           FONT "font/SIL/RecMonoCasual Nerd Font Mono.ttf"
 IDR_FONT_TERMINESS         FONT "font/SIL/Terminess Nerd Font Propo.ttf"
 
