@@ -3176,6 +3176,14 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     }
                     break;
                 }
+                case CLOCK_IDC_FONT_PROFONT: {
+                    WriteConfigFont("ProFont IIx Nerd Font.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_DADDYTIME: {
+                    WriteConfigFont("DaddyTimeMono Nerd Font Propo.ttf");
+                    goto refresh_window;
+                }
             }
             break;
 
