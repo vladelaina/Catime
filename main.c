@@ -2719,19 +2719,22 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     }
                 }
                 case CLOCK_IDC_EDIT_MODE: {
-                    CLOCK_EDIT_MODE = !CLOCK_EDIT_MODE;
-                    WriteConfigEditMode(CLOCK_EDIT_MODE ? "TRUE" : "FALSE");
-                    
-                    if (CLOCK_EDIT_MODE) {
-                        SetBlurBehind(hwnd, TRUE);
-                    } else {
-                        SetBlurBehind(hwnd, FALSE);
-                        SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), 255, LWA_COLORKEY);
+                    // 这里确保只有在特定条件下才进入编辑模式
+                    if (!IS_PREVIEWING && !IS_COLOR_PREVIEWING) {
+                        CLOCK_EDIT_MODE = !CLOCK_EDIT_MODE;
+                        WriteConfigEditMode(CLOCK_EDIT_MODE ? "TRUE" : "FALSE");
+                        
+                        if (CLOCK_EDIT_MODE) {
+                            SetBlurBehind(hwnd, TRUE);
+                        } else {
+                            SetBlurBehind(hwnd, FALSE);
+                            SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), 255, LWA_COLORKEY);
+                        }
+                        
+                        SetClickThrough(hwnd, !CLOCK_EDIT_MODE);
+                        
+                        InvalidateRect(hwnd, NULL, TRUE);
                     }
-                    
-                    SetClickThrough(hwnd, !CLOCK_EDIT_MODE);
-                    
-                    InvalidateRect(hwnd, NULL, TRUE);
                     break;
                 }
                 case CLOCK_IDC_CUSTOMIZE_LEFT: {
@@ -2809,6 +2812,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     WriteConfigFont("Jacquard 12.ttf");
                     goto refresh_window;
                 }
+                case CLOCK_IDC_FONT_JACQUARDA: {
+                    WriteConfigFont("Jacquarda Bastarda 9.ttf");
+                    goto refresh_window;
+                }
                 case CLOCK_IDC_FONT_KAVOON: {
                     WriteConfigFont("Kavoon.ttf");
                     goto refresh_window;
@@ -2833,6 +2840,14 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     WriteConfigFont("Ma Shan Zheng.ttf");
                     goto refresh_window;
                 }
+                case CLOCK_IDC_FONT_MOIRAI_ONE: {
+                    WriteConfigFont("Moirai One.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_MYSTERY_QUEST: {
+                    WriteConfigFont("Mystery Quest.ttf");
+                    goto refresh_window;
+                }
                 case CLOCK_IDC_FONT_NOTO_NASTALIQ: {
                     WriteConfigFont("Noto Nastaliq Urdu Medium.ttf");
                     goto refresh_window;
@@ -2853,12 +2868,28 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     WriteConfigFont("Rubik Bubbles.ttf");
                     goto refresh_window;
                 }
+                case CLOCK_IDC_FONT_RUBIK_BURNED: {
+                    WriteConfigFont("Rubik Burned.ttf");
+                    goto refresh_window;
+                }
                 case CLOCK_IDC_FONT_RUBIK_GLITCH_POP: {
                     WriteConfigFont("Rubik Glitch Pop.ttf");
                     goto refresh_window;
                 }
+                case CLOCK_IDC_FONT_RUBIK_GLITCH: {
+                    WriteConfigFont("Rubik Glitch.ttf");
+                    goto refresh_window;
+                }
                 case CLOCK_IDC_FONT_RUBIK_MARKER_HATCH: {
                     WriteConfigFont("Rubik Marker Hatch.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_RUBIK_PUDDLES: {
+                    WriteConfigFont("Rubik Puddles.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_RUBIK_VINYL: {
+                    WriteConfigFont("Rubik Vinyl.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_RUBIK_WET_PAINT: {
@@ -2883,6 +2914,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDC_FONT_UNDERDOG: {
                     WriteConfigFont("Underdog.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_WALLPOET: {
+                    WriteConfigFont("Wallpoet.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_YESTERYEAR: {
