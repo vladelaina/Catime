@@ -271,25 +271,32 @@ FontResource fontResources[] = {
 };
 
 BOOL LoadFontFromResource(HINSTANCE hInstance, int resourceId) {
+    // 正确指定资源类型为 RT_FONT
     HRSRC hResource = FindResource(hInstance, MAKEINTRESOURCE(resourceId), RT_FONT);
     if (hResource == NULL) {
-        return FALSE;
+        return FALSE; // 资源未找到，直接返回
     }
 
     HGLOBAL hMemory = LoadResource(hInstance, hResource);
     if (hMemory == NULL) {
-        return FALSE;
+        return FALSE; // 资源加载失败，直接返回
     }
 
     void* fontData = LockResource(hMemory);
     if (fontData == NULL) {
-        return FALSE;
+        return FALSE; // 锁定资源失败，直接返回
     }
 
     DWORD fontLength = SizeofResource(hInstance, hResource);
     DWORD nFonts = 0;
     HANDLE handle = AddFontMemResourceEx(fontData, fontLength, NULL, &nFonts);
-    return handle != NULL;
+    
+    // 不显示错误消息
+    if (handle == NULL) {
+        return FALSE; // 如果字体加载失败，直接返回
+    }
+    
+    return TRUE; // 成功加载字体
 }
 
 BOOL LoadFontByName(HINSTANCE hInstance, const char* fontName) {
@@ -598,11 +605,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     }
     
     if (defaultFontIndex != -1) {
-        if (!LoadFontFromResource(hInstance, fontResources[defaultFontIndex].resourceId)) {
-            char errorMsg[256];
-            snprintf(errorMsg, sizeof(errorMsg), "Failed to load font: %s", fontResources[defaultFontIndex].fontName);
-            MessageBox(NULL, errorMsg, "Error", MB_ICONEXCLAMATION | MB_OK);
-        }
+        // 直接加载字体，不显示错误消息
+        LoadFontFromResource(hInstance, fontResources[defaultFontIndex].resourceId);
     }
 
     CLOCK_TOTAL_TIME = CLOCK_DEFAULT_START_TIME;
