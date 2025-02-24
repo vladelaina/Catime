@@ -3393,22 +3393,7 @@ void AdjustWindowPosition(HWND hwnd) {
     int newX = windowRect.left;
     int newY = windowRect.top;
     
-    int maxOutside = windowWidth / 2;
-    if (newX < workArea.left - maxOutside) {
-        newX = workArea.left - maxOutside;
-    }
-    else if (newX + windowWidth > workArea.right + maxOutside) {
-        newX = workArea.right + maxOutside - windowWidth;
-    }
-    
-    maxOutside = windowHeight / 2;
-    if (newY < workArea.top - maxOutside) {
-        newY = workArea.top - maxOutside;
-    }
-    else if (newY + windowHeight > workArea.bottom + maxOutside) {
-        newY = workArea.bottom + maxOutside - windowHeight;
-    }
-    
+    // 移除窗口位置限制的代码，让窗口可以完全移出屏幕
     if (newX != windowRect.left || newY != windowRect.top) {
         SetWindowPos(hwnd, NULL, 
             newX, newY,
