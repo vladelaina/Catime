@@ -2178,8 +2178,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     // 在原有文本大小基础上四周各增加20px
                     SetWindowPos(hwnd, NULL,
                         windowRect.left, windowRect.top,
-                        textSize.cx + 40, // 左右各增加20px
-                        textSize.cy + 40, // 上下各增加20px
+                        textSize.cx + WINDOW_HORIZONTAL_PADDING, // 左右各增加20px
+                        textSize.cy + WINDOW_VERTICAL_PADDING, // 上下各增加20px
                         SWP_NOZORDER | SWP_NOACTIVATE);
                     GetClientRect(hwnd, &rect);
                 }
