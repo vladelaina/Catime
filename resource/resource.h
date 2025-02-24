@@ -9,8 +9,8 @@
 
 
 /* 窗口尺寸增长量 */
-#define WINDOW_HORIZONTAL_PADDING 60  //左右
-#define WINDOW_VERTICAL_PADDING 1     //上下
+#define WINDOW_HORIZONTAL_PADDING 190  //左右
+#define WINDOW_VERTICAL_PADDING -5     //上下
 
 /* 系统按键定义 */
 #define VK_MEDIA_PLAY_PAUSE 0xB3
