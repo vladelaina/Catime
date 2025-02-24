@@ -2926,7 +2926,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDM_SHOW_CURRENT_TIME: {  
                     CLOCK_SHOW_CURRENT_TIME = !CLOCK_SHOW_CURRENT_TIME;
                     if (CLOCK_SHOW_CURRENT_TIME) {
-                        // 新增：关闭番茄钟
+                        // 新增：强制显示窗口
+                        ShowWindow(hwnd, SW_SHOW);  // 添加这行
+                        // 关闭番茄钟
                         CLOCK_COUNT_UP = FALSE;
                         KillTimer(hwnd, 1);   
                         elapsed_time = 0;
