@@ -2775,6 +2775,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     WriteConfigFont("DotGothic16.ttf");
                     goto refresh_window;
                 }
+                case CLOCK_IDC_FONT_DOTO: {  // 添加这个case
+                    WriteConfigFont("Doto ExtraBold.ttf");
+                    goto refresh_window;
+                }
                 case CLOCK_IDC_FONT_FOLDIT: {
                     WriteConfigFont("Foldit SemiBold.ttf");
                     goto refresh_window;
