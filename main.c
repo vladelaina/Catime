@@ -13,7 +13,7 @@
 #include <objbase.h>
 #include <shobjidl.h>
 #include <shlguid.h>
-
+ 
 #ifndef CSIDL_STARTUP
 
 #endif
@@ -3000,6 +3000,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_FEEDBACK_GITHUB: {
                     ShellExecuteA(NULL, "open", FEEDBACK_URL_GITHUB, NULL, NULL, SW_SHOWNORMAL);
+                    break;
+                }
+                case CLOCK_IDM_FEEDBACK_BILIBILI: {
+                    ShellExecuteA(NULL, "open", FEEDBACK_URL_BILIBILI, NULL, NULL, SW_SHOWNORMAL);
                     break;
                 }
                 case CLOCK_IDM_RECENT_FILE_1:
