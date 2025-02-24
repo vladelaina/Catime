@@ -98,8 +98,8 @@
 
 字体许可：
 - CC BY-SA 4.0: BigBlueTermPlus Nerd Font
-- MIT: ProFont IIx, ProggyCleanSZ Nerd Font
-- SIL Open Font License: DaddyTimeMono, DepartureMono, EnvyCodeR, IosevkaTermSlab, LiterationSerif, RecMonoCasual, Terminess, VictorMono, ZedMono
+- MIT: ProFont IIx Nerd Font, ProggyCleanSZ Nerd Font
+- SIL Open Font License: DaddyTimeMono Nerd Font, DepartureMono Nerd Font, EnvyCodeR Nerd Font, IosevkaTermSlab Nerd Font, LiterationSerif Nerd Font, RecMonoCasual Nerd Font, Terminess Nerd Font, VictorMono Nerd Font, ZedMono Nerd Font, Arbutus, Berkshire Swash, Caveat Brush, Creepster, DotGothic16, Doto, Foldit, Fredericka the Great, Frijole, Gwendolyn, Handjet, Inknut Antiqua, Jacquard, Jacquarda Bastarda, Kavoon, Kumar One, Kumar One Outline, Lakki Reddy, Licorice, Ma Shan Zheng, Moirai One, Mystery Quest, Noto Nastaliq Urdu, Piedra, Pixelify Sans, Press Start 2P, Rubik (所有变体), Ruge Boogie, Sevillana, Silkscreen, Stick, Underdog, Wallpoet, Yesteryear, ZCOOL KuaiLe
 - WTFPL: GohuFont
 
 
