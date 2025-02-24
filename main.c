@@ -3227,15 +3227,14 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_COUNTDOWN_RESET: {
-                    if (!CLOCK_COUNT_UP && !CLOCK_SHOW_CURRENT_TIME) {
-                        elapsed_time = 0;
-                        countdown_elapsed_time = 0;
-                        countdown_message_shown = FALSE;
-                        CLOCK_IS_PAUSED = FALSE;
-                        KillTimer(hwnd, 1);
-                        SetTimer(hwnd, 1, 1000, NULL);
-                        InvalidateRect(hwnd, NULL, TRUE);
-                    }
+                    // 添加显示窗口的代码
+                    ShowWindow(hwnd, SW_SHOW);
+                    
+                    elapsed_time = 0;
+                    CLOCK_IS_PAUSED = FALSE;
+                    KillTimer(hwnd, 1);
+                    SetTimer(hwnd, 1, 1000, NULL);
+                    InvalidateRect(hwnd, NULL, TRUE);
                     break;
                 }
                 case CLOCK_IDC_FONT_PROFONT: {
