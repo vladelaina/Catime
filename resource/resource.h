@@ -1,5 +1,5 @@
 /* 版本与更新信息 */
-#define CATIME_VERSION "1.0.4-beta"
+#define CATIME_VERSION "1.0.4.3-beta"
 #define UPDATE_URL_GITHUB    "https://github.com/vladelaina/Catime/releases"
 #define UPDATE_URL_123PAN    "https://www.123684.com/s/ruESjv-2CZUA"
 #define UPDATE_URL_LANZOU    "https://wwrx.lanzoup.com/b00hqiiskj"
