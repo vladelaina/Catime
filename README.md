@@ -47,7 +47,7 @@
 
 ## 💖[支持](support.md)
 
-如果您喜欢本项目，欢迎打赏，金额随意。您的支持是我的动力  ദ്ദി˶˃ ᵕ ˂ )✧Thanks!
+如果您喜欢本项目，欢迎打赏，金额随意。您的支持是我的动力  ദ്ദി˶>𖥦<)✧Thanks!
 
 
   
@@ -100,4 +100,5 @@
 - MIT: ProFont IIx, ProggyCleanSZ Nerd Font
 - SIL Open Font License: DaddyTimeMono, DepartureMono, EnvyCodeR, IosevkaTermSlab, LiterationSerif, RecMonoCasual, Terminess, VictorMono, ZedMono
 - WTFPL: GohuFont
+
 
