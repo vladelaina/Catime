@@ -2175,13 +2175,16 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     textSize.cy != (rect.bottom - rect.top)) {
                     RECT windowRect;
                     GetWindowRect(hwnd, &windowRect);
+                    // 在原有文本大小基础上四周各增加20px
                     SetWindowPos(hwnd, NULL,
                         windowRect.left, windowRect.top,
-                        textSize.cx, textSize.cy,
+                        textSize.cx + 40, // 左右各增加20px
+                        textSize.cy + 40, // 上下各增加20px
                         SWP_NOZORDER | SWP_NOACTIVATE);
                     GetClientRect(hwnd, &rect);
                 }
 
+                // 调整文本绘制位置，使其在增大的窗口中居中
                 int x = (rect.right - textSize.cx) / 2;
                 int y = (rect.bottom - textSize.cy) / 2;
 
