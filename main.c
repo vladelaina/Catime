@@ -3222,22 +3222,25 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_COUNTDOWN_START_PAUSE: {
-                    if (CLOCK_COUNT_UP || CLOCK_SHOW_CURRENT_TIME) {
-                        CLOCK_COUNT_UP = FALSE;
-                        CLOCK_SHOW_CURRENT_TIME = FALSE;
-                        elapsed_time = default_countdown_time;
-                        countdown_elapsed_time = 0;
-                        countdown_message_shown = FALSE;
-                        CLOCK_IS_PAUSED = FALSE;
-                        SetTimer(hwnd, 1, 1000, NULL);
-                    } else {
-                        CLOCK_IS_PAUSED = !CLOCK_IS_PAUSED;
-                        if (CLOCK_IS_PAUSED) {
-                            KillTimer(hwnd, 1);
-                        } else {
-                            SetTimer(hwnd, 1, 1000, NULL);
-                        }
+                    if (!IsWindowVisible(hwnd)) {
+                        // If window is hidden, make it visible when starting countdown
+                        ShowWindow(hwnd, SW_SHOW);
                     }
+                    
+                    if (CLOCK_COUNT_UP) {
+                        CLOCK_COUNT_UP = FALSE;
+                        countdown_elapsed_time = 0;
+                        CLOCK_IS_PAUSED = FALSE;
+                    } else if (!CLOCK_SHOW_CURRENT_TIME) {
+                        // Toggle pause state for countdown
+                        CLOCK_IS_PAUSED = !CLOCK_IS_PAUSED;
+                    } else {
+                        // Switching from "Show Current Time" to countdown
+                        CLOCK_SHOW_CURRENT_TIME = FALSE;
+                        countdown_elapsed_time = 0;
+                        CLOCK_IS_PAUSED = FALSE;
+                    }
+                    
                     InvalidateRect(hwnd, NULL, TRUE);
                     break;
                 }
