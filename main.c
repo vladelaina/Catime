@@ -1610,8 +1610,9 @@ void ShowContextMenu(HWND hwnd) {
 
     HMENU hCountdownMenu = CreatePopupMenu();
     // 判断是否需要显示完整倒计时菜单（非正计时、非显示时间、倒计时进行中）
+    BOOL isWindowVisible = IsWindowVisible(hwnd);
     if (!CLOCK_COUNT_UP && !CLOCK_SHOW_CURRENT_TIME && 
-        CLOCK_TOTAL_TIME > 0 && countdown_elapsed_time < CLOCK_TOTAL_TIME) 
+        CLOCK_TOTAL_TIME > 0 && countdown_elapsed_time < CLOCK_TOTAL_TIME && isWindowVisible) 
     {
         // 显示暂停/继续和重新开始
         AppendMenuW(hCountdownMenu, MF_STRING,
@@ -1624,16 +1625,16 @@ void ShowContextMenu(HWND hwnd) {
             CLOCK_IDM_COUNTDOWN_RESET,
             GetLocalizedString(L"重新开始", L"Restart"));
     } else {
-        // 其他情况（显示当前时间/正计时/倒计时未开始/已结束）显示开始
+        // 其他情况（显示当前时间/正计时/倒计时未开始/已结束/窗口隐藏）显示开始
         AppendMenuW(hCountdownMenu, MF_STRING,
             CLOCK_IDM_COUNTDOWN_START_PAUSE,
             GetLocalizedString(L"开始", L"Start"));
     }
 
-    // 修改父菜单项的勾选条件（需要同时满足倒计时激活且进行中）
+    // 修改父菜单项的勾选条件（需要同时满足倒计时激活且进行中且窗口可见）
     AppendMenuW(hMenu, MF_POPUP | 
         ((!CLOCK_COUNT_UP && !CLOCK_SHOW_CURRENT_TIME && 
-          CLOCK_TOTAL_TIME > 0 && countdown_elapsed_time < CLOCK_TOTAL_TIME) ? 
+          CLOCK_TOTAL_TIME > 0 && countdown_elapsed_time < CLOCK_TOTAL_TIME && isWindowVisible) ? 
             MF_CHECKED : MF_UNCHECKED), 
         (UINT_PTR)hCountdownMenu,
         GetLocalizedString(L"倒计时", L"Countdown"));
