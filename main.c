@@ -3116,14 +3116,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_COUNT_UP_RESET: {
-                    if (CLOCK_COUNT_UP) {
-                        countup_elapsed_time = 0;
-                        countup_message_shown = FALSE;
-                        CLOCK_IS_PAUSED = FALSE;
-                        KillTimer(hwnd, 1);
-                        SetTimer(hwnd, 1, 1000, NULL);
-                        InvalidateRect(hwnd, NULL, TRUE);
-                    }
+                    countup_elapsed_time = 0;  // 正计时使用自己的计时变量
+                    CLOCK_IS_PAUSED = FALSE;
+                    KillTimer(hwnd, 1);
+                    SetTimer(hwnd, 1, 1000, NULL);
+                    InvalidateRect(hwnd, NULL, TRUE);
                     break;
                 }
                 case CLOCK_IDC_SET_COUNTDOWN_TIME: {
@@ -3234,7 +3231,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     // 添加显示窗口的代码
                     ShowWindow(hwnd, SW_SHOW);
                     
-                    elapsed_time = 0;
+                    // 修改这里：使用正确的倒计时变量
+                    countdown_elapsed_time = 0;  // 原先是 elapsed_time = 0
                     CLOCK_IS_PAUSED = FALSE;
                     KillTimer(hwnd, 1);
                     SetTimer(hwnd, 1, 1000, NULL);
