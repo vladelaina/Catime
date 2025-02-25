@@ -13,16 +13,14 @@
 
 <h1 align="center">Catime</h1>
 
+
 <p align="center">一款简洁的 Windows 倒计时工具，支持番茄时钟功能，具有透明界面和丰富的自定义选项。</p>
 <p align="center">A simple Windows countdown tool with Pomodoro clock functionality, featuring a transparent interface and a variety of customization options.</p>
 
 
-
-
-
 <video src="https://github.com/user-attachments/assets/3bd56d5e-3c3f-4c06-a07b-b6cf72e7dcfb.mp4" autoplay loop></video>
 
-[**简体中文**](README.md) |[**繁體中文**](i18n/README_zh-hant.md)  | [English](i18n/README-en.md) | [**日本語**](i18n/README_ja.md) | [**Español**](i18n/README_es.md) | [**Português**](i18n/README_pt-br.md) | [**한국어**](i18n/README_ko-kr.md) | [**Deutsch**](i18n/README_de.md) | [**French**](i18n/README_fr.md)
+**简体中文** | [**English**](i18n/README-en.md)
 
 
 ## 🌟特点
