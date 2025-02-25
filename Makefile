@@ -38,4 +38,6 @@ $(OUTPUT_DIR)/catime.exe: $(OBJ_FILES) resource.o
 
 # 清理构建文件
 clean:
+	@powershell.exe -Command "Stop-Process -Name catime -Force -ErrorAction SilentlyContinue"
 	@rm -f *.o $(OUTPUT_DIR)/*.exe
+
