@@ -20,7 +20,7 @@
 
 <video src="https://github.com/user-attachments/assets/3bd56d5e-3c3f-4c06-a07b-b6cf72e7dcfb.mp4" autoplay loop></video>
 
-**简体中文** | [**English**](i18n/README-en.md)
+**简体中文** | [**English**](./README_EN.md)
 
 
 ## 🌟特点
