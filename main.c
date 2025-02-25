@@ -2306,6 +2306,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             countdown_message_shown = FALSE;
                             CLOCK_COUNT_UP = FALSE;
                             CLOCK_SHOW_CURRENT_TIME = FALSE;
+                            // Show the window when a time is set
+                            ShowWindow(hwnd, SW_SHOW);
                             InvalidateRect(hwnd, NULL, TRUE);
                             SetTimer(hwnd, 1, 1000, NULL);
                             break;
