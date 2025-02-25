@@ -733,7 +733,7 @@ void GetConfigPath(char* path, size_t size) {
 void CreateDefaultConfig(const char* config_path) {
     FILE *file = fopen(config_path, "w");
     if (file) {
-        fprintf(file, "FONT_FILE_NAME=Wallpoet.ttf\n");  // 修改默认字体
+        fprintf(file, "FONT_FILE_NAME=Wallpoet Essence.ttf\n");  // 修改默认字体
         fprintf(file, "CLOCK_TEXT_COLOR=#FFB6C1\n");
         fprintf(file, "CLOCK_BASE_FONT_SIZE=20\n");
         fprintf(file, "CLOCK_WINDOW_POS_X=960\n");
@@ -2474,7 +2474,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     
                     HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
                     for (int i = 0; i < sizeof(fontResources) / sizeof(FontResource); i++) {
-                        if (strcmp(fontResources[i].fontName, "Wallpoet.ttf") == 0) {  // 改为检查 Wallpoet
+                        if (strcmp(fontResources[i].fontName, "Wallpoet Essencet.ttf") == 0) {  // 改为检查 Wallpoet
                             LoadFontFromResource(hInstance, fontResources[i].resourceId);
                             break;
                         }
