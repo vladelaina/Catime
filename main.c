@@ -736,8 +736,8 @@ void CreateDefaultConfig(const char* config_path) {
         fprintf(file, "FONT_FILE_NAME=Wallpoet Essence.ttf\n");  // 修改默认字体
         fprintf(file, "CLOCK_TEXT_COLOR=#FFB6C1\n");
         fprintf(file, "CLOCK_BASE_FONT_SIZE=20\n");
-        fprintf(file, "CLOCK_WINDOW_POS_X=960\n");
-        fprintf(file, "CLOCK_WINDOW_POS_Y=-7\n");
+        fprintf(file, "CLOCK_WINDOW_POS_X=960\n");  //默认位置的x
+        fprintf(file, "CLOCK_WINDOW_POS_Y=-1\n");   //默认位置的y
         fprintf(file, "WINDOW_SCALE=1.62\n");
         fprintf(file, "CLOCK_DEFAULT_START_TIME=1500\n");
         fprintf(file, "CLOCK_TIME_OPTIONS=25,10,5\n");
