@@ -98,7 +98,19 @@
 
 字体许可：
 - MIT: ProFont IIx Nerd Font
-- SIL Open Font License: DaddyTimeMono Nerd Font, DepartureMono Nerd Font, EnvyCodeR Nerd Font, IosevkaTermSlab Nerd Font, LiterationSerif Nerd Font, RecMonoCasual Nerd Font, Terminess Nerd Font, VictorMono Nerd Font, ZedMono Nerd Font, Arbutus, Berkshire Swash, Caveat Brush, Creepster, DotGothic16, Doto, Foldit, Fredericka the Great, Frijole, Gwendolyn, Handjet, Inknut Antiqua, Jacquard, Jacquarda Bastarda, Kavoon, Kumar One, Kumar One Outline, Lakki Reddy, Licorice, Ma Shan Zheng, Moirai One, Mystery Quest, Noto Nastaliq Urdu, Piedra, Pixelify Sans, Press Start 2P, Rubik (所有变体), Ruge Boogie, Sevillana, Silkscreen, Stick, Underdog, Wallpoet, Yesteryear, ZCOOL KuaiLe
-- WTFPL: GohuFont
+- SIL Open Font License: 
+  DaddyTimeMono Nerd Font, DepartureMono Nerd Font, EnvyCodeR Nerd Font, 
+  IosevkaTermSlab Nerd Font, LiterationSerif Nerd Font, RecMonoCasual Nerd Font,
+  Terminess Nerd Font, VictorMono Nerd Font, ZedMono Nerd Font,
+  Arbutus Essence, Berkshire Swash Essence, Caveat Brush Essence, Creepster Essence,
+  DotGothic16 Essence, Doto Essence, Foldit Essence, Fredericka the Great Essence,
+  Frijole Essence, Gwendolyn Essence, Handjet Essence, Inknut Antiqua Essence,
+  Jacquard Essence, Jacquarda Bastarda Essence, Kavoon Essence, Kumar One Essence,
+  Kumar One Outline Essence, Lakki Reddy Essence, Licorice Essence, Ma Shan Zheng Essence,
+  Moirai One Essence, Mystery Quest Essence, Noto Nastaliq Urdu Essence, Piedra Essence,
+  Pixelify Sans Essence, Press Start 2P Essence, Rubik 系列字体, Ruge Boogie Essence,
+  Sevillana Essence, Silkscreen Essence, Stick Essence, Underdog Essence,
+  Wallpoet Essence, Yesteryear Essence, ZCOOL KuaiLe Essence
+- WTFPL: HeavyData Nerd Font
 
 
