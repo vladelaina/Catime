@@ -2474,7 +2474,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     
                     HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
                     for (int i = 0; i < sizeof(fontResources) / sizeof(FontResource); i++) {
-                        if (strcmp(fontResources[i].fontName, "Wallpoet Essencet.ttf") == 0) {  // 改为检查 Wallpoet
+                        if (strcmp(fontResources[i].fontName, "Wallpoet Essence.ttf") == 0) {  // 修复拼写错误
                             LoadFontFromResource(hInstance, fontResources[i].resourceId);
                             break;
                         }
