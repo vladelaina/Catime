@@ -220,54 +220,54 @@ typedef struct {
 } FontResource;
 
 FontResource fontResources[] = {
-    {CLOCK_IDC_FONT_RECMONO, IDR_FONT_RECMONO, "RecMonoCasual Nerd Font Mono.ttf"},
-    {CLOCK_IDC_FONT_DEPARTURE, IDR_FONT_DEPARTURE, "DepartureMono Nerd Font Propo.ttf"},
-    {CLOCK_IDC_FONT_TERMINESS, IDR_FONT_TERMINESS, "Terminess Nerd Font Propo.ttf"},
-    {CLOCK_IDC_FONT_GOHUFONT, IDR_FONT_GOHUFONT, "GohuFont uni11 Nerd Font Mono.ttf"},
-    {CLOCK_IDC_FONT_ARBUTUS, IDR_FONT_ARBUTUS, "Arbutus.ttf"},
-    {CLOCK_IDC_FONT_BERKSHIRE, IDR_FONT_BERKSHIRE, "Berkshire Swash.ttf"},
-    {CLOCK_IDC_FONT_CAVEAT, IDR_FONT_CAVEAT, "Caveat Brush.ttf"},
-    {CLOCK_IDC_FONT_CREEPSTER, IDR_FONT_CREEPSTER, "Creepster.ttf"},
-    {CLOCK_IDC_FONT_DOTGOTHIC, IDR_FONT_DOTGOTHIC, "DotGothic16.ttf"},
-    {CLOCK_IDC_FONT_DOTO, IDR_FONT_DOTO, "Doto ExtraBold.ttf"},
-    {CLOCK_IDC_FONT_FOLDIT, IDR_FONT_FOLDIT, "Foldit SemiBold.ttf"},
-    {CLOCK_IDC_FONT_FREDERICKA, IDR_FONT_FREDERICKA, "Fredericka the Great.ttf"},
-    {CLOCK_IDC_FONT_FRIJOLE, IDR_FONT_FRIJOLE, "Frijole.ttf"},
-    {CLOCK_IDC_FONT_GWENDOLYN, IDR_FONT_GWENDOLYN, "Gwendolyn.ttf"},
-    {CLOCK_IDC_FONT_HANDJET, IDR_FONT_HANDJET, "Handjet.ttf"},
-    {CLOCK_IDC_FONT_INKNUT, IDR_FONT_INKNUT, "Inknut Antiqua Medium.ttf"},
-    {CLOCK_IDC_FONT_JACQUARD, IDR_FONT_JACQUARD, "Jacquard 12.ttf"},
-    {CLOCK_IDC_FONT_JACQUARDA, IDR_FONT_JACQUARDA, "Jacquarda Bastarda 9.ttf"},
-    {CLOCK_IDC_FONT_KAVOON, IDR_FONT_KAVOON, "Kavoon.ttf"},
-    {CLOCK_IDC_FONT_KUMAR_ONE_OUTLINE, IDR_FONT_KUMAR_ONE_OUTLINE, "Kumar One Outline.ttf"},
-    {CLOCK_IDC_FONT_KUMAR_ONE, IDR_FONT_KUMAR_ONE, "Kumar One.ttf"},
-    {CLOCK_IDC_FONT_LAKKI_REDDY, IDR_FONT_LAKKI_REDDY, "Lakki Reddy.ttf"},
-    {CLOCK_IDC_FONT_LICORICE, IDR_FONT_LICORICE, "Licorice.ttf"},
-    {CLOCK_IDC_FONT_MA_SHAN_ZHENG, IDR_FONT_MA_SHAN_ZHENG, "Ma Shan Zheng.ttf"},
-    {CLOCK_IDC_FONT_MOIRAI_ONE, IDR_FONT_MOIRAI_ONE, "Moirai One.ttf"},
-    {CLOCK_IDC_FONT_MYSTERY_QUEST, IDR_FONT_MYSTERY_QUEST, "Mystery Quest.ttf"},
-    {CLOCK_IDC_FONT_NOTO_NASTALIQ, IDR_FONT_NOTO_NASTALIQ, "Noto Nastaliq Urdu Medium.ttf"},
-    {CLOCK_IDC_FONT_PIEDRA, IDR_FONT_PIEDRA, "Piedra.ttf"},
-    {CLOCK_IDC_FONT_PIXELIFY, IDR_FONT_PIXELIFY, "Pixelify Sans Medium.ttf"},
-    {CLOCK_IDC_FONT_PRESS_START, IDR_FONT_PRESS_START, "Press Start 2P.ttf"},
-    {CLOCK_IDC_FONT_RUBIK_BUBBLES, IDR_FONT_RUBIK_BUBBLES, "Rubik Bubbles.ttf"},
-    {CLOCK_IDC_FONT_RUBIK_BURNED, IDR_FONT_RUBIK_BURNED, "Rubik Burned.ttf"},
-    {CLOCK_IDC_FONT_RUBIK_GLITCH_POP, IDR_FONT_RUBIK_GLITCH_POP, "Rubik Glitch Pop.ttf"},
-    {CLOCK_IDC_FONT_RUBIK_GLITCH, IDR_FONT_RUBIK_GLITCH, "Rubik Glitch.ttf"},
-    {CLOCK_IDC_FONT_RUBIK_MARKER_HATCH, IDR_FONT_RUBIK_MARKER_HATCH, "Rubik Marker Hatch.ttf"},
-    {CLOCK_IDC_FONT_RUBIK_PUDDLES, IDR_FONT_RUBIK_PUDDLES, "Rubik Puddles.ttf"},
-    {CLOCK_IDC_FONT_RUBIK_VINYL, IDR_FONT_RUBIK_VINYL, "Rubik Vinyl.ttf"},
-    {CLOCK_IDC_FONT_RUBIK_WET_PAINT, IDR_FONT_RUBIK_WET_PAINT, "Rubik Wet Paint.ttf"},
-    {CLOCK_IDC_FONT_RUGE_BOOGIE, IDR_FONT_RUGE_BOOGIE, "Ruge Boogie.ttf"},
-    {CLOCK_IDC_FONT_SEVILLANA, IDR_FONT_SEVILLANA, "Sevillana.ttf"},
-    {CLOCK_IDC_FONT_SILKSCREEN, IDR_FONT_SILKSCREEN, "Silkscreen.ttf"},
-    {CLOCK_IDC_FONT_STICK, IDR_FONT_STICK, "Stick.ttf"},
-    {CLOCK_IDC_FONT_UNDERDOG, IDR_FONT_UNDERDOG, "Underdog.ttf"},
-    {CLOCK_IDC_FONT_WALLPOET, IDR_FONT_WALLPOET, "Wallpoet.ttf"},
-    {CLOCK_IDC_FONT_YESTERYEAR, IDR_FONT_YESTERYEAR, "Yesteryear.ttf"},
-    {CLOCK_IDC_FONT_ZCOOL_KUAILE, IDR_FONT_ZCOOL_KUAILE, "ZCOOL KuaiLe.ttf"},
-    {CLOCK_IDC_FONT_PROFONT, IDR_FONT_PROFONT, "ProFont IIx Nerd Font.ttf"},
-    {CLOCK_IDC_FONT_DADDYTIME, IDR_FONT_DADDYTIME, "DaddyTimeMono Nerd Font Propo.ttf"},
+    {CLOCK_IDC_FONT_RECMONO, IDR_FONT_RECMONO, "RecMonoCasual Nerd Font Mono Essence.ttf"},
+    {CLOCK_IDC_FONT_DEPARTURE, IDR_FONT_DEPARTURE, "DepartureMono Nerd Font Propo Essence.ttf"},
+    {CLOCK_IDC_FONT_TERMINESS, IDR_FONT_TERMINESS, "Terminess Nerd Font Propo Essence.ttf"},
+    {CLOCK_IDC_FONT_GOHUFONT, IDR_FONT_GOHUFONT, "GohuFont uni11 Nerd Font Mono Essence.ttf"},
+    {CLOCK_IDC_FONT_ARBUTUS, IDR_FONT_ARBUTUS, "Arbutus Essence.ttf"},
+    {CLOCK_IDC_FONT_BERKSHIRE, IDR_FONT_BERKSHIRE, "Berkshire Swash Essence.ttf"},
+    {CLOCK_IDC_FONT_CAVEAT, IDR_FONT_CAVEAT, "Caveat Brush Essence.ttf"},
+    {CLOCK_IDC_FONT_CREEPSTER, IDR_FONT_CREEPSTER, "Creepster Essence.ttf"},
+    {CLOCK_IDC_FONT_DOTGOTHIC, IDR_FONT_DOTGOTHIC, "DotGothic16 Essence.ttf"},
+    {CLOCK_IDC_FONT_DOTO, IDR_FONT_DOTO, "Doto ExtraBold Essence.ttf"},
+    {CLOCK_IDC_FONT_FOLDIT, IDR_FONT_FOLDIT, "Foldit SemiBold Essence.ttf"},
+    {CLOCK_IDC_FONT_FREDERICKA, IDR_FONT_FREDERICKA, "Fredericka the Great Essence.ttf"},
+    {CLOCK_IDC_FONT_FRIJOLE, IDR_FONT_FRIJOLE, "Frijole Essence.ttf"},
+    {CLOCK_IDC_FONT_GWENDOLYN, IDR_FONT_GWENDOLYN, "Gwendolyn Essence.ttf"},
+    {CLOCK_IDC_FONT_HANDJET, IDR_FONT_HANDJET, "Handjet Essence.ttf"},
+    {CLOCK_IDC_FONT_INKNUT, IDR_FONT_INKNUT, "Inknut Antiqua Medium Essence.ttf"},
+    {CLOCK_IDC_FONT_JACQUARD, IDR_FONT_JACQUARD, "Jacquard 12 Essence.ttf"},
+    {CLOCK_IDC_FONT_JACQUARDA, IDR_FONT_JACQUARDA, "Jacquarda Bastarda 9 Essence.ttf"},
+    {CLOCK_IDC_FONT_KAVOON, IDR_FONT_KAVOON, "Kavoon Essence.ttf"},
+    {CLOCK_IDC_FONT_KUMAR_ONE_OUTLINE, IDR_FONT_KUMAR_ONE_OUTLINE, "Kumar One Outline Essence.ttf"},
+    {CLOCK_IDC_FONT_KUMAR_ONE, IDR_FONT_KUMAR_ONE, "Kumar One Essence.ttf"},
+    {CLOCK_IDC_FONT_LAKKI_REDDY, IDR_FONT_LAKKI_REDDY, "Lakki Reddy Essence.ttf"},
+    {CLOCK_IDC_FONT_LICORICE, IDR_FONT_LICORICE, "Licorice Essence.ttf"},
+    {CLOCK_IDC_FONT_MA_SHAN_ZHENG, IDR_FONT_MA_SHAN_ZHENG, "Ma Shan Zheng Essence.ttf"},
+    {CLOCK_IDC_FONT_MOIRAI_ONE, IDR_FONT_MOIRAI_ONE, "Moirai One Essence.ttf"},
+    {CLOCK_IDC_FONT_MYSTERY_QUEST, IDR_FONT_MYSTERY_QUEST, "Mystery Quest Essence.ttf"},
+    {CLOCK_IDC_FONT_NOTO_NASTALIQ, IDR_FONT_NOTO_NASTALIQ, "Noto Nastaliq Urdu Medium Essence.ttf"},
+    {CLOCK_IDC_FONT_PIEDRA, IDR_FONT_PIEDRA, "Piedra Essence.ttf"},
+    {CLOCK_IDC_FONT_PIXELIFY, IDR_FONT_PIXELIFY, "Pixelify Sans Medium Essence.ttf"},
+    {CLOCK_IDC_FONT_PRESS_START, IDR_FONT_PRESS_START, "Press Start 2P Essence.ttf"},
+    {CLOCK_IDC_FONT_RUBIK_BUBBLES, IDR_FONT_RUBIK_BUBBLES, "Rubik Bubbles Essence.ttf"},
+    {CLOCK_IDC_FONT_RUBIK_BURNED, IDR_FONT_RUBIK_BURNED, "Rubik Burned Essence.ttf"},
+    {CLOCK_IDC_FONT_RUBIK_GLITCH_POP, IDR_FONT_RUBIK_GLITCH_POP, "Rubik Glitch Pop Essence.ttf"},
+    {CLOCK_IDC_FONT_RUBIK_GLITCH, IDR_FONT_RUBIK_GLITCH, "Rubik Glitch Essence.ttf"},
+    {CLOCK_IDC_FONT_RUBIK_MARKER_HATCH, IDR_FONT_RUBIK_MARKER_HATCH, "Rubik Marker Hatch Essence.ttf"},
+    {CLOCK_IDC_FONT_RUBIK_PUDDLES, IDR_FONT_RUBIK_PUDDLES, "Rubik Puddles Essence.ttf"},
+    {CLOCK_IDC_FONT_RUBIK_VINYL, IDR_FONT_RUBIK_VINYL, "Rubik Vinyl Essence.ttf"},
+    {CLOCK_IDC_FONT_RUBIK_WET_PAINT, IDR_FONT_RUBIK_WET_PAINT, "Rubik Wet Paint Essence.ttf"},
+    {CLOCK_IDC_FONT_RUGE_BOOGIE, IDR_FONT_RUGE_BOOGIE, "Ruge Boogie Essence.ttf"},
+    {CLOCK_IDC_FONT_SEVILLANA, IDR_FONT_SEVILLANA, "Sevillana Essence.ttf"},
+    {CLOCK_IDC_FONT_SILKSCREEN, IDR_FONT_SILKSCREEN, "Silkscreen Essence.ttf"},
+    {CLOCK_IDC_FONT_STICK, IDR_FONT_STICK, "Stick Essence.ttf"},
+    {CLOCK_IDC_FONT_UNDERDOG, IDR_FONT_UNDERDOG, "Underdog Essence.ttf"},
+    {CLOCK_IDC_FONT_WALLPOET, IDR_FONT_WALLPOET, "Wallpoet Essence.ttf"},
+    {CLOCK_IDC_FONT_YESTERYEAR, IDR_FONT_YESTERYEAR, "Yesteryear Essence.ttf"},
+    {CLOCK_IDC_FONT_ZCOOL_KUAILE, IDR_FONT_ZCOOL_KUAILE, "ZCOOL KuaiLe Essence.ttf"},
+    {CLOCK_IDC_FONT_PROFONT, IDR_FONT_PROFONT, "ProFont IIx Nerd Font Essence.ttf"},
+    {CLOCK_IDC_FONT_DADDYTIME, IDR_FONT_DADDYTIME, "DaddyTimeMono Nerd Font Propo Essence.ttf"},
 };
 
 BOOL LoadFontFromResource(HINSTANCE hInstance, int resourceId) {
@@ -1814,18 +1814,20 @@ void ShowColorMenu(HWND hwnd) {
     // 先添加常用字体到主菜单
     for (int i = 0; i < sizeof(fontResources) / sizeof(fontResources[0]); i++) {
         // 这些字体保留在主菜单
-        if (strcmp(fontResources[i].fontName, "Terminess Nerd Font Propo.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "DaddyTimeMono Nerd Font Propo.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Foldit SemiBold.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Jacquarda Bastarda 9.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Moirai One.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Silkscreen.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Pixelify Sans Medium.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Rubik Glitch Pop.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Rubik Burned.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Rubik Glitch.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "ProFont IIx Nerd Font.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Wallpoet.ttf") == 0) {
+        if (strcmp(fontResources[i].fontName, "Terminess Nerd Font Propo Essence.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "DaddyTimeMono Nerd Font Propo Essence.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Foldit SemiBold Essence.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Jacquarda Bastarda 9 Essence.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Moirai One Essence.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Silkscreen Essence.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Pixelify Sans Medium Essence.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Rubik Glitch Pop Essence.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Rubik Burned Essence.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Rubik Glitch Essence.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "ProFont IIx Nerd Font Essence.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Wallpoet Essence.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Yesteryear Essence.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "ZCOOL KuaiLe Essence.ttf") == 0) {
             
             BOOL isCurrentFont = strcmp(FONT_FILE_NAME, fontResources[i].fontName) == 0;
             char displayName[100];
@@ -1844,18 +1846,20 @@ void ShowColorMenu(HWND hwnd) {
     // 将其他字体添加到"更多"子菜单
     for (int i = 0; i < sizeof(fontResources) / sizeof(fontResources[0]); i++) {
         // 排除已经添加到主菜单的字体
-        if (strcmp(fontResources[i].fontName, "Terminess Nerd Font Propo.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "DaddyTimeMono Nerd Font Propo.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Foldit SemiBold.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Jacquarda Bastarda 9.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Moirai One.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Silkscreen.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Pixelify Sans Medium.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Rubik Glitch Pop.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Rubik Burned.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Rubik Glitch.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "ProFont IIx Nerd Font.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Wallpoet.ttf") == 0) {
+        if (strcmp(fontResources[i].fontName, "Terminess Nerd Font Propo Essence.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "DaddyTimeMono Nerd Font Propo Essence.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Foldit SemiBold Essence.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Jacquarda Bastarda 9 Essence.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Moirai One Essence.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Silkscreen Essence.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Pixelify Sans Medium Essence.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Rubik Glitch Pop Essence.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Rubik Burned Essence.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Rubik Glitch Essence.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "ProFont IIx Nerd Font Essence.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Wallpoet Essence.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Yesteryear Essence.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "ZCOOL KuaiLe Essence.ttf") == 0) {
             continue;
         }
 
@@ -2743,187 +2747,187 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDC_FONT_RECMONO: {
-                    WriteConfigFont("RecMonoCasual Nerd Font Mono.ttf");
+                    WriteConfigFont("RecMonoCasual Nerd Font Mono Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_DEPARTURE: {
-                    WriteConfigFont("DepartureMono Nerd Font Propo.ttf");
+                    WriteConfigFont("DepartureMono Nerd Font Propo Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_TERMINESS: {
-                    WriteConfigFont("Terminess Nerd Font Propo.ttf");
+                    WriteConfigFont("Terminess Nerd Font Propo Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_GOHUFONT: {
-                    WriteConfigFont("GohuFont uni11 Nerd Font Mono.ttf");
+                    WriteConfigFont("GohuFont uni11 Nerd Font Mono Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_ARBUTUS: {
-                    WriteConfigFont("Arbutus.ttf");
+                    WriteConfigFont("Arbutus Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_BERKSHIRE: {
-                    WriteConfigFont("Berkshire Swash.ttf");
+                    WriteConfigFont("Berkshire Swash Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_CAVEAT: {
-                    WriteConfigFont("Caveat Brush.ttf");
+                    WriteConfigFont("Caveat Brush Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_CREEPSTER: {
-                    WriteConfigFont("Creepster.ttf");
+                    WriteConfigFont("Creepster Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_DOTGOTHIC: {
-                    WriteConfigFont("DotGothic16.ttf");
+                    WriteConfigFont("DotGothic16 Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_DOTO: {  // 添加这个case
-                    WriteConfigFont("Doto ExtraBold.ttf");
+                    WriteConfigFont("Doto ExtraBold Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_FOLDIT: {
-                    WriteConfigFont("Foldit SemiBold.ttf");
+                    WriteConfigFont("Foldit SemiBold Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_FREDERICKA: {
-                    WriteConfigFont("Fredericka the Great.ttf");
+                    WriteConfigFont("Fredericka the Great Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_FRIJOLE: {
-                    WriteConfigFont("Frijole.ttf");
+                    WriteConfigFont("Frijole Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_GWENDOLYN: {
-                    WriteConfigFont("Gwendolyn.ttf");
+                    WriteConfigFont("Gwendolyn Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_HANDJET: {
-                    WriteConfigFont("Handjet.ttf");
+                    WriteConfigFont("Handjet Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_INKNUT: {
-                    WriteConfigFont("Inknut Antiqua Medium.ttf");
+                    WriteConfigFont("Inknut Antiqua Medium Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_JACQUARD: {
-                    WriteConfigFont("Jacquard 12.ttf");
+                    WriteConfigFont("Jacquard 12 Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_JACQUARDA: {
-                    WriteConfigFont("Jacquarda Bastarda 9.ttf");
+                    WriteConfigFont("Jacquarda Bastarda 9 Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_KAVOON: {
-                    WriteConfigFont("Kavoon.ttf");
+                    WriteConfigFont("Kavoon Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_KUMAR_ONE_OUTLINE: {
-                    WriteConfigFont("Kumar One Outline.ttf");
+                    WriteConfigFont("Kumar One Outline Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_KUMAR_ONE: {
-                    WriteConfigFont("Kumar One.ttf");
+                    WriteConfigFont("Kumar One Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_LAKKI_REDDY: {
-                    WriteConfigFont("Lakki Reddy.ttf");
+                    WriteConfigFont("Lakki Reddy Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_LICORICE: {
-                    WriteConfigFont("Licorice.ttf");
+                    WriteConfigFont("Licorice Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_MA_SHAN_ZHENG: {
-                    WriteConfigFont("Ma Shan Zheng.ttf");
+                    WriteConfigFont("Ma Shan Zheng Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_MOIRAI_ONE: {
-                    WriteConfigFont("Moirai One.ttf");
+                    WriteConfigFont("Moirai One Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_MYSTERY_QUEST: {
-                    WriteConfigFont("Mystery Quest.ttf");
+                    WriteConfigFont("Mystery Quest Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_NOTO_NASTALIQ: {
-                    WriteConfigFont("Noto Nastaliq Urdu Medium.ttf");
+                    WriteConfigFont("Noto Nastaliq Urdu Medium Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_PIEDRA: {
-                    WriteConfigFont("Piedra.ttf");
+                    WriteConfigFont("Piedra Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_PIXELIFY: {
-                    WriteConfigFont("Pixelify Sans Medium.ttf");
+                    WriteConfigFont("Pixelify Sans Medium Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_PRESS_START: {
-                    WriteConfigFont("Press Start 2P.ttf");
+                    WriteConfigFont("Press Start 2P Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_RUBIK_BUBBLES: {
-                    WriteConfigFont("Rubik Bubbles.ttf");
+                    WriteConfigFont("Rubik Bubbles Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_RUBIK_BURNED: {
-                    WriteConfigFont("Rubik Burned.ttf");
+                    WriteConfigFont("Rubik Burned Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_RUBIK_GLITCH_POP: {
-                    WriteConfigFont("Rubik Glitch Pop.ttf");
+                    WriteConfigFont("Rubik Glitch Pop Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_RUBIK_GLITCH: {
-                    WriteConfigFont("Rubik Glitch.ttf");
+                    WriteConfigFont("Rubik Glitch Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_RUBIK_MARKER_HATCH: {
-                    WriteConfigFont("Rubik Marker Hatch.ttf");
+                    WriteConfigFont("Rubik Marker Hatch Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_RUBIK_PUDDLES: {
-                    WriteConfigFont("Rubik Puddles.ttf");
+                    WriteConfigFont("Rubik Puddles Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_RUBIK_VINYL: {
-                    WriteConfigFont("Rubik Vinyl.ttf");
+                    WriteConfigFont("Rubik Vinyl Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_RUBIK_WET_PAINT: {
-                    WriteConfigFont("Rubik Wet Paint.ttf");
+                    WriteConfigFont("Rubik Wet Paint Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_RUGE_BOOGIE: {
-                    WriteConfigFont("Ruge Boogie.ttf");
+                    WriteConfigFont("Ruge Boogie Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_SEVILLANA: {
-                    WriteConfigFont("Sevillana.ttf");
+                    WriteConfigFont("Sevillana Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_SILKSCREEN: {
-                    WriteConfigFont("Silkscreen.ttf");
+                    WriteConfigFont("Silkscreen Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_STICK: {
-                    WriteConfigFont("Stick.ttf");
+                    WriteConfigFont("Stick Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_UNDERDOG: {
-                    WriteConfigFont("Underdog.ttf");
+                    WriteConfigFont("Underdog Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_WALLPOET: {
-                    WriteConfigFont("Wallpoet.ttf");
+                    WriteConfigFont("Wallpoet Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_YESTERYEAR: {
-                    WriteConfigFont("Yesteryear.ttf");
+                    WriteConfigFont("Yesteryear Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_ZCOOL_KUAILE: {
-                    WriteConfigFont("ZCOOL KuaiLe.ttf");
+                    WriteConfigFont("ZCOOL KuaiLe Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDM_SHOW_CURRENT_TIME: {  
@@ -3238,11 +3242,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDC_FONT_PROFONT: {
-                    WriteConfigFont("ProFont IIx Nerd Font.ttf");
+                    WriteConfigFont("ProFont IIx Nerd Font Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_DADDYTIME: {
-                    WriteConfigFont("DaddyTimeMono Nerd Font Propo.ttf");
+                    WriteConfigFont("DaddyTimeMono Nerd Font Propo Essence.ttf");
                     goto refresh_window;
                 }
             }
