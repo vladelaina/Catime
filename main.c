@@ -223,7 +223,7 @@ FontResource fontResources[] = {
     {CLOCK_IDC_FONT_RECMONO, IDR_FONT_RECMONO, "RecMonoCasual Nerd Font Mono Essence.ttf"},
     {CLOCK_IDC_FONT_DEPARTURE, IDR_FONT_DEPARTURE, "DepartureMono Nerd Font Propo Essence.ttf"},
     {CLOCK_IDC_FONT_TERMINESS, IDR_FONT_TERMINESS, "Terminess Nerd Font Propo Essence.ttf"},
-    {CLOCK_IDC_FONT_GOHUFONT, IDR_FONT_GOHUFONT, "GohuFont uni11 Nerd Font Mono Essence.ttf"},
+    {CLOCK_IDC_FONT_GOHUFONT, IDR_FONT_GOHUFONT, "GohuFont uni11 Nerd Font Mono.ttf"},
     {CLOCK_IDC_FONT_ARBUTUS, IDR_FONT_ARBUTUS, "Arbutus Essence.ttf"},
     {CLOCK_IDC_FONT_BERKSHIRE, IDR_FONT_BERKSHIRE, "Berkshire Swash Essence.ttf"},
     {CLOCK_IDC_FONT_CAVEAT, IDR_FONT_CAVEAT, "Caveat Brush Essence.ttf"},
@@ -266,7 +266,7 @@ FontResource fontResources[] = {
     {CLOCK_IDC_FONT_WALLPOET, IDR_FONT_WALLPOET, "Wallpoet Essence.ttf"},
     {CLOCK_IDC_FONT_YESTERYEAR, IDR_FONT_YESTERYEAR, "Yesteryear Essence.ttf"},
     {CLOCK_IDC_FONT_ZCOOL_KUAILE, IDR_FONT_ZCOOL_KUAILE, "ZCOOL KuaiLe Essence.ttf"},
-    {CLOCK_IDC_FONT_PROFONT, IDR_FONT_PROFONT, "ProFont IIx Nerd Font Essence.ttf"},
+    {CLOCK_IDC_FONT_PROFONT, IDR_FONT_PROFONT, "ProFont IIx Nerd Font.ttf"},
     {CLOCK_IDC_FONT_DADDYTIME, IDR_FONT_DADDYTIME, "DaddyTimeMono Nerd Font Propo Essence.ttf"},
 };
 
@@ -1824,7 +1824,7 @@ void ShowColorMenu(HWND hwnd) {
             strcmp(fontResources[i].fontName, "Rubik Glitch Pop Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Rubik Burned Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Rubik Glitch Essence.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "ProFont IIx Nerd Font Essence.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "ProFont IIx Nerd Font.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Wallpoet Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Yesteryear Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "ZCOOL KuaiLe Essence.ttf") == 0) {
@@ -1856,7 +1856,7 @@ void ShowColorMenu(HWND hwnd) {
             strcmp(fontResources[i].fontName, "Rubik Glitch Pop Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Rubik Burned Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Rubik Glitch Essence.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "ProFont IIx Nerd Font Essence.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "ProFont IIx Nerd Font.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Wallpoet Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Yesteryear Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "ZCOOL KuaiLe Essence.ttf") == 0) {
@@ -2759,7 +2759,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_GOHUFONT: {
-                    WriteConfigFont("GohuFont uni11 Nerd Font Mono Essence.ttf");
+                    WriteConfigFont("GohuFont uni11 Nerd Font Mono.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_ARBUTUS: {
@@ -3242,7 +3242,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDC_FONT_PROFONT: {
-                    WriteConfigFont("ProFont IIx Nerd Font Essence.ttf");
+                    WriteConfigFont("ProFont IIx Nerd Font.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_DADDYTIME: {
