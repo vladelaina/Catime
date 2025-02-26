@@ -2801,10 +2801,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     WriteConfigFont("Creepster Essence.ttf");
                     goto refresh_window;
                 }
-                case CLOCK_IDC_FONT_DOTGOTHIC: {
-                    WriteConfigFont("DotGothic16 Essence.ttf");
-                    goto refresh_window;
-                }
                 case CLOCK_IDC_FONT_DOTO: {  // 添加这个case
                     WriteConfigFont("Doto ExtraBold Essence.ttf");
                     goto refresh_window;
@@ -3287,6 +3283,16 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         CLOCK_IS_PAUSED = FALSE;
                     }
                     
+                    // Add these lines to ensure timer is restarted when coming from "NO_DISPLAY" mode
+                    KillTimer(hwnd, 1); 
+                    SetTimer(hwnd, 1, 1000, NULL);
+                    
+                    // Reset all state variables that might have been set by NO_DISPLAY mode
+                    elapsed_time = 0;
+                    message_shown = FALSE;
+                    countdown_message_shown = FALSE;
+                    countup_message_shown = FALSE;
+                    
                     InvalidateRect(hwnd, NULL, TRUE);
                     break;
                 }
@@ -3301,10 +3307,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     SetTimer(hwnd, 1, 1000, NULL);
                     InvalidateRect(hwnd, NULL, TRUE);
                     break;
-                }
-                case CLOCK_IDC_FONT_PROFONT: {
-                    WriteConfigFont("ProFont IIx Nerd Font.ttf");
-                    goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_DADDYTIME: {
                     WriteConfigFont("DaddyTimeMono Nerd Font Propo Essence.ttf");
@@ -4304,7 +4306,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Неверный ввод") == 0) return L"Неверный ввод";
             if (wcscmp(english, L"Ошибка") == 0) return L"Ошибка";
             if (wcscmp(english, L"Не удалось загрузить шрифт: %hs") == 0) return L"Не удалось загрузить шрифт: %hs";
-            if (wcscmp(english, L"25    = 25 minutes\n25h   = 25 hours\n25s   = 25 seconds\n25 30 = 25 minutes 30 seconds\n25 30m = 25 hours 30 minutes\n1 30 20 = 1 hour 30 minutes 20 seconds") == 0)
+            if (wcscmp(english, L"25    = 25 minutes\n25h   = 25 hours\n25s   = 25 seconds\n25 30 = 25 minutes 30 seconds\n25 30m = 25 hours 30 minutes\n1 30 20 = 1 час 30 минут 20 секунд") == 0)
                 return L"25    = 25 минут\n25h   = 25 часов\n25s   = 25 секунд\n25 30 = 25 минут 30 секунд\n25 30m = 25 часов 30 минут\n1 30 20 = 1 час 30 минут 20 секунд";
             if (wcscmp(english, L"Enter numbers separated by spaces\nExample: 25 10 5") == 0)
                 return L"Введите числа, разделенные пробелами\nПример: 25 10 5";
