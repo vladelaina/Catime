@@ -3160,6 +3160,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc);
 
                         if (inputText[0] == '\0') {
+                            // 即使输入为空，也将启动模式设置为倒计时
+                            WriteConfigStartupMode("COUNTDOWN");
                             break;
                         }
 
