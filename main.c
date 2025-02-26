@@ -2328,15 +2328,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             CLOCK_COUNT_UP = FALSE;
                             CLOCK_SHOW_CURRENT_TIME = FALSE;
                             
-                            // Reset all NO_DISPLAY related state variables
+                            // Reset all NO_DISPLAY related state variables for current session only
                             CLOCK_IS_PAUSED = FALSE;      // Unpause the timer
                             elapsed_time = 0;             // Reset the elapsed time
                             message_shown = FALSE;        // Reset message flags
                             countup_message_shown = FALSE;
-                            
-                            // Update startup mode in config and in memory
-                            strcpy(CLOCK_STARTUP_MODE, "COUNTDOWN");
-                            WriteConfigStartupMode("COUNTDOWN");
                             
                             // Show the window when a time is set
                             ShowWindow(hwnd, SW_SHOW);
