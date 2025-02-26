@@ -3160,6 +3160,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             WriteConfigDefaultStartTime(total_seconds);
                             WriteConfigStartupMode("COUNTDOWN");
                             ReadConfig();
+                            // Show the window when a countdown time is set
+                            ShowWindow(hwnd, SW_SHOW);
                             break;
                         } else {
                             MessageBoxW(hwnd, 
@@ -3201,6 +3203,16 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDC_START_NO_DISPLAY: {
                     WriteConfigStartupMode("NO_DISPLAY");
+                    // Only hide the window when specifically selecting the No Display option
+                    ShowWindow(hwnd, SW_HIDE);
+                    HMENU hMenu = GetMenu(hwnd);
+                    HMENU hTimeOptionsMenu = GetSubMenu(hMenu, GetMenuItemCount(hMenu) - 2);
+                    HMENU hStartupSettingsMenu = GetSubMenu(hTimeOptionsMenu, 0);
+                    
+                    CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_SET_COUNTDOWN_TIME, MF_UNCHECKED);
+                    CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_START_COUNT_UP, MF_UNCHECKED);
+                    CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_START_NO_DISPLAY, MF_CHECKED);
+                    CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_START_SHOW_TIME, MF_UNCHECKED);
                     break;
                 }
                 case CLOCK_IDC_AUTO_START: {
