@@ -689,6 +689,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         elapsed_time = 0;
     } else if (strcmp(CLOCK_STARTUP_MODE, "NO_DISPLAY") == 0) {
         ShowWindow(hwnd, SW_HIDE);
+        // More comprehensive fix to disable all timer behavior
+        KillTimer(hwnd, 1);
+        elapsed_time = CLOCK_TOTAL_TIME;          // Set elapsed time to total time to prevent countdown
+        CLOCK_IS_PAUSED = TRUE;                   // Pause the timer
+        message_shown = TRUE;                     // Prevent "Time's up!" notification
+        countdown_message_shown = TRUE;           // Prevent countdown notification
+        countup_message_shown = TRUE;             // Prevent countup notification
+        countdown_elapsed_time = 0;               // Reset countdown elapsed time
+        countup_elapsed_time = 0;                 // Reset countup elapsed time
     } else if (strcmp(CLOCK_STARTUP_MODE, "SHOW_TIME") == 0) {
         CLOCK_SHOW_CURRENT_TIME = TRUE;
         CLOCK_LAST_TIME_UPDATE = 0;
