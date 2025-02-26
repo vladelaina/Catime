@@ -3163,33 +3163,40 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc);
 
                         if (inputText[0] == '\0') {
-                            // 即使输入为空，也将启动模式设置为倒计时
+                            // Only set the startup mode for next launch, don't switch immediately
                             WriteConfigStartupMode("COUNTDOWN");
                             
-                            // 切换到倒计时模式，并使用配置文件中的默认时间
-                            CLOCK_COUNT_UP = FALSE;
-                            CLOCK_SHOW_CURRENT_TIME = FALSE;
-                            elapsed_time = 0;
-                            CLOCK_TOTAL_TIME = CLOCK_DEFAULT_START_TIME;
+                            // Update menu checkmarks to show the selected startup mode
+                            HMENU hMenu = GetMenu(hwnd);
+                            HMENU hTimeOptionsMenu = GetSubMenu(hMenu, GetMenuItemCount(hMenu) - 2);
+                            HMENU hStartupSettingsMenu = GetSubMenu(hTimeOptionsMenu, 0);
                             
-                            // 重启计时器
-                            KillTimer(hwnd, 1);
-                            SetTimer(hwnd, 1, 1000, NULL);
-                            CLOCK_IS_PAUSED = FALSE;
-                            
-                            // 确保窗口可见
-                            ShowWindow(hwnd, SW_SHOW);
-                            InvalidateRect(hwnd, NULL, TRUE);
+                            CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_SET_COUNTDOWN_TIME, MF_CHECKED);
+                            CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_START_COUNT_UP, MF_UNCHECKED);
+                            CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_START_NO_DISPLAY, MF_UNCHECKED);
+                            CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_START_SHOW_TIME, MF_UNCHECKED);
                             break;
                         }
 
                         int total_seconds = 0;
                         if (ParseInput(inputText, &total_seconds)) {
+                            // Set the default start time and startup mode for next launch
                             WriteConfigDefaultStartTime(total_seconds);
                             WriteConfigStartupMode("COUNTDOWN");
-                            ReadConfig();
-                            // Show the window when a countdown time is set
-                            ShowWindow(hwnd, SW_SHOW);
+                            
+                            // Just update the configuration without reloading it
+                            // and without switching to countdown mode immediately
+                            CLOCK_DEFAULT_START_TIME = total_seconds;
+                            
+                            // Update menu checkmarks
+                            HMENU hMenu = GetMenu(hwnd);
+                            HMENU hTimeOptionsMenu = GetSubMenu(hMenu, GetMenuItemCount(hMenu) - 2);
+                            HMENU hStartupSettingsMenu = GetSubMenu(hTimeOptionsMenu, 0);
+                            
+                            CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_SET_COUNTDOWN_TIME, MF_CHECKED);
+                            CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_START_COUNT_UP, MF_UNCHECKED);
+                            CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_START_NO_DISPLAY, MF_UNCHECKED);
+                            CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_START_SHOW_TIME, MF_UNCHECKED);
                             break;
                         } else {
                             MessageBoxW(hwnd, 
