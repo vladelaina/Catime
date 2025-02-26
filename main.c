@@ -3120,11 +3120,19 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         CLOCK_COUNT_UP = TRUE;
                         CLOCK_SHOW_CURRENT_TIME = FALSE;
                         CLOCK_IS_PAUSED = FALSE;
+                        
+                        // Reset the countdown-related flags that might be set by NO_DISPLAY mode
+                        elapsed_time = 0;
+                        message_shown = FALSE;
+                        countdown_message_shown = FALSE;
+                        
                         countup_elapsed_time = 0;
                         countup_message_shown = FALSE;
                         
+                        // Make sure the window is visible
                         ShowWindow(hwnd, SW_SHOW);
                         
+                        // Restart the timer
                         KillTimer(hwnd, 1);
                         SetTimer(hwnd, 1, 1000, NULL);
                     } else {
