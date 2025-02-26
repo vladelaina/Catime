@@ -3162,6 +3162,21 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         if (inputText[0] == '\0') {
                             // 即使输入为空，也将启动模式设置为倒计时
                             WriteConfigStartupMode("COUNTDOWN");
+                            
+                            // 切换到倒计时模式，并使用配置文件中的默认时间
+                            CLOCK_COUNT_UP = FALSE;
+                            CLOCK_SHOW_CURRENT_TIME = FALSE;
+                            elapsed_time = 0;
+                            CLOCK_TOTAL_TIME = CLOCK_DEFAULT_START_TIME;
+                            
+                            // 重启计时器
+                            KillTimer(hwnd, 1);
+                            SetTimer(hwnd, 1, 1000, NULL);
+                            CLOCK_IS_PAUSED = FALSE;
+                            
+                            // 确保窗口可见
+                            ShowWindow(hwnd, SW_SHOW);
+                            InvalidateRect(hwnd, NULL, TRUE);
                             break;
                         }
 
