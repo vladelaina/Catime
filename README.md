@@ -18,7 +18,11 @@
 <p align="center">A simple Windows countdown tool with Pomodoro clock functionality, featuring a transparent interface and a variety of customization options.</p>
 
 
-<video src="https://github.com/user-attachments/assets/3bd56d5e-3c3f-4c06-a07b-b6cf72e7dcfb.mp4" autoplay loop></video>
+
+
+
+
+<video src="https://github.com/user-attachments/assets/8e8e6014-99f9-444c-8481-810fadf529b0" autoplay loop></video>
 
 **简体中文** | [**English**](./README_EN.md)
 
