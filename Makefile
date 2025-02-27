@@ -23,6 +23,7 @@ LDFLAGS = -lole32 -lshell32 -lcomdlg32 -luuid
 # 生成目标
 all: $(OUTPUT_DIR)/catime.exe
 	@rm -f *.o  # 编译完成后删除所有 .o 文件
+	@cmd.exe /C start "" "$(shell echo '$(OUTPUT_DIR)/catime.exe' | sed 's#/mnt/c/#C:/#')"  # 转换路径格式
 
 # 编译资源文件
 resource.o: $(RC_FILE)
@@ -40,4 +41,3 @@ $(OUTPUT_DIR)/catime.exe: $(OBJ_FILES) resource.o
 clean:
 	@powershell.exe -Command "Stop-Process -Name catime -Force -ErrorAction SilentlyContinue"
 	@rm -f *.o $(OUTPUT_DIR)/*.exe
-
