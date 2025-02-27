@@ -17,12 +17,9 @@
 <p align="center">一款简洁的 Windows 倒计时工具，支持番茄时钟功能，具有透明界面和丰富的自定义选项。</p>
 <p align="center">A simple Windows countdown tool with Pomodoro clock functionality, featuring a transparent interface and a variety of customization options.</p>
 
-
-
-
-
-
-<video src="https://github.com/user-attachments/assets/8e8e6014-99f9-444c-8481-810fadf529b0" autoplay loop></video>
+<div align="center">
+<video src="https://github.com/user-attachments/assets/9218f9f5-c3f8-4360-bdfe-e2fc12007738" autoplay loop></video>
+</div>
 
 **简体中文** | [**English**](./README_EN.md)
 
