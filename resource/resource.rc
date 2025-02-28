@@ -34,7 +34,6 @@ IDR_FONT_TERMINESS         FONT "font/SIL/Terminess Nerd Font Propo Essence.ttf"
 // WTFPL fonts
 // IDR_FONT_GOHUFONT          FONT "font/WTFPL/GohuFont uni11 Nerd Font Mono.ttf"
 
-// 新增字体资源加载
 IDR_FONT_ARBUTUS           FONT "font/OFL/Arbutus Essence.ttf"
 IDR_FONT_BERKSHIRE         FONT "font/OFL/Berkshire Swash Essence.ttf"
 IDR_FONT_CAVEAT            FONT "font/OFL/Caveat Brush Essence.ttf"
