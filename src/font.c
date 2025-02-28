@@ -211,3 +211,75 @@ int CALLBACK EnumFontFamExProc(
 ) {
     return 1;
 }
+
+BOOL PreviewFont(HINSTANCE hInstance, const char* fontName) {
+    if (!fontName) return FALSE;
+    
+    // 保存当前字体名称
+    strncpy(PREVIEW_FONT_NAME, fontName, sizeof(PREVIEW_FONT_NAME) - 1);
+    PREVIEW_FONT_NAME[sizeof(PREVIEW_FONT_NAME) - 1] = '\0';
+    
+    // 获取内部字体名称
+    size_t name_len = strlen(PREVIEW_FONT_NAME);
+    if (name_len > 4 && strcmp(PREVIEW_FONT_NAME + name_len - 4, ".ttf") == 0) {
+        strncpy(PREVIEW_INTERNAL_NAME, PREVIEW_FONT_NAME, name_len - 4);
+        PREVIEW_INTERNAL_NAME[name_len - 4] = '\0';
+    } else {
+        strncpy(PREVIEW_INTERNAL_NAME, PREVIEW_FONT_NAME, sizeof(PREVIEW_INTERNAL_NAME) - 1);
+        PREVIEW_INTERNAL_NAME[sizeof(PREVIEW_INTERNAL_NAME) - 1] = '\0';
+    }
+    
+    // 加载预览字体
+    if (!LoadFontByName(hInstance, PREVIEW_FONT_NAME)) {
+        return FALSE;
+    }
+    
+    IS_PREVIEWING = TRUE;
+    return TRUE;
+}
+
+void CancelFontPreview(void) {
+    IS_PREVIEWING = FALSE;
+    PREVIEW_FONT_NAME[0] = '\0';
+    PREVIEW_INTERNAL_NAME[0] = '\0';
+}
+
+void ApplyFontPreview(void) {
+    if (!IS_PREVIEWING || strlen(PREVIEW_FONT_NAME) == 0) return;
+    
+    strncpy(FONT_FILE_NAME, PREVIEW_FONT_NAME, sizeof(FONT_FILE_NAME) - 1);
+    FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
+    
+    strncpy(FONT_INTERNAL_NAME, PREVIEW_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME) - 1);
+    FONT_INTERNAL_NAME[sizeof(FONT_INTERNAL_NAME) - 1] = '\0';
+    
+    WriteConfigFont(FONT_FILE_NAME);
+    CancelFontPreview();
+}
+
+BOOL SwitchFont(HINSTANCE hInstance, const char* fontName) {
+    if (!fontName) return FALSE;
+    
+    // 加载新字体
+    if (!LoadFontByName(hInstance, fontName)) {
+        return FALSE;
+    }
+    
+    // 更新字体名称
+    strncpy(FONT_FILE_NAME, fontName, sizeof(FONT_FILE_NAME) - 1);
+    FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
+    
+    // 更新内部字体名称
+    size_t name_len = strlen(FONT_FILE_NAME);
+    if (name_len > 4 && strcmp(FONT_FILE_NAME + name_len - 4, ".ttf") == 0) {
+        strncpy(FONT_INTERNAL_NAME, FONT_FILE_NAME, name_len - 4);
+        FONT_INTERNAL_NAME[name_len - 4] = '\0';
+    } else {
+        strncpy(FONT_INTERNAL_NAME, FONT_FILE_NAME, sizeof(FONT_INTERNAL_NAME) - 1);
+        FONT_INTERNAL_NAME[sizeof(FONT_INTERNAL_NAME) - 1] = '\0';
+    }
+    
+    // 写入配置文件
+    WriteConfigFont(FONT_FILE_NAME);
+    return TRUE;
+}

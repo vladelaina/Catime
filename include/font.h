@@ -64,3 +64,29 @@ void WriteConfigFont(const char* font_file_name);
  * @brief 列出系统中可用的字体
  */
 void ListAvailableFonts(void);
+
+/**
+ * @brief 预览字体
+ * @param hInstance 应用程序实例句柄
+ * @param fontName 要预览的字体名称
+ * @return 预览是否成功
+ */
+BOOL PreviewFont(HINSTANCE hInstance, const char* fontName);
+
+/**
+ * @brief 取消字体预览
+ */
+void CancelFontPreview(void);
+
+/**
+ * @brief 应用字体预览
+ */
+void ApplyFontPreview(void);
+
+/**
+ * @brief 切换字体
+ * @param hInstance 应用程序实例句柄
+ * @param fontName 要切换的字体名称
+ * @return 切换是否成功
+ */
+BOOL SwitchFont(HINSTANCE hInstance, const char* fontName);
