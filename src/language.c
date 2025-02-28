@@ -1,10 +1,80 @@
+/**
+ * @file language.c
+ * @brief 多语言支持模块实现文件
+ * 
+ * 本文件实现了应用程序的多语言支持功能，包含语言检测和本地化字符串处理。
+ */
+
 #include <windows.h>
 #include <wchar.h>
 #include "../include/language.h"
 
-AppLanguage CURRENT_LANGUAGE = APP_LANG_CHINESE_SIMP;
+/// 全局语言变量，存储当前应用语言设置
+AppLanguage CURRENT_LANGUAGE = APP_LANG_ENGLISH;  // 默认英语
 
+/**
+ * @brief 初始化应用程序语言环境
+ * 
+ * 根据系统语言自动检测并设置应用程序的当前语言。
+ * 支持检测简体中文、繁体中文及其他预设语言。
+ */
+static void DetectSystemLanguage()
+{
+    LANGID langID = GetUserDefaultUILanguage();
+    switch (PRIMARYLANGID(langID)) {
+        case LANG_CHINESE:
+            // 区分简繁体中文
+            if (SUBLANGID(langID) == SUBLANG_CHINESE_SIMPLIFIED) {
+                CURRENT_LANGUAGE = APP_LANG_CHINESE_SIMP;
+            } else {
+                CURRENT_LANGUAGE = APP_LANG_CHINESE_TRAD;
+            }
+            break;
+        case LANG_SPANISH:
+            CURRENT_LANGUAGE = APP_LANG_SPANISH;
+            break;
+        case LANG_FRENCH:
+            CURRENT_LANGUAGE = APP_LANG_FRENCH;
+            break;
+        case LANG_GERMAN:
+            CURRENT_LANGUAGE = APP_LANG_GERMAN;
+            break;
+        case LANG_RUSSIAN:
+            CURRENT_LANGUAGE = APP_LANG_RUSSIAN;
+            break;
+        case LANG_PORTUGUESE:
+            CURRENT_LANGUAGE = APP_LANG_PORTUGUESE;
+            break;
+        case LANG_JAPANESE:
+            CURRENT_LANGUAGE = APP_LANG_JAPANESE;
+            break;
+        case LANG_KOREAN:
+            CURRENT_LANGUAGE = APP_LANG_KOREAN;
+            break;
+        default:
+            CURRENT_LANGUAGE = APP_LANG_ENGLISH;  // 默认回退到英语
+    }
+}
+
+/**
+ * @brief 获取本地化字符串
+ * @param chinese 简体中文版本的字符串
+ * @param english 英语版本的字符串
+ * @return const wchar_t* 当前语言对应的字符串指针
+ * 
+ * 根据当前语言设置返回对应语言的字符串。新增语言支持时需在此函数中添加分支处理。
+ * 
+ * @note 当前版本优先返回中文，后续可扩展其他语言支持
+ */
 const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english) {
+    // 首次调用时自动检测系统语言
+    static BOOL initialized = FALSE;
+    if (!initialized) {
+        DetectSystemLanguage();
+        initialized = TRUE;
+    }
+
+    // 根据当前语言返回对应字符串
     switch (CURRENT_LANGUAGE) {
         case APP_LANG_CHINESE_SIMP:
             if (wcscmp(english, L"Time's up!") == 0) return L"时间到啦！";
