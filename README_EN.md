@@ -15,7 +15,9 @@
 
 <p align="center">A simple Windows countdown tool with Pomodoro clock functionality, featuring a transparent interface and a variety of customization options.</p>
 
-<video src="https://github.com/user-attachments/assets/3bd56d5e-3c3f-4c06-a07b-b6cf72e7dcfb.mp4" autoplay loop></video>
+<div align="center">
+<video src="https://github.com/user-attachments/assets/9218f9f5-c3f8-4360-bdfe-e2fc12007738" autoplay loop></video>
+</div>
 
 **English** | [**简体中文**](https://github.com/vladelaina/Catime)
 
@@ -55,36 +57,37 @@ Special thanks to these awesome contributors:
 <table>
   <tbody>
     <tr>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/MadMaxChow"><img src="https://avatars.githubusercontent.com/u/13810505?v=4" width="100px;" alt="MAX°孟兆"/><br /><sub><b>MAX°Mengzhao</b></sub></a><br /></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/MadMaxChow"><img src="https://avatars.githubusercontent.com/u/13810505?v=4" width="100px;" alt="MAX°孟兆"/><br /><sub><b>MAX°孟兆</b></sub></a><br /></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/sumruler"><img src="https://avatars.githubusercontent.com/u/56953545?v=4" width="100px;" alt="XuJilong"/><br /><sub><b>XuJilong</b></sub></a><br /></td>
       <td width="14.28%"></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/ZGGSONG"><img src="https://avatars.githubusercontent.com/u/49741009?v=4" width="100px;" alt="zggsong"/><br /><sub><b>zggsong</b></sub></a><br /></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/26087398"><img src="https://i1.hdslb.com/bfs/face/af55083fafbabb7815b09c32adca94139b3ab3f8.webp@240w_240h_1c_1s_!web-avatar-space-header.avif" width="100px;" alt="Nekoyashiki Riri Official"/><br /><sub><b>Nekoyashiki Riri Official</b></sub></a><br /></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/6189012"><img src="https://i0.hdslb.com/bfs/face/e38f4197fddc38397732b61c3086cd6b280dd00e.jpg" width="100px;" alt="MOJI Mora"/><br /><sub><b>MOJI Mora</b></sub></a><br /></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/475437261"><img src="https://i0.hdslb.com/bfs/face/a52c54f0098602b2934d828222aaf3895b06c9ec.jpg@240w_240h_1c_1s_!web-avatar-space-header.avif" width="100px;" alt="Li Kang"/><br /><sub><b>Li Kang</b></sub></a><br /></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/26087398"><img src="https://i1.hdslb.com/bfs/face/af55083fafbabb7815b09c32adca94139b3ab3f8.webp@240w_240h_1c_1s_!web-avatar-space-header.avif" width="100px;" alt="猫屋敷梨梨Official"/><br /><sub><b>猫屋敷梨梨Official</b></sub></a><br /></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/6189012"><img src="https://i0.hdslb.com/bfs/face/e38f4197fddc38397732b61c3086cd6b280dd00e.jpg" width="100px;" alt="MOJIもら"/><br /><sub><b>MOJIもら</b></sub></a><br /></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/475437261"><img src="https://i0.hdslb.com/bfs/face/a52c54f0098602b2934d828222aaf3895b06c9ec.jpg@240w_240h_1c_1s_!web-avatar-space-header.avif" width="100px;" alt="李康"/><br /><sub><b>李康</b></sub></a><br /></td>
     </tr>
     <tr>
-      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/1708573954"><img src="https://i1.hdslb.com/bfs/face/7fe7cfba25dd086f9b4dbb8433b5db237a5ff98b.jpg@240w_240h_1c_1s_!web-avatar-space-header.avif" width="100px;" alt="I'm Anonymous"/><br /><sub><b>I'm Anonymous</b></sub></a><br /></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/1708573954"><img src="https://i1.hdslb.com/bfs/face/7fe7cfba25dd086f9b4dbb8433b5db237a5ff98b.jpg@240w_240h_1c_1s_!web-avatar-space-header.avif" width="100px;" alt="我是无名吖"/><br /><sub><b>我是无名吖</b></sub></a><br /></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/flying-hilichurl"><img src="https://avatars.githubusercontent.com/u/187168840?v=4" width="100px;" alt="flying-hilichurl"/><br /><sub><b>flying-hilichurl</b></sub></a><br /></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/161061562"><img src="https://i1.hdslb.com/bfs/face/ffbffc12d4cb51d158210f26f45bb1b369eaf730.jpg@240w_240h_1c_1s_!web-avatar-space-header.avif" width="100px;" alt="Double-feet Cat"/><br /><sub><b>Double-feet Cat</b></sub></a><br />
+      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/161061562"><img src="https://i1.hdslb.com/bfs/face/ffbffc12d4cb51d158210f26f45bb1b369eaf730.jpg@240w_240h_1c_1s_!web-avatar-space-header.avif" width="100px;" alt="双脚猫"/><br /><sub><b>双脚猫</b></sub></a><br />
 </td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/rsyqvthv"><img src="https://avatars.githubusercontent.com/u/2230369?v=4" width="100px;" alt="rsyqvthv"/><br /><sub><b>rsyqvthv</b></sub></a><br /></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/297146893"><img src="https://i1.hdslb.com/bfs/face/60bd4649e39b9324998c0fede4dbc18a5baa7311.jpg@240w_240h_1c_1s_!web-avatar-space-header.avif" width="100px;" alt="Ocean Hamster"/><br /><sub><b>Ocean Hamster</b></sub></a><br /></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/3546380188519387"><img src="https://i1.hdslb.com/bfs/face/a6396d677f543a173aa11f3d3cd2943a96121dda.jpg@240w_240h_1c_1s_!web-avatar-space-header.avif" width="100px;" alt="Study Marlow"/><br /><sub><b>Study Marlow</b></sub></a><br /></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/8010065"><img src="https://i2.hdslb.com/bfs/face/118e5f530477e11326dbfb3692a0878fc92d303d.jpg@240w_240h_1c_1s_!web-avatar-space-header.avif" width="100px;" alt="Sleeping Volcano"/><br /><sub><b>Sleeping Volcano</b></sub></a><br /></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/297146893"><img src="https://i1.hdslb.com/bfs/face/60bd4649e39b9324998c0fede4dbc18a5baa7311.jpg@240w_240h_1c_1s_!web-avatar-space-header.avif" width="100px;" alt="洋仓鼠"/><br /><sub><b>洋仓鼠</b></sub></a><br /></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/3546380188519387"><img src="https://i1.hdslb.com/bfs/face/a6396d677f543a173aa11f3d3cd2943a96121dda.jpg@240w_240h_1c_1s_!web-avatar-space-header.avif" width="100px;" alt="学习马楼"/><br /><sub><b>学习马楼</b></sub></a><br /></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/8010065"><img src="https://i2.hdslb.com/bfs/face/118e5f530477e11326dbfb3692a0878fc92d303d.jpg@240w_240h_1c_1s_!web-avatar-space-header.avif" width="100px;" alt="睡着的火山"/><br /><sub><b>睡着的火山</b></sub></a><br /></td>
       <tr>
-         <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/5549978"><img src="https://i2.hdslb.com/bfs/face/8da0d17a9d45bb66fb8758c4da378a145e1856ca.jpg@240w_240h_1c_1s_!web-avatar-space-header.avif" width="100px;" alt="Counting Sheep Under Stars"/><br /><sub><b>Counting Sheep Under Stars</b></sub></a><br /></td>
-        <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/13129221"><img src="https://i2.hdslb.com/bfs/face/5a3c76d35af300d44111a50bde4b7acf45ad9621.jpg@128w_128h_1c_1s.webp" width="100px;" alt="Qingyang Wangchuan"/><br /><sub><b>Qingyang Wangchuan</b></sub></a><br /></td>
+         <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/5549978"><img src="https://i2.hdslb.com/bfs/face/8da0d17a9d45bb66fb8758c4da378a145e1856ca.jpg@240w_240h_1c_1s_!web-avatar-space-header.avif" width="100px;" alt="星空下数羊"/><br /><sub><b>星空下数羊</b></sub></a><br /></td>
+        <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/13129221"><img src="https://i2.hdslb.com/bfs/face/5a3c76d35af300d44111a50bde4b7acf45ad9621.jpg@128w_128h_1c_1s.webp" width="100px;" alt="青阳忘川"/><br /><sub><b>青阳忘川</b></sub></a><br /></td>
       </tr>
   </tbody>
 </table>
+
 
 ## 🗝️License
 
 This project is released under the Apache License 2.0.
 
 Image Copyright Notice:
-- Program icon `catime.ico` and demo image `Images/catime.png` are created by [Nekoyashiki Riri Official](https://space.bilibili.com/26087398) with all rights reserved
+- Program icon `catime.ico` and demo image `Images/catime.png` are created by [猫屋敷梨梨Official](https://space.bilibili.com/26087398) with all rights reserved
 - These images may not be used for commercial purposes without explicit permission from the original author
 
 Font Licenses:
