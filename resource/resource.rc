@@ -13,27 +13,41 @@ BEGIN
     PUSHBUTTON      "OK", IDC_BUTTON_OK, 40, 16, 20, 10
 END
 
-// Program icon copyright notice:
-// catime.ico is created by 猫屋敷梨梨Official (https://space.bilibili.com/26087398)
-// with all rights reserved. Not for commercial use without explicit permission.
+//-----------------------------------------------------------------------------
+// Program Icon
+//-----------------------------------------------------------------------------
+// Copyright notice: catime.ico is created by 猫屋敷梨梨Official 
+// (https://space.bilibili.com/26087398) with all rights reserved. 
+// Not for commercial use without explicit permission.
 IDI_CATIME ICON "../asset/icon/catime.ico"
 
-// CC BY-SA 4.0 fonts
+//-----------------------------------------------------------------------------
+// Fonts - CC BY-SA 4.0 License
+//-----------------------------------------------------------------------------
 // IDR_FONT_BIGBLUE           FONT "font/CC BY-SA 4.0/BigBlueTermPlus Nerd Font.ttf"
 
-// MIT fonts
+//-----------------------------------------------------------------------------
+// Fonts - MIT License
+//-----------------------------------------------------------------------------
 // IDR_FONT_PROGGYCLEAN       FONT "font/MIT/ProggyCleanSZ Nerd Font Propo.ttf"
 IDR_FONT_PROFONT         FONT "../asset/font/MIT/ProFont IIx Nerd Font.ttf"
 
-// SIL fonts
+//-----------------------------------------------------------------------------
+// Fonts - SIL Open Font License
+//-----------------------------------------------------------------------------
 IDR_FONT_DEPARTURE         FONT "../asset/font/SIL/DepartureMono Nerd Font Propo Essence.ttf"
 IDR_FONT_DADDYTIME        FONT "../asset/font/SIL/DaddyTimeMono Nerd Font Propo Essence.ttf"
 IDR_FONT_RECMONO           FONT "../asset/font/SIL/RecMonoCasual Nerd Font Mono Essence.ttf"
 IDR_FONT_TERMINESS         FONT "../asset/font/SIL/Terminess Nerd Font Propo Essence.ttf"
 
-// WTFPL fonts
+//-----------------------------------------------------------------------------
+// Fonts - WTFPL License
+//-----------------------------------------------------------------------------
 // IDR_FONT_GOHUFONT          FONT "font/WTFPL/GohuFont uni11 Nerd Font Mono.ttf"
 
+//-----------------------------------------------------------------------------
+// Fonts - SIL Open Font License (OFL)
+//-----------------------------------------------------------------------------
 IDR_FONT_ARBUTUS           FONT "../asset/font/OFL/Arbutus Essence.ttf"
 IDR_FONT_BERKSHIRE         FONT "../asset/font/OFL/Berkshire Swash Essence.ttf"
 IDR_FONT_CAVEAT            FONT "../asset/font/OFL/Caveat Brush Essence.ttf"
