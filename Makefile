@@ -9,8 +9,9 @@ ASSET_DIR = $(OUTPUT_DIR)/asset
 # 设置文件名
 SRC_FILES = main.c
 SRC_LANG = src/language.c
+SRC_FONT = src/font.c
 RC_FILE = resource/resource.rc
-OBJ_FILES = main.o language.o
+OBJ_FILES = main.o language.o font.o
 
 # 创建目标文件夹和资源文件夹
 $(shell mkdir -p $(OUTPUT_DIR) $(ASSET_DIR))
@@ -38,9 +39,13 @@ main.o: main.c
 language.o: src/language.c
 	@$(CC) -c src/language.c -o language.o $(CFLAGS)
 
+# 编译字体模块
+font.o: src/font.c
+	@$(CC) -c src/font.c -o font.o $(CFLAGS)
+
 # 链接编译目标文件，输出到输出目录
 $(OUTPUT_DIR)/catime.exe: $(OBJ_FILES) resource.o
-	@$(CC) -o $(OUTPUT_DIR)/catime.exe main.o language.o resource.o $(CFLAGS) $(LDFLAGS)
+	@$(CC) -o $(OUTPUT_DIR)/catime.exe main.o language.o font.o resource.o $(CFLAGS) $(LDFLAGS)
 
 # 清理构建文件
 clean:
