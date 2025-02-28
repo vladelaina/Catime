@@ -8,8 +8,9 @@ ASSET_DIR = $(OUTPUT_DIR)/asset
 
 # 设置文件名
 SRC_FILES = main.c
+SRC_LANG = src/language.c
 RC_FILE = resource/resource.rc
-OBJ_FILES = main.o
+OBJ_FILES = main.o language.o
 
 # 创建目标文件夹和资源文件夹
 $(shell mkdir -p $(OUTPUT_DIR) $(ASSET_DIR))
@@ -29,13 +30,17 @@ all: $(OUTPUT_DIR)/catime.exe
 resource.o: $(RC_FILE)
 	@$(WINDRES) $(RC_FILE) -o resource.o
 
-# 编译 main.c
-main.o: $(SRC_FILES)
-	@$(CC) -c $(SRC_FILES) -o main.o $(CFLAGS)
+# 编译主程序
+main.o: main.c
+	@$(CC) -c main.c -o main.o $(CFLAGS)
+
+# 编译语言模块
+language.o: src/language.c
+	@$(CC) -c src/language.c -o language.o $(CFLAGS)
 
 # 链接编译目标文件，输出到输出目录
 $(OUTPUT_DIR)/catime.exe: $(OBJ_FILES) resource.o
-	@$(CC) -o $(OUTPUT_DIR)/catime.exe $(OBJ_FILES) resource.o $(CFLAGS) $(LDFLAGS)
+	@$(CC) -o $(OUTPUT_DIR)/catime.exe main.o language.o resource.o $(CFLAGS) $(LDFLAGS)
 
 # 清理构建文件
 clean:
