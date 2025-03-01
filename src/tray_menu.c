@@ -1,3 +1,11 @@
+/**
+ * @file tray_menu.c
+ * @brief 系统托盘菜单功能实现
+ * 
+ * 本文件实现了应用程序的系统托盘菜单，包括右键菜单、颜色选择菜单等功能。
+ * 提供了丰富的应用程序设置选项和用户交互界面。
+ */
+
 #include <windows.h>
 #include <shellapi.h>
 #include <stdio.h>
@@ -8,7 +16,8 @@
 #include "../include/color.h"
 #include "../resource/resource.h"
 
-// 外部变量声明
+/// @name 外部变量声明
+/// @{
 extern BOOL CLOCK_SHOW_CURRENT_TIME;
 extern BOOL CLOCK_USE_24HOUR;
 extern BOOL CLOCK_SHOW_SECONDS;
@@ -27,35 +36,52 @@ extern int CLOCK_TOTAL_TIME;
 extern int countdown_elapsed_time;
 extern char CLOCK_TIMEOUT_FILE_PATH[MAX_PATH];
 extern char CLOCK_TIMEOUT_TEXT[50];
+/// @}
 
-// 外部函数声明
+/// @name 外部函数声明
+/// @{
 extern void GetConfigPath(char* path, size_t size);
 extern BOOL IsAutoStartEnabled(void);
 extern void WriteConfigStartupMode(const char* mode);
 extern void ClearColorOptions(void);
 extern void AddColorOption(const char* color);
+/// @}
 
-// 超时动作类型
+/**
+ * @brief 超时动作类型枚举
+ * 
+ * 定义了时间结束后可以执行的不同操作类型
+ */
 typedef enum {
-    TIMEOUT_ACTION_MESSAGE = 0,
-    TIMEOUT_ACTION_LOCK = 1,
-    TIMEOUT_ACTION_SHUTDOWN = 2,
-    TIMEOUT_ACTION_RESTART = 3,
-    TIMEOUT_ACTION_OPEN_FILE = 4   
+    TIMEOUT_ACTION_MESSAGE = 0,   ///< 显示消息
+    TIMEOUT_ACTION_LOCK = 1,      ///< 锁定屏幕
+    TIMEOUT_ACTION_SHUTDOWN = 2,  ///< 关机
+    TIMEOUT_ACTION_RESTART = 3,   ///< 重启
+    TIMEOUT_ACTION_OPEN_FILE = 4  ///< 打开文件
 } TimeoutActionType;
 
 extern TimeoutActionType CLOCK_TIMEOUT_ACTION;
 
-// 最近文件结构体
+/**
+ * @brief 最近文件结构体
+ * 
+ * 存储最近使用过的文件路径和名称信息
+ */
 typedef struct {
-    char path[MAX_PATH];
-    char name[MAX_PATH];
+    char path[MAX_PATH];  ///< 文件完整路径
+    char name[MAX_PATH];  ///< 文件显示名称
 } RecentFile;
 
 extern RecentFile CLOCK_RECENT_FILES[];
 extern int CLOCK_RECENT_FILES_COUNT;
 
-// 显示颜色菜单
+/**
+ * @brief 显示颜色和设置菜单
+ * @param hwnd 窗口句柄
+ * 
+ * 创建并显示应用程序的主设置菜单，包括编辑模式、超时动作、
+ * 预设管理、字体选择、颜色设置和关于信息等选项。
+ */
 void ShowColorMenu(HWND hwnd) {
     HMENU hMenu = CreatePopupMenu();
     
@@ -71,6 +97,7 @@ void ShowColorMenu(HWND hwnd) {
                CLOCK_IDM_SHOW_MESSAGE, 
                GetLocalizedString(L"显示消息", L"Show Message"));
 
+    // 创建打开文件子菜单
     HMENU hOpenFileMenu = CreatePopupMenu();
     if (CLOCK_RECENT_FILES_COUNT > 0) {
         for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
@@ -89,6 +116,7 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hOpenFileMenu, MF_STRING, CLOCK_IDM_BROWSE_FILE, 
                 GetLocalizedString(L"浏览...", L"Browse..."));
 
+    // 设置打开文件菜单文本，显示当前选择的文件名
     const wchar_t* menuText = GetLocalizedString(L"打开文件", L"Open File");
     if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE && strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
         static wchar_t displayText[MAX_PATH];
@@ -105,9 +133,11 @@ void ShowColorMenu(HWND hwnd) {
         }
     }
 
+    // 将打开文件子菜单添加到超时动作菜单
     AppendMenuW(hTimeoutMenu, MF_POPUP | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE ? MF_CHECKED : MF_UNCHECKED),
                (UINT_PTR)hOpenFileMenu, menuText);
                
+    // 添加其他超时动作选项
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_LOCK ? MF_CHECKED : MF_UNCHECKED), 
                CLOCK_IDM_LOCK_SCREEN, 
                GetLocalizedString(L"锁定屏幕", L"Lock Screen"));
@@ -118,6 +148,7 @@ void ShowColorMenu(HWND hwnd) {
                CLOCK_IDM_RESTART, 
                GetLocalizedString(L"重启", L"Restart"));
 
+    // 将超时动作菜单添加到主菜单
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeoutMenu, 
                 GetLocalizedString(L"超时动作", L"Timeout Action"));
 
@@ -126,8 +157,10 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hTimeOptionsMenu, MF_STRING, CLOCK_IDC_MODIFY_TIME_OPTIONS,
                 GetLocalizedString(L"修改快捷时间选项", L"Modify Time Options"));
     
+    // 启动设置子菜单
     HMENU hStartupSettingsMenu = CreatePopupMenu();
 
+    // 读取当前启动模式
     char currentStartupMode[20] = "COUNTDOWN";
     char configPath[MAX_PATH];  
     GetConfigPath(configPath, MAX_PATH);
@@ -143,6 +176,7 @@ void ShowColorMenu(HWND hwnd) {
         fclose(configFile);
     }
     
+    // 添加启动模式选项
     AppendMenuW(hStartupSettingsMenu, MF_STRING | 
                 (strcmp(currentStartupMode, "COUNTDOWN") == 0 ? MF_CHECKED : 0),
                 CLOCK_IDC_SET_COUNTDOWN_TIME,
@@ -165,14 +199,17 @@ void ShowColorMenu(HWND hwnd) {
     
     AppendMenuW(hStartupSettingsMenu, MF_SEPARATOR, 0, NULL);
 
+    // 添加开机自启动选项
     AppendMenuW(hStartupSettingsMenu, MF_STRING | 
             (IsAutoStartEnabled() ? MF_CHECKED : MF_UNCHECKED),
             CLOCK_IDC_AUTO_START,
             GetLocalizedString(L"开机自启动", L"Start with Windows"));
 
+    // 将启动设置菜单添加到预设管理菜单
     AppendMenuW(hTimeOptionsMenu, MF_POPUP, (UINT_PTR)hStartupSettingsMenu,
                 GetLocalizedString(L"启动设置", L"Startup Settings"));
 
+    // 将预设管理菜单添加到主菜单
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeOptionsMenu,
                 GetLocalizedString(L"预设管理", L"Preset Manager"));
     
@@ -264,6 +301,7 @@ void ShowColorMenu(HWND hwnd) {
     }
     AppendMenuW(hColorSubMenu, MF_SEPARATOR, 0, NULL);
 
+    // 自定义颜色选项
     HMENU hCustomizeMenu = CreatePopupMenu();
     AppendMenuW(hCustomizeMenu, MF_STRING, CLOCK_IDC_COLOR_VALUE, 
                 GetLocalizedString(L"颜色值", L"Color Value"));
@@ -273,6 +311,7 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hColorSubMenu, MF_POPUP, (UINT_PTR)hCustomizeMenu, 
                 GetLocalizedString(L"自定义", L"Customize"));
 
+    // 将字体和颜色菜单添加到主菜单
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hFontSubMenu, 
                 GetLocalizedString(L"字体", L"Font"));
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hColorSubMenu, 
@@ -288,12 +327,14 @@ void ShowColorMenu(HWND hwnd) {
                CATIME_VERSION);
     AppendMenuW(hAboutMenu, MF_STRING | MF_DISABLED, 0, version_text);
 
+    // 反馈菜单
     HMENU hFeedbackMenu = CreatePopupMenu();
     AppendMenuW(hFeedbackMenu, MF_STRING, CLOCK_IDM_FEEDBACK_GITHUB, L"GitHub");
     AppendMenuW(hFeedbackMenu, MF_STRING, CLOCK_IDM_FEEDBACK_BILIBILI, L"BiliBili");
     AppendMenuW(hAboutMenu, MF_POPUP, (UINT_PTR)hFeedbackMenu, 
                 GetLocalizedString(L"反馈", L"Feedback"));
 
+    // 语言选择菜单
     HMENU hLangMenu = CreatePopupMenu();
     AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_CHINESE_SIMP ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDM_LANG_CHINESE, L"简体中文");
@@ -314,6 +355,7 @@ void ShowColorMenu(HWND hwnd) {
 
     AppendMenuW(hAboutMenu, MF_POPUP, (UINT_PTR)hLangMenu, GetLocalizedString(L"语言", L"Language"));
 
+    // 更新菜单
     HMENU hUpdateMenu = CreatePopupMenu();
     AppendMenuW(hUpdateMenu, MF_STRING, CLOCK_IDM_UPDATE_GITHUB, L"GitHub");
     AppendMenuW(hUpdateMenu, MF_STRING, CLOCK_IDM_UPDATE_123PAN,
@@ -324,6 +366,7 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hAboutMenu, MF_POPUP, (UINT_PTR)hUpdateMenu,
                 GetLocalizedString(L"检查更新", L"Check for Updates"));
     
+    // 将关于菜单添加到主菜单
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hAboutMenu,
                 GetLocalizedString(L"关于", L"About"));
 
@@ -333,23 +376,31 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hMenu, MF_STRING, 109,
                 GetLocalizedString(L"退出", L"Exit"));
     
-    // 显示菜单 (保留基础菜单结构)
+    // 显示菜单
     POINT pt;
     GetCursorPos(&pt);
     TrackPopupMenu(hMenu, TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, 0, hwnd, NULL);
     DestroyMenu(hMenu);
 }
 
-// 显示托盘菜单
+/**
+ * @brief 显示托盘右键菜单
+ * @param hwnd 窗口句柄
+ * 
+ * 创建并显示系统托盘右键菜单，包含时间设置、显示模式切换和快捷时间选项。
+ * 根据当前应用程序状态动态调整菜单项。
+ */
 void ShowContextMenu(HWND hwnd) {
     HMENU hMenu = CreatePopupMenu();
     
+    // 添加设置时间选项
     AppendMenuW(hMenu, MF_STRING, 101, 
                 GetLocalizedString(L"设置时间", L"Set Time"));
     
     // 添加分隔线
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
     
+    // 时间显示菜单
     HMENU hTimeMenu = CreatePopupMenu();
     AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
                CLOCK_IDM_SHOW_CURRENT_TIME,
@@ -362,10 +413,12 @@ void ShowContextMenu(HWND hwnd) {
                CLOCK_IDM_SHOW_SECONDS,
                GetLocalizedString(L"显示秒数", L"Show Seconds"));
     
+    // 将时间显示菜单添加到主菜单
     AppendMenuW(hMenu, MF_POPUP | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
                (UINT_PTR)hTimeMenu,
                GetLocalizedString(L"时间显示", L"Time Display"));
 
+    // 正计时菜单
     HMENU hCountUpMenu = CreatePopupMenu();
     AppendMenuW(hCountUpMenu, MF_STRING, CLOCK_IDM_COUNT_UP_START,
         CLOCK_COUNT_UP ? 
@@ -379,10 +432,12 @@ void ShowContextMenu(HWND hwnd) {
             GetLocalizedString(L"重新开始", L"Restart"));
     }
                
+    // 将正计时菜单添加到主菜单
     AppendMenuW(hMenu, MF_POPUP | (CLOCK_COUNT_UP ? MF_CHECKED : MF_UNCHECKED),
                (UINT_PTR)hCountUpMenu,
                GetLocalizedString(L"正计时", L"Count Up"));
 
+    // 倒计时菜单
     HMENU hCountdownMenu = CreatePopupMenu();
     // 判断是否需要显示完整倒计时菜单（非正计时、非显示时间、倒计时进行中）
     BOOL isWindowVisible = IsWindowVisible(hwnd);
@@ -406,7 +461,7 @@ void ShowContextMenu(HWND hwnd) {
             GetLocalizedString(L"开始", L"Start"));
     }
 
-    // 修改父菜单项的勾选条件（需要同时满足倒计时激活且进行中且窗口可见）
+    // 将倒计时菜单添加到主菜单，并根据状态设置勾选
     AppendMenuW(hMenu, MF_POPUP | 
         ((!CLOCK_COUNT_UP && !CLOCK_SHOW_CURRENT_TIME && 
           CLOCK_TOTAL_TIME > 0 && countdown_elapsed_time < CLOCK_TOTAL_TIME && isWindowVisible) ? 
@@ -416,12 +471,14 @@ void ShowContextMenu(HWND hwnd) {
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
+    // 添加快捷时间选项
     for (int i = 0; i < time_options_count; i++) {
         wchar_t menu_item[20];
         _snwprintf(menu_item, sizeof(menu_item)/sizeof(wchar_t), L"%d", time_options[i]);
         AppendMenuW(hMenu, MF_STRING, 102 + i, menu_item);
     }
 
+    // 显示菜单
     POINT pt;
     GetCursorPos(&pt);
     SetForegroundWindow(hwnd);

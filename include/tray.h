@@ -1,21 +1,52 @@
+/**
+ * @file tray.h
+ * @brief 系统托盘功能接口
+ * 
+ * 本文件定义了应用程序系统托盘相关的常量和函数接口，
+ * 包括托盘图标的初始化、移除和通知显示功能。
+ */
+
 #ifndef CLOCK_TRAY_H
 #define CLOCK_TRAY_H
 
 #include <windows.h>
 
-// 系统托盘消息ID
-#define CLOCK_WM_TRAYICON (WM_USER + 2)
+/// @name 系统托盘消息常量
+/// @{
+#define CLOCK_WM_TRAYICON (WM_USER + 2)  ///< 自定义托盘图标消息ID
+/// @}
 
-// 系统托盘图标ID
-#define CLOCK_ID_TRAY_APP_ICON 1001
+/// @name 系统托盘标识常量
+/// @{
+#define CLOCK_ID_TRAY_APP_ICON 1001      ///< 托盘图标标识ID
+/// @}
 
-// 初始化系统托盘图标
+/**
+ * @brief 初始化系统托盘图标
+ * @param hwnd 与托盘图标关联的窗口句柄
+ * @param hInstance 应用程序实例句柄
+ * 
+ * 创建并显示带有默认设置的系统托盘图标。
+ * 该图标将通过CLOCK_WM_TRAYICON回调接收消息。
+ */
 void InitTrayIcon(HWND hwnd, HINSTANCE hInstance);
 
-// 删除系统托盘图标
+/**
+ * @brief 删除系统托盘图标
+ * 
+ * 从系统托盘中移除应用程序的图标。
+ * 应在应用程序关闭时调用。
+ */
 void RemoveTrayIcon(void);
 
-// 显示系统托盘通知
+/**
+ * @brief 在系统托盘中显示通知
+ * @param hwnd 与通知关联的窗口句柄
+ * @param message 要在通知中显示的文本消息
+ * 
+ * 从系统托盘图标显示气球提示通知。
+ * 通知使用NIIF_NONE样式（无图标）并在3秒后超时。
+ */
 void ShowTrayNotification(HWND hwnd, const char* message);
 
 #endif // CLOCK_TRAY_H
