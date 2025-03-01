@@ -31,12 +31,13 @@ void ShowTrayNotification(HWND hwnd, const char* message) {
     nid_notify.hWnd = hwnd;
     nid_notify.uID = CLOCK_ID_TRAY_APP_ICON;
     nid_notify.uFlags = NIF_INFO;
-    nid_notify.dwInfoFlags = NIIF_INFO;
+    nid_notify.dwInfoFlags = NIIF_NONE; // 修改为NIIF_NONE，不显示图标
     nid_notify.uTimeout = 3000;
     
     // 正确处理Unicode字符串转换
     MultiByteToWideChar(CP_UTF8, 0, message, -1, nid_notify.szInfo, sizeof(nid_notify.szInfo)/sizeof(WCHAR));
-    MultiByteToWideChar(CP_UTF8, 0, "Catime", -1, nid_notify.szInfoTitle, sizeof(nid_notify.szInfoTitle)/sizeof(WCHAR));
+    // 不设置标题，保持为空字符串
+    nid_notify.szInfoTitle[0] = L'\0';
     
     Shell_NotifyIconW(NIM_MODIFY, &nid_notify);
 }
