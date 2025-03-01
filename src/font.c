@@ -2,7 +2,8 @@
  * @file font.c
  * @brief 字体管理模块实现文件
  * 
- * 本文件实现了应用程序的字体管理相关功能，包括字体加载、设置和管理。
+ * 本文件实现了应用程序的字体管理相关功能，包括字体加载、预览、
+ * 应用和配置文件管理。支持从资源中加载多种预定义字体。
  */
 
 #include <windows.h>
@@ -12,12 +13,20 @@
 #include "../include/font.h"
 #include "../resource/resource.h"
 
-char FONT_FILE_NAME[100] = "Hack Nerd Font.ttf";
-char FONT_INTERNAL_NAME[100];
-char PREVIEW_FONT_NAME[100] = "";
-char PREVIEW_INTERNAL_NAME[100] = "";
-BOOL IS_PREVIEWING = FALSE;
+/// @name 全局字体变量
+/// @{
+char FONT_FILE_NAME[100] = "Hack Nerd Font.ttf";  ///< 当前使用的字体文件名
+char FONT_INTERNAL_NAME[100];                     ///< 字体内部名称（无扩展名）
+char PREVIEW_FONT_NAME[100] = "";                 ///< 预览字体的文件名
+char PREVIEW_INTERNAL_NAME[100] = "";             ///< 预览字体的内部名称
+BOOL IS_PREVIEWING = FALSE;                       ///< 是否正在预览字体
+/// @}
 
+/**
+ * @brief 字体资源数组
+ * 
+ * 存储应用程序内置的所有字体资源信息
+ */
 FontResource fontResources[] = {
     {CLOCK_IDC_FONT_RECMONO, IDR_FONT_RECMONO, "RecMonoCasual Nerd Font Mono Essence.ttf"},
     {CLOCK_IDC_FONT_DEPARTURE, IDR_FONT_DEPARTURE, "DepartureMono Nerd Font Propo Essence.ttf"},
@@ -69,37 +78,49 @@ FontResource fontResources[] = {
     {CLOCK_IDC_FONT_DADDYTIME, IDR_FONT_DADDYTIME, "DaddyTimeMono Nerd Font Propo Essence.ttf"},
 };
 
+/// 字体资源数量
 const int FONT_RESOURCES_COUNT = sizeof(fontResources) / sizeof(FontResource);
 
+/// @name 外部变量声明
+/// @{
+extern char CLOCK_TEXT_COLOR[];  ///< 当前时钟文本颜色
+/// @}
 
-/// 当前时钟文本颜色
-extern char CLOCK_TEXT_COLOR[];
+/// @name 外部函数声明
+/// @{
+extern void GetConfigPath(char* path, int maxLen);             ///< 获取配置文件路径
+extern void ReadConfig(void);                                  ///< 读取配置文件
+extern int CALLBACK EnumFontFamExProc(ENUMLOGFONTEX *lpelfe, NEWTEXTMETRICEX *lpntme, DWORD FontType, LPARAM lParam); ///< 字体枚举回调函数
+/// @}
 
-/// 获取配置文件路径
-extern void GetConfigPath(char* path, int maxLen);
-
-/// 读取配置文件
-extern void ReadConfig(void);
-
-/// 字体枚举回调函数
-extern int CALLBACK EnumFontFamExProc(ENUMLOGFONTEX *lpelfe, NEWTEXTMETRICEX *lpntme, DWORD FontType, LPARAM lParam);
-
+/**
+ * @brief 从资源加载字体
+ * @param hInstance 应用程序实例句柄
+ * @param resourceId 字体资源ID
+ * @return BOOL 成功返回TRUE，失败返回FALSE
+ * 
+ * 从应用程序资源中加载字体并添加到系统字体集。
+ */
 BOOL LoadFontFromResource(HINSTANCE hInstance, int resourceId) {
+    // 查找字体资源
     HRSRC hResource = FindResource(hInstance, MAKEINTRESOURCE(resourceId), RT_FONT);
     if (hResource == NULL) {
         return FALSE;
     }
 
+    // 加载资源到内存
     HGLOBAL hMemory = LoadResource(hInstance, hResource);
     if (hMemory == NULL) {
         return FALSE;
     }
 
+    // 锁定资源
     void* fontData = LockResource(hMemory);
     if (fontData == NULL) {
         return FALSE;
     }
 
+    // 获取资源大小并添加字体
     DWORD fontLength = SizeofResource(hInstance, hResource);
     DWORD nFonts = 0;
     HANDLE handle = AddFontMemResourceEx(fontData, fontLength, NULL, &nFonts);
@@ -111,7 +132,16 @@ BOOL LoadFontFromResource(HINSTANCE hInstance, int resourceId) {
     return TRUE;
 }
 
+/**
+ * @brief 根据字体名称加载字体
+ * @param hInstance 应用程序实例句柄
+ * @param fontName 字体文件名
+ * @return BOOL 成功返回TRUE，失败返回FALSE
+ * 
+ * 在预定义的字体资源列表中查找指定名称的字体并加载。
+ */
 BOOL LoadFontByName(HINSTANCE hInstance, const char* fontName) {
+    // 遍历字体资源数组查找匹配的字体
     for (int i = 0; i < sizeof(fontResources) / sizeof(FontResource); i++) {
         if (strcmp(fontResources[i].fontName, fontName) == 0) {
             return LoadFontFromResource(hInstance, fontResources[i].resourceId);
@@ -120,16 +150,24 @@ BOOL LoadFontByName(HINSTANCE hInstance, const char* fontName) {
     return FALSE;
 }
 
+/**
+ * @brief 将字体名称写入配置文件
+ * @param font_file_name 要写入的字体文件名
+ * 
+ * 更新配置文件中的字体设置，保留其他配置项。
+ */
 void WriteConfigFont(const char* font_file_name) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
+    // 打开配置文件进行读取
     FILE *file = fopen(config_path, "r");
     if (!file) {
         fprintf(stderr, "Failed to open config file for reading: %s\n", config_path);
         return;
     }
 
+    // 读取整个配置文件内容
     fseek(file, 0, SEEK_END);
     long file_size = ftell(file);
     fseek(file, 0, SEEK_SET);
@@ -144,6 +182,7 @@ void WriteConfigFont(const char* font_file_name) {
     config_content[file_size] = '\0';
     fclose(file);
 
+    // 创建新的配置文件内容
     char *new_config = (char *)malloc(file_size + 100);
     if (!new_config) {
         fprintf(stderr, "Memory allocation failed!\n");
@@ -152,6 +191,7 @@ void WriteConfigFont(const char* font_file_name) {
     }
     new_config[0] = '\0';
 
+    // 按行处理并替换字体设置
     char *line = strtok(config_content, "\n");
     while (line) {
         if (strncmp(line, "FONT_FILE_NAME=", 15) == 0) {
@@ -165,12 +205,14 @@ void WriteConfigFont(const char* font_file_name) {
         line = strtok(NULL, "\n");
     }
 
+    // 添加文本颜色设置
     strcat(new_config, "CLOCK_TEXT_COLOR=");
     strcat(new_config, CLOCK_TEXT_COLOR);
     strcat(new_config, "\n");
 
     free(config_content);
 
+    // 写入新的配置内容
     file = fopen(config_path, "w");
     if (!file) {
         fprintf(stderr, "Failed to open config file for writing: %s\n", config_path);
@@ -182,15 +224,22 @@ void WriteConfigFont(const char* font_file_name) {
 
     free(new_config);
 
+    // 重新读取配置
     ReadConfig();
 }
 
+/**
+ * @brief 列出系统中可用的字体
+ * 
+ * 枚举系统中所有可用的字体，通过回调函数处理字体信息。
+ */
 void ListAvailableFonts(void) {
     HDC hdc = GetDC(NULL);
     LOGFONT lf;
     memset(&lf, 0, sizeof(LOGFONT));
     lf.lfCharSet = DEFAULT_CHARSET;
 
+    // 创建临时字体并枚举字体
     HFONT hFont = CreateFont(12, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
                              lf.lfCharSet, OUT_DEFAULT_PRECIS,
                              CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,
@@ -199,10 +248,21 @@ void ListAvailableFonts(void) {
 
     EnumFontFamiliesEx(hdc, &lf, (FONTENUMPROC)EnumFontFamExProc, 0, 0);
 
+    // 清理资源
     DeleteObject(hFont);
     ReleaseDC(NULL, hdc);
 }
 
+/**
+ * @brief 字体枚举回调函数
+ * @param lpelfe 字体枚举信息
+ * @param lpntme 字体度量信息
+ * @param FontType 字体类型
+ * @param lParam 回调参数
+ * @return int 继续枚举返回1
+ * 
+ * 被EnumFontFamiliesEx调用，处理枚举到的每个字体信息。
+ */
 int CALLBACK EnumFontFamExProc(
     ENUMLOGFONTEX *lpelfe,
     NEWTEXTMETRICEX *lpntme,
@@ -212,6 +272,14 @@ int CALLBACK EnumFontFamExProc(
     return 1;
 }
 
+/**
+ * @brief 预览字体
+ * @param hInstance 应用程序实例句柄
+ * @param fontName 要预览的字体名称
+ * @return BOOL 成功返回TRUE，失败返回FALSE
+ * 
+ * 加载并设置预览字体，但不应用到配置文件。
+ */
 BOOL PreviewFont(HINSTANCE hInstance, const char* fontName) {
     if (!fontName) return FALSE;
     
@@ -219,7 +287,7 @@ BOOL PreviewFont(HINSTANCE hInstance, const char* fontName) {
     strncpy(PREVIEW_FONT_NAME, fontName, sizeof(PREVIEW_FONT_NAME) - 1);
     PREVIEW_FONT_NAME[sizeof(PREVIEW_FONT_NAME) - 1] = '\0';
     
-    // 获取内部字体名称
+    // 获取内部字体名称（去除.ttf扩展名）
     size_t name_len = strlen(PREVIEW_FONT_NAME);
     if (name_len > 4 && strcmp(PREVIEW_FONT_NAME + name_len - 4, ".ttf") == 0) {
         strncpy(PREVIEW_INTERNAL_NAME, PREVIEW_FONT_NAME, name_len - 4);
@@ -238,25 +306,46 @@ BOOL PreviewFont(HINSTANCE hInstance, const char* fontName) {
     return TRUE;
 }
 
+/**
+ * @brief 取消字体预览
+ * 
+ * 清除预览状态并恢复到当前设置的字体。
+ */
 void CancelFontPreview(void) {
     IS_PREVIEWING = FALSE;
     PREVIEW_FONT_NAME[0] = '\0';
     PREVIEW_INTERNAL_NAME[0] = '\0';
 }
 
+/**
+ * @brief 应用字体预览
+ * 
+ * 将当前预览的字体设置为实际使用的字体，并写入配置文件。
+ */
 void ApplyFontPreview(void) {
+    // 检查是否有有效的预览字体
     if (!IS_PREVIEWING || strlen(PREVIEW_FONT_NAME) == 0) return;
     
+    // 更新当前字体
     strncpy(FONT_FILE_NAME, PREVIEW_FONT_NAME, sizeof(FONT_FILE_NAME) - 1);
     FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
     
     strncpy(FONT_INTERNAL_NAME, PREVIEW_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME) - 1);
     FONT_INTERNAL_NAME[sizeof(FONT_INTERNAL_NAME) - 1] = '\0';
     
+    // 保存到配置文件并取消预览状态
     WriteConfigFont(FONT_FILE_NAME);
     CancelFontPreview();
 }
 
+/**
+ * @brief 切换字体
+ * @param hInstance 应用程序实例句柄
+ * @param fontName 要切换的字体名称
+ * @return BOOL 成功返回TRUE，失败返回FALSE
+ * 
+ * 直接切换到指定字体，不经过预览过程。
+ */
 BOOL SwitchFont(HINSTANCE hInstance, const char* fontName) {
     if (!fontName) return FALSE;
     
@@ -269,7 +358,7 @@ BOOL SwitchFont(HINSTANCE hInstance, const char* fontName) {
     strncpy(FONT_FILE_NAME, fontName, sizeof(FONT_FILE_NAME) - 1);
     FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
     
-    // 更新内部字体名称
+    // 更新内部字体名称（去除.ttf扩展名）
     size_t name_len = strlen(FONT_FILE_NAME);
     if (name_len > 4 && strcmp(FONT_FILE_NAME + name_len - 4, ".ttf") == 0) {
         strncpy(FONT_INTERNAL_NAME, FONT_FILE_NAME, name_len - 4);
