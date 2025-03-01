@@ -39,20 +39,7 @@ extern void AddColorOption(const char* color);
 void ShowColorMenu(HWND hwnd) {
     HMENU hMenu = CreatePopupMenu();
     
-    // 添加颜色预览项
-    AppendMenu(hMenu, MF_STRING | MF_GRAYED, CLOCK_IDC_COLOR_PANEL, "Color Preview");
-    
-    // 添加预设颜色
-    HMENU hPresetMenu = CreatePopupMenu();
-    for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
-        AppendMenu(hPresetMenu, MF_STRING, CLOCK_IDC_COLOR_VALUE + i, COLOR_OPTIONS[i].hexColor);
-    }
-    AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hPresetMenu, "Preset Colors");
-    
-    // 添加更多颜色选项
-    AppendMenu(hMenu, MF_STRING, CLOCK_IDC_COLOR_PANEL + 1, "Custom Color...");
-    
-    // 显示菜单
+    // 显示菜单 (保留基础菜单结构)
     POINT pt;
     GetCursorPos(&pt);
     TrackPopupMenu(hMenu, TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, 0, hwnd, NULL);
