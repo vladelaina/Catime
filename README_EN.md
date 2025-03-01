@@ -106,3 +106,14 @@ Font Licenses:
   Sevillana Essence, Silkscreen Essence, Stick Essence, Underdog Essence,
   Wallpoet Essence, Yesteryear Essence, ZCOOL KuaiLe Essence
 - WTFPL: HeavyData Nerd Font
+
+
+---
+
+<div align="center">
+
+Copyright © 2024 - **Catime**\
+By vladelaina\
+Made with ❤️ & ⌨️
+
+</div>
