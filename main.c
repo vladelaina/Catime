@@ -68,7 +68,10 @@ int default_countdown_time = 0;
 
 void PauseMediaPlayback(void);
 
-// 颜色相关变量已移至color.c
+// 颜色相关变量声明
+extern char PREVIEW_COLOR[10];
+extern BOOL IS_COLOR_PREVIEWING;
+extern char CLOCK_TEXT_COLOR[10];
 
 void SetClickThrough(HWND hwnd, BOOL enable);
 
@@ -166,7 +169,7 @@ void SetBlurBehind(HWND hwnd, BOOL enable);
 int time_options[MAX_TIME_OPTIONS];
 int time_options_count = 0;
 
-char CLOCK_TEXT_COLOR[10] = "#FFFFFF";
+// CLOCK_TEXT_COLOR已在color.c中定义
 int CLOCK_BASE_WINDOW_WIDTH = 200;
 int CLOCK_BASE_WINDOW_HEIGHT = 100;
 float CLOCK_WINDOW_SCALE = 1.0f;
@@ -259,8 +262,7 @@ extern char PREVIEW_FONT_NAME[];
 extern char PREVIEW_INTERNAL_NAME[];
 extern BOOL IS_PREVIEWING;
 
-char PREVIEW_COLOR[10] = "";   
-BOOL IS_COLOR_PREVIEWING = FALSE;   
+// PREVIEW_COLOR和IS_COLOR_PREVIEWING已在color.c中定义
 
 #define WM_USER_SHELLICON WM_USER + 1
 
@@ -800,66 +802,7 @@ void ReadConfig() {
     LoadRecentFiles();
 }
 
-void WriteConfigColor(const char* color_input) {
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    
-    FILE *file = fopen(config_path, "r");
-    if (!file) {
-        fprintf(stderr, "Failed to open config file for reading: %s\n", config_path);
-        return;
-    }
-
-    fseek(file, 0, SEEK_END);
-    long file_size = ftell(file);
-    fseek(file, 0, SEEK_SET);
-
-    char *config_content = (char *)malloc(file_size + 1);
-    if (!config_content) {
-        fprintf(stderr, "Memory allocation failed!\n");
-        fclose(file);
-        return;
-    }
-    fread(config_content, sizeof(char), file_size, file);
-    config_content[file_size] = '\0';
-    fclose(file);
-
-    char *new_config = (char *)malloc(file_size + 100);
-    if (!new_config) {
-        fprintf(stderr, "Memory allocation failed!\n");
-        free(config_content);
-        return;
-    }
-    new_config[0] = '\0';
-
-    char *line = strtok(config_content, "\n");
-    while (line) {
-        if (strncmp(line, "CLOCK_TEXT_COLOR=", 17) == 0) {
-            strcat(new_config, "CLOCK_TEXT_COLOR=");
-            strcat(new_config, color_input);
-            strcat(new_config, "\n");
-        } else {
-            strcat(new_config, line);
-            strcat(new_config, "\n");
-        }
-        line = strtok(NULL, "\n");
-    }
-
-    free(config_content);
-
-    file = fopen(config_path, "w");
-    if (!file) {
-        fprintf(stderr, "Failed to open config file for writing: %s\n", config_path);
-        free(new_config);
-        return;
-    }
-    fwrite(new_config, sizeof(char), strlen(new_config), file);
-    fclose(file);
-
-    free(new_config);
-
-    ReadConfig();
-}
+// WriteConfigColor function has been moved to color.c
 
 
 
@@ -3738,16 +3681,7 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT msg, WPARAM wParam, LPARAM
 }
 
 
-void ClearColorOptions() {
-    if (COLOR_OPTIONS) {
-        for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
-            free((void*)COLOR_OPTIONS[i].hexColor);
-        }
-        free(COLOR_OPTIONS);
-        COLOR_OPTIONS = NULL;
-        COLOR_OPTIONS_COUNT = 0;
-    }
-}
+// ClearColorOptions function has been moved to color.c
 
 void WriteConfigDefaultStartTime(int seconds) {
     char config_path[MAX_PATH];
