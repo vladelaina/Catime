@@ -230,8 +230,7 @@ void WriteConfigEditMode(const char* mode);
 void WriteConfigTimeOptions(const char* options);   
 void FormatTime(int remaining_time, char* time_text);
 void ExitProgram(HWND hwnd);
-void ShowContextMenu(HWND hwnd);
-void ShowColorMenu(HWND hwnd);
+// 托盘菜单相关函数已移至tray_menu.c，通过include "include/tray_menu.h"引入
 void ListAvailableFonts();
 void SetBlurBehind(HWND hwnd, BOOL enable);
 void AdjustWindowPosition(HWND hwnd);
@@ -264,11 +263,8 @@ extern BOOL IS_PREVIEWING;
 
 // PREVIEW_COLOR和IS_COLOR_PREVIEWING已在color.c中定义
 
-#define WM_USER_SHELLICON WM_USER + 1
+// 托盘菜单相关函数已移至tray_menu.c
 
-void ShowToastNotification(HWND hwnd, const char* message);
-
- 
 BOOL CLOCK_SHOW_CURRENT_TIME = FALSE;
 time_t CLOCK_LAST_TIME_UPDATE = 0;
 BOOL CLOCK_USE_24HOUR = TRUE;
@@ -1174,95 +1170,6 @@ void ExitProgram(HWND hwnd) {
     RemoveTrayIcon();
 
     PostQuitMessage(0);
-}
-
-void ShowContextMenu(HWND hwnd) {
-    HMENU hMenu = CreatePopupMenu();
-    
-    AppendMenuW(hMenu, MF_STRING, 101, 
-                GetLocalizedString(L"设置时间", L"Set Time"));
-    
-    // 添加分隔线
-    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
-    
-    HMENU hTimeMenu = CreatePopupMenu();
-    AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
-               CLOCK_IDM_SHOW_CURRENT_TIME,
-               GetLocalizedString(L"显示当前时间", L"Show Current Time"));
-    AppendMenuW(hTimeMenu, MF_SEPARATOR, 0, NULL);
-    AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_USE_24HOUR ? MF_CHECKED : MF_UNCHECKED),
-               CLOCK_IDM_24HOUR_FORMAT,
-               GetLocalizedString(L"24小时制", L"24-Hour Format"));
-    AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_SHOW_SECONDS ? MF_CHECKED : MF_UNCHECKED),
-               CLOCK_IDM_SHOW_SECONDS,
-               GetLocalizedString(L"显示秒数", L"Show Seconds"));
-    
-    AppendMenuW(hMenu, MF_POPUP | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
-               (UINT_PTR)hTimeMenu,
-               GetLocalizedString(L"时间显示", L"Time Display"));
-
-    HMENU hCountUpMenu = CreatePopupMenu();
-    AppendMenuW(hCountUpMenu, MF_STRING, CLOCK_IDM_COUNT_UP_START,
-        CLOCK_COUNT_UP ? 
-            (CLOCK_IS_PAUSED ? 
-                GetLocalizedString(L"继续", L"Resume") : 
-                GetLocalizedString(L"暂停", L"Pause")) :
-            GetLocalizedString(L"开始", L"Start"));
-            
-    if (CLOCK_COUNT_UP) {
-        AppendMenuW(hCountUpMenu, MF_STRING, CLOCK_IDM_COUNT_UP_RESET,
-            GetLocalizedString(L"重新开始", L"Restart"));
-    }
-               
-    AppendMenuW(hMenu, MF_POPUP | (CLOCK_COUNT_UP ? MF_CHECKED : MF_UNCHECKED),
-               (UINT_PTR)hCountUpMenu,
-               GetLocalizedString(L"正计时", L"Count Up"));
-
-    HMENU hCountdownMenu = CreatePopupMenu();
-    // 判断是否需要显示完整倒计时菜单（非正计时、非显示时间、倒计时进行中）
-    BOOL isWindowVisible = IsWindowVisible(hwnd);
-    if (!CLOCK_COUNT_UP && !CLOCK_SHOW_CURRENT_TIME && 
-        CLOCK_TOTAL_TIME > 0 && countdown_elapsed_time < CLOCK_TOTAL_TIME && isWindowVisible) 
-    {
-        // 显示暂停/继续和重新开始
-        AppendMenuW(hCountdownMenu, MF_STRING,
-            CLOCK_IDM_COUNTDOWN_START_PAUSE,
-            CLOCK_IS_PAUSED ? 
-                GetLocalizedString(L"继续", L"Resume") :
-                GetLocalizedString(L"暂停", L"Pause"));
-        
-        AppendMenuW(hCountdownMenu, MF_STRING,
-            CLOCK_IDM_COUNTDOWN_RESET,
-            GetLocalizedString(L"重新开始", L"Restart"));
-    } else {
-        // 其他情况（显示当前时间/正计时/倒计时未开始/已结束/窗口隐藏）显示开始
-        AppendMenuW(hCountdownMenu, MF_STRING,
-            CLOCK_IDM_COUNTDOWN_START_PAUSE,
-            GetLocalizedString(L"开始", L"Start"));
-    }
-
-    // 修改父菜单项的勾选条件（需要同时满足倒计时激活且进行中且窗口可见）
-    AppendMenuW(hMenu, MF_POPUP | 
-        ((!CLOCK_COUNT_UP && !CLOCK_SHOW_CURRENT_TIME && 
-          CLOCK_TOTAL_TIME > 0 && countdown_elapsed_time < CLOCK_TOTAL_TIME && isWindowVisible) ? 
-            MF_CHECKED : MF_UNCHECKED), 
-        (UINT_PTR)hCountdownMenu,
-        GetLocalizedString(L"倒计时", L"Countdown"));
-
-    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
-
-    for (int i = 0; i < time_options_count; i++) {
-        wchar_t menu_item[20];
-        _snwprintf(menu_item, sizeof(menu_item)/sizeof(wchar_t), L"%d", time_options[i]);
-        AppendMenuW(hMenu, MF_STRING, 102 + i, menu_item);
-    }
-
-
-    POINT pt;
-    GetCursorPos(&pt);
-    SetForegroundWindow(hwnd);
-    TrackPopupMenu(hMenu, TPM_BOTTOMALIGN | TPM_LEFTALIGN, pt.x, pt.y, 0, hwnd, NULL);
-    DestroyMenu(hMenu);
 }
 
 void ShowColorMenu(HWND hwnd) {
