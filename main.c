@@ -30,6 +30,7 @@ pikaへ／|
 #include <shlguid.h>
 #include "include/language.h"
 #include "include/font.h"
+#include "include/color.h"
  
 #ifndef CSIDL_STARTUP
 
@@ -43,15 +44,12 @@ EXTERN_C const CLSID CLSID_ShellLink;
 EXTERN_C const IID IID_IShellLinkW;
 #endif
 
-void InitializeDefaultLanguage(void);
 COLORREF ShowColorDialog(HWND hwnd); 
 UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM lParam);
 void CreateDefaultConfig(const char* config_path);  
 void WriteConfigDefaultStartTime(int seconds); 
 void WriteConfigStartupMode(const char* mode); 
 BOOL IsColorExists(const char* hexColor);
-void AddColorOption(const char* hexColor);
-void ClearColorOptions(void);
 BOOL IsAutoStartEnabled(void);
 BOOL CreateShortcut(void);
 BOOL RemoveShortcut(void);
@@ -70,12 +68,7 @@ int default_countdown_time = 0;
 
 void PauseMediaPlayback(void);
 
-typedef struct {
-    const char* hexColor;
-} PredefinedColor;
-
-PredefinedColor* COLOR_OPTIONS = NULL;
-size_t COLOR_OPTIONS_COUNT = 0;
+// 颜色相关变量已移至color.c
 
 void SetClickThrough(HWND hwnd, BOOL enable);
 
@@ -321,176 +314,7 @@ char* UTF8ToANSI(const char* utf8Str) {
 
 
 
-typedef struct {
-    const char* name;
-    const char* hex;
-} CSSColor;
-
-static const CSSColor CSS_COLORS[] = {
-    {"white", "#FFFFFF"},
-    {"black", "#000000"},
-    {"red", "#FF0000"},
-    {"lime", "#00FF00"},
-    {"blue", "#0000FF"},
-    {"yellow", "#FFFF00"},
-    {"cyan", "#00FFFF"},
-    {"magenta", "#FF00FF"},
-    {"silver", "#C0C0C0"},
-    {"gray", "#808080"},
-    {"maroon", "#800000"},
-    {"olive", "#808000"},
-    {"green", "#008000"},
-    {"purple", "#800080"},
-    {"teal", "#008080"},
-    {"navy", "#000080"},
-    {"orange", "#FFA500"},
-    {"pink", "#FFC0CB"},
-    {"brown", "#A52A2A"},
-    {"violet", "#EE82EE"},
-    {"indigo", "#4B0082"},
-    {"gold", "#FFD700"},
-    {"coral", "#FF7F50"},
-    {"salmon", "#FA8072"},
-    {"khaki", "#F0E68C"},
-    {"plum", "#DDA0DD"},
-    {"azure", "#F0FFFF"},
-    {"ivory", "#FFFFF0"},
-    {"wheat", "#F5DEB3"},
-    {"snow", "#FFFAFA"}
-};
-
-#define CSS_COLORS_COUNT (sizeof(CSS_COLORS) / sizeof(CSS_COLORS[0]))
-
-static const char* DEFAULT_COLOR_OPTIONS[] = {
-    "#FFFFFF",
-    "#F9DB91",
-    "#F4CAE0",
-    "#FFB6C1",
-    "#A8E7DF",
-    "#A3CFB3",
-    "#92CBFC",
-    "#BDA5E7",
-    "#9370DB",
-    "#8C92CF",
-    "#72A9A5",
-    "#EB99A7",
-    "#EB96BD",
-    "#FFAE8B",
-    "#FF7F50",
-    "#CA6174"
-};
-
-#define DEFAULT_COLOR_OPTIONS_COUNT (sizeof(DEFAULT_COLOR_OPTIONS) / sizeof(DEFAULT_COLOR_OPTIONS[0]))
-
-
-#define DEFAULT_COLOR_OPTIONS_COUNT (sizeof(DEFAULT_COLOR_OPTIONS) / sizeof(DEFAULT_COLOR_OPTIONS[0]))
-
-void InitializeDefaultLanguage(void) {
-    LANGID langId = GetUserDefaultUILanguage();
-    WORD primaryLangId = PRIMARYLANGID(langId);
-    WORD subLangId = SUBLANGID(langId);
-    
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    
-    ClearColorOptions();
-    
-    FILE *file = fopen(config_path, "r");
-    if (!file) {
-        CreateDefaultConfig(config_path);
-        file = fopen(config_path, "r");
-    }
-    
-    if (file) {
-        char line[1024];
-        BOOL found_colors = FALSE;
-        
-        while (fgets(line, sizeof(line), file)) {
-            if (strncmp(line, "COLOR_OPTIONS=", 13) == 0) {
-                ClearColorOptions();
-                
-                char* colors = line + 13;
-                while (*colors == '=' || *colors == ' ') {
-                    colors++;
-                }
-                
-                char* newline = strchr(colors, '\n');
-                if (newline) *newline = '\0';
-                
-                char* token = strtok(colors, ",");
-                while (token) {
-                    while (*token == ' ') token++;
-                    char* end = token + strlen(token) - 1;
-                    while (end > token && *end == ' ') {
-                        *end = '\0';
-                        end--;
-                    }
-                    
-                    if (*token) {
-                        if (token[0] != '#') {
-                            char colorWithHash[10];
-                            snprintf(colorWithHash, sizeof(colorWithHash), "#%s", token);
-                            AddColorOption(colorWithHash);
-                        } else {
-                            AddColorOption(token);
-                        }
-                    }
-                    token = strtok(NULL, ",");
-                }
-                found_colors = TRUE;
-                break;
-            }
-        }
-        fclose(file);
-        
-        if (!found_colors || COLOR_OPTIONS_COUNT == 0) {
-            for (size_t i = 0; i < DEFAULT_COLOR_OPTIONS_COUNT; i++) {
-                AddColorOption(DEFAULT_COLOR_OPTIONS[i]);
-            }
-        }
-    }
-}
-
-void AddColorOption(const char* hexColor) {
-    if (!hexColor || !*hexColor) {
-        return;
-    }
-    
-    char normalizedColor[10];
-    const char* hex = (hexColor[0] == '#') ? hexColor + 1 : hexColor;
-    
-    size_t len = strlen(hex);
-    if (len != 6) {
-        return;
-    }
-    
-    for (int i = 0; i < 6; i++) {
-        if (!isxdigit((unsigned char)hex[i])) {
-            return;
-        }
-    }
-    
-    unsigned int color;
-    if (sscanf(hex, "%x", &color) != 1) {
-        return;
-    }
-    
-    snprintf(normalizedColor, sizeof(normalizedColor), "#%06X", color);
-    
-    for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
-        if (strcasecmp(normalizedColor, COLOR_OPTIONS[i].hexColor) == 0) {
-            return;
-        }
-    }
-    
-    PredefinedColor* newArray = realloc(COLOR_OPTIONS, 
-                                      (COLOR_OPTIONS_COUNT + 1) * sizeof(PredefinedColor));
-    if (newArray) {
-        COLOR_OPTIONS = newArray;
-        COLOR_OPTIONS[COLOR_OPTIONS_COUNT].hexColor = _strdup(normalizedColor);
-        COLOR_OPTIONS_COUNT++;
-    }
-}
+// 颜色相关定义已移至color.c
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     HRESULT hr = CoInitialize(NULL);
@@ -666,14 +490,9 @@ void CreateDefaultConfig(const char* config_path) {
         fprintf(file, "CLOCK_USE_24HOUR=FALSE\n");
         fprintf(file, "CLOCK_SHOW_SECONDS=FALSE\n");
 
-        fprintf(file, "COLOR_OPTIONS=");
-        for (size_t i = 0; i < DEFAULT_COLOR_OPTIONS_COUNT; i++) {
-            fprintf(file, "%s", DEFAULT_COLOR_OPTIONS[i]);
-            if (i < DEFAULT_COLOR_OPTIONS_COUNT - 1) {
-                fprintf(file, ",");
-            }
-        }
-        fprintf(file, "\n");
+        // 颜色选项已移至color.c中处理
+        fprintf(file, "COLOR_OPTIONS=#FFFFFF,#F9DB91,#F4CAE0,#FFB6C1,#A8E7DF,#A3CFB3,#92CBFC,#BDA5E7,#9370DB,#8C92CF,#72A9A5,#EB99A7,#EB96BD,#FFAE8B,#FF7F50,#CA6174\n");
+
 
         fclose(file);
     }
@@ -3343,268 +3162,12 @@ void AdjustWindowPosition(HWND hwnd) {
 
 
 
-int isValidColor(const char* input) {
-    if (!input || strlen(input) == 0) return 0;
-    
-    while (isspace(*input)) input++;
-    char* end = (char*)input + strlen(input) - 1;
-    while (end > input && isspace(*end)) end--;
-    size_t len = end - input + 1;
-    
-    char color[32];
-    strncpy(color, input, sizeof(color)-1);
-    color[sizeof(color)-1] = '\0';
-    
-    for (char* p = color; *p; p++) {
-        *p = tolower(*p);
-    }
-    
-    for (size_t i = 0; i < CSS_COLORS_COUNT; i++) {
-        if (strcmp(color, CSS_COLORS[i].name) == 0) {
-            return 1;
-        }
-    }
-    
-    if (color[0] == '#') {
-        if (strlen(color) == 7 || strlen(color) == 4) {
-            for (size_t i = 1; i < strlen(color); i++) {
-                if (!isxdigit((unsigned char)color[i])) {
-                    goto try_rgb;
-                }
-            }
-            return 1;
-        }
-    } else if (strlen(color) == 6 || strlen(color) == 3) {
-        for (size_t i = 0; i < strlen(color); i++) {
-            if (!isxdigit((unsigned char)color[i])) {
-                goto try_rgb;
-            }
-        }
-        return 1;
-    }
-    
-try_rgb:
-    int r = -1, g = -1, b = -1;
-    char* rgb_str = color;
-    
-    if (strncmp(rgb_str, "rgb", 3) == 0) {
-        rgb_str += 3;
-        while (*rgb_str && (*rgb_str == '(' || isspace(*rgb_str))) rgb_str++;
-    }
-    
-    if (sscanf(rgb_str, "%d,%d,%d", &r, &g, &b) == 3 ||
-        sscanf(rgb_str, "%d，%d，%d", &r, &g, &b) == 3 ||
-        sscanf(rgb_str, "%d;%d;%d", &r, &g, &b) == 3 ||
-        sscanf(rgb_str, "%d；%d；%d", &r, &g, &b) == 3 ||
-        sscanf(rgb_str, "%d %d %d", &r, &g, &b) == 3 ||
-        sscanf(rgb_str, "%d|%d|%d", &r, &g, &b) == 3) {
-        
-        return (r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255);
-    }
-    
-    return 0;
-}
+// 使用color.h中声明的isValidColor函数
 
-void normalizeColor(const char* input, char* output, size_t output_size) {
-    while (isspace(*input)) input++;
-    
-    char color[32];
-    strncpy(color, input, sizeof(color)-1);
-    color[sizeof(color)-1] = '\0';
-    for (char* p = color; *p; p++) {
-        *p = tolower(*p);
-    }
-    
-    for (size_t i = 0; i < CSS_COLORS_COUNT; i++) {
-        if (strcmp(color, CSS_COLORS[i].name) == 0) {
-            strncpy(output, CSS_COLORS[i].hex, output_size);
-            return;
-        }
-    }
-    
-    char cleaned[32] = {0};
-    int j = 0;
-    for (int i = 0; color[i]; i++) {
-        if (!isspace(color[i]) && color[i] != ',' && color[i] != '(' && color[i] != ')') {
-            cleaned[j++] = color[i];
-        }
-    }
-    cleaned[j] = '\0';
-    
-    if (cleaned[0] == '#') {
-        memmove(cleaned, cleaned + 1, strlen(cleaned));
-    }
-    
-    if (strlen(cleaned) == 3) {
-        snprintf(output, output_size, "#%c%c%c%c%c%c",
-            cleaned[0], cleaned[0], cleaned[1], cleaned[1], cleaned[2], cleaned[2]);
-        return;
-    }
-    
-    if (strlen(cleaned) == 6 && strspn(cleaned, "0123456789abcdefABCDEF") == 6) {
-        snprintf(output, output_size, "#%s", cleaned);
-        return;
-    }
-    
-    int r = -1, g = -1, b = -1;
-    char* rgb_str = color;
-    
-    if (strncmp(rgb_str, "rgb", 3) == 0) {
-        rgb_str += 3;
-        while (*rgb_str && (*rgb_str == '(' || isspace(*rgb_str))) rgb_str++;
-    }
-    
-    if (sscanf(rgb_str, "%d,%d,%d", &r, &g, &b) == 3 ||
-        sscanf(rgb_str, "%d，%d，%d", &r, &g, &b) == 3 ||
-        sscanf(rgb_str, "%d;%d;%d", &r, &g, &b) == 3 ||
-        sscanf(rgb_str, "%d；%d；%d", &r, &g, &b) == 3 ||
-        sscanf(rgb_str, "%d %d %d", &r, &g, &b) == 3 ||
-        sscanf(rgb_str, "%d|%d|%d", &r, &g, &b) == 3) {
-        
-        if (r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255) {
-            snprintf(output, output_size, "#%02X%02X%02X", r, g, b);
-            return;
-        }
-    }
-    
-    strncpy(output, input, output_size);
-}
+// 使用color.h中声明的normalizeColor函数
 
-WNDPROC g_OldEditProc;
-
-LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-    switch (msg) {
-        case WM_KEYDOWN:
-            if (wParam == 'A' && GetKeyState(VK_CONTROL) < 0) {
-                SendMessage(hwnd, EM_SETSEL, 0, -1);
-                return 0;
-            }
-            if (wParam == VK_RETURN) {
-                HWND hwndDlg = GetParent(hwnd);
-                if (hwndDlg) {
-                    SendMessage(hwndDlg, WM_COMMAND, CLOCK_IDC_BUTTON_OK, 0);
-                    return 0;
-                }
-            }
-            break;
-
-        case WM_CHAR:
-            if (GetKeyState(VK_CONTROL) < 0 && (wParam == 1 || wParam == 'a' || wParam == 'A')) {
-                return 0;
-            }
-            LRESULT result = CallWindowProc(g_OldEditProc, hwnd, msg, wParam, lParam);
-            
-            char color[32];
-            GetWindowTextA(hwnd, color, sizeof(color));
-            
-            char normalized[32];
-            normalizeColor(color, normalized, sizeof(normalized));
-            
-            if (normalized[0] == '#') {
-                strncpy(PREVIEW_COLOR, normalized, sizeof(PREVIEW_COLOR)-1);
-                PREVIEW_COLOR[sizeof(PREVIEW_COLOR)-1] = '\0';
-                IS_COLOR_PREVIEWING = TRUE;
-                
-                HWND hwndMain = GetParent(GetParent(hwnd));
-                InvalidateRect(hwndMain, NULL, TRUE);
-                UpdateWindow(hwndMain);
-            } else {
-                IS_COLOR_PREVIEWING = FALSE;
-                HWND hwndMain = GetParent(GetParent(hwnd));
-                InvalidateRect(hwndMain, NULL, TRUE);
-                UpdateWindow(hwndMain);
-            }
-            
-            return result;
-
-        case WM_PASTE:
-        case WM_CUT: {
-            LRESULT result = CallWindowProc(g_OldEditProc, hwnd, msg, wParam, lParam);
-            
-            char color[32];
-            GetWindowTextA(hwnd, color, sizeof(color));
-            
-            char normalized[32];
-            normalizeColor(color, normalized, sizeof(normalized));
-            
-            if (normalized[0] == '#') {
-                strncpy(PREVIEW_COLOR, normalized, sizeof(PREVIEW_COLOR)-1);
-                PREVIEW_COLOR[sizeof(PREVIEW_COLOR)-1] = '\0';
-                IS_COLOR_PREVIEWING = TRUE;
-            } else {
-                IS_COLOR_PREVIEWING = FALSE;
-            }
-            
-            HWND hwndMain = GetParent(GetParent(hwnd));
-            InvalidateRect(hwndMain, NULL, TRUE);
-            UpdateWindow(hwndMain);
-            
-            return result;
-        }
-    }
-    
-    return CallWindowProc(g_OldEditProc, hwnd, msg, wParam, lParam);
-}
-
-INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
-    switch (msg) {
-        case WM_INITDIALOG: {
-            SetDlgItemTextW(hwndDlg, CLOCK_IDC_STATIC, GetLocalizedString(
-                L"支持：HEX RGB 颜色名字",
-                L"Supported: HEX RGB Color Names"));
-
-            HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
-            if (hwndEdit) {
-                g_OldEditProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, 
-                                                         (LONG_PTR)ColorEditSubclassProc);
-                
-                if (CLOCK_TEXT_COLOR[0] != '\0') {
-                    SetWindowTextA(hwndEdit, CLOCK_TEXT_COLOR);
-                }
-            }
-            return TRUE;
-        }
-        
-        case WM_COMMAND: {
-            if (LOWORD(wParam) == CLOCK_IDC_BUTTON_OK) {
-                char color[32];
-                GetDlgItemTextA(hwndDlg, CLOCK_IDC_EDIT, color, sizeof(color));
-                
-                BOOL isAllSpaces = TRUE;
-                for (int i = 0; color[i]; i++) {
-                    if (!isspace((unsigned char)color[i])) {
-                        isAllSpaces = FALSE;
-                        break;
-                    }
-                }
-                if (color[0] == '\0' || isAllSpaces) {
-                    EndDialog(hwndDlg, IDCANCEL);
-                    return TRUE;
-                }
-                
-                if (isValidColor(color)) {
-                    char normalized_color[10];
-                    normalizeColor(color, normalized_color, sizeof(normalized_color));
-                    strncpy(CLOCK_TEXT_COLOR, normalized_color, sizeof(CLOCK_TEXT_COLOR)-1);
-                    CLOCK_TEXT_COLOR[sizeof(CLOCK_TEXT_COLOR)-1] = '\0';
-                    
-                    WriteConfigColor(CLOCK_TEXT_COLOR);
-                    EndDialog(hwndDlg, IDOK);
-                    return TRUE;
-                } else {
-                    MessageBoxW(hwndDlg, 
-                        GetLocalizedString(
-                            L"支持：HEX RGB 颜色名字",
-                            L"Supported: HEX RGB Color Names"),
-                        GetLocalizedString(L"颜色格式错误", L"Color Format Error"),
-                        MB_OK);
-                }
-            }
-            break;
-        }
-    }
-    return FALSE;
-}
+// Color related functions are moved to color.c
+extern WNDPROC g_OldEditProc;
 
 typedef struct _ACCENTPOLICY {
     int nAccentState;
@@ -4174,14 +3737,6 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT msg, WPARAM wParam, LPARAM
     return 0;
 }
 
-BOOL IsColorExists(const char* hexColor) {
-    for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
-        if (strcmp(COLOR_OPTIONS[i].hexColor, hexColor) == 0) {
-            return TRUE;
-        }
-    }
-    return FALSE;
-}
 
 void ClearColorOptions() {
     if (COLOR_OPTIONS) {
