@@ -4,7 +4,7 @@
 #include "../resource/resource.h"
 #include "../include/tray.h"
 
-NOTIFYICONDATA nid;
+NOTIFYICONDATAA nid;
 
 // 初始化系统托盘图标
 void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
@@ -26,20 +26,17 @@ void RemoveTrayIcon(void) {
 
 // 显示系统托盘通知
 void ShowTrayNotification(HWND hwnd, const char* message) {
-    NOTIFYICONDATA nid_notify = {0};
-    nid_notify.cbSize = sizeof(NOTIFYICONDATA);
+    NOTIFYICONDATAW nid_notify = {0};
+    nid_notify.cbSize = sizeof(NOTIFYICONDATAW);
     nid_notify.hWnd = hwnd;
     nid_notify.uID = CLOCK_ID_TRAY_APP_ICON;
     nid_notify.uFlags = NIF_INFO;
     nid_notify.dwInfoFlags = NIIF_INFO;
     nid_notify.uTimeout = 3000;
     
-    MultiByteToWideChar(CP_UTF8, 0, message, -1, 
-                        (LPWSTR)nid_notify.szInfo, 
-                        sizeof(nid_notify.szInfo)/sizeof(WCHAR));
-    MultiByteToWideChar(CP_UTF8, 0, "Catime", -1, 
-                        (LPWSTR)nid_notify.szInfoTitle, 
-                        sizeof(nid_notify.szInfoTitle)/sizeof(WCHAR));
+    // 正确处理Unicode字符串转换
+    MultiByteToWideChar(CP_UTF8, 0, message, -1, nid_notify.szInfo, sizeof(nid_notify.szInfo)/sizeof(WCHAR));
+    MultiByteToWideChar(CP_UTF8, 0, "Catime", -1, nid_notify.szInfoTitle, sizeof(nid_notify.szInfoTitle)/sizeof(WCHAR));
     
-    Shell_NotifyIcon(NIM_MODIFY, &nid_notify);
+    Shell_NotifyIconW(NIM_MODIFY, &nid_notify);
 }
