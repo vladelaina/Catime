@@ -56,7 +56,7 @@ BOOL IsAutoStartEnabled(void);
 BOOL CreateShortcut(void);
 BOOL RemoveShortcut(void);
 void WriteConfig(const char* config_path);
-
+void ShowToastNotification(HWND hwnd, const char* message);
 
 
 BOOL CLOCK_IS_PAUSED = FALSE;
@@ -202,7 +202,7 @@ TimeoutActionType CLOCK_TIMEOUT_ACTION;
 
 char inputText[256] = {0};
 static int elapsed_time = 0;
-static int CLOCK_TOTAL_TIME = 0;
+int CLOCK_TOTAL_TIME = 0;
 time_t last_config_time = 0;
 int message_shown = 0;
 char CLOCK_TIMEOUT_TEXT[50] = "";
