@@ -116,7 +116,7 @@
 
 <div align="center">
 
-Copyright © 2024 - **Catime**\
+Copyright © 2025 - **Catime**\
 By vladelaina\
 Made with ❤️ & ⌨️
 
