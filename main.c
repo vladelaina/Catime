@@ -32,6 +32,7 @@ pikaへ／|
 #include "include/font.h"
 #include "include/color.h"
 #include "include/tray.h"
+#include "include/tray_menu.h"
  
 #ifndef CSIDL_STARTUP
 
