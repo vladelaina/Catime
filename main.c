@@ -31,6 +31,7 @@ pikaへ／|
 #include "include/language.h"
 #include "include/font.h"
 #include "include/color.h"
+#include "include/tray.h"
  
 #ifndef CSIDL_STARTUP
 
@@ -201,7 +202,6 @@ TimeoutActionType CLOCK_TIMEOUT_ACTION;
 char inputText[256] = {0};
 static int elapsed_time = 0;
 static int CLOCK_TOTAL_TIME = 0;
-NOTIFYICONDATA nid;
 time_t last_config_time = 0;
 int message_shown = 0;
 char CLOCK_TIMEOUT_TEXT[50] = "";
@@ -390,15 +390,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     SetBlurBehind(hwnd, FALSE);
 
-    memset(&nid, 0, sizeof(nid));
-    nid.cbSize = sizeof(nid);
-    nid.uID = CLOCK_ID_TRAY_APP_ICON;
-    nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
-    nid.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_CATIME));
-    nid.hWnd = hwnd;
-    nid.uCallbackMessage = CLOCK_WM_TRAYICON;
-    strcpy(nid.szTip, "Catime");
-    Shell_NotifyIcon(NIM_ADD, &nid);
+    InitTrayIcon(hwnd, hInstance);
 
     if (SetTimer(hwnd, 1, 1000, NULL) == 0) {
     }
@@ -1179,7 +1171,7 @@ void FormatTime(int remaining_time, char* time_text) {
 }
 
 void ExitProgram(HWND hwnd) {
-    Shell_NotifyIcon(NIM_DELETE, &nid);
+    RemoveTrayIcon();
 
     PostQuitMessage(0);
 }
@@ -3393,24 +3385,14 @@ void SaveRecentFile(const char* filePath) {
 }
 
 void ShowToastNotification(HWND hwnd, const char* message) {
-    nid.uFlags = NIF_INFO;
-    nid.dwInfoFlags = NIIF_NONE;
-    
     const wchar_t* timeUpMsg = GetLocalizedString(L"时间到了!", L"Time's up!");
-    wchar_t wTimeUpMsg[64];
-    wcscpy(wTimeUpMsg, timeUpMsg);
+    // 将wchar_t*转换为char*
+    int size_needed = WideCharToMultiByte(CP_UTF8, 0, timeUpMsg, -1, NULL, 0, NULL, NULL);
+    char* utf8Msg = (char*)malloc(size_needed);
+    WideCharToMultiByte(CP_UTF8, 0, timeUpMsg, -1, utf8Msg, size_needed, NULL, NULL);
     
-    WideCharToMultiByte(CP_ACP, 0, wTimeUpMsg, -1, 
-                        nid.szInfo, sizeof(nid.szInfo), NULL, NULL);
-    
-    nid.szInfoTitle[0] = '\0';
-    nid.uTimeout = 10000;
-
-    Shell_NotifyIcon(NIM_MODIFY, &nid);
-
-    nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
-    nid.szInfo[0] = '\0';
-    nid.szInfoTitle[0] = '\0';
+    ShowTrayNotification(hwnd, utf8Msg);
+    free(utf8Msg);
 }
 
 void WriteConfig(const char* config_path) {
