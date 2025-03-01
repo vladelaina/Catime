@@ -12,8 +12,9 @@ SRC_LANG = src/language.c
 SRC_FONT = src/font.c
 SRC_COLOR = src/color.c
 SRC_TRAY = src/tray.c
+SRC_TRAY_MENU = src/tray_menu.c
 RC_FILE = resource/resource.rc
-OBJ_FILES = main.o language.o font.o color.o tray.o
+OBJ_FILES = main.o language.o font.o color.o tray.o tray_menu.o
 
 # 创建目标文件夹和资源文件夹
 $(shell mkdir -p $(OUTPUT_DIR) $(ASSET_DIR))
@@ -53,9 +54,13 @@ color.o: src/color.c
 tray.o: src/tray.c
 	@$(CC) -c src/tray.c -o tray.o $(CFLAGS)
 
+# 编译托盘菜单模块
+tray_menu.o: src/tray_menu.c
+	@$(CC) -c src/tray_menu.c -o tray_menu.o $(CFLAGS)
+
 # 链接编译目标文件，输出到输出目录
 $(OUTPUT_DIR)/catime.exe: $(OBJ_FILES) resource.o
-	@$(CC) -o $(OUTPUT_DIR)/catime.exe main.o language.o font.o color.o tray.o resource.o $(CFLAGS) $(LDFLAGS)
+	@$(CC) -o $(OUTPUT_DIR)/catime.exe main.o language.o font.o color.o tray.o tray_menu.o resource.o $(CFLAGS) $(LDFLAGS)
 
 # 清理构建文件
 clean:
