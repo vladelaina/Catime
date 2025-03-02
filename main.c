@@ -63,7 +63,7 @@ int default_countdown_time = 0;
 
 void PauseMediaPlayback(void);
 
-// 颜色相关变量声明
+
 extern char PREVIEW_COLOR[10];
 extern BOOL IS_COLOR_PREVIEWING;
 extern char CLOCK_TEXT_COLOR[10];
@@ -161,10 +161,10 @@ void SetBlurBehind(HWND hwnd, BOOL enable);
 
 
 
-// 时间选项已移至timer.c中定义
 
-// CLOCK_TEXT_COLOR已在color.c中定义
-// 计时器状态已移至timer.c中定义
+
+
+
 int CLOCK_BASE_WINDOW_WIDTH = 200;
 int CLOCK_BASE_WINDOW_HEIGHT = 100;
 float CLOCK_WINDOW_SCALE = 1.0f;
@@ -183,18 +183,18 @@ BOOL CLOCK_TEXT_RECT_VALID = FALSE;
 
 BOOL OpenFileDialog(HWND hwnd, char* filePath, DWORD maxPath);
 
-// 超时动作类型已移至timer.c中定义
 
-// 超时动作相关已移至timer.c中定义
+
+
 
 char inputText[256] = {0};
 static int elapsed_time = 0;
-// 计时器时间已移至timer.c中定义
+
 time_t last_config_time = 0;
 int message_shown = 0;
-// 超时动作相关已移至timer.c中定义
 
-// Font related variables and functions are moved to font.c
+
+
 extern char FONT_FILE_NAME[];
 extern char FONT_INTERNAL_NAME[];
 
@@ -215,14 +215,14 @@ void WriteConfigFont(const char* font_file_name);
 void WriteConfigTimeoutAction(const char* action);
 void WriteConfigEditMode(const char* mode);
 void WriteConfigTimeOptions(const char* options);   
-// FormatTime函数已移至timer.c中定义
+
 void ExitProgram(HWND hwnd);
-// 托盘菜单相关函数已移至tray_menu.c，通过include "include/tray_menu.h"引入
+
 void ListAvailableFonts();
 void SetBlurBehind(HWND hwnd, BOOL enable);
 void AdjustWindowPosition(HWND hwnd);
-// isValidInput函数已移至timer.c中定义
-// ParseInput函数已移至timer.c中定义
+
+
 int isValidColor(const char* input);
 INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 int CALLBACK EnumFontFamExProc(
@@ -243,14 +243,14 @@ int CLOCK_RECENT_FILES_COUNT = 0;
 
  
 
-// Font preview variables are moved to font.c
+
 extern char PREVIEW_FONT_NAME[];
 extern char PREVIEW_INTERNAL_NAME[];
 extern BOOL IS_PREVIEWING;
 
-// PREVIEW_COLOR和IS_COLOR_PREVIEWING已在color.c中定义
 
-// 托盘菜单相关函数已移至tray_menu.c
+
+
 
 
 
@@ -294,7 +294,7 @@ char* UTF8ToANSI(const char* utf8Str) {
 
 
 
-// 颜色相关定义已移至color.c
+
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     HRESULT hr = CoInitialize(NULL);
@@ -319,7 +319,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     }
     
     if (defaultFontIndex != -1) {
-        // 直接加载字体，不显示错误消息
+        
         LoadFontFromResource(hInstance, fontResources[defaultFontIndex].resourceId);
     }
 
@@ -395,15 +395,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         elapsed_time = 0;
     } else if (strcmp(CLOCK_STARTUP_MODE, "NO_DISPLAY") == 0) {
         ShowWindow(hwnd, SW_HIDE);
-        // More comprehensive fix to disable all timer behavior
+        
         KillTimer(hwnd, 1);
-        elapsed_time = CLOCK_TOTAL_TIME;          // Set elapsed time to total time to prevent countdown
-        CLOCK_IS_PAUSED = TRUE;                   // Pause the timer
-        message_shown = TRUE;                     // Prevent "Time's up!" notification
-        countdown_message_shown = TRUE;           // Prevent countdown notification
-        countup_message_shown = TRUE;             // Prevent countup notification
-        countdown_elapsed_time = 0;               // Reset countdown elapsed time
-        countup_elapsed_time = 0;                 // Reset countup elapsed time
+        elapsed_time = CLOCK_TOTAL_TIME;          
+        CLOCK_IS_PAUSED = TRUE;                   
+        message_shown = TRUE;                     
+        countdown_message_shown = TRUE;           
+        countup_message_shown = TRUE;             
+        countdown_elapsed_time = 0;               
+        countup_elapsed_time = 0;                 
     } else if (strcmp(CLOCK_STARTUP_MODE, "SHOW_TIME") == 0) {
         CLOCK_SHOW_CURRENT_TIME = TRUE;
         CLOCK_LAST_TIME_UPDATE = 0;
@@ -448,11 +448,11 @@ void GetConfigPath(char* path, size_t size) {
 void CreateDefaultConfig(const char* config_path) {
     FILE *file = fopen(config_path, "w");
     if (file) {
-        fprintf(file, "FONT_FILE_NAME=Wallpoet Essence.ttf\n");  // 修改默认字体
+        fprintf(file, "FONT_FILE_NAME=Wallpoet Essence.ttf\n");  
         fprintf(file, "CLOCK_TEXT_COLOR=#FFB6C1\n");
         fprintf(file, "CLOCK_BASE_FONT_SIZE=20\n");
-        fprintf(file, "CLOCK_WINDOW_POS_X=960\n");  //默认位置的x
-        fprintf(file, "CLOCK_WINDOW_POS_Y=-1\n");   //默认位置的y
+        fprintf(file, "CLOCK_WINDOW_POS_X=960\n");  
+        fprintf(file, "CLOCK_WINDOW_POS_Y=-1\n");   
         fprintf(file, "WINDOW_SCALE=1.62\n");
         fprintf(file, "CLOCK_DEFAULT_START_TIME=1500\n");
         fprintf(file, "CLOCK_TIME_OPTIONS=25,10,5\n");
@@ -462,7 +462,7 @@ void CreateDefaultConfig(const char* config_path) {
         fprintf(file, "CLOCK_USE_24HOUR=FALSE\n");
         fprintf(file, "CLOCK_SHOW_SECONDS=FALSE\n");
 
-        // 颜色选项已移至color.c中处理
+        
         fprintf(file, "COLOR_OPTIONS=#FFFFFF,#F9DB91,#F4CAE0,#FFB6C1,#A8E7DF,#A3CFB3,#92CBFC,#BDA5E7,#9370DB,#8C92CF,#72A9A5,#EB99A7,#EB96BD,#FFAE8B,#FF7F50,#CA6174\n");
 
 
@@ -772,7 +772,7 @@ void ReadConfig() {
     LoadRecentFiles();
 }
 
-// WriteConfigColor function has been moved to color.c
+
 
 
 
@@ -1214,16 +1214,16 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     textSize.cy != (rect.bottom - rect.top)) {
                     RECT windowRect;
                     GetWindowRect(hwnd, &windowRect);
-                    // 在原有文本大小基础上四周各增加20px
+                    
                     SetWindowPos(hwnd, NULL,
                         windowRect.left, windowRect.top,
-                        textSize.cx + WINDOW_HORIZONTAL_PADDING, // 左右各增加20px
-                        textSize.cy + WINDOW_VERTICAL_PADDING, // 上下各增加20px
+                        textSize.cx + WINDOW_HORIZONTAL_PADDING, 
+                        textSize.cy + WINDOW_VERTICAL_PADDING, 
                         SWP_NOZORDER | SWP_NOACTIVATE);
                     GetClientRect(hwnd, &rect);
                 }
 
-                // 调整文本绘制位置，使其在增大的窗口中居中
+                
                 int x = (rect.right - textSize.cx) / 2;
                 int y = (rect.bottom - textSize.cy) / 2;
 
@@ -1342,13 +1342,13 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             CLOCK_COUNT_UP = FALSE;
                             CLOCK_SHOW_CURRENT_TIME = FALSE;
                             
-                            // Reset all NO_DISPLAY related state variables for current session only
-                            CLOCK_IS_PAUSED = FALSE;      // Unpause the timer
-                            elapsed_time = 0;             // Reset the elapsed time
-                            message_shown = FALSE;        // Reset message flags
+                            
+                            CLOCK_IS_PAUSED = FALSE;      
+                            elapsed_time = 0;             
+                            message_shown = FALSE;        
                             countup_message_shown = FALSE;
                             
-                            // Show the window when a time is set
+                            
                             ShowWindow(hwnd, SW_SHOW);
                             InvalidateRect(hwnd, NULL, TRUE);
                             SetTimer(hwnd, 1, 1000, NULL);
@@ -1518,7 +1518,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     
                     HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
                     for (int i = 0; i < FONT_RESOURCES_COUNT; i++) {
-                        if (strcmp(fontResources[i].fontName, "Wallpoet Essence.ttf") == 0) {  // 修复拼写错误
+                        if (strcmp(fontResources[i].fontName, "Wallpoet Essence.ttf") == 0) {  
                             LoadFontFromResource(hInstance, fontResources[i].resourceId);
                             break;
                         }
@@ -1761,7 +1761,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     }
                 }
                 case CLOCK_IDC_EDIT_MODE: {
-                    // 这里确保只有在特定条件下才进入编辑模式
+                    
                     if (!IS_PREVIEWING && !IS_COLOR_PREVIEWING) {
                         CLOCK_EDIT_MODE = !CLOCK_EDIT_MODE;
                         WriteConfigEditMode(CLOCK_EDIT_MODE ? "TRUE" : "FALSE");
@@ -1822,7 +1822,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     WriteConfigFont("Creepster Essence.ttf");
                     goto refresh_window;
                 }
-                case CLOCK_IDC_FONT_DOTO: {  // 添加这个case
+                case CLOCK_IDC_FONT_DOTO: {  
                     WriteConfigFont("Doto ExtraBold Essence.ttf");
                     goto refresh_window;
                 }
@@ -1973,9 +1973,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDM_SHOW_CURRENT_TIME: {  
                     CLOCK_SHOW_CURRENT_TIME = !CLOCK_SHOW_CURRENT_TIME;
                     if (CLOCK_SHOW_CURRENT_TIME) {
-                        // 新增：强制显示窗口
-                        ShowWindow(hwnd, SW_SHOW);  // 添加这行
-                        // 关闭番茄钟
+                        
+                        ShowWindow(hwnd, SW_SHOW);  
+                        
                         CLOCK_COUNT_UP = FALSE;
                         KillTimer(hwnd, 1);   
                         elapsed_time = 0;
@@ -2138,7 +2138,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         CLOCK_SHOW_CURRENT_TIME = FALSE;
                         CLOCK_IS_PAUSED = FALSE;
                         
-                        // Reset the countdown-related flags that might be set by NO_DISPLAY mode
+                        
                         elapsed_time = 0;
                         message_shown = FALSE;
                         countdown_message_shown = FALSE;
@@ -2146,10 +2146,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         countup_elapsed_time = 0;
                         countup_message_shown = FALSE;
                         
-                        // Make sure the window is visible
+                        
                         ShowWindow(hwnd, SW_SHOW);
                         
-                        // Restart the timer
+                        
                         KillTimer(hwnd, 1);
                         SetTimer(hwnd, 1, 1000, NULL);
                     } else {
@@ -2164,7 +2164,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_COUNT_UP_RESET: {
-                    countup_elapsed_time = 0;  // 正计时使用自己的计时变量
+                    countup_elapsed_time = 0;  
                     CLOCK_IS_PAUSED = FALSE;
                     KillTimer(hwnd, 1);
                     SetTimer(hwnd, 1, 1000, NULL);
@@ -2177,10 +2177,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc);
 
                         if (inputText[0] == '\0') {
-                            // Only set the startup mode for next launch, don't switch immediately
+                            
                             WriteConfigStartupMode("COUNTDOWN");
                             
-                            // Update menu checkmarks to show the selected startup mode
+                            
                             HMENU hMenu = GetMenu(hwnd);
                             HMENU hTimeOptionsMenu = GetSubMenu(hMenu, GetMenuItemCount(hMenu) - 2);
                             HMENU hStartupSettingsMenu = GetSubMenu(hTimeOptionsMenu, 0);
@@ -2194,15 +2194,15 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
                         int total_seconds = 0;
                         if (ParseInput(inputText, &total_seconds)) {
-                            // Set the default start time and startup mode for next launch
+                            
                             WriteConfigDefaultStartTime(total_seconds);
                             WriteConfigStartupMode("COUNTDOWN");
                             
-                            // Just update the configuration without reloading it
-                            // and without switching to countdown mode immediately
+                            
+                            
                             CLOCK_DEFAULT_START_TIME = total_seconds;
                             
-                            // Update menu checkmarks
+                            
                             HMENU hMenu = GetMenu(hwnd);
                             HMENU hTimeOptionsMenu = GetSubMenu(hMenu, GetMenuItemCount(hMenu) - 2);
                             HMENU hStartupSettingsMenu = GetSubMenu(hTimeOptionsMenu, 0);
@@ -2252,7 +2252,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDC_START_NO_DISPLAY: {
                     WriteConfigStartupMode("NO_DISPLAY");
-                    // Only hide the window when specifically selecting the No Display option
+                    
                     ShowWindow(hwnd, SW_HIDE);
                     HMENU hMenu = GetMenu(hwnd);
                     HMENU hTimeOptionsMenu = GetSubMenu(hMenu, GetMenuItemCount(hMenu) - 2);
@@ -2293,7 +2293,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_COUNTDOWN_START_PAUSE: {
                     if (!IsWindowVisible(hwnd)) {
-                        // If window is hidden, make it visible when starting countdown
+                        
                         ShowWindow(hwnd, SW_SHOW);
                     }
                     
@@ -2302,20 +2302,20 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         countdown_elapsed_time = 0;
                         CLOCK_IS_PAUSED = FALSE;
                     } else if (!CLOCK_SHOW_CURRENT_TIME) {
-                        // Toggle pause state for countdown
+                        
                         CLOCK_IS_PAUSED = !CLOCK_IS_PAUSED;
                     } else {
-                        // Switching from "Show Current Time" to countdown
+                        
                         CLOCK_SHOW_CURRENT_TIME = FALSE;
                         countdown_elapsed_time = 0;
                         CLOCK_IS_PAUSED = FALSE;
                     }
                     
-                    // Add these lines to ensure timer is restarted when coming from "NO_DISPLAY" mode
+                    
                     KillTimer(hwnd, 1); 
                     SetTimer(hwnd, 1, 1000, NULL);
                     
-                    // Reset all state variables that might have been set by NO_DISPLAY mode
+                    
                     elapsed_time = 0;
                     message_shown = FALSE;
                     countdown_message_shown = FALSE;
@@ -2325,11 +2325,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_COUNTDOWN_RESET: {
-                    // 添加显示窗口的代码
+                    
                     ShowWindow(hwnd, SW_SHOW);
                     
-                    // 修改这里：使用正确的倒计时变量
-                    countdown_elapsed_time = 0;  // 原先是 elapsed_time = 0
+                    
+                    countdown_elapsed_time = 0;  
                     CLOCK_IS_PAUSED = FALSE;
                     KillTimer(hwnd, 1);
                     SetTimer(hwnd, 1, 1000, NULL);
@@ -2498,7 +2498,7 @@ void AdjustWindowPosition(HWND hwnd) {
     int newX = windowRect.left;
     int newY = windowRect.top;
     
-    // 移除窗口位置限制的代码，让窗口可以完全移出屏幕
+    
     if (newX != windowRect.left || newY != windowRect.top) {
         SetWindowPos(hwnd, NULL, 
             newX, newY,
@@ -2510,11 +2510,11 @@ void AdjustWindowPosition(HWND hwnd) {
 
 
 
-// 使用color.h中声明的isValidColor函数
 
-// 使用color.h中声明的normalizeColor函数
 
-// Color related functions are moved to color.c
+
+
+
 extern WNDPROC g_OldEditProc;
 
 typedef struct _ACCENTPOLICY {
@@ -2799,7 +2799,7 @@ void SaveRecentFile(const char* filePath) {
 
 void ShowToastNotification(HWND hwnd, const char* message) {
     const wchar_t* timeUpMsg = GetLocalizedString(L"时间到了!", L"Time's up!");
-    // 将wchar_t*转换为char*
+    
     int size_needed = WideCharToMultiByte(CP_UTF8, 0, timeUpMsg, -1, NULL, 0, NULL, NULL);
     char* utf8Msg = (char*)malloc(size_needed);
     WideCharToMultiByte(CP_UTF8, 0, timeUpMsg, -1, utf8Msg, size_needed, NULL, NULL);
@@ -3076,9 +3076,9 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT msg, WPARAM wParam, LPARAM
 }
 
 
-// ClearColorOptions function has been moved to color.c
 
-// WriteConfigDefaultStartTime and WriteConfigStartupMode functions have been moved to timer.c
+
+
 
 BOOL IsAutoStartEnabled(void) {
     wchar_t startupPath[MAX_PATH];
