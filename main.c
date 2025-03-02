@@ -33,6 +33,7 @@ pikaへ／|
 #include "include/color.h"
 #include "include/tray.h"
 #include "include/tray_menu.h"
+#include "include/timer.h"
  
 #ifndef CSIDL_STARTUP
 
@@ -49,8 +50,6 @@ EXTERN_C const IID IID_IShellLinkW;
 COLORREF ShowColorDialog(HWND hwnd); 
 UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM lParam);
 void CreateDefaultConfig(const char* config_path);  
-void WriteConfigDefaultStartTime(int seconds); 
-void WriteConfigStartupMode(const char* mode); 
 BOOL IsColorExists(const char* hexColor);
 BOOL IsAutoStartEnabled(void);
 BOOL CreateShortcut(void);
@@ -59,7 +58,6 @@ void WriteConfig(const char* config_path);
 void ShowToastNotification(HWND hwnd, const char* message);
 
 
-#include "include/timer.h"
 
 int default_countdown_time = 0;
 
@@ -163,10 +161,10 @@ void SetBlurBehind(HWND hwnd, BOOL enable);
 
 
 
-int time_options[MAX_TIME_OPTIONS];
-int time_options_count = 0;
+// 时间选项已移至timer.c中定义
 
 // CLOCK_TEXT_COLOR已在color.c中定义
+// 计时器状态已移至timer.c中定义
 int CLOCK_BASE_WINDOW_WIDTH = 200;
 int CLOCK_BASE_WINDOW_HEIGHT = 100;
 float CLOCK_WINDOW_SCALE = 1.0f;
@@ -185,23 +183,16 @@ BOOL CLOCK_TEXT_RECT_VALID = FALSE;
 
 BOOL OpenFileDialog(HWND hwnd, char* filePath, DWORD maxPath);
 
-typedef enum {
-    TIMEOUT_ACTION_MESSAGE = 0,
-    TIMEOUT_ACTION_LOCK = 1,
-    TIMEOUT_ACTION_SHUTDOWN = 2,
-    TIMEOUT_ACTION_RESTART = 3,
-    TIMEOUT_ACTION_OPEN_FILE = 4   
-} TimeoutActionType;
+// 超时动作类型已移至timer.c中定义
 
-TimeoutActionType CLOCK_TIMEOUT_ACTION;
+// 超时动作相关已移至timer.c中定义
 
 char inputText[256] = {0};
 static int elapsed_time = 0;
-int CLOCK_TOTAL_TIME = 0;
+// 计时器时间已移至timer.c中定义
 time_t last_config_time = 0;
 int message_shown = 0;
-char CLOCK_TIMEOUT_TEXT[50] = "";
-char CLOCK_TIMEOUT_FILE_PATH[MAX_PATH] = "";   
+// 超时动作相关已移至timer.c中定义
 
 // Font related variables and functions are moved to font.c
 extern char FONT_FILE_NAME[];
@@ -224,14 +215,14 @@ void WriteConfigFont(const char* font_file_name);
 void WriteConfigTimeoutAction(const char* action);
 void WriteConfigEditMode(const char* mode);
 void WriteConfigTimeOptions(const char* options);   
-void FormatTime(int remaining_time, char* time_text);
+// FormatTime函数已移至timer.c中定义
 void ExitProgram(HWND hwnd);
 // 托盘菜单相关函数已移至tray_menu.c，通过include "include/tray_menu.h"引入
 void ListAvailableFonts();
 void SetBlurBehind(HWND hwnd, BOOL enable);
 void AdjustWindowPosition(HWND hwnd);
-int isValidInput(const char* input);
-int ParseInput(const char* input, int* total_seconds);
+// isValidInput函数已移至timer.c中定义
+// ParseInput函数已移至timer.c中定义
 int isValidColor(const char* input);
 INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 int CALLBACK EnumFontFamExProc(
@@ -3087,95 +3078,7 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT msg, WPARAM wParam, LPARAM
 
 // ClearColorOptions function has been moved to color.c
 
-void WriteConfigDefaultStartTime(int seconds) {
-    char config_path[MAX_PATH];
-    char temp_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    snprintf(temp_path, MAX_PATH, "%s.tmp", config_path);
-    FILE *file, *temp_file;
-    char line[256];
-    int found = 0;
-    
-    file = fopen(config_path, "r");
-    temp_file = fopen(temp_path, "w");
-    
-    if (!file || !temp_file) {
-        if (file) fclose(file);
-        if (temp_file) fclose(temp_file);
-        return;
-    }
-    
-    while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, "CLOCK_DEFAULT_START_TIME=", 24) == 0) {
-            fprintf(temp_file, "CLOCK_DEFAULT_START_TIME=%d\n", seconds);
-            found = 1;
-        } else {
-            fputs(line, temp_file);
-        }
-    }
-    
-    if (!found) {
-        fprintf(temp_file, "CLOCK_DEFAULT_START_TIME=%d\n", seconds);
-    }
-    
-    fclose(file);
-    fclose(temp_file);
-    
-    remove(config_path);
-    rename(temp_path, config_path);
-}
-
-void WriteConfigStartupMode(const char* mode) {
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    
-    FILE *file = fopen(config_path, "r");
-    if (!file) return;
-    
-    char *config_content = NULL;
-    long file_size;
-    
-    fseek(file, 0, SEEK_END);
-    file_size = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    
-    config_content = (char *)malloc(file_size + 256);
-    if (!config_content) {
-        fclose(file);
-        return;
-    }
-    
-    size_t bytes_read = fread(config_content, 1, file_size, file);
-    config_content[bytes_read] = '\0';
-    fclose(file);
-    
-    char *new_config = (char *)malloc(strlen(config_content) + 256);
-    if (!new_config) {
-        free(config_content);
-        return;
-    }
-    new_config[0] = '\0';
-    
-    char *line = strtok(config_content, "\n");
-    while (line) {
-        if (strncmp(line, "STARTUP_MODE=", 13) != 0) {
-            strcat(new_config, line);
-            strcat(new_config, "\n");
-        }
-        line = strtok(NULL, "\n");
-    }
-    
-    snprintf(new_config + strlen(new_config), 256, "STARTUP_MODE=%s\n", mode);
-    
-    file = fopen(config_path, "w");
-    if (file) {
-        fputs(new_config, file);
-        fclose(file);
-    }
-    
-    free(config_content);
-    free(new_config);
-}
+// WriteConfigDefaultStartTime and WriteConfigStartupMode functions have been moved to timer.c
 
 BOOL IsAutoStartEnabled(void) {
     wchar_t startupPath[MAX_PATH];

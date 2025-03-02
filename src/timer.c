@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <windows.h>
+#include <shellapi.h>
 
 // 计时器状态
 BOOL CLOCK_IS_PAUSED = FALSE;
@@ -13,7 +15,7 @@ BOOL CLOCK_COUNT_UP = FALSE;
 char CLOCK_STARTUP_MODE[20] = "COUNTDOWN";
 
 // 计时器时间
-extern int CLOCK_TOTAL_TIME;
+int CLOCK_TOTAL_TIME = 0;
 int countdown_elapsed_time = 0;
 int countup_elapsed_time = 0;
 time_t CLOCK_LAST_TIME_UPDATE = 0;
@@ -21,6 +23,15 @@ time_t CLOCK_LAST_TIME_UPDATE = 0;
 // 消息状态
 BOOL countdown_message_shown = FALSE;
 BOOL countup_message_shown = FALSE;
+
+// 超时动作相关
+TimeoutActionType CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
+char CLOCK_TIMEOUT_TEXT[50] = "";
+char CLOCK_TIMEOUT_FILE_PATH[MAX_PATH] = "";
+
+// 时间选项
+int time_options[MAX_TIME_OPTIONS];
+int time_options_count = 0;
 
 void FormatTime(int remaining_time, char* time_text) {
     if (CLOCK_SHOW_CURRENT_TIME) {
@@ -191,4 +202,96 @@ int isValidInput(const char* input) {
     }
 
     return 1;
+}
+
+void WriteConfigDefaultStartTime(int seconds) {
+    char config_path[MAX_PATH];
+    char temp_path[MAX_PATH];
+    
+    // 获取配置文件路径
+    char* appdata_path = getenv("LOCALAPPDATA");
+    if (appdata_path) {
+        snprintf(config_path, MAX_PATH, "%s\\Catime\\config.txt", appdata_path);
+        snprintf(temp_path, MAX_PATH, "%s\\Catime\\config.txt.tmp", appdata_path);
+    } else {
+        strcpy(config_path, ".\\asset\\config.txt");
+        strcpy(temp_path, ".\\asset\\config.txt.tmp");
+    }
+    
+    FILE* file = fopen(config_path, "r");
+    FILE* temp = fopen(temp_path, "w");
+    
+    if (!file || !temp) {
+        if (file) fclose(file);
+        if (temp) fclose(temp);
+        return;
+    }
+    
+    char line[256];
+    int found = 0;
+    
+    while (fgets(line, sizeof(line), file)) {
+        if (strncmp(line, "CLOCK_DEFAULT_START_TIME=", 25) == 0) {
+            fprintf(temp, "CLOCK_DEFAULT_START_TIME=%d\n", seconds);
+            found = 1;
+        } else {
+            fputs(line, temp);
+        }
+    }
+    
+    if (!found) {
+        fprintf(temp, "CLOCK_DEFAULT_START_TIME=%d\n", seconds);
+    }
+    
+    fclose(file);
+    fclose(temp);
+    
+    remove(config_path);
+    rename(temp_path, config_path);
+}
+
+void WriteConfigStartupMode(const char* mode) {
+    char config_path[MAX_PATH];
+    char temp_path[MAX_PATH];
+    
+    // 获取配置文件路径
+    char* appdata_path = getenv("LOCALAPPDATA");
+    if (appdata_path) {
+        snprintf(config_path, MAX_PATH, "%s\\Catime\\config.txt", appdata_path);
+        snprintf(temp_path, MAX_PATH, "%s\\Catime\\config.txt.tmp", appdata_path);
+    } else {
+        strcpy(config_path, ".\\asset\\config.txt");
+        strcpy(temp_path, ".\\asset\\config.txt.tmp");
+    }
+    
+    FILE* file = fopen(config_path, "r");
+    FILE* temp = fopen(temp_path, "w");
+    
+    if (!file || !temp) {
+        if (file) fclose(file);
+        if (temp) fclose(temp);
+        return;
+    }
+    
+    char line[256];
+    int found = 0;
+    
+    while (fgets(line, sizeof(line), file)) {
+        if (strncmp(line, "STARTUP_MODE=", 13) == 0) {
+            fprintf(temp, "STARTUP_MODE=%s\n", mode);
+            found = 1;
+        } else {
+            fputs(line, temp);
+        }
+    }
+    
+    if (!found) {
+        fprintf(temp, "STARTUP_MODE=%s\n", mode);
+    }
+    
+    fclose(file);
+    fclose(temp);
+    
+    remove(config_path);
+    rename(temp_path, config_path);
 }
