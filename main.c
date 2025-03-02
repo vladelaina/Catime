@@ -3073,11 +3073,6 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT msg, WPARAM wParam, LPARAM
     return 0;
 }
 
-
-
-
-
-
 BOOL IsAutoStartEnabled(void) {
     wchar_t startupPath[MAX_PATH];
     wchar_t shortcutPath[MAX_PATH];
