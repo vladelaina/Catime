@@ -2537,47 +2537,22 @@ typedef struct _WINCOMPATTR {
 void SetBlurBehind(HWND hwnd, BOOL enable) {
     if (!hwnd) return;
 
-    static BOOL dwmInitialized = FALSE;
-    static BOOL dwmAvailable = FALSE;
-    
-    if (!dwmInitialized) {
-        dwmInitialized = TRUE;
-        dwmAvailable = InitDWMFunctions();
-    }
-    
-    BOOL success = FALSE;
-    
-    if (dwmAvailable && _DwmEnableBlurBehindWindow) {
-        if (enable) {
-            DWM_BLURBEHIND bb = {0};
-            bb.dwFlags = DWM_BB_ENABLE;
-            bb.fEnable = TRUE;
-            bb.hRgnBlur = NULL;
-            
-            HRESULT hr = _DwmEnableBlurBehindWindow(hwnd, &bb);
-            if (SUCCEEDED(hr)) {
-                success = TRUE;
-                SetLayeredWindowAttributes(hwnd, 0, BLUR_OPACITY, LWA_ALPHA);
-            }
-        } else {
-            DWM_BLURBEHIND bb = {0};
-            bb.dwFlags = DWM_BB_ENABLE;
-            bb.fEnable = FALSE;
-            
-            HRESULT hr = _DwmEnableBlurBehindWindow(hwnd, &bb);
-            if (SUCCEEDED(hr)) {
-                success = TRUE;
-                SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), 255, LWA_COLORKEY);
-            }
-        }
-    }
-    
-    if (!success) {
-        if (enable) {
-            SetLayeredWindowAttributes(hwnd, 0, BLUR_OPACITY, LWA_ALPHA);
-        } else {
-            SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), 255, LWA_COLORKEY);
-        }
+    if (enable) {
+        ACCENT_POLICY accent = {ACCENT_ENABLE_BLURBEHIND, 0, 0, 0};
+        WINDOWCOMPOSITIONATTRIBDATA data = {
+            WCA_ACCENT_POLICY,
+            &accent,
+            sizeof(accent)
+        };
+        SetWindowCompositionAttribute(hwnd, &data);
+    } else {
+        ACCENT_POLICY accent = {ACCENT_DISABLED, 0, 0, 0};
+        WINDOWCOMPOSITIONATTRIBDATA data = {
+            WCA_ACCENT_POLICY,
+            &accent,
+            sizeof(accent)
+        };
+        SetWindowCompositionAttribute(hwnd, &data);
     }
 }
 
