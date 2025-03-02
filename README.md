@@ -44,15 +44,18 @@
 
 ### 参考视频(基于V1.0.0)：<img src="https://www.bilibili.com/favicon.ico" width="20" height="20"> [BiliBili](https://www.bilibili.com/video/BV1ztFeeQEYP)
 
-## 💖[支持](support.md)
-
-如果您喜欢本项目，欢迎打赏，金额随意。您的支持是我的动力  ദ്ദി˶>𖥦<)✧Thanks!
-
 
 ## 💭社区
 
  <a href="https://discord.gg/W3tW2gtp6g"><img alt="Discord" src="https://img.shields.io/badge/Discord-Catime-7289da?logo=discord&logoColor=white&color=7289da"/></a>
 <a href="https://qm.qq.com/q/LgscIMw9i0"><img alt="QQ群" src="https://img.shields.io/badge/QQ-1027327912-eb1923?logo=qq&logoColor=white"/></a>
+
+## 💖[支持](support.md)
+
+如果您喜欢本项目，欢迎打赏，金额随意。您的支持是我的动力  ദ്ദി˶>𖥦<)✧Thanks!
+
+
+
   
 ## ⭐Star History
 
