@@ -1043,22 +1043,17 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 int delta = GET_WHEEL_DELTA_WPARAM(wp);
                 float old_scale = CLOCK_FONT_SCALE_FACTOR;
                 
-                 
-                POINT mousePos;
-                GetCursorPos(&mousePos);
-                
-                 
+                // 移除原有的位置计算逻辑，直接使用窗口中心作为缩放基准点
                 RECT windowRect;
                 GetWindowRect(hwnd, &windowRect);
                 int oldWidth = windowRect.right - windowRect.left;
                 int oldHeight = windowRect.bottom - windowRect.top;
                 
-                 
-                float relativeX = (float)(mousePos.x - windowRect.left) / oldWidth;
-                float relativeY = (float)(mousePos.y - windowRect.top) / oldHeight;
+                // 使用窗口中心作为缩放基准
+                float relativeX = 0.5f;
+                float relativeY = 0.5f;
                 
-                 
-                float scaleFactor = 1.1f;   
+                float scaleFactor = 1.1f;
                 if (delta > 0) {
                     CLOCK_FONT_SCALE_FACTOR *= scaleFactor;
                     CLOCK_WINDOW_SCALE = CLOCK_FONT_SCALE_FACTOR;
@@ -1067,7 +1062,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     CLOCK_WINDOW_SCALE = CLOCK_FONT_SCALE_FACTOR;
                 }
                 
-                 
+                // 保持缩放范围限制
                 if (CLOCK_FONT_SCALE_FACTOR < MIN_SCALE_FACTOR) {
                     CLOCK_FONT_SCALE_FACTOR = MIN_SCALE_FACTOR;
                     CLOCK_WINDOW_SCALE = MIN_SCALE_FACTOR;
@@ -1078,28 +1073,20 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 
                 if (old_scale != CLOCK_FONT_SCALE_FACTOR) {
-                     
+                    // 计算新尺寸
                     int newWidth = (int)(oldWidth * (CLOCK_FONT_SCALE_FACTOR / old_scale));
                     int newHeight = (int)(oldHeight * (CLOCK_FONT_SCALE_FACTOR / old_scale));
                     
-                     
-                    int newX = mousePos.x - (int)(relativeX * newWidth);
-                    int newY = mousePos.y - (int)(relativeY * newHeight);
+                    // 保持窗口中心位置不变
+                    int newX = windowRect.left + (oldWidth - newWidth)/2;
+                    int newY = windowRect.top + (oldHeight - newHeight)/2;
                     
-                     
                     SetWindowPos(hwnd, NULL, 
                         newX, newY,
                         newWidth, newHeight,
                         SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOREDRAW);
                     
-                     
-                    static UINT_PTR timerId = 0;
-                    if (timerId) {
-                        KillTimer(hwnd, timerId);
-                    }
-                    timerId = SetTimer(hwnd, 3, 200, NULL);   
-                    
-                     
+                    // 触发重绘
                     InvalidateRect(hwnd, NULL, FALSE);
                     UpdateWindow(hwnd);
                 }
