@@ -68,16 +68,33 @@ extern char PREVIEW_COLOR[10];
 extern BOOL IS_COLOR_PREVIEWING;
 extern char CLOCK_TEXT_COLOR[10];
 
-void SetClickThrough(HWND hwnd, BOOL enable);
-
 void SetClickThrough(HWND hwnd, BOOL enable) {
     LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+    
+    // 清除之前可能设置的相关样式
+    exStyle &= ~WS_EX_TRANSPARENT;
+    
     if (enable) {
+        // 设置为点击穿透
         exStyle |= WS_EX_TRANSPARENT;
+        
+        // 如果窗口是分层窗口，确保它正确处理鼠标输入
+        if (exStyle & WS_EX_LAYERED) {
+            SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), 255, LWA_COLORKEY);
+        }
     } else {
-        exStyle &= ~WS_EX_TRANSPARENT;
+        // 确保窗口接收所有鼠标输入
+        if (exStyle & WS_EX_LAYERED) {
+            // 保持透明度但允许接收鼠标输入
+            SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
+        }
     }
+    
     SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
+    
+    // 更新窗口以应用新样式
+    SetWindowPos(hwnd, NULL, 0, 0, 0, 0, 
+                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
 }
 
 
