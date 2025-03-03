@@ -205,11 +205,6 @@ void WriteConfigFont(const char* font_file_name) {
         line = strtok(NULL, "\n");
     }
 
-    // 添加文本颜色设置
-    strcat(new_config, "CLOCK_TEXT_COLOR=");
-    strcat(new_config, CLOCK_TEXT_COLOR);
-    strcat(new_config, "\n");
-
     free(config_content);
 
     // 写入新的配置内容
