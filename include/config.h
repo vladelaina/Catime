@@ -22,6 +22,18 @@
 #include "window.h"
 #include "startup.h"
 
+#define MAX_RECENT_FILES 10
+
+typedef struct {
+    char path[MAX_PATH];
+    char name[MAX_PATH];
+} RecentFile;
+
+extern RecentFile CLOCK_RECENT_FILES[MAX_RECENT_FILES];
+extern int CLOCK_RECENT_FILES_COUNT;
+extern int CLOCK_DEFAULT_START_TIME;
+extern time_t last_config_time;
+
 /// @name Configuration-related Function Declarations
 /// @{
 
