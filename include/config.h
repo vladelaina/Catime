@@ -12,7 +12,7 @@
 
 #include <windows.h>
 #include <time.h>
-#include "resource.h"
+#include "../resource/resource.h"
 #include "language.h"
 #include "font.h"
 #include "color.h"
