@@ -7,7 +7,7 @@ OUTPUT_DIR = /mnt/c/Users/vladelaina/Desktop
 ASSET_DIR = $(OUTPUT_DIR)/asset
 
 # 设置文件名
-SRC_FILES = main.c
+SRC_FILES = main.c src/window.c src/tray.c src/color.c src/font.c src/language.c src/timer.c src/tray_menu.c
 SRC_LANG = src/language.c
 SRC_FONT = src/font.c
 SRC_COLOR = src/color.c
@@ -15,16 +15,19 @@ SRC_TRAY = src/tray.c
 SRC_TRAY_MENU = src/tray_menu.c
 SRC_TIMER = src/timer.c
 RC_FILE = resource/resource.rc
-OBJ_FILES = main.o language.o font.o color.o tray.o tray_menu.o timer.o
+OBJ_FILES = main.o language.o font.o color.o tray.o tray_menu.o timer.o window.o
 
 # 创建目标文件夹和资源文件夹
 $(shell mkdir -p $(OUTPUT_DIR) $(ASSET_DIR))
 
 # 编译选项
-CFLAGS = -mwindows
+CFLAGS = -mwindows -Iinclude
 
 # 链接选项 - 添加必要的库
 LDFLAGS = -lole32 -lshell32 -lcomdlg32 -luuid
+
+# 确保 dwmapi.lib 被链接
+LIBS = -ldwmapi -luser32 -lgdi32 -lcomdlg32
 
 # 生成目标
 all: $(OUTPUT_DIR)/catime.exe
@@ -63,9 +66,13 @@ tray_menu.o: src/tray_menu.c
 timer.o: src/timer.c
 	@$(CC) -c src/timer.c -o timer.o $(CFLAGS)
 
+# 编译窗口模块
+window.o: src/window.c
+	@$(CC) -c src/window.c -o window.o $(CFLAGS)
+
 # 链接编译目标文件，输出到输出目录
 $(OUTPUT_DIR)/catime.exe: $(OBJ_FILES) resource.o
-	@$(CC) -o $(OUTPUT_DIR)/catime.exe main.o language.o font.o color.o tray.o tray_menu.o timer.o resource.o $(CFLAGS) $(LDFLAGS)
+	@$(CC) -o $(OUTPUT_DIR)/catime.exe $(OBJ_FILES) resource.o $(CFLAGS) $(LDFLAGS) $(LIBS)
 
 # 清理构建文件
 clean:

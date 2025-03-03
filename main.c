@@ -67,6 +67,11 @@ extern BOOL IS_COLOR_PREVIEWING;
 extern char CLOCK_TEXT_COLOR[10];
 char ORIGINAL_TEXT_COLOR[10] = {0}; // 用于保存编辑模式前的原始颜色
 
+// Default time and input variables
+int CLOCK_DEFAULT_START_TIME = 300;  // Default is 5 minutes (300 seconds)
+static int elapsed_time = 0;
+char inputText[256] = {0};
+
 #pragma comment(lib, "dwmapi.lib")
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "gdi32.lib")
@@ -189,15 +194,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             SendMessage(hwndExisting, WM_CLOSE, 0, 0);
         }
         Sleep(50);
-    }
-
-    WNDCLASS wc = {0};
-    wc.lpfnWndProc = WindowProcedure;
-    wc.hInstance = hInstance;
-    wc.lpszClassName = "CatimeWindow";
-    if (!RegisterClass(&wc)) {
-        MessageBox(NULL, "Window Registration Failed!", "Error", MB_ICONEXCLAMATION | MB_OK);
-        return 0;
     }
 
     HWND hwnd = CreateMainWindow(hInstance, nCmdShow);
@@ -2188,29 +2184,6 @@ void PauseMediaPlayback(void) {
     keybd_event(VK_MEDIA_PLAY_PAUSE, 0, KEYEVENTF_KEYUP, 0);
     Sleep(100);   
 }
-
-BOOL OpenFileDialog(HWND hwnd, char* filePath, DWORD maxPath) {
-    OPENFILENAMEW ofn = {0};
-    wchar_t szFile[MAX_PATH] = L"";
-    
-    ofn.lStructSize = sizeof(OPENFILENAMEW);
-    ofn.hwndOwner = hwnd;
-    ofn.lpstrFilter = L"All Files\0*.*\0"
-                      L"Audio Files\0*.mp3;*.wav;*.m4a;*.wma\0"
-                      L"Video Files\0*.mp4;*.avi;*.mkv;*.wmv\0"
-                      L"Applications\0*.exe\0";
-    ofn.lpstrFile = szFile;
-    ofn.nMaxFile = MAX_PATH;
-    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
-    
-    if (GetOpenFileNameW(&ofn)) {
-        WideCharToMultiByte(CP_UTF8, 0, szFile, -1, 
-                           filePath, maxPath, NULL, NULL);
-        return TRUE;
-    }
-    return FALSE;
-}
-
 
 void LoadRecentFiles(void) {
     char config_path[MAX_PATH];

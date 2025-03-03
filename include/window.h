@@ -40,6 +40,12 @@ extern BOOL CLOCK_TEXT_RECT_VALID;     ///< 文本区域是否有效
 #define MAX_SCALE_FACTOR 100.0f        ///< 最大缩放比例
 /// @}
 
+/// @name 字体相关常量
+/// @{
+extern float CLOCK_FONT_SCALE_FACTOR;    ///< 字体缩放比例
+extern int CLOCK_BASE_FONT_SIZE;         ///< 基础字体大小 
+/// @}
+
 /**
  * @brief 设置窗口点击穿透属性
  * @param hwnd 窗口句柄
@@ -122,5 +128,14 @@ BOOL HandleMouseMove(HWND hwnd);
  * 创建应用程序的主窗口，并设置初始属性。
  */
 HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow);
+
+/**
+ * @brief 打开文件对话框
+ * @param hwnd 父窗口句柄
+ * @param filePath 用于存储选择的文件路径
+ * @param maxPath 文件路径缓冲区大小
+ * @return BOOL 是否成功选择了文件
+ */
+BOOL OpenFileDialog(HWND hwnd, char* filePath, DWORD maxPath);
 
 #endif // WINDOW_H

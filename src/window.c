@@ -13,6 +13,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+// Forward declaration of WindowProcedure (defined in main.c)
+extern LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
 // 窗口尺寸和位置变量
 int CLOCK_BASE_WINDOW_WIDTH = 200;
 int CLOCK_BASE_WINDOW_HEIGHT = 100;
@@ -479,4 +482,20 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
     UpdateWindow(hwnd);
 
     return hwnd;
+}
+
+float CLOCK_FONT_SCALE_FACTOR = 1.0f;
+int CLOCK_BASE_FONT_SIZE = 24;
+
+BOOL OpenFileDialog(HWND hwnd, char* filePath, DWORD maxPath) {
+    OPENFILENAME ofn = { 0 };
+    ofn.lStructSize = sizeof(OPENFILENAME);
+    ofn.hwndOwner = hwnd;
+    ofn.lpstrFilter = "All Files\0*.*\0";
+    ofn.lpstrFile = filePath;
+    ofn.nMaxFile = maxPath;
+    ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
+    ofn.lpstrDefExt = "";
+    
+    return GetOpenFileName(&ofn);
 }
