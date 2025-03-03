@@ -2164,13 +2164,30 @@ refresh_window:
         }
         case WM_RBUTTONDOWN: {
             if (GetKeyState(VK_CONTROL) & 0x8000) {
+                // Toggle edit mode
+                // Save original color when entering edit mode
+                if (!CLOCK_EDIT_MODE) {
+                    strncpy(ORIGINAL_TEXT_COLOR, CLOCK_TEXT_COLOR, sizeof(ORIGINAL_TEXT_COLOR) - 1);
+                    ORIGINAL_TEXT_COLOR[sizeof(ORIGINAL_TEXT_COLOR) - 1] = '\0';
+                }
+                
                 CLOCK_EDIT_MODE = !CLOCK_EDIT_MODE;
                 
                 if (CLOCK_EDIT_MODE) {
-                    // ... existing code for entering edit mode ...
+                    // Entering edit mode
+                    SetClickThrough(hwnd, FALSE);
                 } else {
-                    // ... existing code for exiting edit mode ...
+                    // Exiting edit mode
+                    // Restore the original color if it hasn't been explicitly changed
+                    if (IS_PREVIEWING) {
+                        // If a font was being previewed but no color was selected, restore original color
+                        strncpy(CLOCK_TEXT_COLOR, ORIGINAL_TEXT_COLOR, sizeof(CLOCK_TEXT_COLOR) - 1);
+                        CLOCK_TEXT_COLOR[sizeof(CLOCK_TEXT_COLOR) - 1] = '\0';
+                    }
+                    
+                    SetClickThrough(hwnd, TRUE);
                     SaveWindowSettings(hwnd);  // Save settings when exiting edit mode
+                    WriteConfigColor(CLOCK_TEXT_COLOR);  // Save the current color to config
                 }
                 
                 InvalidateRect(hwnd, NULL, TRUE);
