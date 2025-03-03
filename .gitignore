@@ -1,5 +1,6 @@
-# 忽略build文件夹的所有内容
-build/
+# 忽略build文件夹中的所有内容，但保留目录本身
+build/*
+!build/.gitkeep
 
 # 可执行文件
 *.exe
