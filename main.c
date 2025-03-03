@@ -34,9 +34,9 @@ pikaへ／|
 #include "include/tray.h"
 #include "include/tray_menu.h"
 #include "include/timer.h"
-#include "include/window.h"  // 添加window.h头文件
-#include "include/startup.h" // 添加startup.h头文件
-#include "include/config.h"  // 添加config.h头文件
+#include "include/window.h"  
+#include "include/startup.h" 
+#include "include/config.h"  
  
 #ifndef CSIDL_STARTUP
 
@@ -64,7 +64,6 @@ extern char PREVIEW_COLOR[10];
 extern BOOL IS_COLOR_PREVIEWING;
 extern char CLOCK_TEXT_COLOR[10];
 
-// Default time and input variables
 int CLOCK_DEFAULT_START_TIME = 300;  // Default is 5 minutes (300 seconds)
 static int elapsed_time = 0;
 char inputText[256] = {0};
