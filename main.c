@@ -2035,7 +2035,15 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_DADDYTIME: {
+                    // 写入新字体
                     WriteConfigFont("DaddyTimeMono Nerd Font Propo Essence.ttf");
+                    
+                    // 如果在编辑模式下，使用白色
+                    if (CLOCK_EDIT_MODE) {
+                        strncpy(CLOCK_TEXT_COLOR, "#FFFFFF", sizeof(CLOCK_TEXT_COLOR) - 1);
+                        CLOCK_TEXT_COLOR[sizeof(CLOCK_TEXT_COLOR) - 1] = '\0';
+                    }
+                    
                     goto refresh_window;
                 }
             }
