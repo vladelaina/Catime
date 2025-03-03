@@ -92,3 +92,22 @@ BOOL RemoveShortcut(void) {
     }
     return FALSE;
 }
+
+/**
+ * @brief 更新开机自启动快捷方式
+ * 
+ * 检查是否已启用自启动，如果已启用，则删除旧的快捷方式并创建新的，
+ * 确保即使应用程序位置发生变化，自启动功能也能正常工作。
+ * 
+ * @return BOOL 如果更新成功则返回TRUE，否则返回FALSE
+ */
+BOOL UpdateStartupShortcut(void) {
+    // 如果已经启用了自启动
+    if (IsAutoStartEnabled()) {
+        // 先删除现有的快捷方式
+        RemoveShortcut();
+        // 创建新的快捷方式
+        return CreateShortcut();
+    }
+    return TRUE; // 未启用自启动，视为成功
+}

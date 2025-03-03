@@ -169,6 +169,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     
     InitializeDefaultLanguage();
     
+    // 更新开机自启动快捷方式，确保正确的路径
+    UpdateStartupShortcut();
+    
     ReadConfig();
 
     int defaultFontIndex = -1;
