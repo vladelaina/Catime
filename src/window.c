@@ -368,6 +368,7 @@ void LoadWindowSettings(HWND hwnd) {
     }
     fclose(fp);
     
+    // 直接应用配置文件中的位置，不进行额外调整
     SetWindowPos(hwnd, NULL, 
         CLOCK_WINDOW_POS_X, 
         CLOCK_WINDOW_POS_Y,
@@ -375,6 +376,8 @@ void LoadWindowSettings(HWND hwnd) {
         (int)(CLOCK_BASE_WINDOW_HEIGHT * CLOCK_WINDOW_SCALE),
         SWP_NOZORDER
     );
+    
+    // 不调用AdjustWindowPosition，避免覆盖用户设置
 }
 
 BOOL HandleMouseWheel(HWND hwnd, int delta) {

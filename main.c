@@ -696,9 +696,16 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             if (hwndParent != NULL) {
                 EnableWindow(hwndParent, TRUE);
             }
+            
+            // 首先加载窗口设置
             LoadWindowSettings(hwnd);
+            
+            // 设置点击穿透，但不调整窗口位置
             SetClickThrough(hwnd, !CLOCK_EDIT_MODE);
-            AdjustWindowPosition(hwnd, TRUE);  // 初始化时强制在屏幕内
+            
+            // 不调用AdjustWindowPosition，让窗口保持在配置文件中的位置
+            // AdjustWindowPosition(hwnd, TRUE);
+            
             break;
         }
 
