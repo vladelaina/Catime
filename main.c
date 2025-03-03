@@ -36,6 +36,7 @@ pikaへ／|
 #include "include/timer.h"
 #include "include/window.h"  // 添加window.h头文件
 #include "include/startup.h" // 添加startup.h头文件
+#include "include/config.h"  // 添加config.h头文件
  
 #ifndef CSIDL_STARTUP
 

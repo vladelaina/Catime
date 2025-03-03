@@ -10,7 +10,7 @@ ASSET_DIR = $(OUTPUT_DIR)/asset
 BUILD_DIR = build
 
 # 设置文件名
-SRC_FILES = main.c src/window.c src/tray.c src/color.c src/font.c src/language.c src/timer.c src/tray_menu.c src/startup.c
+SRC_FILES = main.c src/window.c src/tray.c src/color.c src/font.c src/language.c src/timer.c src/tray_menu.c src/startup.c src/config.c
 RC_FILE = resource/resource.rc
 
 # 创建目标文件夹和资源文件夹
@@ -34,7 +34,8 @@ OBJS = $(BUILD_DIR)/main.o \
        $(BUILD_DIR)/language.o \
        $(BUILD_DIR)/timer.o \
        $(BUILD_DIR)/tray_menu.o \
-       $(BUILD_DIR)/startup.o
+       $(BUILD_DIR)/startup.o \
+       $(BUILD_DIR)/config.o
 
 # 生成目标
 all: directories $(OUTPUT_DIR)/catime.exe
@@ -85,6 +86,10 @@ $(BUILD_DIR)/window.o: src/window.c
 # 编译自启动模块
 $(BUILD_DIR)/startup.o: src/startup.c
 	@$(CC) -c src/startup.c -o $(BUILD_DIR)/startup.o $(CFLAGS)
+
+# 编译配置模块
+$(BUILD_DIR)/config.o: src/config.c
+	@$(CC) -c src/config.c -o $(BUILD_DIR)/config.o $(CFLAGS)
 
 # 链接编译目标文件，输出到输出目录
 $(OUTPUT_DIR)/catime.exe: $(OBJS) $(BUILD_DIR)/resource.o
