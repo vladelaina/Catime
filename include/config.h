@@ -22,8 +22,6 @@
 #include "window.h"
 #include "startup.h"
 
-#define MAX_RECENT_FILES 10
-
 typedef struct {
     char path[MAX_PATH];
     char name[MAX_PATH];
