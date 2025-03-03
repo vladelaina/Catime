@@ -698,7 +698,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             }
             LoadWindowSettings(hwnd);
             SetClickThrough(hwnd, !CLOCK_EDIT_MODE);
-            AdjustWindowPosition(hwnd);
+            AdjustWindowPosition(hwnd, TRUE);  // 初始化时强制在屏幕内
             break;
         }
 
@@ -716,7 +716,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             if (CLOCK_EDIT_MODE && CLOCK_IS_DRAGGING) {
                 CLOCK_IS_DRAGGING = FALSE;
                 ReleaseCapture();
-                AdjustWindowPosition(hwnd);
+                // 编辑模式下不强制窗口在屏幕内，允许拖出
+                AdjustWindowPosition(hwnd, FALSE);
                 InvalidateRect(hwnd, NULL, TRUE);
             }
             break;

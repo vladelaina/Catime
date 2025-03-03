@@ -69,11 +69,13 @@ void SetBlurBehind(HWND hwnd, BOOL enable);
 /**
  * @brief 调整窗口位置
  * @param hwnd 窗口句柄
+ * @param forceOnScreen 是否强制窗口在屏幕内
  * 
- * 确保窗口位置在屏幕边界内，
+ * 当forceOnScreen为TRUE时，确保窗口位置在屏幕边界内，
  * 当窗口位置超出边界时自动调整到合适位置。
+ * 在编辑模式下可以将forceOnScreen设置为FALSE，允许窗口拖出屏幕。
  */
-void AdjustWindowPosition(HWND hwnd);
+void AdjustWindowPosition(HWND hwnd, BOOL forceOnScreen);
 
 /**
  * @brief 保存窗口设置

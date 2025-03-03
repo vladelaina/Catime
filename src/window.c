@@ -171,50 +171,48 @@ void SetBlurBehind(HWND hwnd, BOOL enable) {
     }
 }
 
-void AdjustWindowPosition(HWND hwnd) {
-    RECT windowRect;
-    if (!GetWindowRect(hwnd, &windowRect)) return;
-    
-    int windowWidth = windowRect.right - windowRect.left;
-    int windowHeight = windowRect.bottom - windowRect.top;
-    
-    // 获取工作区大小以避免任务栏
-    RECT workArea;
-    SystemParametersInfo(SPI_GETWORKAREA, 0, &workArea, 0);
-    
-    // 检查窗口是否超出屏幕边界
-    BOOL positionChanged = FALSE;
-    
-    // 检查左边界
-    if (windowRect.left < workArea.left - windowWidth / 2) {
-        windowRect.left = workArea.left;
-        positionChanged = TRUE;
+void AdjustWindowPosition(HWND hwnd, BOOL forceOnScreen) {
+    if (!forceOnScreen) {
+        // 不强制窗口在屏幕内，直接返回
+        return;
     }
     
-    // 检查右边界
-    if (windowRect.left > workArea.right - windowWidth / 2) {
-        windowRect.left = workArea.right - windowWidth;
-        positionChanged = TRUE;
+    // 原有的代码，确保窗口在屏幕内
+    RECT rect;
+    GetWindowRect(hwnd, &rect);
+    
+    int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+    
+    int width = rect.right - rect.left;
+    int height = rect.bottom - rect.top;
+    
+    int x = rect.left;
+    int y = rect.top;
+    
+    // 确保窗口右边缘不会超出屏幕
+    if (x + width > screenWidth) {
+        x = screenWidth - width;
     }
     
-    // 检查上边界
-    if (windowRect.top < workArea.top - windowHeight / 2) {
-        windowRect.top = workArea.top;
-        positionChanged = TRUE;
+    // 确保窗口下边缘不会超出屏幕
+    if (y + height > screenHeight) {
+        y = screenHeight - height;
     }
     
-    // 检查下边界
-    if (windowRect.top > workArea.bottom - windowHeight / 2) {
-        windowRect.top = workArea.bottom - windowHeight;
-        positionChanged = TRUE;
+    // 确保窗口左边缘不会超出屏幕
+    if (x < 0) {
+        x = 0;
     }
     
-    // 如果位置需要调整，则更新窗口位置
-    if (positionChanged) {
-        SetWindowPos(hwnd, NULL, 
-                     windowRect.left, windowRect.top,
-                     0, 0,
-                     SWP_NOSIZE | SWP_NOZORDER);
+    // 确保窗口上边缘不会超出屏幕
+    if (y < 0) {
+        y = 0;
+    }
+    
+    // 如果窗口位置需要调整，则移动窗口
+    if (x != rect.left || y != rect.top) {
+        SetWindowPos(hwnd, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
     }
 }
 
