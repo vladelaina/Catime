@@ -971,8 +971,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             break;
         }
         case WM_DESTROY: {
-            ExitProgram(hwnd);
-            break;
+            SaveWindowSettings(hwnd);  // Save window settings before closing
+            KillTimer(hwnd, 1);
+            RemoveTrayIcon();
+            PostQuitMessage(0);
+            return 0;
         }
         case CLOCK_WM_TRAYICON: {
             uID = (UINT)wp;
@@ -2157,6 +2160,28 @@ refresh_window:
                 IS_COLOR_PREVIEWING = FALSE;
                 InvalidateRect(hwnd, NULL, TRUE);
             }
+            break;
+        }
+        case WM_RBUTTONDOWN: {
+            if (GetKeyState(VK_CONTROL) & 0x8000) {
+                CLOCK_EDIT_MODE = !CLOCK_EDIT_MODE;
+                
+                if (CLOCK_EDIT_MODE) {
+                    // ... existing code for entering edit mode ...
+                } else {
+                    // ... existing code for exiting edit mode ...
+                    SaveWindowSettings(hwnd);  // Save settings when exiting edit mode
+                }
+                
+                InvalidateRect(hwnd, NULL, TRUE);
+                WriteConfigEditMode(CLOCK_EDIT_MODE ? "TRUE" : "FALSE");
+                return 0;
+            }
+            break;
+        }
+        case WM_CLOSE: {
+            SaveWindowSettings(hwnd);  // Save window settings before closing
+            DestroyWindow(hwnd);  // Close the window
             break;
         }
         default:

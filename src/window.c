@@ -347,7 +347,36 @@ void SaveWindowSettings(HWND hwnd) {
 }
 
 void LoadWindowSettings(HWND hwnd) {
-    // 此函数实现将在整理main.c后添加
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    
+    FILE *fp = fopen(config_path, "r");
+    if (!fp) return;
+    
+    char line[256];
+    while (fgets(line, sizeof(line), fp)) {
+        line[strcspn(line, "\n")] = 0;
+        
+        if (strncmp(line, "CLOCK_WINDOW_POS_X=", 19) == 0) {
+            CLOCK_WINDOW_POS_X = atoi(line + 19);
+        } else if (strncmp(line, "CLOCK_WINDOW_POS_Y=", 19) == 0) {
+            CLOCK_WINDOW_POS_Y = atoi(line + 19);
+        } else if (strncmp(line, "WINDOW_SCALE=", 13) == 0) {
+            CLOCK_WINDOW_SCALE = atof(line + 13);
+            CLOCK_FONT_SCALE_FACTOR = CLOCK_WINDOW_SCALE;
+        } else if (strncmp(line, "CLOCK_EDIT_MODE=", 16) == 0) {
+            CLOCK_EDIT_MODE = (strncmp(line + 16, "TRUE", 4) == 0);
+        }
+    }
+    fclose(fp);
+    
+    SetWindowPos(hwnd, NULL, 
+        CLOCK_WINDOW_POS_X, 
+        CLOCK_WINDOW_POS_Y,
+        (int)(CLOCK_BASE_WINDOW_WIDTH * CLOCK_WINDOW_SCALE),
+        (int)(CLOCK_BASE_WINDOW_HEIGHT * CLOCK_WINDOW_SCALE),
+        SWP_NOZORDER
+    );
 }
 
 BOOL HandleMouseWheel(HWND hwnd, int delta) {
@@ -400,6 +429,9 @@ BOOL HandleMouseWheel(HWND hwnd, int delta) {
             // 触发重绘
             InvalidateRect(hwnd, NULL, FALSE);
             UpdateWindow(hwnd);
+            
+            // Save settings after resizing
+            SaveWindowSettings(hwnd);
         }
         return TRUE;
     }
@@ -428,6 +460,11 @@ BOOL HandleMouseMove(HWND hwnd) {
         CLOCK_LAST_MOUSE_POS = currentPos;
         
         UpdateWindow(hwnd);
+        
+        // Update the position variables and save settings
+        CLOCK_WINDOW_POS_X = windowRect.left + deltaX;
+        CLOCK_WINDOW_POS_Y = windowRect.top + deltaY;
+        SaveWindowSettings(hwnd);
         
         return TRUE;
     }
