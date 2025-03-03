@@ -35,6 +35,7 @@ pikaへ／|
 #include "include/tray_menu.h"
 #include "include/timer.h"
 #include "include/window.h"  // 添加window.h头文件
+#include "include/startup.h" // 添加startup.h头文件
  
 #ifndef CSIDL_STARTUP
 
@@ -52,9 +53,6 @@ COLORREF ShowColorDialog(HWND hwnd);
 UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM lParam);
 void CreateDefaultConfig(const char* config_path);  
 BOOL IsColorExists(const char* hexColor);
-BOOL IsAutoStartEnabled(void);
-BOOL CreateShortcut(void);
-BOOL RemoveShortcut(void);
 void WriteConfig(const char* config_path);
 void ShowToastNotification(HWND hwnd, const char* message);
 
@@ -2676,62 +2674,5 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT msg, WPARAM wParam, LPARAM
             break;
     }
     return 0;
-}
-
-BOOL IsAutoStartEnabled(void) {
-    wchar_t startupPath[MAX_PATH];
-    wchar_t shortcutPath[MAX_PATH];
-    
-    if (SUCCEEDED(SHGetFolderPathW(NULL, CSIDL_STARTUP, NULL, 0, startupPath))) {
-        wcscat(startupPath, L"\\Catime.lnk");
-        return GetFileAttributesW(startupPath) != INVALID_FILE_ATTRIBUTES;
-    }
-    return FALSE;
-}
-
-BOOL CreateShortcut(void) {
-    wchar_t startupPath[MAX_PATH];
-    wchar_t exePath[MAX_PATH];
-    IShellLinkW* pShellLink = NULL;
-    IPersistFile* pPersistFile = NULL;
-    BOOL success = FALSE;
-    
-    GetModuleFileNameW(NULL, exePath, MAX_PATH);
-    
-    if (SUCCEEDED(SHGetFolderPathW(NULL, CSIDL_STARTUP, NULL, 0, startupPath))) {
-        wcscat(startupPath, L"\\Catime.lnk");
-        
-        HRESULT hr = CoCreateInstance(&CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER,
-                                    &IID_IShellLinkW, (void**)&pShellLink);
-        if (SUCCEEDED(hr)) {
-            hr = pShellLink->lpVtbl->SetPath(pShellLink, exePath);
-            if (SUCCEEDED(hr)) {
-                hr = pShellLink->lpVtbl->QueryInterface(pShellLink,
-                                                      &IID_IPersistFile,
-                                                      (void**)&pPersistFile);
-                if (SUCCEEDED(hr)) {
-                    hr = pPersistFile->lpVtbl->Save(pPersistFile, startupPath, TRUE);
-                    if (SUCCEEDED(hr)) {
-                        success = TRUE;
-                    }
-                    pPersistFile->lpVtbl->Release(pPersistFile);
-                }
-            }
-            pShellLink->lpVtbl->Release(pShellLink);
-        }
-    }
-    
-    return success;
-}
-
-BOOL RemoveShortcut(void) {
-    wchar_t startupPath[MAX_PATH];
-    
-    if (SUCCEEDED(SHGetFolderPathW(NULL, CSIDL_STARTUP, NULL, 0, startupPath))) {
-        wcscat(startupPath, L"\\Catime.lnk");
-        
-        return DeleteFileW(startupPath);
-    }
-    return FALSE;
 }
 

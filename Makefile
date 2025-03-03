@@ -7,15 +7,16 @@ OUTPUT_DIR = /mnt/c/Users/vladelaina/Desktop
 ASSET_DIR = $(OUTPUT_DIR)/asset
 
 # 设置文件名
-SRC_FILES = main.c src/window.c src/tray.c src/color.c src/font.c src/language.c src/timer.c src/tray_menu.c
+SRC_FILES = main.c src/window.c src/tray.c src/color.c src/font.c src/language.c src/timer.c src/tray_menu.c src/startup.c
 SRC_LANG = src/language.c
 SRC_FONT = src/font.c
 SRC_COLOR = src/color.c
 SRC_TRAY = src/tray.c
 SRC_TRAY_MENU = src/tray_menu.c
 SRC_TIMER = src/timer.c
+SRC_STARTUP = src/startup.c
 RC_FILE = resource/resource.rc
-OBJ_FILES = main.o language.o font.o color.o tray.o tray_menu.o timer.o window.o
+OBJ_FILES = main.o language.o font.o color.o tray.o tray_menu.o timer.o window.o startup.o
 
 # 创建目标文件夹和资源文件夹
 $(shell mkdir -p $(OUTPUT_DIR) $(ASSET_DIR))
@@ -69,6 +70,10 @@ timer.o: src/timer.c
 # 编译窗口模块
 window.o: src/window.c
 	@$(CC) -c src/window.c -o window.o $(CFLAGS)
+
+# 编译自启动模块
+startup.o: src/startup.c
+	@$(CC) -c src/startup.c -o startup.o $(CFLAGS)
 
 # 链接编译目标文件，输出到输出目录
 $(OUTPUT_DIR)/catime.exe: $(OBJ_FILES) resource.o
