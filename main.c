@@ -63,7 +63,6 @@ void PauseMediaPlayback(void);
 extern char PREVIEW_COLOR[10];
 extern BOOL IS_COLOR_PREVIEWING;
 extern char CLOCK_TEXT_COLOR[10];
-char ORIGINAL_TEXT_COLOR[10] = {0}; // 用于保存编辑模式前的原始颜色
 
 // Default time and input variables
 int CLOCK_DEFAULT_START_TIME = 300;  // Default is 5 minutes (300 seconds)
@@ -1449,20 +1448,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         WriteConfigEditMode(CLOCK_EDIT_MODE ? "TRUE" : "FALSE");
                         
                         if (CLOCK_EDIT_MODE) {
-                            // 保存原始颜色并更改为白色
-                            strncpy(ORIGINAL_TEXT_COLOR, CLOCK_TEXT_COLOR, sizeof(ORIGINAL_TEXT_COLOR) - 1);
-                            ORIGINAL_TEXT_COLOR[sizeof(ORIGINAL_TEXT_COLOR) - 1] = '\0';
-                            strncpy(CLOCK_TEXT_COLOR, "#FFFFFF", sizeof(CLOCK_TEXT_COLOR) - 1);
-                            CLOCK_TEXT_COLOR[sizeof(CLOCK_TEXT_COLOR) - 1] = '\0';
-                            
                             SetBlurBehind(hwnd, TRUE);
                         } else {
-                            // 恢复原始颜色
-                            if (ORIGINAL_TEXT_COLOR[0] != '\0') {
-                                strncpy(CLOCK_TEXT_COLOR, ORIGINAL_TEXT_COLOR, sizeof(CLOCK_TEXT_COLOR) - 1);
-                                CLOCK_TEXT_COLOR[sizeof(CLOCK_TEXT_COLOR) - 1] = '\0';
-                            }
-                            
                             SetBlurBehind(hwnd, FALSE);
                             SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), 255, LWA_COLORKEY);
                         }
@@ -1496,7 +1483,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     WriteConfigFont("Terminess Nerd Font Propo Essence.ttf");
                     goto refresh_window;
                 }
-                case CLOCK_IDC_FONT_GOHUFONT: {
+                case CLOCK_IDC_FONT_GOHUFONT: {  
                     WriteConfigFont("GohuFont uni11 Nerd Font Mono.ttf");
                     goto refresh_window;
                 }
@@ -2038,12 +2025,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     // 写入新字体
                     WriteConfigFont("DaddyTimeMono Nerd Font Propo Essence.ttf");
                     
-                    // 如果在编辑模式下，使用白色
-                    if (CLOCK_EDIT_MODE) {
-                        strncpy(CLOCK_TEXT_COLOR, "#FFFFFF", sizeof(CLOCK_TEXT_COLOR) - 1);
-                        CLOCK_TEXT_COLOR[sizeof(CLOCK_TEXT_COLOR) - 1] = '\0';
-                    }
-                    
                     goto refresh_window;
                 }
             }
@@ -2063,12 +2044,6 @@ refresh_window:
             if (CLOCK_EDIT_MODE) {
                 CLOCK_EDIT_MODE = FALSE;
                 WriteConfigEditMode("FALSE");
-                
-                // 恢复原始颜色
-                if (ORIGINAL_TEXT_COLOR[0] != '\0') {
-                    strncpy(CLOCK_TEXT_COLOR, ORIGINAL_TEXT_COLOR, sizeof(CLOCK_TEXT_COLOR) - 1);
-                    CLOCK_TEXT_COLOR[sizeof(CLOCK_TEXT_COLOR) - 1] = '\0';
-                }
                 
                 SetBlurBehind(hwnd, FALSE);
                 SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), 255, LWA_COLORKEY);
@@ -2182,12 +2157,6 @@ refresh_window:
         case WM_RBUTTONDOWN: {
             if (GetKeyState(VK_CONTROL) & 0x8000) {
                 // Toggle edit mode
-                // Save original color when entering edit mode
-                if (!CLOCK_EDIT_MODE) {
-                    strncpy(ORIGINAL_TEXT_COLOR, CLOCK_TEXT_COLOR, sizeof(ORIGINAL_TEXT_COLOR) - 1);
-                    ORIGINAL_TEXT_COLOR[sizeof(ORIGINAL_TEXT_COLOR) - 1] = '\0';
-                }
-                
                 CLOCK_EDIT_MODE = !CLOCK_EDIT_MODE;
                 
                 if (CLOCK_EDIT_MODE) {
@@ -2195,13 +2164,6 @@ refresh_window:
                     SetClickThrough(hwnd, FALSE);
                 } else {
                     // Exiting edit mode
-                    // Restore the original color if it hasn't been explicitly changed
-                    if (IS_PREVIEWING) {
-                        // If a font was being previewed but no color was selected, restore original color
-                        strncpy(CLOCK_TEXT_COLOR, ORIGINAL_TEXT_COLOR, sizeof(CLOCK_TEXT_COLOR) - 1);
-                        CLOCK_TEXT_COLOR[sizeof(CLOCK_TEXT_COLOR) - 1] = '\0';
-                    }
-                    
                     SetClickThrough(hwnd, TRUE);
                     SaveWindowSettings(hwnd);  // Save settings when exiting edit mode
                     WriteConfigColor(CLOCK_TEXT_COLOR);  // Save the current color to config
