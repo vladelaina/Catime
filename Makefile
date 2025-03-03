@@ -8,7 +8,6 @@ ASSET_DIR = $(OUTPUT_DIR)/asset
 
 # 创建构建目录
 BUILD_DIR = build
-BIN_DIR = bin
 
 # 设置文件名
 SRC_FILES = main.c src/window.c src/tray.c src/color.c src/font.c src/language.c src/timer.c src/tray_menu.c src/startup.c
@@ -38,14 +37,14 @@ OBJS = $(BUILD_DIR)/main.o \
        $(BUILD_DIR)/startup.o
 
 # 生成目标
-all: directories $(BIN_DIR)/catime.exe
+all: directories $(OUTPUT_DIR)/catime.exe
 	@rm -f $(BUILD_DIR)/*.o  # 编译完成后删除所有 .o 文件
-	@cmd.exe /C start "" "$(shell echo '$(BIN_DIR)/catime.exe' | sed 's#/mnt/c/#C:/#')"  # 转换路径格式
+	@cmd.exe /C start "" "$(shell echo '$(OUTPUT_DIR)/catime.exe' | sed 's#/mnt/c/#C:/#')"  # 转换路径格式
 
 # 创建必要的目录
 directories:
 	@mkdir -p $(BUILD_DIR)
-	@mkdir -p $(BIN_DIR)
+	@mkdir -p $(OUTPUT_DIR)
 
 # 编译资源文件
 $(BUILD_DIR)/resource.o: $(RC_FILE)
@@ -88,12 +87,12 @@ $(BUILD_DIR)/startup.o: src/startup.c
 	@$(CC) -c src/startup.c -o $(BUILD_DIR)/startup.o $(CFLAGS)
 
 # 链接编译目标文件，输出到输出目录
-$(BIN_DIR)/catime.exe: $(OBJS) $(BUILD_DIR)/resource.o
-	@$(CC) -o $(BIN_DIR)/catime.exe $(OBJS) $(BUILD_DIR)/resource.o $(CFLAGS) $(LDFLAGS) $(LIBS)
+$(OUTPUT_DIR)/catime.exe: $(OBJS) $(BUILD_DIR)/resource.o
+	@$(CC) -o $(OUTPUT_DIR)/catime.exe $(OBJS) $(BUILD_DIR)/resource.o $(CFLAGS) $(LDFLAGS) $(LIBS)
 
 # 清理构建文件
 clean:
 	@powershell.exe -Command "Stop-Process -Name catime -Force -ErrorAction SilentlyContinue"
-	@rm -f $(BUILD_DIR)/*.o $(BIN_DIR)/*.exe
+	@rm -f $(BUILD_DIR)/*.o $(OUTPUT_DIR)/catime.exe
 
 .PHONY: all clean
