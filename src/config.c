@@ -1,3 +1,11 @@
+/**
+ * @file config.c
+ * @brief 配置文件管理实现
+ * 
+ * 本文件实现配置文件的路径获取、创建、读写等管理功能，
+ * 包含默认配置生成、配置持久化、最近文件记录等功能。
+ */
+
 #include "../include/config.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,6 +22,14 @@
 #include <shobjidl.h>
 #include <shlguid.h>
 
+/**
+ * @brief 获取配置文件路径
+ * @param path 存储路径的缓冲区
+ * @param size 缓冲区大小
+ * 
+ * 优先获取LOCALAPPDATA环境变量路径，若不存在则使用程序目录。
+ * 自动创建配置目录，失败时回退到本地路径。
+ */
 void GetConfigPath(char* path, size_t size) {
     if (!path || size == 0) return;
 
@@ -38,6 +54,12 @@ void GetConfigPath(char* path, size_t size) {
     }
 }
 
+/**
+ * @brief 创建默认配置文件
+ * @param config_path 配置文件路径
+ * 
+ * 生成包含字体、颜色、窗口位置等默认参数的配置文件。
+ */
 void CreateDefaultConfig(const char* config_path) {
     FILE *file = fopen(config_path, "w");
     if (file) {
@@ -63,6 +85,12 @@ void CreateDefaultConfig(const char* config_path) {
     }
 }
 
+/**
+ * @brief 读取并解析配置文件
+ * 
+ * 从配置路径读取配置，若不存在则创建默认配置。
+ * 解析各配置项并更新程序状态，最后刷新窗口位置。
+ */
 void ReadConfig() {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -210,6 +238,13 @@ void ReadConfig() {
     LoadRecentFiles();
 }
 
+/**
+ * @brief 写入超时动作配置
+ * @param action 要写入的超时动作
+ * 
+ * 使用临时文件方式更新配置文件中的超时动作设置，
+ * 处理OPEN_FILE动作时自动关联超时文件路径。
+ */
 void WriteConfigTimeoutAction(const char* action) {
     char config_path[MAX_PATH];
     char temp_path[MAX_PATH];
@@ -263,6 +298,13 @@ void WriteConfigTimeoutAction(const char* action) {
     }
 }
 
+/**
+ * @brief 写入编辑模式配置
+ * @param mode 编辑模式状态("TRUE"/"FALSE")
+ * 
+ * 通过临时文件方式更新配置文件中的编辑模式设置，
+ * 确保配置项存在时更新，不存在时追加到文件末尾。
+ */
 void WriteConfigEditMode(const char* mode) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -301,6 +343,13 @@ void WriteConfigEditMode(const char* mode) {
     rename(temp_path, config_path);
 }
 
+/**
+ * @brief 写入时间选项配置
+ * @param options 逗号分隔的时间选项字符串
+ * 
+ * 更新配置文件中的预设时间选项，支持动态调整
+ * 倒计时时长选项列表，最大支持MAX_TIME_OPTIONS个选项。
+ */
 void WriteConfigTimeOptions(const char* options) {
     char config_path[MAX_PATH];
     char temp_path[MAX_PATH];
@@ -339,6 +388,12 @@ void WriteConfigTimeOptions(const char* options) {
     rename(temp_path, config_path);
 }
 
+/**
+ * @brief 加载最近使用文件记录
+ * 
+ * 从配置文件中解析CLOCK_RECENT_FILE条目，
+ * 提取文件路径和文件名供快速访问使用。
+ */
 void LoadRecentFiles(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -374,6 +429,14 @@ void LoadRecentFiles(void) {
     fclose(file);
 }
 
+/**
+ * @brief 保存最近使用文件记录
+ * @param filePath 要保存的文件路径
+ * 
+ * 维护最近文件列表(最多MAX_RECENT_FILES个)，
+ * 自动去重并更新配置文件，保持最新文件在列表首位。
+ * 处理中文路径时进行UTF8到ANSI编码转换。
+ */
 void SaveRecentFile(const char* filePath) {
     for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
         if (strcmp(CLOCK_RECENT_FILES[i].path, filePath) == 0) {
@@ -486,6 +549,13 @@ void SaveRecentFile(const char* filePath) {
     free(new_config);
 }
 
+/**
+ * @brief UTF8转ANSI编码
+ * @param utf8Str 要转换的UTF8字符串
+ * @return char* 转换后的ANSI字符串指针
+ * 
+ * 用于处理中文路径的编码转换，转换失败返回原字符串副本。
+ */
 char* UTF8ToANSI(const char* utf8Str) {
     int wlen = MultiByteToWideChar(CP_UTF8, 0, utf8Str, -1, NULL, 0);
     if (wlen == 0) {

@@ -1,13 +1,30 @@
+/**
+ * @file timer.h
+ * @brief 计时器核心功能定义
+ * 
+ * 本头文件定义计时器相关数据结构、状态枚举及全局变量，
+ * 包含倒计时/正计时模式切换、超时动作处理等核心功能声明。
+ */
+
 #ifndef TIMER_H
 #define TIMER_H
 
 #include <windows.h>
 #include <time.h>
 
-// 定义最大时间选项数量
+/// 最大预设时间选项数量
 #define MAX_TIME_OPTIONS 10
 
-// 超时动作类型
+/**
+ * @brief 超时动作类型枚举
+ * 
+ * 定义计时器超时后执行的不同操作类型：
+ * - MESSAGE: 显示提示信息
+ * - LOCK: 锁定计算机
+ * - SHUTDOWN: 关闭系统
+ * - RESTART: 重启系统 
+ * - OPEN_FILE: 打开指定文件
+ */
 typedef enum {
     TIMEOUT_ACTION_MESSAGE = 0,
     TIMEOUT_ACTION_LOCK = 1,
@@ -16,38 +33,82 @@ typedef enum {
     TIMEOUT_ACTION_OPEN_FILE = 4   
 } TimeoutActionType;
 
-// 计时器状态
-extern BOOL CLOCK_IS_PAUSED;
-extern BOOL CLOCK_SHOW_CURRENT_TIME;
-extern BOOL CLOCK_USE_24HOUR;
-extern BOOL CLOCK_SHOW_SECONDS;
-extern BOOL CLOCK_COUNT_UP;
-extern char CLOCK_STARTUP_MODE[20];
+// 计时器状态 --------------------------------------------------
+extern BOOL CLOCK_IS_PAUSED;         ///< 暂停状态标识
+extern BOOL CLOCK_SHOW_CURRENT_TIME; ///< 显示实时时钟模式
+extern BOOL CLOCK_USE_24HOUR;        ///< 24小时制显示
+extern BOOL CLOCK_SHOW_SECONDS;      ///< 显示秒数
+extern BOOL CLOCK_COUNT_UP;          ///< 正计时模式开关
+extern char CLOCK_STARTUP_MODE[20];  ///< 启动模式(COUNTDOWN/COUNTUP)
 
-// 计时器时间
-extern int CLOCK_TOTAL_TIME;
-extern int countdown_elapsed_time;
-extern int countup_elapsed_time;
-extern time_t CLOCK_LAST_TIME_UPDATE;
+// 时间相关 ----------------------------------------------------
+extern int CLOCK_TOTAL_TIME;         ///< 总计时时间(秒)
+extern int countdown_elapsed_time;    ///< 倒计时已用时间
+extern int countup_elapsed_time;     ///< 正计时累计时间
+extern time_t CLOCK_LAST_TIME_UPDATE;///< 最后更新时间戳
 
-// 消息状态
-extern BOOL countdown_message_shown;
-extern BOOL countup_message_shown;
+// 消息状态 ----------------------------------------------------
+extern BOOL countdown_message_shown; ///< 倒计时提示显示状态
+extern BOOL countup_message_shown;   ///< 正计时提示显示状态
 
-// 超时动作相关
-extern TimeoutActionType CLOCK_TIMEOUT_ACTION;
-extern char CLOCK_TIMEOUT_TEXT[50];
-extern char CLOCK_TIMEOUT_FILE_PATH[MAX_PATH];
+// 超时动作配置 ------------------------------------------------
+extern TimeoutActionType CLOCK_TIMEOUT_ACTION; ///< 当前超时动作类型
+extern char CLOCK_TIMEOUT_TEXT[50];            ///< 超时提示文本内容
+extern char CLOCK_TIMEOUT_FILE_PATH[MAX_PATH];  ///< 超时打开文件路径
 
-// 时间选项
-extern int time_options[MAX_TIME_OPTIONS];
-extern int time_options_count;
+// 时间选项配置 ------------------------------------------------
+extern int time_options[MAX_TIME_OPTIONS]; ///< 预设时间选项数组
+extern int time_options_count;             ///< 有效选项数量
 
-// 函数声明
+/**
+ * @brief 格式化时间显示
+ * @param remaining_time 剩余时间(秒)
+ * @param time_text 输出缓冲区(至少9字节)
+ * 
+ * 根据当前计时模式(24小时制/显示秒数)将秒数转换为"HH:MM:SS"格式，
+ * 自动处理倒计时/正计时的显示差异。
+ */
 void FormatTime(int remaining_time, char* time_text);
+
+/**
+ * @brief 解析用户输入时间
+ * @param input 用户输入字符串
+ * @param total_seconds 输出解析后的总秒数
+ * @return int 解析成功返回1，失败返回0
+ * 
+ * 支持"MM:SS"、"HH:MM:SS"及纯数字秒数格式，
+ * 最大支持99小时59分59秒(359999秒)。
+ */
 int ParseInput(const char* input, int* total_seconds);
+
+/**
+ * @brief 验证时间输入格式
+ * @param input 待验证字符串
+ * @return int 有效返回1，无效返回0
+ * 
+ * 检查输入是否符合以下格式：
+ * - 纯数字(秒数)
+ * - MM:SS (1-59分 或 00-59秒)
+ * - HH:MM:SS (00-99小时 00-59分 00-59秒)
+ */
 int isValidInput(const char* input);
+
+/**
+ * @brief 写入默认启动时间配置
+ * @param seconds 默认启动时间(秒)
+ * 
+ * 更新配置文件中的CLOCK_DEFAULT_START_TIME项，
+ * 影响计时器初始值及重置操作。
+ */
 void WriteConfigDefaultStartTime(int seconds);
+
+/**
+ * @brief 写入启动模式配置
+ * @param mode 启动模式字符串("COUNTDOWN"/"COUNTUP")
+ * 
+ * 修改配置文件中的STARTUP_MODE项，
+ * 控制程序启动时的默认计时模式。
+ */
 void WriteConfigStartupMode(const char* mode);
 
 #endif // TIMER_H
