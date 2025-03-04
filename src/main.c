@@ -1,18 +1,3 @@
-/*
-pikaへ／|
-　　/＼7　　　 ∠＿/
-　 /　│　　 ／　／
-　│　Z ＿,＜　／　　 /`ヽ
-　│ヽ　　 /　　〉
-　 Y`　 /　　/
-　ｲ●　､　●　　⊂⊃〈　　/
-　()　 へ　　　　|　＼〈    代码正在努力拆分中~
-　　>ｰ ､_　 ィ　 │ ／／     The code is working hard to split ~
-　 / へ　　 /　ﾉ＜| ＼＼
-　 ヽ_ﾉ　　(_／　 │／／
-　　7|／
-　　＞―r￣￣`ｰ―＿6
-*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,11 +19,11 @@ pikaへ／|
 #include "../include/tray.h"
 #include "../include/tray_menu.h"
 #include "../include/timer.h"
-#include "../include/window.h"  
-#include "../include/startup.h" 
-#include "../include/config.h"  
+#include "../include/window.h"
+#include "../include/startup.h"
+#include "../include/config.h"
 #include "../include/window_procedure.h"
- 
+
 #ifndef CSIDL_STARTUP
 
 #endif
@@ -59,7 +44,7 @@ void PauseMediaPlayback(void);
 
 extern char CLOCK_TEXT_COLOR[10];
 
-int CLOCK_DEFAULT_START_TIME = 300;  // Default is 5 minutes (300 seconds)
+int CLOCK_DEFAULT_START_TIME = 300;
 int elapsed_time = 0;
 char inputText[256] = {0};
 int message_shown = 0;
@@ -80,7 +65,6 @@ void ExitProgram(HWND hwnd);
 
 void ListAvailableFonts();
 
-
 int CALLBACK EnumFontFamExProc(
     const LOGFONT *lpelfe,
     const TEXTMETRIC *lpntme,
@@ -88,15 +72,12 @@ int CALLBACK EnumFontFamExProc(
     LPARAM lParam
 );
 
-// Keep the global variable declarations
 RecentFile CLOCK_RECENT_FILES[MAX_RECENT_FILES];
 int CLOCK_RECENT_FILES_COUNT = 0;
 
 extern char PREVIEW_FONT_NAME[];
 extern char PREVIEW_INTERNAL_NAME[];
 extern BOOL IS_PREVIEWING;
-
-// UTF8ToANSI函数已移至config.c中实现
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     HRESULT hr = CoInitialize(NULL);
@@ -107,12 +88,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     SetConsoleOutputCP(936);
     SetConsoleCP(936);
-    
+
     InitializeDefaultLanguage();
-    
-    // 更新开机自启动快捷方式，确保正确的路径
+
     UpdateStartupShortcut();
-    
+
     ReadConfig();
 
     int defaultFontIndex = -1;
@@ -122,7 +102,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             break;
         }
     }
-    
+
     if (defaultFontIndex != -1) {
         LoadFontFromResource(hInstance, fontResources[defaultFontIndex].resourceId);
     }
@@ -179,19 +159,19 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         elapsed_time = 0;
     } else if (strcmp(CLOCK_STARTUP_MODE, "NO_DISPLAY") == 0) {
         ShowWindow(hwnd, SW_HIDE);
-        
+
         KillTimer(hwnd, 1);
-        elapsed_time = CLOCK_TOTAL_TIME;          
-        CLOCK_IS_PAUSED = TRUE;                   
-        message_shown = TRUE;                     
-        countdown_message_shown = TRUE;           
-        countup_message_shown = TRUE;             
-        countdown_elapsed_time = 0;               
-        countup_elapsed_time = 0;                 
+        elapsed_time = CLOCK_TOTAL_TIME;
+        CLOCK_IS_PAUSED = TRUE;
+        message_shown = TRUE;
+        countdown_message_shown = TRUE;
+        countup_message_shown = TRUE;
+        countdown_elapsed_time = 0;
+        countup_elapsed_time = 0;
     } else if (strcmp(CLOCK_STARTUP_MODE, "SHOW_TIME") == 0) {
         CLOCK_SHOW_CURRENT_TIME = TRUE;
         CLOCK_LAST_TIME_UPDATE = 0;
-    } 
+    }
 
     MSG msg;
     while (GetMessage(&msg, NULL, 0, 0) > 0) {
@@ -206,32 +186,30 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 }
 
 void PauseMediaPlayback(void) {
-     
+
     keybd_event(VK_MEDIA_STOP, 0, 0, 0);
-    Sleep(50);   
+    Sleep(50);
     keybd_event(VK_MEDIA_STOP, 0, KEYEVENTF_KEYUP, 0);
-    Sleep(50);   
+    Sleep(50);
 
-     
-    keybd_event(VK_MEDIA_PLAY_PAUSE, 0, 0, 0);
-    Sleep(50);   
-    keybd_event(VK_MEDIA_PLAY_PAUSE, 0, KEYEVENTF_KEYUP, 0);
-    Sleep(50);   
-
-     
     keybd_event(VK_MEDIA_PLAY_PAUSE, 0, 0, 0);
     Sleep(50);
     keybd_event(VK_MEDIA_PLAY_PAUSE, 0, KEYEVENTF_KEYUP, 0);
-    Sleep(100);   
+    Sleep(50);
+
+    keybd_event(VK_MEDIA_PLAY_PAUSE, 0, 0, 0);
+    Sleep(50);
+    keybd_event(VK_MEDIA_PLAY_PAUSE, 0, KEYEVENTF_KEYUP, 0);
+    Sleep(100);
 }
 
 void ShowToastNotification(HWND hwnd, const char* message) {
     const wchar_t* timeUpMsg = GetLocalizedString(L"时间到了!", L"Time's up!");
-    
+
     int size_needed = WideCharToMultiByte(CP_UTF8, 0, timeUpMsg, -1, NULL, 0, NULL, NULL);
     char* utf8Msg = (char*)malloc(size_needed);
     WideCharToMultiByte(CP_UTF8, 0, timeUpMsg, -1, utf8Msg, size_needed, NULL, NULL);
-    
+
     ShowTrayNotification(hwnd, utf8Msg);
     free(utf8Msg);
 }
