@@ -50,8 +50,6 @@ EXTERN_C const CLSID CLSID_ShellLink;
 EXTERN_C const IID IID_IShellLinkW;
 #endif
 
-COLORREF ShowColorDialog(HWND hwnd); 
-UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM lParam);
 void WriteConfig(const char* config_path);
 void ShowToastNotification(HWND hwnd, const char* message);
 
@@ -59,8 +57,6 @@ int default_countdown_time = 0;
 
 void PauseMediaPlayback(void);
 
-extern char PREVIEW_COLOR[10];
-extern BOOL IS_COLOR_PREVIEWING;
 extern char CLOCK_TEXT_COLOR[10];
 
 int CLOCK_DEFAULT_START_TIME = 300;  // Default is 5 minutes (300 seconds)
@@ -86,8 +82,7 @@ void ExitProgram(HWND hwnd);
 
 void ListAvailableFonts();
 
-int isValidColor(const char* input);
-INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
+
 int CALLBACK EnumFontFamExProc(
     const LOGFONT *lpelfe,
     const TEXTMETRIC *lpntme,
