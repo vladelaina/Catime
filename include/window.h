@@ -138,6 +138,23 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow);
  * @param maxPath 文件路径缓冲区大小
  * @return BOOL 是否成功选择了文件
  */
+/**
+ * @brief 初始化应用程序
+ * @param hInstance 应用程序实例句柄
+ * @return BOOL 初始化是否成功
+ * 
+ * 执行应用程序启动时的初始化工作，包括设置控制台代码页、
+ * 初始化语言、更新自启动快捷方式、读取配置文件和加载字体资源。
+ */
+BOOL InitializeApplication(HINSTANCE hInstance);
+
+/**
+ * @brief 打开文件选择对话框
+ * @param hwnd 父窗口句柄
+ * @param filePath 存储选中文件路径的缓冲区
+ * @param maxPath 缓冲区最大长度
+ * @return BOOL 是否成功选择文件
+ */
 BOOL OpenFileDialog(HWND hwnd, char* filePath, DWORD maxPath);
 
 #endif // WINDOW_H

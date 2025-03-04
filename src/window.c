@@ -9,6 +9,11 @@
 #include "../include/window.h"
 #include "../include/timer.h"
 #include "../include/tray.h"
+#include "../include/language.h"
+#include "../include/font.h"
+#include "../include/color.h"
+#include "../include/startup.h"
+#include "../include/config.h"
 #include "../resource/resource.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -524,6 +529,30 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
 
 float CLOCK_FONT_SCALE_FACTOR = 1.0f;
 int CLOCK_BASE_FONT_SIZE = 24;
+
+BOOL InitializeApplication(HINSTANCE hInstance) {
+    SetConsoleOutputCP(936);
+    SetConsoleCP(936);
+
+    InitializeDefaultLanguage();
+    UpdateStartupShortcut();
+    ReadConfig();
+
+    int defaultFontIndex = -1;
+    for (int i = 0; i < FONT_RESOURCES_COUNT; i++) {
+        if (strcmp(fontResources[i].fontName, FONT_FILE_NAME) == 0) {
+            defaultFontIndex = i;
+            break;
+        }
+    }
+
+    if (defaultFontIndex != -1) {
+        LoadFontFromResource(hInstance, fontResources[defaultFontIndex].resourceId);
+    }
+
+    CLOCK_TOTAL_TIME = CLOCK_DEFAULT_START_TIME;
+    return TRUE;
+}
 
 BOOL OpenFileDialog(HWND hwnd, char* filePath, DWORD maxPath) {
     OPENFILENAME ofn = { 0 };

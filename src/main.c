@@ -74,28 +74,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 1;
     }
 
-    SetConsoleOutputCP(936);
-    SetConsoleCP(936);
-
-    InitializeDefaultLanguage();
-
-    UpdateStartupShortcut();
-
-    ReadConfig();
-
-    int defaultFontIndex = -1;
-    for (int i = 0; i < FONT_RESOURCES_COUNT; i++) {
-        if (strcmp(fontResources[i].fontName, FONT_FILE_NAME) == 0) {
-            defaultFontIndex = i;
-            break;
-        }
+    if (!InitializeApplication(hInstance)) {
+        MessageBox(NULL, "Application initialization failed!", "Error", MB_ICONERROR);
+        return 1;
     }
-
-    if (defaultFontIndex != -1) {
-        LoadFontFromResource(hInstance, fontResources[defaultFontIndex].resourceId);
-    }
-
-    CLOCK_TOTAL_TIME = CLOCK_DEFAULT_START_TIME;
 
     HANDLE hMutex = CreateMutex(NULL, TRUE, "CatimeMutex");
     if (GetLastError() == ERROR_ALREADY_EXISTS) {
@@ -107,47 +89,22 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     }
 
     HWND hwnd = CreateMainWindow(hInstance, nCmdShow);
-
     if (!hwnd) {
         MessageBox(NULL, "Window Creation Failed!", "Error", MB_ICONEXCLAMATION | MB_OK);
         return 0;
     }
 
-    EnableWindow(hwnd, TRUE);
-    SetFocus(hwnd);
-
-    SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), 255, LWA_COLORKEY);
-
-    SetBlurBehind(hwnd, FALSE);
-
-    InitTrayIcon(hwnd, hInstance);
-
     if (SetTimer(hwnd, 1, 1000, NULL) == 0) {
+        MessageBox(NULL, "Timer Creation Failed!", "Error", MB_ICONEXCLAMATION | MB_OK);
+        return 0;
     }
 
-    ShowWindow(hwnd, nCmdShow);
-    UpdateWindow(hwnd);
-
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    FILE *file = fopen(config_path, "r");
-    if (file) {
-        char line[256];
-        while (fgets(line, sizeof(line), file)) {
-            if (strncmp(line, "STARTUP_MODE=", 13) == 0) {
-                sscanf(line, "STARTUP_MODE=%19s", CLOCK_STARTUP_MODE);
-                break;
-            }
-        }
-        fclose(file);
-    }
-
+    // 处理启动模式
     if (strcmp(CLOCK_STARTUP_MODE, "COUNT_UP") == 0) {
         CLOCK_COUNT_UP = TRUE;
         elapsed_time = 0;
     } else if (strcmp(CLOCK_STARTUP_MODE, "NO_DISPLAY") == 0) {
         ShowWindow(hwnd, SW_HIDE);
-
         KillTimer(hwnd, 1);
         elapsed_time = CLOCK_TOTAL_TIME;
         CLOCK_IS_PAUSED = TRUE;
@@ -168,7 +125,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     }
 
     CloseHandle(hMutex);
-
     CoUninitialize();
     return (int)msg.wParam;
 }
