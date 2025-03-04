@@ -123,6 +123,27 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
  * 检查指定的颜色是否已存在于颜色选项列表中。
  */
 BOOL IsColorExists(const char* hexColor);
+
+/**
+ * @brief 显示颜色选择对话框
+ * @param hwnd 父窗口句柄
+ * @return COLORREF 选择的颜色值，如果用户取消则返回(COLORREF)-1
+ * 
+ * 显示Windows标准颜色选择对话框，允许用户选择颜色。
+ */
+COLORREF ShowColorDialog(HWND hwnd);
+
+/**
+ * @brief 颜色对话框钩子过程
+ * @param hdlg 对话框窗口句柄
+ * @param msg 消息ID
+ * @param wParam 消息参数
+ * @param lParam 消息参数
+ * @return UINT_PTR 消息处理结果
+ * 
+ * 处理颜色选择对话框的自定义消息事件，实现颜色预览功能。
+ */
+UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT msg, WPARAM wParam, LPARAM lParam);
 /// @}
 
 #endif // COLOR_H
