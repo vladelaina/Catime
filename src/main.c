@@ -1,10 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <time.h>
-#include <ctype.h>
 #include <dwmapi.h>
 #include "../resource/resource.h"
 #include <winnls.h>
@@ -61,14 +58,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 
 void ExitProgram(HWND hwnd);
 
-void ListAvailableFonts();
 
-int CALLBACK EnumFontFamExProc(
-    const LOGFONT *lpelfe,
-    const TEXTMETRIC *lpntme,
-    DWORD FontType,
-    LPARAM lParam
-);
 
 RecentFile CLOCK_RECENT_FILES[MAX_RECENT_FILES];
 int CLOCK_RECENT_FILES_COUNT = 0;
