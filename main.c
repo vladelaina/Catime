@@ -207,18 +207,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     return (int)msg.wParam;
 }
 
-// GetConfigPath函数已移至config.c中实现
-
-// CreateDefaultConfig函数已移至config.c中实现
-
-// ReadConfig函数已移至config.c中实现
-
-// WriteConfigTimeoutAction函数已移至config.c中实现
-
-
-
-
-
 
 
 INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -1844,63 +1832,5 @@ void ShowToastNotification(HWND hwnd, const char* message) {
     
     ShowTrayNotification(hwnd, utf8Msg);
     free(utf8Msg);
-}
-
-void WriteConfig(const char* config_path) {
-    FILE* file = fopen(config_path, "w");
-    if (!file) return;
-    
-    fprintf(file, "CLOCK_TEXT_COLOR=%s\n", CLOCK_TEXT_COLOR);
-    fprintf(file, "CLOCK_BASE_FONT_SIZE=%d\n", CLOCK_BASE_FONT_SIZE);
-    fprintf(file, "FONT_FILE_NAME=%s\n", FONT_FILE_NAME);
-    fprintf(file, "CLOCK_DEFAULT_START_TIME=%d\n", CLOCK_DEFAULT_START_TIME);
-    fprintf(file, "CLOCK_WINDOW_POS_X=%d\n", CLOCK_WINDOW_POS_X);
-    fprintf(file, "CLOCK_WINDOW_POS_Y=%d\n", CLOCK_WINDOW_POS_Y);
-    fprintf(file, "CLOCK_EDIT_MODE=%s\n", CLOCK_EDIT_MODE ? "TRUE" : "FALSE");
-    fprintf(file, "WINDOW_SCALE=%.2f\n", CLOCK_WINDOW_SCALE);
-    fprintf(file, "CLOCK_USE_24HOUR=%s\n", CLOCK_USE_24HOUR ? "TRUE" : "FALSE");
-    fprintf(file, "CLOCK_SHOW_SECONDS=%s\n", CLOCK_SHOW_SECONDS ? "TRUE" : "FALSE");
-    
-    fprintf(file, "CLOCK_TIME_OPTIONS=");
-    for (int i = 0; i < time_options_count; i++) {
-        if (i > 0) fprintf(file, ",");
-        fprintf(file, "%d", time_options[i]);
-    }
-    fprintf(file, "\n");
-    
-    fprintf(file, "CLOCK_TIMEOUT_TEXT=%s\n", CLOCK_TIMEOUT_TEXT);
-    
-    if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE && strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
-        fprintf(file, "CLOCK_TIMEOUT_ACTION=OPEN_FILE\n");
-        fprintf(file, "CLOCK_TIMEOUT_FILE=%s\n", CLOCK_TIMEOUT_FILE_PATH);
-    } else {
-        switch (CLOCK_TIMEOUT_ACTION) {
-            case TIMEOUT_ACTION_MESSAGE:
-                fprintf(file, "CLOCK_TIMEOUT_ACTION=MESSAGE\n");
-                break;
-            case TIMEOUT_ACTION_LOCK:
-                fprintf(file, "CLOCK_TIMEOUT_ACTION=LOCK\n");
-                break;
-            case TIMEOUT_ACTION_SHUTDOWN:
-                fprintf(file, "CLOCK_TIMEOUT_ACTION=SHUTDOWN\n");
-                break;
-            case TIMEOUT_ACTION_RESTART:
-                fprintf(file, "CLOCK_TIMEOUT_ACTION=RESTART\n");
-                break;
-        }
-    }
-    
-    for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
-        fprintf(file, "CLOCK_RECENT_FILE=%s\n", CLOCK_RECENT_FILES[i].path);
-    }
-    
-    fprintf(file, "COLOR_OPTIONS=");
-    for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
-        if (i > 0) fprintf(file, ",");
-        fprintf(file, "%s", COLOR_OPTIONS[i].hexColor);
-    }
-    fprintf(file, "\n");
-    
-    fclose(file);
 }
 

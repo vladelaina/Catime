@@ -89,6 +89,12 @@ char* UTF8ToANSI(const char* utf8Str);
  */
 void CreateDefaultConfig(const char* config_path);
 
+/**
+ * @brief Writes all configuration settings to the file.
+ * @param config_path The path to the configuration file.
+ */
+void WriteConfig(const char* config_path);
+
 /// @}
 
 #endif // CONFIG_H
