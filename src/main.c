@@ -121,20 +121,20 @@ static void HandleStartupMode(HWND hwnd) {
  * 处理单实例检查，确保只有一个程序实例在运行。
  */
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-    // Initialize COM
+    // 初始化COM
     HRESULT hr = CoInitialize(NULL);
     if (FAILED(hr)) {
         MessageBox(NULL, "COM initialization failed!", "Error", MB_ICONERROR);
         return 1;
     }
 
-    // Initialize application
+    // 初始化应用程序
     if (!InitializeApplication(hInstance)) {
         MessageBox(NULL, "Application initialization failed!", "Error", MB_ICONERROR);
         return 1;
     }
 
-    // Handle single instance
+    // 处理单实例
     HANDLE hMutex = CreateMutex(NULL, TRUE, "CatimeMutex");
     if (GetLastError() == ERROR_ALREADY_EXISTS) {
         HWND hwndExisting = FindWindow("CatimeWindow", "Catime");
@@ -144,30 +144,30 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         Sleep(50);
     }
 
-    // Create main window
+    // 创建主窗口
     HWND hwnd = CreateMainWindow(hInstance, nCmdShow);
     if (!hwnd) {
         MessageBox(NULL, "Window Creation Failed!", "Error", MB_ICONEXCLAMATION | MB_OK);
         return 0;
     }
 
-    // Set timer
+    // 设置定时器
     if (SetTimer(hwnd, 1, 1000, NULL) == 0) {
         MessageBox(NULL, "Timer Creation Failed!", "Error", MB_ICONEXCLAMATION | MB_OK);
         return 0;
     }
 
-    // Handle startup mode
+    // 处理启动模式
     HandleStartupMode(hwnd);
 
-    // Message loop
+    // 消息循环
     MSG msg;
     while (GetMessage(&msg, NULL, 0, 0) > 0) {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
 
-    // Cleanup
+    // 清理资源
     CloseHandle(hMutex);
     CoUninitialize();
     return (int)msg.wParam;
