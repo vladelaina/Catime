@@ -41,6 +41,21 @@ extern int message_shown;
 extern void ShowToastNotification(HWND hwnd, const char* message);
 extern void PauseMediaPlayback(void);
 
+/**
+ * @brief 输入对话框过程
+ * @param hwndDlg 对话框句柄
+ * @param msg 消息类型
+ * @param wParam 消息参数
+ * @param lParam 消息参数
+ * @return INT_PTR 消息处理结果
+ * 
+ * 处理倒计时输入对话框的：
+ * 1. 控件初始化与焦点设置
+ * 2. 背景/控件颜色管理
+ * 3. 确定按钮点击处理
+ * 4. 回车键响应
+ * 5. 资源清理
+ */
 INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     static HBRUSH hBackgroundBrush = NULL;
     static HBRUSH hEditBrush = NULL;
@@ -129,6 +144,22 @@ void ExitProgram(HWND hwnd) {
     PostQuitMessage(0);
 }
 
+/**
+ * @brief 主窗口消息处理回调函数
+ * @param hwnd 窗口句柄
+ * @param msg 消息类型
+ * @param wp 消息参数(具体含义取决于消息类型)
+ * @param lp 消息参数(具体含义取决于消息类型)
+ * @return LRESULT 消息处理结果
+ * 
+ * 处理主窗口的所有消息事件，包括：
+ * - 窗口创建/销毁
+ * - 鼠标事件(拖动、滚轮缩放)
+ * - 定时器事件
+ * - 系统托盘交互
+ * - 绘图事件
+ * - 菜单命令处理
+ */
 LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
     static char time_text[50];
@@ -261,6 +292,15 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         }
 
         case WM_PAINT: {
+            /**
+             * @brief 窗口绘制处理流程
+             * 1. 创建内存DC双缓冲防止闪烁
+             * 2. 根据模式计算剩余时间/获取当前时间
+             * 3. 动态加载字体资源(支持实时预览)
+             * 4. 解析颜色配置(支持HEX/RGB格式)
+             * 5. 使用双缓冲机制绘制文本
+             * 6. 自动调整窗口尺寸适应文本内容
+             */
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hwnd, &ps);
             RECT rect;
@@ -371,6 +411,17 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             break;
         }
         case WM_TIMER: {
+            /**
+             * @brief 定时器消息处理
+             * 当wp==1时处理主定时器事件：
+             * 1. 倒计时模式：
+             *   - 更新剩余时间
+             *   - 触发窗口重绘
+             *   - 超时后执行预设操作(提示/锁屏/关机)
+             * 2. 计时模式：
+             *   - 累计已过时间
+             *   - 持续更新显示
+             */
             if (wp == 1) {
                 if (CLOCK_SHOW_CURRENT_TIME) {
                     InvalidateRect(hwnd, NULL, TRUE);
