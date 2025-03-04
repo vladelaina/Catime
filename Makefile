@@ -10,7 +10,7 @@ ASSET_DIR = $(OUTPUT_DIR)/asset
 BUILD_DIR = build
 
 # 设置文件名 - main.c 移动到 src 目录
-SRC_FILES = src/main.c src/window.c src/tray.c src/color.c src/font.c src/language.c src/timer.c src/tray_menu.c src/startup.c src/config.c src/window_procedure.c
+SRC_FILES = src/main.c src/window.c src/tray.c src/color.c src/font.c src/language.c src/timer.c src/tray_menu.c src/startup.c src/config.c src/window_procedure.c src/media.c src/notification.c
 RC_FILE = resource/resource.rc
 
 # 创建目标文件夹和资源文件夹
@@ -36,7 +36,9 @@ OBJS = $(BUILD_DIR)/main.o \
        $(BUILD_DIR)/tray_menu.o \
        $(BUILD_DIR)/startup.o \
        $(BUILD_DIR)/config.o \
-       $(BUILD_DIR)/window_procedure.o
+       $(BUILD_DIR)/window_procedure.o \
+       $(BUILD_DIR)/media.o \
+       $(BUILD_DIR)/notification.o
 
 # 生成目标
 all: directories $(OUTPUT_DIR)/catime.exe
@@ -95,6 +97,14 @@ $(BUILD_DIR)/config.o: src/config.c
 # 编译窗口过程处理模块
 $(BUILD_DIR)/window_procedure.o: src/window_procedure.c
 	@$(CC) -c src/window_procedure.c -o $(BUILD_DIR)/window_procedure.o $(CFLAGS)
+
+# 编译媒体控制模块
+$(BUILD_DIR)/media.o: src/media.c
+	@$(CC) -c src/media.c -o $(BUILD_DIR)/media.o $(CFLAGS)
+
+# 编译通知模块
+$(BUILD_DIR)/notification.o: src/notification.c
+	@$(CC) -c src/notification.c -o $(BUILD_DIR)/notification.o $(CFLAGS)
 
 # 链接编译目标文件，输出到输出目录
 $(OUTPUT_DIR)/catime.exe: $(OBJS) $(BUILD_DIR)/resource.o
