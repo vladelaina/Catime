@@ -9,8 +9,8 @@ ASSET_DIR = $(OUTPUT_DIR)/asset
 # 创建构建目录
 BUILD_DIR = build
 
-# 设置文件名 - 添加 window_procedure.c
-SRC_FILES = main.c src/window.c src/tray.c src/color.c src/font.c src/language.c src/timer.c src/tray_menu.c src/startup.c src/config.c src/window_procedure.c
+# 设置文件名 - main.c 移动到 src 目录
+SRC_FILES = src/main.c src/window.c src/tray.c src/color.c src/font.c src/language.c src/timer.c src/tray_menu.c src/startup.c src/config.c src/window_procedure.c
 RC_FILE = resource/resource.rc
 
 # 创建目标文件夹和资源文件夹
@@ -25,7 +25,7 @@ LDFLAGS = -lole32 -lshell32 -lcomdlg32 -luuid
 # 确保 dwmapi.lib 被链接
 LIBS = -ldwmapi -luser32 -lgdi32 -lcomdlg32
 
-# 生成目标文件列表 - 添加 window_procedure.o
+# 生成目标文件列表
 OBJS = $(BUILD_DIR)/main.o \
        $(BUILD_DIR)/window.o \
        $(BUILD_DIR)/tray.o \
@@ -52,9 +52,9 @@ directories:
 $(BUILD_DIR)/resource.o: $(RC_FILE)
 	@$(WINDRES) $(RC_FILE) -o $(BUILD_DIR)/resource.o
 
-# 编译主程序
-$(BUILD_DIR)/main.o: main.c
-	@$(CC) -c main.c -o $(BUILD_DIR)/main.o $(CFLAGS)
+# 编译主程序 - 更新路径为 src/main.c
+$(BUILD_DIR)/main.o: src/main.c
+	@$(CC) -c src/main.c -o $(BUILD_DIR)/main.o $(CFLAGS)
 
 # 编译语言模块
 $(BUILD_DIR)/language.o: src/language.c

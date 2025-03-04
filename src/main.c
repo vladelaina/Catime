@@ -21,23 +21,23 @@ pikaへ／|
 #include <time.h>
 #include <ctype.h>
 #include <dwmapi.h>
-#include "resource/resource.h"
+#include "../resource/resource.h"
 #include <winnls.h>
 #include <commdlg.h>
 #include <shlobj.h>
 #include <objbase.h>
 #include <shobjidl.h>
 #include <shlguid.h>
-#include "include/language.h"
-#include "include/font.h"
-#include "include/color.h"
-#include "include/tray.h"
-#include "include/tray_menu.h"
-#include "include/timer.h"
-#include "include/window.h"  
-#include "include/startup.h" 
-#include "include/config.h"  
-#include "include/window_procedure.h"
+#include "../include/language.h"
+#include "../include/font.h"
+#include "../include/color.h"
+#include "../include/tray.h"
+#include "../include/tray_menu.h"
+#include "../include/timer.h"
+#include "../include/window.h"  
+#include "../include/startup.h" 
+#include "../include/config.h"  
+#include "../include/window_procedure.h"
  
 #ifndef CSIDL_STARTUP
 
