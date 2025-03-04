@@ -183,61 +183,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     return (int)msg.wParam;
 }
 
-void PauseMediaPlayback(void) {
-
-    keybd_event(VK_MEDIA_STOP, 0, 0, 0);
-    Sleep(50);
-    keybd_event(VK_MEDIA_STOP, 0, KEYEVENTF_KEYUP, 0);
-    Sleep(50);
-
-    keybd_event(VK_MEDIA_PLAY_PAUSE, 0, 0, 0);
-    Sleep(50);
-    keybd_event(VK_MEDIA_PLAY_PAUSE, 0, KEYEVENTF_KEYUP, 0);
-    Sleep(50);
-
-    keybd_event(VK_MEDIA_PLAY_PAUSE, 0, 0, 0);
-    Sleep(50);
-    keybd_event(VK_MEDIA_PLAY_PAUSE, 0, KEYEVENTF_KEYUP, 0);
-    Sleep(100);
-}
-
-void ShowToastNotification(HWND hwnd, const char* message) {
-    const wchar_t* timeUpMsg = GetLocalizedString(L"时间到了!", L"Time's up!");
-
-    int size_needed = WideCharToMultiByte(CP_UTF8, 0, timeUpMsg, -1, NULL, 0, NULL, NULL);
-    char* utf8Msg = (char*)malloc(size_needed);
-    WideCharToMultiByte(CP_UTF8, 0, timeUpMsg, -1, utf8Msg, size_needed, NULL, NULL);
-
-    ShowTrayNotification(hwnd, utf8Msg);
-    free(utf8Msg);
-}
-
-void PauseMediaPlayback(void) {
-
-    keybd_event(VK_MEDIA_STOP, 0, 0, 0);
-    Sleep(50);
-    keybd_event(VK_MEDIA_STOP, 0, KEYEVENTF_KEYUP, 0);
-    Sleep(50);
-
-    keybd_event(VK_MEDIA_PLAY_PAUSE, 0, 0, 0);
-    Sleep(50);
-    keybd_event(VK_MEDIA_PLAY_PAUSE, 0, KEYEVENTF_KEYUP, 0);
-    Sleep(50);
-
-    keybd_event(VK_MEDIA_PLAY_PAUSE, 0, 0, 0);
-    Sleep(50);
-    keybd_event(VK_MEDIA_PLAY_PAUSE, 0, KEYEVENTF_KEYUP, 0);
-    Sleep(100);
-}
-
-void ShowToastNotification(HWND hwnd, const char* message) {
-    const wchar_t* timeUpMsg = GetLocalizedString(L"时间到了!", L"Time's up!");
-
-    int size_needed = WideCharToMultiByte(CP_UTF8, 0, timeUpMsg, -1, NULL, 0, NULL, NULL);
-    char* utf8Msg = (char*)malloc(size_needed);
-    WideCharToMultiByte(CP_UTF8, 0, timeUpMsg, -1, utf8Msg, size_needed, NULL, NULL);
-
-    ShowTrayNotification(hwnd, utf8Msg);
-    free(utf8Msg);
-}
+// PauseMediaPlayback和ShowToastNotification函数已在media.h和notification.h中声明，
+// 实现在media.c和notification.c中，此处不需要重复定义
 
