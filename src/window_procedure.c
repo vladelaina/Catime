@@ -32,6 +32,15 @@
 #include "../include/config.h"
 #include "../include/window_procedure.h"
 
+// 从main.c引入的变量
+extern char inputText[256];
+extern int elapsed_time;
+extern int message_shown;
+
+// 从main.c引入的函数声明
+extern void ShowToastNotification(HWND hwnd, const char* message);
+extern void PauseMediaPlayback(void);
+
 INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     static HBRUSH hBackgroundBrush = NULL;
     static HBRUSH hEditBrush = NULL;
@@ -113,8 +122,6 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     }
     return FALSE;
 }
-
-
 
 void ExitProgram(HWND hwnd) {
     RemoveTrayIcon();

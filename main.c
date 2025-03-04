@@ -60,8 +60,9 @@ void PauseMediaPlayback(void);
 extern char CLOCK_TEXT_COLOR[10];
 
 int CLOCK_DEFAULT_START_TIME = 300;  // Default is 5 minutes (300 seconds)
-static int elapsed_time = 0;
+int elapsed_time = 0;
 char inputText[256] = {0};
+int message_shown = 0;
 
 #pragma comment(lib, "dwmapi.lib")
 #pragma comment(lib, "user32.lib")
@@ -69,7 +70,6 @@ char inputText[256] = {0};
 #pragma comment(lib, "comdlg32.lib")
 
 time_t last_config_time = 0;
-int message_shown = 0;
 
 extern char FONT_FILE_NAME[];
 extern char FONT_INTERNAL_NAME[];
