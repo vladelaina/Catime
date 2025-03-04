@@ -52,7 +52,6 @@ EXTERN_C const IID IID_IShellLinkW;
 
 COLORREF ShowColorDialog(HWND hwnd); 
 UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM lParam);
-BOOL IsColorExists(const char* hexColor);
 void WriteConfig(const char* config_path);
 void ShowToastNotification(HWND hwnd, const char* message);
 
@@ -81,7 +80,6 @@ extern char FONT_INTERNAL_NAME[];
 
 LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
 INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
-void WriteConfigColor(const char* color_input);
 void WriteConfigFont(const char* font_file_name);
 
 void ExitProgram(HWND hwnd);
