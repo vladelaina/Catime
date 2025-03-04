@@ -50,7 +50,6 @@ EXTERN_C const CLSID CLSID_ShellLink;
 EXTERN_C const IID IID_IShellLinkW;
 #endif
 
-void WriteConfig(const char* config_path);
 void ShowToastNotification(HWND hwnd, const char* message);
 
 int default_countdown_time = 0;
@@ -76,7 +75,6 @@ extern char FONT_INTERNAL_NAME[];
 
 LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
 INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
-void WriteConfigFont(const char* font_file_name);
 
 void ExitProgram(HWND hwnd);
 
