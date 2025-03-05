@@ -7,6 +7,7 @@
  */
 
 #include <windows.h>
+#include <stdio.h>
 #include <ctype.h>
 #include "../resource/resource.h"
 #include "../include/dialog_procedure.h"
