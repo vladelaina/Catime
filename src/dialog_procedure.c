@@ -160,12 +160,12 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
 
     switch (msg) {
         case WM_INITDIALOG: {
-            // 加载大图标
+            // 加载大图标，使用定义的尺寸
             hLargeIcon = (HICON)LoadImage(GetModuleHandle(NULL),
                 MAKEINTRESOURCE(IDI_CATIME),
                 IMAGE_ICON,
-                128,    // 所需宽度
-                128,    // 所需高度
+                ABOUT_ICON_SIZE,    // 使用定义的尺寸
+                ABOUT_ICON_SIZE,    // 使用定义的尺寸
                 LR_DEFAULTCOLOR);
             
             if (hLargeIcon) {

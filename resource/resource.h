@@ -217,6 +217,9 @@
 #define IDC_AUTHOR_TEXT 1008
 #define IDC_ABOUT_OK 1009
 
+// 新增：关于对话框图标尺寸
+#define ABOUT_ICON_SIZE 128
+
 // 新增：关于对话框文本
 #define IDC_ABOUT_TITLE L"关于 Catime"
 #define IDC_ABOUT_VERSION L"版本: "
