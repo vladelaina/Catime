@@ -452,6 +452,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     InvalidateRect(hwnd, NULL, TRUE);
                     break;
                 }
+                case CLOCK_IDM_ABOUT:
+                    ShowAboutDialog(hwnd);
+                    return 0;
                 default: {
                     int cmd = LOWORD(wp);
                     if (cmd >= 102 && cmd < 102 + time_options_count) {

@@ -111,3 +111,39 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     }
     return FALSE;
 }
+
+// 关于对话框处理过程
+INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    switch (msg) {
+        case WM_INITDIALOG:
+            // 设置对话框图标
+            SendMessage(hwndDlg, WM_SETICON, ICON_BIG, 
+                (LPARAM)LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_CATIME)));
+            
+            // 设置版本号文本
+            char versionText[50];
+            sprintf(versionText, "版本: %s", CATIME_VERSION);
+            SetDlgItemText(hwndDlg, IDC_VERSION_TEXT, versionText);
+            return TRUE;
+
+        case WM_COMMAND:
+            if (LOWORD(wParam) == IDC_ABOUT_OK || LOWORD(wParam) == IDCANCEL) {
+                EndDialog(hwndDlg, LOWORD(wParam));
+                return TRUE;
+            }
+            break;
+
+        case WM_CLOSE:
+            EndDialog(hwndDlg, IDCANCEL);
+            return TRUE;
+    }
+    return FALSE;
+}
+
+// 显示关于对话框
+void ShowAboutDialog(HWND hwndParent) {
+    DialogBox(GetModuleHandle(NULL), 
+             MAKEINTRESOURCE(IDD_ABOUT_DIALOG), 
+             hwndParent, 
+             AboutDlgProc);
+}

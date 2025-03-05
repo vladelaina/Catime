@@ -28,4 +28,12 @@
  */
 INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 
+/**
+ * @brief 显示关于对话框
+ * @param hwndParent 父窗口句柄
+ * 
+ * 显示包含程序版本、作者和第三方库信息的关于对话框。
+ */
+void ShowAboutDialog(HWND hwndParent);
+
 #endif // DIALOG_PROCEDURE_H
