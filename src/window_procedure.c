@@ -32,6 +32,7 @@
 #include "../include/config.h"
 #include "../include/window_procedure.h"
 #include "../include/window_events.h"
+#include "../include/drag_scale.h"
 
 // 从main.c引入的变量
 extern char inputText[256];
@@ -175,36 +176,23 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         }
 
         case WM_LBUTTONDOWN: {
-            if (CLOCK_EDIT_MODE) {
-                CLOCK_IS_DRAGGING = TRUE;
-                SetCapture(hwnd);
-                GetCursorPos(&CLOCK_LAST_MOUSE_POS);
-                return 0;
-            }
+            StartDragWindow(hwnd);
             break;
         }
 
         case WM_LBUTTONUP: {
-            if (CLOCK_EDIT_MODE && CLOCK_IS_DRAGGING) {
-                CLOCK_IS_DRAGGING = FALSE;
-                ReleaseCapture();
-                // 编辑模式下不强制窗口在屏幕内，允许拖出
-                AdjustWindowPosition(hwnd, FALSE);
-                InvalidateRect(hwnd, NULL, TRUE);
-            }
+            EndDragWindow(hwnd);
             break;
         }
 
         case WM_MOUSEWHEEL: {
-            if (CLOCK_EDIT_MODE) {
-                int delta = GET_WHEEL_DELTA_WPARAM(wp);
-                HandleWindowResize(hwnd, delta);
-            }
+            int delta = GET_WHEEL_DELTA_WPARAM(wp);
+            HandleScaleWindow(hwnd, delta);
             break;
         }
 
         case WM_MOUSEMOVE: {
-            if (HandleWindowMove(hwnd)) {
+            if (HandleDragWindow(hwnd)) {
                 return 0;
             }
             break;
