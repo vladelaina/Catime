@@ -156,17 +156,34 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 
 // 关于对话框处理过程
 INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    static HICON hLargeIcon = NULL;
+
     switch (msg) {
-        case WM_INITDIALOG:
-            // 设置图标
-            SendMessage(hwndDlg, WM_SETICON, ICON_BIG, 
-                (LPARAM)LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_CATIME)));
+        case WM_INITDIALOG: {
+            // 加载大图标
+            hLargeIcon = (HICON)LoadImage(GetModuleHandle(NULL),
+                MAKEINTRESOURCE(IDI_CATIME),
+                IMAGE_ICON,
+                128,    // 所需宽度
+                128,    // 所需高度
+                LR_DEFAULTCOLOR);
+            
+            if (hLargeIcon) {
+                // 设置静态控件的图标
+                SendDlgItemMessage(hwndDlg, IDC_ABOUT_ICON, STM_SETICON, (WPARAM)hLargeIcon, 0);
+            }
             
             // 设置程序名称和版本信息
             SetDlgItemTextW(hwndDlg, IDC_VERSION_TEXT, IDC_ABOUT_VERSION CATIME_VERSION);
-            
-            // 移除作者相关的设置代码
             return TRUE;
+        }
+
+        case WM_DESTROY:
+            if (hLargeIcon) {
+                DestroyIcon(hLargeIcon);
+                hLargeIcon = NULL;
+            }
+            break;
 
         case WM_COMMAND:
             if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
