@@ -223,7 +223,14 @@
 #define IDC_COPYRIGHT 1011
 #define IDC_CREDITS_LABEL 1012    // "鸣谢："标签
 #define IDC_CREDIT_LINK   1013    // 可点击的链接
-#define IDS_CREDITS_TEXT 1014  // 字符串资源ID
+#define IDS_CREDITS_TEXT 1014     // 字符串资源ID
+
+// 新增：底部链接控件ID
+#define IDC_CREDITS  1015         // 鸣谢按钮
+#define IDC_FEEDBACK 1016         // 反馈按钮
+#define IDC_GITHUB   1017         // GitHub按钮
+#define IDC_LICENSE  1018         // 开源协议按钮
+#define IDC_DONATE   1019         // 捐助按钮
 
 // 新增：关于对话框图标尺寸
 #define ABOUT_ICON_SIZE 128
