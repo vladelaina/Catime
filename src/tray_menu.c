@@ -321,11 +321,6 @@ void ShowColorMenu(HWND hwnd) {
 
     // 关于菜单
     HMENU hAboutMenu = CreatePopupMenu();
-    wchar_t version_text[32];
-    _snwprintf(version_text, sizeof(version_text)/sizeof(wchar_t), 
-               GetLocalizedString(L"当前版本: %hs", L"Version: %hs"), 
-               CATIME_VERSION);
-    AppendMenuW(hAboutMenu, MF_STRING | MF_DISABLED, 0, version_text);
 
     // 在这里添加"关于"菜单项
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_ABOUT, GetLocalizedString(L"关于", L"About"));
