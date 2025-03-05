@@ -236,7 +236,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 return TRUE;
             }
             if (LOWORD(wParam) == IDC_CREDIT_LINK) {
-                ShellExecuteW(NULL, L"open", L"https://space.bilibili.com/26087398", 
+                ShellExecuteW(NULL, L"open", L"" CREDIT_LINK_URL, 
                              NULL, NULL, SW_SHOWNORMAL);
                 return TRUE;
             }

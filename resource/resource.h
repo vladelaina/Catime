@@ -7,6 +7,9 @@
 #define FEEDBACK_URL_GITHUB  "https://github.com/vladelaina/Catime/issues"
 #define FEEDBACK_URL_BILIBILI "https://message.bilibili.com/#/whisper/mid1862395225"
 
+/* 鸣谢链接  猫屋敷梨梨Official*/
+#define CREDIT_LINK_URL       "https://space.bilibili.com/26087398"
+
 
 /* 窗口尺寸增长量 */
 #define WINDOW_HORIZONTAL_PADDING 190  //左右
