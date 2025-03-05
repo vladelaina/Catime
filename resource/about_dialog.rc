@@ -20,10 +20,11 @@ BEGIN
 
     // 显示版本信息
     LTEXT           IDC_ABOUT_VERSION CATIME_VERSION, IDC_VERSION_TEXT, 130, 15, 160, 12
+    // 编译日期
+    LTEXT           L"最后编译日期：", IDC_BUILD_DATE, 100, 25, 180, 12
     // 版权信息
-    LTEXT           IDC_COPYRIGHT_TEXT, IDC_COPYRIGHT, 100, 25, 180, 12
-    // 合并为一个控件并调整位置
-    LTEXT           L"最后编译日期：", IDC_BUILD_DATE, 100, 35, 180, 12
+    LTEXT           IDC_COPYRIGHT_TEXT, IDC_COPYRIGHT, 100, 35, 180, 12
+    // 感谢
     CONTROL         "特别感谢\x20猫屋敷梨梨Official\x20提供的图标", IDC_CREDIT_LINK, "Static", SS_NOTIFY | SS_CENTERIMAGE, 100, 45, 180, 12
     // 修改底部链接部分
     CONTROL         "鸣谢", IDC_CREDITS, "Static", SS_NOTIFY | SS_CENTERIMAGE, 40, 65, 30, 12
