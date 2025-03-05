@@ -220,6 +220,7 @@
 #define IDC_COPYRIGHT 1011
 #define IDC_CREDITS_LABEL 1012    // "鸣谢："标签
 #define IDC_CREDIT_LINK   1013    // 可点击的链接
+#define IDS_CREDITS_TEXT 1014  // 字符串资源ID
 
 // 新增：关于对话框图标尺寸
 #define ABOUT_ICON_SIZE 128

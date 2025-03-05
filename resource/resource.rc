@@ -98,3 +98,8 @@ IDR_FONT_ZCOOL_KUAILE      FONT "../asset/font/OFL/ZCOOL KuaiLe Essence.ttf"
 // About Dialog
 //-----------------------------------------------------------------------------
 #include "about_dialog.rc"
+
+STRINGTABLE
+BEGIN
+    IDS_CREDITS_TEXT     "鸣谢："
+END
