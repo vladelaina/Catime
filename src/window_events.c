@@ -31,7 +31,7 @@ BOOL HandleWindowCreate(HWND hwnd) {
     
     return TRUE;
 }
-
+ 
 /**
  * @brief 处理窗口销毁事件
  * @param hwnd 窗口句柄
