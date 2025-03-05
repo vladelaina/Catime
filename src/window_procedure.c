@@ -31,6 +31,7 @@
 #include "../include/startup.h" 
 #include "../include/config.h"
 #include "../include/window_procedure.h"
+#include "../include/window_events.h"
 
 // 从main.c引入的变量
 extern char inputText[256];
@@ -169,20 +170,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     switch(msg)
     {
         case WM_CREATE: {
-            HWND hwndParent = GetParent(hwnd);
-            if (hwndParent != NULL) {
-                EnableWindow(hwndParent, TRUE);
-            }
-            
-            // 首先加载窗口设置
-            LoadWindowSettings(hwnd);
-            
-            // 设置点击穿透，但不调整窗口位置
-            SetClickThrough(hwnd, !CLOCK_EDIT_MODE);
-            
-            // 不调用AdjustWindowPosition，让窗口保持在配置文件中的位置
-            // AdjustWindowPosition(hwnd, TRUE);
-            
+            HandleWindowCreate(hwnd);
             break;
         }
 
@@ -210,82 +198,13 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         case WM_MOUSEWHEEL: {
             if (CLOCK_EDIT_MODE) {
                 int delta = GET_WHEEL_DELTA_WPARAM(wp);
-                float old_scale = CLOCK_FONT_SCALE_FACTOR;
-                
-                // 移除原有的位置计算逻辑，直接使用窗口中心作为缩放基准点
-                RECT windowRect;
-                GetWindowRect(hwnd, &windowRect);
-                int oldWidth = windowRect.right - windowRect.left;
-                int oldHeight = windowRect.bottom - windowRect.top;
-                
-                // 使用窗口中心作为缩放基准
-                float relativeX = 0.5f;
-                float relativeY = 0.5f;
-                
-                float scaleFactor = 1.1f;
-                if (delta > 0) {
-                    CLOCK_FONT_SCALE_FACTOR *= scaleFactor;
-                    CLOCK_WINDOW_SCALE = CLOCK_FONT_SCALE_FACTOR;
-                } else {
-                    CLOCK_FONT_SCALE_FACTOR /= scaleFactor;
-                    CLOCK_WINDOW_SCALE = CLOCK_FONT_SCALE_FACTOR;
-                }
-                
-                // 保持缩放范围限制
-                if (CLOCK_FONT_SCALE_FACTOR < MIN_SCALE_FACTOR) {
-                    CLOCK_FONT_SCALE_FACTOR = MIN_SCALE_FACTOR;
-                    CLOCK_WINDOW_SCALE = MIN_SCALE_FACTOR;
-                }
-                if (CLOCK_FONT_SCALE_FACTOR > MAX_SCALE_FACTOR) {
-                    CLOCK_FONT_SCALE_FACTOR = MAX_SCALE_FACTOR;
-                    CLOCK_WINDOW_SCALE = MAX_SCALE_FACTOR;
-                }
-                
-                if (old_scale != CLOCK_FONT_SCALE_FACTOR) {
-                    // 计算新尺寸
-                    int newWidth = (int)(oldWidth * (CLOCK_FONT_SCALE_FACTOR / old_scale));
-                    int newHeight = (int)(oldHeight * (CLOCK_FONT_SCALE_FACTOR / old_scale));
-                    
-                    // 保持窗口中心位置不变
-                    int newX = windowRect.left + (oldWidth - newWidth)/2;
-                    int newY = windowRect.top + (oldHeight - newHeight)/2;
-                    
-                    SetWindowPos(hwnd, NULL, 
-                        newX, newY,
-                        newWidth, newHeight,
-                        SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOREDRAW);
-                    
-                    // 触发重绘
-                    InvalidateRect(hwnd, NULL, FALSE);
-                    UpdateWindow(hwnd);
-                }
+                HandleWindowResize(hwnd, delta);
             }
             break;
         }
 
         case WM_MOUSEMOVE: {
-            if (CLOCK_EDIT_MODE && CLOCK_IS_DRAGGING) {
-                POINT currentPos;
-                GetCursorPos(&currentPos);
-                
-                int deltaX = currentPos.x - CLOCK_LAST_MOUSE_POS.x;
-                int deltaY = currentPos.y - CLOCK_LAST_MOUSE_POS.y;
-                
-                RECT windowRect;
-                GetWindowRect(hwnd, &windowRect);
-                
-                SetWindowPos(hwnd, NULL,
-                    windowRect.left + deltaX,
-                    windowRect.top + deltaY,
-                    windowRect.right - windowRect.left,   
-                    windowRect.bottom - windowRect.top,   
-                    SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOREDRAW   
-                );
-                
-                CLOCK_LAST_MOUSE_POS = currentPos;
-                
-                UpdateWindow(hwnd);
-                
+            if (HandleWindowMove(hwnd)) {
                 return 0;
             }
             break;
@@ -477,10 +396,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             break;
         }
         case WM_DESTROY: {
-            SaveWindowSettings(hwnd);  // Save window settings before closing
-            KillTimer(hwnd, 1);
-            RemoveTrayIcon();
-            PostQuitMessage(0);
+            HandleWindowDestroy(hwnd);
             return 0;
         }
         case CLOCK_WM_TRAYICON: {

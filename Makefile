@@ -10,7 +10,7 @@ ASSET_DIR = $(OUTPUT_DIR)/asset
 BUILD_DIR = build
 
 # 设置文件名 - main.c 移动到 src 目录
-SRC_FILES = src/main.c src/window.c src/tray.c src/color.c src/font.c src/language.c src/timer.c src/tray_menu.c src/startup.c src/config.c src/window_procedure.c src/media.c src/notification.c
+SRC_FILES = src/main.c src/window.c src/tray.c src/color.c src/font.c src/language.c src/timer.c src/tray_menu.c src/startup.c src/config.c src/window_procedure.c src/media.c src/notification.c src/window_events.c
 RC_FILE = resource/resource.rc
 
 # 创建目标文件夹和资源文件夹
@@ -38,7 +38,8 @@ OBJS = $(BUILD_DIR)/main.o \
        $(BUILD_DIR)/config.o \
        $(BUILD_DIR)/window_procedure.o \
        $(BUILD_DIR)/media.o \
-       $(BUILD_DIR)/notification.o
+       $(BUILD_DIR)/notification.o \
+       $(BUILD_DIR)/window_events.o
 
 # 生成目标
 all: directories $(OUTPUT_DIR)/catime.exe
@@ -105,6 +106,10 @@ $(BUILD_DIR)/media.o: src/media.c
 # 编译通知模块
 $(BUILD_DIR)/notification.o: src/notification.c
 	@$(CC) -c src/notification.c -o $(BUILD_DIR)/notification.o $(CFLAGS)
+
+# 编译窗口事件处理模块
+$(BUILD_DIR)/window_events.o: src/window_events.c
+	@$(CC) -c src/window_events.c -o $(BUILD_DIR)/window_events.o $(CFLAGS)
 
 # 链接编译目标文件，输出到输出目录
 $(OUTPUT_DIR)/catime.exe: $(OBJS) $(BUILD_DIR)/resource.o
