@@ -13,7 +13,7 @@ STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 // 对话框标题
 CAPTION IDC_ABOUT_TITLE
 // 使用微软雅黑字体，大小为9
-FONT 9, "Microsoft YaHei UI"
+FONT 12, "Microsoft YaHei UI"
 BEGIN
     // 显示程序图标
     CONTROL         "", IDC_ABOUT_ICON, "Static", SS_ICON, 5, -5, ABOUT_ICON_SIZE, ABOUT_ICON_SIZE
