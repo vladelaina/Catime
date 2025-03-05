@@ -175,6 +175,15 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             
             // 设置程序名称和版本信息
             SetDlgItemTextW(hwndDlg, IDC_VERSION_TEXT, IDC_ABOUT_VERSION CATIME_VERSION);
+
+            // 设置编译时间（使用ANSI到宽字符转换）
+            char buildInfo[100];
+            sprintf(buildInfo, "最后编译日期: %s %s", __DATE__, __TIME__);
+            
+            wchar_t wBuildInfo[100];
+            MultiByteToWideChar(CP_ACP, 0, buildInfo, -1, wBuildInfo, 100);
+            SetDlgItemTextW(hwndDlg, IDC_BUILD_DATE, wBuildInfo);
+            
             return TRUE;
         }
 

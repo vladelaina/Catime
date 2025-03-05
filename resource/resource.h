@@ -216,6 +216,8 @@
 #define IDC_LIBS_TEXT 1007
 #define IDC_AUTHOR_TEXT 1008
 #define IDC_ABOUT_OK 1009
+#define IDC_BUILD_DATE 1010
+#define IDC_COPYRIGHT 1011
 
 // 新增：关于对话框图标尺寸
 #define ABOUT_ICON_SIZE 128
@@ -223,4 +225,5 @@
 // 新增：关于对话框文本
 #define IDC_ABOUT_TITLE L"Catime"
 #define IDC_ABOUT_VERSION L"版本: "
+#define IDC_COPYRIGHT_TEXT L"Copyright (C) 2025 By vladelaina"
 
