@@ -1,15 +1,20 @@
+
 /* 版本与更新信息 */
 #define CATIME_VERSION "1.0.4.2"
 #define UPDATE_URL_GITHUB    "https://github.com/vladelaina/Catime/releases"
 #define UPDATE_URL_123PAN    "https://www.123684.com/s/ruESjv-2CZUA"
 #define UPDATE_URL_LANZOU    "https://wwrx.lanzoup.com/b00hqiiskj"
-#define FEEDBACK_URL        "https://www.bilibili.com/video/BV1ztFeeQEYP"
-#define FEEDBACK_URL_GITHUB  "https://github.com/vladelaina/Catime/issues"
-#define FEEDBACK_URL_BILIBILI "https://message.bilibili.com/#/whisper/mid1862395225"
 
 /* 鸣谢链接  猫屋敷梨梨Official*/
 #define CREDIT_LINK_URL       "https://space.bilibili.com/26087398"
 
+// 关于对话框图标尺寸
+#define ABOUT_ICON_SIZE 128
+
+// 关于对话框文本
+#define IDC_ABOUT_TITLE L"Catime"
+#define IDC_ABOUT_VERSION L"版本: "
+#define IDC_COPYRIGHT_TEXT L"Copyright (C) 2025 By vladelaina"
 
 /* 窗口尺寸增长量 */
 #define WINDOW_HORIZONTAL_PADDING 190  //左右
@@ -226,12 +231,4 @@
 #define IDC_GITHUB   1017         // GitHub按钮
 #define IDC_LICENSE  1018         // 开源协议按钮
 #define IDC_DONATE   1019         // 捐助按钮
-
-// 新增：关于对话框图标尺寸
-#define ABOUT_ICON_SIZE 128
-
-// 新增：关于对话框文本
-#define IDC_ABOUT_TITLE L"Catime"
-#define IDC_ABOUT_VERSION L"版本: "
-#define IDC_COPYRIGHT_TEXT L"Copyright (C) 2025 By vladelaina"
 
