@@ -118,12 +118,14 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_INITDIALOG:
+            // 设置对话框标题（使用 Unicode 版本）
+            SetWindowTextW(hwndDlg, IDC_ABOUT_TITLE);
+
             // 设置对话框文本（使用 Unicode 版本）
             SetDlgItemTextW(hwndDlg, IDC_VERSION_TEXT, IDC_ABOUT_VERSION CATIME_VERSION);
             SetDlgItemTextW(hwndDlg, IDC_LIBS_TEXT, IDC_ABOUT_LIBS_NAMES);
             SetDlgItemTextW(hwndDlg, IDC_AUTHOR_TEXT, IDC_ABOUT_AUTHOR_NAME);
             SetDlgItemTextW(hwndDlg, IDC_ABOUT_OK, IDC_ABOUT_OK_TEXT);
-            SetDlgItemTextW(hwndDlg, -1, IDC_ABOUT_TITLE);
             SetDlgItemTextW(hwndDlg, IDC_ABOUT_ICON, IDC_ABOUT_CATIME);
 
             // 设置图标
