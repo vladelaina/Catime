@@ -330,13 +330,6 @@ void ShowColorMenu(HWND hwnd) {
     // 在这里添加"关于"菜单项
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_ABOUT, GetLocalizedString(L"关于", L"About"));
 
-    // 反馈菜单
-    HMENU hFeedbackMenu = CreatePopupMenu();
-    AppendMenuW(hFeedbackMenu, MF_STRING, CLOCK_IDM_FEEDBACK_GITHUB, L"GitHub");
-    AppendMenuW(hFeedbackMenu, MF_STRING, CLOCK_IDM_FEEDBACK_BILIBILI, L"BiliBili");
-    AppendMenuW(hAboutMenu, MF_POPUP, (UINT_PTR)hFeedbackMenu, 
-                GetLocalizedString(L"反馈", L"Feedback"));
-
     // 语言选择菜单
     HMENU hLangMenu = CreatePopupMenu();
     AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_CHINESE_SIMP ? MF_CHECKED : MF_UNCHECKED),

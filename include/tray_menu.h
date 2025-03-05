@@ -61,12 +61,6 @@
 #define CLOCK_IDC_COLOR_PANEL 1302       ///< 颜色面板项
 /// @}
 
-/// @name 反馈菜单项
-/// @{
-#define CLOCK_IDM_FEEDBACK_GITHUB 137    ///< GitHub反馈选项
-#define CLOCK_IDM_FEEDBACK_BILIBILI 138  ///< BiliBili反馈选项
-/// @}
-
 /// @name 语言选择菜单项
 /// @{
 #define CLOCK_IDM_LANG_CHINESE 161       ///< 简体中文选项

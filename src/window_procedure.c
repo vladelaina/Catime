@@ -382,10 +382,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     
                     break;
                 }
-                case CLOCK_IDM_CHECK_UPDATE: {
-                    ShellExecuteA(NULL, "open", UPDATE_URL_GITHUB, NULL, NULL, SW_SHOWNORMAL);
-                    break;
-                }
                 case CLOCK_IDM_UPDATE_GITHUB: {
                     ShellExecuteA(NULL, "open", UPDATE_URL_GITHUB, NULL, NULL, SW_SHOWNORMAL);
                     break;
@@ -396,10 +392,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_UPDATE_LANZOU: {
                     ShellExecuteA(NULL, "open", UPDATE_URL_LANZOU, NULL, NULL, SW_SHOWNORMAL);
-                    break;
-                }
-                case CLOCK_IDM_FEEDBACK: {
-                    ShellExecuteA(NULL, "open", FEEDBACK_URL, NULL, NULL, SW_SHOWNORMAL);
                     break;
                 }
                 case CLOCK_IDM_LANG_CHINESE: {
@@ -858,14 +850,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         }
                     }
                     InvalidateRect(hwnd, NULL, TRUE);
-                    break;
-                }
-                case CLOCK_IDM_FEEDBACK_GITHUB: {
-                    ShellExecuteA(NULL, "open", FEEDBACK_URL_GITHUB, NULL, NULL, SW_SHOWNORMAL);
-                    break;
-                }
-                case CLOCK_IDM_FEEDBACK_BILIBILI: {
-                    ShellExecuteA(NULL, "open", FEEDBACK_URL_BILIBILI, NULL, NULL, SW_SHOWNORMAL);
                     break;
                 }
                 case CLOCK_IDM_RECENT_FILE_1:

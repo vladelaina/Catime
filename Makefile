@@ -101,12 +101,12 @@ $(BUILD_DIR)/config.o: src/config.c
 	@$(CC) -c src/config.c -o $(BUILD_DIR)/config.o $(CFLAGS)
 
 # 编译窗口过程处理模块
-$(BUILD_DIR)/window_procedure.o: src/window_procedure.c
+$(BUILD_DIR)/window_procedure.o: src/window_procedure.c include/window_procedure.h
+	@$(CC) $(CFLAGS) -c $< -o $@
 
 # 编译计时器事件处理模块
 $(BUILD_DIR)/timer_events.o: src/timer_events.c
 	@$(CC) -c src/timer_events.c -o $(BUILD_DIR)/timer_events.o $(CFLAGS)
-	@$(CC) -c src/window_procedure.c -o $(BUILD_DIR)/window_procedure.o $(CFLAGS)
 
 # 编译拖动和缩放模块
 $(BUILD_DIR)/drag_scale.o: src/drag_scale.c
