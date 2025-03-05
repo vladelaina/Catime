@@ -93,3 +93,8 @@ IDR_FONT_UNDERDOG          FONT "../asset/font/OFL/Underdog Essence.ttf"
 IDR_FONT_WALLPOET          FONT "../asset/font/OFL/Wallpoet Essence.ttf"
 IDR_FONT_YESTERYEAR        FONT "../asset/font/OFL/Yesteryear Essence.ttf"
 IDR_FONT_ZCOOL_KUAILE      FONT "../asset/font/OFL/ZCOOL KuaiLe Essence.ttf"
+
+//-----------------------------------------------------------------------------
+// About Dialog
+//-----------------------------------------------------------------------------
+#include "about_dialog.rc"
