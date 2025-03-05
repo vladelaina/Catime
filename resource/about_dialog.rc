@@ -22,7 +22,6 @@ BEGIN
     LTEXT           IDC_ABOUT_VERSION CATIME_VERSION, IDC_VERSION_TEXT, 60, 35, 160, 12
     // 版权信息
     LTEXT           IDC_COPYRIGHT_TEXT, IDC_COPYRIGHT, 60, 50, 180, 12
-    // 修改编译时间显示为宽字符格式
-    LTEXT           L"最后编译日期:", IDC_BUILD_DATE, 60, 65, 80, 12
-    LTEXT           L"", IDC_BUILD_DATE+1, 140, 65, 100, 12  // 新增时间显示专用控件
+    // 合并为一个控件并调整位置
+    LTEXT           L"最后编译日期：", IDC_BUILD_DATE, 60, 65, 180, 12
 END 

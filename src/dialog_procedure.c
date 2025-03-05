@@ -91,13 +91,12 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
             while (++month_num <= 12 && strcmp(month, months[month_num-1]));
 
             // 格式化日期时间为YYYY/MM/DD HH:MM:SS
-            wchar_t timeStr[20];
-            swprintf(timeStr, 20, L"%04d/%02d/%02d %02d:%02d:%02d",
+            wchar_t timeStr[50];
+            swprintf(timeStr, 50, L"最后编译日期：%04d/%02d/%02d %02d:%02d:%02d",
                     year, month_num, day, hour, min, sec);
 
             // 设置控件文本
-            SetDlgItemTextW(hwndDlg, IDC_BUILD_DATE, L"最后编译日期：");
-            SetDlgItemTextW(hwndDlg, IDC_BUILD_DATE+1, timeStr);
+            SetDlgItemTextW(hwndDlg, IDC_BUILD_DATE, timeStr);
 
             return FALSE;  
         }
@@ -214,13 +213,12 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             while (++month_num <= 12 && strcmp(month, months[month_num-1]));
 
             // 格式化日期时间为YYYY/MM/DD HH:MM:SS
-            wchar_t timeStr[20];
-            swprintf(timeStr, 20, L"%04d/%02d/%02d %02d:%02d:%02d",
+            wchar_t timeStr[50];
+            swprintf(timeStr, 50, L"最后编译日期：%04d/%02d/%02d %02d:%02d:%02d",
                     year, month_num, day, hour, min, sec);
 
             // 设置控件文本
-            SetDlgItemTextW(hwndDlg, IDC_BUILD_DATE, L"最后编译日期：");
-            SetDlgItemTextW(hwndDlg, IDC_BUILD_DATE+1, timeStr);
+            SetDlgItemTextW(hwndDlg, IDC_BUILD_DATE, timeStr);
 
             return TRUE;
         }
