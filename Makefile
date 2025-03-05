@@ -119,6 +119,10 @@ $(BUILD_DIR)/media.o: src/media.c
 $(BUILD_DIR)/notification.o: src/notification.c
 	@$(CC) -c src/notification.c -o $(BUILD_DIR)/notification.o $(CFLAGS)
 
+# 编译托盘事件处理模块
+$(BUILD_DIR)/tray_events.o: src/tray_events.c
+	@$(CC) -c src/tray_events.c -o $(BUILD_DIR)/tray_events.o $(CFLAGS)
+
 # 编译窗口事件处理模块
 $(BUILD_DIR)/window_events.o: src/window_events.c
 	@$(CC) -c src/window_events.c -o $(BUILD_DIR)/window_events.o $(CFLAGS)
