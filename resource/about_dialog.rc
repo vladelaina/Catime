@@ -25,10 +25,10 @@ BEGIN
     // 合并为一个控件并调整位置
     LTEXT           L"最后编译日期：", IDC_BUILD_DATE, 60, 65, 180, 12
     CONTROL         "特别感谢\x20猫屋敷梨梨Official\x20提供的图标", IDC_CREDIT_LINK, "Static", SS_NOTIFY | SS_CENTERIMAGE, 60, 95, 180, 12
-    // 添加底部链接行
+    // 修改底部链接部分
     CONTROL         "鸣谢", IDC_CREDITS, "Static", SS_NOTIFY | SS_CENTERIMAGE, 40, 110, 30, 12
-    CONTROL         "反馈", IDC_FEEDBACK, "Static", SS_NOTIFY | SS_CENTERIMAGE, 80, 110, 30, 12
-    CONTROL         "GitHub", IDC_GITHUB, "Static", SS_NOTIFY | SS_CENTERIMAGE, 120, 110, 35, 12
+    CONTROL         "反馈", IDC_FEEDBACK_LINK, "Static", SS_NOTIFY | SS_CENTERIMAGE, 80, 110, 30, 12
+    CONTROL         "GitHub", IDC_GITHUB_LINK, "Static", SS_NOTIFY | SS_CENTERIMAGE, 120, 110, 35, 12
     CONTROL         "开源协议", IDC_LICENSE, "Static", SS_NOTIFY | SS_CENTERIMAGE, 165, 110, 40, 12
     CONTROL         "捐助", IDC_DONATE, "Static", SS_NOTIFY | SS_CENTERIMAGE, 215, 110, 30, 12
 END 

@@ -1,4 +1,3 @@
-
 /* 版本与更新信息 */
 #define CATIME_VERSION "1.0.4.2"
 #define UPDATE_URL_GITHUB    "https://github.com/vladelaina/Catime/releases"
@@ -231,4 +230,8 @@
 #define IDC_GITHUB   1017         // GitHub按钮
 #define IDC_LICENSE  1018         // 开源协议按钮
 #define IDC_DONATE   1019         // 捐助按钮
+
+// 在原有链接ID后面添加反馈和GitHub的链接ID
+#define IDC_FEEDBACK_LINK 1020         // 反馈链接
+#define IDC_GITHUB_LINK   1021         // GitHub链接
 

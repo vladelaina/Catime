@@ -15,6 +15,7 @@
 #include <commctrl.h>
 #include "../include/config.h"
 #include <windowsx.h>
+#include <shellapi.h>
 
 // 从main.c引入的变量
 extern char inputText[256];
@@ -236,8 +237,17 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 return TRUE;
             }
             if (LOWORD(wParam) == IDC_CREDIT_LINK) {
-                ShellExecuteW(NULL, L"open", L"" CREDIT_LINK_URL, 
-                             NULL, NULL, SW_SHOWNORMAL);
+                ShellExecuteW(NULL, L"open", L"https://space.bilibili.com/26087398", NULL, NULL, SW_SHOWNORMAL);
+                return TRUE;
+            }
+            if (LOWORD(wParam) == IDC_FEEDBACK_LINK) {
+                ShellExecuteW(NULL, L"open", L"https://message.bilibili.com/#/whisper/mid1862395225", 
+                           NULL, NULL, SW_SHOWNORMAL);
+                return TRUE;
+            }
+            if (LOWORD(wParam) == IDC_GITHUB_LINK) {
+                ShellExecuteW(NULL, L"open", L"https://github.com/vladelaina/Catime", 
+                           NULL, NULL, SW_SHOWNORMAL);
                 return TRUE;
             }
             break;
