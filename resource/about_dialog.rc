@@ -24,6 +24,5 @@ BEGIN
     LTEXT           IDC_COPYRIGHT_TEXT, IDC_COPYRIGHT, 60, 50, 180, 12
     // 合并为一个控件并调整位置
     LTEXT           L"最后编译日期：", IDC_BUILD_DATE, 60, 65, 180, 12
-    LTEXT           IDS_CREDITS_TEXT, IDC_CREDITS_LABEL, 60, 80, 180, 12
     CONTROL         "猫屋敷梨梨Official", IDC_CREDIT_LINK, "Static", SS_NOTIFY, 60, 95, 180, 12
 END 
