@@ -57,8 +57,8 @@ directories:
 	@mkdir -p $(OUTPUT_DIR)
 
 # 编译资源文件
-$(BUILD_DIR)/resource.o: $(RC_FILE)
-	@$(WINDRES) $(RC_FILE) -o $(BUILD_DIR)/resource.o
+$(BUILD_DIR)/resource.o: $(RC_FILE) resource/about_dialog.rc
+	@$(WINDRES) -I resource $(RC_FILE) -o $(BUILD_DIR)/resource.o
 
 # 编译主程序 - 更新路径为 src/main.c
 $(BUILD_DIR)/main.o: src/main.c
