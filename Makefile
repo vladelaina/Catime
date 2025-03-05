@@ -10,7 +10,7 @@ ASSET_DIR = $(OUTPUT_DIR)/asset
 BUILD_DIR = build
 
 # 设置文件名 - main.c 移动到 src 目录
-SRC_FILES = src/main.c src/window.c src/tray.c src/color.c src/font.c src/language.c src/timer.c src/tray_menu.c src/startup.c src/config.c src/window_procedure.c src/media.c src/notification.c src/tray_events.c src/window_events.c src/drag_scale.c src/drawing.c src/timer_events.c
+SRC_FILES = src/main.c src/window.c src/tray.c src/color.c src/font.c src/language.c src/timer.c src/tray_menu.c src/startup.c src/config.c src/window_procedure.c src/media.c src/notification.c src/tray_events.c src/window_events.c src/drag_scale.c src/drawing.c src/timer_events.c src/dialog_procedure.c
 RC_FILE = resource/resource.rc
 
 # 创建目标文件夹和资源文件夹
@@ -43,7 +43,8 @@ OBJS = $(BUILD_DIR)/main.o \
        $(BUILD_DIR)/window_events.o \
        $(BUILD_DIR)/drag_scale.o \
        $(BUILD_DIR)/drawing.o \
-       $(BUILD_DIR)/timer_events.o
+       $(BUILD_DIR)/timer_events.o \
+       $(BUILD_DIR)/dialog_procedure.o
 
 # 生成目标
 all: directories $(OUTPUT_DIR)/catime.exe
@@ -130,6 +131,10 @@ $(BUILD_DIR)/window_events.o: src/window_events.c
 # 编译绘图模块
 $(BUILD_DIR)/drawing.o: src/drawing.c
 	@$(CC) -c src/drawing.c -o $(BUILD_DIR)/drawing.o $(CFLAGS)
+
+# 编译对话框过程处理模块
+$(BUILD_DIR)/dialog_procedure.o: src/dialog_procedure.c
+	@$(CC) -c src/dialog_procedure.c -o $(BUILD_DIR)/dialog_procedure.o $(CFLAGS)
 
 # 链接编译目标文件，输出到输出目录
 $(OUTPUT_DIR)/catime.exe: $(OBJS) $(BUILD_DIR)/resource.o
