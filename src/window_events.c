@@ -10,6 +10,7 @@
 #include "../include/window.h"
 #include "../include/tray.h"
 #include "../include/config.h"
+#include "../include/drag_scale.h"
 #include "../include/window_events.h"
 
 /**
