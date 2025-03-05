@@ -10,7 +10,7 @@ ASSET_DIR = $(OUTPUT_DIR)/asset
 BUILD_DIR = build
 
 # 设置文件名 - main.c 移动到 src 目录
-SRC_FILES = src/main.c src/window.c src/tray.c src/color.c src/font.c src/language.c src/timer.c src/tray_menu.c src/startup.c src/config.c src/window_procedure.c src/media.c src/notification.c src/window_events.c src/drag_scale.c src/drawing.c
+SRC_FILES = src/main.c src/window.c src/tray.c src/color.c src/font.c src/language.c src/timer.c src/tray_menu.c src/startup.c src/config.c src/window_procedure.c src/media.c src/notification.c src/window_events.c src/drag_scale.c src/drawing.c src/timer_events.c
 RC_FILE = resource/resource.rc
 
 # 创建目标文件夹和资源文件夹
@@ -41,7 +41,8 @@ OBJS = $(BUILD_DIR)/main.o \
        $(BUILD_DIR)/notification.o \
        $(BUILD_DIR)/window_events.o \
        $(BUILD_DIR)/drag_scale.o \
-       $(BUILD_DIR)/drawing.o
+       $(BUILD_DIR)/drawing.o \
+       $(BUILD_DIR)/timer_events.o
 
 # 生成目标
 all: directories $(OUTPUT_DIR)/catime.exe
@@ -99,6 +100,10 @@ $(BUILD_DIR)/config.o: src/config.c
 
 # 编译窗口过程处理模块
 $(BUILD_DIR)/window_procedure.o: src/window_procedure.c
+
+# 编译计时器事件处理模块
+$(BUILD_DIR)/timer_events.o: src/timer_events.c
+	@$(CC) -c src/timer_events.c -o $(BUILD_DIR)/timer_events.o $(CFLAGS)
 	@$(CC) -c src/window_procedure.c -o $(BUILD_DIR)/window_procedure.o $(CFLAGS)
 
 # 编译拖动和缩放模块

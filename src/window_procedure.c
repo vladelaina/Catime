@@ -34,6 +34,7 @@
 #include "../include/window_events.h"
 #include "../include/drag_scale.h"
 #include "../include/drawing.h"
+#include "../include/timer_events.h"
 
 // 从main.c引入的变量
 extern char inputText[256];
@@ -207,68 +208,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             break;
         }
         case WM_TIMER: {
-            /**
-             * @brief 定时器消息处理
-             * 当wp==1时处理主定时器事件：
-             * 1. 倒计时模式：
-             *   - 更新剩余时间
-             *   - 触发窗口重绘
-             *   - 超时后执行预设操作(提示/锁屏/关机)
-             * 2. 计时模式：
-             *   - 累计已过时间
-             *   - 持续更新显示
-             */
-            if (wp == 1) {
-                if (CLOCK_SHOW_CURRENT_TIME) {
-                    InvalidateRect(hwnd, NULL, TRUE);
-                    break;
-                }
-
-                if (CLOCK_COUNT_UP) {
-                    if (!CLOCK_IS_PAUSED) {
-                        countup_elapsed_time++;
-                        InvalidateRect(hwnd, NULL, TRUE);
-                    }
-                } else {
-                    if (countdown_elapsed_time < CLOCK_TOTAL_TIME) {
-                        countdown_elapsed_time++;
-                        if (countdown_elapsed_time >= CLOCK_TOTAL_TIME && !countdown_message_shown) {
-                            countdown_message_shown = TRUE;
-                            
-                            switch (CLOCK_TIMEOUT_ACTION) {
-                                case TIMEOUT_ACTION_MESSAGE:
-                                    ShowToastNotification(hwnd, "Time's up!");
-                                    break;
-                                case TIMEOUT_ACTION_LOCK:
-                                    LockWorkStation();
-                                    break;
-                                case TIMEOUT_ACTION_SHUTDOWN:
-                                    system("shutdown /s /t 0");
-                                    break;
-                                case TIMEOUT_ACTION_RESTART:
-                                    system("shutdown /r /t 0");
-                                    break;
-                                case TIMEOUT_ACTION_OPEN_FILE: {
-                                    if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
-                                        wchar_t wPath[MAX_PATH];
-                                        MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_FILE_PATH, -1, wPath, MAX_PATH);
-                                        
-                                        HINSTANCE result = ShellExecuteW(NULL, L"open", wPath, NULL, NULL, SW_SHOWNORMAL);
-                                        
-                                        if ((INT_PTR)result <= 32) {
-                                            MessageBoxW(hwnd, 
-                                                GetLocalizedString(L"无法打开文件", L"Failed to open file"),
-                                                GetLocalizedString(L"错误", L"Error"),
-                                                MB_ICONERROR);
-                                        }
-                                    }
-                                    break;
-                                }
-                            }
-                        }
-                        InvalidateRect(hwnd, NULL, TRUE);
-                    }
-                }
+            if (HandleTimerEvent(hwnd, wp)) {
+                break;
             }
             break;
         }
