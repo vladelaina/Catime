@@ -327,6 +327,9 @@ void ShowColorMenu(HWND hwnd) {
                CATIME_VERSION);
     AppendMenuW(hAboutMenu, MF_STRING | MF_DISABLED, 0, version_text);
 
+    // 在这里添加"关于"菜单项
+    AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_ABOUT, GetLocalizedString(L"关于", L"About"));
+
     // 反馈菜单
     HMENU hFeedbackMenu = CreatePopupMenu();
     AppendMenuW(hFeedbackMenu, MF_STRING, CLOCK_IDM_FEEDBACK_GITHUB, L"GitHub");
