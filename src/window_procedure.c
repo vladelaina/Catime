@@ -35,6 +35,7 @@
 #include "../include/drag_scale.h"
 #include "../include/drawing.h"
 #include "../include/timer_events.h"
+#include "../include/tray_events.h"
 
 // 从main.c引入的变量
 extern char inputText[256];
@@ -218,15 +219,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             return 0;
         }
         case CLOCK_WM_TRAYICON: {
-            uID = (UINT)wp;
-            uMouseMsg = (UINT)lp;
-
-            if (uMouseMsg == WM_RBUTTONUP) {
-                ShowColorMenu(hwnd);
-            }
-            else if (uMouseMsg == WM_LBUTTONUP) {
-                ShowContextMenu(hwnd);
-            }
+            HandleTrayIconMessage(hwnd, (UINT)wp, (UINT)lp);
             break;
         }
         case WM_COMMAND: {

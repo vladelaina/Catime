@@ -10,7 +10,7 @@ ASSET_DIR = $(OUTPUT_DIR)/asset
 BUILD_DIR = build
 
 # 设置文件名 - main.c 移动到 src 目录
-SRC_FILES = src/main.c src/window.c src/tray.c src/color.c src/font.c src/language.c src/timer.c src/tray_menu.c src/startup.c src/config.c src/window_procedure.c src/media.c src/notification.c src/window_events.c src/drag_scale.c src/drawing.c src/timer_events.c
+SRC_FILES = src/main.c src/window.c src/tray.c src/color.c src/font.c src/language.c src/timer.c src/tray_menu.c src/startup.c src/config.c src/window_procedure.c src/media.c src/notification.c src/tray_events.c src/window_events.c src/drag_scale.c src/drawing.c src/timer_events.c
 RC_FILE = resource/resource.rc
 
 # 创建目标文件夹和资源文件夹
@@ -39,6 +39,7 @@ OBJS = $(BUILD_DIR)/main.o \
        $(BUILD_DIR)/window_procedure.o \
        $(BUILD_DIR)/media.o \
        $(BUILD_DIR)/notification.o \
+       $(BUILD_DIR)/tray_events.o \
        $(BUILD_DIR)/window_events.o \
        $(BUILD_DIR)/drag_scale.o \
        $(BUILD_DIR)/drawing.o \
