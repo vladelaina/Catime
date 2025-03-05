@@ -12,6 +12,7 @@
 #include "../resource/resource.h"
 #include "../include/dialog_procedure.h"
 #include "../include/language.h"
+#include <commctrl.h>
 
 // 从main.c引入的变量
 extern char inputText[256];
@@ -117,26 +118,25 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_INITDIALOG:
-            // 设置对话框图标
-            SendMessage(hwndDlg, WM_SETICON, ICON_BIG, 
-                (LPARAM)LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_CATIME)));
-            
-            // 设置版本号文本
-            char versionText[50];
-            sprintf(versionText, "版本: %s", CATIME_VERSION);
-            SetDlgItemText(hwndDlg, IDC_VERSION_TEXT, versionText);
+            // 设置对话框文本（使用 Unicode 版本）
+            SetDlgItemTextW(hwndDlg, IDC_VERSION_TEXT, IDC_ABOUT_VERSION CATIME_VERSION);
+            SetDlgItemTextW(hwndDlg, IDC_LIBS_TEXT, IDC_ABOUT_LIBS_NAMES);
+            SetDlgItemTextW(hwndDlg, IDC_AUTHOR_TEXT, IDC_ABOUT_AUTHOR_NAME);
+            SetDlgItemTextW(hwndDlg, IDC_ABOUT_OK, IDC_ABOUT_OK_TEXT);
+            SetDlgItemTextW(hwndDlg, -1, IDC_ABOUT_TITLE);
+            SetDlgItemTextW(hwndDlg, IDC_ABOUT_ICON, IDC_ABOUT_CATIME);
+
+            // 设置图标
+            HICON hIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_CATIME));
+            SendMessage(hwndDlg, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
             return TRUE;
 
         case WM_COMMAND:
-            if (LOWORD(wParam) == IDC_ABOUT_OK || LOWORD(wParam) == IDCANCEL) {
+            if (LOWORD(wParam) == IDC_ABOUT_OK || LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
                 EndDialog(hwndDlg, LOWORD(wParam));
                 return TRUE;
             }
             break;
-
-        case WM_CLOSE:
-            EndDialog(hwndDlg, IDCANCEL);
-            return TRUE;
     }
     return FALSE;
 }

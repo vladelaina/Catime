@@ -36,4 +36,6 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
  */
 void ShowAboutDialog(HWND hwndParent);
 
+INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
+
 #endif // DIALOG_PROCEDURE_H
