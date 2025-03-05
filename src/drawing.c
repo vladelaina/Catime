@@ -19,9 +19,7 @@
 // 从window_procedure.c引入的变量
 extern int elapsed_time;
 
-// 窗口绘制相关常量
-#define WINDOW_HORIZONTAL_PADDING 20
-#define WINDOW_VERTICAL_PADDING 20
+// 使用resource.h中定义的窗口绘制相关常量
 
 /**
  * @brief 处理窗口绘制
