@@ -7,7 +7,7 @@
 #pragma code_page(65001)  // UTF-8编码
 
 // 关于对话框资源定义
-IDD_ABOUT_DIALOG DIALOGEX 0, 0, 255, 130
+IDD_ABOUT_DIALOG DIALOGEX 0, 0, 255, 80
 // 对话框样式：模态框架、居中显示、弹出式窗口、带标题栏和系统菜单
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 // 对话框标题
@@ -19,16 +19,16 @@ BEGIN
     CONTROL         "", IDC_ABOUT_ICON, "Static", SS_ICON, 15, 6, ABOUT_ICON_SIZE, ABOUT_ICON_SIZE
 
     // 显示版本信息
-    LTEXT           IDC_ABOUT_VERSION CATIME_VERSION, IDC_VERSION_TEXT, 60, 35, 160, 12
+    LTEXT           IDC_ABOUT_VERSION CATIME_VERSION, IDC_VERSION_TEXT, 130, 15, 160, 12
     // 版权信息
-    LTEXT           IDC_COPYRIGHT_TEXT, IDC_COPYRIGHT, 60, 50, 180, 12
+    LTEXT           IDC_COPYRIGHT_TEXT, IDC_COPYRIGHT, 100, 25, 180, 12
     // 合并为一个控件并调整位置
-    LTEXT           L"最后编译日期：", IDC_BUILD_DATE, 60, 65, 180, 12
-    CONTROL         "特别感谢\x20猫屋敷梨梨Official\x20提供的图标", IDC_CREDIT_LINK, "Static", SS_NOTIFY | SS_CENTERIMAGE, 60, 95, 180, 12
+    LTEXT           L"最后编译日期：", IDC_BUILD_DATE, 100, 35, 180, 12
+    CONTROL         "特别感谢\x20猫屋敷梨梨Official\x20提供的图标", IDC_CREDIT_LINK, "Static", SS_NOTIFY | SS_CENTERIMAGE, 100, 45, 180, 12
     // 修改底部链接部分
-    CONTROL         "鸣谢", IDC_CREDITS, "Static", SS_NOTIFY | SS_CENTERIMAGE, 40, 110, 30, 12
-    CONTROL         "反馈", IDC_FEEDBACK_LINK, "Static", SS_NOTIFY | SS_CENTERIMAGE, 80, 110, 30, 12
-    CONTROL         "GitHub", IDC_GITHUB_LINK, "Static", SS_NOTIFY | SS_CENTERIMAGE, 120, 110, 35, 12
-    CONTROL         "开源协议", IDC_LICENSE, "Static", SS_NOTIFY | SS_CENTERIMAGE, 165, 110, 40, 12
-    CONTROL         "捐助", IDC_DONATE, "Static", SS_NOTIFY | SS_CENTERIMAGE, 215, 110, 30, 12
+    CONTROL         "鸣谢", IDC_CREDITS, "Static", SS_NOTIFY | SS_CENTERIMAGE, 40, 65, 30, 12
+    CONTROL         "反馈", IDC_FEEDBACK_LINK, "Static", SS_NOTIFY | SS_CENTERIMAGE, 80, 65, 30, 12
+    CONTROL         "GitHub", IDC_GITHUB_LINK, "Static", SS_NOTIFY | SS_CENTERIMAGE, 120, 65, 35, 12
+    CONTROL         "开源协议", IDC_LICENSE, "Static", SS_NOTIFY | SS_CENTERIMAGE, 165, 65, 55, 12
+    CONTROL         "捐助", IDC_DONATE, "Static", SS_NOTIFY | SS_CENTERIMAGE, 215, 65, 30, 12
 END 
