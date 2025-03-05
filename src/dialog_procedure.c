@@ -157,28 +157,27 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 // 关于对话框处理过程
 INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
-        case WM_INITDIALOG: {
-            // 设置对话框标题（使用 Unicode 版本）
-            SetWindowTextW(hwndDlg, IDC_ABOUT_TITLE);
-
-            // 设置对话框文本（使用 Unicode 版本）
-            SetDlgItemTextW(hwndDlg, IDC_VERSION_TEXT, IDC_ABOUT_VERSION CATIME_VERSION);
-            SetDlgItemTextW(hwndDlg, IDC_AUTHOR_TEXT, IDC_ABOUT_AUTHOR_NAME);
-            SetDlgItemTextW(hwndDlg, IDC_ABOUT_OK, IDC_ABOUT_OK_TEXT);
-            SetDlgItemTextW(hwndDlg, IDC_ABOUT_ICON, IDC_ABOUT_CATIME);
-
+        case WM_INITDIALOG:
             // 设置图标
-            HICON hIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_CATIME));
-            SendMessage(hwndDlg, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+            SendMessage(hwndDlg, WM_SETICON, ICON_BIG, 
+                (LPARAM)LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_CATIME)));
+            
+            // 设置程序名称和版本信息
+            SetDlgItemTextW(hwndDlg, IDC_VERSION_TEXT, IDC_ABOUT_VERSION CATIME_VERSION);
+            
+            // 移除作者相关的设置代码
             return TRUE;
-        }
 
         case WM_COMMAND:
-            if (LOWORD(wParam) == IDC_ABOUT_OK || LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
+            if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
                 EndDialog(hwndDlg, LOWORD(wParam));
                 return TRUE;
             }
             break;
+
+        case WM_CLOSE:
+            EndDialog(hwndDlg, 0);
+            return TRUE;
     }
     return FALSE;
 }
