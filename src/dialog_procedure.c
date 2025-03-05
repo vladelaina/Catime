@@ -176,9 +176,30 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             // 设置程序名称和版本信息
             SetDlgItemTextW(hwndDlg, IDC_VERSION_TEXT, IDC_ABOUT_VERSION CATIME_VERSION);
 
-            // 设置编译时间（使用ANSI到宽字符转换）
+            // 设置编译时间（新增日期格式转换）
+            char month[4], timeStr[9];
+            int day, year, hour, min, sec;
+            
+            // 解析编译器生成的日期时间
+            sscanf(__DATE__, "%3s %d %d", month, &day, &year);
+            sscanf(__TIME__, "%d:%d:%d", &hour, &min, &sec);
+            
+            // 月份缩写转数字
+            const char* months[] = {"Jan","Feb","Mar","Apr","May","Jun",
+                                   "Jul","Aug","Sep","Oct","Nov","Dec"};
+            int month_num = 1;
+            for (; month_num <= 12; month_num++) {
+                if (strcmp(month, months[month_num-1]) == 0) break;
+            }
+            
+            // 格式化日期时间
+            char formattedDate[20];
+            sprintf(formattedDate, "%04d/%02d/%02d %02d:%02d:%02d", 
+                   year, month_num, day, hour, min, sec);
+            
+            // 组合最终字符串
             char buildInfo[100];
-            sprintf(buildInfo, "最后编译日期: %s %s", __DATE__, __TIME__);
+            sprintf(buildInfo, "最后编译日期: %s", formattedDate);
             
             wchar_t wBuildInfo[100];
             MultiByteToWideChar(CP_ACP, 0, buildInfo, -1, wBuildInfo, 100);
