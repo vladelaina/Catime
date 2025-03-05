@@ -8,7 +8,7 @@
 #define CREDIT_LINK_URL       "https://space.bilibili.com/26087398"
 
 // 关于对话框图标尺寸
-#define ABOUT_ICON_SIZE 150
+#define ABOUT_ICON_SIZE 155
 
 // 关于对话框文本
 #define IDC_ABOUT_TITLE L"Catime"
