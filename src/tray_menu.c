@@ -368,7 +368,7 @@ void ShowColorMenu(HWND hwnd) {
     
     // 将关于菜单添加到主菜单
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hAboutMenu,
-                GetLocalizedString(L"关于", L"About"));
+                GetLocalizedString(L"帮助", L"Help"));
 
     // 添加重置和退出选项
     AppendMenuW(hMenu, MF_STRING, 200,
