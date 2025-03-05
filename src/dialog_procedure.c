@@ -13,9 +13,30 @@
 #include "../include/dialog_procedure.h"
 #include "../include/language.h"
 #include <commctrl.h>
+#include "../include/config.h"
+#include <windowsx.h>
 
 // 从main.c引入的变量
 extern char inputText[256];
+
+// 存储旧的编辑框过程
+WNDPROC wpOrigEditProc;
+
+// 子类化编辑框过程
+LRESULT APIENTRY EditSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    switch (uMsg) {
+    case WM_KEYDOWN: {
+        if (wParam == VK_RETURN) {
+            // 发送BM_CLICK消息给父窗口（对话框）
+            SendMessage(GetParent(hwnd), WM_COMMAND, MAKEWPARAM(IDOK, BN_CLICKED), (LPARAM)hwnd);
+            return 0;
+        }
+        break;
+    }
+    }
+    return CallWindowProc(wpOrigEditProc, hwnd, uMsg, wParam, lParam);
+}
 
 /**
  * @brief 输入对话框过程
@@ -45,6 +66,16 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
             hBackgroundBrush = CreateSolidBrush(RGB(0xF3, 0xF3, 0xF3));
             hEditBrush = CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF));
             hButtonBrush = CreateSolidBrush(RGB(0xFD, 0xFD, 0xFD));
+
+            // 获取编辑框控件的句柄
+            HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
+
+            // 子类化编辑框控件
+            wpOrigEditProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
+
+            // 全选编辑框中的文本
+            SendDlgItemMessage(hwndDlg, CLOCK_IDC_EDIT, EM_SETSEL, 0, -1);
+
             return FALSE;  
         }
 
@@ -79,7 +110,13 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
         case WM_COMMAND:
             if (LOWORD(wParam) == CLOCK_IDC_BUTTON_OK || HIWORD(wParam) == BN_CLICKED) {
                 GetDlgItemText(hwndDlg, CLOCK_IDC_EDIT, inputText, sizeof(inputText));
-                EndDialog(hwndDlg, 0);
+                int total_seconds;
+                if (ParseInput(inputText, &total_seconds)) {
+                    WriteConfigDefaultStartTime(total_seconds);
+                    EndDialog(hwndDlg, 0);
+                } else {
+                    MessageBox(hwndDlg, "Invalid time format. Please use MM:SS or HH:MM:SS.", "Error", MB_OK | MB_ICONERROR);
+                }
                 return TRUE;
             }
             break;
@@ -109,6 +146,9 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                 DeleteObject(hButtonBrush);
                 hButtonBrush = NULL;
             }
+            // 恢复原始编辑框过程
+            HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
+            SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
             break;
     }
     return FALSE;
@@ -117,13 +157,12 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 // 关于对话框处理过程
 INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
-        case WM_INITDIALOG:
+        case WM_INITDIALOG: {
             // 设置对话框标题（使用 Unicode 版本）
             SetWindowTextW(hwndDlg, IDC_ABOUT_TITLE);
 
             // 设置对话框文本（使用 Unicode 版本）
             SetDlgItemTextW(hwndDlg, IDC_VERSION_TEXT, IDC_ABOUT_VERSION CATIME_VERSION);
-            SetDlgItemTextW(hwndDlg, IDC_LIBS_TEXT, IDC_ABOUT_LIBS_NAMES);
             SetDlgItemTextW(hwndDlg, IDC_AUTHOR_TEXT, IDC_ABOUT_AUTHOR_NAME);
             SetDlgItemTextW(hwndDlg, IDC_ABOUT_OK, IDC_ABOUT_OK_TEXT);
             SetDlgItemTextW(hwndDlg, IDC_ABOUT_ICON, IDC_ABOUT_CATIME);
@@ -132,6 +171,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             HICON hIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_CATIME));
             SendMessage(hwndDlg, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
             return TRUE;
+        }
 
         case WM_COMMAND:
             if (LOWORD(wParam) == IDC_ABOUT_OK || LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {

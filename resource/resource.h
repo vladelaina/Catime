@@ -220,9 +220,7 @@
 // 新增：关于对话框文本
 #define IDC_ABOUT_TITLE L"关于 Catime"
 #define IDC_ABOUT_VERSION L"版本: "
-#define IDC_ABOUT_LIBS L"第三方库"
 #define IDC_ABOUT_AUTHOR L"作者"
 #define IDC_ABOUT_OK_TEXT L"确定"
 #define IDC_ABOUT_CATIME L"Catime"
 #define IDC_ABOUT_AUTHOR_NAME L"猫屋敷梨梨Official"
-#define IDC_ABOUT_LIBS_NAMES L"LibreHardwareMonitor\nTinyXML2\nMusicPlayer2\nSimpleNotePad"
