@@ -218,6 +218,8 @@
 #define IDC_ABOUT_OK 1009
 #define IDC_BUILD_DATE 1010
 #define IDC_COPYRIGHT 1011
+#define IDC_CREDITS_LABEL 1012    // "鸣谢："标签
+#define IDC_CREDIT_LINK   1013    // 可点击的链接
 
 // 新增：关于对话框图标尺寸
 #define ABOUT_ICON_SIZE 128

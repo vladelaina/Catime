@@ -235,11 +235,29 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 EndDialog(hwndDlg, LOWORD(wParam));
                 return TRUE;
             }
+            if (LOWORD(wParam) == IDC_CREDIT_LINK) {
+                ShellExecuteW(NULL, L"open", L"https://space.bilibili.com/26087398", 
+                             NULL, NULL, SW_SHOWNORMAL);
+                return TRUE;
+            }
             break;
 
         case WM_CLOSE:
             EndDialog(hwndDlg, 0);
             return TRUE;
+
+        case WM_CTLCOLORSTATIC:
+        {
+            HDC hdc = (HDC)wParam;
+            HWND hwndCtl = (HWND)lParam;
+            
+            if (GetDlgCtrlID(hwndCtl) == IDC_CREDIT_LINK) {
+                SetTextColor(hdc, 0x00D26919); // 将#1969D2转换为BGR格式
+                SetBkMode(hdc, TRANSPARENT);
+                return (INT_PTR)GetStockObject(NULL_BRUSH);
+            }
+            break;
+        }
     }
     return FALSE;
 }
