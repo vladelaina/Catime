@@ -249,28 +249,18 @@
 #define IDC_CREDITS_HAMSTER   2017
 #define IDC_CREDITS_MALOU      2018
 
-// 鸣谢文本内容
-#define CREDITS_TEXT \
-    L"特别感谢以下贡献者：\r\n\r\n" \
-    L"1. zggsong\r\n" \
-    L"   - GitHub: https://github.com/ZGGSONG\r\n\r\n" \
-    L"2. 猫屋敷梨梨Official\r\n" \
-    L"   - BiliBili: https://space.bilibili.com/26087398\r\n" \
-    L"   - 程序图标设计\r\n\r\n" \
-    L"3. MOJIもら\r\n" \
-    L"   - BiliBili: https://space.bilibili.com/6189012\r\n\r\n" \
-    L"4. 李康\r\n" \
-    L"   - BiliBili: https://space.bilibili.com/475437261\r\n\r\n" \
-    L"5. flying-hilichurl\r\n" \
-    L"   - GitHub: https://github.com/flying-hilichurl\r\n\r\n" \
-    L"6. 双脚猫\r\n" \
-    L"   - BiliBili: https://space.bilibili.com/161061562\r\n\r\n" \
-    L"7. rsyqvthv\r\n" \
-    L"   - GitHub: https://github.com/rsyqvthv\r\n\r\n" \
-    L"8. 洋仓鼠\r\n" \
-    L"   - BiliBili: https://space.bilibili.com/297146893\r\n\r\n" \
-    L"9. 学习马楼\r\n" \
-    L"   - BiliBili: https://space.bilibili.com/3546380188519387\r\n\r\n" \
-    L"\r\n" \
-    L"感谢所有贡献者对项目的支持与帮助！"
+// 贡献者链接URL
+#define URL_ZGGSONG         L"https://github.com/ZGGSONG"
+#define URL_NEKO            L"https://space.bilibili.com/26087398"
+#define URL_MOJI            L"https://space.bilibili.com/6189012"
+#define URL_LIKANG          L"https://space.bilibili.com/475437261"
+#define URL_FLYING          L"https://github.com/flying-hilichurl"
+#define URL_CAT             L"https://space.bilibili.com/161061562"
+#define URL_RSYQVTHV        L"https://github.com/rsyqvthv"
+#define URL_HAMSTER         L"https://space.bilibili.com/297146893"
+#define URL_MALOU           L"https://space.bilibili.com/3546380188519387"
+
+// 其他常用链接
+#define URL_GITHUB_REPO     L"https://github.com/vladelaina/Catime"
+#define URL_FEEDBACK        L"https://message.bilibili.com/#/whisper/mid1862395225"
 

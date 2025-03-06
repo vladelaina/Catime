@@ -241,21 +241,19 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
         case WM_COMMAND:
             if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
                 EndDialog(hwndDlg, LOWORD(wParam));
-                g_hwndAboutDlg = NULL;  // 清除对话框句柄
+                g_hwndAboutDlg = NULL;
                 return TRUE;
             }
             if (LOWORD(wParam) == IDC_CREDIT_LINK) {
-                ShellExecuteW(NULL, L"open", L"https://space.bilibili.com/26087398", NULL, NULL, SW_SHOWNORMAL);
+                ShellExecuteW(NULL, L"open", URL_NEKO, NULL, NULL, SW_SHOWNORMAL);
                 return TRUE;
             }
             if (LOWORD(wParam) == IDC_FEEDBACK_LINK) {
-                ShellExecuteW(NULL, L"open", L"https://message.bilibili.com/#/whisper/mid1862395225", 
-                           NULL, NULL, SW_SHOWNORMAL);
+                ShellExecuteW(NULL, L"open", URL_FEEDBACK, NULL, NULL, SW_SHOWNORMAL);
                 return TRUE;
             }
             if (LOWORD(wParam) == IDC_GITHUB_LINK) {
-                ShellExecuteW(NULL, L"open", L"https://github.com/vladelaina/Catime", 
-                           NULL, NULL, SW_SHOWNORMAL);
+                ShellExecuteW(NULL, L"open", URL_GITHUB_REPO, NULL, NULL, SW_SHOWNORMAL);
                 return TRUE;
             }
             if (LOWORD(wParam) == IDC_CREDITS) {
@@ -326,31 +324,31 @@ INT_PTR CALLBACK CreditsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lP
             switch (LOWORD(wParam))
             {
                 case IDC_CREDITS_ZGGSONG:
-                    ShellExecute(NULL, "open", "https://github.com/ZGGSONG", NULL, NULL, SW_SHOW);
+                    ShellExecuteW(NULL, L"open", URL_ZGGSONG, NULL, NULL, SW_SHOW);
                     return TRUE;
                 case IDC_CREDITS_NEKO:
-                    ShellExecute(NULL, "open", "https://space.bilibili.com/26087398", NULL, NULL, SW_SHOW);
+                    ShellExecuteW(NULL, L"open", URL_NEKO, NULL, NULL, SW_SHOW);
                     return TRUE;
                 case IDC_CREDITS_MOJI:
-                    ShellExecute(NULL, "open", "https://space.bilibili.com/6189012", NULL, NULL, SW_SHOW);
+                    ShellExecuteW(NULL, L"open", URL_MOJI, NULL, NULL, SW_SHOW);
                     return TRUE;
                 case IDC_CREDITS_LIKANG:
-                    ShellExecute(NULL, "open", "https://space.bilibili.com/475437261", NULL, NULL, SW_SHOW);
+                    ShellExecuteW(NULL, L"open", URL_LIKANG, NULL, NULL, SW_SHOW);
                     return TRUE;
                 case IDC_CREDITS_FLYING:
-                    ShellExecute(NULL, "open", "https://github.com/flying-hilichurl", NULL, NULL, SW_SHOW);
+                    ShellExecuteW(NULL, L"open", URL_FLYING, NULL, NULL, SW_SHOW);
                     return TRUE;
                 case IDC_CREDITS_CAT:
-                    ShellExecute(NULL, "open", "https://space.bilibili.com/161061562", NULL, NULL, SW_SHOW);
+                    ShellExecuteW(NULL, L"open", URL_CAT, NULL, NULL, SW_SHOW);
                     return TRUE;
                 case IDC_CREDITS_RSYQVTHV:
-                    ShellExecute(NULL, "open", "https://github.com/rsyqvthv", NULL, NULL, SW_SHOW);
+                    ShellExecuteW(NULL, L"open", URL_RSYQVTHV, NULL, NULL, SW_SHOW);
                     return TRUE;
                 case IDC_CREDITS_HAMSTER:
-                    ShellExecute(NULL, "open", "https://space.bilibili.com/297146893", NULL, NULL, SW_SHOW);
+                    ShellExecuteW(NULL, L"open", URL_HAMSTER, NULL, NULL, SW_SHOW);
                     return TRUE;
                 case IDC_CREDITS_MALOU:
-                    ShellExecute(NULL, "open", "https://space.bilibili.com/3546380188519387", NULL, NULL, SW_SHOW);
+                    ShellExecuteW(NULL, L"open", URL_MALOU, NULL, NULL, SW_SHOW);
                     return TRUE;
             }
             break;
