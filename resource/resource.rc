@@ -98,6 +98,7 @@ IDR_FONT_ZCOOL_KUAILE      FONT "../asset/font/OFL/ZCOOL KuaiLe Essence.ttf"
 // About Dialog
 //-----------------------------------------------------------------------------
 #include "about_dialog.rc"
+#include "credits_dialog.rc"
 
 STRINGTABLE
 BEGIN

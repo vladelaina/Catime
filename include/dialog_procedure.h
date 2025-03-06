@@ -38,4 +38,12 @@ void ShowAboutDialog(HWND hwndParent);
 
 INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 
+/**
+ * @brief 显示鸣谢对话框
+ * @param hwndParent 父窗口句柄
+ * 
+ * 显示包含项目贡献者名单的鸣谢对话框。
+ */
+void ShowCreditsDialog(HWND hwndParent);
+
 #endif // DIALOG_PROCEDURE_H

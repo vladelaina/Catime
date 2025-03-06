@@ -26,6 +26,9 @@ WNDPROC wpOrigEditProc;
 // 添加全局变量来跟踪关于对话框句柄
 static HWND g_hwndAboutDlg = NULL;
 
+// 添加全局变量来跟踪鸣谢对话框句柄
+static HWND g_hwndCreditsDialog = NULL;
+
 // 子类化编辑框过程
 LRESULT APIENTRY EditSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
@@ -255,6 +258,10 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                            NULL, NULL, SW_SHOWNORMAL);
                 return TRUE;
             }
+            if (LOWORD(wParam) == IDC_CREDITS) {
+                ShowCreditsDialog(hwndDlg);
+                return TRUE;
+            }
             break;
 
         case WM_CLOSE:
@@ -294,4 +301,42 @@ void ShowAboutDialog(HWND hwndParent) {
                                  hwndParent, 
                                  AboutDlgProc);
     ShowWindow(g_hwndAboutDlg, SW_SHOW);
+}
+
+// 添加鸣谢对话框处理过程
+INT_PTR CALLBACK CreditsDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    switch (msg) {
+        case WM_INITDIALOG:
+            return TRUE;
+
+        case WM_COMMAND:
+            if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
+                EndDialog(hwndDlg, LOWORD(wParam));
+                g_hwndCreditsDialog = NULL;
+                return TRUE;
+            }
+            break;
+
+        case WM_CLOSE:
+            EndDialog(hwndDlg, 0);
+            g_hwndCreditsDialog = NULL;
+            return TRUE;
+    }
+    return FALSE;
+}
+
+// 显示鸣谢对话框
+void ShowCreditsDialog(HWND hwndParent) {
+    // 如果已经存在鸣谢对话框，先关闭它
+    if (g_hwndCreditsDialog != NULL && IsWindow(g_hwndCreditsDialog)) {
+        EndDialog(g_hwndCreditsDialog, 0);
+        g_hwndCreditsDialog = NULL;
+    }
+    
+    // 创建新的鸣谢对话框
+    g_hwndCreditsDialog = CreateDialog(GetModuleHandle(NULL), 
+                                     MAKEINTRESOURCE(IDD_CREDITS_DIALOG), 
+                                     hwndParent, 
+                                     CreditsDialogProc);
+    ShowWindow(g_hwndCreditsDialog, SW_SHOW);
 }
