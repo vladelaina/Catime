@@ -388,39 +388,45 @@ INT_PTR CALLBACK CreditsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lP
                     ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
                 }
-                case IDC_CREDITS_FLYING: {
+                case IDC_CREDITS_WUMING: {
                     wchar_t name[256] = {0}, url[512] = {0};
                     ParseContributorInfo(CONTRIBUTOR_7, name, 256, url, 512);
                     ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
                 }
-                case IDC_CREDITS_CAT: {
+                case IDC_CREDITS_FLYING: {
                     wchar_t name[256] = {0}, url[512] = {0};
                     ParseContributorInfo(CONTRIBUTOR_8, name, 256, url, 512);
                     ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
                 }
-                case IDC_CREDITS_RSYQVTHV: {
+                case IDC_CREDITS_CAT: {
                     wchar_t name[256] = {0}, url[512] = {0};
                     ParseContributorInfo(CONTRIBUTOR_9, name, 256, url, 512);
                     ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
                 }
-                case IDC_CREDITS_HAMSTER: {
+                case IDC_CREDITS_RSYQVTHV: {
                     wchar_t name[256] = {0}, url[512] = {0};
                     ParseContributorInfo(CONTRIBUTOR_10, name, 256, url, 512);
                     ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
                 }
-                case IDC_CREDITS_MALOU: {
+                case IDC_CREDITS_HAMSTER: {
                     wchar_t name[256] = {0}, url[512] = {0};
                     ParseContributorInfo(CONTRIBUTOR_11, name, 256, url, 512);
                     ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
                 }
+                case IDC_CREDITS_MALOU: {
+                    wchar_t name[256] = {0}, url[512] = {0};
+                    ParseContributorInfo(CONTRIBUTOR_12, name, 256, url, 512);
+                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
+                    return TRUE;
+                }
                 case IDC_CREDITS_QINGYANG: {
                     wchar_t name[256] = {0}, url[512] = {0};
-                    ParseContributorInfo(CONTRIBUTOR_15, name, 256, url, 512);
+                    ParseContributorInfo(CONTRIBUTOR_13, name, 256, url, 512);
                     ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
                 }
