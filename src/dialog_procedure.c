@@ -313,32 +313,33 @@ INT_PTR CALLBACK CreditsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lP
     {
         case WM_INITDIALOG:
         {
-            // 设置鸣谢文本内容
-            const char* credits_text = 
-                "特别感谢以下贡献者：\r\n\r\n"
-                "1. zggsong\r\n"
-                "   - GitHub: https://github.com/ZGGSONG\r\n\r\n"
-                "2. 猫屋敷梨梨Official\r\n"
-                "   - BiliBili: https://space.bilibili.com/26087398\r\n"
-                "   - 程序图标设计\r\n\r\n"
-                "3. MOJIもら\r\n"
-                "   - BiliBili: https://space.bilibili.com/6189012\r\n\r\n"
-                "4. 李康\r\n"
-                "   - BiliBili: https://space.bilibili.com/475437261\r\n\r\n"
-                "5. flying-hilichurl\r\n"
-                "   - GitHub: https://github.com/flying-hilichurl\r\n\r\n"
-                "6. 双脚猫\r\n"
-                "   - BiliBili: https://space.bilibili.com/161061562\r\n\r\n"
-                "7. rsyqvthv\r\n"
-                "   - GitHub: https://github.com/rsyqvthv\r\n\r\n"
-                "8. 洋仓鼠\r\n"
-                "   - BiliBili: https://space.bilibili.com/297146893\r\n\r\n"
-                "9. 学习马楼\r\n"
-                "   - BiliBili: https://space.bilibili.com/3546380188519387\r\n\r\n"
-                "\r\n"
-                "感谢所有贡献者对项目的支持与帮助！";
+            // 设置鸣谢文本内容 - 使用宽字符(Unicode)字符串
+            const wchar_t* credits_text = 
+                L"特别感谢以下贡献者：\r\n\r\n"
+                L"1. zggsong\r\n"
+                L"   - GitHub: https://github.com/ZGGSONG\r\n\r\n"
+                L"2. 猫屋敷梨梨Official\r\n"
+                L"   - BiliBili: https://space.bilibili.com/26087398\r\n"
+                L"   - 程序图标设计\r\n\r\n"
+                L"3. MOJIもら\r\n"
+                L"   - BiliBili: https://space.bilibili.com/6189012\r\n\r\n"
+                L"4. 李康\r\n"
+                L"   - BiliBili: https://space.bilibili.com/475437261\r\n\r\n"
+                L"5. flying-hilichurl\r\n"
+                L"   - GitHub: https://github.com/flying-hilichurl\r\n\r\n"
+                L"6. 双脚猫\r\n"
+                L"   - BiliBili: https://space.bilibili.com/161061562\r\n\r\n"
+                L"7. rsyqvthv\r\n"
+                L"   - GitHub: https://github.com/rsyqvthv\r\n\r\n"
+                L"8. 洋仓鼠\r\n"
+                L"   - BiliBili: https://space.bilibili.com/297146893\r\n\r\n"
+                L"9. 学习马楼\r\n"
+                L"   - BiliBili: https://space.bilibili.com/3546380188519387\r\n\r\n"
+                L"\r\n"
+                L"感谢所有贡献者对项目的支持与帮助！";
 
-            SetDlgItemTextA(hwndDlg, IDC_CREDITS_TEXT, credits_text);
+            // 使用 SetDlgItemTextW 设置 Unicode 文本
+            SetDlgItemTextW(hwndDlg, IDC_CREDITS_TEXT, credits_text);
             return TRUE;
         }
 
