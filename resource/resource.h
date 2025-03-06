@@ -250,15 +250,15 @@
 #define IDC_CREDITS_MALOU      2018
 
 // 贡献者链接信息 - 格式: [显示名称](URL链接)
-#define CONTRIBUTOR_ZGGSONG      L"[zggsong](https://github.com/ZGGSONG)"
-#define CONTRIBUTOR_NEKO         L"[猫屋敷梨梨Official](https://space.bilibili.com/26087398)"
-#define CONTRIBUTOR_MOJI         L"[MOJIもら](https://space.bilibili.com/6189012)"
-#define CONTRIBUTOR_LIKANG       L"[李康](https://space.bilibili.com/475437261)"
-#define CONTRIBUTOR_FLYING       L"[flying-hilichurl](https://github.com/flying-hilichurl)"
-#define CONTRIBUTOR_CAT          L"[双脚猫](https://space.bilibili.com/161061562)"
-#define CONTRIBUTOR_RSYQVTHV     L"[rsyqvthv](https://github.com/rsyqvthv)"
-#define CONTRIBUTOR_HAMSTER      L"[洋仓鼠](https://space.bilibili.com/297146893)"
-#define CONTRIBUTOR_MALOU        L"[学习马楼](https://space.bilibili.com/3546380188519387)"
+#define CONTRIBUTOR_1      L"[zggsong](https://github.com/ZGGSONG)"
+#define CONTRIBUTOR_2      L"[猫屋敷梨梨Official](https://space.bilibili.com/26087398)"
+#define CONTRIBUTOR_3      L"[MOJIもら](https://space.bilibili.com/6189012)"
+#define CONTRIBUTOR_4      L"[李康](https://space.bilibili.com/475437261)"
+#define CONTRIBUTOR_5      L"[flying-hilichurl](https://github.com/flying-hilichurl)"
+#define CONTRIBUTOR_6      L"[双脚猫](https://space.bilibili.com/161061562)"
+#define CONTRIBUTOR_7      L"[rsyqvthv](https://github.com/rsyqvthv)"
+#define CONTRIBUTOR_8      L"[洋仓鼠](https://space.bilibili.com/297146893)"
+#define CONTRIBUTOR_9      L"[学习马楼](https://space.bilibili.com/3546380188519387)"
 
 // 其他常用链接
 #define URL_GITHUB_REPO     L"https://github.com/vladelaina/Catime"

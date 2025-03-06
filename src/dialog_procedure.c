@@ -249,7 +249,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             }
             if (LOWORD(wParam) == IDC_CREDIT_LINK) {
                 wchar_t name[256] = {0}, url[512] = {0};
-                ParseContributorInfo(CONTRIBUTOR_NEKO, name, 256, url, 512);
+                ParseContributorInfo(CONTRIBUTOR_2, name, 256, url, 512);
                 ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOWNORMAL);
                 return TRUE;
             }
@@ -354,55 +354,55 @@ INT_PTR CALLBACK CreditsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lP
             {
                 case IDC_CREDITS_ZGGSONG: {
                     wchar_t name[256] = {0}, url[512] = {0};
-                    ParseContributorInfo(CONTRIBUTOR_ZGGSONG, name, 256, url, 512);
+                    ParseContributorInfo(CONTRIBUTOR_1, name, 256, url, 512);
                     ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
                 }
                 case IDC_CREDITS_NEKO: {
                     wchar_t name[256] = {0}, url[512] = {0};
-                    ParseContributorInfo(CONTRIBUTOR_NEKO, name, 256, url, 512);
+                    ParseContributorInfo(CONTRIBUTOR_2, name, 256, url, 512);
                     ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
                 }
                 case IDC_CREDITS_MOJI: {
                     wchar_t name[256] = {0}, url[512] = {0};
-                    ParseContributorInfo(CONTRIBUTOR_MOJI, name, 256, url, 512);
+                    ParseContributorInfo(CONTRIBUTOR_3, name, 256, url, 512);
                     ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
                 }
                 case IDC_CREDITS_LIKANG: {
                     wchar_t name[256] = {0}, url[512] = {0};
-                    ParseContributorInfo(CONTRIBUTOR_LIKANG, name, 256, url, 512);
+                    ParseContributorInfo(CONTRIBUTOR_4, name, 256, url, 512);
                     ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
                 }
                 case IDC_CREDITS_FLYING: {
                     wchar_t name[256] = {0}, url[512] = {0};
-                    ParseContributorInfo(CONTRIBUTOR_FLYING, name, 256, url, 512);
+                    ParseContributorInfo(CONTRIBUTOR_5, name, 256, url, 512);
                     ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
                 }
                 case IDC_CREDITS_CAT: {
                     wchar_t name[256] = {0}, url[512] = {0};
-                    ParseContributorInfo(CONTRIBUTOR_CAT, name, 256, url, 512);
+                    ParseContributorInfo(CONTRIBUTOR_6, name, 256, url, 512);
                     ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
                 }
                 case IDC_CREDITS_RSYQVTHV: {
                     wchar_t name[256] = {0}, url[512] = {0};
-                    ParseContributorInfo(CONTRIBUTOR_RSYQVTHV, name, 256, url, 512);
+                    ParseContributorInfo(CONTRIBUTOR_7, name, 256, url, 512);
                     ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
                 }
                 case IDC_CREDITS_HAMSTER: {
                     wchar_t name[256] = {0}, url[512] = {0};
-                    ParseContributorInfo(CONTRIBUTOR_HAMSTER, name, 256, url, 512);
+                    ParseContributorInfo(CONTRIBUTOR_8, name, 256, url, 512);
                     ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
                 }
                 case IDC_CREDITS_MALOU: {
                     wchar_t name[256] = {0}, url[512] = {0};
-                    ParseContributorInfo(CONTRIBUTOR_MALOU, name, 256, url, 512);
+                    ParseContributorInfo(CONTRIBUTOR_9, name, 256, url, 512);
                     ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
                 }
