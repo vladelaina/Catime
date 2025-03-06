@@ -33,17 +33,17 @@ BEGIN
 
     // 贡献者链接 - 右列
     CONTROL     "XuJilong", IDC_CREDITS_XUJILONG, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                120, 35, 60, 15
+                80, 35, 60, 15
     CONTROL     "猫屋敷梨梨Official", IDC_CREDITS_NEKO, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                120, 50, 110, 15
+                80, 50, 110, 15
     CONTROL     "李康", IDC_CREDITS_LIKANG, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                120, 65, 40, 15
+                80, 65, 40, 15
     CONTROL     "flying-hilichurl", IDC_CREDITS_FLYING, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                120, 80, 85, 15
+                80, 80, 85, 15
     CONTROL     "rsyqvthv", IDC_CREDITS_RSYQVTHV, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                120, 95, 60, 15
+                80, 95, 60, 15
     CONTROL     "学习马楼", IDC_CREDITS_MALOU, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                120, 110, 60, 15
+                80, 110, 60, 15
     CONTROL     "星空下数羊", IDC_CREDITS_SHEEP, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                120, 125, 70, 15
+                80, 125, 70, 15
 END 
