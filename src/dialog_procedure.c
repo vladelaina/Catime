@@ -17,6 +17,9 @@
 #include <windowsx.h>
 #include <shellapi.h>
 
+// 函数声明
+void ParseContributorInfo(const wchar_t* contributor, wchar_t* name, size_t nameSize, wchar_t* url, size_t urlSize);
+
 // 从main.c引入的变量
 extern char inputText[256];
 
@@ -245,7 +248,9 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 return TRUE;
             }
             if (LOWORD(wParam) == IDC_CREDIT_LINK) {
-                ShellExecuteW(NULL, L"open", URL_NEKO, NULL, NULL, SW_SHOWNORMAL);
+                wchar_t name[256] = {0}, url[512] = {0};
+                ParseContributorInfo(CONTRIBUTOR_NEKO, name, 256, url, 512);
+                ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOWNORMAL);
                 return TRUE;
             }
             if (LOWORD(wParam) == IDC_FEEDBACK_LINK) {
@@ -304,7 +309,31 @@ void ShowAboutDialog(HWND hwndParent) {
     ShowWindow(g_hwndAboutDlg, SW_SHOW);
 }
 
-// 添加鸣谢对话框处理过程
+// 添加辅助函数来解析贡献者信息
+void ParseContributorInfo(const wchar_t* contributor, wchar_t* name, size_t nameSize, wchar_t* url, size_t urlSize) {
+    const wchar_t *start = wcschr(contributor, L'[');
+    const wchar_t *middle = wcschr(contributor, L']');
+    const wchar_t *urlStart = wcschr(contributor, L'(');
+    const wchar_t *urlEnd = wcschr(contributor, L')');
+    
+    if (start && middle && urlStart && urlEnd) {
+        // 提取名称 (不包含方括号)
+        size_t nameLen = middle - (start + 1);
+        if (nameLen < nameSize) {
+            wcsncpy(name, start + 1, nameLen);
+            name[nameLen] = L'\0';
+        }
+        
+        // 提取URL (不包含圆括号)
+        size_t urlLen = urlEnd - (urlStart + 1);
+        if (urlLen < urlSize) {
+            wcsncpy(url, urlStart + 1, urlLen);
+            url[urlLen] = L'\0';
+        }
+    }
+}
+
+// 修改鸣谢对话框处理过程
 INT_PTR CALLBACK CreditsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     switch (msg)
@@ -323,33 +352,60 @@ INT_PTR CALLBACK CreditsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lP
             // 处理贡献者链接点击
             switch (LOWORD(wParam))
             {
-                case IDC_CREDITS_ZGGSONG:
-                    ShellExecuteW(NULL, L"open", URL_ZGGSONG, NULL, NULL, SW_SHOW);
+                case IDC_CREDITS_ZGGSONG: {
+                    wchar_t name[256] = {0}, url[512] = {0};
+                    ParseContributorInfo(CONTRIBUTOR_ZGGSONG, name, 256, url, 512);
+                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
-                case IDC_CREDITS_NEKO:
-                    ShellExecuteW(NULL, L"open", URL_NEKO, NULL, NULL, SW_SHOW);
+                }
+                case IDC_CREDITS_NEKO: {
+                    wchar_t name[256] = {0}, url[512] = {0};
+                    ParseContributorInfo(CONTRIBUTOR_NEKO, name, 256, url, 512);
+                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
-                case IDC_CREDITS_MOJI:
-                    ShellExecuteW(NULL, L"open", URL_MOJI, NULL, NULL, SW_SHOW);
+                }
+                case IDC_CREDITS_MOJI: {
+                    wchar_t name[256] = {0}, url[512] = {0};
+                    ParseContributorInfo(CONTRIBUTOR_MOJI, name, 256, url, 512);
+                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
-                case IDC_CREDITS_LIKANG:
-                    ShellExecuteW(NULL, L"open", URL_LIKANG, NULL, NULL, SW_SHOW);
+                }
+                case IDC_CREDITS_LIKANG: {
+                    wchar_t name[256] = {0}, url[512] = {0};
+                    ParseContributorInfo(CONTRIBUTOR_LIKANG, name, 256, url, 512);
+                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
-                case IDC_CREDITS_FLYING:
-                    ShellExecuteW(NULL, L"open", URL_FLYING, NULL, NULL, SW_SHOW);
+                }
+                case IDC_CREDITS_FLYING: {
+                    wchar_t name[256] = {0}, url[512] = {0};
+                    ParseContributorInfo(CONTRIBUTOR_FLYING, name, 256, url, 512);
+                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
-                case IDC_CREDITS_CAT:
-                    ShellExecuteW(NULL, L"open", URL_CAT, NULL, NULL, SW_SHOW);
+                }
+                case IDC_CREDITS_CAT: {
+                    wchar_t name[256] = {0}, url[512] = {0};
+                    ParseContributorInfo(CONTRIBUTOR_CAT, name, 256, url, 512);
+                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
-                case IDC_CREDITS_RSYQVTHV:
-                    ShellExecuteW(NULL, L"open", URL_RSYQVTHV, NULL, NULL, SW_SHOW);
+                }
+                case IDC_CREDITS_RSYQVTHV: {
+                    wchar_t name[256] = {0}, url[512] = {0};
+                    ParseContributorInfo(CONTRIBUTOR_RSYQVTHV, name, 256, url, 512);
+                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
-                case IDC_CREDITS_HAMSTER:
-                    ShellExecuteW(NULL, L"open", URL_HAMSTER, NULL, NULL, SW_SHOW);
+                }
+                case IDC_CREDITS_HAMSTER: {
+                    wchar_t name[256] = {0}, url[512] = {0};
+                    ParseContributorInfo(CONTRIBUTOR_HAMSTER, name, 256, url, 512);
+                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
-                case IDC_CREDITS_MALOU:
-                    ShellExecuteW(NULL, L"open", URL_MALOU, NULL, NULL, SW_SHOW);
+                }
+                case IDC_CREDITS_MALOU: {
+                    wchar_t name[256] = {0}, url[512] = {0};
+                    ParseContributorInfo(CONTRIBUTOR_MALOU, name, 256, url, 512);
+                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
+                }
             }
             break;
 

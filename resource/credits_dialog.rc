@@ -32,7 +32,4 @@ BEGIN
                 20, 250, 260, 20
     CONTROL     "9. 学习马楼", IDC_CREDITS_MALOU, "Static", SS_NOTIFY | SS_CENTERIMAGE,
                 20, 280, 260, 20
-
-    // 确定按钮
-    PUSHBUTTON  "确定", IDOK, 120, 350, 60, 25
 END 
