@@ -307,23 +307,48 @@ void ShowAboutDialog(HWND hwndParent) {
 }
 
 // 添加鸣谢对话框处理过程
-INT_PTR CALLBACK CreditsDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
-    switch (msg) {
+INT_PTR CALLBACK CreditsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg)
+    {
         case WM_INITDIALOG:
+        {
+            // 设置鸣谢文本内容
+            const char* credits_text = 
+                "特别感谢以下贡献者：\r\n\r\n"
+                "1. zggsong\r\n"
+                "   - GitHub: https://github.com/ZGGSONG\r\n\r\n"
+                "2. 猫屋敷梨梨Official\r\n"
+                "   - BiliBili: https://space.bilibili.com/26087398\r\n"
+                "   - 程序图标设计\r\n\r\n"
+                "3. MOJIもら\r\n"
+                "   - BiliBili: https://space.bilibili.com/6189012\r\n\r\n"
+                "4. 李康\r\n"
+                "   - BiliBili: https://space.bilibili.com/475437261\r\n\r\n"
+                "5. flying-hilichurl\r\n"
+                "   - GitHub: https://github.com/flying-hilichurl\r\n\r\n"
+                "6. 双脚猫\r\n"
+                "   - BiliBili: https://space.bilibili.com/161061562\r\n\r\n"
+                "7. rsyqvthv\r\n"
+                "   - GitHub: https://github.com/rsyqvthv\r\n\r\n"
+                "8. 洋仓鼠\r\n"
+                "   - BiliBili: https://space.bilibili.com/297146893\r\n\r\n"
+                "9. 学习马楼\r\n"
+                "   - BiliBili: https://space.bilibili.com/3546380188519387\r\n\r\n"
+                "\r\n"
+                "感谢所有贡献者对项目的支持与帮助！";
+
+            SetDlgItemTextA(hwndDlg, IDC_CREDITS_TEXT, credits_text);
             return TRUE;
+        }
 
         case WM_COMMAND:
-            if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
+            if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
+            {
                 EndDialog(hwndDlg, LOWORD(wParam));
-                g_hwndCreditsDialog = NULL;
                 return TRUE;
             }
             break;
-
-        case WM_CLOSE:
-            EndDialog(hwndDlg, 0);
-            g_hwndCreditsDialog = NULL;
-            return TRUE;
     }
     return FALSE;
 }
@@ -340,6 +365,6 @@ void ShowCreditsDialog(HWND hwndParent) {
     g_hwndCreditsDialog = CreateDialog(GetModuleHandle(NULL), 
                                      MAKEINTRESOURCE(IDD_CREDITS_DIALOG), 
                                      hwndParent, 
-                                     CreditsDialogProc);
+                                     CreditsDlgProc);
     ShowWindow(g_hwndCreditsDialog, SW_SHOW);
 }
