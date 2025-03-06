@@ -255,23 +255,6 @@
 #define IDC_CREDITS_SHEEP     2023
 #define IDC_CREDITS_QINGYANG  2024
 
-// 贡献者链接信息
-#define CONTRIBUTOR_1      L"[MAX°孟兆](https://github.com/MadMaxChow)"
-#define CONTRIBUTOR_2      L"[XuJilong](https://github.com/sumruler)"
-#define CONTRIBUTOR_3      L"[zggsong](https://github.com/ZGGSONG)"
-#define CONTRIBUTOR_4      L"[猫屋敷梨梨Official](https://space.bilibili.com/26087398)"
-#define CONTRIBUTOR_5      L"[MOJIもら](https://space.bilibili.com/6189012)"
-#define CONTRIBUTOR_6      L"[李康](https://space.bilibili.com/475437261)"
-#define CONTRIBUTOR_7      L"[我是无名吖](https://space.bilibili.com/1708573954)"
-#define CONTRIBUTOR_8      L"[flying-hilichurl](https://github.com/flying-hilichurl)"
-#define CONTRIBUTOR_9      L"[双脚猫](https://space.bilibili.com/161061562)"
-#define CONTRIBUTOR_10     L"[rsyqvthv](https://github.com/rsyqvthv)"
-#define CONTRIBUTOR_11     L"[洋仓鼠](https://space.bilibili.com/297146893)"
-#define CONTRIBUTOR_12     L"[学习马楼](https://space.bilibili.com/3546380188519387)"
-#define CONTRIBUTOR_13     L"[睡着的火山](https://space.bilibili.com/8010065)"
-#define CONTRIBUTOR_14     L"[星空下数羊](https://space.bilibili.com/5549978)"
-#define CONTRIBUTOR_15     L"[青阳忘川](https://space.bilibili.com/13129221)"
-
 // 其他常用链接
 #define URL_GITHUB_REPO     L"https://github.com/vladelaina/Catime"
 #define URL_FEEDBACK        L"https://message.bilibili.com/#/whisper/mid1862395225"
