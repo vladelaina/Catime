@@ -15,35 +15,35 @@ BEGIN
 
     // 贡献者链接 - 左列
     CONTROL     "MAX°孟兆", IDC_CREDITS_MAX, "Static", SS_NOTIFY | SS_CENTERIMAGE, 
-                20, 35, 70, 15
+                20, 23, 70, 15
     CONTROL     "zggsong", IDC_CREDITS_ZGGSONG, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 50, 55, 15
+                20, 38, 55, 15
     CONTROL     "MOJIもら", IDC_CREDITS_MOJI, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 65, 65, 15
+                20, 53, 65, 15
     CONTROL     "我是无名吖", IDC_CREDITS_WUMING, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 80, 70, 15
+                20, 68, 70, 15
     CONTROL     "双脚猫", IDC_CREDITS_CAT, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 95, 50, 15
+                20, 83, 50, 15
     CONTROL     "洋仓鼠", IDC_CREDITS_HAMSTER, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 110, 50, 15
+                20, 98, 50, 15
     CONTROL     "睡着的火山", IDC_CREDITS_VOLCANO, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 125, 70, 15
+                20, 113, 70, 15
     CONTROL     "青阳忘川", IDC_CREDITS_QINGYANG, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 140, 60, 15
+                20, 128, 60, 15
 
     // 贡献者链接 - 右列
     CONTROL     "XuJilong", IDC_CREDITS_XUJILONG, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                80, 35, 60, 15
+                80, 23, 60, 15
     CONTROL     "猫屋敷梨梨Official", IDC_CREDITS_NEKO, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                80, 50, 110, 15
+                80, 38, 110, 15
     CONTROL     "李康", IDC_CREDITS_LIKANG, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                80, 65, 40, 15
+                80, 53, 40, 15
     CONTROL     "flying-hilichurl", IDC_CREDITS_FLYING, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                80, 80, 85, 15
+                80, 68, 85, 15
     CONTROL     "rsyqvthv", IDC_CREDITS_RSYQVTHV, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                80, 95, 60, 15
+                80, 83, 60, 15
     CONTROL     "学习马楼", IDC_CREDITS_MALOU, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                80, 110, 60, 15
+                80, 98, 60, 15
     CONTROL     "星空下数羊", IDC_CREDITS_SHEEP, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                80, 125, 70, 15
+                80, 113, 70, 15
 END 
