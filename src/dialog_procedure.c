@@ -352,57 +352,75 @@ INT_PTR CALLBACK CreditsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lP
             // 处理贡献者链接点击
             switch (LOWORD(wParam))
             {
-                case IDC_CREDITS_ZGGSONG: {
+                case IDC_CREDITS_MAX: {
                     wchar_t name[256] = {0}, url[512] = {0};
                     ParseContributorInfo(CONTRIBUTOR_1, name, 256, url, 512);
                     ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
                 }
-                case IDC_CREDITS_NEKO: {
+                case IDC_CREDITS_XUJILONG: {
                     wchar_t name[256] = {0}, url[512] = {0};
                     ParseContributorInfo(CONTRIBUTOR_2, name, 256, url, 512);
                     ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
                 }
-                case IDC_CREDITS_MOJI: {
+                case IDC_CREDITS_ZGGSONG: {
                     wchar_t name[256] = {0}, url[512] = {0};
                     ParseContributorInfo(CONTRIBUTOR_3, name, 256, url, 512);
                     ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
                 }
-                case IDC_CREDITS_LIKANG: {
+                case IDC_CREDITS_NEKO: {
                     wchar_t name[256] = {0}, url[512] = {0};
                     ParseContributorInfo(CONTRIBUTOR_4, name, 256, url, 512);
                     ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
                 }
-                case IDC_CREDITS_FLYING: {
+                case IDC_CREDITS_MOJI: {
                     wchar_t name[256] = {0}, url[512] = {0};
                     ParseContributorInfo(CONTRIBUTOR_5, name, 256, url, 512);
                     ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
                 }
-                case IDC_CREDITS_CAT: {
+                case IDC_CREDITS_LIKANG: {
                     wchar_t name[256] = {0}, url[512] = {0};
                     ParseContributorInfo(CONTRIBUTOR_6, name, 256, url, 512);
                     ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
                 }
-                case IDC_CREDITS_RSYQVTHV: {
+                case IDC_CREDITS_FLYING: {
                     wchar_t name[256] = {0}, url[512] = {0};
                     ParseContributorInfo(CONTRIBUTOR_7, name, 256, url, 512);
                     ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
                 }
-                case IDC_CREDITS_HAMSTER: {
+                case IDC_CREDITS_CAT: {
                     wchar_t name[256] = {0}, url[512] = {0};
                     ParseContributorInfo(CONTRIBUTOR_8, name, 256, url, 512);
                     ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
                 }
-                case IDC_CREDITS_MALOU: {
+                case IDC_CREDITS_RSYQVTHV: {
                     wchar_t name[256] = {0}, url[512] = {0};
                     ParseContributorInfo(CONTRIBUTOR_9, name, 256, url, 512);
+                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
+                    return TRUE;
+                }
+                case IDC_CREDITS_HAMSTER: {
+                    wchar_t name[256] = {0}, url[512] = {0};
+                    ParseContributorInfo(CONTRIBUTOR_10, name, 256, url, 512);
+                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
+                    return TRUE;
+                }
+                case IDC_CREDITS_MALOU: {
+                    wchar_t name[256] = {0}, url[512] = {0};
+                    ParseContributorInfo(CONTRIBUTOR_11, name, 256, url, 512);
+                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
+                    return TRUE;
+                }
+                case IDC_CREDITS_QINGYANG: {
+                    wchar_t name[256] = {0}, url[512] = {0};
+                    ParseContributorInfo(CONTRIBUTOR_15, name, 256, url, 512);
                     ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
                 }
@@ -416,7 +434,7 @@ INT_PTR CALLBACK CreditsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lP
             int ctrlId = GetDlgCtrlID(hwndCtl);
             
             // 为所有贡献者链接设置橙色
-            if (ctrlId >= IDC_CREDITS_ZGGSONG && ctrlId <= IDC_CREDITS_MALOU) {
+            if (ctrlId >= IDC_CREDITS_MAX && ctrlId <= IDC_CREDITS_QINGYANG) {
                 SetTextColor(hdc, 0x00D26919); // 橙色 (BGR格式)
                 SetBkMode(hdc, TRANSPARENT);
                 return (INT_PTR)GetStockObject(NULL_BRUSH);

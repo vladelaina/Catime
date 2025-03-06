@@ -239,26 +239,38 @@
 #define IDD_CREDITS_DIALOG    2000
 #define IDC_CREDITS_TITLE     2001
 #define IDC_CREDITS_TEXT      2002
-#define IDC_CREDITS_ZGGSONG    2010
-#define IDC_CREDITS_NEKO      2011
-#define IDC_CREDITS_MOJI      2012
-#define IDC_CREDITS_LIKANG    2013
-#define IDC_CREDITS_FLYING    2014
-#define IDC_CREDITS_CAT       2015
-#define IDC_CREDITS_RSYQVTHV  2016
-#define IDC_CREDITS_HAMSTER   2017
-#define IDC_CREDITS_MALOU      2018
+#define IDC_CREDITS_MAX       2010
+#define IDC_CREDITS_XUJILONG  2011
+#define IDC_CREDITS_ZGGSONG   2012
+#define IDC_CREDITS_NEKO      2013
+#define IDC_CREDITS_MOJI      2014
+#define IDC_CREDITS_LIKANG    2015
+#define IDC_CREDITS_WUMING    2016
+#define IDC_CREDITS_FLYING    2017
+#define IDC_CREDITS_CAT       2018
+#define IDC_CREDITS_RSYQVTHV  2019
+#define IDC_CREDITS_HAMSTER   2020
+#define IDC_CREDITS_MALOU     2021
+#define IDC_CREDITS_VOLCANO   2022
+#define IDC_CREDITS_SHEEP     2023
+#define IDC_CREDITS_QINGYANG  2024
 
-// 贡献者链接信息 - 格式: [显示名称](URL链接)
-#define CONTRIBUTOR_1      L"[zggsong](https://github.com/ZGGSONG)"
-#define CONTRIBUTOR_2      L"[猫屋敷梨梨Official](https://space.bilibili.com/26087398)"
-#define CONTRIBUTOR_3      L"[MOJIもら](https://space.bilibili.com/6189012)"
-#define CONTRIBUTOR_4      L"[李康](https://space.bilibili.com/475437261)"
-#define CONTRIBUTOR_5      L"[flying-hilichurl](https://github.com/flying-hilichurl)"
-#define CONTRIBUTOR_6      L"[双脚猫](https://space.bilibili.com/161061562)"
-#define CONTRIBUTOR_7      L"[rsyqvthv](https://github.com/rsyqvthv)"
-#define CONTRIBUTOR_8      L"[洋仓鼠](https://space.bilibili.com/297146893)"
-#define CONTRIBUTOR_9      L"[学习马楼](https://space.bilibili.com/3546380188519387)"
+// 贡献者链接信息
+#define CONTRIBUTOR_1      L"[MAX°孟兆](https://github.com/MadMaxChow)"
+#define CONTRIBUTOR_2      L"[XuJilong](https://github.com/sumruler)"
+#define CONTRIBUTOR_3      L"[zggsong](https://github.com/ZGGSONG)"
+#define CONTRIBUTOR_4      L"[猫屋敷梨梨Official](https://space.bilibili.com/26087398)"
+#define CONTRIBUTOR_5      L"[MOJIもら](https://space.bilibili.com/6189012)"
+#define CONTRIBUTOR_6      L"[李康](https://space.bilibili.com/475437261)"
+#define CONTRIBUTOR_7      L"[我是无名吖](https://space.bilibili.com/1708573954)"
+#define CONTRIBUTOR_8      L"[flying-hilichurl](https://github.com/flying-hilichurl)"
+#define CONTRIBUTOR_9      L"[双脚猫](https://space.bilibili.com/161061562)"
+#define CONTRIBUTOR_10     L"[rsyqvthv](https://github.com/rsyqvthv)"
+#define CONTRIBUTOR_11     L"[洋仓鼠](https://space.bilibili.com/297146893)"
+#define CONTRIBUTOR_12     L"[学习马楼](https://space.bilibili.com/3546380188519387)"
+#define CONTRIBUTOR_13     L"[睡着的火山](https://space.bilibili.com/8010065)"
+#define CONTRIBUTOR_14     L"[星空下数羊](https://space.bilibili.com/5549978)"
+#define CONTRIBUTOR_15     L"[青阳忘川](https://space.bilibili.com/13129221)"
 
 // 其他常用链接
 #define URL_GITHUB_REPO     L"https://github.com/vladelaina/Catime"
