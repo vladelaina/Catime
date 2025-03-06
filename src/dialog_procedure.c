@@ -276,7 +276,10 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             
             if (GetDlgCtrlID(hwndCtl) == IDC_CREDIT_LINK || 
                 GetDlgCtrlID(hwndCtl) == IDC_FEEDBACK_LINK ||
-                GetDlgCtrlID(hwndCtl) == IDC_GITHUB_LINK) {
+                GetDlgCtrlID(hwndCtl) == IDC_GITHUB_LINK ||
+                GetDlgCtrlID(hwndCtl) == IDC_CREDITS ||
+                GetDlgCtrlID(hwndCtl) == IDC_LICENSE ||
+                GetDlgCtrlID(hwndCtl) == IDC_DONATE) {
                 SetTextColor(hdc, 0x00D26919); // 保持相同的橙色（BGR格式）
                 SetBkMode(hdc, TRANSPARENT);
                 return (INT_PTR)GetStockObject(NULL_BRUSH);
