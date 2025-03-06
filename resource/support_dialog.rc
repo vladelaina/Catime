@@ -11,7 +11,7 @@ CAPTION "支持"
 FONT 12, "Microsoft YaHei UI"
 BEGIN
     // 顶部文本
-    LTEXT       "如果您喜欢本项目，欢迎打赏，金额随意。\n您的支持是我持续更新的动力", 
+    LTEXT       "如果您喜欢本项目，欢迎打赏，金额随意。\n您的支持是我持续更新的动力。", 
                 IDC_SUPPORT_TEXT, 25, 2, 460, 30
 
     // 支付方式标签
