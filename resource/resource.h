@@ -229,7 +229,7 @@
 #define IDC_FEEDBACK 1016         // 反馈按钮
 #define IDC_GITHUB   1017         // GitHub按钮
 #define IDC_LICENSE  1018         // 开源协议按钮
-#define IDC_DONATE   1019         // 捐助按钮
+#define IDC_SUPPORT  1019         // 支持按钮 (原 IDC_DONATE)
 
 // 在原有链接ID后面添加反馈和GitHub的链接ID
 #define IDC_FEEDBACK_LINK 1020         // 反馈链接

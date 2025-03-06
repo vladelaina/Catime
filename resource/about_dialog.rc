@@ -36,6 +36,6 @@ BEGIN
                                                                               120,  65,  35, 12
     CONTROL     "开源协议",                     IDC_LICENSE,        "Static", SS_NOTIFY | SS_CENTERIMAGE,
                                                                               165,  65,  55, 12
-    CONTROL     "捐助",                         IDC_DONATE,         "Static", SS_NOTIFY | SS_CENTERIMAGE,
+    CONTROL     "支持",                         IDC_SUPPORT,         "Static", SS_NOTIFY | SS_CENTERIMAGE,
                                                                               215,  65,  30, 12
 END 

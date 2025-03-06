@@ -33,6 +33,12 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
  * @param hwndParent 父窗口句柄
  * 
  * 显示包含程序版本、作者和第三方库信息的关于对话框。
+ * 包含以下链接按钮：
+ * - 鸣谢 (IDC_CREDITS)
+ * - 反馈 (IDC_FEEDBACK)
+ * - GitHub (IDC_GITHUB)
+ * - 开源协议 (IDC_LICENSE)
+ * - 支持 (IDC_SUPPORT)
  */
 void ShowAboutDialog(HWND hwndParent);
 
