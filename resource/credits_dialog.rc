@@ -5,12 +5,34 @@
 #pragma code_page(65001)
 
 // 鸣谢对话框资源定义
-IDD_CREDITS_DIALOG DIALOGEX 0, 0, 200, 220
+IDD_CREDITS_DIALOG DIALOGEX 0, 0, 300, 400
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "鸣谢"
 FONT 12, "Microsoft YaHei UI"
 BEGIN
-    // 贡献者列表 - 使用只读的多行编辑框
-    EDITTEXT IDC_CREDITS_TEXT, 10, 10, 180, 200, 
-             ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | WS_VSCROLL
+    // 标题
+    LTEXT       "特别感谢以下贡献者：", IDC_CREDITS_TITLE, 10, 10, 280, 20
+
+    // 贡献者链接 - 使用 SS_NOTIFY 样式使其可点击
+    CONTROL     "1. zggsong", IDC_CREDITS_ZGGSONG, "Static", SS_NOTIFY | SS_CENTERIMAGE, 
+                20, 40, 260, 20
+    CONTROL     "2. 猫屋敷梨梨Official", IDC_CREDITS_NEKO, "Static", SS_NOTIFY | SS_CENTERIMAGE,
+                20, 70, 260, 20
+    CONTROL     "3. MOJIもら", IDC_CREDITS_MOJI, "Static", SS_NOTIFY | SS_CENTERIMAGE,
+                20, 100, 260, 20
+    CONTROL     "4. 李康", IDC_CREDITS_LIKANG, "Static", SS_NOTIFY | SS_CENTERIMAGE,
+                20, 130, 260, 20
+    CONTROL     "5. flying-hilichurl", IDC_CREDITS_FLYING, "Static", SS_NOTIFY | SS_CENTERIMAGE,
+                20, 160, 260, 20
+    CONTROL     "6. 双脚猫", IDC_CREDITS_CAT, "Static", SS_NOTIFY | SS_CENTERIMAGE,
+                20, 190, 260, 20
+    CONTROL     "7. rsyqvthv", IDC_CREDITS_RSYQVTHV, "Static", SS_NOTIFY | SS_CENTERIMAGE,
+                20, 220, 260, 20
+    CONTROL     "8. 洋仓鼠", IDC_CREDITS_HAMSTER, "Static", SS_NOTIFY | SS_CENTERIMAGE,
+                20, 250, 260, 20
+    CONTROL     "9. 学习马楼", IDC_CREDITS_MALOU, "Static", SS_NOTIFY | SS_CENTERIMAGE,
+                20, 280, 260, 20
+
+    // 确定按钮
+    PUSHBUTTON  "确定", IDOK, 120, 350, 60, 25
 END 

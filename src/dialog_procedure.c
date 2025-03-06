@@ -312,19 +312,63 @@ INT_PTR CALLBACK CreditsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lP
     switch (msg)
     {
         case WM_INITDIALOG:
-        {
-            // 使用 resource.h 中定义的文本内容
-            SetDlgItemTextW(hwndDlg, IDC_CREDITS_TEXT, CREDITS_TEXT);
             return TRUE;
-        }
 
         case WM_COMMAND:
+            // 处理确定按钮
             if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
             {
                 EndDialog(hwndDlg, LOWORD(wParam));
                 return TRUE;
             }
+            
+            // 处理贡献者链接点击
+            switch (LOWORD(wParam))
+            {
+                case IDC_CREDITS_ZGGSONG:
+                    ShellExecute(NULL, "open", "https://github.com/ZGGSONG", NULL, NULL, SW_SHOW);
+                    return TRUE;
+                case IDC_CREDITS_NEKO:
+                    ShellExecute(NULL, "open", "https://space.bilibili.com/26087398", NULL, NULL, SW_SHOW);
+                    return TRUE;
+                case IDC_CREDITS_MOJI:
+                    ShellExecute(NULL, "open", "https://space.bilibili.com/6189012", NULL, NULL, SW_SHOW);
+                    return TRUE;
+                case IDC_CREDITS_LIKANG:
+                    ShellExecute(NULL, "open", "https://space.bilibili.com/475437261", NULL, NULL, SW_SHOW);
+                    return TRUE;
+                case IDC_CREDITS_FLYING:
+                    ShellExecute(NULL, "open", "https://github.com/flying-hilichurl", NULL, NULL, SW_SHOW);
+                    return TRUE;
+                case IDC_CREDITS_CAT:
+                    ShellExecute(NULL, "open", "https://space.bilibili.com/161061562", NULL, NULL, SW_SHOW);
+                    return TRUE;
+                case IDC_CREDITS_RSYQVTHV:
+                    ShellExecute(NULL, "open", "https://github.com/rsyqvthv", NULL, NULL, SW_SHOW);
+                    return TRUE;
+                case IDC_CREDITS_HAMSTER:
+                    ShellExecute(NULL, "open", "https://space.bilibili.com/297146893", NULL, NULL, SW_SHOW);
+                    return TRUE;
+                case IDC_CREDITS_MALOU:
+                    ShellExecute(NULL, "open", "https://space.bilibili.com/3546380188519387", NULL, NULL, SW_SHOW);
+                    return TRUE;
+            }
             break;
+
+        case WM_CTLCOLORSTATIC:
+        {
+            HDC hdc = (HDC)wParam;
+            HWND hwndCtl = (HWND)lParam;
+            int ctrlId = GetDlgCtrlID(hwndCtl);
+            
+            // 为所有贡献者链接设置橙色
+            if (ctrlId >= IDC_CREDITS_ZGGSONG && ctrlId <= IDC_CREDITS_MALOU) {
+                SetTextColor(hdc, 0x00D26919); // 橙色 (BGR格式)
+                SetBkMode(hdc, TRANSPARENT);
+                return (INT_PTR)GetStockObject(NULL_BRUSH);
+            }
+            break;
+        }
     }
     return FALSE;
 }
