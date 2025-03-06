@@ -17,31 +17,31 @@ BEGIN
     CONTROL     "MAX°孟兆", IDC_CREDITS_MAX, "Static", SS_NOTIFY | SS_CENTERIMAGE, 
                 20, 15, 260, 20
     CONTROL     "XuJilong", IDC_CREDITS_XUJILONG, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 25, 260, 20
+                20, 30, 260, 20
     CONTROL     "zggsong", IDC_CREDITS_ZGGSONG, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 35, 260, 20
-    CONTROL     "猫屋敷梨梨Official", IDC_CREDITS_NEKO, "Static", SS_NOTIFY | SS_CENTERIMAGE,
                 20, 45, 260, 20
+    CONTROL     "猫屋敷梨梨Official", IDC_CREDITS_NEKO, "Static", SS_NOTIFY | SS_CENTERIMAGE,
+                20, 60, 260, 20
     CONTROL     "MOJIもら", IDC_CREDITS_MOJI, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 55, 260, 20
-    CONTROL     "李康", IDC_CREDITS_LIKANG, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 65, 260, 20
-    CONTROL     "我是无名吖", IDC_CREDITS_WUMING, "Static", SS_NOTIFY | SS_CENTERIMAGE,
                 20, 75, 260, 20
-    CONTROL     "flying-hilichurl", IDC_CREDITS_FLYING, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 85, 260, 20
-    CONTROL     "双脚猫", IDC_CREDITS_CAT, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 95, 260, 20
-    CONTROL     "rsyqvthv", IDC_CREDITS_RSYQVTHV, "Static", SS_NOTIFY | SS_CENTERIMAGE,
+    CONTROL     "李康", IDC_CREDITS_LIKANG, "Static", SS_NOTIFY | SS_CENTERIMAGE,
+                20, 90, 260, 20
+    CONTROL     "我是无名吖", IDC_CREDITS_WUMING, "Static", SS_NOTIFY | SS_CENTERIMAGE,
                 20, 105, 260, 20
-    CONTROL     "洋仓鼠", IDC_CREDITS_HAMSTER, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 115, 260, 20
-    CONTROL     "学习马楼", IDC_CREDITS_MALOU, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 125, 260, 20
-    CONTROL     "睡着的火山", IDC_CREDITS_VOLCANO, "Static", SS_NOTIFY | SS_CENTERIMAGE,
+    CONTROL     "flying-hilichurl", IDC_CREDITS_FLYING, "Static", SS_NOTIFY | SS_CENTERIMAGE,
+                20, 120, 260, 20
+    CONTROL     "双脚猫", IDC_CREDITS_CAT, "Static", SS_NOTIFY | SS_CENTERIMAGE,
                 20, 135, 260, 20
+    CONTROL     "rsyqvthv", IDC_CREDITS_RSYQVTHV, "Static", SS_NOTIFY | SS_CENTERIMAGE,
+                20, 150, 260, 20
+    CONTROL     "洋仓鼠", IDC_CREDITS_HAMSTER, "Static", SS_NOTIFY | SS_CENTERIMAGE,
+                20, 165, 260, 20
+    CONTROL     "学习马楼", IDC_CREDITS_MALOU, "Static", SS_NOTIFY | SS_CENTERIMAGE,
+                20, 180, 260, 20
+    CONTROL     "睡着的火山", IDC_CREDITS_VOLCANO, "Static", SS_NOTIFY | SS_CENTERIMAGE,
+                20, 195, 260, 20
     CONTROL     "星空下数羊", IDC_CREDITS_SHEEP, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 145, 260, 20
+                20, 210, 260, 20
     CONTROL     "青阳忘川", IDC_CREDITS_QINGYANG, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 155, 260, 20
+                20, 225, 260, 20
 END 
