@@ -12,17 +12,17 @@ FONT 12, "Microsoft YaHei UI"
 BEGIN
     // 顶部文本
     LTEXT       "如果您喜欢本项目，欢迎打赏，金额随意。\n您的支持是我持续更新的动力", 
-                IDC_SUPPORT_TEXT, 20, 20, 460, 30
+                IDC_SUPPORT_TEXT, 20, 2, 460, 30
 
     // 支付方式标签
-    LTEXT       "WeChat", IDC_WECHAT_LABEL, 55, 45, 50, 12
-    LTEXT       "Alipay",  IDC_ALIPAY_LABEL, 195, 45, 50, 12
+    LTEXT       "WeChat", IDC_WECHAT_LABEL, 15, 35, 50, 12
+    LTEXT       "Alipay",  IDC_ALIPAY_LABEL, 135, 35, 50, 12
 
     // 二维码图标 - 使用STATIC控件配合SS_ICON样式
     CONTROL     "", IDC_SUPPORT_WECHAT, "Static", SS_ICON,
-                30, 65, 228, 228
+                10, 45, 228, 228
     CONTROL     "", IDC_SUPPORT_ALIPAY, "Static", SS_ICON,
-                170, 65, 228, 228
+                110, 45, 228, 228
 END
 
 // 定义支付图标资源
