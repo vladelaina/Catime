@@ -14,22 +14,22 @@ BEGIN
     LTEXT       "特别感谢以下贡献者：", IDC_CREDITS_TITLE, 10, 10, 280, 20
 
     // 贡献者链接 - 使用 SS_NOTIFY 样式使其可点击
-    CONTROL     "1. zggsong", IDC_CREDITS_ZGGSONG, "Static", SS_NOTIFY | SS_CENTERIMAGE, 
-                20, 40, 260, 20
-    CONTROL     "2. 猫屋敷梨梨Official", IDC_CREDITS_NEKO, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 70, 260, 20
-    CONTROL     "3. MOJIもら", IDC_CREDITS_MOJI, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 100, 260, 20
-    CONTROL     "4. 李康", IDC_CREDITS_LIKANG, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 130, 260, 20
-    CONTROL     "5. flying-hilichurl", IDC_CREDITS_FLYING, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 160, 260, 20
-    CONTROL     "6. 双脚猫", IDC_CREDITS_CAT, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 190, 260, 20
-    CONTROL     "7. rsyqvthv", IDC_CREDITS_RSYQVTHV, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 220, 260, 20
-    CONTROL     "8. 洋仓鼠", IDC_CREDITS_HAMSTER, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 250, 260, 20
-    CONTROL     "9. 学习马楼", IDC_CREDITS_MALOU, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 280, 260, 20
+    CONTROL     "zggsong", IDC_CREDITS_ZGGSONG, "Static", SS_NOTIFY | SS_CENTERIMAGE, 
+                20, 15, 260, 20
+    CONTROL     "猫屋敷梨梨Official", IDC_CREDITS_NEKO, "Static", SS_NOTIFY | SS_CENTERIMAGE,
+                20, 25, 260, 20
+    CONTROL     "MOJIもら", IDC_CREDITS_MOJI, "Static", SS_NOTIFY | SS_CENTERIMAGE,
+                20, 35, 260, 20
+    CONTROL     "李康", IDC_CREDITS_LIKANG, "Static", SS_NOTIFY | SS_CENTERIMAGE,
+                20, 45, 260, 20
+    CONTROL     "flying-hilichurl", IDC_CREDITS_FLYING, "Static", SS_NOTIFY | SS_CENTERIMAGE,
+                20, 55, 260, 20
+    CONTROL     "双脚猫", IDC_CREDITS_CAT, "Static", SS_NOTIFY | SS_CENTERIMAGE,
+                20, 65, 260, 20
+    CONTROL     "rsyqvthv", IDC_CREDITS_RSYQVTHV, "Static", SS_NOTIFY | SS_CENTERIMAGE,
+                20, 75, 260, 20
+    CONTROL     "洋仓鼠", IDC_CREDITS_HAMSTER, "Static", SS_NOTIFY | SS_CENTERIMAGE,
+                20, 85, 260, 20
+    CONTROL     "学习马楼", IDC_CREDITS_MALOU, "Static", SS_NOTIFY | SS_CENTERIMAGE,
+                20, 95, 260, 20
 END 
