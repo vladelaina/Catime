@@ -32,6 +32,9 @@ static HWND g_hwndAboutDlg = NULL;
 // 添加全局变量来跟踪鸣谢对话框句柄
 static HWND g_hwndCreditsDialog = NULL;
 
+// 添加全局变量来跟踪支持对话框句柄
+static HWND g_hwndSupportDialog = NULL;
+
 // 贡献者链接定义
 static const wchar_t* CONTRIBUTOR_LINKS[] = {
     L"[MAX°孟兆](https://github.com/MadMaxChow)",              // CONTRIBUTOR_1
@@ -284,6 +287,10 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 ShowCreditsDialog(hwndDlg);
                 return TRUE;
             }
+            if (LOWORD(wParam) == IDC_SUPPORT) {
+                ShowSupportDialog(hwndDlg);
+                return TRUE;
+            }
             break;
 
         case WM_CLOSE:
@@ -496,4 +503,40 @@ void ShowCreditsDialog(HWND hwndParent) {
                                      hwndParent, 
                                      CreditsDlgProc);
     ShowWindow(g_hwndCreditsDialog, SW_SHOW);
+}
+
+// 支持对话框处理过程
+INT_PTR CALLBACK SupportDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg)
+    {
+        case WM_INITDIALOG:
+            return TRUE;
+
+        case WM_COMMAND:
+            if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
+            {
+                EndDialog(hwndDlg, LOWORD(wParam));
+                g_hwndSupportDialog = NULL;
+                return TRUE;
+            }
+            break;
+    }
+    return FALSE;
+}
+
+// 显示支持对话框
+void ShowSupportDialog(HWND hwndParent) {
+    // 如果已经存在支持对话框，先关闭它
+    if (g_hwndSupportDialog != NULL && IsWindow(g_hwndSupportDialog)) {
+        EndDialog(g_hwndSupportDialog, 0);
+        g_hwndSupportDialog = NULL;
+    }
+    
+    // 创建新的支持对话框
+    g_hwndSupportDialog = CreateDialog(GetModuleHandle(NULL), 
+                                     MAKEINTRESOURCE(IDD_SUPPORT_DIALOG), 
+                                     hwndParent, 
+                                     SupportDlgProc);
+    ShowWindow(g_hwndSupportDialog, SW_SHOW);
 }

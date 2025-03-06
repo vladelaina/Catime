@@ -52,4 +52,12 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
  */
 void ShowCreditsDialog(HWND hwndParent);
 
+/**
+ * @brief 显示支持对话框
+ * @param hwndParent 父窗口句柄
+ * 
+ * 显示包含微信和支付宝打赏二维码的支持对话框。
+ */
+void ShowSupportDialog(HWND hwndParent);
+
 #endif // DIALOG_PROCEDURE_H
