@@ -5,25 +5,12 @@
 #pragma code_page(65001)
 
 // 鸣谢对话框资源定义
-IDD_CREDITS_DIALOG DIALOGEX 0, 0, 300, 200
-STYLE   DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+IDD_CREDITS_DIALOG DIALOGEX 0, 0, 140, 160
+STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "鸣谢"
-FONT    12, "Microsoft YaHei UI"
+FONT 12, "Microsoft YaHei UI"
 BEGIN
-    // 标题
-    LTEXT      "感谢以下贡献者的支持与帮助", IDC_CREDITS_TITLE, 20, 10, 260, 20
-    
-    // 贡献者列表
-    LTEXT      "zggsong",                   IDC_CREDITS_TEXT1,  20, 40,  260, 15
-    LTEXT      "猫屋敷梨梨Official",        IDC_CREDITS_TEXT2,  20, 55,  260, 15
-    LTEXT      "MOJIもら",                  IDC_CREDITS_TEXT3,  20, 70,  260, 15
-    LTEXT      "李康",                      IDC_CREDITS_TEXT4,  20, 85,  260, 15
-    LTEXT      "flying-hilichurl",          IDC_CREDITS_TEXT5,  20, 100, 260, 15
-    LTEXT      "双脚猫",                    IDC_CREDITS_TEXT6,  20, 115, 260, 15
-    LTEXT      "rsyqvthv",                  IDC_CREDITS_TEXT7,  20, 130, 260, 15
-    LTEXT      "洋仓鼠",                    IDC_CREDITS_TEXT8,  20, 145, 260, 15
-    LTEXT      "学习马楼",                  IDC_CREDITS_TEXT9,  20, 160, 260, 15
-    
-    // 确定按钮
-    PUSHBUTTON "确定", IDOK, 120, 175, 60, 15
+    // 贡献者列表 - 使用只读的多行编辑框
+    EDITTEXT IDC_CREDITS_TEXT, 0, 0, 110, 130, 
+             ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | WS_VSCROLL
 END 
