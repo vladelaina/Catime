@@ -508,10 +508,49 @@ void ShowCreditsDialog(HWND hwndParent) {
 // 支持对话框处理过程
 INT_PTR CALLBACK SupportDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+    static HICON hWechatIcon = NULL;
+    static HICON hAlipayIcon = NULL;
+
     switch (msg)
     {
         case WM_INITDIALOG:
+            // 加载大尺寸的支付图标
+            hWechatIcon = (HICON)LoadImage(GetModuleHandle(NULL),
+                MAKEINTRESOURCE(IDI_WECHAT),
+                IMAGE_ICON,
+                228,    // 宽度
+                228,    // 高度
+                LR_DEFAULTCOLOR);
+            
+            hAlipayIcon = (HICON)LoadImage(GetModuleHandle(NULL),
+                MAKEINTRESOURCE(IDI_ALIPAY),
+                IMAGE_ICON,
+                228,    // 宽度
+                228,    // 高度
+                LR_DEFAULTCOLOR);
+            
+            // 设置图标到Static控件
+            if (hWechatIcon) {
+                SendDlgItemMessage(hwndDlg, IDC_SUPPORT_WECHAT, STM_SETICON, (WPARAM)hWechatIcon, 0);
+            }
+            
+            if (hAlipayIcon) {
+                SendDlgItemMessage(hwndDlg, IDC_SUPPORT_ALIPAY, STM_SETICON, (WPARAM)hAlipayIcon, 0);
+            }
+            
             return TRUE;
+
+        case WM_DESTROY:
+            // 清理图标资源
+            if (hWechatIcon) {
+                DestroyIcon(hWechatIcon);
+                hWechatIcon = NULL;
+            }
+            if (hAlipayIcon) {
+                DestroyIcon(hAlipayIcon);
+                hAlipayIcon = NULL;
+            }
+            break;
 
         case WM_COMMAND:
             if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)

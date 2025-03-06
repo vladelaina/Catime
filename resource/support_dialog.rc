@@ -5,22 +5,24 @@
 #pragma code_page(65001)
 
 // 支持对话框资源定义
-IDD_SUPPORT_DIALOG DIALOGEX 0, 0, 300, 200
+IDD_SUPPORT_DIALOG DIALOGEX 0, 0, 500, 400
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "支持"
 FONT 12, "Microsoft YaHei UI"
 BEGIN
     // 顶部文本
     LTEXT       "如果您喜欢本项目，欢迎打赏，金额随意。\n您的支持都是我持续更新的动力 ദ്ദി˶>𖥦<)✧Thanks!", 
-                IDC_SUPPORT_TEXT, 20, 10, 260, 30
+                IDC_SUPPORT_TEXT, 20, 20, 460, 30
 
     // 支付方式标签
     LTEXT       "WeChat", IDC_WECHAT_LABEL, 55, 45, 50, 12
     LTEXT       "Alipay",  IDC_ALIPAY_LABEL, 195, 45, 50, 12
 
-    // 二维码图标
-    ICON        IDI_WECHAT, IDC_SUPPORT_WECHAT, 30, 65, 100, 100
-    ICON        IDI_ALIPAY, IDC_SUPPORT_ALIPAY, 170, 65, 100, 100
+    // 二维码图标 - 使用STATIC控件配合SS_ICON样式
+    CONTROL     "", IDC_SUPPORT_WECHAT, "Static", SS_ICON,
+                30, 65, 228, 228
+    CONTROL     "", IDC_SUPPORT_ALIPAY, "Static", SS_ICON,
+                170, 65, 228, 228
 END
 
 // 定义支付图标资源
