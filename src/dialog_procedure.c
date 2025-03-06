@@ -23,6 +23,9 @@ extern char inputText[256];
 // 存储旧的编辑框过程
 WNDPROC wpOrigEditProc;
 
+// 添加全局变量来跟踪关于对话框句柄
+static HWND g_hwndAboutDlg = NULL;
+
 // 子类化编辑框过程
 LRESULT APIENTRY EditSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
@@ -229,11 +232,13 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 DestroyIcon(hLargeIcon);
                 hLargeIcon = NULL;
             }
+            g_hwndAboutDlg = NULL;  // 清除对话框句柄
             break;
 
         case WM_COMMAND:
             if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
                 EndDialog(hwndDlg, LOWORD(wParam));
+                g_hwndAboutDlg = NULL;  // 清除对话框句柄
                 return TRUE;
             }
             if (LOWORD(wParam) == IDC_CREDIT_LINK) {
@@ -254,6 +259,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
 
         case WM_CLOSE:
             EndDialog(hwndDlg, 0);
+            g_hwndAboutDlg = NULL;  // 清除对话框句柄
             return TRUE;
 
         case WM_CTLCOLORSTATIC:
@@ -276,8 +282,16 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
 
 // 显示关于对话框
 void ShowAboutDialog(HWND hwndParent) {
-    DialogBox(GetModuleHandle(NULL), 
-             MAKEINTRESOURCE(IDD_ABOUT_DIALOG), 
-             hwndParent, 
-             AboutDlgProc);
+    // 如果已经存在关于对话框，先关闭它
+    if (g_hwndAboutDlg != NULL && IsWindow(g_hwndAboutDlg)) {
+        EndDialog(g_hwndAboutDlg, 0);
+        g_hwndAboutDlg = NULL;
+    }
+    
+    // 创建新的关于对话框
+    g_hwndAboutDlg = CreateDialog(GetModuleHandle(NULL), 
+                                 MAKEINTRESOURCE(IDD_ABOUT_DIALOG), 
+                                 hwndParent, 
+                                 AboutDlgProc);
+    ShowWindow(g_hwndAboutDlg, SW_SHOW);
 }
