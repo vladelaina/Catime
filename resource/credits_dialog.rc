@@ -11,37 +11,37 @@ CAPTION "鸣谢"
 FONT 12, "Microsoft YaHei UI"
 BEGIN
     // 标题
-    LTEXT       "特别感谢以下贡献者：", IDC_CREDITS_TITLE, 10, 10, 280, 20
+    LTEXT       "特别感谢以下贡献者：", IDC_CREDITS_TITLE, 10, 10, 130, 20
 
     // 贡献者链接 - 使用 SS_NOTIFY 样式使其可点击
     CONTROL     "MAX°孟兆", IDC_CREDITS_MAX, "Static", SS_NOTIFY | SS_CENTERIMAGE, 
-                20, 15, 260, 20
+                20, 35, 70, 15
     CONTROL     "XuJilong", IDC_CREDITS_XUJILONG, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 25, 260, 20
+                20, 50, 60, 15
     CONTROL     "zggsong", IDC_CREDITS_ZGGSONG, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 35, 260, 20
+                20, 65, 55, 15
     CONTROL     "猫屋敷梨梨Official", IDC_CREDITS_NEKO, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 45, 260, 20
+                20, 80, 110, 15
     CONTROL     "MOJIもら", IDC_CREDITS_MOJI, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 55, 260, 20
+                20, 95, 65, 15
     CONTROL     "李康", IDC_CREDITS_LIKANG, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 65, 260, 20
+                20, 110, 40, 15
     CONTROL     "我是无名吖", IDC_CREDITS_WUMING, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 75, 260, 20
+                20, 125, 70, 15
     CONTROL     "flying-hilichurl", IDC_CREDITS_FLYING, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 85, 260, 20
+                20, 140, 85, 15
     CONTROL     "双脚猫", IDC_CREDITS_CAT, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 95, 260, 20
+                20, 155, 50, 15
     CONTROL     "rsyqvthv", IDC_CREDITS_RSYQVTHV, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 105, 260, 20
+                20, 170, 60, 15
     CONTROL     "洋仓鼠", IDC_CREDITS_HAMSTER, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 115, 260, 20
+                20, 185, 50, 15
     CONTROL     "学习马楼", IDC_CREDITS_MALOU, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 125, 260, 20
+                20, 200, 60, 15
     CONTROL     "睡着的火山", IDC_CREDITS_VOLCANO, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 135, 260, 20
+                20, 215, 70, 15
     CONTROL     "星空下数羊", IDC_CREDITS_SHEEP, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 145, 260, 20
+                20, 230, 70, 15
     CONTROL     "青阳忘川", IDC_CREDITS_QINGYANG, "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                20, 155, 260, 20
+                20, 245, 60, 15
 END 
