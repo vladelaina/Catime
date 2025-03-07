@@ -12,8 +12,8 @@ FONT 10, "Microsoft YaHei UI"
 BEGIN
     LTEXT       "本项目采用 Apache License 2.0 开源协议发布。\n\n" \
                 "图片版权声明：\n\n" \
-                "- 程序图标 `catime.ico` 和演示图片 `Images/catime.png` 由 [猫屋敷梨梨Official](https://space.bilibili.com/26087398) 创作并保留所有权利\n" \
-                "- 未经原作者明确授权，不得将这些图片用于任何商业用途\n\n" \
+                "- 程序图标由 猫屋敷梨梨Official 创作并保留所有权利\n" \
+                "   未经原作者明确授权，不得将这些图片用于任何商业用途\n\n" \
                 "字体许可：\n\n" \
                 "- MIT:\n" \
                 "  ProFont IIx Nerd Font\n" \
