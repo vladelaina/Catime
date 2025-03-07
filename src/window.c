@@ -531,6 +531,56 @@ float CLOCK_FONT_SCALE_FACTOR = 1.0f;
 int CLOCK_BASE_FONT_SIZE = 24;
 
 BOOL InitializeApplication(HINSTANCE hInstance) {
+    // 设置DPI感知模式为Per-Monitor DPI Aware，以便在不同DPI显示器之间移动窗口时正确处理缩放
+    // 使用较新的API SetProcessDpiAwarenessContext如果可用，否则回退到旧API
+    
+    // 定义DPI感知相关的常量和类型
+    #ifndef DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
+    DECLARE_HANDLE(DPI_AWARENESS_CONTEXT);
+    #define DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 ((DPI_AWARENESS_CONTEXT)-4)
+    #endif
+    
+    // 定义PROCESS_DPI_AWARENESS枚举
+    typedef enum {
+        PROCESS_DPI_UNAWARE = 0,
+        PROCESS_SYSTEM_DPI_AWARE = 1,
+        PROCESS_PER_MONITOR_DPI_AWARE = 2
+    } PROCESS_DPI_AWARENESS;
+    
+    HMODULE hUser32 = GetModuleHandleA("user32.dll");
+    if (hUser32) {
+        typedef BOOL(WINAPI* SetProcessDpiAwarenessContextFunc)(DPI_AWARENESS_CONTEXT);
+        SetProcessDpiAwarenessContextFunc setProcessDpiAwarenessContextFunc =
+            (SetProcessDpiAwarenessContextFunc)GetProcAddress(hUser32, "SetProcessDpiAwarenessContext");
+        
+        if (setProcessDpiAwarenessContextFunc) {
+            // DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 是最新的DPI感知模式
+            // 它提供了更好的多显示器DPI支持
+            setProcessDpiAwarenessContextFunc(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+        } else {
+            // 尝试使用较旧的API
+            HMODULE hShcore = LoadLibraryA("shcore.dll");
+            if (hShcore) {
+                typedef HRESULT(WINAPI* SetProcessDpiAwarenessFunc)(PROCESS_DPI_AWARENESS);
+                SetProcessDpiAwarenessFunc setProcessDpiAwarenessFunc =
+                    (SetProcessDpiAwarenessFunc)GetProcAddress(hShcore, "SetProcessDpiAwareness");
+                
+                if (setProcessDpiAwarenessFunc) {
+                    // PROCESS_PER_MONITOR_DPI_AWARE 对应于每个显示器的DPI感知
+                    setProcessDpiAwarenessFunc(PROCESS_PER_MONITOR_DPI_AWARE);
+                } else {
+                    // 最后尝试最旧的API
+                    SetProcessDPIAware();
+                }
+                
+                FreeLibrary(hShcore);
+            } else {
+                // 如果shcore.dll不可用，使用最基本的DPI感知API
+                SetProcessDPIAware();
+            }
+        }
+    }
+    
     SetConsoleOutputCP(936);
     SetConsoleCP(936);
 

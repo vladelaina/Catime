@@ -360,11 +360,43 @@ void ShowAboutDialog(HWND hwndParent) {
         g_hwndAboutDlg = NULL;
     }
     
+    // 保存当前DPI感知上下文
+    HANDLE hOldDpiContext = NULL;
+    HMODULE hUser32 = GetModuleHandleA("user32.dll");
+    if (hUser32) {
+        typedef DPI_AWARENESS_CONTEXT (WINAPI* GetThreadDpiAwarenessContextFunc)();
+        typedef DPI_AWARENESS_CONTEXT (WINAPI* SetThreadDpiAwarenessContextFunc)(DPI_AWARENESS_CONTEXT);
+        
+        GetThreadDpiAwarenessContextFunc getThreadDpiAwarenessContextFunc = 
+            (GetThreadDpiAwarenessContextFunc)GetProcAddress(hUser32, "GetThreadDpiAwarenessContext");
+        SetThreadDpiAwarenessContextFunc setThreadDpiAwarenessContextFunc = 
+            (SetThreadDpiAwarenessContextFunc)GetProcAddress(hUser32, "SetThreadDpiAwarenessContext");
+        
+        if (getThreadDpiAwarenessContextFunc && setThreadDpiAwarenessContextFunc) {
+            // 保存当前DPI上下文
+            hOldDpiContext = getThreadDpiAwarenessContextFunc();
+            // 设置为每显示器DPI感知V2模式
+            setThreadDpiAwarenessContextFunc(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+        }
+    }
+    
     // 创建新的关于对话框
     g_hwndAboutDlg = CreateDialog(GetModuleHandle(NULL), 
                                  MAKEINTRESOURCE(IDD_ABOUT_DIALOG), 
                                  hwndParent, 
                                  AboutDlgProc);
+    
+    // 恢复原来的DPI感知上下文
+    if (hUser32 && hOldDpiContext) {
+        typedef DPI_AWARENESS_CONTEXT (WINAPI* SetThreadDpiAwarenessContextFunc)(DPI_AWARENESS_CONTEXT);
+        SetThreadDpiAwarenessContextFunc setThreadDpiAwarenessContextFunc = 
+            (SetThreadDpiAwarenessContextFunc)GetProcAddress(hUser32, "SetThreadDpiAwarenessContext");
+        
+        if (setThreadDpiAwarenessContextFunc) {
+            setThreadDpiAwarenessContextFunc(hOldDpiContext);
+        }
+    }
+    
     ShowWindow(g_hwndAboutDlg, SW_SHOW);
 }
 
