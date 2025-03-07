@@ -8,27 +8,31 @@
 IDD_LICENSE_DIALOG DIALOGEX 0, 0, 300, 300
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "版权声明"
-FONT 11, "Microsoft YaHei UI"
+FONT 10, "Microsoft YaHei UI"
 BEGIN
     LTEXT       "本项目采用 Apache License 2.0 开源协议发布。\n\n" \
                 "图片版权声明：\n\n" \
                 "- 程序图标 `catime.ico` 和演示图片 `Images/catime.png` 由 [猫屋敷梨梨Official](https://space.bilibili.com/26087398) 创作并保留所有权利\n" \
                 "- 未经原作者明确授权，不得将这些图片用于任何商业用途\n\n" \
                 "字体许可：\n\n" \
-                "- MIT: ProFont IIx Nerd Font\n" \
+                "- MIT:\n" \
+                "  ProFont IIx Nerd Font\n" \
                 "- SIL Open Font License:\n" \
-                "DaddyTimeMono Nerd Font, DepartureMono Nerd Font, EnvyCodeR Nerd Font,\n" \
-                "IosevkaTermSlab Nerd Font, LiterationSerif Nerd Font, RecMonoCasual Nerd Font,\n" \
-                "Terminess Nerd Font, VictorMono Nerd Font, ZedMono Nerd Font,\n" \
-                "Arbutus Essence, Berkshire Swash Essence, Caveat Brush Essence, Creepster Essence,\n" \
-                "DotGothic16 Essence, Doto Essence, Foldit Essence, Fredericka the Great Essence,\n" \
-                "Frijole Essence, Gwendolyn Essence, Handjet Essence, Inknut Antiqua Essence,\n" \
-                "Jacquard Essence, Jacquarda Bastarda Essence, Kavoon Essence, Kumar One Essence,\n" \
-                "Kumar One Outline Essence, Lakki Reddy Essence, Licorice Essence, Ma Shan Zheng Essence,\n" \
-                "Moirai One Essence, Mystery Quest Essence, Noto Nastaliq Urdu Essence, Piedra Essence,\n" \
-                "Pixelify Sans Essence, Press Start 2P Essence, Rubik 系列字体, Ruge Boogie Essence,\n" \
-                "Sevillana Essence, Silkscreen Essence, Stick Essence, Underdog Essence,\n" \
-                "Wallpoet Essence, Yesteryear Essence, ZCOOL KuaiLe Essence\n" \
-                "- WTFPL: HeavyData Nerd Font",
+                "  DaddyTimeMono Nerd Font Propo Essence, DepartureMono Nerd Font Propo Essence,\n" \
+                "  LiterationSerif Nerd Font Essence, RecMonoCasual Nerd Font Mono Essence,\n" \
+                "  Terminess Nerd Font Propo Essence, VictorMono NFP Medium Essence,\n" \
+                "  ZedMono NF Essence,\n" \
+                "  Arbutus Essence, Berkshire Swash Essence, Caveat Brush Essence, Creepster Essence,\n" \
+                "  DotGothic16 Essence, Doto ExtraBold Essence, Foldit SemiBold Essence,\n" \
+                "  Fredericka the Great Essence, Frijole Essence, Gwendolyn Essence, Handjet Essence,\n" \
+                "  Inknut Antiqua Medium Essence, Jacquard 12 Essence, Jacquarda Bastarda 9 Essence,\n" \
+                "  Kavoon Essence, Kumar One Essence, Kumar One Outline Essence, Lakki Reddy Essence,\n" \
+                "  Licorice Essence, Ma Shan Zheng Essence, Moirai One Essence, Mystery Quest Essence,\n" \
+                "  Noto Nastaliq Urdu Medium Essence, Piedra Essence, Pixelify Sans Medium Essence,\n" \
+                "  Press Start 2P Essence, Rubik Bubbles Essence, Rubik Burned Essence,\n" \
+                "  Rubik Glitch Essence, Rubik Glitch Pop Essence, Rubik Marker Hatch Essence,\n" \
+                "  Rubik Puddles Essence, Rubik Vinyl Essence, Rubik Wet Paint Essence,\n" \
+                "  Ruge Boogie Essence, Sevillana Essence, Silkscreen Essence, Stick Essence,\n" \
+                "  Underdog Essence, Wallpoet Essence, Yesteryear Essence, ZCOOL KuaiLe Essence",
                 IDC_LICENSE_TEXT, 10, 10, 280, 260, SS_LEFT
 END 
