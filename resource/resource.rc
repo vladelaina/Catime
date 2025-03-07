@@ -24,12 +24,10 @@ IDI_CATIME ICON "../asset/icon/catime.ico"
 //-----------------------------------------------------------------------------
 // Fonts - CC BY-SA 4.0 License
 //-----------------------------------------------------------------------------
-// IDR_FONT_BIGBLUE           FONT "font/CC BY-SA 4.0/BigBlueTermPlus Nerd Font.ttf"
 
 //-----------------------------------------------------------------------------
 // Fonts - MIT License
 //-----------------------------------------------------------------------------
-// IDR_FONT_PROGGYCLEAN       FONT "font/MIT/ProggyCleanSZ Nerd Font Propo.ttf"
 IDR_FONT_PROFONT         FONT "../asset/font/MIT/ProFont IIx Nerd Font.ttf"
 
 //-----------------------------------------------------------------------------
@@ -43,7 +41,6 @@ IDR_FONT_TERMINESS         FONT "../asset/font/SIL/Terminess Nerd Font Propo Ess
 //-----------------------------------------------------------------------------
 // Fonts - WTFPL License
 //-----------------------------------------------------------------------------
-// IDR_FONT_GOHUFONT          FONT "font/WTFPL/GohuFont uni11 Nerd Font Mono.ttf"
 
 //-----------------------------------------------------------------------------
 // Fonts - SIL Open Font License (OFL)
