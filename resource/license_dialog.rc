@@ -5,29 +5,30 @@
 #pragma code_page(65001)
 
 // 许可证对话框资源定义
-IDD_LICENSE_DIALOG DIALOGEX 0, 0, 300, 200
+IDD_LICENSE_DIALOG DIALOGEX 0, 0, 300, 300
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "开源协议"
+CAPTION "版权声明"
 FONT 12, "Microsoft YaHei UI"
 BEGIN
-    LTEXT       "MIT License\n\n"
-                "Copyright (c) 2024 vladelaina\n\n"
-                "Permission is hereby granted, free of charge, to any person obtaining a copy " \
-                "of this software and associated documentation files (the ""Software""), to deal " \
-                "in the Software without restriction, including without limitation the rights " \
-                "to use, copy, modify, merge, publish, distribute, sublicense, and/or sell " \
-                "copies of the Software, and to permit persons to whom the Software is " \
-                "furnished to do so, subject to the following conditions:\n\n"
-                "The above copyright notice and this permission notice shall be included in all "
-                "copies or substantial portions of the Software.\n\n"
-                "THE SOFTWARE IS PROVIDED ""AS IS"", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR " \
-                "IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, " \
-                "FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE " \
-                "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER " \
-                "LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, " \
-                "OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE " \
-                "SOFTWARE.",
-                IDC_LICENSE_TEXT, 10, 10, 280, 160, SS_LEFT
-
-    DEFPUSHBUTTON   "确定", IDOK, 120, 175, 60, 14
+    LTEXT       "本项目采用 Apache License 2.0 开源协议发布。\n\n" \
+                "图片版权声明：\n\n" \
+                "- 程序图标 `catime.ico` 和演示图片 `Images/catime.png` 由 [猫屋敷梨梨Official](https://space.bilibili.com/26087398) 创作并保留所有权利\n" \
+                "- 未经原作者明确授权，不得将这些图片用于任何商业用途\n\n" \
+                "字体许可：\n\n" \
+                "- MIT: ProFont IIx Nerd Font\n" \
+                "- SIL Open Font License:\n" \
+                "DaddyTimeMono Nerd Font, DepartureMono Nerd Font, EnvyCodeR Nerd Font,\n" \
+                "IosevkaTermSlab Nerd Font, LiterationSerif Nerd Font, RecMonoCasual Nerd Font,\n" \
+                "Terminess Nerd Font, VictorMono Nerd Font, ZedMono Nerd Font,\n" \
+                "Arbutus Essence, Berkshire Swash Essence, Caveat Brush Essence, Creepster Essence,\n" \
+                "DotGothic16 Essence, Doto Essence, Foldit Essence, Fredericka the Great Essence,\n" \
+                "Frijole Essence, Gwendolyn Essence, Handjet Essence, Inknut Antiqua Essence,\n" \
+                "Jacquard Essence, Jacquarda Bastarda Essence, Kavoon Essence, Kumar One Essence,\n" \
+                "Kumar One Outline Essence, Lakki Reddy Essence, Licorice Essence, Ma Shan Zheng Essence,\n" \
+                "Moirai One Essence, Mystery Quest Essence, Noto Nastaliq Urdu Essence, Piedra Essence,\n" \
+                "Pixelify Sans Essence, Press Start 2P Essence, Rubik 系列字体, Ruge Boogie Essence,\n" \
+                "Sevillana Essence, Silkscreen Essence, Stick Essence, Underdog Essence,\n" \
+                "Wallpoet Essence, Yesteryear Essence, ZCOOL KuaiLe Essence\n" \
+                "- WTFPL: HeavyData Nerd Font",
+                IDC_LICENSE_TEXT, 10, 10, 280, 260, SS_LEFT
 END 
