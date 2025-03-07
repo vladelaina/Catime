@@ -25,17 +25,17 @@ BEGIN
     // 感谢信息
     CONTROL     "特别感谢\x20猫屋敷梨梨Official\x20提供的图标",
                                                 IDC_CREDIT_LINK,    "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                                                                              100,  45, 180, 12
+                                                                              100,  45, 115, 12
 
     // 底部链接栏
     CONTROL     "鸣谢",                         IDC_CREDITS,        "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                                                                              40,   65,  30, 12
+                                                                              40,   65,  15, 12
     CONTROL     "反馈",                         IDC_FEEDBACK_LINK,  "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                                                                              80,   65,  30, 12
+                                                                              80,   65,  15, 12
     CONTROL     "GitHub",                       IDC_GITHUB_LINK,    "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                                                                              120,  65,  35, 12
+                                                                              120,  65,  22, 12
     CONTROL     "版权声明",                     IDC_COPYRIGHT_LINK,  "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                                                                              165,  65,  55, 12
+                                                                              165,  65,  26, 12
     CONTROL     "支持",                         IDC_SUPPORT,         "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                                                                              215,  65,  30, 12
+                                                                              215,  65,  15, 12
 END 
