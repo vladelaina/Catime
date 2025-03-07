@@ -100,21 +100,28 @@
 - 未经原作者明确授权，不得将这些图片用于任何商业用途
 
 字体许可：
-- MIT: ProFont IIx Nerd Font
-- SIL Open Font License: 
-  DaddyTimeMono Nerd Font, DepartureMono Nerd Font, EnvyCodeR Nerd Font, 
-  IosevkaTermSlab Nerd Font, LiterationSerif Nerd Font, RecMonoCasual Nerd Font,
-  Terminess Nerd Font, VictorMono Nerd Font, ZedMono Nerd Font,
-  Arbutus Essence, Berkshire Swash Essence, Caveat Brush Essence, Creepster Essence,
-  DotGothic16 Essence, Doto Essence, Foldit Essence, Fredericka the Great Essence,
-  Frijole Essence, Gwendolyn Essence, Handjet Essence, Inknut Antiqua Essence,
-  Jacquard Essence, Jacquarda Bastarda Essence, Kavoon Essence, Kumar One Essence,
-  Kumar One Outline Essence, Lakki Reddy Essence, Licorice Essence, Ma Shan Zheng Essence,
-  Moirai One Essence, Mystery Quest Essence, Noto Nastaliq Urdu Essence, Piedra Essence,
-  Pixelify Sans Essence, Press Start 2P Essence, Rubik 系列字体, Ruge Boogie Essence,
-  Sevillana Essence, Silkscreen Essence, Stick Essence, Underdog Essence,
-  Wallpoet Essence, Yesteryear Essence, ZCOOL KuaiLe Essence
-- WTFPL: HeavyData Nerd Font
+- MIT: 
+  - ProFont IIx Nerd Font.ttf
+- SIL Open Font License (OFL): 
+  - DaddyTimeMono Nerd Font Propo Essence.ttf, DepartureMono Nerd Font Propo Essence.ttf,
+    LiterationSerif Nerd Font Essence.ttf, RecMonoCasual Nerd Font Mono Essence.ttf,
+    Terminess Nerd Font Propo Essence.ttf, VictorMono NFP Medium Essence.ttf,
+    ZedMono NF Essence.ttf
+  - Arbutus Essence.ttf, Berkshire Swash Essence.ttf, Caveat Brush Essence.ttf,
+    Creepster Essence.ttf, DotGothic16 Essence.ttf, Doto ExtraBold Essence.ttf,
+    Foldit SemiBold Essence.ttf, Fredericka the Great Essence.ttf, Frijole Essence.ttf,
+    Gwendolyn Essence.ttf, Handjet Essence.ttf, Inknut Antiqua Medium Essence.ttf,
+    Jacquard 12 Essence.ttf, Jacquarda Bastarda 9 Essence.ttf, Kavoon Essence.ttf,
+    Kumar One Essence.ttf, Kumar One Outline Essence.ttf, Lakki Reddy Essence.ttf,
+    Licorice Essence.ttf, Ma Shan Zheng Essence.ttf, Moirai One Essence.ttf,
+    Mystery Quest Essence.ttf, Noto Nastaliq Urdu Medium Essence.ttf, Piedra Essence.ttf,
+    Pixelify Sans Medium Essence.ttf, Press Start 2P Essence.ttf,
+    Rubik Bubbles Essence.ttf, Rubik Burned Essence.ttf, Rubik Glitch Essence.ttf,
+    Rubik Glitch Pop Essence.ttf, Rubik Marker Hatch Essence.ttf,
+    Rubik Puddles Essence.ttf, Rubik Vinyl Essence.ttf, Rubik Wet Paint Essence.ttf,
+    Ruge Boogie Essence.ttf, Sevillana Essence.ttf, Silkscreen Essence.ttf,
+    Stick Essence.ttf, Underdog Essence.ttf, Wallpoet Essence.ttf,
+    Yesteryear Essence.ttf, ZCOOL KuaiLe Essence.ttf
 
 ---
 
