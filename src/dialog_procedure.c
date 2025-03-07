@@ -263,6 +263,19 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 DestroyIcon(hLargeIcon);
                 hLargeIcon = NULL;
             }
+            // 关闭所有子对话框
+            if (g_hwndCreditsDialog && IsWindow(g_hwndCreditsDialog)) {
+                EndDialog(g_hwndCreditsDialog, 0);
+                g_hwndCreditsDialog = NULL;
+            }
+            if (g_hwndSupportDialog && IsWindow(g_hwndSupportDialog)) {
+                EndDialog(g_hwndSupportDialog, 0);
+                g_hwndSupportDialog = NULL;
+            }
+            if (g_hwndLicenseDialog && IsWindow(g_hwndLicenseDialog)) {
+                EndDialog(g_hwndLicenseDialog, 0);
+                g_hwndLicenseDialog = NULL;
+            }
             g_hwndAboutDlg = NULL;  // 清除对话框句柄
             break;
 
@@ -301,6 +314,19 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             break;
 
         case WM_CLOSE:
+            // 关闭所有子对话框
+            if (g_hwndCreditsDialog && IsWindow(g_hwndCreditsDialog)) {
+                EndDialog(g_hwndCreditsDialog, 0);
+                g_hwndCreditsDialog = NULL;
+            }
+            if (g_hwndSupportDialog && IsWindow(g_hwndSupportDialog)) {
+                EndDialog(g_hwndSupportDialog, 0);
+                g_hwndSupportDialog = NULL;
+            }
+            if (g_hwndLicenseDialog && IsWindow(g_hwndLicenseDialog)) {
+                EndDialog(g_hwndLicenseDialog, 0);
+                g_hwndLicenseDialog = NULL;
+            }
             EndDialog(hwndDlg, 0);
             g_hwndAboutDlg = NULL;  // 清除对话框句柄
             return TRUE;
