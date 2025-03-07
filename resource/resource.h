@@ -269,3 +269,7 @@
 #define IDI_WECHAT            3006
 #define IDI_ALIPAY            3007
 
+// 许可证对话框相关
+#define IDD_LICENSE_DIALOG    4000
+#define IDC_LICENSE_TEXT      4001
+

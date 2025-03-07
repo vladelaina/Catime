@@ -35,6 +35,9 @@ static HWND g_hwndCreditsDialog = NULL;
 // 添加全局变量来跟踪支持对话框句柄
 static HWND g_hwndSupportDialog = NULL;
 
+// 添加全局变量来跟踪许可证对话框句柄
+static HWND g_hwndLicenseDialog = NULL;
+
 // 贡献者链接定义
 static const wchar_t* CONTRIBUTOR_LINKS[] = {
     L"[MAX°孟兆](https://github.com/MadMaxChow)",              // CONTRIBUTOR_1
@@ -289,6 +292,10 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             }
             if (LOWORD(wParam) == IDC_SUPPORT) {
                 ShowSupportDialog(hwndDlg);
+                return TRUE;
+            }
+            if (LOWORD(wParam) == IDC_COPYRIGHT_LINK) {
+                ShowLicenseDialog(hwndDlg);
                 return TRUE;
             }
             break;
@@ -578,4 +585,40 @@ void ShowSupportDialog(HWND hwndParent) {
                                      hwndParent, 
                                      SupportDlgProc);
     ShowWindow(g_hwndSupportDialog, SW_SHOW);
+}
+
+// 许可证对话框处理过程
+INT_PTR CALLBACK LicenseDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg)
+    {
+        case WM_INITDIALOG:
+            return TRUE;
+
+        case WM_COMMAND:
+            if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
+            {
+                EndDialog(hwndDlg, LOWORD(wParam));
+                g_hwndLicenseDialog = NULL;
+                return TRUE;
+            }
+            break;
+    }
+    return FALSE;
+}
+
+// 显示许可证对话框
+void ShowLicenseDialog(HWND hwndParent) {
+    // 如果已经存在许可证对话框，先关闭它
+    if (g_hwndLicenseDialog != NULL && IsWindow(g_hwndLicenseDialog)) {
+        EndDialog(g_hwndLicenseDialog, 0);
+        g_hwndLicenseDialog = NULL;
+    }
+    
+    // 创建新的许可证对话框
+    g_hwndLicenseDialog = CreateDialog(GetModuleHandle(NULL), 
+                                     MAKEINTRESOURCE(IDD_LICENSE_DIALOG), 
+                                     hwndParent, 
+                                     LicenseDlgProc);
+    ShowWindow(g_hwndLicenseDialog, SW_SHOW);
 }

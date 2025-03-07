@@ -60,4 +60,12 @@ void ShowCreditsDialog(HWND hwndParent);
  */
 void ShowSupportDialog(HWND hwndParent);
 
+/**
+ * @brief 显示许可证对话框
+ * @param hwndParent 父窗口句柄
+ * 
+ * 显示包含MIT许可证文本的对话框。
+ */
+void ShowLicenseDialog(HWND hwndParent);
+
 #endif // DIALOG_PROCEDURE_H
