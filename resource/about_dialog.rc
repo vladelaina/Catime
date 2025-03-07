@@ -34,7 +34,7 @@ BEGIN
                                                                               80,   65,  30, 12
     CONTROL     "GitHub",                       IDC_GITHUB_LINK,    "Static", SS_NOTIFY | SS_CENTERIMAGE,
                                                                               120,  65,  35, 12
-    CONTROL     "版权声明",                     IDC_LICENSE,        "Static", SS_NOTIFY | SS_CENTERIMAGE,
+    CONTROL     "版权声明",                     IDC_COPYRIGHT_LINK,  "Static", SS_NOTIFY | SS_CENTERIMAGE,
                                                                               165,  65,  55, 12
     CONTROL     "支持",                         IDC_SUPPORT,         "Static", SS_NOTIFY | SS_CENTERIMAGE,
                                                                               215,  65,  30, 12

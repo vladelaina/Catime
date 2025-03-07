@@ -228,7 +228,7 @@
 #define IDC_CREDITS  1015         // 鸣谢按钮
 #define IDC_FEEDBACK 1016         // 反馈按钮
 #define IDC_GITHUB   1017         // GitHub按钮
-#define IDC_LICENSE  1018         // 版权声明按钮
+#define IDC_COPYRIGHT_LINK 1018   // 版权声明按钮 (原 IDC_LICENSE)
 #define IDC_SUPPORT  1019         // 支持按钮 (原 IDC_DONATE)
 
 // 在原有链接ID后面添加反馈和GitHub的链接ID
