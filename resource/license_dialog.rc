@@ -8,7 +8,7 @@
 IDD_LICENSE_DIALOG DIALOGEX 0, 0, 300, 300
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "版权声明"
-FONT 12, "Microsoft YaHei UI"
+FONT 11, "Microsoft YaHei UI"
 BEGIN
     LTEXT       "本项目采用 Apache License 2.0 开源协议发布。\n\n" \
                 "图片版权声明：\n\n" \
