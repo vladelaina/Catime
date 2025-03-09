@@ -5,13 +5,6 @@
 #define IDC_BUTTON_OK 109
 #define IDD_DIALOG1 1002
 
-IDD_DIALOG1 DIALOGEX 0, 0, 100, 26
-STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP 
-FONT 10, "MS Shell Dlg"
-BEGIN
-    EDITTEXT        IDC_EDIT, 0, 0, 100, 15, ES_AUTOHSCROLL | ES_MULTILINE
-    PUSHBUTTON      "OK", IDC_BUTTON_OK, 40, 16, 20, 10
-END
 
 //-----------------------------------------------------------------------------
 // Program Icon
@@ -92,14 +85,11 @@ IDR_FONT_YESTERYEAR        FONT "../asset/font/OFL/Yesteryear Essence.ttf"
 IDR_FONT_ZCOOL_KUAILE      FONT "../asset/font/OFL/ZCOOL KuaiLe Essence.ttf"
 
 //-----------------------------------------------------------------------------
-// About Dialog
+// Dialog Resources
 //-----------------------------------------------------------------------------
+#include "input_dialog.rc"
 #include "about_dialog.rc"
 #include "credits_dialog.rc"
 #include "support_dialog.rc"
 #include "license_dialog.rc"
 
-STRINGTABLE
-BEGIN
-    IDS_CREDITS_TEXT     "鸣谢："
-END

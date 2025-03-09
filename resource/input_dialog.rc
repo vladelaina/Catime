@@ -1,0 +1,14 @@
+#include <windows.h>
+#include "resource.h"
+
+// 设置 UTF-8 编码
+#pragma code_page(65001)
+
+// 输入对话框资源定义
+IDD_DIALOG1 DIALOGEX 0, 0, 100, 26
+STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP 
+FONT 10, "MS Shell Dlg"
+BEGIN
+    EDITTEXT        IDC_EDIT, 0, 0, 100, 15, ES_AUTOHSCROLL | ES_MULTILINE
+    PUSHBUTTON      "OK", IDC_BUTTON_OK, 40, 16, 20, 10
+END 
