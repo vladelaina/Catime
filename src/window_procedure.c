@@ -145,6 +145,18 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             break;
                         }
 
+                        // 检查是否只有空格
+                        BOOL isAllSpaces = TRUE;
+                        for (int i = 0; inputText[i]; i++) {
+                            if (!isspace((unsigned char)inputText[i])) {
+                                isAllSpaces = FALSE;
+                                break;
+                            }
+                        }
+                        if (isAllSpaces) {
+                            break;
+                        }
+
                         int total_seconds = 0;
                         if (ParseInput(inputText, &total_seconds)) {
                             KillTimer(hwnd, 1);
@@ -192,7 +204,17 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         memset(inputText, 0, sizeof(inputText));
                         DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc);
 
-                        if (inputText[0] == '\0') {
+                        // 检查输入是否为空或只包含空格
+                        BOOL isAllSpaces = TRUE;
+                        for (int i = 0; inputText[i]; i++) {
+                            if (!isspace((unsigned char)inputText[i])) {
+                                isAllSpaces = FALSE;
+                                break;
+                            }
+                        }
+                        
+                        // 如果输入为空或只包含空格，直接退出循环
+                        if (inputText[0] == '\0' || isAllSpaces) {
                             break;
                         }
 
@@ -239,6 +261,18 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc);
 
                         if (inputText[0] == '\0') {
+                            break;
+                        }
+
+                        // 检查是否只有空格
+                        BOOL isAllSpaces = TRUE;
+                        for (int i = 0; inputText[i]; i++) {
+                            if (!isspace((unsigned char)inputText[i])) {
+                                isAllSpaces = FALSE;
+                                break;
+                            }
+                        }
+                        if (isAllSpaces) {
                             break;
                         }
 

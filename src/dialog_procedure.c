@@ -167,6 +167,20 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
         case WM_COMMAND:
             if (LOWORD(wParam) == CLOCK_IDC_BUTTON_OK || HIWORD(wParam) == BN_CLICKED) {
                 GetDlgItemText(hwndDlg, CLOCK_IDC_EDIT, inputText, sizeof(inputText));
+                
+                // 检查是否为空输入或只有空格
+                BOOL isAllSpaces = TRUE;
+                for (int i = 0; inputText[i]; i++) {
+                    if (!isspace((unsigned char)inputText[i])) {
+                        isAllSpaces = FALSE;
+                        break;
+                    }
+                }
+                if (inputText[0] == '\0' || isAllSpaces) {
+                    EndDialog(hwndDlg, 0);
+                    return TRUE;
+                }
+                
                 int total_seconds;
                 if (ParseInput(inputText, &total_seconds)) {
                     WriteConfigDefaultStartTime(total_seconds);
