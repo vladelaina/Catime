@@ -370,7 +370,9 @@ void ShowColorMenu(HWND hwnd) {
     // 显示菜单
     POINT pt;
     GetCursorPos(&pt);
-    TrackPopupMenu(hMenu, TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, 0, hwnd, NULL);
+    SetForegroundWindow(hwnd);
+    TrackPopupMenu(hMenu, TPM_LEFTALIGN | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt.x, pt.y, 0, hwnd, NULL);
+    PostMessage(hwnd, WM_NULL, 0, 0); // 这将允许菜单在点击外部区域时自动关闭
     DestroyMenu(hMenu);
 }
 
@@ -473,6 +475,7 @@ void ShowContextMenu(HWND hwnd) {
     POINT pt;
     GetCursorPos(&pt);
     SetForegroundWindow(hwnd);
-    TrackPopupMenu(hMenu, TPM_BOTTOMALIGN | TPM_LEFTALIGN, pt.x, pt.y, 0, hwnd, NULL);
+    TrackPopupMenu(hMenu, TPM_BOTTOMALIGN | TPM_LEFTALIGN | TPM_NONOTIFY, pt.x, pt.y, 0, hwnd, NULL);
+    PostMessage(hwnd, WM_NULL, 0, 0); // 这将允许菜单在点击外部区域时自动关闭
     DestroyMenu(hMenu);
 }
