@@ -31,6 +31,9 @@ extern RecentFile CLOCK_RECENT_FILES[MAX_RECENT_FILES];
 extern int CLOCK_RECENT_FILES_COUNT;
 extern int CLOCK_DEFAULT_START_TIME;
 extern time_t last_config_time;
+extern int POMODORO_WORK_TIME;      // 工作时间(分钟)
+extern int POMODORO_SHORT_BREAK;    // 短休息时间(分钟) 
+extern int POMODORO_LONG_BREAK;     // 长休息时间(分钟)
 
 /// @name Configuration-related Function Declarations
 /// @{
@@ -94,6 +97,14 @@ void CreateDefaultConfig(const char* config_path);
  * @param config_path The path to the configuration file.
  */
 void WriteConfig(const char* config_path);
+
+/**
+ * @brief Writes the Pomodoro times to the configuration file.
+ * @param work The work time in minutes.
+ * @param short_break The short break time in minutes.
+ * @param long_break The long break time in minutes.
+ */
+void WriteConfigPomodoroTimes(int work, int short_break, int long_break);
 
 /// @}
 

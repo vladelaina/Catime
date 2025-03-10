@@ -22,6 +22,11 @@
 #include <shobjidl.h>
 #include <shlguid.h>
 
+// 添加全局变量
+int POMODORO_WORK_TIME = 25;      // 默认工作时间25分钟
+int POMODORO_SHORT_BREAK = 5;     // 默认短休息5分钟
+int POMODORO_LONG_BREAK = 10;     // 默认长休息10分钟
+
 /**
  * @brief 获取配置文件路径
  * @param path 存储路径的缓冲区
@@ -80,6 +85,10 @@ void CreateDefaultConfig(const char* config_path) {
         
         fprintf(file, "COLOR_OPTIONS=#FFFFFF,#F9DB91,#F4CAE0,#FFB6C1,#A8E7DF,#A3CFB3,#92CBFC,#BDA5E7,#9370DB,#8C92CF,#72A9A5,#EB99A7,#EB96BD,#FFAE8B,#FF7F50,#CA6174\n");
 
+        // 添加番茄钟默认时间配置
+        fprintf(file, "POMODORO_WORK_TIME=25\n");
+        fprintf(file, "POMODORO_SHORT_BREAK=5\n"); 
+        fprintf(file, "POMODORO_LONG_BREAK=10\n");
 
         fclose(file);
     }
@@ -236,6 +245,23 @@ void ReadConfig() {
     }
 
     LoadRecentFiles();
+
+    // 读取番茄钟时间设置
+    char work_time[32] = {0};
+    char short_break[32] = {0};
+    char long_break[32] = {0};
+    
+    if(GetPrivateProfileStringA("Settings", "POMODORO_WORK_TIME", "25", work_time, sizeof(work_time), config_path)) {
+        POMODORO_WORK_TIME = atoi(work_time);
+    }
+    
+    if(GetPrivateProfileStringA("Settings", "POMODORO_SHORT_BREAK", "5", short_break, sizeof(short_break), config_path)) {
+        POMODORO_SHORT_BREAK = atoi(short_break);
+    }
+    
+    if(GetPrivateProfileStringA("Settings", "POMODORO_LONG_BREAK", "10", long_break, sizeof(long_break), config_path)) {
+        POMODORO_LONG_BREAK = atoi(long_break);
+    }
 }
 
 /**
@@ -654,4 +680,26 @@ char* UTF8ToANSI(const char* utf8Str) {
 
     free(wstr);
     return str;
+}
+
+// 添加写入番茄钟配置的函数
+void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, sizeof(config_path));
+    
+    char value[32];
+    
+    sprintf(value, "%d", work);
+    WritePrivateProfileStringA("Settings", "POMODORO_WORK_TIME", value, config_path);
+    
+    sprintf(value, "%d", short_break);
+    WritePrivateProfileStringA("Settings", "POMODORO_SHORT_BREAK", value, config_path);
+    
+    sprintf(value, "%d", long_break);
+    WritePrivateProfileStringA("Settings", "POMODORO_LONG_BREAK", value, config_path);
+    
+    // 更新全局变量
+    POMODORO_WORK_TIME = work;
+    POMODORO_SHORT_BREAK = short_break;
+    POMODORO_LONG_BREAK = long_break;
 }
