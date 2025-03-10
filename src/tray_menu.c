@@ -357,13 +357,16 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hAboutMenu, MF_POPUP, (UINT_PTR)hUpdateMenu,
                 GetLocalizedString(L"检查更新", L"Check for Updates"));
     
+    // 将重置选项添加到关于菜单
+    AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);
+    AppendMenuW(hAboutMenu, MF_STRING, 200,
+                GetLocalizedString(L"重置", L"Reset"));
+
     // 将关于菜单添加到主菜单
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hAboutMenu,
                 GetLocalizedString(L"帮助", L"Help"));
 
-    // 添加重置和退出选项
-    AppendMenuW(hMenu, MF_STRING, 200,
-                GetLocalizedString(L"重置", L"Reset"));
+    // 只保留退出选项
     AppendMenuW(hMenu, MF_STRING, 109,
                 GetLocalizedString(L"退出", L"Exit"));
     
