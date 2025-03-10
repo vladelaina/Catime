@@ -1,0 +1,16 @@
+#include <windows.h>
+#include "resource.h"
+
+// 设置 UTF-8 编码
+#pragma code_page(65001)
+
+// 错误提示对话框资源定义
+IDD_ERROR_DIALOG DIALOGEX 0, 0, 200, 85
+STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "错误"
+FONT 9, "Microsoft YaHei UI"
+BEGIN
+    ICON            IDI_CATIME, IDC_ERROR_ICON, 15, 15, 20, 20
+    LTEXT           "输入格式无效，请重新输入。", IDC_ERROR_TEXT, 45, 20, 140, 20
+    PUSHBUTTON      "确定", IDOK, 75, 50, 50, 14
+END 

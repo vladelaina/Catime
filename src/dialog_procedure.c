@@ -85,6 +85,33 @@ LRESULT APIENTRY EditSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lP
     return CallWindowProc(wpOrigEditProc, hwnd, uMsg, wParam, lParam);
 }
 
+// 在文件开头添加错误对话框处理函数声明
+INT_PTR CALLBACK ErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
+
+// 添加显示错误对话框的函数
+void ShowErrorDialog(HWND hwndParent) {
+    DialogBox(GetModuleHandle(NULL), 
+             MAKEINTRESOURCE(IDD_ERROR_DIALOG), 
+             hwndParent, 
+             ErrorDlgProc);
+}
+
+// 添加错误对话框处理函数
+INT_PTR CALLBACK ErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    switch (msg) {
+        case WM_INITDIALOG:
+            return TRUE;
+
+        case WM_COMMAND:
+            if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
+                EndDialog(hwndDlg, LOWORD(wParam));
+                return TRUE;
+            }
+            break;
+    }
+    return FALSE;
+}
+
 /**
  * @brief 输入对话框过程
  * @param hwndDlg 对话框句柄
@@ -198,12 +225,10 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                     WriteConfigDefaultStartTime(total_seconds);
                     EndDialog(hwndDlg, 0);
                 } else {
-                    if (!ParseInput(inputText, &total_seconds)) {
-                        MessageBoxA(hwndDlg, "无效的时间格式", "错误", MB_ICONERROR);
-                        SetWindowTextA(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT), "");
-                        SetFocus(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT));
-                        return TRUE;
-                    }
+                    ShowErrorDialog(hwndDlg);
+                    SetWindowTextA(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT), "");
+                    SetFocus(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT));
+                    return TRUE;
                 }
                 return TRUE;
             }

@@ -286,3 +286,8 @@
 #define CLOCK_IDD_SHORTCUT_DIALOG 1006
 #define CLOCK_IDD_STARTUP_DIALOG 1007
 
+// 错误对话框相关
+#define IDD_ERROR_DIALOG    5000
+#define IDC_ERROR_ICON      5001  
+#define IDC_ERROR_TEXT      5002
+
