@@ -202,7 +202,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDC_MODIFY_TIME_OPTIONS: {
                     while (1) {
                         memset(inputText, 0, sizeof(inputText));
-                        DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc);
+                        DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_SHORTCUT_DIALOG), NULL, DlgProc);
 
                         // 检查输入是否为空或只包含空格
                         BOOL isAllSpaces = TRUE;
@@ -258,7 +258,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDC_MODIFY_DEFAULT_TIME: {
                     while (1) {
                         memset(inputText, 0, sizeof(inputText));
-                        DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc);
+                        DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_STARTUP_DIALOG), NULL, DlgProc);
 
                         if (inputText[0] == '\0') {
                             break;
@@ -1112,7 +1112,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDC_COLOR_VALUE: {
                     DialogBox(GetModuleHandle(NULL), 
-                             MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), 
+                             MAKEINTRESOURCE(CLOCK_IDD_COLOR_DIALOG), 
                              hwnd, 
                              (DLGPROC)ColorDlgProc);
                     break;
