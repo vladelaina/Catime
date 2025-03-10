@@ -319,6 +319,25 @@ void ShowColorMenu(HWND hwnd) {
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
+    // 番茄钟菜单
+    HMENU hPomodoroMenu = CreatePopupMenu();
+    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_START,
+                GetLocalizedString(L"开始", L"Start"));
+    AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
+    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_WORK,
+                GetLocalizedString(L"工作时间: 25", L"Work Time: 25"));
+    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_BREAK,
+                GetLocalizedString(L"短暂休息: 5", L"Short Break: 5"));
+    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_LBREAK,
+                GetLocalizedString(L"长时间休息: 10", L"Long Break: 10"));
+
+    // 将番茄钟菜单添加到主菜单
+    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hPomodoroMenu,
+                GetLocalizedString(L"番茄时钟", L"Pomodoro"));
+
+    // 添加分隔线
+    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
+
     // 关于菜单
     HMENU hAboutMenu = CreatePopupMenu();
 
