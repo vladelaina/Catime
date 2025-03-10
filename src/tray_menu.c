@@ -390,9 +390,9 @@ void ShowColorMenu(HWND hwnd) {
 void ShowContextMenu(HWND hwnd) {
     HMENU hMenu = CreatePopupMenu();
     
-    // 添加设置时间选项
+    // 将"设置时间"改为"设置倒计时"
     AppendMenuW(hMenu, MF_STRING, 101, 
-                GetLocalizedString(L"设置时间", L"Set Time"));
+                GetLocalizedString(L"设置倒计时", L"Set Countdown"));
     
     // 添加分隔线
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
