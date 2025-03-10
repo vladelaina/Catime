@@ -67,6 +67,11 @@ LRESULT APIENTRY EditSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lP
             SendMessage(GetParent(hwnd), WM_COMMAND, MAKEWPARAM(IDOK, BN_CLICKED), (LPARAM)hwnd);
             return 0;
         }
+        // 处理Ctrl+A全选
+        if (wParam == 'A' && GetKeyState(VK_CONTROL) < 0) {
+            SendMessage(hwnd, EM_SETSEL, 0, -1);
+            return 0;
+        }
         break;
     }
     }
