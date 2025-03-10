@@ -749,12 +749,7 @@ LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
 INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_INITDIALOG: {
-            // 设置静态文本提示
-            SetDlgItemTextW(hwndDlg, CLOCK_IDC_STATIC, GetLocalizedString(
-                L"支持：HEX RGB 颜色名字",
-                L"Supported: HEX RGB Color Names"));
-
-            // 初始化编辑框并设置子类化
+            // 使用对话框资源中定义的静态文本
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
             if (hwndEdit) {
                 g_OldEditProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, 
