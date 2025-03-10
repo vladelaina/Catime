@@ -660,6 +660,7 @@ LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
         case WM_KEYDOWN:
             if (wParam == 'A' && GetKeyState(VK_CONTROL) < 0) {
                 SendMessage(hwnd, EM_SETSEL, 0, -1);
+                // 返回0，阻止消息继续传递，禁用提示音
                 return 0;
             }
         case WM_COMMAND:

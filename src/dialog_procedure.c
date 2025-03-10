@@ -74,6 +74,13 @@ LRESULT APIENTRY EditSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lP
         }
         break;
     }
+    case WM_CHAR: {
+        // 处理Ctrl+A的字符消息，防止发出提示音
+        if (GetKeyState(VK_CONTROL) < 0 && (wParam == 1 || wParam == 'a' || wParam == 'A')) {
+            return 0;
+        }
+        break;
+    }
     }
     return CallWindowProc(wpOrigEditProc, hwnd, uMsg, wParam, lParam);
 }
