@@ -273,3 +273,12 @@
 #define IDD_LICENSE_DIALOG    4000
 #define IDC_LICENSE_TEXT      4001
 
+// 颜色对话框相关
+#define IDD_COLOR_DIALOG 1003
+#define IDC_COLOR_VALUE 1301
+#define IDC_COLOR_PANEL 1302
+
+// 启动时间设置对话框相关
+#define IDD_STARTUP_TIME_DIALOG 1005
+#define IDC_STARTUP_TIME 1401
+
