@@ -36,6 +36,11 @@ extern int CLOCK_TOTAL_TIME;
 extern int countdown_elapsed_time;
 extern char CLOCK_TIMEOUT_FILE_PATH[MAX_PATH];
 extern char CLOCK_TIMEOUT_TEXT[50];
+
+// 添加番茄钟相关变量声明
+extern int POMODORO_WORK_TIME;      ///< 工作时间(秒)
+extern int POMODORO_SHORT_BREAK;    ///< 短休息时间(秒)
+extern int POMODORO_LONG_BREAK;     ///< 长休息时间(秒)
 /// @}
 
 /// @name 外部函数声明
@@ -74,6 +79,42 @@ typedef struct {
 
 extern RecentFile CLOCK_RECENT_FILES[];
 extern int CLOCK_RECENT_FILES_COUNT;
+
+/**
+ * @brief 格式化时间显示
+ * @param seconds 总秒数
+ * @param buffer 输出缓冲区
+ * @param bufferSize 缓冲区大小
+ * 
+ * 将秒数转换为可读的时间格式：
+ * - 纯分钟：25m
+ * - 分秒：25m30s
+ * - 时分：1h30m
+ * - 时分秒：1h30m20s
+ */
+void FormatPomodoroTime(int seconds, wchar_t* buffer, size_t bufferSize) {
+    int hours = seconds / 3600;
+    int minutes = (seconds % 3600) / 60;
+    int secs = seconds % 60;
+
+    if (hours > 0) {
+        if (secs > 0) {
+            _snwprintf(buffer, bufferSize, L"%dh%dm%ds", hours, minutes, secs);
+        } else if (minutes > 0) {
+            _snwprintf(buffer, bufferSize, L"%dh%dm", hours, minutes);
+        } else {
+            _snwprintf(buffer, bufferSize, L"%dh", hours);
+        }
+    } else if (minutes > 0) {
+        if (secs > 0) {
+            _snwprintf(buffer, bufferSize, L"%dm%ds", minutes, secs);
+        } else {
+            _snwprintf(buffer, bufferSize, L"%dm", minutes);
+        }
+    } else {
+        _snwprintf(buffer, bufferSize, L"%ds", secs);
+    }
+}
 
 /**
  * @brief 显示颜色和设置菜单
@@ -415,17 +456,56 @@ void ShowContextMenu(HWND hwnd) {
                (UINT_PTR)hTimeMenu,
                GetLocalizedString(L"时间显示", L"Time Display"));
 
+    // 番茄钟菜单之前，先读取最新的配置值
+    char configPath[MAX_PATH];
+    GetConfigPath(configPath, MAX_PATH);
+    FILE *configFile = fopen(configPath, "r");
+    if (configFile) {
+        char line[256];
+        while (fgets(line, sizeof(line), configFile)) {
+            if (strncmp(line, "POMODORO_WORK_TIME=", 19) == 0) {
+                sscanf(line, "POMODORO_WORK_TIME=%d", &POMODORO_WORK_TIME);
+            }
+            else if (strncmp(line, "POMODORO_SHORT_BREAK=", 21) == 0) {
+                sscanf(line, "POMODORO_SHORT_BREAK=%d", &POMODORO_SHORT_BREAK);
+            }
+            else if (strncmp(line, "POMODORO_LONG_BREAK=", 20) == 0) {
+                sscanf(line, "POMODORO_LONG_BREAK=%d", &POMODORO_LONG_BREAK);
+            }
+        }
+        fclose(configFile);
+    }
+
     // 番茄钟菜单
     HMENU hPomodoroMenu = CreatePopupMenu();
     AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_START,
                 GetLocalizedString(L"开始", L"Start"));
     AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
-    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_WORK,
-                GetLocalizedString(L"工作时间: 25", L"Work Time: 25"));
-    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_BREAK,
-                GetLocalizedString(L"短暂休息: 5", L"Short Break: 5"));
-    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_LBREAK,
-                GetLocalizedString(L"长时间休息: 10", L"Long Break: 10"));
+
+    // 读取配置并格式化显示
+    wchar_t timeBuffer[32];
+    wchar_t menuText[64];
+
+    // 工作时间
+    FormatPomodoroTime(POMODORO_WORK_TIME, timeBuffer, sizeof(timeBuffer)/sizeof(wchar_t));
+    _snwprintf(menuText, sizeof(menuText)/sizeof(wchar_t),
+              GetLocalizedString(L"工作时间: %ls", L"Work Time: %ls"),
+              timeBuffer);
+    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_WORK, menuText);
+
+    // 短暂休息
+    FormatPomodoroTime(POMODORO_SHORT_BREAK, timeBuffer, sizeof(timeBuffer)/sizeof(wchar_t));
+    _snwprintf(menuText, sizeof(menuText)/sizeof(wchar_t),
+              GetLocalizedString(L"短暂休息: %ls", L"Short Break: %ls"),
+              timeBuffer);
+    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_BREAK, menuText);
+
+    // 长时间休息
+    FormatPomodoroTime(POMODORO_LONG_BREAK, timeBuffer, sizeof(timeBuffer)/sizeof(wchar_t));
+    _snwprintf(menuText, sizeof(menuText)/sizeof(wchar_t),
+              GetLocalizedString(L"长时间休息: %ls", L"Long Break: %ls"),
+              timeBuffer);
+    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_LBREAK, menuText);
 
     // 将番茄钟菜单添加到主菜单
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hPomodoroMenu,
