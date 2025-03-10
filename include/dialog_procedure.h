@@ -68,4 +68,12 @@ void ShowSupportDialog(HWND hwndParent);
  */
 void ShowLicenseDialog(HWND hwndParent);
 
+/**
+ * @brief 显示错误对话框
+ * @param hwndParent 父窗口句柄
+ * 
+ * 显示统一的错误提示对话框。
+ */
+void ShowErrorDialog(HWND hwndParent);
+
 #endif // DIALOG_PROCEDURE_H

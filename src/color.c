@@ -13,6 +13,7 @@
 #include "../include/color.h"
 #include "../include/language.h"
 #include "../resource/resource.h"
+#include "../include/dialog_procedure.h"
 
 /// @name 全局变量定义
 /// @{
@@ -798,8 +799,8 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                     EndDialog(hwndDlg, IDOK);
                     return TRUE;
                 } else {
-                    // 显示错误消息
-                    MessageBoxA(hwndDlg, "无效的颜色值", "错误", MB_ICONERROR);
+                    // 使用统一的错误对话框
+                    ShowErrorDialog(hwndDlg);
                     SetWindowTextA(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT), "");
                     SetFocus(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT));
                     return TRUE;
