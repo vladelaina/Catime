@@ -22,10 +22,10 @@
 #include <shobjidl.h>
 #include <shlguid.h>
 
-// 添加全局变量
-int POMODORO_WORK_TIME = 25;      // 默认工作时间25分钟
-int POMODORO_SHORT_BREAK = 5;     // 默认短休息5分钟
-int POMODORO_LONG_BREAK = 10;     // 默认长休息10分钟
+// 修改全局变量的默认值(改为秒)
+int POMODORO_WORK_TIME = 1500;      // 默认工作时间25分钟(1500秒)
+int POMODORO_SHORT_BREAK = 300;     // 默认短休息5分钟(300秒)
+int POMODORO_LONG_BREAK = 600;      // 默认长休息10分钟(600秒)
 
 /**
  * @brief 获取配置文件路径
@@ -85,10 +85,10 @@ void CreateDefaultConfig(const char* config_path) {
         
         fprintf(file, "COLOR_OPTIONS=#FFFFFF,#F9DB91,#F4CAE0,#FFB6C1,#A8E7DF,#A3CFB3,#92CBFC,#BDA5E7,#9370DB,#8C92CF,#72A9A5,#EB99A7,#EB96BD,#FFAE8B,#FF7F50,#CA6174\n");
 
-        // 添加番茄钟默认时间配置
-        fprintf(file, "POMODORO_WORK_TIME=25\n");
-        fprintf(file, "POMODORO_SHORT_BREAK=5\n"); 
-        fprintf(file, "POMODORO_LONG_BREAK=10\n");
+        // 添加番茄钟默认时间配置(单位:秒)
+        fprintf(file, "POMODORO_WORK_TIME=1500\n");     // 25分钟
+        fprintf(file, "POMODORO_SHORT_BREAK=300\n");    // 5分钟
+        fprintf(file, "POMODORO_LONG_BREAK=600\n");     // 10分钟
 
         fclose(file);
     }
@@ -251,15 +251,15 @@ void ReadConfig() {
     char short_break[32] = {0};
     char long_break[32] = {0};
     
-    if(GetPrivateProfileStringA("Settings", "POMODORO_WORK_TIME", "25", work_time, sizeof(work_time), config_path)) {
+    if(GetPrivateProfileStringA("Settings", "POMODORO_WORK_TIME", "1500", work_time, sizeof(work_time), config_path)) {
         POMODORO_WORK_TIME = atoi(work_time);
     }
     
-    if(GetPrivateProfileStringA("Settings", "POMODORO_SHORT_BREAK", "5", short_break, sizeof(short_break), config_path)) {
+    if(GetPrivateProfileStringA("Settings", "POMODORO_SHORT_BREAK", "300", short_break, sizeof(short_break), config_path)) {
         POMODORO_SHORT_BREAK = atoi(short_break);
     }
     
-    if(GetPrivateProfileStringA("Settings", "POMODORO_LONG_BREAK", "10", long_break, sizeof(long_break), config_path)) {
+    if(GetPrivateProfileStringA("Settings", "POMODORO_LONG_BREAK", "600", long_break, sizeof(long_break), config_path)) {
         POMODORO_LONG_BREAK = atoi(long_break);
     }
 }

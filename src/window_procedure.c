@@ -1180,17 +1180,17 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     goto refresh_window;
                 }
                 case CLOCK_IDM_POMODORO_WORK: {
-                    CLOCK_TOTAL_TIME = POMODORO_WORK_TIME * 60;  // 转换为秒
+                    CLOCK_TOTAL_TIME = POMODORO_WORK_TIME;  // 直接使用秒数
                     // ... 其他代码
                     break;
                 }
                 case CLOCK_IDM_POMODORO_BREAK: {
-                    CLOCK_TOTAL_TIME = POMODORO_SHORT_BREAK * 60;
+                    CLOCK_TOTAL_TIME = POMODORO_SHORT_BREAK;  // 直接使用秒数
                     // ... 其他代码
                     break;
                 }
                 case CLOCK_IDM_POMODORO_LBREAK: {
-                    CLOCK_TOTAL_TIME = POMODORO_LONG_BREAK * 60;
+                    CLOCK_TOTAL_TIME = POMODORO_LONG_BREAK;  // 直接使用秒数
                     // ... 其他代码
                     break;
                 }
