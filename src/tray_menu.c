@@ -319,9 +319,6 @@ void ShowColorMenu(HWND hwnd) {
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
-    // 添加分隔线
-    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
-
     // 关于菜单
     HMENU hAboutMenu = CreatePopupMenu();
 
