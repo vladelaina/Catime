@@ -198,7 +198,12 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                     WriteConfigDefaultStartTime(total_seconds);
                     EndDialog(hwndDlg, 0);
                 } else {
-                    MessageBox(hwndDlg, "Invalid time format. Please use MM:SS or HH:MM:SS.", "Error", MB_OK | MB_ICONERROR);
+                    if (!ParseInput(inputText, &total_seconds)) {
+                        MessageBoxA(hwndDlg, "无效的时间格式", "错误", MB_ICONERROR);
+                        SetWindowTextA(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT), "");
+                        SetFocus(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT));
+                        return TRUE;
+                    }
                 }
                 return TRUE;
             }

@@ -799,12 +799,9 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                     return TRUE;
                 } else {
                     // 显示错误消息
-                    MessageBoxW(hwndDlg, 
-                        GetLocalizedString(
-                            L"支持：HEX RGB 颜色名字",
-                            L"Supported: HEX RGB Color Names"),
-                        GetLocalizedString(L"颜色格式错误", L"Color Format Error"),
-                        MB_OK);
+                    MessageBoxA(hwndDlg, "无效的颜色值", "错误", MB_ICONERROR);
+                    SetWindowTextA(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT), "");
+                    SetFocus(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT));
                     return TRUE;
                 }
             } else if (LOWORD(wParam) == IDCANCEL) {
