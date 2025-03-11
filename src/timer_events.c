@@ -40,9 +40,6 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                 if (countdown_elapsed_time >= CLOCK_TOTAL_TIME && !countdown_message_shown) {
                     countdown_message_shown = TRUE;
                     
-                    // 显示超时消息
-                    ShowToastNotification(hwnd, "Time's up!");
-                    
                     // 如果当前是番茄钟模式（总时间等于番茄钟的某个时间），则自动切换到下一个阶段
                     if (CLOCK_TOTAL_TIME == POMODORO_WORK_TIME) {
                         // 工作时间结束，切换到短休息
@@ -50,19 +47,28 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                         countdown_elapsed_time = 0;
                         countdown_message_shown = FALSE;
                         InvalidateRect(hwnd, NULL, TRUE);
+                        // 显示超时消息
+                        ShowToastNotification(hwnd, "Time's up!");
                     } else if (CLOCK_TOTAL_TIME == POMODORO_SHORT_BREAK) {
                         // 短休息结束，切换到工作时间
                         CLOCK_TOTAL_TIME = POMODORO_WORK_TIME;
                         countdown_elapsed_time = 0;
                         countdown_message_shown = FALSE;
                         InvalidateRect(hwnd, NULL, TRUE);
+                        // 显示超时消息
+                        ShowToastNotification(hwnd, "Time's up!");
                     } else if (CLOCK_TOTAL_TIME == POMODORO_LONG_BREAK) {
                         // 长休息结束，切换到工作时间
                         CLOCK_TOTAL_TIME = POMODORO_WORK_TIME;
                         countdown_elapsed_time = 0;
                         countdown_message_shown = FALSE;
                         InvalidateRect(hwnd, NULL, TRUE);
+                        // 显示超时消息
+                        ShowToastNotification(hwnd, "Time's up!");
                     } else {
+                        // 显示超时消息
+                        ShowToastNotification(hwnd, "Time's up!");
+                        
                         // 非番茄钟模式，执行原有的超时动作
                         switch (CLOCK_TIMEOUT_ACTION) {
                             case TIMEOUT_ACTION_LOCK:
