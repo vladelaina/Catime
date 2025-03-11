@@ -1180,18 +1180,150 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     goto refresh_window;
                 }
                 case CLOCK_IDM_POMODORO_WORK: {
-                    CLOCK_TOTAL_TIME = POMODORO_WORK_TIME;  // 直接使用秒数
-                    // ... 其他代码
+                    while (1) {
+                        memset(inputText, 0, sizeof(inputText));
+                        DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_POMODORO_WORK_DIALOG), NULL, DlgProc);
+
+                        if (inputText[0] == '\0') {
+                            break;
+                        }
+
+                        // 检查是否只有空格
+                        BOOL isAllSpaces = TRUE;
+                        for (int i = 0; inputText[i]; i++) {
+                            if (!isspace((unsigned char)inputText[i])) {
+                                isAllSpaces = FALSE;
+                                break;
+                            }
+                        }
+                        if (isAllSpaces) {
+                            break;
+                        }
+
+                        int total_seconds = 0;
+                        if (ParseInput(inputText, &total_seconds)) {
+                            // 更新番茄钟工作时间配置
+                            WriteConfigPomodoroTimes(total_seconds, POMODORO_SHORT_BREAK, POMODORO_LONG_BREAK);
+                            POMODORO_WORK_TIME = total_seconds;
+                            break;
+                        } else {
+                            MessageBoxW(hwnd, 
+                                GetLocalizedString(
+                                    L"25    = 25分钟\n"
+                                    L"25h   = 25小时\n"
+                                    L"25s   = 25秒\n"
+                                    L"25 30 = 25分钟30秒\n"
+                                    L"25 30m = 25小时30分钟\n"
+                                    L"1 30 20 = 1小时30分钟20秒",
+                                    
+                                    L"25    = 25 minutes\n"
+                                    L"25h   = 25 hours\n"
+                                    L"25s   = 25 seconds\n"
+                                    L"25 30 = 25 minutes 30 seconds\n"
+                                    L"25 30m = 25 hours 30 minutes\n"
+                                    L"1 30 20 = 1 hour 30 minutes 20 seconds"),
+                                GetLocalizedString(L"输入格式", L"Input Format"),
+                                MB_OK);
+                        }
+                    }
                     break;
                 }
                 case CLOCK_IDM_POMODORO_BREAK: {
-                    CLOCK_TOTAL_TIME = POMODORO_SHORT_BREAK;  // 直接使用秒数
-                    // ... 其他代码
+                    while (1) {
+                        memset(inputText, 0, sizeof(inputText));
+                        DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_POMODORO_BREAK_DIALOG), NULL, DlgProc);
+
+                        if (inputText[0] == '\0') {
+                            break;
+                        }
+
+                        // 检查是否只有空格
+                        BOOL isAllSpaces = TRUE;
+                        for (int i = 0; inputText[i]; i++) {
+                            if (!isspace((unsigned char)inputText[i])) {
+                                isAllSpaces = FALSE;
+                                break;
+                            }
+                        }
+                        if (isAllSpaces) {
+                            break;
+                        }
+
+                        int total_seconds = 0;
+                        if (ParseInput(inputText, &total_seconds)) {
+                            // 更新番茄钟短暂休息时间配置
+                            WriteConfigPomodoroTimes(POMODORO_WORK_TIME, total_seconds, POMODORO_LONG_BREAK);
+                            POMODORO_SHORT_BREAK = total_seconds;
+                            break;
+                        } else {
+                            MessageBoxW(hwnd, 
+                                GetLocalizedString(
+                                    L"25    = 25分钟\n"
+                                    L"25h   = 25小时\n"
+                                    L"25s   = 25秒\n"
+                                    L"25 30 = 25分钟30秒\n"
+                                    L"25 30m = 25小时30分钟\n"
+                                    L"1 30 20 = 1小时30分钟20秒",
+                                    
+                                    L"25    = 25 minutes\n"
+                                    L"25h   = 25 hours\n"
+                                    L"25s   = 25 seconds\n"
+                                    L"25 30 = 25 minutes 30 seconds\n"
+                                    L"25 30m = 25 hours 30 minutes\n"
+                                    L"1 30 20 = 1 hour 30 minutes 20 seconds"),
+                                GetLocalizedString(L"输入格式", L"Input Format"),
+                                MB_OK);
+                        }
+                    }
                     break;
                 }
                 case CLOCK_IDM_POMODORO_LBREAK: {
-                    CLOCK_TOTAL_TIME = POMODORO_LONG_BREAK;  // 直接使用秒数
-                    // ... 其他代码
+                    while (1) {
+                        memset(inputText, 0, sizeof(inputText));
+                        DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_POMODORO_LBREAK_DIALOG), NULL, DlgProc);
+
+                        if (inputText[0] == '\0') {
+                            break;
+                        }
+
+                        // 检查是否只有空格
+                        BOOL isAllSpaces = TRUE;
+                        for (int i = 0; inputText[i]; i++) {
+                            if (!isspace((unsigned char)inputText[i])) {
+                                isAllSpaces = FALSE;
+                                break;
+                            }
+                        }
+                        if (isAllSpaces) {
+                            break;
+                        }
+
+                        int total_seconds = 0;
+                        if (ParseInput(inputText, &total_seconds)) {
+                            // 更新番茄钟长时间休息时间配置
+                            WriteConfigPomodoroTimes(POMODORO_WORK_TIME, POMODORO_SHORT_BREAK, total_seconds);
+                            POMODORO_LONG_BREAK = total_seconds;
+                            break;
+                        } else {
+                            MessageBoxW(hwnd, 
+                                GetLocalizedString(
+                                    L"25    = 25分钟\n"
+                                    L"25h   = 25小时\n"
+                                    L"25s   = 25秒\n"
+                                    L"25 30 = 25分钟30秒\n"
+                                    L"25 30m = 25小时30分钟\n"
+                                    L"1 30 20 = 1小时30分钟20秒",
+                                    
+                                    L"25    = 25 minutes\n"
+                                    L"25h   = 25 hours\n"
+                                    L"25s   = 25 seconds\n"
+                                    L"25 30 = 25 minutes 30 seconds\n"
+                                    L"25 30m = 25 hours 30 minutes\n"
+                                    L"1 30 20 = 1 hour 30 minutes 20 seconds"),
+                                GetLocalizedString(L"输入格式", L"Input Format"),
+                                MB_OK);
+                        }
+                    }
                     break;
                 }
             }
