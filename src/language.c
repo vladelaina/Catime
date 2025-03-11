@@ -77,8 +77,8 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
     // 根据当前语言返回对应字符串
     switch (CURRENT_LANGUAGE) {
         case APP_LANG_CHINESE_SIMP:
-            if (wcscmp(english, L"Set Countdown") == 0) return L"设置倒计时";
-            if (wcscmp(english, L"Set Time") == 0) return L"设置倒计时";
+            if (wcscmp(english, L"Set Countdown") == 0) return L"倒计时";
+            if (wcscmp(english, L"Set Time") == 0) return L"倒计时";
             if (wcscmp(english, L"Time's up!") == 0) return L"时间到啦！";
             if (wcscmp(english, L"Show Current Time") == 0) return L"显示当前时间";
             if (wcscmp(english, L"24-Hour Format") == 0) return L"24小时制";
@@ -93,8 +93,8 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             return chinese;
             
         case APP_LANG_CHINESE_TRAD:
-            if (wcscmp(english, L"Set Countdown") == 0) return L"設置倒計時";
-            if (wcscmp(english, L"Set Time") == 0) return L"設置倒計時";
+            if (wcscmp(english, L"Set Countdown") == 0) return L"倒計時";
+            if (wcscmp(english, L"Set Time") == 0) return L"倒計時";
             if (wcscmp(english, L"Time's up!") == 0) return L"時間到啦！";
             if (wcscmp(english, L"Show Current Time") == 0) return L"顯示當前時間";
             if (wcscmp(english, L"24-Hour Format") == 0) return L"24小時制";
@@ -156,8 +156,8 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Count Up") == 0) return L"Contar hacia arriba";
             if (wcscmp(english, L"Startup Settings") == 0) return L"Configuración de inicio";
             if (wcscmp(english, L"Start with Windows") == 0) return L"Iniciar con Windows";
-            if (wcscmp(english, L"Set Countdown") == 0) return L"Establecer cuenta regresiva";
-            if (wcscmp(english, L"Set Time") == 0) return L"Establecer cuenta regresiva";
+            if (wcscmp(english, L"Set Countdown") == 0) return L"Cuenta regresiva";
+            if (wcscmp(english, L"Set Time") == 0) return L"Cuenta regresiva";
             return english;
 
         case APP_LANG_FRENCH:
@@ -208,8 +208,8 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Count Up") == 0) return L"Compte à rebours positif";
             if (wcscmp(english, L"Startup Settings") == 0) return L"Paramètres de démarrage";
             if (wcscmp(english, L"Start with Windows") == 0) return L"Démarrer avec Windows";
-            if (wcscmp(english, L"Set Countdown") == 0) return L"Régler le compte à rebours";
-            if (wcscmp(english, L"Set Time") == 0) return L"Régler le compte à rebours";
+            if (wcscmp(english, L"Set Countdown") == 0) return L"Compte à rebours";
+            if (wcscmp(english, L"Set Time") == 0) return L"Compte à rebours";
             return english;
 
         case APP_LANG_GERMAN:
@@ -260,12 +260,13 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Count Up") == 0) return L"Aufwärtszählen";
             if (wcscmp(english, L"Startup Settings") == 0) return L"Starteinstellungen";
             if (wcscmp(english, L"Start with Windows") == 0) return L"Mit Windows starten";
-            if (wcscmp(english, L"Set Countdown") == 0) return L"Countdown einstellen";
-            if (wcscmp(english, L"Set Time") == 0) return L"Countdown einstellen";
+            if (wcscmp(english, L"Set Countdown") == 0) return L"Countdown";
+            if (wcscmp(english, L"Set Time") == 0) return L"Countdown";
             return english;
 
         case APP_LANG_RUSSIAN:
-            if (wcscmp(english, L"Set Time") == 0) return L"Установить время";
+            if (wcscmp(english, L"Set Countdown") == 0) return L"Обратный отсчет";
+            if (wcscmp(english, L"Set Time") == 0) return L"Обратный отсчет";
             if (wcscmp(english, L"Edit Mode") == 0) return L"Режим редактирования";
             if (wcscmp(english, L"Show Current Time") == 0) return L"Показать текущее время";
             if (wcscmp(english, L"24-Hour Format") == 0) return L"24-часовой формат";
@@ -347,7 +348,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Entrada inválida") == 0) return L"Entrada inválida";
             if (wcscmp(english, L"Erro") == 0) return L"Erro";
             if (wcscmp(english, L"Falha ao carregar fonte: %hs") == 0) return L"Falha ao carregar fonte: %hs";
-            if (wcscmp(english, L"25    = 25 minutes\n25h   = 25 hours\n25s   = 25 seconds\n25 30 = 25 minutes 30 seconds\n25 30m = 25 hours 30 minutes\n1 30 20 = 1 hora 30 minutos 20 segundos") == 0)
+            if (wcscmp(english, L"25    = 25 minutes\n25h   = 25 hours\n25s   = 25 seconds\n25 30 = 25 minutes 30 seconds\n25 30m = 25 hours 30 minutes\n1 30 20 = 1 hour 30 minutes 20 seconds") == 0)
                 return L"25    = 25 minutos\n25h   = 25 horas\n25s   = 25 segundos\n25 30 = 25 minutos 30 segundos\n25 30m = 25 horas 30 minutos\n1 30 20 = 1 hora 30 minutos 20 segundos";
             if (wcscmp(english, L"Enter numbers separated by spaces\nExample: 25 10 5") == 0)
                 return L"Insira números separados por espaços\nExemplo: 25 10 5";
@@ -369,7 +370,8 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             return english;
 
         case APP_LANG_JAPANESE:
-            if (wcscmp(english, L"Set Time") == 0) return L"時間設定";
+            if (wcscmp(english, L"Set Countdown") == 0) return L"カウントダウン";
+            if (wcscmp(english, L"Set Time") == 0) return L"カウントダウン";
             if (wcscmp(english, L"Edit Mode") == 0) return L"編集モード";
             if (wcscmp(english, L"Show Current Time") == 0) return L"現在時刻を表示";
             if (wcscmp(english, L"24-Hour Format") == 0) return L"24時間表示";
@@ -416,13 +418,13 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Count Up") == 0) return L"カウントアップ";
             if (wcscmp(english, L"Startup Settings") == 0) return L"起動設定";
             if (wcscmp(english, L"Start with Windows") == 0) return L"Windowsと同時に起動";
-            if (wcscmp(english, L"Set Countdown") == 0) return L"設置倒計時";
-            if (wcscmp(english, L"Set Time") == 0) return L"設置倒計時";
+            if (wcscmp(english, L"Set Countdown") == 0) return L"カウントダウン";
+            if (wcscmp(english, L"Set Time") == 0) return L"カウントダウン";
             return english;
 
         case APP_LANG_KOREAN:
-            if (wcscmp(english, L"Set Countdown") == 0) return L"카운트다운 설정";
-            if (wcscmp(english, L"Set Time") == 0) return L"카운트다운 설정";
+            if (wcscmp(english, L"Set Countdown") == 0) return L"카운트다운";
+            if (wcscmp(english, L"Set Time") == 0) return L"카운트다운";
             if (wcscmp(english, L"Time's up!") == 0) return L"시간이 종료되었습니다!";
             if (wcscmp(english, L"Show Current Time") == 0) return L"현재 시간 표시";
             if (wcscmp(english, L"24-Hour Format") == 0) return L"24시간 형식";
@@ -444,4 +446,3 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
     }
     return english;
 }
-

@@ -431,10 +431,6 @@ void ShowColorMenu(HWND hwnd) {
 void ShowContextMenu(HWND hwnd) {
     HMENU hMenu = CreatePopupMenu();
     
-    // 将"设置时间"改为"设置倒计时"
-    AppendMenuW(hMenu, MF_STRING, 101, 
-                GetLocalizedString(L"设置倒计时", L"Set Countdown"));
-    
     // 添加分隔线
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
     
@@ -529,6 +525,10 @@ void ShowContextMenu(HWND hwnd) {
     AppendMenuW(hMenu, MF_POPUP | (CLOCK_COUNT_UP ? MF_CHECKED : MF_UNCHECKED),
                (UINT_PTR)hCountUpMenu,
                GetLocalizedString(L"正计时", L"Count Up"));
+
+    // 将"设置倒计时"选项添加在正计时的下方
+    AppendMenuW(hMenu, MF_STRING, 101, 
+                GetLocalizedString(L"倒计时", L"Countdown"));
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
