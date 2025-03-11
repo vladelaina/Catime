@@ -507,23 +507,9 @@ void ShowContextMenu(HWND hwnd) {
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hPomodoroMenu,
                 GetLocalizedString(L"番茄时钟", L"Pomodoro"));
 
-    // 正计时菜单
-    HMENU hCountUpMenu = CreatePopupMenu();
-    AppendMenuW(hCountUpMenu, MF_STRING, CLOCK_IDM_COUNT_UP_START,
-        CLOCK_COUNT_UP ? 
-            (CLOCK_IS_PAUSED ? 
-                GetLocalizedString(L"继续", L"Resume") : 
-                GetLocalizedString(L"暂停", L"Pause")) :
-            GetLocalizedString(L"开始", L"Start"));
-            
-    if (CLOCK_COUNT_UP) {
-        AppendMenuW(hCountUpMenu, MF_STRING, CLOCK_IDM_COUNT_UP_RESET,
-            GetLocalizedString(L"重新开始", L"Restart"));
-    }
-               
-    // 将正计时菜单添加到主菜单
-    AppendMenuW(hMenu, MF_POPUP | (CLOCK_COUNT_UP ? MF_CHECKED : MF_UNCHECKED),
-               (UINT_PTR)hCountUpMenu,
+    // 正计时菜单 - 改为直接点击启动
+    AppendMenuW(hMenu, MF_STRING | (CLOCK_COUNT_UP ? MF_CHECKED : MF_UNCHECKED),
+               CLOCK_IDM_COUNT_UP_START,
                GetLocalizedString(L"正计时", L"Count Up"));
 
     // 将"设置倒计时"选项添加在正计时的下方
