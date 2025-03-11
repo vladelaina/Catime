@@ -1205,6 +1205,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     // 设置工作时间
                     CLOCK_TOTAL_TIME = POMODORO_WORK_TIME;
                     
+                    // 初始化番茄钟阶段为工作阶段
+                    extern void InitializePomodoro(void);
+                    InitializePomodoro();
+                    
                     // 保存原始超时动作
                     TimeoutActionType originalAction = CLOCK_TIMEOUT_ACTION;
                     
