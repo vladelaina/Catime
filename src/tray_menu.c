@@ -431,10 +431,7 @@ void ShowColorMenu(HWND hwnd) {
 void ShowContextMenu(HWND hwnd) {
     HMENU hMenu = CreatePopupMenu();
     
-    // 添加分隔线
-    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
-    
-    // 计时管理菜单
+    // 计时管理菜单 - 移动到最上方
     HMENU hTimerManagementMenu = CreatePopupMenu();
     
     // 检查当前是否有计时进行中
@@ -460,6 +457,9 @@ void ShowContextMenu(HWND hwnd) {
     // 将计时管理菜单添加到主菜单
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimerManagementMenu,
                GetLocalizedString(L"计时管理", L"Timer Management"));
+    
+    // 添加分隔线
+    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
     
     // 时间显示菜单
     HMENU hTimeMenu = CreatePopupMenu();
