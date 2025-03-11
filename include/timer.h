@@ -55,6 +55,7 @@ extern time_t CLOCK_LAST_TIME_UPDATE;///< 最后更新时间戳
 // 消息状态 ----------------------------------------------------
 extern BOOL countdown_message_shown; ///< 倒计时提示显示状态
 extern BOOL countup_message_shown;   ///< 正计时提示显示状态
+extern int pomodoro_work_cycles;     ///< 番茄钟工作周期计数
 
 // 超时动作配置 ------------------------------------------------
 extern TimeoutActionType CLOCK_TIMEOUT_ACTION; ///< 当前超时动作类型

@@ -42,8 +42,17 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                     
                     // 如果当前是番茄钟模式（总时间等于番茄钟的某个时间），则自动切换到下一个阶段
                     if (CLOCK_TOTAL_TIME == POMODORO_WORK_TIME) {
-                        // 工作时间结束，切换到短休息
-                        CLOCK_TOTAL_TIME = POMODORO_SHORT_BREAK;
+                        // 工作时间结束，增加工作周期计数
+                        pomodoro_work_cycles++;
+                        
+                        // 每完成两个工作周期后进入长休息，否则进入短休息
+                        if (pomodoro_work_cycles % 2 == 0) {
+                            // 第二个工作周期结束，切换到长休息
+                            CLOCK_TOTAL_TIME = POMODORO_LONG_BREAK;
+                        } else {
+                            // 第一个工作周期结束，切换到短休息
+                            CLOCK_TOTAL_TIME = POMODORO_SHORT_BREAK;
+                        }
                         countdown_elapsed_time = 0;
                         countdown_message_shown = FALSE;
                         InvalidateRect(hwnd, NULL, TRUE);

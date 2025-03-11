@@ -36,6 +36,7 @@ time_t CLOCK_LAST_TIME_UPDATE = 0;     ///< 最后更新时间戳
  *  @{ */
 BOOL countdown_message_shown = FALSE;  ///< 倒计时完成消息显示状态
 BOOL countup_message_shown = FALSE;    ///< 正计时完成消息显示状态
+int pomodoro_work_cycles = 0;          ///< 番茄钟工作周期计数
 /** @} */
 
 /** @name 超时动作配置
