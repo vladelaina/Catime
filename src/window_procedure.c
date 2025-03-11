@@ -980,7 +980,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         countdown_elapsed_time = 0;
                         CLOCK_IS_PAUSED = FALSE;
                         
-                        
+                        // 确保每次切换到正计时模式时，计时器从0开始
+                        countup_elapsed_time = 0;
                         elapsed_time = 0;
                         message_shown = FALSE;
                         countdown_message_shown = FALSE;
