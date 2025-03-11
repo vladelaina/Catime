@@ -222,8 +222,23 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                 
                 int total_seconds;
                 if (ParseInput(inputText, &total_seconds)) {
-                    WriteConfigDefaultStartTime(total_seconds);
-                    EndDialog(hwndDlg, 0);
+                    // 根据对话框ID调用不同的配置更新函数
+                    int dialogId = GetWindowLongPtr(hwndDlg, GWLP_USERDATA);
+                    if (dialogId == CLOCK_IDD_POMODORO_WORK_DIALOG) {
+                        WriteConfigPomodoroTimes(total_seconds, POMODORO_SHORT_BREAK, POMODORO_LONG_BREAK);
+                        EndDialog(hwndDlg, 0);
+                    } else if (dialogId == CLOCK_IDD_POMODORO_BREAK_DIALOG) {
+                        WriteConfigPomodoroTimes(POMODORO_WORK_TIME, total_seconds, POMODORO_LONG_BREAK);
+                        EndDialog(hwndDlg, 0);
+                    } else if (dialogId == CLOCK_IDD_POMODORO_LBREAK_DIALOG) {
+                        WriteConfigPomodoroTimes(POMODORO_WORK_TIME, POMODORO_SHORT_BREAK, total_seconds);
+                        EndDialog(hwndDlg, 0);
+                    } else if (dialogId == CLOCK_IDD_DIALOG1 || dialogId == CLOCK_IDD_STARTUP_DIALOG) {
+                        WriteConfigDefaultStartTime(total_seconds);
+                        EndDialog(hwndDlg, 0);
+                    } else {
+                        EndDialog(hwndDlg, 0);
+                    }
                 } else {
                     ShowErrorDialog(hwndDlg);
                     SetWindowTextA(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT), "");
