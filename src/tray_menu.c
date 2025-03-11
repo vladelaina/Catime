@@ -434,6 +434,33 @@ void ShowContextMenu(HWND hwnd) {
     // 添加分隔线
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
     
+    // 计时管理菜单
+    HMENU hTimerManagementMenu = CreatePopupMenu();
+    
+    // 检查当前是否有计时进行中
+    BOOL isTimerRunning = !CLOCK_SHOW_CURRENT_TIME && 
+                         ((!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0) || 
+                          (CLOCK_COUNT_UP && TRUE));
+    
+    // 添加暂停/继续选项
+    if (!CLOCK_IS_PAUSED && isTimerRunning) {
+        // 当前有计时且未暂停，显示"暂停"选项
+        AppendMenuW(hTimerManagementMenu, MF_STRING, CLOCK_IDM_TIMER_PAUSE_RESUME,
+                   GetLocalizedString(L"暂停", L"Pause"));
+    } else if (CLOCK_IS_PAUSED && isTimerRunning) {
+        // 当前有计时且已暂停，显示"继续"选项
+        AppendMenuW(hTimerManagementMenu, MF_STRING, CLOCK_IDM_TIMER_PAUSE_RESUME,
+                   GetLocalizedString(L"继续", L"Resume"));
+    } else {
+        // 没有计时进行中，显示灰色的"暂停"选项
+        AppendMenuW(hTimerManagementMenu, MF_STRING | MF_GRAYED, CLOCK_IDM_TIMER_PAUSE_RESUME,
+                   GetLocalizedString(L"暂停", L"Pause"));
+    }
+    
+    // 将计时管理菜单添加到主菜单
+    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimerManagementMenu,
+               GetLocalizedString(L"计时管理", L"Timer Management"));
+    
     // 时间显示菜单
     HMENU hTimeMenu = CreatePopupMenu();
     AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 

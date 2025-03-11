@@ -428,6 +428,28 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     ShellExecuteA(NULL, "open", UPDATE_URL_LANZOU, NULL, NULL, SW_SHOWNORMAL);
                     break;
                 }
+                case CLOCK_IDM_TIMER_PAUSE_RESUME: {
+                    // 检查当前是否有计时进行中
+                    if (!CLOCK_SHOW_CURRENT_TIME && 
+                        ((!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0) || 
+                         (CLOCK_COUNT_UP && TRUE))) {
+                        
+                        // 切换暂停/继续状态
+                        CLOCK_IS_PAUSED = !CLOCK_IS_PAUSED;
+                        
+                        if (CLOCK_IS_PAUSED) {
+                            // 如果暂停，停止计时器
+                            KillTimer(hwnd, 1);
+                        } else {
+                            // 如果继续，重新启动计时器
+                            SetTimer(hwnd, 1, 1000, NULL);
+                        }
+                        
+                        // 更新显示
+                        InvalidateRect(hwnd, NULL, TRUE);
+                    }
+                    break;
+                }
                 case CLOCK_IDM_LANG_CHINESE: {
                     CURRENT_LANGUAGE = APP_LANG_CHINESE_SIMP;
                     InvalidateRect(hwnd, NULL, TRUE);
