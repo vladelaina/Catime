@@ -456,12 +456,23 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         ((!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0) || 
                          (CLOCK_COUNT_UP && TRUE))) {
                         
-                        // 重置计时器状态
-                        CLOCK_IS_PAUSED = FALSE;
+                        // 保持当前计时器类型(倒计时/正计时/番茄钟)，只重置进度
+                        if (!CLOCK_COUNT_UP) {
+                            // 倒计时模式 - 保留CLOCK_TOTAL_TIME，只重置已计时部分
+                            countdown_elapsed_time = 0;
+                        } else {
+                            // 正计时模式 - 从0开始重新计时
+                            countup_elapsed_time = 0;
+                        }
+                        
+                        // 重置通用计时器状态
                         elapsed_time = 0;
                         message_shown = FALSE;
                         countdown_message_shown = FALSE;
                         countup_message_shown = FALSE;
+                        
+                        // 取消暂停状态
+                        CLOCK_IS_PAUSED = FALSE;
                         
                         // 重新开始计时
                         KillTimer(hwnd, 1);
