@@ -559,6 +559,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         message_shown = 0;
                         countdown_message_shown = FALSE;
                         
+                        // 重置暂停状态，确保新的倒计时处于运行状态
+                        CLOCK_IS_PAUSED = FALSE;
+                        
                         KillTimer(hwnd, 1);
                         SetTimer(hwnd, 1, 1000, NULL);
                         
