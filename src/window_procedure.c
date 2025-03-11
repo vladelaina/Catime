@@ -496,7 +496,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         ShowWindow(hwnd, SW_SHOW);
                         CLOCK_EDIT_MODE = FALSE;
                         WriteConfigEditMode("FALSE");
-                        SetClickThrough(hwnd, TRUE);
                         
                         int index = cmd - 102;
                         CLOCK_TOTAL_TIME = time_options[index] * 60;
@@ -558,6 +557,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         char filePath[MAX_PATH] = "";
                         if (OpenFileDialog(hwnd, filePath, MAX_PATH)) {
                             strncpy(CLOCK_TIMEOUT_FILE_PATH, filePath, sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1);
+                            CLOCK_TIMEOUT_FILE_PATH[sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1] = '\0';
                             CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
                             WriteConfigTimeoutAction("OPEN_FILE");
                             SaveRecentFile(filePath);
@@ -811,6 +811,14 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     WriteConfigFont("ZCOOL KuaiLe Essence.ttf");
                     goto refresh_window;
                 }
+                case CLOCK_IDC_FONT_PROFONT: {
+                    WriteConfigFont("ProFont IIx Nerd Font.ttf");
+                    goto refresh_window;
+                }
+                case CLOCK_IDC_FONT_DADDYTIME: {
+                    WriteConfigFont("DaddyTimeMono Nerd Font Propo Essence.ttf");
+                    goto refresh_window;
+                }
                 case CLOCK_IDM_SHOW_CURRENT_TIME: {  
                     CLOCK_SHOW_CURRENT_TIME = !CLOCK_SHOW_CURRENT_TIME;
                     if (CLOCK_SHOW_CURRENT_TIME) {
@@ -969,6 +977,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     if (!CLOCK_COUNT_UP) {
                         CLOCK_COUNT_UP = TRUE;
                         CLOCK_SHOW_CURRENT_TIME = FALSE;
+                        countdown_elapsed_time = 0;
                         CLOCK_IS_PAUSED = FALSE;
                         
                         
@@ -976,7 +985,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         message_shown = FALSE;
                         countdown_message_shown = FALSE;
                         
-                        countup_elapsed_time = 0;
                         countup_message_shown = FALSE;
                         
                         
@@ -1123,61 +1131,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         InvalidateRect(hwnd, NULL, TRUE);
                     }
                     break;
-                }
-                case CLOCK_IDM_COUNTDOWN_START_PAUSE: {
-                    if (!IsWindowVisible(hwnd)) {
-                        
-                        ShowWindow(hwnd, SW_SHOW);
-                    }
-                    
-                    if (CLOCK_COUNT_UP) {
-                        CLOCK_COUNT_UP = FALSE;
-                        countdown_elapsed_time = 0;
-                        CLOCK_IS_PAUSED = FALSE;
-                    } else if (!CLOCK_SHOW_CURRENT_TIME) {
-                        
-                        CLOCK_IS_PAUSED = !CLOCK_IS_PAUSED;
-                    } else {
-                        
-                        CLOCK_SHOW_CURRENT_TIME = FALSE;
-                        countdown_elapsed_time = 0;
-                        CLOCK_IS_PAUSED = FALSE;
-                    }
-                    
-                    
-                    KillTimer(hwnd, 1); 
-                    SetTimer(hwnd, 1, 1000, NULL);
-                    
-                    
-                    elapsed_time = 0;
-                    message_shown = FALSE;
-                    countdown_message_shown = FALSE;
-                    countup_message_shown = FALSE;
-                    
-                    InvalidateRect(hwnd, NULL, TRUE);
-                    break;
-                }
-                case CLOCK_IDM_COUNTDOWN_RESET: {
-                    
-                    ShowWindow(hwnd, SW_SHOW);
-                    
-                    
-                    countdown_elapsed_time = 0;  
-                    CLOCK_IS_PAUSED = FALSE;
-                    KillTimer(hwnd, 1);
-                    SetTimer(hwnd, 1, 1000, NULL);
-                    InvalidateRect(hwnd, NULL, TRUE);
-                    break;
-                }
-                case CLOCK_IDC_FONT_PROFONT: {
-                    WriteConfigFont("ProFont IIx Nerd Font.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_DADDYTIME: {
-                    // 写入新字体
-                    WriteConfigFont("DaddyTimeMono Nerd Font Propo Essence.ttf");
-                    
-                    goto refresh_window;
                 }
                 case CLOCK_IDM_POMODORO_START: {
                     if (!IsWindowVisible(hwnd)) {
@@ -1532,5 +1485,3 @@ refresh_window:
     }
     return 0;
 }
-
-
