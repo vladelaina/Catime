@@ -454,6 +454,17 @@ void ShowContextMenu(HWND hwnd) {
                    GetLocalizedString(L"暂停", L"Pause"));
     }
     
+    // 添加重新开始选项
+    if (isTimerRunning) {
+        // 当前有计时进行中，启用"重新开始"选项
+        AppendMenuW(hTimerManagementMenu, MF_STRING, CLOCK_IDM_TIMER_RESTART,
+                   GetLocalizedString(L"重新开始", L"Restart"));
+    } else {
+        // 没有计时进行中，显示灰色的"重新开始"选项
+        AppendMenuW(hTimerManagementMenu, MF_STRING | MF_GRAYED, CLOCK_IDM_TIMER_RESTART,
+                   GetLocalizedString(L"重新开始", L"Restart"));
+    }
+    
     // 将计时管理菜单添加到主菜单
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimerManagementMenu,
                GetLocalizedString(L"计时管理", L"Timer Management"));

@@ -450,6 +450,28 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     }
                     break;
                 }
+                case CLOCK_IDM_TIMER_RESTART: {
+                    // 检查当前是否有计时进行中
+                    if (!CLOCK_SHOW_CURRENT_TIME && 
+                        ((!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0) || 
+                         (CLOCK_COUNT_UP && TRUE))) {
+                        
+                        // 重置计时器状态
+                        CLOCK_IS_PAUSED = FALSE;
+                        elapsed_time = 0;
+                        message_shown = FALSE;
+                        countdown_message_shown = FALSE;
+                        countup_message_shown = FALSE;
+                        
+                        // 重新开始计时
+                        KillTimer(hwnd, 1);
+                        SetTimer(hwnd, 1, 1000, NULL);
+                        
+                        // 强制重绘窗口
+                        InvalidateRect(hwnd, NULL, TRUE);
+                    }
+                    break;
+                }
                 case CLOCK_IDM_LANG_CHINESE: {
                     CURRENT_LANGUAGE = APP_LANG_CHINESE_SIMP;
                     InvalidateRect(hwnd, NULL, TRUE);

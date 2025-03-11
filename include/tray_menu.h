@@ -22,6 +22,7 @@
 /// @{
 #define CLOCK_IDM_TIMER_MANAGEMENT 159   ///< 计时管理主菜单
 #define CLOCK_IDM_TIMER_PAUSE_RESUME 158 ///< 暂停/继续计时
+#define CLOCK_IDM_TIMER_RESTART 177      ///< 重新开始计时
 #define CLOCK_IDM_COUNT_UP_START 171     ///< 开始/暂停正计时
 #define CLOCK_IDM_COUNT_UP_RESET 172     ///< 重置正计时
 #define CLOCK_IDM_COUNTDOWN_START_PAUSE 154  ///< 开始/暂停倒计时
