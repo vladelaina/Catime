@@ -40,34 +40,56 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                 if (countdown_elapsed_time >= CLOCK_TOTAL_TIME && !countdown_message_shown) {
                     countdown_message_shown = TRUE;
                     
-                    switch (CLOCK_TIMEOUT_ACTION) {
-                        case TIMEOUT_ACTION_MESSAGE:
-                            ShowToastNotification(hwnd, "Time's up!");
-                            break;
-                        case TIMEOUT_ACTION_LOCK:
-                            LockWorkStation();
-                            break;
-                        case TIMEOUT_ACTION_SHUTDOWN:
-                            system("shutdown /s /t 0");
-                            break;
-                        case TIMEOUT_ACTION_RESTART:
-                            system("shutdown /r /t 0");
-                            break;
-                        case TIMEOUT_ACTION_OPEN_FILE: {
-                            if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
-                                wchar_t wPath[MAX_PATH];
-                                MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_FILE_PATH, -1, wPath, MAX_PATH);
-                                
-                                HINSTANCE result = ShellExecuteW(NULL, L"open", wPath, NULL, NULL, SW_SHOWNORMAL);
-                                
-                                if ((INT_PTR)result <= 32) {
-                                    MessageBoxW(hwnd, 
-                                        GetLocalizedString(L"无法打开文件", L"Failed to open file"),
-                                        GetLocalizedString(L"错误", L"Error"),
-                                        MB_ICONERROR);
+                    // 显示超时消息
+                    ShowToastNotification(hwnd, "Time's up!");
+                    
+                    // 如果当前是番茄钟模式（总时间等于番茄钟的某个时间），则自动切换到下一个阶段
+                    if (CLOCK_TOTAL_TIME == POMODORO_WORK_TIME) {
+                        // 工作时间结束，切换到短休息
+                        CLOCK_TOTAL_TIME = POMODORO_SHORT_BREAK;
+                        countdown_elapsed_time = 0;
+                        countdown_message_shown = FALSE;
+                        InvalidateRect(hwnd, NULL, TRUE);
+                    } else if (CLOCK_TOTAL_TIME == POMODORO_SHORT_BREAK) {
+                        // 短休息结束，切换到工作时间
+                        CLOCK_TOTAL_TIME = POMODORO_WORK_TIME;
+                        countdown_elapsed_time = 0;
+                        countdown_message_shown = FALSE;
+                        InvalidateRect(hwnd, NULL, TRUE);
+                    } else if (CLOCK_TOTAL_TIME == POMODORO_LONG_BREAK) {
+                        // 长休息结束，切换到工作时间
+                        CLOCK_TOTAL_TIME = POMODORO_WORK_TIME;
+                        countdown_elapsed_time = 0;
+                        countdown_message_shown = FALSE;
+                        InvalidateRect(hwnd, NULL, TRUE);
+                    } else {
+                        // 非番茄钟模式，执行原有的超时动作
+                        switch (CLOCK_TIMEOUT_ACTION) {
+                            case TIMEOUT_ACTION_LOCK:
+                                LockWorkStation();
+                                break;
+                            case TIMEOUT_ACTION_SHUTDOWN:
+                                system("shutdown /s /t 0");
+                                break;
+                            case TIMEOUT_ACTION_RESTART:
+                                system("shutdown /r /t 0");
+                                break;
+                            case TIMEOUT_ACTION_OPEN_FILE: {
+                                if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
+                                    wchar_t wPath[MAX_PATH];
+                                    MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_FILE_PATH, -1, wPath, MAX_PATH);
+                                    
+                                    HINSTANCE result = ShellExecuteW(NULL, L"open", wPath, NULL, NULL, SW_SHOWNORMAL);
+                                    
+                                    if ((INT_PTR)result <= 32) {
+                                        MessageBoxW(hwnd, 
+                                            GetLocalizedString(L"无法打开文件", L"Failed to open file"),
+                                            GetLocalizedString(L"错误", L"Error"),
+                                            MB_ICONERROR);
+                                    }
                                 }
+                                break;
                             }
-                            break;
                         }
                     }
                 }

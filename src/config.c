@@ -23,9 +23,9 @@
 #include <shlguid.h>
 
 // 修改全局变量的默认值(改为秒)
-int POMODORO_WORK_TIME = 1500;      // 默认工作时间25分钟(1500秒)
-int POMODORO_SHORT_BREAK = 300;     // 默认短休息5分钟(300秒)
-int POMODORO_LONG_BREAK = 600;      // 默认长休息10分钟(600秒)
+extern int POMODORO_WORK_TIME;      // 默认工作时间25分钟(1500秒)
+extern int POMODORO_SHORT_BREAK;     // 默认短休息5分钟(300秒)
+extern int POMODORO_LONG_BREAK;      // 默认长休息10分钟(600秒)
 
 /**
  * @brief 获取配置文件路径

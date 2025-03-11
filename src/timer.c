@@ -45,6 +45,13 @@ char CLOCK_TIMEOUT_TEXT[50] = "";      ///< 超时显示文本
 char CLOCK_TIMEOUT_FILE_PATH[MAX_PATH] = ""; ///< 超时执行文件路径
 /** @} */
 
+/** @name 番茄钟时间设置
+ *  @{ */
+int POMODORO_WORK_TIME = 25 * 60;    ///< 番茄钟工作时间（25分钟）
+int POMODORO_SHORT_BREAK = 5 * 60;   ///< 番茄钟短休息时间（5分钟）
+int POMODORO_LONG_BREAK = 15 * 60;   ///< 番茄钟长休息时间（15分钟）
+/** @} */
+
 /** @name 预设时间选项
  *  @{ */
 int time_options[MAX_TIME_OPTIONS];    ///< 预设时间选项数组

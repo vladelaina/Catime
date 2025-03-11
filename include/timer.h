@@ -15,6 +15,11 @@
 /// 最大预设时间选项数量
 #define MAX_TIME_OPTIONS 10
 
+/// 番茄钟时间变量（单位：秒）
+extern int POMODORO_WORK_TIME;    ///< 番茄钟工作时间（默认25分钟）
+extern int POMODORO_SHORT_BREAK;  ///< 番茄钟短休息时间（默认5分钟）
+extern int POMODORO_LONG_BREAK;   ///< 番茄钟长休息时间（默认15分钟）
+
 /**
  * @brief 超时动作类型枚举
  * 

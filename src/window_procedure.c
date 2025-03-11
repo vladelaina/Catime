@@ -1179,6 +1179,39 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     
                     goto refresh_window;
                 }
+                case CLOCK_IDM_POMODORO_START: {
+                    if (!IsWindowVisible(hwnd)) {
+                        ShowWindow(hwnd, SW_SHOW);
+                    }
+                    
+                    // 重置计时器状态
+                    CLOCK_COUNT_UP = FALSE;
+                    CLOCK_SHOW_CURRENT_TIME = FALSE;
+                    countdown_elapsed_time = 0;
+                    CLOCK_IS_PAUSED = FALSE;
+                    
+                    // 设置工作时间
+                    CLOCK_TOTAL_TIME = POMODORO_WORK_TIME;
+                    
+                    // 保存原始超时动作
+                    TimeoutActionType originalAction = CLOCK_TIMEOUT_ACTION;
+                    
+                    // 强制设置为显示消息
+                    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
+                    
+                    // 启动定时器
+                    KillTimer(hwnd, 1);
+                    SetTimer(hwnd, 1, 1000, NULL);
+                    
+                    // 重置消息状态
+                    elapsed_time = 0;
+                    message_shown = FALSE;
+                    countdown_message_shown = FALSE;
+                    countup_message_shown = FALSE;
+                    
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    break;
+                }
                 case CLOCK_IDM_POMODORO_WORK: {
                     while (1) {
                         memset(inputText, 0, sizeof(inputText));
