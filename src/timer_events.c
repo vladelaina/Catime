@@ -67,13 +67,14 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                         // 显示超时消息
                         ShowToastNotification(hwnd, "Time's up!");
                     } else if (CLOCK_TOTAL_TIME == POMODORO_LONG_BREAK) {
-                        // 长休息结束，切换到工作时间
-                        CLOCK_TOTAL_TIME = POMODORO_WORK_TIME;
+                        // 长休息结束，一轮番茄钟完成
+                        CLOCK_TOTAL_TIME = 0;
                         countdown_elapsed_time = 0;
                         countdown_message_shown = FALSE;
+                        pomodoro_work_cycles = 0;
                         InvalidateRect(hwnd, NULL, TRUE);
                         // 显示超时消息
-                        ShowToastNotification(hwnd, "Time's up!");
+                        ShowToastNotification(hwnd, "Pomodoro cycle completed!");
                     } else {
                         // 显示超时消息
                         ShowToastNotification(hwnd, "Time's up!");
