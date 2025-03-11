@@ -507,6 +507,11 @@ void ShowContextMenu(HWND hwnd) {
               timeBuffer);
     AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_LBREAK, menuText);
 
+    // 添加分隔线和重新开始选项
+    AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
+    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_RESET,
+                GetLocalizedString(L"重新开始", L"Restart"));
+
     // 将番茄钟菜单添加到主菜单
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hPomodoroMenu,
                 GetLocalizedString(L"番茄时钟", L"Pomodoro"));
