@@ -685,18 +685,53 @@ char* UTF8ToANSI(const char* utf8Str) {
 // 添加写入番茄钟配置的函数
 void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
     char config_path[MAX_PATH];
-    GetConfigPath(config_path, sizeof(config_path));
+    char temp_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    snprintf(temp_path, MAX_PATH, "%s.tmp", config_path);
+    FILE *file, *temp_file;
+    char line[256];
+    int found_work = 0, found_short = 0, found_long = 0;
     
-    char value[32];
+    file = fopen(config_path, "r");
+    temp_file = fopen(temp_path, "w");
     
-    sprintf(value, "%d", work);
-    WritePrivateProfileStringA("Settings", "POMODORO_WORK_TIME", value, config_path);
+    if (!file || !temp_file) {
+        if (file) fclose(file);
+        if (temp_file) fclose(temp_file);
+        return;
+    }
     
-    sprintf(value, "%d", short_break);
-    WritePrivateProfileStringA("Settings", "POMODORO_SHORT_BREAK", value, config_path);
+    while (fgets(line, sizeof(line), file)) {
+        if (strncmp(line, "POMODORO_WORK_TIME=", 19) == 0) {
+            fprintf(temp_file, "POMODORO_WORK_TIME=%d\n", work);
+            found_work = 1;
+        } else if (strncmp(line, "POMODORO_SHORT_BREAK=", 21) == 0) {
+            fprintf(temp_file, "POMODORO_SHORT_BREAK=%d\n", short_break);
+            found_short = 1;
+        } else if (strncmp(line, "POMODORO_LONG_BREAK=", 20) == 0) {
+            fprintf(temp_file, "POMODORO_LONG_BREAK=%d\n", long_break);
+            found_long = 1;
+        } else {
+            fputs(line, temp_file);
+        }
+    }
     
-    sprintf(value, "%d", long_break);
-    WritePrivateProfileStringA("Settings", "POMODORO_LONG_BREAK", value, config_path);
+    // 如果配置文件中没有找到对应的键，则添加
+    if (!found_work) {
+        fprintf(temp_file, "POMODORO_WORK_TIME=%d\n", work);
+    }
+    if (!found_short) {
+        fprintf(temp_file, "POMODORO_SHORT_BREAK=%d\n", short_break);
+    }
+    if (!found_long) {
+        fprintf(temp_file, "POMODORO_LONG_BREAK=%d\n", long_break);
+    }
+    
+    fclose(file);
+    fclose(temp_file);
+    
+    remove(config_path);
+    rename(temp_path, config_path);
     
     // 更新全局变量
     POMODORO_WORK_TIME = work;
