@@ -1359,6 +1359,21 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     }
                     break;
                 }
+                case CLOCK_IDM_POMODORO_RESET:
+                    // 如果当前是番茄钟模式，重置计时器
+                    if (CLOCK_TOTAL_TIME == POMODORO_WORK_TIME || 
+                        CLOCK_TOTAL_TIME == POMODORO_SHORT_BREAK || 
+                        CLOCK_TOTAL_TIME == POMODORO_LONG_BREAK) {
+                        // 重置已用时间
+                        countdown_elapsed_time = 0;
+                        // 取消暂停状态
+                        CLOCK_IS_PAUSED = FALSE;
+                        // 重新开始计时
+                        SetTimer(hwnd, 1, 1000, NULL);
+                        // 强制重绘窗口
+                        InvalidateRect(hwnd, NULL, TRUE);
+                    }
+                    break;
             }
             break;
 
