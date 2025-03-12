@@ -38,6 +38,9 @@ static HWND g_hwndSupportDialog = NULL;
 // 添加全局变量来跟踪许可证对话框句柄
 static HWND g_hwndLicenseDialog = NULL;
 
+// 添加循环次数编辑框的子类化过程
+static WNDPROC wpOrigLoopEditProc;  // 存储原始的编辑框过程
+
 // 贡献者链接定义
 static const wchar_t* CONTRIBUTOR_LINKS[] = {
     L"[MAX°孟兆](https://github.com/MadMaxChow)",              // CONTRIBUTOR_1
@@ -771,11 +774,46 @@ void ShowPomodoroLoopDialog(HWND hwndParent) {
     }
 }
 
+// 添加循环次数编辑框的子类化过程
+LRESULT APIENTRY LoopEditSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    switch (uMsg) {
+    case WM_KEYDOWN: {
+        if (wParam == VK_RETURN) {
+            // 发送BM_CLICK消息给父窗口（对话框）
+            SendMessage(GetParent(hwnd), WM_COMMAND, MAKEWPARAM(CLOCK_IDC_BUTTON_OK, BN_CLICKED), (LPARAM)hwnd);
+            return 0;
+        }
+        // 处理Ctrl+A全选
+        if (wParam == 'A' && GetKeyState(VK_CONTROL) < 0) {
+            SendMessage(hwnd, EM_SETSEL, 0, -1);
+            return 0;
+        }
+        break;
+    }
+    case WM_CHAR: {
+        // 处理Ctrl+A的字符消息，防止发出提示音
+        if (GetKeyState(VK_CONTROL) < 0 && (wParam == 1 || wParam == 'a' || wParam == 'A')) {
+            return 0;
+        }
+        break;
+    }
+    }
+    return CallWindowProc(wpOrigLoopEditProc, hwnd, uMsg, wParam, lParam);
+}
+
+// 修改 PomodoroLoopDlgProc 函数
 INT_PTR CALLBACK PomodoroLoopDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_INITDIALOG: {
             // 设置编辑框焦点
-            SetFocus(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT));
+            HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
+            SetFocus(hwndEdit);
+            
+            // 子类化编辑框控件
+            wpOrigLoopEditProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, 
+                                                          (LONG_PTR)LoopEditSubclassProc);
+            
             return FALSE;
         }
 
@@ -803,6 +841,12 @@ INT_PTR CALLBACK PomodoroLoopDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPAR
                 g_hwndPomodoroLoopDialog = NULL;
                 return TRUE;
             }
+            break;
+
+        case WM_DESTROY:
+            // 恢复原始编辑框过程
+            HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
+            SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)wpOrigLoopEditProc);
             break;
 
         case WM_CLOSE:
