@@ -791,10 +791,11 @@ INT_PTR CALLBACK PomodoroLoopDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPAR
                     EndDialog(hwndDlg, IDOK);
                     g_hwndPomodoroLoopDialog = NULL;
                 } else {
-                    MessageBoxW(hwndDlg,
-                        GetLocalizedString(L"请输入1-99之间的数字", L"Please enter a number between 1 and 99"),
-                        GetLocalizedString(L"输入错误", L"Input Error"),
-                        MB_OK | MB_ICONWARNING);
+                    ShowErrorDialog(hwndDlg);
+                    // 清空输入框
+                    SetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, L"");
+                    // 设置焦点回到输入框
+                    SetFocus(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT));
                 }
                 return TRUE;
             } else if (LOWORD(wParam) == IDCANCEL) {
