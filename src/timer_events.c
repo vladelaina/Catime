@@ -102,11 +102,11 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                         // 停止计时器
                         KillTimer(hwnd, 1);
                         
-                        // 切换到显示当前时间模式
-                        CLOCK_SHOW_CURRENT_TIME = TRUE;
-                        CLOCK_LAST_TIME_UPDATE = 0;
+                        // 不再切换到显示当前时间模式
+                        // CLOCK_SHOW_CURRENT_TIME = TRUE;
+                        // CLOCK_LAST_TIME_UPDATE = 0;
                         
-                        // 重新启动时间显示定时器
+                        // 重新启动定时器
                         SetTimer(hwnd, 1, 1000, NULL);
                         
                         InvalidateRect(hwnd, NULL, TRUE);
