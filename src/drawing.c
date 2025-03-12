@@ -78,8 +78,10 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
 
         if (hours > 0) {
             sprintf(time_text, "%d:%02d:%02d", hours, minutes, seconds);
-        } else {
+        } else if (minutes > 0) {
             sprintf(time_text, "%d:%02d", minutes, seconds);
+        } else {
+            sprintf(time_text, "%d", seconds);
         }
     } else {
         // 倒计时模式
@@ -100,8 +102,10 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
 
             if (hours > 0) {
                 sprintf(time_text, "%d:%02d:%02d", hours, minutes, seconds);
-            } else {
+            } else if (minutes > 0) {
                 sprintf(time_text, "%d:%02d", minutes, seconds);
+            } else {
+                sprintf(time_text, "%d", seconds);
             }
         }
     }
