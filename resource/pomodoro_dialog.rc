@@ -44,6 +44,6 @@ CAPTION "设置番茄钟循环次数"
 FONT 9, "Segoe UI"
 BEGIN
     LTEXT           "请输入番茄钟循环次数（1-10）：\n\n每完成一个循环，将休息一次长时间\n\n例如：设置为4，则连续工作4次后休息长时间", CLOCK_IDC_STATIC, 10, 10, 180, 60
-    EDITTEXT        CLOCK_IDC_EDIT, 10, 75, 180, 20, ES_AUTOHSCROLL | ES_NUMBER
+    EDITTEXT        CLOCK_IDC_EDIT, 10, 75, 180, 20, ES_AUTOHSCROLL
     PUSHBUTTON      "确定", CLOCK_IDC_BUTTON_OK, 140, 100, 50, 14
 END
