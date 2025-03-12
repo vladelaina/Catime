@@ -523,7 +523,7 @@ void ShowContextMenu(HWND hwnd) {
     // 工作时间
     FormatPomodoroTime(POMODORO_WORK_TIME, timeBuffer, sizeof(timeBuffer)/sizeof(wchar_t));
     _snwprintf(menuText, sizeof(menuText)/sizeof(wchar_t),
-              GetLocalizedString(L"工作时间: %ls", L"Work Time: %ls"),
+              GetLocalizedString(L"集中精力: %ls", L"Focus: %ls"),
               timeBuffer);
     AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_WORK, menuText);
 
