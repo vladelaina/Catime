@@ -65,10 +65,12 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                         pomodoro_cycle_counter++;
                         
                         // 每完成两个工作周期后进入长休息，否则进入短休息
-                        if (pomodoro_work_cycles % 2 == 0) {
+                        if (pomodoro_work_cycles == 2) {
                             // 第二个工作周期结束，切换到长休息
                             CLOCK_TOTAL_TIME = POMODORO_LONG_BREAK;
                             current_pomodoro_phase = POMODORO_PHASE_LONG_BREAK;
+                            // 在这里重置工作周期，这样长休息后就会直接进入新的循环
+                            pomodoro_work_cycles = 0;
                         } else {
                             // 第一个工作周期结束，切换到短休息
                             CLOCK_TOTAL_TIME = POMODORO_SHORT_BREAK;
@@ -88,35 +90,19 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                         InvalidateRect(hwnd, NULL, TRUE);
                         // 显示超时消息
                         ShowToastNotification(hwnd, "Time's up!");
-                    } else if ((CLOCK_TOTAL_TIME == POMODORO_LONG_BREAK && current_pomodoro_phase == POMODORO_PHASE_LONG_BREAK) || 
-                              (pomodoro_cycle_counter >= 3 && CLOCK_TOTAL_TIME > 0)) {
-                        // 长休息结束，一轮番茄钟完成，完全结束番茄钟计时
-                        // 或者当工作时间和长休息时间相同时，通过计数器识别长休息结束
+                    } else if (CLOCK_TOTAL_TIME == POMODORO_LONG_BREAK && current_pomodoro_phase == POMODORO_PHASE_LONG_BREAK) {
+                        // 长休息结束，开始新的番茄钟工作周期
                         countdown_elapsed_time = 0;
                         countdown_message_shown = FALSE;
-                        pomodoro_work_cycles = 0;
                         pomodoro_cycle_counter = 0;
-                        current_pomodoro_phase = POMODORO_PHASE_IDLE;
                         
-                        // 停止计时器
-                        KillTimer(hwnd, 1);
-                        
-                        // 不再自动切换到显示当前时间模式，但确保计时器状态正确
-                        // CLOCK_SHOW_CURRENT_TIME = TRUE;
-                        // CLOCK_LAST_TIME_UPDATE = 0;
-                        
-                        // 注意：不要将CLOCK_TOTAL_TIME设为0
-                        // 保持CLOCK_TOTAL_TIME为当前值，这样切换模式时能正确显示内容
-                        
-                        // 重新启动定时器，保持在番茄钟完成状态
-                        SetTimer(hwnd, 1, 1000, NULL);
-                        
-                        // 确保窗口可见
-                        ShowWindow(hwnd, SW_SHOW);
+                        // 设置下一个周期为工作时间
+                        CLOCK_TOTAL_TIME = POMODORO_WORK_TIME;
+                        current_pomodoro_phase = POMODORO_PHASE_WORK;
                         
                         InvalidateRect(hwnd, NULL, TRUE);
                         // 显示超时消息
-                        ShowToastNotification(hwnd, "Pomodoro cycle completed!");
+                        ShowToastNotification(hwnd, "Break over! Time to focus again.");
                     } else {
                         // 显示超时消息
                         ShowToastNotification(hwnd, "Time's up!");
