@@ -774,11 +774,6 @@ void ShowPomodoroLoopDialog(HWND hwndParent) {
 INT_PTR CALLBACK PomodoroLoopDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_INITDIALOG: {
-            // 设置当前循环次数
-            wchar_t loop_count_str[16];
-            _snwprintf(loop_count_str, sizeof(loop_count_str)/sizeof(wchar_t), L"%d", POMODORO_LOOP_COUNT);
-            SetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, loop_count_str);
-            
             // 设置编辑框焦点
             SetFocus(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT));
             return FALSE;
