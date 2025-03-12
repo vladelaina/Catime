@@ -751,3 +751,68 @@ void ShowLicenseDialog(HWND hwndParent) {
                                      LicenseDlgProc);
     ShowWindow(g_hwndLicenseDialog, SW_SHOW);
 }
+
+// 添加全局变量来跟踪番茄钟循环次数设置对话框句柄
+static HWND g_hwndPomodoroLoopDialog = NULL;
+
+void ShowPomodoroLoopDialog(HWND hwndParent) {
+    if (!g_hwndPomodoroLoopDialog) {
+        g_hwndPomodoroLoopDialog = CreateDialog(
+            GetModuleHandle(NULL),
+            MAKEINTRESOURCE(CLOCK_IDD_POMODORO_LOOP_DIALOG),
+            hwndParent,
+            PomodoroLoopDlgProc
+        );
+        if (g_hwndPomodoroLoopDialog) {
+            ShowWindow(g_hwndPomodoroLoopDialog, SW_SHOW);
+        }
+    } else {
+        SetForegroundWindow(g_hwndPomodoroLoopDialog);
+    }
+}
+
+INT_PTR CALLBACK PomodoroLoopDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    switch (msg) {
+        case WM_INITDIALOG: {
+            // 设置当前循环次数
+            wchar_t loop_count_str[16];
+            _snwprintf(loop_count_str, sizeof(loop_count_str)/sizeof(wchar_t), L"%d", POMODORO_LOOP_COUNT);
+            SetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, loop_count_str);
+            
+            // 设置编辑框焦点
+            SetFocus(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT));
+            return FALSE;
+        }
+
+        case WM_COMMAND:
+            if (LOWORD(wParam) == CLOCK_IDC_BUTTON_OK) {
+                wchar_t input_str[16];
+                GetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, input_str, sizeof(input_str)/sizeof(wchar_t));
+                
+                int new_loop_count = _wtoi(input_str);
+                if (new_loop_count >= 1 && new_loop_count <= 99) {
+                    // 更新配置文件和全局变量
+                    WriteConfigPomodoroLoopCount(new_loop_count);
+                    EndDialog(hwndDlg, IDOK);
+                    g_hwndPomodoroLoopDialog = NULL;
+                } else {
+                    MessageBoxW(hwndDlg,
+                        GetLocalizedString(L"请输入1-99之间的数字", L"Please enter a number between 1 and 99"),
+                        GetLocalizedString(L"输入错误", L"Input Error"),
+                        MB_OK | MB_ICONWARNING);
+                }
+                return TRUE;
+            } else if (LOWORD(wParam) == IDCANCEL) {
+                EndDialog(hwndDlg, IDCANCEL);
+                g_hwndPomodoroLoopDialog = NULL;
+                return TRUE;
+            }
+            break;
+
+        case WM_CLOSE:
+            EndDialog(hwndDlg, IDCANCEL);
+            g_hwndPomodoroLoopDialog = NULL;
+            return TRUE;
+    }
+    return FALSE;
+}

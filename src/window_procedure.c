@@ -1472,41 +1472,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     }
                     break;
                 }
-                case CLOCK_IDM_POMODORO_LOOP_COUNT: {
-                    // 创建简单的输入对话框
-                    wchar_t loop_count_str[16] = {0};
-                    _snwprintf(loop_count_str, sizeof(loop_count_str)/sizeof(wchar_t), L"%d", POMODORO_LOOP_COUNT);
-                    
-                    // 使用InputBox获取用户输入的循环次数
-                    wchar_t input_result[16] = {0};
-                    if (InputBox(hwnd, 
-                        GetLocalizedString(L"设置循环次数", L"Set Loop Count"), 
-                        GetLocalizedString(L"请输入番茄钟循环次数 (1-99):", L"Enter Pomodoro loop count (1-99):"),
-                        loop_count_str, 
-                        input_result, 
-                        sizeof(input_result)/sizeof(wchar_t))) {
-                        
-                        // 解析输入的数字
-                        int new_loop_count = _wtoi(input_result);
-                        
-                        // 确保值在有效范围内
-                        if (new_loop_count >= 1 && new_loop_count <= 99) {
-                            // 更新配置文件和全局变量
-                            WriteConfigPomodoroLoopCount(new_loop_count);
-                            POMODORO_LOOP_COUNT = new_loop_count;
-                            
-                            // 刷新菜单显示
-                            InvalidateRect(hwnd, NULL, TRUE);
-                        } else {
-                            // 显示错误消息
-                            MessageBoxW(hwnd, 
-                                GetLocalizedString(L"请输入1到99之间的数字", L"Please enter a number between 1 and 99"),
-                                GetLocalizedString(L"输入错误", L"Input Error"),
-                                MB_OK | MB_ICONERROR);
-                        }
-                    }
+                case CLOCK_IDM_POMODORO_LOOP_COUNT:
+                    ShowPomodoroLoopDialog(hwnd);
                     break;
-                }
                 case CLOCK_IDM_POMODORO_RESET:
                     // 如果当前是番茄钟模式，重置计时器
                     if (CLOCK_TOTAL_TIME == POMODORO_WORK_TIME || 

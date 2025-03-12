@@ -76,4 +76,15 @@ void ShowLicenseDialog(HWND hwndParent);
  */
 void ShowErrorDialog(HWND hwndParent);
 
+/**
+ * @brief 显示番茄钟循环次数设置对话框
+ * @param hwndParent 父窗口句柄
+ * 
+ * 显示用于设置番茄钟循环次数的对话框。
+ * 允许用户输入1-99之间的循环次数。
+ */
+void ShowPomodoroLoopDialog(HWND hwndParent);
+
+INT_PTR CALLBACK PomodoroLoopDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
+
 #endif // DIALOG_PROCEDURE_H
