@@ -48,7 +48,98 @@ extern int message_shown;
 extern void ShowToastNotification(HWND hwnd, const char* message);
 extern void PauseMediaPlayback(void);
 
+// 在文件开头添加
+typedef struct {
+    const wchar_t* title;
+    const wchar_t* prompt;
+    const wchar_t* defaultText;
+    wchar_t* result;
+    size_t maxLen;
+} INPUTBOX_PARAMS;
 
+/**
+ * @brief 输入对话框回调函数
+ * @param hwndDlg 对话框句柄
+ * @param uMsg 消息
+ * @param wParam 消息参数
+ * @param lParam 消息参数
+ * @return 处理结果
+ */
+INT_PTR CALLBACK InputBoxProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    static wchar_t* result;
+    static size_t maxLen;
+    
+    switch (uMsg) {
+        case WM_INITDIALOG: {
+            // 获取传递的参数
+            INPUTBOX_PARAMS* params = (INPUTBOX_PARAMS*)lParam;
+            result = params->result;
+            maxLen = params->maxLen;
+            
+            // 设置对话框标题
+            SetWindowTextW(hwndDlg, params->title);
+            
+            // 设置提示消息
+            SetDlgItemTextW(hwndDlg, IDC_STATIC_PROMPT, params->prompt);
+            
+            // 设置默认文本
+            SetDlgItemTextW(hwndDlg, IDC_EDIT_INPUT, params->defaultText);
+            
+            // 选中文本
+            SendDlgItemMessageW(hwndDlg, IDC_EDIT_INPUT, EM_SETSEL, 0, -1);
+            
+            // 设置焦点
+            SetFocus(GetDlgItem(hwndDlg, IDC_EDIT_INPUT));
+            return FALSE;
+        }
+        
+        case WM_COMMAND:
+            switch (LOWORD(wParam)) {
+                case IDOK: {
+                    // 获取输入文本
+                    GetDlgItemTextW(hwndDlg, IDC_EDIT_INPUT, result, (int)maxLen);
+                    EndDialog(hwndDlg, TRUE);
+                    return TRUE;
+                }
+                
+                case IDCANCEL:
+                    // 取消操作
+                    EndDialog(hwndDlg, FALSE);
+                    return TRUE;
+            }
+            break;
+    }
+    
+    return FALSE;
+}
+
+/**
+ * @brief 显示输入对话框
+ * @param hwndParent 父窗口句柄
+ * @param title 对话框标题
+ * @param prompt 提示信息
+ * @param defaultText 默认文本
+ * @param result 结果缓冲区
+ * @param maxLen 缓冲区最大长度
+ * @return 成功返回TRUE，取消返回FALSE
+ */
+BOOL InputBox(HWND hwndParent, const wchar_t* title, const wchar_t* prompt, 
+              const wchar_t* defaultText, wchar_t* result, size_t maxLen) {
+    // 准备传递给对话框的参数
+    INPUTBOX_PARAMS params;
+    params.title = title;
+    params.prompt = prompt;
+    params.defaultText = defaultText;
+    params.result = result;
+    params.maxLen = maxLen;
+    
+    // 显示模态对话框
+    return DialogBoxParamW(GetModuleHandle(NULL), 
+                          MAKEINTRESOURCEW(IDD_INPUTBOX), 
+                          hwndParent, 
+                          InputBoxProc, 
+                          (LPARAM)&params) == TRUE;
+}
 
 void ExitProgram(HWND hwnd) {
     RemoveTrayIcon();
@@ -1052,7 +1143,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         // 设置番茄钟状态为空闲
                         extern POMODORO_PHASE current_pomodoro_phase;
                         extern void InitializePomodoro(void);
-                        current_pomodoro_phase = POMODORO_PHASE_IDLE;
+                        InitializePomodoro();
                         
                         ShowWindow(hwnd, SW_SHOW);
                         
@@ -1211,7 +1302,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     // 设置工作时间
                     CLOCK_TOTAL_TIME = POMODORO_WORK_TIME;
                     
-                    // 初始化番茄钟阶段为工作阶段
+                    // 初始化番茄钟阶段
                     extern void InitializePomodoro(void);
                     InitializePomodoro();
                     
@@ -1355,7 +1446,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
                         int total_seconds = 0;
                         if (ParseInput(inputText, &total_seconds)) {
-                            // 更新番茄钟长时间休息时间配置
+                            // 更新番茄钟长休息时间配置
                             WriteConfigPomodoroTimes(POMODORO_WORK_TIME, POMODORO_SHORT_BREAK, total_seconds);
                             POMODORO_LONG_BREAK = total_seconds;
                             break;
@@ -1377,6 +1468,41 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                                     L"1 30 20 = 1 hour 30 minutes 20 seconds"),
                                 GetLocalizedString(L"输入格式", L"Input Format"),
                                 MB_OK);
+                        }
+                    }
+                    break;
+                }
+                case CLOCK_IDM_POMODORO_LOOP_COUNT: {
+                    // 创建简单的输入对话框
+                    wchar_t loop_count_str[16] = {0};
+                    _snwprintf(loop_count_str, sizeof(loop_count_str)/sizeof(wchar_t), L"%d", POMODORO_LOOP_COUNT);
+                    
+                    // 使用InputBox获取用户输入的循环次数
+                    wchar_t input_result[16] = {0};
+                    if (InputBox(hwnd, 
+                        GetLocalizedString(L"设置循环次数", L"Set Loop Count"), 
+                        GetLocalizedString(L"请输入番茄钟循环次数 (1-99):", L"Enter Pomodoro loop count (1-99):"),
+                        loop_count_str, 
+                        input_result, 
+                        sizeof(input_result)/sizeof(wchar_t))) {
+                        
+                        // 解析输入的数字
+                        int new_loop_count = _wtoi(input_result);
+                        
+                        // 确保值在有效范围内
+                        if (new_loop_count >= 1 && new_loop_count <= 99) {
+                            // 更新配置文件和全局变量
+                            WriteConfigPomodoroLoopCount(new_loop_count);
+                            POMODORO_LOOP_COUNT = new_loop_count;
+                            
+                            // 刷新菜单显示
+                            InvalidateRect(hwnd, NULL, TRUE);
+                        } else {
+                            // 显示错误消息
+                            MessageBoxW(hwnd, 
+                                GetLocalizedString(L"请输入1到99之间的数字", L"Please enter a number between 1 and 99"),
+                                GetLocalizedString(L"输入错误", L"Input Error"),
+                                MB_OK | MB_ICONERROR);
                         }
                     }
                     break;

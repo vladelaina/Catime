@@ -19,6 +19,7 @@
 extern int POMODORO_WORK_TIME;    ///< 番茄钟工作时间（默认25分钟）
 extern int POMODORO_SHORT_BREAK;  ///< 番茄钟短休息时间（默认5分钟）
 extern int POMODORO_LONG_BREAK;   ///< 番茄钟长休息时间（默认15分钟）
+extern int POMODORO_LOOP_COUNT;   ///< 番茄钟循环次数（默认1次）
 
 /**
  * @brief 超时动作类型枚举

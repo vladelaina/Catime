@@ -41,6 +41,7 @@ extern char CLOCK_TIMEOUT_TEXT[50];
 extern int POMODORO_WORK_TIME;      ///< 工作时间(秒)
 extern int POMODORO_SHORT_BREAK;    ///< 短休息时间(秒)
 extern int POMODORO_LONG_BREAK;     ///< 长休息时间(秒)
+extern int POMODORO_LOOP_COUNT;     ///< 循环次数
 /// @}
 
 /// @name 外部函数声明
@@ -506,6 +507,11 @@ void ShowContextMenu(HWND hwnd) {
             else if (strncmp(line, "POMODORO_LONG_BREAK=", 20) == 0) {
                 sscanf(line, "POMODORO_LONG_BREAK=%d", &POMODORO_LONG_BREAK);
             }
+            else if (strncmp(line, "POMODORO_LOOP_COUNT=", 20) == 0) {
+                sscanf(line, "POMODORO_LOOP_COUNT=%d", &POMODORO_LOOP_COUNT);
+                // 确保循环次数至少为1
+                if (POMODORO_LOOP_COUNT < 1) POMODORO_LOOP_COUNT = 1;
+            }
         }
         fclose(configFile);
     }
@@ -540,6 +546,12 @@ void ShowContextMenu(HWND hwnd) {
               GetLocalizedString(L"长时间休息: %ls", L"Long Break: %ls"),
               timeBuffer);
     AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_LBREAK, menuText);
+
+    // 添加循环次数选项
+    _snwprintf(menuText, sizeof(menuText)/sizeof(wchar_t),
+              GetLocalizedString(L"循环次数: %d", L"Loop Count: %d"),
+              POMODORO_LOOP_COUNT);
+    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_LOOP_COUNT, menuText);
 
     // 将番茄钟菜单添加到主菜单
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hPomodoroMenu,

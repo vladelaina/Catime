@@ -17,15 +17,9 @@
  * @param hwnd 与通知关联的窗口句柄
  * @param message 要在通知中显示的文本消息
  * 
- * 显示一个系统托盘通知，通知内容为"时间到了!"或其本地化版本。
+ * 显示一个系统托盘通知，通知内容为传入的消息。
  */
 void ShowToastNotification(HWND hwnd, const char* message) {
-    const wchar_t* timeUpMsg = GetLocalizedString(L"时间到了!", L"Time's up!");
-
-    int size_needed = WideCharToMultiByte(CP_UTF8, 0, timeUpMsg, -1, NULL, 0, NULL, NULL);
-    char* utf8Msg = (char*)malloc(size_needed);
-    WideCharToMultiByte(CP_UTF8, 0, timeUpMsg, -1, utf8Msg, size_needed, NULL, NULL);
-
-    ShowTrayNotification(hwnd, utf8Msg);
-    free(utf8Msg);
+    // 使用传入的消息参数
+    ShowTrayNotification(hwnd, message);
 }

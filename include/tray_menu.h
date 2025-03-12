@@ -58,6 +58,16 @@
 #define CLOCK_IDC_AUTO_START 160           ///< 开机自启动
 /// @}
 
+/// @name 番茄钟菜单项
+/// @{
+#define CLOCK_IDM_POMODORO_START 181   ///< 开始番茄钟
+#define CLOCK_IDM_POMODORO_WORK 182    ///< 设置工作时间
+#define CLOCK_IDM_POMODORO_BREAK 183   ///< 设置短休息时间
+#define CLOCK_IDM_POMODORO_LBREAK 184  ///< 设置长休息时间
+#define CLOCK_IDM_POMODORO_LOOP_COUNT 185 ///< 设置循环次数
+#define CLOCK_IDM_POMODORO_RESET 186  ///< 重置番茄钟
+/// @}
+
 /// @name 颜色选择菜单项
 /// @{
 #define CLOCK_IDC_COLOR_VALUE 1301       ///< 颜色值编辑项

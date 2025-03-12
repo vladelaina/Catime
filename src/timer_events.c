@@ -20,8 +20,38 @@ POMODORO_PHASE current_pomodoro_phase = POMODORO_PHASE_IDLE;
 // 番茄钟循环计数器
 static int pomodoro_cycle_counter = 0;
 
+// 完成的番茄钟循环次数
+static int complete_pomodoro_cycles = 0;
+
 // 从main.c引入的函数声明
 extern void ShowToastNotification(HWND hwnd, const char* message);
+
+/**
+ * @brief 将宽字符串转换为UTF-8编码的普通字符串并显示通知
+ * @param hwnd 窗口句柄
+ * @param chinese 中文消息
+ * @param english 英文消息
+ */
+static void ShowLocalizedNotification(HWND hwnd, const wchar_t* chinese, const wchar_t* english) {
+    // 获取本地化字符串
+    const wchar_t* localizedMsg = GetLocalizedString(chinese, english);
+    
+    // 计算所需的缓冲区大小
+    int size_needed = WideCharToMultiByte(CP_UTF8, 0, localizedMsg, -1, NULL, 0, NULL, NULL);
+    
+    // 分配内存
+    char* utf8Msg = (char*)malloc(size_needed);
+    if (utf8Msg) {
+        // 转换为UTF-8
+        WideCharToMultiByte(CP_UTF8, 0, localizedMsg, -1, utf8Msg, size_needed, NULL, NULL);
+        
+        // 显示通知
+        ShowToastNotification(hwnd, utf8Msg);
+        
+        // 释放内存
+        free(utf8Msg);
+    }
+}
 
 /**
  * @brief 设置番茄钟为工作阶段
@@ -32,6 +62,7 @@ void InitializePomodoro(void) {
     current_pomodoro_phase = POMODORO_PHASE_WORK;
     pomodoro_work_cycles = 0;
     pomodoro_cycle_counter = 0;
+    complete_pomodoro_cycles = 0;
 }
 
 /**
@@ -80,7 +111,7 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                         countdown_message_shown = FALSE;
                         InvalidateRect(hwnd, NULL, TRUE);
                         // 显示超时消息
-                        ShowToastNotification(hwnd, "Time's up!");
+                        ShowLocalizedNotification(hwnd, L"时间到！", L"Time's up!");
                     } else if (CLOCK_TOTAL_TIME == POMODORO_SHORT_BREAK && current_pomodoro_phase == POMODORO_PHASE_SHORT_BREAK) {
                         // 短休息结束，切换到工作时间
                         CLOCK_TOTAL_TIME = POMODORO_WORK_TIME;
@@ -89,23 +120,38 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                         countdown_message_shown = FALSE;
                         InvalidateRect(hwnd, NULL, TRUE);
                         // 显示超时消息
-                        ShowToastNotification(hwnd, "Time's up!");
+                        ShowLocalizedNotification(hwnd, L"时间到！", L"Time's up!");
                     } else if (CLOCK_TOTAL_TIME == POMODORO_LONG_BREAK && current_pomodoro_phase == POMODORO_PHASE_LONG_BREAK) {
-                        // 长休息结束，开始新的番茄钟工作周期
+                        // 长休息结束
                         countdown_elapsed_time = 0;
                         countdown_message_shown = FALSE;
-                        pomodoro_cycle_counter = 0;
                         
-                        // 设置下一个周期为工作时间
-                        CLOCK_TOTAL_TIME = POMODORO_WORK_TIME;
-                        current_pomodoro_phase = POMODORO_PHASE_WORK;
+                        // 增加完成循环计数器，并检查是否完成了所有配置的循环次数
+                        complete_pomodoro_cycles++;
+                        
+                        if (complete_pomodoro_cycles >= POMODORO_LOOP_COUNT) {
+                            // 已完成所有循环次数，结束番茄钟
+                            complete_pomodoro_cycles = 0;
+                            current_pomodoro_phase = POMODORO_PHASE_IDLE;
+                            
+                            // 显示完成所有循环的提示消息
+                            ShowLocalizedNotification(hwnd, L"所有番茄钟循环完成！", L"All Pomodoro cycles completed!");
+                        } else {
+                            // 还有剩余循环，开始新的番茄钟工作周期
+                            pomodoro_cycle_counter = 0;
+                            
+                            // 设置下一个周期为工作时间
+                            CLOCK_TOTAL_TIME = POMODORO_WORK_TIME;
+                            current_pomodoro_phase = POMODORO_PHASE_WORK;
+                            
+                            // 显示超时消息
+                            ShowLocalizedNotification(hwnd, L"休息结束！重新开始工作！", L"Break over! Time to focus again.");
+                        }
                         
                         InvalidateRect(hwnd, NULL, TRUE);
-                        // 显示超时消息
-                        ShowToastNotification(hwnd, "Break over! Time to focus again.");
                     } else {
                         // 显示超时消息
-                        ShowToastNotification(hwnd, "Time's up!");
+                        ShowLocalizedNotification(hwnd, L"时间到！", L"Time's up!");
                         
                         // 非番茄钟模式，执行原有的超时动作
                         switch (CLOCK_TIMEOUT_ACTION) {

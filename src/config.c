@@ -26,6 +26,7 @@
 extern int POMODORO_WORK_TIME;      // 默认工作时间25分钟(1500秒)
 extern int POMODORO_SHORT_BREAK;     // 默认短休息5分钟(300秒)
 extern int POMODORO_LONG_BREAK;      // 默认长休息10分钟(600秒)
+extern int POMODORO_LOOP_COUNT;      // 默认循环次数1次
 
 /**
  * @brief 获取配置文件路径
@@ -89,6 +90,7 @@ void CreateDefaultConfig(const char* config_path) {
         fprintf(file, "POMODORO_WORK_TIME=1500\n");     // 25分钟
         fprintf(file, "POMODORO_SHORT_BREAK=300\n");    // 5分钟
         fprintf(file, "POMODORO_LONG_BREAK=600\n");     // 10分钟
+        fprintf(file, "POMODORO_LOOP_COUNT=1\n");       // 1次
 
         fclose(file);
     }
@@ -250,6 +252,7 @@ void ReadConfig() {
     char work_time[32] = {0};
     char short_break[32] = {0};
     char long_break[32] = {0};
+    char loop_count[32] = {0};
     
     if(GetPrivateProfileStringA("Settings", "POMODORO_WORK_TIME", "1500", work_time, sizeof(work_time), config_path)) {
         POMODORO_WORK_TIME = atoi(work_time);
@@ -261,6 +264,12 @@ void ReadConfig() {
     
     if(GetPrivateProfileStringA("Settings", "POMODORO_LONG_BREAK", "600", long_break, sizeof(long_break), config_path)) {
         POMODORO_LONG_BREAK = atoi(long_break);
+    }
+    
+    if(GetPrivateProfileStringA("Settings", "POMODORO_LOOP_COUNT", "1", loop_count, sizeof(loop_count), config_path)) {
+        POMODORO_LOOP_COUNT = atoi(loop_count);
+        // 确保循环次数至少为1
+        if (POMODORO_LOOP_COUNT < 1) POMODORO_LOOP_COUNT = 1;
     }
 }
 
@@ -737,4 +746,47 @@ void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
     POMODORO_WORK_TIME = work;
     POMODORO_SHORT_BREAK = short_break;
     POMODORO_LONG_BREAK = long_break;
+}
+
+// 添加写入番茄钟循环次数配置的函数
+void WriteConfigPomodoroLoopCount(int loop_count) {
+    char config_path[MAX_PATH];
+    char temp_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    snprintf(temp_path, MAX_PATH, "%s.tmp", config_path);
+    FILE *file, *temp_file;
+    char line[256];
+    int found = 0;
+    
+    file = fopen(config_path, "r");
+    temp_file = fopen(temp_path, "w");
+    
+    if (!file || !temp_file) {
+        if (file) fclose(file);
+        if (temp_file) fclose(temp_file);
+        return;
+    }
+    
+    while (fgets(line, sizeof(line), file)) {
+        if (strncmp(line, "POMODORO_LOOP_COUNT=", 20) == 0) {
+            fprintf(temp_file, "POMODORO_LOOP_COUNT=%d\n", loop_count);
+            found = 1;
+        } else {
+            fputs(line, temp_file);
+        }
+    }
+    
+    // 如果配置文件中没有找到对应的键，则添加
+    if (!found) {
+        fprintf(temp_file, "POMODORO_LOOP_COUNT=%d\n", loop_count);
+    }
+    
+    fclose(file);
+    fclose(temp_file);
+    
+    remove(config_path);
+    rename(temp_path, config_path);
+    
+    // 更新全局变量
+    POMODORO_LOOP_COUNT = loop_count;
 }

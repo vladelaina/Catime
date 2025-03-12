@@ -106,6 +106,24 @@ void WriteConfig(const char* config_path);
  */
 void WriteConfigPomodoroTimes(int work, int short_break, int long_break);
 
+/**
+ * @brief 写入番茄钟时间设置
+ * @param work_time 工作时间(秒)
+ * @param short_break 短休息时间(秒)
+ * @param long_break 长休息时间(秒)
+ * 
+ * 更新配置文件中的番茄钟时间设置，包括工作、短休息和长休息时间
+ */
+void WriteConfigPomodoroSettings(int work_time, int short_break, int long_break);
+
+/**
+ * @brief 写入番茄钟循环次数设置
+ * @param loop_count 循环次数
+ * 
+ * 更新配置文件中的番茄钟循环次数设置
+ */
+void WriteConfigPomodoroLoopCount(int loop_count);
+
 /// @}
 
 #endif // CONFIG_H
