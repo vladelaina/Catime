@@ -802,6 +802,23 @@ LRESULT APIENTRY LoopEditSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARA
     return CallWindowProc(wpOrigLoopEditProc, hwnd, uMsg, wParam, lParam);
 }
 
+// 添加一个辅助函数来检查输入是否为纯数字
+BOOL IsValidNumberInput(const wchar_t* str) {
+    // 检查是否为空
+    if (!str || !*str) {
+        return FALSE;
+    }
+    
+    // 检查每个字符是否都是数字
+    for (int i = 0; str[i]; i++) {
+        if (!iswdigit(str[i])) {
+            return FALSE;
+        }
+    }
+    
+    return TRUE;
+}
+
 // 修改 PomodoroLoopDlgProc 函数
 INT_PTR CALLBACK PomodoroLoopDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
@@ -822,6 +839,14 @@ INT_PTR CALLBACK PomodoroLoopDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPAR
                 wchar_t input_str[16];
                 GetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, input_str, sizeof(input_str)/sizeof(wchar_t));
                 
+                // 首先验证输入是否为纯数字
+                if (!IsValidNumberInput(input_str)) {
+                    ShowErrorDialog(hwndDlg);
+                    SetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, L"");
+                    SetFocus(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT));
+                    return TRUE;
+                }
+                
                 int new_loop_count = _wtoi(input_str);
                 if (new_loop_count >= 1 && new_loop_count <= 99) {
                     // 更新配置文件和全局变量
@@ -830,9 +855,7 @@ INT_PTR CALLBACK PomodoroLoopDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPAR
                     g_hwndPomodoroLoopDialog = NULL;
                 } else {
                     ShowErrorDialog(hwndDlg);
-                    // 清空输入框
                     SetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, L"");
-                    // 设置焦点回到输入框
                     SetFocus(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT));
                 }
                 return TRUE;
