@@ -131,24 +131,34 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                         
                         if (complete_pomodoro_cycles >= POMODORO_LOOP_COUNT) {
                             // 已完成所有循环次数，结束番茄钟
+                            // 重置所有计时参数
+                            countdown_elapsed_time = 0;
+                            countdown_message_shown = FALSE;
+                            CLOCK_TOTAL_TIME = 0;
+                            
+                            // 完成所有循环后停止计时
                             complete_pomodoro_cycles = 0;
                             current_pomodoro_phase = POMODORO_PHASE_IDLE;
                             
-                            // 显示完成所有循环的提示消息
+                            // 显示完成提示并停止计时器
                             ShowLocalizedNotification(hwnd, L"所有番茄钟循环完成！", L"All Pomodoro cycles completed!");
+                            KillTimer(hwnd, 1);
                         } else {
-                            // 还有剩余循环，开始新的番茄钟工作周期
-                            pomodoro_cycle_counter = 0;
-                            
-                            // 设置下一个周期为工作时间
+                            // 准备新工作周期参数
                             CLOCK_TOTAL_TIME = POMODORO_WORK_TIME;
+                            countdown_elapsed_time = 0;
+                            countdown_message_shown = FALSE;
+                            
+                            // 先设置阶段再更新显示
                             current_pomodoro_phase = POMODORO_PHASE_WORK;
                             
-                            // 显示超时消息
+                            // 更新显示后发送通知
+                            InvalidateRect(hwnd, NULL, TRUE);
                             ShowLocalizedNotification(hwnd, L"休息结束！重新开始工作！", L"Break over! Time to focus again.");
+                            
+                            // 重置周期计数器
+                            pomodoro_cycle_counter = 0;
                         }
-                        
-                        InvalidateRect(hwnd, NULL, TRUE);
                     } else {
                         // 显示超时消息
                         ShowLocalizedNotification(hwnd, L"时间到！", L"Time's up!");
