@@ -547,6 +547,9 @@ void ShowContextMenu(HWND hwnd) {
               timeBuffer);
     AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_LBREAK, menuText);
 
+    // 添加分隔线
+    AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
+
     // 添加循环次数选项
     _snwprintf(menuText, sizeof(menuText)/sizeof(wchar_t),
               GetLocalizedString(L"循环次数: %d", L"Loop Count: %d"),
