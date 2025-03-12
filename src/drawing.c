@@ -49,18 +49,61 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
     SetStretchBltMode(memDC, HALFTONE);
     SetBrushOrgEx(memDC, 0, 0, NULL);
 
-    int remaining_time = CLOCK_TOTAL_TIME - elapsed_time;
-    if (elapsed_time >= CLOCK_TOTAL_TIME) {
-        if (strcmp(CLOCK_TIMEOUT_TEXT, "0") == 0) {
-            time_text[0] = '\0';
-        } else if (strlen(CLOCK_TIMEOUT_TEXT) > 0) {
-            strncpy(time_text, CLOCK_TIMEOUT_TEXT, sizeof(time_text) - 1);
-            time_text[sizeof(time_text) - 1] = '\0';
+    // 根据不同模式生成显示文本
+    if (CLOCK_SHOW_CURRENT_TIME) {
+        time_t now = time(NULL);
+        struct tm *tm_info = localtime(&now);
+        int hour = tm_info->tm_hour;
+        
+        if (!CLOCK_USE_24HOUR) {
+            if (hour == 0) {
+                hour = 12;
+            } else if (hour > 12) {
+                hour -= 12;
+            }
+        }
+
+        if (CLOCK_SHOW_SECONDS) {
+            sprintf(time_text, "%d:%02d:%02d", 
+                    hour, tm_info->tm_min, tm_info->tm_sec);
         } else {
-            time_text[0] = '\0';
+            sprintf(time_text, "%d:%02d", 
+                    hour, tm_info->tm_min);
+        }
+    } else if (CLOCK_COUNT_UP) {
+        // 正计时模式
+        int hours = countup_elapsed_time / 3600;
+        int minutes = (countup_elapsed_time % 3600) / 60;
+        int seconds = countup_elapsed_time % 60;
+
+        if (hours > 0) {
+            sprintf(time_text, "%d:%02d:%02d", hours, minutes, seconds);
+        } else {
+            sprintf(time_text, "%d:%02d", minutes, seconds);
         }
     } else {
-        FormatTime(remaining_time, time_text);
+        // 倒计时模式
+        int remaining_time = CLOCK_TOTAL_TIME - countdown_elapsed_time;
+        if (remaining_time <= 0) {
+            if (strcmp(CLOCK_TIMEOUT_TEXT, "0") == 0) {
+                time_text[0] = '\0';
+            } else if (strlen(CLOCK_TIMEOUT_TEXT) > 0) {
+                strncpy(time_text, CLOCK_TIMEOUT_TEXT, sizeof(time_text) - 1);
+                time_text[sizeof(time_text) - 1] = '\0';
+            } else {
+                time_text[0] = '\0';
+            }
+        } else {
+            int hours = remaining_time / 3600;
+            int minutes = (remaining_time % 3600) / 60;
+            int seconds = remaining_time % 60;
+
+            if (hours > 0) {
+                sprintf(time_text, "%d:%02d:%02d", hours, minutes, seconds);
+            } else {
+                sprintf(time_text, "%d:%02d", minutes, seconds);
+            }
+        }
     }
 
     const char* fontToUse = IS_PREVIEWING ? PREVIEW_FONT_NAME : FONT_FILE_NAME;

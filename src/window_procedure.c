@@ -37,6 +37,7 @@
 #include "../include/timer_events.h"
 #include "../include/tray_events.h"
 #include "../include/dialog_procedure.h"
+#include "../include/pomodoro.h"
 
 // 从main.c引入的变量
 extern char inputText[256];
@@ -886,6 +887,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         CLOCK_COUNT_UP = FALSE;
                         KillTimer(hwnd, 1);   
                         elapsed_time = 0;
+                        countdown_elapsed_time = 0;
+                        CLOCK_TOTAL_TIME = 0; // 确保总时间被重置
                         CLOCK_LAST_TIME_UPDATE = time(NULL);
                         SetTimer(hwnd, 1, 1000, NULL);   
                     } else {
@@ -1043,12 +1046,15 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         elapsed_time = 0;
                         message_shown = FALSE;
                         countdown_message_shown = FALSE;
-                        
+                        CLOCK_TOTAL_TIME = 0; // 重置总时间，确保番茄钟状态完全清除
                         countup_message_shown = FALSE;
                         
+                        // 设置番茄钟状态为空闲
+                        extern POMODORO_PHASE current_pomodoro_phase;
+                        extern void InitializePomodoro(void);
+                        current_pomodoro_phase = POMODORO_PHASE_IDLE;
                         
                         ShowWindow(hwnd, SW_SHOW);
-                        
                         
                         KillTimer(hwnd, 1);
                         SetTimer(hwnd, 1, 1000, NULL);

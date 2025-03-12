@@ -92,7 +92,6 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                               (pomodoro_cycle_counter >= 3 && CLOCK_TOTAL_TIME > 0)) {
                         // 长休息结束，一轮番茄钟完成，完全结束番茄钟计时
                         // 或者当工作时间和长休息时间相同时，通过计数器识别长休息结束
-                        CLOCK_TOTAL_TIME = 0;
                         countdown_elapsed_time = 0;
                         countdown_message_shown = FALSE;
                         pomodoro_work_cycles = 0;
@@ -102,12 +101,18 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                         // 停止计时器
                         KillTimer(hwnd, 1);
                         
-                        // 不再切换到显示当前时间模式
+                        // 不再自动切换到显示当前时间模式，但确保计时器状态正确
                         // CLOCK_SHOW_CURRENT_TIME = TRUE;
                         // CLOCK_LAST_TIME_UPDATE = 0;
                         
-                        // 重新启动定时器
+                        // 注意：不要将CLOCK_TOTAL_TIME设为0
+                        // 保持CLOCK_TOTAL_TIME为当前值，这样切换模式时能正确显示内容
+                        
+                        // 重新启动定时器，保持在番茄钟完成状态
                         SetTimer(hwnd, 1, 1000, NULL);
+                        
+                        // 确保窗口可见
+                        ShowWindow(hwnd, SW_SHOW);
                         
                         InvalidateRect(hwnd, NULL, TRUE);
                         // 显示超时消息
