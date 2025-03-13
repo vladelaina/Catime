@@ -572,6 +572,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         
                         // 强制重绘窗口
                         InvalidateRect(hwnd, NULL, TRUE);
+                        
+                        // 确保重置后窗口置顶
+                        HandleWindowReset(hwnd);
                     }
                     break;
                 }
@@ -633,6 +636,16 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     SetWindowTopmost(hwnd, newTopmost);
                     WriteConfigTopmost(newTopmost ? "TRUE" : "FALSE");
                     break;
+                }
+                case CLOCK_IDM_COUNTDOWN_RESET: {
+                    // 现有的重置代码
+                    // ...
+                    
+                    // 添加窗口置顶重置
+                    HandleWindowReset(hwnd);
+                    return 0;
+                    
+                    // ... 其他命令处理 ...
                 }
                 default: {
                     int cmd = LOWORD(wp);
@@ -1172,6 +1185,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     KillTimer(hwnd, 1);
                     SetTimer(hwnd, 1, 1000, NULL);
                     InvalidateRect(hwnd, NULL, TRUE);
+                    
+                    // 确保重置后窗口置顶
+                    HandleWindowReset(hwnd);
                     break;
                 }
                 case CLOCK_IDC_SET_COUNTDOWN_TIME: {
@@ -1494,6 +1510,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         SetTimer(hwnd, 1, 1000, NULL);
                         // 强制重绘窗口
                         InvalidateRect(hwnd, NULL, TRUE);
+                        
+                        // 确保重置后窗口置顶
+                        HandleWindowReset(hwnd);
                     }
                     break;
             }

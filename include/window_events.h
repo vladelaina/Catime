@@ -25,6 +25,12 @@ BOOL HandleWindowCreate(HWND hwnd);
 void HandleWindowDestroy(HWND hwnd);
 
 /**
+ * @brief 处理窗口重置事件
+ * @param hwnd 窗口句柄
+ */
+void HandleWindowReset(HWND hwnd);
+
+/**
  * @brief 处理窗口大小调整事件
  * @param hwnd 窗口句柄
  * @param delta 鼠标滚轮增量

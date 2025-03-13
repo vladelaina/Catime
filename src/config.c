@@ -613,6 +613,7 @@ void WriteConfig(const char* config_path) {
     fprintf(file, "WINDOW_SCALE=%.2f\n", CLOCK_WINDOW_SCALE);
     fprintf(file, "CLOCK_USE_24HOUR=%s\n", CLOCK_USE_24HOUR ? "TRUE" : "FALSE");
     fprintf(file, "CLOCK_SHOW_SECONDS=%s\n", CLOCK_SHOW_SECONDS ? "TRUE" : "FALSE");
+    fprintf(file, "WINDOW_TOPMOST=%s\n", CLOCK_WINDOW_TOPMOST ? "TRUE" : "FALSE");
     
     fprintf(file, "CLOCK_TIME_OPTIONS=");
     for (int i = 0; i < time_options_count; i++) {

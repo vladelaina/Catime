@@ -30,6 +30,9 @@ BOOL HandleWindowCreate(HWND hwnd) {
     // 设置点击穿透
     SetClickThrough(hwnd, !CLOCK_EDIT_MODE);
     
+    // 确保窗口处于置顶状态
+    SetWindowTopmost(hwnd, CLOCK_WINDOW_TOPMOST);
+    
     return TRUE;
 }
 
@@ -42,6 +45,18 @@ void HandleWindowDestroy(HWND hwnd) {
     KillTimer(hwnd, 1);
     RemoveTrayIcon();
     PostQuitMessage(0);
+}
+
+/**
+ * @brief 处理窗口重置事件
+ * @param hwnd 窗口句柄
+ */
+void HandleWindowReset(HWND hwnd) {
+    // 无条件应用配置中的置顶设置
+    // 不管CLOCK_WINDOW_TOPMOST当前值是什么，都强制设为TRUE并应用
+    CLOCK_WINDOW_TOPMOST = TRUE;
+    SetWindowTopmost(hwnd, TRUE);
+    WriteConfigTopmost("TRUE");
 }
 
 // 该函数已移至drag_scale.c
