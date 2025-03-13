@@ -437,62 +437,27 @@ void ShowColorMenu(HWND hwnd) {
 void ShowContextMenu(HWND hwnd) {
     HMENU hMenu = CreatePopupMenu();
     
-    // 计时管理菜单 - 移动到最上方
-    HMENU hTimerManagementMenu = CreatePopupMenu();
-    
-    // 检查当前是否有计时进行中
-    BOOL isTimerRunning = !CLOCK_SHOW_CURRENT_TIME && 
-                         ((!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0) || 
-                          (CLOCK_COUNT_UP && TRUE));
-    
-    // 添加暂停/继续选项
-    if (!CLOCK_IS_PAUSED && isTimerRunning) {
-        // 当前有计时且未暂停，显示"暂停"选项
-        AppendMenuW(hTimerManagementMenu, MF_STRING, CLOCK_IDM_TIMER_PAUSE_RESUME,
-                   GetLocalizedString(L"暂停", L"Pause"));
-    } else if (CLOCK_IS_PAUSED && isTimerRunning) {
-        // 当前有计时且已暂停，显示"继续"选项
-        AppendMenuW(hTimerManagementMenu, MF_STRING, CLOCK_IDM_TIMER_PAUSE_RESUME,
-                   GetLocalizedString(L"继续", L"Resume"));
-    } else {
-        // 没有计时进行中，显示灰色的"暂停"选项
-        AppendMenuW(hTimerManagementMenu, MF_STRING | MF_GRAYED, CLOCK_IDM_TIMER_PAUSE_RESUME,
-                   GetLocalizedString(L"暂停", L"Pause"));
-    }
-    
-    // 添加重新开始选项
-    if (isTimerRunning) {
-        // 当前有计时进行中，启用"重新开始"选项
-        AppendMenuW(hTimerManagementMenu, MF_STRING, CLOCK_IDM_TIMER_RESTART,
-                   GetLocalizedString(L"重新开始", L"Restart"));
-    } else {
-        // 没有计时进行中，显示灰色的"重新开始"选项
-        AppendMenuW(hTimerManagementMenu, MF_STRING | MF_GRAYED, CLOCK_IDM_TIMER_RESTART,
-                   GetLocalizedString(L"重新开始", L"Restart"));
-    }
-    
-    // 将计时管理菜单添加到主菜单
-    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimerManagementMenu,
-               GetLocalizedString(L"计时管理", L"Timer Management"));
-    
-    // 添加分隔线
-    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
-    
     // 时间显示菜单
     HMENU hTimeMenu = CreatePopupMenu();
-    AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
+    AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_SHOW_CURRENT_TIME,
                GetLocalizedString(L"显示当前时间", L"Show Current Time"));
-    AppendMenuW(hTimeMenu, MF_SEPARATOR, 0, NULL);
+    
     AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_USE_24HOUR ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_24HOUR_FORMAT,
                GetLocalizedString(L"24小时制", L"24-Hour Format"));
+    
     AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_SHOW_SECONDS ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_SHOW_SECONDS,
                GetLocalizedString(L"显示秒数", L"Show Seconds"));
     
-    // 将时间显示菜单添加到主菜单
-    AppendMenuW(hMenu, MF_POPUP | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED), 
+    // 添加置顶选项
+    AppendMenuW(hTimeMenu, MF_SEPARATOR, 0, NULL);
+    AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_WINDOW_TOPMOST ? MF_CHECKED : MF_UNCHECKED),
+               CLOCK_IDM_TOPMOST,
+               GetLocalizedString(L"置顶", L"Always on Top"));
+    
+    AppendMenuW(hMenu, MF_POPUP,
                (UINT_PTR)hTimeMenu,
                GetLocalizedString(L"时间显示", L"Time Display"));
 
