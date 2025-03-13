@@ -481,7 +481,7 @@ BOOL HandleMouseMove(HWND hwnd) {
 HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
     // 窗口类注册
     WNDCLASS wc = {0};
-    wc.lpfnWndProc = WindowProcedure;  // 注：假设WindowProcedure已在其他地方定义
+    wc.lpfnWndProc = WindowProcedure;
     wc.hInstance = hInstance;
     wc.lpszClassName = "CatimeWindow";
     
@@ -490,9 +490,17 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
         return NULL;
     }
 
+    // 设置扩展样式
+    DWORD exStyle = WS_EX_LAYERED | WS_EX_TOOLWINDOW;
+    
+    // 如果不是置顶模式，添加WS_EX_NOACTIVATE扩展样式
+    if (!CLOCK_WINDOW_TOPMOST) {
+        exStyle |= WS_EX_NOACTIVATE;
+    }
+    
     // 创建窗口
     HWND hwnd = CreateWindowEx(
-        WS_EX_LAYERED | (CLOCK_WINDOW_TOPMOST ? WS_EX_TOPMOST : 0) | WS_EX_TOOLWINDOW,
+        exStyle,
         "CatimeWindow",
         "Catime",
         WS_POPUP,
@@ -525,12 +533,35 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
     ShowWindow(hwnd, nCmdShow);
     UpdateWindow(hwnd);
 
+    // 根据置顶状态设置窗口位置和父窗口
     if (CLOCK_WINDOW_TOPMOST) {
         SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, 
                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
     } else {
-        SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, 
-                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+        // 找到桌面窗口并设置为父窗口
+        HWND hProgman = FindWindow("Progman", NULL);
+        if (hProgman != NULL) {
+            // 尝试寻找真正的桌面窗口
+            HWND hDesktop = hProgman;
+            
+            // 寻找WorkerW窗口(Win10+常见)
+            HWND hWorkerW = FindWindowEx(NULL, NULL, "WorkerW", NULL);
+            while (hWorkerW != NULL) {
+                HWND hView = FindWindowEx(hWorkerW, NULL, "SHELLDLL_DefView", NULL);
+                if (hView != NULL) {
+                    hDesktop = hWorkerW;
+                    break;
+                }
+                hWorkerW = FindWindowEx(NULL, hWorkerW, "WorkerW", NULL);
+            }
+            
+            // 设置为桌面的子窗口
+            SetParent(hwnd, hDesktop);
+        } else {
+            // 如果找不到桌面窗口，设置为Z顺序底部
+            SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, 
+                        SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+        }
     }
 
     return hwnd;
@@ -629,7 +660,60 @@ BOOL OpenFileDialog(HWND hwnd, char* filePath, DWORD maxPath) {
 // 添加设置窗口置顶状态函数
 void SetWindowTopmost(HWND hwnd, BOOL topmost) {
     CLOCK_WINDOW_TOPMOST = topmost;
-    SetWindowPos(hwnd, topmost ? HWND_TOPMOST : HWND_NOTOPMOST,
-                0, 0, 0, 0,
-                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    
+    // 获取当前窗口样式
+    LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+    
+    if (topmost) {
+        // 置顶模式：移除不激活样式（如果存在），添加置顶样式
+        exStyle &= ~WS_EX_NOACTIVATE;
+        
+        // 设置窗口位置为顶层
+        SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    } else {
+        // 非置顶模式：添加不激活样式，防止窗口获得焦点
+        exStyle |= WS_EX_NOACTIVATE;
+        
+        // 设置为桌面的子窗口
+        HWND hProgman = FindWindow("Progman", NULL);
+        HWND hDesktop = NULL;
+        
+        // 尝试找到真正的桌面窗口
+        if (hProgman != NULL) {
+            // 先尝试使用Progman
+            hDesktop = hProgman;
+            
+            // 查找WorkerW窗口（Win10上更常见）
+            HWND hWorkerW = FindWindowEx(NULL, NULL, "WorkerW", NULL);
+            while (hWorkerW != NULL) {
+                HWND hView = FindWindowEx(hWorkerW, NULL, "SHELLDLL_DefView", NULL);
+                if (hView != NULL) {
+                    // 找到了真正的桌面容器
+                    hDesktop = hWorkerW;
+                    break;
+                }
+                hWorkerW = FindWindowEx(NULL, hWorkerW, "WorkerW", NULL);
+            }
+        }
+        
+        if (hDesktop != NULL) {
+            // 将窗口设置为桌面的子窗口，这样可以保持在桌面上
+            SetParent(hwnd, hDesktop);
+        } else {
+            // 如果找不到桌面窗口，至少放到Z顺序底部
+            SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0,
+                        SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+        }
+    }
+    
+    // 应用新的窗口样式
+    SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
+    
+    // 强制更新窗口
+    SetWindowPos(hwnd, NULL, 0, 0, 0, 0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+    
+    // 保存窗口置顶设置
+    WriteConfigTopmost(topmost ? "TRUE" : "FALSE");
 }
