@@ -668,9 +668,16 @@ void SetWindowTopmost(HWND hwnd, BOOL topmost) {
         // 置顶模式：移除不激活样式（如果存在），添加置顶样式
         exStyle &= ~WS_EX_NOACTIVATE;
         
-        // 设置窗口位置为顶层
+        // 如果之前将窗口设为桌面子窗口，现在需要恢复
+        // 首先将窗口设为顶级窗口，清除父窗口关系
+        SetParent(hwnd, NULL);
+        
+        // 重置窗口所有者，确保Z-order正确
+        SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, 0);
+        
+        // 设置窗口位置为顶层，并强制更新窗口
         SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
-                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED);
     } else {
         // 非置顶模式：添加不激活样式，防止窗口获得焦点
         exStyle |= WS_EX_NOACTIVATE;
