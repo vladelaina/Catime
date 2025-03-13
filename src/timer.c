@@ -149,74 +149,32 @@ void FormatTime(int remaining_time, char* time_text) {
 int ParseInput(const char* input, int* total_seconds) {
     if (!isValidInput(input)) return 0;
 
-    int hours = 0, minutes = 0, seconds = 0;
+    int total = 0;
     char input_copy[256];
     strncpy(input_copy, input, sizeof(input_copy)-1);
     input_copy[sizeof(input_copy)-1] = '\0';
 
-    char *tokens[3] = {0};
-    int token_count = 0;
-
     char *token = strtok(input_copy, " ");
-    while (token && token_count < 3) {
-        tokens[token_count++] = token;
+    while (token) {
+        char unit = tolower((unsigned char)token[strlen(token) - 1]);
+        if (unit == 'h' || unit == 'm' || unit == 's') {
+            token[strlen(token) - 1] = '\0';   
+            int value = atoi(token);
+            switch (unit) {
+                case 'h': total += value * 3600; break;
+                case 'm': total += value * 60; break;
+                case 's': total += value; break;
+            }
+        } else {
+            total += atoi(token) * 60; // 默认单位为分钟
+        }
         token = strtok(NULL, " ");
     }
 
-    if (token_count == 1) {
-        char unit = tolower((unsigned char)tokens[0][strlen(tokens[0]) - 1]);
-        if (unit == 'h' || unit == 'm' || unit == 's') {
-            tokens[0][strlen(tokens[0]) - 1] = '\0';   
-            int value = atoi(tokens[0]);
-            switch (unit) {
-                case 'h': hours = value; break;
-                case 'm': minutes = value; break;
-                case 's': seconds = value; break;
-            }
-        } else {
-            minutes = atoi(tokens[0]);
-        }
-    } else if (token_count == 2) {
-        char unit = tolower((unsigned char)tokens[1][strlen(tokens[1]) - 1]);
-        if (unit == 'h' || unit == 'm' || unit == 's') {
-            tokens[1][strlen(tokens[1]) - 1] = '\0';   
-            int value1 = atoi(tokens[0]);
-            int value2 = atoi(tokens[1]);
-            switch (unit) {
-                case 'h': 
-                    minutes = value1;
-                    hours = value2;
-                    break;
-                case 'm': 
-                    hours = value1;
-                    minutes = value2;
-                    break;
-                case 's':
-                    minutes = value1;
-                    seconds = value2;
-                    break;
-            }
-        } else {
-            minutes = atoi(tokens[0]);
-            seconds = atoi(tokens[1]);
-        }
-    } else if (token_count == 3) {
-        hours = atoi(tokens[0]);
-        minutes = atoi(tokens[1]);
-        seconds = atoi(tokens[2]);
-    }
-
-    *total_seconds = hours * 3600 + minutes * 60 + seconds;
+    *total_seconds = total;
     if (*total_seconds <= 0) return 0;
 
-    if (hours < 0 || hours > 99 ||     
-        minutes < 0 || minutes > 59 ||  
-        seconds < 0 || seconds > 59) {  
-        return 0;
-    }
-
-    if (hours > INT_MAX/3600 || 
-        (*total_seconds) > INT_MAX) {
+    if (*total_seconds > INT_MAX) {
         return 0;
     }
 
@@ -239,14 +197,13 @@ int isValidInput(const char* input) {
     }
 
     int len = strlen(input);
-    int spaceCount = 0;
     int digitCount = 0;
 
     for (int i = 0; i < len; i++) {
         if (isdigit(input[i])) {
             digitCount++;
         } else if (input[i] == ' ') {
-            spaceCount++;
+            // 允许任意数量的空格
         } else if (i == len - 1 && (input[i] == 'h' || input[i] == 'm' || input[i] == 's')) {
             // 允许最后一个字符是h、m或s
         } else {
@@ -254,7 +211,7 @@ int isValidInput(const char* input) {
         }
     }
 
-    if (digitCount == 0 || spaceCount > 2) {
+    if (digitCount == 0) {
         return 0;
     }
 
