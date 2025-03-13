@@ -492,7 +492,7 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
 
     // 创建窗口
     HWND hwnd = CreateWindowEx(
-        WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
+        WS_EX_LAYERED | (CLOCK_WINDOW_TOPMOST ? WS_EX_TOPMOST : 0) | WS_EX_TOOLWINDOW,
         "CatimeWindow",
         "Catime",
         WS_POPUP,
@@ -527,6 +527,9 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
 
     if (CLOCK_WINDOW_TOPMOST) {
         SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, 
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    } else {
+        SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, 
                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
     }
 
