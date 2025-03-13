@@ -32,6 +32,7 @@ int CLOCK_WINDOW_POS_Y = 100;
 BOOL CLOCK_EDIT_MODE = FALSE;
 BOOL CLOCK_IS_DRAGGING = FALSE;
 POINT CLOCK_LAST_MOUSE_POS = {0, 0};
+BOOL CLOCK_WINDOW_TOPMOST = TRUE;  // 默认置顶
 
 // 文本区域变量
 RECT CLOCK_TEXT_RECT = {0, 0, 0, 0};
@@ -524,6 +525,11 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
     ShowWindow(hwnd, nCmdShow);
     UpdateWindow(hwnd);
 
+    if (CLOCK_WINDOW_TOPMOST) {
+        SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, 
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    }
+
     return hwnd;
 }
 
@@ -615,4 +621,12 @@ BOOL OpenFileDialog(HWND hwnd, char* filePath, DWORD maxPath) {
     ofn.lpstrDefExt = "";
     
     return GetOpenFileName(&ofn);
+}
+
+// 添加设置窗口置顶状态函数
+void SetWindowTopmost(HWND hwnd, BOOL topmost) {
+    CLOCK_WINDOW_TOPMOST = topmost;
+    SetWindowPos(hwnd, topmost ? HWND_TOPMOST : HWND_NOTOPMOST,
+                0, 0, 0, 0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
 }

@@ -82,6 +82,7 @@ void CreateDefaultConfig(const char* config_path) {
         fprintf(file, "CLOCK_TIMEOUT_ACTION=LOCK\n");
         fprintf(file, "CLOCK_USE_24HOUR=FALSE\n");
         fprintf(file, "CLOCK_SHOW_SECONDS=FALSE\n");
+        fprintf(file, "WINDOW_TOPMOST=TRUE\n");
 
         
         fprintf(file, "COLOR_OPTIONS=#FFFFFF,#F9DB91,#F4CAE0,#FFB6C1,#A8E7DF,#A3CFB3,#92CBFC,#BDA5E7,#9370DB,#8C92CF,#72A9A5,#EB99A7,#EB96BD,#FFAE8B,#FF7F50,#CA6174\n");
@@ -234,6 +235,9 @@ void ReadConfig() {
         }
         else if (strncmp(line, "CLOCK_SHOW_SECONDS=", 19) == 0) {
             CLOCK_SHOW_SECONDS = (strncmp(line + 19, "TRUE", 4) == 0);
+        }
+        else if (strncmp(line, "WINDOW_TOPMOST=", 15) == 0) {
+            CLOCK_WINDOW_TOPMOST = (strcmp(line + 15, "TRUE") == 0);
         }
     }
 
@@ -789,4 +793,45 @@ void WriteConfigPomodoroLoopCount(int loop_count) {
     
     // 更新全局变量
     POMODORO_LOOP_COUNT = loop_count;
+}
+
+// 添加写入置顶状态函数
+void WriteConfigTopmost(const char* topmost) {
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    
+    FILE* file = fopen(config_path, "r");
+    if (!file) return;
+    
+    char temp_path[MAX_PATH];
+    strcpy(temp_path, config_path);
+    strcat(temp_path, ".tmp");
+    
+    FILE* temp = fopen(temp_path, "w");
+    if (!temp) {
+        fclose(file);
+        return;
+    }
+    
+    char line[256];
+    BOOL found = FALSE;
+    
+    while (fgets(line, sizeof(line), file)) {
+        if (strncmp(line, "WINDOW_TOPMOST=", 15) == 0) {
+            fprintf(temp, "WINDOW_TOPMOST=%s\n", topmost);
+            found = TRUE;
+        } else {
+            fputs(line, temp);
+        }
+    }
+    
+    if (!found) {
+        fprintf(temp, "WINDOW_TOPMOST=%s\n", topmost);
+    }
+    
+    fclose(file);
+    fclose(temp);
+    
+    remove(config_path);
+    rename(temp_path, config_path);
 }

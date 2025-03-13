@@ -294,3 +294,6 @@
 #define IDD_ERROR_DIALOG    5000
 #define IDC_ERROR_ICON      5001  
 #define IDC_ERROR_TEXT      5002
+
+// 在预设管理菜单项部分添加
+#define CLOCK_IDM_TOPMOST 187  // 置顶选项ID

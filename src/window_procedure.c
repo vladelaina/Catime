@@ -628,6 +628,12 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDM_ABOUT:
                     ShowAboutDialog(hwnd);
                     return 0;
+                case CLOCK_IDM_TOPMOST: {
+                    BOOL newTopmost = !CLOCK_WINDOW_TOPMOST;
+                    SetWindowTopmost(hwnd, newTopmost);
+                    WriteConfigTopmost(newTopmost ? "TRUE" : "FALSE");
+                    break;
+                }
                 default: {
                     int cmd = LOWORD(wp);
                     if (cmd >= 102 && cmd < 102 + time_options_count) {

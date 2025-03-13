@@ -26,6 +26,7 @@ extern int CLOCK_WINDOW_POS_Y;         ///< 窗口Y坐标
 extern BOOL CLOCK_EDIT_MODE;           ///< 是否处于编辑模式
 extern BOOL CLOCK_IS_DRAGGING;         ///< 是否正在拖拽窗口
 extern POINT CLOCK_LAST_MOUSE_POS;     ///< 上次鼠标位置
+extern BOOL CLOCK_WINDOW_TOPMOST;       ///< 窗口是否置顶
 /// @}
 
 /// @name 文本区域变量
@@ -132,13 +133,6 @@ BOOL HandleMouseMove(HWND hwnd);
 HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow);
 
 /**
- * @brief 打开文件对话框
- * @param hwnd 父窗口句柄
- * @param filePath 用于存储选择的文件路径
- * @param maxPath 文件路径缓冲区大小
- * @return BOOL 是否成功选择了文件
- */
-/**
  * @brief 初始化应用程序
  * @param hInstance 应用程序实例句柄
  * @return BOOL 初始化是否成功
@@ -156,5 +150,15 @@ BOOL InitializeApplication(HINSTANCE hInstance);
  * @return BOOL 是否成功选择文件
  */
 BOOL OpenFileDialog(HWND hwnd, char* filePath, DWORD maxPath);
+
+/**
+ * @brief 设置窗口置顶状态
+ * @param hwnd 窗口句柄
+ * @param topmost 是否置顶
+ * 
+ * 控制窗口是否始终显示在其他窗口之上。
+ * 同时更新全局状态变量并保存配置。
+ */
+void SetWindowTopmost(HWND hwnd, BOOL topmost);
 
 #endif // WINDOW_H

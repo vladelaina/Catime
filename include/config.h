@@ -124,6 +124,12 @@ void WriteConfigPomodoroSettings(int work_time, int short_break, int long_break)
  */
 void WriteConfigPomodoroLoopCount(int loop_count);
 
+/**
+ * @brief 写入窗口置顶状态到配置文件
+ * @param topmost 置顶状态字符串("TRUE"/"FALSE")
+ */
+void WriteConfigTopmost(const char* topmost);
+
 /// @}
 
 #endif // CONFIG_H

@@ -36,6 +36,7 @@ extern int CLOCK_TOTAL_TIME;
 extern int countdown_elapsed_time;
 extern char CLOCK_TIMEOUT_FILE_PATH[MAX_PATH];
 extern char CLOCK_TIMEOUT_TEXT[50];
+extern BOOL CLOCK_WINDOW_TOPMOST;       ///< 窗口是否置顶
 
 // 添加番茄钟相关变量声明
 extern int POMODORO_WORK_TIME;      ///< 工作时间(秒)
@@ -253,8 +254,12 @@ void ShowColorMenu(HWND hwnd) {
 
     // 将预设管理菜单添加到主菜单
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeOptionsMenu,
-                GetLocalizedString(L"预设管理", L"Preset Manager"));
+                GetLocalizedString(L"预设管理", L"Preset Management"));
     
+    AppendMenuW(hTimeOptionsMenu, MF_STRING | (CLOCK_WINDOW_TOPMOST ? MF_CHECKED : MF_UNCHECKED),
+                CLOCK_IDM_TOPMOST,
+                GetLocalizedString(L"置顶", L"Always on Top"));
+
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
     // 字体菜单
