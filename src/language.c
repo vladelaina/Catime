@@ -89,7 +89,8 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Start") == 0) return L"开始";
             if (wcscmp(english, L"Pause") == 0) return L"暂停";
             if (wcscmp(english, L"Resume") == 0) return L"继续";
-            if (wcscmp(english, L"Restart") == 0) return L"重新开始";
+            if (wcscmp(english, L"Start Over") == 0) return L"重新开始";
+            if (wcscmp(english, L"Restart") == 0) return L"重启";
             return chinese;
             
         case APP_LANG_CHINESE_TRAD:
@@ -105,7 +106,8 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Start") == 0) return L"開始";
             if (wcscmp(english, L"Pause") == 0) return L"暫停";
             if (wcscmp(english, L"Resume") == 0) return L"繼續";
-            if (wcscmp(english, L"Restart") == 0) return L"重新開始";
+            if (wcscmp(english, L"Start Over") == 0) return L"重新開始";
+            if (wcscmp(english, L"Restart") == 0) return L"重啟";
             return chinese;
 
         case APP_LANG_SPANISH:

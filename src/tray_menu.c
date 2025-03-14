@@ -470,7 +470,7 @@ void ShowContextMenu(HWND hwnd) {
     
     AppendMenuW(hTimerManageMenu, MF_STRING | (timerRunning ? MF_ENABLED : MF_GRAYED),
                CLOCK_IDM_TIMER_RESTART, 
-               GetLocalizedString(L"重新开始", L"Restart"));
+               GetLocalizedString(L"重新开始", L"Start Over"));
     
     // 将计时管理菜单添加到主菜单 - 这里总是启用父菜单项
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimerManageMenu,
