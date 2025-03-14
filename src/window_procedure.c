@@ -539,18 +539,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     
                     break;
                 }
-                case CLOCK_IDM_UPDATE_GITHUB: {
-                    ShellExecuteA(NULL, "open", UPDATE_URL_GITHUB, NULL, NULL, SW_SHOWNORMAL);
-                    break;
-                }
-                case CLOCK_IDM_UPDATE_123PAN: {
-                    ShellExecuteA(NULL, "open", UPDATE_URL_123PAN, NULL, NULL, SW_SHOWNORMAL);   
-                    break;
-                }
-                case CLOCK_IDM_UPDATE_LANZOU: {
-                    ShellExecuteA(NULL, "open", UPDATE_URL_LANZOU, NULL, NULL, SW_SHOWNORMAL);
-                    break;
-                }
                 case CLOCK_IDM_TIMER_PAUSE_RESUME: {
                     PauseResumeTimer(hwnd);
                     break;

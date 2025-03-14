@@ -1,8 +1,5 @@
 /* 版本与更新信息 */
 #define CATIME_VERSION "1.0.5-alpha"
-#define UPDATE_URL_GITHUB    "https://github.com/vladelaina/Catime/releases"
-#define UPDATE_URL_123PAN    "https://www.123684.com/s/ruESjv-2CZUA"
-#define UPDATE_URL_LANZOU    "https://wwrx.lanzoup.com/b00hqiiskj"
 
 /* 鸣谢链接  猫屋敷梨梨Official*/
 #define CREDIT_LINK_URL       "https://space.bilibili.com/26087398"
@@ -152,9 +149,6 @@
 #define CLOCK_IDM_RECENT_FILE_3 128
 #define CLOCK_IDM_BROWSE_FILE 129
 #define CLOCK_IDM_ABOUT 130
-#define CLOCK_IDM_UPDATE_GITHUB 134
-#define CLOCK_IDM_UPDATE_123PAN 135
-#define CLOCK_IDM_UPDATE_LANZOU 136
 
 /* 番茄钟功能 */
 #define CLOCK_IDM_POMODORO 500

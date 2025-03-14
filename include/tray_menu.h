@@ -88,13 +88,6 @@
 #define CLOCK_IDM_LANG_KOREAN 170        ///< 韩语选项
 /// @}
 
-/// @name 更新选项菜单项
-/// @{
-#define CLOCK_IDM_UPDATE_GITHUB 134      ///< GitHub更新选项
-#define CLOCK_IDM_UPDATE_123PAN 135      ///< 123云盘更新选项
-#define CLOCK_IDM_UPDATE_LANZOU 136      ///< 蓝奏云更新选项
-/// @}
-
 /**
  * @brief 显示托盘右键菜单
  * @param hwnd 窗口句柄

@@ -349,17 +349,6 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_ABOUT, GetLocalizedString(L"关于", L"About"));
     AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);
 
-    // 更新菜单
-    HMENU hUpdateMenu = CreatePopupMenu();
-    AppendMenuW(hUpdateMenu, MF_STRING, CLOCK_IDM_UPDATE_GITHUB, L"GitHub");
-    AppendMenuW(hUpdateMenu, MF_STRING, CLOCK_IDM_UPDATE_123PAN,
-                GetLocalizedString(L"123云盘", L"123Pan"));
-    AppendMenuW(hUpdateMenu, MF_STRING, CLOCK_IDM_UPDATE_LANZOU,
-                GetLocalizedString(L"蓝奏云 (密码: 1234)", L"LanzouCloud (pwd: 1234)"));
-
-    AppendMenuW(hAboutMenu, MF_POPUP, (UINT_PTR)hUpdateMenu,
-                GetLocalizedString(L"检查更新", L"Check for Updates"));
-
     // 语言选择菜单
     HMENU hLangMenu = CreatePopupMenu();
     AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_CHINESE_SIMP ? MF_CHECKED : MF_UNCHECKED),
