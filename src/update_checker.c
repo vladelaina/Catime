@@ -344,7 +344,7 @@ BOOL DownloadUpdateToDesktop(const char* url, const char* fileName, HWND hwnd) {
     
     // 创建一个命令行命令，包含删除配置文件的步骤
     char cmdLine[1024];
-    sprintf(cmdLine, "cmd.exe /c timeout /t 2 > nul && "
+    sprintf(cmdLine, "cmd.exe /c timeout /t 3 > nul && "
            "del /f /q \"%%LOCALAPPDATA%%\\Catime\\config.txt\" > nul 2>&1 && "
            "move /y \"%s\" \"%s\" && "
            "start \"\" \"%s\"", 
