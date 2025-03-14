@@ -219,6 +219,41 @@ int isValidInput(const char* input) {
 }
 
 /**
+ * @brief 重置计时器
+ * 
+ * 重置计时器状态，包括暂停标志、已计时间等
+ */
+void ResetTimer(void) {
+    // 重置计时状态
+    if (CLOCK_COUNT_UP) {
+        countup_elapsed_time = 0;
+    } else {
+        countdown_elapsed_time = 0;
+    }
+    
+    // 取消暂停状态
+    CLOCK_IS_PAUSED = FALSE;
+    
+    // 重置消息显示标志
+    countdown_message_shown = FALSE;
+    countup_message_shown = FALSE;
+}
+
+/**
+ * @brief 切换计时器暂停状态
+ * 
+ * 在暂停和继续状态之间切换计时器
+ */
+void TogglePauseTimer(void) {
+    CLOCK_IS_PAUSED = !CLOCK_IS_PAUSED;
+    
+    // 如果暂停，记录当前时间点
+    if (CLOCK_IS_PAUSED) {
+        CLOCK_LAST_TIME_UPDATE = time(NULL);
+    }
+}
+
+/**
  * @brief 将默认启动时间写入配置文件
  * @param seconds 默认启动时间（秒）
  * 

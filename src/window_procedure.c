@@ -521,61 +521,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_TIMER_PAUSE_RESUME: {
-                    // 检查当前是否有计时进行中
-                    if (!CLOCK_SHOW_CURRENT_TIME && 
-                        ((!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0) || 
-                         (CLOCK_COUNT_UP && TRUE))) {
-                        
-                        // 切换暂停/继续状态
-                        CLOCK_IS_PAUSED = !CLOCK_IS_PAUSED;
-                        
-                        if (CLOCK_IS_PAUSED) {
-                            // 如果暂停，停止计时器
-                            KillTimer(hwnd, 1);
-                        } else {
-                            // 如果继续，重新启动计时器
-                            SetTimer(hwnd, 1, 1000, NULL);
-                        }
-                        
-                        // 更新显示
-                        InvalidateRect(hwnd, NULL, TRUE);
-                    }
+                    PauseResumeTimer(hwnd);
                     break;
                 }
                 case CLOCK_IDM_TIMER_RESTART: {
-                    // 检查当前是否有计时进行中
-                    if (!CLOCK_SHOW_CURRENT_TIME && 
-                        ((!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0) || 
-                         (CLOCK_COUNT_UP && TRUE))) {
-                        
-                        // 保持当前计时器类型(倒计时/正计时/番茄钟)，只重置进度
-                        if (!CLOCK_COUNT_UP) {
-                            // 倒计时模式 - 保留CLOCK_TOTAL_TIME，只重置已计时部分
-                            countdown_elapsed_time = 0;
-                        } else {
-                            // 正计时模式 - 从0开始重新计时
-                            countup_elapsed_time = 0;
-                        }
-                        
-                        // 重置通用计时器状态
-                        elapsed_time = 0;
-                        message_shown = FALSE;
-                        countdown_message_shown = FALSE;
-                        countup_message_shown = FALSE;
-                        
-                        // 取消暂停状态
-                        CLOCK_IS_PAUSED = FALSE;
-                        
-                        // 重新开始计时
-                        KillTimer(hwnd, 1);
-                        SetTimer(hwnd, 1, 1000, NULL);
-                        
-                        // 强制重绘窗口
-                        InvalidateRect(hwnd, NULL, TRUE);
-                        
-                        // 确保重置后窗口置顶
-                        HandleWindowReset(hwnd);
-                    }
+                    RestartTimer(hwnd);
                     break;
                 }
                 case CLOCK_IDM_LANG_CHINESE: {

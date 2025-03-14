@@ -23,4 +23,20 @@
  */
 void HandleTrayIconMessage(HWND hwnd, UINT uID, UINT uMouseMsg);
 
+/**
+ * @brief 暂停或继续计时器
+ * @param hwnd 窗口句柄
+ * 
+ * 根据当前状态暂停或继续计时器，并更新相关状态变量
+ */
+void PauseResumeTimer(HWND hwnd);
+
+/**
+ * @brief 重新开始计时器
+ * @param hwnd 窗口句柄
+ * 
+ * 重置计时器到初始状态并继续运行
+ */
+void RestartTimer(HWND hwnd);
+
 #endif // CLOCK_TRAY_EVENTS_H

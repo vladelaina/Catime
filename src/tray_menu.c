@@ -437,6 +437,32 @@ void ShowColorMenu(HWND hwnd) {
 void ShowContextMenu(HWND hwnd) {
     HMENU hMenu = CreatePopupMenu();
     
+    // 计时管理菜单 - 添加在最顶部
+    HMENU hTimerManageMenu = CreatePopupMenu();
+    
+    // 设置暂停/继续选项文本并检查是否应该启用
+    BOOL timerRunning = (!CLOCK_SHOW_CURRENT_TIME && (CLOCK_COUNT_UP || 
+                         (!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0)));
+    
+    // 暂停/继续文本根据当前状态变化
+    const wchar_t* pauseResumeText = CLOCK_IS_PAUSED ? 
+                                     GetLocalizedString(L"继续", L"Resume") : 
+                                     GetLocalizedString(L"暂停", L"Pause");
+    
+    AppendMenuW(hTimerManageMenu, MF_STRING | (timerRunning ? MF_ENABLED : MF_GRAYED),
+               CLOCK_IDM_TIMER_PAUSE_RESUME, pauseResumeText);
+    
+    AppendMenuW(hTimerManageMenu, MF_STRING | (timerRunning ? MF_ENABLED : MF_GRAYED),
+               CLOCK_IDM_TIMER_RESTART, 
+               GetLocalizedString(L"重新开始", L"Restart"));
+    
+    // 将计时管理菜单添加到主菜单
+    AppendMenuW(hMenu, MF_POPUP | (timerRunning ? MF_ENABLED : MF_GRAYED),
+               (UINT_PTR)hTimerManageMenu,
+               GetLocalizedString(L"计时管理", L"Timer Control"));
+    
+    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
+    
     // 时间显示菜单
     HMENU hTimeMenu = CreatePopupMenu();
     AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED),

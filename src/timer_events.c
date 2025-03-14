@@ -78,11 +78,14 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
             return TRUE;
         }
 
+        // 如果计时器暂停，不进行时间更新
+        if (CLOCK_IS_PAUSED) {
+            return TRUE;
+        }
+
         if (CLOCK_COUNT_UP) {
-            if (!CLOCK_IS_PAUSED) {
-                countup_elapsed_time++;
-                InvalidateRect(hwnd, NULL, TRUE);
-            }
+            countup_elapsed_time++;
+            InvalidateRect(hwnd, NULL, TRUE);
         } else {
             if (countdown_elapsed_time < CLOCK_TOTAL_TIME) {
                 countdown_elapsed_time++;
