@@ -30,13 +30,17 @@ extern int POMODORO_LOOP_COUNT;   ///< 番茄钟循环次数（默认1次）
  * - SHUTDOWN: 关闭系统
  * - RESTART: 重启系统 
  * - OPEN_FILE: 打开指定文件
+ * - SHOW_TIME: 显示当前时间
+ * - COUNT_UP: 正计时
  */
 typedef enum {
     TIMEOUT_ACTION_MESSAGE = 0,
     TIMEOUT_ACTION_LOCK = 1,
     TIMEOUT_ACTION_SHUTDOWN = 2,
     TIMEOUT_ACTION_RESTART = 3,
-    TIMEOUT_ACTION_OPEN_FILE = 4   
+    TIMEOUT_ACTION_OPEN_FILE = 4,
+    TIMEOUT_ACTION_SHOW_TIME = 5,
+    TIMEOUT_ACTION_COUNT_UP = 6   
 } TimeoutActionType;
 
 // 计时器状态 --------------------------------------------------

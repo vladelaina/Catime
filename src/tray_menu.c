@@ -65,7 +65,9 @@ typedef enum {
     TIMEOUT_ACTION_LOCK = 1,      ///< 锁定屏幕
     TIMEOUT_ACTION_SHUTDOWN = 2,  ///< 关机
     TIMEOUT_ACTION_RESTART = 3,   ///< 重启
-    TIMEOUT_ACTION_OPEN_FILE = 4  ///< 打开文件
+    TIMEOUT_ACTION_OPEN_FILE = 4,  ///< 打开文件
+    TIMEOUT_ACTION_SHOW_TIME = 5, ///< 显示当前时间
+    TIMEOUT_ACTION_COUNT_UP = 6   ///< 正计时
 } TimeoutActionType;
 
 extern TimeoutActionType CLOCK_TIMEOUT_ACTION;
@@ -191,6 +193,15 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_RESTART ? MF_CHECKED : MF_UNCHECKED), 
                CLOCK_IDM_RESTART, 
                GetLocalizedString(L"重启", L"Restart"));
+
+    // 在超时动作菜单中添加新选项 (在hTimeoutMenu的其他选项之后，在将该菜单添加到主菜单之前)
+    AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SHOW_TIME ? MF_CHECKED : MF_UNCHECKED), 
+               CLOCK_IDM_TIMEOUT_SHOW_TIME, 
+               GetLocalizedString(L"显示当前时间", L"Show Current Time"));
+           
+    AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_COUNT_UP ? MF_CHECKED : MF_UNCHECKED), 
+               CLOCK_IDM_TIMEOUT_COUNT_UP, 
+               GetLocalizedString(L"正计时", L"Count Up"));
 
     // 将超时动作菜单添加到主菜单
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeoutMenu, 

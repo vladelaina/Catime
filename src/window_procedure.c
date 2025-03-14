@@ -1375,6 +1375,16 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         HandleWindowReset(hwnd);
                     }
                     break;
+                case CLOCK_IDM_TIMEOUT_SHOW_TIME: {
+                    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SHOW_TIME;
+                    WriteConfigTimeoutAction("SHOW_TIME");
+                    break;
+                }
+                case CLOCK_IDM_TIMEOUT_COUNT_UP: {
+                    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_COUNT_UP;
+                    WriteConfigTimeoutAction("COUNT_UP");
+                    break;
+                }
             }
             break;
 

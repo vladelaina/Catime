@@ -181,6 +181,10 @@ void ReadConfig() {
                 CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_RESTART;
             } else if (strcmp(action, "OPEN_FILE") == 0) {
                 CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
+            } else if (strcmp(action, "SHOW_TIME") == 0) {
+                CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SHOW_TIME;
+            } else if (strcmp(action, "COUNT_UP") == 0) {
+                CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_COUNT_UP;
             }
         }
         else if (strncmp(line, "CLOCK_EDIT_MODE=", 15) == 0) {

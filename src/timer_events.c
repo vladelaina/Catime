@@ -26,6 +26,10 @@ static int complete_pomodoro_cycles = 0;
 // 从main.c引入的函数声明
 extern void ShowToastNotification(HWND hwnd, const char* message);
 
+// 从main.c引入的变量声明，用于超时动作
+extern int elapsed_time;
+extern BOOL message_shown;
+
 /**
  * @brief 将宽字符串转换为UTF-8编码的普通字符串并显示通知
  * @param hwnd 窗口句柄
@@ -193,6 +197,30 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                                 }
                                 break;
                             }
+                            case TIMEOUT_ACTION_SHOW_TIME:
+                                // 切换到显示当前时间模式
+                                CLOCK_SHOW_CURRENT_TIME = TRUE;
+                                CLOCK_COUNT_UP = FALSE;
+                                KillTimer(hwnd, 1);
+                                SetTimer(hwnd, 1, 1000, NULL);
+                                InvalidateRect(hwnd, NULL, TRUE);
+                                break;
+                            case TIMEOUT_ACTION_COUNT_UP:
+                                // 切换到正计时模式并重置
+                                CLOCK_COUNT_UP = TRUE;
+                                CLOCK_SHOW_CURRENT_TIME = FALSE;
+                                countup_elapsed_time = 0;
+                                elapsed_time = 0;
+                                message_shown = FALSE;
+                                countdown_message_shown = FALSE;
+                                countup_message_shown = FALSE;
+                                
+                                // 设置番茄钟状态为空闲
+                                CLOCK_IS_PAUSED = FALSE;
+                                KillTimer(hwnd, 1);
+                                SetTimer(hwnd, 1, 1000, NULL);
+                                InvalidateRect(hwnd, NULL, TRUE);
+                                break;
                         }
                     }
                 }

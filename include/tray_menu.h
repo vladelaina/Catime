@@ -42,6 +42,8 @@
 #define CLOCK_IDM_RESTART 124            ///< 重启动作
 #define CLOCK_IDM_BROWSE_FILE 129        ///< 浏览文件选项
 #define CLOCK_IDM_RECENT_FILE_1 126      ///< 最近文件起始ID
+#define CLOCK_IDM_TIMEOUT_SHOW_TIME 131  ///< 显示当前时间动作
+#define CLOCK_IDM_TIMEOUT_COUNT_UP 132   ///< 正计时动作
 /// @}
 
 /// @name 时间选项管理菜单项
