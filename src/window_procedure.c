@@ -291,6 +291,37 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     }
                     break;
                 }
+                // 处理便捷时间选项 (102-102+MAX_TIME_OPTIONS)
+                case 102: case 103: case 104: case 105: case 106:
+                case 107: case 108: {
+                    int index = cmd - 102;
+                    if (index >= 0 && index < time_options_count) {
+                        int minutes = time_options[index];
+                        if (minutes > 0) {
+                            KillTimer(hwnd, 1);
+                            CLOCK_TOTAL_TIME = minutes * 60; // 转换为秒
+                            countdown_elapsed_time = 0;
+                            countdown_message_shown = FALSE;
+                            CLOCK_COUNT_UP = FALSE;
+                            CLOCK_SHOW_CURRENT_TIME = FALSE;
+                            
+                            CLOCK_IS_PAUSED = FALSE;      
+                            elapsed_time = 0;             
+                            message_shown = FALSE;        
+                            countup_message_shown = FALSE;
+                            
+                            ShowWindow(hwnd, SW_SHOW);
+                            InvalidateRect(hwnd, NULL, TRUE);
+                            SetTimer(hwnd, 1, 1000, NULL);
+                        }
+                    }
+                    break;
+                }
+                // 处理退出选项
+                case 109: {
+                    ExitProgram(hwnd);
+                    break;
+                }
                 case CLOCK_IDC_MODIFY_TIME_OPTIONS: {
                     while (1) {
                         memset(inputText, 0, sizeof(inputText));
