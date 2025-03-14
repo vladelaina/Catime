@@ -347,7 +347,13 @@ void ShowColorMenu(HWND hwnd) {
 
     // 在这里添加"关于"菜单项
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_ABOUT, GetLocalizedString(L"关于", L"About"));
+
+    // 添加分隔线
     AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);
+
+    // 添加"检查更新"选项
+    AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_CHECK_UPDATE, 
+               GetLocalizedString(L"检查更新", L"Check for Updates"));
 
     // 语言选择菜单
     HMENU hLangMenu = CreatePopupMenu();

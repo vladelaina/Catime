@@ -38,6 +38,7 @@
 #include "../include/tray_events.h"
 #include "../include/dialog_procedure.h"
 #include "../include/pomodoro.h"
+#include "../include/update_checker.h"
 
 // 从main.c引入的变量
 extern char inputText[256];
@@ -1412,6 +1413,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         WritePrivateProfileStringA("Settings", "CLOCK_TIMEOUT_FILE_PATH", 
                                                   filePath, config_path);
                     }
+                    break;
+                }
+                case CLOCK_IDM_CHECK_UPDATE: {
+                    // 调用检查更新函数
+                    CheckForUpdate(hwnd);
                     break;
                 }
             }

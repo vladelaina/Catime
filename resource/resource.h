@@ -149,6 +149,7 @@
 #define CLOCK_IDM_RECENT_FILE_3 128
 #define CLOCK_IDM_BROWSE_FILE 129
 #define CLOCK_IDM_ABOUT 130
+#define CLOCK_IDM_CHECK_UPDATE 133  // 添加检查更新菜单项ID
 
 /* 番茄钟功能 */
 #define CLOCK_IDM_POMODORO 500
