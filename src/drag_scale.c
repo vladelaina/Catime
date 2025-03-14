@@ -11,6 +11,9 @@
 #include "../include/config.h"
 #include "../include/drag_scale.h"
 
+// 添加变量来记录编辑模式前的置顶状态
+BOOL PREVIOUS_TOPMOST_STATE = FALSE;
+
 /**
  * @brief 开始拖动窗口
  * @param hwnd 窗口句柄
@@ -23,6 +26,65 @@ void StartDragWindow(HWND hwnd) {
         CLOCK_IS_DRAGGING = TRUE;
         SetCapture(hwnd);
         GetCursorPos(&CLOCK_LAST_MOUSE_POS);
+    }
+}
+
+/**
+ * @brief 开始编辑模式
+ * @param hwnd 窗口句柄
+ * 
+ * 启用编辑模式前，确保窗口为置顶状态，
+ * 记录原始置顶状态以便退出编辑模式时恢复。
+ */
+void StartEditMode(HWND hwnd) {
+    // 记录当前的置顶状态
+    PREVIOUS_TOPMOST_STATE = CLOCK_WINDOW_TOPMOST;
+    
+    // 如果当前不是置顶状态，先设为置顶
+    if (!CLOCK_WINDOW_TOPMOST) {
+        SetWindowTopmost(hwnd, TRUE);
+    }
+    
+    // 然后启用编辑模式
+    CLOCK_EDIT_MODE = TRUE;
+    WriteConfigEditMode("TRUE");
+    
+    // 应用模糊效果
+    SetBlurBehind(hwnd, TRUE);
+    
+    // 禁用点击穿透
+    SetClickThrough(hwnd, FALSE);
+    
+    // 刷新窗口
+    InvalidateRect(hwnd, NULL, TRUE);
+}
+
+/**
+ * @brief 结束编辑模式
+ * @param hwnd 窗口句柄
+ * 
+ * 退出编辑模式，恢复窗口原始置顶状态，
+ * 清除模糊效果并更新相关设置。
+ */
+void EndEditMode(HWND hwnd) {
+    if (CLOCK_EDIT_MODE) {
+        CLOCK_EDIT_MODE = FALSE;
+        WriteConfigEditMode("FALSE");
+        
+        // 移除模糊效果
+        SetBlurBehind(hwnd, FALSE);
+        SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), 255, LWA_COLORKEY);
+        
+        // 恢复点击穿透
+        SetClickThrough(hwnd, !CLOCK_EDIT_MODE);
+        
+        // 如果之前不是置顶状态，恢复为非置顶
+        if (!PREVIOUS_TOPMOST_STATE) {
+            SetWindowTopmost(hwnd, FALSE);
+        }
+        
+        // 刷新窗口
+        InvalidateRect(hwnd, NULL, TRUE);
     }
 }
 

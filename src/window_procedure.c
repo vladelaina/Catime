@@ -597,147 +597,15 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     
                     // ... 其他命令处理 ...
                 }
-                default: {
-                    int cmd = LOWORD(wp);
-                    if (cmd >= 102 && cmd < 102 + time_options_count) {
-                        if (CLOCK_SHOW_CURRENT_TIME) {
-                            CLOCK_SHOW_CURRENT_TIME = FALSE;
-                            CLOCK_LAST_TIME_UPDATE = 0;
-                        }
-                        
-                        if (CLOCK_COUNT_UP) {
-                            CLOCK_COUNT_UP = FALSE;
-                        }
-                        
-                        ShowWindow(hwnd, SW_SHOW);
-                        CLOCK_EDIT_MODE = FALSE;
-                        WriteConfigEditMode("FALSE");
-                        
-                        int index = cmd - 102;
-                        CLOCK_TOTAL_TIME = time_options[index] * 60;
-                        elapsed_time = 0;
-                        countdown_elapsed_time = 0;
-                        message_shown = 0;
-                        countdown_message_shown = FALSE;
-                        
-                        // 重置暂停状态，确保新的倒计时处于运行状态
-                        CLOCK_IS_PAUSED = FALSE;
-                        
-                        KillTimer(hwnd, 1);
-                        SetTimer(hwnd, 1, 1000, NULL);
-                        
-                        InvalidateRect(hwnd, NULL, TRUE);
-                        return 0;
-                    }
-                    
-                    if (cmd >= 201 && cmd < 201 + COLOR_OPTIONS_COUNT) {
-                        int colorIndex = cmd - 201;
-                        const char* hexColor = COLOR_OPTIONS[colorIndex].hexColor;
-                        WriteConfigColor(hexColor);
-                        goto refresh_window;
-                    }
-
-                    if (cmd == 109) {
-                        ExitProgram(hwnd);
-                        break;
-                    }
-
-                    if (cmd == CLOCK_IDM_SHOW_MESSAGE) {
-                        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
-                        WriteConfigTimeoutAction("MESSAGE");
-                        break;
-                    }
-                    else if (cmd == CLOCK_IDM_LOCK_SCREEN) {
-                        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_LOCK;
-                        WriteConfigTimeoutAction("LOCK");
-                        break;
-                    }
-                    else if (cmd == CLOCK_IDM_SHUTDOWN) {
-                        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SHUTDOWN;
-                        WriteConfigTimeoutAction("SHUTDOWN");
-                        break;
-                    }
-                    else if (cmd == CLOCK_IDM_RESTART) {
-                        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_RESTART;
-                        WriteConfigTimeoutAction("RESTART");
-                        break;
-                    }
-                    else if (cmd == CLOCK_IDM_OPEN_FILE) {
-                        char filePath[MAX_PATH] = "";
-                        if (OpenFileDialog(hwnd, filePath, MAX_PATH)) {
-                            strncpy(CLOCK_TIMEOUT_FILE_PATH, filePath, sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1);
-                            CLOCK_TIMEOUT_FILE_PATH[sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1] = '\0';
-                            CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
-                            WriteConfigTimeoutAction("OPEN_FILE");
-                        }
-                        break;
-                    }
-                    else if (cmd == CLOCK_IDM_BROWSE_FILE) {
-                        char filePath[MAX_PATH] = "";
-                        if (OpenFileDialog(hwnd, filePath, MAX_PATH)) {
-                            strncpy(CLOCK_TIMEOUT_FILE_PATH, filePath, sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1);
-                            CLOCK_TIMEOUT_FILE_PATH[sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1] = '\0';
-                            CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
-                            WriteConfigTimeoutAction("OPEN_FILE");
-                            SaveRecentFile(filePath);
-                        }
-                        break;
-                    }
-                    else if (cmd >= CLOCK_IDM_RECENT_FILE_1 && cmd <= CLOCK_IDM_RECENT_FILE_3) {
-                        int index = cmd - CLOCK_IDM_RECENT_FILE_1;
-                        if (index < CLOCK_RECENT_FILES_COUNT) {
-                            wchar_t wPath[MAX_PATH];
-                            MultiByteToWideChar(CP_UTF8, 0, CLOCK_RECENT_FILES[index].path, -1, wPath, MAX_PATH);
-                            
-                            if (GetFileAttributesW(wPath) != INVALID_FILE_ATTRIBUTES) {
-                                strncpy(CLOCK_TIMEOUT_FILE_PATH, CLOCK_RECENT_FILES[index].path, 
-                                        sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1);
-                                CLOCK_TIMEOUT_FILE_PATH[sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1] = '\0';
-                                
-                                CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
-                                
-                                WriteConfigTimeoutAction("OPEN_FILE");
-                                
-                                SaveRecentFile(CLOCK_RECENT_FILES[index].path);
-                                
-                                ReadConfig();
-                            } else {
-                                MessageBoxW(hwnd, 
-                                    GetLocalizedString(L"所选文件不存在", L"Selected file does not exist"),
-                                    GetLocalizedString(L"错误", L"Error"),
-                                    MB_ICONERROR);
-                                
-                                memset(CLOCK_TIMEOUT_FILE_PATH, 0, sizeof(CLOCK_TIMEOUT_FILE_PATH));
-                                CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
-                                WriteConfigTimeoutAction("MESSAGE");
-                                
-                                for (int i = index; i < CLOCK_RECENT_FILES_COUNT - 1; i++) {
-                                    CLOCK_RECENT_FILES[i] = CLOCK_RECENT_FILES[i + 1];
-                                }
-                                CLOCK_RECENT_FILES_COUNT--;
-                            }
-                        }
-                        break;
-                    }
-                }
                 case CLOCK_IDC_EDIT_MODE: {
-                    
-                    if (!IS_PREVIEWING && !IS_COLOR_PREVIEWING) {
-                        CLOCK_EDIT_MODE = !CLOCK_EDIT_MODE;
-                        WriteConfigEditMode(CLOCK_EDIT_MODE ? "TRUE" : "FALSE");
-                        
-                        if (CLOCK_EDIT_MODE) {
-                            SetBlurBehind(hwnd, TRUE);
-                        } else {
-                            SetBlurBehind(hwnd, FALSE);
-                            SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), 255, LWA_COLORKEY);
-                        }
-                        
-                        SetClickThrough(hwnd, !CLOCK_EDIT_MODE);
-                        
-                        InvalidateRect(hwnd, NULL, TRUE);
+                    if (CLOCK_EDIT_MODE) {
+                        EndEditMode(hwnd);
+                    } else {
+                        StartEditMode(hwnd);
                     }
-                    break;
+                    
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    return 0;
                 }
                 case CLOCK_IDC_CUSTOMIZE_LEFT: {
                     COLORREF color = ShowColorDialog(hwnd);
@@ -1480,15 +1348,7 @@ refresh_window:
         }
         case WM_RBUTTONUP: {
             if (CLOCK_EDIT_MODE) {
-                CLOCK_EDIT_MODE = FALSE;
-                WriteConfigEditMode("FALSE");
-                
-                SetBlurBehind(hwnd, FALSE);
-                SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), 255, LWA_COLORKEY);
-                
-                SetClickThrough(hwnd, !CLOCK_EDIT_MODE);
-                
-                InvalidateRect(hwnd, NULL, TRUE);
+                EndEditMode(hwnd);
                 return 0;
             }
             break;
@@ -1616,6 +1476,14 @@ refresh_window:
         case WM_CLOSE: {
             SaveWindowSettings(hwnd);  // Save window settings before closing
             DestroyWindow(hwnd);  // Close the window
+            break;
+        }
+        case WM_LBUTTONDBLCLK: {
+            if (!CLOCK_EDIT_MODE) {
+                // 开启编辑模式
+                StartEditMode(hwnd);
+                return 0;
+            }
             break;
         }
         default:

@@ -14,6 +14,7 @@
 #include "../include/tray_menu.h"
 #include "../include/font.h"
 #include "../include/color.h"
+#include "../include/drag_scale.h"  // 添加此行，包含拖动缩放头文件
 #include "../resource/resource.h"
 
 /// @name 外部变量声明

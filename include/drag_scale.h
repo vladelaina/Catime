@@ -11,6 +11,9 @@
 
 #include <windows.h>
 
+// 记录编辑模式前的置顶状态
+extern BOOL PREVIOUS_TOPMOST_STATE;
+
 /**
  * @brief 处理窗口拖动事件
  * @param hwnd 窗口句柄
@@ -49,5 +52,23 @@ void StartDragWindow(HWND hwnd);
  * 释放鼠标捕获并调整窗口位置。
  */
 void EndDragWindow(HWND hwnd);
+
+/**
+ * @brief 开始编辑模式
+ * @param hwnd 窗口句柄
+ * 
+ * 启用编辑模式前，确保窗口为置顶状态，
+ * 记录原始置顶状态以便退出编辑模式时恢复。
+ */
+void StartEditMode(HWND hwnd);
+
+/**
+ * @brief 结束编辑模式
+ * @param hwnd 窗口句柄
+ * 
+ * 退出编辑模式，恢复窗口原始置顶状态，
+ * 清除模糊效果并更新相关设置。
+ */
+void EndEditMode(HWND hwnd);
 
 #endif // DRAG_SCALE_H
