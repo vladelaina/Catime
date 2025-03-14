@@ -1,5 +1,5 @@
 /* 版本与更新信息 */
-#define CATIME_VERSION "1.0.5-alpha"
+#define CATIME_VERSION "1.0.3"
 
 /* 鸣谢链接  猫屋敷梨梨Official*/
 #define CREDIT_LINK_URL       "https://space.bilibili.com/26087398"
@@ -292,3 +292,8 @@
 
 // 在预设管理菜单项部分添加
 #define CLOCK_IDM_TOPMOST 187  // 置顶选项ID
+
+// 新增：下载进度条对话框
+#define IDD_DOWNLOAD_PROGRESS 1000
+#define IDC_PROGRESS_BAR      1001
+#define IDC_PROGRESS_TEXT     1002

@@ -20,6 +20,17 @@
 #define UPDATE_API_URL "https://api.github.com/repos/vladelaina/Catime/releases/latest"
 #define USER_AGENT "Catime Update Checker"
 
+// 进度条对话框布局结构，需要添加到资源文件
+#define IDD_DOWNLOAD_PROGRESS 1000
+#define IDC_PROGRESS_BAR 1001
+#define IDC_PROGRESS_TEXT 1002
+
+// 记录下载进度的全局变量
+static BOOL g_bCancelDownload = FALSE;
+static DWORD g_dwTotalSize = 0;
+static DWORD g_dwDownloaded = 0;
+static char g_szProgressText[256] = {0};
+
 /**
  * @brief 解析JSON响应获取最新版本号
  * @param jsonResponse GitHub API返回的JSON响应
@@ -112,6 +123,34 @@ int CompareVersions(const char* version1, const char* version2) {
 }
 
 /**
+ * @brief 进度条对话框消息处理回调
+ */
+INT_PTR CALLBACK DownloadProgressDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    switch (uMsg) {
+        case WM_INITDIALOG:
+            // 初始化进度条
+            SendDlgItemMessage(hwndDlg, IDC_PROGRESS_BAR, PBM_SETRANGE, 0, MAKELPARAM(0, 100));
+            return TRUE;
+            
+        case WM_COMMAND:
+            if (LOWORD(wParam) == IDCANCEL) {
+                g_bCancelDownload = TRUE;
+                EndDialog(hwndDlg, IDCANCEL);
+                return TRUE;
+            }
+            break;
+            
+        case WM_TIMER:
+            // 更新进度条和文本
+            SendDlgItemMessage(hwndDlg, IDC_PROGRESS_BAR, PBM_SETPOS, 
+                              (g_dwTotalSize > 0) ? (g_dwDownloaded * 100 / g_dwTotalSize) : 0, 0);
+            SetDlgItemTextA(hwndDlg, IDC_PROGRESS_TEXT, g_szProgressText);
+            return TRUE;
+    }
+    return FALSE;
+}
+
+/**
  * @brief 下载文件到用户桌面
  * @param url 文件下载URL
  * @param fileName 保存的文件名
@@ -154,6 +193,15 @@ BOOL DownloadUpdateToDesktop(const char* url, const char* fileName, HWND hwnd) {
         return FALSE;
     }
     
+    // 获取文件大小
+    char sizeBuffer[32];
+    DWORD sizeBufferLength = sizeof(sizeBuffer);
+    g_dwTotalSize = 0;
+    
+    if (HttpQueryInfoA(hUrl, HTTP_QUERY_CONTENT_LENGTH, sizeBuffer, &sizeBufferLength, NULL)) {
+        g_dwTotalSize = atol(sizeBuffer);
+    }
+    
     // 创建本地文件
     HANDLE hFile = CreateFileA(filePath, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 
                              FILE_ATTRIBUTE_NORMAL, NULL);
@@ -167,23 +215,89 @@ BOOL DownloadUpdateToDesktop(const char* url, const char* fileName, HWND hwnd) {
         return FALSE;
     }
     
+    // 重置下载状态
+    g_bCancelDownload = FALSE;
+    g_dwDownloaded = 0;
+    
+    // 创建进度条对话框作为子窗口
+    HWND hProgressDlg = CreateDialog(
+        GetModuleHandle(NULL),
+        MAKEINTRESOURCE(IDD_DOWNLOAD_PROGRESS),
+        hwnd,
+        DownloadProgressDlgProc
+    );
+    
+    if (!hProgressDlg) {
+        CloseHandle(hFile);
+        InternetCloseHandle(hUrl);
+        InternetCloseHandle(hInternet);
+        MessageBoxW(hwnd, 
+                   GetLocalizedString(L"无法创建进度条窗口", L"Could not create progress window"), 
+                   GetLocalizedString(L"更新错误", L"Update Error"), 
+                   MB_ICONERROR);
+        return FALSE;
+    }
+    
+    // 设置进度条窗口标题
+    SetWindowTextW(hProgressDlg, GetLocalizedString(L"下载更新中...", L"Downloading update..."));
+    
+    // 设置定时器更新进度
+    SetTimer(hProgressDlg, 1, 100, NULL);
+    
+    // 显示进度条窗口
+    ShowWindow(hProgressDlg, SW_SHOW);
+    
     // 下载文件
     BYTE buffer[4096];
     DWORD bytesRead = 0;
     BOOL result = TRUE;
     
-    while (InternetReadFile(hUrl, buffer, sizeof(buffer), &bytesRead) && bytesRead > 0) {
+    while (!g_bCancelDownload && 
+           InternetReadFile(hUrl, buffer, sizeof(buffer), &bytesRead) && 
+           bytesRead > 0) {
         DWORD bytesWritten = 0;
         if (!WriteFile(hFile, buffer, bytesRead, &bytesWritten, NULL) || bytesWritten != bytesRead) {
             result = FALSE;
             break;
         }
+        
+        // 更新进度
+        g_dwDownloaded += bytesRead;
+        
+        // 更新进度文本
+        if (g_dwTotalSize > 0) {
+            sprintf(g_szProgressText, "%s: %.1f MB / %.1f MB (%.1f%%)",
+                   (CURRENT_LANGUAGE == APP_LANG_ENGLISH) ? "Downloading" : "下载中",
+                   g_dwDownloaded / 1048576.0,
+                   g_dwTotalSize / 1048576.0,
+                   (g_dwDownloaded * 100.0) / g_dwTotalSize);
+        } else {
+            sprintf(g_szProgressText, "%s: %.1f MB",
+                   (CURRENT_LANGUAGE == APP_LANG_ENGLISH) ? "Downloading" : "下载中",
+                   g_dwDownloaded / 1048576.0);
+        }
+        
+        // 处理Windows消息，确保UI响应
+        MSG msg;
+        while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
     }
     
     // 清理
+    KillTimer(hProgressDlg, 1);
+    DestroyWindow(hProgressDlg);
+    
     CloseHandle(hFile);
     InternetCloseHandle(hUrl);
     InternetCloseHandle(hInternet);
+    
+    if (g_bCancelDownload) {
+        // 用户取消了下载，删除不完整的文件
+        DeleteFileA(filePath);
+        return FALSE;
+    }
     
     if (!result) {
         MessageBoxW(hwnd, 
