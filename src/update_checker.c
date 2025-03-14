@@ -338,152 +338,42 @@ BOOL DownloadUpdateToDesktop(const char* url, const char* fileName, HWND hwnd) {
         return FALSE;
     }
     
-    // 检查文件扩展名，确定是否为可执行文件或压缩包
-    BOOL isZipFile = FALSE;
-    BOOL isExeFile = FALSE;
-    char* extension = strrchr(fileName, '.');
-    if (extension) {
-        if (_stricmp(extension, ".zip") == 0) {
-            isZipFile = TRUE;
-        } else if (_stricmp(extension, ".exe") == 0) {
-            isExeFile = TRUE;
-        }
-    }
-    
     // 直接执行更新操作，不显示任何提示
-    if (isExeFile) {
-        // 对于EXE文件，采用简单的替换方式
-        char currentExePath[MAX_PATH];
-        
-        // 获取当前程序路径
-        GetModuleFileNameA(NULL, currentExePath, MAX_PATH);
-        
-        // 创建一个简单的命令行命令，使用Windows内置命令
-        char cmdLine[1024];
-        sprintf(cmdLine, "cmd.exe /c timeout /t 2 > nul && move /y \"%s\" \"%s\" && start \"\" \"%s\"", 
-               filePath, currentExePath, currentExePath);
-        
-        // 创建进程执行命令
-        STARTUPINFOA si = {0};
-        PROCESS_INFORMATION pi = {0};
-        si.cb = sizeof(si);
-        
-        if (CreateProcessA(NULL, cmdLine, NULL, NULL, FALSE, 
-                          CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
-            CloseHandle(pi.hProcess);
-            CloseHandle(pi.hThread);
-            
-            // 退出当前程序
-            PostMessage(hwnd, WM_CLOSE, 0, 0);
-            return TRUE;
-        } else {
-            DWORD error = GetLastError();
-            char errorMsg[256];
-            sprintf(errorMsg, "启动更新进程失败，错误代码: %lu", error);
-            
-            wchar_t errorMsgW[256];
-            MultiByteToWideChar(CP_ACP, 0, errorMsg, -1, errorMsgW, 256);
-            
-            MessageBoxW(hwnd, errorMsgW, 
-                       GetLocalizedString(L"更新错误", L"Update Error"), 
-                       MB_ICONERROR);
-            return TRUE; // 仍然返回TRUE，因为下载成功了
-        }
-    }
-    else if (isZipFile) {
-        // ZIP文件处理代码与之前相同
-        // 创建安装批处理文件
-        char batchPath[MAX_PATH];
-        char currentExePath[MAX_PATH];
-        char installDir[MAX_PATH];
-        
-        // 获取当前程序路径
-        GetModuleFileNameA(NULL, currentExePath, MAX_PATH);
-        
-        // 获取安装目录（当前程序所在目录）
-        strcpy(installDir, currentExePath);
-        char* lastSlash = strrchr(installDir, '\\');
-        if (lastSlash) {
-            *lastSlash = '\0';
-        }
-        
-        // 创建批处理文件路径（临时文件夹中）
-        char tempPath[MAX_PATH];
-        GetTempPathA(MAX_PATH, tempPath);
-        sprintf(batchPath, "%s\\catime_update.bat", tempPath);
-        
-        // 创建批处理文件
-        FILE* batchFile = fopen(batchPath, "w");
-        if (!batchFile) {
-            MessageBoxW(hwnd, 
-                       GetLocalizedString(L"无法创建更新脚本", L"Could not create update script"), 
-                       GetLocalizedString(L"更新错误", L"Update Error"), 
-                       MB_ICONERROR);
-            return TRUE; // 仍然返回TRUE，因为下载成功了
-        }
-        
-        // 编写批处理脚本
-        fprintf(batchFile, "@echo off\n");
-        fprintf(batchFile, "echo 正在更新 Catime，请稍候...\n");
-        fprintf(batchFile, "timeout /t 1 > nul\n");
-        
-        // 等待原程序退出
-        fprintf(batchFile, ":wait_loop\n");
-        fprintf(batchFile, "tasklist | find /i \"Catime.exe\" > nul\n");
-        fprintf(batchFile, "if not errorlevel 1 (\n");
-        fprintf(batchFile, "  timeout /t 1 > nul\n");
-        fprintf(batchFile, "  goto wait_loop\n");
-        fprintf(batchFile, ")\n");
-        
-        // 如果是ZIP文件，解压并运行
-        // 首先创建一个唯一的临时目录
-        fprintf(batchFile, "set TEMP_DIR=%%TEMP%%\\catime_update_%%RANDOM%%\n");
-        fprintf(batchFile, "mkdir %%TEMP_DIR%%\n");
-        
-        // 解压ZIP文件到临时目录
-        fprintf(batchFile, "powershell -Command \"Expand-Archive -Path '%s' -DestinationPath %%TEMP_DIR%% -Force\"\n", filePath);
-        
-        // 复制解压的文件到原安装目录
-        fprintf(batchFile, "xcopy /E /Y /I \"%%TEMP_DIR%%\\*\" \"%s\\\"\n", installDir);
-        
-        // 启动新版本
-        fprintf(batchFile, "start \"\" \"%s\"\n", currentExePath);
-        
-        // 清理临时文件
-        fprintf(batchFile, "rmdir /S /Q %%TEMP_DIR%%\n");
-        
-        // 删除自身
-        fprintf(batchFile, "del \"%%~f0\"\n");
-        fclose(batchFile);
-        
-        // 构建命令行来运行批处理文件
-        char cmdLine[MAX_PATH + 20];
-        sprintf(cmdLine, "cmd.exe /c \"%s\"", batchPath);
-        
-        // 创建进程运行批处理文件
-        STARTUPINFOA si = {0};
-        PROCESS_INFORMATION pi = {0};
-        si.cb = sizeof(si);
-        
-        if (CreateProcessA(NULL, cmdLine, NULL, NULL, FALSE, 
-                         CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
-            CloseHandle(pi.hProcess);
-            CloseHandle(pi.hThread);
-            
-            // 退出当前程序
-            PostMessage(hwnd, WM_CLOSE, 0, 0);
-        } else {
-            MessageBoxW(hwnd, 
-                       GetLocalizedString(L"无法启动更新程序", L"Could not start update program"), 
-                       GetLocalizedString(L"更新错误", L"Update Error"), 
-                       MB_ICONERROR);
-        }
-    } else {
-        // 其他类型文件，打开文件位置
-        ShellExecuteA(NULL, "open", desktopPath, NULL, NULL, SW_SHOW);
-    }
+    // 获取当前程序路径
+    char currentExePath[MAX_PATH];
+    GetModuleFileNameA(NULL, currentExePath, MAX_PATH);
     
-    return TRUE;
+    // 创建一个简单的命令行命令，使用Windows内置命令
+    char cmdLine[1024];
+    sprintf(cmdLine, "cmd.exe /c timeout /t 2 > nul && move /y \"%s\" \"%s\" && start \"\" \"%s\"", 
+           filePath, currentExePath, currentExePath);
+    
+    // 创建进程执行命令
+    STARTUPINFOA si = {0};
+    PROCESS_INFORMATION pi = {0};
+    si.cb = sizeof(si);
+    
+    if (CreateProcessA(NULL, cmdLine, NULL, NULL, FALSE, 
+                      CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+        
+        // 退出当前程序
+        PostMessage(hwnd, WM_CLOSE, 0, 0);
+        return TRUE;
+    } else {
+        DWORD error = GetLastError();
+        char errorMsg[256];
+        sprintf(errorMsg, "启动更新进程失败，错误代码: %lu", error);
+        
+        wchar_t errorMsgW[256];
+        MultiByteToWideChar(CP_ACP, 0, errorMsg, -1, errorMsgW, 256);
+        
+        MessageBoxW(hwnd, errorMsgW, 
+                   GetLocalizedString(L"更新错误", L"Update Error"), 
+                   MB_ICONERROR);
+        return TRUE; // 仍然返回TRUE，因为下载成功了
+    }
 }
 
 /**
