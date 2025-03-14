@@ -582,9 +582,20 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     ShowAboutDialog(hwnd);
                     return 0;
                 case CLOCK_IDM_TOPMOST: {
+                    // Toggle the topmost state in configuration
                     BOOL newTopmost = !CLOCK_WINDOW_TOPMOST;
-                    SetWindowTopmost(hwnd, newTopmost);
-                    WriteConfigTopmost(newTopmost ? "TRUE" : "FALSE");
+                    
+                    // If in edit mode, just update the stored state but don't apply it yet
+                    if (CLOCK_EDIT_MODE) {
+                        // Update the configuration and saved state only
+                        PREVIOUS_TOPMOST_STATE = newTopmost;
+                        CLOCK_WINDOW_TOPMOST = newTopmost;
+                        WriteConfigTopmost(newTopmost ? "TRUE" : "FALSE");
+                    } else {
+                        // Not in edit mode, apply it immediately
+                        SetWindowTopmost(hwnd, newTopmost);
+                        WriteConfigTopmost(newTopmost ? "TRUE" : "FALSE");
+                    }
                     break;
                 }
                 case CLOCK_IDM_COUNTDOWN_RESET: {
