@@ -154,21 +154,67 @@ int ParseInput(const char* input, int* total_seconds) {
     strncpy(input_copy, input, sizeof(input_copy)-1);
     input_copy[sizeof(input_copy)-1] = '\0';
 
-    char *token = strtok(input_copy, " ");
-    while (token) {
-        char unit = tolower((unsigned char)token[strlen(token) - 1]);
-        if (unit == 'h' || unit == 'm' || unit == 's') {
-            token[strlen(token) - 1] = '\0';   
+    // 检查是否是目标时间格式（以't'结尾）
+    int len = strlen(input_copy);
+    if (len > 0 && input_copy[len-1] == 't') {
+        // 移除't'后缀
+        input_copy[len-1] = '\0';
+        
+        // 获取当前时间
+        time_t now = time(NULL);
+        struct tm *tm_now = localtime(&now);
+        
+        // 目标时间，初始化为当前日期
+        struct tm tm_target = *tm_now;
+        tm_target.tm_sec = 0; // 默认秒数为0
+        
+        // 解析目标时间
+        int hour = -1, minute = -1, second = -1;
+        int count = 0;
+        char *token = strtok(input_copy, " ");
+        
+        while (token && count < 3) {
             int value = atoi(token);
-            switch (unit) {
-                case 'h': total += value * 3600; break;
-                case 'm': total += value * 60; break;
-                case 's': total += value; break;
-            }
-        } else {
-            total += atoi(token) * 60; // 默认单位为分钟
+            if (count == 0) hour = value;
+            else if (count == 1) minute = value;
+            else if (count == 2) second = value;
+            count++;
+            token = strtok(NULL, " ");
         }
-        token = strtok(NULL, " ");
+        
+        // 设置目标时间
+        if (hour >= 0) tm_target.tm_hour = hour;
+        if (minute >= 0) tm_target.tm_min = minute;
+        if (second >= 0) tm_target.tm_sec = second;
+        
+        // 计算时间差（秒）
+        time_t target_time = mktime(&tm_target);
+        
+        // 如果目标时间已过，则设置为明天的同一时间
+        if (target_time <= now) {
+            tm_target.tm_mday += 1;
+            target_time = mktime(&tm_target);
+        }
+        
+        total = (int)difftime(target_time, now);
+    } else {
+        // 原有的时间格式处理逻辑
+        char *token = strtok(input_copy, " ");
+        while (token) {
+            char unit = tolower((unsigned char)token[strlen(token) - 1]);
+            if (unit == 'h' || unit == 'm' || unit == 's') {
+                token[strlen(token) - 1] = '\0';   
+                int value = atoi(token);
+                switch (unit) {
+                    case 'h': total += value * 3600; break;
+                    case 'm': total += value * 60; break;
+                    case 's': total += value; break;
+                }
+            } else {
+                total += atoi(token) * 60; // 默认单位为分钟
+            }
+            token = strtok(NULL, " ");
+        }
     }
 
     *total_seconds = total;
@@ -204,8 +250,8 @@ int isValidInput(const char* input) {
             digitCount++;
         } else if (input[i] == ' ') {
             // 允许任意数量的空格
-        } else if (i == len - 1 && (input[i] == 'h' || input[i] == 'm' || input[i] == 's')) {
-            // 允许最后一个字符是h、m或s
+        } else if (i == len - 1 && (input[i] == 'h' || input[i] == 'm' || input[i] == 's' || input[i] == 't')) {
+            // 允许最后一个字符是h、m、s或t（t表示目标时间）
         } else {
             return 0;
         }
