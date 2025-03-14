@@ -168,22 +168,20 @@ void ReadConfig() {
         else if (strncmp(line, "CLOCK_TIMEOUT_TEXT=", 19) == 0) {
             sscanf(line + 19, "%49[^\n]", CLOCK_TIMEOUT_TEXT);
         }
-        else if (strncmp(line, "CLOCK_TIMEOUT_ACTION=", 20) == 0) {
-            char action[8] = {0};
-            sscanf(line + 20, "%7s", action);
-            if (strcmp(action, "MESSAGE") == 0) {
+        else if (strncmp(line, "CLOCK_TIMEOUT_ACTION=", 21) == 0) {
+            if (strcmp(line + 21, "MESSAGE") == 0) {
                 CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
-            } else if (strcmp(action, "LOCK") == 0) {
+            } else if (strcmp(line + 21, "LOCK") == 0) {
                 CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_LOCK;
-            } else if (strcmp(action, "SHUTDOWN") == 0) {
+            } else if (strcmp(line + 21, "SHUTDOWN") == 0) {
                 CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SHUTDOWN;
-            } else if (strcmp(action, "RESTART") == 0) {
+            } else if (strcmp(line + 21, "RESTART") == 0) {
                 CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_RESTART;
-            } else if (strcmp(action, "OPEN_FILE") == 0) {
+            } else if (strcmp(line + 21, "OPEN_FILE") == 0) {
                 CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
-            } else if (strcmp(action, "SHOW_TIME") == 0) {
+            } else if (strcmp(line + 21, "SHOW_TIME") == 0) {
                 CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SHOW_TIME;
-            } else if (strcmp(action, "COUNT_UP") == 0) {
+            } else if (strcmp(line + 21, "COUNT_UP") == 0) {
                 CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_COUNT_UP;
             }
         }
@@ -199,25 +197,12 @@ void ReadConfig() {
         else if (strncmp(line, "WINDOW_SCALE=", 13) == 0) {
             CLOCK_WINDOW_SCALE = atof(line + 13);
         }
-        else if (strncmp(line, "CLOCK_TIMEOUT_FILE=", 19) == 0) {
-            char *path = line + 19;
-            char *newline = strchr(path, '\n');
-            if (newline) *newline = '\0';
+        else if (strncmp(line, "CLOCK_TIMEOUT_FILE_PATH=", 24) == 0) {
+            strncpy(CLOCK_TIMEOUT_FILE_PATH, line + 24, MAX_PATH - 1);
+            CLOCK_TIMEOUT_FILE_PATH[MAX_PATH - 1] = '\0';
             
-            while (*path == '=' || *path == ' ' || *path == '"') path++;
-            size_t len = strlen(path);
-            if (len > 0 && path[len-1] == '"') path[len-1] = '\0';
-            
-            if (GetFileAttributes(path) != INVALID_FILE_ATTRIBUTES) {
-                strncpy(CLOCK_TIMEOUT_FILE_PATH, path, sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1);
-                CLOCK_TIMEOUT_FILE_PATH[sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1] = '\0';
-                
-                if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
-                    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
-                }
-            } else {
-                memset(CLOCK_TIMEOUT_FILE_PATH, 0, sizeof(CLOCK_TIMEOUT_FILE_PATH));
-                CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
+            if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
+                CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
             }
         }
         else if (strncmp(line, "COLOR_OPTIONS=", 14) == 0) {
@@ -290,55 +275,42 @@ void ReadConfig() {
  */
 void WriteConfigTimeoutAction(const char* action) {
     char config_path[MAX_PATH];
-    char temp_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    snprintf(temp_path, MAX_PATH, "%s.tmp", config_path);
+    
+    FILE* file = fopen(config_path, "r");
+    if (!file) return;
+    
+    char temp_path[MAX_PATH];
+    strcpy(temp_path, config_path);
+    strcat(temp_path, ".tmp");
     
     FILE* temp = fopen(temp_path, "w");
-    FILE* file = fopen(config_path, "r");
-    
-    if (!temp || !file) {
-        if (temp) fclose(temp);
-        if (file) fclose(file);
+    if (!temp) {
+        fclose(file);
         return;
     }
-
-    char line[MAX_PATH];
-    int success = 1;
-
+    
+    char line[256];
+    BOOL found = FALSE;
+    
     while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, "CLOCK_TIMEOUT_ACTION=", 20) != 0 && 
-            strncmp(line, "CLOCK_TIMEOUT_FILE=", 19) != 0) {
-            if (fputs(line, temp) == EOF) {
-                success = 0;
-                break;
-            }
-        }
-    }
-
-    if (success) {
-        if (fprintf(temp, "CLOCK_TIMEOUT_ACTION=%s\n", action) < 0) {
-            success = 0;
+        if (strncmp(line, "CLOCK_TIMEOUT_ACTION=", 21) == 0) {
+            fprintf(temp, "CLOCK_TIMEOUT_ACTION=%s\n", action);
+            found = TRUE;
+        } else {
+            fputs(line, temp);
         }
     }
     
-    if (success && strcmp(action, "OPEN_FILE") == 0 && strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
-        if (GetFileAttributes(CLOCK_TIMEOUT_FILE_PATH) != INVALID_FILE_ATTRIBUTES) {
-            if (fprintf(temp, "CLOCK_TIMEOUT_FILE=%s\n", CLOCK_TIMEOUT_FILE_PATH) < 0) {
-                success = 0;
-            }
-        }
+    if (!found) {
+        fprintf(temp, "CLOCK_TIMEOUT_ACTION=%s\n", action);
     }
-
+    
     fclose(file);
     fclose(temp);
-
-    if (success) {
-        remove(config_path);
-        rename(temp_path, config_path);
-    } else {
-        remove(temp_path);
-    }
+    
+    remove(config_path);
+    rename(temp_path, config_path);
 }
 
 /**

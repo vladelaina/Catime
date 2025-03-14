@@ -1385,6 +1385,47 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     WriteConfigTimeoutAction("COUNT_UP");
                     break;
                 }
+                case CLOCK_IDM_SHOW_MESSAGE: {
+                    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
+                    WriteConfigTimeoutAction("MESSAGE");
+                    break;
+                }
+                case CLOCK_IDM_LOCK_SCREEN: {
+                    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_LOCK;
+                    WriteConfigTimeoutAction("LOCK");
+                    break;
+                }
+                case CLOCK_IDM_SHUTDOWN: {
+                    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SHUTDOWN;
+                    WriteConfigTimeoutAction("SHUTDOWN");
+                    break;
+                }
+                case CLOCK_IDM_RESTART: {
+                    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_RESTART;
+                    WriteConfigTimeoutAction("RESTART");
+                    break;
+                }
+                case CLOCK_IDM_BROWSE_FILE: {
+                    char filePath[MAX_PATH] = {0};
+                    if (OpenFileDialog(hwnd, filePath, MAX_PATH)) {
+                        strncpy(CLOCK_TIMEOUT_FILE_PATH, filePath, MAX_PATH - 1);
+                        CLOCK_TIMEOUT_FILE_PATH[MAX_PATH - 1] = '\0';
+                        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
+                        
+                        // 保存最近文件
+                        SaveRecentFile(filePath);
+                        
+                        // 保存超时动作设置
+                        WriteConfigTimeoutAction("OPEN_FILE");
+                        
+                        // 保存文件路径
+                        char config_path[MAX_PATH];
+                        GetConfigPath(config_path, MAX_PATH);
+                        WritePrivateProfileStringA("Settings", "CLOCK_TIMEOUT_FILE_PATH", 
+                                                  filePath, config_path);
+                    }
+                    break;
+                }
             }
             break;
 

@@ -143,55 +143,19 @@ void ShowColorMenu(HWND hwnd) {
                CLOCK_IDM_SHOW_MESSAGE, 
                GetLocalizedString(L"显示消息", L"Show Message"));
 
-    // 创建打开文件子菜单
-    HMENU hOpenFileMenu = CreatePopupMenu();
-    if (CLOCK_RECENT_FILES_COUNT > 0) {
-        for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
-            BOOL isCurrentFile = (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE && 
-                                strcmp(CLOCK_RECENT_FILES[i].path, CLOCK_TIMEOUT_FILE_PATH) == 0);
-            
-            wchar_t wFileName[MAX_PATH];
-            MultiByteToWideChar(CP_UTF8, 0, CLOCK_RECENT_FILES[i].name, -1, wFileName, MAX_PATH);
-            
-            AppendMenuW(hOpenFileMenu, MF_STRING | (isCurrentFile ? MF_CHECKED : MF_UNCHECKED), 
-                      CLOCK_IDM_RECENT_FILE_1 + i, 
-                      wFileName);
-        }
-        AppendMenuW(hOpenFileMenu, MF_SEPARATOR, 0, NULL);
-    }
-    AppendMenuW(hOpenFileMenu, MF_STRING, CLOCK_IDM_BROWSE_FILE, 
-                GetLocalizedString(L"浏览...", L"Browse..."));
-
-    // 设置打开文件菜单文本，显示当前选择的文件名
-    const wchar_t* menuText = GetLocalizedString(L"打开文件", L"Open File");
-    if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE && strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
-        static wchar_t displayText[MAX_PATH];
-        char *filename = strrchr(CLOCK_TIMEOUT_FILE_PATH, '\\');
-        if (filename) {
-            filename++;
-            wchar_t wFileName[MAX_PATH];
-            MultiByteToWideChar(CP_UTF8, 0, filename, -1, wFileName, MAX_PATH);
-            
-            _snwprintf(displayText, MAX_PATH, 
-                      GetLocalizedString(L"打开: %ls", L"Open: %ls"), 
-                      wFileName);
-            menuText = displayText;
-        }
-    }
-
-    // 将打开文件子菜单添加到超时动作菜单
-    AppendMenuW(hTimeoutMenu, MF_POPUP | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE ? MF_CHECKED : MF_UNCHECKED),
-               (UINT_PTR)hOpenFileMenu, menuText);
-               
-    // 添加其他超时动作选项
-    AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_LOCK ? MF_CHECKED : MF_UNCHECKED), 
-               CLOCK_IDM_LOCK_SCREEN, 
+    // 添加锁定屏幕选项
+    AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_LOCK ? MF_CHECKED : MF_UNCHECKED),
+               CLOCK_IDM_LOCK_SCREEN,
                GetLocalizedString(L"锁定屏幕", L"Lock Screen"));
-    AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SHUTDOWN ? MF_CHECKED : MF_UNCHECKED), 
-               CLOCK_IDM_SHUTDOWN, 
+
+    // 添加关机选项
+    AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SHUTDOWN ? MF_CHECKED : MF_UNCHECKED),
+               CLOCK_IDM_SHUTDOWN,
                GetLocalizedString(L"关机", L"Shutdown"));
-    AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_RESTART ? MF_CHECKED : MF_UNCHECKED), 
-               CLOCK_IDM_RESTART, 
+
+    // 添加重启选项
+    AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_RESTART ? MF_CHECKED : MF_UNCHECKED),
+               CLOCK_IDM_RESTART,
                GetLocalizedString(L"重启", L"Restart"));
 
     // 在超时动作菜单中添加新选项 (在hTimeoutMenu的其他选项之后，在将该菜单添加到主菜单之前)

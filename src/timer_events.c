@@ -172,6 +172,9 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                         
                         // 非番茄钟模式，执行原有的超时动作
                         switch (CLOCK_TIMEOUT_ACTION) {
+                            case TIMEOUT_ACTION_MESSAGE:
+                                // 已经显示了通知，不需要额外操作
+                                break;
                             case TIMEOUT_ACTION_LOCK:
                                 LockWorkStation();
                                 break;
