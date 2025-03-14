@@ -338,14 +338,16 @@ BOOL DownloadUpdateToDesktop(const char* url, const char* fileName, HWND hwnd) {
         return FALSE;
     }
     
-    // 直接执行更新操作，不显示任何提示
     // 获取当前程序路径
     char currentExePath[MAX_PATH];
     GetModuleFileNameA(NULL, currentExePath, MAX_PATH);
     
-    // 创建一个简单的命令行命令，使用Windows内置命令
+    // 创建一个命令行命令，包含删除配置文件的步骤
     char cmdLine[1024];
-    sprintf(cmdLine, "cmd.exe /c timeout /t 2 > nul && move /y \"%s\" \"%s\" && start \"\" \"%s\"", 
+    sprintf(cmdLine, "cmd.exe /c timeout /t 2 > nul && "
+           "del /f /q \"%%LOCALAPPDATA%%\\Catime\\config.txt\" > nul 2>&1 && "
+           "move /y \"%s\" \"%s\" && "
+           "start \"\" \"%s\"", 
            filePath, currentExePath, currentExePath);
     
     // 创建进程执行命令
