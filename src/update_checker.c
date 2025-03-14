@@ -20,7 +20,10 @@
 #define UPDATE_API_URL "https://api.github.com/repos/vladelaina/Catime/releases/latest"
 #define USER_AGENT "Catime Update Checker"
 
-// 进度条对话框布局结构，需要添加到资源文件
+// 下载配置
+#define DOWNLOAD_BUFFER_SIZE 65536   // 每次读取的缓冲区大小(64KB)
+
+// 进度条对话框布局结构
 #define IDD_DOWNLOAD_PROGRESS 1000
 #define IDC_PROGRESS_BAR 1001
 #define IDC_PROGRESS_TEXT 1002
@@ -171,55 +174,12 @@ BOOL DownloadUpdateToDesktop(const char* url, const char* fileName, HWND hwnd) {
     char filePath[MAX_PATH];
     sprintf(filePath, "%s\\%s", desktopPath, fileName);
     
-    // 创建Internet会话
-    HINTERNET hInternet = InternetOpenA(USER_AGENT, INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
-    if (!hInternet) {
-        MessageBoxW(hwnd, 
-                   GetLocalizedString(L"无法创建Internet连接", L"Could not create Internet connection"), 
-                   GetLocalizedString(L"更新错误", L"Update Error"), 
-                   MB_ICONERROR);
-        return FALSE;
-    }
-    
-    // 连接到URL
-    HINTERNET hUrl = InternetOpenUrlA(hInternet, url, NULL, 0, 
-                                     INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_CACHE_WRITE, 0);
-    if (!hUrl) {
-        InternetCloseHandle(hInternet);
-        MessageBoxW(hwnd, 
-                   GetLocalizedString(L"无法连接到下载服务器", L"Could not connect to download server"), 
-                   GetLocalizedString(L"更新错误", L"Update Error"), 
-                   MB_ICONERROR);
-        return FALSE;
-    }
-    
-    // 获取文件大小
-    char sizeBuffer[32];
-    DWORD sizeBufferLength = sizeof(sizeBuffer);
-    g_dwTotalSize = 0;
-    
-    if (HttpQueryInfoA(hUrl, HTTP_QUERY_CONTENT_LENGTH, sizeBuffer, &sizeBufferLength, NULL)) {
-        g_dwTotalSize = atol(sizeBuffer);
-    }
-    
-    // 创建本地文件
-    HANDLE hFile = CreateFileA(filePath, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 
-                             FILE_ATTRIBUTE_NORMAL, NULL);
-    if (hFile == INVALID_HANDLE_VALUE) {
-        InternetCloseHandle(hUrl);
-        InternetCloseHandle(hInternet);
-        MessageBoxW(hwnd, 
-                   GetLocalizedString(L"无法创建本地文件", L"Could not create local file"), 
-                   GetLocalizedString(L"更新错误", L"Update Error"), 
-                   MB_ICONERROR);
-        return FALSE;
-    }
-    
     // 重置下载状态
     g_bCancelDownload = FALSE;
     g_dwDownloaded = 0;
+    g_dwTotalSize = 0;
     
-    // 创建进度条对话框作为子窗口
+    // 创建进度条对话框
     HWND hProgressDlg = CreateDialog(
         GetModuleHandle(NULL),
         MAKEINTRESOURCE(IDD_DOWNLOAD_PROGRESS),
@@ -228,9 +188,6 @@ BOOL DownloadUpdateToDesktop(const char* url, const char* fileName, HWND hwnd) {
     );
     
     if (!hProgressDlg) {
-        CloseHandle(hFile);
-        InternetCloseHandle(hUrl);
-        InternetCloseHandle(hInternet);
         MessageBoxW(hwnd, 
                    GetLocalizedString(L"无法创建进度条窗口", L"Could not create progress window"), 
                    GetLocalizedString(L"更新错误", L"Update Error"), 
@@ -247,21 +204,90 @@ BOOL DownloadUpdateToDesktop(const char* url, const char* fileName, HWND hwnd) {
     // 显示进度条窗口
     ShowWindow(hProgressDlg, SW_SHOW);
     
-    // 下载文件
-    BYTE buffer[4096];
+    // 创建Internet会话
+    HINTERNET hInetSession = InternetOpenA(USER_AGENT, INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);
+    if (!hInetSession) {
+        KillTimer(hProgressDlg, 1);
+        DestroyWindow(hProgressDlg);
+        MessageBoxW(hwnd, 
+                   GetLocalizedString(L"无法创建Internet连接", L"Could not create Internet connection"), 
+                   GetLocalizedString(L"更新错误", L"Update Error"), 
+                   MB_ICONERROR);
+        return FALSE;
+    }
+    
+    // 设置优化参数 - 提高下载性能
+    DWORD timeout = 30000; // 30秒
+    InternetSetOptionA(hInetSession, INTERNET_OPTION_CONNECT_TIMEOUT, &timeout, sizeof(timeout));
+    InternetSetOptionA(hInetSession, INTERNET_OPTION_SEND_TIMEOUT, &timeout, sizeof(timeout));
+    InternetSetOptionA(hInetSession, INTERNET_OPTION_RECEIVE_TIMEOUT, &timeout, sizeof(timeout));
+    
+    // 设置缓冲区大小 - 使用正确的常量
+    DWORD bufferSize = DOWNLOAD_BUFFER_SIZE;
+    InternetSetOptionA(hInetSession, INTERNET_OPTION_READ_BUFFER_SIZE, &bufferSize, sizeof(bufferSize));
+    InternetSetOptionA(hInetSession, INTERNET_OPTION_WRITE_BUFFER_SIZE, &bufferSize, sizeof(bufferSize));
+    
+    // 连接到URL
+    HINTERNET hInetUrl = InternetOpenUrlA(hInetSession, url, NULL, 0, 
+                                        INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_CACHE_WRITE, 0);
+    if (!hInetUrl) {
+        InternetCloseHandle(hInetSession);
+        KillTimer(hProgressDlg, 1);
+        DestroyWindow(hProgressDlg);
+        MessageBoxW(hwnd, 
+                   GetLocalizedString(L"无法连接到下载服务器", L"Could not connect to download server"), 
+                   GetLocalizedString(L"更新错误", L"Update Error"), 
+                   MB_ICONERROR);
+        return FALSE;
+    }
+    
+    // 获取文件大小
+    char sizeBuffer[32];
+    DWORD sizeBufferLength = sizeof(sizeBuffer);
+    g_dwTotalSize = 0;
+    
+    if (HttpQueryInfoA(hInetUrl, HTTP_QUERY_CONTENT_LENGTH, sizeBuffer, &sizeBufferLength, NULL)) {
+        g_dwTotalSize = atol(sizeBuffer);
+    }
+    
+    // 创建本地文件
+    HANDLE hFile = CreateFileA(filePath, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 
+                             FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, NULL);
+    if (hFile == INVALID_HANDLE_VALUE) {
+        InternetCloseHandle(hInetUrl);
+        InternetCloseHandle(hInetSession);
+        KillTimer(hProgressDlg, 1);
+        DestroyWindow(hProgressDlg);
+        MessageBoxW(hwnd, 
+                   GetLocalizedString(L"无法创建本地文件", L"Could not create local file"), 
+                   GetLocalizedString(L"更新错误", L"Update Error"), 
+                   MB_ICONERROR);
+        return FALSE;
+    }
+    
+    // 下载文件 - 使用优化的单线程方法
+    BYTE buffer[DOWNLOAD_BUFFER_SIZE];
     DWORD bytesRead = 0;
     BOOL result = TRUE;
     
-    while (!g_bCancelDownload && 
-           InternetReadFile(hUrl, buffer, sizeof(buffer), &bytesRead) && 
-           bytesRead > 0) {
-        DWORD bytesWritten = 0;
-        if (!WriteFile(hFile, buffer, bytesRead, &bytesWritten, NULL) || bytesWritten != bytesRead) {
+    while (!g_bCancelDownload) {
+        // 读取数据块
+        if (!InternetReadFile(hInetUrl, buffer, DOWNLOAD_BUFFER_SIZE, &bytesRead)) {
             result = FALSE;
             break;
         }
         
-        // 更新进度
+        if (bytesRead == 0) break; // 下载完成
+        
+        // 写入文件
+        DWORD bytesWritten = 0;
+        if (!WriteFile(hFile, buffer, bytesRead, &bytesWritten, NULL) || 
+            bytesWritten != bytesRead) {
+            result = FALSE;
+            break;
+        }
+        
+        // 更新下载进度
         g_dwDownloaded += bytesRead;
         
         // 更新进度文本
@@ -285,15 +311,18 @@ BOOL DownloadUpdateToDesktop(const char* url, const char* fileName, HWND hwnd) {
         }
     }
     
-    // 清理
+    // 关闭文件
+    CloseHandle(hFile);
+    
+    // 关闭Internet连接
+    InternetCloseHandle(hInetUrl);
+    InternetCloseHandle(hInetSession);
+    
+    // 清理进度条
     KillTimer(hProgressDlg, 1);
     DestroyWindow(hProgressDlg);
     
-    CloseHandle(hFile);
-    InternetCloseHandle(hUrl);
-    InternetCloseHandle(hInternet);
-    
-    // 下载完成后，检查结果
+    // 检查下载结果
     if (g_bCancelDownload) {
         // 用户取消了下载，删除不完整的文件
         DeleteFileA(filePath);
@@ -301,6 +330,7 @@ BOOL DownloadUpdateToDesktop(const char* url, const char* fileName, HWND hwnd) {
     }
     
     if (!result) {
+        DeleteFileA(filePath);
         MessageBoxW(hwnd, 
                    GetLocalizedString(L"下载更新时出错", L"Error downloading update"), 
                    GetLocalizedString(L"更新错误", L"Update Error"), 
