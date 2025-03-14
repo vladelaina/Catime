@@ -139,10 +139,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     if (GetLastError() == ERROR_ALREADY_EXISTS) {
         HWND hwndExisting = FindWindow("CatimeWindow", "Catime");
         if (hwndExisting) {
-            SendMessage(hwndExisting, WM_CLOSE, 0, 0);
+            // 尝试激活已存在的窗口
+            ShowWindow(hwndExisting, SW_SHOW);
+            SetForegroundWindow(hwndExisting);
         }
-        Sleep(50);
+        // 释放互斥锁并退出程序
+        ReleaseMutex(hMutex);
+        CloseHandle(hMutex);
+        CoUninitialize();
+        return 0;
     }
+    Sleep(50);
 
     // 创建主窗口
     HWND hwnd = CreateMainWindow(hInstance, nCmdShow);
