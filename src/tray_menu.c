@@ -440,15 +440,19 @@ void ShowContextMenu(HWND hwnd) {
     // 计时管理菜单 - 添加在最顶部
     HMENU hTimerManageMenu = CreatePopupMenu();
     
-    // 设置暂停/继续选项文本并检查是否应该启用
+    // 设置是否应该启用子菜单项的条件
+    // 当满足以下条件时计时器选项应该可用:
+    // 1. 不处于显示当前时间模式
+    // 2. 且正在进行倒计时或正计时
     BOOL timerRunning = (!CLOCK_SHOW_CURRENT_TIME && (CLOCK_COUNT_UP || 
                          (!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0)));
     
     // 暂停/继续文本根据当前状态变化
     const wchar_t* pauseResumeText = CLOCK_IS_PAUSED ? 
-                                     GetLocalizedString(L"继续", L"Resume") : 
-                                     GetLocalizedString(L"暂停", L"Pause");
+                                    GetLocalizedString(L"继续", L"Resume") : 
+                                    GetLocalizedString(L"暂停", L"Pause");
     
+    // 子菜单项根据条件禁用，但保持父菜单项可选
     AppendMenuW(hTimerManageMenu, MF_STRING | (timerRunning ? MF_ENABLED : MF_GRAYED),
                CLOCK_IDM_TIMER_PAUSE_RESUME, pauseResumeText);
     
@@ -456,9 +460,8 @@ void ShowContextMenu(HWND hwnd) {
                CLOCK_IDM_TIMER_RESTART, 
                GetLocalizedString(L"重新开始", L"Restart"));
     
-    // 将计时管理菜单添加到主菜单
-    AppendMenuW(hMenu, MF_POPUP | (timerRunning ? MF_ENABLED : MF_GRAYED),
-               (UINT_PTR)hTimerManageMenu,
+    // 将计时管理菜单添加到主菜单 - 这里总是启用父菜单项
+    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimerManageMenu,
                GetLocalizedString(L"计时管理", L"Timer Control"));
     
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);

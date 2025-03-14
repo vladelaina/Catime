@@ -38,16 +38,27 @@ void HandleTrayIconMessage(HWND hwnd, UINT uID, UINT uMouseMsg) {
  * 根据当前状态暂停或继续计时器，并更新相关状态变量
  */
 void PauseResumeTimer(HWND hwnd) {
-    // 反转暂停状态
-    CLOCK_IS_PAUSED = !CLOCK_IS_PAUSED;
-    
-    // 如果暂停，记录当前时间
-    if (CLOCK_IS_PAUSED) {
-        CLOCK_LAST_TIME_UPDATE = time(NULL);
+    // 检查当前是否有计时进行中
+    if (!CLOCK_SHOW_CURRENT_TIME && 
+        ((!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0) || 
+         (CLOCK_COUNT_UP && TRUE))) {
+        
+        // 切换暂停/继续状态
+        CLOCK_IS_PAUSED = !CLOCK_IS_PAUSED;
+        
+        if (CLOCK_IS_PAUSED) {
+            // 如果暂停，记录当前时间点
+            CLOCK_LAST_TIME_UPDATE = time(NULL);
+            // 停止计时器
+            KillTimer(hwnd, 1);
+        } else {
+            // 如果继续，重新启动计时器
+            SetTimer(hwnd, 1, 1000, NULL);
+        }
+        
+        // 更新窗口以反映新状态
+        InvalidateRect(hwnd, NULL, TRUE);
     }
-    
-    // 更新窗口以反映新状态
-    InvalidateRect(hwnd, NULL, TRUE);
 }
 
 /**
@@ -57,17 +68,43 @@ void PauseResumeTimer(HWND hwnd) {
  * 重置计时器到初始状态并继续运行
  */
 void RestartTimer(HWND hwnd) {
-    if (CLOCK_COUNT_UP) {
-        // 重置正计时
-        countup_elapsed_time = 0;
-    } else {
-        // 重置倒计时
-        countdown_elapsed_time = 0;
+    // 检查当前是否有计时进行中
+    if (!CLOCK_SHOW_CURRENT_TIME && 
+        ((!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0) || 
+         (CLOCK_COUNT_UP && TRUE))) {
+        
+        // 保持当前计时器类型(倒计时/正计时/番茄钟)，只重置进度
+        if (!CLOCK_COUNT_UP) {
+            // 倒计时模式 - 保留CLOCK_TOTAL_TIME，只重置已计时部分
+            countdown_elapsed_time = 0;
+        } else {
+            // 正计时模式 - 从0开始重新计时
+            countup_elapsed_time = 0;
+        }
+        
+        // 重置通用计时器状态
+        extern int elapsed_time;
+        extern BOOL message_shown;
+        extern BOOL countdown_message_shown;
+        extern BOOL countup_message_shown;
+        
+        elapsed_time = 0;
+        message_shown = FALSE;
+        countdown_message_shown = FALSE;
+        countup_message_shown = FALSE;
+        
+        // 取消暂停状态
+        CLOCK_IS_PAUSED = FALSE;
+        
+        // 确保计时器正在运行
+        KillTimer(hwnd, 1);
+        SetTimer(hwnd, 1, 1000, NULL);
+        
+        // 更新窗口以反映新状态
+        InvalidateRect(hwnd, NULL, TRUE);
+        
+        // 确保重置后窗口置顶
+        extern void HandleWindowReset(HWND hwnd);
+        HandleWindowReset(hwnd);
     }
-    
-    // 确保计时器不处于暂停状态
-    CLOCK_IS_PAUSED = FALSE;
-    
-    // 更新窗口以反映新状态
-    InvalidateRect(hwnd, NULL, TRUE);
 }
