@@ -17,11 +17,13 @@
 #pragma comment(lib, "wininet.lib")
 
 // 更新源URL
-#define UPDATE_API_URL "https://api.github.com/repos/vladelaina/Catime/releases/latest"
+#define GITHUB_API_URL "https://api.github.com/repos/vladelaina/Catime/releases/latest"
+#define GITEE_API_URL "https://gitee.com/api/v5/repos/xinye-nozan/catime/releases/latest"
 #define USER_AGENT "Catime Update Checker"
 
 // 下载配置
 #define DOWNLOAD_BUFFER_SIZE 65536   // 每次读取的缓冲区大小(64KB)
+#define CONNECTION_TEST_TIMEOUT 3000 // 连接测试超时时间(3秒)
 
 // 进度条对话框布局结构
 #define IDD_DOWNLOAD_PROGRESS 1000
@@ -35,8 +37,79 @@ static DWORD g_dwDownloaded = 0;
 static char g_szProgressText[256] = {0};
 
 /**
+ * @brief 检查与API的连接速度
+ * @param apiUrl API的URL
+ * @return 连接时间(毫秒)，如果连接失败则返回MAXDWORD
+ */
+DWORD CheckConnectionSpeed(const char* apiUrl) {
+    DWORD startTime = GetTickCount();
+    DWORD endTime;
+    BOOL result = FALSE;
+    
+    // 创建Internet会话
+    HINTERNET hInternet = InternetOpenA(USER_AGENT, INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
+    if (hInternet) {
+        // 设置连接超时
+        DWORD timeout = CONNECTION_TEST_TIMEOUT;
+        InternetSetOptionA(hInternet, INTERNET_OPTION_CONNECT_TIMEOUT, &timeout, sizeof(timeout));
+        
+        // 尝试连接
+        HINTERNET hConnect = InternetOpenUrlA(hInternet, apiUrl, NULL, 0, 
+                                            INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_CACHE_WRITE, 0);
+        if (hConnect) {
+            // 读取一小段数据以确认连接有效
+            char buffer[1024];
+            DWORD bytesRead = 0;
+            result = InternetReadFile(hConnect, buffer, sizeof(buffer), &bytesRead);
+            
+            InternetCloseHandle(hConnect);
+        }
+        
+        InternetCloseHandle(hInternet);
+    }
+    
+    endTime = GetTickCount();
+    
+    // 如果连接失败，返回最大值表示无效
+    if (!result) {
+        return MAXDWORD;
+    }
+    
+    // 返回连接所花费的时间
+    return (endTime - startTime);
+}
+
+/**
+ * @brief 选择最快的更新源
+ * @param apiUrl 用于存储选择的API URL的缓冲区
+ * @param maxLen 缓冲区的最大长度
+ * @return 是否成功选择了更新源
+ */
+BOOL SelectFastestUpdateSource(char* apiUrl, size_t maxLen) {
+    // 检查GitHub的连接速度
+    DWORD githubSpeed = CheckConnectionSpeed(GITHUB_API_URL);
+    
+    // 检查Gitee的连接速度
+    DWORD giteeSpeed = CheckConnectionSpeed(GITEE_API_URL);
+    
+    // 如果两者都连接失败，返回失败
+    if (githubSpeed == MAXDWORD && giteeSpeed == MAXDWORD) {
+        return FALSE;
+    }
+    
+    // 选择速度更快的源
+    if (giteeSpeed < githubSpeed) {
+        strncpy(apiUrl, GITEE_API_URL, maxLen);
+    } else {
+        strncpy(apiUrl, GITHUB_API_URL, maxLen);
+    }
+    
+    return TRUE;
+}
+
+/**
  * @brief 解析JSON响应获取最新版本号
- * @param jsonResponse GitHub API返回的JSON响应
+ * @param jsonResponse GitHub/Gitee API返回的JSON响应
  * @param latestVersion 用于存储解析出的版本号的缓冲区
  * @param maxLen 缓冲区最大长度
  * @param downloadUrl 用于存储下载URL的缓冲区
@@ -382,10 +455,20 @@ BOOL DownloadUpdateToDesktop(const char* url, const char* fileName, HWND hwnd) {
  * @brief 检查应用程序更新
  * @param hwnd 窗口句柄
  * 
- * 连接到GitHub检查是否有新版本。如果有，会提示用户是否下载。
+ * 连接到GitHub/Gitee检查是否有新版本。如果有，会提示用户是否下载。
  * 如果用户确认，会将新版本下载到用户桌面。
  */
 void CheckForUpdate(HWND hwnd) {
+    // 选择最快的更新源
+    char updateApiUrl[256] = {0};
+    if (!SelectFastestUpdateSource(updateApiUrl, sizeof(updateApiUrl))) {
+        MessageBoxW(hwnd, 
+                   GetLocalizedString(L"无法连接到更新服务器", L"Could not connect to update servers"), 
+                   GetLocalizedString(L"更新错误", L"Update Error"), 
+                   MB_ICONERROR);
+        return;
+    }
+    
     // 创建Internet会话
     HINTERNET hInternet = InternetOpenA(USER_AGENT, INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
     if (!hInternet) {
@@ -396,13 +479,13 @@ void CheckForUpdate(HWND hwnd) {
         return;
     }
     
-    // 连接到GitHub API
-    HINTERNET hConnect = InternetOpenUrlA(hInternet, UPDATE_API_URL, NULL, 0, 
+    // 连接到更新API
+    HINTERNET hConnect = InternetOpenUrlA(hInternet, updateApiUrl, NULL, 0, 
                                         INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_CACHE_WRITE, 0);
     if (!hConnect) {
         InternetCloseHandle(hInternet);
         MessageBoxW(hwnd, 
-                   GetLocalizedString(L"无法连接到GitHub服务器", L"Could not connect to GitHub server"), 
+                   GetLocalizedString(L"无法连接到更新服务器", L"Could not connect to update server"), 
                    GetLocalizedString(L"更新错误", L"Update Error"), 
                    MB_ICONERROR);
         return;
@@ -430,7 +513,7 @@ void CheckForUpdate(HWND hwnd) {
     if (!ParseLatestVersionFromJson(buffer, latestVersion, sizeof(latestVersion), 
                                   downloadUrl, sizeof(downloadUrl))) {
         MessageBoxW(hwnd, 
-                   GetLocalizedString(L"无法从GitHub获取版本信息", L"Could not get version info from GitHub"), 
+                   GetLocalizedString(L"无法解析版本信息", L"Could not parse version information"), 
                    GetLocalizedString(L"更新错误", L"Update Error"), 
                    MB_ICONERROR);
         return;
