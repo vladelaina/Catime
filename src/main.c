@@ -142,6 +142,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             // 尝试激活已存在的窗口
             ShowWindow(hwndExisting, SW_SHOW);
             SetForegroundWindow(hwndExisting);
+            
+            // 发送自定义消息，告诉已有实例开始默认倒计时
+            // 使用WM_USER+100作为自定义消息ID
+            SendMessage(hwndExisting, WM_USER+100, 0, 0);
         }
         // 释放互斥锁并退出程序
         ReleaseMutex(hMutex);
