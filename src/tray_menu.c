@@ -158,64 +158,58 @@ void ShowColorMenu(HWND hwnd) {
                CLOCK_IDM_RESTART,
                GetLocalizedString(L"重启", L"Restart"));
 
-    // 在超时动作菜单中添加"打开文件"选项 (在其他选项后，最好在TIMEOUT_ACTION_SHOW_TIME的前面)
-    AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE ? MF_CHECKED : MF_UNCHECKED), 
-               CLOCK_IDM_OPEN_FILE, 
-               GetLocalizedString(L"打开文件", L"Open File"));
+    // 在超时动作菜单中添加"打开文件"选项（将其改为子菜单）
+    HMENU hFileMenu = CreatePopupMenu();
 
-    // 在"打开文件"选项之后添加文件浏览选项
-    if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE) {
-        HMENU hFileMenu = CreatePopupMenu();
+    // 添加"浏览..."选项
+    AppendMenuW(hFileMenu, MF_STRING, CLOCK_IDM_BROWSE_FILE,
+               GetLocalizedString(L"浏览...", L"Browse..."));
+
+    // 如果有当前选择的文件，显示它
+    if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
+        wchar_t wFileName[MAX_PATH];
+        wchar_t wFilePath[MAX_PATH];
         
-        // 添加"浏览..."选项
-        AppendMenuW(hFileMenu, MF_STRING, CLOCK_IDM_BROWSE_FILE,
-                   GetLocalizedString(L"浏览...", L"Browse..."));
+        // 将文件路径转换为宽字符
+        MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_FILE_PATH, -1, wFilePath, MAX_PATH);
         
-        // 如果有当前选择的文件，显示它
-        if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
-            wchar_t wFileName[MAX_PATH];
-            wchar_t wFilePath[MAX_PATH];
-            
-            // 将文件路径转换为宽字符
-            MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_FILE_PATH, -1, wFilePath, MAX_PATH);
-            
-            // 提取文件名
-            wchar_t* wFileNamePtr = wcsrchr(wFilePath, L'\\');
-            if (wFileNamePtr) {
-                wcscpy(wFileName, wFileNamePtr + 1);
-            } else {
-                wcscpy(wFileName, wFilePath);
-            }
-            
-            // 添加当前文件（作为禁用项显示）
-            AppendMenuW(hFileMenu, MF_STRING | MF_DISABLED, 0, wFileName);
+        // 提取文件名
+        wchar_t* wFileNamePtr = wcsrchr(wFilePath, L'\\');
+        if (wFileNamePtr) {
+            wcscpy(wFileName, wFileNamePtr + 1);
+        } else {
+            wcscpy(wFileName, wFilePath);
         }
         
-        // 添加最近文件分隔线和标题
-        if (CLOCK_RECENT_FILES_COUNT > 0) {
-            AppendMenuW(hFileMenu, MF_SEPARATOR, 0, NULL);
-            AppendMenuW(hFileMenu, MF_STRING | MF_DISABLED, 0,
-                       GetLocalizedString(L"最近文件", L"Recent Files"));
-        }
-        
-        // 添加最近文件列表
-        for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
-            // 跳过当前文件（已经在上面添加了）
-            if (strcmp(CLOCK_RECENT_FILES[i].path, CLOCK_TIMEOUT_FILE_PATH) == 0) {
-                continue;
-            }
-            
-            wchar_t wFileName[MAX_PATH];
-            MultiByteToWideChar(CP_UTF8, 0, CLOCK_RECENT_FILES[i].name, -1, wFileName, MAX_PATH);
-            
-            AppendMenuW(hFileMenu, MF_STRING, CLOCK_IDM_RECENT_FILE_1 + i,
-                       wFileName);
-        }
-        
-        // 将文件菜单附加到主菜单
-        AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hFileMenu,
-                   GetLocalizedString(L"选择文件", L"Select File"));
+        // 添加当前文件（作为禁用项显示）
+        AppendMenuW(hFileMenu, MF_STRING | MF_DISABLED, 0, wFileName);
     }
+
+    // 添加最近文件分隔线和标题
+    if (CLOCK_RECENT_FILES_COUNT > 0) {
+        AppendMenuW(hFileMenu, MF_SEPARATOR, 0, NULL);
+        AppendMenuW(hFileMenu, MF_STRING | MF_DISABLED, 0,
+                   GetLocalizedString(L"最近文件", L"Recent Files"));
+    }
+
+    // 添加最近文件列表
+    for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
+        // 跳过当前文件（已经在上面添加了）
+        if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0 && 
+            strcmp(CLOCK_RECENT_FILES[i].path, CLOCK_TIMEOUT_FILE_PATH) == 0) {
+            continue;
+        }
+        
+        wchar_t wFileName[MAX_PATH];
+        MultiByteToWideChar(CP_UTF8, 0, CLOCK_RECENT_FILES[i].name, -1, wFileName, MAX_PATH);
+        
+        AppendMenuW(hFileMenu, MF_STRING, CLOCK_IDM_RECENT_FILE_1 + i, wFileName);
+    }
+
+    // 将"打开文件"作为子菜单添加到超时动作菜单中
+    AppendMenuW(hTimeoutMenu, MF_POPUP | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE ? MF_CHECKED : MF_UNCHECKED), 
+               (UINT_PTR)hFileMenu, 
+               GetLocalizedString(L"打开文件", L"Open File"));
 
     // 在超时动作菜单中添加新选项 (在hTimeoutMenu的其他选项之后，在将该菜单添加到主菜单之前)
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SHOW_TIME ? MF_CHECKED : MF_UNCHECKED), 
