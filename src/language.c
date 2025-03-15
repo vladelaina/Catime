@@ -129,6 +129,19 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Select Preset") == 0) return L"选择预设";
             if (wcscmp(english, L"Confirm Delete") == 0) return L"确认删除";
             if (wcscmp(english, L"Are you sure you want to delete this preset?") == 0) return L"确定要删除这个预设吗？";
+            if (wcscmp(english, L"Open File") == 0) return L"打开文件";
+            if (wcscmp(english, L"No Display") == 0) return L"不显示";
+            if (wcscmp(english, L"Preset Management") == 0) return L"预设管理";
+            if (wcscmp(english, L"Color Value") == 0) return L"颜色值";
+            if (wcscmp(english, L"Color Panel") == 0) return L"颜色面板";
+            if (wcscmp(english, L"More") == 0) return L"更多";
+            if (wcscmp(english, L"Help") == 0) return L"帮助";
+            if (wcscmp(english, L"Working: %d/%d") == 0) return L"工作中: %d/%d";
+            if (wcscmp(english, L"Short Break: %d/%d") == 0) return L"短休息: %d/%d";
+            if (wcscmp(english, L"Long Break") == 0) return L"长休息";
+            if (wcscmp(english, L"Time to focus!") == 0) return L"专注时间到了！";
+            if (wcscmp(english, L"Time for a break!") == 0) return L"休息时间到了！";
+            if (wcscmp(english, L"Completed: %d/%d") == 0) return L"已完成: %d/%d";
             return chinese;
             
         case APP_LANG_CHINESE_TRAD:
@@ -184,6 +197,19 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Select Preset") == 0) return L"選擇預設";
             if (wcscmp(english, L"Confirm Delete") == 0) return L"確認刪除";
             if (wcscmp(english, L"Are you sure you want to delete this preset?") == 0) return L"確定要刪除這個預設嗎？";
+            if (wcscmp(english, L"Open File") == 0) return L"打開文件";
+            if (wcscmp(english, L"No Display") == 0) return L"不顯示";
+            if (wcscmp(english, L"Preset Management") == 0) return L"預設管理";
+            if (wcscmp(english, L"Color Value") == 0) return L"顏色值";
+            if (wcscmp(english, L"Color Panel") == 0) return L"顏色面板";
+            if (wcscmp(english, L"More") == 0) return L"更多";
+            if (wcscmp(english, L"Help") == 0) return L"幫助";
+            if (wcscmp(english, L"Working: %d/%d") == 0) return L"工作中: %d/%d";
+            if (wcscmp(english, L"Short Break: %d/%d") == 0) return L"短休息: %d/%d";
+            if (wcscmp(english, L"Long Break") == 0) return L"長休息";
+            if (wcscmp(english, L"Time to focus!") == 0) return L"專注時間到了！";
+            if (wcscmp(english, L"Time for a break!") == 0) return L"休息時間到了！";
+            if (wcscmp(english, L"Completed: %d/%d") == 0) return L"已完成: %d/%d";
             return chinese;
 
         case APP_LANG_SPANISH:
@@ -251,6 +277,19 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Select Preset") == 0) return L"Seleccionar Preajuste";
             if (wcscmp(english, L"Confirm Delete") == 0) return L"Confirmar Eliminación";
             if (wcscmp(english, L"Are you sure you want to delete this preset?") == 0) return L"¿Está seguro de que desea eliminar este preajuste?";
+            if (wcscmp(english, L"Open File") == 0) return L"Abrir Archivo";
+            if (wcscmp(english, L"No Display") == 0) return L"Sin Visualización";
+            if (wcscmp(english, L"Preset Management") == 0) return L"Gestión de Preajustes";
+            if (wcscmp(english, L"Color Value") == 0) return L"Valor de Color";
+            if (wcscmp(english, L"Color Panel") == 0) return L"Panel de Color";
+            if (wcscmp(english, L"More") == 0) return L"Más";
+            if (wcscmp(english, L"Help") == 0) return L"Ayuda";
+            if (wcscmp(english, L"Working: %d/%d") == 0) return L"Trabajando: %d/%d";
+            if (wcscmp(english, L"Short Break: %d/%d") == 0) return L"Descanso Corto: %d/%d";
+            if (wcscmp(english, L"Long Break") == 0) return L"Descanso Largo";
+            if (wcscmp(english, L"Time to focus!") == 0) return L"¡Hora de concentrarse!";
+            if (wcscmp(english, L"Time for a break!") == 0) return L"¡Hora de un descanso!";
+            if (wcscmp(english, L"Completed: %d/%d") == 0) return L"Completado: %d/%d";
             return english;
 
         case APP_LANG_FRENCH:
@@ -318,6 +357,19 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Select Preset") == 0) return L"Sélectionner un Préréglage";
             if (wcscmp(english, L"Confirm Delete") == 0) return L"Confirmer la Suppression";
             if (wcscmp(english, L"Are you sure you want to delete this preset?") == 0) return L"Êtes-vous sûr de vouloir supprimer ce préréglage ?";
+            if (wcscmp(english, L"Open File") == 0) return L"Ouvrir Fichier";
+            if (wcscmp(english, L"No Display") == 0) return L"Aucun Affichage";
+            if (wcscmp(english, L"Preset Management") == 0) return L"Gestion des Préréglages";
+            if (wcscmp(english, L"Color Value") == 0) return L"Valeur de Couleur";
+            if (wcscmp(english, L"Color Panel") == 0) return L"Panneau de Couleur";
+            if (wcscmp(english, L"More") == 0) return L"Plus";
+            if (wcscmp(english, L"Help") == 0) return L"Aide";
+            if (wcscmp(english, L"Working: %d/%d") == 0) return L"Travail: %d/%d";
+            if (wcscmp(english, L"Short Break: %d/%d") == 0) return L"Pause Courte: %d/%d";
+            if (wcscmp(english, L"Long Break") == 0) return L"Pause Longue";
+            if (wcscmp(english, L"Time to focus!") == 0) return L"C'est l'heure de se concentrer !";
+            if (wcscmp(english, L"Time for a break!") == 0) return L"C'est l'heure d'une pause !";
+            if (wcscmp(english, L"Completed: %d/%d") == 0) return L"Terminé: %d/%d";
             return english;
 
         case APP_LANG_GERMAN:
@@ -385,6 +437,19 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Select Preset") == 0) return L"Voreinstellung Auswählen";
             if (wcscmp(english, L"Confirm Delete") == 0) return L"Löschen Bestätigen";
             if (wcscmp(english, L"Are you sure you want to delete this preset?") == 0) return L"Sind Sie sicher, dass Sie diese Voreinstellung löschen möchten?";
+            if (wcscmp(english, L"Open File") == 0) return L"Datei Öffnen";
+            if (wcscmp(english, L"No Display") == 0) return L"Keine Anzeige";
+            if (wcscmp(english, L"Preset Management") == 0) return L"Voreinstellungsverwaltung";
+            if (wcscmp(english, L"Color Value") == 0) return L"Farbwert";
+            if (wcscmp(english, L"Color Panel") == 0) return L"Farbpanel";
+            if (wcscmp(english, L"More") == 0) return L"Mehr";
+            if (wcscmp(english, L"Help") == 0) return L"Hilfe";
+            if (wcscmp(english, L"Working: %d/%d") == 0) return L"Arbeiten: %d/%d";
+            if (wcscmp(english, L"Short Break: %d/%d") == 0) return L"Kurze Pause: %d/%d";
+            if (wcscmp(english, L"Long Break") == 0) return L"Lange Pause";
+            if (wcscmp(english, L"Time to focus!") == 0) return L"Zeit zum Fokussieren!";
+            if (wcscmp(english, L"Time for a break!") == 0) return L"Zeit für eine Pause!";
+            if (wcscmp(english, L"Completed: %d/%d") == 0) return L"Abgeschlossen: %d/%d";
             return english;
 
         case APP_LANG_RUSSIAN:
@@ -453,6 +518,19 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Select Preset") == 0) return L"Выбрать Пресет";
             if (wcscmp(english, L"Confirm Delete") == 0) return L"Подтвердить Удаление";
             if (wcscmp(english, L"Are you sure you want to delete this preset?") == 0) return L"Вы уверены, что хотите удалить этот пресет?";
+            if (wcscmp(english, L"Open File") == 0) return L"Открыть файл";
+            if (wcscmp(english, L"No Display") == 0) return L"Не отображать";
+            if (wcscmp(english, L"Preset Management") == 0) return L"Управление пресетами";
+            if (wcscmp(english, L"Color Value") == 0) return L"Значение цвета";
+            if (wcscmp(english, L"Color Panel") == 0) return L"Цветовая панель";
+            if (wcscmp(english, L"More") == 0) return L"Больше";
+            if (wcscmp(english, L"Help") == 0) return L"Помощь";
+            if (wcscmp(english, L"Working: %d/%d") == 0) return L"Работа: %d/%d";
+            if (wcscmp(english, L"Short Break: %d/%d") == 0) return L"Короткий перерыв: %d/%d";
+            if (wcscmp(english, L"Long Break") == 0) return L"Длительный перерыв";
+            if (wcscmp(english, L"Time to focus!") == 0) return L"Время сосредоточиться!";
+            if (wcscmp(english, L"Time for a break!") == 0) return L"Время для перерыва!";
+            if (wcscmp(english, L"Completed: %d/%d") == 0) return L"Завершено: %d/%d";
             return english;
 
         case APP_LANG_PORTUGUESE:
@@ -520,6 +598,19 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Select Preset") == 0) return L"Selecionar Predefinição";
             if (wcscmp(english, L"Confirm Delete") == 0) return L"Confirmer Exclusão";
             if (wcscmp(english, L"Are you sure you want to delete this preset?") == 0) return L"Tem certeza que deseja excluir esta predefinição?";
+            if (wcscmp(english, L"Open File") == 0) return L"Abrir Arquivo";
+            if (wcscmp(english, L"No Display") == 0) return L"Sem Exibição";
+            if (wcscmp(english, L"Preset Management") == 0) return L"Gerenciamento de Predefinições";
+            if (wcscmp(english, L"Color Value") == 0) return L"Valor da Cor";
+            if (wcscmp(english, L"Color Panel") == 0) return L"Painel de Cor";
+            if (wcscmp(english, L"More") == 0) return L"Mais";
+            if (wcscmp(english, L"Help") == 0) return L"Ajuda";
+            if (wcscmp(english, L"Working: %d/%d") == 0) return L"Trabalhando: %d/%d";
+            if (wcscmp(english, L"Short Break: %d/%d") == 0) return L"Pausa Curta: %d/%d";
+            if (wcscmp(english, L"Long Break") == 0) return L"Pausa Longa";
+            if (wcscmp(english, L"Time to focus!") == 0) return L"Hora de focar!";
+            if (wcscmp(english, L"Time for a break!") == 0) return L"Hora de uma pausa!";
+            if (wcscmp(english, L"Completed: %d/%d") == 0) return L"Concluído: %d/%d";
             return english;
 
         case APP_LANG_JAPANESE:
@@ -598,6 +689,19 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Select Preset") == 0) return L"プリセットを選択";
             if (wcscmp(english, L"Confirm Delete") == 0) return L"削除の確認";
             if (wcscmp(english, L"Are you sure you want to delete this preset?") == 0) return L"このプリセットを削除してもよろしいですか？";
+            if (wcscmp(english, L"Open File") == 0) return L"ファイルを開く";
+            if (wcscmp(english, L"No Display") == 0) return L"表示なし";
+            if (wcscmp(english, L"Preset Management") == 0) return L"プリセット管理";
+            if (wcscmp(english, L"Color Value") == 0) return L"色の値";
+            if (wcscmp(english, L"Color Panel") == 0) return L"カラーパネル";
+            if (wcscmp(english, L"More") == 0) return L"その他";
+            if (wcscmp(english, L"Help") == 0) return L"ヘルプ";
+            if (wcscmp(english, L"Working: %d/%d") == 0) return L"作業中: %d/%d";
+            if (wcscmp(english, L"Short Break: %d/%d") == 0) return L"短い休憩: %d/%d";
+            if (wcscmp(english, L"Long Break") == 0) return L"長い休憩";
+            if (wcscmp(english, L"Time to focus!") == 0) return L"集中する時間です！";
+            if (wcscmp(english, L"Time for a break!") == 0) return L"休憩の時間です！";
+            if (wcscmp(english, L"Completed: %d/%d") == 0) return L"完了: %d/%d";
             return english;
 
         case APP_LANG_KOREAN:
@@ -653,6 +757,19 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Select Preset") == 0) return L"프리셋 선택";
             if (wcscmp(english, L"Confirm Delete") == 0) return L"삭제 확인";
             if (wcscmp(english, L"Are you sure you want to delete this preset?") == 0) return L"이 프리셋을 삭제하시겠습니까?";
+            if (wcscmp(english, L"Open File") == 0) return L"파일 열기";
+            if (wcscmp(english, L"No Display") == 0) return L"표시 없음";
+            if (wcscmp(english, L"Preset Management") == 0) return L"프리셋 관리";
+            if (wcscmp(english, L"Color Value") == 0) return L"색상 값";
+            if (wcscmp(english, L"Color Panel") == 0) return L"색상 패널";
+            if (wcscmp(english, L"More") == 0) return L"더 보기";
+            if (wcscmp(english, L"Help") == 0) return L"도움말";
+            if (wcscmp(english, L"Working: %d/%d") == 0) return L"작업 중: %d/%d";
+            if (wcscmp(english, L"Short Break: %d/%d") == 0) return L"짧은 휴식: %d/%d";
+            if (wcscmp(english, L"Long Break") == 0) return L"긴 휴식";
+            if (wcscmp(english, L"Time to focus!") == 0) return L"집중할 시간입니다!";
+            if (wcscmp(english, L"Time for a break!") == 0) return L"휴식 시간입니다!";
+            if (wcscmp(english, L"Completed: %d/%d") == 0) return L"완료: %d/%d";
             return english;
 
         case APP_LANG_ENGLISH:
