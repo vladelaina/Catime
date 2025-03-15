@@ -168,7 +168,6 @@ int ParseInput(const char* input, int* total_seconds) {
         
         // 目标时间，初始化为当前日期
         struct tm tm_target = *tm_now;
-        tm_target.tm_sec = 0; // 默认秒数为0
         
         // 解析目标时间
         int hour = -1, minute = -1, second = -1;
@@ -184,10 +183,25 @@ int ParseInput(const char* input, int* total_seconds) {
             token = strtok(NULL, " ");
         }
         
-        // 设置目标时间
-        if (hour >= 0) tm_target.tm_hour = hour;
-        if (minute >= 0) tm_target.tm_min = minute;
-        if (second >= 0) tm_target.tm_sec = second;
+        // 设置目标时间，根据提供的值设置，不足的默认为0
+        if (hour >= 0) {
+            tm_target.tm_hour = hour;
+            
+            // 如果只提供了小时，将分钟和秒设置为0
+            if (minute < 0) {
+                tm_target.tm_min = 0;
+                tm_target.tm_sec = 0;
+            } else {
+                tm_target.tm_min = minute;
+                
+                // 如果没有提供秒，设置为0
+                if (second < 0) {
+                    tm_target.tm_sec = 0;
+                } else {
+                    tm_target.tm_sec = second;
+                }
+            }
+        }
         
         // 计算时间差（秒）
         time_t target_time = mktime(&tm_target);
