@@ -161,9 +161,7 @@ void ShowColorMenu(HWND hwnd) {
     // 在超时动作菜单中添加"打开文件"选项（将其改为子菜单）
     HMENU hFileMenu = CreatePopupMenu();
 
-    // 添加"浏览..."选项
-    AppendMenuW(hFileMenu, MF_STRING, CLOCK_IDM_BROWSE_FILE,
-               GetLocalizedString(L"浏览...", L"Browse..."));
+
 
     // 如果有当前选择的文件，显示它
     if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
@@ -185,12 +183,12 @@ void ShowColorMenu(HWND hwnd) {
         AppendMenuW(hFileMenu, MF_STRING | MF_DISABLED, 0, wFileName);
     }
 
-    // 添加最近文件分隔线和标题
-    if (CLOCK_RECENT_FILES_COUNT > 0) {
-        AppendMenuW(hFileMenu, MF_SEPARATOR, 0, NULL);
-        AppendMenuW(hFileMenu, MF_STRING | MF_DISABLED, 0,
-                   GetLocalizedString(L"最近文件", L"Recent Files"));
-    }
+    // 添加分隔线
+    AppendMenuW(hFileMenu, MF_SEPARATOR, 0, NULL);
+
+      // 添加"浏览..."选项
+    AppendMenuW(hFileMenu, MF_STRING, CLOCK_IDM_BROWSE_FILE,
+               GetLocalizedString(L"浏览...", L"Browse..."));
 
     // 添加最近文件列表
     for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
