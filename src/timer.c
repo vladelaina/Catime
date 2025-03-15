@@ -142,9 +142,10 @@ void FormatTime(int remaining_time, char* time_text) {
  * 
  * 支持多种输入格式：
  * - 单一数字（默认分钟）："25" → 25分钟
- * - 带单位："1h30m" → 5400秒
- * - 多段格式："1 30" → 1分30秒
- * - 完整格式："1 30 15" → 1小时30分15秒
+ * - 带单位："1h30m" → 1小时30分钟
+ * - 两段格式："25 3" → 25分钟3秒
+ * - 三段格式："1 30 15" → 1小时30分钟15秒
+ * - 混合格式："25 30m" → 25小时30分钟
  */
 int ParseInput(const char* input, int* total_seconds) {
     if (!isValidInput(input)) return 0;
@@ -198,22 +199,103 @@ int ParseInput(const char* input, int* total_seconds) {
         
         total = (int)difftime(target_time, now);
     } else {
-        // 原有的时间格式处理逻辑
-        char *token = strtok(input_copy, " ");
-        while (token) {
-            char unit = tolower((unsigned char)token[strlen(token) - 1]);
-            if (unit == 'h' || unit == 'm' || unit == 's') {
-                token[strlen(token) - 1] = '\0';   
-                int value = atoi(token);
-                switch (unit) {
-                    case 'h': total += value * 3600; break;
-                    case 'm': total += value * 60; break;
-                    case 's': total += value; break;
-                }
-            } else {
-                total += atoi(token) * 60; // 默认单位为分钟
+        // 检查是否含有单位标识符
+        BOOL hasUnits = FALSE;
+        for (int i = 0; input_copy[i]; i++) {
+            char c = tolower((unsigned char)input_copy[i]);
+            if (c == 'h' || c == 'm' || c == 's') {
+                hasUnits = TRUE;
+                break;
             }
-            token = strtok(NULL, " ");
+        }
+        
+        if (hasUnits) {
+            // 对于带单位的输入，合并所有标记单位的部分
+            char* parts[10] = {0}; // 最多存储10个部分
+            int part_count = 0;
+            
+            // 分割输入字符串
+            char* token = strtok(input_copy, " ");
+            while (token && part_count < 10) {
+                parts[part_count++] = token;
+                token = strtok(NULL, " ");
+            }
+            
+            // 处理每个部分
+            for (int i = 0; i < part_count; i++) {
+                char* part = parts[i];
+                int part_len = strlen(part);
+                BOOL has_unit = FALSE;
+                
+                // 检查这一部分是否有单位
+                for (int j = 0; j < part_len; j++) {
+                    char c = tolower((unsigned char)part[j]);
+                    if (c == 'h' || c == 'm' || c == 's') {
+                        has_unit = TRUE;
+                        break;
+                    }
+                }
+                
+                if (has_unit) {
+                    // 如果带单位，按单位处理
+                    char unit = tolower((unsigned char)part[part_len-1]);
+                    part[part_len-1] = '\0'; // 移除单位
+                    int value = atoi(part);
+                    
+                    switch (unit) {
+                        case 'h': total += value * 3600; break;
+                        case 'm': total += value * 60; break;
+                        case 's': total += value; break;
+                    }
+                } else if (i < part_count - 1 && 
+                          strlen(parts[i+1]) > 0 && 
+                          tolower((unsigned char)parts[i+1][strlen(parts[i+1])-1]) == 'h') {
+                    // 如果后一项带h单位，当前项是小时
+                    total += atoi(part) * 3600;
+                } else if (i < part_count - 1 && 
+                          strlen(parts[i+1]) > 0 && 
+                          tolower((unsigned char)parts[i+1][strlen(parts[i+1])-1]) == 'm') {
+                    // 如果后一项带m单位，当前项是小时
+                    total += atoi(part) * 3600;
+                } else {
+                    // 默认按两段或三段格式处理
+                    if (part_count == 2) {
+                        // 两段格式：第一段是分钟，第二段是秒
+                        if (i == 0) total += atoi(part) * 60;
+                        else total += atoi(part);
+                    } else if (part_count == 3) {
+                        // 三段格式：时:分:秒
+                        if (i == 0) total += atoi(part) * 3600;
+                        else if (i == 1) total += atoi(part) * 60;
+                        else total += atoi(part);
+                    } else {
+                        // 其他情况按分钟处理
+                        total += atoi(part) * 60;
+                    }
+                }
+            }
+        } else {
+            // 不含单位的处理
+            char* parts[3] = {0}; // 最多存储3个部分(时、分、秒)
+            int part_count = 0;
+            
+            // 分割输入字符串
+            char* token = strtok(input_copy, " ");
+            while (token && part_count < 3) {
+                parts[part_count++] = token;
+                token = strtok(NULL, " ");
+            }
+            
+            if (part_count == 1) {
+                // 单个数字，按分钟计算
+                total = atoi(parts[0]) * 60;
+            } else if (part_count == 2) {
+                // 两个数字：分:秒
+                total = atoi(parts[0]) * 60 + atoi(parts[1]);
+            } else if (part_count == 3) {
+                // 三个数字：时:分:秒
+                total = atoi(parts[0]) * 3600 + atoi(parts[1]) * 60 + atoi(parts[2]);
+            }
         }
     }
 
