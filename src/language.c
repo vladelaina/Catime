@@ -114,6 +114,21 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Break over! Time to focus again.") == 0) return L"休息结束！重新开始工作！";
             if (wcscmp(english, L"Error") == 0) return L"错误";
             if (wcscmp(english, L"Failed to open file") == 0) return L"无法打开文件";
+            if (wcscmp(english, L"Timer Control") == 0) return L"计时管理";
+            if (wcscmp(english, L"Pomodoro") == 0) return L"番茄时钟";
+            if (wcscmp(english, L"Focus: %ls") == 0) return L"集中精力: %ls";
+            if (wcscmp(english, L"Short Break: %ls") == 0) return L"短暂休息: %ls";
+            if (wcscmp(english, L"Long Break: %ls") == 0) return L"长时间休息: %ls";
+            if (wcscmp(english, L"Loop Count: %d") == 0) return L"循环次数: %d";
+            if (wcscmp(english, L"Always on Top") == 0) return L"置顶";
+            if (wcscmp(english, L"Save Preset") == 0) return L"保存预设";
+            if (wcscmp(english, L"Load Preset") == 0) return L"加载预设";
+            if (wcscmp(english, L"Delete Preset") == 0) return L"删除预设";
+            if (wcscmp(english, L"Create New Preset") == 0) return L"创建新预设";
+            if (wcscmp(english, L"Preset Name") == 0) return L"预设名称";
+            if (wcscmp(english, L"Select Preset") == 0) return L"选择预设";
+            if (wcscmp(english, L"Confirm Delete") == 0) return L"确认删除";
+            if (wcscmp(english, L"Are you sure you want to delete this preset?") == 0) return L"确定要删除这个预设吗？";
             return chinese;
             
         case APP_LANG_CHINESE_TRAD:
@@ -154,6 +169,21 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Break over! Time to focus again.") == 0) return L"休息結束！重新開始工作！";
             if (wcscmp(english, L"Error") == 0) return L"錯誤";
             if (wcscmp(english, L"Failed to open file") == 0) return L"無法打開文件";
+            if (wcscmp(english, L"Timer Control") == 0) return L"計時管理";
+            if (wcscmp(english, L"Pomodoro") == 0) return L"番茄鐘";
+            if (wcscmp(english, L"Focus: %ls") == 0) return L"集中精力: %ls";
+            if (wcscmp(english, L"Short Break: %ls") == 0) return L"短暫休息: %ls";
+            if (wcscmp(english, L"Long Break: %ls") == 0) return L"長時間休息: %ls";
+            if (wcscmp(english, L"Loop Count: %d") == 0) return L"循環次數: %d";
+            if (wcscmp(english, L"Always on Top") == 0) return L"置頂";
+            if (wcscmp(english, L"Save Preset") == 0) return L"保存預設";
+            if (wcscmp(english, L"Load Preset") == 0) return L"加載預設";
+            if (wcscmp(english, L"Delete Preset") == 0) return L"刪除預設";
+            if (wcscmp(english, L"Create New Preset") == 0) return L"創建新預設";
+            if (wcscmp(english, L"Preset Name") == 0) return L"預設名稱";
+            if (wcscmp(english, L"Select Preset") == 0) return L"選擇預設";
+            if (wcscmp(english, L"Confirm Delete") == 0) return L"確認刪除";
+            if (wcscmp(english, L"Are you sure you want to delete this preset?") == 0) return L"確定要刪除這個預設嗎？";
             return chinese;
 
         case APP_LANG_SPANISH:
@@ -200,12 +230,27 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"已设置为启动时正计时";
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"已设置为启动时倒计时";
             if (wcscmp(english, L"Settings") == 0) return L"设置";
-            if (wcscmp(english, L"Preset Manager") == 0) return L"Gestor de preajustes";
+            if (wcscmp(english, L"Preset Manager") == 0) return L"Gestor de Preajustes";
             if (wcscmp(english, L"Count Up") == 0) return L"Contar hacia arriba";
             if (wcscmp(english, L"Startup Settings") == 0) return L"Configuración de inicio";
             if (wcscmp(english, L"Start with Windows") == 0) return L"Iniciar con Windows";
             if (wcscmp(english, L"Set Countdown") == 0) return L"Cuenta regresiva";
             if (wcscmp(english, L"Set Time") == 0) return L"Cuenta regresiva";
+            if (wcscmp(english, L"Timer Control") == 0) return L"Control del Temporizador";
+            if (wcscmp(english, L"Pomodoro") == 0) return L"Pomodoro";
+            if (wcscmp(english, L"Focus: %ls") == 0) return L"Enfoque: %ls";
+            if (wcscmp(english, L"Short Break: %ls") == 0) return L"Descanso Corto: %ls";
+            if (wcscmp(english, L"Long Break: %ls") == 0) return L"Descanso Largo: %ls";
+            if (wcscmp(english, L"Loop Count: %d") == 0) return L"Conteo de Ciclos: %d";
+            if (wcscmp(english, L"Always on Top") == 0) return L"Siempre Visible";
+            if (wcscmp(english, L"Save Preset") == 0) return L"Guardar Preajuste";
+            if (wcscmp(english, L"Load Preset") == 0) return L"Cargar Preajuste";
+            if (wcscmp(english, L"Delete Preset") == 0) return L"Eliminar Preajuste";
+            if (wcscmp(english, L"Create New Preset") == 0) return L"Crear Nuevo Preajuste";
+            if (wcscmp(english, L"Preset Name") == 0) return L"Nombre del Preajuste";
+            if (wcscmp(english, L"Select Preset") == 0) return L"Seleccionar Preajuste";
+            if (wcscmp(english, L"Confirm Delete") == 0) return L"Confirmar Eliminación";
+            if (wcscmp(english, L"Are you sure you want to delete this preset?") == 0) return L"¿Está seguro de que desea eliminar este preajuste?";
             return english;
 
         case APP_LANG_FRENCH:
@@ -235,7 +280,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Reset") == 0) return english;
             if (wcscmp(english, L"Exit") == 0) return L"Quitter";
             if (wcscmp(english, L"Temps écoulé !") == 0) return L"Temps écoulé !";
-            if (wcscmp(english, L"Format d'entrée") == 0) return L"Format d'entrée";
+            if (wcscmp(english, L"Formato d'entrée") == 0) return L"Formato d'entrée";
             if (wcscmp(english, L"Entrée invalide") == 0) return L"Entrée invalide";
             if (wcscmp(english, L"Erreur") == 0) return L"Erreur";
             if (wcscmp(english, L"Échec du chargement de la police: %hs") == 0) return L"Échec du chargement de la police: %hs";
@@ -252,12 +297,27 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"已设置为启动时正计时";
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"已设置为启动时倒计时";
             if (wcscmp(english, L"Settings") == 0) return L"设置";
-            if (wcscmp(english, L"Preset Manager") == 0) return L"Gestionnaire de préréglages";
+            if (wcscmp(english, L"Preset Manager") == 0) return L"Gestionnaire de Préréglages";
             if (wcscmp(english, L"Count Up") == 0) return L"Compte à rebours positif";
             if (wcscmp(english, L"Startup Settings") == 0) return L"Paramètres de démarrage";
             if (wcscmp(english, L"Start with Windows") == 0) return L"Démarrer avec Windows";
             if (wcscmp(english, L"Set Countdown") == 0) return L"Compte à rebours";
             if (wcscmp(english, L"Set Time") == 0) return L"Compte à rebours";
+            if (wcscmp(english, L"Timer Control") == 0) return L"Contrôle du Minuteur";
+            if (wcscmp(english, L"Pomodoro") == 0) return L"Pomodoro";
+            if (wcscmp(english, L"Focus: %ls") == 0) return L"Concentration: %ls";
+            if (wcscmp(english, L"Short Break: %ls") == 0) return L"Pause Courte: %ls";
+            if (wcscmp(english, L"Long Break: %ls") == 0) return L"Pause Longue: %ls";
+            if (wcscmp(english, L"Loop Count: %d") == 0) return L"Nombre de Cycles: %d";
+            if (wcscmp(english, L"Always on Top") == 0) return L"Toujours au Premier Plan";
+            if (wcscmp(english, L"Save Preset") == 0) return L"Enregistrer le Préréglage";
+            if (wcscmp(english, L"Load Preset") == 0) return L"Charger le Préréglage";
+            if (wcscmp(english, L"Delete Preset") == 0) return L"Supprimer le Préréglage";
+            if (wcscmp(english, L"Create New Preset") == 0) return L"Créer un Nouveau Préréglage";
+            if (wcscmp(english, L"Preset Name") == 0) return L"Nom du Préréglage";
+            if (wcscmp(english, L"Select Preset") == 0) return L"Sélectionner un Préréglage";
+            if (wcscmp(english, L"Confirm Delete") == 0) return L"Confirmer la Suppression";
+            if (wcscmp(english, L"Are you sure you want to delete this preset?") == 0) return L"Êtes-vous sûr de vouloir supprimer ce préréglage ?";
             return english;
 
         case APP_LANG_GERMAN:
@@ -304,12 +364,27 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"Als Stoppuhr beim Start eingestellt";
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"Als Countdown beim Start eingestellt";
             if (wcscmp(english, L"Settings") == 0) return L"Einstellungen";
-            if (wcscmp(english, L"Preset Manager") == 0) return L"Voreinstellungen";
+            if (wcscmp(english, L"Preset Manager") == 0) return L"Voreinstellungen-Manager";
             if (wcscmp(english, L"Count Up") == 0) return L"Aufwärtszählen";
             if (wcscmp(english, L"Startup Settings") == 0) return L"Starteinstellungen";
             if (wcscmp(english, L"Start with Windows") == 0) return L"Mit Windows starten";
             if (wcscmp(english, L"Set Countdown") == 0) return L"Countdown";
             if (wcscmp(english, L"Set Time") == 0) return L"Countdown";
+            if (wcscmp(english, L"Timer Control") == 0) return L"Timer-Steuerung";
+            if (wcscmp(english, L"Pomodoro") == 0) return L"Pomodoro";
+            if (wcscmp(english, L"Focus: %ls") == 0) return L"Fokus: %ls";
+            if (wcscmp(english, L"Short Break: %ls") == 0) return L"Kurze Pause: %ls";
+            if (wcscmp(english, L"Long Break: %ls") == 0) return L"Lange Pause: %ls";
+            if (wcscmp(english, L"Loop Count: %d") == 0) return L"Zyklenanzahl: %d";
+            if (wcscmp(english, L"Always on Top") == 0) return L"Immer im Vordergrund";
+            if (wcscmp(english, L"Save Preset") == 0) return L"Voreinstellung Speichern";
+            if (wcscmp(english, L"Load Preset") == 0) return L"Voreinstellung Laden";
+            if (wcscmp(english, L"Delete Preset") == 0) return L"Voreinstellung Löschen";
+            if (wcscmp(english, L"Create New Preset") == 0) return L"Neue Voreinstellung Erstellen";
+            if (wcscmp(english, L"Preset Name") == 0) return L"Voreinstellungsname";
+            if (wcscmp(english, L"Select Preset") == 0) return L"Voreinstellung Auswählen";
+            if (wcscmp(english, L"Confirm Delete") == 0) return L"Löschen Bestätigen";
+            if (wcscmp(english, L"Are you sure you want to delete this preset?") == 0) return L"Sind Sie sicher, dass Sie diese Voreinstellung löschen möchten?";
             return english;
 
         case APP_LANG_RUSSIAN:
@@ -357,12 +432,27 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"Настроено на запуск секундомера";
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"Настроено на запуск обратного отсчета";
             if (wcscmp(english, L"Settings") == 0) return L"Настройки";
-            if (wcscmp(english, L"Preset Manager") == 0) return L"Настроить";
+            if (wcscmp(english, L"Preset Manager") == 0) return L"Менеджер Пресетов";
             if (wcscmp(english, L"Count Up") == 0) return L"Счетчик";
             if (wcscmp(english, L"Startup Settings") == 0) return L"Настройки запуска";
             if (wcscmp(english, L"Start with Windows") == 0) return L"Запускать с Windows";
             if (wcscmp(english, L"Set Countdown") == 0) return L"Установить обратный отсчет";
             if (wcscmp(english, L"Set Time") == 0) return L"Установить обратный отсчет";
+            if (wcscmp(english, L"Timer Control") == 0) return L"Таймер управления";
+            if (wcscmp(english, L"Pomodoro") == 0) return L"Помодоро";
+            if (wcscmp(english, L"Focus: %ls") == 0) return L"Фокус: %ls";
+            if (wcscmp(english, L"Short Break: %ls") == 0) return L"Короткий перерыв: %ls";
+            if (wcscmp(english, L"Long Break: %ls") == 0) return L"Длительный перерыв: %ls";
+            if (wcscmp(english, L"Loop Count: %d") == 0) return L"Количество циклов: %d";
+            if (wcscmp(english, L"Always on Top") == 0) return L"Всегда на переднем плане";
+            if (wcscmp(english, L"Save Preset") == 0) return L"Сохранить Пресет";
+            if (wcscmp(english, L"Load Preset") == 0) return L"Загрузить Пресет";
+            if (wcscmp(english, L"Delete Preset") == 0) return L"Удалить Пресет";
+            if (wcscmp(english, L"Create New Preset") == 0) return L"Создать Новый Пресет";
+            if (wcscmp(english, L"Preset Name") == 0) return L"Имя Пресета";
+            if (wcscmp(english, L"Select Preset") == 0) return L"Выбрать Пресет";
+            if (wcscmp(english, L"Confirm Delete") == 0) return L"Подтвердить Удаление";
+            if (wcscmp(english, L"Are you sure you want to delete this preset?") == 0) return L"Вы уверены, что хотите удалить этот пресет?";
             return english;
 
         case APP_LANG_PORTUGUESE:
@@ -409,12 +499,27 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"Configurado como cronômetro na inicialização";
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"Configurado como contagem regressiva na inicialização";
             if (wcscmp(english, L"Settings") == 0) return L"Configurações";
-            if (wcscmp(english, L"Preset Manager") == 0) return L"Gerenciador de pré-ajustes";
+            if (wcscmp(english, L"Preset Manager") == 0) return L"Gerenciador de Predefinições";
             if (wcscmp(english, L"Count Up") == 0) return L"Contagem ascendente";
             if (wcscmp(english, L"Startup Settings") == 0) return L"Configurações de inicialização";
             if (wcscmp(english, L"Start with Windows") == 0) return L"Iniciar com o Windows";
             if (wcscmp(english, L"Set Countdown") == 0) return L"Establecer cuenta regresiva";
             if (wcscmp(english, L"Set Time") == 0) return L"Establecer cuenta regresiva";
+            if (wcscmp(english, L"Timer Control") == 0) return L"Controle do Timer";
+            if (wcscmp(english, L"Pomodoro") == 0) return L"Pomodoro";
+            if (wcscmp(english, L"Focus: %ls") == 0) return L"Foco: %ls";
+            if (wcscmp(english, L"Short Break: %ls") == 0) return L"Pausa Curta: %ls";
+            if (wcscmp(english, L"Long Break: %ls") == 0) return L"Pausa Longa: %ls";
+            if (wcscmp(english, L"Loop Count: %d") == 0) return L"Contagem de Ciclos: %d";
+            if (wcscmp(english, L"Always on Top") == 0) return L"Sempre Visível";
+            if (wcscmp(english, L"Save Preset") == 0) return L"Salvar Predefinição";
+            if (wcscmp(english, L"Load Preset") == 0) return L"Carregar Predefinição";
+            if (wcscmp(english, L"Delete Preset") == 0) return L"Excluir Predefinição";
+            if (wcscmp(english, L"Create New Preset") == 0) return L"Criar Nova Predefinição";
+            if (wcscmp(english, L"Preset Name") == 0) return L"Nome da Predefinição";
+            if (wcscmp(english, L"Select Preset") == 0) return L"Selecionar Predefinição";
+            if (wcscmp(english, L"Confirm Delete") == 0) return L"Confirmer Exclusão";
+            if (wcscmp(english, L"Are you sure you want to delete this preset?") == 0) return L"Tem certeza que deseja excluir esta predefinição?";
             return english;
 
         case APP_LANG_JAPANESE:
@@ -439,7 +544,6 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Font") == 0) return L"フォント";
             if (wcscmp(english, L"Version: %hs") == 0) return L"バージョン: %hs";
             if (wcscmp(english, L"Feedback") == 0) return L"フィードバック";
-            if (wcscmp(english, L"Language") == 0) return english;
             if (wcscmp(english, L"Check for Updates") == 0) return L"更新を確認";
             if (wcscmp(english, L"About") == 0) return L"について";
             if (wcscmp(english, L"Reset") == 0) return L"リセット";
@@ -473,12 +577,27 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"起動時にストップウォッチに設定";
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"起動時にカウントダウンに設定";
             if (wcscmp(english, L"Settings") == 0) return L"設定";
-            if (wcscmp(english, L"Preset Manager") == 0) return L"プリセット管理";
+            if (wcscmp(english, L"Preset Manager") == 0) return L"プリセットマネージャー";
             if (wcscmp(english, L"Count Up") == 0) return L"カウントアップ";
             if (wcscmp(english, L"Startup Settings") == 0) return L"起動設定";
             if (wcscmp(english, L"Start with Windows") == 0) return L"Windowsと同時に起動";
             if (wcscmp(english, L"Set Countdown") == 0) return L"カウントダウン";
             if (wcscmp(english, L"Set Time") == 0) return L"カウントダウン";
+            if (wcscmp(english, L"Timer Control") == 0) return L"タイマー制御";
+            if (wcscmp(english, L"Pomodoro") == 0) return L"ポモドーロ";
+            if (wcscmp(english, L"Focus: %ls") == 0) return L"集中: %ls";
+            if (wcscmp(english, L"Short Break: %ls") == 0) return L"短い休憩: %ls";
+            if (wcscmp(english, L"Long Break: %ls") == 0) return L"長い休憩: %ls";
+            if (wcscmp(english, L"Loop Count: %d") == 0) return L"ループ回数: %d";
+            if (wcscmp(english, L"Always on Top") == 0) return L"常に最前面";
+            if (wcscmp(english, L"Save Preset") == 0) return L"プリセットを保存";
+            if (wcscmp(english, L"Load Preset") == 0) return L"プリセットを読み込む";
+            if (wcscmp(english, L"Delete Preset") == 0) return L"プリセットを削除";
+            if (wcscmp(english, L"Create New Preset") == 0) return L"新しいプリセットを作成";
+            if (wcscmp(english, L"Preset Name") == 0) return L"プリセット名";
+            if (wcscmp(english, L"Select Preset") == 0) return L"プリセットを選択";
+            if (wcscmp(english, L"Confirm Delete") == 0) return L"削除の確認";
+            if (wcscmp(english, L"Are you sure you want to delete this preset?") == 0) return L"このプリセットを削除してもよろしいですか？";
             return english;
 
         case APP_LANG_KOREAN:
@@ -519,6 +638,21 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Break over! Time to focus again.") == 0) return L"휴식 종료! 다시 집중할 시간입니다.";
             if (wcscmp(english, L"Error") == 0) return L"오류";
             if (wcscmp(english, L"Failed to open file") == 0) return L"파일을 열지 못했습니다";
+            if (wcscmp(english, L"Timer Control") == 0) return L"타이머 제어";
+            if (wcscmp(english, L"Pomodoro") == 0) return L"포모도로";
+            if (wcscmp(english, L"Focus: %ls") == 0) return L"집중: %ls";
+            if (wcscmp(english, L"Short Break: %ls") == 0) return L"짧은 휴식: %ls";
+            if (wcscmp(english, L"Long Break: %ls") == 0) return L"긴 휴식: %ls";
+            if (wcscmp(english, L"Loop Count: %d") == 0) return L"반복 횟수: %d";
+            if (wcscmp(english, L"Always on Top") == 0) return L"항상 위에";
+            if (wcscmp(english, L"Save Preset") == 0) return L"프리셋 저장";
+            if (wcscmp(english, L"Load Preset") == 0) return L"프리셋 불러오기";
+            if (wcscmp(english, L"Delete Preset") == 0) return L"프리셋 삭제";
+            if (wcscmp(english, L"Create New Preset") == 0) return L"새 프리셋 만들기";
+            if (wcscmp(english, L"Preset Name") == 0) return L"프리셋 이름";
+            if (wcscmp(english, L"Select Preset") == 0) return L"프리셋 선택";
+            if (wcscmp(english, L"Confirm Delete") == 0) return L"삭제 확인";
+            if (wcscmp(english, L"Are you sure you want to delete this preset?") == 0) return L"이 프리셋을 삭제하시겠습니까?";
             return english;
 
         case APP_LANG_ENGLISH:
