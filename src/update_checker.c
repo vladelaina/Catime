@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <shlobj.h>
 #include <direct.h>
+#include <io.h>  // 添加对_access的支持
 #include "../include/update_checker.h"
 #include "../include/language.h"
 #include "../resource/resource.h"
@@ -227,25 +228,43 @@ INT_PTR CALLBACK DownloadProgressDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 }
 
 /**
- * @brief 下载文件到用户桌面并自动安装更新
+ * @brief 下载文件到本地并自动安装更新
  * @param url 文件下载URL
  * @param fileName 保存的文件名
  * @param hwnd 窗口句柄，用于显示消息
  * @return 下载成功返回TRUE，失败返回FALSE
  */
-BOOL DownloadUpdateToDesktop(const char* url, const char* fileName, HWND hwnd) {
-    char desktopPath[MAX_PATH];
-    if (SHGetFolderPathA(NULL, CSIDL_DESKTOP, NULL, 0, desktopPath) != S_OK) {
+BOOL DownloadUpdate(const char* url, const char* fileName, HWND hwnd) {
+    char localAppDataPath[MAX_PATH];
+    char catimeFolderPath[MAX_PATH];
+    
+    // 获取AppData\Local路径
+    if (SHGetFolderPathA(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, localAppDataPath) != S_OK) {
         MessageBoxW(hwnd, 
-                   GetLocalizedString(L"无法获取桌面路径", L"Could not get desktop path"), 
+                   GetLocalizedString(L"无法获取AppData路径", L"Could not get AppData path"), 
                    GetLocalizedString(L"更新错误", L"Update Error"), 
                    MB_ICONERROR);
         return FALSE;
     }
     
+    // 构建Catime文件夹路径
+    sprintf(catimeFolderPath, "%s\\Catime", localAppDataPath);
+    
+    // 确保目录存在
+    if (_access(catimeFolderPath, 0) != 0) {
+        // 目录不存在，创建它
+        if (_mkdir(catimeFolderPath) != 0) {
+            MessageBoxW(hwnd, 
+                       GetLocalizedString(L"无法创建应用数据目录", L"Could not create app data directory"), 
+                       GetLocalizedString(L"更新错误", L"Update Error"), 
+                       MB_ICONERROR);
+            return FALSE;
+        }
+    }
+    
     // 构建完整的保存路径
     char filePath[MAX_PATH];
-    sprintf(filePath, "%s\\%s", desktopPath, fileName);
+    sprintf(filePath, "%s\\%s", catimeFolderPath, fileName);
     
     // 重置下载状态
     g_bCancelDownload = FALSE;
@@ -456,7 +475,7 @@ BOOL DownloadUpdateToDesktop(const char* url, const char* fileName, HWND hwnd) {
  * @param hwnd 窗口句柄
  * 
  * 连接到GitHub/Gitee检查是否有新版本。如果有，会提示用户是否下载。
- * 如果用户确认，会将新版本下载到用户桌面。
+ * 如果用户确认，会将新版本下载到AppData目录。
  */
 void CheckForUpdate(HWND hwnd) {
     // 选择最快的更新源
@@ -549,7 +568,7 @@ void CheckForUpdate(HWND hwnd) {
             }
             
             // 下载更新
-            DownloadUpdateToDesktop(downloadUrl, fileName, hwnd);
+            DownloadUpdate(downloadUrl, fileName, hwnd);
         }
     } else {
         // 已经是最新版本
