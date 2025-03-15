@@ -194,6 +194,7 @@
 #define CLOCK_IDM_LOCK_SCREEN 122
 #define CLOCK_IDM_SHUTDOWN 123
 #define CLOCK_IDM_RESTART 124
+#define CLOCK_IDM_CURRENT_FILE 127   // 当前文件菜单项ID
 
 /* 显示与视觉效果 */
 #define BLUR_OPACITY 192

@@ -1415,24 +1415,35 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_BROWSE_FILE: {
                     char filePath[MAX_PATH] = {0};
-                    if (OpenFileDialog(hwnd, filePath, MAX_PATH)) {
+                    
+                    // 打开文件对话框
+                    OPENFILENAMEA ofn = {0};
+                    ofn.lStructSize = sizeof(OPENFILENAMEA);
+                    ofn.hwndOwner = hwnd;
+                    ofn.lpstrFilter = "All Files\0*.*\0"
+                                     "Applications\0*.exe\0"
+                                     "Audio Files\0*.mp3;*.wav;*.m4a;*.wma\0"
+                                     "Video Files\0*.mp4;*.avi;*.mkv;*.wmv\0";
+                    ofn.lpstrFile = filePath;
+                    ofn.nMaxFile = MAX_PATH;
+                    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+                    
+                    if (GetOpenFileNameA(&ofn)) {
+                        // 保存文件路径到配置
                         strncpy(CLOCK_TIMEOUT_FILE_PATH, filePath, MAX_PATH - 1);
                         CLOCK_TIMEOUT_FILE_PATH[MAX_PATH - 1] = '\0';
+                        
+                        // 设置超时动作为打开文件
                         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
                         
-                        // 保存最近文件
+                        // 保存文件到最近文件列表
                         SaveRecentFile(filePath);
                         
-                        // 保存超时动作设置
+                        // 更新配置文件
                         WriteConfigTimeoutAction("OPEN_FILE");
-                        
-                        // 保存文件路径
-                        char config_path[MAX_PATH];
-                        GetConfigPath(config_path, MAX_PATH);
-                        WritePrivateProfileStringA("Settings", "CLOCK_TIMEOUT_FILE_PATH", 
-                                                  filePath, config_path);
                     }
-                    break;
+                    
+                    return 0;
                 }
                 case CLOCK_IDM_CHECK_UPDATE: {
                     // 调用检查更新函数

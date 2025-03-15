@@ -228,6 +228,43 @@ void ReadConfig() {
         else if (strncmp(line, "WINDOW_TOPMOST=", 15) == 0) {
             CLOCK_WINDOW_TOPMOST = (strcmp(line + 15, "TRUE") == 0);
         }
+        else if (strncmp(line, "CLOCK_RECENT_FILE=", 18) == 0) {
+            if (CLOCK_RECENT_FILES_COUNT < MAX_RECENT_FILES) {
+                char *filePath = line + 18;
+                // 移除尾部的换行符
+                size_t len = strlen(filePath);
+                if (len > 0 && filePath[len-1] == '\n') {
+                    filePath[len-1] = '\0';
+                }
+                
+                // 检查文件是否存在
+                if (GetFileAttributesA(filePath) != INVALID_FILE_ATTRIBUTES) {
+                    strncpy(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path, filePath, MAX_PATH - 1);
+                    CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path[MAX_PATH - 1] = '\0';
+                    
+                    // 提取文件名
+                    char *fileName = strrchr(filePath, '\\');
+                    if (fileName) {
+                        fileName++; // 跳过反斜杠
+                        strncpy(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].name, fileName, MAX_PATH - 1);
+                    } else {
+                        strncpy(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].name, filePath, MAX_PATH - 1);
+                    }
+                    
+                    CLOCK_RECENT_FILES_COUNT++;
+                }
+            }
+        }
+        else if (strncmp(line, "CLOCK_TIMEOUT_FILE=", 19) == 0) {
+            strncpy(CLOCK_TIMEOUT_FILE_PATH, line + 19, MAX_PATH - 1);
+            CLOCK_TIMEOUT_FILE_PATH[MAX_PATH - 1] = '\0';
+            
+            // 移除尾部的换行符
+            size_t len = strlen(CLOCK_TIMEOUT_FILE_PATH);
+            if (len > 0 && CLOCK_TIMEOUT_FILE_PATH[len-1] == '\n') {
+                CLOCK_TIMEOUT_FILE_PATH[len-1] = '\0';
+            }
+        }
     }
 
     fclose(file);
@@ -453,115 +490,56 @@ void LoadRecentFiles(void) {
  * 处理中文路径时进行UTF8到ANSI编码转换。
  */
 void SaveRecentFile(const char* filePath) {
+    // 检查文件是否存在
+    if (GetFileAttributesA(filePath) == INVALID_FILE_ATTRIBUTES) {
+        return;
+    }
+    
+    // 检查文件是否已在列表中
     for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
         if (strcmp(CLOCK_RECENT_FILES[i].path, filePath) == 0) {
-            for (int j = i; j < CLOCK_RECENT_FILES_COUNT - 1; j++) {
-                strcpy(CLOCK_RECENT_FILES[j].path, CLOCK_RECENT_FILES[j + 1].path);
-                strcpy(CLOCK_RECENT_FILES[j].name, CLOCK_RECENT_FILES[j + 1].name);
+            // 已经存在，将其移到列表前面
+            RecentFile temp = CLOCK_RECENT_FILES[i];
+            for (int j = i; j > 0; j--) {
+                CLOCK_RECENT_FILES[j] = CLOCK_RECENT_FILES[j-1];
             }
-            CLOCK_RECENT_FILES_COUNT--;
-            break;
+            CLOCK_RECENT_FILES[0] = temp;
+            
+            // 更新配置文件
+            WriteConfig(NULL);
+            return;
         }
     }
-
-    if (CLOCK_RECENT_FILES_COUNT == MAX_RECENT_FILES) {
-        for (int i = 0; i < MAX_RECENT_FILES - 1; i++) {
-            strcpy(CLOCK_RECENT_FILES[i].path, CLOCK_RECENT_FILES[i + 1].path);
-            strcpy(CLOCK_RECENT_FILES[i].name, CLOCK_RECENT_FILES[i + 1].name);
+    
+    // 添加新文件到列表头部
+    if (CLOCK_RECENT_FILES_COUNT < MAX_RECENT_FILES) {
+        // 有空间添加新文件
+        for (int i = CLOCK_RECENT_FILES_COUNT; i > 0; i--) {
+            CLOCK_RECENT_FILES[i] = CLOCK_RECENT_FILES[i-1];
         }
-        CLOCK_RECENT_FILES_COUNT--;
-    }
-
-    strncpy(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path, filePath, MAX_PATH - 1);
-    CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path[MAX_PATH - 1] = '\0';
-
-    wchar_t wFilePath[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wFilePath, MAX_PATH);
-
-    wchar_t* wFilename = wcsrchr(wFilePath, L'\\');
-    if (wFilename) {
-        wFilename++;  
-        WideCharToMultiByte(CP_UTF8, 0, wFilename, -1,
-                           CLOCK_RECENT_FILES[0].name,
-                           MAX_PATH, NULL, NULL);
+        CLOCK_RECENT_FILES_COUNT++;
     } else {
-        WideCharToMultiByte(CP_UTF8, 0, wFilePath, -1,
-                           CLOCK_RECENT_FILES[0].name,
-                           MAX_PATH, NULL, NULL);
-    }
-    
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    
-    FILE *file = fopen(config_path, "r");
-    if (!file) return;
-    
-    char *config_content = NULL;
-    long file_size;
-    
-    fseek(file, 0, SEEK_END);
-    file_size = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    
-    config_content = (char *)malloc(file_size + MAX_RECENT_FILES * (MAX_PATH + 20));
-    if (!config_content) {
-        fclose(file);
-        return;
-    }
-    
-    size_t bytes_read = fread(config_content, 1, file_size, file);
-    config_content[bytes_read] = '\0';
-    fclose(file);
-    
-    char *new_config = (char *)malloc(strlen(config_content) + MAX_RECENT_FILES * (MAX_PATH + 20));
-    if (!new_config) {
-        free(config_content);
-        return;
-    }
-    new_config[0] = '\0';
-    
-    char *line = strtok(config_content, "\n");
-    while (line) {
-        if (strncmp(line, "CLOCK_RECENT_FILE", 16) != 0 && 
-            strncmp(line, "CLOCK_TIMEOUT_FILE", 17) != 0 &&
-            strncmp(line, "CLOCK_TIMEOUT_ACTION", 19) != 0) {
-            strcat(new_config, line);
-            strcat(new_config, "\n");
+        // 列表已满，移除最后一个
+        for (int i = MAX_RECENT_FILES - 1; i > 0; i--) {
+            CLOCK_RECENT_FILES[i] = CLOCK_RECENT_FILES[i-1];
         }
-        line = strtok(NULL, "\n");
     }
     
-    for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
-        char recent_file_line[MAX_PATH + 20];
-        snprintf(recent_file_line, sizeof(recent_file_line), 
-                "CLOCK_RECENT_FILE=%s\n", CLOCK_RECENT_FILES[i].path);
-        strcat(new_config, recent_file_line);
-    }
-
-    if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
-        strcat(new_config, "CLOCK_TIMEOUT_ACTION=OPEN_FILE\n");
-        
-        char timeout_file_line[MAX_PATH + 20];
-        char clean_path[MAX_PATH];
-        strncpy(clean_path, CLOCK_TIMEOUT_FILE_PATH, MAX_PATH - 1);
-        clean_path[MAX_PATH - 1] = '\0';
-        
-        char* p = clean_path;
-        while (*p == '=' || *p == ' ') p++;
-        
-        snprintf(timeout_file_line, sizeof(timeout_file_line),
-                "CLOCK_TIMEOUT_FILE=%s\n", p);
-        strcat(new_config, timeout_file_line);
+    // 设置第一个文件
+    strncpy(CLOCK_RECENT_FILES[0].path, filePath, MAX_PATH - 1);
+    CLOCK_RECENT_FILES[0].path[MAX_PATH - 1] = '\0';
+    
+    // 提取文件名
+    const char* fileName = strrchr(filePath, '\\');
+    if (fileName) {
+        fileName++; // 跳过反斜杠
+        strncpy(CLOCK_RECENT_FILES[0].name, fileName, MAX_PATH - 1);
+    } else {
+        strncpy(CLOCK_RECENT_FILES[0].name, filePath, MAX_PATH - 1);
     }
     
-    file = fopen(config_path, "w");
-    if (file) {
-        fputs(new_config, file);
-        fclose(file);
-    }
-    
-    free(config_content);
-    free(new_config);
+    // 更新配置文件
+    WriteConfig(NULL);
 }
 
 /**
