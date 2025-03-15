@@ -451,12 +451,6 @@ void ShowContextMenu(HWND hwnd) {
                CLOCK_IDM_SHOW_SECONDS,
                GetLocalizedString(L"显示秒数", L"Show Seconds"));
     
-    // 添加置顶选项
-    AppendMenuW(hTimeMenu, MF_SEPARATOR, 0, NULL);
-    AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_WINDOW_TOPMOST ? MF_CHECKED : MF_UNCHECKED),
-               CLOCK_IDM_TOPMOST,
-               GetLocalizedString(L"置顶", L"Always on Top"));
-    
     AppendMenuW(hMenu, MF_POPUP,
                (UINT_PTR)hTimeMenu,
                GetLocalizedString(L"时间显示", L"Time Display"));
