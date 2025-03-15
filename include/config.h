@@ -128,6 +128,14 @@ void WriteConfigPomodoroSettings(int work_time, int short_break, int long_break)
 void WriteConfigPomodoroLoopCount(int loop_count);
 
 /**
+ * @brief 写入超时打开文件路径
+ * @param filePath 文件路径
+ * 
+ * 更新配置文件中的超时打开文件路径，同时设置超时动作为打开文件
+ */
+void WriteConfigTimeoutFile(const char* filePath);
+
+/**
  * @brief 写入窗口置顶状态到配置文件
  * @param topmost 置顶状态字符串("TRUE"/"FALSE")
  */

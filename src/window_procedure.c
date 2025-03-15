@@ -1414,35 +1414,28 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_BROWSE_FILE: {
-                    char filePath[MAX_PATH] = {0};
+                    OPENFILENAME ofn;
+                    char szFile[MAX_PATH] = {0};
                     
-                    // 打开文件对话框
-                    OPENFILENAMEA ofn = {0};
-                    ofn.lStructSize = sizeof(OPENFILENAMEA);
+                    ZeroMemory(&ofn, sizeof(ofn));
+                    ofn.lStructSize = sizeof(ofn);
                     ofn.hwndOwner = hwnd;
-                    ofn.lpstrFilter = "All Files\0*.*\0"
-                                     "Applications\0*.exe\0"
-                                     "Audio Files\0*.mp3;*.wav;*.m4a;*.wma\0"
-                                     "Video Files\0*.mp4;*.avi;*.mkv;*.wmv\0";
-                    ofn.lpstrFile = filePath;
-                    ofn.nMaxFile = MAX_PATH;
+                    ofn.lpstrFile = szFile;
+                    ofn.nMaxFile = sizeof(szFile);
+                    ofn.lpstrFilter = "All Files\0*.*\0";
+                    ofn.nFilterIndex = 1;
+                    ofn.lpstrFileTitle = NULL;
+                    ofn.nMaxFileTitle = 0;
+                    ofn.lpstrInitialDir = NULL;
                     ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
                     
-                    if (GetOpenFileNameA(&ofn)) {
-                        // 保存文件路径到配置
-                        strncpy(CLOCK_TIMEOUT_FILE_PATH, filePath, MAX_PATH - 1);
-                        CLOCK_TIMEOUT_FILE_PATH[MAX_PATH - 1] = '\0';
+                    if (GetOpenFileName(&ofn)) {
+                        // 将选择的文件添加到最近文件列表
+                        SaveRecentFile(ofn.lpstrFile);
                         
-                        // 设置超时动作为打开文件
-                        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
-                        
-                        // 保存文件到最近文件列表
-                        SaveRecentFile(filePath);
-                        
-                        // 更新配置文件
-                        WriteConfigTimeoutAction("OPEN_FILE");
+                        // 设置为超时打开文件
+                        WriteConfigTimeoutFile(ofn.lpstrFile);
                     }
-                    
                     return 0;
                 }
                 case CLOCK_IDM_CHECK_UPDATE: {

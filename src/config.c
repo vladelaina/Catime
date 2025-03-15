@@ -844,3 +844,62 @@ void WriteConfigTopmost(const char* topmost) {
     remove(config_path);
     rename(temp_path, config_path);
 }
+
+/**
+ * @brief 写入超时打开文件路径
+ * @param filePath 文件路径
+ * 
+ * 更新配置文件中的超时打开文件路径，同时设置超时动作为打开文件
+ */
+void WriteConfigTimeoutFile(const char* filePath) {
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    
+    FILE* file = fopen(config_path, "r");
+    if (!file) return;
+    
+    char temp_path[MAX_PATH];
+    strcpy(temp_path, config_path);
+    strcat(temp_path, ".tmp");
+    
+    FILE* temp = fopen(temp_path, "w");
+    if (!temp) {
+        fclose(file);
+        return;
+    }
+    
+    char line[256];
+    BOOL foundAction = FALSE;
+    BOOL foundFile = FALSE;
+    
+    while (fgets(line, sizeof(line), file)) {
+        if (strncmp(line, "CLOCK_TIMEOUT_ACTION=", 21) == 0) {
+            fprintf(temp, "CLOCK_TIMEOUT_ACTION=OPEN_FILE\n");
+            foundAction = TRUE;
+        } else if (strncmp(line, "CLOCK_TIMEOUT_FILE=", 19) == 0) {
+            fprintf(temp, "CLOCK_TIMEOUT_FILE=%s\n", filePath);
+            foundFile = TRUE;
+        } else {
+            fputs(line, temp);
+        }
+    }
+    
+    if (!foundAction) {
+        fprintf(temp, "CLOCK_TIMEOUT_ACTION=OPEN_FILE\n");
+    }
+    
+    if (!foundFile) {
+        fprintf(temp, "CLOCK_TIMEOUT_FILE=%s\n", filePath);
+    }
+    
+    fclose(file);
+    fclose(temp);
+    
+    remove(config_path);
+    rename(temp_path, config_path);
+    
+    // 更新全局变量
+    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
+    strncpy(CLOCK_TIMEOUT_FILE_PATH, filePath, MAX_PATH - 1);
+    CLOCK_TIMEOUT_FILE_PATH[MAX_PATH - 1] = '\0';
+}
