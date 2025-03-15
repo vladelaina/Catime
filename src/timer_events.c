@@ -167,10 +167,14 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                             pomodoro_cycle_counter = 0;
                         }
                     } else {
-                        // 显示超时消息
-                        ShowLocalizedNotification(hwnd, L"时间到！", L"Time's up!");
-                        
                         // 非番茄钟模式，执行原有的超时动作
+                        
+                        // 如果超时动作不是打开文件，才显示通知消息
+                        if (CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_OPEN_FILE) {
+                            // 显示超时消息
+                            ShowLocalizedNotification(hwnd, L"时间到！", L"Time's up!");
+                        }
+                        
                         switch (CLOCK_TIMEOUT_ACTION) {
                             case TIMEOUT_ACTION_MESSAGE:
                                 // 已经显示了通知，不需要额外操作
