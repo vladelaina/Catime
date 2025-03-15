@@ -161,47 +161,33 @@ void ShowColorMenu(HWND hwnd) {
     // 在超时动作菜单中添加"打开文件"选项（将其改为子菜单）
     HMENU hFileMenu = CreatePopupMenu();
 
-
-
-    // 如果有当前选择的文件，显示它
-    if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
-        wchar_t wFileName[MAX_PATH];
-        wchar_t wFilePath[MAX_PATH];
-        
-        // 将文件路径转换为宽字符
-        MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_FILE_PATH, -1, wFilePath, MAX_PATH);
-        
-        // 提取文件名
-        wchar_t* wFileNamePtr = wcsrchr(wFilePath, L'\\');
-        if (wFileNamePtr) {
-            wcscpy(wFileName, wFileNamePtr + 1);
-        } else {
-            wcscpy(wFileName, wFilePath);
-        }
-        
-        // 添加当前文件（作为禁用项显示）
-        AppendMenuW(hFileMenu, MF_STRING | MF_DISABLED, 0, wFileName);
-    }
-
-    // 添加分隔线
-    AppendMenuW(hFileMenu, MF_SEPARATOR, 0, NULL);
-
-      // 添加"浏览..."选项
+    // 添加"浏览..."选项
     AppendMenuW(hFileMenu, MF_STRING, CLOCK_IDM_BROWSE_FILE,
                GetLocalizedString(L"浏览...", L"Browse..."));
+               
+    // 添加分隔线（如果有最近文件的话）
+    if (CLOCK_RECENT_FILES_COUNT > 0) {
+        AppendMenuW(hFileMenu, MF_SEPARATOR, 0, NULL);
+    }
 
     // 添加最近文件列表
     for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
-        // 跳过当前文件（已经在上面添加了）
-        if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0 && 
-            strcmp(CLOCK_RECENT_FILES[i].path, CLOCK_TIMEOUT_FILE_PATH) == 0) {
-            continue;
-        }
-        
         wchar_t wFileName[MAX_PATH];
         MultiByteToWideChar(CP_UTF8, 0, CLOCK_RECENT_FILES[i].name, -1, wFileName, MAX_PATH);
         
-        AppendMenuW(hFileMenu, MF_STRING, CLOCK_IDM_RECENT_FILE_1 + i, wFileName);
+        // 检查是否是当前选择的文件
+        BOOL isCurrentFile = (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0 && 
+                              strcmp(CLOCK_RECENT_FILES[i].path, CLOCK_TIMEOUT_FILE_PATH) == 0);
+        
+        // 在文件名前添加勾选标记（如果是当前选择的文件）
+        if (isCurrentFile) {
+            wchar_t checkedFileName[MAX_PATH + 4];
+            wcscpy(checkedFileName, L"✓ ");
+            wcscat(checkedFileName, wFileName);
+            AppendMenuW(hFileMenu, MF_STRING | MF_CHECKED, CLOCK_IDM_RECENT_FILE_1 + i, checkedFileName);
+        } else {
+            AppendMenuW(hFileMenu, MF_STRING, CLOCK_IDM_RECENT_FILE_1 + i, wFileName);
+        }
     }
 
     // 将"打开文件"作为子菜单添加到超时动作菜单中

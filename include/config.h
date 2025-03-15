@@ -22,6 +22,9 @@
 #include "window.h"
 #include "startup.h"
 
+// 定义最多保存5个最近文件
+#define MAX_RECENT_FILES 5
+
 typedef struct {
     char path[MAX_PATH];
     char name[MAX_PATH];
