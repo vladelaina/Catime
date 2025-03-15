@@ -146,6 +146,7 @@ void FormatTime(int remaining_time, char* time_text) {
  * - 两段格式："25 3" → 25分钟3秒
  * - 三段格式："1 30 15" → 1小时30分钟15秒
  * - 混合格式："25 30m" → 25小时30分钟
+ * - 目标时间："17 30t" 或 "17 30T" → 倒计时到17点30分
  */
 int ParseInput(const char* input, int* total_seconds) {
     if (!isValidInput(input)) return 0;
@@ -155,10 +156,10 @@ int ParseInput(const char* input, int* total_seconds) {
     strncpy(input_copy, input, sizeof(input_copy)-1);
     input_copy[sizeof(input_copy)-1] = '\0';
 
-    // 检查是否是目标时间格式（以't'结尾）
+    // 检查是否是目标时间格式（以't'或'T'结尾）
     int len = strlen(input_copy);
-    if (len > 0 && input_copy[len-1] == 't') {
-        // 移除't'后缀
+    if (len > 0 && (input_copy[len-1] == 't' || input_copy[len-1] == 'T')) {
+        // 移除't'或'T'后缀
         input_copy[len-1] = '\0';
         
         // 获取当前时间
@@ -315,7 +316,7 @@ int ParseInput(const char* input, int* total_seconds) {
  * @return int 合法返回1，非法返回0
  * 
  * 有效字符检查规则：
- * - 仅允许数字、空格和结尾的h/m/s单位标识
+ * - 仅允许数字、空格和结尾的h/m/s/t单位标识(不区分大小写)
  * - 至少包含一个数字
  * - 最多两个空格分隔符
  */
@@ -332,8 +333,10 @@ int isValidInput(const char* input) {
             digitCount++;
         } else if (input[i] == ' ') {
             // 允许任意数量的空格
-        } else if (i == len - 1 && (input[i] == 'h' || input[i] == 'm' || input[i] == 's' || input[i] == 't')) {
-            // 允许最后一个字符是h、m、s或t（t表示目标时间）
+        } else if (i == len - 1 && (input[i] == 'h' || input[i] == 'm' || input[i] == 's' || 
+                                   input[i] == 't' || input[i] == 'T' || 
+                                   input[i] == 'H' || input[i] == 'M' || input[i] == 'S')) {
+            // 允许最后一个字符是h/m/s/t或它们的大写形式
         } else {
             return 0;
         }
