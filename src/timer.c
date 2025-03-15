@@ -30,6 +30,11 @@ int CLOCK_TOTAL_TIME = 0;              ///< 总计时时间（秒）
 int countdown_elapsed_time = 0;        ///< 倒计时已用时间（秒）
 int countup_elapsed_time = 0;          ///< 正计时累计时间（秒）
 time_t CLOCK_LAST_TIME_UPDATE = 0;     ///< 最后更新时间戳
+
+// 高精度计时器相关变量
+LARGE_INTEGER timer_frequency;         ///< 高精度计时器频率
+LARGE_INTEGER timer_last_count;        ///< 上次计时点
+BOOL high_precision_timer_initialized = FALSE; ///< 高精度计时器初始化标志
 /** @} */
 
 /** @name 消息状态标志
@@ -59,6 +64,78 @@ int POMODORO_LOOP_COUNT = 1;         ///< 番茄钟循环次数（默认1次）
 int time_options[MAX_TIME_OPTIONS];    ///< 预设时间选项数组
 int time_options_count = 0;            ///< 有效预设时间数量
 /** @} */
+
+/**
+ * @brief 初始化高精度计时器
+ * 
+ * 获取系统计时器频率并记录初始计时点
+ * @return BOOL 初始化是否成功
+ */
+BOOL InitializeHighPrecisionTimer(void) {
+    if (!QueryPerformanceFrequency(&timer_frequency)) {
+        return FALSE;  // 系统不支持高精度计时器
+    }
+    
+    if (!QueryPerformanceCounter(&timer_last_count)) {
+        return FALSE;  // 获取当前计数失败
+    }
+    
+    high_precision_timer_initialized = TRUE;
+    return TRUE;
+}
+
+/**
+ * @brief 计算自上次调用后经过的毫秒数
+ * 
+ * 使用高精度计时器计算精确的时间间隔
+ * @return double 经过的毫秒数
+ */
+double GetElapsedMilliseconds(void) {
+    if (!high_precision_timer_initialized) {
+        if (!InitializeHighPrecisionTimer()) {
+            return 0.0;  // 初始化失败，返回0
+        }
+    }
+    
+    LARGE_INTEGER current_count;
+    if (!QueryPerformanceCounter(&current_count)) {
+        return 0.0;  // 获取当前计数失败
+    }
+    
+    // 计算时间差（转换为毫秒）
+    double elapsed = (double)(current_count.QuadPart - timer_last_count.QuadPart) * 1000.0 / (double)timer_frequency.QuadPart;
+    
+    // 更新上次计时点
+    timer_last_count = current_count;
+    
+    return elapsed;
+}
+
+/**
+ * @brief 更新倒计时/正计时的经过时间
+ * 
+ * 使用高精度计时器更新计时状态
+ */
+void UpdateElapsedTime(void) {
+    if (CLOCK_IS_PAUSED) {
+        return;  // 暂停状态不更新
+    }
+    
+    double elapsed_ms = GetElapsedMilliseconds();
+    
+    if (CLOCK_COUNT_UP) {
+        // 正计时模式
+        countup_elapsed_time += (int)(elapsed_ms / 1000.0);
+    } else {
+        // 倒计时模式
+        countdown_elapsed_time += (int)(elapsed_ms / 1000.0);
+        
+        // 确保不会超过总时间
+        if (countdown_elapsed_time > CLOCK_TOTAL_TIME) {
+            countdown_elapsed_time = CLOCK_TOTAL_TIME;
+        }
+    }
+}
 
 /**
  * @brief 格式化显示时间
@@ -93,6 +170,9 @@ void FormatTime(int remaining_time, char* time_text) {
     }
 
     if (CLOCK_COUNT_UP) {
+        // 在显示前先更新经过时间
+        UpdateElapsedTime();
+        
         int hours = countup_elapsed_time / 3600;
         int minutes = (countup_elapsed_time % 3600) / 60;
         int seconds = countup_elapsed_time % 60;
@@ -107,6 +187,9 @@ void FormatTime(int remaining_time, char* time_text) {
         return;
     }
 
+    // 在显示前先更新经过时间
+    UpdateElapsedTime();
+    
     int remaining = CLOCK_TOTAL_TIME - countdown_elapsed_time;
     if (remaining <= 0) {
         time_text[0] = '\0';
@@ -382,6 +465,9 @@ void ResetTimer(void) {
     // 重置消息显示标志
     countdown_message_shown = FALSE;
     countup_message_shown = FALSE;
+    
+    // 重新初始化高精度计时器
+    InitializeHighPrecisionTimer();
 }
 
 /**
@@ -392,9 +478,9 @@ void ResetTimer(void) {
 void TogglePauseTimer(void) {
     CLOCK_IS_PAUSED = !CLOCK_IS_PAUSED;
     
-    // 如果暂停，记录当前时间点
-    if (CLOCK_IS_PAUSED) {
-        CLOCK_LAST_TIME_UPDATE = time(NULL);
+    // 如果从暂停状态恢复，重新初始化高精度计时器
+    if (!CLOCK_IS_PAUSED) {
+        InitializeHighPrecisionTimer();
     }
 }
 
