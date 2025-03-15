@@ -310,6 +310,7 @@ void ShowColorMenu(HWND hwnd) {
 
     // 颜色菜单
     HMENU hColorSubMenu = CreatePopupMenu();
+    // 预设颜色选项的菜单ID从201开始,到201+COLOR_OPTIONS_COUNT-1
     for (int i = 0; i < COLOR_OPTIONS_COUNT; i++) {
         const char* hexColor = COLOR_OPTIONS[i].hexColor;
         
@@ -317,7 +318,7 @@ void ShowColorMenu(HWND hwnd) {
         mii.fMask = MIIM_STRING | MIIM_ID | MIIM_STATE | MIIM_FTYPE;
         mii.fType = MFT_STRING | MFT_OWNERDRAW;
         mii.fState = strcmp(CLOCK_TEXT_COLOR, hexColor) == 0 ? MFS_CHECKED : MFS_UNCHECKED;
-        mii.wID = 201 + i;
+        mii.wID = 201 + i;  // 预设颜色菜单项ID从201开始
         mii.dwTypeData = (LPSTR)hexColor;
         
         InsertMenuItem(hColorSubMenu, i, TRUE, &mii);

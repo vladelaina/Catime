@@ -222,6 +222,25 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             break;
         }
         case WM_COMMAND: {
+            // 处理预设颜色选项(ID: 201 ~ 201+COLOR_OPTIONS_COUNT-1)
+            if (LOWORD(wp) >= 201 && LOWORD(wp) < 201 + COLOR_OPTIONS_COUNT) {
+                int colorIndex = LOWORD(wp) - 201;
+                if (colorIndex >= 0 && colorIndex < COLOR_OPTIONS_COUNT) {
+                    // 更新当前颜色
+                    strncpy(CLOCK_TEXT_COLOR, COLOR_OPTIONS[colorIndex].hexColor, 
+                            sizeof(CLOCK_TEXT_COLOR) - 1);
+                    CLOCK_TEXT_COLOR[sizeof(CLOCK_TEXT_COLOR) - 1] = '\0';
+                    
+                    // 写入配置文件
+                    char config_path[MAX_PATH];
+                    GetConfigPath(config_path, MAX_PATH);
+                    WriteConfig(config_path);
+                    
+                    // 重绘窗口以显示新颜色
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    return 0;
+                }
+            }
             WORD cmd = LOWORD(wp);
             switch (cmd) {
                 case 101: {   
