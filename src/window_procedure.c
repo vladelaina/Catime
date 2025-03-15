@@ -940,7 +940,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDM_RECENT_FILE_5: {
                     int index = cmd - CLOCK_IDM_RECENT_FILE_1;
                     if (index < CLOCK_RECENT_FILES_COUNT) {
-                        wchar_t wPath[MAX_PATH];
+                        wchar_t wPath[MAX_PATH] = {0};
                         MultiByteToWideChar(CP_UTF8, 0, CLOCK_RECENT_FILES[index].path, -1, wPath, MAX_PATH);
                         
                         if (GetFileAttributesW(wPath) != INVALID_FILE_ATTRIBUTES) {
@@ -975,29 +975,39 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_BROWSE_FILE: {
-                    OPENFILENAME ofn;
-                    char szFile[MAX_PATH] = {0};
+                    wchar_t szFile[MAX_PATH] = {0};
                     
-                    ZeroMemory(&ofn, sizeof(ofn));
+                    OPENFILENAMEW ofn = {0};
                     ofn.lStructSize = sizeof(ofn);
                     ofn.hwndOwner = hwnd;
                     ofn.lpstrFile = szFile;
-                    ofn.nMaxFile = sizeof(szFile);
-                    ofn.lpstrFilter = "All Files\0*.*\0";
+                    ofn.nMaxFile = sizeof(szFile) / sizeof(wchar_t);
+                    ofn.lpstrFilter = L"所有文件\0*.*\0";
                     ofn.nFilterIndex = 1;
                     ofn.lpstrFileTitle = NULL;
                     ofn.nMaxFileTitle = 0;
                     ofn.lpstrInitialDir = NULL;
                     ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
                     
-                    if (GetOpenFileName(&ofn)) {
-                        // 步骤1: 设置为当前超时打开文件
-                        WriteConfigTimeoutFile(ofn.lpstrFile);
+                    if (GetOpenFileNameW(&ofn)) {
+                        // 将宽字符路径转换为UTF-8以保存到配置文件
+                        char utf8Path[MAX_PATH * 3] = {0}; // 更大的缓冲区以容纳UTF-8编码
+                        WideCharToMultiByte(CP_UTF8, 0, szFile, -1, utf8Path, sizeof(utf8Path), NULL, NULL);
                         
-                        // 步骤2: 更新最近文件列表
-                        SaveRecentFile(ofn.lpstrFile);
+                        if (GetFileAttributesW(szFile) != INVALID_FILE_ATTRIBUTES) {
+                            // 步骤1: 设置为当前超时打开文件
+                            WriteConfigTimeoutFile(utf8Path);
+                            
+                            // 步骤2: 更新最近文件列表
+                            SaveRecentFile(utf8Path);
+                        } else {
+                            MessageBoxW(hwnd, 
+                                GetLocalizedString(L"所选文件不存在", L"Selected file does not exist"),
+                                GetLocalizedString(L"错误", L"Error"),
+                                MB_ICONERROR);
+                        }
                     }
-                    return 0;
+                    break;
                 }
                 case CLOCK_IDC_TIMEOUT_BROWSE: {
                     OPENFILENAMEW ofn;

@@ -98,6 +98,36 @@ void CreateDefaultConfig(const char* config_path) {
 }
 
 /**
+ * @brief 从文件路径中提取文件名
+ * @param path 完整文件路径
+ * @param name 输出文件名缓冲区
+ * @param nameSize 缓冲区大小
+ * 
+ * 从完整文件路径中提取文件名部分，支持UTF-8编码的中文路径
+ */
+void ExtractFileName(const char* path, char* name, size_t nameSize) {
+    if (!path || !name || nameSize == 0) return;
+    
+    // 首先转换为宽字符以正确处理Unicode路径
+    wchar_t wPath[MAX_PATH] = {0};
+    MultiByteToWideChar(CP_UTF8, 0, path, -1, wPath, MAX_PATH);
+    
+    // 查找最后一个反斜杠或正斜杠
+    wchar_t* lastSlash = wcsrchr(wPath, L'\\');
+    if (!lastSlash) lastSlash = wcsrchr(wPath, L'/');
+    
+    wchar_t wName[MAX_PATH] = {0};
+    if (lastSlash) {
+        wcscpy(wName, lastSlash + 1);
+    } else {
+        wcscpy(wName, wPath);
+    }
+    
+    // 转换回UTF-8
+    WideCharToMultiByte(CP_UTF8, 0, wName, -1, name, nameSize, NULL, NULL);
+}
+
+/**
  * @brief 读取并解析配置文件
  * 
  * 从配置路径读取配置，若不存在则创建默认配置。
@@ -550,8 +580,15 @@ void LoadRecentFiles(void) {
  * 注意：此函数只更新最近文件列表，不修改当前超时文件。
  */
 void SaveRecentFile(const char* filePath) {
-    // 检查文件是否存在
-    if (GetFileAttributesA(filePath) == INVALID_FILE_ATTRIBUTES) {
+    // 检查文件路径是否有效
+    if (!filePath || strlen(filePath) == 0) return;
+    
+    // 转换为宽字符以检查文件是否存在
+    wchar_t wPath[MAX_PATH] = {0};
+    MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wPath, MAX_PATH);
+    
+    if (GetFileAttributesW(wPath) == INVALID_FILE_ATTRIBUTES) {
+        // 文件不存在，不添加
         return;
     }
     
@@ -564,95 +601,46 @@ void SaveRecentFile(const char* filePath) {
         }
     }
     
-    // 如果文件已存在于列表中
-    if (existingIndex >= 0) {
-        // 如果已经是第一个，无需移动
-        if (existingIndex == 0) {
-            return;
-        }
-        
-        // 保存临时副本
+    if (existingIndex == 0) {
+        // 文件已经在列表最前面，无需操作
+        return;
+    }
+    
+    if (existingIndex > 0) {
+        // 文件已在列表中，但不在最前面，需要移动
         RecentFile temp = CLOCK_RECENT_FILES[existingIndex];
         
-        // 将所有文件后移
-        for (int j = existingIndex; j > 0; j--) {
-            CLOCK_RECENT_FILES[j] = CLOCK_RECENT_FILES[j-1];
+        // 向后移动元素
+        for (int i = existingIndex; i > 0; i--) {
+            CLOCK_RECENT_FILES[i] = CLOCK_RECENT_FILES[i - 1];
         }
         
-        // 将此文件放到第一位
+        // 放到第一位
         CLOCK_RECENT_FILES[0] = temp;
     } else {
-        // 如果是新文件
+        // 文件不在列表中，需要添加
+        // 首先确保列表不超过5个
         if (CLOCK_RECENT_FILES_COUNT < MAX_RECENT_FILES) {
-            // 列表未满，后移所有文件
-            for (int i = CLOCK_RECENT_FILES_COUNT; i > 0; i--) {
-                CLOCK_RECENT_FILES[i] = CLOCK_RECENT_FILES[i-1];
-            }
             CLOCK_RECENT_FILES_COUNT++;
-        } else {
-            // 列表已满，移除最后一个
-            for (int i = MAX_RECENT_FILES - 1; i > 0; i--) {
-                CLOCK_RECENT_FILES[i] = CLOCK_RECENT_FILES[i-1];
-            }
         }
         
-        // 设置第一个文件路径
+        // 向后移动元素
+        for (int i = CLOCK_RECENT_FILES_COUNT - 1; i > 0; i--) {
+            CLOCK_RECENT_FILES[i] = CLOCK_RECENT_FILES[i - 1];
+        }
+        
+        // 添加新文件到第一位
         strncpy(CLOCK_RECENT_FILES[0].path, filePath, MAX_PATH - 1);
         CLOCK_RECENT_FILES[0].path[MAX_PATH - 1] = '\0';
         
         // 提取文件名
-        const char* fileName = strrchr(filePath, '\\');
-        if (fileName) {
-            fileName++; // 跳过反斜杠
-            strncpy(CLOCK_RECENT_FILES[0].name, fileName, MAX_PATH - 1);
-        } else {
-            strncpy(CLOCK_RECENT_FILES[0].name, filePath, MAX_PATH - 1);
-        }
-        CLOCK_RECENT_FILES[0].name[MAX_PATH - 1] = '\0';
+        ExtractFileName(filePath, CLOCK_RECENT_FILES[0].name, MAX_PATH);
     }
     
-    // 更新配置文件中的最近文件列表
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    
-    FILE* file = fopen(config_path, "r");
-    if (!file) return;
-    
-    char temp_path[MAX_PATH];
-    strcpy(temp_path, config_path);
-    strcat(temp_path, ".tmp");
-    
-    FILE* temp = fopen(temp_path, "w");
-    if (!temp) {
-        fclose(file);
-        return;
-    }
-    
-    char line[MAX_PATH];
-    BOOL recentFilesWritten = FALSE;
-    
-    // 读取原配置文件，跳过旧的最近文件记录
-    while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, "CLOCK_RECENT_FILE_", 18) == 0 || 
-            strncmp(line, "CLOCK_RECENT_FILE=", 18) == 0) {
-            // 跳过旧的最近文件记录
-            continue;
-        } else {
-            // 复制所有其他配置
-            fputs(line, temp);
-        }
-    }
-    
-    // 写入新的最近文件记录
-    for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
-        fprintf(temp, "CLOCK_RECENT_FILE_%d=%s\n", i+1, CLOCK_RECENT_FILES[i].path);
-    }
-    
-    fclose(file);
-    fclose(temp);
-    
-    remove(config_path);
-    rename(temp_path, config_path);
+    // 更新配置文件
+    char configPath[MAX_PATH];
+    GetConfigPath(configPath, MAX_PATH);
+    WriteConfig(configPath);
 }
 
 /**
@@ -662,76 +650,6 @@ void SaveRecentFile(const char* filePath) {
  * 
  * 用于处理中文路径的编码转换，转换失败返回原字符串副本。
  */
-/**
- * @brief 写入所有配置设置到文件
- * @param config_path 配置文件路径
- */
-void WriteConfig(const char* config_path) {
-    FILE* file = fopen(config_path, "w");
-    if (!file) return;
-    
-    fprintf(file, "CLOCK_TEXT_COLOR=%s\n", CLOCK_TEXT_COLOR);
-    fprintf(file, "CLOCK_BASE_FONT_SIZE=%d\n", CLOCK_BASE_FONT_SIZE);
-    fprintf(file, "FONT_FILE_NAME=%s\n", FONT_FILE_NAME);
-    fprintf(file, "CLOCK_DEFAULT_START_TIME=%d\n", CLOCK_DEFAULT_START_TIME);
-    fprintf(file, "CLOCK_WINDOW_POS_X=%d\n", CLOCK_WINDOW_POS_X);
-    fprintf(file, "CLOCK_WINDOW_POS_Y=%d\n", CLOCK_WINDOW_POS_Y);
-    fprintf(file, "CLOCK_EDIT_MODE=%s\n", CLOCK_EDIT_MODE ? "TRUE" : "FALSE");
-    fprintf(file, "WINDOW_SCALE=%.2f\n", CLOCK_WINDOW_SCALE);
-    fprintf(file, "CLOCK_USE_24HOUR=%s\n", CLOCK_USE_24HOUR ? "TRUE" : "FALSE");
-    fprintf(file, "CLOCK_SHOW_SECONDS=%s\n", CLOCK_SHOW_SECONDS ? "TRUE" : "FALSE");
-    fprintf(file, "WINDOW_TOPMOST=%s\n", CLOCK_WINDOW_TOPMOST ? "TRUE" : "FALSE");
-    
-    fprintf(file, "CLOCK_TIME_OPTIONS=");
-    for (int i = 0; i < time_options_count; i++) {
-        if (i > 0) fprintf(file, ",");
-        fprintf(file, "%d", time_options[i]);
-    }
-    fprintf(file, "\n");
-    
-    fprintf(file, "CLOCK_TIMEOUT_TEXT=%s\n", CLOCK_TIMEOUT_TEXT);
-    
-    if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE && strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
-        fprintf(file, "CLOCK_TIMEOUT_ACTION=OPEN_FILE\n");
-        fprintf(file, "CLOCK_TIMEOUT_FILE=%s\n", CLOCK_TIMEOUT_FILE_PATH);
-    } else {
-        switch (CLOCK_TIMEOUT_ACTION) {
-            case TIMEOUT_ACTION_MESSAGE:
-                fprintf(file, "CLOCK_TIMEOUT_ACTION=MESSAGE\n");
-                break;
-            case TIMEOUT_ACTION_LOCK:
-                fprintf(file, "CLOCK_TIMEOUT_ACTION=LOCK\n");
-                break;
-            case TIMEOUT_ACTION_SHUTDOWN:
-                fprintf(file, "CLOCK_TIMEOUT_ACTION=SHUTDOWN\n");
-                break;
-            case TIMEOUT_ACTION_RESTART:
-                fprintf(file, "CLOCK_TIMEOUT_ACTION=RESTART\n");
-                break;
-            case TIMEOUT_ACTION_SHOW_TIME:
-                fprintf(file, "CLOCK_TIMEOUT_ACTION=SHOW_TIME\n");
-                break;
-            case TIMEOUT_ACTION_COUNT_UP:
-                fprintf(file, "CLOCK_TIMEOUT_ACTION=COUNT_UP\n");
-                break;
-        }
-    }
-    
-    // 使用CLOCK_RECENT_FILE_1格式保存最近文件
-    for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
-        fprintf(file, "CLOCK_RECENT_FILE_%d=%s\n", i+1, CLOCK_RECENT_FILES[i].path);
-    }
-    
-    fprintf(file, "COLOR_OPTIONS=");
-    for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
-        if (i > 0) fprintf(file, ",");
-        fprintf(file, "%s", COLOR_OPTIONS[i].hexColor);
-    }
-    fprintf(file, "\n");
-    
-    fclose(file);
-}
-
 char* UTF8ToANSI(const char* utf8Str) {
     int wlen = MultiByteToWideChar(CP_UTF8, 0, utf8Str, -1, NULL, 0);
     if (wlen == 0) {
@@ -972,4 +890,74 @@ void WriteConfigTimeoutFile(const char* filePath) {
     
     remove(config_path);
     rename(temp_path, config_path);
+}
+
+/**
+ * @brief 写入所有配置设置到文件
+ * @param config_path 配置文件路径
+ */
+void WriteConfig(const char* config_path) {
+    FILE* file = fopen(config_path, "w");
+    if (!file) return;
+    
+    fprintf(file, "CLOCK_TEXT_COLOR=%s\n", CLOCK_TEXT_COLOR);
+    fprintf(file, "CLOCK_BASE_FONT_SIZE=%d\n", CLOCK_BASE_FONT_SIZE);
+    fprintf(file, "FONT_FILE_NAME=%s\n", FONT_FILE_NAME);
+    fprintf(file, "CLOCK_DEFAULT_START_TIME=%d\n", CLOCK_DEFAULT_START_TIME);
+    fprintf(file, "CLOCK_WINDOW_POS_X=%d\n", CLOCK_WINDOW_POS_X);
+    fprintf(file, "CLOCK_WINDOW_POS_Y=%d\n", CLOCK_WINDOW_POS_Y);
+    fprintf(file, "CLOCK_EDIT_MODE=%s\n", CLOCK_EDIT_MODE ? "TRUE" : "FALSE");
+    fprintf(file, "WINDOW_SCALE=%.2f\n", CLOCK_WINDOW_SCALE);
+    fprintf(file, "CLOCK_USE_24HOUR=%s\n", CLOCK_USE_24HOUR ? "TRUE" : "FALSE");
+    fprintf(file, "CLOCK_SHOW_SECONDS=%s\n", CLOCK_SHOW_SECONDS ? "TRUE" : "FALSE");
+    fprintf(file, "WINDOW_TOPMOST=%s\n", CLOCK_WINDOW_TOPMOST ? "TRUE" : "FALSE");
+    
+    fprintf(file, "CLOCK_TIME_OPTIONS=");
+    for (int i = 0; i < time_options_count; i++) {
+        if (i > 0) fprintf(file, ",");
+        fprintf(file, "%d", time_options[i]);
+    }
+    fprintf(file, "\n");
+    
+    fprintf(file, "CLOCK_TIMEOUT_TEXT=%s\n", CLOCK_TIMEOUT_TEXT);
+    
+    if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE && strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
+        fprintf(file, "CLOCK_TIMEOUT_ACTION=OPEN_FILE\n");
+        fprintf(file, "CLOCK_TIMEOUT_FILE=%s\n", CLOCK_TIMEOUT_FILE_PATH);
+    } else {
+        switch (CLOCK_TIMEOUT_ACTION) {
+            case TIMEOUT_ACTION_MESSAGE:
+                fprintf(file, "CLOCK_TIMEOUT_ACTION=MESSAGE\n");
+                break;
+            case TIMEOUT_ACTION_LOCK:
+                fprintf(file, "CLOCK_TIMEOUT_ACTION=LOCK\n");
+                break;
+            case TIMEOUT_ACTION_SHUTDOWN:
+                fprintf(file, "CLOCK_TIMEOUT_ACTION=SHUTDOWN\n");
+                break;
+            case TIMEOUT_ACTION_RESTART:
+                fprintf(file, "CLOCK_TIMEOUT_ACTION=RESTART\n");
+                break;
+            case TIMEOUT_ACTION_SHOW_TIME:
+                fprintf(file, "CLOCK_TIMEOUT_ACTION=SHOW_TIME\n");
+                break;
+            case TIMEOUT_ACTION_COUNT_UP:
+                fprintf(file, "CLOCK_TIMEOUT_ACTION=COUNT_UP\n");
+                break;
+        }
+    }
+    
+    // 使用CLOCK_RECENT_FILE_1格式保存最近文件
+    for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
+        fprintf(file, "CLOCK_RECENT_FILE_%d=%s\n", i+1, CLOCK_RECENT_FILES[i].path);
+    }
+    
+    fprintf(file, "COLOR_OPTIONS=");
+    for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
+        if (i > 0) fprintf(file, ",");
+        fprintf(file, "%s", COLOR_OPTIONS[i].hexColor);
+    }
+    fprintf(file, "\n");
+    
+    fclose(file);
 }
