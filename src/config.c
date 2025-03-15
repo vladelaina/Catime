@@ -289,6 +289,12 @@ void ReadConfig() {
             if (len > 0 && CLOCK_TIMEOUT_FILE_PATH[len-1] == '\n') {
                 CLOCK_TIMEOUT_FILE_PATH[len-1] = '\0';
             }
+            
+            // 如果文件路径有效，确保设置超时动作为打开文件
+            if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0 && 
+                GetFileAttributesA(CLOCK_TIMEOUT_FILE_PATH) != INVALID_FILE_ATTRIBUTES) {
+                CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
+            }
         }
     }
 
@@ -541,6 +547,7 @@ void LoadRecentFiles(void) {
  * 维护最近文件列表(最多MAX_RECENT_FILES个)，
  * 自动去重并更新配置文件，保持最新文件在列表首位。
  * 处理中文路径时进行UTF8到ANSI编码转换。
+ * 注意：此函数只更新最近文件列表，不修改当前超时文件。
  */
 void SaveRecentFile(const char* filePath) {
     // 检查文件是否存在
@@ -549,50 +556,103 @@ void SaveRecentFile(const char* filePath) {
     }
     
     // 检查文件是否已在列表中
+    int existingIndex = -1;
     for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
         if (strcmp(CLOCK_RECENT_FILES[i].path, filePath) == 0) {
-            // 已经存在，将其移到列表前面
-            RecentFile temp = CLOCK_RECENT_FILES[i];
-            for (int j = i; j > 0; j--) {
-                CLOCK_RECENT_FILES[j] = CLOCK_RECENT_FILES[j-1];
-            }
-            CLOCK_RECENT_FILES[0] = temp;
-            
-            // 更新配置文件
-            WriteConfig(NULL);
+            existingIndex = i;
+            break;
+        }
+    }
+    
+    // 如果文件已存在于列表中
+    if (existingIndex >= 0) {
+        // 如果已经是第一个，无需移动
+        if (existingIndex == 0) {
             return;
         }
-    }
-    
-    // 添加新文件到列表头部
-    if (CLOCK_RECENT_FILES_COUNT < MAX_RECENT_FILES) {
-        // 有空间添加新文件
-        for (int i = CLOCK_RECENT_FILES_COUNT; i > 0; i--) {
-            CLOCK_RECENT_FILES[i] = CLOCK_RECENT_FILES[i-1];
+        
+        // 保存临时副本
+        RecentFile temp = CLOCK_RECENT_FILES[existingIndex];
+        
+        // 将所有文件后移
+        for (int j = existingIndex; j > 0; j--) {
+            CLOCK_RECENT_FILES[j] = CLOCK_RECENT_FILES[j-1];
         }
-        CLOCK_RECENT_FILES_COUNT++;
+        
+        // 将此文件放到第一位
+        CLOCK_RECENT_FILES[0] = temp;
     } else {
-        // 列表已满，移除最后一个
-        for (int i = MAX_RECENT_FILES - 1; i > 0; i--) {
-            CLOCK_RECENT_FILES[i] = CLOCK_RECENT_FILES[i-1];
+        // 如果是新文件
+        if (CLOCK_RECENT_FILES_COUNT < MAX_RECENT_FILES) {
+            // 列表未满，后移所有文件
+            for (int i = CLOCK_RECENT_FILES_COUNT; i > 0; i--) {
+                CLOCK_RECENT_FILES[i] = CLOCK_RECENT_FILES[i-1];
+            }
+            CLOCK_RECENT_FILES_COUNT++;
+        } else {
+            // 列表已满，移除最后一个
+            for (int i = MAX_RECENT_FILES - 1; i > 0; i--) {
+                CLOCK_RECENT_FILES[i] = CLOCK_RECENT_FILES[i-1];
+            }
+        }
+        
+        // 设置第一个文件路径
+        strncpy(CLOCK_RECENT_FILES[0].path, filePath, MAX_PATH - 1);
+        CLOCK_RECENT_FILES[0].path[MAX_PATH - 1] = '\0';
+        
+        // 提取文件名
+        const char* fileName = strrchr(filePath, '\\');
+        if (fileName) {
+            fileName++; // 跳过反斜杠
+            strncpy(CLOCK_RECENT_FILES[0].name, fileName, MAX_PATH - 1);
+        } else {
+            strncpy(CLOCK_RECENT_FILES[0].name, filePath, MAX_PATH - 1);
+        }
+        CLOCK_RECENT_FILES[0].name[MAX_PATH - 1] = '\0';
+    }
+    
+    // 更新配置文件中的最近文件列表
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    
+    FILE* file = fopen(config_path, "r");
+    if (!file) return;
+    
+    char temp_path[MAX_PATH];
+    strcpy(temp_path, config_path);
+    strcat(temp_path, ".tmp");
+    
+    FILE* temp = fopen(temp_path, "w");
+    if (!temp) {
+        fclose(file);
+        return;
+    }
+    
+    char line[MAX_PATH];
+    BOOL recentFilesWritten = FALSE;
+    
+    // 读取原配置文件，跳过旧的最近文件记录
+    while (fgets(line, sizeof(line), file)) {
+        if (strncmp(line, "CLOCK_RECENT_FILE_", 18) == 0 || 
+            strncmp(line, "CLOCK_RECENT_FILE=", 18) == 0) {
+            // 跳过旧的最近文件记录
+            continue;
+        } else {
+            // 复制所有其他配置
+            fputs(line, temp);
         }
     }
     
-    // 设置第一个文件
-    strncpy(CLOCK_RECENT_FILES[0].path, filePath, MAX_PATH - 1);
-    CLOCK_RECENT_FILES[0].path[MAX_PATH - 1] = '\0';
-    
-    // 提取文件名
-    const char* fileName = strrchr(filePath, '\\');
-    if (fileName) {
-        fileName++; // 跳过反斜杠
-        strncpy(CLOCK_RECENT_FILES[0].name, fileName, MAX_PATH - 1);
-    } else {
-        strncpy(CLOCK_RECENT_FILES[0].name, filePath, MAX_PATH - 1);
+    // 写入新的最近文件记录
+    for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
+        fprintf(temp, "CLOCK_RECENT_FILE_%d=%s\n", i+1, CLOCK_RECENT_FILES[i].path);
     }
     
-    // 更新配置文件
-    WriteConfig(NULL);
+    fclose(file);
+    fclose(temp);
+    
+    remove(config_path);
+    rename(temp_path, config_path);
 }
 
 /**
@@ -647,6 +707,12 @@ void WriteConfig(const char* config_path) {
                 break;
             case TIMEOUT_ACTION_RESTART:
                 fprintf(file, "CLOCK_TIMEOUT_ACTION=RESTART\n");
+                break;
+            case TIMEOUT_ACTION_SHOW_TIME:
+                fprintf(file, "CLOCK_TIMEOUT_ACTION=SHOW_TIME\n");
+                break;
+            case TIMEOUT_ACTION_COUNT_UP:
+                fprintf(file, "CLOCK_TIMEOUT_ACTION=COUNT_UP\n");
                 break;
         }
     }
@@ -849,9 +915,16 @@ void WriteConfigTopmost(const char* topmost) {
  * @brief 写入超时打开文件路径
  * @param filePath 文件路径
  * 
- * 更新配置文件中的超时打开文件路径，同时设置超时动作为打开文件
+ * 更新配置文件中的超时打开文件路径，同时设置超时动作为打开文件。
+ * 此函数只设置当前超时文件，不修改最近文件列表。
  */
 void WriteConfigTimeoutFile(const char* filePath) {
+    // 首先更新全局变量
+    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
+    strncpy(CLOCK_TIMEOUT_FILE_PATH, filePath, MAX_PATH - 1);
+    CLOCK_TIMEOUT_FILE_PATH[MAX_PATH - 1] = '\0';
+    
+    // 然后更新配置文件
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
@@ -868,27 +941,29 @@ void WriteConfigTimeoutFile(const char* filePath) {
         return;
     }
     
-    char line[256];
-    BOOL foundAction = FALSE;
-    BOOL foundFile = FALSE;
+    char line[MAX_PATH];
+    BOOL actionFound = FALSE;
+    BOOL fileFound = FALSE;
     
+    // 读取原配置文件，更新超时动作和文件
     while (fgets(line, sizeof(line), file)) {
         if (strncmp(line, "CLOCK_TIMEOUT_ACTION=", 21) == 0) {
             fprintf(temp, "CLOCK_TIMEOUT_ACTION=OPEN_FILE\n");
-            foundAction = TRUE;
+            actionFound = TRUE;
         } else if (strncmp(line, "CLOCK_TIMEOUT_FILE=", 19) == 0) {
             fprintf(temp, "CLOCK_TIMEOUT_FILE=%s\n", filePath);
-            foundFile = TRUE;
+            fileFound = TRUE;
         } else {
+            // 保留其他所有配置
             fputs(line, temp);
         }
     }
     
-    if (!foundAction) {
+    // 如果配置中没有这些项，添加它们
+    if (!actionFound) {
         fprintf(temp, "CLOCK_TIMEOUT_ACTION=OPEN_FILE\n");
     }
-    
-    if (!foundFile) {
+    if (!fileFound) {
         fprintf(temp, "CLOCK_TIMEOUT_FILE=%s\n", filePath);
     }
     
@@ -897,9 +972,4 @@ void WriteConfigTimeoutFile(const char* filePath) {
     
     remove(config_path);
     rename(temp_path, config_path);
-    
-    // 更新全局变量
-    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
-    strncpy(CLOCK_TIMEOUT_FILE_PATH, filePath, MAX_PATH - 1);
-    CLOCK_TIMEOUT_FILE_PATH[MAX_PATH - 1] = '\0';
 }

@@ -935,41 +935,69 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_RECENT_FILE_1:
                 case CLOCK_IDM_RECENT_FILE_2:
-                case CLOCK_IDM_RECENT_FILE_3: {
+                case CLOCK_IDM_RECENT_FILE_3:
+                case CLOCK_IDM_RECENT_FILE_4:
+                case CLOCK_IDM_RECENT_FILE_5: {
                     int index = cmd - CLOCK_IDM_RECENT_FILE_1;
                     if (index < CLOCK_RECENT_FILES_COUNT) {
                         wchar_t wPath[MAX_PATH];
                         MultiByteToWideChar(CP_UTF8, 0, CLOCK_RECENT_FILES[index].path, -1, wPath, MAX_PATH);
                         
                         if (GetFileAttributesW(wPath) != INVALID_FILE_ATTRIBUTES) {
-                            strncpy(CLOCK_TIMEOUT_FILE_PATH, CLOCK_RECENT_FILES[index].path, 
-                                    sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1);
-                            CLOCK_TIMEOUT_FILE_PATH[sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1] = '\0';
+                            // 步骤1: 设置为当前超时打开文件
+                            WriteConfigTimeoutFile(CLOCK_RECENT_FILES[index].path);
                             
-                            CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
-                            
-                            WriteConfigTimeoutAction("OPEN_FILE");
-                            
+                            // 步骤2: 更新最近文件列表(将此文件移到最前面)
                             SaveRecentFile(CLOCK_RECENT_FILES[index].path);
-                            
-                            ReadConfig();
                         } else {
                             MessageBoxW(hwnd, 
                                 GetLocalizedString(L"所选文件不存在", L"Selected file does not exist"),
                                 GetLocalizedString(L"错误", L"Error"),
                                 MB_ICONERROR);
                             
+                            // 清除无效文件路径
                             memset(CLOCK_TIMEOUT_FILE_PATH, 0, sizeof(CLOCK_TIMEOUT_FILE_PATH));
                             CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
                             WriteConfigTimeoutAction("MESSAGE");
                             
+                            // 从最近文件列表中移除此文件
                             for (int i = index; i < CLOCK_RECENT_FILES_COUNT - 1; i++) {
                                 CLOCK_RECENT_FILES[i] = CLOCK_RECENT_FILES[i + 1];
                             }
                             CLOCK_RECENT_FILES_COUNT--;
+                            
+                            // 更新配置文件中的最近文件列表
+                            char config_path[MAX_PATH];
+                            GetConfigPath(config_path, MAX_PATH);
+                            WriteConfig(config_path);
                         }
                     }
                     break;
+                }
+                case CLOCK_IDM_BROWSE_FILE: {
+                    OPENFILENAME ofn;
+                    char szFile[MAX_PATH] = {0};
+                    
+                    ZeroMemory(&ofn, sizeof(ofn));
+                    ofn.lStructSize = sizeof(ofn);
+                    ofn.hwndOwner = hwnd;
+                    ofn.lpstrFile = szFile;
+                    ofn.nMaxFile = sizeof(szFile);
+                    ofn.lpstrFilter = "All Files\0*.*\0";
+                    ofn.nFilterIndex = 1;
+                    ofn.lpstrFileTitle = NULL;
+                    ofn.nMaxFileTitle = 0;
+                    ofn.lpstrInitialDir = NULL;
+                    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+                    
+                    if (GetOpenFileName(&ofn)) {
+                        // 步骤1: 设置为当前超时打开文件
+                        WriteConfigTimeoutFile(ofn.lpstrFile);
+                        
+                        // 步骤2: 更新最近文件列表
+                        SaveRecentFile(ofn.lpstrFile);
+                    }
+                    return 0;
                 }
                 case CLOCK_IDC_TIMEOUT_BROWSE: {
                     OPENFILENAMEW ofn;
@@ -988,15 +1016,17 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 
                     if (GetOpenFileNameW(&ofn)) {
+                        char utf8Path[MAX_PATH];
                         WideCharToMultiByte(CP_UTF8, 0, szFile, -1, 
-                                           CLOCK_TIMEOUT_FILE_PATH, 
-                                           sizeof(CLOCK_TIMEOUT_FILE_PATH), 
+                                           utf8Path, 
+                                           sizeof(utf8Path), 
                                            NULL, NULL);
                         
-                        char config_path[MAX_PATH];
-                        GetConfigPath(config_path, MAX_PATH);
-                        WriteConfigTimeoutAction("OPEN_FILE");
-                        SaveRecentFile(CLOCK_TIMEOUT_FILE_PATH);
+                        // 步骤1: 设置为当前超时打开文件
+                        WriteConfigTimeoutFile(utf8Path);
+                        
+                        // 步骤2: 更新最近文件列表
+                        SaveRecentFile(utf8Path);
                     }
                     break;
                 }
@@ -1412,31 +1442,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_RESTART;
                     WriteConfigTimeoutAction("RESTART");
                     break;
-                }
-                case CLOCK_IDM_BROWSE_FILE: {
-                    OPENFILENAME ofn;
-                    char szFile[MAX_PATH] = {0};
-                    
-                    ZeroMemory(&ofn, sizeof(ofn));
-                    ofn.lStructSize = sizeof(ofn);
-                    ofn.hwndOwner = hwnd;
-                    ofn.lpstrFile = szFile;
-                    ofn.nMaxFile = sizeof(szFile);
-                    ofn.lpstrFilter = "All Files\0*.*\0";
-                    ofn.nFilterIndex = 1;
-                    ofn.lpstrFileTitle = NULL;
-                    ofn.nMaxFileTitle = 0;
-                    ofn.lpstrInitialDir = NULL;
-                    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
-                    
-                    if (GetOpenFileName(&ofn)) {
-                        // 将选择的文件添加到最近文件列表
-                        SaveRecentFile(ofn.lpstrFile);
-                        
-                        // 设置为超时打开文件
-                        WriteConfigTimeoutFile(ofn.lpstrFile);
-                    }
-                    return 0;
                 }
                 case CLOCK_IDM_CHECK_UPDATE: {
                     // 调用检查更新函数
