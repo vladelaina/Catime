@@ -9,7 +9,7 @@
 
 // 关于对话框文本
 #define IDC_ABOUT_TITLE L"Catime"
-#define IDC_ABOUT_VERSION L"版本: "
+#define IDC_ABOUT_VERSION L"当前版本: "
 #define IDC_COPYRIGHT_TEXT L"Copyright (C) 2025 By vladelaina"
 
 /* 窗口尺寸增长量 */
