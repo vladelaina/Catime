@@ -1075,3 +1075,52 @@ void WriteConfigTimeoutWebsite(const char* url) {
     remove(config_path);
     rename(temp_path, config_path);
 }
+
+/**
+ * @brief 写入启动模式配置
+ * @param mode 启动模式字符串("COUNTDOWN"/"COUNT_UP"/"SHOW_TIME"/"NO_DISPLAY")
+ * 
+ * 修改配置文件中的STARTUP_MODE项，控制程序启动时的默认计时模式。
+ */
+void WriteConfigStartupMode(const char* mode) {
+    char config_path[MAX_PATH];
+    char temp_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    snprintf(temp_path, MAX_PATH, "%s.tmp", config_path);
+    
+    FILE *file, *temp_file;
+    char line[256];
+    int found = 0;
+    
+    file = fopen(config_path, "r");
+    temp_file = fopen(temp_path, "w");
+    
+    if (!file || !temp_file) {
+        if (file) fclose(file);
+        if (temp_file) fclose(temp_file);
+        return;
+    }
+    
+    // 更新全局变量
+    strncpy(CLOCK_STARTUP_MODE, mode, sizeof(CLOCK_STARTUP_MODE) - 1);
+    CLOCK_STARTUP_MODE[sizeof(CLOCK_STARTUP_MODE) - 1] = '\0';
+    
+    while (fgets(line, sizeof(line), file)) {
+        if (strncmp(line, "STARTUP_MODE=", 13) == 0) {
+            fprintf(temp_file, "STARTUP_MODE=%s\n", mode);
+            found = 1;
+        } else {
+            fputs(line, temp_file);
+        }
+    }
+    
+    if (!found) {
+        fprintf(temp_file, "STARTUP_MODE=%s\n", mode);
+    }
+    
+    fclose(file);
+    fclose(temp_file);
+    
+    remove(config_path);
+    rename(temp_path, config_path);
+}

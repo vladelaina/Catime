@@ -114,3 +114,21 @@ void RestartTimer(HWND hwnd) {
         HandleWindowReset(hwnd);
     }
 }
+
+/**
+ * @brief 设置启动模式
+ * @param hwnd 窗口句柄
+ * @param mode 启动模式
+ * 
+ * 设置应用程序的启动模式并更新到配置文件
+ */
+void SetStartupMode(HWND hwnd, const char* mode) {
+    // 保存启动模式到配置文件
+    WriteConfigStartupMode(mode);
+    
+    // 更新菜单项的选中状态
+    HMENU hMenu = GetMenu(hwnd);
+    if (hMenu) {
+        InvalidateRect(hwnd, NULL, TRUE);
+    }
+}
