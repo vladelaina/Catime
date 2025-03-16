@@ -645,7 +645,7 @@ INT_PTR CALLBACK CreditsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lP
             int ctrlId = GetDlgCtrlID(hwndCtl);
             
             // 为所有贡献者链接设置橙色
-            if (ctrlId >= IDC_CREDITS_MAX && ctrlId <= IDC_CREDITS_QINGYANG) {
+            if (ctrlId >= IDC_CREDITS_MAX && ctrlId <= IDC_CREDITS_ZHUJIU) {
                 SetTextColor(hdc, 0x00D26919); // 橙色 (BGR格式)
                 SetBkMode(hdc, TRANSPARENT);
                 return (INT_PTR)GetStockObject(NULL_BRUSH);
