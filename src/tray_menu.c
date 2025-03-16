@@ -285,11 +285,12 @@ void ShowColorMenu(HWND hwnd) {
         wchar_t truncatedName[MAX_PATH];
         TruncateFileName(wFileName, truncatedName, 25); // 限制为25个字符
         
-        // 检查是否是当前选择的文件
-        BOOL isCurrentFile = (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0 && 
-                              strcmp(CLOCK_RECENT_FILES[i].path, CLOCK_TIMEOUT_FILE_PATH) == 0);
+        // 检查是否是当前选择的文件，且当前超时动作为"打开文件"
+        BOOL isCurrentFile = (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE && 
+                             strlen(CLOCK_TIMEOUT_FILE_PATH) > 0 && 
+                             strcmp(CLOCK_RECENT_FILES[i].path, CLOCK_TIMEOUT_FILE_PATH) == 0);
         
-        // 使用菜单项的勾选状态表示选中，不再添加额外的"✓ "前缀
+        // 使用菜单项的勾选状态表示选中
         AppendMenuW(hFileMenu, MF_STRING | (isCurrentFile ? MF_CHECKED : 0), 
                    CLOCK_IDM_RECENT_FILE_1 + i, truncatedName);
     }
