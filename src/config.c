@@ -64,12 +64,21 @@ void GetConfigPath(char* path, size_t size) {
  * @brief 创建默认配置文件
  * @param config_path 配置文件路径
  * 
- * 生成包含字体、颜色、窗口位置等默认参数的配置文件。
+ * 生成包含所有必要参数的配置文件，遵循统一的顺序结构：
+ * 1. 基本设置（颜色、字体、窗口位置等）
+ * 2. 颜色选项列表
+ * 3. 超时文本
+ * 4. 番茄钟设置
+ * 5. 超时动作及相关路径
+ * 6. 最近文件列表
+ * 7. 时间选项
+ * 
+ * 该顺序与WriteConfig函数保持一致，确保配置文件结构统一。
  */
 void CreateDefaultConfig(const char* config_path) {
     FILE *file = fopen(config_path, "w");
     if (file) {
-        // 基本设置 - 保持与WriteConfig函数相同的顺序
+        // 基本设置区块 - 与WriteConfig函数保持相同顺序
         fprintf(file, "CLOCK_TEXT_COLOR=#FFB6C1\n");
         fprintf(file, "CLOCK_BASE_FONT_SIZE=20\n");
         fprintf(file, "FONT_FILE_NAME=Wallpoet Essence.ttf\n");
@@ -82,29 +91,29 @@ void CreateDefaultConfig(const char* config_path) {
         fprintf(file, "CLOCK_SHOW_SECONDS=FALSE\n");
         fprintf(file, "WINDOW_TOPMOST=TRUE\n");
         
-        // 颜色选项
+        // 颜色选项区块
         fprintf(file, "COLOR_OPTIONS=#FFFFFF,#F9DB91,#F4CAE0,#FFB6C1,#A8E7DF,#A3CFB3,#92CBFC,#BDA5E7,#9370DB,#8C92CF,#72A9A5,#EB99A7,#EB96BD,#FFAE8B,#FF7F50,#CA6174\n");
         
-        // 超时文本
+        // 超时文本区块
         fprintf(file, "CLOCK_TIMEOUT_TEXT=0\n");
         
-        // 番茄钟设置(单位:秒)
+        // 番茄钟设置区块(单位:秒)
         fprintf(file, "POMODORO_WORK_TIME=1500\n");     // 25分钟
         fprintf(file, "POMODORO_SHORT_BREAK=300\n");    // 5分钟
         fprintf(file, "POMODORO_LONG_BREAK=600\n");     // 10分钟
         fprintf(file, "POMODORO_LOOP_COUNT=1\n");       // 1次
         
-        // 默认超时动作设置(添加空的文件路径和网站URL以保持结构一致)
+        // 超时动作设置区块
         fprintf(file, "CLOCK_TIMEOUT_ACTION=LOCK\n");
-        fprintf(file, "CLOCK_TIMEOUT_FILE=\n");         // 空文件路径
-        fprintf(file, "CLOCK_TIMEOUT_WEBSITE=\n");      // 空网站URL
+        fprintf(file, "CLOCK_TIMEOUT_FILE=\n");         // 空文件路径占位
+        fprintf(file, "CLOCK_TIMEOUT_WEBSITE=\n");      // 空网站URL占位
         
-        // 添加空的最近文件记录(最多5个)
+        // 最近文件列表区块
         for (int i = 1; i <= 5; i++) {
-            fprintf(file, "CLOCK_RECENT_FILE_%d=\n", i);
+            fprintf(file, "CLOCK_RECENT_FILE_%d=\n", i); // 空文件记录占位
         }
         
-        // 时间选项
+        // 时间选项区块
         fprintf(file, "CLOCK_TIME_OPTIONS=25,10,5\n");
         
         fclose(file);
@@ -888,7 +897,10 @@ void WriteConfigTopmost(const char* topmost) {
  * @param filePath 文件路径
  * 
  * 更新配置文件中的超时打开文件路径，同时设置超时动作为打开文件。
- * 此函数只设置当前超时文件，不修改最近文件列表。
+ * 使用WriteConfig函数完全重写配置文件，确保：
+ * 1. 保留所有现有设置
+ * 2. 维持配置文件结构一致性
+ * 3. 不会丢失番茄钟等其他设置
  */
 void WriteConfigTimeoutFile(const char* filePath) {
     // 首先更新全局变量
@@ -896,22 +908,32 @@ void WriteConfigTimeoutFile(const char* filePath) {
     strncpy(CLOCK_TIMEOUT_FILE_PATH, filePath, MAX_PATH - 1);
     CLOCK_TIMEOUT_FILE_PATH[MAX_PATH - 1] = '\0';
     
-    // 然后更新配置文件
+    // 使用WriteConfig完全重写配置文件，保持结构一致
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    
-    // 完全重写配置文件，确保保留所有设置并调整顺序
     WriteConfig(config_path);
 }
 
 /**
  * @brief 写入所有配置设置到文件
  * @param config_path 配置文件路径
+ * 
+ * 按照统一的顺序写入所有配置项，确保配置文件结构一致：
+ * 1. 基本设置（颜色、字体、窗口位置等）
+ * 2. 颜色选项列表
+ * 3. 超时文本
+ * 4. 番茄钟设置
+ * 5. 超时动作及相关路径
+ * 6. 最近文件列表
+ * 7. 时间选项
+ * 
+ * 该顺序与CreateDefaultConfig函数保持一致，确保更新配置时不改变结构。
  */
 void WriteConfig(const char* config_path) {
     FILE* file = fopen(config_path, "w");
     if (!file) return;
     
+    // 基本设置区块
     fprintf(file, "CLOCK_TEXT_COLOR=%s\n", CLOCK_TEXT_COLOR);
     fprintf(file, "CLOCK_BASE_FONT_SIZE=%d\n", CLOCK_BASE_FONT_SIZE);
     fprintf(file, "FONT_FILE_NAME=%s\n", FONT_FILE_NAME);
@@ -924,6 +946,7 @@ void WriteConfig(const char* config_path) {
     fprintf(file, "CLOCK_SHOW_SECONDS=%s\n", CLOCK_SHOW_SECONDS ? "TRUE" : "FALSE");
     fprintf(file, "WINDOW_TOPMOST=%s\n", CLOCK_WINDOW_TOPMOST ? "TRUE" : "FALSE");
     
+    // 颜色选项区块
     fprintf(file, "COLOR_OPTIONS=");
     for (int i = 0; i < COLOR_OPTIONS_COUNT; i++) {
         if (i > 0) fprintf(file, ",");
@@ -931,15 +954,16 @@ void WriteConfig(const char* config_path) {
     }
     fprintf(file, "\n");
     
+    // 超时文本区块
     fprintf(file, "CLOCK_TIMEOUT_TEXT=%s\n", CLOCK_TIMEOUT_TEXT);
     
-    // 添加番茄钟配置项
+    // 番茄钟设置区块
     fprintf(file, "POMODORO_WORK_TIME=%d\n", POMODORO_WORK_TIME);
     fprintf(file, "POMODORO_SHORT_BREAK=%d\n", POMODORO_SHORT_BREAK);
     fprintf(file, "POMODORO_LONG_BREAK=%d\n", POMODORO_LONG_BREAK);
     fprintf(file, "POMODORO_LOOP_COUNT=%d\n", POMODORO_LOOP_COUNT);
     
-    // 在番茄钟配置之后添加文件和网站配置
+    // 超时动作设置区块
     if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE && strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
         fprintf(file, "CLOCK_TIMEOUT_ACTION=OPEN_FILE\n");
         fprintf(file, "CLOCK_TIMEOUT_FILE=%s\n", CLOCK_TIMEOUT_FILE_PATH);
@@ -947,7 +971,7 @@ void WriteConfig(const char* config_path) {
         fprintf(file, "CLOCK_TIMEOUT_ACTION=OPEN_WEBSITE\n");
         fprintf(file, "CLOCK_TIMEOUT_WEBSITE=%s\n", CLOCK_TIMEOUT_WEBSITE_URL);
     } else {
-        // 确保关机和重启选项不会被保存到配置文件中
+        // 确保关机和重启选项不会被永久保存到配置文件中
         if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SHUTDOWN || 
             CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_RESTART) {
             fprintf(file, "CLOCK_TIMEOUT_ACTION=MESSAGE\n");
@@ -969,11 +993,12 @@ void WriteConfig(const char* config_path) {
         }
     }
     
-    // 最近文件列表写在最后
+    // 最近文件列表区块
     for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
         fprintf(file, "CLOCK_RECENT_FILE_%d=%s\n", i+1, CLOCK_RECENT_FILES[i].path);
     }
     
+    // 时间选项区块
     fprintf(file, "CLOCK_TIME_OPTIONS=");
     for (int i = 0; i < time_options_count; i++) {
         if (i > 0) fprintf(file, ",");
