@@ -179,15 +179,9 @@ void ShowColorMenu(HWND hwnd) {
         BOOL isCurrentFile = (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0 && 
                               strcmp(CLOCK_RECENT_FILES[i].path, CLOCK_TIMEOUT_FILE_PATH) == 0);
         
-        // 在文件名前添加勾选标记（如果是当前选择的文件）
-        if (isCurrentFile) {
-            wchar_t checkedFileName[MAX_PATH + 4];
-            wcscpy(checkedFileName, L"✓ ");
-            wcscat(checkedFileName, wFileName);
-            AppendMenuW(hFileMenu, MF_STRING | MF_CHECKED, CLOCK_IDM_RECENT_FILE_1 + i, checkedFileName);
-        } else {
-            AppendMenuW(hFileMenu, MF_STRING, CLOCK_IDM_RECENT_FILE_1 + i, wFileName);
-        }
+        // 使用菜单项的勾选状态表示选中，不再添加额外的"✓ "前缀
+        AppendMenuW(hFileMenu, MF_STRING | (isCurrentFile ? MF_CHECKED : 0), 
+                   CLOCK_IDM_RECENT_FILE_1 + i, wFileName);
     }
 
     // 将"打开文件"作为子菜单添加到超时动作菜单中
