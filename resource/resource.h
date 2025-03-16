@@ -260,6 +260,10 @@
 #define IDC_CREDITS_VOLCANO   2022
 #define IDC_CREDITS_SHEEP     2023
 #define IDC_CREDITS_QINGYANG  2024
+#define IDC_CREDITS_WILLIAM   2025  // 新增：William
+#define IDC_CREDITS_WANGYE    2026  // 新增：王野
+#define IDC_CREDITS_FENGZENG  2027  // 新增：风增
+#define IDC_CREDITS_ZHUJIU    2028  // 新增：煮酒论科技
 
 // 其他常用链接
 #define URL_GITHUB_REPO     L"https://github.com/vladelaina/Catime"

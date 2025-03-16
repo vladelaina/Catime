@@ -57,7 +57,11 @@ static const wchar_t* CONTRIBUTOR_LINKS[] = {
     L"[学习马楼](https://space.bilibili.com/3546380188519387)", // CONTRIBUTOR_12
     L"[睡着的火山](https://space.bilibili.com/8010065)",        // CONTRIBUTOR_13
     L"[星空下数羊](https://space.bilibili.com/5549978)",        // CONTRIBUTOR_14
-    L"[青阳忘川](https://space.bilibili.com/13129221)"          // CONTRIBUTOR_15
+    L"[青阳忘川](https://space.bilibili.com/13129221)",         // CONTRIBUTOR_15
+    L"[William](https://github.com/llfWilliam)",               // CONTRIBUTOR_16 - 新增
+    L"[王野](https://github.com/wangye99)",                    // CONTRIBUTOR_17 - 新增
+    L"[风增](https://space.bilibili.com/470931145)",           // CONTRIBUTOR_18 - 新增 
+    L"[煮酒论科技](https://space.bilibili.com/572042200)"        // CONTRIBUTOR_19 - 新增
 };
 
 // 子类化编辑框过程
@@ -604,6 +608,30 @@ INT_PTR CALLBACK CreditsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lP
                 case IDC_CREDITS_QINGYANG: {
                     wchar_t name[256] = {0}, url[512] = {0};
                     ParseContributorInfo(CONTRIBUTOR_LINKS[14], name, 256, url, 512);
+                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
+                    return TRUE;
+                }
+                case IDC_CREDITS_WILLIAM: {
+                    wchar_t name[256] = {0}, url[512] = {0};
+                    ParseContributorInfo(CONTRIBUTOR_LINKS[15], name, 256, url, 512);
+                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
+                    return TRUE;
+                }
+                case IDC_CREDITS_WANGYE: {
+                    wchar_t name[256] = {0}, url[512] = {0};
+                    ParseContributorInfo(CONTRIBUTOR_LINKS[16], name, 256, url, 512);
+                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
+                    return TRUE;
+                }
+                case IDC_CREDITS_FENGZENG: {
+                    wchar_t name[256] = {0}, url[512] = {0};
+                    ParseContributorInfo(CONTRIBUTOR_LINKS[17], name, 256, url, 512);
+                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
+                    return TRUE;
+                }
+                case IDC_CREDITS_ZHUJIU: {
+                    wchar_t name[256] = {0}, url[512] = {0};
+                    ParseContributorInfo(CONTRIBUTOR_LINKS[18], name, 256, url, 512);
                     ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
                 }
