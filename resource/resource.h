@@ -199,6 +199,8 @@
 #define CLOCK_IDM_CURRENT_FILE 127   // 当前文件菜单项ID
 #define CLOCK_IDM_TIMEOUT_SHOW_TIME 135  // 超时动作：显示当前时间
 #define CLOCK_IDM_TIMEOUT_COUNT_UP 136   // 超时动作：正计时
+#define CLOCK_IDM_OPEN_WEBSITE 137     // 超时动作：打开网站
+#define CLOCK_IDM_CURRENT_WEBSITE 138  // 当前网站菜单项ID
 
 /* 显示与视觉效果 */
 #define BLUR_OPACITY 192
@@ -302,3 +304,6 @@
 #define IDD_DOWNLOAD_PROGRESS 1000
 #define IDC_PROGRESS_BAR      1001
 #define IDC_PROGRESS_TEXT     1002
+
+// 添加网站URL输入对话框
+#define CLOCK_IDD_WEBSITE_DIALOG 1008

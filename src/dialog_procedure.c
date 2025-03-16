@@ -910,3 +910,138 @@ INT_PTR CALLBACK PomodoroLoopDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPAR
     }
     return FALSE;
 }
+
+// 添加全局变量跟踪网站URL对话框句柄
+static HWND g_hwndWebsiteDialog = NULL;
+
+// 网站URL输入对话框过程
+INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    static HBRUSH hBackgroundBrush = NULL;
+    static HBRUSH hEditBrush = NULL;
+    static HBRUSH hButtonBrush = NULL;
+
+    switch (msg) {
+        case WM_INITDIALOG: {
+            // 设置对话框为模态
+            SetWindowLongPtr(hwndDlg, GWLP_USERDATA, lParam);
+            
+            // 设置背景和控件颜色
+            hBackgroundBrush = CreateSolidBrush(RGB(240, 240, 240));
+            hEditBrush = CreateSolidBrush(RGB(255, 255, 255));
+            hButtonBrush = CreateSolidBrush(RGB(240, 240, 240));
+            
+            // 子类化编辑框以支持回车键提交
+            HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
+            wpOrigEditProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
+            
+            // 如果已有URL，预填充到编辑框
+            if (strlen(CLOCK_TIMEOUT_WEBSITE_URL) > 0) {
+                SetDlgItemTextA(hwndDlg, CLOCK_IDC_EDIT, CLOCK_TIMEOUT_WEBSITE_URL);
+            }
+            
+            // 设置焦点到编辑框并选中所有文本
+            SetFocus(hwndEdit);
+            SendMessage(hwndEdit, EM_SETSEL, 0, -1);
+            
+            return FALSE;  // 因为我们手动设置了焦点
+        }
+        
+        case WM_CTLCOLORDLG:
+            return (INT_PTR)hBackgroundBrush;
+            
+        case WM_CTLCOLORSTATIC:
+            SetBkColor((HDC)wParam, RGB(240, 240, 240));
+            return (INT_PTR)hBackgroundBrush;
+            
+        case WM_CTLCOLOREDIT:
+            SetBkColor((HDC)wParam, RGB(255, 255, 255));
+            return (INT_PTR)hEditBrush;
+            
+        case WM_CTLCOLORBTN:
+            return (INT_PTR)hButtonBrush;
+            
+        case WM_COMMAND:
+            if (LOWORD(wParam) == CLOCK_IDC_BUTTON_OK || HIWORD(wParam) == BN_CLICKED) {
+                char url[MAX_PATH] = {0};
+                GetDlgItemText(hwndDlg, CLOCK_IDC_EDIT, url, sizeof(url));
+                
+                // 检查是否为空输入或只有空格
+                BOOL isAllSpaces = TRUE;
+                for (int i = 0; url[i]; i++) {
+                    if (!isspace((unsigned char)url[i])) {
+                        isAllSpaces = FALSE;
+                        break;
+                    }
+                }
+                
+                if (url[0] == '\0' || isAllSpaces) {
+                    EndDialog(hwndDlg, IDCANCEL);
+                    g_hwndWebsiteDialog = NULL;
+                    return TRUE;
+                }
+                
+                // 验证URL格式 - 简单检查，至少应该包含http://或https://
+                if (strncmp(url, "http://", 7) != 0 && strncmp(url, "https://", 8) != 0) {
+                    // 添加https://前缀
+                    char tempUrl[MAX_PATH] = "https://";
+                    strncat(tempUrl, url, MAX_PATH - 9);
+                    strncpy(url, tempUrl, MAX_PATH - 1);
+                }
+                
+                // 更新配置
+                WriteConfigTimeoutWebsite(url);
+                EndDialog(hwndDlg, IDOK);
+                g_hwndWebsiteDialog = NULL;
+                return TRUE;
+            } else if (LOWORD(wParam) == IDCANCEL) {
+                EndDialog(hwndDlg, IDCANCEL);
+                g_hwndWebsiteDialog = NULL;
+                return TRUE;
+            }
+            break;
+            
+        case WM_DESTROY:
+            // 恢复原始编辑框过程
+            HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
+            SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
+            
+            // 释放资源
+            if (hBackgroundBrush) {
+                DeleteObject(hBackgroundBrush);
+                hBackgroundBrush = NULL;
+            }
+            if (hEditBrush) {
+                DeleteObject(hEditBrush);
+                hEditBrush = NULL;
+            }
+            if (hButtonBrush) {
+                DeleteObject(hButtonBrush);
+                hButtonBrush = NULL;
+            }
+            break;
+            
+        case WM_CLOSE:
+            EndDialog(hwndDlg, IDCANCEL);
+            g_hwndWebsiteDialog = NULL;
+            return TRUE;
+    }
+    
+    return FALSE;
+}
+
+// 显示网站URL输入对话框
+void ShowWebsiteDialog(HWND hwndParent) {
+    if (!g_hwndWebsiteDialog) {
+        g_hwndWebsiteDialog = CreateDialog(
+            GetModuleHandle(NULL),
+            MAKEINTRESOURCE(CLOCK_IDD_WEBSITE_DIALOG),
+            hwndParent,
+            WebsiteDialogProc
+        );
+        if (g_hwndWebsiteDialog) {
+            ShowWindow(g_hwndWebsiteDialog, SW_SHOW);
+        }
+    } else {
+        SetForegroundWindow(g_hwndWebsiteDialog);
+    }
+}

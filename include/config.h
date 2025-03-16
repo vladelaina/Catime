@@ -141,6 +141,14 @@ void WriteConfigTimeoutFile(const char* filePath);
  */
 void WriteConfigTopmost(const char* topmost);
 
+/**
+ * @brief 写入超时打开网站的URL
+ * @param url 网站URL
+ * 
+ * 更新配置文件中的超时打开网站URL，同时设置超时动作为打开网站
+ */
+void WriteConfigTimeoutWebsite(const char* url);
+
 /// @}
 
 #endif // CONFIG_H

@@ -32,6 +32,7 @@ extern int POMODORO_LOOP_COUNT;   ///< 番茄钟循环次数（默认1次）
  * - OPEN_FILE: 打开指定文件
  * - SHOW_TIME: 显示当前时间
  * - COUNT_UP: 正计时
+ * - OPEN_WEBSITE: 打开网站
  */
 typedef enum {
     TIMEOUT_ACTION_MESSAGE = 0,
@@ -40,7 +41,8 @@ typedef enum {
     TIMEOUT_ACTION_RESTART = 3,
     TIMEOUT_ACTION_OPEN_FILE = 4,
     TIMEOUT_ACTION_SHOW_TIME = 5,
-    TIMEOUT_ACTION_COUNT_UP = 6   
+    TIMEOUT_ACTION_COUNT_UP = 6,
+    TIMEOUT_ACTION_OPEN_WEBSITE = 7
 } TimeoutActionType;
 
 // 计时器状态 --------------------------------------------------
@@ -66,6 +68,7 @@ extern int pomodoro_work_cycles;     ///< 番茄钟工作周期计数
 extern TimeoutActionType CLOCK_TIMEOUT_ACTION; ///< 当前超时动作类型
 extern char CLOCK_TIMEOUT_TEXT[50];            ///< 超时提示文本内容
 extern char CLOCK_TIMEOUT_FILE_PATH[MAX_PATH];  ///< 超时打开文件路径
+extern char CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH]; ///< 超时打开网站URL
 
 // 时间选项配置 ------------------------------------------------
 extern int time_options[MAX_TIME_OPTIONS]; ///< 预设时间选项数组

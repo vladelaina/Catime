@@ -50,6 +50,9 @@ extern int POMODORO_WORK_TIME;      ///< 工作时间(秒)
 extern int POMODORO_SHORT_BREAK;    ///< 短休息时间(秒)
 extern int POMODORO_LONG_BREAK;     ///< 长休息时间(秒)
 extern int POMODORO_LOOP_COUNT;     ///< 循环次数
+
+// 在外部变量声明部分添加
+extern char CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH];   ///< 超时打开网站的URL
 /// @}
 
 /// @name 外部函数声明
@@ -73,7 +76,8 @@ typedef enum {
     TIMEOUT_ACTION_RESTART = 3,   ///< 重启系统
     TIMEOUT_ACTION_OPEN_FILE = 4, ///< 打开指定文件
     TIMEOUT_ACTION_SHOW_TIME = 5, ///< 显示当前时间
-    TIMEOUT_ACTION_COUNT_UP = 6   ///< 切换到正计时模式
+    TIMEOUT_ACTION_COUNT_UP = 6,   ///< 切换到正计时模式
+    TIMEOUT_ACTION_OPEN_WEBSITE = 7   ///< 打开网站
 } TimeoutActionType;
 
 extern TimeoutActionType CLOCK_TIMEOUT_ACTION;
@@ -299,6 +303,20 @@ void ShowColorMenu(HWND hwnd) {
                (UINT_PTR)hFileMenu, 
                GetLocalizedString(L"打开文件", L"Open File"));
 
+    // 在打开文件菜单后分隔线前添加当前网站菜单项
+    // 只有当已设置网站URL时才显示
+    if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE && strlen(CLOCK_TIMEOUT_WEBSITE_URL) > 0) {
+        wchar_t websiteUrl[MAX_PATH];
+        MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_WEBSITE_URL, -1, websiteUrl, MAX_PATH);
+        
+        // 截断过长的URL
+        wchar_t truncatedUrl[MAX_PATH];
+        TruncateFileName(websiteUrl, truncatedUrl, 35); // 限制为35个字符
+        
+        AppendMenuW(hTimeoutMenu, MF_STRING, CLOCK_IDM_CURRENT_WEBSITE,
+                   truncatedUrl);
+    }
+
     // 在超时动作菜单中添加新选项 (在hTimeoutMenu的其他选项之后，在将该菜单添加到主菜单之前)
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SHOW_TIME ? MF_CHECKED : MF_UNCHECKED), 
                CLOCK_IDM_TIMEOUT_SHOW_TIME, 
@@ -307,6 +325,11 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_COUNT_UP ? MF_CHECKED : MF_UNCHECKED), 
                CLOCK_IDM_TIMEOUT_COUNT_UP, 
                GetLocalizedString(L"正计时", L"Count Up"));
+
+    // 在超时动作菜单中添加"打开网站"选项（在 CLOCK_IDM_OPEN_FILE 下方）
+    AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_WEBSITE ? MF_CHECKED : MF_UNCHECKED),
+               CLOCK_IDM_OPEN_WEBSITE,
+               GetLocalizedString(L"打开网站", L"Open Website"));
 
     // 将超时动作菜单添加到主菜单
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeoutMenu, 

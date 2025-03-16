@@ -59,6 +59,7 @@ int message_shown = 0;                   ///< 消息显示标志
 time_t last_config_time = 0;             ///< 最后配置时间
 RecentFile CLOCK_RECENT_FILES[MAX_RECENT_FILES];  ///< 最近文件列表
 int CLOCK_RECENT_FILES_COUNT = 0;        ///< 最近文件数量
+char CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH] = "";
 /// @}
 
 /// @name 外部变量声明

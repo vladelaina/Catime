@@ -228,6 +228,13 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                                 SetTimer(hwnd, 1, 1000, NULL);
                                 InvalidateRect(hwnd, NULL, TRUE);
                                 break;
+                            case TIMEOUT_ACTION_OPEN_WEBSITE:
+                                if (strlen(CLOCK_TIMEOUT_WEBSITE_URL) > 0) {
+                                    wchar_t wideUrl[MAX_PATH];
+                                    MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_WEBSITE_URL, -1, wideUrl, MAX_PATH);
+                                    ShellExecuteW(NULL, L"open", wideUrl, NULL, NULL, SW_NORMAL);
+                                }
+                                break;
                         }
                     }
                 }

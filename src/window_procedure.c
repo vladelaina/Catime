@@ -1458,6 +1458,14 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     CheckForUpdate(hwnd);
                     break;
                 }
+                case CLOCK_IDM_OPEN_WEBSITE:
+                    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_WEBSITE;
+                    ShowWebsiteDialog(hwnd);
+                    break;
+                
+                case CLOCK_IDM_CURRENT_WEBSITE:
+                    ShowWebsiteDialog(hwnd);
+                    break;
             }
             break;
 

@@ -87,4 +87,12 @@ void ShowPomodoroLoopDialog(HWND hwndParent);
 
 INT_PTR CALLBACK PomodoroLoopDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 
+/**
+ * @brief 显示网站URL输入对话框
+ * @param hwndParent 父窗口句柄
+ * 
+ * 显示用于输入超时时打开的网站URL的对话框。
+ */
+void ShowWebsiteDialog(HWND hwndParent);
+
 #endif // DIALOG_PROCEDURE_H

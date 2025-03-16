@@ -336,6 +336,21 @@ void ReadConfig() {
                 CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
             }
         }
+        else if (strncmp(line, "CLOCK_TIMEOUT_WEBSITE=", 22) == 0) {
+            strncpy(CLOCK_TIMEOUT_WEBSITE_URL, line + 22, MAX_PATH - 1);
+            CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH - 1] = '\0';
+            
+            // 移除尾部的换行符
+            size_t len = strlen(CLOCK_TIMEOUT_WEBSITE_URL);
+            if (len > 0 && CLOCK_TIMEOUT_WEBSITE_URL[len-1] == '\n') {
+                CLOCK_TIMEOUT_WEBSITE_URL[len-1] = '\0';
+            }
+            
+            // 如果URL有效，确保设置超时动作为打开网站
+            if (strlen(CLOCK_TIMEOUT_WEBSITE_URL) > 0) {
+                CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_WEBSITE;
+            }
+        }
     }
 
     fclose(file);
@@ -949,6 +964,9 @@ void WriteConfig(const char* config_path) {
     if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE && strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
         fprintf(file, "CLOCK_TIMEOUT_ACTION=OPEN_FILE\n");
         fprintf(file, "CLOCK_TIMEOUT_FILE=%s\n", CLOCK_TIMEOUT_FILE_PATH);
+    } else if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_WEBSITE && strlen(CLOCK_TIMEOUT_WEBSITE_URL) > 0) {
+        fprintf(file, "CLOCK_TIMEOUT_ACTION=OPEN_WEBSITE\n");
+        fprintf(file, "CLOCK_TIMEOUT_WEBSITE=%s\n", CLOCK_TIMEOUT_WEBSITE_URL);
     } else {
         // 确保关机和重启选项不会被保存到配置文件中
         if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SHUTDOWN || 
@@ -988,4 +1006,66 @@ void WriteConfig(const char* config_path) {
     fprintf(file, "\n");
     
     fclose(file);
+}
+
+/**
+ * @brief 写入超时打开网站的URL
+ * @param url 网站URL
+ * 
+ * 更新配置文件中的超时打开网站URL，同时设置超时动作为打开网站。
+ */
+void WriteConfigTimeoutWebsite(const char* url) {
+    // 首先更新全局变量
+    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_WEBSITE;
+    strncpy(CLOCK_TIMEOUT_WEBSITE_URL, url, MAX_PATH - 1);
+    CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH - 1] = '\0';
+    
+    // 然后更新配置文件
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    
+    FILE* file = fopen(config_path, "r");
+    if (!file) return;
+    
+    char temp_path[MAX_PATH];
+    strcpy(temp_path, config_path);
+    strcat(temp_path, ".tmp");
+    
+    FILE* temp = fopen(temp_path, "w");
+    if (!temp) {
+        fclose(file);
+        return;
+    }
+    
+    char line[MAX_PATH];
+    BOOL actionFound = FALSE;
+    BOOL urlFound = FALSE;
+    
+    // 读取原配置文件，更新超时动作和URL
+    while (fgets(line, sizeof(line), file)) {
+        if (strncmp(line, "CLOCK_TIMEOUT_ACTION=", 21) == 0) {
+            fprintf(temp, "CLOCK_TIMEOUT_ACTION=OPEN_WEBSITE\n");
+            actionFound = TRUE;
+        } else if (strncmp(line, "CLOCK_TIMEOUT_WEBSITE=", 22) == 0) {
+            fprintf(temp, "CLOCK_TIMEOUT_WEBSITE=%s\n", url);
+            urlFound = TRUE;
+        } else {
+            // 保留其他所有配置
+            fputs(line, temp);
+        }
+    }
+    
+    // 如果配置中没有这些项，添加它们
+    if (!actionFound) {
+        fprintf(temp, "CLOCK_TIMEOUT_ACTION=OPEN_WEBSITE\n");
+    }
+    if (!urlFound) {
+        fprintf(temp, "CLOCK_TIMEOUT_WEBSITE=%s\n", url);
+    }
+    
+    fclose(file);
+    fclose(temp);
+    
+    remove(config_path);
+    rename(temp_path, config_path);
 }
