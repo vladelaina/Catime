@@ -30,7 +30,7 @@ BEGIN
                 20, 113, 45, 15
     CONTROL     "青阳忘川", IDC_CREDITS_QINGYANG, "Static", SS_NOTIFY | SS_CENTERIMAGE,
                 20, 128, 45, 15
-    CONTROL     "William", IDC_CREDITS_WILLIAM, "Static", SS_NOTIFY | SS_CENTERIMAGE,
+    CONTROL     "王野", IDC_CREDITS_WANGYE, "Static", SS_NOTIFY | SS_CENTERIMAGE,
                 20, 143, 45, 15
     CONTROL     "风增", IDC_CREDITS_FENGZENG, "Static", SS_NOTIFY | SS_CENTERIMAGE,
                 20, 158, 45, 15
@@ -50,7 +50,7 @@ BEGIN
                 80, 98, 55, 15
     CONTROL     "星空下数羊", IDC_CREDITS_SHEEP, "Static", SS_NOTIFY | SS_CENTERIMAGE,
                 80, 113, 55, 15
-    CONTROL     "王野", IDC_CREDITS_WANGYE, "Static", SS_NOTIFY | SS_CENTERIMAGE,
+    CONTROL     "William", IDC_CREDITS_WILLIAM, "Static", SS_NOTIFY | SS_CENTERIMAGE,
                 80, 128, 45, 15
     CONTROL     "煮酒论科技", IDC_CREDITS_ZHUJIU, "Static", SS_NOTIFY | SS_CENTERIMAGE,
                 80, 143, 55, 15
