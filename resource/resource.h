@@ -300,10 +300,5 @@
 // 在预设管理菜单项部分添加
 #define CLOCK_IDM_TOPMOST 187  // 置顶选项ID
 
-// 新增：下载进度条对话框
-#define IDD_DOWNLOAD_PROGRESS 1000
-#define IDC_PROGRESS_BAR      1001
-#define IDC_PROGRESS_TEXT     1002
-
 // 添加网站URL输入对话框
 #define CLOCK_IDD_WEBSITE_DIALOG 1008
