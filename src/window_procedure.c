@@ -1181,7 +1181,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDC_START_NO_DISPLAY: {
                     WriteConfigStartupMode("NO_DISPLAY");
                     
-                    ShowWindow(hwnd, SW_HIDE);
                     HMENU hMenu = GetMenu(hwnd);
                     HMENU hTimeOptionsMenu = GetSubMenu(hMenu, GetMenuItemCount(hMenu) - 2);
                     HMENU hStartupSettingsMenu = GetSubMenu(hTimeOptionsMenu, 0);
