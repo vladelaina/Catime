@@ -83,7 +83,6 @@ void CreateDefaultConfig(const char* config_path) {
         fprintf(file, "CLOCK_USE_24HOUR=FALSE\n");
         fprintf(file, "CLOCK_SHOW_SECONDS=FALSE\n");
         fprintf(file, "WINDOW_TOPMOST=TRUE\n");
-
         
         fprintf(file, "COLOR_OPTIONS=#FFFFFF,#F9DB91,#F4CAE0,#FFB6C1,#A8E7DF,#A3CFB3,#92CBFC,#BDA5E7,#9370DB,#8C92CF,#72A9A5,#EB99A7,#EB96BD,#FFAE8B,#FF7F50,#CA6174\n");
 
@@ -886,50 +885,8 @@ void WriteConfigTimeoutFile(const char* filePath) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    FILE* file = fopen(config_path, "r");
-    if (!file) return;
-    
-    char temp_path[MAX_PATH];
-    strcpy(temp_path, config_path);
-    strcat(temp_path, ".tmp");
-    
-    FILE* temp = fopen(temp_path, "w");
-    if (!temp) {
-        fclose(file);
-        return;
-    }
-    
-    char line[MAX_PATH];
-    BOOL actionFound = FALSE;
-    BOOL fileFound = FALSE;
-    
-    // 读取原配置文件，更新超时动作和文件
-    while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, "CLOCK_TIMEOUT_ACTION=", 21) == 0) {
-            fprintf(temp, "CLOCK_TIMEOUT_ACTION=OPEN_FILE\n");
-            actionFound = TRUE;
-        } else if (strncmp(line, "CLOCK_TIMEOUT_FILE=", 19) == 0) {
-            fprintf(temp, "CLOCK_TIMEOUT_FILE=%s\n", filePath);
-            fileFound = TRUE;
-        } else {
-            // 保留其他所有配置
-            fputs(line, temp);
-        }
-    }
-    
-    // 如果配置中没有这些项，添加它们
-    if (!actionFound) {
-        fprintf(temp, "CLOCK_TIMEOUT_ACTION=OPEN_FILE\n");
-    }
-    if (!fileFound) {
-        fprintf(temp, "CLOCK_TIMEOUT_FILE=%s\n", filePath);
-    }
-    
-    fclose(file);
-    fclose(temp);
-    
-    remove(config_path);
-    rename(temp_path, config_path);
+    // 完全重写配置文件，确保保留所有设置并调整顺序
+    WriteConfig(config_path);
 }
 
 /**
@@ -952,15 +909,22 @@ void WriteConfig(const char* config_path) {
     fprintf(file, "CLOCK_SHOW_SECONDS=%s\n", CLOCK_SHOW_SECONDS ? "TRUE" : "FALSE");
     fprintf(file, "WINDOW_TOPMOST=%s\n", CLOCK_WINDOW_TOPMOST ? "TRUE" : "FALSE");
     
-    fprintf(file, "CLOCK_TIME_OPTIONS=");
-    for (int i = 0; i < time_options_count; i++) {
+    fprintf(file, "COLOR_OPTIONS=");
+    for (int i = 0; i < COLOR_OPTIONS_COUNT; i++) {
         if (i > 0) fprintf(file, ",");
-        fprintf(file, "%d", time_options[i]);
+        fprintf(file, "%s", COLOR_OPTIONS[i].hexColor);
     }
     fprintf(file, "\n");
     
     fprintf(file, "CLOCK_TIMEOUT_TEXT=%s\n", CLOCK_TIMEOUT_TEXT);
     
+    // 添加番茄钟配置项
+    fprintf(file, "POMODORO_WORK_TIME=%d\n", POMODORO_WORK_TIME);
+    fprintf(file, "POMODORO_SHORT_BREAK=%d\n", POMODORO_SHORT_BREAK);
+    fprintf(file, "POMODORO_LONG_BREAK=%d\n", POMODORO_LONG_BREAK);
+    fprintf(file, "POMODORO_LOOP_COUNT=%d\n", POMODORO_LOOP_COUNT);
+    
+    // 在番茄钟配置之后添加文件和网站配置
     if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE && strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
         fprintf(file, "CLOCK_TIMEOUT_ACTION=OPEN_FILE\n");
         fprintf(file, "CLOCK_TIMEOUT_FILE=%s\n", CLOCK_TIMEOUT_FILE_PATH);
@@ -986,22 +950,19 @@ void WriteConfig(const char* config_path) {
                 case TIMEOUT_ACTION_COUNT_UP:
                     fprintf(file, "CLOCK_TIMEOUT_ACTION=COUNT_UP\n");
                     break;
-                default:
-                    fprintf(file, "CLOCK_TIMEOUT_ACTION=MESSAGE\n");
-                    break;
             }
         }
     }
     
-    // 使用CLOCK_RECENT_FILE_1格式保存最近文件
+    // 最近文件列表写在最后
     for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
         fprintf(file, "CLOCK_RECENT_FILE_%d=%s\n", i+1, CLOCK_RECENT_FILES[i].path);
     }
     
-    fprintf(file, "COLOR_OPTIONS=");
-    for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
+    fprintf(file, "CLOCK_TIME_OPTIONS=");
+    for (int i = 0; i < time_options_count; i++) {
         if (i > 0) fprintf(file, ",");
-        fprintf(file, "%s", COLOR_OPTIONS[i].hexColor);
+        fprintf(file, "%d", time_options[i]);
     }
     fprintf(file, "\n");
     
