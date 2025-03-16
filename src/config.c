@@ -69,29 +69,44 @@ void GetConfigPath(char* path, size_t size) {
 void CreateDefaultConfig(const char* config_path) {
     FILE *file = fopen(config_path, "w");
     if (file) {
-        fprintf(file, "FONT_FILE_NAME=Wallpoet Essence.ttf\n");  
+        // 基本设置 - 保持与WriteConfig函数相同的顺序
         fprintf(file, "CLOCK_TEXT_COLOR=#FFB6C1\n");
         fprintf(file, "CLOCK_BASE_FONT_SIZE=20\n");
-        fprintf(file, "CLOCK_WINDOW_POS_X=960\n");  
-        fprintf(file, "CLOCK_WINDOW_POS_Y=-1\n");   
-        fprintf(file, "WINDOW_SCALE=1.62\n");
+        fprintf(file, "FONT_FILE_NAME=Wallpoet Essence.ttf\n");
         fprintf(file, "CLOCK_DEFAULT_START_TIME=1500\n");
-        fprintf(file, "CLOCK_TIME_OPTIONS=25,10,5\n");
-        fprintf(file, "CLOCK_TIMEOUT_TEXT=0\n");
+        fprintf(file, "CLOCK_WINDOW_POS_X=960\n");
+        fprintf(file, "CLOCK_WINDOW_POS_Y=-1\n");
         fprintf(file, "CLOCK_EDIT_MODE=FALSE\n");
-        fprintf(file, "CLOCK_TIMEOUT_ACTION=LOCK\n");
+        fprintf(file, "WINDOW_SCALE=1.62\n");
         fprintf(file, "CLOCK_USE_24HOUR=FALSE\n");
         fprintf(file, "CLOCK_SHOW_SECONDS=FALSE\n");
         fprintf(file, "WINDOW_TOPMOST=TRUE\n");
         
+        // 颜色选项
         fprintf(file, "COLOR_OPTIONS=#FFFFFF,#F9DB91,#F4CAE0,#FFB6C1,#A8E7DF,#A3CFB3,#92CBFC,#BDA5E7,#9370DB,#8C92CF,#72A9A5,#EB99A7,#EB96BD,#FFAE8B,#FF7F50,#CA6174\n");
-
-        // 添加番茄钟默认时间配置(单位:秒)
+        
+        // 超时文本
+        fprintf(file, "CLOCK_TIMEOUT_TEXT=0\n");
+        
+        // 番茄钟设置(单位:秒)
         fprintf(file, "POMODORO_WORK_TIME=1500\n");     // 25分钟
         fprintf(file, "POMODORO_SHORT_BREAK=300\n");    // 5分钟
         fprintf(file, "POMODORO_LONG_BREAK=600\n");     // 10分钟
         fprintf(file, "POMODORO_LOOP_COUNT=1\n");       // 1次
-
+        
+        // 默认超时动作设置(添加空的文件路径和网站URL以保持结构一致)
+        fprintf(file, "CLOCK_TIMEOUT_ACTION=LOCK\n");
+        fprintf(file, "CLOCK_TIMEOUT_FILE=\n");         // 空文件路径
+        fprintf(file, "CLOCK_TIMEOUT_WEBSITE=\n");      // 空网站URL
+        
+        // 添加空的最近文件记录(最多5个)
+        for (int i = 1; i <= 5; i++) {
+            fprintf(file, "CLOCK_RECENT_FILE_%d=\n", i);
+        }
+        
+        // 时间选项
+        fprintf(file, "CLOCK_TIME_OPTIONS=25,10,5\n");
+        
         fclose(file);
     }
 }
