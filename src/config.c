@@ -207,9 +207,11 @@ void ReadConfig() {
             } else if (strcmp(line + 21, "LOCK") == 0) {
                 CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_LOCK;
             } else if (strcmp(line + 21, "SHUTDOWN") == 0) {
-                CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SHUTDOWN;
+                // 即使配置文件中有SHUTDOWN，也将其视为一次性操作，默认为MESSAGE
+                CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
             } else if (strcmp(line + 21, "RESTART") == 0) {
-                CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_RESTART;
+                // 即使配置文件中有RESTART，也将其视为一次性操作，默认为MESSAGE
+                CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
             } else if (strcmp(line + 21, "OPEN_FILE") == 0) {
                 CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
             } else if (strcmp(line + 21, "SHOW_TIME") == 0) {
@@ -368,6 +370,7 @@ void ReadConfig() {
  * 
  * 使用临时文件方式更新配置文件中的超时动作设置，
  * 处理OPEN_FILE动作时自动关联超时文件路径。
+ * 注意："RESTART"和"SHUTDOWN"选项只运行一次，不会持久化到配置文件中。
  */
 void WriteConfigTimeoutAction(const char* action) {
     char config_path[MAX_PATH];
@@ -389,9 +392,15 @@ void WriteConfigTimeoutAction(const char* action) {
     char line[256];
     BOOL found = FALSE;
     
+    // 如果是关机或重启，不写入配置文件，而是写入"MESSAGE"
+    const char* actual_action = action;
+    if (strcmp(action, "RESTART") == 0 || strcmp(action, "SHUTDOWN") == 0) {
+        actual_action = "MESSAGE";
+    }
+    
     while (fgets(line, sizeof(line), file)) {
         if (strncmp(line, "CLOCK_TIMEOUT_ACTION=", 21) == 0) {
-            fprintf(temp, "CLOCK_TIMEOUT_ACTION=%s\n", action);
+            fprintf(temp, "CLOCK_TIMEOUT_ACTION=%s\n", actual_action);
             found = TRUE;
         } else {
             fputs(line, temp);
@@ -399,7 +408,7 @@ void WriteConfigTimeoutAction(const char* action) {
     }
     
     if (!found) {
-        fprintf(temp, "CLOCK_TIMEOUT_ACTION=%s\n", action);
+        fprintf(temp, "CLOCK_TIMEOUT_ACTION=%s\n", actual_action);
     }
     
     fclose(file);
@@ -925,25 +934,28 @@ void WriteConfig(const char* config_path) {
         fprintf(file, "CLOCK_TIMEOUT_ACTION=OPEN_FILE\n");
         fprintf(file, "CLOCK_TIMEOUT_FILE=%s\n", CLOCK_TIMEOUT_FILE_PATH);
     } else {
-        switch (CLOCK_TIMEOUT_ACTION) {
-            case TIMEOUT_ACTION_MESSAGE:
-                fprintf(file, "CLOCK_TIMEOUT_ACTION=MESSAGE\n");
-                break;
-            case TIMEOUT_ACTION_LOCK:
-                fprintf(file, "CLOCK_TIMEOUT_ACTION=LOCK\n");
-                break;
-            case TIMEOUT_ACTION_SHUTDOWN:
-                fprintf(file, "CLOCK_TIMEOUT_ACTION=SHUTDOWN\n");
-                break;
-            case TIMEOUT_ACTION_RESTART:
-                fprintf(file, "CLOCK_TIMEOUT_ACTION=RESTART\n");
-                break;
-            case TIMEOUT_ACTION_SHOW_TIME:
-                fprintf(file, "CLOCK_TIMEOUT_ACTION=SHOW_TIME\n");
-                break;
-            case TIMEOUT_ACTION_COUNT_UP:
-                fprintf(file, "CLOCK_TIMEOUT_ACTION=COUNT_UP\n");
-                break;
+        // 确保关机和重启选项不会被保存到配置文件中
+        if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SHUTDOWN || 
+            CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_RESTART) {
+            fprintf(file, "CLOCK_TIMEOUT_ACTION=MESSAGE\n");
+        } else {
+            switch (CLOCK_TIMEOUT_ACTION) {
+                case TIMEOUT_ACTION_MESSAGE:
+                    fprintf(file, "CLOCK_TIMEOUT_ACTION=MESSAGE\n");
+                    break;
+                case TIMEOUT_ACTION_LOCK:
+                    fprintf(file, "CLOCK_TIMEOUT_ACTION=LOCK\n");
+                    break;
+                case TIMEOUT_ACTION_SHOW_TIME:
+                    fprintf(file, "CLOCK_TIMEOUT_ACTION=SHOW_TIME\n");
+                    break;
+                case TIMEOUT_ACTION_COUNT_UP:
+                    fprintf(file, "CLOCK_TIMEOUT_ACTION=COUNT_UP\n");
+                    break;
+                default:
+                    fprintf(file, "CLOCK_TIMEOUT_ACTION=MESSAGE\n");
+                    break;
+            }
         }
     }
     
