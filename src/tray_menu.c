@@ -73,6 +73,30 @@ typedef enum {
 extern TimeoutActionType CLOCK_TIMEOUT_ACTION;
 
 /**
+ * @brief 从配置文件读取超时动作设置
+ * 
+ * 确保CLOCK_TIMEOUT_ACTION变量与配置文件中的设置保持一致
+ */
+void ReadTimeoutActionFromConfig() {
+    char configPath[MAX_PATH];
+    GetConfigPath(configPath, MAX_PATH);
+    
+    FILE *configFile = fopen(configPath, "r");
+    if (configFile) {
+        char line[256];
+        while (fgets(line, sizeof(line), configFile)) {
+            if (strncmp(line, "TIMEOUT_ACTION=", 15) == 0) {
+                int action = 0;
+                sscanf(line, "TIMEOUT_ACTION=%d", &action);
+                CLOCK_TIMEOUT_ACTION = (TimeoutActionType)action;
+                break;
+            }
+        }
+        fclose(configFile);
+    }
+}
+
+/**
  * @brief 最近文件结构体
  * 
  * 存储最近使用过的文件路径和名称信息
@@ -129,6 +153,9 @@ void FormatPomodoroTime(int seconds, wchar_t* buffer, size_t bufferSize) {
  * 预设管理、字体选择、颜色设置和关于信息等选项。
  */
 void ShowColorMenu(HWND hwnd) {
+    // 在创建菜单前先读取配置文件中的超时动作设置
+    ReadTimeoutActionFromConfig();
+    
     HMENU hMenu = CreatePopupMenu();
     
     // 添加编辑模式选项
@@ -438,6 +465,9 @@ void ShowColorMenu(HWND hwnd) {
  * 根据当前应用程序状态动态调整菜单项。
  */
 void ShowContextMenu(HWND hwnd) {
+    // 在创建菜单前先读取配置文件中的超时动作设置
+    ReadTimeoutActionFromConfig();
+    
     HMENU hMenu = CreatePopupMenu();
     
     // 计时管理菜单 - 添加在最顶部

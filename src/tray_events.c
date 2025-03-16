@@ -12,6 +12,9 @@
 #include "../include/color.h"
 #include "../include/timer.h"
 
+// 声明从配置文件读取超时动作的函数
+extern void ReadTimeoutActionFromConfig(void);
+
 /**
  * @brief 处理系统托盘消息
  * @param hwnd 窗口句柄
@@ -68,6 +71,9 @@ void PauseResumeTimer(HWND hwnd) {
  * 重置计时器到初始状态并继续运行
  */
 void RestartTimer(HWND hwnd) {
+    // 从配置文件读取超时动作设置
+    ReadTimeoutActionFromConfig();
+    
     // 检查当前是否有计时进行中
     if (!CLOCK_SHOW_CURRENT_TIME && 
         ((!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0) || 
