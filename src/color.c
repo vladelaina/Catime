@@ -24,6 +24,15 @@ BOOL IS_COLOR_PREVIEWING = FALSE;         ///< 是否正在预览颜色
 char CLOCK_TEXT_COLOR[10] = "#FFFFFF";    ///< 当前文本颜色值
 /// @}
 
+/// @name 函数原型声明
+/// @{
+void GetConfigPath(char* path, size_t size);
+void CreateDefaultConfig(const char* config_path);
+void ReadConfig(void);
+void WriteConfig(const char* config_path);
+void replaceBlackColor(const char* color, char* output, size_t output_size);
+/// @}
+
 /**
  * @brief CSS标准颜色定义
  * 
@@ -93,14 +102,6 @@ static const char* DEFAULT_COLOR_OPTIONS[] = {
 /// 编辑框子类化过程的原始窗口过程
 WNDPROC g_OldEditProc;
 
-/// @name 外部函数声明
-/// @{
-void GetConfigPath(char* path, size_t size);
-void CreateDefaultConfig(const char* config_path);
-void ReadConfig(void);
-void WriteConfig(const char* config_path);
-/// @}
-
 /**
  * @brief 初始化默认语言和颜色设置
  * 
@@ -147,10 +148,18 @@ COLORREF ShowColorDialog(HWND hwnd) {
             finalColor = cc.rgbResult;
         }
         
-        snprintf(CLOCK_TEXT_COLOR, sizeof(CLOCK_TEXT_COLOR), "#%02X%02X%02X",
+        char tempColor[10];
+        snprintf(tempColor, sizeof(tempColor), "#%02X%02X%02X",
                 GetRValue(finalColor),
                 GetGValue(finalColor),
                 GetBValue(finalColor));
+        
+        // 替换纯黑色为近似黑色
+        char finalColorStr[10];
+        replaceBlackColor(tempColor, finalColorStr, sizeof(finalColorStr));
+        
+        strncpy(CLOCK_TEXT_COLOR, finalColorStr, sizeof(CLOCK_TEXT_COLOR) - 1);
+        CLOCK_TEXT_COLOR[sizeof(CLOCK_TEXT_COLOR) - 1] = '\0';
         
         WriteConfigColor(CLOCK_TEXT_COLOR);
         
@@ -210,7 +219,11 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT msg, WPARAM wParam, LPARAM
                             GetGValue(color),
                             GetBValue(color));
                     
-                    strncpy(PREVIEW_COLOR, colorStr, sizeof(PREVIEW_COLOR) - 1);
+                    // 替换纯黑色为近似黑色
+                    char finalColorStr[20];
+                    replaceBlackColor(colorStr, finalColorStr, sizeof(finalColorStr));
+                    
+                    strncpy(PREVIEW_COLOR, finalColorStr, sizeof(PREVIEW_COLOR) - 1);
                     PREVIEW_COLOR[sizeof(PREVIEW_COLOR) - 1] = '\0';
                     IS_COLOR_PREVIEWING = TRUE;
                     
@@ -241,7 +254,11 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT msg, WPARAM wParam, LPARAM
                             GetGValue(color),
                             GetBValue(color));
                     
-                    strncpy(PREVIEW_COLOR, colorStr, sizeof(PREVIEW_COLOR) - 1);
+                    // 替换纯黑色为近似黑色
+                    char finalColorStr[20];
+                    replaceBlackColor(colorStr, finalColorStr, sizeof(finalColorStr));
+                    
+                    strncpy(PREVIEW_COLOR, finalColorStr, sizeof(PREVIEW_COLOR) - 1);
                     PREVIEW_COLOR[sizeof(PREVIEW_COLOR) - 1] = '\0';
                     IS_COLOR_PREVIEWING = TRUE;
                     
@@ -689,7 +706,11 @@ LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
             normalizeColor(color, normalized, sizeof(normalized));
             
             if (normalized[0] == '#') {
-                strncpy(PREVIEW_COLOR, normalized, sizeof(PREVIEW_COLOR)-1);
+                // 替换纯黑色为近似黑色
+                char finalColor[32];
+                replaceBlackColor(normalized, finalColor, sizeof(finalColor));
+                
+                strncpy(PREVIEW_COLOR, finalColor, sizeof(PREVIEW_COLOR)-1);
                 PREVIEW_COLOR[sizeof(PREVIEW_COLOR)-1] = '\0';
                 IS_COLOR_PREVIEWING = TRUE;
                 
@@ -717,7 +738,11 @@ LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
             normalizeColor(color, normalized, sizeof(normalized));
             
             if (normalized[0] == '#') {
-                strncpy(PREVIEW_COLOR, normalized, sizeof(PREVIEW_COLOR)-1);
+                // 替换纯黑色为近似黑色
+                char finalColor[32];
+                replaceBlackColor(normalized, finalColor, sizeof(finalColor));
+                
+                strncpy(PREVIEW_COLOR, finalColor, sizeof(PREVIEW_COLOR)-1);
                 PREVIEW_COLOR[sizeof(PREVIEW_COLOR)-1] = '\0';
                 IS_COLOR_PREVIEWING = TRUE;
             } else {
@@ -808,4 +833,22 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
         }
     }
     return FALSE;
+}
+
+/**
+ * @brief 替换纯黑色为近似黑色
+ * @param color 原始颜色字符串
+ * @param output 输出缓冲区
+ * @param output_size 输出缓冲区大小
+ * 
+ * 如果输入颜色是纯黑色(#000000)，则替换为#000001
+ */
+void replaceBlackColor(const char* color, char* output, size_t output_size) {
+    if (color && (strcasecmp(color, "#000000") == 0)) {
+        strncpy(output, "#000001", output_size);
+        output[output_size - 1] = '\0';
+    } else {
+        strncpy(output, color, output_size);
+        output[output_size - 1] = '\0';
+    }
 }

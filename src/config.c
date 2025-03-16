@@ -211,6 +211,11 @@ void ReadConfig() {
         else if (strncmp(line, "CLOCK_TEXT_COLOR=", 17) == 0) {
             strncpy(CLOCK_TEXT_COLOR, line + 17, sizeof(CLOCK_TEXT_COLOR) - 1);
             CLOCK_TEXT_COLOR[sizeof(CLOCK_TEXT_COLOR) - 1] = '\0';
+            
+            // 检查并替换纯黑色
+            if (strcasecmp(CLOCK_TEXT_COLOR, "#000000") == 0) {
+                strncpy(CLOCK_TEXT_COLOR, "#000001", sizeof(CLOCK_TEXT_COLOR) - 1);
+            }
         }
         else if (strncmp(line, "CLOCK_DEFAULT_START_TIME=", 25) == 0) {
             sscanf(line + 25, "%d", &CLOCK_DEFAULT_START_TIME);
