@@ -471,11 +471,33 @@ BOOL DownloadUpdate(const char* url, const char* fileName, HWND hwnd) {
 }
 
 /**
+ * @brief 打开浏览器下载更新
+ * @param url 文件下载URL
+ * @param hwnd 窗口句柄，用于显示消息
+ * @return 操作成功返回TRUE，失败返回FALSE
+ */
+BOOL OpenBrowserForUpdate(const char* url, HWND hwnd) {
+    // 使用ShellExecute打开浏览器到下载链接
+    HINSTANCE hInstance = ShellExecuteA(hwnd, "open", url, NULL, NULL, SW_SHOWNORMAL);
+    
+    if ((INT_PTR)hInstance <= 32) {
+        // 打开浏览器失败
+        MessageBoxW(hwnd, 
+                   GetLocalizedString(L"无法打开浏览器下载更新", L"Could not open browser to download update"), 
+                   GetLocalizedString(L"更新错误", L"Update Error"), 
+                   MB_ICONERROR);
+        return FALSE;
+    }
+    
+    // 打开浏览器成功
+    return TRUE;
+}
+
+/**
  * @brief 检查应用程序更新
  * @param hwnd 窗口句柄
  * 
- * 连接到GitHub/Gitee检查是否有新版本。如果有，会提示用户是否下载。
- * 如果用户确认，会将新版本下载到AppData目录。
+ * 连接到GitHub/Gitee检查是否有新版本。如果有，会提示用户是否在浏览器中下载。
  */
 void CheckForUpdate(HWND hwnd) {
     // 选择最快的更新源
@@ -550,8 +572,8 @@ void CheckForUpdate(HWND hwnd) {
         
         swprintf(message, 256, 
                 GetLocalizedString(
-                    L"发现新版本!\n当前版本: %ls\n最新版本: %ls\n\n是否下载更新?",
-                    L"New version available!\nCurrent version: %ls\nLatest version: %ls\n\nDownload update?"
+                    L"发现新版本!\n当前版本: %ls\n最新版本: %ls\n\n是否在浏览器中打开下载页面?",
+                    L"New version available!\nCurrent version: %ls\nLatest version: %ls\n\nOpen download page in browser?"
                 ), currentVersionW, latestVersionW);
         
         int result = MessageBoxW(hwnd, message, 
@@ -559,16 +581,17 @@ void CheckForUpdate(HWND hwnd) {
                                MB_YESNO | MB_ICONINFORMATION);
         
         if (result == IDYES) {
-            // 提取文件名
-            const char* fileName = strrchr(downloadUrl, '/');
-            if (fileName) {
-                fileName++; // 跳过'/'字符
-            } else {
-                fileName = "Catime-latest.zip";
-            }
+            // 在浏览器中打开下载链接
+            OpenBrowserForUpdate(downloadUrl, hwnd);
             
-            // 下载更新
-            DownloadUpdate(downloadUrl, fileName, hwnd);
+            // 提示用户手动更新的说明
+            MessageBoxW(hwnd, 
+                       GetLocalizedString(
+                           L"请在下载完成后，退出 Catime 并用新下载的版本替换当前程序。",
+                           L"After downloading, please exit Catime and replace the current program with the newly downloaded version."
+                       ), 
+                       GetLocalizedString(L"更新说明", L"Update Instructions"), 
+                       MB_ICONINFORMATION);
         }
     } else {
         // 已经是最新版本
