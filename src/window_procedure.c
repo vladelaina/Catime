@@ -39,6 +39,7 @@
 #include "../include/dialog_procedure.h"
 #include "../include/pomodoro.h"
 #include "../include/update_checker.h"
+#include "../include/async_update_checker.h"
 
 // 从main.c引入的变量
 extern char inputText[256];
@@ -1454,8 +1455,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_CHECK_UPDATE: {
-                    // 调用检查更新函数
-                    CheckForUpdate(hwnd);
+                    // 调用异步检查更新函数
+                    CheckForUpdateAsync(hwnd);
                     break;
                 }
                 case CLOCK_IDM_OPEN_WEBSITE:
