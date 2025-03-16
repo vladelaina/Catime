@@ -146,6 +146,69 @@ void FormatPomodoroTime(int seconds, wchar_t* buffer, size_t bufferSize) {
 }
 
 /**
+ * @brief 截断长文件名
+ * @param fileName 原始文件名
+ * @param truncated 截断后的文件名缓冲区
+ * @param maxLen 最大显示长度(不包括结束符)
+ * 
+ * 如果文件名超过指定长度，则采用"前12个字符...后12个字符"的形式
+ * 例如："很长的文件名文件名文件名文件名.txt" -> "很长的文件名文...名文件名文件名.txt"
+ */
+void TruncateFileName(const wchar_t* fileName, wchar_t* truncated, size_t maxLen) {
+    if (!fileName || !truncated || maxLen <= 7) return; // 至少需要显示"x...y"
+    
+    size_t nameLen = wcslen(fileName);
+    if (nameLen <= maxLen) {
+        // 文件名未超过限制长度，直接复制
+        wcscpy(truncated, fileName);
+        return;
+    }
+    
+    // 查找最后一个点号位置(扩展名分隔符)
+    const wchar_t* lastDot = wcsrchr(fileName, L'.');
+    const wchar_t* fileNameNoExt = fileName;
+    const wchar_t* ext = L"";
+    size_t nameNoExtLen = nameLen;
+    size_t extLen = 0;
+    
+    if (lastDot && lastDot != fileName) {
+        // 有有效的扩展名
+        ext = lastDot;  // 包含点号的扩展名
+        extLen = wcslen(ext);
+        nameNoExtLen = lastDot - fileName;  // 不含扩展名的文件名长度
+    }
+    
+    // 如果纯文件名长度小于等于27字符(12+3+12)，使用旧方式截断
+    if (nameNoExtLen <= 27) {
+        // 简单截断主文件名，保留扩展名
+        wcsncpy(truncated, fileName, maxLen - extLen - 3);
+        truncated[maxLen - extLen - 3] = L'\0';
+        wcscat(truncated, L"...");
+        wcscat(truncated, ext);
+        return;
+    }
+    
+    // 使用新的截断方式：前12个字符 + ... + 后12个字符 + 扩展名
+    wchar_t buffer[MAX_PATH];
+    
+    // 复制前12个字符
+    wcsncpy(buffer, fileName, 12);
+    buffer[12] = L'\0';
+    
+    // 添加省略号
+    wcscat(buffer, L"...");
+    
+    // 复制后12个字符(不含扩展名部分)
+    wcsncat(buffer, fileName + nameNoExtLen - 12, 12);
+    
+    // 添加扩展名
+    wcscat(buffer, ext);
+    
+    // 复制结果到输出缓冲区
+    wcscpy(truncated, buffer);
+}
+
+/**
  * @brief 显示颜色和设置菜单
  * @param hwnd 窗口句柄
  * 
@@ -193,13 +256,17 @@ void ShowColorMenu(HWND hwnd) {
         wchar_t wFileName[MAX_PATH];
         MultiByteToWideChar(CP_UTF8, 0, CLOCK_RECENT_FILES[i].name, -1, wFileName, MAX_PATH);
         
+        // 截断过长的文件名
+        wchar_t truncatedName[MAX_PATH];
+        TruncateFileName(wFileName, truncatedName, 25); // 限制为25个字符
+        
         // 检查是否是当前选择的文件
         BOOL isCurrentFile = (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0 && 
                               strcmp(CLOCK_RECENT_FILES[i].path, CLOCK_TIMEOUT_FILE_PATH) == 0);
         
         // 使用菜单项的勾选状态表示选中，不再添加额外的"✓ "前缀
         AppendMenuW(hFileMenu, MF_STRING | (isCurrentFile ? MF_CHECKED : 0), 
-                   CLOCK_IDM_RECENT_FILE_1 + i, wFileName);
+                   CLOCK_IDM_RECENT_FILE_1 + i, truncatedName);
     }
                
     // 如果有最近文件，添加分隔线
