@@ -307,7 +307,7 @@ void ShowColorMenu(HWND hwnd) {
     // 将"打开文件"作为子菜单添加到超时动作菜单中
     AppendMenuW(hTimeoutMenu, MF_POPUP | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE ? MF_CHECKED : MF_UNCHECKED), 
                (UINT_PTR)hFileMenu, 
-               GetLocalizedString(L"打开文件", L"Open File"));
+               GetLocalizedString(L"打开文件/软件", L"Open File/Software"));
 
     // 6. 打开网站
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_WEBSITE ? MF_CHECKED : MF_UNCHECKED),

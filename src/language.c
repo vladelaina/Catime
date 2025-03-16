@@ -129,7 +129,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Select Preset") == 0) return L"选择预设";
             if (wcscmp(english, L"Confirm Delete") == 0) return L"确认删除";
             if (wcscmp(english, L"Are you sure you want to delete this preset?") == 0) return L"确定要删除这个预设吗？";
-            if (wcscmp(english, L"Open File") == 0) return L"打开文件";
+            if (wcscmp(english, L"Open File/Software") == 0) return L"打开文件/软件";
             if (wcscmp(english, L"No Display") == 0) return L"不显示";
             if (wcscmp(english, L"Preset Management") == 0) return L"预设管理";
             if (wcscmp(english, L"Color Value") == 0) return L"颜色值";
@@ -197,7 +197,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Select Preset") == 0) return L"選擇預設";
             if (wcscmp(english, L"Confirm Delete") == 0) return L"確認刪除";
             if (wcscmp(english, L"Are you sure you want to delete this preset?") == 0) return L"確定要刪除這個預設嗎？";
-            if (wcscmp(english, L"Open File") == 0) return L"打開文件";
+            if (wcscmp(english, L"Open File/Software") == 0) return L"打開文件/軟件";
             if (wcscmp(english, L"No Display") == 0) return L"不顯示";
             if (wcscmp(english, L"Preset Management") == 0) return L"預設管理";
             if (wcscmp(english, L"Color Value") == 0) return L"顏色值";
@@ -222,7 +222,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Timeout Action") == 0) return L"Acción de tiempo";
             if (wcscmp(english, L"Show Message") == 0) return L"Mostrar mensaje";
             if (wcscmp(english, L"Browse...") == 0) return L"Explorar...";
-            if (wcscmp(english, L"Open File") == 0) return L"Abrir archivo";
+            if (wcscmp(english, L"Open File/Software") == 0) return L"Abrir archivo/software";
             if (wcscmp(english, L"Open: %hs") == 0) return L"Abrir: %hs";
             if (wcscmp(english, L"Lock Screen") == 0) return L"Bloquear pantalla";
             if (wcscmp(english, L"Shutdown") == 0) return L"Apagar";
@@ -277,7 +277,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Select Preset") == 0) return L"Seleccionar Preajuste";
             if (wcscmp(english, L"Confirm Delete") == 0) return L"Confirmar Eliminación";
             if (wcscmp(english, L"Are you sure you want to delete this preset?") == 0) return L"¿Está seguro de que desea eliminar este preajuste?";
-            if (wcscmp(english, L"Open File") == 0) return L"Abrir Archivo";
+            if (wcscmp(english, L"Open File/Software") == 0) return L"Abrir Archivo/Software";
             if (wcscmp(english, L"No Display") == 0) return L"Sin Visualización";
             if (wcscmp(english, L"Preset Management") == 0) return L"Gestión de Preajustes";
             if (wcscmp(english, L"Color Value") == 0) return L"Valor de Color";
@@ -302,7 +302,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Timeout Action") == 0) return L"Action de temporisation";
             if (wcscmp(english, L"Show Message") == 0) return L"Afficher le message";
             if (wcscmp(english, L"Browse...") == 0) return L"Parcourir...";
-            if (wcscmp(english, L"Open File") == 0) return L"Ouvrir le fichier";
+            if (wcscmp(english, L"Open File/Software") == 0) return L"Ouvrir le fichier/logiciel";
             if (wcscmp(english, L"Open: %hs") == 0) return L"Ouvrir: %hs";
             if (wcscmp(english, L"Lock Screen") == 0) return L"Verrouiller l'écran";
             if (wcscmp(english, L"Shutdown") == 0) return L"Arrêter";
@@ -357,7 +357,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Select Preset") == 0) return L"Sélectionner un Préréglage";
             if (wcscmp(english, L"Confirm Delete") == 0) return L"Confirmer la Suppression";
             if (wcscmp(english, L"Are you sure you want to delete this preset?") == 0) return L"Êtes-vous sûr de vouloir supprimer ce préréglage ?";
-            if (wcscmp(english, L"Open File") == 0) return L"Ouvrir Fichier";
+            if (wcscmp(english, L"Open File/Software") == 0) return L"Ouvrir Fichier/Software";
             if (wcscmp(english, L"No Display") == 0) return L"Aucun Affichage";
             if (wcscmp(english, L"Preset Management") == 0) return L"Gestion des Préréglages";
             if (wcscmp(english, L"Color Value") == 0) return L"Valeur de Couleur";
@@ -382,7 +382,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Timeout Action") == 0) return L"Zeitüberschreitungsaktion";
             if (wcscmp(english, L"Show Message") == 0) return L"Nachricht anzeigen";
             if (wcscmp(english, L"Browse...") == 0) return L"Durchsuchen...";
-            if (wcscmp(english, L"Open File") == 0) return L"Datei öffnen";
+            if (wcscmp(english, L"Open File/Software") == 0) return L"Datei/Software öffnen";
             if (wcscmp(english, L"Open: %hs") == 0) return L"Öffnen: %hs";
             if (wcscmp(english, L"Lock Screen") == 0) return L"Bildschirm sperren";
             if (wcscmp(english, L"Shutdown") == 0) return L"Herunterfahren";
@@ -437,7 +437,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Select Preset") == 0) return L"Voreinstellung Auswählen";
             if (wcscmp(english, L"Confirm Delete") == 0) return L"Löschen Bestätigen";
             if (wcscmp(english, L"Are you sure you want to delete this preset?") == 0) return L"Sind Sie sicher, dass Sie diese Voreinstellung löschen möchten?";
-            if (wcscmp(english, L"Open File") == 0) return L"Datei Öffnen";
+            if (wcscmp(english, L"Open File/Software") == 0) return L"Datei/Software Öffnen";
             if (wcscmp(english, L"No Display") == 0) return L"Keine Anzeige";
             if (wcscmp(english, L"Preset Management") == 0) return L"Voreinstellungsverwaltung";
             if (wcscmp(english, L"Color Value") == 0) return L"Farbwert";
@@ -463,7 +463,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Timeout Action") == 0) return L"Действие по таймауту";
             if (wcscmp(english, L"Show Message") == 0) return L"Показать сообщение";
             if (wcscmp(english, L"Browse...") == 0) return L"Обзор...";
-            if (wcscmp(english, L"Open File") == 0) return L"Открыть файл";
+            if (wcscmp(english, L"Open File/Software") == 0) return L"Открыть файл/Software";
             if (wcscmp(english, L"Open: %hs") == 0) return L"Открыть: %hs";
             if (wcscmp(english, L"Lock Screen") == 0) return L"Заблокировать экран";
             if (wcscmp(english, L"Shutdown") == 0) return L"Выключение";
@@ -518,7 +518,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Select Preset") == 0) return L"Выбрать Пресет";
             if (wcscmp(english, L"Confirm Delete") == 0) return L"Подтвердить Удаление";
             if (wcscmp(english, L"Are you sure you want to delete this preset?") == 0) return L"Вы уверены, что хотите удалить этот пресет?";
-            if (wcscmp(english, L"Open File") == 0) return L"Открыть файл";
+            if (wcscmp(english, L"Open File/Software") == 0) return L"Открыть файл/Software";
             if (wcscmp(english, L"No Display") == 0) return L"Не отображать";
             if (wcscmp(english, L"Preset Management") == 0) return L"Управление пресетами";
             if (wcscmp(english, L"Color Value") == 0) return L"Значение цвета";
@@ -543,7 +543,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Timeout Action") == 0) return L"Ação de timeout";
             if (wcscmp(english, L"Show Message") == 0) return L"Mostrar mensagem";
             if (wcscmp(english, L"Browse...") == 0) return L"Navegar...";
-            if (wcscmp(english, L"Open File") == 0) return L"Abrir arquivo";
+            if (wcscmp(english, L"Open File/Software") == 0) return L"Abrir arquivo/Software";
             if (wcscmp(english, L"Open: %hs") == 0) return L"Abrir: %hs";
             if (wcscmp(english, L"Lock Screen") == 0) return L"Bloquear tela";
             if (wcscmp(english, L"Shutdown") == 0) return L"Desligar";
@@ -598,7 +598,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Select Preset") == 0) return L"Selecionar Predefinição";
             if (wcscmp(english, L"Confirm Delete") == 0) return L"Confirmer Exclusão";
             if (wcscmp(english, L"Are you sure you want to delete this preset?") == 0) return L"Tem certeza que deseja excluir esta predefinição?";
-            if (wcscmp(english, L"Open File") == 0) return L"Abrir Arquivo";
+            if (wcscmp(english, L"Open File/Software") == 0) return L"Abrir Arquivo/Software";
             if (wcscmp(english, L"No Display") == 0) return L"Sem Exibição";
             if (wcscmp(english, L"Preset Management") == 0) return L"Gerenciamento de Predefinições";
             if (wcscmp(english, L"Color Value") == 0) return L"Valor da Cor";
@@ -624,7 +624,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Timeout Action") == 0) return L"タイムアウト動作";
             if (wcscmp(english, L"Show Message") == 0) return L"メッセージを表示";
             if (wcscmp(english, L"Browse...") == 0) return L"参照...";
-            if (wcscmp(english, L"Open File") == 0) return L"ファイルを開く";
+            if (wcscmp(english, L"Open File/Software") == 0) return L"ファイル/ソフトウェアを開く";
             if (wcscmp(english, L"Open: %hs") == 0) return L"開く: %hs";
             if (wcscmp(english, L"Lock Screen") == 0) return L"画面をロック";
             if (wcscmp(english, L"Shutdown") == 0) return L"シャットダウン";
@@ -689,7 +689,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Select Preset") == 0) return L"プリセットを選択";
             if (wcscmp(english, L"Confirm Delete") == 0) return L"削除の確認";
             if (wcscmp(english, L"Are you sure you want to delete this preset?") == 0) return L"このプリセットを削除してもよろしいですか？";
-            if (wcscmp(english, L"Open File") == 0) return L"ファイルを開く";
+            if (wcscmp(english, L"Open File/Software") == 0) return L"ファイル/ソフトウェアを開く";
             if (wcscmp(english, L"No Display") == 0) return L"表示なし";
             if (wcscmp(english, L"Preset Management") == 0) return L"プリセット管理";
             if (wcscmp(english, L"Color Value") == 0) return L"色の値";
@@ -757,7 +757,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Select Preset") == 0) return L"프리셋 선택";
             if (wcscmp(english, L"Confirm Delete") == 0) return L"삭제 확인";
             if (wcscmp(english, L"Are you sure you want to delete this preset?") == 0) return L"이 프리셋을 삭제하시겠습니까?";
-            if (wcscmp(english, L"Open File") == 0) return L"파일 열기";
+            if (wcscmp(english, L"Open File/Software") == 0) return L"파일 열기/Software";
             if (wcscmp(english, L"No Display") == 0) return L"표시 없음";
             if (wcscmp(english, L"Preset Management") == 0) return L"프리셋 관리";
             if (wcscmp(english, L"Color Value") == 0) return L"색상 값";
