@@ -308,20 +308,6 @@ void ShowColorMenu(HWND hwnd) {
                (UINT_PTR)hFileMenu, 
                GetLocalizedString(L"打开文件", L"Open File"));
 
-    // 在打开文件菜单后分隔线前添加当前网站菜单项
-    // 只有当已设置网站URL时才显示
-    if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE && strlen(CLOCK_TIMEOUT_WEBSITE_URL) > 0) {
-        wchar_t websiteUrl[MAX_PATH];
-        MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_WEBSITE_URL, -1, websiteUrl, MAX_PATH);
-        
-        // 截断过长的URL
-        wchar_t truncatedUrl[MAX_PATH];
-        TruncateFileName(websiteUrl, truncatedUrl, 35); // 限制为35个字符
-        
-        AppendMenuW(hTimeoutMenu, MF_STRING, CLOCK_IDM_CURRENT_WEBSITE,
-                   truncatedUrl);
-    }
-
     // 6. 打开网站
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_WEBSITE ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_OPEN_WEBSITE,
