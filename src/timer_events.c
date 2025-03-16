@@ -169,9 +169,11 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                     } else {
                         // 非番茄钟模式，执行原有的超时动作
                         
-                        // 如果超时动作不是打开文件和锁屏，才显示通知消息
+                        // 如果超时动作不是打开文件、锁屏、关机或重启，才显示通知消息
                         if (CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_OPEN_FILE && 
-                            CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_LOCK) {
+                            CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_LOCK &&
+                            CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_SHUTDOWN &&
+                            CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_RESTART) {
                             // 显示超时消息
                             ShowLocalizedNotification(hwnd, L"时间到！", L"Time's up!");
                         }
