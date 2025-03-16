@@ -2,8 +2,14 @@
  * @file tray_menu.c
  * @brief 系统托盘菜单功能实现
  * 
- * 本文件实现了应用程序的系统托盘菜单，包括右键菜单、颜色选择菜单等功能。
- * 提供了丰富的应用程序设置选项和用户交互界面。
+ * 本文件实现了应用程序的系统托盘菜单功能，包括：
+ * - 右键菜单及其子菜单
+ * - 颜色选择菜单
+ * - 字体设置菜单
+ * - 超时动作设置
+ * - 番茄钟功能
+ * - 预设时间管理
+ * - 多语言界面支持
  */
 
 #include <windows.h>
@@ -14,7 +20,7 @@
 #include "../include/tray_menu.h"
 #include "../include/font.h"
 #include "../include/color.h"
-#include "../include/drag_scale.h"  // 添加此行，包含拖动缩放头文件
+#include "../include/drag_scale.h"
 #include "../resource/resource.h"
 
 /// @name 外部变量声明
@@ -58,16 +64,16 @@ extern void AddColorOption(const char* color);
 /**
  * @brief 超时动作类型枚举
  * 
- * 定义了时间结束后可以执行的不同操作类型
+ * 定义了计时结束后可执行的不同操作类型
  */
 typedef enum {
-    TIMEOUT_ACTION_MESSAGE = 0,   ///< 显示消息
+    TIMEOUT_ACTION_MESSAGE = 0,   ///< 显示消息提醒
     TIMEOUT_ACTION_LOCK = 1,      ///< 锁定屏幕
     TIMEOUT_ACTION_SHUTDOWN = 2,  ///< 关机
-    TIMEOUT_ACTION_RESTART = 3,   ///< 重启
-    TIMEOUT_ACTION_OPEN_FILE = 4,  ///< 打开文件
+    TIMEOUT_ACTION_RESTART = 3,   ///< 重启系统
+    TIMEOUT_ACTION_OPEN_FILE = 4, ///< 打开指定文件
     TIMEOUT_ACTION_SHOW_TIME = 5, ///< 显示当前时间
-    TIMEOUT_ACTION_COUNT_UP = 6   ///< 正计时
+    TIMEOUT_ACTION_COUNT_UP = 6   ///< 切换到正计时模式
 } TimeoutActionType;
 
 extern TimeoutActionType CLOCK_TIMEOUT_ACTION;
@@ -75,7 +81,7 @@ extern TimeoutActionType CLOCK_TIMEOUT_ACTION;
 /**
  * @brief 从配置文件读取超时动作设置
  * 
- * 确保CLOCK_TIMEOUT_ACTION变量与配置文件中的设置保持一致
+ * 读取配置文件中保存的超时动作设置，并更新全局变量 CLOCK_TIMEOUT_ACTION
  */
 void ReadTimeoutActionFromConfig() {
     char configPath[MAX_PATH];
@@ -99,11 +105,11 @@ void ReadTimeoutActionFromConfig() {
 /**
  * @brief 最近文件结构体
  * 
- * 存储最近使用过的文件路径和名称信息
+ * 存储最近使用过的文件信息，包括完整路径和显示名称
  */
 typedef struct {
     char path[MAX_PATH];  ///< 文件完整路径
-    char name[MAX_PATH];  ///< 文件显示名称
+    char name[MAX_PATH];  ///< 文件显示名称（可能是截断后的）
 } RecentFile;
 
 extern RecentFile CLOCK_RECENT_FILES[];
@@ -111,15 +117,16 @@ extern int CLOCK_RECENT_FILES_COUNT;
 
 /**
  * @brief 格式化时间显示
+ * 
  * @param seconds 总秒数
  * @param buffer 输出缓冲区
- * @param bufferSize 缓冲区大小
+ * @param bufferSize 缓冲区大小（以 wchar_t 为单位）
  * 
- * 将秒数转换为可读的时间格式：
+ * 将秒数转换为直观的可读时间格式，根据时长选择合适的表示方式：
  * - 纯分钟：25m
- * - 分秒：25m30s
- * - 时分：1h30m
- * - 时分秒：1h30m20s
+ * - 分秒组合：25m30s
+ * - 时分组合：1h30m
+ * - 时分秒完整格式：1h30m20s
  */
 void FormatPomodoroTime(int seconds, wchar_t* buffer, size_t bufferSize) {
     int hours = seconds / 3600;
@@ -146,13 +153,14 @@ void FormatPomodoroTime(int seconds, wchar_t* buffer, size_t bufferSize) {
 }
 
 /**
- * @brief 截断长文件名
+ * @brief 截断过长的文件名
+ * 
  * @param fileName 原始文件名
  * @param truncated 截断后的文件名缓冲区
- * @param maxLen 最大显示长度(不包括结束符)
+ * @param maxLen 最大显示长度（不包括结束符）
  * 
- * 如果文件名超过指定长度，则采用"前12个字符...后12个字符"的形式
- * 例如："很长的文件名文件名文件名文件名.txt" -> "很长的文件名文...名文件名文件名.txt"
+ * 如果文件名超过指定长度，采用"前12个字符...后12个字符.扩展名"的格式进行智能截断。
+ * 此函数保留文件扩展名，确保用户能识别文件类型。
  */
 void TruncateFileName(const wchar_t* fileName, wchar_t* truncated, size_t maxLen) {
     if (!fileName || !truncated || maxLen <= 7) return; // 至少需要显示"x...y"
@@ -210,10 +218,18 @@ void TruncateFileName(const wchar_t* fileName, wchar_t* truncated, size_t maxLen
 
 /**
  * @brief 显示颜色和设置菜单
+ * 
  * @param hwnd 窗口句柄
  * 
- * 创建并显示应用程序的主设置菜单，包括编辑模式、超时动作、
- * 预设管理、字体选择、颜色设置和关于信息等选项。
+ * 创建并显示应用程序的主设置菜单，包括：
+ * - 编辑模式开关
+ * - 超时动作设置
+ * - 预设时间管理
+ * - 启动模式设置
+ * - 字体选择
+ * - 颜色设置
+ * - 语言选择
+ * - 帮助和关于信息
  */
 void ShowColorMenu(HWND hwnd) {
     // 在创建菜单前先读取配置文件中的超时动作设置
@@ -526,10 +542,15 @@ void ShowColorMenu(HWND hwnd) {
 
 /**
  * @brief 显示托盘右键菜单
+ * 
  * @param hwnd 窗口句柄
  * 
- * 创建并显示系统托盘右键菜单，包含时间设置、显示模式切换和快捷时间选项。
- * 根据当前应用程序状态动态调整菜单项。
+ * 创建并显示系统托盘右键菜单，根据当前应用状态动态调整菜单项。包含：
+ * - 计时控制（暂停/继续、重新开始）
+ * - 时间显示设置（24小时制、显示秒数）
+ * - 番茄时钟设置
+ * - 正计时和倒计时模式切换
+ * - 快捷时间预设选项
  */
 void ShowContextMenu(HWND hwnd) {
     // 在创建菜单前先读取配置文件中的超时动作设置
