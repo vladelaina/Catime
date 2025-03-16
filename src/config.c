@@ -272,8 +272,12 @@ void ReadConfig() {
                 if (newline) *newline = '\0';
 
                 if (CLOCK_RECENT_FILES_COUNT < MAX_RECENT_FILES) {
-                    // 检查文件是否存在
-                    if (GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES) {
+                    // Convert to wide characters for proper file existence check
+                    wchar_t widePath[MAX_PATH] = {0};
+                    MultiByteToWideChar(CP_UTF8, 0, path, -1, widePath, MAX_PATH);
+                    
+                    // Check if file exists using wide character function
+                    if (GetFileAttributesW(widePath) != INVALID_FILE_ATTRIBUTES) {
                         strncpy(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path, path, MAX_PATH - 1);
                         CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path[MAX_PATH - 1] = '\0';
 
@@ -296,8 +300,12 @@ void ReadConfig() {
             if (newline) *newline = '\0';
 
             if (CLOCK_RECENT_FILES_COUNT < MAX_RECENT_FILES) {
-                // 检查文件是否存在
-                if (GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES) {
+                // Convert to wide characters for proper file existence check
+                wchar_t widePath[MAX_PATH] = {0};
+                MultiByteToWideChar(CP_UTF8, 0, path, -1, widePath, MAX_PATH);
+                
+                // Check if file exists using wide character function
+                if (GetFileAttributesW(widePath) != INVALID_FILE_ATTRIBUTES) {
                     strncpy(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path, path, MAX_PATH - 1);
                     CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path[MAX_PATH - 1] = '\0';
 
@@ -525,17 +533,21 @@ void LoadRecentFiles(void) {
     CLOCK_RECENT_FILES_COUNT = 0;
 
     while (fgets(line, sizeof(line), file)) {
-        // 支持新的格式 CLOCK_RECENT_FILE_N=path
+        // Support for the CLOCK_RECENT_FILE_N=path format
         if (strncmp(line, "CLOCK_RECENT_FILE_", 18) == 0) {
             char *path = strchr(line + 18, '=');
             if (path) {
-                path++; // 跳过等号
+                path++; // Skip the equals sign
                 char *newline = strchr(path, '\n');
                 if (newline) *newline = '\0';
 
                 if (CLOCK_RECENT_FILES_COUNT < MAX_RECENT_FILES) {
-                    // 检查文件是否存在
-                    if (GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES) {
+                    // Convert to wide characters for proper file existence check
+                    wchar_t widePath[MAX_PATH] = {0};
+                    MultiByteToWideChar(CP_UTF8, 0, path, -1, widePath, MAX_PATH);
+                    
+                    // Check if file exists using wide character function
+                    if (GetFileAttributesW(widePath) != INVALID_FILE_ATTRIBUTES) {
                         strncpy(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path, path, MAX_PATH - 1);
                         CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path[MAX_PATH - 1] = '\0';
 
@@ -551,15 +563,19 @@ void LoadRecentFiles(void) {
                 }
             }
         }
-        // 保持对老格式的兼容
+        // Also update the old format for compatibility
         else if (strncmp(line, "CLOCK_RECENT_FILE=", 18) == 0) {
             char *path = line + 18;
             char *newline = strchr(path, '\n');
             if (newline) *newline = '\0';
 
             if (CLOCK_RECENT_FILES_COUNT < MAX_RECENT_FILES) {
-                // 检查文件是否存在
-                if (GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES) {
+                // Convert to wide characters for proper file existence check
+                wchar_t widePath[MAX_PATH] = {0};
+                MultiByteToWideChar(CP_UTF8, 0, path, -1, widePath, MAX_PATH);
+                
+                // Check if file exists using wide character function
+                if (GetFileAttributesW(widePath) != INVALID_FILE_ATTRIBUTES) {
                     strncpy(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path, path, MAX_PATH - 1);
                     CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path[MAX_PATH - 1] = '\0';
 
