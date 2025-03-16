@@ -249,26 +249,31 @@ void ShowColorMenu(HWND hwnd) {
 
     // 超时动作菜单
     HMENU hTimeoutMenu = CreatePopupMenu();
+    
+    // 1. 显示消息
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_MESSAGE ? MF_CHECKED : MF_UNCHECKED), 
                CLOCK_IDM_SHOW_MESSAGE, 
                GetLocalizedString(L"显示消息", L"Show Message"));
 
-    // 添加锁定屏幕选项
+    // 2. 显示当前时间
+    AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SHOW_TIME ? MF_CHECKED : MF_UNCHECKED), 
+               CLOCK_IDM_TIMEOUT_SHOW_TIME, 
+               GetLocalizedString(L"显示当前时间", L"Show Current Time"));
+
+    // 3. 正计时
+    AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_COUNT_UP ? MF_CHECKED : MF_UNCHECKED), 
+               CLOCK_IDM_TIMEOUT_COUNT_UP, 
+               GetLocalizedString(L"正计时", L"Count Up"));
+
+    // 4. 锁定屏幕
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_LOCK ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_LOCK_SCREEN,
                GetLocalizedString(L"锁定屏幕", L"Lock Screen"));
 
-    // 添加关机选项
-    AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SHUTDOWN ? MF_CHECKED : MF_UNCHECKED),
-               CLOCK_IDM_SHUTDOWN,
-               GetLocalizedString(L"关机", L"Shutdown"));
+    // 第一个分隔线
+    AppendMenuW(hTimeoutMenu, MF_SEPARATOR, 0, NULL);
 
-    // 添加重启选项
-    AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_RESTART ? MF_CHECKED : MF_UNCHECKED),
-               CLOCK_IDM_RESTART,
-               GetLocalizedString(L"重启", L"Restart"));
-
-    // 在超时动作菜单中添加"打开文件"选项（将其改为子菜单）
+    // 5. 打开文件（子菜单）
     HMENU hFileMenu = CreatePopupMenu();
 
     // 先添加最近文件列表
@@ -317,19 +322,23 @@ void ShowColorMenu(HWND hwnd) {
                    truncatedUrl);
     }
 
-    // 在超时动作菜单中添加新选项 (在hTimeoutMenu的其他选项之后，在将该菜单添加到主菜单之前)
-    AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SHOW_TIME ? MF_CHECKED : MF_UNCHECKED), 
-               CLOCK_IDM_TIMEOUT_SHOW_TIME, 
-               GetLocalizedString(L"显示当前时间", L"Show Current Time"));
-           
-    AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_COUNT_UP ? MF_CHECKED : MF_UNCHECKED), 
-               CLOCK_IDM_TIMEOUT_COUNT_UP, 
-               GetLocalizedString(L"正计时", L"Count Up"));
-
-    // 在超时动作菜单中添加"打开网站"选项（在 CLOCK_IDM_OPEN_FILE 下方）
+    // 6. 打开网站
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_WEBSITE ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_OPEN_WEBSITE,
                GetLocalizedString(L"打开网站", L"Open Website"));
+
+    // 第二个分隔线
+    AppendMenuW(hTimeoutMenu, MF_SEPARATOR, 0, NULL);
+
+    // 7. 关机
+    AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SHUTDOWN ? MF_CHECKED : MF_UNCHECKED),
+               CLOCK_IDM_SHUTDOWN,
+               GetLocalizedString(L"关机", L"Shutdown"));
+
+    // 8. 重启
+    AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_RESTART ? MF_CHECKED : MF_UNCHECKED),
+               CLOCK_IDM_RESTART,
+               GetLocalizedString(L"重启", L"Restart"));
 
     // 将超时动作菜单添加到主菜单
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeoutMenu, 
