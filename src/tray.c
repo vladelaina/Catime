@@ -2,7 +2,8 @@
  * @file tray.c
  * @brief 系统托盘功能实现
  * 
- * 本文件实现了应用程序的系统托盘操作，包括初始化、移除和通知显示功能。
+ * 本文件实现了应用程序的系统托盘操作，包括初始化、移除和通知显示功能，
+ * 以及处理Windows资源管理器重启时托盘图标自动恢复的机制。
  */
 
 #include <windows.h>
@@ -20,7 +21,9 @@ UINT WM_TASKBARCREATED = 0;
 /**
  * @brief 注册TaskbarCreated消息
  * 
- * 注册系统发送的TaskbarCreated消息，用于在资源管理器重启后重新创建托盘图标
+ * 注册系统发送的TaskbarCreated消息，用于在Windows资源管理器重启后
+ * 能够接收到消息并重新创建托盘图标。此机制确保程序在系统托盘刷新后
+ * 仍然正常显示图标。
  */
 void RegisterTaskbarCreatedMessage() {
     // 注册接收资源管理器重启后发送的消息
@@ -34,6 +37,7 @@ void RegisterTaskbarCreatedMessage() {
  * 
  * 创建并显示带有默认设置的系统托盘图标。
  * 该图标将通过CLOCK_WM_TRAYICON回调接收消息。
+ * 同时确保已注册TaskbarCreated消息，以支持托盘图标的自动恢复。
  */
 void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
     memset(&nid, 0, sizeof(nid));
@@ -56,7 +60,7 @@ void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
  * @brief 删除系统托盘图标
  * 
  * 从系统托盘中移除应用程序的图标。
- * 应在应用程序关闭时调用。
+ * 应在应用程序关闭时调用，确保系统资源的正确释放。
  */
 void RemoveTrayIcon(void) {
     Shell_NotifyIcon(NIM_DELETE, &nid);
@@ -70,7 +74,7 @@ void RemoveTrayIcon(void) {
  * 从系统托盘图标显示气球提示通知。
  * 通知使用NIIF_NONE样式（无图标）并在3秒后超时。
  * 
- * @note 消息文本从UTF-8转换为Unicode以正确显示。
+ * @note 消息文本从UTF-8转换为Unicode以正确显示各种语言字符。
  */
 void ShowTrayNotification(HWND hwnd, const char* message) {
     NOTIFYICONDATAW nid_notify = {0};
@@ -95,7 +99,8 @@ void ShowTrayNotification(HWND hwnd, const char* message) {
  * @param hInstance 实例句柄
  * 
  * 在Windows资源管理器重启后重新创建托盘图标。
- * 应在收到TaskbarCreated消息时调用此函数。
+ * 应在收到TaskbarCreated消息时调用此函数，确保托盘图标自动恢复，
+ * 避免出现程序运行但托盘图标消失的情况。
  */
 void RecreateTaskbarIcon(HWND hwnd, HINSTANCE hInstance) {
     // 首先尝试删除可能存在的旧图标

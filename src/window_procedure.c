@@ -172,6 +172,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     UINT uMouseMsg;
 
     // 检查是否是TaskbarCreated消息
+    // TaskbarCreated是Windows在资源管理器重启时广播的系统消息
+    // 此时所有托盘图标都会被销毁，需要应用程序自行重建
+    // 处理此消息可以解决系统托盘刷新后图标消失但程序仍在运行的问题
     if (msg == WM_TASKBARCREATED) {
         // 资源管理器重启，需要重新创建托盘图标
         RecreateTaskbarIcon(hwnd, GetModuleHandle(NULL));
