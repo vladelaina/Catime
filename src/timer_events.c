@@ -78,6 +78,7 @@ void InitializePomodoro(void) {
 BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
     if (wp == 1) {
         if (CLOCK_SHOW_CURRENT_TIME) {
+            // 在显示当前时间模式下，每次定时器触发都刷新显示
             InvalidateRect(hwnd, NULL, TRUE);
             return TRUE;
         }

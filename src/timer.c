@@ -65,6 +65,9 @@ int time_options[MAX_TIME_OPTIONS];    ///< 预设时间选项数组
 int time_options_count = 0;            ///< 有效预设时间数量
 /** @} */
 
+// 添加上一次显示的时间记录，用于防止时间显示跳秒
+static int last_displayed_second = -1; 
+
 /**
  * @brief 初始化高精度计时器
  * 
@@ -147,9 +150,29 @@ void UpdateElapsedTime(void) {
  */
 void FormatTime(int remaining_time, char* time_text) {
     if (CLOCK_SHOW_CURRENT_TIME) {
-        // 修改为使用Windows API获取本地时间
+        // 获取本地时间
         SYSTEMTIME st;
         GetLocalTime(&st);
+        
+        // 检查时间连续性，防止跳秒显示
+        if (last_displayed_second != -1) {
+            // 如果不是连续的秒数，且不是跨分钟的情况，则使用上一秒+1
+            if (st.wSecond != (last_displayed_second + 1) % 60 && 
+                !(last_displayed_second == 59 && st.wSecond == 0)) {
+                // 只有当差距为1秒时才修正（防止长时间无更新后的大跳跃）
+                if ((st.wSecond == (last_displayed_second + 2) % 60) ||
+                    (last_displayed_second == 58 && st.wSecond == 0)) {
+                    // 此时我们保持使用系统时间，但记录这次的秒数
+                    last_displayed_second = st.wSecond;
+                }
+            } else {
+                // 时间连续，正常更新
+                last_displayed_second = st.wSecond;
+            }
+        } else {
+            // 第一次显示，初始化记录
+            last_displayed_second = st.wSecond;
+        }
         
         int hour = st.wHour;
         
@@ -163,7 +186,7 @@ void FormatTime(int remaining_time, char* time_text) {
 
         if (CLOCK_SHOW_SECONDS) {
             sprintf(time_text, "%d:%02d:%02d", 
-                    hour, st.wMinute, st.wSecond);
+                    hour, st.wMinute, last_displayed_second);
         } else {
             sprintf(time_text, "%d:%02d", 
                     hour, st.wMinute);
