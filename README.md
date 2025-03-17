@@ -69,7 +69,7 @@
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/MadMaxChow"><img src="https://avatars.githubusercontent.com/u/13810505?v=4" width="100px;" alt="MAX°孟兆"/><br /><sub><b>MAX°孟兆</b></sub></a><br /></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/sumruler"><img src="https://avatars.githubusercontent.com/u/56953545?v=4" width="100px;" alt="XuJilong"/><br /><sub><b>XuJilong</b></sub></a><br /></td>
-      <td width="14.28%"></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://www.diandiapp.com/"><img src="https://github.com/user-attachments/assets/ed3ad284-d4f6-456f-a451-0d4c3cba05a4" width="100px;" alt="点滴进度作者"/><br /><sub><b>点滴进度作者</b></sub></a><br /></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/ZGGSONG"><img src="https://avatars.githubusercontent.com/u/49741009?v=4" width="100px;" alt="zggsong"/><br /><sub><b>zggsong</b></sub></a><br /></td>
       <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/26087398"><img src="https://i1.hdslb.com/bfs/face/af55083fafbabb7815b09c32adca94139b3ab3f8.webp@240w_240h_1c_1s_!web-avatar-space-header.avif" width="100px;" alt="猫屋敷梨梨Official"/><br /><sub><b>猫屋敷梨梨Official</b></sub></a><br /></td>
       <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/6189012"><img src="https://i0.hdslb.com/bfs/face/e38f4197fddc38397732b61c3086cd6b280dd00e.jpg" width="100px;" alt="MOJIもら"/><br /><sub><b>MOJIもら</b></sub></a><br /></td>
@@ -136,4 +136,5 @@ By vladelaina\
 Made with ❤️ & ⌨️
 
 </div>
+
 
