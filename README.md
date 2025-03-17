@@ -91,7 +91,7 @@
                 <td align="center" valign="top" width="14.28%"><a href="https://github.com/wangye99"><img src="https://avatars.githubusercontent.com/u/59310777?v=4" width="100px;" alt="王野"/><br /><sub><b>王野</b></sub></a><br /></td>
         <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/572042200"><img src="https://i1.hdslb.com/bfs/face/b952499e109734d73d81a2a6929aefd30b3fbc9d.png@128w_128h_1c_1s.webp" width="100px;" alt="煮酒论科技"/><br /><sub><b>煮酒论科技</b></sub></a><br /></td>
         <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/470931145"><img src="https://i2.hdslb.com/bfs/face/bd8660b3927b5be8fc724c2cf9be3d8ebe44ffa2.jpg@128w_128h_1c_1s.webp" width="100px;" alt="风增"/><br /><sub><b>风增</b></sub></a><br /></td>
-        <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/266931550"><img src="https://i2.hdslb.com/bfs/face/46767d98b42d75c223ad17fa47f1d5afaa18f8d2.jpg@128w_128h_1c_1s.webp" width="100px;" alt="田春"/><br /><sub><b>田春</b></sub></a><br /></td>
+        <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/266931550"><img src="https://github.com/user-attachments/assets/2fa88218-ee70-4a99-a225-ec632cfabf23" width="100px;" alt="田春"/><br /><sub><b>田春</b></sub></a><br /></td>
       </tr>
   </tbody>
 </table>
