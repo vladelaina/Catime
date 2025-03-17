@@ -2,12 +2,11 @@
  * @file tray.h
  * @brief 系统托盘功能接口
  * 
- * 本文件定义了应用程序系统托盘相关的常量和函数接口，
- * 包括托盘图标的初始化、移除和通知显示功能。
+ * 本文件定义了应用程序的系统托盘操作接口，包括初始化、移除和通知显示功能。
  */
 
-#ifndef CLOCK_TRAY_H
-#define CLOCK_TRAY_H
+#ifndef TRAY_H
+#define TRAY_H
 
 #include <windows.h>
 
@@ -20,6 +19,16 @@
 /// @{
 #define CLOCK_ID_TRAY_APP_ICON 1001      ///< 托盘图标标识ID
 /// @}
+
+/// TaskbarCreated消息ID
+extern UINT WM_TASKBARCREATED;
+
+/**
+ * @brief 注册TaskbarCreated消息
+ * 
+ * 注册系统发送的TaskbarCreated消息，用于在资源管理器重启后重新创建托盘图标
+ */
+void RegisterTaskbarCreatedMessage(void);
 
 /**
  * @brief 初始化系统托盘图标
@@ -49,4 +58,14 @@ void RemoveTrayIcon(void);
  */
 void ShowTrayNotification(HWND hwnd, const char* message);
 
-#endif // CLOCK_TRAY_H
+/**
+ * @brief 重新创建托盘图标
+ * @param hwnd 窗口句柄
+ * @param hInstance 实例句柄
+ * 
+ * 在Windows资源管理器重启后重新创建托盘图标。
+ * 应在收到TaskbarCreated消息时调用此函数。
+ */
+void RecreateTaskbarIcon(HWND hwnd, HINSTANCE hInstance);
+
+#endif // TRAY_H

@@ -171,6 +171,13 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     UINT uID;
     UINT uMouseMsg;
 
+    // 检查是否是TaskbarCreated消息
+    if (msg == WM_TASKBARCREATED) {
+        // 资源管理器重启，需要重新创建托盘图标
+        RecreateTaskbarIcon(hwnd, GetModuleHandle(NULL));
+        return 0;
+    }
+
     switch(msg)
     {
         case WM_CREATE: {

@@ -14,6 +14,19 @@
 /// 全局通知图标数据结构
 NOTIFYICONDATAA nid;
 
+/// 记录TaskbarCreated消息的ID
+UINT WM_TASKBARCREATED = 0;
+
+/**
+ * @brief 注册TaskbarCreated消息
+ * 
+ * 注册系统发送的TaskbarCreated消息，用于在资源管理器重启后重新创建托盘图标
+ */
+void RegisterTaskbarCreatedMessage() {
+    // 注册接收资源管理器重启后发送的消息
+    WM_TASKBARCREATED = RegisterWindowMessage(TEXT("TaskbarCreated"));
+}
+
 /**
  * @brief 初始化系统托盘图标
  * @param hwnd 与托盘图标关联的窗口句柄
@@ -32,6 +45,11 @@ void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
     nid.uCallbackMessage = CLOCK_WM_TRAYICON;
     strcpy(nid.szTip, "Catime");
     Shell_NotifyIcon(NIM_ADD, &nid);
+    
+    // 确保已注册TaskbarCreated消息
+    if (WM_TASKBARCREATED == 0) {
+        RegisterTaskbarCreatedMessage();
+    }
 }
 
 /**
@@ -69,4 +87,20 @@ void ShowTrayNotification(HWND hwnd, const char* message) {
     nid_notify.szInfoTitle[0] = L'\0';
     
     Shell_NotifyIconW(NIM_MODIFY, &nid_notify);
+}
+
+/**
+ * @brief 重新创建托盘图标
+ * @param hwnd 窗口句柄
+ * @param hInstance 实例句柄
+ * 
+ * 在Windows资源管理器重启后重新创建托盘图标。
+ * 应在收到TaskbarCreated消息时调用此函数。
+ */
+void RecreateTaskbarIcon(HWND hwnd, HINSTANCE hInstance) {
+    // 首先尝试删除可能存在的旧图标
+    RemoveTrayIcon();
+    
+    // 重新创建托盘图标
+    InitTrayIcon(hwnd, hInstance);
 }
