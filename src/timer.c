@@ -147,9 +147,11 @@ void UpdateElapsedTime(void) {
  */
 void FormatTime(int remaining_time, char* time_text) {
     if (CLOCK_SHOW_CURRENT_TIME) {
-        time_t now = time(NULL);
-        struct tm *tm_info = localtime(&now);
-        int hour = tm_info->tm_hour;
+        // 修改为使用Windows API获取本地时间
+        SYSTEMTIME st;
+        GetLocalTime(&st);
+        
+        int hour = st.wHour;
         
         if (!CLOCK_USE_24HOUR) {
             if (hour == 0) {
@@ -161,10 +163,10 @@ void FormatTime(int remaining_time, char* time_text) {
 
         if (CLOCK_SHOW_SECONDS) {
             sprintf(time_text, "%d:%02d:%02d", 
-                    hour, tm_info->tm_min, tm_info->tm_sec);
+                    hour, st.wMinute, st.wSecond);
         } else {
             sprintf(time_text, "%d:%02d", 
-                    hour, tm_info->tm_min);
+                    hour, st.wMinute);
         }
         return;
     }
