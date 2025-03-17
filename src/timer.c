@@ -65,8 +65,8 @@ int time_options[MAX_TIME_OPTIONS];    ///< 预设时间选项数组
 int time_options_count = 0;            ///< 有效预设时间数量
 /** @} */
 
-// 添加上一次显示的时间记录，用于防止时间显示跳秒
-static int last_displayed_second = -1; 
+/** 上一次显示的时间（秒），用于防止时间显示跳秒现象 */
+static int last_displayed_second = -1;
 
 /**
  * @brief 初始化高精度计时器
@@ -117,7 +117,9 @@ double GetElapsedMilliseconds(void) {
 /**
  * @brief 更新倒计时/正计时的经过时间
  * 
- * 使用高精度计时器更新计时状态
+ * 使用高精度计时器计算自上次调用以来经过的时间，并相应地更新
+ * countup_elapsed_time（正计时模式）或 countdown_elapsed_time（倒计时模式）。
+ * 在暂停状态下不进行更新。
  */
 void UpdateElapsedTime(void) {
     if (CLOCK_IS_PAUSED) {
@@ -255,6 +257,35 @@ void FormatTime(int remaining_time, char* time_text) {
  * - 三段格式："1 30 15" → 1小时30分钟15秒
  * - 混合格式："25 30m" → 25小时30分钟
  * - 目标时间："17 30t" 或 "17 30T" → 倒计时到17点30分
+ */
+
+// 详细说明解析逻辑和边界处理
+/**
+ * @brief 解析用户输入的时间字符串
+ * @param input 用户输入的时间字符串
+ * @param[out] total_seconds 解析得到的总秒数
+ * @return int 解析成功返回1，失败返回0
+ * 
+ * 支持多种输入格式：
+ * - 单一数字（默认分钟）："25" → 25分钟
+ * - 带单位："1h30m" → 1小时30分钟
+ * - 两段格式："25 3" → 25分钟3秒
+ * - 三段格式："1 30 15" → 1小时30分钟15秒
+ * - 混合格式："25 30m" → 25小时30分钟
+ * - 目标时间："17 30t" 或 "17 30T" → 倒计时到17点30分
+ * 
+ * 解析流程：
+ * 1. 首先检查输入的有效性
+ * 2. 检测是否是目标时间格式（以't'或'T'结尾）
+ *    - 若是，计算从当前到目标时间的秒数，若时间已过则设为明天同一时间
+ * 3. 否则，检查是否包含单位标识符(h/m/s)
+ *    - 若包含，按照带单位处理
+ *    - 若不包含，根据空格分隔的数字数量决定处理方式
+ * 
+ * 边界处理：
+ * - 非法输入返回0
+ * - 负值或零值返回0
+ * - 超过INT_MAX的值返回0
  */
 int ParseInput(const char* input, int* total_seconds) {
     if (!isValidInput(input)) return 0;
