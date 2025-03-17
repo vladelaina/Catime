@@ -58,10 +58,11 @@ static const wchar_t* CONTRIBUTOR_LINKS[] = {
     L"[睡着的火山](https://space.bilibili.com/8010065)",        // CONTRIBUTOR_13
     L"[星空下数羊](https://space.bilibili.com/5549978)",        // CONTRIBUTOR_14
     L"[青阳忘川](https://space.bilibili.com/13129221)",         // CONTRIBUTOR_15
-    L"[William](https://github.com/llfWilliam)",               // CONTRIBUTOR_16 - 新增
-    L"[王野](https://github.com/wangye99)",                    // CONTRIBUTOR_17 - 新增
-    L"[风增](https://space.bilibili.com/470931145)",           // CONTRIBUTOR_18 - 新增 
-    L"[煮酒论科技](https://space.bilibili.com/572042200)"        // CONTRIBUTOR_19 - 新增
+    L"[William](https://github.com/llfWilliam)",               // CONTRIBUTOR_16
+    L"[王野](https://github.com/wangye99)",                    // CONTRIBUTOR_17
+    L"[风增](https://space.bilibili.com/470931145)",           // CONTRIBUTOR_18
+    L"[煮酒论科技](https://space.bilibili.com/572042200)",       // CONTRIBUTOR_19
+    L"[田春](https://space.bilibili.com/266931550)"            // CONTRIBUTOR_20 - 新增
 };
 
 // 子类化编辑框过程
@@ -635,6 +636,12 @@ INT_PTR CALLBACK CreditsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lP
                     ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
                     return TRUE;
                 }
+                case IDC_CREDITS_TIANCHUN: {
+                    wchar_t name[256] = {0}, url[512] = {0};
+                    ParseContributorInfo(CONTRIBUTOR_LINKS[19], name, 256, url, 512);
+                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
+                    return TRUE;
+                }
             }
             break;
 
@@ -645,7 +652,7 @@ INT_PTR CALLBACK CreditsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lP
             int ctrlId = GetDlgCtrlID(hwndCtl);
             
             // 为所有贡献者链接设置橙色
-            if (ctrlId >= IDC_CREDITS_MAX && ctrlId <= IDC_CREDITS_ZHUJIU) {
+            if (ctrlId >= IDC_CREDITS_MAX && ctrlId <= IDC_CREDITS_TIANCHUN) {
                 SetTextColor(hdc, 0x00D26919); // 橙色 (BGR格式)
                 SetBkMode(hdc, TRANSPARENT);
                 return (INT_PTR)GetStockObject(NULL_BRUSH);

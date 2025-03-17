@@ -264,6 +264,7 @@
 #define IDC_CREDITS_WANGYE    2026  // 新增：王野
 #define IDC_CREDITS_FENGZENG  2027  // 新增：风增
 #define IDC_CREDITS_ZHUJIU    2028  // 新增：煮酒论科技
+#define IDC_CREDITS_TIANCHUN  2029  // 新增：田春
 
 // 其他常用链接
 #define URL_GITHUB_REPO     L"https://github.com/vladelaina/Catime"

@@ -54,4 +54,6 @@ BEGIN
                 80, 128, 45, 15
     CONTROL     "煮酒论科技", IDC_CREDITS_ZHUJIU, "Static", SS_NOTIFY | SS_CENTERIMAGE,
                 80, 143, 55, 15
+    CONTROL     "田春", IDC_CREDITS_TIANCHUN, "Static", SS_NOTIFY | SS_CENTERIMAGE,
+                80, 158, 45, 15
 END 
