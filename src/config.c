@@ -104,7 +104,7 @@ void CreateDefaultConfig(const char* config_path) {
         fprintf(file, "POMODORO_LOOP_COUNT=1\n");       // 1次
         
         // 超时动作设置区块
-        fprintf(file, "CLOCK_TIMEOUT_ACTION=LOCK\n");
+        fprintf(file, "CLOCK_TIMEOUT_ACTION=MESSAGE\n");
         fprintf(file, "CLOCK_TIMEOUT_FILE=\n");         // 空文件路径占位
         fprintf(file, "CLOCK_TIMEOUT_WEBSITE=\n");      // 空网站URL占位
         
