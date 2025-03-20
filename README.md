@@ -127,6 +127,9 @@
     Stick Essence.ttf, Underdog Essence.ttf, Wallpoet Essence.ttf,
     Yesteryear Essence.ttf, ZCOOL KuaiLe Essence.ttf
 
+壁纸:
+- 作者:[阿稳同学_](https://t.bilibili.com/712774660744282132)
+    - 动态壁纸链接：[wallpaper](https://steamcommunity.com/sharedfiles/filedetails/?id=2881927206)
 ---
 
 <div align="center">
