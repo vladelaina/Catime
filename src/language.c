@@ -747,7 +747,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Select Preset") == 0) return L"프리셋 선택";
             if (wcscmp(english, L"Confirm Delete") == 0) return L"삭제 확인";
             if (wcscmp(english, L"Are you sure you want to delete this preset?") == 0) return L"이 프리셋을 삭제하시겠습니까?";
-            if (wcscmp(english, L"Open File/Software") == 0) return L"파일 열기/Software";
+            if (wcscmp(english, L"Open File/Software") == 0) return L"파일 열기/프로그램";
             if (wcscmp(english, L"No Display") == 0) return L"표시하지 않음";
             if (wcscmp(english, L"Preset Management") == 0) return L"프리셋 관리";
             if (wcscmp(english, L"Color Value") == 0) return L"색상 값";
@@ -761,7 +761,6 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Time for a break!") == 0) return L"휴식 시간입니다!";
             if (wcscmp(english, L"Completed: %d/%d") == 0) return L"완료: %d/%d";
             if (wcscmp(english, L"Browse...") == 0) return L"찾아보기...";
-            if (wcscmp(english, L"Open File/Software") == 0) return L"파일 열기/소프트웨어";
             if (wcscmp(english, L"Open Website") == 0) return L"웹사이트 열기";
             if (wcscmp(english, L"Language") == 0) return L"언어";
             if (wcscmp(english, L"Set to No Display on Startup") == 0) return L"시작 시 표시하지 않음";
