@@ -142,6 +142,9 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Time to focus!") == 0) return L"专注时间到了！";
             if (wcscmp(english, L"Time for a break!") == 0) return L"休息时间到了！";
             if (wcscmp(english, L"Completed: %d/%d") == 0) return L"已完成: %d/%d";
+            if (wcscmp(english, L"Browse...") == 0) return L"浏览...";
+            if (wcscmp(english, L"Open File/Software") == 0) return L"打开文件/软件";
+            if (wcscmp(english, L"Open Website") == 0) return L"打开网站";
             return chinese;
             
         case APP_LANG_CHINESE_TRAD:
@@ -210,6 +213,9 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Time to focus!") == 0) return L"專注時間到了！";
             if (wcscmp(english, L"Time for a break!") == 0) return L"休息時間到了！";
             if (wcscmp(english, L"Completed: %d/%d") == 0) return L"已完成: %d/%d";
+            if (wcscmp(english, L"Browse...") == 0) return L"瀏覽...";
+            if (wcscmp(english, L"Open File/Software") == 0) return L"打開文件/軟件";
+            if (wcscmp(english, L"Open Website") == 0) return L"打開網站";
             return chinese;
 
         case APP_LANG_SPANISH:
@@ -290,6 +296,9 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Time to focus!") == 0) return L"¡Hora de concentrarse!";
             if (wcscmp(english, L"Time for a break!") == 0) return L"¡Hora de un descanso!";
             if (wcscmp(english, L"Completed: %d/%d") == 0) return L"Completado: %d/%d";
+            if (wcscmp(english, L"Browse...") == 0) return L"Explorar...";
+            if (wcscmp(english, L"Open File/Software") == 0) return L"Abrir archivo/software";
+            if (wcscmp(english, L"Open Website") == 0) return L"Abrir sitio web";
             return english;
 
         case APP_LANG_FRENCH:
@@ -370,6 +379,9 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Time to focus!") == 0) return L"C'est l'heure de se concentrer !";
             if (wcscmp(english, L"Time for a break!") == 0) return L"C'est l'heure d'une pause !";
             if (wcscmp(english, L"Completed: %d/%d") == 0) return L"Terminé: %d/%d";
+            if (wcscmp(english, L"Browse...") == 0) return L"Parcourir...";
+            if (wcscmp(english, L"Open File/Software") == 0) return L"Ouvrir fichier/logiciel";
+            if (wcscmp(english, L"Open Website") == 0) return L"Ouvrir site web";
             return english;
 
         case APP_LANG_GERMAN:
@@ -450,6 +462,9 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Time to focus!") == 0) return L"Zeit zum Fokussieren!";
             if (wcscmp(english, L"Time for a break!") == 0) return L"Zeit für eine Pause!";
             if (wcscmp(english, L"Completed: %d/%d") == 0) return L"Abgeschlossen: %d/%d";
+            if (wcscmp(english, L"Browse...") == 0) return L"Durchsuchen...";
+            if (wcscmp(english, L"Open File/Software") == 0) return L"Datei/Software öffnen";
+            if (wcscmp(english, L"Open Website") == 0) return L"Website öffnen";
             return english;
 
         case APP_LANG_RUSSIAN:
@@ -463,7 +478,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Timeout Action") == 0) return L"Действие по таймауту";
             if (wcscmp(english, L"Show Message") == 0) return L"Показать сообщение";
             if (wcscmp(english, L"Browse...") == 0) return L"Обзор...";
-            if (wcscmp(english, L"Open File/Software") == 0) return L"Открыть файл/Software";
+            if (wcscmp(english, L"Open File/Software") == 0) return L"Открыть файл/программу";
             if (wcscmp(english, L"Open: %hs") == 0) return L"Открыть: %hs";
             if (wcscmp(english, L"Lock Screen") == 0) return L"Заблокировать экран";
             if (wcscmp(english, L"Shutdown") == 0) return L"Выключение";
@@ -518,7 +533,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Select Preset") == 0) return L"Выбрать Пресет";
             if (wcscmp(english, L"Confirm Delete") == 0) return L"Подтвердить Удаление";
             if (wcscmp(english, L"Are you sure you want to delete this preset?") == 0) return L"Вы уверены, что хотите удалить этот пресет?";
-            if (wcscmp(english, L"Open File/Software") == 0) return L"Открыть файл/Software";
+            if (wcscmp(english, L"Open File/Software") == 0) return L"Открыть файл/программу";
             if (wcscmp(english, L"No Display") == 0) return L"Не отображать";
             if (wcscmp(english, L"Preset Management") == 0) return L"Управление пресетами";
             if (wcscmp(english, L"Color Value") == 0) return L"Значение цвета";
@@ -531,6 +546,9 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Time to focus!") == 0) return L"Время сосредоточиться!";
             if (wcscmp(english, L"Time for a break!") == 0) return L"Время для перерыва!";
             if (wcscmp(english, L"Completed: %d/%d") == 0) return L"Завершено: %d/%d";
+            if (wcscmp(english, L"Browse...") == 0) return L"Обзор...";
+            if (wcscmp(english, L"Open File/Software") == 0) return L"Открыть файл/программу";
+            if (wcscmp(english, L"Open Website") == 0) return L"Открыть сайт";
             return english;
 
         case APP_LANG_PORTUGUESE:
@@ -611,6 +629,9 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Time to focus!") == 0) return L"Hora de focar!";
             if (wcscmp(english, L"Time for a break!") == 0) return L"Hora de uma pausa!";
             if (wcscmp(english, L"Completed: %d/%d") == 0) return L"Concluído: %d/%d";
+            if (wcscmp(english, L"Browse...") == 0) return L"Navegar...";
+            if (wcscmp(english, L"Open File/Software") == 0) return L"Abrir arquivo/software";
+            if (wcscmp(english, L"Open Website") == 0) return L"Abrir site";
             return english;
 
         case APP_LANG_JAPANESE:
@@ -702,6 +723,9 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Time to focus!") == 0) return L"集中する時間です！";
             if (wcscmp(english, L"Time for a break!") == 0) return L"休憩の時間です！";
             if (wcscmp(english, L"Completed: %d/%d") == 0) return L"完了: %d/%d";
+            if (wcscmp(english, L"Browse...") == 0) return L"参照...";
+            if (wcscmp(english, L"Open File/Software") == 0) return L"ファイル/ソフトウェアを開く";
+            if (wcscmp(english, L"Open Website") == 0) return L"ウェブサイトを開く";
             return english;
 
         case APP_LANG_KOREAN:
@@ -770,6 +794,9 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Time to focus!") == 0) return L"집중할 시간입니다!";
             if (wcscmp(english, L"Time for a break!") == 0) return L"휴식 시간입니다!";
             if (wcscmp(english, L"Completed: %d/%d") == 0) return L"완료: %d/%d";
+            if (wcscmp(english, L"Browse...") == 0) return L"찾아보기...";
+            if (wcscmp(english, L"Open File/Software") == 0) return L"파일 열기/소프트웨어";
+            if (wcscmp(english, L"Open Website") == 0) return L"웹사이트 열기";
             return english;
 
         case APP_LANG_ENGLISH:
