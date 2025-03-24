@@ -116,9 +116,6 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Failed to open file") == 0) return L"无法打开文件";
             if (wcscmp(english, L"Timer Control") == 0) return L"计时管理";
             if (wcscmp(english, L"Pomodoro") == 0) return L"番茄时钟";
-            if (wcscmp(english, L"Focus: %ls") == 0) return L"集中精力: %ls";
-            if (wcscmp(english, L"Short Break: %ls") == 0) return L"短暂休息: %ls";
-            if (wcscmp(english, L"Long Break: %ls") == 0) return L"长时间休息: %ls";
             if (wcscmp(english, L"Loop Count: %d") == 0) return L"循环次数: %d";
             if (wcscmp(english, L"Always on Top") == 0) return L"置顶";
             if (wcscmp(english, L"Save Preset") == 0) return L"保存预设";
@@ -187,9 +184,6 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Failed to open file") == 0) return L"無法開啟檔案";
             if (wcscmp(english, L"Timer Control") == 0) return L"計時器控制";
             if (wcscmp(english, L"Pomodoro") == 0) return L"番茄鐘";
-            if (wcscmp(english, L"Focus: %ls") == 0) return L"專注: %ls";
-            if (wcscmp(english, L"Short Break: %ls") == 0) return L"短休息: %ls";
-            if (wcscmp(english, L"Long Break: %ls") == 0) return L"長休息: %ls";
             if (wcscmp(english, L"Loop Count: %d") == 0) return L"循環次數: %d";
             if (wcscmp(english, L"Always on Top") == 0) return L"視窗置頂";
             if (wcscmp(english, L"Save Preset") == 0) return L"儲存預設";
@@ -222,7 +216,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"設定為啟動時倒計時";
             if (wcscmp(english, L"Enter numbers separated by spaces\nExample: 25 10 5") == 0) 
                 return L"請輸入以空格分隔的數字\n範例: 25 10 5";
-            if (wcscmp(english, L"25    = 25 minutes\n25h   = 25 hours\n25s   = 25 seconds\n25 30 = 25 minutes 30 seconds\n25 30m = 25 hours 30 minutes\n1 30 20 = 1小時30分鐘20秒") == 0)
+            if (wcscmp(english, L"25    = 25 minutes\n25h   = 25小時\n25s   = 25秒\n25 30 = 25分鐘30秒\n25 30m = 25小時30分鐘\n1 30 20 = 1小時30分鐘20秒") == 0)
                 return L"25    = 25分鐘\n25h   = 25小時\n25s   = 25秒\n25 30 = 25分鐘30秒\n25 30m = 25小時30分鐘\n1 30 20 = 1小時30分鐘20秒";
             return chinese;
 
@@ -266,9 +260,6 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Failed to open file") == 0) return L"Error al abrir el archivo";
             if (wcscmp(english, L"Timer Control") == 0) return L"Control del temporizador";
             if (wcscmp(english, L"Pomodoro") == 0) return L"Pomodoro";
-            if (wcscmp(english, L"Focus: %ls") == 0) return L"Concentración: %ls";
-            if (wcscmp(english, L"Short Break: %ls") == 0) return L"Descanso corto: %ls";
-            if (wcscmp(english, L"Long Break: %ls") == 0) return L"Descanso largo: %ls";
             if (wcscmp(english, L"Loop Count: %d") == 0) return L"Número de ciclos: %d";
             if (wcscmp(english, L"Always on Top") == 0) return L"Siempre visible";
             if (wcscmp(english, L"Save Preset") == 0) return L"Guardar ajuste";
@@ -300,7 +291,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"Iniciar como cuenta regresiva";
             if (wcscmp(english, L"Enter numbers separated by spaces\nExample: 25 10 5") == 0) 
                 return L"Ingrese números separados por espacios\nEjemplo: 25 10 5";
-            if (wcscmp(english, L"25    = 25 minutes\n25h   = 25 hours\n25s   = 25 seconds\n25 30 = 25 minutes 30 seconds\n25 30m = 25 hours 30 minutes\n1 30 20 = 1 hour 30 minutes 20 seconds") == 0)
+            if (wcscmp(english, L"25    = 25 minutes\n25h   = 25 horas\n25s   = 25 seconds\n25 30 = 25 minutes 30 seconds\n25 30m = 25 hours 30 minutes\n1 30 20 = 1 hour 30 minutes 20 seconds") == 0)
                 return L"25    = 25 minutos\n25h   = 25 horas\n25s   = 25 segundos\n25 30 = 25 minutos 30 segundos\n25 30m = 25 horas 30 minutos\n1 30 20 = 1 hora 30 minutos 20 segundos";
             return english;
 
@@ -344,9 +335,6 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Failed to open file") == 0) return L"Échec de l'ouverture du fichier";
             if (wcscmp(english, L"Timer Control") == 0) return L"Contrôle du minuteur";
             if (wcscmp(english, L"Pomodoro") == 0) return L"Pomodoro";
-            if (wcscmp(english, L"Focus: %ls") == 0) return L"Concentration : %ls";
-            if (wcscmp(english, L"Short Break: %ls") == 0) return L"Pause courte : %ls";
-            if (wcscmp(english, L"Long Break: %ls") == 0) return L"Pause longue : %ls";
             if (wcscmp(english, L"Loop Count: %d") == 0) return L"Nombre de cycles : %d";
             if (wcscmp(english, L"Always on Top") == 0) return L"Toujours au premier plan";
             if (wcscmp(english, L"Save Preset") == 0) return L"Enregistrer le préréglage";
@@ -422,11 +410,8 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Failed to open file") == 0) return L"Datei konnte nicht geöffnet werden";
             if (wcscmp(english, L"Timer Control") == 0) return L"Timer-Steuerung";
             if (wcscmp(english, L"Pomodoro") == 0) return L"Pomodoro";
-            if (wcscmp(english, L"Focus: %ls") == 0) return L"Fokus: %ls";
-            if (wcscmp(english, L"Short Break: %ls") == 0) return L"Kurze Pause: %ls";
-            if (wcscmp(english, L"Long Break: %ls") == 0) return L"Lange Pause: %ls";
-            if (wcscmp(english, L"Loop Count: %d") == 0) return L"Anzahl der Durchläufe: %d";
-            if (wcscmp(english, L"Always on Top") == 0) return L"Im Vordergrund bleiben";
+            if (wcscmp(english, L"Loop Count: %d") == 0) return L"Anzahl der Zyklen: %d";
+            if (wcscmp(english, L"Always on Top") == 0) return L"Immer im Vordergrund";
             if (wcscmp(english, L"Save Preset") == 0) return L"Voreinstellung speichern";
             if (wcscmp(english, L"Load Preset") == 0) return L"Voreinstellung laden";
             if (wcscmp(english, L"Delete Preset") == 0) return L"Voreinstellung löschen";
@@ -500,9 +485,6 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Failed to open file") == 0) return L"Не удалось открыть файл";
             if (wcscmp(english, L"Timer Control") == 0) return L"Управление таймером";
             if (wcscmp(english, L"Pomodoro") == 0) return L"Помодоро";
-            if (wcscmp(english, L"Focus: %ls") == 0) return L"Фокус: %ls";
-            if (wcscmp(english, L"Short Break: %ls") == 0) return L"Короткий перерыв: %ls";
-            if (wcscmp(english, L"Long Break: %ls") == 0) return L"Длинный перерыв: %ls";
             if (wcscmp(english, L"Loop Count: %d") == 0) return L"Количество циклов: %d";
             if (wcscmp(english, L"Always on Top") == 0) return L"Поверх всех окон";
             if (wcscmp(english, L"Save Preset") == 0) return L"Сохранить пресет";
@@ -578,9 +560,6 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Failed to open file") == 0) return L"Falha ao abrir arquivo";
             if (wcscmp(english, L"Timer Control") == 0) return L"Controle do temporizador";
             if (wcscmp(english, L"Pomodoro") == 0) return L"Pomodoro";
-            if (wcscmp(english, L"Focus: %ls") == 0) return L"Foco: %ls";
-            if (wcscmp(english, L"Short Break: %ls") == 0) return L"Pausa curta: %ls";
-            if (wcscmp(english, L"Long Break: %ls") == 0) return L"Pausa longa: %ls";
             if (wcscmp(english, L"Loop Count: %d") == 0) return L"Número de ciclos: %d";
             if (wcscmp(english, L"Always on Top") == 0) return L"Sempre visível";
             if (wcscmp(english, L"Save Preset") == 0) return L"Salvar predefinição";
@@ -656,9 +635,6 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Failed to open file") == 0) return L"ファイルを開けませんでした";
             if (wcscmp(english, L"Timer Control") == 0) return L"タイマー制御";
             if (wcscmp(english, L"Pomodoro") == 0) return L"ポモドーロ";
-            if (wcscmp(english, L"Focus: %ls") == 0) return L"集中時間: %ls";
-            if (wcscmp(english, L"Short Break: %ls") == 0) return L"小休憩: %ls";
-            if (wcscmp(english, L"Long Break: %ls") == 0) return L"長休憩: %ls";
             if (wcscmp(english, L"Loop Count: %d") == 0) return L"繰り返し回数: %d";
             if (wcscmp(english, L"Always on Top") == 0) return L"常に最前面に表示";
             if (wcscmp(english, L"Save Preset") == 0) return L"プリセットを保存";
@@ -690,7 +666,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"起動時にカウントダウンで開始";
             if (wcscmp(english, L"Enter numbers separated by spaces\nExample: 25 10 5") == 0) 
                 return L"数字をスペースで区切って入力してください\n例: 25 10 5";
-            if (wcscmp(english, L"25    = 25 minutes\n25h   = 25 hours\n25s   = 25 seconds\n25 30 = 25 minutes 30 seconds\n25 30m = 25 hours 30 minutes\n1 30 20 = 1 hour 30 minutes 20 seconds") == 0)
+            if (wcscmp(english, L"25    = 25 minutes\n25h   = 25時間\n25s   = 25秒\n25 30 = 25分30秒\n25 30m = 25時間30分\n1 30 20 = 1時間30分20秒") == 0)
                 return L"25    = 25分\n25h   = 25時間\n25s   = 25秒\n25 30 = 25分30秒\n25 30m = 25時間30分\n1 30 20 = 1時間30分20秒";
             return english;
 
@@ -734,9 +710,6 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Failed to open file") == 0) return L"파일을 열 수 없습니다";
             if (wcscmp(english, L"Timer Control") == 0) return L"타이머 제어";
             if (wcscmp(english, L"Pomodoro") == 0) return L"뽀모도로";
-            if (wcscmp(english, L"Focus: %ls") == 0) return L"집중: %ls";
-            if (wcscmp(english, L"Short Break: %ls") == 0) return L"짧은 휴식: %ls";
-            if (wcscmp(english, L"Long Break: %ls") == 0) return L"긴 휴식: %ls";
             if (wcscmp(english, L"Loop Count: %d") == 0) return L"반복 횟수: %d";
             if (wcscmp(english, L"Always on Top") == 0) return L"항상 위에 표시";
             if (wcscmp(english, L"Save Preset") == 0) return L"프리셋 저장";
@@ -768,7 +741,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"시작 시 타이머로 실행";
             if (wcscmp(english, L"Enter numbers separated by spaces\nExample: 25 10 5") == 0) 
                 return L"숫자를 공백으로 구분하여 입력하세요\n예시: 25 10 5";
-            if (wcscmp(english, L"25    = 25 minutes\n25h   = 25 hours\n25s   = 25 seconds\n25 30 = 25 minutes 30 seconds\n25 30m = 25 hours 30 minutes\n1 30 20 = 1 hour 30 minutes 20 seconds") == 0)
+            if (wcscmp(english, L"25    = 25 minutes\n25h   = 25시간\n25s   = 25초\n25 30 = 25분 30초\n25 30m = 25시간 30분\n1 30 20 = 1시간 30분 20초") == 0)
                 return L"25    = 25분\n25h   = 25시간\n25s   = 25초\n25 30 = 25분 30초\n25 30m = 25시간 30분\n1 30 20 = 1시간 30분 20초";
             return english;
 
