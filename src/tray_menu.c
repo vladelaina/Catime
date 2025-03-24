@@ -661,24 +661,18 @@ void ShowContextMenu(HWND hwnd) {
 
     // 工作时间
     FormatPomodoroTime(POMODORO_WORK_TIME, timeBuffer, sizeof(timeBuffer)/sizeof(wchar_t));
-    _snwprintf(menuText, sizeof(menuText)/sizeof(wchar_t),
-              GetLocalizedString(L"集中精力: %ls", L"Focus: %ls"),
-              timeBuffer);
-    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_WORK, menuText);
+    // 直接使用时间值作为菜单项显示文本
+    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_WORK, timeBuffer);
 
     // 短暂休息
     FormatPomodoroTime(POMODORO_SHORT_BREAK, timeBuffer, sizeof(timeBuffer)/sizeof(wchar_t));
-    _snwprintf(menuText, sizeof(menuText)/sizeof(wchar_t),
-              GetLocalizedString(L"短暂休息: %ls", L"Short Break: %ls"),
-              timeBuffer);
-    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_BREAK, menuText);
+    // 直接使用时间值作为菜单项显示文本
+    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_BREAK, timeBuffer);
 
     // 长时间休息
     FormatPomodoroTime(POMODORO_LONG_BREAK, timeBuffer, sizeof(timeBuffer)/sizeof(wchar_t));
-    _snwprintf(menuText, sizeof(menuText)/sizeof(wchar_t),
-              GetLocalizedString(L"长时间休息: %ls", L"Long Break: %ls"),
-              timeBuffer);
-    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_LBREAK, menuText);
+    // 直接使用时间值作为菜单项显示文本
+    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_LBREAK, timeBuffer);
 
     // 添加分隔线
     AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
