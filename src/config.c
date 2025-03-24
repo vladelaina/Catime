@@ -97,10 +97,8 @@ void CreateDefaultConfig(const char* config_path) {
         // 超时文本区块
         fprintf(file, "CLOCK_TIMEOUT_TEXT=0\n");
         
-        // 番茄钟设置区块(单位:秒)
-        fprintf(file, "POMODORO_WORK_TIME=1500\n");     // 25分钟
-        fprintf(file, "POMODORO_SHORT_BREAK=300\n");    // 5分钟
-        fprintf(file, "POMODORO_LONG_BREAK=600\n");     // 10分钟
+        // 番茄钟设置区块
+        fprintf(file, "POMODORO_TIME_OPTIONS=1500,300,600\n"); // 工作时间,短休息,长休息
         fprintf(file, "POMODORO_LOOP_COUNT=1\n");       // 1次
         
         // 超时动作设置区块
@@ -377,6 +375,25 @@ void ReadConfig() {
             // 如果URL有效，确保设置超时动作为打开网站
             if (strlen(CLOCK_TIMEOUT_WEBSITE_URL) > 0) {
                 CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_WEBSITE;
+            }
+        }
+        else if (strncmp(line, "POMODORO_TIME_OPTIONS=", 22) == 0) {
+            char* options = line + 22;
+            char* token;
+            int values[3] = {1500, 300, 600}; // 默认值
+            int index = 0;
+            
+            token = strtok(options, ",");
+            while (token && index < 3) {
+                values[index++] = atoi(token);
+                token = strtok(NULL, ",");
+            }
+            
+            // 确保至少有一个有效值
+            if (index > 0) {
+                POMODORO_WORK_TIME = values[0];
+                if (index > 1) POMODORO_SHORT_BREAK = values[1];
+                if (index > 2) POMODORO_LONG_BREAK = values[2];
             }
         }
     }
@@ -764,7 +781,7 @@ void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
     snprintf(temp_path, MAX_PATH, "%s.tmp", config_path);
     FILE *file, *temp_file;
     char line[256];
-    int found_work = 0, found_short = 0, found_long = 0;
+    int found = 0;
     
     file = fopen(config_path, "r");
     temp_file = fopen(temp_path, "w");
@@ -776,29 +793,20 @@ void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
     }
     
     while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, "POMODORO_WORK_TIME=", 19) == 0) {
-            fprintf(temp_file, "POMODORO_WORK_TIME=%d\n", work);
-            found_work = 1;
-        } else if (strncmp(line, "POMODORO_SHORT_BREAK=", 21) == 0) {
-            fprintf(temp_file, "POMODORO_SHORT_BREAK=%d\n", short_break);
-            found_short = 1;
-        } else if (strncmp(line, "POMODORO_LONG_BREAK=", 20) == 0) {
-            fprintf(temp_file, "POMODORO_LONG_BREAK=%d\n", long_break);
-            found_long = 1;
+        // 查找POMODORO_TIME_OPTIONS行
+        if (strncmp(line, "POMODORO_TIME_OPTIONS=", 22) == 0) {
+            fprintf(temp_file, "POMODORO_TIME_OPTIONS=%d,%d,%d\n", 
+                    work, short_break, long_break);
+            found = 1;
         } else {
             fputs(line, temp_file);
         }
     }
     
-    // 如果配置文件中没有找到对应的键，则添加
-    if (!found_work) {
-        fprintf(temp_file, "POMODORO_WORK_TIME=%d\n", work);
-    }
-    if (!found_short) {
-        fprintf(temp_file, "POMODORO_SHORT_BREAK=%d\n", short_break);
-    }
-    if (!found_long) {
-        fprintf(temp_file, "POMODORO_LONG_BREAK=%d\n", long_break);
+    // 如果没有找到POMODORO_TIME_OPTIONS，则添加它
+    if (!found) {
+        fprintf(temp_file, "POMODORO_TIME_OPTIONS=%d,%d,%d\n", 
+                work, short_break, long_break);
     }
     
     fclose(file);
@@ -963,9 +971,8 @@ void WriteConfig(const char* config_path) {
     fprintf(file, "CLOCK_TIMEOUT_TEXT=%s\n", CLOCK_TIMEOUT_TEXT);
     
     // 番茄钟设置区块
-    fprintf(file, "POMODORO_WORK_TIME=%d\n", POMODORO_WORK_TIME);
-    fprintf(file, "POMODORO_SHORT_BREAK=%d\n", POMODORO_SHORT_BREAK);
-    fprintf(file, "POMODORO_LONG_BREAK=%d\n", POMODORO_LONG_BREAK);
+    fprintf(file, "POMODORO_TIME_OPTIONS=%d,%d,%d\n", 
+            POMODORO_WORK_TIME, POMODORO_SHORT_BREAK, POMODORO_LONG_BREAK);
     fprintf(file, "POMODORO_LOOP_COUNT=%d\n", POMODORO_LOOP_COUNT);
     
     // 超时动作设置区块

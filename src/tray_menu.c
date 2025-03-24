@@ -631,14 +631,24 @@ void ShowContextMenu(HWND hwnd) {
     if (configFile) {
         char line[256];
         while (fgets(line, sizeof(line), configFile)) {
-            if (strncmp(line, "POMODORO_WORK_TIME=", 19) == 0) {
-                sscanf(line, "POMODORO_WORK_TIME=%d", &POMODORO_WORK_TIME);
-            }
-            else if (strncmp(line, "POMODORO_SHORT_BREAK=", 21) == 0) {
-                sscanf(line, "POMODORO_SHORT_BREAK=%d", &POMODORO_SHORT_BREAK);
-            }
-            else if (strncmp(line, "POMODORO_LONG_BREAK=", 20) == 0) {
-                sscanf(line, "POMODORO_LONG_BREAK=%d", &POMODORO_LONG_BREAK);
+            if (strncmp(line, "POMODORO_TIME_OPTIONS=", 22) == 0) {
+                char* options = line + 22;
+                char* token;
+                int values[3] = {1500, 300, 600}; // 默认值
+                int index = 0;
+                
+                token = strtok(options, ",");
+                while (token && index < 3) {
+                    values[index++] = atoi(token);
+                    token = strtok(NULL, ",");
+                }
+                
+                // 确保至少有一个有效值
+                if (index > 0) {
+                    POMODORO_WORK_TIME = values[0];
+                    if (index > 1) POMODORO_SHORT_BREAK = values[1];
+                    if (index > 2) POMODORO_LONG_BREAK = values[2];
+                }
             }
             else if (strncmp(line, "POMODORO_LOOP_COUNT=", 20) == 0) {
                 sscanf(line, "POMODORO_LOOP_COUNT=%d", &POMODORO_LOOP_COUNT);
@@ -673,7 +683,6 @@ void ShowContextMenu(HWND hwnd) {
     FormatPomodoroTime(POMODORO_LONG_BREAK, timeBuffer, sizeof(timeBuffer)/sizeof(wchar_t));
     // 直接使用时间值作为菜单项显示文本
     AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_LBREAK, timeBuffer);
-
 
     // 添加循环次数选项
     _snwprintf(menuText, sizeof(menuText)/sizeof(wchar_t),
