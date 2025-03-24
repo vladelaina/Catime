@@ -14,11 +14,16 @@
 #include "../include/notification.h"
 #include "../include/pomodoro.h"
 
-// 当前番茄钟阶段变量
-POMODORO_PHASE current_pomodoro_phase = POMODORO_PHASE_IDLE;
+// 番茄钟时间列表最大容量
+#define MAX_POMODORO_TIMES 10
+extern int POMODORO_TIMES[MAX_POMODORO_TIMES]; // 存储所有番茄钟时间
+extern int POMODORO_TIMES_COUNT;              // 实际的番茄钟时间数量
 
-// 番茄钟循环计数器
-static int pomodoro_cycle_counter = 0;
+// 当前正在执行的番茄钟时间索引
+static int current_pomodoro_time_index = 0;
+
+// 定义 current_pomodoro_phase 变量，它在 pomodoro.h 中被声明为 extern
+POMODORO_PHASE current_pomodoro_phase = POMODORO_PHASE_IDLE;
 
 // 完成的番茄钟循环次数
 static int complete_pomodoro_cycles = 0;
@@ -63,10 +68,21 @@ static void ShowLocalizedNotification(HWND hwnd, const wchar_t* chinese, const w
  * 重置所有计时器计数并将番茄钟设置为工作阶段
  */
 void InitializePomodoro(void) {
+    // 使用已有的枚举值 POMODORO_PHASE_WORK 代替 POMODORO_PHASE_RUNNING
     current_pomodoro_phase = POMODORO_PHASE_WORK;
-    pomodoro_work_cycles = 0;
-    pomodoro_cycle_counter = 0;
+    current_pomodoro_time_index = 0;
     complete_pomodoro_cycles = 0;
+    
+    // 设置初始倒计时为第一个时间值
+    if (POMODORO_TIMES_COUNT > 0) {
+        CLOCK_TOTAL_TIME = POMODORO_TIMES[0];
+    } else {
+        // 如果没有配置时间，使用默认的25分钟
+        CLOCK_TOTAL_TIME = 1500;
+    }
+    
+    countdown_elapsed_time = 0;
+    countdown_message_shown = FALSE;
 }
 
 /**
@@ -97,76 +113,54 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                 if (countdown_elapsed_time >= CLOCK_TOTAL_TIME && !countdown_message_shown) {
                     countdown_message_shown = TRUE;
                     
-                    // 使用番茄钟阶段变量判断当前处于哪个阶段，而不仅仅依赖时间值
-                    if (CLOCK_TOTAL_TIME == POMODORO_WORK_TIME && current_pomodoro_phase == POMODORO_PHASE_WORK) {
-                        // 工作时间结束，增加工作周期计数
-                        pomodoro_work_cycles++;
-                        pomodoro_cycle_counter++;
-                        
-                        // 每完成两个工作周期后进入长休息，否则进入短休息
-                        if (pomodoro_work_cycles == 2) {
-                            // 第二个工作周期结束，切换到长休息
-                            CLOCK_TOTAL_TIME = POMODORO_LONG_BREAK;
-                            current_pomodoro_phase = POMODORO_PHASE_LONG_BREAK;
-                            // 在这里重置工作周期，这样长休息后就会直接进入新的循环
-                            pomodoro_work_cycles = 0;
-                        } else {
-                            // 第一个工作周期结束，切换到短休息
-                            CLOCK_TOTAL_TIME = POMODORO_SHORT_BREAK;
-                            current_pomodoro_phase = POMODORO_PHASE_SHORT_BREAK;
-                        }
-                        countdown_elapsed_time = 0;
-                        countdown_message_shown = FALSE;
-                        InvalidateRect(hwnd, NULL, TRUE);
+                    // 检查是否处于番茄钟模式 - 使用任何非IDLE状态表示番茄钟正在运行
+                    if (current_pomodoro_phase != POMODORO_PHASE_IDLE && POMODORO_TIMES_COUNT > 0) {
                         // 显示超时消息
                         ShowLocalizedNotification(hwnd, L"时间到！", L"Time's up!");
-                    } else if (CLOCK_TOTAL_TIME == POMODORO_SHORT_BREAK && current_pomodoro_phase == POMODORO_PHASE_SHORT_BREAK) {
-                        // 短休息结束，切换到工作时间
-                        CLOCK_TOTAL_TIME = POMODORO_WORK_TIME;
-                        current_pomodoro_phase = POMODORO_PHASE_WORK;
-                        countdown_elapsed_time = 0;
-                        countdown_message_shown = FALSE;
-                        InvalidateRect(hwnd, NULL, TRUE);
-                        // 显示超时消息
-                        ShowLocalizedNotification(hwnd, L"时间到！", L"Time's up!");
-                    } else if (CLOCK_TOTAL_TIME == POMODORO_LONG_BREAK && current_pomodoro_phase == POMODORO_PHASE_LONG_BREAK) {
-                        // 长休息结束
-                        countdown_elapsed_time = 0;
-                        countdown_message_shown = FALSE;
                         
-                        // 增加完成循环计数器，并检查是否完成了所有配置的循环次数
-                        complete_pomodoro_cycles++;
+                        // 移动到下一个时间段
+                        current_pomodoro_time_index++;
                         
-                        if (complete_pomodoro_cycles >= POMODORO_LOOP_COUNT) {
-                            // 已完成所有循环次数，结束番茄钟
-                            // 重置所有计时参数
-                            countdown_elapsed_time = 0;
-                            countdown_message_shown = FALSE;
-                            CLOCK_TOTAL_TIME = 0;
+                        // 检查是否已经完成了一个完整的循环
+                        if (current_pomodoro_time_index >= POMODORO_TIMES_COUNT) {
+                            // 重置索引回到第一个时间
+                            current_pomodoro_time_index = 0;
                             
-                            // 完成所有循环后停止计时
-                            complete_pomodoro_cycles = 0;
-                            current_pomodoro_phase = POMODORO_PHASE_IDLE;
+                            // 增加完成的循环计数
+                            complete_pomodoro_cycles++;
                             
-                            // 显示完成提示并停止计时器
-                            ShowLocalizedNotification(hwnd, L"所有番茄钟循环完成！", L"All Pomodoro cycles completed!");
-                            KillTimer(hwnd, 1);
-                        } else {
-                            // 准备新工作周期参数
-                            CLOCK_TOTAL_TIME = POMODORO_WORK_TIME;
-                            countdown_elapsed_time = 0;
-                            countdown_message_shown = FALSE;
-                            
-                            // 先设置阶段再更新显示
-                            current_pomodoro_phase = POMODORO_PHASE_WORK;
-                            
-                            // 更新显示后发送通知
-                            InvalidateRect(hwnd, NULL, TRUE);
-                            ShowLocalizedNotification(hwnd, L"休息结束！重新开始工作！", L"Break over! Time to focus again.");
-                            
-                            // 重置周期计数器
-                            pomodoro_cycle_counter = 0;
+                            // 检查是否已完成所有配置的循环次数
+                            if (complete_pomodoro_cycles >= POMODORO_LOOP_COUNT) {
+                                // 已完成所有循环次数，结束番茄钟
+                                countdown_elapsed_time = 0;
+                                countdown_message_shown = FALSE;
+                                CLOCK_TOTAL_TIME = 0;
+                                
+                                // 重置番茄钟状态
+                                current_pomodoro_phase = POMODORO_PHASE_IDLE;
+                                
+                                // 显示完成提示并停止计时器
+                                ShowLocalizedNotification(hwnd, L"所有番茄钟循环完成！", L"All Pomodoro cycles completed!");
+                                KillTimer(hwnd, 1);
+                                return TRUE;
+                            }
                         }
+                        
+                        // 设置下一个时间段的倒计时
+                        CLOCK_TOTAL_TIME = POMODORO_TIMES[current_pomodoro_time_index];
+                        countdown_elapsed_time = 0;
+                        countdown_message_shown = FALSE;
+                        
+                        // 如果是新一轮的第一个时间段，显示循环提示
+                        if (current_pomodoro_time_index == 0 && complete_pomodoro_cycles > 0) {
+                            wchar_t cycleMsg[100];
+                            swprintf(cycleMsg, 100, 
+                                     GetLocalizedString(L"开始第 %d 轮番茄钟", L"Starting Pomodoro cycle %d"), 
+                                     complete_pomodoro_cycles + 1);
+                            ShowLocalizedNotification(hwnd, cycleMsg, L"");
+                        }
+                        
+                        InvalidateRect(hwnd, NULL, TRUE);
                     } else {
                         // 非番茄钟模式，执行原有的超时动作
                         

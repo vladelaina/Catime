@@ -22,11 +22,18 @@
 #include <shobjidl.h>
 #include <shlguid.h>
 
+// 定义番茄钟时间数组的最大容量
+#define MAX_POMODORO_TIMES 10
+
 // 修改全局变量的默认值(改为秒)
 extern int POMODORO_WORK_TIME;      // 默认工作时间25分钟(1500秒)
 extern int POMODORO_SHORT_BREAK;     // 默认短休息5分钟(300秒)
 extern int POMODORO_LONG_BREAK;      // 默认长休息10分钟(600秒)
 extern int POMODORO_LOOP_COUNT;      // 默认循环次数1次
+
+// 添加到文件开头的全局变量声明区域
+int POMODORO_TIMES[MAX_POMODORO_TIMES] = {1500, 300, 600}; // 默认时间
+int POMODORO_TIMES_COUNT = 3;                             // 默认有3个时间
 
 /**
  * @brief 获取配置文件路径
@@ -98,8 +105,8 @@ void CreateDefaultConfig(const char* config_path) {
         fprintf(file, "CLOCK_TIMEOUT_TEXT=0\n");
         
         // 番茄钟设置区块
-        fprintf(file, "POMODORO_TIME_OPTIONS=1500,300,600\n"); // 工作时间,短休息,长休息
-        fprintf(file, "POMODORO_LOOP_COUNT=1\n");       // 1次
+        fprintf(file, "POMODORO_TIME_OPTIONS=1500,300,600\n"); // 时间1,时间2,时间3...
+        fprintf(file, "POMODORO_LOOP_COUNT=1\n");       // 循环次数
         
         // 超时动作设置区块
         fprintf(file, "CLOCK_TIMEOUT_ACTION=MESSAGE\n");
@@ -380,20 +387,23 @@ void ReadConfig() {
         else if (strncmp(line, "POMODORO_TIME_OPTIONS=", 22) == 0) {
             char* options = line + 22;
             char* token;
-            int values[3] = {1500, 300, 600}; // 默认值
-            int index = 0;
             
+            // 重置番茄钟时间计数
+            POMODORO_TIMES_COUNT = 0;
+            
+            // 解析所有时间值
             token = strtok(options, ",");
-            while (token && index < 3) {
-                values[index++] = atoi(token);
+            while (token && POMODORO_TIMES_COUNT < MAX_POMODORO_TIMES) {
+                POMODORO_TIMES[POMODORO_TIMES_COUNT++] = atoi(token);
                 token = strtok(NULL, ",");
             }
             
-            // 确保至少有一个有效值
-            if (index > 0) {
-                POMODORO_WORK_TIME = values[0];
-                if (index > 1) POMODORO_SHORT_BREAK = values[1];
-                if (index > 2) POMODORO_LONG_BREAK = values[2];
+            // 即使我们现在使用新的数组存储所有时间，
+            // 为了向后兼容，依然保留这三个变量的设置
+            if (POMODORO_TIMES_COUNT > 0) {
+                POMODORO_WORK_TIME = POMODORO_TIMES[0];
+                if (POMODORO_TIMES_COUNT > 1) POMODORO_SHORT_BREAK = POMODORO_TIMES[1];
+                if (POMODORO_TIMES_COUNT > 2) POMODORO_LONG_BREAK = POMODORO_TIMES[2];
             }
         }
     }
@@ -773,7 +783,7 @@ char* UTF8ToANSI(const char* utf8Str) {
     return str;
 }
 
-// 添加写入番茄钟配置的函数
+// 修改WriteConfigPomodoroTimes函数，支持新的运行逻辑
 void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
     char config_path[MAX_PATH];
     char temp_path[MAX_PATH];
@@ -782,6 +792,30 @@ void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
     FILE *file, *temp_file;
     char line[256];
     int found = 0;
+    
+    // 更新全局变量
+    // 保持向后兼容，同时更新POMODORO_TIMES数组
+    POMODORO_WORK_TIME = work;
+    POMODORO_SHORT_BREAK = short_break;
+    POMODORO_LONG_BREAK = long_break;
+    
+    // 确保至少有这三个时间值
+    POMODORO_TIMES[0] = work;
+    if (POMODORO_TIMES_COUNT < 1) POMODORO_TIMES_COUNT = 1;
+    
+    if (POMODORO_TIMES_COUNT > 1) {
+        POMODORO_TIMES[1] = short_break;
+    } else if (short_break > 0) {
+        POMODORO_TIMES[1] = short_break;
+        POMODORO_TIMES_COUNT = 2;
+    }
+    
+    if (POMODORO_TIMES_COUNT > 2) {
+        POMODORO_TIMES[2] = long_break;
+    } else if (long_break > 0) {
+        POMODORO_TIMES[2] = long_break;
+        POMODORO_TIMES_COUNT = 3;
+    }
     
     file = fopen(config_path, "r");
     temp_file = fopen(temp_path, "w");
@@ -795,8 +829,13 @@ void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
     while (fgets(line, sizeof(line), file)) {
         // 查找POMODORO_TIME_OPTIONS行
         if (strncmp(line, "POMODORO_TIME_OPTIONS=", 22) == 0) {
-            fprintf(temp_file, "POMODORO_TIME_OPTIONS=%d,%d,%d\n", 
-                    work, short_break, long_break);
+            // 写入所有番茄钟时间
+            fprintf(temp_file, "POMODORO_TIME_OPTIONS=");
+            for (int i = 0; i < POMODORO_TIMES_COUNT; i++) {
+                if (i > 0) fprintf(temp_file, ",");
+                fprintf(temp_file, "%d", POMODORO_TIMES[i]);
+            }
+            fprintf(temp_file, "\n");
             found = 1;
         } else {
             fputs(line, temp_file);
@@ -805,8 +844,12 @@ void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
     
     // 如果没有找到POMODORO_TIME_OPTIONS，则添加它
     if (!found) {
-        fprintf(temp_file, "POMODORO_TIME_OPTIONS=%d,%d,%d\n", 
-                work, short_break, long_break);
+        fprintf(temp_file, "POMODORO_TIME_OPTIONS=");
+        for (int i = 0; i < POMODORO_TIMES_COUNT; i++) {
+            if (i > 0) fprintf(temp_file, ",");
+            fprintf(temp_file, "%d", POMODORO_TIMES[i]);
+        }
+        fprintf(temp_file, "\n");
     }
     
     fclose(file);
@@ -814,11 +857,6 @@ void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
     
     remove(config_path);
     rename(temp_path, config_path);
-    
-    // 更新全局变量
-    POMODORO_WORK_TIME = work;
-    POMODORO_SHORT_BREAK = short_break;
-    POMODORO_LONG_BREAK = long_break;
 }
 
 // 添加写入番茄钟循环次数配置的函数
@@ -971,8 +1009,12 @@ void WriteConfig(const char* config_path) {
     fprintf(file, "CLOCK_TIMEOUT_TEXT=%s\n", CLOCK_TIMEOUT_TEXT);
     
     // 番茄钟设置区块
-    fprintf(file, "POMODORO_TIME_OPTIONS=%d,%d,%d\n", 
-            POMODORO_WORK_TIME, POMODORO_SHORT_BREAK, POMODORO_LONG_BREAK);
+    fprintf(file, "POMODORO_TIME_OPTIONS=");
+    for (int i = 0; i < POMODORO_TIMES_COUNT; i++) {
+        if (i > 0) fprintf(file, ",");
+        fprintf(file, "%d", POMODORO_TIMES[i]);
+    }
+    fprintf(file, "\n");
     fprintf(file, "POMODORO_LOOP_COUNT=%d\n", POMODORO_LOOP_COUNT);
     
     // 超时动作设置区块
