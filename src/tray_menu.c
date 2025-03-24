@@ -674,8 +674,6 @@ void ShowContextMenu(HWND hwnd) {
     // 直接使用时间值作为菜单项显示文本
     AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_LBREAK, timeBuffer);
 
-    // 添加分隔线
-    AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
 
     // 添加循环次数选项
     _snwprintf(menuText, sizeof(menuText)/sizeof(wchar_t),
@@ -683,6 +681,9 @@ void ShowContextMenu(HWND hwnd) {
               POMODORO_LOOP_COUNT);
     AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_LOOP_COUNT, menuText);
 
+    // 添加分隔线
+    AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
+    
     // 将番茄钟菜单添加到主菜单
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hPomodoroMenu,
                 GetLocalizedString(L"番茄时钟", L"Pomodoro"));
