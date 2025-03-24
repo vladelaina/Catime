@@ -141,6 +141,14 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                                 
                                 // 显示完成提示并停止计时器
                                 ShowLocalizedNotification(hwnd, L"所有番茄钟循环完成！", L"All Pomodoro cycles completed!");
+                                
+                                // 切换到空闲状态 - 添加以下代码
+                                CLOCK_COUNT_UP = FALSE;       // 确保不是正计时模式
+                                CLOCK_SHOW_CURRENT_TIME = FALSE; // 确保不是显示当前时间模式
+                                message_shown = TRUE;         // 标记消息已显示
+                                
+                                // 强制重绘窗口以清除显示
+                                InvalidateRect(hwnd, NULL, TRUE);
                                 KillTimer(hwnd, 1);
                                 return TRUE;
                             }
