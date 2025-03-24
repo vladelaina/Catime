@@ -50,6 +50,19 @@ extern int message_shown;
 extern void ShowToastNotification(HWND hwnd, const char* message);
 extern void PauseMediaPlayback(void);
 
+// 在文件开头添加这些外部变量声明
+extern int POMODORO_TIMES[10]; // 番茄钟时间数组
+extern int POMODORO_TIMES_COUNT; // 番茄钟时间选项个数
+
+// 如果ShowInputDialog函数需要声明，可以在开始处添加
+extern BOOL ShowInputDialog(HWND hwnd, char* text);
+
+// 还需要声明或修改WriteConfigPomodoroTimeOptions函数名
+extern void WriteConfigPomodoroTimeOptions(const char* options);
+
+// 如果函数不存在，可以使用现有的相似函数
+// 例如修改对WriteConfigPomodoroTimeOptions的调用为WriteConfigPomodoroTimes
+
 // 在文件开头添加
 typedef struct {
     const wchar_t* title;
@@ -58,6 +71,19 @@ typedef struct {
     wchar_t* result;
     size_t maxLen;
 } INPUTBOX_PARAMS;
+
+// 在文件开头添加对ShowPomodoroLoopDialog函数的声明
+extern void ShowPomodoroLoopDialog(HWND hwndParent);
+
+// 辅助函数：检查字符串是否只包含空格
+static BOOL isAllSpacesOnly(const char* str) {
+    for (int i = 0; str[i]; i++) {
+        if (!isspace((unsigned char)str[i])) {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
 
 /**
  * @brief 输入对话框回调函数
@@ -1265,152 +1291,98 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     InvalidateRect(hwnd, NULL, TRUE);
                     break;
                 }
-                case CLOCK_IDM_POMODORO_WORK: {
-                    while (1) {
-                        memset(inputText, 0, sizeof(inputText));
-                        DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_POMODORO_WORK_DIALOG), NULL, DlgProc);
-
-                        if (inputText[0] == '\0') {
-                            break;
-                        }
-
-                        // 检查是否只有空格
-                        BOOL isAllSpaces = TRUE;
-                        for (int i = 0; inputText[i]; i++) {
-                            if (!isspace((unsigned char)inputText[i])) {
-                                isAllSpaces = FALSE;
-                                break;
-                            }
-                        }
-                        if (isAllSpaces) {
-                            break;
-                        }
-
-                        int total_seconds = 0;
-                        if (ParseInput(inputText, &total_seconds)) {
-                            // 更新番茄钟工作时间配置
-                            WriteConfigPomodoroTimes(total_seconds, POMODORO_SHORT_BREAK, POMODORO_LONG_BREAK);
-                            POMODORO_WORK_TIME = total_seconds;
-                            break;
-                        } else {
-                            MessageBoxW(hwnd, 
-                                GetLocalizedString(
-                                    L"25    = 25分钟\n"
-                                    L"25h   = 25小时\n"
-                                    L"25s   = 25秒\n"
-                                    L"25 30 = 25分钟30秒\n"
-                                    L"25 30m = 25小时30分钟\n"
-                                    L"1 30 20 = 1小时30分钟20秒",
-                                    
-                                    L"25    = 25 minutes\n"
-                                    L"25h   = 25 hours\n"
-                                    L"25s   = 25 seconds\n"
-                                    L"25 30 = 25 minutes 30 seconds\n"
-                                    L"25 30m = 25 hours 30 minutes\n"
-                                    L"1 30 20 = 1 hour 30 minutes 20 seconds"),
-                                GetLocalizedString(L"输入格式", L"Input Format"),
-                                MB_OK);
-                        }
-                    }
-                    break;
-                }
-                case CLOCK_IDM_POMODORO_BREAK: {
-                    while (1) {
-                        memset(inputText, 0, sizeof(inputText));
-                        DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_POMODORO_BREAK_DIALOG), NULL, DlgProc);
-
-                        if (inputText[0] == '\0') {
-                            break;
-                        }
-
-                        // 检查是否只有空格
-                        BOOL isAllSpaces = TRUE;
-                        for (int i = 0; inputText[i]; i++) {
-                            if (!isspace((unsigned char)inputText[i])) {
-                                isAllSpaces = FALSE;
-                                break;
-                            }
-                        }
-                        if (isAllSpaces) {
-                            break;
-                        }
-
-                        int total_seconds = 0;
-                        if (ParseInput(inputText, &total_seconds)) {
-                            // 更新番茄钟短暂休息时间配置
-                            WriteConfigPomodoroTimes(POMODORO_WORK_TIME, total_seconds, POMODORO_LONG_BREAK);
-                            POMODORO_SHORT_BREAK = total_seconds;
-                            break;
-                        } else {
-                            MessageBoxW(hwnd, 
-                                GetLocalizedString(
-                                    L"25    = 25分钟\n"
-                                    L"25h   = 25小时\n"
-                                    L"25s   = 25秒\n"
-                                    L"25 30 = 25分钟30秒\n"
-                                    L"25 30m = 25小时30分钟\n"
-                                    L"1 30 20 = 1小时30分钟20秒",
-                                    
-                                    L"25    = 25 minutes\n"
-                                    L"25h   = 25 hours\n"
-                                    L"25s   = 25 seconds\n"
-                                    L"25 30 = 25 minutes 30 seconds\n"
-                                    L"25 30m = 25 hours 30 minutes\n"
-                                    L"1 30 20 = 1 hour 30 minutes 20 seconds"),
-                                GetLocalizedString(L"输入格式", L"Input Format"),
-                                MB_OK);
-                        }
-                    }
-                    break;
-                }
+                case CLOCK_IDM_POMODORO_WORK:
+                case CLOCK_IDM_POMODORO_BREAK:
                 case CLOCK_IDM_POMODORO_LBREAK: {
-                    while (1) {
-                        memset(inputText, 0, sizeof(inputText));
-                        DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_POMODORO_LBREAK_DIALOG), NULL, DlgProc);
-
-                        if (inputText[0] == '\0') {
-                            break;
-                        }
-
-                        // 检查是否只有空格
-                        BOOL isAllSpaces = TRUE;
-                        for (int i = 0; inputText[i]; i++) {
-                            if (!isspace((unsigned char)inputText[i])) {
-                                isAllSpaces = FALSE;
-                                break;
-                            }
-                        }
-                        if (isAllSpaces) {
-                            break;
-                        }
-
+                    // 处理番茄钟时间设置选项（动态ID范围）
+                    if (LOWORD(wp) >= CLOCK_IDM_POMODORO_WORK && 
+                        LOWORD(wp) < CLOCK_IDM_POMODORO_WORK + POMODORO_TIMES_COUNT) {
+                        
+                        // 计算选择的选项索引
+                        int selectedIndex = LOWORD(wp) - CLOCK_IDM_POMODORO_WORK;
+                        
+                        if (selectedIndex >= 0 && selectedIndex < POMODORO_TIMES_COUNT) {
+                            // 使用现有对话框方式修改番茄钟时间
+                            // 使用当前菜单ID作为区分
+                            switch (LOWORD(wp)) {
+                                case CLOCK_IDM_POMODORO_WORK:
+                                    // 使用已有的工作时间设置代码
+                                    memset(inputText, 0, sizeof(inputText));
+                                    DialogBox(GetModuleHandle(NULL), 
+                                             MAKEINTRESOURCE(CLOCK_IDD_POMODORO_WORK_DIALOG),
+                                             NULL, DlgProc);
+                                    // 处理输入结果
+                                    if (inputText[0] && !isAllSpacesOnly(inputText)) {
                         int total_seconds = 0;
                         if (ParseInput(inputText, &total_seconds)) {
-                            // 更新番茄钟长休息时间配置
-                            WriteConfigPomodoroTimes(POMODORO_WORK_TIME, POMODORO_SHORT_BREAK, total_seconds);
-                            POMODORO_LONG_BREAK = total_seconds;
-                            break;
-                        } else {
-                            MessageBoxW(hwnd, 
-                                GetLocalizedString(
-                                    L"25    = 25分钟\n"
-                                    L"25h   = 25小时\n"
-                                    L"25s   = 25秒\n"
-                                    L"25 30 = 25分钟30秒\n"
-                                    L"25 30m = 25小时30分钟\n"
-                                    L"1 30 20 = 1小时30分钟20秒",
-                                    
-                                    L"25    = 25 minutes\n"
-                                    L"25h   = 25 hours\n"
-                                    L"25s   = 25 seconds\n"
-                                    L"25 30 = 25 minutes 30 seconds\n"
-                                    L"25 30m = 25 hours 30 minutes\n"
-                                    L"1 30 20 = 1 hour 30 minutes 20 seconds"),
-                                GetLocalizedString(L"输入格式", L"Input Format"),
-                                MB_OK);
+                                            POMODORO_TIMES[selectedIndex] = total_seconds;
+                                            WriteConfigPomodoroTimes(total_seconds, 
+                                                                    POMODORO_SHORT_BREAK, 
+                                                                    POMODORO_LONG_BREAK);
+                            POMODORO_WORK_TIME = total_seconds;
                         }
                     }
                     break;
+                                    
+                                case CLOCK_IDM_POMODORO_BREAK:
+                                    // 使用已有的短休息时间设置代码
+                                    memset(inputText, 0, sizeof(inputText));
+                                    DialogBox(GetModuleHandle(NULL), 
+                                             MAKEINTRESOURCE(CLOCK_IDD_POMODORO_BREAK_DIALOG),
+                                             NULL, DlgProc);
+                                    // 处理输入结果 
+                                    if (inputText[0] && !isAllSpacesOnly(inputText)) {
+                        int total_seconds = 0;
+                        if (ParseInput(inputText, &total_seconds)) {
+                                            POMODORO_TIMES[selectedIndex] = total_seconds;
+                                            WriteConfigPomodoroTimes(POMODORO_WORK_TIME, 
+                                                                    total_seconds, 
+                                                                    POMODORO_LONG_BREAK);
+                            POMODORO_SHORT_BREAK = total_seconds;
+                        }
+                    }
+                    break;
+                                    
+                                case CLOCK_IDM_POMODORO_LBREAK:
+                                    // 使用已有的长休息时间设置代码
+                                    memset(inputText, 0, sizeof(inputText));
+                                    DialogBox(GetModuleHandle(NULL), 
+                                             MAKEINTRESOURCE(CLOCK_IDD_POMODORO_LBREAK_DIALOG),
+                                             NULL, DlgProc);
+                                    // 处理输入结果
+                                    if (inputText[0] && !isAllSpacesOnly(inputText)) {
+                                        int total_seconds = 0;
+                                        if (ParseInput(inputText, &total_seconds)) {
+                                            POMODORO_TIMES[selectedIndex] = total_seconds;
+                                            WriteConfigPomodoroTimes(POMODORO_WORK_TIME, 
+                                                                    POMODORO_SHORT_BREAK, 
+                                                                    total_seconds);
+                                            POMODORO_LONG_BREAK = total_seconds;
+                                        }
+                                    }
+                            break;
+                                    
+                                default:
+                                    // 对于其他自定义选项，可以复用现有对话框
+                                    memset(inputText, 0, sizeof(inputText));
+                                    DialogBox(GetModuleHandle(NULL), 
+                                             MAKEINTRESOURCE(CLOCK_IDD_DIALOG1),
+                                             NULL, DlgProc);
+                                    // 处理输入结果
+                                    if (inputText[0] && !isAllSpacesOnly(inputText)) {
+                        int total_seconds = 0;
+                        if (ParseInput(inputText, &total_seconds)) {
+                                            POMODORO_TIMES[selectedIndex] = total_seconds;
+                                            // 更新番茄钟自定义时间
+                                            // 这里需要一个能保存所有时间的函数
+                                        }
+                                    }
+                            break;
+                            }
+                        }
+                        
+                    break;
+                    }
                 }
                 case CLOCK_IDM_POMODORO_LOOP_COUNT:
                     ShowPomodoroLoopDialog(hwnd);

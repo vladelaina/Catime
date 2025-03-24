@@ -51,6 +51,11 @@ extern int POMODORO_SHORT_BREAK;    ///< 短休息时间(秒)
 extern int POMODORO_LONG_BREAK;     ///< 长休息时间(秒)
 extern int POMODORO_LOOP_COUNT;     ///< 循环次数
 
+// 番茄钟时间数组和计数变量
+#define MAX_POMODORO_TIMES 10
+extern int POMODORO_TIMES[MAX_POMODORO_TIMES]; // 存储所有番茄钟时间
+extern int POMODORO_TIMES_COUNT;              // 实际的番茄钟时间数量
+
 // 在外部变量声明部分添加
 extern char CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH];   ///< 超时打开网站的URL
 /// @}
@@ -628,26 +633,30 @@ void ShowContextMenu(HWND hwnd) {
     char configPath[MAX_PATH];
     GetConfigPath(configPath, MAX_PATH);
     FILE *configFile = fopen(configPath, "r");
+    POMODORO_TIMES_COUNT = 0;  // 初始化为0
+    
     if (configFile) {
         char line[256];
         while (fgets(line, sizeof(line), configFile)) {
             if (strncmp(line, "POMODORO_TIME_OPTIONS=", 22) == 0) {
                 char* options = line + 22;
                 char* token;
-                int values[3] = {1500, 300, 600}; // 默认值
                 int index = 0;
                 
                 token = strtok(options, ",");
-                while (token && index < 3) {
-                    values[index++] = atoi(token);
+                while (token && index < MAX_POMODORO_TIMES) {
+                    POMODORO_TIMES[index++] = atoi(token);
                     token = strtok(NULL, ",");
                 }
                 
+                // 设置实际的时间选项数量
+                POMODORO_TIMES_COUNT = index;
+                
                 // 确保至少有一个有效值
                 if (index > 0) {
-                    POMODORO_WORK_TIME = values[0];
-                    if (index > 1) POMODORO_SHORT_BREAK = values[1];
-                    if (index > 2) POMODORO_LONG_BREAK = values[2];
+                    POMODORO_WORK_TIME = POMODORO_TIMES[0];
+                    if (index > 1) POMODORO_SHORT_BREAK = POMODORO_TIMES[1];
+                    if (index > 2) POMODORO_LONG_BREAK = POMODORO_TIMES[2];
                 }
             }
             else if (strncmp(line, "POMODORO_LOOP_COUNT=", 20) == 0) {
@@ -665,26 +674,20 @@ void ShowContextMenu(HWND hwnd) {
                 GetLocalizedString(L"开始", L"Start"));
     AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
 
-    // 读取配置并格式化显示
+    // 读取配置并动态创建时间选项
     wchar_t timeBuffer[32];
-    wchar_t menuText[64];
-
-    // 工作时间
-    FormatPomodoroTime(POMODORO_WORK_TIME, timeBuffer, sizeof(timeBuffer)/sizeof(wchar_t));
-    // 直接使用时间值作为菜单项显示文本
-    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_WORK, timeBuffer);
-
-    // 短暂休息
-    FormatPomodoroTime(POMODORO_SHORT_BREAK, timeBuffer, sizeof(timeBuffer)/sizeof(wchar_t));
-    // 直接使用时间值作为菜单项显示文本
-    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_BREAK, timeBuffer);
-
-    // 长时间休息
-    FormatPomodoroTime(POMODORO_LONG_BREAK, timeBuffer, sizeof(timeBuffer)/sizeof(wchar_t));
-    // 直接使用时间值作为菜单项显示文本
-    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_LBREAK, timeBuffer);
+    
+    // 为每个番茄钟时间创建菜单项
+    for (int i = 0; i < POMODORO_TIMES_COUNT; i++) {
+        FormatPomodoroTime(POMODORO_TIMES[i], timeBuffer, sizeof(timeBuffer)/sizeof(wchar_t));
+        
+        // 使用动态ID: CLOCK_IDM_POMODORO_WORK + i
+        // 这要求在处理消息时能够识别这些动态ID
+        AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_WORK + i, timeBuffer);
+    }
 
     // 添加循环次数选项
+    wchar_t menuText[64];
     _snwprintf(menuText, sizeof(menuText)/sizeof(wchar_t),
               GetLocalizedString(L"循环次数: %d", L"Loop Count: %d"),
               POMODORO_LOOP_COUNT);
