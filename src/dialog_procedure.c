@@ -1100,26 +1100,27 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
     
     switch (msg) {
         case WM_INITDIALOG: {
-            // 设置对话框标题
-            SetWindowTextW(hwndDlg, GetLocalizedString(L"设置番茄钟时间组合", L"Set Pomodoro Time Combination"));
+            // 应用本地化文本（使用对话框已有文本作为默认值）
+            WCHAR caption[256] = {0};
+            GetWindowTextW(hwndDlg, caption, 256);
+            SetWindowTextW(hwndDlg, GetLocalizedString(caption, L"Set Pomodoro Time Combination"));
             
-            // 设置提示文本
+            // 获取静态文本控件当前文本并应用本地化
             HWND hStatic = GetDlgItem(hwndDlg, CLOCK_IDC_STATIC);
-            SetWindowTextW(hStatic, GetLocalizedString(
-                L"输入番茄钟时间序列，用空格分隔：\n\n"
-                L"25m = 25分钟\n"
-                L"30s = 30秒\n"
-                L"1h30m = 1小时30分钟\n"
-                L"例如: 25m 5m 15m - 工作25分钟，短休息5分钟，长休息15分钟", 
+            WCHAR staticText[512] = {0};
+            GetWindowTextW(hStatic, staticText, 512);
+            SetWindowTextW(hStatic, GetLocalizedString(staticText, 
                 L"Enter pomodoro time sequence, separated by spaces:\n\n"
                 L"25m = 25 minutes\n"
                 L"30s = 30 seconds\n"
                 L"1h30m = 1 hour 30 minutes\n"
                 L"Example: 25m 5m 15m - work 25min, short break 5min, long break 15min"));
             
-            // 设置确定按钮文本
+            // 本地化按钮文本
             HWND hButton = GetDlgItem(hwndDlg, CLOCK_IDC_BUTTON_OK);
-            SetWindowTextW(hButton, GetLocalizedString(L"确定", L"OK"));
+            WCHAR buttonText[50] = {0};
+            GetWindowTextW(hButton, buttonText, 50);
+            SetWindowTextW(hButton, GetLocalizedString(buttonText, L"OK"));
             
             // 设置背景和控件颜色
             hBackgroundBrush = CreateSolidBrush(RGB(240, 240, 240));
@@ -1258,7 +1259,7 @@ void ShowPomodoroComboDialog(HWND hwndParent) {
     if (!g_hwndPomodoroComboDialog) {
         g_hwndPomodoroComboDialog = CreateDialog(
             GetModuleHandle(NULL),
-            MAKEINTRESOURCE(CLOCK_IDD_DIALOG1),  // 使用通用输入对话框资源
+            MAKEINTRESOURCE(CLOCK_IDD_POMODORO_COMBO_DIALOG), // 使用新的对话框资源
             hwndParent,
             PomodoroComboDialogProc
         );

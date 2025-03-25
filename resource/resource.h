@@ -317,3 +317,6 @@
 
 // 修改动态ID基址
 #define CLOCK_IDM_POMODORO_TIME_BASE 600  // 番茄钟时间菜单项的基础ID
+
+// 添加番茄钟组合对话框ID
+#define CLOCK_IDD_POMODORO_COMBO_DIALOG 514
