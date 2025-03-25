@@ -23,6 +23,15 @@ void ParseContributorInfo(const wchar_t* contributor, wchar_t* name, size_t name
 // 从main.c引入的变量
 extern char inputText[256];
 
+// 添加番茄钟相关的外部变量声明
+#define MAX_POMODORO_TIMES 10
+extern int POMODORO_TIMES[MAX_POMODORO_TIMES]; // 存储所有番茄钟时间
+extern int POMODORO_TIMES_COUNT;               // 实际的番茄钟时间数量
+extern int POMODORO_WORK_TIME;                 // 番茄钟工作时间（秒）
+extern int POMODORO_SHORT_BREAK;               // 番茄钟短休息时间（秒）
+extern int POMODORO_LONG_BREAK;                // 番茄钟长休息时间（秒）
+extern int POMODORO_LOOP_COUNT;                // 番茄钟循环次数
+
 // 存储旧的编辑框过程
 WNDPROC wpOrigEditProc;
 
@@ -1078,4 +1087,236 @@ void ShowWebsiteDialog(HWND hwndParent) {
     } else {
         SetForegroundWindow(g_hwndWebsiteDialog);
     }
+}
+
+// 设置全局变量来跟踪番茄钟组合对话框句柄
+static HWND g_hwndPomodoroComboDialog = NULL;
+
+// 添加番茄钟组合对话框处理函数
+INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    static HBRUSH hBackgroundBrush = NULL;
+    static HBRUSH hEditBrush = NULL;
+    static HBRUSH hButtonBrush = NULL;
+    
+    switch (msg) {
+        case WM_INITDIALOG: {
+            // 设置对话框标题
+            SetWindowTextW(hwndDlg, GetLocalizedString(L"设置番茄钟时间组合", L"Set Pomodoro Time Combination"));
+            
+            // 设置提示文本
+            HWND hStatic = GetDlgItem(hwndDlg, CLOCK_IDC_STATIC);
+            SetWindowTextW(hStatic, GetLocalizedString(
+                L"输入番茄钟时间序列，用空格分隔：\n\n"
+                L"25m = 25分钟\n"
+                L"30s = 30秒\n"
+                L"1h30m = 1小时30分钟\n"
+                L"例如: 25m 5m 15m - 工作25分钟，短休息5分钟，长休息15分钟", 
+                L"Enter pomodoro time sequence, separated by spaces:\n\n"
+                L"25m = 25 minutes\n"
+                L"30s = 30 seconds\n"
+                L"1h30m = 1 hour 30 minutes\n"
+                L"Example: 25m 5m 15m - work 25min, short break 5min, long break 15min"));
+            
+            // 设置确定按钮文本
+            HWND hButton = GetDlgItem(hwndDlg, CLOCK_IDC_BUTTON_OK);
+            SetWindowTextW(hButton, GetLocalizedString(L"确定", L"OK"));
+            
+            // 设置背景和控件颜色
+            hBackgroundBrush = CreateSolidBrush(RGB(240, 240, 240));
+            hEditBrush = CreateSolidBrush(RGB(255, 255, 255));
+            hButtonBrush = CreateSolidBrush(RGB(240, 240, 240));
+            
+            // 子类化编辑框以支持回车键提交
+            HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
+            wpOrigEditProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
+            
+            // 从配置中读取当前的番茄钟时间选项并格式化显示
+            char currentOptions[256] = {0};
+            for (int i = 0; i < POMODORO_TIMES_COUNT; i++) {
+                char timeStr[32];
+                int seconds = POMODORO_TIMES[i];
+                
+                // 格式化时间，转换为人类可读格式
+                if (seconds >= 3600) {
+                    int hours = seconds / 3600;
+                    int mins = (seconds % 3600) / 60;
+                    int secs = seconds % 60;
+                    if (mins == 0 && secs == 0)
+                        sprintf(timeStr, "%dh ", hours);
+                    else if (secs == 0)
+                        sprintf(timeStr, "%dh%dm ", hours, mins);
+                    else
+                        sprintf(timeStr, "%dh%dm%ds ", hours, mins, secs);
+                } else if (seconds >= 60) {
+                    int mins = seconds / 60;
+                    int secs = seconds % 60;
+                    if (secs == 0)
+                        sprintf(timeStr, "%dm ", mins);
+                    else
+                        sprintf(timeStr, "%dm%ds ", mins, secs);
+                } else {
+                    sprintf(timeStr, "%ds ", seconds);
+                }
+                
+                strcat(currentOptions, timeStr);
+            }
+            
+            // 去掉末尾的空格
+            if (strlen(currentOptions) > 0 && currentOptions[strlen(currentOptions) - 1] == ' ') {
+                currentOptions[strlen(currentOptions) - 1] = '\0';
+            }
+            
+            // 设置编辑框文本
+            SetDlgItemTextA(hwndDlg, CLOCK_IDC_EDIT, currentOptions);
+            
+            // 设置焦点到编辑框并选中所有文本
+            SetFocus(hwndEdit);
+            SendMessage(hwndEdit, EM_SETSEL, 0, -1);
+            
+            return FALSE;  // 因为我们手动设置了焦点
+        }
+        
+        case WM_CTLCOLORDLG:
+            return (INT_PTR)hBackgroundBrush;
+            
+        case WM_CTLCOLORSTATIC:
+            SetBkColor((HDC)wParam, RGB(240, 240, 240));
+            return (INT_PTR)hBackgroundBrush;
+            
+        case WM_CTLCOLOREDIT:
+            SetBkColor((HDC)wParam, RGB(255, 255, 255));
+            return (INT_PTR)hEditBrush;
+            
+        case WM_CTLCOLORBTN:
+            return (INT_PTR)hButtonBrush;
+            
+        case WM_COMMAND:
+            if (LOWORD(wParam) == CLOCK_IDC_BUTTON_OK || LOWORD(wParam) == IDOK) {
+                char input[256] = {0};
+                GetDlgItemTextA(hwndDlg, CLOCK_IDC_EDIT, input, sizeof(input));
+                
+                // 解析输入的时间格式，转换为秒数数组
+                char *token, *saveptr;
+                char input_copy[256];
+                strncpy(input_copy, input, sizeof(input_copy) - 1);
+                
+                int times[MAX_POMODORO_TIMES] = {0};
+                int times_count = 0;
+                
+                token = strtok_r(input_copy, " ", &saveptr);
+                while (token && times_count < MAX_POMODORO_TIMES) {
+                    int seconds = 0;
+                    if (ParseTimeInput(token, &seconds)) {
+                        times[times_count++] = seconds;
+                    }
+                    token = strtok_r(NULL, " ", &saveptr);
+                }
+                
+                if (times_count > 0) {
+                    // 更新全局变量
+                    POMODORO_TIMES_COUNT = times_count;
+                    for (int i = 0; i < times_count; i++) {
+                        POMODORO_TIMES[i] = times[i];
+                    }
+                    
+                    // 更新基本的番茄钟时间
+                    if (times_count > 0) POMODORO_WORK_TIME = times[0];
+                    if (times_count > 1) POMODORO_SHORT_BREAK = times[1];
+                    if (times_count > 2) POMODORO_LONG_BREAK = times[2];
+                    
+                    // 写入配置文件
+                    WriteConfigPomodoroTimeOptions(times, times_count);
+                }
+                
+                EndDialog(hwndDlg, IDOK);
+                g_hwndPomodoroComboDialog = NULL;
+                return TRUE;
+            } else if (LOWORD(wParam) == IDCANCEL) {
+                EndDialog(hwndDlg, IDCANCEL);
+                g_hwndPomodoroComboDialog = NULL;
+                return TRUE;
+            }
+            break;
+            
+        case WM_DESTROY:
+            // 恢复原始编辑框过程
+            HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
+            SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
+            
+            // 释放资源
+            if (hBackgroundBrush) DeleteObject(hBackgroundBrush);
+            if (hEditBrush) DeleteObject(hEditBrush);
+            if (hButtonBrush) DeleteObject(hButtonBrush);
+            break;
+    }
+    
+    return FALSE;
+}
+
+// 显示番茄钟组合对话框
+void ShowPomodoroComboDialog(HWND hwndParent) {
+    if (!g_hwndPomodoroComboDialog) {
+        g_hwndPomodoroComboDialog = CreateDialog(
+            GetModuleHandle(NULL),
+            MAKEINTRESOURCE(CLOCK_IDD_DIALOG1),  // 使用通用输入对话框资源
+            hwndParent,
+            PomodoroComboDialogProc
+        );
+        if (g_hwndPomodoroComboDialog) {
+            ShowWindow(g_hwndPomodoroComboDialog, SW_SHOW);
+        }
+    } else {
+        SetForegroundWindow(g_hwndPomodoroComboDialog);
+    }
+}
+
+// 解析时间输入 (如 "25m", "30s", "1h30m" 等)
+BOOL ParseTimeInput(const char* input, int* seconds) {
+    if (!input || !seconds) return FALSE;
+    
+    *seconds = 0;
+    char* buffer = _strdup(input);
+    if (!buffer) return FALSE;
+    
+    int len = strlen(buffer);
+    char* pos = buffer;
+    int value = 0;
+    int tempSeconds = 0;
+    
+    while (*pos) {
+        // 读取数字
+        if (isdigit((unsigned char)*pos)) {
+            value = 0;
+            while (isdigit((unsigned char)*pos)) {
+                value = value * 10 + (*pos - '0');
+                pos++;
+            }
+            
+            // 读取单位
+            if (*pos == 'h' || *pos == 'H') {
+                tempSeconds += value * 3600; // 小时转秒
+                pos++;
+            } else if (*pos == 'm' || *pos == 'M') {
+                tempSeconds += value * 60;   // 分钟转秒
+                pos++;
+            } else if (*pos == 's' || *pos == 'S') {
+                tempSeconds += value;        // 秒
+                pos++;
+            } else if (*pos == '\0') {
+                // 没有单位，默认为分钟
+                tempSeconds += value * 60;
+            } else {
+                // 无效字符
+                free(buffer);
+                return FALSE;
+            }
+        } else {
+            // 非数字起始
+            pos++;
+        }
+    }
+    
+    free(buffer);
+    *seconds = tempSeconds;
+    return TRUE;
 }

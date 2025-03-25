@@ -1173,3 +1173,66 @@ void WriteConfigStartupMode(const char* mode) {
     remove(config_path);
     rename(temp_path, config_path);
 }
+
+/**
+ * @brief 写入番茄钟时间选项
+ * @param times 时间数组（秒）
+ * @param count 时间数组长度
+ * 
+ * 将番茄钟时间选项写入配置文件
+ */
+void WriteConfigPomodoroTimeOptions(int* times, int count) {
+    if (!times || count <= 0) return;
+    
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    
+    FILE* file = fopen(config_path, "r");
+    if (!file) return;
+    
+    char temp_path[MAX_PATH];
+    strcpy(temp_path, config_path);
+    strcat(temp_path, ".tmp");
+    
+    FILE* temp = fopen(temp_path, "w");
+    if (!temp) {
+        fclose(file);
+        return;
+    }
+    
+    char line[MAX_PATH];
+    BOOL optionsFound = FALSE;
+    
+    // 读取原配置文件，更新番茄钟时间选项
+    while (fgets(line, sizeof(line), file)) {
+        if (strncmp(line, "POMODORO_TIME_OPTIONS=", 22) == 0) {
+            // 写入新的时间选项
+            fprintf(temp, "POMODORO_TIME_OPTIONS=");
+            for (int i = 0; i < count; i++) {
+                fprintf(temp, "%d", times[i]);
+                if (i < count - 1) fprintf(temp, ",");
+            }
+            fprintf(temp, "\n");
+            optionsFound = TRUE;
+        } else {
+            // 保留其他所有配置
+            fputs(line, temp);
+        }
+    }
+    
+    // 如果配置中没有这一项，添加它
+    if (!optionsFound) {
+        fprintf(temp, "POMODORO_TIME_OPTIONS=");
+        for (int i = 0; i < count; i++) {
+            fprintf(temp, "%d", times[i]);
+            if (i < count - 1) fprintf(temp, ",");
+        }
+        fprintf(temp, "\n");
+    }
+    
+    fclose(file);
+    fclose(temp);
+    
+    remove(config_path);
+    rename(temp_path, config_path);
+}

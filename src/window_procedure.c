@@ -57,8 +57,8 @@ extern int POMODORO_TIMES_COUNT; // 番茄钟时间选项个数
 // 如果ShowInputDialog函数需要声明，可以在开始处添加
 extern BOOL ShowInputDialog(HWND hwnd, char* text);
 
-// 还需要声明或修改WriteConfigPomodoroTimeOptions函数名
-extern void WriteConfigPomodoroTimeOptions(const char* options);
+// 修改为正确的函数声明，与config.h中的定义匹配
+extern void WriteConfigPomodoroTimeOptions(int* times, int count);
 
 // 如果函数不存在，可以使用现有的相似函数
 // 例如修改对WriteConfigPomodoroTimeOptions的调用为WriteConfigPomodoroTimes
@@ -1436,6 +1436,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 
                 case CLOCK_IDM_CURRENT_WEBSITE:
                     ShowWebsiteDialog(hwnd);
+                    break;
+                case CLOCK_IDM_POMODORO_COMBINATION:
+                    ShowPomodoroComboDialog(hwnd);
                     break;
             }
             break;

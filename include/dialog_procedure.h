@@ -95,4 +95,21 @@ INT_PTR CALLBACK PomodoroLoopDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPAR
  */
 void ShowWebsiteDialog(HWND hwndParent);
 
+/**
+ * @brief 显示番茄钟组合对话框
+ * @param hwndParent 父窗口句柄
+ * 
+ * 显示用于设置番茄钟时间组合的对话框。
+ * 允许用户输入自定义的番茄钟时间序列。
+ */
+void ShowPomodoroComboDialog(HWND hwndParent);
+
+/**
+ * @brief 解析时间输入
+ * @param input 输入字符串 (如 "25m", "30s", "1h30m")
+ * @param seconds 输出秒数
+ * @return BOOL 解析成功返回TRUE，失败返回FALSE
+ */
+BOOL ParseTimeInput(const char* input, int* seconds);
+
 #endif // DIALOG_PROCEDURE_H

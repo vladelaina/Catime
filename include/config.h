@@ -149,6 +149,15 @@ void WriteConfigTopmost(const char* topmost);
  */
 void WriteConfigTimeoutWebsite(const char* url);
 
+/**
+ * @brief 写入番茄钟时间选项
+ * @param times 时间数组（秒）
+ * @param count 时间数组长度
+ * 
+ * 将番茄钟时间选项写入配置文件
+ */
+void WriteConfigPomodoroTimeOptions(int* times, int count);
+
 /// @}
 
 #endif // CONFIG_H
