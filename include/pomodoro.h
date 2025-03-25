@@ -10,10 +10,10 @@
 
 // 番茄钟阶段枚举
 typedef enum {
-    POMODORO_PHASE_IDLE,       // 空闲状态
-    POMODORO_PHASE_WORK,       // 工作阶段
-    POMODORO_PHASE_SHORT_BREAK, // 短休息阶段
-    POMODORO_PHASE_LONG_BREAK   // 长休息阶段
+    POMODORO_PHASE_IDLE = 0,  // 空闲状态
+    POMODORO_PHASE_WORK,      // 工作阶段
+    POMODORO_PHASE_BREAK,     // 休息阶段
+    POMODORO_PHASE_LONG_BREAK // 长休息阶段
 } POMODORO_PHASE;
 
 // 当前番茄钟阶段

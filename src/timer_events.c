@@ -20,7 +20,7 @@ extern int POMODORO_TIMES[MAX_POMODORO_TIMES]; // 存储所有番茄钟时间
 extern int POMODORO_TIMES_COUNT;              // 实际的番茄钟时间数量
 
 // 当前正在执行的番茄钟时间索引
-static int current_pomodoro_time_index = 0;
+int current_pomodoro_time_index = 0;
 
 // 定义 current_pomodoro_phase 变量，它在 pomodoro.h 中被声明为 extern
 POMODORO_PHASE current_pomodoro_phase = POMODORO_PHASE_IDLE;

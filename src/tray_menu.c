@@ -21,6 +21,7 @@
 #include "../include/font.h"
 #include "../include/color.h"
 #include "../include/drag_scale.h"
+#include "../include/pomodoro.h"
 #include "../resource/resource.h"
 
 /// @name 外部变量声明
@@ -58,6 +59,8 @@ extern int POMODORO_TIMES_COUNT;              // 实际的番茄钟时间数量
 
 // 在外部变量声明部分添加
 extern char CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH];   ///< 超时打开网站的URL
+extern int current_pomodoro_time_index; // 当前番茄钟时间索引
+extern POMODORO_PHASE current_pomodoro_phase; // 番茄钟阶段
 /// @}
 
 /// @name 外部函数声明
@@ -671,7 +674,13 @@ void ShowContextMenu(HWND hwnd) {
         else if (i == 2) menuId = CLOCK_IDM_POMODORO_LBREAK;
         else menuId = CLOCK_IDM_POMODORO_TIME_BASE + i;
         
-        AppendMenuW(hPomodoroMenu, MF_STRING, menuId, timeBuffer);
+        // 检查当前是否是活跃的番茄钟阶段
+        BOOL isCurrentPhase = (current_pomodoro_phase != POMODORO_PHASE_IDLE &&
+                              current_pomodoro_time_index == i);
+        
+        // 如果是当前阶段，添加勾选状态
+        AppendMenuW(hPomodoroMenu, MF_STRING | (isCurrentPhase ? MF_CHECKED : MF_UNCHECKED), 
+                    menuId, timeBuffer);
     }
 
     // 添加循环次数选项
