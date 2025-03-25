@@ -32,8 +32,8 @@ extern int POMODORO_LONG_BREAK;      // 默认长休息10分钟(600秒)
 extern int POMODORO_LOOP_COUNT;      // 默认循环次数1次
 
 // 添加到文件开头的全局变量声明区域
-int POMODORO_TIMES[MAX_POMODORO_TIMES] = {1500, 300, 600}; // 默认时间
-int POMODORO_TIMES_COUNT = 3;                             // 默认有3个时间
+int POMODORO_TIMES[MAX_POMODORO_TIMES] = {1500, 300, 1500, 600}; // 默认时间
+int POMODORO_TIMES_COUNT = 4;                             // 默认有4个时间
 
 /**
  * @brief 获取配置文件路径
@@ -105,7 +105,7 @@ void CreateDefaultConfig(const char* config_path) {
         fprintf(file, "CLOCK_TIMEOUT_TEXT=0\n");
         
         // 番茄钟设置区块
-        fprintf(file, "POMODORO_TIME_OPTIONS=1500,300,600\n"); // 时间1,时间2,时间3...
+        fprintf(file, "POMODORO_TIME_OPTIONS=1500,300,1500,600\n"); // 时间1,时间2,时间3,时间4...
         fprintf(file, "POMODORO_LOOP_COUNT=1\n");       // 循环次数
         
         // 超时动作设置区块
