@@ -681,9 +681,14 @@ void ShowContextMenu(HWND hwnd) {
     for (int i = 0; i < POMODORO_TIMES_COUNT; i++) {
         FormatPomodoroTime(POMODORO_TIMES[i], timeBuffer, sizeof(timeBuffer)/sizeof(wchar_t));
         
-        // 使用动态ID: CLOCK_IDM_POMODORO_WORK + i
-        // 这要求在处理消息时能够识别这些动态ID
-        AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_WORK + i, timeBuffer);
+        // 同时兼容旧的ID和新的ID体系
+        UINT menuId;
+        if (i == 0) menuId = CLOCK_IDM_POMODORO_WORK;
+        else if (i == 1) menuId = CLOCK_IDM_POMODORO_BREAK;
+        else if (i == 2) menuId = CLOCK_IDM_POMODORO_LBREAK;
+        else menuId = CLOCK_IDM_POMODORO_TIME_BASE + i;
+        
+        AppendMenuW(hPomodoroMenu, MF_STRING, menuId, timeBuffer);
     }
 
     // 添加循环次数选项

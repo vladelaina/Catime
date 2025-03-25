@@ -1293,101 +1293,89 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_POMODORO_WORK:
                 case CLOCK_IDM_POMODORO_BREAK:
-                case CLOCK_IDM_POMODORO_LBREAK: {
-                    // 处理番茄钟时间设置选项（动态ID范围）
-                    if (LOWORD(wp) >= CLOCK_IDM_POMODORO_WORK && 
-                        LOWORD(wp) < CLOCK_IDM_POMODORO_WORK + POMODORO_TIMES_COUNT) {
-                        
-                        // 计算选择的选项索引
-                        int selectedIndex = LOWORD(wp) - CLOCK_IDM_POMODORO_WORK;
-                        
-                        if (selectedIndex >= 0 && selectedIndex < POMODORO_TIMES_COUNT) {
-                            // 使用现有对话框方式修改番茄钟时间
-                            // 使用当前菜单ID作为区分
-                            switch (LOWORD(wp)) {
-                                case CLOCK_IDM_POMODORO_WORK:
-                                    // 使用已有的工作时间设置代码
-                                    memset(inputText, 0, sizeof(inputText));
-                                    DialogBox(GetModuleHandle(NULL), 
-                                             MAKEINTRESOURCE(CLOCK_IDD_POMODORO_WORK_DIALOG),
-                                             NULL, DlgProc);
-                                    // 处理输入结果
-                                    if (inputText[0] && !isAllSpacesOnly(inputText)) {
-                        int total_seconds = 0;
-                        if (ParseInput(inputText, &total_seconds)) {
-                                            POMODORO_TIMES[selectedIndex] = total_seconds;
-                                            WriteConfigPomodoroTimes(total_seconds, 
-                                                                    POMODORO_SHORT_BREAK, 
-                                                                    POMODORO_LONG_BREAK);
-                            POMODORO_WORK_TIME = total_seconds;
+                case CLOCK_IDM_POMODORO_LBREAK:
+                    // 保留原始的菜单项ID处理
+                    {
+                        int selectedIndex = 0;
+                        if (LOWORD(wp) == CLOCK_IDM_POMODORO_WORK) {
+                            selectedIndex = 0;
+                        } else if (LOWORD(wp) == CLOCK_IDM_POMODORO_BREAK) {
+                            selectedIndex = 1;
+                        } else if (LOWORD(wp) == CLOCK_IDM_POMODORO_LBREAK) {
+                            selectedIndex = 2;
                         }
-                    }
-                    break;
-                                    
-                                case CLOCK_IDM_POMODORO_BREAK:
-                                    // 使用已有的短休息时间设置代码
-                                    memset(inputText, 0, sizeof(inputText));
-                                    DialogBox(GetModuleHandle(NULL), 
-                                             MAKEINTRESOURCE(CLOCK_IDD_POMODORO_BREAK_DIALOG),
-                                             NULL, DlgProc);
-                                    // 处理输入结果 
-                                    if (inputText[0] && !isAllSpacesOnly(inputText)) {
-                        int total_seconds = 0;
-                        if (ParseInput(inputText, &total_seconds)) {
-                                            POMODORO_TIMES[selectedIndex] = total_seconds;
-                                            WriteConfigPomodoroTimes(POMODORO_WORK_TIME, 
-                                                                    total_seconds, 
-                                                                    POMODORO_LONG_BREAK);
-                            POMODORO_SHORT_BREAK = total_seconds;
-                        }
-                    }
-                    break;
-                                    
-                                case CLOCK_IDM_POMODORO_LBREAK:
-                                    // 使用已有的长休息时间设置代码
-                                    memset(inputText, 0, sizeof(inputText));
-                                    DialogBox(GetModuleHandle(NULL), 
-                                             MAKEINTRESOURCE(CLOCK_IDD_POMODORO_LBREAK_DIALOG),
-                                             NULL, DlgProc);
-                                    // 处理输入结果
-                                    if (inputText[0] && !isAllSpacesOnly(inputText)) {
-                                        int total_seconds = 0;
-                                        if (ParseInput(inputText, &total_seconds)) {
-                                            POMODORO_TIMES[selectedIndex] = total_seconds;
-                                            WriteConfigPomodoroTimes(POMODORO_WORK_TIME, 
-                                                                    POMODORO_SHORT_BREAK, 
-                                                                    total_seconds);
-                                            POMODORO_LONG_BREAK = total_seconds;
-                                        }
-                                    }
-                            break;
-                                    
-                                default:
-                                    // 对于其他自定义选项，可以复用现有对话框
-                                    memset(inputText, 0, sizeof(inputText));
-                                    DialogBox(GetModuleHandle(NULL), 
-                                             MAKEINTRESOURCE(CLOCK_IDD_DIALOG1),
-                                             NULL, DlgProc);
-                                    // 处理输入结果
-                                    if (inputText[0] && !isAllSpacesOnly(inputText)) {
-                        int total_seconds = 0;
-                        if (ParseInput(inputText, &total_seconds)) {
-                                            POMODORO_TIMES[selectedIndex] = total_seconds;
-                                            // 更新番茄钟自定义时间
-                                            // 这里需要一个能保存所有时间的函数
-                                        }
-                                    }
-                            break;
+                        
+                        // 使用通用对话框修改番茄钟时间
+                        memset(inputText, 0, sizeof(inputText));
+                        DialogBox(GetModuleHandle(NULL), 
+                                 MAKEINTRESOURCE(CLOCK_IDD_POMODORO_TIME_DIALOG),
+                                 hwnd, DlgProc);
+                        
+                        // 处理输入结果
+                        if (inputText[0] && !isAllSpacesOnly(inputText)) {
+                            int total_seconds = 0;
+                            if (ParseInput(inputText, &total_seconds)) {
+                                // 更新选中时间
+                                POMODORO_TIMES[selectedIndex] = total_seconds;
+                                
+                                // 使用已有函数更新配置
+                                if (POMODORO_TIMES_COUNT >= 3) {
+                                    WriteConfigPomodoroTimes(POMODORO_TIMES[0], 
+                                                           POMODORO_TIMES[1], 
+                                                           POMODORO_TIMES[2]);
+                                }
+                                
+                                // 更新核心变量
+                                if (selectedIndex == 0) POMODORO_WORK_TIME = total_seconds;
+                                else if (selectedIndex == 1) POMODORO_SHORT_BREAK = total_seconds;
+                                else if (selectedIndex == 2) POMODORO_LONG_BREAK = total_seconds;
                             }
                         }
-                        
-                    break;
                     }
-                }
+                    break;
+
+                // 同时处理新的动态ID范围
+                case 600: case 601: case 602: case 603: case 604:
+                case 605: case 606: case 607: case 608: case 609:
+                    // 处理番茄钟时间设置选项（动态ID范围）
+                    {
+                        // 计算选择的选项索引
+                        int selectedIndex = LOWORD(wp) - CLOCK_IDM_POMODORO_TIME_BASE;
+                        
+                        if (selectedIndex >= 0 && selectedIndex < POMODORO_TIMES_COUNT) {
+                            // 使用通用对话框修改番茄钟时间
+                            memset(inputText, 0, sizeof(inputText));
+                            DialogBox(GetModuleHandle(NULL), 
+                                     MAKEINTRESOURCE(CLOCK_IDD_POMODORO_TIME_DIALOG),
+                                     hwnd, DlgProc);
+                            
+                            // 处理输入结果
+                            if (inputText[0] && !isAllSpacesOnly(inputText)) {
+                                int total_seconds = 0;
+                                if (ParseInput(inputText, &total_seconds)) {
+                                    // 更新选中时间
+                                    POMODORO_TIMES[selectedIndex] = total_seconds;
+                                    
+                                    // 使用已有函数更新配置
+                                    if (POMODORO_TIMES_COUNT >= 3) {
+                                        WriteConfigPomodoroTimes(POMODORO_TIMES[0], 
+                                                               POMODORO_TIMES[1], 
+                                                               POMODORO_TIMES[2]);
+                                    }
+                                    
+                                    // 更新核心变量
+                                    if (selectedIndex == 0) POMODORO_WORK_TIME = total_seconds;
+                                    else if (selectedIndex == 1) POMODORO_SHORT_BREAK = total_seconds;
+                                    else if (selectedIndex == 2) POMODORO_LONG_BREAK = total_seconds;
+                                }
+                            }
+                        }
+                    }
+                    break;
                 case CLOCK_IDM_POMODORO_LOOP_COUNT:
                     ShowPomodoroLoopDialog(hwnd);
                     break;
-                case CLOCK_IDM_POMODORO_RESET:
+                case CLOCK_IDM_POMODORO_RESET: {
                     // 如果当前是番茄钟模式，重置计时器
                     if (CLOCK_TOTAL_TIME == POMODORO_WORK_TIME || 
                         CLOCK_TOTAL_TIME == POMODORO_SHORT_BREAK || 
@@ -1405,6 +1393,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         HandleWindowReset(hwnd);
                     }
                     break;
+                }
                 case CLOCK_IDM_TIMEOUT_SHOW_TIME: {
                     CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SHOW_TIME;
                     WriteConfigTimeoutAction("SHOW_TIME");

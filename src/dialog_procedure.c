@@ -232,16 +232,15 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                 if (ParseInput(inputText, &total_seconds)) {
                     // 根据对话框ID调用不同的配置更新函数
                     int dialogId = GetWindowLongPtr(hwndDlg, GWLP_USERDATA);
-                    if (dialogId == CLOCK_IDD_POMODORO_WORK_DIALOG) {
-                        WriteConfigPomodoroTimes(total_seconds, POMODORO_SHORT_BREAK, POMODORO_LONG_BREAK);
+                    if (dialogId == CLOCK_IDD_POMODORO_TIME_DIALOG) {
+                        // 通用番茄钟时间设置，由调用者处理具体更新逻辑
                         EndDialog(hwndDlg, 0);
-                    } else if (dialogId == CLOCK_IDD_POMODORO_BREAK_DIALOG) {
-                        WriteConfigPomodoroTimes(POMODORO_WORK_TIME, total_seconds, POMODORO_LONG_BREAK);
-                        EndDialog(hwndDlg, 0);
-                    } else if (dialogId == CLOCK_IDD_POMODORO_LBREAK_DIALOG) {
-                        WriteConfigPomodoroTimes(POMODORO_WORK_TIME, POMODORO_SHORT_BREAK, total_seconds);
+                    } else if (dialogId == CLOCK_IDD_POMODORO_LOOP_DIALOG) {
+                        // 番茄钟循环次数
+                        WriteConfigPomodoroLoopCount(total_seconds);
                         EndDialog(hwndDlg, 0);
                     } else if (dialogId == CLOCK_IDD_DIALOG1 || dialogId == CLOCK_IDD_STARTUP_DIALOG) {
+                        // 默认倒计时时间
                         WriteConfigDefaultStartTime(total_seconds);
                         EndDialog(hwndDlg, 0);
                     } else {
