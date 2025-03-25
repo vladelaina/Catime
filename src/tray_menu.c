@@ -132,13 +132,14 @@ extern int CLOCK_RECENT_FILES_COUNT;
  */
 static void FormatPomodoroTime(int seconds, wchar_t* buffer, size_t bufferSize) {
     int minutes = seconds / 60;
+    int secs = seconds % 60;
     int hours = minutes / 60;
     minutes %= 60;
     
     if (hours > 0) {
-        _snwprintf(buffer, bufferSize, L"%d:%02d:00", hours, minutes);
+        _snwprintf(buffer, bufferSize, L"%d:%02d:%02d", hours, minutes, secs);
     } else {
-        _snwprintf(buffer, bufferSize, L"%d:00", minutes);
+        _snwprintf(buffer, bufferSize, L"%d:%02d", minutes, secs);
     }
 }
 
