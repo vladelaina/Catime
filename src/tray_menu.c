@@ -125,39 +125,20 @@ extern RecentFile CLOCK_RECENT_FILES[];
 extern int CLOCK_RECENT_FILES_COUNT;
 
 /**
- * @brief 格式化时间显示
- * 
- * @param seconds 总秒数
+ * @brief 格式化番茄钟时间到宽字符串
+ * @param seconds 秒数
  * @param buffer 输出缓冲区
- * @param bufferSize 缓冲区大小（以 wchar_t 为单位）
- * 
- * 将秒数转换为直观的可读时间格式，根据时长选择合适的表示方式：
- * - 纯分钟：25m
- * - 分秒组合：25m30s
- * - 时分组合：1h30m
- * - 时分秒完整格式：1h30m20s
+ * @param bufferSize 缓冲区大小
  */
-void FormatPomodoroTime(int seconds, wchar_t* buffer, size_t bufferSize) {
-    int hours = seconds / 3600;
-    int minutes = (seconds % 3600) / 60;
-    int secs = seconds % 60;
-
+static void FormatPomodoroTime(int seconds, wchar_t* buffer, size_t bufferSize) {
+    int minutes = seconds / 60;
+    int hours = minutes / 60;
+    minutes %= 60;
+    
     if (hours > 0) {
-        if (secs > 0) {
-            _snwprintf(buffer, bufferSize, L"%dh%dm%ds", hours, minutes, secs);
-        } else if (minutes > 0) {
-            _snwprintf(buffer, bufferSize, L"%dh%dm", hours, minutes);
-        } else {
-            _snwprintf(buffer, bufferSize, L"%dh", hours);
-        }
-    } else if (minutes > 0) {
-        if (secs > 0) {
-            _snwprintf(buffer, bufferSize, L"%dm%ds", minutes, secs);
-        } else {
-            _snwprintf(buffer, bufferSize, L"%dm", minutes);
-        }
+        _snwprintf(buffer, bufferSize, L"%d:%02d:00", hours, minutes);
     } else {
-        _snwprintf(buffer, bufferSize, L"%ds", secs);
+        _snwprintf(buffer, bufferSize, L"%d:00", minutes);
     }
 }
 
@@ -670,13 +651,14 @@ void ShowContextMenu(HWND hwnd) {
 
     // 番茄钟菜单
     HMENU hPomodoroMenu = CreatePopupMenu();
+    
+    // 添加timeBuffer的声明
+    wchar_t timeBuffer[64]; // 用于存储格式化后的时间字符串
+    
     AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_START,
                 GetLocalizedString(L"开始", L"Start"));
     AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
 
-    // 读取配置并动态创建时间选项
-    wchar_t timeBuffer[32];
-    
     // 为每个番茄钟时间创建菜单项
     for (int i = 0; i < POMODORO_TIMES_COUNT; i++) {
         FormatPomodoroTime(POMODORO_TIMES[i], timeBuffer, sizeof(timeBuffer)/sizeof(wchar_t));
@@ -698,8 +680,13 @@ void ShowContextMenu(HWND hwnd) {
               POMODORO_LOOP_COUNT);
     AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_LOOP_COUNT, menuText);
 
+
     // 添加分隔线
     AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
+
+        // 添加组合选项
+    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_COMBINATION,
+              GetLocalizedString(L"组合", L"Combination"));
     
     // 将番茄钟菜单添加到主菜单
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hPomodoroMenu,

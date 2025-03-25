@@ -156,6 +156,15 @@
 /* 番茄钟功能 */
 #define CLOCK_IDM_POMODORO 500
 
+// 在番茄钟菜单项部分添加
+#define CLOCK_IDM_POMODORO_START 181   ///< 开始番茄钟
+#define CLOCK_IDM_POMODORO_WORK 182    ///< 设置工作时间
+#define CLOCK_IDM_POMODORO_BREAK 183   ///< 设置短休息时间
+#define CLOCK_IDM_POMODORO_LBREAK 184  ///< 设置长休息时间
+#define CLOCK_IDM_POMODORO_LOOP_COUNT 185 ///< 设置循环次数
+#define CLOCK_IDM_POMODORO_COMBINATION 188 ///< 番茄钟组合
+#define CLOCK_IDM_POMODORO_RESET 186  ///< 重置番茄钟
+
 /* 番茄钟对话框 */
 #define CLOCK_IDD_POMODORO_TIME_DIALOG 510
 #define CLOCK_IDD_POMODORO_LOOP_DIALOG 513

@@ -142,6 +142,14 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Browse...") == 0) return L"浏览...";
             if (wcscmp(english, L"Open File/Software") == 0) return L"打开文件/软件";
             if (wcscmp(english, L"Open Website") == 0) return L"打开网站";
+            if (wcscmp(english, L"Combination") == 0) return L"组合";
+            if (wcscmp(english, L"Set to No Display on Startup") == 0) return L"設定為啟動時不顯示";
+            if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"設定為啟動時正計時";
+            if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"設定為啟動時倒計時";
+            if (wcscmp(english, L"Enter numbers separated by spaces\nExample: 25 10 5") == 0) 
+                return L"請輸入以空格分隔的數字\n範例: 25 10 5";
+            if (wcscmp(english, L"25    = 25 minutes\n25h   = 25小時\n25s   = 25秒\n25 30 = 25分鐘30秒\n25 30m = 25小時30分鐘\n1 30 20 = 1小時30分鐘20秒") == 0)
+                return L"25    = 25分鐘\n25h   = 25小時\n25s   = 25秒\n25 30 = 25分鐘30秒\n25 30m = 25小時30分鐘\n1 30 20 = 1小時30分鐘20秒";
             return chinese;
             
         case APP_LANG_CHINESE_TRAD:
@@ -210,7 +218,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Browse...") == 0) return L"瀏覽...";
             if (wcscmp(english, L"Open File/Software") == 0) return L"開啟檔案/軟體";
             if (wcscmp(english, L"Open Website") == 0) return L"開啟網站";
-            if (wcscmp(english, L"Language") == 0) return L"語言";
+            if (wcscmp(english, L"Combination") == 0) return L"組合";
             if (wcscmp(english, L"Set to No Display on Startup") == 0) return L"設定為啟動時不顯示";
             if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"設定為啟動時正計時";
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"設定為啟動時倒計時";
@@ -285,7 +293,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Completed: %d/%d") == 0) return L"Completado: %d/%d";
             if (wcscmp(english, L"Browse...") == 0) return L"Examinar...";
             if (wcscmp(english, L"Open Website") == 0) return L"Abrir sitio web";
-            if (wcscmp(english, L"Language") == 0) return L"Idioma";
+            if (wcscmp(english, L"Combination") == 0) return L"Combinación";
             if (wcscmp(english, L"Set to No Display on Startup") == 0) return L"No mostrar al inicio";
             if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"Iniciar como cronómetro";
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"Iniciar como cuenta regresiva";
@@ -360,7 +368,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Completed: %d/%d") == 0) return L"Terminé : %d/%d";
             if (wcscmp(english, L"Browse...") == 0) return L"Parcourir...";
             if (wcscmp(english, L"Open Website") == 0) return L"Ouvrir un site web";
-            if (wcscmp(english, L"Language") == 0) return L"Langue";
+            if (wcscmp(english, L"Combination") == 0) return L"Combinaison";
             if (wcscmp(english, L"Set to No Display on Startup") == 0) return L"Ne pas afficher au démarrage";
             if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"Démarrer en mode chronomètre";
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"Démarrer en mode compte à rebours";
@@ -435,7 +443,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Completed: %d/%d") == 0) return L"Abgeschlossen: %d/%d";
             if (wcscmp(english, L"Browse...") == 0) return L"Durchsuchen...";
             if (wcscmp(english, L"Open Website") == 0) return L"Webseite öffnen";
-            if (wcscmp(english, L"Language") == 0) return L"Sprache";
+            if (wcscmp(english, L"Combination") == 0) return L"Kombination";
             if (wcscmp(english, L"Set to No Display on Startup") == 0) return L"Beim Start nicht anzeigen";
             if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"Beim Start als Stoppuhr starten";
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"Beim Start als Countdown starten";
@@ -510,7 +518,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Completed: %d/%d") == 0) return L"Завершено: %d/%d";
             if (wcscmp(english, L"Browse...") == 0) return L"Обзор...";
             if (wcscmp(english, L"Open Website") == 0) return L"Открыть сайт";
-            if (wcscmp(english, L"Language") == 0) return L"Язык";
+            if (wcscmp(english, L"Combination") == 0) return L"Комбинация";
             if (wcscmp(english, L"Set to No Display on Startup") == 0) return L"Не показывать при запуске";
             if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"Запускать как секундомер";
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"Запускать как обратный отсчёт";
@@ -585,7 +593,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Completed: %d/%d") == 0) return L"Concluído: %d/%d";
             if (wcscmp(english, L"Browse...") == 0) return L"Procurar...";
             if (wcscmp(english, L"Open Website") == 0) return L"Abrir site";
-            if (wcscmp(english, L"Language") == 0) return L"Idioma";
+            if (wcscmp(english, L"Combination") == 0) return L"Combinação";
             if (wcscmp(english, L"Set to No Display on Startup") == 0) return L"Não exibir na inicialização";
             if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"Iniciar como cronômetro";
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"Iniciar como contagem regressiva";
@@ -660,7 +668,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Completed: %d/%d") == 0) return L"完了: %d/%d";
             if (wcscmp(english, L"Browse...") == 0) return L"参照...";
             if (wcscmp(english, L"Open Website") == 0) return L"ウェブサイトを開く";
-            if (wcscmp(english, L"Language") == 0) return L"言語";
+            if (wcscmp(english, L"Combination") == 0) return L"コンビネーション";
             if (wcscmp(english, L"Set to No Display on Startup") == 0) return L"起動時に非表示で開始";
             if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"起動時にストップウォッチで開始";
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"起動時にカウントダウンで開始";
@@ -735,7 +743,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Completed: %d/%d") == 0) return L"완료: %d/%d";
             if (wcscmp(english, L"Browse...") == 0) return L"찾아보기...";
             if (wcscmp(english, L"Open Website") == 0) return L"웹사이트 열기";
-            if (wcscmp(english, L"Language") == 0) return L"언어";
+            if (wcscmp(english, L"Combination") == 0) return L"조합";
             if (wcscmp(english, L"Set to No Display on Startup") == 0) return L"시작 시 표시하지 않음";
             if (wcscmp(english, L"Set to Stopwatch on Startup") == 0) return L"시작 시 스톱워치로 실행";
             if (wcscmp(english, L"Set to Countdown on Startup") == 0) return L"시작 시 타이머로 실행";
