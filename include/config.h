@@ -162,6 +162,14 @@ void WriteConfigTimeoutWebsite(const char* url);
  */
 void WriteConfigPomodoroTimeOptions(int* times, int count);
 
+/**
+ * @brief 从配置文件中读取通知消息文本
+ * 
+ * 专门读取 CLOCK_TIMEOUT_MESSAGE_TEXT 和 POMODORO_CYCLE_COMPLETE_TEXT
+ * 并更新相应的全局变量。
+ */
+void ReadNotificationMessagesConfig(void);
+
 /// @}
 
 #endif // CONFIG_H

@@ -145,11 +145,14 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                 countdown_elapsed_time++;
                 if (countdown_elapsed_time >= CLOCK_TOTAL_TIME && !countdown_message_shown) {
                     countdown_message_shown = TRUE;
-                    
+
+                    // 在显示通知前，重新读取配置文件中的消息文本
+                    ReadNotificationMessagesConfig();
+
                     // 尝试从配置读取并转换超时消息
                     wchar_t* timeoutMsgW = Utf8ToWideChar(CLOCK_TIMEOUT_MESSAGE_TEXT);
 
-                    // 检查是否处于番茄钟模式 - 使用任何非IDLE状态表示番茄钟正在运行
+                    // 检查是否处于番茄钟模式
                     if (current_pomodoro_phase != POMODORO_PHASE_IDLE && POMODORO_TIMES_COUNT > 0) {
                         // 显示超时消息 (使用配置或默认值)
                         if (timeoutMsgW) {

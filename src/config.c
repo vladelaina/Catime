@@ -1257,3 +1257,56 @@ void WriteConfigPomodoroTimeOptions(int* times, int count) {
     remove(config_path);
     rename(temp_path, config_path);
 }
+
+/**
+ * @brief 从配置文件中读取通知消息文本
+ * 
+ * 专门读取 CLOCK_TIMEOUT_MESSAGE_TEXT 和 POMODORO_CYCLE_COMPLETE_TEXT
+ * 并更新相应的全局变量。
+ */
+void ReadNotificationMessagesConfig(void) {
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+
+    FILE* file = fopen(config_path, "r");
+    if (!file) {
+        // 文件无法打开，保留内存中的当前值或默认值
+        return;
+    }
+
+    char line[256];
+    BOOL timeoutMsgFound = FALSE;
+    BOOL cycleCompleteMsgFound = FALSE;
+
+    while (fgets(line, sizeof(line), file)) {
+        size_t len = strlen(line);
+        if (len > 0 && line[len - 1] == '\n') {
+            line[len - 1] = '\0'; // 移除换行符
+        }
+
+        if (!timeoutMsgFound && strncmp(line, "CLOCK_TIMEOUT_MESSAGE_TEXT=", 27) == 0) {
+            strncpy(CLOCK_TIMEOUT_MESSAGE_TEXT, line + 27, sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT) - 1);
+            CLOCK_TIMEOUT_MESSAGE_TEXT[sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT) - 1] = '\0';
+            timeoutMsgFound = TRUE;
+        } else if (!cycleCompleteMsgFound && strncmp(line, "POMODORO_CYCLE_COMPLETE_TEXT=", 29) == 0) {
+            strncpy(POMODORO_CYCLE_COMPLETE_TEXT, line + 29, sizeof(POMODORO_CYCLE_COMPLETE_TEXT) - 1);
+            POMODORO_CYCLE_COMPLETE_TEXT[sizeof(POMODORO_CYCLE_COMPLETE_TEXT) - 1] = '\0';
+            cycleCompleteMsgFound = TRUE;
+        }
+
+        // 如果两个都找到了，可以提前退出循环
+        if (timeoutMsgFound && cycleCompleteMsgFound) {
+            break;
+        }
+    }
+
+    fclose(file);
+
+    // 如果文件中没有找到对应的配置项，确保变量有默认值（虽然它们在定义时已有）
+    if (!timeoutMsgFound) {
+        strcpy(CLOCK_TIMEOUT_MESSAGE_TEXT, "时间到！"); // 默认值
+    }
+    if (!cycleCompleteMsgFound) {
+        strcpy(POMODORO_CYCLE_COMPLETE_TEXT, "所有番茄钟循环完成！"); // 默认值
+    }
+}
