@@ -12,6 +12,7 @@
 #include "../include/language.h"
 #include "../include/notification.h"
 #include "../resource/resource.h"
+#include <windowsx.h>  // 用于GET_X_LPARAM和GET_Y_LPARAM宏
 
 // 通知窗口相关常量
 #define NOTIFICATION_WIDTH 300
@@ -19,6 +20,9 @@
 #define NOTIFICATION_TIMEOUT 8000  // 8秒后自动消失
 #define NOTIFICATION_TIMER_ID 1001
 #define NOTIFICATION_CLASS_NAME "CatimeNotificationClass"
+// 关闭按钮相关常量
+#define CLOSE_BTN_SIZE 16       // 关闭按钮的大小
+#define CLOSE_BTN_MARGIN 10     // 关闭按钮的边距
 
 // 前向声明
 LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -118,6 +122,8 @@ void RegisterNotificationClass(HINSTANCE hInstance) {
  * 处理通知窗口的绘制、鼠标点击、定时器等消息
  */
 LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    static BOOL isCloseButtonHovered = FALSE;  // 鼠标是否悬停在关闭按钮上
+    
     switch (msg) {
         case WM_PAINT: {
             PAINTSTRUCT ps;
@@ -165,6 +171,28 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
                 DrawText(memDC, message, -1, &textRect, DT_WORDBREAK);
             }
             
+            // 绘制关闭按钮 (X)
+            RECT closeButtonRect;
+            closeButtonRect.right = clientRect.right - CLOSE_BTN_MARGIN;
+            closeButtonRect.left = closeButtonRect.right - CLOSE_BTN_SIZE;
+            closeButtonRect.top = CLOSE_BTN_MARGIN;
+            closeButtonRect.bottom = closeButtonRect.top + CLOSE_BTN_SIZE;
+            
+            // 设置关闭按钮颜色 - 悬停时为红色，否则为灰色
+            COLORREF btnColor = isCloseButtonHovered ? RGB(255, 0, 0) : RGB(150, 150, 150);
+            HPEN closePen = CreatePen(PS_SOLID, 2, btnColor);
+            HPEN oldClosePen = (HPEN)SelectObject(memDC, closePen);
+            
+            // 绘制 X
+            MoveToEx(memDC, closeButtonRect.left, closeButtonRect.top, NULL);
+            LineTo(memDC, closeButtonRect.right, closeButtonRect.bottom);
+            MoveToEx(memDC, closeButtonRect.right, closeButtonRect.top, NULL);
+            LineTo(memDC, closeButtonRect.left, closeButtonRect.bottom);
+            
+            // 恢复原来的画笔
+            SelectObject(memDC, oldClosePen);
+            DeleteObject(closePen);
+            
             // 复制到屏幕
             BitBlt(hdc, 0, 0, clientRect.right, clientRect.bottom, memDC, 0, 0, SRCCOPY);
             
@@ -179,12 +207,76 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             return 0;
         }
         
-        case WM_LBUTTONDOWN:
-        case WM_RBUTTONDOWN:
-            // 点击通知窗口时关闭
-            DestroyWindow(hwnd);
+        case WM_MOUSEMOVE: {
+            // 获取鼠标坐标
+            int xPos = GET_X_LPARAM(lParam);
+            int yPos = GET_Y_LPARAM(lParam);
+            
+            // 计算关闭按钮区域
+            RECT closeButtonRect;
+            RECT clientRect;
+            GetClientRect(hwnd, &clientRect);
+            closeButtonRect.right = clientRect.right - CLOSE_BTN_MARGIN;
+            closeButtonRect.left = closeButtonRect.right - CLOSE_BTN_SIZE;
+            closeButtonRect.top = CLOSE_BTN_MARGIN;
+            closeButtonRect.bottom = closeButtonRect.top + CLOSE_BTN_SIZE;
+            
+            // 检查鼠标是否在关闭按钮上
+            BOOL newHoverState = (xPos >= closeButtonRect.left && xPos <= closeButtonRect.right &&
+                                  yPos >= closeButtonRect.top && yPos <= closeButtonRect.bottom);
+            
+            // 如果悬停状态改变，重绘窗口
+            if (newHoverState != isCloseButtonHovered) {
+                isCloseButtonHovered = newHoverState;
+                InvalidateRect(hwnd, NULL, FALSE);
+            }
+            
+            // 设置鼠标跟踪，确保收到WM_MOUSELEAVE消息
+            if (!isCloseButtonHovered) {
+                TRACKMOUSEEVENT tme;
+                tme.cbSize = sizeof(TRACKMOUSEEVENT);
+                tme.dwFlags = TME_LEAVE;
+                tme.hwndTrack = hwnd;
+                TrackMouseEvent(&tme);
+            }
+            
+            return 0;
+        }
+        
+        case WM_MOUSELEAVE:
+            // 鼠标离开窗口时重置悬停状态
+            if (isCloseButtonHovered) {
+                isCloseButtonHovered = FALSE;
+                InvalidateRect(hwnd, NULL, FALSE);
+            }
             return 0;
             
+        case WM_LBUTTONDOWN: {
+            // 获取鼠标坐标
+            int xPos = GET_X_LPARAM(lParam);
+            int yPos = GET_Y_LPARAM(lParam);
+            
+            // 计算关闭按钮区域
+            RECT closeButtonRect;
+            RECT clientRect;
+            GetClientRect(hwnd, &clientRect);
+            closeButtonRect.right = clientRect.right - CLOSE_BTN_MARGIN;
+            closeButtonRect.left = closeButtonRect.right - CLOSE_BTN_SIZE;
+            closeButtonRect.top = CLOSE_BTN_MARGIN;
+            closeButtonRect.bottom = closeButtonRect.top + CLOSE_BTN_SIZE;
+            
+            // 如果点击在关闭按钮上，关闭窗口
+            if (xPos >= closeButtonRect.left && xPos <= closeButtonRect.right &&
+                yPos >= closeButtonRect.top && yPos <= closeButtonRect.bottom) {
+                DestroyWindow(hwnd);
+                return 0;
+            }
+            
+            // 否则，普通点击任意位置也关闭窗口(保持原有行为)
+            DestroyWindow(hwnd);
+            return 0;
+        }
+        
         case WM_TIMER:
             if (wParam == NOTIFICATION_TIMER_ID) {
                 // 定时器到期，关闭通知
