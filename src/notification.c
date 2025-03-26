@@ -24,6 +24,18 @@
 #define CLOSE_BTN_SIZE 16       // 关闭按钮的大小
 #define CLOSE_BTN_MARGIN 10     // 关闭按钮的边距
 
+// 动画相关常量
+#define ANIMATION_TIMER_ID 1002  // 动画定时器ID
+#define ANIMATION_STEP 5         // 每步透明度变化量减小 (0-255)
+#define ANIMATION_INTERVAL 15    // 动画步骤间隔(毫秒)
+
+// 动画状态枚举
+typedef enum {
+    ANIM_FADE_IN,   // 渐入动画
+    ANIM_VISIBLE,   // 完全可见
+    ANIM_FADE_OUT,  // 渐出动画
+} AnimationState;
+
 // 前向声明
 LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 void RegisterNotificationClass(HINSTANCE hInstance);
@@ -35,7 +47,7 @@ void DrawRoundedRectangle(HDC hdc, RECT rect, int radius);
  * @param message 要在通知中显示的文本消息
  * 
  * 显示一个自定义样式的通知窗口，包含Catime图标、标题和消息内容。
- * 通知会在3秒后自动消失，或者用户点击时立即关闭。
+ * 通知会在8秒后自动消失，或者用户点击时立即关闭。
  */
 void ShowToastNotification(HWND hwnd, const char* message) {
     static BOOL isClassRegistered = FALSE;
@@ -57,9 +69,9 @@ void ShowToastNotification(HWND hwnd, const char* message) {
     int x = workArea.right - NOTIFICATION_WIDTH - 20;
     int y = workArea.bottom - NOTIFICATION_HEIGHT - 20;
     
-    // 创建通知窗口
+    // 创建通知窗口 - 添加WS_EX_LAYERED样式以支持透明度
     HWND hNotification = CreateWindowEx(
-        WS_EX_TOPMOST,
+        WS_EX_TOPMOST | WS_EX_LAYERED,  // 添加分层窗口样式以实现动画
         NOTIFICATION_CLASS_NAME,
         "Catime 通知",
         WS_POPUP,
@@ -87,9 +99,21 @@ void ShowToastNotification(HWND hwnd, const char* message) {
         SetProp(hNotification, "NotificationIcon", hIcon);
     }
     
-    // 显示窗口并设置定时器用于自动关闭
+    // 设置初始动画状态
+    SetProp(hNotification, "AnimState", (HANDLE)ANIM_FADE_IN);
+    SetProp(hNotification, "Opacity", (HANDLE)0);  // 起始透明度为0
+    
+    // 设置初始透明度为0（完全透明）
+    SetLayeredWindowAttributes(hNotification, 0, 0, LWA_ALPHA);
+    
+    // 显示窗口
     ShowWindow(hNotification, SW_SHOWNOACTIVATE);
     UpdateWindow(hNotification);
+    
+    // 启动淡入动画
+    SetTimer(hNotification, ANIMATION_TIMER_ID, ANIMATION_INTERVAL, NULL);
+    
+    // 设置自动关闭定时器
     SetTimer(hNotification, NOTIFICATION_TIMER_ID, NOTIFICATION_TIMEOUT, NULL);
 }
 
@@ -220,6 +244,70 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             return 0;
         }
         
+        case WM_TIMER:
+            if (wParam == NOTIFICATION_TIMER_ID) {
+                // 主定时器到期，开始淡出动画
+                KillTimer(hwnd, NOTIFICATION_TIMER_ID);
+                
+                // 检查当前状态 - 只有在完全可见时才开始淡出
+                AnimationState currentState = (AnimationState)GetProp(hwnd, "AnimState");
+                if (currentState == ANIM_VISIBLE) {
+                    // 设置为淡出状态
+                    SetProp(hwnd, "AnimState", (HANDLE)ANIM_FADE_OUT);
+                    // 启动动画定时器
+                    SetTimer(hwnd, ANIMATION_TIMER_ID, ANIMATION_INTERVAL, NULL);
+                }
+                return 0;
+            }
+            else if (wParam == ANIMATION_TIMER_ID) {
+                // 处理动画定时器
+                AnimationState state = (AnimationState)GetProp(hwnd, "AnimState");
+                DWORD opacityVal = (DWORD)(DWORD_PTR)GetProp(hwnd, "Opacity");
+                BYTE opacity = (BYTE)opacityVal;
+                
+                switch (state) {
+                    case ANIM_FADE_IN:
+                        // 淡入动画
+                        if (opacity >= 255 - ANIMATION_STEP) {
+                            // 达到最大透明度，完成淡入
+                            opacity = 255;
+                            SetProp(hwnd, "Opacity", (HANDLE)(DWORD_PTR)opacity);
+                            SetLayeredWindowAttributes(hwnd, 0, opacity, LWA_ALPHA);
+                            
+                            // 切换到可见状态并停止动画
+                            SetProp(hwnd, "AnimState", (HANDLE)ANIM_VISIBLE);
+                            KillTimer(hwnd, ANIMATION_TIMER_ID);
+                        } else {
+                            // 正常淡入
+                            opacity += ANIMATION_STEP;
+                            SetProp(hwnd, "Opacity", (HANDLE)(DWORD_PTR)opacity);
+                            SetLayeredWindowAttributes(hwnd, 0, opacity, LWA_ALPHA);
+                        }
+                        break;
+                        
+                    case ANIM_FADE_OUT:
+                        // 淡出动画
+                        if (opacity <= ANIMATION_STEP) {
+                            // 完全透明，销毁窗口
+                            KillTimer(hwnd, ANIMATION_TIMER_ID);  // 确保先停止定时器
+                            DestroyWindow(hwnd);
+                        } else {
+                            // 正常淡出
+                            opacity -= ANIMATION_STEP;
+                            SetProp(hwnd, "Opacity", (HANDLE)(DWORD_PTR)opacity);
+                            SetLayeredWindowAttributes(hwnd, 0, opacity, LWA_ALPHA);
+                        }
+                        break;
+                        
+                    case ANIM_VISIBLE:
+                        // 已完全可见状态不需要动画，停止定时器
+                        KillTimer(hwnd, ANIMATION_TIMER_ID);
+                        break;
+                }
+                return 0;
+            }
+            break;
+            
         case WM_MOUSEMOVE: {
             // 获取鼠标坐标
             int xPos = GET_X_LPARAM(lParam);
@@ -265,6 +353,12 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             return 0;
             
         case WM_LBUTTONDOWN: {
+            // 获取当前状态 - 只有在完全可见或淡入完成后才响应点击
+            AnimationState currentState = (AnimationState)GetProp(hwnd, "AnimState");
+            if (currentState != ANIM_VISIBLE) {
+                return 0;  // 忽略点击，避免动画中途干扰
+            }
+            
             // 获取鼠标坐标
             int xPos = GET_X_LPARAM(lParam);
             int yPos = GET_Y_LPARAM(lParam);
@@ -278,29 +372,17 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             closeButtonRect.top = CLOSE_BTN_MARGIN;
             closeButtonRect.bottom = closeButtonRect.top + CLOSE_BTN_SIZE;
             
-            // 如果点击在关闭按钮上，关闭窗口
-            if (xPos >= closeButtonRect.left && xPos <= closeButtonRect.right &&
-                yPos >= closeButtonRect.top && yPos <= closeButtonRect.bottom) {
-                DestroyWindow(hwnd);
-                return 0;
-            }
-            
-            // 否则，普通点击任意位置也关闭窗口(保持原有行为)
-            DestroyWindow(hwnd);
+            // 如果点击任何区域，开始淡出动画
+            KillTimer(hwnd, NOTIFICATION_TIMER_ID);  // 停止自动关闭定时器
+            SetProp(hwnd, "AnimState", (HANDLE)ANIM_FADE_OUT);
+            SetTimer(hwnd, ANIMATION_TIMER_ID, ANIMATION_INTERVAL, NULL);
             return 0;
         }
         
-        case WM_TIMER:
-            if (wParam == NOTIFICATION_TIMER_ID) {
-                // 定时器到期，关闭通知
-                KillTimer(hwnd, NOTIFICATION_TIMER_ID);
-                DestroyWindow(hwnd);
-            }
-            return 0;
-            
         case WM_DESTROY: {
             // 清理资源
             KillTimer(hwnd, NOTIFICATION_TIMER_ID);
+            KillTimer(hwnd, ANIMATION_TIMER_ID);
             
             // 释放字符串内存
             char* message = (char*)GetProp(hwnd, "MessageText");
@@ -308,9 +390,11 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
                 free(message);
             }
             
-            // 移除属性
+            // 移除所有属性
             RemoveProp(hwnd, "MessageText");
             RemoveProp(hwnd, "NotificationIcon");
+            RemoveProp(hwnd, "AnimState");
+            RemoveProp(hwnd, "Opacity");
             return 0;
         }
     }
