@@ -224,9 +224,9 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
                 switch (state) {
                     case ANIM_FADE_IN:
                         // 淡入动画
-                        if (opacity >= 255 - ANIMATION_STEP) {
+                        if (opacity >= 242 - ANIMATION_STEP) {
                             // 达到最大透明度，完成淡入
-                            opacity = 255;
+                            opacity = 242;
                             SetProp(hwnd, "Opacity", (HANDLE)(DWORD_PTR)opacity);
                             SetLayeredWindowAttributes(hwnd, 0, opacity, LWA_ALPHA);
                             
