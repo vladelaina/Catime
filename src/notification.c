@@ -78,7 +78,7 @@ void ShowToastNotification(HWND hwnd, const char* message) {
     
     // 创建通知窗口 - 添加WS_EX_LAYERED样式以支持透明度
     HWND hNotification = CreateWindowExW(
-        WS_EX_TOPMOST | WS_EX_LAYERED,  // 添加分层窗口样式以实现动画
+        WS_EX_TOPMOST | WS_EX_LAYERED | WS_EX_TOOLWINDOW,  // 添加WS_EX_TOOLWINDOW防止窗口在任务栏中显示
         NOTIFICATION_CLASS_NAME,
         L"Catime 通知",  // 改为宽字符
         WS_POPUP,
