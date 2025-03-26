@@ -15,8 +15,8 @@
 #include <windowsx.h>  // 用于GET_X_LPARAM和GET_Y_LPARAM宏
 
 // 通知窗口相关常量
-#define NOTIFICATION_WIDTH 365
-#define NOTIFICATION_HEIGHT 88  // 调整高度
+#define NOTIFICATION_WIDTH 350
+#define NOTIFICATION_HEIGHT 80  // 调整高度
 #define NOTIFICATION_TIMEOUT 8000  // 8秒后自动消失
 #define NOTIFICATION_TIMER_ID 1001
 #define NOTIFICATION_CLASS_NAME "CatimeNotificationClass"
@@ -46,7 +46,7 @@ void DrawRoundedRectangle(HDC hdc, RECT rect, int radius);
  * @param hwnd 与通知关联的窗口句柄
  * @param message 要在通知中显示的文本消息
  * 
- * 显示一个自定义样式的通知窗口，包含Catime图标、标题和消息内容。
+ * 显示一个自定义样式的通知窗口，包含标题和消息内容。
  * 通知会在8秒后自动消失，或者用户点击时立即关闭。
  */
 void ShowToastNotification(HWND hwnd, const char* message) {
@@ -88,16 +88,6 @@ void ShowToastNotification(HWND hwnd, const char* message) {
     
     // 保存消息文本以便绘制
     SetProp(hNotification, "MessageText", (HANDLE)_strdup(message));
-    
-    // 加载应用程序图标 - 使用高DPI版本
-    HICON hIcon = (HICON)LoadImage(hInstance, 
-                                  MAKEINTRESOURCE(IDI_CATIME), 
-                                  IMAGE_ICON, 
-                                  64, 64,   // 指定尺寸
-                                  LR_DEFAULTCOLOR);
-    if (hIcon) {
-        SetProp(hNotification, "NotificationIcon", hIcon);
-    }
     
     // 设置初始动画状态
     SetProp(hNotification, "AnimState", (HANDLE)ANIM_FADE_IN);
@@ -146,8 +136,6 @@ void RegisterNotificationClass(HINSTANCE hInstance) {
  * 处理通知窗口的绘制、鼠标点击、定时器等消息
  */
 LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-    static BOOL isCloseButtonHovered = FALSE;  // 鼠标是否悬停在关闭按钮上
-    
     switch (msg) {
         case WM_PAINT: {
             PAINTSTRUCT ps;
@@ -170,16 +158,6 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             // 绘制圆角矩形边框
             DrawRoundedRectangle(memDC, clientRect, 10);
             
-            // 绘制小图标 - 缩小图标尺寸并放在标题左侧
-            HICON hIcon = (HICON)GetProp(hwnd, "NotificationIcon");
-            if (hIcon) {
-                int iconSize = 20; // 缩小图标尺寸
-                int iconX = 15;
-                int iconY = 15;
-                DrawIconEx(memDC, iconX, iconY, 
-                          hIcon, iconSize, iconSize, 0, NULL, DI_NORMAL);
-            }
-            
             // 设置文本属性
             SetBkMode(memDC, TRANSPARENT);
             
@@ -196,7 +174,7 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             // 绘制标题 "Catime"
             SelectObject(memDC, titleFont);
             SetTextColor(memDC, RGB(0, 0, 0));
-            RECT titleRect = {45, 15, clientRect.right - 15, 40};
+            RECT titleRect = {15, 10, clientRect.right - 15, 35};
             DrawText(memDC, "Catime", -1, &titleRect, DT_SINGLELINE);
             
             // 绘制消息内容 - 放在标题下方
@@ -204,31 +182,9 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             SetTextColor(memDC, RGB(100, 100, 100));
             const char* message = (const char*)GetProp(hwnd, "MessageText");
             if (message) {
-                RECT textRect = {15, 45, clientRect.right - 15, clientRect.bottom - 15};
+                RECT textRect = {15, 35, clientRect.right - 15, clientRect.bottom - 10};
                 DrawText(memDC, message, -1, &textRect, DT_WORDBREAK);
             }
-            
-            // 绘制关闭按钮 (X)
-            RECT closeButtonRect;
-            closeButtonRect.right = clientRect.right - CLOSE_BTN_MARGIN;
-            closeButtonRect.left = closeButtonRect.right - CLOSE_BTN_SIZE;
-            closeButtonRect.top = CLOSE_BTN_MARGIN;
-            closeButtonRect.bottom = closeButtonRect.top + CLOSE_BTN_SIZE;
-            
-            // 设置关闭按钮颜色 - 悬停时为红色，否则为灰色
-            COLORREF btnColor = isCloseButtonHovered ? RGB(255, 0, 0) : RGB(150, 150, 150);
-            HPEN closePen = CreatePen(PS_SOLID, 2, btnColor);
-            HPEN oldClosePen = (HPEN)SelectObject(memDC, closePen);
-            
-            // 绘制 X
-            MoveToEx(memDC, closeButtonRect.left, closeButtonRect.top, NULL);
-            LineTo(memDC, closeButtonRect.right, closeButtonRect.bottom);
-            MoveToEx(memDC, closeButtonRect.right, closeButtonRect.top, NULL);
-            LineTo(memDC, closeButtonRect.left, closeButtonRect.bottom);
-            
-            // 恢复原来的画笔
-            SelectObject(memDC, oldClosePen);
-            DeleteObject(closePen);
             
             // 复制到屏幕
             BitBlt(hdc, 0, 0, clientRect.right, clientRect.bottom, memDC, 0, 0, SRCCOPY);
@@ -308,50 +264,6 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             }
             break;
             
-        case WM_MOUSEMOVE: {
-            // 获取鼠标坐标
-            int xPos = GET_X_LPARAM(lParam);
-            int yPos = GET_Y_LPARAM(lParam);
-            
-            // 计算关闭按钮区域
-            RECT closeButtonRect;
-            RECT clientRect;
-            GetClientRect(hwnd, &clientRect);
-            closeButtonRect.right = clientRect.right - CLOSE_BTN_MARGIN;
-            closeButtonRect.left = closeButtonRect.right - CLOSE_BTN_SIZE;
-            closeButtonRect.top = CLOSE_BTN_MARGIN;
-            closeButtonRect.bottom = closeButtonRect.top + CLOSE_BTN_SIZE;
-            
-            // 检查鼠标是否在关闭按钮上
-            BOOL newHoverState = (xPos >= closeButtonRect.left && xPos <= closeButtonRect.right &&
-                                  yPos >= closeButtonRect.top && yPos <= closeButtonRect.bottom);
-            
-            // 如果悬停状态改变，重绘窗口
-            if (newHoverState != isCloseButtonHovered) {
-                isCloseButtonHovered = newHoverState;
-                InvalidateRect(hwnd, NULL, FALSE);
-            }
-            
-            // 设置鼠标跟踪，确保收到WM_MOUSELEAVE消息
-            if (!isCloseButtonHovered) {
-                TRACKMOUSEEVENT tme;
-                tme.cbSize = sizeof(TRACKMOUSEEVENT);
-                tme.dwFlags = TME_LEAVE;
-                tme.hwndTrack = hwnd;
-                TrackMouseEvent(&tme);
-            }
-            
-            return 0;
-        }
-        
-        case WM_MOUSELEAVE:
-            // 鼠标离开窗口时重置悬停状态
-            if (isCloseButtonHovered) {
-                isCloseButtonHovered = FALSE;
-                InvalidateRect(hwnd, NULL, FALSE);
-            }
-            return 0;
-            
         case WM_LBUTTONDOWN: {
             // 获取当前状态 - 只有在完全可见或淡入完成后才响应点击
             AnimationState currentState = (AnimationState)GetProp(hwnd, "AnimState");
@@ -359,20 +271,7 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
                 return 0;  // 忽略点击，避免动画中途干扰
             }
             
-            // 获取鼠标坐标
-            int xPos = GET_X_LPARAM(lParam);
-            int yPos = GET_Y_LPARAM(lParam);
-            
-            // 计算关闭按钮区域
-            RECT closeButtonRect;
-            RECT clientRect;
-            GetClientRect(hwnd, &clientRect);
-            closeButtonRect.right = clientRect.right - CLOSE_BTN_MARGIN;
-            closeButtonRect.left = closeButtonRect.right - CLOSE_BTN_SIZE;
-            closeButtonRect.top = CLOSE_BTN_MARGIN;
-            closeButtonRect.bottom = closeButtonRect.top + CLOSE_BTN_SIZE;
-            
-            // 如果点击任何区域，开始淡出动画
+            // 点击任何区域，开始淡出动画
             KillTimer(hwnd, NOTIFICATION_TIMER_ID);  // 停止自动关闭定时器
             SetProp(hwnd, "AnimState", (HANDLE)ANIM_FADE_OUT);
             SetTimer(hwnd, ANIMATION_TIMER_ID, ANIMATION_INTERVAL, NULL);
@@ -392,7 +291,6 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             
             // 移除所有属性
             RemoveProp(hwnd, "MessageText");
-            RemoveProp(hwnd, "NotificationIcon");
             RemoveProp(hwnd, "AnimState");
             RemoveProp(hwnd, "Opacity");
             return 0;
