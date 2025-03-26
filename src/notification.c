@@ -19,7 +19,7 @@
 #define NOTIFICATION_HEIGHT 80  // 调整高度
 #define NOTIFICATION_TIMEOUT 8000  // 8秒后自动消失
 #define NOTIFICATION_TIMER_ID 1001
-#define NOTIFICATION_CLASS_NAME "CatimeNotificationClass"
+#define NOTIFICATION_CLASS_NAME L"CatimeNotificationClass"  // 修改为宽字符串
 // 关闭按钮相关常量
 #define CLOSE_BTN_SIZE 16       // 关闭按钮的大小
 #define CLOSE_BTN_MARGIN 10     // 关闭按钮的边距
@@ -69,11 +69,18 @@ void ShowToastNotification(HWND hwnd, const char* message) {
     int x = workArea.right - NOTIFICATION_WIDTH - 20;
     int y = workArea.bottom - NOTIFICATION_HEIGHT - 20;
     
+    // 将消息转换为宽字符
+    int wlen = MultiByteToWideChar(CP_UTF8, 0, message, -1, NULL, 0);
+    wchar_t* wmessage = (wchar_t*)malloc(wlen * sizeof(wchar_t));
+    if (wmessage) {
+        MultiByteToWideChar(CP_UTF8, 0, message, -1, wmessage, wlen);
+    }
+    
     // 创建通知窗口 - 添加WS_EX_LAYERED样式以支持透明度
-    HWND hNotification = CreateWindowEx(
+    HWND hNotification = CreateWindowExW(
         WS_EX_TOPMOST | WS_EX_LAYERED,  // 添加分层窗口样式以实现动画
         NOTIFICATION_CLASS_NAME,
-        "Catime 通知",
+        L"Catime 通知",  // 改为宽字符
         WS_POPUP,
         x, y,
         NOTIFICATION_WIDTH, NOTIFICATION_HEIGHT,
@@ -82,16 +89,17 @@ void ShowToastNotification(HWND hwnd, const char* message) {
     
     if (!hNotification) {
         // 创建失败时，回退到简单的托盘通知
+        if (wmessage) free(wmessage);
         ShowTrayNotification(hwnd, message);
         return;
     }
     
     // 保存消息文本以便绘制
-    SetProp(hNotification, "MessageText", (HANDLE)_strdup(message));
+    SetPropW(hNotification, L"MessageText", (HANDLE)wmessage);
     
     // 设置初始动画状态
-    SetProp(hNotification, "AnimState", (HANDLE)ANIM_FADE_IN);
-    SetProp(hNotification, "Opacity", (HANDLE)0);  // 起始透明度为0
+    SetPropW(hNotification, L"AnimState", (HANDLE)ANIM_FADE_IN);
+    SetPropW(hNotification, L"Opacity", (HANDLE)0);  // 起始透明度为0
     
     // 设置初始透明度为0（完全透明）
     SetLayeredWindowAttributes(hNotification, 0, 0, LWA_ALPHA);
@@ -114,15 +122,15 @@ void ShowToastNotification(HWND hwnd, const char* message) {
  * 注册用于显示自定义通知的窗口类
  */
 void RegisterNotificationClass(HINSTANCE hInstance) {
-    WNDCLASSEX wc = {0};
-    wc.cbSize = sizeof(WNDCLASSEX);
+    WNDCLASSEXW wc = {0};
+    wc.cbSize = sizeof(WNDCLASSEXW);
     wc.lpfnWndProc = NotificationWndProc;
     wc.hInstance = hInstance;
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
     wc.hbrBackground = (HBRUSH)(COLOR_WINDOW+1);
     wc.lpszClassName = NOTIFICATION_CLASS_NAME;
     
-    RegisterClassEx(&wc);
+    RegisterClassExW(&wc);
 }
 
 /**
@@ -162,28 +170,28 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             SetBkMode(memDC, TRANSPARENT);
             
             // 创建标题字体 - 粗体
-            HFONT titleFont = CreateFont(22, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
+            HFONT titleFont = CreateFontW(22, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
                                        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-                                       DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Microsoft YaHei");
+                                       DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei");
             
             // 创建消息内容字体
-            HFONT contentFont = CreateFont(20, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+            HFONT contentFont = CreateFontW(20, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
                                          DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-                                         DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Microsoft YaHei");
+                                         DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei");
             
             // 绘制标题 "Catime"
             SelectObject(memDC, titleFont);
             SetTextColor(memDC, RGB(0, 0, 0));
             RECT titleRect = {15, 10, clientRect.right - 15, 35};
-            DrawText(memDC, "Catime", -1, &titleRect, DT_SINGLELINE);
+            DrawTextW(memDC, L"Catime", -1, &titleRect, DT_SINGLELINE);
             
             // 绘制消息内容 - 放在标题下方
             SelectObject(memDC, contentFont);
             SetTextColor(memDC, RGB(100, 100, 100));
-            const char* message = (const char*)GetProp(hwnd, "MessageText");
+            const wchar_t* message = (const wchar_t*)GetPropW(hwnd, L"MessageText");
             if (message) {
                 RECT textRect = {15, 35, clientRect.right - 15, clientRect.bottom - 10};
-                DrawText(memDC, message, -1, &textRect, DT_WORDBREAK);
+                DrawTextW(memDC, message, -1, &textRect, DT_WORDBREAK);
             }
             
             // 复制到屏幕
@@ -206,10 +214,10 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
                 KillTimer(hwnd, NOTIFICATION_TIMER_ID);
                 
                 // 检查当前状态 - 只有在完全可见时才开始淡出
-                AnimationState currentState = (AnimationState)GetProp(hwnd, "AnimState");
+                AnimationState currentState = (AnimationState)GetPropW(hwnd, L"AnimState");
                 if (currentState == ANIM_VISIBLE) {
                     // 设置为淡出状态
-                    SetProp(hwnd, "AnimState", (HANDLE)ANIM_FADE_OUT);
+                    SetPropW(hwnd, L"AnimState", (HANDLE)ANIM_FADE_OUT);
                     // 启动动画定时器
                     SetTimer(hwnd, ANIMATION_TIMER_ID, ANIMATION_INTERVAL, NULL);
                 }
@@ -217,8 +225,8 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             }
             else if (wParam == ANIMATION_TIMER_ID) {
                 // 处理动画定时器
-                AnimationState state = (AnimationState)GetProp(hwnd, "AnimState");
-                DWORD opacityVal = (DWORD)(DWORD_PTR)GetProp(hwnd, "Opacity");
+                AnimationState state = (AnimationState)GetPropW(hwnd, L"AnimState");
+                DWORD opacityVal = (DWORD)(DWORD_PTR)GetPropW(hwnd, L"Opacity");
                 BYTE opacity = (BYTE)opacityVal;
                 
                 switch (state) {
@@ -227,16 +235,16 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
                         if (opacity >= 242 - ANIMATION_STEP) {
                             // 达到最大透明度，完成淡入
                             opacity = 242;
-                            SetProp(hwnd, "Opacity", (HANDLE)(DWORD_PTR)opacity);
+                            SetPropW(hwnd, L"Opacity", (HANDLE)(DWORD_PTR)opacity);
                             SetLayeredWindowAttributes(hwnd, 0, opacity, LWA_ALPHA);
                             
                             // 切换到可见状态并停止动画
-                            SetProp(hwnd, "AnimState", (HANDLE)ANIM_VISIBLE);
+                            SetPropW(hwnd, L"AnimState", (HANDLE)ANIM_VISIBLE);
                             KillTimer(hwnd, ANIMATION_TIMER_ID);
                         } else {
                             // 正常淡入
                             opacity += ANIMATION_STEP;
-                            SetProp(hwnd, "Opacity", (HANDLE)(DWORD_PTR)opacity);
+                            SetPropW(hwnd, L"Opacity", (HANDLE)(DWORD_PTR)opacity);
                             SetLayeredWindowAttributes(hwnd, 0, opacity, LWA_ALPHA);
                         }
                         break;
@@ -250,7 +258,7 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
                         } else {
                             // 正常淡出
                             opacity -= ANIMATION_STEP;
-                            SetProp(hwnd, "Opacity", (HANDLE)(DWORD_PTR)opacity);
+                            SetPropW(hwnd, L"Opacity", (HANDLE)(DWORD_PTR)opacity);
                             SetLayeredWindowAttributes(hwnd, 0, opacity, LWA_ALPHA);
                         }
                         break;
@@ -266,14 +274,14 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             
         case WM_LBUTTONDOWN: {
             // 获取当前状态 - 只有在完全可见或淡入完成后才响应点击
-            AnimationState currentState = (AnimationState)GetProp(hwnd, "AnimState");
+            AnimationState currentState = (AnimationState)GetPropW(hwnd, L"AnimState");
             if (currentState != ANIM_VISIBLE) {
                 return 0;  // 忽略点击，避免动画中途干扰
             }
             
             // 点击任何区域，开始淡出动画
             KillTimer(hwnd, NOTIFICATION_TIMER_ID);  // 停止自动关闭定时器
-            SetProp(hwnd, "AnimState", (HANDLE)ANIM_FADE_OUT);
+            SetPropW(hwnd, L"AnimState", (HANDLE)ANIM_FADE_OUT);
             SetTimer(hwnd, ANIMATION_TIMER_ID, ANIMATION_INTERVAL, NULL);
             return 0;
         }
@@ -284,15 +292,15 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             KillTimer(hwnd, ANIMATION_TIMER_ID);
             
             // 释放字符串内存
-            char* message = (char*)GetProp(hwnd, "MessageText");
+            wchar_t* message = (wchar_t*)GetPropW(hwnd, L"MessageText");
             if (message) {
                 free(message);
             }
             
             // 移除所有属性
-            RemoveProp(hwnd, "MessageText");
-            RemoveProp(hwnd, "AnimState");
-            RemoveProp(hwnd, "Opacity");
+            RemovePropW(hwnd, L"MessageText");
+            RemovePropW(hwnd, L"AnimState");
+            RemovePropW(hwnd, L"Opacity");
             return 0;
         }
     }
