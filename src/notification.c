@@ -17,7 +17,7 @@
 // 通知窗口相关常量
 #define NOTIFICATION_WIDTH 350
 #define NOTIFICATION_HEIGHT 80  // 调整高度
-#define NOTIFICATION_TIMEOUT 8000  // 8秒后自动消失
+#define NOTIFICATION_TIMEOUT 3000  // 3秒后自动消失
 #define NOTIFICATION_TIMER_ID 1001
 #define NOTIFICATION_CLASS_NAME L"CatimeNotificationClass"  // 修改为宽字符串
 // 关闭按钮相关常量
