@@ -13,6 +13,7 @@
 #include "../include/language.h"
 #include "../include/notification.h"
 #include "../include/pomodoro.h"
+#include "../include/config.h"
 
 // 番茄钟时间列表最大容量
 #define MAX_POMODORO_TIMES 10
@@ -36,27 +37,59 @@ extern int elapsed_time;
 extern BOOL message_shown;
 
 /**
+ * @brief 将 UTF-8 编码的 char* 字符串转换为 wchar_t* 字符串
+ * @param utf8String 输入的 UTF-8 字符串
+ * @return 转换后的 wchar_t* 字符串，使用后需要调用 free() 释放内存。转换失败返回 NULL。
+ */
+static wchar_t* Utf8ToWideChar(const char* utf8String) {
+    if (!utf8String || utf8String[0] == '\0') {
+        return NULL; // 返回 NULL 处理空字符串或 NULL 指针
+    }
+    int size_needed = MultiByteToWideChar(CP_UTF8, 0, utf8String, -1, NULL, 0);
+    if (size_needed == 0) {
+        // 转换失败
+        return NULL;
+    }
+    wchar_t* wideString = (wchar_t*)malloc(size_needed * sizeof(wchar_t));
+    if (!wideString) {
+        // 内存分配失败
+        return NULL;
+    }
+    int result = MultiByteToWideChar(CP_UTF8, 0, utf8String, -1, wideString, size_needed);
+    if (result == 0) {
+        // 转换失败
+        free(wideString);
+        return NULL;
+    }
+    return wideString;
+}
+
+/**
  * @brief 将宽字符串转换为UTF-8编码的普通字符串并显示通知
  * @param hwnd 窗口句柄
- * @param chinese 中文消息
- * @param english 英文消息
+ * @param message 要显示的宽字符串消息 (从配置读取并转换而来)
  */
-static void ShowLocalizedNotification(HWND hwnd, const wchar_t* chinese, const wchar_t* english) {
-    // 获取本地化字符串
-    const wchar_t* localizedMsg = GetLocalizedString(chinese, english);
-    
+static void ShowLocalizedNotification(HWND hwnd, const wchar_t* message) {
+    // 如果消息为空，则不显示
+    if (!message || message[0] == L'\0') {
+        return;
+    }
+
     // 计算所需的缓冲区大小
-    int size_needed = WideCharToMultiByte(CP_UTF8, 0, localizedMsg, -1, NULL, 0, NULL, NULL);
-    
+    int size_needed = WideCharToMultiByte(CP_UTF8, 0, message, -1, NULL, 0, NULL, NULL);
+    if (size_needed == 0) return; // 转换失败
+
     // 分配内存
     char* utf8Msg = (char*)malloc(size_needed);
     if (utf8Msg) {
         // 转换为UTF-8
-        WideCharToMultiByte(CP_UTF8, 0, localizedMsg, -1, utf8Msg, size_needed, NULL, NULL);
-        
-        // 显示通知
-        ShowToastNotification(hwnd, utf8Msg);
-        
+        int result = WideCharToMultiByte(CP_UTF8, 0, message, -1, utf8Msg, size_needed, NULL, NULL);
+
+        if (result > 0) {
+            // 显示通知
+            ShowToastNotification(hwnd, utf8Msg);
+        }
+
         // 释放内存
         free(utf8Msg);
     }
@@ -113,10 +146,17 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                 if (countdown_elapsed_time >= CLOCK_TOTAL_TIME && !countdown_message_shown) {
                     countdown_message_shown = TRUE;
                     
+                    // 尝试从配置读取并转换超时消息
+                    wchar_t* timeoutMsgW = Utf8ToWideChar(CLOCK_TIMEOUT_MESSAGE_TEXT);
+
                     // 检查是否处于番茄钟模式 - 使用任何非IDLE状态表示番茄钟正在运行
                     if (current_pomodoro_phase != POMODORO_PHASE_IDLE && POMODORO_TIMES_COUNT > 0) {
-                        // 显示超时消息
-                        ShowLocalizedNotification(hwnd, L"时间到！", L"Time's up!");
+                        // 显示超时消息 (使用配置或默认值)
+                        if (timeoutMsgW) {
+                            ShowLocalizedNotification(hwnd, timeoutMsgW);
+                        } else {
+                            ShowLocalizedNotification(hwnd, L"时间到！"); // Fallback
+                        }
                         
                         // 移动到下一个时间段
                         current_pomodoro_time_index++;
@@ -139,8 +179,15 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                                 // 重置番茄钟状态
                                 current_pomodoro_phase = POMODORO_PHASE_IDLE;
                                 
-                                // 显示完成提示并停止计时器
-                                ShowLocalizedNotification(hwnd, L"所有番茄钟循环完成！", L"All Pomodoro cycles completed!");
+                                // 尝试从配置读取并转换完成消息
+                                wchar_t* cycleCompleteMsgW = Utf8ToWideChar(POMODORO_CYCLE_COMPLETE_TEXT);
+                                // 显示完成提示 (使用配置或默认值)
+                                if (cycleCompleteMsgW) {
+                                    ShowLocalizedNotification(hwnd, cycleCompleteMsgW);
+                                    free(cycleCompleteMsgW); // 释放完成消息内存
+                                } else {
+                                    ShowLocalizedNotification(hwnd, L"所有番茄钟循环完成！"); // Fallback
+                                }
                                 
                                 // 切换到空闲状态 - 添加以下代码
                                 CLOCK_COUNT_UP = FALSE;       // 确保不是正计时模式
@@ -150,6 +197,7 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                                 // 强制重绘窗口以清除显示
                                 InvalidateRect(hwnd, NULL, TRUE);
                                 KillTimer(hwnd, 1);
+                                if (timeoutMsgW) free(timeoutMsgW); // 释放超时消息内存
                                 return TRUE;
                             }
                         }
@@ -162,10 +210,11 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                         // 如果是新一轮的第一个时间段，显示循环提示
                         if (current_pomodoro_time_index == 0 && complete_pomodoro_cycles > 0) {
                             wchar_t cycleMsg[100];
-                            swprintf(cycleMsg, 100, 
-                                     GetLocalizedString(L"开始第 %d 轮番茄钟", L"Starting Pomodoro cycle %d"), 
-                                     complete_pomodoro_cycles + 1);
-                            ShowLocalizedNotification(hwnd, cycleMsg, L"");
+                            // GetLocalizedString 需要重新考虑，或者硬编码英文/中文
+                            // 暂时保留原来的方式，但理想情况下也应配置化
+                            const wchar_t* formatStr = GetLocalizedString(L"开始第 %d 轮番茄钟", L"Starting Pomodoro cycle %d");
+                            swprintf(cycleMsg, 100, formatStr, complete_pomodoro_cycles + 1);
+                            ShowLocalizedNotification(hwnd, cycleMsg); // 调用修改后的函数
                         }
                         
                         InvalidateRect(hwnd, NULL, TRUE);
@@ -177,8 +226,12 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                             CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_LOCK &&
                             CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_SHUTDOWN &&
                             CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_RESTART) {
-                            // 显示超时消息
-                            ShowLocalizedNotification(hwnd, L"时间到！", L"Time's up!");
+                            // 显示超时消息 (使用配置或默认值)
+                            if (timeoutMsgW) {
+                                ShowLocalizedNotification(hwnd, timeoutMsgW);
+                            } else {
+                                ShowLocalizedNotification(hwnd, L"时间到！"); // Fallback
+                            }
                         }
                         
                         switch (CLOCK_TIMEOUT_ACTION) {
@@ -242,6 +295,11 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                                 }
                                 break;
                         }
+                    }
+
+                    // 释放转换后的宽字符串内存
+                    if (timeoutMsgW) {
+                        free(timeoutMsgW);
                     }
                 }
                 InvalidateRect(hwnd, NULL, TRUE);

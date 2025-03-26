@@ -38,6 +38,10 @@ extern int POMODORO_WORK_TIME;      // 工作时间(分钟)
 extern int POMODORO_SHORT_BREAK;    // 短休息时间(分钟) 
 extern int POMODORO_LONG_BREAK;     // 长休息时间(分钟)
 
+// 新增：用于存储自定义通知消息的变量
+extern char CLOCK_TIMEOUT_MESSAGE_TEXT[100];       ///< 倒计时结束时的通知消息
+extern char POMODORO_CYCLE_COMPLETE_TEXT[100]; ///< 番茄钟所有循环完成时的通知消息
+
 /// @name Configuration-related Function Declarations
 /// @{
 

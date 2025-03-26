@@ -35,6 +35,10 @@ extern int POMODORO_LOOP_COUNT;      // 默认循环次数1次
 int POMODORO_TIMES[MAX_POMODORO_TIMES] = {1500, 300, 1500, 600}; // 默认时间
 int POMODORO_TIMES_COUNT = 4;                             // 默认有4个时间
 
+// 新增：定义全局变量并设置默认值 (使用 UTF-8 编码)
+char CLOCK_TIMEOUT_MESSAGE_TEXT[100] = "时间到！";
+char POMODORO_CYCLE_COMPLETE_TEXT[100] = "所有番茄钟循环完成！";
+
 /**
  * @brief 获取配置文件路径
  * @param path 存储路径的缓冲区
@@ -103,6 +107,10 @@ void CreateDefaultConfig(const char* config_path) {
         
         // 超时文本区块
         fprintf(file, "CLOCK_TIMEOUT_TEXT=0\n");
+        
+        // 新增：自定义通知消息
+        fprintf(file, "CLOCK_TIMEOUT_MESSAGE_TEXT=%s\n", CLOCK_TIMEOUT_MESSAGE_TEXT);
+        fprintf(file, "POMODORO_CYCLE_COMPLETE_TEXT=%s\n", POMODORO_CYCLE_COMPLETE_TEXT);
         
         // 番茄钟设置区块
         fprintf(file, "POMODORO_TIME_OPTIONS=1500,300,1500,600\n"); // 时间1,时间2,时间3,时间4...
@@ -405,6 +413,15 @@ void ReadConfig() {
                 if (POMODORO_TIMES_COUNT > 1) POMODORO_SHORT_BREAK = POMODORO_TIMES[1];
                 if (POMODORO_TIMES_COUNT > 2) POMODORO_LONG_BREAK = POMODORO_TIMES[2];
             }
+        }
+        // 新增：读取自定义通知消息
+        else if (strncmp(line, "CLOCK_TIMEOUT_MESSAGE_TEXT=", 27) == 0) {
+            strncpy(CLOCK_TIMEOUT_MESSAGE_TEXT, line + 27, sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT) - 1);
+            CLOCK_TIMEOUT_MESSAGE_TEXT[sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT) - 1] = '\0';
+        }
+        else if (strncmp(line, "POMODORO_CYCLE_COMPLETE_TEXT=", 29) == 0) {
+            strncpy(POMODORO_CYCLE_COMPLETE_TEXT, line + 29, sizeof(POMODORO_CYCLE_COMPLETE_TEXT) - 1);
+            POMODORO_CYCLE_COMPLETE_TEXT[sizeof(POMODORO_CYCLE_COMPLETE_TEXT) - 1] = '\0';
         }
     }
 
@@ -1007,6 +1024,10 @@ void WriteConfig(const char* config_path) {
     
     // 超时文本区块
     fprintf(file, "CLOCK_TIMEOUT_TEXT=%s\n", CLOCK_TIMEOUT_TEXT);
+    
+    // 新增：自定义通知消息
+    fprintf(file, "CLOCK_TIMEOUT_MESSAGE_TEXT=%s\n", CLOCK_TIMEOUT_MESSAGE_TEXT);
+    fprintf(file, "POMODORO_CYCLE_COMPLETE_TEXT=%s\n", POMODORO_CYCLE_COMPLETE_TEXT);
     
     // 番茄钟设置区块
     fprintf(file, "POMODORO_TIME_OPTIONS=");
