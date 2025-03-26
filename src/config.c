@@ -1,9 +1,10 @@
 /**
  * @file config.c
- * @brief 配置文件管理实现
+ * @brief 配置文件管理模块实现
  * 
- * 本文件实现配置文件的路径获取、创建、读写等管理功能，
- * 包含默认配置生成、配置持久化、最近文件记录等功能。
+ * 本模块负责配置文件的路径获取、创建、读写等核心管理功能，
+ * 包含默认配置生成、配置持久化存储、最近文件记录维护等功能。
+ * 支持UTF-8编码与中文路径处理。
  */
 
 #include "../include/config.h"
@@ -25,18 +26,22 @@
 // 定义番茄钟时间数组的最大容量
 #define MAX_POMODORO_TIMES 10
 
-// 修改全局变量的默认值(改为秒)
-extern int POMODORO_WORK_TIME;      // 默认工作时间25分钟(1500秒)
+/**
+ * 全局变量声明区域
+ * 以下变量定义了应用的默认配置值，可被配置文件覆盖
+ */
+// 修改全局变量的默认值(单位:秒)
+extern int POMODORO_WORK_TIME;       // 默认工作时间25分钟(1500秒)
 extern int POMODORO_SHORT_BREAK;     // 默认短休息5分钟(300秒)
 extern int POMODORO_LONG_BREAK;      // 默认长休息10分钟(600秒)
 extern int POMODORO_LOOP_COUNT;      // 默认循环次数1次
 
-// 添加到文件开头的全局变量声明区域
+// 番茄钟时间序列，格式为：[工作时间, 短休息, 工作时间, 长休息]
 int POMODORO_TIMES[MAX_POMODORO_TIMES] = {1500, 300, 1500, 600}; // 默认时间
-int POMODORO_TIMES_COUNT = 4;                             // 默认有4个时间
+int POMODORO_TIMES_COUNT = 4;                             // 默认有4个时间段
 
-// 新增：定义全局变量并设置默认值 (使用 UTF-8 编码)
-char CLOCK_TIMEOUT_MESSAGE_TEXT[100] = "时间到！";
+// 自定义提示信息文本 (使用 UTF-8 编码)
+char CLOCK_TIMEOUT_MESSAGE_TEXT[100] = "时间到啦！";
 char POMODORO_CYCLE_COMPLETE_TEXT[100] = "所有番茄钟循环完成！";
 
 /**
@@ -44,8 +49,8 @@ char POMODORO_CYCLE_COMPLETE_TEXT[100] = "所有番茄钟循环完成！";
  * @param path 存储路径的缓冲区
  * @param size 缓冲区大小
  * 
- * 优先获取LOCALAPPDATA环境变量路径，若不存在则使用程序目录。
- * 自动创建配置目录，失败时回退到本地路径。
+ * 优先获取LOCALAPPDATA环境变量路径，若不存在则回退至程序目录。
+ * 自动创建配置目录结构，若创建失败则使用本地备用路径。
  */
 void GetConfigPath(char* path, size_t size) {
     if (!path || size == 0) return;
@@ -73,16 +78,16 @@ void GetConfigPath(char* path, size_t size) {
 
 /**
  * @brief 创建默认配置文件
- * @param config_path 配置文件路径
+ * @param config_path 配置文件完整路径
  * 
- * 生成包含所有必要参数的配置文件，遵循统一的顺序结构：
- * 1. 基本设置（颜色、字体、窗口位置等）
- * 2. 颜色选项列表
- * 3. 超时文本
- * 4. 番茄钟设置
- * 5. 超时动作及相关路径
- * 6. 最近文件列表
- * 7. 时间选项
+ * 生成包含所有必要参数的默认配置文件，配置项按以下顺序组织：
+ * 1. 基本设置（颜色、字体、窗口位置等UI设置）
+ * 2. 颜色选项列表（用户可选的颜色方案）
+ * 3. 超时提示文本与自定义通知消息
+ * 4. 番茄钟相关时间设置与循环参数
+ * 5. 超时后的动作设置与相关资源路径
+ * 6. 最近使用文件列表
+ * 7. 预设时间选项
  * 
  * 该顺序与WriteConfig函数保持一致，确保配置文件结构统一。
  */
@@ -139,7 +144,8 @@ void CreateDefaultConfig(const char* config_path) {
  * @param name 输出文件名缓冲区
  * @param nameSize 缓冲区大小
  * 
- * 从完整文件路径中提取文件名部分，支持UTF-8编码的中文路径
+ * 从完整文件路径中提取文件名部分，支持UTF-8编码的中文路径。
+ * 使用Windows API转换编码以确保正确处理Unicode字符。
  */
 void ExtractFileName(const char* path, char* name, size_t nameSize) {
     if (!path || !name || nameSize == 0) return;
@@ -166,8 +172,9 @@ void ExtractFileName(const char* path, char* name, size_t nameSize) {
 /**
  * @brief 读取并解析配置文件
  * 
- * 从配置路径读取配置，若不存在则创建默认配置。
- * 解析各配置项并更新程序状态，最后刷新窗口位置。
+ * 从配置路径读取配置项，若文件不存在则自动创建默认配置。
+ * 解析各配置项并更新程序全局状态变量，最后刷新窗口位置。
+ * 支持兼容性处理，确保新旧版本配置文件均可正确读取。
  */
 void ReadConfig() {
     char config_path[MAX_PATH];
@@ -461,11 +468,11 @@ void ReadConfig() {
 
 /**
  * @brief 写入超时动作配置
- * @param action 要写入的超时动作
+ * @param action 要写入的超时动作类型
  * 
- * 使用临时文件方式更新配置文件中的超时动作设置，
+ * 使用临时文件方式安全更新配置文件中的超时动作设置，
  * 处理OPEN_FILE动作时自动关联超时文件路径。
- * 注意："RESTART"和"SHUTDOWN"选项只运行一次，不会持久化到配置文件中。
+ * 注意："RESTART"和"SHUTDOWN"选项为一次性操作，不会持久化保存。
  */
 void WriteConfigTimeoutAction(const char* action) {
     char config_path[MAX_PATH];
@@ -515,10 +522,10 @@ void WriteConfigTimeoutAction(const char* action) {
 
 /**
  * @brief 写入编辑模式配置
- * @param mode 编辑模式状态("TRUE"/"FALSE")
+ * @param mode 编辑模式状态值("TRUE"/"FALSE")
  * 
- * 通过临时文件方式更新配置文件中的编辑模式设置，
- * 确保配置项存在时更新，不存在时追加到文件末尾。
+ * 通过临时文件方式安全更新配置文件中的编辑模式设置，
+ * 确保配置项存在时更新，不存在时自动追加到文件末尾。
  */
 void WriteConfigEditMode(const char* mode) {
     char config_path[MAX_PATH];
@@ -564,6 +571,7 @@ void WriteConfigEditMode(const char* mode) {
  * 
  * 更新配置文件中的预设时间选项，支持动态调整
  * 倒计时时长选项列表，最大支持MAX_TIME_OPTIONS个选项。
+ * 采用临时文件方式确保写入过程的原子性和安全性。
  */
 void WriteConfigTimeOptions(const char* options) {
     char config_path[MAX_PATH];
@@ -608,6 +616,7 @@ void WriteConfigTimeOptions(const char* options) {
  * 
  * 从配置文件中解析CLOCK_RECENT_FILE条目，
  * 提取文件路径和文件名供快速访问使用。
+ * 支持新旧两种格式的最近文件记录，自动过滤不存在的文件。
  */
 void LoadRecentFiles(void) {
     char config_path[MAX_PATH];
@@ -687,9 +696,8 @@ void LoadRecentFiles(void) {
  * @param filePath 要保存的文件路径
  * 
  * 维护最近文件列表(最多MAX_RECENT_FILES个)，
- * 自动去重并更新配置文件，保持最新文件在列表首位。
- * 处理中文路径时进行UTF8到ANSI编码转换。
- * 注意：此函数只更新最近文件列表，不修改当前超时文件。
+ * 自动去重并更新配置文件，保持最新使用的文件在列表首位。
+ * 自动处理中文路径，支持UTF8编码，确保文件存在后再添加。
  */
 void SaveRecentFile(const char* filePath) {
     // 检查文件路径是否有效
@@ -758,9 +766,10 @@ void SaveRecentFile(const char* filePath) {
 /**
  * @brief UTF8转ANSI编码
  * @param utf8Str 要转换的UTF8字符串
- * @return char* 转换后的ANSI字符串指针
+ * @return char* 转换后的ANSI字符串指针（需手动释放）
  * 
- * 用于处理中文路径的编码转换，转换失败返回原字符串副本。
+ * 用于处理中文路径的编码转换，确保Windows API能正确处理路径。
+ * 转换失败时会返回原字符串的副本，需手动释放返回的内存。
  */
 char* UTF8ToANSI(const char* utf8Str) {
     int wlen = MultiByteToWideChar(CP_UTF8, 0, utf8Str, -1, NULL, 0);
@@ -800,7 +809,16 @@ char* UTF8ToANSI(const char* utf8Str) {
     return str;
 }
 
-// 修改WriteConfigPomodoroTimes函数，支持新的运行逻辑
+/**
+ * @brief 写入番茄钟时间设置
+ * @param work 工作时间(秒)
+ * @param short_break 短休息时间(秒)
+ * @param long_break 长休息时间(秒)
+ * 
+ * 更新番茄钟相关时间设置并保存到配置文件，
+ * 同时更新全局变量与POMODORO_TIMES数组，保持一致性。
+ * 采用临时文件方式确保写入过程安全可靠。
+ */
 void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
     char config_path[MAX_PATH];
     char temp_path[MAX_PATH];
@@ -876,7 +894,14 @@ void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
     rename(temp_path, config_path);
 }
 
-// 添加写入番茄钟循环次数配置的函数
+/**
+ * @brief 写入番茄钟循环次数配置
+ * @param loop_count 循环次数
+ * 
+ * 更新番茄钟循环次数并保存到配置文件，
+ * 采用临时文件方式确保配置更新过程不会损坏原文件。
+ * 若配置项不存在则会自动添加到文件中。
+ */
 void WriteConfigPomodoroLoopCount(int loop_count) {
     char config_path[MAX_PATH];
     char temp_path[MAX_PATH];
@@ -919,7 +944,13 @@ void WriteConfigPomodoroLoopCount(int loop_count) {
     POMODORO_LOOP_COUNT = loop_count;
 }
 
-// 添加写入置顶状态函数
+/**
+ * @brief 写入窗口置顶状态配置
+ * @param topmost 置顶状态("TRUE"/"FALSE")
+ * 
+ * 更新窗口是否置顶的配置并保存到文件，
+ * 使用临时文件方式确保写入过程安全完整。
+ */
 void WriteConfigTopmost(const char* topmost) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -962,13 +993,13 @@ void WriteConfigTopmost(const char* topmost) {
 
 /**
  * @brief 写入超时打开文件路径
- * @param filePath 文件路径
+ * @param filePath 目标文件路径
  * 
  * 更新配置文件中的超时打开文件路径，同时设置超时动作为打开文件。
  * 使用WriteConfig函数完全重写配置文件，确保：
  * 1. 保留所有现有设置
  * 2. 维持配置文件结构一致性
- * 3. 不会丢失番茄钟等其他设置
+ * 3. 不会丢失其他已配置设置
  */
 void WriteConfigTimeoutFile(const char* filePath) {
     // 首先更新全局变量
@@ -989,13 +1020,13 @@ void WriteConfigTimeoutFile(const char* filePath) {
  * 按照统一的顺序写入所有配置项，确保配置文件结构一致：
  * 1. 基本设置（颜色、字体、窗口位置等）
  * 2. 颜色选项列表
- * 3. 超时文本
+ * 3. 超时文本与通知消息
  * 4. 番茄钟设置
- * 5. 超时动作及相关路径
+ * 5. 超时动作及相关资源路径
  * 6. 最近文件列表
  * 7. 时间选项
  * 
- * 该顺序与CreateDefaultConfig函数保持一致，确保更新配置时不改变结构。
+ * 该顺序与CreateDefaultConfig函数保持一致，确保配置文件结构统一。
  */
 void WriteConfig(const char* config_path) {
     FILE* file = fopen(config_path, "w");
@@ -1086,9 +1117,10 @@ void WriteConfig(const char* config_path) {
 
 /**
  * @brief 写入超时打开网站的URL
- * @param url 网站URL
+ * @param url 目标网站URL
  * 
  * 更新配置文件中的超时打开网站URL，同时设置超时动作为打开网站。
+ * 使用临时文件方式确保配置更新过程安全可靠。
  */
 void WriteConfigTimeoutWebsite(const char* url) {
     // 首先更新全局变量
@@ -1151,6 +1183,7 @@ void WriteConfigTimeoutWebsite(const char* url) {
  * @param mode 启动模式字符串("COUNTDOWN"/"COUNT_UP"/"SHOW_TIME"/"NO_DISPLAY")
  * 
  * 修改配置文件中的STARTUP_MODE项，控制程序启动时的默认计时模式。
+ * 同时更新全局变量，确保设置立即生效。
  */
 void WriteConfigStartupMode(const char* mode) {
     char config_path[MAX_PATH];
@@ -1200,7 +1233,9 @@ void WriteConfigStartupMode(const char* mode) {
  * @param times 时间数组（秒）
  * @param count 时间数组长度
  * 
- * 将番茄钟时间选项写入配置文件
+ * 将番茄钟自定义时间序列写入配置文件，
+ * 格式为逗号分隔的时间值列表。
+ * 采用临时文件方式确保配置更新安全。
  */
 void WriteConfigPomodoroTimeOptions(int* times, int count) {
     if (!times || count <= 0) return;
@@ -1262,7 +1297,8 @@ void WriteConfigPomodoroTimeOptions(int* times, int count) {
  * @brief 从配置文件中读取通知消息文本
  * 
  * 专门读取 CLOCK_TIMEOUT_MESSAGE_TEXT 和 POMODORO_CYCLE_COMPLETE_TEXT
- * 并更新相应的全局变量。
+ * 并更新相应的全局变量。若配置不存在则保持默认值不变。
+ * 支持UTF-8编码的中文消息文本。
  */
 void ReadNotificationMessagesConfig(void) {
     char config_path[MAX_PATH];
@@ -1304,7 +1340,7 @@ void ReadNotificationMessagesConfig(void) {
 
     // 如果文件中没有找到对应的配置项，确保变量有默认值（虽然它们在定义时已有）
     if (!timeoutMsgFound) {
-        strcpy(CLOCK_TIMEOUT_MESSAGE_TEXT, "时间到！"); // 默认值
+        strcpy(CLOCK_TIMEOUT_MESSAGE_TEXT, "时间到啦！"); // 默认值
     }
     if (!cycleCompleteMsgFound) {
         strcpy(POMODORO_CYCLE_COMPLETE_TEXT, "所有番茄钟循环完成！"); // 默认值
