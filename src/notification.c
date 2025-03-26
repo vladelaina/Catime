@@ -16,7 +16,7 @@
 // 通知窗口相关常量
 #define NOTIFICATION_WIDTH 300
 #define NOTIFICATION_HEIGHT 100
-#define NOTIFICATION_TIMEOUT 3000  // 3秒后自动消失
+#define NOTIFICATION_TIMEOUT 8000  // 8秒后自动消失
 #define NOTIFICATION_TIMER_ID 1001
 #define NOTIFICATION_CLASS_NAME "CatimeNotificationClass"
 
@@ -55,7 +55,7 @@ void ShowToastNotification(HWND hwnd, const char* message) {
     
     // 创建通知窗口
     HWND hNotification = CreateWindowEx(
-        WS_EX_TOPMOST | WS_EX_LAYERED,
+        WS_EX_TOPMOST,
         NOTIFICATION_CLASS_NAME,
         "Catime 通知",
         WS_POPUP,
@@ -69,9 +69,6 @@ void ShowToastNotification(HWND hwnd, const char* message) {
         ShowTrayNotification(hwnd, message);
         return;
     }
-    
-    // 设置窗口透明度（80%不透明）
-    SetLayeredWindowAttributes(hNotification, 0, 204, LWA_ALPHA);
     
     // 保存消息文本以便绘制
     SetProp(hNotification, "MessageText", (HANDLE)_strdup(message));
@@ -139,33 +136,26 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             // 绘制圆角矩形边框
             DrawRoundedRectangle(memDC, clientRect, 10);
             
-            // 绘制图标
+            // 绘制图标 - 进一步放大到64x64像素
             HICON hIcon = (HICON)GetProp(hwnd, "NotificationIcon");
             if (hIcon) {
-                DrawIconEx(memDC, 15, (clientRect.bottom - 32) / 2, hIcon, 32, 32, 0, NULL, DI_NORMAL);
+                DrawIconEx(memDC, 15, (clientRect.bottom - 64) / 2, hIcon, 64, 64, 0, NULL, DI_NORMAL);
             }
             
             // 设置文本属性
             SetBkMode(memDC, TRANSPARENT);
-            HFONT titleFont = CreateFont(16, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
-                                        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-                                        DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Microsoft YaHei");
-            HFONT oldFont = (HFONT)SelectObject(memDC, titleFont);
             
-            // 绘制标题
-            SetTextColor(memDC, RGB(50, 50, 50));
-            TextOut(memDC, 60, 15, "Catime", 6);
-            
-            // 绘制消息内容
+            // 创建消息内容字体
             HFONT contentFont = CreateFont(14, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
                                          DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
                                          DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Microsoft YaHei");
-            SelectObject(memDC, contentFont);
+            HFONT oldFont = (HFONT)SelectObject(memDC, contentFont);
             SetTextColor(memDC, RGB(100, 100, 100));
             
+            // 绘制消息内容 - 由于没有标题，可以占用更多空间
             const char* message = (const char*)GetProp(hwnd, "MessageText");
             if (message) {
-                RECT textRect = {60, 40, clientRect.right - 15, clientRect.bottom - 15};
+                RECT textRect = {90, 20, clientRect.right - 15, clientRect.bottom - 15};
                 DrawText(memDC, message, -1, &textRect, DT_WORDBREAK);
             }
             
@@ -174,7 +164,6 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             
             // 清理资源
             SelectObject(memDC, oldFont);
-            DeleteObject(titleFont);
             DeleteObject(contentFont);
             SelectObject(memDC, oldBitmap);
             DeleteObject(memBitmap);
