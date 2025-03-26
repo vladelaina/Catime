@@ -136,10 +136,10 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             // 绘制圆角矩形边框
             DrawRoundedRectangle(memDC, clientRect, 10);
             
-            // 绘制图标 - 进一步放大到64x64像素
+            // 绘制图标 - 放大到128x128像素
             HICON hIcon = (HICON)GetProp(hwnd, "NotificationIcon");
             if (hIcon) {
-                DrawIconEx(memDC, 15, (clientRect.bottom - 64) / 2, hIcon, 64, 64, 0, NULL, DI_NORMAL);
+                DrawIconEx(memDC, 15, (clientRect.bottom - 128) / 2, hIcon, 128, 128, 0, NULL, DI_NORMAL);
             }
             
             // 设置文本属性
