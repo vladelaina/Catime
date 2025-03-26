@@ -675,16 +675,11 @@ void ShowContextMenu(HWND hwnd) {
         else menuId = CLOCK_IDM_POMODORO_TIME_BASE + i;
         
         // 检查当前是否是活跃的番茄钟阶段
-        // 只有当满足以下条件时才显示勾选状态：
-        // 1. 番茄钟阶段不是IDLE状态
-        // 2. 当前是番茄钟对应的索引
-        // 3. 程序当前不处于显示当前时间模式
-        // 4. 不是正在进行普通的正计时或倒计时
         BOOL isCurrentPhase = (current_pomodoro_phase != POMODORO_PHASE_IDLE &&
                               current_pomodoro_time_index == i &&
                               !CLOCK_SHOW_CURRENT_TIME &&
-                              ((CLOCK_COUNT_UP == FALSE && CLOCK_TOTAL_TIME == POMODORO_TIMES[i]) ||
-                               CLOCK_COUNT_UP == FALSE));
+                              !CLOCK_COUNT_UP &&  // 添加检查是否不是正计时模式
+                              CLOCK_TOTAL_TIME == POMODORO_TIMES[i]);
         
         // 如果是当前阶段，添加勾选状态
         AppendMenuW(hPomodoroMenu, MF_STRING | (isCurrentPhase ? MF_CHECKED : MF_UNCHECKED), 
