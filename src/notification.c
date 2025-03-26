@@ -156,7 +156,7 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             DeleteObject(whiteBrush);
             
             // 绘制圆角矩形边框
-            DrawRoundedRectangle(memDC, clientRect, 10);
+            DrawRoundedRectangle(memDC, clientRect, 0);
             
             // 设置文本属性
             SetBkMode(memDC, TRANSPARENT);
@@ -309,12 +309,12 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
  * 在指定的设备上下文中绘制带圆角的矩形
  */
 void DrawRoundedRectangle(HDC hdc, RECT rect, int radius) {
-    // 创建圆角矩形路径
+    // 创建矩形路径
     HPEN pen = CreatePen(PS_SOLID, 1, RGB(200, 200, 200));
     HPEN oldPen = (HPEN)SelectObject(hdc, pen);
     
-    // 使用圆角矩形API
-    RoundRect(hdc, rect.left, rect.top, rect.right, rect.bottom, radius * 2, radius * 2);
+    // 使用普通矩形替代圆角矩形
+    Rectangle(hdc, rect.left, rect.top, rect.right, rect.bottom);
     
     // 清理资源
     SelectObject(hdc, oldPen);
