@@ -15,8 +15,8 @@
 #include <windowsx.h>  // 用于GET_X_LPARAM和GET_Y_LPARAM宏
 
 // 通知窗口相关常量
-#define NOTIFICATION_WIDTH 300
-#define NOTIFICATION_HEIGHT 120  // 增加高度以容纳更大的图标
+#define NOTIFICATION_WIDTH 365
+#define NOTIFICATION_HEIGHT 88  // 调整高度
 #define NOTIFICATION_TIMEOUT 8000  // 8秒后自动消失
 #define NOTIFICATION_TIMER_ID 1001
 #define NOTIFICATION_CLASS_NAME "CatimeNotificationClass"
@@ -146,28 +146,41 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             // 绘制圆角矩形边框
             DrawRoundedRectangle(memDC, clientRect, 10);
             
-            // 绘制图标 - 使用更合适的尺寸，与窗口高度匹配
+            // 绘制小图标 - 缩小图标尺寸并放在标题左侧
             HICON hIcon = (HICON)GetProp(hwnd, "NotificationIcon");
             if (hIcon) {
-                int iconSize = 64; // 将图标大小改为更合适的尺寸
-                DrawIconEx(memDC, 15, (clientRect.bottom - iconSize) / 2, 
+                int iconSize = 20; // 缩小图标尺寸
+                int iconX = 15;
+                int iconY = 15;
+                DrawIconEx(memDC, iconX, iconY, 
                           hIcon, iconSize, iconSize, 0, NULL, DI_NORMAL);
             }
             
             // 设置文本属性
             SetBkMode(memDC, TRANSPARENT);
             
+            // 创建标题字体 - 粗体
+            HFONT titleFont = CreateFont(18, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
+                                       DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+                                       DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Microsoft YaHei");
+            
             // 创建消息内容字体
             HFONT contentFont = CreateFont(14, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
                                          DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
                                          DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Microsoft YaHei");
-            HFONT oldFont = (HFONT)SelectObject(memDC, contentFont);
-            SetTextColor(memDC, RGB(100, 100, 100));
             
-            // 绘制消息内容 - 由于没有标题，可以占用更多空间
+            // 绘制标题 "Catime"
+            SelectObject(memDC, titleFont);
+            SetTextColor(memDC, RGB(0, 0, 0));
+            RECT titleRect = {45, 15, clientRect.right - 15, 40};
+            DrawText(memDC, "Catime", -1, &titleRect, DT_SINGLELINE);
+            
+            // 绘制消息内容 - 放在标题下方
+            SelectObject(memDC, contentFont);
+            SetTextColor(memDC, RGB(100, 100, 100));
             const char* message = (const char*)GetProp(hwnd, "MessageText");
             if (message) {
-                RECT textRect = {90, 20, clientRect.right - 15, clientRect.bottom - 15};
+                RECT textRect = {15, 45, clientRect.right - 15, clientRect.bottom - 15};
                 DrawText(memDC, message, -1, &textRect, DT_WORDBREAK);
             }
             
@@ -197,9 +210,9 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             BitBlt(hdc, 0, 0, clientRect.right, clientRect.bottom, memDC, 0, 0, SRCCOPY);
             
             // 清理资源
-            SelectObject(memDC, oldFont);
-            DeleteObject(contentFont);
             SelectObject(memDC, oldBitmap);
+            DeleteObject(titleFont);
+            DeleteObject(contentFont);
             DeleteObject(memBitmap);
             DeleteDC(memDC);
             
