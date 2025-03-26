@@ -15,7 +15,7 @@
 
 // 通知窗口相关常量
 #define NOTIFICATION_WIDTH 300
-#define NOTIFICATION_HEIGHT 100
+#define NOTIFICATION_HEIGHT 120  // 增加高度以容纳更大的图标
 #define NOTIFICATION_TIMEOUT 8000  // 8秒后自动消失
 #define NOTIFICATION_TIMER_ID 1001
 #define NOTIFICATION_CLASS_NAME "CatimeNotificationClass"
@@ -73,8 +73,12 @@ void ShowToastNotification(HWND hwnd, const char* message) {
     // 保存消息文本以便绘制
     SetProp(hNotification, "MessageText", (HANDLE)_strdup(message));
     
-    // 加载应用程序图标
-    HICON hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_CATIME));
+    // 加载应用程序图标 - 使用高DPI版本
+    HICON hIcon = (HICON)LoadImage(hInstance, 
+                                  MAKEINTRESOURCE(IDI_CATIME), 
+                                  IMAGE_ICON, 
+                                  64, 64,   // 指定尺寸
+                                  LR_DEFAULTCOLOR);
     if (hIcon) {
         SetProp(hNotification, "NotificationIcon", hIcon);
     }
@@ -136,10 +140,12 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             // 绘制圆角矩形边框
             DrawRoundedRectangle(memDC, clientRect, 10);
             
-            // 绘制图标 - 放大到128x128像素
+            // 绘制图标 - 使用更合适的尺寸，与窗口高度匹配
             HICON hIcon = (HICON)GetProp(hwnd, "NotificationIcon");
             if (hIcon) {
-                DrawIconEx(memDC, 15, (clientRect.bottom - 128) / 2, hIcon, 128, 128, 0, NULL, DI_NORMAL);
+                int iconSize = 64; // 将图标大小改为更合适的尺寸
+                DrawIconEx(memDC, 15, (clientRect.bottom - iconSize) / 2, 
+                          hIcon, iconSize, iconSize, 0, NULL, DI_NORMAL);
             }
             
             // 设置文本属性
