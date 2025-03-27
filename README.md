@@ -133,8 +133,8 @@
     Yesteryear Essence.ttf, ZCOOL KuaiLe Essence.ttf
 
 壁纸:
-- 作者:[阿稳同学_](https://t.bilibili.com/712774660744282132)
-    - 动态壁纸链接：[Wallpaper Engine](https://steamcommunity.com/sharedfiles/filedetails/?id=2881927206)
+- 作者:[猫屋敷梨梨Official](https://space.bilibili.com/26087398)
+    - 动态壁纸链接：[Wallpaper Engine](https://steamcommunity.com/sharedfiles/filedetails/?id=3171487185)
 ---
 
 <div align="center">
