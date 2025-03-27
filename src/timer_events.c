@@ -36,6 +36,11 @@ extern void ShowToastNotification(HWND hwnd, const char* message);
 extern int elapsed_time;
 extern BOOL message_shown;
 
+// 从config.c引入的自定义消息文本
+extern char CLOCK_TIMEOUT_MESSAGE_TEXT[100];
+extern char POMODORO_TIMEOUT_MESSAGE_TEXT[100]; // 新增番茄钟专用提示
+extern char POMODORO_CYCLE_COMPLETE_TEXT[100];
+
 /**
  * @brief 将 UTF-8 编码的 char* 字符串转换为 wchar_t* 字符串
  * @param utf8String 输入的 UTF-8 字符串
@@ -149,16 +154,19 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                     // 在显示通知前，重新读取配置文件中的消息文本
                     ReadNotificationMessagesConfig();
 
-                    // 尝试从配置读取并转换超时消息
-                    wchar_t* timeoutMsgW = Utf8ToWideChar(CLOCK_TIMEOUT_MESSAGE_TEXT);
+                    // 变量声明放在分支前面，保证在所有分支中可用
+                    wchar_t* timeoutMsgW = NULL;
 
                     // 检查是否处于番茄钟模式
                     if (current_pomodoro_phase != POMODORO_PHASE_IDLE && POMODORO_TIMES_COUNT > 0) {
+                        // 使用番茄钟专用提示消息
+                        timeoutMsgW = Utf8ToWideChar(POMODORO_TIMEOUT_MESSAGE_TEXT);
+                        
                         // 显示超时消息 (使用配置或默认值)
                         if (timeoutMsgW) {
                             ShowLocalizedNotification(hwnd, timeoutMsgW);
                         } else {
-                            ShowLocalizedNotification(hwnd, L"时间到！"); // Fallback
+                            ShowLocalizedNotification(hwnd, L"番茄钟时间到！"); // Fallback
                         }
                         
                         // 移动到下一个时间段
@@ -222,7 +230,8 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                         
                         InvalidateRect(hwnd, NULL, TRUE);
                     } else {
-                        // 非番茄钟模式，执行原有的超时动作
+                        // 非番茄钟模式，使用普通倒计时提示消息
+                        timeoutMsgW = Utf8ToWideChar(CLOCK_TIMEOUT_MESSAGE_TEXT);
                         
                         // 如果超时动作不是打开文件、锁屏、关机或重启，才显示通知消息
                         if (CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_OPEN_FILE && 

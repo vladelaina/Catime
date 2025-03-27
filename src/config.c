@@ -42,6 +42,7 @@ int POMODORO_TIMES_COUNT = 4;                             // 默认有4个时间
 
 // 自定义提示信息文本 (使用 UTF-8 编码)
 char CLOCK_TIMEOUT_MESSAGE_TEXT[100] = "时间到啦！";
+char POMODORO_TIMEOUT_MESSAGE_TEXT[100] = "番茄钟时间到！"; // 新增番茄钟专用提示信息
 char POMODORO_CYCLE_COMPLETE_TEXT[100] = "所有番茄钟循环完成！";
 
 /**
@@ -115,6 +116,7 @@ void CreateDefaultConfig(const char* config_path) {
         
         // 新增：自定义通知消息
         fprintf(file, "CLOCK_TIMEOUT_MESSAGE_TEXT=%s\n", CLOCK_TIMEOUT_MESSAGE_TEXT);
+        fprintf(file, "POMODORO_TIMEOUT_MESSAGE_TEXT=%s\n", POMODORO_TIMEOUT_MESSAGE_TEXT); // 添加番茄钟专用提示
         fprintf(file, "POMODORO_CYCLE_COMPLETE_TEXT=%s\n", POMODORO_CYCLE_COMPLETE_TEXT);
         
         // 番茄钟设置区块
@@ -1058,6 +1060,7 @@ void WriteConfig(const char* config_path) {
     
     // 新增：自定义通知消息
     fprintf(file, "CLOCK_TIMEOUT_MESSAGE_TEXT=%s\n", CLOCK_TIMEOUT_MESSAGE_TEXT);
+    fprintf(file, "POMODORO_TIMEOUT_MESSAGE_TEXT=%s\n", POMODORO_TIMEOUT_MESSAGE_TEXT); // 添加番茄钟专用提示
     fprintf(file, "POMODORO_CYCLE_COMPLETE_TEXT=%s\n", POMODORO_CYCLE_COMPLETE_TEXT);
     
     // 番茄钟设置区块
@@ -1296,7 +1299,7 @@ void WriteConfigPomodoroTimeOptions(int* times, int count) {
 /**
  * @brief 从配置文件中读取通知消息文本
  * 
- * 专门读取 CLOCK_TIMEOUT_MESSAGE_TEXT 和 POMODORO_CYCLE_COMPLETE_TEXT
+ * 专门读取 CLOCK_TIMEOUT_MESSAGE_TEXT、POMODORO_TIMEOUT_MESSAGE_TEXT 和 POMODORO_CYCLE_COMPLETE_TEXT
  * 并更新相应的全局变量。若配置不存在则保持默认值不变。
  * 支持UTF-8编码的中文消息文本。
  */
@@ -1312,6 +1315,7 @@ void ReadNotificationMessagesConfig(void) {
 
     char line[256];
     BOOL timeoutMsgFound = FALSE;
+    BOOL pomodoroTimeoutMsgFound = FALSE; // 新增番茄钟专用提示标志
     BOOL cycleCompleteMsgFound = FALSE;
 
     while (fgets(line, sizeof(line), file)) {
@@ -1324,14 +1328,20 @@ void ReadNotificationMessagesConfig(void) {
             strncpy(CLOCK_TIMEOUT_MESSAGE_TEXT, line + 27, sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT) - 1);
             CLOCK_TIMEOUT_MESSAGE_TEXT[sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT) - 1] = '\0';
             timeoutMsgFound = TRUE;
-        } else if (!cycleCompleteMsgFound && strncmp(line, "POMODORO_CYCLE_COMPLETE_TEXT=", 29) == 0) {
+        } 
+        else if (!pomodoroTimeoutMsgFound && strncmp(line, "POMODORO_TIMEOUT_MESSAGE_TEXT=", 30) == 0) {
+            strncpy(POMODORO_TIMEOUT_MESSAGE_TEXT, line + 30, sizeof(POMODORO_TIMEOUT_MESSAGE_TEXT) - 1);
+            POMODORO_TIMEOUT_MESSAGE_TEXT[sizeof(POMODORO_TIMEOUT_MESSAGE_TEXT) - 1] = '\0';
+            pomodoroTimeoutMsgFound = TRUE;
+        }
+        else if (!cycleCompleteMsgFound && strncmp(line, "POMODORO_CYCLE_COMPLETE_TEXT=", 29) == 0) {
             strncpy(POMODORO_CYCLE_COMPLETE_TEXT, line + 29, sizeof(POMODORO_CYCLE_COMPLETE_TEXT) - 1);
             POMODORO_CYCLE_COMPLETE_TEXT[sizeof(POMODORO_CYCLE_COMPLETE_TEXT) - 1] = '\0';
             cycleCompleteMsgFound = TRUE;
         }
 
-        // 如果两个都找到了，可以提前退出循环
-        if (timeoutMsgFound && cycleCompleteMsgFound) {
+        // 如果所有消息都找到了，可以提前退出循环
+        if (timeoutMsgFound && pomodoroTimeoutMsgFound && cycleCompleteMsgFound) {
             break;
         }
     }
@@ -1341,6 +1351,9 @@ void ReadNotificationMessagesConfig(void) {
     // 如果文件中没有找到对应的配置项，确保变量有默认值（虽然它们在定义时已有）
     if (!timeoutMsgFound) {
         strcpy(CLOCK_TIMEOUT_MESSAGE_TEXT, "时间到啦！"); // 默认值
+    }
+    if (!pomodoroTimeoutMsgFound) {
+        strcpy(POMODORO_TIMEOUT_MESSAGE_TEXT, "番茄钟时间到！"); // 默认值
     }
     if (!cycleCompleteMsgFound) {
         strcpy(POMODORO_CYCLE_COMPLETE_TEXT, "所有番茄钟循环完成！"); // 默认值
