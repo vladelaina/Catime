@@ -3,6 +3,10 @@
 <img align="center" alt="catime" width="230" src="Images/catime.png" />
 </a>
   
+
+
+
+
 </p>
 <p align="center">
    <a href="https://hellogithub.com/repository/00a7a32b7bc647e1a62747530bc16115" target="_blank"><img src="https://abroad.hellogithub.com/v1/widgets/recommend.svg?rid=00a7a32b7bc647e1a62747530bc16115&claim_uid=JBczix10rXqNblQ&theme=small" alt="Featured｜HelloGitHub" /></a>
@@ -18,7 +22,7 @@
 <p align="center">A simple Windows countdown tool with Pomodoro clock functionality, featuring a transparent interface and a variety of customization options.</p>
 
 <div align="center">
-<video src="https://github.com/user-attachments/assets/9218f9f5-c3f8-4360-bdfe-e2fc12007738" autoplay loop></video>
+<video src="https://github.com/user-attachments/assets/2f733378-8ddd-468f-b971-7e98ea4824c2" autoplay loop></video>
 </div>
 
 **简体中文** | [**English**](./README_EN.md)
