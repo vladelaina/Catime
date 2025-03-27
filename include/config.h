@@ -188,6 +188,23 @@ void WriteConfigNotificationTimeout(int timeout_ms);
  */
 void ReadNotificationTimeoutConfig(void);
 
+/**
+ * @brief 从配置文件中读取通知最大透明度
+ * 
+ * 专门读取 NOTIFICATION_MAX_OPACITY 配置项
+ * 并更新相应的全局变量。若配置不存在则保持默认值不变。
+ */
+void ReadNotificationOpacityConfig(void);
+
+/**
+ * @brief 写入通知最大透明度配置
+ * @param opacity 透明度百分比值(1-100)
+ * 
+ * 更新配置文件中的通知最大透明度设置，
+ * 采用临时文件方式确保配置更新安全。
+ */
+void WriteConfigNotificationOpacity(int opacity);
+
 /// @}
 
 #endif // CONFIG_H

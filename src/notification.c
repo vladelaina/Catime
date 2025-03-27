@@ -38,6 +38,8 @@
 
 // 从config.h引入
 extern int NOTIFICATION_TIMEOUT_MS; // 修改：使用extern关键字声明，不再定义
+// 新增：通知最大透明度配置
+extern int NOTIFICATION_MAX_OPACITY;
 
 /**
  * 通知窗口动画状态枚举
@@ -73,6 +75,8 @@ void ShowToastNotification(HWND hwnd, const char* message) {
     
     // 在显示通知前动态读取最新的通知显示时间配置
     ReadNotificationTimeoutConfig();
+    // 新增：读取最新的通知透明度配置
+    ReadNotificationOpacityConfig();
     
     // 播放通知声音
     MessageBeep(MB_ICONINFORMATION);
@@ -261,12 +265,15 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
                 DWORD opacityVal = (DWORD)(DWORD_PTR)GetPropW(hwnd, L"Opacity");
                 BYTE opacity = (BYTE)opacityVal;
                 
+                // 计算最大透明度值（百分比转换为0-255范围）
+                BYTE maxOpacity = (BYTE)((NOTIFICATION_MAX_OPACITY * 255) / 100);
+                
                 switch (state) {
                     case ANIM_FADE_IN:
                         // 淡入动画 - 逐渐增加不透明度
-                        if (opacity >= 242 - ANIMATION_STEP) {
+                        if (opacity >= maxOpacity - ANIMATION_STEP) {
                             // 达到最大透明度，完成淡入
-                            opacity = 242;
+                            opacity = maxOpacity;
                             SetPropW(hwnd, L"Opacity", (HANDLE)(DWORD_PTR)opacity);
                             SetLayeredWindowAttributes(hwnd, 0, opacity, LWA_ALPHA);
                             

@@ -47,6 +47,8 @@ char POMODORO_CYCLE_COMPLETE_TEXT[100] = "所有番茄钟循环完成！";
 
 // 新增配置变量：通知显示持续时间(毫秒)
 int NOTIFICATION_TIMEOUT_MS = 3000;  // 默认3秒
+// 新增配置变量：通知窗口最大透明度(百分比)
+int NOTIFICATION_MAX_OPACITY = 95;   // 默认95%透明度
 
 /**
  * @brief 获取配置文件路径
@@ -124,6 +126,9 @@ void CreateDefaultConfig(const char* config_path) {
         
         // 新增：通知显示时间
         fprintf(file, "NOTIFICATION_TIMEOUT_MS=3000\n");  // 默认3秒
+        
+        // 新增：通知窗口最大透明度
+        fprintf(file, "NOTIFICATION_MAX_OPACITY=95\n");   // 默认95%
         
         // 番茄钟设置区块
         fprintf(file, "POMODORO_TIME_OPTIONS=1500,300,1500,600\n"); // 时间1,时间2,时间3,时间4...
@@ -443,6 +448,14 @@ void ReadConfig() {
             int timeout = atoi(line + 24);
             if (timeout > 0) {
                 NOTIFICATION_TIMEOUT_MS = timeout;
+            }
+        }
+        // 添加读取通知最大透明度的代码
+        else if (strncmp(line, "NOTIFICATION_MAX_OPACITY=", 25) == 0) {
+            int opacity = atoi(line + 25);
+            // 确保透明度在有效范围内(1-100)
+            if (opacity >= 1 && opacity <= 100) {
+                NOTIFICATION_MAX_OPACITY = opacity;
             }
         }
     }
@@ -1079,6 +1092,9 @@ void WriteConfig(const char* config_path) {
     // 新增：通知显示时间
     fprintf(file, "NOTIFICATION_TIMEOUT_MS=%d\n", NOTIFICATION_TIMEOUT_MS);
     
+    // 新增：通知最大透明度
+    fprintf(file, "NOTIFICATION_MAX_OPACITY=%d\n", NOTIFICATION_MAX_OPACITY);
+    
     // 番茄钟设置区块
     fprintf(file, "POMODORO_TIME_OPTIONS=");
     for (int i = 0; i < POMODORO_TIMES_COUNT; i++) {
@@ -1466,4 +1482,101 @@ void ReadNotificationTimeoutConfig(void) {
     if (!timeoutFound) {
         NOTIFICATION_TIMEOUT_MS = 3000; // 确保有默认值
     }
+}
+
+/**
+ * @brief 从配置文件中读取通知最大透明度
+ * 
+ * 专门读取 NOTIFICATION_MAX_OPACITY 配置项
+ * 并更新相应的全局变量。若配置不存在则保持默认值不变。
+ */
+void ReadNotificationOpacityConfig(void) {
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+
+    FILE* file = fopen(config_path, "r");
+    if (!file) {
+        // 文件无法打开，保留当前默认值
+        return;
+    }
+
+    char line[256];
+    BOOL opacityFound = FALSE;
+
+    while (fgets(line, sizeof(line), file)) {
+        size_t len = strlen(line);
+        if (len > 0 && line[len - 1] == '\n') {
+            line[len - 1] = '\0'; // 移除换行符
+        }
+
+        if (strncmp(line, "NOTIFICATION_MAX_OPACITY=", 25) == 0) {
+            int opacity = atoi(line + 25);
+            // 确保透明度在有效范围内(1-100)
+            if (opacity >= 1 && opacity <= 100) {
+                NOTIFICATION_MAX_OPACITY = opacity;
+            }
+            opacityFound = TRUE;
+            break; // 找到后就可以退出循环了
+        }
+    }
+
+    fclose(file);
+
+    // 如果配置中没找到，保留默认值
+    if (!opacityFound) {
+        NOTIFICATION_MAX_OPACITY = 95; // 确保有默认值
+    }
+}
+
+/**
+ * @brief 写入通知最大透明度配置
+ * @param opacity 透明度百分比值(1-100)
+ * 
+ * 更新配置文件中的通知最大透明度设置，
+ * 采用临时文件方式确保配置更新安全。
+ */
+void WriteConfigNotificationOpacity(int opacity) {
+    // 确保透明度在有效范围内
+    if (opacity < 1) opacity = 1;
+    if (opacity > 100) opacity = 100;
+    
+    char config_path[MAX_PATH];
+    char temp_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    snprintf(temp_path, MAX_PATH, "%s.tmp", config_path);
+    FILE *file, *temp_file;
+    char line[256];
+    int found = 0;
+    
+    file = fopen(config_path, "r");
+    temp_file = fopen(temp_path, "w");
+    
+    if (!file || !temp_file) {
+        if (file) fclose(file);
+        if (temp_file) fclose(temp_file);
+        return;
+    }
+    
+    while (fgets(line, sizeof(line), file)) {
+        if (strncmp(line, "NOTIFICATION_MAX_OPACITY=", 25) == 0) {
+            fprintf(temp_file, "NOTIFICATION_MAX_OPACITY=%d\n", opacity);
+            found = 1;
+        } else {
+            fputs(line, temp_file);
+        }
+    }
+    
+    // 如果配置文件中没有找到对应的键，则添加
+    if (!found) {
+        fprintf(temp_file, "NOTIFICATION_MAX_OPACITY=%d\n", opacity);
+    }
+    
+    fclose(file);
+    fclose(temp_file);
+    
+    remove(config_path);
+    rename(temp_path, config_path);
+    
+    // 更新全局变量
+    NOTIFICATION_MAX_OPACITY = opacity;
 }
