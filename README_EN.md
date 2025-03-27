@@ -24,18 +24,24 @@
 
 ## 🌟Features
 
-- **Minimalist Design**: Transparent interface, click-through capability, adjustable size and position, multi-language support
-- **Rich Font Selection**: 47 fonts with real-time preview
-- **Flexible Timing**: Quick presets, custom time input, current time display (12/24-hour format), countdown, count-up
-- **Timeout Actions**: Notifications, screen lock, shutdown/restart, file opening
-- **Interface Customization**: 15 preset colors, support for color value input, color palette selection, real-time preview
+- **Minimalist Design**: Transparent interface, click-through capability, freely draggable and resizable, no complicated graphical settings interface - it doesn't feel like you're running an extra application
+- **Flexible Timing**: Quick presets, custom time input, current time display (12/24-hour format), countdown, count-up, Pomodoro timer
+- **Timeout Actions**: Display messages, show current time, count up, lock screen, open files/applications, open websites, shutdown, restart
+- **Rich Customization**: 47 fonts, 15 preset colors, support for color value input, color palette selection, real-time preview
 
-## 📑Instructions
+## 💡Use Cases
 
-- **Left-click tray icon**: Set time
-- **Right-click tray icon**: Open settings menu
-- **Edit Mode**: Drag to adjust position, scroll wheel to adjust size, 🖱️right-click to exit edit mode
-
+- 👔 End of workday countdown
+- 🍅 Pomodoro timer
+- 🎮 Gaming time tracker - always see the time while playing fullscreen games to avoid gaming too long
+- ⏰ Scheduled actions:
+  - 🌐 Open websites
+  - 💻 Launch applications
+  - 📄 Open files
+  - 📝 Run batch scripts
+  - 🔄 Schedule shutdown/restart
+- 📊 Presentation countdown timer
+- 🕰️ Desktop clock
 
 ### 🛠️Configuration File
 Settings are saved in `C:\Users\username\AppData\Local\Catime\config.txt`
