@@ -17,46 +17,50 @@
 <p align="center">A simple Windows countdown tool with Pomodoro clock functionality, featuring a transparent interface and a variety of customization options.</p>
 
 <div align="center">
-<video src="https://github.com/user-attachments/assets/9218f9f5-c3f8-4360-bdfe-e2fc12007738" autoplay loop></video>
+<video src="https://github.com/user-attachments/assets/2f733378-8ddd-468f-b971-7e98ea4824c2" autoplay loop></video>
 </div>
 
 **English** | [**简体中文**](https://github.com/vladelaina/Catime)
 
-## 🌟 Features
+## 🌟Features
 
-- **Minimalist Design**: Transparent interface, click-through functionality, adjustable size and position, multi-language support
+- **Minimalist Design**: Transparent interface, click-through capability, adjustable size and position, multi-language support
 - **Rich Font Selection**: 47 fonts with real-time preview
-- **Flexible Timing**: Quick presets, custom time input, current time display (12/24-hour format), countdown, countup
+- **Flexible Timing**: Quick presets, custom time input, current time display (12/24-hour format), countdown, count-up
 - **Timeout Actions**: Notifications, screen lock, shutdown/restart, file opening
-- **Interface Customization**: 15 preset colors, custom color input, color picker support, real-time preview
+- **Interface Customization**: 15 preset colors, support for color value input, color palette selection, real-time preview
 
-## 📑 Instructions
+## 📑Instructions
 
-- **Left-click on tray icon**: Set time
-- **Right-click on tray icon**: Open settings menu
-- **Edit Mode**: Drag to adjust position, scroll wheel to adjust size, right-click to exit edit mode
+- **Left-click tray icon**: Set time
+- **Right-click tray icon**: Open settings menu
+- **Edit Mode**: Drag to adjust position, scroll wheel to adjust size, 🖱️right-click to exit edit mode
 
-### 🛠️ Configuration File
+
+### 🛠️Configuration File
 Settings are saved in `C:\Users\username\AppData\Local\Catime\config.txt`
 
 ### Demo Video (Based on V1.0.5): <img src="https://www.bilibili.com/favicon.ico" width="20" height="20"> [BiliBili](https://www.bilibili.com/video/BV1fzQRYxErt)
 
-## 💭 Community
+
+## 💭Community
 
  <a href="https://discord.gg/W3tW2gtp6g"><img alt="Discord" src="https://img.shields.io/badge/Discord-Catime-7289da?logo=discord&logoColor=white&color=7289da"/></a>
  <a href="https://qm.qq.com/q/LgscIMw9i0"><img alt="QQ Group" src="https://img.shields.io/badge/QQ-1027327912-7289da?logo=qq&logoColor=white"/></a>
  
-## 💖 [Support](support.md)
+## 💖[Support](support.md)
 
-If you like this project, feel free to donate any amount. Your support is the motivation for continued updates ദ്ദി˶>𖥦<)✧Thanks!
+If you like this project, feel free to donate any amount. Your support is my motivation to keep updating ദ്ദി˶>𖥦<)✧Thanks!
 
-## ⭐ Star History
+## ⭐Star History
 
 <a href="https://star-history.com/#vladelaina/Catime&Date">
     <img src="https://api.star-history.com/svg?repos=vladelaina/Catime&type=Date" height="420" alt="Star History Chart">
 </a>
 
-## ✨ Acknowledgements
+> [Project Progress](https://k021q39fc0u.feishu.cn/mindnotes/ZUDYbJAaOmhBAmn1H4Lc3rI3nGc#mindmap)
+
+## ✨Acknowledgements 
 
 Special thanks to the following contributors:
 <table>
@@ -64,11 +68,11 @@ Special thanks to the following contributors:
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/MadMaxChow"><img src="https://avatars.githubusercontent.com/u/13810505?v=4" width="100px;" alt="MAX°孟兆"/><br /><sub><b>MAX°孟兆</b></sub></a><br /></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/sumruler"><img src="https://avatars.githubusercontent.com/u/56953545?v=4" width="100px;" alt="XuJilong"/><br /><sub><b>XuJilong</b></sub></a><br /></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://www.diandiapp.com/"><img src="https://github.com/user-attachments/assets/ed3ad284-d4f6-456f-a451-0d4c3cba05a4" width="100px;" alt="点滴进度作者"/><br /><sub><b>DianDi App Author</b></sub></a><br /></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://www.diandiapp.com/"><img src="https://github.com/user-attachments/assets/ed3ad284-d4f6-456f-a451-0d4c3cba05a4" width="100px;" alt="点滴进度作者"/><br /><sub><b>Author of Diandi Progress</b></sub></a><br /></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/ZGGSONG"><img src="https://avatars.githubusercontent.com/u/49741009?v=4" width="100px;" alt="zggsong"/><br /><sub><b>zggsong</b></sub></a><br /></td>
       <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/26087398"><img src="https://i1.hdslb.com/bfs/face/af55083fafbabb7815b09c32adca94139b3ab3f8.webp@240w_240h_1c_1s_!web-avatar-space-header.avif" width="100px;" alt="猫屋敷梨梨Official"/><br /><sub><b>猫屋敷梨梨Official</b></sub></a><br /></td>
       <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/6189012"><img src="https://i0.hdslb.com/bfs/face/e38f4197fddc38397732b61c3086cd6b280dd00e.jpg" width="100px;" alt="MOJIもら"/><br /><sub><b>MOJIもら</b></sub></a><br /></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/475437261"><img src="https://i0.hdslb.com/bfs/face/a52c54f0098602b2934d828222aaf3895b06c9ec.jpg@240w_240h_1c_1s_!web-avatar-space-header.avif" width="100px;" alt="李康"/><br /><sub><b>李康</b></sub></a><br /></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/475437261"><img src="https://i0.hdslb.com/bfs/face/a52c54f0098602b2934d828222aaf3895b06c9ec.jpg@240w_240h_1c_1s_!web-avatar-space-header.avif" width="100px;" alt="李康"/><br /><sub><b>Li Kang</b></sub></a><br /></td>
     </tr>
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/1708573954"><img src="https://i1.hdslb.com/bfs/face/7fe7cfba25dd086f9b4dbb8433b5db237a5ff98b.jpg@240w_240h_1c_1s_!web-avatar-space-header.avif" width="100px;" alt="我是无名吖"/><br /><sub><b>我是无名吖</b></sub></a><br /></td>
@@ -83,20 +87,20 @@ Special thanks to the following contributors:
          <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/5549978"><img src="https://i2.hdslb.com/bfs/face/8da0d17a9d45bb66fb8758c4da378a145e1856ca.jpg@240w_240h_1c_1s_!web-avatar-space-header.avif" width="100px;" alt="星空下数羊"/><br /><sub><b>星空下数羊</b></sub></a><br /></td>
         <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/13129221"><img src="https://i2.hdslb.com/bfs/face/5a3c76d35af300d44111a50bde4b7acf45ad9621.jpg@128w_128h_1c_1s.webp" width="100px;" alt="青阳忘川"/><br /><sub><b>青阳忘川</b></sub></a><br /></td>
         <td align="center" valign="top" width="14.28%"><a href="https://github.com/llfWilliam"><img src="https://avatars.githubusercontent.com/u/192875064?v=4" width="100px;" alt="William"/><br /><sub><b>William</b></sub></a><br /></td>
-                <td align="center" valign="top" width="14.28%"><a href="https://github.com/wangye99"><img src="https://avatars.githubusercontent.com/u/59310777?v=4" width="100px;" alt="王野"/><br /><sub><b>王野</b></sub></a><br /></td>
+                <td align="center" valign="top" width="14.28%"><a href="https://github.com/wangye99"><img src="https://avatars.githubusercontent.com/u/59310777?v=4" width="100px;" alt="王野"/><br /><sub><b>Wang Ye</b></sub></a><br /></td>
         <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/572042200"><img src="https://i1.hdslb.com/bfs/face/b952499e109734d73d81a2a6929aefd30b3fbc9d.png@128w_128h_1c_1s.webp" width="100px;" alt="煮酒论科技"/><br /><sub><b>煮酒论科技</b></sub></a><br /></td>
-        <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/470931145"><img src="https://i2.hdslb.com/bfs/face/bd8660b3927b5be8fc724c2cf9be3d8ebe44ffa2.jpg@128w_128h_1c_1s.webp" width="100px;" alt="风增"/><br /><sub><b>风增</b></sub></a><br /></td>
-        <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/266931550"><img src="https://github.com/user-attachments/assets/2fa88218-ee70-4a99-a225-ec632cfabf23" width="100px;" alt="田春"/><br /><sub><b>田春</b></sub></a><br /></td>
+        <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/470931145"><img src="https://i2.hdslb.com/bfs/face/bd8660b3927b5be8fc724c2cf9be3d8ebe44ffa2.jpg@128w_128h_1c_1s.webp" width="100px;" alt="风增"/><br /><sub><b>Feng Zeng</b></sub></a><br /></td>
+        <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/266931550"><img src="https://github.com/user-attachments/assets/2fa88218-ee70-4a99-a225-ec632cfabf23" width="100px;" alt="田春"/><br /><sub><b>Tian Chun</b></sub></a><br /></td>
       </tr>
   </tbody>
 </table>
 
-## 🗝️ Copyright Statement
+## 🗝️Copyright Statement
 
-This project is released under the Apache License 2.0 open source license.
+This project is published under the Apache License 2.0 open source license.
 
 Icon copyright statement:
-- The software icon was created by [猫屋敷梨梨Official](https://space.bilibili.com/26087398) who reserves all rights. Without explicit authorization from the original creator, it may not be used for any commercial purposes.
+- The software icon was created by [猫屋敷梨梨Official](https://space.bilibili.com/26087398) who reserves all rights. It may not be used for any commercial purposes without explicit authorization from the original creator.
 
 Font licenses:
 - MIT: 
@@ -123,8 +127,8 @@ Font licenses:
     Yesteryear Essence.ttf, ZCOOL KuaiLe Essence.ttf
 
 Wallpaper:
-- Author: [阿稳同学_](https://t.bilibili.com/712774660744282132)
-    - Dynamic wallpaper link: [Wallpaper Engine](https://steamcommunity.com/sharedfiles/filedetails/?id=2881927206)
+- Author: [猫屋敷梨梨Official](https://space.bilibili.com/26087398)
+    - Dynamic wallpaper link: [Wallpaper Engine](https://steamcommunity.com/sharedfiles/filedetails/?id=3171487185)
 ---
 
 <div align="center">
