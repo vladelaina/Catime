@@ -1,10 +1,9 @@
 /**
  * @file config.h
- * @brief Configuration management module header file.
+ * @brief 配置管理模块头文件
  *
- * This file defines the interfaces for application configuration,
- * including reading, writing, and managing settings related to window,
- * fonts, colors, and other customizable options.
+ * 本文件定义了应用程序配置的接口，
+ * 包括读取、写入和管理与窗口、字体、颜色及其他可定制选项相关的设置。
  */
 
 #ifndef CONFIG_H
@@ -40,76 +39,77 @@ extern int POMODORO_LONG_BREAK;     // 长休息时间(分钟)
 
 // 新增：用于存储自定义通知消息的变量
 extern char CLOCK_TIMEOUT_MESSAGE_TEXT[100];       ///< 倒计时结束时的通知消息
-extern char POMODORO_CYCLE_COMPLETE_TEXT[100]; ///< 番茄钟所有循环完成时的通知消息
+extern char POMODORO_TIMEOUT_MESSAGE_TEXT[100];    ///< 番茄钟时间段结束时的通知消息
+extern char POMODORO_CYCLE_COMPLETE_TEXT[100];     ///< 番茄钟所有循环完成时的通知消息
 
-/// @name Configuration-related Function Declarations
+/// @name 配置相关函数声明
 /// @{
 
 /**
- * @brief Retrieves the configuration file path.
- * @param path Buffer to store the configuration file path.
- * @param size Size of the buffer.
+ * @brief 获取配置文件路径
+ * @param path 存储配置文件路径的缓冲区
+ * @param size 缓冲区大小
  */
 void GetConfigPath(char* path, size_t size);
 
 /**
- * @brief Reads the configuration from the file.
+ * @brief 从文件读取配置
  */
 void ReadConfig();
 
 /**
- * @brief Writes the timeout action to the configuration file.
- * @param action The timeout action to write.
+ * @brief 将超时动作写入配置文件
+ * @param action 要写入的超时动作
  */
 void WriteConfigTimeoutAction(const char* action);
 
 /**
- * @brief Writes the edit mode to the configuration file.
- * @param mode The edit mode to write.
+ * @brief 将编辑模式写入配置文件
+ * @param mode 要写入的编辑模式
  */
 void WriteConfigEditMode(const char* mode);
 
 /**
- * @brief Writes the time options to the configuration file.
- * @param options The time options to write.
+ * @brief 将时间选项写入配置文件
+ * @param options 要写入的时间选项
  */
 void WriteConfigTimeOptions(const char* options);
 
 /**
- * @brief Loads recent files from the configuration.
+ * @brief 从配置中加载最近使用的文件
  */
 void LoadRecentFiles(void);
 
 /**
- * @brief Saves a recent file to the configuration.
- * @param filePath The path of the file to save.
+ * @brief 将最近使用的文件保存到配置中
+ * @param filePath 要保存的文件路径
  */
 void SaveRecentFile(const char* filePath);
 
 /**
- * @brief Converts a UTF-8 string to ANSI.
- * @param utf8Str The UTF-8 string to convert.
- * @return The converted ANSI string.
+ * @brief 将UTF-8字符串转换为ANSI编码
+ * @param utf8Str 要转换的UTF-8字符串
+ * @return 转换后的ANSI字符串
  */
 char* UTF8ToANSI(const char* utf8Str);
 
 /**
- * @brief Creates the default configuration file.
- * @param config_path The path to the configuration file.
+ * @brief 创建默认配置文件
+ * @param config_path 配置文件的路径
  */
 void CreateDefaultConfig(const char* config_path);
 
 /**
- * @brief Writes all configuration settings to the file.
- * @param config_path The path to the configuration file.
+ * @brief 将所有配置设置写入文件
+ * @param config_path 配置文件的路径
  */
 void WriteConfig(const char* config_path);
 
 /**
- * @brief Writes the Pomodoro times to the configuration file.
- * @param work The work time in minutes.
- * @param short_break The short break time in minutes.
- * @param long_break The long break time in minutes.
+ * @brief 将番茄钟时间写入配置文件
+ * @param work 工作时间（分钟）
+ * @param short_break 短休息时间（分钟）
+ * @param long_break 长休息时间（分钟）
  */
 void WriteConfigPomodoroTimes(int work, int short_break, int long_break);
 
@@ -165,7 +165,7 @@ void WriteConfigPomodoroTimeOptions(int* times, int count);
 /**
  * @brief 从配置文件中读取通知消息文本
  * 
- * 专门读取 CLOCK_TIMEOUT_MESSAGE_TEXT 和 POMODORO_CYCLE_COMPLETE_TEXT
+ * 专门读取 CLOCK_TIMEOUT_MESSAGE_TEXT、POMODORO_TIMEOUT_MESSAGE_TEXT 和 POMODORO_CYCLE_COMPLETE_TEXT
  * 并更新相应的全局变量。
  */
 void ReadNotificationMessagesConfig(void);
