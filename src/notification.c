@@ -15,6 +15,7 @@
 #include "../include/tray.h"
 #include "../include/language.h"
 #include "../include/notification.h"
+#include "../include/config.h"
 #include "../resource/resource.h"
 #include <windowsx.h>  // 用于GET_X_LPARAM和GET_Y_LPARAM宏
 
@@ -69,6 +70,9 @@ void DrawRoundedRectangle(HDC hdc, RECT rect, int radius);
 void ShowToastNotification(HWND hwnd, const char* message) {
     static BOOL isClassRegistered = FALSE;
     HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
+    
+    // 在显示通知前动态读取最新的通知显示时间配置
+    ReadNotificationTimeoutConfig();
     
     // 播放通知声音
     MessageBeep(MB_ICONINFORMATION);

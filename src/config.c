@@ -1424,3 +1424,46 @@ void WriteConfigNotificationTimeout(int timeout_ms) {
     // 更新全局变量
     NOTIFICATION_TIMEOUT_MS = timeout_ms;
 }
+
+/**
+ * @brief 从配置文件中读取通知显示时间
+ * 
+ * 专门读取 NOTIFICATION_TIMEOUT_MS 配置项
+ * 并更新相应的全局变量。若配置不存在则保持默认值不变。
+ */
+void ReadNotificationTimeoutConfig(void) {
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+
+    FILE* file = fopen(config_path, "r");
+    if (!file) {
+        // 文件无法打开，保留当前默认值
+        return;
+    }
+
+    char line[256];
+    BOOL timeoutFound = FALSE;
+
+    while (fgets(line, sizeof(line), file)) {
+        size_t len = strlen(line);
+        if (len > 0 && line[len - 1] == '\n') {
+            line[len - 1] = '\0'; // 移除换行符
+        }
+
+        if (strncmp(line, "NOTIFICATION_TIMEOUT_MS=", 24) == 0) {
+            int timeout = atoi(line + 24);
+            if (timeout > 0) {
+                NOTIFICATION_TIMEOUT_MS = timeout;
+            }
+            timeoutFound = TRUE;
+            break; // 找到后就可以退出循环了
+        }
+    }
+
+    fclose(file);
+
+    // 如果配置中没找到，保留默认值
+    if (!timeoutFound) {
+        NOTIFICATION_TIMEOUT_MS = 3000; // 确保有默认值
+    }
+}

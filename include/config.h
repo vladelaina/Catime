@@ -181,6 +181,13 @@ void ReadNotificationMessagesConfig(void);
  */
 void WriteConfigNotificationTimeout(int timeout_ms);
 
+/**
+ * @brief 从配置文件中读取通知显示时间
+ * 
+ * 专门读取 NOTIFICATION_TIMEOUT_MS 配置项并更新相应的全局变量。
+ */
+void ReadNotificationTimeoutConfig(void);
+
 /// @}
 
 #endif // CONFIG_H
