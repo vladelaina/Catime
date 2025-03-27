@@ -42,6 +42,9 @@ extern char CLOCK_TIMEOUT_MESSAGE_TEXT[100];       ///< 倒计时结束时的通
 extern char POMODORO_TIMEOUT_MESSAGE_TEXT[100];    ///< 番茄钟时间段结束时的通知消息
 extern char POMODORO_CYCLE_COMPLETE_TEXT[100];     ///< 番茄钟所有循环完成时的通知消息
 
+// 新增：用于存储通知显示时间的变量
+extern int NOTIFICATION_TIMEOUT_MS;  ///< 通知显示持续时间(毫秒)
+
 /// @name 配置相关函数声明
 /// @{
 
@@ -169,6 +172,14 @@ void WriteConfigPomodoroTimeOptions(int* times, int count);
  * 并更新相应的全局变量。
  */
 void ReadNotificationMessagesConfig(void);
+
+/**
+ * @brief 写入通知显示时间配置
+ * @param timeout_ms 通知显示时间(毫秒)
+ * 
+ * 更新配置文件中的通知显示时间，并更新全局变量。
+ */
+void WriteConfigNotificationTimeout(int timeout_ms);
 
 /// @}
 

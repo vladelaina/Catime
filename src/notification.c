@@ -24,7 +24,6 @@
 // 通知窗口尺寸与布局常量
 #define NOTIFICATION_WIDTH 350       // 通知窗口宽度(像素)
 #define NOTIFICATION_HEIGHT 80       // 通知窗口高度(像素)
-#define NOTIFICATION_TIMEOUT 3000    // 通知显示持续时间(毫秒)
 #define NOTIFICATION_TIMER_ID 1001   // 通知超时计时器ID
 #define NOTIFICATION_CLASS_NAME L"CatimeNotificationClass"  // 通知窗口类名
 // 窗口界面元素常量
@@ -35,6 +34,9 @@
 #define ANIMATION_TIMER_ID 1002      // 动画计时器ID
 #define ANIMATION_STEP 5             // 每步透明度变化量(0-255)
 #define ANIMATION_INTERVAL 15        // 动画帧间隔(毫秒)
+
+// 从config.h引入
+extern int NOTIFICATION_TIMEOUT_MS; // 修改：使用extern关键字声明，不再定义
 
 /**
  * 通知窗口动画状态枚举
@@ -126,8 +128,8 @@ void ShowToastNotification(HWND hwnd, const char* message) {
     // 启动淡入动画
     SetTimer(hNotification, ANIMATION_TIMER_ID, ANIMATION_INTERVAL, NULL);
     
-    // 设置自动关闭定时器
-    SetTimer(hNotification, NOTIFICATION_TIMER_ID, NOTIFICATION_TIMEOUT, NULL);
+    // 设置自动关闭定时器，使用全局配置的超时时间
+    SetTimer(hNotification, NOTIFICATION_TIMER_ID, NOTIFICATION_TIMEOUT_MS, NULL);
 }
 
 /**

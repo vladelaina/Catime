@@ -1,23 +1,25 @@
 /**
  * @file notification.h
- * @brief 通知功能接口
+ * @brief 应用通知系统接口
  * 
- * 本文件定义了应用程序通知相关的函数接口，
- * 包括系统托盘通知等功能。
+ * 本文件定义了应用程序的通知系统接口，包括自定义样式的弹出通知和系统托盘通知。
  */
 
-#ifndef CLOCK_NOTIFICATION_H
-#define CLOCK_NOTIFICATION_H
+#ifndef NOTIFICATION_H
+#define NOTIFICATION_H
 
 #include <windows.h>
 
+// 全局变量：通知显示持续时间(毫秒)
+extern int NOTIFICATION_TIMEOUT_MS;  // 新增：通知显示时间变量
+
 /**
- * @brief 显示提示通知
- * @param hwnd 与通知关联的窗口句柄
- * @param message 要在通知中显示的文本消息
+ * @brief 显示自定义样式的提示通知
+ * @param hwnd 父窗口句柄，用于获取应用实例和计算位置
+ * @param message 要显示的通知消息文本(UTF-8编码)
  * 
- * 显示一个系统托盘通知，通知内容为"时间到了!"或其本地化版本。
+ * 在屏幕右下角显示一个带动画效果的自定义通知窗口
  */
 void ShowToastNotification(HWND hwnd, const char* message);
 
-#endif // CLOCK_NOTIFICATION_H
+#endif // NOTIFICATION_H

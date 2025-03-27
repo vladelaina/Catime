@@ -45,6 +45,9 @@ char CLOCK_TIMEOUT_MESSAGE_TEXT[100] = "时间到啦！";
 char POMODORO_TIMEOUT_MESSAGE_TEXT[100] = "番茄钟时间到！"; // 新增番茄钟专用提示信息
 char POMODORO_CYCLE_COMPLETE_TEXT[100] = "所有番茄钟循环完成！";
 
+// 新增配置变量：通知显示持续时间(毫秒)
+int NOTIFICATION_TIMEOUT_MS = 3000;  // 默认3秒
+
 /**
  * @brief 获取配置文件路径
  * @param path 存储路径的缓冲区
@@ -118,6 +121,9 @@ void CreateDefaultConfig(const char* config_path) {
         fprintf(file, "CLOCK_TIMEOUT_MESSAGE_TEXT=%s\n", CLOCK_TIMEOUT_MESSAGE_TEXT);
         fprintf(file, "POMODORO_TIMEOUT_MESSAGE_TEXT=%s\n", POMODORO_TIMEOUT_MESSAGE_TEXT); // 添加番茄钟专用提示
         fprintf(file, "POMODORO_CYCLE_COMPLETE_TEXT=%s\n", POMODORO_CYCLE_COMPLETE_TEXT);
+        
+        // 新增：通知显示时间
+        fprintf(file, "NOTIFICATION_TIMEOUT_MS=3000\n");  // 默认3秒
         
         // 番茄钟设置区块
         fprintf(file, "POMODORO_TIME_OPTIONS=1500,300,1500,600\n"); // 时间1,时间2,时间3,时间4...
@@ -431,6 +437,13 @@ void ReadConfig() {
         else if (strncmp(line, "POMODORO_CYCLE_COMPLETE_TEXT=", 29) == 0) {
             strncpy(POMODORO_CYCLE_COMPLETE_TEXT, line + 29, sizeof(POMODORO_CYCLE_COMPLETE_TEXT) - 1);
             POMODORO_CYCLE_COMPLETE_TEXT[sizeof(POMODORO_CYCLE_COMPLETE_TEXT) - 1] = '\0';
+        }
+        // 添加读取通知显示时间的代码
+        else if (strncmp(line, "NOTIFICATION_TIMEOUT_MS=", 24) == 0) {
+            int timeout = atoi(line + 24);
+            if (timeout > 0) {
+                NOTIFICATION_TIMEOUT_MS = timeout;
+            }
         }
     }
 
@@ -1063,6 +1076,9 @@ void WriteConfig(const char* config_path) {
     fprintf(file, "POMODORO_TIMEOUT_MESSAGE_TEXT=%s\n", POMODORO_TIMEOUT_MESSAGE_TEXT); // 添加番茄钟专用提示
     fprintf(file, "POMODORO_CYCLE_COMPLETE_TEXT=%s\n", POMODORO_CYCLE_COMPLETE_TEXT);
     
+    // 新增：通知显示时间
+    fprintf(file, "NOTIFICATION_TIMEOUT_MS=%d\n", NOTIFICATION_TIMEOUT_MS);
+    
     // 番茄钟设置区块
     fprintf(file, "POMODORO_TIME_OPTIONS=");
     for (int i = 0; i < POMODORO_TIMES_COUNT; i++) {
@@ -1358,4 +1374,53 @@ void ReadNotificationMessagesConfig(void) {
     if (!cycleCompleteMsgFound) {
         strcpy(POMODORO_CYCLE_COMPLETE_TEXT, "所有番茄钟循环完成！"); // 默认值
     }
+}
+
+/**
+ * @brief 写入通知显示时间配置
+ * @param timeout_ms 通知显示时间(毫秒)
+ * 
+ * 更新配置文件中的通知显示时间设置，
+ * 采用临时文件方式确保配置更新安全。
+ */
+void WriteConfigNotificationTimeout(int timeout_ms) {
+    char config_path[MAX_PATH];
+    char temp_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    snprintf(temp_path, MAX_PATH, "%s.tmp", config_path);
+    FILE *file, *temp_file;
+    char line[256];
+    int found = 0;
+    
+    file = fopen(config_path, "r");
+    temp_file = fopen(temp_path, "w");
+    
+    if (!file || !temp_file) {
+        if (file) fclose(file);
+        if (temp_file) fclose(temp_file);
+        return;
+    }
+    
+    while (fgets(line, sizeof(line), file)) {
+        if (strncmp(line, "NOTIFICATION_TIMEOUT_MS=", 24) == 0) {
+            fprintf(temp_file, "NOTIFICATION_TIMEOUT_MS=%d\n", timeout_ms);
+            found = 1;
+        } else {
+            fputs(line, temp_file);
+        }
+    }
+    
+    // 如果配置文件中没有找到对应的键，则添加
+    if (!found) {
+        fprintf(temp_file, "NOTIFICATION_TIMEOUT_MS=%d\n", timeout_ms);
+    }
+    
+    fclose(file);
+    fclose(temp_file);
+    
+    remove(config_path);
+    rename(temp_path, config_path);
+    
+    // 更新全局变量
+    NOTIFICATION_TIMEOUT_MS = timeout_ms;
 }
