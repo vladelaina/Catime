@@ -17,10 +17,10 @@ RC_FILE = resource/resource.rc
 $(shell mkdir -p $(OUTPUT_DIR) $(ASSET_DIR))
 
 # 编译选项
-CFLAGS = -mwindows -Iinclude -O3
+CFLAGS = -mwindows -Iinclude -O3 -flto=8 -march=native -ffunction-sections -fdata-sections -fno-strict-aliasing
 
-# 链接选项 - 添加必要的库
-LDFLAGS = -lole32 -lshell32 -lcomdlg32 -luuid -lwininet
+# 链接选项 - 添加必要的库并优化
+LDFLAGS = -lole32 -lshell32 -lcomdlg32 -luuid -lwininet -Wl,--gc-sections -flto=8 -s
 
 # 确保 dwmapi.lib 被链接
 LIBS = -ldwmapi -luser32 -lgdi32 -lcomdlg32

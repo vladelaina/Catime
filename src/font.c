@@ -88,7 +88,7 @@ extern char CLOCK_TEXT_COLOR[];  ///< 当前时钟文本颜色
 
 /// @name 外部函数声明
 /// @{
-extern void GetConfigPath(char* path, int maxLen);             ///< 获取配置文件路径
+extern void GetConfigPath(char* path, size_t maxLen);             ///< 获取配置文件路径
 extern void ReadConfig(void);                                  ///< 读取配置文件
 extern int CALLBACK EnumFontFamExProc(ENUMLOGFONTEX *lpelfe, NEWTEXTMETRICEX *lpntme, DWORD FontType, LPARAM lParam); ///< 字体枚举回调函数
 /// @}
