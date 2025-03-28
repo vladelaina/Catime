@@ -31,7 +31,6 @@
 - **自定义丰富**: 47种字体、15种预设颜色、支持输入颜色值、使用调色板选择颜色、支持实时预览
 
 ## 💡使用场景
- 演示视频(基于V1.0.5)：<img src="https://www.bilibili.com/favicon.ico" width="20" height="20"> [BiliBili](https://www.bilibili.com/video/BV1fzQRYxErt)
 
 - 👔 下班倒计时
 - 🍅 番茄时钟
@@ -46,6 +45,7 @@
 - 🕰️ 作为桌面时钟使用
 - ⏱️正计时/倒计时
 
+ 演示视频(基于V1.0.5)：<img src="https://www.bilibili.com/favicon.ico" width="20" height="20"> [BiliBili](https://www.bilibili.com/video/BV1fzQRYxErt)
 
 ## 📑使用说明
 
