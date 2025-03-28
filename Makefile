@@ -17,7 +17,7 @@ RC_FILE = resource/resource.rc
 $(shell mkdir -p $(OUTPUT_DIR) $(ASSET_DIR))
 
 # 编译选项
-CFLAGS = -mwindows -Iinclude
+CFLAGS = -mwindows -Iinclude -O3
 
 # 链接选项 - 添加必要的库
 LDFLAGS = -lole32 -lshell32 -lcomdlg32 -luuid -lwininet
