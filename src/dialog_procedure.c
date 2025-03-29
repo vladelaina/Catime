@@ -1339,10 +1339,26 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             hBackgroundBrush = CreateSolidBrush(RGB(0xF3, 0xF3, 0xF3));
             hEditBrush = CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF));
             
-            // 设置当前通知消息内容到编辑框
-            SetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_EDIT1, CLOCK_TIMEOUT_MESSAGE_TEXT);
-            SetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_EDIT2, POMODORO_TIMEOUT_MESSAGE_TEXT);
-            SetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_EDIT3, POMODORO_CYCLE_COMPLETE_TEXT);
+            // 读取最新配置到全局变量
+            ReadNotificationMessagesConfig();
+            
+            // 为了处理UTF-8中文，我们需要转换到Unicode
+            wchar_t wideText[sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT)];
+            
+            // 第一个编辑框 - 倒计时超时提示
+            MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_MESSAGE_TEXT, -1, 
+                               wideText, sizeof(wideText)/sizeof(wchar_t));
+            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, wideText);
+            
+            // 第二个编辑框 - 番茄钟超时提示
+            MultiByteToWideChar(CP_UTF8, 0, POMODORO_TIMEOUT_MESSAGE_TEXT, -1, 
+                               wideText, sizeof(wideText)/sizeof(wchar_t));
+            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT2, wideText);
+            
+            // 第三个编辑框 - 番茄钟循环完成提示
+            MultiByteToWideChar(CP_UTF8, 0, POMODORO_CYCLE_COMPLETE_TEXT, -1, 
+                               wideText, sizeof(wideText)/sizeof(wchar_t));
+            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT3, wideText);
             
             // 本地化标签文本
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_LABEL1, 
@@ -1378,14 +1394,27 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
         
         case WM_COMMAND:
             if (LOWORD(wParam) == IDOK) {
-                // 获取编辑框中的文本
-                char timeout_msg[100] = {0};
-                char pomodoro_msg[100] = {0};
-                char cycle_complete_msg[100] = {0};
+                // 获取编辑框中的文本（Unicode方式）
+                wchar_t wTimeout[256] = {0};
+                wchar_t wPomodoro[256] = {0};
+                wchar_t wCycle[256] = {0};
                 
-                GetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_EDIT1, timeout_msg, sizeof(timeout_msg));
-                GetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_EDIT2, pomodoro_msg, sizeof(pomodoro_msg));
-                GetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_EDIT3, cycle_complete_msg, sizeof(cycle_complete_msg));
+                // 获取Unicode文本
+                GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, wTimeout, sizeof(wTimeout)/sizeof(wchar_t));
+                GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT2, wPomodoro, sizeof(wPomodoro)/sizeof(wchar_t));
+                GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT3, wCycle, sizeof(wCycle)/sizeof(wchar_t));
+                
+                // 转换为UTF-8
+                char timeout_msg[256] = {0};
+                char pomodoro_msg[256] = {0};
+                char cycle_complete_msg[256] = {0};
+                
+                WideCharToMultiByte(CP_UTF8, 0, wTimeout, -1, 
+                                    timeout_msg, sizeof(timeout_msg), NULL, NULL);
+                WideCharToMultiByte(CP_UTF8, 0, wPomodoro, -1, 
+                                    pomodoro_msg, sizeof(pomodoro_msg), NULL, NULL);
+                WideCharToMultiByte(CP_UTF8, 0, wCycle, -1, 
+                                    cycle_complete_msg, sizeof(cycle_complete_msg), NULL, NULL);
                 
                 // 保存到配置文件并更新全局变量
                 WriteConfigNotificationMessages(timeout_msg, pomodoro_msg, cycle_complete_msg);

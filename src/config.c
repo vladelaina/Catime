@@ -1336,60 +1336,186 @@ void WriteConfigPomodoroTimeOptions(int* times, int count) {
  * 
  * 更新配置文件中的通知消息设置，
  * 采用临时文件方式确保配置更新安全。
+ * 支持UTF-8编码的中文字符。
  */
 void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodoro_msg, const char* cycle_complete_msg) {
     char config_path[MAX_PATH];
     char temp_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     snprintf(temp_path, MAX_PATH, "%s.tmp", config_path);
-    FILE *file, *temp_file;
-    char line[256];
-    int found_timeout = 0;
-    int found_pomodoro = 0;
-    int found_cycle = 0;
     
-    file = fopen(config_path, "r");
-    temp_file = fopen(temp_path, "w");
+    // 使用Windows API打开文件，确保UTF-8编码正确处理
+    HANDLE hSourceFile = CreateFileA(
+        config_path,
+        GENERIC_READ,
+        FILE_SHARE_READ,
+        NULL,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+    );
     
-    if (!file || !temp_file) {
-        if (file) fclose(file);
-        if (temp_file) fclose(temp_file);
+    if (hSourceFile == INVALID_HANDLE_VALUE) {
+        // 如果源文件不存在，尝试直接创建新文件
+        HANDLE hNewFile = CreateFileA(
+            config_path,
+            GENERIC_WRITE,
+            0,
+            NULL,
+            CREATE_ALWAYS,
+            FILE_ATTRIBUTE_NORMAL,
+            NULL
+        );
+        
+        if (hNewFile == INVALID_HANDLE_VALUE) {
+            return; // 无法创建文件
+        }
+        
+        // 写入UTF-8 BOM标记
+        unsigned char bom[3] = {0xEF, 0xBB, 0xBF};
+        DWORD bytesWritten;
+        WriteFile(hNewFile, bom, 3, &bytesWritten, NULL);
+        
+        // 写入配置项
+        char buffer[1024];
+        sprintf(buffer, "CLOCK_TIMEOUT_MESSAGE_TEXT=%s\r\n", timeout_msg);
+        WriteFile(hNewFile, buffer, strlen(buffer), &bytesWritten, NULL);
+        
+        sprintf(buffer, "POMODORO_TIMEOUT_MESSAGE_TEXT=%s\r\n", pomodoro_msg);
+        WriteFile(hNewFile, buffer, strlen(buffer), &bytesWritten, NULL);
+        
+        sprintf(buffer, "POMODORO_CYCLE_COMPLETE_TEXT=%s\r\n", cycle_complete_msg);
+        WriteFile(hNewFile, buffer, strlen(buffer), &bytesWritten, NULL);
+        
+        CloseHandle(hNewFile);
+        
+        // 更新全局变量
+        strcpy(CLOCK_TIMEOUT_MESSAGE_TEXT, timeout_msg);
+        strcpy(POMODORO_TIMEOUT_MESSAGE_TEXT, pomodoro_msg);
+        strcpy(POMODORO_CYCLE_COMPLETE_TEXT, cycle_complete_msg);
         return;
     }
     
-    // 复制原文件内容到临时文件，同时替换需要更新的行
-    while (fgets(line, sizeof(line), file)) {
+    HANDLE hTempFile = CreateFileA(
+        temp_path,
+        GENERIC_WRITE,
+        0,
+        NULL,
+        CREATE_ALWAYS,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+    );
+    
+    if (hTempFile == INVALID_HANDLE_VALUE) {
+        CloseHandle(hSourceFile);
+        return;
+    }
+    
+    // 写入UTF-8 BOM标记
+    unsigned char bom[3] = {0xEF, 0xBB, 0xBF};
+    DWORD bytesWritten;
+    WriteFile(hTempFile, bom, 3, &bytesWritten, NULL);
+    
+    char buffer[1024];
+    char line[1024];
+    DWORD bytesRead;
+    BOOL found_timeout = FALSE;
+    BOOL found_pomodoro = FALSE;
+    BOOL found_cycle = FALSE;
+    
+    // 跳过源文件中的BOM标记（如果有）
+    ReadFile(hSourceFile, buffer, 3, &bytesRead, NULL);
+    if (bytesRead == 3) {
+        if (!(buffer[0] == 0xEF && buffer[1] == 0xBB && buffer[2] == 0xBF)) {
+            // 不是BOM，需要回退文件指针
+            SetFilePointer(hSourceFile, 0, NULL, FILE_BEGIN);
+        }
+    } else {
+        // 文件过短，重置指针到开始位置
+        SetFilePointer(hSourceFile, 0, NULL, FILE_BEGIN);
+    }
+    
+    // 处理文件内容
+    BOOL readingLine = TRUE;
+    int pos = 0;
+    
+    while (readingLine) {
+        // 逐字节读取，构建行
+        bytesRead = 0;
+        pos = 0;
+        memset(line, 0, sizeof(line));
+        
+        while (TRUE) {
+            char ch;
+            ReadFile(hSourceFile, &ch, 1, &bytesRead, NULL);
+            
+            if (bytesRead == 0) { // 文件结束
+                readingLine = FALSE;
+                break;
+            }
+            
+            if (ch == '\n') { // 行结束
+                break;
+            }
+            
+            if (ch != '\r') { // 忽略回车符
+                line[pos++] = ch;
+                if (pos >= sizeof(line) - 1) break; // 防止缓冲区溢出
+            }
+        }
+        
+        line[pos] = '\0'; // 确保字符串结束
+        
+        // 如果没有内容且文件已结束，退出循环
+        if (pos == 0 && !readingLine) {
+            break;
+        }
+        
+        // 处理这一行
         if (strncmp(line, "CLOCK_TIMEOUT_MESSAGE_TEXT=", 27) == 0) {
-            fprintf(temp_file, "CLOCK_TIMEOUT_MESSAGE_TEXT=%s\n", timeout_msg);
-            found_timeout = 1;
+            sprintf(buffer, "CLOCK_TIMEOUT_MESSAGE_TEXT=%s\r\n", timeout_msg);
+            WriteFile(hTempFile, buffer, strlen(buffer), &bytesWritten, NULL);
+            found_timeout = TRUE;
         } else if (strncmp(line, "POMODORO_TIMEOUT_MESSAGE_TEXT=", 30) == 0) {
-            fprintf(temp_file, "POMODORO_TIMEOUT_MESSAGE_TEXT=%s\n", pomodoro_msg);
-            found_pomodoro = 1;
+            sprintf(buffer, "POMODORO_TIMEOUT_MESSAGE_TEXT=%s\r\n", pomodoro_msg);
+            WriteFile(hTempFile, buffer, strlen(buffer), &bytesWritten, NULL);
+            found_pomodoro = TRUE;
         } else if (strncmp(line, "POMODORO_CYCLE_COMPLETE_TEXT=", 29) == 0) {
-            fprintf(temp_file, "POMODORO_CYCLE_COMPLETE_TEXT=%s\n", cycle_complete_msg);
-            found_cycle = 1;
+            sprintf(buffer, "POMODORO_CYCLE_COMPLETE_TEXT=%s\r\n", cycle_complete_msg);
+            WriteFile(hTempFile, buffer, strlen(buffer), &bytesWritten, NULL);
+            found_cycle = TRUE;
         } else {
-            fputs(line, temp_file);
+            // 写回原始行，加上换行符
+            strcat(line, "\r\n");
+            WriteFile(hTempFile, line, strlen(line), &bytesWritten, NULL);
+        }
+        
+        // 如果所有消息都找到了，可以提前退出循环
+        if (found_timeout && found_pomodoro && found_cycle) {
+            break;
         }
     }
     
     // 如果配置中没找到相应项，则添加
     if (!found_timeout) {
-        fprintf(temp_file, "CLOCK_TIMEOUT_MESSAGE_TEXT=%s\n", timeout_msg);
+        sprintf(buffer, "CLOCK_TIMEOUT_MESSAGE_TEXT=%s\r\n", timeout_msg);
+        WriteFile(hTempFile, buffer, strlen(buffer), &bytesWritten, NULL);
     }
     if (!found_pomodoro) {
-        fprintf(temp_file, "POMODORO_TIMEOUT_MESSAGE_TEXT=%s\n", pomodoro_msg);
+        sprintf(buffer, "POMODORO_TIMEOUT_MESSAGE_TEXT=%s\r\n", pomodoro_msg);
+        WriteFile(hTempFile, buffer, strlen(buffer), &bytesWritten, NULL);
     }
     if (!found_cycle) {
-        fprintf(temp_file, "POMODORO_CYCLE_COMPLETE_TEXT=%s\n", cycle_complete_msg);
+        sprintf(buffer, "POMODORO_CYCLE_COMPLETE_TEXT=%s\r\n", cycle_complete_msg);
+        WriteFile(hTempFile, buffer, strlen(buffer), &bytesWritten, NULL);
     }
     
-    fclose(file);
-    fclose(temp_file);
+    CloseHandle(hSourceFile);
+    CloseHandle(hTempFile);
     
     // 替换原文件
-    remove(config_path);
-    rename(temp_path, config_path);
+    DeleteFileA(config_path);
+    MoveFileA(temp_path, config_path);
     
     // 更新全局变量
     strcpy(CLOCK_TIMEOUT_MESSAGE_TEXT, timeout_msg);
@@ -1408,48 +1534,98 @@ void ReadNotificationMessagesConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
 
-    FILE* file = fopen(config_path, "r");
-    if (!file) {
+    HANDLE hFile = CreateFileA(
+        config_path,
+        GENERIC_READ,
+        FILE_SHARE_READ,
+        NULL,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+    );
+    
+    if (hFile == INVALID_HANDLE_VALUE) {
         // 文件无法打开，保留内存中的当前值或默认值
         return;
     }
 
-    char line[256];
+    // 跳过UTF-8 BOM标记（如果有）
+    char bom[3];
+    DWORD bytesRead;
+    ReadFile(hFile, bom, 3, &bytesRead, NULL);
+    
+    if (bytesRead != 3 || bom[0] != 0xEF || bom[1] != 0xBB || bom[2] != 0xBF) {
+        // 不是BOM，需要回退文件指针
+        SetFilePointer(hFile, 0, NULL, FILE_BEGIN);
+    }
+    
+    char line[1024];
     BOOL timeoutMsgFound = FALSE;
-    BOOL pomodoroTimeoutMsgFound = FALSE; // 新增番茄钟专用提示标志
+    BOOL pomodoroTimeoutMsgFound = FALSE;
     BOOL cycleCompleteMsgFound = FALSE;
-
-    while (fgets(line, sizeof(line), file)) {
-        size_t len = strlen(line);
-        if (len > 0 && line[len - 1] == '\n') {
-            line[len - 1] = '\0'; // 移除换行符
+    
+    // 逐行读取文件内容
+    BOOL readingLine = TRUE;
+    int pos = 0;
+    
+    while (readingLine) {
+        // 逐字节读取，构建行
+        bytesRead = 0;
+        pos = 0;
+        memset(line, 0, sizeof(line));
+        
+        while (TRUE) {
+            char ch;
+            ReadFile(hFile, &ch, 1, &bytesRead, NULL);
+            
+            if (bytesRead == 0) { // 文件结束
+                readingLine = FALSE;
+                break;
+            }
+            
+            if (ch == '\n') { // 行结束
+                break;
+            }
+            
+            if (ch != '\r') { // 忽略回车符
+                line[pos++] = ch;
+                if (pos >= sizeof(line) - 1) break; // 防止缓冲区溢出
+            }
         }
-
-        if (!timeoutMsgFound && strncmp(line, "CLOCK_TIMEOUT_MESSAGE_TEXT=", 27) == 0) {
+        
+        line[pos] = '\0'; // 确保字符串结束
+        
+        // 如果没有内容且文件已结束，退出循环
+        if (pos == 0 && !readingLine) {
+            break;
+        }
+        
+        // 处理这一行
+        if (strncmp(line, "CLOCK_TIMEOUT_MESSAGE_TEXT=", 27) == 0) {
             strncpy(CLOCK_TIMEOUT_MESSAGE_TEXT, line + 27, sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT) - 1);
             CLOCK_TIMEOUT_MESSAGE_TEXT[sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT) - 1] = '\0';
             timeoutMsgFound = TRUE;
         } 
-        else if (!pomodoroTimeoutMsgFound && strncmp(line, "POMODORO_TIMEOUT_MESSAGE_TEXT=", 30) == 0) {
+        else if (strncmp(line, "POMODORO_TIMEOUT_MESSAGE_TEXT=", 30) == 0) {
             strncpy(POMODORO_TIMEOUT_MESSAGE_TEXT, line + 30, sizeof(POMODORO_TIMEOUT_MESSAGE_TEXT) - 1);
             POMODORO_TIMEOUT_MESSAGE_TEXT[sizeof(POMODORO_TIMEOUT_MESSAGE_TEXT) - 1] = '\0';
             pomodoroTimeoutMsgFound = TRUE;
         }
-        else if (!cycleCompleteMsgFound && strncmp(line, "POMODORO_CYCLE_COMPLETE_TEXT=", 29) == 0) {
+        else if (strncmp(line, "POMODORO_CYCLE_COMPLETE_TEXT=", 29) == 0) {
             strncpy(POMODORO_CYCLE_COMPLETE_TEXT, line + 29, sizeof(POMODORO_CYCLE_COMPLETE_TEXT) - 1);
             POMODORO_CYCLE_COMPLETE_TEXT[sizeof(POMODORO_CYCLE_COMPLETE_TEXT) - 1] = '\0';
             cycleCompleteMsgFound = TRUE;
         }
-
+        
         // 如果所有消息都找到了，可以提前退出循环
         if (timeoutMsgFound && pomodoroTimeoutMsgFound && cycleCompleteMsgFound) {
             break;
         }
     }
-
-    fclose(file);
-
-    // 如果文件中没有找到对应的配置项，确保变量有默认值（虽然它们在定义时已有）
+    
+    CloseHandle(hFile);
+    
+    // 如果文件中没有找到对应的配置项，确保变量有默认值
     if (!timeoutMsgFound) {
         strcpy(CLOCK_TIMEOUT_MESSAGE_TEXT, "时间到啦！"); // 默认值
     }
@@ -1458,6 +1634,98 @@ void ReadNotificationMessagesConfig(void) {
     }
     if (!cycleCompleteMsgFound) {
         strcpy(POMODORO_CYCLE_COMPLETE_TEXT, "所有番茄钟循环完成！"); // 默认值
+    }
+}
+
+/**
+ * @brief 从配置文件中读取通知显示时间
+ * 
+ * 专门读取 NOTIFICATION_TIMEOUT_MS 配置项
+ * 并更新相应的全局变量。若配置不存在则保持默认值不变。
+ */
+void ReadNotificationTimeoutConfig(void) {
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    
+    HANDLE hFile = CreateFileA(
+        config_path,
+        GENERIC_READ,
+        FILE_SHARE_READ,
+        NULL,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+    );
+    
+    if (hFile == INVALID_HANDLE_VALUE) {
+        // 文件无法打开，保留当前默认值
+        return;
+    }
+    
+    // 跳过UTF-8 BOM标记（如果有）
+    char bom[3];
+    DWORD bytesRead;
+    ReadFile(hFile, bom, 3, &bytesRead, NULL);
+    
+    if (bytesRead != 3 || bom[0] != 0xEF || bom[1] != 0xBB || bom[2] != 0xBF) {
+        // 不是BOM，需要回退文件指针
+        SetFilePointer(hFile, 0, NULL, FILE_BEGIN);
+    }
+    
+    char line[256];
+    BOOL timeoutFound = FALSE;
+    
+    // 逐行读取文件内容
+    BOOL readingLine = TRUE;
+    int pos = 0;
+    
+    while (readingLine) {
+        // 逐字节读取，构建行
+        bytesRead = 0;
+        pos = 0;
+        memset(line, 0, sizeof(line));
+        
+        while (TRUE) {
+            char ch;
+            ReadFile(hFile, &ch, 1, &bytesRead, NULL);
+            
+            if (bytesRead == 0) { // 文件结束
+                readingLine = FALSE;
+                break;
+            }
+            
+            if (ch == '\n') { // 行结束
+                break;
+            }
+            
+            if (ch != '\r') { // 忽略回车符
+                line[pos++] = ch;
+                if (pos >= sizeof(line) - 1) break; // 防止缓冲区溢出
+            }
+        }
+        
+        line[pos] = '\0'; // 确保字符串结束
+        
+        // 如果没有内容且文件已结束，退出循环
+        if (pos == 0 && !readingLine) {
+            break;
+        }
+        
+        if (strncmp(line, "NOTIFICATION_TIMEOUT_MS=", 24) == 0) {
+            int timeout = atoi(line + 24);
+            if (timeout > 0) {
+                NOTIFICATION_TIMEOUT_MS = timeout;
+            }
+            timeoutFound = TRUE;
+            break; // 找到后就可以退出循环了
+        }
+    }
+    
+    CloseHandle(hFile);
+    
+    // 如果配置中没找到，保留默认值
+    if (!timeoutFound) {
+        NOTIFICATION_TIMEOUT_MS = 3000; // 确保有默认值
     }
 }
 
@@ -1473,84 +1741,150 @@ void WriteConfigNotificationTimeout(int timeout_ms) {
     char temp_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     snprintf(temp_path, MAX_PATH, "%s.tmp", config_path);
-    FILE *file, *temp_file;
-    char line[256];
-    int found = 0;
     
-    file = fopen(config_path, "r");
-    temp_file = fopen(temp_path, "w");
+    HANDLE hSourceFile = CreateFileA(
+        config_path,
+        GENERIC_READ,
+        FILE_SHARE_READ,
+        NULL,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+    );
     
-    if (!file || !temp_file) {
-        if (file) fclose(file);
-        if (temp_file) fclose(temp_file);
+    HANDLE hTempFile = CreateFileA(
+        temp_path,
+        GENERIC_WRITE,
+        0,
+        NULL,
+        CREATE_ALWAYS,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+    );
+    
+    if (hSourceFile == INVALID_HANDLE_VALUE) {
+        // 源文件不存在，创建新文件并写入默认内容
+        if (hTempFile != INVALID_HANDLE_VALUE) {
+            CloseHandle(hTempFile);
+        }
+        
+        HANDLE hNewFile = CreateFileA(
+            config_path,
+            GENERIC_WRITE,
+            0,
+            NULL,
+            CREATE_ALWAYS,
+            FILE_ATTRIBUTE_NORMAL,
+            NULL
+        );
+        
+        if (hNewFile == INVALID_HANDLE_VALUE) {
+            return; // 无法创建文件
+        }
+        
+        // 写入UTF-8 BOM标记
+        unsigned char bom[3] = {0xEF, 0xBB, 0xBF};
+        DWORD bytesWritten;
+        WriteFile(hNewFile, bom, 3, &bytesWritten, NULL);
+        
+        // 写入配置项
+        char buffer[128];
+        sprintf(buffer, "NOTIFICATION_TIMEOUT_MS=%d\r\n", timeout_ms);
+        WriteFile(hNewFile, buffer, strlen(buffer), &bytesWritten, NULL);
+        
+        CloseHandle(hNewFile);
+        
+        // 更新全局变量
+        NOTIFICATION_TIMEOUT_MS = timeout_ms;
         return;
     }
     
-    while (fgets(line, sizeof(line), file)) {
+    if (hTempFile == INVALID_HANDLE_VALUE) {
+        CloseHandle(hSourceFile);
+        return;
+    }
+    
+    // 写入UTF-8 BOM标记到临时文件
+    unsigned char bom[3] = {0xEF, 0xBB, 0xBF};
+    DWORD bytesWritten;
+    WriteFile(hTempFile, bom, 3, &bytesWritten, NULL);
+    
+    // 跳过源文件的UTF-8 BOM标记（如果有）
+    char bomCheck[3];
+    DWORD bytesRead;
+    ReadFile(hSourceFile, bomCheck, 3, &bytesRead, NULL);
+    
+    if (bytesRead != 3 || bomCheck[0] != 0xEF || bomCheck[1] != 0xBB || bomCheck[2] != 0xBF) {
+        // 不是BOM，回退文件指针
+        SetFilePointer(hSourceFile, 0, NULL, FILE_BEGIN);
+    }
+    
+    // 逐行复制文件内容
+    char line[1024];
+    BOOL found = FALSE;
+    BOOL readingLine = TRUE;
+    int pos = 0;
+    char buffer[1024];
+    
+    while (readingLine) {
+        // 逐字节读取，构建行
+        bytesRead = 0;
+        pos = 0;
+        memset(line, 0, sizeof(line));
+        
+        while (TRUE) {
+            char ch;
+            ReadFile(hSourceFile, &ch, 1, &bytesRead, NULL);
+            
+            if (bytesRead == 0) { // 文件结束
+                readingLine = FALSE;
+                break;
+            }
+            
+            if (ch == '\n') { // 行结束
+                break;
+            }
+            
+            if (ch != '\r') { // 忽略回车符
+                line[pos++] = ch;
+                if (pos >= sizeof(line) - 1) break; // 防止缓冲区溢出
+            }
+        }
+        
+        line[pos] = '\0'; // 确保字符串结束
+        
+        // 如果没有内容且文件已结束，退出循环
+        if (pos == 0 && !readingLine) {
+            break;
+        }
+        
+        // 处理这一行
         if (strncmp(line, "NOTIFICATION_TIMEOUT_MS=", 24) == 0) {
-            fprintf(temp_file, "NOTIFICATION_TIMEOUT_MS=%d\n", timeout_ms);
-            found = 1;
+            sprintf(buffer, "NOTIFICATION_TIMEOUT_MS=%d\r\n", timeout_ms);
+            WriteFile(hTempFile, buffer, strlen(buffer), &bytesWritten, NULL);
+            found = TRUE;
         } else {
-            fputs(line, temp_file);
+            // 写回原始行，加上换行符
+            strcat(line, "\r\n");
+            WriteFile(hTempFile, line, strlen(line), &bytesWritten, NULL);
         }
     }
     
-    // 如果配置文件中没有找到对应的键，则添加
+    // 如果配置中没找到相应项，则添加
     if (!found) {
-        fprintf(temp_file, "NOTIFICATION_TIMEOUT_MS=%d\n", timeout_ms);
+        sprintf(buffer, "NOTIFICATION_TIMEOUT_MS=%d\r\n", timeout_ms);
+        WriteFile(hTempFile, buffer, strlen(buffer), &bytesWritten, NULL);
     }
     
-    fclose(file);
-    fclose(temp_file);
+    CloseHandle(hSourceFile);
+    CloseHandle(hTempFile);
     
-    remove(config_path);
-    rename(temp_path, config_path);
+    // 替换原文件
+    DeleteFileA(config_path);
+    MoveFileA(temp_path, config_path);
     
     // 更新全局变量
     NOTIFICATION_TIMEOUT_MS = timeout_ms;
-}
-
-/**
- * @brief 从配置文件中读取通知显示时间
- * 
- * 专门读取 NOTIFICATION_TIMEOUT_MS 配置项
- * 并更新相应的全局变量。若配置不存在则保持默认值不变。
- */
-void ReadNotificationTimeoutConfig(void) {
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-
-    FILE* file = fopen(config_path, "r");
-    if (!file) {
-        // 文件无法打开，保留当前默认值
-        return;
-    }
-
-    char line[256];
-    BOOL timeoutFound = FALSE;
-
-    while (fgets(line, sizeof(line), file)) {
-        size_t len = strlen(line);
-        if (len > 0 && line[len - 1] == '\n') {
-            line[len - 1] = '\0'; // 移除换行符
-        }
-
-        if (strncmp(line, "NOTIFICATION_TIMEOUT_MS=", 24) == 0) {
-            int timeout = atoi(line + 24);
-            if (timeout > 0) {
-                NOTIFICATION_TIMEOUT_MS = timeout;
-            }
-            timeoutFound = TRUE;
-            break; // 找到后就可以退出循环了
-        }
-    }
-
-    fclose(file);
-
-    // 如果配置中没找到，保留默认值
-    if (!timeoutFound) {
-        NOTIFICATION_TIMEOUT_MS = 3000; // 确保有默认值
-    }
 }
 
 /**
@@ -1562,22 +1896,71 @@ void ReadNotificationTimeoutConfig(void) {
 void ReadNotificationOpacityConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-
-    FILE* file = fopen(config_path, "r");
-    if (!file) {
+    
+    HANDLE hFile = CreateFileA(
+        config_path,
+        GENERIC_READ,
+        FILE_SHARE_READ,
+        NULL,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+    );
+    
+    if (hFile == INVALID_HANDLE_VALUE) {
         // 文件无法打开，保留当前默认值
         return;
     }
-
+    
+    // 跳过UTF-8 BOM标记（如果有）
+    char bom[3];
+    DWORD bytesRead;
+    ReadFile(hFile, bom, 3, &bytesRead, NULL);
+    
+    if (bytesRead != 3 || bom[0] != 0xEF || bom[1] != 0xBB || bom[2] != 0xBF) {
+        // 不是BOM，需要回退文件指针
+        SetFilePointer(hFile, 0, NULL, FILE_BEGIN);
+    }
+    
     char line[256];
     BOOL opacityFound = FALSE;
-
-    while (fgets(line, sizeof(line), file)) {
-        size_t len = strlen(line);
-        if (len > 0 && line[len - 1] == '\n') {
-            line[len - 1] = '\0'; // 移除换行符
+    
+    // 逐行读取文件内容
+    BOOL readingLine = TRUE;
+    int pos = 0;
+    
+    while (readingLine) {
+        // 逐字节读取，构建行
+        bytesRead = 0;
+        pos = 0;
+        memset(line, 0, sizeof(line));
+        
+        while (TRUE) {
+            char ch;
+            ReadFile(hFile, &ch, 1, &bytesRead, NULL);
+            
+            if (bytesRead == 0) { // 文件结束
+                readingLine = FALSE;
+                break;
+            }
+            
+            if (ch == '\n') { // 行结束
+                break;
+            }
+            
+            if (ch != '\r') { // 忽略回车符
+                line[pos++] = ch;
+                if (pos >= sizeof(line) - 1) break; // 防止缓冲区溢出
+            }
         }
-
+        
+        line[pos] = '\0'; // 确保字符串结束
+        
+        // 如果没有内容且文件已结束，退出循环
+        if (pos == 0 && !readingLine) {
+            break;
+        }
+        
         if (strncmp(line, "NOTIFICATION_MAX_OPACITY=", 25) == 0) {
             int opacity = atoi(line + 25);
             // 确保透明度在有效范围内(1-100)
@@ -1588,64 +1971,11 @@ void ReadNotificationOpacityConfig(void) {
             break; // 找到后就可以退出循环了
         }
     }
-
-    fclose(file);
-
+    
+    CloseHandle(hFile);
+    
     // 如果配置中没找到，保留默认值
     if (!opacityFound) {
         NOTIFICATION_MAX_OPACITY = 95; // 确保有默认值
     }
-}
-
-/**
- * @brief 写入通知最大透明度配置
- * @param opacity 透明度百分比值(1-100)
- * 
- * 更新配置文件中的通知最大透明度设置，
- * 采用临时文件方式确保配置更新安全。
- */
-void WriteConfigNotificationOpacity(int opacity) {
-    // 确保透明度在有效范围内
-    if (opacity < 1) opacity = 1;
-    if (opacity > 100) opacity = 100;
-    
-    char config_path[MAX_PATH];
-    char temp_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    snprintf(temp_path, MAX_PATH, "%s.tmp", config_path);
-    FILE *file, *temp_file;
-    char line[256];
-    int found = 0;
-    
-    file = fopen(config_path, "r");
-    temp_file = fopen(temp_path, "w");
-    
-    if (!file || !temp_file) {
-        if (file) fclose(file);
-        if (temp_file) fclose(temp_file);
-        return;
-    }
-    
-    while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, "NOTIFICATION_MAX_OPACITY=", 25) == 0) {
-            fprintf(temp_file, "NOTIFICATION_MAX_OPACITY=%d\n", opacity);
-            found = 1;
-        } else {
-            fputs(line, temp_file);
-        }
-    }
-    
-    // 如果配置文件中没有找到对应的键，则添加
-    if (!found) {
-        fprintf(temp_file, "NOTIFICATION_MAX_OPACITY=%d\n", opacity);
-    }
-    
-    fclose(file);
-    fclose(temp_file);
-    
-    remove(config_path);
-    rename(temp_path, config_path);
-    
-    // 更新全局变量
-    NOTIFICATION_MAX_OPACITY = opacity;
 }
