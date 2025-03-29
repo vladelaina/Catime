@@ -1440,6 +1440,26 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDM_POMODORO_COMBINATION:
                     ShowPomodoroComboDialog(hwnd);
                     break;
+                case CLOCK_IDM_NOTIFICATION_CONTENT: {
+                    // 显示通知内容设置对话框
+                    ShowNotificationMessagesDialog(hwnd);
+                    break;
+                }
+                case CLOCK_IDM_NOTIFICATION_DISPLAY: {
+                    // 显示通知显示时间设置对话框（可以复用现有对话框）
+                    memset(inputText, 0, sizeof(inputText));
+                    sprintf(inputText, "%d", NOTIFICATION_TIMEOUT_MS);
+                    DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc);
+                    
+                    // 处理输入结果
+                    if (inputText[0] != '\0' && !isAllSpacesOnly(inputText)) {
+                        int timeout_ms = atoi(inputText);
+                        if (timeout_ms >= 500) { // 确保至少有500毫秒的显示时间
+                            WriteConfigNotificationTimeout(timeout_ms);
+                        }
+                    }
+                    break;
+                }
             }
             break;
 

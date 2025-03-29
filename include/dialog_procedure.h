@@ -112,4 +112,12 @@ void ShowPomodoroComboDialog(HWND hwndParent);
  */
 BOOL ParseTimeInput(const char* input, int* seconds);
 
+/**
+ * @brief 显示通知消息设置对话框
+ * @param hwndParent 父窗口句柄
+ * 
+ * 显示通知消息设置对话框，用于修改各种通知提示文本。
+ */
+void ShowNotificationMessagesDialog(HWND hwndParent);
+
 #endif // DIALOG_PROCEDURE_H

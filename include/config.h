@@ -205,6 +205,17 @@ void ReadNotificationOpacityConfig(void);
  */
 void WriteConfigNotificationOpacity(int opacity);
 
+/**
+ * @brief 写入通知消息配置
+ * @param timeout_msg 倒计时超时提示文本
+ * @param pomodoro_msg 番茄钟超时提示文本
+ * @param cycle_complete_msg 番茄钟循环完成提示文本
+ * 
+ * 更新配置文件中的通知消息设置，
+ * 采用临时文件方式确保配置更新安全。
+ */
+void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodoro_msg, const char* cycle_complete_msg);
+
 /// @}
 
 #endif // CONFIG_H

@@ -1321,3 +1321,110 @@ BOOL ParseTimeInput(const char* input, int* seconds) {
     *seconds = tempSeconds;
     return TRUE;
 }
+
+// 添加全局变量来跟踪通知消息对话框句柄
+static HWND g_hwndNotificationMessagesDialog = NULL;
+
+// 添加通知消息对话框处理程序
+INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    static HBRUSH hBackgroundBrush = NULL;
+    static HBRUSH hEditBrush = NULL;
+    
+    switch (msg) {
+        case WM_INITDIALOG: {
+            // 设置窗口置顶
+            SetWindowPos(hwndDlg, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+            
+            // 创建画刷
+            hBackgroundBrush = CreateSolidBrush(RGB(0xF3, 0xF3, 0xF3));
+            hEditBrush = CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF));
+            
+            // 设置当前通知消息内容到编辑框
+            SetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_EDIT1, CLOCK_TIMEOUT_MESSAGE_TEXT);
+            SetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_EDIT2, POMODORO_TIMEOUT_MESSAGE_TEXT);
+            SetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_EDIT3, POMODORO_CYCLE_COMPLETE_TEXT);
+            
+            // 本地化标签文本
+            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_LABEL1, 
+                           GetLocalizedString(L"倒计时超时提示:", L"Countdown timeout message:"));
+            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_LABEL2, 
+                           GetLocalizedString(L"番茄钟超时提示:", L"Pomodoro timeout message:"));
+            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_LABEL3,
+                           GetLocalizedString(L"番茄钟循环完成提示:", L"Pomodoro cycle complete message:"));
+            
+            // 本地化按钮文本
+            SetDlgItemTextW(hwndDlg, IDOK, GetLocalizedString(L"确定", L"OK"));
+            SetDlgItemTextW(hwndDlg, IDCANCEL, GetLocalizedString(L"取消", L"Cancel"));
+            
+            // 全选第一个编辑框文本
+            SendDlgItemMessage(hwndDlg, IDC_NOTIFICATION_EDIT1, EM_SETSEL, 0, -1);
+            
+            // 设置焦点到第一个编辑框
+            SetFocus(GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT1));
+            
+            return FALSE;  // 返回FALSE因为我们手动设置了焦点
+        }
+        
+        case WM_CTLCOLORDLG:
+            return (INT_PTR)hBackgroundBrush;
+        
+        case WM_CTLCOLORSTATIC:
+            SetBkColor((HDC)wParam, RGB(0xF3, 0xF3, 0xF3));
+            return (INT_PTR)hBackgroundBrush;
+            
+        case WM_CTLCOLOREDIT:
+            SetBkColor((HDC)wParam, RGB(0xFF, 0xFF, 0xFF));
+            return (INT_PTR)hEditBrush;
+        
+        case WM_COMMAND:
+            if (LOWORD(wParam) == IDOK) {
+                // 获取编辑框中的文本
+                char timeout_msg[100] = {0};
+                char pomodoro_msg[100] = {0};
+                char cycle_complete_msg[100] = {0};
+                
+                GetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_EDIT1, timeout_msg, sizeof(timeout_msg));
+                GetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_EDIT2, pomodoro_msg, sizeof(pomodoro_msg));
+                GetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_EDIT3, cycle_complete_msg, sizeof(cycle_complete_msg));
+                
+                // 保存到配置文件并更新全局变量
+                WriteConfigNotificationMessages(timeout_msg, pomodoro_msg, cycle_complete_msg);
+                
+                EndDialog(hwndDlg, IDOK);
+                g_hwndNotificationMessagesDialog = NULL;
+                return TRUE;
+            } else if (LOWORD(wParam) == IDCANCEL) {
+                EndDialog(hwndDlg, IDCANCEL);
+                g_hwndNotificationMessagesDialog = NULL;
+                return TRUE;
+            }
+            break;
+            
+        case WM_DESTROY:
+            if (hBackgroundBrush) DeleteObject(hBackgroundBrush);
+            if (hEditBrush) DeleteObject(hEditBrush);
+            break;
+    }
+    
+    return FALSE;
+}
+
+/**
+ * @brief 显示通知消息设置对话框
+ * @param hwndParent 父窗口句柄
+ * 
+ * 显示通知消息设置对话框，用于修改各种通知提示文本。
+ */
+void ShowNotificationMessagesDialog(HWND hwndParent) {
+    if (!g_hwndNotificationMessagesDialog) {
+        // 确保首先读取最新的配置值
+        ReadNotificationMessagesConfig();
+        
+        DialogBox(GetModuleHandle(NULL), 
+                 MAKEINTRESOURCE(CLOCK_IDD_NOTIFICATION_MESSAGES_DIALOG), 
+                 hwndParent, 
+                 NotificationMessagesDlgProc);
+    } else {
+        SetForegroundWindow(g_hwndNotificationMessagesDialog);
+    }
+}

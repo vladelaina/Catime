@@ -1329,6 +1329,75 @@ void WriteConfigPomodoroTimeOptions(int* times, int count) {
 }
 
 /**
+ * @brief 写入通知消息配置
+ * @param timeout_msg 倒计时超时提示文本
+ * @param pomodoro_msg 番茄钟超时提示文本
+ * @param cycle_complete_msg 番茄钟循环完成提示文本
+ * 
+ * 更新配置文件中的通知消息设置，
+ * 采用临时文件方式确保配置更新安全。
+ */
+void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodoro_msg, const char* cycle_complete_msg) {
+    char config_path[MAX_PATH];
+    char temp_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    snprintf(temp_path, MAX_PATH, "%s.tmp", config_path);
+    FILE *file, *temp_file;
+    char line[256];
+    int found_timeout = 0;
+    int found_pomodoro = 0;
+    int found_cycle = 0;
+    
+    file = fopen(config_path, "r");
+    temp_file = fopen(temp_path, "w");
+    
+    if (!file || !temp_file) {
+        if (file) fclose(file);
+        if (temp_file) fclose(temp_file);
+        return;
+    }
+    
+    // 复制原文件内容到临时文件，同时替换需要更新的行
+    while (fgets(line, sizeof(line), file)) {
+        if (strncmp(line, "CLOCK_TIMEOUT_MESSAGE_TEXT=", 27) == 0) {
+            fprintf(temp_file, "CLOCK_TIMEOUT_MESSAGE_TEXT=%s\n", timeout_msg);
+            found_timeout = 1;
+        } else if (strncmp(line, "POMODORO_TIMEOUT_MESSAGE_TEXT=", 30) == 0) {
+            fprintf(temp_file, "POMODORO_TIMEOUT_MESSAGE_TEXT=%s\n", pomodoro_msg);
+            found_pomodoro = 1;
+        } else if (strncmp(line, "POMODORO_CYCLE_COMPLETE_TEXT=", 29) == 0) {
+            fprintf(temp_file, "POMODORO_CYCLE_COMPLETE_TEXT=%s\n", cycle_complete_msg);
+            found_cycle = 1;
+        } else {
+            fputs(line, temp_file);
+        }
+    }
+    
+    // 如果配置中没找到相应项，则添加
+    if (!found_timeout) {
+        fprintf(temp_file, "CLOCK_TIMEOUT_MESSAGE_TEXT=%s\n", timeout_msg);
+    }
+    if (!found_pomodoro) {
+        fprintf(temp_file, "POMODORO_TIMEOUT_MESSAGE_TEXT=%s\n", pomodoro_msg);
+    }
+    if (!found_cycle) {
+        fprintf(temp_file, "POMODORO_CYCLE_COMPLETE_TEXT=%s\n", cycle_complete_msg);
+    }
+    
+    fclose(file);
+    fclose(temp_file);
+    
+    // 替换原文件
+    remove(config_path);
+    rename(temp_path, config_path);
+    
+    // 更新全局变量
+    strcpy(CLOCK_TIMEOUT_MESSAGE_TEXT, timeout_msg);
+    strcpy(POMODORO_TIMEOUT_MESSAGE_TEXT, pomodoro_msg);
+    strcpy(POMODORO_CYCLE_COMPLETE_TEXT, cycle_complete_msg);
+}
+
+/**
  * @brief 从配置文件中读取通知消息文本
  * 
  * 专门读取 CLOCK_TIMEOUT_MESSAGE_TEXT、POMODORO_TIMEOUT_MESSAGE_TEXT 和 POMODORO_CYCLE_COMPLETE_TEXT

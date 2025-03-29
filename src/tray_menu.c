@@ -380,18 +380,12 @@ void ShowColorMenu(HWND hwnd) {
 
     // 添加通知设置菜单
     HMENU hNotificationMenu = CreatePopupMenu();
-    
-    // 添加通知内容选项
-    AppendMenuW(hNotificationMenu, MF_STRING, 
-                CLOCK_IDM_NOTIFICATION_CONTENT,
+    AppendMenuW(hNotificationMenu, MF_STRING, CLOCK_IDM_NOTIFICATION_CONTENT,
                 GetLocalizedString(L"内容", L"Content"));
-    
-    // 添加通知显示选项
-    AppendMenuW(hNotificationMenu, MF_STRING, 
-                CLOCK_IDM_NOTIFICATION_DISPLAY,
-                GetLocalizedString(L"显示", L"Display"));
-    
-    // 将通知设置菜单添加到预设管理菜单
+    AppendMenuW(hNotificationMenu, MF_STRING, CLOCK_IDM_NOTIFICATION_DISPLAY,
+                GetLocalizedString(L"显示时间", L"Display Time"));
+
+    // 添加通知设置父菜单
     AppendMenuW(hTimeOptionsMenu, MF_POPUP, (UINT_PTR)hNotificationMenu,
                 GetLocalizedString(L"通知设置", L"Notification Settings"));
 
