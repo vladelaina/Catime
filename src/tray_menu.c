@@ -378,6 +378,23 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hTimeOptionsMenu, MF_POPUP, (UINT_PTR)hStartupSettingsMenu,
                 GetLocalizedString(L"启动设置", L"Startup Settings"));
 
+    // 添加通知设置菜单
+    HMENU hNotificationMenu = CreatePopupMenu();
+    
+    // 添加通知内容选项
+    AppendMenuW(hNotificationMenu, MF_STRING, 
+                CLOCK_IDM_NOTIFICATION_CONTENT,
+                GetLocalizedString(L"内容", L"Content"));
+    
+    // 添加通知显示选项
+    AppendMenuW(hNotificationMenu, MF_STRING, 
+                CLOCK_IDM_NOTIFICATION_DISPLAY,
+                GetLocalizedString(L"显示", L"Display"));
+    
+    // 将通知设置菜单添加到预设管理菜单
+    AppendMenuW(hTimeOptionsMenu, MF_POPUP, (UINT_PTR)hNotificationMenu,
+                GetLocalizedString(L"通知设置", L"Notification Settings"));
+
     // 将预设管理菜单添加到主菜单
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeOptionsMenu,
                 GetLocalizedString(L"预设管理", L"Preset Management"));
