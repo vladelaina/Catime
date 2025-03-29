@@ -75,31 +75,32 @@ static const wchar_t* CONTRIBUTOR_LINKS[] = {
 };
 
 // 子类化编辑框过程
-LRESULT APIENTRY EditSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+LRESULT APIENTRY EditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-    switch (uMsg) {
-    case WM_KEYDOWN: {
+    switch (msg) {
+    case WM_KEYDOWN:
+        // 回车键处理
         if (wParam == VK_RETURN) {
-            // 发送BM_CLICK消息给父窗口（对话框）
-            SendMessage(GetParent(hwnd), WM_COMMAND, MAKEWPARAM(IDOK, BN_CLICKED), (LPARAM)hwnd);
+            // 发送BM_CLICK消息给父窗口的OK按钮
+            SendMessage(GetParent(hwnd), WM_COMMAND, MAKEWPARAM(IDOK, BN_CLICKED), (LPARAM)GetDlgItem(GetParent(hwnd), IDOK));
             return 0;
         }
-        // 处理Ctrl+A全选
+        // Ctrl+A全选处理
         if (wParam == 'A' && GetKeyState(VK_CONTROL) < 0) {
             SendMessage(hwnd, EM_SETSEL, 0, -1);
             return 0;
         }
         break;
-    }
-    case WM_CHAR: {
-        // 处理Ctrl+A的字符消息，防止发出提示音
-        if (GetKeyState(VK_CONTROL) < 0 && (wParam == 1 || wParam == 'a' || wParam == 'A')) {
+    
+    case WM_CHAR:
+        // 阻止Ctrl+A生成字符，避免发出提示音
+        if (wParam == 1 || (wParam == 'a' || wParam == 'A') && GetKeyState(VK_CONTROL) < 0) {
             return 0;
         }
         break;
     }
-    }
-    return CallWindowProc(wpOrigEditProc, hwnd, uMsg, wParam, lParam);
+    
+    return CallWindowProc(wpOrigEditProc, hwnd, msg, wParam, lParam);
 }
 
 // 在文件开头添加错误对话框处理函数声明
@@ -1372,6 +1373,18 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             SetDlgItemTextW(hwndDlg, IDOK, GetLocalizedString(L"确定", L"OK"));
             SetDlgItemTextW(hwndDlg, IDCANCEL, GetLocalizedString(L"取消", L"Cancel"));
             
+            // 子类化编辑框以支持Ctrl+A全选
+            HWND hEdit1 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT1);
+            HWND hEdit2 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT2);
+            HWND hEdit3 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT3);
+            
+            // 保存原始的窗口过程
+            wpOrigEditProc = (WNDPROC)SetWindowLongPtr(hEdit1, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
+            
+            // 对其他编辑框也应用相同的子类化过程
+            SetWindowLongPtr(hEdit2, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
+            SetWindowLongPtr(hEdit3, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
+            
             // 全选第一个编辑框文本
             SendDlgItemMessage(hwndDlg, IDC_NOTIFICATION_EDIT1, EM_SETSEL, 0, -1);
             
@@ -1430,6 +1443,17 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             break;
             
         case WM_DESTROY:
+            // 恢复原始窗口过程
+            HWND hEdit1 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT1);
+            HWND hEdit2 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT2);
+            HWND hEdit3 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT3);
+            
+            if (wpOrigEditProc) {
+                SetWindowLongPtr(hEdit1, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
+                SetWindowLongPtr(hEdit2, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
+                SetWindowLongPtr(hEdit3, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
+            }
+            
             if (hBackgroundBrush) DeleteObject(hBackgroundBrush);
             if (hEditBrush) DeleteObject(hEditBrush);
             break;
