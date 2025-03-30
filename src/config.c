@@ -1336,7 +1336,6 @@ void WriteConfigPomodoroTimeOptions(int* times, int count) {
  * 
  * 更新配置文件中的通知消息设置，
  * 采用临时文件方式确保配置更新安全。
- * 支持UTF-8编码的中文字符。
  */
 void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodoro_msg, const char* cycle_complete_msg) {
     char config_path[MAX_PATH];
@@ -1344,7 +1343,6 @@ void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodo
     GetConfigPath(config_path, MAX_PATH);
     snprintf(temp_path, MAX_PATH, "%s.tmp", config_path);
     
-    // 使用Windows API打开文件，确保UTF-8编码正确处理
     HANDLE hSourceFile = CreateFileA(
         config_path,
         GENERIC_READ,
@@ -1355,8 +1353,22 @@ void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodo
         NULL
     );
     
+    HANDLE hTempFile = CreateFileA(
+        temp_path,
+        GENERIC_WRITE,
+        0,
+        NULL,
+        CREATE_ALWAYS,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+    );
+    
     if (hSourceFile == INVALID_HANDLE_VALUE) {
-        // 如果源文件不存在，尝试直接创建新文件
+        // 源文件不存在，创建新文件并写入默认内容
+        if (hTempFile != INVALID_HANDLE_VALUE) {
+            CloseHandle(hTempFile);
+        }
+        
         HANDLE hNewFile = CreateFileA(
             config_path,
             GENERIC_WRITE,
@@ -1377,7 +1389,8 @@ void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodo
         WriteFile(hNewFile, bom, 3, &bytesWritten, NULL);
         
         // 写入配置项
-        char buffer[1024];
+        char buffer[512];
+        
         sprintf(buffer, "CLOCK_TIMEOUT_MESSAGE_TEXT=%s\r\n", timeout_msg);
         WriteFile(hNewFile, buffer, strlen(buffer), &bytesWritten, NULL);
         
@@ -1390,54 +1403,48 @@ void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodo
         CloseHandle(hNewFile);
         
         // 更新全局变量
-        strcpy(CLOCK_TIMEOUT_MESSAGE_TEXT, timeout_msg);
-        strcpy(POMODORO_TIMEOUT_MESSAGE_TEXT, pomodoro_msg);
-        strcpy(POMODORO_CYCLE_COMPLETE_TEXT, cycle_complete_msg);
+        strncpy(CLOCK_TIMEOUT_MESSAGE_TEXT, timeout_msg, sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT) - 1);
+        CLOCK_TIMEOUT_MESSAGE_TEXT[sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT) - 1] = '\0';
+        
+        strncpy(POMODORO_TIMEOUT_MESSAGE_TEXT, pomodoro_msg, sizeof(POMODORO_TIMEOUT_MESSAGE_TEXT) - 1);
+        POMODORO_TIMEOUT_MESSAGE_TEXT[sizeof(POMODORO_TIMEOUT_MESSAGE_TEXT) - 1] = '\0';
+        
+        strncpy(POMODORO_CYCLE_COMPLETE_TEXT, cycle_complete_msg, sizeof(POMODORO_CYCLE_COMPLETE_TEXT) - 1);
+        POMODORO_CYCLE_COMPLETE_TEXT[sizeof(POMODORO_CYCLE_COMPLETE_TEXT) - 1] = '\0';
+        
         return;
     }
-    
-    HANDLE hTempFile = CreateFileA(
-        temp_path,
-        GENERIC_WRITE,
-        0,
-        NULL,
-        CREATE_ALWAYS,
-        FILE_ATTRIBUTE_NORMAL,
-        NULL
-    );
     
     if (hTempFile == INVALID_HANDLE_VALUE) {
         CloseHandle(hSourceFile);
         return;
     }
     
-    // 写入UTF-8 BOM标记
+    // 写入UTF-8 BOM标记到临时文件
     unsigned char bom[3] = {0xEF, 0xBB, 0xBF};
     DWORD bytesWritten;
     WriteFile(hTempFile, bom, 3, &bytesWritten, NULL);
     
-    char buffer[1024];
-    char line[1024];
+    // 跳过源文件的UTF-8 BOM标记（如果有）
+    char bomCheck[3];
     DWORD bytesRead;
-    BOOL found_timeout = FALSE;
-    BOOL found_pomodoro = FALSE;
-    BOOL found_cycle = FALSE;
+    ReadFile(hSourceFile, bomCheck, 3, &bytesRead, NULL);
     
-    // 跳过源文件中的BOM标记（如果有）
-    ReadFile(hSourceFile, buffer, 3, &bytesRead, NULL);
-    if (bytesRead == 3) {
-        if (!(buffer[0] == 0xEF && buffer[1] == 0xBB && buffer[2] == 0xBF)) {
-            // 不是BOM，需要回退文件指针
-            SetFilePointer(hSourceFile, 0, NULL, FILE_BEGIN);
-        }
-    } else {
-        // 文件过短，重置指针到开始位置
+    if (bytesRead != 3 || bomCheck[0] != 0xEF || bomCheck[1] != 0xBB || bomCheck[2] != 0xBF) {
+        // 不是BOM，回退文件指针
         SetFilePointer(hSourceFile, 0, NULL, FILE_BEGIN);
     }
     
-    // 处理文件内容
+    // 三个标志位，用于标记是否已经找到并更新了对应的配置项
+    BOOL foundTimeout = FALSE;
+    BOOL foundPomodoro = FALSE;
+    BOOL foundCycle = FALSE;
+    
+    // 逐行复制文件内容
+    char line[1024];
     BOOL readingLine = TRUE;
     int pos = 0;
+    char buffer[1024];
     
     while (readingLine) {
         // 逐字节读取，构建行
@@ -1475,37 +1482,34 @@ void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodo
         if (strncmp(line, "CLOCK_TIMEOUT_MESSAGE_TEXT=", 27) == 0) {
             sprintf(buffer, "CLOCK_TIMEOUT_MESSAGE_TEXT=%s\r\n", timeout_msg);
             WriteFile(hTempFile, buffer, strlen(buffer), &bytesWritten, NULL);
-            found_timeout = TRUE;
+            foundTimeout = TRUE;
         } else if (strncmp(line, "POMODORO_TIMEOUT_MESSAGE_TEXT=", 30) == 0) {
             sprintf(buffer, "POMODORO_TIMEOUT_MESSAGE_TEXT=%s\r\n", pomodoro_msg);
             WriteFile(hTempFile, buffer, strlen(buffer), &bytesWritten, NULL);
-            found_pomodoro = TRUE;
+            foundPomodoro = TRUE;
         } else if (strncmp(line, "POMODORO_CYCLE_COMPLETE_TEXT=", 29) == 0) {
             sprintf(buffer, "POMODORO_CYCLE_COMPLETE_TEXT=%s\r\n", cycle_complete_msg);
             WriteFile(hTempFile, buffer, strlen(buffer), &bytesWritten, NULL);
-            found_cycle = TRUE;
+            foundCycle = TRUE;
         } else {
             // 写回原始行，加上换行符
             strcat(line, "\r\n");
             WriteFile(hTempFile, line, strlen(line), &bytesWritten, NULL);
         }
-        
-        // 如果所有消息都找到了，可以提前退出循环
-        if (found_timeout && found_pomodoro && found_cycle) {
-            break;
-        }
     }
     
     // 如果配置中没找到相应项，则添加
-    if (!found_timeout) {
+    if (!foundTimeout) {
         sprintf(buffer, "CLOCK_TIMEOUT_MESSAGE_TEXT=%s\r\n", timeout_msg);
         WriteFile(hTempFile, buffer, strlen(buffer), &bytesWritten, NULL);
     }
-    if (!found_pomodoro) {
+    
+    if (!foundPomodoro) {
         sprintf(buffer, "POMODORO_TIMEOUT_MESSAGE_TEXT=%s\r\n", pomodoro_msg);
         WriteFile(hTempFile, buffer, strlen(buffer), &bytesWritten, NULL);
     }
-    if (!found_cycle) {
+    
+    if (!foundCycle) {
         sprintf(buffer, "POMODORO_CYCLE_COMPLETE_TEXT=%s\r\n", cycle_complete_msg);
         WriteFile(hTempFile, buffer, strlen(buffer), &bytesWritten, NULL);
     }
@@ -1518,9 +1522,14 @@ void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodo
     MoveFileA(temp_path, config_path);
     
     // 更新全局变量
-    strcpy(CLOCK_TIMEOUT_MESSAGE_TEXT, timeout_msg);
-    strcpy(POMODORO_TIMEOUT_MESSAGE_TEXT, pomodoro_msg);
-    strcpy(POMODORO_CYCLE_COMPLETE_TEXT, cycle_complete_msg);
+    strncpy(CLOCK_TIMEOUT_MESSAGE_TEXT, timeout_msg, sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT) - 1);
+    CLOCK_TIMEOUT_MESSAGE_TEXT[sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT) - 1] = '\0';
+    
+    strncpy(POMODORO_TIMEOUT_MESSAGE_TEXT, pomodoro_msg, sizeof(POMODORO_TIMEOUT_MESSAGE_TEXT) - 1);
+    POMODORO_TIMEOUT_MESSAGE_TEXT[sizeof(POMODORO_TIMEOUT_MESSAGE_TEXT) - 1] = '\0';
+    
+    strncpy(POMODORO_CYCLE_COMPLETE_TEXT, cycle_complete_msg, sizeof(POMODORO_CYCLE_COMPLETE_TEXT) - 1);
+    POMODORO_CYCLE_COMPLETE_TEXT[sizeof(POMODORO_CYCLE_COMPLETE_TEXT) - 1] = '\0';
 }
 
 /**
