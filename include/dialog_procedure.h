@@ -120,4 +120,12 @@ BOOL ParseTimeInput(const char* input, int* seconds);
  */
 void ShowNotificationMessagesDialog(HWND hwndParent);
 
+/**
+ * @brief 显示通知显示设置对话框
+ * @param hwndParent 父窗口句柄
+ * 
+ * 显示通知显示设置对话框，用于修改通知显示时间和透明度。
+ */
+void ShowNotificationDisplayDialog(HWND hwndParent);
+
 #endif // DIALOG_PROCEDURE_H

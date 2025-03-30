@@ -2019,3 +2019,166 @@ void ReadNotificationOpacityConfig(void) {
         NOTIFICATION_MAX_OPACITY = 95; // 确保有默认值
     }
 }
+
+/**
+ * @brief 写入通知最大透明度配置
+ * @param opacity 透明度百分比值(1-100)
+ * 
+ * 更新配置文件中的通知最大透明度设置，
+ * 采用临时文件方式确保配置更新安全。
+ */
+void WriteConfigNotificationOpacity(int opacity) {
+    char config_path[MAX_PATH];
+    char temp_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    snprintf(temp_path, MAX_PATH, "%s.tmp", config_path);
+    
+    HANDLE hSourceFile = CreateFileA(
+        config_path,
+        GENERIC_READ,
+        FILE_SHARE_READ,
+        NULL,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+    );
+    
+    HANDLE hTempFile = CreateFileA(
+        temp_path,
+        GENERIC_WRITE,
+        0,
+        NULL,
+        CREATE_ALWAYS,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+    );
+    
+    if (hSourceFile == INVALID_HANDLE_VALUE) {
+        // 源文件不存在，创建新文件并写入默认内容
+        if (hTempFile != INVALID_HANDLE_VALUE) {
+            CloseHandle(hTempFile);
+        }
+        
+        HANDLE hNewFile = CreateFileA(
+            config_path,
+            GENERIC_WRITE,
+            0,
+            NULL,
+            CREATE_ALWAYS,
+            FILE_ATTRIBUTE_NORMAL,
+            NULL
+        );
+        
+        if (hNewFile == INVALID_HANDLE_VALUE) {
+            return; // 无法创建文件
+        }
+        
+        // 写入UTF-8 BOM标记
+        unsigned char bom[3] = {0xEF, 0xBB, 0xBF};
+        DWORD bytesWritten;
+        WriteFile(hNewFile, bom, 3, &bytesWritten, NULL);
+        
+        // 写入配置项
+        char buffer[128];
+        sprintf(buffer, "NOTIFICATION_MAX_OPACITY=%d\r\n", opacity);
+        WriteFile(hNewFile, buffer, strlen(buffer), &bytesWritten, NULL);
+        
+        CloseHandle(hNewFile);
+        
+        // 更新全局变量
+        NOTIFICATION_MAX_OPACITY = opacity;
+        return;
+    }
+    
+    if (hTempFile == INVALID_HANDLE_VALUE) {
+        CloseHandle(hSourceFile);
+        return;
+    }
+    
+    // 检查UTF-8 BOM
+    char bom[3];
+    DWORD bytesRead;
+    ReadFile(hSourceFile, bom, 3, &bytesRead, NULL);
+    
+    // 确定源文件是否有BOM
+    BOOL hasBOM = (bytesRead == 3 && bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF);
+    
+    // 写入BOM到临时文件
+    DWORD bytesWritten;
+    if (hasBOM) {
+        WriteFile(hTempFile, bom, 3, &bytesWritten, NULL);
+    } else {
+        // 源文件无BOM，回退文件指针重新从头开始
+        SetFilePointer(hSourceFile, 0, NULL, FILE_BEGIN);
+    }
+    
+    // 逐行读取源文件并写入临时文件
+    char line[256];
+    BOOL foundOpacity = FALSE;
+    BOOL readingLine = TRUE;
+    int pos = 0;
+    
+    while (readingLine) {
+        // 逐字节读取，构建行
+        bytesRead = 0;
+        pos = 0;
+        memset(line, 0, sizeof(line));
+        
+        while (TRUE) {
+            char ch;
+            ReadFile(hSourceFile, &ch, 1, &bytesRead, NULL);
+            
+            if (bytesRead == 0) { // 文件结束
+                readingLine = FALSE;
+                break;
+            }
+            
+            if (ch == '\n') { // 行结束
+                break;
+            }
+            
+            if (ch != '\r') { // 忽略回车符
+                line[pos++] = ch;
+                if (pos >= sizeof(line) - 1) break; // 防止缓冲区溢出
+            }
+        }
+        
+        line[pos] = '\0'; // 确保字符串结束
+        
+        // 如果没有内容且文件已结束，退出循环
+        if (pos == 0 && !readingLine) {
+            break;
+        }
+        
+        // 检查是否为透明度配置行
+        if (strncmp(line, "NOTIFICATION_MAX_OPACITY=", 25) == 0) {
+            // 更新透明度配置行
+            char buffer[128];
+            sprintf(buffer, "NOTIFICATION_MAX_OPACITY=%d\r\n", opacity);
+            WriteFile(hTempFile, buffer, strlen(buffer), &bytesWritten, NULL);
+            foundOpacity = TRUE;
+        } else {
+            // 原样写入其他行
+            WriteFile(hTempFile, line, strlen(line), &bytesWritten, NULL);
+            WriteFile(hTempFile, "\r\n", 2, &bytesWritten, NULL);
+        }
+    }
+    
+    // 如果没有找到透明度配置行，添加一个
+    if (!foundOpacity) {
+        char buffer[128];
+        sprintf(buffer, "NOTIFICATION_MAX_OPACITY=%d\r\n", opacity);
+        WriteFile(hTempFile, buffer, strlen(buffer), &bytesWritten, NULL);
+    }
+    
+    // 关闭文件句柄
+    CloseHandle(hSourceFile);
+    CloseHandle(hTempFile);
+    
+    // 替换原配置文件
+    DeleteFileA(config_path);
+    MoveFileA(temp_path, config_path);
+    
+    // 更新全局变量
+    NOTIFICATION_MAX_OPACITY = opacity;
+}

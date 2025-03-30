@@ -1481,3 +1481,166 @@ void ShowNotificationMessagesDialog(HWND hwndParent) {
         SetForegroundWindow(g_hwndNotificationMessagesDialog);
     }
 }
+
+// 添加全局变量来跟踪通知显示设置对话框句柄
+static HWND g_hwndNotificationDisplayDialog = NULL;
+
+// 添加通知显示设置对话框处理程序
+INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    static HBRUSH hBackgroundBrush = NULL;
+    static HBRUSH hEditBrush = NULL;
+    
+    switch (msg) {
+        case WM_INITDIALOG: {
+            // 设置窗口置顶
+            SetWindowPos(hwndDlg, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+            
+            // 创建画刷
+            hBackgroundBrush = CreateSolidBrush(RGB(0xF3, 0xF3, 0xF3));
+            hEditBrush = CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF));
+            
+            // 读取最新配置
+            ReadNotificationTimeoutConfig();
+            ReadNotificationOpacityConfig();
+            
+            // 设置当前值到编辑框
+            char buffer[32];
+            
+            // 显示时间（毫秒）
+            sprintf(buffer, "%d", NOTIFICATION_TIMEOUT_MS);
+            SetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, buffer);
+            
+            // 透明度（百分比）
+            sprintf(buffer, "%d", NOTIFICATION_MAX_OPACITY);
+            SetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT, buffer);
+            
+            // 本地化标签文本
+            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_TIME_LABEL, 
+                           GetLocalizedString(L"通知显示时间(毫秒):", L"Notification display time (ms):"));
+            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_OPACITY_LABEL, 
+                           GetLocalizedString(L"通知最大透明度(1-100%):", L"Notification max opacity (1-100%):"));
+            
+            // 本地化按钮文本
+            SetDlgItemTextW(hwndDlg, IDOK, GetLocalizedString(L"确定", L"OK"));
+            SetDlgItemTextW(hwndDlg, IDCANCEL, GetLocalizedString(L"取消", L"Cancel"));
+            
+            // 子类化编辑框以支持Ctrl+A全选
+            HWND hEditTime = GetDlgItem(hwndDlg, IDC_NOTIFICATION_TIME_EDIT);
+            HWND hEditOpacity = GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT);
+            
+            // 保存原始的窗口过程
+            wpOrigEditProc = (WNDPROC)SetWindowLongPtr(hEditTime, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
+            
+            // 对第二个编辑框也应用相同的子类化过程
+            SetWindowLongPtr(hEditOpacity, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
+            
+            // 全选第一个编辑框文本
+            SendDlgItemMessage(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, EM_SETSEL, 0, -1);
+            
+            // 设置焦点到第一个编辑框
+            SetFocus(hEditTime);
+            
+            return FALSE;  // 返回FALSE因为我们手动设置了焦点
+        }
+        
+        case WM_CTLCOLORDLG:
+            return (INT_PTR)hBackgroundBrush;
+        
+        case WM_CTLCOLORSTATIC:
+            SetBkColor((HDC)wParam, RGB(0xF3, 0xF3, 0xF3));
+            return (INT_PTR)hBackgroundBrush;
+            
+        case WM_CTLCOLOREDIT:
+            SetBkColor((HDC)wParam, RGB(0xFF, 0xFF, 0xFF));
+            return (INT_PTR)hEditBrush;
+        
+        case WM_COMMAND:
+            if (LOWORD(wParam) == IDOK) {
+                // 获取输入值
+                char timeBuffer[32] = {0};
+                char opacityBuffer[32] = {0};
+                
+                GetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, timeBuffer, sizeof(timeBuffer));
+                GetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT, opacityBuffer, sizeof(opacityBuffer));
+                
+                // 解析为整数
+                int timeoutMs = atoi(timeBuffer);
+                int opacity = atoi(opacityBuffer);
+                
+                // 验证输入值
+                BOOL valid = TRUE;
+                
+                // 验证显示时间 (至少500毫秒，最多30秒)
+                if (timeoutMs < 500 || timeoutMs > 30000) {
+                    MessageBoxW(hwndDlg, 
+                                GetLocalizedString(L"通知显示时间必须在500到30000毫秒之间。", 
+                                                  L"Notification time must be between 500 and 30000 ms."),
+                                GetLocalizedString(L"输入错误", L"Input Error"),
+                                MB_ICONERROR | MB_OK);
+                    valid = FALSE;
+                }
+                
+                // 验证透明度 (1-100%)
+                if (opacity < 1 || opacity > 100) {
+                    MessageBoxW(hwndDlg, 
+                                GetLocalizedString(L"透明度必须在1%到100%之间。", 
+                                                  L"Opacity must be between 1% and 100%."),
+                                GetLocalizedString(L"输入错误", L"Input Error"),
+                                MB_ICONERROR | MB_OK);
+                    valid = FALSE;
+                }
+                
+                if (valid) {
+                    // 保存到配置文件并更新全局变量
+                    WriteConfigNotificationTimeout(timeoutMs);
+                    WriteConfigNotificationOpacity(opacity);
+                    
+                    EndDialog(hwndDlg, IDOK);
+                    g_hwndNotificationDisplayDialog = NULL;
+                }
+                return TRUE;
+            } else if (LOWORD(wParam) == IDCANCEL) {
+                EndDialog(hwndDlg, IDCANCEL);
+                g_hwndNotificationDisplayDialog = NULL;
+                return TRUE;
+            }
+            break;
+            
+        case WM_DESTROY:
+            // 恢复原始窗口过程
+            HWND hEditTime = GetDlgItem(hwndDlg, IDC_NOTIFICATION_TIME_EDIT);
+            HWND hEditOpacity = GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT);
+            
+            if (wpOrigEditProc) {
+                SetWindowLongPtr(hEditTime, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
+                SetWindowLongPtr(hEditOpacity, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
+            }
+            
+            if (hBackgroundBrush) DeleteObject(hBackgroundBrush);
+            if (hEditBrush) DeleteObject(hEditBrush);
+            break;
+    }
+    
+    return FALSE;
+}
+
+/**
+ * @brief 显示通知显示设置对话框
+ * @param hwndParent 父窗口句柄
+ * 
+ * 显示通知显示设置对话框，用于修改通知显示时间和透明度。
+ */
+void ShowNotificationDisplayDialog(HWND hwndParent) {
+    if (!g_hwndNotificationDisplayDialog) {
+        // 确保首先读取最新的配置值
+        ReadNotificationTimeoutConfig();
+        ReadNotificationOpacityConfig();
+        
+        DialogBox(GetModuleHandle(NULL), 
+                 MAKEINTRESOURCE(CLOCK_IDD_NOTIFICATION_DISPLAY_DIALOG), 
+                 hwndParent, 
+                 NotificationDisplayDlgProc);
+    } else {
+        SetForegroundWindow(g_hwndNotificationDisplayDialog);
+    }
+}
