@@ -1343,6 +1343,30 @@ void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodo
     GetConfigPath(config_path, MAX_PATH);
     snprintf(temp_path, MAX_PATH, "%s.tmp", config_path);
     
+    // 检查源文件是否有BOM标记
+    BOOL hasBOM = FALSE;
+    HANDLE hCheckFile = CreateFileA(
+        config_path,
+        GENERIC_READ,
+        FILE_SHARE_READ,
+        NULL,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+    );
+    
+    if (hCheckFile != INVALID_HANDLE_VALUE) {
+        unsigned char checkBom[3] = {0};
+        DWORD bytesRead = 0;
+        ReadFile(hCheckFile, checkBom, 3, &bytesRead, NULL);
+        
+        if (bytesRead == 3 && checkBom[0] == 0xEF && checkBom[1] == 0xBB && checkBom[2] == 0xBF) {
+            hasBOM = TRUE;
+        }
+        CloseHandle(hCheckFile);
+    }
+    
+    // 继续原来的代码逻辑，打开原文件和临时文件
     HANDLE hSourceFile = CreateFileA(
         config_path,
         GENERIC_READ,
@@ -1383,14 +1407,18 @@ void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodo
             return; // 无法创建文件
         }
         
-        // 写入UTF-8 BOM标记
-        unsigned char bom[3] = {0xEF, 0xBB, 0xBF};
-        DWORD bytesWritten;
-        WriteFile(hNewFile, bom, 3, &bytesWritten, NULL);
+        // 只在原文件有BOM时才写入BOM标记
+        if (hasBOM) {
+            unsigned char bom[3] = {0xEF, 0xBB, 0xBF};
+            DWORD bytesWritten;
+            WriteFile(hNewFile, bom, 3, &bytesWritten, NULL);
+        }
         
         // 写入配置项
         char buffer[512];
+        DWORD bytesWritten;
         
+        // 写入所有通知消息配置
         sprintf(buffer, "CLOCK_TIMEOUT_MESSAGE_TEXT=%s\r\n", timeout_msg);
         WriteFile(hNewFile, buffer, strlen(buffer), &bytesWritten, NULL);
         
@@ -1420,10 +1448,12 @@ void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodo
         return;
     }
     
-    // 写入UTF-8 BOM标记到临时文件
-    unsigned char bom[3] = {0xEF, 0xBB, 0xBF};
-    DWORD bytesWritten;
-    WriteFile(hTempFile, bom, 3, &bytesWritten, NULL);
+    // 只在原文件有BOM时才写入BOM标记
+    if (hasBOM) {
+        unsigned char bom[3] = {0xEF, 0xBB, 0xBF};
+        DWORD bytesWritten;
+        WriteFile(hTempFile, bom, 3, &bytesWritten, NULL);
+    }
     
     // 跳过源文件的UTF-8 BOM标记（如果有）
     char bomCheck[3];
@@ -1445,6 +1475,7 @@ void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodo
     BOOL readingLine = TRUE;
     int pos = 0;
     char buffer[1024];
+    DWORD bytesWritten; // 添加这个变量声明
     
     while (readingLine) {
         // 逐字节读取，构建行
