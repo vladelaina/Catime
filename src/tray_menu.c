@@ -383,7 +383,7 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hNotificationMenu, MF_STRING, CLOCK_IDM_NOTIFICATION_CONTENT,
                 GetLocalizedString(L"内容", L"Content"));
     AppendMenuW(hNotificationMenu, MF_STRING, CLOCK_IDM_NOTIFICATION_DISPLAY,
-                GetLocalizedString(L"显示时间", L"Display Time"));
+                GetLocalizedString(L"显示", L"Display"));
 
     // 添加通知设置父菜单
     AppendMenuW(hTimeOptionsMenu, MF_POPUP, (UINT_PTR)hNotificationMenu,
