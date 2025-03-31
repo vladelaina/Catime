@@ -1506,8 +1506,12 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
             // 设置当前值到编辑框
             char buffer[32];
             
-            // 显示时间（毫秒）
-            sprintf(buffer, "%d", NOTIFICATION_TIMEOUT_MS);
+            // 显示时间（秒，支持小数点）- 毫秒转为秒
+            sprintf(buffer, "%.1f", (float)NOTIFICATION_TIMEOUT_MS / 1000.0f);
+            // 移除末尾的.0
+            if (strlen(buffer) > 2 && buffer[strlen(buffer)-2] == '.' && buffer[strlen(buffer)-1] == '0') {
+                buffer[strlen(buffer)-2] = '\0';
+            }
             SetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, buffer);
             
             // 透明度（百分比）
@@ -1516,31 +1520,20 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
             
             // 本地化标签文本
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_TIME_LABEL, 
-                           GetLocalizedString(L"通知显示时间(毫秒):", L"Notification display time (ms):"));
-            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_OPACITY_LABEL, 
-                           GetLocalizedString(L"通知最大透明度(1-100%):", L"Notification max opacity (1-100%):"));
+                           GetLocalizedString(L"通知显示时间(秒):", L"Notification display time (sec):"));
             
-            // 本地化按钮文本
-            SetDlgItemTextW(hwndDlg, IDOK, GetLocalizedString(L"确定", L"OK"));
-            SetDlgItemTextW(hwndDlg, IDCANCEL, GetLocalizedString(L"取消", L"Cancel"));
-            
-            // 子类化编辑框以支持Ctrl+A全选
+            // 修改编辑框风格，移除ES_NUMBER以允许小数点
             HWND hEditTime = GetDlgItem(hwndDlg, IDC_NOTIFICATION_TIME_EDIT);
-            HWND hEditOpacity = GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT);
+            LONG style = GetWindowLong(hEditTime, GWL_STYLE);
+            SetWindowLong(hEditTime, GWL_STYLE, style & ~ES_NUMBER);
             
-            // 保存原始的窗口过程
+            // 子类化编辑框以支持回车键提交和限制输入
             wpOrigEditProc = (WNDPROC)SetWindowLongPtr(hEditTime, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
             
-            // 对第二个编辑框也应用相同的子类化过程
-            SetWindowLongPtr(hEditOpacity, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
-            
-            // 全选第一个编辑框文本
-            SendDlgItemMessage(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, EM_SETSEL, 0, -1);
-            
-            // 设置焦点到第一个编辑框
+            // 设置焦点到时间编辑框
             SetFocus(hEditTime);
             
-            return FALSE;  // 返回FALSE因为我们手动设置了焦点
+            return FALSE;
         }
         
         case WM_CTLCOLORDLG:
@@ -1556,51 +1549,32 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
         
         case WM_COMMAND:
             if (LOWORD(wParam) == IDOK) {
-                // 获取输入值
-                char timeBuffer[32] = {0};
-                char opacityBuffer[32] = {0};
+                char timeStr[32] = {0};
+                char opacityStr[32] = {0};
                 
-                GetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, timeBuffer, sizeof(timeBuffer));
-                GetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT, opacityBuffer, sizeof(opacityBuffer));
+                // 获取用户输入的值
+                GetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, timeStr, sizeof(timeStr));
+                GetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT, opacityStr, sizeof(opacityStr));
                 
-                // 解析为整数
-                int timeoutMs = atoi(timeBuffer);
-                int opacity = atoi(opacityBuffer);
+                // 解析时间（秒）并转换为毫秒
+                float timeInSeconds = atof(timeStr);
+                int timeInMs = (int)(timeInSeconds * 1000.0f);
                 
-                // 验证输入值
-                BOOL valid = TRUE;
+                // 确保时间至少为100毫秒
+                if (timeInMs < 100) timeInMs = 100;
                 
-                // 验证显示时间 (至少500毫秒，最多30秒)
-                if (timeoutMs < 500 || timeoutMs > 30000) {
-                    MessageBoxW(hwndDlg, 
-                                GetLocalizedString(L"通知显示时间必须在500到30000毫秒之间。", 
-                                                  L"Notification time must be between 500 and 30000 ms."),
-                                GetLocalizedString(L"输入错误", L"Input Error"),
-                                MB_ICONERROR | MB_OK);
-                    valid = FALSE;
-                }
+                // 解析透明度
+                int opacity = atoi(opacityStr);
                 
-                // 验证透明度 (1-100%)
-                if (opacity < 1 || opacity > 100) {
-                    MessageBoxW(hwndDlg, 
-                                GetLocalizedString(L"透明度必须在1%到100%之间。", 
-                                                  L"Opacity must be between 1% and 100%."),
-                                GetLocalizedString(L"输入错误", L"Input Error"),
-                                MB_ICONERROR | MB_OK);
-                    valid = FALSE;
-                }
+                // 确保透明度在1-100范围内
+                if (opacity < 1) opacity = 1;
+                if (opacity > 100) opacity = 100;
                 
-                if (valid) {
-                    // 保存到配置文件并更新全局变量
-                    WriteConfigNotificationTimeout(timeoutMs);
-                    WriteConfigNotificationOpacity(opacity);
-                    
-                    EndDialog(hwndDlg, IDOK);
-                    g_hwndNotificationDisplayDialog = NULL;
-                }
-                return TRUE;
-            } else if (LOWORD(wParam) == IDCANCEL) {
-                EndDialog(hwndDlg, IDCANCEL);
+                // 写入配置
+                WriteConfigNotificationTimeout(timeInMs);
+                WriteConfigNotificationOpacity(opacity);
+                
+                EndDialog(hwndDlg, IDOK);
                 g_hwndNotificationDisplayDialog = NULL;
                 return TRUE;
             }
