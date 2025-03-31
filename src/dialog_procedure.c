@@ -1556,6 +1556,22 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
                 GetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, timeStr, sizeof(timeStr));
                 GetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT, opacityStr, sizeof(opacityStr));
                 
+                // 使用更健壮的方式替换中文句号
+                // 首先获取Unicode格式的文本
+                wchar_t wTimeStr[32] = {0};
+                GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, wTimeStr, sizeof(wTimeStr)/sizeof(wchar_t));
+                
+                // 在Unicode文本中替换中文句号
+                for (int i = 0; wTimeStr[i] != L'\0'; i++) {
+                    if (wTimeStr[i] == L'。') {  // 中文句号的Unicode码点
+                        wTimeStr[i] = L'.';      // 替换为英文小数点
+                    }
+                }
+                
+                // 将处理后的Unicode文本转回ASCII
+                WideCharToMultiByte(CP_ACP, 0, wTimeStr, -1, 
+                                    timeStr, sizeof(timeStr), NULL, NULL);
+                
                 // 解析时间（秒）并转换为毫秒
                 float timeInSeconds = atof(timeStr);
                 int timeInMs = (int)(timeInSeconds * 1000.0f);
