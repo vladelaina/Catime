@@ -1591,8 +1591,8 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
                 float timeInSeconds = atof(timeStr);
                 int timeInMs = (int)(timeInSeconds * 1000.0f);
                 
-                // 确保时间至少为100毫秒
-                if (timeInMs < 100) timeInMs = 100;
+                // 确保时间至少为3000毫秒（3秒）
+                if (timeInMs < 100) timeInMs = 3000;
                 
                 // 解析透明度
                 int opacity = atoi(opacityStr);
