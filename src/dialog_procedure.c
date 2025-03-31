@@ -1568,7 +1568,17 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
                         wTimeStr[i] == L'，' ||  // 中文逗号
                         wTimeStr[i] == L',' ||   // 英文逗号
                         wTimeStr[i] == L'·' ||   // 中文间隔号
-                        wTimeStr[i] == L'`') {   // 反引号
+                        wTimeStr[i] == L'`' ||   // 反引号
+                        wTimeStr[i] == L'：' ||  // 中文冒号
+                        wTimeStr[i] == L':' ||   // 英文冒号
+                        wTimeStr[i] == L'；' ||  // 中文分号
+                        wTimeStr[i] == L';' ||   // 英文分号
+                        wTimeStr[i] == L'/' ||   // 斜杠
+                        wTimeStr[i] == L'\\' ||  // 反斜杠
+                        wTimeStr[i] == L'~' ||   // 波浪号
+                        wTimeStr[i] == L'～' ||  // 全角波浪号
+                        wTimeStr[i] == L'、' ||  // 顿号
+                        wTimeStr[i] == L'．') {  // 全角句点
                         wTimeStr[i] = L'.';      // 替换为英文小数点
                     }
                 }
