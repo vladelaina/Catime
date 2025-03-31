@@ -1608,8 +1608,18 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
                 EndDialog(hwndDlg, IDOK);
                 g_hwndNotificationDisplayDialog = NULL;
                 return TRUE;
+            } else if (LOWORD(wParam) == IDCANCEL) {
+                EndDialog(hwndDlg, IDCANCEL);
+                g_hwndNotificationDisplayDialog = NULL;
+                return TRUE;
             }
             break;
+            
+        // 添加对WM_CLOSE消息的处理
+        case WM_CLOSE:
+            EndDialog(hwndDlg, IDCANCEL);
+            g_hwndNotificationDisplayDialog = NULL;
+            return TRUE;
             
         case WM_DESTROY:
             // 恢复原始窗口过程
