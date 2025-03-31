@@ -1563,7 +1563,12 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
                 
                 // 在Unicode文本中替换中文句号
                 for (int i = 0; wTimeStr[i] != L'\0'; i++) {
-                    if (wTimeStr[i] == L'。') {  // 中文句号的Unicode码点
+                    // 将多种标点符号都识别为小数点
+                    if (wTimeStr[i] == L'。' ||  // 中文句号
+                        wTimeStr[i] == L'，' ||  // 中文逗号
+                        wTimeStr[i] == L',' ||   // 英文逗号
+                        wTimeStr[i] == L'·' ||   // 中文间隔号
+                        wTimeStr[i] == L'`') {   // 反引号
                         wTimeStr[i] = L'.';      // 替换为英文小数点
                     }
                 }
