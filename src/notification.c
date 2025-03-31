@@ -23,7 +23,8 @@
  * 通知窗口相关常量定义
  */
 // 通知窗口尺寸与布局常量
-#define NOTIFICATION_WIDTH 350       // 通知窗口宽度(像素)
+#define NOTIFICATION_MIN_WIDTH 350     // 通知窗口最小宽度(像素)
+#define NOTIFICATION_MAX_WIDTH 800     // 通知窗口最大宽度(像素)
 #define NOTIFICATION_HEIGHT 80       // 通知窗口高度(像素)
 #define NOTIFICATION_TIMER_ID 1001   // 通知超时计时器ID
 #define NOTIFICATION_CLASS_NAME L"CatimeNotificationClass"  // 通知窗口类名
@@ -57,6 +58,21 @@ void RegisterNotificationClass(HINSTANCE hInstance);
 void DrawRoundedRectangle(HDC hdc, RECT rect, int radius);
 
 /**
+ * @brief 计算文本绘制所需的宽度
+ * @param hdc 设备上下文
+ * @param text 要测量的文本
+ * @param font 使用的字体
+ * @return int 文本绘制所需的宽度(像素)
+ */
+int CalculateTextWidth(HDC hdc, const wchar_t* text, HFONT font) {
+    HFONT oldFont = (HFONT)SelectObject(hdc, font);
+    SIZE textSize;
+    GetTextExtentPoint32W(hdc, text, wcslen(text), &textSize);
+    SelectObject(hdc, oldFont);
+    return textSize.cx;
+}
+
+/**
  * @brief 显示自定义样式的提示通知
  * @param hwnd 父窗口句柄，用于获取应用实例和计算位置
  * @param message 要显示的通知消息文本(UTF-8编码)
@@ -87,19 +103,41 @@ void ShowToastNotification(HWND hwnd, const char* message) {
         isClassRegistered = TRUE;
     }
     
-    // 获取主窗口位置，计算通知窗口位置（右下角）
-    RECT workArea;
-    SystemParametersInfo(SPI_GETWORKAREA, 0, &workArea, 0);
-    
-    int x = workArea.right - NOTIFICATION_WIDTH - 20;
-    int y = workArea.bottom - NOTIFICATION_HEIGHT - 20;
-    
     // 将消息转换为宽字符以支持Unicode显示
     int wlen = MultiByteToWideChar(CP_UTF8, 0, message, -1, NULL, 0);
     wchar_t* wmessage = (wchar_t*)malloc(wlen * sizeof(wchar_t));
-    if (wmessage) {
-        MultiByteToWideChar(CP_UTF8, 0, message, -1, wmessage, wlen);
+    if (!wmessage) {
+        // 内存分配失败，回退到系统托盘通知
+        ShowTrayNotification(hwnd, message);
+        return;
     }
+    MultiByteToWideChar(CP_UTF8, 0, message, -1, wmessage, wlen);
+    
+    // 计算文本需要的宽度
+    HDC hdc = GetDC(hwnd);
+    HFONT contentFont = CreateFontW(20, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+                                 DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+                                 DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei");
+    
+    // 计算文本宽度并添加边距
+    int textWidth = CalculateTextWidth(hdc, wmessage, contentFont);
+    int notificationWidth = textWidth + 40; // 左右各20像素边距
+    
+    // 确保宽度在允许范围内
+    if (notificationWidth < NOTIFICATION_MIN_WIDTH) 
+        notificationWidth = NOTIFICATION_MIN_WIDTH;
+    if (notificationWidth > NOTIFICATION_MAX_WIDTH) 
+        notificationWidth = NOTIFICATION_MAX_WIDTH;
+    
+    DeleteObject(contentFont);
+    ReleaseDC(hwnd, hdc);
+    
+    // 获取工作区大小，计算通知窗口位置（右下角）
+    RECT workArea;
+    SystemParametersInfo(SPI_GETWORKAREA, 0, &workArea, 0);
+    
+    int x = workArea.right - notificationWidth - 20;
+    int y = workArea.bottom - NOTIFICATION_HEIGHT - 20;
     
     // 创建通知窗口，添加图层支持以实现透明效果
     HWND hNotification = CreateWindowExW(
@@ -108,19 +146,20 @@ void ShowToastNotification(HWND hwnd, const char* message) {
         L"Catime 通知",  // 窗口标题(不可见)
         WS_POPUP,        // 无边框弹出窗口样式
         x, y,            // 屏幕右下角位置
-        NOTIFICATION_WIDTH, NOTIFICATION_HEIGHT,
+        notificationWidth, NOTIFICATION_HEIGHT,
         NULL, NULL, hInstance, NULL
     );
     
     // 创建失败时回退到系统托盘通知
     if (!hNotification) {
-        if (wmessage) free(wmessage);
+        free(wmessage);
         ShowTrayNotification(hwnd, message);
         return;
     }
     
-    // 保存消息文本到窗口属性中，便于绘制
+    // 保存消息文本和窗口宽度到窗口属性中
     SetPropW(hNotification, L"MessageText", (HANDLE)wmessage);
+    SetPropW(hNotification, L"WindowWidth", (HANDLE)(LONG_PTR)notificationWidth);
     
     // 设置初始动画状态为淡入
     SetPropW(hNotification, L"AnimState", (HANDLE)ANIM_FADE_IN);
@@ -221,13 +260,14 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             RECT titleRect = {15, 10, clientRect.right - 15, 35};
             DrawTextW(memDC, L"Catime", -1, &titleRect, DT_SINGLELINE);
             
-            // 绘制消息内容 - 放在标题下方
+            // 绘制消息内容 - 放在标题下方，使用单行模式
             SelectObject(memDC, contentFont);
             SetTextColor(memDC, RGB(100, 100, 100));
             const wchar_t* message = (const wchar_t*)GetPropW(hwnd, L"MessageText");
             if (message) {
                 RECT textRect = {15, 35, clientRect.right - 15, clientRect.bottom - 10};
-                DrawTextW(memDC, message, -1, &textRect, DT_WORDBREAK);
+                // 使用DT_SINGLELINE|DT_END_ELLIPSIS确保文本在一行内显示，过长时使用省略号
+                DrawTextW(memDC, message, -1, &textRect, DT_SINGLELINE|DT_END_ELLIPSIS);
             }
             
             // 将内存DC中的内容复制到窗口DC
