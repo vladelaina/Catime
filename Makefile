@@ -4,7 +4,6 @@ WINDRES = x86_64-w64-mingw32-windres
 
 # 设置目标文件夹路径
 OUTPUT_DIR = /mnt/c/Users/vladelaina/Desktop
-ASSET_DIR = $(OUTPUT_DIR)/asset
 
 # 创建构建目录
 BUILD_DIR = build
