@@ -21,10 +21,10 @@ body:
     id: "reproduction-method"
     attributes:
       label: "复现步骤"
-      description: "请列出您遇到问题之前执行的操作步骤，帮助我们快速重现"
+      description: "列出遇到问题之前执行的操作步骤，这有助于帮助我们快速重现"
       placeholder: "例如：\n1. 点击了编辑模式\n2. 出现了..."
     validations:
-      required: true
+      required: false
   - type: textarea
     id: "more"
     attributes:
