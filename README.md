@@ -73,7 +73,7 @@
     <img src="https://api.star-history.com/svg?repos=vladelaina/Catime&type=Date" height="420" alt="Star History Chart">
 </a>
 
-> [项目进展](https://k021q39fc0u.feishu.cn/mindnotes/ZUDYbJAaOmhBAmn1H4Lc3rI3nGc#mindmap)
+> [项目进度](https://github.com/users/vladelaina/projects/2)
 
 ## ✨鸣谢 
 
