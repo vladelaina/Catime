@@ -11,7 +11,7 @@ body:
       placeholder: "比如：当我想要……时，软件没能……"  
     validations:
       required: true
-  - type: input
+  - type: textarea
     id: way-to-solve
     attributes:
       label: 你希望的解决方案  
@@ -32,4 +32,4 @@ body:
       description: "请先看看是否已有类似的建议，避免重复提交～"  
       options:
         - label: 是的，我查过了 ✅  
-          required: true  
+          required: true
