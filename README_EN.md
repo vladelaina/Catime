@@ -64,7 +64,7 @@ If you like this project, feel free to donate any amount. Your support is my mot
     <img src="https://api.star-history.com/svg?repos=vladelaina/Catime&type=Date" height="420" alt="Star History Chart">
 </a>
 
-> [Project Progress](https://k021q39fc0u.feishu.cn/mindnotes/ZUDYbJAaOmhBAmn1H4Lc3rI3nGc#mindmap)
+> [Project Progress](https://github.com/users/vladelaina/projects/2)
 
 ## ✨Acknowledgements 
 
