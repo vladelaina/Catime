@@ -36,17 +36,20 @@ jobs:
         
     - name: 添加版本信息文件
       run: |
-        echo "# Catime Beta 版本说明" > output/README.txt
-        echo "感谢您使用 Catime 测试版！" >> output/README.txt
+        echo "# Catime Beta 版本说明 | Beta Version Information" > output/README.txt
+        echo "感谢您使用 Catime 测试版！| Thank you for using Catime Beta version!" >> output/README.txt
         echo "" >> output/README.txt
-        echo "## 版本信息" >> output/README.txt
-        echo "- 版本类型：Beta 测试版" >> output/README.txt
-        echo "- 构建日期：$(date '+%Y-%m-%d %H:%M:%S')" >> output/README.txt
-        echo "- 构建编号：${GITHUB_RUN_NUMBER:-未知}" >> output/README.txt
+        echo "## 版本信息 | Version Information" >> output/README.txt
+        echo "- 版本类型：Beta 测试版 | Version Type: Beta" >> output/README.txt
+        echo "- 构建日期：$(date '+%Y-%m-%d %H:%M:%S') | Build Date: $(date '+%Y-%m-%d %H:%M:%S')" >> output/README.txt
+        echo "- 构建编号：${GITHUB_RUN_NUMBER:-未知} | Build Number: ${GITHUB_RUN_NUMBER:-Unknown}" >> output/README.txt
         echo "" >> output/README.txt
-        echo "## 重要提示" >> output/README.txt
+        echo "## 重要提示 | Important Notes" >> output/README.txt
         echo "本版本为测试版本，可能存在功能不稳定或界面布局调整等情况。" >> output/README.txt
+        echo "This is a beta version, which may have unstable features or UI layout adjustments." >> output/README.txt
+        echo "" >> output/README.txt
         echo "如遇到问题，请通过 Issues 页面向我们反馈。您的意见将帮助我们改进产品质量。" >> output/README.txt
+        echo "If you encounter any issues, please provide feedback through the Issues page. Your opinions will help us improve product quality." >> output/README.txt
         
     - name: 重命名为测试版
       run: |
