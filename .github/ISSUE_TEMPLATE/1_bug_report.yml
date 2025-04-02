@@ -7,21 +7,21 @@ body:
     id: "expectation"
     attributes:
       label: "预期情况"
-      description: "请描述您期望看到的结果或行为～"  
+      description: "请描述您期望看到的结果或行为"  
     validations:
       required: true
   - type: textarea
     id: "describe-the-bug"
     attributes:
       label: "实际情况"
-      description: "请详细描述您遇到的问题或错误，让我们更好地理解～"  
+      description: "请详细描述您遇到的问题或错误，让我们更好地理解"  
     validations:
       required: true
   - type: textarea
     id: "reproduction-method"
     attributes:
       label: "复现步骤"
-      description: "请列出您遇到问题之前执行的操作步骤，帮助我们快速重现～"
+      description: "请列出您遇到问题之前执行的操作步骤，帮助我们快速重现"
       placeholder: "例如：\n1. 点击了编辑模式\n2. 出现了..."
     validations:
       required: true
@@ -37,7 +37,7 @@ body:
     id: "latest-version"
     attributes:
       label: "我已确认更新到最新版本"
-      description: "请先确认已更新到最新版本，确保问题不是由版本过旧引起的～"  
+      description: "请先确认已更新到最新版本，确保问题不是由版本过旧引起的"  
       options:
         - label: 是的，我已是最新版本 🚀
           required: true
@@ -45,7 +45,7 @@ body:
     id: "issues"
     attributes:
       label: "我已经查找过相关问题"  
-      description: "请先看看是否已有类似的建议，避免重复提交～"  
+      description: "请先看看是否已有类似的建议，避免重复提交"  
       options:
         - label: 是的，我查过了 ✅  
           required: true
