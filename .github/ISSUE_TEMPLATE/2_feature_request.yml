@@ -8,7 +8,7 @@ body:
     attributes:
       label: 遇到的问题  
       description: "请简单描述一下你遇到的问题或需要改进的地方～"  
-      placeholder: "比如：当我想要……时，软件没能……"  
+      placeholder: "例如：在使用过程中遇到的具体问题或不足"  
     validations:
       required: true
   - type: textarea
