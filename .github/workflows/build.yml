@@ -1,0 +1,40 @@
+name: build catime
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v3
+      
+    - name: 安装MinGW编译器
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y mingw-w64
+        
+    - name: 创建构建目录
+      run: mkdir -p build
+      
+    - name: 编译应用程序
+      run: |
+        # 修改Makefile中的输出目录为当前工作区
+        sed -i 's|OUTPUT_DIR = /mnt/c/Users/vladelaina/Desktop|OUTPUT_DIR = $(pwd)/output|g' Makefile
+        # 删除启动应用程序的命令行
+        sed -i '/@cmd.exe \/C start/d' Makefile
+        # 创建输出目录
+        mkdir -p output
+        # 执行构建
+        make all
+        
+    - name: 上传构建结果
+      uses: actions/upload-artifact@v3
+      with:
+        name: catime-windows
+        path: output/catime.exe
