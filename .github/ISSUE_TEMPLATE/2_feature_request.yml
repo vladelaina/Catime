@@ -18,7 +18,7 @@ body:
       description: "理想情况下，你希望软件怎么做呢？欢迎畅所欲言！"  
     validations:
       required: true
-  - type: input
+  - type: textarea
     id: instead
     attributes:
       label: 你考虑过的其他方案（可选）  
