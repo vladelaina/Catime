@@ -1,34 +1,35 @@
-name: Feature 请求
-description: "为这个项目提出一个建议"
+name: 功能请求
+description: "💡 你有好的想法？来这里提建议吧！"
 title: "[Feature request]: "
 labels: ['enhancement']
-body: 
-- type: input
-  id: problem
-  attributes:
-    label: 相关问题
-    description: "清楚而简洁地描述问题是什么。"
-    placeholder: "当我想要……时，软件不能……"
-  validations:
-    required: true
-- type: input
-  id: way-to-solve
-  attributes:
-    label: 描述你希望的解决方案
-    description: "你希望发生什么"
-  validations:
-    required: true
-- type: input
-  id: instead
-  attributes:
-    label: 描述你所考虑的替代方案
-  validations:
-    required: false
-- type: checkboxes
-  id: "issues"
-  attributes:
-    label: "我确认已查询历史issues"
-    description: "否则请查询后提出"
-    options:
-      - label: 是
-        required: true
+body:
+  - type: input
+    id: problem
+    attributes:
+      label: 遇到的问题  
+      description: "请简单描述一下你遇到的问题或需要改进的地方～"  
+      placeholder: "比如：当我想要……时，软件没能……"  
+    validations:
+      required: true
+  - type: input
+    id: way-to-solve
+    attributes:
+      label: 你希望的解决方案  
+      description: "理想情况下，你希望软件怎么做呢？欢迎畅所欲言！"  
+    validations:
+      required: true
+  - type: input
+    id: instead
+    attributes:
+      label: 你考虑过的其他方案（可选）  
+      description: "如果有其他替代方案，也可以写在这里哦～"  
+    validations:
+      required: false
+  - type: checkboxes
+    id: "issues"
+    attributes:
+      label: "📌 我已经查找过相关问题"  
+      description: "请先看看是否已有类似的建议，避免重复提交～"  
+      options:
+        - label: 是的，我查过了 ✅  
+          required: true  
