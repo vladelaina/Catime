@@ -25,7 +25,8 @@ jobs:
     - name: 编译应用程序
       run: |
         # 修改Makefile中的输出目录为当前工作区
-        sed -i 's|OUTPUT_DIR = /mnt/c/Users/vladelaina/Desktop|OUTPUT_DIR = $(pwd)/output|g' Makefile
+        export OUTPUT_PATH="$(pwd)/output"
+        sed -i "s|OUTPUT_DIR = /mnt/c/Users/vladelaina/Desktop|OUTPUT_DIR = $OUTPUT_PATH|g" Makefile
         # 删除启动应用程序的命令行
         sed -i '/@cmd.exe \/C start/d' Makefile
         # 创建输出目录
