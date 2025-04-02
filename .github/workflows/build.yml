@@ -43,12 +43,12 @@ jobs:
         
     - name: 添加版本信息文件
       run: |
-        echo "# Catime Beta ${{ env.VERSION }} 版本说明" > output/README.txt
-        echo "感谢您使用 Catime ${{ env.VERSION }} 测试版！" >> output/README.txt
+        echo "# Catime ${{ env.VERSION }} 版本说明" > output/README.txt
+        echo "感谢您使用 catime_${{ env.VERSION }} 测试版！" >> output/README.txt
         echo "" >> output/README.txt
         echo "## 版本信息" >> output/README.txt
         echo "- 版本号：${{ env.VERSION }}" >> output/README.txt
-        echo "- 版本类型：Beta 测试版" >> output/README.txt
+        echo "- 版本类型：测试版" >> output/README.txt
         echo "- 构建日期：$(date '+%Y-%m-%d %H:%M:%S')" >> output/README.txt
         echo "- 构建编号：${GITHUB_RUN_NUMBER:-未知}" >> output/README.txt
         echo "" >> output/README.txt
@@ -58,7 +58,7 @@ jobs:
         echo "" >> output/README.txt
         echo "-----------------------------------" >> output/README.txt
         echo "" >> output/README.txt
-        echo "# Catime Beta ${{ env.VERSION }} Version Information" >> output/README.txt
+        echo "# catime_${{ env.VERSION }} Version Information" >> output/README.txt
         echo "Thank you for using Catime ${{ env.VERSION }} Beta version!" >> output/README.txt
         echo "" >> output/README.txt
         echo "## Version Information" >> output/README.txt
