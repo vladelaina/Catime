@@ -34,7 +34,7 @@ jobs:
         make all
         
     - name: 上传构建结果
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: catime-windows
         path: output/catime.exe
