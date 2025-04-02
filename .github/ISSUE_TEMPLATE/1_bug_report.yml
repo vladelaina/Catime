@@ -1,5 +1,5 @@
 name: Bug 报告
-description: 在提出问题前请先自行升级到最新客户端，同时也请通过搜索确认是否有人提出过相同问题。
+description: 在提出问题前请先升级到最新客户端，同时也请通过搜索确认是否有人提出过相同问题。
 title: "[Bug]: "
 labels: ["bug"]
 body:
