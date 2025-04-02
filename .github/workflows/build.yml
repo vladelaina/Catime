@@ -34,9 +34,20 @@ jobs:
         # 执行构建
         make all
         
+    - name: 创建内测版本说明文件
+      run: |
+        echo "# 警告：内测版本" > output/README.txt
+        echo "此版本为内测版本，可能存在问题。请谨慎使用并及时反馈遇到的任何问题。" >> output/README.txt
+        
+    - name: 重命名为内测版本
+      run: |
+        mv output/catime.exe output/catime_内测版.exe
+        
     - name: 上传构建结果
       uses: actions/upload-artifact@v4
       with:
-        name: catime-windows
-        path: output/catime.exe
-      # 注意：构建完成后，您可以在GitHub Actions工作流运行页面的"Artifacts"部分下载构件
+        name: catime-windows-内测版
+        path: |
+          output/catime_内测版.exe
+          output/README.txt
+        # 注意：构建完成后，您可以在GitHub Actions工作流运行页面的"Artifacts"部分下载构件
