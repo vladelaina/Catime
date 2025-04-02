@@ -73,22 +73,22 @@ jobs:
         
     - name: 重命名为测试版
       run: |
-        mv output/catime.exe output/catime_${{ env.VERSION }}_build${{ github.run_number }}.exe
+        mv output/catime.exe output/catime_${{ env.VERSION }}_${{ github.run_number }}.exe
         
     - name: 创建发布包
       run: |
         mkdir -p release
-        cp output/catime_${{ env.VERSION }}_build${{ github.run_number }}.exe release/
+        cp output/catime_${{ env.VERSION }}_${{ github.run_number }}.exe release/
         cp output/README.txt release/
         cd release
-        zip -r catime_${{ env.VERSION }}_build${{ github.run_number }}.zip *
-        mv catime_${{ env.VERSION }}_build${{ github.run_number }}.zip ../output/
+        zip -r catime_${{ env.VERSION }}_${{ github.run_number }}.zip *
+        mv catime_${{ env.VERSION }}_${{ github.run_number }}.zip ../output/
         
     - name: 上传构建结果
       uses: actions/upload-artifact@v4
       with:
-        name: catime-windows-${{ env.VERSION }}-build${{ github.run_number }}
+        name: catime-windows-${{ env.VERSION }}-${{ github.run_number }}
         path: |
-          output/catime_${{ env.VERSION }}_build${{ github.run_number }}.exe
+          output/catime_${{ env.VERSION }}_${{ github.run_number }}.exe
           output/README.txt
         # 注意：构建完成后，您可以在GitHub Actions工作流运行页面的"Artifacts"部分下载构件
