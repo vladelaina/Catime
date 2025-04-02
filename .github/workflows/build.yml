@@ -38,3 +38,4 @@ jobs:
       with:
         name: catime-windows
         path: output/catime.exe
+      # 注意：构建完成后，您可以在GitHub Actions工作流运行页面的"Artifacts"部分下载构件
