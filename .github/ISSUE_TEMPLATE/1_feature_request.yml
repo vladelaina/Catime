@@ -9,7 +9,7 @@ body:
       label: 功能需求   
       description: "简单描述一下你希望增加或改进的功能"  
     validations:
-      required: true
+      required: false
   - type: textarea
     id: way-to-solve
     attributes:
