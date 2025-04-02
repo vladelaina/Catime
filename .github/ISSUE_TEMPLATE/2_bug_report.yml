@@ -9,7 +9,7 @@ body:
       label: "预期情况"
       description: "请描述您期望看到的结果或行为"  
     validations:
-      required: true
+      required: false
   - type: textarea
     id: "describe-the-bug"
     attributes:
