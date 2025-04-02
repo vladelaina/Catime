@@ -25,11 +25,3 @@ body:
       description: "如果有其他替代方案，也可以写在这里哦～"  
     validations:
       required: false
-  - type: checkboxes
-    id: "issues"
-    attributes:
-      label: "📌 我已经查找过相关问题"  
-      description: "请先看看是否已有类似的建议，避免重复提交"  
-      options:
-        - label: 是的，我查过了 ✅  
-          required: true
