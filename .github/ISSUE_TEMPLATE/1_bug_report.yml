@@ -26,14 +26,6 @@ body:
     validations:
       required: true
   - type: textarea
-    id: "log"
-    attributes:
-      label: "日志信息"
-      description: "位置在软件当前目录下的logs"
-      placeholder: 在日志开始和结束位置粘贴冒号后的内容：```
-    validations:
-      required: true
-  - type: textarea
     id: "more"
     attributes:
       label: "额外信息"
@@ -44,7 +36,6 @@ body:
     id: "latest-version"
     attributes:
       label: "我确认已更新至最新版本"
-      description: "否则请更新后尝试"
       options:
         - label: 是
           required: true
@@ -52,7 +43,6 @@ body:
     id: "issues"
     attributes:
       label: "我确认已查询历史issues"
-      description: "否则请查询后提出"
       options:
         - label: 是
           required: true
