@@ -22,7 +22,9 @@ body:
     attributes:
       label: "复现步骤"
       description: "请列出在出现问题之前您执行的操作步骤"
-      placeholder: "例如：1. 打开应用 2. 点击某个按钮"
+      placeholder: "例如："
+      placeholder: "1. 点击了编辑模式"
+      placeholder: "2. 出现了..."
     validations:
       required: true
   - type: textarea
