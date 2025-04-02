@@ -1,5 +1,5 @@
-name: Bug 报告
-description: 在提出问题前请先升级到最新客户端，同时也请通过搜索确认是否有人提出过相同问题。
+name: Bug 反馈
+description: 在报告问题之前，建议您先升级到最新版本，并通过搜索查看是否已有相同问题被报告过。
 title: "[Bug]: "
 labels: ["bug"]
 body:
@@ -7,42 +7,42 @@ body:
     id: "expectation"
     attributes:
       label: "预期情况"
-      description: "描述你认为应该发生什么"
+      description: "请描述您期望看到的结果或行为"
     validations:
       required: true
   - type: textarea
     id: "describe-the-bug"
     attributes:
       label: "实际情况"
-      description: "描述实际发生了什么"
+      description: "请详细描述您遇到的问题或错误"
     validations:
       required: true
   - type: textarea
     id: "reproduction-method"
     attributes:
-      label: "复现方法"
-      description: "在BUG出现前执行了哪些操作"
-      placeholder: 标序号
+      label: "复现步骤"
+      description: "请列出在出现问题之前您执行的操作步骤"
+      placeholder: "例如：1. 打开应用 2. 点击某个按钮"
     validations:
       required: true
   - type: textarea
     id: "more"
     attributes:
-      label: "额外信息"
-      description: "可选"
+      label: "其他信息"
+      description: "如果有其他相关信息，欢迎提供（可选）"
     validations:
       required: false
   - type: checkboxes
     id: "latest-version"
     attributes:
-      label: "我确认已更新至最新版本"
+      label: "我已确认更新到最新版本"
       options:
         - label: 是
           required: true
   - type: checkboxes
     id: "issues"
     attributes:
-      label: "我确认已查询历史issues"
+      label: "我已查询过相关的历史问题"
       options:
         - label: 是
           required: true
