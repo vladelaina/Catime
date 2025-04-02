@@ -33,3 +33,11 @@ body:
       placeholder: "例如：\n系统：Windows 11\n版本：23H2"
     validations:
       required: false
+  - type: checkboxes
+    id: "latest-version"
+    attributes:
+      label: "我已确认更新到最新版本"
+      description: "请先确认已更新到最新版本，确保问题不是由版本过旧引起的"  
+      options:
+        - label: 是的，我已是最新版本 🚀
+          required: true
