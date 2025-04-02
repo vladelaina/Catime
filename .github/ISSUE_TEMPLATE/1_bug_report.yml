@@ -22,7 +22,7 @@ body:
     attributes:
       label: "复现步骤"
       description: "请列出在出现问题之前您执行的操作步骤"
-      placeholder: "例如：1. 点击了编辑模式\n2. 出现了..."
+      placeholder: "例如\n：1. 点击了编辑模式\n2. 出现了..."
     validations:
       required: true
   - type: textarea
