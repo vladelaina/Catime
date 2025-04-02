@@ -90,6 +90,5 @@ jobs:
         name: catime-windows-${{ env.VERSION }}
         path: |
           output/catime_${{ env.VERSION }}.exe
-          output/catime_${{ env.VERSION }}.zip
           output/README.txt
         # 注意：构建完成后，您可以在GitHub Actions工作流运行页面的"Artifacts"部分下载构件
