@@ -9,7 +9,8 @@
  <a href="https://github.com/vladelaina/Catime/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/github/license/vladelaina/Catime?label=License" /></a>
  <a href="https://github.com/vladelaina/Catime/releases/latest"><img alt="Release" src="https://img.shields.io/github/release/vladelaina/Catime.svg?label=Release" /></a>
  <a href="https://github.com/vladelaina/Catime/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/vladelaina/Catime/total?label=Downloads" /></a>
-<a href="https://github.com/users/vladelaina/projects/2"><img src="https://img.shields.io/badge/Project%20Progress-12%25%20Complete-00C853?style=flat-circle&logo=github" alt="Project Progress" /></a>
+  <img src="https://img.shields.io/badge/Progress-12%25%20Complete-00C853?style=flat-circle" alt="Progress" />
+</a>
 </p>
 
 <h1 align="center">Catime</h1>
