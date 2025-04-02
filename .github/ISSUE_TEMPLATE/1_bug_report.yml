@@ -36,9 +36,9 @@ body:
   - type: checkboxes
     id: "latest-version"
     attributes:
-      label: "我已确认更新到最新版本"
+      label: "📌我已确认更新到最新版本"
       options:
-        - label: 是
+        - label: 是的，我已是最新版本 🚀
           required: true
   - type: checkboxes
     id: "issues"
