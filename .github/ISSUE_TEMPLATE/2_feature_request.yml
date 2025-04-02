@@ -6,8 +6,8 @@ body:
   - type: input
     id: problem
     attributes:
-      label: 需求  
-      description: "请简单描述一下你需求或需要改进的地方"  
+      label: 功能需求   
+      description: "请简单描述一下你希望增加或改进的功能"  
     validations:
       required: true
   - type: textarea
