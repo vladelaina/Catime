@@ -29,7 +29,8 @@ body:
     id: "more"
     attributes:
       label: "其他信息"
-      description: "如果有其他相关信息，欢迎提供（可选）"
+      description: "如果有其他相关信息，欢迎提供（如系统和系统版本等，可选）"
+      placeholder: "例如：\n系统：Windows 11\n版本：23H2"
     validations:
       required: false
   - type: checkboxes
