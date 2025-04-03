@@ -44,8 +44,9 @@ jobs:
         sed -i '/@cmd.exe \/C start/d' Makefile
         # 创建输出目录
         mkdir -p output
-        # 执行构建
-        make all
+        # 执行构建，使用多线程编译提高速度
+        make -j$(nproc) all
+        echo "使用了 $(nproc) 个核心进行并行编译"
         
     - name: 添加版本信息文件
       run: |
