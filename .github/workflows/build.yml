@@ -55,7 +55,7 @@ jobs:
         echo "## 版本信息" >> output/README.txt
         echo "- 版本号：${{ env.VERSION }}" >> output/README.txt
         echo "- 版本类型：测试版" >> output/README.txt
-        echo "- 构建日期：$(date '+%Y-%m-%d %H:%M:%S')" >> output/README.txt
+        echo "- 构建日期：$(date '+%Y-%m-%d %H:%M:%S') (UTC+8)" >> output/README.txt
         echo "- 构建编号：${GITHUB_RUN_NUMBER:-未知}" >> output/README.txt
         echo "" >> output/README.txt
         echo "## 重要提示" >> output/README.txt
@@ -70,7 +70,7 @@ jobs:
         echo "## Version Information" >> output/README.txt
         echo "- Version: ${{ env.VERSION }}" >> output/README.txt
         echo "- Version Type: Beta" >> output/README.txt
-        echo "- Build Date: $(date '+%Y-%m-%d %H:%M:%S')" >> output/README.txt
+        echo "- Build Date: $(date '+%Y-%m-%d %H:%M:%S') (UTC+8)" >> output/README.txt
         echo "- Build Number: ${GITHUB_RUN_NUMBER:-Unknown}" >> output/README.txt
         echo "" >> output/README.txt
         echo "## Important Notes" >> output/README.txt
