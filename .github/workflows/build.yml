@@ -14,6 +14,12 @@ jobs:
     - name: 检出代码
       uses: actions/checkout@v3
       
+    - name: 设置中国时区
+      run: |
+        sudo timedatectl set-timezone Asia/Shanghai
+        echo "当前时区: $(date +%Z)"
+        echo "当前时间: $(date)"
+        
     - name: 安装MinGW编译器
       run: |
         sudo apt-get update
