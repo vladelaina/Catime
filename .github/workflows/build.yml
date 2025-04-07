@@ -2,9 +2,9 @@ name: build catime
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main ]
 
 jobs:
   build:
@@ -76,8 +76,7 @@ jobs:
         echo "" >> output/README.txt
         echo "## Important Notes" >> output/README.txt
         echo "This is a beta version, which may have unstable features or UI layout adjustments." >> output/README.txt
-        echo "If you encounter any issues, please provide feedback through the Issues page. Your opinions will help us improve product quality." >> output/README.txt
-        
+        echo "If you encounter any issues, please provide feedback through the Issues page. Your opinions will help us improve product quality." >> output/README.txt   
     - name: 重命名为测试版
       run: |
         mv output/catime.exe output/catime_${{ env.VERSION }}_${{ github.run_number }}.exe
