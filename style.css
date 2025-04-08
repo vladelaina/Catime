@@ -1,37 +1,37 @@
-/* docs/style.css - Anime Inspired Theme */
+/* docs/style.css - 动漫风格主题 */
 
-/* --- CSS Variables (Anime Pastel Theme) --- */
+/* --- CSS 变量 (动漫风格柔和配色) --- */
 :root {
-    /* Primary Palette: Soft Blue & Pink Accents */
-    --primary-color: #7aa2f7; /* Soft Blue */
+    /* 主要配色: 柔和蓝色和粉色点缀 */
+    --primary-color: #7aa2f7; /* 柔和蓝色 */
     --primary-hover: #9abdfa;
-    --accent-color: #f77daa;   /* Soft Pink */
+    --accent-color: #f77daa;   /* 柔和粉色 */
     --accent-hover: #ff9fbc;
 
-    /* Supporting Colors */
-    --secondary-color: #9aa5ce; /* Lavender Grey for text */
-    --background-color: #f2f4ff; /* Very Light Blue/Purple Tint */
-    --surface-color: #ffffff;   /* White for cards/header */
-    --text-color: #414868;      /* Dark Blue/Grey */
-    --heading-color: #2e3a59;   /* Darker Blue/Grey */
-    --border-color: #e0e0ff;    /* Light Lavender Border */
+    /* 辅助颜色 */
+    --secondary-color: #9aa5ce; /* 淡紫灰色用于文本 */
+    --background-color: #f2f4ff; /* 非常浅的蓝/紫色调 */
+    --surface-color: #ffffff;   /* 白色用于卡片/页头 */
+    --text-color: #414868;      /* 深蓝/灰色 */
+    --heading-color: #2e3a59;   /* 更深的蓝/灰色 */
+    --border-color: #e0e0ff;    /* 浅紫色边框 */
 
-    /* Gradients & Shadows */
-    --gradient-start: #a7c7e7; /* Light Blue */
-    --gradient-end: #e0d6ff;   /* Light Purple */
-    --card-shadow: 0 5px 15px rgba(122, 162, 247, 0.1); /* Softer blue shadow */
+    /* 渐变和阴影 */
+    --gradient-start: #a7c7e7; /* 浅蓝色 */
+    --gradient-end: #e0d6ff;   /* 浅紫色 */
+    --card-shadow: 0 5px 15px rgba(122, 162, 247, 0.1); /* 更柔和的蓝色阴影 */
     --card-hover-shadow: 0 8px 25px rgba(122, 162, 247, 0.18);
     --button-shadow: 0 4px 10px rgba(122, 162, 247, 0.2);
     --button-hover-shadow: 0 6px 15px rgba(122, 162, 247, 0.3);
 
-    /* Typography & Layout */
+    /* 排版和布局 */
     --font-family: 'Poppins', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    --border-radius-base: 10px;  /* More rounded */
-    --border-radius-large: 16px; /* Even more rounded */
+    --border-radius-base: 10px;  /* 更圆润 */
+    --border-radius-large: 16px; /* 更加圆润 */
     --border-radius-pill: 50px;
 }
 
-/* --- Global Styles & Resets --- */
+/* --- 全局样式和重置 --- */
 *,
 *::before,
 *::after {
@@ -51,7 +51,7 @@ body {
     color: var(--text-color);
     background-color: var(--background-color);
     overflow-x: hidden;
-    font-weight: 400; /* Default to regular weight */
+    font-weight: 400; /* 默认使用常规字重 */
 }
 
 .container {
@@ -64,20 +64,20 @@ body {
 
 h1, h2, h3, h4, h5, h6 {
     color: var(--heading-color);
-    font-weight: 700; /* Bold headings */
+    font-weight: 700; /* 粗体标题 */
     line-height: 1.3;
     margin-bottom: 0.75rem;
 }
 
 a {
-    color: var(--accent-color); /* Use pink for links */
+    color: var(--accent-color); /* 链接使用粉色 */
     text-decoration: none;
     transition: color 0.3s ease;
 }
 
 a:hover {
     color: var(--accent-hover);
-    text-decoration: none; /* Remove underline globally for cleaner look */
+    text-decoration: none; /* 全局移除下划线，获得更整洁的外观 */
 }
 
 img {
@@ -86,13 +86,13 @@ img {
     display: block;
 }
 
-/* --- Header / Navigation --- */
+/* --- 页头/导航 --- */
 .main-header {
-    background-color: rgba(255, 255, 255, 0.85); /* Slightly more transparent white */
+    background-color: rgba(255, 255, 255, 0.85); /* 略微更透明的白色 */
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border-color);
-    padding: 0.8rem 0; /* Slightly less padding */
+    padding: 0.8rem 0; /* 稍微减少内边距 */
     position: sticky;
     top: 0;
     z-index: 1000;
@@ -108,14 +108,14 @@ img {
 .logo {
     font-size: 1.8rem;
     font-weight: 700;
-    color: var(--primary-color); /* Blue logo text */
+    color: var(--primary-color); /* 蓝色 logo 文本 */
     text-decoration: none;
     display: flex;
     align-items: center;
     gap: 0.5rem;
 }
 .logo .logo-icon {
-    color: var(--accent-color); /* Pink cat icon */
+    color: var(--accent-color); /* 粉色猫咪图标 */
     font-size: 1.5rem;
 }
 .logo:hover {
@@ -130,7 +130,7 @@ img {
     list-style: none;
     display: flex;
     align-items: center;
-    gap: 1.8rem; /* More space */
+    gap: 1.8rem; /* 更多间距 */
 }
 
 .nav-links a {
@@ -142,17 +142,17 @@ img {
     transition: color 0.3s ease;
 }
 .nav-links a:hover {
-    color: var(--primary-color); /* Blue hover for nav links */
+    color: var(--primary-color); /* 导航链接悬停时为蓝色 */
 }
 
-.nav-links a::after { /* Underline animation */
+.nav-links a::after { /* 下划线动画 */
     content: '';
     position: absolute;
     width: 0;
     height: 2px;
     bottom: 0;
     left: 50%;
-    background-color: var(--accent-color); /* Pink underline */
+    background-color: var(--accent-color); /* 粉色下划线 */
     transition: all 0.3s ease-out;
     transform: translateX(-50%);
     border-radius: 1px;
@@ -160,11 +160,11 @@ img {
 
 .nav-links a:hover::after,
 .nav-links a.active::after {
-    width: 60%; /* Smaller underline for cuter feel */
+    width: 60%; /* 较小的下划线，更可爱的感觉 */
 }
 
 .nav-button {
-    background-color: var(--primary-color); /* Blue button */
+    background-color: var(--primary-color); /* 蓝色按钮 */
     color: white !important;
     padding: 0.6rem 1.4rem;
     border-radius: var(--border-radius-pill);
@@ -189,9 +189,9 @@ img {
 }
 
 
-/* --- Hero Section --- */
+/* --- 英雄区域 --- */
 .hero {
-    padding: 6rem 0 7rem; /* More bottom padding */
+    padding: 6rem 0 7rem; /* 底部更多内边距 */
     background-image: linear-gradient(145deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
     position: relative;
     overflow: hidden;
@@ -202,7 +202,7 @@ img {
     align-items: center;
     justify-content: space-between;
     gap: 3rem;
-    position: relative; /* For z-index if needed */
+    position: relative; /* 为 z-index 做准备（如需要） */
     z-index: 2;
 }
 
@@ -211,26 +211,26 @@ img {
 }
 
 .hero-title {
-    font-size: 3.8rem; /* Even larger title */
+    font-size: 3.8rem; /* 更大的标题 */
     font-weight: 700;
     margin-bottom: 0.8rem;
-    color: var(--heading-color); /* Darker blue heading */
+    color: var(--heading-color); /* 深蓝色标题 */
     line-height: 1.15;
 }
 
 .hero-subtitle {
     font-size: 1.8rem;
-    color: var(--primary-color); /* Blue subtitle */
+    color: var(--primary-color); /* 蓝色副标题 */
     margin-bottom: 1.5rem;
-    font-weight: 400; /* Regular weight for subtitle */
+    font-weight: 400; /* 副标题为常规字重 */
 }
 
 .hero-description {
     font-size: 1.1rem;
-    color: var(--text-color); /* Use standard text color */
+    color: var(--text-color); /* 使用标准文本颜色 */
     margin-bottom: 2.5rem;
     max-width: 520px;
-    line-height: 1.8; /* Slightly more line spacing */
+    line-height: 1.8; /* 稍微增加行间距 */
 }
 
 .hero-visual {
@@ -240,18 +240,18 @@ img {
 }
 
 .hero-screenshot {
-    border-radius: var(--border-radius-large); /* More rounded corners */
-    box-shadow: 0 15px 35px rgba(122, 162, 247, 0.2); /* Softer, larger shadow */
+    border-radius: var(--border-radius-large); /* 更圆润的边角 */
+    box-shadow: 0 15px 35px rgba(122, 162, 247, 0.2); /* 更柔和、更大的阴影 */
     transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-    /* Consider removing hover effect if visual is complex illustration */
+    /* 如果视觉元素是复杂插图，可考虑删除悬停效果 */
     /* &:hover { ... } */
 }
 .hero-screenshot:hover {
-     transform: scale(1.03) translateY(-5px); /* Gentle scale and lift */
+     transform: scale(1.03) translateY(-5px); /* 轻微放大和抬升 */
      box-shadow: 0 20px 45px rgba(122, 162, 247, 0.25);
 }
 
-/* Call to Action Buttons */
+/* 号召性按钮 */
 .cta-button {
     display: inline-block;
     padding: 0.8rem 1.8rem;
@@ -269,23 +269,23 @@ img {
     margin-right: 0.6rem;
 }
 .cta-button.primary {
-    background-color: var(--accent-color); /* Pink primary button */
+    background-color: var(--accent-color); /* 粉色主要按钮 */
     color: white;
 }
 .cta-button.primary:hover {
     background-color: var(--accent-hover);
     color: white;
     transform: translateY(-2px);
-    box-shadow: 0 6px 15px rgba(247, 125, 170, 0.3); /* Pink shadow */
+    box-shadow: 0 6px 15px rgba(247, 125, 170, 0.3); /* 粉色阴影 */
 }
 .cta-button.secondary {
-    background-color: var(--surface-color); /* White */
-    color: var(--primary-color); /* Blue text */
+    background-color: var(--surface-color); /* 白色 */
+    color: var(--primary-color); /* 蓝色文本 */
     border: 1px solid var(--border-color);
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
 }
 .cta-button.secondary:hover {
-    background-color: #f8faff; /* Very light blue hover */
+    background-color: #f8faff; /* 非常浅的蓝色悬停效果 */
     color: var(--primary-hover);
     border-color: #d0d0ff;
     transform: translateY(-2px);
@@ -296,7 +296,7 @@ img {
     font-size: 1.15rem;
 }
 
-/* Optional Background Shapes */
+/* 可选的背景形状 */
 .background-shapes {
     position: absolute;
     top: 0;
@@ -309,20 +309,20 @@ img {
 .shape {
     position: absolute;
     border-radius: 50%;
-    opacity: 0.1; /* Very subtle */
-    background-color: var(--accent-color); /* Pink shapes */
+    opacity: 0.1; /* 非常微妙 */
+    background-color: var(--accent-color); /* 粉色形状 */
     animation: float 15s infinite ease-in-out alternate;
 }
 .shape1 {
     width: 150px; height: 150px; top: 10%; left: 5%; animation-duration: 18s;
-    background-color: rgba(255, 255, 255, 0.5); /* White shape */
+    background-color: rgba(255, 255, 255, 0.5); /* 白色形状 */
 }
 .shape2 {
     width: 80px; height: 80px; bottom: 15%; right: 10%; animation-duration: 12s; animation-delay: 2s;
 }
 .shape3 {
     width: 120px; height: 120px; top: 40%; right: 15%; animation-duration: 20s; animation-delay: 1s;
-     background-color: rgba(167, 199, 231, 0.3); /* Light blue shape */
+     background-color: rgba(167, 199, 231, 0.3); /* 浅蓝色形状 */
 }
 
 @keyframes float {
@@ -330,11 +330,11 @@ img {
     100% { transform: translateY(-20px) translateX(15px) rotate(20deg); }
 }
 
-/* --- Features Section --- */
+/* --- 特性区域 --- */
 .features {
     padding: 6rem 0;
-    background-color: var(--surface-color); /* White background */
-    position: relative; /* For potential future decorations */
+    background-color: var(--surface-color); /* 白色背景 */
+    position: relative; /* 为潜在的未来装饰做准备 */
 }
 
 .section-title {
@@ -358,11 +358,11 @@ img {
 .features-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 2.5rem; /* Slightly larger gap */
+    gap: 2.5rem; /* 稍微更大的间隙 */
 }
 
 .feature-card {
-    background-color: #f8faff; /* Very light blue card background */
+    background-color: #f8faff; /* 非常浅的蓝色卡片背景 */
     padding: 2.5rem 2rem;
     border-radius: var(--border-radius-large);
     text-align: center;
@@ -370,29 +370,29 @@ img {
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     border: 1px solid transparent;
     position: relative;
-    overflow: hidden; /* Hide potential overflow from hover effects */
+    overflow: hidden; /* 隐藏悬停效果可能造成的溢出 */
 }
 
 .feature-card:hover {
-    transform: translateY(-10px); /* More lift */
+    transform: translateY(-10px); /* 更多提升 */
     box-shadow: var(--card-hover-shadow);
     border-color: rgba(122, 162, 247, 0.2);
 }
 
 .feature-icon {
-    font-size: 2.8rem; /* Larger icons */
-    color: var(--primary-color); /* Blue icons */
+    font-size: 2.8rem; /* 更大的图标 */
+    color: var(--primary-color); /* 蓝色图标 */
     margin-bottom: 1.5rem;
     display: inline-block;
     transition: transform 0.3s ease;
-    /* Optional background circle
+    /* 可选的背景圆圈
     background-color: rgba(122, 162, 247, 0.1);
     width: 80px; height: 80px; line-height: 80px; border-radius: 50%;
     */
 }
 .feature-card:hover .feature-icon {
-    transform: scale(1.1) rotate(-5deg); /* Slight icon animation on hover */
-    color: var(--accent-color); /* Change icon to pink on hover */
+    transform: scale(1.1) rotate(-5deg); /* 悬停时图标的轻微动画 */
+    color: var(--accent-color); /* 悬停时图标变为粉色 */
 }
 
 
@@ -410,10 +410,10 @@ img {
 }
 
 
-/* --- CTA Section --- */
+/* --- CTA 区域 --- */
 .cta-section {
     padding: 5.5rem 0;
-    /* Use a more vibrant gradient for CTA */
+    /* 为 CTA 使用更鲜艳的渐变 */
     background-image: linear-gradient(60deg, var(--primary-color) 0%, var(--accent-color) 100%);
     color: white;
     text-align: center;
@@ -429,29 +429,29 @@ img {
     margin-bottom: 2.5rem;
     opacity: 0.95;
 }
-.cta-section .cta-button.primary { /* Button style on dark background */
+.cta-section .cta-button.primary { /* 深色背景上的按钮样式 */
     background-color: white;
-    color: var(--primary-color); /* Blue text on white button */
+    color: var(--primary-color); /* 白色按钮上的蓝色文本 */
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 }
 .cta-section .cta-button.primary:hover {
-    background-color: #f0f8ff; /* Light blue tint on hover */
-    color: var(--accent-color); /* Pink text on hover */
+    background-color: #f0f8ff; /* 悬停时的浅蓝色调 */
+    color: var(--accent-color); /* 悬停时的粉色文本 */
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-    transform: translateY(-3px); /* Slightly more lift */
+    transform: translateY(-3px); /* 稍微更多提升 */
 }
 .cta-section .cta-button.primary i {
-     color: var(--accent-color); /* Pink icon */
+     color: var(--accent-color); /* 粉色图标 */
 }
 .cta-section .cta-button.primary:hover i {
-    color: var(--primary-color); /* Blue icon on hover */
+    color: var(--primary-color); /* 悬停时的蓝色图标 */
 }
 
 
-/* --- Footer --- */
+/* --- 页脚 --- */
 .main-footer {
     padding: 3rem 0 2.5rem;
-    background-color: #e6e9ff; /* Slightly darker lavender footer */
+    background-color: #e6e9ff; /* 稍微深一点的薰衣草色页脚 */
     text-align: center;
     color: var(--secondary-color);
     font-size: 0.9rem;
@@ -461,11 +461,11 @@ img {
     margin-bottom: 0.5rem;
 }
 .main-footer a {
-    color: var(--primary-color); /* Blue links in footer */
+    color: var(--primary-color); /* 页脚中的蓝色链接 */
     font-weight: 500;
 }
 .main-footer a:hover {
-    color: var(--accent-color); /* Pink hover */
+    color: var(--accent-color); /* 悬停时为粉色 */
 }
 .footer-links {
     margin-top: 1rem;
@@ -475,7 +475,7 @@ img {
     display: inline-block;
 }
 
-/* --- Responsive Adjustments --- */
+/* --- 响应式调整 --- */
 @media (max-width: 992px) {
     .hero-content {
         flex-direction: column;
@@ -483,11 +483,11 @@ img {
     }
     .hero-text {
         margin-bottom: 3rem;
-        order: 2; /* Text below image on mobile */
+        order: 2; /* 移动端上文本在图像下方 */
     }
     .hero-visual {
         order: 1;
-        max-width: 450px; /* Limit image size */
+        max-width: 450px; /* 限制图像大小 */
         margin-left: auto;
         margin-right: auto;
     }
@@ -502,11 +502,11 @@ img {
         margin-right: auto;
     }
     .background-shapes {
-        /* Optionally reduce or hide shapes on smaller screens */
+        /* 可选择在小屏幕上减少或隐藏形状 */
         opacity: 0.7;
     }
     .shape {
-       /* opacity: 0.05; */ /* Make even more subtle */
+       /* opacity: 0.05; */ /* 使其更加微妙 */
     }
 }
 
@@ -519,10 +519,10 @@ img {
         gap: 1rem;
     }
     .nav-links {
-        gap: 0.8rem 1rem; /* Adjust row and column gap */
+        gap: 0.8rem 1rem; /* 调整行和列间距 */
         flex-wrap: wrap;
         justify-content: center;
-        padding: 0 1rem; /* Add padding to prevent edge touching */
+        padding: 0 1rem; /* 添加内边距防止触及边缘 */
     }
     .hero {
         padding: 4rem 0 5rem;
