@@ -1,20 +1,34 @@
-/* docs/style.css */
+/* docs/style.css - Anime Inspired Theme */
 
-/* --- CSS Variables (Customize Colors and Fonts Here) --- */
+/* --- CSS Variables (Anime Pastel Theme) --- */
 :root {
-    --primary-color: #007bff; /* Bright blue - main accent color */
-    --primary-hover: #0056b3;
-    --secondary-color: #6c757d; /* Grey for secondary text/elements */
-    --background-color: #ffffff; /* White background */
-    --surface-color: #f8f9fa; /* Light grey for cards/sections */
-    --text-color: #212529; /* Dark grey for text */
-    --heading-color: #1a202c; /* Slightly darker for headings */
-    --border-color: #dee2e6;
-    --gradient-start: #e0f7fa; /* Light cyan */
-    --gradient-end: #ffffff;   /* White */
-    --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-    --card-hover-shadow: 0 8px 25px rgba(0, 123, 255, 0.1);
-    --font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    /* Primary Palette: Soft Blue & Pink Accents */
+    --primary-color: #7aa2f7; /* Soft Blue */
+    --primary-hover: #9abdfa;
+    --accent-color: #f77daa;   /* Soft Pink */
+    --accent-hover: #ff9fbc;
+
+    /* Supporting Colors */
+    --secondary-color: #9aa5ce; /* Lavender Grey for text */
+    --background-color: #f2f4ff; /* Very Light Blue/Purple Tint */
+    --surface-color: #ffffff;   /* White for cards/header */
+    --text-color: #414868;      /* Dark Blue/Grey */
+    --heading-color: #2e3a59;   /* Darker Blue/Grey */
+    --border-color: #e0e0ff;    /* Light Lavender Border */
+
+    /* Gradients & Shadows */
+    --gradient-start: #a7c7e7; /* Light Blue */
+    --gradient-end: #e0d6ff;   /* Light Purple */
+    --card-shadow: 0 5px 15px rgba(122, 162, 247, 0.1); /* Softer blue shadow */
+    --card-hover-shadow: 0 8px 25px rgba(122, 162, 247, 0.18);
+    --button-shadow: 0 4px 10px rgba(122, 162, 247, 0.2);
+    --button-hover-shadow: 0 6px 15px rgba(122, 162, 247, 0.3);
+
+    /* Typography & Layout */
+    --font-family: 'Poppins', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --border-radius-base: 10px;  /* More rounded */
+    --border-radius-large: 16px; /* Even more rounded */
+    --border-radius-pill: 50px;
 }
 
 /* --- Global Styles & Resets --- */
@@ -27,8 +41,8 @@
 }
 
 html {
-    scroll-behavior: smooth; /* Smooth scrolling for anchor links */
-    font-size: 16px; /* Base font size */
+    scroll-behavior: smooth;
+    font-size: 16px;
 }
 
 body {
@@ -36,7 +50,8 @@ body {
     line-height: 1.7;
     color: var(--text-color);
     background-color: var(--background-color);
-    overflow-x: hidden; /* Prevent horizontal scroll */
+    overflow-x: hidden;
+    font-weight: 400; /* Default to regular weight */
 }
 
 .container {
@@ -49,20 +64,20 @@ body {
 
 h1, h2, h3, h4, h5, h6 {
     color: var(--heading-color);
-    font-weight: 600; /* Semibold for headings */
+    font-weight: 700; /* Bold headings */
     line-height: 1.3;
     margin-bottom: 0.75rem;
 }
 
 a {
-    color: var(--primary-color);
+    color: var(--accent-color); /* Use pink for links */
     text-decoration: none;
     transition: color 0.3s ease;
 }
 
 a:hover {
-    color: var(--primary-hover);
-    text-decoration: underline;
+    color: var(--accent-hover);
+    text-decoration: none; /* Remove underline globally for cleaner look */
 }
 
 img {
@@ -73,19 +88,15 @@ img {
 
 /* --- Header / Navigation --- */
 .main-header {
-    background-color: rgba(255, 255, 255, 0.9); /* Slightly transparent white */
-    backdrop-filter: blur(10px); /* Frosted glass effect */
-    -webkit-backdrop-filter: blur(10px); /* Safari */
+    background-color: rgba(255, 255, 255, 0.85); /* Slightly more transparent white */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border-color);
-    padding: 1rem 0;
-    position: sticky; /* Stick to top */
+    padding: 0.8rem 0; /* Slightly less padding */
+    position: sticky;
     top: 0;
     z-index: 1000;
     transition: box-shadow 0.3s ease;
-}
-
-.main-header.scrolled { /* Optional: Add shadow on scroll */
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
 .main-header .container {
@@ -95,29 +106,43 @@ img {
 }
 
 .logo {
-    font-size: 1.75rem;
-    font-weight: 700; /* Bold logo */
-    color: var(--primary-color);
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--primary-color); /* Blue logo text */
     text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.logo .logo-icon {
+    color: var(--accent-color); /* Pink cat icon */
+    font-size: 1.5rem;
 }
 .logo:hover {
-    text-decoration: none;
     color: var(--primary-hover);
 }
+.logo:hover .logo-icon {
+    color: var(--accent-hover);
+}
+
 
 .nav-links {
     list-style: none;
     display: flex;
     align-items: center;
-    gap: 1.5rem; /* Space between links */
+    gap: 1.8rem; /* More space */
 }
 
 .nav-links a {
     color: var(--text-color);
-    font-weight: 400; /* Regular weight */
+    font-weight: 400;
     text-decoration: none;
     position: relative;
-    padding-bottom: 0.25rem;
+    padding-bottom: 0.3rem;
+    transition: color 0.3s ease;
+}
+.nav-links a:hover {
+    color: var(--primary-color); /* Blue hover for nav links */
 }
 
 .nav-links a::after { /* Underline animation */
@@ -127,43 +152,49 @@ img {
     height: 2px;
     bottom: 0;
     left: 50%;
-    background-color: var(--primary-color);
+    background-color: var(--accent-color); /* Pink underline */
     transition: all 0.3s ease-out;
     transform: translateX(-50%);
+    border-radius: 1px;
 }
 
 .nav-links a:hover::after,
-.nav-links a.active::after { /* Style for active link if needed */
-    width: 100%;
+.nav-links a.active::after {
+    width: 60%; /* Smaller underline for cuter feel */
 }
 
 .nav-button {
-    background-color: var(--primary-color);
-    color: white !important; /* Override default link color */
-    padding: 0.5rem 1.25rem;
-    border-radius: 50px; /* Pill shape */
+    background-color: var(--primary-color); /* Blue button */
+    color: white !important;
+    padding: 0.6rem 1.4rem;
+    border-radius: var(--border-radius-pill);
     text-decoration: none;
-    transition: background-color 0.3s ease, box-shadow 0.3s ease;
-    box-shadow: 0 2px 5px rgba(0, 123, 255, 0.2);
+    transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
+    box-shadow: var(--button-shadow);
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+.nav-button i {
+    margin-right: 0.4rem;
 }
 .nav-button:hover {
     background-color: var(--primary-hover);
     color: white !important;
     text-decoration: none;
-    box-shadow: 0 4px 10px rgba(0, 123, 255, 0.3);
+    box-shadow: var(--button-hover-shadow);
+    transform: translateY(-2px);
 }
-.nav-button::after { /* Remove underline effect for button */
+.nav-button::after {
     display: none;
 }
 
 
 /* --- Hero Section --- */
 .hero {
-    padding: 6rem 0; /* More vertical padding */
-    /* Subtle Gradient Background */
-    background-image: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+    padding: 6rem 0 7rem; /* More bottom padding */
+    background-image: linear-gradient(145deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
     position: relative;
-    overflow: hidden; /* Contain background shapes if added */
+    overflow: hidden;
 }
 
 .hero-content {
@@ -171,117 +202,154 @@ img {
     align-items: center;
     justify-content: space-between;
     gap: 3rem;
+    position: relative; /* For z-index if needed */
+    z-index: 2;
 }
 
 .hero-text {
-    flex: 1 1 55%; /* Takes up slightly more space */
+    flex: 1 1 55%;
 }
 
 .hero-title {
-    font-size: 3.5rem; /* Larger title */
+    font-size: 3.8rem; /* Even larger title */
     font-weight: 700;
-    margin-bottom: 1rem;
-    color: var(--primary-color); /* Use primary color for title */
-    line-height: 1.2;
+    margin-bottom: 0.8rem;
+    color: var(--heading-color); /* Darker blue heading */
+    line-height: 1.15;
 }
 
 .hero-subtitle {
-    font-size: 1.75rem; /* Larger subtitle */
-    color: var(--heading-color);
+    font-size: 1.8rem;
+    color: var(--primary-color); /* Blue subtitle */
     margin-bottom: 1.5rem;
-    font-weight: 300; /* Lighter weight for subtitle */
+    font-weight: 400; /* Regular weight for subtitle */
 }
 
 .hero-description {
     font-size: 1.1rem;
-    color: var(--secondary-color);
+    color: var(--text-color); /* Use standard text color */
     margin-bottom: 2.5rem;
-    max-width: 500px; /* Limit width for readability */
+    max-width: 520px;
+    line-height: 1.8; /* Slightly more line spacing */
 }
 
 .hero-visual {
     flex: 1 1 40%;
-    position: relative; /* For potential absolute positioning of elements inside */
-    text-align: center; /* Center the screenshot/visual */
+    position: relative;
+    text-align: center;
 }
 
 .hero-screenshot {
-    border-radius: 12px; /* Rounded corners */
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); /* Softer, larger shadow */
-    /* Optional: Add a slight 3D tilt effect on hover */
+    border-radius: var(--border-radius-large); /* More rounded corners */
+    box-shadow: 0 15px 35px rgba(122, 162, 247, 0.2); /* Softer, larger shadow */
     transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    /* Consider removing hover effect if visual is complex illustration */
+    /* &:hover { ... } */
 }
 .hero-screenshot:hover {
-     transform: perspective(1000px) rotateY(-5deg) rotateX(5deg) scale(1.05); /* Subtle 3D tilt */
-     box-shadow: 0 15px 40px rgba(0, 123, 255, 0.15);
+     transform: scale(1.03) translateY(-5px); /* Gentle scale and lift */
+     box-shadow: 0 20px 45px rgba(122, 162, 247, 0.25);
 }
-
 
 /* Call to Action Buttons */
 .cta-button {
     display: inline-block;
     padding: 0.8rem 1.8rem;
-    border-radius: 50px; /* Pill shape */
+    border-radius: var(--border-radius-pill);
     font-size: 1rem;
     font-weight: 600;
     text-align: center;
     cursor: pointer;
     transition: all 0.3s ease;
     border: none;
-    margin: 0.5rem 0.5rem 0.5rem 0; /* Spacing */
-    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+    margin: 0.5rem 0.5rem 0.5rem 0;
+    box-shadow: var(--button-shadow);
 }
-.cta-button i { /* Icon spacing */
+.cta-button i {
     margin-right: 0.6rem;
 }
 .cta-button.primary {
-    background-color: var(--primary-color);
+    background-color: var(--accent-color); /* Pink primary button */
     color: white;
 }
 .cta-button.primary:hover {
-    background-color: var(--primary-hover);
+    background-color: var(--accent-hover);
     color: white;
-    text-decoration: none;
-    transform: translateY(-2px); /* Slight lift */
-    box-shadow: 0 6px 12px rgba(0, 123, 255, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(247, 125, 170, 0.3); /* Pink shadow */
 }
 .cta-button.secondary {
-    background-color: white;
-    color: var(--primary-color);
+    background-color: var(--surface-color); /* White */
+    color: var(--primary-color); /* Blue text */
     border: 1px solid var(--border-color);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
 }
 .cta-button.secondary:hover {
-    background-color: #f8f9fa; /* Light background on hover */
+    background-color: #f8faff; /* Very light blue hover */
     color: var(--primary-hover);
-    border-color: #ced4da;
-    text-decoration: none;
+    border-color: #d0d0ff;
     transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 10px rgba(122, 162, 247, 0.1);
 }
-.cta-button.large { /* For more prominent CTAs */
+.cta-button.large {
     padding: 1rem 2.5rem;
-    font-size: 1.1rem;
+    font-size: 1.15rem;
 }
 
+/* Optional Background Shapes */
+.background-shapes {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 1;
+}
+.shape {
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0.1; /* Very subtle */
+    background-color: var(--accent-color); /* Pink shapes */
+    animation: float 15s infinite ease-in-out alternate;
+}
+.shape1 {
+    width: 150px; height: 150px; top: 10%; left: 5%; animation-duration: 18s;
+    background-color: rgba(255, 255, 255, 0.5); /* White shape */
+}
+.shape2 {
+    width: 80px; height: 80px; bottom: 15%; right: 10%; animation-duration: 12s; animation-delay: 2s;
+}
+.shape3 {
+    width: 120px; height: 120px; top: 40%; right: 15%; animation-duration: 20s; animation-delay: 1s;
+     background-color: rgba(167, 199, 231, 0.3); /* Light blue shape */
+}
+
+@keyframes float {
+    0% { transform: translateY(0px) translateX(0px) rotate(0deg); }
+    100% { transform: translateY(-20px) translateX(15px) rotate(20deg); }
+}
 
 /* --- Features Section --- */
 .features {
-    padding: 5rem 0;
-    background-color: var(--surface-color); /* Light grey background */
+    padding: 6rem 0;
+    background-color: var(--surface-color); /* White background */
+    position: relative; /* For potential future decorations */
 }
 
 .section-title {
     text-align: center;
-    font-size: 2.5rem;
+    font-size: 2.6rem;
     font-weight: 700;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
+    color: var(--heading-color);
 }
 
 .section-subtitle {
     text-align: center;
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     color: var(--secondary-color);
-    margin-bottom: 4rem;
+    margin-bottom: 4.5rem;
     max-width: 600px;
     margin-left: auto;
     margin-right: auto;
@@ -289,41 +357,47 @@ img {
 
 .features-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* Responsive grid */
-    gap: 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2.5rem; /* Slightly larger gap */
 }
 
 .feature-card {
-    background-color: var(--background-color); /* White cards */
+    background-color: #f8faff; /* Very light blue card background */
     padding: 2.5rem 2rem;
-    border-radius: 12px; /* More rounded corners */
+    border-radius: var(--border-radius-large);
     text-align: center;
     box-shadow: var(--card-shadow);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
-    border: 1px solid transparent; /* Prepare for hover border */
+    border: 1px solid transparent;
+    position: relative;
+    overflow: hidden; /* Hide potential overflow from hover effects */
 }
 
 .feature-card:hover {
-    transform: translateY(-8px); /* Lift effect */
+    transform: translateY(-10px); /* More lift */
     box-shadow: var(--card-hover-shadow);
-    border-color: rgba(0, 123, 255, 0.1); /* Subtle blue border on hover */
+    border-color: rgba(122, 162, 247, 0.2);
 }
 
 .feature-icon {
-    font-size: 2.5rem; /* Larger icons */
-    color: var(--primary-color);
+    font-size: 2.8rem; /* Larger icons */
+    color: var(--primary-color); /* Blue icons */
     margin-bottom: 1.5rem;
     display: inline-block;
-    /* Optional: Add a background shape for the icon */
-    /* background-color: rgba(0, 123, 255, 0.1); */
-    /* width: 70px; */
-    /* height: 70px; */
-    /* line-height: 70px; */
-    /* border-radius: 50%; */
+    transition: transform 0.3s ease;
+    /* Optional background circle
+    background-color: rgba(122, 162, 247, 0.1);
+    width: 80px; height: 80px; line-height: 80px; border-radius: 50%;
+    */
+}
+.feature-card:hover .feature-icon {
+    transform: scale(1.1) rotate(-5deg); /* Slight icon animation on hover */
+    color: var(--accent-color); /* Change icon to pink on hover */
 }
 
+
 .feature-card h3 {
-    font-size: 1.25rem;
+    font-size: 1.3rem;
     font-weight: 600;
     margin-bottom: 0.75rem;
     color: var(--heading-color);
@@ -331,45 +405,53 @@ img {
 
 .feature-card p {
     font-size: 0.95rem;
-    color: var(--secondary-color);
-    line-height: 1.6;
+    color: var(--text-color);
+    line-height: 1.65;
 }
 
 
-/* --- (Optional) CTA Section --- */
+/* --- CTA Section --- */
 .cta-section {
-    padding: 5rem 0;
-    background-color: var(--primary-color); /* Use primary color for background */
-    background-image: linear-gradient(45deg, var(--primary-color), var(--primary-hover)); /* Add gradient */
+    padding: 5.5rem 0;
+    /* Use a more vibrant gradient for CTA */
+    background-image: linear-gradient(60deg, var(--primary-color) 0%, var(--accent-color) 100%);
     color: white;
     text-align: center;
 }
 .cta-section h2 {
-    font-size: 2.2rem;
+    font-size: 2.4rem;
     color: white;
     margin-bottom: 1rem;
+    font-weight: 700;
 }
 .cta-section p {
-    font-size: 1.1rem;
-    margin-bottom: 2rem;
-    opacity: 0.9;
+    font-size: 1.15rem;
+    margin-bottom: 2.5rem;
+    opacity: 0.95;
 }
-.cta-section .cta-button.primary { /* Style button for dark background */
+.cta-section .cta-button.primary { /* Button style on dark background */
     background-color: white;
-    color: var(--primary-color);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+    color: var(--primary-color); /* Blue text on white button */
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 }
 .cta-section .cta-button.primary:hover {
-    background-color: #f0f0f0; /* Slightly off-white hover */
-    color: var(--primary-hover);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    background-color: #f0f8ff; /* Light blue tint on hover */
+    color: var(--accent-color); /* Pink text on hover */
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    transform: translateY(-3px); /* Slightly more lift */
+}
+.cta-section .cta-button.primary i {
+     color: var(--accent-color); /* Pink icon */
+}
+.cta-section .cta-button.primary:hover i {
+    color: var(--primary-color); /* Blue icon on hover */
 }
 
 
 /* --- Footer --- */
 .main-footer {
-    padding: 3rem 0;
-    background-color: var(--surface-color); /* Match features section background */
+    padding: 3rem 0 2.5rem;
+    background-color: #e6e9ff; /* Slightly darker lavender footer */
     text-align: center;
     color: var(--secondary-color);
     font-size: 0.9rem;
@@ -379,28 +461,35 @@ img {
     margin-bottom: 0.5rem;
 }
 .main-footer a {
-    color: var(--primary-color);
-    font-weight: 500; /* Slightly bolder links in footer */
+    color: var(--primary-color); /* Blue links in footer */
+    font-weight: 500;
 }
 .main-footer a:hover {
-    color: var(--primary-hover);
+    color: var(--accent-color); /* Pink hover */
 }
 .footer-links {
     margin-top: 1rem;
 }
 .footer-links a {
-    margin: 0 0.75rem;
+    margin: 0 0.8rem;
     display: inline-block;
 }
 
 /* --- Responsive Adjustments --- */
 @media (max-width: 992px) {
     .hero-content {
-        flex-direction: column; /* Stack hero content vertically */
+        flex-direction: column;
         text-align: center;
     }
     .hero-text {
         margin-bottom: 3rem;
+        order: 2; /* Text below image on mobile */
+    }
+    .hero-visual {
+        order: 1;
+        max-width: 450px; /* Limit image size */
+        margin-left: auto;
+        margin-right: auto;
     }
     .hero-title {
         font-size: 3rem;
@@ -412,35 +501,55 @@ img {
         margin-left: auto;
         margin-right: auto;
     }
+    .background-shapes {
+        /* Optionally reduce or hide shapes on smaller screens */
+        opacity: 0.7;
+    }
+    .shape {
+       /* opacity: 0.05; */ /* Make even more subtle */
+    }
 }
 
 @media (max-width: 768px) {
     html {
-        font-size: 15px; /* Slightly smaller base font */
+        font-size: 15px;
     }
     .main-header .container {
-        flex-direction: column; /* Stack logo and nav links */
+        flex-direction: column;
         gap: 1rem;
     }
     .nav-links {
-        gap: 1rem; /* Smaller gap */
-        flex-wrap: wrap; /* Allow links to wrap */
+        gap: 0.8rem 1rem; /* Adjust row and column gap */
+        flex-wrap: wrap;
         justify-content: center;
+        padding: 0 1rem; /* Add padding to prevent edge touching */
     }
     .hero {
-        padding: 4rem 0;
+        padding: 4rem 0 5rem;
     }
     .hero-title {
-        font-size: 2.5rem;
+        font-size: 2.6rem;
     }
     .hero-subtitle {
-        font-size: 1.3rem;
+        font-size: 1.4rem;
     }
     .section-title {
-        font-size: 2rem;
+        font-size: 2.2rem;
+    }
+     .features {
+        padding: 4rem 0;
     }
     .features-grid {
-        grid-template-columns: 1fr; /* Single column on small screens */
-        gap: 1.5rem;
+        grid-template-columns: 1fr;
+        gap: 1.8rem;
+    }
+    .cta-section {
+        padding: 4rem 0;
+    }
+    .cta-section h2 {
+        font-size: 2rem;
+    }
+    .cta-section p {
+        font-size: 1.05rem;
     }
 }

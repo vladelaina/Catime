@@ -3,22 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Catime - 一款为 Windows 设计的极简、现代、高效的透明计时器与番茄钟。">
-    <title>Catime - 现代极简 Windows 计时器</title>
+    <meta name="description" content="Catime - 一款为 Windows 设计的极简、现代、高效的透明计时器与番茄钟，带来可爱风格。">
+    <title>Catime - 可爱风 Windows 计时器 & 番茄钟</title>
 
-    <!-- Google Fonts (Optional - Choose a modern font) -->
+    <!-- Google Fonts (Poppins is still a good clean choice) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
 
-    <!-- Font Awesome (For Icons) -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <!-- Font Awesome (Ensure latest version) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
     <!-- AOS (Animate On Scroll) Library -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
 
-    <!-- Your Custom Stylesheet (We'll define styles here or in style.css) -->
+    <!-- Your Custom Stylesheet -->
     <link rel="stylesheet" href="style.css">
+
+    <!-- Favicon (Optional: Add a cute cat icon!) -->
+    <!-- <link rel="icon" type="image/png" href="images/favicon.png"> -->
 
 </head>
 <body>
@@ -26,12 +29,12 @@
     <!-- Header/Navigation -->
     <header class="main-header">
         <nav class="container">
-            <a href="index.html" class="logo">Catime</a>
+            <a href="index.html" class="logo">Catime <i class="fa-solid fa-cat logo-icon"></i></a>
             <ul class="nav-links">
                 <li><a href="index.html">首页</a></li>
                 <li><a href="about.html">关于</a></li>
                 <li><a href="https://github.com/vladelaina/Catime" target="_blank" rel="noopener noreferrer">GitHub</a></li>
-                <li><a href="https://github.com/vladelaina/Catime/releases/latest" class="nav-button" target="_blank" rel="noopener noreferrer">下载</a></li>
+                <li><a href="https://github.com/vladelaina/Catime/releases/latest" class="nav-button" target="_blank" rel="noopener noreferrer"><i class="fas fa-download"></i> 下载</a></li>
             </ul>
         </nav>
     </header>
@@ -42,114 +45,114 @@
             <div class="container hero-content">
                 <div class="hero-text" data-aos="fade-right">
                     <h1 class="hero-title">Catime</h1>
-                    <p class="hero-subtitle">掌控时间，如此优雅</p>
+                    <p class="hero-subtitle">让时间管理，也萌萌哒~</p>
                     <p class="hero-description">
-                        专为 Windows 打造的极简透明计时器与番茄钟。
-                        无缝融入你的桌面，专注当下，效率倍增。
+                        为 Windows 设计的透明计时器 & 番茄钟。
+                        像猫咪一样轻盈悬浮，专注每刻，效率加倍！
                     </p>
                     <a href="https://github.com/vladelaina/Catime/releases/latest" class="cta-button primary" target="_blank" rel="noopener noreferrer">
-                        <i class="fas fa-download"></i> 获取最新版
+                        <i class="fas fa-heart"></i> 立即获取
                     </a>
                     <a href="https://github.com/vladelaina/Catime" class="cta-button secondary" target="_blank" rel="noopener noreferrer">
                         <i class="fab fa-github"></i> 查看源码
                     </a>
                 </div>
                 <div class="hero-visual" data-aos="fade-left" data-aos-delay="200">
-                    <!-- **视觉元素区** -->
-                    <!-- 方案1: 放置 Catime 截图 -->
-                     <img src="images/catime-screenshot-modern.png" alt="Catime 界面截图" class="hero-screenshot">
-                     <!--
-                         你需要准备一张背景透明或有现代感背景的 Catime 截图
-                         命名为 catime-screenshot-modern.png 并放在 docs/images/ 目录下
-                         给图片添加阴影和圆角效果 (已在 CSS 中定义)
-                     -->
-
-                    <!-- 方案2: (更高级) 使用 SVG 动画或简单的 CSS 3D 效果 -->
+                    <!-- **视觉元素区 (非常重要!)** -->
                     <!--
-                    <div class="cool-visual-element">
-                         这里可以用 CSS 创建一些悬浮、旋转的几何图形，或者嵌入 SVG 动画
-                         例如: <div class="floating-shape shape1"></div> <div class="floating-shape shape2"></div>
-                         然后在 CSS 中定义它们的动画
-                    </div>
+                        !!! 关键步骤：请替换下面的图片 !!!
+                        你需要一张符合“二次元”或可爱风格的图片。
+                        可以是：
+                        1. Catime 软件截图，放置在一个精心设计的、有可爱元素的背景上。
+                        2. 一个专门绘制的、包含猫咪和时钟/计时元素的动漫风格插画。
+                        3. 确保图片背景透明或与页面背景融合。
+
+                        命名为 catime-visual.png (或你选择的名字) 并放在 images/ 目录下。
                     -->
-                     <p style="text-align: center; margin-top: 20px; font-style: italic; color: #aaa;">(在此放置 Catime 截图或炫酷视觉元素)</p>
+                     <img src="images/catime-visual-placeholder.png" alt="Catime 可爱计时器界面展示" class="hero-screenshot">
+                     <!-- 临时占位符，请务必替换 -->
+                     <p style="text-align: center; margin-top: 15px; font-size: 0.9em; color: var(--secondary-color); font-style: italic;">(替换成你的 Catime 截图或插画)</p>
                 </div>
             </div>
-            <!-- Optional: Add subtle background shapes/elements -->
-            <div class="background-shapes"></div>
+             <!-- Optional: Subtle background elements -->
+            <div class="background-shapes">
+                <div class="shape shape1"></div>
+                <div class="shape shape2"></div>
+                <div class="shape shape3"></div>
+            </div>
         </section>
 
         <!-- Features Section -->
         <section class="features" id="features">
             <div class="container">
-                <h2 class="section-title" data-aos="fade-up">核心特性</h2>
-                <p class="section-subtitle" data-aos="fade-up" data-aos-delay="100">简洁设计，强大功能</p>
+                <h2 class="section-title" data-aos="fade-up">核心特性 ✨</h2>
+                <p class="section-subtitle" data-aos="fade-up" data-aos-delay="100">轻巧可爱，功能不少</p>
                 <div class="features-grid">
                     <!-- Feature Card 1 -->
                     <div class="feature-card" data-aos="fade-up" data-aos-delay="200">
                         <div class="feature-icon">
-                            <!-- !! 替换为你自己的图标 (来自 README 或 Font Awesome) !! -->
-                            <i class="fas fa-eye-slash"></i>
+                             <!-- Suggestion: fa-ghost, fa-low-vision, fa-cat -->
+                            <i class="fas fa-ghost"></i>
                         </div>
                         <h3>透明悬浮 & 穿透</h3>
-                        <p>优雅悬浮，不遮挡内容，不干扰操作，完美融入桌面。</p>
+                        <p>像幽灵猫猫一样悬浮，不挡视线，不影响操作，融入桌面背景。</p>
                     </div>
                     <!-- Feature Card 2 -->
                     <div class="feature-card" data-aos="fade-up" data-aos-delay="300">
                         <div class="feature-icon">
-                            <!-- !! 替换为你自己的图标 !! -->
+                             <!-- Suggestion: fa-stopwatch, fa-clock, fa-hourglass-half -->
                             <i class="fas fa-stopwatch-20"></i>
                         </div>
                         <h3>灵活计时模式</h3>
-                        <p>预设、自定义、番茄钟一应俱全，适应各种计时需求。</p>
+                        <p>预设、自定义、番茄钟，多种模式满足你的不同时间管理需求。</p>
                     </div>
                     <!-- Feature Card 3 -->
                     <div class="feature-card" data-aos="fade-up" data-aos-delay="400">
                         <div class="feature-icon">
-                            <!-- !! 替换为你自己的图标 !! -->
-                            <i class="fas fa-palette"></i>
+                            <!-- Suggestion: fa-palette, fa-paint-brush, fa-wand-magic-sparkles -->
+                            <i class="fas fa-wand-magic-sparkles"></i>
                         </div>
                         <h3>个性化定制</h3>
-                        <p>字体、颜色、布局随心调整，打造你的专属计时器。</p>
+                        <p>字体、颜色、布局随心搭配，打造专属于你的可爱计时器。</p>
                     </div>
                     <!-- Feature Card 4 -->
                     <div class="feature-card" data-aos="fade-up" data-aos-delay="500">
                         <div class="feature-icon">
-                             <!-- !! 替换为你自己的图标 !! -->
-                            <i class="fas fa-bolt"></i>
+                             <!-- Suggestion: fa-bolt, fa-rocket, fa-bell -->
+                            <i class="fas fa-bell"></i>
                         </div>
                         <h3>智能超时动作</h3>
-                        <p>计时结束自动执行任务，如锁屏、关机、打开应用等。</p>
+                        <p>时间到！自动执行任务，如提醒、锁屏、关机等，省心省力。</p>
                     </div>
                      <!-- Feature Card 5 -->
                      <div class="feature-card" data-aos="fade-up" data-aos-delay="600">
                         <div class="feature-icon">
-                             <!-- !! 替换为你自己的图标 !! -->
+                             <!-- Suggestion: fa-feather-alt, fa-leaf, fa-shield-cat -->
                             <i class="fas fa-feather-alt"></i>
                         </div>
                         <h3>轻量高效</h3>
-                        <p>C 语言编写，体积小巧，资源占用低，运行流畅。</p>
+                        <p>C 语言编写，小巧玲珑，资源占用低，运行顺畅不卡顿。</p>
                     </div>
                      <!-- Feature Card 6 -->
                      <div class="feature-card" data-aos="fade-up" data-aos-delay="700">
                         <div class="feature-icon">
-                             <!-- !! 替换为你自己的图标 !! -->
-                            <i class="fas fa-code-branch"></i>
+                             <!-- Suggestion: fa-code-branch, fa-heart, fa-gift -->
+                            <i class="fas fa-heart"></i>
                         </div>
                         <h3>开源免费</h3>
-                        <p>遵循 Apache 2.0 协议，自由使用，欢迎贡献。</p>
+                        <p>遵循 Apache 2.0 协议，免费使用，欢迎大家一起贡献代码~</p>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- (Optional) Call to Action Section -->
+        <!-- Call to Action Section -->
         <section class="cta-section" data-aos="zoom-in">
             <div class="container">
-                <h2>准备好提升你的效率了吗？</h2>
-                <p>立即下载 Catime，体验前所未有的专注与高效。</p>
+                <h2>准备好和 Catime 一起管理时间了吗？</h2>
+                <p>立刻下载，开启可爱又高效的专注旅程！</p>
                 <a href="https://github.com/vladelaina/Catime/releases/latest" class="cta-button primary large" target="_blank" rel="noopener noreferrer">
-                    <i class="fas fa-rocket"></i> 免费获取 Catime
+                    <i class="fas fa-paw"></i> 免费带走 Catime
                 </a>
             </div>
         </section>
@@ -163,8 +166,8 @@
             <p>基于 <a href="https://github.com/vladelaina/Catime/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Apache 2.0</a> 许可开源.</p>
             <div class="footer-links">
                 <a href="https://github.com/vladelaina/Catime/issues" target="_blank" rel="noopener noreferrer">问题反馈</a>
-                <!-- <a href="YOUR_DISCORD_LINK" target="_blank" rel="noopener noreferrer">Discord</a> -->
-                <!-- <a href="YOUR_QQ_GROUP_LINK" target="_blank" rel="noopener noreferrer">QQ 群</a> -->
+                <!-- <a href="#">用户 Q 群</a> -->
+                <!-- <a href="#">Discord</a> -->
             </div>
         </div>
     </footer>
