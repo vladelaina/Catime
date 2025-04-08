@@ -242,13 +242,53 @@ img {
 .hero-screenshot {
     border-radius: var(--border-radius-large); /* 更圆润的边角 */
     box-shadow: 0 15px 35px rgba(122, 162, 247, 0.2); /* 更柔和、更大的阴影 */
-    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-    /* 如果视觉元素是复杂插图，可考虑删除悬停效果 */
-    /* &:hover { ... } */
+    transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+    position: relative;
+    border: 6px solid rgba(255, 255, 255, 0.85); /* 半透明白色边框 */
+    transform: scale(1.3); /* 默认1.3倍大小 */
+    z-index: 2;
 }
+
+.hero-screenshot::before,
+.hero-screenshot::after {
+    content: '';
+    position: absolute;
+    background: white;
+    z-index: 1;
+    opacity: 0.4;
+    transition: all 0.5s ease;
+}
+
+/* 水平丝带 */
+.hero-screenshot::before {
+    height: 6px;
+    width: 120%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 15px 5px rgba(255, 255, 255, 0.2);
+}
+
+/* 垂直丝带 */
+.hero-screenshot::after {
+    width: 6px;
+    height: 120%;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 15px 5px rgba(255, 255, 255, 0.2);
+}
+
 .hero-screenshot:hover {
-     transform: scale(1.03) translateY(-5px); /* 轻微放大和抬升 */
-     box-shadow: 0 20px 45px rgba(122, 162, 247, 0.25);
+    transform: scale(1.4) translateY(-8px) rotate(2deg); /* 从1.3放大到1.4并轻微旋转 */
+    box-shadow: 0 30px 60px rgba(122, 162, 247, 0.35);
+    border-color: rgba(255, 255, 255, 1); /* 边框变为纯白色 */
+}
+
+.hero-screenshot:hover::before,
+.hero-screenshot:hover::after {
+    opacity: 0.8; /* 鼠标悬停时丝带变得更明显 */
+    box-shadow: 0 0 20px 8px rgba(255, 255, 255, 0.4);
 }
 
 /* 号召性按钮 */
