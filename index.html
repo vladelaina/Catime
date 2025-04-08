@@ -215,8 +215,7 @@
                     }
                 }
                 
-                // 启动呼吸效果
-                startBreatheEffect();
+                // 注意：不在一开始就启动呼吸效果
                 
                 heroContainer.addEventListener('mousemove', function(e) {
                     // 获取鼠标在元素内的相对位置（0-1）
@@ -231,13 +230,17 @@
                 
                 // 鼠标离开时恢复原始状态
                 heroContainer.addEventListener('mouseleave', function() {
+                    stopBreatheEffect(); // 停止呼吸效果
                     currentRotateX = 0;
                     currentRotateY = 0;
+                    // 直接设置回初始状态
+                    heroImage.style.transform = 'scale(1.3) perspective(1000px)';
                 });
                 
-                // 鼠标进入时准备变换
+                // 鼠标进入时准备变换并启动呼吸效果
                 heroContainer.addEventListener('mouseenter', function() {
                     heroImage.style.transition = 'transform 0.2s ease-out';
+                    startBreatheEffect(); // 启动呼吸效果
                 });
                 
                 // 添加点击效果：按下和回弹
@@ -268,8 +271,14 @@
                             }, 400);
                         }
                     } else {
-                        // 重新启动呼吸效果
-                        startBreatheEffect();
+                        // 如果鼠标不在图片上，保持停止呼吸效果的状态
+                        heroImage.style.transition = 'transform 0.4s cubic-bezier(0.18, 1.3, 0.4, 1)';
+                        heroImage.style.transform = 'scale(1.3) perspective(1000px)';
+                        
+                        // 恢复正常过渡
+                        setTimeout(() => {
+                            heroImage.style.transition = 'transform 0.2s ease-out';
+                        }, 400);
                     }
                 });
             }
