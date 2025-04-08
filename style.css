@@ -447,7 +447,7 @@ img {
 
 /* 幽灵图标动画 */
 .feature-card:nth-child(1):hover .feature-icon {
-    animation: ghostFloat 1.5s ease-in-out infinite;
+    animation: ghostSpin 0.5s linear infinite;
 }
 
 /* 计时器图标动画 */
@@ -476,9 +476,9 @@ img {
 }
 
 /* 动画关键帧 */
-@keyframes ghostFloat {
-    0%, 100% { transform: translateY(0) scale(1.1); }
-    50% { transform: translateY(-10px) scale(1.1); }
+@keyframes ghostSpin {
+    from { transform: rotate(0deg) scale(1.1); }
+    to { transform: rotate(360deg) scale(1.1); }
 }
 
 @keyframes spin {
