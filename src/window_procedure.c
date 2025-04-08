@@ -503,12 +503,15 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     int current_total = CLOCK_TOTAL_TIME;
                     BOOL was_timing = (current_elapsed < current_total);
                     
+                    // 重置UI状态
                     CLOCK_EDIT_MODE = FALSE;
                     SetClickThrough(hwnd, TRUE);
                     SendMessage(hwnd, WM_SETREDRAW, FALSE, 0);
                     
+                    // 重置文件路径
                     memset(CLOCK_TIMEOUT_FILE_PATH, 0, sizeof(CLOCK_TIMEOUT_FILE_PATH));
                     
+                    // 默认语言初始化
                     AppLanguage defaultLanguage;
                     LANGID langId = GetUserDefaultUILanguage();
                     WORD primaryLangId = PRIMARYLANGID(langId);
@@ -549,13 +552,29 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         CURRENT_LANGUAGE = defaultLanguage;
                     }
                     
+                    // 重置番茄钟状态
+                    current_pomodoro_phase = POMODORO_PHASE_IDLE;
+                    current_pomodoro_time_index = 0;
+                    complete_pomodoro_cycles = 0;
+                    
+                    // 删除并重新创建配置文件
                     char config_path[MAX_PATH];
                     GetConfigPath(config_path, MAX_PATH);
-                    remove(config_path);   
-                    CreateDefaultConfig(config_path);   
                     
-                    ReadConfig();   
+                    // 确保文件关闭和删除
+                    FILE* test = fopen(config_path, "r");
+                    if (test) {
+                        fclose(test);
+                        remove(config_path);
+                    }
                     
+                    // 重新创建默认配置
+                    CreateDefaultConfig(config_path);
+                    
+                    // 重新读取配置
+                    ReadConfig();
+                    
+                    // 恢复默认字体
                     HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
                     for (int i = 0; i < FONT_RESOURCES_COUNT; i++) {
                         if (strcmp(fontResources[i].fontName, "Wallpoet Essence.ttf") == 0) {  
@@ -564,14 +583,17 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         }
                     }
                     
+                    // 保持当前计时状态（如果有）
                     if (was_timing) {
                         elapsed_time = current_elapsed;
                         CLOCK_TOTAL_TIME = current_total;
                     }
                     
+                    // 重置窗口缩放
                     CLOCK_WINDOW_SCALE = 1.0f;
                     CLOCK_FONT_SCALE_FACTOR = 1.0f;
                     
+                    // 重新计算窗口大小
                     HDC hdc = GetDC(hwnd);
                     HFONT hFont = CreateFont(
                         -CLOCK_BASE_FONT_SIZE,   
@@ -591,19 +613,20 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     DeleteObject(hFont);
                     ReleaseDC(hwnd, hdc);
                     
+                    // 根据屏幕设置默认缩放
                     int screenHeight = GetSystemMetrics(SM_CYSCREEN);
-                    
                     float defaultScale = (screenHeight * 0.03f) / 20.0f;
                     CLOCK_WINDOW_SCALE = defaultScale;
                     CLOCK_FONT_SCALE_FACTOR = defaultScale;
                     
-                    
+                    // 重置窗口位置
                     SetWindowPos(hwnd, NULL, 
                         CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y,
                         textSize.cx * defaultScale, textSize.cy * defaultScale,
                         SWP_NOZORDER | SWP_NOACTIVATE
                     );
                     
+                    // 重绘窗口
                     SendMessage(hwnd, WM_SETREDRAW, TRUE, 0);
                     RedrawWindow(hwnd, NULL, NULL, 
                         RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
