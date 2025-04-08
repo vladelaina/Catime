@@ -433,17 +433,79 @@ img {
     color: var(--primary-color); /* 蓝色图标 */
     margin-bottom: 1.5rem;
     display: inline-block;
-    transition: transform 0.3s ease;
+    transition: transform 0.3s ease, color 0.3s ease;
     /* 可选的背景圆圈
     background-color: rgba(122, 162, 247, 0.1);
     width: 80px; height: 80px; line-height: 80px; border-radius: 50%;
     */
 }
+
 .feature-card:hover .feature-icon {
-    transform: scale(1.1) rotate(-5deg); /* 悬停时图标的轻微动画 */
+    transform: scale(1.1); /* 保留原有的缩放效果 */
     color: var(--accent-color); /* 悬停时图标变为粉色 */
 }
 
+/* 幽灵图标动画 */
+.feature-card:nth-child(1):hover .feature-icon {
+    animation: ghostFloat 1.5s ease-in-out infinite;
+}
+
+/* 计时器图标动画 */
+.feature-card:nth-child(2):hover .feature-icon {
+    animation: spin 2s linear infinite;
+}
+
+/* 魔法棒图标动画 */
+.feature-card:nth-child(3):hover .feature-icon {
+    animation: sparkle 1.5s ease-in-out infinite;
+}
+
+/* 铃铛图标动画 */
+.feature-card:nth-child(4):hover .feature-icon {
+    animation: ring 0.5s ease-in-out infinite;
+}
+
+/* 羽毛图标动画 */
+.feature-card:nth-child(5):hover .feature-icon {
+    animation: float 2s ease-in-out infinite;
+}
+
+/* 爱心图标动画 */
+.feature-card:nth-child(6):hover .feature-icon {
+    animation: heartbeat 1.5s ease-in-out infinite;
+}
+
+/* 动画关键帧 */
+@keyframes ghostFloat {
+    0%, 100% { transform: translateY(0) scale(1.1); }
+    50% { transform: translateY(-10px) scale(1.1); }
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg) scale(1.1); }
+    to { transform: rotate(360deg) scale(1.1); }
+}
+
+@keyframes sparkle {
+    0%, 100% { transform: scale(1.1); opacity: 1; }
+    50% { transform: scale(1.3); opacity: 0.8; }
+}
+
+@keyframes ring {
+    0%, 100% { transform: rotate(0deg) scale(1.1); }
+    25% { transform: rotate(15deg) scale(1.1); }
+    75% { transform: rotate(-15deg) scale(1.1); }
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0) rotate(0deg) scale(1.1); }
+    50% { transform: translateY(-10px) rotate(5deg) scale(1.1); }
+}
+
+@keyframes heartbeat {
+    0%, 100% { transform: scale(1.1); }
+    50% { transform: scale(1.3); }
+}
 
 .feature-card h3 {
     font-size: 1.3rem;
