@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Catime - 一款为 Windows 设计的极简、现代、高效的透明计时器与番茄钟，带来可爱风格。">
-    <title>Catime - 可爱风 Windows 计时器 & 番茄钟</title>
+    <title>Catime - 计时器 & 番茄钟</title>
 
     <!-- Google 字体 (Poppins 是一个干净的选择) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -184,6 +184,40 @@
                 const maxRotateX = 15; 
                 const maxRotateY = 20;
                 
+                // 呼吸效果的定时器
+                let breatheTimer = null;
+                
+                // 当前旋转角度
+                let currentRotateX = 0;
+                let currentRotateY = 0;
+                
+                // 设置呼吸效果
+                function startBreatheEffect() {
+                    if (breatheTimer) return; // 避免重复启动
+                    
+                    let phase = 0;
+                    breatheTimer = setInterval(() => {
+                        // 正弦波动的呼吸效果
+                        const scale = 1.35 + Math.sin(phase) * 0.03;
+                        
+                        // 应用变换，结合当前的旋转角度
+                        heroImage.style.transform = `scale(${scale}) perspective(1000px) rotateY(${currentRotateY}deg) rotateX(${currentRotateX}deg)`;
+                        
+                        phase += 0.05;
+                    }, 30);
+                }
+
+                // 停止呼吸效果
+                function stopBreatheEffect() {
+                    if (breatheTimer) {
+                        clearInterval(breatheTimer);
+                        breatheTimer = null;
+                    }
+                }
+                
+                // 启动呼吸效果
+                startBreatheEffect();
+                
                 heroContainer.addEventListener('mousemove', function(e) {
                     // 获取鼠标在元素内的相对位置（0-1）
                     const rect = heroContainer.getBoundingClientRect();
@@ -191,16 +225,14 @@
                     const y = (e.clientY - rect.top) / rect.height;
                     
                     // 计算倾斜角度（转换为-maxRotate到maxRotate的范围）
-                    const rotateY = (x - 0.5) * 2 * maxRotateY;
-                    const rotateX = (y - 0.5) * -2 * maxRotateX; // 负号让鼠标在顶部时，图片向上倾斜
-                    
-                    // 应用变换
-                    heroImage.style.transform = `scale(1.35) perspective(1000px) rotateY(${rotateY}deg) rotateX(${rotateX}deg)`;
+                    currentRotateY = (x - 0.5) * 2 * maxRotateY;
+                    currentRotateX = (y - 0.5) * -2 * maxRotateX; // 负号让鼠标在顶部时，图片向上倾斜
                 });
                 
                 // 鼠标离开时恢复原始状态
                 heroContainer.addEventListener('mouseleave', function() {
-                    heroImage.style.transform = 'scale(1.3) perspective(1000px)';
+                    currentRotateX = 0;
+                    currentRotateY = 0;
                 });
                 
                 // 鼠标进入时准备变换
@@ -210,39 +242,34 @@
                 
                 // 添加点击效果：按下和回弹
                 heroImage.addEventListener('mousedown', function() {
+                    // 暂时停止呼吸效果
+                    stopBreatheEffect();
                     // 按下效果 - 缩小并稍微下沉
-                    heroImage.style.transform = `scale(1.25) perspective(1000px) translateZ(-20px)`;
+                    heroImage.style.transform = `scale(1.25) perspective(1000px) rotateY(${currentRotateY}deg) rotateX(${currentRotateX}deg) translateZ(-20px)`;
                 });
                 
                 // 鼠标释放或离开时回弹
                 document.addEventListener('mouseup', function(event) {
                     if (heroContainer.matches(':hover')) {
                         // 如果鼠标仍在图片上，回弹到悬停状态
-                        const rect = heroContainer.getBoundingClientRect();
-                        const x = (event.clientX - rect.left) / rect.width;
-                        const y = (event.clientY - rect.top) / rect.height;
-                        const rotateY = (x - 0.5) * 2 * maxRotateY;
-                        const rotateX = (y - 0.5) * -2 * maxRotateX;
-                        
-                        // 添加弹性回弹效果
-                        heroImage.style.transition = 'transform 0.4s cubic-bezier(0.18, 1.3, 0.4, 1)';
-                        setTimeout(() => {
-                            heroImage.style.transform = `scale(1.35) perspective(1000px) rotateY(${rotateY}deg) rotateX(${rotateX}deg)`;
-                        }, 50);
-                        
-                        // 恢复正常过渡
-                        setTimeout(() => {
-                            heroImage.style.transition = 'transform 0.2s ease-out';
-                        }, 400);
+                        if (event.target === heroImage || heroImage.contains(event.target)) {
+                            // 添加弹性回弹效果
+                            heroImage.style.transition = 'transform 0.4s cubic-bezier(0.18, 1.3, 0.4, 1)';
+                            
+                            // 重新启动呼吸效果之前，先执行回弹动画
+                            setTimeout(() => {
+                                // 这里不设置transform，让呼吸效果接管
+                                startBreatheEffect();
+                            }, 400);
+                            
+                            // 恢复正常过渡
+                            setTimeout(() => {
+                                heroImage.style.transition = 'transform 0.2s ease-out';
+                            }, 400);
+                        }
                     } else {
-                        // 如果鼠标不在图片上，恢复到正常状态
-                        heroImage.style.transition = 'transform 0.4s cubic-bezier(0.18, 1.3, 0.4, 1)';
-                        heroImage.style.transform = 'scale(1.3) perspective(1000px)';
-                        
-                        // 恢复正常过渡
-                        setTimeout(() => {
-                            heroImage.style.transition = 'transform 0.2s ease-out';
-                        }, 400);
+                        // 重新启动呼吸效果
+                        startBreatheEffect();
                     }
                 });
             }
