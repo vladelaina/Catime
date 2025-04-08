@@ -19,6 +19,12 @@ typedef enum {
 // 当前番茄钟阶段
 extern POMODORO_PHASE current_pomodoro_phase;
 
+// 当前正在执行的番茄钟时间索引
+extern int current_pomodoro_time_index;
+
+// 完成的番茄钟循环次数
+extern int complete_pomodoro_cycles;
+
 // 初始化番茄钟状态为工作阶段
 void InitializePomodoro(void);
 

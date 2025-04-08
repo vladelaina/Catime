@@ -27,7 +27,7 @@ int current_pomodoro_time_index = 0;
 POMODORO_PHASE current_pomodoro_phase = POMODORO_PHASE_IDLE;
 
 // 完成的番茄钟循环次数
-static int complete_pomodoro_cycles = 0;
+int complete_pomodoro_cycles = 0;
 
 // 从main.c引入的函数声明
 extern void ShowToastNotification(HWND hwnd, const char* message);
@@ -157,8 +157,15 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                     // 变量声明放在分支前面，保证在所有分支中可用
                     wchar_t* timeoutMsgW = NULL;
 
-                    // 检查是否处于番茄钟模式
-                    if (current_pomodoro_phase != POMODORO_PHASE_IDLE && POMODORO_TIMES_COUNT > 0) {
+                    // 检查是否处于番茄钟模式 - 必须同时满足两个条件：
+                    // 1. 当前番茄钟阶段不为IDLE 
+                    // 2. 番茄钟时间配置有效
+                    // 3. 当前倒计时总时长与番茄钟时间列表中的当前索引时间匹配
+                    if (current_pomodoro_phase != POMODORO_PHASE_IDLE && 
+                        POMODORO_TIMES_COUNT > 0 && 
+                        current_pomodoro_time_index < POMODORO_TIMES_COUNT &&
+                        CLOCK_TOTAL_TIME == POMODORO_TIMES[current_pomodoro_time_index]) {
+                        
                         // 使用番茄钟专用提示消息
                         timeoutMsgW = Utf8ToWideChar(POMODORO_TIMEOUT_MESSAGE_TEXT);
                         
@@ -230,7 +237,8 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                         
                         InvalidateRect(hwnd, NULL, TRUE);
                     } else {
-                        // 非番茄钟模式，使用普通倒计时提示消息
+                        // 非番茄钟模式，或者已经切换到普通倒计时模式
+                        // 使用普通倒计时提示消息
                         timeoutMsgW = Utf8ToWideChar(CLOCK_TIMEOUT_MESSAGE_TEXT);
                         
                         // 如果超时动作不是打开文件、锁屏、关机或重启，才显示通知消息
@@ -244,6 +252,16 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                             } else {
                                 ShowLocalizedNotification(hwnd, L"时间到！"); // Fallback
                             }
+                        }
+                        
+                        // 如果当前模式不是番茄钟（手动切换到了普通倒计时），确保不会回到番茄钟循环
+                        if (current_pomodoro_phase != POMODORO_PHASE_IDLE &&
+                            (current_pomodoro_time_index >= POMODORO_TIMES_COUNT ||
+                             CLOCK_TOTAL_TIME != POMODORO_TIMES[current_pomodoro_time_index])) {
+                            // 如果已经切换到普通倒计时，重置番茄钟状态
+                            current_pomodoro_phase = POMODORO_PHASE_IDLE;
+                            current_pomodoro_time_index = 0;
+                            complete_pomodoro_cycles = 0;
                         }
                         
                         switch (CLOCK_TIMEOUT_ACTION) {

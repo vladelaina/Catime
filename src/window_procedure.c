@@ -53,6 +53,8 @@ extern void PauseMediaPlayback(void);
 // 在文件开头添加这些外部变量声明
 extern int POMODORO_TIMES[10]; // 番茄钟时间数组
 extern int POMODORO_TIMES_COUNT; // 番茄钟时间选项个数
+extern int current_pomodoro_time_index; // 当前番茄钟时间索引
+extern int complete_pomodoro_cycles; // 完成的番茄钟循环次数
 
 // 如果ShowInputDialog函数需要声明，可以在开始处添加
 extern BOOL ShowInputDialog(HWND hwnd, char* text);
@@ -315,12 +317,17 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             CLOCK_COUNT_UP = FALSE;
                             CLOCK_SHOW_CURRENT_TIME = FALSE;
                             
-                            
                             CLOCK_IS_PAUSED = FALSE;      
                             elapsed_time = 0;             
                             message_shown = FALSE;        
                             countup_message_shown = FALSE;
                             
+                            // 如果当前处于番茄钟模式，则在切换到普通倒计时时重置番茄钟状态
+                            if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
+                                current_pomodoro_phase = POMODORO_PHASE_IDLE;
+                                current_pomodoro_time_index = 0;
+                                complete_pomodoro_cycles = 0;
+                            }
                             
                             ShowWindow(hwnd, SW_SHOW);
                             InvalidateRect(hwnd, NULL, TRUE);
@@ -366,6 +373,13 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             elapsed_time = 0;             
                             message_shown = FALSE;        
                             countup_message_shown = FALSE;
+                            
+                            // 如果当前处于番茄钟模式，则在切换到普通倒计时时重置番茄钟状态
+                            if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
+                                current_pomodoro_phase = POMODORO_PHASE_IDLE;
+                                current_pomodoro_time_index = 0;
+                                complete_pomodoro_cycles = 0;
+                            }
                             
                             ShowWindow(hwnd, SW_SHOW);
                             InvalidateRect(hwnd, NULL, TRUE);
