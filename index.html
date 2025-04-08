@@ -207,6 +207,44 @@
                 heroContainer.addEventListener('mouseenter', function() {
                     heroImage.style.transition = 'transform 0.2s ease-out';
                 });
+                
+                // 添加点击效果：按下和回弹
+                heroImage.addEventListener('mousedown', function() {
+                    // 按下效果 - 缩小并稍微下沉
+                    heroImage.style.transform = `scale(1.25) perspective(1000px) translateZ(-20px)`;
+                });
+                
+                // 鼠标释放或离开时回弹
+                document.addEventListener('mouseup', function(event) {
+                    if (heroContainer.matches(':hover')) {
+                        // 如果鼠标仍在图片上，回弹到悬停状态
+                        const rect = heroContainer.getBoundingClientRect();
+                        const x = (event.clientX - rect.left) / rect.width;
+                        const y = (event.clientY - rect.top) / rect.height;
+                        const rotateY = (x - 0.5) * 2 * maxRotateY;
+                        const rotateX = (y - 0.5) * -2 * maxRotateX;
+                        
+                        // 添加弹性回弹效果
+                        heroImage.style.transition = 'transform 0.4s cubic-bezier(0.18, 1.3, 0.4, 1)';
+                        setTimeout(() => {
+                            heroImage.style.transform = `scale(1.35) perspective(1000px) rotateY(${rotateY}deg) rotateX(${rotateX}deg)`;
+                        }, 50);
+                        
+                        // 恢复正常过渡
+                        setTimeout(() => {
+                            heroImage.style.transition = 'transform 0.2s ease-out';
+                        }, 400);
+                    } else {
+                        // 如果鼠标不在图片上，恢复到正常状态
+                        heroImage.style.transition = 'transform 0.4s cubic-bezier(0.18, 1.3, 0.4, 1)';
+                        heroImage.style.transform = 'scale(1.3) perspective(1000px)';
+                        
+                        // 恢复正常过渡
+                        setTimeout(() => {
+                            heroImage.style.transition = 'transform 0.2s ease-out';
+                        }, 400);
+                    }
+                });
             }
         });
     </script>

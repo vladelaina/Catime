@@ -248,6 +248,8 @@ img {
     transform: scale(1.3) perspective(1000px); /* 默认1.3倍大小，添加透视效果 */
     transform-origin: center center;
     z-index: 2;
+    cursor: pointer; /* 添加指针样式表示可点击 */
+    user-select: none; /* 防止拖拽选中 */
 }
 
 .hero-screenshot::before,
