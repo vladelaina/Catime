@@ -1,5 +1,5 @@
 /* 版本与更新信息 */
-#define CATIME_VERSION "1.0.6-alpha1"
+#define CATIME_VERSION "1.0.6-alpha2"
 
 /* 鸣谢链接  猫屋敷梨梨Official*/
 #define CREDIT_LINK_URL       "https://space.bilibili.com/26087398"
