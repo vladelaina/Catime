@@ -173,6 +173,42 @@
             once: true, // 动画是否只发生一次 - 在向下滚动时
             offset: 50, // 从原始触发点偏移的距离 (以像素为单位)
         });
+        
+        // 为展示图片添加3D倾斜效果
+        document.addEventListener('DOMContentLoaded', function() {
+            const heroImage = document.querySelector('.hero-screenshot');
+            const heroContainer = document.querySelector('.hero-visual');
+            
+            if (heroImage && heroContainer) {
+                // 最大倾斜角度
+                const maxRotateX = 15; 
+                const maxRotateY = 20;
+                
+                heroContainer.addEventListener('mousemove', function(e) {
+                    // 获取鼠标在元素内的相对位置（0-1）
+                    const rect = heroContainer.getBoundingClientRect();
+                    const x = (e.clientX - rect.left) / rect.width;
+                    const y = (e.clientY - rect.top) / rect.height;
+                    
+                    // 计算倾斜角度（转换为-maxRotate到maxRotate的范围）
+                    const rotateY = (x - 0.5) * 2 * maxRotateY;
+                    const rotateX = (y - 0.5) * -2 * maxRotateX; // 负号让鼠标在顶部时，图片向上倾斜
+                    
+                    // 应用变换
+                    heroImage.style.transform = `scale(1.35) perspective(1000px) rotateY(${rotateY}deg) rotateX(${rotateX}deg)`;
+                });
+                
+                // 鼠标离开时恢复原始状态
+                heroContainer.addEventListener('mouseleave', function() {
+                    heroImage.style.transform = 'scale(1.3) perspective(1000px)';
+                });
+                
+                // 鼠标进入时准备变换
+                heroContainer.addEventListener('mouseenter', function() {
+                    heroImage.style.transition = 'transform 0.2s ease-out';
+                });
+            }
+        });
     </script>
 
 </body>

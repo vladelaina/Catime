@@ -245,7 +245,7 @@ img {
     transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
     position: relative;
     border: 6px solid rgba(255, 255, 255, 0.85); /* 半透明白色边框 */
-    transform: scale(1.3); /* 默认1.3倍大小 */
+    transform: scale(1.3) perspective(1000px); /* 默认1.3倍大小，添加透视效果 */
     transform-origin: center center;
     z-index: 2;
 }
@@ -288,10 +288,10 @@ img {
 }
 
 .hero-screenshot:hover {
-    transform: none; /* 移除默认transform，因为动画会处理所有变换 */
+    transform: scale(1.35) perspective(1000px); /* 移除默认transform，改为稍微放大且添加透视效果 */
     box-shadow: 30px 20px 40px rgba(122, 162, 247, 0.25);
-    animation: breathe 3s infinite ease-in-out;
     border-color: rgba(255, 255, 255, 1); /* 边框变为纯白色 */
+    animation: none; /* 停用原有的动画 */
 }
 
 .hero-screenshot:hover::before,
