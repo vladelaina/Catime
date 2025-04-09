@@ -577,7 +577,7 @@ img {
     transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
     position: relative;
     border: 6px solid rgba(255, 255, 255, 0.85);
-    transform: scale(1.05) perspective(1000px);
+    transform: perspective(1000px);
     transform-origin: center center;
     z-index: 2;
     user-select: none;
@@ -614,7 +614,7 @@ img {
 }
 
 .scenario-card:hover .scenario-img {
-    transform: scale(1.1) perspective(1000px);
+    transform: perspective(1000px);
     box-shadow: 30px 20px 40px rgba(122, 162, 247, 0.25);
     border-color: rgba(255, 255, 255, 1);
 }
@@ -683,7 +683,7 @@ img {
     
     .scenario-img {
         max-width: 80%;
-        transform: scale(1) perspective(1000px);
+        transform: perspective(1000px);
     }
     
     .scenario-content {
