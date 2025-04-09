@@ -1268,7 +1268,7 @@ img {
 
 .github-chart-container {
     max-width: 900px;
-    margin: 3rem auto;
+    margin: 2rem auto;
     background-color: white;
     border-radius: var(--border-radius-large);
     padding: 1rem;
@@ -1323,7 +1323,7 @@ img {
 /* 响应式设计 */
 @media (max-width: 768px) {
     .github-chart-container {
-        margin: 2rem auto;
+        margin: 1.5rem auto;
         padding: 0.5rem;
     }
     
