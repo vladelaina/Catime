@@ -231,7 +231,10 @@
         document.addEventListener('DOMContentLoaded', function() {
             const heroImage = document.querySelector('.hero-screenshot');
             const heroContainer = document.querySelector('.hero-visual');
+            const scenarioImages = document.querySelectorAll('.scenario-img');
+            const scenarioContainers = document.querySelectorAll('.scenario-visual');
             
+            // 处理英雄图片
             if (heroImage && heroContainer) {
                 // 最大倾斜角度
                 const maxRotateX = 15; 
@@ -333,6 +336,99 @@
                             heroImage.style.transition = 'transform 0.2s ease-out';
                         }, 150);
                     }
+                });
+            }
+            
+            // 为场景图片添加相同的3D倾斜效果
+            if (scenarioImages.length > 0 && scenarioContainers.length > 0) {
+                // 为每个场景图片设置动画效果
+                scenarioContainers.forEach((container, index) => {
+                    const image = scenarioImages[index];
+                    
+                    // 最大倾斜角度
+                    const maxRotateX = 12;
+                    const maxRotateY = 18;
+                    
+                    // 呼吸效果的定时器
+                    let breatheTimer = null;
+                    
+                    // 当前旋转角度
+                    let currentRotateX = 0;
+                    let currentRotateY = 0;
+                    
+                    // 设置呼吸效果
+                    function startBreatheEffect() {
+                        if (breatheTimer) return; // 避免重复启动
+                        
+                        let phase = 0;
+                        breatheTimer = setInterval(() => {
+                            // 正弦波动的呼吸效果
+                            const scale = 1.1 + Math.sin(phase) * 0.03;
+                            
+                            // 应用变换，结合当前的旋转角度
+                            image.style.transform = `scale(${scale}) perspective(1000px) rotateY(${currentRotateY}deg) rotateX(${currentRotateX}deg)`;
+                            
+                            phase += 0.05;
+                        }, 30);
+                    }
+
+                    // 停止呼吸效果
+                    function stopBreatheEffect() {
+                        if (breatheTimer) {
+                            clearInterval(breatheTimer);
+                            breatheTimer = null;
+                        }
+                    }
+                    
+                    container.addEventListener('mousemove', function(e) {
+                        // 获取鼠标在元素内的相对位置（0-1）
+                        const rect = container.getBoundingClientRect();
+                        const x = (e.clientX - rect.left) / rect.width;
+                        const y = (e.clientY - rect.top) / rect.height;
+                        
+                        // 计算倾斜角度（转换为-maxRotate到maxRotate的范围）
+                        currentRotateY = (x - 0.5) * 2 * maxRotateY;
+                        currentRotateX = (y - 0.5) * -2 * maxRotateX; // 负号让鼠标在顶部时，图片向上倾斜
+                    });
+                    
+                    // 鼠标离开时恢复原始状态
+                    container.addEventListener('mouseleave', function() {
+                        stopBreatheEffect(); // 停止呼吸效果
+                        currentRotateX = 0;
+                        currentRotateY = 0;
+                        // 直接设置回初始状态
+                        image.style.transform = 'scale(1.05) perspective(1000px)';
+                    });
+                    
+                    // 鼠标进入时准备变换并启动呼吸效果
+                    container.addEventListener('mouseenter', function() {
+                        image.style.transition = 'transform 0.2s ease-out';
+                        startBreatheEffect(); // 启动呼吸效果
+                    });
+                    
+                    // 添加点击效果：按下和回弹
+                    image.addEventListener('mousedown', function() {
+                        // 暂时停止呼吸效果
+                        stopBreatheEffect();
+                        // 按下效果 - 缩小并轻微下沉
+                        image.style.transform = `scale(1.03) perspective(1000px) rotateY(${currentRotateY}deg) rotateX(${currentRotateX}deg) translateZ(-10px)`;
+                    });
+                    
+                    // 单独为每个场景图片添加鼠标释放事件
+                    image.addEventListener('mouseup', function() {
+                        // 添加更快速的回弹效果
+                        image.style.transition = 'transform 0.15s cubic-bezier(0.34, 1.2, 0.64, 1)';
+                        
+                        // 重新启动呼吸效果之前，先执行回弹动画
+                        setTimeout(() => {
+                            startBreatheEffect();
+                        }, 100);
+                        
+                        // 恢复正常过渡，延迟时间与动画时长匹配
+                        setTimeout(() => {
+                            image.style.transition = 'transform 0.2s ease-out';
+                        }, 150);
+                    });
                 });
             }
         });

@@ -564,19 +564,68 @@ img {
     overflow: hidden;
     box-shadow: 0 5px 20px rgba(122, 162, 247, 0.15);
     transition: all 0.3s ease;
+    position: relative;
+    cursor: pointer;
 }
 
 .scenario-img {
     width: 100%;
     height: auto;
     display: block;
-    transition: transform 0.5s ease;
+    border-radius: var(--border-radius-large);
+    box-shadow: 0 15px 35px rgba(122, 162, 247, 0.2);
+    transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+    position: relative;
+    border: 6px solid rgba(255, 255, 255, 0.85);
+    transform: scale(1.05) perspective(1000px);
+    transform-origin: center center;
+    z-index: 2;
+    user-select: none;
+}
+
+.scenario-img::before,
+.scenario-img::after {
+    content: '';
+    position: absolute;
+    background: white;
+    z-index: 1;
+    opacity: 0.4;
+    transition: all 0.5s ease;
+}
+
+/* 水平丝带 */
+.scenario-img::before {
+    height: 6px;
+    width: 120%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 15px 5px rgba(255, 255, 255, 0.2);
+}
+
+/* 垂直丝带 */
+.scenario-img::after {
+    width: 6px;
+    height: 120%;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 15px 5px rgba(255, 255, 255, 0.2);
 }
 
 .scenario-card:hover .scenario-img {
-    transform: scale(1.05);
+    transform: scale(1.1) perspective(1000px);
+    box-shadow: 30px 20px 40px rgba(122, 162, 247, 0.25);
+    border-color: rgba(255, 255, 255, 1);
 }
 
+.scenario-card:hover .scenario-img::before,
+.scenario-card:hover .scenario-img::after {
+    opacity: 0.8;
+    box-shadow: 0 0 20px 8px rgba(255, 255, 255, 0.4);
+}
+
+/* 添加脚本控制悬停和点击效果 */
 .scenario-content {
     flex: 1;
     padding: 1rem;
@@ -626,6 +675,15 @@ img {
     .scenario-visual {
         width: 100%;
         margin-bottom: 1.5rem;
+        min-height: 250px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    .scenario-img {
+        max-width: 80%;
+        transform: scale(1) perspective(1000px);
     }
     
     .scenario-content {
@@ -650,6 +708,14 @@ img {
     
     .scenario-content h3 {
         font-size: 1.3rem;
+    }
+    
+    .scenario-visual {
+        min-height: 180px;
+    }
+    
+    .scenario-img {
+        max-width: 90%;
     }
 }
 
