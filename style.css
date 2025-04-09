@@ -3081,3 +3081,128 @@ p:hover {
         font-size: 2.5rem;
     }
 }
+
+.scenario-content h3 {
+    font-size: 1.6rem; /* 增加标题大小 */
+    font-weight: 600;
+    margin-bottom: 1.2rem; /* 增加与正文的距离 */
+    color: var(--heading-color);
+    transition: all 0.4s cubic-bezier(0.215, 0.61, 0.355, 1);
+    cursor: pointer;
+    position: relative;
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+}
+
+.scenario-content h3::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    transition: width 0.4s ease-in-out;
+    z-index: -1;
+}
+
+/* 游戏场景标题效果 */
+@keyframes gameTitle {
+    0% { text-shadow: 0 0 5px rgba(255, 0, 0, 0.3); }
+    25% { text-shadow: 0 0 15px rgba(255, 0, 0, 0.5), 0 0 5px rgba(255, 100, 0, 0.3); }
+    50% { text-shadow: 0 0 25px rgba(255, 0, 0, 0.7), 0 0 15px rgba(255, 100, 0, 0.5), 0 0 5px rgba(255, 255, 0, 0.3); }
+    75% { text-shadow: 0 0 15px rgba(255, 0, 0, 0.5), 0 0 5px rgba(255, 100, 0, 0.3); }
+    100% { text-shadow: 0 0 5px rgba(255, 0, 0, 0.3); }
+}
+
+.scenario-card:nth-child(1) .scenario-content h3:hover {
+    color: #ff3838;
+    background-color: rgba(255, 56, 56, 0.08);
+    animation: gameTitle 2s infinite;
+    transform: perspective(200px) rotateX(10deg);
+    text-shadow: 0 2px 4px rgba(255, 56, 56, 0.4);
+    box-shadow: 0 5px 15px rgba(255, 56, 56, 0.2);
+    letter-spacing: 1px;
+}
+
+.scenario-card:nth-child(1) .scenario-content h3::before {
+    background: linear-gradient(90deg, transparent, #ff3838, transparent);
+}
+
+.scenario-card:nth-child(1) .scenario-content h3:hover::before {
+    width: 100%;
+}
+
+/* 自动打开软件标题效果 */
+@keyframes boltTitle {
+    0%, 100% { transform: scale(1); }
+    10%, 90% { transform: scale(1); }
+    20% { transform: scale(1.1) rotate(-2deg); }
+    30% { transform: scale(1) rotate(0deg); }
+    40% { transform: scale(1.1) rotate(2deg); }
+    50% { transform: scale(1) rotate(0deg); }
+    60% { transform: scale(1.05) rotate(-1deg); }
+    70% { transform: scale(1) rotate(0deg); }
+    80% { transform: scale(1.05) rotate(1deg); }
+}
+
+.scenario-card:nth-child(2) .scenario-content h3:hover {
+    color: #ffb700;
+    animation: boltTitle 2s ease-in-out infinite;
+    text-shadow: 0 0 10px rgba(255, 183, 0, 0.5);
+    background: linear-gradient(90deg, rgba(255, 183, 0, 0.1), rgba(255, 183, 0, 0.0));
+    border-right: 2px solid rgba(255, 183, 0, 0.5);
+    padding-left: 1rem;
+    padding-right: 1rem;
+    letter-spacing: 0.5px;
+}
+
+.scenario-card:nth-child(2) .scenario-content h3::after {
+    content: '⚡';
+    position: absolute;
+    right: -10px;
+    top: 0;
+    font-size: 1rem;
+    opacity: 0;
+    transform: translateX(20px);
+    transition: all 0.4s ease;
+}
+
+.scenario-card:nth-child(2) .scenario-content h3:hover::after {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* PPT演示标题效果 */
+@keyframes pptTitle {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 100% 50%; }
+}
+
+.scenario-card:nth-child(3) .scenario-content h3:hover {
+    color: transparent;
+    background: linear-gradient(90deg, #0078d0, #00a8ff, #0078d0);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    animation: pptTitle 3s ease infinite;
+    text-shadow: none;
+    transform: translateY(-3px);
+    letter-spacing: 0.5px;
+}
+
+.scenario-card:nth-child(3) .scenario-content h3::before {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #0078d0, transparent);
+    transform: scaleX(0);
+    transition: transform 0.4s ease;
+}
+
+.scenario-card:nth-child(3) .scenario-content h3:hover::before {
+    transform: scaleX(1);
+}
