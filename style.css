@@ -315,32 +315,71 @@ img {
     border: none;
     margin: 0.5rem 0.5rem 0.5rem 0;
     box-shadow: var(--button-shadow);
+    position: relative;
+    overflow: hidden;
 }
 .cta-button i {
     margin-right: 0.6rem;
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: inline-block;
+}
+.cta-button::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.5s ease-out, height 0.5s ease-out;
+    z-index: 1;
+    opacity: 0;
+}
+.cta-button:hover::before {
+    width: 300%;
+    height: 300%;
+    opacity: 1;
+}
+.cta-button > * {
+    position: relative;
+    z-index: 2;
 }
 .cta-button.primary {
     background-color: var(--accent-color); /* 粉色主要按钮 */
     color: white;
+    transition: all 0.4s ease, transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 .cta-button.primary:hover {
-    background-color: var(--accent-hover);
+    background-color: #ff5d95; /* 更亮更饱和的粉色 */
     color: white;
-    box-shadow: 0 6px 15px rgba(247, 125, 170, 0.3); /* 粉色阴影 */
+    box-shadow: 0 6px 20px rgba(247, 125, 170, 0.5), 0 0 15px rgba(255, 93, 149, 0.6); /* 增强的粉色阴影和发光效果 */
+    transform: translateY(-3px);
     animation: jelly 0.6s ease;
+}
+.cta-button.primary:hover i {
+    transform: scale(1.2) rotate(10deg);
+    color: #fff6f9; /* 更亮的颜色强调图标 */
 }
 .cta-button.secondary {
     background-color: var(--surface-color); /* 白色 */
     color: var(--primary-color); /* 蓝色文本 */
     border: 1px solid var(--border-color);
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    transition: all 0.4s ease, transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 .cta-button.secondary:hover {
-    background-color: #f8faff; /* 非常浅的蓝色悬停效果 */
-    color: var(--primary-hover);
-    border-color: #d0d0ff;
-    box-shadow: 0 4px 10px rgba(122, 162, 247, 0.1);
+    background-color: #eef4ff; /* 更明显的淡蓝色 */
+    color: #4f7df9; /* 更亮的蓝色 */
+    border-color: #b8c9ff;
+    box-shadow: 0 6px 15px rgba(122, 162, 247, 0.3), 0 0 10px rgba(79, 125, 249, 0.4); /* 增强的蓝色阴影和发光效果 */
+    transform: translateY(-3px);
     animation: jelly 0.6s ease;
+}
+.cta-button.secondary:hover i {
+    transform: scale(1.2) rotate(10deg);
+    color: #3a69f8; /* 更亮的蓝色强调图标 */
 }
 .cta-button.large {
     padding: 1rem 2.5rem;
@@ -979,18 +1018,23 @@ img {
     background-color: white;
     color: var(--primary-color); /* 白色按钮上的蓝色文本 */
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    position: relative;
+    overflow: hidden;
 }
 .cta-section .cta-button.primary:hover {
-    background-color: #f0f8ff; /* 悬停时的浅蓝色调 */
+    background-color: #f5faff; /* 悬停时的浅蓝色调 */
     color: var(--accent-color); /* 悬停时的粉色文本 */
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2), 0 0 15px rgba(255, 255, 255, 0.5); /* 增强发光效果 */
+    transform: translateY(-3px);
     animation: jelly 0.6s ease;
 }
 .cta-section .cta-button.primary i {
-     color: var(--accent-color); /* 粉色图标 */
+    color: var(--accent-color); /* 粉色图标 */
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 .cta-section .cta-button.primary:hover i {
     color: var(--primary-color); /* 悬停时的蓝色图标 */
+    transform: scale(1.2) rotate(10deg);
 }
 
 
@@ -1688,8 +1732,11 @@ img {
 
 /* --- 果冻效果动画 --- */
 @keyframes jelly {
-    0%, 100% { transform: scale(1); }
-    25% { transform: scale(1.05, 0.95); }
-    50% { transform: scale(0.95, 1.05); }
+    0% { transform: scale(1); }
+    15% { transform: scale(1.05, 0.95); }
+    30% { transform: scale(0.92, 1.08); }
+    45% { transform: scale(1.06, 0.94); }
+    60% { transform: scale(0.95, 1.03); }
     75% { transform: scale(1.02, 0.98); }
+    100% { transform: scale(1); }
 }
