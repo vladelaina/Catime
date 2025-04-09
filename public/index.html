@@ -168,7 +168,7 @@
                 
                 <div class="github-chart-container" data-aos="zoom-in" data-aos-delay="200">
                     <!-- 使用 Star History 的推荐方法 -->
-                    <div id="star-history-chart" style="width: 100%; height: 450px;"></div>
+                    <div id="star-history-chart" style="width: 100%; height: 500px;"></div>
                 </div>
             </div>
         </section>
@@ -598,7 +598,7 @@
                             grid: {
                                 left: '5%',
                                 right: '5%',
-                                bottom: '10%',
+                                bottom: '15%',
                                 top: '15%',
                                 containLabel: true
                             },
@@ -608,7 +608,14 @@
                                 nameLocation: 'middle',
                                 nameGap: 35,
                                 axisLabel: {
-                                    formatter: '{yyyy}-{MM}-{dd}'
+                                    formatter: '{yyyy}-{MM}-{dd}',
+                                    rotate: 30,
+                                    interval: function(index, value) {
+                                        // 每周只显示一个标签
+                                        const date = new Date(value);
+                                        return date.getDay() === 1; // 每周一显示
+                                    },
+                                    margin: 10
                                 },
                                 splitLine: {
                                     show: false
@@ -698,7 +705,7 @@
                     grid: {
                         left: '5%',
                         right: '5%',
-                        bottom: '10%',
+                        bottom: '15%',
                         top: '15%',
                         containLabel: true
                     },
@@ -708,7 +715,14 @@
                         nameLocation: 'middle',
                         nameGap: 35,
                         axisLabel: {
-                            formatter: '{yyyy}-{MM}-{dd}'
+                            formatter: '{yyyy}-{MM}-{dd}',
+                            rotate: 30,
+                            interval: function(index, value) {
+                                // 每周只显示一个标签
+                                const date = new Date(value);
+                                return date.getDay() === 1; // 每周一显示
+                            },
+                            margin: 10
                         },
                         splitLine: {
                             show: false
