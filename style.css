@@ -548,7 +548,7 @@ img {
     flex: 1 1 35%; /* 从40%减少到35%，减少图片区域占比 */
     position: relative;
     text-align: center;
-    margin-right: -3rem; /* 使用负边距，让图片向右侧移动 */
+    margin-right: -5rem; /* 从-3rem增加到-5rem，使图片向右移动更多 */
 }
 
 .hero-screenshot {
@@ -627,7 +627,7 @@ img {
     }
 
     .hero-visual {
-        margin-right: -1.5rem; /* 在中等屏幕上减少负边距 */
+        margin-right: -2.5rem; /* 从-1.5rem增加到-2.5rem */
     }
 }
 
