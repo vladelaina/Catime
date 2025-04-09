@@ -3494,34 +3494,42 @@ p:hover {
 /* 闪电动画 */
 @keyframes lightningBolt1 {
     0%, 100% {
-        transform: scale(0) rotate(0deg);
+        transform: scale(0) rotate(-25deg);
         opacity: 0;
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 215, 0, 0.85));
+        filter: blur(5px);
     }
     10% {
         transform: scale(0.7) rotate(-5deg);
         opacity: 0.7;
-        filter: brightness(1.4);
+        filter: brightness(1.4) blur(2px);
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 215, 0, 0.85));
     }
     15%, 85% {
-        transform: scale(1.4) rotate(-10deg);
+        transform: scale(1.4) rotate(-10deg) translateX(-3px);
         opacity: 0.95;
-        box-shadow: 0 0 15px rgba(255, 215, 0, 0.9), 0 0 25px rgba(255, 255, 255, 0.8);
-        filter: brightness(1.8);
+        box-shadow: 0 0 15px rgba(0, 170, 255, 0.9), 0 0 25px rgba(255, 255, 255, 0.8), 0 0 40px rgba(0, 170, 255, 0.5);
+        filter: brightness(1.8) contrast(1.1) blur(0px);
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.95), rgba(0, 170, 255, 0.9));
     }
     20% {
-        transform: scale(1.3) rotate(-8deg);
+        transform: scale(1.3) rotate(-8deg) translateX(2px);
         opacity: 0.9;
-        filter: brightness(1.6);
+        filter: brightness(1.6) contrast(1.05);
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.92), rgba(0, 190, 255, 0.87));
     }
     50% {
-        transform: scale(1.6) rotate(5deg);
+        transform: scale(1.6) rotate(5deg) translateY(-2px);
         opacity: 1;
-        box-shadow: 0 0 20px rgba(255, 215, 0, 1), 0 0 35px rgba(255, 255, 255, 0.9);
-        filter: brightness(2);
+        box-shadow: 0 0 20px rgba(0, 170, 255, 1), 0 0 35px rgba(255, 255, 255, 0.9), 0 0 50px rgba(0, 170, 255, 0.7);
+        filter: brightness(2.2) contrast(1.2);
+        background: linear-gradient(90deg, rgba(255, 255, 255, 1), rgba(60, 200, 255, 0.95));
     }
     90% {
         transform: scale(0.6) rotate(0deg);
         opacity: 0.6;
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 215, 0, 0.85));
+        filter: blur(3px);
     }
 }
 
@@ -3529,27 +3537,34 @@ p:hover {
     0%, 100% {
         transform: scale(0) rotate(25deg);
         opacity: 0;
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 215, 0, 0.85));
+        filter: blur(5px);
     }
     5% {
         transform: scale(0.6) rotate(30deg);
         opacity: 0.6;
-        filter: brightness(1.2);
+        filter: brightness(1.2) blur(2px);
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 215, 0, 0.85));
     }
     15%, 75% {
-        transform: scale(1.3) rotate(35deg);
+        transform: scale(1.3) rotate(35deg) translateX(3px);
         opacity: 0.95;
-        box-shadow: 0 0 12px rgba(255, 215, 0, 0.9), 0 0 20px rgba(255, 255, 255, 0.7);
-        filter: brightness(1.6);
+        box-shadow: 0 0 12px rgba(0, 191, 255, 0.9), 0 0 20px rgba(255, 255, 255, 0.7), 0 0 35px rgba(0, 191, 255, 0.5);
+        filter: brightness(1.6) contrast(1.1) blur(0px);
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.92), rgba(0, 170, 255, 0.87));
     }
     50% {
-        transform: scale(1.7) rotate(45deg);
+        transform: scale(1.7) rotate(45deg) translateY(2px);
         opacity: 1;
-        box-shadow: 0 0 18px rgba(255, 215, 0, 1), 0 0 30px rgba(255, 255, 255, 0.9);
-        filter: brightness(1.8);
+        box-shadow: 0 0 18px rgba(0, 170, 255, 1), 0 0 30px rgba(255, 255, 255, 0.9), 0 0 45px rgba(0, 170, 255, 0.7);
+        filter: brightness(2) contrast(1.15);
+        background: linear-gradient(90deg, rgba(255, 255, 255, 1), rgba(60, 200, 255, 0.95));
     }
     85% {
         transform: scale(0.8) rotate(30deg);
         opacity: 0.7;
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 215, 0, 0.85));
+        filter: blur(3px);
     }
 }
 
@@ -3573,11 +3588,11 @@ p:hover {
     height: 32px;
     top: 65%;
     right: -18px;
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.95), rgba(255, 215, 0, 0.9));
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.95), rgba(0, 180, 255, 0.9));
     clip-path: polygon(25% 0%, 45% 0%, 65% 30%, 50% 30%, 75% 60%, 65% 60%, 100% 100%, 40% 70%, 55% 70%, 25% 40%, 40% 40%, 25% 0%);
     transform-origin: center;
     z-index: -1;
-    filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.9));
+    filter: drop-shadow(0 0 10px rgba(0, 180, 255, 0.9)) drop-shadow(0 0 20px rgba(255, 255, 255, 0.7));
     animation: lightningBolt3 0.65s ease-out 0.1s infinite;
 }
 
@@ -3586,32 +3601,33 @@ p:hover {
         transform: scale(0) rotate(-30deg);
         opacity: 0;
         background: linear-gradient(90deg, rgba(255, 255, 255, 0.95), rgba(255, 215, 0, 0.9));
+        filter: blur(5px);
     }
     15% {
-        transform: scale(0.8) rotate(-25deg);
+        transform: scale(0.8) rotate(-25deg) translateX(-2px);
         opacity: 0.8;
         background: linear-gradient(90deg, rgba(255, 255, 255, 0.95), rgba(255, 215, 0, 0.9));
-        filter: brightness(1.5) drop-shadow(0 0 8px rgba(255, 215, 0, 0.8));
+        filter: brightness(1.5) drop-shadow(0 0 8px rgba(255, 215, 0, 0.8)) blur(1px);
     }
     30%, 70% {
-        transform: scale(1.4) rotate(-15deg);
+        transform: scale(1.4) rotate(-15deg) translateX(2px);
         opacity: 0.95;
         background: linear-gradient(90deg, rgba(255, 255, 255, 0.98), rgba(0, 170, 255, 0.9));
-        box-shadow: 0 0 15px rgba(0, 170, 255, 0.9), 0 0 25px rgba(255, 255, 255, 0.8);
-        filter: brightness(1.8) drop-shadow(0 0 12px rgba(0, 170, 255, 0.9));
+        box-shadow: 0 0 15px rgba(0, 170, 255, 0.9), 0 0 25px rgba(255, 255, 255, 0.8), 0 0 40px rgba(0, 170, 255, 0.6);
+        filter: brightness(1.8) drop-shadow(0 0 12px rgba(0, 170, 255, 0.9)) contrast(1.15);
     }
     50% {
-        transform: scale(1.6) rotate(-10deg);
+        transform: scale(1.6) rotate(-10deg) translateY(-3px);
         opacity: 1;
         background: linear-gradient(90deg, rgba(255, 255, 255, 1), rgba(60, 200, 255, 0.95));
-        filter: brightness(2) drop-shadow(0 0 18px rgba(0, 200, 255, 1));
-        box-shadow: 0 0 20px rgba(0, 170, 255, 1), 0 0 30px rgba(255, 255, 255, 0.9);
+        filter: brightness(2.2) drop-shadow(0 0 18px rgba(0, 200, 255, 1)) contrast(1.2);
+        box-shadow: 0 0 20px rgba(0, 170, 255, 1), 0 0 30px rgba(255, 255, 255, 0.9), 0 0 50px rgba(0, 170, 255, 0.6);
     }
     85% {
         transform: scale(0.7) rotate(-20deg);
         opacity: 0.7;
         background: linear-gradient(90deg, rgba(255, 255, 255, 0.95), rgba(255, 215, 0, 0.9));
-        filter: brightness(1.3) drop-shadow(0 0 6px rgba(255, 215, 0, 0.7));
+        filter: brightness(1.3) drop-shadow(0 0 6px rgba(255, 215, 0, 0.7)) blur(2px);
     }
 }
 
@@ -3638,7 +3654,7 @@ p:hover {
     height: 26px;
     top: -40px;
     left: -30px;
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 230, 0, 0.85));
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(0, 180, 255, 0.85));
     clip-path: polygon(40% 0%, 60% 0%, 50% 30%, 70% 30%, 35% 100%, 45% 60%, 30% 60%, 40% 0%);
     animation: lightningBolt4 0.6s ease-out 0.3s infinite;
 }
@@ -3648,7 +3664,7 @@ p:hover {
     height: 24px;
     bottom: -35px;
     right: -35px;
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 225, 0, 0.85));
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(0, 180, 255, 0.85));
     clip-path: polygon(50% 0%, 65% 30%, 50% 30%, 100% 55%, 50% 100%, 35% 70%, 50% 70%, 0% 45%, 50% 0%);
     animation: lightningBolt5 0.55s ease-out 0.45s infinite;
 }
@@ -3669,96 +3685,24 @@ p:hover {
     position: relative;
     z-index: 2;
     animation: electricPulse 0.6s ease-in-out infinite alternate;
-    text-shadow: 0 0 10px rgba(0, 170, 255, 0.9), 0 0 20px rgba(255, 255, 255, 0.8);
+    text-shadow: 0 0 10px rgba(0, 170, 255, 0.9), 0 0 20px rgba(255, 255, 255, 0.8), 0 0 30px rgba(0, 170, 255, 0.5);
 }
 
 @keyframes electricPulse {
     0% {
         color: #FFD700;
-        transform: scale(1);
+        transform: scale(1) rotate(-2deg);
         text-shadow: 0 0 10px rgba(255, 215, 0, 0.9), 0 0 20px rgba(255, 255, 255, 0.8);
     }
     50% {
         color: #00AAFF;
-        transform: scale(1.15);
-        text-shadow: 0 0 15px rgba(0, 170, 255, 1), 0 0 25px rgba(255, 255, 255, 0.9), 0 0 35px rgba(0, 170, 255, 0.7);
+        transform: scale(1.2) rotate(2deg);
+        text-shadow: 0 0 15px rgba(0, 170, 255, 1), 0 0 25px rgba(255, 255, 255, 0.9), 0 0 35px rgba(0, 170, 255, 0.7), 0 0 50px rgba(0, 170, 255, 0.4);
     }
     100% {
         color: #FFD700;
-        transform: scale(1);
+        transform: scale(1) rotate(-1deg);
         text-shadow: 0 0 10px rgba(255, 215, 0, 0.9), 0 0 20px rgba(255, 255, 255, 0.8);
-    }
-}
-
-@keyframes lightningBolt1 {
-    0%, 100% {
-        transform: scale(0) rotate(-25deg);
-        opacity: 0;
-        background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 215, 0, 0.85));
-    }
-    10% {
-        transform: scale(0.7) rotate(-5deg);
-        opacity: 0.7;
-        filter: brightness(1.4);
-        background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 215, 0, 0.85));
-    }
-    15%, 85% {
-        transform: scale(1.4) rotate(-10deg);
-        opacity: 0.95;
-        box-shadow: 0 0 15px rgba(0, 170, 255, 0.9), 0 0 25px rgba(255, 255, 255, 0.8);
-        filter: brightness(1.8);
-        background: linear-gradient(90deg, rgba(255, 255, 255, 0.95), rgba(0, 170, 255, 0.9));
-    }
-    20% {
-        transform: scale(1.3) rotate(-8deg);
-        opacity: 0.9;
-        filter: brightness(1.6);
-        background: linear-gradient(90deg, rgba(255, 255, 255, 0.92), rgba(0, 190, 255, 0.87));
-    }
-    50% {
-        transform: scale(1.6) rotate(5deg);
-        opacity: 1;
-        box-shadow: 0 0 20px rgba(0, 170, 255, 1), 0 0 35px rgba(255, 255, 255, 0.9);
-        filter: brightness(2);
-        background: linear-gradient(90deg, rgba(255, 255, 255, 1), rgba(0, 200, 255, 0.95));
-    }
-    90% {
-        transform: scale(0.6) rotate(0deg);
-        opacity: 0.6;
-        background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 215, 0, 0.85));
-    }
-}
-
-@keyframes lightningBolt2 {
-    0%, 100% {
-        transform: scale(0) rotate(25deg);
-        opacity: 0;
-        background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 215, 0, 0.85));
-    }
-    5% {
-        transform: scale(0.6) rotate(30deg);
-        opacity: 0.6;
-        filter: brightness(1.2);
-        background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 215, 0, 0.85));
-    }
-    15%, 75% {
-        transform: scale(1.3) rotate(35deg);
-        opacity: 0.95;
-        box-shadow: 0 0 12px rgba(0, 191, 255, 0.9), 0 0 20px rgba(255, 255, 255, 0.7);
-        filter: brightness(1.6);
-        background: linear-gradient(90deg, rgba(255, 255, 255, 0.92), rgba(0, 170, 255, 0.87));
-    }
-    50% {
-        transform: scale(1.7) rotate(45deg);
-        opacity: 1;
-        box-shadow: 0 0 18px rgba(0, 170, 255, 1), 0 0 30px rgba(255, 255, 255, 0.9);
-        filter: brightness(1.8);
-        background: linear-gradient(90deg, rgba(255, 255, 255, 1), rgba(0, 200, 255, 0.95));
-    }
-    85% {
-        transform: scale(0.8) rotate(30deg);
-        opacity: 0.7;
-        background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 215, 0, 0.85));
     }
 }
 
@@ -3856,23 +3800,24 @@ p:hover {
     0% {
         box-shadow: 0 0 0 0 rgba(0, 170, 255, 0.7);
     }
-    70% {
-        box-shadow: 0 0 0 15px rgba(0, 170, 255, 0);
+    50% {
+        box-shadow: 0 0 0 15px rgba(0, 170, 255, 0.3), 0 0 0 5px rgba(255, 255, 255, 0.5);
     }
     100% {
-        box-shadow: 0 0 0 0 rgba(0, 170, 255, 0);
+        box-shadow: 0 0 0 20px rgba(0, 170, 255, 0), 0 0 0 8px rgba(255, 255, 255, 0);
     }
 }
 
 /* 添加多点电流效果 */
 .scenario-card:nth-child(2) .scenario-icon:hover .lightning-element::before,
 .scenario-card:nth-child(2) .scenario-icon:hover .lightning-element::after {
-    filter: drop-shadow(0 0 15px rgba(0, 170, 255, 1));
+    filter: drop-shadow(0 0 15px rgba(0, 170, 255, 1)) drop-shadow(0 0 25px rgba(255, 255, 255, 0.7));
 }
 
 /* 电流震荡效果 */
 .scenario-card:nth-child(2):hover .scenario-icon {
     animation: shockwave 1.2s ease-out infinite;
+    filter: drop-shadow(0 0 20px rgba(0, 170, 255, 0.5));
 }
 
 @keyframes shockwave {
@@ -3880,24 +3825,51 @@ p:hover {
         transform: scale(1);
     }
     10% {
-        transform: scale(1.05) rotate(2deg);
+        transform: scale(1.08) rotate(3deg);
     }
     20% {
-        transform: scale(0.98) rotate(-2deg);
+        transform: scale(0.96) rotate(-3deg);
     }
     30% {
-        transform: scale(1.02) rotate(1deg);
+        transform: scale(1.04) rotate(2deg);
     }
     40% {
-        transform: scale(0.99) rotate(-1deg);
+        transform: scale(0.98) rotate(-2deg);
     }
     50% {
-        transform: scale(1.01);
+        transform: scale(1.02) translateY(-2px);
     }
     60% {
-        transform: scale(0.995);
+        transform: scale(0.99) translateY(1px);
     }
     70% {
-        transform: scale(1);
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* 添加电流粒子效果 */
+.scenario-card:nth-child(2) .scenario-icon:hover::after {
+    content: "";
+    position: absolute;
+    width: 150%;
+    height: 150%;
+    top: -25%;
+    left: -25%;
+    background: radial-gradient(circle, rgba(0, 170, 255, 0), rgba(0, 170, 255, 0.1) 30%, rgba(0, 170, 255, 0) 70%);
+    animation: lightningBolt2 0.7s ease-out 0.2s infinite, particleEffect 2s linear infinite;
+}
+
+@keyframes particleEffect {
+    0% {
+        transform: rotate(0deg);
+        opacity: 0.3;
+    }
+    50% {
+        transform: rotate(180deg);
+        opacity: 0.7;
+    }
+    100% {
+        transform: rotate(360deg);
+        opacity: 0.3;
     }
 }
