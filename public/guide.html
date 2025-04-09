@@ -229,6 +229,9 @@
             const testFetchBtn = document.getElementById('test-fetch');
             const toggleDebugBtn = document.getElementById('toggle-debug');
             
+            // 检查是否从文件系统加载
+            const isFileProtocol = window.location.protocol === 'file:';
+            
             // 显示调试信息
             function showDebugInfo() {
                 debugInfo.style.display = 'block';
@@ -252,17 +255,21 @@
             // 测试按钮点击事件
             if (testFetchBtn) {
                 testFetchBtn.addEventListener('click', function() {
-                    fetch('../wiki/Home.md')
-                        .then(response => {
-                            alert(`Home.md 请求状态: ${response.status} ${response.statusText}`);
-                            return response.text();
-                        })
-                        .then(text => {
-                            alert(`文件内容长度: ${text.length} 字符, 前50个字符: ${text.substring(0, 50)}...`);
-                        })
-                        .catch(error => {
-                            alert(`请求出错: ${error.message}`);
-                        });
+                    if (isFileProtocol) {
+                        alert("您正在使用file://协议打开文件，浏览器安全限制会阻止直接读取本地文件。\n\n建议的解决方案:\n1. 使用本地服务器运行此页面\n2. 或使用下面提供的嵌入式wiki数据");
+                    } else {
+                        fetch('../wiki/Home.md')
+                            .then(response => {
+                                alert(`Home.md 请求状态: ${response.status} ${response.statusText}`);
+                                return response.text();
+                            })
+                            .then(text => {
+                                alert(`文件内容长度: ${text.length} 字符, 前50个字符: ${text.substring(0, 50)}...`);
+                            })
+                            .catch(error => {
+                                alert(`请求出错: ${error.message}`);
+                            });
+                    }
                 });
             }
             
@@ -277,31 +284,92 @@
                 });
             }
             
-            // 初始加载首页内容
-            loadContent('Home');
-            
-            // 为导航链接添加点击事件
-            navLinks.forEach(link => {
-                link.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    
-                    // 移除所有active类
-                    navLinks.forEach(l => l.classList.remove('active'));
-                    
-                    // 为当前点击的链接添加active类
-                    this.classList.add('active');
-                    
-                    // 获取页面名称并加载内容
-                    const pageName = this.getAttribute('data-page');
-                    loadContent(pageName);
-                });
-            });
+            // Wiki 数据 - 用于file://协议下的备用内容
+            const wikiData = {
+                "Home": `**Welcome to the Catime wiki!**
+
+一款简洁的 Windows 倒计时工具，支持番茄时钟功能，具有透明界面和丰富的自定义选项。
+
+<img src="../wiki/images/Showcase.gif" alt="Showcase" style="zoom: 200%;" />
+
+## 文档目录
+
+- [使用场景](./使用场景)
+
+* 菜单说明
+  * [右键托盘图标](./右键托盘图标)
+  * [左键托盘图标](./左键托盘图标)
+* [配置文件](./配置文件)
+
+#### [常见问题](./常见问题)`,
+                "使用场景": `# 使用场景
+
+(此文档正在编写中...)`,
+                "右键托盘图标": `# 右键点击设置选项
+
+![Right-click menu options](../wiki/images/Right-click%20menu%20options.png)
+
+## 编辑模式
+
+## 超时动作
+
+## 预设管理
+
+## 字体
+
+## 颜色
+
+## 帮助`,
+                "左键托盘图标": `# 左键点击快速管理时间
+
+![Left-click menu options](../wiki/images/Left-click%20menu%20options.png)
+
+## 计时管理
+
+## 时间显示
+
+## 番茄时钟
+
+## 正计时
+
+## 倒计时
+
+## 快捷倒计时选项`,
+                "常见问题": `## 常见问题
+
+(此文档正在编写中...)`
+            };
             
             // 加载内容函数
             function loadContent(pageName) {
                 // 显示加载中
                 contentContainer.style.display = 'none';
                 loadingIndicator.style.display = 'flex';
+                
+                // 如果是文件协议，使用内嵌的wiki数据
+                if (isFileProtocol) {
+                    console.log(`使用内嵌数据加载: ${pageName}`);
+                    setTimeout(() => {
+                        const content = wikiData[pageName] || `# 找不到 "${pageName}" 的内容\n\n该页面可能不存在或正在编写中。`;
+                        
+                        // 使用marked.js渲染Markdown内容
+                        contentContainer.innerHTML = marked.parse(content);
+                        
+                        // 设置页面标题
+                        const firstHeading = contentContainer.querySelector('h1, h2, h3, h4, h5, h6');
+                        if (firstHeading) {
+                            document.title = `${firstHeading.textContent} - Catime 指南`;
+                        }
+                        
+                        // 隐藏加载中，显示内容
+                        loadingIndicator.style.display = 'none';
+                        contentContainer.style.display = 'block';
+                        
+                        // 处理内部链接
+                        handleInternalLinks();
+                    }, 300); // 模拟加载延迟
+                    return;
+                }
                 
                 // 构建文件路径 (根据文件命名约定)
                 let filePath;
@@ -375,7 +443,24 @@
                                 <h1>内容加载错误</h1>
                                 <p>无法加载 "${pageName}" 的内容</p>
                                 <p style="color: #666; font-size: 0.9em;">错误详情: ${error.message}</p>
+                                <div style="margin-top: 20px;">
+                                    <p style="margin-bottom: 15px;">
+                                        <strong>可能的原因:</strong><br>
+                                        ${isFileProtocol ? 
+                                          '您正在使用file://协议打开文件，浏览器安全限制会阻止直接读取本地文件。' : 
+                                          '无法从服务器获取文件内容。'}
+                                    </p>
+                                    <p style="margin-bottom: 15px;">
+                                        <strong>解决方案:</strong><br>
+                                        ${isFileProtocol ? 
+                                          '1. 使用本地服务器（如 http-server、live-server 等）运行此页面<br>2. 或者点击下方的"使用内嵌数据"按钮' : 
+                                          '请检查文件路径和服务器配置是否正确'}
+                                    </p>
+                                </div>
                                 <p style="margin-top: 20px;">
+                                    ${isFileProtocol ? 
+                                      `<a href="#" onclick="useEmbeddedData('${pageName}'); return false;" class="btn btn-sm btn-primary">使用内嵌数据</a> ` : 
+                                      ''}
                                     <a href="#" onclick="window.location.search='?debug=true'; return false;" class="btn btn-sm btn-primary">开启调试模式</a>
                                     <a href="#" onclick="document.querySelector('#wiki-navigation a[data-page=\\'Home\\']').click(); return false;" class="btn btn-sm btn-secondary" style="margin-left: 10px;">返回首页</a>
                                 </p>
@@ -385,6 +470,40 @@
                         contentContainer.style.display = 'block';
                     });
             }
+            
+            // 使用内嵌数据的函数
+            window.useEmbeddedData = function(pageName) {
+                if (wikiData[pageName]) {
+                    contentContainer.innerHTML = marked.parse(wikiData[pageName]);
+                    loadingIndicator.style.display = 'none';
+                    contentContainer.style.display = 'block';
+                    handleInternalLinks();
+                } else {
+                    contentContainer.innerHTML = marked.parse(`# 找不到 "${pageName}" 的内容\n\n该页面可能不存在或正在编写中。`);
+                    loadingIndicator.style.display = 'none';
+                    contentContainer.style.display = 'block';
+                }
+            };
+            
+            // 初始加载首页内容
+            loadContent('Home');
+            
+            // 为导航链接添加点击事件
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // 移除所有active类
+                    navLinks.forEach(l => l.classList.remove('active'));
+                    
+                    // 为当前点击的链接添加active类
+                    this.classList.add('active');
+                    
+                    // 获取页面名称并加载内容
+                    const pageName = this.getAttribute('data-page');
+                    loadContent(pageName);
+                });
+            });
             
             // 处理内部链接
             function handleInternalLinks() {
