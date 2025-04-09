@@ -1724,19 +1724,19 @@ img {
 
 .scenario-content p:hover span {
     display: inline-block;
-    animation: letterWave 1s ease-in-out infinite;
+    animation: none;
 }
 
 .scenario-content p span:nth-child(2n) {
-    animation-delay: 0.1s;
+    animation-delay: 0;
 }
 
 .scenario-content p span:nth-child(3n) {
-    animation-delay: 0.2s;
+    animation-delay: 0;
 }
 
 .scenario-content p span:nth-child(4n) {
-    animation-delay: 0.3s;
+    animation-delay: 0;
 }
 
 /* 响应式调整 - 使用场景 */
