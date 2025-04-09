@@ -451,19 +451,19 @@ img {
 /* 特性图标夸张动画效果 */
 @keyframes ghostBounce {
     0%, 100% { transform: translateY(0) scale(1.1); }
-    40% { transform: translateY(-15px) scale(1.3) rotate(5deg); }
-    60% { transform: translateY(-15px) scale(1.3) rotate(-5deg); }
-    80% { transform: translateY(-7px) scale(1.2); }
+    40% { transform: translateY(-25px) scale(1.5) rotate(15deg); }
+    60% { transform: translateY(-25px) scale(1.5) rotate(-15deg); }
+    80% { transform: translateY(-12px) scale(1.3); }
 }
 
 /* 修改沙漏图标的动画 */
 @keyframes hourglassFlip {
     0% { transform: rotate(0deg) scale(1.1); }
-    10% { transform: rotate(0deg) scale(1.3); }
-    30% { transform: rotate(180deg) scale(1.4); }
-    50% { transform: rotate(180deg) scale(1.2); }
-    70% { transform: rotate(360deg) scale(1.4); }
-    90% { transform: rotate(360deg) scale(1.3); }
+    10% { transform: rotate(0deg) scale(1.5) translateY(-5px); }
+    30% { transform: rotate(180deg) scale(1.8) translateY(10px); }
+    50% { transform: rotate(180deg) scale(1.5) translateY(-5px); }
+    70% { transform: rotate(360deg) scale(1.8) translateY(10px); }
+    90% { transform: rotate(360deg) scale(1.5) translateY(-5px); }
     100% { transform: rotate(360deg) scale(1.1); }
 }
 
@@ -476,58 +476,63 @@ img {
 
 @keyframes magicSparkle {
     0% { transform: scale(1.1); filter: brightness(1); }
-    25% { transform: scale(1.5) rotate(10deg); filter: brightness(1.3) drop-shadow(0 0 6px rgba(247, 125, 170, 0.6)); }
-    50% { transform: scale(1.3) rotate(-10deg); filter: brightness(1.2) drop-shadow(0 0 4px rgba(247, 125, 170, 0.4)); }
-    75% { transform: scale(1.4) rotate(5deg); filter: brightness(1.3) drop-shadow(0 0 6px rgba(247, 125, 170, 0.6)); }
+    25% { transform: scale(1.8) rotate(20deg); filter: brightness(1.5) drop-shadow(0 0 12px rgba(247, 125, 170, 0.8)); }
+    50% { transform: scale(1.5) rotate(-20deg); filter: brightness(1.3) drop-shadow(0 0 8px rgba(247, 125, 170, 0.6)); }
+    75% { transform: scale(1.7) rotate(15deg); filter: brightness(1.5) drop-shadow(0 0 12px rgba(247, 125, 170, 0.8)); }
     100% { transform: scale(1.1); filter: brightness(1); }
 }
 
 @keyframes bellShake {
     0%, 100% { transform: scale(1.1); }
-    20% { transform: scale(1.3) rotate(25deg); }
-    40% { transform: scale(1.2) rotate(-20deg); }
-    60% { transform: scale(1.3) rotate(15deg); }
-    80% { transform: scale(1.2) rotate(-10deg); }
+    20% { transform: scale(1.6) rotate(35deg) translateY(-10px); }
+    40% { transform: scale(1.4) rotate(-30deg) translateY(5px); }
+    60% { transform: scale(1.6) rotate(25deg) translateY(-10px); }
+    80% { transform: scale(1.4) rotate(-20deg) translateY(5px); }
 }
 
 @keyframes featherFloat {
     0%, 100% { transform: translateY(0) rotate(0deg) scale(1.1); }
-    25% { transform: translateY(-15px) rotate(10deg) scale(1.3); }
-    50% { transform: translateY(-20px) rotate(-5deg) scale(1.4); }
-    75% { transform: translateY(-15px) rotate(5deg) scale(1.3); }
+    25% { transform: translateY(-25px) rotate(20deg) scale(1.6); }
+    50% { transform: translateY(-35px) rotate(-15deg) scale(1.8); }
+    75% { transform: translateY(-25px) rotate(15deg) scale(1.6); }
 }
 
 @keyframes heartPulse {
     0%, 100% { transform: scale(1.1); color: var(--accent-color); }
-    25% { transform: scale(1.6); color: var(--accent-color); }
+    25% { transform: scale(1.9); color: #ff3366; filter: drop-shadow(0 0 10px rgba(255, 51, 102, 0.7)); }
     50% { transform: scale(1.1); color: var(--primary-color); }
-    75% { transform: scale(1.4); color: var(--accent-color); }
+    75% { transform: scale(1.7); color: #ff3366; filter: drop-shadow(0 0 10px rgba(255, 51, 102, 0.7)); }
 }
 
 /* 为每个特性卡片设置不同的动画 */
 .feature-card:nth-child(1):hover .feature-icon {
-    animation: ghostBounce 1.5s ease infinite;
+    animation: ghostBounce 1.8s ease infinite;
+    color: #9281EC; /* 紫色幽灵色调 */
 }
 
 /* 更新第二个特性卡片的动画为沙漏翻转 */
 .feature-card:nth-child(2):hover .feature-icon {
     animation: hourglassFlip 3s ease-in-out infinite;
+    color: #F7AF3E; /* 沙漏金色 */
 }
 
 .feature-card:nth-child(3):hover .feature-icon {
-    animation: magicSparkle 1.5s ease-in-out infinite;
+    animation: magicSparkle 2s ease-in-out infinite;
+    color: #F77DAA; /* 魔法粉色 */
 }
 
 .feature-card:nth-child(4):hover .feature-icon {
-    animation: bellShake 1s ease-in-out infinite;
+    animation: bellShake 1.5s ease-in-out infinite;
+    color: #FFD43B; /* 铃铛金色 */
 }
 
 .feature-card:nth-child(5):hover .feature-icon {
-    animation: featherFloat 2s ease-in-out infinite;
+    animation: featherFloat 2.5s ease-in-out infinite;
+    color: #78E3A7; /* 羽毛绿色 */
 }
 
 .feature-card:nth-child(6):hover .feature-icon {
-    animation: heartPulse 1.5s ease-in-out infinite;
+    animation: heartPulse 1.8s ease-in-out infinite;
 }
 
 .feature-card h3 {
