@@ -1273,13 +1273,182 @@ img {
     border-radius: var(--border-radius-large);
     padding: 1rem;
     box-shadow: var(--card-shadow);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
     overflow: hidden;
+    position: relative;
+    z-index: 1;
+}
+
+/* 星星粒子效果 */
+.github-chart-container .star-particles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    pointer-events: none;
+}
+
+.github-chart-container .star-particle {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    background-color: #ffcc33;
+    border-radius: 50%;
+    opacity: 0;
+    animation-duration: 3s;
+    animation-iteration-count: infinite;
+}
+
+.github-chart-container:hover .star-particles {
+    opacity: 1;
+}
+
+.github-chart-container:hover .star-particle {
+    animation-name: floatingStar;
+}
+
+@keyframes floatingStar {
+    0% {
+        transform: translateY(0) scale(0);
+        opacity: 0;
+    }
+    10% {
+        transform: translateY(-10px) scale(1);
+        opacity: 0.8;
+    }
+    50% {
+        opacity: 0.5;
+    }
+    100% {
+        transform: translateY(-100px) scale(0);
+        opacity: 0;
+    }
+}
+
+/* 发光边框效果 */
+.github-chart-container .glow-border {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: var(--border-radius-large);
+    border: 2px solid transparent;
+    box-shadow: 0 0 15px rgba(122, 162, 247, 0);
+    transition: all 1s ease;
+    z-index: -1;
+    pointer-events: none;
+}
+
+.github-chart-container:hover .glow-border {
+    border-color: rgba(122, 162, 247, 0.3);
+    box-shadow: 0 0 15px rgba(122, 162, 247, 0.5);
+    animation: borderGlow 3s infinite alternate;
+}
+
+@keyframes borderGlow {
+    0% {
+        box-shadow: 0 0 15px rgba(122, 162, 247, 0.5);
+    }
+    50% {
+        box-shadow: 0 0 25px rgba(122, 162, 247, 0.7);
+    }
+    100% {
+        box-shadow: 0 0 15px rgba(122, 162, 247, 0.5);
+    }
+}
+
+.github-chart-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(122, 162, 247, 0.05), rgba(225, 190, 231, 0.05));
+    opacity: 0;
+    z-index: -1;
+    transition: opacity 0.5s ease;
+    border-radius: var(--border-radius-large);
+}
+
+.github-chart-container::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 60%);
+    opacity: 0;
+    transform: scale(0.5);
+    z-index: -1;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    pointer-events: none;
 }
 
 .github-chart-container:hover {
-    box-shadow: var(--card-hover-shadow);
-    transform: translateY(-5px);
+    box-shadow: var(--card-hover-shadow), 0 0 30px rgba(122, 162, 247, 0.3);
+    transform: translateY(-10px) scale(1.02);
+    animation: chartPulse 3s infinite alternate;
+}
+
+.github-chart-container:hover::before {
+    opacity: 1;
+    animation: chartBackground 8s infinite alternate;
+}
+
+.github-chart-container:hover::after {
+    opacity: 0.5;
+    transform: scale(1);
+    animation: chartGlow 5s infinite alternate;
+}
+
+@keyframes chartPulse {
+    0% {
+        transform: translateY(-10px) scale(1.02);
+    }
+    50% {
+        transform: translateY(-8px) scale(1.03);
+    }
+    100% {
+        transform: translateY(-10px) scale(1.02);
+    }
+}
+
+@keyframes chartBackground {
+    0% {
+        background-position: 0% 0%;
+        background: linear-gradient(135deg, rgba(122, 162, 247, 0.05), rgba(225, 190, 231, 0.05));
+    }
+    50% {
+        background-position: 100% 100%;
+        background: linear-gradient(135deg, rgba(225, 190, 231, 0.08), rgba(122, 162, 247, 0.08));
+    }
+    100% {
+        background-position: 0% 0%;
+        background: linear-gradient(135deg, rgba(122, 162, 247, 0.05), rgba(225, 190, 231, 0.05));
+    }
+}
+
+@keyframes chartGlow {
+    0% {
+        opacity: 0.3;
+        transform: scale(0.8) rotate(0deg);
+    }
+    50% {
+        opacity: 0.5;
+        transform: scale(1) rotate(180deg);
+    }
+    100% {
+        opacity: 0.3;
+        transform: scale(0.8) rotate(360deg);
+    }
 }
 
 .github-chart {
@@ -1287,6 +1456,14 @@ img {
     height: auto;
     display: block;
     border-radius: var(--border-radius-base);
+    transition: all 0.5s ease;
+    position: relative;
+    z-index: 2;
+}
+
+.github-chart-container:hover .github-chart {
+    transform: scale(1.01);
+    filter: drop-shadow(0 0 8px rgba(122, 162, 247, 0.3));
 }
 
 .github-buttons {
@@ -3402,7 +3579,7 @@ p:hover {
     content: "";
     position: absolute;
     transform: scale(0);
-    opacity: 0;
+        opacity: 0;
     pointer-events: none;
     transform-origin: left center;
 }

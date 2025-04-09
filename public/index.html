@@ -167,6 +167,10 @@
                 <p class="section-subtitle" data-aos="fade-up" data-aos-delay="100">获得超过 1.3k 的 GitHub 星标，持续增长中</p>
                 
                 <div class="github-chart-container" data-aos="zoom-in" data-aos-delay="200">
+                    <!-- 发光边框效果 -->
+                    <div class="glow-border"></div>
+                    <!-- 星星粒子效果 -->
+                    <div class="star-particles"></div>
                     <!-- 使用 Star History 的推荐方法 -->
                     <div id="star-history-chart" style="width: 100%; height: 400px;"></div>
                 </div>
@@ -514,6 +518,97 @@
             
             // 首先显示模拟数据，提供即时反馈
             renderFallbackChart(chart, false);
+            
+            // 为GitHub星星图表添加3D交互效果
+            const githubChartContainer = document.querySelector('.github-chart-container');
+            if (githubChartContainer) {
+                let isMouseOver = false;
+                let mouseX = 0, mouseY = 0;
+                let rafId = null;
+                
+                // 鼠标移动事件
+                githubChartContainer.addEventListener('mousemove', function(e) {
+                    if (!isMouseOver) return;
+                    
+                    // 获取鼠标在容器内的相对位置（-0.5到0.5的范围）
+                    const rect = githubChartContainer.getBoundingClientRect();
+                    mouseX = ((e.clientX - rect.left) / rect.width) - 0.5;
+                    mouseY = ((e.clientY - rect.top) / rect.height) - 0.5;
+                    
+                    // 如果没有动画帧请求，则添加一个
+                    if (!rafId) {
+                        rafId = requestAnimationFrame(updateTransform);
+                    }
+                });
+                
+                // 更新3D变换
+                function updateTransform() {
+                    // 计算旋转角度（最大±10度）
+                    const rotateY = mouseX * 5;
+                    const rotateX = -mouseY * 5;
+                    
+                    // 应用变换
+                    githubChartContainer.style.transform = 
+                        `translateY(-10px) scale(1.02) perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+                    
+                    // 添加阴影方向跟随
+                    const shadowX = mouseX * 20;
+                    const shadowY = mouseY * 20;
+                    githubChartContainer.style.boxShadow = 
+                        `${-shadowX}px ${-shadowY}px 30px rgba(122, 162, 247, 0.3), 0 10px 20px rgba(0,0,0,0.1)`;
+                    
+                    // 重置动画帧请求ID
+                    rafId = null;
+                    
+                    // 如果鼠标仍在容器上，则请求下一帧
+                    if (isMouseOver) {
+                        rafId = requestAnimationFrame(updateTransform);
+                    }
+                }
+                
+                // 鼠标进入事件
+                githubChartContainer.addEventListener('mouseenter', function() {
+                    isMouseOver = true;
+                    githubChartContainer.style.transition = 'transform 0.3s ease, box-shadow 0.3s ease';
+                    rafId = requestAnimationFrame(updateTransform);
+                    
+                    // 当图表容器被悬停时，更新ECharts图表大小以确保正确渲染
+                    chart.resize();
+                });
+                
+                // 鼠标离开事件
+                githubChartContainer.addEventListener('mouseleave', function() {
+                    isMouseOver = false;
+                    
+                    // 重置变换和阴影
+                    githubChartContainer.style.transition = 'transform 0.5s ease, box-shadow 0.5s ease';
+                    githubChartContainer.style.transform = '';
+                    githubChartContainer.style.boxShadow = '';
+                    
+                    // 取消动画帧请求
+                    if (rafId) {
+                        cancelAnimationFrame(rafId);
+                        rafId = null;
+                    }
+                });
+                
+                // 点击效果
+                githubChartContainer.addEventListener('mousedown', function() {
+                    // 按下效果 - 缩小并降低高度
+                    githubChartContainer.style.transition = 'transform 0.1s ease';
+                    githubChartContainer.style.transform = 
+                        `translateY(-5px) scale(1.01) perspective(1000px) rotateX(${-mouseY * 3}deg) rotateY(${mouseX * 3}deg)`;
+                });
+                
+                // 释放效果
+                githubChartContainer.addEventListener('mouseup', function() {
+                    // 回弹效果
+                    githubChartContainer.style.transition = 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)';
+                    if (isMouseOver) {
+                        updateTransform();
+                    }
+                });
+            }
             
             // 然后在后台获取真实数据
             fetch('https://api.star-history.com/svg?repos=vladelaina/Catime&type=Date')
