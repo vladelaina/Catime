@@ -232,14 +232,14 @@ img {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 3rem;
+    gap: 5rem; /* 从3rem增加到5rem，增加组件之间的间距 */
     position: relative;
     z-index: 2;
     padding: 1rem 0;
 }
 
 .hero-text {
-    flex: 1 1 55%;
+    flex: 1 1 60%; /* 从55%增加到60%，让文本区域占据更多空间 */
     max-width: 540px;
 }
 
@@ -545,9 +545,10 @@ img {
 }
 
 .hero-visual {
-    flex: 1 1 40%;
+    flex: 1 1 35%; /* 从40%减少到35%，减少图片区域占比 */
     position: relative;
     text-align: center;
+    margin-right: -3rem; /* 使用负边距，让图片向右侧移动 */
 }
 
 .hero-screenshot {
@@ -601,7 +602,7 @@ img {
 }
 
 .hero-screenshot:hover {
-    transform: scale(1.55) perspective(1000px); /* 悬停时略微放大 */
+    transform: scale(1.45) perspective(1000px); /* 悬停时略微放大 */
     box-shadow: 20px 15px 30px rgba(122, 162, 247, 0.25);
     border-color: rgba(255, 255, 255, 1);
     animation: none;
@@ -624,6 +625,10 @@ img {
     .hero-screenshot:hover {
         transform: scale(1.4) perspective(1000px);
     }
+
+    .hero-visual {
+        margin-right: -1.5rem; /* 在中等屏幕上减少负边距 */
+    }
 }
 
 @media (max-width: 768px) {
@@ -636,6 +641,10 @@ img {
     .hero-screenshot:hover {
         transform: scale(1.3) perspective(1000px);
         box-shadow: 10px 10px 20px rgba(122, 162, 247, 0.2);
+    }
+
+    .hero-visual {
+        margin-right: 0; /* 在手机屏幕上取消负边距 */
     }
     
     .hero-screenshot::before,
