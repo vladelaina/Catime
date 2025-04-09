@@ -145,6 +145,35 @@ img {
     position: relative;
     z-index: 2;
     filter: drop-shadow(0 2px 5px rgba(122, 162, 247, 0.3)); /* 添加微妙的阴影 */
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.4s ease;
+}
+
+/* 添加Logo图标的悬停动画 */
+@keyframes logoWiggle {
+    0% { transform: scale(1); }
+    15% { transform: scale(1.05, 0.95); }
+    30% { transform: scale(0.92, 1.08); }
+    45% { transform: scale(1.06, 0.94); }
+    60% { transform: scale(0.95, 1.03); }
+    75% { transform: scale(1.02, 0.98); }
+    100% { transform: scale(1); }
+}
+
+@keyframes logoGlow {
+    0%, 100% { filter: drop-shadow(0 2px 5px rgba(122, 162, 247, 0.3)); }
+    50% { filter: drop-shadow(0 0 12px rgba(233, 111, 153, 0.8)); }
+}
+
+/* Logo整体悬停效果 */
+.logo:hover .logo-img {
+    animation: jelly 0.7s ease;
+    transform-origin: center;
+}
+
+/* 只有图标悬停的效果 */
+.logo-img:hover {
+    animation: jelly 0.7s ease;
+    transform-origin: center;
 }
 
 .nav-links {
