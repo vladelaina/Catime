@@ -222,7 +222,7 @@ img {
 
 /* --- 英雄区域 --- */
 .hero {
-    padding: 6rem 0 7rem; /* 底部更多内边距 */
+    padding: 4rem 0 5rem; /* 减少顶部和底部内边距，从原来的6rem 0 7rem */
     background-image: linear-gradient(145deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
     position: relative;
     overflow: hidden;
@@ -595,22 +595,53 @@ img {
 
 /* 添加呼吸动画效果 */
 @keyframes breathe {
-    0% { transform: scale(1.3) perspective(1000px) rotateY(-15deg) rotateX(5deg); }
-    50% { transform: scale(1.38) perspective(1000px) rotateY(-15deg) rotateX(5deg); }
-    100% { transform: scale(1.3) perspective(1000px) rotateY(-15deg) rotateX(5deg); }
+    0% { transform: scale(1.2) perspective(1000px) rotateY(-10deg) rotateX(3deg); }
+    50% { transform: scale(1.25) perspective(1000px) rotateY(-10deg) rotateX(3deg); }
+    100% { transform: scale(1.2) perspective(1000px) rotateY(-10deg) rotateX(3deg); }
 }
 
 .hero-screenshot:hover {
-    transform: scale(1.35) perspective(1000px); /* 移除默认transform，改为稍微放大且添加透视效果 */
-    box-shadow: 30px 20px 40px rgba(122, 162, 247, 0.25);
-    border-color: rgba(255, 255, 255, 1); /* 边框变为纯白色 */
-    animation: none; /* 停用原有的动画 */
+    transform: scale(1.25) perspective(1000px); /* 悬停时略微放大 */
+    box-shadow: 20px 15px 30px rgba(122, 162, 247, 0.25);
+    border-color: rgba(255, 255, 255, 1);
+    animation: none;
 }
 
 .hero-screenshot:hover::before,
 .hero-screenshot:hover::after {
     opacity: 0.8; /* 鼠标悬停时丝带变得更明显 */
-    box-shadow: 0 0 20px 8px rgba(255, 255, 255, 0.4);
+    box-shadow: 0 0 15px 6px rgba(255, 255, 255, 0.4);
+}
+
+/* 响应式调整悬停效果 */
+@media (max-width: 992px) {
+    @keyframes breathe {
+        0% { transform: scale(1.1) perspective(1000px) rotateY(-8deg) rotateX(2deg); }
+        50% { transform: scale(1.15) perspective(1000px) rotateY(-8deg) rotateX(2deg); }
+        100% { transform: scale(1.1) perspective(1000px) rotateY(-8deg) rotateX(2deg); }
+    }
+    
+    .hero-screenshot:hover {
+        transform: scale(1.15) perspective(1000px);
+    }
+}
+
+@media (max-width: 768px) {
+    @keyframes breathe {
+        0% { transform: scale(1) perspective(1000px) rotateY(-5deg) rotateX(2deg); }
+        50% { transform: scale(1.05) perspective(1000px) rotateY(-5deg) rotateX(2deg); }
+        100% { transform: scale(1) perspective(1000px) rotateY(-5deg) rotateX(2deg); }
+    }
+    
+    .hero-screenshot:hover {
+        transform: scale(1.05) perspective(1000px);
+        box-shadow: 10px 10px 20px rgba(122, 162, 247, 0.2);
+    }
+    
+    .hero-screenshot::before,
+    .hero-screenshot::after {
+        box-shadow: 0 0 10px 3px rgba(255, 255, 255, 0.15);
+    }
 }
 
 /* 号召性按钮 */
@@ -1590,6 +1621,7 @@ img {
     .hero-content {
         flex-direction: column;
         text-align: center;
+        gap: 1.5rem; /* 减少间距，更加紧凑 */
     }
     .hero-text {
         margin-bottom: 3rem;
@@ -1635,7 +1667,7 @@ img {
         padding: 0 1rem; /* 添加内边距防止触及边缘 */
     }
     .hero {
-        padding: 4rem 0 5rem;
+        padding: 3rem 0 4rem; /* 在移动端进一步减少内边距 */
     }
     .hero-title {
         font-size: 2.6rem;
@@ -2758,5 +2790,13 @@ p:hover {
     
     .main-footer {
         padding: 2.5rem 0 2rem;
+    }
+    
+    .hero {
+        padding: 2.5rem 0 3.5rem; /* 在更小屏幕上进一步减少内边距 */
+    }
+    
+    .hero-title {
+        font-size: 2.5rem;
     }
 }
