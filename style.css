@@ -1457,30 +1457,30 @@ img {
         filter: drop-shadow(0 0 5px rgba(122, 162, 247, 0.3)); 
     }
     25% { 
-        transform: scale(2.3) translateY(-35px) rotate(35deg); 
-        filter: drop-shadow(0 0 35px rgba(255, 50, 50, 0.9)) brightness(1.8); 
+        transform: scale(1.4) translateY(-10px) rotate(15deg); 
+        filter: drop-shadow(0 0 15px rgba(255, 50, 50, 0.7)) brightness(1.5); 
     }
     50% { 
-        transform: scale(2.8) translateY(-10px) rotate(-30deg); 
-        filter: drop-shadow(0 0 45px rgba(255, 0, 0, 1)) brightness(2.2); 
+        transform: scale(1.5) translateY(-5px) rotate(-10deg); 
+        filter: drop-shadow(0 0 20px rgba(255, 0, 0, 0.8)) brightness(1.6); 
     }
     75% { 
-        transform: scale(2.3) translateY(-35px) rotate(20deg); 
-        filter: drop-shadow(0 0 35px rgba(255, 50, 50, 0.9)) brightness(1.8); 
+        transform: scale(1.4) translateY(-10px) rotate(10deg); 
+        filter: drop-shadow(0 0 15px rgba(255, 50, 50, 0.7)) brightness(1.5); 
     }
 }
 
 @keyframes boltFlash {
     0%, 100% { transform: scale(1.1); filter: drop-shadow(0 0 5px rgba(122, 162, 247, 0.3)); }
-    10% { transform: scale(3.0) rotate(25deg); filter: drop-shadow(0 0 50px rgba(255, 255, 0, 1)) brightness(2.0); }
+    10% { transform: scale(1.5) rotate(10deg); filter: drop-shadow(0 0 20px rgba(255, 255, 0, 0.8)) brightness(1.6); }
     20% { transform: scale(1.2) rotate(-5deg); filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5)); }
-    30% { transform: scale(2.5) rotate(20deg); filter: drop-shadow(0 0 40px rgba(255, 255, 0, 0.9)) brightness(1.8); }
-    40% { transform: scale(1.2) rotate(-10deg); filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5)); }
-    50% { transform: scale(2.8) rotate(30deg); filter: drop-shadow(0 0 45px rgba(255, 255, 0, 1)) brightness(2.0); }
-    60% { transform: scale(1.2) rotate(-15deg); filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5)); }
-    70% { transform: scale(2.5) rotate(20deg); filter: drop-shadow(0 0 40px rgba(255, 255, 0, 0.9)) brightness(1.8); }
-    80% { transform: scale(1.2) rotate(-10deg); filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5)); }
-    90% { transform: scale(2.0) rotate(15deg); filter: drop-shadow(0 0 30px rgba(255, 255, 0, 0.8)) brightness(1.6); }
+    30% { transform: scale(1.4) rotate(8deg); filter: drop-shadow(0 0 18px rgba(255, 255, 0, 0.7)) brightness(1.5); }
+    40% { transform: scale(1.2) rotate(-5deg); filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5)); }
+    50% { transform: scale(1.5) rotate(12deg); filter: drop-shadow(0 0 20px rgba(255, 255, 0, 0.8)) brightness(1.6); }
+    60% { transform: scale(1.2) rotate(-7deg); filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5)); }
+    70% { transform: scale(1.4) rotate(8deg); filter: drop-shadow(0 0 18px rgba(255, 255, 0, 0.7)) brightness(1.5); }
+    80% { transform: scale(1.2) rotate(-5deg); filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5)); }
+    90% { transform: scale(1.3) rotate(6deg); filter: drop-shadow(0 0 15px rgba(255, 255, 0, 0.6)) brightness(1.4); }
 }
 
 @keyframes presentationPulse {
@@ -1489,20 +1489,20 @@ img {
         filter: drop-shadow(0 0 5px rgba(122, 162, 247, 0.3)); 
     }
     20% { 
-        transform: scale(2.5) translateY(-20px) rotate(25deg); 
-        filter: drop-shadow(0 0 40px rgba(0, 150, 255, 0.9)) brightness(1.8); 
+        transform: scale(1.4) translateY(-8px) rotate(10deg); 
+        filter: drop-shadow(0 0 18px rgba(0, 150, 255, 0.7)) brightness(1.5); 
     }
     40% { 
-        transform: scale(1.8) translateY(15px) rotate(-20deg); 
-        filter: drop-shadow(0 0 25px rgba(0, 150, 255, 0.7)) brightness(1.5); 
+        transform: scale(1.3) translateY(5px) rotate(-8deg); 
+        filter: drop-shadow(0 0 12px rgba(0, 150, 255, 0.6)) brightness(1.4); 
     }
     60% { 
-        transform: scale(2.8) translateY(-25px) rotate(30deg); 
-        filter: drop-shadow(0 0 45px rgba(0, 100, 255, 1)) brightness(2.0); 
+        transform: scale(1.5) translateY(-10px) rotate(12deg); 
+        filter: drop-shadow(0 0 20px rgba(0, 100, 255, 0.8)) brightness(1.6); 
     }
     80% { 
-        transform: scale(1.8) translateY(15px) rotate(-20deg); 
-        filter: drop-shadow(0 0 25px rgba(0, 150, 255, 0.7)) brightness(1.5); 
+        transform: scale(1.3) translateY(5px) rotate(-8deg); 
+        filter: drop-shadow(0 0 12px rgba(0, 150, 255, 0.6)) brightness(1.4); 
     }
 }
 
