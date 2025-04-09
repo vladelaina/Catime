@@ -146,7 +146,8 @@
                 <p class="section-subtitle" data-aos="fade-up" data-aos-delay="100">获得超过 1.3k 的 GitHub 星标，持续增长中</p>
                 
                 <div class="github-chart-container" data-aos="zoom-in" data-aos-delay="200">
-                    <img src="https://star-history.com/embed?secret=Z2hwX2RhNFlBVnFtZmVkY3Y2OHQ0aEYwdzRQMks0Wnl1MDJJWm1PNw==#vladelaina/Catime&Date" alt="Catime GitHub Star History Chart" class="github-chart">
+                    <!-- 使用 Star History 的推荐方法 -->
+                    <div id="star-history-chart" style="width: 100%; height: 450px;"></div>
                 </div>
                 
                 <div class="github-buttons" data-aos="fade-up" data-aos-delay="300">
@@ -452,6 +453,233 @@
                     });
                 });
             }
+        });
+    </script>
+    
+    <!-- Star History Chart -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+    <script>
+        // 在文档加载完成后初始化 Star History Chart
+        document.addEventListener('DOMContentLoaded', function() {
+            // 检查是否存在图表容器
+            const chartContainer = document.getElementById('star-history-chart');
+            if (!chartContainer) return;
+            
+            // 初始化 ECharts 实例
+            const chart = echarts.init(chartContainer);
+            
+            // 配置加载状态
+            chart.showLoading({
+                text: '加载 GitHub 星星数据中...',
+                color: '#7aa2f7',
+                textColor: '#414868',
+                maskColor: 'rgba(255, 255, 255, 0.8)',
+            });
+            
+            // 获取 star-history 数据
+            fetch('https://api.star-history.com/svg?repos=vladelaina/Catime&type=Date')
+                .then(response => response.text())
+                .then(svgData => {
+                    // 解析 SVG 数据以提取星星历史
+                    const parser = new DOMParser();
+                    const svgDoc = parser.parseFromString(svgData, 'image/svg+xml');
+                    
+                    try {
+                        // 提取日期和星星数
+                        const paths = svgDoc.querySelectorAll('path[d]');
+                        const dataPath = Array.from(paths).find(path => 
+                            path.getAttribute('d').includes('M') && 
+                            path.getAttribute('d').includes('L') && 
+                            !path.getAttribute('d').includes('H')
+                        );
+                        
+                        if (!dataPath) throw new Error('数据路径未找到');
+                        
+                        const data = dataPath.getAttribute('d')
+                            .split('M')[1]
+                            .split('L')
+                            .map(point => {
+                                const [x, y] = point.trim().split(',').map(parseFloat);
+                                return [x, y];
+                            });
+                        
+                        // 获取 X 轴和 Y 轴范围
+                        const xRange = svgDoc.querySelector('.x').textContent;
+                        const yRange = svgDoc.querySelector('.y').textContent;
+                        
+                        // 解析日期范围
+                        const dateMatch = xRange.match(/(\d{4}-\d{2})/g);
+                        if (!dateMatch || dateMatch.length < 2) throw new Error('日期范围未找到');
+                        
+                        const startDate = new Date(dateMatch[0]);
+                        const endDate = new Date(dateMatch[dateMatch.length - 1]);
+                        const totalDays = (endDate - startDate) / (1000 * 60 * 60 * 24);
+                        
+                        // 解析星星数范围
+                        const starsMatch = yRange.match(/\d+/g);
+                        if (!starsMatch || starsMatch.length < 2) throw new Error('星星数范围未找到');
+                        
+                        const maxStars = parseInt(starsMatch[starsMatch.length - 1]);
+                        
+                        // 转换数据为 ECharts 格式
+                        const chartData = data.map(([x, y]) => {
+                            // 将 x 从 SVG 坐标转换为日期
+                            const dateOffset = x / svgDoc.querySelector('svg').getAttribute('width') * totalDays;
+                            const date = new Date(startDate);
+                            date.setDate(date.getDate() + dateOffset);
+                            
+                            // 将 y 从 SVG 坐标转换为星星数
+                            const height = svgDoc.querySelector('svg').getAttribute('height');
+                            const stars = Math.round(maxStars * (1 - y / height));
+                            
+                            return [date.toISOString().split('T')[0], stars];
+                        });
+                        
+                        // 配置图表选项
+                        const option = {
+                            title: {
+                                text: 'Catime GitHub 星星增长历史',
+                                left: 'center',
+                                top: 10,
+                                textStyle: {
+                                    color: '#414868'
+                                }
+                            },
+                            tooltip: {
+                                trigger: 'axis',
+                                formatter: function(params) {
+                                    return `${params[0].data[0]}: ${params[0].data[1]} 星星`;
+                                }
+                            },
+                            grid: {
+                                left: '5%',
+                                right: '5%',
+                                bottom: '10%',
+                                top: '15%',
+                                containLabel: true
+                            },
+                            xAxis: {
+                                type: 'time',
+                                name: '日期',
+                                nameLocation: 'middle',
+                                nameGap: 35,
+                                axisLabel: {
+                                    formatter: '{yyyy}-{MM}'
+                                }
+                            },
+                            yAxis: {
+                                type: 'value',
+                                name: '星星数',
+                                nameRotate: 90,
+                                nameLocation: 'middle',
+                                nameGap: 50
+                            },
+                            series: [{
+                                name: 'GitHub 星星',
+                                type: 'line',
+                                smooth: true,
+                                symbol: 'circle',
+                                symbolSize: 8,
+                                sampling: 'average',
+                                itemStyle: {
+                                    color: '#7aa2f7'
+                                },
+                                areaStyle: {
+                                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                        { offset: 0, color: 'rgba(122, 162, 247, 0.5)' },
+                                        { offset: 1, color: 'rgba(122, 162, 247, 0.1)' }
+                                    ])
+                                },
+                                data: chartData
+                            }]
+                        };
+                        
+                        // 应用配置并隐藏加载状态
+                        chart.setOption(option);
+                        chart.hideLoading();
+                        
+                    } catch (error) {
+                        console.error('解析 Star History SVG 错误:', error);
+                        renderFallbackChart(chart);
+                    }
+                })
+                .catch(error => {
+                    console.error('获取 Star History 数据错误:', error);
+                    renderFallbackChart(chart);
+                });
+                
+            // 备用图表
+            function renderFallbackChart(chart) {
+                chart.hideLoading();
+                
+                // 模拟数据
+                const dateData = [
+                    ['2023-05', 0],
+                    ['2023-06', 50],
+                    ['2023-07', 200],
+                    ['2023-08', 350],
+                    ['2023-09', 500],
+                    ['2023-10', 650],
+                    ['2023-11', 800],
+                    ['2023-12', 900],
+                    ['2024-01', 1000],
+                    ['2024-02', 1150],
+                    ['2024-03', 1300]
+                ];
+                
+                // 备用图表配置
+                const option = {
+                    title: {
+                        text: 'Catime GitHub 星星增长历史 (模拟数据)',
+                        left: 'center',
+                        textStyle: {
+                            color: '#414868'
+                        }
+                    },
+                    tooltip: {
+                        trigger: 'axis'
+                    },
+                    grid: {
+                        left: '5%',
+                        right: '5%',
+                        bottom: '10%',
+                        top: '15%',
+                        containLabel: true
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: dateData.map(item => item[0])
+                    },
+                    yAxis: {
+                        type: 'value',
+                        name: '星星数'
+                    },
+                    series: [{
+                        name: 'GitHub 星星',
+                        type: 'line',
+                        smooth: true,
+                        symbol: 'circle',
+                        symbolSize: 8,
+                        itemStyle: {
+                            color: '#7aa2f7'
+                        },
+                        areaStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(122, 162, 247, 0.5)' },
+                                { offset: 1, color: 'rgba(122, 162, 247, 0.1)' }
+                            ])
+                        },
+                        data: dateData.map(item => item[1])
+                    }]
+                };
+                
+                chart.setOption(option);
+            }
+            
+            // 响应窗口调整大小
+            window.addEventListener('resize', function() {
+                chart.resize();
+            });
         });
     </script>
 
