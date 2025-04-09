@@ -450,70 +450,110 @@ img {
 
 /* 特性图标夸张动画效果 */
 @keyframes ghostBounce {
-    0%, 100% { transform: translateY(0) scale(1.1); }
-    40% { transform: translateY(-25px) scale(1.5) rotate(15deg); }
-    60% { transform: translateY(-25px) scale(1.5) rotate(-15deg); }
-    80% { transform: translateY(-12px) scale(1.3); }
+    0%, 100% { transform: translateY(0) scale(1.1); filter: drop-shadow(0 0 5px rgba(146, 129, 236, 0.3)); }
+    40% { transform: translateY(-25px) scale(1.5) rotate(15deg); filter: drop-shadow(0 0 15px rgba(146, 129, 236, 0.7)); }
+    60% { transform: translateY(-25px) scale(1.5) rotate(-15deg); filter: drop-shadow(0 0 15px rgba(146, 129, 236, 0.7)); }
+    80% { transform: translateY(-12px) scale(1.3); filter: drop-shadow(0 0 10px rgba(146, 129, 236, 0.5)); }
 }
 
 /* 修改沙漏图标的动画 */
 @keyframes hourglassFlip {
-    0% { transform: rotate(0deg) scale(1.1); }
-    10% { transform: rotate(0deg) scale(1.5) translateY(-5px); }
-    30% { transform: rotate(180deg) scale(1.8) translateY(10px); }
-    50% { transform: rotate(180deg) scale(1.5) translateY(-5px); }
-    70% { transform: rotate(360deg) scale(1.8) translateY(10px); }
-    90% { transform: rotate(360deg) scale(1.5) translateY(-5px); }
-    100% { transform: rotate(360deg) scale(1.1); }
+    0% { transform: rotate(0deg) scale(1.1); filter: drop-shadow(0 0 5px rgba(247, 175, 62, 0.3)); }
+    10% { transform: rotate(0deg) scale(1.5) translateY(-5px); filter: drop-shadow(0 0 12px rgba(247, 175, 62, 0.6)); }
+    30% { transform: rotate(180deg) scale(1.8) translateY(10px); filter: drop-shadow(0 0 15px rgba(247, 175, 62, 0.8)); }
+    50% { transform: rotate(180deg) scale(1.5) translateY(-5px); filter: drop-shadow(0 0 12px rgba(247, 175, 62, 0.6)); }
+    70% { transform: rotate(360deg) scale(1.8) translateY(10px); filter: drop-shadow(0 0 15px rgba(247, 175, 62, 0.8)); }
+    90% { transform: rotate(360deg) scale(1.5) translateY(-5px); filter: drop-shadow(0 0 12px rgba(247, 175, 62, 0.6)); }
+    100% { transform: rotate(360deg) scale(1.1); filter: drop-shadow(0 0 5px rgba(247, 175, 62, 0.3)); }
 }
 
 @keyframes stopwatchSpin {
-    0% { transform: rotate(0deg) scale(1.1); }
-    40% { transform: rotate(180deg) scale(1.4); }
-    80% { transform: rotate(320deg) scale(1.2); }
-    100% { transform: rotate(360deg) scale(1.1); }
+    0% { transform: rotate(0deg) scale(1.1); filter: drop-shadow(0 0 5px rgba(122, 162, 247, 0.3)); }
+    40% { transform: rotate(180deg) scale(1.4); filter: drop-shadow(0 0 15px rgba(122, 162, 247, 0.7)); }
+    80% { transform: rotate(320deg) scale(1.2); filter: drop-shadow(0 0 10px rgba(122, 162, 247, 0.5)); }
+    100% { transform: rotate(360deg) scale(1.1); filter: drop-shadow(0 0 5px rgba(122, 162, 247, 0.3)); }
 }
 
 @keyframes magicSparkle {
-    0% { transform: scale(1.1); filter: brightness(1); }
-    25% { transform: scale(1.8) rotate(20deg); filter: brightness(1.5) drop-shadow(0 0 12px rgba(247, 125, 170, 0.8)); }
-    50% { transform: scale(1.5) rotate(-20deg); filter: brightness(1.3) drop-shadow(0 0 8px rgba(247, 125, 170, 0.6)); }
-    75% { transform: scale(1.7) rotate(15deg); filter: brightness(1.5) drop-shadow(0 0 12px rgba(247, 125, 170, 0.8)); }
-    100% { transform: scale(1.1); filter: brightness(1); }
+    0% { transform: scale(1.1); filter: brightness(1) drop-shadow(0 0 5px rgba(247, 125, 170, 0.3)); }
+    25% { transform: scale(1.8) rotate(20deg); filter: brightness(1.5) drop-shadow(0 0 15px rgba(247, 125, 170, 0.8)); }
+    50% { transform: scale(1.5) rotate(-20deg); filter: brightness(1.3) drop-shadow(0 0 10px rgba(247, 125, 170, 0.6)); }
+    75% { transform: scale(1.7) rotate(15deg); filter: brightness(1.5) drop-shadow(0 0 15px rgba(247, 125, 170, 0.8)); }
+    100% { transform: scale(1.1); filter: brightness(1) drop-shadow(0 0 5px rgba(247, 125, 170, 0.3)); }
 }
 
 @keyframes bellShake {
-    0%, 100% { transform: scale(1.1); }
-    20% { transform: scale(1.6) rotate(35deg) translateY(-10px); }
-    40% { transform: scale(1.4) rotate(-30deg) translateY(5px); }
-    60% { transform: scale(1.6) rotate(25deg) translateY(-10px); }
-    80% { transform: scale(1.4) rotate(-20deg) translateY(5px); }
+    0%, 100% { transform: scale(1.1); filter: drop-shadow(0 0 5px rgba(255, 212, 59, 0.3)); }
+    20% { transform: scale(1.6) rotate(35deg) translateY(-10px); filter: drop-shadow(0 0 15px rgba(255, 212, 59, 0.7)); }
+    40% { transform: scale(1.4) rotate(-30deg) translateY(5px); filter: drop-shadow(0 0 12px rgba(255, 212, 59, 0.5)); }
+    60% { transform: scale(1.6) rotate(25deg) translateY(-10px); filter: drop-shadow(0 0 15px rgba(255, 212, 59, 0.7)); }
+    80% { transform: scale(1.4) rotate(-20deg) translateY(5px); filter: drop-shadow(0 0 12px rgba(255, 212, 59, 0.5)); }
 }
 
 @keyframes featherFloat {
-    0%, 100% { transform: translateY(0) rotate(0deg) scale(1.1); }
-    25% { transform: translateY(-25px) rotate(20deg) scale(1.6); }
-    50% { transform: translateY(-35px) rotate(-15deg) scale(1.8); }
-    75% { transform: translateY(-25px) rotate(15deg) scale(1.6); }
+    0%, 100% { transform: translateY(0) rotate(0deg) scale(1.1); filter: drop-shadow(0 0 5px rgba(120, 227, 167, 0.3)); }
+    25% { transform: translateY(-25px) rotate(20deg) scale(1.6); filter: drop-shadow(0 0 15px rgba(120, 227, 167, 0.7)); }
+    50% { transform: translateY(-35px) rotate(-15deg) scale(1.8); filter: drop-shadow(0 0 18px rgba(120, 227, 167, 0.8)); }
+    75% { transform: translateY(-25px) rotate(15deg) scale(1.6); filter: drop-shadow(0 0 15px rgba(120, 227, 167, 0.7)); }
 }
 
 @keyframes heartPulse {
-    0%, 100% { transform: scale(1.1); color: var(--accent-color); }
-    25% { transform: scale(1.9); color: #ff3366; filter: drop-shadow(0 0 10px rgba(255, 51, 102, 0.7)); }
-    50% { transform: scale(1.1); color: var(--primary-color); }
-    75% { transform: scale(1.7); color: #ff3366; filter: drop-shadow(0 0 10px rgba(255, 51, 102, 0.7)); }
+    0%, 100% { transform: scale(1.1); color: var(--accent-color); filter: drop-shadow(0 0 5px rgba(255, 51, 102, 0.3)); }
+    25% { transform: scale(1.9); color: #ff3366; filter: drop-shadow(0 0 15px rgba(255, 51, 102, 0.7)); }
+    50% { transform: scale(1.1); color: var(--primary-color); filter: drop-shadow(0 0 5px rgba(122, 162, 247, 0.3)); }
+    75% { transform: scale(1.7); color: #ff3366; filter: drop-shadow(0 0 15px rgba(255, 51, 102, 0.7)); }
 }
 
-/* 为每个特性卡片设置不同的动画 */
+/* 添加粒子效果和额外视觉效果的新动画 */
+@keyframes ghostParticles {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(146, 129, 236, 0); }
+    50% { box-shadow: 0 0 30px 15px rgba(146, 129, 236, 0.2); }
+}
+
+@keyframes hourglassSand {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(247, 175, 62, 0); }
+    50% { box-shadow: 0 0 30px 15px rgba(247, 175, 62, 0.2); }
+}
+
+@keyframes magicStars {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(247, 125, 170, 0); }
+    50% { box-shadow: 0 0 30px 15px rgba(247, 125, 170, 0.2); }
+}
+
+@keyframes bellRing {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 212, 59, 0); }
+    50% { box-shadow: 0 0 30px 15px rgba(255, 212, 59, 0.2); }
+}
+
+@keyframes featherWind {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(120, 227, 167, 0); }
+    50% { box-shadow: 0 0 30px 15px rgba(120, 227, 167, 0.2); }
+}
+
+@keyframes heartGlow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 51, 102, 0); }
+    50% { box-shadow: 0 0 30px 15px rgba(255, 51, 102, 0.2); }
+}
+
+/* 为每个特性卡片设置不同的动画和背景效果 */
 .feature-card:nth-child(1):hover .feature-icon {
     animation: ghostBounce 1.8s ease infinite;
     color: #9281EC; /* 紫色幽灵色调 */
 }
 
-/* 更新第二个特性卡片的动画为沙漏翻转 */
+.feature-card:nth-child(1):hover {
+    animation: jelly 0.7s ease, ghostParticles 2.5s ease-in-out infinite;
+    background: radial-gradient(circle at center, rgba(146, 129, 236, 0.1) 0%, rgba(248, 250, 255, 1) 70%);
+}
+
 .feature-card:nth-child(2):hover .feature-icon {
     animation: hourglassFlip 3s ease-in-out infinite;
     color: #F7AF3E; /* 沙漏金色 */
+}
+
+.feature-card:nth-child(2):hover {
+    animation: jelly 0.7s ease, hourglassSand 2.5s ease-in-out infinite;
+    background: radial-gradient(circle at center, rgba(247, 175, 62, 0.1) 0%, rgba(248, 250, 255, 1) 70%);
 }
 
 .feature-card:nth-child(3):hover .feature-icon {
@@ -521,9 +561,19 @@ img {
     color: #F77DAA; /* 魔法粉色 */
 }
 
+.feature-card:nth-child(3):hover {
+    animation: jelly 0.7s ease, magicStars 2.5s ease-in-out infinite;
+    background: radial-gradient(circle at center, rgba(247, 125, 170, 0.1) 0%, rgba(248, 250, 255, 1) 70%);
+}
+
 .feature-card:nth-child(4):hover .feature-icon {
     animation: bellShake 1.5s ease-in-out infinite;
     color: #FFD43B; /* 铃铛金色 */
+}
+
+.feature-card:nth-child(4):hover {
+    animation: jelly 0.7s ease, bellRing 2.5s ease-in-out infinite;
+    background: radial-gradient(circle at center, rgba(255, 212, 59, 0.1) 0%, rgba(248, 250, 255, 1) 70%);
 }
 
 .feature-card:nth-child(5):hover .feature-icon {
@@ -531,8 +581,68 @@ img {
     color: #78E3A7; /* 羽毛绿色 */
 }
 
+.feature-card:nth-child(5):hover {
+    animation: jelly 0.7s ease, featherWind 2.5s ease-in-out infinite;
+    background: radial-gradient(circle at center, rgba(120, 227, 167, 0.1) 0%, rgba(248, 250, 255, 1) 70%);
+}
+
 .feature-card:nth-child(6):hover .feature-icon {
     animation: heartPulse 1.8s ease-in-out infinite;
+}
+
+.feature-card:nth-child(6):hover {
+    animation: jelly 0.7s ease, heartGlow 2.5s ease-in-out infinite;
+    background: radial-gradient(circle at center, rgba(255, 51, 102, 0.1) 0%, rgba(248, 250, 255, 1) 70%);
+}
+
+/* 添加伪元素用于额外的粒子效果 */
+.feature-card {
+    position: relative;
+    z-index: 1;
+}
+
+.feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: var(--border-radius-large);
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    pointer-events: none;
+}
+
+.feature-card:nth-child(1):hover::before {
+    opacity: 1;
+    background: radial-gradient(circle at center, rgba(146, 129, 236, 0.15), transparent 70%);
+}
+
+.feature-card:nth-child(2):hover::before {
+    opacity: 1;
+    background: radial-gradient(circle at center, rgba(247, 175, 62, 0.15), transparent 70%);
+}
+
+.feature-card:nth-child(3):hover::before {
+    opacity: 1;
+    background: radial-gradient(circle at center, rgba(247, 125, 170, 0.15), transparent 70%);
+}
+
+.feature-card:nth-child(4):hover::before {
+    opacity: 1;
+    background: radial-gradient(circle at center, rgba(255, 212, 59, 0.15), transparent 70%);
+}
+
+.feature-card:nth-child(5):hover::before {
+    opacity: 1;
+    background: radial-gradient(circle at center, rgba(120, 227, 167, 0.15), transparent 70%);
+}
+
+.feature-card:nth-child(6):hover::before {
+    opacity: 1;
+    background: radial-gradient(circle at center, rgba(255, 51, 102, 0.15), transparent 70%);
 }
 
 .feature-card h3 {
@@ -540,12 +650,29 @@ img {
     font-weight: 600;
     margin-bottom: 0.75rem;
     color: var(--heading-color);
+    transition: color 0.3s ease, transform 0.3s ease;
 }
+
+.feature-card:hover h3 {
+    transform: scale(1.05);
+}
+
+.feature-card:nth-child(1):hover h3 { color: #7d6dd8; }
+.feature-card:nth-child(2):hover h3 { color: #e9a23b; }
+.feature-card:nth-child(3):hover h3 { color: #e96e99; }
+.feature-card:nth-child(4):hover h3 { color: #edc537; }
+.feature-card:nth-child(5):hover h3 { color: #6ad096; }
+.feature-card:nth-child(6):hover h3 { color: #e94f79; }
 
 .feature-card p {
     font-size: 0.95rem;
     color: var(--text-color);
     line-height: 1.65;
+    transition: transform 0.3s ease;
+}
+
+.feature-card:hover p {
+    transform: translateY(2px);
 }
 
 
