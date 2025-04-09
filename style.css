@@ -456,6 +456,17 @@ img {
     80% { transform: translateY(-7px) scale(1.2); }
 }
 
+/* 修改沙漏图标的动画 */
+@keyframes hourglassFlip {
+    0% { transform: rotate(0deg) scale(1.1); }
+    10% { transform: rotate(0deg) scale(1.3); }
+    30% { transform: rotate(180deg) scale(1.4); }
+    50% { transform: rotate(180deg) scale(1.2); }
+    70% { transform: rotate(360deg) scale(1.4); }
+    90% { transform: rotate(360deg) scale(1.3); }
+    100% { transform: rotate(360deg) scale(1.1); }
+}
+
 @keyframes stopwatchSpin {
     0% { transform: rotate(0deg) scale(1.1); }
     40% { transform: rotate(180deg) scale(1.4); }
@@ -498,8 +509,9 @@ img {
     animation: ghostBounce 1.5s ease infinite;
 }
 
+/* 更新第二个特性卡片的动画为沙漏翻转 */
 .feature-card:nth-child(2):hover .feature-icon {
-    animation: stopwatchSpin 1.5s ease-in-out infinite;
+    animation: hourglassFlip 3s ease-in-out infinite;
 }
 
 .feature-card:nth-child(3):hover .feature-icon {
