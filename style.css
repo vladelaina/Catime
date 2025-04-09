@@ -3175,34 +3175,56 @@ p:hover {
 
 /* PPT演示标题效果 */
 @keyframes pptTitle {
-    0% { background-position: 0% 50%; }
-    100% { background-position: 100% 50%; }
+    0% { background-position: 0% 50%; transform: perspective(500px) rotateY(0deg); }
+    25% { background-position: 33% 50%; transform: perspective(500px) rotateY(2deg); }
+    50% { background-position: 66% 50%; transform: perspective(500px) rotateY(0deg); }
+    75% { background-position: 100% 50%; transform: perspective(500px) rotateY(-2deg); }
+    100% { background-position: 0% 50%; transform: perspective(500px) rotateY(0deg); }
 }
 
 .scenario-card:nth-child(3) .scenario-content h3:hover {
     color: transparent;
-    background: linear-gradient(90deg, #0078d0, #00a8ff, #0078d0);
+    background: linear-gradient(90deg, #1e40af, #3b82f6, #7dd3fc, #3b82f6, #1e40af);
     background-size: 200% 100%;
     -webkit-background-clip: text;
     background-clip: text;
-    animation: pptTitle 3s ease infinite;
-    text-shadow: none;
+    animation: pptTitle 4s ease-in-out infinite;
+    text-shadow: 0 0 8px rgba(59, 130, 246, 0.25);
     transform: translateY(-3px);
-    letter-spacing: 0.5px;
+    letter-spacing: 0.8px;
+    position: relative;
 }
 
 .scenario-card:nth-child(3) .scenario-content h3::before {
     content: '';
     position: absolute;
-    bottom: -5px;
+    bottom: -8px;
     left: 0;
     width: 100%;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, #0078d0, transparent);
+    height: 3px;
+    background: linear-gradient(90deg, transparent, #3b82f6, transparent);
     transform: scaleX(0);
-    transition: transform 0.4s ease;
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.scenario-card:nth-child(3) .scenario-content h3::after {
+    content: '▶';
+    position: absolute;
+    right: -20px;
+    top: 50%;
+    transform: translateY(-50%) scale(0);
+    color: #3b82f6;
+    font-size: 0.7em;
+    opacity: 0;
+    transition: all 0.3s ease;
 }
 
 .scenario-card:nth-child(3) .scenario-content h3:hover::before {
     transform: scaleX(1);
+}
+
+.scenario-card:nth-child(3) .scenario-content h3:hover::after {
+    transform: translateY(-50%) scale(1);
+    opacity: 1;
+    right: -25px;
 }
