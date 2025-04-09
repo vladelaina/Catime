@@ -3467,9 +3467,9 @@ p:hover {
     opacity: 0;
     pointer-events: none;
     z-index: -1;
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 215, 0, 0.85));
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(60, 200, 255, 0.85));
     clip-path: polygon(30% 0%, 50% 40%, 38% 40%, 60% 100%, 25% 50%, 45% 50%, 30% 0%);
-    filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.8));
+    filter: drop-shadow(0 0 12px rgba(0, 180, 255, 0.9)) drop-shadow(0 0 20px rgba(255, 255, 255, 0.8));
 }
 
 /* 第一个闪电伪元素 */
@@ -3491,19 +3491,19 @@ p:hover {
     transform: scale(0) rotate(25deg);
 }
 
-/* 闪电动画 */
+/* 闪电动画 - 更强的光效和颜色变化 */
 @keyframes lightningBolt1 {
     0%, 100% {
         transform: scale(0) rotate(-25deg);
         opacity: 0;
-        background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 215, 0, 0.85));
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(60, 180, 255, 0.85));
         filter: blur(5px);
     }
     10% {
         transform: scale(0.7) rotate(-5deg);
         opacity: 0.7;
-        filter: brightness(1.4) blur(2px);
-        background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 215, 0, 0.85));
+        filter: brightness(1.5) blur(2px);
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(0, 200, 255, 0.85));
     }
     15%, 85% {
         transform: scale(1.4) rotate(-10deg) translateX(-3px);
@@ -3515,20 +3515,20 @@ p:hover {
     20% {
         transform: scale(1.3) rotate(-8deg) translateX(2px);
         opacity: 0.9;
-        filter: brightness(1.6) contrast(1.05);
+        filter: brightness(1.7) contrast(1.05);
         background: linear-gradient(90deg, rgba(255, 255, 255, 0.92), rgba(0, 190, 255, 0.87));
     }
     50% {
-        transform: scale(1.6) rotate(5deg) translateY(-2px);
+        transform: scale(1.7) rotate(5deg) translateY(-2px);
         opacity: 1;
         box-shadow: 0 0 20px rgba(0, 170, 255, 1), 0 0 35px rgba(255, 255, 255, 0.9), 0 0 50px rgba(0, 170, 255, 0.7);
-        filter: brightness(2.2) contrast(1.2);
-        background: linear-gradient(90deg, rgba(255, 255, 255, 1), rgba(60, 200, 255, 0.95));
+        filter: brightness(2.5) contrast(1.3);
+        background: linear-gradient(90deg, rgba(255, 255, 255, 1), rgba(60, 210, 255, 0.95));
     }
     90% {
         transform: scale(0.6) rotate(0deg);
         opacity: 0.6;
-        background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 215, 0, 0.85));
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(60, 200, 255, 0.85));
         filter: blur(3px);
     }
 }
@@ -3537,33 +3537,33 @@ p:hover {
     0%, 100% {
         transform: scale(0) rotate(25deg);
         opacity: 0;
-        background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 215, 0, 0.85));
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(60, 200, 255, 0.85));
         filter: blur(5px);
     }
     5% {
         transform: scale(0.6) rotate(30deg);
         opacity: 0.6;
-        filter: brightness(1.2) blur(2px);
-        background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 215, 0, 0.85));
+        filter: brightness(1.3) blur(2px);
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(60, 200, 255, 0.85));
     }
     15%, 75% {
         transform: scale(1.3) rotate(35deg) translateX(3px);
         opacity: 0.95;
         box-shadow: 0 0 12px rgba(0, 191, 255, 0.9), 0 0 20px rgba(255, 255, 255, 0.7), 0 0 35px rgba(0, 191, 255, 0.5);
-        filter: brightness(1.6) contrast(1.1) blur(0px);
+        filter: brightness(1.8) contrast(1.1) blur(0px);
         background: linear-gradient(90deg, rgba(255, 255, 255, 0.92), rgba(0, 170, 255, 0.87));
     }
     50% {
-        transform: scale(1.7) rotate(45deg) translateY(2px);
+        transform: scale(1.8) rotate(45deg) translateY(2px);
         opacity: 1;
         box-shadow: 0 0 18px rgba(0, 170, 255, 1), 0 0 30px rgba(255, 255, 255, 0.9), 0 0 45px rgba(0, 170, 255, 0.7);
-        filter: brightness(2) contrast(1.15);
-        background: linear-gradient(90deg, rgba(255, 255, 255, 1), rgba(60, 200, 255, 0.95));
+        filter: brightness(2.2) contrast(1.25);
+        background: linear-gradient(90deg, rgba(255, 255, 255, 1), rgba(60, 210, 255, 0.95));
     }
     85% {
         transform: scale(0.8) rotate(30deg);
         opacity: 0.7;
-        background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 215, 0, 0.85));
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(60, 200, 255, 0.85));
         filter: blur(3px);
     }
 }
@@ -3576,7 +3576,7 @@ p:hover {
     animation: lightningBolt2 0.7s ease-out 0.2s infinite;
 }
 
-/* 第三个闪电元素 */
+/* 新增 - 第三个闪电元素与增强效果 */
 .scenario-card:nth-child(2) .scenario-icon .lightning-element {
     display: none;
 }
@@ -3584,15 +3584,15 @@ p:hover {
 .scenario-card:nth-child(2) .scenario-icon:hover .lightning-element {
     display: block;
     position: absolute;
-    width: 22px;
-    height: 32px;
+    width: 24px;
+    height: 36px;
     top: 65%;
     right: -18px;
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.95), rgba(0, 180, 255, 0.9));
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(0, 210, 255, 0.9), rgba(120, 220, 255, 0.8));
     clip-path: polygon(25% 0%, 45% 0%, 65% 30%, 50% 30%, 75% 60%, 65% 60%, 100% 100%, 40% 70%, 55% 70%, 25% 40%, 40% 40%, 25% 0%);
     transform-origin: center;
     z-index: -1;
-    filter: drop-shadow(0 0 10px rgba(0, 180, 255, 0.9)) drop-shadow(0 0 20px rgba(255, 255, 255, 0.7));
+    filter: drop-shadow(0 0 15px rgba(0, 180, 255, 0.9)) drop-shadow(0 0 25px rgba(255, 255, 255, 0.7));
     animation: lightningBolt3 0.65s ease-out 0.1s infinite;
 }
 
@@ -3600,45 +3600,45 @@ p:hover {
     0%, 100% {
         transform: scale(0) rotate(-30deg);
         opacity: 0;
-        background: linear-gradient(90deg, rgba(255, 255, 255, 0.95), rgba(255, 215, 0, 0.9));
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(0, 210, 255, 0.9), rgba(120, 220, 255, 0.8));
         filter: blur(5px);
     }
     15% {
-        transform: scale(0.8) rotate(-25deg) translateX(-2px);
+        transform: scale(0.9) rotate(-25deg) translateX(-2px);
         opacity: 0.8;
-        background: linear-gradient(90deg, rgba(255, 255, 255, 0.95), rgba(255, 215, 0, 0.9));
-        filter: brightness(1.5) drop-shadow(0 0 8px rgba(255, 215, 0, 0.8)) blur(1px);
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(0, 210, 255, 0.9), rgba(120, 220, 255, 0.8));
+        filter: brightness(1.5) drop-shadow(0 0 8px rgba(0, 210, 255, 0.8)) blur(1px);
     }
     30%, 70% {
-        transform: scale(1.4) rotate(-15deg) translateX(2px);
+        transform: scale(1.6) rotate(-15deg) translateX(2px);
         opacity: 0.95;
-        background: linear-gradient(90deg, rgba(255, 255, 255, 0.98), rgba(0, 170, 255, 0.9));
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(0, 210, 255, 0.95), rgba(60, 180, 255, 0.9));
         box-shadow: 0 0 15px rgba(0, 170, 255, 0.9), 0 0 25px rgba(255, 255, 255, 0.8), 0 0 40px rgba(0, 170, 255, 0.6);
-        filter: brightness(1.8) drop-shadow(0 0 12px rgba(0, 170, 255, 0.9)) contrast(1.15);
+        filter: brightness(2) drop-shadow(0 0 12px rgba(0, 170, 255, 0.9)) contrast(1.2);
     }
     50% {
-        transform: scale(1.6) rotate(-10deg) translateY(-3px);
+        transform: scale(1.8) rotate(-10deg) translateY(-3px);
         opacity: 1;
-        background: linear-gradient(90deg, rgba(255, 255, 255, 1), rgba(60, 200, 255, 0.95));
-        filter: brightness(2.2) drop-shadow(0 0 18px rgba(0, 200, 255, 1)) contrast(1.2);
+        background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(80, 210, 255, 0.95), rgba(0, 160, 255, 0.9));
+        filter: brightness(2.5) drop-shadow(0 0 18px rgba(0, 200, 255, 1)) contrast(1.3);
         box-shadow: 0 0 20px rgba(0, 170, 255, 1), 0 0 30px rgba(255, 255, 255, 0.9), 0 0 50px rgba(0, 170, 255, 0.6);
     }
     85% {
         transform: scale(0.7) rotate(-20deg);
         opacity: 0.7;
-        background: linear-gradient(90deg, rgba(255, 255, 255, 0.95), rgba(255, 215, 0, 0.9));
-        filter: brightness(1.3) drop-shadow(0 0 6px rgba(255, 215, 0, 0.7)) blur(2px);
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(0, 210, 255, 0.9), rgba(120, 220, 255, 0.8));
+        filter: brightness(1.3) drop-shadow(0 0 6px rgba(0, 210, 255, 0.7)) blur(2px);
     }
 }
 
-/* 添加多个闪电元素效果 */
+/* 添加多个闪电元素效果与强化 */
 .scenario-card:nth-child(2) .scenario-icon:hover::before,
 .scenario-card:nth-child(2) .scenario-icon:hover::after,
 .scenario-card:nth-child(2) .scenario-icon:hover .lightning-element {
-    filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.9));
+    filter: drop-shadow(0 0 15px rgba(0, 180, 255, 0.9)) drop-shadow(0 0 25px rgba(255, 255, 255, 0.8));
 }
 
-/* 增加额外的两个闪电 */
+/* 增加额外的两个闪电 - 更强的形状变化 */
 .scenario-card:nth-child(2) .scenario-icon:hover .lightning-element::before,
 .scenario-card:nth-child(2) .scenario-icon:hover .lightning-element::after {
     content: "";
@@ -3646,41 +3646,30 @@ p:hover {
     transform: scale(0);
     opacity: 0;
     z-index: -1;
-    filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.9));
+    filter: drop-shadow(0 0 15px rgba(0, 180, 255, 0.9));
 }
 
 .scenario-card:nth-child(2) .scenario-icon:hover .lightning-element::before {
-    width: 18px;
-    height: 26px;
-    top: -40px;
-    left: -30px;
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(0, 180, 255, 0.85));
+    width: 22px;
+    height: 30px;
+    top: -45px;
+    left: -35px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(0, 210, 255, 0.9), rgba(120, 220, 255, 0.8));
     clip-path: polygon(40% 0%, 60% 0%, 50% 30%, 70% 30%, 35% 100%, 45% 60%, 30% 60%, 40% 0%);
     animation: lightningBolt4 0.6s ease-out 0.3s infinite;
 }
 
 .scenario-card:nth-child(2) .scenario-icon:hover .lightning-element::after {
-    width: 16px;
-    height: 24px;
-    bottom: -35px;
-    right: -35px;
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(0, 180, 255, 0.85));
+    width: 20px;
+    height: 28px;
+    bottom: -40px;
+    right: -40px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(0, 210, 255, 0.9), rgba(120, 220, 255, 0.8));
     clip-path: polygon(50% 0%, 65% 30%, 50% 30%, 100% 55%, 50% 100%, 35% 70%, 50% 70%, 0% 45%, 50% 0%);
     animation: lightningBolt5 0.55s ease-out 0.45s infinite;
 }
 
-/* 添加电流分支 */
-.scenario-card:nth-child(2) .scenario-icon:hover::after {
-    content: "";
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    top: 0;
-    left: 0;
-    z-index: -1;
-}
-
-/* 添加电流波动效果 */
+/* 新增 - 电流波动效果与增强 */
 .scenario-card:nth-child(2) .scenario-icon:hover i {
     position: relative;
     z-index: 2;
@@ -3690,53 +3679,55 @@ p:hover {
 
 @keyframes electricPulse {
     0% {
-        color: #FFD700;
+        color: #00B7FF;
         transform: scale(1) rotate(-2deg);
-        text-shadow: 0 0 10px rgba(255, 215, 0, 0.9), 0 0 20px rgba(255, 255, 255, 0.8);
+        text-shadow: 0 0 10px rgba(0, 180, 255, 0.9), 0 0 20px rgba(255, 255, 255, 0.8);
     }
     50% {
-        color: #00AAFF;
-        transform: scale(1.2) rotate(2deg);
-        text-shadow: 0 0 15px rgba(0, 170, 255, 1), 0 0 25px rgba(255, 255, 255, 0.9), 0 0 35px rgba(0, 170, 255, 0.7), 0 0 50px rgba(0, 170, 255, 0.4);
+        color: #FFFFFF;
+        transform: scale(1.3) rotate(2deg);
+        text-shadow: 0 0 18px rgba(0, 210, 255, 1), 0 0 30px rgba(255, 255, 255, 0.9), 
+                     0 0 40px rgba(0, 170, 255, 0.7), 0 0 60px rgba(0, 170, 255, 0.4);
     }
     100% {
-        color: #FFD700;
+        color: #60C7FF;
         transform: scale(1) rotate(-1deg);
-        text-shadow: 0 0 10px rgba(255, 215, 0, 0.9), 0 0 20px rgba(255, 255, 255, 0.8);
+        text-shadow: 0 0 10px rgba(0, 180, 255, 0.9), 0 0 20px rgba(255, 255, 255, 0.8);
     }
 }
 
+/* 改进闪电形状变化动画 */
 @keyframes lightningBolt4 {
     0%, 100% {
         transform: scale(0) rotate(15deg);
         opacity: 0;
-        background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 230, 0, 0.85));
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(0, 210, 255, 0.9), rgba(120, 220, 255, 0.8));
     }
     20% {
-        transform: scale(0.9) rotate(20deg);
+        transform: scale(1) rotate(20deg);
         opacity: 0.85;
-        filter: brightness(1.6) drop-shadow(0 0 10px rgba(255, 215, 0, 0.8));
-        background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 230, 0, 0.85));
+        filter: brightness(1.8) drop-shadow(0 0 12px rgba(0, 210, 255, 0.8));
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(0, 210, 255, 0.9), rgba(120, 220, 255, 0.8));
     }
     40%, 60% {
-        transform: scale(1.4) rotate(30deg);
+        transform: scale(1.5) rotate(30deg);
         opacity: 0.95;
         box-shadow: 0 0 15px rgba(0, 170, 255, 0.9), 0 0 20px rgba(255, 255, 255, 0.7);
-        filter: brightness(1.9) drop-shadow(0 0 15px rgba(0, 170, 255, 0.9));
-        background: linear-gradient(90deg, rgba(255, 255, 255, 0.95), rgba(0, 170, 255, 0.85));
+        filter: brightness(2.1) drop-shadow(0 0 18px rgba(0, 170, 255, 0.9));
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(0, 210, 255, 0.95), rgba(60, 180, 255, 0.9));
     }
     50% {
-        transform: scale(1.6) rotate(35deg);
+        transform: scale(1.7) rotate(35deg);
         opacity: 1;
-        filter: brightness(2.1) drop-shadow(0 0 20px rgba(0, 170, 255, 1));
-        box-shadow: 0 0 18px rgba(0, 170, 255, 1), 0 0 25px rgba(255, 255, 255, 0.9);
-        background: linear-gradient(90deg, rgba(255, 255, 255, 1), rgba(0, 200, 255, 0.95));
+        filter: brightness(2.3) drop-shadow(0 0 22px rgba(0, 170, 255, 1));
+        box-shadow: 0 0 20px rgba(0, 170, 255, 1), 0 0 30px rgba(255, 255, 255, 0.9);
+        background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(80, 210, 255, 0.95), rgba(0, 160, 255, 0.9));
     }
     80% {
         transform: scale(0.8) rotate(25deg);
         opacity: 0.7;
-        filter: brightness(1.4) drop-shadow(0 0 8px rgba(255, 215, 0, 0.7));
-        background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 230, 0, 0.85));
+        filter: brightness(1.6) drop-shadow(0 0 10px rgba(0, 210, 255, 0.7));
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(0, 210, 255, 0.9), rgba(120, 220, 255, 0.8));
     }
 }
 
@@ -3744,46 +3735,37 @@ p:hover {
     0%, 100% {
         transform: scale(0) rotate(-15deg);
         opacity: 0;
-        background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 225, 0, 0.85));
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(0, 210, 255, 0.9), rgba(120, 220, 255, 0.8));
     }
     25% {
-        transform: scale(0.8) rotate(-25deg);
+        transform: scale(0.9) rotate(-25deg);
         opacity: 0.8;
-        filter: brightness(1.5) drop-shadow(0 0 8px rgba(255, 215, 0, 0.8));
-        background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 225, 0, 0.85));
+        filter: brightness(1.7) drop-shadow(0 0 10px rgba(0, 210, 255, 0.8));
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(0, 210, 255, 0.9), rgba(120, 220, 255, 0.8));
     }
     45%, 55% {
-        transform: scale(1.3) rotate(-35deg);
+        transform: scale(1.4) rotate(-35deg);
         opacity: 0.95;
-        box-shadow: 0 0 12px rgba(0, 170, 255, 0.9), 0 0 18px rgba(255, 255, 255, 0.7);
-        filter: brightness(1.8) drop-shadow(0 0 12px rgba(0, 170, 255, 0.9));
-        background: linear-gradient(90deg, rgba(255, 255, 255, 0.95), rgba(0, 170, 255, 0.85));
+        box-shadow: 0 0 14px rgba(0, 170, 255, 0.9), 0 0 20px rgba(255, 255, 255, 0.7);
+        filter: brightness(2) drop-shadow(0 0 15px rgba(0, 170, 255, 0.9));
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(0, 210, 255, 0.95), rgba(60, 180, 255, 0.9));
     }
     50% {
-        transform: scale(1.5) rotate(-40deg);
+        transform: scale(1.6) rotate(-40deg);
         opacity: 1;
-        filter: brightness(2) drop-shadow(0 0 15px rgba(0, 170, 255, 1));
-        box-shadow: 0 0 15px rgba(0, 170, 255, 1), 0 0 20px rgba(255, 255, 255, 0.8);
-        background: linear-gradient(90deg, rgba(255, 255, 255, 1), rgba(0, 200, 255, 0.95));
+        filter: brightness(2.2) drop-shadow(0 0 18px rgba(0, 170, 255, 1));
+        box-shadow: 0 0 18px rgba(0, 170, 255, 1), 0 0 25px rgba(255, 255, 255, 0.8);
+        background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(80, 210, 255, 0.95), rgba(0, 160, 255, 0.9));
     }
     75% {
-        transform: scale(0.7) rotate(-20deg);
+        transform: scale(0.8) rotate(-20deg);
         opacity: 0.65;
-        filter: brightness(1.3) drop-shadow(0 0 6px rgba(255, 215, 0, 0.7));
-        background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 225, 0, 0.85));
+        filter: brightness(1.5) drop-shadow(0 0 8px rgba(0, 210, 255, 0.7));
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(0, 210, 255, 0.9), rgba(120, 220, 255, 0.8));
     }
 }
 
-/* 添加电流连接效果 */
-.scenario-card:nth-child(2) .scenario-icon:hover::before {
-    animation: lightningBolt1 0.8s ease-out infinite;
-}
-
-.scenario-card:nth-child(2) .scenario-icon:hover::after {
-    animation: lightningBolt2 0.7s ease-out 0.2s infinite;
-}
-
-/* 添加电流圆形波动效果 */
+/* 新增 - 电流圆形波动效果 */
 .scenario-card:nth-child(2) .scenario-icon:hover::before {
     content: "";
     position: absolute;
@@ -3798,26 +3780,28 @@ p:hover {
 
 @keyframes electricCircle {
     0% {
-        box-shadow: 0 0 0 0 rgba(0, 170, 255, 0.7);
+        box-shadow: 0 0 0 0 rgba(0, 190, 255, 0.8);
     }
     50% {
-        box-shadow: 0 0 0 15px rgba(0, 170, 255, 0.3), 0 0 0 5px rgba(255, 255, 255, 0.5);
+        box-shadow: 0 0 0 18px rgba(0, 170, 255, 0.3), 0 0 0 8px rgba(255, 255, 255, 0.5),
+                    0 0 25px rgba(0, 210, 255, 0.6), 0 0 40px rgba(120, 220, 255, 0.4);
     }
     100% {
-        box-shadow: 0 0 0 20px rgba(0, 170, 255, 0), 0 0 0 8px rgba(255, 255, 255, 0);
+        box-shadow: 0 0 0 25px rgba(0, 170, 255, 0), 0 0 0 12px rgba(255, 255, 255, 0),
+                    0 0 35px rgba(0, 210, 255, 0), 0 0 50px rgba(120, 220, 255, 0);
     }
 }
 
-/* 添加多点电流效果 */
+/* 新增 - 增强电流连接效果和光影 */
 .scenario-card:nth-child(2) .scenario-icon:hover .lightning-element::before,
 .scenario-card:nth-child(2) .scenario-icon:hover .lightning-element::after {
-    filter: drop-shadow(0 0 15px rgba(0, 170, 255, 1)) drop-shadow(0 0 25px rgba(255, 255, 255, 0.7));
+    filter: drop-shadow(0 0 18px rgba(0, 190, 255, 1)) drop-shadow(0 0 28px rgba(255, 255, 255, 0.8));
 }
 
-/* 电流震荡效果 */
+/* 改进 - 电流震荡效果与发光 */
 .scenario-card:nth-child(2):hover .scenario-icon {
     animation: shockwave 1.2s ease-out infinite;
-    filter: drop-shadow(0 0 20px rgba(0, 170, 255, 0.5));
+    filter: drop-shadow(0 0 25px rgba(0, 190, 255, 0.6));
 }
 
 @keyframes shockwave {
@@ -3825,51 +3809,109 @@ p:hover {
         transform: scale(1);
     }
     10% {
-        transform: scale(1.08) rotate(3deg);
+        transform: scale(1.1) rotate(3deg);
     }
     20% {
-        transform: scale(0.96) rotate(-3deg);
+        transform: scale(0.95) rotate(-3deg);
     }
     30% {
-        transform: scale(1.04) rotate(2deg);
+        transform: scale(1.05) rotate(2deg);
     }
     40% {
         transform: scale(0.98) rotate(-2deg);
     }
     50% {
-        transform: scale(1.02) translateY(-2px);
+        transform: scale(1.03) translateY(-3px);
     }
     60% {
-        transform: scale(0.99) translateY(1px);
+        transform: scale(0.97) translateY(2px);
     }
     70% {
-        transform: scale(1) translateY(0);
+        transform: scale(1.01) translateY(-1px);
+    }
+    80% {
+        transform: scale(0.99) translateY(0);
     }
 }
 
-/* 添加电流粒子效果 */
+/* 新增 - 电流离子云效果 */
 .scenario-card:nth-child(2) .scenario-icon:hover::after {
     content: "";
     position: absolute;
-    width: 150%;
-    height: 150%;
-    top: -25%;
-    left: -25%;
-    background: radial-gradient(circle, rgba(0, 170, 255, 0), rgba(0, 170, 255, 0.1) 30%, rgba(0, 170, 255, 0) 70%);
-    animation: lightningBolt2 0.7s ease-out 0.2s infinite, particleEffect 2s linear infinite;
+    width: 180%;
+    height: 180%;
+    top: -40%;
+    left: -40%;
+    background: radial-gradient(ellipse at center, 
+                rgba(0, 210, 255, 0), 
+                rgba(0, 190, 255, 0.15) 30%, 
+                rgba(80, 210, 255, 0.1) 50%, 
+                rgba(0, 160, 255, 0) 70%);
+    animation: lightningBolt2 0.7s ease-out 0.2s infinite, particleEffect 2.5s linear infinite;
 }
 
 @keyframes particleEffect {
     0% {
-        transform: rotate(0deg);
+        transform: rotate(0deg) scale(0.95);
         opacity: 0.3;
+        filter: blur(8px);
+    }
+    25% {
+        transform: rotate(90deg) scale(1);
+        opacity: 0.6;
+        filter: blur(6px);
     }
     50% {
-        transform: rotate(180deg);
-        opacity: 0.7;
+        transform: rotate(180deg) scale(1.05);
+        opacity: 0.8;
+        filter: blur(4px);
+    }
+    75% {
+        transform: rotate(270deg) scale(1);
+        opacity: 0.6;
+        filter: blur(6px);
     }
     100% {
-        transform: rotate(360deg);
+        transform: rotate(360deg) scale(0.95);
         opacity: 0.3;
+        filter: blur(8px);
+    }
+}
+
+/* 新增 - 闪电分支效果 */
+.scenario-card:nth-child(2) .scenario-icon:hover::before {
+    content: "";
+    position: absolute;
+}
+
+/* 新增 - 闪电能量脉冲环 */
+.scenario-card:nth-child(2) .scenario-icon:hover::after {
+    content: "";
+    position: absolute;
+    width: 200%;
+    height: 200%;
+    top: -50%;
+    left: -50%;
+    border-radius: 50%;
+    background: radial-gradient(circle, 
+                rgba(255, 255, 255, 0.1) 0%, 
+                rgba(0, 210, 255, 0.08) 40%, 
+                rgba(0, 160, 255, 0.05) 65%, 
+                transparent 80%);
+    opacity: 0;
+    animation: energyPulse 2s ease-out infinite;
+}
+
+@keyframes energyPulse {
+    0% {
+        transform: scale(0.2);
+        opacity: 0.8;
+    }
+    50% {
+        opacity: 0.4;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 0;
     }
 }
