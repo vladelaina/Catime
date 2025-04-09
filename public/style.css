@@ -1494,6 +1494,109 @@ img {
     }
 }
 
+/* 添加新的喷火效果动画 */
+@keyframes dragonFireBreath {
+    0%, 100% {
+        transform: scale(0) translateX(0);
+        opacity: 0;
+    }
+    15% {
+        transform: scale(0.3) translateX(15px) translateY(-5px);
+        opacity: 0.5;
+    }
+    40% {
+        transform: scale(1.2) translateX(30px) translateY(-10px);
+        opacity: 0.9;
+    }
+    70% {
+        transform: scale(0.8) translateX(40px) translateY(-5px);
+        opacity: 0.6;
+    }
+    90% {
+        transform: scale(0.3) translateX(50px) translateY(0);
+        opacity: 0.2;
+    }
+}
+
+/* 稍微不同的第二个火焰动画 */
+@keyframes dragonFireBreath2 {
+    0%, 100% {
+        transform: scale(0) translateX(0) translateY(0);
+        opacity: 0;
+    }
+    10% {
+        transform: scale(0.4) translateX(10px) translateY(-8px);
+        opacity: 0.6;
+    }
+    35% {
+        transform: scale(1.4) translateX(25px) translateY(-15px);
+        opacity: 0.95;
+    }
+    65% {
+        transform: scale(1.0) translateX(35px) translateY(-10px);
+        opacity: 0.7;
+    }
+    85% {
+        transform: scale(0.5) translateX(45px) translateY(-5px);
+        opacity: 0.3;
+    }
+}
+
+/* 第三个火焰动画变体 */
+@keyframes dragonFireBreath3 {
+    0%, 100% {
+        transform: scale(0) translateX(0) translateY(0) rotate(0deg);
+        opacity: 0;
+    }
+    20% {
+        transform: scale(0.6) translateX(15px) translateY(-3px) rotate(5deg);
+        opacity: 0.7;
+    }
+    45% {
+        transform: scale(1.3) translateX(28px) translateY(-8px) rotate(-5deg);
+        opacity: 0.9;
+    }
+    75% {
+        transform: scale(0.9) translateX(38px) translateY(-2px) rotate(10deg);
+        opacity: 0.5;
+    }
+    95% {
+        transform: scale(0.4) translateX(48px) translateY(5px) rotate(0deg);
+        opacity: 0.1;
+    }
+}
+
+@keyframes firePulse {
+    0%, 100% {
+        box-shadow: 0 0 10px 2px rgba(255, 50, 0, 0.7), 
+                   0 0 20px 5px rgba(255, 120, 0, 0.5),
+                   0 0 30px 7px rgba(255, 180, 0, 0.3);
+        background: radial-gradient(circle, rgba(255, 50, 0, 0.9) 10%, rgba(255, 120, 0, 0.8) 50%, rgba(255, 180, 0, 0.4) 90%);
+    }
+    50% {
+        box-shadow: 0 0 15px 4px rgba(255, 50, 0, 0.9), 
+                   0 0 30px 8px rgba(255, 120, 0, 0.7),
+                   0 0 40px 10px rgba(255, 180, 0, 0.5);
+        background: radial-gradient(circle, rgba(255, 50, 0, 1) 20%, rgba(255, 120, 0, 0.9) 60%, rgba(255, 180, 0, 0.6) 90%);
+    }
+}
+
+/* 添加第二种火焰颜色 - 蓝色核心的龙火 */
+@keyframes dragonFirePulse {
+    0%, 100% {
+        box-shadow: 0 0 10px 2px rgba(0, 150, 255, 0.7), 
+                   0 0 20px 5px rgba(100, 200, 255, 0.5),
+                   0 0 30px 7px rgba(180, 220, 255, 0.3);
+        background: radial-gradient(circle, rgba(0, 200, 255, 0.9) 10%, rgba(100, 150, 255, 0.8) 50%, rgba(150, 100, 255, 0.4) 90%);
+    }
+    50% {
+        box-shadow: 0 0 15px 4px rgba(0, 150, 255, 0.9), 
+                   0 0 30px 8px rgba(80, 180, 255, 0.7),
+                   0 0 40px 10px rgba(160, 200, 255, 0.5);
+        background: radial-gradient(circle, rgba(50, 220, 255, 1) 20%, rgba(80, 180, 255, 0.9) 60%, rgba(130, 120, 255, 0.6) 90%);
+    }
+}
+
 @keyframes boltFlash {
     0%, 100% { transform: scale(1.1); filter: drop-shadow(0 0 5px rgba(122, 162, 247, 0.3)); }
     10% { transform: scale(1.5) rotate(10deg); filter: drop-shadow(0 0 20px rgba(255, 255, 0, 0.8)) brightness(1.6); }
@@ -1550,6 +1653,7 @@ img {
 /* 添加只在图标悬停时的动画效果 */
 .scenario-card:nth-child(1) .scenario-icon:hover {
     animation: dragonFloat 2s infinite;
+    position: relative;
 }
 
 .scenario-card:nth-child(2) .scenario-icon:hover {
@@ -3234,4 +3338,67 @@ p:hover {
     opacity: 1;
     right: -25px;
     animation: slideIcon 1s ease-in-out infinite;
+}
+
+/* 添加龙喷火的伪元素 */
+.scenario-card:nth-child(1) .scenario-icon {
+    position: relative;
+    overflow: visible;
+}
+
+.scenario-card:nth-child(1) .scenario-icon::before,
+.scenario-card:nth-child(1) .scenario-icon::after,
+.scenario-card:nth-child(1) .scenario-icon .fire-element {
+    content: "";
+    position: absolute;
+    transform: scale(0);
+    opacity: 0;
+    pointer-events: none;
+    transform-origin: left center;
+}
+
+.scenario-card:nth-child(1) .scenario-icon::before {
+    top: 45%;
+    left: 60%;
+    width: 16px;
+    height: 16px;
+    border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+    z-index: -1;
+}
+
+.scenario-card:nth-child(1) .scenario-icon::after {
+    top: 40%;
+    left: 55%;
+    width: 12px;
+    height: 12px;
+    border-radius: 60% 40% 60% 40% / 40% 60% 40% 60%;
+    z-index: -2;
+}
+
+/* 添加第三个火焰元素 */
+.scenario-card:nth-child(1) .scenario-icon .fire-element {
+    display: none;
+}
+
+.scenario-card:nth-child(1) .scenario-icon:hover .fire-element {
+    display: block;
+    top: 55%;
+    left: 58%;
+    width: 14px;
+    height: 14px;
+    border-radius: 40% 60% 30% 70% / 60% 30% 70% 40%;
+    z-index: -3;
+    animation: dragonFireBreath3 1.1s ease-out 0.15s infinite, firePulse 0.55s ease-in-out infinite;
+}
+
+.scenario-card:nth-child(1) .scenario-icon:hover::before {
+    animation: dragonFireBreath 1.2s ease-out infinite, firePulse 0.6s ease-in-out infinite;
+}
+
+.scenario-card:nth-child(1) .scenario-icon:hover::after {
+    animation: dragonFireBreath2 0.9s ease-out 0.1s infinite, dragonFirePulse 0.5s ease-in-out infinite;
+}
+
+.scenario-card:nth-child(2) .scenario-icon:hover {
+    animation: boltFlash 1.5s infinite;
 }
