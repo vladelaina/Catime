@@ -1450,34 +1450,78 @@ img {
 }
 
 /* 使用场景图标动画效果 */
-@keyframes gamepadBounce {
-    0%, 100% { transform: scale(1.1) rotate(0deg); filter: drop-shadow(0 0 5px rgba(122, 162, 247, 0.3)); }
-    25% { transform: scale(1.5) rotate(15deg) translateY(-10px); filter: drop-shadow(0 0 15px rgba(122, 162, 247, 0.7)); }
-    50% { transform: scale(1.3) rotate(-10deg) translateY(5px); filter: drop-shadow(0 0 10px rgba(122, 162, 247, 0.5)); }
-    75% { transform: scale(1.5) rotate(10deg) translateY(-10px); filter: drop-shadow(0 0 15px rgba(122, 162, 247, 0.7)); }
+@keyframes dragonFloat {
+    0%, 100% { 
+        transform: scale(1.1) translateY(0) rotate(0deg); 
+        filter: drop-shadow(0 0 5px rgba(122, 162, 247, 0.3)); 
+    }
+    25% { 
+        transform: scale(1.4) translateY(-15px) rotate(15deg); 
+        filter: drop-shadow(0 0 15px rgba(122, 162, 247, 0.7)) brightness(1.2); 
+    }
+    50% { 
+        transform: scale(1.6) translateY(-5px) rotate(-10deg); 
+        filter: drop-shadow(0 0 20px rgba(122, 162, 247, 0.9)) brightness(1.4); 
+    }
+    75% { 
+        transform: scale(1.4) translateY(-15px) rotate(5deg); 
+        filter: drop-shadow(0 0 15px rgba(122, 162, 247, 0.7)) brightness(1.2); 
+    }
 }
 
-@keyframes laptopCode {
-    0%, 100% { transform: scale(1.1) rotate(0deg); filter: drop-shadow(0 0 5px rgba(122, 162, 247, 0.3)); }
-    25% { transform: scale(1.4) rotate(5deg) translateY(-5px); filter: drop-shadow(0 0 12px rgba(122, 162, 247, 0.6)); }
-    50% { transform: scale(1.6) rotate(-5deg) translateY(5px); filter: drop-shadow(0 0 15px rgba(122, 162, 247, 0.8)); }
-    75% { transform: scale(1.4) rotate(5deg) translateY(-5px); filter: drop-shadow(0 0 12px rgba(122, 162, 247, 0.6)); }
+@keyframes boltFlash {
+    0%, 100% { transform: scale(1.1); filter: drop-shadow(0 0 5px rgba(122, 162, 247, 0.3)); }
+    20% { transform: scale(1.8); filter: drop-shadow(0 0 20px rgba(122, 162, 247, 0.9)); }
+    40% { transform: scale(1.2); filter: drop-shadow(0 0 8px rgba(122, 162, 247, 0.4)); }
+    60% { transform: scale(1.6); filter: drop-shadow(0 0 15px rgba(122, 162, 247, 0.7)); }
+    80% { transform: scale(1.3); filter: drop-shadow(0 0 10px rgba(122, 162, 247, 0.5)); }
+}
+
+@keyframes crownShine {
+    0%, 100% { 
+        transform: scale(1.1); 
+        filter: drop-shadow(0 0 5px rgba(122, 162, 247, 0.3)); 
+    }
+    25% { 
+        transform: scale(1.3) translateY(-5px); 
+        filter: drop-shadow(0 0 15px rgba(122, 162, 247, 0.7)) brightness(1.3); 
+    }
+    50% { 
+        transform: scale(1.5); 
+        filter: drop-shadow(0 0 20px rgba(122, 162, 247, 0.9)) brightness(1.6); 
+    }
+    75% { 
+        transform: scale(1.3) translateY(-5px); 
+        filter: drop-shadow(0 0 15px rgba(122, 162, 247, 0.7)) brightness(1.3); 
+    }
 }
 
 @keyframes presentationPulse {
-    0%, 100% { transform: scale(1.1); filter: drop-shadow(0 0 5px rgba(122, 162, 247, 0.3)); }
-    30% { transform: scale(1.5) translateY(-8px); filter: drop-shadow(0 0 15px rgba(122, 162, 247, 0.7)); }
-    60% { transform: scale(1.3) translateY(5px); filter: drop-shadow(0 0 10px rgba(122, 162, 247, 0.5)); }
-    90% { transform: scale(1.5) translateY(-8px); filter: drop-shadow(0 0 15px rgba(122, 162, 247, 0.7)); }
+    0%, 100% { 
+        transform: scale(1.1); 
+        filter: drop-shadow(0 0 5px rgba(122, 162, 247, 0.3)); 
+    }
+    30% { 
+        transform: scale(1.5) translateY(-8px); 
+        filter: drop-shadow(0 0 15px rgba(122, 162, 247, 0.7)); 
+    }
+    60% { 
+        transform: scale(1.3) translateY(5px); 
+        filter: drop-shadow(0 0 10px rgba(122, 162, 247, 0.5)); 
+    }
+    90% { 
+        transform: scale(1.5) translateY(-8px); 
+        filter: drop-shadow(0 0 15px rgba(122, 162, 247, 0.7)); 
+    }
 }
 
 /* 应用动画到各个场景图标 - 只在图标悬停时触发 */
 .scenario-card:nth-child(1) .scenario-icon:hover {
-    animation: gamepadBounce 2s infinite;
+    animation: dragonFloat 3s infinite;
 }
 
 .scenario-card:nth-child(2) .scenario-icon:hover {
-    animation: laptopCode 2s infinite;
+    animation: boltFlash 2s infinite;
 }
 
 .scenario-card:nth-child(3) .scenario-icon:hover {
