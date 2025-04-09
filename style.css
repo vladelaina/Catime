@@ -113,15 +113,78 @@ img {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    transition: all 0.4s ease;
+    position: relative;
+    overflow: hidden;
+}
+.logo::before {
+    content: '';
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
+    border-radius: 50%;
+    opacity: 0;
+    top: 50%;
+    left: -30px;
+    transform: translateY(-50%);
+    transition: opacity 0.3s ease;
+    z-index: 1;
+    pointer-events: none;
+}
+.logo:hover::before {
+    opacity: 1;
+    animation: logoRipple 1.5s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+}
+@keyframes logoRipple {
+    0% {
+        left: -30px;
+        opacity: 0.7;
+    }
+    100% {
+        left: 120%;
+        opacity: 0;
+    }
 }
 .logo-img {
     height: 3.2rem;
     width: auto;
     margin-right: 0.1rem;
     vertical-align: middle;
+    transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transform-origin: center center;
+    position: relative;
+    z-index: 2;
 }
 .logo:hover {
-    color: var(--primary-hover);
+    color: var(--accent-color); /* 鼠标悬停时变为粉色 */
+    text-shadow: 0 0 8px rgba(247, 125, 170, 0.3);
+    animation: logoGlow 1.5s ease infinite alternate;
+}
+@keyframes logoGlow {
+    0% {
+        text-shadow: 0 0 8px rgba(247, 125, 170, 0.3);
+    }
+    50% {
+        text-shadow: 0 0 15px rgba(247, 125, 170, 0.5), 0 0 20px rgba(122, 162, 247, 0.3);
+    }
+    100% {
+        text-shadow: 0 0 8px rgba(247, 125, 170, 0.3);
+    }
+}
+.logo:hover .logo-img {
+    transform: scale(1.15) rotate(10deg);
+    filter: drop-shadow(0 5px 15px rgba(122, 162, 247, 0.4));
+    animation: logoWiggle 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes logoWiggle {
+    0% { transform: scale(1) rotate(0); }
+    20% { transform: scale(1.2) rotate(15deg); }
+    40% { transform: scale(1.15) rotate(-8deg); }
+    60% { transform: scale(1.18) rotate(5deg); }
+    80% { transform: scale(1.15) rotate(-3deg); }
+    100% { transform: scale(1.15) rotate(10deg); }
 }
 
 .nav-links {
