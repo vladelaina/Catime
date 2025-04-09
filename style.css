@@ -51,7 +51,10 @@ body {
     color: var(--text-color);
     background-color: var(--background-color);
     overflow-x: hidden;
-    font-weight: 400; /* 默认使用常规字重 */
+    font-weight: 400;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 .container {
@@ -60,15 +63,16 @@ body {
     margin-right: auto;
     padding-left: 15px;
     padding-right: 15px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 h1, h2, h3, h4, h5, h6 {
     color: var(--heading-color);
-    font-weight: 700; /* 粗体标题 */
+    font-weight: 700;
     line-height: 1.3;
     margin-bottom: 0.75rem;
-    transition: color 0.3s ease, transform 0.3s ease, text-shadow 0.3s ease;
-    cursor: pointer;
+    letter-spacing: -0.02em; /* 稍微紧凑的字间距 */
 }
 
 h2:hover, h3:hover, h4:hover, h5:hover, h6:hover {
@@ -96,110 +100,71 @@ img {
 
 /* --- 页头/导航 --- */
 .main-header {
-    background-color: rgba(255, 255, 255, 0.85); /* 略微更透明的白色 */
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background-color: rgba(255, 255, 255, 0.92); /* 增加透明度，但保持清晰 */
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
     border-bottom: 1px solid var(--border-color);
-    padding: 0.8rem 0; /* 稍微减少内边距 */
+    padding: 1rem 0; /* 稍微增加内边距 */
     position: sticky;
     top: 0;
     z-index: 1000;
-    transition: box-shadow 0.3s ease;
+    transition: box-shadow 0.3s ease, background-color 0.3s ease;
+    box-shadow: 0 2px 15px rgba(122, 162, 247, 0.08); /* 添加微妙的阴影 */
+}
+
+.main-header:hover {
+    background-color: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 2px 20px rgba(122, 162, 247, 0.12);
 }
 
 .main-header .container {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 0 15px; /* 确保左右内边距一致 */
 }
 
 .logo {
-    font-size: 1.8rem;
+    font-size: 1.9rem; /* 增加logo大小 */
     font-weight: 700;
-    color: var(--primary-color); /* 蓝色 logo 文本 */
+    color: var(--primary-color);
     text-decoration: none;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.6rem; /* 增加logo图标和文字的间距 */
     transition: all 0.4s ease;
     position: relative;
     overflow: hidden;
 }
-.logo::before {
-    content: '';
-    position: absolute;
-    width: 30px;
-    height: 30px;
-    background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
-    border-radius: 50%;
-    opacity: 0;
-    top: 50%;
-    left: -30px;
-    transform: translateY(-50%);
-    transition: opacity 0.3s ease;
-    z-index: 1;
-    pointer-events: none;
-}
-.logo:hover::before {
-    opacity: 1;
-    animation: logoRipple 1.5s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
-}
-@keyframes logoRipple {
-    0% {
-        left: -30px;
-        opacity: 0.7;
-    }
-    100% {
-        left: 120%;
-        opacity: 0;
-    }
-}
+
 .logo-img {
-    height: 3.2rem;
+    height: 3.4rem; /* 增加logo图标大小 */
     width: auto;
     margin-right: 0.1rem;
     vertical-align: middle;
     position: relative;
     z-index: 2;
+    filter: drop-shadow(0 2px 5px rgba(122, 162, 247, 0.3)); /* 添加微妙的阴影 */
 }
-.logo:hover {
-    color: var(--accent-color); /* 鼠标悬停时变为粉色 */
-    text-shadow: 0 0 8px rgba(247, 125, 170, 0.3);
-    animation: logoGlow 1.5s ease infinite alternate;
-}
-@keyframes logoGlow {
-    0% {
-        text-shadow: 0 0 8px rgba(247, 125, 170, 0.3);
-    }
-    50% {
-        text-shadow: 0 0 15px rgba(247, 125, 170, 0.5), 0 0 20px rgba(122, 162, 247, 0.3);
-    }
-    100% {
-        text-shadow: 0 0 8px rgba(247, 125, 170, 0.3);
-    }
-}
-.logo:hover .logo-img {
-    animation: jelly 0.6s ease;
-}
-
-/* 移除不再使用的动画关键帧 */
 
 .nav-links {
     list-style: none;
     display: flex;
     align-items: center;
-    gap: 1.8rem; /* 更多间距 */
+    gap: 2rem; /* 增加导航项间距 */
 }
 
 .nav-links a {
     color: var(--text-color);
-    font-weight: 400;
+    font-weight: 500; /* 增加字重 */
     text-decoration: none;
     position: relative;
     padding-bottom: 0.3rem;
     transition: color 0.3s ease;
-    display: inline-block; /* 确保动画可以应用 */
+    display: inline-block;
+    font-size: 1.05rem; /* 增加导航文字大小 */
 }
+
 .nav-links a:hover {
     color: var(--primary-color); /* 导航链接悬停时为蓝色 */
     animation: jelly 0.6s ease;
@@ -224,19 +189,24 @@ img {
 }
 
 .nav-button {
-    background-color: var(--primary-color); /* 蓝色按钮 */
+    background-color: var(--primary-color);
     color: white !important;
-    padding: 0.6rem 1.4rem;
+    padding: 0.6rem 1.5rem; /* 增加内边距 */
     border-radius: var(--border-radius-pill);
     text-decoration: none;
     transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
     box-shadow: var(--button-shadow);
     font-weight: 600;
-    font-size: 0.95rem;
+    font-size: 1rem; /* 增加字体大小 */
 }
+
 .nav-button i {
-    margin-right: 0.4rem;
+    margin-right: 0.7rem; /* 增加图标和文字的间距 */
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.3s ease;
+    display: inline-block;
+    font-size: 1.1em; /* 增加图标大小，相对于按钮文字 */
 }
+
 .nav-button:hover {
     background-color: var(--primary-hover);
     color: white !important;
@@ -244,6 +214,7 @@ img {
     box-shadow: var(--button-hover-shadow);
     animation: jelly 0.6s ease;
 }
+
 .nav-button::after {
     display: none;
 }
@@ -262,22 +233,25 @@ img {
     align-items: center;
     justify-content: space-between;
     gap: 3rem;
-    position: relative; /* 为 z-index 做准备（如需要） */
+    position: relative;
     z-index: 2;
+    padding: 1rem 0;
 }
 
 .hero-text {
     flex: 1 1 55%;
+    max-width: 540px;
 }
 
 .hero-title {
-    font-size: 3.8rem; /* 更大的标题 */
+    font-size: 3.8rem;
     font-weight: 700;
     margin-bottom: 0.8rem;
-    color: var(--heading-color); /* 深蓝色标题 */
+    color: var(--heading-color);
     line-height: 1.15;
     cursor: pointer;
     transition: color 0.3s ease, text-shadow 0.3s ease, transform 0.3s ease;
+    letter-spacing: -0.03em; /* 更紧凑的字间距 */
 }
 
 /* 3D旋转文字效果 */
@@ -429,16 +403,17 @@ img {
 
 /* 改进描述文字基本样式 */
 .hero-description {
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     color: var(--text-color);
-    margin-bottom: 2.5rem;
+    margin-bottom: 2.8rem;
     max-width: 520px;
     line-height: 1.8;
     transition: all 0.3s ease;
     cursor: pointer;
-    padding: 10px 0;
+    padding: 12px 0;
     position: relative;
-    text-align: justify;
+    text-align: left; /* 改为左对齐而非两端对齐 */
+    letter-spacing: 0.01em; /* 微调字间距 */
 }
 
 /* 添加鼠标悬停特效底部边框 */
@@ -641,9 +616,9 @@ img {
 /* 号召性按钮 */
 .cta-button {
     display: inline-block;
-    padding: 0.8rem 1.8rem;
+    padding: 0.9rem 2rem; /* 增加内边距 */
     border-radius: var(--border-radius-pill);
-    font-size: 1rem;
+    font-size: 1.05rem; /* 增加字体大小 */
     font-weight: 600;
     text-align: center;
     cursor: pointer;
@@ -653,12 +628,16 @@ img {
     box-shadow: var(--button-shadow);
     position: relative;
     overflow: hidden;
+    letter-spacing: 0.02em; /* 增加字间距 */
 }
+
 .cta-button i {
-    margin-right: 0.6rem;
+    margin-right: 0.7rem; /* 增加图标和文字的间距 */
     transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.3s ease;
     display: inline-block;
+    font-size: 1.1em; /* 增加图标大小，相对于按钮文字 */
 }
+
 .cta-button::before {
     content: '';
     position: absolute;
@@ -673,20 +652,24 @@ img {
     z-index: 1;
     opacity: 0;
 }
+
 .cta-button:hover::before {
     width: 300%;
     height: 300%;
     opacity: 1;
 }
+
 .cta-button > * {
     position: relative;
     z-index: 2;
 }
+
 .cta-button.primary {
     background-color: var(--accent-color); /* 粉色主要按钮 */
     color: white;
     transition: all 0.4s ease, transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
+
 .cta-button.primary:hover {
     background-color: #ff5d95; /* 更亮更饱和的粉色 */
     color: white;
@@ -694,10 +677,12 @@ img {
     transform: translateY(-3px);
     animation: jelly 0.6s ease;
 }
+
 .cta-button.primary:hover i {
     transform: scale(1.2) rotate(10deg);
     color: #fff6f9; /* 更亮的颜色强调图标 */
 }
+
 .cta-button.secondary {
     background-color: var(--surface-color); /* 白色 */
     color: var(--primary-color); /* 蓝色文本 */
@@ -705,6 +690,7 @@ img {
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
     transition: all 0.4s ease, transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
+
 .cta-button.secondary:hover {
     background-color: #eef4ff; /* 更明显的淡蓝色 */
     color: #4f7df9; /* 更亮的蓝色 */
@@ -713,13 +699,16 @@ img {
     transform: translateY(-3px);
     animation: jelly 0.6s ease;
 }
+
 .cta-button.secondary:hover i {
     transform: scale(1.2) rotate(10deg);
     color: #3a69f8; /* 更亮的蓝色强调图标 */
 }
+
 .cta-button.large {
-    padding: 1rem 2.5rem;
-    font-size: 1.15rem;
+    padding: 1.1rem 2.7rem; /* 增加大型按钮的内边距 */
+    font-size: 1.2rem; /* 增加大型按钮字体大小 */
+    letter-spacing: 0.03em; /* 更大的字间距 */
 }
 
 /* 可选的背景形状 */
@@ -732,6 +721,7 @@ img {
     overflow: hidden;
     z-index: 1;
 }
+
 .shape {
     position: absolute;
     border-radius: 50%;
@@ -739,13 +729,16 @@ img {
     background-color: var(--accent-color); /* 粉色形状 */
     animation: float 15s infinite ease-in-out alternate;
 }
+
 .shape1 {
     width: 150px; height: 150px; top: 10%; left: 5%; animation-duration: 18s;
     background-color: rgba(255, 255, 255, 0.5); /* 白色形状 */
 }
+
 .shape2 {
     width: 80px; height: 80px; bottom: 15%; right: 10%; animation-duration: 12s; animation-delay: 2s;
 }
+
 .shape3 {
     width: 120px; height: 120px; top: 40%; right: 15%; animation-duration: 20s; animation-delay: 1s;
      background-color: rgba(167, 199, 231, 0.3); /* 浅蓝色形状 */
@@ -758,19 +751,20 @@ img {
 
 /* --- 特性区域 --- */
 .features {
-    padding: 6rem 0;
-    background-color: var(--surface-color); /* 白色背景 */
-    position: relative; /* 为潜在的未来装饰做准备 */
+    padding: 7rem 0; /* 增加垂直空间 */
+    background-color: var(--surface-color);
+    position: relative;
 }
 
 .section-title {
     text-align: center;
-    font-size: 2.6rem;
+    font-size: 2.7rem; /* 增加大小 */
     font-weight: 700;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.8rem;
     color: var(--heading-color);
     cursor: pointer;
     transition: color 0.3s ease, text-shadow 0.3s ease, transform 0.3s ease;
+    letter-spacing: -0.02em; /* 微调字间距 */
 }
 
 .section-title:hover {
@@ -784,14 +778,15 @@ img {
 
 .section-subtitle {
     text-align: center;
-    font-size: 1.15rem;
+    font-size: 1.2rem; /* 增加大小 */
     color: var(--secondary-color);
-    margin-bottom: 4.5rem;
-    max-width: 600px;
+    margin-bottom: 4.8rem; /* 增加与内容的距离 */
+    max-width: 650px; /* 增加宽度 */
     margin-left: auto;
     margin-right: auto;
     transition: color 0.3s ease, transform 0.3s ease;
     cursor: pointer;
+    line-height: 1.6; /* 优化行高 */
 }
 
 .section-subtitle:hover {
@@ -801,20 +796,21 @@ img {
 
 .features-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 2.5rem; /* 稍微更大的间隙 */
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* 稍微增加卡片宽度 */
+    gap: 2.8rem; /* 增加卡片间距 */
+    margin-top: 2rem; /* 增加与标题的距离 */
 }
 
 .feature-card {
-    background-color: #f8faff; /* 非常浅的蓝色卡片背景 */
-    padding: 2.5rem 2rem;
+    background-color: #f8faff;
+    padding: 2.8rem 2.2rem; /* 增加内边距 */
     border-radius: var(--border-radius-large);
     text-align: center;
     box-shadow: var(--card-shadow);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     border: 1px solid transparent;
     position: relative;
-    overflow: hidden; /* 隐藏悬停效果可能造成的溢出 */
+    overflow: hidden;
 }
 
 .feature-card:hover {
@@ -1039,9 +1035,9 @@ img {
 }
 
 .feature-card h3 {
-    font-size: 1.3rem;
+    font-size: 1.4rem; /* 增加标题大小 */
     font-weight: 600;
-    margin-bottom: 0.75rem;
+    margin-bottom: 1rem; /* 增加与正文的距离 */
     color: var(--heading-color);
     transition: color 0.3s ease, transform 0.3s ease, text-shadow 0.3s ease;
     cursor: pointer;
@@ -1063,9 +1059,9 @@ img {
 .feature-card:nth-child(6):hover h3 { color: #e94f79; }
 
 .feature-card p {
-    font-size: 0.95rem;
+    font-size: 1rem;
     color: var(--text-color);
-    line-height: 1.65;
+    line-height: 1.7;
     transition: color 0.3s ease, transform 0.3s ease;
     cursor: pointer;
 }
@@ -1297,14 +1293,15 @@ img {
 .scenario-card {
     display: flex;
     align-items: center;
-    gap: 3rem;
+    gap: 4rem; /* 增加左右内容的间距 */
     background-color: var(--surface-color);
     border-radius: var(--border-radius-large);
-    padding: 2rem;
+    padding: 2.5rem; /* 增加内边距 */
     box-shadow: var(--card-shadow);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     overflow: hidden;
     position: relative;
+    margin-bottom: 1rem; /* 卡片底部间距 */
 }
 
 .scenario-card:hover {
@@ -1411,9 +1408,9 @@ img {
 }
 
 .scenario-content h3 {
-    font-size: 1.5rem;
+    font-size: 1.6rem; /* 增加标题大小 */
     font-weight: 600;
-    margin-bottom: 1rem;
+    margin-bottom: 1.2rem; /* 增加与正文的距离 */
     color: var(--heading-color);
     transition: color 0.3s ease, transform 0.3s ease, text-shadow 0.3s ease;
     cursor: pointer;
@@ -1428,8 +1425,8 @@ img {
 
 .scenario-content p {
     color: var(--text-color);
-    line-height: 1.7;
-    font-size: 1rem;
+    line-height: 1.8; /* 增加行高 */
+    font-size: 1.05rem; /* 稍微增加字体大小 */
     transition: color 0.3s ease, transform 0.3s ease;
 }
 
@@ -1496,19 +1493,22 @@ img {
 
 /* --- CTA 区域 --- */
 .cta-section {
-    padding: 5.5rem 0;
-    /* 为 CTA 使用更鲜艳的渐变 */
+    padding: 6.5rem 0; /* 增加垂直空间 */
     background-image: linear-gradient(60deg, var(--primary-color) 0%, var(--accent-color) 100%);
     color: white;
     text-align: center;
 }
 .cta-section h2 {
-    font-size: 2.4rem;
+    font-size: 2.5rem; /* 增加标题大小 */
     color: white;
-    margin-bottom: 1rem;
+    margin-bottom: 1.2rem;
     font-weight: 700;
     cursor: pointer;
     transition: transform 0.3s ease, text-shadow 0.3s ease;
+    letter-spacing: -0.01em; /* 微调字间距 */
+    max-width: 860px; /* 限制宽度，保持居中 */
+    margin-left: auto;
+    margin-right: auto;
 }
 .cta-section h2:hover {
     transform: scale(1.02);
@@ -1553,12 +1553,13 @@ img {
 
 /* --- 页脚 --- */
 .main-footer {
-    padding: 3rem 0 2.5rem;
-    background-color: #e6e9ff; /* 稍微深一点的薰衣草色页脚 */
+    padding: 3.5rem 0 3rem; /* 增加垂直空间 */
+    background-color: #e6e9ff;
     text-align: center;
     color: var(--secondary-color);
     font-size: 0.9rem;
     border-top: 1px solid var(--border-color);
+    line-height: 1.8; /* 增加行高 */
 }
 .main-footer p {
     margin-bottom: 0.5rem;
@@ -2538,4 +2539,224 @@ p:hover {
     color: var(--text-color);
     transform: none;
     cursor: default;
+}
+
+/* 优化的响应式设计 */
+@media (max-width: 1200px) {
+    .container {
+        max-width: 960px;
+    }
+}
+
+@media (max-width: 992px) {
+    .container {
+        max-width: 90%;
+    }
+    
+    html {
+        font-size: 15px;
+    }
+    
+    .hero-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 2rem;
+    }
+    
+    .hero-text {
+        margin-bottom: 0;
+        order: 2;
+        flex: 1 1 100%;
+        max-width: 100%;
+    }
+    
+    .hero-visual {
+        order: 1;
+        max-width: 480px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    
+    .hero-title {
+        font-size: 3.2rem;
+    }
+    
+    .hero-subtitle {
+        font-size: 1.6rem;
+    }
+    
+    .hero-description {
+        margin-left: auto;
+        margin-right: auto;
+        max-width: 600px;
+        text-align: center;
+    }
+    
+    .features-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 2.5rem;
+    }
+    
+    .scenario-card,
+    .scenario-card.reverse {
+        flex-direction: column;
+        padding: 2rem;
+        gap: 2rem;
+    }
+    
+    .scenario-visual {
+        width: 100%;
+        margin-bottom: 1rem;
+        min-height: 250px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    .scenario-img {
+        max-width: 85%;
+    }
+    
+    .scenario-content {
+        padding: 0 1rem;
+        text-align: center;
+    }
+    
+    .section-title {
+        font-size: 2.4rem;
+    }
+    
+    .section-subtitle {
+        font-size: 1.1rem;
+        margin-bottom: 3.5rem;
+    }
+    
+    .cta-section h2 {
+        font-size: 2.2rem;
+    }
+}
+
+@media (max-width: 768px) {
+    html {
+        font-size: 14px;
+    }
+    
+    .main-header .container {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 0.8rem 1rem;
+    }
+    
+    .nav-links {
+        gap: 1rem 1.5rem;
+        flex-wrap: wrap;
+        justify-content: center;
+        padding: 0.5rem 0;
+    }
+    
+    .hero {
+        padding: 4rem 0;
+    }
+    
+    .hero-title {
+        font-size: 2.8rem;
+    }
+    
+    .hero-subtitle {
+        font-size: 1.4rem;
+    }
+    
+    .hero-description {
+        font-size: 1.05rem;
+        padding: 0.5rem 0;
+    }
+    
+    .desc-word {
+        margin-right: 3px;
+    }
+    
+    .features-grid {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+    
+    .feature-card {
+        padding: 2rem 1.5rem;
+    }
+    
+    .cta-section {
+        padding: 4rem 0;
+    }
+    
+    .cta-section h2 {
+        font-size: 2rem;
+    }
+    
+    .cta-section p {
+        font-size: 1.05rem;
+        margin-bottom: 2rem;
+    }
+    
+    .cta-button.large {
+        padding: 0.9rem 2rem;
+        font-size: 1.1rem;
+        width: 80%; /* 在移动设备上扩大按钮宽度 */
+        max-width: 300px;
+    }
+    
+    .section-title {
+        font-size: 2.2rem;
+    }
+    
+    .section-subtitle {
+        font-size: 1.05rem;
+        margin-bottom: 2.5rem;
+    }
+    
+    .usage-scenarios {
+        padding: 4rem 0;
+    }
+    
+    .scenarios-container {
+        gap: 2.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    html {
+        font-size: 13px;
+    }
+    
+    .hero-title {
+        font-size: 2.5rem;
+    }
+    
+    .hero-subtitle {
+        font-size: 1.3rem;
+    }
+    
+    .cta-button {
+        padding: 0.8rem 1.5rem;
+        font-size: 1rem;
+        display: block;
+        margin: 1rem auto;
+        width: 90%;
+        max-width: 280px;
+    }
+    
+    .feature-icon {
+        font-size: 2.5rem;
+    }
+    
+    .section-title {
+        font-size: 2rem;
+    }
+    
+    .cta-section h2 {
+        font-size: 1.8rem;
+    }
+    
+    .main-footer {
+        padding: 2.5rem 0 2rem;
+    }
 }
