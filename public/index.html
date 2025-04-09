@@ -539,6 +539,11 @@
                     if (!rafId) {
                         rafId = requestAnimationFrame(updateTransform);
                     }
+                    
+                    // 随机创建跟随鼠标的彗星粒子
+                    if (Math.random() > 0.85) { // 调整概率控制生成频率
+                        createCometParticle(e.clientX - rect.left, e.clientY - rect.top);
+                    }
                 });
                 
                 // 更新3D变换
@@ -574,7 +579,61 @@
                     
                     // 当图表容器被悬停时，更新ECharts图表大小以确保正确渲染
                     chart.resize();
+                    
+                    // 创建星星粒子
+                    createStarParticles();
                 });
+                
+                // 创建星星粒子效果
+                function createStarParticles() {
+                    const starParticlesContainer = githubChartContainer.querySelector('.star-particles');
+                    if (!starParticlesContainer || starParticlesContainer.children.length > 0) return;
+                    
+                    // 增加粒子数量到30个
+                    for (let i = 0; i < 30; i++) {
+                        const particle = document.createElement('div');
+                        particle.className = 'star-particle';
+                        
+                        // 随机位置 - 更广泛的分布
+                        const x = Math.random() * 100;
+                        const y = Math.random() * 100;
+                        particle.style.left = `${x}%`;
+                        particle.style.bottom = `${y}%`;
+                        
+                        // 随机大小 - 增加大小范围
+                        const size = Math.random() * 4 + 1;
+                        particle.style.width = `${size}px`;
+                        particle.style.height = `${size}px`;
+                        
+                        // 随机不透明度
+                        const baseOpacity = Math.random() * 0.5 + 0.5;
+                        particle.style.opacity = baseOpacity;
+                        
+                        // 随机延迟 - 更宽的延迟范围
+                        const delay = Math.random() * 5;
+                        particle.style.animationDelay = `${delay}s`;
+                        
+                        // 随机持续时间 - 更多变化
+                        const duration = Math.random() * 3 + 2;
+                        particle.style.animationDuration = `${duration}s`;
+                        
+                        // 添加随机旋转
+                        if (Math.random() > 0.7) {
+                            particle.style.transform = `rotate(${Math.random() * 360}deg)`;
+                        }
+                        
+                        // 随机星星形状 - 有10%概率创建特殊形状
+                        if (Math.random() > 0.9) {
+                            // 创建星形粒子
+                            particle.style.clipPath = 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)';
+                            particle.style.width = `${size * 3}px`;
+                            particle.style.height = `${size * 3}px`;
+                        }
+                        
+                        // 添加到容器
+                        starParticlesContainer.appendChild(particle);
+                    }
+                }
                 
                 // 鼠标离开事件
                 githubChartContainer.addEventListener('mouseleave', function() {
@@ -863,6 +922,65 @@
                 chart.resize();
             });
         });
+    </script>
+
+    <!-- 创建彗星效果 -->
+    <script>
+        function createCometParticle(x, y) {
+            const starParticlesContainer = githubChartContainer.querySelector('.star-particles');
+            if (!starParticlesContainer) return;
+            
+            const comet = document.createElement('div');
+            comet.className = 'star-particle comet';
+            
+            // 设置彗星位置为鼠标位置
+            comet.style.left = `${x}px`;
+            comet.style.top = `${y}px`;
+            comet.style.bottom = 'auto';
+            
+            // 彗星大小
+            const size = Math.random() * 2 + 2;
+            comet.style.width = `${size}px`;
+            comet.style.height = `${size}px`;
+            
+            // 设置彗星特殊样式
+            comet.style.boxShadow = `0 0 6px 2px rgba(122, 162, 247, 0.8)`;
+            comet.style.backgroundColor = '#7aa2f7';
+            comet.style.opacity = '0.9';
+            
+            // 计算随机方向（彗星尾巴会朝反方向）
+            const angle = Math.random() * 360;
+            const distance = 50 + Math.random() * 100; // 移动距离
+            
+            // 设置径向渐变作为彗星尾巴
+            comet.style.background = `radial-gradient(circle at center, #7aa2f7 10%, rgba(122, 162, 247, 0.5) 40%, transparent 70%)`;
+            
+            // 应用CSS动画
+            comet.style.animation = 'none'; // 清除默认动画
+            comet.style.transition = 'all 1s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+            
+            // 添加到容器
+            starParticlesContainer.appendChild(comet);
+            
+            // 在下一帧应用变换，确保过渡效果生效
+            requestAnimationFrame(() => {
+                // 根据角度计算新位置
+                const rad = angle * Math.PI / 180;
+                const moveX = Math.cos(rad) * distance;
+                const moveY = Math.sin(rad) * distance;
+                
+                // 设置移动和缩放效果
+                comet.style.transform = `translate(${moveX}px, ${moveY}px) scale(0.1)`;
+                comet.style.opacity = '0';
+            });
+            
+            // 移除彗星元素
+            setTimeout(() => {
+                if (comet.parentNode === starParticlesContainer) {
+                    starParticlesContainer.removeChild(comet);
+                }
+            }, 1000);
+        }
     </script>
 
 </body>
