@@ -115,9 +115,9 @@ img {
     gap: 0.5rem;
 }
 .logo-img {
-    height: 1.8rem;
+    height: 3.2rem;
     width: auto;
-    margin-right: 0.3rem;
+    margin-right: 0.1rem;
     vertical-align: middle;
 }
 .logo:hover {
