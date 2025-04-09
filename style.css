@@ -1447,7 +1447,7 @@ img {
 .scenario-card:hover .scenario-icon {
     background-color: var(--primary-color);
     color: white;
-    /* 移除 transform，避免与动画冲突 */
+    /* 不应用动画 */
 }
 
 /* 使用场景图标动画效果 */
@@ -1506,30 +1506,34 @@ img {
     }
 }
 
-/* 应用动画到各个场景图标 - 修改为卡片悬停时自动触发动画 */
+/* 修改为只在图标悬停时应用动画 */
+/* 移除卡片悬停时的图标动画 */
 .scenario-card:nth-child(1):hover .scenario-icon {
-    animation: dragonFloat 2s infinite;
     background-color: rgba(255, 100, 100, 0.2);
     color: #ff3838;
 }
 
 .scenario-card:nth-child(2):hover .scenario-icon {
-    animation: boltFlash 1.5s infinite;
     background-color: rgba(255, 215, 0, 0.2);
     color: #ffb700;
 }
 
 .scenario-card:nth-child(3):hover .scenario-icon {
-    animation: presentationPulse 1.8s infinite;
     background-color: rgba(0, 150, 255, 0.2);
     color: #0096ff;
 }
 
-/* 删除原来的只在图标悬停时触发的动画设置 */
-.scenario-card:nth-child(1) .scenario-icon:hover,
-.scenario-card:nth-child(2) .scenario-icon:hover,
+/* 添加只在图标悬停时的动画效果 */
+.scenario-card:nth-child(1) .scenario-icon:hover {
+    animation: dragonFloat 2s infinite;
+}
+
+.scenario-card:nth-child(2) .scenario-icon:hover {
+    animation: boltFlash 1.5s infinite;
+}
+
 .scenario-card:nth-child(3) .scenario-icon:hover {
-    animation: none;
+    animation: presentationPulse 1.8s infinite;
 }
 
 .scenario-content h3 {
