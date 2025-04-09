@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Catime 指南 - 了解最新的时间管理技巧、软件更新和用户故事。">
-    <title>博客 - Catime | 可爱风 Windows 计时器 & 番茄钟</title>
+    <title>指南 - Catime | 可爱风 Windows 计时器 & 番茄钟</title>
 
     <!-- Google 字体 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,11 +16,120 @@
 
     <!-- AOS 库 -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    
+    <!-- Marked.js 用于解析Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <!-- 自定义样式表 -->
     <link rel="stylesheet" href="style.css">
 
     <link rel="icon" type="image/png" href="assets/catime.png">
+    
+    <style>
+        .wiki-container {
+            display: flex;
+            max-width: 1200px;
+            margin: 40px auto;
+            min-height: 600px;
+        }
+        
+        .wiki-sidebar {
+            width: 250px;
+            background: #f7f9fc;
+            border-radius: 10px;
+            padding: 20px;
+            margin-right: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        
+        .wiki-content {
+            flex: 1;
+            background: #fff;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        
+        .wiki-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .wiki-list li {
+            margin-bottom: 10px;
+        }
+        
+        .wiki-list a {
+            display: block;
+            padding: 8px 10px;
+            color: #4d5969;
+            text-decoration: none;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+        
+        .wiki-list a:hover, .wiki-list a.active {
+            background: #e8f0fe;
+            color: #3498db;
+        }
+        
+        .wiki-list .category {
+            font-weight: 600;
+            font-size: 14px;
+            margin-top: 20px;
+            margin-bottom: 5px;
+            color: #333;
+        }
+        
+        .wiki-list .sub-item {
+            padding-left: 20px;
+        }
+        
+        .wiki-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .wiki-content h1 {
+            font-size: 28px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .wiki-content h2 {
+            font-size: 22px;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+        
+        .wiki-content h3 {
+            font-size: 18px;
+            margin-top: 25px;
+        }
+        
+        #content-loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 300px;
+        }
+        
+        @media (max-width: 768px) {
+            .wiki-container {
+                flex-direction: column;
+            }
+            
+            .wiki-sidebar {
+                width: 100%;
+                margin-right: 0;
+                margin-bottom: 20px;
+            }
+        }
+    </style>
 </head>
 <body>
 
@@ -39,104 +148,48 @@
     </header>
 
     <main>
-        <!-- 博客页面标题 -->
+        <!-- 指南页面标题 -->
         <section class="page-header">
             <div class="container">
-                <h1 data-aos="fade-up">Catime 指南(正在施工中ing~🚀)</h1>
-                <p data-aos="fade-up" data-aos-delay="100">探索时间管理的乐趣与效率，跟进最新更新</p>
+                <h1 data-aos="fade-up">Catime 使用指南</h1>
+                <p data-aos="fade-up" data-aos-delay="100">了解 Catime 的使用方法、功能特性与常见问题解答</p>
             </div>
         </section>
 
-        <!-- 博客文章列表 -->
-        <section class="blog-section">
+        <!-- Wiki 内容区域 -->
+        <section class="wiki-section">
             <div class="container">
-                <div class="blog-grid">
-                    <!-- 博客文章 1 -->
-                    <article class="blog-card" data-aos="fade-up">
-                        <div class="blog-image">
-                            <img src="assets/blog-1.jpg" alt="Catime 番茄钟功能介绍">
-                        </div>
-                        <div class="blog-content">
-                            <div class="blog-meta">
-                                <span class="blog-date"><i class="far fa-calendar-alt"></i> 2024年4月10日</span>
-                                <span class="blog-category"><i class="fas fa-tag"></i> 功能介绍</span>
+                <div class="wiki-container" data-aos="fade-up">
+                    <!-- 左侧导航 -->
+                    <div class="wiki-sidebar">
+                        <h3>文档目录</h3>
+                        <ul class="wiki-list" id="wiki-navigation">
+                            <li><a href="#" data-page="Home" class="active">首页</a></li>
+                            <li><a href="#" data-page="使用场景">使用场景</a></li>
+                            <li class="category">菜单说明</li>
+                            <li class="sub-item"><a href="#" data-page="右键托盘图标">右键托盘图标</a></li>
+                            <li class="sub-item"><a href="#" data-page="左键托盘图标">左键托盘图标</a></li>
+                            <li><a href="#" data-page="常见问题">常见问题</a></li>
+                        </ul>
+                    </div>
+                    
+                    <!-- 右侧内容 -->
+                    <div class="wiki-content">
+                        <div id="wiki-content-container">
+                            <div id="content-loading" style="display: none;">
+                                <i class="fas fa-circle-notch fa-spin fa-2x"></i>
                             </div>
-                            <h2><a href="blog-post.html">番茄钟：如何利用 Catime 提升工作效率</a></h2>
-                            <p>番茄工作法是一种简单有效的时间管理方法，本文将介绍如何利用 Catime 的番茄钟功能来提升你的工作和学习效率...</p>
-                            <a href="blog-post.html" class="read-more">阅读全文 <i class="fas fa-arrow-right"></i></a>
-                        </div>
-                    </article>
-
-                    <!-- 博客文章 2 -->
-                    <article class="blog-card" data-aos="fade-up" data-aos-delay="100">
-                        <div class="blog-image">
-                            <img src="assets/blog-2.jpg" alt="Catime 自定义主题教程">
-                        </div>
-                        <div class="blog-content">
-                            <div class="blog-meta">
-                                <span class="blog-date"><i class="far fa-calendar-alt"></i> 2024年4月5日</span>
-                                <span class="blog-category"><i class="fas fa-tag"></i> 教程</span>
+                            <div id="debug-info" style="margin-bottom: 15px; padding: 10px; background: #f5f5f5; border-radius: 5px; font-size: 0.9em; display: none;">
+                                <div><strong>当前页面URL:</strong> <span id="current-url"></span></div>
+                                <div><strong>当前工作目录:</strong> <span id="current-dir"></span></div>
+                                <div style="margin-top: 10px;">
+                                    <button id="test-fetch" class="btn btn-sm btn-primary">测试加载Home.md</button>
+                                    <button id="toggle-debug" class="btn btn-sm btn-secondary" style="margin-left: 10px;">隐藏调试信息</button>
+                                </div>
                             </div>
-                            <h2><a href="blog-post.html">如何自定义你的 Catime 主题</a></h2>
-                            <p>Catime 支持丰富的个性化设置，本教程将带你一步步学习如何调整颜色、字体和布局，打造专属于你的可爱计时器...</p>
-                            <a href="blog-post.html" class="read-more">阅读全文 <i class="fas fa-arrow-right"></i></a>
+                            <div id="markdown-content"></div>
                         </div>
-                    </article>
-
-                    <!-- 博客文章 3 -->
-                    <article class="blog-card" data-aos="fade-up" data-aos-delay="200">
-                        <div class="blog-image">
-                            <img src="assets/blog-3.jpg" alt="Catime 更新日志">
-                        </div>
-                        <div class="blog-content">
-                            <div class="blog-meta">
-                                <span class="blog-date"><i class="far fa-calendar-alt"></i> 2024年3月20日</span>
-                                <span class="blog-category"><i class="fas fa-tag"></i> 更新日志</span>
-                            </div>
-                            <h2><a href="blog-post.html">Catime v1.2 更新日志：新增透明度调节和热键功能</a></h2>
-                            <p>我们很高兴地宣布 Catime v1.2 已经发布！本次更新带来了透明度调节功能、全局热键支持以及多项性能优化...</p>
-                            <a href="blog-post.html" class="read-more">阅读全文 <i class="fas fa-arrow-right"></i></a>
-                        </div>
-                    </article>
-
-                    <!-- 博客文章 4 -->
-                    <article class="blog-card" data-aos="fade-up" data-aos-delay="300">
-                        <div class="blog-image">
-                            <img src="assets/blog-4.jpg" alt="用户分享">
-                        </div>
-                        <div class="blog-content">
-                            <div class="blog-meta">
-                                <span class="blog-date"><i class="far fa-calendar-alt"></i> 2024年3月15日</span>
-                                <span class="blog-category"><i class="fas fa-tag"></i> 用户故事</span>
-                            </div>
-                            <h2><a href="blog-post.html">用户故事：设计师小明如何用 Catime 规划一天</a></h2>
-                            <p>作为一名自由职业设计师，小明如何利用 Catime 的各项功能提高工作效率、避免拖延、平衡工作与生活的案例分享...</p>
-                            <a href="blog-post.html" class="read-more">阅读全文 <i class="fas fa-arrow-right"></i></a>
-                        </div>
-                    </article>
-                </div>
-
-                <!-- 分页 -->
-                <div class="pagination" data-aos="fade-up">
-                    <span class="current-page">1</span>
-                    <a href="#" class="page-number">2</a>
-                    <a href="#" class="page-number">3</a>
-                    <a href="#" class="next-page">下一页 <i class="fas fa-chevron-right"></i></a>
-                </div>
-            </div>
-        </section>
-
-        <!-- 订阅区域 -->
-        <section class="subscribe-section" data-aos="fade-up">
-            <div class="container">
-                <div class="subscribe-box">
-                    <h2>订阅我们的博客更新</h2>
-                    <p>及时获取最新的功能介绍、使用技巧和Catime相关资讯</p>
-                    <form class="subscribe-form">
-                        <input type="email" placeholder="输入你的邮箱地址" required>
-                        <button type="submit" class="subscribe-button">订阅 <i class="fas fa-paper-plane"></i></button>
-                    </form>
-                    <div class="privacy-note">我们尊重你的隐私，不会向任何第三方分享你的信息</div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -163,6 +216,204 @@
             duration: 800, // 动画持续时间
             once: true, // 动画是否只发生一次 - 在向下滚动时
             offset: 50, // 从原始触发点偏移的距离 (以像素为单位)
+        });
+        
+        // Wiki 内容加载
+        document.addEventListener('DOMContentLoaded', function() {
+            const contentContainer = document.getElementById('markdown-content');
+            const loadingIndicator = document.getElementById('content-loading');
+            const navLinks = document.querySelectorAll('#wiki-navigation a');
+            const debugInfo = document.getElementById('debug-info');
+            const currentUrlEl = document.getElementById('current-url');
+            const currentDirEl = document.getElementById('current-dir');
+            const testFetchBtn = document.getElementById('test-fetch');
+            const toggleDebugBtn = document.getElementById('toggle-debug');
+            
+            // 显示调试信息
+            function showDebugInfo() {
+                debugInfo.style.display = 'block';
+                currentUrlEl.textContent = window.location.href;
+                currentDirEl.textContent = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
+                toggleDebugBtn.textContent = '隐藏调试信息';
+            }
+            
+            // 隐藏调试信息
+            function hideDebugInfo() {
+                debugInfo.style.display = 'none';
+                toggleDebugBtn.textContent = '显示调试信息';
+            }
+            
+            // 检查URL参数是否有debug=true
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('debug') === 'true') {
+                showDebugInfo();
+            }
+            
+            // 测试按钮点击事件
+            if (testFetchBtn) {
+                testFetchBtn.addEventListener('click', function() {
+                    fetch('../wiki/Home.md')
+                        .then(response => {
+                            alert(`Home.md 请求状态: ${response.status} ${response.statusText}`);
+                            return response.text();
+                        })
+                        .then(text => {
+                            alert(`文件内容长度: ${text.length} 字符, 前50个字符: ${text.substring(0, 50)}...`);
+                        })
+                        .catch(error => {
+                            alert(`请求出错: ${error.message}`);
+                        });
+                });
+            }
+            
+            // 切换调试信息显示
+            if (toggleDebugBtn) {
+                toggleDebugBtn.addEventListener('click', function() {
+                    if (debugInfo.style.display === 'none') {
+                        showDebugInfo();
+                    } else {
+                        hideDebugInfo();
+                    }
+                });
+            }
+            
+            // 初始加载首页内容
+            loadContent('Home');
+            
+            // 为导航链接添加点击事件
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // 移除所有active类
+                    navLinks.forEach(l => l.classList.remove('active'));
+                    
+                    // 为当前点击的链接添加active类
+                    this.classList.add('active');
+                    
+                    // 获取页面名称并加载内容
+                    const pageName = this.getAttribute('data-page');
+                    loadContent(pageName);
+                });
+            });
+            
+            // 加载内容函数
+            function loadContent(pageName) {
+                // 显示加载中
+                contentContainer.style.display = 'none';
+                loadingIndicator.style.display = 'flex';
+                
+                // 构建文件路径 (根据文件命名约定)
+                let filePath;
+                
+                // 处理特殊文件名和常见路径模式
+                if (pageName === '左键托盘图标') {
+                    filePath = '../wiki/左键.托盘图标.md';
+                } else if (pageName.includes('/')) {
+                    // 如果是子目录中的文件
+                    filePath = `../wiki/${pageName}.md`;
+                } else {
+                    filePath = `../wiki/${pageName}.md`;
+                }
+                
+                console.log(`尝试加载文件: ${filePath}`);
+                
+                // 使用fetch API加载Markdown文件
+                fetch(filePath)
+                    .then(response => {
+                        if (!response.ok) {
+                            // 尝试其他可能的文件路径
+                            if (response.status === 404) {
+                                // 尝试不带.md后缀的路径
+                                return fetch(`../wiki/${pageName}`);
+                            }
+                            throw new Error(`HTTP错误 ${response.status}: ${response.statusText}`);
+                        }
+                        return response.text();
+                    })
+                    .then(markdownContent => {
+                        if (!markdownContent.trim()) {
+                            throw new Error('文件内容为空');
+                        }
+                        
+                        // 替换图片路径，使其指向正确的wiki/images目录
+                        markdownContent = markdownContent.replace(
+                            /!\[(.*?)\]\((\.\/images\/[^)]+)\)/g, 
+                            function(match, altText, imgPath) {
+                                // 提取图片文件名
+                                const imgFileName = imgPath.replace('./images/', '');
+                                return `![${altText}](../wiki/images/${imgFileName})`;
+                            }
+                        );
+                        
+                        // 处理其他的图片格式，如果没有./前缀
+                        markdownContent = markdownContent.replace(
+                            /!\[(.*?)\]\((images\/[^)]+)\)/g,
+                            '![$1](../wiki/$2)'
+                        );
+                        
+                        // 使用marked.js渲染Markdown内容
+                        contentContainer.innerHTML = marked.parse(markdownContent);
+                        
+                        // 设置页面标题
+                        const firstHeading = contentContainer.querySelector('h1, h2, h3, h4, h5, h6');
+                        if (firstHeading) {
+                            document.title = `${firstHeading.textContent} - Catime 指南`;
+                        }
+                        
+                        // 隐藏加载中，显示内容
+                        loadingIndicator.style.display = 'none';
+                        contentContainer.style.display = 'block';
+                        
+                        // 处理内部链接
+                        handleInternalLinks();
+                    })
+                    .catch(error => {
+                        console.error('加载文件出错:', error);
+                        contentContainer.innerHTML = `
+                            <div style="padding: 20px; text-align: center;">
+                                <h1>内容加载错误</h1>
+                                <p>无法加载 "${pageName}" 的内容</p>
+                                <p style="color: #666; font-size: 0.9em;">错误详情: ${error.message}</p>
+                                <p style="margin-top: 20px;">
+                                    <a href="#" onclick="window.location.search='?debug=true'; return false;" class="btn btn-sm btn-primary">开启调试模式</a>
+                                    <a href="#" onclick="document.querySelector('#wiki-navigation a[data-page=\\'Home\\']').click(); return false;" class="btn btn-sm btn-secondary" style="margin-left: 10px;">返回首页</a>
+                                </p>
+                            </div>
+                        `;
+                        loadingIndicator.style.display = 'none';
+                        contentContainer.style.display = 'block';
+                    });
+            }
+            
+            // 处理内部链接
+            function handleInternalLinks() {
+                document.querySelectorAll('#markdown-content a').forEach(link => {
+                    const href = link.getAttribute('href');
+                    
+                    // 如果是内部wiki链接
+                    if (href && (href.startsWith('./') || !href.includes('://') && !href.startsWith('#'))) {
+                        link.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            
+                            // 处理链接格式，获取页面名
+                            let targetPage = href.replace(/^\.\//, '');
+                            
+                            // 去掉.md后缀，如果有的话
+                            targetPage = targetPage.replace(/\.md$/, '');
+                            
+                            // 找到对应的导航项并触发点击
+                            const navItem = document.querySelector(`#wiki-navigation a[data-page="${targetPage}"]`);
+                            if (navItem) {
+                                navItem.click();
+                            } else {
+                                // 加载没有在导航中列出的页面
+                                loadContent(targetPage);
+                            }
+                        });
+                    }
+                });
+            }
         });
     </script>
 
