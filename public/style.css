@@ -3915,3 +3915,187 @@ p:hover {
         opacity: 0;
     }
 }
+
+.scenario-card:nth-child(3) .scenario-icon {
+    position: relative;
+    overflow: visible;
+}
+
+/* 添加PPT演示相关的伪元素 */
+.scenario-card:nth-child(3) .scenario-icon::before,
+.scenario-card:nth-child(3) .scenario-icon::after {
+    content: "";
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0);
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+/* 添加幻灯片框架效果 */
+.scenario-card:nth-child(3) .scenario-icon::before {
+    width: 20px;
+    height: 15px;
+    top: -20px;
+    right: -25px;
+    background: linear-gradient(135deg, #3b82f6, #60a5fa);
+    border-radius: 2px;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+    transform-origin: bottom left;
+    z-index: -1;
+}
+
+/* 添加幻灯片切换效果 */
+.scenario-card:nth-child(3) .scenario-icon::after {
+    width: 18px;
+    height: 12px;
+    bottom: -18px;
+    left: -20px;
+    background: linear-gradient(135deg, #60a5fa, #93c5fd);
+    border-radius: 2px;
+    box-shadow: 0 0 8px rgba(96, 165, 250, 0.5);
+    transform-origin: top right;
+    z-index: -1;
+}
+
+/* 鼠标悬停时激活伪元素 */
+.scenario-card:nth-child(3) .scenario-icon:hover::before {
+    opacity: 1;
+    transform: scale(1) rotate(-15deg);
+    animation: slideChange1 3s ease-in-out infinite;
+}
+
+.scenario-card:nth-child(3) .scenario-icon:hover::after {
+    opacity: 1;
+    transform: scale(1) rotate(15deg);
+    animation: slideChange2 3s ease-in-out infinite 0.5s;
+}
+
+/* 幻灯片动画 */
+@keyframes slideChange1 {
+    0%, 100% {
+        transform: scale(1) rotate(-15deg) translateY(0);
+        opacity: 0.7;
+        background: linear-gradient(135deg, #3b82f6, #60a5fa);
+    }
+    25% {
+        transform: scale(1.2) rotate(-5deg) translateY(-5px);
+        opacity: 0.9;
+        background: linear-gradient(135deg, #2563eb, #60a5fa);
+        box-shadow: 0 0 15px rgba(59, 130, 246, 0.7), 0 0 25px rgba(59, 130, 246, 0.4);
+    }
+    50% {
+        transform: scale(1.4) rotate(5deg) translateY(-10px);
+        opacity: 1;
+        background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+        box-shadow: 0 0 20px rgba(59, 130, 246, 0.8), 0 0 30px rgba(59, 130, 246, 0.5);
+    }
+    75% {
+        transform: scale(1.2) rotate(-5deg) translateY(-5px);
+        opacity: 0.9;
+        background: linear-gradient(135deg, #2563eb, #60a5fa);
+        box-shadow: 0 0 15px rgba(59, 130, 246, 0.7), 0 0 25px rgba(59, 130, 246, 0.4);
+    }
+}
+
+@keyframes slideChange2 {
+    0%, 100% {
+        transform: scale(1) rotate(15deg) translateY(0);
+        opacity: 0.7;
+        background: linear-gradient(135deg, #60a5fa, #93c5fd);
+    }
+    25% {
+        transform: scale(1.2) rotate(5deg) translateY(5px);
+        opacity: 0.9;
+        background: linear-gradient(135deg, #3b82f6, #93c5fd);
+        box-shadow: 0 0 15px rgba(59, 130, 246, 0.7), 0 0 25px rgba(59, 130, 246, 0.4);
+    }
+    50% {
+        transform: scale(1.4) rotate(-5deg) translateY(10px);
+        opacity: 1;
+        background: linear-gradient(135deg, #2563eb, #60a5fa);
+        box-shadow: 0 0 20px rgba(59, 130, 246, 0.8), 0 0 30px rgba(59, 130, 246, 0.5);
+    }
+    75% {
+        transform: scale(1.2) rotate(5deg) translateY(5px);
+        opacity: 0.9;
+        background: linear-gradient(135deg, #3b82f6, #93c5fd);
+        box-shadow: 0 0 15px rgba(59, 130, 246, 0.7), 0 0 25px rgba(59, 130, 246, 0.4);
+    }
+}
+
+/* 添加幻灯片内容动效 */
+.scenario-card:nth-child(3) .scenario-icon i {
+    position: relative;
+    z-index: 2;
+}
+
+.scenario-card:nth-child(3) .scenario-icon:hover i {
+    animation: presentationIcon 1.5s ease-in-out infinite;
+    color: #2563eb;
+    text-shadow: 0 0 10px rgba(59, 130, 246, 0.7), 0 0 20px rgba(255, 255, 255, 0.5);
+}
+
+@keyframes presentationIcon {
+    0%, 100% {
+        transform: scale(1);
+        color: #3b82f6;
+        text-shadow: 0 0 10px rgba(59, 130, 246, 0.5), 0 0 15px rgba(255, 255, 255, 0.3);
+    }
+    50% {
+        transform: scale(1.3);
+        color: #1d4ed8;
+        text-shadow: 0 0 15px rgba(29, 78, 216, 0.8), 0 0 25px rgba(255, 255, 255, 0.6), 0 0 35px rgba(29, 78, 216, 0.4);
+    }
+}
+
+/* 添加光线效果 */
+.scenario-card:nth-child(3) .scenario-icon:hover {
+    animation: presentationPulse 1.8s infinite;
+    position: relative;
+}
+
+.scenario-card:nth-child(3) .scenario-icon:hover::before,
+.scenario-card:nth-child(3) .scenario-icon:hover::after {
+    content: "";
+    position: absolute;
+    opacity: 1;
+}
+
+/* 添加幻灯片切换光效 */
+.scenario-card:nth-child(3) .scenario-icon:hover::before {
+    animation: slideChange1 3s ease-in-out infinite, slideGlow1 2s ease-in-out infinite;
+}
+
+.scenario-card:nth-child(3) .scenario-icon:hover::after {
+    animation: slideChange2 3s ease-in-out infinite 0.5s, slideGlow2 2s ease-in-out infinite 0.3s;
+}
+
+@keyframes slideGlow1 {
+    0%, 100% {
+        box-shadow: 0 0 10px rgba(59, 130, 246, 0.5), 0 0 15px rgba(59, 130, 246, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(59, 130, 246, 0.8), 0 0 30px rgba(59, 130, 246, 0.5), 0 0 45px rgba(59, 130, 246, 0.3);
+    }
+}
+
+@keyframes slideGlow2 {
+    0%, 100% {
+        box-shadow: 0 0 10px rgba(96, 165, 250, 0.5), 0 0 15px rgba(96, 165, 250, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(96, 165, 250, 0.8), 0 0 30px rgba(96, 165, 250, 0.5), 0 0 45px rgba(96, 165, 250, 0.3);
+    }
+}
+
+@keyframes presentationPulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+        background-color: rgba(59, 130, 246, 0.1);
+    }
+    50% {
+        box-shadow: 0 0 0 10px rgba(59, 130, 246, 0), 0 0 20px 5px rgba(96, 165, 250, 0);
+        background-color: rgba(59, 130, 246, 0.2);
+    }
+}
