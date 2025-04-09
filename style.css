@@ -427,18 +427,146 @@ img {
     to { transform: translateY(-50%) scale(1.3); }
 }
 
+/* 改进描述文字基本样式 */
 .hero-description {
     font-size: 1.1rem;
-    color: var(--text-color); /* 使用标准文本颜色 */
+    color: var(--text-color);
     margin-bottom: 2.5rem;
     max-width: 520px;
-    line-height: 1.8; /* 稍微增加行间距 */
-    transition: color 0.3s ease, transform 0.3s ease;
+    line-height: 1.8;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    padding: 10px 0;
+    position: relative;
+    text-align: justify;
 }
 
-.hero-description:hover {
-    color: var(--heading-color);
-    transform: translateY(-2px);
+/* 添加鼠标悬停特效底部边框 */
+.hero-description::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+    transition: width 0.6s ease;
+}
+
+.hero-description:hover::after {
+    width: 100%;
+    box-shadow: 0 0 10px rgba(122, 162, 247, 0.5);
+}
+
+/* 描述文字的单词效果 - 增强版 */
+.desc-word {
+    display: inline-block;
+    margin-right: 5px;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    opacity: 0.85;
+    transform-origin: center bottom;
+    position: relative;
+    padding: 0 2px;
+}
+
+.hero-description:hover .desc-word {
+    opacity: 1;
+}
+
+/* 描述文字悬停效果 - 改进波浪动画 */
+@keyframes wordFloat {
+    0% { 
+        transform: translateY(0) rotate(0deg); 
+    }
+    50% { 
+        transform: translateY(-10px) rotate(2deg); 
+    }
+    100% { 
+        transform: translateY(0) rotate(0deg); 
+    }
+}
+
+/* 猫咪相关词汇特殊动画 - 加入更多猫咪元素 */
+@keyframes catMove {
+    0% { 
+        transform: translateY(0) rotate(0deg) scale(1); 
+        color: var(--text-color);
+    }
+    30% { 
+        transform: translateY(-10px) rotate(-5deg) scale(1.15); 
+        color: #ffac59; /* 橙色 - 猫咪色 */
+    }
+    60% { 
+        transform: translateY(-5px) rotate(3deg) scale(1.08); 
+        color: #ffac59; 
+    }
+    100% { 
+        transform: translateY(0) rotate(0deg) scale(1); 
+        color: var(--text-color);
+    }
+}
+
+.hero-description:hover .cat-word {
+    animation: catMove 1.5s ease-in-out infinite;
+    text-shadow: 0 0 8px rgba(255, 172, 89, 0.5);
+    font-weight: 500;
+}
+
+/* 添加一个小猫爪图标在猫咪词之前 */
+.hero-description:hover .cat-word:first-child::before {
+    content: '🐾 ';
+    font-size: 0.9em;
+    opacity: 0;
+    animation: fadeIn 0.5s forwards 0.3s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* 突出词汇特殊动画 - 更强调重点 */
+@keyframes empPulse {
+    0% { 
+        transform: scale(1); 
+        color: var(--text-color);
+    }
+    50% { 
+        transform: scale(1.25); 
+        color: var(--accent-color);
+        text-shadow: 0 0 15px rgba(247, 125, 170, 0.7);
+    }
+    100% { 
+        transform: scale(1); 
+        color: var(--text-color);
+    }
+}
+
+.hero-description:hover .emp-word {
+    animation: empPulse 1s ease-in-out infinite;
+    font-weight: 600;
+    position: relative;
+}
+
+/* 添加闪光效果到重点词 */
+.hero-description:hover .emp-word::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
+    opacity: 0;
+    animation: sparkle 2s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes sparkle {
+    0% { opacity: 0; transform: scale(0.5); }
+    5% { opacity: 0.7; }
+    10% { opacity: 0; transform: scale(1.2); }
+    100% { opacity: 0; }
 }
 
 .hero-visual {
@@ -2331,4 +2459,83 @@ p:hover {
         transform: translateY(-50%) scale(1.5) rotate(72deg); 
         color: #ffdd59;
     }
+}
+
+/* 描述文字的单词效果 */
+.desc-word {
+    display: inline-block;
+    margin-right: 5px;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    opacity: 0.8;
+    transform-origin: center bottom;
+}
+
+.hero-description:hover .desc-word {
+    opacity: 1;
+}
+
+/* 描述文字悬停效果 - 波浪动画 */
+@keyframes wordFloat {
+    0%, 100% { 
+        transform: translateY(0); 
+    }
+    50% { 
+        transform: translateY(-10px); 
+    }
+}
+
+/* 使描述文字在悬停时产生波浪式的动画，每个词有延迟 */
+.hero-description:hover .desc-word:nth-child(1) { animation: wordFloat 1s ease-in-out 0.0s infinite; }
+.hero-description:hover .desc-word:nth-child(2) { animation: wordFloat 1s ease-in-out 0.1s infinite; }
+.hero-description:hover .desc-word:nth-child(3) { animation: wordFloat 1s ease-in-out 0.2s infinite; }
+.hero-description:hover .desc-word:nth-child(4) { animation: wordFloat 1s ease-in-out 0.3s infinite; }
+.hero-description:hover .desc-word:nth-child(5) { animation: wordFloat 1s ease-in-out 0.4s infinite; }
+.hero-description:hover .desc-word:nth-child(6) { animation: wordFloat 1s ease-in-out 0.5s infinite; }
+.hero-description:hover .desc-word:nth-child(7) { animation: wordFloat 1s ease-in-out 0.6s infinite; }
+.hero-description:hover .desc-word:nth-child(8) { animation: wordFloat 1s ease-in-out 0.7s infinite; }
+.hero-description:hover .desc-word:nth-child(9) { animation: wordFloat 1s ease-in-out 0.8s infinite; }
+
+/* 猫咪相关词汇特殊动画 */
+@keyframes catMove {
+    0%, 100% { 
+        transform: translateY(0) rotate(0deg); 
+        color: var(--text-color);
+    }
+    25% { 
+        transform: translateY(-12px) rotate(-5deg); 
+        color: #ffac59; /* 橙色 - 猫咪色 */
+    }
+    75% { 
+        transform: translateY(-6px) rotate(5deg); 
+        color: #ffac59; 
+    }
+}
+
+.hero-description:hover .cat-word {
+    animation: catMove 1.5s ease-in-out infinite !important;
+    text-shadow: 0 0 8px rgba(255, 172, 89, 0.5);
+}
+
+/* 突出词汇特殊动画 */
+@keyframes empPulse {
+    0%, 100% { 
+        transform: scale(1); 
+        color: var(--text-color);
+    }
+    50% { 
+        transform: scale(1.2); 
+        color: var(--accent-color);
+        text-shadow: 0 0 10px rgba(247, 125, 170, 0.6);
+    }
+}
+
+.hero-description:hover .emp-word {
+    animation: empPulse 1s ease-in-out infinite !important;
+}
+
+/* 修改hero-description的hover样式 */
+.hero-description:hover {
+    color: var(--text-color);
+    transform: none;
+    cursor: default;
 }
