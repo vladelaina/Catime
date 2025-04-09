@@ -1428,25 +1428,26 @@ img {
 }
 
 .scenario-icon {
-    width: 60px;
-    height: 60px;
+    width: 70px;
+    height: 70px;
     background-color: rgba(122, 162, 247, 0.1);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     margin-bottom: 1.5rem;
-    font-size: 1.5rem;
+    font-size: 1.8rem;
     color: var(--primary-color);
     transition: all 0.3s ease;
     transform-origin: center center;
+    box-shadow: 0 0 15px rgba(122, 162, 247, 0.1);
 }
 
 /* 卡片悬停时图标背景变色 */
 .scenario-card:hover .scenario-icon {
     background-color: var(--primary-color);
     color: white;
-    transform: scale(1.1);
+    /* 移除 transform，避免与动画冲突 */
 }
 
 /* 使用场景图标动画效果 */
@@ -1456,76 +1457,79 @@ img {
         filter: drop-shadow(0 0 5px rgba(122, 162, 247, 0.3)); 
     }
     25% { 
-        transform: scale(1.4) translateY(-15px) rotate(15deg); 
-        filter: drop-shadow(0 0 15px rgba(122, 162, 247, 0.7)) brightness(1.2); 
+        transform: scale(2.3) translateY(-35px) rotate(35deg); 
+        filter: drop-shadow(0 0 35px rgba(255, 50, 50, 0.9)) brightness(1.8); 
     }
     50% { 
-        transform: scale(1.6) translateY(-5px) rotate(-10deg); 
-        filter: drop-shadow(0 0 20px rgba(122, 162, 247, 0.9)) brightness(1.4); 
+        transform: scale(2.8) translateY(-10px) rotate(-30deg); 
+        filter: drop-shadow(0 0 45px rgba(255, 0, 0, 1)) brightness(2.2); 
     }
     75% { 
-        transform: scale(1.4) translateY(-15px) rotate(5deg); 
-        filter: drop-shadow(0 0 15px rgba(122, 162, 247, 0.7)) brightness(1.2); 
+        transform: scale(2.3) translateY(-35px) rotate(20deg); 
+        filter: drop-shadow(0 0 35px rgba(255, 50, 50, 0.9)) brightness(1.8); 
     }
 }
 
 @keyframes boltFlash {
     0%, 100% { transform: scale(1.1); filter: drop-shadow(0 0 5px rgba(122, 162, 247, 0.3)); }
-    20% { transform: scale(1.8); filter: drop-shadow(0 0 20px rgba(122, 162, 247, 0.9)); }
-    40% { transform: scale(1.2); filter: drop-shadow(0 0 8px rgba(122, 162, 247, 0.4)); }
-    60% { transform: scale(1.6); filter: drop-shadow(0 0 15px rgba(122, 162, 247, 0.7)); }
-    80% { transform: scale(1.3); filter: drop-shadow(0 0 10px rgba(122, 162, 247, 0.5)); }
-}
-
-@keyframes crownShine {
-    0%, 100% { 
-        transform: scale(1.1); 
-        filter: drop-shadow(0 0 5px rgba(122, 162, 247, 0.3)); 
-    }
-    25% { 
-        transform: scale(1.3) translateY(-5px); 
-        filter: drop-shadow(0 0 15px rgba(122, 162, 247, 0.7)) brightness(1.3); 
-    }
-    50% { 
-        transform: scale(1.5); 
-        filter: drop-shadow(0 0 20px rgba(122, 162, 247, 0.9)) brightness(1.6); 
-    }
-    75% { 
-        transform: scale(1.3) translateY(-5px); 
-        filter: drop-shadow(0 0 15px rgba(122, 162, 247, 0.7)) brightness(1.3); 
-    }
+    10% { transform: scale(3.0) rotate(25deg); filter: drop-shadow(0 0 50px rgba(255, 255, 0, 1)) brightness(2.0); }
+    20% { transform: scale(1.2) rotate(-5deg); filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5)); }
+    30% { transform: scale(2.5) rotate(20deg); filter: drop-shadow(0 0 40px rgba(255, 255, 0, 0.9)) brightness(1.8); }
+    40% { transform: scale(1.2) rotate(-10deg); filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5)); }
+    50% { transform: scale(2.8) rotate(30deg); filter: drop-shadow(0 0 45px rgba(255, 255, 0, 1)) brightness(2.0); }
+    60% { transform: scale(1.2) rotate(-15deg); filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5)); }
+    70% { transform: scale(2.5) rotate(20deg); filter: drop-shadow(0 0 40px rgba(255, 255, 0, 0.9)) brightness(1.8); }
+    80% { transform: scale(1.2) rotate(-10deg); filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5)); }
+    90% { transform: scale(2.0) rotate(15deg); filter: drop-shadow(0 0 30px rgba(255, 255, 0, 0.8)) brightness(1.6); }
 }
 
 @keyframes presentationPulse {
     0%, 100% { 
-        transform: scale(1.1); 
+        transform: scale(1.1) rotate(0deg); 
         filter: drop-shadow(0 0 5px rgba(122, 162, 247, 0.3)); 
     }
-    30% { 
-        transform: scale(1.5) translateY(-8px); 
-        filter: drop-shadow(0 0 15px rgba(122, 162, 247, 0.7)); 
+    20% { 
+        transform: scale(2.5) translateY(-20px) rotate(25deg); 
+        filter: drop-shadow(0 0 40px rgba(0, 150, 255, 0.9)) brightness(1.8); 
+    }
+    40% { 
+        transform: scale(1.8) translateY(15px) rotate(-20deg); 
+        filter: drop-shadow(0 0 25px rgba(0, 150, 255, 0.7)) brightness(1.5); 
     }
     60% { 
-        transform: scale(1.3) translateY(5px); 
-        filter: drop-shadow(0 0 10px rgba(122, 162, 247, 0.5)); 
+        transform: scale(2.8) translateY(-25px) rotate(30deg); 
+        filter: drop-shadow(0 0 45px rgba(0, 100, 255, 1)) brightness(2.0); 
     }
-    90% { 
-        transform: scale(1.5) translateY(-8px); 
-        filter: drop-shadow(0 0 15px rgba(122, 162, 247, 0.7)); 
+    80% { 
+        transform: scale(1.8) translateY(15px) rotate(-20deg); 
+        filter: drop-shadow(0 0 25px rgba(0, 150, 255, 0.7)) brightness(1.5); 
     }
 }
 
-/* 应用动画到各个场景图标 - 只在图标悬停时触发 */
-.scenario-card:nth-child(1) .scenario-icon:hover {
-    animation: dragonFloat 3s infinite;
+/* 应用动画到各个场景图标 - 修改为卡片悬停时自动触发动画 */
+.scenario-card:nth-child(1):hover .scenario-icon {
+    animation: dragonFloat 2s infinite;
+    background-color: rgba(255, 100, 100, 0.2);
+    color: #ff3838;
 }
 
-.scenario-card:nth-child(2) .scenario-icon:hover {
-    animation: boltFlash 2s infinite;
+.scenario-card:nth-child(2):hover .scenario-icon {
+    animation: boltFlash 1.5s infinite;
+    background-color: rgba(255, 215, 0, 0.2);
+    color: #ffb700;
 }
 
+.scenario-card:nth-child(3):hover .scenario-icon {
+    animation: presentationPulse 1.8s infinite;
+    background-color: rgba(0, 150, 255, 0.2);
+    color: #0096ff;
+}
+
+/* 删除原来的只在图标悬停时触发的动画设置 */
+.scenario-card:nth-child(1) .scenario-icon:hover,
+.scenario-card:nth-child(2) .scenario-icon:hover,
 .scenario-card:nth-child(3) .scenario-icon:hover {
-    animation: presentationPulse 2s infinite;
+    animation: none;
 }
 
 .scenario-content h3 {
@@ -1593,9 +1597,9 @@ img {
     }
     
     .scenario-icon {
-        width: 50px;
-        height: 50px;
-        font-size: 1.3rem;
+        width: 60px;
+        height: 60px;
+        font-size: 1.6rem;
     }
     
     .scenario-content h3 {
@@ -1608,6 +1612,14 @@ img {
     
     .scenario-img {
         max-width: 90%;
+    }
+}
+
+@media (max-width: 480px) {
+    .scenario-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 1.4rem;
     }
 }
 
