@@ -159,11 +159,6 @@ img {
     100% { transform: scale(1); }
 }
 
-@keyframes logoGlow {
-    0%, 100% { filter: drop-shadow(0 2px 5px rgba(122, 162, 247, 0.3)); }
-    50% { filter: drop-shadow(0 0 12px rgba(233, 111, 153, 0.8)); }
-}
-
 /* Logo整体悬停效果 */
 .logo:hover .logo-img {
     animation: jelly 0.7s ease;
@@ -1585,12 +1580,65 @@ img {
     color: var(--text-color);
     line-height: 1.8; /* 增加行高 */
     font-size: 1.05rem; /* 稍微增加字体大小 */
-    transition: color 0.3s ease, transform 0.3s ease;
+    transition: all 0.4s ease;
+    position: relative;
+    padding: 0.5rem 0;
+    cursor: pointer;
 }
 
 .scenario-content p:hover {
     color: var(--heading-color);
-    transform: translateY(-1px);
+    transform: translateY(-3px);
+    text-shadow: 0 0 8px rgba(122, 162, 247, 0.4);
+    letter-spacing: 0.3px;
+}
+
+/* 为每个场景卡片添加不同颜色的文字效果 */
+.scenario-card:nth-child(1) .scenario-content p:hover {
+    text-shadow: 0 0 10px rgba(255, 100, 100, 0.5);
+    color: #d03838;
+    background: linear-gradient(90deg, transparent, rgba(255, 100, 100, 0.05), transparent);
+}
+
+.scenario-card:nth-child(2) .scenario-content p:hover {
+    text-shadow: 0 0 10px rgba(255, 183, 0, 0.5);
+    color: #f29500;
+    background: linear-gradient(90deg, transparent, rgba(255, 183, 0, 0.05), transparent);
+}
+
+.scenario-card:nth-child(3) .scenario-content p:hover {
+    text-shadow: 0 0 10px rgba(0, 150, 255, 0.5);
+    color: #0078d0;
+    background: linear-gradient(90deg, transparent, rgba(0, 150, 255, 0.05), transparent);
+}
+
+/* 添加流光效果 */
+@keyframes textFlowLight {
+    0% {
+        background-position: -100% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+.scenario-content p::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
+    opacity: 0;
+    transform: scaleX(0.8);
+    transition: all 0.5s ease;
+}
+
+.scenario-content p:hover::after {
+    opacity: 0.7;
+    transform: scaleX(1);
+    animation: textFlowLight 2s linear infinite;
 }
 
 /* 响应式调整 - 使用场景 */
