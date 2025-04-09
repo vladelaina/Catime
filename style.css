@@ -138,9 +138,11 @@ img {
     position: relative;
     padding-bottom: 0.3rem;
     transition: color 0.3s ease;
+    display: inline-block; /* 确保动画可以应用 */
 }
 .nav-links a:hover {
     color: var(--primary-color); /* 导航链接悬停时为蓝色 */
+    animation: jelly 0.6s ease;
 }
 
 .nav-links a::after { /* 下划线动画 */
@@ -180,7 +182,7 @@ img {
     color: white !important;
     text-decoration: none;
     box-shadow: var(--button-hover-shadow);
-    transform: translateY(-2px);
+    animation: jelly 0.6s ease;
 }
 .nav-button::after {
     display: none;
@@ -324,8 +326,8 @@ img {
 .cta-button.primary:hover {
     background-color: var(--accent-hover);
     color: white;
-    transform: translateY(-2px);
     box-shadow: 0 6px 15px rgba(247, 125, 170, 0.3); /* 粉色阴影 */
+    animation: jelly 0.6s ease;
 }
 .cta-button.secondary {
     background-color: var(--surface-color); /* 白色 */
@@ -337,8 +339,8 @@ img {
     background-color: #f8faff; /* 非常浅的蓝色悬停效果 */
     color: var(--primary-hover);
     border-color: #d0d0ff;
-    transform: translateY(-2px);
     box-shadow: 0 4px 10px rgba(122, 162, 247, 0.1);
+    animation: jelly 0.6s ease;
 }
 .cta-button.large {
     padding: 1rem 2.5rem;
@@ -426,6 +428,7 @@ img {
     transform: translateY(-10px); /* 更多提升 */
     box-shadow: var(--card-hover-shadow);
     border-color: rgba(122, 162, 247, 0.2);
+    animation: jelly 0.7s ease;
 }
 
 .feature-icon {
@@ -632,6 +635,7 @@ img {
 .scenario-card:hover {
     transform: translateY(-10px);
     box-shadow: var(--card-hover-shadow);
+    animation: jelly 0.7s ease;
 }
 
 .scenario-card.reverse {
@@ -829,7 +833,7 @@ img {
     background-color: #f0f8ff; /* 悬停时的浅蓝色调 */
     color: var(--accent-color); /* 悬停时的粉色文本 */
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-    transform: translateY(-3px); /* 稍微更多提升 */
+    animation: jelly 0.6s ease;
 }
 .cta-section .cta-button.primary i {
      color: var(--accent-color); /* 粉色图标 */
@@ -1529,4 +1533,12 @@ img {
     .post-content h3 {
         font-size: 1.3rem;
     }
+}
+
+/* --- 果冻效果动画 --- */
+@keyframes jelly {
+    0%, 100% { transform: scale(1); }
+    25% { transform: scale(1.05, 0.95); }
+    50% { transform: scale(0.95, 1.05); }
+    75% { transform: scale(1.02, 0.98); }
 }
