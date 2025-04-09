@@ -635,7 +635,6 @@ img {
 .scenario-card:hover {
     transform: translateY(-10px);
     box-shadow: var(--card-hover-shadow);
-    animation: jelly 0.7s ease;
 }
 
 .scenario-card.reverse {
