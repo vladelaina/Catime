@@ -117,6 +117,7 @@ img {
 .logo-img {
     height: 1.8rem;
     width: auto;
+    margin-right: 0.3rem;
     vertical-align: middle;
 }
 .logo:hover {
