@@ -151,8 +151,6 @@ img {
     width: auto;
     margin-right: 0.1rem;
     vertical-align: middle;
-    transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    transform-origin: center center;
     position: relative;
     z-index: 2;
 }
@@ -173,19 +171,10 @@ img {
     }
 }
 .logo:hover .logo-img {
-    transform: scale(1.15) rotate(10deg);
-    filter: drop-shadow(0 5px 15px rgba(122, 162, 247, 0.4));
-    animation: logoWiggle 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    /* 移除图标动画效果 */
 }
 
-@keyframes logoWiggle {
-    0% { transform: scale(1) rotate(0); }
-    20% { transform: scale(1.2) rotate(15deg); }
-    40% { transform: scale(1.15) rotate(-8deg); }
-    60% { transform: scale(1.18) rotate(5deg); }
-    80% { transform: scale(1.15) rotate(-3deg); }
-    100% { transform: scale(1.15) rotate(10deg); }
-}
+/* 移除不再使用的动画关键帧 */
 
 .nav-links {
     list-style: none;
