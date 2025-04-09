@@ -2225,3 +2225,110 @@ p:hover {
     letter-spacing: 1px;
     transform: none;
 }
+
+/* 调整为更二次元风格的动效 */
+@keyframes animeWiggle {
+    0%, 100% { 
+        transform: translateY(0) scale(1); 
+        color: #ff85b1; /* 粉色 */
+    }
+    25% { 
+        transform: translateY(-5px) rotate(-2deg) scale(1.03); 
+        color: #ffac59; /* 橙色 */
+    }
+    50% { 
+        transform: translateY(0) scale(1.05); 
+        color: #a18fff; /* 紫色 */
+    }
+    75% { 
+        transform: translateY(-3px) rotate(2deg) scale(1.03); 
+        color: #5ccefa; /* 蓝色 - 二次元经典色 */
+    }
+}
+
+/* 调整二次元风格副标题 */
+.hero-subtitle {
+    font-size: 1.8rem;
+    color: var(--primary-color);
+    margin-bottom: 1.5rem;
+    font-weight: 400;
+    cursor: pointer;
+    transition: all 0.5s ease;
+    position: relative;
+    letter-spacing: -0.5px; /* 略微紧凑的字间距，更符合二次元风格 */
+}
+
+.hero-subtitle:hover {
+    animation: animeWiggle 3s ease-in-out infinite;
+    text-shadow: 
+        0 0 10px rgba(255, 133, 177, 0.7), /* 粉色辉光 */
+        0 0 20px rgba(92, 206, 250, 0.5); /* 蓝色辉光 */
+    letter-spacing: 0;
+    transform: none;
+}
+
+/* 改进二次元表情符号样式 */
+.cute-emoji {
+    display: inline-block;
+    font-size: 1.3em;
+    vertical-align: middle;
+    opacity: 0.9;
+    transition: all 0.4s ease;
+    transform-origin: center;
+    margin-left: 5px;
+}
+
+.hero-subtitle:hover .cute-emoji {
+    animation: animeBounce 1.2s ease infinite;
+    opacity: 1;
+    color: #ff85b1; /* 粉色 */
+}
+
+@keyframes animeBounce {
+    0%, 100% { transform: translateY(0) scale(1); }
+    30% { transform: translateY(-10px) scale(1.3) rotate(-8deg); }
+    40% { transform: translateY(0) scale(1.2); }
+    60% { transform: translateY(-5px) scale(1.25) rotate(8deg); }
+    70% { transform: translateY(0) scale(1.2); }
+    80% { transform: translateY(-3px) scale(1.15); }
+}
+
+/* 添加更多二次元风格的装饰元素 */
+.hero-subtitle::before,
+.hero-subtitle::after {
+    content: '★';
+    position: absolute;
+    opacity: 0;
+    transition: all 0.5s ease;
+    font-size: 1.3rem;
+    color: #ffac59; /* 橙色星星 */
+}
+
+.hero-subtitle::before {
+    left: -25px;
+    top: 40%;
+    transform: translateY(-50%);
+}
+
+.hero-subtitle::after {
+    right: -25px;
+    top: 40%;
+    transform: translateY(-50%);
+}
+
+.hero-subtitle:hover::before,
+.hero-subtitle:hover::after {
+    opacity: 1;
+    animation: starTwinkle 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes starTwinkle {
+    from { 
+        transform: translateY(-50%) scale(1) rotate(0deg); 
+        color: #ffac59;
+    }
+    to { 
+        transform: translateY(-50%) scale(1.5) rotate(72deg); 
+        color: #ffdd59;
+    }
+}
