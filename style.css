@@ -114,17 +114,14 @@ img {
     align-items: center;
     gap: 0.5rem;
 }
-.logo .logo-icon {
-    color: var(--accent-color); /* 粉色猫咪图标 */
-    font-size: 1.5rem;
+.logo-img {
+    height: 1.8rem;
+    width: auto;
+    vertical-align: middle;
 }
 .logo:hover {
     color: var(--primary-hover);
 }
-.logo:hover .logo-icon {
-    color: var(--accent-hover);
-}
-
 
 .nav-links {
     list-style: none;
