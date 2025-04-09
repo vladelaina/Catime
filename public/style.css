@@ -1598,16 +1598,46 @@ img {
 }
 
 @keyframes boltFlash {
-    0%, 100% { transform: scale(1.1); filter: drop-shadow(0 0 5px rgba(122, 162, 247, 0.3)); }
-    10% { transform: scale(1.5) rotate(10deg); filter: drop-shadow(0 0 20px rgba(255, 255, 0, 0.8)) brightness(1.6); }
-    20% { transform: scale(1.2) rotate(-5deg); filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5)); }
-    30% { transform: scale(1.4) rotate(8deg); filter: drop-shadow(0 0 18px rgba(255, 255, 0, 0.7)) brightness(1.5); }
-    40% { transform: scale(1.2) rotate(-5deg); filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5)); }
-    50% { transform: scale(1.5) rotate(12deg); filter: drop-shadow(0 0 20px rgba(255, 255, 0, 0.8)) brightness(1.6); }
-    60% { transform: scale(1.2) rotate(-7deg); filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5)); }
-    70% { transform: scale(1.4) rotate(8deg); filter: drop-shadow(0 0 18px rgba(255, 255, 0, 0.7)) brightness(1.5); }
-    80% { transform: scale(1.2) rotate(-5deg); filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5)); }
-    90% { transform: scale(1.3) rotate(6deg); filter: drop-shadow(0 0 15px rgba(255, 255, 0, 0.6)) brightness(1.4); }
+    0%, 100% { 
+        transform: scale(1.1); 
+        filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.5)); 
+    }
+    10% { 
+        transform: scale(1.5) rotate(10deg); 
+        filter: drop-shadow(0 0 25px rgba(255, 255, 0, 0.9)) brightness(1.8); 
+    }
+    20% { 
+        transform: scale(1.3) rotate(-5deg); 
+        filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.7)) brightness(1.5); 
+    }
+    30% { 
+        transform: scale(1.5) rotate(8deg); 
+        filter: drop-shadow(0 0 25px rgba(255, 255, 0, 0.9)) brightness(1.8); 
+    }
+    40% { 
+        transform: scale(1.25) rotate(-5deg); 
+        filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.7)) brightness(1.5); 
+    }
+    50% { 
+        transform: scale(1.6) rotate(12deg); 
+        filter: drop-shadow(0 0 30px rgba(255, 255, 0, 1)) brightness(2); 
+    }
+    60% { 
+        transform: scale(1.25) rotate(-7deg); 
+        filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.7)) brightness(1.5); 
+    }
+    70% { 
+        transform: scale(1.5) rotate(8deg); 
+        filter: drop-shadow(0 0 25px rgba(255, 255, 0, 0.9)) brightness(1.8); 
+    }
+    80% { 
+        transform: scale(1.25) rotate(-5deg); 
+        filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.7)) brightness(1.5); 
+    }
+    90% { 
+        transform: scale(1.35) rotate(6deg); 
+        filter: drop-shadow(0 0 20px rgba(255, 255, 0, 0.8)) brightness(1.6); 
+    }
 }
 
 @keyframes presentationPulse {
@@ -1657,7 +1687,27 @@ img {
 }
 
 .scenario-card:nth-child(2) .scenario-icon:hover {
-    animation: boltFlash 1.5s infinite;
+    animation: boltFlash 1s infinite;
+    background-color: rgba(255, 215, 0, 0.15);
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.5), inset 0 0 15px rgba(255, 255, 255, 0.8);
+    position: relative;
+    overflow: visible;
+}
+
+.scenario-card:nth-child(2) .scenario-icon:hover i {
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.9)) brightness(1.5);
+    animation: iconPulse 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes iconPulse {
+    0% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.9)) brightness(1.5);
+    }
+    100% {
+        transform: scale(1.2);
+        filter: drop-shadow(0 0 20px rgba(255, 255, 255, 1)) brightness(2);
+    }
 }
 
 .scenario-card:nth-child(3) .scenario-icon:hover {
@@ -3400,7 +3450,7 @@ p:hover {
 }
 
 .scenario-card:nth-child(2) .scenario-icon:hover {
-    animation: boltFlash 1.5s infinite;
+    animation: boltFlash 1s infinite;
 }
 
 /* 添加闪电伪元素效果 */
@@ -3417,28 +3467,28 @@ p:hover {
     opacity: 0;
     pointer-events: none;
     z-index: -1;
-    background: rgba(255, 215, 0, 0.7);
-    clip-path: polygon(40% 0%, 60% 0%, 100% 60%, 60% 60%, 70% 100%, 30% 50%, 60% 50%, 40% 0%);
-    filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.8));
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 215, 0, 0.85));
+    clip-path: polygon(30% 0%, 50% 40%, 38% 40%, 60% 100%, 25% 50%, 45% 50%, 30% 0%);
+    filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.8));
 }
 
 /* 第一个闪电伪元素 */
 .scenario-card:nth-child(2) .scenario-icon::before {
-    width: 20px;
-    height: 30px;
-    top: -25px;
-    right: 0px;
+    width: 24px;
+    height: 36px;
+    top: -30px;
+    right: -5px;
     transform-origin: bottom center;
 }
 
 /* 第二个闪电伪元素 */
 .scenario-card:nth-child(2) .scenario-icon::after {
-    width: 16px;
-    height: 24px;
-    bottom: -20px;
-    left: 5px;
+    width: 20px;
+    height: 28px;
+    bottom: -25px;
+    left: 0px;
     transform-origin: top center;
-    transform: scale(0) rotate(20deg);
+    transform: scale(0) rotate(25deg);
 }
 
 /* 闪电动画 */
@@ -3447,41 +3497,68 @@ p:hover {
         transform: scale(0) rotate(0deg);
         opacity: 0;
     }
-    20%, 80% {
-        transform: scale(1.2) rotate(-10deg);
+    10% {
+        transform: scale(0.7) rotate(-5deg);
+        opacity: 0.7;
+        filter: brightness(1.4);
+    }
+    15%, 85% {
+        transform: scale(1.4) rotate(-10deg);
+        opacity: 0.95;
+        box-shadow: 0 0 15px rgba(255, 215, 0, 0.9), 0 0 25px rgba(255, 255, 255, 0.8);
+        filter: brightness(1.8);
+    }
+    20% {
+        transform: scale(1.3) rotate(-8deg);
         opacity: 0.9;
-        box-shadow: 0 0 10px rgba(255, 215, 0, 0.8), 0 0 20px rgba(255, 255, 255, 0.6);
+        filter: brightness(1.6);
     }
     50% {
-        transform: scale(1.5) rotate(5deg);
+        transform: scale(1.6) rotate(5deg);
         opacity: 1;
-        box-shadow: 0 0 15px rgba(255, 215, 0, 1), 0 0 30px rgba(255, 255, 255, 0.8);
+        box-shadow: 0 0 20px rgba(255, 215, 0, 1), 0 0 35px rgba(255, 255, 255, 0.9);
+        filter: brightness(2);
+    }
+    90% {
+        transform: scale(0.6) rotate(0deg);
+        opacity: 0.6;
     }
 }
 
 @keyframes lightningBolt2 {
     0%, 100% {
-        transform: scale(0) rotate(20deg);
+        transform: scale(0) rotate(25deg);
         opacity: 0;
     }
-    30%, 70% {
-        transform: scale(1.3) rotate(30deg);
-        opacity: 0.9;
-        box-shadow: 0 0 8px rgba(255, 215, 0, 0.8), 0 0 16px rgba(255, 255, 255, 0.6);
+    5% {
+        transform: scale(0.6) rotate(30deg);
+        opacity: 0.6;
+        filter: brightness(1.2);
+    }
+    15%, 75% {
+        transform: scale(1.3) rotate(35deg);
+        opacity: 0.95;
+        box-shadow: 0 0 12px rgba(255, 215, 0, 0.9), 0 0 20px rgba(255, 255, 255, 0.7);
+        filter: brightness(1.6);
     }
     50% {
-        transform: scale(1.6) rotate(40deg);
+        transform: scale(1.7) rotate(45deg);
         opacity: 1;
-        box-shadow: 0 0 12px rgba(255, 215, 0, 1), 0 0 24px rgba(255, 255, 255, 0.8);
+        box-shadow: 0 0 18px rgba(255, 215, 0, 1), 0 0 30px rgba(255, 255, 255, 0.9);
+        filter: brightness(1.8);
+    }
+    85% {
+        transform: scale(0.8) rotate(30deg);
+        opacity: 0.7;
     }
 }
 
 .scenario-card:nth-child(2) .scenario-icon:hover::before {
-    animation: lightningBolt1 1.2s ease-out infinite;
+    animation: lightningBolt1 0.8s ease-out infinite;
 }
 
 .scenario-card:nth-child(2) .scenario-icon:hover::after {
-    animation: lightningBolt2 1s ease-out 0.3s infinite;
+    animation: lightningBolt2 0.7s ease-out 0.2s infinite;
 }
 
 /* 第三个闪电元素 */
@@ -3492,15 +3569,16 @@ p:hover {
 .scenario-card:nth-child(2) .scenario-icon:hover .lightning-element {
     display: block;
     position: absolute;
-    width: 18px;
-    height: 26px;
-    top: 70%;
-    right: -15px;
-    background: rgba(255, 215, 0, 0.85);
-    clip-path: polygon(30% 0%, 70% 0%, 100% 50%, 60% 50%, 80% 100%, 20% 60%, 60% 60%, 30% 0%);
+    width: 22px;
+    height: 32px;
+    top: 65%;
+    right: -18px;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.95), rgba(255, 215, 0, 0.9));
+    clip-path: polygon(25% 0%, 45% 0%, 65% 30%, 50% 30%, 75% 60%, 65% 60%, 100% 100%, 40% 70%, 55% 70%, 25% 40%, 40% 40%, 25% 0%);
     transform-origin: center;
     z-index: -1;
-    animation: lightningBolt3 0.8s ease-out 0.15s infinite;
+    filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.9));
+    animation: lightningBolt3 0.65s ease-out 0.1s infinite;
 }
 
 @keyframes lightningBolt3 {
@@ -3508,16 +3586,27 @@ p:hover {
         transform: scale(0) rotate(-30deg);
         opacity: 0;
     }
-    25%, 75% {
-        transform: scale(1.4) rotate(-20deg);
-        opacity: 0.9;
-        box-shadow: 0 0 12px rgba(255, 215, 0, 0.8), 0 0 18px rgba(255, 255, 255, 0.7);
+    15% {
+        transform: scale(0.8) rotate(-25deg);
+        opacity: 0.8;
+        filter: brightness(1.5) drop-shadow(0 0 8px rgba(255, 215, 0, 0.8));
+    }
+    30%, 70% {
+        transform: scale(1.4) rotate(-15deg);
+        opacity: 0.95;
+        box-shadow: 0 0 15px rgba(255, 215, 0, 0.9), 0 0 25px rgba(255, 255, 255, 0.8);
+        filter: brightness(1.8) drop-shadow(0 0 12px rgba(255, 215, 0, 0.9));
     }
     50% {
-        transform: scale(1.7) rotate(-15deg);
+        transform: scale(1.6) rotate(-10deg);
         opacity: 1;
-        filter: brightness(1.5);
-        box-shadow: 0 0 15px rgba(255, 215, 0, 1), 0 0 25px rgba(255, 255, 255, 0.9);
+        filter: brightness(2) drop-shadow(0 0 18px rgba(255, 215, 0, 1));
+        box-shadow: 0 0 20px rgba(255, 215, 0, 1), 0 0 30px rgba(255, 255, 255, 0.9);
+    }
+    85% {
+        transform: scale(0.7) rotate(-20deg);
+        opacity: 0.7;
+        filter: brightness(1.3) drop-shadow(0 0 6px rgba(255, 215, 0, 0.7));
     }
 }
 
@@ -3525,7 +3614,7 @@ p:hover {
 .scenario-card:nth-child(2) .scenario-icon:hover::before,
 .scenario-card:nth-child(2) .scenario-icon:hover::after,
 .scenario-card:nth-child(2) .scenario-icon:hover .lightning-element {
-    filter: drop-shadow(0 0 8px rgba(255, 255, 0, 0.8));
+    filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.9));
 }
 
 /* 增加额外的两个闪电 */
@@ -3533,29 +3622,30 @@ p:hover {
 .scenario-card:nth-child(2) .scenario-icon:hover .lightning-element::after {
     content: "";
     position: absolute;
-    background: rgba(255, 215, 0, 0.7);
     transform: scale(0);
     opacity: 0;
     z-index: -1;
-    filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.8));
+    filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.9));
 }
 
 .scenario-card:nth-child(2) .scenario-icon:hover .lightning-element::before {
-    width: 14px;
-    height: 20px;
-    top: -35px;
-    left: -25px;
-    clip-path: polygon(35% 0%, 65% 0%, 100% 50%, 65% 50%, 85% 100%, 25% 55%, 65% 55%, 35% 0%);
-    animation: lightningBolt4 0.9s ease-out 0.5s infinite;
+    width: 18px;
+    height: 26px;
+    top: -40px;
+    left: -30px;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 230, 0, 0.85));
+    clip-path: polygon(40% 0%, 60% 0%, 50% 30%, 70% 30%, 35% 100%, 45% 60%, 30% 60%, 40% 0%);
+    animation: lightningBolt4 0.6s ease-out 0.3s infinite;
 }
 
 .scenario-card:nth-child(2) .scenario-icon:hover .lightning-element::after {
-    width: 12px;
-    height: 18px;
-    bottom: -30px;
-    right: -30px;
-    clip-path: polygon(45% 0%, 55% 0%, 90% 45%, 55% 45%, 75% 100%, 35% 50%, 65% 50%, 45% 0%);
-    animation: lightningBolt5 1.1s ease-out 0.7s infinite;
+    width: 16px;
+    height: 24px;
+    bottom: -35px;
+    right: -35px;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 225, 0, 0.85));
+    clip-path: polygon(50% 0%, 65% 30%, 50% 30%, 100% 55%, 50% 100%, 35% 70%, 50% 70%, 0% 45%, 50% 0%);
+    animation: lightningBolt5 0.55s ease-out 0.45s infinite;
 }
 
 @keyframes lightningBolt4 {
@@ -3563,16 +3653,27 @@ p:hover {
         transform: scale(0) rotate(15deg);
         opacity: 0;
     }
-    30%, 70% {
-        transform: scale(1.3) rotate(25deg);
-        opacity: 0.9;
-        box-shadow: 0 0 10px rgba(255, 215, 0, 0.8), 0 0 15px rgba(255, 255, 255, 0.6);
+    20% {
+        transform: scale(0.9) rotate(20deg);
+        opacity: 0.85;
+        filter: brightness(1.6) drop-shadow(0 0 10px rgba(255, 215, 0, 0.8));
+    }
+    40%, 60% {
+        transform: scale(1.4) rotate(30deg);
+        opacity: 0.95;
+        box-shadow: 0 0 15px rgba(255, 215, 0, 0.9), 0 0 20px rgba(255, 255, 255, 0.7);
+        filter: brightness(1.9) drop-shadow(0 0 15px rgba(255, 215, 0, 0.9));
     }
     50% {
-        transform: scale(1.5) rotate(35deg);
+        transform: scale(1.6) rotate(35deg);
         opacity: 1;
-        filter: brightness(1.4);
-        box-shadow: 0 0 12px rgba(255, 215, 0, 1), 0 0 20px rgba(255, 255, 255, 0.8);
+        filter: brightness(2.1) drop-shadow(0 0 20px rgba(255, 215, 0, 1));
+        box-shadow: 0 0 18px rgba(255, 215, 0, 1), 0 0 25px rgba(255, 255, 255, 0.9);
+    }
+    80% {
+        transform: scale(0.8) rotate(25deg);
+        opacity: 0.7;
+        filter: brightness(1.4) drop-shadow(0 0 8px rgba(255, 215, 0, 0.7));
     }
 }
 
@@ -3581,15 +3682,26 @@ p:hover {
         transform: scale(0) rotate(-15deg);
         opacity: 0;
     }
-    35%, 65% {
-        transform: scale(1.2) rotate(-25deg);
-        opacity: 0.85;
-        box-shadow: 0 0 8px rgba(255, 215, 0, 0.8), 0 0 12px rgba(255, 255, 255, 0.6);
+    25% {
+        transform: scale(0.8) rotate(-25deg);
+        opacity: 0.8;
+        filter: brightness(1.5) drop-shadow(0 0 8px rgba(255, 215, 0, 0.8));
+    }
+    45%, 55% {
+        transform: scale(1.3) rotate(-35deg);
+        opacity: 0.95;
+        box-shadow: 0 0 12px rgba(255, 215, 0, 0.9), 0 0 18px rgba(255, 255, 255, 0.7);
+        filter: brightness(1.8) drop-shadow(0 0 12px rgba(255, 215, 0, 0.9));
     }
     50% {
-        transform: scale(1.4) rotate(-35deg);
+        transform: scale(1.5) rotate(-40deg);
         opacity: 1;
-        filter: brightness(1.3);
-        box-shadow: 0 0 10px rgba(255, 215, 0, 1), 0 0 15px rgba(255, 255, 255, 0.8);
+        filter: brightness(2) drop-shadow(0 0 15px rgba(255, 215, 0, 1));
+        box-shadow: 0 0 15px rgba(255, 215, 0, 1), 0 0 20px rgba(255, 255, 255, 0.8);
+    }
+    75% {
+        transform: scale(0.7) rotate(-20deg);
+        opacity: 0.65;
+        filter: brightness(1.3) drop-shadow(0 0 6px rgba(255, 215, 0, 0.7));
     }
 }
