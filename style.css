@@ -67,6 +67,14 @@ h1, h2, h3, h4, h5, h6 {
     font-weight: 700; /* 粗体标题 */
     line-height: 1.3;
     margin-bottom: 0.75rem;
+    transition: color 0.3s ease, transform 0.3s ease, text-shadow 0.3s ease;
+    cursor: pointer;
+}
+
+h2:hover, h3:hover, h4:hover, h5:hover, h6:hover {
+    color: var(--primary-color);
+    transform: scale(1.01);
+    text-shadow: 0 0 8px rgba(122, 162, 247, 0.2);
 }
 
 a {
@@ -268,6 +276,24 @@ img {
     margin-bottom: 0.8rem;
     color: var(--heading-color); /* 深蓝色标题 */
     line-height: 1.15;
+    cursor: pointer;
+    transition: color 0.3s ease, text-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.hero-title:hover {
+    color: transparent;
+    background-image: linear-gradient(
+        90deg,
+        var(--primary-color) 0%,
+        var(--accent-color) 30%,
+        var(--primary-color) 60%,
+        var(--accent-color) 100%
+    );
+    background-size: 200% 100%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    animation: textShimmer 3s linear infinite, jelly 0.6s ease;
+    text-shadow: none;
 }
 
 .hero-subtitle {
@@ -275,6 +301,15 @@ img {
     color: var(--primary-color); /* 蓝色副标题 */
     margin-bottom: 1.5rem;
     font-weight: 400; /* 副标题为常规字重 */
+    cursor: pointer;
+    transition: color 0.3s ease, text-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.hero-subtitle:hover {
+    color: var(--accent-color);
+    text-shadow: 0 0 12px rgba(247, 125, 170, 0.4);
+    transform: scale(1.03);
+    animation: jelly 0.6s ease;
 }
 
 .hero-description {
@@ -283,6 +318,12 @@ img {
     margin-bottom: 2.5rem;
     max-width: 520px;
     line-height: 1.8; /* 稍微增加行间距 */
+    transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.hero-description:hover {
+    color: var(--heading-color);
+    transform: translateY(-2px);
 }
 
 .hero-visual {
@@ -372,7 +413,7 @@ img {
 }
 .cta-button i {
     margin-right: 0.6rem;
-    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.3s ease;
     display: inline-block;
 }
 .cta-button::before {
@@ -485,6 +526,23 @@ img {
     font-weight: 700;
     margin-bottom: 0.75rem;
     color: var(--heading-color);
+    cursor: pointer;
+    transition: color 0.3s ease, text-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.section-title:hover {
+    color: transparent;
+    background-image: linear-gradient(
+        90deg,
+        var(--primary-color) 0%,
+        var(--accent-color) 50%,
+        var(--primary-color) 100%
+    );
+    background-size: 200% 100%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    animation: textShimmer 3s linear infinite, jelly 0.6s ease;
+    text-shadow: none;
 }
 
 .section-subtitle {
@@ -495,6 +553,13 @@ img {
     max-width: 600px;
     margin-left: auto;
     margin-right: auto;
+    transition: color 0.3s ease, transform 0.3s ease;
+    cursor: pointer;
+}
+
+.section-subtitle:hover {
+    color: var(--accent-color);
+    transform: translateY(-2px);
 }
 
 .features-grid {
@@ -741,11 +806,16 @@ img {
     font-weight: 600;
     margin-bottom: 0.75rem;
     color: var(--heading-color);
-    transition: color 0.3s ease, transform 0.3s ease;
+    transition: color 0.3s ease, transform 0.3s ease, text-shadow 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
 }
 
 .feature-card:hover h3 {
-    transform: scale(1.05);
+    transform: scale(1.1);
+    text-shadow: 0 0 8px rgba(122, 162, 247, 0.2);
+    animation: jelly 0.6s ease;
 }
 
 .feature-card:nth-child(1):hover h3 { color: #7d6dd8; }
@@ -759,13 +829,130 @@ img {
     font-size: 0.95rem;
     color: var(--text-color);
     line-height: 1.65;
-    transition: transform 0.3s ease;
+    transition: color 0.3s ease, transform 0.3s ease;
+    cursor: pointer;
 }
 
 .feature-card:hover p {
-    transform: translateY(2px);
+    transform: translateY(-3px);
+    color: var(--heading-color);
 }
 
+/* 文本闪烁效果 */
+@keyframes textShimmer {
+    0% {
+        background-position: -100% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+.section-title:hover {
+    color: transparent;
+    background-image: linear-gradient(
+        90deg,
+        var(--primary-color) 0%,
+        var(--accent-color) 50%,
+        var(--primary-color) 100%
+    );
+    background-size: 200% 100%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    animation: textShimmer 3s linear infinite, jelly 0.6s ease;
+    text-shadow: none;
+}
+
+/* 特殊悬停效果 - 波浪文本 */
+@keyframes wave {
+    0%, 100% { transform: translateY(0); }
+    25% { transform: translateY(-8px); }
+    75% { transform: translateY(8px); }
+}
+
+.cta-section h2:hover {
+    animation: none;
+    transform: none;
+    text-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+}
+
+.cta-section h2:hover .wave-letter {
+    display: inline-block;
+    animation: wave 1.5s ease-in-out infinite;
+}
+
+.cta-section h2:hover .wave-letter:nth-child(2) {
+    animation-delay: 0.1s;
+}
+.cta-section h2:hover .wave-letter:nth-child(3) {
+    animation-delay: 0.2s;
+}
+.cta-section h2:hover .wave-letter:nth-child(4) {
+    animation-delay: 0.3s;
+}
+.cta-section h2:hover .wave-letter:nth-child(5) {
+    animation-delay: 0.4s;
+}
+.cta-section h2:hover .wave-letter:nth-child(6) {
+    animation-delay: 0.5s;
+}
+.cta-section h2:hover .wave-letter:nth-child(7) {
+    animation-delay: 0.6s;
+}
+.cta-section h2:hover .wave-letter:nth-child(8) {
+    animation-delay: 0.7s;
+}
+.cta-section h2:hover .wave-letter:nth-child(9) {
+    animation-delay: 0.8s;
+}
+.cta-section h2:hover .wave-letter:nth-child(10) {
+    animation-delay: 0.9s;
+}
+.cta-section h2:hover .wave-letter:nth-child(11) {
+    animation-delay: 1.0s;
+}
+.cta-section h2:hover .wave-letter:nth-child(12) {
+    animation-delay: 1.1s;
+}
+.cta-section h2:hover .wave-letter:nth-child(13) {
+    animation-delay: 1.2s;
+}
+.cta-section h2:hover .wave-letter:nth-child(14) {
+    animation-delay: 1.3s;
+}
+.cta-section h2:hover .wave-letter:nth-child(15) {
+    animation-delay: 1.4s;
+}
+.cta-section h2:hover .wave-letter:nth-child(16) {
+    animation-delay: 1.5s;
+}
+.cta-section h2:hover .wave-letter:nth-child(17) {
+    animation-delay: 1.6s;
+}
+.cta-section h2:hover .wave-letter:nth-child(18) {
+    animation-delay: 1.7s;
+}
+
+/* 特殊文本悬停效果 */
+.feature-card h3::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: -100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.4),
+        transparent
+    );
+    transition: left 0.5s ease;
+}
+
+.feature-card h3:hover::after {
+    left: 100%;
+}
 
 /* --- GitHub 星星增长曲线 --- */
 .github-stats {
@@ -983,12 +1170,27 @@ img {
     font-weight: 600;
     margin-bottom: 1rem;
     color: var(--heading-color);
+    transition: color 0.3s ease, transform 0.3s ease, text-shadow 0.3s ease;
+    cursor: pointer;
+}
+
+.scenario-content h3:hover {
+    color: var(--primary-color);
+    transform: scale(1.03);
+    text-shadow: 0 0 10px rgba(122, 162, 247, 0.3);
+    animation: jelly 0.6s ease;
 }
 
 .scenario-content p {
     color: var(--text-color);
     line-height: 1.7;
     font-size: 1rem;
+    transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.scenario-content p:hover {
+    color: var(--heading-color);
+    transform: translateY(-1px);
 }
 
 /* 响应式调整 - 使用场景 */
@@ -1060,11 +1262,25 @@ img {
     color: white;
     margin-bottom: 1rem;
     font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.3s ease, text-shadow 0.3s ease;
+}
+.cta-section h2:hover {
+    transform: scale(1.02);
+    text-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+    animation: jelly 0.6s ease;
 }
 .cta-section p {
     font-size: 1.15rem;
     margin-bottom: 2.5rem;
     opacity: 0.95;
+    cursor: pointer;
+    transition: opacity 0.3s ease, transform 0.3s ease, text-shadow 0.3s ease;
+}
+.cta-section p:hover {
+    opacity: 1;
+    transform: translateY(-2px);
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
 }
 .cta-section .cta-button.primary { /* 深色背景上的按钮样式 */
     background-color: white;
@@ -1101,6 +1317,12 @@ img {
 }
 .main-footer p {
     margin-bottom: 0.5rem;
+    transition: color 0.3s ease, transform 0.3s ease;
+    cursor: pointer;
+}
+.main-footer p:hover {
+    color: var(--primary-color);
+    transform: translateY(-1px);
 }
 .main-footer a {
     color: var(--primary-color); /* 页脚中的蓝色链接 */
@@ -1791,4 +2013,25 @@ img {
     60% { transform: scale(0.95, 1.03); }
     75% { transform: scale(1.02, 0.98); }
     100% { transform: scale(1); }
+}
+
+/* 全局段落悬停效果 */
+p {
+    transition: color 0.3s ease, transform 0.3s ease;
+}
+
+p:hover {
+    color: var(--heading-color);
+    transform: translateY(-1px);
+}
+
+/* 按钮内文本的悬停效果 */
+.cta-button span {
+    transition: color 0.3s ease, transform 0.3s ease;
+    display: inline-block;
+}
+
+.cta-button:hover span {
+    transform: scale(1.05);
+    animation: jelly 0.4s ease;
 }
