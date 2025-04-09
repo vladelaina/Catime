@@ -521,6 +521,87 @@ img {
 }
 
 
+/* --- GitHub 星星增长曲线 --- */
+.github-stats {
+    padding: 6rem 0;
+    background: linear-gradient(to bottom, var(--surface-color), var(--background-color));
+    position: relative;
+}
+
+.github-chart-container {
+    max-width: 900px;
+    margin: 3rem auto;
+    background-color: white;
+    border-radius: var(--border-radius-large);
+    padding: 1rem;
+    box-shadow: var(--card-shadow);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    overflow: hidden;
+}
+
+.github-chart-container:hover {
+    box-shadow: var(--card-hover-shadow);
+    transform: translateY(-5px);
+}
+
+.github-chart {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: var(--border-radius-base);
+}
+
+.github-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.github-button {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.8rem 1.8rem;
+    background-color: var(--primary-color);
+    color: white;
+    border-radius: var(--border-radius-pill);
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: var(--button-shadow);
+}
+
+.github-button i {
+    margin-right: 0.8rem;
+    font-size: 1.2rem;
+}
+
+.github-button:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-3px);
+    box-shadow: var(--button-hover-shadow);
+    color: white;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .github-chart-container {
+        margin: 2rem auto;
+        padding: 0.5rem;
+    }
+    
+    .github-buttons {
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .github-button {
+        width: 80%;
+        justify-content: center;
+    }
+}
+
+
 /* --- 使用场景区域 --- */
 .usage-scenarios {
     padding: 6rem 0;
