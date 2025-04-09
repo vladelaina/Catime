@@ -541,7 +541,7 @@
                     }
                     
                     // 随机创建跟随鼠标的彗星粒子
-                    if (Math.random() > 0.85) { // 调整概率控制生成频率
+                    if (Math.random() > 0.92) { // 控制生成频率
                         createCometParticle(e.clientX - rect.left, e.clientY - rect.top);
                     }
                 });
@@ -936,33 +936,15 @@
             // 设置彗星位置为鼠标位置
             comet.style.left = `${x}px`;
             comet.style.top = `${y}px`;
-            comet.style.bottom = 'auto';
             
-            // 彗星大小
-            const size = Math.random() * 2 + 2;
-            comet.style.width = `${size}px`;
-            comet.style.height = `${size}px`;
-            
-            // 设置彗星特殊样式
-            comet.style.boxShadow = `0 0 6px 2px rgba(122, 162, 247, 0.8)`;
-            comet.style.backgroundColor = '#7aa2f7';
-            comet.style.opacity = '0.9';
-            
-            // 计算随机方向（彗星尾巴会朝反方向）
+            // 随机方向角度
             const angle = Math.random() * 360;
             const distance = 50 + Math.random() * 100; // 移动距离
-            
-            // 设置径向渐变作为彗星尾巴
-            comet.style.background = `radial-gradient(circle at center, #7aa2f7 10%, rgba(122, 162, 247, 0.5) 40%, transparent 70%)`;
-            
-            // 应用CSS动画
-            comet.style.animation = 'none'; // 清除默认动画
-            comet.style.transition = 'all 1s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
             
             // 添加到容器
             starParticlesContainer.appendChild(comet);
             
-            // 在下一帧应用变换，确保过渡效果生效
+            // 在下一帧应用变换
             requestAnimationFrame(() => {
                 // 根据角度计算新位置
                 const rad = angle * Math.PI / 180;
@@ -979,7 +961,7 @@
                 if (comet.parentNode === starParticlesContainer) {
                     starParticlesContainer.removeChild(comet);
                 }
-            }, 1000);
+            }, 1500);
         }
     </script>
 
