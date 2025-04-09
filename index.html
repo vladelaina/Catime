@@ -531,11 +531,14 @@
                             const date = new Date(startDate);
                             date.setDate(date.getDate() + dateOffset);
                             
+                            // 格式化日期为 YYYY-MM-DD
+                            const formattedDate = date.toISOString().split('T')[0];
+                            
                             // 将 y 从 SVG 坐标转换为星星数
                             const height = svgDoc.querySelector('svg').getAttribute('height');
                             const stars = Math.round(maxStars * (1 - y / height));
                             
-                            return [date.toISOString().split('T')[0], stars];
+                            return [formattedDate, stars];
                         });
                         
                         // 配置图表选项
@@ -551,7 +554,9 @@
                             tooltip: {
                                 trigger: 'axis',
                                 formatter: function(params) {
-                                    return `${params[0].data[0]}: ${params[0].data[1]} 星星`;
+                                    const date = new Date(params[0].value[0]);
+                                    const formattedDate = date.toISOString().split('T')[0];
+                                    return `${formattedDate}: ${params[0].value[1]} 星星`;
                                 }
                             },
                             grid: {
@@ -562,11 +567,16 @@
                                 containLabel: true
                             },
                             xAxis: {
-                                type: 'category',
+                                type: 'time',
                                 name: '日期',
                                 nameLocation: 'middle',
                                 nameGap: 35,
-                                data: ['2025-02-09', '2025-02-16', '2025-02-23', '2025-03-02', '2025-03-09', '2025-03-16', '2025-03-23', '2025-03-30', '2025-04-06']
+                                axisLabel: {
+                                    formatter: '{yyyy}-{MM}-{dd}'
+                                },
+                                splitLine: {
+                                    show: false
+                                }
                             },
                             yAxis: {
                                 type: 'value',
@@ -595,7 +605,12 @@
                                         { offset: 1, color: 'rgba(122, 162, 247, 0.1)' }
                                     ])
                                 },
-                                data: chartData
+                                data: chartData.map(item => {
+                                    return {
+                                        name: item[0],
+                                        value: [item[0], item[1]]
+                                    };
+                                })
                             }]
                         };
                         
@@ -615,24 +630,16 @@
             function renderFallbackChart(chart, showFallbackTitle = true) {
                 chart.hideLoading();
                 
-                // 模拟数据 - 尽量接近真实趋势
+                // 模拟数据 - 使用用户提供的准确日期
                 const dateData = [
                     ['2025-02-02', 0],
-                    ['2025-02-24', 120],
-                    ['2025-03-08', 210],
-                    ['2025-03-15', 300],
+                    ['2025-03-08', 120],
                     ['2025-03-16', 390],
-                    ['2025-03-20', 480],
                     ['2025-03-23', 570],
-                    ['2025-03-24', 660],
                     ['2025-03-25', 750],
-                    ['2025-03-28', 840],
                     ['2025-03-29', 930],
-                    ['2025-04-01', 1020],
                     ['2025-04-01', 1110],
-                    ['2025-04-04', 1200],
-                    ['2025-04-07', 1290],
-                    ['2025-04-09', 1330]
+                    ['2025-04-07', 1330]
                 ];
                 
                 // 备用图表配置
@@ -647,7 +654,9 @@
                     tooltip: {
                         trigger: 'axis',
                         formatter: function(params) {
-                            return `${params[0].name}: ${params[0].value} 星星`;
+                            const date = new Date(params[0].value[0]);
+                            const formattedDate = date.toISOString().split('T')[0];
+                            return `${formattedDate}: ${params[0].value[1]} 星星`;
                         }
                     },
                     grid: {
@@ -658,11 +667,16 @@
                         containLabel: true
                     },
                     xAxis: {
-                        type: 'category',
+                        type: 'time',
                         name: '日期',
                         nameLocation: 'middle',
                         nameGap: 35,
-                        data: dateData.map(item => item[0])
+                        axisLabel: {
+                            formatter: '{yyyy}-{MM}-{dd}'
+                        },
+                        splitLine: {
+                            show: false
+                        }
                     },
                     yAxis: {
                         type: 'value',
@@ -687,7 +701,12 @@
                                 { offset: 1, color: 'rgba(122, 162, 247, 0.1)' }
                             ])
                         },
-                        data: dateData.map(item => item[1])
+                        data: dateData.map(item => {
+                            return {
+                                name: item[0],
+                                value: [item[0], item[1]]
+                            };
+                        })
                     }]
                 };
                 
