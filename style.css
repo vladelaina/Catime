@@ -521,6 +521,139 @@ img {
 }
 
 
+/* --- 使用场景区域 --- */
+.usage-scenarios {
+    padding: 6rem 0;
+    background-color: var(--background-color);
+    position: relative;
+}
+
+.scenarios-container {
+    display: flex;
+    flex-direction: column;
+    gap: 4rem;
+    margin-top: 1rem;
+}
+
+.scenario-card {
+    display: flex;
+    align-items: center;
+    gap: 3rem;
+    background-color: var(--surface-color);
+    border-radius: var(--border-radius-large);
+    padding: 2rem;
+    box-shadow: var(--card-shadow);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    overflow: hidden;
+    position: relative;
+}
+
+.scenario-card:hover {
+    transform: translateY(-10px);
+    box-shadow: var(--card-hover-shadow);
+}
+
+.scenario-card.reverse {
+    flex-direction: row-reverse;
+}
+
+.scenario-visual {
+    flex: 1;
+    min-width: 40%;
+    border-radius: var(--border-radius-base);
+    overflow: hidden;
+    box-shadow: 0 5px 20px rgba(122, 162, 247, 0.15);
+    transition: all 0.3s ease;
+}
+
+.scenario-img {
+    width: 100%;
+    height: auto;
+    display: block;
+    transition: transform 0.5s ease;
+}
+
+.scenario-card:hover .scenario-img {
+    transform: scale(1.05);
+}
+
+.scenario-content {
+    flex: 1;
+    padding: 1rem;
+}
+
+.scenario-icon {
+    width: 60px;
+    height: 60px;
+    background-color: rgba(122, 162, 247, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    font-size: 1.5rem;
+    color: var(--primary-color);
+    transition: all 0.3s ease;
+}
+
+.scenario-card:hover .scenario-icon {
+    background-color: var(--primary-color);
+    color: white;
+    transform: scale(1.1) rotate(10deg);
+}
+
+.scenario-content h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--heading-color);
+}
+
+.scenario-content p {
+    color: var(--text-color);
+    line-height: 1.7;
+    font-size: 1rem;
+}
+
+/* 响应式调整 - 使用场景 */
+@media (max-width: 992px) {
+    .scenario-card,
+    .scenario-card.reverse {
+        flex-direction: column;
+        padding: 1.5rem;
+    }
+    
+    .scenario-visual {
+        width: 100%;
+        margin-bottom: 1.5rem;
+    }
+    
+    .scenario-content {
+        padding: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .usage-scenarios {
+        padding: 4rem 0;
+    }
+    
+    .scenarios-container {
+        gap: 2.5rem;
+    }
+    
+    .scenario-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 1.3rem;
+    }
+    
+    .scenario-content h3 {
+        font-size: 1.3rem;
+    }
+}
+
+
 /* --- CTA 区域 --- */
 .cta-section {
     padding: 5.5rem 0;
