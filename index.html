@@ -375,11 +375,11 @@
                         
                         let phase = 0;
                         breatheTimer = setInterval(() => {
-                            // 正弦波动的呼吸效果，移除缩放效果
-                            // 只保留旋转效果
+                            // 添加缩放效果，类似于hero图片的呼吸效果
+                            const scale = 1.02 + Math.sin(phase) * 0.02;
                             
-                            // 应用变换，结合当前的旋转角度
-                            image.style.transform = `perspective(1000px) rotateY(${currentRotateY}deg) rotateX(${currentRotateX}deg)`;
+                            // 应用变换，结合当前的旋转角度和缩放效果
+                            image.style.transform = `scale(${scale}) perspective(1000px) rotateY(${currentRotateY}deg) rotateX(${currentRotateX}deg)`;
                             
                             phase += 0.05;
                         }, 30);
@@ -410,7 +410,7 @@
                         currentRotateX = 0;
                         currentRotateY = 0;
                         // 直接设置回初始状态
-                        image.style.transform = 'perspective(1000px)';
+                        image.style.transform = 'scale(1) perspective(1000px)';
                     });
                     
                     // 鼠标进入时准备变换并启动呼吸效果
@@ -424,7 +424,7 @@
                         // 暂时停止呼吸效果
                         stopBreatheEffect();
                         // 按下效果 - 只添加轻微下沉，不缩放
-                        image.style.transform = `perspective(1000px) rotateY(${currentRotateY}deg) rotateX(${currentRotateX}deg) translateZ(-10px)`;
+                        image.style.transform = `scale(0.98) perspective(1000px) rotateY(${currentRotateY}deg) rotateX(${currentRotateX}deg) translateZ(-10px)`;
                     });
                     
                     // 单独为每个场景图片添加鼠标释放事件
