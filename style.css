@@ -171,7 +171,7 @@ img {
     }
 }
 .logo:hover .logo-img {
-    /* 移除图标动画效果 */
+    animation: jelly 0.6s ease;
 }
 
 /* 移除不再使用的动画关键帧 */
