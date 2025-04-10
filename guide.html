@@ -37,11 +37,25 @@
             <span class="particle p4"></span>
             <span class="particle p5"></span>
             <span class="particle p6"></span>
+            <span class="particle p7"></span>
+            <span class="particle p8"></span>
         </div>
         <svg class="scroll-progress-circle" viewBox="0 0 100 100">
+            <defs>
+                <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#7aa2f7" />
+                    <stop offset="50%" stop-color="#9aaee8" />
+                    <stop offset="100%" stop-color="#f77daa" />
+                </linearGradient>
+                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="3" result="blur" />
+                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                </filter>
+            </defs>
             <circle class="scroll-progress-circle-bg" cx="50" cy="50" r="45"></circle>
             <circle class="scroll-progress-circle-fill" cx="50" cy="50" r="45"></circle>
             <circle class="scroll-progress-circle-inner" cx="50" cy="50" r="35"></circle>
+            <path class="scroll-progress-circle-deco" d="M50,15 A35,35 0 0,1 85,50 A35,35 0 0,1 50,85 A35,35 0 0,1 15,50 A35,35 0 0,1 50,15 Z" />
         </svg>
         <div class="scroll-progress-icon">
             <i class="fas fa-arrow-up"></i>
@@ -50,6 +64,7 @@
             <span class="emoji emoji-rocket">🚀</span>
             <span class="emoji emoji-star">⭐</span>
             <span class="emoji emoji-heart">💖</span>
+            <span class="emoji emoji-sparkles">✨</span>
         </div>
         <div class="scroll-progress-stars">
             <span class="star star-1">✦</span>
@@ -57,8 +72,10 @@
             <span class="star star-3">✦</span>
             <span class="star star-4">✧</span>
             <span class="star star-5">✦</span>
+            <span class="star star-6">✧</span>
         </div>
         <div class="scroll-progress-percentage">0%</div>
+        <div class="scroll-progress-tooltip">返回顶部</div>
     </div>
 
     <!-- 页头/导航 -->
@@ -364,6 +381,7 @@
             const progressContainer = document.getElementById('scrollProgressContainer');
             const progressCircle = document.querySelector('.scroll-progress-circle-fill');
             const progressPercentage = document.querySelector('.scroll-progress-percentage');
+            const progressIcon = document.querySelector('.scroll-progress-icon');
             const circleLength = progressCircle.getTotalLength ? 
                                  progressCircle.getTotalLength() : 283; // 回退值
             
@@ -383,19 +401,46 @@
                 progressCircle.style.strokeDashoffset = offset;
                 
                 // 更新百分比文本
-                const percentValue = Math.round(scrollPercentage * 100);
+                const percentValue = Math.min(Math.round(scrollPercentage * 100), 100);
                 progressPercentage.textContent = `${percentValue}%`;
                 
-                // 改变颜色渐变
-                if (percentValue > 75) {
-                    progressCircle.style.stroke = 'var(--accent-color)';
-                } else if (percentValue > 50) {
-                    progressCircle.style.stroke = '#9abdfa';
-                } else if (percentValue > 25) {
-                    progressCircle.style.stroke = '#7aa2f7';
+                // 改变颜色和图标效果，根据进度动态变化
+                updateAppearanceByProgress(percentValue);
+            }
+            
+            // 根据进度动态更改外观
+            function updateAppearanceByProgress(percentValue) {
+                // 设置渐变色比例
+                if (percentValue > 80) {
+                    progressIcon.style.color = 'var(--accent-color)';
+                    progressIcon.style.textShadow = '0 2px 8px rgba(247, 125, 170, 0.5)';
+                } else if (percentValue > 40) {
+                    progressIcon.style.color = '#9aa5ce';
+                    progressIcon.style.textShadow = '0 2px 5px rgba(154, 165, 206, 0.4)';
                 } else {
-                    progressCircle.style.stroke = 'var(--primary-color)';
+                    progressIcon.style.color = 'var(--primary-color)';
+                    progressIcon.style.textShadow = '0 2px 5px rgba(122, 162, 247, 0.3)';
                 }
+                
+                // 调整容器大小和背景，根据滚动位置微调
+                const sizeAdjust = 1 + (percentValue * 0.0015); // 最大放大到1.15倍
+                progressContainer.style.transform = `scale(${sizeAdjust})`;
+                
+                // 增加随机微动效果
+                if (Math.random() > 0.95) {
+                    addMicroMovement();
+                }
+            }
+            
+            // 添加微小的随机动画，让图标更生动
+            function addMicroMovement() {
+                const stars = document.querySelectorAll('.star');
+                const randomStar = stars[Math.floor(Math.random() * stars.length)];
+                randomStar.style.opacity = '0.7';
+                
+                setTimeout(() => {
+                    randomStar.style.opacity = '0';
+                }, 300);
             }
             
             // 点击回到顶部，添加动画效果
@@ -412,11 +457,39 @@
                     behavior: 'smooth'
                 });
                 
+                // 播放声音效果（如果浏览器支持）
+                playClickSound();
+                
                 // 移除点击效果类
                 setTimeout(() => {
                     this.classList.remove('clicked');
-                }, 300);
+                }, 500);
             });
+            
+            // 播放点击声音 (轻微的"叮"声)
+            function playClickSound() {
+                try {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                    oscillator.frequency.exponentialRampToValueAtTime(500, audioContext.currentTime + 0.2);
+                    
+                    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.3);
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.start();
+                    oscillator.stop(audioContext.currentTime + 0.3);
+                } catch (e) {
+                    // 浏览器不支持 Web Audio API，静默失败
+                    console.log('Audio API不受支持');
+                }
+            }
             
             // 创建粒子爆发效果
             function createParticleBurst() {
@@ -438,6 +511,18 @@
                 });
             }
             
+            // 悬停时显示完整的工具提示
+            progressContainer.addEventListener('mouseenter', function() {
+                const scrollTop = window.scrollY;
+                const percentComplete = Math.round((scrollTop / (document.body.scrollHeight - window.innerHeight)) * 100);
+                
+                if (percentComplete > 10) {
+                    document.querySelector('.scroll-progress-tooltip').textContent = "返回顶部 (" + percentComplete + "%)";
+                } else {
+                    document.querySelector('.scroll-progress-tooltip').textContent = "返回顶部";
+                }
+            });
+            
             // 监听滚动事件，使用防抖处理
             let scrollTimeout;
             window.addEventListener('scroll', function() {
@@ -447,6 +532,15 @@
             
             // 初始化进度
             updateProgress();
+            
+            // 定期添加微小的动画，使元素更生动
+            setInterval(() => {
+                if (!progressContainer.matches(':hover')) {
+                    if (Math.random() > 0.7) {
+                        addMicroMovement();
+                    }
+                }
+            }, 3000);
         });
     </script>
 

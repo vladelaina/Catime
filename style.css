@@ -4769,6 +4769,8 @@ p:hover {
     pointer-events: auto;
     overflow: visible;
     border: 2px solid rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
 }
 
 .scroll-progress-container:hover {
@@ -4783,6 +4785,16 @@ p:hover {
 .scroll-progress-container:active {
     transform: scale(0.92);
     transition: all 0.2s ease;
+}
+
+.scroll-progress-container.clicked {
+    animation: clickPulse 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes clickPulse {
+    0% { transform: scale(0.92); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
 }
 
 /* 发光效果 */
@@ -4846,6 +4858,8 @@ p:hover {
 .p4 { top: 60%; left: 10%; animation-delay: 0.4s; }
 .p5 { top: 30%; right: 0; animation-delay: 0.5s; background: #f77daa; }
 .p6 { top: 70%; left: 30%; animation-delay: 0.6s; }
+.p7 { top: 40%; left: 50%; animation-delay: 0.7s; background: #f77daa; }
+.p8 { top: 50%; right: 40%; animation-delay: 0.8s; }
 
 @keyframes particleBurst {
     0% { transform: scale(0) translate(0, 0); opacity: 0; }
@@ -4859,6 +4873,8 @@ p:hover {
 .p4 { --tx: -25px; --ty: 15px; }
 .p5 { --tx: 30px; --ty: -5px; }
 .p6 { --tx: -20px; --ty: 30px; }
+.p7 { --tx: 15px; --ty: 25px; }
+.p8 { --tx: -30px; --ty: -15px; }
 
 /* 进度圆环 */
 .scroll-progress-circle {
@@ -4880,30 +4896,48 @@ p:hover {
 
 .scroll-progress-circle-fill {
     fill: none;
-    stroke: var(--primary-color);
+    stroke: url(#progressGradient);
     stroke-width: 6;
     stroke-linecap: round;
     stroke-dasharray: 283; /* 2πr ≈ 2 * 3.14 * 45 ≈ 283 */
     stroke-dashoffset: 283;
     transition: stroke-dashoffset 0.2s ease;
-    filter: drop-shadow(0 0 3px rgba(122, 162, 247, 0.7));
+    filter: drop-shadow(0 0 3px rgba(122, 162, 247, 0.7)) url(#glow);
 }
 
 .scroll-progress-container:hover .scroll-progress-circle-fill {
-    stroke: var(--accent-color);
-    filter: drop-shadow(0 0 5px rgba(247, 125, 170, 0.8));
+    filter: drop-shadow(0 0 5px rgba(247, 125, 170, 0.8)) url(#glow);
     animation: glowStroke 2s infinite alternate;
 }
 
 @keyframes glowStroke {
-    0% { filter: drop-shadow(0 0 3px rgba(122, 162, 247, 0.7)); }
-    100% { filter: drop-shadow(0 0 8px rgba(247, 125, 170, 0.8)); }
+    0% { filter: drop-shadow(0 0 3px rgba(122, 162, 247, 0.7)) url(#glow); }
+    100% { filter: drop-shadow(0 0 8px rgba(247, 125, 170, 0.8)) url(#glow); }
 }
 
 .scroll-progress-circle-inner {
     fill: rgba(255, 255, 255, 0.9);
     stroke: none;
     filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.5));
+}
+
+.scroll-progress-circle-deco {
+    fill: none;
+    stroke: rgba(122, 162, 247, 0.1);
+    stroke-width: 1;
+    stroke-dasharray: 4 2;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+
+.scroll-progress-container:hover .scroll-progress-circle-deco {
+    opacity: 1;
+    animation: rotateCircle 15s linear infinite;
+}
+
+@keyframes rotateCircle {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
 /* 箭头图标 */
@@ -4962,12 +4996,14 @@ p:hover {
 .star-3 { bottom: -10px; left: 50%; transform: translateX(-50%); animation-delay: 0.5s; }
 .star-4 { top: 30%; left: -20px; animation-delay: 0.7s; }
 .star-5 { top: -10px; left: 20%; animation-delay: 0.9s; }
+.star-6 { bottom: -5px; right: 20%; animation-delay: 0.6s; }
 
 .scroll-progress-container:hover .star-1 { top: -25px; }
 .scroll-progress-container:hover .star-2 { right: -25px; }
 .scroll-progress-container:hover .star-3 { bottom: -20px; }
 .scroll-progress-container:hover .star-4 { left: -25px; }
 .scroll-progress-container:hover .star-5 { top: -20px; left: 15%; }
+.scroll-progress-container:hover .star-6 { bottom: -15px; right: 15%; }
 
 @keyframes twinkle {
     0%, 100% { transform: scale(1); filter: drop-shadow(0 0 3px rgba(122, 162, 247, 0.4)); }
@@ -5012,6 +5048,12 @@ p:hover {
     transform: rotate(25deg) scale(0);
 }
 
+.emoji-sparkles {
+    bottom: -20px;
+    left: -15px;
+    transform: rotate(-20deg) scale(0);
+}
+
 .scroll-progress-container:hover .emoji-rocket {
     opacity: 1;
     transform: rotate(15deg) scale(1);
@@ -5030,6 +5072,12 @@ p:hover {
     animation: heartBeat 1s ease infinite;
 }
 
+.scroll-progress-container:hover .emoji-sparkles {
+    opacity: 1;
+    transform: rotate(-10deg) scale(1);
+    animation: sparkleFlash 2s ease infinite;
+}
+
 @keyframes rocketWiggle {
     0%, 100% { transform: rotate(15deg) translateY(0); }
     50% { transform: rotate(20deg) translateY(-5px); }
@@ -5046,6 +5094,13 @@ p:hover {
     20%, 40% { transform: scale(0.95); }
     50%, 70% { transform: scale(1.1); }
     60%, 80% { transform: scale(0.98); }
+}
+
+@keyframes sparkleFlash {
+    0%, 100% { opacity: 1; transform: rotate(-10deg) scale(1); }
+    25% { opacity: 0.5; transform: rotate(-5deg) scale(0.9); }
+    50% { opacity: 1; transform: rotate(-15deg) scale(1.1); }
+    75% { opacity: 0.7; transform: rotate(-8deg) scale(0.95); }
 }
 
 /* 百分比显示 */
@@ -5070,6 +5125,51 @@ p:hover {
     transform: translateX(-50%) translateY(-5px);
 }
 
+/* 提示工具提示 */
+.scroll-progress-tooltip {
+    position: absolute;
+    top: -40px;
+    left: 50%;
+    transform: translateX(-50%) scale(0);
+    background-color: white;
+    color: var(--primary-color);
+    font-size: 0.8rem;
+    padding: 5px 10px;
+    border-radius: 10px;
+    white-space: nowrap;
+    box-shadow: 0 2px 10px rgba(122, 162, 247, 0.2);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    pointer-events: none;
+    z-index: 6;
+}
+
+.scroll-progress-tooltip:after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: white transparent transparent transparent;
+}
+
+.scroll-progress-container:hover .scroll-progress-tooltip {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+}
+
+/* 点击效果 */
+.scroll-progress-container.clicked .scroll-progress-icon {
+    animation: clickSpin 0.5s ease;
+}
+
+@keyframes clickSpin {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
 /* 媒体查询 - 移动设备优化 */
 @media (max-width: 768px) {
     .scroll-progress-container {
@@ -5090,5 +5190,11 @@ p:hover {
     .scroll-progress-percentage {
         font-size: 0.7rem;
         bottom: -25px;
+    }
+    
+    .scroll-progress-tooltip {
+        font-size: 0.7rem;
+        top: -35px;
+        padding: 4px 8px;
     }
 }
