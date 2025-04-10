@@ -17,16 +17,12 @@
     <!-- AOS 库 -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     
-    <!-- Marked.js 用于解析Markdown -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
     <!-- 自定义样式表 -->
     <link rel="stylesheet" href="style.css">
 
     <link rel="icon" type="image/png" href="assets/catime.png">
 </head>
 <body>
-
     <!-- 滚动进度指示器 -->
     <div class="scroll-progress-container" id="scrollProgressContainer">
         <div class="scroll-progress-glow"></div>
@@ -93,41 +89,48 @@
     </header>
 
     <main>
-        <!-- Wiki 内容区域 -->
-        <section class="wiki-section">
+        <section class="guide-section">
             <div class="container">
-                <div class="wiki-container" data-aos="fade-up">
-                    <!-- 左侧导航 -->
-                    <div class="wiki-sidebar">
-                        <h3>文档目录</h3>
-                        <ul class="wiki-list" id="wiki-navigation">
-                            <li><a href="#" data-page="Home" class="active">首页</a></li>
-                            <li><a href="#" data-page="使用场景">使用场景</a></li>
-                            <li class="category">菜单说明</li>
-                            <li class="sub-item"><a href="#" data-page="右键托盘图标">右键托盘图标</a></li>
-                            <li class="sub-item"><a href="#" data-page="左键托盘图标">左键托盘图标</a></li>
-                            <li><a href="#" data-page="常见问题">常见问题</a></li>
-                        </ul>
+                <article class="guide-content" data-aos="fade-up">
+                    <h1>Hi~ 我的朋友！</h1>
+                    <p>我是 Vladelaina，Catime 的开发者，也是一名普通的大学生。</p>
+                    <p>很高兴能在这里和你见面！</p>
+
+                    <p>想和你分享一下我这个名字的由来：</p>
+                    <p>"Vladelaina" 是结合了我最喜欢的两部动漫女主角的名字——《86-不存在的战区-》中的 <strong>Vladilena Milizé</strong> 和《魔女之旅》中的 <strong>Elaina</strong>。</p>
+                    <p>如果你还没看过这两部作品，真心推荐你去看看，剧情和角色都非常精彩，绝对值得一追！</p>
+
+                    <p>接下来，就让我为你介绍一下 Catime 的使用指南吧～</p>
+
+                    <h2>软件无需安装，首次双击打开的时候在顶部显示一个25分钟的置顶倒计时</h2>
+                    <div class="guide-image">
+                        <img src="assets/First time use.gif" alt="First time use">
                     </div>
-                    
-                    <!-- 右侧内容 -->
-                    <div class="wiki-content">
-                        <div id="wiki-content-container">
-                            <div id="content-loading" style="display: none;">
-                                <i class="fas fa-circle-notch fa-spin fa-2x"></i>
-                            </div>
-                            <div id="debug-info" style="margin-bottom: 15px; padding: 10px; background: #f5f5f5; border-radius: 5px; font-size: 0.9em; display: none;">
-                                <div><strong>当前页面URL:</strong> <span id="current-url"></span></div>
-                                <div><strong>当前工作目录:</strong> <span id="current-dir"></span></div>
-                                <div style="margin-top: 10px;">
-                                    <button id="test-fetch" class="btn btn-sm btn-primary">测试加载Home.md</button>
-                                    <button id="toggle-debug" class="btn btn-sm btn-secondary" style="margin-left: 10px;">隐藏调试信息</button>
-                                </div>
-                            </div>
-                            <div id="markdown-content"></div>
+
+                    <p>建议你先将 Catime 的托盘图标从隐藏区域拖到任务栏上，这样使用会更方便。</p>
+                    <div class="guide-image">
+                        <img src="assets/Move out.gif" alt="Move out">
+                    </div>
+
+                    <h2>Catime 的所有操作都通过点击任务栏图标完成：</h2>
+                    <ul>
+                        <li><strong>左键</strong>：打开时间管理界面</li>
+                        <div class="guide-image">
+                            <img src="assets/left click.png" alt="left click">
                         </div>
+                        <li><strong>右键</strong>：打开设置菜单</li>
+                        <div class="guide-image">
+                            <img src="assets/right click.png" alt="right click">
+                        </div>
+                    </ul>
+
+                    <p>我的朋友，相信你已经迫不及待地想移动一下窗口的位置了吧？比如把它放到屏幕左下角。这个时候只需右键点击托盘图标，选择"编辑模式"。此时，窗口会变成亚克力背景，你就可以用鼠标拖拽来调整位置，滚轮调整大小。调整完毕后，鼠标在窗口上右键即可关闭编辑模式～</p>
+                    <div class="guide-image">
+                        <img src="assets/move.gif" alt="move">
                     </div>
-                </div>
+
+                    <p>至此，恭喜🎉你已经掌握了Catime的核心内容，剩下的部分基本都是字面意思😉。</p>
+                </article>
             </div>
         </section>
     </main>
@@ -140,8 +143,6 @@
             <p>图标画师: <a href="https://space.bilibili.com/26087398" target="_blank" rel="noopener noreferrer">猫屋敷梨梨Official</a></p>
             <div class="footer-links">
                 <a href="https://github.com/vladelaina/Catime/issues" target="_blank" rel="noopener noreferrer">问题反馈</a>
-                <!-- <a href="#">用户 Q 群</a> -->
-                <!-- <a href="#">Discord</a> -->
             </div>
         </div>
     </footer>
@@ -150,228 +151,9 @@
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <script>
         AOS.init({
-            duration: 800, // 动画持续时间
-            once: true, // 动画是否只发生一次 - 在向下滚动时
-            offset: 50, // 从原始触发点偏移的距离 (以像素为单位)
-        });
-        
-        // Wiki 内容加载
-        document.addEventListener('DOMContentLoaded', function() {
-            const contentContainer = document.getElementById('markdown-content');
-            const loadingIndicator = document.getElementById('content-loading');
-            const navLinks = document.querySelectorAll('#wiki-navigation a');
-            const debugInfo = document.getElementById('debug-info');
-            const currentUrlEl = document.getElementById('current-url');
-            const currentDirEl = document.getElementById('current-dir');
-            const testFetchBtn = document.getElementById('test-fetch');
-            const toggleDebugBtn = document.getElementById('toggle-debug');
-            
-            // 检查是否从文件系统加载
-            const isFileProtocol = window.location.protocol === 'file:';
-            
-            // 显示调试信息
-            function showDebugInfo() {
-                debugInfo.style.display = 'block';
-                currentUrlEl.textContent = window.location.href;
-                currentDirEl.textContent = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
-                toggleDebugBtn.textContent = '隐藏调试信息';
-            }
-            
-            // 隐藏调试信息
-            function hideDebugInfo() {
-                debugInfo.style.display = 'none';
-                toggleDebugBtn.textContent = '显示调试信息';
-            }
-            
-            // 检查URL参数是否有debug=true
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('debug') === 'true') {
-                showDebugInfo();
-            }
-            
-            // 测试按钮点击事件
-            if (testFetchBtn) {
-                testFetchBtn.addEventListener('click', function() {
-                    if (isFileProtocol) {
-                        alert("您正在使用file://协议打开文件，浏览器安全限制会阻止直接读取本地文件。\n\n建议的解决方案:\n使用本地服务器运行此页面");
-                    } else {
-                        fetch('wiki/Home.md')
-                            .then(response => {
-                                alert(`Home.md 请求状态: ${response.status} ${response.statusText}`);
-                                return response.text();
-                            })
-                            .then(text => {
-                                alert(`文件内容长度: ${text.length} 字符, 前50个字符: ${text.substring(0, 50)}...`);
-                            })
-                            .catch(error => {
-                                alert(`请求出错: ${error.message}`);
-                            });
-                    }
-                });
-            }
-            
-            // 切换调试信息显示
-            if (toggleDebugBtn) {
-                toggleDebugBtn.addEventListener('click', function() {
-                    if (debugInfo.style.display === 'none') {
-                        showDebugInfo();
-                    } else {
-                        hideDebugInfo();
-                    }
-                });
-            }
-            
-            // 加载内容函数
-            function loadContent(pageName) {
-                // 显示加载中
-                contentContainer.style.display = 'none';
-                loadingIndicator.style.display = 'flex';
-                
-                // 构建文件路径 (根据文件命名约定)
-                let filePath;
-                
-                // 处理特殊文件名和常见路径模式
-                if (pageName === '左键托盘图标') {
-                    filePath = 'wiki/左键.托盘图标.md';
-                } else if (pageName.includes('/')) {
-                    // 如果是子目录中的文件
-                    filePath = `wiki/${pageName}.md`;
-                } else {
-                    filePath = `wiki/${pageName}.md`;
-                }
-                
-                console.log(`尝试加载文件: ${filePath}`);
-                
-                // 使用fetch API加载Markdown文件
-                fetch(filePath)
-                    .then(response => {
-                        if (!response.ok) {
-                            // 尝试其他可能的文件路径
-                            if (response.status === 404) {
-                                // 尝试不带.md后缀的路径
-                                return fetch(`wiki/${pageName}`);
-                            }
-                            throw new Error(`HTTP错误 ${response.status}: ${response.statusText}`);
-                        }
-                        return response.text();
-                    })
-                    .then(markdownContent => {
-                        if (!markdownContent.trim()) {
-                            throw new Error('文件内容为空');
-                        }
-                        
-                        // 替换图片路径，使其指向正确的wiki/images目录
-                        markdownContent = markdownContent.replace(
-                            /!\[(.*?)\]\((\.\/images\/[^)]+)\)/g, 
-                            function(match, altText, imgPath) {
-                                // 提取图片文件名
-                                const imgFileName = imgPath.replace('./images/', '');
-                                return `![${altText}](wiki/images/${imgFileName})`;
-                            }
-                        );
-                        
-                        // 处理其他的图片格式，如果没有./前缀
-                        markdownContent = markdownContent.replace(
-                            /!\[(.*?)\]\((images\/[^)]+)\)/g,
-                            '![$1](wiki/$2)'
-                        );
-                        
-                        // 使用marked.js渲染Markdown内容
-                        contentContainer.innerHTML = marked.parse(markdownContent);
-                        
-                        // 设置页面标题
-                        const firstHeading = contentContainer.querySelector('h1, h2, h3, h4, h5, h6');
-                        if (firstHeading) {
-                            document.title = `${firstHeading.textContent} - Catime 指南`;
-                        }
-                        
-                        // 隐藏加载中，显示内容
-                        loadingIndicator.style.display = 'none';
-                        contentContainer.style.display = 'block';
-                        
-                        // 处理内部链接
-                        handleInternalLinks();
-                    })
-                    .catch(error => {
-                        console.error('加载文件出错:', error);
-                        contentContainer.innerHTML = `
-                            <div style="padding: 20px; text-align: center;">
-                                <h1>内容加载错误</h1>
-                                <p>无法加载 "${pageName}" 的内容</p>
-                                <p style="color: #666; font-size: 0.9em;">错误详情: ${error.message}</p>
-                                <div style="margin-top: 20px;">
-                                    <p style="margin-bottom: 15px;">
-                                        <strong>可能的原因:</strong><br>
-                                        ${isFileProtocol ? 
-                                          '您正在使用file://协议打开文件，浏览器安全限制会阻止直接读取本地文件。' : 
-                                          '无法从服务器获取文件内容。'}
-                                    </p>
-                                    <p style="margin-bottom: 15px;">
-                                        <strong>解决方案:</strong><br>
-                                        ${isFileProtocol ? 
-                                          '请使用本地服务器（如 http-server、live-server 等）运行此页面' : 
-                                          '请检查文件路径和服务器配置是否正确'}
-                                    </p>
-                                </div>
-                                <p style="margin-top: 20px;">
-                                    <a href="#" onclick="window.location.search='?debug=true'; return false;" class="btn btn-sm btn-primary">开启调试模式</a>
-                                    <a href="#" onclick="document.querySelector('#wiki-navigation a[data-page=\\'Home\\']').click(); return false;" class="btn btn-sm btn-secondary" style="margin-left: 10px;">返回首页</a>
-                                </p>
-                            </div>
-                        `;
-                        loadingIndicator.style.display = 'none';
-                        contentContainer.style.display = 'block';
-                    });
-            }
-            
-            // 初始加载首页内容
-            loadContent('Home');
-            
-            // 为导航链接添加点击事件
-            navLinks.forEach(link => {
-                link.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    
-                    // 移除所有active类
-                    navLinks.forEach(l => l.classList.remove('active'));
-                    
-                    // 为当前点击的链接添加active类
-                    this.classList.add('active');
-                    
-                    // 获取页面名称并加载内容
-                    const pageName = this.getAttribute('data-page');
-                    loadContent(pageName);
-                });
-            });
-            
-            // 处理内部链接
-            function handleInternalLinks() {
-                document.querySelectorAll('#markdown-content a').forEach(link => {
-                    const href = link.getAttribute('href');
-                    
-                    // 如果是内部wiki链接
-                    if (href && (href.startsWith('./') || !href.includes('://') && !href.startsWith('#'))) {
-                        link.addEventListener('click', function(e) {
-                            e.preventDefault();
-                            
-                            // 处理链接格式，获取页面名
-                            let targetPage = href.replace(/^\.\//, '');
-                            
-                            // 去掉.md后缀，如果有的话
-                            targetPage = targetPage.replace(/\.md$/, '');
-                            
-                            // 找到对应的导航项并触发点击
-                            const navItem = document.querySelector(`#wiki-navigation a[data-page="${targetPage}"]`);
-                            if (navItem) {
-                                navItem.click();
-                            } else {
-                                // 加载没有在导航中列出的页面
-                                loadContent(targetPage);
-                            }
-                        });
-                    }
-                });
-            }
+            duration: 800,
+            once: true,
+            offset: 50,
         });
     </script>
 
@@ -536,6 +318,5 @@
             }, 3000);
         });
     </script>
-
 </body>
 </html> 

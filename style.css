@@ -5198,3 +5198,94 @@ p:hover {
         padding: 4px 8px;
     }
 }
+
+.guide-section {
+    padding: 80px 0;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.guide-content {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 40px;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.guide-content h1 {
+    font-size: 2.5em;
+    color: var(--primary-color);
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.guide-content h2 {
+    font-size: 1.8em;
+    color: var(--accent-color);
+    margin: 40px 0 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--primary-color);
+}
+
+.guide-content p {
+    font-size: 1.1em;
+    line-height: 1.8;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.guide-content ul {
+    list-style-type: none;
+    padding-left: 20px;
+}
+
+.guide-content li {
+    position: relative;
+    padding-left: 30px;
+    margin-bottom: 15px;
+    font-size: 1.1em;
+    line-height: 1.6;
+}
+
+.guide-content li::before {
+    content: "✨";
+    position: absolute;
+    left: 0;
+    top: 0;
+    font-size: 1.2em;
+}
+
+.guide-image {
+    margin: 30px 0;
+    text-align: center;
+}
+
+.guide-image img {
+    max-width: 100%;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+}
+
+.guide-image img:hover {
+    transform: scale(1.02);
+}
+
+@media (max-width: 768px) {
+    .guide-content {
+        padding: 20px;
+    }
+    
+    .guide-content h1 {
+        font-size: 2em;
+    }
+    
+    .guide-content h2 {
+        font-size: 1.5em;
+    }
+    
+    .guide-content p {
+        font-size: 1em;
+    }
+}
