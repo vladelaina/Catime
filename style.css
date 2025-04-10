@@ -6375,11 +6375,39 @@ p:hover {
     padding: 80px 0;
     background-color: var(--bg-secondary); /* 使用次要背景色 */
     text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+/* 添加背景动效 */
+.contributors::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 50% 120%, rgba(122, 162, 247, 0.08), transparent 70%);
+    opacity: 0.6;
+    z-index: 0;
+    transition: opacity 0.5s ease;
+}
+
+.contributors:hover::before {
+    opacity: 1;
+    animation: softGlow 5s infinite alternate;
+}
+
+@keyframes softGlow {
+    0% { transform: scale(1); opacity: 0.6; }
+    100% { transform: scale(1.2); opacity: 1; }
 }
 
 .contributors .section-title,
 .contributors .section-subtitle {
     margin-bottom: 40px; /* 调整标题和副标题的间距 */
+    position: relative;
+    z-index: 1;
 }
 
 .contributors-grid table {
@@ -6387,6 +6415,8 @@ p:hover {
     border-collapse: separate; /* 使用 separate 以便应用 border-radius */
     border-spacing: 15px; /* 控制单元格之间的间距 */
     margin-top: 20px;
+    position: relative;
+    z-index: 1;
 }
 
 .contributors-grid td {
@@ -6394,8 +6424,25 @@ p:hover {
     padding: 20px 10px;
     border-radius: 12px; /* 圆角 */
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
     vertical-align: top; /* 确保内容顶部对齐 */
+    position: relative;
+    overflow: hidden;
+}
+
+.contributors-grid td::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(122, 162, 247, 0.1), rgba(247, 125, 170, 0.1));
+    opacity: 0;
+    z-index: -1;
+    transition: opacity 0.3s ease, transform 0.5s ease;
+    transform: scale(0.9);
+    border-radius: 12px;
 }
 
 .contributors-grid td:hover {
@@ -6403,45 +6450,153 @@ p:hover {
     box-shadow: 0 8px 25px rgba(122, 162, 247, 0.2); /* 添加蓝色辉光效果 */
 }
 
+.contributors-grid td:hover::before {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.contributor-avatar-container {
+    position: relative;
+    width: 86px;
+    height: 86px;
+    margin: 0 auto 10px;
+    perspective: 800px;
+}
+
+.contributor-avatar-glow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, 
+        rgba(122, 162, 247, 0), 
+        rgba(122, 162, 247, 0.4), 
+        rgba(247, 125, 170, 0.4), 
+        rgba(247, 125, 170, 0.2), 
+        rgba(122, 162, 247, 0)
+    );
+    filter: blur(8px);
+    opacity: 0;
+    transform: scale(1.1);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    animation: rotateGlow 10s linear infinite;
+}
+
+@keyframes rotateGlow {
+    0% { transform: scale(1.1) rotate(0deg); }
+    100% { transform: scale(1.1) rotate(360deg); }
+}
+
+.contributors-grid td:hover .contributor-avatar-glow {
+    opacity: 1;
+    transform: scale(1.15);
+}
+
 .contributors-grid img {
     width: 80px; /* 调整头像大小 */
     height: 80px;
     border-radius: 50%; /* 圆形头像 */
     object-fit: cover; /* 确保图片不变形 */
-    margin-bottom: 10px;
     border: 3px solid transparent;
-    transition: border-color 0.3s ease, transform 0.3s ease;
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
     display: block; /* 确保图片居中 */
-    margin-left: auto;
-    margin-right: auto;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+    transform-style: preserve-3d;
 }
 
 .contributors-grid td:hover img {
     border-color: var(--primary-color); /* 悬停时显示边框 */
-    transform: scale(1.1); /* 轻微放大头像 */
+    transform: scale(1.1) rotateY(10deg) rotateX(-10deg); /* 添加3D旋转效果 */
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
 .contributors-grid a {
     text-decoration: none;
     color: inherit; /* 继承父元素颜色 */
     display: block; /* 使整个单元格可点击 */
+    position: relative;
 }
 
 .contributors-grid sub {
     font-size: 0.9em;
     color: var(--text-secondary);
     display: block; /* 换行显示 */
-    margin-top: 5px;
+    margin-top: 8px;
+    transition: transform 0.3s ease;
 }
 
 .contributors-grid sub b {
     color: var(--text-color);
     font-weight: 600;
-    transition: color 0.3s ease;
+    transition: all 0.3s ease;
+    display: inline-block;
+    position: relative;
+}
+
+.contributors-grid sub b::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background: linear-gradient(to right, var(--primary-color), var(--accent-color));
+    transition: all 0.3s ease;
+    transform: translateX(-50%);
+}
+
+.contributors-grid td:hover sub {
+    transform: translateY(3px);
 }
 
 .contributors-grid td:hover sub b {
     color: var(--primary-color); /* 悬停时名字变色 */
+}
+
+.contributors-grid td:hover sub b::after {
+    width: 100%;
+}
+
+/* 添加悬停时的粒子效果 */
+.contributor-particles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.contributor-particle {
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.contributors-grid td:hover .contributor-particle {
+    animation: floatParticle 1s forwards ease-out;
+}
+
+@keyframes floatParticle {
+    0% {
+        opacity: 0.8;
+        transform: translate(0, 0) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(
+            calc(var(--tx, 0) * 1px),
+            calc(var(--ty, 0) * 1px)
+        ) scale(0);
+    }
 }
 
 /* 响应式调整 */
@@ -6462,7 +6617,11 @@ p:hover {
         width: 48% !important; /* 每行显示2个 */
         padding: 15px 8px;
     }
-     .contributors-grid img {
+    .contributor-avatar-container {
+        width: 76px;
+        height: 76px;
+    }
+    .contributors-grid img {
         width: 70px;
         height: 70px;
     }
@@ -6474,11 +6633,15 @@ p:hover {
         display: block; /* 堆叠显示 */
         margin: 10px auto;
     }
-     .contributors-grid img {
+    .contributor-avatar-container {
+        width: 66px;
+        height: 66px;
+    }
+    .contributors-grid img {
         width: 60px;
         height: 60px;
     }
-     .contributors-grid sub {
+    .contributors-grid sub {
         font-size: 0.85em;
     }
 }

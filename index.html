@@ -326,9 +326,51 @@
                 <table>
                   <tbody>
                     <tr>
-                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/MadMaxChow" target="_blank" rel="noopener noreferrer"><img src="https://avatars.githubusercontent.com/u/13810505?v=4" width="100px;" alt="MAX°孟兆"/><br /><sub><b>MAX°孟兆</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/sumruler" target="_blank" rel="noopener noreferrer"><img src="https://avatars.githubusercontent.com/u/56953545?v=4" width="100px;" alt="XuJilong"/><br /><sub><b>XuJilong</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://www.diandiapp.com/" target="_blank" rel="noopener noreferrer"><img src="https://github.com/user-attachments/assets/ed3ad284-d4f6-456f-a451-0d4c3cba05a4" width="100px;" alt="点滴进度作者"/><br /><sub><b>点滴进度作者</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%">
+                        <a href="https://github.com/MadMaxChow" target="_blank" rel="noopener noreferrer">
+                          <div class="contributor-avatar-container">
+                            <div class="contributor-avatar-glow"></div>
+                            <img src="https://avatars.githubusercontent.com/u/13810505?v=4" width="100px;" alt="MAX°孟兆"/>
+                          </div>
+                          <div class="contributor-particles">
+                            <span class="contributor-particle" style="--tx: -30; --ty: -20; background-color: #7aa2f7;"></span>
+                            <span class="contributor-particle" style="--tx: 30; --ty: -15; background-color: #f77daa;"></span>
+                            <span class="contributor-particle" style="--tx: 10; --ty: 30; background-color: #7aa2f7;"></span>
+                            <span class="contributor-particle" style="--tx: -15; --ty: 25; background-color: #f77daa;"></span>
+                          </div>
+                          <sub><b>MAX°孟兆</b></sub>
+                        </a>
+                      </td>
+                      <td align="center" valign="top" width="14.28%">
+                        <a href="https://github.com/sumruler" target="_blank" rel="noopener noreferrer">
+                          <div class="contributor-avatar-container">
+                            <div class="contributor-avatar-glow"></div>
+                            <img src="https://avatars.githubusercontent.com/u/56953545?v=4" width="100px;" alt="XuJilong"/>
+                          </div>
+                          <div class="contributor-particles">
+                            <span class="contributor-particle" style="--tx: -30; --ty: -20; background-color: #7aa2f7;"></span>
+                            <span class="contributor-particle" style="--tx: 30; --ty: -15; background-color: #f77daa;"></span>
+                            <span class="contributor-particle" style="--tx: 10; --ty: 30; background-color: #7aa2f7;"></span>
+                            <span class="contributor-particle" style="--tx: -15; --ty: 25; background-color: #f77daa;"></span>
+                          </div>
+                          <sub><b>XuJilong</b></sub>
+                        </a>
+                      </td>
+                      <td align="center" valign="top" width="14.28%">
+                        <a href="https://www.diandiapp.com/" target="_blank" rel="noopener noreferrer">
+                          <div class="contributor-avatar-container">
+                            <div class="contributor-avatar-glow"></div>
+                            <img src="https://github.com/user-attachments/assets/ed3ad284-d4f6-456f-a451-0d4c3cba05a4" width="100px;" alt="点滴进度作者"/>
+                          </div>
+                          <div class="contributor-particles">
+                            <span class="contributor-particle" style="--tx: -30; --ty: -20; background-color: #7aa2f7;"></span>
+                            <span class="contributor-particle" style="--tx: 30; --ty: -15; background-color: #f77daa;"></span>
+                            <span class="contributor-particle" style="--tx: 10; --ty: 30; background-color: #7aa2f7;"></span>
+                            <span class="contributor-particle" style="--tx: -15; --ty: 25; background-color: #f77daa;"></span>
+                          </div>
+                          <sub><b>点滴进度作者</b></sub>
+                        </a>
+                      </td>
                       <td align="center" valign="top" width="14.28%"><a href="https://github.com/ZGGSONG" target="_blank" rel="noopener noreferrer"><img src="https://avatars.githubusercontent.com/u/49741009?v=4" width="100px;" alt="zggsong"/><br /><sub><b>zggsong</b></sub></a><br /></td>
                       <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/26087398" target="_blank" rel="noopener noreferrer"><img src="https://i1.hdslb.com/bfs/face/af55083fafbabb7815b09c32adca94139b3ab3f8.webp@240w_240h_1c_1s_!web-avatar-space-header.avif" width="100px;" alt="猫屋敷梨梨Official"/><br /><sub><b>猫屋敷梨梨Official</b></sub></a><br /></td>
                       <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/6189012" target="_blank" rel="noopener noreferrer"><img src="https://i0.hdslb.com/bfs/face/e38f4197fddc38397732b61c3086cd6b280dd00e.jpg" width="100px;" alt="MOJIもら"/><br /><sub><b>MOJIもら</b></sub></a><br /></td>
@@ -1217,6 +1259,84 @@
                 }
             }, 3000);
         });
+    </script>
+
+    <!-- 添加贡献者动效的JavaScript -->
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        // 为所有贡献者头像添加动效容器
+        const contributorCells = document.querySelectorAll('.contributors-grid td');
+        
+        contributorCells.forEach(cell => {
+          // 检查是否已经有贡献者容器
+          const link = cell.querySelector('a');
+          if (!link) return;
+          
+          // 如果没有现代结构，就添加它
+          const img = link.querySelector('img');
+          if (img && !link.querySelector('.contributor-avatar-container')) {
+            // 保存原始HTML以获取图片和姓名
+            const imgSrc = img.getAttribute('src');
+            const imgAlt = img.getAttribute('alt');
+            const nameElement = link.querySelector('sub');
+            const name = nameElement ? nameElement.innerHTML : '';
+            
+            // 创建新结构
+            const newHTML = `
+              <div class="contributor-avatar-container">
+                <div class="contributor-avatar-glow"></div>
+                <img src="${imgSrc}" width="100px;" alt="${imgAlt}"/>
+              </div>
+              <div class="contributor-particles">
+                <span class="contributor-particle" style="--tx: -${Math.random() * 30 + 10}; --ty: -${Math.random() * 25 + 5}; background-color: ${Math.random() > 0.5 ? '#7aa2f7' : '#f77daa'};"></span>
+                <span class="contributor-particle" style="--tx: ${Math.random() * 30 + 10}; --ty: -${Math.random() * 25 + 5}; background-color: ${Math.random() > 0.5 ? '#7aa2f7' : '#f77daa'};"></span>
+                <span class="contributor-particle" style="--tx: ${Math.random() * 25 + 5}; --ty: ${Math.random() * 25 + 5}; background-color: ${Math.random() > 0.5 ? '#7aa2f7' : '#f77daa'};"></span>
+                <span class="contributor-particle" style="--tx: -${Math.random() * 25 + 5}; --ty: ${Math.random() * 25 + 5}; background-color: ${Math.random() > 0.5 ? '#7aa2f7' : '#f77daa'};"></span>
+              </div>
+              ${nameElement ? '<sub>' + name + '</sub>' : ''}
+            `;
+            
+            // 替换链接内容
+            if (nameElement) nameElement.remove();
+            img.remove();
+            link.innerHTML = newHTML;
+          }
+        });
+        
+        // 添加鼠标移动交互效果
+        contributorCells.forEach(cell => {
+          cell.addEventListener('mousemove', function(e) {
+            const avatar = cell.querySelector('img');
+            if (!avatar) return;
+            
+            const rect = cell.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / rect.width - 0.5; // -0.5 to 0.5
+            const y = (e.clientY - rect.top) / rect.height - 0.5; // -0.5 to 0.5
+            
+            // 应用3D倾斜效果
+            avatar.style.transform = `scale(1.1) rotateY(${x * 20}deg) rotateX(${-y * 20}deg)`;
+            
+            // 添加发光效果的动态位置
+            const glow = cell.querySelector('.contributor-avatar-glow');
+            if (glow) {
+              glow.style.background = `radial-gradient(circle at ${50 + x * 100}% ${50 + y * 100}%, rgba(122, 162, 247, 0.4), rgba(247, 125, 170, 0.3), transparent 70%)`;
+            }
+          });
+          
+          // 鼠标离开时重置效果
+          cell.addEventListener('mouseleave', function() {
+            const avatar = cell.querySelector('img');
+            if (avatar) {
+              avatar.style.transform = '';
+            }
+            
+            const glow = cell.querySelector('.contributor-avatar-glow');
+            if (glow) {
+              glow.style.background = '';
+            }
+          });
+        });
+      });
     </script>
 
 </body>
