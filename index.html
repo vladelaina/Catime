@@ -22,6 +22,88 @@
 
      <link rel="icon" type="image/png" href="assets/catime.png"> 
 
+    <!-- 特别感谢区域样式 -->
+    <style>
+        /* 特别感谢区域 */
+        .special-thanks {
+            padding: 6rem 0;
+            background-color: var(--background-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .special-thanks::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(122, 162, 247, 0.3), transparent);
+        }
+
+        .thanks-list {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-top: 2rem;
+            list-style: none;
+            padding: 0;
+        }
+
+        .thanks-item {
+            padding: 0;
+            transition: all 0.3s ease;
+        }
+
+        .thanks-item a {
+            display: flex;
+            align-items: center;
+            padding: 0.8rem 1.5rem;
+            background: white;
+            border-radius: 50px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            color: var(--text-color);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(122, 162, 247, 0.1);
+        }
+
+        .thanks-item:hover a {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(122, 162, 247, 0.15);
+            border-color: rgba(122, 162, 247, 0.3);
+        }
+
+        .thanks-item a i {
+            color: var(--accent-color);
+            margin-right: 0.7rem;
+            font-size: 0.9rem;
+            transition: transform 0.3s ease;
+        }
+
+        .thanks-item:hover a i {
+            transform: scale(1.2);
+            animation: heartPulse 1.2s infinite;
+        }
+
+        .thanks-item a span {
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            .thanks-list {
+                gap: 1rem;
+            }
+            
+            .thanks-item a {
+                padding: 0.6rem 1.2rem;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+
 </head>
 <body>
 
@@ -316,6 +398,72 @@
         </section>
 
     </main>
+
+    <!-- 特别感谢区域 -->
+    <section class="special-thanks" id="special-thanks">
+        <div class="container">
+            <h2 class="section-title" data-aos="fade-up">特别感谢 🙏</h2>
+            <p class="section-subtitle" data-aos="fade-up" data-aos-delay="100">特别感谢以下大佬对于本项目的推荐（按时间排序）</p>
+            <div class="special-thanks-list" data-aos="fade-up" data-aos-delay="200">
+                <ul class="thanks-list">
+                    <li class="thanks-item">
+                        <a href="https://mp.weixin.qq.com/s/mL-oDEfYK8jGZkUmbs55AA" target="_blank" rel="noopener noreferrer">
+                            <i class="fas fa-heart"></i>
+                            <span>果核剥壳</span>
+                        </a>
+                    </li>
+                    <li class="thanks-item">
+                        <a href="https://mp.weixin.qq.com/s/9c9_O4D8EuDfeHeL9Lg3yA" target="_blank" rel="noopener noreferrer">
+                            <i class="fas fa-heart"></i>
+                            <span>it学无止境</span>
+                        </a>
+                    </li>
+                    <li class="thanks-item">
+                        <a href="https://hellogithub.com/repository/00a7a32b7bc647e1a62747530bc16115" target="_blank" rel="noopener noreferrer">
+                            <i class="fas fa-heart"></i>
+                            <span>HelloGitHub 网站收录</span>
+                        </a>
+                    </li>
+                    <li class="thanks-item">
+                        <a href="https://www.bilibili.com/video/BV1iYQUYKE4j/?vd_source=efeaf6f967e48f58317a9291cef584cd" target="_blank" rel="noopener noreferrer">
+                            <i class="fas fa-heart"></i>
+                            <span>玄离199</span>
+                        </a>
+                    </li>
+                    <li class="thanks-item">
+                        <a href="https://www.bilibili.com/video/BV1DnQoYjEWR/" target="_blank" rel="noopener noreferrer">
+                            <i class="fas fa-heart"></i>
+                            <span>_不言不厌</span>
+                        </a>
+                    </li>
+                    <li class="thanks-item">
+                        <a href="https://www.bilibili.com/video/BV1TaXYY1EQp" target="_blank" rel="noopener noreferrer">
+                            <i class="fas fa-heart"></i>
+                            <span>小众软件</span>
+                        </a>
+                    </li>
+                    <li class="thanks-item">
+                        <a href="https://github.com/521xueweihan/HelloGitHub/blob/master/content/HelloGitHub108.md" target="_blank" rel="noopener noreferrer">
+                            <i class="fas fa-heart"></i>
+                            <span>HelloGitHub 月刊</span>
+                        </a>
+                    </li>
+                    <li class="thanks-item">
+                        <a href="https://mp.weixin.qq.com/s/cE6AcVwx4-HPSFM7RBpxmw" target="_blank" rel="noopener noreferrer">
+                            <i class="fas fa-heart"></i>
+                            <span>HelloGitHub 专栏</span>
+                        </a>
+                    </li>
+                    <li class="thanks-item">
+                        <a href="https://api.xiaoheihe.cn/v3/bbs/app/api/web/share?link_id=6f02701abda6" target="_blank" rel="noopener noreferrer">
+                            <i class="fas fa-heart"></i>
+                            <span>学不下去了</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </section>
 
     <!-- 贡献者区域 -->
     <section class="contributors" id="contributors">
