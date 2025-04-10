@@ -30,12 +30,26 @@
     <!-- 滚动进度指示器 -->
     <div class="scroll-progress-container" id="scrollProgressContainer">
         <div class="scroll-progress-glow"></div>
+        <div class="scroll-progress-particles">
+            <span class="particle p1"></span>
+            <span class="particle p2"></span>
+            <span class="particle p3"></span>
+            <span class="particle p4"></span>
+            <span class="particle p5"></span>
+            <span class="particle p6"></span>
+        </div>
         <svg class="scroll-progress-circle" viewBox="0 0 100 100">
             <circle class="scroll-progress-circle-bg" cx="50" cy="50" r="45"></circle>
             <circle class="scroll-progress-circle-fill" cx="50" cy="50" r="45"></circle>
+            <circle class="scroll-progress-circle-inner" cx="50" cy="50" r="35"></circle>
         </svg>
         <div class="scroll-progress-icon">
             <i class="fas fa-arrow-up"></i>
+        </div>
+        <div class="scroll-progress-emoji-container">
+            <span class="emoji emoji-rocket">🚀</span>
+            <span class="emoji emoji-star">⭐</span>
+            <span class="emoji emoji-heart">💖</span>
         </div>
         <div class="scroll-progress-stars">
             <span class="star star-1">✦</span>
@@ -44,9 +58,7 @@
             <span class="star star-4">✧</span>
             <span class="star star-5">✦</span>
         </div>
-        <div class="scroll-progress-emoji">
-            <span>🚀</span>
-        </div>
+        <div class="scroll-progress-percentage">0%</div>
     </div>
 
     <!-- 页头/导航 -->
@@ -351,7 +363,9 @@
         document.addEventListener('DOMContentLoaded', function() {
             const progressContainer = document.getElementById('scrollProgressContainer');
             const progressCircle = document.querySelector('.scroll-progress-circle-fill');
-            const circleLength = progressCircle.getTotalLength();
+            const progressPercentage = document.querySelector('.scroll-progress-percentage');
+            const circleLength = progressCircle.getTotalLength ? 
+                                 progressCircle.getTotalLength() : 283; // 回退值
             
             // 初始设置
             progressCircle.style.strokeDasharray = circleLength;
@@ -367,18 +381,69 @@
                 // 更新环形进度条
                 const offset = circleLength - (scrollPercentage * circleLength);
                 progressCircle.style.strokeDashoffset = offset;
+                
+                // 更新百分比文本
+                const percentValue = Math.round(scrollPercentage * 100);
+                progressPercentage.textContent = `${percentValue}%`;
+                
+                // 改变颜色渐变
+                if (percentValue > 75) {
+                    progressCircle.style.stroke = 'var(--accent-color)';
+                } else if (percentValue > 50) {
+                    progressCircle.style.stroke = '#9abdfa';
+                } else if (percentValue > 25) {
+                    progressCircle.style.stroke = '#7aa2f7';
+                } else {
+                    progressCircle.style.stroke = 'var(--primary-color)';
+                }
             }
             
-            // 点击回到顶部
+            // 点击回到顶部，添加动画效果
             progressContainer.addEventListener('click', function() {
+                // 添加点击效果类
+                this.classList.add('clicked');
+                
+                // 创建粒子爆发效果
+                createParticleBurst();
+                
+                // 平滑滚动到顶部
                 window.scrollTo({
                     top: 0,
                     behavior: 'smooth'
                 });
+                
+                // 移除点击效果类
+                setTimeout(() => {
+                    this.classList.remove('clicked');
+                }, 300);
             });
             
-            // 监听滚动事件
-            window.addEventListener('scroll', updateProgress);
+            // 创建粒子爆发效果
+            function createParticleBurst() {
+                const particles = document.querySelectorAll('.particle');
+                
+                particles.forEach(particle => {
+                    // 重置动画
+                    particle.style.animation = 'none';
+                    particle.offsetHeight; // 触发重排
+                    particle.style.animation = null;
+                    
+                    // 随机位置和颜色
+                    const hue = Math.floor(Math.random() * 30) + 330; // 粉红色范围
+                    const saturation = Math.floor(Math.random() * 30) + 70;
+                    const lightness = Math.floor(Math.random() * 20) + 70;
+                    
+                    particle.style.background = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+                    particle.style.boxShadow = `0 0 10px hsl(${hue}, ${saturation}%, ${lightness}%)`;
+                });
+            }
+            
+            // 监听滚动事件，使用防抖处理
+            let scrollTimeout;
+            window.addEventListener('scroll', function() {
+                clearTimeout(scrollTimeout);
+                scrollTimeout = setTimeout(updateProgress, 10);
+            });
             
             // 初始化进度
             updateProgress();

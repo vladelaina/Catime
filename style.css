@@ -4754,87 +4754,159 @@ p:hover {
     position: fixed;
     bottom: 30px;
     right: 30px;
-    width: 65px;
-    height: 65px;
+    width: 70px;
+    height: 70px;
     z-index: 1000;
     cursor: pointer;
     border-radius: 50%;
-    background: #ffffff;
-    box-shadow: 0 4px 20px rgba(122, 162, 247, 0.3);
-    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+    box-shadow: 0 4px 20px rgba(122, 162, 247, 0.25),
+                inset 0 2px 10px rgba(255, 255, 255, 0.8),
+                inset 0 -2px 5px rgba(122, 162, 247, 0.1);
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
     opacity: 1;
-    transform: scale(1);
+    transform: scale(1) rotate(0deg);
     pointer-events: auto;
     overflow: visible;
+    border: 2px solid rgba(255, 255, 255, 0.8);
 }
 
 .scroll-progress-container:hover {
-    transform: scale(1.12) rotate(5deg);
-    box-shadow: 0 8px 25px rgba(122, 162, 247, 0.4), 
-                0 0 15px rgba(247, 125, 170, 0.3);
+    transform: scale(1.15) rotate(5deg);
+    box-shadow: 0 8px 30px rgba(122, 162, 247, 0.4), 
+                0 0 20px rgba(247, 125, 170, 0.35),
+                inset 0 2px 10px rgba(255, 255, 255, 0.9),
+                inset 0 -2px 5px rgba(122, 162, 247, 0.15);
+    border-color: rgba(255, 255, 255, 0.95);
 }
 
 .scroll-progress-container:active {
-    transform: scale(0.95);
+    transform: scale(0.92);
     transition: all 0.2s ease;
 }
 
+/* 发光效果 */
 .scroll-progress-glow {
     position: absolute;
-    top: -5px;
-    left: -5px;
-    right: -5px;
-    bottom: -5px;
+    top: -8px;
+    left: -8px;
+    right: -8px;
+    bottom: -8px;
     border-radius: 50%;
     background: radial-gradient(circle at center, 
-                rgba(247, 125, 170, 0.5) 0%, 
-                rgba(122, 162, 247, 0.5) 40%, 
+                rgba(247, 125, 170, 0.6) 0%, 
+                rgba(122, 162, 247, 0.6) 35%, 
                 rgba(255, 255, 255, 0) 70%);
     opacity: 0;
     z-index: -1;
     transition: opacity 0.5s ease;
-    animation: glowPulse 3s infinite alternate;
+    animation: glowPulse 4s infinite alternate;
+    filter: blur(5px);
 }
 
 .scroll-progress-container:hover .scroll-progress-glow {
-    opacity: 1;
+    opacity: 0.85;
 }
 
 @keyframes glowPulse {
-    0% { transform: scale(1); opacity: 0.4; }
-    100% { transform: scale(1.15); opacity: 0.8; }
+    0% { transform: scale(1); opacity: 0.4; filter: blur(5px); }
+    50% { filter: blur(10px); }
+    100% { transform: scale(1.2); opacity: 0.8; filter: blur(7px); }
 }
 
+/* 粒子效果 */
+.scroll-progress-particles {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.particle {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    box-shadow: 0 0 10px rgba(122, 162, 247, 0.7);
+    opacity: 0;
+    transform: scale(0);
+}
+
+.scroll-progress-container:hover .particle {
+    animation: particleBurst 1.5s ease-out forwards;
+}
+
+.p1 { top: 20%; left: 0; animation-delay: 0.1s; background: #f77daa; }
+.p2 { top: 10%; right: 20%; animation-delay: 0.2s; }
+.p3 { top: 80%; right: 30%; animation-delay: 0.3s; background: #f77daa; }
+.p4 { top: 60%; left: 10%; animation-delay: 0.4s; }
+.p5 { top: 30%; right: 0; animation-delay: 0.5s; background: #f77daa; }
+.p6 { top: 70%; left: 30%; animation-delay: 0.6s; }
+
+@keyframes particleBurst {
+    0% { transform: scale(0) translate(0, 0); opacity: 0; }
+    20% { opacity: 1; }
+    100% { transform: scale(1) translate(var(--tx, 20px), var(--ty, 20px)); opacity: 0; }
+}
+
+.p1 { --tx: -30px; --ty: -20px; }
+.p2 { --tx: 25px; --ty: -30px; }
+.p3 { --tx: 25px; --ty: 20px; }
+.p4 { --tx: -25px; --ty: 15px; }
+.p5 { --tx: 30px; --ty: -5px; }
+.p6 { --tx: -20px; --ty: 30px; }
+
+/* 进度圆环 */
 .scroll-progress-circle {
     width: 100%;
     height: 100%;
     transform: rotate(-90deg);
-    filter: drop-shadow(0 0 3px rgba(122, 162, 247, 0.3));
+    filter: drop-shadow(0 0 5px rgba(122, 162, 247, 0.4));
+    position: relative;
+    z-index: 2;
 }
 
 .scroll-progress-circle-bg {
     fill: none;
-    stroke: var(--border-color);
-    stroke-width: 5;
-    opacity: 0.5;
+    stroke: rgba(122, 162, 247, 0.15);
+    stroke-width: 6;
+    stroke-linecap: round;
+    filter: blur(0.5px);
 }
 
 .scroll-progress-circle-fill {
     fill: none;
     stroke: var(--primary-color);
-    stroke-width: 5;
+    stroke-width: 6;
     stroke-linecap: round;
     stroke-dasharray: 283; /* 2πr ≈ 2 * 3.14 * 45 ≈ 283 */
     stroke-dashoffset: 283;
     transition: stroke-dashoffset 0.2s ease;
-    filter: drop-shadow(0 0 2px rgba(122, 162, 247, 0.7));
+    filter: drop-shadow(0 0 3px rgba(122, 162, 247, 0.7));
 }
 
 .scroll-progress-container:hover .scroll-progress-circle-fill {
     stroke: var(--accent-color);
-    filter: drop-shadow(0 0 3px rgba(247, 125, 170, 0.8));
+    filter: drop-shadow(0 0 5px rgba(247, 125, 170, 0.8));
+    animation: glowStroke 2s infinite alternate;
 }
 
+@keyframes glowStroke {
+    0% { filter: drop-shadow(0 0 3px rgba(122, 162, 247, 0.7)); }
+    100% { filter: drop-shadow(0 0 8px rgba(247, 125, 170, 0.8)); }
+}
+
+.scroll-progress-circle-inner {
+    fill: rgba(255, 255, 255, 0.9);
+    stroke: none;
+    filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.5));
+}
+
+/* 箭头图标 */
 .scroll-progress-icon {
     position: absolute;
     top: 50%;
@@ -4843,17 +4915,20 @@ p:hover {
     color: var(--primary-color);
     font-size: 1.4rem;
     transition: all 0.3s ease;
-    z-index: 2;
+    z-index: 3;
+    text-shadow: 0 2px 5px rgba(122, 162, 247, 0.2);
 }
 
 .scroll-progress-container:hover .scroll-progress-icon {
-    transform: translate(-50%, -60%);
+    transform: translate(-50%, -65%);
     color: var(--accent-color);
-    animation: bounce 0.6s ease infinite alternate;
+    animation: bounce 0.8s ease infinite alternate;
+    text-shadow: 0 2px 8px rgba(247, 125, 170, 0.4);
 }
 
 @keyframes bounce {
     0% { transform: translate(-50%, -50%); }
+    50% { transform: translate(-50%, -60%); }
     100% { transform: translate(-50%, -65%); }
 }
 
@@ -4872,61 +4947,148 @@ p:hover {
     position: absolute;
     color: var(--primary-color);
     opacity: 0;
-    transition: all 0.3s ease;
+    transition: all 0.4s ease;
     font-size: 1.2rem;
+    filter: drop-shadow(0 0 3px rgba(122, 162, 247, 0.4));
 }
 
 .scroll-progress-container:hover .star {
-    opacity: 0.8;
-    animation: twinkle 2s infinite alternate;
+    opacity: 0.9;
+    animation: twinkle 2.5s infinite alternate;
 }
 
-.star-1 { top: -10px; left: 50%; transform: translateX(-50%); animation-delay: 0.1s; }
-.star-2 { top: 30%; right: -15px; animation-delay: 0.3s; }
-.star-3 { bottom: -5px; left: 50%; transform: translateX(-50%); animation-delay: 0.5s; }
-.star-4 { top: 30%; left: -15px; animation-delay: 0.7s; }
-.star-5 { top: 0; left: 20%; animation-delay: 0.9s; }
+.star-1 { top: -15px; left: 50%; transform: translateX(-50%); animation-delay: 0.1s; }
+.star-2 { top: 30%; right: -20px; animation-delay: 0.3s; }
+.star-3 { bottom: -10px; left: 50%; transform: translateX(-50%); animation-delay: 0.5s; }
+.star-4 { top: 30%; left: -20px; animation-delay: 0.7s; }
+.star-5 { top: -10px; left: 20%; animation-delay: 0.9s; }
 
-.scroll-progress-container:hover .star-1 { top: -20px; }
-.scroll-progress-container:hover .star-2 { right: -20px; }
-.scroll-progress-container:hover .star-3 { bottom: -15px; }
-.scroll-progress-container:hover .star-4 { left: -20px; }
-.scroll-progress-container:hover .star-5 { top: -15px; left: 15%; }
+.scroll-progress-container:hover .star-1 { top: -25px; }
+.scroll-progress-container:hover .star-2 { right: -25px; }
+.scroll-progress-container:hover .star-3 { bottom: -20px; }
+.scroll-progress-container:hover .star-4 { left: -25px; }
+.scroll-progress-container:hover .star-5 { top: -20px; left: 15%; }
 
 @keyframes twinkle {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.3); }
+    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 3px rgba(122, 162, 247, 0.4)); }
+    50% { transform: scale(1.4); filter: drop-shadow(0 0 8px rgba(247, 125, 170, 0.6)); }
 }
 
-/* 可爱表情 */
-.scroll-progress-emoji {
+/* 表情装饰 */
+.scroll-progress-emoji-container {
     position: absolute;
-    bottom: -25px;
-    right: -15px;
-    font-size: 1.6rem;
-    transform: rotate(-15deg) scale(0);
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 4;
+}
+
+.emoji {
+    position: absolute;
+    font-size: 1.5rem;
+    opacity: 0;
     transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-    z-index: 1;
+    transform-origin: center;
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.2));
 }
 
-.scroll-progress-container:hover .scroll-progress-emoji {
+.emoji-rocket {
+    bottom: -25px;
+    right: -20px;
+    transform: rotate(-15deg) scale(0);
+}
+
+.emoji-star {
+    top: -22px;
+    left: -15px;
+    transform: rotate(15deg) scale(0);
+}
+
+.emoji-heart {
+    top: -5px;
+    right: -25px;
+    transform: rotate(25deg) scale(0);
+}
+
+.scroll-progress-container:hover .emoji-rocket {
+    opacity: 1;
     transform: rotate(15deg) scale(1);
-    animation: wiggle 1s ease infinite;
+    animation: rocketWiggle 1.2s ease infinite;
 }
 
-@keyframes wiggle {
-    0%, 100% { transform: rotate(15deg); }
-    25% { transform: rotate(0deg); }
-    50% { transform: rotate(25deg); }
-    75% { transform: rotate(10deg); }
+.scroll-progress-container:hover .emoji-star {
+    opacity: 1;
+    transform: rotate(-15deg) scale(1);
+    animation: starPulse 1.5s ease infinite alternate;
 }
 
-@keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
+.scroll-progress-container:hover .emoji-heart {
+    opacity: 1;
+    transform: rotate(15deg) scale(1);
+    animation: heartBeat 1s ease infinite;
 }
 
-.scroll-progress-container:active .scroll-progress-icon {
-    animation: pulse 0.3s ease;
+@keyframes rocketWiggle {
+    0%, 100% { transform: rotate(15deg) translateY(0); }
+    50% { transform: rotate(20deg) translateY(-5px); }
+}
+
+@keyframes starPulse {
+    0% { transform: rotate(-15deg) scale(1); }
+    100% { transform: rotate(-5deg) scale(1.2); }
+}
+
+@keyframes heartBeat {
+    0%, 100% { transform: scale(1); }
+    10%, 30% { transform: scale(1.2); }
+    20%, 40% { transform: scale(0.95); }
+    50%, 70% { transform: scale(1.1); }
+    60%, 80% { transform: scale(0.98); }
+}
+
+/* 百分比显示 */
+.scroll-progress-percentage {
+    position: absolute;
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.8rem;
+    color: var(--primary-color);
+    font-weight: 600;
+    opacity: 0;
+    transition: all 0.3s ease;
+    background-color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(122, 162, 247, 0.2);
+}
+
+.scroll-progress-container:hover .scroll-progress-percentage {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-5px);
+}
+
+/* 媒体查询 - 移动设备优化 */
+@media (max-width: 768px) {
+    .scroll-progress-container {
+        width: 60px;
+        height: 60px;
+        bottom: 20px;
+        right: 20px;
+    }
+    
+    .scroll-progress-icon {
+        font-size: 1.2rem;
+    }
+    
+    .emoji {
+        font-size: 1.2rem;
+    }
+    
+    .scroll-progress-percentage {
+        font-size: 0.7rem;
+        bottom: -25px;
+    }
 }
