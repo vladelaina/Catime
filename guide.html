@@ -513,14 +513,7 @@
             
             // 悬停时显示完整的工具提示
             progressContainer.addEventListener('mouseenter', function() {
-                const scrollTop = window.scrollY;
-                const percentComplete = Math.round((scrollTop / (document.body.scrollHeight - window.innerHeight)) * 100);
-                
-                if (percentComplete > 10) {
-                    document.querySelector('.scroll-progress-tooltip').textContent = "返回顶部 (" + percentComplete + "%)";
-                } else {
-                    document.querySelector('.scroll-progress-tooltip').textContent = "返回顶部";
-                }
+                document.querySelector('.scroll-progress-tooltip').textContent = "返回顶部";
             });
             
             // 监听滚动事件，使用防抖处理
