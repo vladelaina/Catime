@@ -6147,18 +6147,38 @@ p:hover {
     display: inline-flex;
     align-items: center;
     gap: 5px;
+    padding: 5px 10px;
+    border-radius: 4px;
+    background: rgba(0, 161, 214, 0.1);
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
 }
 
 .bilibili-link:hover {
     color: #fb7299;
     transform: translateY(-2px);
+    background: rgba(251, 114, 153, 0.1);
 }
 
-.bilibili-link i {
-    font-size: 1.2em;
+.bilibili-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.4em;
+    height: 1.4em;
+    font-weight: bold;
+    font-style: normal;
+    background-color: #00a1d6;
+    color: white;
+    border-radius: 50%;
+    font-size: 0.9em;
+    line-height: 1;
+    transition: all 0.3s ease;
 }
 
-.bilibili-link:hover i {
+.bilibili-link:hover .bilibili-icon {
+    background-color: #fb7299;
     animation: bilibiliBounce 0.5s ease;
 }
 
