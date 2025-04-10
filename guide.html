@@ -104,16 +104,6 @@
 
         <section class="guide-section">
             <div class="container">
-                <div class="guide-toc" data-aos="fade-up" data-aos-delay="100">
-                    <h3><i class="fas fa-list-ul"></i> 目录</h3>
-                    <ul>
-                        <li><a href="#intro">开发者介绍</a></li>
-                        <li><a href="#start">开始使用</a></li>
-                        <li><a href="#operations">基本操作</a></li>
-                        <li><a href="#customization">自定义功能</a></li>
-                    </ul>
-                </div>
-                
                 <article class="guide-content" data-aos="fade-up" data-aos-delay="200">
                     <div id="intro" class="guide-section-content">
                         <h1 class="animated-title">Hi~ 我的朋友！</h1>
@@ -398,22 +388,6 @@
             window.addEventListener('scroll', function() {
                 clearTimeout(scrollTimeout);
                 scrollTimeout = setTimeout(updateProgress, 10);
-            });
-            
-            // 平滑滚动到锚点
-            document.querySelectorAll('.guide-toc a').forEach(anchor => {
-                anchor.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const targetId = this.getAttribute('href');
-                    const targetElement = document.querySelector(targetId);
-                    
-                    if (targetElement) {
-                        window.scrollTo({
-                            top: targetElement.offsetTop - 100,
-                            behavior: 'smooth'
-                        });
-                    }
-                });
             });
             
             // 初始化进度
