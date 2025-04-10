@@ -4762,14 +4762,8 @@ p:hover {
     box-shadow: 0 4px 15px rgba(122, 162, 247, 0.25);
     background: white;
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    opacity: 0;
-    transform: scale(0.8) translateY(20px);
-    pointer-events: none;
-}
-
-.scroll-progress-container.visible {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: scale(1);
     pointer-events: auto;
 }
 

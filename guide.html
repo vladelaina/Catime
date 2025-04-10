@@ -356,13 +356,6 @@
                 // 更新环形进度条
                 const offset = circleLength - (scrollPercentage * circleLength);
                 progressCircle.style.strokeDashoffset = offset;
-                
-                // 显示/隐藏进度指示器
-                if (scrollTop > 300) {
-                    progressContainer.classList.add('visible');
-                } else {
-                    progressContainer.classList.remove('visible');
-                }
             }
             
             // 点击回到顶部
