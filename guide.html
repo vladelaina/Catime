@@ -597,6 +597,179 @@
                     }
                 });
             });
+            
+            // 为动漫图标添加特殊效果
+            document.querySelectorAll('.anime-icon').forEach(icon => {
+                icon.addEventListener('click', function() {
+                    // 创建临时粒子效果
+                    const particles = 12;
+                    const colors = icon.textContent === '86' ? 
+                        ['#7aa2f7', '#bb9af7', '#c0caf5'] : 
+                        ['#f7768e', '#ff9e64', '#e0af68'];
+                    
+                    for (let i = 0; i < particles; i++) {
+                        const particle = document.createElement('span');
+                        particle.className = 'anime-particle';
+                        const size = Math.floor(Math.random() * 8) + 4;
+                        particle.style.width = `${size}px`;
+                        particle.style.height = `${size}px`;
+                        particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+                        
+                        // 随机定位和动画
+                        const angle = Math.random() * Math.PI * 2;
+                        const distance = Math.random() * 60 + 20;
+                        const duration = Math.random() * 0.6 + 0.4;
+                        const delay = Math.random() * 0.2;
+                        
+                        particle.style.position = 'absolute';
+                        particle.style.left = '50%';
+                        particle.style.top = '50%';
+                        particle.style.borderRadius = '50%';
+                        particle.style.transform = 'translate(-50%, -50%)';
+                        particle.style.pointerEvents = 'none';
+                        particle.style.zIndex = '10';
+                        particle.style.opacity = '0.8';
+                        
+                        icon.appendChild(particle);
+                        
+                        // 应用动画
+                        setTimeout(() => {
+                            particle.style.transition = `all ${duration}s ease-out`;
+                            particle.style.transform = `translate(
+                                calc(-50% + ${Math.cos(angle) * distance}px), 
+                                calc(-50% + ${Math.sin(angle) * distance}px)
+                            )`;
+                            particle.style.opacity = '0';
+                        }, delay * 1000);
+                        
+                        // 清除粒子
+                        setTimeout(() => {
+                            if (icon.contains(particle)) {
+                                icon.removeChild(particle);
+                            }
+                        }, (duration + delay) * 1000);
+                    }
+                    
+                    // 添加弹跳效果
+                    this.style.transform = 'translateY(-3px) rotate(3deg) scale(1.1)';
+                    setTimeout(() => {
+                        this.style.transform = 'translateY(-3px) rotate(3deg)';
+                    }, 150);
+                });
+            });
+            
+            // 为头像添加点击魔法效果
+            const authorAvatar = document.querySelector('.author-avatar img');
+            if (authorAvatar) {
+                authorAvatar.addEventListener('click', function() {
+                    const avatar = this;
+                    const originalTransform = avatar.style.transform;
+                    
+                    // 创建闪光效果
+                    const flash = document.createElement('div');
+                    flash.className = 'avatar-flash';
+                    flash.style.position = 'absolute';
+                    flash.style.top = '0';
+                    flash.style.left = '0';
+                    flash.style.width = '100%';
+                    flash.style.height = '100%';
+                    flash.style.borderRadius = '50%';
+                    flash.style.background = 'radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 70%)';
+                    flash.style.opacity = '0';
+                    flash.style.transition = 'all 0.4s ease-out';
+                    flash.style.zIndex = '5';
+                    
+                    avatar.parentNode.appendChild(flash);
+                    
+                    // 触发闪光动画
+                    setTimeout(() => {
+                        flash.style.opacity = '1';
+                        avatar.style.transform = `${originalTransform || ''} scale(1.15)`;
+                        avatar.style.borderColor = 'var(--accent-color)';
+                    }, 50);
+                    
+                    // 清除闪光效果
+                    setTimeout(() => {
+                        flash.style.opacity = '0';
+                        avatar.style.transform = originalTransform || '';
+                        avatar.style.borderColor = 'var(--primary-color)';
+                        
+                        setTimeout(() => {
+                            if (avatar.parentNode.contains(flash)) {
+                                avatar.parentNode.removeChild(flash);
+                            }
+                        }, 400);
+                    }, 700);
+                });
+            }
+            
+            // 为信息卡片添加悬浮互动
+            document.querySelectorAll('.info-card, .tip-box').forEach(card => {
+                // 创建一个跟随光标的光晕效果
+                const glow = document.createElement('div');
+                glow.className = 'card-glow';
+                glow.style.position = 'absolute';
+                glow.style.width = '80px';
+                glow.style.height = '80px';
+                glow.style.borderRadius = '50%';
+                glow.style.background = 'radial-gradient(circle, rgba(247, 125, 170, 0.2) 0%, rgba(247, 125, 170, 0) 70%)';
+                glow.style.pointerEvents = 'none';
+                glow.style.opacity = '0';
+                glow.style.zIndex = '1';
+                glow.style.transition = 'opacity 0.3s ease';
+                
+                card.style.position = 'relative';
+                card.style.overflow = 'hidden';
+                card.appendChild(glow);
+                
+                card.addEventListener('mousemove', function(e) {
+                    const rect = card.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    
+                    glow.style.opacity = '1';
+                    glow.style.transform = `translate(${x - 40}px, ${y - 40}px)`;
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    glow.style.opacity = '0';
+                });
+            });
+            
+            // 添加点击波纹效果
+            document.addEventListener('click', function(e) {
+                // 创建点击波纹元素
+                const ripple = document.createElement('div');
+                ripple.className = 'click-ripple';
+                ripple.style.position = 'fixed';
+                ripple.style.width = '20px';
+                ripple.style.height = '20px';
+                ripple.style.borderRadius = '50%';
+                ripple.style.backgroundColor = 'rgba(247, 125, 170, 0.3)';
+                ripple.style.pointerEvents = 'none';
+                ripple.style.transform = 'translate(-50%, -50%) scale(0)';
+                ripple.style.transition = 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
+                ripple.style.zIndex = '9999';
+                
+                // 定位在点击位置
+                ripple.style.left = `${e.clientX}px`;
+                ripple.style.top = `${e.clientY}px`;
+                
+                document.body.appendChild(ripple);
+                
+                // 触发动画
+                setTimeout(() => {
+                    ripple.style.transform = 'translate(-50%, -50%) scale(8)';
+                    ripple.style.opacity = '0';
+                }, 10);
+                
+                // 移除波纹元素
+                setTimeout(() => {
+                    if (document.body.contains(ripple)) {
+                        document.body.removeChild(ripple);
+                    }
+                }, 500);
+            });
         });
     </script>
 </body>
