@@ -6139,3 +6139,30 @@ p:hover {
             transparent 50%
         );
 }
+
+.bilibili-link {
+    color: #00a1d6;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.bilibili-link:hover {
+    color: #fb7299;
+    transform: translateY(-2px);
+}
+
+.bilibili-link i {
+    font-size: 1.2em;
+}
+
+.bilibili-link:hover i {
+    animation: bilibiliBounce 0.5s ease;
+}
+
+@keyframes bilibiliBounce {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}
