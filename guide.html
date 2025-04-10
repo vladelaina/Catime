@@ -89,47 +89,145 @@
     </header>
 
     <main>
+        <!-- 指南头部 -->
+        <section class="guide-hero">
+            <div class="container">
+                <h1 class="guide-hero-title" data-aos="fade-up">Catime<span class="guide-accent">使用指南</span></h1>
+                <div class="guide-hero-decoration">
+                    <div class="floating-icon icon1"><i class="fas fa-clock"></i></div>
+                    <div class="floating-icon icon2"><i class="fas fa-cat"></i></div>  
+                    <div class="floating-icon icon3"><i class="fas fa-heart"></i></div>
+                    <div class="floating-icon icon4"><i class="fas fa-hourglass-half"></i></div>
+                </div>
+            </div>
+        </section>
+
         <section class="guide-section">
             <div class="container">
-                <article class="guide-content" data-aos="fade-up">
-                    <h1>Hi~ 我的朋友！</h1>
-                    <p>我是 Vladelaina，Catime 的开发者，也是一名普通的大学生。</p>
-                    <p>很高兴能在这里和你见面！</p>
-
-                    <p>想和你分享一下我这个名字的由来：</p>
-                    <p>"Vladelaina" 是结合了我最喜欢的两部动漫女主角的名字——《86-不存在的战区-》中的 <strong>Vladilena Milizé</strong> 和《魔女之旅》中的 <strong>Elaina</strong>。</p>
-                    <p>如果你还没看过这两部作品，真心推荐你去看看，剧情和角色都非常精彩，绝对值得一追！</p>
-
-                    <p>接下来，就让我为你介绍一下 Catime 的使用指南吧～</p>
-
-                    <h2>软件无需安装，首次双击打开的时候在顶部显示一个25分钟的置顶倒计时</h2>
-                    <div class="guide-image">
-                        <img src="assets/First time use.gif" alt="First time use">
-                    </div>
-
-                    <p>建议你先将 Catime 的托盘图标从隐藏区域拖到任务栏上，这样使用会更方便。</p>
-                    <div class="guide-image">
-                        <img src="assets/Move out.gif" alt="Move out">
-                    </div>
-
-                    <h2>Catime 的所有操作都通过点击任务栏图标完成：</h2>
+                <div class="guide-toc" data-aos="fade-up" data-aos-delay="100">
+                    <h3><i class="fas fa-list-ul"></i> 目录</h3>
                     <ul>
-                        <li><strong>左键</strong>：打开时间管理界面</li>
-                        <div class="guide-image">
-                            <img src="assets/left click.png" alt="left click">
-                        </div>
-                        <li><strong>右键</strong>：打开设置菜单</li>
-                        <div class="guide-image">
-                            <img src="assets/right click.png" alt="right click">
-                        </div>
+                        <li><a href="#intro">开发者介绍</a></li>
+                        <li><a href="#start">开始使用</a></li>
+                        <li><a href="#operations">基本操作</a></li>
+                        <li><a href="#customization">自定义功能</a></li>
                     </ul>
+                </div>
+                
+                <article class="guide-content" data-aos="fade-up" data-aos-delay="200">
+                    <div id="intro" class="guide-section-content">
+                        <h1 class="animated-title">Hi~ 我的朋友！</h1>
+                        <div class="author-card">
+                            <div class="author-avatar">
+                                <img src="assets/catime.png" alt="Vladelaina">
+                                <div class="avatar-glow"></div>
+                            </div>
+                            <div class="author-info">
+                                <p>我是 <span class="highlight">Vladelaina</span>，Catime 的开发者，也是一名普通的大学生。</p>
+                                <p>很高兴能在这里和你见面！</p>
+                            </div>
+                        </div>
 
-                    <p>我的朋友，相信你已经迫不及待地想移动一下窗口的位置了吧？比如把它放到屏幕左下角。这个时候只需右键点击托盘图标，选择"编辑模式"。此时，窗口会变成亚克力背景，你就可以用鼠标拖拽来调整位置，滚轮调整大小。调整完毕后，鼠标在窗口上右键即可关闭编辑模式～</p>
-                    <div class="guide-image">
-                        <img src="assets/move.gif" alt="move">
+                        <div class="info-card">
+                            <h3><i class="fas fa-info-circle"></i> 关于我的名字</h3>
+                            <p>"Vladelaina" 是结合了我最喜欢的两部动漫女主角的名字——《86-不存在的战区-》中的 <strong>Vladilena Milizé</strong> 和《魔女之旅》中的 <strong>Elaina</strong>。</p>
+                            <p>如果你还没看过这两部作品，真心推荐你去看看，剧情和角色都非常精彩，绝对值得一追！</p>
+                            <div class="anime-icons">
+                                <span class="anime-icon">86</span>
+                                <span class="anime-icon">魔女之旅</span>
+                            </div>
+                        </div>
+
+                        <div class="guide-divider">
+                            <span class="divider-icon"><i class="fas fa-star"></i></span>
+                        </div>
+
+                        <p class="guide-intro">接下来，就让我为你介绍一下 Catime 的使用指南吧～</p>
                     </div>
 
-                    <p>至此，恭喜🎉你已经掌握了Catime的核心内容，剩下的部分基本都是字面意思😉。</p>
+                    <div id="start" class="guide-section-content">
+                        <h2 class="animated-title"><i class="fas fa-rocket"></i> 开始使用</h2>
+                        <div class="feature-box">
+                            <div class="feature-content">
+                                <p>软件无需安装，首次双击打开的时候在顶部显示一个25分钟的置顶倒计时</p>
+                            </div>
+                            <div class="feature-actions">
+                                <span class="feature-tag">简单</span>
+                                <span class="feature-tag">无需安装</span>
+                            </div>
+                        </div>
+                        <div class="guide-image animated-image">
+                            <img src="assets/First time use.gif" alt="First time use">
+                            <div class="image-caption">首次使用 Catime</div>
+                        </div>
+
+                        <div class="tip-box">
+                            <div class="tip-icon"><i class="fas fa-lightbulb"></i></div>
+                            <div class="tip-content">
+                                <h4>小贴士</h4>
+                                <p>建议你先将 Catime 的托盘图标从隐藏区域拖到任务栏上，这样使用会更方便。</p>
+                            </div>
+                        </div>
+
+                        <div class="guide-image animated-image">
+                            <img src="assets/Move out.gif" alt="Move out">
+                            <div class="image-caption">将图标移至任务栏</div>
+                        </div>
+                    </div>
+
+                    <div id="operations" class="guide-section-content">
+                        <h2 class="animated-title"><i class="fas fa-mouse-pointer"></i> 基本操作</h2>
+                        <p class="section-intro">Catime 的所有操作都通过点击任务栏图标完成：</p>
+                        
+                        <div class="operation-cards">
+                            <div class="operation-card">
+                                <div class="operation-icon">
+                                    <i class="fas fa-hand-pointer"></i>
+                                </div>
+                                <div class="operation-details">
+                                    <h3>左键</h3>
+                                    <p>打开时间管理界面</p>
+                                </div>
+                                <div class="guide-image small-image">
+                                    <img src="assets/left click.png" alt="left click">
+                                </div>
+                            </div>
+                            
+                            <div class="operation-card">
+                                <div class="operation-icon">
+                                    <i class="fas fa-hand-point-up"></i>
+                                </div>
+                                <div class="operation-details">
+                                    <h3>右键</h3>
+                                    <p>打开设置菜单</p>
+                                </div>
+                                <div class="guide-image small-image">
+                                    <img src="assets/right click.png" alt="right click">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="customization" class="guide-section-content">
+                        <h2 class="animated-title"><i class="fas fa-sliders-h"></i> 自定义功能</h2>
+                        <div class="feature-highlight">
+                            <p>我的朋友，相信你已经迫不及待地想移动一下窗口的位置了吧？比如把它放到屏幕左下角。这个时候只需右键点击托盘图标，选择"编辑模式"。此时，窗口会变成亚克力背景，你就可以用鼠标拖拽来调整位置，滚轮调整大小。调整完毕后，鼠标在窗口上右键即可关闭编辑模式～</p>
+                        </div>
+                        <div class="guide-image animated-image">
+                            <img src="assets/move.gif" alt="move">
+                            <div class="image-caption">调整窗口位置</div>
+                        </div>
+
+                        <div class="conclusion-box">
+                            <div class="conclusion-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="conclusion-content">
+                                <h3>恭喜完成!</h3>
+                                <p>至此，恭喜🎉你已经掌握了Catime的核心内容，剩下的部分基本都是字面意思😉。</p>
+                            </div>
+                        </div>
+                    </div>
                 </article>
             </div>
         </section>
@@ -305,6 +403,22 @@
                 scrollTimeout = setTimeout(updateProgress, 10);
             });
             
+            // 平滑滚动到锚点
+            document.querySelectorAll('.guide-toc a').forEach(anchor => {
+                anchor.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    const targetElement = document.querySelector(targetId);
+                    
+                    if (targetElement) {
+                        window.scrollTo({
+                            top: targetElement.offsetTop - 100,
+                            behavior: 'smooth'
+                        });
+                    }
+                });
+            });
+            
             // 初始化进度
             updateProgress();
             
@@ -316,6 +430,17 @@
                     }
                 }
             }, 3000);
+            
+            // 添加图片悬停动画效果
+            document.querySelectorAll('.animated-image img').forEach(img => {
+                img.addEventListener('mouseenter', function() {
+                    this.classList.add('hover-effect');
+                });
+                
+                img.addEventListener('mouseleave', function() {
+                    this.classList.remove('hover-effect');
+                });
+            });
         });
     </script>
 </body>
