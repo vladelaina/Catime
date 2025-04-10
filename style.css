@@ -4415,3 +4415,108 @@ p:hover {
     background: linear-gradient(to left, rgba(122, 162, 247, 0.8), transparent);
     transform: translateY(-50%);
 }
+
+/* Wiki 样式 */
+.wiki-container {
+    display: flex;
+    max-width: 1200px;
+    margin: 40px auto;
+    min-height: 600px;
+}
+
+.wiki-sidebar {
+    width: 250px;
+    background: #f7f9fc;
+    border-radius: 10px;
+    padding: 20px;
+    margin-right: 30px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+.wiki-content {
+    flex: 1;
+    background: #fff;
+    border-radius: 10px;
+    padding: 30px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+.wiki-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.wiki-list li {
+    margin-bottom: 10px;
+}
+
+.wiki-list a {
+    display: block;
+    padding: 8px 10px;
+    color: #4d5969;
+    text-decoration: none;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.wiki-list a:hover, .wiki-list a.active {
+    background: #e8f0fe;
+    color: #3498db;
+}
+
+.wiki-list .category {
+    font-weight: 600;
+    font-size: 14px;
+    margin-top: 20px;
+    margin-bottom: 5px;
+    color: #333;
+}
+
+.wiki-list .sub-item {
+    padding-left: 20px;
+}
+
+.wiki-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin: 15px 0;
+}
+
+.wiki-content h1 {
+    font-size: 28px;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.wiki-content h2 {
+    font-size: 22px;
+    margin-top: 30px;
+    margin-bottom: 15px;
+}
+
+.wiki-content h3 {
+    font-size: 18px;
+    margin-top: 25px;
+}
+
+#content-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 300px;
+}
+
+@media (max-width: 768px) {
+    .wiki-container {
+        flex-direction: column;
+    }
+    
+    .wiki-sidebar {
+        width: 100%;
+        margin-right: 0;
+        margin-bottom: 20px;
+    }
+}
