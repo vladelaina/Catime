@@ -5823,24 +5823,6 @@ p:hover {
     margin-top: 1rem;
 }
 
-.image-caption {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    padding: 0.7rem 1rem;
-    background-color: rgba(0, 0, 0, 0.7);
-    color: white;
-    font-size: 0.9rem;
-    transform: translateY(100%);
-    transition: all 0.3s ease;
-    text-align: center;
-}
-
-.guide-image:hover .image-caption {
-    transform: translateY(0);
-}
-
 .tip-box {
     display: flex;
     align-items: flex-start;
