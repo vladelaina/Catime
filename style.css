@@ -5465,11 +5465,10 @@ p:hover {
     background: radial-gradient(circle, rgba(122, 162, 247, 0.5) 0%, rgba(122, 162, 247, 0) 70%);
     opacity: 0;
     transition: all 0.5s ease;
-    animation: pulse 2s infinite ease-in-out;
 }
 
 .author-card:hover .avatar-glow {
-    opacity: 1;
+    opacity: 0;
 }
 
 @keyframes pulse {
