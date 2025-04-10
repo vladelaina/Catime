@@ -42,6 +42,29 @@
             background: linear-gradient(90deg, transparent, rgba(122, 162, 247, 0.3), transparent);
         }
 
+        .thanks-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 0.7rem;
+            border: 1px solid rgba(122, 162, 247, 0.2);
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .thanks-item:hover .thanks-avatar {
+            transform: scale(1.1);
+            box-shadow: 0 3px 8px rgba(122, 162, 247, 0.2);
+            border-color: rgba(247, 125, 170, 0.4);
+        }
+
+        @keyframes thanksPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
         .thanks-list {
             display: flex;
             flex-wrap: wrap;
@@ -68,12 +91,16 @@
             text-decoration: none;
             transition: all 0.3s ease;
             border: 1px solid rgba(122, 162, 247, 0.1);
+            min-width: 180px;
+            justify-content: center;
         }
 
         .thanks-item:hover a {
             transform: translateY(-5px);
             box-shadow: 0 8px 20px rgba(122, 162, 247, 0.15);
             border-color: rgba(122, 162, 247, 0.3);
+            background: linear-gradient(135deg, #ffffff, #f9f9ff);
+            color: var(--primary-color);
         }
 
         .thanks-item a i {
@@ -90,6 +117,28 @@
 
         .thanks-item a span {
             font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .thanks-item:hover a span {
+            transform: translateX(3px);
+            color: var(--accent-color);
+        }
+
+        .thanks-item a span::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 0;
+            height: 1px;
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+            transition: width 0.3s ease;
+        }
+
+        .thanks-item:hover a span::after {
+            width: 100%;
         }
 
         @media (max-width: 768px) {
@@ -100,6 +149,30 @@
             .thanks-item a {
                 padding: 0.6rem 1.2rem;
                 font-size: 0.9rem;
+                min-width: 150px;
+            }
+
+            .thanks-avatar {
+                width: 28px;
+                height: 28px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .thanks-list {
+                gap: 0.8rem;
+            }
+            
+            .thanks-item a {
+                padding: 0.5rem 1rem;
+                font-size: 0.85rem;
+                min-width: 135px;
+            }
+
+            .thanks-avatar {
+                width: 24px;
+                height: 24px;
+                margin-right: 0.5rem;
             }
         }
     </style>
@@ -199,7 +272,7 @@
                         <span class="desc-word cat-word">，</span>
                         <span class="desc-word">专注</span>
                         <span class="desc-word">每刻</span>
-                        <span class="desc-word">，</span>
+                        <span class="desc-word cat-word">，</span>
                         <span class="desc-word emp-word">效率</span>
                         <span class="desc-word emp-word">加倍</span>
                         <span class="desc-word emp-word">！</span>
@@ -408,55 +481,55 @@
                 <ul class="thanks-list">
                     <li class="thanks-item">
                         <a href="https://mp.weixin.qq.com/s/mL-oDEfYK8jGZkUmbs55AA" target="_blank" rel="noopener noreferrer">
-                            <i class="fas fa-heart"></i>
+                            <img src="assets/Contributors/果核次元.webp" alt="果核剥壳" class="thanks-avatar">
                             <span>果核剥壳</span>
                         </a>
                     </li>
                     <li class="thanks-item">
                         <a href="https://mp.weixin.qq.com/s/9c9_O4D8EuDfeHeL9Lg3yA" target="_blank" rel="noopener noreferrer">
-                            <i class="fas fa-heart"></i>
+                            <img src="assets/Contributors/it学无止境.png" alt="it学无止境" class="thanks-avatar">
                             <span>it学无止境</span>
                         </a>
                     </li>
                     <li class="thanks-item">
                         <a href="https://hellogithub.com/repository/00a7a32b7bc647e1a62747530bc16115" target="_blank" rel="noopener noreferrer">
-                            <i class="fas fa-heart"></i>
+                            <img src="assets/Contributors/HelloGitHub.webp" alt="HelloGitHub 网站收录" class="thanks-avatar">
                             <span>HelloGitHub 网站收录</span>
                         </a>
                     </li>
                     <li class="thanks-item">
                         <a href="https://www.bilibili.com/video/BV1iYQUYKE4j/?vd_source=efeaf6f967e48f58317a9291cef584cd" target="_blank" rel="noopener noreferrer">
-                            <i class="fas fa-heart"></i>
+                            <img src="assets/Contributors/玄离199.webp" alt="玄离199" class="thanks-avatar">
                             <span>玄离199</span>
                         </a>
                     </li>
                     <li class="thanks-item">
                         <a href="https://www.bilibili.com/video/BV1DnQoYjEWR/" target="_blank" rel="noopener noreferrer">
-                            <i class="fas fa-heart"></i>
+                            <img src="assets/Contributors/_不言不厌.webp" alt="_不言不厌" class="thanks-avatar">
                             <span>_不言不厌</span>
                         </a>
                     </li>
                     <li class="thanks-item">
                         <a href="https://www.bilibili.com/video/BV1TaXYY1EQp" target="_blank" rel="noopener noreferrer">
-                            <i class="fas fa-heart"></i>
+                            <img src="assets/Contributors/小众软件.avif" alt="小众软件" class="thanks-avatar">
                             <span>小众软件</span>
                         </a>
                     </li>
                     <li class="thanks-item">
                         <a href="https://github.com/521xueweihan/HelloGitHub/blob/master/content/HelloGitHub108.md" target="_blank" rel="noopener noreferrer">
-                            <i class="fas fa-heart"></i>
+                            <img src="assets/Contributors/HelloGitHub.webp" alt="HelloGitHub 月刊" class="thanks-avatar">
                             <span>HelloGitHub 月刊</span>
                         </a>
                     </li>
                     <li class="thanks-item">
                         <a href="https://mp.weixin.qq.com/s/cE6AcVwx4-HPSFM7RBpxmw" target="_blank" rel="noopener noreferrer">
-                            <i class="fas fa-heart"></i>
+                            <img src="assets/Contributors/HelloGitHub.webp" alt="HelloGitHub 专栏" class="thanks-avatar">
                             <span>HelloGitHub 专栏</span>
                         </a>
                     </li>
                     <li class="thanks-item">
                         <a href="https://api.xiaoheihe.cn/v3/bbs/app/api/web/share?link_id=6f02701abda6" target="_blank" rel="noopener noreferrer">
-                            <i class="fas fa-heart"></i>
+                            <img src="assets/Contributors/学不下去了.webp" alt="学不下去了" class="thanks-avatar">
                             <span>学不下去了</span>
                         </a>
                     </li>
