@@ -5808,6 +5808,10 @@ p:hover {
     width: 100%;
     transition: all 0.5s ease;
     transform-origin: center;
+    cursor: pointer;
+    user-select: none;
+    border-radius: var(--border-radius-base);
+    box-shadow: 0 10px 30px rgba(122, 162, 247, 0.15);
 }
 
 .animated-image img.hover-effect {
@@ -6077,4 +6081,20 @@ p:hover {
     .feature-box {
         padding: 1rem;
     }
+}
+
+.animated-image img {
+    display: block;
+    width: 100%;
+    transition: all 0.5s ease;
+    transform-origin: center;
+    cursor: pointer;
+    user-select: none;
+    border-radius: var(--border-radius-base);
+    box-shadow: 0 10px 30px rgba(122, 162, 247, 0.15);
+}
+
+.small-image {
+    max-width: 90%;
+    margin-top: 1rem;
 }
