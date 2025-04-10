@@ -6369,3 +6369,116 @@ p:hover {
 }
 
 /* ... existing code ... */
+
+/* 贡献者区域 */
+.contributors {
+    padding: 80px 0;
+    background-color: var(--bg-secondary); /* 使用次要背景色 */
+    text-align: center;
+}
+
+.contributors .section-title,
+.contributors .section-subtitle {
+    margin-bottom: 40px; /* 调整标题和副标题的间距 */
+}
+
+.contributors-grid table {
+    width: 100%;
+    border-collapse: separate; /* 使用 separate 以便应用 border-radius */
+    border-spacing: 15px; /* 控制单元格之间的间距 */
+    margin-top: 20px;
+}
+
+.contributors-grid td {
+    background-color: var(--bg-color); /* 卡片背景色 */
+    padding: 20px 10px;
+    border-radius: 12px; /* 圆角 */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    vertical-align: top; /* 确保内容顶部对齐 */
+}
+
+.contributors-grid td:hover {
+    transform: translateY(-8px) scale(1.03); /* 悬停时轻微上移放大 */
+    box-shadow: 0 8px 25px rgba(122, 162, 247, 0.2); /* 添加蓝色辉光效果 */
+}
+
+.contributors-grid img {
+    width: 80px; /* 调整头像大小 */
+    height: 80px;
+    border-radius: 50%; /* 圆形头像 */
+    object-fit: cover; /* 确保图片不变形 */
+    margin-bottom: 10px;
+    border: 3px solid transparent;
+    transition: border-color 0.3s ease, transform 0.3s ease;
+    display: block; /* 确保图片居中 */
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.contributors-grid td:hover img {
+    border-color: var(--primary-color); /* 悬停时显示边框 */
+    transform: scale(1.1); /* 轻微放大头像 */
+}
+
+.contributors-grid a {
+    text-decoration: none;
+    color: inherit; /* 继承父元素颜色 */
+    display: block; /* 使整个单元格可点击 */
+}
+
+.contributors-grid sub {
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    display: block; /* 换行显示 */
+    margin-top: 5px;
+}
+
+.contributors-grid sub b {
+    color: var(--text-color);
+    font-weight: 600;
+    transition: color 0.3s ease;
+}
+
+.contributors-grid td:hover sub b {
+    color: var(--primary-color); /* 悬停时名字变色 */
+}
+
+/* 响应式调整 */
+@media (max-width: 992px) {
+    .contributors-grid td {
+        width: 33.33% !important; /* 每行显示3个 */
+    }
+}
+
+@media (max-width: 768px) {
+    .contributors {
+        padding: 60px 0;
+    }
+    .contributors-grid table {
+        border-spacing: 10px;
+    }
+    .contributors-grid td {
+        width: 48% !important; /* 每行显示2个 */
+        padding: 15px 8px;
+    }
+     .contributors-grid img {
+        width: 70px;
+        height: 70px;
+    }
+}
+
+@media (max-width: 480px) {
+    .contributors-grid td {
+        width: 90% !important; /* 每行显示1个 */
+        display: block; /* 堆叠显示 */
+        margin: 10px auto;
+    }
+     .contributors-grid img {
+        width: 60px;
+        height: 60px;
+    }
+     .contributors-grid sub {
+        font-size: 0.85em;
+    }
+}
