@@ -4694,51 +4694,6 @@ p:hover {
     }
 }
 
-/* 添加目录表格样式，类似图片中的样式 */
-.table-of-contents {
-    background: #f7f9fc;
-    border-radius: var(--border-radius-base);
-    padding: 15px 20px;
-    margin: 30px 0;
-    box-shadow: 0 2px 8px rgba(122, 162, 247, 0.1);
-}
-
-.table-of-contents h3 {
-    margin-top: 0;
-    color: var(--primary-color);
-    font-size: 1.2rem;
-    border-bottom: 1px solid rgba(122, 162, 247, 0.2);
-    padding-bottom: 10px;
-    margin-bottom: 15px;
-}
-
-.table-of-contents ul {
-    list-style: none;
-    padding-left: 0;
-    margin-bottom: 0;
-}
-
-.table-of-contents li {
-    padding: 5px 0;
-    border-bottom: 1px dotted rgba(122, 162, 247, 0.1);
-}
-
-.table-of-contents a {
-    display: block;
-    text-decoration: none;
-    color: var(--text-color);
-    transition: all 0.2s ease;
-    padding: 5px 10px;
-    border-radius: 4px;
-    border-bottom: none !important;
-}
-
-.table-of-contents a:hover {
-    background: rgba(122, 162, 247, 0.1);
-    color: var(--primary-color) !important;
-    transform: translateX(5px);
-}
-
 /* 修改Wiki区域的顶部间距 */
 .wiki-section {
     padding-top: 40px;
@@ -5469,67 +5424,6 @@ p:hover {
     color: var(--accent-color);
 }
 
-.guide-toc {
-    background-color: rgba(255, 255, 255, 0.9);
-    border-radius: var(--border-radius-base);
-    padding: 1.5rem;
-    margin-bottom: 2rem;
-    box-shadow: var(--card-shadow);
-    border-left: 3px solid var(--primary-color);
-}
-
-.guide-toc h3 {
-    color: var(--primary-color);
-    font-size: 1.3rem;
-    margin-bottom: 1rem;
-    display: flex;
-    align-items: center;
-}
-
-.guide-toc h3 i {
-    margin-right: 10px;
-}
-
-.guide-toc ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
-
-.guide-toc li {
-    margin-bottom: 0.5rem;
-    transition: all 0.3s ease;
-    padding-left: 20px;
-    position: relative;
-}
-
-.guide-toc li::before {
-    content: "→";
-    position: absolute;
-    left: 0;
-    color: var(--accent-color);
-    opacity: 0;
-    transform: translateX(-10px);
-    transition: all 0.3s ease;
-}
-
-.guide-toc li:hover::before {
-    opacity: 1;
-    transform: translateX(0);
-}
-
-.guide-toc a {
-    color: var(--text-color);
-    text-decoration: none;
-    font-weight: 500;
-    transition: all 0.3s ease;
-}
-
-.guide-toc a:hover {
-    color: var(--primary-color);
-    padding-left: 5px;
-}
-
 .author-card {
     display: flex;
     align-items: center;
@@ -5545,11 +5439,6 @@ p:hover {
     background-color: rgba(122, 162, 247, 0.1);
     transform: translateY(-5px);
     box-shadow: var(--card-hover-shadow);
-}
-
-.author-avatar {
-    margin-right: 2rem;
-    position: relative;
 }
 
 .author-avatar img {
@@ -6045,10 +5934,6 @@ p:hover {
     }
     
     .guide-content {
-        padding: 1rem;
-    }
-    
-    .guide-toc {
         padding: 1rem;
     }
     
