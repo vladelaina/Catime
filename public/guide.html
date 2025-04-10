@@ -258,7 +258,7 @@
                     if (isFileProtocol) {
                         alert("您正在使用file://协议打开文件，浏览器安全限制会阻止直接读取本地文件。\n\n建议的解决方案:\n1. 使用本地服务器运行此页面\n2. 或使用下面提供的嵌入式wiki数据");
                     } else {
-                        fetch('../wiki/Home.md')
+                        fetch('wiki/Home.md')
                             .then(response => {
                                 alert(`Home.md 请求状态: ${response.status} ${response.statusText}`);
                                 return response.text();
@@ -290,7 +290,7 @@
 
 一款简洁的 Windows 倒计时工具，支持番茄时钟功能，具有透明界面和丰富的自定义选项。
 
-<img src="../wiki/images/Showcase.gif" alt="Showcase" style="zoom: 200%;" />
+<img src="wiki/images/Showcase.gif" alt="Showcase" style="zoom: 200%;" />
 
 ## 文档目录
 
@@ -307,7 +307,7 @@
 (此文档正在编写中...)`,
                 "右键托盘图标": `# 右键点击设置选项
 
-![Right-click menu options](../wiki/images/Right-click%20menu%20options.png)
+![Right-click menu options](wiki/images/Right-click%20menu%20options.png)
 
 ## 编辑模式
 
@@ -322,7 +322,7 @@
 ## 帮助`,
                 "左键托盘图标": `# 左键点击快速管理时间
 
-![Left-click menu options](../wiki/images/Left-click%20menu%20options.png)
+![Left-click menu options](wiki/images/Left-click%20menu%20options.png)
 
 ## 计时管理
 
@@ -376,12 +376,12 @@
                 
                 // 处理特殊文件名和常见路径模式
                 if (pageName === '左键托盘图标') {
-                    filePath = '../wiki/左键.托盘图标.md';
+                    filePath = 'wiki/左键.托盘图标.md';
                 } else if (pageName.includes('/')) {
                     // 如果是子目录中的文件
-                    filePath = `../wiki/${pageName}.md`;
+                    filePath = `wiki/${pageName}.md`;
                 } else {
-                    filePath = `../wiki/${pageName}.md`;
+                    filePath = `wiki/${pageName}.md`;
                 }
                 
                 console.log(`尝试加载文件: ${filePath}`);
@@ -393,7 +393,7 @@
                             // 尝试其他可能的文件路径
                             if (response.status === 404) {
                                 // 尝试不带.md后缀的路径
-                                return fetch(`../wiki/${pageName}`);
+                                return fetch(`wiki/${pageName}`);
                             }
                             throw new Error(`HTTP错误 ${response.status}: ${response.statusText}`);
                         }
@@ -410,14 +410,14 @@
                             function(match, altText, imgPath) {
                                 // 提取图片文件名
                                 const imgFileName = imgPath.replace('./images/', '');
-                                return `![${altText}](../wiki/images/${imgFileName})`;
+                                return `![${altText}](wiki/images/${imgFileName})`;
                             }
                         );
                         
                         // 处理其他的图片格式，如果没有./前缀
                         markdownContent = markdownContent.replace(
                             /!\[(.*?)\]\((images\/[^)]+)\)/g,
-                            '![$1](../wiki/$2)'
+                            '![$1](wiki/$2)'
                         );
                         
                         // 使用marked.js渲染Markdown内容
