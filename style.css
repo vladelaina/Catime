@@ -4738,3 +4738,13 @@ p:hover {
     color: var(--primary-color) !important;
     transform: translateX(5px);
 }
+
+/* 修改Wiki区域的顶部间距 */
+.wiki-section {
+    padding-top: 40px;
+}
+
+/* 删除page-header相关样式 */
+.page-header {
+    display: none;
+}
