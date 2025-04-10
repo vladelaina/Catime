@@ -27,6 +27,17 @@
 </head>
 <body>
 
+    <!-- 滚动进度指示器 -->
+    <div class="scroll-progress-container" id="scrollProgressContainer">
+        <svg class="scroll-progress-circle" viewBox="0 0 100 100">
+            <circle class="scroll-progress-circle-bg" cx="50" cy="50" r="45"></circle>
+            <circle class="scroll-progress-circle-fill" cx="50" cy="50" r="45"></circle>
+        </svg>
+        <div class="scroll-progress-icon">
+            <i class="fas fa-arrow-up"></i>
+        </div>
+    </div>
+
     <!-- 页头/导航 -->
     <header class="main-header">
         <nav class="container">
@@ -321,6 +332,52 @@
                     }
                 });
             }
+        });
+    </script>
+
+    <!-- 滚动进度指示器脚本 -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const progressContainer = document.getElementById('scrollProgressContainer');
+            const progressCircle = document.querySelector('.scroll-progress-circle-fill');
+            const circleLength = progressCircle.getTotalLength();
+            
+            // 初始设置
+            progressCircle.style.strokeDasharray = circleLength;
+            progressCircle.style.strokeDashoffset = circleLength;
+            
+            // 计算滚动进度
+            function updateProgress() {
+                // 获取文档高度和滚动位置
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const docHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+                const scrollPercentage = scrollTop / docHeight;
+                
+                // 更新环形进度条
+                const offset = circleLength - (scrollPercentage * circleLength);
+                progressCircle.style.strokeDashoffset = offset;
+                
+                // 显示/隐藏进度指示器
+                if (scrollTop > 300) {
+                    progressContainer.classList.add('visible');
+                } else {
+                    progressContainer.classList.remove('visible');
+                }
+            }
+            
+            // 点击回到顶部
+            progressContainer.addEventListener('click', function() {
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            });
+            
+            // 监听滚动事件
+            window.addEventListener('scroll', updateProgress);
+            
+            // 初始化进度
+            updateProgress();
         });
     </script>
 

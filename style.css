@@ -4748,3 +4748,78 @@ p:hover {
 .page-header {
     display: none;
 }
+
+/* 滚动进度指示器样式 */
+.scroll-progress-container {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    z-index: 1000;
+    cursor: pointer;
+    border-radius: 50%;
+    box-shadow: 0 4px 15px rgba(122, 162, 247, 0.25);
+    background: white;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    opacity: 0;
+    transform: scale(0.8) translateY(20px);
+    pointer-events: none;
+}
+
+.scroll-progress-container.visible {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    pointer-events: auto;
+}
+
+.scroll-progress-container:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(122, 162, 247, 0.35);
+}
+
+.scroll-progress-circle {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.scroll-progress-circle-bg {
+    fill: none;
+    stroke: var(--border-color);
+    stroke-width: 4;
+}
+
+.scroll-progress-circle-fill {
+    fill: none;
+    stroke: var(--primary-color);
+    stroke-width: 4;
+    stroke-dasharray: 283; /* 2πr ≈ 2 * 3.14 * 45 ≈ 283 */
+    stroke-dashoffset: 283;
+    transition: stroke-dashoffset 0.1s ease;
+}
+
+.scroll-progress-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--primary-color);
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+}
+
+.scroll-progress-container:hover .scroll-progress-icon {
+    transform: translate(-50%, -50%) translateY(-3px);
+    color: var(--primary-hover);
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.scroll-progress-container:active .scroll-progress-icon {
+    animation: pulse 0.3s ease;
+}
