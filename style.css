@@ -6314,6 +6314,113 @@ p:hover {
     width: 100%;
 }
 
+/* 贡献者区域的移动端适配 */
+@media (max-width: 992px) {
+    .contributors-grid table {
+        border-spacing: 10px; /* 减小单元格间距 */
+    }
+    
+    .contributors-grid td {
+        padding: 15px 8px; /* 减小内边距 */
+    }
+    
+    .contributors-grid img {
+        width: 70px; /* 缩小头像尺寸 */
+        height: 70px;
+    }
+    
+    .contributor-avatar-container {
+        width: 76px;
+        height: 76px;
+    }
+}
+
+@media (max-width: 768px) {
+    .contributors {
+        padding: 60px 0; /* 减小顶部和底部内边距 */
+    }
+    
+    .contributors-grid table {
+        border-spacing: 8px; /* 进一步减小单元格间距 */
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .contributors-grid tbody {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        width: 100%;
+    }
+    
+    .contributors-grid tr {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        width: 100%;
+    }
+    
+    .contributors-grid td {
+        padding: 12px 5px; /* 减小内边距 */
+        display: inline-block;
+        width: calc(33.33% - 16px); /* 一行显示3个 */
+        margin: 8px;
+        float: none;
+    }
+    
+    .contributors-grid img {
+        width: 60px; /* 进一步缩小头像尺寸 */
+        height: 60px;
+        border-width: 2px; /* 减小边框宽度 */
+    }
+    
+    .contributor-avatar-container {
+        width: 66px;
+        height: 66px;
+        margin-bottom: 6px; /* 减小下边距 */
+    }
+    
+    .contributors-grid sub {
+        font-size: 0.75em; /* 缩小字体大小 */
+        margin-top: 5px; /* 减小上边距 */
+    }
+}
+
+@media (max-width: 480px) {
+    .contributors-grid table {
+        border-spacing: 5px; /* 最小化单元格间距 */
+    }
+    
+    .contributors-grid td {
+        padding: 10px 3px; /* 最小化内边距 */
+        width: calc(50% - 10px); /* 一行显示2个 */
+        margin: 5px;
+    }
+    
+    .contributors-grid img {
+        width: 50px; /* 进一步缩小头像尺寸 */
+        height: 50px;
+    }
+    
+    .contributor-avatar-container {
+        width: 56px;
+        height: 56px;
+    }
+    
+    .contributors-grid sub {
+        font-size: 0.7em; /* 进一步缩小字体大小 */
+    }
+    
+    .contributors .section-title {
+        font-size: 1.8rem; /* 缩小标题尺寸 */
+    }
+    
+    .contributors .section-subtitle {
+        font-size: 0.9rem; /* 缩小副标题尺寸 */
+    }
+}
+
 /* 支持项目区域 */
 .support-project {
     padding: 6rem 0;
