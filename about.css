@@ -1253,4 +1253,373 @@ iframe {
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
+}
+
+/* 结语部分样式 */
+.conclusion-story-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 2rem;
+    position: relative;
+    padding: 1rem 0;
+    overflow: hidden;
+}
+
+/* 结语图标基础样式 */
+.conclusion-story-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(247, 125, 170, 0.15), rgba(122, 162, 247, 0.15));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+    position: relative;
+    transition: all 0.5s ease;
+    overflow: hidden;
+    animation: conclusionPulse 4s ease-in-out infinite;
+    box-shadow: 0 5px 20px rgba(247, 125, 170, 0.2);
+}
+
+/* 主图标 */
+.conclusion-story-icon i {
+    font-size: 2.5rem;
+    color: var(--accent-color);
+    transition: all 0.5s ease;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+}
+
+/* 替代图标 */
+.conclusion-story-icon .alt-icon {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transform: scale(0);
+    transition: all 0.5s ease;
+    z-index: 3;
+}
+
+.conclusion-story-icon .alt-icon i {
+    font-size: 2.5rem;
+    color: var(--primary-color);
+    filter: drop-shadow(0 2px 4px rgba(122, 162, 247, 0.3));
+}
+
+/* 悬停效果 - 仅在图标上悬停时触发 */
+.conclusion-story-icon:hover {
+    background: linear-gradient(135deg, rgba(247, 125, 170, 0.2), rgba(122, 162, 247, 0.2));
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(122, 162, 247, 0.3);
+}
+
+.conclusion-story-icon:hover > i:first-child {
+    opacity: 0;
+    transform: scale(0);
+}
+
+.conclusion-story-icon:hover .alt-icon {
+    opacity: 1;
+    transform: scale(1);
+    animation: conclusionBounce 1s ease-in-out;
+}
+
+.conclusion-story-title {
+    font-size: 2.2rem;
+    font-weight: 700;
+    background: linear-gradient(90deg, var(--accent-color), var(--primary-color));
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    margin-bottom: 0.5rem;
+    position: relative;
+    z-index: 1;
+    transition: all 0.3s ease;
+}
+
+.conclusion-story-title::after {
+    content: '结语';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    color: transparent;
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+    background-clip: text;
+    -webkit-background-clip: text;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    transform-origin: center;
+}
+
+.conclusion-story-header:hover .conclusion-story-title::after {
+    opacity: 1;
+    animation: conclusionTitleShift 3s ease-in-out infinite;
+}
+
+.conclusion-story-decoration {
+    display: flex;
+    align-items: center;
+    margin-top: 0.5rem;
+}
+
+.conclusion-story-header .deco-circle {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    transition: all 0.3s ease;
+}
+
+.conclusion-story-header .deco-line {
+    width: 120px;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent-color), var(--primary-color));
+    margin: 0 8px;
+    position: relative;
+    overflow: hidden;
+}
+
+.conclusion-story-header .deco-line::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+    animation: conclusionLineShine 3s ease-in-out infinite;
+}
+
+.conclusion-story-header:hover .deco-circle {
+    transform: scale(1.5);
+    box-shadow: 0 0 10px var(--primary-color);
+}
+
+/* 结语动效关键帧动画 */
+@keyframes conclusionPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); box-shadow: 0 8px 30px rgba(122, 162, 247, 0.3); }
+}
+
+@keyframes conclusionBounce {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.3); }
+    60% { transform: scale(0.9); }
+    80% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+@keyframes conclusionLineShine {
+    0% { left: -100%; }
+    50%, 100% { left: 100%; }
+}
+
+@keyframes conclusionTitleShift {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 1; }
+}
+
+/* 响应式适配 */
+@media (max-width: 768px) {
+    .conclusion-story-icon {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .conclusion-story-icon i {
+        font-size: 1.8rem;
+    }
+    
+    .conclusion-story-title {
+        font-size: 1.8rem;
+    }
+}
+
+.conclusion-story-icon::before {
+    content: '';
+    position: absolute;
+    top: -20%;
+    left: -20%;
+    width: 140%;
+    height: 140%;
+    background: radial-gradient(circle, rgba(247, 125, 170, 0.3), transparent 70%);
+    opacity: 0;
+    transform: scale(0.8);
+    transition: all 0.5s ease;
+    z-index: 1;
+}
+
+.conclusion-story-icon::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px dashed rgba(122, 162, 247, 0.5);
+    transform: rotate(0deg);
+    opacity: 0.8;
+    transition: all 0.5s ease;
+}
+
+.conclusion-story-icon:hover::before {
+    opacity: 0.6;
+    transform: scale(1);
+    animation: conclusionGlow 2s ease-in-out infinite;
+}
+
+.conclusion-story-icon:hover::after {
+    border-color: rgba(247, 125, 170, 0.8);
+    animation: conclusionRotate 10s linear infinite;
+}
+
+.conclusion-story-header .conclusion-particles {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.conclusion-story-header .conclusion-particle {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--accent-color), transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.conclusion-story-header:hover .conclusion-particle {
+    opacity: 0.5;
+    animation: conclusionFloat 3s ease-in-out infinite;
+}
+
+.conclusion-story-header .conclusion-particle:nth-child(1) {
+    top: 20%;
+    left: 10%;
+    animation-delay: 0.2s;
+}
+
+.conclusion-story-header .conclusion-particle:nth-child(2) {
+    top: 60%;
+    right: 15%;
+    animation-delay: 0.7s;
+}
+
+.conclusion-story-header .conclusion-particle:nth-child(3) {
+    bottom: 20%;
+    left: 20%;
+    animation-delay: 1.2s;
+}
+
+.conclusion-story-header .conclusion-particle:nth-child(4) {
+    top: 30%;
+    right: 20%;
+    animation-delay: 0.5s;
+}
+
+.conclusion-story-header .conclusion-particle:nth-child(5) {
+    bottom: 30%;
+    right: 10%;
+    animation-delay: 1s;
+}
+
+#conclusion p {
+    position: relative;
+    transition: all 0.3s ease;
+    padding: 0 2px;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+}
+
+#conclusion p:hover {
+    background: linear-gradient(90deg, rgba(247, 125, 170, 0.05), rgba(122, 162, 247, 0.05));
+    transform: translateX(5px);
+}
+
+@keyframes conclusionGlow {
+    0%, 100% { transform: scale(1); opacity: 0.6; }
+    50% { transform: scale(1.1); opacity: 0.4; }
+}
+
+@keyframes conclusionRotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes conclusionFloat {
+    0%, 100% {
+        transform: translateY(0) translateX(0);
+    }
+    50% {
+        transform: translateY(-15px) translateX(5px);
+    }
+}
+
+#conclusion .emphasis-text {
+    position: relative;
+    color: var(--accent-color);
+    font-weight: 600;
+    transition: all 0.3s ease;
+    padding: 0 1px;
+}
+
+#conclusion .emphasis-text::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent-color), var(--primary-color));
+    transform: scaleX(0);
+    transform-origin: bottom left;
+    transition: transform 0.3s ease;
+    opacity: 0.7;
+}
+
+#conclusion .emphasis-text:hover {
+    text-shadow: 0 2px 8px rgba(247, 125, 170, 0.3);
+    transform: translateY(-1px);
+}
+
+#conclusion .emphasis-text:hover::after {
+    transform: scaleX(1);
+}
+
+#conclusion .primary-text {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+#conclusion .feature-box {
+    border-left: 4px solid var(--accent-color);
+    border-radius: 6px;
+    background: linear-gradient(90deg, rgba(247, 125, 170, 0.1), transparent 80%);
+    padding: 1rem;
+    margin: 1.5rem 0;
+    transform: translateZ(0);
+    transition: all 0.3s ease;
+}
+
+#conclusion .feature-box:hover {
+    border-left-color: var(--primary-color);
+    background: linear-gradient(90deg, rgba(122, 162, 247, 0.1), transparent 80%);
+    transform: translateX(5px);
 } 
