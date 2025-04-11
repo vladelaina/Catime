@@ -157,6 +157,50 @@
     100% { transform: translateY(0) translateX(0); opacity: 0.3; }
 }
 
+/* 书本翻页动画效果 */
+@keyframes bookFlip {
+    0% { transform: perspective(300px) rotateY(0deg); opacity: 1; }
+    25% { transform: perspective(300px) rotateY(-10deg) skewY(5deg); opacity: 0.9; }
+    50% { transform: perspective(300px) rotateY(-20deg) skewY(10deg) translateX(-2px); opacity: 0.8; }
+    75% { transform: perspective(300px) rotateY(-10deg) skewY(5deg) translateX(-1px); opacity: 0.9; }
+    100% { transform: perspective(300px) rotateY(0deg); opacity: 1; }
+}
+
+#story .animated-title i.fa-book {
+    display: inline-block;
+    transform-origin: left center;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+#story .animated-title i.fa-book:after {
+    content: "\f02d"; /* 使用同样的书本图标作为页面 */
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    position: absolute;
+    top: 0;
+    left: 0;
+    color: rgba(247, 125, 170, 0.3);
+    transform: translateX(2px) perspective(300px) rotateY(10deg);
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+#story .animated-title:hover i.fa-book {
+    animation: bookFlip 2s ease-in-out infinite;
+    color: #f77daa;
+    text-shadow: 0 0 8px rgba(247, 125, 170, 0.4);
+}
+
+#story .animated-title:hover i.fa-book:after {
+    opacity: 1;
+    animation: bookFlip 2s ease-in-out infinite reverse;
+}
+
+#story .animated-title:hover {
+    color: #7aa2f7;
+}
+
 /* 响应式调整 */
 @media (max-width: 768px) {
     .questions-box {
