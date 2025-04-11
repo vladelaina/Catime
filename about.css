@@ -269,4 +269,38 @@
         grid-template-columns: 1fr;
         grid-template-rows: repeat(2, auto);
     }
+}
+
+/* 哔哩哔哩视频容器 */
+.video-container {
+    position: relative;
+    width: 100%;
+    max-width: 800px;
+    margin: 20px auto;
+    padding-top: 56.25%; /* 16:9 比例 */
+    box-shadow: 0 4px 16px rgba(122, 162, 247, 0.15);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.video-container iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+.video-container:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 24px rgba(122, 162, 247, 0.2);
+}
+
+/* 适配移动设备的视频容器 */
+@media (max-width: 768px) {
+    .video-container {
+        margin: 15px auto;
+    }
 } 
