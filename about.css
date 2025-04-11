@@ -245,7 +245,7 @@
 .story-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
+    grid-template-rows: 1fr;
     gap: 15px;
     margin: 20px 0;
     max-width: 100%;
@@ -267,6 +267,6 @@
 @media (max-width: 768px) {
     .story-grid {
         grid-template-columns: 1fr;
-        grid-template-rows: repeat(4, auto);
+        grid-template-rows: repeat(2, auto);
     }
 } 
