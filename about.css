@@ -74,6 +74,12 @@
     transition: all 0.3s ease;
 }
 
+.question-icon-img {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+}
+
 .question-item:hover .question-icon-wrap {
     background: rgba(247, 125, 170, 0.1);
     transform: rotate(-5deg);
