@@ -22,8 +22,8 @@
 .question-item {
     display: flex;
     align-items: center;
-    margin: 1rem 0;
-    padding: 0.8rem 1rem;
+    margin: 1.5rem 0;
+    padding: 1.2rem 1.5rem;
     background: rgba(255, 255, 255, 0.5);
     border-radius: 12px;
     transition: all 0.3s ease;
@@ -57,26 +57,26 @@
 }
 
 .question-icon-wrap {
-    width: 36px;
-    height: 36px;
+    width: 48px;
+    height: 48px;
     display: flex;
     align-items: center;
     justify-content: center;
     background: rgba(122, 162, 247, 0.1);
     border-radius: 10px;
-    margin-right: 1rem;
+    margin-right: 1.2rem;
     transition: all 0.3s ease;
 }
 
 .question-icon {
-    font-size: 1.2rem;
+    font-size: 1.5rem;
     color: #7aa2f7;
     transition: all 0.3s ease;
 }
 
 .question-icon-img {
-    width: 20px;
-    height: 20px;
+    width: 28px;
+    height: 28px;
     object-fit: contain;
 }
 
@@ -92,7 +92,7 @@
 
 .question-text {
     margin: 0;
-    font-size: 1rem;
+    font-size: 1.25rem;
     color: var(--text-color);
     transition: all 0.3s ease;
     font-weight: 500;
@@ -218,26 +218,22 @@
 /* 响应式调整 */
 @media (max-width: 768px) {
     .questions-box {
-        padding: 1.2rem;
-        margin: 1rem 0;
+        padding: 1.5rem 1rem;
     }
-
+    
     .question-item {
-        padding: 0.6rem 0.8rem;
-        margin: 0.8rem 0;
+        flex-direction: row;
+        padding: 1rem;
     }
-
+    
     .question-icon-wrap {
-        width: 32px;
-        height: 32px;
+        width: 40px;
+        height: 40px;
+        margin-right: 1rem;
     }
-
-    .question-icon {
-        font-size: 1rem;
-    }
-
+    
     .question-text {
-        font-size: 0.9rem;
+        font-size: 1.1rem;
     }
 }
 
