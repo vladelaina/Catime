@@ -157,6 +157,22 @@
     100% { transform: translateY(0) translateX(0); opacity: 0.3; }
 }
 
+/* 书页翻动动画 */
+@keyframes pageFlipping {
+    0% { transform: rotateY(0) translateY(0); }
+    25% { transform: rotateY(5deg) translateY(-1px); }
+    50% { transform: rotateY(0) translateY(0); }
+    75% { transform: rotateY(-5deg) translateY(-1px); }
+    100% { transform: rotateY(0) translateY(0); }
+}
+
+/* 书本发光效果 */
+@keyframes bookGlow {
+    0% { text-shadow: 0 0 8px rgba(247, 125, 170, 0.4); }
+    50% { text-shadow: 0 0 15px rgba(247, 125, 170, 0.7); }
+    100% { text-shadow: 0 0 8px rgba(247, 125, 170, 0.4); }
+}
+
 /* 书本翻页动画效果 */
 #story .animated-title .book-cover,
 #story .animated-title .book-pages {
@@ -190,7 +206,9 @@
 #story .animated-title:hover .book-pages {
     transform: rotateY(0);
     opacity: 1;
-    text-shadow: 0 0 8px rgba(247, 125, 170, 0.4);
+    animation: 
+        pageFlipping 3s ease-in-out infinite,
+        bookGlow 2s ease-in-out infinite;
 }
 
 #story .animated-title:hover {
