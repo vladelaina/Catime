@@ -624,7 +624,7 @@
     position: relative;
     transition: all 0.5s ease;
     overflow: hidden;
-    animation: storyIconFloat 6s ease-in-out infinite;
+    animation: storyIconFloat 6s ease-in-out infinite alternate;
     box-shadow: 0 5px 20px rgba(122, 162, 247, 0.25);
 }
 
@@ -695,7 +695,8 @@
     animation: storyStarTwinkle 3.7s ease-in-out infinite 1s;
 }
 
-.story-begin-header:hover .story-begin-icon {
+/* 故事开始图标悬停效果 - 仅悬停在图标上时触发 */
+.story-begin-icon:hover {
     transform: translateY(-5px) rotate(5deg);
     box-shadow: 
         0 8px 30px rgba(122, 162, 247, 0.4),
@@ -703,54 +704,17 @@
     background: linear-gradient(135deg, rgba(122, 162, 247, 0.3), rgba(100, 140, 230, 0.2));
 }
 
-/* 图标主体 */
-.story-begin-icon i {
-    font-size: 2.5rem;
-    color: var(--primary-color);
-    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    position: relative;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
-    z-index: 3;
-    animation: storyBookBreathe 3s ease-in-out infinite alternate;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 900; /* 确保图标正确加载 */
-}
-
-/* 翻页效果 - 简化实现 */
-.story-begin-icon .book-open {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transform: scale(0);
-    transition: all 0.5s ease;
-}
-
-.story-begin-icon .book-open i {
-    font-size: 2.5rem;
-    color: var(--accent-color);
-    filter: drop-shadow(0 2px 4px rgba(247, 125, 170, 0.3));
-}
-
-/* 悬停效果 */
-.story-begin-header:hover .story-begin-icon > i.fas.fa-book {
+.story-begin-icon:hover > i.fas.fa-book {
     opacity: 0;
     transform: scale(0);
 }
 
-.story-begin-header:hover .story-begin-icon .book-open {
+.story-begin-icon:hover .book-open {
     opacity: 1;
     transform: scale(1);
 }
 
-.story-begin-header:hover .story-begin-icon .book-open i {
+.story-begin-icon:hover .book-open i {
     animation: pageFlipping 3s ease-in-out infinite, pinkBookGlow 2s ease-in-out infinite;
 }
 
@@ -943,54 +907,20 @@
 }
 
 .name-origin-header:hover .name-origin-icon {
-    box-shadow: 0 8px 30px rgba(247, 125, 170, 0.4);
+    /* 已被新选择器替换，移除 */
 }
 
 .name-origin-header:hover .name-origin-icon::before,
 .name-origin-header:hover .name-origin-icon::after {
-    animation-play-state: paused;
-}
-
-.name-origin-icon i {
-    font-size: 2.5rem;
-    color: var(--accent-color);
-    transition: all 0.5s ease;
-    position: relative;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 900; /* 确保图标正确加载 */
-}
-
-.name-origin-icon .alt-icon {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transform: scale(0);
-    transition: all 0.5s ease;
-}
-
-.name-origin-icon .alt-icon i {
-    font-size: 2.5rem;
-    color: #f77daa;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+    /* 已被新选择器替换，移除 */
 }
 
 .name-origin-header:hover .name-origin-icon > i {
-    opacity: 0;
-    transform: scale(0);
+    /* 已被新选择器替换，移除 */
 }
 
 .name-origin-header:hover .name-origin-icon .alt-icon {
-    opacity: 1;
-    transform: scale(1.2) rotate(15deg);
+    /* 已被新选择器替换，移除 */
 }
 
 .name-origin-title {
@@ -1098,4 +1028,127 @@
     .name-origin-decoration .deco-line {
         width: 80px;
     }
+}
+
+/* 名字由来图标悬停效果 - 仅悬停在图标上时触发 */
+.name-origin-icon:hover {
+    box-shadow: 0 8px 30px rgba(247, 125, 170, 0.4);
+}
+
+.name-origin-icon:hover::before,
+.name-origin-icon:hover::after {
+    animation-play-state: paused;
+}
+
+.name-origin-icon:hover > i {
+    opacity: 0;
+    transform: scale(0);
+}
+
+.name-origin-icon:hover .alt-icon {
+    opacity: 1;
+    transform: scale(1.2) rotate(15deg);
+}
+
+/* Logo故事图标悬停效果 - 仅悬停在图标上时触发 */
+.logo-story-icon:hover::before {
+    animation: iconShine 1.5s ease-out forwards;
+}
+
+.logo-story-icon:hover > i {
+    opacity: 0;
+    transform: scale(0);
+}
+
+.logo-story-icon:hover .alt-icon {
+    opacity: 1;
+    transform: scale(1.1);
+    animation: iconBounce 1s ease-in-out;
+}
+
+/* 删除旧的header悬停选择器 */
+.story-begin-header:hover .story-begin-icon,
+.name-origin-header:hover .name-origin-icon,
+.logo-story-header:hover .logo-story-icon,
+.story-begin-header:hover .story-begin-icon > i.fas.fa-book,
+.story-begin-header:hover .story-begin-icon .book-open,
+.story-begin-header:hover .story-begin-icon .book-open i,
+.name-origin-header:hover .name-origin-icon > i,
+.name-origin-header:hover .name-origin-icon .alt-icon,
+.logo-story-header:hover .logo-story-icon > i,
+.logo-story-header:hover .logo-story-icon .alt-icon,
+.name-origin-header:hover .name-origin-icon::before,
+.name-origin-header:hover .name-origin-icon::after,
+.logo-story-header:hover .logo-story-icon::before {
+    /* 已被新选择器替换，删除这些规则 */
+    transition: none;
+}
+
+/* 图标主体样式 */
+.story-begin-icon i {
+    font-size: 2.5rem;
+    color: var(--primary-color);
+    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+    z-index: 3;
+    animation: storyBookBreathe 3s ease-in-out infinite alternate;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900; /* 确保图标正确加载 */
+}
+
+/* 翻页效果 - 简化实现 */
+.story-begin-icon .book-open {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transform: scale(0);
+    transition: all 0.5s ease;
+}
+
+.story-begin-icon .book-open i {
+    font-size: 2.5rem;
+    color: var(--accent-color);
+    filter: drop-shadow(0 2px 4px rgba(247, 125, 170, 0.3));
+}
+
+/* 名字由来图标基础样式 */
+.name-origin-icon i {
+    font-size: 2.5rem;
+    color: var(--accent-color);
+    transition: all 0.5s ease;
+    position: relative;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900; /* 确保图标正确加载 */
+}
+
+.name-origin-icon .alt-icon {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transform: scale(0);
+    transition: all 0.5s ease;
+}
+
+.name-origin-icon .alt-icon i {
+    font-size: 2.5rem;
+    color: #f77daa;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 } 
