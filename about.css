@@ -735,8 +735,8 @@
 
 .story-begin-icon .book-open i {
     font-size: 2.5rem;
-    color: var(--primary-color);
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+    color: var(--accent-color);
+    filter: drop-shadow(0 2px 4px rgba(247, 125, 170, 0.3));
 }
 
 /* 悬停效果 */
@@ -751,7 +751,14 @@
 }
 
 .story-begin-header:hover .story-begin-icon .book-open i {
-    animation: pageFlipping 3s ease-in-out infinite, bookGlow 2s ease-in-out infinite;
+    animation: pageFlipping 3s ease-in-out infinite, pinkBookGlow 2s ease-in-out infinite;
+}
+
+/* 添加粉色书本发光效果 */
+@keyframes pinkBookGlow {
+    0% { text-shadow: 0 0 8px rgba(247, 125, 170, 0.4); }
+    50% { text-shadow: 0 0 15px rgba(247, 125, 170, 0.7); }
+    100% { text-shadow: 0 0 8px rgba(247, 125, 170, 0.4); }
 }
 
 /* 增强动画关键帧 */
