@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Catime 关于 - 了解 Catime 的起源、开发故事和背后的理念。">
+    <title>Catime - 关于</title>
+
+    <!-- Google 字体 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <!-- AOS 库 -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    
+    <!-- 自定义样式表 -->
+    <link rel="stylesheet" href="style.css">
+
+    <link rel="icon" type="image/png" href="assets/catime.png">
+</head>
+<body>
+    <!-- 滚动进度指示器 -->
+    <div class="scroll-progress-container" id="scrollProgressContainer">
+        <div class="scroll-progress-glow"></div>
+        <div class="scroll-progress-particles">
+            <span class="particle p1"></span>
+            <span class="particle p2"></span>
+            <span class="particle p3"></span>
+            <span class="particle p4"></span>
+            <span class="particle p5"></span>
+            <span class="particle p6"></span>
+            <span class="particle p7"></span>
+            <span class="particle p8"></span>
+        </div>
+        <svg class="scroll-progress-circle" viewBox="0 0 100 100">
+            <defs>
+                <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#7aa2f7" />
+                    <stop offset="50%" stop-color="#9aaee8" />
+                    <stop offset="100%" stop-color="#f77daa" />
+                </linearGradient>
+                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="3" result="blur" />
+                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                </filter>
+            </defs>
+            <circle class="scroll-progress-circle-bg" cx="50" cy="50" r="45"></circle>
+            <circle class="scroll-progress-circle-fill" cx="50" cy="50" r="45"></circle>
+            <circle class="scroll-progress-circle-inner" cx="50" cy="50" r="35"></circle>
+            <path class="scroll-progress-circle-deco" d="M50,15 A35,35 0 0,1 85,50 A35,35 0 0,1 50,85 A35,35 0 0,1 15,50 A35,35 0 0,1 50,15 Z" />
+        </svg>
+        <div class="scroll-progress-icon">
+            <i class="fas fa-arrow-up"></i>
+        </div>
+        <div class="scroll-progress-emoji-container">
+            <span class="emoji emoji-rocket">🚀</span>
+            <span class="emoji emoji-star">⭐</span>
+            <span class="emoji emoji-heart">💖</span>
+            <span class="emoji emoji-sparkles">✨</span>
+        </div>
+        <div class="scroll-progress-stars">
+            <span class="star star-1">✦</span>
+            <span class="star star-2">✧</span>
+            <span class="star star-3">✦</span>
+            <span class="star star-4">✧</span>
+            <span class="star star-5">✦</span>
+            <span class="star star-6">✧</span>
+        </div>
+        <div class="scroll-progress-percentage">0%</div>
+        <div class="scroll-progress-tooltip">返回顶部</div>
+    </div>
+
+    <!-- 页头/导航 -->
+    <header class="main-header">
+        <nav class="container">
+            <a href="index.html" class="logo"><img src="assets/catime.png" class="logo-img" alt="Catime Logo"> Catime</a>
+            <ul class="nav-links">
+                <li><a href="index.html">首页</a></li>
+                <li><a href="guide.html">指南</a></li>
+                <li><a href="about.html" class="active">关于</a></li>
+                <li><a href="https://github.com/vladelaina/Catime" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+                <li><a href="downloads/catime_1.0.5.exe" class="nav-button" download><i class="fas fa-download"></i> 下载</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <!-- 关于头部 -->
+        <section class="guide-hero">
+            <div class="container">
+                <h1 class="guide-hero-title" data-aos="fade-up"><span class="catime-text">Catime</span><span class="guide-accent">关于</span></h1>
+                <div class="guide-hero-decoration">
+                    <div class="floating-icon icon1"><i class="fas fa-heart"></i></div>
+                    <div class="floating-icon icon2"><i class="fas fa-star"></i></div>  
+                    <div class="floating-icon icon3"><i class="fas fa-cat"></i></div>
+                    <div class="floating-icon icon4"><i class="fas fa-history"></i></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="guide-section">
+            <div class="container">
+                <article class="guide-content" data-aos="fade-up" data-aos-delay="200">
+                    <div id="intro" class="guide-section-content">
+                        <h1 class="animated-title">嘿，朋友！</h1>
+                        <p>你可能会有不少好奇：</p>
+                        <div class="feature-box">
+                            <div class="feature-content">
+                                <p><strong>"Catime 这个名字是怎么来的？"</strong></p>
+                                <p><strong>"为什么要用 C 语言写？"</strong></p>
+                                <p><strong>"还有，为什么图标是猫猫泥？"</strong></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="story" class="guide-section-content">
+                        <h2 class="animated-title"><i class="fas fa-book"></i> 梦开始的地方</h2>
+                        <p>那时候的我，还只是个大二的普通大学生，每天长时间坐在电脑前。你有没有过那种久坐之后，肩膀酸痛到不行的感觉？我可是深有体会。</p>
+                        
+                        <div class="feature-box">
+                            <div class="feature-content">
+                                <p>当时我心想："要是能有一把人体工学椅，或许就能缓解这些问题了吧？"</p>
+                                <p>于是，我咬牙斥巨资 500 多元买了一把（要知道那时候我一个月的生活费也才 1500）。</p>
+                            </div>
+                        </div>
+
+                        <p>唔~ 然而买回来才发现，虽然疼痛有稍微减轻一些，但远远谈不上"解决"。</p>
+                        <p>那一刻我意识到，也许我需要尝试一些不一样的方法，去真正解决这个困扰我的问题。</p>
+
+                        <div class="guide-image animated-image">
+                            <img src="assets/Story 4.jpg" alt="Story 4">
+                        </div>
+
+                        <div class="feature-box">
+                            <div class="feature-content">
+                                <p>我知道问题的根源是"久坐"。</p>
+                                <p>那该怎么才能让我离开桌面、强迫自己活动一下呢？</p>
+                            </div>
+                        </div>
+
+                        <p>于是我开始尝试一些计时器工具，比如 Pomotroid，还有 <a href="https://github.com/xujiangjiang/Easy-Cat-Timer" target="_blank" rel="noopener noreferrer">Easy-Cat-Timer</a> 等这些优秀又开源的番茄时钟和计时器。</p>
+
+                        <div class="guide-image animated-image">
+                            <img src="assets/Story 3.gif" alt="Story 3">
+                        </div>
+
+                        <div class="feature-box">
+                            <div class="feature-content">
+                                <p>但很快我发现——这些工具对我并不管用。</p>
+                                <p>时间一到，我不是选择忽略，就是直接一键关闭提示。</p>
+                                <p>那时候我心里冒出个想法：<strong>"要不干脆自己写一个算了！"</strong></p>
+                            </div>
+                        </div>
+
+                        <div class="guide-image animated-image">
+                            <img src="assets/Story 1.gif" alt="Story 1">
+                        </div>
+
+                        <p>唔~说实话，那时候我还是个小白，除了会点 C，其他几乎啥也不会。</p>
+                        <p>不过好在这个项目也不算复杂，于是我磕磕绊绊地做了两个多月，中间还重构了一次。</p>
+
+                        <div class="guide-image animated-image">
+                            <img src="assets/Story 6.gif" alt="Story 6">
+                        </div>
+
+                        <div class="feature-box">
+                            <div class="feature-content">
+                                <p>一开始我还想着整点花活儿，比如做个角色能从左边走到右边，后来一想，好像也没必要……</p>
+                                <p>最终我保留了最基础、最实用的部分 —— 简洁的计时器界面和提醒功能。</p>
+                            </div>
+                        </div>
+
+                        <div class="guide-image animated-image">
+                            <img src="assets/Story 2.gif" alt="Story 2">
+                        </div>
+
+                        <div class="feature-box">
+                            <div class="feature-content">
+                                <p>一开始其实我也认真考虑过加一个设置界面，甚至连 UI 图都画好了。</p>
+                                <p>但当我真正动手的时候才发现——<strong>用 C 写 UI，简直是灾难现场。</strong></p>
+                                <p>真的是每多写一行都在怀疑人生……</p>
+                                <p>最终只能忍痛割爱，放弃了这个念头。</p>
+                            </div>
+                        </div>
+
+                        <div class="guide-image animated-image">
+                            <img src="assets/Story 5.jpg" alt="Story 5">
+                        </div>
+
+                        <div class="feature-box">
+                            <div class="feature-content">
+                                <p>本来是懒得写 UI，结果竟然意外实现了"极简主义设计"。</p>
+                            </div>
+                        </div>
+
+                        <div class="guide-image animated-image">
+                            <img src="assets/No additional operations.jpg" alt="No additional operations">
+                        </div>
+
+                        <div class="feature-box">
+                            <div class="feature-content">
+                                <p>第一个版本发布的时候，我还顺带肝了个演示视频——主要是因为当时还不支持中文，全英文界面，生怕大家看不懂我在整啥。</p>
+                            </div>
+                        </div>
+
+                        <div class="guide-image animated-image">
+                            <img src="assets/wtf.png" alt="wtf">
+                        </div>
+
+                        <div class="feature-box">
+                            <div class="feature-content">
+                                <p>唔，好吧，视频也救不了——还是有点让人看不懂。</p>
+                            </div>
+                        </div>
+
+                        <div class="feature-box">
+                            <div class="feature-content">
+                                <p>😂本来只是随手整了个 demo，结果视频一发，评论区居然开始热闹了起来。</p>
+                                <p>我一边怀疑人生一边想：<strong>"不会吧，不会真有人想用吧？"</strong></p>
+                                <p>然后……我竟然开始认真了。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="name" class="guide-section-content">
+                        <h2 class="animated-title"><i class="fas fa-tag"></i> 关于名字的由来</h2>
+                        <p>我之前一直在用 <a href="https://github.com/xujiangjiang/Easy-Cat-Timer" target="_blank" rel="noopener noreferrer">Easy-Cat-Timer</a>（C#） ——真的超级好用！</p>
+
+                        <div class="guide-image animated-image">
+                            <img src="assets/Easy Cat Timer.png" alt="Easy Cat Timer">
+                        </div>
+
+                        <div class="feature-box">
+                            <div class="feature-content">
+                                <p>而且特别特别可爱！！！✨</p>
+                                <p>不过有点可惜，它已经 <strong>6 年没更新了</strong>。</p>
+                                <p>当时我心想：<strong>"要不我来魔改一下试试？"</strong></p>
+                                <p>但很快我就意识到……<strong>好吧，C# 对我来说还是太难了 QAQ</strong></p>
+                            </div>
+                        </div>
+
+                        <p>所以我干脆用我唯一稍微会一点的 C，自己整一个！</p>
+
+                        <div class="feature-box">
+                            <div class="feature-content">
+                                <p>而 <strong>"Caime"</strong> 这个名字，其实是我向 <strong>Easy-Cat-Timer</strong> 的作者——<a href="https://space.bilibili.com/222417" target="_blank" rel="noopener noreferrer">絮酱酱</a> 致敬而取的。</p>
+                                <p>她是一位既可爱又坚强的女孩子！！！</p>
+                                <p>尽管她的项目已经停更多年，但她是我梦想开始的地方。祝絮酱酱早日康复！</p>
+                            </div>
+                        </div>
+
+                        <div class="guide-image animated-image">
+                            <img src="assets/xujiangjiang_dynamic.jpg" alt="xujiangjiang_dynamic">
+                        </div>
+
+                        <div class="guide-image animated-image">
+                            <img src="assets/xujiangjiang_comment area.jpg" alt="xujiangjiang_comment area">
+                        </div>
+                    </div>
+
+                    <div id="logo" class="guide-section-content">
+                        <h2 class="animated-title"><i class="fas fa-image"></i> 关于 Logo 的故事</h2>
+                        <p>当是我在跟画师讨论设计logo的时候，其实自己脑子里面没有太多的概念，我只知道想要的图标跟猫咪还有二次元有关，具体呢，其实我也不知道。不过刚好我有一个表情包</p>
+
+                        <div class="guide-image animated-image">
+                            <img src="assets/Expression pack.jpg" alt="Expression pack">
+                        </div>
+
+                        <p>上面刚好有一个猫咪，然后她描了一遍</p>
+
+                        <div class="guide-image animated-image">
+                            <img src="assets/sketch.jpg" alt="sketch">
+                        </div>
+
+                        <div class="feature-box">
+                            <div class="feature-content">
+                                <p>"唔~要不我帮你查一下这个图的来源"</p>
+                                <p>"<a href="https://space.bilibili.com/26087398?spm_id_from=333.1387.follow.user_card.click" target="_blank" rel="noopener noreferrer">猫屋敷梨梨Official</a>"</p>
+                            </div>
+                        </div>
+
+                        <p>说实话，这是我第一次听到这个名字，然后.....没错，我直接私信up，然后</p>
+
+                        <div class="guide-image animated-image">
+                            <img src="assets/Follow me.jpg" alt="Follow me">
+                        </div>
+
+                        <div class="feature-box">
+                            <div class="feature-content">
+                                <p>对吧~小声嘀咕：我之前的画师把我给我删了🤣！！！</p>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </section>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="main-footer">
+        <div class="container">
+            <p>&copy; 2024 Catime Project by <a href="https://github.com/vladelaina" target="_blank" rel="noopener noreferrer">vladelaina</a>.</p>
+            <p>基于 <a href="https://github.com/vladelaina/Catime/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Apache 2.0</a> 许可开源.</p>
+            <p>图标画师: <a href="https://space.bilibili.com/26087398" target="_blank" rel="noopener noreferrer">猫屋敷梨梨Official</a></p>
+            <div class="footer-links">
+                <a href="https://github.com/vladelaina/Catime/issues" target="_blank" rel="noopener noreferrer">问题反馈</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- AOS 库 JS -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 50,
+        });
+    </script>
+
+    <!-- 滚动进度指示器脚本 -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const progressContainer = document.getElementById('scrollProgressContainer');
+            const progressCircle = document.querySelector('.scroll-progress-circle-fill');
+            const progressPercentage = document.querySelector('.scroll-progress-percentage');
+            const progressIcon = document.querySelector('.scroll-progress-icon');
+            const circleLength = progressCircle.getTotalLength ? 
+                                 progressCircle.getTotalLength() : 283; // 回退值
+            
+            // 初始设置
+            progressCircle.style.strokeDasharray = circleLength;
+            progressCircle.style.strokeDashoffset = circleLength;
+            
+            // 计算滚动进度
+            function updateProgress() {
+                // 获取文档高度和滚动位置
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const docHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+                const scrollPercentage = scrollTop / docHeight;
+                
+                // 更新环形进度条
+                const offset = circleLength - (scrollPercentage * circleLength);
+                progressCircle.style.strokeDashoffset = offset;
+                
+                // 更新百分比文本
+                const percentValue = Math.min(Math.round(scrollPercentage * 100), 100);
+                progressPercentage.textContent = `${percentValue}%`;
+                
+                // 改变颜色和图标效果，根据进度动态变化
+                updateAppearanceByProgress(percentValue);
+            }
+            
+            // 根据进度动态更改外观
+            function updateAppearanceByProgress(percentValue) {
+                // 设置渐变色比例
+                if (percentValue > 80) {
+                    progressIcon.style.color = 'var(--accent-color)';
+                    progressIcon.style.textShadow = '0 2px 8px rgba(247, 125, 170, 0.5)';
+                } else if (percentValue > 40) {
+                    progressIcon.style.color = '#9aa5ce';
+                    progressIcon.style.textShadow = '0 2px 5px rgba(154, 165, 206, 0.4)';
+                } else {
+                    progressIcon.style.color = 'var(--primary-color)';
+                    progressIcon.style.textShadow = '0 2px 5px rgba(122, 162, 247, 0.3)';
+                }
+                
+                // 调整容器大小和背景，根据滚动位置微调
+                const sizeAdjust = 1 + (percentValue * 0.0015); // 最大放大到1.15倍
+                progressContainer.style.transform = `scale(${sizeAdjust})`;
+                
+                // 增加随机微动效果
+                if (Math.random() > 0.95) {
+                    addMicroMovement();
+                }
+            }
+            
+            // 添加微小的随机动画，让图标更生动
+            function addMicroMovement() {
+                const stars = document.querySelectorAll('.star');
+                const randomStar = stars[Math.floor(Math.random() * stars.length)];
+                randomStar.style.opacity = '0.7';
+                
+                setTimeout(() => {
+                    randomStar.style.opacity = '0';
+                }, 300);
+            }
+            
+            // 点击回到顶部，添加动画效果
+            progressContainer.addEventListener('click', function() {
+                // 添加点击效果类
+                this.classList.add('clicked');
+                
+                // 创建粒子爆发效果
+                createParticleBurst();
+                
+                // 平滑滚动到顶部
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+                
+                // 播放声音效果（如果浏览器支持）
+                playClickSound();
+                
+                // 移除点击效果类
+                setTimeout(() => {
+                    this.classList.remove('clicked');
+                }, 500);
+            });
+            
+            // 播放点击声音 (轻微的"叮"声)
+            function playClickSound() {
+                try {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                    oscillator.frequency.exponentialRampToValueAtTime(500, audioContext.currentTime + 0.2);
+                    
+                    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.3);
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.start();
+                    oscillator.stop(audioContext.currentTime + 0.3);
+                } catch (e) {
+                    // 浏览器不支持 Web Audio API，静默失败
+                    console.log('Audio API不受支持');
+                }
+            }
+            
+            // 创建粒子爆发效果
+            function createParticleBurst() {
+                const particles = document.querySelectorAll('.particle');
+                
+                particles.forEach(particle => {
+                    // 重置动画
+                    particle.style.animation = 'none';
+                    particle.offsetHeight; // 触发重排
+                    particle.style.animation = null;
+                    
+                    // 随机位置和颜色
+                    const hue = Math.floor(Math.random() * 30) + 330; // 粉红色范围
+                    const saturation = Math.floor(Math.random() * 30) + 70;
+                    const lightness = Math.floor(Math.random() * 20) + 70;
+                    
+                    particle.style.background = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+                    particle.style.boxShadow = `0 0 10px hsl(${hue}, ${saturation}%, ${lightness}%)`;
+                });
+            }
+            
+            // 悬停时显示完整的工具提示
+            progressContainer.addEventListener('mouseenter', function() {
+                document.querySelector('.scroll-progress-tooltip').textContent = "返回顶部";
+            });
+            
+            // 监听滚动事件，使用防抖处理
+            let scrollTimeout;
+            window.addEventListener('scroll', function() {
+                clearTimeout(scrollTimeout);
+                scrollTimeout = setTimeout(updateProgress, 10);
+            });
+            
+            // 初始化进度
+            updateProgress();
+            
+            // 定期添加微小的动画，使元素更生动
+            setInterval(() => {
+                if (!progressContainer.matches(':hover')) {
+                    if (Math.random() > 0.7) {
+                        addMicroMovement();
+                    }
+                }
+            }, 3000);
+            
+            // 为指南页面的图片添加3D倾斜效果
+            document.querySelectorAll('.animated-image img').forEach(img => {
+                const container = img.closest('.animated-image');
+                
+                // 最大倾斜角度
+                const maxRotateX = 10;
+                const maxRotateY = 15;
+                
+                // 呼吸效果的定时器
+                let breatheTimer = null;
+                
+                // 当前旋转角度
+                let currentRotateX = 0;
+                let currentRotateY = 0;
+                
+                // 设置呼吸效果
+                function startBreatheEffect() {
+                    if (breatheTimer) return; // 避免重复启动
+                    
+                    let phase = 0;
+                    breatheTimer = setInterval(() => {
+                        // 添加缩放效果，轻微的呼吸效果
+                        const scale = 1.02 + Math.sin(phase) * 0.015;
+                        
+                        // 应用变换，结合当前的旋转角度和缩放效果
+                        img.style.transform = `scale(${scale}) perspective(1000px) rotateY(${currentRotateY}deg) rotateX(${currentRotateX}deg)`;
+                        
+                        phase += 0.05;
+                    }, 30);
+                }
+
+                // 停止呼吸效果
+                function stopBreatheEffect() {
+                    if (breatheTimer) {
+                        clearInterval(breatheTimer);
+                        breatheTimer = null;
+                    }
+                }
+                
+                container.addEventListener('mousemove', function(e) {
+                    // 获取鼠标在元素内的相对位置（0-1）
+                    const rect = container.getBoundingClientRect();
+                    const x = (e.clientX - rect.left) / rect.width;
+                    const y = (e.clientY - rect.top) / rect.height;
+                    
+                    // 计算倾斜角度（转换为-maxRotate到maxRotate的范围）
+                    currentRotateY = (x - 0.5) * 2 * maxRotateY;
+                    currentRotateX = (y - 0.5) * -2 * maxRotateX; // 负号让鼠标在顶部时，图片向上倾斜
+                });
+                
+                // 鼠标离开时恢复原始状态
+                container.addEventListener('mouseleave', function() {
+                    stopBreatheEffect(); // 停止呼吸效果
+                    currentRotateX = 0;
+                    currentRotateY = 0;
+                    // 直接设置回初始状态
+                    img.style.transform = 'scale(1) perspective(1000px)';
+                });
+                
+                // 鼠标进入时准备变换并启动呼吸效果
+                container.addEventListener('mouseenter', function() {
+                    img.style.transition = 'transform 0.2s ease-out';
+                    startBreatheEffect(); // 启动呼吸效果
+                });
+                
+                // 添加点击效果：按下和回弹
+                img.addEventListener('mousedown', function() {
+                    // 暂时停止呼吸效果
+                    stopBreatheEffect();
+                    // 按下效果 - 只添加轻微下沉，不缩放
+                    img.style.transform = `scale(0.98) perspective(1000px) rotateY(${currentRotateY}deg) rotateX(${currentRotateX}deg) translateZ(-10px)`;
+                });
+                
+                // 鼠标释放时回弹
+                document.addEventListener('mouseup', function(event) {
+                    if (container.matches(':hover')) {
+                        // 如果鼠标仍在图片上，回弹到悬停状态
+                        if (event.target === img || img.contains(event.target)) {
+                            // 添加更快速的回弹效果
+                            img.style.transition = 'transform 0.15s cubic-bezier(0.34, 1.2, 0.64, 1)';
+                            
+                            // 重新启动呼吸效果之前，先执行回弹动画
+                            setTimeout(() => {
+                                startBreatheEffect();
+                            }, 100);
+                            
+                            // 恢复正常过渡，延迟时间与动画时长匹配
+                            setTimeout(() => {
+                                img.style.transition = 'transform 0.2s ease-out';
+                            }, 150);
+                        }
+                    } else {
+                        // 如果鼠标不在图片上，保持停止呼吸效果的状态
+                        img.style.transform = 'scale(1) perspective(1000px)';
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
