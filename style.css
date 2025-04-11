@@ -6558,131 +6558,71 @@ p:hover {
     width: 100%;
 }
 
-/* 添加悬停时的粒子效果 */
-.contributor-particles {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 0;
-}
-
-.contributor-particle {
-    position: absolute;
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-}
-
-.contributors-grid td:hover .contributor-particle {
-    animation: floatParticle 1s forwards ease-out;
-}
-
-@keyframes floatParticle {
-    0% {
-        opacity: 0.8;
-        transform: translate(0, 0) scale(1);
-    }
-    100% {
-        opacity: 0;
-        transform: translate(
-            calc(var(--tx, 0) * 1px),
-            calc(var(--ty, 0) * 1px)
-        ) scale(0);
-    }
-}
-
-/* 响应式调整 */
-@media (max-width: 992px) {
-    .contributors-grid td {
-        width: 33.33% !important; /* 每行显示3个 */
-    }
-}
-
-@media (max-width: 768px) {
-    .contributors {
-        padding: 60px 0;
-    }
-    .contributors-grid table {
-        border-spacing: 10px;
-    }
-    .contributors-grid td {
-        width: 48% !important; /* 每行显示2个 */
-        padding: 15px 8px;
-    }
-    .contributor-avatar-container {
-        width: 76px;
-        height: 76px;
-    }
-    .contributors-grid img {
-        width: 70px;
-        height: 70px;
-    }
-}
-
-@media (max-width: 480px) {
-    .contributors-grid td {
-        width: 90% !important; /* 每行显示1个 */
-        display: block; /* 堆叠显示 */
-        margin: 10px auto;
-    }
-    .contributor-avatar-container {
-        width: 66px;
-        height: 66px;
-    }
-    .contributors-grid img {
-        width: 60px;
-        height: 60px;
-    }
-    .contributors-grid sub {
-        font-size: 0.85em;
-    }
-}
-
 /* 支持项目区域 */
 .support-project {
     padding: 6rem 0;
-    background-color: var(--bg-secondary); /* 使用与贡献者区域相同的背景色 */
+    background: linear-gradient(135deg, var(--bg-secondary) 0%, rgba(240, 245, 255, 0.8) 100%);
     position: relative;
-    border-top: 1px solid rgba(122, 162, 247, 0.15); /* 保留细微的顶部边框 */
+    border-top: 1px solid rgba(122, 162, 247, 0.15);
+    overflow: hidden;
 }
 
-/* 移除自动添加的::before伪元素，因为它与上面的 border-top 重复了 */
-/*
 .support-project::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(122, 162, 247, 0.3), transparent);
+    top: -10%;
+    right: -10%;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(122, 162, 247, 0.1) 0%, rgba(122, 162, 247, 0) 70%);
+    border-radius: 50%;
+    z-index: 1;
+    animation: supportBgPulse 8s infinite alternate ease-in-out;
 }
-*/
+
+.support-project::after {
+    content: '';
+    position: absolute;
+    bottom: -5%;
+    left: -5%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(247, 125, 170, 0.1) 0%, rgba(247, 125, 170, 0) 70%);
+    border-radius: 50%;
+    z-index: 1;
+    animation: supportBgPulse 8s infinite alternate-reverse ease-in-out;
+}
+
+@keyframes supportBgPulse {
+    0% { transform: scale(1); opacity: 0.4; }
+    50% { transform: scale(1.1); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 0.4; }
+}
 
 .support-methods {
     display: flex;
     justify-content: center;
-    align-items: flex-start; /* 垂直顶部对齐 */
-    gap: 4rem; /* 增加二维码之间的间距 */
+    align-items: flex-start;
+    gap: 4rem;
     margin-top: 3rem;
-    flex-wrap: wrap; /* 允许在小屏幕上换行 */
+    flex-wrap: wrap;
+    position: relative;
+    z-index: 2;
 }
 
 .support-method {
     text-align: center;
-    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    padding: 2rem; /* 增加内边距 */
-    background: #ffffff;
-    border-radius: 18px; /* 更圆润的边角 */
-    box-shadow: 0 6px 25px rgba(172, 188, 229, 0.2); /* 更柔和的阴影 */
-    border: 1px solid #e8eaf6; /* 更浅的边框 */
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    padding: 2rem;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(122, 162, 247, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.8);
     position: relative;
-    overflow: hidden; /* 配合伪元素效果 */
+    overflow: hidden;
+    transform: translateY(0);
 }
 
 .support-method::before {
@@ -6692,10 +6632,10 @@ p:hover {
     left: -50%;
     width: 200%;
     height: 200%;
-    background: radial-gradient(circle, rgba(122, 162, 247, 0.1) 0%, rgba(122, 162, 247, 0) 70%);
+    background: radial-gradient(circle, rgba(122, 162, 247, 0.2) 0%, rgba(122, 162, 247, 0) 70%);
     opacity: 0;
     transform: scale(0.5);
-    transition: opacity 0.4s ease, transform 0.4s ease;
+    transition: all 0.4s ease;
     z-index: 1;
 }
 
@@ -6705,64 +6645,88 @@ p:hover {
 }
 
 .support-method:hover {
-    transform: translateY(-10px) scale(1.04); /* 悬浮效果更明显 */
-    box-shadow: 0 15px 40px rgba(122, 162, 247, 0.2);
+    transform: translateY(-15px);
+    box-shadow: 0 20px 40px rgba(122, 162, 247, 0.25), 0 0 20px rgba(122, 162, 247, 0.1);
     border-color: rgba(122, 162, 247, 0.3);
 }
 
 .support-qr {
-    width: 180px; /* 调整二维码大小 */
+    width: 180px;
     height: 180px;
-    object-fit: contain; /* 保持二维码比例 */
-    margin-bottom: 1.5rem; /* 增加二维码和标签的间距 */
-    border-radius: 10px; /* 增加圆角 */
-    border: 1px solid #e0e4f0;
+    object-fit: contain;
+    margin-bottom: 1.5rem;
+    border-radius: 15px;
+    border: 2px solid rgba(255, 255, 255, 0.9);
     background-color: #fff;
-    padding: 8px; /* 给二维码一点内边距 */
-    transition: all 0.3s ease;
-    position: relative; /* 使内容显示在伪元素之上 */
-    z-index: 2; /* 使内容显示在伪元素之上 */
+    padding: 10px;
+    transition: all 0.4s ease;
+    position: relative;
+    z-index: 2;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
 }
 
 .support-method:hover .support-qr {
-    transform: scale(1.05); /* 轻微放大二维码 */
-    border-color: #c5cdeb;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    transform: scale(1.05) rotate(1deg);
+    border-color: var(--accent-color);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+}
+
+.support-method:hover .alipay-qr {
+    border-color: #1677ff;
+}
+
+.support-method:hover .wechat-qr {
+    border-color: #07c160;
 }
 
 .support-label {
-    font-size: 1.15rem; /* 增大字体 */
+    font-size: 1.2rem;
     font-weight: 600;
     color: var(--text-light-color);
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0.6rem;
-    transition: color 0.3s ease, transform 0.3s ease;
-    position: relative; /* 使内容显示在伪元素之上 */
-    z-index: 2; /* 使内容显示在伪元素之上 */
+    transition: all 0.3s ease;
+    position: relative;
+    z-index: 2;
 }
 
 .support-method:hover .support-label {
-    color: var(--primary-color); /* 使用主色调 */
-    transform: translateY(-2px); /* 标签轻微上移 */
+    color: var(--primary-color);
+    transform: translateY(-2px) scale(1.05);
+    text-shadow: 0 2px 10px rgba(122, 162, 247, 0.3);
 }
 
 .support-label i {
-    font-size: 1.4rem; /* 调整图标大小 */
-    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); /* 添加回弹效果 */
+    font-size: 1.4rem;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .support-method:hover .support-label i {
-    transform: scale(1.2) rotate(-10deg); /* 悬停时图标放大并轻微旋转 */
+    transform: scale(1.3) rotate(-10deg);
+    animation: iconWiggle 1s infinite alternate ease-in-out;
+}
+
+@keyframes iconWiggle {
+    0% { transform: scale(1.3) rotate(-10deg); }
+    100% { transform: scale(1.3) rotate(5deg); }
 }
 
 .support-label.alipay i {
-    color: #1677ff; /* 更新为最新的支付宝蓝色 */
+    color: #1677ff;
+}
+
+.support-method:hover .support-label.alipay {
+    color: #1677ff;
 }
 
 .support-label.wechat i {
-    color: #07c160; /* 微信绿色 */
+    color: #07c160;
+}
+
+.support-method:hover .support-label.wechat {
+    color: #07c160;
 }
 
 /* Coffee Icon Animation */
@@ -6770,24 +6734,56 @@ p:hover {
     display: inline-block;
     animation: coffeeSteam 2.5s infinite ease-out 0.5s;
     transform-origin: bottom center;
+    position: relative;
+}
+
+.support-project .section-title i.fa-mug-hot::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    width: 20px;
+    height: 8px;
+    background: radial-gradient(ellipse at center, rgba(255, 172, 51, 0.6) 0%, rgba(255, 172, 51, 0) 70%);
+    border-radius: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    animation: coffeeSteamParticle 2.5s infinite ease-out;
 }
 
 @keyframes coffeeSteam {
-  0% { transform: translateY(0) scale(1); opacity: 1; }
-  50% { transform: translateY(-8px) scale(1.05); opacity: 0.8; }
-  100% { transform: translateY(0) scale(1); opacity: 1; }
+    0% { transform: translateY(0) scale(1); opacity: 1; }
+    50% { transform: translateY(-10px) scale(1.1); opacity: 0.8; }
+    100% { transform: translateY(0) scale(1); opacity: 1; }
 }
 
+@keyframes coffeeSteamParticle {
+    0% { transform: translateX(-50%) translateY(0); opacity: 0; }
+    30% { opacity: 0.8; }
+    60% { transform: translateX(-50%) translateY(-15px); opacity: 0; }
+    100% { transform: translateX(-50%) translateY(-20px); opacity: 0; }
+}
+
+.support-project .section-subtitle {
+    position: relative;
+    z-index: 2;
+    transition: all 0.3s ease;
+}
+
+.support-project .section-subtitle:hover {
+    transform: translateY(-3px);
+    color: var(--primary-color);
+}
 
 @media (max-width: 768px) {
     .support-methods {
-        gap: 2.5rem;
-        flex-direction: column; /* 在平板上也改为垂直堆叠 */
-        align-items: center; /* 居中对齐 */
+        gap: 3rem;
+        flex-direction: column;
+        align-items: center;
     }
     .support-method {
-        width: 80%; /* 调整宽度 */
-        max-width: 300px; /* 设置最大宽度 */
+        width: 85%;
+        max-width: 300px;
         padding: 1.5rem;
     }
     .support-qr {
@@ -6801,7 +6797,7 @@ p:hover {
 
 @media (max-width: 480px) {
     .support-project {
-        padding: 4rem 0; /* 调整内边距 */
+        padding: 4rem 0;
     }
     .support-method {
         width: 90%;
