@@ -570,4 +570,188 @@
     .deco-line {
         width: 80px;
     }
+}
+
+/* 梦开始的地方 - 标题动画效果 */
+.story-begin-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 2rem;
+    position: relative;
+    padding: 1rem 0;
+    overflow: hidden;
+}
+
+.story-begin-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(122, 162, 247, 0.2), rgba(100, 140, 230, 0.1));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+    position: relative;
+    transition: all 0.5s ease;
+    overflow: hidden;
+    animation: storyIconFloat 5s ease-in-out infinite;
+    box-shadow: 0 5px 20px rgba(122, 162, 247, 0.25);
+}
+
+.story-begin-icon::before {
+    content: '';
+    position: absolute;
+    width: 150%;
+    height: 150%;
+    background: radial-gradient(circle at center, rgba(122, 162, 247, 0.8), transparent 60%);
+    opacity: 0;
+    transform: scale(0.5);
+    animation: storyRipple 3s ease-in-out infinite;
+}
+
+.story-begin-header:hover .story-begin-icon::before {
+    animation: storyRipple 1.5s ease-out forwards;
+}
+
+.story-begin-header:hover .story-begin-icon {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 30px rgba(122, 162, 247, 0.4);
+}
+
+.story-begin-icon i {
+    font-size: 2.5rem;
+    color: var(--primary-color);
+    transition: all 0.5s ease;
+    position: relative;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.story-begin-icon i::after {
+    content: '\f02d';
+    font-family: "Font Awesome 5 Free";
+    position: absolute;
+    top: 0;
+    left: 0;
+    opacity: 0;
+    transform: rotateY(90deg);
+    transition: all 0.5s ease;
+}
+
+.story-begin-header:hover .story-begin-icon i {
+    transform: rotateY(-90deg);
+    opacity: 0;
+}
+
+.story-begin-header:hover .story-begin-icon i::after {
+    transform: rotateY(0);
+    opacity: 1;
+    color: var(--primary-color);
+}
+
+.story-begin-title {
+    font-size: 2.2rem;
+    font-weight: 700;
+    background: linear-gradient(90deg, #4d76e0, var(--primary-color));
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    margin-bottom: 0.5rem;
+    position: relative;
+    z-index: 1;
+    transition: all 0.3s ease;
+    text-shadow: 0 2px 10px rgba(122, 162, 247, 0.1);
+}
+
+.story-begin-title::before {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #4d76e0, var(--primary-color));
+    transform: translateX(-50%);
+    transition: width 0.5s ease;
+}
+
+.story-begin-header:hover .story-begin-title::before {
+    width: 100%;
+}
+
+.story-begin-decoration {
+    display: flex;
+    align-items: center;
+    margin-top: 0.5rem;
+}
+
+.story-begin-decoration .deco-circle {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4d76e0;
+    transition: all 0.3s ease;
+}
+
+.story-begin-decoration .deco-line {
+    width: 120px;
+    height: 2px;
+    background: linear-gradient(90deg, #4d76e0, var(--primary-color));
+    margin: 0 8px;
+    position: relative;
+    overflow: hidden;
+}
+
+.story-begin-decoration .deco-line::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+    animation: storyLineShine 4s ease-in-out infinite;
+}
+
+.story-begin-header:hover .story-begin-decoration .deco-circle {
+    transform: scale(1.5) rotate(180deg);
+    background: var(--primary-color);
+    box-shadow: 0 0 10px rgba(122, 162, 247, 0.6);
+}
+
+/* 梦开始的地方 - 动画关键帧 */
+@keyframes storyIconFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+}
+
+@keyframes storyRipple {
+    0% { opacity: 0.8; transform: scale(0.5); }
+    100% { opacity: 0; transform: scale(1.2); }
+}
+
+@keyframes storyLineShine {
+    0% { left: -100%; }
+    40%, 60% { left: 100%; }
+    100% { left: 100%; }
+}
+
+/* 响应式适配 */
+@media (max-width: 768px) {
+    .story-begin-icon {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .story-begin-icon i {
+        font-size: 1.8rem;
+    }
+    
+    .story-begin-title {
+        font-size: 1.8rem;
+    }
+    
+    .story-begin-decoration .deco-line {
+        width: 80px;
+    }
 } 
