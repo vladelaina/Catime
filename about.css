@@ -285,7 +285,6 @@
 }
 
 .video-container:hover {
-    transform: translateY(-5px);
     box-shadow: 0 8px 24px rgba(122, 162, 247, 0.2);
 }
 
