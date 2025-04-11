@@ -641,13 +641,17 @@ img {
 /* 响应式调整悬停效果 */
 @media (max-width: 992px) {
     @keyframes breathe {
-        0% { transform: scale(1.3) perspective(1000px) rotateY(-8deg) rotateX(2deg); }
-        50% { transform: scale(1.35) perspective(1000px) rotateY(-8deg) rotateX(2deg); }
-        100% { transform: scale(1.3) perspective(1000px) rotateY(-8deg) rotateX(2deg); }
+        0% { transform: scale(1.2) perspective(1000px) rotateY(-8deg) rotateX(2deg); }
+        50% { transform: scale(1.25) perspective(1000px) rotateY(-8deg) rotateX(2deg); }
+        100% { transform: scale(1.2) perspective(1000px) rotateY(-8deg) rotateX(2deg); }
     }
     
     .hero-screenshot:hover {
-        transform: scale(1.4) perspective(1000px);
+        transform: scale(1.25) perspective(1000px);
+    }
+
+    .hero-screenshot {
+        transform: scale(1.2) perspective(1000px); /* 减小平板上的默认缩放 */
     }
 
     .hero-visual {
@@ -657,14 +661,21 @@ img {
 
 @media (max-width: 768px) {
     @keyframes breathe {
-        0% { transform: scale(1.2) perspective(1000px) rotateY(-5deg) rotateX(2deg); }
-        50% { transform: scale(1.25) perspective(1000px) rotateY(-5deg) rotateX(2deg); }
-        100% { transform: scale(1.2) perspective(1000px) rotateY(-5deg) rotateX(2deg); }
+        0% { transform: scale(1.0) perspective(1000px) rotateY(-5deg) rotateX(2deg); }
+        50% { transform: scale(1.05) perspective(1000px) rotateY(-5deg) rotateX(2deg); }
+        100% { transform: scale(1.0) perspective(1000px) rotateY(-5deg) rotateX(2deg); }
     }
     
     .hero-screenshot:hover {
-        transform: scale(1.3) perspective(1000px);
+        transform: scale(1.1) perspective(1000px);
         box-shadow: 10px 10px 20px rgba(122, 162, 247, 0.2);
+    }
+
+    .hero-screenshot {
+        transform: scale(1.0) perspective(1000px); /* 手机上不缩放 */
+        max-width: 90%; /* 限制最大宽度 */
+        margin: 0 auto; /* 居中显示 */
+        animation: breathe 3s infinite ease-in-out; /* 应用动画效果 */
     }
 
     .hero-visual {
@@ -674,6 +685,24 @@ img {
     .hero-screenshot::before,
     .hero-screenshot::after {
         box-shadow: 0 0 10px 3px rgba(255, 255, 255, 0.15);
+    }
+}
+
+@media (max-width: 480px) {
+    .hero-screenshot {
+        transform: scale(0.85) perspective(1000px); /* 在更小的屏幕上缩小 */
+        border-width: 4px; /* 减小边框宽度 */
+        animation: breathe 3s infinite ease-in-out; /* 应用动画效果 */
+    }
+    
+    .hero-screenshot:hover {
+        transform: scale(0.9) perspective(1000px);
+    }
+    
+    @keyframes breathe {
+        0% { transform: scale(0.85) perspective(1000px) rotateY(-3deg) rotateX(1deg); }
+        50% { transform: scale(0.87) perspective(1000px) rotateY(-3deg) rotateX(1deg); }
+        100% { transform: scale(0.85) perspective(1000px) rotateY(-3deg) rotateX(1deg); }
     }
 }
 
