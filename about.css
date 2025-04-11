@@ -334,7 +334,7 @@
 
 .story-note::after {
     content: '"';
-    font-size: 3rem;
+    font-size: 2rem;
     color: rgba(247, 125, 170, 0.1);
     position: absolute;
     bottom: -2rem;
@@ -388,5 +388,186 @@
     .story-note::before,
     .story-note::after {
         font-size: 2rem;
+    }
+}
+
+/* Logo 故事标题动画效果 */
+.logo-story-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 2rem;
+    position: relative;
+    padding: 1rem 0;
+    overflow: hidden;
+}
+
+.logo-story-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(122, 162, 247, 0.15), rgba(247, 125, 170, 0.15));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+    position: relative;
+    transition: all 0.5s ease;
+    overflow: hidden;
+    animation: iconPulse 4s ease-in-out infinite;
+    box-shadow: 0 5px 20px rgba(122, 162, 247, 0.2);
+}
+
+.logo-story-icon::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+    mix-blend-mode: overlay;
+}
+
+.logo-story-header:hover .logo-story-icon::before {
+    animation: iconShine 1.5s ease-out forwards;
+}
+
+.logo-story-icon i {
+    font-size: 2.5rem;
+    color: var(--primary-color);
+    transition: all 0.5s ease;
+    position: relative;
+}
+
+.logo-story-header:hover .logo-story-icon i {
+    color: var(--accent-color);
+    animation: iconBounce 1s ease-in-out;
+    transform: scale(1.1);
+}
+
+.logo-story-title {
+    font-size: 2.2rem;
+    font-weight: 700;
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    margin-bottom: 0.5rem;
+    position: relative;
+    z-index: 1;
+    transition: all 0.3s ease;
+}
+
+.logo-story-title::after {
+    content: '关于 Logo 的故事';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    color: transparent;
+    background: linear-gradient(90deg, var(--accent-color), var(--primary-color));
+    background-clip: text;
+    -webkit-background-clip: text;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    transform-origin: center;
+}
+
+.logo-story-header:hover .logo-story-title::after {
+    opacity: 1;
+    animation: titleShift 3s ease-in-out infinite;
+}
+
+.logo-story-decoration {
+    display: flex;
+    align-items: center;
+    margin-top: 0.5rem;
+}
+
+.deco-circle {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent-color);
+    transition: all 0.3s ease;
+}
+
+.deco-line {
+    width: 120px;
+    height: 2px;
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+    margin: 0 8px;
+    position: relative;
+    overflow: hidden;
+}
+
+.deco-line::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+    animation: lineShine 3s ease-in-out infinite;
+}
+
+.logo-story-header:hover .deco-circle {
+    transform: scale(1.5);
+    box-shadow: 0 0 10px var(--accent-color);
+}
+
+/* Logo 动效关键帧动画 */
+@keyframes iconPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); box-shadow: 0 8px 30px rgba(247, 125, 170, 0.3); }
+}
+
+@keyframes iconBounce {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.3); }
+    60% { transform: scale(0.9); }
+    80% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+@keyframes iconShine {
+    0% { opacity: 0; transform: scale(0.5); }
+    50% { opacity: 0.8; }
+    100% { opacity: 0; transform: scale(2); }
+}
+
+@keyframes lineShine {
+    0% { left: -100%; }
+    50%, 100% { left: 100%; }
+}
+
+@keyframes titleShift {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 1; }
+}
+
+/* 响应式适配 */
+@media (max-width: 768px) {
+    .logo-story-icon {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .logo-story-icon i {
+        font-size: 1.8rem;
+    }
+    
+    .logo-story-title {
+        font-size: 1.8rem;
+    }
+    
+    .deco-line {
+        width: 80px;
     }
 } 
