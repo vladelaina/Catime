@@ -177,6 +177,50 @@
         }
     </style>
 
+    <!-- 贡献者网格的移动端适配样式 -->
+    <style>
+      @media (max-width: 768px) {
+        .contributors-grid table {
+          width: 100% !important;
+          border-spacing: 0 !important;
+        }
+        
+        .contributors-grid tbody {
+          display: block !important;
+          width: 100% !important;
+        }
+        
+        .contributors-grid tr {
+          display: flex !important;
+          justify-content: center !important;
+          flex-wrap: wrap !important;
+          width: 100% !important;
+          margin-bottom: 15px !important;
+        }
+        
+        .contributors-grid td {
+          box-sizing: border-box !important;
+          text-align: center !important;
+        }
+        
+        .contributors-grid img {
+          margin: 0 auto !important;
+          display: block !important;
+        }
+        
+        .contributors-grid sub {
+          display: block !important;
+          text-align: center !important;
+        }
+      }
+      
+      @media (max-width: 480px) {
+        .contributors-grid td {
+          padding: 8px 3px !important;
+        }
+      }
+    </style>
+
 </head>
 <body>
 
@@ -1671,6 +1715,89 @@
             }
           });
         });
+
+        // 处理移动端贡献者列表布局
+        function adjustContributorsLayout() {
+          if (window.innerWidth <= 768) {
+            const contributorsTable = document.querySelector('.contributors-grid table');
+            const contributorsTbody = document.querySelector('.contributors-grid tbody');
+            const allCells = Array.from(document.querySelectorAll('.contributors-grid td'));
+            
+            // 如果没有表格，直接返回
+            if (!contributorsTable || !contributorsTbody || allCells.length === 0) return;
+            
+            // 保存原始单元格数组
+            const cellsCopy = allCells.map(cell => cell.cloneNode(true));
+            
+            // 删除所有现有行
+            while (contributorsTbody.firstChild) {
+              contributorsTbody.removeChild(contributorsTbody.firstChild);
+            }
+            
+            // 根据屏幕宽度决定每行显示的单元格数量
+            const cellsPerRow = window.innerWidth <= 480 ? 2 : 3;
+            
+            // 创建新的行并平均分配单元格
+            for (let i = 0; i < cellsCopy.length; i += cellsPerRow) {
+              const newRow = document.createElement('tr');
+              newRow.style.display = 'flex';
+              newRow.style.justifyContent = 'center';
+              newRow.style.width = '100%';
+              newRow.style.marginBottom = '10px';
+              
+              // 计算当前行要添加的单元格数量（不超过总数）
+              const cellsToAdd = Math.min(cellsPerRow, cellsCopy.length - i);
+              
+              // 如果是最后一行且单元格数量不足一整行，调整样式使其居中
+              const isLastRow = i + cellsPerRow >= cellsCopy.length;
+              const isCellsNotFull = cellsToAdd < cellsPerRow;
+              
+              if (isLastRow && isCellsNotFull) {
+                // 添加左边距，使最后一行居中显示
+                newRow.style.justifyContent = 'center';
+                
+                // 如果只有一个单元格在最后一行
+                if (cellsToAdd === 1) {
+                  // 特殊处理最后一行只有一个单元格的情况
+                  const emptyCell = document.createElement('td');
+                  emptyCell.style.visibility = 'hidden';
+                  emptyCell.style.flex = '0 0 0';
+                  
+                  if (window.innerWidth <= 480) {
+                    // 为最后一行的单个贡献者应用合适的样式
+                    newRow.style.justifyContent = 'center';
+                  }
+                }
+              }
+              
+              // 添加当前行的单元格
+              for (let j = 0; j < cellsToAdd; j++) {
+                const cell = cellsCopy[i + j];
+                
+                // 设置单元格样式
+                if (window.innerWidth <= 480) {
+                  cell.style.flex = '0 0 calc(50% - 10px)';
+                  cell.style.maxWidth = 'calc(50% - 10px)';
+                  cell.style.margin = '0 5px';
+                } else {
+                  cell.style.flex = '0 0 calc(33.33% - 16px)';
+                  cell.style.maxWidth = 'calc(33.33% - 16px)';
+                  cell.style.margin = '0 8px';
+                }
+                
+                newRow.appendChild(cell);
+              }
+              
+              contributorsTbody.appendChild(newRow);
+            }
+          }
+        }
+        
+        // 初始调整
+        setTimeout(adjustContributorsLayout, 100);
+        
+        // 窗口大小改变时重新调整
+        window.addEventListener('resize', adjustContributorsLayout);
       });
     </script>
 
