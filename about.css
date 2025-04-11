@@ -158,43 +158,39 @@
 }
 
 /* 书本翻页动画效果 */
-@keyframes bookFlip {
-    0% { transform: perspective(300px) rotateY(0deg); opacity: 1; }
-    25% { transform: perspective(300px) rotateY(-10deg) skewY(5deg); opacity: 0.9; }
-    50% { transform: perspective(300px) rotateY(-20deg) skewY(10deg) translateX(-2px); opacity: 0.8; }
-    75% { transform: perspective(300px) rotateY(-10deg) skewY(5deg) translateX(-1px); opacity: 0.9; }
-    100% { transform: perspective(300px) rotateY(0deg); opacity: 1; }
-}
-
-#story .animated-title i.fa-book {
+#story .animated-title .book-cover,
+#story .animated-title .book-pages {
     display: inline-block;
-    transform-origin: left center;
-    transition: all 0.3s ease;
+    transition: all 0.5s ease;
     position: relative;
 }
 
-#story .animated-title i.fa-book:after {
-    content: "\f02d"; /* 使用同样的书本图标作为页面 */
-    font-family: "Font Awesome 6 Free";
-    font-weight: 900;
-    position: absolute;
-    top: 0;
-    left: 0;
-    color: rgba(247, 125, 170, 0.3);
-    transform: translateX(2px) perspective(300px) rotateY(10deg);
-    opacity: 0;
-    transition: all 0.3s ease;
+#story .animated-title .book-cover {
+    color: #7aa2f7;
+    transform-origin: left center;
+    z-index: 2;
 }
 
-#story .animated-title:hover i.fa-book {
-    animation: bookFlip 2s ease-in-out infinite;
+#story .animated-title .book-pages {
     color: #f77daa;
-    text-shadow: 0 0 8px rgba(247, 125, 170, 0.4);
+    margin-left: -14px; /* 负边距使两个图标重叠 */
+    opacity: 0;
+    transform: rotateY(-90deg);
+    transform-origin: left center;
+    z-index: 1;
 }
 
-#story .animated-title:hover i.fa-book:after {
+#story .animated-title:hover .book-cover {
+    transform: rotateY(-120deg);
+    opacity: 0;
+    color: #7aa2f7;
+    text-shadow: 0 0 8px rgba(122, 162, 247, 0.4);
+}
+
+#story .animated-title:hover .book-pages {
+    transform: rotateY(0);
     opacity: 1;
-    animation: bookFlip 2s ease-in-out infinite reverse;
+    text-shadow: 0 0 8px rgba(247, 125, 170, 0.4);
 }
 
 #story .animated-title:hover {
