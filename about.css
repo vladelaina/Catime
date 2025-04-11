@@ -302,6 +302,8 @@
     align-items: center;
     justify-content: center;
     background: transparent;
+    transition: opacity 0.4s ease;
+    z-index: 2;
 }
 
 .video-preview-img {
@@ -354,12 +356,24 @@
     left: 0;
     width: 100%;
     height: 100%;
+    background: rgba(255, 255, 255, 0.02); /* 非常轻微的背景，避免完全透明时的闪烁 */
+    transition: opacity 0.3s ease;
+    z-index: 1;
 }
 
 .video-frame-container iframe {
     width: 100%;
     height: 100%;
     border: none;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+    background: transparent;
+}
+
+/* 确保视频播放器不会出现边框和黑色背景 */
+iframe {
+    background-color: transparent !important;
+    border: none !important;
 }
 
 /* 响应式调整 */
@@ -1230,4 +1244,14 @@
     font-size: 2.5rem;
     color: #f77daa;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+/* 平滑过渡效果 */
+.fade-in {
+    animation: fadeIn 0.5s ease forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 } 

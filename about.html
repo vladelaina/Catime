@@ -249,7 +249,8 @@
                                 </div>
                             </div>
                             <div class="video-frame-container" style="display: none;">
-                                <!-- 视频iframe将在点击后加载 -->
+                                <!-- 自动播放的iframe，初始隐藏 -->
+                                <iframe id="autoplayIframe" src="about:blank" data-src="https://player.bilibili.com/player.html?isOutside=true&aid=113928587706855&bvid=BV1ztFeeQEYP&cid=28175761955&p=1&autoplay=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" style="opacity: 0;"></iframe>
                             </div>
                         </div>
                         
@@ -258,23 +259,26 @@
                                 const videoContainer = document.getElementById('videoContainer');
                                 const videoCover = videoContainer.querySelector('.video-cover');
                                 const videoFrameContainer = videoContainer.querySelector('.video-frame-container');
+                                const autoplayIframe = document.getElementById('autoplayIframe');
+                                
+                                // 预加载封面图
+                                const preloadImg = new Image();
+                                preloadImg.src = 'assets/bilibili video cover.jpg';
                                 
                                 videoCover.addEventListener('click', function() {
-                                    // 创建iframe元素
-                                    const iframe = document.createElement('iframe');
-                                    iframe.src = "https://player.bilibili.com/player.html?isOutside=true&aid=113928587706855&bvid=BV1ztFeeQEYP&cid=28175761955&p=1&autoplay=1";
-                                    iframe.setAttribute('scrolling', 'no');
-                                    iframe.setAttribute('border', '0');
-                                    iframe.setAttribute('frameborder', 'no');
-                                    iframe.setAttribute('framespacing', '0');
-                                    iframe.setAttribute('allowfullscreen', 'true');
-                                    
-                                    // 添加iframe到容器
-                                    videoFrameContainer.appendChild(iframe);
-                                    
-                                    // 隐藏封面，显示视频
-                                    videoCover.style.display = 'none';
+                                    // 显示视频容器
+                                    videoCover.style.opacity = '0';
                                     videoFrameContainer.style.display = 'block';
+                                    
+                                    // 设置真正的视频URL
+                                    const realSrc = autoplayIframe.getAttribute('data-src');
+                                    autoplayIframe.src = realSrc;
+                                    
+                                    // 淡入显示iframe
+                                    setTimeout(function() {
+                                        videoCover.style.display = 'none';
+                                        autoplayIframe.style.opacity = '1';
+                                    }, 50);
                                 });
                             });
                         </script>
