@@ -241,9 +241,44 @@
                             </div>
                         </div>
                         
-                        <div class="video-container">
-                            <iframe src="https://player.bilibili.com/player.html?isOutside=true&aid=113928587706855&bvid=BV1ztFeeQEYP&cid=28175761955&p=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"></iframe>
+                        <div class="video-container" id="videoContainer">
+                            <div class="video-cover">
+                                <img src="assets/video-preview.jpg" alt="视频预览" class="video-preview-img">
+                                <div class="play-button">
+                                    <i class="fas fa-play"></i>
+                                </div>
+                                <div class="video-title">演示视频 - 点击播放</div>
+                            </div>
+                            <div class="video-frame-container" style="display: none;">
+                                <!-- 视频iframe将在点击后加载 -->
+                            </div>
                         </div>
+                        
+                        <script>
+                            document.addEventListener('DOMContentLoaded', function() {
+                                const videoContainer = document.getElementById('videoContainer');
+                                const videoCover = videoContainer.querySelector('.video-cover');
+                                const videoFrameContainer = videoContainer.querySelector('.video-frame-container');
+                                
+                                videoCover.addEventListener('click', function() {
+                                    // 创建iframe元素
+                                    const iframe = document.createElement('iframe');
+                                    iframe.src = "https://player.bilibili.com/player.html?isOutside=true&aid=113928587706855&bvid=BV1ztFeeQEYP&cid=28175761955&p=1&autoplay=1";
+                                    iframe.setAttribute('scrolling', 'no');
+                                    iframe.setAttribute('border', '0');
+                                    iframe.setAttribute('frameborder', 'no');
+                                    iframe.setAttribute('framespacing', '0');
+                                    iframe.setAttribute('allowfullscreen', 'true');
+                                    
+                                    // 添加iframe到容器
+                                    videoFrameContainer.appendChild(iframe);
+                                    
+                                    // 隐藏封面，显示视频
+                                    videoCover.style.display = 'none';
+                                    videoFrameContainer.style.display = 'block';
+                                });
+                            });
+                        </script>
 
                         <div class="guide-image animated-image">
                             <img src="assets/wtf.png" alt="wtf">

@@ -271,7 +271,7 @@
     }
 }
 
-/* 哔哩哔哩视频容器 */
+/* 改进的视频容器样式 */
 .video-container {
     position: relative;
     width: 100%;
@@ -284,24 +284,123 @@
     transition: all 0.3s ease;
 }
 
-.video-container iframe {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    border: none;
-}
-
 .video-container:hover {
     transform: translateY(-5px);
     box-shadow: 0 8px 24px rgba(122, 162, 247, 0.2);
 }
 
-/* 适配移动设备的视频容器 */
+/* 视频封面样式 */
+.video-cover {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+}
+
+.video-preview-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.8;
+    transition: all 0.5s ease;
+}
+
+.video-cover:hover .video-preview-img {
+    transform: scale(1.05);
+    opacity: 0.6;
+}
+
+/* 播放按钮样式 */
+.play-button {
+    position: absolute;
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    z-index: 2;
+    backdrop-filter: blur(3px);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.play-button i {
+    font-size: 25px;
+    color: #fff;
+    transition: all 0.3s ease;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.video-cover:hover .play-button {
+    transform: scale(1.1);
+    background: rgba(247, 125, 170, 0.3);
+    box-shadow: 0 0 20px rgba(247, 125, 170, 0.5);
+}
+
+.video-cover:hover .play-button i {
+    transform: translateX(3px);
+}
+
+/* 视频标题样式 */
+.video-title {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 15px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    opacity: 0.8;
+    text-align: center;
+}
+
+.video-cover:hover .video-title {
+    padding-bottom: 25px;
+    opacity: 1;
+}
+
+/* 视频iframe容器 */
+.video-frame-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.video-frame-container iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+/* 响应式调整 */
 @media (max-width: 768px) {
-    .video-container {
-        margin: 15px auto;
+    .play-button {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .play-button i {
+        font-size: 18px;
+    }
+    
+    .video-title {
+        font-size: 14px;
+        padding: 10px;
     }
 }
 
