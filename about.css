@@ -159,18 +159,18 @@
 
 /* 书页翻动动画 */
 @keyframes pageFlipping {
-    0% { transform: rotateY(0) translateY(0); }
-    25% { transform: rotateY(5deg) translateY(-1px); }
-    50% { transform: rotateY(0) translateY(0); }
-    75% { transform: rotateY(-5deg) translateY(-1px); }
-    100% { transform: rotateY(0) translateY(0); }
+    0% { transform: scale(1); }
+    25% { transform: scale(1.05) rotate(5deg); }
+    50% { transform: scale(1.1); }
+    75% { transform: scale(1.05) rotate(-5deg); }
+    100% { transform: scale(1); }
 }
 
 /* 书本发光效果 */
 @keyframes bookGlow {
-    0% { text-shadow: 0 0 8px rgba(247, 125, 170, 0.4); }
-    50% { text-shadow: 0 0 15px rgba(247, 125, 170, 0.7); }
-    100% { text-shadow: 0 0 8px rgba(247, 125, 170, 0.4); }
+    0% { text-shadow: 0 0 8px rgba(122, 162, 247, 0.4); }
+    50% { text-shadow: 0 0 15px rgba(122, 162, 247, 0.7); }
+    100% { text-shadow: 0 0 8px rgba(122, 162, 247, 0.4); }
 }
 
 /* 书本翻页动画效果 */
@@ -441,12 +441,41 @@
     color: var(--primary-color);
     transition: all 0.5s ease;
     position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900; /* 确保图标正确加载 */
+}
+
+.logo-story-icon .alt-icon {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transform: scale(0);
+    transition: all 0.5s ease;
+}
+
+.logo-story-icon .alt-icon i {
+    font-size: 2.5rem;
+    color: var(--accent-color);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 }
 
 .logo-story-header:hover .logo-story-icon i {
-    color: var(--accent-color);
-    animation: iconBounce 1s ease-in-out;
+    opacity: 0;
+    transform: scale(0);
+}
+
+.logo-story-header:hover .logo-story-icon .alt-icon {
+    opacity: 1;
     transform: scale(1.1);
+    animation: iconBounce 1s ease-in-out;
 }
 
 .logo-story-title {
@@ -595,58 +624,179 @@
     position: relative;
     transition: all 0.5s ease;
     overflow: hidden;
-    animation: storyIconFloat 5s ease-in-out infinite;
+    animation: storyIconFloat 6s ease-in-out infinite;
     box-shadow: 0 5px 20px rgba(122, 162, 247, 0.25);
 }
 
+/* 背景装饰效果 */
 .story-begin-icon::before {
     content: '';
     position: absolute;
-    width: 150%;
-    height: 150%;
-    background: radial-gradient(circle at center, rgba(122, 162, 247, 0.8), transparent 60%);
-    opacity: 0;
-    transform: scale(0.5);
-    animation: storyRipple 3s ease-in-out infinite;
+    width: 100%;
+    height: 100%;
+    background: 
+        radial-gradient(circle at 30% 30%, rgba(122, 162, 247, 0.3) 0%, transparent 15%),
+        radial-gradient(circle at 70% 70%, rgba(122, 162, 247, 0.3) 0%, transparent 15%),
+        radial-gradient(circle at center, rgba(255, 255, 255, 0.1) 0%, transparent 60%);
+    animation: storyBgPulse 4s ease-in-out infinite alternate;
 }
 
-.story-begin-header:hover .story-begin-icon::before {
-    animation: storyRipple 1.5s ease-out forwards;
+/* 粒子光效 */
+.story-begin-icon::after {
+    content: '';
+    position: absolute;
+    inset: -20%;
+    border-radius: 40%;
+    background: conic-gradient(
+        transparent 0deg,
+        transparent 70deg,
+        rgba(122, 162, 247, 0.2) 90deg,
+        rgba(122, 162, 247, 0.1) 180deg,
+        transparent 220deg,
+        rgba(122, 162, 247, 0.1) 300deg,
+        rgba(122, 162, 247, 0.2) 340deg,
+        transparent 360deg
+    );
+    opacity: 0.7;
+    animation: storyRotateConic 10s linear infinite;
+}
+
+/* 星星装饰 */
+.story-begin-icon .story-star {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 5px rgba(122, 162, 247, 0.8);
+}
+
+.story-begin-icon .story-star:nth-child(1) {
+    top: 25%;
+    left: 20%;
+    animation: storyStarTwinkle 3s ease-in-out infinite;
+}
+
+.story-begin-icon .story-star:nth-child(2) {
+    top: 15%;
+    right: 25%;
+    animation: storyStarTwinkle 2.5s ease-in-out infinite 0.5s;
+}
+
+.story-begin-icon .story-star:nth-child(3) {
+    bottom: 20%;
+    left: 15%;
+    animation: storyStarTwinkle 3.2s ease-in-out infinite 0.3s;
+}
+
+.story-begin-icon .story-star:nth-child(4) {
+    bottom: 25%;
+    right: 20%;
+    animation: storyStarTwinkle 3.7s ease-in-out infinite 1s;
 }
 
 .story-begin-header:hover .story-begin-icon {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 30px rgba(122, 162, 247, 0.4);
+    transform: translateY(-5px) rotate(5deg);
+    box-shadow: 
+        0 8px 30px rgba(122, 162, 247, 0.4),
+        inset 0 0 15px rgba(255, 255, 255, 0.5);
+    background: linear-gradient(135deg, rgba(122, 162, 247, 0.3), rgba(100, 140, 230, 0.2));
 }
 
+/* 图标主体 */
 .story-begin-icon i {
     font-size: 2.5rem;
     color: var(--primary-color);
-    transition: all 0.5s ease;
+    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     position: relative;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+    z-index: 3;
+    animation: storyBookBreathe 3s ease-in-out infinite alternate;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900; /* 确保图标正确加载 */
 }
 
-.story-begin-icon i::after {
-    content: '\f02d';
-    font-family: "Font Awesome 5 Free";
+/* 翻页效果 - 简化实现 */
+.story-begin-icon .book-open {
     position: absolute;
     top: 0;
     left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     opacity: 0;
-    transform: rotateY(90deg);
+    transform: scale(0);
     transition: all 0.5s ease;
 }
 
-.story-begin-header:hover .story-begin-icon i {
-    transform: rotateY(-90deg);
-    opacity: 0;
+.story-begin-icon .book-open i {
+    font-size: 2.5rem;
+    color: var(--primary-color);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
-.story-begin-header:hover .story-begin-icon i::after {
-    transform: rotateY(0);
+/* 悬停效果 */
+.story-begin-header:hover .story-begin-icon > i.fas.fa-book {
+    opacity: 0;
+    transform: scale(0);
+}
+
+.story-begin-header:hover .story-begin-icon .book-open {
     opacity: 1;
-    color: var(--primary-color);
+    transform: scale(1);
+}
+
+.story-begin-header:hover .story-begin-icon .book-open i {
+    animation: pageFlipping 3s ease-in-out infinite, bookGlow 2s ease-in-out infinite;
+}
+
+/* 增强动画关键帧 */
+@keyframes storyIconFloat {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    25% { transform: translateY(-4px) rotate(-2deg); }
+    50% { transform: translateY(-8px) rotate(0deg); }
+    75% { transform: translateY(-4px) rotate(2deg); }
+}
+
+@keyframes storyBgPulse {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 0.3; }
+}
+
+@keyframes storyRotateConic {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes storyStarTwinkle {
+    0%, 100% { opacity: 0.2; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1.2); }
+}
+
+@keyframes storyBookBreathe {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+@keyframes storyPageTurn {
+    0%, 45%, 100% { transform: rotateY(0); }
+    50%, 95% { transform: rotateY(-15deg); }
+}
+
+@keyframes storyRipple {
+    0% { opacity: 0.8; transform: scale(0.5); }
+    100% { opacity: 0; transform: scale(1.5); }
+}
+
+/* 线条流光效果 */
+@keyframes storyLineShine {
+    0% { left: -100%; }
+    40%, 60% { left: 100%; }
+    100% { left: 100%; }
 }
 
 .story-begin-title {
@@ -717,23 +867,6 @@
     transform: scale(1.5) rotate(180deg);
     background: var(--primary-color);
     box-shadow: 0 0 10px rgba(122, 162, 247, 0.6);
-}
-
-/* 梦开始的地方 - 动画关键帧 */
-@keyframes storyIconFloat {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-8px); }
-}
-
-@keyframes storyRipple {
-    0% { opacity: 0.8; transform: scale(0.5); }
-    100% { opacity: 0; transform: scale(1.2); }
-}
-
-@keyframes storyLineShine {
-    0% { left: -100%; }
-    40%, 60% { left: 100%; }
-    100% { left: 100%; }
 }
 
 /* 响应式适配 */
@@ -817,11 +950,40 @@
     transition: all 0.5s ease;
     position: relative;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900; /* 确保图标正确加载 */
 }
 
-.name-origin-header:hover .name-origin-icon i {
-    transform: scale(1.2) rotate(15deg);
+.name-origin-icon .alt-icon {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transform: scale(0);
+    transition: all 0.5s ease;
+}
+
+.name-origin-icon .alt-icon i {
+    font-size: 2.5rem;
     color: #f77daa;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.name-origin-header:hover .name-origin-icon > i {
+    opacity: 0;
+    transform: scale(0);
+}
+
+.name-origin-header:hover .name-origin-icon .alt-icon {
+    opacity: 1;
+    transform: scale(1.2) rotate(15deg);
 }
 
 .name-origin-title {
