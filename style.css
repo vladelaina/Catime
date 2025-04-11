@@ -6646,9 +6646,9 @@ p:hover {
 /* 支持项目区域 */
 .support-project {
     padding: 6rem 0;
-    background: linear-gradient(180deg, var(--background-color) 0%, #f5f7fa 100%); /* 从背景色渐变到浅灰色 */
+    background-color: var(--bg-secondary); /* 使用与贡献者区域相同的背景色 */
     position: relative;
-    border-top: 1px solid rgba(122, 162, 247, 0.15); /* 添加一个细微的顶部边框 */
+    border-top: 1px solid rgba(122, 162, 247, 0.15); /* 保留细微的顶部边框 */
 }
 
 /* 移除自动添加的::before伪元素，因为它与上面的 border-top 重复了 */
