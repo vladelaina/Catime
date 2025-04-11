@@ -4718,7 +4718,7 @@ p:hover {
     box-shadow: 0 4px 20px rgba(122, 162, 247, 0.25),
                 inset 0 2px 10px rgba(255, 255, 255, 0.8),
                 inset 0 -2px 5px rgba(122, 162, 247, 0.1);
-    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: all 0.5s ease-in-out;
     opacity: 1;
     transform: scale(1) rotate(0deg);
     pointer-events: auto;
@@ -6734,34 +6734,12 @@ p:hover {
     display: inline-block;
     animation: coffeeSteam 2.5s infinite ease-out 0.5s;
     transform-origin: bottom center;
-    position: relative;
-}
-
-.support-project .section-title i.fa-mug-hot::before {
-    content: '';
-    position: absolute;
-    top: -10px;
-    left: 50%;
-    width: 20px;
-    height: 8px;
-    background: radial-gradient(ellipse at center, rgba(255, 172, 51, 0.6) 0%, rgba(255, 172, 51, 0) 70%);
-    border-radius: 50%;
-    transform: translateX(-50%);
-    opacity: 0;
-    animation: coffeeSteamParticle 2.5s infinite ease-out;
 }
 
 @keyframes coffeeSteam {
-    0% { transform: translateY(0) scale(1); opacity: 1; }
-    50% { transform: translateY(-10px) scale(1.1); opacity: 0.8; }
-    100% { transform: translateY(0) scale(1); opacity: 1; }
-}
-
-@keyframes coffeeSteamParticle {
-    0% { transform: translateX(-50%) translateY(0); opacity: 0; }
-    30% { opacity: 0.8; }
-    60% { transform: translateX(-50%) translateY(-15px); opacity: 0; }
-    100% { transform: translateX(-50%) translateY(-20px); opacity: 0; }
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  50% { transform: translateY(-8px) scale(1.05); opacity: 0.8; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
 }
 
 .support-project .section-subtitle {
