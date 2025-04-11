@@ -402,6 +402,7 @@
     overflow: hidden;
 }
 
+/* Logo故事图标基础样式 */
 .logo-story-icon {
     width: 80px;
     height: 80px;
@@ -418,64 +419,63 @@
     box-shadow: 0 5px 20px rgba(122, 162, 247, 0.2);
 }
 
-.logo-story-icon::before {
-    content: '';
+/* 主图标 */
+.logo-story-icon i {
+    font-size: 2.5rem;
+    color: var(--primary-color);
+    transition: all 0.5s ease;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+}
+
+/* 替代图标 */
+.logo-story-icon .alt-icon {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0));
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    pointer-events: none;
-    mix-blend-mode: overlay;
-}
-
-.logo-story-header:hover .logo-story-icon::before {
-    animation: iconShine 1.5s ease-out forwards;
-}
-
-.logo-story-icon i {
-    font-size: 2.5rem;
-    color: var(--primary-color);
-    transition: all 0.5s ease;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 900; /* 确保图标正确加载 */
-}
-
-.logo-story-icon .alt-icon {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
     display: flex;
     align-items: center;
     justify-content: center;
     opacity: 0;
     transform: scale(0);
     transition: all 0.5s ease;
+    z-index: 3;
 }
 
 .logo-story-icon .alt-icon i {
     font-size: 2.5rem;
     color: var(--accent-color);
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+    filter: drop-shadow(0 2px 4px rgba(247, 125, 170, 0.3));
 }
 
-.logo-story-header:hover .logo-story-icon i {
+/* 悬停效果 - 仅在图标上悬停时触发 */
+.logo-story-icon:hover {
+    background: linear-gradient(135deg, rgba(122, 162, 247, 0.2), rgba(247, 125, 170, 0.2));
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(247, 125, 170, 0.3);
+}
+
+.logo-story-icon:hover > i:first-child {
     opacity: 0;
     transform: scale(0);
 }
 
-.logo-story-header:hover .logo-story-icon .alt-icon {
+.logo-story-icon:hover .alt-icon {
     opacity: 1;
-    transform: scale(1.1);
+    transform: scale(1);
     animation: iconBounce 1s ease-in-out;
+}
+
+/* 移除旧的header悬停选择器 */
+.logo-story-header:hover .logo-story-icon i,
+.logo-story-header:hover .logo-story-icon .alt-icon,
+.logo-story-header:hover .logo-story-icon::before {
+    /* 规则已被替换，这里删除旧的样式 */
 }
 
 .logo-story-title {
@@ -1052,17 +1052,27 @@
 
 /* Logo故事图标悬停效果 - 仅悬停在图标上时触发 */
 .logo-story-icon:hover::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0));
     animation: iconShine 1.5s ease-out forwards;
+    pointer-events: none;
+    mix-blend-mode: overlay;
+    z-index: 4;
 }
 
-.logo-story-icon:hover > i {
+.logo-story-icon:hover > i.fas.fa-image {
     opacity: 0;
     transform: scale(0);
 }
 
 .logo-story-icon:hover .alt-icon {
     opacity: 1;
-    transform: scale(1.1);
+    transform: scale(1);
     animation: iconBounce 1s ease-in-out;
 }
 
