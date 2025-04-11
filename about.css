@@ -303,4 +303,90 @@
     .video-container {
         margin: 15px auto;
     }
+}
+
+/* 故事笔记样式 */
+.story-note {
+    font-style: italic;
+    color: var(--text-color);
+    padding: 1rem 1.5rem;
+    margin: 1.5rem 0;
+    border-left: 3px solid var(--primary-color);
+    background: linear-gradient(90deg, rgba(122, 162, 247, 0.08), rgba(247, 125, 170, 0.05));
+    border-radius: 0 8px 8px 0;
+    font-size: 1.05rem;
+    line-height: 1.6;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(122, 162, 247, 0.06);
+    transition: all 0.3s ease;
+}
+
+.story-note::before {
+    content: '"';
+    font-size: 3rem;
+    color: rgba(122, 162, 247, 0.1);
+    position: absolute;
+    top: -0.5rem;
+    left: 0.5rem;
+    font-family: serif;
+}
+
+.story-note::after {
+    content: '"';
+    font-size: 3rem;
+    color: rgba(247, 125, 170, 0.1);
+    position: absolute;
+    bottom: -2rem;
+    right: 0.5rem;
+    font-family: serif;
+}
+
+.story-note:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(122, 162, 247, 0.1);
+    background: linear-gradient(90deg, rgba(122, 162, 247, 0.1), rgba(247, 125, 170, 0.07));
+}
+
+.story-note a {
+    position: relative;
+    color: var(--primary-color);
+    text-decoration: none;
+    padding-bottom: 2px;
+    transition: all 0.3s ease;
+}
+
+.story-note a::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 1px;
+    bottom: 0;
+    left: 0;
+    background: linear-gradient(to right, var(--primary-color), var(--accent-color));
+    transform: scaleX(0);
+    transform-origin: bottom right;
+    transition: transform 0.3s ease;
+}
+
+.story-note a:hover {
+    color: var(--accent-color);
+}
+
+.story-note a:hover::after {
+    transform: scaleX(1);
+    transform-origin: bottom left;
+}
+
+@media (max-width: 768px) {
+    .story-note {
+        padding: 0.8rem 1rem;
+        font-size: 1rem;
+        margin: 1rem 0;
+    }
+    
+    .story-note::before,
+    .story-note::after {
+        font-size: 2rem;
+    }
 } 
