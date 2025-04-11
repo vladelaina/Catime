@@ -56,7 +56,7 @@
         .thanks-item:hover .thanks-avatar {
             transform: scale(1.1);
             box-shadow: 0 3px 8px rgba(122, 162, 247, 0.2);
-            border-color: rgba(247, 125, 170, 0.4);
+            border-color: rgba(122, 162, 247, 0.2); /* 从粉色改为蓝色，且透明度更高 */
         }
 
         @keyframes thanksPulse {
@@ -1544,7 +1544,7 @@
             // 添加发光效果的动态位置
             const glow = cell.querySelector('.contributor-avatar-glow');
             if (glow) {
-              glow.style.background = `radial-gradient(circle at ${50 + x * 100}% ${50 + y * 100}%, rgba(122, 162, 247, 0.4), rgba(247, 125, 170, 0.3), transparent 70%)`;
+              glow.style.background = ''; // 不设置背景，保持透明
             }
           });
           

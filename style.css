@@ -5462,19 +5462,22 @@ p:hover {
     width: 100%;
     height: 100%;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(122, 162, 247, 0.5) 0%, rgba(122, 162, 247, 0) 70%);
+    background: none; /* 移除背景渐变 */
+    filter: blur(8px);
     opacity: 0;
-    transition: all 0.5s ease;
+    transform: scale(1.1);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    animation: none; /* 移除旋转动画 */
 }
 
-.author-card:hover .avatar-glow {
-    opacity: 0;
+@keyframes rotateGlow {
+    0% { transform: scale(1.1) rotate(0deg); }
+    100% { transform: scale(1.1) rotate(360deg); }
 }
 
-@keyframes pulse {
-    0% { transform: scale(0.8); opacity: 0.3; }
-    50% { transform: scale(1.1); opacity: 0.5; }
-    100% { transform: scale(0.8); opacity: 0.3; }
+.contributors-grid td:hover .contributor-avatar-glow {
+    opacity: 0; /* 设置为透明，不显示粉色圈 */
+    transform: scale(1.15);
 }
 
 .author-info {
@@ -6470,18 +6473,12 @@ p:hover {
     right: 0;
     bottom: 0;
     border-radius: 50%;
-    background: conic-gradient(from 0deg, 
-        rgba(122, 162, 247, 0), 
-        rgba(122, 162, 247, 0.4), 
-        rgba(247, 125, 170, 0.4), 
-        rgba(247, 125, 170, 0.2), 
-        rgba(122, 162, 247, 0)
-    );
+    background: none; /* 移除背景渐变 */
     filter: blur(8px);
     opacity: 0;
     transform: scale(1.1);
     transition: opacity 0.5s ease, transform 0.5s ease;
-    animation: rotateGlow 10s linear infinite;
+    animation: none; /* 移除旋转动画 */
 }
 
 @keyframes rotateGlow {
@@ -6490,7 +6487,7 @@ p:hover {
 }
 
 .contributors-grid td:hover .contributor-avatar-glow {
-    opacity: 1;
+    opacity: 0; /* 设置为透明，不显示粉色圈 */
     transform: scale(1.15);
 }
 
