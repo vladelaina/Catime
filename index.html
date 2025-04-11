@@ -486,6 +486,19 @@
                     </div>
                 </div>
             </div>
+            <!-- 添加咖啡粒子效果 -->
+            <div class="coffee-particles">
+                <div class="coffee-particle" style="left: 5%; animation-delay: 0s;"><i class="fas fa-coffee" style="color: #bb6b38;"></i></div>
+                <div class="coffee-particle" style="left: 15%; animation-delay: 2s;"><i class="fas fa-mug-hot" style="color: #ffac33;"></i></div>
+                <div class="coffee-particle" style="left: 25%; animation-delay: 4s;"><i class="fas fa-coffee" style="color: #bb6b38;"></i></div>
+                <div class="coffee-particle" style="left: 35%; animation-delay: 1s;"><i class="fas fa-mug-saucer" style="color: #b36b42;"></i></div>
+                <div class="coffee-particle" style="left: 45%; animation-delay: 3s;"><i class="fas fa-mug-hot" style="color: #ffac33;"></i></div>
+                <div class="coffee-particle" style="left: 55%; animation-delay: 5s;"><i class="fas fa-coffee" style="color: #bb6b38;"></i></div>
+                <div class="coffee-particle" style="left: 65%; animation-delay: 0.5s;"><i class="fas fa-mug-saucer" style="color: #b36b42;"></i></div>
+                <div class="coffee-particle" style="left: 75%; animation-delay: 2.5s;"><i class="fas fa-mug-hot" style="color: #ffac33;"></i></div>
+                <div class="coffee-particle" style="left: 85%; animation-delay: 4.5s;"><i class="fas fa-coffee" style="color: #bb6b38;"></i></div>
+                <div class="coffee-particle" style="left: 95%; animation-delay: 1.5s;"><i class="fas fa-mug-saucer" style="color: #b36b42;"></i></div>
+            </div>
         </section>
 
     </main>
@@ -656,6 +669,85 @@
             </div>
         </div>
     </footer>
+
+    <!-- 支持项目的3D交互效果 -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 为支持项目卡添加3D交互效果
+        const supportMethods = document.querySelectorAll('.support-method');
+        
+        supportMethods.forEach(card => {
+            let rect = card.getBoundingClientRect();
+            let centerX = (rect.left + rect.right) / 2;
+            let centerY = (rect.top + rect.bottom) / 2;
+            
+            // 鼠标移动事件处理
+            card.addEventListener('mousemove', function(e) {
+                rect = card.getBoundingClientRect();
+                centerX = (rect.left + rect.right) / 2;
+                centerY = (rect.top + rect.bottom) / 2;
+                
+                // 计算鼠标与卡片中心的相对距离（-1到1的范围）
+                const relativeX = (e.clientX - centerX) / (rect.width / 2);
+                const relativeY = (e.clientY - centerY) / (rect.height / 2);
+                
+                // 应用旋转效果，最大±10度
+                card.style.transform = `translateY(-20px) scale(1.03) rotateX(${-relativeY * 10}deg) rotateY(${relativeX * 10}deg)`;
+                
+                // 获取QR码和标签元素
+                const qrCode = card.querySelector('.support-qr');
+                const label = card.querySelector('.support-label');
+                
+                if (qrCode) {
+                    // QR码沿Z轴移动更多，创造深度感
+                    qrCode.style.transform = `translateZ(40px) scale(1.08) rotate(${relativeX * 2}deg)`;
+                }
+                
+                if (label) {
+                    // 标签轻微偏移跟随鼠标
+                    label.style.transform = `translateZ(25px) translateY(-5px) translateX(${relativeX * 5}px) scale(1.05)`;
+                }
+            });
+            
+            // 鼠标离开时重置效果
+            card.addEventListener('mouseleave', function() {
+                card.style.transform = '';
+                const qrCode = card.querySelector('.support-qr');
+                const label = card.querySelector('.support-label');
+                
+                if (qrCode) {
+                    qrCode.style.transform = 'translateZ(20px)';
+                }
+                
+                if (label) {
+                    label.style.transform = 'translateZ(10px)';
+                }
+                
+                // 使用setTimeout添加过渡回原位的动画
+                setTimeout(() => {
+                    card.style.transition = 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                    qrCode.style.transition = 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                    label.style.transition = 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                }, 50);
+            });
+            
+            // 鼠标进入时移除过渡效果，使移动更流畅
+            card.addEventListener('mouseenter', function() {
+                card.style.transition = 'none';
+                const qrCode = card.querySelector('.support-qr');
+                const label = card.querySelector('.support-label');
+                
+                if (qrCode) {
+                    qrCode.style.transition = 'none';
+                }
+                
+                if (label) {
+                    label.style.transition = 'none';
+                }
+            });
+        });
+    });
+    </script>
 
     <!-- AOS (滚动时动画) 库 JS -->
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
@@ -872,7 +964,7 @@
             }
         });
     </script>
-    
+
     <!-- Star History Chart -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
     <script>

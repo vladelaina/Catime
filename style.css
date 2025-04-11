@@ -6790,3 +6790,59 @@ p:hover {
         font-size: 1rem;
     }
 }
+
+/* 添加咖啡图标飘动粒子效果 */
+.support-project .coffee-particles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.coffee-particle {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    background: transparent;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 1;
+    animation: coffeeFloat 8s linear infinite;
+    font-size: 1.3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.coffee-particle i {
+    transform: translateZ(0);
+    filter: drop-shadow(0 0 5px rgba(255, 172, 51, 0.3));
+    animation: rotateCoffee 4s linear infinite;
+}
+
+@keyframes rotateCoffee {
+    0% { transform: rotate(0deg) scale(1); }
+    50% { transform: rotate(180deg) scale(1.2); }
+    100% { transform: rotate(360deg) scale(1); }
+}
+
+@keyframes coffeeFloat {
+    0% {
+        transform: translateY(100%) rotate(0deg);
+        opacity: 0;
+    }
+    10% {
+        opacity: 0.8;
+    }
+    90% {
+        opacity: 0.6;
+    }
+    100% {
+        transform: translateY(-100vh) rotate(360deg);
+        opacity: 0;
+    }
+}
