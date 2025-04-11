@@ -1622,4 +1622,62 @@ iframe {
     border-left-color: var(--primary-color);
     background: linear-gradient(90deg, rgba(122, 162, 247, 0.1), transparent 80%);
     transform: translateX(5px);
+}
+
+/* 为李笑来的引用添加的特殊样式 */
+.quote-highlight {
+    display: inline-block;
+    position: relative;
+    font-weight: 700;
+    font-size: 1.2em;
+    color: #f77daa;
+    padding: 0.5rem 1rem;
+    margin: 1rem 0;
+    text-align: center;
+    background: linear-gradient(135deg, rgba(122, 162, 247, 0.08) 0%, rgba(247, 125, 170, 0.08) 100%);
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    transform: translateZ(0);
+    transition: all 0.4s ease;
+    width: 100%;
+    line-height: 1.5;
+}
+
+.quote-highlight::before,
+.quote-highlight::after {
+    content: '"';
+    font-size: 1.5em;
+    font-family: 'Georgia', serif;
+    color: rgba(247, 125, 170, 0.5);
+    position: absolute;
+    height: 30px;
+    width: 30px;
+}
+
+.quote-highlight::before {
+    top: -15px;
+    left: 10px;
+}
+
+.quote-highlight::after {
+    bottom: -25px;
+    right: 10px;
+}
+
+.quote-highlight:hover {
+    transform: translateY(-3px) scale(1.01);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    background: linear-gradient(135deg, rgba(122, 162, 247, 0.12) 0%, rgba(247, 125, 170, 0.12) 100%);
+}
+
+.quote-highlight:hover::before,
+.quote-highlight:hover::after {
+    color: rgba(247, 125, 170, 0.8);
+}
+
+@media (max-width: 768px) {
+    .quote-highlight {
+        font-size: 1.1em;
+        padding: 0.4rem 0.8rem;
+    }
 } 
