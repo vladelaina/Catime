@@ -239,4 +239,34 @@
     .question-text {
         font-size: 0.9rem;
     }
+}
+
+/* 四方格布局 */
+.story-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 15px;
+    margin: 20px 0;
+    max-width: 100%;
+}
+
+.story-grid .grid-item {
+    margin: 0;
+    height: 100%;
+}
+
+.story-grid .grid-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 10px;
+}
+
+/* 适配移动设备 */
+@media (max-width: 768px) {
+    .story-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: repeat(4, auto);
+    }
 } 
