@@ -1,0 +1,148 @@
+/* 问题框样式 */
+.questions-box {
+    background: linear-gradient(135deg, rgba(122, 162, 247, 0.1), rgba(247, 125, 170, 0.1));
+    border-radius: 20px;
+    padding: 2rem;
+    margin: 2rem 0;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 15px rgba(122, 162, 247, 0.1);
+}
+
+.questions-box::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.6s ease;
+}
+
+.questions-box:hover::before {
+    transform: translateX(100%);
+}
+
+.question-item {
+    display: flex;
+    align-items: center;
+    margin: 1.5rem 0;
+    padding: 1.2rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(5px);
+}
+
+.question-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(to bottom, #7aa2f7, #f77daa);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.question-item:hover {
+    transform: translateX(10px);
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 15px rgba(122, 162, 247, 0.15);
+}
+
+.question-item:hover::before {
+    opacity: 1;
+}
+
+.question-icon {
+    font-size: 1.8rem;
+    margin-right: 1.2rem;
+    color: #7aa2f7;
+    transition: all 0.3s ease;
+    text-shadow: 0 2px 5px rgba(122, 162, 247, 0.3);
+}
+
+.question-item:hover .question-icon {
+    transform: scale(1.2) rotate(5deg);
+    color: #f77daa;
+    text-shadow: 0 2px 8px rgba(247, 125, 170, 0.4);
+}
+
+.question-text {
+    margin: 0;
+    font-size: 1.2rem;
+    color: var(--text-color);
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.question-item:hover .question-text {
+    color: #7aa2f7;
+    text-shadow: 0 0 8px rgba(122, 162, 247, 0.2);
+}
+
+@keyframes floatQuestion {
+    0% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+    100% { transform: translateY(0); }
+}
+
+.question-item:nth-child(1) { 
+    animation: floatQuestion 3s ease-in-out infinite;
+    background: rgba(122, 162, 247, 0.05);
+}
+
+.question-item:nth-child(2) { 
+    animation: floatQuestion 3s ease-in-out infinite 0.5s;
+    background: rgba(247, 125, 170, 0.05);
+}
+
+.question-item:nth-child(3) { 
+    animation: floatQuestion 3s ease-in-out infinite 1s;
+    background: rgba(154, 165, 206, 0.05);
+}
+
+.questions-box::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 50% 50%, rgba(122, 162, 247, 0.1), transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.questions-box:hover::after {
+    opacity: 1;
+}
+
+/* 添加粒子效果 */
+.questions-box .particle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: #7aa2f7;
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.questions-box:hover .particle {
+    opacity: 0.3;
+    animation: particleFloat 3s ease-in-out infinite;
+}
+
+@keyframes particleFloat {
+    0% { transform: translateY(0) translateX(0); opacity: 0.3; }
+    50% { transform: translateY(-10px) translateX(5px); opacity: 0.1; }
+    100% { transform: translateY(0) translateX(0); opacity: 0.3; }
+} 
