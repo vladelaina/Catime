@@ -6642,3 +6642,177 @@ p:hover {
         font-size: 0.85em;
     }
 }
+
+/* 支持项目区域 */
+.support-project {
+    padding: 6rem 0;
+    background: linear-gradient(180deg, var(--background-color) 0%, #f5f7fa 100%); /* 从背景色渐变到浅灰色 */
+    position: relative;
+    border-top: 1px solid rgba(122, 162, 247, 0.15); /* 添加一个细微的顶部边框 */
+}
+
+/* 移除自动添加的::before伪元素，因为它与上面的 border-top 重复了 */
+/*
+.support-project::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(122, 162, 247, 0.3), transparent);
+}
+*/
+
+.support-methods {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start; /* 垂直顶部对齐 */
+    gap: 4rem; /* 增加二维码之间的间距 */
+    margin-top: 3rem;
+    flex-wrap: wrap; /* 允许在小屏幕上换行 */
+}
+
+.support-method {
+    text-align: center;
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    padding: 2rem; /* 增加内边距 */
+    background: #ffffff;
+    border-radius: 18px; /* 更圆润的边角 */
+    box-shadow: 0 6px 25px rgba(172, 188, 229, 0.2); /* 更柔和的阴影 */
+    border: 1px solid #e8eaf6; /* 更浅的边框 */
+    position: relative;
+    overflow: hidden; /* 配合伪元素效果 */
+}
+
+.support-method::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(122, 162, 247, 0.1) 0%, rgba(122, 162, 247, 0) 70%);
+    opacity: 0;
+    transform: scale(0.5);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+    z-index: 1;
+}
+
+.support-method:hover::before {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.support-method:hover {
+    transform: translateY(-10px) scale(1.04); /* 悬浮效果更明显 */
+    box-shadow: 0 15px 40px rgba(122, 162, 247, 0.2);
+    border-color: rgba(122, 162, 247, 0.3);
+}
+
+.support-qr {
+    width: 180px; /* 调整二维码大小 */
+    height: 180px;
+    object-fit: contain; /* 保持二维码比例 */
+    margin-bottom: 1.5rem; /* 增加二维码和标签的间距 */
+    border-radius: 10px; /* 增加圆角 */
+    border: 1px solid #e0e4f0;
+    background-color: #fff;
+    padding: 8px; /* 给二维码一点内边距 */
+    transition: all 0.3s ease;
+    position: relative; /* 使内容显示在伪元素之上 */
+    z-index: 2; /* 使内容显示在伪元素之上 */
+}
+
+.support-method:hover .support-qr {
+    transform: scale(1.05); /* 轻微放大二维码 */
+    border-color: #c5cdeb;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.support-label {
+    font-size: 1.15rem; /* 增大字体 */
+    font-weight: 600;
+    color: var(--text-light-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    transition: color 0.3s ease, transform 0.3s ease;
+    position: relative; /* 使内容显示在伪元素之上 */
+    z-index: 2; /* 使内容显示在伪元素之上 */
+}
+
+.support-method:hover .support-label {
+    color: var(--primary-color); /* 使用主色调 */
+    transform: translateY(-2px); /* 标签轻微上移 */
+}
+
+.support-label i {
+    font-size: 1.4rem; /* 调整图标大小 */
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); /* 添加回弹效果 */
+}
+
+.support-method:hover .support-label i {
+    transform: scale(1.2) rotate(-10deg); /* 悬停时图标放大并轻微旋转 */
+}
+
+.support-label.alipay i {
+    color: #1677ff; /* 更新为最新的支付宝蓝色 */
+}
+
+.support-label.wechat i {
+    color: #07c160; /* 微信绿色 */
+}
+
+/* Coffee Icon Animation */
+.support-project .section-title i.fa-mug-hot {
+    display: inline-block;
+    animation: coffeeSteam 2.5s infinite ease-out 0.5s;
+    transform-origin: bottom center;
+}
+
+@keyframes coffeeSteam {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  50% { transform: translateY(-8px) scale(1.05); opacity: 0.8; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+
+@media (max-width: 768px) {
+    .support-methods {
+        gap: 2.5rem;
+        flex-direction: column; /* 在平板上也改为垂直堆叠 */
+        align-items: center; /* 居中对齐 */
+    }
+    .support-method {
+        width: 80%; /* 调整宽度 */
+        max-width: 300px; /* 设置最大宽度 */
+        padding: 1.5rem;
+    }
+    .support-qr {
+        width: 160px;
+        height: 160px;
+    }
+    .support-label {
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .support-project {
+        padding: 4rem 0; /* 调整内边距 */
+    }
+    .support-method {
+        width: 90%;
+        max-width: 280px;
+    }
+    .support-qr {
+        width: 140px;
+        height: 140px;
+        margin-bottom: 1rem;
+    }
+    .support-label {
+        font-size: 1rem;
+    }
+}
