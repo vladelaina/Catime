@@ -917,8 +917,18 @@
                     
                     let phase = 0;
                     breatheTimer = setInterval(() => {
-                        // 正弦波动的呼吸效果
-                        const scale = 1.55 + Math.sin(phase) * 0.03;
+                        // 检测是否是移动设备
+                        const isMobile = window.innerWidth <= 480;
+                        
+                        // 根据设备类型使用不同的缩放比例
+                        let scale;
+                        if (isMobile) {
+                            // 移动设备上使用更小的缩放效果
+                            scale = 0.85 + Math.sin(phase) * 0.02;
+                        } else {
+                            // 正弦波动的呼吸效果
+                            scale = 1.55 + Math.sin(phase) * 0.03;
+                        }
                         
                         // 应用变换，结合当前的旋转角度
                         heroImage.style.transform = `scale(${scale}) perspective(1000px) rotateY(${currentRotateY}deg) rotateX(${currentRotateX}deg)`;
@@ -953,8 +963,17 @@
                     stopBreatheEffect(); // 停止呼吸效果
                     currentRotateX = 0;
                     currentRotateY = 0;
-                    // 直接设置回初始状态
-                    heroImage.style.transform = 'scale(1.5) perspective(1000px)';
+                    
+                    // 检测是否是移动设备
+                    const isMobile = window.innerWidth <= 480;
+                    
+                    // 根据设备类型设置不同的初始缩放
+                    if (isMobile) {
+                        heroImage.style.transform = 'scale(0.85) perspective(1000px)';
+                    } else {
+                        // 直接设置回初始状态
+                        heroImage.style.transform = 'scale(1.5) perspective(1000px)';
+                    }
                 });
                 
                 // 鼠标进入时准备变换并启动呼吸效果
@@ -967,8 +986,17 @@
                 heroImage.addEventListener('mousedown', function() {
                     // 暂时停止呼吸效果
                     stopBreatheEffect();
+                    
+                    // 检测是否是移动设备（屏幕宽度小于等于480px）
+                    const isMobile = window.innerWidth <= 480;
+                    
                     // 按下效果 - 缩小并轻微下沉，使变化更加柔和
-                    heroImage.style.transform = `scale(1.48) perspective(1000px) rotateY(${currentRotateY}deg) rotateX(${currentRotateX}deg) translateZ(-10px)`;
+                    // 在移动设备上使用更小的缩放比例
+                    if (isMobile) {
+                        heroImage.style.transform = `scale(0.8) perspective(1000px) rotateY(${currentRotateY}deg) rotateX(${currentRotateX}deg) translateZ(-10px)`;
+                    } else {
+                        heroImage.style.transform = `scale(1.48) perspective(1000px) rotateY(${currentRotateY}deg) rotateX(${currentRotateX}deg) translateZ(-10px)`;
+                    }
                 });
                 
                 // 鼠标释放或离开时回弹
@@ -991,9 +1019,18 @@
                             }, 150);
                         }
                     } else {
+                        // 检测是否是移动设备
+                        const isMobile = window.innerWidth <= 480;
+                        
                         // 如果鼠标不在图片上，保持停止呼吸效果的状态
                         heroImage.style.transition = 'transform 0.15s cubic-bezier(0.34, 1.2, 0.64, 1)';
-                        heroImage.style.transform = 'scale(1.5) perspective(1000px)';
+                        
+                        // 在移动设备上使用更小的缩放比例
+                        if (isMobile) {
+                            heroImage.style.transform = 'scale(0.85) perspective(1000px)';
+                        } else {
+                            heroImage.style.transform = 'scale(1.5) perspective(1000px)';
+                        }
                         
                         // 恢复正常过渡，延迟时间与动画时长匹配
                         setTimeout(() => {

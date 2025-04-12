@@ -696,7 +696,8 @@ img {
     }
     
     .hero-screenshot:hover {
-        transform: scale(0.9) perspective(1000px);
+        transform: scale(0.9) perspective(1000px); /* 悬停时缩小放大比例 */
+        max-width: 95%; /* 限制最大宽度，防止溢出 */
     }
     
     @keyframes breathe {
