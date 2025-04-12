@@ -5749,11 +5749,13 @@ p:hover {
     border-right: none;
     z-index: 0;
     transition: all 0.3s ease;
+    display: none; /* 隐藏这个蓝色正方形 */
 }
 
 .tip-box:hover::before {
     background-color: rgba(122, 162, 247, 0.2);
     transform: rotate(45deg) scale(1.2);
+    display: none; /* 悬停时也隐藏 */
 }
 
 .tip-icon {
