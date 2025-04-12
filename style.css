@@ -5313,7 +5313,7 @@ p:hover {
     display: inline-block;
 }
 
-.icon-animate-rotate:hover {
+.text-accent:hover .icon-animate-rotate {
     animation: iconRotate 1s ease infinite;
 }
 
@@ -5330,7 +5330,7 @@ p:hover {
     display: inline-block;
 }
 
-.icon-animate-bounce:hover {
+.text-primary:hover .icon-animate-bounce {
     animation: iconBounce 0.8s ease infinite;
 }
 
@@ -5344,7 +5344,7 @@ p:hover {
     display: inline-block;
 }
 
-.icon-animate-jump:hover {
+.text-success:hover .icon-animate-jump {
     animation: iconJump 0.8s ease infinite;
 }
 
@@ -5363,7 +5363,7 @@ p:hover {
     display: inline-block;
 }
 
-.icon-animate-pulse:hover {
+.text-warning:hover .icon-animate-pulse {
     animation: iconPulse 1.5s ease infinite;
 }
 
