@@ -5383,7 +5383,7 @@ p:hover {
 }
 
 .guide-intro::after {
-    content: "✨";
+    content: "";
     position: absolute;
     right: -15px;
     bottom: -5px;
@@ -5615,7 +5615,7 @@ p:hover {
 }
 
 .feature-highlight::before {
-    content: "✨";
+    content: "";
     position: absolute;
     top: -10px;
     left: 20px;
