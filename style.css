@@ -5307,6 +5307,72 @@ p:hover {
     text-shadow: 0 0 5px rgba(233, 162, 59, 0.5);
 }
 
+/* 图标动画效果 */
+.icon-animate-rotate {
+    transition: transform 0.3s ease;
+    display: inline-block;
+}
+
+.icon-animate-rotate:hover {
+    animation: iconRotate 1s ease infinite;
+}
+
+@keyframes iconRotate {
+    0% { transform: rotate(0); }
+    25% { transform: rotate(15deg); }
+    50% { transform: rotate(0); }
+    75% { transform: rotate(-15deg); }
+    100% { transform: rotate(0); }
+}
+
+.icon-animate-bounce {
+    transition: transform 0.3s ease;
+    display: inline-block;
+}
+
+.icon-animate-bounce:hover {
+    animation: iconBounce 0.8s ease infinite;
+}
+
+@keyframes iconBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+
+.icon-animate-jump {
+    transition: transform 0.3s ease;
+    display: inline-block;
+}
+
+.icon-animate-jump:hover {
+    animation: iconJump 0.8s ease infinite;
+}
+
+@keyframes iconJump {
+    0%, 100% { transform: scale(1) translateY(0); }
+    10% { transform: scale(1.1) translateY(0); }
+    30% { transform: scale(0.9) translateY(0); }
+    50% { transform: scale(1.05) translateY(-5px); }
+    57% { transform: scale(1) translateY(-3px); }
+    64% { transform: scale(1) translateY(0); }
+    100% { transform: scale(1) translateY(0); }
+}
+
+.icon-animate-pulse {
+    transition: transform 0.3s ease;
+    display: inline-block;
+}
+
+.icon-animate-pulse:hover {
+    animation: iconPulse 1.5s ease infinite;
+}
+
+@keyframes iconPulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.2); opacity: 0.8; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
 .info-card {
     background-color: rgba(247, 125, 170, 0.05);
     border-radius: var(--border-radius-base);
