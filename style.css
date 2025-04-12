@@ -5262,6 +5262,51 @@ p:hover {
     transform: scale(1.05);
 }
 
+/* 文本强调样式 */
+.text-primary {
+    color: var(--primary-color);
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.text-primary:hover {
+    color: var(--primary-color);
+    text-shadow: 0 0 5px rgba(122, 162, 247, 0.5);
+}
+
+.text-accent {
+    color: var(--accent-color);
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.text-accent:hover {
+    color: var(--accent-color);
+    text-shadow: 0 0 5px rgba(247, 125, 170, 0.5);
+}
+
+.text-success {
+    color: #52c41a;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.text-success:hover {
+    color: #52c41a;
+    text-shadow: 0 0 5px rgba(82, 196, 26, 0.5);
+}
+
+.text-warning {
+    color: #e9a23b;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.text-warning:hover {
+    color: #e9a23b;
+    text-shadow: 0 0 5px rgba(233, 162, 59, 0.5);
+}
+
 .info-card {
     background-color: rgba(247, 125, 170, 0.05);
     border-radius: var(--border-radius-base);
