@@ -6627,13 +6627,19 @@ p:hover {
         width: 85%;
         max-width: 300px;
         padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
     }
     .support-qr {
         width: 160px;
         height: 160px;
+        margin: 0 auto 1rem auto;
     }
     .support-label {
         font-size: 1.1rem;
+        margin: 0 auto;
     }
 }
 
@@ -6644,14 +6650,19 @@ p:hover {
     .support-method {
         width: 90%;
         max-width: 280px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
     }
     .support-qr {
         width: 140px;
         height: 140px;
-        margin-bottom: 1rem;
+        margin: 0 auto 1rem auto;
     }
     .support-label {
         font-size: 1rem;
+        margin: 0 auto;
     }
 }
 

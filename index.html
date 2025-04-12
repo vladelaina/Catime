@@ -608,13 +608,13 @@
                 <p class="section-subtitle" data-aos="fade-up" data-aos-delay="100" style="font-size: 1.25rem; color: var(--text-secondary); max-width: 80%; margin: 1rem auto 2rem;">如果 Catime 对你有帮助，可以请作者喝杯咖啡鼓励一下哦~</p>
 
                 <div class="support-methods" data-aos="fade-up" data-aos-delay="200" style="margin-top: 3.5rem; gap: 5rem;">
-                    <div class="support-method responsive-method" style="padding: 2.5rem; border-radius: 25px; box-shadow: 0 15px 35px rgba(122, 162, 247, 0.2); border: 2px solid rgba(255, 255, 255, 0.9); background: rgba(255, 255, 255, 0.92); min-width: 280px;">
-                        <img src="assets/WeChat.png" alt="微信收款码" class="support-qr wechat-qr responsive-qr" style="width: 240px; height: 240px; border: 3px solid rgba(255, 255, 255, 0.9); border-radius: 18px; padding: 15px; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);">
-                        <p class="support-label wechat responsive-label" style="font-size: 1.4rem; margin-top: 1rem;"><i class="fab fa-weixin responsive-icon" style="font-size: 1.6rem;"></i> 微信</p>
+                    <div class="support-method responsive-method" style="padding: 2.5rem; border-radius: 25px; box-shadow: 0 15px 35px rgba(122, 162, 247, 0.2); border: 2px solid rgba(255, 255, 255, 0.9); background: rgba(255, 255, 255, 0.92); min-width: 280px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                        <img src="assets/WeChat.png" alt="微信收款码" class="support-qr wechat-qr responsive-qr" style="width: 240px; height: 240px; border: 3px solid rgba(255, 255, 255, 0.9); border-radius: 18px; padding: 15px; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08); margin: 0 auto;">
+                        <p class="support-label wechat responsive-label" style="font-size: 1.4rem; margin: 1rem auto 0 auto; text-align: center;"><i class="fab fa-weixin responsive-icon" style="font-size: 1.6rem;"></i> 微信</p>
                     </div>
-                    <div class="support-method responsive-method" style="padding: 2.5rem; border-radius: 25px; box-shadow: 0 15px 35px rgba(122, 162, 247, 0.2); border: 2px solid rgba(255, 255, 255, 0.9); background: rgba(255, 255, 255, 0.92); min-width: 280px;">
-                        <img src="assets/Alipay.png" alt="支付宝收款码" class="support-qr alipay-qr responsive-qr" style="width: 240px; height: 240px; border: 3px solid rgba(255, 255, 255, 0.9); border-radius: 18px; padding: 15px; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);">
-                        <p class="support-label alipay responsive-label" style="font-size: 1.4rem; margin-top: 1rem;"><i class="fab fa-alipay responsive-icon" style="font-size: 1.6rem;"></i> 支付宝</p>
+                    <div class="support-method responsive-method" style="padding: 2.5rem; border-radius: 25px; box-shadow: 0 15px 35px rgba(122, 162, 247, 0.2); border: 2px solid rgba(255, 255, 255, 0.9); background: rgba(255, 255, 255, 0.92); min-width: 280px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                        <img src="assets/Alipay.png" alt="支付宝收款码" class="support-qr alipay-qr responsive-qr" style="width: 240px; height: 240px; border: 3px solid rgba(255, 255, 255, 0.9); border-radius: 18px; padding: 15px; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08); margin: 0 auto;">
+                        <p class="support-label alipay responsive-label" style="font-size: 1.4rem; margin: 1rem auto 0 auto; text-align: center;"><i class="fab fa-alipay responsive-icon" style="font-size: 1.6rem;"></i> 支付宝</p>
                     </div>
                 </div>
             </div>
@@ -808,6 +808,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         // 为支持项目卡添加3D交互效果
         const supportMethods = document.querySelectorAll('.support-method');
+        const isMobile = window.innerWidth <= 768; // 检测是否是移动设备
         
         supportMethods.forEach(card => {
             let rect = card.getBoundingClientRect();
@@ -816,6 +817,8 @@
             
             // 鼠标移动事件处理
             card.addEventListener('mousemove', function(e) {
+                if (isMobile) return; // 在移动设备上不执行这些特效
+                
                 rect = card.getBoundingClientRect();
                 centerX = (rect.left + rect.right) / 2;
                 centerY = (rect.top + rect.bottom) / 2;
@@ -844,6 +847,8 @@
             
             // 鼠标离开时重置效果
             card.addEventListener('mouseleave', function() {
+                if (isMobile) return; // 在移动设备上不执行这些特效
+                
                 card.style.transform = '';
                 const qrCode = card.querySelector('.support-qr');
                 const label = card.querySelector('.support-label');
@@ -866,6 +871,8 @@
             
             // 鼠标进入时移除过渡效果，使移动更流畅
             card.addEventListener('mouseenter', function() {
+                if (isMobile) return; // 在移动设备上不执行这些特效
+                
                 card.style.transition = 'none';
                 const qrCode = card.querySelector('.support-qr');
                 const label = card.querySelector('.support-label');
