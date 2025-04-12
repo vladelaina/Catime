@@ -5372,16 +5372,41 @@ p:hover {
     margin: 0 auto;
     position: relative;
     padding-bottom: 0.5rem;
+    transition: color 0.4s ease, transform 0.4s ease;
+    text-shadow: 0 0 0 transparent;
+}
+
+.guide-intro:hover {
+    color: var(--accent-color);
+    transform: translateY(-3px) scale(1.02);
+    text-shadow: 0 2px 8px rgba(247, 125, 170, 0.2);
 }
 
 .guide-intro::after {
-    content: "";
+    content: "✨";
     position: absolute;
-    left: 30%;
-    bottom: 0;
-    width: 40%;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, var(--accent-color), transparent);
+    right: -15px;
+    bottom: -5px;
+    font-size: 1.3rem;
+    opacity: 0;
+    transform: scale(0.5) rotate(-15deg);
+    transition: opacity 0.4s ease 0.1s, transform 0.4s ease 0.1s;
+    pointer-events: none;
+    filter: drop-shadow(0 0 3px rgba(255, 215, 0, 0.5));
+}
+
+.guide-intro:hover::after {
+    opacity: 1;
+    transform: scale(1) rotate(10deg) translateX(5px);
+    animation: emojiWiggle 1.5s ease-in-out 0.5s infinite;
+}
+
+@keyframes emojiWiggle {
+    0% { transform: scale(1) rotate(10deg) translateX(5px); }
+    25% { transform: scale(1.1) rotate(15deg) translateX(7px) translateY(-2px); }
+    50% { transform: scale(1) rotate(5deg) translateX(3px) translateY(1px); }
+    75% { transform: scale(1.05) rotate(12deg) translateX(6px) translateY(-1px); }
+    100% { transform: scale(1) rotate(10deg) translateX(5px); }
 }
 
 .feature-box {
