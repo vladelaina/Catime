@@ -5198,14 +5198,30 @@ p:hover {
     box-shadow: var(--card-hover-shadow);
 }
 
-.author-avatar img {
-    width: 80px;
+.author-avatar {
+    position: relative; /* Ensure this is the positioning context */
+    width: 80px; /* Explicitly define size if needed */
     height: 80px;
+    display: inline-block; /* Or adjust as needed for layout */
+}
+
+.author-avatar img {
+    width: 100%; /* Make image fill the container */
+    height: 100%;
     border-radius: 50%;
     border: 3px solid var(--primary-color);
     transition: all 0.5s ease;
     object-fit: cover;
+    display: block; /* Remove potential space below image */
 }
+
+/* Optional: Style the link directly if needed */
+.author-avatar a {
+    display: block;
+    border-radius: 50%;
+    /* z-index: 1; might not be needed if pointer-events: none is used on glow */
+}
+
 
 .author-card:hover .author-avatar img {
     transform: rotate(10deg);
@@ -5225,6 +5241,7 @@ p:hover {
     transform: scale(1.1);
     transition: opacity 0.5s ease, transform 0.5s ease;
     animation: none; /* 移除旋转动画 */
+    pointer-events: none; /* Add this to allow clicks to pass through */
 }
 
 @keyframes rotateGlow {
@@ -5798,9 +5815,9 @@ p:hover {
     .author-avatar {
         margin-right: 0;
         margin-bottom: 1.5rem;
-    }
-    
-    .author-avatar img {
+}
+
+.author-avatar img {
         width: 70px;
         height: 70px;
     }
