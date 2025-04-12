@@ -157,7 +157,7 @@
         <a href="https://github.com/behappy425"><img src="https://avatars.githubusercontent.com/u/115355212?v=4" width="100px;" alt="behappy425"/><br /><sub><b>behappy425</b></sub></a><br />
       </td>
       <td align="center" valign="top" width="14.28%">
-        <a href="https://github.com/xj-66"><img src="https://avatars.githubusercontent.com/u/31737411?v=4" width="100px;" alt="x.j"/><br /><sub><b>x.j</b></sub></a><br />
+        <a href="https://github.com/xxtui-main/xxtui"><img src="https://avatars.githubusercontent.com/u/31737411?v=4" width="100px;" alt="x.j"/><br /><sub><b>x.j</b></sub></a><br />
       </td>
     </tr>
   </tbody>
