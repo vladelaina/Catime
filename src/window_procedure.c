@@ -499,9 +499,44 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case 200: {   
-                    int current_elapsed = elapsed_time;
-                    int current_total = CLOCK_TOTAL_TIME;
-                    BOOL was_timing = (current_elapsed < current_total);
+                    // 先停止所有计时器，确保没有计时事件会继续处理
+                    KillTimer(hwnd, 1);
+                    
+                    // 完全重置计时器状态 - 关键部分
+                    // 导入所有需要重置的计时状态变量
+                    extern int elapsed_time;            // 从 main.c
+                    extern int countdown_elapsed_time;  // 从 timer.c
+                    extern int countup_elapsed_time;    // 从 timer.c
+                    extern BOOL message_shown;          // 从 main.c 
+                    extern BOOL countdown_message_shown;// 从 timer.c
+                    extern BOOL countup_message_shown;  // 从 timer.c
+                    
+                    // 从timer.c引入高精度计时器初始化函数
+                    extern BOOL InitializeHighPrecisionTimer(void);
+                    extern void ResetTimer(void);    // 使用专门的重置函数
+                    
+                    // 重置所有计时器状态变量 - 顺序很重要!
+                    CLOCK_TOTAL_TIME = 25 * 60;      // 1. 先设置总时间为25分钟
+                    elapsed_time = 0;                // 2. 重置main.c中的elapsed_time
+                    countdown_elapsed_time = 0;      // 3. 重置timer.c中的countdown_elapsed_time
+                    countup_elapsed_time = 0;        // 4. 重置timer.c中的countup_elapsed_time
+                    message_shown = FALSE;           // 5. 重置消息状态
+                    countdown_message_shown = FALSE;
+                    countup_message_shown = FALSE;
+                    
+                    // 设置计时器状态为倒计时模式
+                    CLOCK_COUNT_UP = FALSE;
+                    CLOCK_SHOW_CURRENT_TIME = FALSE;
+                    CLOCK_IS_PAUSED = FALSE;
+                    
+                    // 重置番茄钟状态
+                    current_pomodoro_phase = POMODORO_PHASE_IDLE;
+                    current_pomodoro_time_index = 0;
+                    complete_pomodoro_cycles = 0;
+                    
+                    // 调用计时器专用的重置函数 - 这很关键！
+                    // 这个函数会重新初始化高精度计时器和重置所有计时状态
+                    ResetTimer();
                     
                     // 重置UI状态
                     CLOCK_EDIT_MODE = FALSE;
@@ -552,11 +587,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         CURRENT_LANGUAGE = defaultLanguage;
                     }
                     
-                    // 重置番茄钟状态
-                    current_pomodoro_phase = POMODORO_PHASE_IDLE;
-                    current_pomodoro_time_index = 0;
-                    complete_pomodoro_cycles = 0;
-                    
                     // 删除并重新创建配置文件
                     char config_path[MAX_PATH];
                     GetConfigPath(config_path, MAX_PATH);
@@ -581,12 +611,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             LoadFontFromResource(hInstance, fontResources[i].resourceId);
                             break;
                         }
-                    }
-                    
-                    // 保持当前计时状态（如果有）
-                    if (was_timing) {
-                        elapsed_time = current_elapsed;
-                        CLOCK_TOTAL_TIME = current_total;
                     }
                     
                     // 重置窗口缩放
@@ -626,7 +650,13 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         SWP_NOZORDER | SWP_NOACTIVATE
                     );
                     
-                    // 重绘窗口
+                    // 确保窗口可见
+                    ShowWindow(hwnd, SW_SHOW);
+                    
+                    // 重新启动计时器 - 确保在所有状态重置后才启动
+                    SetTimer(hwnd, 1, 1000, NULL);
+                    
+                    // 刷新窗口显示
                     SendMessage(hwnd, WM_SETREDRAW, TRUE, 0);
                     RedrawWindow(hwnd, NULL, NULL, 
                         RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
