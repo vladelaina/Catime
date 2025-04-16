@@ -104,6 +104,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Feedback") == 0) return L"反馈";
             if (wcscmp(english, L"Check for Updates") == 0) return L"检查更新";
             if (wcscmp(english, L"About") == 0) return L"关于";
+            if (wcscmp(english, L"User Guide") == 0) return L"使用指南";
             if (wcscmp(english, L"Reset") == 0) return L"重置";
             if (wcscmp(english, L"Exit") == 0) return L"退出";
             if (wcscmp(english, L"Settings") == 0) return L"设置";
@@ -180,6 +181,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Feedback") == 0) return L"意見回饋";
             if (wcscmp(english, L"Check for Updates") == 0) return L"檢查更新";
             if (wcscmp(english, L"About") == 0) return L"關於";
+            if (wcscmp(english, L"User Guide") == 0) return L"使用指南";
             if (wcscmp(english, L"Reset") == 0) return L"重設";
             if (wcscmp(english, L"Exit") == 0) return L"結束";
             if (wcscmp(english, L"Settings") == 0) return L"設定";
@@ -256,6 +258,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Feedback") == 0) return L"Comentarios";
             if (wcscmp(english, L"Check for Updates") == 0) return L"Buscar actualizaciones";
             if (wcscmp(english, L"About") == 0) return L"Acerca de";
+            if (wcscmp(english, L"User Guide") == 0) return L"Guía de uso";
             if (wcscmp(english, L"Reset") == 0) return L"Restablecer";
             if (wcscmp(english, L"Exit") == 0) return L"Salir";
             if (wcscmp(english, L"Settings") == 0) return L"Configuración";
@@ -331,6 +334,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Feedback") == 0) return L"Commentaires";
             if (wcscmp(english, L"Check for Updates") == 0) return L"Vérifier les mises à jour";
             if (wcscmp(english, L"About") == 0) return L"À propos";
+            if (wcscmp(english, L"User Guide") == 0) return L"Guide d'utilisation";
             if (wcscmp(english, L"Reset") == 0) return L"Réinitialiser";
             if (wcscmp(english, L"Exit") == 0) return L"Quitter";
             if (wcscmp(english, L"Settings") == 0) return L"Paramètres";
@@ -406,6 +410,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Feedback") == 0) return L"Feedback";
             if (wcscmp(english, L"Check for Updates") == 0) return L"Nach Updates suchen";
             if (wcscmp(english, L"About") == 0) return L"Über";
+            if (wcscmp(english, L"User Guide") == 0) return L"Benutzerhandbuch";
             if (wcscmp(english, L"Reset") == 0) return L"Zurücksetzen";
             if (wcscmp(english, L"Exit") == 0) return L"Beenden";
             if (wcscmp(english, L"Settings") == 0) return L"Einstellungen";
@@ -481,6 +486,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Feedback") == 0) return L"Обратная связь";
             if (wcscmp(english, L"Check for Updates") == 0) return L"Проверить обновления";
             if (wcscmp(english, L"About") == 0) return L"О программе";
+            if (wcscmp(english, L"User Guide") == 0) return L"Пользовательское руководство";
             if (wcscmp(english, L"Reset") == 0) return L"Сбросить";
             if (wcscmp(english, L"Exit") == 0) return L"Выход";
             if (wcscmp(english, L"Settings") == 0) return L"Настройки";
@@ -556,6 +562,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Feedback") == 0) return L"Feedback";
             if (wcscmp(english, L"Check for Updates") == 0) return L"Verificar atualizações";
             if (wcscmp(english, L"About") == 0) return L"Sobre";
+            if (wcscmp(english, L"User Guide") == 0) return L"Guia de uso";
             if (wcscmp(english, L"Reset") == 0) return L"Redefinir";
             if (wcscmp(english, L"Exit") == 0) return L"Sair";
             if (wcscmp(english, L"Settings") == 0) return L"Configurações";
@@ -631,6 +638,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Feedback") == 0) return L"フィードバック";
             if (wcscmp(english, L"Check for Updates") == 0) return L"アップデートを確認";
             if (wcscmp(english, L"About") == 0) return L"このアプリについて";
+            if (wcscmp(english, L"User Guide") == 0) return L"使用ガイド";
             if (wcscmp(english, L"Reset") == 0) return L"リセット";
             if (wcscmp(english, L"Exit") == 0) return L"終了";
             if (wcscmp(english, L"Settings") == 0) return L"設定";
@@ -706,6 +714,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Feedback") == 0) return L"피드백";
             if (wcscmp(english, L"Check for Updates") == 0) return L"업데이트 확인";
             if (wcscmp(english, L"About") == 0) return L"프로그램 정보";
+            if (wcscmp(english, L"User Guide") == 0) return L"사용 설명서";
             if (wcscmp(english, L"Reset") == 0) return L"초기화";
             if (wcscmp(english, L"Exit") == 0) return L"종료";
             if (wcscmp(english, L"Settings") == 0) return L"설정";

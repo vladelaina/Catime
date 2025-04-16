@@ -9,6 +9,7 @@
  */
 
 #include <windows.h>
+#include <shellapi.h>
 #include "../include/tray_events.h"
 #include "../include/tray_menu.h"
 #include "../include/color.h"
@@ -155,4 +156,15 @@ void SetStartupMode(HWND hwnd, const char* mode) {
     if (hMenu) {
         InvalidateRect(hwnd, NULL, TRUE);
     }
+}
+
+/**
+ * @brief 打开使用指南网页
+ * 
+ * 使用ShellExecute打开Catime的使用指南网页，
+ * 为用户提供详细的软件使用说明和帮助文档。
+ * 网址为：https://catime.vladelaina.com/guide
+ */
+void OpenUserGuide(void) {
+    ShellExecuteW(NULL, L"open", L"https://catime.vladelaina.com/guide", NULL, NULL, SW_SHOWNORMAL);
 }

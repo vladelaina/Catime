@@ -512,6 +512,9 @@ void ShowColorMenu(HWND hwnd) {
 
     // 添加分隔线
     AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);
+    
+    // 添加"帮助"选项 - 打开使用指南网页
+    AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_HELP, GetLocalizedString(L"使用指南", L"User Guide"));
 
     // 添加"检查更新"选项
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_CHECK_UPDATE, 

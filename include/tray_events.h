@@ -39,4 +39,20 @@ void PauseResumeTimer(HWND hwnd);
  */
 void RestartTimer(HWND hwnd);
 
+/**
+ * @brief 设置启动模式
+ * @param hwnd 窗口句柄
+ * @param mode 启动模式字符串
+ * 
+ * 根据给定的模式设置启动模式，并更新相关状态变量
+ */
+void SetStartupMode(HWND hwnd, const char* mode);
+
+/**
+ * @brief 打开用户指南
+ * 
+ * 打开用户指南，提供应用程序的使用说明和帮助
+ */
+void OpenUserGuide(void);
+
 #endif // CLOCK_TRAY_EVENTS_H

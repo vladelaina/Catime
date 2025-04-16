@@ -237,6 +237,9 @@
 #define IDC_CREDIT_LINK   1013    // 可点击的链接
 #define IDS_CREDITS_TEXT 1014     // 字符串资源ID
 
+// 定义帮助菜单项ID
+#define CLOCK_IDM_HELP 134        // 添加帮助菜单项ID
+
 // 新增：底部链接控件ID
 #define IDC_CREDITS  1015         // 鸣谢按钮
 #define IDC_FEEDBACK 1016         // 反馈按钮
