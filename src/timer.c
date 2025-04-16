@@ -219,7 +219,8 @@ void FormatTime(int remaining_time, char* time_text) {
     
     int remaining = CLOCK_TOTAL_TIME - countdown_elapsed_time;
     if (remaining <= 0) {
-        time_text[0] = '\0';
+        // 不要返回空字符串，而是显示0:00
+        sprintf(time_text, "    0:00");
         return;
     }
 
@@ -513,6 +514,12 @@ void ResetTimer(void) {
         countup_elapsed_time = 0;
     } else {
         countdown_elapsed_time = 0;
+        
+        // 确保倒计时总时间不为零，如果为零将导致计时器不显示
+        if (CLOCK_TOTAL_TIME <= 0) {
+            // 如果总时间无效，使用默认值
+            CLOCK_TOTAL_TIME = 60; // 默认设置为1分钟
+        }
     }
     
     // 取消暂停状态

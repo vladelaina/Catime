@@ -712,14 +712,25 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_COUNTDOWN_RESET: {
-                    // 现有的重置代码
-                    // ...
+                    // 调用 ResetTimer 重置计时器状态
+                    extern void ResetTimer(void);
+                    ResetTimer();
                     
-                    // 添加窗口置顶重置
+                    // 确保是倒计时模式
+                    if (CLOCK_COUNT_UP) {
+                        CLOCK_COUNT_UP = FALSE;  // 切换到倒计时模式
+                    }
+                    
+                    // 重启定时器
+                    KillTimer(hwnd, 1);
+                    SetTimer(hwnd, 1, 1000, NULL);
+                    
+                    // 强制重绘窗口
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    
+                    // 确保窗口置顶并可见
                     HandleWindowReset(hwnd);
-                    return 0;
-                    
-                    // ... 其他命令处理 ...
+                    break;
                 }
                 case CLOCK_IDC_EDIT_MODE: {
                     if (CLOCK_EDIT_MODE) {
@@ -1162,13 +1173,23 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_COUNT_UP_RESET: {
-                    countup_elapsed_time = 0;  
-                    CLOCK_IS_PAUSED = FALSE;
+                    // 调用 ResetTimer 重置计时器状态
+                    extern void ResetTimer(void);
+                    ResetTimer();
+                    
+                    // 确保是正计时模式
+                    if (!CLOCK_COUNT_UP) {
+                        CLOCK_COUNT_UP = TRUE;
+                    }
+                    
+                    // 重启定时器
                     KillTimer(hwnd, 1);
                     SetTimer(hwnd, 1, 1000, NULL);
+                    
+                    // 强制重绘窗口
                     InvalidateRect(hwnd, NULL, TRUE);
                     
-                    // 确保重置后窗口置顶
+                    // 确保重置后窗口置顶并可见
                     HandleWindowReset(hwnd);
                     break;
                 }
@@ -1413,22 +1434,24 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     ShowPomodoroLoopDialog(hwnd);
                     break;
                 case CLOCK_IDM_POMODORO_RESET: {
-                    // 如果当前是番茄钟模式，重置计时器
+                    // 调用 ResetTimer 重置计时器状态
+                    extern void ResetTimer(void);
+                    ResetTimer();
+                    
+                    // 如果当前是番茄钟模式，重置相关状态
                     if (CLOCK_TOTAL_TIME == POMODORO_WORK_TIME || 
                         CLOCK_TOTAL_TIME == POMODORO_SHORT_BREAK || 
                         CLOCK_TOTAL_TIME == POMODORO_LONG_BREAK) {
-                        // 重置已用时间
-                        countdown_elapsed_time = 0;
-                        // 取消暂停状态
-                        CLOCK_IS_PAUSED = FALSE;
                         // 重新开始计时
+                        KillTimer(hwnd, 1);
                         SetTimer(hwnd, 1, 1000, NULL);
-                        // 强制重绘窗口
-                        InvalidateRect(hwnd, NULL, TRUE);
-                        
-                        // 确保重置后窗口置顶
-                        HandleWindowReset(hwnd);
                     }
+                    
+                    // 强制重绘窗口
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    
+                    // 确保重置后窗口置顶并可见
+                    HandleWindowReset(hwnd);
                     break;
                 }
                 case CLOCK_IDM_TIMEOUT_SHOW_TIME: {

@@ -57,6 +57,9 @@ void HandleWindowReset(HWND hwnd) {
     CLOCK_WINDOW_TOPMOST = TRUE;
     SetWindowTopmost(hwnd, TRUE);
     WriteConfigTopmost("TRUE");
+    
+    // 确保窗口总是可见的 - 解决计时器重置后不可见的问题
+    ShowWindow(hwnd, SW_SHOW);
 }
 
 // 该函数已移至drag_scale.c
