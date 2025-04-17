@@ -86,15 +86,6 @@
 设置保存在 `C:\Users\用户名\AppData\Local\Catime\config.txt`
 
 
-## 💭社区
-
- <a href="https://discord.gg/W3tW2gtp6g"><img alt="Discord" src="https://img.shields.io/badge/Discord-Catime-7289da?logo=discord&logoColor=white&color=7289da"/></a>
- <a href="https://qm.qq.com/q/LgscIMw9i0"><img alt="QQ群" src="https://img.shields.io/badge/QQ-1027327912-7289da?logo=qq&logoColor=white"/></a>
- 
-## 💖[支持](support.md)
-
-如果您喜欢本项目，欢迎打赏，金额随意。您的支持是我持续更新的动力 ദ്ദി˶>𖥦<)✧Thanks!
-
 ## ⭐Star History
 
 <a href="https://star-history.com/#vladelaina/Catime&Date">
