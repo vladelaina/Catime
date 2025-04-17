@@ -445,18 +445,59 @@ function initLanguageToggle() {
             // 设置游戏场景描述的英文
             const gamingText = 'Set a timer while gaming to track your break time. It won\'t affect gameplay, floating transparently on screen, helping you control gaming sessions and avoid excessive play.';
             setSpanContent(gamingScenario, gamingText);
+            
+            // 添加英文版的特定CSS类以确保正确显示
+            gamingScenario.classList.add('english-description');
         }
         
         if (autoopenScenario) {
             // 设置自动打开软件场景描述的英文
             const autoopenText = 'Automatically open specified programs when time\'s up, no more repeated alarm confirmations. Whether reminding you to check emails, opening meeting software, or launching your favorite apps - everything happens automatically.';
             setSpanContent(autoopenScenario, autoopenText);
+            
+            // 添加英文版的特定CSS类以确保正确显示
+            autoopenScenario.classList.add('english-description');
         }
         
         if (presentationScenario) {
             // 设置PPT演示场景描述的英文
             const presentationText = 'The perfect companion for presentations, floating transparently on your slides without blocking the audience\'s view. Helps you precisely control your speaking time, making presentations more confident and worry-free.';
             setSpanContent(presentationScenario, presentationText);
+            
+            // 添加英文版的特定CSS类以确保正确显示
+            presentationScenario.classList.add('english-description');
+        }
+        
+        // 添加特定于英文描述的CSS样式规则，确保正确显示
+        if (!document.getElementById('english-description-styles')) {
+            const styleElement = document.createElement('style');
+            styleElement.id = 'english-description-styles';
+            styleElement.textContent = `
+                .english-description {
+                    letter-spacing: 0 !important;
+                    line-height: 1.8 !important;
+                }
+                .english-description span {
+                    display: inline-block !important;
+                }
+                .english-description span.space {
+                    width: 0.3em !important;
+                    margin-right: 0.05em !important;
+                }
+                .english-description:hover span {
+                    animation: letterWave 2s ease-in-out infinite !important;
+                }
+                .english-description:hover span:nth-child(2n) {
+                    animation-delay: 0.1s !important;
+                }
+                .english-description:hover span:nth-child(3n) {
+                    animation-delay: 0.2s !important;
+                }
+                .english-description:hover span:nth-child(4n) {
+                    animation-delay: 0.3s !important;
+                }
+            `;
+            document.head.appendChild(styleElement);
         }
     }
     
@@ -470,7 +511,16 @@ function initLanguageToggle() {
         // 将新文本拆分为字符并创建span
         for (let i = 0; i < text.length; i++) {
             const span = document.createElement('span');
-            span.textContent = text[i];
+            
+            // 英文文本中的空格需要特殊处理，保持空格宽度
+            if (text[i] === ' ') {
+                span.innerHTML = '&nbsp;';
+                span.className = 'space'; // 添加类名以便CSS处理
+                span.style.marginRight = '0.25em'; // 为空格添加额外的右侧间距
+            } else {
+                span.textContent = text[i];
+            }
+            
             element.appendChild(span);
         }
     }
