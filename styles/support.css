@@ -349,27 +349,72 @@
     line-height: 1.6;
 }
 
+/* 优化支持卡片按钮样式 */
 .support-btn {
-    display: inline-block;
-    padding: 0.8rem 1.5rem;
-    background: white;
-    color: var(--primary-color);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.8rem 1.8rem;
+    background: linear-gradient(45deg, rgba(255, 148, 184, 0.9), rgba(255, 122, 172, 0.9));
+    color: white;
     text-decoration: none;
-    border-radius: 50px;
+    border-radius: 30px;
     font-weight: 600;
-    border: 2px solid var(--primary-color);
-    transition: all 0.3s ease;
+    border: none;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 5px 15px rgba(255, 122, 172, 0.3);
+    position: relative;
+    overflow: hidden;
+    min-width: 160px;
+    z-index: 1;
+    font-size: 1rem;
+    letter-spacing: 0.5px;
+}
+
+.support-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(45deg, rgba(122, 162, 247, 0.9), rgba(148, 184, 255, 0.9));
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    z-index: -1;
 }
 
 .support-btn:hover {
-    background: var(--primary-color);
+    background: none;
     color: white;
-    transform: translateY(-3px);
-    box-shadow: 0 8px 20px rgba(122, 162, 247, 0.3);
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(122, 162, 247, 0.4);
+}
+
+.support-btn:hover::before {
+    opacity: 1;
+}
+
+.support-btn:active {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(122, 162, 247, 0.4);
 }
 
 .support-btn i {
-    margin-right: 0.5rem;
+    margin-right: 0.8rem;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+}
+
+.support-btn:hover i {
+    transform: scale(1.2) rotate(10deg);
+}
+
+/* 重写原有的按钮样式 */
+.support-cards .support-btn {
+    min-width: 180px;
+    margin-top: 0.5rem;
+    font-size: 1.05rem;
 }
 
 /* 感谢支持者区域样式 */
