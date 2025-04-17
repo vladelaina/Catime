@@ -689,6 +689,18 @@
     display: none !important;
 }
 
-.support-method:hover {
-    // ... existing code ...
+/* 其他支持方式标题图标动画 */
+.support-details .section-title i.fa-hand-holding-heart {
+    color: #ff7daa;
+    font-size: 1.2em;
+    margin-left: 10px;
+    animation: heartPulse 2s infinite;
+}
+
+@keyframes heartPulse {
+    0% { transform: scale(1); }
+    25% { transform: scale(1.2); }
+    50% { transform: scale(1); }
+    75% { transform: scale(1.2); }
+    100% { transform: scale(1); }
 } 
