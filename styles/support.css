@@ -401,6 +401,27 @@
     animation: simpleStarShine 2s infinite ease-in-out;
 }
 
+/* Bug图标爬行效果 */
+.support-card:nth-child(2):hover .support-icon {
+    background: var(--primary-color);
+    overflow: visible;
+}
+
+.support-card:nth-child(2):hover .support-icon i.fa-bug {
+    color: white;
+    animation: bugCrawl 3s infinite;
+    position: relative;
+}
+
+@keyframes bugCrawl {
+    0% { transform: translate(0, 0) rotate(0deg); }
+    20% { transform: translate(-15px, -10px) rotate(-15deg); }
+    40% { transform: translate(15px, -15px) rotate(15deg); }
+    60% { transform: translate(-15px, 15px) rotate(-10deg); }
+    80% { transform: translate(15px, 10px) rotate(10deg); }
+    100% { transform: translate(0, 0) rotate(0deg); }
+}
+
 @keyframes simpleStarShine {
     0% { transform: scale(1); }
     50% { transform: scale(1.2); }
