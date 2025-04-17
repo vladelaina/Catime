@@ -5,30 +5,31 @@
   
 <p align="center">
   <a href="https://qm.qq.com/q/LgscIMw9i0" target="_blank">
-    <img src="https://img.shields.io/badge/QQ%20Group-Join-blue?logo=qq&logoColor=white" alt="Join QQ Group" />
+    <img src="https://img.shields.io/badge/QQ%20Group-Join-blue?logo=tencentqq&logoColor=white&style=for-the-badge" alt="Join QQ Group" />
   </a>
   <a href="https://discord.com/invite/W3tW2gtp6g" target="_blank">
-    <img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white" alt="Join Discord" />
+    <img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white&style=for-the-badge" alt="Join Discord" />
   </a>
   <a href="https://catime.vladelaina.com/support" target="_blank">
-    <img src="https://img.shields.io/badge/Support-Go%20Now-critical?logo=buymeacoffee" alt="Support" />
+    <img src="https://img.shields.io/badge/Buy%20me%20a%20coffee-Support%20now-critical?logo=buymeacoffee&logoColor=white&style=for-the-badge" alt="Buy me a coffee" />
   </a>
 
   <br/>
 
   <a href="https://github.com/vladelaina/Catime/blob/main/LICENSE">
-    <img alt="License" src="https://img.shields.io/github/license/vladelaina/Catime?label=License" />
+    <img alt="License" src="https://img.shields.io/github/license/vladelaina/Catime?label=License&style=for-the-badge&color=blue" />
   </a>
   <a href="https://github.com/vladelaina/Catime/releases/latest">
-    <img alt="Release" src="https://img.shields.io/github/release/vladelaina/Catime.svg?label=Release" />
+    <img alt="Release" src="https://img.shields.io/github/release/vladelaina/Catime.svg?label=Release&style=for-the-badge&color=brightgreen" />
   </a>
   <a href="https://github.com/vladelaina/Catime/releases">
-    <img alt="Downloads" src="https://img.shields.io/github/downloads/vladelaina/Catime/total?label=Downloads" />
+    <img alt="Downloads" src="https://img.shields.io/github/downloads/vladelaina/Catime/total?label=Downloads&style=for-the-badge&color=orange" />
   </a>
   <a href="https://github.com/users/vladelaina/projects/2" target="_blank">
-    <img src="https://img.shields.io/badge/To%20Do-12%25%20Complete-00C853?style=flat-circle" alt="To-Do" />
+    <img src="https://img.shields.io/badge/To%20Do-12%25%20Complete-00C853?style=for-the-badge&logo=todoist&logoColor=white" alt="To-Do" />
   </a>
 </p>
+
 
 
 
