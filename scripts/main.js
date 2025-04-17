@@ -233,6 +233,15 @@ function initLanguageToggle() {
             if (metaDescription) {
                 metaDescription.setAttribute('content', 'Catime - A minimalist, modern, efficient transparent timer and pomodoro clock for Windows, with a cute style.');
             }
+            
+            // 处理CTA区域的波浪字母
+            handleWaveLetters();
+            
+            // 处理滚动进度提示
+            const scrollTooltip = document.querySelector('.scroll-progress-tooltip');
+            if (scrollTooltip) {
+                scrollTooltip.textContent = 'Back to Top';
+            }
         }
         
         // 如果是中文，不需要翻译
@@ -261,6 +270,12 @@ function initLanguageToggle() {
             '智能超时动作': 'Smart Timeout Actions', 
             '轻量高效': 'Lightweight & Efficient',
             '开源免费': 'Open Source & Free',
+            '遵循 Apache 2.0 协议，免费使用，欢迎大家一起贡献代码~': 'Licensed under Apache 2.0, free to use, contributions welcome!',
+            '预设、自定义、番茄钟，多种模式满足你的不同时间管理需求。': 'Preset, custom, pomodoro - multiple modes to meet your time management needs.',
+            '像幽灵猫猫一样悬浮，不挡视线，不影响操作，融入桌面背景。': 'Float like a ghost cat, not blocking your view or operations, blending with your desktop.',
+            '字体、颜色、布局随心搭配，打造专属于你的可爱计时器。': 'Customize fonts, colors, and layout to create your own cute timer.',
+            '时间到！自动执行任务，如提醒、锁屏、关机等，省心省力。': 'Time\'s up! Automatic tasks like reminders, screen lock, shutdown, etc. - hassle-free.',
+            'C 语言编写，小巧玲珑，资源占用低，运行顺畅不卡顿。': 'Written in C, lightweight with low resource usage, runs smoothly without lag.',
             
             // 社区区域
             '开源社区认可 ⭐': 'Community Recognition ⭐',
@@ -272,6 +287,9 @@ function initLanguageToggle() {
             '游戏场景': 'Gaming',
             '自动打开软件': 'Auto Launch Apps',
             'PPT演示时使用': 'Presentations',
+            '在游戏中设置计时器，随时关注休息时间。完全不会影响游戏操作，透明悬浮在游戏界面上，让你掌控游戏时间，避免沉迷过度。': 'Set a timer while gaming to track your break time. It won\'t affect gameplay, floating transparently on screen, helping you control gaming sessions and avoid excessive play.',
+            '设置完成后自动打开指定程序，告别传统闹钟的重复确认。无论是提醒你查看邮件、打开会议软件，还是打开你最喜欢的应用，一切都能自动完成。': 'Automatically open specified programs when time\'s up, no more repeated alarm confirmations. Whether reminding you to check emails, opening meeting software, or launching your favorite apps - everything happens automatically.',
+            '演讲和演示时的最佳拍档，透明悬浮在PPT上不影响观众视线，帮助你精确控制演讲时间，演示从此更加从容自信，不再担心超时。': 'The perfect companion for presentations, floating transparently on your slides without blocking the audience\'s view. Helps you precisely control your speaking time, making presentations more confident and worry-free.',
             
             // 号召性区域
             '立刻下载，开启可爱又高效的专注旅程！': 'Download now and start your cute & efficient focus journey!',
@@ -286,11 +304,26 @@ function initLanguageToggle() {
             '感谢所有为 Catime 做出贡献的小伙伴们！': 'Thanks to everyone who contributed to Catime!',
             
             // 动态生成的文本
-            '准备好和 Catime 一起管理时间了吗？': 'Ready to manage time with Catime?'
+            '准备好和 Catime 一起管理时间了吗？': 'Ready to manage time with Catime?',
+            
+            // 滚动指示器
+            '返回顶部': 'Back to Top',
+            
+            // 页脚区域
+            '基于': 'Released under',
+            '许可开源': 'license',
+            '图标画师:': 'Icon Artist:',
+            '问题反馈': 'Feedback'
         };
         
         // 遍历所有文本节点进行翻译
         translateTextNodes(document.body, translations);
+        
+        // 处理特殊情况：场景描述区域的字符级span
+        handleScenarioDescriptions();
+        
+        // 处理页脚文本
+        handleFooterTranslation();
     }
     
     // 递归翻译文本节点
@@ -304,6 +337,13 @@ function initLanguageToggle() {
         } else if (element.nodeType === Node.ELEMENT_NODE) {
             // 处理特定ID和其他属性
             translateElementById(element, translations);
+            
+            // 不翻译某些特定元素
+            if (element.classList && (element.classList.contains('contributor-particles') || 
+                element.classList.contains('scroll-progress-stars') ||
+                element.classList.contains('scroll-progress-emoji-container'))) {
+                return;
+            }
             
             // 处理元素的子节点
             for (let i = 0; i < element.childNodes.length; i++) {
@@ -355,6 +395,99 @@ function initLanguageToggle() {
         // 翻译title属性
         if (element.title && translations[element.title]) {
             element.title = translations[element.title];
+        }
+    }
+    
+    // 特殊处理场景描述（单个字符分割的span）
+    function handleScenarioDescriptions() {
+        // 获取当前语言
+        const lang = localStorage.getItem('catime-language') || 'zh';
+        
+        // 如果不是英文，不进行替换
+        if (lang !== 'en') return;
+        
+        const gamingScenario = document.querySelector('#scenario-gaming .scenario-content p');
+        const autoopenScenario = document.querySelector('#scenario-autoopen .scenario-content p');
+        const presentationScenario = document.querySelector('#scenario-presentation .scenario-content p');
+        
+        if (gamingScenario) {
+            // 设置游戏场景描述的英文
+            const gamingText = 'Set a timer while gaming to track your break time. It won\'t affect gameplay, floating transparently on screen, helping you control gaming sessions and avoid excessive play.';
+            setSpanContent(gamingScenario, gamingText);
+        }
+        
+        if (autoopenScenario) {
+            // 设置自动打开软件场景描述的英文
+            const autoopenText = 'Automatically open specified programs when time\'s up, no more repeated alarm confirmations. Whether reminding you to check emails, opening meeting software, or launching your favorite apps - everything happens automatically.';
+            setSpanContent(autoopenScenario, autoopenText);
+        }
+        
+        if (presentationScenario) {
+            // 设置PPT演示场景描述的英文
+            const presentationText = 'The perfect companion for presentations, floating transparently on your slides without blocking the audience\'s view. Helps you precisely control your speaking time, making presentations more confident and worry-free.';
+            setSpanContent(presentationScenario, presentationText);
+        }
+    }
+    
+    // 设置包含多个span的段落内容
+    function setSpanContent(element, text) {
+        // 先清空现有内容
+        while (element.firstChild) {
+            element.removeChild(element.firstChild);
+        }
+        
+        // 将新文本拆分为字符并创建span
+        for (let i = 0; i < text.length; i++) {
+            const span = document.createElement('span');
+            span.textContent = text[i];
+            element.appendChild(span);
+        }
+    }
+    
+    // 特殊处理页脚的翻译
+    function handleFooterTranslation() {
+        // 获取当前语言
+        const lang = localStorage.getItem('catime-language') || 'zh';
+        
+        // 如果不是英文，不进行替换
+        if (lang !== 'en') return;
+        
+        const footerCopyright = document.querySelector('.main-footer p:first-child');
+        const footerLicense = document.querySelector('.main-footer p:nth-child(2)');
+        const footerArtist = document.querySelector('.main-footer p:nth-child(3)');
+        
+        if (footerCopyright) {
+            footerCopyright.innerHTML = '&copy; 2024 Catime Project by <a href="https://github.com/vladelaina" target="_blank" rel="noopener noreferrer">vladelaina</a>';
+        }
+        
+        if (footerLicense) {
+            footerLicense.innerHTML = 'Released under <a href="https://github.com/vladelaina/Catime/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Apache 2.0</a> license';
+        }
+        
+        if (footerArtist) {
+            footerArtist.innerHTML = 'Icon Artist: <a href="https://space.bilibili.com/26087398" target="_blank" rel="noopener noreferrer">猫屋敷梨梨Official</a>';
+        }
+    }
+
+    // 处理CTA区域的波浪字母
+    function handleWaveLetters() {
+        const ctaTitle = document.getElementById('cta-title');
+        if (!ctaTitle) return;
+        
+        // 清空现有内容
+        while (ctaTitle.firstChild) {
+            ctaTitle.removeChild(ctaTitle.firstChild);
+        }
+        
+        // 英文文本
+        const englishText = 'Ready to manage time with Catime?';
+        
+        // 遍历每个字符，创建带wave-letter类的span
+        for (let i = 0; i < englishText.length; i++) {
+            const span = document.createElement('span');
+            span.className = 'wave-letter';
+            span.textContent = englishText[i];
+            ctaTitle.appendChild(span);
         }
     }
 }
