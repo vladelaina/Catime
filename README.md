@@ -72,7 +72,7 @@
 
  演示视频(基于V1.0.5)：<img src="https://www.bilibili.com/favicon.ico" width="20" height="20"> [BiliBili](https://www.bilibili.com/video/BV1AsoKYgE3r/)
 
-## [📑使用说明](https://catime.vladelaina.com/guide)
+## [📑使用指南](https://catime.vladelaina.com/guide)
 
 - **左键点击托盘图标**: 设置**时间**
 - **右键点击托盘图标**: 设置**菜单**
