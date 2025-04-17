@@ -690,17 +690,17 @@
 }
 
 /* 其他支持方式标题图标动画 */
-.support-details .section-title i.fa-hand-holding-heart {
-    color: #ff7daa;
+.support-details .section-title i.fa-gift {
+    color: #7aa2f7;
     font-size: 1.2em;
     margin-left: 10px;
-    animation: heartPulse 2s infinite;
+    animation: giftWiggle 2.5s infinite;
 }
 
-@keyframes heartPulse {
-    0% { transform: scale(1); }
-    25% { transform: scale(1.2); }
-    50% { transform: scale(1); }
-    75% { transform: scale(1.2); }
-    100% { transform: scale(1); }
+@keyframes giftWiggle {
+    0% { transform: rotate(0deg); }
+    25% { transform: rotate(-10deg); }
+    50% { transform: rotate(0deg); }
+    75% { transform: rotate(10deg); }
+    100% { transform: rotate(0deg); }
 } 
