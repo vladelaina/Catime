@@ -341,16 +341,19 @@ document.addEventListener('DOMContentLoaded', function() {
     // 初始化 ECharts 实例
     const chart = echarts.init(chartContainer);
     
-    // 配置加载状态
+    // 获取当前语言设置
+    const currentLang = localStorage.getItem('catime-language') || 'zh';
+    
+    // 配置加载状态 - 根据语言设置不同文本
     chart.showLoading({
-        text: '加载 GitHub 星星数据中...',
+        text: currentLang === 'en' ? 'Loading GitHub stars data...' : '加载 GitHub 星星数据中...',
         color: '#7aa2f7',
         textColor: '#414868',
         maskColor: 'rgba(255, 255, 255, 0.8)',
     });
     
     // 使用模拟数据渲染图表
-    renderFallbackChart(chart, false);
+    renderFallbackChart(chart, false, currentLang);
     
     // 为GitHub星星图表添加3D交互效果
     const githubChartContainer = document.querySelector('.github-chart-container');
@@ -503,7 +506,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // 备用图表
-    function renderFallbackChart(chart, showFallbackTitle = true) {
+    function renderFallbackChart(chart, showFallbackTitle = true, lang = 'zh') {
         chart.hideLoading();
         
         // 模拟数据 - 使用用户提供的准确日期
@@ -518,10 +521,19 @@ document.addEventListener('DOMContentLoaded', function() {
             ['2025-04-07', 1330]
         ];
         
+        // 根据语言设置标题和其他文本
+        const isEnglish = lang === 'en';
+        const chartTitle = isEnglish 
+            ? (showFallbackTitle ? 'Catime GitHub Star Growth History (Estimated Data)' : 'Catime GitHub Star Growth History')
+            : (showFallbackTitle ? 'Catime GitHub 星星增长历史 (估计数据)' : 'Catime GitHub 星星增长历史');
+        
+        const starLabel = isEnglish ? 'Stars' : '星星数';
+        const seriesName = isEnglish ? 'GitHub Stars' : 'GitHub 星星';
+        
         // 备用图表配置
         const option = {
             title: {
-                text: showFallbackTitle ? 'Catime GitHub 星星增长历史 (估计数据)' : 'Catime GitHub 星星增长历史',
+                text: chartTitle,
                 left: 'center',
                 textStyle: {
                     color: '#414868'
@@ -532,7 +544,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 formatter: function(params) {
                     const date = new Date(params[0].value[0]);
                     const formattedDate = date.toISOString().split('T')[0];
-                    return `${formattedDate}: ${params[0].value[1]} 星星`;
+                    return isEnglish 
+                        ? `${formattedDate}: ${params[0].value[1]} stars` 
+                        : `${formattedDate}: ${params[0].value[1]} 星星`;
                 }
             },
             grid: {
@@ -563,14 +577,14 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             yAxis: {
                 type: 'value',
-                name: '星星数',
+                name: starLabel,
                 nameRotate: 90,
                 nameLocation: 'middle',
                 nameGap: 50,
                 splitNumber: 6
             },
             series: [{
-                name: 'GitHub 星星',
+                name: seriesName,
                 type: 'line',
                 smooth: true,
                 symbol: 'circle',
