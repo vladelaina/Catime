@@ -3,14 +3,29 @@
 <img align="center" alt="catime" width="230" src="Images/catime.png" />
 </a>
   
-</p>
 <p align="center">
- <a href="https://github.com/vladelaina/Catime/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/github/license/vladelaina/Catime?label=License" /></a>
- <a href="https://github.com/vladelaina/Catime/releases/latest"><img alt="Release" src="https://img.shields.io/github/release/vladelaina/Catime.svg?label=Release" /></a>
- <a href="https://github.com/vladelaina/Catime/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/vladelaina/Catime/total?label=Downloads" /></a>
- <a href="https://github.com/users/vladelaina/projects/2" target="_blank"><img src="https://img.shields.io/badge/To%20Do-5%25%20Complete-00C853?style=flat-circle" alt="To-Do" /></a>
-</a>
+  <a href="https://qm.qq.com/q/LgscIMw9i0" target="_blank">
+    <img src="https://img.shields.io/badge/QQ%20Group-Join-blue?logo=tencentqq" alt="Join QQ Group" />
+  </a>
+  <a href="https://catime.vladelaina.com/support" target="_blank">
+    <img src="https://img.shields.io/badge/Support-Go%20Now-critical?logo=buymeacoffee" alt="Support" />
+  </a>
+  <br/>
+  <a href="https://github.com/vladelaina/Catime/blob/main/LICENSE">
+    <img alt="License" src="https://img.shields.io/github/license/vladelaina/Catime?label=License" />
+  </a>
+  <a href="https://github.com/vladelaina/Catime/releases/latest">
+    <img alt="Release" src="https://img.shields.io/github/release/vladelaina/Catime.svg?label=Release" />
+  </a>
+  <a href="https://github.com/vladelaina/Catime/releases">
+    <img alt="Downloads" src="https://img.shields.io/github/downloads/vladelaina/Catime/total?label=Downloads" />
+  </a>
+  <a href="https://github.com/users/vladelaina/projects/2" target="_blank">
+    <img src="https://img.shields.io/badge/To%20Do-5%25%20Complete-00C853?style=flat-circle" alt="To-Do" />
+  </a>
 </p>
+
+
 
 <h1 align="center">Catime</h1>
 
