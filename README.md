@@ -4,13 +4,21 @@
 </a>
   
 <p align="center">
+  <!-- 上方：支持 和 QQ 群 -->
+
   <a href="https://qm.qq.com/q/LgscIMw9i0" target="_blank">
     <img src="https://img.shields.io/badge/QQ%20Group-Join-blue?logo=tencentqq" alt="Join QQ Group" />
+  </a>
+  <a href="https://discord.com/invite/W3tW2gtp6g" target="_blank">
+    <img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white" alt="Join Discord" />
   </a>
   <a href="https://catime.vladelaina.com/support" target="_blank">
     <img src="https://img.shields.io/badge/Support-Go%20Now-critical?logo=buymeacoffee" alt="Support" />
   </a>
+
   <br/>
+
+  <!-- 下方：GitHub 徽章 -->
   <a href="https://github.com/vladelaina/Catime/blob/main/LICENSE">
     <img alt="License" src="https://img.shields.io/github/license/vladelaina/Catime?label=License" />
   </a>
@@ -24,6 +32,7 @@
     <img src="https://img.shields.io/badge/To%20Do-5%25%20Complete-00C853?style=flat-circle" alt="To-Do" />
   </a>
 </p>
+
 
 
 
