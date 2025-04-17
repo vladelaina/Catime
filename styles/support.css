@@ -54,9 +54,11 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
     transform-style: preserve-3d;
     position: relative;
+    cursor: pointer;
+    overflow: hidden;
 }
 
 .support-method::before {
@@ -66,11 +68,11 @@
     left: -15px;
     right: -15px;
     bottom: -15px;
-    background: radial-gradient(circle at center, rgba(122, 162, 247, 0.2), transparent 70%);
+    background: radial-gradient(circle at center, rgba(122, 162, 247, 0.15), transparent 60%);
     border-radius: 35px;
     opacity: 0;
     transform: translateZ(-10px);
-    transition: all 0.5s ease;
+    transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
     z-index: -1;
 }
 
@@ -80,8 +82,9 @@
 }
 
 .support-method:hover {
-    transform: translateY(-20px);
-    box-shadow: 0 25px 50px rgba(122, 162, 247, 0.3), 0 10px 30px rgba(122, 162, 247, 0.15);
+    transform: translateY(-15px);
+    box-shadow: 0 20px 40px rgba(122, 162, 247, 0.25), 0 8px 20px rgba(122, 162, 247, 0.1);
+    border-color: rgba(122, 162, 247, 0.2);
 }
 
 .support-qr {
@@ -93,23 +96,70 @@
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
     margin: 0 auto;
     transform: translateZ(20px);
-    transition: all 0.4s ease;
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
     object-fit: contain;
+    position: relative;
+    z-index: 1;
 }
 
+.support-qr::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
+    border-radius: 22px;
+    background: radial-gradient(circle at top right, rgba(255, 255, 255, 0.6), transparent 60%);
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    z-index: -1;
+}
+
+/* QR码单独的悬停效果 */
+.support-qr:hover {
+    transform: translateZ(50px) scale(1.06);
+    box-shadow: 0 20px 35px rgba(0, 0, 0, 0.12);
+    padding: 14px;
+}
+
+.support-qr:hover::before {
+    opacity: 0.7;
+}
+
+/* 鼠标悬停在卡片上的QR码效果 */
 .support-method:hover .support-qr {
-    transform: translateZ(40px);
-    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.12);
+    transform: translateZ(30px) scale(1.03);
+    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.1);
+}
+
+.alipay-qr,
+.wechat-qr {
+    transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .support-method:hover .alipay-qr {
     border-color: #1677ff;
-    transform: translateZ(40px) scale(1.05) rotate(-1deg);
+    transform: translateZ(30px) scale(1.03);
+    box-shadow: 0 12px 25px rgba(22, 119, 255, 0.15);
 }
 
 .support-method:hover .wechat-qr {
     border-color: #07c160;
-    transform: translateZ(40px) scale(1.05) rotate(1deg);
+    transform: translateZ(30px) scale(1.03);
+    box-shadow: 0 12px 25px rgba(7, 193, 96, 0.15);
+}
+
+.alipay-qr:hover {
+    border-color: #1677ff;
+    transform: translateZ(50px) scale(1.06);
+    box-shadow: 0 20px 35px rgba(22, 119, 255, 0.25);
+}
+
+.wechat-qr:hover {
+    border-color: #07c160;
+    transform: translateZ(50px) scale(1.06);
+    box-shadow: 0 20px 35px rgba(7, 193, 96, 0.25);
 }
 
 .support-label {
@@ -119,7 +169,8 @@
     font-weight: 500;
     color: var(--text-color);
     transform: translateZ(10px);
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    position: relative;
 }
 
 .support-method:hover .support-label {
@@ -128,19 +179,31 @@
     letter-spacing: 0.5px;
 }
 
+.support-label::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background: currentColor;
+    transform: translateX(-50%);
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    opacity: 0;
+}
+
+.support-method:hover .support-label::after {
+    width: 60%;
+    opacity: 0.7;
+}
+
 .support-label i {
     margin-right: 0.5rem;
-    transition: all 0.4s ease;
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .support-method:hover .support-label i {
-    transform: scale(1.2);
-    animation: iconWiggle 1s infinite alternate;
-}
-
-@keyframes iconWiggle {
-    0% { transform: scale(1.2) rotate(-10deg); }
-    100% { transform: scale(1.2) rotate(5deg); }
+    transform: scale(1.1);
 }
 
 .support-label.alipay i {
@@ -624,4 +687,8 @@
 
 .nav-links .support-btn::after {
     display: none !important;
+}
+
+.support-method:hover {
+    // ... existing code ...
 } 
