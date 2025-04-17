@@ -277,3 +277,48 @@
     0% { transform: scale(1.3) rotate(-10deg) !important; }
     100% { transform: scale(1.3) rotate(5deg) !important; }
 }
+
+/* 语言切换按钮样式 */
+#language-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+#language-toggle i {
+    font-size: 1.1rem;
+    color: var(--primary-color);
+    transition: all 0.3s ease;
+}
+
+#language-toggle:hover i {
+    transform: rotate(20deg);
+    color: var(--accent-color);
+}
+
+#language-toggle::after {
+    content: '';
+    position: absolute;
+    bottom: -3px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+    transition: width 0.3s ease;
+}
+
+#language-toggle:hover::after {
+    width: 100%;
+}
+
+@media (max-width: 768px) {
+    #language-toggle {
+        font-size: 0.9rem;
+    }
+    
+    #language-toggle i {
+        font-size: 1rem;
+    }
+}
