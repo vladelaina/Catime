@@ -26,7 +26,7 @@
     <img alt="Downloads" src="https://img.shields.io/github/downloads/vladelaina/Catime/total?label=Downloads" />
   </a>
   <a href="https://github.com/users/vladelaina/projects/2" target="_blank">
-    <img src="https://img.shields.io/badge/To%20Do-5%25%20Complete-00C853?style=flat-circle" alt="To-Do" />
+    <img src="https://img.shields.io/badge/To%20Do-12%25%20Complete-00C853?style=flat-circle" alt="To-Do" />
   </a>
 </p>
 
