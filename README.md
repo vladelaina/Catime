@@ -4,7 +4,6 @@
 </a>
   
 <p align="center">
-  <!-- 上方：支持 和 QQ 群 -->
 
   <a href="https://qm.qq.com/q/LgscIMw9i0" target="_blank">
     <img src="https://img.shields.io/badge/QQ%20Group-Join-blue?logo=tencentqq" alt="Join QQ Group" />
@@ -18,7 +17,6 @@
 
   <br/>
 
-  <!-- 下方：GitHub 徽章 -->
   <a href="https://github.com/vladelaina/Catime/blob/main/LICENSE">
     <img alt="License" src="https://img.shields.io/github/license/vladelaina/Catime?label=License" />
   </a>
