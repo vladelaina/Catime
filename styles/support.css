@@ -451,3 +451,31 @@
         margin: 2rem auto;
     }
 } 
+
+/* 导航栏支持项目按钮样式 */
+.nav-links .support-btn {
+    background: linear-gradient(45deg, var(--accent-color), #f799b8) !important;
+    box-shadow: 0 4px 15px rgba(247, 125, 170, 0.3) !important;
+    color: white !important;
+    padding: 0.6rem 1.5rem !important;
+    border-radius: 50px !important;
+    border: none !important;
+    font-weight: 600 !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.nav-links .support-btn:hover {
+    background: linear-gradient(45deg, #f799b8, var(--accent-color)) !important;
+    box-shadow: 0 6px 20px rgba(247, 125, 170, 0.4) !important;
+    transform: translateY(-3px) !important;
+}
+
+.nav-links .support-btn i {
+    margin-right: 0.5rem !important;
+    animation: coffeeSteam 2s infinite !important;
+}
+
+.nav-links .support-btn::after {
+    display: none !important;
+} 
