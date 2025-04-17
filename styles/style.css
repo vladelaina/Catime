@@ -3754,12 +3754,21 @@ p:hover {
 }
 
 .support-btn i {
-    animation: coffeeSteam 2s infinite;
+    display: inline-block; /* Needed for transform */
+    transition: transform 0.3s ease, opacity 0.3s ease; /* Added transition for smoother hover effect */
+    opacity: 0.8; /* Slightly faded when not animating */
+    transform-origin: bottom center;
+}
+
+/* Add hover state animation */
+.support-btn:hover i {
+    animation: coffeeSteam 1.5s ease-in-out infinite alternate;
 }
 
 @keyframes coffeeSteam {
-    0%, 100% { transform: translateY(0) rotate(0); opacity: 0.8; }
-    50% { transform: translateY(-5px) rotate(5deg); opacity: 1; }
+    0% { transform: translateY(0) rotate(0deg); opacity: 0.6; }
+    50% { transform: translateY(-3px) rotate(-5deg); opacity: 1; }
+    100% { transform: translateY(0) rotate(0deg); opacity: 0.6; }
 }
 
 /* 响应式导航 */
@@ -10157,15 +10166,21 @@ p:hover {
 
 /* Coffee Icon Animation */
 .support-project .section-title i.fa-mug-hot {
-    display: inline-block;
-    animation: coffeeSteam 2.5s infinite ease-out 0.5s;
+    display: inline-block; /* Needed for transform */
+    transition: transform 0.3s ease, opacity 0.3s ease; /* Added transition for smoother hover effect */
+    opacity: 0.8; /* Slightly faded when not animating */
     transform-origin: bottom center;
 }
 
+/* Add hover state animation */
+.support-project .section-title:hover i.fa-mug-hot {
+    animation: coffeeSteam 1.5s ease-in-out infinite alternate;
+}
+
 @keyframes coffeeSteam {
-  0% { transform: translateY(0) scale(1); opacity: 1; }
-  50% { transform: translateY(-8px) scale(1.05); opacity: 0.8; }
-  100% { transform: translateY(0) scale(1); opacity: 1; }
+    0% { transform: translateY(0) rotate(0deg); opacity: 0.6; }
+    50% { transform: translateY(-3px) rotate(-5deg); opacity: 1; }
+    100% { transform: translateY(0) rotate(0deg); opacity: 0.6; }
 }
 
 .support-project .section-subtitle {
