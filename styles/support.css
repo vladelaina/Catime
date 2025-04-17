@@ -389,6 +389,24 @@
     animation: pulse 1.5s infinite;
 }
 
+/* 星星图标特殊样式 */
+.support-card:first-child:hover .support-icon {
+    background: var(--primary-color);
+    box-shadow: 0 0 20px rgba(122, 162, 247, 0.5);
+}
+
+.support-card:first-child:hover .support-icon i.fa-star {
+    color: gold;
+    text-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
+    animation: simpleStarShine 2s infinite ease-in-out;
+}
+
+@keyframes simpleStarShine {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
 @keyframes pulse {
     0% { box-shadow: 0 0 0 0 rgba(122, 162, 247, 0.4); }
     70% { box-shadow: 0 0 0 15px rgba(122, 162, 247, 0); }
