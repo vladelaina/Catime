@@ -4,9 +4,8 @@
 </a>
   
 <p align="center">
-
   <a href="https://qm.qq.com/q/LgscIMw9i0" target="_blank">
-    <img src="https://img.shields.io/badge/QQ%20Group-Join-blue?logo=tencentqq" alt="Join QQ Group" />
+    <img src="https://img.shields.io/badge/QQ%20Group-Join-blue?logo=qq&logoColor=white" alt="Join QQ Group" />
   </a>
   <a href="https://discord.com/invite/W3tW2gtp6g" target="_blank">
     <img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white" alt="Join Discord" />
