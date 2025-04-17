@@ -413,6 +413,44 @@
     position: relative;
 }
 
+/* 分享图标扩散效果 */
+.support-card:nth-child(3):hover .support-icon {
+    background: var(--primary-color);
+    overflow: visible;
+}
+
+.support-card:nth-child(3):hover .support-icon i.fa-share-alt {
+    color: white;
+    animation: shareExpand 1.5s infinite ease-in-out;
+    position: relative;
+}
+
+@keyframes shareExpand {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.3) rotate(15deg); }
+    75% { transform: scale(1.1) rotate(-10deg); }
+    100% { transform: scale(1); }
+}
+
+.support-card:nth-child(3):hover .support-icon::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(122, 162, 247, 0.6);
+    border-radius: 50%;
+    z-index: -1;
+    animation: shareRipple 1.5s infinite ease-out;
+    opacity: 0;
+}
+
+@keyframes shareRipple {
+    0% { transform: scale(0.8); opacity: 0.5; }
+    100% { transform: scale(1.5); opacity: 0; }
+}
+
 @keyframes bugCrawl {
     0% { transform: translate(0, 0) rotate(0deg); }
     20% { transform: translate(-15px, -10px) rotate(-15deg); }
