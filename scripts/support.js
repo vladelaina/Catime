@@ -128,6 +128,33 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 初始化咖啡粒子效果
     initCoffeeParticles();
+    
+    // 添加支持页面的翻译
+    addSupportTranslations();
+
+    // 语言切换按钮功能
+    const languageToggle = document.getElementById('language-toggle');
+    if (languageToggle) {
+        const currentLang = localStorage.getItem('catime-language') || 'zh';
+        
+        // 根据当前语言设置按钮文本
+        if (currentLang === 'zh') {
+            languageToggle.innerHTML = '<i class="fas fa-language"></i> English';
+        } else {
+            languageToggle.innerHTML = '<i class="fas fa-language"></i> 中文';
+        }
+        
+        // 点击切换语言
+        languageToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const newLang = currentLang === 'zh' ? 'en' : 'zh';
+            localStorage.setItem('catime-language', newLang);
+            
+            // 重新加载页面应用新的语言
+            window.location.reload();
+        });
+    }
 });
 
 // 初始化咖啡粒子效果
@@ -205,6 +232,190 @@ function initScrollProgressIndicator() {
             scrollProgressContainer.style.opacity = '0';
             scrollProgressContainer.style.transform = 'scale(0.8)';
             scrollProgressContainer.style.pointerEvents = 'none';
+        }
+    }
+}
+
+// 添加support页面特定的翻译
+function addSupportTranslations() {
+    // 检查当前语言设置
+    const currentLang = localStorage.getItem('catime-language') || 'zh';
+    
+    // 如果当前语言是英文，则添加英文翻译
+    if (currentLang === 'en') {
+        // 翻译页面标题
+        const pageTitle = document.getElementById('page-title');
+        if (pageTitle) {
+            pageTitle.textContent = 'Catime - Support the Project';
+        }
+        
+        // 翻译meta描述
+        const metaDescription = document.getElementById('meta-description');
+        if (metaDescription) {
+            metaDescription.setAttribute('content', 'Support Catime Project - A minimalist, modern, efficient transparent timer and pomodoro clock for Windows, with a cute style.');
+        }
+        
+        // 翻译导航链接
+        document.querySelectorAll('.nav-links li a').forEach(link => {
+            if (link.textContent === '首页') link.textContent = 'Home';
+            if (link.textContent === '指南') link.textContent = 'Guide';
+            if (link.textContent === '关于') link.textContent = 'About';
+            if (link.querySelector('span') && link.querySelector('span').textContent === '下载') {
+                link.querySelector('span').textContent = 'Download';
+            }
+        });
+        
+        // 翻译页面标题区域
+        const pageHeader = document.querySelector('.page-header h1');
+        if (pageHeader) {
+            pageHeader.textContent = 'Support the Project';
+        }
+        
+        const pageHeaderSubtitle = document.querySelector('.page-header p');
+        if (pageHeaderSubtitle) {
+            pageHeaderSubtitle.textContent = 'Your support is our motivation to continuously develop and improve Catime';
+        }
+        
+        // 翻译主要内容
+        translateSupportElements();
+        
+        // 翻译滚动进度提示
+        const scrollTooltip = document.querySelector('.scroll-progress-tooltip');
+        if (scrollTooltip) {
+            scrollTooltip.textContent = 'Back to Top';
+        }
+        
+        // 翻译页脚
+        translateFooter();
+    }
+}
+
+// 翻译support页面内容元素
+function translateSupportElements() {
+    // 翻译section标题和内容
+    document.querySelectorAll('.section-title').forEach(title => {
+        if (title.innerHTML.includes('支持项目')) {
+            title.innerHTML = 'Support the Project <i class="fas fa-mug-hot"></i>';
+        }
+        if (title.innerHTML.includes('其他支持方式')) {
+            title.innerHTML = 'Other Ways to Support <i class="fas fa-gift"></i>';
+        }
+        if (title.innerHTML.includes('感谢支持者')) {
+            title.innerHTML = 'Thanks to Supporters';
+        }
+    });
+    
+    // 翻译支持项目说明
+    const projectDesc = document.querySelector('.support-project .section-subtitle');
+    if (projectDesc) {
+        projectDesc.innerHTML = 'Catime will continue to be open-source and free to use forever.<br>' +
+            'But its development and maintenance require a lot of time and energy.<br>' +
+            'If you find Catime helpful, consider buying the author a coffee,<br>' +
+            'to fuel this passion ❤️‍🔥<br>' +
+            'Every bit of your support is a powerful drive to keep it moving forward!';
+    }
+    
+    // 翻译支付方式标签
+    document.querySelectorAll('.support-label').forEach(label => {
+        if (label.textContent === '微信') {
+            label.innerHTML = '<i class="fab fa-weixin"></i> WeChat';
+        }
+        if (label.textContent === '支付宝') {
+            label.innerHTML = '<i class="fab fa-alipay"></i> Alipay';
+        }
+    });
+    
+    // 翻译其他支持卡片内容
+    const supportCards = document.querySelectorAll('.support-card');
+    supportCards.forEach(card => {
+        const title = card.querySelector('h3');
+        const desc = card.querySelector('p');
+        const btn = card.querySelector('.support-btn');
+        
+        if (title && title.textContent === 'Star 项目') {
+            title.textContent = 'Star Project';
+            desc.textContent = 'If you like Catime, please give us a Star on GitHub. It\'s the best encouragement for us!';
+            if (btn) btn.innerHTML = '<i class="fab fa-github"></i> Star Project';
+        }
+        
+        if (title && title.textContent === '提交Issues') {
+            title.textContent = 'Submit Issues';
+            desc.textContent = 'Found a bug or have feature suggestions? Welcome to submit Issues on GitHub to help us continuously improve Catime!';
+            if (btn) btn.innerHTML = '<i class="fas fa-exclamation-circle"></i> Submit Issues';
+        }
+        
+        if (title && title.textContent === '分享推广') {
+            title.textContent = 'Share & Promote';
+            desc.textContent = 'Share Catime with your friends, colleagues, or on social media to help more people discover this tool!';
+            if (btn) btn.innerHTML = '<i class="fas fa-users"></i> Join Community';
+        }
+    });
+    
+    // 翻译感谢支持者部分
+    const supportersDesc = document.querySelector('.supporters .section-subtitle');
+    if (supportersDesc) {
+        supportersDesc.textContent = 'Special thanks to those who have supported the Catime project! Your encouragement is our motivation to move forward.';
+    }
+    
+    // 翻译表格头部
+    const tableHeaders = document.querySelectorAll('.supporters-table th');
+    if (tableHeaders.length >= 4) {
+        tableHeaders[0].textContent = 'Time';
+        tableHeaders[1].textContent = 'Username';
+        tableHeaders[2].textContent = 'Amount';
+        tableHeaders[3].textContent = 'Message';
+    }
+    
+    // 翻译表格内容中的留言（这里只翻译重复出现的内容）
+    document.querySelectorAll('.supporters-table td').forEach(td => {
+        if (td.textContent === '催更催更😏') {
+            td.textContent = 'Push for updates😏';
+        }
+        if (td.textContent === '番茄钟超赞，期待继续优化') {
+            td.textContent = 'Pomodoro timer is great, looking forward to further optimization';
+        }
+        if (td.textContent === '很棒的项目！') {
+            td.textContent = 'Great project!';
+        }
+        if (td.textContent === '恭喜') {
+            td.textContent = 'Congratulations';
+        }
+        if (td.textContent === '感谢Catime，希望你也能多爱自己，未来可期') {
+            td.textContent = 'Thank you Catime, hope you also love yourself more, the future is promising';
+        }
+        if (td.textContent === '建议catime加个倒计时列表功能') {
+            td.textContent = 'Suggest adding a countdown list feature to catime';
+        }
+        if (td.textContent === '赞助了一年的域名 vladelaina.com') {
+            td.textContent = 'Sponsored one year of domain vladelaina.com';
+        }
+        if (td.textContent === '打赏catime') {
+            td.textContent = 'Tipping catime';
+        }
+        if (td.textContent === '软件好用，赞赞赞') {
+            td.textContent = 'The software is great, praise!';
+        }
+    });
+}
+
+// 翻译页脚
+function translateFooter() {
+    const footerContent = document.querySelector('.main-footer .container');
+    if (footerContent) {
+        // 遍历所有段落
+        footerContent.querySelectorAll('p').forEach(p => {
+            const text = p.innerHTML;
+            if (text.includes('基于')) {
+                p.innerHTML = 'Open-sourced under <a href="https://github.com/vladelaina/Catime/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Apache 2.0</a> license';
+            } else if (text.includes('图标画师')) {
+                p.innerHTML = 'Icon artist: <a href="https://space.bilibili.com/26087398" target="_blank" rel="noopener noreferrer">猫屋敷梨梨Official</a>';
+            }
+        });
+        
+        // 翻译问题反馈链接
+        const feedbackLink = footerContent.querySelector('.footer-links a');
+        if (feedbackLink && feedbackLink.textContent === '问题反馈') {
+            feedbackLink.textContent = 'Feedback';
         }
     }
 } 
