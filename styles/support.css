@@ -1,0 +1,453 @@
+/* 支持项目区域样式 */
+.support-project {
+    padding: 6rem 0;
+    background-color: var(--background-color);
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+}
+
+.support-project::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(122, 162, 247, 0.3), transparent);
+    z-index: -1;
+}
+
+.support-project::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(122, 162, 247, 0.3), transparent);
+    z-index: -1;
+}
+
+@keyframes supportBgPulse {
+    0% { transform: scale(1); opacity: 0.1; }
+    50% { transform: scale(1.1); opacity: 0.15; }
+    100% { transform: scale(1); opacity: 0.1; }
+}
+
+.support-methods {
+    display: flex;
+    justify-content: center;
+    gap: 5rem;
+    margin-top: 3.5rem;
+    perspective: 1000px;
+}
+
+.support-method {
+    padding: 2.5rem;
+    border-radius: 25px;
+    box-shadow: 0 15px 35px rgba(122, 162, 247, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.92);
+    min-width: 280px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transform-style: preserve-3d;
+    position: relative;
+}
+
+.support-method::before {
+    content: '';
+    position: absolute;
+    top: -15px;
+    left: -15px;
+    right: -15px;
+    bottom: -15px;
+    background: radial-gradient(circle at center, rgba(122, 162, 247, 0.2), transparent 70%);
+    border-radius: 35px;
+    opacity: 0;
+    transform: translateZ(-10px);
+    transition: all 0.5s ease;
+    z-index: -1;
+}
+
+.support-method:hover::before {
+    opacity: 1;
+    transform: translateZ(-5px);
+}
+
+.support-method:hover {
+    transform: translateY(-20px);
+    box-shadow: 0 25px 50px rgba(122, 162, 247, 0.3), 0 10px 30px rgba(122, 162, 247, 0.15);
+}
+
+.support-qr {
+    width: 240px;
+    height: 240px;
+    border: 3px solid rgba(255, 255, 255, 0.9);
+    border-radius: 18px;
+    padding: 15px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    margin: 0 auto;
+    transform: translateZ(20px);
+    transition: all 0.4s ease;
+    object-fit: contain;
+}
+
+.support-method:hover .support-qr {
+    transform: translateZ(40px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.12);
+}
+
+.support-method:hover .alipay-qr {
+    border-color: #1677ff;
+    transform: translateZ(40px) scale(1.05) rotate(-1deg);
+}
+
+.support-method:hover .wechat-qr {
+    border-color: #07c160;
+    transform: translateZ(40px) scale(1.05) rotate(1deg);
+}
+
+.support-label {
+    font-size: 1.4rem;
+    margin: 1rem auto 0 auto;
+    text-align: center;
+    font-weight: 500;
+    color: var(--text-color);
+    transform: translateZ(10px);
+    transition: all 0.3s ease;
+}
+
+.support-method:hover .support-label {
+    transform: translateZ(25px) translateY(-5px);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.support-label i {
+    margin-right: 0.5rem;
+    transition: all 0.4s ease;
+}
+
+.support-method:hover .support-label i {
+    transform: scale(1.2);
+    animation: iconWiggle 1s infinite alternate;
+}
+
+@keyframes iconWiggle {
+    0% { transform: scale(1.2) rotate(-10deg); }
+    100% { transform: scale(1.2) rotate(5deg); }
+}
+
+.support-label.alipay i {
+    color: #1677ff;
+}
+
+.support-method:hover .support-label.alipay {
+    color: #1677ff;
+}
+
+.support-label.wechat i {
+    color: #07c160;
+}
+
+.support-method:hover .support-label.wechat {
+    color: #07c160;
+}
+
+.support-project .section-title i.fa-mug-hot {
+    color: #ffac33;
+    font-size: 1.2em;
+    margin-left: 10px;
+    animation: coffeeSteam 3s infinite;
+}
+
+@keyframes coffeeSteam {
+    0%, 100% { transform: translateY(0) rotate(0); opacity: 0.8; }
+    50% { transform: translateY(-10px) rotate(5deg); opacity: 1; }
+}
+
+.support-project .section-subtitle {
+    font-size: 1.25rem;
+    color: var(--text-secondary);
+    max-width: 80%;
+    margin: 1rem auto 2rem;
+    transition: all 0.3s ease;
+}
+
+.support-project .section-subtitle:hover {
+    color: var(--primary-color);
+    transform: scale(1.02);
+}
+
+@media (max-width: 768px) {
+    .support-methods {
+        flex-direction: column;
+        gap: 3rem;
+    }
+    
+    .support-method {
+        padding: 2rem;
+        width: 90%;
+        margin: 0 auto;
+    }
+    
+    .support-qr {
+        width: 220px;
+        height: 220px;
+    }
+    
+    .support-label {
+        font-size: 1.3rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .support-project {
+        padding: 4rem 0;
+    }
+    
+    .support-method {
+        padding: 1.8rem;
+        width: 95%;
+        min-width: auto;
+        margin: 0 auto;
+    }
+    
+    .support-qr {
+        width: 200px;
+        height: 200px;
+    }
+    
+    .support-label {
+        font-size: 1.2rem;
+    }
+}
+
+.support-project .coffee-particles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.coffee-particle {
+    position: absolute;
+    top: -50px;
+    font-size: 18px;
+    opacity: 0.6;
+    animation: coffeeFloat 15s linear infinite;
+    z-index: -1;
+}
+
+.coffee-particle i {
+    animation: rotateCoffee 8s linear infinite;
+    display: block;
+}
+
+@keyframes rotateCoffee {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes coffeeFloat {
+    0% { 
+        transform: translateY(-30px) rotate(0deg); 
+        opacity: 0; 
+    }
+    10% { 
+        opacity: 0.6; 
+    }
+    90% { 
+        opacity: 0.6; 
+    }
+    100% { 
+        transform: translateY(calc(100vh + 50px)) rotate(360deg); 
+        opacity: 0; 
+    }
+}
+
+/* 其他支持方式样式 */
+.support-details {
+    padding: 6rem 0;
+    background-color: #f9f9ff;
+}
+
+.support-cards {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-top: 3rem;
+}
+
+.support-card {
+    background: white;
+    border-radius: 20px;
+    padding: 2.5rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    width: 300px;
+    text-align: center;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(122, 162, 247, 0.1);
+}
+
+.support-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 15px 40px rgba(122, 162, 247, 0.2);
+    border-color: rgba(122, 162, 247, 0.3);
+}
+
+.support-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    color: var(--primary-color);
+    background: rgba(122, 162, 247, 0.1);
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.support-card:hover .support-icon {
+    transform: scale(1.1);
+    background: var(--primary-color);
+    color: white;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(122, 162, 247, 0.4); }
+    70% { box-shadow: 0 0 0 15px rgba(122, 162, 247, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(122, 162, 247, 0); }
+}
+
+.support-card h3 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: var(--text-color);
+    transition: all 0.3s ease;
+}
+
+.support-card:hover h3 {
+    color: var(--primary-color);
+}
+
+.support-card p {
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+}
+
+.support-btn {
+    display: inline-block;
+    padding: 0.8rem 1.5rem;
+    background: white;
+    color: var(--primary-color);
+    text-decoration: none;
+    border-radius: 50px;
+    font-weight: 600;
+    border: 2px solid var(--primary-color);
+    transition: all 0.3s ease;
+}
+
+.support-btn:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(122, 162, 247, 0.3);
+}
+
+.support-btn i {
+    margin-right: 0.5rem;
+}
+
+/* 感谢支持者区域样式 */
+.supporters {
+    padding: 6rem 0;
+    background-color: var(--background-color);
+    text-align: center;
+}
+
+.heart-animation {
+    margin: 3rem auto;
+    font-size: 5rem;
+    color: var(--accent-color);
+    position: relative;
+    width: 100px;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.heart-animation i {
+    animation: heartbeat 1.5s infinite;
+}
+
+@keyframes heartbeat {
+    0% { transform: scale(1); }
+    14% { transform: scale(1.3); }
+    28% { transform: scale(1); }
+    42% { transform: scale(1.3); }
+    70% { transform: scale(1); }
+}
+
+.heart-animation::before {
+    content: '';
+    position: absolute;
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(247, 125, 170, 0.3) 0%, rgba(247, 125, 170, 0) 70%);
+    animation: pulse 2s infinite;
+}
+
+@media (max-width: 768px) {
+    .support-cards {
+        flex-direction: column;
+        align-items: center;
+        gap: 1.5rem;
+    }
+    
+    .support-card {
+        width: 90%;
+        max-width: 350px;
+    }
+    
+    .heart-animation {
+        font-size: 4rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .support-details {
+        padding: 4rem 0;
+    }
+    
+    .support-card {
+        width: 95%;
+        padding: 2rem;
+    }
+    
+    .support-icon {
+        width: 70px;
+        height: 70px;
+        font-size: 2rem;
+    }
+    
+    .heart-animation {
+        font-size: 3.5rem;
+        margin: 2rem auto;
+    }
+} 

@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="支持 Catime 项目 - 一款为 Windows 设计的极简、现代、高效的透明计时器与番茄钟，带来可爱风格。">
+    <title>支持项目 - Catime</title>
+
+    <!-- Google 字体 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome 图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <!-- AOS 滚动动画库 -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    <!-- 主样式表 -->
+    <link rel="stylesheet" href="styles/style.css">
+    
+    <!-- 支持页面样式 -->
+    <link rel="stylesheet" href="styles/support.css">
+
+    <link rel="icon" type="image/png" href="assets/catime.png"> 
+</head>
+<body>
+
+    <!-- 滚动进度指示器 -->
+    <div class="scroll-progress-container" id="scrollProgressContainer">
+        <div class="scroll-progress-glow"></div>
+        <div class="scroll-progress-particles">
+            <span class="particle p1"></span>
+            <span class="particle p2"></span>
+            <span class="particle p3"></span>
+            <span class="particle p4"></span>
+            <span class="particle p5"></span>
+            <span class="particle p6"></span>
+            <span class="particle p7"></span>
+            <span class="particle p8"></span>
+        </div>
+        <svg class="scroll-progress-circle" viewBox="0 0 100 100">
+            <defs>
+                <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#7aa2f7" />
+                    <stop offset="50%" stop-color="#9aaee8" />
+                    <stop offset="100%" stop-color="#f77daa" />
+                </linearGradient>
+                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="3" result="blur" />
+                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                </filter>
+            </defs>
+            <circle class="scroll-progress-circle-bg" cx="50" cy="50" r="45"></circle>
+            <circle class="scroll-progress-circle-fill" cx="50" cy="50" r="45"></circle>
+            <circle class="scroll-progress-circle-inner" cx="50" cy="50" r="35"></circle>
+            <path class="scroll-progress-circle-deco" d="M50,15 A35,35 0 0,1 85,50 A35,35 0 0,1 50,85 A35,35 0 0,1 15,50 A35,35 0 0,1 50,15 Z" />
+        </svg>
+        <div class="scroll-progress-icon">
+            <i class="fas fa-arrow-up"></i>
+        </div>
+        <div class="scroll-progress-emoji-container">
+            <span class="emoji emoji-rocket">🚀</span>
+            <span class="emoji emoji-star">⭐</span>
+            <span class="emoji emoji-heart">💖</span>
+            <span class="emoji emoji-sparkles">✨</span>
+        </div>
+        <div class="scroll-progress-stars">
+            <span class="star star-1">✦</span>
+            <span class="star star-2">✧</span>
+            <span class="star star-3">✦</span>
+            <span class="star star-4">✧</span>
+            <span class="star star-5">✦</span>
+            <span class="star star-6">✧</span>
+        </div>
+        <div class="scroll-progress-percentage">0%</div>
+        <div class="scroll-progress-tooltip">返回顶部</div>
+    </div>
+
+    <!-- 页头/导航 -->
+    <header class="main-header">
+        <nav class="container">
+            <a href="index.html" class="logo"><img src="assets/catime.png" class="logo-img" alt="Catime Logo"> Catime</a>
+            <ul class="nav-links">
+                <li><a href="index.html">首页</a></li>
+                <li><a href="guide.html">指南</a></li>
+                <li><a href="about.html">关于</a></li>
+                <li><a href="https://github.com/vladelaina/Catime" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+                <li><a href="downloads/catime_1.0.5.exe" class="nav-button" download><i class="fas fa-download"></i> <span>下载</span></a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <!-- 页面标题 -->
+        <section class="page-header">
+            <div class="container">
+                <h1>支持项目</h1>
+                <p>您的支持是我们持续开发和改进 Catime 的动力</p>
+            </div>
+        </section>
+
+        <!-- 支持项目区域 -->
+        <section class="support-project" id="support">
+            <div class="container">
+                <h2 class="section-title" data-aos="fade-up">支持项目 <i class="fas fa-mug-hot"></i></h2>
+                <p class="section-subtitle" data-aos="fade-up" data-aos-delay="100">如果 Catime 对你有帮助，可以请作者喝杯咖啡鼓励一下哦~</p>
+
+                <div class="support-methods" data-aos="fade-up" data-aos-delay="200">
+                    <div class="support-method">
+                        <img src="assets/WeChat.png" alt="微信收款码" class="support-qr wechat-qr">
+                        <p class="support-label wechat"><i class="fab fa-weixin"></i> 微信</p>
+                    </div>
+                    <div class="support-method">
+                        <img src="assets/Alipay.png" alt="支付宝收款码" class="support-qr alipay-qr">
+                        <p class="support-label alipay"><i class="fab fa-alipay"></i> 支付宝</p>
+                    </div>
+                </div>
+            </div>
+            <!-- 添加咖啡粒子效果 -->
+            <div class="coffee-particles">
+                <div class="coffee-particle" style="left: 5%; animation-delay: 0s;"><i class="fas fa-coffee"></i></div>
+                <div class="coffee-particle" style="left: 15%; animation-delay: 2s;"><i class="fas fa-mug-hot"></i></div>
+                <div class="coffee-particle" style="left: 25%; animation-delay: 4s;"><i class="fas fa-coffee"></i></div>
+                <div class="coffee-particle" style="left: 35%; animation-delay: 1s;"><i class="fas fa-mug-saucer"></i></div>
+                <div class="coffee-particle" style="left: 45%; animation-delay: 3s;"><i class="fas fa-mug-hot"></i></div>
+                <div class="coffee-particle" style="left: 55%; animation-delay: 5s;"><i class="fas fa-coffee"></i></div>
+                <div class="coffee-particle" style="left: 65%; animation-delay: 0.5s;"><i class="fas fa-mug-saucer"></i></div>
+                <div class="coffee-particle" style="left: 75%; animation-delay: 2.5s;"><i class="fas fa-mug-hot"></i></div>
+                <div class="coffee-particle" style="left: 85%; animation-delay: 4.5s;"><i class="fas fa-coffee"></i></div>
+                <div class="coffee-particle" style="left: 95%; animation-delay: 1.5s;"><i class="fas fa-mug-saucer"></i></div>
+            </div>
+        </section>
+
+        <!-- 支持方式说明 -->
+        <section class="support-details">
+            <div class="container">
+                <h2 class="section-title" data-aos="fade-up">其他支持方式</h2>
+                <div class="support-cards" data-aos="fade-up" data-aos-delay="100">
+                    <div class="support-card">
+                        <div class="support-icon"><i class="fas fa-star"></i></div>
+                        <h3>Star 项目</h3>
+                        <p>如果你喜欢 Catime，请在 GitHub 上给我们点个 Star，这是对我们最好的鼓励！</p>
+                        <a href="https://github.com/vladelaina/Catime" class="support-btn" target="_blank" rel="noopener noreferrer">
+                            <i class="fab fa-github"></i> Star 项目
+                        </a>
+                    </div>
+                    <div class="support-card">
+                        <div class="support-icon"><i class="fas fa-code-branch"></i></div>
+                        <h3>贡献代码</h3>
+                        <p>欢迎提交 Pull Request 来帮助改进 Catime，无论是修复 Bug 还是添加新功能！</p>
+                        <a href="https://github.com/vladelaina/Catime/pulls" class="support-btn" target="_blank" rel="noopener noreferrer">
+                            <i class="fas fa-code-pull-request"></i> 贡献代码
+                        </a>
+                    </div>
+                    <div class="support-card">
+                        <div class="support-icon"><i class="fas fa-share-alt"></i></div>
+                        <h3>分享推广</h3>
+                        <p>将 Catime 分享给你的朋友、同事或社交媒体，帮助更多人发现这个小工具！</p>
+                        <a href="https://jq.qq.com/?_wv=1027&k=ZLbwPHXM" class="support-btn" target="_blank" rel="noopener noreferrer">
+                            <i class="fas fa-users"></i> 加入社区
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 感谢支持者 -->
+        <section class="supporters">
+            <div class="container">
+                <h2 class="section-title" data-aos="fade-up">感谢支持者</h2>
+                <p class="section-subtitle" data-aos="fade-up" data-aos-delay="100">
+                    特别感谢那些已经支持 Catime 项目的朋友们！你们的鼓励是我们继续前进的动力。
+                </p>
+                <div class="heart-animation" data-aos="zoom-in" data-aos-delay="200">
+                    <i class="fas fa-heart"></i>
+                </div>
+            </div>
+        </section>
+
+        <!-- 返回首页 -->
+        <section class="cta-section" data-aos="zoom-in">
+            <div class="container">
+                <h2>
+                    <span class="wave-letter">准</span>
+                    <span class="wave-letter">备</span>
+                    <span class="wave-letter">好</span>
+                    <span class="wave-letter">和</span>
+                    <span class="wave-letter"> </span>
+                    <span class="wave-letter">C</span>
+                    <span class="wave-letter">a</span>
+                    <span class="wave-letter">t</span>
+                    <span class="wave-letter">i</span>
+                    <span class="wave-letter">m</span>
+                    <span class="wave-letter">e</span>
+                    <span class="wave-letter"> </span>
+                    <span class="wave-letter">一</span>
+                    <span class="wave-letter">起</span>
+                    <span class="wave-letter">管</span>
+                    <span class="wave-letter">理</span>
+                    <span class="wave-letter">时</span>
+                    <span class="wave-letter">间</span>
+                    <span class="wave-letter">了</span>
+                    <span class="wave-letter">吗</span>
+                    <span class="wave-letter">？</span>
+                </h2>
+                <p>立刻下载，开启可爱又高效的专注旅程！</p>
+                <a href="downloads/catime_1.0.5.exe" class="cta-button primary large" download>
+                    <i class="fas fa-paw"></i> <span>免费带走 Catime</span>
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="main-footer">
+        <div class="container">
+            <p>&copy; 2024 Catime Project by <a href="https://github.com/vladelaina" target="_blank" rel="noopener noreferrer">vladelaina</a></p>
+            <p>基于 <a href="https://github.com/vladelaina/Catime/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Apache 2.0</a> 许可开源</p>
+            <p>图标画师: <a href="https://space.bilibili.com/26087398" target="_blank" rel="noopener noreferrer">猫屋敷梨梨Official</a></p>
+            <div class="footer-links">
+                <a href="https://message.bilibili.com/#/whisper/mid1862395225" target="_blank" rel="noopener noreferrer">问题反馈</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript 库 -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script src="scripts/main.js"></script>
+    <script src="scripts/support.js"></script>
+
+</body>
+</html> 

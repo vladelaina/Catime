@@ -7,165 +7,8 @@ document.addEventListener('DOMContentLoaded', function() {
         offset: 50,
     });
 
-    // 滚动进度指示器功能
-    const progressContainer = document.getElementById('scrollProgressContainer');
-    if (progressContainer) {
-        const progressCircle = document.querySelector('.scroll-progress-circle-fill');
-        const progressPercentage = document.querySelector('.scroll-progress-percentage');
-        const progressIcon = document.querySelector('.scroll-progress-icon');
-        const circleLength = progressCircle.getTotalLength ? 
-                            progressCircle.getTotalLength() : 283; // 回退值
-        
-        // 初始设置
-        progressCircle.style.strokeDasharray = circleLength;
-        progressCircle.style.strokeDashoffset = circleLength;
-        
-        // 计算滚动进度
-        function updateProgress() {
-            // 获取文档高度和滚动位置
-            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-            const docHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-            const scrollPercentage = scrollTop / docHeight;
-            
-            // 更新环形进度条
-            const offset = circleLength - (scrollPercentage * circleLength);
-            progressCircle.style.strokeDashoffset = offset;
-            
-            // 更新百分比文本
-            const percentValue = Math.min(Math.round(scrollPercentage * 100), 100);
-            progressPercentage.textContent = `${percentValue}%`;
-            
-            // 改变颜色和图标效果，根据进度动态变化
-            updateAppearanceByProgress(percentValue);
-        }
-        
-        // 根据进度动态更改外观
-        function updateAppearanceByProgress(percentValue) {
-            // 设置渐变色比例
-            if (percentValue > 80) {
-                progressIcon.style.color = 'var(--accent-color)';
-                progressIcon.style.textShadow = '0 2px 8px rgba(247, 125, 170, 0.5)';
-            } else if (percentValue > 40) {
-                progressIcon.style.color = '#9aa5ce';
-                progressIcon.style.textShadow = '0 2px 5px rgba(154, 165, 206, 0.4)';
-            } else {
-                progressIcon.style.color = 'var(--primary-color)';
-                progressIcon.style.textShadow = '0 2px 5px rgba(122, 162, 247, 0.3)';
-            }
-            
-            // 调整容器大小和背景，根据滚动位置微调
-            const sizeAdjust = 1 + (percentValue * 0.0015); // 最大放大到1.15倍
-            progressContainer.style.transform = `scale(${sizeAdjust})`;
-            
-            // 增加随机微动效果
-            if (Math.random() > 0.95) {
-                addMicroMovement();
-            }
-        }
-        
-        // 添加微小的随机动画，让图标更生动
-        function addMicroMovement() {
-            const stars = document.querySelectorAll('.star');
-            const randomStar = stars[Math.floor(Math.random() * stars.length)];
-            randomStar.style.opacity = '0.7';
-            
-            setTimeout(() => {
-                randomStar.style.opacity = '0';
-            }, 300);
-        }
-        
-        // 点击回到顶部，添加动画效果
-        progressContainer.addEventListener('click', function() {
-            // 添加点击效果类
-            this.classList.add('clicked');
-            
-            // 创建粒子爆发效果
-            createParticleBurst();
-            
-            // 平滑滚动到顶部
-            window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-            });
-            
-            // 播放声音效果（如果浏览器支持）
-            playClickSound();
-            
-            // 移除点击效果类
-            setTimeout(() => {
-                this.classList.remove('clicked');
-            }, 500);
-        });
-        
-        // 播放点击声音 (轻微的"叮"声)
-        function playClickSound() {
-            try {
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
-                
-                oscillator.type = 'sine';
-                oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-                oscillator.frequency.exponentialRampToValueAtTime(500, audioContext.currentTime + 0.2);
-                
-                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.3);
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-                
-                oscillator.start();
-                oscillator.stop(audioContext.currentTime + 0.3);
-            } catch (e) {
-                // 浏览器不支持 Web Audio API，静默失败
-                console.log('Audio API不受支持');
-            }
-        }
-        
-        // 创建粒子爆发效果
-        function createParticleBurst() {
-            const particles = document.querySelectorAll('.particle');
-            
-            particles.forEach(particle => {
-                // 重置动画
-                particle.style.animation = 'none';
-                particle.offsetHeight; // 触发重排
-                particle.style.animation = null;
-                
-                // 随机位置和颜色
-                const hue = Math.floor(Math.random() * 30) + 330; // 粉红色范围
-                const saturation = Math.floor(Math.random() * 30) + 70;
-                const lightness = Math.floor(Math.random() * 20) + 70;
-                
-                particle.style.background = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-                particle.style.boxShadow = `0 0 10px hsl(${hue}, ${saturation}%, ${lightness}%)`;
-            });
-        }
-        
-        // 悬停时显示完整的工具提示
-        progressContainer.addEventListener('mouseenter', function() {
-            document.querySelector('.scroll-progress-tooltip').textContent = "返回顶部";
-        });
-        
-        // 监听滚动事件，使用防抖处理
-        let scrollTimeout;
-        window.addEventListener('scroll', function() {
-            clearTimeout(scrollTimeout);
-            scrollTimeout = setTimeout(updateProgress, 10);
-        });
-        
-        // 初始化进度
-        updateProgress();
-        
-        // 定期添加微小的动画，使元素更生动
-        setInterval(() => {
-            if (!progressContainer.matches(':hover')) {
-                if (Math.random() > 0.7) {
-                    addMicroMovement();
-                }
-            }
-        }, 3000);
-    }
+    // 初始化滚动进度指示器
+    initScrollProgressIndicator();
 
     // 为图片添加3D倾斜效果
     document.querySelectorAll('.animated-image img').forEach(img => {
@@ -258,3 +101,65 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+// 初始化滚动进度指示器
+function initScrollProgressIndicator() {
+    const scrollProgressContainer = document.getElementById('scrollProgressContainer');
+    if (!scrollProgressContainer) return;
+
+    const scrollProgressCircle = document.querySelector('.scroll-progress-circle-fill');
+    const scrollProgressPercentage = document.querySelector('.scroll-progress-percentage');
+
+    if (!scrollProgressCircle || !scrollProgressPercentage) return;
+
+    // 窗口滚动时更新进度
+    window.addEventListener('scroll', function() {
+        updateScrollProgress();
+    });
+
+    // 点击滚动进度指示器返回顶部
+    scrollProgressContainer.addEventListener('click', function() {
+        // 添加点击效果
+        this.classList.add('clicked');
+        
+        // 平滑滚动到顶部
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+        
+        // 移除点击效果
+        setTimeout(() => {
+            this.classList.remove('clicked');
+        }, 500);
+    });
+
+    // 初始化滚动进度
+    updateScrollProgress();
+
+    // 更新滚动进度函数
+    function updateScrollProgress() {
+        const scrollTop = window.scrollY;
+        const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+        const scrollPercentage = (scrollTop / scrollHeight) * 100;
+        
+        // 更新圆形进度条
+        const perimeter = Math.PI * 2 * 45; // 2πr，r=45
+        const strokeDashoffset = perimeter * (1 - scrollPercentage / 100);
+        scrollProgressCircle.style.strokeDashoffset = strokeDashoffset;
+        
+        // 更新百分比文本
+        scrollProgressPercentage.textContent = `${Math.round(scrollPercentage)}%`;
+        
+        // 根据滚动位置切换容器可见性
+        if (scrollTop > 300) {
+            scrollProgressContainer.style.opacity = '1';
+            scrollProgressContainer.style.transform = 'scale(1)';
+            scrollProgressContainer.style.pointerEvents = 'auto';
+        } else {
+            scrollProgressContainer.style.opacity = '0';
+            scrollProgressContainer.style.transform = 'scale(0.8)';
+            scrollProgressContainer.style.pointerEvents = 'none';
+        }
+    }
+}
