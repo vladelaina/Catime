@@ -245,6 +245,22 @@ function initLanguageToggle() {
             
             // 处理hero描述区域
             handleHeroDescription();
+
+            // 处理问题反馈链接，在英文模式下指向GitHub issues页面
+            const feedbackLink = document.querySelector('.footer-links a');
+            if (feedbackLink) {
+                feedbackLink.href = 'https://github.com/vladelaina/Catime/issues';
+                feedbackLink.target = '_blank';
+                feedbackLink.rel = 'noopener noreferrer';
+            }
+        } else {
+            // 在中文模式下恢复原链接
+            const feedbackLink = document.querySelector('.footer-links a');
+            if (feedbackLink) {
+                feedbackLink.href = 'https://message.bilibili.com/#/whisper/mid1862395225';
+                feedbackLink.target = '_blank';
+                feedbackLink.rel = 'noopener noreferrer';
+            }
         }
         
         // 如果是中文，不需要翻译
