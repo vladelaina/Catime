@@ -396,8 +396,8 @@
 }
 
 .support-card:first-child:hover .support-icon i.fa-star {
-    color: gold;
-    text-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
+    color: white;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
     animation: simpleStarShine 2s infinite ease-in-out;
 }
 
