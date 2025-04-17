@@ -171,6 +171,18 @@ function initScrollProgressIndicator() {
 function initLanguageToggle() {
     const languageToggle = document.getElementById('language-toggle');
     
+    // 检查URL中是否有语言参数
+    function getLanguageFromURL() {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('lang');
+    }
+    
+    // 从URL获取语言设置
+    const urlLang = getLanguageFromURL();
+    if (urlLang === 'en' || urlLang === 'zh') {
+        localStorage.setItem('catime-language', urlLang);
+    }
+    
     if (languageToggle) {
         // 检查当前语言设置（默认是中文）
         let currentLang = localStorage.getItem('catime-language') || 'zh';
