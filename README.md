@@ -12,7 +12,7 @@
     <img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white&style=for-the-badge" alt="Join Discord" />
   </a>
   <a href="https://catime.vladelaina.com/support" target="_blank">
-    <img src="https://img.shields.io/badge/Buy%20me%20a%20coffee-Support%20now-critical?logo=buymeacoffee&logoColor=white&style=for-the-badge" alt="Buy me a coffee" />
+    <img src="https://img.shields.io/badge/Buy%20me%20a%20coffee-Support%20-critical?logo=buymeacoffee&logoColor=white&style=for-the-badge" alt="Buy me a coffee" />
   </a>
 
   <br/>
