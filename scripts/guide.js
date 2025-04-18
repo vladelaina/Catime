@@ -124,7 +124,17 @@ function translateGuideElements() {
         });
     }
 
-    // 处理特定链接中的文本
+    // 处理特定链接中的文本和修复"About My Name"部分
+    const infoCard = document.querySelector('.info-card');
+    if (infoCard) {
+        const paragraphs = infoCard.querySelectorAll('p');
+        if (paragraphs.length >= 1) {
+            // 修复第一个段落中的重复内容
+            paragraphs[0].innerHTML = "\"Vladelaina\" combines the names of my favorite anime heroines — <strong>Vladilena Milizé</strong> from <a href=\"https://en.wikipedia.org/wiki/86_(novel_series)\" target=\"_blank\" rel=\"noopener noreferrer\">86 -Eighty Six-</a> and <strong>Elaina</strong> from <a href=\"https://en.wikipedia.org/wiki/Wandering_Witch:_The_Journey_of_Elaina\" target=\"_blank\" rel=\"noopener noreferrer\">Wandering Witch: The Journey of Elaina</a>.";
+        }
+    }
+
+    // 处理普通的链接翻译
     document.querySelectorAll('a').forEach(link => {
         if (link.href && link.href.includes('86_(novel_series)') && link.textContent.includes('86-不存在的战区-')) {
             link.textContent = '86 -Eighty Six-';
