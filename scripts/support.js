@@ -347,7 +347,10 @@ function translateSupportElements() {
         if (title && title.textContent === '分享推广') {
             title.textContent = 'Share & Promote';
             desc.textContent = 'Share Catime with your friends, colleagues, or on social media to help more people discover this tool!';
-            if (btn) btn.innerHTML = '<i class="fas fa-users"></i> Join Community';
+            if (btn) {
+                btn.innerHTML = '<i class="fas fa-users"></i> Join Community';
+                btn.href = 'https://discord.com/invite/W3tW2gtp6g';
+            }
         }
     });
     
