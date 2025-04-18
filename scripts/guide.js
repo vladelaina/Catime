@@ -44,14 +44,14 @@ function addGuideTranslations() {
             if (guideAccent) guideAccent.textContent = ' User Guide';
         }
         
-        // 翻译主要内容
-        translateGuideElements();
-        
         // 翻译滚动进度提示
         const scrollTooltip = document.querySelector('.scroll-progress-tooltip');
         if (scrollTooltip) {
             scrollTooltip.textContent = 'Back to Top';
         }
+        
+        // 翻译主要内容
+        translateGuideElements();
         
         // 翻译页脚
         translateFooter();
@@ -98,13 +98,18 @@ function translateGuideElements() {
         "鼠标在窗口上右键即可关闭编辑模式": "right-click on the window to exit edit mode",
         "～": ".",
         "恭喜完成!": "Congratulations!",
-        "至此，恭喜🎉你已经掌握了Catime的核心内容，剩下的部分基本都是字面意思😉。": "Congratulations! 🎉 You've now mastered the core features of Catime. The rest is pretty self-explanatory! 😉"
+        "至此，恭喜🎉你已经掌握了Catime的核心内容，剩下的部分基本都是字面意思😉。": "Congratulations! 🎉 You've now mastered the core features of Catime. The rest is pretty self-explanatory! 😉",
+        // 添加缺少的翻译
+        "返回顶部": "Back to Top",
+        "86-不存在的战区-": "86 -Eighty Six-",
+        "魔女之旅": "Wandering Witch: The Journey of Elaina",
+        "section-intro": "section-intro en"
     };
     
     // 应用翻译到元素
     for (const [key, value] of Object.entries(translations)) {
         // 选择所有可能包含文本的元素
-        const elements = document.querySelectorAll('h1, h2, h3, h4, p, span, div.tip-content h4, div.conclusion-content h3, div.operation-details h3, div.feature-content p, div.anime-icons span');
+        const elements = document.querySelectorAll('h1, h2, h3, h4, p, span, div.tip-content h4, div.conclusion-content h3, div.operation-details h3, div.feature-content p, div.anime-icons span, a');
         
         elements.forEach(el => {
             // 完全匹配
@@ -118,6 +123,16 @@ function translateGuideElements() {
             }
         });
     }
+
+    // 处理特定链接中的文本
+    document.querySelectorAll('a').forEach(link => {
+        if (link.href && link.href.includes('86_(novel_series)') && link.textContent.includes('86-不存在的战区-')) {
+            link.textContent = '86 -Eighty Six-';
+        }
+        if (link.href && link.href.includes('Wandering_Witch') && link.textContent.includes('魔女之旅')) {
+            link.textContent = 'Wandering Witch: The Journey of Elaina';
+        }
+    });
 }
 
 // 转义正则表达式中的特殊字符
@@ -136,28 +151,30 @@ function translateSpecialElements() {
     // 翻译动漫图标
     document.querySelectorAll('.anime-icon').forEach(icon => {
         if (icon.textContent === '魔女之旅') icon.textContent = 'Wandering Witch';
+        if (icon.textContent === '86') icon.textContent = '86';
     });
     
-    // 翻译feature-highlight中的span内容
+    // 完全替换feature-highlight中的内容
     const featureHighlight = document.querySelector('.feature-highlight p');
     if (featureHighlight) {
-        const spans = featureHighlight.querySelectorAll('span');
-        spans.forEach(span => {
-            // 针对特定内容进行翻译
-            if (span.textContent.includes('右键点击托盘图标，选择"编辑模式"')) {
-                span.textContent = span.textContent.replace('右键点击托盘图标，选择"编辑模式"', 'right-click the tray icon and select "Edit Mode"');
-            }
-            if (span.textContent.includes('窗口会变成亚克力背景')) {
-                span.textContent = span.textContent.replace('窗口会变成亚克力背景', 'the window will change to an acrylic background');
-            }
-            if (span.textContent.includes('鼠标拖拽来调整位置，滚轮调整大小')) {
-                span.textContent = span.textContent.replace('鼠标拖拽来调整位置，滚轮调整大小', 'mouse drag to adjust position, scroll wheel to resize');
-            }
-            if (span.textContent.includes('鼠标在窗口上右键即可关闭编辑模式')) {
-                span.textContent = span.textContent.replace('鼠标在窗口上右键即可关闭编辑模式', 'right-click on the window to exit edit mode');
-            }
-        });
+        // 直接替换为完全翻译好的HTML
+        featureHighlight.innerHTML = `My friend, I bet you're eager to move the window position, like to the bottom left of the screen. To do this, just <span class="text-accent"><i class="fas fa-mouse-pointer icon-animate-rotate"></i> right-click the tray icon and select "Edit Mode"</span>. At this point, <span class="text-primary"><i class="fas fa-window-maximize icon-animate-bounce"></i> the window will change to an acrylic background</span> and you can use <span class="text-success"><i class="fas fa-arrows-alt icon-animate-jump"></i> mouse drag to adjust position, scroll wheel to resize</span>. After adjusting, <span class="text-warning"><i class="fas fa-check-circle icon-animate-pulse"></i> right-click on the window to exit edit mode</span>.`;
     }
+
+    // 翻译section-intro
+    const sectionIntro = document.querySelector('.section-intro');
+    if (sectionIntro && sectionIntro.textContent.includes('Catime 的所有操作都通过点击任务栏图标完成')) {
+        sectionIntro.textContent = 'All Catime operations are performed by clicking the taskbar icon:';
+    }
+
+    // 翻译alt属性
+    document.querySelectorAll('img').forEach(img => {
+        if (img.alt === 'First time use') img.alt = 'First time use';
+        if (img.alt === 'Move out') img.alt = 'Move out';
+        if (img.alt === 'left click') img.alt = 'left click';
+        if (img.alt === 'right click') img.alt = 'right click';
+        if (img.alt === 'move') img.alt = 'move';
+    });
 }
 
 // 翻译页脚
