@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // 预加载封面图
         const preloadImg = new Image();
-        preloadImg.src = 'assets/bilibili video cover.jpg';
+        preloadImg.src = 'assets/bilibili video cover2.jpg';
         
         videoCover.addEventListener('click', function() {
             // 显示视频容器
