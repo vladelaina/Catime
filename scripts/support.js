@@ -279,6 +279,9 @@ function addSupportTranslations() {
         // 翻译主要内容
         translateSupportElements();
         
+        // 确保所有按钮可见
+        fixButtonVisibility();
+        
         // 翻译滚动进度提示
         const scrollTooltip = document.querySelector('.scroll-progress-tooltip');
         if (scrollTooltip) {
@@ -287,6 +290,29 @@ function addSupportTranslations() {
         
         // 翻译页脚
         translateFooter();
+    }
+}
+
+// 确保所有支持按钮可见
+function fixButtonVisibility() {
+    // 确保所有按钮都是可见的
+    document.querySelectorAll('.support-card .support-btn').forEach(btn => {
+        btn.style.display = 'flex';
+        btn.style.visibility = 'visible';
+        btn.style.opacity = '1';
+    });
+    
+    // 特别检查提交Issues按钮
+    const issuesBtn = document.querySelector('.support-card:nth-child(2) .support-btn');
+    if (issuesBtn) {
+        issuesBtn.style.display = 'flex';
+        issuesBtn.style.visibility = 'visible';
+        issuesBtn.style.opacity = '1';
+        
+        // 确保按钮内容正确显示
+        if (issuesBtn.querySelector('i')) {
+            issuesBtn.querySelector('i').style.display = 'inline-block';
+        }
     }
 }
 
@@ -341,14 +367,19 @@ function translateSupportElements() {
         if (title && title.textContent === '提交Issues') {
             title.textContent = 'Submit Issues';
             desc.textContent = 'Found a bug or have feature suggestions? Welcome to submit Issues on GitHub to help us continuously improve Catime!';
-            if (btn) btn.innerHTML = '<i class="fas fa-exclamation-circle"></i> Submit Issues';
+            if (btn) {
+                btn.innerHTML = '<i class="fas fa-exclamation-circle"></i> Submit Issues';
+                btn.style.display = 'flex';
+                btn.style.visibility = 'visible';
+                btn.style.opacity = '1';
+            }
         }
         
         if (title && title.textContent === '分享推广') {
             title.textContent = 'Share & Promote';
             desc.textContent = 'Share Catime with your friends, colleagues, or on social media to help more people discover this tool!';
             if (btn) {
-                btn.innerHTML = '<i class="fas fa-users"></i> Join Community';
+                btn.innerHTML = '<i class="fas fa-users"></i> Join Discord';
                 btn.href = 'https://discord.com/invite/W3tW2gtp6g';
             }
         }

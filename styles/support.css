@@ -360,6 +360,10 @@
     text-align: center;
     transition: all 0.3s ease;
     border: 1px solid rgba(122, 162, 247, 0.1);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 380px;
 }
 
 .support-card:hover {
@@ -552,9 +556,61 @@
 
 /* 重写原有的按钮样式 */
 .support-cards .support-btn {
-    min-width: 180px;
-    margin-top: 0.5rem;
+    width: 200px;
+    margin: 0.5rem auto 0;
     font-size: 1.05rem;
+    height: 45px;
+    white-space: nowrap;
+    padding: 0;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    visibility: visible !important;
+    opacity: 1 !important;
+    border-radius: 30px;
+    box-shadow: 0 5px 15px rgba(255, 122, 172, 0.3);
+    color: white;
+    text-decoration: none;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Make all buttons identical */
+.support-card:nth-child(1) .support-btn,
+.support-card:nth-child(2) .support-btn,
+.support-card:nth-child(3) .support-btn {
+    width: 200px;
+    height: 45px;
+    padding: 0;
+    font-size: 1.05rem;
+    border-radius: 30px;
+    box-shadow: 0 5px 15px rgba(255, 122, 172, 0.3);
+    font-weight: 600;
+    background: linear-gradient(45deg, rgba(255, 148, 184, 0.9), rgba(255, 122, 172, 0.9));
+}
+
+.support-cards .support-btn i {
+    flex-shrink: 0;
+    width: 25px;
+    text-align: center;
+    margin-right: 8px;
+    font-size: 1.1rem;
+    display: inline-block !important;
+}
+
+/* Override the general margin for card buttons */
+.support-card .support-btn i {
+    margin-right: 8px;
+    width: 25px;
+}
+
+/* Fix for all buttons to ensure consistent appearance */
+.support-card .support-btn {
+    visibility: visible !important;
+    opacity: 1 !important;
+    display: flex !important;
+    min-height: 45px;
+    text-align: center;
+    background: linear-gradient(45deg, rgba(255, 148, 184, 0.9), rgba(255, 122, 172, 0.9));
 }
 
 /* 感谢支持者区域样式 */
@@ -709,6 +765,7 @@
     .support-card {
         width: 90%;
         max-width: 350px;
+        height: auto;
     }
     
     .heart-animation {
@@ -724,6 +781,7 @@
     .support-card {
         width: 95%;
         padding: 2rem;
+        height: auto;
     }
     
     .support-icon {
