@@ -364,6 +364,7 @@
     flex-direction: column;
     justify-content: space-between;
     height: 380px;
+    position: relative;
 }
 
 .support-card:hover {
@@ -491,6 +492,22 @@
     color: var(--text-secondary);
     margin-bottom: 1.5rem;
     line-height: 1.6;
+    flex-grow: 1;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    height: 80px; /* Fixed height for description */
+}
+
+/* Ensure all buttons are positioned at the same height */
+.support-card .support-btn {
+    position: absolute;
+    bottom: 2.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 200px;
+    margin: 0;
 }
 
 /* 优化支持卡片按钮样式 */
@@ -765,7 +782,7 @@
     .support-card {
         width: 90%;
         max-width: 350px;
-        height: auto;
+        height: 350px; /* Adjusted height for mobile */
     }
     
     .heart-animation {
@@ -781,7 +798,11 @@
     .support-card {
         width: 95%;
         padding: 2rem;
-        height: auto;
+        height: 350px;
+    }
+    
+    .support-card .support-btn {
+        bottom: 2rem;
     }
     
     .support-icon {

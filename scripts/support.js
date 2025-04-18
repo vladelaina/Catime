@@ -385,6 +385,19 @@ function translateSupportElements() {
         }
     });
     
+    // Ensure all cards have the same layout after translation
+    setTimeout(() => {
+        // Force buttons to be positioned correctly
+        document.querySelectorAll('.support-card .support-btn').forEach(btn => {
+            btn.style.position = 'absolute';
+            btn.style.bottom = window.innerWidth <= 480 ? '2rem' : '2.5rem';
+            btn.style.left = '50%';
+            btn.style.transform = 'translateX(-50%)';
+            btn.style.width = '200px';
+            btn.style.margin = '0';
+        });
+    }, 100);
+    
     // 翻译感谢支持者部分
     const supportersDesc = document.querySelector('.supporters .section-subtitle');
     if (supportersDesc) {
