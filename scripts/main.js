@@ -177,10 +177,24 @@ function initLanguageToggle() {
         return urlParams.get('lang');
     }
     
+    // 检测浏览器语言
+    function getBrowserLanguage() {
+        return navigator.language || navigator.userLanguage || '';
+    }
+    
     // 从URL获取语言设置
     const urlLang = getLanguageFromURL();
     if (urlLang === 'en' || urlLang === 'zh') {
         localStorage.setItem('catime-language', urlLang);
+    } else if (!localStorage.getItem('catime-language')) {
+        // 如果URL中没有语言参数，且本地存储中也没有语言设置，则检查浏览器语言
+        const browserLang = getBrowserLanguage().toLowerCase();
+        // 如果浏览器语言不是中文（zh，zh-CN，zh-TW等），则设置为英文
+        if (!browserLang.startsWith('zh')) {
+            localStorage.setItem('catime-language', 'en');
+        } else {
+            localStorage.setItem('catime-language', 'zh');
+        }
     }
     
     if (languageToggle) {
