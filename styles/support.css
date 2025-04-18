@@ -568,7 +568,7 @@
 }
 
 .support-btn:hover i {
-    transform: scale(1.2) rotate(10deg);
+    transform: scale(1.2);
 }
 
 /* 重写原有的按钮样式 */

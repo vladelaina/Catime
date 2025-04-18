@@ -236,10 +236,13 @@ function initScrollProgressIndicator() {
     }
 }
 
-// 添加support页面特定的翻译
+// 添加支持页面的翻译
 function addSupportTranslations() {
     // 检查当前语言设置
     const currentLang = localStorage.getItem('catime-language') || 'zh';
+    
+    // 应用按钮样式，无论是哪种语言
+    fixButtonPositions();
     
     // 如果当前语言是英文，则添加英文翻译
     if (currentLang === 'en') {
@@ -291,6 +294,21 @@ function addSupportTranslations() {
         // 翻译页脚
         translateFooter();
     }
+}
+
+// 确保所有支持按钮位置固定，适用于中英文界面
+function fixButtonPositions() {
+    setTimeout(() => {
+        // 固定按钮位置
+        document.querySelectorAll('.support-card .support-btn').forEach(btn => {
+            btn.style.position = 'absolute';
+            btn.style.bottom = window.innerWidth <= 480 ? '2rem' : '2.5rem';
+            btn.style.left = '50%';
+            btn.style.transform = 'translateX(-50%)';
+            btn.style.width = '200px';
+            btn.style.margin = '0';
+        });
+    }, 100);
 }
 
 // 确保所有支持按钮可见
@@ -384,19 +402,6 @@ function translateSupportElements() {
             }
         }
     });
-    
-    // Ensure all cards have the same layout after translation
-    setTimeout(() => {
-        // Force buttons to be positioned correctly
-        document.querySelectorAll('.support-card .support-btn').forEach(btn => {
-            btn.style.position = 'absolute';
-            btn.style.bottom = window.innerWidth <= 480 ? '2rem' : '2.5rem';
-            btn.style.left = '50%';
-            btn.style.transform = 'translateX(-50%)';
-            btn.style.width = '200px';
-            btn.style.margin = '0';
-        });
-    }, 100);
     
     // 翻译感谢支持者部分
     const supportersDesc = document.querySelector('.supporters .section-subtitle');
