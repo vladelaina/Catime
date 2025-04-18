@@ -19,6 +19,7 @@
     
     <!-- 自定义样式表 -->
     <link rel="stylesheet" href="styles/style.css">
+    <link rel="stylesheet" href="styles/about.css">
 
     <link rel="icon" type="image/png" href="assets/catime.png">
 </head>
@@ -142,6 +143,22 @@
                         </div>
 
                         <p class="guide-intro">接下来，就让我为你介绍一下 Catime 的使用指南吧～</p>
+                        
+                        <h3 class="animated-title"><i class="fas fa-play-circle"></i> 演示视频</h3>
+                        <p class="section-intro">这里有一个演示视频，帮助你更好地了解Catime的使用方法：</p>
+                        
+                        <div class="video-container" id="videoContainer">
+                            <div class="video-cover">
+                                <img src="assets/bilibili video cover.jpg" alt="视频预览" class="video-preview-img">
+                                <div class="play-button">
+                                    <i class="fas fa-play"></i>
+                                </div>
+                            </div>
+                            <div class="video-frame-container" style="display: none;">
+                                <!-- 自动播放的iframe，初始隐藏 -->
+                                <iframe id="autoplayIframe" src="about:blank" data-src="https://player.bilibili.com/player.html?isOutside=true&aid=114346508159097&bvid=BV1AsoKYgE3r&cid=29444735174&p=1&autoplay=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" style="opacity: 0;"></iframe>
+                            </div>
+                        </div>
                     </div>
 
                     <div id="start" class="guide-section-content">
@@ -213,7 +230,7 @@
                         <div class="guide-image animated-image">
                             <img src="assets/move.gif" alt="move">
                         </div>
-
+                        
                         <div class="conclusion-box">
                             <div class="conclusion-icon">
                                 <i class="fas fa-check-circle"></i>

@@ -1,5 +1,33 @@
 // 指南页面特有功能
 document.addEventListener('DOMContentLoaded', function() {
+    // 视频封面点击处理
+    const videoContainer = document.getElementById('videoContainer');
+    if (videoContainer) {
+        const videoCover = videoContainer.querySelector('.video-cover');
+        const videoFrameContainer = videoContainer.querySelector('.video-frame-container');
+        const autoplayIframe = document.getElementById('autoplayIframe');
+        
+        // 预加载封面图
+        const preloadImg = new Image();
+        preloadImg.src = 'assets/bilibili video cover.jpg';
+        
+        videoCover.addEventListener('click', function() {
+            // 显示视频容器
+            videoCover.style.opacity = '0';
+            videoFrameContainer.style.display = 'block';
+            
+            // 设置真正的视频URL
+            const realSrc = autoplayIframe.getAttribute('data-src');
+            autoplayIframe.src = realSrc;
+            
+            // 淡入显示iframe
+            setTimeout(function() {
+                videoCover.style.display = 'none';
+                autoplayIframe.style.opacity = '1';
+            }, 50);
+        });
+    }
+    
     // 添加指南页面的翻译
     addGuideTranslations();
 });
@@ -99,6 +127,9 @@ function translateGuideElements() {
         "～": ".",
         "恭喜完成!": "Congratulations!",
         "至此，恭喜🎉你已经掌握了Catime的核心内容，剩下的部分基本都是字面意思😉。": "Congratulations! 🎉 You've now mastered the core features of Catime. The rest is pretty self-explanatory! 😉",
+        // 添加视频部分的翻译
+        "<i class=\"fas fa-play-circle\"></i> 演示视频": "<i class=\"fas fa-play-circle\"></i> Demo Video",
+        "这里有一个演示视频，帮助你更好地了解Catime的使用方法：": "Here's a demo video to help you better understand how to use Catime:",
         // 添加缺少的翻译
         "返回顶部": "Back to Top",
         "86-不存在的战区-": "86 -Eighty Six-",
