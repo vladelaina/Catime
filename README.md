@@ -4,9 +4,10 @@
 </a>
   
 <p align="center">
-  <a href="https://qm.qq.com/q/LgscIMw9i0" target="_blank">
-    <img src="https://img.shields.io/badge/QQ%20Group-Join-blue?logo=tencentqq&logoColor=white&style=for-the-badge" alt="Join QQ Group" />
-  </a>
+<a href="https://qm.qq.com/q/LgscIMw9i0" target="_blank">
+    <img src="https://img.shields.io/badge/QQ%20Group%20-%20%201027327912-blue?logo=tencentqq&logoColor=white&style=for-the-badge" alt="Join QQ Group" />
+</a>
+
   <a href="https://discord.com/invite/W3tW2gtp6g" target="_blank">
     <img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white&style=for-the-badge" alt="Join Discord" />
   </a>
