@@ -317,10 +317,10 @@ function translateSupportElements() {
     
     // 翻译支付方式标签
     document.querySelectorAll('.support-label').forEach(label => {
-        if (label.textContent === '微信') {
+        if (label.textContent.includes('微信')) {
             label.innerHTML = '<i class="fab fa-weixin"></i> WeChat';
         }
-        if (label.textContent === '支付宝') {
+        if (label.textContent.includes('支付宝')) {
             label.innerHTML = '<i class="fab fa-alipay"></i> Alipay';
         }
     });
