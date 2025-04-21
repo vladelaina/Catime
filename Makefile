@@ -49,7 +49,6 @@ OBJS = $(BUILD_DIR)/main.o \
 
 # 生成目标
 all: directories $(OUTPUT_DIR)/catime.exe
-	@rm -f $(BUILD_DIR)/*.o  # 编译完成后删除所有 .o 文件
 	@echo "使用 UPX 压缩可执行文件..."
 	@upx --best --lzma "$(OUTPUT_DIR)/catime.exe"
 	@cmd.exe /C start "" "$(shell echo '$(OUTPUT_DIR)/catime.exe' | sed 's#/mnt/c/#C:/#')"  # 转换路径格式
