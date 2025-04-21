@@ -39,9 +39,7 @@ jobs:
       run: |
         # 修改Makefile中的输出目录为当前工作区
         export OUTPUT_PATH="$(pwd)/output"
-        sed -i "s|OUTPUT_DIR = /mnt/c/Users/vladelaina/Desktop|OUTPUT_DIR = $OUTPUT_PATH|g" Makefile
-        # 删除启动应用程序的命令行
-        sed -i '/@cmd.exe \/C start/d' Makefile
+        sed -i "s|OUTPUT_DIR = ./bin|OUTPUT_DIR = $OUTPUT_PATH|g" Makefile
         # 创建输出目录
         mkdir -p output
         # 执行构建，使用多线程编译提高速度
