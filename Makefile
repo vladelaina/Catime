@@ -3,7 +3,7 @@ CC = x86_64-w64-mingw32-gcc
 WINDRES = x86_64-w64-mingw32-windres
 
 # 设置目标文件夹路径
-OUTPUT_DIR = /mnt/c/Users/vladelaina/Desktop
+OUTPUT_DIR = ./bin
 
 # 创建构建目录
 BUILD_DIR = build
@@ -51,7 +51,6 @@ OBJS = $(BUILD_DIR)/main.o \
 all: directories $(OUTPUT_DIR)/catime.exe
 	@echo "使用 UPX 压缩可执行文件..."
 	@upx --best --lzma "$(OUTPUT_DIR)/catime.exe"
-	@cmd.exe /C start "" "$(shell echo '$(OUTPUT_DIR)/catime.exe' | sed 's#/mnt/c/#C:/#')"  # 转换路径格式
 
 # 创建必要的目录
 directories:
