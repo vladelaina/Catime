@@ -151,7 +151,6 @@ $(OUTPUT_DIR)/catime.exe: $(OBJS) $(BUILD_DIR)/resource.o
 
 # 清理构建文件
 clean:
-	@powershell.exe -Command "Stop-Process -Name catime -Force -ErrorAction SilentlyContinue"
 	@rm -f $(BUILD_DIR)/*.o $(OUTPUT_DIR)/catime.exe
 	@rm -rf $(BUILD_DIR)/include $(BUILD_DIR)/resource
 
