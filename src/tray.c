@@ -47,7 +47,15 @@ void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
     nid.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_CATIME));
     nid.hWnd = hwnd;
     nid.uCallbackMessage = CLOCK_WM_TRAYICON;
-    wcscpy_s(nid.szTip, _countof(nid.szTip), L"Catime");
+    
+    // 创建包含应用名称和版本号的提示文本
+    wchar_t versionText[128] = {0};
+    // 将版本号从UTF-8转换为Unicode
+    wchar_t versionWide[64] = {0};
+    MultiByteToWideChar(CP_UTF8, 0, CATIME_VERSION, -1, versionWide, _countof(versionWide));
+    swprintf_s(versionText, _countof(versionText), L"Catime %s", versionWide);
+    wcscpy_s(nid.szTip, _countof(nid.szTip), versionText);
+    
     Shell_NotifyIconW(NIM_ADD, &nid);
     
     // 确保已注册TaskbarCreated消息
