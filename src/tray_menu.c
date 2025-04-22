@@ -140,9 +140,9 @@ static void FormatPomodoroTime(int seconds, wchar_t* buffer, size_t bufferSize) 
     minutes %= 60;
     
     if (hours > 0) {
-        _snwprintf(buffer, bufferSize, L"%d:%02d:%02d", hours, minutes, secs);
+        _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d:%02d", hours, minutes, secs);
     } else {
-        _snwprintf(buffer, bufferSize, L"%d:%02d", minutes, secs);
+        _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d", minutes, secs);
     }
 }
 
@@ -422,14 +422,13 @@ void ShowColorMenu(HWND hwnd) {
             strcmp(fontResources[i].fontName, "ZCOOL KuaiLe Essence.ttf") == 0) {
             
             BOOL isCurrentFont = strcmp(FONT_FILE_NAME, fontResources[i].fontName) == 0;
-            char displayName[100];
-            strncpy(displayName, fontResources[i].fontName, sizeof(displayName) - 1);
-            displayName[sizeof(displayName) - 1] = '\0';
-            char* dot = strstr(displayName, ".ttf");
-            if (dot) *dot = '\0';
+            wchar_t wDisplayName[100];
+            MultiByteToWideChar(CP_UTF8, 0, fontResources[i].fontName, -1, wDisplayName, 100);
+            wchar_t* dot = wcsstr(wDisplayName, L".ttf");
+            if (dot) *dot = L'\0';
             
-            AppendMenu(hFontSubMenu, MF_STRING | (isCurrentFont ? MF_CHECKED : MF_UNCHECKED),
-                      fontResources[i].menuId, displayName);
+            AppendMenuW(hFontSubMenu, MF_STRING | (isCurrentFont ? MF_CHECKED : MF_UNCHECKED),
+                      fontResources[i].menuId, wDisplayName);
         }
     }
 
@@ -456,14 +455,13 @@ void ShowColorMenu(HWND hwnd) {
         }
 
         BOOL isCurrentFont = strcmp(FONT_FILE_NAME, fontResources[i].fontName) == 0;
-        char displayName[100];
-        strncpy(displayName, fontResources[i].fontName, sizeof(displayName) - 1);
-        displayName[sizeof(displayName) - 1] = '\0';
-        char* dot = strstr(displayName, ".ttf");
-        if (dot) *dot = '\0';
+        wchar_t wDisplayNameMore[100];
+        MultiByteToWideChar(CP_UTF8, 0, fontResources[i].fontName, -1, wDisplayNameMore, 100);
+        wchar_t* dot = wcsstr(wDisplayNameMore, L".ttf");
+        if (dot) *dot = L'\0';
         
-        AppendMenu(hMoreFontsMenu, MF_STRING | (isCurrentFont ? MF_CHECKED : MF_UNCHECKED),
-                  fontResources[i].menuId, displayName);
+        AppendMenuW(hMoreFontsMenu, MF_STRING | (isCurrentFont ? MF_CHECKED : MF_UNCHECKED),
+                  fontResources[i].menuId, wDisplayNameMore);
     }
 
     // 将"更多"子菜单添加到主字体菜单

@@ -13,7 +13,7 @@
 #include "../include/tray.h"
 
 /// 全局通知图标数据结构
-NOTIFYICONDATAA nid;
+NOTIFYICONDATAW nid;
 
 /// 记录TaskbarCreated消息的ID
 UINT WM_TASKBARCREATED = 0;
@@ -47,8 +47,8 @@ void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
     nid.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_CATIME));
     nid.hWnd = hwnd;
     nid.uCallbackMessage = CLOCK_WM_TRAYICON;
-    strcpy(nid.szTip, "Catime");
-    Shell_NotifyIcon(NIM_ADD, &nid);
+    wcscpy_s(nid.szTip, _countof(nid.szTip), L"Catime");
+    Shell_NotifyIconW(NIM_ADD, &nid);
     
     // 确保已注册TaskbarCreated消息
     if (WM_TASKBARCREATED == 0) {
@@ -63,7 +63,7 @@ void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
  * 应在应用程序关闭时调用，确保系统资源的正确释放。
  */
 void RemoveTrayIcon(void) {
-    Shell_NotifyIcon(NIM_DELETE, &nid);
+    Shell_NotifyIconW(NIM_DELETE, &nid);
 }
 
 /**

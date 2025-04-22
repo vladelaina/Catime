@@ -54,9 +54,7 @@ void HandleTrayIconMessage(HWND hwnd, UINT uID, UINT uMouseMsg) {
  */
 void PauseResumeTimer(HWND hwnd) {
     // 检查当前是否有计时进行中
-    if (!CLOCK_SHOW_CURRENT_TIME && 
-        ((!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0) || 
-         (CLOCK_COUNT_UP && TRUE))) {
+    if (!CLOCK_SHOW_CURRENT_TIME && (CLOCK_COUNT_UP || CLOCK_TOTAL_TIME > 0)) {
         
         // 切换暂停/继续状态
         CLOCK_IS_PAUSED = !CLOCK_IS_PAUSED;
