@@ -140,19 +140,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     if (GetLastError() == ERROR_ALREADY_EXISTS) {
         HWND hwndExisting = FindWindow("CatimeWindow", "Catime");
         if (hwndExisting) {
-            // 尝试激活已存在的窗口
-            ShowWindow(hwndExisting, SW_SHOW);
-            SetForegroundWindow(hwndExisting);
-            
-            // 发送自定义消息，告诉已有实例开始默认倒计时
-            // 使用WM_USER+100作为自定义消息ID
-            SendMessage(hwndExisting, WM_USER+100, 0, 0);
+            // 关闭已存在的窗口实例
+            SendMessage(hwndExisting, WM_CLOSE, 0, 0);
+            // 等待旧实例关闭
+            Sleep(200);
         }
-        // 释放互斥锁并退出程序
+        // 释放旧互斥锁
         ReleaseMutex(hMutex);
         CloseHandle(hMutex);
-        CoUninitialize();
-        return 0;
+        
+        // 创建新的互斥锁
+        hMutex = CreateMutex(NULL, TRUE, "CatimeMutex");
+        // 继续新实例的启动流程
     }
     Sleep(50);
 
