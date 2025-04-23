@@ -41,9 +41,6 @@ static HWND g_hwndAboutDlg = NULL;
 // 添加全局变量来跟踪支持对话框句柄
 static HWND g_hwndSupportDialog = NULL;
 
-// 添加全局变量来跟踪许可证对话框句柄
-static HWND g_hwndLicenseDialog = NULL;
-
 // 添加全局变量来跟踪错误对话框句柄
 static HWND g_hwndErrorDlg = NULL;
 
@@ -335,10 +332,6 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 EndDialog(g_hwndSupportDialog, 0);
                 g_hwndSupportDialog = NULL;
             }
-            if (g_hwndLicenseDialog && IsWindow(g_hwndLicenseDialog)) {
-                EndDialog(g_hwndLicenseDialog, 0);
-                g_hwndLicenseDialog = NULL;
-            }
             g_hwndAboutDlg = NULL;  // 清除对话框句柄
             break;
 
@@ -369,7 +362,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 return TRUE;
             }
             if (LOWORD(wParam) == IDC_COPYRIGHT_LINK) {
-                ShowLicenseDialog(hwndDlg);
+                ShellExecuteW(NULL, L"open", L"https://github.com/vladelaina/Catime?tab=readme-ov-file#%EF%B8%8F%E7%89%88%E6%9D%83%E5%A3%B0%E6%98%8E", NULL, NULL, SW_SHOWNORMAL);
                 return TRUE;
             }
             break;
@@ -379,10 +372,6 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             if (g_hwndSupportDialog && IsWindow(g_hwndSupportDialog)) {
                 EndDialog(g_hwndSupportDialog, 0);
                 g_hwndSupportDialog = NULL;
-            }
-            if (g_hwndLicenseDialog && IsWindow(g_hwndLicenseDialog)) {
-                EndDialog(g_hwndLicenseDialog, 0);
-                g_hwndLicenseDialog = NULL;
             }
             EndDialog(hwndDlg, 0);
             g_hwndAboutDlg = NULL;  // 清除对话框句柄
@@ -530,42 +519,6 @@ void ShowSupportDialog(HWND hwndParent) {
                                      hwndParent, 
                                      SupportDlgProc);
     ShowWindow(g_hwndSupportDialog, SW_SHOW);
-}
-
-// 许可证对话框处理过程
-INT_PTR CALLBACK LicenseDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam)
-{
-    switch (msg)
-    {
-        case WM_INITDIALOG:
-            return TRUE;
-
-        case WM_COMMAND:
-            if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
-            {
-                EndDialog(hwndDlg, LOWORD(wParam));
-                g_hwndLicenseDialog = NULL;
-                return TRUE;
-            }
-            break;
-    }
-    return FALSE;
-}
-
-// 显示许可证对话框
-void ShowLicenseDialog(HWND hwndParent) {
-    // 如果已经存在许可证对话框，先关闭它
-    if (g_hwndLicenseDialog != NULL && IsWindow(g_hwndLicenseDialog)) {
-        EndDialog(g_hwndLicenseDialog, 0);
-        g_hwndLicenseDialog = NULL;
-    }
-    
-    // 创建新的许可证对话框
-    g_hwndLicenseDialog = CreateDialog(GetModuleHandle(NULL), 
-                                     MAKEINTRESOURCE(IDD_LICENSE_DIALOG), 
-                                     hwndParent, 
-                                     LicenseDlgProc);
-    ShowWindow(g_hwndLicenseDialog, SW_SHOW);
 }
 
 // 添加全局变量来跟踪番茄钟循环次数设置对话框句柄

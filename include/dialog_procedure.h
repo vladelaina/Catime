@@ -37,7 +37,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
  * - 鸣谢 (IDC_CREDITS) - 打开网页 https://vladelaina.github.io/Catime/#thanks
  * - 反馈 (IDC_FEEDBACK)
  * - GitHub (IDC_GITHUB)
- * - 开源协议 (IDC_LICENSE)
+ * - 版权声明 (IDC_COPYRIGHT_LINK) - 打开网页 https://github.com/vladelaina/Catime#版权声明
  * - 支持 (IDC_SUPPORT)
  */
 void ShowAboutDialog(HWND hwndParent);
@@ -51,14 +51,6 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
  * 显示包含微信和支付宝打赏二维码的支持对话框。
  */
 void ShowSupportDialog(HWND hwndParent);
-
-/**
- * @brief 显示许可证对话框
- * @param hwndParent 父窗口句柄
- * 
- * 显示包含MIT许可证文本的对话框。
- */
-void ShowLicenseDialog(HWND hwndParent);
 
 /**
  * @brief 显示错误对话框

@@ -266,10 +266,6 @@
 #define IDI_WECHAT            3006
 #define IDI_ALIPAY            3007
 
-// 许可证对话框相关
-#define IDD_LICENSE_DIALOG    4000
-#define IDC_LICENSE_TEXT      4001
-
 // 颜色对话框相关
 #define IDD_COLOR_DIALOG 1003
 #define IDC_COLOR_VALUE 1301
