@@ -256,16 +256,6 @@
 #define URL_GITHUB_REPO     L"https://github.com/vladelaina/Catime"
 #define URL_FEEDBACK        L"https://message.bilibili.com/#/whisper/mid1862395225"
 
-// 支持对话框相关
-#define IDD_SUPPORT_DIALOG    3000
-#define IDC_SUPPORT_TEXT      3001
-#define IDC_SUPPORT_WECHAT    3002
-#define IDC_SUPPORT_ALIPAY    3003
-#define IDC_WECHAT_LABEL      3004
-#define IDC_ALIPAY_LABEL      3005
-#define IDI_WECHAT            3006
-#define IDI_ALIPAY            3007
-
 // 颜色对话框相关
 #define IDD_COLOR_DIALOG 1003
 #define IDC_COLOR_VALUE 1301

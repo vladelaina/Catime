@@ -37,20 +37,12 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
  * - 鸣谢 (IDC_CREDITS) - 打开网页 https://vladelaina.github.io/Catime/#thanks
  * - 反馈 (IDC_FEEDBACK)
  * - GitHub (IDC_GITHUB)
- * - 版权声明 (IDC_COPYRIGHT_LINK) - 打开网页 https://github.com/vladelaina/Catime#版权声明
- * - 支持 (IDC_SUPPORT)
+ * - 版权声明 (IDC_COPYRIGHT_LINK) - 打开网页 https://github.com/vladelaina/Catime?tab=readme-ov-file#%EF%B8%8F%E7%89%88%E6%9D%83%E5%A3%B0%E6%98%8E
+ * - 支持 (IDC_SUPPORT) - 打开网页 https://vladelaina.github.io/Catime/support.html
  */
 void ShowAboutDialog(HWND hwndParent);
 
 INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
-
-/**
- * @brief 显示支持对话框
- * @param hwndParent 父窗口句柄
- * 
- * 显示包含微信和支付宝打赏二维码的支持对话框。
- */
-void ShowSupportDialog(HWND hwndParent);
 
 /**
  * @brief 显示错误对话框

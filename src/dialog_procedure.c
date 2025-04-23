@@ -38,9 +38,6 @@ WNDPROC wpOrigEditProc;
 // 添加全局变量来跟踪关于对话框句柄
 static HWND g_hwndAboutDlg = NULL;
 
-// 添加全局变量来跟踪支持对话框句柄
-static HWND g_hwndSupportDialog = NULL;
-
 // 添加全局变量来跟踪错误对话框句柄
 static HWND g_hwndErrorDlg = NULL;
 
@@ -327,11 +324,6 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 DestroyIcon(hLargeIcon);
                 hLargeIcon = NULL;
             }
-            // 关闭所有子对话框
-            if (g_hwndSupportDialog && IsWindow(g_hwndSupportDialog)) {
-                EndDialog(g_hwndSupportDialog, 0);
-                g_hwndSupportDialog = NULL;
-            }
             g_hwndAboutDlg = NULL;  // 清除对话框句柄
             break;
 
@@ -358,7 +350,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 return TRUE;
             }
             if (LOWORD(wParam) == IDC_SUPPORT) {
-                ShowSupportDialog(hwndDlg);
+                ShellExecuteW(NULL, L"open", L"https://vladelaina.github.io/Catime/support.html", NULL, NULL, SW_SHOWNORMAL);
                 return TRUE;
             }
             if (LOWORD(wParam) == IDC_COPYRIGHT_LINK) {
@@ -369,10 +361,6 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
 
         case WM_CLOSE:
             // 关闭所有子对话框
-            if (g_hwndSupportDialog && IsWindow(g_hwndSupportDialog)) {
-                EndDialog(g_hwndSupportDialog, 0);
-                g_hwndSupportDialog = NULL;
-            }
             EndDialog(hwndDlg, 0);
             g_hwndAboutDlg = NULL;  // 清除对话框句柄
             return TRUE;
@@ -444,81 +432,6 @@ void ShowAboutDialog(HWND hwndParent) {
     }
     
     ShowWindow(g_hwndAboutDlg, SW_SHOW);
-}
-
-// 支持对话框处理过程
-INT_PTR CALLBACK SupportDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam)
-{
-    static HICON hWechatIcon = NULL;
-    static HICON hAlipayIcon = NULL;
-
-    switch (msg)
-    {
-        case WM_INITDIALOG:
-            // 加载大尺寸的支付图标
-            hWechatIcon = (HICON)LoadImage(GetModuleHandle(NULL),
-                MAKEINTRESOURCE(IDI_WECHAT),
-                IMAGE_ICON,
-                228,    // 宽度
-                228,    // 高度
-                LR_DEFAULTCOLOR);
-            
-            hAlipayIcon = (HICON)LoadImage(GetModuleHandle(NULL),
-                MAKEINTRESOURCE(IDI_ALIPAY),
-                IMAGE_ICON,
-                228,    // 宽度
-                228,    // 高度
-                LR_DEFAULTCOLOR);
-            
-            // 设置图标到Static控件
-            if (hWechatIcon) {
-                SendDlgItemMessage(hwndDlg, IDC_SUPPORT_WECHAT, STM_SETICON, (WPARAM)hWechatIcon, 0);
-            }
-            
-            if (hAlipayIcon) {
-                SendDlgItemMessage(hwndDlg, IDC_SUPPORT_ALIPAY, STM_SETICON, (WPARAM)hAlipayIcon, 0);
-            }
-            
-            return TRUE;
-
-        case WM_DESTROY:
-            // 清理图标资源
-            if (hWechatIcon) {
-                DestroyIcon(hWechatIcon);
-                hWechatIcon = NULL;
-            }
-            if (hAlipayIcon) {
-                DestroyIcon(hAlipayIcon);
-                hAlipayIcon = NULL;
-            }
-            break;
-
-        case WM_COMMAND:
-            if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
-            {
-                EndDialog(hwndDlg, LOWORD(wParam));
-                g_hwndSupportDialog = NULL;
-                return TRUE;
-            }
-            break;
-    }
-    return FALSE;
-}
-
-// 显示支持对话框
-void ShowSupportDialog(HWND hwndParent) {
-    // 如果已经存在支持对话框，先关闭它
-    if (g_hwndSupportDialog != NULL && IsWindow(g_hwndSupportDialog)) {
-        EndDialog(g_hwndSupportDialog, 0);
-        g_hwndSupportDialog = NULL;
-    }
-    
-    // 创建新的支持对话框
-    g_hwndSupportDialog = CreateDialog(GetModuleHandle(NULL), 
-                                     MAKEINTRESOURCE(IDD_SUPPORT_DIALOG), 
-                                     hwndParent, 
-                                     SupportDlgProc);
-    ShowWindow(g_hwndSupportDialog, SW_SHOW);
 }
 
 // 添加全局变量来跟踪番茄钟循环次数设置对话框句柄
