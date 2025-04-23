@@ -18,7 +18,7 @@
 #include <shellapi.h>
 
 // 函数声明
-void ParseContributorInfo(const wchar_t* contributor, wchar_t* name, size_t nameSize, wchar_t* url, size_t urlSize);
+static void DrawColorSelectButton(HDC hdc, HWND hwnd);
 
 // 从main.c引入的变量
 extern char inputText[256];
@@ -38,41 +38,20 @@ WNDPROC wpOrigEditProc;
 // 添加全局变量来跟踪关于对话框句柄
 static HWND g_hwndAboutDlg = NULL;
 
-// 添加全局变量来跟踪鸣谢对话框句柄
-static HWND g_hwndCreditsDialog = NULL;
-
 // 添加全局变量来跟踪支持对话框句柄
 static HWND g_hwndSupportDialog = NULL;
 
 // 添加全局变量来跟踪许可证对话框句柄
 static HWND g_hwndLicenseDialog = NULL;
 
+// 添加全局变量来跟踪错误对话框句柄
+static HWND g_hwndErrorDlg = NULL;
+
 // 添加循环次数编辑框的子类化过程
 static WNDPROC wpOrigLoopEditProc;  // 存储原始的编辑框过程
 
-// 贡献者链接定义
-static const wchar_t* CONTRIBUTOR_LINKS[] = {
-    L"[MAX°孟兆](https://github.com/MadMaxChow)",              // CONTRIBUTOR_1
-    L"[XuJilong](https://github.com/sumruler)",                // CONTRIBUTOR_2
-    L"[zggsong](https://github.com/ZGGSONG)",                  // CONTRIBUTOR_3
-    L"[猫屋敷梨梨Official](https://space.bilibili.com/26087398)", // CONTRIBUTOR_4
-    L"[MOJIもら](https://space.bilibili.com/6189012)",         // CONTRIBUTOR_5
-    L"[李康](https://space.bilibili.com/475437261)",           // CONTRIBUTOR_6
-    L"[我是无名吖](https://space.bilibili.com/1708573954)",     // CONTRIBUTOR_7
-    L"[flying-hilichurl](https://github.com/flying-hilichurl)", // CONTRIBUTOR_8
-    L"[双脚猫](https://space.bilibili.com/161061562)",         // CONTRIBUTOR_9
-    L"[rsyqvthv](https://github.com/rsyqvthv)",                // CONTRIBUTOR_10
-    L"[洋仓鼠](https://space.bilibili.com/297146893)",         // CONTRIBUTOR_11
-    L"[学习马楼](https://space.bilibili.com/3546380188519387)", // CONTRIBUTOR_12
-    L"[睡着的火山](https://space.bilibili.com/8010065)",        // CONTRIBUTOR_13
-    L"[星空下数羊](https://space.bilibili.com/5549978)",        // CONTRIBUTOR_14
-    L"[青阳忘川](https://space.bilibili.com/13129221)",         // CONTRIBUTOR_15
-    L"[William](https://github.com/llfWilliam)",               // CONTRIBUTOR_16
-    L"[王野](https://github.com/wangye99)",                    // CONTRIBUTOR_17
-    L"[风增](https://space.bilibili.com/470931145)",           // CONTRIBUTOR_18
-    L"[煮酒论科技](https://space.bilibili.com/572042200)",       // CONTRIBUTOR_19
-    L"[田春](https://space.bilibili.com/266931550)"            // CONTRIBUTOR_20 - 新增
-};
+// 添加常量字符串
+#define URL_GITHUB_REPO L"https://github.com/vladelaina/Catime"
 
 // 子类化编辑框过程
 LRESULT APIENTRY EditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -352,10 +331,6 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 hLargeIcon = NULL;
             }
             // 关闭所有子对话框
-            if (g_hwndCreditsDialog && IsWindow(g_hwndCreditsDialog)) {
-                EndDialog(g_hwndCreditsDialog, 0);
-                g_hwndCreditsDialog = NULL;
-            }
             if (g_hwndSupportDialog && IsWindow(g_hwndSupportDialog)) {
                 EndDialog(g_hwndSupportDialog, 0);
                 g_hwndSupportDialog = NULL;
@@ -374,9 +349,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 return TRUE;
             }
             if (LOWORD(wParam) == IDC_CREDIT_LINK) {
-                wchar_t name[256] = {0}, url[512] = {0};
-                ParseContributorInfo(CONTRIBUTOR_LINKS[3], name, 256, url, 512);
-                ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOWNORMAL);
+                ShellExecuteW(NULL, L"open", L"https://space.bilibili.com/26087398", NULL, NULL, SW_SHOWNORMAL);
                 return TRUE;
             }
             if (LOWORD(wParam) == IDC_FEEDBACK_LINK) {
@@ -388,7 +361,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 return TRUE;
             }
             if (LOWORD(wParam) == IDC_CREDITS) {
-                ShowCreditsDialog(hwndDlg);
+                ShellExecuteW(NULL, L"open", L"https://vladelaina.github.io/Catime/#thanks", NULL, NULL, SW_SHOWNORMAL);
                 return TRUE;
             }
             if (LOWORD(wParam) == IDC_SUPPORT) {
@@ -403,10 +376,6 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
 
         case WM_CLOSE:
             // 关闭所有子对话框
-            if (g_hwndCreditsDialog && IsWindow(g_hwndCreditsDialog)) {
-                EndDialog(g_hwndCreditsDialog, 0);
-                g_hwndCreditsDialog = NULL;
-            }
             if (g_hwndSupportDialog && IsWindow(g_hwndSupportDialog)) {
                 EndDialog(g_hwndSupportDialog, 0);
                 g_hwndSupportDialog = NULL;
@@ -486,206 +455,6 @@ void ShowAboutDialog(HWND hwndParent) {
     }
     
     ShowWindow(g_hwndAboutDlg, SW_SHOW);
-}
-
-// 添加辅助函数来解析贡献者信息
-void ParseContributorInfo(const wchar_t* contributor, wchar_t* name, size_t nameSize, wchar_t* url, size_t urlSize) {
-    const wchar_t *start = wcschr(contributor, L'[');
-    const wchar_t *middle = wcschr(contributor, L']');
-    const wchar_t *urlStart = wcschr(contributor, L'(');
-    const wchar_t *urlEnd = wcschr(contributor, L')');
-    
-    if (start && middle && urlStart && urlEnd) {
-        // 提取名称 (不包含方括号)
-        size_t nameLen = middle - (start + 1);
-        if (nameLen < nameSize) {
-            wcsncpy(name, start + 1, nameLen);
-            name[nameLen] = L'\0';
-        }
-        
-        // 提取URL (不包含圆括号)
-        size_t urlLen = urlEnd - (urlStart + 1);
-        if (urlLen < urlSize) {
-            wcsncpy(url, urlStart + 1, urlLen);
-            url[urlLen] = L'\0';
-        }
-    }
-}
-
-// 修改鸣谢对话框处理过程
-INT_PTR CALLBACK CreditsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam)
-{
-    switch (msg)
-    {
-        case WM_INITDIALOG:
-            return TRUE;
-
-        case WM_COMMAND:
-            // 处理确定按钮
-            if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
-            {
-                EndDialog(hwndDlg, LOWORD(wParam));
-                return TRUE;
-            }
-            
-            // 处理贡献者链接点击
-            switch (LOWORD(wParam))
-            {
-                case IDC_CREDITS_MAX: {
-                    wchar_t name[256] = {0}, url[512] = {0};
-                    ParseContributorInfo(CONTRIBUTOR_LINKS[0], name, 256, url, 512);
-                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
-                    return TRUE;
-                }
-                case IDC_CREDITS_XUJILONG: {
-                    wchar_t name[256] = {0}, url[512] = {0};
-                    ParseContributorInfo(CONTRIBUTOR_LINKS[1], name, 256, url, 512);
-                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
-                    return TRUE;
-                }
-                case IDC_CREDITS_ZGGSONG: {
-                    wchar_t name[256] = {0}, url[512] = {0};
-                    ParseContributorInfo(CONTRIBUTOR_LINKS[2], name, 256, url, 512);
-                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
-                    return TRUE;
-                }
-                case IDC_CREDITS_NEKO: {
-                    wchar_t name[256] = {0}, url[512] = {0};
-                    ParseContributorInfo(CONTRIBUTOR_LINKS[3], name, 256, url, 512);
-                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
-                    return TRUE;
-                }
-                case IDC_CREDITS_MOJI: {
-                    wchar_t name[256] = {0}, url[512] = {0};
-                    ParseContributorInfo(CONTRIBUTOR_LINKS[4], name, 256, url, 512);
-                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
-                    return TRUE;
-                }
-                case IDC_CREDITS_LIKANG: {
-                    wchar_t name[256] = {0}, url[512] = {0};
-                    ParseContributorInfo(CONTRIBUTOR_LINKS[5], name, 256, url, 512);
-                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
-                    return TRUE;
-                }
-                case IDC_CREDITS_WUMING: {
-                    wchar_t name[256] = {0}, url[512] = {0};
-                    ParseContributorInfo(CONTRIBUTOR_LINKS[6], name, 256, url, 512);
-                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
-                    return TRUE;
-                }
-                case IDC_CREDITS_FLYING: {
-                    wchar_t name[256] = {0}, url[512] = {0};
-                    ParseContributorInfo(CONTRIBUTOR_LINKS[7], name, 256, url, 512);
-                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
-                    return TRUE;
-                }
-                case IDC_CREDITS_CAT: {
-                    wchar_t name[256] = {0}, url[512] = {0};
-                    ParseContributorInfo(CONTRIBUTOR_LINKS[8], name, 256, url, 512);
-                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
-                    return TRUE;
-                }
-                case IDC_CREDITS_RSYQVTHV: {
-                    wchar_t name[256] = {0}, url[512] = {0};
-                    ParseContributorInfo(CONTRIBUTOR_LINKS[9], name, 256, url, 512);
-                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
-                    return TRUE;
-                }
-                case IDC_CREDITS_HAMSTER: {
-                    wchar_t name[256] = {0}, url[512] = {0};
-                    ParseContributorInfo(CONTRIBUTOR_LINKS[10], name, 256, url, 512);
-                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
-                    return TRUE;
-                }
-                case IDC_CREDITS_MALOU: {
-                    wchar_t name[256] = {0}, url[512] = {0};
-                    ParseContributorInfo(CONTRIBUTOR_LINKS[11], name, 256, url, 512);
-                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
-                    return TRUE;
-                }
-                case IDC_CREDITS_VOLCANO: {
-                    wchar_t name[256] = {0}, url[512] = {0};
-                    ParseContributorInfo(CONTRIBUTOR_LINKS[12], name, 256, url, 512);
-                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
-                    return TRUE;
-                }
-                case IDC_CREDITS_SHEEP: {
-                    wchar_t name[256] = {0}, url[512] = {0};
-                    ParseContributorInfo(CONTRIBUTOR_LINKS[13], name, 256, url, 512);
-                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
-                    return TRUE;
-                }
-                case IDC_CREDITS_QINGYANG: {
-                    wchar_t name[256] = {0}, url[512] = {0};
-                    ParseContributorInfo(CONTRIBUTOR_LINKS[14], name, 256, url, 512);
-                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
-                    return TRUE;
-                }
-                case IDC_CREDITS_WILLIAM: {
-                    wchar_t name[256] = {0}, url[512] = {0};
-                    ParseContributorInfo(CONTRIBUTOR_LINKS[15], name, 256, url, 512);
-                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
-                    return TRUE;
-                }
-                case IDC_CREDITS_WANGYE: {
-                    wchar_t name[256] = {0}, url[512] = {0};
-                    ParseContributorInfo(CONTRIBUTOR_LINKS[16], name, 256, url, 512);
-                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
-                    return TRUE;
-                }
-                case IDC_CREDITS_FENGZENG: {
-                    wchar_t name[256] = {0}, url[512] = {0};
-                    ParseContributorInfo(CONTRIBUTOR_LINKS[17], name, 256, url, 512);
-                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
-                    return TRUE;
-                }
-                case IDC_CREDITS_ZHUJIU: {
-                    wchar_t name[256] = {0}, url[512] = {0};
-                    ParseContributorInfo(CONTRIBUTOR_LINKS[18], name, 256, url, 512);
-                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
-                    return TRUE;
-                }
-                case IDC_CREDITS_TIANCHUN: {
-                    wchar_t name[256] = {0}, url[512] = {0};
-                    ParseContributorInfo(CONTRIBUTOR_LINKS[19], name, 256, url, 512);
-                    ShellExecuteW(NULL, L"open", url, NULL, NULL, SW_SHOW);
-                    return TRUE;
-                }
-            }
-            break;
-
-        case WM_CTLCOLORSTATIC:
-        {
-            HDC hdc = (HDC)wParam;
-            HWND hwndCtl = (HWND)lParam;
-            int ctrlId = GetDlgCtrlID(hwndCtl);
-            
-            // 为所有贡献者链接设置橙色
-            if (ctrlId >= IDC_CREDITS_MAX && ctrlId <= IDC_CREDITS_TIANCHUN) {
-                SetTextColor(hdc, 0x00D26919); // 橙色 (BGR格式)
-                SetBkMode(hdc, TRANSPARENT);
-                return (INT_PTR)GetStockObject(NULL_BRUSH);
-            }
-            break;
-        }
-    }
-    return FALSE;
-}
-
-// 显示鸣谢对话框
-void ShowCreditsDialog(HWND hwndParent) {
-    // 如果已经存在鸣谢对话框，先关闭它
-    if (g_hwndCreditsDialog != NULL && IsWindow(g_hwndCreditsDialog)) {
-        EndDialog(g_hwndCreditsDialog, 0);
-        g_hwndCreditsDialog = NULL;
-    }
-    
-    // 创建新的鸣谢对话框
-    g_hwndCreditsDialog = CreateDialog(GetModuleHandle(NULL), 
-                                     MAKEINTRESOURCE(IDD_CREDITS_DIALOG), 
-                                     hwndParent, 
-                                     CreditsDlgProc);
-    ShowWindow(g_hwndCreditsDialog, SW_SHOW);
 }
 
 // 支持对话框处理过程

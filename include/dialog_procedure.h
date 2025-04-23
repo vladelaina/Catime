@@ -34,7 +34,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
  * 
  * 显示包含程序版本、作者和第三方库信息的关于对话框。
  * 包含以下链接按钮：
- * - 鸣谢 (IDC_CREDITS)
+ * - 鸣谢 (IDC_CREDITS) - 打开网页 https://vladelaina.github.io/Catime/#thanks
  * - 反馈 (IDC_FEEDBACK)
  * - GitHub (IDC_GITHUB)
  * - 开源协议 (IDC_LICENSE)
@@ -43,14 +43,6 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 void ShowAboutDialog(HWND hwndParent);
 
 INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
-
-/**
- * @brief 显示鸣谢对话框
- * @param hwndParent 父窗口句柄
- * 
- * 显示包含项目贡献者名单的鸣谢对话框。
- */
-void ShowCreditsDialog(HWND hwndParent);
 
 /**
  * @brief 显示支持对话框
