@@ -55,4 +55,11 @@ void SetStartupMode(HWND hwnd, const char* mode);
  */
 void OpenUserGuide(void);
 
+/**
+ * @brief 打开支持页面
+ * 
+ * 打开支持页面，提供支持开发者的渠道
+ */
+void OpenSupportPage(void);
+
 #endif // CLOCK_TRAY_EVENTS_H

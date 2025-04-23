@@ -239,6 +239,7 @@
 
 // 定义帮助菜单项ID
 #define CLOCK_IDM_HELP 134        // 添加帮助菜单项ID
+#define CLOCK_IDM_SUPPORT 139     // 添加赞助选项菜单项ID
 
 // 新增：底部链接控件ID
 #define IDC_CREDITS  1015         // 鸣谢按钮

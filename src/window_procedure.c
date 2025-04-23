@@ -80,6 +80,9 @@ extern void ShowPomodoroLoopDialog(HWND hwndParent);
 // 添加对OpenUserGuide函数的声明
 extern void OpenUserGuide(void);
 
+// 添加对OpenSupportPage函数的声明
+extern void OpenSupportPage(void);
+
 // 辅助函数：检查字符串是否只包含空格
 static BOOL isAllSpacesOnly(const char* str) {
     for (int i = 0; str[i]; i++) {
@@ -1543,6 +1546,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_HELP: {
                     OpenUserGuide();
+                    break;
+                }
+                case CLOCK_IDM_SUPPORT: {
+                    OpenSupportPage();
                     break;
                 }
             }

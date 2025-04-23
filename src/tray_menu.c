@@ -514,6 +514,9 @@ void ShowColorMenu(HWND hwnd) {
     // 添加"帮助"选项 - 打开使用指南网页
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_HELP, GetLocalizedString(L"使用指南", L"User Guide"));
 
+    // 添加"支持"选项 - 打开赞助网页
+    AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_SUPPORT, GetLocalizedString(L"支持", L"Support"));
+
     // 添加"检查更新"选项
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_CHECK_UPDATE, 
                GetLocalizedString(L"检查更新", L"Check for Updates"));
