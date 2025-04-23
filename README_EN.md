@@ -11,7 +11,7 @@
   <a href="https://discord.com/invite/W3tW2gtp6g" target="_blank">
     <img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white&style=for-the-badge" alt="Join Discord" />
   </a>
-  <a href="https://catime.vladelaina.com/support" target="_blank">
+  <a href="https://vladelaina.github.io/Catime/support" target="_blank">
     <img src="https://img.shields.io/badge/Buy%20me%20a%20coffee-Support%20now-critical?logo=buymeacoffee&logoColor=white&style=for-the-badge" alt="Buy me a coffee" />
   </a>
 
@@ -49,14 +49,14 @@
 
 **English** | [**简体中文**](https://github.com/vladelaina/Catime)
 
-## [🌟Features](https://catime.vladelaina.com/#core-features)
+## [🌟Features](https://vladelaina.github.io/Catime/#core-features)
 
 - **Minimalist Design**: Transparent interface, click-through capability, free dragging and resizing, no complex graphical settings interface, doesn't feel like running an additional application
 - **Flexible Timing**: Quick presets, custom time input, display current time (12/24-hour format), countdown, count up, Pomodoro timer
 - **Timeout Actions**: Display message, show current time, count up, lock screen, open file/application, open website, shutdown, restart
 - **Rich Customization**: 47 fonts, 15 preset colors, support for color value input, color palette selection, real-time preview
 
-## [💡Use Cases](https://catime.vladelaina.com/#use-cases)
+## [��Use Cases](https://vladelaina.github.io/Catime/#use-cases)
 
 - 👔 Countdown to end of work
 - 🍅 Pomodoro timer
@@ -73,7 +73,7 @@
 
  Demo video (based on V1.0.5): <img src="https://www.bilibili.com/favicon.ico" width="20" height="20"> [BiliBili](https://www.bilibili.com/video/BV1AsoKYgE3r/)
 
-## [📑User Guide](https://catime.vladelaina.com/guide)
+## [📑User Guide](https://vladelaina.github.io/Catime/guide)
 
 - **Left-click tray icon**: Set **time**
 - **Right-click tray icon**: Settings **menu**
@@ -91,7 +91,7 @@ Settings are saved in `C:\Users\username\AppData\Local\Catime\config.txt`
 </a>
 
 
-## [✨Acknowledgements](https://catime.vladelaina.com/#thanks) 
+## [✨Acknowledgements](https://vladelaina.github.io/Catime/#thanks) 
 
 Special thanks to the following contributors:
 <table>

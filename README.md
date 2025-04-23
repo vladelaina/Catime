@@ -11,7 +11,7 @@
   <a href="https://discord.com/invite/W3tW2gtp6g" target="_blank">
     <img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white&style=for-the-badge" alt="Join Discord" />
   </a>
-  <a href="https://catime.vladelaina.com/support" target="_blank">
+  <a href="https://vladelaina.github.io/Catime/support" target="_blank">
     <img src="https://img.shields.io/badge/Buy%20me%20a%20coffee-Support%20-critical?logo=buymeacoffee&logoColor=white&style=for-the-badge" alt="Buy me a coffee" />
   </a>
 
@@ -50,14 +50,14 @@
 
 **简体中文** | [**English**](./README_EN.md)
 
-## [🌟特点](https://catime.vladelaina.com/#core-features)
+## [🌟特点](https://vladelaina.github.io/Catime/#core-features)
 
 - **极简设计**: 透明界面、点击穿透、随意拖拽和缩放、没有繁琐的图形化设置界面，不会让人有直观上多开一个软件的感觉
 - **灵活计时**: 快速预设、自定义时间输入、显示当前时间(12/24小时制)、倒计时、正计时、番茄时钟
 - **超时动作**: 显示消息、显示当前时间、正计时、锁定屏幕、打开文件/软件、打开网站、关机、重启
 - **自定义丰富**: 47种字体、15种预设颜色、支持输入颜色值、使用调色板选择颜色、支持实时预览
 
-## [💡使用场景](https://catime.vladelaina.com/#use-cases)
+## [💡使用场景](https://vladelaina.github.io/Catime/#use-cases)
 
 - 👔 下班倒计时
 - 🍅 番茄时钟
@@ -74,7 +74,7 @@
 
  演示视频(基于V1.0.5)：<img src="https://www.bilibili.com/favicon.ico" width="20" height="20"> [BiliBili](https://www.bilibili.com/video/BV1AsoKYgE3r/)
 
-## [📑使用指南](https://catime.vladelaina.com/guide)
+## [📑使用指南](https://vladelaina.github.io/Catime/guide)
 
 - **左键点击托盘图标**: 设置**时间**
 - **右键点击托盘图标**: 设置**菜单**
@@ -92,7 +92,7 @@
 </a>
 
 
-## [✨鸣谢](https://catime.vladelaina.com/#thanks) 
+## [✨鸣谢](https://vladelaina.github.io/Catime/#thanks) 
 
 特别感谢以下贡献者：
 <table>

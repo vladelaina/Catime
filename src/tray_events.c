@@ -161,10 +161,10 @@ void SetStartupMode(HWND hwnd, const char* mode) {
  * 
  * 使用ShellExecute打开Catime的使用指南网页，
  * 为用户提供详细的软件使用说明和帮助文档。
- * 网址为：https://catime.vladelaina.com/guide
+ * 网址为：https://vladelaina.github.io/Catime/guide
  */
 void OpenUserGuide(void) {
-    ShellExecuteW(NULL, L"open", L"https://catime.vladelaina.com/guide", NULL, NULL, SW_SHOWNORMAL);
+    ShellExecuteW(NULL, L"open", L"https://vladelaina.github.io/Catime/guide", NULL, NULL, SW_SHOWNORMAL);
 }
 
 /**
@@ -172,8 +172,8 @@ void OpenUserGuide(void) {
  * 
  * 使用ShellExecute打开Catime的支持页面，
  * 为用户提供支持开发者的渠道。
- * 网址为：https://catime.vladelaina.com/support
+ * 网址为：https://vladelaina.github.io/Catime/support
  */
 void OpenSupportPage(void) {
-    ShellExecuteW(NULL, L"open", L"https://catime.vladelaina.com/support", NULL, NULL, SW_SHOWNORMAL);
+    ShellExecuteW(NULL, L"open", L"https://vladelaina.github.io/Catime/support", NULL, NULL, SW_SHOWNORMAL);
 }
