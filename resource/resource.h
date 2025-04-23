@@ -2,7 +2,7 @@
 #define CATIME_VERSION "1.0.6-alpha2"
 
 /* 鸣谢链接  猫屋敷梨梨Official*/
-#define CREDIT_LINK_URL       "https://space.bilibili.com/26087398"
+#define CREDIT_LINK_URL       L"https://space.bilibili.com/26087398"
 
 // 关于对话框图标尺寸
 #define ABOUT_ICON_SIZE 200
@@ -251,31 +251,6 @@
 // 在原有链接ID后面添加反馈和GitHub的链接ID
 #define IDC_FEEDBACK_LINK 1020         // 反馈链接
 #define IDC_GITHUB_LINK   1021         // GitHub链接
-
-// 鸣谢对话框相关
-#define IDD_CREDITS_DIALOG    2000
-#define IDC_CREDITS_TITLE     2001
-#define IDC_CREDITS_TEXT      2002
-#define IDC_CREDITS_MAX       2010
-#define IDC_CREDITS_XUJILONG  2011
-#define IDC_CREDITS_ZGGSONG   2012
-#define IDC_CREDITS_NEKO      2013
-#define IDC_CREDITS_MOJI      2014
-#define IDC_CREDITS_LIKANG    2015
-#define IDC_CREDITS_WUMING    2016
-#define IDC_CREDITS_FLYING    2017
-#define IDC_CREDITS_CAT       2018
-#define IDC_CREDITS_RSYQVTHV  2019
-#define IDC_CREDITS_HAMSTER   2020
-#define IDC_CREDITS_MALOU     2021
-#define IDC_CREDITS_VOLCANO   2022
-#define IDC_CREDITS_SHEEP     2023
-#define IDC_CREDITS_QINGYANG  2024
-#define IDC_CREDITS_WILLIAM   2025  // 新增：William
-#define IDC_CREDITS_WANGYE    2026  // 新增：王野
-#define IDC_CREDITS_FENGZENG  2027  // 新增：风增
-#define IDC_CREDITS_ZHUJIU    2028  // 新增：煮酒论科技
-#define IDC_CREDITS_TIANCHUN  2029  // 新增：田春
 
 // 其他常用链接
 #define URL_GITHUB_REPO     L"https://github.com/vladelaina/Catime"
