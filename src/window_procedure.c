@@ -1705,37 +1705,6 @@ refresh_window:
             }
             break;
         }
-        // 处理自定义的"开始默认倒计时"消息
-        case WM_USER+100: {
-            // 开始默认倒计时
-            // 1. 读取配置文件中的默认时间
-            extern int CLOCK_DEFAULT_START_TIME;
-            
-            // 2. 停止当前计时器
-            KillTimer(hwnd, 1);
-            
-            // 3. 设置新的倒计时
-            CLOCK_TOTAL_TIME = CLOCK_DEFAULT_START_TIME;
-            countdown_elapsed_time = 0;
-            countdown_message_shown = FALSE;
-            CLOCK_COUNT_UP = FALSE;
-            CLOCK_SHOW_CURRENT_TIME = FALSE;
-            
-            // 4. 确保窗口状态正确
-            CLOCK_IS_PAUSED = FALSE;
-            elapsed_time = 0;
-            message_shown = FALSE;
-            countup_message_shown = FALSE;
-            
-            // 5. 显示窗口并开始计时
-            ShowWindow(hwnd, SW_SHOW);
-            InvalidateRect(hwnd, NULL, TRUE);
-            SetTimer(hwnd, 1, 1000, NULL);
-            
-            // 确保窗口置顶
-            HandleWindowReset(hwnd);
-            return 0;
-        }
         default:
             return DefWindowProc(hwnd, msg, wp, lp);
     }
