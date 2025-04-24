@@ -203,7 +203,7 @@
     Mystery Quest Essence.ttf, Noto Nastaliq Urdu Medium Essence.ttf, Piedra Essence.ttf,
     Pixelify Sans Medium Essence.ttf, Press Start 2P Essence.ttf,
     Rubik Bubbles Essence.ttf, Rubik Burned Essence.ttf, Rubik Glitch Essence.ttf,
-    Rubik Glitch Pop Essence.ttf, Rubik Marker Hatch Essence.ttf,
+    Rubik Marker Hatch Essence.ttf,
     Rubik Puddles Essence.ttf, Rubik Vinyl Essence.ttf, Rubik Wet Paint Essence.ttf,
     Ruge Boogie Essence.ttf, Sevillana Essence.ttf, Silkscreen Essence.ttf,
     Stick Essence.ttf, Underdog Essence.ttf, Wallpoet Essence.ttf,

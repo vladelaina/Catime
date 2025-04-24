@@ -413,7 +413,6 @@ void ShowColorMenu(HWND hwnd) {
             strcmp(fontResources[i].fontName, "Moirai One Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Silkscreen Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Pixelify Sans Medium Essence.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Rubik Glitch Pop Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Rubik Burned Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Rubik Glitch Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "ProFont IIx Nerd Font.ttf") == 0 ||
@@ -444,7 +443,6 @@ void ShowColorMenu(HWND hwnd) {
             strcmp(fontResources[i].fontName, "Moirai One Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Silkscreen Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Pixelify Sans Medium Essence.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Rubik Glitch Pop Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Rubik Burned Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Rubik Glitch Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "ProFont IIx Nerd Font.ttf") == 0 ||

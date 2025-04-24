@@ -913,10 +913,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     WriteConfigFont("Rubik Burned Essence.ttf");
                     goto refresh_window;
                 }
-                case CLOCK_IDC_FONT_RUBIK_GLITCH_POP: {
-                    WriteConfigFont("Rubik Glitch Pop Essence.ttf");
-                    goto refresh_window;
-                }
                 case CLOCK_IDC_FONT_RUBIK_GLITCH: {
                     WriteConfigFont("Rubik Glitch Essence.ttf");
                     goto refresh_window;
