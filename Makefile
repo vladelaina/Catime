@@ -80,7 +80,7 @@ define update_progress
 	 printf "\r\033[38;2;205;214;244mProgress: ["; \
 	 for i in $$(seq 1 $$bar_length); do printf "█"; done; \
 	 for i in $$(seq 1 $$((40 - bar_length))); do printf "░"; done; \
-	 printf "] %3d%% (%d/%d) " "$$percentage" "$$new_count" "$(TOTAL_FILES)"; \
+	 printf "] %3d%% Complete " "$$percentage"; \
 	 if [ $$new_count -eq $(TOTAL_FILES) ]; then printf "\n\033[0m"; fi
 endef
 
@@ -125,7 +125,7 @@ init_progress:
 	@echo "0" > $(PROGRESS_FILE)
 	@printf "\033[38;2;205;214;244mProgress: ["; \
 	 for i in $$(seq 1 40); do printf "░"; done; \
-	 printf "] %3d%% (0/%d) " "0" "$(TOTAL_FILES)"
+	 printf "] %3d%% Complete " "0"
 
 # 创建必要的目录
 directories:
