@@ -774,12 +774,27 @@ BOOL OpenBrowserForUpdateAndExit(const char* url, HWND hwnd) {
         return FALSE;
     }
     
+    // 删除配置文件
+    char config_path[MAX_PATH];
+    extern void GetConfigPath(char* path, size_t size);
+    GetConfigPath(config_path, MAX_PATH);
+    
+    BOOL configDeleted = DeleteFileA(config_path);
+    
     // 提示用户将退出程序
-    MessageBoxW(hwnd, 
-               GetLocalizedString(
-                   L"即将退出程序，请从网页下载并安装新版本。",
-                   L"The program will now exit. Please download and install the new version from the website."
-               ), 
+    wchar_t message[512];
+    swprintf(message, sizeof(message)/sizeof(wchar_t),
+            GetLocalizedString(
+                L"即将退出程序，请从网页下载并安装新版本。\n%s",
+                L"The program will now exit. Please download and install the new version from the website.\n%s"),
+            configDeleted ? 
+                GetLocalizedString(L"配置文件已清除，新版本将使用默认设置。", 
+                                 L"Configuration file has been deleted, the new version will use default settings.") : 
+                GetLocalizedString(L"无法清除配置文件，新版本可能会继承旧版本设置。", 
+                                 L"Failed to delete configuration file, the new version may inherit old settings.")
+    );
+    
+    MessageBoxW(hwnd, message, 
                GetLocalizedString(L"更新提示", L"Update Notice"), 
                MB_ICONINFORMATION);
     
