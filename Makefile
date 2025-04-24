@@ -51,16 +51,23 @@ OBJS = $(BUILD_DIR)/main.o \
 TOTAL_FILES = 22
 PROGRESS_FILE = $(BUILD_DIR)/.progress
 
+# 为编译时的彩色输出设置颜色宏
+CYAN = \033[96m
+GRAY = \033[38;2;205;214;244m
+BLUE = \033[38;2;137;180;250m
+GREEN = \033[92m
+END = \033[0m
+
 # ASCII 艺术标志
 define CATIME_LOGO
-echo ""
-echo -e "\033[96m ██████╗  █████╗ ████████╗██╗███╗   ███╗███████╗"
-echo -e "██╔════╝ ██╔══██╗╚══██╔══╝██║████╗ ████║██╔════╝"
-echo -e "██║      ███████║   ██║   ██║██╔████╔██║█████╗  "
-echo -e "██║      ██╔══██║   ██║   ██║██║╚██╔╝██║██╔══╝  "
-echo -e "╚██████╗ ██║  ██║   ██║   ██║██║ ╚═╝ ██║███████╗"
-echo -e " ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝╚═╝     ╚═╝╚══════╝\033[0m"
-echo ""
+printf "\n"
+printf "$(CYAN)██████╗  █████╗ ████████╗██╗███╗   ███╗███████╗$(END)\n"
+printf "$(CYAN)██╔════╝ ██╔══██╗╚══██╔══╝██║████╗ ████║██╔════╝$(END)\n"
+printf "$(CYAN)██║      ███████║   ██║   ██║██╔████╔██║█████╗  $(END)\n"
+printf "$(CYAN)██║      ██╔══██║   ██║   ██║██║╚██╔╝██║██╔══╝  $(END)\n"
+printf "$(CYAN)╚██████╗ ██║  ██║   ██║   ██║██║ ╚═╝ ██║███████╗$(END)\n"
+printf "$(CYAN) ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝╚═╝     ╚═╝╚══════╝$(END)\n"
+printf "\n"
 endef
 
 # 更新进度计数并显示真实进度条
@@ -120,9 +127,9 @@ finalize_build: compress_executable
 	@echo -e "\033[92mBuild completed! Output directory: $(OUTPUT_DIR)\033[0m"
 	@rm -f $(PROGRESS_FILE)
 
-# 清屏
+# 清屏 - 跨平台兼容方式
 clear_screen:
-	@clear || cls
+	@(clear || cls || true)
 
 # 显示标志
 show_logo:
