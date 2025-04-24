@@ -90,9 +90,15 @@ all: clear_screen show_logo directories init_progress build_executable compress_
 build_executable: $(OUTPUT_DIR)/catime.exe
 
 compress_executable: build_executable
+	@# Check if compilation was skipped and update progress bar to 100% if needed
+	@if [ -f $(PROGRESS_FILE) ] && [ "$$(cat $(PROGRESS_FILE))" -lt "$(TOTAL_FILES)" ]; then \
+	  printf "\r\033[38;2;205;214;244mProgress: ["; \
+	  for i in $$(seq 1 40); do printf "█"; done; \
+	  printf "] 100%% Complete \033[0m\n"; \
+	fi
 	@original_size_bytes=$$(stat -c %s "$(OUTPUT_DIR)/catime.exe"); \
 	 original_size_human=$$(echo $$original_size_bytes | numfmt --to=iec-i --suffix=B --format="%.2f"); \
-	 printf "\033[38;2;137;180;250m压缩中...\033[0m\n"; \
+	 printf "\033[38;2;137;180;250mCompressing...\033[0m\n"; \
 	 printf "Compressing with UPX: [ ]"; \
 	 upx --best --lzma "$(OUTPUT_DIR)/catime.exe" > /dev/null 2>&1 & \
 	 pid=$$!; \
@@ -126,7 +132,7 @@ show_logo:
 init_progress:
 	@mkdir -p $(BUILD_DIR)
 	@echo "0" > $(PROGRESS_FILE)
-	@printf "\033[38;2;137;180;250m编译中...\033[0m\n"
+	@printf "\033[38;2;137;180;250mBuilding...\033[0m\n"
 	@printf "\033[38;2;205;214;244mProgress: ["; \
 	 for i in $$(seq 1 40); do printf "░"; done; \
 	 printf "] %3d%% Complete " "0"
