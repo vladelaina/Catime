@@ -16,6 +16,9 @@ typedef struct {
     BOOL silentCheck;
 } UpdateThreadParams;
 
+// 正在运行的更新检查线程句柄
+static HANDLE g_hUpdateThread = NULL;
+
 /**
  * @brief 更新检查线程函数
  * @param param 线程参数（窗口句柄）
@@ -33,6 +36,9 @@ unsigned __stdcall UpdateCheckThreadProc(void* param) {
     // 调用原始的更新检查函数，传入静默检查参数
     CheckForUpdateSilent(hwnd, silentCheck);
     
+    // 清除线程句柄
+    g_hUpdateThread = NULL;
+    
     // 线程结束
     _endthreadex(0);
     return 0;
@@ -48,6 +54,20 @@ unsigned __stdcall UpdateCheckThreadProc(void* param) {
  * 此函数立即返回，不会阻塞主线程。
  */
 void CheckForUpdateAsync(HWND hwnd, BOOL silentCheck) {
+    // 如果已经有更新检查线程在运行，不要启动新线程
+    if (g_hUpdateThread != NULL) {
+        // 检查线程是否已完成
+        DWORD result = WaitForSingleObject(g_hUpdateThread, 0);
+        if (result == WAIT_TIMEOUT) {
+            // 线程仍在运行，不启动新线程
+            return;
+        } else {
+            // 线程已完成，关闭句柄
+            CloseHandle(g_hUpdateThread);
+            g_hUpdateThread = NULL;
+        }
+    }
+    
     // 分配线程参数内存
     UpdateThreadParams* threadParams = (UpdateThreadParams*)malloc(sizeof(UpdateThreadParams));
     if (!threadParams) {
@@ -70,8 +90,8 @@ void CheckForUpdateAsync(HWND hwnd, BOOL silentCheck) {
     );
     
     if (hThread) {
-        // 关闭线程句柄（线程会继续运行）
-        CloseHandle(hThread);
+        // 保存线程句柄以便后续检查
+        g_hUpdateThread = hThread;
     } else {
         // 线程创建失败，释放参数内存
         free(threadParams);

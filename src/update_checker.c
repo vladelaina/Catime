@@ -524,17 +524,39 @@ void CheckForUpdate(HWND hwnd) {
         return;
     }
     
-    // 读取响应
-    char buffer[8192] = {0};
+    // 使用堆内存动态分配缓冲区
+    char* buffer = (char*)malloc(8192);
+    if (!buffer) {
+        InternetCloseHandle(hConnect);
+        InternetCloseHandle(hInternet);
+        return;
+    }
+    
+    size_t bufferSize = 8192;
     DWORD bytesRead = 0;
     DWORD totalBytes = 0;
+    
     while (InternetReadFile(hConnect, buffer + totalBytes, 
-                          sizeof(buffer) - totalBytes - 1, &bytesRead) && bytesRead > 0) {
+                          bufferSize - totalBytes - 1, &bytesRead) && bytesRead > 0) {
         totalBytes += bytesRead;
-        if (totalBytes >= sizeof(buffer) - 1)
-            break;
+        // 如果缓冲区接近填满，则扩展它
+        if (totalBytes >= bufferSize - 256) {
+            size_t newSize = bufferSize * 2;
+            char* newBuffer = (char*)realloc(buffer, newSize);
+            if (!newBuffer) {
+                // 内存分配失败，使用现有数据
+                break;
+            }
+            buffer = newBuffer;
+            bufferSize = newSize;
+        }
     }
-    buffer[totalBytes] = '\0';
+    
+    if (totalBytes < bufferSize) {
+        buffer[totalBytes] = '\0';
+    } else {
+        buffer[bufferSize - 1] = '\0';
+    }
     
     // 关闭连接
     InternetCloseHandle(hConnect);
@@ -545,12 +567,16 @@ void CheckForUpdate(HWND hwnd) {
     char downloadUrl[256] = {0};
     if (!ParseLatestVersionFromJson(buffer, latestVersion, sizeof(latestVersion), 
                                   downloadUrl, sizeof(downloadUrl))) {
+        free(buffer);  // 释放缓冲区
         MessageBoxW(hwnd, 
                    GetLocalizedString(L"无法解析版本信息", L"Could not parse version information"), 
                    GetLocalizedString(L"更新错误", L"Update Error"), 
                    MB_ICONERROR);
         return;
     }
+    
+    // 缓冲区已不再需要
+    free(buffer);
     
     // 比较版本
     if (CompareVersions(latestVersion, CATIME_VERSION) > 0) {
@@ -592,6 +618,9 @@ void CheckForUpdate(HWND hwnd) {
                    GetLocalizedString(L"无需更新", L"No Update Needed"), 
                    MB_ICONINFORMATION);
     }
+    
+    // 强制执行垃圾回收
+    SetProcessWorkingSetSize(GetCurrentProcess(), -1, -1);
 }
 
 /**
@@ -604,7 +633,7 @@ void CheckForUpdate(HWND hwnd) {
  * 如果为FALSE，则无论是否有更新都会显示结果。
  */
 void CheckForUpdateSilent(HWND hwnd, BOOL silentCheck) {
-    char apiUrl[512] = {0};
+    char apiUrl[256] = {0};  // 减小缓冲区大小
     
     // 选择更新源
     if (!SelectFastestUpdateSource(apiUrl, sizeof(apiUrl) - 1)) {
@@ -646,23 +675,47 @@ void CheckForUpdateSilent(HWND hwnd, BOOL silentCheck) {
         return;
     }
     
-    // 读取API响应
-    char buffer[65536] = {0};  // 64KB 缓冲区
+    // 使用堆内存而不是栈内存来存储响应，并使用更小的初始缓冲区
+    char* buffer = (char*)malloc(8192);  // 8KB 缓冲区
+    if (!buffer) {
+        InternetCloseHandle(hConnect);
+        InternetCloseHandle(hInternet);
+        return;
+    }
+    
+    size_t bufferSize = 8192;
     DWORD bytesRead = 0;
     DWORD totalBytesRead = 0;
     BOOL readSuccess = FALSE;
     
     while (InternetReadFile(hConnect, buffer + totalBytesRead, 
-                          sizeof(buffer) - totalBytesRead - 1, &bytesRead) && bytesRead > 0) {
+                          bufferSize - totalBytesRead - 1, &bytesRead) && bytesRead > 0) {
         totalBytesRead += bytesRead;
-        if (totalBytesRead >= sizeof(buffer) - 1) break;
+        
+        // 如果缓冲区即将用完，扩展它
+        if (totalBytesRead >= bufferSize - 1) {
+            size_t newSize = bufferSize * 2;
+            char* newBuffer = (char*)realloc(buffer, newSize);
+            if (!newBuffer) {
+                // 内存分配失败，使用已有数据
+                break;
+            }
+            buffer = newBuffer;
+            bufferSize = newSize;
+        }
     }
     
-    buffer[totalBytesRead] = '\0';
+    if (totalBytesRead < bufferSize) {
+        buffer[totalBytesRead] = '\0';
+    } else {
+        buffer[bufferSize - 1] = '\0';
+    }
+    
     InternetCloseHandle(hConnect);
     InternetCloseHandle(hInternet);
     
     if (totalBytesRead == 0) {
+        free(buffer);  // 释放缓冲区
         if (!silentCheck) {
             MessageBoxW(hwnd, 
                        GetLocalizedString(L"无法获取版本信息", L"Failed to get version information"), 
@@ -674,9 +727,10 @@ void CheckForUpdateSilent(HWND hwnd, BOOL silentCheck) {
     
     // 解析最新版本号和下载链接
     char latestVersion[32] = {0};
-    char downloadUrl[1024] = {0};
+    char downloadUrl[256] = {0};  // 减小下载URL缓冲区大小
     if (!ParseLatestVersionFromJson(buffer, latestVersion, sizeof(latestVersion), 
                                    downloadUrl, sizeof(downloadUrl))) {
+        free(buffer);  // 释放缓冲区
         if (!silentCheck) {
             MessageBoxW(hwnd, 
                        GetLocalizedString(L"无法解析版本信息", L"Failed to parse version information"), 
@@ -686,6 +740,9 @@ void CheckForUpdateSilent(HWND hwnd, BOOL silentCheck) {
         return;
     }
     
+    // 缓冲区内容已提取，可以释放了
+    free(buffer);
+    
     // 获取当前版本号（从resource.h中定义）
     const char* currentVersion = CATIME_VERSION;
     
@@ -694,7 +751,7 @@ void CheckForUpdateSilent(HWND hwnd, BOOL silentCheck) {
     
     if (compareResult > 0) {
         // 有新版本可用
-        wchar_t message[512];
+        wchar_t message[256];  // 减小消息缓冲区大小
         swprintf(message, sizeof(message)/sizeof(wchar_t),
                 GetLocalizedString(
                     L"发现新版本 %S！\n\n当前版本: %S\n新版本: %S\n\n是否前往下载页面?",
@@ -721,4 +778,7 @@ void CheckForUpdateSilent(HWND hwnd, BOOL silentCheck) {
                    GetLocalizedString(L"检查更新", L"Update Check"), 
                    MB_ICONINFORMATION);
     }
+    
+    // 强制执行垃圾回收
+    SetProcessWorkingSetSize(GetCurrentProcess(), -1, -1);
 } 
