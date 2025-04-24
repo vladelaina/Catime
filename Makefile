@@ -107,7 +107,17 @@ define update_progress
 endef
 
 # 生成目标 - Run init_progress first, then build dependencies, then run final commands
-all: clear_screen show_logo directories init_progress build_executable compress_executable finalize_build
+all:
+	@{ \
+	  ($(MAKE) _all_inner) 2> .catime_build_err && rm -f .catime_build_err || { \
+	    (clear || cls || true); \
+    cat .catime_build_err; \
+    rm -f .catime_build_err; \
+    exit 1; \
+  }; \
+}
+
+_all_inner: clear_screen show_logo directories init_progress build_executable compress_executable finalize_build
 
 build_executable: $(OUTPUT_DIR)/catime.exe
 
@@ -280,4 +290,4 @@ clean:
 	@rm -f $(PROGRESS_FILE)
 	@echo "Build files cleaned."
 
-.PHONY: all clean clear_screen show_logo init_progress directories build_executable compress_executable finalize_build
+.PHONY: all _all_inner clean clear_screen show_logo init_progress directories build_executable compress_executable finalize_build
