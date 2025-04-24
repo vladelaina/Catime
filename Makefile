@@ -108,14 +108,16 @@ endef
 
 # 生成目标 - Run init_progress first, then build dependencies, then run final commands
 all:
-	@{ \
+	@trap 'rm -f .catime_build_err_tmp .catime_build_err' INT TERM EXIT; \
+	{ \
 	  ($(MAKE) _all_inner) 2> .catime_build_err && rm -f .catime_build_err || { \
 	    (clear || cls || true); \
-    cat .catime_build_err; \
+    [ -f .catime_build_err ] && cat .catime_build_err; \
     rm -f .catime_build_err; \
     exit 1; \
   }; \
 }
+	@trap - INT TERM EXIT # 解除 trap
 
 _all_inner: clear_screen show_logo directories init_progress build_executable compress_executable finalize_build
 
