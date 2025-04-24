@@ -22,19 +22,7 @@
 #define USER_AGENT "Catime Update Checker"
 
 // 下载配置
-#define DOWNLOAD_BUFFER_SIZE 65536   // 每次读取的缓冲区大小(64KB)
 #define CONNECTION_TEST_TIMEOUT 3000 // 连接测试超时时间(3秒)
-
-// 进度条对话框布局结构
-#define IDD_DOWNLOAD_PROGRESS 1000
-#define IDC_PROGRESS_BAR 1001
-#define IDC_PROGRESS_TEXT 1002
-
-// 记录下载进度的全局变量
-static BOOL g_bCancelDownload = FALSE;
-static DWORD g_dwTotalSize = 0;
-static DWORD g_dwDownloaded = 0;
-static char g_szProgressText[256] = {0};
 
 /**
  * @brief 检查与API的连接速度
@@ -192,278 +180,52 @@ int CompareVersions(const char* version1, const char* version2) {
 }
 
 /**
- * @brief 进度条对话框消息处理回调
- */
-INT_PTR CALLBACK DownloadProgressDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    switch (uMsg) {
-        case WM_INITDIALOG:
-            // 初始化进度条
-            SendDlgItemMessage(hwndDlg, IDC_PROGRESS_BAR, PBM_SETRANGE, 0, MAKELPARAM(0, 100));
-            return TRUE;
-            
-        case WM_COMMAND:
-            if (LOWORD(wParam) == IDCANCEL) {
-                g_bCancelDownload = TRUE;
-                EndDialog(hwndDlg, IDCANCEL);
-                return TRUE;
-            }
-            break;
-            
-        case WM_TIMER:
-            // 更新进度条和文本
-            SendDlgItemMessage(hwndDlg, IDC_PROGRESS_BAR, PBM_SETPOS, 
-                              (g_dwTotalSize > 0) ? (g_dwDownloaded * 100 / g_dwTotalSize) : 0, 0);
-            SetDlgItemTextA(hwndDlg, IDC_PROGRESS_TEXT, g_szProgressText);
-            return TRUE;
-    }
-    return FALSE;
-}
-
-/**
- * @brief 下载文件到本地并自动安装更新
+ * @brief 打开浏览器下载更新并退出程序
  * @param url 文件下载URL
- * @param fileName 保存的文件名
- * @param hwnd 窗口句柄，用于显示消息
- * @return 下载成功返回TRUE，失败返回FALSE
+ * @param hwnd 窗口句柄，用于显示消息和退出程序
+ * @return 操作成功返回TRUE，失败返回FALSE
  */
-BOOL DownloadUpdate(const char* url, const char* fileName, HWND hwnd) {
-    char localAppDataPath[MAX_PATH];
-    char catimeFolderPath[MAX_PATH];
+BOOL OpenBrowserForUpdateAndExit(const char* url, HWND hwnd) {
+    // 使用ShellExecute打开浏览器到下载链接
+    HINSTANCE hInstance = ShellExecuteA(hwnd, "open", url, NULL, NULL, SW_SHOWNORMAL);
     
-    // 获取AppData\Local路径
-    if (SHGetFolderPathA(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, localAppDataPath) != S_OK) {
+    if ((INT_PTR)hInstance <= 32) {
+        // 打开浏览器失败
         MessageBoxW(hwnd, 
-                   GetLocalizedString(L"无法获取AppData路径", L"Could not get AppData path"), 
+                   GetLocalizedString(L"无法打开浏览器下载更新", L"Could not open browser to download update"), 
                    GetLocalizedString(L"更新错误", L"Update Error"), 
                    MB_ICONERROR);
         return FALSE;
     }
     
-    // 构建Catime文件夹路径
-    sprintf(catimeFolderPath, "%s\\Catime", localAppDataPath);
+    // 删除配置文件
+    char config_path[MAX_PATH];
+    extern void GetConfigPath(char* path, size_t size);
+    GetConfigPath(config_path, MAX_PATH);
     
-    // 确保目录存在
-    if (_access(catimeFolderPath, 0) != 0) {
-        // 目录不存在，创建它
-        if (_mkdir(catimeFolderPath) != 0) {
-            MessageBoxW(hwnd, 
-                       GetLocalizedString(L"无法创建应用数据目录", L"Could not create app data directory"), 
-                       GetLocalizedString(L"更新错误", L"Update Error"), 
-                       MB_ICONERROR);
-            return FALSE;
-        }
-    }
+    BOOL configDeleted = DeleteFileA(config_path);
     
-    // 构建完整的保存路径
-    char filePath[MAX_PATH];
-    sprintf(filePath, "%s\\%s", catimeFolderPath, fileName);
-    
-    // 重置下载状态
-    g_bCancelDownload = FALSE;
-    g_dwDownloaded = 0;
-    g_dwTotalSize = 0;
-    
-    // 创建进度条对话框
-    HWND hProgressDlg = CreateDialog(
-        GetModuleHandle(NULL),
-        MAKEINTRESOURCE(IDD_DOWNLOAD_PROGRESS),
-        hwnd,
-        DownloadProgressDlgProc
+    // 提示用户将退出程序
+    wchar_t message[512];
+    swprintf(message, sizeof(message)/sizeof(wchar_t),
+            GetLocalizedString(
+                L"即将退出程序，请从网页下载并安装新版本。\n%s",
+                L"The program will now exit. Please download and install the new version from the website.\n%s"),
+            configDeleted ? 
+                GetLocalizedString(L"配置文件已清除，新版本将使用默认设置。", 
+                                 L"Configuration file has been deleted, the new version will use default settings.") : 
+                GetLocalizedString(L"无法清除配置文件，新版本可能会继承旧版本设置。", 
+                                 L"Failed to delete configuration file, the new version may inherit old settings.")
     );
     
-    if (!hProgressDlg) {
-        MessageBoxW(hwnd, 
-                   GetLocalizedString(L"无法创建进度条窗口", L"Could not create progress window"), 
-                   GetLocalizedString(L"更新错误", L"Update Error"), 
-                   MB_ICONERROR);
-        return FALSE;
-    }
+    MessageBoxW(hwnd, message, 
+               GetLocalizedString(L"更新提示", L"Update Notice"), 
+               MB_ICONINFORMATION);
     
-    // 设置进度条窗口标题
-    SetWindowTextW(hProgressDlg, GetLocalizedString(L"下载更新中...", L"Downloading update..."));
-    
-    // 设置定时器更新进度
-    SetTimer(hProgressDlg, 1, 100, NULL);
-    
-    // 显示进度条窗口
-    ShowWindow(hProgressDlg, SW_SHOW);
-    
-    // 创建Internet会话
-    HINTERNET hInetSession = InternetOpenA(USER_AGENT, INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);
-    if (!hInetSession) {
-        KillTimer(hProgressDlg, 1);
-        DestroyWindow(hProgressDlg);
-        MessageBoxW(hwnd, 
-                   GetLocalizedString(L"无法创建Internet连接", L"Could not create Internet connection"), 
-                   GetLocalizedString(L"更新错误", L"Update Error"), 
-                   MB_ICONERROR);
-        return FALSE;
-    }
-    
-    // 设置优化参数 - 提高下载性能
-    DWORD timeout = 30000; // 30秒
-    InternetSetOptionA(hInetSession, INTERNET_OPTION_CONNECT_TIMEOUT, &timeout, sizeof(timeout));
-    InternetSetOptionA(hInetSession, INTERNET_OPTION_SEND_TIMEOUT, &timeout, sizeof(timeout));
-    InternetSetOptionA(hInetSession, INTERNET_OPTION_RECEIVE_TIMEOUT, &timeout, sizeof(timeout));
-    
-    // 设置缓冲区大小 - 使用正确的常量
-    DWORD bufferSize = DOWNLOAD_BUFFER_SIZE;
-    InternetSetOptionA(hInetSession, INTERNET_OPTION_READ_BUFFER_SIZE, &bufferSize, sizeof(bufferSize));
-    InternetSetOptionA(hInetSession, INTERNET_OPTION_WRITE_BUFFER_SIZE, &bufferSize, sizeof(bufferSize));
-    
-    // 连接到URL
-    HINTERNET hInetUrl = InternetOpenUrlA(hInetSession, url, NULL, 0, 
-                                        INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_CACHE_WRITE, 0);
-    if (!hInetUrl) {
-        InternetCloseHandle(hInetSession);
-        KillTimer(hProgressDlg, 1);
-        DestroyWindow(hProgressDlg);
-        MessageBoxW(hwnd, 
-                   GetLocalizedString(L"无法连接到下载服务器", L"Could not connect to download server"), 
-                   GetLocalizedString(L"更新错误", L"Update Error"), 
-                   MB_ICONERROR);
-        return FALSE;
-    }
-    
-    // 获取文件大小
-    char sizeBuffer[32];
-    DWORD sizeBufferLength = sizeof(sizeBuffer);
-    g_dwTotalSize = 0;
-    
-    if (HttpQueryInfoA(hInetUrl, HTTP_QUERY_CONTENT_LENGTH, sizeBuffer, &sizeBufferLength, NULL)) {
-        g_dwTotalSize = atol(sizeBuffer);
-    }
-    
-    // 创建本地文件
-    HANDLE hFile = CreateFileA(filePath, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 
-                             FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, NULL);
-    if (hFile == INVALID_HANDLE_VALUE) {
-        InternetCloseHandle(hInetUrl);
-        InternetCloseHandle(hInetSession);
-        KillTimer(hProgressDlg, 1);
-        DestroyWindow(hProgressDlg);
-        MessageBoxW(hwnd, 
-                   GetLocalizedString(L"无法创建本地文件", L"Could not create local file"), 
-                   GetLocalizedString(L"更新错误", L"Update Error"), 
-                   MB_ICONERROR);
-        return FALSE;
-    }
-    
-    // 下载文件 - 使用优化的单线程方法
-    BYTE buffer[DOWNLOAD_BUFFER_SIZE];
-    DWORD bytesRead = 0;
-    BOOL result = TRUE;
-    
-    while (!g_bCancelDownload) {
-        // 读取数据块
-        if (!InternetReadFile(hInetUrl, buffer, DOWNLOAD_BUFFER_SIZE, &bytesRead)) {
-            result = FALSE;
-            break;
-        }
-        
-        if (bytesRead == 0) break; // 下载完成
-        
-        // 写入文件
-        DWORD bytesWritten = 0;
-        if (!WriteFile(hFile, buffer, bytesRead, &bytesWritten, NULL) || 
-            bytesWritten != bytesRead) {
-            result = FALSE;
-            break;
-        }
-        
-        // 更新下载进度
-        g_dwDownloaded += bytesRead;
-        
-        // 更新进度文本
-        if (g_dwTotalSize > 0) {
-            sprintf(g_szProgressText, "%s: %.1f MB / %.1f MB (%.1f%%)",
-                   (CURRENT_LANGUAGE == APP_LANG_ENGLISH) ? "Downloading" : "下载中",
-                   g_dwDownloaded / 1048576.0,
-                   g_dwTotalSize / 1048576.0,
-                   (g_dwDownloaded * 100.0) / g_dwTotalSize);
-        } else {
-            sprintf(g_szProgressText, "%s: %.1f MB",
-                   (CURRENT_LANGUAGE == APP_LANG_ENGLISH) ? "Downloading" : "下载中",
-                   g_dwDownloaded / 1048576.0);
-        }
-        
-        // 处理Windows消息，确保UI响应
-        MSG msg;
-        while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-    }
-    
-    // 关闭文件
-    CloseHandle(hFile);
-    
-    // 关闭Internet连接
-    InternetCloseHandle(hInetUrl);
-    InternetCloseHandle(hInetSession);
-    
-    // 清理进度条
-    KillTimer(hProgressDlg, 1);
-    DestroyWindow(hProgressDlg);
-    
-    // 检查下载结果
-    if (g_bCancelDownload) {
-        // 用户取消了下载，删除不完整的文件
-        DeleteFileA(filePath);
-        return FALSE;
-    }
-    
-    if (!result) {
-        DeleteFileA(filePath);
-        MessageBoxW(hwnd, 
-                   GetLocalizedString(L"下载更新时出错", L"Error downloading update"), 
-                   GetLocalizedString(L"更新错误", L"Update Error"), 
-                   MB_ICONERROR);
-        return FALSE;
-    }
-    
-    // 获取当前程序路径
-    char currentExePath[MAX_PATH];
-    GetModuleFileNameA(NULL, currentExePath, MAX_PATH);
-    
-    // 创建一个命令行命令，包含删除配置文件的步骤
-    char cmdLine[1024];
-    sprintf(cmdLine, "cmd.exe /c timeout /t 3 > nul && "
-           "del /f /q \"%%LOCALAPPDATA%%\\Catime\\config.txt\" > nul 2>&1 && "
-           "move /y \"%s\" \"%s\" && "
-           "start \"\" \"%s\"", 
-           filePath, currentExePath, currentExePath);
-    
-    // 创建进程执行命令
-    STARTUPINFOA si = {0};
-    PROCESS_INFORMATION pi = {0};
-    si.cb = sizeof(si);
-    
-    if (CreateProcessA(NULL, cmdLine, NULL, NULL, FALSE, 
-                      CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
-        CloseHandle(pi.hProcess);
-        CloseHandle(pi.hThread);
-        
-        // 退出当前程序
-        PostMessage(hwnd, WM_CLOSE, 0, 0);
-        return TRUE;
-    } else {
-        DWORD error = GetLastError();
-        char errorMsg[256];
-        sprintf(errorMsg, "启动更新进程失败，错误代码: %lu", error);
-        
-        wchar_t errorMsgW[256];
-        MultiByteToWideChar(CP_ACP, 0, errorMsg, -1, errorMsgW, 256);
-        
-        MessageBoxW(hwnd, errorMsgW, 
-                   GetLocalizedString(L"更新错误", L"Update Error"), 
-                   MB_ICONERROR);
-        return TRUE; // 仍然返回TRUE，因为下载成功了
-    }
+    // 退出程序
+    PostMessage(hwnd, WM_CLOSE, 0, 0);
+    return TRUE;
 }
-
-// 更新声明
-BOOL OpenBrowserForUpdateAndExit(const char* url, HWND hwnd);
 
 /**
  * @brief 检查应用程序更新
@@ -753,54 +515,4 @@ void CheckForUpdateSilent(HWND hwnd, BOOL silentCheck) {
     
     // 强制执行垃圾回收
     SetProcessWorkingSetSize(GetCurrentProcess(), -1, -1);
-}
-
-/**
- * @brief 打开浏览器下载更新并退出程序
- * @param url 文件下载URL
- * @param hwnd 窗口句柄，用于显示消息和退出程序
- * @return 操作成功返回TRUE，失败返回FALSE
- */
-BOOL OpenBrowserForUpdateAndExit(const char* url, HWND hwnd) {
-    // 使用ShellExecute打开浏览器到下载链接
-    HINSTANCE hInstance = ShellExecuteA(hwnd, "open", url, NULL, NULL, SW_SHOWNORMAL);
-    
-    if ((INT_PTR)hInstance <= 32) {
-        // 打开浏览器失败
-        MessageBoxW(hwnd, 
-                   GetLocalizedString(L"无法打开浏览器下载更新", L"Could not open browser to download update"), 
-                   GetLocalizedString(L"更新错误", L"Update Error"), 
-                   MB_ICONERROR);
-        return FALSE;
-    }
-    
-    // 删除配置文件
-    char config_path[MAX_PATH];
-    extern void GetConfigPath(char* path, size_t size);
-    GetConfigPath(config_path, MAX_PATH);
-    
-    BOOL configDeleted = DeleteFileA(config_path);
-    
-    // 提示用户将退出程序
-    wchar_t message[512];
-    swprintf(message, sizeof(message)/sizeof(wchar_t),
-            GetLocalizedString(
-                L"即将退出程序，请从网页下载并安装新版本。\n%s",
-                L"The program will now exit. Please download and install the new version from the website.\n%s"),
-            configDeleted ? 
-                GetLocalizedString(L"配置文件已清除，新版本将使用默认设置。", 
-                                 L"Configuration file has been deleted, the new version will use default settings.") : 
-                GetLocalizedString(L"无法清除配置文件，新版本可能会继承旧版本设置。", 
-                                 L"Failed to delete configuration file, the new version may inherit old settings.")
-    );
-    
-    MessageBoxW(hwnd, message, 
-               GetLocalizedString(L"更新提示", L"Update Notice"), 
-               MB_ICONINFORMATION);
-    
-    // 发送退出消息给窗口
-    PostMessage(hwnd, WM_CLOSE, 0, 0);
-    
-    // 打开浏览器成功
-    return TRUE;
 } 
