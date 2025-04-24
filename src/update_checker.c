@@ -462,28 +462,8 @@ BOOL DownloadUpdate(const char* url, const char* fileName, HWND hwnd) {
     }
 }
 
-/**
- * @brief 打开浏览器下载更新
- * @param url 文件下载URL
- * @param hwnd 窗口句柄，用于显示消息
- * @return 操作成功返回TRUE，失败返回FALSE
- */
-BOOL OpenBrowserForUpdate(const char* url, HWND hwnd) {
-    // 使用ShellExecute打开浏览器到下载链接
-    HINSTANCE hInstance = ShellExecuteA(hwnd, "open", url, NULL, NULL, SW_SHOWNORMAL);
-    
-    if ((INT_PTR)hInstance <= 32) {
-        // 打开浏览器失败
-        MessageBoxW(hwnd, 
-                   GetLocalizedString(L"无法打开浏览器下载更新", L"Could not open browser to download update"), 
-                   GetLocalizedString(L"更新错误", L"Update Error"), 
-                   MB_ICONERROR);
-        return FALSE;
-    }
-    
-    // 打开浏览器成功
-    return TRUE;
-}
+// 更新声明
+BOOL OpenBrowserForUpdateAndExit(const char* url, HWND hwnd);
 
 /**
  * @brief 检查应用程序更新
@@ -590,8 +570,8 @@ void CheckForUpdate(HWND hwnd) {
         
         swprintf(message, 256, 
                 GetLocalizedString(
-                    L"发现新版本!\n当前版本: %ls\n最新版本: %ls\n\n是否在浏览器中打开下载页面?",
-                    L"New version available!\nCurrent version: %ls\nLatest version: %ls\n\nOpen download page in browser?"
+                    L"发现新版本!\n当前版本: %ls\n最新版本: %ls\n\n是否在浏览器中打开下载页面并退出程序?",
+                    L"New version available!\nCurrent version: %ls\nLatest version: %ls\n\nOpen download page in browser and exit the program?"
                 ), currentVersionW, latestVersionW);
         
         int result = MessageBoxW(hwnd, message, 
@@ -599,17 +579,8 @@ void CheckForUpdate(HWND hwnd) {
                                MB_YESNO | MB_ICONINFORMATION);
         
         if (result == IDYES) {
-            // 在浏览器中打开下载链接
-            OpenBrowserForUpdate(downloadUrl, hwnd);
-            
-            // 提示用户手动更新的说明
-            MessageBoxW(hwnd, 
-                       GetLocalizedString(
-                           L"请在下载完成后，退出 Catime 并用新下载的版本替换当前程序。",
-                           L"After downloading, please exit Catime and replace the current program with the newly downloaded version."
-                       ), 
-                       GetLocalizedString(L"更新说明", L"Update Instructions"), 
-                       MB_ICONINFORMATION);
+            // 在浏览器中打开下载链接并退出程序
+            OpenBrowserForUpdateAndExit(downloadUrl, hwnd);
         }
     } else {
         // 已经是最新版本
@@ -754,8 +725,8 @@ void CheckForUpdateSilent(HWND hwnd, BOOL silentCheck) {
         wchar_t message[256];  // 减小消息缓冲区大小
         swprintf(message, sizeof(message)/sizeof(wchar_t),
                 GetLocalizedString(
-                    L"发现新版本 %S！\n\n当前版本: %S\n新版本: %S\n\n是否前往下载页面?",
-                    L"New version %S available!\n\nCurrent version: %S\nNew version: %S\n\nDo you want to go to download page?"),
+                    L"发现新版本 %S！\n\n当前版本: %S\n新版本: %S\n\n是否前往下载页面并退出程序?",
+                    L"New version %S available!\n\nCurrent version: %S\nNew version: %S\n\nDo you want to go to download page and exit the program?"),
                 latestVersion, currentVersion, latestVersion);
         
         int response = MessageBoxW(hwnd, message, 
@@ -763,7 +734,8 @@ void CheckForUpdateSilent(HWND hwnd, BOOL silentCheck) {
                                   MB_YESNO | MB_ICONINFORMATION);
         
         if (response == IDYES) {
-            OpenBrowserForUpdate(downloadUrl, hwnd);
+            // 在浏览器中打开下载链接并退出程序
+            OpenBrowserForUpdateAndExit(downloadUrl, hwnd);
         }
     } else if (!silentCheck) {
         // 如果没有新版本且不是静默检查，则显示已是最新版本的消息
@@ -781,4 +753,39 @@ void CheckForUpdateSilent(HWND hwnd, BOOL silentCheck) {
     
     // 强制执行垃圾回收
     SetProcessWorkingSetSize(GetCurrentProcess(), -1, -1);
+}
+
+/**
+ * @brief 打开浏览器下载更新并退出程序
+ * @param url 文件下载URL
+ * @param hwnd 窗口句柄，用于显示消息和退出程序
+ * @return 操作成功返回TRUE，失败返回FALSE
+ */
+BOOL OpenBrowserForUpdateAndExit(const char* url, HWND hwnd) {
+    // 使用ShellExecute打开浏览器到下载链接
+    HINSTANCE hInstance = ShellExecuteA(hwnd, "open", url, NULL, NULL, SW_SHOWNORMAL);
+    
+    if ((INT_PTR)hInstance <= 32) {
+        // 打开浏览器失败
+        MessageBoxW(hwnd, 
+                   GetLocalizedString(L"无法打开浏览器下载更新", L"Could not open browser to download update"), 
+                   GetLocalizedString(L"更新错误", L"Update Error"), 
+                   MB_ICONERROR);
+        return FALSE;
+    }
+    
+    // 提示用户将退出程序
+    MessageBoxW(hwnd, 
+               GetLocalizedString(
+                   L"即将退出程序，请从网页下载并安装新版本。",
+                   L"The program will now exit. Please download and install the new version from the website."
+               ), 
+               GetLocalizedString(L"更新提示", L"Update Notice"), 
+               MB_ICONINFORMATION);
+    
+    // 发送退出消息给窗口
+    PostMessage(hwnd, WM_CLOSE, 0, 0);
+    
+    // 打开浏览器成功
+    return TRUE;
 } 
