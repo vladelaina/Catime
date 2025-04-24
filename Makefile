@@ -47,10 +47,65 @@ OBJS = $(BUILD_DIR)/main.o \
        $(BUILD_DIR)/update_checker.o \
        $(BUILD_DIR)/async_update_checker.o
 
+# 总文件数量 (包括资源文件)
+TOTAL_FILES = 22
+PROGRESS_FILE = $(BUILD_DIR)/.progress
+
+# ASCII 艺术标志
+define CATIME_LOGO
+echo ""
+echo "██████╗ █████╗ ██╗███╗   ███╗███████╗"
+echo "██╔════╝██╔══██╗██║████╗ ████║██╔════╝"
+echo "██║     ███████║██║██╔████╔██║█████╗  "
+echo "██║     ██╔══██║██║██║╚██╔╝██║██╔══╝  "
+echo "╚██████╗██║  ██║██║██║ ╚═╝ ██║███████╗"
+echo " ╚═════╝╚═╝  ╚═╝╚═╝╚═╝     ╚═╝╚══════╝"
+echo ""
+endef
+
+# 更新进度计数并显示真实进度条
+define update_progress
+	@if [ ! -f $(PROGRESS_FILE) ]; then echo "0" > $(PROGRESS_FILE); fi
+	@current=$$(cat $(PROGRESS_FILE)); \
+	 new_count=$$((current + 1)); \
+	 if [ $$new_count -gt $(TOTAL_FILES) ]; then \
+	   new_count=$(TOTAL_FILES); \
+	 fi; \
+	 echo $$new_count > $(PROGRESS_FILE); \
+	 percentage=$$((new_count * 100 / $(TOTAL_FILES))); \
+	 bar_length=$$((new_count * 40 / $(TOTAL_FILES))); \
+	 if [ $$bar_length -gt 40 ]; then \
+	   bar_length=40; \
+	 fi; \
+	 printf "\r\033[33m编译进度: ["; \
+	 for i in $$(seq 1 $$bar_length); do printf "█"; done; \
+	 for i in $$(seq 1 $$((40 - bar_length))); do printf "░"; done; \
+	 printf "] %3d%% (%d/%d) " "$$percentage" "$$new_count" "$(TOTAL_FILES)"; \
+	 if [ $$new_count -eq $(TOTAL_FILES) ]; then printf "\n\033[0m"; fi
+endef
+
 # 生成目标
-all: directories $(OUTPUT_DIR)/catime.exe
+all: clear_screen show_logo directories init_progress $(OUTPUT_DIR)/catime.exe
 	@echo "使用 UPX 压缩可执行文件..."
 	@upx --best --lzma "$(OUTPUT_DIR)/catime.exe"
+	@echo "编译完成！输出目录: $(OUTPUT_DIR)"
+	@rm -f $(PROGRESS_FILE)
+
+# 清屏
+clear_screen:
+	@clear || cls
+
+# 显示标志
+show_logo:
+	@$(CATIME_LOGO)
+
+# 初始化进度
+init_progress:
+	@mkdir -p $(BUILD_DIR)
+	@echo "0" > $(PROGRESS_FILE)
+	@printf "\033[33m编译进度: ["; \
+	 for i in $$(seq 1 40); do printf "░"; done; \
+	 printf "] %3d%% (0/%d) " "0" "$(TOTAL_FILES)"
 
 # 创建必要的目录
 directories:
@@ -59,99 +114,124 @@ directories:
 
 # 编译资源文件
 $(BUILD_DIR)/resource.o: $(RC_FILE) resource/about_dialog.rc
+	@echo "编译资源文件..."
 	@$(WINDRES) -I resource $(RC_FILE) -o $(BUILD_DIR)/resource.o
+	@$(call update_progress)
 
-# 编译主程序 - 更新路径为 src/main.c
+# 编译主程序
 $(BUILD_DIR)/main.o: src/main.c
 	@$(CC) -c src/main.c -o $(BUILD_DIR)/main.o $(CFLAGS)
+	@$(call update_progress)
 
 # 编译语言模块
 $(BUILD_DIR)/language.o: src/language.c
 	@$(CC) -c src/language.c -o $(BUILD_DIR)/language.o $(CFLAGS)
+	@$(call update_progress)
 
 # 编译字体模块
 $(BUILD_DIR)/font.o: src/font.c
 	@$(CC) -c src/font.c -o $(BUILD_DIR)/font.o $(CFLAGS)
+	@$(call update_progress)
 
 # 编译颜色模块
 $(BUILD_DIR)/color.o: src/color.c
 	@$(CC) -c src/color.c -o $(BUILD_DIR)/color.o $(CFLAGS)
+	@$(call update_progress)
 
 # 编译托盘模块
 $(BUILD_DIR)/tray.o: src/tray.c
 	@$(CC) -c src/tray.c -o $(BUILD_DIR)/tray.o $(CFLAGS)
+	@$(call update_progress)
 
 # 编译托盘菜单模块
 $(BUILD_DIR)/tray_menu.o: src/tray_menu.c
 	@$(CC) -c src/tray_menu.c -o $(BUILD_DIR)/tray_menu.o $(CFLAGS)
+	@$(call update_progress)
 
 # 编译计时器模块
 $(BUILD_DIR)/timer.o: src/timer.c
 	@$(CC) -c src/timer.c -o $(BUILD_DIR)/timer.o $(CFLAGS)
+	@$(call update_progress)
 
 # 编译窗口模块
 $(BUILD_DIR)/window.o: src/window.c
 	@$(CC) -c src/window.c -o $(BUILD_DIR)/window.o $(CFLAGS)
+	@$(call update_progress)
 
 # 编译自启动模块
 $(BUILD_DIR)/startup.o: src/startup.c
 	@$(CC) -c src/startup.c -o $(BUILD_DIR)/startup.o $(CFLAGS)
+	@$(call update_progress)
 
 # 编译配置模块
 $(BUILD_DIR)/config.o: src/config.c
 	@$(CC) -c src/config.c -o $(BUILD_DIR)/config.o $(CFLAGS)
+	@$(call update_progress)
 
 # 编译窗口过程处理模块
 $(BUILD_DIR)/window_procedure.o: src/window_procedure.c include/window_procedure.h
 	@$(CC) $(CFLAGS) -c $< -o $@
+	@$(call update_progress)
 
 # 编译计时器事件处理模块
 $(BUILD_DIR)/timer_events.o: src/timer_events.c
 	@$(CC) -c src/timer_events.c -o $(BUILD_DIR)/timer_events.o $(CFLAGS)
+	@$(call update_progress)
 
 # 编译拖动和缩放模块
 $(BUILD_DIR)/drag_scale.o: src/drag_scale.c
 	@$(CC) -c src/drag_scale.c -o $(BUILD_DIR)/drag_scale.o $(CFLAGS)
+	@$(call update_progress)
 
 # 编译媒体控制模块
 $(BUILD_DIR)/media.o: src/media.c
 	@$(CC) -c src/media.c -o $(BUILD_DIR)/media.o $(CFLAGS)
+	@$(call update_progress)
 
 # 编译通知模块
 $(BUILD_DIR)/notification.o: src/notification.c
 	@$(CC) -c src/notification.c -o $(BUILD_DIR)/notification.o $(CFLAGS)
+	@$(call update_progress)
 
 # 编译托盘事件处理模块
 $(BUILD_DIR)/tray_events.o: src/tray_events.c
 	@$(CC) -c src/tray_events.c -o $(BUILD_DIR)/tray_events.o $(CFLAGS)
+	@$(call update_progress)
 
 # 编译窗口事件处理模块
 $(BUILD_DIR)/window_events.o: src/window_events.c
 	@$(CC) -c src/window_events.c -o $(BUILD_DIR)/window_events.o $(CFLAGS)
+	@$(call update_progress)
 
 # 编译绘图模块
 $(BUILD_DIR)/drawing.o: src/drawing.c
 	@$(CC) -c src/drawing.c -o $(BUILD_DIR)/drawing.o $(CFLAGS)
+	@$(call update_progress)
 
 # 编译对话框过程处理模块
 $(BUILD_DIR)/dialog_procedure.o: src/dialog_procedure.c
 	@$(CC) -c src/dialog_procedure.c -o $(BUILD_DIR)/dialog_procedure.o $(CFLAGS)
+	@$(call update_progress)
 
 # 编译更新检查器模块
 $(BUILD_DIR)/update_checker.o: src/update_checker.c
 	@$(CC) -c src/update_checker.c -o $(BUILD_DIR)/update_checker.o $(CFLAGS)
+	@$(call update_progress)
 
 # 添加 async_update_checker.o 的编译规则
 $(BUILD_DIR)/async_update_checker.o: src/async_update_checker.c
 	@$(CC) -c src/async_update_checker.c -o $(BUILD_DIR)/async_update_checker.o $(CFLAGS)
+	@$(call update_progress)
 
 # 链接编译目标文件，输出到输出目录
 $(OUTPUT_DIR)/catime.exe: $(OBJS) $(BUILD_DIR)/resource.o
+	@echo "链接可执行文件..."
 	@$(CC) -o $(OUTPUT_DIR)/catime.exe $(OBJS) $(BUILD_DIR)/resource.o $(CFLAGS) $(LDFLAGS) $(LIBS)
 
 # 清理构建文件
 clean:
 	@rm -f $(BUILD_DIR)/*.o $(OUTPUT_DIR)/catime.exe
 	@rm -rf $(BUILD_DIR)/include $(BUILD_DIR)/resource
+	@rm -f $(PROGRESS_FILE)
 
-.PHONY: all clean
+.PHONY: all clean clear_screen show_logo init_progress directories
