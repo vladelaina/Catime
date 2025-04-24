@@ -90,7 +90,8 @@ all: clear_screen show_logo directories init_progress build_executable compress_
 build_executable: $(OUTPUT_DIR)/catime.exe
 
 compress_executable: build_executable
-	@original_size=$$(stat -c %s "$(OUTPUT_DIR)/catime.exe"); \
+	@original_size_bytes=$$(stat -c %s "$(OUTPUT_DIR)/catime.exe"); \
+	 original_size_human=$$(echo $$original_size_bytes | numfmt --to=iec-i --suffix=B --format="%.2f"); \
 	 printf "Compressing with UPX: [ ]"; \
 	 upx --best --lzma "$(OUTPUT_DIR)/catime.exe" > /dev/null 2>&1 & \
 	 pid=$$!; \
@@ -102,10 +103,11 @@ compress_executable: build_executable
 	 	sleep 0.1; \
 	 done; \
 	 wait $$pid; \
-	 compressed_size=$$(stat -c %s "$(OUTPUT_DIR)/catime.exe"); \
-	 ratio=$$(awk -v o=$$original_size -v c=$$compressed_size 'BEGIN {printf "%.2f", c * 100 / o}'); \
+	 compressed_size_bytes=$$(stat -c %s "$(OUTPUT_DIR)/catime.exe"); \
+	 compressed_size_human=$$(echo $$compressed_size_bytes | numfmt --to=iec-i --suffix=B --format="%.2f"); \
+	 ratio=$$(awk -v o=$$original_size_bytes -v c=$$compressed_size_bytes 'BEGIN {printf "%.2f", c * 100 / o}'); \
 	 printf "\rCompressing with UPX: [Done]\n"; \
-	 printf "Compressed: %s -> %s (%s%%)\n" "$$original_size" "$$compressed_size" "$$ratio";
+	 printf "Compressed: %s -> %s (%s%%)\n" "$$original_size_human" "$$compressed_size_human" "$$ratio";
 
 finalize_build: compress_executable
 	@echo -e "\033[92mBuild completed! Output directory: $(OUTPUT_DIR)\033[0m"
