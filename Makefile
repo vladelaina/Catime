@@ -84,10 +84,30 @@ define update_progress
 	 if [ $$new_count -eq $(TOTAL_FILES) ]; then printf "\n\033[0m"; fi
 endef
 
-# 生成目标
-all: clear_screen show_logo directories init_progress $(OUTPUT_DIR)/catime.exe
-	@echo "Compressing with UPX..."
-	@upx --best --lzma "$(OUTPUT_DIR)/catime.exe"
+# 生成目标 - Run init_progress first, then build dependencies, then run final commands
+all: clear_screen show_logo directories init_progress build_executable compress_executable finalize_build
+
+build_executable: $(OUTPUT_DIR)/catime.exe
+
+compress_executable: build_executable
+	@original_size=$$(stat -c %s "$(OUTPUT_DIR)/catime.exe"); \
+	 printf "Compressing with UPX: [ ]"; \
+	 upx --best --lzma "$(OUTPUT_DIR)/catime.exe" > /dev/null 2>&1 & \
+	 pid=$$!; \
+	 spin='-\|/'; \
+	 i=0; \
+	 while kill -0 $$pid 2>/dev/null; do \
+	 	i=$$(( $$i+1 )); \
+	 	printf "\rCompressing with UPX: [%c]" "$${spin:$$((i%4)):1}"; \
+	 	sleep 0.1; \
+	 done; \
+	 wait $$pid; \
+	 compressed_size=$$(stat -c %s "$(OUTPUT_DIR)/catime.exe"); \
+	 ratio=$$(awk -v o=$$original_size -v c=$$compressed_size 'BEGIN {printf "%.2f", c * 100 / o}'); \
+	 printf "\rCompressing with UPX: [Done]\n"; \
+	 printf "Compressed: %s -> %s (%s%%)\n" "$$original_size" "$$compressed_size" "$$ratio";
+
+finalize_build: compress_executable
 	@echo -e "\033[92mBuild completed! Output directory: $(OUTPUT_DIR)\033[0m"
 	@rm -f $(PROGRESS_FILE)
 
@@ -99,7 +119,7 @@ clear_screen:
 show_logo:
 	@$(CATIME_LOGO)
 
-# 初始化进度
+# 初始化进度 - Should run before compilation starts
 init_progress:
 	@mkdir -p $(BUILD_DIR)
 	@echo "0" > $(PROGRESS_FILE)
@@ -227,6 +247,7 @@ $(BUILD_DIR)/async_update_checker.o: src/async_update_checker.c
 $(OUTPUT_DIR)/catime.exe: $(OBJS) $(BUILD_DIR)/resource.o
 	@echo "Linking executable..."
 	@$(CC) -o $(OUTPUT_DIR)/catime.exe $(OBJS) $(BUILD_DIR)/resource.o $(CFLAGS) $(LDFLAGS) $(LIBS)
+	# The progress bar should be full after this linking step
 
 # 清理构建文件
 clean:
@@ -235,4 +256,4 @@ clean:
 	@rm -f $(PROGRESS_FILE)
 	@echo "Build files cleaned."
 
-.PHONY: all clean clear_screen show_logo init_progress directories
+.PHONY: all clean clear_screen show_logo init_progress directories build_executable compress_executable finalize_build
