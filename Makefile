@@ -92,6 +92,7 @@ build_executable: $(OUTPUT_DIR)/catime.exe
 compress_executable: build_executable
 	@original_size_bytes=$$(stat -c %s "$(OUTPUT_DIR)/catime.exe"); \
 	 original_size_human=$$(echo $$original_size_bytes | numfmt --to=iec-i --suffix=B --format="%.2f"); \
+	 printf "\033[38;2;137;180;250m压缩中...\033[0m\n"; \
 	 printf "Compressing with UPX: [ ]"; \
 	 upx --best --lzma "$(OUTPUT_DIR)/catime.exe" > /dev/null 2>&1 & \
 	 pid=$$!; \
@@ -99,14 +100,14 @@ compress_executable: build_executable
 	 i=0; \
 	 while kill -0 $$pid 2>/dev/null; do \
 	 	i=$$(( $$i+1 )); \
-	 	printf "\rCompressing with UPX: [%c]" "$${spin:$$((i%4)):1}"; \
+	 	printf "\b\b%c]" "$${spin:$$((i%4)):1}"; \
 	 	sleep 0.1; \
 	 done; \
 	 wait $$pid; \
 	 compressed_size_bytes=$$(stat -c %s "$(OUTPUT_DIR)/catime.exe"); \
 	 compressed_size_human=$$(echo $$compressed_size_bytes | numfmt --to=iec-i --suffix=B --format="%.2f"); \
 	 ratio=$$(awk -v o=$$original_size_bytes -v c=$$compressed_size_bytes 'BEGIN {printf "%.2f", c * 100 / o}'); \
-	 printf "\rCompressing with UPX: [Done]\n"; \
+	 printf "\b\bDone]\n"; \
 	 printf "Compressed: %s -> %s (%s%%)\n" "$$original_size_human" "$$compressed_size_human" "$$ratio";
 
 finalize_build: compress_executable
@@ -125,6 +126,7 @@ show_logo:
 init_progress:
 	@mkdir -p $(BUILD_DIR)
 	@echo "0" > $(PROGRESS_FILE)
+	@printf "\033[38;2;137;180;250m编译中...\033[0m\n"
 	@printf "\033[38;2;205;214;244mProgress: ["; \
 	 for i in $$(seq 1 40); do printf "░"; done; \
 	 printf "] %3d%% Complete " "0"
@@ -136,7 +138,6 @@ directories:
 
 # 编译资源文件
 $(BUILD_DIR)/resource.o: $(RC_FILE) resource/about_dialog.rc
-	@echo "Compiling resources..."
 	@$(WINDRES) -I resource $(RC_FILE) -o $(BUILD_DIR)/resource.o
 	@$(call update_progress)
 
@@ -247,9 +248,7 @@ $(BUILD_DIR)/async_update_checker.o: src/async_update_checker.c
 
 # 链接编译目标文件，输出到输出目录
 $(OUTPUT_DIR)/catime.exe: $(OBJS) $(BUILD_DIR)/resource.o
-	@echo "Linking executable..."
 	@$(CC) -o $(OUTPUT_DIR)/catime.exe $(OBJS) $(BUILD_DIR)/resource.o $(CFLAGS) $(LDFLAGS) $(LIBS)
-	# The progress bar should be full after this linking step
 
 # 清理构建文件
 clean:
