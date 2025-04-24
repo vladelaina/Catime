@@ -19,7 +19,6 @@
 
 // 更新源URL
 #define GITHUB_API_URL "https://api.github.com/repos/vladelaina/Catime/releases/latest"
-#define GITEE_API_URL "https://gitee.com/api/v5/repos/xinye-nozan/catime/releases/latest"
 #define USER_AGENT "Catime Update Checker"
 
 // 下载配置
@@ -81,7 +80,7 @@ DWORD CheckConnectionSpeed(const char* apiUrl) {
 }
 
 /**
- * @brief 选择最快的更新源
+ * @brief 选择更新源
  * @param apiUrl 用于存储选择的API URL的缓冲区
  * @param maxLen 缓冲区的最大长度
  * @return 是否成功选择了更新源
@@ -90,20 +89,13 @@ BOOL SelectFastestUpdateSource(char* apiUrl, size_t maxLen) {
     // 检查GitHub的连接速度
     DWORD githubSpeed = CheckConnectionSpeed(GITHUB_API_URL);
     
-    // 检查Gitee的连接速度
-    DWORD giteeSpeed = CheckConnectionSpeed(GITEE_API_URL);
-    
-    // 如果两者都连接失败，返回失败
-    if (githubSpeed == MAXDWORD && giteeSpeed == MAXDWORD) {
+    // 如果连接失败，返回失败
+    if (githubSpeed == MAXDWORD) {
         return FALSE;
     }
     
-    // 选择速度更快的源
-    if (giteeSpeed < githubSpeed) {
-        strncpy(apiUrl, GITEE_API_URL, maxLen);
-    } else {
-        strncpy(apiUrl, GITHUB_API_URL, maxLen);
-    }
+    // 使用GitHub作为更新源
+    strncpy(apiUrl, GITHUB_API_URL, maxLen);
     
     return TRUE;
 }
@@ -497,14 +489,14 @@ BOOL OpenBrowserForUpdate(const char* url, HWND hwnd) {
  * @brief 检查应用程序更新
  * @param hwnd 窗口句柄
  * 
- * 连接到GitHub/Gitee检查是否有新版本。如果有，会提示用户是否在浏览器中下载。
+ * 连接到GitHub检查是否有新版本。如果有，会提示用户是否在浏览器中下载。
  */
 void CheckForUpdate(HWND hwnd) {
-    // 选择最快的更新源
+    // 选择更新源
     char updateApiUrl[256] = {0};
     if (!SelectFastestUpdateSource(updateApiUrl, sizeof(updateApiUrl))) {
         MessageBoxW(hwnd, 
-                   GetLocalizedString(L"无法连接到更新服务器", L"Could not connect to update servers"), 
+                   GetLocalizedString(L"无法连接到更新服务器", L"Could not connect to update server"), 
                    GetLocalizedString(L"更新错误", L"Update Error"), 
                    MB_ICONERROR);
         return;
@@ -598,6 +590,135 @@ void CheckForUpdate(HWND hwnd) {
         MessageBoxW(hwnd, 
                    GetLocalizedString(L"您已经使用的是最新版本!", L"You are already using the latest version!"), 
                    GetLocalizedString(L"无需更新", L"No Update Needed"), 
+                   MB_ICONINFORMATION);
+    }
+}
+
+/**
+ * @brief 静默检查应用程序更新
+ * @param hwnd 窗口句柄
+ * @param silentCheck 是否仅在有更新时显示提示
+ * 
+ * 连接到GitHub检查是否有新版本。
+ * 如果silentCheck为TRUE，仅在有更新时才显示提示；
+ * 如果为FALSE，则无论是否有更新都会显示结果。
+ */
+void CheckForUpdateSilent(HWND hwnd, BOOL silentCheck) {
+    char apiUrl[512] = {0};
+    
+    // 选择更新源
+    if (!SelectFastestUpdateSource(apiUrl, sizeof(apiUrl) - 1)) {
+        if (!silentCheck) {
+            MessageBoxW(hwnd, 
+                       GetLocalizedString(L"无法连接到更新服务器", L"Cannot connect to update server"), 
+                       GetLocalizedString(L"更新检查", L"Update Check"), 
+                       MB_ICONINFORMATION);
+        }
+        return;
+    }
+    
+    HINTERNET hInternet = InternetOpenA(USER_AGENT, INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
+    if (!hInternet) {
+        if (!silentCheck) {
+            MessageBoxW(hwnd, 
+                       GetLocalizedString(L"无法初始化网络连接", L"Failed to initialize network connection"), 
+                       GetLocalizedString(L"更新检查", L"Update Check"), 
+                       MB_ICONERROR);
+        }
+        return;
+    }
+    
+    // 设置连接和接收超时
+    DWORD timeout = 10000;  // 10秒
+    InternetSetOptionA(hInternet, INTERNET_OPTION_CONNECT_TIMEOUT, &timeout, sizeof(timeout));
+    InternetSetOptionA(hInternet, INTERNET_OPTION_RECEIVE_TIMEOUT, &timeout, sizeof(timeout));
+    
+    HINTERNET hConnect = InternetOpenUrlA(hInternet, apiUrl, NULL, 0, 
+                                        INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_CACHE_WRITE, 0);
+    if (!hConnect) {
+        InternetCloseHandle(hInternet);
+        if (!silentCheck) {
+            MessageBoxW(hwnd, 
+                       GetLocalizedString(L"无法连接到更新服务器", L"Cannot connect to update server"), 
+                       GetLocalizedString(L"更新检查", L"Update Check"), 
+                       MB_ICONINFORMATION);
+        }
+        return;
+    }
+    
+    // 读取API响应
+    char buffer[65536] = {0};  // 64KB 缓冲区
+    DWORD bytesRead = 0;
+    DWORD totalBytesRead = 0;
+    BOOL readSuccess = FALSE;
+    
+    while (InternetReadFile(hConnect, buffer + totalBytesRead, 
+                          sizeof(buffer) - totalBytesRead - 1, &bytesRead) && bytesRead > 0) {
+        totalBytesRead += bytesRead;
+        if (totalBytesRead >= sizeof(buffer) - 1) break;
+    }
+    
+    buffer[totalBytesRead] = '\0';
+    InternetCloseHandle(hConnect);
+    InternetCloseHandle(hInternet);
+    
+    if (totalBytesRead == 0) {
+        if (!silentCheck) {
+            MessageBoxW(hwnd, 
+                       GetLocalizedString(L"无法获取版本信息", L"Failed to get version information"), 
+                       GetLocalizedString(L"更新检查", L"Update Check"), 
+                       MB_ICONINFORMATION);
+        }
+        return;
+    }
+    
+    // 解析最新版本号和下载链接
+    char latestVersion[32] = {0};
+    char downloadUrl[1024] = {0};
+    if (!ParseLatestVersionFromJson(buffer, latestVersion, sizeof(latestVersion), 
+                                   downloadUrl, sizeof(downloadUrl))) {
+        if (!silentCheck) {
+            MessageBoxW(hwnd, 
+                       GetLocalizedString(L"无法解析版本信息", L"Failed to parse version information"), 
+                       GetLocalizedString(L"更新检查", L"Update Check"), 
+                       MB_ICONINFORMATION);
+        }
+        return;
+    }
+    
+    // 获取当前版本号（从resource.h中定义）
+    const char* currentVersion = CATIME_VERSION;
+    
+    // 比较版本号
+    int compareResult = CompareVersions(latestVersion, currentVersion);
+    
+    if (compareResult > 0) {
+        // 有新版本可用
+        wchar_t message[512];
+        swprintf(message, sizeof(message)/sizeof(wchar_t),
+                GetLocalizedString(
+                    L"发现新版本 %S！\n\n当前版本: %S\n新版本: %S\n\n是否前往下载页面?",
+                    L"New version %S available!\n\nCurrent version: %S\nNew version: %S\n\nDo you want to go to download page?"),
+                latestVersion, currentVersion, latestVersion);
+        
+        int response = MessageBoxW(hwnd, message, 
+                                  GetLocalizedString(L"发现更新", L"Update Available"), 
+                                  MB_YESNO | MB_ICONINFORMATION);
+        
+        if (response == IDYES) {
+            OpenBrowserForUpdate(downloadUrl, hwnd);
+        }
+    } else if (!silentCheck) {
+        // 如果没有新版本且不是静默检查，则显示已是最新版本的消息
+        wchar_t message[256];
+        swprintf(message, sizeof(message)/sizeof(wchar_t),
+                GetLocalizedString(
+                    L"您的软件已是最新版本！\n当前版本: %S",
+                    L"Your software is up to date!\nCurrent version: %S"),
+                currentVersion);
+        
+        MessageBoxW(hwnd, message, 
+                   GetLocalizedString(L"检查更新", L"Update Check"), 
                    MB_ICONINFORMATION);
     }
 } 

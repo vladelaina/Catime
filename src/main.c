@@ -30,6 +30,7 @@
 #include "../include/window_procedure.h"
 #include "../include/media.h"
 #include "../include/notification.h"
+#include "../include/async_update_checker.h"
 
 // 较旧的Windows SDK所需
 #ifndef CSIDL_STARTUP
@@ -170,6 +171,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     // 处理启动模式
     HandleStartupMode(hwnd);
+    
+    // 自动检查更新（静默模式，仅在有更新时提示）
+    CheckForUpdateAsync(hwnd, TRUE);
 
     // 消息循环
     MSG msg;

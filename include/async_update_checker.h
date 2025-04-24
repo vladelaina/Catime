@@ -13,11 +13,12 @@
 /**
  * @brief 异步检查应用程序更新
  * @param hwnd 窗口句柄
+ * @param silentCheck 是否为静默检查(仅在有更新时显示提示)
  * 
- * 在单独的线程中连接到GitHub/Gitee检查是否有新版本。
+ * 在单独的线程中连接到GitHub检查是否有新版本。
  * 如果有，会提示用户是否在浏览器中下载。
  * 此函数立即返回，不会阻塞主线程。
  */
-void CheckForUpdateAsync(HWND hwnd);
+void CheckForUpdateAsync(HWND hwnd, BOOL silentCheck);
 
 #endif // ASYNC_UPDATE_CHECKER_H

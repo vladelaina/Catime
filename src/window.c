@@ -641,6 +641,7 @@ BOOL InitializeApplication(HINSTANCE hInstance) {
     }
 
     CLOCK_TOTAL_TIME = CLOCK_DEFAULT_START_TIME;
+    
     return TRUE;
 }
 

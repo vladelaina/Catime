@@ -13,6 +13,7 @@
 // 线程参数结构体
 typedef struct {
     HWND hwnd;
+    BOOL silentCheck;
 } UpdateThreadParams;
 
 /**
@@ -24,12 +25,13 @@ typedef struct {
 unsigned __stdcall UpdateCheckThreadProc(void* param) {
     UpdateThreadParams* threadParams = (UpdateThreadParams*)param;
     HWND hwnd = threadParams->hwnd;
+    BOOL silentCheck = threadParams->silentCheck;
     
     // 释放线程参数内存
     free(threadParams);
     
-    // 调用原始的更新检查函数
-    CheckForUpdate(hwnd);
+    // 调用原始的更新检查函数，传入静默检查参数
+    CheckForUpdateSilent(hwnd, silentCheck);
     
     // 线程结束
     _endthreadex(0);
@@ -39,12 +41,13 @@ unsigned __stdcall UpdateCheckThreadProc(void* param) {
 /**
  * @brief 异步检查应用程序更新
  * @param hwnd 窗口句柄
+ * @param silentCheck 是否为静默检查(仅在有更新时显示提示)
  * 
- * 在单独的线程中连接到GitHub/Gitee检查是否有新版本。
+ * 在单独的线程中连接到GitHub检查是否有新版本。
  * 如果有，会提示用户是否在浏览器中下载。
  * 此函数立即返回，不会阻塞主线程。
  */
-void CheckForUpdateAsync(HWND hwnd) {
+void CheckForUpdateAsync(HWND hwnd, BOOL silentCheck) {
     // 分配线程参数内存
     UpdateThreadParams* threadParams = (UpdateThreadParams*)malloc(sizeof(UpdateThreadParams));
     if (!threadParams) {
@@ -54,6 +57,7 @@ void CheckForUpdateAsync(HWND hwnd) {
     
     // 设置线程参数
     threadParams->hwnd = hwnd;
+    threadParams->silentCheck = silentCheck;
     
     // 创建线程执行更新检查
     HANDLE hThread = (HANDLE)_beginthreadex(

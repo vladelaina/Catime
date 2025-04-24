@@ -1,8 +1,8 @@
 /* 版本与更新信息 */
-#define CATIME_VERSION "1.0.6-alpha2"
+#define CATIME_VERSION "1.0.4"
 
 /* 鸣谢链接  猫屋敷梨梨Official*/
-#define CREDIT_LINK_URL       L"https://space.bilibili.com/26087398"
+#define CREDIT_LINK_URL L"https://space.bilibili.com/26087398"
 
 // 关于对话框图标尺寸
 #define ABOUT_ICON_SIZE 200
@@ -13,8 +13,8 @@
 #define IDC_COPYRIGHT_TEXT L"Copyright (C) 2025 By vladelaina"
 
 /* 窗口尺寸增长量 */
-#define WINDOW_HORIZONTAL_PADDING 190  //左右
-#define WINDOW_VERTICAL_PADDING -5     //上下
+#define WINDOW_HORIZONTAL_PADDING 190 // 左右
+#define WINDOW_VERTICAL_PADDING -5    // 上下
 
 /* 系统按键定义 */
 #define VK_MEDIA_PLAY_PAUSE 0xB3
@@ -149,19 +149,19 @@
 #define CLOCK_IDM_RECENT_FILE_5 130
 #define CLOCK_IDM_BROWSE_FILE 131
 #define CLOCK_IDM_ABOUT 132
-#define CLOCK_IDM_CHECK_UPDATE 133  // 添加检查更新菜单项ID
+#define CLOCK_IDM_CHECK_UPDATE 133 // 添加检查更新菜单项ID
 
 /* 番茄钟功能 */
 #define CLOCK_IDM_POMODORO 500
 
 // 在番茄钟菜单项部分添加
-#define CLOCK_IDM_POMODORO_START 181   ///< 开始番茄钟
-#define CLOCK_IDM_POMODORO_WORK 182    ///< 设置工作时间
-#define CLOCK_IDM_POMODORO_BREAK 183   ///< 设置短休息时间
-#define CLOCK_IDM_POMODORO_LBREAK 184  ///< 设置长休息时间
-#define CLOCK_IDM_POMODORO_LOOP_COUNT 185 ///< 设置循环次数
+#define CLOCK_IDM_POMODORO_START 181       ///< 开始番茄钟
+#define CLOCK_IDM_POMODORO_WORK 182        ///< 设置工作时间
+#define CLOCK_IDM_POMODORO_BREAK 183       ///< 设置短休息时间
+#define CLOCK_IDM_POMODORO_LBREAK 184      ///< 设置长休息时间
+#define CLOCK_IDM_POMODORO_LOOP_COUNT 185  ///< 设置循环次数
 #define CLOCK_IDM_POMODORO_COMBINATION 188 ///< 番茄钟组合
-#define CLOCK_IDM_POMODORO_RESET 186  ///< 重置番茄钟
+#define CLOCK_IDM_POMODORO_RESET 186       ///< 重置番茄钟
 
 /* 番茄钟对话框 */
 #define CLOCK_IDD_POMODORO_TIME_DIALOG 510
@@ -183,7 +183,7 @@
 /* 计时器功能 */
 #define CLOCK_IDM_COUNT_UP_START 171
 #define CLOCK_IDM_COUNT_UP_RESET 172
-#define CLOCK_IDM_COUNT_UP         153
+#define CLOCK_IDM_COUNT_UP 153
 #define CLOCK_IDM_COUNTDOWN_START_PAUSE 154
 #define CLOCK_IDM_COUNTDOWN_RESET 155
 #define CLOCK_IDC_TIMEOUT_BROWSE 140
@@ -201,18 +201,18 @@
 #define CLOCK_IDM_LOCK_SCREEN 122
 #define CLOCK_IDM_SHUTDOWN 123
 #define CLOCK_IDM_RESTART 124
-#define CLOCK_IDM_CURRENT_FILE 127   // 当前文件菜单项ID
-#define CLOCK_IDM_TIMEOUT_SHOW_TIME 135  // 超时动作：显示当前时间
-#define CLOCK_IDM_TIMEOUT_COUNT_UP 136   // 超时动作：正计时
-#define CLOCK_IDM_OPEN_WEBSITE 137     // 超时动作：打开网站
-#define CLOCK_IDM_CURRENT_WEBSITE 138  // 当前网站菜单项ID
+#define CLOCK_IDM_CURRENT_FILE 127      // 当前文件菜单项ID
+#define CLOCK_IDM_TIMEOUT_SHOW_TIME 135 // 超时动作：显示当前时间
+#define CLOCK_IDM_TIMEOUT_COUNT_UP 136  // 超时动作：正计时
+#define CLOCK_IDM_OPEN_WEBSITE 137      // 超时动作：打开网站
+#define CLOCK_IDM_CURRENT_WEBSITE 138   // 当前网站菜单项ID
 
 /* 显示与视觉效果 */
 #define BLUR_OPACITY 192
 #define BLUR_TRANSITION_MS 200
 #define CLOCK_IDM_SHOW_CURRENT_TIME 150
-#define CLOCK_IDM_24HOUR_FORMAT    151
-#define CLOCK_IDM_SHOW_SECONDS     152
+#define CLOCK_IDM_24HOUR_FORMAT 151
+#define CLOCK_IDM_SHOW_SECONDS 152
 
 /* 系统常量 */
 #define CSIDL_STARTUP 0x0007
@@ -231,28 +231,28 @@
 #define IDC_ABOUT_OK 1009
 #define IDC_BUILD_DATE 1010
 #define IDC_COPYRIGHT 1011
-#define IDC_CREDITS_LABEL 1012    // "鸣谢："标签
-#define IDC_CREDIT_LINK   1013    // 可点击的链接
-#define IDS_CREDITS_TEXT 1014     // 字符串资源ID
+#define IDC_CREDITS_LABEL 1012 // "鸣谢："标签
+#define IDC_CREDIT_LINK 1013   // 可点击的链接
+#define IDS_CREDITS_TEXT 1014  // 字符串资源ID
 
 // 定义帮助菜单项ID
-#define CLOCK_IDM_HELP 134        // 添加帮助菜单项ID
-#define CLOCK_IDM_SUPPORT 139     // 添加赞助选项菜单项ID
+#define CLOCK_IDM_HELP 134    // 添加帮助菜单项ID
+#define CLOCK_IDM_SUPPORT 139 // 添加赞助选项菜单项ID
 
 // 新增：底部链接控件ID
-#define IDC_CREDITS  1015         // 鸣谢按钮
-#define IDC_FEEDBACK 1016         // 反馈按钮
-#define IDC_GITHUB   1017         // GitHub按钮
-#define IDC_COPYRIGHT_LINK 1018   // 版权声明按钮 (原 IDC_LICENSE)
-#define IDC_SUPPORT  1019         // 支持按钮 (原 IDC_DONATE)
+#define IDC_CREDITS 1015        // 鸣谢按钮
+#define IDC_FEEDBACK 1016       // 反馈按钮
+#define IDC_GITHUB 1017         // GitHub按钮
+#define IDC_COPYRIGHT_LINK 1018 // 版权声明按钮 (原 IDC_LICENSE)
+#define IDC_SUPPORT 1019        // 支持按钮 (原 IDC_DONATE)
 
 // 在原有链接ID后面添加反馈和GitHub的链接ID
-#define IDC_FEEDBACK_LINK 1020         // 反馈链接
-#define IDC_GITHUB_LINK   1021         // GitHub链接
+#define IDC_FEEDBACK_LINK 1020 // 反馈链接
+#define IDC_GITHUB_LINK 1021   // GitHub链接
 
 // 其他常用链接
-#define URL_GITHUB_REPO     L"https://github.com/vladelaina/Catime"
-#define URL_FEEDBACK        L"https://message.bilibili.com/#/whisper/mid1862395225"
+#define URL_GITHUB_REPO L"https://github.com/vladelaina/Catime"
+#define URL_FEEDBACK L"https://message.bilibili.com/#/whisper/mid1862395225"
 
 // 颜色对话框相关
 #define IDD_COLOR_DIALOG 1003
@@ -268,18 +268,18 @@
 #define CLOCK_IDD_STARTUP_DIALOG 1007
 
 // 错误对话框相关
-#define IDD_ERROR_DIALOG    5000
-#define IDC_ERROR_ICON      5001  
-#define IDC_ERROR_TEXT      5002
+#define IDD_ERROR_DIALOG 5000
+#define IDC_ERROR_ICON 5001
+#define IDC_ERROR_TEXT 5002
 
 // 在预设管理菜单项部分添加
-#define CLOCK_IDM_TOPMOST 187  // 置顶选项ID
+#define CLOCK_IDM_TOPMOST 187 // 置顶选项ID
 
 // 添加网站URL输入对话框
 #define CLOCK_IDD_WEBSITE_DIALOG 1008
 
 // 修改动态ID基址
-#define CLOCK_IDM_POMODORO_TIME_BASE 600  // 番茄钟时间菜单项的基础ID
+#define CLOCK_IDM_POMODORO_TIME_BASE 600 // 番茄钟时间菜单项的基础ID
 
 // 添加番茄钟组合对话框ID
 #define CLOCK_IDD_POMODORO_COMBO_DIALOG 514
