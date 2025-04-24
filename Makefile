@@ -54,12 +54,12 @@ PROGRESS_FILE = $(BUILD_DIR)/.progress
 # ASCII 艺术标志
 define CATIME_LOGO
 echo ""
-echo "██████╗ █████╗ ██╗███╗   ███╗███████╗"
-echo "██╔════╝██╔══██╗██║████╗ ████║██╔════╝"
-echo "██║     ███████║██║██╔████╔██║█████╗  "
-echo "██║     ██╔══██║██║██║╚██╔╝██║██╔══╝  "
-echo "╚██████╗██║  ██║██║██║ ╚═╝ ██║███████╗"
-echo " ╚═════╝╚═╝  ╚═╝╚═╝╚═╝     ╚═╝╚══════╝"
+echo -e "\033[96m██████╗ █████╗ ██╗███╗   ███╗███████╗"
+echo -e "██╔════╝██╔══██╗██║████╗ ████║██╔════╝"
+echo -e "██║     ███████║██║██╔████╔██║█████╗  "
+echo -e "██║     ██╔══██║██║██║╚██╔╝██║██╔══╝  "
+echo -e "╚██████╗██║  ██║██║██║ ╚═╝ ██║███████╗"
+echo -e " ╚═════╝╚═╝  ╚═╝╚═╝╚═╝     ╚═╝╚══════╝\033[0m"
 echo ""
 endef
 
@@ -77,7 +77,7 @@ define update_progress
 	 if [ $$bar_length -gt 40 ]; then \
 	   bar_length=40; \
 	 fi; \
-	 printf "\r\033[33m编译进度: ["; \
+	 printf "\r\033[38;2;205;214;244mProgress: ["; \
 	 for i in $$(seq 1 $$bar_length); do printf "█"; done; \
 	 for i in $$(seq 1 $$((40 - bar_length))); do printf "░"; done; \
 	 printf "] %3d%% (%d/%d) " "$$percentage" "$$new_count" "$(TOTAL_FILES)"; \
@@ -86,9 +86,9 @@ endef
 
 # 生成目标
 all: clear_screen show_logo directories init_progress $(OUTPUT_DIR)/catime.exe
-	@echo "使用 UPX 压缩可执行文件..."
+	@echo "Compressing with UPX..."
 	@upx --best --lzma "$(OUTPUT_DIR)/catime.exe"
-	@echo "编译完成！输出目录: $(OUTPUT_DIR)"
+	@echo -e "\033[92mBuild completed! Output directory: $(OUTPUT_DIR)\033[0m"
 	@rm -f $(PROGRESS_FILE)
 
 # 清屏
@@ -103,7 +103,7 @@ show_logo:
 init_progress:
 	@mkdir -p $(BUILD_DIR)
 	@echo "0" > $(PROGRESS_FILE)
-	@printf "\033[33m编译进度: ["; \
+	@printf "\033[38;2;205;214;244mProgress: ["; \
 	 for i in $$(seq 1 40); do printf "░"; done; \
 	 printf "] %3d%% (0/%d) " "0" "$(TOTAL_FILES)"
 
@@ -114,7 +114,7 @@ directories:
 
 # 编译资源文件
 $(BUILD_DIR)/resource.o: $(RC_FILE) resource/about_dialog.rc
-	@echo "编译资源文件..."
+	@echo "Compiling resources..."
 	@$(WINDRES) -I resource $(RC_FILE) -o $(BUILD_DIR)/resource.o
 	@$(call update_progress)
 
@@ -225,7 +225,7 @@ $(BUILD_DIR)/async_update_checker.o: src/async_update_checker.c
 
 # 链接编译目标文件，输出到输出目录
 $(OUTPUT_DIR)/catime.exe: $(OBJS) $(BUILD_DIR)/resource.o
-	@echo "链接可执行文件..."
+	@echo "Linking executable..."
 	@$(CC) -o $(OUTPUT_DIR)/catime.exe $(OBJS) $(BUILD_DIR)/resource.o $(CFLAGS) $(LDFLAGS) $(LIBS)
 
 # 清理构建文件
@@ -233,5 +233,6 @@ clean:
 	@rm -f $(BUILD_DIR)/*.o $(OUTPUT_DIR)/catime.exe
 	@rm -rf $(BUILD_DIR)/include $(BUILD_DIR)/resource
 	@rm -f $(PROGRESS_FILE)
+	@echo "Build files cleaned."
 
 .PHONY: all clean clear_screen show_logo init_progress directories
