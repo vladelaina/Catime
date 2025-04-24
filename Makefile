@@ -8,6 +8,28 @@ OUTPUT_DIR = ./bin
 # 创建构建目录
 BUILD_DIR = build
 
+# 检测是否在CI环境中运行
+ifdef CI
+    USE_COLOR =
+else
+    USE_COLOR = yes
+endif
+
+# 定义颜色代码
+ifeq ($(USE_COLOR),yes)
+    CYAN = \033[96m
+    GRAY = \033[38;2;205;214;244m
+    BLUE = \033[38;2;137;180;250m
+    GREEN = \033[92m
+    RESET = \033[0m
+else
+    CYAN =
+    GRAY =
+    BLUE =
+    GREEN =
+    RESET =
+endif
+
 # 设置文件名 - 添加 async_update_checker.c 到源文件列表
 SRC_FILES = src/main.c src/window.c src/tray.c src/color.c src/font.c src/language.c src/timer.c src/tray_menu.c src/startup.c src/config.c src/window_procedure.c src/media.c src/notification.c src/tray_events.c src/window_events.c src/drag_scale.c src/drawing.c src/timer_events.c src/dialog_procedure.c src/update_checker.c src/async_update_checker.c
 RC_FILE = resource/resource.rc
@@ -51,23 +73,16 @@ OBJS = $(BUILD_DIR)/main.o \
 TOTAL_FILES = 22
 PROGRESS_FILE = $(BUILD_DIR)/.progress
 
-# 为编译时的彩色输出设置颜色宏
-CYAN = \033[96m
-GRAY = \033[38;2;205;214;244m
-BLUE = \033[38;2;137;180;250m
-GREEN = \033[92m
-END = \033[0m
-
 # ASCII 艺术标志
 define CATIME_LOGO
-printf "\n"
-printf "$(CYAN)██████╗  █████╗ ████████╗██╗███╗   ███╗███████╗$(END)\n"
-printf "$(CYAN)██╔════╝ ██╔══██╗╚══██╔══╝██║████╗ ████║██╔════╝$(END)\n"
-printf "$(CYAN)██║      ███████║   ██║   ██║██╔████╔██║█████╗  $(END)\n"
-printf "$(CYAN)██║      ██╔══██║   ██║   ██║██║╚██╔╝██║██╔══╝  $(END)\n"
-printf "$(CYAN)╚██████╗ ██║  ██║   ██║   ██║██║ ╚═╝ ██║███████╗$(END)\n"
-printf "$(CYAN) ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝╚═╝     ╚═╝╚══════╝$(END)\n"
-printf "\n"
+@printf "\n"
+@printf "$(CYAN)██████╗  █████╗ ████████╗██╗███╗   ███╗███████╗$(RESET)\n"
+@printf "$(CYAN)██╔════╝ ██╔══██╗╚══██╔══╝██║████╗ ████║██╔════╝$(RESET)\n"
+@printf "$(CYAN)██║      ███████║   ██║   ██║██╔████╔██║█████╗  $(RESET)\n"
+@printf "$(CYAN)██║      ██╔══██║   ██║   ██║██║╚██╔╝██║██╔══╝  $(RESET)\n"
+@printf "$(CYAN)╚██████╗ ██║  ██║   ██║   ██║██║ ╚═╝ ██║███████╗$(RESET)\n"
+@printf "$(CYAN) ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝╚═╝     ╚═╝╚══════╝$(RESET)\n"
+@printf "\n"
 endef
 
 # 更新进度计数并显示真实进度条
@@ -84,11 +99,11 @@ define update_progress
 	 if [ $$bar_length -gt 40 ]; then \
 	   bar_length=40; \
 	 fi; \
-	 printf "\r\033[38;2;205;214;244mProgress: ["; \
+	 printf "\r$(GRAY)Progress: ["; \
 	 for i in $$(seq 1 $$bar_length); do printf "█"; done; \
 	 for i in $$(seq 1 $$((40 - bar_length))); do printf "░"; done; \
-	 printf "] %3d%% Complete " "$$percentage"; \
-	 if [ $$new_count -eq $(TOTAL_FILES) ]; then printf "\n\033[0m"; fi
+	 printf "] %3d%% Complete $(RESET)" "$$percentage"; \
+	 if [ $$new_count -eq $(TOTAL_FILES) ]; then printf "\n"; fi
 endef
 
 # 生成目标 - Run init_progress first, then build dependencies, then run final commands
@@ -96,35 +111,30 @@ all: clear_screen show_logo directories init_progress build_executable compress_
 
 build_executable: $(OUTPUT_DIR)/catime.exe
 
+# 修复 compress_executable 函数使用兼容语法
 compress_executable: build_executable
 	@# Check if compilation was skipped and update progress bar to 100% if needed
 	@if [ -f $(PROGRESS_FILE) ] && [ "$$(cat $(PROGRESS_FILE))" -lt "$(TOTAL_FILES)" ]; then \
-	  printf "\r\033[38;2;205;214;244mProgress: ["; \
+	  printf "\r$(GRAY)Progress: ["; \
 	  for i in $$(seq 1 40); do printf "█"; done; \
-	  printf "] 100%% Complete \033[0m\n"; \
+	  printf "] 100%% Complete $(RESET)\n"; \
 	fi
-	@original_size_bytes=$$(stat -c %s "$(OUTPUT_DIR)/catime.exe"); \
-	 original_size_human=$$(echo $$original_size_bytes | numfmt --to=iec-i --suffix=B --format="%.2f"); \
-	 printf "\033[38;2;137;180;250mCompressing...\033[0m\n"; \
+	@printf "$(BLUE)Compressing...$(RESET)\n"; \
+	 size_before=$$(stat -c %s "$(OUTPUT_DIR)/catime.exe"); \
 	 printf "Compressing with UPX: [ ]"; \
-	 upx --best --lzma "$(OUTPUT_DIR)/catime.exe" > /dev/null 2>&1 & \
-	 pid=$$!; \
-	 spin='-\|/'; \
-	 i=0; \
-	 while kill -0 $$pid 2>/dev/null; do \
-	 	i=$$(( $$i+1 )); \
-	 	printf "\b\b%c]" "$${spin:$$((i%4)):1}"; \
-	 	sleep 0.1; \
-	 done; \
-	 wait $$pid; \
-	 compressed_size_bytes=$$(stat -c %s "$(OUTPUT_DIR)/catime.exe"); \
-	 compressed_size_human=$$(echo $$compressed_size_bytes | numfmt --to=iec-i --suffix=B --format="%.2f"); \
-	 ratio=$$(awk -v o=$$original_size_bytes -v c=$$compressed_size_bytes 'BEGIN {printf "%.2f", c * 100 / o}'); \
+	 upx --best --lzma "$(OUTPUT_DIR)/catime.exe" > /dev/null 2>&1; \
 	 printf "\b\bDone]\n"; \
-	 printf "Compressed: %s -> %s (%s%%)\n" "$$original_size_human" "$$compressed_size_human" "$$ratio";
+	 size_after=$$(stat -c %s "$(OUTPUT_DIR)/catime.exe"); \
+	 size_before_kb=$$(expr $$size_before / 1024); \
+	 size_after_kb=$$(expr $$size_after / 1024); \
+	 ratio=0; \
+	 if [ $$size_before -ne 0 ]; then \
+	   ratio=$$(expr $$size_after \* 100 / $$size_before); \
+	 fi; \
+	 printf "Compressed: %dKiB -> %dKiB (%d%%)\n" "$$size_before_kb" "$$size_after_kb" "$$ratio";
 
 finalize_build: compress_executable
-	@echo -e "\033[92mBuild completed! Output directory: $(OUTPUT_DIR)\033[0m"
+	@printf "$(GREEN)Build completed! Output directory: $(OUTPUT_DIR)$(RESET)\n"
 	@rm -f $(PROGRESS_FILE)
 
 # 清屏 - 跨平台兼容方式
@@ -133,16 +143,16 @@ clear_screen:
 
 # 显示标志
 show_logo:
-	@$(CATIME_LOGO)
+	$(CATIME_LOGO)
 
 # 初始化进度 - Should run before compilation starts
 init_progress:
 	@mkdir -p $(BUILD_DIR)
 	@echo "0" > $(PROGRESS_FILE)
-	@printf "\033[38;2;137;180;250mBuilding...\033[0m\n"
-	@printf "\033[38;2;205;214;244mProgress: ["; \
+	@printf "$(BLUE)Building...$(RESET)\n"
+	@printf "$(GRAY)Progress: ["; \
 	 for i in $$(seq 1 40); do printf "░"; done; \
-	 printf "] %3d%% Complete " "0"
+	 printf "] %3d%% Complete $(RESET)" "0"
 
 # 创建必要的目录
 directories:
