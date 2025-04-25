@@ -276,6 +276,14 @@
 #define IDC_UPDATE_TEXT 711
 #define IDC_UPDATE_EXIT_TEXT 712
 
+/* 更新错误对话框 */
+#define IDD_UPDATE_ERROR_DIALOG 720
+#define IDC_UPDATE_ERROR_TEXT 721
+
+/* 无需更新对话框 */
+#define IDD_NO_UPDATE_DIALOG 730
+#define IDC_NO_UPDATE_TEXT 731
+
 // 在预设管理菜单项部分添加
 #define CLOCK_IDM_TOPMOST 187 // 置顶选项ID
 

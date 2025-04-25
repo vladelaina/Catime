@@ -33,6 +33,9 @@ typedef struct {
 
 // 函数声明
 BOOL OpenBrowserForUpdateAndExit(const char* url, HWND hwnd);
+void ShowUpdateErrorDialog(HWND hwnd, const wchar_t* errorMsg);
+void ShowNoUpdateDialog(HWND hwnd, const wchar_t* versionInfo);
+void ShowExitMessageDialog(HWND hwnd, const wchar_t* message);
 
 /**
  * @brief 检查与API的连接速度
@@ -84,16 +87,36 @@ DWORD CheckConnectionSpeed(const char* apiUrl) {
  * @return 是否成功选择了更新源
  */
 BOOL SelectFastestUpdateSource(char* apiUrl, size_t maxLen) {
+    // 调试输出
+    FILE *debugFile = fopen("update_source.log", "w");
+    if (debugFile) {
+        fprintf(debugFile, "Selecting update source...\n");
+    }
+    
     // 检查GitHub的连接速度
     DWORD githubSpeed = CheckConnectionSpeed(GITHUB_API_URL);
     
+    if (debugFile) {
+        fprintf(debugFile, "GitHub API URL: %s\n", GITHUB_API_URL);
+        fprintf(debugFile, "GitHub connection speed: %u ms\n", githubSpeed);
+    }
+    
     // 如果连接失败，返回失败
     if (githubSpeed == MAXDWORD) {
+        if (debugFile) {
+            fprintf(debugFile, "Connection failed\n");
+            fclose(debugFile);
+        }
         return FALSE;
     }
     
     // 使用GitHub作为更新源
     strncpy(apiUrl, GITHUB_API_URL, maxLen);
+    
+    if (debugFile) {
+        fprintf(debugFile, "Selected API URL: %s\n", apiUrl);
+        fclose(debugFile);
+    }
     
     return TRUE;
 }
@@ -109,17 +132,41 @@ BOOL SelectFastestUpdateSource(char* apiUrl, size_t maxLen) {
  */
 BOOL ParseLatestVersionFromJson(const char* jsonResponse, char* latestVersion, size_t maxLen, 
                                char* downloadUrl, size_t urlMaxLen) {
+    // 调试输出
+    FILE *debugFile = fopen("update_debug.log", "w");
+    if (debugFile) {
+        fprintf(debugFile, "Parsing JSON response:\n%s\n\n", jsonResponse);
+    }
+    
     // 查找版本号 - 在"tag_name"之后
     const char* tagNamePos = strstr(jsonResponse, "\"tag_name\":");
-    if (!tagNamePos) return FALSE;
+    if (!tagNamePos) {
+        if (debugFile) {
+            fprintf(debugFile, "Failed to find tag_name\n");
+            fclose(debugFile);
+        }
+        return FALSE;
+    }
     
     // 查找第一个引号
     const char* firstQuote = strchr(tagNamePos + 11, '\"');
-    if (!firstQuote) return FALSE;
+    if (!firstQuote) {
+        if (debugFile) {
+            fprintf(debugFile, "Failed to find first quote in tag_name\n");
+            fclose(debugFile);
+        }
+        return FALSE;
+    }
     
     // 查找第二个引号
     const char* secondQuote = strchr(firstQuote + 1, '\"');
-    if (!secondQuote) return FALSE;
+    if (!secondQuote) {
+        if (debugFile) {
+            fprintf(debugFile, "Failed to find second quote in tag_name\n");
+            fclose(debugFile);
+        }
+        return FALSE;
+    }
     
     // 计算版本号长度
     size_t versionLen = secondQuote - (firstQuote + 1);
@@ -134,17 +181,39 @@ BOOL ParseLatestVersionFromJson(const char* jsonResponse, char* latestVersion, s
         memmove(latestVersion, latestVersion + 1, versionLen);
     }
     
+    if (debugFile) {
+        fprintf(debugFile, "Found version: %s\n", latestVersion);
+    }
+    
     // 查找下载URL - 在"browser_download_url"之后
     const char* downloadUrlPos = strstr(jsonResponse, "\"browser_download_url\":");
-    if (!downloadUrlPos) return FALSE;
+    if (!downloadUrlPos) {
+        if (debugFile) {
+            fprintf(debugFile, "Failed to find browser_download_url\n");
+            fclose(debugFile);
+        }
+        return FALSE;
+    }
     
     // 查找第一个引号
     firstQuote = strchr(downloadUrlPos + 22, '\"');
-    if (!firstQuote) return FALSE;
+    if (!firstQuote) {
+        if (debugFile) {
+            fprintf(debugFile, "Failed to find first quote in download URL\n");
+            fclose(debugFile);
+        }
+        return FALSE;
+    }
     
     // 查找第二个引号
     secondQuote = strchr(firstQuote + 1, '\"');
-    if (!secondQuote) return FALSE;
+    if (!secondQuote) {
+        if (debugFile) {
+            fprintf(debugFile, "Failed to find second quote in download URL\n");
+            fclose(debugFile);
+        }
+        return FALSE;
+    }
     
     // 计算URL长度
     size_t urlLen = secondQuote - (firstQuote + 1);
@@ -153,6 +222,13 @@ BOOL ParseLatestVersionFromJson(const char* jsonResponse, char* latestVersion, s
     // 复制下载URL
     strncpy(downloadUrl, firstQuote + 1, urlLen);
     downloadUrl[urlLen] = '\0';
+    
+    if (debugFile) {
+        fprintf(debugFile, "Found download URL: %s\n", downloadUrl);
+        fprintf(debugFile, "Current version: %s\n", CATIME_VERSION);
+        fprintf(debugFile, "Parse succeeded\n");
+        fclose(debugFile);
+    }
     
     return TRUE;
 }
@@ -316,20 +392,14 @@ void CheckForUpdate(HWND hwnd) {
     // 选择更新源
     char updateApiUrl[256] = {0};
     if (!SelectFastestUpdateSource(updateApiUrl, sizeof(updateApiUrl))) {
-        MessageBoxW(hwnd, 
-                   GetLocalizedString(L"无法连接到更新服务器", L"Could not connect to update server"), 
-                   GetLocalizedString(L"更新错误", L"Update Error"), 
-                   MB_ICONERROR);
+        ShowUpdateErrorDialog(hwnd, GetLocalizedString(L"无法连接到更新服务器", L"Could not connect to update server"));
         return;
     }
     
     // 创建Internet会话
     HINTERNET hInternet = InternetOpenA(USER_AGENT, INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
     if (!hInternet) {
-        MessageBoxW(hwnd, 
-                   GetLocalizedString(L"无法创建Internet连接", L"Could not create Internet connection"), 
-                   GetLocalizedString(L"更新错误", L"Update Error"), 
-                   MB_ICONERROR);
+        ShowUpdateErrorDialog(hwnd, GetLocalizedString(L"无法创建Internet连接", L"Could not create Internet connection"));
         return;
     }
     
@@ -338,10 +408,7 @@ void CheckForUpdate(HWND hwnd) {
                                         INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_CACHE_WRITE, 0);
     if (!hConnect) {
         InternetCloseHandle(hInternet);
-        MessageBoxW(hwnd, 
-                   GetLocalizedString(L"无法连接到更新服务器", L"Could not connect to update server"), 
-                   GetLocalizedString(L"更新错误", L"Update Error"), 
-                   MB_ICONERROR);
+        ShowUpdateErrorDialog(hwnd, GetLocalizedString(L"无法连接到更新服务器", L"Could not connect to update server"));
         return;
     }
     
@@ -389,10 +456,7 @@ void CheckForUpdate(HWND hwnd) {
     if (!ParseLatestVersionFromJson(buffer, latestVersion, sizeof(latestVersion), 
                                   downloadUrl, sizeof(downloadUrl))) {
         free(buffer);  // 释放缓冲区
-        MessageBoxW(hwnd, 
-                   GetLocalizedString(L"无法解析版本信息", L"Could not parse version information"), 
-                   GetLocalizedString(L"更新错误", L"Update Error"), 
-                   MB_ICONERROR);
+        ShowUpdateErrorDialog(hwnd, GetLocalizedString(L"无法解析版本信息", L"Could not parse version information"));
         return;
     }
     
@@ -410,10 +474,12 @@ void CheckForUpdate(HWND hwnd) {
         }
     } else {
         // 已经是最新版本
-        MessageBoxW(hwnd, 
-                   GetLocalizedString(L"您已经使用的是最新版本!", L"You are already using the latest version!"), 
-                   GetLocalizedString(L"无需更新", L"No Update Needed"), 
-                   MB_ICONINFORMATION);
+        wchar_t message[256];
+        swprintf(message, sizeof(message)/sizeof(wchar_t),
+                GetLocalizedString(L"您已经使用的是最新版本!\n当前版本: %S", 
+                                 L"You are already using the latest version!\nCurrent version: %S"), 
+                CATIME_VERSION);
+        ShowNoUpdateDialog(hwnd, message);
     }
     
     // 强制执行垃圾回收
@@ -435,10 +501,7 @@ void CheckForUpdateSilent(HWND hwnd, BOOL silentCheck) {
     // 选择更新源
     if (!SelectFastestUpdateSource(apiUrl, sizeof(apiUrl) - 1)) {
         if (!silentCheck) {
-            MessageBoxW(hwnd, 
-                       GetLocalizedString(L"无法连接到更新服务器", L"Cannot connect to update server"), 
-                       GetLocalizedString(L"更新检查", L"Update Check"), 
-                       MB_ICONINFORMATION);
+            ShowUpdateErrorDialog(hwnd, GetLocalizedString(L"无法连接到更新服务器", L"Cannot connect to update server"));
         }
         return;
     }
@@ -446,10 +509,7 @@ void CheckForUpdateSilent(HWND hwnd, BOOL silentCheck) {
     HINTERNET hInternet = InternetOpenA(USER_AGENT, INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
     if (!hInternet) {
         if (!silentCheck) {
-            MessageBoxW(hwnd, 
-                       GetLocalizedString(L"无法初始化网络连接", L"Failed to initialize network connection"), 
-                       GetLocalizedString(L"更新检查", L"Update Check"), 
-                       MB_ICONERROR);
+            ShowUpdateErrorDialog(hwnd, GetLocalizedString(L"无法初始化网络连接", L"Failed to initialize network connection"));
         }
         return;
     }
@@ -464,10 +524,7 @@ void CheckForUpdateSilent(HWND hwnd, BOOL silentCheck) {
     if (!hConnect) {
         InternetCloseHandle(hInternet);
         if (!silentCheck) {
-            MessageBoxW(hwnd, 
-                       GetLocalizedString(L"无法连接到更新服务器", L"Cannot connect to update server"), 
-                       GetLocalizedString(L"更新检查", L"Update Check"), 
-                       MB_ICONINFORMATION);
+            ShowUpdateErrorDialog(hwnd, GetLocalizedString(L"无法连接到更新服务器", L"Cannot connect to update server"));
         }
         return;
     }
@@ -514,10 +571,7 @@ void CheckForUpdateSilent(HWND hwnd, BOOL silentCheck) {
     if (totalBytesRead == 0) {
         free(buffer);  // 释放缓冲区
         if (!silentCheck) {
-            MessageBoxW(hwnd, 
-                       GetLocalizedString(L"无法获取版本信息", L"Failed to get version information"), 
-                       GetLocalizedString(L"更新检查", L"Update Check"), 
-                       MB_ICONINFORMATION);
+            ShowUpdateErrorDialog(hwnd, GetLocalizedString(L"无法获取版本信息", L"Failed to get version information"));
         }
         return;
     }
@@ -529,10 +583,7 @@ void CheckForUpdateSilent(HWND hwnd, BOOL silentCheck) {
                                    downloadUrl, sizeof(downloadUrl))) {
         free(buffer);  // 释放缓冲区
         if (!silentCheck) {
-            MessageBoxW(hwnd, 
-                       GetLocalizedString(L"无法解析版本信息", L"Failed to parse version information"), 
-                       GetLocalizedString(L"更新检查", L"Update Check"), 
-                       MB_ICONINFORMATION);
+            ShowUpdateErrorDialog(hwnd, GetLocalizedString(L"无法解析版本信息", L"Failed to parse version information"));
         }
         return;
     }
@@ -563,9 +614,7 @@ void CheckForUpdateSilent(HWND hwnd, BOOL silentCheck) {
                     L"Your software is up to date!\nCurrent version: %S"),
                 currentVersion);
         
-        MessageBoxW(hwnd, message, 
-                   GetLocalizedString(L"检查更新", L"Update Check"), 
-                   MB_ICONINFORMATION);
+        ShowNoUpdateDialog(hwnd, message);
     }
     
     // 强制执行垃圾回收
@@ -584,10 +633,7 @@ BOOL OpenBrowserForUpdateAndExit(const char* url, HWND hwnd) {
     
     if ((INT_PTR)hInstance <= 32) {
         // 打开浏览器失败
-        MessageBoxW(hwnd, 
-                   GetLocalizedString(L"无法打开浏览器下载更新", L"Could not open browser to download update"), 
-                   GetLocalizedString(L"更新错误", L"Update Error"), 
-                   MB_ICONERROR);
+        ShowUpdateErrorDialog(hwnd, GetLocalizedString(L"无法打开浏览器下载更新", L"Could not open browser to download update"));
         return FALSE;
     }
     
@@ -609,4 +655,90 @@ BOOL OpenBrowserForUpdateAndExit(const char* url, HWND hwnd) {
     // 退出程序
     PostMessage(hwnd, WM_CLOSE, 0, 0);
     return TRUE;
+}
+
+/**
+ * @brief 更新错误对话框处理过程
+ * @param hwndDlg 对话框句柄
+ * @param msg 消息类型
+ * @param wParam 消息参数
+ * @param lParam 消息参数
+ * @return INT_PTR 消息处理结果
+ */
+INT_PTR CALLBACK UpdateErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    switch (msg) {
+        case WM_INITDIALOG: {
+            // 获取错误消息文本
+            const wchar_t* errorMsg = (const wchar_t*)lParam;
+            if (errorMsg) {
+                // 设置对话框文本
+                SetDlgItemTextW(hwndDlg, IDC_UPDATE_ERROR_TEXT, errorMsg);
+            }
+            return TRUE;
+        }
+        
+        case WM_COMMAND:
+            if (LOWORD(wParam) == IDOK) {
+                EndDialog(hwndDlg, IDOK);
+                return TRUE;
+            }
+            break;
+    }
+    return FALSE;
+}
+
+/**
+ * @brief 显示更新错误对话框
+ * @param hwnd 父窗口句柄
+ * @param errorMsg 错误消息
+ */
+void ShowUpdateErrorDialog(HWND hwnd, const wchar_t* errorMsg) {
+    DialogBoxParam(GetModuleHandle(NULL), 
+                 MAKEINTRESOURCE(IDD_UPDATE_ERROR_DIALOG), 
+                 hwnd, 
+                 UpdateErrorDlgProc, 
+                 (LPARAM)errorMsg);
+}
+
+/**
+ * @brief 无需更新对话框处理过程
+ * @param hwndDlg 对话框句柄
+ * @param msg 消息类型
+ * @param wParam 消息参数
+ * @param lParam 消息参数
+ * @return INT_PTR 消息处理结果
+ */
+INT_PTR CALLBACK NoUpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    switch (msg) {
+        case WM_INITDIALOG: {
+            // 可以接收额外信息如当前版本
+            const wchar_t* versionInfo = (const wchar_t*)lParam;
+            if (versionInfo) {
+                // 设置对话框文本，添加当前版本信息
+                SetDlgItemTextW(hwndDlg, IDC_NO_UPDATE_TEXT, versionInfo);
+            }
+            return TRUE;
+        }
+        
+        case WM_COMMAND:
+            if (LOWORD(wParam) == IDOK) {
+                EndDialog(hwndDlg, IDOK);
+                return TRUE;
+            }
+            break;
+    }
+    return FALSE;
+}
+
+/**
+ * @brief 显示无需更新对话框
+ * @param hwnd 父窗口句柄
+ * @param versionInfo 版本信息，可为NULL
+ */
+void ShowNoUpdateDialog(HWND hwnd, const wchar_t* versionInfo) {
+    DialogBoxParam(GetModuleHandle(NULL), 
+                 MAKEINTRESOURCE(IDD_NO_UPDATE_DIALOG), 
+                 hwnd, 
+                 NoUpdateDlgProc, 
+                 (LPARAM)versionInfo);
 } 
