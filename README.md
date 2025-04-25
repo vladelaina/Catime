@@ -173,6 +173,12 @@
       <td align="center" valign="top" width="14.28%">
         <a href="https://github.com/xxtui-main/xxtui"><img src="https://avatars.githubusercontent.com/u/31737411?v=4" width="100px;" alt="x.j"/><br /><sub><b>x.j</b></sub></a><br />
       </td>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://github.com/kissholic"><img src="https://github.com/user-attachments/assets/e35f1cb3-ac11-41bf-8d29-b79af941544c" width="100px;" alt="纸鸢"/><br /><sub><b>纸鸢</b></sub></a><br />
+      </td>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://github.com/pyqmlp"><img src="https://github.com/user-attachments/assets/fb0473e9-db9d-4f63-ac8d-4aa1d9ee7579" width="100px;" alt="柒"/><br /><sub><b>柒</b></sub></a><br />
+      </td>
     </tr>
   </tbody>
 </table>
