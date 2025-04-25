@@ -265,6 +265,29 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                             complete_pomodoro_cycles = 0;
                         }
                         
+                        // 如果是睡眠选项，立即处理，跳过其他处理逻辑
+                        if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SLEEP) {
+                            // 重置显示并应用更改
+                            CLOCK_TOTAL_TIME = 0;
+                            countdown_elapsed_time = 0;
+                            
+                            // 停止计时器
+                            KillTimer(hwnd, 1);
+                            
+                            // 立即强制重绘窗口以清除显示
+                            InvalidateRect(hwnd, NULL, TRUE);
+                            UpdateWindow(hwnd);
+                            
+                            // 释放内存
+                            if (timeoutMsgW) {
+                                free(timeoutMsgW);
+                            }
+                            
+                            // 执行睡眠命令
+                            system("rundll32.exe powrprof.dll,SetSuspendState 0,1,0");
+                            return TRUE;
+                        }
+                        
                         switch (CLOCK_TIMEOUT_ACTION) {
                             case TIMEOUT_ACTION_MESSAGE:
                                 // 已经显示了通知，不需要额外操作
@@ -279,15 +302,7 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                                 system("shutdown /r /t 0");
                                 break;
                             case TIMEOUT_ACTION_SLEEP:
-                                // 重置显示
-                                CLOCK_TOTAL_TIME = 0;
-                                countdown_elapsed_time = 0;
-                                InvalidateRect(hwnd, NULL, TRUE);
-                                // 停止计时器
-                                KillTimer(hwnd, 1);
-                                // 执行睡眠命令
-                                system("rundll32.exe powrprof.dll,SetSuspendState 0,1,0");
-                                return TRUE;
+                                // 这个分支现在不会被执行，因为已经在前面处理了
                                 break;
                             case TIMEOUT_ACTION_OPEN_FILE: {
                                 if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
