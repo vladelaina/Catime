@@ -1516,6 +1516,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     WriteConfigTimeoutAction("RESTART");
                     break;
                 }
+                case CLOCK_IDM_SLEEP: {
+                    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SLEEP;
+                    WriteConfigTimeoutAction("SLEEP");
+                    break;
+                }
                 case CLOCK_IDM_CHECK_UPDATE: {
                     // 调用异步检查更新函数 - 非静默模式
                     CheckForUpdateAsync(hwnd, FALSE);

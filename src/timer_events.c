@@ -245,7 +245,8 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                         if (CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_OPEN_FILE && 
                             CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_LOCK &&
                             CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_SHUTDOWN &&
-                            CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_RESTART) {
+                            CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_RESTART &&
+                            CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_SLEEP) {
                             // 显示超时消息 (使用配置或默认值)
                             if (timeoutMsgW) {
                                 ShowLocalizedNotification(hwnd, timeoutMsgW);
@@ -276,6 +277,17 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                                 break;
                             case TIMEOUT_ACTION_RESTART:
                                 system("shutdown /r /t 0");
+                                break;
+                            case TIMEOUT_ACTION_SLEEP:
+                                // 重置显示
+                                CLOCK_TOTAL_TIME = 0;
+                                countdown_elapsed_time = 0;
+                                InvalidateRect(hwnd, NULL, TRUE);
+                                // 停止计时器
+                                KillTimer(hwnd, 1);
+                                // 执行睡眠命令
+                                system("rundll32.exe powrprof.dll,SetSuspendState 0,1,0");
+                                return TRUE;
                                 break;
                             case TIMEOUT_ACTION_OPEN_FILE: {
                                 if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {

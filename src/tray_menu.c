@@ -85,7 +85,8 @@ typedef enum {
     TIMEOUT_ACTION_OPEN_FILE = 4, ///< 打开指定文件
     TIMEOUT_ACTION_SHOW_TIME = 5, ///< 显示当前时间
     TIMEOUT_ACTION_COUNT_UP = 6,   ///< 切换到正计时模式
-    TIMEOUT_ACTION_OPEN_WEBSITE = 7   ///< 打开网站
+    TIMEOUT_ACTION_OPEN_WEBSITE = 7, ///< 打开网站
+    TIMEOUT_ACTION_SLEEP = 8        ///< 睡眠
 } TimeoutActionType;
 
 extern TimeoutActionType CLOCK_TIMEOUT_ACTION;
@@ -316,6 +317,11 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_RESTART ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_RESTART,
                GetLocalizedString(L"重启", L"Restart"));
+
+    // 9. 睡眠
+    AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SLEEP ? MF_CHECKED : MF_UNCHECKED),
+               CLOCK_IDM_SLEEP,
+               GetLocalizedString(L"睡眠", L"Sleep"));
 
     // 将超时动作菜单添加到主菜单
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeoutMenu, 

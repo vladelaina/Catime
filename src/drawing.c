@@ -87,7 +87,11 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
         // 倒计时模式
         int remaining_time = CLOCK_TOTAL_TIME - countdown_elapsed_time;
         if (remaining_time <= 0) {
-            if (strcmp(CLOCK_TIMEOUT_TEXT, "0") == 0) {
+            // 超时到达，根据情况决定是否显示内容
+            if (CLOCK_TOTAL_TIME == 0 && countdown_elapsed_time == 0) {
+                // 这是睡眠操作后的情况，不显示任何内容
+                time_text[0] = '\0';
+            } else if (strcmp(CLOCK_TIMEOUT_TEXT, "0") == 0) {
                 time_text[0] = '\0';
             } else if (strlen(CLOCK_TIMEOUT_TEXT) > 0) {
                 strncpy(time_text, CLOCK_TIMEOUT_TEXT, sizeof(time_text) - 1);

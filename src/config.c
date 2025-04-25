@@ -572,7 +572,7 @@ void WriteConfigTimeoutAction(const char* action) {
     
     // 如果是关机或重启，不写入配置文件，而是写入"MESSAGE"
     const char* actual_action = action;
-    if (strcmp(action, "RESTART") == 0 || strcmp(action, "SHUTDOWN") == 0) {
+    if (strcmp(action, "RESTART") == 0 || strcmp(action, "SHUTDOWN") == 0 || strcmp(action, "SLEEP") == 0) {
         actual_action = "MESSAGE";
     }
     
@@ -1165,7 +1165,8 @@ void WriteConfig(const char* config_path) {
     } else {
         // 确保关机和重启选项不会被永久保存到配置文件中
         if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SHUTDOWN || 
-            CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_RESTART) {
+            CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_RESTART ||
+            CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SLEEP) {
             fprintf(file, "CLOCK_TIMEOUT_ACTION=MESSAGE\n");
         } else {
             switch (CLOCK_TIMEOUT_ACTION) {

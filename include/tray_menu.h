@@ -40,6 +40,7 @@
 #define CLOCK_IDM_LOCK_SCREEN 122        ///< 锁定屏幕动作
 #define CLOCK_IDM_SHUTDOWN 123           ///< 关机动作
 #define CLOCK_IDM_RESTART 124            ///< 重启动作
+#define CLOCK_IDM_SLEEP 125              ///< 睡眠动作
 #define CLOCK_IDM_BROWSE_FILE 131        ///< 浏览文件选项
 #define CLOCK_IDM_RECENT_FILE_1 126      ///< 最近文件起始ID
 #define CLOCK_IDM_TIMEOUT_SHOW_TIME 135  ///< 显示当前时间动作
