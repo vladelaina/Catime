@@ -96,7 +96,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Lock Screen") == 0) return L"锁定屏幕";
             if (wcscmp(english, L"Shutdown") == 0) return L"关机";
             if (wcscmp(english, L"Timeout Action") == 0) return L"超时动作";
-            if (wcscmp(english, L"Modify Time Options") == 0) return L"修改快捷倒计时选项";
+            if (wcscmp(english, L"Modify Time Options") == 0) return L"倒计时预设";
             if (wcscmp(english, L"Customize") == 0) return L"自定义";
             if (wcscmp(english, L"Color") == 0) return L"颜色";
             if (wcscmp(english, L"Font") == 0) return L"字体";
@@ -173,7 +173,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Lock Screen") == 0) return L"鎖定螢幕";
             if (wcscmp(english, L"Shutdown") == 0) return L"關機";
             if (wcscmp(english, L"Timeout Action") == 0) return L"逾時動作";
-            if (wcscmp(english, L"Modify Time Options") == 0) return L"修改快捷倒計時選項";
+            if (wcscmp(english, L"Modify Time Options") == 0) return L"倒計時預設";
             if (wcscmp(english, L"Customize") == 0) return L"自訂";
             if (wcscmp(english, L"Color") == 0) return L"顏色";
             if (wcscmp(english, L"Font") == 0) return L"字型";
@@ -250,7 +250,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Lock Screen") == 0) return L"Bloquear pantalla";
             if (wcscmp(english, L"Shutdown") == 0) return L"Apagar";
             if (wcscmp(english, L"Timeout Action") == 0) return L"Acción al finalizar";
-            if (wcscmp(english, L"Modify Time Options") == 0) return L"Modificar opciones de cuenta regresiva rápida";
+            if (wcscmp(english, L"Modify Time Options") == 0) return L"Preajustes de cuenta regresiva";
             if (wcscmp(english, L"Customize") == 0) return L"Personalizar";
             if (wcscmp(english, L"Color") == 0) return L"Color";
             if (wcscmp(english, L"Font") == 0) return L"Fuente";
@@ -326,7 +326,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Lock Screen") == 0) return L"Verrouiller l'écran";
             if (wcscmp(english, L"Shutdown") == 0) return L"Éteindre";
             if (wcscmp(english, L"Timeout Action") == 0) return L"Action à l'expiration";
-            if (wcscmp(english, L"Modify Time Options") == 0) return L"Modifier les options de compte à rebours rapide";
+            if (wcscmp(english, L"Modify Time Options") == 0) return L"Préréglages de minuterie";
             if (wcscmp(english, L"Customize") == 0) return L"Personnaliser";
             if (wcscmp(english, L"Color") == 0) return L"Couleur";
             if (wcscmp(english, L"Font") == 0) return L"Police";
@@ -402,7 +402,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Lock Screen") == 0) return L"Bildschirm sperren";
             if (wcscmp(english, L"Shutdown") == 0) return L"Herunterfahren";
             if (wcscmp(english, L"Timeout Action") == 0) return L"Zeitüberschreitungsaktion";
-            if (wcscmp(english, L"Modify Time Options") == 0) return L"Schnell-Countdown-Optionen ändern";
+            if (wcscmp(english, L"Modify Time Options") == 0) return L"Countdown-Voreinstellungen";
             if (wcscmp(english, L"Customize") == 0) return L"Anpassen";
             if (wcscmp(english, L"Color") == 0) return L"Farbe";
             if (wcscmp(english, L"Font") == 0) return L"Schriftart";
@@ -478,7 +478,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Lock Screen") == 0) return L"Заблокировать экран";
             if (wcscmp(english, L"Shutdown") == 0) return L"Выключить компьютер";
             if (wcscmp(english, L"Timeout Action") == 0) return L"Действие по истечении времени";
-            if (wcscmp(english, L"Modify Time Options") == 0) return L"Настройки быстрого обратного отсчёта";
+            if (wcscmp(english, L"Modify Time Options") == 0) return L"Пресеты таймера";
             if (wcscmp(english, L"Customize") == 0) return L"Настроить";
             if (wcscmp(english, L"Color") == 0) return L"Цвет";
             if (wcscmp(english, L"Font") == 0) return L"Шрифт";
@@ -554,7 +554,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Lock Screen") == 0) return L"Bloquear tela";
             if (wcscmp(english, L"Shutdown") == 0) return L"Desligar";
             if (wcscmp(english, L"Timeout Action") == 0) return L"Ação ao finalizar";
-            if (wcscmp(english, L"Modify Time Options") == 0) return L"Modificar opções de contagem regressiva rápida";
+            if (wcscmp(english, L"Modify Time Options") == 0) return L"Predefinições de timer";
             if (wcscmp(english, L"Customize") == 0) return L"Personalizar";
             if (wcscmp(english, L"Color") == 0) return L"Cor";
             if (wcscmp(english, L"Font") == 0) return L"Fonte";
@@ -630,7 +630,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Lock Screen") == 0) return L"画面をロック";
             if (wcscmp(english, L"Shutdown") == 0) return L"シャットダウン";
             if (wcscmp(english, L"Timeout Action") == 0) return L"タイムアウト時の動作";
-            if (wcscmp(english, L"Modify Time Options") == 0) return L"クイックカウントダウンオプションの変更";
+            if (wcscmp(english, L"Modify Time Options") == 0) return L"タイマープリセット";
             if (wcscmp(english, L"Customize") == 0) return L"カスタマイズ";
             if (wcscmp(english, L"Color") == 0) return L"色";
             if (wcscmp(english, L"Font") == 0) return L"フォント";
@@ -706,7 +706,7 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
             if (wcscmp(english, L"Lock Screen") == 0) return L"화면 잠금";
             if (wcscmp(english, L"Shutdown") == 0) return L"시스템 종료";
             if (wcscmp(english, L"Timeout Action") == 0) return L"시간 종료 시 동작";
-            if (wcscmp(english, L"Modify Time Options") == 0) return L"빠른 타이머 옵션 수정";
+            if (wcscmp(english, L"Modify Time Options") == 0) return L"타이머 프리셋";
             if (wcscmp(english, L"Customize") == 0) return L"사용자 지정";
             if (wcscmp(english, L"Color") == 0) return L"색상";
             if (wcscmp(english, L"Font") == 0) return L"글꼴";

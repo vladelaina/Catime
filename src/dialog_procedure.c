@@ -132,6 +132,13 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
             hEditBrush = CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF));
             hButtonBrush = CreateSolidBrush(RGB(0xFD, 0xFD, 0xFD));
 
+            // 检查对话框ID是否为快捷倒计时选项对话框，如果是则设置标题
+            DWORD dlgId = GetWindowLongPtr(hwndDlg, GWLP_USERDATA);
+            if (dlgId == CLOCK_IDD_SHORTCUT_DIALOG || 
+                GetDlgCtrlID((HWND)lParam) == CLOCK_IDD_SHORTCUT_DIALOG) {
+                SetWindowTextW(hwndDlg, GetLocalizedString(L"倒计时预设", L"Countdown Presets"));
+            }
+
             // 获取编辑框控件的句柄
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
 

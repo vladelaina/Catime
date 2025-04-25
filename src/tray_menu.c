@@ -335,7 +335,7 @@ void ShowColorMenu(HWND hwnd) {
     // 预设管理菜单
     HMENU hTimeOptionsMenu = CreatePopupMenu();
     AppendMenuW(hTimeOptionsMenu, MF_STRING, CLOCK_IDC_MODIFY_TIME_OPTIONS,
-                GetLocalizedString(L"修改快捷倒计时选项", L"Modify Quick Countdown Options"));
+                GetLocalizedString(L"倒计时预设", L"Modify Quick Countdown Options"));
     
     // 启动设置子菜单
     HMENU hStartupSettingsMenu = CreatePopupMenu();
