@@ -19,6 +19,19 @@
 #define GITHUB_API_URL "https://api.github.com/repos/vladelaina/Catime/releases/latest"
 #define USER_AGENT "Catime Update Checker"
 
+// 添加版本信息结构体定义
+typedef struct {
+    const char* currentVersion;
+    const char* latestVersion;
+    const char* downloadUrl;
+} UpdateVersionInfo;
+
+// 函数声明
+INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
+INT_PTR CALLBACK UpdateErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
+INT_PTR CALLBACK NoUpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
+INT_PTR CALLBACK ExitMsgDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
+
 /**
  * @brief 比较版本号
  * @param version1 第一个版本号字符串
@@ -96,6 +109,184 @@ BOOL ParseLatestVersionFromJson(const char* jsonResponse, char* latestVersion, s
 }
 
 /**
+ * @brief 退出消息对话框处理过程
+ */
+INT_PTR CALLBACK ExitMsgDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    switch (msg) {
+        case WM_INITDIALOG: {
+            // 获取消息文本
+            const wchar_t* exitMsg = (const wchar_t*)lParam;
+            if (exitMsg) {
+                // 设置对话框文本
+                SetDlgItemTextW(hwndDlg, IDC_UPDATE_EXIT_TEXT, exitMsg);
+                SetDlgItemTextW(hwndDlg, IDC_UPDATE_TEXT, L"");  // 清空版本文本
+                
+                // 隐藏是否按钮，只显示确定按钮
+                ShowWindow(GetDlgItem(hwndDlg, IDYES), SW_HIDE);
+                ShowWindow(GetDlgItem(hwndDlg, IDNO), SW_HIDE);
+                ShowWindow(GetDlgItem(hwndDlg, IDOK), SW_SHOW);
+                
+                // 设置窗口标题
+                SetWindowTextW(hwndDlg, GetLocalizedString(L"更新提示", L"Update Notice"));
+            }
+            return TRUE;
+        }
+        
+        case WM_COMMAND:
+            if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDYES || LOWORD(wParam) == IDNO) {
+                EndDialog(hwndDlg, LOWORD(wParam));
+                return TRUE;
+            }
+            break;
+    }
+    return FALSE;
+}
+
+/**
+ * @brief 显示自定义的退出消息对话框
+ */
+void ShowExitMessageDialog(HWND hwnd, const wchar_t* message) {
+    DialogBoxParam(GetModuleHandle(NULL), 
+                 MAKEINTRESOURCE(IDD_UPDATE_DIALOG), 
+                 hwnd, 
+                 ExitMsgDlgProc, 
+                 (LPARAM)message);
+}
+
+/**
+ * @brief 更新对话框处理过程
+ */
+INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    static UpdateVersionInfo* versionInfo = NULL;
+    
+    switch (msg) {
+        case WM_INITDIALOG: {
+            // 保存版本信息
+            versionInfo = (UpdateVersionInfo*)lParam;
+            
+            // 格式化显示文本
+            if (versionInfo) {
+                wchar_t displayText[256];
+                swprintf(displayText, sizeof(displayText)/sizeof(wchar_t),
+                        L"当前版本: %S\n新版本: %S",
+                        versionInfo->currentVersion, versionInfo->latestVersion);
+                
+                // 设置对话框文本
+                SetDlgItemTextW(hwndDlg, IDC_UPDATE_TEXT, displayText);
+                
+                // 设置窗口标题
+                SetWindowTextW(hwndDlg, GetLocalizedString(L"更新可用", L"Update Available"));
+                
+                // 隐藏退出文本和确定按钮，显示是/否按钮
+                SetDlgItemTextW(hwndDlg, IDC_UPDATE_EXIT_TEXT, L"");
+                ShowWindow(GetDlgItem(hwndDlg, IDYES), SW_SHOW);
+                ShowWindow(GetDlgItem(hwndDlg, IDNO), SW_SHOW);
+                ShowWindow(GetDlgItem(hwndDlg, IDOK), SW_HIDE);
+            }
+            return TRUE;
+        }
+        
+        case WM_COMMAND:
+            if (LOWORD(wParam) == IDYES || LOWORD(wParam) == IDNO) {
+                EndDialog(hwndDlg, LOWORD(wParam));
+                return TRUE;
+            }
+            break;
+    }
+    return FALSE;
+}
+
+/**
+ * @brief 显示更新通知对话框
+ */
+int ShowUpdateNotification(HWND hwnd, const char* currentVersion, const char* latestVersion, const char* downloadUrl) {
+    // 创建版本信息结构体
+    UpdateVersionInfo versionInfo;
+    versionInfo.currentVersion = currentVersion;
+    versionInfo.latestVersion = latestVersion;
+    versionInfo.downloadUrl = downloadUrl;
+    
+    // 显示自定义对话框
+    return DialogBoxParam(GetModuleHandle(NULL), 
+                        MAKEINTRESOURCE(IDD_UPDATE_DIALOG), 
+                        hwnd, 
+                        UpdateDlgProc, 
+                        (LPARAM)&versionInfo);
+}
+
+/**
+ * @brief 更新错误对话框处理过程
+ */
+INT_PTR CALLBACK UpdateErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    switch (msg) {
+        case WM_INITDIALOG: {
+            // 获取错误消息文本
+            const wchar_t* errorMsg = (const wchar_t*)lParam;
+            if (errorMsg) {
+                // 设置对话框文本
+                SetDlgItemTextW(hwndDlg, IDC_UPDATE_ERROR_TEXT, errorMsg);
+            }
+            return TRUE;
+        }
+        
+        case WM_COMMAND:
+            if (LOWORD(wParam) == IDOK) {
+                EndDialog(hwndDlg, IDOK);
+                return TRUE;
+            }
+            break;
+    }
+    return FALSE;
+}
+
+/**
+ * @brief 显示更新错误对话框
+ */
+void ShowUpdateErrorDialog(HWND hwnd, const wchar_t* errorMsg) {
+    DialogBoxParam(GetModuleHandle(NULL), 
+                 MAKEINTRESOURCE(IDD_UPDATE_ERROR_DIALOG), 
+                 hwnd, 
+                 UpdateErrorDlgProc, 
+                 (LPARAM)errorMsg);
+}
+
+/**
+ * @brief 无需更新对话框处理过程
+ */
+INT_PTR CALLBACK NoUpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    switch (msg) {
+        case WM_INITDIALOG: {
+            // 可以接收额外信息如当前版本
+            const wchar_t* versionInfo = (const wchar_t*)lParam;
+            if (versionInfo) {
+                // 设置对话框文本，添加当前版本信息
+                SetDlgItemTextW(hwndDlg, IDC_NO_UPDATE_TEXT, versionInfo);
+            }
+            return TRUE;
+        }
+        
+        case WM_COMMAND:
+            if (LOWORD(wParam) == IDOK) {
+                EndDialog(hwndDlg, IDOK);
+                return TRUE;
+            }
+            break;
+    }
+    return FALSE;
+}
+
+/**
+ * @brief 显示无需更新对话框
+ */
+void ShowNoUpdateDialog(HWND hwnd, const wchar_t* versionInfo) {
+    DialogBoxParam(GetModuleHandle(NULL), 
+                 MAKEINTRESOURCE(IDD_NO_UPDATE_DIALOG), 
+                 hwnd, 
+                 NoUpdateDlgProc, 
+                 (LPARAM)versionInfo);
+}
+
+/**
  * @brief 打开浏览器下载更新并退出程序
  */
 BOOL OpenBrowserForUpdateAndExit(const char* url, HWND hwnd) {
@@ -103,10 +294,8 @@ BOOL OpenBrowserForUpdateAndExit(const char* url, HWND hwnd) {
     HINSTANCE hInstance = ShellExecuteA(hwnd, "open", url, NULL, NULL, SW_SHOWNORMAL);
     
     if ((INT_PTR)hInstance <= 32) {
-        MessageBoxW(hwnd, 
-                  GetLocalizedString(L"无法打开浏览器下载更新", L"Could not open browser to download update"),
-                  GetLocalizedString(L"更新错误", L"Update Error"),
-                  MB_ICONERROR | MB_OK);
+        // 打开浏览器失败
+        ShowUpdateErrorDialog(hwnd, GetLocalizedString(L"无法打开浏览器下载更新", L"Could not open browser to download update"));
         return FALSE;
     }
     
@@ -117,11 +306,12 @@ BOOL OpenBrowserForUpdateAndExit(const char* url, HWND hwnd) {
     DeleteFileA(config_path);
     
     // 提示用户
-    MessageBoxW(hwnd,
-              GetLocalizedString(L"已打开浏览器下载新版本，程序即将退出。", 
-                              L"Browser opened to download new version. The application will now exit."),
-              GetLocalizedString(L"更新提示", L"Update Notice"),
-              MB_ICONINFORMATION | MB_OK);
+    wchar_t message[512];
+    swprintf(message, sizeof(message)/sizeof(wchar_t),
+            L"即将退出程序");
+    
+    // 使用自定义对话框显示退出消息
+    ShowExitMessageDialog(hwnd, message);
     
     // 退出程序
     PostMessage(hwnd, WM_CLOSE, 0, 0);
@@ -136,10 +326,7 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
     HINTERNET hInternet = InternetOpenA(USER_AGENT, INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
     if (!hInternet) {
         if (!silentCheck) {
-            MessageBoxW(hwnd,
-                      GetLocalizedString(L"无法创建Internet连接", L"Could not create Internet connection"),
-                      GetLocalizedString(L"更新错误", L"Update Error"),
-                      MB_ICONERROR | MB_OK);
+            ShowUpdateErrorDialog(hwnd, GetLocalizedString(L"无法创建Internet连接", L"Could not create Internet connection"));
         }
         return;
     }
@@ -150,10 +337,7 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
     if (!hConnect) {
         InternetCloseHandle(hInternet);
         if (!silentCheck) {
-            MessageBoxW(hwnd,
-                      GetLocalizedString(L"无法连接到更新服务器", L"Could not connect to update server"),
-                      GetLocalizedString(L"更新错误", L"Update Error"),
-                      MB_ICONERROR | MB_OK);
+            ShowUpdateErrorDialog(hwnd, GetLocalizedString(L"无法连接到更新服务器", L"Could not connect to update server"));
         }
         return;
     }
@@ -196,10 +380,7 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
                                   downloadUrl, sizeof(downloadUrl))) {
         free(buffer);
         if (!silentCheck) {
-            MessageBoxW(hwnd,
-                      GetLocalizedString(L"无法解析版本信息", L"Could not parse version information"),
-                      GetLocalizedString(L"更新错误", L"Update Error"),
-                      MB_ICONERROR | MB_OK);
+            ShowUpdateErrorDialog(hwnd, GetLocalizedString(L"无法解析版本信息", L"Could not parse version information"));
         }
         return;
     }
@@ -212,16 +393,7 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
     // 比较版本
     if (CompareVersions(latestVersion, currentVersion) > 0) {
         // 有新版本
-        wchar_t msgBuffer[512];
-        swprintf(msgBuffer, sizeof(msgBuffer)/sizeof(wchar_t),
-                GetLocalizedString(
-                    L"发现新版本！\n当前版本: %S\n最新版本: %S\n\n是否立即打开浏览器下载新版本？",
-                    L"New version available!\nCurrent version: %S\nLatest version: %S\n\nOpen browser to download new version now?"),
-                currentVersion, latestVersion);
-                
-        int response = MessageBoxW(hwnd, msgBuffer,
-                                GetLocalizedString(L"更新可用", L"Update Available"),
-                                MB_ICONINFORMATION | MB_YESNO);
+        int response = ShowUpdateNotification(hwnd, currentVersion, latestVersion, downloadUrl);
         
         if (response == IDYES) {
             OpenBrowserForUpdateAndExit(downloadUrl, hwnd);
@@ -235,9 +407,7 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
                     L"Your software is up to date!\nCurrent version: %S"),
                 currentVersion);
         
-        MessageBoxW(hwnd, message,
-                  GetLocalizedString(L"已是最新版本", L"No Updates Available"),
-                  MB_ICONINFORMATION | MB_OK);
+        ShowNoUpdateDialog(hwnd, message);
     }
 }
 
