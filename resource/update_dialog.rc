@@ -1,0 +1,37 @@
+#include <windows.h>
+#include "resource.h"
+
+// 设置 UTF-8 编码
+#pragma code_page(65001)
+
+// 更新提示对话框资源定义
+IDD_UPDATE_DIALOG DIALOGEX 0, 0, 160, 100
+STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+FONT 12, "Microsoft YaHei UI"
+BEGIN
+    CTEXT           "当前版本: %s\n新版本: %s", IDC_UPDATE_TEXT, 0, 10, 160, 40
+    CTEXT           "即将退出程序", IDC_UPDATE_EXIT_TEXT, 0, 50, 160, 20
+    PUSHBUTTON      "是(&Y)", IDYES, 30, 75, 40, 15
+    PUSHBUTTON      "否(&N)", IDNO, 90, 75, 40, 15
+    DEFPUSHBUTTON   "确定", IDOK, 60, 75, 40, 15, NOT WS_VISIBLE
+END
+
+// 更新错误对话框资源定义
+IDD_UPDATE_ERROR_DIALOG DIALOGEX 0, 0, 160, 60
+STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "更新错误"
+FONT 12, "Microsoft YaHei UI"
+BEGIN
+    CTEXT           "", IDC_UPDATE_ERROR_TEXT, 0, 10, 160, 25
+    DEFPUSHBUTTON   "确定", IDOK, 60, 40, 40, 15
+END
+
+// 无需更新对话框资源定义
+IDD_NO_UPDATE_DIALOG DIALOGEX 0, 0, 160, 60
+STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "无需更新"
+FONT 12, "Microsoft YaHei UI"
+BEGIN
+    CTEXT           "您已经使用的是最新版本!", IDC_NO_UPDATE_TEXT, 0, 10, 160, 25
+    DEFPUSHBUTTON   "确定", IDOK, 60, 40, 40, 15
+END 
