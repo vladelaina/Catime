@@ -8,6 +8,7 @@
  */
 
 #include "../include/config.h"
+#include "../resource/resource.h"  // 添加这一行以访问CATIME_VERSION常量
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -100,6 +101,9 @@ void GetConfigPath(char* path, size_t size) {
 void CreateDefaultConfig(const char* config_path) {
     FILE *file = fopen(config_path, "w");
     if (file) {
+        // 添加版本标识 - 作为配置文件第一行
+        fprintf(file, "CONFIG_VERSION=%s\n", CATIME_VERSION);
+        
         // 基本设置区块 - 与WriteConfig函数保持相同顺序
         fprintf(file, "CLOCK_TEXT_COLOR=#FFB6C1\n");
         fprintf(file, "CLOCK_BASE_FONT_SIZE=20\n");
@@ -203,17 +207,61 @@ void ReadConfig() {
         }
     }
 
+    // 检查配置文件版本
+    char line[256];
+    BOOL versionFound = FALSE;
+    BOOL versionMatched = FALSE;
+    
+    // 读取第一行检查版本信息
+    if (fgets(line, sizeof(line), file)) {
+        size_t len = strlen(line);
+        if (len > 0 && line[len-1] == '\n') {
+            line[len-1] = '\0';
+        }
+        
+        if (strncmp(line, "CONFIG_VERSION=", 15) == 0) {
+            versionFound = TRUE;
+            // 比较版本是否匹配
+            if (strcmp(line + 15, CATIME_VERSION) == 0) {
+                versionMatched = TRUE;
+            }
+        }
+    }
+    
+    // 如果版本不匹配或不存在版本信息，重新创建配置文件
+    if (!versionFound || !versionMatched) {
+        // 关闭旧文件
+        fclose(file);
+        
+        // 创建新的默认配置文件
+        CreateDefaultConfig(config_path);
+        
+        // 重新打开配置文件
+        file = fopen(config_path, "r");
+        if (!file) {
+            fprintf(stderr, "Failed to open config file after recreation: %s\n", config_path);
+            return;
+        }
+    } else {
+        // 如果版本匹配，将文件指针重置到文件开始以便重新读取所有配置
+        rewind(file);
+    }
+
     time_options_count = 0;
     memset(time_options, 0, sizeof(time_options));
     
     // 重置最近文件计数
     CLOCK_RECENT_FILES_COUNT = 0;
 
-    char line[256];
     while (fgets(line, sizeof(line), file)) {
         size_t len = strlen(line);
         if (len > 0 && line[len-1] == '\n') {
             line[len-1] = '\0';
+        }
+
+        // 跳过版本信息行
+        if (strncmp(line, "CONFIG_VERSION=", 15) == 0) {
+            continue;
         }
 
         if (strncmp(line, "COLOR_OPTIONS=", 13) == 0) {
@@ -1059,6 +1107,9 @@ void WriteConfigTimeoutFile(const char* filePath) {
 void WriteConfig(const char* config_path) {
     FILE* file = fopen(config_path, "w");
     if (!file) return;
+    
+    // 添加版本标识 - 作为配置文件第一行
+    fprintf(file, "CONFIG_VERSION=%s\n", CATIME_VERSION);
     
     // 基本设置区块
     fprintf(file, "CLOCK_TEXT_COLOR=%s\n", CLOCK_TEXT_COLOR);
