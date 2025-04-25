@@ -132,7 +132,11 @@ void InitializePomodoro(void) {
 BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
     if (wp == 1) {
         if (CLOCK_SHOW_CURRENT_TIME) {
-            // 在显示当前时间模式下，每次定时器触发都刷新显示
+            // 在显示当前时间模式下，每次定时器触发都重置上次显示的秒数，确保显示最新时间
+            extern int last_displayed_second;
+            last_displayed_second = -1; // 强制重置秒数缓存，确保每次都显示最新系统时间
+            
+            // 刷新显示
             InvalidateRect(hwnd, NULL, TRUE);
             return TRUE;
         }

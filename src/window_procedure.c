@@ -985,7 +985,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         countdown_elapsed_time = 0;
                         CLOCK_TOTAL_TIME = 0; // 确保总时间被重置
                         CLOCK_LAST_TIME_UPDATE = time(NULL);
-                        SetTimer(hwnd, 1, 1000, NULL);   
+                        SetTimer(hwnd, 1, 100, NULL); // 减少间隔到100毫秒，提高刷新频率
                     } else {
                         KillTimer(hwnd, 1);   
                         elapsed_time = CLOCK_TOTAL_TIME;   

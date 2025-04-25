@@ -60,6 +60,7 @@ extern int CLOCK_TOTAL_TIME;         ///< 总计时时间(秒)
 extern int countdown_elapsed_time;    ///< 倒计时已用时间
 extern int countup_elapsed_time;     ///< 正计时累计时间
 extern time_t CLOCK_LAST_TIME_UPDATE;///< 最后更新时间戳
+extern int last_displayed_second;    ///< 上一次显示的秒数，用于同步时间显示
 
 // 消息状态 ----------------------------------------------------
 extern BOOL countdown_message_shown; ///< 倒计时提示显示状态

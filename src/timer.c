@@ -66,7 +66,7 @@ int time_options_count = 0;            ///< 有效预设时间数量
 /** @} */
 
 /** 上一次显示的时间（秒），用于防止时间显示跳秒现象 */
-static int last_displayed_second = -1;
+int last_displayed_second = -1;
 
 /**
  * @brief 初始化高精度计时器
@@ -158,13 +158,12 @@ void FormatTime(int remaining_time, char* time_text) {
         
         // 检查时间连续性，防止跳秒显示
         if (last_displayed_second != -1) {
-            // 如果不是连续的秒数，且不是跨分钟的情况，则使用上一秒+1
+            // 如果不是连续的秒数，且不是跨分钟的情况
             if (st.wSecond != (last_displayed_second + 1) % 60 && 
                 !(last_displayed_second == 59 && st.wSecond == 0)) {
-                // 只有当差距为1秒时才修正（防止长时间无更新后的大跳跃）
-                if ((st.wSecond == (last_displayed_second + 2) % 60) ||
-                    (last_displayed_second == 58 && st.wSecond == 0)) {
-                    // 此时我们保持使用系统时间，但记录这次的秒数
+                // 放宽条件，允许更大的差距同步，确保不会长时间落后
+                if (st.wSecond != last_displayed_second) {
+                    // 直接使用系统时间秒数
                     last_displayed_second = st.wSecond;
                 }
             } else {
