@@ -1,0 +1,21 @@
+# 忽略build文件夹中的所有内容，但保留目录本身
+build/*
+!build/.gitkeep
+
+
+# 可执行文件
+*.exe
+*.out
+*.app
+
+# 编译中间文件
+*.o
+*.obj
+
+# 其他临时文件
+*.log
+*.tmp 
+
+# 忽略资源编译生成文件
+*.res
+*.aps 
