@@ -267,10 +267,14 @@
 #define CLOCK_IDD_SHORTCUT_DIALOG 1006
 #define CLOCK_IDD_STARTUP_DIALOG 1007
 
-// 错误对话框相关
-#define IDD_ERROR_DIALOG 5000
-#define IDC_ERROR_ICON 5001
-#define IDC_ERROR_TEXT 5002
+/* 错误对话框 */
+#define IDD_ERROR_DIALOG 700
+#define IDC_ERROR_TEXT 701
+
+/* 更新对话框 */
+#define IDD_UPDATE_DIALOG 710
+#define IDC_UPDATE_TEXT 711
+#define IDC_UPDATE_EXIT_TEXT 712
 
 // 在预设管理菜单项部分添加
 #define CLOCK_IDM_TOPMOST 187 // 置顶选项ID

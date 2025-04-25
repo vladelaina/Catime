@@ -103,3 +103,4 @@ END
 #include "pomodoro_dialog.rc"
 #include "website_dialog.rc"
 #include "notification_dialog.rc"
+#include "update_dialog.rc"

@@ -17,12 +17,22 @@
 
 #pragma comment(lib, "wininet.lib")
 
+// 添加版本信息结构体定义
+typedef struct {
+    const char* currentVersion;
+    const char* latestVersion;
+    const char* downloadUrl;
+} UpdateVersionInfo;
+
 // 更新源URL
 #define GITHUB_API_URL "https://api.github.com/repos/vladelaina/Catime/releases/latest"
 #define USER_AGENT "Catime Update Checker"
 
 // 下载配置
 #define CONNECTION_TEST_TIMEOUT 3000 // 连接测试超时时间(3秒)
+
+// 函数声明
+BOOL OpenBrowserForUpdateAndExit(const char* url, HWND hwnd);
 
 /**
  * @brief 检查与API的连接速度
@@ -180,51 +190,97 @@ int CompareVersions(const char* version1, const char* version2) {
 }
 
 /**
- * @brief 打开浏览器下载更新并退出程序
- * @param url 文件下载URL
- * @param hwnd 窗口句柄，用于显示消息和退出程序
- * @return 操作成功返回TRUE，失败返回FALSE
+ * @brief 退出消息对话框处理过程
+ * @param hwndDlg 对话框句柄
+ * @param msg 消息类型
+ * @param wParam 消息参数
+ * @param lParam 消息参数
+ * @return INT_PTR 消息处理结果
  */
-BOOL OpenBrowserForUpdateAndExit(const char* url, HWND hwnd) {
-    // 使用ShellExecute打开浏览器到下载链接
-    HINSTANCE hInstance = ShellExecuteA(hwnd, "open", url, NULL, NULL, SW_SHOWNORMAL);
-    
-    if ((INT_PTR)hInstance <= 32) {
-        // 打开浏览器失败
-        MessageBoxW(hwnd, 
-                   GetLocalizedString(L"无法打开浏览器下载更新", L"Could not open browser to download update"), 
-                   GetLocalizedString(L"更新错误", L"Update Error"), 
-                   MB_ICONERROR);
-        return FALSE;
+INT_PTR CALLBACK ExitMsgDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    switch (msg) {
+        case WM_INITDIALOG: {
+            // 获取消息文本
+            const wchar_t* exitMsg = (const wchar_t*)lParam;
+            if (exitMsg) {
+                // 设置对话框文本
+                SetDlgItemTextW(hwndDlg, IDC_UPDATE_EXIT_TEXT, exitMsg);
+                SetDlgItemTextW(hwndDlg, IDC_UPDATE_TEXT, L"");  // 清空版本文本
+                
+                // 隐藏是否按钮，只显示确定按钮
+                ShowWindow(GetDlgItem(hwndDlg, IDYES), SW_HIDE);
+                ShowWindow(GetDlgItem(hwndDlg, IDNO), SW_HIDE);
+                ShowWindow(GetDlgItem(hwndDlg, IDOK), SW_SHOW);
+                
+                // 设置窗口标题
+                SetWindowTextW(hwndDlg, GetLocalizedString(L"更新提示", L"Update Notice"));
+            }
+            return TRUE;
+        }
+        
+        case WM_COMMAND:
+            if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDYES || LOWORD(wParam) == IDNO) {
+                EndDialog(hwndDlg, LOWORD(wParam));
+                return TRUE;
+            }
+            break;
     }
+    return FALSE;
+}
+
+/**
+ * @brief 显示自定义的退出消息对话框
+ * @param hwnd 父窗口句柄
+ * @param message 显示的消息
+ */
+void ShowExitMessageDialog(HWND hwnd, const wchar_t* message) {
+    DialogBoxParam(GetModuleHandle(NULL), 
+                 MAKEINTRESOURCE(IDD_UPDATE_DIALOG), 
+                 hwnd, 
+                 ExitMsgDlgProc, 
+                 (LPARAM)message);
+}
+
+/**
+ * @brief 更新对话框处理过程
+ * @param hwndDlg 对话框句柄
+ * @param msg 消息类型
+ * @param wParam 消息参数
+ * @param lParam 消息参数
+ * @return INT_PTR 消息处理结果
+ */
+INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    static UpdateVersionInfo* versionInfo = NULL;
     
-    // 删除配置文件
-    char config_path[MAX_PATH];
-    extern void GetConfigPath(char* path, size_t size);
-    GetConfigPath(config_path, MAX_PATH);
-    
-    BOOL configDeleted = DeleteFileA(config_path);
-    
-    // 提示用户将退出程序
-    wchar_t message[512];
-    swprintf(message, sizeof(message)/sizeof(wchar_t),
-            GetLocalizedString(
-                L"即将退出程序\n%s",
-                L"The program will now exit\n%s"),
-            configDeleted ? 
-                GetLocalizedString(L"配置文件已清除，新版本将使用默认设置。", 
-                                 L"Configuration file has been deleted, the new version will use default settings.") : 
-                GetLocalizedString(L"无法清除配置文件，新版本可能会继承旧版本设置。", 
-                                 L"Failed to delete configuration file, the new version may inherit old settings.")
-    );
-    
-    MessageBoxW(hwnd, message, 
-               GetLocalizedString(L"更新提示", L"Update Notice"), 
-               MB_OK);
-    
-    // 退出程序
-    PostMessage(hwnd, WM_CLOSE, 0, 0);
-    return TRUE;
+    switch (msg) {
+        case WM_INITDIALOG: {
+            // 保存版本信息
+            versionInfo = (UpdateVersionInfo*)lParam;
+            
+            // 格式化显示文本
+            if (versionInfo) {
+                wchar_t displayText[256];
+                swprintf(displayText, sizeof(displayText)/sizeof(wchar_t),
+                        L"当前版本: %S\n新版本: %S",
+                        versionInfo->currentVersion, versionInfo->latestVersion);
+                
+                // 设置对话框文本
+                SetDlgItemTextW(hwndDlg, IDC_UPDATE_TEXT, displayText);
+                
+                // 设置窗口标题
+                SetWindowTextW(hwndDlg, GetLocalizedString(L"更新可用", L"Update Available"));
+            }
+            return TRUE;
+        }
+        
+        case WM_COMMAND:
+            if (LOWORD(wParam) == IDYES || LOWORD(wParam) == IDNO) {
+                EndDialog(hwndDlg, LOWORD(wParam));
+                return TRUE;
+            }
+            break;
+    }
+    return FALSE;
 }
 
 /**
@@ -236,34 +292,18 @@ BOOL OpenBrowserForUpdateAndExit(const char* url, HWND hwnd) {
  * @return 用户选择结果，IDYES表示用户要更新
  */
 int ShowUpdateNotification(HWND hwnd, const char* currentVersion, const char* latestVersion, const char* downloadUrl) {
-    wchar_t message[256];
+    // 创建版本信息结构体
+    UpdateVersionInfo versionInfo;
+    versionInfo.currentVersion = currentVersion;
+    versionInfo.latestVersion = latestVersion;
+    versionInfo.downloadUrl = downloadUrl;
     
-    // 转换版本号为宽字符，如果是非ASCII字符
-    wchar_t currentVersionW[32];
-    wchar_t latestVersionW[32];
-    
-    // 检查是否需要宽字符转换
-    if (strpbrk(currentVersion, "\x80\xFF") || strpbrk(latestVersion, "\x80\xFF")) {
-        MultiByteToWideChar(CP_ACP, 0, currentVersion, -1, currentVersionW, 32);
-        MultiByteToWideChar(CP_ACP, 0, latestVersion, -1, latestVersionW, 32);
-        
-        swprintf(message, sizeof(message)/sizeof(wchar_t),
-                GetLocalizedString(
-                    L"当前版本: %ls\n新版本: %ls\n\n是否在浏览器中打开下载页面并退出程序?",
-                    L"Current version: %ls\nNew version: %ls\n\nOpen download page in browser and exit the program?"
-                ), currentVersionW, latestVersionW);
-    } else {
-        // 使用%S直接转换ASCII字符串为宽字符
-        swprintf(message, sizeof(message)/sizeof(wchar_t),
-                GetLocalizedString(
-                    L"当前版本: %S\n新版本: %S\n\n是否在浏览器中打开下载页面并退出程序?",
-                    L"Current version: %S\nNew version: %S\n\nOpen download page in browser and exit the program?"
-                ), currentVersion, latestVersion);
-    }
-    
-    return MessageBoxW(hwnd, message, 
-                     GetLocalizedString(L"更新可用", L"Update Available"), 
-                     MB_YESNO);
+    // 显示自定义对话框
+    return DialogBoxParam(GetModuleHandle(NULL), 
+                        MAKEINTRESOURCE(IDD_UPDATE_DIALOG), 
+                        hwnd, 
+                        UpdateDlgProc, 
+                        (LPARAM)&versionInfo);
 }
 
 /**
@@ -530,4 +570,43 @@ void CheckForUpdateSilent(HWND hwnd, BOOL silentCheck) {
     
     // 强制执行垃圾回收
     SetProcessWorkingSetSize(GetCurrentProcess(), -1, -1);
+}
+
+/**
+ * @brief 打开浏览器下载更新并退出程序
+ * @param url 文件下载URL
+ * @param hwnd 窗口句柄，用于显示消息和退出程序
+ * @return 操作成功返回TRUE，失败返回FALSE
+ */
+BOOL OpenBrowserForUpdateAndExit(const char* url, HWND hwnd) {
+    // 使用ShellExecute打开浏览器到下载链接
+    HINSTANCE hInstance = ShellExecuteA(hwnd, "open", url, NULL, NULL, SW_SHOWNORMAL);
+    
+    if ((INT_PTR)hInstance <= 32) {
+        // 打开浏览器失败
+        MessageBoxW(hwnd, 
+                   GetLocalizedString(L"无法打开浏览器下载更新", L"Could not open browser to download update"), 
+                   GetLocalizedString(L"更新错误", L"Update Error"), 
+                   MB_ICONERROR);
+        return FALSE;
+    }
+    
+    // 删除配置文件
+    char config_path[MAX_PATH];
+    extern void GetConfigPath(char* path, size_t size);
+    GetConfigPath(config_path, MAX_PATH);
+    
+    BOOL configDeleted = DeleteFileA(config_path);
+    
+    // 提示用户将退出程序
+    wchar_t message[512];
+    swprintf(message, sizeof(message)/sizeof(wchar_t),
+            L"即将退出程序");
+    
+    // 使用自定义对话框显示退出消息
+    ShowExitMessageDialog(hwnd, message);
+    
+    // 退出程序
+    PostMessage(hwnd, WM_CLOSE, 0, 0);
+    return TRUE;
 } 
