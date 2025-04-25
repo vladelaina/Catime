@@ -308,6 +308,11 @@ void ShowColorMenu(HWND hwnd) {
     // 第二个分隔线
     AppendMenuW(hTimeoutMenu, MF_SEPARATOR, 0, NULL);
 
+    // 添加一个不可选择的提示选项
+    AppendMenuW(hTimeoutMenu, MF_STRING | MF_GRAYED | MF_DISABLED, 
+               0,  // 使用ID为0表示不可选菜单项
+               GetLocalizedString(L"以下超时动作为一次性", L"Following actions are one-time only"));
+
     // 7. 关机
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SHUTDOWN ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_SHUTDOWN,
