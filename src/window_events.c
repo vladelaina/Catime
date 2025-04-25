@@ -44,6 +44,11 @@ void HandleWindowDestroy(HWND hwnd) {
     SaveWindowSettings(hwnd);  // 保存窗口设置
     KillTimer(hwnd, 1);
     RemoveTrayIcon();
+    
+    // 清理更新检查线程
+    extern void CleanupUpdateThread(void);
+    CleanupUpdateThread();
+    
     PostQuitMessage(0);
 }
 

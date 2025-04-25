@@ -361,7 +361,13 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
         if (totalBytes >= bufferSize - 256) {
             size_t newSize = bufferSize * 2;
             char* newBuffer = (char*)realloc(buffer, newSize);
-            if (!newBuffer) break;
+            if (!newBuffer) {
+                // 修复：如果realloc失败，释放原始buffer并中断
+                free(buffer);
+                InternetCloseHandle(hConnect);
+                InternetCloseHandle(hInternet);
+                return;
+            }
             buffer = newBuffer;
             bufferSize = newSize;
         }

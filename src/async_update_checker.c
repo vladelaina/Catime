@@ -18,6 +18,22 @@ typedef struct {
 
 // 正在运行的更新检查线程句柄
 static HANDLE g_hUpdateThread = NULL;
+static BOOL g_bUpdateThreadRunning = FALSE;
+
+/**
+ * @brief 清理更新检查线程资源
+ * 
+ * 关闭线程句柄并释放相关资源。
+ */
+void CleanupUpdateThread() {
+    if (g_hUpdateThread != NULL) {
+        // 等待线程结束，但最多等待1秒
+        WaitForSingleObject(g_hUpdateThread, 1000);
+        CloseHandle(g_hUpdateThread);
+        g_hUpdateThread = NULL;
+        g_bUpdateThreadRunning = FALSE;
+    }
+}
 
 /**
  * @brief 更新检查线程函数
@@ -36,8 +52,8 @@ unsigned __stdcall UpdateCheckThreadProc(void* param) {
     // 调用原始的更新检查函数，传入静默检查参数
     CheckForUpdateSilent(hwnd, silentCheck);
     
-    // 清除线程句柄
-    g_hUpdateThread = NULL;
+    // 标记线程已结束
+    g_bUpdateThreadRunning = FALSE;
     
     // 线程结束
     _endthreadex(0);
@@ -55,17 +71,14 @@ unsigned __stdcall UpdateCheckThreadProc(void* param) {
  */
 void CheckForUpdateAsync(HWND hwnd, BOOL silentCheck) {
     // 如果已经有更新检查线程在运行，不要启动新线程
+    if (g_bUpdateThreadRunning) {
+        return;
+    }
+    
+    // 清理之前的线程句柄（如果有）
     if (g_hUpdateThread != NULL) {
-        // 检查线程是否已完成
-        DWORD result = WaitForSingleObject(g_hUpdateThread, 0);
-        if (result == WAIT_TIMEOUT) {
-            // 线程仍在运行，不启动新线程
-            return;
-        } else {
-            // 线程已完成，关闭句柄
-            CloseHandle(g_hUpdateThread);
-            g_hUpdateThread = NULL;
-        }
+        CloseHandle(g_hUpdateThread);
+        g_hUpdateThread = NULL;
     }
     
     // 分配线程参数内存
@@ -78,6 +91,9 @@ void CheckForUpdateAsync(HWND hwnd, BOOL silentCheck) {
     // 设置线程参数
     threadParams->hwnd = hwnd;
     threadParams->silentCheck = silentCheck;
+    
+    // 标记线程即将运行
+    g_bUpdateThreadRunning = TRUE;
     
     // 创建线程执行更新检查
     HANDLE hThread = (HANDLE)_beginthreadex(
@@ -95,5 +111,6 @@ void CheckForUpdateAsync(HWND hwnd, BOOL silentCheck) {
     } else {
         // 线程创建失败，释放参数内存
         free(threadParams);
+        g_bUpdateThreadRunning = FALSE;
     }
 }

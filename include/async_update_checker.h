@@ -20,4 +20,12 @@
  */
 void CheckForUpdateAsync(HWND hwnd, BOOL silentCheck);
 
+/**
+ * @brief 清理更新检查线程资源
+ * 
+ * 在程序退出前调用此函数，确保释放所有更新检查线程相关资源，
+ * 防止内存泄漏和资源泄漏。
+ */
+void CleanupUpdateThread(void);
+
 #endif // ASYNC_UPDATE_CHECKER_H
