@@ -332,8 +332,8 @@ void CheckForUpdate(HWND hwnd) {
         
         swprintf(message, 256, 
                 GetLocalizedString(
-                    L"发现新版本!\n当前版本: %ls\n最新版本: %ls\n\n是否在浏览器中打开下载页面并退出程序?",
-                    L"New version available!\nCurrent version: %ls\nLatest version: %ls\n\nOpen download page in browser and exit the program?"
+                    L"当前版本: %ls\n新版本: %ls\n\n是否在浏览器中打开下载页面并退出程序?",
+                    L"Current version: %ls\nNew version: %ls\n\nOpen download page in browser and exit the program?"
                 ), currentVersionW, latestVersionW);
         
         int result = MessageBoxW(hwnd, message, 
@@ -487,9 +487,9 @@ void CheckForUpdateSilent(HWND hwnd, BOOL silentCheck) {
         wchar_t message[256];  // 减小消息缓冲区大小
         swprintf(message, sizeof(message)/sizeof(wchar_t),
                 GetLocalizedString(
-                    L"发现新版本 %S！\n\n当前版本: %S\n新版本: %S\n\n是否前往下载页面并退出程序?",
-                    L"New version %S available!\n\nCurrent version: %S\nNew version: %S\n\nDo you want to go to download page and exit the program?"),
-                latestVersion, currentVersion, latestVersion);
+                    L"当前版本: %S\n新版本: %S\n\n是否前往下载页面并退出程序?",
+                    L"Current version: %S\nNew version: %S\n\nDo you want to go to download page and exit the program?"),
+                currentVersion, latestVersion);
         
         int response = MessageBoxW(hwnd, message, 
                                   GetLocalizedString(L"发现更新", L"Update Available"), 
