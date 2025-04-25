@@ -123,10 +123,10 @@ void CreateDefaultConfig(const char* config_path) {
         // 超时文本区块
         fprintf(file, "CLOCK_TIMEOUT_TEXT=0\n");
         
-        // 新增：自定义通知消息
-        fprintf(file, "CLOCK_TIMEOUT_MESSAGE_TEXT=%s\n", CLOCK_TIMEOUT_MESSAGE_TEXT);
-        fprintf(file, "POMODORO_TIMEOUT_MESSAGE_TEXT=%s\n", POMODORO_TIMEOUT_MESSAGE_TEXT); // 添加番茄钟专用提示
-        fprintf(file, "POMODORO_CYCLE_COMPLETE_TEXT=%s\n", POMODORO_CYCLE_COMPLETE_TEXT);
+        // 新增：自定义通知消息 - 使用硬编码的默认值，而不是全局变量的当前值
+        fprintf(file, "CLOCK_TIMEOUT_MESSAGE_TEXT=时间到啦！\n");
+        fprintf(file, "POMODORO_TIMEOUT_MESSAGE_TEXT=番茄钟时间到！\n"); // 添加番茄钟专用提示
+        fprintf(file, "POMODORO_CYCLE_COMPLETE_TEXT=所有番茄钟循环完成！\n");
         
         // 新增：通知显示时间
         fprintf(file, "NOTIFICATION_TIMEOUT_MS=3000\n");  // 默认3秒

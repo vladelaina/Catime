@@ -520,6 +520,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     // 从timer.c引入高精度计时器初始化函数
                     extern BOOL InitializeHighPrecisionTimer(void);
                     extern void ResetTimer(void);    // 使用专门的重置函数
+                    extern void ReadNotificationMessagesConfig(void); // 读取通知消息配置
                     
                     // 重置所有计时器状态变量 - 顺序很重要!
                     CLOCK_TOTAL_TIME = 25 * 60;      // 1. 先设置总时间为25分钟
@@ -609,6 +610,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     
                     // 重新读取配置
                     ReadConfig();
+                    
+                    // 确保重新读取通知消息
+                    ReadNotificationMessagesConfig();
                     
                     // 恢复默认字体
                     HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
