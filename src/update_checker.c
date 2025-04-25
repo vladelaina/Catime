@@ -228,6 +228,45 @@ BOOL OpenBrowserForUpdateAndExit(const char* url, HWND hwnd) {
 }
 
 /**
+ * @brief 显示更新通知对话框
+ * @param hwnd 窗口句柄
+ * @param currentVersion 当前版本
+ * @param latestVersion 最新版本
+ * @param downloadUrl 下载URL
+ * @return 用户选择结果，IDYES表示用户要更新
+ */
+int ShowUpdateNotification(HWND hwnd, const char* currentVersion, const char* latestVersion, const char* downloadUrl) {
+    wchar_t message[256];
+    
+    // 转换版本号为宽字符，如果是非ASCII字符
+    wchar_t currentVersionW[32];
+    wchar_t latestVersionW[32];
+    
+    // 检查是否需要宽字符转换
+    if (strpbrk(currentVersion, "\x80\xFF") || strpbrk(latestVersion, "\x80\xFF")) {
+        MultiByteToWideChar(CP_ACP, 0, currentVersion, -1, currentVersionW, 32);
+        MultiByteToWideChar(CP_ACP, 0, latestVersion, -1, latestVersionW, 32);
+        
+        swprintf(message, sizeof(message)/sizeof(wchar_t),
+                GetLocalizedString(
+                    L"当前版本: %ls\n新版本: %ls\n\n是否在浏览器中打开下载页面并退出程序?",
+                    L"Current version: %ls\nNew version: %ls\n\nOpen download page in browser and exit the program?"
+                ), currentVersionW, latestVersionW);
+    } else {
+        // 使用%S直接转换ASCII字符串为宽字符
+        swprintf(message, sizeof(message)/sizeof(wchar_t),
+                GetLocalizedString(
+                    L"当前版本: %S\n新版本: %S\n\n是否在浏览器中打开下载页面并退出程序?",
+                    L"Current version: %S\nNew version: %S\n\nOpen download page in browser and exit the program?"
+                ), currentVersion, latestVersion);
+    }
+    
+    return MessageBoxW(hwnd, message, 
+                     GetLocalizedString(L"更新可用", L"Update Available"), 
+                     MB_YESNO | MB_ICONINFORMATION);
+}
+
+/**
  * @brief 检查应用程序更新
  * @param hwnd 窗口句柄
  * 
@@ -323,22 +362,7 @@ void CheckForUpdate(HWND hwnd) {
     // 比较版本
     if (CompareVersions(latestVersion, CATIME_VERSION) > 0) {
         // 有新版本可用
-        wchar_t message[256];
-        wchar_t latestVersionW[32];
-        wchar_t currentVersionW[32];
-        
-        MultiByteToWideChar(CP_ACP, 0, latestVersion, -1, latestVersionW, 32);
-        MultiByteToWideChar(CP_ACP, 0, CATIME_VERSION, -1, currentVersionW, 32);
-        
-        swprintf(message, 256, 
-                GetLocalizedString(
-                    L"当前版本: %ls\n新版本: %ls\n\n是否在浏览器中打开下载页面并退出程序?",
-                    L"Current version: %ls\nNew version: %ls\n\nOpen download page in browser and exit the program?"
-                ), currentVersionW, latestVersionW);
-        
-        int result = MessageBoxW(hwnd, message, 
-                               GetLocalizedString(L"更新可用", L"Update Available"), 
-                               MB_YESNO | MB_ICONINFORMATION);
+        int result = ShowUpdateNotification(hwnd, CATIME_VERSION, latestVersion, downloadUrl);
         
         if (result == IDYES) {
             // 在浏览器中打开下载链接并退出程序
@@ -484,16 +508,7 @@ void CheckForUpdateSilent(HWND hwnd, BOOL silentCheck) {
     
     if (compareResult > 0) {
         // 有新版本可用
-        wchar_t message[256];  // 减小消息缓冲区大小
-        swprintf(message, sizeof(message)/sizeof(wchar_t),
-                GetLocalizedString(
-                    L"当前版本: %S\n新版本: %S\n\n是否前往下载页面并退出程序?",
-                    L"Current version: %S\nNew version: %S\n\nDo you want to go to download page and exit the program?"),
-                currentVersion, latestVersion);
-        
-        int response = MessageBoxW(hwnd, message, 
-                                  GetLocalizedString(L"发现更新", L"Update Available"), 
-                                  MB_YESNO | MB_ICONINFORMATION);
+        int response = ShowUpdateNotification(hwnd, currentVersion, latestVersion, downloadUrl);
         
         if (response == IDYES) {
             // 在浏览器中打开下载链接并退出程序
