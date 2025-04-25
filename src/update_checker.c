@@ -127,7 +127,7 @@ INT_PTR CALLBACK ExitMsgDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lP
                 ShowWindow(GetDlgItem(hwndDlg, IDOK), SW_SHOW);
                 
                 // 设置窗口标题
-                SetWindowTextW(hwndDlg, GetLocalizedString(L"更新提示", L"Update Notice"));
+                SetWindowTextW(hwndDlg, GetLocalizedString(L"Catime - 更新提示", L"Catime - Update Notice"));
             }
             return TRUE;
         }
@@ -175,7 +175,7 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                 SetDlgItemTextW(hwndDlg, IDC_UPDATE_TEXT, displayText);
                 
                 // 设置窗口标题
-                SetWindowTextW(hwndDlg, GetLocalizedString(L"更新可用", L"Update Available"));
+                SetWindowTextW(hwndDlg, GetLocalizedString(L"Catime - 更新可用", L"Catime - Update Available"));
                 
                 // 隐藏退出文本和确定按钮，显示是/否按钮
                 SetDlgItemTextW(hwndDlg, IDC_UPDATE_EXIT_TEXT, L"");

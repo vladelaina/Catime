@@ -7,6 +7,7 @@
 // 更新提示对话框资源定义
 IDD_UPDATE_DIALOG DIALOGEX 0, 0, 160, 100
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Catime - 更新提示"
 FONT 12, "Microsoft YaHei UI"
 BEGIN
     CTEXT           "当前版本: %s\n新版本: %s", IDC_UPDATE_TEXT, 0, 10, 160, 40
@@ -19,7 +20,7 @@ END
 // 无需更新对话框资源定义
 IDD_NO_UPDATE_DIALOG DIALOGEX 0, 0, 160, 60
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "无需更新"
+CAPTION "Catime - 无需更新"
 FONT 12, "Microsoft YaHei UI"
 BEGIN
     CTEXT           "您已经使用的是最新版本!", IDC_NO_UPDATE_TEXT, 0, 10, 160, 25
