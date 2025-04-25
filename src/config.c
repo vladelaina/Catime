@@ -1210,59 +1210,62 @@ void WriteConfig(const char* config_path) {
  * 使用临时文件方式确保配置更新过程安全可靠。
  */
 void WriteConfigTimeoutWebsite(const char* url) {
-    // 首先更新全局变量
-    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_WEBSITE;
-    strncpy(CLOCK_TIMEOUT_WEBSITE_URL, url, MAX_PATH - 1);
-    CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH - 1] = '\0';
-    
-    // 然后更新配置文件
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    
-    FILE* file = fopen(config_path, "r");
-    if (!file) return;
-    
-    char temp_path[MAX_PATH];
-    strcpy(temp_path, config_path);
-    strcat(temp_path, ".tmp");
-    
-    FILE* temp = fopen(temp_path, "w");
-    if (!temp) {
-        fclose(file);
-        return;
-    }
-    
-    char line[MAX_PATH];
-    BOOL actionFound = FALSE;
-    BOOL urlFound = FALSE;
-    
-    // 读取原配置文件，更新超时动作和URL
-    while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, "CLOCK_TIMEOUT_ACTION=", 21) == 0) {
-            fprintf(temp, "CLOCK_TIMEOUT_ACTION=OPEN_WEBSITE\n");
-            actionFound = TRUE;
-        } else if (strncmp(line, "CLOCK_TIMEOUT_WEBSITE=", 22) == 0) {
-            fprintf(temp, "CLOCK_TIMEOUT_WEBSITE=%s\n", url);
-            urlFound = TRUE;
-        } else {
-            // 保留其他所有配置
-            fputs(line, temp);
+    // 只有在提供了有效URL的情况下才设置超时动作为打开网站
+    if (url && url[0] != '\0') {
+        // 首先更新全局变量
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_WEBSITE;
+        strncpy(CLOCK_TIMEOUT_WEBSITE_URL, url, MAX_PATH - 1);
+        CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH - 1] = '\0';
+        
+        // 然后更新配置文件
+        char config_path[MAX_PATH];
+        GetConfigPath(config_path, MAX_PATH);
+        
+        FILE* file = fopen(config_path, "r");
+        if (!file) return;
+        
+        char temp_path[MAX_PATH];
+        strcpy(temp_path, config_path);
+        strcat(temp_path, ".tmp");
+        
+        FILE* temp = fopen(temp_path, "w");
+        if (!temp) {
+            fclose(file);
+            return;
         }
+        
+        char line[MAX_PATH];
+        BOOL actionFound = FALSE;
+        BOOL urlFound = FALSE;
+        
+        // 读取原配置文件，更新超时动作和URL
+        while (fgets(line, sizeof(line), file)) {
+            if (strncmp(line, "CLOCK_TIMEOUT_ACTION=", 21) == 0) {
+                fprintf(temp, "CLOCK_TIMEOUT_ACTION=OPEN_WEBSITE\n");
+                actionFound = TRUE;
+            } else if (strncmp(line, "CLOCK_TIMEOUT_WEBSITE=", 22) == 0) {
+                fprintf(temp, "CLOCK_TIMEOUT_WEBSITE=%s\n", url);
+                urlFound = TRUE;
+            } else {
+                // 保留其他所有配置
+                fputs(line, temp);
+            }
+        }
+        
+        // 如果配置中没有这些项，添加它们
+        if (!actionFound) {
+            fprintf(temp, "CLOCK_TIMEOUT_ACTION=OPEN_WEBSITE\n");
+        }
+        if (!urlFound) {
+            fprintf(temp, "CLOCK_TIMEOUT_WEBSITE=%s\n", url);
+        }
+        
+        fclose(file);
+        fclose(temp);
+        
+        remove(config_path);
+        rename(temp_path, config_path);
     }
-    
-    // 如果配置中没有这些项，添加它们
-    if (!actionFound) {
-        fprintf(temp, "CLOCK_TIMEOUT_ACTION=OPEN_WEBSITE\n");
-    }
-    if (!urlFound) {
-        fprintf(temp, "CLOCK_TIMEOUT_WEBSITE=%s\n", url);
-    }
-    
-    fclose(file);
-    fclose(temp);
-    
-    remove(config_path);
-    rename(temp_path, config_path);
 }
 
 /**

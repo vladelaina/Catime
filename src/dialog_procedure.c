@@ -680,6 +680,7 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
                 g_hwndWebsiteDialog = NULL;
                 return TRUE;
             } else if (LOWORD(wParam) == IDCANCEL) {
+                // 用户取消，不更改超时动作
                 EndDialog(hwndDlg, IDCANCEL);
                 g_hwndWebsiteDialog = NULL;
                 return TRUE;
@@ -717,19 +718,16 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
 
 // 显示网站URL输入对话框
 void ShowWebsiteDialog(HWND hwndParent) {
-    if (!g_hwndWebsiteDialog) {
-        g_hwndWebsiteDialog = CreateDialog(
-            GetModuleHandle(NULL),
-            MAKEINTRESOURCE(CLOCK_IDD_WEBSITE_DIALOG),
-            hwndParent,
-            WebsiteDialogProc
-        );
-        if (g_hwndWebsiteDialog) {
-            ShowWindow(g_hwndWebsiteDialog, SW_SHOW);
-        }
-    } else {
-        SetForegroundWindow(g_hwndWebsiteDialog);
-    }
+    // 使用模态对话框代替非模态对话框，这样可以知道用户是确认还是取消
+    INT_PTR result = DialogBox(
+        GetModuleHandle(NULL),
+        MAKEINTRESOURCE(CLOCK_IDD_WEBSITE_DIALOG),
+        hwndParent,
+        WebsiteDialogProc
+    );
+    
+    // 只有用户点击确定，且输入有效URL时才会返回IDOK，此时WebsiteDialogProc已设置CLOCK_TIMEOUT_ACTION
+    // 如果用户取消或关闭对话框，不会更改超时动作
 }
 
 // 设置全局变量来跟踪番茄钟组合对话框句柄

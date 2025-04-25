@@ -1527,7 +1527,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_OPEN_WEBSITE:
-                    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_WEBSITE;
+                    // 不立即设置操作类型，而是等待对话框返回结果后再决定是否设置
                     ShowWebsiteDialog(hwnd);
                     break;
                 
