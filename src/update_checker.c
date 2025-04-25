@@ -209,8 +209,8 @@ BOOL OpenBrowserForUpdateAndExit(const char* url, HWND hwnd) {
     wchar_t message[512];
     swprintf(message, sizeof(message)/sizeof(wchar_t),
             GetLocalizedString(
-                L"即将退出程序，请从网页下载并安装新版本。\n%s",
-                L"The program will now exit. Please download and install the new version from the website.\n%s"),
+                L"即将退出程序\n%s",
+                L"The program will now exit\n%s"),
             configDeleted ? 
                 GetLocalizedString(L"配置文件已清除，新版本将使用默认设置。", 
                                  L"Configuration file has been deleted, the new version will use default settings.") : 
@@ -220,7 +220,7 @@ BOOL OpenBrowserForUpdateAndExit(const char* url, HWND hwnd) {
     
     MessageBoxW(hwnd, message, 
                GetLocalizedString(L"更新提示", L"Update Notice"), 
-               MB_ICONINFORMATION);
+               MB_OK);
     
     // 退出程序
     PostMessage(hwnd, WM_CLOSE, 0, 0);
@@ -263,7 +263,7 @@ int ShowUpdateNotification(HWND hwnd, const char* currentVersion, const char* la
     
     return MessageBoxW(hwnd, message, 
                      GetLocalizedString(L"更新可用", L"Update Available"), 
-                     MB_YESNO | MB_ICONINFORMATION);
+                     MB_YESNO);
 }
 
 /**
