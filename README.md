@@ -125,7 +125,7 @@
         <a href="https://space.bilibili.com/1708573954"><img src="https://i1.hdslb.com/bfs/face/7fe7cfba25dd086f9b4dbb8433b5db237a5ff98b.jpg@240w_240h_1c_1s_!web-avatar-space-header.avif" width="100px;" alt="我是无名吖"/><br /><sub><b>我是无名吖</b></sub></a><br />
       </td>
       <td align="center" valign="top" width="14.28%">
-        <a href="https://github.com/flying-hilichurl"><img src="https://avatars.githubusercontent.com/u/187168840?v=4" width="100px;" alt="flying-hilichurl"/><br /><sub><b>flying-hilichurl</b></sub></a><br />
+        <a href="https://github.com/flying-hilichurl"><img src="https://github.com/user-attachments/assets/e83d0c15-cfe1-46d0-9904-c4dfda7baf0a" width="100px;" alt="金麟"/><br /><sub><b>金麟</b></sub></a><br />
       </td>
       <td align="center" valign="top" width="14.28%">
         <a href="https://space.bilibili.com/161061562"><img src="https://i1.hdslb.com/bfs/face/ffbffc12d4cb51d158210f26f45bb1b369eaf730.jpg@240w_240h_1c_1s_!web-avatar-space-header.avif" width="100px;" alt="双脚猫"/><br /><sub><b>双脚猫</b></sub></a><br />
