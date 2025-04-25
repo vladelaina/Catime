@@ -155,9 +155,9 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
             int month_num = 0;
             while (++month_num <= 12 && strcmp(month, months[month_num-1]));
 
-            // 格式化日期时间为YYYY/MM/DD HH:MM:SS
-            wchar_t timeStr[50];
-            swprintf(timeStr, 50, L"最后编译日期：%04d/%02d/%02d %02d:%02d:%02d",
+            // 格式化日期时间为YYYY/MM/DD HH:MM:SS 并添加 UTC+8 标识
+            wchar_t timeStr[60];
+            swprintf(timeStr, 60, L"最后编译日期：%04d/%02d/%02d %02d:%02d:%02d (UTC+8)",
                     year, month_num, day, hour, min, sec);
 
             // 设置控件文本
@@ -308,9 +308,9 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             int month_num = 0;
             while (++month_num <= 12 && strcmp(month, months[month_num-1]));
 
-            // 格式化日期时间为YYYY/MM/DD HH:MM:SS
-            wchar_t timeStr[50];
-            swprintf(timeStr, 50, L"最后编译日期：%04d/%02d/%02d %02d:%02d:%02d",
+            // 格式化日期时间为YYYY/MM/DD HH:MM:SS 并添加 UTC+8 标识
+            wchar_t timeStr[60];
+            swprintf(timeStr, 60, L"最后编译日期：%04d/%02d/%02d %02d:%02d:%02d (UTC+8)",
                     year, month_num, day, hour, min, sec);
 
             // 设置控件文本
