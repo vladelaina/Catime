@@ -27,7 +27,7 @@
     <img alt="Downloads" src="https://img.shields.io/github/downloads/vladelaina/Catime/total?label=Downloads&style=for-the-badge&color=orange" />
   </a>
   <a href="https://github.com/vladelaina/Catime/releases" target="_blank">
-    <img src="https://img.shields.io/badge/Software%20Size-227%20KB-blue?style=for-the-badge" alt="Software Size" />
+    <img src="https://img.shields.io/badge/Software%20Size-227%20KB-blue?logo=appveyor&logoColor=white&style=for-the-badge" alt="Software Size" />
   </a>
 </p>
 
