@@ -30,7 +30,7 @@ body:
     attributes:
       label: "📌 其他小提示"
       description: "还有什么想告诉我们的吗？系统信息、版本号都可以写在这里哦～"
-      placeholder: "例如：\n系统：Windows 11 💻\n版本：23H2 ✨"
+      placeholder: "例如：\n系统：Windows 11 \n版本：23H2"
     validations:
       required: false
   - type: checkboxes
