@@ -138,6 +138,10 @@ INT_PTR CALLBACK ExitMsgDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lP
                 return TRUE;
             }
             break;
+            
+        case WM_CLOSE:
+            EndDialog(hwndDlg, IDCANCEL);
+            return TRUE;
     }
     return FALSE;
 }
@@ -192,6 +196,10 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                 return TRUE;
             }
             break;
+            
+        case WM_CLOSE:
+            EndDialog(hwndDlg, IDNO);
+            return TRUE;
     }
     return FALSE;
 }
@@ -235,6 +243,10 @@ INT_PTR CALLBACK UpdateErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARA
                 return TRUE;
             }
             break;
+            
+        case WM_CLOSE:
+            EndDialog(hwndDlg, IDCANCEL);
+            return TRUE;
     }
     return FALSE;
 }
@@ -271,6 +283,10 @@ INT_PTR CALLBACK NoUpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM l
                 return TRUE;
             }
             break;
+            
+        case WM_CLOSE:
+            EndDialog(hwndDlg, IDCANCEL);
+            return TRUE;
     }
     return FALSE;
 }
