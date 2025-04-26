@@ -26,10 +26,11 @@
   <a href="https://github.com/vladelaina/Catime/releases">
     <img alt="Downloads" src="https://img.shields.io/github/downloads/vladelaina/Catime/total?label=Downloads&style=for-the-badge&color=orange" />
   </a>
-  <a href="https://github.com/users/vladelaina/projects/2" target="_blank">
-    <img src="https://img.shields.io/badge/To%20Do-12%25%20Complete-00C853?style=for-the-badge&logo=todoist&logoColor=white" alt="To-Do" />
+  <a href="https://github.com/vladelaina/Catime/releases" target="_blank">
+    <img src="https://img.shields.io/badge/Software%20Size-227%20KB-blue?style=for-the-badge" alt="Software Size" />
   </a>
 </p>
+
 
 
 
