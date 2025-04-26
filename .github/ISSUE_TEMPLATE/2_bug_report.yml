@@ -36,10 +36,10 @@ body:
   - type: checkboxes
     id: "latest-version"
     attributes:
-      label: "🔎 小小确认"
+      label: "✅ 小小确认"
       description: "在提交bug之前，请帮忙确认一下这些小事项吧～"  
       options:
-        - label: 🚀 我已确认使用的是最新版本，不是旧版本哦～
+        - label: "⚡ 我已确认使用的是最新版本，不是旧版本哦～"
           required: true
-        - label: 📚 我已经查看过常见问题和已知问题列表，确认这是个新bug～
+        - label: "🔍 我已经查看过常见问题和已知问题列表，确认这是个新bug～"
           required: true
