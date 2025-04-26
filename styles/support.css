@@ -724,6 +724,7 @@
     color: var(--text-color);
     font-size: 1rem;
     transition: all 0.2s ease;
+    white-space: nowrap; /* 防止内容换行 */
 }
 
 .supporters-table tr:last-child td {
@@ -747,6 +748,7 @@
     .supporters-list {
         max-width: 95%;
         padding: 0.5rem;
+        overflow-x: auto; /* 添加水平滚动 */
     }
     
     .supporters-table th,
@@ -763,6 +765,13 @@
     
     .supporters-table {
         min-width: 550px;
+        table-layout: fixed; /* 固定表格布局 */
+    }
+    
+    /* 设置列宽 */
+    .supporters-table th:first-child,
+    .supporters-table td:first-child {
+        width: 140px; /* 时间列宽度 */
     }
     
     .supporters-table th,
