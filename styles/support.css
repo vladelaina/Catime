@@ -727,6 +727,13 @@
     white-space: nowrap; /* 防止内容换行 */
 }
 
+/* 为留言列单独设置样式，允许文本换行 */
+.supporters-table td:last-child {
+    white-space: normal;
+    max-width: 250px; /* 设置最大宽度 */
+    word-wrap: break-word; /* 允许单词内断行 */
+}
+
 .supporters-table tr:last-child td {
     border-bottom: none;
 }
@@ -772,6 +779,23 @@
     .supporters-table th:first-child,
     .supporters-table td:first-child {
         width: 140px; /* 时间列宽度 */
+    }
+    
+    /* 用户名和金额列宽度 */
+    .supporters-table th:nth-child(2),
+    .supporters-table td:nth-child(2) {
+        width: 80px;
+    }
+    
+    .supporters-table th:nth-child(3),
+    .supporters-table td:nth-child(3) {
+        width: 60px;
+    }
+    
+    /* 留言列宽度 */
+    .supporters-table th:last-child,
+    .supporters-table td:last-child {
+        width: 250px;
     }
     
     .supporters-table th,

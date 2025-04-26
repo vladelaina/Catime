@@ -453,6 +453,19 @@ function translateSupportElements() {
         if (td.textContent === '极简，可爱，好用，喜欢') {
             td.textContent = 'Minimalist, cute, useful, love it';
         }
+        
+        // 为所有留言单元格添加特殊样式，增强可读性
+        if (td.parentElement && td.cellIndex === 3) { // 第四列是留言列
+            td.style.maxWidth = '250px';
+            td.style.wordWrap = 'break-word';
+            td.style.whiteSpace = 'normal';
+            
+            // 检查是否为英文模式，如果是，增加字体大小提高可读性
+            if (localStorage.getItem('catime-language') === 'en') {
+                td.style.fontSize = '0.9rem';
+                td.style.lineHeight = '1.4';
+            }
+        }
     });
 }
 
