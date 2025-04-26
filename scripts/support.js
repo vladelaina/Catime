@@ -450,6 +450,9 @@ function translateSupportElements() {
         if (td.textContent === '软件好用，赞赞赞') {
             td.textContent = 'The software is great, praise!';
         }
+        if (td.textContent === '极简，可爱，好用，喜欢') {
+            td.textContent = 'Minimalist, cute, useful, love it';
+        }
     });
 }
 
