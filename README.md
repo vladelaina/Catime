@@ -174,7 +174,7 @@
         <a href="https://github.com/xxtui-main/xxtui"><img src="https://avatars.githubusercontent.com/u/31737411?v=4" width="100px;" alt="x.j"/><br /><sub><b>x.j</b></sub></a><br />
       </td>
       <td align="center" valign="top" width="14.28%">
-        <a href="https://github.com/kissholic"><img src="https://github.com/user-attachments/assets/e35f1cb3-ac11-41bf-8d29-b79af941544c" width="100px;" alt="纸鸢"/><br /><sub><b>纸鸢</b></sub></a><br />
+        <a href="https://github.com/kissholic"><img src="https://avatars.githubusercontent.com/u/26087790?v=4" width="100px;" alt="kissholic"/><br /><sub><b>kissholic</b></sub></a><br />
       </td>
       <td align="center" valign="top" width="14.28%">
         <a href=""><img src="https://github.com/user-attachments/assets/ef1ff137-7430-420c-8142-562a48803f56" width="100px;" alt="Alnilam"/><br /><sub><b>Alnilam</b></sub></a><br />
