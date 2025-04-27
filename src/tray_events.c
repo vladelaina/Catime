@@ -14,6 +14,8 @@
 #include "../include/tray_menu.h"
 #include "../include/color.h"
 #include "../include/timer.h"
+#include "../include/language.h"
+#include "../resource/resource.h"
 
 // 声明从配置文件读取超时动作的函数
 extern void ReadTimeoutActionFromConfig(void);
@@ -176,4 +178,24 @@ void OpenUserGuide(void) {
  */
 void OpenSupportPage(void) {
     ShellExecuteW(NULL, L"open", L"https://vladelaina.github.io/Catime/support", NULL, NULL, SW_SHOWNORMAL);
+}
+
+/**
+ * @brief 打开反馈页面
+ * 
+ * 根据当前语言设置打开不同的反馈渠道：
+ * - 简体中文：打开bilibili私信页面
+ * - 其他语言：打开GitHub Issues页面
+ */
+void OpenFeedbackPage(void) {
+    extern AppLanguage CURRENT_LANGUAGE; // 声明外部变量
+    
+    // 根据语言选择不同的反馈链接
+    if (CURRENT_LANGUAGE == APP_LANG_CHINESE_SIMP) {
+        // 简体中文用户打开bilibili私信
+        ShellExecuteW(NULL, L"open", URL_FEEDBACK, NULL, NULL, SW_SHOWNORMAL);
+    } else {
+        // 其他语言用户打开GitHub Issues
+        ShellExecuteW(NULL, L"open", L"https://github.com/vladelaina/Catime/issues", NULL, NULL, SW_SHOWNORMAL);
+    }
 }

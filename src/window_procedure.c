@@ -83,6 +83,9 @@ extern void OpenUserGuide(void);
 // 添加对OpenSupportPage函数的声明
 extern void OpenSupportPage(void);
 
+// 添加对OpenFeedbackPage函数的声明
+extern void OpenFeedbackPage(void);
+
 // 辅助函数：检查字符串是否只包含空格
 static BOOL isAllSpacesOnly(const char* str) {
     for (int i = 0; str[i]; i++) {
@@ -1555,6 +1558,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_SUPPORT: {
                     OpenSupportPage();
+                    break;
+                }
+                case CLOCK_IDM_FEEDBACK: {
+                    OpenFeedbackPage();
                     break;
                 }
             }

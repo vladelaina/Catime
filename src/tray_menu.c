@@ -517,8 +517,14 @@ void ShowColorMenu(HWND hwnd) {
     // 在这里添加"关于"菜单项
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_ABOUT, GetLocalizedString(L"关于", L"About"));
 
+    // 添加分隔线
+    AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);
+
     // 添加"支持"选项 - 打开赞助网页
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_SUPPORT, GetLocalizedString(L"支持", L"Support"));
+    
+    // 添加"反馈"选项 - 根据语言打开不同的反馈链接
+    AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_FEEDBACK, GetLocalizedString(L"反馈", L"Feedback"));
     
     // 添加分隔线
     AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);

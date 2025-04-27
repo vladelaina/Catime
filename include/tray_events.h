@@ -62,4 +62,13 @@ void OpenUserGuide(void);
  */
 void OpenSupportPage(void);
 
+/**
+ * @brief 打开反馈页面
+ * 
+ * 根据当前语言设置打开不同的反馈渠道：
+ * - 简体中文：打开bilibili私信页面
+ * - 其他语言：打开GitHub Issues页面
+ */
+void OpenFeedbackPage(void);
+
 #endif // CLOCK_TRAY_EVENTS_H
