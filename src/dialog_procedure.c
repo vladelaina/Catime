@@ -345,7 +345,16 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 return TRUE;
             }
             if (LOWORD(wParam) == IDC_FEEDBACK_LINK) {
-                ShellExecuteW(NULL, L"open", URL_FEEDBACK, NULL, NULL, SW_SHOWNORMAL);
+                extern AppLanguage CURRENT_LANGUAGE;
+                
+                // 根据语言选择不同的反馈链接
+                if (CURRENT_LANGUAGE == APP_LANG_CHINESE_SIMP) {
+                    // 简体中文用户打开bilibili私信
+                    ShellExecuteW(NULL, L"open", URL_FEEDBACK, NULL, NULL, SW_SHOWNORMAL);
+                } else {
+                    // 其他语言用户打开GitHub Issues
+                    ShellExecuteW(NULL, L"open", L"https://github.com/vladelaina/Catime/issues", NULL, NULL, SW_SHOWNORMAL);
+                }
                 return TRUE;
             }
             if (LOWORD(wParam) == IDC_GITHUB_LINK) {
