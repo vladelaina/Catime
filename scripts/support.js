@@ -453,6 +453,9 @@ function translateSupportElements() {
         if (td.textContent === '极简，可爱，好用，喜欢') {
             td.textContent = 'Minimalist, cute, useful, love it';
         }
+        if (td.textContent === '不错不错，实用鼓励一下') {
+            td.textContent = 'Not bad, very practical, a little encouragement';
+        }
         
         // 为所有留言单元格添加特殊样式，增强可读性
         if (td.parentElement && td.cellIndex === 3) { // 第四列是留言列
