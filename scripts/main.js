@@ -7,6 +7,9 @@ document.addEventListener('DOMContentLoaded', function() {
         offset: 50,
     });
 
+    // 设置所有下载按钮的URL
+    setDownloadUrls();
+
     // 初始化滚动进度指示器
     initScrollProgressIndicator();
 
@@ -104,6 +107,29 @@ document.addEventListener('DOMContentLoaded', function() {
     // 语言切换功能初始化
     initLanguageToggle();
 });
+
+// 设置所有下载按钮的URL
+function setDownloadUrls() {
+    // 检查全局配置是否存在
+    if (typeof CATIME_CONFIG === 'undefined') {
+        console.error('全局配置未加载');
+        return;
+    }
+
+    // 设置所有带有id的下载按钮
+    const downloadButtons = [
+        'download-btn',
+        'hero-download-btn',
+        'cta-download-btn'
+    ];
+
+    downloadButtons.forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) {
+            btn.href = CATIME_CONFIG.DOWNLOAD_URL;
+        }
+    });
+}
 
 // 初始化滚动进度指示器
 function initScrollProgressIndicator() {
