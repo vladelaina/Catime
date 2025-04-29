@@ -32,8 +32,8 @@ else
     RESET =
 endif
 
-# 设置文件名 - 添加 async_update_checker.c 到源文件列表
-SRC_FILES = src/main.c src/window.c src/tray.c src/color.c src/font.c src/language.c src/timer.c src/tray_menu.c src/startup.c src/config.c src/window_procedure.c src/media.c src/notification.c src/tray_events.c src/window_events.c src/drag_scale.c src/drawing.c src/timer_events.c src/dialog_procedure.c src/update_checker.c src/async_update_checker.c
+# 设置文件名 - 添加 async_update_checker.c 和 log.c 到源文件列表
+SRC_FILES = src/main.c src/window.c src/tray.c src/color.c src/font.c src/language.c src/timer.c src/tray_menu.c src/startup.c src/config.c src/window_procedure.c src/media.c src/notification.c src/tray_events.c src/window_events.c src/drag_scale.c src/drawing.c src/timer_events.c src/dialog_procedure.c src/update_checker.c src/async_update_checker.c src/log.c
 RC_FILE = resource/resource.rc
 
 # 创建目标文件夹和资源文件夹
@@ -69,10 +69,11 @@ OBJS = $(BUILD_DIR)/main.o \
        $(BUILD_DIR)/timer_events.o \
        $(BUILD_DIR)/dialog_procedure.o \
        $(BUILD_DIR)/update_checker.o \
-       $(BUILD_DIR)/async_update_checker.o
+       $(BUILD_DIR)/async_update_checker.o \
+       $(BUILD_DIR)/log.o
 
 # 总文件数量 (包括资源文件)
-TOTAL_FILES = 22
+TOTAL_FILES = 23
 PROGRESS_FILE = $(BUILD_DIR)/.progress
 
 # ASCII 艺术标志
@@ -281,6 +282,11 @@ $(BUILD_DIR)/update_checker.o: src/update_checker.c
 # 添加 async_update_checker.o 的编译规则
 $(BUILD_DIR)/async_update_checker.o: src/async_update_checker.c
 	@$(CC) -c src/async_update_checker.c -o $(BUILD_DIR)/async_update_checker.o $(CFLAGS)
+	@$(call update_progress)
+
+# 添加 log.o 的编译规则
+$(BUILD_DIR)/log.o: src/log.c
+	@$(CC) -c src/log.c -o $(BUILD_DIR)/log.o $(CFLAGS)
 	@$(call update_progress)
 
 # 链接编译目标文件，输出到输出目录

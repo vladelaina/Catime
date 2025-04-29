@@ -31,6 +31,7 @@
 #include "../include/media.h"
 #include "../include/notification.h"
 #include "../include/async_update_checker.h"
+#include "../include/log.h"
 
 // 较旧的Windows SDK所需
 #ifndef CSIDL_STARTUP
@@ -49,6 +50,10 @@ EXTERN_C const IID IID_IShellLinkW;
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "gdi32.lib")
 #pragma comment(lib, "comdlg32.lib")
+#pragma comment(lib, "dbghelp.lib") // 用于异常处理功能
+
+// 来自log.c的函数声明
+extern void CleanupLogSystem(void);
 
 /// @name 全局变量
 /// @{
@@ -92,10 +97,14 @@ void ExitProgram(HWND hwnd);
  * 包括计时模式、显示状态等。
  */
 static void HandleStartupMode(HWND hwnd) {
+    LOG_INFO("设置启动模式: %s", CLOCK_STARTUP_MODE);
+    
     if (strcmp(CLOCK_STARTUP_MODE, "COUNT_UP") == 0) {
+        LOG_INFO("设置为正计时模式");
         CLOCK_COUNT_UP = TRUE;
         elapsed_time = 0;
     } else if (strcmp(CLOCK_STARTUP_MODE, "NO_DISPLAY") == 0) {
+        LOG_INFO("设置为隐藏模式，窗口将被隐藏");
         ShowWindow(hwnd, SW_HIDE);
         KillTimer(hwnd, 1);
         elapsed_time = CLOCK_TOTAL_TIME;
@@ -106,8 +115,11 @@ static void HandleStartupMode(HWND hwnd) {
         countdown_elapsed_time = 0;
         countup_elapsed_time = 0;
     } else if (strcmp(CLOCK_STARTUP_MODE, "SHOW_TIME") == 0) {
+        LOG_INFO("设置为显示当前时间模式");
         CLOCK_SHOW_CURRENT_TIME = TRUE;
         CLOCK_LAST_TIME_UPDATE = 0;
+    } else {
+        LOG_INFO("使用默认倒计时模式");
     }
 }
 
@@ -123,67 +135,108 @@ static void HandleStartupMode(HWND hwnd) {
  * 处理单实例检查，确保只有一个程序实例在运行。
  */
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-    // 初始化COM
-    HRESULT hr = CoInitialize(NULL);
-    if (FAILED(hr)) {
-        MessageBox(NULL, "COM initialization failed!", "Error", MB_ICONERROR);
-        return 1;
+    // 初始化日志系统
+    if (!InitializeLogSystem()) {
+        // 如果日志系统初始化失败，仍然继续运行，但不记录日志
+        MessageBox(NULL, "日志系统初始化失败，程序将继续运行但不记录日志。", "警告", MB_ICONWARNING);
     }
 
-    // 初始化应用程序
-    if (!InitializeApplication(hInstance)) {
-        MessageBox(NULL, "Application initialization failed!", "Error", MB_ICONERROR);
-        return 1;
-    }
+    // 设置异常处理器
+    SetupExceptionHandler();
 
-    // 处理单实例
-    HANDLE hMutex = CreateMutex(NULL, TRUE, "CatimeMutex");
-    if (GetLastError() == ERROR_ALREADY_EXISTS) {
-        HWND hwndExisting = FindWindow("CatimeWindow", "Catime");
-        if (hwndExisting) {
-            // 关闭已存在的窗口实例
-            SendMessage(hwndExisting, WM_CLOSE, 0, 0);
-            // 等待旧实例关闭
-            Sleep(200);
+    LOG_INFO("Catime 正在启动...");
+        // 初始化COM
+        HRESULT hr = CoInitialize(NULL);
+        if (FAILED(hr)) {
+            LOG_ERROR("COM 初始化失败，错误码: 0x%08X", hr);
+            MessageBox(NULL, "COM initialization failed!", "Error", MB_ICONERROR);
+            return 1;
         }
-        // 释放旧互斥锁
-        ReleaseMutex(hMutex);
-        CloseHandle(hMutex);
+        LOG_INFO("COM 初始化成功");
+
+        // 初始化应用程序
+        LOG_INFO("开始初始化应用程序...");
+        if (!InitializeApplication(hInstance)) {
+            LOG_ERROR("应用程序初始化失败");
+            MessageBox(NULL, "Application initialization failed!", "Error", MB_ICONERROR);
+            return 1;
+        }
+        LOG_INFO("应用程序初始化成功");
+
+        // 处理单实例
+        LOG_INFO("检查是否有其他实例正在运行...");
+        HANDLE hMutex = CreateMutex(NULL, TRUE, "CatimeMutex");
+        DWORD mutexError = GetLastError();
         
-        // 创建新的互斥锁
-        hMutex = CreateMutex(NULL, TRUE, "CatimeMutex");
-        // 继续新实例的启动流程
-    }
-    Sleep(50);
+        if (mutexError == ERROR_ALREADY_EXISTS) {
+            LOG_INFO("检测到已有实例正在运行，尝试关闭该实例");
+            HWND hwndExisting = FindWindow("CatimeWindow", "Catime");
+            if (hwndExisting) {
+                // 关闭已存在的窗口实例
+                LOG_INFO("向已有实例发送关闭消息");
+                SendMessage(hwndExisting, WM_CLOSE, 0, 0);
+                // 等待旧实例关闭
+                Sleep(200);
+            } else {
+                LOG_WARNING("找不到已有实例的窗口句柄，但互斥锁已存在");
+            }
+            // 释放旧互斥锁
+            ReleaseMutex(hMutex);
+            CloseHandle(hMutex);
+            
+            // 创建新的互斥锁
+            LOG_INFO("创建新的互斥锁");
+            hMutex = CreateMutex(NULL, TRUE, "CatimeMutex");
+            if (GetLastError() == ERROR_ALREADY_EXISTS) {
+                LOG_WARNING("创建新互斥锁后仍然有冲突，可能有竞争条件");
+            }
+        }
+        Sleep(50);
 
-    // 创建主窗口
-    HWND hwnd = CreateMainWindow(hInstance, nCmdShow);
-    if (!hwnd) {
-        MessageBox(NULL, "Window Creation Failed!", "Error", MB_ICONEXCLAMATION | MB_OK);
-        return 0;
-    }
+        // 创建主窗口
+        LOG_INFO("开始创建主窗口...");
+        HWND hwnd = CreateMainWindow(hInstance, nCmdShow);
+        if (!hwnd) {
+            LOG_ERROR("主窗口创建失败");
+            MessageBox(NULL, "Window Creation Failed!", "Error", MB_ICONEXCLAMATION | MB_OK);
+            return 0;
+        }
+        LOG_INFO("主窗口创建成功，句柄: 0x%p", hwnd);
 
-    // 设置定时器
-    if (SetTimer(hwnd, 1, 1000, NULL) == 0) {
-        MessageBox(NULL, "Timer Creation Failed!", "Error", MB_ICONEXCLAMATION | MB_OK);
-        return 0;
-    }
+        // 设置定时器
+        LOG_INFO("设置主定时器...");
+        if (SetTimer(hwnd, 1, 1000, NULL) == 0) {
+            DWORD timerError = GetLastError();
+            LOG_ERROR("定时器创建失败，错误码: %lu", timerError);
+            MessageBox(NULL, "Timer Creation Failed!", "Error", MB_ICONEXCLAMATION | MB_OK);
+            return 0;
+        }
+        LOG_INFO("定时器设置成功");
 
-    // 处理启动模式
-    HandleStartupMode(hwnd);
-    
-    // 自动检查更新（静默模式，仅在有更新时提示）
-    CheckForUpdateAsync(hwnd, TRUE);
+        // 处理启动模式
+        LOG_INFO("处理启动模式: %s", CLOCK_STARTUP_MODE);
+        HandleStartupMode(hwnd);
+        
+        // 自动检查更新（静默模式，仅在有更新时提示）
+        LOG_INFO("开始异步检查更新...");
+        CheckForUpdateAsync(hwnd, TRUE);
 
-    // 消息循环
-    MSG msg;
-    while (GetMessage(&msg, NULL, 0, 0) > 0) {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
-    }
+        // 消息循环
+        LOG_INFO("进入主消息循环");
+        MSG msg;
+        while (GetMessage(&msg, NULL, 0, 0) > 0) {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
 
-    // 清理资源
-    CloseHandle(hMutex);
-    CoUninitialize();
-    return (int)msg.wParam;
+        // 清理资源
+        LOG_INFO("程序准备退出，开始清理资源");
+        CloseHandle(hMutex);
+        CoUninitialize();
+        
+        // 关闭日志系统
+        CleanupLogSystem();
+        
+        return (int)msg.wParam;
+    // 如果执行到这里，说明程序正常退出
 }
