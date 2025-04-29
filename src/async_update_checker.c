@@ -85,8 +85,6 @@ unsigned __stdcall UpdateCheckThreadProc(void* param) {
     // 标记线程已结束
     g_bUpdateThreadRunning = FALSE;
     
-    LOG_INFO("更新检查线程即将结束");
-    
     // 线程结束
     _endthreadex(0);
     return 0;
