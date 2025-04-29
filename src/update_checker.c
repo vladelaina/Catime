@@ -11,6 +11,7 @@
 #include <shlobj.h>
 #include "../include/update_checker.h"
 #include "../include/language.h"
+#include "../include/log.h"
 #include "../resource/resource.h"
 
 #pragma comment(lib, "wininet.lib")
@@ -39,12 +40,16 @@ INT_PTR CALLBACK ExitMsgDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lP
  * @return 如果version1 > version2返回1，如果相等返回0，如果version1 < version2返回-1
  */
 int CompareVersions(const char* version1, const char* version2) {
+    LOG_DEBUG("比较版本: '%s' vs '%s'", version1, version2);
+    
     int major1, minor1, patch1;
     int major2, minor2, patch2;
     
     // 解析版本号
     sscanf(version1, "%d.%d.%d", &major1, &minor1, &patch1);
     sscanf(version2, "%d.%d.%d", &major2, &minor2, &patch2);
+    
+    LOG_DEBUG("解析版本1: %d.%d.%d, 版本2: %d.%d.%d", major1, minor1, patch1, major2, minor2, patch2);
     
     // 比较主版本号
     if (major1 > major2) return 1;
@@ -66,9 +71,14 @@ int CompareVersions(const char* version1, const char* version2) {
  */
 BOOL ParseLatestVersionFromJson(const char* jsonResponse, char* latestVersion, size_t maxLen, 
                                char* downloadUrl, size_t urlMaxLen) {
+    LOG_DEBUG("开始解析JSON响应，提取版本信息");
+    
     // 查找版本号
     const char* tagNamePos = strstr(jsonResponse, "\"tag_name\":");
-    if (!tagNamePos) return FALSE;
+    if (!tagNamePos) {
+        LOG_ERROR("JSON解析失败：找不到tag_name字段");
+        return FALSE;
+    }
     
     const char* firstQuote = strchr(tagNamePos + 11, '\"');
     if (!firstQuote) return FALSE;
@@ -90,7 +100,10 @@ BOOL ParseLatestVersionFromJson(const char* jsonResponse, char* latestVersion, s
     
     // 查找下载URL
     const char* downloadUrlPos = strstr(jsonResponse, "\"browser_download_url\":");
-    if (!downloadUrlPos) return FALSE;
+    if (!downloadUrlPos) {
+        LOG_ERROR("JSON解析失败：找不到browser_download_url字段");
+        return FALSE;
+    }
     
     firstQuote = strchr(downloadUrlPos + 22, '\"');
     if (!firstQuote) return FALSE;
@@ -315,17 +328,14 @@ BOOL OpenBrowserForUpdateAndExit(const char* url, HWND hwnd) {
         return FALSE;
     }
     
-    // 删除配置文件
-    char config_path[MAX_PATH];
-    extern void GetConfigPath(char* path, size_t size);
-    GetConfigPath(config_path, MAX_PATH);
-    DeleteFileA(config_path);
+    LOG_INFO("成功打开浏览器，准备退出程序");
     
     // 提示用户
     wchar_t message[512];
     swprintf(message, sizeof(message)/sizeof(wchar_t),
             L"即将退出程序");
     
+    LOG_INFO("发送退出消息到主窗口");
     // 使用自定义对话框显示退出消息
     ShowExitMessageDialog(hwnd, message);
     
@@ -338,90 +348,124 @@ BOOL OpenBrowserForUpdateAndExit(const char* url, HWND hwnd) {
  * @brief 通用的更新检查函数
  */
 void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
+    LOG_INFO("开始执行更新检查流程，静默模式：%s", silentCheck ? "是" : "否");
+    
     // 创建Internet会话
+    LOG_INFO("尝试创建Internet会话");
     HINTERNET hInternet = InternetOpenA(USER_AGENT, INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
     if (!hInternet) {
+        DWORD errorCode = GetLastError();
+        char errorMsg[256] = {0};
+        GetLastErrorDescription(errorCode, errorMsg, sizeof(errorMsg));
+        LOG_ERROR("创建Internet会话失败，错误码: %lu，错误信息: %s", errorCode, errorMsg);
+        
         if (!silentCheck) {
             ShowUpdateErrorDialog(hwnd, GetLocalizedString(L"无法创建Internet连接", L"Could not create Internet connection"));
         }
         return;
     }
+    LOG_INFO("Internet会话创建成功");
     
     // 连接到更新API
+    LOG_INFO("尝试连接到GitHub API: %s", GITHUB_API_URL);
     HINTERNET hConnect = InternetOpenUrlA(hInternet, GITHUB_API_URL, NULL, 0, 
                                         INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_CACHE_WRITE, 0);
     if (!hConnect) {
+        DWORD errorCode = GetLastError();
+        char errorMsg[256] = {0};
+        GetLastErrorDescription(errorCode, errorMsg, sizeof(errorMsg));
+        LOG_ERROR("连接到GitHub API失败，错误码: %lu，错误信息: %s", errorCode, errorMsg);
+        
         InternetCloseHandle(hInternet);
         if (!silentCheck) {
             ShowUpdateErrorDialog(hwnd, GetLocalizedString(L"无法连接到更新服务器", L"Could not connect to update server"));
         }
         return;
     }
+    LOG_INFO("成功连接到GitHub API");
     
     // 分配缓冲区
+    LOG_INFO("为API响应分配内存缓冲区");
     char* buffer = (char*)malloc(8192);
     if (!buffer) {
+        LOG_ERROR("内存分配失败，无法为API响应分配缓冲区");
         InternetCloseHandle(hConnect);
         InternetCloseHandle(hInternet);
         return;
     }
     
     // 读取响应
+    LOG_INFO("开始从API读取响应数据");
     DWORD bytesRead = 0;
     DWORD totalBytes = 0;
     size_t bufferSize = 8192;
     
     while (InternetReadFile(hConnect, buffer + totalBytes, 
                           bufferSize - totalBytes - 1, &bytesRead) && bytesRead > 0) {
+        LOG_DEBUG("读取了 %lu 字节数据，累计 %lu 字节", bytesRead, totalBytes + bytesRead);
         totalBytes += bytesRead;
         if (totalBytes >= bufferSize - 256) {
             size_t newSize = bufferSize * 2;
             char* newBuffer = (char*)realloc(buffer, newSize);
             if (!newBuffer) {
                 // 修复：如果realloc失败，释放原始buffer并中断
+                LOG_ERROR("重新分配缓冲区失败，当前大小: %zu 字节", bufferSize);
                 free(buffer);
                 InternetCloseHandle(hConnect);
                 InternetCloseHandle(hInternet);
                 return;
             }
+            LOG_DEBUG("缓冲区已扩展，新大小: %zu 字节", newSize);
             buffer = newBuffer;
             bufferSize = newSize;
         }
     }
     
     buffer[totalBytes] = '\0';
+    LOG_INFO("成功读取API响应，共 %lu 字节数据", totalBytes);
     
     // 关闭连接
+    LOG_INFO("关闭Internet连接");
     InternetCloseHandle(hConnect);
     InternetCloseHandle(hInternet);
     
     // 解析版本和下载URL
+    LOG_INFO("开始解析API响应，提取版本信息和下载URL");
     char latestVersion[32] = {0};
     char downloadUrl[256] = {0};
     if (!ParseLatestVersionFromJson(buffer, latestVersion, sizeof(latestVersion), 
                                   downloadUrl, sizeof(downloadUrl))) {
+        LOG_ERROR("解析版本信息失败，响应可能不是有效的JSON格式");
         free(buffer);
         if (!silentCheck) {
             ShowUpdateErrorDialog(hwnd, GetLocalizedString(L"无法解析版本信息", L"Could not parse version information"));
         }
         return;
     }
+    LOG_INFO("成功解析版本信息，GitHub最新版本: %s, 下载URL: %s", latestVersion, downloadUrl);
     
     free(buffer);
     
     // 获取当前版本
     const char* currentVersion = CATIME_VERSION;
+    LOG_INFO("当前应用版本: %s", currentVersion);
     
     // 比较版本
-    if (CompareVersions(latestVersion, currentVersion) > 0) {
+    LOG_INFO("比较版本号: 当前版本 %s vs. 最新版本 %s", currentVersion, latestVersion);
+    int versionCompare = CompareVersions(latestVersion, currentVersion);
+    if (versionCompare > 0) {
         // 有新版本
+        LOG_INFO("发现新版本！当前: %s, 可用更新: %s", currentVersion, latestVersion);
         int response = ShowUpdateNotification(hwnd, currentVersion, latestVersion, downloadUrl);
+        LOG_INFO("更新提示对话框结果: %s", response == IDYES ? "用户同意更新" : "用户拒绝更新");
         
         if (response == IDYES) {
+            LOG_INFO("用户选择立即更新，准备打开浏览器并退出程序");
             OpenBrowserForUpdateAndExit(downloadUrl, hwnd);
         }
     } else if (!silentCheck) {
         // 已是最新版本
+        LOG_INFO("当前已是最新版本 %s，无需更新", currentVersion);
         wchar_t message[256];
         swprintf(message, sizeof(message)/sizeof(wchar_t),
                 GetLocalizedString(
@@ -430,7 +474,11 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
                 currentVersion);
         
         ShowNoUpdateDialog(hwnd, message);
+    } else {
+        LOG_INFO("静默检查模式：当前已是最新版本 %s，无需显示提示", currentVersion);
     }
+    
+    LOG_INFO("更新检查流程完成");
 }
 
 /**

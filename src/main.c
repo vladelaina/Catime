@@ -218,8 +218,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         HandleStartupMode(hwnd);
         
         // 自动检查更新（静默模式，仅在有更新时提示）
-        LOG_INFO("开始异步检查更新...");
+        LOG_INFO("------ 开始异步检查更新 ------");
+        LOG_INFO("准备开始异步更新检查，窗口句柄：0x%p", hwnd);
+        DWORD startTime = GetTickCount();
         CheckForUpdateAsync(hwnd, TRUE);
+        LOG_INFO("异步更新检查初始化完成，耗时：%lu毫秒", GetTickCount() - startTime);
+        LOG_INFO("异步更新检查已在后台线程启动，主线程继续执行");
 
         // 消息循环
         LOG_INFO("进入主消息循环");
@@ -231,6 +235,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
         // 清理资源
         LOG_INFO("程序准备退出，开始清理资源");
+        
+        // 清理更新检查线程资源
+        LOG_INFO("准备清理更新检查线程资源");
+        CleanupUpdateThread();
+        
         CloseHandle(hMutex);
         CoUninitialize();
         
