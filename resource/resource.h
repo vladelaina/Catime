@@ -1,5 +1,5 @@
 /* 版本与更新信息 */
-#define CATIME_VERSION "1.0.7-alpha1"
+#define CATIME_VERSION "1.0.7-alpha2"
 
 /* 鸣谢链接  猫屋敷梨梨Official*/
 #define CREDIT_LINK_URL L"https://space.bilibili.com/26087398"
@@ -236,8 +236,8 @@
 #define IDS_CREDITS_TEXT 1014  // 字符串资源ID
 
 // 定义帮助菜单项ID
-#define CLOCK_IDM_HELP 134    // 添加帮助菜单项ID
-#define CLOCK_IDM_SUPPORT 139 // 添加赞助选项菜单项ID
+#define CLOCK_IDM_HELP 134     // 添加帮助菜单项ID
+#define CLOCK_IDM_SUPPORT 139  // 添加赞助选项菜单项ID
 #define CLOCK_IDM_FEEDBACK 141 // 添加反馈选项菜单项ID
 
 // 新增：底部链接控件ID
