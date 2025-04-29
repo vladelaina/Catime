@@ -14,6 +14,7 @@
 #include <dbghelp.h>
 #include "../include/log.h"
 #include "../include/config.h"
+#include "../resource/resource.h"
 
 // 日志文件路径
 static char LOG_FILE_PATH[MAX_PATH] = {0};
@@ -73,6 +74,7 @@ BOOL InitializeLogSystem(void) {
     
     // 记录日志系统初始化信息
     WriteLog(LOG_LEVEL_INFO, "==================================================");
+    WriteLog(LOG_LEVEL_INFO, "Catime 版本: %s", CATIME_VERSION);
     WriteLog(LOG_LEVEL_INFO, "日志系统初始化完成，Catime 启动");
     
     return TRUE;
