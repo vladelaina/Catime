@@ -190,8 +190,14 @@
         <a href="hhttps://github.com/Crazy-A2"><img src="https://avatars.githubusercontent.com/u/68056912?v=4" width="100px;" alt="Marial"/><br /><sub><b>Marial</b></sub></a><br />
       </td>
     </tr>
+    <tr>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://space.bilibili.com/507572706"><img src="https://github.com/user-attachments/assets/8bf7a9e8-749a-47b6-976c-6798bacea6d2" width="100px;" alt="卓越方达"/><br /><sub><b>卓越方达</b></sub></a><br />
+      </td>
+    </tr>  
   </tbody>
 </table>
+
 
 
 ## 🗝️版权声明
