@@ -12,6 +12,7 @@
 #include <time.h>
 #include <windows.h>
 #include <dbghelp.h>
+#include <wininet.h>
 #include "../include/log.h"
 #include "../include/config.h"
 #include "../resource/resource.h"
@@ -29,6 +30,165 @@ static const char* LOG_LEVEL_STRINGS[] = {
     "ERROR",
     "FATAL"
 };
+
+/**
+ * @brief 获取操作系统版本信息
+ * 
+ * 使用Windows API获取操作系统版本、版本号、构建等信息
+ */
+static void LogSystemInformation(void) {
+    // 获取系统信息
+    SYSTEM_INFO si;
+    GetNativeSystemInfo(&si);
+    
+    // 使用RtlGetVersion更精确地获取系统版本，因为GetVersionEx在新版Windows上被改变了
+    typedef NTSTATUS(WINAPI* RtlGetVersionPtr)(PRTL_OSVERSIONINFOW);
+    HMODULE hNtdll = GetModuleHandleW(L"ntdll.dll");
+    
+    DWORD major = 0, minor = 0, build = 0;
+    BOOL isWorkstation = TRUE;
+    BOOL isServer = FALSE;
+    
+    if (hNtdll) {
+        RtlGetVersionPtr pRtlGetVersion = (RtlGetVersionPtr)GetProcAddress(hNtdll, "RtlGetVersion");
+        if (pRtlGetVersion) {
+            RTL_OSVERSIONINFOW rovi = { 0 };
+            rovi.dwOSVersionInfoSize = sizeof(rovi);
+            if (pRtlGetVersion(&rovi) == 0) { // STATUS_SUCCESS = 0
+                major = rovi.dwMajorVersion;
+                minor = rovi.dwMinorVersion;
+                build = rovi.dwBuildNumber;
+            }
+        }
+    }
+    
+    // 如果上面的方法失败，尝试下面的方法
+    if (major == 0) {
+        OSVERSIONINFOEXA osvi;
+        ZeroMemory(&osvi, sizeof(OSVERSIONINFOEXA));
+        osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEXA);
+        
+        typedef LONG (WINAPI* PRTLGETVERSION)(OSVERSIONINFOEXW*);
+        PRTLGETVERSION pRtlGetVersion;
+        pRtlGetVersion = (PRTLGETVERSION)GetProcAddress(GetModuleHandle(TEXT("ntdll.dll")), "RtlGetVersion");
+        
+        if (pRtlGetVersion) {
+            pRtlGetVersion((OSVERSIONINFOEXW*)&osvi);
+            major = osvi.dwMajorVersion;
+            minor = osvi.dwMinorVersion;
+            build = osvi.dwBuildNumber;
+            isWorkstation = (osvi.wProductType == VER_NT_WORKSTATION);
+            isServer = !isWorkstation;
+        } else {
+            // 最后尝试使用GetVersionExA，虽然可能不准确
+            if (GetVersionExA((OSVERSIONINFOA*)&osvi)) {
+                major = osvi.dwMajorVersion;
+                minor = osvi.dwMinorVersion;
+                build = osvi.dwBuildNumber;
+                isWorkstation = (osvi.wProductType == VER_NT_WORKSTATION);
+                isServer = !isWorkstation;
+            } else {
+                WriteLog(LOG_LEVEL_WARNING, "无法获取操作系统版本信息");
+            }
+        }
+    }
+    
+    // 检测具体的Windows版本
+    const char* windowsVersion = "未知版本";
+    
+    // 根据版本号确定具体版本
+    if (major == 10) {
+        if (build >= 22000) {
+            windowsVersion = "Windows 11";
+        } else {
+            windowsVersion = "Windows 10";
+        }
+    } else if (major == 6) {
+        if (minor == 3) {
+            windowsVersion = "Windows 8.1";
+        } else if (minor == 2) {
+            windowsVersion = "Windows 8";
+        } else if (minor == 1) {
+            windowsVersion = "Windows 7";
+        } else if (minor == 0) {
+            windowsVersion = "Windows Vista";
+        }
+    } else if (major == 5) {
+        if (minor == 2) {
+            windowsVersion = "Windows Server 2003";
+            if (isWorkstation && si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64) {
+                windowsVersion = "Windows XP Professional x64";
+            }
+        } else if (minor == 1) {
+            windowsVersion = "Windows XP";
+        } else if (minor == 0) {
+            windowsVersion = "Windows 2000";
+        }
+    }
+    
+    WriteLog(LOG_LEVEL_INFO, "操作系统: %s (%d.%d) Build %d %s", 
+        windowsVersion,
+        major, minor, 
+        build, 
+        isWorkstation ? "工作站" : "服务器");
+    
+    // CPU架构
+    const char* arch;
+    switch (si.wProcessorArchitecture) {
+        case PROCESSOR_ARCHITECTURE_AMD64:
+            arch = "x64 (AMD64)";
+            break;
+        case PROCESSOR_ARCHITECTURE_INTEL:
+            arch = "x86 (Intel)";
+            break;
+        case PROCESSOR_ARCHITECTURE_ARM:
+            arch = "ARM";
+            break;
+        case PROCESSOR_ARCHITECTURE_ARM64:
+            arch = "ARM64";
+            break;
+        default:
+            arch = "未知";
+            break;
+    }
+    WriteLog(LOG_LEVEL_INFO, "CPU架构: %s", arch);
+    
+    // 系统内存信息
+    MEMORYSTATUSEX memInfo;
+    memInfo.dwLength = sizeof(MEMORYSTATUSEX);
+    if (GlobalMemoryStatusEx(&memInfo)) {
+        WriteLog(LOG_LEVEL_INFO, "物理内存: %.2f GB / %.2f GB (已用 %d%%)", 
+            (memInfo.ullTotalPhys - memInfo.ullAvailPhys) / (1024.0 * 1024 * 1024), 
+            memInfo.ullTotalPhys / (1024.0 * 1024 * 1024),
+            memInfo.dwMemoryLoad);
+    }
+    
+    // 不获取屏幕分辨率信息，因为这些信息不准确且对于调试并非必要
+    
+    // 检查是否启用了UAC
+    BOOL uacEnabled = FALSE;
+    HANDLE hToken;
+    if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
+        TOKEN_ELEVATION_TYPE elevationType;
+        DWORD dwSize;
+        if (GetTokenInformation(hToken, TokenElevationType, &elevationType, sizeof(elevationType), &dwSize)) {
+            uacEnabled = (elevationType != TokenElevationTypeDefault);
+        }
+        CloseHandle(hToken);
+    }
+    WriteLog(LOG_LEVEL_INFO, "UAC状态: %s", uacEnabled ? "已启用" : "未启用");
+    
+    // 检查是否以管理员运行
+    BOOL isAdmin = FALSE;
+    SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
+    PSID AdministratorsGroup;
+    if (AllocateAndInitializeSid(&NtAuthority, 2, SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0, &AdministratorsGroup)) {
+        if (CheckTokenMembership(NULL, AdministratorsGroup, &isAdmin)) {
+            WriteLog(LOG_LEVEL_INFO, "管理员权限: %s", isAdmin ? "是" : "否");
+        }
+        FreeSid(AdministratorsGroup);
+    }
+}
 
 /**
  * @brief 获取日志文件路径
@@ -74,7 +234,12 @@ BOOL InitializeLogSystem(void) {
     
     // 记录日志系统初始化信息
     WriteLog(LOG_LEVEL_INFO, "==================================================");
+    // 首先记录软件版本
     WriteLog(LOG_LEVEL_INFO, "Catime 版本: %s", CATIME_VERSION);
+    // 然后记录系统环境信息(在任何可能的错误之前)
+    WriteLog(LOG_LEVEL_INFO, "-----------------系统信息-----------------");
+    LogSystemInformation();
+    WriteLog(LOG_LEVEL_INFO, "-----------------应用信息-----------------");
     WriteLog(LOG_LEVEL_INFO, "日志系统初始化完成，Catime 启动");
     
     return TRUE;
