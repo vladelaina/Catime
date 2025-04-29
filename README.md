@@ -183,6 +183,12 @@
       <td align="center" valign="top" width="14.28%">
         <a href="https://github.com/pyqmlp"><img src="https://github.com/user-attachments/assets/fb0473e9-db9d-4f63-ac8d-4aa1d9ee7579" width="100px;" alt="柒"/><br /><sub><b>柒</b></sub></a><br />
       </td>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://github.com/Mapaler"><img src="https://avatars.githubusercontent.com/u/6565860?v=4" width="100px;" alt="枫谷剑仙"/><br /><sub><b>枫谷剑仙</b></sub></a><br />
+      </td>
+      <td align="center" valign="top" width="14.28%">
+        <a href="hhttps://github.com/Crazy-A2"><img src="https://avatars.githubusercontent.com/u/68056912?v=4" width="100px;" alt="Marial"/><br /><sub><b>Marial</b></sub></a><br />
+      </td>
     </tr>
   </tbody>
 </table>
