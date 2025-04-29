@@ -187,7 +187,7 @@
         <a href="https://github.com/Mapaler"><img src="https://avatars.githubusercontent.com/u/6565860?v=4" width="100px;" alt="枫谷剑仙"/><br /><sub><b>枫谷剑仙</b></sub></a><br />
       </td>
       <td align="center" valign="top" width="14.28%">
-        <a href="hhttps://github.com/Crazy-A2"><img src="https://avatars.githubusercontent.com/u/68056912?v=4" width="100px;" alt="Marial"/><br /><sub><b>Marial</b></sub></a><br />
+        <a href="https://github.com/Crazy-A2"><img src="https://avatars.githubusercontent.com/u/68056912?v=4" width="100px;" alt="Marial"/><br /><sub><b>Marial</b></sub></a><br />
       </td>
     </tr>
     <tr>
