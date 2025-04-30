@@ -9,9 +9,22 @@
 #define NOTIFICATION_H
 
 #include <windows.h>
+#include "config.h"  // 引入通知类型枚举
 
 // 全局变量：通知显示持续时间(毫秒)
 extern int NOTIFICATION_TIMEOUT_MS;  // 新增：通知显示时间变量
+
+/**
+ * @brief 显示通知（根据配置的通知类型）
+ * @param hwnd 父窗口句柄，用于获取应用实例和计算位置
+ * @param message 要显示的通知消息文本(UTF-8编码)
+ * 
+ * 根据配置的通知类型显示不同风格的通知：
+ * - NOTIFICATION_TYPE_CATIME: 使用Catime自定义通知窗口
+ * - NOTIFICATION_TYPE_SYSTEM_MODAL: 使用系统模态对话框
+ * - NOTIFICATION_TYPE_OS: 使用系统托盘通知
+ */
+void ShowNotification(HWND hwnd, const char* message);
 
 /**
  * @brief 显示自定义样式的提示通知
@@ -21,5 +34,16 @@ extern int NOTIFICATION_TIMEOUT_MS;  // 新增：通知显示时间变量
  * 在屏幕右下角显示一个带动画效果的自定义通知窗口
  */
 void ShowToastNotification(HWND hwnd, const char* message);
+
+/**
+ * @brief 显示系统模态对话框通知
+ * @param hwnd 父窗口句柄
+ * @param message 要显示的通知消息文本(UTF-8编码)
+ * 
+ * 显示一个阻塞的系统消息框通知
+ */
+void ShowModalNotification(HWND hwnd, const char* message);
+
+// 系统托盘通知已在tray.h中定义：void ShowTrayNotification(HWND hwnd, const char* message);
 
 #endif // NOTIFICATION_H

@@ -14,6 +14,9 @@
 #include "../include/notification.h"
 #include "../include/pomodoro.h"
 #include "../include/config.h"
+#include <stdio.h>
+#include <string.h>
+#include "../include/window.h"
 
 // 番茄钟时间列表最大容量
 #define MAX_POMODORO_TIMES 10
@@ -30,7 +33,7 @@ POMODORO_PHASE current_pomodoro_phase = POMODORO_PHASE_IDLE;
 int complete_pomodoro_cycles = 0;
 
 // 从main.c引入的函数声明
-extern void ShowToastNotification(HWND hwnd, const char* message);
+extern void ShowNotification(HWND hwnd, const char* message);
 
 // 从main.c引入的变量声明，用于超时动作
 extern int elapsed_time;
@@ -40,6 +43,36 @@ extern BOOL message_shown;
 extern char CLOCK_TIMEOUT_MESSAGE_TEXT[100];
 extern char POMODORO_TIMEOUT_MESSAGE_TEXT[100]; // 新增番茄钟专用提示
 extern char POMODORO_CYCLE_COMPLETE_TEXT[100];
+
+// 定义ClockState类型
+typedef enum {
+    CLOCK_STATE_IDLE,
+    CLOCK_STATE_COUNTDOWN,
+    CLOCK_STATE_COUNTUP,
+    CLOCK_STATE_POMODORO
+} ClockState;
+
+// 定义PomodoroState类型
+typedef struct {
+    BOOL isLastCycle;
+    int cycleIndex;
+    int totalCycles;
+} PomodoroState;
+
+extern HWND g_hwnd; // 主窗口句柄
+extern ClockState g_clockState;
+extern PomodoroState g_pomodoroState;
+
+// 计时器行为函数声明
+extern void ShowTrayNotification(HWND hwnd, const char* message);
+extern void ShowNotification(HWND hwnd, const char* message);
+extern void OpenFileByPath(const char* filePath);
+extern void OpenWebsite(const char* url);
+extern void SleepComputer(void);
+extern void ShutdownComputer(void);
+extern void RestartComputer(void);
+extern void SetTimeDisplay(void);
+extern void ShowCountUp(HWND hwnd);
 
 /**
  * @brief 将 UTF-8 编码的 char* 字符串转换为 wchar_t* 字符串
@@ -91,8 +124,8 @@ static void ShowLocalizedNotification(HWND hwnd, const wchar_t* message) {
         int result = WideCharToMultiByte(CP_UTF8, 0, message, -1, utf8Msg, size_needed, NULL, NULL);
 
         if (result > 0) {
-            // 显示通知
-            ShowToastNotification(hwnd, utf8Msg);
+            // 显示通知，使用新的ShowNotification函数
+            ShowNotification(hwnd, utf8Msg);
         }
 
         // 释放内存
@@ -370,3 +403,68 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
     }
     return FALSE;
 }
+
+void OnTimerTimeout(HWND hwnd) {
+    // 根据timeout action执行不同的行为
+    switch (CLOCK_TIMEOUT_ACTION) {
+        case TIMEOUT_ACTION_MESSAGE: {
+            char utf8Msg[256] = {0};
+            
+            // 根据当前状态选择不同的提示信息
+            if (g_clockState == CLOCK_STATE_POMODORO) {
+                // 检查番茄钟是否完成所有循环
+                if (g_pomodoroState.isLastCycle && g_pomodoroState.cycleIndex >= g_pomodoroState.totalCycles - 1) {
+                    strncpy(utf8Msg, POMODORO_CYCLE_COMPLETE_TEXT, sizeof(utf8Msg) - 1);
+                } else {
+                    strncpy(utf8Msg, POMODORO_TIMEOUT_MESSAGE_TEXT, sizeof(utf8Msg) - 1);
+                }
+            } else {
+                strncpy(utf8Msg, CLOCK_TIMEOUT_MESSAGE_TEXT, sizeof(utf8Msg) - 1);
+            }
+            
+            utf8Msg[sizeof(utf8Msg) - 1] = '\0'; // 确保字符串以空字符结尾
+            
+            // 显示自定义提示信息
+            ShowNotification(hwnd, utf8Msg);
+            break;
+        }
+        
+        // ... existing code ...
+    }
+}
+
+// 添加缺失的全局变量定义（如果其他地方没有定义）
+#ifndef STUB_VARIABLES_DEFINED
+#define STUB_VARIABLES_DEFINED
+// 主窗口句柄
+HWND g_hwnd = NULL;
+// 当前时钟状态
+ClockState g_clockState = CLOCK_STATE_IDLE;
+// 番茄钟状态
+PomodoroState g_pomodoroState = {FALSE, 0, 1};
+#endif
+
+// 添加stub函数定义，如果需要的话
+#ifndef STUB_FUNCTIONS_DEFINED
+#define STUB_FUNCTIONS_DEFINED
+__attribute__((weak)) void SleepComputer(void) {
+    // 这是一个弱符号定义，如果其他地方有实际实现，将使用那个实现
+    system("rundll32.exe powrprof.dll,SetSuspendState 0,1,0");
+}
+
+__attribute__((weak)) void ShutdownComputer(void) {
+    system("shutdown /s /t 0");
+}
+
+__attribute__((weak)) void RestartComputer(void) {
+    system("shutdown /r /t 0");
+}
+
+__attribute__((weak)) void SetTimeDisplay(void) {
+    // 设置时间显示的stub实现
+}
+
+__attribute__((weak)) void ShowCountUp(HWND hwnd) {
+    // 显示正计时的stub实现
+}
+#endif

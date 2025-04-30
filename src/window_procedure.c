@@ -47,7 +47,7 @@ extern int elapsed_time;
 extern int message_shown;
 
 // 从main.c引入的函数声明
-extern void ShowToastNotification(HWND hwnd, const char* message);
+extern void ShowNotification(HWND hwnd, const char* message);
 extern void PauseMediaPlayback(void);
 
 // 在文件开头添加这些外部变量声明

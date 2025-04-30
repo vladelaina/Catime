@@ -45,6 +45,16 @@ extern char POMODORO_CYCLE_COMPLETE_TEXT[100];     ///< 番茄钟所有循环完
 // 新增：用于存储通知显示时间的变量
 extern int NOTIFICATION_TIMEOUT_MS;  ///< 通知显示持续时间(毫秒)
 
+// 新增：通知类型枚举
+typedef enum {
+    NOTIFICATION_TYPE_CATIME = 0,      // Catime通知窗口
+    NOTIFICATION_TYPE_SYSTEM_MODAL,    // 系统模态窗口
+    NOTIFICATION_TYPE_OS               // 操作系统通知
+} NotificationType;
+
+// 通知类型全局变量声明
+extern NotificationType NOTIFICATION_TYPE;
+
 /// @name 配置相关函数声明
 /// @{
 
@@ -215,6 +225,22 @@ void WriteConfigNotificationOpacity(int opacity);
  * 采用临时文件方式确保配置更新安全。
  */
 void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodoro_msg, const char* cycle_complete_msg);
+
+/**
+ * @brief 从配置文件中读取通知类型
+ * 
+ * 专门读取 NOTIFICATION_TYPE 配置项并更新相应的全局变量。
+ */
+void ReadNotificationTypeConfig(void);
+
+/**
+ * @brief 写入通知类型配置
+ * @param type 通知类型
+ * 
+ * 更新配置文件中的通知类型设置，
+ * 采用临时文件方式确保配置更新安全。
+ */
+void WriteConfigNotificationType(NotificationType type);
 
 /// @}
 

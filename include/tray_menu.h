@@ -63,7 +63,7 @@
 
 /// @name 通知设置菜单项
 /// @{
-#define CLOCK_IDM_NOTIFICATION_SETTINGS 190  ///< 通知设置主菜单
+#define CLOCK_IDM_NOTIFICATION_SETTINGS 193  ///< 通知设置主菜单
 #define CLOCK_IDM_NOTIFICATION_CONTENT 191   ///< 通知内容设置
 #define CLOCK_IDM_NOTIFICATION_DISPLAY 192   ///< 通知显示设置
 /// @}

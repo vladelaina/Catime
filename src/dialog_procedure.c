@@ -1339,6 +1339,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             ReadNotificationMessagesConfig();
             ReadNotificationTimeoutConfig();
             ReadNotificationOpacityConfig();
+            ReadNotificationTypeConfig();
             
             // 设置通知内容 - 为了处理UTF-8中文，转换到Unicode
             wchar_t wideText[256];
@@ -1411,6 +1412,29 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             
             // 设置焦点到第一个编辑框
             SetFocus(hEdit1);
+            
+            // 设置通知类型单选按钮
+            HWND hRadioCatime = GetDlgItem(hwndDlg, IDC_NOTIFICATION_TYPE_CATIME);
+            HWND hRadioSystemModal = GetDlgItem(hwndDlg, IDC_NOTIFICATION_TYPE_SYSTEM_MODAL);
+            HWND hRadioOS = GetDlgItem(hwndDlg, IDC_NOTIFICATION_TYPE_OS);
+            
+            // 根据当前配置选中相应的单选按钮
+            BOOL checked = FALSE;
+            switch (NOTIFICATION_TYPE) {
+                case NOTIFICATION_TYPE_CATIME:
+                    checked = SendMessage(hRadioCatime, BM_SETCHECK, BST_CHECKED, 0);
+                    break;
+                case NOTIFICATION_TYPE_SYSTEM_MODAL:
+                    checked = SendMessage(hRadioSystemModal, BM_SETCHECK, BST_CHECKED, 0);
+                    break;
+                case NOTIFICATION_TYPE_OS:
+                    checked = SendMessage(hRadioOS, BM_SETCHECK, BST_CHECKED, 0);
+                    break;
+                default:
+                    // 默认选择Catime通知窗口
+                    checked = SendMessage(hRadioCatime, BM_SETCHECK, BST_CHECKED, 0);
+                    break;
+            }
             
             return FALSE;  // 返回FALSE因为我们手动设置了焦点
         }
@@ -1503,10 +1527,23 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 if (opacity < 1) opacity = 1;
                 if (opacity > 100) opacity = 100;
                 
+                // ===== 通知类型部分 =====
+                // 判断选中的单选按钮
+                NotificationType notificationType = NOTIFICATION_TYPE_CATIME; // 默认
+                
+                if (IsDlgButtonChecked(hwndDlg, IDC_NOTIFICATION_TYPE_CATIME) == BST_CHECKED) {
+                    notificationType = NOTIFICATION_TYPE_CATIME;
+                } else if (IsDlgButtonChecked(hwndDlg, IDC_NOTIFICATION_TYPE_SYSTEM_MODAL) == BST_CHECKED) {
+                    notificationType = NOTIFICATION_TYPE_SYSTEM_MODAL;
+                } else if (IsDlgButtonChecked(hwndDlg, IDC_NOTIFICATION_TYPE_OS) == BST_CHECKED) {
+                    notificationType = NOTIFICATION_TYPE_OS;
+                }
+                
                 // 保存所有配置
                 WriteConfigNotificationMessages(timeout_msg, pomodoro_msg, cycle_complete_msg);
                 WriteConfigNotificationTimeout(timeInMs);
                 WriteConfigNotificationOpacity(opacity);
+                WriteConfigNotificationType(notificationType);
                 
                 EndDialog(hwndDlg, IDOK);
                 g_hwndNotificationSettingsDialog = NULL;
@@ -1559,6 +1596,7 @@ void ShowNotificationSettingsDialog(HWND hwndParent) {
         ReadNotificationMessagesConfig();
         ReadNotificationTimeoutConfig();
         ReadNotificationOpacityConfig();
+        ReadNotificationTypeConfig();
         
         DialogBox(GetModuleHandle(NULL), 
                  MAKEINTRESOURCE(CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG), 

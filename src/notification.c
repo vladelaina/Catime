@@ -41,6 +41,8 @@
 extern int NOTIFICATION_TIMEOUT_MS; // 修改：使用extern关键字声明，不再定义
 // 新增：通知最大透明度配置
 extern int NOTIFICATION_MAX_OPACITY;
+// 新增：通知类型配置
+extern NotificationType NOTIFICATION_TYPE;
 
 /**
  * 通知窗口动画状态枚举
@@ -70,6 +72,64 @@ int CalculateTextWidth(HDC hdc, const wchar_t* text, HFONT font) {
     GetTextExtentPoint32W(hdc, text, wcslen(text), &textSize);
     SelectObject(hdc, oldFont);
     return textSize.cx;
+}
+
+/**
+ * @brief 显示通知（根据配置的通知类型）
+ * @param hwnd 父窗口句柄，用于获取应用实例和计算位置
+ * @param message 要显示的通知消息文本(UTF-8编码)
+ * 
+ * 根据配置的通知类型显示不同风格的通知
+ */
+void ShowNotification(HWND hwnd, const char* message) {
+    // 读取最新的通知类型配置
+    ReadNotificationTypeConfig();
+    
+    // 根据通知类型选择对应的通知方式
+    switch (NOTIFICATION_TYPE) {
+        case NOTIFICATION_TYPE_CATIME:
+            ShowToastNotification(hwnd, message);
+            break;
+        case NOTIFICATION_TYPE_SYSTEM_MODAL:
+            ShowModalNotification(hwnd, message);
+            break;
+        case NOTIFICATION_TYPE_OS:
+            ShowTrayNotification(hwnd, message);
+            break;
+        default:
+            // 默认使用Catime通知窗口
+            ShowToastNotification(hwnd, message);
+            break;
+    }
+}
+
+/**
+ * @brief 显示系统模态对话框通知
+ * @param hwnd 父窗口句柄
+ * @param message 要显示的通知消息文本(UTF-8编码)
+ * 
+ * 显示一个阻塞的系统消息框通知
+ */
+void ShowModalNotification(HWND hwnd, const char* message) {
+    // 播放通知声音
+    MessageBeep(MB_ICONINFORMATION);
+    
+    // 将UTF-8消息转换为宽字符以支持Unicode显示
+    int wlen = MultiByteToWideChar(CP_UTF8, 0, message, -1, NULL, 0);
+    wchar_t* wmessage = (wchar_t*)malloc(wlen * sizeof(wchar_t));
+    if (!wmessage) {
+        // 内存分配失败，直接显示英文版本
+        MessageBoxA(hwnd, message, "Catime Notification", MB_OK | MB_ICONINFORMATION);
+        return;
+    }
+    
+    MultiByteToWideChar(CP_UTF8, 0, message, -1, wmessage, wlen);
+    
+    // 显示模态对话框，固定标题为"Catime通知"
+    MessageBoxW(hwnd, wmessage, L"Catime通知", MB_OK | MB_ICONINFORMATION);
+    
+    // 释放分配的内存
+    free(wmessage);
 }
 
 /**

@@ -50,6 +50,8 @@ char POMODORO_CYCLE_COMPLETE_TEXT[100] = "所有番茄钟循环完成！";
 int NOTIFICATION_TIMEOUT_MS = 3000;  // 默认3秒
 // 新增配置变量：通知窗口最大透明度(百分比)
 int NOTIFICATION_MAX_OPACITY = 95;   // 默认95%透明度
+// 新增配置变量：通知类型
+NotificationType NOTIFICATION_TYPE = NOTIFICATION_TYPE_CATIME; // 默认使用Catime通知窗口
 
 /**
  * @brief 获取配置文件路径
@@ -133,6 +135,9 @@ void CreateDefaultConfig(const char* config_path) {
         
         // 新增：通知窗口最大透明度
         fprintf(file, "NOTIFICATION_MAX_OPACITY=95\n");   // 默认95%
+        
+        // 新增：通知类型
+        fprintf(file, "NOTIFICATION_TYPE=0\n");  // 默认使用Catime通知窗口
         
         // 番茄钟设置区块
         fprintf(file, "POMODORO_TIME_OPTIONS=1500,300,1500,600\n"); // 时间1,时间2,时间3,时间4...
@@ -540,6 +545,18 @@ void ReadConfig() {
         // 确保循环次数至少为1
         if (POMODORO_LOOP_COUNT < 1) POMODORO_LOOP_COUNT = 1;
     }
+    
+    // 查找通知显示时间配置
+    ReadNotificationTimeoutConfig();
+    
+    // 查找通知透明度配置
+    ReadNotificationOpacityConfig();
+    
+    // 查找通知类型配置
+    ReadNotificationTypeConfig();
+    
+    // 关闭文件
+    fclose(file);
 }
 
 /**
@@ -1137,7 +1154,7 @@ void WriteConfig(const char* config_path) {
     
     // 新增：自定义通知消息
     fprintf(file, "CLOCK_TIMEOUT_MESSAGE_TEXT=%s\n", CLOCK_TIMEOUT_MESSAGE_TEXT);
-    fprintf(file, "POMODORO_TIMEOUT_MESSAGE_TEXT=%s\n", POMODORO_TIMEOUT_MESSAGE_TEXT); // 添加番茄钟专用提示
+    fprintf(file, "POMODORO_TIMEOUT_MESSAGE_TEXT=%s\n", POMODORO_TIMEOUT_MESSAGE_TEXT);
     fprintf(file, "POMODORO_CYCLE_COMPLETE_TEXT=%s\n", POMODORO_CYCLE_COMPLETE_TEXT);
     
     // 新增：通知显示时间
@@ -1145,6 +1162,9 @@ void WriteConfig(const char* config_path) {
     
     // 新增：通知最大透明度
     fprintf(file, "NOTIFICATION_MAX_OPACITY=%d\n", NOTIFICATION_MAX_OPACITY);
+    
+    // 新增：通知类型
+    fprintf(file, "NOTIFICATION_TYPE=%d\n", (int)NOTIFICATION_TYPE);
     
     // 番茄钟设置区块
     fprintf(file, "POMODORO_TIME_OPTIONS=");
@@ -1891,4 +1911,91 @@ void WriteConfigNotificationOpacity(int opacity) {
     
     // 更新全局变量
     NOTIFICATION_MAX_OPACITY = opacity;
+}
+
+/**
+ * @brief 从配置文件中读取通知类型设置
+ *
+ * 读取配置文件中的NOTIFICATION_TYPE项，并更新全局变量。
+ * 若配置项不存在，保持默认值（Catime通知窗口）。
+ */
+void ReadNotificationTypeConfig(void) {
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    
+    FILE *file = fopen(config_path, "r");
+    if (file) {
+        char line[256];
+        while (fgets(line, sizeof(line), file)) {
+            if (strncmp(line, "NOTIFICATION_TYPE=", 18) == 0) {
+                int type;
+                if (sscanf(line + 18, "%d", &type) == 1) {
+                    // 确保类型值在有效范围内
+                    if (type >= NOTIFICATION_TYPE_CATIME && type <= NOTIFICATION_TYPE_OS) {
+                        NOTIFICATION_TYPE = (NotificationType)type;
+                    }
+                }
+                break;
+            }
+        }
+        fclose(file);
+    }
+}
+
+/**
+ * @brief 写入通知类型配置
+ * @param type 通知类型枚举值
+ *
+ * 更新配置文件中的通知类型设置，采用临时文件方式确保配置更新安全。
+ */
+void WriteConfigNotificationType(NotificationType type) {
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    
+    // 确保类型值在有效范围内
+    if (type < NOTIFICATION_TYPE_CATIME || type > NOTIFICATION_TYPE_OS) {
+        type = NOTIFICATION_TYPE_CATIME; // 默认值
+    }
+    
+    // 更新全局变量
+    NOTIFICATION_TYPE = type;
+    
+    // 构建临时文件路径
+    char temp_path[MAX_PATH];
+    strncpy(temp_path, config_path, MAX_PATH - 5);
+    strcat(temp_path, ".tmp");
+    
+    FILE *source = fopen(config_path, "r");
+    FILE *target = fopen(temp_path, "w");
+    
+    if (source && target) {
+        char line[256];
+        BOOL found = FALSE;
+        
+        // 复制文件内容，替换目标配置行
+        while (fgets(line, sizeof(line), source)) {
+            if (strncmp(line, "NOTIFICATION_TYPE=", 18) == 0) {
+                fprintf(target, "NOTIFICATION_TYPE=%d\n", (int)type);
+                found = TRUE;
+            } else {
+                fputs(line, target);
+            }
+        }
+        
+        // 如果没找到配置项，添加到文件末尾
+        if (!found) {
+            fprintf(target, "NOTIFICATION_TYPE=%d\n", (int)type);
+        }
+        
+        fclose(source);
+        fclose(target);
+        
+        // 替换原始文件
+        remove(config_path);
+        rename(temp_path, config_path);
+    } else {
+        // 清理可能打开的文件
+        if (source) fclose(source);
+        if (target) fclose(target);
+    }
 }
