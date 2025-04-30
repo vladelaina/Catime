@@ -1,5 +1,5 @@
 /* 版本与更新信息 */
-#define CATIME_VERSION "1.0.6"
+#define CATIME_VERSION "1.0.8-alpha1"
 
 /* 鸣谢链接  猫屋敷梨梨Official*/
 #define CREDIT_LINK_URL L"https://space.bilibili.com/26087398"
@@ -309,7 +309,7 @@
 // 通知设置菜单项
 #define CLOCK_IDM_NOTIFICATION_CONTENT 191
 #define CLOCK_IDM_NOTIFICATION_DISPLAY 192
-#define CLOCK_IDM_NOTIFICATION_SETTINGS 193  // 新增：整合后的通知设置菜单项
+#define CLOCK_IDM_NOTIFICATION_SETTINGS 193 // 新增：整合后的通知设置菜单项
 
 // 通知设置对话框相关 - 添加新控件ID
 #define CLOCK_IDD_NOTIFICATION_DISPLAY_DIALOG 1011
