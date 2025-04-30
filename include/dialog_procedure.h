@@ -104,4 +104,13 @@ void ShowNotificationMessagesDialog(HWND hwndParent);
  */
 void ShowNotificationDisplayDialog(HWND hwndParent);
 
+/**
+ * @brief 显示整合后的通知设置对话框
+ * @param hwndParent 父窗口句柄
+ * 
+ * 显示同时包含通知内容和通知显示设置的整合对话框。
+ * 与之前的两个单独对话框不同，这个对话框整合了所有通知相关设置。
+ */
+void ShowNotificationSettingsDialog(HWND hwndParent);
+
 #endif // DIALOG_PROCEDURE_H

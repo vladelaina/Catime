@@ -1552,6 +1552,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     ShowNotificationDisplayDialog(hwnd);
                     break;
                 }
+                case CLOCK_IDM_NOTIFICATION_SETTINGS: {
+                    ShowNotificationSettingsDialog(hwnd);
+                    break;
+                }
                 case CLOCK_IDM_HELP: {
                     OpenUserGuide();
                     break;

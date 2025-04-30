@@ -1308,3 +1308,263 @@ void ShowNotificationDisplayDialog(HWND hwndParent) {
         SetForegroundWindow(g_hwndNotificationDisplayDialog);
     }
 }
+
+// 添加全局变量来跟踪整合后的通知设置对话框句柄
+static HWND g_hwndNotificationSettingsDialog = NULL;
+
+/**
+ * @brief 整合后的通知设置对话框处理程序
+ * @param hwndDlg 对话框句柄
+ * @param msg 消息类型
+ * @param wParam 消息参数
+ * @param lParam 消息参数
+ * @return INT_PTR 消息处理结果
+ * 
+ * 整合了通知内容和通知显示的统一设置界面
+ */
+INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    static HBRUSH hBackgroundBrush = NULL;
+    static HBRUSH hEditBrush = NULL;
+    
+    switch (msg) {
+        case WM_INITDIALOG: {
+            // 设置窗口置顶
+            SetWindowPos(hwndDlg, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+            
+            // 创建画刷
+            hBackgroundBrush = CreateSolidBrush(RGB(0xF3, 0xF3, 0xF3));
+            hEditBrush = CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF));
+            
+            // 读取最新配置到全局变量
+            ReadNotificationMessagesConfig();
+            ReadNotificationTimeoutConfig();
+            ReadNotificationOpacityConfig();
+            
+            // 设置通知内容 - 为了处理UTF-8中文，转换到Unicode
+            wchar_t wideText[256];
+            
+            // 第一个编辑框 - 倒计时超时提示
+            MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_MESSAGE_TEXT, -1, 
+                               wideText, sizeof(wideText)/sizeof(wchar_t));
+            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, wideText);
+            
+            // 第二个编辑框 - 番茄钟超时提示
+            MultiByteToWideChar(CP_UTF8, 0, POMODORO_TIMEOUT_MESSAGE_TEXT, -1, 
+                               wideText, sizeof(wideText)/sizeof(wchar_t));
+            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT2, wideText);
+            
+            // 第三个编辑框 - 番茄钟循环完成提示
+            MultiByteToWideChar(CP_UTF8, 0, POMODORO_CYCLE_COMPLETE_TEXT, -1, 
+                               wideText, sizeof(wideText)/sizeof(wchar_t));
+            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT3, wideText);
+            
+            // 设置通知显示时间和透明度
+            char buffer[32];
+            
+            // 显示时间（秒，支持小数点）- 毫秒转为秒
+            sprintf(buffer, "%.1f", (float)NOTIFICATION_TIMEOUT_MS / 1000.0f);
+            // 移除末尾的.0
+            if (strlen(buffer) > 2 && buffer[strlen(buffer)-2] == '.' && buffer[strlen(buffer)-1] == '0') {
+                buffer[strlen(buffer)-2] = '\0';
+            }
+            SetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, buffer);
+            
+            // 透明度（百分比）
+            sprintf(buffer, "%d", NOTIFICATION_MAX_OPACITY);
+            SetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT, buffer);
+            
+            // 本地化标签文本
+            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_LABEL1, 
+                           GetLocalizedString(L"倒计时超时提示:", L"Countdown timeout message:"));
+            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_LABEL2, 
+                           GetLocalizedString(L"番茄钟超时提示:", L"Pomodoro timeout message:"));
+            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_LABEL3,
+                           GetLocalizedString(L"番茄钟循环完成提示:", L"Pomodoro cycle complete message:"));
+            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_TIME_LABEL, 
+                           GetLocalizedString(L"通知显示时间(秒):", L"Notification display time (sec):"));
+            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_OPACITY_LABEL,
+                           GetLocalizedString(L"通知最大透明度(1-100%):", L"Notification max opacity (1-100%):"));
+            
+            // 本地化按钮文本
+            SetDlgItemTextW(hwndDlg, IDOK, GetLocalizedString(L"确定", L"OK"));
+            SetDlgItemTextW(hwndDlg, IDCANCEL, GetLocalizedString(L"取消", L"Cancel"));
+            
+            // 修改编辑框风格，移除ES_NUMBER以允许小数点
+            HWND hEditTime = GetDlgItem(hwndDlg, IDC_NOTIFICATION_TIME_EDIT);
+            LONG style = GetWindowLong(hEditTime, GWL_STYLE);
+            SetWindowLong(hEditTime, GWL_STYLE, style & ~ES_NUMBER);
+            
+            // 子类化编辑框以支持Ctrl+A全选
+            HWND hEdit1 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT1);
+            HWND hEdit2 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT2);
+            HWND hEdit3 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT3);
+            HWND hEditOpacity = GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT);
+            
+            // 保存原始的窗口过程
+            wpOrigEditProc = (WNDPROC)SetWindowLongPtr(hEdit1, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
+            
+            // 对其他编辑框也应用相同的子类化过程
+            SetWindowLongPtr(hEdit2, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
+            SetWindowLongPtr(hEdit3, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
+            SetWindowLongPtr(hEditTime, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
+            SetWindowLongPtr(hEditOpacity, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
+            
+            // 设置焦点到第一个编辑框
+            SetFocus(hEdit1);
+            
+            return FALSE;  // 返回FALSE因为我们手动设置了焦点
+        }
+        
+        case WM_CTLCOLORDLG:
+            return (INT_PTR)hBackgroundBrush;
+        
+        case WM_CTLCOLORSTATIC:
+            SetBkColor((HDC)wParam, RGB(0xF3, 0xF3, 0xF3));
+            return (INT_PTR)hBackgroundBrush;
+            
+        case WM_CTLCOLOREDIT:
+            SetBkColor((HDC)wParam, RGB(0xFF, 0xFF, 0xFF));
+            return (INT_PTR)hEditBrush;
+        
+        case WM_COMMAND:
+            if (LOWORD(wParam) == IDOK) {
+                // ===== 通知内容部分 =====
+                // 获取编辑框中的文本（Unicode方式）
+                wchar_t wTimeout[256] = {0};
+                wchar_t wPomodoro[256] = {0};
+                wchar_t wCycle[256] = {0};
+                
+                // 获取Unicode文本
+                GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, wTimeout, sizeof(wTimeout)/sizeof(wchar_t));
+                GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT2, wPomodoro, sizeof(wPomodoro)/sizeof(wchar_t));
+                GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT3, wCycle, sizeof(wCycle)/sizeof(wchar_t));
+                
+                // 转换为UTF-8
+                char timeout_msg[256] = {0};
+                char pomodoro_msg[256] = {0};
+                char cycle_complete_msg[256] = {0};
+                
+                WideCharToMultiByte(CP_UTF8, 0, wTimeout, -1, 
+                                    timeout_msg, sizeof(timeout_msg), NULL, NULL);
+                WideCharToMultiByte(CP_UTF8, 0, wPomodoro, -1, 
+                                    pomodoro_msg, sizeof(pomodoro_msg), NULL, NULL);
+                WideCharToMultiByte(CP_UTF8, 0, wCycle, -1, 
+                                    cycle_complete_msg, sizeof(cycle_complete_msg), NULL, NULL);
+                
+                // ===== 通知显示部分 =====
+                char timeStr[32] = {0};
+                char opacityStr[32] = {0};
+                
+                // 获取用户输入的值
+                GetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, timeStr, sizeof(timeStr));
+                GetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT, opacityStr, sizeof(opacityStr));
+                
+                // 使用更健壮的方式替换中文句号
+                wchar_t wTimeStr[32] = {0};
+                GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, wTimeStr, sizeof(wTimeStr)/sizeof(wchar_t));
+                
+                // 在Unicode文本中替换中文句号
+                for (int i = 0; wTimeStr[i] != L'\0'; i++) {
+                    // 将多种标点符号都识别为小数点
+                    if (wTimeStr[i] == L'。' ||  // 中文句号
+                        wTimeStr[i] == L'，' ||  // 中文逗号
+                        wTimeStr[i] == L',' ||   // 英文逗号
+                        wTimeStr[i] == L'·' ||   // 中文间隔号
+                        wTimeStr[i] == L'`' ||   // 反引号
+                        wTimeStr[i] == L'：' ||  // 中文冒号
+                        wTimeStr[i] == L':' ||   // 英文冒号
+                        wTimeStr[i] == L'；' ||  // 中文分号
+                        wTimeStr[i] == L';' ||   // 英文分号
+                        wTimeStr[i] == L'/' ||   // 斜杠
+                        wTimeStr[i] == L'\\' ||  // 反斜杠
+                        wTimeStr[i] == L'~' ||   // 波浪号
+                        wTimeStr[i] == L'～' ||  // 全角波浪号
+                        wTimeStr[i] == L'、' ||  // 顿号
+                        wTimeStr[i] == L'．') {  // 全角句点
+                        wTimeStr[i] = L'.';      // 替换为英文小数点
+                    }
+                }
+                
+                // 将处理后的Unicode文本转回ASCII
+                WideCharToMultiByte(CP_ACP, 0, wTimeStr, -1, 
+                                    timeStr, sizeof(timeStr), NULL, NULL);
+                
+                // 解析时间（秒）并转换为毫秒
+                float timeInSeconds = atof(timeStr);
+                int timeInMs = (int)(timeInSeconds * 1000.0f);
+                
+                // 确保时间至少为3000毫秒（3秒）
+                if (timeInMs < 100) timeInMs = 3000;
+                
+                // 解析透明度
+                int opacity = atoi(opacityStr);
+                
+                // 确保透明度在1-100范围内
+                if (opacity < 1) opacity = 1;
+                if (opacity > 100) opacity = 100;
+                
+                // 保存所有配置
+                WriteConfigNotificationMessages(timeout_msg, pomodoro_msg, cycle_complete_msg);
+                WriteConfigNotificationTimeout(timeInMs);
+                WriteConfigNotificationOpacity(opacity);
+                
+                EndDialog(hwndDlg, IDOK);
+                g_hwndNotificationSettingsDialog = NULL;
+                return TRUE;
+            } else if (LOWORD(wParam) == IDCANCEL) {
+                EndDialog(hwndDlg, IDCANCEL);
+                g_hwndNotificationSettingsDialog = NULL;
+                return TRUE;
+            }
+            break;
+            
+        case WM_CLOSE:
+            EndDialog(hwndDlg, IDCANCEL);
+            g_hwndNotificationSettingsDialog = NULL;
+            return TRUE;
+            
+        case WM_DESTROY:
+            // 恢复原始窗口过程
+            HWND hEdit1 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT1);
+            HWND hEdit2 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT2);
+            HWND hEdit3 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT3);
+            HWND hEditTime = GetDlgItem(hwndDlg, IDC_NOTIFICATION_TIME_EDIT);
+            HWND hEditOpacity = GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT);
+            
+            if (wpOrigEditProc) {
+                SetWindowLongPtr(hEdit1, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
+                SetWindowLongPtr(hEdit2, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
+                SetWindowLongPtr(hEdit3, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
+                SetWindowLongPtr(hEditTime, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
+                SetWindowLongPtr(hEditOpacity, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
+            }
+            
+            if (hBackgroundBrush) DeleteObject(hBackgroundBrush);
+            if (hEditBrush) DeleteObject(hEditBrush);
+            break;
+    }
+    
+    return FALSE;
+}
+
+/**
+ * @brief 显示整合后的通知设置对话框
+ * @param hwndParent 父窗口句柄
+ * 
+ * 显示同时包含通知内容和通知显示设置的整合对话框
+ */
+void ShowNotificationSettingsDialog(HWND hwndParent) {
+    if (!g_hwndNotificationSettingsDialog) {
+        // 确保首先读取最新的配置值
+        ReadNotificationMessagesConfig();
+        ReadNotificationTimeoutConfig();
+        ReadNotificationOpacityConfig();
+        
+        DialogBox(GetModuleHandle(NULL), 
+                 MAKEINTRESOURCE(CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG), 
+                 hwndParent, 
+                 NotificationSettingsDlgProc);
+    } else {
+        SetForegroundWindow(g_hwndNotificationSettingsDialog);
+    }
+}
