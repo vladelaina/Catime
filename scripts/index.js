@@ -657,6 +657,9 @@ function createCometParticle(x, y) {
 
 // 添加贡献者动效
 document.addEventListener('DOMContentLoaded', function() {
+    // 为特别感谢名单添加动效
+    enhanceThanksListItems();
+    
     // 为所有贡献者头像添加动效容器
     const contributorCells = document.querySelectorAll('.contributors-grid td');
     
@@ -813,3 +816,116 @@ document.addEventListener('DOMContentLoaded', function() {
     // 窗口大小改变时重新调整
     window.addEventListener('resize', adjustContributorsLayout);
 });
+
+// 增强特别感谢名单项目的交互效果
+function enhanceThanksListItems() {
+    const thanksItems = document.querySelectorAll('.thanks-item');
+    
+    thanksItems.forEach(item => {
+        const link = item.querySelector('a');
+        const avatar = item.querySelector('.thanks-avatar');
+        const nameSpan = item.querySelector('a span');
+        
+        if (!link || !avatar) return;
+        
+        // 重置初始状态
+        avatar.style.transition = 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+        
+        // 鼠标进入效果
+        link.addEventListener('mouseenter', function() {
+            // 创建闪光效果
+            if (!item.querySelector('.thanks-item-shine')) {
+                const shine = document.createElement('div');
+                shine.className = 'thanks-item-shine';
+                shine.style.position = 'absolute';
+                shine.style.top = '0';
+                shine.style.left = '0';
+                shine.style.width = '100%';
+                shine.style.height = '100%';
+                shine.style.background = 'linear-gradient(135deg, transparent, rgba(255,255,255,0.4), transparent)';
+                shine.style.transform = 'translateX(-100%) skewX(-15deg)';
+                shine.style.pointerEvents = 'none';
+                shine.style.zIndex = '0';
+                link.appendChild(shine);
+                
+                // 触发动画
+                setTimeout(() => {
+                    shine.style.transition = 'transform 0.8s ease-out';
+                    shine.style.transform = 'translateX(100%) skewX(-15deg)';
+                    
+                    // 动画结束后移除
+                    shine.addEventListener('transitionend', function() {
+                        if (shine.parentNode === link) {
+                            link.removeChild(shine);
+                        }
+                    });
+                }, 50);
+            }
+            
+            // 随机添加浮动微粒效果
+            for (let i = 0; i < 3; i++) {
+                const particle = document.createElement('span');
+                particle.className = 'thanks-particle';
+                
+                // 随机位置、大小和颜色
+                const size = 4 + Math.random() * 6;
+                particle.style.position = 'absolute';
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+                particle.style.borderRadius = '50%';
+                particle.style.backgroundColor = Math.random() > 0.5 ? 
+                    'rgba(122, 162, 247, 0.6)' : 'rgba(247, 125, 170, 0.6)';
+                particle.style.left = `${20 + Math.random() * 60}%`;
+                particle.style.bottom = '0';
+                particle.style.zIndex = '0';
+                particle.style.pointerEvents = 'none';
+                
+                // 添加动画
+                particle.style.animation = `float-up ${1.5 + Math.random()}s ease-out forwards`;
+                link.appendChild(particle);
+                
+                // 动画结束后移除
+                setTimeout(() => {
+                    if (particle.parentNode === link) {
+                        link.removeChild(particle);
+                    }
+                }, 2000);
+            }
+            
+            // 给名称添加打字机效果
+            if (nameSpan && Math.random() > 0.7) {
+                const originalText = nameSpan.textContent;
+                const chars = originalText.split('');
+                nameSpan.textContent = '';
+                
+                chars.forEach((char, index) => {
+                    setTimeout(() => {
+                        nameSpan.textContent += char;
+                    }, 30 * index);
+                });
+            }
+            
+            // 随机旋转角度
+            const randomRotate = Math.random() > 0.5 ? '5deg' : '-5deg';
+            avatar.style.transform = `scale(1.15) rotate(${randomRotate})`;
+        });
+        
+        // 鼠标离开效果
+        link.addEventListener('mouseleave', function() {
+            avatar.style.transform = '';
+        });
+    });
+    
+    // 添加必要的CSS样式
+    if (!document.getElementById('thanks-list-animations')) {
+        const style = document.createElement('style');
+        style.id = 'thanks-list-animations';
+        style.textContent = `
+            @keyframes float-up {
+                0% { transform: translateY(0) scale(1); opacity: 1; }
+                100% { transform: translateY(-100px) scale(0); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}

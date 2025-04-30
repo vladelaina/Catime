@@ -5,6 +5,7 @@
     background-color: var(--background-color);
     position: relative;
     overflow: hidden;
+    background: linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(248,249,255,1) 50%, rgba(255,255,255,1) 100%);
 }
 
 .special-thanks::before {
@@ -17,33 +18,9 @@
     background: linear-gradient(90deg, transparent, rgba(122, 162, 247, 0.3), transparent);
 }
 
-.thanks-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    object-fit: cover;
-    margin-right: 0.7rem;
-    border: 1px solid rgba(122, 162, 247, 0.2);
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-}
-
-.thanks-item:hover .thanks-avatar {
-    transform: scale(1.1);
-    box-shadow: 0 3px 8px rgba(122, 162, 247, 0.2);
-    border-color: rgba(122, 162, 247, 0.2); /* 从粉色改为蓝色，且透明度更高 */
-}
-
-@keyframes thanksPulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
-}
-
 .thanks-list {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 1.5rem;
     margin-top: 2rem;
     list-style: none;
@@ -60,94 +37,146 @@
     align-items: center;
     padding: 0.8rem 1.5rem;
     background: white;
-    border-radius: 50px;
+    border-radius: 18px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
     color: var(--text-color);
     text-decoration: none;
     transition: all 0.3s ease;
     border: 1px solid rgba(122, 162, 247, 0.1);
-    min-width: 180px;
-    justify-content: center;
+    justify-content: flex-start;
+    overflow: hidden;
+    position: relative;
 }
 
-.thanks-item:hover a {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 20px rgba(122, 162, 247, 0.15);
-    border-color: rgba(122, 162, 247, 0.3);
-    background: linear-gradient(135deg, #ffffff, #f9f9ff);
-    color: var(--primary-color);
+.thanks-item a::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(122, 162, 247, 0.05), rgba(247, 125, 170, 0.05));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 0;
 }
 
-.thanks-item a i {
-    color: var(--accent-color);
-    margin-right: 0.7rem;
-    font-size: 0.9rem;
-    transition: transform 0.3s ease;
+.thanks-item:hover a::before {
+    opacity: 1;
 }
 
-.thanks-item:hover a i {
-    transform: scale(1.2);
-    animation: heartPulse 1.2s infinite;
+.thanks-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 1rem;
+    border: 2px solid rgba(122, 162, 247, 0.2);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    position: relative;
+    z-index: 1;
+}
+
+.thanks-item:hover .thanks-avatar {
+    transform: scale(1.15) rotate(5deg);
+    box-shadow: 0 6px 15px rgba(122, 162, 247, 0.25);
+    border-color: rgba(122, 162, 247, 0.6);
 }
 
 .thanks-item a span {
     font-weight: 500;
     transition: all 0.3s ease;
     position: relative;
+    z-index: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: calc(100% - 60px);
 }
 
 .thanks-item:hover a span {
-    transform: translateX(3px);
     color: var(--accent-color);
 }
 
-.thanks-item a span::after {
-    content: '';
-    position: absolute;
-    bottom: -2px;
-    left: 0;
-    width: 0;
-    height: 1px;
-    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
-    transition: width 0.3s ease;
+.thanks-item:hover a {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 25px rgba(122, 162, 247, 0.15);
+    border-color: rgba(122, 162, 247, 0.3);
 }
 
-.thanks-item:hover a span::after {
-    width: 100%;
+@keyframes shine {
+    0% {
+        left: -100%;
+    }
+    20%, 100% {
+        left: 100%;
+    }
+}
+
+.thanks-item a::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(90deg, 
+        transparent,
+        rgba(255, 255, 255, 0.3),
+        transparent);
+    transform: skewX(-25deg);
+    transition: all 0.3s ease;
+    z-index: 0;
+}
+
+.thanks-item:hover a::after {
+    animation: shine 2s ease-in-out infinite;
+}
+
+@media (max-width: 1200px) {
+    .thanks-list {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
 }
 
 @media (max-width: 768px) {
     .thanks-list {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
         gap: 1rem;
     }
     
     .thanks-item a {
-        padding: 0.6rem 1.2rem;
+        padding: 0.7rem 1.2rem;
         font-size: 0.9rem;
-        min-width: 150px;
     }
 
     .thanks-avatar {
-        width: 28px;
-        height: 28px;
+        width: 36px;
+        height: 36px;
+        margin-right: 0.8rem;
     }
 }
 
 @media (max-width: 480px) {
     .thanks-list {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
         gap: 0.8rem;
     }
     
     .thanks-item a {
-        padding: 0.5rem 1rem;
+        padding: 0.6rem 1rem;
         font-size: 0.85rem;
-        min-width: 135px;
     }
 
     .thanks-avatar {
-        width: 24px;
-        height: 24px;
-        margin-right: 0.5rem;
+        width: 32px;
+        height: 32px;
+        margin-right: 0.6rem;
+    }
+    
+    .thanks-item a span {
+        max-width: calc(100% - 45px);
     }
 }
 
@@ -377,5 +406,135 @@ html[lang="en"] .hero-description .emp-word {
     html[lang="en"] .hero-description .desc-word {
         margin-right: 2px;
         font-size: 0.9rem;
+    }
+}
+
+/* 特别感谢区域的背景装饰元素 */
+.thanks-decoration {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.thanks-decoration-circle {
+    position: absolute;
+    width: var(--size);
+    height: var(--size);
+    border-radius: 50%;
+    left: var(--x);
+    top: var(--y);
+    background-color: var(--color);
+    animation: pulse 6s ease-in-out infinite;
+    animation-delay: var(--delay);
+    transform: translate(-50%, -50%);
+}
+
+.thanks-decoration-plus {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    left: var(--x);
+    top: var(--y);
+    transform: translate(-50%, -50%);
+    opacity: 0.7;
+}
+
+.thanks-decoration-plus::before,
+.thanks-decoration-plus::after {
+    content: '';
+    position: absolute;
+    background-color: var(--color);
+}
+
+.thanks-decoration-plus::before {
+    width: 100%;
+    height: 4px;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+}
+
+.thanks-decoration-plus::after {
+    width: 4px;
+    height: 100%;
+    left: 50%;
+    top: 0;
+    transform: translateX(-50%);
+}
+
+.thanks-decoration-dot {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    left: var(--x);
+    top: var(--y);
+    background-color: var(--color);
+    transform: translate(-50%, -50%);
+    animation: float 10s ease-in-out infinite;
+    animation-delay: calc(var(--x) * 0.1s);
+}
+
+.thanks-decoration-star {
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    left: var(--x);
+    top: var(--y);
+    background-color: transparent;
+    transform: translate(-50%, -50%) rotate(45deg);
+    opacity: 0.7;
+    animation: twinkle 4s ease-in-out infinite;
+    animation-delay: calc(var(--y) * 0.1s);
+}
+
+.thanks-decoration-star::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--color);
+    clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+    transform: rotate(0deg);
+}
+
+@keyframes pulse {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
+    50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.8; }
+}
+
+@keyframes float {
+    0%, 100% { transform: translate(-50%, -50%) translateY(0px); }
+    50% { transform: translate(-50%, -50%) translateY(-15px); }
+}
+
+@keyframes twinkle {
+    0%, 100% { opacity: 0.3; transform: translate(-50%, -50%) rotate(45deg) scale(1); }
+    50% { opacity: 0.8; transform: translate(-50%, -50%) rotate(45deg) scale(1.2); }
+}
+
+/* 调整特别感谢区域的容器，确保装饰不影响内容 */
+.special-thanks .container {
+    position: relative;
+    z-index: 1;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .thanks-decoration-circle {
+        opacity: 0.5;
+    }
+    
+    .thanks-decoration-plus,
+    .thanks-decoration-dot,
+    .thanks-decoration-star {
+        transform: translate(-50%, -50%) scale(0.8);
     }
 }
