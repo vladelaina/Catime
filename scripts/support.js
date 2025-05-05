@@ -420,6 +420,9 @@ function translateSupportElements() {
     
     // 翻译表格内容中的留言（这里只翻译重复出现的内容）
     document.querySelectorAll('.supporters-table td').forEach(td => {
+        if (td.textContent === '加油') {
+            td.textContent = 'Keep going';
+        }
         if (td.textContent === '好用，爱用，希望增加个鼠标悬停时隐藏时钟的功能') {
             td.textContent = 'Love it! Hope to add a feature to hide the clock when hovering with mouse';
         }
