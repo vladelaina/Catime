@@ -115,7 +115,7 @@ all:
 	@trap 'rm -f .catime_build_err_tmp .catime_build_err' INT TERM EXIT; \
 	{ \
 	  ($(MAKE) _all_inner) 2> .catime_build_err && rm -f .catime_build_err || { \
-	    (clear || cls || true); \
+	    (clear || true); \
     [ -f .catime_build_err ] && cat .catime_build_err; \
     rm -f .catime_build_err; \
     exit 1; \
@@ -153,9 +153,9 @@ finalize_build: compress_executable
 	@printf "$(GREEN)Build completed! Output directory: $(OUTPUT_DIR)$(RESET)\n"
 	@rm -f $(PROGRESS_FILE)
 
-# 清屏 - 跨平台兼容方式
+# 清屏 - 仅使用clear命令，不使用cls命令
 clear_screen:
-	@(clear || cls || true)
+	@(clear || true)
 
 # 显示标志
 show_logo:

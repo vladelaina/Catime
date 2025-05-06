@@ -45,6 +45,7 @@ jobs:
       run: |
         # 修改Makefile中的输出目录为当前工作区
         export OUTPUT_PATH="$(pwd)/output"
+        export TERM=xterm-256color
         sed -i "s|OUTPUT_DIR = ./bin|OUTPUT_DIR = $OUTPUT_PATH|g" Makefile
         # 创建输出目录
         mkdir -p output

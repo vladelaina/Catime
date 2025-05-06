@@ -162,7 +162,7 @@ BOOL PlayNotificationSound(HWND hwnd) {
         // 验证文件路径是否合法
         if (!IsValidFilePath(NOTIFICATION_SOUND_FILE)) {
             wchar_t errorMsg[MAX_PATH + 64];
-            swprintf(errorMsg, MAX_PATH + 64, L"音频文件路径无效:\n%hs", NOTIFICATION_SOUND_FILE);
+            StringCbPrintfW(errorMsg, sizeof(errorMsg), L"音频文件路径无效:\n%hs", NOTIFICATION_SOUND_FILE);
             ShowErrorMessage(hwnd, errorMsg);
             // 播放系统默认提示音作为备选
             MessageBeep(MB_OK);
@@ -191,7 +191,7 @@ BOOL PlayNotificationSound(HWND hwnd) {
             } else {
                 // 不支持的文件格式
                 wchar_t errorMsg[256];
-                swprintf(errorMsg, 256, L"不支持的音频格式: %hs", extension);
+                StringCbPrintfW(errorMsg, sizeof(errorMsg), L"不支持的音频格式: %hs", extension);
                 ShowErrorMessage(hwnd, errorMsg);
                 
                 // 尝试使用MCI播放，有时候即使扩展名不常见，仍然可以播放
@@ -200,7 +200,7 @@ BOOL PlayNotificationSound(HWND hwnd) {
         } else {
             // 文件不存在
             wchar_t errorMsg[MAX_PATH + 64];
-            swprintf(errorMsg, MAX_PATH + 64, L"找不到配置的音频文件:\n%hs", NOTIFICATION_SOUND_FILE);
+            StringCbPrintfW(errorMsg, sizeof(errorMsg), L"找不到配置的音频文件:\n%hs", NOTIFICATION_SOUND_FILE);
             ShowErrorMessage(hwnd, errorMsg);
         }
     }
