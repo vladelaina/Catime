@@ -16,31 +16,10 @@
 #include "../include/language.h"
 #include "../include/notification.h"
 #include "../include/config.h"
-#include "../resource/resource.h"
+#include "../resource/resource.h"  // 包含所有ID和常量的定义
 #include <windowsx.h>  // 用于GET_X_LPARAM和GET_Y_LPARAM宏
 
-/**
- * 通知窗口相关常量定义
- */
-// 通知窗口尺寸与布局常量
-#define NOTIFICATION_MIN_WIDTH 350     // 通知窗口最小宽度(像素)
-#define NOTIFICATION_MAX_WIDTH 800     // 通知窗口最大宽度(像素)
-#define NOTIFICATION_HEIGHT 80       // 通知窗口高度(像素)
-#define NOTIFICATION_TIMER_ID 1001   // 通知超时计时器ID
-#define NOTIFICATION_CLASS_NAME L"CatimeNotificationClass"  // 通知窗口类名
-// 窗口界面元素常量
-#define CLOSE_BTN_SIZE 16            // 关闭按钮的大小(像素)
-#define CLOSE_BTN_MARGIN 10          // 关闭按钮边距(像素)
-
-// 动画效果相关常量
-#define ANIMATION_TIMER_ID 1002      // 动画计时器ID
-#define ANIMATION_STEP 5             // 每步透明度变化量(0-255)
-#define ANIMATION_INTERVAL 15        // 动画帧间隔(毫秒)
-
 // 从config.h引入
-extern int NOTIFICATION_TIMEOUT_MS; // 修改：使用extern关键字声明，不再定义
-// 新增：通知最大透明度配置
-extern int NOTIFICATION_MAX_OPACITY;
 // 新增：通知类型配置
 extern NotificationType NOTIFICATION_TYPE;
 

@@ -13,6 +13,7 @@
 #define MIN_SCALE_FACTOR 0.5f
 #define MAX_SCALE_FACTOR 100.0f
 #define CLOCK_WM_TRAYICON (WM_USER + 2)
+#define MAX_POMODORO_TIMES 10  // 番茄钟时间数组的最大容量
 
 /* 窗口尺寸常量 */
 #define WINDOW_HORIZONTAL_PADDING 190 // 左右
@@ -148,7 +149,7 @@
 #define CLOCK_IDM_POMODORO_TIME_BASE 600 // 番茄钟时间菜单项的基础ID
 
 /*==================================
- * 通知系统 (190-199, 1010-1099, 2000-2099)
+ * 通知系统 (190-199, 1000-1099, 2000-2099)
  *==================================*/
 #define CLOCK_IDM_NOTIFICATION_CONTENT 191
 #define CLOCK_IDM_NOTIFICATION_DISPLAY 192
@@ -180,8 +181,21 @@
 #define IDC_NOTIFICATION_SOUND_LABEL 2014
 #define IDC_NOTIFICATION_SOUND_COMBO 2015
 
+/* 通知窗口常量 */
+#define NOTIFICATION_MIN_WIDTH 350     // 通知窗口最小宽度(像素)
+#define NOTIFICATION_MAX_WIDTH 800     // 通知窗口最大宽度(像素)
+#define NOTIFICATION_HEIGHT 80         // 通知窗口高度(像素)
+#define NOTIFICATION_TIMER_ID 1001     // 通知超时计时器ID
+#define NOTIFICATION_CLASS_NAME L"CatimeNotificationClass" // 通知窗口类名
+#define CLOSE_BTN_SIZE 16              // 关闭按钮的大小(像素)
+#define CLOSE_BTN_MARGIN 10            // 关闭按钮边距(像素)
+#define ANIMATION_TIMER_ID 1002        // 动画计时器ID
+#define ANIMATION_STEP 5               // 每步透明度变化量(0-255)
+#define ANIMATION_INTERVAL 15          // 动画帧间隔(毫秒)
+
 /* 通知最大透明度配置 */
 extern int NOTIFICATION_MAX_OPACITY;
+extern int NOTIFICATION_TIMEOUT_MS;    // 通知显示持续时间
 
 /*==================================
  * 关于对话框 (1050-1099)
