@@ -207,44 +207,77 @@ void ExtractFileName(const char* path, char* name, size_t nameSize) {
 }
 
 /**
- * @brief 检查并创建音频文件夹
+ * @brief 检查并创建资源文件夹
  * 
- * 检查配置文件同目录下是否存在audio文件夹，如果不存在则创建
+ * 检查配置文件同目录下是否存在resources目录结构，如果不存在则创建
+ * 创建的目录结构为：resources/audio, resources/images, resources/animations, resources/themes
  */
-void CheckAndCreateAudioFolder() {
+void CheckAndCreateResourceFolders() {
     char config_path[MAX_PATH];
-    char audio_folder_path[MAX_PATH];
+    char base_path[MAX_PATH];
+    char resource_path[MAX_PATH];
     char *last_slash;
     
     // 获取配置文件路径
     GetConfigPath(config_path, MAX_PATH);
     
     // 复制配置文件路径
-    strncpy(audio_folder_path, config_path, MAX_PATH - 1);
-    audio_folder_path[MAX_PATH - 1] = '\0';
+    strncpy(base_path, config_path, MAX_PATH - 1);
+    base_path[MAX_PATH - 1] = '\0';
     
     // 找到最后一个斜杠或反斜杠，即文件名部分的起始位置
-    last_slash = strrchr(audio_folder_path, '\\');
+    last_slash = strrchr(base_path, '\\');
     if (!last_slash) {
-        last_slash = strrchr(audio_folder_path, '/');
+        last_slash = strrchr(base_path, '/');
     }
     
     if (last_slash) {
         // 截断路径到目录部分
         *(last_slash + 1) = '\0';
-        // 拼接audio文件夹路径
-        strcat(audio_folder_path, "audio");
         
-        // 检查audio文件夹是否存在
-        DWORD attrs = GetFileAttributesA(audio_folder_path);
+        // 创建resources主目录
+        snprintf(resource_path, MAX_PATH, "%sresources", base_path);
+        DWORD attrs = GetFileAttributesA(resource_path);
         if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
-            // 文件夹不存在，创建它
-            if (!CreateDirectoryA(audio_folder_path, NULL)) {
-                DWORD error = GetLastError();
-                if (error != ERROR_ALREADY_EXISTS) {
-                    // 创建文件夹失败，记录错误
-                    fprintf(stderr, "Failed to create audio folder: %s (Error: %lu)\n", audio_folder_path, error);
-                }
+            if (!CreateDirectoryA(resource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
+                fprintf(stderr, "Failed to create resources folder: %s (Error: %lu)\n", resource_path, GetLastError());
+                return;
+            }
+        }
+        
+        // 创建audio子目录
+        snprintf(resource_path, MAX_PATH, "%sresources\\audio", base_path);
+        attrs = GetFileAttributesA(resource_path);
+        if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
+            if (!CreateDirectoryA(resource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
+                fprintf(stderr, "Failed to create audio folder: %s (Error: %lu)\n", resource_path, GetLastError());
+            }
+        }
+        
+        // 创建images子目录
+        snprintf(resource_path, MAX_PATH, "%sresources\\images", base_path);
+        attrs = GetFileAttributesA(resource_path);
+        if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
+            if (!CreateDirectoryA(resource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
+                fprintf(stderr, "Failed to create images folder: %s (Error: %lu)\n", resource_path, GetLastError());
+            }
+        }
+        
+        // 创建animations子目录
+        snprintf(resource_path, MAX_PATH, "%sresources\\animations", base_path);
+        attrs = GetFileAttributesA(resource_path);
+        if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
+            if (!CreateDirectoryA(resource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
+                fprintf(stderr, "Failed to create animations folder: %s (Error: %lu)\n", resource_path, GetLastError());
+            }
+        }
+        
+        // 创建themes子目录
+        snprintf(resource_path, MAX_PATH, "%sresources\\themes", base_path);
+        attrs = GetFileAttributesA(resource_path);
+        if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
+            if (!CreateDirectoryA(resource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
+                fprintf(stderr, "Failed to create themes folder: %s (Error: %lu)\n", resource_path, GetLastError());
             }
         }
     }
@@ -258,8 +291,8 @@ void CheckAndCreateAudioFolder() {
  * 支持兼容性处理，确保新旧版本配置文件均可正确读取。
  */
 void ReadConfig() {
-    // 检查并创建audio文件夹
-    CheckAndCreateAudioFolder();
+    // 检查并创建资源文件夹
+    CheckAndCreateResourceFolders();
     
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
