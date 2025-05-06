@@ -71,6 +71,13 @@ void GetConfigPath(char* path, size_t size);
 void ReadConfig();
 
 /**
+ * @brief 检查并创建音频文件夹
+ * 
+ * 检查配置文件同目录下是否存在audio文件夹，如果不存在则创建
+ */
+void CheckAndCreateAudioFolder();
+
+/**
  * @brief 将超时动作写入配置文件
  * @param action 要写入的超时动作
  */

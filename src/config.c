@@ -207,6 +207,50 @@ void ExtractFileName(const char* path, char* name, size_t nameSize) {
 }
 
 /**
+ * @brief 检查并创建音频文件夹
+ * 
+ * 检查配置文件同目录下是否存在audio文件夹，如果不存在则创建
+ */
+void CheckAndCreateAudioFolder() {
+    char config_path[MAX_PATH];
+    char audio_folder_path[MAX_PATH];
+    char *last_slash;
+    
+    // 获取配置文件路径
+    GetConfigPath(config_path, MAX_PATH);
+    
+    // 复制配置文件路径
+    strncpy(audio_folder_path, config_path, MAX_PATH - 1);
+    audio_folder_path[MAX_PATH - 1] = '\0';
+    
+    // 找到最后一个斜杠或反斜杠，即文件名部分的起始位置
+    last_slash = strrchr(audio_folder_path, '\\');
+    if (!last_slash) {
+        last_slash = strrchr(audio_folder_path, '/');
+    }
+    
+    if (last_slash) {
+        // 截断路径到目录部分
+        *(last_slash + 1) = '\0';
+        // 拼接audio文件夹路径
+        strcat(audio_folder_path, "audio");
+        
+        // 检查audio文件夹是否存在
+        DWORD attrs = GetFileAttributesA(audio_folder_path);
+        if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
+            // 文件夹不存在，创建它
+            if (!CreateDirectoryA(audio_folder_path, NULL)) {
+                DWORD error = GetLastError();
+                if (error != ERROR_ALREADY_EXISTS) {
+                    // 创建文件夹失败，记录错误
+                    fprintf(stderr, "Failed to create audio folder: %s (Error: %lu)\n", audio_folder_path, error);
+                }
+            }
+        }
+    }
+}
+
+/**
  * @brief 读取并解析配置文件
  * 
  * 从配置路径读取配置项，若文件不存在则自动创建默认配置。
@@ -214,6 +258,9 @@ void ExtractFileName(const char* path, char* name, size_t nameSize) {
  * 支持兼容性处理，确保新旧版本配置文件均可正确读取。
  */
 void ReadConfig() {
+    // 检查并创建audio文件夹
+    CheckAndCreateAudioFolder();
+    
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
