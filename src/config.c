@@ -283,6 +283,15 @@ void CheckAndCreateResourceFolders() {
                 fprintf(stderr, "Failed to create themes folder: %s (Error: %lu)\n", resource_path, GetLastError());
             }
         }
+        
+        // 创建plug-in子目录
+        snprintf(resource_path, MAX_PATH, "%sresources\\plug-in", base_path);
+        attrs = GetFileAttributesA(resource_path);
+        if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
+            if (!CreateDirectoryA(resource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
+                fprintf(stderr, "Failed to create plug-in folder: %s (Error: %lu)\n", resource_path, GetLastError());
+            }
+        }
     }
 }
 
