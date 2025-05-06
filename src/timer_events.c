@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "../include/window.h"
+#include "audio_player.h"  // 添加头文件引用
 
 // 番茄钟时间列表最大容量
 #define MAX_POMODORO_TIMES 10
@@ -126,6 +127,15 @@ static void ShowLocalizedNotification(HWND hwnd, const wchar_t* message) {
         if (result > 0) {
             // 显示通知，使用新的ShowNotification函数
             ShowNotification(hwnd, utf8Msg);
+            
+            // 如果超时动作是MESSAGE，播放通知音频
+            if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_MESSAGE) {
+                // 读取最新的音频设置
+                ReadNotificationSoundConfig();
+                
+                // 播放通知音频
+                PlayNotificationSound(hwnd);
+            }
         }
 
         // 释放内存
@@ -426,6 +436,11 @@ void OnTimerTimeout(HWND hwnd) {
             
             // 显示自定义提示信息
             ShowNotification(hwnd, utf8Msg);
+            
+            // 读取最新的音频设置并播放提示音
+            ReadNotificationSoundConfig();
+            PlayNotificationSound(hwnd);
+            
             break;
         }
         

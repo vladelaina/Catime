@@ -1,0 +1,24 @@
+/**
+ * @file audio_player.h
+ * @brief 音频播放功能接口
+ * 
+ * 提供通知音频播放功能的接口，支持多种音频格式的后台播放。
+ */
+
+#ifndef AUDIO_PLAYER_H
+#define AUDIO_PLAYER_H
+
+#include <windows.h>
+
+/**
+ * @brief 播放通知音频
+ * @param hwnd 父窗口句柄
+ * @return BOOL 成功返回TRUE，失败返回FALSE
+ * 
+ * 当配置了有效的NOTIFICATION_SOUND_FILE并且文件存在时，系统会播放该音频文件。
+ * 如果文件不存在或播放失败，则会播放系统默认提示音。
+ * 播放失败时会显示错误提示对话框。
+ */
+BOOL PlayNotificationSound(HWND hwnd);
+
+#endif // AUDIO_PLAYER_H 

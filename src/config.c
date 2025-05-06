@@ -2188,10 +2188,15 @@ void ReadNotificationSoundConfig(void) {
     char line[1024];
     while (fgets(line, sizeof(line), file)) {
         if (strncmp(line, "NOTIFICATION_SOUND_FILE=", 23) == 0) {
-            char* value = line + 23;
+            char* value = line + 23;  // 正确的偏移量，跳过"NOTIFICATION_SOUND_FILE="
             // 移除末尾的换行符
             char* newline = strchr(value, '\n');
             if (newline) *newline = '\0';
+            
+            // 确保路径不包含等号
+            if (value[0] == '=') {
+                value++; // 如果第一个字符是等号，跳过它
+            }
             
             // 复制到全局变量，确保清零
             memset(NOTIFICATION_SOUND_FILE, 0, MAX_PATH);
@@ -2210,6 +2215,19 @@ void ReadNotificationSoundConfig(void) {
  */
 void WriteConfigNotificationSound(const char* sound_file) {
     if (!sound_file) return;
+    
+    // 检查路径是否包含等号，如果有则移除
+    char clean_path[MAX_PATH] = {0};
+    const char* src = sound_file;
+    char* dst = clean_path;
+    
+    while (*src && (dst - clean_path) < (MAX_PATH - 1)) {
+        if (*src != '=') {
+            *dst++ = *src;
+        }
+        src++;
+    }
+    *dst = '\0';
     
     char config_path[MAX_PATH];
     char temp_path[MAX_PATH];
@@ -2233,7 +2251,7 @@ void WriteConfigNotificationSound(const char* sound_file) {
     // 复制文件内容，替换或添加通知音频设置
     while (fgets(line, sizeof(line), source)) {
         if (strncmp(line, "NOTIFICATION_SOUND_FILE=", 23) == 0) {
-            fprintf(dest, "NOTIFICATION_SOUND_FILE=%s\n", sound_file);
+            fprintf(dest, "NOTIFICATION_SOUND_FILE=%s\n", clean_path);
             found = 1;
         } else {
             fputs(line, dest);
@@ -2242,7 +2260,7 @@ void WriteConfigNotificationSound(const char* sound_file) {
     
     // 如果没有找到配置项，添加到文件末尾
     if (!found) {
-        fprintf(dest, "NOTIFICATION_SOUND_FILE=%s\n", sound_file);
+        fprintf(dest, "NOTIFICATION_SOUND_FILE=%s\n", clean_path);
     }
     
     fclose(source);
@@ -2254,6 +2272,6 @@ void WriteConfigNotificationSound(const char* sound_file) {
     
     // 更新全局变量
     memset(NOTIFICATION_SOUND_FILE, 0, MAX_PATH);
-    strncpy(NOTIFICATION_SOUND_FILE, sound_file, MAX_PATH - 1);
+    strncpy(NOTIFICATION_SOUND_FILE, clean_path, MAX_PATH - 1);
     NOTIFICATION_SOUND_FILE[MAX_PATH - 1] = '\0';
 }
