@@ -104,32 +104,84 @@ void ShowNotification(HWND hwnd, const char* message) {
 }
 
 /**
+ * 模态对话框线程参数结构体
+ */
+typedef struct {
+    HWND hwnd;               // 父窗口句柄
+    char message[512];       // 消息内容
+} DialogThreadParams;
+
+/**
+ * @brief 显示模态对话框的线程函数
+ * @param lpParam 线程参数，DialogThreadParams结构体指针
+ * @return DWORD 线程返回值
+ */
+DWORD WINAPI ShowModalDialogThread(LPVOID lpParam) {
+    DialogThreadParams* params = (DialogThreadParams*)lpParam;
+    
+    // 播放通知声音
+    MessageBeep(MB_OK);
+    
+    // 将UTF-8消息转换为宽字符以支持Unicode显示
+    int wlen = MultiByteToWideChar(CP_UTF8, 0, params->message, -1, NULL, 0);
+    wchar_t* wmessage = (wchar_t*)malloc(wlen * sizeof(wchar_t));
+    if (!wmessage) {
+        // 内存分配失败，直接显示英文版本
+        MessageBoxA(params->hwnd, params->message, "Catime", MB_OK);
+        free(params);
+        return 0;
+    }
+    
+    MultiByteToWideChar(CP_UTF8, 0, params->message, -1, wmessage, wlen);
+    
+    // 显示模态对话框，固定标题为"Catime"
+    MessageBoxW(params->hwnd, wmessage, L"Catime", MB_OK);
+    
+    // 释放分配的内存
+    free(wmessage);
+    free(params);
+    
+    return 0;
+}
+
+/**
  * @brief 显示系统模态对话框通知
  * @param hwnd 父窗口句柄
  * @param message 要显示的通知消息文本(UTF-8编码)
  * 
- * 显示一个阻塞的系统消息框通知
+ * 在单独线程中显示模态对话框，不会阻塞主程序运行
  */
 void ShowModalNotification(HWND hwnd, const char* message) {
-    // 播放通知声音
-    MessageBeep(MB_ICONINFORMATION);
+    // 创建线程参数结构体
+    DialogThreadParams* params = (DialogThreadParams*)malloc(sizeof(DialogThreadParams));
+    if (!params) return;
     
-    // 将UTF-8消息转换为宽字符以支持Unicode显示
-    int wlen = MultiByteToWideChar(CP_UTF8, 0, message, -1, NULL, 0);
-    wchar_t* wmessage = (wchar_t*)malloc(wlen * sizeof(wchar_t));
-    if (!wmessage) {
-        // 内存分配失败，直接显示英文版本
-        MessageBoxA(hwnd, message, "Catime Notification", MB_OK | MB_ICONINFORMATION);
+    // 复制参数
+    params->hwnd = hwnd;
+    strncpy(params->message, message, sizeof(params->message) - 1);
+    params->message[sizeof(params->message) - 1] = '\0';
+    
+    // 创建新线程来显示对话框
+    HANDLE hThread = CreateThread(
+        NULL,               // 默认安全属性
+        0,                  // 默认堆栈大小
+        ShowModalDialogThread, // 线程函数
+        params,             // 线程参数
+        0,                  // 立即运行线程
+        NULL                // 不接收线程ID
+    );
+    
+    // 如果线程创建失败，释放资源
+    if (hThread == NULL) {
+        free(params);
+        // 回退到非阻塞的通知方式
+        MessageBeep(MB_OK);
+        ShowTrayNotification(hwnd, message);
         return;
     }
     
-    MultiByteToWideChar(CP_UTF8, 0, message, -1, wmessage, wlen);
-    
-    // 显示模态对话框，固定标题为"Catime通知"
-    MessageBoxW(hwnd, wmessage, L"Catime通知", MB_OK | MB_ICONINFORMATION);
-    
-    // 释放分配的内存
-    free(wmessage);
+    // 关闭线程句柄，让系统自动清理
+    CloseHandle(hThread);
 }
 
 /**
@@ -155,7 +207,7 @@ void ShowToastNotification(HWND hwnd, const char* message) {
     ReadNotificationOpacityConfig();
     
     // 播放通知声音
-    MessageBeep(MB_ICONINFORMATION);
+    MessageBeep(MB_OK);
     
     // 注册通知窗口类（如果还未注册）
     if (!isClassRegistered) {
