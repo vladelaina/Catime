@@ -213,10 +213,10 @@ static void GetLogFilePath(char* logPath, size_t size) {
         strncpy(logPath, configPath, dirLen);
         
         // 使用简单的日志文件名
-        _snprintf_s(logPath + dirLen, size - dirLen, _TRUNCATE, "catime.log");
+        _snprintf_s(logPath + dirLen, size - dirLen, _TRUNCATE, "Catime_Logs.log");
     } else {
         // 如果无法确定配置目录，使用当前目录
-        _snprintf_s(logPath, size, _TRUNCATE, "catime.log");
+        _snprintf_s(logPath, size, _TRUNCATE, "Catime_Logs.log");
     }
 }
 
