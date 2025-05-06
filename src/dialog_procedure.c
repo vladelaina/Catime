@@ -1325,6 +1325,9 @@ static void PopulateSoundComboBox(HWND hwndDlg) {
 
     // 添加"无"选项
     SendMessageW(hwndCombo, CB_ADDSTRING, 0, (LPARAM)L"无");
+    
+    // 添加"系统提示音"选项
+    SendMessageW(hwndCombo, CB_ADDSTRING, 0, (LPARAM)L"系统提示音");
 
     // 获取音频文件夹路径
     char audio_path[MAX_PATH];
@@ -1359,20 +1362,26 @@ static void PopulateSoundComboBox(HWND hwndDlg) {
 
     // 设置当前选中的音频文件
     if (NOTIFICATION_SOUND_FILE[0] != '\0') {
-        wchar_t wSoundFile[MAX_PATH];
-        MultiByteToWideChar(CP_UTF8, 0, NOTIFICATION_SOUND_FILE, -1, wSoundFile, MAX_PATH);
-        
-        // 获取文件名部分
-        wchar_t* fileName = wcsrchr(wSoundFile, L'\\');
-        if (fileName) fileName++;
-        else fileName = wSoundFile;
-        
-        // 在下拉框中查找并选择该文件
-        int index = SendMessageW(hwndCombo, CB_FINDSTRINGEXACT, -1, (LPARAM)fileName);
-        if (index != CB_ERR) {
-            SendMessage(hwndCombo, CB_SETCURSEL, index, 0);
+        // 检查是否是系统提示音特殊标记
+        if (strcmp(NOTIFICATION_SOUND_FILE, "SYSTEM_BEEP") == 0) {
+            // 选择"系统提示音"选项（索引为1）
+            SendMessage(hwndCombo, CB_SETCURSEL, 1, 0);
         } else {
-            SendMessage(hwndCombo, CB_SETCURSEL, 0, 0); // 选择"无"
+            wchar_t wSoundFile[MAX_PATH];
+            MultiByteToWideChar(CP_UTF8, 0, NOTIFICATION_SOUND_FILE, -1, wSoundFile, MAX_PATH);
+            
+            // 获取文件名部分
+            wchar_t* fileName = wcsrchr(wSoundFile, L'\\');
+            if (fileName) fileName++;
+            else fileName = wSoundFile;
+            
+            // 在下拉框中查找并选择该文件
+            int index = SendMessageW(hwndCombo, CB_FINDSTRINGEXACT, -1, (LPARAM)fileName);
+            if (index != CB_ERR) {
+                SendMessage(hwndCombo, CB_SETCURSEL, index, 0);
+            } else {
+                SendMessage(hwndCombo, CB_SETCURSEL, 0, 0); // 选择"无"
+            }
         }
     } else {
         SendMessage(hwndCombo, CB_SETCURSEL, 0, 0); // 选择"无"
@@ -1502,17 +1511,23 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                     wchar_t wFileName[MAX_PATH];
                     SendMessageW(hwndCombo, CB_GETLBTEXT, index, (LPARAM)wFileName);
                     
-                    // 获取音频文件夹路径
-                    char audio_path[MAX_PATH];
-                    GetAudioFolderPath(audio_path, MAX_PATH);
-                    
-                    // 转换为UTF-8路径
-                    char fileName[MAX_PATH];
-                    WideCharToMultiByte(CP_UTF8, 0, wFileName, -1, fileName, MAX_PATH, NULL, NULL);
-                    
-                    // 构建完整的文件路径
-                    memset(NOTIFICATION_SOUND_FILE, 0, MAX_PATH);
-                    snprintf(NOTIFICATION_SOUND_FILE, MAX_PATH, "%s\\%s", audio_path, fileName);
+                    // 检查是否选择了"系统提示音"
+                    if (wcscmp(wFileName, L"系统提示音") == 0) {
+                        // 使用特殊标记来表示系统提示音
+                        strcpy(NOTIFICATION_SOUND_FILE, "SYSTEM_BEEP");
+                    } else {
+                        // 获取音频文件夹路径
+                        char audio_path[MAX_PATH];
+                        GetAudioFolderPath(audio_path, MAX_PATH);
+                        
+                        // 转换为UTF-8路径
+                        char fileName[MAX_PATH];
+                        WideCharToMultiByte(CP_UTF8, 0, wFileName, -1, fileName, MAX_PATH, NULL, NULL);
+                        
+                        // 构建完整的文件路径
+                        memset(NOTIFICATION_SOUND_FILE, 0, MAX_PATH);
+                        snprintf(NOTIFICATION_SOUND_FILE, MAX_PATH, "%s\\%s", audio_path, fileName);
+                    }
                 } else {
                     NOTIFICATION_SOUND_FILE[0] = '\0';
                 }

@@ -207,6 +207,13 @@ BOOL PlayNotificationSound(HWND hwnd) {
     
     // 检查是否配置了音频文件
     if (NOTIFICATION_SOUND_FILE[0] != '\0') {
+        // 检查是否是系统提示音特殊标记
+        if (strcmp(NOTIFICATION_SOUND_FILE, "SYSTEM_BEEP") == 0) {
+            // 直接播放系统提示音
+            MessageBeep(MB_OK);
+            return TRUE;
+        }
+        
         // 验证文件路径是否合法
         if (!IsValidFilePath(NOTIFICATION_SOUND_FILE)) {
             wchar_t errorMsg[MAX_PATH + 64];
