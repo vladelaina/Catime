@@ -75,9 +75,23 @@ static BOOL PlayAudioWithMCI(HWND hwnd, const char* filePath) {
     wchar_t wFilePath[MAX_PATH];
     MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wFilePath, MAX_PATH);
     
+    // 获取文件扩展名以使用正确的MCI类型
+    char extension[16] = {0};
+    GetFileExtension(filePath, extension, sizeof(extension));
+    
+    // 选择正确的MCI设备类型
+    const wchar_t* deviceType = L"mpegvideo"; // 默认类型
+    if (_stricmp(extension, ".mp3") == 0) {
+        deviceType = L"mpegvideo"; // MP3使用mpegvideo设备
+    } else if (_stricmp(extension, ".wma") == 0) {
+        deviceType = L"waveaudio"; // WMA可能使用waveaudio效果更好
+    } else if (_stricmp(extension, ".mid") == 0 || _stricmp(extension, ".midi") == 0) {
+        deviceType = L"sequencer"; // MIDI文件使用sequencer
+    }
+    
     // 构建MCI命令
-    wchar_t openCommand[MAX_PATH + 32];
-    wchar_t playCommand[] = L"play catime_notify";
+    wchar_t openCommand[MAX_PATH + 128]; // 增加缓冲区大小以容纳更多参数
+    wchar_t playCommand[128]; // 增大缓冲区
     wchar_t closeCommand[] = L"close catime_notify";
     wchar_t errorMsg[256] = {0};
     MCIERROR error;
@@ -85,16 +99,29 @@ static BOOL PlayAudioWithMCI(HWND hwnd, const char* filePath) {
     // 先尝试关闭可能存在的实例
     mciSendStringW(closeCommand, NULL, 0, NULL);
     
-    // 构建打开命令
-    StringCchPrintfW(openCommand, MAX_PATH + 32, L"open \"%s\" type mpegvideo alias catime_notify", wFilePath);
+    // 简化打开命令，只使用基本参数，移除可能不兼容的高级参数
+    StringCchPrintfW(openCommand, MAX_PATH + 128, 
+                    L"open \"%s\" type %s alias catime_notify", 
+                    wFilePath, deviceType);
     
     // 尝试打开文件
     error = mciSendStringW(openCommand, NULL, 0, NULL);
     if (error) {
-        mciGetErrorStringW(error, errorMsg, 256);
-        ShowErrorMessage(hwnd, errorMsg);
-        return FALSE;
+        // 如果指定类型失败，尝试让系统自动检测
+        StringCchPrintfW(openCommand, MAX_PATH + 128, 
+                        L"open \"%s\" alias catime_notify", 
+                        wFilePath);
+        error = mciSendStringW(openCommand, NULL, 0, NULL);
+        
+        if (error) {
+            mciGetErrorStringW(error, errorMsg, 256);
+            ShowErrorMessage(hwnd, errorMsg);
+            return FALSE;
+        }
     }
+    
+    // 使用最简单的播放命令，移除可能导致问题的参数
+    StringCchPrintfW(playCommand, 128, L"play catime_notify");
     
     // 尝试播放
     error = mciSendStringW(playCommand, NULL, 0, hwnd);
@@ -121,7 +148,9 @@ static BOOL PlayWavFile(HWND hwnd, const char* filePath) {
     wchar_t wFilePath[MAX_PATH];
     MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wFilePath, MAX_PATH);
     
-    // 使用PlaySound API播放WAV文件
+    // 使用PlaySound API播放WAV文件，只使用最可靠的参数
+    // SND_FILENAME: 指定文件路径
+    // SND_ASYNC: 异步播放，不阻塞调用线程
     if (!PlaySoundW(wFilePath, NULL, SND_FILENAME | SND_ASYNC)) {
         ShowErrorMessage(hwnd, L"无法播放WAV音频文件");
         return FALSE;
@@ -148,15 +177,34 @@ static BOOL IsValidFilePath(const char* filePath) {
 }
 
 /**
+ * @brief 清理音频资源
+ * 
+ * 停止任何正在播放的音频并释放相关资源，
+ * 确保新音频播放前不会有资源冲突。
+ */
+static void CleanupAudioResources(void) {
+    // 停止任何可能正在播放的WAV音频
+    PlaySound(NULL, NULL, SND_PURGE);
+    
+    // 停止并关闭任何MCI音频 - 使用最基本的命令
+    mciSendStringW(L"close catime_notify", NULL, 0, NULL);
+    
+    // 不再需要Sleep，避免不必要的延迟
+}
+
+/**
  * @brief 播放通知音频
  * @param hwnd 父窗口句柄
  * @return BOOL 成功返回TRUE，失败返回FALSE
  * 
  * 如果配置了有效的NOTIFICATION_SOUND_FILE并且文件存在，
  * 系统将优先使用配置的音频文件，只有在文件不存在或播放失败时
- * 才会播放系统默认提示音。
+ * 才会播放系统默认提示音。如果没有配置音频文件，不播放任何声音。
  */
 BOOL PlayNotificationSound(HWND hwnd) {
+    // 首先清理之前的音频资源，确保播放质量
+    CleanupAudioResources();
+    
     // 检查是否配置了音频文件
     if (NOTIFICATION_SOUND_FILE[0] != '\0') {
         // 验证文件路径是否合法
@@ -200,10 +248,12 @@ BOOL PlayNotificationSound(HWND hwnd) {
             wchar_t errorMsg[MAX_PATH + 64];
             StringCbPrintfW(errorMsg, sizeof(errorMsg), L"找不到配置的音频文件:\n%hs", NOTIFICATION_SOUND_FILE);
             ShowErrorMessage(hwnd, errorMsg);
+            // 播放系统默认提示音作为备选
+            MessageBeep(MB_OK);
+            return TRUE;
         }
     }
     
-    // 如果配置的音频文件不存在或播放失败，播放系统默认提示音
-    MessageBeep(MB_OK);
+    // 如果没有配置音频文件，不播放任何声音
     return TRUE;
 } 

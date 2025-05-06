@@ -98,9 +98,6 @@ typedef struct {
 DWORD WINAPI ShowModalDialogThread(LPVOID lpParam) {
     DialogThreadParams* params = (DialogThreadParams*)lpParam;
     
-    // 播放通知声音
-    MessageBeep(MB_OK);
-    
     // 将UTF-8消息转换为宽字符以支持Unicode显示
     int wlen = MultiByteToWideChar(CP_UTF8, 0, params->message, -1, NULL, 0);
     wchar_t* wmessage = (wchar_t*)malloc(wlen * sizeof(wchar_t));
@@ -184,9 +181,6 @@ void ShowToastNotification(HWND hwnd, const char* message) {
     ReadNotificationTimeoutConfig();
     // 新增：读取最新的通知透明度配置
     ReadNotificationOpacityConfig();
-    
-    // 播放通知声音
-    MessageBeep(MB_OK);
     
     // 注册通知窗口类（如果还未注册）
     if (!isClassRegistered) {
