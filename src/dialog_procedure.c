@@ -16,6 +16,7 @@
 #include "../include/config.h"
 #include <windowsx.h>
 #include <shellapi.h>
+#include "../include/audio_player.h"  // 添加音频播放器头文件
 
 // 函数声明
 static void DrawColorSelectButton(HDC hdc, HWND hwnd);
@@ -1549,6 +1550,56 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             } else if (LOWORD(wParam) == IDCANCEL) {
                 EndDialog(hwndDlg, IDCANCEL);
                 g_hwndNotificationSettingsDialog = NULL;
+                return TRUE;
+            } else if (LOWORD(wParam) == IDC_TEST_SOUND_BUTTON) {
+                // 测试当前选中的音频
+                HWND hwndCombo = GetDlgItem(hwndDlg, IDC_NOTIFICATION_SOUND_COMBO);
+                int index = SendMessage(hwndCombo, CB_GETCURSEL, 0, 0);
+                
+                if (index > 0) { // 0是"无"选项
+                    wchar_t wFileName[MAX_PATH];
+                    SendMessageW(hwndCombo, CB_GETLBTEXT, index, (LPARAM)wFileName);
+                    
+                    // 临时保存当前音频设置
+                    char tempSoundFile[MAX_PATH];
+                    strcpy(tempSoundFile, NOTIFICATION_SOUND_FILE);
+                    
+                    // 临时设置音频文件
+                    if (wcscmp(wFileName, L"系统提示音") == 0) {
+                        // 使用特殊标记
+                        strcpy(NOTIFICATION_SOUND_FILE, "SYSTEM_BEEP");
+                    } else {
+                        // 获取音频文件夹路径
+                        char audio_path[MAX_PATH];
+                        GetAudioFolderPath(audio_path, MAX_PATH);
+                        
+                        // 转换为UTF-8路径
+                        char fileName[MAX_PATH];
+                        WideCharToMultiByte(CP_UTF8, 0, wFileName, -1, fileName, MAX_PATH, NULL, NULL);
+                        
+                        // 构建完整的文件路径
+                        memset(NOTIFICATION_SOUND_FILE, 0, MAX_PATH);
+                        snprintf(NOTIFICATION_SOUND_FILE, MAX_PATH, "%s\\%s", audio_path, fileName);
+                    }
+                    
+                    // 播放音频
+                    PlayNotificationSound(hwndDlg);
+                    
+                    // 恢复之前的设置
+                    strcpy(NOTIFICATION_SOUND_FILE, tempSoundFile);
+                }
+                return TRUE;
+            } else if (LOWORD(wParam) == IDC_OPEN_SOUND_DIR_BUTTON) {
+                // 获取音频目录路径
+                char audio_path[MAX_PATH];
+                GetAudioFolderPath(audio_path, MAX_PATH);
+                
+                // 确保目录存在
+                wchar_t wAudioPath[MAX_PATH];
+                MultiByteToWideChar(CP_UTF8, 0, audio_path, -1, wAudioPath, MAX_PATH);
+                
+                // 打开目录
+                ShellExecuteW(hwndDlg, L"open", wAudioPath, NULL, NULL, SW_SHOWNORMAL);
                 return TRUE;
             }
             break;
