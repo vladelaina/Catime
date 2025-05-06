@@ -1348,8 +1348,6 @@ static void PopulateSoundComboBox(HWND hwndDlg) {
             if (ext && (
                 _wcsicmp(ext, L".mp3") == 0 ||
                 _wcsicmp(ext, L".wav") == 0 ||
-                _wcsicmp(ext, L".ogg") == 0 ||
-                _wcsicmp(ext, L".m4a") == 0 ||
                 _wcsicmp(ext, L".wma") == 0
             )) {
                 // 直接添加Unicode文件名到下拉框

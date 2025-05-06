@@ -181,9 +181,7 @@ BOOL PlayNotificationSound(HWND hwnd) {
                     return TRUE;
                 }
             } else if (_stricmp(extension, ".mp3") == 0 ||
-                      _stricmp(extension, ".wma") == 0 ||
-                      _stricmp(extension, ".m4a") == 0 ||
-                      _stricmp(extension, ".ogg") == 0) {
+                      _stricmp(extension, ".wma") == 0) {
                 // 使用MCI播放其他格式
                 if (PlayAudioWithMCI(hwnd, NOTIFICATION_SOUND_FILE)) {
                     return TRUE;
