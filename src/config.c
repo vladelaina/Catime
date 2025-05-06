@@ -53,6 +53,9 @@ int NOTIFICATION_MAX_OPACITY = 95;   // 默认95%透明度
 // 新增配置变量：通知类型
 NotificationType NOTIFICATION_TYPE = NOTIFICATION_TYPE_CATIME; // 默认使用Catime通知窗口
 
+// 新增：通知音频文件路径全局变量
+char NOTIFICATION_SOUND_FILE[MAX_PATH] = "";  // 默认为空
+
 /**
  * @brief 获取配置文件路径
  * @param path 存储路径的缓冲区
@@ -2132,4 +2135,114 @@ void WriteConfigNotificationType(NotificationType type) {
         if (source) fclose(source);
         if (target) fclose(target);
     }
+}
+
+/**
+ * @brief 获取音频文件夹路径
+ * @param path 存储音频文件夹路径的缓冲区
+ * @param size 缓冲区大小
+ */
+void GetAudioFolderPath(char* path, size_t size) {
+    if (!path || size == 0) return;
+
+    char* appdata_path = getenv("LOCALAPPDATA");
+    if (appdata_path) {
+        if (snprintf(path, size, "%s\\Catime\\resources\\audio", appdata_path) >= size) {
+            strncpy(path, ".\\resources\\audio", size - 1);
+            path[size - 1] = '\0';
+            return;
+        }
+        
+        char dir_path[MAX_PATH];
+        if (snprintf(dir_path, sizeof(dir_path), "%s\\Catime\\resources\\audio", appdata_path) < sizeof(dir_path)) {
+            if (!CreateDirectoryA(dir_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
+                strncpy(path, ".\\resources\\audio", size - 1);
+                path[size - 1] = '\0';
+            }
+        }
+    } else {
+        strncpy(path, ".\\resources\\audio", size - 1);
+        path[size - 1] = '\0';
+    }
+}
+
+/**
+ * @brief 从配置文件中读取通知音频设置
+ */
+void ReadNotificationSoundConfig(void) {
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    
+    FILE* file = fopen(config_path, "r");
+    if (!file) return;
+    
+    char line[1024];
+    while (fgets(line, sizeof(line), file)) {
+        if (strncmp(line, "NOTIFICATION_SOUND_FILE=", 23) == 0) {
+            char* value = line + 23;
+            // 移除末尾的换行符
+            char* newline = strchr(value, '\n');
+            if (newline) *newline = '\0';
+            
+            // 复制到全局变量
+            strncpy(NOTIFICATION_SOUND_FILE, value, MAX_PATH - 1);
+            NOTIFICATION_SOUND_FILE[MAX_PATH - 1] = '\0';
+            break;
+        }
+    }
+    
+    fclose(file);
+}
+
+/**
+ * @brief 写入通知音频配置
+ * @param sound_file 音频文件路径
+ */
+void WriteConfigNotificationSound(const char* sound_file) {
+    if (!sound_file) return;
+    
+    char config_path[MAX_PATH];
+    char temp_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    
+    // 创建临时文件路径
+    snprintf(temp_path, MAX_PATH, "%s.tmp", config_path);
+    
+    FILE* source = fopen(config_path, "r");
+    if (!source) return;
+    
+    FILE* dest = fopen(temp_path, "w");
+    if (!dest) {
+        fclose(source);
+        return;
+    }
+    
+    char line[1024];
+    int found = 0;
+    
+    // 复制文件内容，替换或添加通知音频设置
+    while (fgets(line, sizeof(line), source)) {
+        if (strncmp(line, "NOTIFICATION_SOUND_FILE=", 23) == 0) {
+            fprintf(dest, "NOTIFICATION_SOUND_FILE=%s\n", sound_file);
+            found = 1;
+        } else {
+            fputs(line, dest);
+        }
+    }
+    
+    // 如果没有找到配置项，添加到文件末尾
+    if (!found) {
+        fprintf(dest, "NOTIFICATION_SOUND_FILE=%s\n", sound_file);
+    }
+    
+    fclose(source);
+    fclose(dest);
+    
+    // 替换原文件
+    remove(config_path);
+    rename(temp_path, config_path);
+    
+    // 更新全局变量
+    strncpy(NOTIFICATION_SOUND_FILE, sound_file, MAX_PATH - 1);
+    NOTIFICATION_SOUND_FILE[MAX_PATH - 1] = '\0';
 }

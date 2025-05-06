@@ -55,6 +55,9 @@ typedef enum {
 // 通知类型全局变量声明
 extern NotificationType NOTIFICATION_TYPE;
 
+// 新增：通知音频相关配置
+extern char NOTIFICATION_SOUND_FILE[MAX_PATH];  ///< 通知音频文件路径
+
 /// @name 配置相关函数声明
 /// @{
 
@@ -248,6 +251,29 @@ void ReadNotificationTypeConfig(void);
  * 采用临时文件方式确保配置更新安全。
  */
 void WriteConfigNotificationType(NotificationType type);
+
+/**
+ * @brief 获取音频文件夹路径
+ * @param path 存储音频文件夹路径的缓冲区
+ * @param size 缓冲区大小
+ */
+void GetAudioFolderPath(char* path, size_t size);
+
+/**
+ * @brief 从配置文件中读取通知音频设置
+ * 
+ * 专门读取 NOTIFICATION_SOUND_FILE 配置项并更新相应的全局变量。
+ */
+void ReadNotificationSoundConfig(void);
+
+/**
+ * @brief 写入通知音频配置
+ * @param sound_file 音频文件路径
+ * 
+ * 更新配置文件中的通知音频设置，
+ * 采用临时文件方式确保配置更新安全。
+ */
+void WriteConfigNotificationSound(const char* sound_file);
 
 /// @}
 

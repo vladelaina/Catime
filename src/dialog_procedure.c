@@ -1313,6 +1313,75 @@ void ShowNotificationDisplayDialog(HWND hwndParent) {
 static HWND g_hwndNotificationSettingsDialog = NULL;
 
 /**
+ * @brief 填充音频下拉框
+ * @param hwndDlg 对话框句柄
+ */
+static void PopulateSoundComboBox(HWND hwndDlg) {
+    HWND hwndCombo = GetDlgItem(hwndDlg, IDC_NOTIFICATION_SOUND_COMBO);
+    if (!hwndCombo) return;
+
+    // 清空下拉框
+    SendMessage(hwndCombo, CB_RESETCONTENT, 0, 0);
+
+    // 添加"无"选项
+    SendMessageW(hwndCombo, CB_ADDSTRING, 0, (LPARAM)L"无");
+
+    // 获取音频文件夹路径
+    char audio_path[MAX_PATH];
+    GetAudioFolderPath(audio_path, MAX_PATH);
+
+    // 构建搜索路径
+    char search_path[MAX_PATH];
+    snprintf(search_path, MAX_PATH, "%s\\*.*", audio_path);
+
+    // 查找音频文件
+    WIN32_FIND_DATAA find_data;
+    HANDLE hFind = FindFirstFileA(search_path, &find_data);
+    if (hFind != INVALID_HANDLE_VALUE) {
+        do {
+            // 检查文件扩展名
+            char* ext = strrchr(find_data.cFileName, '.');
+            if (ext && (
+                _stricmp(ext, ".mp3") == 0 ||
+                _stricmp(ext, ".wav") == 0 ||
+                _stricmp(ext, ".ogg") == 0 ||
+                _stricmp(ext, ".m4a") == 0 ||
+                _stricmp(ext, ".wma") == 0
+            )) {
+                // 转换为宽字符
+                wchar_t wFileName[MAX_PATH];
+                MultiByteToWideChar(CP_UTF8, 0, find_data.cFileName, -1, wFileName, MAX_PATH);
+                
+                // 添加到下拉框
+                SendMessageW(hwndCombo, CB_ADDSTRING, 0, (LPARAM)wFileName);
+            }
+        } while (FindNextFileA(hFind, &find_data));
+        FindClose(hFind);
+    }
+
+    // 设置当前选中的音频文件
+    if (NOTIFICATION_SOUND_FILE[0] != '\0') {
+        wchar_t wSoundFile[MAX_PATH];
+        MultiByteToWideChar(CP_UTF8, 0, NOTIFICATION_SOUND_FILE, -1, wSoundFile, MAX_PATH);
+        
+        // 获取文件名部分
+        wchar_t* fileName = wcsrchr(wSoundFile, L'\\');
+        if (fileName) fileName++;
+        else fileName = wSoundFile;
+        
+        // 在下拉框中查找并选择该文件
+        int index = SendMessageW(hwndCombo, CB_FINDSTRINGEXACT, -1, (LPARAM)fileName);
+        if (index != CB_ERR) {
+            SendMessage(hwndCombo, CB_SETCURSEL, index, 0);
+        } else {
+            SendMessage(hwndCombo, CB_SETCURSEL, 0, 0); // 选择"无"
+        }
+    } else {
+        SendMessage(hwndCombo, CB_SETCURSEL, 0, 0); // 选择"无"
+    }
+}
+
+/**
  * @brief 整合后的通知设置对话框处理程序
  * @param hwndDlg 对话框句柄
  * @param msg 消息类型
@@ -1323,25 +1392,16 @@ static HWND g_hwndNotificationSettingsDialog = NULL;
  * 整合了通知内容和通知显示的统一设置界面
  */
 INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
-    static HBRUSH hBackgroundBrush = NULL;
-    static HBRUSH hEditBrush = NULL;
-    
     switch (msg) {
         case WM_INITDIALOG: {
-            // 设置窗口置顶
-            SetWindowPos(hwndDlg, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-            
-            // 创建画刷
-            hBackgroundBrush = CreateSolidBrush(RGB(0xF3, 0xF3, 0xF3));
-            hEditBrush = CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF));
-            
             // 读取最新配置到全局变量
             ReadNotificationMessagesConfig();
             ReadNotificationTimeoutConfig();
             ReadNotificationOpacityConfig();
             ReadNotificationTypeConfig();
+            ReadNotificationSoundConfig();
             
-            // 设置通知内容 - 为了处理UTF-8中文，转换到Unicode
+            // 设置通知消息文本 - 使用Unicode函数
             wchar_t wideText[256];
             
             // 第一个编辑框 - 倒计时超时提示
@@ -1359,101 +1419,38 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                                wideText, sizeof(wideText)/sizeof(wchar_t));
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT3, wideText);
             
-            // 设置通知显示时间和透明度
-            char buffer[32];
+            // 设置通知显示时间
+            wchar_t timeout_str[32];
+            swprintf(timeout_str, sizeof(timeout_str)/sizeof(wchar_t), L"%d", NOTIFICATION_TIMEOUT_MS / 1000);
+            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, timeout_str);
             
-            // 显示时间（秒，支持小数点）- 毫秒转为秒
-            sprintf(buffer, "%.1f", (float)NOTIFICATION_TIMEOUT_MS / 1000.0f);
-            // 移除末尾的.0
-            if (strlen(buffer) > 2 && buffer[strlen(buffer)-2] == '.' && buffer[strlen(buffer)-1] == '0') {
-                buffer[strlen(buffer)-2] = '\0';
-            }
-            SetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, buffer);
-            
-            // 透明度（百分比）
-            sprintf(buffer, "%d", NOTIFICATION_MAX_OPACITY);
-            SetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT, buffer);
-            
-            // 本地化标签文本
-            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_LABEL1, 
-                           GetLocalizedString(L"倒计时超时提示:", L"Countdown timeout message:"));
-            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_LABEL2, 
-                           GetLocalizedString(L"番茄钟超时提示:", L"Pomodoro timeout message:"));
-            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_LABEL3,
-                           GetLocalizedString(L"番茄钟循环完成提示:", L"Pomodoro cycle complete message:"));
-            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_TIME_LABEL, 
-                           GetLocalizedString(L"通知显示时间(秒):", L"Notification display time (sec):"));
-            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_OPACITY_LABEL,
-                           GetLocalizedString(L"通知最大透明度(1-100%):", L"Notification max opacity (1-100%):"));
-            
-            // 本地化按钮文本
-            SetDlgItemTextW(hwndDlg, IDOK, GetLocalizedString(L"确定", L"OK"));
-            SetDlgItemTextW(hwndDlg, IDCANCEL, GetLocalizedString(L"取消", L"Cancel"));
-            
-            // 修改编辑框风格，移除ES_NUMBER以允许小数点
-            HWND hEditTime = GetDlgItem(hwndDlg, IDC_NOTIFICATION_TIME_EDIT);
-            LONG style = GetWindowLong(hEditTime, GWL_STYLE);
-            SetWindowLong(hEditTime, GWL_STYLE, style & ~ES_NUMBER);
-            
-            // 子类化编辑框以支持Ctrl+A全选
-            HWND hEdit1 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT1);
-            HWND hEdit2 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT2);
-            HWND hEdit3 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT3);
-            HWND hEditOpacity = GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT);
-            
-            // 保存原始的窗口过程
-            wpOrigEditProc = (WNDPROC)SetWindowLongPtr(hEdit1, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
-            
-            // 对其他编辑框也应用相同的子类化过程
-            SetWindowLongPtr(hEdit2, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
-            SetWindowLongPtr(hEdit3, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
-            SetWindowLongPtr(hEditTime, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
-            SetWindowLongPtr(hEditOpacity, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
-            
-            // 设置焦点到第一个编辑框
-            SetFocus(hEdit1);
+            // 设置通知透明度
+            wchar_t opacity_str[32];
+            swprintf(opacity_str, sizeof(opacity_str)/sizeof(wchar_t), L"%d", NOTIFICATION_MAX_OPACITY);
+            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT, opacity_str);
             
             // 设置通知类型单选按钮
-            HWND hRadioCatime = GetDlgItem(hwndDlg, IDC_NOTIFICATION_TYPE_CATIME);
-            HWND hRadioSystemModal = GetDlgItem(hwndDlg, IDC_NOTIFICATION_TYPE_SYSTEM_MODAL);
-            HWND hRadioOS = GetDlgItem(hwndDlg, IDC_NOTIFICATION_TYPE_OS);
-            
-            // 根据当前配置选中相应的单选按钮
-            BOOL checked = FALSE;
             switch (NOTIFICATION_TYPE) {
                 case NOTIFICATION_TYPE_CATIME:
-                    checked = SendMessage(hRadioCatime, BM_SETCHECK, BST_CHECKED, 0);
-                    break;
-                case NOTIFICATION_TYPE_SYSTEM_MODAL:
-                    checked = SendMessage(hRadioSystemModal, BM_SETCHECK, BST_CHECKED, 0);
+                    CheckDlgButton(hwndDlg, IDC_NOTIFICATION_TYPE_CATIME, BST_CHECKED);
                     break;
                 case NOTIFICATION_TYPE_OS:
-                    checked = SendMessage(hRadioOS, BM_SETCHECK, BST_CHECKED, 0);
+                    CheckDlgButton(hwndDlg, IDC_NOTIFICATION_TYPE_OS, BST_CHECKED);
                     break;
-                default:
-                    // 默认选择Catime通知窗口
-                    checked = SendMessage(hRadioCatime, BM_SETCHECK, BST_CHECKED, 0);
+                case NOTIFICATION_TYPE_SYSTEM_MODAL:
+                    CheckDlgButton(hwndDlg, IDC_NOTIFICATION_TYPE_SYSTEM_MODAL, BST_CHECKED);
                     break;
             }
             
-            return FALSE;  // 返回FALSE因为我们手动设置了焦点
-        }
-        
-        case WM_CTLCOLORDLG:
-            return (INT_PTR)hBackgroundBrush;
-        
-        case WM_CTLCOLORSTATIC:
-            SetBkColor((HDC)wParam, RGB(0xF3, 0xF3, 0xF3));
-            return (INT_PTR)hBackgroundBrush;
+            // 填充音频下拉框
+            PopulateSoundComboBox(hwndDlg);
             
-        case WM_CTLCOLOREDIT:
-            SetBkColor((HDC)wParam, RGB(0xFF, 0xFF, 0xFF));
-            return (INT_PTR)hEditBrush;
+            return TRUE;
+        }
         
         case WM_COMMAND:
             if (LOWORD(wParam) == IDOK) {
-                // ===== 通知内容部分 =====
-                // 获取编辑框中的文本（Unicode方式）
+                // 获取通知消息文本 - 使用Unicode函数
                 wchar_t wTimeout[256] = {0};
                 wchar_t wPomodoro[256] = {0};
                 wchar_t wCycle[256] = {0};
@@ -1475,75 +1472,60 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 WideCharToMultiByte(CP_UTF8, 0, wCycle, -1, 
                                     cycle_complete_msg, sizeof(cycle_complete_msg), NULL, NULL);
                 
-                // ===== 通知显示部分 =====
-                char timeStr[32] = {0};
-                char opacityStr[32] = {0};
-                
-                // 获取用户输入的值
-                GetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, timeStr, sizeof(timeStr));
-                GetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT, opacityStr, sizeof(opacityStr));
-                
-                // 使用更健壮的方式替换中文句号
+                // 获取通知显示时间
                 wchar_t wTimeStr[32] = {0};
                 GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, wTimeStr, sizeof(wTimeStr)/sizeof(wchar_t));
-                
-                // 在Unicode文本中替换中文句号
-                for (int i = 0; wTimeStr[i] != L'\0'; i++) {
-                    // 将多种标点符号都识别为小数点
-                    if (wTimeStr[i] == L'。' ||  // 中文句号
-                        wTimeStr[i] == L'，' ||  // 中文逗号
-                        wTimeStr[i] == L',' ||   // 英文逗号
-                        wTimeStr[i] == L'·' ||   // 中文间隔号
-                        wTimeStr[i] == L'`' ||   // 反引号
-                        wTimeStr[i] == L'：' ||  // 中文冒号
-                        wTimeStr[i] == L':' ||   // 英文冒号
-                        wTimeStr[i] == L'；' ||  // 中文分号
-                        wTimeStr[i] == L';' ||   // 英文分号
-                        wTimeStr[i] == L'/' ||   // 斜杠
-                        wTimeStr[i] == L'\\' ||  // 反斜杠
-                        wTimeStr[i] == L'~' ||   // 波浪号
-                        wTimeStr[i] == L'～' ||  // 全角波浪号
-                        wTimeStr[i] == L'、' ||  // 顿号
-                        wTimeStr[i] == L'．') {  // 全角句点
-                        wTimeStr[i] = L'.';      // 替换为英文小数点
-                    }
+                int timeout = _wtoi(wTimeStr);
+                if (timeout > 0) {
+                    NOTIFICATION_TIMEOUT_MS = timeout * 1000;
                 }
                 
-                // 将处理后的Unicode文本转回ASCII
-                WideCharToMultiByte(CP_ACP, 0, wTimeStr, -1, 
-                                    timeStr, sizeof(timeStr), NULL, NULL);
-                
-                // 解析时间（秒）并转换为毫秒
-                float timeInSeconds = atof(timeStr);
-                int timeInMs = (int)(timeInSeconds * 1000.0f);
-                
-                // 确保时间至少为3000毫秒（3秒）
-                if (timeInMs < 100) timeInMs = 3000;
-                
-                // 解析透明度
-                int opacity = atoi(opacityStr);
-                
-                // 确保透明度在1-100范围内
-                if (opacity < 1) opacity = 1;
-                if (opacity > 100) opacity = 100;
-                
-                // ===== 通知类型部分 =====
-                // 判断选中的单选按钮
-                NotificationType notificationType = NOTIFICATION_TYPE_CATIME; // 默认
-                
-                if (IsDlgButtonChecked(hwndDlg, IDC_NOTIFICATION_TYPE_CATIME) == BST_CHECKED) {
-                    notificationType = NOTIFICATION_TYPE_CATIME;
-                } else if (IsDlgButtonChecked(hwndDlg, IDC_NOTIFICATION_TYPE_SYSTEM_MODAL) == BST_CHECKED) {
-                    notificationType = NOTIFICATION_TYPE_SYSTEM_MODAL;
-                } else if (IsDlgButtonChecked(hwndDlg, IDC_NOTIFICATION_TYPE_OS) == BST_CHECKED) {
-                    notificationType = NOTIFICATION_TYPE_OS;
+                // 获取通知透明度
+                wchar_t wOpacityStr[32] = {0};
+                GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT, wOpacityStr, sizeof(wOpacityStr)/sizeof(wchar_t));
+                int opacity = _wtoi(wOpacityStr);
+                if (opacity >= 1 && opacity <= 100) {
+                    NOTIFICATION_MAX_OPACITY = opacity;
                 }
                 
-                // 保存所有配置
-                WriteConfigNotificationMessages(timeout_msg, pomodoro_msg, cycle_complete_msg);
-                WriteConfigNotificationTimeout(timeInMs);
-                WriteConfigNotificationOpacity(opacity);
-                WriteConfigNotificationType(notificationType);
+                // 获取通知类型
+                if (IsDlgButtonChecked(hwndDlg, IDC_NOTIFICATION_TYPE_CATIME)) {
+                    NOTIFICATION_TYPE = NOTIFICATION_TYPE_CATIME;
+                } else if (IsDlgButtonChecked(hwndDlg, IDC_NOTIFICATION_TYPE_OS)) {
+                    NOTIFICATION_TYPE = NOTIFICATION_TYPE_OS;
+                } else if (IsDlgButtonChecked(hwndDlg, IDC_NOTIFICATION_TYPE_SYSTEM_MODAL)) {
+                    NOTIFICATION_TYPE = NOTIFICATION_TYPE_SYSTEM_MODAL;
+                }
+                
+                // 获取选中的音频文件
+                HWND hwndCombo = GetDlgItem(hwndDlg, IDC_NOTIFICATION_SOUND_COMBO);
+                int index = SendMessage(hwndCombo, CB_GETCURSEL, 0, 0);
+                if (index > 0) { // 0是"无"选项
+                    wchar_t wFileName[MAX_PATH];
+                    SendMessageW(hwndCombo, CB_GETLBTEXT, index, (LPARAM)wFileName);
+                    
+                    // 获取音频文件夹路径
+                    char audio_path[MAX_PATH];
+                    GetAudioFolderPath(audio_path, MAX_PATH);
+                    
+                    // 构建完整的文件路径
+                    char fileName[MAX_PATH];
+                    WideCharToMultiByte(CP_UTF8, 0, wFileName, -1, fileName, MAX_PATH, NULL, NULL);
+                    snprintf(NOTIFICATION_SOUND_FILE, MAX_PATH, "%s\\%s", audio_path, fileName);
+                } else {
+                    NOTIFICATION_SOUND_FILE[0] = '\0';
+                }
+                
+                // 保存所有设置
+                WriteConfigNotificationMessages(
+                    timeout_msg,
+                    pomodoro_msg,
+                    cycle_complete_msg
+                );
+                WriteConfigNotificationTimeout(NOTIFICATION_TIMEOUT_MS);
+                WriteConfigNotificationOpacity(NOTIFICATION_MAX_OPACITY);
+                WriteConfigNotificationType(NOTIFICATION_TYPE);
+                WriteConfigNotificationSound(NOTIFICATION_SOUND_FILE);
                 
                 EndDialog(hwndDlg, IDOK);
                 g_hwndNotificationSettingsDialog = NULL;
@@ -1559,28 +1541,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             EndDialog(hwndDlg, IDCANCEL);
             g_hwndNotificationSettingsDialog = NULL;
             return TRUE;
-            
-        case WM_DESTROY:
-            // 恢复原始窗口过程
-            HWND hEdit1 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT1);
-            HWND hEdit2 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT2);
-            HWND hEdit3 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT3);
-            HWND hEditTime = GetDlgItem(hwndDlg, IDC_NOTIFICATION_TIME_EDIT);
-            HWND hEditOpacity = GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT);
-            
-            if (wpOrigEditProc) {
-                SetWindowLongPtr(hEdit1, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
-                SetWindowLongPtr(hEdit2, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
-                SetWindowLongPtr(hEdit3, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
-                SetWindowLongPtr(hEditTime, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
-                SetWindowLongPtr(hEditOpacity, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
-            }
-            
-            if (hBackgroundBrush) DeleteObject(hBackgroundBrush);
-            if (hEditBrush) DeleteObject(hEditBrush);
-            break;
     }
-    
     return FALSE;
 }
 
