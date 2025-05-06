@@ -1400,6 +1400,8 @@ static void PopulateSoundComboBox(HWND hwndDlg) {
  * 整合了通知内容和通知显示的统一设置界面
  */
 INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    static BOOL isPlaying = FALSE; // 添加一个静态变量来跟踪播放状态
+    
     switch (msg) {
         case WM_INITDIALOG: {
             // 读取最新配置到全局变量
@@ -1452,6 +1454,9 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             
             // 填充音频下拉框
             PopulateSoundComboBox(hwndDlg);
+            
+            // 在初始化时重置播放状态
+            isPlaying = FALSE;
             
             return TRUE;
         }
@@ -1552,41 +1557,52 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 g_hwndNotificationSettingsDialog = NULL;
                 return TRUE;
             } else if (LOWORD(wParam) == IDC_TEST_SOUND_BUTTON) {
-                // 测试当前选中的音频
-                HWND hwndCombo = GetDlgItem(hwndDlg, IDC_NOTIFICATION_SOUND_COMBO);
-                int index = SendMessage(hwndCombo, CB_GETCURSEL, 0, 0);
-                
-                if (index > 0) { // 0是"无"选项
-                    wchar_t wFileName[MAX_PATH];
-                    SendMessageW(hwndCombo, CB_GETLBTEXT, index, (LPARAM)wFileName);
+                if (!isPlaying) {
+                    // 当前不在播放，开始播放并更改按钮文本为"结束"
+                    HWND hwndCombo = GetDlgItem(hwndDlg, IDC_NOTIFICATION_SOUND_COMBO);
+                    int index = SendMessage(hwndCombo, CB_GETCURSEL, 0, 0);
                     
-                    // 临时保存当前音频设置
-                    char tempSoundFile[MAX_PATH];
-                    strcpy(tempSoundFile, NOTIFICATION_SOUND_FILE);
-                    
-                    // 临时设置音频文件
-                    if (wcscmp(wFileName, L"系统提示音") == 0) {
-                        // 使用特殊标记
-                        strcpy(NOTIFICATION_SOUND_FILE, "SYSTEM_BEEP");
-                    } else {
-                        // 获取音频文件夹路径
-                        char audio_path[MAX_PATH];
-                        GetAudioFolderPath(audio_path, MAX_PATH);
+                    if (index > 0) { // 0是"无"选项
+                        wchar_t wFileName[MAX_PATH];
+                        SendMessageW(hwndCombo, CB_GETLBTEXT, index, (LPARAM)wFileName);
                         
-                        // 转换为UTF-8路径
-                        char fileName[MAX_PATH];
-                        WideCharToMultiByte(CP_UTF8, 0, wFileName, -1, fileName, MAX_PATH, NULL, NULL);
+                        // 临时保存当前音频设置
+                        char tempSoundFile[MAX_PATH];
+                        strcpy(tempSoundFile, NOTIFICATION_SOUND_FILE);
                         
-                        // 构建完整的文件路径
-                        memset(NOTIFICATION_SOUND_FILE, 0, MAX_PATH);
-                        snprintf(NOTIFICATION_SOUND_FILE, MAX_PATH, "%s\\%s", audio_path, fileName);
+                        // 临时设置音频文件
+                        if (wcscmp(wFileName, L"系统提示音") == 0) {
+                            // 使用特殊标记
+                            strcpy(NOTIFICATION_SOUND_FILE, "SYSTEM_BEEP");
+                        } else {
+                            // 获取音频文件夹路径
+                            char audio_path[MAX_PATH];
+                            GetAudioFolderPath(audio_path, MAX_PATH);
+                            
+                            // 转换为UTF-8路径
+                            char fileName[MAX_PATH];
+                            WideCharToMultiByte(CP_UTF8, 0, wFileName, -1, fileName, MAX_PATH, NULL, NULL);
+                            
+                            // 构建完整的文件路径
+                            memset(NOTIFICATION_SOUND_FILE, 0, MAX_PATH);
+                            snprintf(NOTIFICATION_SOUND_FILE, MAX_PATH, "%s\\%s", audio_path, fileName);
+                        }
+                        
+                        // 播放音频
+                        if (PlayNotificationSound(hwndDlg)) {
+                            // 播放成功，更改按钮文本为"结束"
+                            SetDlgItemTextW(hwndDlg, IDC_TEST_SOUND_BUTTON, L"结束");
+                            isPlaying = TRUE;
+                        }
+                        
+                        // 恢复之前的设置
+                        strcpy(NOTIFICATION_SOUND_FILE, tempSoundFile);
                     }
-                    
-                    // 播放音频
-                    PlayNotificationSound(hwndDlg);
-                    
-                    // 恢复之前的设置
-                    strcpy(NOTIFICATION_SOUND_FILE, tempSoundFile);
+                } else {
+                    // 当前正在播放，停止播放并恢复按钮文本
+                    StopNotificationSound();
+                    SetDlgItemTextW(hwndDlg, IDC_TEST_SOUND_BUTTON, L"测试");
+                    isPlaying = FALSE;
                 }
                 return TRUE;
             } else if (LOWORD(wParam) == IDC_OPEN_SOUND_DIR_BUTTON) {
@@ -1605,6 +1621,10 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             break;
             
         case WM_CLOSE:
+            // 关闭对话框时确保停止播放
+            if (isPlaying) {
+                StopNotificationSound();
+            }
             EndDialog(hwndDlg, IDCANCEL);
             g_hwndNotificationSettingsDialog = NULL;
             return TRUE;

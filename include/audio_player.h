@@ -21,4 +21,11 @@
  */
 BOOL PlayNotificationSound(HWND hwnd);
 
+/**
+ * @brief 停止播放通知音频
+ * 
+ * 停止当前正在播放的任何通知音频
+ */
+void StopNotificationSound(void);
+
 #endif // AUDIO_PLAYER_H 

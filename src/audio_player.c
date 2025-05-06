@@ -182,7 +182,7 @@ static BOOL IsValidFilePath(const char* filePath) {
  * 停止任何正在播放的音频并释放相关资源，
  * 确保新音频播放前不会有资源冲突。
  */
-static void CleanupAudioResources(void) {
+void CleanupAudioResources(void) {
     // 停止任何可能正在播放的WAV音频
     PlaySound(NULL, NULL, SND_PURGE);
     
@@ -263,4 +263,13 @@ BOOL PlayNotificationSound(HWND hwnd) {
     
     // 如果没有配置音频文件，不播放任何声音
     return TRUE;
+}
+
+/**
+ * @brief 停止播放通知音频
+ * 
+ * 停止当前正在播放的任何通知音频
+ */
+void StopNotificationSound(void) {
+    CleanupAudioResources();
 } 
