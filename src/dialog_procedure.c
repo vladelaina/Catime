@@ -1329,33 +1329,33 @@ static void PopulateSoundComboBox(HWND hwndDlg) {
     // 获取音频文件夹路径
     char audio_path[MAX_PATH];
     GetAudioFolderPath(audio_path, MAX_PATH);
+    
+    // 转换为宽字符路径
+    wchar_t wAudioPath[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, audio_path, -1, wAudioPath, MAX_PATH);
 
     // 构建搜索路径
-    char search_path[MAX_PATH];
-    snprintf(search_path, MAX_PATH, "%s\\*.*", audio_path);
+    wchar_t wSearchPath[MAX_PATH];
+    swprintf(wSearchPath, MAX_PATH, L"%s\\*.*", wAudioPath);
 
-    // 查找音频文件
-    WIN32_FIND_DATAA find_data;
-    HANDLE hFind = FindFirstFileA(search_path, &find_data);
+    // 查找音频文件 - 使用Unicode版本的API
+    WIN32_FIND_DATAW find_data;
+    HANDLE hFind = FindFirstFileW(wSearchPath, &find_data);
     if (hFind != INVALID_HANDLE_VALUE) {
         do {
             // 检查文件扩展名
-            char* ext = strrchr(find_data.cFileName, '.');
+            wchar_t* ext = wcsrchr(find_data.cFileName, L'.');
             if (ext && (
-                _stricmp(ext, ".mp3") == 0 ||
-                _stricmp(ext, ".wav") == 0 ||
-                _stricmp(ext, ".ogg") == 0 ||
-                _stricmp(ext, ".m4a") == 0 ||
-                _stricmp(ext, ".wma") == 0
+                _wcsicmp(ext, L".mp3") == 0 ||
+                _wcsicmp(ext, L".wav") == 0 ||
+                _wcsicmp(ext, L".ogg") == 0 ||
+                _wcsicmp(ext, L".m4a") == 0 ||
+                _wcsicmp(ext, L".wma") == 0
             )) {
-                // 转换为宽字符
-                wchar_t wFileName[MAX_PATH];
-                MultiByteToWideChar(CP_UTF8, 0, find_data.cFileName, -1, wFileName, MAX_PATH);
-                
-                // 添加到下拉框
-                SendMessageW(hwndCombo, CB_ADDSTRING, 0, (LPARAM)wFileName);
+                // 直接添加Unicode文件名到下拉框
+                SendMessageW(hwndCombo, CB_ADDSTRING, 0, (LPARAM)find_data.cFileName);
             }
-        } while (FindNextFileA(hFind, &find_data));
+        } while (FindNextFileW(hFind, &find_data));
         FindClose(hFind);
     }
 
@@ -1508,9 +1508,12 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                     char audio_path[MAX_PATH];
                     GetAudioFolderPath(audio_path, MAX_PATH);
                     
-                    // 构建完整的文件路径
+                    // 转换为UTF-8路径
                     char fileName[MAX_PATH];
                     WideCharToMultiByte(CP_UTF8, 0, wFileName, -1, fileName, MAX_PATH, NULL, NULL);
+                    
+                    // 构建完整的文件路径
+                    memset(NOTIFICATION_SOUND_FILE, 0, MAX_PATH);
                     snprintf(NOTIFICATION_SOUND_FILE, MAX_PATH, "%s\\%s", audio_path, fileName);
                 } else {
                     NOTIFICATION_SOUND_FILE[0] = '\0';

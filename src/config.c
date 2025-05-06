@@ -2184,7 +2184,8 @@ void ReadNotificationSoundConfig(void) {
             char* newline = strchr(value, '\n');
             if (newline) *newline = '\0';
             
-            // 复制到全局变量
+            // 复制到全局变量，确保清零
+            memset(NOTIFICATION_SOUND_FILE, 0, MAX_PATH);
             strncpy(NOTIFICATION_SOUND_FILE, value, MAX_PATH - 1);
             NOTIFICATION_SOUND_FILE[MAX_PATH - 1] = '\0';
             break;
@@ -2243,6 +2244,7 @@ void WriteConfigNotificationSound(const char* sound_file) {
     rename(temp_path, config_path);
     
     // 更新全局变量
+    memset(NOTIFICATION_SOUND_FILE, 0, MAX_PATH);
     strncpy(NOTIFICATION_SOUND_FILE, sound_file, MAX_PATH - 1);
     NOTIFICATION_SOUND_FILE[MAX_PATH - 1] = '\0';
 }
