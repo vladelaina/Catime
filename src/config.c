@@ -137,7 +137,22 @@ void CreateDefaultConfig(const char* config_path) {
         fprintf(file, "NOTIFICATION_MAX_OPACITY=95\n");   // 默认95%
         
         // 新增：通知类型
-        fprintf(file, "NOTIFICATION_TYPE=0\n");  // 默认使用Catime通知窗口
+        const char* typeStr;
+        switch (NOTIFICATION_TYPE) {
+            case NOTIFICATION_TYPE_CATIME:
+                typeStr = "CATIME";
+                break;
+            case NOTIFICATION_TYPE_SYSTEM_MODAL:
+                typeStr = "SYSTEM_MODAL";
+                break;
+            case NOTIFICATION_TYPE_OS:
+                typeStr = "OS";
+                break;
+            default:
+                typeStr = "CATIME"; // 默认值
+                break;
+        }
+        fprintf(file, "NOTIFICATION_TYPE=%s\n", typeStr);
         
         // 番茄钟设置区块
         fprintf(file, "POMODORO_TIME_OPTIONS=1500,300,1500,600\n"); // 时间1,时间2,时间3,时间4...
@@ -1164,7 +1179,22 @@ void WriteConfig(const char* config_path) {
     fprintf(file, "NOTIFICATION_MAX_OPACITY=%d\n", NOTIFICATION_MAX_OPACITY);
     
     // 新增：通知类型
-    fprintf(file, "NOTIFICATION_TYPE=%d\n", (int)NOTIFICATION_TYPE);
+    const char* typeStr;
+    switch (NOTIFICATION_TYPE) {
+        case NOTIFICATION_TYPE_CATIME:
+            typeStr = "CATIME";
+            break;
+        case NOTIFICATION_TYPE_SYSTEM_MODAL:
+            typeStr = "SYSTEM_MODAL";
+            break;
+        case NOTIFICATION_TYPE_OS:
+            typeStr = "OS";
+            break;
+        default:
+            typeStr = "CATIME"; // 默认值
+            break;
+    }
+    fprintf(file, "NOTIFICATION_TYPE=%s\n", typeStr);
     
     // 番茄钟设置区块
     fprintf(file, "POMODORO_TIME_OPTIONS=");
@@ -1928,12 +1958,19 @@ void ReadNotificationTypeConfig(void) {
         char line[256];
         while (fgets(line, sizeof(line), file)) {
             if (strncmp(line, "NOTIFICATION_TYPE=", 18) == 0) {
-                int type;
-                if (sscanf(line + 18, "%d", &type) == 1) {
-                    // 确保类型值在有效范围内
-                    if (type >= NOTIFICATION_TYPE_CATIME && type <= NOTIFICATION_TYPE_OS) {
-                        NOTIFICATION_TYPE = (NotificationType)type;
-                    }
+                char typeStr[32] = {0};
+                sscanf(line + 18, "%31s", typeStr);
+                
+                // 根据字符串设置通知类型
+                if (strcmp(typeStr, "CATIME") == 0) {
+                    NOTIFICATION_TYPE = NOTIFICATION_TYPE_CATIME;
+                } else if (strcmp(typeStr, "SYSTEM_MODAL") == 0) {
+                    NOTIFICATION_TYPE = NOTIFICATION_TYPE_SYSTEM_MODAL;
+                } else if (strcmp(typeStr, "OS") == 0) {
+                    NOTIFICATION_TYPE = NOTIFICATION_TYPE_OS;
+                } else {
+                    // 无效类型使用默认值
+                    NOTIFICATION_TYPE = NOTIFICATION_TYPE_CATIME;
                 }
                 break;
             }
@@ -1960,6 +1997,23 @@ void WriteConfigNotificationType(NotificationType type) {
     // 更新全局变量
     NOTIFICATION_TYPE = type;
     
+    // 将枚举转换为字符串
+    const char* typeStr;
+    switch (type) {
+        case NOTIFICATION_TYPE_CATIME:
+            typeStr = "CATIME";
+            break;
+        case NOTIFICATION_TYPE_SYSTEM_MODAL:
+            typeStr = "SYSTEM_MODAL";
+            break;
+        case NOTIFICATION_TYPE_OS:
+            typeStr = "OS";
+            break;
+        default:
+            typeStr = "CATIME"; // 默认值
+            break;
+    }
+    
     // 构建临时文件路径
     char temp_path[MAX_PATH];
     strncpy(temp_path, config_path, MAX_PATH - 5);
@@ -1975,7 +2029,7 @@ void WriteConfigNotificationType(NotificationType type) {
         // 复制文件内容，替换目标配置行
         while (fgets(line, sizeof(line), source)) {
             if (strncmp(line, "NOTIFICATION_TYPE=", 18) == 0) {
-                fprintf(target, "NOTIFICATION_TYPE=%d\n", (int)type);
+                fprintf(target, "NOTIFICATION_TYPE=%s\n", typeStr);
                 found = TRUE;
             } else {
                 fputs(line, target);
@@ -1984,7 +2038,7 @@ void WriteConfigNotificationType(NotificationType type) {
         
         // 如果没找到配置项，添加到文件末尾
         if (!found) {
-            fprintf(target, "NOTIFICATION_TYPE=%d\n", (int)type);
+            fprintf(target, "NOTIFICATION_TYPE=%s\n", typeStr);
         }
         
         fclose(source);
