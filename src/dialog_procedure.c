@@ -1376,9 +1376,9 @@ static void PopulateSoundComboBox(HWND hwndDlg) {
             // 检查文件扩展名
             wchar_t* ext = wcsrchr(find_data.cFileName, L'.');
             if (ext && (
+                _wcsicmp(ext, L".flac") == 0 ||
                 _wcsicmp(ext, L".mp3") == 0 ||
-                _wcsicmp(ext, L".wav") == 0 ||
-                _wcsicmp(ext, L".wma") == 0
+                _wcsicmp(ext, L".wav") == 0
             )) {
                 // 直接添加Unicode文件名到下拉框
                 SendMessageW(hwndCombo, CB_ADDSTRING, 0, (LPARAM)find_data.cFileName);
