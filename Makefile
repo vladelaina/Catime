@@ -40,7 +40,7 @@ RC_FILE = resource/resource.rc
 $(shell mkdir -p $(OUTPUT_DIR) $(ASSET_DIR))
 
 # 编译选项
-CFLAGS = -mwindows -Iinclude -O3 -flto=8 -mtune=generic -ffunction-sections -fdata-sections -fno-strict-aliasing
+CFLAGS = -mwindows -Iinclude -Ilibs/miniaudio -O3 -flto=8 -mtune=generic -ffunction-sections -fdata-sections -fno-strict-aliasing
 
 # 链接选项 - 添加必要的库并优化
 LDFLAGS = -lole32 -lshell32 -lcomdlg32 -luuid -lwininet -lwinmm -Wl,--gc-sections -flto=8 -s
@@ -292,7 +292,7 @@ $(BUILD_DIR)/log.o: src/log.c
 
 # 编译音频播放器模块
 $(BUILD_DIR)/audio_player.o: src/audio_player.c include/audio_player.h
-	@$(CC) -c src/audio_player.c -o $(BUILD_DIR)/audio_player.o $(CFLAGS)
+	@$(CC) -c src/audio_player.c -o $(BUILD_DIR)/audio_player.o $(CFLAGS) -DMINIAUDIO_IMPLEMENTATION
 	@$(call update_progress)
 
 # 链接编译目标文件，输出到输出目录
