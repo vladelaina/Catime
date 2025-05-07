@@ -81,8 +81,8 @@ static BOOL FileExists(const char* filePath) {
     if (!filePath || filePath[0] == '\0') return FALSE;
     
     // 转换为宽字符以支持Unicode路径
-    wchar_t wFilePath[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wFilePath, MAX_PATH);
+    wchar_t wFilePath[MAX_PATH * 2] = {0};
+    MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wFilePath, MAX_PATH * 2);
     
     // 获取文件属性
     DWORD dwAttrib = GetFileAttributesW(wFilePath);
@@ -179,21 +179,89 @@ static BOOL PlayAudioWithMiniaudio(HWND hwnd, const char* filePath) {
         g_soundInitialized = MA_FALSE;
     }
     
-    // 转换为宽字符以支持Unicode路径
-    wchar_t wFilePath[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wFilePath, MAX_PATH);
-    
-    // 将宽字符转回UTF-8，miniaudio使用UTF-8路径
-    char utf8Path[MAX_PATH * 4];  // 最多需要原始长度的4倍
-    WideCharToMultiByte(CP_UTF8, 0, wFilePath, -1, utf8Path, sizeof(utf8Path), NULL, NULL);
-    
-    // 初始化音频文件
-    ma_result result = ma_sound_init_from_file(&g_audioEngine, utf8Path, 0, NULL, NULL, &g_sound);
-    if (result != MA_SUCCESS) {
+    // 步骤1: 首先将UTF-8路径转换为Windows宽字符格式
+    wchar_t wFilePath[MAX_PATH * 2] = {0};
+    if (MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wFilePath, MAX_PATH * 2) == 0) {
+        DWORD error = GetLastError();
         wchar_t errorMsg[256];
-        swprintf(errorMsg, 256, L"无法加载音频文件: %hs\n错误代码: %d", filePath, result);
+        swprintf(errorMsg, 256, L"路径转换错误 (UTF-8->Unicode): %lu", error);
         ShowErrorMessage(hwnd, errorMsg);
         return FALSE;
+    }
+    
+    // 步骤2: 获取文件的短路径名 (8.3格式)，避免中文路径问题
+    wchar_t shortPath[MAX_PATH] = {0};
+    DWORD shortPathLen = GetShortPathNameW(wFilePath, shortPath, MAX_PATH);
+    if (shortPathLen == 0 || shortPathLen >= MAX_PATH) {
+        DWORD error = GetLastError();
+        
+        // 如果获取短路径失败，尝试使用Windows原生PlaySound API
+        if (PlaySoundW(wFilePath, NULL, SND_FILENAME | SND_ASYNC)) {
+            // 设置一个定时器来模拟播放完成回调
+            if (g_audioTimerId != 0) {
+                KillTimer(hwnd, g_audioTimerId);
+            }
+            g_audioTimerId = SetTimer(hwnd, 1002, 3000, (TIMERPROC)SystemBeepDoneCallback);
+            g_isPlaying = MA_TRUE;
+            return TRUE;
+        }
+        
+        // 如果备用方法也失败，显示错误信息
+        wchar_t errorMsg[512];
+        swprintf(errorMsg, 512, L"获取短路径失败: %ls\n错误代码: %lu", wFilePath, error);
+        ShowErrorMessage(hwnd, errorMsg);
+        return FALSE;
+    }
+    
+    // 步骤3: 将短路径名转换为ASCII编码（对短路径名可行）
+    char asciiPath[MAX_PATH] = {0};
+    if (WideCharToMultiByte(CP_ACP, 0, shortPath, -1, asciiPath, MAX_PATH, NULL, NULL) == 0) {
+        DWORD error = GetLastError();
+        wchar_t errorMsg[256];
+        swprintf(errorMsg, 256, L"路径转换错误 (Short Path->ASCII): %lu", error);
+        ShowErrorMessage(hwnd, errorMsg);
+        
+        // 尝试使用Windows原生API播放
+        if (PlaySoundW(wFilePath, NULL, SND_FILENAME | SND_ASYNC)) {
+            if (g_audioTimerId != 0) {
+                KillTimer(hwnd, g_audioTimerId);
+            }
+            g_audioTimerId = SetTimer(hwnd, 1002, 3000, (TIMERPROC)SystemBeepDoneCallback);
+            g_isPlaying = MA_TRUE;
+            return TRUE;
+        }
+        
+        return FALSE;
+    }
+    
+    // 步骤4: 使用ASCII短路径初始化miniaudio
+    ma_result result = ma_sound_init_from_file(&g_audioEngine, asciiPath, 0, NULL, NULL, &g_sound);
+    
+    if (result != MA_SUCCESS) {
+        // 尝试回退到宽字符路径（很可能会失败，但值得一试）
+        char utf8Path[MAX_PATH * 4] = {0};
+        WideCharToMultiByte(CP_UTF8, 0, wFilePath, -1, utf8Path, sizeof(utf8Path), NULL, NULL);
+        
+        result = ma_sound_init_from_file(&g_audioEngine, utf8Path, 0, NULL, NULL, &g_sound);
+        
+        if (result != MA_SUCCESS) {
+            // 如果还是失败，尝试使用Windows原生API播放
+            if (PlaySoundW(wFilePath, NULL, SND_FILENAME | SND_ASYNC)) {
+                // 设置一个定时器来模拟播放完成回调
+                if (g_audioTimerId != 0) {
+                    KillTimer(hwnd, g_audioTimerId);
+                }
+                g_audioTimerId = SetTimer(hwnd, 1002, 3000, (TIMERPROC)SystemBeepDoneCallback);
+                g_isPlaying = MA_TRUE;
+                return TRUE;
+            }
+            
+            // 如果所有方法都失败，显示错误信息
+            wchar_t errorMsg[512];
+            swprintf(errorMsg, 512, L"无法加载音频文件: %ls\n错误代码: %d", wFilePath, result);
+            ShowErrorMessage(hwnd, errorMsg);
+            return FALSE;
+        }
     }
     
     g_soundInitialized = MA_TRUE;
@@ -202,6 +270,17 @@ static BOOL PlayAudioWithMiniaudio(HWND hwnd, const char* filePath) {
     if (ma_sound_start(&g_sound) != MA_SUCCESS) {
         ma_sound_uninit(&g_sound);
         g_soundInitialized = MA_FALSE;
+        
+        // 再次尝试使用Windows原生API
+        if (PlaySoundW(wFilePath, NULL, SND_FILENAME | SND_ASYNC)) {
+            if (g_audioTimerId != 0) {
+                KillTimer(hwnd, g_audioTimerId);
+            }
+            g_audioTimerId = SetTimer(hwnd, 1002, 3000, (TIMERPROC)SystemBeepDoneCallback);
+            g_isPlaying = MA_TRUE;
+            return TRUE;
+        }
+        
         ShowErrorMessage(hwnd, L"无法开始播放音频");
         return FALSE;
     }
