@@ -1654,6 +1654,52 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 
                 // 打开目录
                 ShellExecuteW(hwndDlg, L"open", wAudioPath, NULL, NULL, SW_SHOWNORMAL);
+                
+                // 记录当前选择的音频文件
+                HWND hwndCombo = GetDlgItem(hwndDlg, IDC_NOTIFICATION_SOUND_COMBO);
+                int selectedIndex = SendMessage(hwndCombo, CB_GETCURSEL, 0, 0);
+                wchar_t selectedFile[MAX_PATH] = {0};
+                if (selectedIndex > 0) {
+                    SendMessageW(hwndCombo, CB_GETLBTEXT, selectedIndex, (LPARAM)selectedFile);
+                }
+                
+                // 重新填充音频下拉框
+                PopulateSoundComboBox(hwndDlg);
+                
+                // 尝试恢复之前的选择
+                if (selectedFile[0] != L'\0') {
+                    int newIndex = SendMessageW(hwndCombo, CB_FINDSTRINGEXACT, -1, (LPARAM)selectedFile);
+                    if (newIndex != CB_ERR) {
+                        SendMessage(hwndCombo, CB_SETCURSEL, newIndex, 0);
+                    } else {
+                        // 如果找不到之前的选择，默认选择"无"
+                        SendMessage(hwndCombo, CB_SETCURSEL, 0, 0);
+                    }
+                }
+                
+                return TRUE;
+            } else if (LOWORD(wParam) == IDC_NOTIFICATION_SOUND_COMBO && HIWORD(wParam) == CBN_DROPDOWN) {
+                // 下拉列表将要打开时，重新加载文件列表
+                HWND hwndCombo = GetDlgItem(hwndDlg, IDC_NOTIFICATION_SOUND_COMBO);
+                
+                // 记录当前选择的文件
+                int selectedIndex = SendMessage(hwndCombo, CB_GETCURSEL, 0, 0);
+                wchar_t selectedFile[MAX_PATH] = {0};
+                if (selectedIndex > 0) {
+                    SendMessageW(hwndCombo, CB_GETLBTEXT, selectedIndex, (LPARAM)selectedFile);
+                }
+                
+                // 重新填充下拉框
+                PopulateSoundComboBox(hwndDlg);
+                
+                // 恢复之前的选择
+                if (selectedFile[0] != L'\0') {
+                    int newIndex = SendMessageW(hwndCombo, CB_FINDSTRINGEXACT, -1, (LPARAM)selectedFile);
+                    if (newIndex != CB_ERR) {
+                        SendMessage(hwndCombo, CB_SETCURSEL, newIndex, 0);
+                    }
+                }
+                
                 return TRUE;
             }
             break;
