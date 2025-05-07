@@ -1314,6 +1314,32 @@ void ShowNotificationDisplayDialog(HWND hwndParent) {
 static HWND g_hwndNotificationSettingsDialog = NULL;
 
 /**
+ * @brief 音频播放完成回调函数
+ * @param hwnd 窗口句柄
+ * 
+ * 当音频播放完成时，将"结束"按钮变回"测试"按钮
+ */
+static void OnAudioPlaybackComplete(HWND hwnd) {
+    if (hwnd && IsWindow(hwnd)) {
+        SetDlgItemTextW(hwnd, IDC_TEST_SOUND_BUTTON, L"测试");
+        
+        // 获取对话框数据
+        HWND hwndTestButton = GetDlgItem(hwnd, IDC_TEST_SOUND_BUTTON);
+        
+        // 发送WM_SETTEXT消息更新按钮文本
+        if (hwndTestButton && IsWindow(hwndTestButton)) {
+            SendMessageW(hwndTestButton, WM_SETTEXT, 0, (LPARAM)L"测试");
+        }
+        
+        // 更新全局播放状态
+        if (g_hwndNotificationSettingsDialog == hwnd) {
+            // 发送消息给对话框，通知播放状态变更
+            SendMessage(hwnd, WM_APP + 100, 0, 0);
+        }
+    }
+}
+
+/**
  * @brief 填充音频下拉框
  * @param hwndDlg 对话框句柄
  */
@@ -1458,6 +1484,12 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             // 在初始化时重置播放状态
             isPlaying = FALSE;
             
+            // 设置音频播放完成回调函数
+            SetAudioPlaybackCompleteCallback(hwndDlg, OnAudioPlaybackComplete);
+            
+            // 保存对话框句柄
+            g_hwndNotificationSettingsDialog = hwndDlg;
+            
             return TRUE;
         }
         
@@ -1549,10 +1581,16 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 WriteConfigNotificationType(NOTIFICATION_TYPE);
                 WriteConfigNotificationSound(NOTIFICATION_SOUND_FILE);
                 
+                // 关闭对话框前清理回调
+                SetAudioPlaybackCompleteCallback(NULL, NULL);
+                
                 EndDialog(hwndDlg, IDOK);
                 g_hwndNotificationSettingsDialog = NULL;
                 return TRUE;
             } else if (LOWORD(wParam) == IDCANCEL) {
+                // 关闭对话框前清理回调
+                SetAudioPlaybackCompleteCallback(NULL, NULL);
+                
                 EndDialog(hwndDlg, IDCANCEL);
                 g_hwndNotificationSettingsDialog = NULL;
                 return TRUE;
@@ -1620,14 +1658,30 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             }
             break;
             
+        // 添加自定义消息处理，用于音频播放完成通知
+        case WM_APP + 100:
+            // 音频播放已完成，更新按钮状态
+            isPlaying = FALSE;
+            return TRUE;
+            
         case WM_CLOSE:
             // 关闭对话框时确保停止播放
             if (isPlaying) {
                 StopNotificationSound();
             }
+            
+            // 清理回调
+            SetAudioPlaybackCompleteCallback(NULL, NULL);
+            
             EndDialog(hwndDlg, IDCANCEL);
             g_hwndNotificationSettingsDialog = NULL;
             return TRUE;
+            
+        case WM_DESTROY:
+            // 对话框销毁时清理回调
+            SetAudioPlaybackCompleteCallback(NULL, NULL);
+            g_hwndNotificationSettingsDialog = NULL;
+            break;
     }
     return FALSE;
 }

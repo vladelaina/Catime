@@ -11,6 +11,24 @@
 #include <windows.h>
 
 /**
+ * @brief 音频播放完成回调函数类型
+ * @param hwnd 窗口句柄
+ * 
+ * 当音频播放完成时，系统会调用此回调函数通知应用程序。
+ */
+typedef void (*AudioPlaybackCompleteCallback)(HWND hwnd);
+
+/**
+ * @brief 设置音频播放完成回调函数
+ * @param hwnd 回调窗口句柄
+ * @param callback 回调函数
+ * 
+ * 设置音频播放完成时的回调函数，当音频播放结束后，
+ * 系统会调用该回调函数通知应用程序。
+ */
+void SetAudioPlaybackCompleteCallback(HWND hwnd, AudioPlaybackCompleteCallback callback);
+
+/**
  * @brief 播放通知音频
  * @param hwnd 父窗口句柄
  * @return BOOL 成功返回TRUE，失败返回FALSE
