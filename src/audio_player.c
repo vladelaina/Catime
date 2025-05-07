@@ -184,7 +184,7 @@ static BOOL PlayAudioWithMiniaudio(HWND hwnd, const char* filePath) {
     if (MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wFilePath, MAX_PATH * 2) == 0) {
         DWORD error = GetLastError();
         wchar_t errorMsg[256];
-        swprintf(errorMsg, 256, L"路径转换错误 (UTF-8->Unicode): %lu", error);
+        StringCbPrintfW(errorMsg, sizeof(errorMsg), L"路径转换错误 (UTF-8->Unicode): %lu", error);
         ShowErrorMessage(hwnd, errorMsg);
         return FALSE;
     }
@@ -208,7 +208,7 @@ static BOOL PlayAudioWithMiniaudio(HWND hwnd, const char* filePath) {
         
         // 如果备用方法也失败，显示错误信息
         wchar_t errorMsg[512];
-        swprintf(errorMsg, 512, L"获取短路径失败: %ls\n错误代码: %lu", wFilePath, error);
+        StringCbPrintfW(errorMsg, sizeof(errorMsg), L"获取短路径失败: %ls\n错误代码: %lu", wFilePath, error);
         ShowErrorMessage(hwnd, errorMsg);
         return FALSE;
     }
@@ -218,7 +218,7 @@ static BOOL PlayAudioWithMiniaudio(HWND hwnd, const char* filePath) {
     if (WideCharToMultiByte(CP_ACP, 0, shortPath, -1, asciiPath, MAX_PATH, NULL, NULL) == 0) {
         DWORD error = GetLastError();
         wchar_t errorMsg[256];
-        swprintf(errorMsg, 256, L"路径转换错误 (Short Path->ASCII): %lu", error);
+        StringCbPrintfW(errorMsg, sizeof(errorMsg), L"路径转换错误 (Short Path->ASCII): %lu", error);
         ShowErrorMessage(hwnd, errorMsg);
         
         // 尝试使用Windows原生API播放
@@ -258,7 +258,7 @@ static BOOL PlayAudioWithMiniaudio(HWND hwnd, const char* filePath) {
             
             // 如果所有方法都失败，显示错误信息
             wchar_t errorMsg[512];
-            swprintf(errorMsg, 512, L"无法加载音频文件: %ls\n错误代码: %d", wFilePath, result);
+            StringCbPrintfW(errorMsg, sizeof(errorMsg), L"无法加载音频文件: %ls\n错误代码: %d", wFilePath, result);
             ShowErrorMessage(hwnd, errorMsg);
             return FALSE;
         }
