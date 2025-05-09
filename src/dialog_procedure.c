@@ -1427,6 +1427,7 @@ static void PopulateSoundComboBox(HWND hwndDlg) {
  */
 INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     static BOOL isPlaying = FALSE; // 添加一个静态变量来跟踪播放状态
+    static int originalVolume = 0; // 添加一个静态变量保存原始音量
     
     switch (msg) {
         case WM_INITDIALOG: {
@@ -1437,6 +1438,9 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             ReadNotificationTypeConfig();
             ReadNotificationSoundConfig();
             ReadNotificationVolumeConfig();
+            
+            // 保存原始音量值，用于取消操作时恢复
+            originalVolume = NOTIFICATION_SOUND_VOLUME;
             
             // 设置通知消息文本 - 使用Unicode函数
             wchar_t wideText[256];
@@ -1515,10 +1519,9 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 swprintf(volumeText, sizeof(volumeText)/sizeof(wchar_t), L"%d%%", volume);
                 SetDlgItemTextW(hwndDlg, IDC_VOLUME_TEXT, volumeText);
                 
-                // 应用音量设置到当前正在播放的音频
-                if (isPlaying) {
-                    SetAudioVolume(volume);
-                }
+                // 实时应用音量设置 - 无论是否有音频正在播放都应用设置
+                // 这样在其他地方播放的通知声音也能使用当前滑块设置的音量
+                SetAudioVolume(volume);
                 
                 return TRUE;
             }
@@ -1637,6 +1640,12 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                     StopNotificationSound();
                     isPlaying = FALSE;
                 }
+                
+                // 恢复原始音量设置
+                NOTIFICATION_SOUND_VOLUME = originalVolume;
+                
+                // 重新应用原始音量
+                SetAudioVolume(originalVolume);
                 
                 // 关闭对话框前清理回调
                 SetAudioPlaybackCompleteCallback(NULL, NULL);
@@ -1800,6 +1809,8 @@ void ShowNotificationSettingsDialog(HWND hwndParent) {
         ReadNotificationTimeoutConfig();
         ReadNotificationOpacityConfig();
         ReadNotificationTypeConfig();
+        ReadNotificationSoundConfig();
+        ReadNotificationVolumeConfig();
         
         DialogBox(GetModuleHandle(NULL), 
                  MAKEINTRESOURCE(CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG), 
