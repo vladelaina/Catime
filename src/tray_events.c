@@ -15,6 +15,7 @@
 #include "../include/color.h"
 #include "../include/timer.h"
 #include "../include/language.h"
+#include "../include/window_events.h"
 #include "../resource/resource.h"
 
 // 声明从配置文件读取超时动作的函数
@@ -55,6 +56,10 @@ void HandleTrayIconMessage(HWND hwnd, UINT uID, UINT uMouseMsg) {
  * 注意：仅当显示计时器（而非当前时间）且计时器活动时才能操作
  */
 void PauseResumeTimer(HWND hwnd) {
+    // 停止任何可能正在播放的通知音频
+    extern void StopNotificationSound(void);
+    StopNotificationSound();
+    
     // 检查当前是否有计时进行中
     if (!CLOCK_SHOW_CURRENT_TIME && (CLOCK_COUNT_UP || CLOCK_TOTAL_TIME > 0)) {
         
@@ -90,48 +95,33 @@ void PauseResumeTimer(HWND hwnd) {
  * 此操作不会改变计时模式或总时长，只会将进度重置为初始状态。
  */
 void RestartTimer(HWND hwnd) {
-    // 从配置文件读取超时动作设置
-    ReadTimeoutActionFromConfig();
+    // 停止任何可能正在播放的通知音频
+    extern void StopNotificationSound(void);
+    StopNotificationSound();
     
-    // 检查当前是否有计时进行中
-    if (!CLOCK_SHOW_CURRENT_TIME && 
-        ((!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0) || 
-         (CLOCK_COUNT_UP && TRUE))) {
-        
-        // 保持当前计时器类型(倒计时/正计时/番茄钟)，只重置进度
-        if (!CLOCK_COUNT_UP) {
-            // 倒计时模式 - 保留CLOCK_TOTAL_TIME，只重置已计时部分
+    // 根据当前模式判断操作
+    if (!CLOCK_COUNT_UP) {
+        // 倒计时模式
+        if (CLOCK_TOTAL_TIME > 0) {
             countdown_elapsed_time = 0;
-        } else {
-            // 正计时模式 - 从0开始重新计时
-            countup_elapsed_time = 0;
+            countdown_message_shown = FALSE;
+            CLOCK_IS_PAUSED = FALSE;
+            KillTimer(hwnd, 1);
+            SetTimer(hwnd, 1, 1000, NULL);
         }
-        
-        // 重置通用计时器状态
-        extern int elapsed_time;
-        extern BOOL message_shown;
-        extern BOOL countdown_message_shown;
-        extern BOOL countup_message_shown;
-        
-        elapsed_time = 0;
-        message_shown = FALSE;
-        countdown_message_shown = FALSE;
-        countup_message_shown = FALSE;
-        
-        // 取消暂停状态
+    } else {
+        // 正计时模式
+        countup_elapsed_time = 0;
         CLOCK_IS_PAUSED = FALSE;
-        
-        // 确保计时器正在运行
         KillTimer(hwnd, 1);
         SetTimer(hwnd, 1, 1000, NULL);
-        
-        // 更新窗口以反映新状态
-        InvalidateRect(hwnd, NULL, TRUE);
-        
-        // 确保重置后窗口置顶
-        extern void HandleWindowReset(HWND hwnd);
-        HandleWindowReset(hwnd);
     }
+    
+    // 更新窗口
+    InvalidateRect(hwnd, NULL, TRUE);
+    
+    // 确保窗口置顶可见
+    HandleWindowReset(hwnd);
 }
 
 /**

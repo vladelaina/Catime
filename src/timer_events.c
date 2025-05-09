@@ -368,6 +368,10 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                                 break;
                             }
                             case TIMEOUT_ACTION_SHOW_TIME:
+                                // 停止任何正在播放的通知音频
+                                extern void StopNotificationSound(void);
+                                StopNotificationSound();
+                                
                                 // 切换到显示当前时间模式
                                 CLOCK_SHOW_CURRENT_TIME = TRUE;
                                 CLOCK_COUNT_UP = FALSE;
@@ -376,6 +380,10 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                                 InvalidateRect(hwnd, NULL, TRUE);
                                 break;
                             case TIMEOUT_ACTION_COUNT_UP:
+                                // 停止任何正在播放的通知音频
+                                extern void StopNotificationSound(void);
+                                StopNotificationSound();
+                                
                                 // 切换到正计时模式并重置
                                 CLOCK_COUNT_UP = TRUE;
                                 CLOCK_SHOW_CURRENT_TIME = FALSE;
