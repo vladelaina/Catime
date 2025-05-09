@@ -1584,12 +1584,24 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 // 关闭对话框前清理回调
                 SetAudioPlaybackCompleteCallback(NULL, NULL);
                 
+                // 确保停止正在播放的音频
+                if (isPlaying) {
+                    StopNotificationSound();
+                    isPlaying = FALSE;
+                }
+                
                 EndDialog(hwndDlg, IDOK);
                 g_hwndNotificationSettingsDialog = NULL;
                 return TRUE;
             } else if (LOWORD(wParam) == IDCANCEL) {
                 // 关闭对话框前清理回调
                 SetAudioPlaybackCompleteCallback(NULL, NULL);
+                
+                // 确保停止正在播放的音频
+                if (isPlaying) {
+                    StopNotificationSound();
+                    isPlaying = FALSE;
+                }
                 
                 EndDialog(hwndDlg, IDCANCEL);
                 g_hwndNotificationSettingsDialog = NULL;
