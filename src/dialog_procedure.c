@@ -1436,6 +1436,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             ReadNotificationOpacityConfig();
             ReadNotificationTypeConfig();
             ReadNotificationSoundConfig();
+            ReadNotificationVolumeConfig();
             
             // 设置通知消息文本 - 使用Unicode函数
             wchar_t wideText[256];
@@ -1481,6 +1482,16 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             // 填充音频下拉框
             PopulateSoundComboBox(hwndDlg);
             
+            // 设置音量滑块
+            HWND hwndSlider = GetDlgItem(hwndDlg, IDC_VOLUME_SLIDER);
+            SendMessage(hwndSlider, TBM_SETRANGE, TRUE, MAKELONG(0, 100));
+            SendMessage(hwndSlider, TBM_SETPOS, TRUE, NOTIFICATION_SOUND_VOLUME);
+            
+            // 更新音量文本
+            wchar_t volumeText[16];
+            swprintf(volumeText, sizeof(volumeText)/sizeof(wchar_t), L"%d%%", NOTIFICATION_SOUND_VOLUME);
+            SetDlgItemTextW(hwndDlg, IDC_VOLUME_TEXT, volumeText);
+            
             // 在初始化时重置播放状态
             isPlaying = FALSE;
             
@@ -1491,6 +1502,27 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             g_hwndNotificationSettingsDialog = hwndDlg;
             
             return TRUE;
+        }
+        
+        case WM_HSCROLL: {
+            // 处理音量滑块拖动事件
+            if (GetDlgItem(hwndDlg, IDC_VOLUME_SLIDER) == (HWND)lParam) {
+                // 获取滑块当前位置
+                int volume = (int)SendMessage((HWND)lParam, TBM_GETPOS, 0, 0);
+                
+                // 更新音量百分比文本
+                wchar_t volumeText[16];
+                swprintf(volumeText, sizeof(volumeText)/sizeof(wchar_t), L"%d%%", volume);
+                SetDlgItemTextW(hwndDlg, IDC_VOLUME_TEXT, volumeText);
+                
+                // 应用音量设置到当前正在播放的音频
+                if (isPlaying) {
+                    SetAudioVolume(volume);
+                }
+                
+                return TRUE;
+            }
+            break;
         }
         
         case WM_COMMAND:
@@ -1570,6 +1602,11 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                     NOTIFICATION_SOUND_FILE[0] = '\0';
                 }
                 
+                // 获取音量滑块位置
+                HWND hwndSlider = GetDlgItem(hwndDlg, IDC_VOLUME_SLIDER);
+                int volume = (int)SendMessage(hwndSlider, TBM_GETPOS, 0, 0);
+                NOTIFICATION_SOUND_VOLUME = volume;
+                
                 // 保存所有设置
                 WriteConfigNotificationMessages(
                     timeout_msg,
@@ -1580,28 +1617,29 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 WriteConfigNotificationOpacity(NOTIFICATION_MAX_OPACITY);
                 WriteConfigNotificationType(NOTIFICATION_TYPE);
                 WriteConfigNotificationSound(NOTIFICATION_SOUND_FILE);
-                
-                // 关闭对话框前清理回调
-                SetAudioPlaybackCompleteCallback(NULL, NULL);
+                WriteConfigNotificationVolume(NOTIFICATION_SOUND_VOLUME);
                 
                 // 确保停止正在播放的音频
                 if (isPlaying) {
                     StopNotificationSound();
                     isPlaying = FALSE;
                 }
+                
+                // 关闭对话框前清理回调
+                SetAudioPlaybackCompleteCallback(NULL, NULL);
                 
                 EndDialog(hwndDlg, IDOK);
                 g_hwndNotificationSettingsDialog = NULL;
                 return TRUE;
             } else if (LOWORD(wParam) == IDCANCEL) {
-                // 关闭对话框前清理回调
-                SetAudioPlaybackCompleteCallback(NULL, NULL);
-                
                 // 确保停止正在播放的音频
                 if (isPlaying) {
                     StopNotificationSound();
                     isPlaying = FALSE;
                 }
+                
+                // 关闭对话框前清理回调
+                SetAudioPlaybackCompleteCallback(NULL, NULL);
                 
                 EndDialog(hwndDlg, IDCANCEL);
                 g_hwndNotificationSettingsDialog = NULL;
@@ -1613,6 +1651,11 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                     int index = SendMessage(hwndCombo, CB_GETCURSEL, 0, 0);
                     
                     if (index > 0) { // 0是"无"选项
+                        // 获取当前滑块音量并应用
+                        HWND hwndSlider = GetDlgItem(hwndDlg, IDC_VOLUME_SLIDER);
+                        int volume = (int)SendMessage(hwndSlider, TBM_GETPOS, 0, 0);
+                        SetAudioVolume(volume);
+                        
                         wchar_t wFileName[MAX_PATH];
                         SendMessageW(hwndCombo, CB_GETLBTEXT, index, (LPARAM)wFileName);
                         

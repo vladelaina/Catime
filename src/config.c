@@ -56,6 +56,9 @@ NotificationType NOTIFICATION_TYPE = NOTIFICATION_TYPE_CATIME; // 默认使用Ca
 // 新增：通知音频文件路径全局变量
 char NOTIFICATION_SOUND_FILE[MAX_PATH] = "";  // 默认为空
 
+// 新增：通知音频音量全局变量
+int NOTIFICATION_SOUND_VOLUME = 100;  // 默认音量100%
+
 /**
  * @brief 获取配置文件路径
  * @param path 存储路径的缓冲区
@@ -173,6 +176,12 @@ void CreateDefaultConfig(const char* config_path) {
         
         // 时间选项区块
         fprintf(file, "CLOCK_TIME_OPTIONS=25,10,5\n");
+        
+        // 新增：通知音频文件路径
+        fprintf(file, "NOTIFICATION_SOUND_FILE=\n");  // 默认为空
+        
+        // 新增：通知音频音量
+        fprintf(file, "NOTIFICATION_SOUND_VOLUME=100\n");  // 默认音量100%
         
         fclose(file);
     }
@@ -618,6 +627,28 @@ void ReadConfig() {
                 NOTIFICATION_MAX_OPACITY = opacity;
             }
         }
+        else if (strncmp(line, "NOTIFICATION_SOUND_FILE=", 23) == 0) {
+            char* value = line + 23;  // 正确的偏移量，跳过"NOTIFICATION_SOUND_FILE="
+            // 移除末尾的换行符
+            char* newline = strchr(value, '\n');
+            if (newline) *newline = '\0';
+            
+            // 确保路径不包含等号
+            if (value[0] == '=') {
+                value++; // 如果第一个字符是等号，跳过它
+            }
+            
+            // 复制到全局变量，确保清零
+            memset(NOTIFICATION_SOUND_FILE, 0, MAX_PATH);
+            strncpy(NOTIFICATION_SOUND_FILE, value, MAX_PATH - 1);
+            NOTIFICATION_SOUND_FILE[MAX_PATH - 1] = '\0';
+        }
+        else if (strncmp(line, "NOTIFICATION_SOUND_VOLUME=", 26) == 0) {
+            int volume = atoi(line + 26);
+            if (volume >= 0 && volume <= 100) {
+                NOTIFICATION_SOUND_VOLUME = volume;
+            }
+        }
     }
 
     fclose(file);
@@ -661,6 +692,12 @@ void ReadConfig() {
     
     // 查找通知类型配置
     ReadNotificationTypeConfig();
+    
+    // 查找通知音频配置
+    ReadNotificationSoundConfig();
+    
+    // 查找通知音频音量配置
+    ReadNotificationVolumeConfig();
     
     // 关闭文件
     fclose(file);
@@ -1340,6 +1377,12 @@ void WriteConfig(const char* config_path) {
         fprintf(file, "%d", time_options[i]);
     }
     fprintf(file, "\n");
+    
+    // 新增：通知音频文件路径
+    fprintf(file, "NOTIFICATION_SOUND_FILE=\n");  // 默认为空
+    
+    // 新增：通知音频音量
+    fprintf(file, "NOTIFICATION_SOUND_VOLUME=100\n");  // 默认音量100%
     
     fclose(file);
 }
@@ -2274,4 +2317,79 @@ void WriteConfigNotificationSound(const char* sound_file) {
     memset(NOTIFICATION_SOUND_FILE, 0, MAX_PATH);
     strncpy(NOTIFICATION_SOUND_FILE, clean_path, MAX_PATH - 1);
     NOTIFICATION_SOUND_FILE[MAX_PATH - 1] = '\0';
+}
+
+/**
+ * @brief 从配置文件中读取通知音频音量
+ */
+void ReadNotificationVolumeConfig(void) {
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    
+    FILE* file = fopen(config_path, "r");
+    if (!file) return;
+    
+    char line[256];
+    while (fgets(line, sizeof(line), file)) {
+        if (strncmp(line, "NOTIFICATION_SOUND_VOLUME=", 26) == 0) {
+            int volume = atoi(line + 26);
+            if (volume >= 0 && volume <= 100) {
+                NOTIFICATION_SOUND_VOLUME = volume;
+            }
+            break;
+        }
+    }
+    
+    fclose(file);
+}
+
+/**
+ * @brief 写入通知音频音量配置
+ * @param volume 音量百分比值(0-100)
+ */
+void WriteConfigNotificationVolume(int volume) {
+    // 验证音量范围
+    if (volume < 0) volume = 0;
+    if (volume > 100) volume = 100;
+    
+    // 更新全局变量
+    NOTIFICATION_SOUND_VOLUME = volume;
+    
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    
+    FILE* file = fopen(config_path, "r");
+    if (!file) return;
+    
+    char temp_path[MAX_PATH];
+    strcpy(temp_path, config_path);
+    strcat(temp_path, ".tmp");
+    
+    FILE* temp = fopen(temp_path, "w");
+    if (!temp) {
+        fclose(file);
+        return;
+    }
+    
+    char line[256];
+    BOOL found = FALSE;
+    
+    while (fgets(line, sizeof(line), file)) {
+        if (strncmp(line, "NOTIFICATION_SOUND_VOLUME=", 26) == 0) {
+            fprintf(temp, "NOTIFICATION_SOUND_VOLUME=%d\n", volume);
+            found = TRUE;
+        } else {
+            fputs(line, temp);
+        }
+    }
+    
+    if (!found) {
+        fprintf(temp, "NOTIFICATION_SOUND_VOLUME=%d\n", volume);
+    }
+    
+    fclose(file);
+    fclose(temp);
+    
+    remove(config_path);
+    rename(temp_path, config_path);
 }

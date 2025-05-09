@@ -182,6 +182,9 @@
 #define IDC_NOTIFICATION_SOUND_COMBO 2015
 #define IDC_TEST_SOUND_BUTTON 2016     // 测试音频按钮
 #define IDC_OPEN_SOUND_DIR_BUTTON 2017 // 打开音频目录按钮
+#define IDC_VOLUME_LABEL 2018          // 音量标签
+#define IDC_VOLUME_SLIDER 2019         // 音量滑块
+#define IDC_VOLUME_TEXT 2020           // 音量百分比文本
 
 /* 通知窗口常量 */
 #define NOTIFICATION_MIN_WIDTH 350     // 通知窗口最小宽度(像素)

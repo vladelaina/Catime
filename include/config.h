@@ -58,6 +58,9 @@ extern NotificationType NOTIFICATION_TYPE;
 // 新增：通知音频相关配置
 extern char NOTIFICATION_SOUND_FILE[MAX_PATH];  ///< 通知音频文件路径
 
+// 新增：通知音频音量
+extern int NOTIFICATION_SOUND_VOLUME;  ///< 通知音频音量 (0-100)
+
 /// @name 配置相关函数声明
 /// @{
 
@@ -274,6 +277,22 @@ void ReadNotificationSoundConfig(void);
  * 采用临时文件方式确保配置更新安全。
  */
 void WriteConfigNotificationSound(const char* sound_file);
+
+/**
+ * @brief 从配置文件中读取通知音频音量
+ * 
+ * 专门读取 NOTIFICATION_SOUND_VOLUME 配置项并更新相应的全局变量。
+ */
+void ReadNotificationVolumeConfig(void);
+
+/**
+ * @brief 写入通知音频音量配置
+ * @param volume 音量百分比值(0-100)
+ * 
+ * 更新配置文件中的通知音频音量设置，
+ * 采用临时文件方式确保配置更新安全。
+ */
+void WriteConfigNotificationVolume(int volume);
 
 /// @}
 

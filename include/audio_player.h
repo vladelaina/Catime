@@ -46,4 +46,12 @@ BOOL PlayNotificationSound(HWND hwnd);
  */
 void StopNotificationSound(void);
 
+/**
+ * @brief 设置音频播放音量
+ * @param volume 音量百分比(0-100)
+ * 
+ * 设置音频播放的音量大小，影响所有通知音频的播放
+ */
+void SetAudioVolume(int volume);
+
 #endif // AUDIO_PLAYER_H 

@@ -15,6 +15,7 @@
 
 // 声明全局变量
 extern char NOTIFICATION_SOUND_FILE[MAX_PATH];  // 从config.c引用
+extern int NOTIFICATION_SOUND_VOLUME;          // 从config.c引用音量配置
 
 // 定义回调函数类型，用于音频播放完成通知
 typedef void (*AudioPlaybackCompleteCallback)(HWND hwnd);
@@ -159,6 +160,28 @@ static void CALLBACK SystemBeepDoneCallback(HWND hwnd, UINT message, UINT_PTR id
 }
 
 /**
+ * @brief 设置音频播放音量
+ * @param volume 音量百分比(0-100)
+ */
+void SetAudioVolume(int volume) {
+    // 确保音量在有效范围内
+    if (volume < 0) volume = 0;
+    if (volume > 100) volume = 100;
+    
+    // 如果引擎已初始化，设置音量
+    if (g_engineInitialized) {
+        // miniaudio的音量范围是0.0-1.0
+        float volFloat = (float)volume / 100.0f;
+        ma_engine_set_volume(&g_audioEngine, volFloat);
+        
+        // 如果当前有音频在播放，也更新它的音量
+        if (g_soundInitialized && g_isPlaying) {
+            ma_sound_set_volume(&g_sound, volFloat);
+        }
+    }
+}
+
+/**
  * @brief 使用miniaudio播放音频文件
  * @param hwnd 父窗口句柄
  * @param filePath 音频文件路径
@@ -167,13 +190,18 @@ static void CALLBACK SystemBeepDoneCallback(HWND hwnd, UINT message, UINT_PTR id
 static BOOL PlayAudioWithMiniaudio(HWND hwnd, const char* filePath) {
     if (!filePath || filePath[0] == '\0') return FALSE;
     
-    // 确保音频引擎已初始化
-    if (!InitializeAudioEngine()) {
-        ShowErrorMessage(hwnd, L"无法初始化音频引擎");
-        return FALSE;
+    // 如果音频引擎未初始化，先初始化
+    if (!g_engineInitialized) {
+        if (!InitializeAudioEngine()) {
+            return FALSE;
+        }
     }
     
-    // 如果已经有声音在播放，先停止并清理
+    // 设置音量
+    float volume = (float)NOTIFICATION_SOUND_VOLUME / 100.0f;
+    ma_engine_set_volume(&g_audioEngine, volume);
+    
+    // 加载并播放音频文件
     if (g_soundInitialized) {
         ma_sound_uninit(&g_sound);
         g_soundInitialized = MA_FALSE;
