@@ -196,43 +196,18 @@ void ExitProgram(HWND hwnd) {
  * @return BOOL 是否成功注册至少一个热键
  */
 BOOL RegisterGlobalHotkeys(HWND hwnd) {
-    // 先取消注册所有已注册的热键
+    // 先注销所有已注册的热键
     UnregisterGlobalHotkeys(hwnd);
     
-    // 从配置文件读取热键设置
-    char configPath[MAX_PATH];
-    GetConfigPath(configPath, MAX_PATH);
-    
+    // 使用新函数读取热键配置
     WORD showTimeHotkey = 0;
     WORD countUpHotkey = 0;
     WORD countdownHotkey = 0;
+    ReadConfigHotkeys(&showTimeHotkey, &countUpHotkey, &countdownHotkey);
     
-    FILE *configFile = fopen(configPath, "r");
-    if (configFile) {
-        char line[256];
-        while (fgets(line, sizeof(line), configFile)) {
-            if (strncmp(line, "HOTKEY_SHOW_TIME=", 17) == 0) {
-                int value = 0;
-                sscanf(line, "HOTKEY_SHOW_TIME=%d", &value);
-                showTimeHotkey = (WORD)value;
-            }
-            else if (strncmp(line, "HOTKEY_COUNT_UP=", 16) == 0) {
-                int value = 0;
-                sscanf(line, "HOTKEY_COUNT_UP=%d", &value);
-                countUpHotkey = (WORD)value;
-            }
-            else if (strncmp(line, "HOTKEY_COUNTDOWN=", 17) == 0) {
-                int value = 0;
-                sscanf(line, "HOTKEY_COUNTDOWN=%d", &value);
-                countdownHotkey = (WORD)value;
-            }
-        }
-        fclose(configFile);
-    }
-    
-    // 注册热键
     BOOL success = FALSE;
     
+    // 注册显示当前时间热键
     if (showTimeHotkey != 0) {
         BYTE vk = LOBYTE(showTimeHotkey);  // 虚拟键码
         BYTE mod = HIBYTE(showTimeHotkey); // 修饰键
@@ -247,6 +222,7 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         }
     }
     
+    // 注册正计时热键
     if (countUpHotkey != 0) {
         BYTE vk = LOBYTE(countUpHotkey);  // 虚拟键码
         BYTE mod = HIBYTE(countUpHotkey); // 修饰键
@@ -261,6 +237,7 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         }
     }
     
+    // 注册默认倒计时热键
     if (countdownHotkey != 0) {
         BYTE vk = LOBYTE(countdownHotkey);  // 虚拟键码
         BYTE mod = HIBYTE(countdownHotkey); // 修饰键

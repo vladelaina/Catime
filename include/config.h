@@ -294,6 +294,27 @@ void ReadNotificationVolumeConfig(void);
  */
 void WriteConfigNotificationVolume(int volume);
 
+/**
+ * @brief 写入热键配置
+ * @param showTimeHotkey 显示时间热键值
+ * @param countUpHotkey 正计时热键值
+ * @param countdownHotkey 倒计时热键值
+ * 
+ * 更新配置文件中的热键设置，
+ * 采用临时文件方式确保配置更新安全。
+ */
+void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownHotkey);
+
+/**
+ * @brief 从配置文件中读取热键设置
+ * @param showTimeHotkey 存储显示时间热键的指针
+ * @param countUpHotkey 存储正计时热键的指针
+ * @param countdownHotkey 存储倒计时热键的指针
+ * 
+ * 专门读取热键配置项并更新相应的参数值。
+ */
+void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdownHotkey);
+
 /// @}
 
 #endif // CONFIG_H

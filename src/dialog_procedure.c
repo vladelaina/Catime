@@ -1875,31 +1875,8 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
             hBackgroundBrush = CreateSolidBrush(RGB(0xF3, 0xF3, 0xF3));
             hButtonBrush = CreateSolidBrush(RGB(0xFD, 0xFD, 0xFD));
             
-            // 从配置文件读取热键设置
-            char configPath[MAX_PATH];
-            GetConfigPath(configPath, MAX_PATH);
-            FILE *configFile = fopen(configPath, "r");
-            if (configFile) {
-                char line[256];
-                while (fgets(line, sizeof(line), configFile)) {
-                    if (strncmp(line, "HOTKEY_SHOW_TIME=", 17) == 0) {
-                        int value = 0;
-                        sscanf(line, "HOTKEY_SHOW_TIME=%d", &value);
-                        showTimeHotkey = (WORD)value;
-                    }
-                    else if (strncmp(line, "HOTKEY_COUNT_UP=", 16) == 0) {
-                        int value = 0;
-                        sscanf(line, "HOTKEY_COUNT_UP=%d", &value);
-                        countUpHotkey = (WORD)value;
-                    }
-                    else if (strncmp(line, "HOTKEY_COUNTDOWN=", 17) == 0) {
-                        int value = 0;
-                        sscanf(line, "HOTKEY_COUNTDOWN=%d", &value);
-                        countdownHotkey = (WORD)value;
-                    }
-                }
-                fclose(configFile);
-            }
+            // 使用新函数读取热键配置
+            ReadConfigHotkeys(&showTimeHotkey, &countUpHotkey, &countdownHotkey);
             
             // 设置热键控件的初始值
             SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT1, HKM_SETHOTKEY, showTimeHotkey, 0);
@@ -1949,72 +1926,8 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                         return TRUE;
                     }
                     
-                    // 保存热键设置到配置文件
-                    char configPath[MAX_PATH];
-                    GetConfigPath(configPath, MAX_PATH);
-                    
-                    // 先读取现有配置
-                    FILE *configFile = fopen(configPath, "r");
-                    if (!configFile) {
-                        // 如果文件不存在，则创建新文件
-                        configFile = fopen(configPath, "w");
-                        if (configFile) {
-                            fprintf(configFile, "HOTKEY_SHOW_TIME=%d\n", newShowTimeHotkey);
-                            fprintf(configFile, "HOTKEY_COUNT_UP=%d\n", newCountUpHotkey);
-                            fprintf(configFile, "HOTKEY_COUNTDOWN=%d\n", newCountdownHotkey);
-                            fclose(configFile);
-                        }
-                    } else {
-                        // 文件存在，读取所有行并更新热键设置
-                        char tempPath[MAX_PATH];
-                        sprintf(tempPath, "%s.tmp", configPath);
-                        FILE *tempFile = fopen(tempPath, "w");
-                        
-                        if (tempFile) {
-                            char line[256];
-                            BOOL foundShowTime = FALSE;
-                            BOOL foundCountUp = FALSE;
-                            BOOL foundCountdown = FALSE;
-                            
-                            while (fgets(line, sizeof(line), configFile)) {
-                                if (strncmp(line, "HOTKEY_SHOW_TIME=", 17) == 0) {
-                                    fprintf(tempFile, "HOTKEY_SHOW_TIME=%d\n", newShowTimeHotkey);
-                                    foundShowTime = TRUE;
-                                }
-                                else if (strncmp(line, "HOTKEY_COUNT_UP=", 16) == 0) {
-                                    fprintf(tempFile, "HOTKEY_COUNT_UP=%d\n", newCountUpHotkey);
-                                    foundCountUp = TRUE;
-                                }
-                                else if (strncmp(line, "HOTKEY_COUNTDOWN=", 17) == 0) {
-                                    fprintf(tempFile, "HOTKEY_COUNTDOWN=%d\n", newCountdownHotkey);
-                                    foundCountdown = TRUE;
-                                }
-                                else {
-                                    fputs(line, tempFile);
-                                }
-                            }
-                            
-                            // 添加未找到的配置项
-                            if (!foundShowTime) {
-                                fprintf(tempFile, "HOTKEY_SHOW_TIME=%d\n", newShowTimeHotkey);
-                            }
-                            if (!foundCountUp) {
-                                fprintf(tempFile, "HOTKEY_COUNT_UP=%d\n", newCountUpHotkey);
-                            }
-                            if (!foundCountdown) {
-                                fprintf(tempFile, "HOTKEY_COUNTDOWN=%d\n", newCountdownHotkey);
-                            }
-                            
-                            fclose(tempFile);
-                            fclose(configFile);
-                            
-                            // 替换原文件
-                            remove(configPath);
-                            rename(tempPath, configPath);
-                        } else {
-                            fclose(configFile);
-                        }
-                    }
+                    // 使用新的函数保存热键设置到配置文件
+                    WriteConfigHotkeys(newShowTimeHotkey, newCountUpHotkey, newCountdownHotkey);
                     
                     // 通知主窗口热键设置已更改，需要重新注册
                     PostMessage(GetParent(hwndDlg), WM_APP+1, 0, 0);
