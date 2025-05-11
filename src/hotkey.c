@@ -14,6 +14,13 @@
 #include "../include/window_procedure.h"
 #include "../resource/resource.h"
 
+// 热键修饰符标志 - 如果commctrl.h中没有定义
+#ifndef HOTKEYF_SHIFT
+#define HOTKEYF_SHIFT   0x01
+#define HOTKEYF_CONTROL 0x02
+#define HOTKEYF_ALT     0x04
+#endif
+
 /**
  * @brief 显示热键设置对话框
  * @param hwndParent 父窗口句柄
@@ -233,6 +240,17 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                 // 获取当前控件的热键值
                 WORD newHotkey = (WORD)SendDlgItemMessage(hwndDlg, ctrlId, HKM_GETHOTKEY, 0, 0);
                 
+                // 提取修饰键和虚拟键
+                BYTE vk = LOBYTE(newHotkey);
+                BYTE modifiers = HIBYTE(newHotkey);
+                
+                // 特殊处理: 中文输入法可能会产生Shift+0xE5这种组合，这是无效的
+                if (vk == 0xE5 && modifiers == HOTKEYF_SHIFT) {
+                    // 清除无效的热键组合
+                    SendDlgItemMessage(hwndDlg, ctrlId, HKM_SETHOTKEY, 0, 0);
+                    return TRUE;
+                }
+                
                 // 检查是否是单独的数字、字母或符号（无修饰键）
                 if (newHotkey != 0 && IsRestrictedSingleKey(newHotkey)) {
                     // 发现无效热键，静默清除
@@ -297,6 +315,13 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                     // 静默清除任何无效热键
                     BOOL needsRefresh = FALSE;
                     for (int i = 0; i < sizeof(hotkeys) / sizeof(hotkeys[0]); i++) {
+                        // 检查是否是无效的中文输入法热键组合 (Shift+0xE5)
+                        if (LOBYTE(*hotkeys[i]) == 0xE5 && HIBYTE(*hotkeys[i]) == HOTKEYF_SHIFT) {
+                            *hotkeys[i] = 0;
+                            needsRefresh = TRUE;
+                            continue;
+                        }
+                        
                         if (*hotkeys[i] != 0 && IsRestrictedSingleKey(*hotkeys[i])) {
                             // 发现单键热键，直接置为0
                             *hotkeys[i] = 0;
