@@ -2056,6 +2056,41 @@ void StartPomodoroTimer(HWND hwnd) {
  */
 void ToggleEditMode(HWND hwnd) {
     CLOCK_EDIT_MODE = !CLOCK_EDIT_MODE;
+    
+    if (CLOCK_EDIT_MODE) {
+        // 记录当前的置顶状态
+        PREVIOUS_TOPMOST_STATE = CLOCK_WINDOW_TOPMOST;
+        
+        // 如果当前不是置顶状态，先设为置顶
+        if (!CLOCK_WINDOW_TOPMOST) {
+            SetWindowTopmost(hwnd, TRUE);
+        }
+        
+        // 应用模糊效果
+        SetBlurBehind(hwnd, TRUE);
+        
+        // 禁用点击穿透
+        SetClickThrough(hwnd, FALSE);
+    } else {
+        // 移除模糊效果
+        SetBlurBehind(hwnd, FALSE);
+        SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), 255, LWA_COLORKEY);
+        
+        // 恢复点击穿透
+        SetClickThrough(hwnd, TRUE);
+        
+        // 如果之前不是置顶状态，恢复为非置顶
+        if (!PREVIOUS_TOPMOST_STATE) {
+            SetWindowTopmost(hwnd, FALSE);
+        }
+        
+        // 保存窗口设置和颜色设置
+        SaveWindowSettings(hwnd);
+        WriteConfigColor(CLOCK_TEXT_COLOR);
+    }
+    
+    // 更新配置文件并刷新窗口
+    WriteConfigEditMode(CLOCK_EDIT_MODE ? "TRUE" : "FALSE");
     InvalidateRect(hwnd, NULL, TRUE);
 }
 
