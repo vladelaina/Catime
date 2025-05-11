@@ -205,6 +205,7 @@ void ExitProgram(HWND hwnd) {
  * 
  * 从配置文件读取并注册全局热键设置，用于快速切换显示当前时间、正计时和默认倒计时。
  * 如果热键已注册，会先取消注册再重新注册。
+ * 如果热键无法注册（可能被其他程序占用），则将该热键设置为无并更新配置文件。
  * 
  * @return BOOL 是否成功注册至少一个热键
  */
@@ -231,6 +232,7 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
                      &pauseResumeHotkey, &restartTimerHotkey);
     
     BOOL success = FALSE;
+    BOOL configChanged = FALSE;
     
     // 注册显示当前时间热键
     if (showTimeHotkey != 0) {
@@ -244,6 +246,10 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         
         if (RegisterHotKey(hwnd, HOTKEY_ID_SHOW_TIME, fsModifiers, vk)) {
             success = TRUE;
+        } else {
+            // 热键注册失败，清除配置
+            showTimeHotkey = 0;
+            configChanged = TRUE;
         }
     }
     
@@ -259,6 +265,10 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         
         if (RegisterHotKey(hwnd, HOTKEY_ID_COUNT_UP, fsModifiers, vk)) {
             success = TRUE;
+        } else {
+            // 热键注册失败，清除配置
+            countUpHotkey = 0;
+            configChanged = TRUE;
         }
     }
     
@@ -274,6 +284,10 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         
         if (RegisterHotKey(hwnd, HOTKEY_ID_COUNTDOWN, fsModifiers, vk)) {
             success = TRUE;
+        } else {
+            // 热键注册失败，清除配置
+            countdownHotkey = 0;
+            configChanged = TRUE;
         }
     }
     
@@ -289,6 +303,10 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         
         if (RegisterHotKey(hwnd, HOTKEY_ID_QUICK_COUNTDOWN1, fsModifiers, vk)) {
             success = TRUE;
+        } else {
+            // 热键注册失败，清除配置
+            quickCountdown1Hotkey = 0;
+            configChanged = TRUE;
         }
     }
     
@@ -304,6 +322,10 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         
         if (RegisterHotKey(hwnd, HOTKEY_ID_QUICK_COUNTDOWN2, fsModifiers, vk)) {
             success = TRUE;
+        } else {
+            // 热键注册失败，清除配置
+            quickCountdown2Hotkey = 0;
+            configChanged = TRUE;
         }
     }
     
@@ -319,6 +341,10 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         
         if (RegisterHotKey(hwnd, HOTKEY_ID_QUICK_COUNTDOWN3, fsModifiers, vk)) {
             success = TRUE;
+        } else {
+            // 热键注册失败，清除配置
+            quickCountdown3Hotkey = 0;
+            configChanged = TRUE;
         }
     }
     
@@ -334,6 +360,10 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         
         if (RegisterHotKey(hwnd, HOTKEY_ID_POMODORO, fsModifiers, vk)) {
             success = TRUE;
+        } else {
+            // 热键注册失败，清除配置
+            pomodoroHotkey = 0;
+            configChanged = TRUE;
         }
     }
     
@@ -349,6 +379,10 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         
         if (RegisterHotKey(hwnd, HOTKEY_ID_TOGGLE_VISIBILITY, fsModifiers, vk)) {
             success = TRUE;
+        } else {
+            // 热键注册失败，清除配置
+            toggleVisibilityHotkey = 0;
+            configChanged = TRUE;
         }
     }
     
@@ -364,6 +398,10 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         
         if (RegisterHotKey(hwnd, HOTKEY_ID_EDIT_MODE, fsModifiers, vk)) {
             success = TRUE;
+        } else {
+            // 热键注册失败，清除配置
+            editModeHotkey = 0;
+            configChanged = TRUE;
         }
     }
     
@@ -379,6 +417,10 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         
         if (RegisterHotKey(hwnd, HOTKEY_ID_PAUSE_RESUME, fsModifiers, vk)) {
             success = TRUE;
+        } else {
+            // 热键注册失败，清除配置
+            pauseResumeHotkey = 0;
+            configChanged = TRUE;
         }
     }
     
@@ -394,7 +436,19 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         
         if (RegisterHotKey(hwnd, HOTKEY_ID_RESTART_TIMER, fsModifiers, vk)) {
             success = TRUE;
+        } else {
+            // 热键注册失败，清除配置
+            restartTimerHotkey = 0;
+            configChanged = TRUE;
         }
+    }
+    
+    // 如果有热键注册失败，更新配置文件
+    if (configChanged) {
+        WriteConfigHotkeys(showTimeHotkey, countUpHotkey, countdownHotkey,
+                           quickCountdown1Hotkey, quickCountdown2Hotkey, quickCountdown3Hotkey,
+                           pomodoroHotkey, toggleVisibilityHotkey, editModeHotkey,
+                           pauseResumeHotkey, restartTimerHotkey);
     }
     
     return success;
