@@ -181,6 +181,9 @@ void CreateDefaultConfig(const char* config_path) {
         fprintf(file, "HOTKEY_SHOW_TIME=None\n");
         fprintf(file, "HOTKEY_COUNT_UP=None\n");
         fprintf(file, "HOTKEY_COUNTDOWN=None\n");
+        fprintf(file, "HOTKEY_QUICK_COUNTDOWN1=None\n");
+        fprintf(file, "HOTKEY_QUICK_COUNTDOWN2=None\n");
+        fprintf(file, "HOTKEY_QUICK_COUNTDOWN3=None\n");
         fprintf(file, "HOTKEY_POMODORO=None\n");
         fprintf(file, "HOTKEY_TOGGLE_VISIBILITY=None\n");
         fprintf(file, "HOTKEY_EDIT_MODE=None\n");
