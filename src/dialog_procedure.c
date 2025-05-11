@@ -1465,10 +1465,15 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             swprintf(timeout_str, sizeof(timeout_str)/sizeof(wchar_t), L"%d", NOTIFICATION_TIMEOUT_MS / 1000);
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, timeout_str);
             
-            // 设置通知透明度
-            wchar_t opacity_str[32];
-            swprintf(opacity_str, sizeof(opacity_str)/sizeof(wchar_t), L"%d", NOTIFICATION_MAX_OPACITY);
-            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT, opacity_str);
+            // 设置通知透明度滑动条
+            HWND hwndOpacitySlider = GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT);
+            SendMessage(hwndOpacitySlider, TBM_SETRANGE, TRUE, MAKELONG(1, 100));
+            SendMessage(hwndOpacitySlider, TBM_SETPOS, TRUE, NOTIFICATION_MAX_OPACITY);
+            
+            // 更新透明度文本
+            wchar_t opacityText[16];
+            swprintf(opacityText, sizeof(opacityText)/sizeof(wchar_t), L"%d%%", NOTIFICATION_MAX_OPACITY);
+            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_OPACITY_TEXT, opacityText);
             
             // 设置通知类型单选按钮
             switch (NOTIFICATION_TYPE) {
@@ -1509,7 +1514,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
         }
         
         case WM_HSCROLL: {
-            // 处理音量滑块拖动事件
+            // 处理滑块拖动事件
             if (GetDlgItem(hwndDlg, IDC_VOLUME_SLIDER) == (HWND)lParam) {
                 // 获取滑块当前位置
                 int volume = (int)SendMessage((HWND)lParam, TBM_GETPOS, 0, 0);
@@ -1519,9 +1524,19 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 swprintf(volumeText, sizeof(volumeText)/sizeof(wchar_t), L"%d%%", volume);
                 SetDlgItemTextW(hwndDlg, IDC_VOLUME_TEXT, volumeText);
                 
-                // 实时应用音量设置 - 无论是否有音频正在播放都应用设置
-                // 这样在其他地方播放的通知声音也能使用当前滑块设置的音量
+                // 实时应用音量设置
                 SetAudioVolume(volume);
+                
+                return TRUE;
+            }
+            else if (GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT) == (HWND)lParam) {
+                // 获取滑块当前位置
+                int opacity = (int)SendMessage((HWND)lParam, TBM_GETPOS, 0, 0);
+                
+                // 更新透明度百分比文本
+                wchar_t opacityText[16];
+                swprintf(opacityText, sizeof(opacityText)/sizeof(wchar_t), L"%d%%", opacity);
+                SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_OPACITY_TEXT, opacityText);
                 
                 return TRUE;
             }
@@ -1560,10 +1575,9 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                     NOTIFICATION_TIMEOUT_MS = timeout * 1000;
                 }
                 
-                // 获取通知透明度
-                wchar_t wOpacityStr[32] = {0};
-                GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT, wOpacityStr, sizeof(wOpacityStr)/sizeof(wchar_t));
-                int opacity = _wtoi(wOpacityStr);
+                // 获取通知透明度（从滑动条获取）
+                HWND hwndOpacitySlider = GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT);
+                int opacity = (int)SendMessage(hwndOpacitySlider, TBM_GETPOS, 0, 0);
                 if (opacity >= 1 && opacity <= 100) {
                     NOTIFICATION_MAX_OPACITY = opacity;
                 }
