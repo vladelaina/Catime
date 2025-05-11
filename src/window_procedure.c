@@ -2079,6 +2079,10 @@ void ModifyMenuItemText(HMENU hMenu, UINT id, const char* text);
  * @param hwnd 窗口句柄
  */
 void ToggleShowTimeMode(HWND hwnd) {
+    // 停止任何可能正在播放的通知音频
+    extern void StopNotificationSound(void);
+    StopNotificationSound();
+    
     CLOCK_SHOW_CURRENT_TIME = TRUE;
     InvalidateRect(hwnd, NULL, TRUE);
 }
@@ -2088,6 +2092,10 @@ void ToggleShowTimeMode(HWND hwnd) {
  * @param hwnd 窗口句柄
  */
 void StartCountUp(HWND hwnd) {
+    // 停止任何可能正在播放的通知音频
+    extern void StopNotificationSound(void);
+    StopNotificationSound();
+    
     // 声明外部变量
     extern int countup_elapsed_time;
     
@@ -2108,6 +2116,10 @@ void StartCountUp(HWND hwnd) {
  * @param hwnd 窗口句柄
  */
 void StartDefaultCountDown(HWND hwnd) {
+    // 停止任何可能正在播放的通知音频
+    extern void StopNotificationSound(void);
+    StopNotificationSound();
+    
     CLOCK_COUNT_UP = FALSE;
     CLOCK_SHOW_CURRENT_TIME = FALSE;
     if (CLOCK_DEFAULT_START_TIME > 0) {
@@ -2178,6 +2190,10 @@ void ToggleEditMode(HWND hwnd) {
  * @param hwnd 窗口句柄
  */
 void TogglePauseResume(HWND hwnd) {
+    // 停止任何可能正在播放的通知音频
+    extern void StopNotificationSound(void);
+    StopNotificationSound();
+    
     // 只有在非显示时间模式下才有效
     if (!CLOCK_SHOW_CURRENT_TIME) {
         CLOCK_IS_PAUSED = !CLOCK_IS_PAUSED;
@@ -2190,14 +2206,29 @@ void TogglePauseResume(HWND hwnd) {
  * @param hwnd 窗口句柄
  */
 void RestartCurrentTimer(HWND hwnd) {
+    // 停止任何可能正在播放的通知音频
+    extern void StopNotificationSound(void);
+    StopNotificationSound();
+    
     // 只有在非显示时间模式下才有效
     if (!CLOCK_SHOW_CURRENT_TIME) {
+        // 从main.c引入的变量
+        extern int elapsed_time;
+        extern BOOL message_shown;
+        
+        // 重置消息显示状态，确保计时器结束时可以再次显示通知并播放声音
+        message_shown = FALSE;
+        countdown_message_shown = FALSE;
+        countup_message_shown = FALSE;
+        
         if (CLOCK_COUNT_UP) {
             // 重置正计时
             countdown_elapsed_time = 0;
+            countup_elapsed_time = 0;
         } else {
             // 重置倒计时
             countdown_elapsed_time = 0;
+            elapsed_time = 0;
         }
         CLOCK_IS_PAUSED = FALSE;
         InvalidateRect(hwnd, NULL, TRUE);
@@ -2209,6 +2240,10 @@ void RestartCurrentTimer(HWND hwnd) {
  * @param hwnd 窗口句柄
  */
 void StartQuickCountdown1(HWND hwnd) {
+    // 停止任何可能正在播放的通知音频
+    extern void StopNotificationSound(void);
+    StopNotificationSound();
+    
     extern int time_options[];
     extern int time_options_count;
     
@@ -2232,6 +2267,10 @@ void StartQuickCountdown1(HWND hwnd) {
  * @param hwnd 窗口句柄
  */
 void StartQuickCountdown2(HWND hwnd) {
+    // 停止任何可能正在播放的通知音频
+    extern void StopNotificationSound(void);
+    StopNotificationSound();
+    
     extern int time_options[];
     extern int time_options_count;
     
@@ -2255,6 +2294,10 @@ void StartQuickCountdown2(HWND hwnd) {
  * @param hwnd 窗口句柄
  */
 void StartQuickCountdown3(HWND hwnd) {
+    // 停止任何可能正在播放的通知音频
+    extern void StopNotificationSound(void);
+    StopNotificationSound();
+    
     extern int time_options[];
     extern int time_options_count;
     
