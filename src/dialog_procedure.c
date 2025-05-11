@@ -684,8 +684,8 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
                 if (strncmp(url, "http://", 7) != 0 && strncmp(url, "https://", 8) != 0) {
                     // 添加https://前缀
                     char tempUrl[MAX_PATH] = "https://";
-                    strncat(tempUrl, url, MAX_PATH - 9);
-                    strncpy(url, tempUrl, MAX_PATH - 1);
+                    StringCbCatA(tempUrl, sizeof(tempUrl), url);
+                    StringCbCopyA(url, sizeof(url), tempUrl);
                 }
                 
                 // 更新配置
@@ -854,7 +854,7 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
                 // 解析输入的时间格式，转换为秒数数组
                 char *token, *saveptr;
                 char input_copy[256];
-                strncpy(input_copy, input, sizeof(input_copy) - 1);
+                StringCbCopyA(input_copy, sizeof(input_copy), input);
                 
                 int times[MAX_POMODORO_TIMES] = {0};
                 int times_count = 0;
@@ -1617,7 +1617,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                         
                         // 构建完整的文件路径
                         memset(NOTIFICATION_SOUND_FILE, 0, MAX_PATH);
-                        snprintf(NOTIFICATION_SOUND_FILE, MAX_PATH, "%s\\%s", audio_path, fileName);
+                        StringCbPrintfA(NOTIFICATION_SOUND_FILE, MAX_PATH, "%s\\%s", audio_path, fileName);
                     }
                 } else {
                     NOTIFICATION_SOUND_FILE[0] = '\0';
@@ -1693,7 +1693,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                         // 临时设置音频文件
                         if (wcscmp(wFileName, L"系统提示音") == 0) {
                             // 使用特殊标记
-                            strcpy(NOTIFICATION_SOUND_FILE, "SYSTEM_BEEP");
+                            StringCbCopyA(NOTIFICATION_SOUND_FILE, sizeof(NOTIFICATION_SOUND_FILE), "SYSTEM_BEEP");
                         } else {
                             // 获取音频文件夹路径
                             char audio_path[MAX_PATH];
@@ -1705,7 +1705,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                             
                             // 构建完整的文件路径
                             memset(NOTIFICATION_SOUND_FILE, 0, MAX_PATH);
-                            snprintf(NOTIFICATION_SOUND_FILE, MAX_PATH, "%s\\%s", audio_path, fileName);
+                            StringCbPrintfA(NOTIFICATION_SOUND_FILE, MAX_PATH, "%s\\%s", audio_path, fileName);
                         }
                         
                         // 播放音频
@@ -1716,7 +1716,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                         }
                         
                         // 恢复之前的设置
-                        strcpy(NOTIFICATION_SOUND_FILE, tempSoundFile);
+                        StringCbCopyA(NOTIFICATION_SOUND_FILE, sizeof(NOTIFICATION_SOUND_FILE), tempSoundFile);
                     }
                 } else {
                     // 当前正在播放，停止播放并恢复按钮文本
