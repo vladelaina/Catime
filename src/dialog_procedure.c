@@ -1688,7 +1688,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                         
                         // 临时保存当前音频设置
                         char tempSoundFile[MAX_PATH];
-                        strcpy(tempSoundFile, NOTIFICATION_SOUND_FILE);
+                        StringCbCopyA(tempSoundFile, sizeof(tempSoundFile), NOTIFICATION_SOUND_FILE);
                         
                         // 临时设置音频文件
                         if (wcscmp(wFileName, L"系统提示音") == 0) {
