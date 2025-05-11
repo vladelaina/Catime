@@ -26,6 +26,86 @@ void ShowHotkeySettingsDialog(HWND hwndParent) {
 }
 
 /**
+ * @brief 检查热键是否是单个按键
+ * @param hotkey 热键值
+ * @return BOOL 如果是单个按键则返回TRUE，否则返回FALSE
+ * 
+ * 检查热键是否只包含一个单一的按键，不包含修饰键
+ */
+BOOL IsSingleKey(WORD hotkey) {
+    // 提取修饰键部分
+    BYTE modifiers = HIBYTE(hotkey);
+    
+    // 没有修饰键（Alt, Ctrl, Shift）
+    return modifiers == 0;
+}
+
+/**
+ * @brief 检查热键值是否是单独的字母、数字或符号
+ * @param hotkey 热键值
+ * @return BOOL 如果是单独的字母、数字或符号则返回TRUE
+ * 
+ * 检查热键值是否缺少修饰键，仅仅包含单个字母、数字或符号
+ */
+BOOL IsRestrictedSingleKey(WORD hotkey) {
+    // 如果热键为0，表示未设置，直接返回FALSE
+    if (hotkey == 0) {
+        return FALSE;
+    }
+    
+    // 提取修饰键和虚拟键
+    BYTE vk = LOBYTE(hotkey);
+    BYTE modifiers = HIBYTE(hotkey);
+    
+    // 如果有任何修饰键，则是组合键，返回FALSE
+    if (modifiers != 0) {
+        return FALSE;
+    }
+    
+    // 判断是否是字母、数字或符号
+    // 虚拟键码参考: https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
+    
+    // 字母键 (A-Z)
+    if (vk >= 'A' && vk <= 'Z') {
+        return TRUE;
+    }
+    
+    // 数字键 (0-9)
+    if (vk >= '0' && vk <= '9') {
+        return TRUE;
+    }
+    
+    // 数字小键盘 (VK_NUMPAD0 - VK_NUMPAD9)
+    if (vk >= VK_NUMPAD0 && vk <= VK_NUMPAD9) {
+        return TRUE;
+    }
+    
+    // 各种符号键
+    switch (vk) {
+        case VK_OEM_1:      // ;:
+        case VK_OEM_PLUS:   // +
+        case VK_OEM_COMMA:  // ,
+        case VK_OEM_MINUS:  // -
+        case VK_OEM_PERIOD: // .
+        case VK_OEM_2:      // /?
+        case VK_OEM_3:      // `~
+        case VK_OEM_4:      // [{
+        case VK_OEM_5:      // \|
+        case VK_OEM_6:      // ]}
+        case VK_OEM_7:      // '"
+        case VK_SPACE:      // 空格
+        case VK_RETURN:     // 回车
+        case VK_ESCAPE:     // ESC
+        case VK_TAB:        // Tab
+            return TRUE;
+    }
+    
+    // 其他单个功能键允许使用，比如F1-F12
+    
+    return FALSE;
+}
+
+/**
  * @brief 热键设置对话框消息处理过程
  * @param hwndDlg 对话框句柄
  * @param msg 消息类型
@@ -153,6 +233,13 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                 // 获取当前控件的热键值
                 WORD newHotkey = (WORD)SendDlgItemMessage(hwndDlg, ctrlId, HKM_GETHOTKEY, 0, 0);
                 
+                // 检查是否是单独的数字、字母或符号（无修饰键）
+                if (newHotkey != 0 && IsRestrictedSingleKey(newHotkey)) {
+                    // 发现无效热键，静默清除
+                    SendDlgItemMessage(hwndDlg, ctrlId, HKM_SETHOTKEY, 0, 0);
+                    return TRUE;
+                }
+                
                 // 如果热键为0（无），则不需要检查冲突
                 if (newHotkey != 0) {
                     // 定义热键控件ID数组
@@ -198,6 +285,24 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                     WORD newEditModeHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT6, HKM_GETHOTKEY, 0, 0);
                     WORD newPauseResumeHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT7, HKM_GETHOTKEY, 0, 0);
                     WORD newRestartTimerHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT8, HKM_GETHOTKEY, 0, 0);
+                    
+                    // 再次检查所有热键，确保没有单个键的热键
+                    WORD* hotkeys[] = {
+                        &newShowTimeHotkey, &newCountUpHotkey, &newCountdownHotkey,
+                        &newQuickCountdown1Hotkey, &newQuickCountdown2Hotkey, &newQuickCountdown3Hotkey,
+                        &newPomodoroHotkey, &newToggleVisibilityHotkey, &newEditModeHotkey,
+                        &newPauseResumeHotkey, &newRestartTimerHotkey
+                    };
+                    
+                    // 静默清除任何无效热键
+                    BOOL needsRefresh = FALSE;
+                    for (int i = 0; i < sizeof(hotkeys) / sizeof(hotkeys[0]); i++) {
+                        if (*hotkeys[i] != 0 && IsRestrictedSingleKey(*hotkeys[i])) {
+                            // 发现单键热键，直接置为0
+                            *hotkeys[i] = 0;
+                            needsRefresh = TRUE;
+                        }
+                    }
                     
                     // 使用新的函数保存热键设置到配置文件
                     WriteConfigHotkeys(newShowTimeHotkey, newCountUpHotkey, newCountdownHotkey,
