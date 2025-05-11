@@ -2088,8 +2088,18 @@ void ToggleShowTimeMode(HWND hwnd) {
  * @param hwnd 窗口句柄
  */
 void StartCountUp(HWND hwnd) {
+    // 声明外部变量
+    extern int countup_elapsed_time;
+    
+    // 重置正计时计数器
+    countup_elapsed_time = 0;
+    
+    // 设置为正计时模式
     CLOCK_COUNT_UP = TRUE;
     CLOCK_SHOW_CURRENT_TIME = FALSE;
+    CLOCK_IS_PAUSED = FALSE;
+    
+    // 刷新窗口
     InvalidateRect(hwnd, NULL, TRUE);
 }
 
