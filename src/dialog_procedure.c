@@ -9,14 +9,18 @@
 #include <windows.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <commctrl.h>
+#include <windowsx.h>
+#include <shellapi.h>
+#include <strsafe.h>
+#include <shlobj.h>
+#include <uxtheme.h>
 #include "../resource/resource.h"
 #include "../include/dialog_procedure.h"
 #include "../include/language.h"
-#include <commctrl.h>
 #include "../include/config.h"
-#include <windowsx.h>
-#include <shellapi.h>
-#include "../include/audio_player.h"  // 添加音频播放器头文件
+#include "../include/audio_player.h" 
+#include "../include/window_procedure.h"  // 添加窗口处理头文件以使用RegisterGlobalHotkeys和UnregisterGlobalHotkeys函数
 
 // 函数声明
 static void DrawColorSelectButton(HDC hdc, HWND hwnd);
@@ -1932,6 +1936,9 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
             SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT7, HKM_SETHOTKEY, pauseResumeHotkey, 0);
             SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT8, HKM_SETHOTKEY, restartTimerHotkey, 0);
             
+            // 临时注销所有热键，以便用户可以立即测试新的热键设置
+            UnregisterGlobalHotkeys(GetParent(hwndDlg));
+            
             return TRUE;
         }
         
@@ -1955,6 +1962,53 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
         }
         
         case WM_COMMAND: {
+            // 检测热键控件通知消息
+            WORD ctrlId = LOWORD(wParam);
+            WORD notifyCode = HIWORD(wParam);
+            
+            // 处理热键编辑控件的变更通知
+            if (notifyCode == EN_CHANGE &&
+                (ctrlId == IDC_HOTKEY_EDIT1 || ctrlId == IDC_HOTKEY_EDIT2 ||
+                 ctrlId == IDC_HOTKEY_EDIT3 || ctrlId == IDC_HOTKEY_EDIT4 ||
+                 ctrlId == IDC_HOTKEY_EDIT5 || ctrlId == IDC_HOTKEY_EDIT6 ||
+                 ctrlId == IDC_HOTKEY_EDIT7 || ctrlId == IDC_HOTKEY_EDIT8 ||
+                 ctrlId == IDC_HOTKEY_EDIT9 || ctrlId == IDC_HOTKEY_EDIT10 ||
+                 ctrlId == IDC_HOTKEY_EDIT11)) {
+                
+                // 获取当前控件的热键值
+                WORD newHotkey = (WORD)SendDlgItemMessage(hwndDlg, ctrlId, HKM_GETHOTKEY, 0, 0);
+                
+                // 如果热键为0（无），则不需要检查冲突
+                if (newHotkey != 0) {
+                    // 定义热键控件ID数组
+                    static const int hotkeyCtrlIds[] = {
+                        IDC_HOTKEY_EDIT1, IDC_HOTKEY_EDIT2, IDC_HOTKEY_EDIT3,
+                        IDC_HOTKEY_EDIT9, IDC_HOTKEY_EDIT10, IDC_HOTKEY_EDIT11,
+                        IDC_HOTKEY_EDIT4, IDC_HOTKEY_EDIT5, IDC_HOTKEY_EDIT6,
+                        IDC_HOTKEY_EDIT7, IDC_HOTKEY_EDIT8
+                    };
+                    
+                    // 检查是否与其他热键控件冲突
+                    for (int i = 0; i < sizeof(hotkeyCtrlIds) / sizeof(hotkeyCtrlIds[0]); i++) {
+                        // 跳过当前控件
+                        if (hotkeyCtrlIds[i] == ctrlId) {
+                            continue;
+                        }
+                        
+                        // 获取其他控件的热键值
+                        WORD otherHotkey = (WORD)SendDlgItemMessage(hwndDlg, hotkeyCtrlIds[i], HKM_GETHOTKEY, 0, 0);
+                        
+                        // 检查是否冲突
+                        if (otherHotkey != 0 && otherHotkey == newHotkey) {
+                            // 发现冲突，清除旧的热键（设置为0，即"无"）
+                            SendDlgItemMessage(hwndDlg, hotkeyCtrlIds[i], HKM_SETHOTKEY, 0, 0);
+                        }
+                    }
+                }
+                
+                return TRUE;
+            }
+            
             switch (LOWORD(wParam)) {
                 case IDOK: {
                     // 获取热键控件中设置的值
@@ -1969,70 +2023,6 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                     WORD newEditModeHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT6, HKM_GETHOTKEY, 0, 0);
                     WORD newPauseResumeHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT7, HKM_GETHOTKEY, 0, 0);
                     WORD newRestartTimerHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT8, HKM_GETHOTKEY, 0, 0);
-                    
-                    // 检查热键冲突
-                    BOOL hasConflict = FALSE;
-                    char conflictMsg[512] = "热键设置冲突。以下热键重复设置：\n";
-                    int conflictCount = 0;
-                    
-                    // 创建热键数组以检查冲突
-                    WORD hotkeyArray[11] = {
-                        newShowTimeHotkey,
-                        newCountUpHotkey,
-                        newCountdownHotkey,
-                        newQuickCountdown1Hotkey,
-                        newQuickCountdown2Hotkey,
-                        newQuickCountdown3Hotkey,
-                        newPomodoroHotkey,
-                        newToggleVisibilityHotkey,
-                        newEditModeHotkey,
-                        newPauseResumeHotkey,
-                        newRestartTimerHotkey
-                    };
-                    
-                    const char* hotkeyNames[11] = {
-                        "显示当前时间",
-                        "正计时",
-                        "默认倒计时",
-                        "快捷倒计时1",
-                        "快捷倒计时2",
-                        "快捷倒计时3",
-                        "开始番茄钟",
-                        "隐藏/显示窗口",
-                        "进入编辑模式",
-                        "暂停/继续计时",
-                        "重新开始计时"
-                    };
-                    
-                    // 逐一比较热键，检查冲突
-                    for (int i = 0; i < 11; i++) {
-                        if (hotkeyArray[i] == 0) continue; // 跳过未设置的热键
-                        
-                        for (int j = i + 1; j < 11; j++) {
-                            if (hotkeyArray[j] == 0) continue; // 跳过未设置的热键
-                            
-                            if (hotkeyArray[i] == hotkeyArray[j]) {
-                                hasConflict = TRUE;
-                                
-                                // 添加冲突信息
-                                char conflictPair[128];
-                                sprintf(conflictPair, "%s 与 %s\n", hotkeyNames[i], hotkeyNames[j]);
-                                strcat(conflictMsg, conflictPair);
-                                conflictCount++;
-                                
-                                // 最多显示5个冲突
-                                if (conflictCount >= 5) break;
-                            }
-                        }
-                        
-                        if (conflictCount >= 5) break;
-                    }
-                    
-                    if (hasConflict) {
-                        // 显示热键冲突警告
-                        MessageBoxA(hwndDlg, conflictMsg, "热键冲突", MB_ICONWARNING | MB_OK);
-                        return TRUE;
-                    }
                     
                     // 使用新的函数保存热键设置到配置文件
                     WriteConfigHotkeys(newShowTimeHotkey, newCountUpHotkey, newCountdownHotkey,
@@ -2049,13 +2039,15 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                 }
                 
                 case IDCANCEL:
+                    // 重新注册原有的热键
+                    PostMessage(GetParent(hwndDlg), WM_APP+1, 0, 0);
                     EndDialog(hwndDlg, IDCANCEL);
                     return TRUE;
             }
             break;
         }
         
-        case WM_DESTROY:
+        case WM_DESTROY: {
             // 清理资源
             if (hBackgroundBrush) {
                 DeleteObject(hBackgroundBrush);
@@ -2065,7 +2057,14 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                 DeleteObject(hButtonBrush);
                 hButtonBrush = NULL;
             }
-            break;
+            
+            // 无论用户是点击确定还是取消，或者关闭对话框，都需要重新注册热键
+            // 如果用户点击确定，将重新注册新的热键设置
+            // 如果用户点击取消或关闭对话框，将恢复原来的热键设置
+            RegisterGlobalHotkeys(GetParent(hwndDlg));
+            
+            return TRUE;
+        }
     }
     
     return FALSE;
