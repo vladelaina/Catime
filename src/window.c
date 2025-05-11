@@ -368,8 +368,6 @@ void LoadWindowSettings(HWND hwnd) {
         } else if (strncmp(line, "WINDOW_SCALE=", 13) == 0) {
             CLOCK_WINDOW_SCALE = atof(line + 13);
             CLOCK_FONT_SCALE_FACTOR = CLOCK_WINDOW_SCALE;
-        } else if (strncmp(line, "CLOCK_EDIT_MODE=", 16) == 0) {
-            CLOCK_EDIT_MODE = (strncmp(line + 16, "TRUE", 4) == 0);
         }
     }
     fclose(fp);

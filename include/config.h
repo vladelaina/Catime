@@ -90,12 +90,6 @@ void CheckAndCreateAudioFolder();
 void WriteConfigTimeoutAction(const char* action);
 
 /**
- * @brief 将编辑模式写入配置文件
- * @param mode 要写入的编辑模式
- */
-void WriteConfigEditMode(const char* mode);
-
-/**
  * @brief 将时间选项写入配置文件
  * @param options 要写入的时间选项
  */

@@ -1962,7 +1962,6 @@ refresh_window:
                 }
                 
                 InvalidateRect(hwnd, NULL, TRUE);
-                WriteConfigEditMode(CLOCK_EDIT_MODE ? "TRUE" : "FALSE");
                 return 0;
             }
             break;
@@ -2169,8 +2168,7 @@ void ToggleEditMode(HWND hwnd) {
         WriteConfigColor(CLOCK_TEXT_COLOR);
     }
     
-    // 更新配置文件并刷新窗口
-    WriteConfigEditMode(CLOCK_EDIT_MODE ? "TRUE" : "FALSE");
+    // 刷新窗口
     InvalidateRect(hwnd, NULL, TRUE);
 }
 

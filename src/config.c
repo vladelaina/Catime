@@ -119,7 +119,7 @@ void CreateDefaultConfig(const char* config_path) {
         fprintf(file, "CLOCK_DEFAULT_START_TIME=1500\n");
         fprintf(file, "CLOCK_WINDOW_POS_X=960\n");
         fprintf(file, "CLOCK_WINDOW_POS_Y=-1\n");
-        fprintf(file, "CLOCK_EDIT_MODE=FALSE\n");
+        // 移除CLOCK_EDIT_MODE配置项，它只在运行时使用
         fprintf(file, "WINDOW_SCALE=1.62\n");
         fprintf(file, "CLOCK_USE_24HOUR=FALSE\n");
         fprintf(file, "CLOCK_SHOW_SECONDS=FALSE\n");
@@ -463,15 +463,7 @@ void ReadConfig() {
                 CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_COUNT_UP;
             }
         }
-        else if (strncmp(line, "CLOCK_EDIT_MODE=", 15) == 0) {
-            char edit_mode[8] = {0};
-            sscanf(line + 15, "%7s", edit_mode);
-            if (strcmp(edit_mode, "TRUE") == 0) {
-                CLOCK_EDIT_MODE = TRUE;
-            } else if (strcmp(edit_mode, "FALSE") == 0) {
-                CLOCK_EDIT_MODE = FALSE;
-            }
-        }
+        // 移除CLOCK_EDIT_MODE配置项的读取逻辑
         else if (strncmp(line, "WINDOW_SCALE=", 13) == 0) {
             CLOCK_WINDOW_SCALE = atof(line + 13);
         }
@@ -765,51 +757,6 @@ void WriteConfigTimeoutAction(const char* action) {
     
     fclose(file);
     fclose(temp);
-    
-    remove(config_path);
-    rename(temp_path, config_path);
-}
-
-/**
- * @brief 写入编辑模式配置
- * @param mode 编辑模式状态值("TRUE"/"FALSE")
- * 
- * 通过临时文件方式安全更新配置文件中的编辑模式设置，
- * 确保配置项存在时更新，不存在时自动追加到文件末尾。
- */
-void WriteConfigEditMode(const char* mode) {
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    char temp_path[MAX_PATH];
-    snprintf(temp_path, MAX_PATH, "%s.tmp", config_path);
-    FILE *file, *temp_file;
-    char line[256];
-    int found = 0;
-    
-    file = fopen(config_path, "r");
-    temp_file = fopen(temp_path, "w");
-    
-    if (!file || !temp_file) {
-        if (file) fclose(file);
-        if (temp_file) fclose(temp_file);
-        return;
-    }
-    
-    while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, "CLOCK_EDIT_MODE=", 15) == 0) {
-            fprintf(temp_file, "CLOCK_EDIT_MODE=%s\n", mode);
-            found = 1;
-        } else {
-            fputs(line, temp_file);
-        }
-    }
-    
-    if (!found) {
-        fprintf(temp_file, "CLOCK_EDIT_MODE=%s\n", mode);
-    }
-    
-    fclose(file);
-    fclose(temp_file);
     
     remove(config_path);
     rename(temp_path, config_path);
@@ -1292,7 +1239,7 @@ void WriteConfig(const char* config_path) {
     fprintf(file, "CLOCK_DEFAULT_START_TIME=%d\n", CLOCK_DEFAULT_START_TIME);
     fprintf(file, "CLOCK_WINDOW_POS_X=%d\n", CLOCK_WINDOW_POS_X);
     fprintf(file, "CLOCK_WINDOW_POS_Y=%d\n", CLOCK_WINDOW_POS_Y);
-    fprintf(file, "CLOCK_EDIT_MODE=%s\n", CLOCK_EDIT_MODE ? "TRUE" : "FALSE");
+    // 移除CLOCK_EDIT_MODE的写入，它只在运行时使用
     fprintf(file, "WINDOW_SCALE=%.2f\n", CLOCK_WINDOW_SCALE);
     fprintf(file, "CLOCK_USE_24HOUR=%s\n", CLOCK_USE_24HOUR ? "TRUE" : "FALSE");
     fprintf(file, "CLOCK_SHOW_SECONDS=%s\n", CLOCK_SHOW_SECONDS ? "TRUE" : "FALSE");

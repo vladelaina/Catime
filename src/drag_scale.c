@@ -47,7 +47,6 @@ void StartEditMode(HWND hwnd) {
     
     // 然后启用编辑模式
     CLOCK_EDIT_MODE = TRUE;
-    WriteConfigEditMode("TRUE");
     
     // 应用模糊效果
     SetBlurBehind(hwnd, TRUE);
@@ -69,7 +68,6 @@ void StartEditMode(HWND hwnd) {
 void EndEditMode(HWND hwnd) {
     if (CLOCK_EDIT_MODE) {
         CLOCK_EDIT_MODE = FALSE;
-        WriteConfigEditMode("FALSE");
         
         // 移除模糊效果
         SetBlurBehind(hwnd, FALSE);
