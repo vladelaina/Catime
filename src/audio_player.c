@@ -33,6 +33,7 @@ static UINT_PTR g_audioTimerId = 0;
 
 // 播放状态跟踪
 static ma_bool32 g_isPlaying = MA_FALSE;
+static ma_bool32 g_isPaused = MA_FALSE;  // 新增暂停状态变量
 
 // 前置声明
 static void CheckAudioPlaybackComplete(HWND hwnd, UINT message, UINT_PTR idEvent, DWORD dwTime);
@@ -110,8 +111,8 @@ static void ShowErrorMessage(HWND hwnd, const wchar_t* errorMsg) {
 static void CALLBACK CheckAudioPlaybackComplete(HWND hwnd, UINT message, UINT_PTR idEvent, DWORD dwTime) {
     // 如果音频引擎和声音已初始化
     if (g_engineInitialized && g_soundInitialized) {
-        // 检查播放状态
-        if (!ma_sound_is_playing(&g_sound)) {
+        // 检查播放状态 - 如果处于暂停状态，不视为播放完成
+        if (!ma_sound_is_playing(&g_sound) && !g_isPaused) {
             // 停止并清理资源
             if (g_soundInitialized) {
                 ma_sound_uninit(&g_sound);
@@ -122,6 +123,7 @@ static void CALLBACK CheckAudioPlaybackComplete(HWND hwnd, UINT message, UINT_PT
             KillTimer(hwnd, idEvent);
             g_audioTimerId = 0;
             g_isPlaying = MA_FALSE;
+            g_isPaused = MA_FALSE;  // 确保暂停状态也被重置
             
             // 调用回调函数
             if (g_audioCompleteCallback) {
@@ -133,6 +135,7 @@ static void CALLBACK CheckAudioPlaybackComplete(HWND hwnd, UINT message, UINT_PT
         KillTimer(hwnd, idEvent);
         g_audioTimerId = 0;
         g_isPlaying = MA_FALSE;
+        g_isPaused = MA_FALSE;  // 确保暂停状态也被重置
         
         if (g_audioCompleteCallback) {
             g_audioCompleteCallback(g_audioCallbackHwnd);
@@ -152,6 +155,7 @@ static void CALLBACK SystemBeepDoneCallback(HWND hwnd, UINT message, UINT_PTR id
     KillTimer(hwnd, idEvent);
     g_audioTimerId = 0;
     g_isPlaying = MA_FALSE;
+    g_isPaused = MA_FALSE;  // 确保暂停状态也被重置
     
     // 执行回调
     if (g_audioCompleteCallback) {
@@ -365,6 +369,7 @@ void CleanupAudioResources(void) {
     }
     
     g_isPlaying = MA_FALSE;
+    g_isPaused = MA_FALSE;  // 重置暂停状态
 }
 
 /**
@@ -472,10 +477,48 @@ BOOL PlayNotificationSound(HWND hwnd) {
 }
 
 /**
+ * @brief 暂停当前播放的通知音频
+ * @return BOOL 成功返回TRUE，失败返回FALSE
+ * 
+ * 暂停当前正在播放的通知音频，用于在用户暂停计时器时同步暂停音频。
+ * 仅当音频处于播放状态且使用miniaudio播放时有效。
+ */
+BOOL PauseNotificationSound(void) {
+    // 检查是否有音频在播放，且没有处于暂停状态
+    if (g_isPlaying && !g_isPaused && g_engineInitialized && g_soundInitialized) {
+        // 暂停播放 - 使用stop而不是set_paused，因为库可能不支持后者
+        ma_sound_stop(&g_sound);
+        g_isPaused = MA_TRUE;
+        return TRUE;
+    }
+    return FALSE;
+}
+
+/**
+ * @brief 继续播放已暂停的通知音频
+ * @return BOOL 成功返回TRUE，失败返回FALSE
+ * 
+ * 继续播放之前被暂停的通知音频，用于在用户继续计时器时同步继续音频播放。
+ * 仅当音频处于暂停状态时有效。
+ */
+BOOL ResumeNotificationSound(void) {
+    // 检查是否有音频处于暂停状态
+    if (g_isPlaying && g_isPaused && g_engineInitialized && g_soundInitialized) {
+        // 继续播放 - 使用start而不是set_paused
+        ma_sound_start(&g_sound);
+        g_isPaused = MA_FALSE;
+        return TRUE;
+    }
+    return FALSE;
+}
+
+/**
  * @brief 停止播放通知音频
  * 
- * 停止当前正在播放的任何通知音频
+ * 停止当前正在播放的任何通知音频，包括处于暂停状态的音频
  */
 void StopNotificationSound(void) {
+    // 直接清理所有音频资源，不需要单独处理暂停状态
+    // 因为CleanupAudioResources会重置所有状态
     CleanupAudioResources();
 } 

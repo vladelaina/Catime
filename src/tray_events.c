@@ -56,10 +56,6 @@ void HandleTrayIconMessage(HWND hwnd, UINT uID, UINT uMouseMsg) {
  * 注意：仅当显示计时器（而非当前时间）且计时器活动时才能操作
  */
 void PauseResumeTimer(HWND hwnd) {
-    // 停止任何可能正在播放的通知音频
-    extern void StopNotificationSound(void);
-    StopNotificationSound();
-    
     // 检查当前是否有计时进行中
     if (!CLOCK_SHOW_CURRENT_TIME && (CLOCK_COUNT_UP || CLOCK_TOTAL_TIME > 0)) {
         
@@ -71,9 +67,17 @@ void PauseResumeTimer(HWND hwnd) {
             CLOCK_LAST_TIME_UPDATE = time(NULL);
             // 停止计时器
             KillTimer(hwnd, 1);
+            
+            // 暂停正在播放的通知音频（新增）
+            extern BOOL PauseNotificationSound(void);
+            PauseNotificationSound();
         } else {
             // 如果继续，重新启动计时器
             SetTimer(hwnd, 1, 1000, NULL);
+            
+            // 继续播放通知音频（新增）
+            extern BOOL ResumeNotificationSound(void);
+            ResumeNotificationSound();
         }
         
         // 更新窗口以反映新状态

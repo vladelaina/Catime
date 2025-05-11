@@ -40,6 +40,24 @@ void SetAudioPlaybackCompleteCallback(HWND hwnd, AudioPlaybackCompleteCallback c
 BOOL PlayNotificationSound(HWND hwnd);
 
 /**
+ * @brief 暂停当前播放的通知音频
+ * @return BOOL 成功返回TRUE，失败返回FALSE
+ * 
+ * 暂停当前正在播放的通知音频，用于在用户暂停计时器时同步暂停音频。
+ * 仅当音频处于播放状态且使用miniaudio播放时有效。
+ */
+BOOL PauseNotificationSound(void);
+
+/**
+ * @brief 继续播放已暂停的通知音频
+ * @return BOOL 成功返回TRUE，失败返回FALSE
+ * 
+ * 继续播放之前被暂停的通知音频，用于在用户继续计时器时同步继续音频播放。
+ * 仅当音频处于暂停状态时有效。
+ */
+BOOL ResumeNotificationSound(void);
+
+/**
  * @brief 停止播放通知音频
  * 
  * 停止当前正在播放的任何通知音频
