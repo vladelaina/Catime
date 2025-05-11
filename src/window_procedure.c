@@ -2127,7 +2127,7 @@ void StartDefaultCountDown(HWND hwnd) {
  */
 void StartPomodoroTimer(HWND hwnd) {
     // 使用番茄钟菜单项命令来启动番茄钟
-    PostMessage(hwnd, WM_COMMAND, CLOCK_IDM_POMODORO, 0);
+    PostMessage(hwnd, WM_COMMAND, CLOCK_IDM_POMODORO_START, 0);
 }
 
 /**
