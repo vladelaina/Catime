@@ -221,6 +221,14 @@
 #define IDC_HOTKEY_LABEL8 2117         // "重新开始"标签ID
 #define IDC_HOTKEY_EDIT8 2118          // 重新开始快捷键编辑控件ID
 
+// 快捷倒计时热键控件
+#define IDC_HOTKEY_LABEL9 2119         // "快捷倒计时1"标签ID
+#define IDC_HOTKEY_EDIT9 2120          // 快捷倒计时1快捷键编辑控件ID
+#define IDC_HOTKEY_LABEL10 2121        // "快捷倒计时2"标签ID
+#define IDC_HOTKEY_EDIT10 2122         // 快捷倒计时2快捷键编辑控件ID
+#define IDC_HOTKEY_LABEL11 2123        // "快捷倒计时3"标签ID
+#define IDC_HOTKEY_EDIT11 2124         // 快捷倒计时3快捷键编辑控件ID
+
 /* 通知最大透明度配置 */
 extern int NOTIFICATION_MAX_OPACITY;
 extern int NOTIFICATION_TIMEOUT_MS;    // 通知显示持续时间

@@ -189,11 +189,14 @@ void ExitProgram(HWND hwnd) {
 #define HOTKEY_ID_SHOW_TIME       100  // 显示当前时间热键ID
 #define HOTKEY_ID_COUNT_UP        101  // 正计时热键ID
 #define HOTKEY_ID_COUNTDOWN       102  // 倒计时热键ID
-#define HOTKEY_ID_POMODORO        103  // 番茄钟热键ID
-#define HOTKEY_ID_TOGGLE_VISIBILITY 104 // 隐藏/显示热键ID
-#define HOTKEY_ID_EDIT_MODE       105  // 编辑模式热键ID
-#define HOTKEY_ID_PAUSE_RESUME    106  // 暂停/继续热键ID
-#define HOTKEY_ID_RESTART_TIMER   107  // 重新开始热键ID
+#define HOTKEY_ID_QUICK_COUNTDOWN1 103 // 快捷倒计时1热键ID
+#define HOTKEY_ID_QUICK_COUNTDOWN2 104 // 快捷倒计时2热键ID
+#define HOTKEY_ID_QUICK_COUNTDOWN3 105 // 快捷倒计时3热键ID
+#define HOTKEY_ID_POMODORO        106  // 番茄钟热键ID
+#define HOTKEY_ID_TOGGLE_VISIBILITY 107 // 隐藏/显示热键ID
+#define HOTKEY_ID_EDIT_MODE       108  // 编辑模式热键ID
+#define HOTKEY_ID_PAUSE_RESUME    109  // 暂停/继续热键ID
+#define HOTKEY_ID_RESTART_TIMER   110  // 重新开始热键ID
 
 /**
  * @brief 注册全局热键
@@ -212,6 +215,9 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
     WORD showTimeHotkey = 0;
     WORD countUpHotkey = 0;
     WORD countdownHotkey = 0;
+    WORD quickCountdown1Hotkey = 0;
+    WORD quickCountdown2Hotkey = 0;
+    WORD quickCountdown3Hotkey = 0;
     WORD pomodoroHotkey = 0;
     WORD toggleVisibilityHotkey = 0;
     WORD editModeHotkey = 0;
@@ -219,6 +225,7 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
     WORD restartTimerHotkey = 0;
     
     ReadConfigHotkeys(&showTimeHotkey, &countUpHotkey, &countdownHotkey,
+                     &quickCountdown1Hotkey, &quickCountdown2Hotkey, &quickCountdown3Hotkey,
                      &pomodoroHotkey, &toggleVisibilityHotkey, &editModeHotkey,
                      &pauseResumeHotkey, &restartTimerHotkey);
     
@@ -265,6 +272,51 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         if (mod & HOTKEYF_SHIFT) fsModifiers |= MOD_SHIFT;
         
         if (RegisterHotKey(hwnd, HOTKEY_ID_COUNTDOWN, fsModifiers, vk)) {
+            success = TRUE;
+        }
+    }
+    
+    // 注册快捷倒计时1热键
+    if (quickCountdown1Hotkey != 0) {
+        BYTE vk = LOBYTE(quickCountdown1Hotkey);
+        BYTE mod = HIBYTE(quickCountdown1Hotkey);
+        
+        UINT fsModifiers = 0;
+        if (mod & HOTKEYF_ALT) fsModifiers |= MOD_ALT;
+        if (mod & HOTKEYF_CONTROL) fsModifiers |= MOD_CONTROL;
+        if (mod & HOTKEYF_SHIFT) fsModifiers |= MOD_SHIFT;
+        
+        if (RegisterHotKey(hwnd, HOTKEY_ID_QUICK_COUNTDOWN1, fsModifiers, vk)) {
+            success = TRUE;
+        }
+    }
+    
+    // 注册快捷倒计时2热键
+    if (quickCountdown2Hotkey != 0) {
+        BYTE vk = LOBYTE(quickCountdown2Hotkey);
+        BYTE mod = HIBYTE(quickCountdown2Hotkey);
+        
+        UINT fsModifiers = 0;
+        if (mod & HOTKEYF_ALT) fsModifiers |= MOD_ALT;
+        if (mod & HOTKEYF_CONTROL) fsModifiers |= MOD_CONTROL;
+        if (mod & HOTKEYF_SHIFT) fsModifiers |= MOD_SHIFT;
+        
+        if (RegisterHotKey(hwnd, HOTKEY_ID_QUICK_COUNTDOWN2, fsModifiers, vk)) {
+            success = TRUE;
+        }
+    }
+    
+    // 注册快捷倒计时3热键
+    if (quickCountdown3Hotkey != 0) {
+        BYTE vk = LOBYTE(quickCountdown3Hotkey);
+        BYTE mod = HIBYTE(quickCountdown3Hotkey);
+        
+        UINT fsModifiers = 0;
+        if (mod & HOTKEYF_ALT) fsModifiers |= MOD_ALT;
+        if (mod & HOTKEYF_CONTROL) fsModifiers |= MOD_CONTROL;
+        if (mod & HOTKEYF_SHIFT) fsModifiers |= MOD_SHIFT;
+        
+        if (RegisterHotKey(hwnd, HOTKEY_ID_QUICK_COUNTDOWN3, fsModifiers, vk)) {
             success = TRUE;
         }
     }
@@ -358,6 +410,9 @@ void UnregisterGlobalHotkeys(HWND hwnd) {
     UnregisterHotKey(hwnd, HOTKEY_ID_SHOW_TIME);
     UnregisterHotKey(hwnd, HOTKEY_ID_COUNT_UP);
     UnregisterHotKey(hwnd, HOTKEY_ID_COUNTDOWN);
+    UnregisterHotKey(hwnd, HOTKEY_ID_QUICK_COUNTDOWN1);
+    UnregisterHotKey(hwnd, HOTKEY_ID_QUICK_COUNTDOWN2);
+    UnregisterHotKey(hwnd, HOTKEY_ID_QUICK_COUNTDOWN3);
     UnregisterHotKey(hwnd, HOTKEY_ID_POMODORO);
     UnregisterHotKey(hwnd, HOTKEY_ID_TOGGLE_VISIBILITY);
     UnregisterHotKey(hwnd, HOTKEY_ID_EDIT_MODE);
@@ -1942,6 +1997,21 @@ refresh_window:
                     // 开始默认倒计时
                     StartDefaultCountDown(hwnd);
                     break;
+                
+                case HOTKEY_ID_QUICK_COUNTDOWN1:
+                    // 开始快捷倒计时1
+                    StartQuickCountdown1(hwnd);
+                    break;
+                
+                case HOTKEY_ID_QUICK_COUNTDOWN2:
+                    // 开始快捷倒计时2
+                    StartQuickCountdown2(hwnd);
+                    break;
+                
+                case HOTKEY_ID_QUICK_COUNTDOWN3:
+                    // 开始快捷倒计时3
+                    StartQuickCountdown3(hwnd);
+                    break;
                     
                 case HOTKEY_ID_POMODORO:
                     // 开始番茄钟
@@ -2122,5 +2192,74 @@ void RestartCurrentTimer(HWND hwnd) {
         }
         CLOCK_IS_PAUSED = FALSE;
         InvalidateRect(hwnd, NULL, TRUE);
+    }
+}
+
+/**
+ * @brief 开始快捷倒计时1
+ * @param hwnd 窗口句柄
+ */
+void StartQuickCountdown1(HWND hwnd) {
+    extern int time_options[];
+    extern int time_options_count;
+    
+    CLOCK_COUNT_UP = FALSE;
+    CLOCK_SHOW_CURRENT_TIME = FALSE;
+    
+    // 检查是否有至少一个预设时间选项
+    if (time_options_count > 0) {
+        CLOCK_TOTAL_TIME = time_options[0] * 60; // 将分钟转换为秒
+        countdown_elapsed_time = 0;
+        CLOCK_IS_PAUSED = FALSE;
+        InvalidateRect(hwnd, NULL, TRUE);
+    } else {
+        // 如果没有预设时间选项，弹出设置对话框
+        PostMessage(hwnd, WM_COMMAND, CLOCK_IDC_MODIFY_TIME_OPTIONS, 0);
+    }
+}
+
+/**
+ * @brief 开始快捷倒计时2
+ * @param hwnd 窗口句柄
+ */
+void StartQuickCountdown2(HWND hwnd) {
+    extern int time_options[];
+    extern int time_options_count;
+    
+    CLOCK_COUNT_UP = FALSE;
+    CLOCK_SHOW_CURRENT_TIME = FALSE;
+    
+    // 检查是否有至少两个预设时间选项
+    if (time_options_count > 1) {
+        CLOCK_TOTAL_TIME = time_options[1] * 60; // 将分钟转换为秒
+        countdown_elapsed_time = 0;
+        CLOCK_IS_PAUSED = FALSE;
+        InvalidateRect(hwnd, NULL, TRUE);
+    } else {
+        // 如果没有足够的预设时间选项，弹出设置对话框
+        PostMessage(hwnd, WM_COMMAND, CLOCK_IDC_MODIFY_TIME_OPTIONS, 0);
+    }
+}
+
+/**
+ * @brief 开始快捷倒计时3
+ * @param hwnd 窗口句柄
+ */
+void StartQuickCountdown3(HWND hwnd) {
+    extern int time_options[];
+    extern int time_options_count;
+    
+    CLOCK_COUNT_UP = FALSE;
+    CLOCK_SHOW_CURRENT_TIME = FALSE;
+    
+    // 检查是否有至少三个预设时间选项
+    if (time_options_count > 2) {
+        CLOCK_TOTAL_TIME = time_options[2] * 60; // 将分钟转换为秒
+        countdown_elapsed_time = 0;
+        CLOCK_IS_PAUSED = FALSE;
+        InvalidateRect(hwnd, NULL, TRUE);
+    } else {
+        // 如果没有足够的预设时间选项，弹出设置对话框
+        PostMessage(hwnd, WM_COMMAND, CLOCK_IDC_MODIFY_TIME_OPTIONS, 0);
     }
 }

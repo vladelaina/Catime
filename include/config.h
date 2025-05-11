@@ -318,6 +318,9 @@ WORD StringToHotkey(const char* str);
  * @param showTimeHotkey 显示时间热键值
  * @param countUpHotkey 正计时热键值
  * @param countdownHotkey 倒计时热键值
+ * @param quickCountdown1Hotkey 快捷倒计时1热键值
+ * @param quickCountdown2Hotkey 快捷倒计时2热键值
+ * @param quickCountdown3Hotkey 快捷倒计时3热键值
  * @param pomodoroHotkey 番茄钟热键值
  * @param toggleVisibilityHotkey 隐藏/显示热键值
  * @param editModeHotkey 编辑模式热键值
@@ -328,6 +331,7 @@ WORD StringToHotkey(const char* str);
  * 采用临时文件方式确保配置更新安全。
  */
 void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownHotkey,
+                        WORD quickCountdown1Hotkey, WORD quickCountdown2Hotkey, WORD quickCountdown3Hotkey,
                         WORD pomodoroHotkey, WORD toggleVisibilityHotkey, WORD editModeHotkey,
                         WORD pauseResumeHotkey, WORD restartTimerHotkey);
 
@@ -336,6 +340,9 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
  * @param showTimeHotkey 存储显示时间热键的指针
  * @param countUpHotkey 存储正计时热键的指针
  * @param countdownHotkey 存储倒计时热键的指针
+ * @param quickCountdown1Hotkey 存储快捷倒计时1热键的指针
+ * @param quickCountdown2Hotkey 存储快捷倒计时2热键的指针
+ * @param quickCountdown3Hotkey 存储快捷倒计时3热键的指针
  * @param pomodoroHotkey 存储番茄钟热键的指针
  * @param toggleVisibilityHotkey 存储隐藏/显示热键的指针
  * @param editModeHotkey 存储编辑模式热键的指针
@@ -346,6 +353,7 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
  * 支持解析可读性格式的热键字符串。
  */
 void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdownHotkey,
+                      WORD* quickCountdown1Hotkey, WORD* quickCountdown2Hotkey, WORD* quickCountdown3Hotkey,
                       WORD* pomodoroHotkey, WORD* toggleVisibilityHotkey, WORD* editModeHotkey,
                       WORD* pauseResumeHotkey, WORD* restartTimerHotkey);
 

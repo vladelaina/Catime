@@ -1393,6 +1393,9 @@ void WriteConfig(const char* config_path) {
     WORD showTimeHotkey = 0;
     WORD countUpHotkey = 0;
     WORD countdownHotkey = 0;
+    WORD quickCountdown1Hotkey = 0;
+    WORD quickCountdown2Hotkey = 0;
+    WORD quickCountdown3Hotkey = 0;
     WORD pomodoroHotkey = 0;
     WORD toggleVisibilityHotkey = 0;
     WORD editModeHotkey = 0;
@@ -1400,6 +1403,7 @@ void WriteConfig(const char* config_path) {
     WORD restartTimerHotkey = 0;
     
     ReadConfigHotkeys(&showTimeHotkey, &countUpHotkey, &countdownHotkey,
+                      &quickCountdown1Hotkey, &quickCountdown2Hotkey, &quickCountdown3Hotkey,
                       &pomodoroHotkey, &toggleVisibilityHotkey, &editModeHotkey,
                       &pauseResumeHotkey, &restartTimerHotkey);
     
@@ -1407,6 +1411,9 @@ void WriteConfig(const char* config_path) {
     fprintf(file, "HOTKEY_SHOW_TIME=%d\n", showTimeHotkey);
     fprintf(file, "HOTKEY_COUNT_UP=%d\n", countUpHotkey);
     fprintf(file, "HOTKEY_COUNTDOWN=%d\n", countdownHotkey);
+    fprintf(file, "HOTKEY_QUICK_COUNTDOWN1=%d\n", quickCountdown1Hotkey);
+    fprintf(file, "HOTKEY_QUICK_COUNTDOWN2=%d\n", quickCountdown2Hotkey);
+    fprintf(file, "HOTKEY_QUICK_COUNTDOWN3=%d\n", quickCountdown3Hotkey);
     fprintf(file, "HOTKEY_POMODORO=%d\n", pomodoroHotkey);
     fprintf(file, "HOTKEY_TOGGLE_VISIBILITY=%d\n", toggleVisibilityHotkey);
     fprintf(file, "HOTKEY_EDIT_MODE=%d\n", editModeHotkey);
@@ -2435,6 +2442,9 @@ void WriteConfigNotificationVolume(int volume) {
  * @param showTimeHotkey 存储显示时间热键的指针
  * @param countUpHotkey 存储正计时热键的指针
  * @param countdownHotkey 存储倒计时热键的指针
+ * @param quickCountdown1Hotkey 存储快捷倒计时1热键的指针
+ * @param quickCountdown2Hotkey 存储快捷倒计时2热键的指针
+ * @param quickCountdown3Hotkey 存储快捷倒计时3热键的指针
  * @param pomodoroHotkey 存储番茄钟热键的指针
  * @param toggleVisibilityHotkey 存储隐藏/显示热键的指针
  * @param editModeHotkey 存储编辑模式热键的指针
@@ -2445,10 +2455,13 @@ void WriteConfigNotificationVolume(int volume) {
  * 支持解析可读性格式的热键字符串。
  */
 void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdownHotkey,
+                       WORD* quickCountdown1Hotkey, WORD* quickCountdown2Hotkey, WORD* quickCountdown3Hotkey,
                        WORD* pomodoroHotkey, WORD* toggleVisibilityHotkey, WORD* editModeHotkey,
-                       WORD* pauseResumeHotkey, WORD* restartTimerHotkey) {
+                       WORD* pauseResumeHotkey, WORD* restartTimerHotkey)
+{
     // 参数校验
     if (!showTimeHotkey || !countUpHotkey || !countdownHotkey || 
+        !quickCountdown1Hotkey || !quickCountdown2Hotkey || !quickCountdown3Hotkey ||
         !pomodoroHotkey || !toggleVisibilityHotkey || !editModeHotkey || 
         !pauseResumeHotkey || !restartTimerHotkey) return;
     
@@ -2456,6 +2469,9 @@ void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdow
     *showTimeHotkey = 0;
     *countUpHotkey = 0;
     *countdownHotkey = 0;
+    *quickCountdown1Hotkey = 0;
+    *quickCountdown2Hotkey = 0;
+    *quickCountdown3Hotkey = 0;
     *pomodoroHotkey = 0;
     *toggleVisibilityHotkey = 0;
     *editModeHotkey = 0;
@@ -2496,6 +2512,33 @@ void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdow
             
             // 解析热键字符串
             *countdownHotkey = StringToHotkey(value);
+        }
+        else if (strncmp(line, "HOTKEY_QUICK_COUNTDOWN1=", 24) == 0) {
+            char* value = line + 24;
+            // 去除末尾的换行符
+            char* newline = strchr(value, '\n');
+            if (newline) *newline = '\0';
+            
+            // 解析热键字符串
+            *quickCountdown1Hotkey = StringToHotkey(value);
+        }
+        else if (strncmp(line, "HOTKEY_QUICK_COUNTDOWN2=", 24) == 0) {
+            char* value = line + 24;
+            // 去除末尾的换行符
+            char* newline = strchr(value, '\n');
+            if (newline) *newline = '\0';
+            
+            // 解析热键字符串
+            *quickCountdown2Hotkey = StringToHotkey(value);
+        }
+        else if (strncmp(line, "HOTKEY_QUICK_COUNTDOWN3=", 24) == 0) {
+            char* value = line + 24;
+            // 去除末尾的换行符
+            char* newline = strchr(value, '\n');
+            if (newline) *newline = '\0';
+            
+            // 解析热键字符串
+            *quickCountdown3Hotkey = StringToHotkey(value);
         }
         else if (strncmp(line, "HOTKEY_POMODORO=", 16) == 0) {
             char* value = line + 16;
@@ -2552,6 +2595,9 @@ void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdow
  * @param showTimeHotkey 显示时间热键值
  * @param countUpHotkey 正计时热键值
  * @param countdownHotkey 倒计时热键值
+ * @param quickCountdown1Hotkey 快捷倒计时1热键值
+ * @param quickCountdown2Hotkey 快捷倒计时2热键值
+ * @param quickCountdown3Hotkey 快捷倒计时3热键值
  * @param pomodoroHotkey 番茄钟热键值
  * @param toggleVisibilityHotkey 隐藏/显示热键值
  * @param editModeHotkey 编辑模式热键值
@@ -2563,46 +2609,59 @@ void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdow
  * 将热键值转换为可读性更好的格式再保存。
  */
 void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownHotkey,
+                        WORD quickCountdown1Hotkey, WORD quickCountdown2Hotkey, WORD quickCountdown3Hotkey,
                         WORD pomodoroHotkey, WORD toggleVisibilityHotkey, WORD editModeHotkey,
-                        WORD pauseResumeHotkey, WORD restartTimerHotkey) {
+                        WORD pauseResumeHotkey, WORD restartTimerHotkey)
+{
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
     FILE* file = fopen(config_path, "r");
     if (!file) {
-        // 如果文件不存在，则创建新文件
+        // 文件不存在，直接创建新文件
         file = fopen(config_path, "w");
-        if (file) {
-            // 将热键值转换为可读格式
-            char showTimeStr[64] = {0};
-            char countUpStr[64] = {0};
-            char countdownStr[64] = {0};
-            char pomodoroStr[64] = {0};
-            char toggleVisibilityStr[64] = {0};
-            char editModeStr[64] = {0};
-            char pauseResumeStr[64] = {0};
-            char restartTimerStr[64] = {0};
-            
-            // 转换各个热键
-            HotkeyToString(showTimeHotkey, showTimeStr, sizeof(showTimeStr));
-            HotkeyToString(countUpHotkey, countUpStr, sizeof(countUpStr));
-            HotkeyToString(countdownHotkey, countdownStr, sizeof(countdownStr));
-            HotkeyToString(pomodoroHotkey, pomodoroStr, sizeof(pomodoroStr));
-            HotkeyToString(toggleVisibilityHotkey, toggleVisibilityStr, sizeof(toggleVisibilityStr));
-            HotkeyToString(editModeHotkey, editModeStr, sizeof(editModeStr));
-            HotkeyToString(pauseResumeHotkey, pauseResumeStr, sizeof(pauseResumeStr));
-            HotkeyToString(restartTimerHotkey, restartTimerStr, sizeof(restartTimerStr));
-            
-            fprintf(file, "HOTKEY_SHOW_TIME=%s\n", showTimeStr);
-            fprintf(file, "HOTKEY_COUNT_UP=%s\n", countUpStr);
-            fprintf(file, "HOTKEY_COUNTDOWN=%s\n", countdownStr);
-            fprintf(file, "HOTKEY_POMODORO=%s\n", pomodoroStr);
-            fprintf(file, "HOTKEY_TOGGLE_VISIBILITY=%s\n", toggleVisibilityStr);
-            fprintf(file, "HOTKEY_EDIT_MODE=%s\n", editModeStr);
-            fprintf(file, "HOTKEY_PAUSE_RESUME=%s\n", pauseResumeStr);
-            fprintf(file, "HOTKEY_RESTART_TIMER=%s\n", restartTimerStr);
-            fclose(file);
-        }
+        if (!file) return;
+        
+        // 将热键值转换为可读格式
+        char showTimeStr[64] = {0};
+        char countUpStr[64] = {0};
+        char countdownStr[64] = {0};
+        char quickCountdown1Str[64] = {0};
+        char quickCountdown2Str[64] = {0};
+        char quickCountdown3Str[64] = {0};
+        char pomodoroStr[64] = {0};
+        char toggleVisibilityStr[64] = {0};
+        char editModeStr[64] = {0};
+        char pauseResumeStr[64] = {0};
+        char restartTimerStr[64] = {0};
+        
+        // 转换各个热键
+        HotkeyToString(showTimeHotkey, showTimeStr, sizeof(showTimeStr));
+        HotkeyToString(countUpHotkey, countUpStr, sizeof(countUpStr));
+        HotkeyToString(countdownHotkey, countdownStr, sizeof(countdownStr));
+        HotkeyToString(quickCountdown1Hotkey, quickCountdown1Str, sizeof(quickCountdown1Str));
+        HotkeyToString(quickCountdown2Hotkey, quickCountdown2Str, sizeof(quickCountdown2Str));
+        HotkeyToString(quickCountdown3Hotkey, quickCountdown3Str, sizeof(quickCountdown3Str));
+        HotkeyToString(pomodoroHotkey, pomodoroStr, sizeof(pomodoroStr));
+        HotkeyToString(toggleVisibilityHotkey, toggleVisibilityStr, sizeof(toggleVisibilityStr));
+        HotkeyToString(editModeHotkey, editModeStr, sizeof(editModeStr));
+        HotkeyToString(pauseResumeHotkey, pauseResumeStr, sizeof(pauseResumeStr));
+        HotkeyToString(restartTimerHotkey, restartTimerStr, sizeof(restartTimerStr));
+        
+        // 写入所有热键设置
+        fprintf(file, "HOTKEY_SHOW_TIME=%s\n", showTimeStr);
+        fprintf(file, "HOTKEY_COUNT_UP=%s\n", countUpStr);
+        fprintf(file, "HOTKEY_COUNTDOWN=%s\n", countdownStr);
+        fprintf(file, "HOTKEY_QUICK_COUNTDOWN1=%s\n", quickCountdown1Str);
+        fprintf(file, "HOTKEY_QUICK_COUNTDOWN2=%s\n", quickCountdown2Str);
+        fprintf(file, "HOTKEY_QUICK_COUNTDOWN3=%s\n", quickCountdown3Str);
+        fprintf(file, "HOTKEY_POMODORO=%s\n", pomodoroStr);
+        fprintf(file, "HOTKEY_TOGGLE_VISIBILITY=%s\n", toggleVisibilityStr);
+        fprintf(file, "HOTKEY_EDIT_MODE=%s\n", editModeStr);
+        fprintf(file, "HOTKEY_PAUSE_RESUME=%s\n", pauseResumeStr);
+        fprintf(file, "HOTKEY_RESTART_TIMER=%s\n", restartTimerStr);
+        
+        fclose(file);
         return;
     }
     
@@ -2620,6 +2679,9 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
     BOOL foundShowTime = FALSE;
     BOOL foundCountUp = FALSE;
     BOOL foundCountdown = FALSE;
+    BOOL foundQuickCountdown1 = FALSE;
+    BOOL foundQuickCountdown2 = FALSE;
+    BOOL foundQuickCountdown3 = FALSE;
     BOOL foundPomodoro = FALSE;
     BOOL foundToggleVisibility = FALSE;
     BOOL foundEditMode = FALSE;
@@ -2630,6 +2692,9 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
     char showTimeStr[64] = {0};
     char countUpStr[64] = {0};
     char countdownStr[64] = {0};
+    char quickCountdown1Str[64] = {0};
+    char quickCountdown2Str[64] = {0};
+    char quickCountdown3Str[64] = {0};
     char pomodoroStr[64] = {0};
     char toggleVisibilityStr[64] = {0};
     char editModeStr[64] = {0};
@@ -2640,12 +2705,16 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
     HotkeyToString(showTimeHotkey, showTimeStr, sizeof(showTimeStr));
     HotkeyToString(countUpHotkey, countUpStr, sizeof(countUpStr));
     HotkeyToString(countdownHotkey, countdownStr, sizeof(countdownStr));
+    HotkeyToString(quickCountdown1Hotkey, quickCountdown1Str, sizeof(quickCountdown1Str));
+    HotkeyToString(quickCountdown2Hotkey, quickCountdown2Str, sizeof(quickCountdown2Str));
+    HotkeyToString(quickCountdown3Hotkey, quickCountdown3Str, sizeof(quickCountdown3Str));
     HotkeyToString(pomodoroHotkey, pomodoroStr, sizeof(pomodoroStr));
     HotkeyToString(toggleVisibilityHotkey, toggleVisibilityStr, sizeof(toggleVisibilityStr));
     HotkeyToString(editModeHotkey, editModeStr, sizeof(editModeStr));
     HotkeyToString(pauseResumeHotkey, pauseResumeStr, sizeof(pauseResumeStr));
     HotkeyToString(restartTimerHotkey, restartTimerStr, sizeof(restartTimerStr));
     
+    // 处理每一行
     while (fgets(line, sizeof(line), file)) {
         if (strncmp(line, "HOTKEY_SHOW_TIME=", 17) == 0) {
             fprintf(temp_file, "HOTKEY_SHOW_TIME=%s\n", showTimeStr);
@@ -2658,6 +2727,18 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
         else if (strncmp(line, "HOTKEY_COUNTDOWN=", 17) == 0) {
             fprintf(temp_file, "HOTKEY_COUNTDOWN=%s\n", countdownStr);
             foundCountdown = TRUE;
+        }
+        else if (strncmp(line, "HOTKEY_QUICK_COUNTDOWN1=", 24) == 0) {
+            fprintf(temp_file, "HOTKEY_QUICK_COUNTDOWN1=%s\n", quickCountdown1Str);
+            foundQuickCountdown1 = TRUE;
+        }
+        else if (strncmp(line, "HOTKEY_QUICK_COUNTDOWN2=", 24) == 0) {
+            fprintf(temp_file, "HOTKEY_QUICK_COUNTDOWN2=%s\n", quickCountdown2Str);
+            foundQuickCountdown2 = TRUE;
+        }
+        else if (strncmp(line, "HOTKEY_QUICK_COUNTDOWN3=", 24) == 0) {
+            fprintf(temp_file, "HOTKEY_QUICK_COUNTDOWN3=%s\n", quickCountdown3Str);
+            foundQuickCountdown3 = TRUE;
         }
         else if (strncmp(line, "HOTKEY_POMODORO=", 16) == 0) {
             fprintf(temp_file, "HOTKEY_POMODORO=%s\n", pomodoroStr);
@@ -2680,11 +2761,12 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
             foundRestartTimer = TRUE;
         }
         else {
+            // 保留其他行
             fputs(line, temp_file);
         }
     }
     
-    // 添加未找到的配置项
+    // 添加未找到的热键配置项
     if (!foundShowTime) {
         fprintf(temp_file, "HOTKEY_SHOW_TIME=%s\n", showTimeStr);
     }
@@ -2693,6 +2775,15 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
     }
     if (!foundCountdown) {
         fprintf(temp_file, "HOTKEY_COUNTDOWN=%s\n", countdownStr);
+    }
+    if (!foundQuickCountdown1) {
+        fprintf(temp_file, "HOTKEY_QUICK_COUNTDOWN1=%s\n", quickCountdown1Str);
+    }
+    if (!foundQuickCountdown2) {
+        fprintf(temp_file, "HOTKEY_QUICK_COUNTDOWN2=%s\n", quickCountdown2Str);
+    }
+    if (!foundQuickCountdown3) {
+        fprintf(temp_file, "HOTKEY_QUICK_COUNTDOWN3=%s\n", quickCountdown3Str);
     }
     if (!foundPomodoro) {
         fprintf(temp_file, "HOTKEY_POMODORO=%s\n", pomodoroStr);

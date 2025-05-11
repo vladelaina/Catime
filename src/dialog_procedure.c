@@ -1848,6 +1848,9 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
     static WORD showTimeHotkey = 0;        // 显示当前时间的热键
     static WORD countUpHotkey = 0;         // 正计时的热键
     static WORD countdownHotkey = 0;       // 倒计时的热键
+    static WORD quickCountdown1Hotkey = 0; // 快捷倒计时1的热键
+    static WORD quickCountdown2Hotkey = 0; // 快捷倒计时2的热键
+    static WORD quickCountdown3Hotkey = 0; // 快捷倒计时3的热键
     static WORD pomodoroHotkey = 0;        // 番茄钟的热键
     static WORD toggleVisibilityHotkey = 0; // 隐藏/显示的热键
     static WORD editModeHotkey = 0;        // 编辑模式的热键
@@ -1869,6 +1872,12 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                           GetLocalizedString(L"正计时:", L"Count Up:"));
             SetDlgItemTextW(hwndDlg, IDC_HOTKEY_LABEL3, 
                           GetLocalizedString(L"默认倒计时:", L"Default Countdown:"));
+            SetDlgItemTextW(hwndDlg, IDC_HOTKEY_LABEL9, 
+                          GetLocalizedString(L"快捷倒计时1:", L"Quick Countdown 1:"));
+            SetDlgItemTextW(hwndDlg, IDC_HOTKEY_LABEL10, 
+                          GetLocalizedString(L"快捷倒计时2:", L"Quick Countdown 2:"));
+            SetDlgItemTextW(hwndDlg, IDC_HOTKEY_LABEL11, 
+                          GetLocalizedString(L"快捷倒计时3:", L"Quick Countdown 3:"));
             SetDlgItemTextW(hwndDlg, IDC_HOTKEY_LABEL4, 
                           GetLocalizedString(L"开始番茄钟:", L"Start Pomodoro:"));
             SetDlgItemTextW(hwndDlg, IDC_HOTKEY_LABEL5, 
@@ -1892,6 +1901,7 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
             
             // 使用新函数读取热键配置
             ReadConfigHotkeys(&showTimeHotkey, &countUpHotkey, &countdownHotkey,
+                             &quickCountdown1Hotkey, &quickCountdown2Hotkey, &quickCountdown3Hotkey,
                              &pomodoroHotkey, &toggleVisibilityHotkey, &editModeHotkey,
                              &pauseResumeHotkey, &restartTimerHotkey);
             
@@ -1899,6 +1909,9 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
             SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT1, HKM_SETHOTKEY, showTimeHotkey, 0);
             SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT2, HKM_SETHOTKEY, countUpHotkey, 0);
             SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT3, HKM_SETHOTKEY, countdownHotkey, 0);
+            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT9, HKM_SETHOTKEY, quickCountdown1Hotkey, 0);
+            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT10, HKM_SETHOTKEY, quickCountdown2Hotkey, 0);
+            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT11, HKM_SETHOTKEY, quickCountdown3Hotkey, 0);
             SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT4, HKM_SETHOTKEY, pomodoroHotkey, 0);
             SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT5, HKM_SETHOTKEY, toggleVisibilityHotkey, 0);
             SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT6, HKM_SETHOTKEY, editModeHotkey, 0);
@@ -1934,6 +1947,9 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                     WORD newShowTimeHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT1, HKM_GETHOTKEY, 0, 0);
                     WORD newCountUpHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT2, HKM_GETHOTKEY, 0, 0);
                     WORD newCountdownHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT3, HKM_GETHOTKEY, 0, 0);
+                    WORD newQuickCountdown1Hotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT9, HKM_GETHOTKEY, 0, 0);
+                    WORD newQuickCountdown2Hotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT10, HKM_GETHOTKEY, 0, 0);
+                    WORD newQuickCountdown3Hotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT11, HKM_GETHOTKEY, 0, 0);
                     WORD newPomodoroHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT4, HKM_GETHOTKEY, 0, 0);
                     WORD newToggleVisibilityHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT5, HKM_GETHOTKEY, 0, 0);
                     WORD newEditModeHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT6, HKM_GETHOTKEY, 0, 0);
@@ -1946,10 +1962,13 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                     int conflictCount = 0;
                     
                     // 创建热键数组以检查冲突
-                    WORD hotkeyArray[8] = {
+                    WORD hotkeyArray[11] = {
                         newShowTimeHotkey,
                         newCountUpHotkey,
                         newCountdownHotkey,
+                        newQuickCountdown1Hotkey,
+                        newQuickCountdown2Hotkey,
+                        newQuickCountdown3Hotkey,
                         newPomodoroHotkey,
                         newToggleVisibilityHotkey,
                         newEditModeHotkey,
@@ -1957,10 +1976,13 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                         newRestartTimerHotkey
                     };
                     
-                    const char* hotkeyNames[8] = {
+                    const char* hotkeyNames[11] = {
                         "显示当前时间",
                         "正计时",
                         "默认倒计时",
+                        "快捷倒计时1",
+                        "快捷倒计时2",
+                        "快捷倒计时3",
                         "开始番茄钟",
                         "隐藏/显示窗口",
                         "进入编辑模式",
@@ -1969,10 +1991,10 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                     };
                     
                     // 逐一比较热键，检查冲突
-                    for (int i = 0; i < 8; i++) {
+                    for (int i = 0; i < 11; i++) {
                         if (hotkeyArray[i] == 0) continue; // 跳过未设置的热键
                         
-                        for (int j = i + 1; j < 8; j++) {
+                        for (int j = i + 1; j < 11; j++) {
                             if (hotkeyArray[j] == 0) continue; // 跳过未设置的热键
                             
                             if (hotkeyArray[i] == hotkeyArray[j]) {
@@ -2000,6 +2022,7 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                     
                     // 使用新的函数保存热键设置到配置文件
                     WriteConfigHotkeys(newShowTimeHotkey, newCountUpHotkey, newCountdownHotkey,
+                                      newQuickCountdown1Hotkey, newQuickCountdown2Hotkey, newQuickCountdown3Hotkey,
                                       newPomodoroHotkey, newToggleVisibilityHotkey, newEditModeHotkey,
                                       newPauseResumeHotkey, newRestartTimerHotkey);
                     
