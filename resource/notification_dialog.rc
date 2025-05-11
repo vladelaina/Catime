@@ -47,6 +47,6 @@ BEGIN
     LTEXT           "100%", IDC_VOLUME_TEXT, 275, 335, 35, 15
     
     // 确定和取消按钮
-    PUSHBUTTON      "确定", IDOK, 235, 380, 50, 15
-    PUSHBUTTON      "取消", IDCANCEL, 290, 380, 50, 15
+    PUSHBUTTON      "取消", IDCANCEL, 235, 380, 50, 15
+    PUSHBUTTON      "确定", IDOK, 290, 380, 50, 15
 END 
