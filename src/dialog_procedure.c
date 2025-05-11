@@ -169,7 +169,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 
             // 格式化日期时间为YYYY/MM/DD HH:MM:SS 并添加 UTC+8 标识
             wchar_t timeStr[60];
-            swprintf(timeStr, 60, L"最后编译日期：%04d/%02d/%02d %02d:%02d:%02d (UTC+8)",
+            StringCbPrintfW(timeStr, sizeof(timeStr), L"最后编译日期：%04d/%02d/%02d %02d:%02d:%02d (UTC+8)",
                     year, month_num, day, hour, min, sec);
 
             // 设置控件文本
@@ -322,7 +322,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
 
             // 格式化日期时间为YYYY/MM/DD HH:MM:SS 并添加 UTC+8 标识
             wchar_t timeStr[60];
-            swprintf(timeStr, 60, L"最后编译日期：%04d/%02d/%02d %02d:%02d:%02d (UTC+8)",
+            StringCbPrintfW(timeStr, sizeof(timeStr), L"最后编译日期：%04d/%02d/%02d %02d:%02d:%02d (UTC+8)",
                     year, month_num, day, hour, min, sec);
 
             // 设置控件文本
@@ -798,23 +798,23 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
                     int mins = (seconds % 3600) / 60;
                     int secs = seconds % 60;
                     if (mins == 0 && secs == 0)
-                        sprintf(timeStr, "%dh ", hours);
+                        StringCbPrintfA(timeStr, sizeof(timeStr), "%dh ", hours);
                     else if (secs == 0)
-                        sprintf(timeStr, "%dh%dm ", hours, mins);
+                        StringCbPrintfA(timeStr, sizeof(timeStr), "%dh%dm ", hours, mins);
                     else
-                        sprintf(timeStr, "%dh%dm%ds ", hours, mins, secs);
+                        StringCbPrintfA(timeStr, sizeof(timeStr), "%dh%dm%ds ", hours, mins, secs);
                 } else if (seconds >= 60) {
                     int mins = seconds / 60;
                     int secs = seconds % 60;
                     if (secs == 0)
-                        sprintf(timeStr, "%dm ", mins);
+                        StringCbPrintfA(timeStr, sizeof(timeStr), "%dm ", mins);
                     else
-                        sprintf(timeStr, "%dm%ds ", mins, secs);
+                        StringCbPrintfA(timeStr, sizeof(timeStr), "%dm%ds ", mins, secs);
                 } else {
-                    sprintf(timeStr, "%ds ", seconds);
+                    StringCbPrintfA(timeStr, sizeof(timeStr), "%ds ", seconds);
                 }
                 
-                strcat(currentOptions, timeStr);
+                StringCbCatA(currentOptions, sizeof(currentOptions), timeStr);
             }
             
             // 去掉末尾的空格
@@ -1161,7 +1161,7 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
             char buffer[32];
             
             // 显示时间（秒，支持小数点）- 毫秒转为秒
-            sprintf(buffer, "%.1f", (float)NOTIFICATION_TIMEOUT_MS / 1000.0f);
+            StringCbPrintfA(buffer, sizeof(buffer), "%.1f", (float)NOTIFICATION_TIMEOUT_MS / 1000.0f);
             // 移除末尾的.0
             if (strlen(buffer) > 2 && buffer[strlen(buffer)-2] == '.' && buffer[strlen(buffer)-1] == '0') {
                 buffer[strlen(buffer)-2] = '\0';
@@ -1169,7 +1169,7 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
             SetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, buffer);
             
             // 透明度（百分比）
-            sprintf(buffer, "%d", NOTIFICATION_MAX_OPACITY);
+            StringCbPrintfA(buffer, sizeof(buffer), "%d", NOTIFICATION_MAX_OPACITY);
             SetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT, buffer);
             
             // 本地化标签文本
@@ -1370,7 +1370,7 @@ static void PopulateSoundComboBox(HWND hwndDlg) {
 
     // 构建搜索路径
     wchar_t wSearchPath[MAX_PATH];
-    swprintf(wSearchPath, MAX_PATH, L"%s\\*.*", wAudioPath);
+    StringCbPrintfW(wSearchPath, sizeof(wSearchPath), L"%s\\*.*", wAudioPath);
 
     // 查找音频文件 - 使用Unicode版本的API
     WIN32_FIND_DATAW find_data;
@@ -1466,7 +1466,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             
             // 设置通知显示时间
             wchar_t timeout_str[32];
-            swprintf(timeout_str, sizeof(timeout_str)/sizeof(wchar_t), L"%d", NOTIFICATION_TIMEOUT_MS / 1000);
+            StringCbPrintfW(timeout_str, sizeof(timeout_str), L"%d", NOTIFICATION_TIMEOUT_MS / 1000);
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, timeout_str);
             
             // 设置通知透明度滑动条
@@ -1476,7 +1476,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             
             // 更新透明度文本
             wchar_t opacityText[16];
-            swprintf(opacityText, sizeof(opacityText)/sizeof(wchar_t), L"%d%%", NOTIFICATION_MAX_OPACITY);
+            StringCbPrintfW(opacityText, sizeof(opacityText), L"%d%%", NOTIFICATION_MAX_OPACITY);
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_OPACITY_TEXT, opacityText);
             
             // 设置通知类型单选按钮
@@ -1502,7 +1502,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             
             // 更新音量文本
             wchar_t volumeText[16];
-            swprintf(volumeText, sizeof(volumeText)/sizeof(wchar_t), L"%d%%", NOTIFICATION_SOUND_VOLUME);
+            StringCbPrintfW(volumeText, sizeof(volumeText), L"%d%%", NOTIFICATION_SOUND_VOLUME);
             SetDlgItemTextW(hwndDlg, IDC_VOLUME_TEXT, volumeText);
             
             // 在初始化时重置播放状态
@@ -1525,7 +1525,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 
                 // 更新音量百分比文本
                 wchar_t volumeText[16];
-                swprintf(volumeText, sizeof(volumeText)/sizeof(wchar_t), L"%d%%", volume);
+                StringCbPrintfW(volumeText, sizeof(volumeText), L"%d%%", volume);
                 SetDlgItemTextW(hwndDlg, IDC_VOLUME_TEXT, volumeText);
                 
                 // 实时应用音量设置
@@ -1539,7 +1539,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 
                 // 更新透明度百分比文本
                 wchar_t opacityText[16];
-                swprintf(opacityText, sizeof(opacityText)/sizeof(wchar_t), L"%d%%", opacity);
+                StringCbPrintfW(opacityText, sizeof(opacityText), L"%d%%", opacity);
                 SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_OPACITY_TEXT, opacityText);
                 
                 return TRUE;
