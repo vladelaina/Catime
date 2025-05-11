@@ -1605,7 +1605,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                     // 检查是否选择了"系统提示音"
                     if (wcscmp(wFileName, L"系统提示音") == 0) {
                         // 使用特殊标记来表示系统提示音
-                        strcpy(NOTIFICATION_SOUND_FILE, "SYSTEM_BEEP");
+                        StringCbCopyA(NOTIFICATION_SOUND_FILE, sizeof(NOTIFICATION_SOUND_FILE), "SYSTEM_BEEP");
                     } else {
                         // 获取音频文件夹路径
                         char audio_path[MAX_PATH];
