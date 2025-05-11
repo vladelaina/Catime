@@ -459,6 +459,9 @@ function translateSupportElements() {
         if (td.textContent === '不错不错，实用鼓励一下') {
             td.textContent = 'Not bad, very practical, a little encouragement';
         }
+        if (td.textContent === '在任务栏里吃灰叭（bushi）好用👍') {
+            td.textContent = 'Let it collect dust in the taskbar (just kidding) It\'s great👍';
+        }
         
         // 为所有留言单元格添加特殊样式，增强可读性
         if (td.parentElement && td.cellIndex === 3) { // 第四列是留言列
