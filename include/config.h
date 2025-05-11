@@ -295,6 +295,25 @@ void ReadNotificationVolumeConfig(void);
 void WriteConfigNotificationVolume(int volume);
 
 /**
+ * @brief 将热键值转换为可读字符串
+ * @param hotkey 热键值
+ * @param buffer 输出缓冲区
+ * @param bufferSize 缓冲区大小
+ * 
+ * 将WORD格式的热键值转换为可读字符串格式，例如"Ctrl+Alt+A"
+ */
+void HotkeyToString(WORD hotkey, char* buffer, size_t bufferSize);
+
+/**
+ * @brief 将字符串转换为热键值
+ * @param str 热键字符串
+ * @return WORD 热键值
+ * 
+ * 将可读字符串格式的热键（如"Ctrl+Alt+A"）转换为WORD格式的热键值
+ */
+WORD StringToHotkey(const char* str);
+
+/**
  * @brief 写入热键配置
  * @param showTimeHotkey 显示时间热键值
  * @param countUpHotkey 正计时热键值
@@ -312,6 +331,7 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
  * @param countdownHotkey 存储倒计时热键的指针
  * 
  * 专门读取热键配置项并更新相应的参数值。
+ * 支持解析可读性格式的热键字符串。
  */
 void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdownHotkey);
 

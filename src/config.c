@@ -178,9 +178,9 @@ void CreateDefaultConfig(const char* config_path) {
         fprintf(file, "CLOCK_TIME_OPTIONS=25,10,5\n");
         
         // 热键配置区块 - 默认不设置热键
-        fprintf(file, "HOTKEY_SHOW_TIME=0\n");
-        fprintf(file, "HOTKEY_COUNT_UP=0\n");
-        fprintf(file, "HOTKEY_COUNTDOWN=0\n");
+        fprintf(file, "HOTKEY_SHOW_TIME=None\n");
+        fprintf(file, "HOTKEY_COUNT_UP=None\n");
+        fprintf(file, "HOTKEY_COUNTDOWN=None\n");
         
         // 新增：通知音频文件路径
         fprintf(file, "NOTIFICATION_SOUND_FILE=\n");  // 默认为空
@@ -2436,19 +2436,31 @@ void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdow
     char line[256];
     while (fgets(line, sizeof(line), file)) {
         if (strncmp(line, "HOTKEY_SHOW_TIME=", 17) == 0) {
-            int value = 0;
-            sscanf(line + 17, "%d", &value);
-            *showTimeHotkey = (WORD)value;
+            char* value = line + 17;
+            // 去除末尾的换行符
+            char* newline = strchr(value, '\n');
+            if (newline) *newline = '\0';
+            
+            // 解析热键字符串
+            *showTimeHotkey = StringToHotkey(value);
         }
         else if (strncmp(line, "HOTKEY_COUNT_UP=", 16) == 0) {
-            int value = 0;
-            sscanf(line + 16, "%d", &value);
-            *countUpHotkey = (WORD)value;
+            char* value = line + 16;
+            // 去除末尾的换行符
+            char* newline = strchr(value, '\n');
+            if (newline) *newline = '\0';
+            
+            // 解析热键字符串
+            *countUpHotkey = StringToHotkey(value);
         }
         else if (strncmp(line, "HOTKEY_COUNTDOWN=", 17) == 0) {
-            int value = 0;
-            sscanf(line + 17, "%d", &value);
-            *countdownHotkey = (WORD)value;
+            char* value = line + 17;
+            // 去除末尾的换行符
+            char* newline = strchr(value, '\n');
+            if (newline) *newline = '\0';
+            
+            // 解析热键字符串
+            *countdownHotkey = StringToHotkey(value);
         }
     }
     
@@ -2463,6 +2475,7 @@ void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdow
  * 
  * 更新配置文件中的热键设置，
  * 采用临时文件方式确保配置更新安全。
+ * 将热键值转换为可读性更好的格式再保存。
  */
 void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownHotkey) {
     char config_path[MAX_PATH];
@@ -2473,9 +2486,21 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
         // 如果文件不存在，则创建新文件
         file = fopen(config_path, "w");
         if (file) {
-            fprintf(file, "HOTKEY_SHOW_TIME=%d\n", showTimeHotkey);
-            fprintf(file, "HOTKEY_COUNT_UP=%d\n", countUpHotkey);
-            fprintf(file, "HOTKEY_COUNTDOWN=%d\n", countdownHotkey);
+            // 将热键值转换为可读格式
+            char showTimeStr[64] = {0};
+            char countUpStr[64] = {0};
+            char countdownStr[64] = {0};
+            
+            // 转换显示时间热键
+            HotkeyToString(showTimeHotkey, showTimeStr, sizeof(showTimeStr));
+            // 转换正计时热键
+            HotkeyToString(countUpHotkey, countUpStr, sizeof(countUpStr));
+            // 转换倒计时热键
+            HotkeyToString(countdownHotkey, countdownStr, sizeof(countdownStr));
+            
+            fprintf(file, "HOTKEY_SHOW_TIME=%s\n", showTimeStr);
+            fprintf(file, "HOTKEY_COUNT_UP=%s\n", countUpStr);
+            fprintf(file, "HOTKEY_COUNTDOWN=%s\n", countdownStr);
             fclose(file);
         }
         return;
@@ -2496,17 +2521,29 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
     BOOL foundCountUp = FALSE;
     BOOL foundCountdown = FALSE;
     
+    // 将热键值转换为可读格式
+    char showTimeStr[64] = {0};
+    char countUpStr[64] = {0};
+    char countdownStr[64] = {0};
+    
+    // 转换显示时间热键
+    HotkeyToString(showTimeHotkey, showTimeStr, sizeof(showTimeStr));
+    // 转换正计时热键
+    HotkeyToString(countUpHotkey, countUpStr, sizeof(countUpStr));
+    // 转换倒计时热键
+    HotkeyToString(countdownHotkey, countdownStr, sizeof(countdownStr));
+    
     while (fgets(line, sizeof(line), file)) {
         if (strncmp(line, "HOTKEY_SHOW_TIME=", 17) == 0) {
-            fprintf(temp_file, "HOTKEY_SHOW_TIME=%d\n", showTimeHotkey);
+            fprintf(temp_file, "HOTKEY_SHOW_TIME=%s\n", showTimeStr);
             foundShowTime = TRUE;
         }
         else if (strncmp(line, "HOTKEY_COUNT_UP=", 16) == 0) {
-            fprintf(temp_file, "HOTKEY_COUNT_UP=%d\n", countUpHotkey);
+            fprintf(temp_file, "HOTKEY_COUNT_UP=%s\n", countUpStr);
             foundCountUp = TRUE;
         }
         else if (strncmp(line, "HOTKEY_COUNTDOWN=", 17) == 0) {
-            fprintf(temp_file, "HOTKEY_COUNTDOWN=%d\n", countdownHotkey);
+            fprintf(temp_file, "HOTKEY_COUNTDOWN=%s\n", countdownStr);
             foundCountdown = TRUE;
         }
         else {
@@ -2516,13 +2553,13 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
     
     // 添加未找到的配置项
     if (!foundShowTime) {
-        fprintf(temp_file, "HOTKEY_SHOW_TIME=%d\n", showTimeHotkey);
+        fprintf(temp_file, "HOTKEY_SHOW_TIME=%s\n", showTimeStr);
     }
     if (!foundCountUp) {
-        fprintf(temp_file, "HOTKEY_COUNT_UP=%d\n", countUpHotkey);
+        fprintf(temp_file, "HOTKEY_COUNT_UP=%s\n", countUpStr);
     }
     if (!foundCountdown) {
-        fprintf(temp_file, "HOTKEY_COUNTDOWN=%d\n", countdownHotkey);
+        fprintf(temp_file, "HOTKEY_COUNTDOWN=%s\n", countdownStr);
     }
     
     fclose(file);
@@ -2531,4 +2568,225 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
     // 替换原文件
     remove(config_path);
     rename(temp_path, config_path);
+}
+
+/**
+ * @brief 将热键值转换为可读字符串
+ * @param hotkey 热键值
+ * @param buffer 输出缓冲区
+ * @param bufferSize 缓冲区大小
+ * 
+ * 将WORD格式的热键值转换为可读字符串格式，例如"Ctrl+Alt+A"
+ */
+void HotkeyToString(WORD hotkey, char* buffer, size_t bufferSize) {
+    if (!buffer || bufferSize == 0) return;
+    
+    // 如果热键为0，表示未设置
+    if (hotkey == 0) {
+        strncpy(buffer, "None", bufferSize - 1);
+        buffer[bufferSize - 1] = '\0';
+        return;
+    }
+    
+    BYTE vk = LOBYTE(hotkey);    // 虚拟键码
+    BYTE mod = HIBYTE(hotkey);   // 修饰键
+    
+    buffer[0] = '\0';
+    size_t len = 0;
+    
+    // 添加修饰键
+    if (mod & HOTKEYF_CONTROL) {
+        strncpy(buffer, "Ctrl", bufferSize - 1);
+        len = strlen(buffer);
+    }
+    
+    if (mod & HOTKEYF_SHIFT) {
+        if (len > 0 && len < bufferSize - 1) {
+            buffer[len++] = '+';
+            buffer[len] = '\0';
+        }
+        strncat(buffer, "Shift", bufferSize - len - 1);
+        len = strlen(buffer);
+    }
+    
+    if (mod & HOTKEYF_ALT) {
+        if (len > 0 && len < bufferSize - 1) {
+            buffer[len++] = '+';
+            buffer[len] = '\0';
+        }
+        strncat(buffer, "Alt", bufferSize - len - 1);
+        len = strlen(buffer);
+    }
+    
+    // 添加虚拟键
+    if (len > 0 && len < bufferSize - 1 && vk != 0) {
+        buffer[len++] = '+';
+        buffer[len] = '\0';
+    }
+    
+    // 获取虚拟键名称
+    if (vk >= 'A' && vk <= 'Z') {
+        // 字母键
+        char keyName[2] = {vk, '\0'};
+        strncat(buffer, keyName, bufferSize - len - 1);
+    } else if (vk >= '0' && vk <= '9') {
+        // 数字键
+        char keyName[2] = {vk, '\0'};
+        strncat(buffer, keyName, bufferSize - len - 1);
+    } else if (vk >= VK_F1 && vk <= VK_F24) {
+        // 功能键
+        char keyName[4];
+        sprintf(keyName, "F%d", vk - VK_F1 + 1);
+        strncat(buffer, keyName, bufferSize - len - 1);
+    } else {
+        // 其他特殊键
+        switch (vk) {
+            case VK_BACK:       strncat(buffer, "Backspace", bufferSize - len - 1); break;
+            case VK_TAB:        strncat(buffer, "Tab", bufferSize - len - 1); break;
+            case VK_RETURN:     strncat(buffer, "Enter", bufferSize - len - 1); break;
+            case VK_ESCAPE:     strncat(buffer, "Esc", bufferSize - len - 1); break;
+            case VK_SPACE:      strncat(buffer, "Space", bufferSize - len - 1); break;
+            case VK_PRIOR:      strncat(buffer, "PageUp", bufferSize - len - 1); break;
+            case VK_NEXT:       strncat(buffer, "PageDown", bufferSize - len - 1); break;
+            case VK_END:        strncat(buffer, "End", bufferSize - len - 1); break;
+            case VK_HOME:       strncat(buffer, "Home", bufferSize - len - 1); break;
+            case VK_LEFT:       strncat(buffer, "Left", bufferSize - len - 1); break;
+            case VK_UP:         strncat(buffer, "Up", bufferSize - len - 1); break;
+            case VK_RIGHT:      strncat(buffer, "Right", bufferSize - len - 1); break;
+            case VK_DOWN:       strncat(buffer, "Down", bufferSize - len - 1); break;
+            case VK_INSERT:     strncat(buffer, "Insert", bufferSize - len - 1); break;
+            case VK_DELETE:     strncat(buffer, "Delete", bufferSize - len - 1); break;
+            case VK_NUMPAD0:    strncat(buffer, "Num0", bufferSize - len - 1); break;
+            case VK_NUMPAD1:    strncat(buffer, "Num1", bufferSize - len - 1); break;
+            case VK_NUMPAD2:    strncat(buffer, "Num2", bufferSize - len - 1); break;
+            case VK_NUMPAD3:    strncat(buffer, "Num3", bufferSize - len - 1); break;
+            case VK_NUMPAD4:    strncat(buffer, "Num4", bufferSize - len - 1); break;
+            case VK_NUMPAD5:    strncat(buffer, "Num5", bufferSize - len - 1); break;
+            case VK_NUMPAD6:    strncat(buffer, "Num6", bufferSize - len - 1); break;
+            case VK_NUMPAD7:    strncat(buffer, "Num7", bufferSize - len - 1); break;
+            case VK_NUMPAD8:    strncat(buffer, "Num8", bufferSize - len - 1); break;
+            case VK_NUMPAD9:    strncat(buffer, "Num9", bufferSize - len - 1); break;
+            case VK_MULTIPLY:   strncat(buffer, "Num*", bufferSize - len - 1); break;
+            case VK_ADD:        strncat(buffer, "Num+", bufferSize - len - 1); break;
+            case VK_SUBTRACT:   strncat(buffer, "Num-", bufferSize - len - 1); break;
+            case VK_DECIMAL:    strncat(buffer, "Num.", bufferSize - len - 1); break;
+            case VK_DIVIDE:     strncat(buffer, "Num/", bufferSize - len - 1); break;
+            case VK_OEM_1:      strncat(buffer, ";", bufferSize - len - 1); break;
+            case VK_OEM_PLUS:   strncat(buffer, "=", bufferSize - len - 1); break;
+            case VK_OEM_COMMA:  strncat(buffer, ",", bufferSize - len - 1); break;
+            case VK_OEM_MINUS:  strncat(buffer, "-", bufferSize - len - 1); break;
+            case VK_OEM_PERIOD: strncat(buffer, ".", bufferSize - len - 1); break;
+            case VK_OEM_2:      strncat(buffer, "/", bufferSize - len - 1); break;
+            case VK_OEM_3:      strncat(buffer, "`", bufferSize - len - 1); break;
+            case VK_OEM_4:      strncat(buffer, "[", bufferSize - len - 1); break;
+            case VK_OEM_5:      strncat(buffer, "\\", bufferSize - len - 1); break;
+            case VK_OEM_6:      strncat(buffer, "]", bufferSize - len - 1); break;
+            case VK_OEM_7:      strncat(buffer, "'", bufferSize - len - 1); break;
+            default:            
+                // 对于其他未知键，使用十六进制表示
+                char keyName[8];
+                sprintf(keyName, "0x%02X", vk);
+                strncat(buffer, keyName, bufferSize - len - 1);
+                break;
+        }
+    }
+}
+
+/**
+ * @brief 将字符串转换为热键值
+ * @param str 热键字符串
+ * @return WORD 热键值
+ * 
+ * 将可读字符串格式的热键（如"Ctrl+Alt+A"）转换为WORD格式的热键值
+ */
+WORD StringToHotkey(const char* str) {
+    if (!str || str[0] == '\0' || strcmp(str, "None") == 0) {
+        return 0;  // 未设置热键
+    }
+    
+    // 尝试直接解析为数字（兼容旧格式）
+    if (isdigit(str[0])) {
+        return (WORD)atoi(str);
+    }
+    
+    BYTE vk = 0;    // 虚拟键码
+    BYTE mod = 0;   // 修饰键
+    
+    // 复制字符串以便使用strtok
+    char buffer[256];
+    strncpy(buffer, str, sizeof(buffer) - 1);
+    buffer[sizeof(buffer) - 1] = '\0';
+    
+    // 分割字符串，查找修饰键和主键
+    char* token = strtok(buffer, "+");
+    char* lastToken = NULL;
+    
+    while (token) {
+        if (stricmp(token, "Ctrl") == 0) {
+            mod |= HOTKEYF_CONTROL;
+        } else if (stricmp(token, "Shift") == 0) {
+            mod |= HOTKEYF_SHIFT;
+        } else if (stricmp(token, "Alt") == 0) {
+            mod |= HOTKEYF_ALT;
+        } else {
+            // 可能是主键
+            lastToken = token;
+        }
+        token = strtok(NULL, "+");
+    }
+    
+    // 解析主键
+    if (lastToken) {
+        // 检查是否是单个字符的字母或数字
+        if (strlen(lastToken) == 1) {
+            char ch = toupper(lastToken[0]);
+            if ((ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9')) {
+                vk = ch;
+            }
+        } 
+        // 检查是否是功能键
+        else if (lastToken[0] == 'F' && isdigit(lastToken[1])) {
+            int fNum = atoi(lastToken + 1);
+            if (fNum >= 1 && fNum <= 24) {
+                vk = VK_F1 + fNum - 1;
+            }
+        }
+        // 检查特殊键名
+        else if (stricmp(lastToken, "Backspace") == 0) vk = VK_BACK;
+        else if (stricmp(lastToken, "Tab") == 0) vk = VK_TAB;
+        else if (stricmp(lastToken, "Enter") == 0) vk = VK_RETURN;
+        else if (stricmp(lastToken, "Esc") == 0) vk = VK_ESCAPE;
+        else if (stricmp(lastToken, "Space") == 0) vk = VK_SPACE;
+        else if (stricmp(lastToken, "PageUp") == 0) vk = VK_PRIOR;
+        else if (stricmp(lastToken, "PageDown") == 0) vk = VK_NEXT;
+        else if (stricmp(lastToken, "End") == 0) vk = VK_END;
+        else if (stricmp(lastToken, "Home") == 0) vk = VK_HOME;
+        else if (stricmp(lastToken, "Left") == 0) vk = VK_LEFT;
+        else if (stricmp(lastToken, "Up") == 0) vk = VK_UP;
+        else if (stricmp(lastToken, "Right") == 0) vk = VK_RIGHT;
+        else if (stricmp(lastToken, "Down") == 0) vk = VK_DOWN;
+        else if (stricmp(lastToken, "Insert") == 0) vk = VK_INSERT;
+        else if (stricmp(lastToken, "Delete") == 0) vk = VK_DELETE;
+        else if (stricmp(lastToken, "Num0") == 0) vk = VK_NUMPAD0;
+        else if (stricmp(lastToken, "Num1") == 0) vk = VK_NUMPAD1;
+        else if (stricmp(lastToken, "Num2") == 0) vk = VK_NUMPAD2;
+        else if (stricmp(lastToken, "Num3") == 0) vk = VK_NUMPAD3;
+        else if (stricmp(lastToken, "Num4") == 0) vk = VK_NUMPAD4;
+        else if (stricmp(lastToken, "Num5") == 0) vk = VK_NUMPAD5;
+        else if (stricmp(lastToken, "Num6") == 0) vk = VK_NUMPAD6;
+        else if (stricmp(lastToken, "Num7") == 0) vk = VK_NUMPAD7;
+        else if (stricmp(lastToken, "Num8") == 0) vk = VK_NUMPAD8;
+        else if (stricmp(lastToken, "Num9") == 0) vk = VK_NUMPAD9;
+        else if (stricmp(lastToken, "Num*") == 0) vk = VK_MULTIPLY;
+        else if (stricmp(lastToken, "Num+") == 0) vk = VK_ADD;
+        else if (stricmp(lastToken, "Num-") == 0) vk = VK_SUBTRACT;
+        else if (stricmp(lastToken, "Num.") == 0) vk = VK_DECIMAL;
+        else if (stricmp(lastToken, "Num/") == 0) vk = VK_DIVIDE;
+        // 检查十六进制格式
+        else if (strncmp(lastToken, "0x", 2) == 0) {
+            vk = (BYTE)strtol(lastToken, NULL, 16);
+        }
+    }
+    
+    return MAKEWORD(vk, mod);
 }
