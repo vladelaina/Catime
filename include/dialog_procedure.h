@@ -113,4 +113,24 @@ void ShowNotificationDisplayDialog(HWND hwndParent);
  */
 void ShowNotificationSettingsDialog(HWND hwndParent);
 
+/**
+ * @brief 显示热键设置对话框
+ * @param hwndParent 父窗口句柄
+ * 
+ * 显示热键设置对话框，用于设置切换显示当前时间、正计时和默认倒计时的全局快捷键。
+ */
+void ShowHotkeySettingsDialog(HWND hwndParent);
+
+/**
+ * @brief 热键设置对话框消息处理过程
+ * @param hwndDlg 对话框句柄
+ * @param msg 消息类型
+ * @param wParam 消息参数
+ * @param lParam 消息参数
+ * @return INT_PTR 消息处理结果
+ * 
+ * 处理热键设置对话框的所有消息事件，包括初始化、背景颜色和按钮点击。
+ */
+INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
+
 #endif // DIALOG_PROCEDURE_H

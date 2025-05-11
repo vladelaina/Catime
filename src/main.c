@@ -17,6 +17,7 @@
 #include <objbase.h>
 #include <shobjidl.h>
 #include <shlguid.h>
+#include <commctrl.h>
 #include "../resource/resource.h"
 #include "../include/language.h"
 #include "../include/font.h"
@@ -51,6 +52,7 @@ EXTERN_C const IID IID_IShellLinkW;
 #pragma comment(lib, "gdi32.lib")
 #pragma comment(lib, "comdlg32.lib")
 #pragma comment(lib, "dbghelp.lib") // 用于异常处理功能
+#pragma comment(lib, "comctl32.lib") // 用于Common Controls
 
 // 来自log.c的函数声明
 extern void CleanupLogSystem(void);
@@ -135,6 +137,9 @@ static void HandleStartupMode(HWND hwnd) {
  * 处理单实例检查，确保只有一个程序实例在运行。
  */
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+    // 初始化Common Controls
+    InitCommonControls();
+    
     // 初始化日志系统
     if (!InitializeLogSystem()) {
         // 如果日志系统初始化失败，仍然继续运行，但不记录日志

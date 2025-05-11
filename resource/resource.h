@@ -198,6 +198,17 @@
 #define ANIMATION_STEP 5               // 每步透明度变化量(0-255)
 #define ANIMATION_INTERVAL 15          // 动画帧间隔(毫秒)
 
+/* 热键设置对话框和控件 (2100-2120) */
+#define CLOCK_IDD_HOTKEY_DIALOG 2100   // 热键设置对话框ID
+#define IDC_HOTKEY_LABEL1 2101         // "显示当前时间"标签ID
+#define IDC_HOTKEY_EDIT1 2102          // 显示当前时间快捷键编辑控件ID
+#define IDC_HOTKEY_LABEL2 2103         // "正计时"标签ID
+#define IDC_HOTKEY_EDIT2 2104          // 正计时快捷键编辑控件ID
+#define IDC_HOTKEY_LABEL3 2105         // "默认倒计时"标签ID
+#define IDC_HOTKEY_EDIT3 2106          // 默认倒计时快捷键编辑控件ID
+#define IDC_HOTKEY_NOTE 2107           // 热键说明标签ID
+#define CLOCK_IDM_HOTKEY_SETTINGS 2108 // 热键设置菜单项ID
+
 /* 通知最大透明度配置 */
 extern int NOTIFICATION_MAX_OPACITY;
 extern int NOTIFICATION_TIMEOUT_MS;    // 通知显示持续时间

@@ -401,6 +401,10 @@ void ShowColorMenu(HWND hwnd) {
                 CLOCK_IDM_TOPMOST,
                 GetLocalizedString(L"置顶", L"Always on Top"));
 
+    // 在预设管理菜单之后添加"热键设置"选项
+    AppendMenuW(hMenu, MF_STRING, CLOCK_IDM_HOTKEY_SETTINGS,
+                GetLocalizedString(L"热键设置", L"Hotkey Settings"));
+
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
     // 字体菜单

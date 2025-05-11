@@ -43,10 +43,10 @@ $(shell mkdir -p $(OUTPUT_DIR) $(ASSET_DIR))
 CFLAGS = -mwindows -Iinclude -Ilibs/miniaudio -O3 -flto=8 -mtune=generic -ffunction-sections -fdata-sections -fno-strict-aliasing
 
 # 链接选项 - 添加必要的库并优化
-LDFLAGS = -lole32 -lshell32 -lcomdlg32 -luuid -lwininet -lwinmm -Wl,--gc-sections -flto=8 -s
+LDFLAGS = -lole32 -lshell32 -lcomdlg32 -luuid -lwininet -lwinmm -lcomctl32 -Wl,--gc-sections -flto=8 -s
 
 # 确保 dwmapi.lib 被链接
-LIBS = -ldwmapi -luser32 -lgdi32 -lcomdlg32 -lwinmm
+LIBS = -ldwmapi -luser32 -lgdi32 -lcomdlg32 -lwinmm -lcomctl32
 
 # 生成目标文件列表
 OBJS = $(BUILD_DIR)/main.o \

@@ -1,0 +1,28 @@
+#include <windows.h>
+#include "resource.h"
+
+// 设置 UTF-8 编码
+#pragma code_page(65001)
+
+// 热键设置对话框
+CLOCK_IDD_HOTKEY_DIALOG DIALOGEX 0, 0, 300, 200
+STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "热键设置"
+FONT 9, "Segoe UI"
+BEGIN
+    GROUPBOX        "功能快捷键", -1, 10, 10, 280, 150
+    
+    LTEXT           "显示当前时间:", IDC_HOTKEY_LABEL1, 20, 35, 80, 15
+    CONTROL         "", IDC_HOTKEY_EDIT1, "msctls_hotkey32", WS_BORDER | WS_TABSTOP, 110, 33, 160, 20
+    
+    LTEXT           "正计时:", IDC_HOTKEY_LABEL2, 20, 65, 80, 15
+    CONTROL         "", IDC_HOTKEY_EDIT2, "msctls_hotkey32", WS_BORDER | WS_TABSTOP, 110, 63, 160, 20
+    
+    LTEXT           "默认倒计时:", IDC_HOTKEY_LABEL3, 20, 95, 80, 15
+    CONTROL         "", IDC_HOTKEY_EDIT3, "msctls_hotkey32", WS_BORDER | WS_TABSTOP, 110, 93, 160, 20
+
+    LTEXT           "* 热键将全局生效", IDC_HOTKEY_NOTE, 20, 125, 250, 30
+    
+    PUSHBUTTON      "确定", IDOK, 180, 170, 50, 15
+    PUSHBUTTON      "取消", IDCANCEL, 240, 170, 50, 15
+END 

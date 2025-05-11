@@ -1820,3 +1820,229 @@ void ShowNotificationSettingsDialog(HWND hwndParent) {
         SetForegroundWindow(g_hwndNotificationSettingsDialog);
     }
 }
+
+/**
+ * @brief 显示热键设置对话框
+ * @param hwndParent 父窗口句柄
+ */
+void ShowHotkeySettingsDialog(HWND hwndParent) {
+    DialogBox(GetModuleHandle(NULL), 
+             MAKEINTRESOURCE(CLOCK_IDD_HOTKEY_DIALOG), 
+             hwndParent, 
+             HotkeySettingsDlgProc);
+}
+
+/**
+ * @brief 热键设置对话框消息处理过程
+ * @param hwndDlg 对话框句柄
+ * @param msg 消息类型
+ * @param wParam 消息参数
+ * @param lParam 消息参数
+ * @return INT_PTR 消息处理结果
+ */
+INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    static HBRUSH hBackgroundBrush = NULL;
+    static HBRUSH hButtonBrush = NULL;
+    
+    // 以下变量用于存储当前设置的热键
+    static WORD showTimeHotkey = 0;    // 显示当前时间的热键
+    static WORD countUpHotkey = 0;     // 正计时的热键
+    static WORD countdownHotkey = 0;   // 倒计时的热键
+    
+    switch (msg) {
+        case WM_INITDIALOG: {
+            // 设置对话框置顶
+            SetWindowPos(hwndDlg, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+            
+            // 应用本地化文本
+            SetWindowTextW(hwndDlg, GetLocalizedString(L"热键设置", L"Hotkey Settings"));
+            
+            // 本地化标签
+            SetDlgItemTextW(hwndDlg, IDC_HOTKEY_LABEL1, 
+                          GetLocalizedString(L"显示当前时间:", L"Show Current Time:"));
+            SetDlgItemTextW(hwndDlg, IDC_HOTKEY_LABEL2, 
+                          GetLocalizedString(L"正计时:", L"Count Up:"));
+            SetDlgItemTextW(hwndDlg, IDC_HOTKEY_LABEL3, 
+                          GetLocalizedString(L"默认倒计时:", L"Default Countdown:"));
+            SetDlgItemTextW(hwndDlg, IDC_HOTKEY_NOTE, 
+                          GetLocalizedString(L"* 热键将全局生效", L"* Hotkeys will work globally"));
+            
+            // 本地化按钮
+            SetDlgItemTextW(hwndDlg, IDOK, GetLocalizedString(L"确定", L"OK"));
+            SetDlgItemTextW(hwndDlg, IDCANCEL, GetLocalizedString(L"取消", L"Cancel"));
+            
+            // 创建背景刷子
+            hBackgroundBrush = CreateSolidBrush(RGB(0xF3, 0xF3, 0xF3));
+            hButtonBrush = CreateSolidBrush(RGB(0xFD, 0xFD, 0xFD));
+            
+            // 从配置文件读取热键设置
+            char configPath[MAX_PATH];
+            GetConfigPath(configPath, MAX_PATH);
+            FILE *configFile = fopen(configPath, "r");
+            if (configFile) {
+                char line[256];
+                while (fgets(line, sizeof(line), configFile)) {
+                    if (strncmp(line, "HOTKEY_SHOW_TIME=", 17) == 0) {
+                        int value = 0;
+                        sscanf(line, "HOTKEY_SHOW_TIME=%d", &value);
+                        showTimeHotkey = (WORD)value;
+                    }
+                    else if (strncmp(line, "HOTKEY_COUNT_UP=", 16) == 0) {
+                        int value = 0;
+                        sscanf(line, "HOTKEY_COUNT_UP=%d", &value);
+                        countUpHotkey = (WORD)value;
+                    }
+                    else if (strncmp(line, "HOTKEY_COUNTDOWN=", 17) == 0) {
+                        int value = 0;
+                        sscanf(line, "HOTKEY_COUNTDOWN=%d", &value);
+                        countdownHotkey = (WORD)value;
+                    }
+                }
+                fclose(configFile);
+            }
+            
+            // 设置热键控件的初始值
+            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT1, HKM_SETHOTKEY, showTimeHotkey, 0);
+            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT2, HKM_SETHOTKEY, countUpHotkey, 0);
+            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT3, HKM_SETHOTKEY, countdownHotkey, 0);
+            
+            return TRUE;
+        }
+        
+        case WM_CTLCOLORDLG:
+        case WM_CTLCOLORSTATIC: {
+            HDC hdcStatic = (HDC)wParam;
+            SetBkColor(hdcStatic, RGB(0xF3, 0xF3, 0xF3));
+            if (!hBackgroundBrush) {
+                hBackgroundBrush = CreateSolidBrush(RGB(0xF3, 0xF3, 0xF3));
+            }
+            return (INT_PTR)hBackgroundBrush;
+        }
+        
+        case WM_CTLCOLORBTN: {
+            HDC hdcBtn = (HDC)wParam;
+            SetBkColor(hdcBtn, RGB(0xFD, 0xFD, 0xFD));
+            if (!hButtonBrush) {
+                hButtonBrush = CreateSolidBrush(RGB(0xFD, 0xFD, 0xFD));
+            }
+            return (INT_PTR)hButtonBrush;
+        }
+        
+        case WM_COMMAND: {
+            switch (LOWORD(wParam)) {
+                case IDOK: {
+                    // 获取热键控件中设置的值
+                    WORD newShowTimeHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT1, HKM_GETHOTKEY, 0, 0);
+                    WORD newCountUpHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT2, HKM_GETHOTKEY, 0, 0);
+                    WORD newCountdownHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT3, HKM_GETHOTKEY, 0, 0);
+                    
+                    // 判断热键是否有冲突
+                    if ((newShowTimeHotkey != 0 && newShowTimeHotkey == newCountUpHotkey) ||
+                        (newShowTimeHotkey != 0 && newShowTimeHotkey == newCountdownHotkey) ||
+                        (newCountUpHotkey != 0 && newCountUpHotkey == newCountdownHotkey)) {
+                        // 显示热键冲突警告
+                        MessageBoxW(hwndDlg, 
+                                   GetLocalizedString(L"热键设置冲突，请设置不同的热键。", 
+                                                     L"Hotkey conflict detected. Please set different hotkeys."),
+                                   GetLocalizedString(L"热键冲突", L"Hotkey Conflict"),
+                                   MB_ICONWARNING | MB_OK);
+                        return TRUE;
+                    }
+                    
+                    // 保存热键设置到配置文件
+                    char configPath[MAX_PATH];
+                    GetConfigPath(configPath, MAX_PATH);
+                    
+                    // 先读取现有配置
+                    FILE *configFile = fopen(configPath, "r");
+                    if (!configFile) {
+                        // 如果文件不存在，则创建新文件
+                        configFile = fopen(configPath, "w");
+                        if (configFile) {
+                            fprintf(configFile, "HOTKEY_SHOW_TIME=%d\n", newShowTimeHotkey);
+                            fprintf(configFile, "HOTKEY_COUNT_UP=%d\n", newCountUpHotkey);
+                            fprintf(configFile, "HOTKEY_COUNTDOWN=%d\n", newCountdownHotkey);
+                            fclose(configFile);
+                        }
+                    } else {
+                        // 文件存在，读取所有行并更新热键设置
+                        char tempPath[MAX_PATH];
+                        sprintf(tempPath, "%s.tmp", configPath);
+                        FILE *tempFile = fopen(tempPath, "w");
+                        
+                        if (tempFile) {
+                            char line[256];
+                            BOOL foundShowTime = FALSE;
+                            BOOL foundCountUp = FALSE;
+                            BOOL foundCountdown = FALSE;
+                            
+                            while (fgets(line, sizeof(line), configFile)) {
+                                if (strncmp(line, "HOTKEY_SHOW_TIME=", 17) == 0) {
+                                    fprintf(tempFile, "HOTKEY_SHOW_TIME=%d\n", newShowTimeHotkey);
+                                    foundShowTime = TRUE;
+                                }
+                                else if (strncmp(line, "HOTKEY_COUNT_UP=", 16) == 0) {
+                                    fprintf(tempFile, "HOTKEY_COUNT_UP=%d\n", newCountUpHotkey);
+                                    foundCountUp = TRUE;
+                                }
+                                else if (strncmp(line, "HOTKEY_COUNTDOWN=", 17) == 0) {
+                                    fprintf(tempFile, "HOTKEY_COUNTDOWN=%d\n", newCountdownHotkey);
+                                    foundCountdown = TRUE;
+                                }
+                                else {
+                                    fputs(line, tempFile);
+                                }
+                            }
+                            
+                            // 添加未找到的配置项
+                            if (!foundShowTime) {
+                                fprintf(tempFile, "HOTKEY_SHOW_TIME=%d\n", newShowTimeHotkey);
+                            }
+                            if (!foundCountUp) {
+                                fprintf(tempFile, "HOTKEY_COUNT_UP=%d\n", newCountUpHotkey);
+                            }
+                            if (!foundCountdown) {
+                                fprintf(tempFile, "HOTKEY_COUNTDOWN=%d\n", newCountdownHotkey);
+                            }
+                            
+                            fclose(tempFile);
+                            fclose(configFile);
+                            
+                            // 替换原文件
+                            remove(configPath);
+                            rename(tempPath, configPath);
+                        } else {
+                            fclose(configFile);
+                        }
+                    }
+                    
+                    // 通知主窗口热键设置已更改，需要重新注册
+                    PostMessage(GetParent(hwndDlg), WM_APP+1, 0, 0);
+                    
+                    // 关闭对话框
+                    EndDialog(hwndDlg, IDOK);
+                    return TRUE;
+                }
+                
+                case IDCANCEL:
+                    EndDialog(hwndDlg, IDCANCEL);
+                    return TRUE;
+            }
+            break;
+        }
+        
+        case WM_DESTROY:
+            // 清理资源
+            if (hBackgroundBrush) {
+                DeleteObject(hBackgroundBrush);
+                hBackgroundBrush = NULL;
+            }
+            if (hButtonBrush) {
+                DeleteObject(hButtonBrush);
+                hButtonBrush = NULL;
+            }
+            break;
+    }
+    
+    return FALSE;
+}

@@ -187,6 +187,110 @@ void ExitProgram(HWND hwnd) {
 }
 
 /**
+ * @brief 注册全局热键
+ * @param hwnd 窗口句柄
+ * 
+ * 从配置文件读取并注册全局热键设置，用于快速切换显示当前时间、正计时和默认倒计时。
+ * 如果热键已注册，会先取消注册再重新注册。
+ * 
+ * @return BOOL 是否成功注册至少一个热键
+ */
+BOOL RegisterGlobalHotkeys(HWND hwnd) {
+    // 先取消注册所有已注册的热键
+    UnregisterGlobalHotkeys(hwnd);
+    
+    // 从配置文件读取热键设置
+    char configPath[MAX_PATH];
+    GetConfigPath(configPath, MAX_PATH);
+    
+    WORD showTimeHotkey = 0;
+    WORD countUpHotkey = 0;
+    WORD countdownHotkey = 0;
+    
+    FILE *configFile = fopen(configPath, "r");
+    if (configFile) {
+        char line[256];
+        while (fgets(line, sizeof(line), configFile)) {
+            if (strncmp(line, "HOTKEY_SHOW_TIME=", 17) == 0) {
+                int value = 0;
+                sscanf(line, "HOTKEY_SHOW_TIME=%d", &value);
+                showTimeHotkey = (WORD)value;
+            }
+            else if (strncmp(line, "HOTKEY_COUNT_UP=", 16) == 0) {
+                int value = 0;
+                sscanf(line, "HOTKEY_COUNT_UP=%d", &value);
+                countUpHotkey = (WORD)value;
+            }
+            else if (strncmp(line, "HOTKEY_COUNTDOWN=", 17) == 0) {
+                int value = 0;
+                sscanf(line, "HOTKEY_COUNTDOWN=%d", &value);
+                countdownHotkey = (WORD)value;
+            }
+        }
+        fclose(configFile);
+    }
+    
+    // 注册热键
+    BOOL success = FALSE;
+    
+    if (showTimeHotkey != 0) {
+        BYTE vk = LOBYTE(showTimeHotkey);  // 虚拟键码
+        BYTE mod = HIBYTE(showTimeHotkey); // 修饰键
+        
+        UINT fsModifiers = 0;
+        if (mod & HOTKEYF_ALT) fsModifiers |= MOD_ALT;
+        if (mod & HOTKEYF_CONTROL) fsModifiers |= MOD_CONTROL;
+        if (mod & HOTKEYF_SHIFT) fsModifiers |= MOD_SHIFT;
+        
+        if (RegisterHotKey(hwnd, HOTKEY_ID_SHOW_TIME, fsModifiers, vk)) {
+            success = TRUE;
+        }
+    }
+    
+    if (countUpHotkey != 0) {
+        BYTE vk = LOBYTE(countUpHotkey);  // 虚拟键码
+        BYTE mod = HIBYTE(countUpHotkey); // 修饰键
+        
+        UINT fsModifiers = 0;
+        if (mod & HOTKEYF_ALT) fsModifiers |= MOD_ALT;
+        if (mod & HOTKEYF_CONTROL) fsModifiers |= MOD_CONTROL;
+        if (mod & HOTKEYF_SHIFT) fsModifiers |= MOD_SHIFT;
+        
+        if (RegisterHotKey(hwnd, HOTKEY_ID_COUNT_UP, fsModifiers, vk)) {
+            success = TRUE;
+        }
+    }
+    
+    if (countdownHotkey != 0) {
+        BYTE vk = LOBYTE(countdownHotkey);  // 虚拟键码
+        BYTE mod = HIBYTE(countdownHotkey); // 修饰键
+        
+        UINT fsModifiers = 0;
+        if (mod & HOTKEYF_ALT) fsModifiers |= MOD_ALT;
+        if (mod & HOTKEYF_CONTROL) fsModifiers |= MOD_CONTROL;
+        if (mod & HOTKEYF_SHIFT) fsModifiers |= MOD_SHIFT;
+        
+        if (RegisterHotKey(hwnd, HOTKEY_ID_COUNTDOWN, fsModifiers, vk)) {
+            success = TRUE;
+        }
+    }
+    
+    return success;
+}
+
+/**
+ * @brief 取消注册全局热键
+ * @param hwnd 窗口句柄
+ * 
+ * 取消注册所有已注册的全局热键。
+ */
+void UnregisterGlobalHotkeys(HWND hwnd) {
+    UnregisterHotKey(hwnd, HOTKEY_ID_SHOW_TIME);
+    UnregisterHotKey(hwnd, HOTKEY_ID_COUNT_UP);
+    UnregisterHotKey(hwnd, HOTKEY_ID_COUNTDOWN);
+}
+
+/**
  * @brief 主窗口消息处理回调函数
  * @param hwnd 窗口句柄
  * @param msg 消息类型
@@ -221,6 +325,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     switch(msg)
     {
         case WM_CREATE: {
+            // 在窗口创建时注册全局热键
+            RegisterGlobalHotkeys(hwnd);
             HandleWindowCreate(hwnd);
             break;
         }
@@ -262,6 +368,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             break;
         }
         case WM_DESTROY: {
+            // 窗口销毁时取消注册全局热键
+            UnregisterGlobalHotkeys(hwnd);
             HandleWindowDestroy(hwnd);
             return 0;
         }
@@ -1571,6 +1679,12 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     ShowNotificationSettingsDialog(hwnd);
                     break;
                 }
+                case CLOCK_IDM_HOTKEY_SETTINGS: {
+                    ShowHotkeySettingsDialog(hwnd);
+                    // 注册/重新注册全局热键
+                    RegisterGlobalHotkeys(hwnd);
+                    break;
+                }
                 case CLOCK_IDM_HELP: {
                     OpenUserGuide();
                     break;
@@ -1736,8 +1850,65 @@ refresh_window:
             }
             break;
         }
+        case WM_HOTKEY: {
+            // 处理全局热键消息
+            switch (wp) {
+                case HOTKEY_ID_SHOW_TIME: {
+                    // 切换到显示当前时间模式
+                    CLOCK_SHOW_CURRENT_TIME = TRUE;
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    break;
+                }
+                case HOTKEY_ID_COUNT_UP: {
+                    // 切换到正计时模式
+                    CLOCK_COUNT_UP = TRUE;
+                    CLOCK_SHOW_CURRENT_TIME = FALSE;
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    break;
+                }
+                case HOTKEY_ID_COUNTDOWN: {
+                    // 切换到默认倒计时模式
+                    CLOCK_COUNT_UP = FALSE;
+                    CLOCK_SHOW_CURRENT_TIME = FALSE;
+                    if (CLOCK_DEFAULT_START_TIME > 0) {
+                        CLOCK_TOTAL_TIME = CLOCK_DEFAULT_START_TIME;
+                        countdown_elapsed_time = 0;
+                        CLOCK_IS_PAUSED = FALSE;
+                    } else {
+                        // 如果没有设置默认倒计时，则弹出设置对话框
+                        PostMessage(hwnd, WM_COMMAND, 101, 0);
+                    }
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    break;
+                }
+            }
+            return 0;
+        }
+        // 处理热键设置更改后的重新注册消息
+        case WM_APP+1: {
+            // 仅重新注册热键，不打开对话框
+            RegisterGlobalHotkeys(hwnd);
+            return 0;
+        }
         default:
             return DefWindowProc(hwnd, msg, wp, lp);
     }
     return 0;
 }
+
+// 外部变量声明
+extern int CLOCK_DEFAULT_START_TIME;
+extern int countdown_elapsed_time;
+extern BOOL CLOCK_IS_PAUSED;
+extern BOOL CLOCK_COUNT_UP;
+extern BOOL CLOCK_SHOW_CURRENT_TIME;
+extern int CLOCK_TOTAL_TIME;
+
+// 菜单项移除
+void RemoveMenuItems(HMENU hMenu, int count);
+
+// 菜单项添加
+void AddMenuItem(HMENU hMenu, UINT id, const char* text, BOOL isEnabled);
+
+// 修改菜单项文本
+void ModifyMenuItemText(HMENU hMenu, UINT id, const char* text);
