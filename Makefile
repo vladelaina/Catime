@@ -32,8 +32,8 @@ else
     RESET =
 endif
 
-# 设置文件名 - 添加 async_update_checker.c 和 log.c 到源文件列表
-SRC_FILES = src/main.c src/window.c src/tray.c src/color.c src/font.c src/language.c src/timer.c src/tray_menu.c src/startup.c src/config.c src/window_procedure.c src/media.c src/notification.c src/tray_events.c src/window_events.c src/drag_scale.c src/drawing.c src/timer_events.c src/dialog_procedure.c src/update_checker.c src/async_update_checker.c src/log.c src/audio_player.c
+# 设置文件名 - 添加 hotkey.c 到源文件列表
+SRC_FILES = src/main.c src/window.c src/tray.c src/color.c src/font.c src/language.c src/timer.c src/tray_menu.c src/startup.c src/config.c src/window_procedure.c src/media.c src/notification.c src/tray_events.c src/window_events.c src/drag_scale.c src/drawing.c src/timer_events.c src/dialog_procedure.c src/update_checker.c src/async_update_checker.c src/log.c src/audio_player.c src/hotkey.c
 RC_FILE = resource/resource.rc
 
 # 创建目标文件夹和资源文件夹
@@ -71,10 +71,11 @@ OBJS = $(BUILD_DIR)/main.o \
        $(BUILD_DIR)/update_checker.o \
        $(BUILD_DIR)/async_update_checker.o \
        $(BUILD_DIR)/log.o \
-       $(BUILD_DIR)/audio_player.o
+       $(BUILD_DIR)/audio_player.o \
+       $(BUILD_DIR)/hotkey.o
 
 # 总文件数量 (包括资源文件)
-TOTAL_FILES = 24
+TOTAL_FILES = 25
 PROGRESS_FILE = $(BUILD_DIR)/.progress
 
 # ASCII 艺术标志
@@ -293,6 +294,11 @@ $(BUILD_DIR)/log.o: src/log.c
 # 编译音频播放器模块
 $(BUILD_DIR)/audio_player.o: src/audio_player.c include/audio_player.h
 	@$(CC) -c src/audio_player.c -o $(BUILD_DIR)/audio_player.o $(CFLAGS) -DMINIAUDIO_IMPLEMENTATION
+	@$(call update_progress)
+
+# 编译热键管理模块
+$(BUILD_DIR)/hotkey.o: src/hotkey.c include/hotkey.h
+	@$(CC) -c src/hotkey.c -o $(BUILD_DIR)/hotkey.o $(CFLAGS)
 	@$(call update_progress)
 
 # 链接编译目标文件，输出到输出目录

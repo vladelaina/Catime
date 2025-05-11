@@ -40,6 +40,7 @@
 #include "../include/pomodoro.h"
 #include "../include/update_checker.h"
 #include "../include/async_update_checker.h"
+#include "../include/hotkey.h"
 
 // 从main.c引入的变量
 extern char inputText[256];
