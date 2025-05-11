@@ -186,6 +186,15 @@ void ExitProgram(HWND hwnd) {
     PostQuitMessage(0);
 }
 
+#define HOTKEY_ID_SHOW_TIME       100  // 显示当前时间热键ID
+#define HOTKEY_ID_COUNT_UP        101  // 正计时热键ID
+#define HOTKEY_ID_COUNTDOWN       102  // 倒计时热键ID
+#define HOTKEY_ID_POMODORO        103  // 番茄钟热键ID
+#define HOTKEY_ID_TOGGLE_VISIBILITY 104 // 隐藏/显示热键ID
+#define HOTKEY_ID_EDIT_MODE       105  // 编辑模式热键ID
+#define HOTKEY_ID_PAUSE_RESUME    106  // 暂停/继续热键ID
+#define HOTKEY_ID_RESTART_TIMER   107  // 重新开始热键ID
+
 /**
  * @brief 注册全局热键
  * @param hwnd 窗口句柄
@@ -203,7 +212,15 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
     WORD showTimeHotkey = 0;
     WORD countUpHotkey = 0;
     WORD countdownHotkey = 0;
-    ReadConfigHotkeys(&showTimeHotkey, &countUpHotkey, &countdownHotkey);
+    WORD pomodoroHotkey = 0;
+    WORD toggleVisibilityHotkey = 0;
+    WORD editModeHotkey = 0;
+    WORD pauseResumeHotkey = 0;
+    WORD restartTimerHotkey = 0;
+    
+    ReadConfigHotkeys(&showTimeHotkey, &countUpHotkey, &countdownHotkey,
+                     &pomodoroHotkey, &toggleVisibilityHotkey, &editModeHotkey,
+                     &pauseResumeHotkey, &restartTimerHotkey);
     
     BOOL success = FALSE;
     
@@ -224,8 +241,8 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
     
     // 注册正计时热键
     if (countUpHotkey != 0) {
-        BYTE vk = LOBYTE(countUpHotkey);  // 虚拟键码
-        BYTE mod = HIBYTE(countUpHotkey); // 修饰键
+        BYTE vk = LOBYTE(countUpHotkey);
+        BYTE mod = HIBYTE(countUpHotkey);
         
         UINT fsModifiers = 0;
         if (mod & HOTKEYF_ALT) fsModifiers |= MOD_ALT;
@@ -237,10 +254,10 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         }
     }
     
-    // 注册默认倒计时热键
+    // 注册倒计时热键
     if (countdownHotkey != 0) {
-        BYTE vk = LOBYTE(countdownHotkey);  // 虚拟键码
-        BYTE mod = HIBYTE(countdownHotkey); // 修饰键
+        BYTE vk = LOBYTE(countdownHotkey);
+        BYTE mod = HIBYTE(countdownHotkey);
         
         UINT fsModifiers = 0;
         if (mod & HOTKEYF_ALT) fsModifiers |= MOD_ALT;
@@ -248,6 +265,81 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         if (mod & HOTKEYF_SHIFT) fsModifiers |= MOD_SHIFT;
         
         if (RegisterHotKey(hwnd, HOTKEY_ID_COUNTDOWN, fsModifiers, vk)) {
+            success = TRUE;
+        }
+    }
+    
+    // 注册番茄钟热键
+    if (pomodoroHotkey != 0) {
+        BYTE vk = LOBYTE(pomodoroHotkey);
+        BYTE mod = HIBYTE(pomodoroHotkey);
+        
+        UINT fsModifiers = 0;
+        if (mod & HOTKEYF_ALT) fsModifiers |= MOD_ALT;
+        if (mod & HOTKEYF_CONTROL) fsModifiers |= MOD_CONTROL;
+        if (mod & HOTKEYF_SHIFT) fsModifiers |= MOD_SHIFT;
+        
+        if (RegisterHotKey(hwnd, HOTKEY_ID_POMODORO, fsModifiers, vk)) {
+            success = TRUE;
+        }
+    }
+    
+    // 注册隐藏/显示窗口热键
+    if (toggleVisibilityHotkey != 0) {
+        BYTE vk = LOBYTE(toggleVisibilityHotkey);
+        BYTE mod = HIBYTE(toggleVisibilityHotkey);
+        
+        UINT fsModifiers = 0;
+        if (mod & HOTKEYF_ALT) fsModifiers |= MOD_ALT;
+        if (mod & HOTKEYF_CONTROL) fsModifiers |= MOD_CONTROL;
+        if (mod & HOTKEYF_SHIFT) fsModifiers |= MOD_SHIFT;
+        
+        if (RegisterHotKey(hwnd, HOTKEY_ID_TOGGLE_VISIBILITY, fsModifiers, vk)) {
+            success = TRUE;
+        }
+    }
+    
+    // 注册编辑模式热键
+    if (editModeHotkey != 0) {
+        BYTE vk = LOBYTE(editModeHotkey);
+        BYTE mod = HIBYTE(editModeHotkey);
+        
+        UINT fsModifiers = 0;
+        if (mod & HOTKEYF_ALT) fsModifiers |= MOD_ALT;
+        if (mod & HOTKEYF_CONTROL) fsModifiers |= MOD_CONTROL;
+        if (mod & HOTKEYF_SHIFT) fsModifiers |= MOD_SHIFT;
+        
+        if (RegisterHotKey(hwnd, HOTKEY_ID_EDIT_MODE, fsModifiers, vk)) {
+            success = TRUE;
+        }
+    }
+    
+    // 注册暂停/继续热键
+    if (pauseResumeHotkey != 0) {
+        BYTE vk = LOBYTE(pauseResumeHotkey);
+        BYTE mod = HIBYTE(pauseResumeHotkey);
+        
+        UINT fsModifiers = 0;
+        if (mod & HOTKEYF_ALT) fsModifiers |= MOD_ALT;
+        if (mod & HOTKEYF_CONTROL) fsModifiers |= MOD_CONTROL;
+        if (mod & HOTKEYF_SHIFT) fsModifiers |= MOD_SHIFT;
+        
+        if (RegisterHotKey(hwnd, HOTKEY_ID_PAUSE_RESUME, fsModifiers, vk)) {
+            success = TRUE;
+        }
+    }
+    
+    // 注册重新开始热键
+    if (restartTimerHotkey != 0) {
+        BYTE vk = LOBYTE(restartTimerHotkey);
+        BYTE mod = HIBYTE(restartTimerHotkey);
+        
+        UINT fsModifiers = 0;
+        if (mod & HOTKEYF_ALT) fsModifiers |= MOD_ALT;
+        if (mod & HOTKEYF_CONTROL) fsModifiers |= MOD_CONTROL;
+        if (mod & HOTKEYF_SHIFT) fsModifiers |= MOD_SHIFT;
+        
+        if (RegisterHotKey(hwnd, HOTKEY_ID_RESTART_TIMER, fsModifiers, vk)) {
             success = TRUE;
         }
     }
@@ -262,9 +354,15 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
  * 取消注册所有已注册的全局热键。
  */
 void UnregisterGlobalHotkeys(HWND hwnd) {
+    // 注销所有已注册的热键
     UnregisterHotKey(hwnd, HOTKEY_ID_SHOW_TIME);
     UnregisterHotKey(hwnd, HOTKEY_ID_COUNT_UP);
     UnregisterHotKey(hwnd, HOTKEY_ID_COUNTDOWN);
+    UnregisterHotKey(hwnd, HOTKEY_ID_POMODORO);
+    UnregisterHotKey(hwnd, HOTKEY_ID_TOGGLE_VISIBILITY);
+    UnregisterHotKey(hwnd, HOTKEY_ID_EDIT_MODE);
+    UnregisterHotKey(hwnd, HOTKEY_ID_PAUSE_RESUME);
+    UnregisterHotKey(hwnd, HOTKEY_ID_RESTART_TIMER);
 }
 
 /**
@@ -1830,36 +1928,52 @@ refresh_window:
         case WM_HOTKEY: {
             // 处理全局热键消息
             switch (wp) {
-                case HOTKEY_ID_SHOW_TIME: {
-                    // 切换到显示当前时间模式
-                    CLOCK_SHOW_CURRENT_TIME = TRUE;
-                    InvalidateRect(hwnd, NULL, TRUE);
+                case HOTKEY_ID_SHOW_TIME:
+                    // 显示当前时间
+                    ToggleShowTimeMode(hwnd);
                     break;
-                }
-                case HOTKEY_ID_COUNT_UP: {
-                    // 切换到正计时模式
-                    CLOCK_COUNT_UP = TRUE;
-                    CLOCK_SHOW_CURRENT_TIME = FALSE;
-                    InvalidateRect(hwnd, NULL, TRUE);
+                    
+                case HOTKEY_ID_COUNT_UP:
+                    // 开始正计时
+                    StartCountUp(hwnd);
                     break;
-                }
-                case HOTKEY_ID_COUNTDOWN: {
-                    // 切换到默认倒计时模式
-                    CLOCK_COUNT_UP = FALSE;
-                    CLOCK_SHOW_CURRENT_TIME = FALSE;
-                    if (CLOCK_DEFAULT_START_TIME > 0) {
-                        CLOCK_TOTAL_TIME = CLOCK_DEFAULT_START_TIME;
-                        countdown_elapsed_time = 0;
-                        CLOCK_IS_PAUSED = FALSE;
+                    
+                case HOTKEY_ID_COUNTDOWN:
+                    // 开始默认倒计时
+                    StartDefaultCountDown(hwnd);
+                    break;
+                    
+                case HOTKEY_ID_POMODORO:
+                    // 开始番茄钟
+                    StartPomodoroTimer(hwnd);
+                    break;
+                    
+                case HOTKEY_ID_TOGGLE_VISIBILITY:
+                    // 隐藏/显示窗口
+                    if (IsWindowVisible(hwnd)) {
+                        ShowWindow(hwnd, SW_HIDE);
                     } else {
-                        // 如果没有设置默认倒计时，则弹出设置对话框
-                        PostMessage(hwnd, WM_COMMAND, 101, 0);
+                        ShowWindow(hwnd, SW_SHOW);
+                        SetForegroundWindow(hwnd);
                     }
-                    InvalidateRect(hwnd, NULL, TRUE);
                     break;
-                }
+                    
+                case HOTKEY_ID_EDIT_MODE:
+                    // 进入编辑模式
+                    ToggleEditMode(hwnd);
+                    break;
+                    
+                case HOTKEY_ID_PAUSE_RESUME:
+                    // 暂停/继续计时
+                    TogglePauseResume(hwnd);
+                    break;
+                    
+                case HOTKEY_ID_RESTART_TIMER:
+                    // 重新开始当前计时
+                    RestartCurrentTimer(hwnd);
+                    break;
             }
-            return 0;
+            break;
         }
         // 处理热键设置更改后的重新注册消息
         case WM_APP+1: {
@@ -1889,3 +2003,89 @@ void AddMenuItem(HMENU hMenu, UINT id, const char* text, BOOL isEnabled);
 
 // 修改菜单项文本
 void ModifyMenuItemText(HMENU hMenu, UINT id, const char* text);
+
+/**
+ * @brief 切换到显示当前时间模式
+ * @param hwnd 窗口句柄
+ */
+void ToggleShowTimeMode(HWND hwnd) {
+    CLOCK_SHOW_CURRENT_TIME = TRUE;
+    InvalidateRect(hwnd, NULL, TRUE);
+}
+
+/**
+ * @brief 开始正计时
+ * @param hwnd 窗口句柄
+ */
+void StartCountUp(HWND hwnd) {
+    CLOCK_COUNT_UP = TRUE;
+    CLOCK_SHOW_CURRENT_TIME = FALSE;
+    InvalidateRect(hwnd, NULL, TRUE);
+}
+
+/**
+ * @brief 开始默认倒计时
+ * @param hwnd 窗口句柄
+ */
+void StartDefaultCountDown(HWND hwnd) {
+    CLOCK_COUNT_UP = FALSE;
+    CLOCK_SHOW_CURRENT_TIME = FALSE;
+    if (CLOCK_DEFAULT_START_TIME > 0) {
+        CLOCK_TOTAL_TIME = CLOCK_DEFAULT_START_TIME;
+        countdown_elapsed_time = 0;
+        CLOCK_IS_PAUSED = FALSE;
+    } else {
+        // 如果没有设置默认倒计时，则弹出设置对话框
+        PostMessage(hwnd, WM_COMMAND, 101, 0);
+    }
+    InvalidateRect(hwnd, NULL, TRUE);
+}
+
+/**
+ * @brief 开始番茄钟
+ * @param hwnd 窗口句柄
+ */
+void StartPomodoroTimer(HWND hwnd) {
+    // 使用番茄钟菜单项命令来启动番茄钟
+    PostMessage(hwnd, WM_COMMAND, CLOCK_IDM_POMODORO, 0);
+}
+
+/**
+ * @brief 切换编辑模式
+ * @param hwnd 窗口句柄
+ */
+void ToggleEditMode(HWND hwnd) {
+    CLOCK_EDIT_MODE = !CLOCK_EDIT_MODE;
+    InvalidateRect(hwnd, NULL, TRUE);
+}
+
+/**
+ * @brief 暂停/继续计时
+ * @param hwnd 窗口句柄
+ */
+void TogglePauseResume(HWND hwnd) {
+    // 只有在非显示时间模式下才有效
+    if (!CLOCK_SHOW_CURRENT_TIME) {
+        CLOCK_IS_PAUSED = !CLOCK_IS_PAUSED;
+        InvalidateRect(hwnd, NULL, TRUE);
+    }
+}
+
+/**
+ * @brief 重新开始当前计时
+ * @param hwnd 窗口句柄
+ */
+void RestartCurrentTimer(HWND hwnd) {
+    // 只有在非显示时间模式下才有效
+    if (!CLOCK_SHOW_CURRENT_TIME) {
+        if (CLOCK_COUNT_UP) {
+            // 重置正计时
+            countdown_elapsed_time = 0;
+        } else {
+            // 重置倒计时
+            countdown_elapsed_time = 0;
+        }
+        CLOCK_IS_PAUSED = FALSE;
+        InvalidateRect(hwnd, NULL, TRUE);
+    }
+}

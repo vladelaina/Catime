@@ -14,9 +14,14 @@
 /**
  * @brief 热键ID定义
  */
-#define HOTKEY_ID_SHOW_TIME 1    // 显示当前时间热键ID
-#define HOTKEY_ID_COUNT_UP  2    // 正计时热键ID
-#define HOTKEY_ID_COUNTDOWN 3    // 默认倒计时热键ID
+#define HOTKEY_ID_SHOW_TIME       100  // 显示当前时间热键ID
+#define HOTKEY_ID_COUNT_UP        101  // 正计时热键ID
+#define HOTKEY_ID_COUNTDOWN       102  // 倒计时热键ID
+#define HOTKEY_ID_POMODORO        103  // 番茄钟热键ID
+#define HOTKEY_ID_TOGGLE_VISIBILITY 104 // 隐藏/显示热键ID
+#define HOTKEY_ID_EDIT_MODE       105  // 编辑模式热键ID
+#define HOTKEY_ID_PAUSE_RESUME    106  // 暂停/继续热键ID
+#define HOTKEY_ID_RESTART_TIMER   107  // 重新开始热键ID
 
 /**
  * @brief 主窗口消息处理函数
@@ -55,5 +60,47 @@ BOOL RegisterGlobalHotkeys(HWND hwnd);
  * 取消注册所有已注册的全局热键。
  */
 void UnregisterGlobalHotkeys(HWND hwnd);
+
+/**
+ * @brief 切换到显示当前时间模式
+ * @param hwnd 窗口句柄
+ */
+void ToggleShowTimeMode(HWND hwnd);
+
+/**
+ * @brief 开始正计时
+ * @param hwnd 窗口句柄
+ */
+void StartCountUp(HWND hwnd);
+
+/**
+ * @brief 开始默认倒计时
+ * @param hwnd 窗口句柄
+ */
+void StartDefaultCountDown(HWND hwnd);
+
+/**
+ * @brief 开始番茄钟
+ * @param hwnd 窗口句柄
+ */
+void StartPomodoroTimer(HWND hwnd);
+
+/**
+ * @brief 切换编辑模式
+ * @param hwnd 窗口句柄
+ */
+void ToggleEditMode(HWND hwnd);
+
+/**
+ * @brief 暂停/继续计时
+ * @param hwnd 窗口句柄
+ */
+void TogglePauseResume(HWND hwnd);
+
+/**
+ * @brief 重新开始当前计时
+ * @param hwnd 窗口句柄
+ */
+void RestartCurrentTimer(HWND hwnd);
 
 #endif // WINDOW_PROCEDURE_H 

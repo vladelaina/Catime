@@ -1845,9 +1845,14 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
     static HBRUSH hButtonBrush = NULL;
     
     // 以下变量用于存储当前设置的热键
-    static WORD showTimeHotkey = 0;    // 显示当前时间的热键
-    static WORD countUpHotkey = 0;     // 正计时的热键
-    static WORD countdownHotkey = 0;   // 倒计时的热键
+    static WORD showTimeHotkey = 0;        // 显示当前时间的热键
+    static WORD countUpHotkey = 0;         // 正计时的热键
+    static WORD countdownHotkey = 0;       // 倒计时的热键
+    static WORD pomodoroHotkey = 0;        // 番茄钟的热键
+    static WORD toggleVisibilityHotkey = 0; // 隐藏/显示的热键
+    static WORD editModeHotkey = 0;        // 编辑模式的热键
+    static WORD pauseResumeHotkey = 0;     // 暂停/继续的热键
+    static WORD restartTimerHotkey = 0;    // 重新开始的热键
     
     switch (msg) {
         case WM_INITDIALOG: {
@@ -1864,6 +1869,16 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                           GetLocalizedString(L"正计时:", L"Count Up:"));
             SetDlgItemTextW(hwndDlg, IDC_HOTKEY_LABEL3, 
                           GetLocalizedString(L"默认倒计时:", L"Default Countdown:"));
+            SetDlgItemTextW(hwndDlg, IDC_HOTKEY_LABEL4, 
+                          GetLocalizedString(L"开始番茄钟:", L"Start Pomodoro:"));
+            SetDlgItemTextW(hwndDlg, IDC_HOTKEY_LABEL5, 
+                          GetLocalizedString(L"隐藏/显示窗口:", L"Hide/Show Window:"));
+            SetDlgItemTextW(hwndDlg, IDC_HOTKEY_LABEL6, 
+                          GetLocalizedString(L"进入编辑模式:", L"Enter Edit Mode:"));
+            SetDlgItemTextW(hwndDlg, IDC_HOTKEY_LABEL7, 
+                          GetLocalizedString(L"暂停/继续计时:", L"Pause/Resume Timer:"));
+            SetDlgItemTextW(hwndDlg, IDC_HOTKEY_LABEL8, 
+                          GetLocalizedString(L"重新开始计时:", L"Restart Timer:"));
             SetDlgItemTextW(hwndDlg, IDC_HOTKEY_NOTE, 
                           GetLocalizedString(L"* 热键将全局生效", L"* Hotkeys will work globally"));
             
@@ -1876,12 +1891,19 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
             hButtonBrush = CreateSolidBrush(RGB(0xFD, 0xFD, 0xFD));
             
             // 使用新函数读取热键配置
-            ReadConfigHotkeys(&showTimeHotkey, &countUpHotkey, &countdownHotkey);
+            ReadConfigHotkeys(&showTimeHotkey, &countUpHotkey, &countdownHotkey,
+                             &pomodoroHotkey, &toggleVisibilityHotkey, &editModeHotkey,
+                             &pauseResumeHotkey, &restartTimerHotkey);
             
             // 设置热键控件的初始值
             SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT1, HKM_SETHOTKEY, showTimeHotkey, 0);
             SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT2, HKM_SETHOTKEY, countUpHotkey, 0);
             SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT3, HKM_SETHOTKEY, countdownHotkey, 0);
+            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT4, HKM_SETHOTKEY, pomodoroHotkey, 0);
+            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT5, HKM_SETHOTKEY, toggleVisibilityHotkey, 0);
+            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT6, HKM_SETHOTKEY, editModeHotkey, 0);
+            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT7, HKM_SETHOTKEY, pauseResumeHotkey, 0);
+            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT8, HKM_SETHOTKEY, restartTimerHotkey, 0);
             
             return TRUE;
         }
@@ -1912,22 +1934,74 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                     WORD newShowTimeHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT1, HKM_GETHOTKEY, 0, 0);
                     WORD newCountUpHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT2, HKM_GETHOTKEY, 0, 0);
                     WORD newCountdownHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT3, HKM_GETHOTKEY, 0, 0);
+                    WORD newPomodoroHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT4, HKM_GETHOTKEY, 0, 0);
+                    WORD newToggleVisibilityHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT5, HKM_GETHOTKEY, 0, 0);
+                    WORD newEditModeHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT6, HKM_GETHOTKEY, 0, 0);
+                    WORD newPauseResumeHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT7, HKM_GETHOTKEY, 0, 0);
+                    WORD newRestartTimerHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT8, HKM_GETHOTKEY, 0, 0);
                     
-                    // 判断热键是否有冲突
-                    if ((newShowTimeHotkey != 0 && newShowTimeHotkey == newCountUpHotkey) ||
-                        (newShowTimeHotkey != 0 && newShowTimeHotkey == newCountdownHotkey) ||
-                        (newCountUpHotkey != 0 && newCountUpHotkey == newCountdownHotkey)) {
+                    // 检查热键冲突
+                    BOOL hasConflict = FALSE;
+                    char conflictMsg[512] = "热键设置冲突。以下热键重复设置：\n";
+                    int conflictCount = 0;
+                    
+                    // 创建热键数组以检查冲突
+                    WORD hotkeyArray[8] = {
+                        newShowTimeHotkey,
+                        newCountUpHotkey,
+                        newCountdownHotkey,
+                        newPomodoroHotkey,
+                        newToggleVisibilityHotkey,
+                        newEditModeHotkey,
+                        newPauseResumeHotkey,
+                        newRestartTimerHotkey
+                    };
+                    
+                    const char* hotkeyNames[8] = {
+                        "显示当前时间",
+                        "正计时",
+                        "默认倒计时",
+                        "开始番茄钟",
+                        "隐藏/显示窗口",
+                        "进入编辑模式",
+                        "暂停/继续计时",
+                        "重新开始计时"
+                    };
+                    
+                    // 逐一比较热键，检查冲突
+                    for (int i = 0; i < 8; i++) {
+                        if (hotkeyArray[i] == 0) continue; // 跳过未设置的热键
+                        
+                        for (int j = i + 1; j < 8; j++) {
+                            if (hotkeyArray[j] == 0) continue; // 跳过未设置的热键
+                            
+                            if (hotkeyArray[i] == hotkeyArray[j]) {
+                                hasConflict = TRUE;
+                                
+                                // 添加冲突信息
+                                char conflictPair[128];
+                                sprintf(conflictPair, "%s 与 %s\n", hotkeyNames[i], hotkeyNames[j]);
+                                strcat(conflictMsg, conflictPair);
+                                conflictCount++;
+                                
+                                // 最多显示5个冲突
+                                if (conflictCount >= 5) break;
+                            }
+                        }
+                        
+                        if (conflictCount >= 5) break;
+                    }
+                    
+                    if (hasConflict) {
                         // 显示热键冲突警告
-                        MessageBoxW(hwndDlg, 
-                                   GetLocalizedString(L"热键设置冲突，请设置不同的热键。", 
-                                                     L"Hotkey conflict detected. Please set different hotkeys."),
-                                   GetLocalizedString(L"热键冲突", L"Hotkey Conflict"),
-                                   MB_ICONWARNING | MB_OK);
+                        MessageBoxA(hwndDlg, conflictMsg, "热键冲突", MB_ICONWARNING | MB_OK);
                         return TRUE;
                     }
                     
                     // 使用新的函数保存热键设置到配置文件
-                    WriteConfigHotkeys(newShowTimeHotkey, newCountUpHotkey, newCountdownHotkey);
+                    WriteConfigHotkeys(newShowTimeHotkey, newCountUpHotkey, newCountdownHotkey,
+                                      newPomodoroHotkey, newToggleVisibilityHotkey, newEditModeHotkey,
+                                      newPauseResumeHotkey, newRestartTimerHotkey);
                     
                     // 通知主窗口热键设置已更改，需要重新注册
                     PostMessage(GetParent(hwndDlg), WM_APP+1, 0, 0);
