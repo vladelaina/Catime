@@ -8,6 +8,19 @@
 
 #include <windows.h>
 #include <commctrl.h>
+#include <strsafe.h>
+#include <windowsx.h>
+#include <wchar.h>
+// Windows通用控件版本6（用于子类化）
+#if defined _M_IX86
+#pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='x86' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#elif defined _M_IA64
+#pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='ia64' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#elif defined _M_X64
+#pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='amd64' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#else
+#pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#endif
 #include "../include/hotkey.h"
 #include "../include/language.h"
 #include "../include/config.h"
@@ -201,6 +214,14 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
             // 临时注销所有热键，以便用户可以立即测试新的热键设置
             UnregisterGlobalHotkeys(GetParent(hwndDlg));
             
+            // 为所有热键编辑控件设置子类处理函数
+            for (int i = IDC_HOTKEY_EDIT1; i <= IDC_HOTKEY_EDIT11; i++) {
+                HWND hHotkeyCtrl = GetDlgItem(hwndDlg, i);
+                if (hHotkeyCtrl) {
+                    SetWindowSubclass(hHotkeyCtrl, HotkeyControlSubclassProc, i, 0);
+                }
+            }
+            
             return TRUE;
         }
         
@@ -362,8 +383,63 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                 DeleteObject(hButtonBrush);
                 hButtonBrush = NULL;
             }
+            
+            // 移除所有热键编辑控件的子类处理函数
+            for (int i = IDC_HOTKEY_EDIT1; i <= IDC_HOTKEY_EDIT11; i++) {
+                HWND hHotkeyCtrl = GetDlgItem(hwndDlg, i);
+                if (hHotkeyCtrl) {
+                    RemoveWindowSubclass(hHotkeyCtrl, HotkeyControlSubclassProc, i);
+                }
+            }
             break;
     }
     
     return FALSE;
+}
+
+/**
+ * @brief 热键控件子类化处理函数
+ * @param hwnd 热键控件窗口句柄
+ * @param uMsg 消息类型
+ * @param wParam 消息参数
+ * @param lParam 消息参数
+ * @param uIdSubclass 子类ID
+ * @param dwRefData 引用数据
+ * @return LRESULT 消息处理结果
+ * 
+ * 处理热键控件的消息，特别是拦截Alt键和Alt+Shift组合键
+ * 防止Windows系统发出提示音
+ */
+LRESULT CALLBACK HotkeyControlSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, 
+                                         LPARAM lParam, UINT_PTR uIdSubclass, 
+                                         DWORD_PTR dwRefData) {
+    switch (uMsg) {
+        case WM_GETDLGCODE:
+            // 告诉Windows我们要处理所有键盘输入，包括Alt和菜单键
+            return DLGC_WANTALLKEYS | DLGC_WANTCHARS;
+            
+        case WM_SYSKEYDOWN:
+        case WM_SYSKEYUP:
+            // 处理Alt键和Alt+Shift等组合键，防止系统发出提示音
+            if (wParam == VK_MENU || wParam == VK_SHIFT || 
+                wParam == VK_CONTROL || wParam == VK_LWIN || wParam == VK_RWIN) {
+                // 正常处理这些键，但阻止默认的系统音效
+                return 0;
+            }
+            break;
+            
+        case WM_KEYDOWN:
+            // 处理正常按键，但当与Alt组合时要特殊处理
+            if (GetKeyState(VK_MENU) < 0) {
+                // Alt键被按下的情况
+                if (wParam == VK_SHIFT || wParam == VK_CONTROL) {
+                    // 阻止Alt+Shift和Alt+Ctrl组合键的系统提示音
+                    return 0;
+                }
+            }
+            break;
+    }
+    
+    // 对于其他所有消息，调用原始的窗口过程
+    return DefSubclassProc(hwnd, uMsg, wParam, lParam);
 } 

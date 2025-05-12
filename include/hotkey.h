@@ -31,4 +31,21 @@ void ShowHotkeySettingsDialog(HWND hwndParent);
  */
 INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 
+/**
+ * @brief 热键控件子类化处理函数
+ * @param hwnd 热键控件窗口句柄
+ * @param uMsg 消息类型
+ * @param wParam 消息参数
+ * @param lParam 消息参数
+ * @param uIdSubclass 子类ID
+ * @param dwRefData 引用数据
+ * @return LRESULT 消息处理结果
+ * 
+ * 处理热键控件的消息，特别是拦截Alt键和Alt+Shift组合键
+ * 防止Windows系统发出提示音
+ */
+LRESULT CALLBACK HotkeyControlSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, 
+                                         LPARAM lParam, UINT_PTR uIdSubclass, 
+                                         DWORD_PTR dwRefData);
+
 #endif // HOTKEY_H 
