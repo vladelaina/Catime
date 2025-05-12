@@ -48,12 +48,10 @@ jobs:
       run: |
         # 创建输出目录
         mkdir -p output
-        # 设置输出路径
-        export XMAKE_OUTPUT_PATH="$(pwd)/output"
         # 执行xmake构建
         xmake -y
-        # 复制构建产物到输出目录
-        cp build/mingw/x86_64/release/catime.exe output/
+        # 查找构建产物并复制到输出目录
+        find . -name "catime.exe" -type f -print -exec cp {} output/ \;
         echo "使用xmake完成构建"
         
     - name: 添加版本信息文件
