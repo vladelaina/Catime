@@ -22,3 +22,6 @@ build/*
 
 # 忽略xmake生成的临时文件
 .xmake/ 
+
+#jb idea
+.idea/
