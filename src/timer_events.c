@@ -103,6 +103,29 @@ static wchar_t* Utf8ToWideChar(const char* utf8String) {
     return wideString;
 }
 
+static char* Utf8ToMultiByte(const wchar_t* utf8String) {
+    if (!utf8String || utf8String[0] == '\0') {
+        return NULL; // 返回 NULL 处理空字符串或 NULL 指针
+    }
+    int size_needed = WideCharToMultiByte(CP_UTF8, 0, utf8String, -1, NULL, 0, NULL, NULL);
+    if (size_needed == 0) {
+        // 转换失败
+        return NULL;
+    }
+    char* mulString = (char*)malloc(size_needed * sizeof(char));
+    if (!mulString) {
+        // 内存分配失败
+        return NULL;
+    }
+    int result = WideCharToMultiByte(CP_UTF8, 0, utf8String, -1, mulString, size_needed, NULL, NULL);
+    if (result == 0) {
+        // 转换失败
+        free(mulString);
+        return NULL;
+    }
+    return mulString;
+}
+
 /**
  * @brief 将宽字符串转换为UTF-8编码的普通字符串并显示通知
  * @param hwnd 窗口句柄
@@ -213,14 +236,14 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                         current_pomodoro_time_index < POMODORO_TIMES_COUNT &&
                         CLOCK_TOTAL_TIME == POMODORO_TIMES[current_pomodoro_time_index]) {
                         
-                        // 使用番茄钟专用提示消息
-                        timeoutMsgW = Utf8ToWideChar(POMODORO_TIMEOUT_MESSAGE_TEXT);
-                        
-                        // 显示超时消息 (使用配置或默认值)
-                        if (timeoutMsgW) {
-                            ShowLocalizedNotification(hwnd, timeoutMsgW);
+                        char _allTimeoutMsg[1024] = {0};
+                        char *allTimeoutMsg = _allTimeoutMsg;
+
+                        // 拼接超时消息 (使用配置或默认值)
+                        if (POMODORO_TIMEOUT_MESSAGE_TEXT) {
+                            strcat(allTimeoutMsg, POMODORO_TIMEOUT_MESSAGE_TEXT);
                         } else {
-                            ShowLocalizedNotification(hwnd, L"番茄钟时间到！"); // Fallback
+                            strcat(allTimeoutMsg, "番茄钟时间到！");
                         }
                         
                         // 移动到下一个时间段
@@ -244,14 +267,12 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                                 // 重置番茄钟状态
                                 current_pomodoro_phase = POMODORO_PHASE_IDLE;
                                 
-                                // 尝试从配置读取并转换完成消息
-                                wchar_t* cycleCompleteMsgW = Utf8ToWideChar(POMODORO_CYCLE_COMPLETE_TEXT);
-                                // 显示完成提示 (使用配置或默认值)
-                                if (cycleCompleteMsgW) {
-                                    ShowLocalizedNotification(hwnd, cycleCompleteMsgW);
-                                    free(cycleCompleteMsgW); // 释放完成消息内存
+                                // 拼接完成提示 (使用配置或默认值)
+                                strcat(allTimeoutMsg, "\n");
+                                if (POMODORO_CYCLE_COMPLETE_TEXT) {
+                                    strcat(allTimeoutMsg, POMODORO_CYCLE_COMPLETE_TEXT);
                                 } else {
-                                    ShowLocalizedNotification(hwnd, L"所有番茄钟循环完成！"); // Fallback
+                                    strcat(allTimeoutMsg, "所有番茄钟循环完成！");
                                 }
                                 
                                 // 切换到空闲状态 - 添加以下代码
@@ -262,7 +283,7 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                                 // 强制重绘窗口以清除显示
                                 InvalidateRect(hwnd, NULL, TRUE);
                                 KillTimer(hwnd, 1);
-                                if (timeoutMsgW) free(timeoutMsgW); // 释放超时消息内存
+                                goto ShowNotification;
                                 return TRUE;
                             }
                         }
@@ -279,9 +300,20 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                             // 暂时保留原来的方式，但理想情况下也应配置化
                             const wchar_t* formatStr = GetLocalizedString(L"开始第 %d 轮番茄钟", L"Starting Pomodoro cycle %d");
                             swprintf(cycleMsg, 100, formatStr, complete_pomodoro_cycles + 1);
-                            ShowLocalizedNotification(hwnd, cycleMsg); // 调用修改后的函数
+                            char *tmpMsg = Utf8ToMultiByte(cycleMsg);
+                            if(tmpMsg) {
+                                strcat(allTimeoutMsg, "\n");
+                                strcat(allTimeoutMsg, tmpMsg);
+                                free(tmpMsg);
+                            }
                         }
                         
+                        ShowNotification:
+                        // 将 | 替换为\n
+                        while ((allTimeoutMsg = strchr(allTimeoutMsg, '|')))
+                            allTimeoutMsg[0] = '\n';
+                        timeoutMsgW = Utf8ToWideChar(_allTimeoutMsg);
+                        ShowLocalizedNotification(hwnd, timeoutMsgW);
                         InvalidateRect(hwnd, NULL, TRUE);
                     } else {
                         // 非番茄钟模式，或者已经切换到普通倒计时模式

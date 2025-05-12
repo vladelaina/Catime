@@ -45,12 +45,18 @@ void DrawRoundedRectangle(HDC hdc, RECT rect, int radius);
  * @param font 使用的字体
  * @return int 文本绘制所需的宽度(像素)
  */
-int CalculateTextWidth(HDC hdc, const wchar_t* text, HFONT font) {
+SIZE CalculateTextWidth(HDC hdc, const wchar_t* text, HFONT font) {
     HFONT oldFont = (HFONT)SelectObject(hdc, font);
     SIZE textSize;
-    GetTextExtentPoint32W(hdc, text, wcslen(text), &textSize);
+    RECT rect = { 0, 0, 0, 0 };
+    SystemParametersInfo(SPI_GETWORKAREA, 0, &rect, 0);
+    int resu = DrawTextW(hdc, text, -1, &rect, DT_CALCRECT | DT_LEFT | DT_TOP | DT_WORDBREAK);
+    //GetTextExtentPoint32W(hdc, text, wcslen(text), &textSize);
+    textSize.cx = rect.right - rect.left;
+    textSize.cy = rect.bottom - rect.top;
+    
     SelectObject(hdc, oldFont);
-    return textSize.cx;
+    return textSize;
 }
 
 /**
@@ -199,14 +205,15 @@ void ShowToastNotification(HWND hwnd, const char* message) {
     MultiByteToWideChar(CP_UTF8, 0, message, -1, wmessage, wlen);
     
     // 计算文本需要的宽度
-    HDC hdc = GetDC(hwnd);
+    HDC hdc = GetDC(0);
     HFONT contentFont = CreateFontW(20, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
                                  DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
                                  DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei");
     
     // 计算文本宽度并添加边距
-    int textWidth = CalculateTextWidth(hdc, wmessage, contentFont);
-    int notificationWidth = textWidth + 40; // 左右各20像素边距
+    SIZE rectSize = CalculateTextWidth(hdc, wmessage, contentFont);
+    int notificationWidth = rectSize.cx + 40; // 左右各20像素边距
+    int notificationHeight = rectSize.cy + 30 + 22; // 22是catime标题高度
     
     // 确保宽度在允许范围内
     if (notificationWidth < NOTIFICATION_MIN_WIDTH) 
@@ -222,7 +229,7 @@ void ShowToastNotification(HWND hwnd, const char* message) {
     SystemParametersInfo(SPI_GETWORKAREA, 0, &workArea, 0);
     
     int x = workArea.right - notificationWidth - 20;
-    int y = workArea.bottom - NOTIFICATION_HEIGHT - 20;
+    int y = workArea.bottom - notificationHeight - 20;
     
     // 创建通知窗口，添加图层支持以实现透明效果
     HWND hNotification = CreateWindowExW(
@@ -231,7 +238,7 @@ void ShowToastNotification(HWND hwnd, const char* message) {
         L"Catime 通知",  // 窗口标题(不可见)
         WS_POPUP,        // 无边框弹出窗口样式
         x, y,            // 屏幕右下角位置
-        notificationWidth, NOTIFICATION_HEIGHT,
+        notificationWidth, notificationHeight,
         NULL, NULL, hInstance, NULL
     );
     
@@ -351,8 +358,9 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             const wchar_t* message = (const wchar_t*)GetPropW(hwnd, L"MessageText");
             if (message) {
                 RECT textRect = {15, 35, clientRect.right - 15, clientRect.bottom - 10};
-                // 使用DT_SINGLELINE|DT_END_ELLIPSIS确保文本在一行内显示，过长时使用省略号
-                DrawTextW(memDC, message, -1, &textRect, DT_SINGLELINE|DT_END_ELLIPSIS);
+                // 使用DT_WORDBREAK可以绘制多行文字
+                DrawTextW(memDC, message, -1, &textRect, DT_CALCRECT | DT_LEFT | DT_TOP | DT_WORDBREAK);
+                DrawTextW(memDC, message, -1, &textRect, DT_LEFT | DT_TOP | DT_WORDBREAK);
             }
             
             // 将内存DC中的内容复制到窗口DC
