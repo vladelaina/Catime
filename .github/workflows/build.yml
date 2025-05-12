@@ -31,9 +31,12 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y mingw-w64
         
-    - name: 创建构建目录
-      run: mkdir -p build
-      
+    - name: 安装XMake
+      run: |
+        bash <(curl -fsSL https://xmake.io/shget.text)
+        source ~/.xmake/profile
+        xmake --version
+        
     - name: 提取版本号
       id: get_version
       run: |
@@ -43,15 +46,15 @@ jobs:
       
     - name: 编译应用程序
       run: |
-        # 修改Makefile中的输出目录为当前工作区
-        export OUTPUT_PATH="$(pwd)/output"
-        export TERM=xterm-256color
-        sed -i "s|OUTPUT_DIR = ./bin|OUTPUT_DIR = $OUTPUT_PATH|g" Makefile
         # 创建输出目录
         mkdir -p output
-        # 执行构建，使用多线程编译提高速度
-        make -j$(nproc) all
-        echo "使用了 $(nproc) 个核心进行并行编译"
+        # 设置输出路径
+        export XMAKE_OUTPUT_PATH="$(pwd)/output"
+        # 执行xmake构建
+        xmake -y
+        # 复制构建产物到输出目录
+        cp build/mingw/x86_64/release/catime.exe output/
+        echo "使用xmake完成构建"
         
     - name: 添加版本信息文件
       run: |
