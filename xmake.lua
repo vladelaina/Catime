@@ -154,8 +154,8 @@ after_build(function (target)
     local size_after_kb = math.floor(size_after / 1024)
     
     -- 改变显示格式，使用与Makefile类似的格式但不尝试显示百分比符号
-    print("\x1b[32m[" .. " 99%]:\x1b[0m Compressed: " .. size_before_kb .. "KiB → " .. size_after_kb .. "KiB")
-    print("\x1b[32m[" .. " 99%]:\x1b[0m \x1b[32m" .. "输出目录: ./bin" .. "\x1b[0m")
+    print("\x1b[38;2;0;255;0m[" .. " 99%]:\x1b[0m Compressed: " .. size_before_kb .. "KiB → " .. size_after_kb .. "KiB")
+    print("\x1b[38;2;0;255;0m[" .. " 99%]:\x1b[0m " .. "Output directory: ./bin")
 end)
 
 -- 自定义菜单
