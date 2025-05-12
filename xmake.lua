@@ -155,10 +155,9 @@ after_build(function (target)
     local size_after = os.filesize(targetfile)
     local size_before_kb = math.floor(size_before / 1024)
     local size_after_kb = math.floor(size_after / 1024)
-    local ratio = size_before > 0 and math.floor((size_after * 100) / size_before) or 100
     
     -- 改变显示格式，使用与Makefile类似的格式但不尝试显示百分比符号
-    print("Compressed: " .. size_before_kb .. "KiB -> " .. size_after_kb .. "KiB (" .. ratio .. ")")
+    print("Compressed: " .. size_before_kb .. "KiB -> " .. size_after_kb .. "KiB")
     print("\x1b[32m" .. "构建完成! 输出目录: bin" .. "\x1b[0m")
 end)
 
