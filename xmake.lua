@@ -50,14 +50,14 @@ target("catime")
         print("")
         
         -- 显示初始进度条
-        local bar_width = 40
-        local filled_char = "█"
-        local empty_char = "░"
-        local empty_bar = string.rep(empty_char, bar_width)
+        -- local bar_width = 40
+        -- local filled_char = "█"
+        -- local empty_char = "░"
+        -- local empty_bar = string.rep(empty_char, bar_width)
         
-        print("\x1b[34m" .. "开始构建..." .. "\x1b[0m")
-        io.write(string.format("\r\x1b[90mProgress: [\x1b[0m\x1b[90m%s\x1b[0m\x1b[90m] %3d%% Complete\x1b[0m", empty_bar, 0))
-        io.flush()
+        -- print("\x1b[34m" .. "开始构建..." .. "\x1b[0m")
+        -- io.write(string.format("\r\x1b[90mProgress: [\x1b[0m\x1b[90m%s\x1b[0m\x1b[90m] %3d%% Complete\x1b[0m", empty_bar, 0))
+        -- io.flush()
     end)
     
     -- 在每个文件编译后更新进度
@@ -100,8 +100,8 @@ after_build(function (target)
     local empty_char = "░"
     local full_bar = string.rep(filled_char, bar_width)
     
-    io.write(string.format("\r\x1b[90mProgress: [\x1b[0m\x1b[90m%s\x1b[0m\x1b[90m] %3d%% Complete\x1b[0m\n", full_bar, 100))
-    io.flush()
+    -- io.write(string.format("\r\x1b[90mProgress: [\x1b[0m\x1b[90m%s\x1b[0m\x1b[90m] %3d%% Complete\x1b[0m\n", full_bar, 100))
+    -- io.flush()
     
     -- 压缩可执行文件
     print("\x1b[34m" .. "正在压缩可执行文件..." .. "\x1b[0m")
