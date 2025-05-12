@@ -2217,6 +2217,10 @@ void ToggleEditMode(HWND hwnd) {
         
         // 禁用点击穿透
         SetClickThrough(hwnd, FALSE);
+        
+        // 确保窗口可见，并显示在前台
+        ShowWindow(hwnd, SW_SHOW);
+        SetForegroundWindow(hwnd);
     } else {
         // 移除模糊效果
         SetBlurBehind(hwnd, FALSE);
