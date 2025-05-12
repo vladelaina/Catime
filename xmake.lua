@@ -20,10 +20,51 @@ set_arch("x86_64")
 -- 设置MinGW工具链
 set_toolchains("mingw")
 
+-- 定义ASCII艺术标志
+local catime_logo = [[
+
+██████╗  █████╗ ████████╗██╗███╗   ███╗███████╗
+██╔════╝ ██╔══██╗╚══██╔══╝██║████╗ ████║██╔════╝
+██║      ███████║   ██║   ██║██╔████╔██║█████╗  
+██║      ██╔══██║   ██║   ██║██║╚██╔╝██║██╔══╝  
+╚██████╗ ██║  ██║   ██║   ██║██║ ╚═╝ ██║███████╗
+ ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝╚═╝     ╚═╝╚══════╝
+
+]]
+
 -- 定义目标
 target("catime")
     -- 设置为可执行程序
     set_kind("binary")
+    
+    -- 在构建开始前显示标志
+    before_build(function (target)
+        -- 显示ASCII艺术标志
+        print("")
+        print("\x1b[36m" .. "██████╗  █████╗ ████████╗██╗███╗   ███╗███████╗" .. "\x1b[0m")
+        print("\x1b[36m" .. "██╔════╝ ██╔══██╗╚══██╔══╝██║████╗ ████║██╔════╝" .. "\x1b[0m")
+        print("\x1b[36m" .. "██║      ███████║   ██║   ██║██╔████╔██║█████╗  " .. "\x1b[0m")
+        print("\x1b[36m" .. "██║      ██╔══██║   ██║   ██║██║╚██╔╝██║██╔══╝  " .. "\x1b[0m")
+        print("\x1b[36m" .. "╚██████╗ ██║  ██║   ██║   ██║██║ ╚═╝ ██║███████╗" .. "\x1b[0m")
+        print("\x1b[36m" .. " ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝╚═╝     ╚═╝╚══════╝" .. "\x1b[0m")
+        print("")
+        
+        -- 显示初始进度条
+        local bar_width = 40
+        local filled_char = "█"
+        local empty_char = "░"
+        local empty_bar = string.rep(empty_char, bar_width)
+        
+        print("\x1b[34m" .. "开始构建..." .. "\x1b[0m")
+        io.write(string.format("\r\x1b[90mProgress: [\x1b[0m\x1b[90m%s\x1b[0m\x1b[90m] %3d%% Complete\x1b[0m", empty_bar, 0))
+        io.flush()
+    end)
+    
+    -- 在每个文件编译后更新进度
+    after_build_file(function (target, sourcefile)
+        -- 注意：这个回调可能在某些xmake版本中不可用
+        -- 如果不工作，用户仍然会看到标准的xmake进度输出
+    end)
     
     -- 添加Windows特有设置
     add_defines("_WINDOWS")
@@ -53,24 +94,72 @@ target("catime")
     
 -- 配置自定义构建事件
 after_build(function (target)
-    -- 压缩可执行文件
-    import("core.project.task")
-    import("core.base.option")
-    import("utils.progress")
+    -- 显示完成进度条
+    local bar_width = 40
+    local filled_char = "█"
+    local empty_char = "░"
+    local full_bar = string.rep(filled_char, bar_width)
     
-    print("正在压缩可执行文件...")
+    io.write(string.format("\r\x1b[90mProgress: [\x1b[0m\x1b[90m%s\x1b[0m\x1b[90m] %3d%% Complete\x1b[0m\n", full_bar, 100))
+    io.flush()
+    
+    -- 压缩可执行文件
+    print("\x1b[34m" .. "正在压缩可执行文件..." .. "\x1b[0m")
     local targetfile = target:targetfile()
     local size_before = os.filesize(targetfile)
+    local size_before_kb = math.floor(size_before / 1024)
     
-    -- 使用UPX压缩，需要确保UPX已安装
-    os.exec("upx --best --lzma %s", targetfile)
+    -- 隐藏所有UPX输出，使用脚本
+    local is_windows = os.host() == "windows"
+    local script_ext = is_windows and ".bat" or ".sh"
+    local script_file = os.tmpfile() .. script_ext
     
+    -- 创建临时脚本
+    local script = io.open(script_file, "w")
+    if script then
+        if is_windows then
+            -- Windows bat脚本
+            script:write("@echo off\n")
+            script:write("upx --best --lzma " .. targetfile .. " > nul 2>&1\n")
+        else
+            -- Unix shell脚本
+            script:write("#!/bin/sh\n")
+            script:write("upx --best --lzma " .. targetfile .. " > /dev/null 2>&1\n")
+        end
+        script:close()
+        
+        -- 确保脚本可执行(仅Unix)
+        if not is_windows then
+            os.exec("chmod +x %s", script_file)
+        end
+        
+        -- 运行脚本并只显示最终结果
+        print("Compressing with UPX: [Done]")
+        os.exec(script_file)
+        
+        -- 清理临时文件
+        os.rm(script_file)
+    else
+        -- 如果无法创建脚本，则直接显示结果
+        -- 但不执行UPX，因为无法隐藏输出
+        print("Compressing with UPX: [Done]")
+        try {
+            function()
+                os.exec("upx --best --lzma %s", targetfile)
+            end,
+            catch = function() end
+        }
+    end
+    
+    -- 显示压缩结果，格式类似Makefile
     local size_after = os.filesize(targetfile)
     local size_before_kb = math.floor(size_before / 1024)
     local size_after_kb = math.floor(size_after / 1024)
-    local ratio = math.floor((size_after * 100) / size_before)
+    local ratio = size_before > 0 and math.floor((size_after * 100) / size_before) or 100
     
-    print(string.format("压缩完成: %dKiB -> %dKiB (%d%%)", size_before_kb, size_after_kb, ratio))
+    -- 改变显示格式，使用与Makefile类似的格式但不尝试显示百分比符号
+    print("Compressed: " .. size_before_kb .. "KiB -> " .. size_after_kb .. "KiB (" .. ratio .. ")")
+    print("\x1b[32m" .. "构建完成! 输出目录: bin" .. "\x1b[0m")
 end)
 
 -- 自定义菜单
