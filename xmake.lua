@@ -86,7 +86,7 @@ target("catime")
     end
     
     -- 设置输出目录
-    set_targetdir("bin")
+    set_targetdir("$(buildir)")
     set_objectdir("build")
     
     -- 添加miniaudio实现定义
@@ -155,7 +155,7 @@ after_build(function (target)
     
     -- 改变显示格式，使用与Makefile类似的格式但不尝试显示百分比符号
     print("\x1b[38;2;0;255;0m[" .. " 99%]:\x1b[0m Compressed: " .. size_before_kb .. "KiB → " .. size_after_kb .. "KiB")
-    print("\x1b[38;2;0;255;0m[" .. " 99%]:\x1b[0m " .. "Output directory: ./bin")
+    print("\x1b[38;2;0;255;0m[" .. " 99%]:\x1b[0m " .. "Output directory: " .. target:targetdir())
 end)
 
 -- 自定义菜单
