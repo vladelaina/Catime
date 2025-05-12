@@ -104,7 +104,6 @@ after_build(function (target)
     -- io.flush()
     
     -- 压缩可执行文件
-    print("\x1b[34m" .. "正在压缩可执行文件..." .. "\x1b[0m")
     local targetfile = target:targetfile()
     local size_before = os.filesize(targetfile)
     local size_before_kb = math.floor(size_before / 1024)
@@ -134,7 +133,6 @@ after_build(function (target)
         end
         
         -- 运行脚本并只显示最终结果
-        print("Compressing with UPX: [Done]")
         os.exec(script_file)
         
         -- 清理临时文件
@@ -142,7 +140,6 @@ after_build(function (target)
     else
         -- 如果无法创建脚本，则直接显示结果
         -- 但不执行UPX，因为无法隐藏输出
-        print("Compressing with UPX: [Done]")
         try {
             function()
                 os.exec("upx --best --lzma %s", targetfile)
@@ -157,8 +154,8 @@ after_build(function (target)
     local size_after_kb = math.floor(size_after / 1024)
     
     -- 改变显示格式，使用与Makefile类似的格式但不尝试显示百分比符号
-    print("Compressed: " .. size_before_kb .. "KiB -> " .. size_after_kb .. "KiB")
-    print("\x1b[32m" .. "构建完成! 输出目录: bin" .. "\x1b[0m")
+    print("\x1b[32m[" .. " 99%]:\x1b[0m Compressed: " .. size_before_kb .. "KiB → " .. size_after_kb .. "KiB")
+    print("\x1b[32m[" .. " 99%]:\x1b[0m \x1b[32m" .. "输出目录: ./bin" .. "\x1b[0m")
 end)
 
 -- 自定义菜单
