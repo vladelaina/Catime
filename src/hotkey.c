@@ -441,6 +441,17 @@ LRESULT CALLBACK HotkeyControlSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam,
                     return 0;
                 }
             }
+            
+            // 处理回车键 - 当按下回车时模拟点击确定按钮
+            if (wParam == VK_RETURN) {
+                // 获取父对话框句柄
+                HWND hwndDlg = GetParent(hwnd);
+                if (hwndDlg) {
+                    // 发送模拟点击确定按钮的消息
+                    SendMessage(hwndDlg, WM_COMMAND, MAKEWPARAM(IDOK, BN_CLICKED), (LPARAM)GetDlgItem(hwndDlg, IDOK));
+                    return 0;
+                }
+            }
             break;
     }
     
