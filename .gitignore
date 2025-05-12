@@ -1,3 +1,4 @@
+.xmake/*
 # 忽略build文件夹中的所有内容，但保留目录本身
 build/*
 !build/.gitkeep
