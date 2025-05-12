@@ -34,6 +34,11 @@
 #define HOTKEYF_ALT     0x04
 #endif
 
+// 添加一个变量跟踪最近是否发生了热键冲突
+static BOOL g_hasRecentHotkeyConflict = FALSE;
+// 记录最后一个编辑的热键控件ID
+static int g_lastEditedHotkeyCtrl = 0;
+
 /**
  * @brief 显示热键设置对话框
  * @param hwndParent 父窗口句柄
@@ -152,6 +157,10 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
     
     switch (msg) {
         case WM_INITDIALOG: {
+            // 初始化热键冲突追踪变量
+            g_hasRecentHotkeyConflict = FALSE;
+            g_lastEditedHotkeyCtrl = 0;
+            
             // 设置对话框置顶
             SetWindowPos(hwndDlg, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
             
@@ -248,6 +257,48 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
             return (INT_PTR)hButtonBrush;
         }
         
+        case WM_LBUTTONDOWN: {
+            // 获取鼠标点击坐标
+            POINT pt = {LOWORD(lParam), HIWORD(lParam)};
+            HWND hwndHit = ChildWindowFromPoint(hwndDlg, pt);
+            
+            // 如果刚刚发生了热键冲突，保持焦点在当前编辑的热键控件上
+            if (g_hasRecentHotkeyConflict && g_lastEditedHotkeyCtrl != 0) {
+                // 设置焦点回到最后编辑的热键控件
+                SetFocus(GetDlgItem(hwndDlg, g_lastEditedHotkeyCtrl));
+                g_hasRecentHotkeyConflict = FALSE; // 重置标志
+                return TRUE;
+            }
+            
+            // 如果点击的不是对话框本身，而是某个控件
+            if (hwndHit != NULL && hwndHit != hwndDlg) {
+                // 获取控件ID
+                int ctrlId = GetDlgCtrlID(hwndHit);
+                
+                // 检查点击的是否为热键输入框
+                BOOL isHotkeyEdit = FALSE;
+                for (int i = IDC_HOTKEY_EDIT1; i <= IDC_HOTKEY_EDIT11; i++) {
+                    if (ctrlId == i) {
+                        isHotkeyEdit = TRUE;
+                        break;
+                    }
+                }
+                
+                // 如果点击的不是热键输入框控件，则清除焦点
+                if (!isHotkeyEdit) {
+                    // 将焦点设置到静态文本控件上
+                    SetFocus(GetDlgItem(hwndDlg, IDC_HOTKEY_NOTE));
+                }
+            } 
+            // 如果点击的是对话框本身（空白区域）
+            else if (hwndHit == hwndDlg) {
+                // 将焦点设置到静态文本控件上
+                SetFocus(GetDlgItem(hwndDlg, IDC_HOTKEY_NOTE));
+                return TRUE;
+            }
+            break;
+        }
+        
         case WM_COMMAND: {
             // 检测热键控件通知消息
             WORD ctrlId = LOWORD(wParam);
@@ -261,6 +312,9 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                  ctrlId == IDC_HOTKEY_EDIT7 || ctrlId == IDC_HOTKEY_EDIT8 ||
                  ctrlId == IDC_HOTKEY_EDIT9 || ctrlId == IDC_HOTKEY_EDIT10 ||
                  ctrlId == IDC_HOTKEY_EDIT11)) {
+                
+                // 记录当前正在编辑的热键控件ID
+                g_lastEditedHotkeyCtrl = ctrlId;
                 
                 // 获取当前控件的热键值
                 WORD newHotkey = (WORD)SendDlgItemMessage(hwndDlg, ctrlId, HKM_GETHOTKEY, 0, 0);
@@ -282,6 +336,9 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                     SendDlgItemMessage(hwndDlg, ctrlId, HKM_SETHOTKEY, 0, 0);
                     return TRUE;
                 }
+                
+                // 初始化热键冲突标志为false
+                g_hasRecentHotkeyConflict = FALSE;
                 
                 // 如果热键为0（无），则不需要检查冲突
                 if (newHotkey != 0) {
@@ -307,6 +364,8 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                         if (otherHotkey != 0 && otherHotkey == newHotkey) {
                             // 发现冲突，清除旧的热键（设置为0，即"无"）
                             SendDlgItemMessage(hwndDlg, hotkeyCtrlIds[i], HKM_SETHOTKEY, 0, 0);
+                            // 设置热键冲突标志
+                            g_hasRecentHotkeyConflict = TRUE;
                         }
                     }
                 }
@@ -363,6 +422,10 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                     // 通知主窗口热键设置已更改，需要重新注册
                     PostMessage(GetParent(hwndDlg), WM_APP+1, 0, 0);
                     
+                    // 重置热键冲突跟踪变量
+                    g_hasRecentHotkeyConflict = FALSE;
+                    g_lastEditedHotkeyCtrl = 0;
+                    
                     // 关闭对话框
                     EndDialog(hwndDlg, IDOK);
                     return TRUE;
@@ -371,6 +434,11 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                 case IDCANCEL:
                     // 重新注册原有的热键
                     PostMessage(GetParent(hwndDlg), WM_APP+1, 0, 0);
+                    
+                    // 重置热键冲突跟踪变量
+                    g_hasRecentHotkeyConflict = FALSE;
+                    g_lastEditedHotkeyCtrl = 0;
+                    
                     EndDialog(hwndDlg, IDCANCEL);
                     return TRUE;
             }
