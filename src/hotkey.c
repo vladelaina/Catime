@@ -222,7 +222,11 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                 }
             }
             
-            return TRUE;
+            // 阻止对话框自动设置焦点到第一个输入控件
+            // 这样对话框打开时就不会突然进入输入状态
+            SetFocus(GetDlgItem(hwndDlg, IDCANCEL));
+            
+            return FALSE;  // 返回FALSE表示我们已手动设置了焦点，不需要系统默认行为
         }
         
         case WM_CTLCOLORDLG:
