@@ -19,3 +19,6 @@ build/*
 # 忽略资源编译生成文件
 *.res
 *.aps 
+
+# 忽略xmake生成的临时文件
+.xmake/ 
