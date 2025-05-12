@@ -75,6 +75,9 @@ extern void RestartComputer(void);
 extern void SetTimeDisplay(void);
 extern void ShowCountUp(HWND hwnd);
 
+// 添加外部函数声明到文件开头或函数前
+extern void StopNotificationSound(void);
+
 /**
  * @brief 将 UTF-8 编码的 char* 字符串转换为 wchar_t* 字符串
  * @param utf8String 输入的 UTF-8 字符串
@@ -369,7 +372,6 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                             }
                             case TIMEOUT_ACTION_SHOW_TIME:
                                 // 停止任何正在播放的通知音频
-                                extern void StopNotificationSound(void);
                                 StopNotificationSound();
                                 
                                 // 切换到显示当前时间模式
@@ -381,7 +383,6 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                                 break;
                             case TIMEOUT_ACTION_COUNT_UP:
                                 // 停止任何正在播放的通知音频
-                                extern void StopNotificationSound(void);
                                 StopNotificationSound();
                                 
                                 // 切换到正计时模式并重置

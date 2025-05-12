@@ -2873,9 +2873,11 @@ void HotkeyToString(WORD hotkey, char* buffer, size_t bufferSize) {
             case VK_OEM_7:      strncat(buffer, "'", bufferSize - len - 1); break;
             default:            
                 // 对于其他未知键，使用十六进制表示
+                {
                 char keyName[8];
                 sprintf(keyName, "0x%02X", vk);
                 strncat(buffer, keyName, bufferSize - len - 1);
+                }
                 break;
         }
     }

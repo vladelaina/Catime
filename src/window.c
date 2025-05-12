@@ -17,9 +17,16 @@
 #include "../resource/resource.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <windows.h>
 
 // Forward declaration of WindowProcedure (defined in main.c)
 extern LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+// 添加SetProcessDPIAware函数的声明
+#ifndef _INC_WINUSER
+// 如果没有被windows.h包含，添加SetProcessDPIAware函数声明
+WINUSERAPI BOOL WINAPI SetProcessDPIAware(VOID);
+#endif
 
 // 窗口尺寸和位置变量
 int CLOCK_BASE_WINDOW_WIDTH = 200;

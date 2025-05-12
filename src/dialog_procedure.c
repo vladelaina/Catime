@@ -265,6 +265,12 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
             break;
 
         case WM_DESTROY:
+            // 恢复原始编辑框过程
+            {
+            HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
+            SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
+            
+            // 释放资源
             if (hBackgroundBrush) {
                 DeleteObject(hBackgroundBrush);
                 hBackgroundBrush = NULL;
@@ -277,9 +283,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                 DeleteObject(hButtonBrush);
                 hButtonBrush = NULL;
             }
-            // 恢复原始编辑框过程
-            HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
-            SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
+            }
             break;
     }
     return FALSE;
@@ -408,6 +412,14 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
     return FALSE;
 }
 
+// 添加DPI感知相关类型定义（如果编译器没有提供）
+#ifndef DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
+// DPI_AWARENESS_CONTEXT是一个HANDLE
+typedef HANDLE DPI_AWARENESS_CONTEXT;
+// 相关DPI上下文常量定义
+#define DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 ((DPI_AWARENESS_CONTEXT)-4)
+#endif
+
 // 显示关于对话框
 void ShowAboutDialog(HWND hwndParent) {
     // 如果已经存在关于对话框，先关闭它
@@ -420,8 +432,9 @@ void ShowAboutDialog(HWND hwndParent) {
     HANDLE hOldDpiContext = NULL;
     HMODULE hUser32 = GetModuleHandleA("user32.dll");
     if (hUser32) {
-        typedef DPI_AWARENESS_CONTEXT (WINAPI* GetThreadDpiAwarenessContextFunc)();
-        typedef DPI_AWARENESS_CONTEXT (WINAPI* SetThreadDpiAwarenessContextFunc)(DPI_AWARENESS_CONTEXT);
+        // 函数指针类型定义
+        typedef HANDLE (WINAPI* GetThreadDpiAwarenessContextFunc)(void);
+        typedef HANDLE (WINAPI* SetThreadDpiAwarenessContextFunc)(HANDLE);
         
         GetThreadDpiAwarenessContextFunc getThreadDpiAwarenessContextFunc = 
             (GetThreadDpiAwarenessContextFunc)GetProcAddress(hUser32, "GetThreadDpiAwarenessContext");
@@ -444,7 +457,7 @@ void ShowAboutDialog(HWND hwndParent) {
     
     // 恢复原来的DPI感知上下文
     if (hUser32 && hOldDpiContext) {
-        typedef DPI_AWARENESS_CONTEXT (WINAPI* SetThreadDpiAwarenessContextFunc)(DPI_AWARENESS_CONTEXT);
+        typedef HANDLE (WINAPI* SetThreadDpiAwarenessContextFunc)(HANDLE);
         SetThreadDpiAwarenessContextFunc setThreadDpiAwarenessContextFunc = 
             (SetThreadDpiAwarenessContextFunc)GetProcAddress(hUser32, "SetThreadDpiAwarenessContext");
         
@@ -600,8 +613,10 @@ INT_PTR CALLBACK PomodoroLoopDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPAR
 
         case WM_DESTROY:
             // 恢复原始编辑框过程
+            {
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
             SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)wpOrigLoopEditProc);
+            }
             break;
 
         case WM_CLOSE:
@@ -704,6 +719,7 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
             
         case WM_DESTROY:
             // 恢复原始编辑框过程
+            {
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
             SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
             
@@ -719,6 +735,7 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
             if (hButtonBrush) {
                 DeleteObject(hButtonBrush);
                 hButtonBrush = NULL;
+            }
             }
             break;
             
@@ -897,13 +914,24 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
             
         case WM_DESTROY:
             // 恢复原始编辑框过程
+            {
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
             SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
             
             // 释放资源
-            if (hBackgroundBrush) DeleteObject(hBackgroundBrush);
-            if (hEditBrush) DeleteObject(hEditBrush);
-            if (hButtonBrush) DeleteObject(hButtonBrush);
+            if (hBackgroundBrush) {
+                DeleteObject(hBackgroundBrush);
+                hBackgroundBrush = NULL;
+            }
+            if (hEditBrush) {
+                DeleteObject(hEditBrush);
+                hEditBrush = NULL;
+            }
+            if (hButtonBrush) {
+                DeleteObject(hButtonBrush);
+                hButtonBrush = NULL;
+            }
+            }
             break;
     }
     
@@ -1099,6 +1127,7 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             
         case WM_DESTROY:
             // 恢复原始窗口过程
+            {
             HWND hEdit1 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT1);
             HWND hEdit2 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT2);
             HWND hEdit3 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT3);
@@ -1111,6 +1140,7 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             
             if (hBackgroundBrush) DeleteObject(hBackgroundBrush);
             if (hEditBrush) DeleteObject(hEditBrush);
+            }
             break;
     }
     
@@ -1278,6 +1308,7 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
             
         case WM_DESTROY:
             // 恢复原始窗口过程
+            {
             HWND hEditTime = GetDlgItem(hwndDlg, IDC_NOTIFICATION_TIME_EDIT);
             HWND hEditOpacity = GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT);
             
@@ -1288,6 +1319,7 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
             
             if (hBackgroundBrush) DeleteObject(hBackgroundBrush);
             if (hEditBrush) DeleteObject(hEditBrush);
+            }
             break;
     }
     
