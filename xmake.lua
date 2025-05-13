@@ -62,6 +62,9 @@ target("catime")
     -- 添加头文件搜索路径
     add_includedirs("include", "libs/miniaudio")
     
+    -- 禁用某些警告选项
+    add_cxflags("-Wno-unknown-warning-option", {force = false})  -- 禁用未知警告的警告
+    
     -- 添加编译选项
     if is_mode("release") then
         add_cflags("-O3", "-mtune=generic", "-ffunction-sections", "-fdata-sections", "-fno-strict-aliasing")

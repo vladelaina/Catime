@@ -416,8 +416,13 @@ void ReadConfig() {
             
             size_t name_len = strlen(FONT_FILE_NAME);
             if (name_len > 4 && strcmp(FONT_FILE_NAME + name_len - 4, ".ttf") == 0) {
-                strncpy(FONT_INTERNAL_NAME, FONT_FILE_NAME, name_len - 4);
-                FONT_INTERNAL_NAME[name_len - 4] = '\0';
+                // 确保目标大小足够，避免依赖源字符串长度
+                size_t copy_len = name_len - 4;
+                if (copy_len >= sizeof(FONT_INTERNAL_NAME))
+                    copy_len = sizeof(FONT_INTERNAL_NAME) - 1;
+                
+                memcpy(FONT_INTERNAL_NAME, FONT_FILE_NAME, copy_len);
+                FONT_INTERNAL_NAME[copy_len] = '\0';
             } else {
                 strncpy(FONT_INTERNAL_NAME, FONT_FILE_NAME, sizeof(FONT_INTERNAL_NAME) - 1);
                 FONT_INTERNAL_NAME[sizeof(FONT_INTERNAL_NAME) - 1] = '\0';

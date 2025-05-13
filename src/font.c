@@ -284,8 +284,13 @@ BOOL PreviewFont(HINSTANCE hInstance, const char* fontName) {
     // 获取内部字体名称（去除.ttf扩展名）
     size_t name_len = strlen(PREVIEW_FONT_NAME);
     if (name_len > 4 && strcmp(PREVIEW_FONT_NAME + name_len - 4, ".ttf") == 0) {
-        strncpy(PREVIEW_INTERNAL_NAME, PREVIEW_FONT_NAME, name_len - 4);
-        PREVIEW_INTERNAL_NAME[name_len - 4] = '\0';
+        // 确保目标大小足够，避免依赖源字符串长度
+        size_t copy_len = name_len - 4;
+        if (copy_len >= sizeof(PREVIEW_INTERNAL_NAME))
+            copy_len = sizeof(PREVIEW_INTERNAL_NAME) - 1;
+        
+        memcpy(PREVIEW_INTERNAL_NAME, PREVIEW_FONT_NAME, copy_len);
+        PREVIEW_INTERNAL_NAME[copy_len] = '\0';
     } else {
         strncpy(PREVIEW_INTERNAL_NAME, PREVIEW_FONT_NAME, sizeof(PREVIEW_INTERNAL_NAME) - 1);
         PREVIEW_INTERNAL_NAME[sizeof(PREVIEW_INTERNAL_NAME) - 1] = '\0';
@@ -355,8 +360,13 @@ BOOL SwitchFont(HINSTANCE hInstance, const char* fontName) {
     // 更新内部字体名称（去除.ttf扩展名）
     size_t name_len = strlen(FONT_FILE_NAME);
     if (name_len > 4 && strcmp(FONT_FILE_NAME + name_len - 4, ".ttf") == 0) {
-        strncpy(FONT_INTERNAL_NAME, FONT_FILE_NAME, name_len - 4);
-        FONT_INTERNAL_NAME[name_len - 4] = '\0';
+        // 确保目标大小足够，避免依赖源字符串长度
+        size_t copy_len = name_len - 4;
+        if (copy_len >= sizeof(FONT_INTERNAL_NAME))
+            copy_len = sizeof(FONT_INTERNAL_NAME) - 1;
+            
+        memcpy(FONT_INTERNAL_NAME, FONT_FILE_NAME, copy_len);
+        FONT_INTERNAL_NAME[copy_len] = '\0';
     } else {
         strncpy(FONT_INTERNAL_NAME, FONT_FILE_NAME, sizeof(FONT_INTERNAL_NAME) - 1);
         FONT_INTERNAL_NAME[sizeof(FONT_INTERNAL_NAME) - 1] = '\0';
