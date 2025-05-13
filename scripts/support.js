@@ -462,6 +462,9 @@ function translateSupportElements() {
         if (td.textContent === '在任务栏里吃灰叭（bushi）好用👍') {
             td.textContent = 'Let it collect dust in the taskbar (just kidding) It\'s great👍';
         }
+        if (td.textContent === '学生党，1块冲你和我一样喜欢蕾娜和伊蕾娜，1块冲你的产品确实挺好') {
+            td.textContent = 'As a student, ¥1 because you like Laina and Elaina like me, another ¥1 because your product is really good';
+        }
         
         // 为所有留言单元格添加特殊样式，增强可读性
         if (td.parentElement && td.cellIndex === 3) { // 第四列是留言列
