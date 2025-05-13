@@ -2143,7 +2143,13 @@ void ToggleShowTimeMode(HWND hwnd) {
     extern void StopNotificationSound(void);
     StopNotificationSound();
     
+    // 切换到显示当前时间模式
     CLOCK_SHOW_CURRENT_TIME = TRUE;
+    
+    // 重新设置计时器，确保更新频率正确
+    KillTimer(hwnd, 1);
+    SetTimer(hwnd, 1, 100, NULL);  // 使用100毫秒的更新频率以保持时间显示流畅
+    
     InvalidateRect(hwnd, NULL, TRUE);
 }
 
@@ -2159,6 +2165,9 @@ void StartCountUp(HWND hwnd) {
     // 声明外部变量
     extern int countup_elapsed_time;
     
+    // 保存先前状态以确定是否需要重置计时器
+    BOOL wasShowingTime = CLOCK_SHOW_CURRENT_TIME;
+    
     // 重置正计时计数器
     countup_elapsed_time = 0;
     
@@ -2166,6 +2175,12 @@ void StartCountUp(HWND hwnd) {
     CLOCK_COUNT_UP = TRUE;
     CLOCK_SHOW_CURRENT_TIME = FALSE;
     CLOCK_IS_PAUSED = FALSE;
+    
+    // 如果之前在显示当前时间模式，先停止旧计时器再启动新计时器
+    if (wasShowingTime) {
+        KillTimer(hwnd, 1);
+        SetTimer(hwnd, 1, 1000, NULL); // 设置为每秒更新一次
+    }
     
     // 刷新窗口
     InvalidateRect(hwnd, NULL, TRUE);
@@ -2180,16 +2195,28 @@ void StartDefaultCountDown(HWND hwnd) {
     extern void StopNotificationSound(void);
     StopNotificationSound();
     
+    // 保存先前状态以确定是否需要重置计时器
+    BOOL wasShowingTime = CLOCK_SHOW_CURRENT_TIME;
+    
+    // 设置模式
     CLOCK_COUNT_UP = FALSE;
     CLOCK_SHOW_CURRENT_TIME = FALSE;
+    
     if (CLOCK_DEFAULT_START_TIME > 0) {
         CLOCK_TOTAL_TIME = CLOCK_DEFAULT_START_TIME;
         countdown_elapsed_time = 0;
         CLOCK_IS_PAUSED = FALSE;
+        
+        // 如果之前在显示当前时间模式，先停止旧计时器再启动新计时器
+        if (wasShowingTime) {
+            KillTimer(hwnd, 1);
+            SetTimer(hwnd, 1, 1000, NULL); // 设置为每秒更新一次
+        }
     } else {
         // 如果没有设置默认倒计时，则弹出设置对话框
         PostMessage(hwnd, WM_COMMAND, 101, 0);
     }
+    
     InvalidateRect(hwnd, NULL, TRUE);
 }
 
@@ -2198,6 +2225,14 @@ void StartDefaultCountDown(HWND hwnd) {
  * @param hwnd 窗口句柄
  */
 void StartPomodoroTimer(HWND hwnd) {
+    // 保存先前状态以确定是否需要重置计时器
+    BOOL wasShowingTime = CLOCK_SHOW_CURRENT_TIME;
+    
+    // 如果之前在显示当前时间模式，先停止旧计时器
+    if (wasShowingTime) {
+        KillTimer(hwnd, 1);
+    }
+    
     // 使用番茄钟菜单项命令来启动番茄钟
     PostMessage(hwnd, WM_COMMAND, CLOCK_IDM_POMODORO_START, 0);
 }
@@ -2311,6 +2346,9 @@ void StartQuickCountdown1(HWND hwnd) {
     extern int time_options[];
     extern int time_options_count;
     
+    // 保存先前状态以确定是否需要重置计时器
+    BOOL wasShowingTime = CLOCK_SHOW_CURRENT_TIME;
+    
     CLOCK_COUNT_UP = FALSE;
     CLOCK_SHOW_CURRENT_TIME = FALSE;
     
@@ -2319,6 +2357,13 @@ void StartQuickCountdown1(HWND hwnd) {
         CLOCK_TOTAL_TIME = time_options[0] * 60; // 将分钟转换为秒
         countdown_elapsed_time = 0;
         CLOCK_IS_PAUSED = FALSE;
+        
+        // 如果之前在显示当前时间模式，先停止旧计时器再启动新计时器
+        if (wasShowingTime) {
+            KillTimer(hwnd, 1);
+            SetTimer(hwnd, 1, 1000, NULL); // 设置为每秒更新一次
+        }
+        
         InvalidateRect(hwnd, NULL, TRUE);
     } else {
         // 如果没有预设时间选项，弹出设置对话框
@@ -2338,6 +2383,9 @@ void StartQuickCountdown2(HWND hwnd) {
     extern int time_options[];
     extern int time_options_count;
     
+    // 保存先前状态以确定是否需要重置计时器
+    BOOL wasShowingTime = CLOCK_SHOW_CURRENT_TIME;
+    
     CLOCK_COUNT_UP = FALSE;
     CLOCK_SHOW_CURRENT_TIME = FALSE;
     
@@ -2346,6 +2394,13 @@ void StartQuickCountdown2(HWND hwnd) {
         CLOCK_TOTAL_TIME = time_options[1] * 60; // 将分钟转换为秒
         countdown_elapsed_time = 0;
         CLOCK_IS_PAUSED = FALSE;
+        
+        // 如果之前在显示当前时间模式，先停止旧计时器再启动新计时器
+        if (wasShowingTime) {
+            KillTimer(hwnd, 1);
+            SetTimer(hwnd, 1, 1000, NULL); // 设置为每秒更新一次
+        }
+        
         InvalidateRect(hwnd, NULL, TRUE);
     } else {
         // 如果没有足够的预设时间选项，弹出设置对话框
@@ -2365,6 +2420,9 @@ void StartQuickCountdown3(HWND hwnd) {
     extern int time_options[];
     extern int time_options_count;
     
+    // 保存先前状态以确定是否需要重置计时器
+    BOOL wasShowingTime = CLOCK_SHOW_CURRENT_TIME;
+    
     CLOCK_COUNT_UP = FALSE;
     CLOCK_SHOW_CURRENT_TIME = FALSE;
     
@@ -2373,6 +2431,13 @@ void StartQuickCountdown3(HWND hwnd) {
         CLOCK_TOTAL_TIME = time_options[2] * 60; // 将分钟转换为秒
         countdown_elapsed_time = 0;
         CLOCK_IS_PAUSED = FALSE;
+        
+        // 如果之前在显示当前时间模式，先停止旧计时器再启动新计时器
+        if (wasShowingTime) {
+            KillTimer(hwnd, 1);
+            SetTimer(hwnd, 1, 1000, NULL); // 设置为每秒更新一次
+        }
+        
         InvalidateRect(hwnd, NULL, TRUE);
     } else {
         // 如果没有足够的预设时间选项，弹出设置对话框
