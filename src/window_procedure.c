@@ -824,6 +824,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     // 先停止所有计时器，确保没有计时事件会继续处理
                     KillTimer(hwnd, 1);
                     
+                    // 注销所有全局热键，确保重置后不会继续生效
+                    UnregisterGlobalHotkeys(hwnd);
+                    
                     // 完全重置计时器状态 - 关键部分
                     // 导入所有需要重置的计时状态变量
                     extern int elapsed_time;            // 从 main.c
@@ -986,6 +989,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     SendMessage(hwnd, WM_SETREDRAW, TRUE, 0);
                     RedrawWindow(hwnd, NULL, NULL, 
                         RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
+                    
+                    // 重新注册默认热键
+                    RegisterGlobalHotkeys(hwnd);
                     
                     break;
                 }
