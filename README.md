@@ -109,7 +109,7 @@ cd Catime
   sudo pacman -Syu --noconfirm mingw-w64 upx xmake
   ```
 
-- Windows
+#### 🪟Windows
   
   1. 准备工具
 
