@@ -119,31 +119,6 @@ cd Catime
   | **xmake** | 构建工具          | `xmake-v<版本号>-win64.exe`                                 | [xmake](https://github.com/xmake-io/xmake/releases/latest)                     |
   | **UPX**   | 可执行文件压缩工具（可选） | `upx-<版本号>-win64.zip`                                    | [upx](https://github.com/upx/upx/releases/latest)                              |
 
-
-### 二、工具
-
-
-#### 🐧Linux
-
-- Ubuntu
-   ```bash
-   sudo apt update && sudo apt install -y mingw-w64 upx-ucl && curl -fsSL https://xmake.io/shget.text | bash
-   ```
-- Arch
-  ```bash
-  sudo pacman -Syu --noconfirm mingw-w64 upx xmake
-  ```
-
-- Windows
-  
-  1. 准备工具
-
-  | 工具        | 说明            | 推荐版本格式                                                   | 下载地址                                                                           |
-  | --------- | ------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------ |
-  | **MinGW** | GCC 编译器       | `x86_64-<版本号>-release-win32-seh-ucrt-rtv<数字>-rev<数字>.7z` | [MinGW Build](https://github.com/niXman/mingw-builds-binaries/releases/latest) |
-  | **xmake** | 构建工具          | `xmake-v<版本号>-win64.exe`                                 | [xmake](https://github.com/xmake-io/xmake/releases/latest)                     |
-  | **UPX**   | 可执行文件压缩工具（可选） | `upx-<版本号>-win64.zip`                                    | [upx](https://github.com/upx/upx/releases/latest)                              |
-
   <details>
     <summary>2. 安装各工具</summary>
 
