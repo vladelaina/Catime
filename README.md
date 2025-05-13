@@ -122,7 +122,7 @@ cd Catime
   <details>
     <summary>2. 安装各工具</summary>
 
-  #### 📦 2.1 安装 MinGW
+  #### 📦 2.1 安装  [MinGW Build](https://github.com/niXman/mingw-builds-binaries/releases/latest)
 
   1. **解压 MinGW 到指定位置**
      例：将 `x86_64-<版本号>-release-win32-seh-ucrt-rtv<数字>-rev<数字>.7z` 解压到：
@@ -151,12 +151,12 @@ cd Catime
 
      若成功显示版本号，即表示 MinGW 安装完成 ✅
 
-  #### 📦 2.2 安装 xmake
+  #### 📦 2.2 安装 [xmake](https://github.com/xmake-io/xmake/releases/latest)
 
   1. 运行 `xmake-v<版本号>-win64.exe` 进行安装
   2. 安装时会自动配置 PATH（若未配置，可手动添加 xmake 安装目录下的 `bin` 目录）
 
-  #### 📦 2.3 安装 UPX（可选）
+  #### 📦 2.3 安装 [upx](https://github.com/upx/upx/releases/latest)（可选）
 
   1. 解压 `upx-<版本号>-win64.zip` 到任意目录（如：`C:\Tools\upx`）
   2. 将该目录添加到系统环境变量 PATH
