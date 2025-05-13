@@ -94,6 +94,7 @@ cd Catime
 ```
 
 
+我理解您的需求，现将从"安装各工具"到"验证工具是否可用"的部分用`<details>`标签包裹：
 
 ### 二、工具
 
@@ -119,7 +120,34 @@ cd Catime
   | **xmake** | 构建工具          | `xmake-v<版本号>-win64.exe`                                 | [xmake](https://github.com/xmake-io/xmake/releases/latest)                     |
   | **UPX**   | 可执行文件压缩工具（可选） | `upx-<版本号>-win64.zip`                                    | [upx](https://github.com/upx/upx/releases/latest)                              |
 
-  2. 安装各工具
+我理解您的需求，将维持原有的目录结构格式，同时用`<details>`标签包裹相关内容：
+
+### 二、工具
+
+
+#### 🐧Linux
+
+- Ubuntu
+   ```bash
+   sudo apt update && sudo apt install -y mingw-w64 upx-ucl && curl -fsSL https://xmake.io/shget.text | bash
+   ```
+- Arch
+  ```bash
+  sudo pacman -Syu --noconfirm mingw-w64 upx xmake
+  ```
+
+- Windows
+  
+  1. 准备工具
+
+  | 工具        | 说明            | 推荐版本格式                                                   | 下载地址                                                                           |
+  | --------- | ------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------ |
+  | **MinGW** | GCC 编译器       | `x86_64-<版本号>-release-win32-seh-ucrt-rtv<数字>-rev<数字>.7z` | [MinGW Build](https://github.com/niXman/mingw-builds-binaries/releases/latest) |
+  | **xmake** | 构建工具          | `xmake-v<版本号>-win64.exe`                                 | [xmake](https://github.com/xmake-io/xmake/releases/latest)                     |
+  | **UPX**   | 可执行文件压缩工具（可选） | `upx-<版本号>-win64.zip`                                    | [upx](https://github.com/upx/upx/releases/latest)                              |
+
+  <details>
+    <summary>2. 安装各工具</summary>
 
   #### 📦 2.1 安装 MinGW
 
@@ -150,7 +178,7 @@ cd Catime
 
      若成功显示版本号，即表示 MinGW 安装完成 ✅
 
-  3. 安装 xmake
+  #### 📦 2.2 安装 xmake
 
   1. 运行 `xmake-v<版本号>-win64.exe` 进行安装
   2. 安装时会自动配置 PATH（若未配置，可手动添加 xmake 安装目录下的 `bin` 目录）
@@ -160,21 +188,28 @@ cd Catime
   1. 解压 `upx-<版本号>-win64.zip` 到任意目录（如：`C:\Tools\upx`）
   2. 将该目录添加到系统环境变量 PATH
 
-### 三、验证工具是否可用
+  </details>
 
-#### ✅ 3.1 验证 gcc
+  <details>
+    <summary>3. 验证工具是否可用</summary>
 
-```bash
-gcc --version
-```
+  #### ✅ 3.1 验证 gcc
 
-#### ✅ 3.2 验证 xmake
+  ```bash
+  gcc --version
+  ```
 
-```bash
-xmake --version
-```
+  #### ✅ 3.2 验证 xmake
 
-若均能正常显示版本号，则工具配置成功 🎉
+  ```bash
+  xmake --version
+  ```
+
+  若均能正常显示版本号，则工具配置成功 🎉
+
+  </details>
+
+
 
 
 
