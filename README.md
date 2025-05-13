@@ -84,7 +84,7 @@
 
 
 
-## 🛠️ [从源代码构建 Catime](https://vladelaina.com/blog-post?slug=Build_catime_from_source)
+## 🛠️ [从源代码构建](https://vladelaina.com/blog-post?slug=Build_catime_from_source)
 
 ### 一、克隆：
 
