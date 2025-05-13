@@ -190,8 +190,7 @@ cd Catime
 
   </details>
 
-  <details>
-    <summary>3. 验证工具是否可用</summary>
+## 三、验证工具是否可用
 
   #### ✅ 3.1 验证 gcc
 
@@ -206,8 +205,6 @@ cd Catime
   ```
 
   若均能正常显示版本号，则工具配置成功 🎉
-
-  </details>
 
 
 
