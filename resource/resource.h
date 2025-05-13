@@ -1,5 +1,5 @@
 /* 版本与更新信息 */
-#define CATIME_VERSION "1.0.8-alpha1"
+#define CATIME_VERSION "1.0.8-alpha2"
 
 /* 鸣谢链接 */
 #define CREDIT_LINK_URL L"https://space.bilibili.com/26087398"
@@ -13,7 +13,7 @@
 #define MIN_SCALE_FACTOR 0.5f
 #define MAX_SCALE_FACTOR 100.0f
 #define CLOCK_WM_TRAYICON (WM_USER + 2)
-#define MAX_POMODORO_TIMES 10  // 番茄钟时间数组的最大容量
+#define MAX_POMODORO_TIMES 10 // 番茄钟时间数组的最大容量
 
 /* 窗口尺寸常量 */
 #define WINDOW_HORIZONTAL_PADDING 190 // 左右
@@ -69,14 +69,14 @@
 #define CLOCK_IDM_RECENT_FILE_4 129
 #define CLOCK_IDM_RECENT_FILE_5 130
 #define CLOCK_IDM_BROWSE_FILE 131
-#define CLOCK_IDM_CURRENT_FILE 127      // 当前文件菜单项ID
+#define CLOCK_IDM_CURRENT_FILE 127 // 当前文件菜单项ID
 
 /* 关于与帮助 */
 #define CLOCK_IDM_ABOUT 132
-#define CLOCK_IDM_CHECK_UPDATE 133      // 检查更新菜单项ID
-#define CLOCK_IDM_HELP 134              // 帮助菜单项ID
-#define CLOCK_IDM_SUPPORT 139           // 赞助选项菜单项ID
-#define CLOCK_IDM_FEEDBACK 141          // 反馈选项菜单项ID
+#define CLOCK_IDM_CHECK_UPDATE 133 // 检查更新菜单项ID
+#define CLOCK_IDM_HELP 134         // 帮助菜单项ID
+#define CLOCK_IDM_SUPPORT 139      // 赞助选项菜单项ID
+#define CLOCK_IDM_FEEDBACK 141     // 反馈选项菜单项ID
 
 /* 超时动作 */
 #define CLOCK_IDM_TIMEOUT_ACTION 120
@@ -93,7 +93,7 @@
 #define CLOCK_IDM_SHOW_CURRENT_TIME 150
 #define CLOCK_IDM_24HOUR_FORMAT 151
 #define CLOCK_IDM_SHOW_SECONDS 152
-#define CLOCK_IDM_TOPMOST 187           // 置顶选项ID
+#define CLOCK_IDM_TOPMOST 187 // 置顶选项ID
 
 /*==================================
  * 多语言支持 (160-179)
@@ -173,7 +173,7 @@
 #define IDC_NOTIFICATION_TIME_EDIT 2008
 #define IDC_NOTIFICATION_OPACITY_LABEL 2009
 #define IDC_NOTIFICATION_OPACITY_EDIT 2010
-#define IDC_NOTIFICATION_OPACITY_TEXT 2021     // 透明度百分比文本
+#define IDC_NOTIFICATION_OPACITY_TEXT 2021 // 透明度百分比文本
 
 /* 通知控件 - 类型选择 */
 #define IDC_NOTIFICATION_TYPE_CATIME 2011
@@ -188,16 +188,16 @@
 #define IDC_VOLUME_TEXT 2020           // 音量百分比文本
 
 /* 通知窗口常量 */
-#define NOTIFICATION_MIN_WIDTH 350     // 通知窗口最小宽度(像素)
-#define NOTIFICATION_MAX_WIDTH 800     // 通知窗口最大宽度(像素)
-#define NOTIFICATION_HEIGHT 80         // 通知窗口高度(像素)
-#define NOTIFICATION_TIMER_ID 1001     // 通知超时计时器ID
+#define NOTIFICATION_MIN_WIDTH 350 // 通知窗口最小宽度(像素)
+#define NOTIFICATION_MAX_WIDTH 800 // 通知窗口最大宽度(像素)
+#define NOTIFICATION_HEIGHT 80     // 通知窗口高度(像素)
+#define NOTIFICATION_TIMER_ID 1001 // 通知超时计时器ID
 #define NOTIFICATION_CLASS_NAME L"CatimeNotificationClass" // 通知窗口类名
-#define CLOSE_BTN_SIZE 16              // 关闭按钮的大小(像素)
-#define CLOSE_BTN_MARGIN 10            // 关闭按钮边距(像素)
-#define ANIMATION_TIMER_ID 1002        // 动画计时器ID
-#define ANIMATION_STEP 5               // 每步透明度变化量(0-255)
-#define ANIMATION_INTERVAL 15          // 动画帧间隔(毫秒)
+#define CLOSE_BTN_SIZE 16       // 关闭按钮的大小(像素)
+#define CLOSE_BTN_MARGIN 10     // 关闭按钮边距(像素)
+#define ANIMATION_TIMER_ID 1002 // 动画计时器ID
+#define ANIMATION_STEP 5        // 每步透明度变化量(0-255)
+#define ANIMATION_INTERVAL 15   // 动画帧间隔(毫秒)
 
 /* 热键设置对话框和控件 (2100-2199) */
 #define CLOCK_IDD_HOTKEY_DIALOG 2100   // 热键设置对话框ID
@@ -211,28 +211,28 @@
 #define CLOCK_IDM_HOTKEY_SETTINGS 2108 // 热键设置菜单项ID
 
 // 新增热键控件
-#define IDC_HOTKEY_LABEL4 2109         // "番茄钟"标签ID
-#define IDC_HOTKEY_EDIT4 2110          // 番茄钟快捷键编辑控件ID
-#define IDC_HOTKEY_LABEL5 2111         // "隐藏/显示"标签ID
-#define IDC_HOTKEY_EDIT5 2112          // 隐藏/显示快捷键编辑控件ID
-#define IDC_HOTKEY_LABEL6 2113         // "编辑模式"标签ID
-#define IDC_HOTKEY_EDIT6 2114          // 编辑模式快捷键编辑控件ID
-#define IDC_HOTKEY_LABEL7 2115         // "暂停/继续"标签ID
-#define IDC_HOTKEY_EDIT7 2116          // 暂停/继续快捷键编辑控件ID
-#define IDC_HOTKEY_LABEL8 2117         // "重新开始"标签ID
-#define IDC_HOTKEY_EDIT8 2118          // 重新开始快捷键编辑控件ID
+#define IDC_HOTKEY_LABEL4 2109 // "番茄钟"标签ID
+#define IDC_HOTKEY_EDIT4 2110  // 番茄钟快捷键编辑控件ID
+#define IDC_HOTKEY_LABEL5 2111 // "隐藏/显示"标签ID
+#define IDC_HOTKEY_EDIT5 2112  // 隐藏/显示快捷键编辑控件ID
+#define IDC_HOTKEY_LABEL6 2113 // "编辑模式"标签ID
+#define IDC_HOTKEY_EDIT6 2114  // 编辑模式快捷键编辑控件ID
+#define IDC_HOTKEY_LABEL7 2115 // "暂停/继续"标签ID
+#define IDC_HOTKEY_EDIT7 2116  // 暂停/继续快捷键编辑控件ID
+#define IDC_HOTKEY_LABEL8 2117 // "重新开始"标签ID
+#define IDC_HOTKEY_EDIT8 2118  // 重新开始快捷键编辑控件ID
 
 // 快捷倒计时热键控件
-#define IDC_HOTKEY_LABEL9 2119         // "快捷倒计时1"标签ID
-#define IDC_HOTKEY_EDIT9 2120          // 快捷倒计时1快捷键编辑控件ID
-#define IDC_HOTKEY_LABEL10 2121        // "快捷倒计时2"标签ID
-#define IDC_HOTKEY_EDIT10 2122         // 快捷倒计时2快捷键编辑控件ID
-#define IDC_HOTKEY_LABEL11 2123        // "快捷倒计时3"标签ID
-#define IDC_HOTKEY_EDIT11 2124         // 快捷倒计时3快捷键编辑控件ID
+#define IDC_HOTKEY_LABEL9 2119  // "快捷倒计时1"标签ID
+#define IDC_HOTKEY_EDIT9 2120   // 快捷倒计时1快捷键编辑控件ID
+#define IDC_HOTKEY_LABEL10 2121 // "快捷倒计时2"标签ID
+#define IDC_HOTKEY_EDIT10 2122  // 快捷倒计时2快捷键编辑控件ID
+#define IDC_HOTKEY_LABEL11 2123 // "快捷倒计时3"标签ID
+#define IDC_HOTKEY_EDIT11 2124  // 快捷倒计时3快捷键编辑控件ID
 
 /* 通知最大透明度配置 */
 extern int NOTIFICATION_MAX_OPACITY;
-extern int NOTIFICATION_TIMEOUT_MS;    // 通知显示持续时间
+extern int NOTIFICATION_TIMEOUT_MS; // 通知显示持续时间
 
 /*==================================
  * 关于对话框 (1050-1099)
