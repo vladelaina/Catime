@@ -48,22 +48,6 @@ target("catime")
         print("\x1b[36m" .. "╚██████╗ ██║  ██║   ██║   ██║██║ ╚═╝ ██║███████╗" .. "\x1b[0m")
         print("\x1b[36m" .. " ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝╚═╝     ╚═╝╚══════╝" .. "\x1b[0m")
         print("")
-        
-        -- 显示初始进度条
-        -- local bar_width = 40
-        -- local filled_char = "█"
-        -- local empty_char = "░"
-        -- local empty_bar = string.rep(empty_char, bar_width)
-        
-        -- print("\x1b[34m" .. "开始构建..." .. "\x1b[0m")
-        -- io.write(string.format("\r\x1b[90mProgress: [\x1b[0m\x1b[90m%s\x1b[0m\x1b[90m] %3d%% Complete\x1b[0m", empty_bar, 0))
-        -- io.flush()
-    end)
-    
-    -- 在每个文件编译后更新进度
-    after_build_file(function (target, sourcefile)
-        -- 注意：这个回调可能在某些xmake版本中不可用
-        -- 如果不工作，用户仍然会看到标准的xmake进度输出
     end)
     
     -- 添加Windows特有设置
@@ -80,8 +64,8 @@ target("catime")
     
     -- 添加编译选项
     if is_mode("release") then
-        add_cflags("-O3", "-flto=8", "-mtune=generic", "-ffunction-sections", "-fdata-sections", "-fno-strict-aliasing")
-        add_ldflags("-Wl,--gc-sections", "-flto=8", "-s")
+        add_cflags("-O3", "-mtune=generic", "-ffunction-sections", "-fdata-sections", "-fno-strict-aliasing")
+        add_ldflags("-Wl,--gc-sections", "-s")
         add_defines("NDEBUG")
     end
     
@@ -94,19 +78,9 @@ target("catime")
     
 -- 配置自定义构建事件
 after_build(function (target)
-    -- 显示完成进度条
-    local bar_width = 40
-    local filled_char = "█"
-    local empty_char = "░"
-    local full_bar = string.rep(filled_char, bar_width)
-    
-    -- io.write(string.format("\r\x1b[90mProgress: [\x1b[0m\x1b[90m%s\x1b[0m\x1b[90m] %3d%% Complete\x1b[0m\n", full_bar, 100))
-    -- io.flush()
-    
     -- 压缩可执行文件
     local targetfile = target:targetfile()
     local size_before = os.filesize(targetfile)
-    local size_before_kb = math.floor(size_before / 1024)
     
     -- 隐藏所有UPX输出，使用脚本
     local is_windows = os.host() == "windows"
@@ -139,7 +113,6 @@ after_build(function (target)
         os.rm(script_file)
     else
         -- 如果无法创建脚本，则直接显示结果
-        -- 但不执行UPX，因为无法隐藏输出
         try {
             function()
                 os.exec("upx --best --lzma %s", targetfile)
@@ -153,7 +126,7 @@ after_build(function (target)
     local size_before_kb = math.floor(size_before / 1024)
     local size_after_kb = math.floor(size_after / 1024)
     
-    -- 改变显示格式，使用与Makefile类似的格式但不尝试显示百分比符号
+    -- 显示结果
     print("\x1b[38;2;0;255;0m[" .. " 99%]:\x1b[0m Compressed: " .. size_before_kb .. "KiB → " .. size_after_kb .. "KiB")
     print("\x1b[38;2;0;255;0m[" .. " 99%]:\x1b[0m " .. "Output directory: " .. target:targetdir())
 end)
