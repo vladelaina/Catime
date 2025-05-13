@@ -82,9 +82,10 @@
 - **编辑模式**: 鼠标可以拖拽调整位置，滚轮调整大小，🖱️鼠标右键关闭编辑模式
 
 
-### 🛠️配置文件
+### 📃配置文件
 设置保存在 `C:\Users\用户名\AppData\Local\Catime\config.txt`
 
+## 🛠️ [编译指南](https://vladelaina.com/blog-post?slug=Build_catime_from_source)
 
 ## ⭐Star History
 
