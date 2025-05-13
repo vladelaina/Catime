@@ -17,6 +17,11 @@
 #include "../include/config.h"
 #include "../resource/resource.h"
 
+// 添加对ARM64宏的检查
+#ifndef PROCESSOR_ARCHITECTURE_ARM64
+#define PROCESSOR_ARCHITECTURE_ARM64 12
+#endif
+
 // 日志文件路径
 static char LOG_FILE_PATH[MAX_PATH] = {0};
 static FILE* logFile = NULL;
