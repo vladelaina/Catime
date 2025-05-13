@@ -119,7 +119,6 @@ cd Catime
   | **xmake** | 构建工具          | `xmake-v<版本号>-win64.exe`                                 | [xmake](https://github.com/xmake-io/xmake/releases/latest)                     |
   | **UPX**   | 可执行文件压缩工具（可选） | `upx-<版本号>-win64.zip`                                    | [upx](https://github.com/upx/upx/releases/latest)                              |
 
-我理解您的需求，将维持原有的目录结构格式，同时用`<details>`标签包裹相关内容：
 
 ### 二、工具
 
