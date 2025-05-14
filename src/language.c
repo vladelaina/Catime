@@ -94,6 +94,13 @@ static const LocalizedString CHINESE_SIMP_STRINGS[] = {
     {L"Enter numbers separated by spaces\nExample: 25 10 5", L"请输入以空格分隔的数字\n范例: 25 10 5"},
     {L"25    = 25 minutes\n25h   = 25小時\n25s   = 25秒\n25 30 = 25分钟30秒\n25 30m = 25小时30分钟\n1 30 20 = 1小时30分钟20秒", 
      L"25    = 25分钟\n25h   = 25小时\n25s   = 25秒\n25 30 = 25分钟30秒\n25 30m = 25小时30分钟\n1 30 20 = 1小时30分钟20秒"},
+    {L"Support", L"支持"},
+    {L"Following actions are one-time only", L"以下超时动作为一次性"},
+    {L"Sleep", L"睡眠"},
+    {L"Stopwatch", L"正计时"},
+    {L"Modify Quick Countdown Options", L"修改倒计时选项"},
+    {L"Notification Settings", L"通知设置"},
+    {L"Hotkey Settings", L"热键设置"},
     {NULL, NULL}  // 表示结束
 };
 
@@ -171,6 +178,13 @@ static const LocalizedString CHINESE_TRAD_STRINGS[] = {
     {L"Enter numbers separated by spaces\nExample: 25 10 5", L"請輸入以空格分隔的數字\n範例: 25 10 5"},
     {L"25    = 25 minutes\n25h   = 25小時\n25s   = 25秒\n25 30 = 25分鐘30秒\n25 30m = 25小時30分鐘\n1 30 20 = 1小時30分鐘20秒", 
      L"25    = 25分鐘\n25h   = 25小時\n25s   = 25秒\n25 30 = 25分鐘30秒\n25 30m = 25小時30分鐘\n1 30 20 = 1小時30分鐘20秒"},
+    {L"Support", L"支援"},
+    {L"Following actions are one-time only", L"以下逾時動作為一次性"},
+    {L"Sleep", L"睡眠"},
+    {L"Stopwatch", L"正計時"},
+    {L"Modify Quick Countdown Options", L"修改倒計時選項"},
+    {L"Notification Settings", L"通知設定"},
+    {L"Hotkey Settings", L"熱鍵設定"},
     {NULL, NULL}  // 表示结束
 };
 
@@ -248,6 +262,13 @@ static const LocalizedString SPANISH_STRINGS[] = {
     {L"Enter numbers separated by spaces\nExample: 25 10 5", L"Ingrese números separados por espacios\nEjemplo: 25 10 5"},
     {L"25    = 25 minutes\n25h   = 25 hours\n25s   = 25 seconds\n25 30 = 25 minutes 30 seconds\n25 30m = 25 hours 30 minutes\n1 30 20 = 1 hour 30 minutes 20 seconds", 
      L"25    = 25 minutos\n25h   = 25 horas\n25s   = 25 segundos\n25 30 = 25 minutos 30 segundos\n25 30m = 25 horas 30 minutos\n1 30 20 = 1 hora 30 minutos 20 segundos"},
+    {L"Support", L"Apoyo"},
+    {L"Following actions are one-time only", L"Las siguientes acciones son de una sola vez"},
+    {L"Sleep", L"Suspender"},
+    {L"Stopwatch", L"Cronómetro"},
+    {L"Modify Quick Countdown Options", L"Modificar opciones rápidas de cuenta regresiva"},
+    {L"Notification Settings", L"Configuración de notificaciones"},
+    {L"Hotkey Settings", L"Configuración de teclas de acceso rápido"},
     {NULL, NULL}  // 表示结束
 };
 
@@ -325,6 +346,13 @@ static const LocalizedString FRENCH_STRINGS[] = {
     {L"Enter numbers separated by spaces\nExample: 25 10 5", L"Digite números separados por espaços\nExemplo: 25 10 5"},
     {L"25    = 25 minutes\n25h   = 25 hours\n25s   = 25 seconds\n25 30 = 25 minutes 30 seconds\n25 30m = 25 hours 30 minutes\n1 30 20 = 1 hour 30 minutes 20 seconds", 
      L"25    = 25 minutos\n25h   = 25 horas\n25s   = 25 segundos\n25 30 = 25 minutos 30 segundos\n25 30m = 25 horas 30 minutos\n1 30 20 = 1 hora 30 minutos 20 segundos"},
+    {L"Support", L"Soutien"},
+    {L"Following actions are one-time only", L"Les actions suivantes sont à usage unique"},
+    {L"Sleep", L"Mettre en veille"},
+    {L"Stopwatch", L"Chronomètre"},
+    {L"Modify Quick Countdown Options", L"Modifier les options rapides du compte à rebours"},
+    {L"Notification Settings", L"Paramètres de notification"},
+    {L"Hotkey Settings", L"Paramètres des raccourcis clavier"},
     {NULL, NULL}  // 表示结束
 };
 
@@ -402,6 +430,13 @@ static const LocalizedString GERMAN_STRINGS[] = {
     {L"Enter numbers separated by spaces\nExample: 25 10 5", L"Geben Sie Zahlen durch Leerzeichen getrennt ein\nBeispiel: 25 10 5"},
     {L"25    = 25 minutes\n25h   = 25 hours\n25s   = 25 seconds\n25 30 = 25 minutes 30 seconds\n25 30m = 25 hours 30 minutes\n1 30 20 = 1 hour 30 minutes 20 seconds", 
      L"25    = 25 Minuten\n25h   = 25 Stunden\n25s   = 25 Sekunden\n25 30 = 25 Minuten 30 Sekunden\n25 30m = 25 Stunden 30 Minuten\n1 30 20 = 1 Stunde 30 Minuten 20 Sekunden"},
+    {L"Support", L"Unterstützung"},
+    {L"Following actions are one-time only", L"Die folgenden Aktionen sind einmalig"},
+    {L"Sleep", L"Ruhezustand"},
+    {L"Stopwatch", L"Stoppuhr"},
+    {L"Modify Quick Countdown Options", L"Schnelle Countdown-Optionen ändern"},
+    {L"Notification Settings", L"Benachrichtigungseinstellungen"},
+    {L"Hotkey Settings", L"Tastenkürzel-Einstellungen"},
     {NULL, NULL}  // 表示结束
 };
 
@@ -479,6 +514,13 @@ static const LocalizedString RUSSIAN_STRINGS[] = {
     {L"Enter numbers separated by spaces\nExample: 25 10 5", L"Введите числа через пробел\nПример: 25 10 5"},
     {L"25    = 25 minutes\n25h   = 25 hours\n25s   = 25 seconds\n25 30 = 25 minutes 30 seconds\n25 30m = 25 hours 30 minutes\n1 30 20 = 1 hour 30 minutes 20 seconds", 
      L"25    = 25 минут\n25h   = 25 часов\n25s   = 25 секунд\n25 30 = 25 минут 30 секунд\n25 30m = 25 часов 30 минут\n1 30 20 = 1 час 30 минут 20 секунд"},
+    {L"Support", L"Поддержка"},
+    {L"Following actions are one-time only", L"Следующие действия выполняются только один раз"},
+    {L"Sleep", L"Спящий режим"},
+    {L"Stopwatch", L"Секундомер"},
+    {L"Modify Quick Countdown Options", L"Изменить быстрые настройки таймера"},
+    {L"Notification Settings", L"Настройки уведомлений"},
+    {L"Hotkey Settings", L"Настройки горячих клавиш"},
     {NULL, NULL}  // 表示结束
 };
 
@@ -556,6 +598,13 @@ static const LocalizedString PORTUGUESE_STRINGS[] = {
     {L"Enter numbers separated by spaces\nExample: 25 10 5", L"Digite números separados por espaços\nExemplo: 25 10 5"},
     {L"25    = 25 minutes\n25h   = 25 hours\n25s   = 25 seconds\n25 30 = 25 minutes 30 seconds\n25 30m = 25 hours 30 minutes\n1 30 20 = 1 hour 30 minutes 20 seconds", 
      L"25    = 25 minutos\n25h   = 25 horas\n25s   = 25 segundos\n25 30 = 25 minutos 30 segundos\n25 30m = 25 horas 30 minutos\n1 30 20 = 1 hora 30 minutos 20 segundos"},
+    {L"Support", L"Suporte"},
+    {L"Following actions are one-time only", L"As seguintes ações são apenas de uso único"},
+    {L"Sleep", L"Suspender"},
+    {L"Stopwatch", L"Cronômetro"},
+    {L"Modify Quick Countdown Options", L"Modificar opções rápidas de contagem regressiva"},
+    {L"Notification Settings", L"Configurações de notificação"},
+    {L"Hotkey Settings", L"Configurações de teclas de atalho"},
     {NULL, NULL}  // 表示结束
 };
 
@@ -630,9 +679,16 @@ static const LocalizedString JAPANESE_STRINGS[] = {
     {L"Set to No Display on Startup", L"起動時に非表示で開始"},
     {L"Set to Stopwatch on Startup", L"起動時にストップウォッチで開始"},
     {L"Set to Countdown on Startup", L"起動時にカウントダウンで開始"},
-    {L"Enter numbers separated by spaces\nExample: 25 10 5", L"数字をスペースで区切って入力してください\n例: 25 10 5"},
+    {L"Enter numbers separated by spaces\nExample: 25 10 5", L"数字をスペースで区切って入力してください\n예시: 25 10 5"},
     {L"25    = 25 minutes\n25h   = 25 hours\n25s   = 25 seconds\n25 30 = 25 minutes 30 seconds\n25 30m = 25 hours 30 minutes\n1 30 20 = 1 hour 30 minutes 20 seconds", 
      L"25    = 25分\n25h   = 25時間\n25s   = 25秒\n25 30 = 25分30秒\n25 30m = 25時間30分\n1 30 20 = 1時間30分20秒"},
+    {L"Support", L"サポート"},
+    {L"Following actions are one-time only", L"以下のアクションは一回限りです"},
+    {L"Sleep", L"スリープ"},
+    {L"Stopwatch", L"ストップウォッチ"},
+    {L"Modify Quick Countdown Options", L"クイックカウントダウンオプションを変更"},
+    {L"Notification Settings", L"通知設定"},
+    {L"Hotkey Settings", L"ホットキー設定"},
     {NULL, NULL}  // 表示结束
 };
 
@@ -710,6 +766,13 @@ static const LocalizedString KOREAN_STRINGS[] = {
     {L"Enter numbers separated by spaces\nExample: 25 10 5", L"숫자를 공백으로 구분하여 입력하세요\n예시: 25 10 5"},
     {L"25    = 25 minutes\n25h   = 25 hours\n25s   = 25 seconds\n25 30 = 25 minutes 30 seconds\n25 30m = 25 hours 30 minutes\n1 30 20 = 1 hour 30 minutes 20 seconds", 
      L"25    = 25분\n25h   = 25시간\n25s   = 25초\n25 30 = 25분 30초\n25 30m = 25시간 30분\n1 30 20 = 1시간 30분 20초"},
+    {L"Support", L"지원"},
+    {L"Following actions are one-time only", L"다음 작업은 일회성입니다"},
+    {L"Sleep", L"절전 모드"},
+    {L"Stopwatch", L"스톱워치"},
+    {L"Modify Quick Countdown Options", L"빠른 카운트다운 옵션 수정"},
+    {L"Notification Settings", L"알림 설정"},
+    {L"Hotkey Settings", L"단축키 설정"},
     {NULL, NULL}  // 表示结束
 };
 
