@@ -50,7 +50,7 @@
 <video src="https://github.com/user-attachments/assets/2f733378-8ddd-468f-b971-7e98ea4824c2" autoplay loop></video>
 </div>
 
-**English** | [**简体中文**](./README_zh.md)
+**English** | [**简体中文**](./README-zh.md)
 
 ## [🌟Features](https://vladelaina.github.io/Catime/#core-features)
 
