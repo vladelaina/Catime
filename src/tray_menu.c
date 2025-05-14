@@ -230,6 +230,9 @@ void ShowColorMenu(HWND hwnd) {
     // 在创建菜单前先读取配置文件中的超时动作设置
     ReadTimeoutActionFromConfig();
     
+    // 设置鼠标光标为默认箭头，防止显示等待光标
+    SetCursor(LoadCursor(NULL, IDC_ARROW));
+    
     HMENU hMenu = CreatePopupMenu();
     
     // 添加编辑模式选项
@@ -591,6 +594,9 @@ void ShowColorMenu(HWND hwnd) {
 void ShowContextMenu(HWND hwnd) {
     // 在创建菜单前先读取配置文件中的超时动作设置
     ReadTimeoutActionFromConfig();
+    
+    // 设置鼠标光标为默认箭头，防止显示等待光标
+    SetCursor(LoadCursor(NULL, IDC_ARROW));
     
     HMENU hMenu = CreatePopupMenu();
     

@@ -522,7 +522,13 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 SetCursor(LoadCursor(NULL, IDC_ARROW));
                 return TRUE; // 表示我们已经处理了此消息
             }
-            break; // 让默认处理程序处理其他情况
+            
+            // 处理托盘图标相关操作时，也使用默认箭头光标
+            if (LOWORD(lp) == HTCLIENT || msg == CLOCK_WM_TRAYICON) {
+                SetCursor(LoadCursor(NULL, IDC_ARROW));
+                return TRUE;
+            }
+            break;
         }
 
         case WM_LBUTTONDOWN: {

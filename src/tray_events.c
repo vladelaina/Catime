@@ -34,6 +34,9 @@ extern void ReadTimeoutActionFromConfig(void);
  * 所有菜单项的命令处理在对应的菜单显示模块中实现。
  */
 void HandleTrayIconMessage(HWND hwnd, UINT uID, UINT uMouseMsg) {
+    // 设置默认光标，防止显示等待光标
+    SetCursor(LoadCursor(NULL, IDC_ARROW));
+    
     if (uMouseMsg == WM_RBUTTONUP) {
         ShowColorMenu(hwnd);
     }
