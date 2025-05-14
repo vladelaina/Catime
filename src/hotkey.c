@@ -61,16 +61,16 @@ static WNDPROC g_OldHotkeyDlgProc = NULL;
  * 处理对话框的键盘消息，阻止系统提示音
  */
 LRESULT CALLBACK HotkeyDialogSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-    // Section 1: Check if the current message (DOWN or UP) corresponds to an original hotkey
+    // 第一部分：检查当前按键消息（按下或释放）是否对应于原始热键
     if (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN || msg == WM_KEYUP || msg == WM_SYSKEYUP) {
         BYTE vk = (BYTE)wParam;
-        // Only proceed if it's not a lone modifier key event itself.
-        // Lone modifier key presses/releases are handled by the switch statement later for general suppression.
+        // 仅当事件本身不是单独的修饰键时才继续处理。
+        // 单独的修饰键按下/释放事件由后续的 switch 语句进行通用抑制处理。
         if (!(vk == VK_SHIFT || vk == VK_CONTROL || vk == VK_MENU || vk == VK_LWIN || vk == VK_RWIN)) {
             BYTE currentModifiers = 0;
             if (GetKeyState(VK_SHIFT) & 0x8000) currentModifiers |= HOTKEYF_SHIFT;
             if (GetKeyState(VK_CONTROL) & 0x8000) currentModifiers |= HOTKEYF_CONTROL;
-            // For SYS messages, Alt is involved. For non-SYS, check GetKeyState for Alt explicitly.
+            // 对于 WM_SYSKEY* 消息，Alt 键已参与其中。对于非 WM_SYSKEY* 消息，需明确检查 Alt 键状态。
             if (msg == WM_SYSKEYDOWN || msg == WM_SYSKEYUP || (GetKeyState(VK_MENU) & 0x8000)) {
                 currentModifiers |= HOTKEYF_ALT;
             }
@@ -100,22 +100,22 @@ LRESULT CALLBACK HotkeyDialogSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LP
                         if (ctrlId == i) { isHotkeyEditControl = TRUE; break; }
                     }
                     if (!isHotkeyEditControl) {
-                        return 0; // Suppress DOWN or UP event for an original hotkey if not on edit control
+                        return 0; // 如果焦点不在热键编辑控件上，则抑制原始热键的按下或释放事件
                     }
                 } else {
-                    return 0; // Suppress DOWN or UP event for an original hotkey if no focus
+                    return 0; // 如果没有焦点，则抑制原始热键的按下或释放事件
                 }
-                // If on an edit control, the message will fall through to CallWindowProc,
-                // allowing the control's own subclass (if any) or default processing.
+                // 如果焦点在热键编辑控件上，消息将传递给 CallWindowProc，
+                // 允许控件自身的子类（如果有）或默认处理。
             }
         }
     }
 
-    // Section 2: General suppression for SYSKEY messages and specific KEYDOWN/UP for lone modifiers
+    // 第二部分：对 WM_SYSKEY* 消息以及特定修饰键的单独按下/释放进行通用抑制
     switch (msg) {
         case WM_SYSKEYDOWN:
         case WM_SYSKEYUP:
-            // This handles lone Alt key presses/releases, or Alt+somekey that wasn't an original hotkey.
+            // 此处处理单独的 Alt 键按下/释放，或非原始热键的 Alt+组合键。
             {
                 HWND hwndFocus = GetFocus();
                 if (hwndFocus) {
@@ -125,16 +125,16 @@ LRESULT CALLBACK HotkeyDialogSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LP
                         if (ctrlId == i) { isHotkeyEditControl = TRUE; break; }
                     }
                     if (isHotkeyEditControl) {
-                        break; // Let hotkey edit control's subclass handle it (falls to CallWindowProc)
+                        break; // 让热键编辑控件的子类处理（最终会调用 CallWindowProc）
                     }
                 }
-                return 0; // Consume generic SYSKEY message if not on an edit control (or no focus)
+                return 0; // 如果焦点不在热键编辑控件上（或无焦点），则消费通用的 WM_SYSKEY* 消息
             }
             
         case WM_KEYDOWN:
         case WM_KEYUP:
-            // This handles lone Shift, Ctrl, Win key presses/releases if not on an edit control.
-            // (Alt is covered by WM_SYSKEYDOWN/WM_SYSKEYUP above).
+            // 此处处理焦点不在热键编辑控件上时的单独 Shift, Ctrl, Win 键按下/释放。
+            // （Alt 键已由上面的 WM_SYSKEYDOWN/WM_SYSKEYUP 处理）。
             {
                 BYTE vk_code = (BYTE)wParam;
                 if (vk_code == VK_SHIFT || vk_code == VK_CONTROL || vk_code == VK_LWIN || vk_code == VK_RWIN) {
@@ -146,14 +146,14 @@ LRESULT CALLBACK HotkeyDialogSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LP
                             if (ctrlId == i) { isHotkeyEditControl = TRUE; break; }
                         }
                         if (!isHotkeyEditControl) {
-                            return 0; // Suppress lone Shift/Ctrl/Win if not on edit control
+                            return 0; // 如果焦点不在热键编辑控件上，则抑制单独的 Shift/Ctrl/Win 键
                         }
                     } else {
-                        return 0; // Suppress if no focus
+                        return 0; // 如果没有焦点，则抑制该事件
                     }
                 }
             }
-            // If not a lone modifier or already handled, fall through to CallWindowProc.
+            // 如果不是单独的修饰键或尚未处理，则传递给 CallWindowProc。
             break; 
             
         case WM_SYSCOMMAND:
@@ -499,7 +499,7 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                     };
                     
                     // 静默清除任何无效热键
-                    // BOOL needsRefresh = FALSE; // 这行似乎没有实际作用，可以考虑移除或检查其用途
+                    // BOOL needsRefresh = FALSE; // (已注释) 用于标记是否需要刷新界面，目前未使用。
                     for (int i = 0; i < sizeof(hotkeys) / sizeof(hotkeys[0]); i++) {
                         // 检查是否是无效的中文输入法热键组合 (Shift+0xE5)
                         if (LOBYTE(*hotkeys[i]) == 0xE5 && HIBYTE(*hotkeys[i]) == HOTKEYF_SHIFT) {
