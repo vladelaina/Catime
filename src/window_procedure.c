@@ -516,6 +516,15 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             break;
         }
 
+        case WM_SETCURSOR: {
+            // 当在编辑模式下时，总是使用默认箭头光标
+            if (CLOCK_EDIT_MODE && LOWORD(lp) == HTCLIENT) {
+                SetCursor(LoadCursor(NULL, IDC_ARROW));
+                return TRUE; // 表示我们已经处理了此消息
+            }
+            break; // 让默认处理程序处理其他情况
+        }
+
         case WM_LBUTTONDOWN: {
             StartDragWindow(hwnd);
             break;

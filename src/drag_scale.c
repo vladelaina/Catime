@@ -54,6 +54,9 @@ void StartEditMode(HWND hwnd) {
     // 禁用点击穿透
     SetClickThrough(hwnd, FALSE);
     
+    // 确保鼠标光标为默认箭头
+    SetCursor(LoadCursor(NULL, IDC_ARROW));
+    
     // 刷新窗口
     InvalidateRect(hwnd, NULL, TRUE);
 }
