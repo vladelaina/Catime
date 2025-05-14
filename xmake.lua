@@ -67,8 +67,23 @@ target("catime")
     
     -- 添加编译选项
     if is_mode("release") then
+        -- 基本优化选项
         add_cflags("-O3", "-mtune=generic", "-ffunction-sections", "-fdata-sections", "-fno-strict-aliasing")
-        add_ldflags("-Wl,--gc-sections", "-s")
+        
+        -- 添加LTO(链接时优化)支持
+        add_cflags("-flto")
+        add_ldflags("-flto")
+        
+        -- 更多的优化标志
+        add_cflags("-fno-exceptions", "-fomit-frame-pointer", "-fmerge-all-constants")
+        add_cflags("-fno-math-errno", "-fno-trapping-math", "-ffast-math")
+        
+        -- 去除不必要的部分
+        add_ldflags("-Wl,--gc-sections", "-s", "-Wl,--strip-all")
+        
+        -- 使用更小的运行时库
+        add_cflags("-Os", {force = true})  -- 更倾向于体积优化而非速度优化
+        
         add_defines("NDEBUG")
     end
     
@@ -100,12 +115,14 @@ after_build(function (target)
                 if is_windows then
                     -- Windows bat脚本
                     script:write("@echo off\n")
-                    script:write("upx --best --lzma " .. targetfile .. " > nul 2>&1\n")
+                    -- 使用--ultra-brute进行更激进的压缩
+                    script:write("upx --ultra-brute --lzma " .. targetfile .. " > nul 2>&1\n")
                     script:write("exit 0\n")  -- 确保即使失败也返回成功
                 else
                     -- Unix shell脚本
                     script:write("#!/bin/sh\n")
-                    script:write("upx --best --lzma " .. targetfile .. " > /dev/null 2>&1 || true\n")
+                    -- 使用--ultra-brute进行更激进的压缩
+                    script:write("upx --ultra-brute --lzma " .. targetfile .. " > /dev/null 2>&1 || true\n")
                 end
                 script:close()
                 
