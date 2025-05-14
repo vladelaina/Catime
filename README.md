@@ -45,48 +45,49 @@
 <p align="center">一款简洁的 Windows 倒计时工具，支持番茄时钟功能，具有透明界面和丰富的自定义选项。</p>
 <p align="center">A simple Windows countdown tool with Pomodoro clock functionality, featuring a transparent interface and a variety of customization options.</p>
 
+
 <div align="center">
 <video src="https://github.com/user-attachments/assets/2f733378-8ddd-468f-b971-7e98ea4824c2" autoplay loop></video>
 </div>
 
-**简体中文** | [**English**](./README_EN.md)
+**English** | [**简体中文**](./README_zh.md)
 
-## [🌟特点](https://vladelaina.github.io/Catime/#core-features)
+## [🌟Features](https://vladelaina.github.io/Catime/#core-features)
 
-- **极简设计**: 透明界面、点击穿透、随意拖拽和缩放、没有繁琐的图形化设置界面，不会让人有直观上多开一个软件的感觉
-- **灵活计时**: 快速预设、自定义时间输入、显示当前时间(12/24小时制)、倒计时、正计时、番茄时钟
-- **超时动作**: 显示消息、显示当前时间、正计时、锁定屏幕、打开文件/软件、打开网站、关机、重启
-- **自定义丰富**: 47种字体、15种预设颜色、支持输入颜色值、使用调色板选择颜色、支持实时预览
+- **Minimalist Design**: Transparent interface, click-through capability, free dragging and resizing, no complex graphical settings interface, won't feel like an additional application running
+- **Flexible Timing**: Quick presets, custom time input, current time display (12/24-hour format), countdown, count-up, Pomodoro clock
+- **Timeout Actions**: Display messages, show current time, count up, lock screen, open files/applications, open websites, shutdown, restart
+- **Rich Customization**: 47 fonts, 15 preset colors, support for custom color values, color palette selection, real-time preview
 
-## [💡使用场景](https://vladelaina.github.io/Catime/#use-cases)
+## [💡Use Cases](https://vladelaina.github.io/Catime/#use-cases)
 
-- 👔 下班倒计时
-- 🍅 番茄时钟
-- 🎮 打游戏时使用，可以随时看时间，避免玩过头
-- ⏰ 定时打开
-  - 🌐 网站
-  - 💻 软件
-  - 📄 文件
-  - 📝 批处理脚本
-  - 🔄 定时关机/重启
-- 📊 ppt演示倒计时
-- 🕰️ 作为桌面时钟使用
-- ⏱️正计时/倒计时
+- 👔 Countdown to end of work
+- 🍅 Pomodoro technique
+- 🎮 Use while gaming to keep track of time
+- ⏰ Schedule opening of:
+  - 🌐 Websites
+  - 💻 Applications
+  - 📄 Files
+  - 📝 Batch scripts
+  - 🔄 Scheduled shutdown/restart
+- 📊 Presentation countdown timer
+- 🕰️ Desktop clock
+- ⏱️ Count-up/countdown timer
 
- 演示视频(基于V1.0.5)：<img src="https://www.bilibili.com/favicon.ico" width="20" height="20"> [BiliBili](https://www.bilibili.com/video/BV1AsoKYgE3r/)
+ Demo video (based on V1.0.5): <img src="https://www.bilibili.com/favicon.ico" width="20" height="20"> [BiliBili](https://www.bilibili.com/video/BV1AsoKYgE3r/)
 
-## [📑使用指南](https://vladelaina.github.io/Catime/guide)
+## [📑User Guide](https://vladelaina.github.io/Catime/guide)
 
-- **左键点击托盘图标**: 设置**时间**
-- **右键点击托盘图标**: 设置**菜单**
-- **编辑模式**: 鼠标可以拖拽调整位置，滚轮调整大小，🖱️鼠标右键关闭编辑模式
-
-
+- **Left-click tray icon**: Set **time**
+- **Right-click tray icon**: Set **menu**
+- **Edit mode**: Drag to adjust position, scroll wheel to resize, 🖱️ right-click to exit edit mode
 
 
-## 🛠️ [从源代码构建](https://vladelaina.com/blog-post?slug=Build_catime_from_source)
 
-### 一、克隆：
+
+## 🛠️ [Building from Source](https://vladelaina.com/blog-post?slug=Build_catime_from_source)
+
+### 1. Clone:
 
 ```
 git clone git@github.com:vladelaina/Catime.git
@@ -95,7 +96,7 @@ cd Catime
 
 
 
-### 二、工具
+### 2. Tools
 
 
 #### 🐧Linux
@@ -111,96 +112,96 @@ cd Catime
 
 #### 🪟Windows
   
-  1. 准备工具
+  1. Prepare tools
 
-  | 工具        | 说明            | 推荐版本格式                                                   | 下载地址                                                                           |
-  | --------- | ------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------ |
-  | **MinGW** | GCC 编译器       | `x86_64-<版本号>-release-win32-seh-ucrt-rtv<数字>-rev<数字>.7z` | [MinGW Build](https://github.com/niXman/mingw-builds-binaries/releases/latest) |
-  | **xmake** | 构建工具          | `xmake-v<版本号>-win64.exe`                                 | [xmake](https://github.com/xmake-io/xmake/releases/latest)                     |
-  | **UPX**   | 可执行文件压缩工具（可选） | `upx-<版本号>-win64.zip`                                    | [upx](https://github.com/upx/upx/releases/latest)                              |
+  | Tool       | Description            | Recommended Version Format                                    | Download Link                                                                     |
+  | ---------- | ---------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+  | **MinGW**  | GCC Compiler           | `x86_64-<version>-release-win32-seh-ucrt-rtv<num>-rev<num>.7z` | [MinGW Build](https://github.com/niXman/mingw-builds-binaries/releases/latest)  |
+  | **xmake**  | Build Tool             | `xmake-v<version>-win64.exe`                                  | [xmake](https://github.com/xmake-io/xmake/releases/latest)                      |
+  | **UPX**    | Executable Compressor (Optional) | `upx-<version>-win64.zip`                           | [upx](https://github.com/upx/upx/releases/latest)                               |
 
   <details>
-    <summary>2. 安装各工具</summary>
+    <summary>2. Install tools</summary>
 
-  #### 📦 2.1 安装  [MinGW Build](https://github.com/niXman/mingw-builds-binaries/releases/latest)
+  #### 📦 2.1 Install [MinGW Build](https://github.com/niXman/mingw-builds-binaries/releases/latest)
 
-  1. **解压 MinGW 到指定位置**
-     例：将 `x86_64-<版本号>-release-win32-seh-ucrt-rtv<数字>-rev<数字>.7z` 解压到：
+  1. **Extract MinGW to a specific location**
+     Example: Extract `x86_64-<version>-release-win32-seh-ucrt-rtv<num>-rev<num>.7z` to:
 
      ```
      C:\mingw64
      ```
 
-  2. **配置系统环境变量 PATH**
+  2. **Configure system environment variable PATH**
 
-     * 打开：`控制面板 → 系统 → 高级系统设置 → 环境变量`
-     * 在 **系统变量** 中找到 `Path`，点击"编辑"
-     * 添加以下路径：
+     * Open: `Control Panel → System → Advanced System Settings → Environment Variables`
+     * Find `Path` in **System variables**, click "Edit"
+     * Add the following path:
 
        ```
        C:\mingw64\bin
        ```
 
-  3. **验证安装是否成功**
+  3. **Verify installation**
 
-     打开命令行（Win + R → 输入 `cmd` → 回车），输入：
+     Open command prompt (Win + R → type `cmd` → Enter), type:
 
      ```bash
      gcc --version
      ```
 
-     若成功显示版本号，即表示 MinGW 安装完成 ✅
+     If version number displays successfully, MinGW installation is complete ✅
 
-  #### 📦 2.2 安装 [xmake](https://github.com/xmake-io/xmake/releases/latest)
+  #### 📦 2.2 Install [xmake](https://github.com/xmake-io/xmake/releases/latest)
 
-  1. 运行 `xmake-v<版本号>-win64.exe` 进行安装
-  2. 安装时会自动配置 PATH（若未配置，可手动添加 xmake 安装目录下的 `bin` 目录）
+  1. Run `xmake-v<version>-win64.exe` to install
+  2. PATH will be configured automatically during installation (if not, manually add the `bin` directory of the xmake installation)
 
-  #### 📦 2.3 安装 [upx](https://github.com/upx/upx/releases/latest)（可选）
+  #### 📦 2.3 Install [upx](https://github.com/upx/upx/releases/latest) (Optional)
 
-  1. 解压 `upx-<版本号>-win64.zip` 到任意目录（如：`C:\Tools\upx`）
-  2. 将该目录添加到系统环境变量 PATH
+  1. Extract `upx-<version>-win64.zip` to any directory (e.g.: `C:\Tools\upx`)
+  2. Add this directory to the system environment variable PATH
 
   </details>
 
 
-### 三、验证工具是否可用
+### 3. Verify tools
   <details>
     <summary></summary>
 
 
-  #### ✅ 3.1 验证 gcc
+  #### ✅ 3.1 Verify gcc
 
   ```bash
   gcc --version
   ```
 
-  #### ✅ 3.2 验证 xmake
+  #### ✅ 3.2 Verify xmake
 
   ```bash
   xmake --version
   ```
 
-  #### ✅ 3.3 验证 upx(可选)
+  #### ✅ 3.3 Verify upx (optional)
 
   ```bash
   upx --version
   ```
-  若均能正常显示版本号，则工具配置成功 🎉
+  If all display version numbers correctly, tool configuration is successful 🎉
   </details>
 
 
 
 
 
-### 四、使用 xmake 构建项目
+### 4. Build with xmake
 
-在项目根目录下打开命令行，使用以下命令：
+Open a command prompt in the project root directory and use these commands:
 
 ```bash
-xmake         # 编译项目
-xmake run     # 编译并运行项目
-xmake clean   # 清理构建产物
+xmake         # Compile the project
+xmake run     # Compile and run the project
+xmake clean   # Clean build artifacts
 ```
 
 
@@ -214,9 +215,9 @@ xmake clean   # 清理构建产物
 </a>
 
 
-## [✨鸣谢](https://vladelaina.github.io/Catime/#thanks) 
+## [✨Acknowledgements](https://vladelaina.github.io/Catime/#thanks) 
 
-特别感谢以下贡献者：
+Special thanks to the following contributors:
 <table>
   <tbody>
     <tr>
@@ -328,14 +329,14 @@ xmake clean   # 清理构建产物
 
 
 
-## 🗝️版权声明
+## 🗝️Copyright Notice
 
-本项目采用 Apache License 2.0 开源协议发布。
+This project is released under the Apache License 2.0 open source license.
 
-图标版权声明：
-- 软件图标由 [猫屋敷梨梨Official](https://space.bilibili.com/26087398) 创作并保留所有权利，未经原作者明确授权，不得用于任何商业用途
+Icon copyright notice:
+- The software icon was created by [猫屋敷梨梨Official](https://space.bilibili.com/26087398) who reserves all rights. Without explicit authorization from the original creator, it may not be used for any commercial purposes.
 
-字体许可：
+Font licenses:
 - MIT: 
   - ProFont IIx Nerd Font.ttf
 - SIL Open Font License (OFL): 
@@ -359,9 +360,9 @@ xmake clean   # 清理构建产物
     Stick Essence.ttf, Underdog Essence.ttf, Wallpoet Essence.ttf,
     Yesteryear Essence.ttf, ZCOOL KuaiLe Essence.ttf
 
-壁纸:
-- 作者:[猫屋敷梨梨Official](https://space.bilibili.com/26087398)
-    - 动态壁纸链接：[Wallpaper Engine](https://steamcommunity.com/sharedfiles/filedetails/?id=3171487185)
+Wallpaper:
+- Author: [猫屋敷梨梨Official](https://space.bilibili.com/26087398)
+    - Dynamic wallpaper link: [Wallpaper Engine](https://steamcommunity.com/sharedfiles/filedetails/?id=3171487185)
 ---
 
 <div align="center">

@@ -4,9 +4,10 @@
 </a>
   
 <p align="center">
-  <a href="https://qm.qq.com/q/LgscIMw9i0" target="_blank">
+<a href="https://qm.qq.com/q/LgscIMw9i0" target="_blank">
     <img src="https://img.shields.io/badge/QQ%20Group%20-%20%201027327912-blue?logo=tencentqq&logoColor=white&style=for-the-badge" alt="Join QQ Group" />
-  </a>
+</a>
+
   <a href="https://discord.com/invite/W3tW2gtp6g" target="_blank">
     <img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white&style=for-the-badge" alt="Join Discord" />
   </a>
@@ -26,9 +27,10 @@
     <img alt="Downloads" src="https://img.shields.io/github/downloads/vladelaina/Catime/total?label=Downloads&style=for-the-badge&color=orange" />
   </a>
   <a href="https://github.com/vladelaina/Catime/releases" target="_blank">
-    <img src="https://img.shields.io/badge/Software%20Size-227%20KB-blue?logo=appveyor&logoColor=white&style=for-the-badge" alt="Software Size" />
+    <img src="https://img.shields.io/badge/Software%20Size-232%20KB-blue?logo=appveyor&logoColor=white&style=for-the-badge" alt="Software Size" />
   </a>
 </p>
+
 
 
 
@@ -37,50 +39,172 @@
 <h1 align="center">Catime</h1>
 
 <div align="center">
-<a href="https://hellogithub.com/repository/00a7a32b7bc647e1a62747530bc16115" target="_blank"><img src="https://api.hellogithub.com/v1/widgets/recommend.svg?rid=00a7a32b7bc647e1a62747530bc16115&claim_uid=JBczix10rXqNblQ&theme=neutral" alt="Featured｜HelloGitHub" style="width: 250px; height: 54px;" width="250" height="54" /></a>
+<a href="https://hellogithub.com/repository/00a7a32b7bc647e1a62747530bc16115" target="_blank"><img src="https://api.hellogithub.com/v1/widgets/recommend.svg?rid=00a7a32b7bc647e1a62747530bc16115&claim_uid=JBczix10rXqNblQ" alt="Featured｜HelloGitHub" style="width: 250px; height: 54px;" width="250" height="54" /></a>
 </div>
 
+<p align="center">一款简洁的 Windows 倒计时工具，支持番茄时钟功能，具有透明界面和丰富的自定义选项。</p>
 <p align="center">A simple Windows countdown tool with Pomodoro clock functionality, featuring a transparent interface and a variety of customization options.</p>
 
 <div align="center">
 <video src="https://github.com/user-attachments/assets/2f733378-8ddd-468f-b971-7e98ea4824c2" autoplay loop></video>
 </div>
 
-**English** | [**简体中文**](https://github.com/vladelaina/Catime)
+**简体中文** | [**English**](https://github.com/vladelaina/Catime)
 
-## [🌟Features](https://vladelaina.github.io/Catime/#core-features)
+## [🌟特点](https://vladelaina.github.io/Catime/#core-features)
 
-- **Minimalist Design**: Transparent interface, click-through capability, free dragging and resizing, no complex graphical settings interface, doesn't feel like running an additional application
-- **Flexible Timing**: Quick presets, custom time input, display current time (12/24-hour format), countdown, count up, Pomodoro timer
-- **Timeout Actions**: Display message, show current time, count up, lock screen, open file/application, open website, shutdown, restart
-- **Rich Customization**: 47 fonts, 15 preset colors, support for color value input, color palette selection, real-time preview
+- **极简设计**: 透明界面、点击穿透、随意拖拽和缩放、没有繁琐的图形化设置界面，不会让人有直观上多开一个软件的感觉
+- **灵活计时**: 快速预设、自定义时间输入、显示当前时间(12/24小时制)、倒计时、正计时、番茄时钟
+- **超时动作**: 显示消息、显示当前时间、正计时、锁定屏幕、打开文件/软件、打开网站、关机、重启
+- **自定义丰富**: 47种字体、15种预设颜色、支持输入颜色值、使用调色板选择颜色、支持实时预览
 
-## [Use Cases](https://vladelaina.github.io/Catime/#use-cases)
+## [💡使用场景](https://vladelaina.github.io/Catime/#use-cases)
 
-- 👔 Countdown to end of work
-- 🍅 Pomodoro timer
-- 🎮 Use while gaming to keep track of time and avoid playing too long
-- ⏰ Scheduled opening of:
-  - 🌐 Websites
-  - 💻 Applications
-  - 📄 Files
-  - 📝 Batch scripts
-  - 🔄 Scheduled shutdown/restart
-- 📊 Presentation countdown
-- 🕰️ Desktop clock
-- ⏱️ Count up/countdown
+- 👔 下班倒计时
+- 🍅 番茄时钟
+- 🎮 打游戏时使用，可以随时看时间，避免玩过头
+- ⏰ 定时打开
+  - 🌐 网站
+  - 💻 软件
+  - 📄 文件
+  - 📝 批处理脚本
+  - 🔄 定时关机/重启
+- 📊 ppt演示倒计时
+- 🕰️ 作为桌面时钟使用
+- ⏱️正计时/倒计时
 
- Demo video (based on V1.0.5): <img src="https://www.bilibili.com/favicon.ico" width="20" height="20"> [BiliBili](https://www.bilibili.com/video/BV1AsoKYgE3r/)
+ 演示视频(基于V1.0.5)：<img src="https://www.bilibili.com/favicon.ico" width="20" height="20"> [BiliBili](https://www.bilibili.com/video/BV1AsoKYgE3r/)
 
-## [📑User Guide](https://vladelaina.github.io/Catime/guide)
+## [📑使用指南](https://vladelaina.github.io/Catime/guide)
 
-- **Left-click tray icon**: Set **time**
-- **Right-click tray icon**: Settings **menu**
-- **Edit mode**: Mouse can drag to adjust position, scroll wheel to adjust size, 🖱️right-click to exit edit mode
+- **左键点击托盘图标**: 设置**时间**
+- **右键点击托盘图标**: 设置**菜单**
+- **编辑模式**: 鼠标可以拖拽调整位置，滚轮调整大小，🖱️鼠标右键关闭编辑模式
 
 
-### 🛠️Configuration File
-Settings are saved in `C:\Users\username\AppData\Local\Catime\config.txt`
+
+
+## 🛠️ [从源代码构建](https://vladelaina.com/blog-post?slug=Build_catime_from_source)
+
+### 一、克隆：
+
+```
+git clone git@github.com:vladelaina/Catime.git
+cd Catime
+```
+
+
+
+### 二、工具
+
+
+#### 🐧Linux
+
+- Ubuntu
+   ```bash
+   sudo apt update && sudo apt install -y mingw-w64 upx-ucl && curl -fsSL https://xmake.io/shget.text | bash
+   ```
+- Arch
+  ```bash
+  sudo pacman -Syu --noconfirm mingw-w64 upx xmake
+  ```
+
+#### 🪟Windows
+  
+  1. 准备工具
+
+  | 工具        | 说明            | 推荐版本格式                                                   | 下载地址                                                                           |
+  | --------- | ------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------ |
+  | **MinGW** | GCC 编译器       | `x86_64-<版本号>-release-win32-seh-ucrt-rtv<数字>-rev<数字>.7z` | [MinGW Build](https://github.com/niXman/mingw-builds-binaries/releases/latest) |
+  | **xmake** | 构建工具          | `xmake-v<版本号>-win64.exe`                                 | [xmake](https://github.com/xmake-io/xmake/releases/latest)                     |
+  | **UPX**   | 可执行文件压缩工具（可选） | `upx-<版本号>-win64.zip`                                    | [upx](https://github.com/upx/upx/releases/latest)                              |
+
+  <details>
+    <summary>2. 安装各工具</summary>
+
+  #### 📦 2.1 安装  [MinGW Build](https://github.com/niXman/mingw-builds-binaries/releases/latest)
+
+  1. **解压 MinGW 到指定位置**
+     例：将 `x86_64-<版本号>-release-win32-seh-ucrt-rtv<数字>-rev<数字>.7z` 解压到：
+
+     ```
+     C:\mingw64
+     ```
+
+  2. **配置系统环境变量 PATH**
+
+     * 打开：`控制面板 → 系统 → 高级系统设置 → 环境变量`
+     * 在 **系统变量** 中找到 `Path`，点击"编辑"
+     * 添加以下路径：
+
+       ```
+       C:\mingw64\bin
+       ```
+
+  3. **验证安装是否成功**
+
+     打开命令行（Win + R → 输入 `cmd` → 回车），输入：
+
+     ```bash
+     gcc --version
+     ```
+
+     若成功显示版本号，即表示 MinGW 安装完成 ✅
+
+  #### 📦 2.2 安装 [xmake](https://github.com/xmake-io/xmake/releases/latest)
+
+  1. 运行 `xmake-v<版本号>-win64.exe` 进行安装
+  2. 安装时会自动配置 PATH（若未配置，可手动添加 xmake 安装目录下的 `bin` 目录）
+
+  #### 📦 2.3 安装 [upx](https://github.com/upx/upx/releases/latest)（可选）
+
+  1. 解压 `upx-<版本号>-win64.zip` 到任意目录（如：`C:\Tools\upx`）
+  2. 将该目录添加到系统环境变量 PATH
+
+  </details>
+
+
+### 三、验证工具是否可用
+  <details>
+    <summary></summary>
+
+
+  #### ✅ 3.1 验证 gcc
+
+  ```bash
+  gcc --version
+  ```
+
+  #### ✅ 3.2 验证 xmake
+
+  ```bash
+  xmake --version
+  ```
+
+  #### ✅ 3.3 验证 upx(可选)
+
+  ```bash
+  upx --version
+  ```
+  若均能正常显示版本号，则工具配置成功 🎉
+  </details>
+
+
+
+
+
+### 四、使用 xmake 构建项目
+
+在项目根目录下打开命令行，使用以下命令：
+
+```bash
+xmake         # 编译项目
+xmake run     # 编译并运行项目
+xmake clean   # 清理构建产物
+```
+
+
+
 
 
 ## ⭐Star History
@@ -90,9 +214,9 @@ Settings are saved in `C:\Users\username\AppData\Local\Catime\config.txt`
 </a>
 
 
-## [✨Acknowledgements](https://vladelaina.github.io/Catime/#thanks) 
+## [✨鸣谢](https://vladelaina.github.io/Catime/#thanks) 
 
-Special thanks to the following contributors:
+特别感谢以下贡献者：
 <table>
   <tbody>
     <tr>
@@ -191,19 +315,27 @@ Special thanks to the following contributors:
       <td align="center" valign="top" width="14.28%">
         <a href="https://space.bilibili.com/507572706"><img src="https://github.com/user-attachments/assets/8bf7a9e8-749a-47b6-976c-6798bacea6d2" width="100px;" alt="卓越方达"/><br /><sub><b>卓越方达</b></sub></a><br />
       </td>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://github.com/choyy"><img src="https://avatars.githubusercontent.com/u/68107073?v=4" width="100px;" alt="choyy"/><br /><sub><b>choyy</b></sub></a><br />
+      </td>
+       </td>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://space.bilibili.com/378034263?spm_id_from=333.1007.0.0"><img src="https://github.com/user-attachments/assets/ec961664-258b-404f-8f9b-f4b396208473" width="100px;" alt="益渊Yyuan"/><br /><sub><b>益渊Yyuan</b></sub></a><br />
+      </td>
     </tr>  
   </tbody>
 </table>
 
 
-## 🗝️Copyright Notice
 
-This project is released under the Apache License 2.0 open source license.
+## 🗝️版权声明
 
-Icon copyright notice:
-- Software icon created by [猫屋敷梨梨Official](https://space.bilibili.com/26087398) who retains all rights. Without explicit authorization from the original creator, it may not be used for any commercial purposes.
+本项目采用 Apache License 2.0 开源协议发布。
 
-Font licenses:
+图标版权声明：
+- 软件图标由 [猫屋敷梨梨Official](https://space.bilibili.com/26087398) 创作并保留所有权利，未经原作者明确授权，不得用于任何商业用途
+
+字体许可：
 - MIT: 
   - ProFont IIx Nerd Font.ttf
 - SIL Open Font License (OFL): 
@@ -227,9 +359,9 @@ Font licenses:
     Stick Essence.ttf, Underdog Essence.ttf, Wallpoet Essence.ttf,
     Yesteryear Essence.ttf, ZCOOL KuaiLe Essence.ttf
 
-Wallpaper:
-- Creator: [猫屋敷梨梨Official](https://space.bilibili.com/26087398)
-    - Dynamic wallpaper link: [Wallpaper Engine](https://steamcommunity.com/sharedfiles/filedetails/?id=3171487185)
+壁纸:
+- 作者:[猫屋敷梨梨Official](https://space.bilibili.com/26087398)
+    - 动态壁纸链接：[Wallpaper Engine](https://steamcommunity.com/sharedfiles/filedetails/?id=3171487185)
 ---
 
 <div align="center">
@@ -239,3 +371,6 @@ By vladelaina\
 Made with ❤️ & ⌨️
 
 </div>
+
+
+
