@@ -1498,10 +1498,21 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT3, wideText);
             
             // 设置通知显示时间
-            wchar_t timeout_str[32];
-            StringCbPrintfW(timeout_str, sizeof(timeout_str), L"%d", NOTIFICATION_TIMEOUT_MS / 1000);
-            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, timeout_str);
+            // 使用时间控件，设置初始化时间值
+            // 将秒数转换为SYSTEMTIME结构的时分秒
+            SYSTEMTIME st = {0};
+            // 获取当地时间作为基础
+            GetLocalTime(&st);
+            // 设置时间控件只关注时分秒部分
+            int totalSeconds = NOTIFICATION_TIMEOUT_MS / 1000;
+            st.wHour = totalSeconds / 3600;
+            st.wMinute = (totalSeconds % 3600) / 60;
+            st.wSecond = totalSeconds % 60;
             
+            // 设置时间控件的初始值
+            SendDlgItemMessage(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, DTM_SETSYSTEMTIME, 
+                              GDT_VALID, (LPARAM)&st);
+
             // 设置通知透明度滑动条
             HWND hwndOpacitySlider = GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT);
             SendMessage(hwndOpacitySlider, TBM_SETRANGE, TRUE, MAKELONG(1, 100));
@@ -1605,11 +1616,13 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                                     cycle_complete_msg, sizeof(cycle_complete_msg), NULL, NULL);
                 
                 // 获取通知显示时间
-                wchar_t wTimeStr[32] = {0};
-                GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, wTimeStr, sizeof(wTimeStr)/sizeof(wchar_t));
-                int timeout = _wtoi(wTimeStr);
-                if (timeout > 0) {
-                    NOTIFICATION_TIMEOUT_MS = timeout * 1000;
+                SYSTEMTIME st = {0};
+                if (SendDlgItemMessage(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, DTM_GETSYSTEMTIME, 0, (LPARAM)&st) == GDT_VALID) {
+                    // 计算总秒数: 时*3600 + 分*60 + 秒
+                    int totalSeconds = st.wHour * 3600 + st.wMinute * 60 + st.wSecond;
+                    if (totalSeconds > 0) {
+                        NOTIFICATION_TIMEOUT_MS = totalSeconds * 1000;
+                    }
                 }
                 
                 // 获取通知透明度（从滑动条获取）

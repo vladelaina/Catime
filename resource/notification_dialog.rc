@@ -1,4 +1,5 @@
 #include <windows.h>
+#include <commctrl.h>
 #include "resource.h"
 
 // 设置 UTF-8 编码
@@ -25,8 +26,8 @@ BEGIN
     // 通知显示部分
     GROUPBOX        "通知显示", -1, 10, 180, 330, 70
     
-    LTEXT           "通知显示时间(秒):", IDC_NOTIFICATION_TIME_LABEL, 20, 200, 100, 15
-    EDITTEXT        IDC_NOTIFICATION_TIME_EDIT, 130, 198, 200, 20, ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "通知显示时间:", IDC_NOTIFICATION_TIME_LABEL, 20, 200, 100, 15
+    CONTROL         "", IDC_NOTIFICATION_TIME_EDIT, "SysDateTimePick32", DTS_TIMEFORMAT | DTS_UPDOWN | WS_TABSTOP, 130, 198, 100, 20
     
     LTEXT           "通知最大透明度(1-100%):", IDC_NOTIFICATION_OPACITY_LABEL, 20, 225, 110, 15
     CONTROL         "", IDC_NOTIFICATION_OPACITY_EDIT, "msctls_trackbar32", TBS_BOTH | TBS_NOTICKS | WS_TABSTOP, 130, 223, 180, 15
