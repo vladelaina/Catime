@@ -34,6 +34,138 @@
 #define HOTKEYF_ALT     0x04
 #endif
 
+// 文件作用域的静态变量，用于存储对话框初始化时的热键值
+static WORD g_dlgShowTimeHotkey = 0;
+static WORD g_dlgCountUpHotkey = 0;
+static WORD g_dlgCountdownHotkey = 0;
+static WORD g_dlgQuickCountdown1Hotkey = 0;
+static WORD g_dlgQuickCountdown2Hotkey = 0;
+static WORD g_dlgQuickCountdown3Hotkey = 0;
+static WORD g_dlgPomodoroHotkey = 0;
+static WORD g_dlgToggleVisibilityHotkey = 0;
+static WORD g_dlgEditModeHotkey = 0;
+static WORD g_dlgPauseResumeHotkey = 0;
+static WORD g_dlgRestartTimerHotkey = 0;
+
+// 保存对话框原始窗口过程
+static WNDPROC g_OldHotkeyDlgProc = NULL;
+
+/**
+ * @brief 对话框子类化处理函数
+ * @param hwnd 对话框窗口句柄
+ * @param msg 消息类型
+ * @param wParam 消息参数
+ * @param lParam 消息参数
+ * @return LRESULT 消息处理结果
+ * 
+ * 处理对话框的键盘消息，阻止系统提示音
+ */
+LRESULT CALLBACK HotkeyDialogSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    // Section 1: Check if the current message (DOWN or UP) corresponds to an original hotkey
+    if (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN || msg == WM_KEYUP || msg == WM_SYSKEYUP) {
+        BYTE vk = (BYTE)wParam;
+        // Only proceed if it's not a lone modifier key event itself.
+        // Lone modifier key presses/releases are handled by the switch statement later for general suppression.
+        if (!(vk == VK_SHIFT || vk == VK_CONTROL || vk == VK_MENU || vk == VK_LWIN || vk == VK_RWIN)) {
+            BYTE currentModifiers = 0;
+            if (GetKeyState(VK_SHIFT) & 0x8000) currentModifiers |= HOTKEYF_SHIFT;
+            if (GetKeyState(VK_CONTROL) & 0x8000) currentModifiers |= HOTKEYF_CONTROL;
+            // For SYS messages, Alt is involved. For non-SYS, check GetKeyState for Alt explicitly.
+            if (msg == WM_SYSKEYDOWN || msg == WM_SYSKEYUP || (GetKeyState(VK_MENU) & 0x8000)) {
+                currentModifiers |= HOTKEYF_ALT;
+            }
+
+            WORD currentEventKeyCombination = MAKEWORD(vk, currentModifiers);
+
+            const WORD originalHotkeys[] = {
+                g_dlgShowTimeHotkey, g_dlgCountUpHotkey, g_dlgCountdownHotkey,
+                g_dlgQuickCountdown1Hotkey, g_dlgQuickCountdown2Hotkey, g_dlgQuickCountdown3Hotkey,
+                g_dlgPomodoroHotkey, g_dlgToggleVisibilityHotkey, g_dlgEditModeHotkey,
+                g_dlgPauseResumeHotkey, g_dlgRestartTimerHotkey
+            };
+            BOOL isAnOriginalHotkeyEvent = FALSE;
+            for (size_t i = 0; i < sizeof(originalHotkeys) / sizeof(originalHotkeys[0]); ++i) {
+                if (originalHotkeys[i] != 0 && originalHotkeys[i] == currentEventKeyCombination) {
+                    isAnOriginalHotkeyEvent = TRUE;
+                    break;
+                }
+            }
+
+            if (isAnOriginalHotkeyEvent) {
+                HWND hwndFocus = GetFocus();
+                if (hwndFocus) {
+                    DWORD ctrlId = GetDlgCtrlID(hwndFocus);
+                    BOOL isHotkeyEditControl = FALSE;
+                    for (int i = IDC_HOTKEY_EDIT1; i <= IDC_HOTKEY_EDIT11; i++) {
+                        if (ctrlId == i) { isHotkeyEditControl = TRUE; break; }
+                    }
+                    if (!isHotkeyEditControl) {
+                        return 0; // Suppress DOWN or UP event for an original hotkey if not on edit control
+                    }
+                } else {
+                    return 0; // Suppress DOWN or UP event for an original hotkey if no focus
+                }
+                // If on an edit control, the message will fall through to CallWindowProc,
+                // allowing the control's own subclass (if any) or default processing.
+            }
+        }
+    }
+
+    // Section 2: General suppression for SYSKEY messages and specific KEYDOWN/UP for lone modifiers
+    switch (msg) {
+        case WM_SYSKEYDOWN:
+        case WM_SYSKEYUP:
+            // This handles lone Alt key presses/releases, or Alt+somekey that wasn't an original hotkey.
+            {
+                HWND hwndFocus = GetFocus();
+                if (hwndFocus) {
+                    DWORD ctrlId = GetDlgCtrlID(hwndFocus);
+                    BOOL isHotkeyEditControl = FALSE;
+                    for (int i = IDC_HOTKEY_EDIT1; i <= IDC_HOTKEY_EDIT11; i++) {
+                        if (ctrlId == i) { isHotkeyEditControl = TRUE; break; }
+                    }
+                    if (isHotkeyEditControl) {
+                        break; // Let hotkey edit control's subclass handle it (falls to CallWindowProc)
+                    }
+                }
+                return 0; // Consume generic SYSKEY message if not on an edit control (or no focus)
+            }
+            
+        case WM_KEYDOWN:
+        case WM_KEYUP:
+            // This handles lone Shift, Ctrl, Win key presses/releases if not on an edit control.
+            // (Alt is covered by WM_SYSKEYDOWN/WM_SYSKEYUP above).
+            {
+                BYTE vk_code = (BYTE)wParam;
+                if (vk_code == VK_SHIFT || vk_code == VK_CONTROL || vk_code == VK_LWIN || vk_code == VK_RWIN) {
+                    HWND hwndFocus = GetFocus();
+                    if (hwndFocus) {
+                        DWORD ctrlId = GetDlgCtrlID(hwndFocus);
+                        BOOL isHotkeyEditControl = FALSE;
+                        for (int i = IDC_HOTKEY_EDIT1; i <= IDC_HOTKEY_EDIT11; i++) {
+                            if (ctrlId == i) { isHotkeyEditControl = TRUE; break; }
+                        }
+                        if (!isHotkeyEditControl) {
+                            return 0; // Suppress lone Shift/Ctrl/Win if not on edit control
+                        }
+                    } else {
+                        return 0; // Suppress if no focus
+                    }
+                }
+            }
+            // If not a lone modifier or already handled, fall through to CallWindowProc.
+            break; 
+            
+        case WM_SYSCOMMAND:
+            if ((wParam & 0xFFF0) == SC_KEYMENU) {
+                return 0;
+            }
+            break;
+    }
+    
+    return CallWindowProc(g_OldHotkeyDlgProc, hwnd, msg, wParam, lParam);
+}
+
 /**
  * @brief 显示热键设置对话框
  * @param hwndParent 父窗口句柄
@@ -137,18 +269,10 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
     static HBRUSH hBackgroundBrush = NULL;
     static HBRUSH hButtonBrush = NULL;
     
-    // 以下变量用于存储当前设置的热键
-    static WORD showTimeHotkey = 0;        // 显示当前时间的热键
-    static WORD countUpHotkey = 0;         // 正计时的热键
-    static WORD countdownHotkey = 0;       // 倒计时的热键
-    static WORD quickCountdown1Hotkey = 0; // 快捷倒计时1的热键
-    static WORD quickCountdown2Hotkey = 0; // 快捷倒计时2的热键
-    static WORD quickCountdown3Hotkey = 0; // 快捷倒计时3的热键
-    static WORD pomodoroHotkey = 0;        // 番茄钟的热键
-    static WORD toggleVisibilityHotkey = 0; // 隐藏/显示的热键
-    static WORD editModeHotkey = 0;        // 编辑模式的热键
-    static WORD pauseResumeHotkey = 0;     // 暂停/继续的热键
-    static WORD restartTimerHotkey = 0;    // 重新开始的热键
+    // 以下变量用于存储当前设置的热键 - 这些已被移至文件作用域 g_dlg...
+    // static WORD showTimeHotkey = 0;
+    // static WORD countUpHotkey = 0;
+    // ... (其他类似注释掉)
     
     switch (msg) {
         case WM_INITDIALOG: {
@@ -192,24 +316,24 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
             hBackgroundBrush = CreateSolidBrush(RGB(0xF3, 0xF3, 0xF3));
             hButtonBrush = CreateSolidBrush(RGB(0xFD, 0xFD, 0xFD));
             
-            // 使用新函数读取热键配置
-            ReadConfigHotkeys(&showTimeHotkey, &countUpHotkey, &countdownHotkey,
-                             &quickCountdown1Hotkey, &quickCountdown2Hotkey, &quickCountdown3Hotkey,
-                             &pomodoroHotkey, &toggleVisibilityHotkey, &editModeHotkey,
-                             &pauseResumeHotkey, &restartTimerHotkey);
+            // 使用新函数读取热键配置到文件作用域的静态变量
+            ReadConfigHotkeys(&g_dlgShowTimeHotkey, &g_dlgCountUpHotkey, &g_dlgCountdownHotkey,
+                             &g_dlgQuickCountdown1Hotkey, &g_dlgQuickCountdown2Hotkey, &g_dlgQuickCountdown3Hotkey,
+                             &g_dlgPomodoroHotkey, &g_dlgToggleVisibilityHotkey, &g_dlgEditModeHotkey,
+                             &g_dlgPauseResumeHotkey, &g_dlgRestartTimerHotkey);
             
             // 设置热键控件的初始值
-            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT1, HKM_SETHOTKEY, showTimeHotkey, 0);
-            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT2, HKM_SETHOTKEY, countUpHotkey, 0);
-            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT3, HKM_SETHOTKEY, countdownHotkey, 0);
-            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT9, HKM_SETHOTKEY, quickCountdown1Hotkey, 0);
-            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT10, HKM_SETHOTKEY, quickCountdown2Hotkey, 0);
-            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT11, HKM_SETHOTKEY, quickCountdown3Hotkey, 0);
-            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT4, HKM_SETHOTKEY, pomodoroHotkey, 0);
-            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT5, HKM_SETHOTKEY, toggleVisibilityHotkey, 0);
-            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT6, HKM_SETHOTKEY, editModeHotkey, 0);
-            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT7, HKM_SETHOTKEY, pauseResumeHotkey, 0);
-            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT8, HKM_SETHOTKEY, restartTimerHotkey, 0);
+            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT1, HKM_SETHOTKEY, g_dlgShowTimeHotkey, 0);
+            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT2, HKM_SETHOTKEY, g_dlgCountUpHotkey, 0);
+            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT3, HKM_SETHOTKEY, g_dlgCountdownHotkey, 0);
+            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT9, HKM_SETHOTKEY, g_dlgQuickCountdown1Hotkey, 0);
+            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT10, HKM_SETHOTKEY, g_dlgQuickCountdown2Hotkey, 0);
+            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT11, HKM_SETHOTKEY, g_dlgQuickCountdown3Hotkey, 0);
+            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT4, HKM_SETHOTKEY, g_dlgPomodoroHotkey, 0);
+            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT5, HKM_SETHOTKEY, g_dlgToggleVisibilityHotkey, 0);
+            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT6, HKM_SETHOTKEY, g_dlgEditModeHotkey, 0);
+            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT7, HKM_SETHOTKEY, g_dlgPauseResumeHotkey, 0);
+            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT8, HKM_SETHOTKEY, g_dlgRestartTimerHotkey, 0);
             
             // 临时注销所有热键，以便用户可以立即测试新的热键设置
             UnregisterGlobalHotkeys(GetParent(hwndDlg));
@@ -221,6 +345,9 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                     SetWindowSubclass(hHotkeyCtrl, HotkeyControlSubclassProc, i, 0);
                 }
             }
+            
+            // 对对话框窗口进行子类化，以拦截所有键盘消息
+            g_OldHotkeyDlgProc = (WNDPROC)SetWindowLongPtr(hwndDlg, GWLP_WNDPROC, (LONG_PTR)HotkeyDialogSubclassProc);
             
             // 阻止对话框自动设置焦点到第一个输入控件
             // 这样对话框打开时就不会突然进入输入状态
@@ -372,19 +499,19 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                     };
                     
                     // 静默清除任何无效热键
-                    BOOL needsRefresh = FALSE;
+                    // BOOL needsRefresh = FALSE; // 这行似乎没有实际作用，可以考虑移除或检查其用途
                     for (int i = 0; i < sizeof(hotkeys) / sizeof(hotkeys[0]); i++) {
                         // 检查是否是无效的中文输入法热键组合 (Shift+0xE5)
                         if (LOBYTE(*hotkeys[i]) == 0xE5 && HIBYTE(*hotkeys[i]) == HOTKEYF_SHIFT) {
                             *hotkeys[i] = 0;
-                            needsRefresh = TRUE;
+                            // needsRefresh = TRUE;
                             continue;
                         }
                         
                         if (*hotkeys[i] != 0 && IsRestrictedSingleKey(*hotkeys[i])) {
                             // 发现单键热键，直接置为0
                             *hotkeys[i] = 0;
-                            needsRefresh = TRUE;
+                            // needsRefresh = TRUE;
                         }
                     }
                     
@@ -422,6 +549,12 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                 hButtonBrush = NULL;
             }
             
+            // 如果存在原始窗口过程，恢复它
+            if (g_OldHotkeyDlgProc) {
+                SetWindowLongPtr(hwndDlg, GWLP_WNDPROC, (LONG_PTR)g_OldHotkeyDlgProc);
+                g_OldHotkeyDlgProc = NULL;
+            }
+            
             // 移除所有热键编辑控件的子类处理函数
             for (int i = IDC_HOTKEY_EDIT1; i <= IDC_HOTKEY_EDIT11; i++) {
                 HWND hHotkeyCtrl = GetDlgItem(hwndDlg, i);
@@ -456,26 +589,7 @@ LRESULT CALLBACK HotkeyControlSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam,
             // 告诉Windows我们要处理所有键盘输入，包括Alt和菜单键
             return DLGC_WANTALLKEYS | DLGC_WANTCHARS;
             
-        case WM_SYSKEYDOWN:
-        case WM_SYSKEYUP:
-            // 处理Alt键和Alt+Shift等组合键，防止系统发出提示音
-            if (wParam == VK_MENU || wParam == VK_SHIFT || 
-                wParam == VK_CONTROL || wParam == VK_LWIN || wParam == VK_RWIN) {
-                // 正常处理这些键，但阻止默认的系统音效
-                return 0;
-            }
-            break;
-            
         case WM_KEYDOWN:
-            // 处理正常按键，但当与Alt组合时要特殊处理
-            if (GetKeyState(VK_MENU) < 0) {
-                // Alt键被按下的情况
-                if (wParam == VK_SHIFT || wParam == VK_CONTROL) {
-                    // 阻止Alt+Shift和Alt+Ctrl组合键的系统提示音
-                    return 0;
-                }
-            }
-            
             // 处理回车键 - 当按下回车时模拟点击确定按钮
             if (wParam == VK_RETURN) {
                 // 获取父对话框句柄
