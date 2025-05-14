@@ -1309,7 +1309,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
                     CLOCK_SHOW_CURRENT_TIME = !CLOCK_SHOW_CURRENT_TIME;
                     if (CLOCK_SHOW_CURRENT_TIME) {
-                        
                         ShowWindow(hwnd, SW_SHOW);  
                         
                         CLOCK_COUNT_UP = FALSE;
@@ -1321,8 +1320,13 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         SetTimer(hwnd, 1, 100, NULL); // 减少间隔到100毫秒，提高刷新频率
                     } else {
                         KillTimer(hwnd, 1);   
-                        elapsed_time = CLOCK_TOTAL_TIME;   
-                        message_shown = 1;   
+                        // 取消显示当前时间时，完全重置状态而不是恢复以前的状态
+                        elapsed_time = 0;
+                        countdown_elapsed_time = 0;
+                        CLOCK_TOTAL_TIME = 0;
+                        message_shown = 0;   // 重置消息显示状态
+                        // 设置定时器但使用更长的间隔，因为不再需要秒级更新
+                        SetTimer(hwnd, 1, 1000, NULL); 
                     }
                     InvalidateRect(hwnd, NULL, TRUE);
                     break;
@@ -2143,14 +2147,20 @@ void ToggleShowTimeMode(HWND hwnd) {
     extern void StopNotificationSound(void);
     StopNotificationSound();
     
-    // 切换到显示当前时间模式
-    CLOCK_SHOW_CURRENT_TIME = TRUE;
-    
-    // 重新设置计时器，确保更新频率正确
-    KillTimer(hwnd, 1);
-    SetTimer(hwnd, 1, 100, NULL);  // 使用100毫秒的更新频率以保持时间显示流畅
-    
-    InvalidateRect(hwnd, NULL, TRUE);
+    // 如果当前不是显示当前时间模式，则开启
+    // 如果已经是显示当前时间模式，则不做任何改变（不关闭）
+    if (!CLOCK_SHOW_CURRENT_TIME) {
+        // 切换到显示当前时间模式
+        CLOCK_SHOW_CURRENT_TIME = TRUE;
+        
+        // 重新设置计时器，确保更新频率正确
+        KillTimer(hwnd, 1);
+        SetTimer(hwnd, 1, 100, NULL);  // 使用100毫秒的更新频率以保持时间显示流畅
+        
+        // 刷新窗口
+        InvalidateRect(hwnd, NULL, TRUE);
+    }
+    // 已经在显示当前时间模式下，不做任何操作
 }
 
 /**
