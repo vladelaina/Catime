@@ -95,7 +95,7 @@ cd Catime
 
 
 
-### 二、工具
+### 二、工具（MinGW, xmake, UPX）
 
 
 #### 🐧Linux
