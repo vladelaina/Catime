@@ -163,7 +163,11 @@ cd Catime
 
   </details>
 
+
 ## 三、验证工具是否可用
+  <details>
+    <summary></summary>
+
 
   #### ✅ 3.1 验证 gcc
 
@@ -183,7 +187,7 @@ cd Catime
   upx --version
   ```
   若均能正常显示版本号，则工具配置成功 🎉
-
+  </details>
 
 
 
