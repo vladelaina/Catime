@@ -220,6 +220,14 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
             return FALSE;  
         }
 
+        // 添加处理WM_CLOSE消息的代码，当通过快捷键关闭对话框时不检查输入值合法性
+        case WM_CLOSE: {
+            // 直接关闭对话框，不进行输入验证
+            g_hwndInputDialog = NULL;
+            EndDialog(hwndDlg, 0);
+            return TRUE;
+        }
+
         case WM_CTLCOLORDLG:
         case WM_CTLCOLORSTATIC: {
             HDC hdcStatic = (HDC)wParam;
