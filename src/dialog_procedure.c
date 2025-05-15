@@ -59,13 +59,27 @@ static WNDPROC wpOrigLoopEditProc;  // 存储原始的编辑框过程
 // 子类化编辑框过程
 LRESULT APIENTRY EditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+    static BOOL firstKeyProcessed = FALSE;
+    
     switch (msg) {
     case WM_SETFOCUS:
         // 当获取焦点时，确保选中全部文本
         PostMessage(hwnd, EM_SETSEL, 0, -1);
+        // 重置首次按键标记
+        firstKeyProcessed = FALSE;
         break;
         
     case WM_KEYDOWN:
+        // 处理首次按键问题
+        if (!firstKeyProcessed) {
+            // 强制清除所有修饰键状态
+            // 这有助于解决热键残留状态问题
+            firstKeyProcessed = TRUE;
+            
+            // 标记已经处理了首次按键，但不做特殊处理
+            // 让系统正常处理这个按键，避免重复输入
+        }
+        
         // 回车键处理
         if (wParam == VK_RETURN) {
             // 发送BM_CLICK消息给父窗口的OK按钮
@@ -176,6 +190,10 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 
             // 设置一个特殊的定时器，在对话框完全显示后设置焦点
             SetTimer(hwndDlg, 9999, 50, NULL);
+            
+            // 强制重置所有修饰键状态（防止热键残留）
+            // 这会解决使用热键打开对话框后第一个按键被忽略的问题
+            PostMessage(hwndDlg, WM_APP+103, 0, 0);
             
             // 设置编译时间（优化后的宽字符处理）
             char month[4];
@@ -325,6 +343,67 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                     // 全选文本
                     SendMessage(hwndEdit, EM_SETSEL, 0, -1);
                 }
+            }
+            return TRUE;
+            
+        case WM_APP+103:
+            // 强制重置所有修饰键状态
+            // 模拟所有可能的修饰键的释放
+            // 这会帮助清除任何可能残留的热键状态
+            {
+                INPUT inputs[8] = {0};
+                int inputCount = 0;
+                
+                // 左Shift键释放
+                inputs[inputCount].type = INPUT_KEYBOARD;
+                inputs[inputCount].ki.wVk = VK_LSHIFT;
+                inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
+                inputCount++;
+                
+                // 右Shift键释放
+                inputs[inputCount].type = INPUT_KEYBOARD;
+                inputs[inputCount].ki.wVk = VK_RSHIFT;
+                inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
+                inputCount++;
+                
+                // 左Ctrl键释放
+                inputs[inputCount].type = INPUT_KEYBOARD;
+                inputs[inputCount].ki.wVk = VK_LCONTROL;
+                inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
+                inputCount++;
+                
+                // 右Ctrl键释放
+                inputs[inputCount].type = INPUT_KEYBOARD;
+                inputs[inputCount].ki.wVk = VK_RCONTROL;
+                inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
+                inputCount++;
+                
+                // 左Alt键释放
+                inputs[inputCount].type = INPUT_KEYBOARD;
+                inputs[inputCount].ki.wVk = VK_LMENU;
+                inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
+                inputCount++;
+                
+                // 右Alt键释放
+                inputs[inputCount].type = INPUT_KEYBOARD;
+                inputs[inputCount].ki.wVk = VK_RMENU;
+                inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
+                inputCount++;
+                
+                // 左Win键释放
+                inputs[inputCount].type = INPUT_KEYBOARD;
+                inputs[inputCount].ki.wVk = VK_LWIN;
+                inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
+                inputCount++;
+                
+                // 右Win键释放
+                inputs[inputCount].type = INPUT_KEYBOARD;
+                inputs[inputCount].ki.wVk = VK_RWIN;
+                inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
+                inputCount++;
+                
+                // 发送所有按键释放事件
+                SendInput(inputCount, inputs, sizeof(INPUT));
             }
             return TRUE;
 
