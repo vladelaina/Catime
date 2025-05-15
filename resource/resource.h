@@ -1,5 +1,5 @@
 /* 版本与更新信息 */
-#define CATIME_VERSION "1.1.0"
+#define CATIME_VERSION "1.1.1-alph1"
 
 /* 鸣谢链接 */
 #define CREDIT_LINK_URL L"https://space.bilibili.com/26087398"
