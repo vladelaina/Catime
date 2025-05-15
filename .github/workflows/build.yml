@@ -54,6 +54,26 @@ jobs:
         find . -name "catime.exe" -type f -print -exec cp {} output/ \;
         echo "使用xmake完成构建"
         
+    - name: 安装UPX压缩工具
+      run: |
+        sudo apt-get install -y upx
+        upx --version
+        
+    - name: 使用UPX压缩可执行文件
+      run: |
+        # 保存压缩前大小
+        BEFORE_SIZE=$(stat -c %s output/catime.exe)
+        BEFORE_SIZE_KB=$((BEFORE_SIZE / 1024))
+        
+        # 使用UPX进行压缩，ultra-brute模式获得最小体积
+        upx --ultra-brute --lzma output/catime.exe
+        
+        # 保存压缩后大小并显示结果
+        AFTER_SIZE=$(stat -c %s output/catime.exe)
+        AFTER_SIZE_KB=$((AFTER_SIZE / 1024))
+        
+        echo "UPX压缩: ${BEFORE_SIZE_KB}KiB → ${AFTER_SIZE_KB}KiB"
+        
     - name: 添加版本信息文件
       run: |
         echo "# Catime ${{ env.VERSION }} 版本说明" > output/README.txt

@@ -96,67 +96,7 @@ target("catime")
     
 -- 配置自定义构建事件
 after_build(function (target)
-    -- 压缩可执行文件
-    local targetfile = target:targetfile()
-    local size_before = os.filesize(targetfile)
-    
-    -- 直接尝试执行upx压缩，使用try-catch捕获可能的错误
-    local compression_success = false
-    try {
-        function()
-            -- 隐藏所有UPX输出，使用脚本
-            local is_windows = os.host() == "windows"
-            local script_ext = is_windows and ".bat" or ".sh"
-            local script_file = os.tmpfile() .. script_ext
-            
-            -- 创建临时脚本
-            local script = io.open(script_file, "w")
-            if script then
-                if is_windows then
-                    -- Windows bat脚本
-                    script:write("@echo off\n")
-                    -- 使用--ultra-brute进行更激进的压缩
-                    script:write("upx --ultra-brute --lzma " .. targetfile .. " > nul 2>&1\n")
-                    script:write("exit 0\n")  -- 确保即使失败也返回成功
-                else
-                    -- Unix shell脚本
-                    script:write("#!/bin/sh\n")
-                    -- 使用--ultra-brute进行更激进的压缩
-                    script:write("upx --ultra-brute --lzma " .. targetfile .. " > /dev/null 2>&1 || true\n")
-                end
-                script:close()
-                
-                -- 确保脚本可执行(仅Unix)
-                if not is_windows then
-                    os.exec("chmod +x %s", script_file)
-                end
-                
-                -- 运行脚本并只显示最终结果
-                os.exec(script_file)
-                
-                -- 清理临时文件
-                os.rm(script_file)
-                
-                compression_success = true
-            end
-        end,
-        catch = function()
-            -- 如果出现错误，不做任何处理
-        end
-    }
-    
-    -- 显示压缩结果，格式类似Makefile
-    local size_after = os.filesize(targetfile)
-    local size_before_kb = math.floor(size_before / 1024)
-    local size_after_kb = math.floor(size_after / 1024)
-    
-    if compression_success and size_before ~= size_after then
-        -- 只有成功压缩时才显示结果
-        print("\x1b[38;2;0;255;0m[" .. " 99%]:\x1b[0m Compressed: " .. size_before_kb .. "KiB → " .. size_after_kb .. "KiB")
-    else
-        print("\x1b[38;2;0;255;0m[" .. " 99%]:\x1b[0m Compression skipped (UPX failed or not available)")
-    end
-    
+    -- 显示构建信息
     print("\x1b[38;2;0;255;0m[" .. " 99%]:\x1b[0m " .. "Output directory: " .. target:targetdir())
 end)
 
