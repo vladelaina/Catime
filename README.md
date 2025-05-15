@@ -96,18 +96,18 @@ cd Catime
 
 
 
-### 2. Tools (MinGW, xmake, UPX)
+### 2. Tools (MinGW, xmake)
 
 
 #### 🐧Linux
 
 - Ubuntu
    ```bash
-   sudo apt update && sudo apt install -y mingw-w64 upx-ucl && curl -fsSL https://xmake.io/shget.text | bash
+   sudo apt update && sudo apt install -y mingw-w64 && curl -fsSL https://xmake.io/shget.text | bash
    ```
 - Arch
   ```bash
-  sudo pacman -Syu --noconfirm mingw-w64 upx xmake
+  sudo pacman -Syu --noconfirm mingw-w64 xmake
   ```
 
 #### 🪟Windows
@@ -118,7 +118,6 @@ cd Catime
   | ---------- | ---------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------- |
   | **MinGW**  | GCC Compiler           | `x86_64-<version>-release-win32-seh-ucrt-rtv<num>-rev<num>.7z` | [MinGW Build](https://github.com/niXman/mingw-builds-binaries/releases/latest)  |
   | **xmake**  | Build Tool             | `xmake-v<version>-win64.exe`                                  | [xmake](https://github.com/xmake-io/xmake/releases/latest)                      |
-  | **UPX**    | Executable Compressor (Optional) | `upx-<version>-win64.zip`                           | [upx](https://github.com/upx/upx/releases/latest)                               |
 
   <details>
     <summary>2. Install tools</summary>
@@ -157,11 +156,6 @@ cd Catime
   1. Run `xmake-v<version>-win64.exe` to install
   2. PATH will be configured automatically during installation (if not, manually add the `bin` directory of the xmake installation)
 
-  #### 📦 2.3 Install [upx](https://github.com/upx/upx/releases/latest) (Optional)
-
-  1. Extract `upx-<version>-win64.zip` to any directory (e.g.: `C:\Tools\upx`)
-  2. Add this directory to the system environment variable PATH
-
   </details>
 
 
@@ -182,11 +176,6 @@ cd Catime
   xmake --version
   ```
 
-  #### ✅ 3.3 Verify upx (optional)
-
-  ```bash
-  upx --version
-  ```
   If all display version numbers correctly, tool configuration is successful 🎉
   </details>
 

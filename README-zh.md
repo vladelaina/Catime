@@ -95,18 +95,18 @@ cd Catime
 
 
 
-### 二、工具（MinGW, xmake, UPX）
+### 二、工具（MinGW, xmake）
 
 
 #### 🐧Linux
 
 - Ubuntu
    ```bash
-   sudo apt update && sudo apt install -y mingw-w64 upx-ucl && curl -fsSL https://xmake.io/shget.text | bash
+   sudo apt update && sudo apt install -y mingw-w64 && curl -fsSL https://xmake.io/shget.text | bash
    ```
 - Arch
   ```bash
-  sudo pacman -Syu --noconfirm mingw-w64 upx xmake
+  sudo pacman -Syu --noconfirm mingw-w64 xmake
   ```
 
 #### 🪟Windows
@@ -117,7 +117,6 @@ cd Catime
   | --------- | ------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------ |
   | **MinGW** | GCC 编译器       | `x86_64-<版本号>-release-win32-seh-ucrt-rtv<数字>-rev<数字>.7z` | [MinGW Build](https://github.com/niXman/mingw-builds-binaries/releases/latest) |
   | **xmake** | 构建工具          | `xmake-v<版本号>-win64.exe`                                 | [xmake](https://github.com/xmake-io/xmake/releases/latest)                     |
-  | **UPX**   | 可执行文件压缩工具（可选） | `upx-<版本号>-win64.zip`                                    | [upx](https://github.com/upx/upx/releases/latest)                              |
 
   <details>
     <summary>2. 安装各工具</summary>
@@ -156,11 +155,6 @@ cd Catime
   1. 运行 `xmake-v<版本号>-win64.exe` 进行安装
   2. 安装时会自动配置 PATH（若未配置，可手动添加 xmake 安装目录下的 `bin` 目录）
 
-  #### 📦 2.3 安装 [upx](https://github.com/upx/upx/releases/latest)（可选）
-
-  1. 解压 `upx-<版本号>-win64.zip` 到任意目录（如：`C:\Tools\upx`）
-  2. 将该目录添加到系统环境变量 PATH
-
   </details>
 
 
@@ -181,11 +175,6 @@ cd Catime
   xmake --version
   ```
 
-  #### ✅ 3.3 验证 upx(可选)
-
-  ```bash
-  upx --version
-  ```
   若均能正常显示版本号，则工具配置成功 🎉
   </details>
 
