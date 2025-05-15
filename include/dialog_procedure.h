@@ -113,4 +113,12 @@ void ShowNotificationDisplayDialog(HWND hwndParent);
  */
 void ShowNotificationSettingsDialog(HWND hwndParent);
 
+/**
+ * @brief 全局倒计时输入对话框句柄
+ * 
+ * 用于跟踪当前显示的倒计时输入对话框。
+ * 如果为NULL，表示没有输入对话框正在显示。
+ */
+extern HWND g_hwndInputDialog;
+
 #endif // DIALOG_PROCEDURE_H

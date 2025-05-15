@@ -47,6 +47,9 @@ static HWND g_hwndAboutDlg = NULL;
 // 添加全局变量来跟踪错误对话框句柄
 static HWND g_hwndErrorDlg = NULL;
 
+// 添加全局变量来跟踪倒计时输入对话框句柄
+HWND g_hwndInputDialog = NULL;
+
 // 添加循环次数编辑框的子类化过程
 static WNDPROC wpOrigLoopEditProc;  // 存储原始的编辑框过程
 
@@ -131,6 +134,9 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 
     switch (msg) {
         case WM_INITDIALOG: {
+            // 保存对话框句柄
+            g_hwndInputDialog = hwndDlg;
+            
             SetWindowPos(hwndDlg, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
             SetFocus(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT));
             SendMessage(hwndDlg, DM_SETDEFID, CLOCK_IDC_BUTTON_OK, 0);
@@ -220,6 +226,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                     }
                 }
                 if (inputText[0] == '\0' || isAllSpaces) {
+                    g_hwndInputDialog = NULL;
                     EndDialog(hwndDlg, 0);
                     return TRUE;
                 }
@@ -230,16 +237,20 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                     int dialogId = GetWindowLongPtr(hwndDlg, GWLP_USERDATA);
                     if (dialogId == CLOCK_IDD_POMODORO_TIME_DIALOG) {
                         // 通用番茄钟时间设置，由调用者处理具体更新逻辑
+                        g_hwndInputDialog = NULL;
                         EndDialog(hwndDlg, 0);
                     } else if (dialogId == CLOCK_IDD_POMODORO_LOOP_DIALOG) {
                         // 番茄钟循环次数
                         WriteConfigPomodoroLoopCount(total_seconds);
+                        g_hwndInputDialog = NULL;
                         EndDialog(hwndDlg, 0);
                     } else if (dialogId == CLOCK_IDD_DIALOG1 || dialogId == CLOCK_IDD_STARTUP_DIALOG) {
                         // 默认倒计时时间
                         WriteConfigDefaultStartTime(total_seconds);
+                        g_hwndInputDialog = NULL;
                         EndDialog(hwndDlg, 0);
                     } else {
+                        g_hwndInputDialog = NULL;
                         EndDialog(hwndDlg, 0);
                     }
                 } else {
@@ -283,6 +294,9 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                 DeleteObject(hButtonBrush);
                 hButtonBrush = NULL;
             }
+            
+            // 清除对话框句柄
+            g_hwndInputDialog = NULL;
             }
             break;
     }

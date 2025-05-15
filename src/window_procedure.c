@@ -26,7 +26,7 @@
 #include "../include/color.h"
 #include "../include/tray.h"
 #include "../include/tray_menu.h"
-#include "../include/timer.h"
+#include "../include/timer.h"  
 #include "../include/window.h"  
 #include "../include/startup.h" 
 #include "../include/config.h"
@@ -2097,6 +2097,13 @@ refresh_window:
                 StartDefaultCountDown(hwnd);
                 return 0;
             } else if (wp == HOTKEY_ID_CUSTOM_COUNTDOWN) {
+                // 检查输入对话框是否已经存在
+                if (g_hwndInputDialog != NULL && IsWindow(g_hwndInputDialog)) {
+                    // 对话框已存在，关闭它
+                    SendMessage(g_hwndInputDialog, WM_CLOSE, 0, 0);
+                    return 0;
+                }
+                
                 // 显示输入对话框以设置倒计时
                 extern int elapsed_time;
                 extern BOOL message_shown;
