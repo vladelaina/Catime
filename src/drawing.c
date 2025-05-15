@@ -147,7 +147,7 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
     SetTextColor(memDC, RGB(r, g, b));
 
     if (CLOCK_EDIT_MODE) {
-        HBRUSH hBrush = CreateSolidBrush(RGB(0, 0, 0));
+        HBRUSH hBrush = CreateSolidBrush(RGB(20, 20, 20));  // 深灰色背景
         FillRect(memDC, &rect, hBrush);
         DeleteObject(hBrush);
     } else {
@@ -177,10 +177,26 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
         int x = (rect.right - textSize.cx) / 2;
         int y = (rect.bottom - textSize.cy) / 2;
 
-        SetTextColor(memDC, RGB(r, g, b));
-        
-        for (int i = 0; i < 8; i++) {
+        // 如果处于编辑模式，强制使用白色文字并添加描边效果
+        if (CLOCK_EDIT_MODE) {
+            SetTextColor(memDC, RGB(255, 255, 255));
+            
+            // 添加黑色描边效果
+            SetTextColor(memDC, RGB(0, 0, 0));
+            TextOutA(memDC, x-1, y, time_text, strlen(time_text));
+            TextOutA(memDC, x+1, y, time_text, strlen(time_text));
+            TextOutA(memDC, x, y-1, time_text, strlen(time_text));
+            TextOutA(memDC, x, y+1, time_text, strlen(time_text));
+            
+            // 设置回白色绘制文本
+            SetTextColor(memDC, RGB(255, 255, 255));
             TextOutA(memDC, x, y, time_text, strlen(time_text));
+        } else {
+            SetTextColor(memDC, RGB(r, g, b));
+            
+            for (int i = 0; i < 8; i++) {
+                TextOutA(memDC, x, y, time_text, strlen(time_text));
+            }
         }
     }
 

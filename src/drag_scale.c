@@ -57,8 +57,9 @@ void StartEditMode(HWND hwnd) {
     // 确保鼠标光标为默认箭头
     SetCursor(LoadCursor(NULL, IDC_ARROW));
     
-    // 刷新窗口
+    // 刷新窗口，添加立即更新
     InvalidateRect(hwnd, NULL, TRUE);
+    UpdateWindow(hwnd);  // 确保立即刷新
 }
 
 /**
@@ -84,8 +85,9 @@ void EndEditMode(HWND hwnd) {
             SetWindowTopmost(hwnd, FALSE);
         }
         
-        // 刷新窗口
+        // 刷新窗口，添加立即更新
         InvalidateRect(hwnd, NULL, TRUE);
+        UpdateWindow(hwnd);  // 确保立即刷新
     }
 }
 

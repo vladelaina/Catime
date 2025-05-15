@@ -148,7 +148,7 @@ void SetBlurBehind(HWND hwnd, BOOL enable) {
         ACCENT_POLICY policy = {0};
         policy.AccentState = ACCENT_ENABLE_BLURBEHIND;
         policy.AccentFlags = 0;
-        policy.GradientColor = (BLUR_OPACITY << 24) | 0x00FFFFFF;
+        policy.GradientColor = (180 << 24) | 0x00202020;  // 改为透明度180的深灰色背景
         
         WINDOWCOMPOSITIONATTRIBDATA data = {0};
         data.Attrib = WCA_ACCENT_POLICY;
