@@ -325,6 +325,9 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                              &g_dlgPomodoroHotkey, &g_dlgToggleVisibilityHotkey, &g_dlgEditModeHotkey,
                              &g_dlgPauseResumeHotkey, &g_dlgRestartTimerHotkey);
             
+            // 读取自定义倒计时热键
+            ReadCustomCountdownHotkey(&g_dlgCustomCountdownHotkey);
+            
             // 设置热键控件的初始值
             SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT1, HKM_SETHOTKEY, g_dlgShowTimeHotkey, 0);
             SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT2, HKM_SETHOTKEY, g_dlgCountUpHotkey, 0);
