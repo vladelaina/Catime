@@ -451,6 +451,11 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
                            quickCountdown1Hotkey, quickCountdown2Hotkey, quickCountdown3Hotkey,
                            pomodoroHotkey, toggleVisibilityHotkey, editModeHotkey,
                            pauseResumeHotkey, restartTimerHotkey);
+        
+        // 检查自定义倒计时热键是否被清除，如果是，同时更新配置
+        if (customCountdownHotkey == 0) {
+            WriteConfigKeyValue("HOTKEY_CUSTOM_COUNTDOWN", "None");
+        }
     }
     
     // 在读取热键配置后添加

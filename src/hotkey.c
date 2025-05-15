@@ -425,7 +425,7 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                  ctrlId == IDC_HOTKEY_EDIT5 || ctrlId == IDC_HOTKEY_EDIT6 ||
                  ctrlId == IDC_HOTKEY_EDIT7 || ctrlId == IDC_HOTKEY_EDIT8 ||
                  ctrlId == IDC_HOTKEY_EDIT9 || ctrlId == IDC_HOTKEY_EDIT10 ||
-                 ctrlId == IDC_HOTKEY_EDIT11)) {
+                 ctrlId == IDC_HOTKEY_EDIT11 || ctrlId == IDC_HOTKEY_EDIT12)) {
                 
                 // 获取当前控件的热键值
                 WORD newHotkey = (WORD)SendDlgItemMessage(hwndDlg, ctrlId, HKM_GETHOTKEY, 0, 0);
@@ -455,7 +455,7 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                         IDC_HOTKEY_EDIT1, IDC_HOTKEY_EDIT2, IDC_HOTKEY_EDIT3,
                         IDC_HOTKEY_EDIT9, IDC_HOTKEY_EDIT10, IDC_HOTKEY_EDIT11,
                         IDC_HOTKEY_EDIT4, IDC_HOTKEY_EDIT5, IDC_HOTKEY_EDIT6,
-                        IDC_HOTKEY_EDIT7, IDC_HOTKEY_EDIT8
+                        IDC_HOTKEY_EDIT7, IDC_HOTKEY_EDIT8, IDC_HOTKEY_EDIT12
                     };
                     
                     // 检查是否与其他热键控件冲突
@@ -500,7 +500,7 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                         &showTimeHotkey, &countUpHotkey, &countdownHotkey,
                         &quickCountdown1Hotkey, &quickCountdown2Hotkey, &quickCountdown3Hotkey,
                         &pomodoroHotkey, &toggleVisibilityHotkey, &editModeHotkey,
-                        &pauseResumeHotkey, &restartTimerHotkey
+                        &pauseResumeHotkey, &restartTimerHotkey, &customCountdownHotkey
                     };
                     
                     // 静默清除任何无效热键
@@ -525,8 +525,8 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                                       quickCountdown1Hotkey, quickCountdown2Hotkey, quickCountdown3Hotkey,
                                       pomodoroHotkey, toggleVisibilityHotkey, editModeHotkey,
                                       pauseResumeHotkey, restartTimerHotkey);
-
-                    // 单独保存自定义倒计时热键
+                    // 单独保存自定义倒计时热键 - 同时更新全局静态变量
+                    g_dlgCustomCountdownHotkey = customCountdownHotkey;
                     char customCountdownStr[64] = {0};
                     HotkeyToString(customCountdownHotkey, customCountdownStr, sizeof(customCountdownStr));
                     WriteConfigKeyValue("HOTKEY_CUSTOM_COUNTDOWN", customCountdownStr);
