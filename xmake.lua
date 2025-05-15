@@ -98,6 +98,22 @@ target("catime")
 after_build(function (target)
     -- 显示构建信息
     print("\x1b[38;2;0;255;0m[" .. " 99%]:\x1b[0m " .. "Output directory: " .. target:targetdir())
+    
+    -- 获取并显示编译后的文件大小
+    local targetfile = target:targetfile()
+    local filesize = os.filesize(targetfile)
+    
+    -- 格式化文件大小显示
+    local size_text = ""
+    if filesize < 1024 then
+        size_text = string.format("%.2f B", filesize)
+    elseif filesize < 1024 * 1024 then
+        size_text = string.format("%.2f KB", filesize / 1024)
+    else
+        size_text = string.format("%.2f MB", filesize / (1024 * 1024))
+    end
+    
+    print("\x1b[38;2;0;255;0m[" .. " 99%]:\x1b[0m " .. "Size: " .. size_text)
 end)
 
 -- 自定义菜单
