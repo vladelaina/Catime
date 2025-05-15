@@ -60,6 +60,11 @@ static WNDPROC wpOrigLoopEditProc;  // 存储原始的编辑框过程
 LRESULT APIENTRY EditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     switch (msg) {
+    case WM_SETFOCUS:
+        // 当获取焦点时，确保选中全部文本
+        PostMessage(hwnd, EM_SETSEL, 0, -1);
+        break;
+        
     case WM_KEYDOWN:
         // 回车键处理
         if (wParam == VK_RETURN) {
@@ -138,8 +143,6 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
             g_hwndInputDialog = hwndDlg;
             
             SetWindowPos(hwndDlg, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-            SetFocus(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT));
-            SendMessage(hwndDlg, DM_SETDEFID, CLOCK_IDC_BUTTON_OK, 0);
             hBackgroundBrush = CreateSolidBrush(RGB(0xF3, 0xF3, 0xF3));
             hEditBrush = CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF));
             hButtonBrush = CreateSolidBrush(RGB(0xFD, 0xFD, 0xFD));
@@ -157,9 +160,23 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
             // 子类化编辑框控件
             wpOrigEditProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
 
+            // 确保输入框获得焦点 - 使用多种方法保证焦点设置
+            SetFocus(hwndEdit);
+            
+            // 使用多个延迟消息，以不同的延迟时间确保焦点和文本选择能正确生效
+            PostMessage(hwndDlg, WM_APP+100, 0, (LPARAM)hwndEdit);
+            PostMessage(hwndDlg, WM_APP+101, 0, (LPARAM)hwndEdit);
+            PostMessage(hwndDlg, WM_APP+102, 0, (LPARAM)hwndEdit);
+            
             // 全选编辑框中的文本
             SendDlgItemMessage(hwndDlg, CLOCK_IDC_EDIT, EM_SETSEL, 0, -1);
+            
+            // 设置默认按钮ID
+            SendMessage(hwndDlg, DM_SETDEFID, CLOCK_IDC_BUTTON_OK, 0);
 
+            // 设置一个特殊的定时器，在对话框完全显示后设置焦点
+            SetTimer(hwndDlg, 9999, 50, NULL);
+            
             // 设置编译时间（优化后的宽字符处理）
             char month[4];
             int day, year, hour, min, sec;
@@ -263,6 +280,24 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
             }
             break;
 
+        case WM_TIMER:
+            if (wParam == 9999) {
+                // 定时器用于在对话框完全显示后设置焦点
+                KillTimer(hwndDlg, 9999);
+                
+                HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
+                if (hwndEdit && IsWindow(hwndEdit)) {
+                    // 确保窗口位于前台
+                    SetForegroundWindow(hwndDlg);
+                    // 确保编辑框获得焦点
+                    SetFocus(hwndEdit);
+                    // 全选文本
+                    SendMessage(hwndEdit, EM_SETSEL, 0, -1);
+                }
+                return TRUE;
+            }
+            break;
+
         case WM_KEYDOWN:
             if (wParam == VK_RETURN) {
                 int dlgId = GetDlgCtrlID((HWND)lParam);
@@ -274,6 +309,24 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                 return TRUE;
             }
             break;
+
+        case WM_APP+100:
+        case WM_APP+101:
+        case WM_APP+102:
+            // 延迟执行的焦点和选择设置
+            if (lParam) {
+                HWND hwndEdit = (HWND)lParam;
+                // 确保窗口有效并可见
+                if (IsWindow(hwndEdit) && IsWindowVisible(hwndEdit)) {
+                    // 确保窗口在前台
+                    SetForegroundWindow(hwndDlg);
+                    // 设置焦点到输入框
+                    SetFocus(hwndEdit);
+                    // 全选文本
+                    SendMessage(hwndEdit, EM_SETSEL, 0, -1);
+                }
+            }
+            return TRUE;
 
         case WM_DESTROY:
             // 恢复原始编辑框过程
