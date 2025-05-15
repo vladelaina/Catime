@@ -338,21 +338,58 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                             return TRUE;
                         }
                         
+                        // 如果是关机选项，立即处理，跳过其他处理逻辑
+                        if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SHUTDOWN) {
+                            // 重置显示并应用更改
+                            CLOCK_TOTAL_TIME = 0;
+                            countdown_elapsed_time = 0;
+                            
+                            // 停止计时器
+                            KillTimer(hwnd, 1);
+                            
+                            // 立即强制重绘窗口以清除显示
+                            InvalidateRect(hwnd, NULL, TRUE);
+                            UpdateWindow(hwnd);
+                            
+                            // 释放内存
+                            if (timeoutMsgW) {
+                                free(timeoutMsgW);
+                            }
+                            
+                            // 执行关机命令
+                            system("shutdown /s /t 0");
+                            return TRUE;
+                        }
+                        
+                        // 如果是重启选项，立即处理，跳过其他处理逻辑
+                        if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_RESTART) {
+                            // 重置显示并应用更改
+                            CLOCK_TOTAL_TIME = 0;
+                            countdown_elapsed_time = 0;
+                            
+                            // 停止计时器
+                            KillTimer(hwnd, 1);
+                            
+                            // 立即强制重绘窗口以清除显示
+                            InvalidateRect(hwnd, NULL, TRUE);
+                            UpdateWindow(hwnd);
+                            
+                            // 释放内存
+                            if (timeoutMsgW) {
+                                free(timeoutMsgW);
+                            }
+                            
+                            // 执行重启命令
+                            system("shutdown /r /t 0");
+                            return TRUE;
+                        }
+                        
                         switch (CLOCK_TIMEOUT_ACTION) {
                             case TIMEOUT_ACTION_MESSAGE:
                                 // 已经显示了通知，不需要额外操作
                                 break;
                             case TIMEOUT_ACTION_LOCK:
                                 LockWorkStation();
-                                break;
-                            case TIMEOUT_ACTION_SHUTDOWN:
-                                system("shutdown /s /t 0");
-                                break;
-                            case TIMEOUT_ACTION_RESTART:
-                                system("shutdown /r /t 0");
-                                break;
-                            case TIMEOUT_ACTION_SLEEP:
-                                // 这个分支现在不会被执行，因为已经在前面处理了
                                 break;
                             case TIMEOUT_ACTION_OPEN_FILE: {
                                 if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
