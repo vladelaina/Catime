@@ -198,6 +198,7 @@ void ExitProgram(HWND hwnd) {
 #define HOTKEY_ID_EDIT_MODE       108  // 编辑模式热键ID
 #define HOTKEY_ID_PAUSE_RESUME    109  // 暂停/继续热键ID
 #define HOTKEY_ID_RESTART_TIMER   110  // 重新开始热键ID
+#define HOTKEY_ID_CUSTOM_COUNTDOWN 111 // 自定义倒计时热键ID
 
 /**
  * @brief 注册全局热键
@@ -225,6 +226,7 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
     WORD editModeHotkey = 0;
     WORD pauseResumeHotkey = 0;
     WORD restartTimerHotkey = 0;
+    WORD customCountdownHotkey = 0;
     
     ReadConfigHotkeys(&showTimeHotkey, &countUpHotkey, &countdownHotkey,
                      &quickCountdown1Hotkey, &quickCountdown2Hotkey, &quickCountdown3Hotkey,
@@ -451,6 +453,29 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
                            pauseResumeHotkey, restartTimerHotkey);
     }
     
+    // 在读取热键配置后添加
+    ReadCustomCountdownHotkey(&customCountdownHotkey);
+    
+    // 在注册倒计时热键后添加
+    // 注册自定义倒计时热键
+    if (customCountdownHotkey != 0) {
+        BYTE vk = LOBYTE(customCountdownHotkey);
+        BYTE mod = HIBYTE(customCountdownHotkey);
+        
+        UINT fsModifiers = 0;
+        if (mod & HOTKEYF_ALT) fsModifiers |= MOD_ALT;
+        if (mod & HOTKEYF_CONTROL) fsModifiers |= MOD_CONTROL;
+        if (mod & HOTKEYF_SHIFT) fsModifiers |= MOD_SHIFT;
+        
+        if (RegisterHotKey(hwnd, HOTKEY_ID_CUSTOM_COUNTDOWN, fsModifiers, vk)) {
+            success = TRUE;
+        } else {
+            // 热键注册失败，清除配置
+            customCountdownHotkey = 0;
+            configChanged = TRUE;
+        }
+    }
+    
     return success;
 }
 
@@ -473,6 +498,7 @@ void UnregisterGlobalHotkeys(HWND hwnd) {
     UnregisterHotKey(hwnd, HOTKEY_ID_EDIT_MODE);
     UnregisterHotKey(hwnd, HOTKEY_ID_PAUSE_RESUME);
     UnregisterHotKey(hwnd, HOTKEY_ID_RESTART_TIMER);
+    UnregisterHotKey(hwnd, HOTKEY_ID_CUSTOM_COUNTDOWN);
 }
 
 /**
@@ -2060,67 +2086,59 @@ refresh_window:
             break;
         }
         case WM_HOTKEY: {
-            // 处理全局热键消息
-            switch (wp) {
-                case HOTKEY_ID_SHOW_TIME:
-                    // 显示当前时间
-                    ToggleShowTimeMode(hwnd);
-                    break;
-                    
-                case HOTKEY_ID_COUNT_UP:
-                    // 开始正计时
-                    StartCountUp(hwnd);
-                    break;
-                    
-                case HOTKEY_ID_COUNTDOWN:
-                    // 开始默认倒计时
-                    StartDefaultCountDown(hwnd);
-                    break;
-                
-                case HOTKEY_ID_QUICK_COUNTDOWN1:
-                    // 开始快捷倒计时1
-                    StartQuickCountdown1(hwnd);
-                    break;
-                
-                case HOTKEY_ID_QUICK_COUNTDOWN2:
-                    // 开始快捷倒计时2
-                    StartQuickCountdown2(hwnd);
-                    break;
-                
-                case HOTKEY_ID_QUICK_COUNTDOWN3:
-                    // 开始快捷倒计时3
-                    StartQuickCountdown3(hwnd);
-                    break;
-                    
-                case HOTKEY_ID_POMODORO:
-                    // 开始番茄钟
-                    StartPomodoroTimer(hwnd);
-                    break;
-                    
-                case HOTKEY_ID_TOGGLE_VISIBILITY:
-                    // 隐藏/显示窗口
-                    if (IsWindowVisible(hwnd)) {
-                        ShowWindow(hwnd, SW_HIDE);
-                    } else {
-                        ShowWindow(hwnd, SW_SHOW);
-                        SetForegroundWindow(hwnd);
-                    }
-                    break;
-                    
-                case HOTKEY_ID_EDIT_MODE:
-                    // 进入编辑模式
-                    ToggleEditMode(hwnd);
-                    break;
-                    
-                case HOTKEY_ID_PAUSE_RESUME:
-                    // 暂停/继续计时
-                    TogglePauseResume(hwnd);
-                    break;
-                    
-                case HOTKEY_ID_RESTART_TIMER:
-                    // 重新开始当前计时
-                    RestartCurrentTimer(hwnd);
-                    break;
+            // WM_HOTKEY消息的 lp 中包含了按键信息
+            if (wp == HOTKEY_ID_SHOW_TIME) {
+                ToggleShowTimeMode(hwnd);
+                return 0;
+            } else if (wp == HOTKEY_ID_COUNT_UP) {
+                StartCountUp(hwnd);
+                return 0;
+            } else if (wp == HOTKEY_ID_COUNTDOWN) {
+                StartDefaultCountDown(hwnd);
+                return 0;
+            } else if (wp == HOTKEY_ID_CUSTOM_COUNTDOWN) {
+                // 显示输入对话框以设置倒计时
+                DialogBox(GetModuleHandle(NULL), 
+                         MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), 
+                         hwnd, DlgProc);
+                return 0;
+            } else if (wp == HOTKEY_ID_QUICK_COUNTDOWN1) {
+                // 开始快捷倒计时1
+                StartQuickCountdown1(hwnd);
+                return 0;
+            } else if (wp == HOTKEY_ID_QUICK_COUNTDOWN2) {
+                // 开始快捷倒计时2
+                StartQuickCountdown2(hwnd);
+                return 0;
+            } else if (wp == HOTKEY_ID_QUICK_COUNTDOWN3) {
+                // 开始快捷倒计时3
+                StartQuickCountdown3(hwnd);
+                return 0;
+            } else if (wp == HOTKEY_ID_POMODORO) {
+                // 开始番茄钟
+                StartPomodoroTimer(hwnd);
+                return 0;
+            } else if (wp == HOTKEY_ID_TOGGLE_VISIBILITY) {
+                // 隐藏/显示窗口
+                if (IsWindowVisible(hwnd)) {
+                    ShowWindow(hwnd, SW_HIDE);
+                } else {
+                    ShowWindow(hwnd, SW_SHOW);
+                    SetForegroundWindow(hwnd);
+                }
+                return 0;
+            } else if (wp == HOTKEY_ID_EDIT_MODE) {
+                // 进入编辑模式
+                ToggleEditMode(hwnd);
+                return 0;
+            } else if (wp == HOTKEY_ID_PAUSE_RESUME) {
+                // 暂停/继续计时
+                TogglePauseResume(hwnd);
+                return 0;
+            } else if (wp == HOTKEY_ID_RESTART_TIMER) {
+                // 重新开始当前计时
+                RestartCurrentTimer(hwnd);
+                return 0;
             }
             break;
         }

@@ -351,6 +351,27 @@ void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdow
                       WORD* pomodoroHotkey, WORD* toggleVisibilityHotkey, WORD* editModeHotkey,
                       WORD* pauseResumeHotkey, WORD* restartTimerHotkey);
 
+/**
+ * @brief 从配置文件中读取自定义倒计时热键
+ * @param hotkey 热键值指针
+ */
+void ReadCustomCountdownHotkey(WORD* hotkey);
+
+/**
+ * @brief 从配置文件中读取显示当前时间热键
+ * @param hotkey 热键值指针
+ */
+void ReadTimeHotkey(WORD* hotkey);
+
+/**
+ * @brief 写入单个配置项到配置文件
+ * @param key 配置项键名
+ * @param value 配置项值
+ * 
+ * 在配置文件中添加或更新单个配置项
+ */
+void WriteConfigKeyValue(const char* key, const char* value);
+
 /// @}
 
 #endif // CONFIG_H

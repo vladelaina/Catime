@@ -38,6 +38,7 @@
 static WORD g_dlgShowTimeHotkey = 0;
 static WORD g_dlgCountUpHotkey = 0;
 static WORD g_dlgCountdownHotkey = 0;
+static WORD g_dlgCustomCountdownHotkey = 0; // 新增倒计时热键
 static WORD g_dlgQuickCountdown1Hotkey = 0;
 static WORD g_dlgQuickCountdown2Hotkey = 0;
 static WORD g_dlgQuickCountdown3Hotkey = 0;
@@ -287,6 +288,8 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                           GetLocalizedString(L"显示当前时间:", L"Show Current Time:"));
             SetDlgItemTextW(hwndDlg, IDC_HOTKEY_LABEL2, 
                           GetLocalizedString(L"正计时:", L"Count Up:"));
+            SetDlgItemTextW(hwndDlg, IDC_HOTKEY_LABEL12, 
+                          GetLocalizedString(L"倒计时:", L"Countdown:"));
             SetDlgItemTextW(hwndDlg, IDC_HOTKEY_LABEL3, 
                           GetLocalizedString(L"默认倒计时:", L"Default Countdown:"));
             SetDlgItemTextW(hwndDlg, IDC_HOTKEY_LABEL9, 
@@ -325,6 +328,7 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
             // 设置热键控件的初始值
             SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT1, HKM_SETHOTKEY, g_dlgShowTimeHotkey, 0);
             SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT2, HKM_SETHOTKEY, g_dlgCountUpHotkey, 0);
+            SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT12, HKM_SETHOTKEY, g_dlgCustomCountdownHotkey, 0); // 为新的倒计时热键设置初始值
             SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT3, HKM_SETHOTKEY, g_dlgCountdownHotkey, 0);
             SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT9, HKM_SETHOTKEY, g_dlgQuickCountdown1Hotkey, 0);
             SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT10, HKM_SETHOTKEY, g_dlgQuickCountdown2Hotkey, 0);
@@ -339,7 +343,7 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
             UnregisterGlobalHotkeys(GetParent(hwndDlg));
             
             // 为所有热键编辑控件设置子类处理函数
-            for (int i = IDC_HOTKEY_EDIT1; i <= IDC_HOTKEY_EDIT11; i++) {
+            for (int i = IDC_HOTKEY_EDIT1; i <= IDC_HOTKEY_EDIT12; i++) {
                 HWND hHotkeyCtrl = GetDlgItem(hwndDlg, i);
                 if (hHotkeyCtrl) {
                     SetWindowSubclass(hHotkeyCtrl, HotkeyControlSubclassProc, i, 0);
@@ -477,25 +481,26 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
             
             switch (LOWORD(wParam)) {
                 case IDOK: {
-                    // 获取热键控件中设置的值
-                    WORD newShowTimeHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT1, HKM_GETHOTKEY, 0, 0);
-                    WORD newCountUpHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT2, HKM_GETHOTKEY, 0, 0);
-                    WORD newCountdownHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT3, HKM_GETHOTKEY, 0, 0);
-                    WORD newQuickCountdown1Hotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT9, HKM_GETHOTKEY, 0, 0);
-                    WORD newQuickCountdown2Hotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT10, HKM_GETHOTKEY, 0, 0);
-                    WORD newQuickCountdown3Hotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT11, HKM_GETHOTKEY, 0, 0);
-                    WORD newPomodoroHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT4, HKM_GETHOTKEY, 0, 0);
-                    WORD newToggleVisibilityHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT5, HKM_GETHOTKEY, 0, 0);
-                    WORD newEditModeHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT6, HKM_GETHOTKEY, 0, 0);
-                    WORD newPauseResumeHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT7, HKM_GETHOTKEY, 0, 0);
-                    WORD newRestartTimerHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT8, HKM_GETHOTKEY, 0, 0);
+                    // 获取热键控件中设置的热键值
+                    WORD showTimeHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT1, HKM_GETHOTKEY, 0, 0);
+                    WORD countUpHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT2, HKM_GETHOTKEY, 0, 0);
+                    WORD customCountdownHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT12, HKM_GETHOTKEY, 0, 0); // 获取新增倒计时热键
+                    WORD countdownHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT3, HKM_GETHOTKEY, 0, 0);
+                    WORD quickCountdown1Hotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT9, HKM_GETHOTKEY, 0, 0);
+                    WORD quickCountdown2Hotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT10, HKM_GETHOTKEY, 0, 0);
+                    WORD quickCountdown3Hotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT11, HKM_GETHOTKEY, 0, 0);
+                    WORD pomodoroHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT4, HKM_GETHOTKEY, 0, 0);
+                    WORD toggleVisibilityHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT5, HKM_GETHOTKEY, 0, 0);
+                    WORD editModeHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT6, HKM_GETHOTKEY, 0, 0);
+                    WORD pauseResumeHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT7, HKM_GETHOTKEY, 0, 0);
+                    WORD restartTimerHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT8, HKM_GETHOTKEY, 0, 0);
                     
                     // 再次检查所有热键，确保没有单个键的热键
                     WORD* hotkeys[] = {
-                        &newShowTimeHotkey, &newCountUpHotkey, &newCountdownHotkey,
-                        &newQuickCountdown1Hotkey, &newQuickCountdown2Hotkey, &newQuickCountdown3Hotkey,
-                        &newPomodoroHotkey, &newToggleVisibilityHotkey, &newEditModeHotkey,
-                        &newPauseResumeHotkey, &newRestartTimerHotkey
+                        &showTimeHotkey, &countUpHotkey, &countdownHotkey,
+                        &quickCountdown1Hotkey, &quickCountdown2Hotkey, &quickCountdown3Hotkey,
+                        &pomodoroHotkey, &toggleVisibilityHotkey, &editModeHotkey,
+                        &pauseResumeHotkey, &restartTimerHotkey
                     };
                     
                     // 静默清除任何无效热键
@@ -516,10 +521,15 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                     }
                     
                     // 使用新的函数保存热键设置到配置文件
-                    WriteConfigHotkeys(newShowTimeHotkey, newCountUpHotkey, newCountdownHotkey,
-                                      newQuickCountdown1Hotkey, newQuickCountdown2Hotkey, newQuickCountdown3Hotkey,
-                                      newPomodoroHotkey, newToggleVisibilityHotkey, newEditModeHotkey,
-                                      newPauseResumeHotkey, newRestartTimerHotkey);
+                    WriteConfigHotkeys(showTimeHotkey, countUpHotkey, countdownHotkey,
+                                      quickCountdown1Hotkey, quickCountdown2Hotkey, quickCountdown3Hotkey,
+                                      pomodoroHotkey, toggleVisibilityHotkey, editModeHotkey,
+                                      pauseResumeHotkey, restartTimerHotkey);
+
+                    // 单独保存自定义倒计时热键
+                    char customCountdownStr[64] = {0};
+                    HotkeyToString(customCountdownHotkey, customCountdownStr, sizeof(customCountdownStr));
+                    WriteConfigKeyValue("HOTKEY_CUSTOM_COUNTDOWN", customCountdownStr);
                     
                     // 通知主窗口热键设置已更改，需要重新注册
                     PostMessage(GetParent(hwndDlg), WM_APP+1, 0, 0);
@@ -556,7 +566,7 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
             }
             
             // 移除所有热键编辑控件的子类处理函数
-            for (int i = IDC_HOTKEY_EDIT1; i <= IDC_HOTKEY_EDIT11; i++) {
+            for (int i = IDC_HOTKEY_EDIT1; i <= IDC_HOTKEY_EDIT12; i++) {
                 HWND hHotkeyCtrl = GetDlgItem(hwndDlg, i);
                 if (hHotkeyCtrl) {
                     RemoveWindowSubclass(hHotkeyCtrl, HotkeyControlSubclassProc, i);

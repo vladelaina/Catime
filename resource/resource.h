@@ -229,6 +229,8 @@
 #define IDC_HOTKEY_EDIT10 2122  // 快捷倒计时2快捷键编辑控件ID
 #define IDC_HOTKEY_LABEL11 2123 // "快捷倒计时3"标签ID
 #define IDC_HOTKEY_EDIT11 2124  // 快捷倒计时3快捷键编辑控件ID
+#define IDC_HOTKEY_LABEL12 2125 // "倒计时"标签ID
+#define IDC_HOTKEY_EDIT12 2126  // 倒计时快捷键编辑控件ID
 
 /* 通知最大透明度配置 */
 extern int NOTIFICATION_MAX_OPACITY;

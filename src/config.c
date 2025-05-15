@@ -2566,14 +2566,13 @@ void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdow
 void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownHotkey,
                         WORD quickCountdown1Hotkey, WORD quickCountdown2Hotkey, WORD quickCountdown3Hotkey,
                         WORD pomodoroHotkey, WORD toggleVisibilityHotkey, WORD editModeHotkey,
-                        WORD pauseResumeHotkey, WORD restartTimerHotkey)
-{
+                        WORD pauseResumeHotkey, WORD restartTimerHotkey) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
     FILE* file = fopen(config_path, "r");
     if (!file) {
-        // 文件不存在，直接创建新文件
+        // 如果文件不存在，则创建新文件
         file = fopen(config_path, "w");
         if (!file) return;
         
@@ -2589,6 +2588,7 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
         char editModeStr[64] = {0};
         char pauseResumeStr[64] = {0};
         char restartTimerStr[64] = {0};
+        char customCountdownStr[64] = {0}; // 新增自定义倒计时热键
         
         // 转换各个热键
         HotkeyToString(showTimeHotkey, showTimeStr, sizeof(showTimeStr));
@@ -2602,8 +2602,12 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
         HotkeyToString(editModeHotkey, editModeStr, sizeof(editModeStr));
         HotkeyToString(pauseResumeHotkey, pauseResumeStr, sizeof(pauseResumeStr));
         HotkeyToString(restartTimerHotkey, restartTimerStr, sizeof(restartTimerStr));
+        // 获取自定义倒计时热键的值
+        WORD customCountdownHotkey = 0;
+        ReadCustomCountdownHotkey(&customCountdownHotkey);
+        HotkeyToString(customCountdownHotkey, customCountdownStr, sizeof(customCountdownStr));
         
-        // 写入所有热键设置
+        // 写入热键配置
         fprintf(file, "HOTKEY_SHOW_TIME=%s\n", showTimeStr);
         fprintf(file, "HOTKEY_COUNT_UP=%s\n", countUpStr);
         fprintf(file, "HOTKEY_COUNTDOWN=%s\n", countdownStr);
@@ -2615,6 +2619,7 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
         fprintf(file, "HOTKEY_EDIT_MODE=%s\n", editModeStr);
         fprintf(file, "HOTKEY_PAUSE_RESUME=%s\n", pauseResumeStr);
         fprintf(file, "HOTKEY_RESTART_TIMER=%s\n", restartTimerStr);
+        fprintf(file, "HOTKEY_CUSTOM_COUNTDOWN=%s\n", customCountdownStr); // 添加新的热键
         
         fclose(file);
         return;
@@ -2985,4 +2990,101 @@ WORD StringToHotkey(const char* str) {
     }
     
     return MAKEWORD(vk, mod);
+}
+
+/**
+ * @brief 从配置文件中读取自定义倒计时热键设置
+ * @param hotkey 存储热键的指针
+ */
+void ReadCustomCountdownHotkey(WORD* hotkey) {
+    if (!hotkey) return;
+    
+    *hotkey = 0; // 默认为0（未设置）
+    
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    
+    FILE* file = fopen(config_path, "r");
+    if (!file) return;
+    
+    char line[256];
+    while (fgets(line, sizeof(line), file)) {
+        if (strncmp(line, "HOTKEY_CUSTOM_COUNTDOWN=", 24) == 0) {
+            char* value = line + 24;
+            // 去除末尾的换行符
+            char* newline = strchr(value, '\n');
+            if (newline) *newline = '\0';
+            
+            // 解析热键字符串
+            *hotkey = StringToHotkey(value);
+            break;
+        }
+    }
+    
+    fclose(file);
+}
+
+/**
+ * @brief 写入单个配置项到配置文件
+ * @param key 配置项键名
+ * @param value 配置项值
+ * 
+ * 在配置文件中添加或更新单个配置项
+ */
+void WriteConfigKeyValue(const char* key, const char* value) {
+    if (!key || !value) return;
+    
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    
+    FILE* file = fopen(config_path, "r");
+    if (!file) {
+        // 文件不存在，创建新文件
+        file = fopen(config_path, "w");
+        if (!file) return;
+        
+        // 直接写入键值对
+        fprintf(file, "%s=%s\n", key, value);
+        fclose(file);
+        return;
+    }
+    
+    // 文件存在，读取所有内容到临时文件，修改对应行
+    char temp_path[MAX_PATH];
+    sprintf(temp_path, "%s.tmp", config_path);
+    FILE* temp_file = fopen(temp_path, "w");
+    
+    if (!temp_file) {
+        fclose(file);
+        return;
+    }
+    
+    char line[256];
+    BOOL found = FALSE;
+    size_t key_len = strlen(key);
+    
+    // 处理每一行
+    while (fgets(line, sizeof(line), file)) {
+        if (strncmp(line, key, key_len) == 0 && line[key_len] == '=') {
+            // 找到匹配的键，更新值
+            fprintf(temp_file, "%s=%s\n", key, value);
+            found = TRUE;
+        } else {
+            // 其他行直接复制
+            fputs(line, temp_file);
+        }
+    }
+    
+    // 如果没有找到对应的键，在文件末尾添加
+    if (!found) {
+        fprintf(temp_file, "%s=%s\n", key, value);
+    }
+    
+    // 关闭文件
+    fclose(file);
+    fclose(temp_file);
+    
+    // 替换原文件
+    remove(config_path);
+    rename(temp_path, config_path);
 }

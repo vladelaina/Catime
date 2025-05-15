@@ -17,34 +17,37 @@ BEGIN
     LTEXT           "正计时:",IDC_HOTKEY_LABEL2,14,35,80,8
     CONTROL         "",IDC_HOTKEY_EDIT2,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,105,33,160,14
     
-    LTEXT           "默认倒计时:",IDC_HOTKEY_LABEL3,14,55,80,8
-    CONTROL         "",IDC_HOTKEY_EDIT3,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,105,53,160,14
+    LTEXT           "倒计时:",IDC_HOTKEY_LABEL12,14,55,80,8
+    CONTROL         "",IDC_HOTKEY_EDIT12,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,105,53,160,14
     
-    LTEXT           "快捷倒计时1:",IDC_HOTKEY_LABEL9,14,75,80,8
-    CONTROL         "",IDC_HOTKEY_EDIT9,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,105,73,160,14
+    LTEXT           "默认倒计时:",IDC_HOTKEY_LABEL3,14,75,80,8
+    CONTROL         "",IDC_HOTKEY_EDIT3,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,105,73,160,14
     
-    LTEXT           "快捷倒计时2:",IDC_HOTKEY_LABEL10,14,95,80,8
-    CONTROL         "",IDC_HOTKEY_EDIT10,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,105,93,160,14
+    LTEXT           "快捷倒计时1:",IDC_HOTKEY_LABEL9,14,95,80,8
+    CONTROL         "",IDC_HOTKEY_EDIT9,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,105,93,160,14
     
-    LTEXT           "快捷倒计时3:",IDC_HOTKEY_LABEL11,14,115,80,8
-    CONTROL         "",IDC_HOTKEY_EDIT11,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,105,113,160,14
+    LTEXT           "快捷倒计时2:",IDC_HOTKEY_LABEL10,14,115,80,8
+    CONTROL         "",IDC_HOTKEY_EDIT10,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,105,113,160,14
     
-    LTEXT           "开始番茄钟:",IDC_HOTKEY_LABEL4,14,135,80,8
-    CONTROL         "",IDC_HOTKEY_EDIT4,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,105,133,160,14
+    LTEXT           "快捷倒计时3:",IDC_HOTKEY_LABEL11,14,135,80,8
+    CONTROL         "",IDC_HOTKEY_EDIT11,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,105,133,160,14
     
-    LTEXT           "隐藏/显示窗口:",IDC_HOTKEY_LABEL5,14,155,80,8
-    CONTROL         "",IDC_HOTKEY_EDIT5,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,105,153,160,14
+    LTEXT           "开始番茄钟:",IDC_HOTKEY_LABEL4,14,155,80,8
+    CONTROL         "",IDC_HOTKEY_EDIT4,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,105,153,160,14
     
-    LTEXT           "进入编辑模式:",IDC_HOTKEY_LABEL6,14,175,80,8
-    CONTROL         "",IDC_HOTKEY_EDIT6,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,105,173,160,14
+    LTEXT           "隐藏/显示窗口:",IDC_HOTKEY_LABEL5,14,175,80,8
+    CONTROL         "",IDC_HOTKEY_EDIT5,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,105,173,160,14
     
-    LTEXT           "暂停/继续计时:",IDC_HOTKEY_LABEL7,14,195,80,8
-    CONTROL         "",IDC_HOTKEY_EDIT7,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,105,193,160,14
+    LTEXT           "进入编辑模式:",IDC_HOTKEY_LABEL6,14,195,80,8
+    CONTROL         "",IDC_HOTKEY_EDIT6,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,105,193,160,14
     
-    LTEXT           "重新开始计时:",IDC_HOTKEY_LABEL8,14,215,80,8
-    CONTROL         "",IDC_HOTKEY_EDIT8,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,105,213,160,14
+    LTEXT           "暂停/继续计时:",IDC_HOTKEY_LABEL7,14,215,80,8
+    CONTROL         "",IDC_HOTKEY_EDIT7,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,105,213,160,14
     
-    LTEXT           "* 热键将全局生效",IDC_HOTKEY_NOTE,15,245,200,8
-    PUSHBUTTON      "取消",IDCANCEL,170,270,50,14
-    DEFPUSHBUTTON   "确定",IDOK,225,270,50,14
+    LTEXT           "重新开始计时:",IDC_HOTKEY_LABEL8,14,235,80,8
+    CONTROL         "",IDC_HOTKEY_EDIT8,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,105,233,160,14
+    
+    LTEXT           "* 热键将全局生效",IDC_HOTKEY_NOTE,15,265,200,8
+    PUSHBUTTON      "取消",IDCANCEL,170,280,50,14
+    DEFPUSHBUTTON   "确定",IDOK,225,280,50,14
 END 
