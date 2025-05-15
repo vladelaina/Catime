@@ -2098,9 +2098,47 @@ refresh_window:
                 return 0;
             } else if (wp == HOTKEY_ID_CUSTOM_COUNTDOWN) {
                 // 显示输入对话框以设置倒计时
-                DialogBox(GetModuleHandle(NULL), 
-                         MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), 
-                         hwnd, DlgProc);
+                extern int elapsed_time;
+                extern BOOL message_shown;
+                extern BOOL countdown_message_shown;
+                
+                // 清空输入文本
+                memset(inputText, 0, sizeof(inputText));
+                
+                // 显示输入对话框
+                INT_PTR result = DialogBox(GetModuleHandle(NULL), 
+                                         MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), 
+                                         hwnd, DlgProc);
+                
+                // 如果对话框有输入并确认
+                if (inputText[0] != '\0') {
+                    // 检查输入是否有效
+                    int total_seconds = 0;
+                    if (ParseInput(inputText, &total_seconds)) {
+                        // 停止任何可能正在播放的通知音频
+                        extern void StopNotificationSound(void);
+                        StopNotificationSound();
+                        
+                        // 设置倒计时状态
+                        CLOCK_TOTAL_TIME = total_seconds;
+                        countdown_elapsed_time = 0;
+                        elapsed_time = 0;
+                        message_shown = FALSE;
+                        countdown_message_shown = FALSE;
+                        
+                        // 切换到倒计时模式
+                        CLOCK_COUNT_UP = FALSE;
+                        CLOCK_SHOW_CURRENT_TIME = FALSE;
+                        CLOCK_IS_PAUSED = FALSE;
+                        
+                        // 停止并重启计时器
+                        KillTimer(hwnd, 1);
+                        SetTimer(hwnd, 1, 1000, NULL);
+                        
+                        // 刷新窗口显示
+                        InvalidateRect(hwnd, NULL, TRUE);
+                    }
+                }
                 return 0;
             } else if (wp == HOTKEY_ID_QUICK_COUNTDOWN1) {
                 // 开始快捷倒计时1
