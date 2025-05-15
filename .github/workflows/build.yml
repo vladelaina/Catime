@@ -59,13 +59,16 @@ jobs:
         sudo apt-get install -y upx
         upx --version
         
-    - name: 使用UPX压缩可执行文件
+    - name: 创建压缩版和非压缩版
       run: |
+        # 复制一份原始文件作为非压缩版
+        cp output/catime.exe output/catime_original.exe
+        
         # 保存压缩前大小
         BEFORE_SIZE=$(stat -c %s output/catime.exe)
         BEFORE_SIZE_KB=$((BEFORE_SIZE / 1024))
         
-        # 使用UPX进行压缩，ultra-brute模式获得最小体积
+        # 对原始catime.exe进行压缩
         upx --ultra-brute --lzma output/catime.exe
         
         # 保存压缩后大小并显示结果
@@ -89,6 +92,10 @@ jobs:
         echo "本版本为测试版本，可能存在功能不稳定或界面布局调整等情况。" >> output/README.txt
         echo "如遇到问题，请通过 Issues 页面向我们反馈。您的意见将帮助我们改进产品质量。" >> output/README.txt
         echo "" >> output/README.txt
+        echo "## 文件说明" >> output/README.txt
+        echo "- catime_${{ env.VERSION }}_${{ github.run_number }}.exe: 原始版本" >> output/README.txt
+        echo "- catime_${{ env.VERSION }}_${{ github.run_number }}_upx.exe: UPX压缩版本，体积更小" >> output/README.txt
+        echo "" >> output/README.txt
         echo "-----------------------------------" >> output/README.txt
         echo "" >> output/README.txt
         echo "# catime_${{ env.VERSION }} Version Information" >> output/README.txt
@@ -100,17 +107,26 @@ jobs:
         echo "- Build Date: $(date '+%Y-%m-%d %H:%M:%S') (UTC+8)" >> output/README.txt
         echo "- Build Number: ${GITHUB_RUN_NUMBER:-Unknown}" >> output/README.txt
         echo "" >> output/README.txt
+        echo "## File Description" >> output/README.txt
+        echo "- catime_${{ env.VERSION }}_${{ github.run_number }}.exe: Original version" >> output/README.txt
+        echo "- catime_${{ env.VERSION }}_${{ github.run_number }}_upx.exe: UPX compressed version, smaller size" >> output/README.txt
+        echo "" >> output/README.txt
         echo "## Important Notes" >> output/README.txt
         echo "This is a beta version, which may have unstable features or UI layout adjustments." >> output/README.txt
-        echo "If you encounter any issues, please provide feedback through the Issues page. Your opinions will help us improve product quality." >> output/README.txt   
-    - name: 重命名为测试版
+        echo "If you encounter any issues, please provide feedback through the Issues page. Your opinions will help us improve product quality." >> output/README.txt
+        
+    - name: 重命名文件
       run: |
-        mv output/catime.exe output/catime_${{ env.VERSION }}_${{ github.run_number }}.exe
+        # 重命名非压缩版本
+        mv output/catime_original.exe output/catime_${{ env.VERSION }}_${{ github.run_number }}.exe
+        # 重命名压缩版本
+        mv output/catime.exe output/catime_${{ env.VERSION }}_${{ github.run_number }}_upx.exe
         
     - name: 创建发布包
       run: |
         mkdir -p release
         cp output/catime_${{ env.VERSION }}_${{ github.run_number }}.exe release/
+        cp output/catime_${{ env.VERSION }}_${{ github.run_number }}_upx.exe release/
         cp output/README.txt release/
         cd release
         zip -r catime_${{ env.VERSION }}_${{ github.run_number }}.zip *
@@ -122,5 +138,6 @@ jobs:
         name: catime-windows-${{ env.VERSION }}-${{ github.run_number }}
         path: |
           output/catime_${{ env.VERSION }}_${{ github.run_number }}.exe
+          output/catime_${{ env.VERSION }}_${{ github.run_number }}_upx.exe
           output/README.txt
         # 注意：构建完成后，您可以在GitHub Actions工作流运行页面的"Artifacts"部分下载构件
