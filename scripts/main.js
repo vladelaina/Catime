@@ -351,6 +351,7 @@ function initLanguageToggle() {
             // 社区区域
             '开源社区认可 ⭐': 'Community Recognition ⭐',
             '获得超过 1.4k 的 GitHub 星标，持续增长中': 'Over 1.4k GitHub stars and growing',
+            '获得超过 2k 的 GitHub 星标，持续增长中': 'Over 2k GitHub stars and growing',
             
             // 使用场景区域
             '使用场景 🌟': 'Use Cases 🌟',

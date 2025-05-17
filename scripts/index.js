@@ -532,8 +532,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // 根据语言设置标题和其他文本
         const isEnglish = lang === 'en';
         const chartTitle = isEnglish 
-            ? (showFallbackTitle ? 'Catime GitHub Star Growth History (Over 2k Stars, Estimated Data)' : 'Catime GitHub Star Growth History (Over 2k Stars)')
-            : (showFallbackTitle ? 'Catime GitHub 星星增长历史 (超过 2k, 估计数据)' : 'Catime GitHub 星星增长历史 (超过 2k)');
+            ? (showFallbackTitle ? 'Catime GitHub Star Growth History (Estimated Data)' : 'Catime GitHub Star Growth History')
+            : (showFallbackTitle ? 'Catime GitHub 星星增长历史 (估计数据)' : 'Catime GitHub 星星增长历史');
         
         const starLabel = isEnglish ? 'Stars' : '星星数';
         const seriesName = isEnglish ? 'GitHub Stars' : 'GitHub 星星';
