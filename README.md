@@ -318,6 +318,9 @@ Special thanks to the following contributors:
       <td align="center" valign="top" width="14.28%">
         <a href="https://github.com/jin-gubang"><img src="https://avatars.githubusercontent.com/u/170781370?v=4" width="100px;" alt="jin-gubang"/><br /><sub><b>jin-gubang</b></sub></a><br />
       </td>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://github.com/xlr134"><img src="https://avatars.githubusercontent.com/u/138568644?v=4" width="100px;" alt="xlr134"/><br /><sub><b>xlr134</b></sub></a><br />
+      </td>
     </tr>  
   </tbody>
 </table>
