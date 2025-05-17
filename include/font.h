@@ -5,7 +5,8 @@
  * 本文件定义了应用程序的字体管理相关接口，包括字体加载、设置和管理功能。
  */
 
-#pragma once
+#ifndef FONT_H
+#define FONT_H
 
 #include <windows.h>
 #include <stdbool.h>
@@ -90,3 +91,5 @@ void ApplyFontPreview(void);
  * @return 切换是否成功
  */
 BOOL SwitchFont(HINSTANCE hInstance, const char* fontName);
+
+#endif /* FONT_H */

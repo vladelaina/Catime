@@ -5,7 +5,8 @@
  * 本文件定义了应用程序支持的语言枚举和本地化字符串获取接口。
  */
 
-#pragma once
+#ifndef LANGUAGE_H
+#define LANGUAGE_H
 
 #include <wchar.h>
 
@@ -43,3 +44,5 @@ extern AppLanguage CURRENT_LANGUAGE;
  * @endcode
  */
 const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english);
+
+#endif /* LANGUAGE_H */
