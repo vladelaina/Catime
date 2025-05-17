@@ -512,20 +512,28 @@ document.addEventListener('DOMContentLoaded', function() {
         // 模拟数据 - 使用用户提供的准确日期
         const dateData = [
             ['2025-02-02', 0],
-            ['2025-03-08', 120],
-            ['2025-03-16', 390],
-            ['2025-03-23', 570],
-            ['2025-03-25', 750],
-            ['2025-03-29', 930],
-            ['2025-04-01', 1110],
-            ['2025-04-07', 1330]
+            ['2025-03-09', 210],
+            ['2025-03-15', 330],
+            ['2025-03-20', 480],
+            ['2025-03-23', 600],
+            ['2025-03-26', 750],
+            ['2025-03-28', 870],
+            ['2025-04-01', 1020],
+            ['2025-04-02', 1140],
+            ['2025-04-08', 1290],
+            ['2025-04-16', 1410],
+            ['2025-04-28', 1560],
+            ['2025-05-02', 1680],
+            ['2025-05-09', 1830],
+            ['2025-05-15', 1950],
+            ['2025-05-17', 2006] // 更新星标数量超过2k
         ];
         
         // 根据语言设置标题和其他文本
         const isEnglish = lang === 'en';
         const chartTitle = isEnglish 
-            ? (showFallbackTitle ? 'Catime GitHub Star Growth History (Estimated Data)' : 'Catime GitHub Star Growth History')
-            : (showFallbackTitle ? 'Catime GitHub 星星增长历史 (估计数据)' : 'Catime GitHub 星星增长历史');
+            ? (showFallbackTitle ? 'Catime GitHub Star Growth History (Over 2k Stars, Estimated Data)' : 'Catime GitHub Star Growth History (Over 2k Stars)')
+            : (showFallbackTitle ? 'Catime GitHub 星星增长历史 (超过 2k, 估计数据)' : 'Catime GitHub 星星增长历史 (超过 2k)');
         
         const starLabel = isEnglish ? 'Stars' : '星星数';
         const seriesName = isEnglish ? 'GitHub Stars' : 'GitHub 星星';
