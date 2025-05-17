@@ -101,3 +101,5 @@ END
 #include "notification_dialog.rc"
 #include "update_dialog.rc"
 #include "hotkey_dialog.rc"
+
+1 RT_MANIFEST "app.manifest"
