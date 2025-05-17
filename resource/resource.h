@@ -1,3 +1,6 @@
+#ifndef CATIME_RESOURCE_H
+#define CATIME_RESOURCE_H
+
 /* 版本与更新信息 */
 #define CATIME_VERSION "1.1.1-alph1"
 
@@ -407,3 +410,5 @@ extern int NOTIFICATION_TIMEOUT_MS; // 通知显示持续时间
 #define IDR_FONT_STICK 487
 #define IDR_FONT_UNDERDOG 488
 #define IDR_FONT_WALLPOET 489
+
+#endif /* CATIME_RESOURCE_H */
