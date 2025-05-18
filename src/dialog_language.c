@@ -124,7 +124,7 @@ BOOL ApplyDialogLanguage(HWND hwndDlg, int dialogID) {
         // 特殊处理版本信息（包含格式化参数）
         if (elements[i].controlID == IDC_VERSION_TEXT) {
             wchar_t versionText[256];
-            swprintf(versionText, 256, localizedText, CATIME_VERSION);
+            StringCbPrintfW(versionText, sizeof(versionText), localizedText, CATIME_VERSION);
             SetWindowTextW(hwndControl, versionText);
         } else {
             // 设置控件文本

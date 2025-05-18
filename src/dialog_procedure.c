@@ -482,7 +482,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             const wchar_t* versionFormat = GetDialogLocalizedString(IDD_ABOUT_DIALOG, IDC_VERSION_TEXT);
             if (versionFormat) {
                 wchar_t versionText[256];
-                swprintf(versionText, 256, versionFormat, CATIME_VERSION);
+                StringCbPrintfW(versionText, sizeof(versionText), versionFormat, CATIME_VERSION);
                 SetDlgItemTextW(hwndDlg, IDC_VERSION_TEXT, versionText);
             }
 
@@ -506,7 +506,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             
             // 格式化日期时间
             wchar_t timeStr[60];
-            swprintf(timeStr, sizeof(timeStr)/sizeof(wchar_t), dateFormat,
+            StringCbPrintfW(timeStr, sizeof(timeStr), dateFormat,
                     year, month_num, day, hour, min, sec);
 
             // 设置控件文本
