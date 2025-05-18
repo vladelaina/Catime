@@ -526,7 +526,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 return TRUE;
             }
             if (LOWORD(wParam) == IDC_COPYRIGHT_LINK) {
-                ShellExecuteW(NULL, L"open", L"https://github.com/vladelaina/Catime?tab=readme-ov-file#%EF%B8%8F%E7%89%88%E6%9D%83%E5%A3%B0%E6%98%8E", NULL, NULL, SW_SHOWNORMAL);
+                ShellExecuteW(NULL, L"open", L"https://github.com/vladelaina/Catime#️copyright-notice", NULL, NULL, SW_SHOWNORMAL);
                 return TRUE;
             }
             break;
