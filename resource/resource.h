@@ -34,6 +34,7 @@
 /* 外部链接 */
 #define URL_GITHUB_REPO L"https://github.com/vladelaina/Catime"
 #define URL_FEEDBACK L"https://message.bilibili.com/#/whisper/mid1862395225"
+#define URL_BILIBILI_SPACE L"https://space.bilibili.com/1862395225"
 
 /*==================================
  * 主要图标与应用ID (100-199)
@@ -266,7 +267,7 @@ extern int NOTIFICATION_TIMEOUT_MS; // 通知显示持续时间
 #define IDC_GITHUB 1017         // GitHub按钮
 #define IDC_COPYRIGHT_LINK 1018 // 版权声明按钮
 #define IDC_SUPPORT 1019        // 支持按钮
-#define IDC_FEEDBACK_LINK 1020  // 反馈链接
+#define IDC_BILIBILI_LINK 1020  // B站链接
 #define IDC_GITHUB_LINK 1021    // GitHub链接
 
 /*==================================

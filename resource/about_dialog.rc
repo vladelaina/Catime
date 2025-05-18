@@ -30,10 +30,10 @@ BEGIN
     // 底部链接栏
     CONTROL     "鸣谢",                         IDC_CREDITS,        "Static", SS_NOTIFY | SS_CENTERIMAGE,
                                                                               40,   65,  25, 12
-    CONTROL     "反馈",                         IDC_FEEDBACK_LINK,  "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                                                                              80,   65,  25, 12
+    CONTROL     "BiliBili",                     IDC_BILIBILI_LINK,  "Static", SS_NOTIFY | SS_CENTERIMAGE,
+                                                                              80,   65,  35, 12
     CONTROL     "GitHub",                       IDC_GITHUB_LINK,    "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                                                                              120,  65,  32, 12
+                                                                              125,  65,  32, 12
     CONTROL     "版权声明",                     IDC_COPYRIGHT_LINK,  "Static", SS_NOTIFY | SS_CENTERIMAGE,
                                                                               165,  65,  36, 12
     CONTROL     "支持",                         IDC_SUPPORT,         "Static", SS_NOTIFY | SS_CENTERIMAGE,

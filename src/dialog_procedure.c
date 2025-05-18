@@ -508,17 +508,9 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 ShellExecuteW(NULL, L"open", L"https://space.bilibili.com/26087398", NULL, NULL, SW_SHOWNORMAL);
                 return TRUE;
             }
-            if (LOWORD(wParam) == IDC_FEEDBACK_LINK) {
-                extern AppLanguage CURRENT_LANGUAGE;
-                
-                // 根据语言选择不同的反馈链接
-                if (CURRENT_LANGUAGE == APP_LANG_CHINESE_SIMP) {
-                    // 简体中文用户打开bilibili私信
-                    ShellExecuteW(NULL, L"open", URL_FEEDBACK, NULL, NULL, SW_SHOWNORMAL);
-                } else {
-                    // 其他语言用户打开GitHub Issues
-                    ShellExecuteW(NULL, L"open", L"https://github.com/vladelaina/Catime/issues", NULL, NULL, SW_SHOWNORMAL);
-                }
+            if (LOWORD(wParam) == IDC_BILIBILI_LINK) {
+                // 直接打开B站个人主页
+                ShellExecuteW(NULL, L"open", URL_BILIBILI_SPACE, NULL, NULL, SW_SHOWNORMAL);
                 return TRUE;
             }
             if (LOWORD(wParam) == IDC_GITHUB_LINK) {
@@ -551,7 +543,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             HWND hwndCtl = (HWND)lParam;
             
             if (GetDlgCtrlID(hwndCtl) == IDC_CREDIT_LINK || 
-                GetDlgCtrlID(hwndCtl) == IDC_FEEDBACK_LINK ||
+                GetDlgCtrlID(hwndCtl) == IDC_BILIBILI_LINK ||
                 GetDlgCtrlID(hwndCtl) == IDC_GITHUB_LINK ||
                 GetDlgCtrlID(hwndCtl) == IDC_CREDITS ||
                 GetDlgCtrlID(hwndCtl) == IDC_COPYRIGHT_LINK ||
