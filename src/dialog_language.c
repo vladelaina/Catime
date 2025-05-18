@@ -36,8 +36,36 @@ static DialogLocalizedElement g_aboutDialogElements[] = {
     {IDD_ABOUT_DIALOG, IDC_SUPPORT, L"Support"}
 };
 
+// 通知设置对话框元素本地化映射表
+static DialogLocalizedElement g_notificationDialogElements[] = {
+    // 对话框标题
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, -1, L"通知设置"},
+    // 通知内容组
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_CONTENT_GROUP, L"通知内容"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_LABEL1, L"倒计时超时提示:"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_LABEL2, L"番茄钟超时提示:"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_LABEL3, L"番茄钟循环完成提示:"},
+    // 通知显示组
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_DISPLAY_GROUP, L"通知显示"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_TIME_LABEL, L"通知显示时间:"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_OPACITY_LABEL, L"通知最大透明度(1-100%):"},
+    // 通知方式组
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_METHOD_GROUP, L"通知方式"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_TYPE_CATIME, L"Catime通知窗口"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_TYPE_OS, L"操作系统通知"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_TYPE_SYSTEM_MODAL, L"系统模态窗口"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_SOUND_LABEL, L"提示音(支持.mp3/.wav/.flac):"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_TEST_SOUND_BUTTON, L"测试"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_OPEN_SOUND_DIR_BUTTON, L"音频目录"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_VOLUME_LABEL, L"音量(0-100%):"},
+    // 底部按钮
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDCANCEL, L"取消"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDOK, L"确定"}
+};
+
 // 本地化元素计数
 #define ABOUT_DIALOG_ELEMENTS_COUNT (sizeof(g_aboutDialogElements) / sizeof(g_aboutDialogElements[0]))
+#define NOTIFICATION_DIALOG_ELEMENTS_COUNT (sizeof(g_notificationDialogElements) / sizeof(g_notificationDialogElements[0]))
 
 /**
  * @brief 初始化对话框多语言支持
@@ -62,6 +90,9 @@ BOOL ApplyDialogLanguage(HWND hwndDlg, int dialogID) {
     if (dialogID == IDD_ABOUT_DIALOG) {
         elements = g_aboutDialogElements;
         elementsCount = ABOUT_DIALOG_ELEMENTS_COUNT;
+    } else if (dialogID == CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG) {
+        elements = g_notificationDialogElements;
+        elementsCount = NOTIFICATION_DIALOG_ELEMENTS_COUNT;
     } else {
         // 不支持的对话框ID
         return FALSE;
@@ -72,12 +103,22 @@ BOOL ApplyDialogLanguage(HWND hwndDlg, int dialogID) {
         // 跳过不匹配当前对话框ID的元素
         if (elements[i].dialogID != dialogID) continue;
         
+        // 对话框标题特殊处理
+        if (elements[i].controlID == -1) {
+            // 设置对话框标题
+            const wchar_t* localizedText = GetLocalizedString(elements[i].textKey, elements[i].textKey);
+            if (localizedText) {
+                SetWindowTextW(hwndDlg, localizedText);
+            }
+            continue;
+        }
+        
         // 获取控件句柄
         HWND hwndControl = GetDlgItem(hwndDlg, elements[i].controlID);
         if (!hwndControl) continue;
         
         // 获取本地化文本
-        const wchar_t* localizedText = GetLocalizedString(NULL, elements[i].textKey);
+        const wchar_t* localizedText = GetLocalizedString(elements[i].textKey, elements[i].textKey);
         if (!localizedText) continue;
         
         // 特殊处理版本信息（包含格式化参数）
@@ -105,6 +146,9 @@ const wchar_t* GetDialogLocalizedString(int dialogID, int controlID) {
     if (dialogID == IDD_ABOUT_DIALOG) {
         elements = g_aboutDialogElements;
         elementsCount = ABOUT_DIALOG_ELEMENTS_COUNT;
+    } else if (dialogID == CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG) {
+        elements = g_notificationDialogElements;
+        elementsCount = NOTIFICATION_DIALOG_ELEMENTS_COUNT;
     } else {
         // 不支持的对话框ID
         return NULL;
@@ -114,7 +158,7 @@ const wchar_t* GetDialogLocalizedString(int dialogID, int controlID) {
     for (int i = 0; i < elementsCount; i++) {
         if (elements[i].dialogID == dialogID && elements[i].controlID == controlID) {
             // 返回本地化文本
-            return GetLocalizedString(NULL, elements[i].textKey);
+            return GetLocalizedString(elements[i].textKey, elements[i].textKey);
         }
     }
     

@@ -1529,14 +1529,15 @@ static HWND g_hwndNotificationSettingsDialog = NULL;
  */
 static void OnAudioPlaybackComplete(HWND hwnd) {
     if (hwnd && IsWindow(hwnd)) {
-        SetDlgItemTextW(hwnd, IDC_TEST_SOUND_BUTTON, L"测试");
+        const wchar_t* testText = GetLocalizedString(L"测试", L"Test");
+        SetDlgItemTextW(hwnd, IDC_TEST_SOUND_BUTTON, testText);
         
         // 获取对话框数据
         HWND hwndTestButton = GetDlgItem(hwnd, IDC_TEST_SOUND_BUTTON);
         
         // 发送WM_SETTEXT消息更新按钮文本
         if (hwndTestButton && IsWindow(hwndTestButton)) {
-            SendMessageW(hwndTestButton, WM_SETTEXT, 0, (LPARAM)L"测试");
+            SendMessageW(hwndTestButton, WM_SETTEXT, 0, (LPARAM)testText);
         }
         
         // 更新全局播放状态
@@ -1559,10 +1560,10 @@ static void PopulateSoundComboBox(HWND hwndDlg) {
     SendMessage(hwndCombo, CB_RESETCONTENT, 0, 0);
 
     // 添加"无"选项
-    SendMessageW(hwndCombo, CB_ADDSTRING, 0, (LPARAM)L"无");
+    SendMessageW(hwndCombo, CB_ADDSTRING, 0, (LPARAM)GetLocalizedString(L"无", L"None"));
     
     // 添加"系统提示音"选项
-    SendMessageW(hwndCombo, CB_ADDSTRING, 0, (LPARAM)L"系统提示音");
+    SendMessageW(hwndCombo, CB_ADDSTRING, 0, (LPARAM)GetLocalizedString(L"系统提示音", L"System Beep"));
 
     // 获取音频文件夹路径
     char audio_path[MAX_PATH];
@@ -1649,6 +1650,9 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             
             // 保存原始音量值，用于取消操作时恢复
             originalVolume = NOTIFICATION_SOUND_VOLUME;
+            
+            // 应用多语言支持
+            ApplyDialogLanguage(hwndDlg, CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG);
             
             // 设置通知消息文本 - 使用Unicode函数
             wchar_t wideText[256];
@@ -1820,7 +1824,8 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                     SendMessageW(hwndCombo, CB_GETLBTEXT, index, (LPARAM)wFileName);
                     
                     // 检查是否选择了"系统提示音"
-                    if (wcscmp(wFileName, L"系统提示音") == 0) {
+                    const wchar_t* sysBeepText = GetLocalizedString(L"系统提示音", L"System Beep");
+                    if (wcscmp(wFileName, sysBeepText) == 0) {
                         // 使用特殊标记来表示系统提示音
                         StringCbCopyA(NOTIFICATION_SOUND_FILE, sizeof(NOTIFICATION_SOUND_FILE), "SYSTEM_BEEP");
                     } else {
@@ -1908,7 +1913,8 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                         StringCbCopyA(tempSoundFile, sizeof(tempSoundFile), NOTIFICATION_SOUND_FILE);
                         
                         // 临时设置音频文件
-                        if (wcscmp(wFileName, L"系统提示音") == 0) {
+                        const wchar_t* sysBeepText = GetLocalizedString(L"系统提示音", L"System Beep");
+                        if (wcscmp(wFileName, sysBeepText) == 0) {
                             // 使用特殊标记
                             StringCbCopyA(NOTIFICATION_SOUND_FILE, sizeof(NOTIFICATION_SOUND_FILE), "SYSTEM_BEEP");
                         } else {
@@ -1928,7 +1934,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                         // 播放音频
                         if (PlayNotificationSound(hwndDlg)) {
                             // 播放成功，更改按钮文本为"结束"
-                            SetDlgItemTextW(hwndDlg, IDC_TEST_SOUND_BUTTON, L"结束");
+                            SetDlgItemTextW(hwndDlg, IDC_TEST_SOUND_BUTTON, GetLocalizedString(L"结束", L"Stop"));
                             isPlaying = TRUE;
                         }
                         
@@ -1938,7 +1944,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 } else {
                     // 当前正在播放，停止播放并恢复按钮文本
                     StopNotificationSound();
-                    SetDlgItemTextW(hwndDlg, IDC_TEST_SOUND_BUTTON, L"测试");
+                    SetDlgItemTextW(hwndDlg, IDC_TEST_SOUND_BUTTON, GetLocalizedString(L"测试", L"Test"));
                     isPlaying = FALSE;
                 }
                 return TRUE;
