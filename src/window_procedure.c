@@ -1050,53 +1050,93 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_LANG_CHINESE: {
-                    CURRENT_LANGUAGE = APP_LANG_CHINESE_SIMP;
+                    SetLanguage(APP_LANG_CHINESE_SIMP);
+                    // 刷新窗口
                     InvalidateRect(hwnd, NULL, TRUE);
+                    // 刷新托盘菜单
+                    extern void UpdateTrayIcon(HWND hwnd);
+                    UpdateTrayIcon(hwnd);
                     break;
                 }
                 case CLOCK_IDM_LANG_CHINESE_TRAD: {
-                    CURRENT_LANGUAGE = APP_LANG_CHINESE_TRAD;
+                    SetLanguage(APP_LANG_CHINESE_TRAD);
+                    // 刷新窗口
                     InvalidateRect(hwnd, NULL, TRUE);
+                    // 刷新托盘菜单
+                    extern void UpdateTrayIcon(HWND hwnd);
+                    UpdateTrayIcon(hwnd);
                     break;
                 }
                 case CLOCK_IDM_LANG_ENGLISH: {
-                    CURRENT_LANGUAGE = APP_LANG_ENGLISH;
+                    SetLanguage(APP_LANG_ENGLISH);
+                    // 刷新窗口
                     InvalidateRect(hwnd, NULL, TRUE);
+                    // 刷新托盘菜单
+                    extern void UpdateTrayIcon(HWND hwnd);
+                    UpdateTrayIcon(hwnd);
                     break;
                 }
                 case CLOCK_IDM_LANG_SPANISH: {
-                    CURRENT_LANGUAGE = APP_LANG_SPANISH;
+                    SetLanguage(APP_LANG_SPANISH);
+                    // 刷新窗口
                     InvalidateRect(hwnd, NULL, TRUE);
+                    // 刷新托盘菜单
+                    extern void UpdateTrayIcon(HWND hwnd);
+                    UpdateTrayIcon(hwnd);
                     break;
                 }
                 case CLOCK_IDM_LANG_FRENCH: {
-                    CURRENT_LANGUAGE = APP_LANG_FRENCH;
+                    SetLanguage(APP_LANG_FRENCH);
+                    // 刷新窗口
                     InvalidateRect(hwnd, NULL, TRUE);
+                    // 刷新托盘菜单
+                    extern void UpdateTrayIcon(HWND hwnd);
+                    UpdateTrayIcon(hwnd);
                     break;
                 }
                 case CLOCK_IDM_LANG_GERMAN: {
-                    CURRENT_LANGUAGE = APP_LANG_GERMAN;
+                    SetLanguage(APP_LANG_GERMAN);
+                    // 刷新窗口
                     InvalidateRect(hwnd, NULL, TRUE);
+                    // 刷新托盘菜单
+                    extern void UpdateTrayIcon(HWND hwnd);
+                    UpdateTrayIcon(hwnd);
                     break;
                 }
                 case CLOCK_IDM_LANG_RUSSIAN: {
-                    CURRENT_LANGUAGE = APP_LANG_RUSSIAN;
+                    SetLanguage(APP_LANG_RUSSIAN);
+                    // 刷新窗口
                     InvalidateRect(hwnd, NULL, TRUE);
+                    // 刷新托盘菜单
+                    extern void UpdateTrayIcon(HWND hwnd);
+                    UpdateTrayIcon(hwnd);
                     break;
                 }
                 case CLOCK_IDM_LANG_PORTUGUESE: {
-                    CURRENT_LANGUAGE = APP_LANG_PORTUGUESE;
+                    SetLanguage(APP_LANG_PORTUGUESE);
+                    // 刷新窗口
                     InvalidateRect(hwnd, NULL, TRUE);
+                    // 刷新托盘菜单
+                    extern void UpdateTrayIcon(HWND hwnd);
+                    UpdateTrayIcon(hwnd);
                     break;
                 }
                 case CLOCK_IDM_LANG_JAPANESE: {
-                    CURRENT_LANGUAGE = APP_LANG_JAPANESE;
+                    SetLanguage(APP_LANG_JAPANESE);
+                    // 刷新窗口
                     InvalidateRect(hwnd, NULL, TRUE);
+                    // 刷新托盘菜单
+                    extern void UpdateTrayIcon(HWND hwnd);
+                    UpdateTrayIcon(hwnd);
                     break;
                 }
                 case CLOCK_IDM_LANG_KOREAN: {
-                    CURRENT_LANGUAGE = APP_LANG_KOREAN;
+                    SetLanguage(APP_LANG_KOREAN);
+                    // 刷新窗口
                     InvalidateRect(hwnd, NULL, TRUE);
+                    // 刷新托盘菜单
+                    extern void UpdateTrayIcon(HWND hwnd);
+                    UpdateTrayIcon(hwnd);
                     break;
                 }
                 case CLOCK_IDM_ABOUT:

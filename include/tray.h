@@ -68,4 +68,13 @@ void ShowTrayNotification(HWND hwnd, const char* message);
  */
 void RecreateTaskbarIcon(HWND hwnd, HINSTANCE hInstance);
 
+/**
+ * @brief 更新托盘图标和菜单
+ * @param hwnd 窗口句柄
+ * 
+ * 在应用程序语言或设置更改后更新托盘图标和菜单。
+ * 用于确保托盘菜单显示的文本与当前语言设置一致。
+ */
+void UpdateTrayIcon(HWND hwnd);
+
 #endif // TRAY_H

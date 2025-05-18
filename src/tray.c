@@ -117,3 +117,19 @@ void RecreateTaskbarIcon(HWND hwnd, HINSTANCE hInstance) {
     // 重新创建托盘图标
     InitTrayIcon(hwnd, hInstance);
 }
+
+/**
+ * @brief 更新托盘图标和菜单
+ * @param hwnd 窗口句柄
+ * 
+ * 在应用程序语言或设置更改后更新托盘图标和菜单。
+ * 此函数先移除当前的托盘图标，然后重新创建它，
+ * 确保托盘菜单显示的文本与当前语言设置一致。
+ */
+void UpdateTrayIcon(HWND hwnd) {
+    // 获取实例句柄
+    HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
+    
+    // 使用重新创建托盘图标函数来完成更新
+    RecreateTaskbarIcon(hwnd, hInstance);
+}

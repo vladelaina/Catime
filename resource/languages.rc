@@ -1,0 +1,26 @@
+#include <windows.h>
+#include "resource.h"
+
+// 语言资源ID
+#define LANG_EN_INI       1001
+#define LANG_ZH_CN_INI    1002
+#define LANG_ZH_TW_INI    1003
+#define LANG_ES_INI       1004
+#define LANG_FR_INI       1005
+#define LANG_DE_INI       1006
+#define LANG_RU_INI       1007
+#define LANG_PT_INI       1008
+#define LANG_JA_INI       1009
+#define LANG_KO_INI       1010
+
+// 语言资源数据
+LANG_EN_INI RCDATA "languages/en.ini"
+LANG_ZH_CN_INI RCDATA "languages/zh_CN.ini"
+LANG_ZH_TW_INI RCDATA "languages/zh_TW.ini"
+LANG_ES_INI RCDATA "languages/es.ini"
+LANG_FR_INI RCDATA "languages/fr.ini"
+LANG_DE_INI RCDATA "languages/de.ini"
+LANG_RU_INI RCDATA "languages/ru.ini"
+LANG_PT_INI RCDATA "languages/pt.ini"
+LANG_JA_INI RCDATA "languages/ja.ini"
+LANG_KO_INI RCDATA "languages/ko.ini" 
