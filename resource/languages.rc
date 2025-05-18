@@ -16,7 +16,7 @@
 // 语言资源数据
 LANG_EN_INI RCDATA "languages/en.ini"
 LANG_ZH_CN_INI RCDATA "languages/zh_CN.ini"
-LANG_ZH_TW_INI RCDATA "languages/zh_TW.ini"
+LANG_ZH_TW_INI RCDATA "languages/zh-Hant.ini"
 LANG_ES_INI RCDATA "languages/es.ini"
 LANG_FR_INI RCDATA "languages/fr.ini"
 LANG_DE_INI RCDATA "languages/de.ini"
