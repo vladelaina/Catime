@@ -20,16 +20,16 @@ AppLanguage CURRENT_LANGUAGE = APP_LANG_ENGLISH;  // 默认英语
 #define MAX_STRING_LENGTH 1024
 
 // 语言资源ID (定义在languages.rc中)
-#define LANG_EN_INI       1001
-#define LANG_ZH_CN_INI    1002
-#define LANG_ZH_TW_INI    1003
-#define LANG_ES_INI       1004
-#define LANG_FR_INI       1005
-#define LANG_DE_INI       1006
-#define LANG_RU_INI       1007
-#define LANG_PT_INI       1008
-#define LANG_JA_INI       1009
-#define LANG_KO_INI       1010
+#define LANG_EN_INI       1001  // 对应languages/en.ini
+#define LANG_ZH_CN_INI    1002  // 对应languages/zh_CN.ini
+#define LANG_ZH_TW_INI    1003  // 对应languages/zh-Hant.ini
+#define LANG_ES_INI       1004  // 对应languages/es.ini
+#define LANG_FR_INI       1005  // 对应languages/fr.ini
+#define LANG_DE_INI       1006  // 对应languages/de.ini
+#define LANG_RU_INI       1007  // 对应languages/ru.ini
+#define LANG_PT_INI       1008  // 对应languages/pt.ini
+#define LANG_JA_INI       1009  // 对应languages/ja.ini
+#define LANG_KO_INI       1010  // 对应languages/ko.ini
 
 /**
  * @brief 定义语言字符串键值对结构
@@ -289,8 +289,8 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
 
     const wchar_t* translation = NULL;
 
-    // 如果是中文并且提供了中文字符串，直接返回
-    if ((CURRENT_LANGUAGE == APP_LANG_CHINESE_SIMP || CURRENT_LANGUAGE == APP_LANG_CHINESE_TRAD) && chinese) {
+    // 如果是简体中文并且提供了中文字符串，直接返回
+    if (CURRENT_LANGUAGE == APP_LANG_CHINESE_SIMP && chinese) {
         return chinese;
     }
 
@@ -298,6 +298,11 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
     translation = FindTranslation(english);
     if (translation) {
         return translation;
+    }
+
+    // 繁体中文但未找到翻译时，返回简体中文作为备选
+    if (CURRENT_LANGUAGE == APP_LANG_CHINESE_TRAD && chinese) {
+        return chinese;
     }
 
     // 默认返回英文
