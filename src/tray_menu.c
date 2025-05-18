@@ -552,6 +552,10 @@ void ShowColorMenu(HWND hwnd) {
                 CLOCK_IDM_LANG_GERMAN, L"Deutsch");
     AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_RUSSIAN ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDM_LANG_RUSSIAN, L"Русский");
+    AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_PORTUGUESE ? MF_CHECKED : MF_UNCHECKED),
+                CLOCK_IDM_LANG_PORTUGUESE, L"Português");
+    AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_JAPANESE ? MF_CHECKED : MF_UNCHECKED),
+                CLOCK_IDM_LANG_JAPANESE, L"日本語");
     AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_KOREAN ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDM_LANG_KOREAN, L"한국어");
 
