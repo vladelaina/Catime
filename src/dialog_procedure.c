@@ -22,6 +22,7 @@
 #include "../include/audio_player.h" 
 #include "../include/window_procedure.h"  // 添加窗口处理头文件以使用RegisterGlobalHotkeys和UnregisterGlobalHotkeys函数
 #include "../include/hotkey.h"  // 引入热键管理头文件
+#include "../include/dialog_language.h"  // 添加对话框语言支持头文件
 
 // 函数声明
 static void DrawColorSelectButton(HDC hdc, HWND hwnd);
@@ -462,8 +463,22 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 SendDlgItemMessage(hwndDlg, IDC_ABOUT_ICON, STM_SETICON, (WPARAM)hLargeIcon, 0);
             }
             
-            // 设置程序名称和版本信息
-            SetDlgItemTextW(hwndDlg, IDC_VERSION_TEXT, IDC_ABOUT_VERSION CATIME_VERSION);
+            // 应用多语言支持
+            ApplyDialogLanguage(hwndDlg, IDD_ABOUT_DIALOG);
+            
+            // 设置对话框标题
+            const wchar_t* titleText = GetLocalizedString(L"关于", L"About");
+            if (titleText) {
+                SetWindowTextW(hwndDlg, titleText);
+            }
+            
+            // 设置版本信息（会覆盖ApplyDialogLanguage的版本设置）
+            const wchar_t* versionFormat = GetDialogLocalizedString(IDD_ABOUT_DIALOG, IDC_VERSION_TEXT);
+            if (versionFormat) {
+                wchar_t versionText[256];
+                swprintf(versionText, 256, versionFormat, CATIME_VERSION);
+                SetDlgItemTextW(hwndDlg, IDC_VERSION_TEXT, versionText);
+            }
 
             // 设置编译时间（优化后的宽字符处理）
             char month[4];
@@ -479,9 +494,13 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             int month_num = 0;
             while (++month_num <= 12 && strcmp(month, months[month_num-1]));
 
-            // 格式化日期时间为YYYY/MM/DD HH:MM:SS 并添加 UTC+8 标识
+            // 获取本地化的日期格式字符串
+            const wchar_t* dateFormat = GetLocalizedString(L"最后编译日期：%04d/%02d/%02d %02d:%02d:%02d (UTC+8)",
+                                                         L"Build Date: %04d/%02d/%02d %02d:%02d:%02d (UTC+8)");
+            
+            // 格式化日期时间
             wchar_t timeStr[60];
-            StringCbPrintfW(timeStr, sizeof(timeStr), L"最后编译日期：%04d/%02d/%02d %02d:%02d:%02d (UTC+8)",
+            swprintf(timeStr, sizeof(timeStr)/sizeof(wchar_t), dateFormat,
                     year, month_num, day, hour, min, sec);
 
             // 设置控件文本

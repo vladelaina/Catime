@@ -14,28 +14,27 @@ CAPTION IDC_ABOUT_TITLE
 FONT 12, "Microsoft YaHei UI"
 BEGIN
     // 程序图标
-    CONTROL     "",                             IDC_ABOUT_ICON,    "Static", SS_ICON,                   
-                                                                              5,  -10, ABOUT_ICON_SIZE, ABOUT_ICON_SIZE
+    CONTROL     "",                          IDC_ABOUT_ICON,    "Static", SS_ICON,                   
+                                                                          5,  -10, ABOUT_ICON_SIZE, ABOUT_ICON_SIZE
 
     // 版本信息组
-    LTEXT       IDC_ABOUT_VERSION CATIME_VERSION, IDC_VERSION_TEXT,          130,  15, 160, 12
-    LTEXT       L"最后编译日期：",                IDC_BUILD_DATE,            100,  25, 180, 12
-    LTEXT       IDC_COPYRIGHT_TEXT,               IDC_COPYRIGHT,             100,  35, 180, 12
+    LTEXT       "",                          IDC_VERSION_TEXT,          130,  15, 160, 12
+    LTEXT       "",                          IDC_BUILD_DATE,            100,  25, 180, 12
+    LTEXT       "",                          IDC_COPYRIGHT,             100,  35, 180, 12
 
     // 感谢信息
-    CONTROL     "特别感谢\x20猫屋敷梨梨Official\x20提供的图标",
-                                                IDC_CREDIT_LINK,    "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                                                                              100,  45, 145, 12
+    CONTROL     "",                          IDC_CREDIT_LINK,    "Static", SS_NOTIFY | SS_CENTERIMAGE,
+                                                                          100,  45, 145, 12
 
     // 底部链接栏
-    CONTROL     "鸣谢",                         IDC_CREDITS,        "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                                                                              40,   65,  25, 12
-    CONTROL     "BiliBili",                     IDC_BILIBILI_LINK,  "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                                                                              80,   65,  35, 12
-    CONTROL     "GitHub",                       IDC_GITHUB_LINK,    "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                                                                              125,  65,  32, 12
-    CONTROL     "版权声明",                     IDC_COPYRIGHT_LINK,  "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                                                                              165,  65,  36, 12
-    CONTROL     "支持",                         IDC_SUPPORT,         "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                                                                              215,  65,  25, 12
+    CONTROL     "",                          IDC_CREDITS,        "Static", SS_NOTIFY | SS_CENTERIMAGE,
+                                                                          40,   65,  25, 12
+    CONTROL     "",                          IDC_BILIBILI_LINK,  "Static", SS_NOTIFY | SS_CENTERIMAGE,
+                                                                          80,   65,  35, 12
+    CONTROL     "",                          IDC_GITHUB_LINK,    "Static", SS_NOTIFY | SS_CENTERIMAGE,
+                                                                          125,  65,  32, 12
+    CONTROL     "",                          IDC_COPYRIGHT_LINK,  "Static", SS_NOTIFY | SS_CENTERIMAGE,
+                                                                          165,  65,  36, 12
+    CONTROL     "",                          IDC_SUPPORT,         "Static", SS_NOTIFY | SS_CENTERIMAGE,
+                                                                          215,  65,  25, 12
 END 

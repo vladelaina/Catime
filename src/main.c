@@ -33,6 +33,7 @@
 #include "../include/notification.h"
 #include "../include/async_update_checker.h"
 #include "../include/log.h"
+#include "../include/dialog_language.h"
 
 // 较旧的Windows SDK所需
 #ifndef CSIDL_STARTUP
@@ -167,6 +168,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             return 1;
         }
         LOG_INFO("应用程序初始化成功");
+
+        // 初始化对话框多语言支持
+        LOG_INFO("开始初始化对话框多语言支持...");
+        if (!InitDialogLanguageSupport()) {
+            LOG_WARNING("对话框多语言支持初始化失败，但程序将继续运行");
+        }
+        LOG_INFO("对话框多语言支持初始化成功");
 
         // 处理单实例
         LOG_INFO("检查是否有其他实例正在运行...");
