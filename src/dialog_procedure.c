@@ -127,10 +127,10 @@ INT_PTR CALLBACK ErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
         case WM_INITDIALOG:
             // 设置本地化的错误提示文本
             SetDlgItemTextW(hwndDlg, IDC_ERROR_TEXT, 
-                GetLocalizedString(L"输入格式无效，请重新输入。", L"Invalid input format, please try again."));
+                GetLocalizedString(L"Invalid input format, please try again.", L"Invalid input format, please try again."));
             
             // 设置对话框标题
-            SetWindowTextW(hwndDlg, GetLocalizedString(L"错误", L"Error"));
+            SetWindowTextW(hwndDlg, GetLocalizedString(L"Error", L"Error"));
             return TRUE;
 
         case WM_COMMAND:
@@ -179,7 +179,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
             // 检查对话框ID是否为快捷倒计时选项对话框，如果是则设置标题
             DWORD dlgId = GetWindowLongPtr(hwndDlg, GWLP_USERDATA); // 现在可以正确获取dlgId
             if (dlgId == CLOCK_IDD_SHORTCUT_DIALOG) { // 移除 GetDlgCtrlID((HWND)lParam) 的判断
-                SetWindowTextW(hwndDlg, GetLocalizedString(L"倒计时预设", L"Countdown Presets"));
+                SetWindowTextW(hwndDlg, GetLocalizedString(L"Countdown Presets", L"Countdown Presets"));
             }
             
             // 应用多语言支持
@@ -230,7 +230,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 
             // 格式化日期时间为YYYY/MM/DD HH:MM:SS 并添加 UTC+8 标识
             wchar_t timeStr[60];
-            StringCbPrintfW(timeStr, sizeof(timeStr), L"最后编译日期：%04d/%02d/%02d %02d:%02d:%02d (UTC+8)",
+            StringCbPrintfW(timeStr, sizeof(timeStr), L"Build Date: %04d/%02d/%02d %02d:%02d:%02d (UTC+8)",
                     year, month_num, day, hour, min, sec);
 
             // 设置控件文本
@@ -487,7 +487,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             ApplyDialogLanguage(hwndDlg, IDD_ABOUT_DIALOG);
             
             // 设置对话框标题
-            const wchar_t* titleText = GetLocalizedString(L"关于", L"About");
+            const wchar_t* titleText = GetLocalizedString(L"About", L"About");
             if (titleText) {
                 SetWindowTextW(hwndDlg, titleText);
             }
@@ -515,7 +515,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             while (++month_num <= 12 && strcmp(month, months[month_num-1]));
 
             // 获取本地化的日期格式字符串
-            const wchar_t* dateFormat = GetLocalizedString(L"最后编译日期：%04d/%02d/%02d %02d:%02d:%02d (UTC+8)",
+            const wchar_t* dateFormat = GetLocalizedString(L"Build Date: %04d/%02d/%02d %02d:%02d:%02d (UTC+8)",
                                                          L"Build Date: %04d/%02d/%02d %02d:%02d:%02d (UTC+8)");
             
             // 格式化日期时间
@@ -1219,15 +1219,15 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             
             // 本地化标签文本
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_LABEL1, 
-                           GetLocalizedString(L"倒计时超时提示:", L"Countdown timeout message:"));
+                           GetLocalizedString(L"Countdown timeout message:", L"Countdown timeout message:"));
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_LABEL2, 
-                           GetLocalizedString(L"番茄钟超时提示:", L"Pomodoro timeout message:"));
+                           GetLocalizedString(L"Pomodoro timeout message:", L"Pomodoro timeout message:"));
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_LABEL3,
-                           GetLocalizedString(L"番茄钟循环完成提示:", L"Pomodoro cycle complete message:"));
+                           GetLocalizedString(L"Pomodoro cycle complete message:", L"Pomodoro cycle complete message:"));
             
             // 本地化按钮文本
-            SetDlgItemTextW(hwndDlg, IDOK, GetLocalizedString(L"确定", L"OK"));
-            SetDlgItemTextW(hwndDlg, IDCANCEL, GetLocalizedString(L"取消", L"Cancel"));
+            SetDlgItemTextW(hwndDlg, IDOK, GetLocalizedString(L"OK", L"OK"));
+            SetDlgItemTextW(hwndDlg, IDCANCEL, GetLocalizedString(L"Cancel", L"Cancel"));
             
             // 子类化编辑框以支持Ctrl+A全选
             HWND hEdit1 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT1);
@@ -1378,7 +1378,7 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
             
             // 本地化标签文本
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_TIME_LABEL, 
-                           GetLocalizedString(L"通知显示时间(秒):", L"Notification display time (sec):"));
+                           GetLocalizedString(L"Notification display time (sec):", L"Notification display time (sec):"));
             
             // 修改编辑框风格，移除ES_NUMBER以允许小数点
             HWND hEditTime = GetDlgItem(hwndDlg, IDC_NOTIFICATION_TIME_EDIT);
@@ -1531,7 +1531,7 @@ static HWND g_hwndNotificationSettingsDialog = NULL;
  */
 static void OnAudioPlaybackComplete(HWND hwnd) {
     if (hwnd && IsWindow(hwnd)) {
-        const wchar_t* testText = GetLocalizedString(L"测试", L"Test");
+        const wchar_t* testText = GetLocalizedString(L"Test", L"Test");
         SetDlgItemTextW(hwnd, IDC_TEST_SOUND_BUTTON, testText);
         
         // 获取对话框数据
@@ -1562,10 +1562,10 @@ static void PopulateSoundComboBox(HWND hwndDlg) {
     SendMessage(hwndCombo, CB_RESETCONTENT, 0, 0);
 
     // 添加"无"选项
-    SendMessageW(hwndCombo, CB_ADDSTRING, 0, (LPARAM)GetLocalizedString(L"无", L"None"));
+    SendMessageW(hwndCombo, CB_ADDSTRING, 0, (LPARAM)GetLocalizedString(L"None", L"None"));
     
     // 添加"系统提示音"选项
-    SendMessageW(hwndCombo, CB_ADDSTRING, 0, (LPARAM)GetLocalizedString(L"系统提示音", L"System Beep"));
+    SendMessageW(hwndCombo, CB_ADDSTRING, 0, (LPARAM)GetLocalizedString(L"System Beep", L"System Beep"));
 
     // 获取音频文件夹路径
     char audio_path[MAX_PATH];
@@ -1826,7 +1826,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                     SendMessageW(hwndCombo, CB_GETLBTEXT, index, (LPARAM)wFileName);
                     
                     // 检查是否选择了"系统提示音"
-                    const wchar_t* sysBeepText = GetLocalizedString(L"系统提示音", L"System Beep");
+                    const wchar_t* sysBeepText = GetLocalizedString(L"System Beep", L"System Beep");
                     if (wcscmp(wFileName, sysBeepText) == 0) {
                         // 使用特殊标记来表示系统提示音
                         StringCbCopyA(NOTIFICATION_SOUND_FILE, sizeof(NOTIFICATION_SOUND_FILE), "SYSTEM_BEEP");
@@ -1915,7 +1915,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                         StringCbCopyA(tempSoundFile, sizeof(tempSoundFile), NOTIFICATION_SOUND_FILE);
                         
                         // 临时设置音频文件
-                        const wchar_t* sysBeepText = GetLocalizedString(L"系统提示音", L"System Beep");
+                        const wchar_t* sysBeepText = GetLocalizedString(L"System Beep", L"System Beep");
                         if (wcscmp(wFileName, sysBeepText) == 0) {
                             // 使用特殊标记
                             StringCbCopyA(NOTIFICATION_SOUND_FILE, sizeof(NOTIFICATION_SOUND_FILE), "SYSTEM_BEEP");
@@ -1936,7 +1936,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                         // 播放音频
                         if (PlayNotificationSound(hwndDlg)) {
                             // 播放成功，更改按钮文本为"结束"
-                            SetDlgItemTextW(hwndDlg, IDC_TEST_SOUND_BUTTON, GetLocalizedString(L"结束", L"Stop"));
+                            SetDlgItemTextW(hwndDlg, IDC_TEST_SOUND_BUTTON, GetLocalizedString(L"Stop", L"Stop"));
                             isPlaying = TRUE;
                         }
                         
@@ -1946,7 +1946,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 } else {
                     // 当前正在播放，停止播放并恢复按钮文本
                     StopNotificationSound();
-                    SetDlgItemTextW(hwndDlg, IDC_TEST_SOUND_BUTTON, GetLocalizedString(L"测试", L"Test"));
+                    SetDlgItemTextW(hwndDlg, IDC_TEST_SOUND_BUTTON, GetLocalizedString(L"Test", L"Test"));
                     isPlaying = FALSE;
                 }
                 return TRUE;

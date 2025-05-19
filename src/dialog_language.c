@@ -40,48 +40,48 @@ static DialogLocalizedElement g_aboutDialogElements[] = {
 // 通知设置对话框元素本地化映射表
 static DialogLocalizedElement g_notificationDialogElements[] = {
     // 对话框标题
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, -1, L"通知设置"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, -1, L"Notification Settings"},
     // 通知内容组
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_CONTENT_GROUP, L"通知内容"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_LABEL1, L"倒计时超时提示:"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_LABEL2, L"番茄钟超时提示:"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_LABEL3, L"番茄钟循环完成提示:"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_CONTENT_GROUP, L"Notification Content"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_LABEL1, L"Countdown timeout message:"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_LABEL2, L"Pomodoro timeout message:"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_LABEL3, L"Pomodoro cycle complete message:"},
     // 通知显示组
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_DISPLAY_GROUP, L"通知显示"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_TIME_LABEL, L"通知显示时间:"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_OPACITY_LABEL, L"通知最大透明度(1-100%):"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_DISPLAY_GROUP, L"Notification Display"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_TIME_LABEL, L"Notification display time:"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_OPACITY_LABEL, L"Maximum notification opacity (1-100%):"},
     // 通知方式组
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_METHOD_GROUP, L"通知方式"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_TYPE_CATIME, L"Catime通知窗口"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_TYPE_OS, L"操作系统通知"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_TYPE_SYSTEM_MODAL, L"系统模态窗口"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_SOUND_LABEL, L"提示音(支持.mp3/.wav/.flac):"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_TEST_SOUND_BUTTON, L"测试"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_OPEN_SOUND_DIR_BUTTON, L"音频目录"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_VOLUME_LABEL, L"音量(0-100%):"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_METHOD_GROUP, L"Notification Method"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_TYPE_CATIME, L"Catime notification window"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_TYPE_OS, L"System notification"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_TYPE_SYSTEM_MODAL, L"System modal window"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_SOUND_LABEL, L"Sound (supports .mp3/.wav/.flac):"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_TEST_SOUND_BUTTON, L"Test"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_OPEN_SOUND_DIR_BUTTON, L"Audio folder"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_VOLUME_LABEL, L"Volume (0-100%):"},
     // 底部按钮
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDCANCEL, L"取消"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDOK, L"确定"}
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDCANCEL, L"Cancel"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDOK, L"OK"}
 };
 
 // 番茄钟循环次数设置对话框元素本地化映射表
 static DialogLocalizedElement g_pomodoroLoopDialogElements[] = {
     // 对话框标题
-    {CLOCK_IDD_POMODORO_LOOP_DIALOG, -1, L"设置番茄钟循环次数"},
+    {CLOCK_IDD_POMODORO_LOOP_DIALOG, -1, L"Set Pomodoro Loop Count"},
     // 提示文本
-    {CLOCK_IDD_POMODORO_LOOP_DIALOG, CLOCK_IDC_STATIC, L"请输入循环次数（1-10）："},
+    {CLOCK_IDD_POMODORO_LOOP_DIALOG, CLOCK_IDC_STATIC, L"Please enter loop count (1-10):"},
     // 确定按钮
-    {CLOCK_IDD_POMODORO_LOOP_DIALOG, CLOCK_IDC_BUTTON_OK, L"确定"}
+    {CLOCK_IDD_POMODORO_LOOP_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK"}
 };
 
 // 番茄钟时间组合设置对话框元素本地化映射表
 static DialogLocalizedElement g_pomodoroComboDialogElements[] = {
     // 对话框标题
-    {CLOCK_IDD_POMODORO_COMBO_DIALOG, -1, L"设置番茄钟时间组合"},
+    {CLOCK_IDD_POMODORO_COMBO_DIALOG, -1, L"Set Pomodoro Time Combination"},
     // 提示文本
-    {CLOCK_IDD_POMODORO_COMBO_DIALOG, CLOCK_IDC_STATIC, L"输入番茄钟时间组合，用空格分隔：\\n\\n25m = 25分钟\\n30s = 30秒\\n1h30m = 1小时30分钟\\n例如: 25m 5m 25m 10m - 工作25分钟，短休息5分钟，工作25分钟，长休息10分钟"},
+    {CLOCK_IDD_POMODORO_COMBO_DIALOG, CLOCK_IDC_STATIC, L"Enter pomodoro time sequence, separated by spaces:\\n\\n25m = 25 minutes\\n30s = 30 seconds\\n1h30m = 1 hour 30 minutes\\nExample: 25m 5m 25m 10m - work 25min, short break 5min, work 25min, long break 10min"},
     // 确定按钮
-    {CLOCK_IDD_POMODORO_COMBO_DIALOG, CLOCK_IDC_BUTTON_OK, L"确定"}
+    {CLOCK_IDD_POMODORO_COMBO_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK"}
 };
 
 // 番茄钟时间设置对话框元素本地化映射表
@@ -154,7 +154,7 @@ BOOL ApplyDialogLanguage(HWND hwndDlg, int dialogID) {
             if (localizedText) {
                 // 为番茄钟时间设置对话框添加特殊处理
                 if (dialogID == CLOCK_IDD_POMODORO_TIME_DIALOG && wcscmp(localizedText, L"PomodoroTimeSettingTitle") == 0) {
-                    SetWindowTextW(hwndDlg, L"设置番茄钟时间");
+                    SetWindowTextW(hwndDlg, L"Set Pomodoro Time");
                 } else {
                     SetWindowTextW(hwndDlg, localizedText);
                 }
@@ -176,17 +176,17 @@ BOOL ApplyDialogLanguage(HWND hwndDlg, int dialogID) {
             if (elements[i].controlID == -1) {
                 // 对话框标题
                 if (wcscmp(localizedText, L"PomodoroTimeSettingTitle") == 0) {
-                    localizedText = L"设置番茄钟时间";
+                    localizedText = L"Set Pomodoro Time";
                 }
             } else if (elements[i].controlID == CLOCK_IDC_STATIC) {
                 // 静态文本
                 if (wcscmp(localizedText, L"PomodoroTimeSettingPrompt") == 0) {
-                    localizedText = L"25=25分钟\n25h=25小时\n25s=25秒\n25 30=25分钟30秒\n25 30m=25小时30分钟\n1 30 20=1小时30分钟20秒";
+                    localizedText = L"25=25 minutes\n25h=25 hours\n25s=25 seconds\n25 30=25 minutes 30 seconds\n25 30m=25 hours 30 minutes\n1 30 20=1 hour 30 minutes 20 seconds";
                 }
             } else if (elements[i].controlID == CLOCK_IDC_BUTTON_OK) {
                 // 确定按钮
                 if (wcscmp(localizedText, L"OkButton") == 0) {
-                    localizedText = L"确定";
+                    localizedText = L"OK";
                 }
             }
         }
