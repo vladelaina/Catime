@@ -960,28 +960,6 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
     
     switch (msg) {
         case WM_INITDIALOG: {
-            // 应用本地化文本（使用对话框已有文本作为默认值）
-            WCHAR caption[256] = {0};
-            GetWindowTextW(hwndDlg, caption, 256);
-            SetWindowTextW(hwndDlg, GetLocalizedString(caption, L"Set Pomodoro Time Combination"));
-            
-            // 获取静态文本控件当前文本并应用本地化
-            HWND hStatic = GetDlgItem(hwndDlg, CLOCK_IDC_STATIC);
-            WCHAR staticText[512] = {0};
-            GetWindowTextW(hStatic, staticText, 512);
-            SetWindowTextW(hStatic, GetLocalizedString(staticText, 
-                L"Enter pomodoro time sequence, separated by spaces:\n\n"
-                L"25m = 25 minutes\n"
-                L"30s = 30 seconds\n"
-                L"1h30m = 1 hour 30 minutes\n"
-                L"Example: 25m 5m 15m - work 25min, short break 5min, long break 15min"));
-            
-            // 本地化按钮文本
-            HWND hButton = GetDlgItem(hwndDlg, CLOCK_IDC_BUTTON_OK);
-            WCHAR buttonText[50] = {0};
-            GetWindowTextW(hButton, buttonText, 50);
-            SetWindowTextW(hButton, GetLocalizedString(buttonText, L"OK"));
-            
             // 设置背景和控件颜色
             hBackgroundBrush = CreateSolidBrush(RGB(240, 240, 240));
             hEditBrush = CreateSolidBrush(RGB(255, 255, 255));
@@ -1029,6 +1007,9 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
             
             // 设置编辑框文本
             SetDlgItemTextA(hwndDlg, CLOCK_IDC_EDIT, currentOptions);
+            
+            // 应用多语言支持 - 移到这里确保覆盖所有默认文本
+            ApplyDialogLanguage(hwndDlg, CLOCK_IDD_POMODORO_COMBO_DIALOG);
             
             // 设置焦点到编辑框并选中所有文本
             SetFocus(hwndEdit);

@@ -74,10 +74,21 @@ static DialogLocalizedElement g_pomodoroLoopDialogElements[] = {
     {CLOCK_IDD_POMODORO_LOOP_DIALOG, CLOCK_IDC_BUTTON_OK, L"确定"}
 };
 
+// 番茄钟时间组合设置对话框元素本地化映射表
+static DialogLocalizedElement g_pomodoroComboDialogElements[] = {
+    // 对话框标题
+    {CLOCK_IDD_POMODORO_COMBO_DIALOG, -1, L"设置番茄钟时间组合"},
+    // 提示文本
+    {CLOCK_IDD_POMODORO_COMBO_DIALOG, CLOCK_IDC_STATIC, L"输入番茄钟时间组合，用空格分隔：\\n\\n25m = 25分钟\\n30s = 30秒\\n1h30m = 1小时30分钟\\n例如: 25m 5m 25m 10m - 工作25分钟，短休息5分钟，工作25分钟，长休息10分钟"},
+    // 确定按钮
+    {CLOCK_IDD_POMODORO_COMBO_DIALOG, CLOCK_IDC_BUTTON_OK, L"确定"}
+};
+
 // 本地化元素计数
 #define ABOUT_DIALOG_ELEMENTS_COUNT (sizeof(g_aboutDialogElements) / sizeof(g_aboutDialogElements[0]))
 #define NOTIFICATION_DIALOG_ELEMENTS_COUNT (sizeof(g_notificationDialogElements) / sizeof(g_notificationDialogElements[0]))
 #define POMODORO_LOOP_DIALOG_ELEMENTS_COUNT (sizeof(g_pomodoroLoopDialogElements) / sizeof(g_pomodoroLoopDialogElements[0]))
+#define POMODORO_COMBO_DIALOG_ELEMENTS_COUNT (sizeof(g_pomodoroComboDialogElements) / sizeof(g_pomodoroComboDialogElements[0]))
 
 /**
  * @brief 初始化对话框多语言支持
@@ -94,6 +105,29 @@ BOOL InitDialogLanguageSupport(void) {
 BOOL ApplyDialogLanguage(HWND hwndDlg, int dialogID) {
     if (!hwndDlg) return FALSE;
     
+    // 番茄钟组合对话框特殊处理
+    if (dialogID == CLOCK_IDD_POMODORO_COMBO_DIALOG) {
+        // 设置对话框标题
+        SetWindowTextW(hwndDlg, GetLocalizedString(L"设置番茄钟时间组合", L"Set Pomodoro Time Combination"));
+        
+        // 设置静态文本
+        HWND hwndStatic = GetDlgItem(hwndDlg, CLOCK_IDC_STATIC);
+        if (hwndStatic) {
+            SetWindowTextW(hwndStatic, GetLocalizedString(
+                L"输入番茄钟时间组合，用空格分隔：\n\n25m = 25分钟\n30s = 30秒\n1h30m = 1小时30分钟\n例如: 25m 5m 25m 10m - 工作25分钟，短休息5分钟，工作25分钟，长休息10分钟",
+                L"Enter pomodoro time sequence, separated by spaces:\n\n25m = 25 minutes\n30s = 30 seconds\n1h30m = 1 hour 30 minutes\nExample: 25m 5m 25m 10m - work 25min, short break 5min, work 25min, long break 10min"));
+        }
+        
+        // 设置确定按钮
+        HWND hwndButton = GetDlgItem(hwndDlg, CLOCK_IDC_BUTTON_OK);
+        if (hwndButton) {
+            SetWindowTextW(hwndButton, GetLocalizedString(L"确定", L"OK"));
+        }
+        
+        return TRUE;
+    }
+    
+    // 其他对话框的常规处理
     int i;
     const DialogLocalizedElement* elements = NULL;
     size_t elementsCount = 0;
@@ -167,6 +201,9 @@ const wchar_t* GetDialogLocalizedString(int dialogID, int controlID) {
     } else if (dialogID == CLOCK_IDD_POMODORO_LOOP_DIALOG) {
         elements = g_pomodoroLoopDialogElements;
         elementsCount = POMODORO_LOOP_DIALOG_ELEMENTS_COUNT;
+    } else if (dialogID == CLOCK_IDD_POMODORO_COMBO_DIALOG) {
+        elements = g_pomodoroComboDialogElements;
+        elementsCount = POMODORO_COMBO_DIALOG_ELEMENTS_COUNT;
     } else {
         // 不支持的对话框ID
         return NULL;
