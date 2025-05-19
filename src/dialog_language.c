@@ -151,8 +151,22 @@ BOOL ApplyDialogLanguage(HWND hwndDlg, int dialogID) {
         const wchar_t* localizedText = GetLocalizedString(elements[i].textKey, elements[i].textKey);
         if (!localizedText) continue;
         
-        // 特殊处理版本信息（包含格式化参数）
-        if (elements[i].controlID == IDC_VERSION_TEXT && dialogID == IDD_ABOUT_DIALOG) {
+        // 特殊处理番茄钟组合对话框的静态文本换行
+        if (dialogID == CLOCK_IDD_POMODORO_COMBO_DIALOG && elements[i].controlID == CLOCK_IDC_STATIC) {
+            wchar_t processedText[1024]; // 假设文本不会超过1024个宽字符
+            const wchar_t* src = localizedText;
+            wchar_t* dst = processedText;
+            while (*src) {
+                if (src[0] == L'\\' && src[1] == L'n') {
+                    *dst++ = L'\n';
+                    src += 2;
+                } else {
+                    *dst++ = *src++;
+                }
+            }
+            *dst = L'\0';
+            SetWindowTextW(hwndControl, processedText);
+        } else if (elements[i].controlID == IDC_VERSION_TEXT && dialogID == IDD_ABOUT_DIALOG) {
             wchar_t versionText[256];
             StringCbPrintfW(versionText, sizeof(versionText), localizedText, CATIME_VERSION);
             SetWindowTextW(hwndControl, versionText);
