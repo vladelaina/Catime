@@ -61,7 +61,12 @@ static SpecialControlEntry g_specialControls[] = {
     // 番茄钟组合对话框特殊处理的静态文本 - 使用实际的INI键名
     {CLOCK_IDD_POMODORO_COMBO_DIALOG, CLOCK_IDC_STATIC, 
      L"Enter pomodoro time sequence, separated by spaces:\\n\\n25m = 25 minutes\\n30s = 30 seconds\\n1h30m = 1 hour 30 minutes\\nExample: 25m 5m 25m 10m - work 25min, short break 5min, work 25min, long break 10min", 
-     L"Enter pomodoro time sequence, separated by spaces:\n\n25m = 25 minutes\n30s = 30 seconds\n1h30m = 1 hour 30 minutes\nExample: 25m 5m 25m 10m - work 25min, short break 5min, work 25min, long break 10min"}
+     L"Enter pomodoro time sequence, separated by spaces:\n\n25m = 25 minutes\n30s = 30 seconds\n1h30m = 1 hour 30 minutes\nExample: 25m 5m 25m 10m - work 25min, short break 5min, work 25min, long break 10min"},
+    
+    // 网站URL输入对话框说明文本
+    {CLOCK_IDD_WEBSITE_DIALOG, CLOCK_IDC_STATIC, 
+     L"Enter the website URL to open when the countdown ends:\\nExample: https://github.com/vladelaina/Catime", 
+     L"请输入要在倒计时结束时打开的网站URL：\n例如：https://github.com/vladelaina/Catime"}
 };
 
 // 特殊按钮文本
@@ -73,7 +78,8 @@ static SpecialControlEntry g_specialButtons[] = {
     
     {CLOCK_IDD_POMODORO_LOOP_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"},
     {CLOCK_IDD_POMODORO_COMBO_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"},
-    {CLOCK_IDD_POMODORO_TIME_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"}
+    {CLOCK_IDD_POMODORO_TIME_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"},
+    {CLOCK_IDD_WEBSITE_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"}
 };
 
 // 对话框映射表的大小

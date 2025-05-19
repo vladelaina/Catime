@@ -858,6 +858,9 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
                 SetDlgItemTextA(hwndDlg, CLOCK_IDC_EDIT, CLOCK_TIMEOUT_WEBSITE_URL);
             }
             
+            // 应用多语言支持
+            ApplyDialogLanguage(hwndDlg, CLOCK_IDD_WEBSITE_DIALOG);
+            
             // 设置焦点到编辑框并选中所有文本
             SetFocus(hwndEdit);
             SendMessage(hwndEdit, EM_SETSEL, 0, -1);
