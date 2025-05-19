@@ -53,13 +53,14 @@ static SpecialControlEntry g_specialControls[] = {
     {IDD_ABOUT_DIALOG, IDC_BUILD_DATE, L"Build Date:", L"Build Date:"},
     {IDD_ABOUT_DIALOG, IDC_COPYRIGHT, L"Copyright © 2023-2024 VladeLaina", L"Copyright © 2023-2024 VladeLaina"},
     
-    // 番茄钟时间设置对话框特殊处理的静态文本
-    {CLOCK_IDD_POMODORO_TIME_DIALOG, CLOCK_IDC_STATIC, L"25=25 minutes\n25h=25 hours\n25s=25 seconds\n25 30=25 minutes 30 seconds\n25 30m=25 hours 30 minutes\n1 30 20=1 hour 30 minutes 20 seconds", 
+    // 番茄钟时间设置对话框特殊处理的静态文本 - 使用实际的INI键名
+    {CLOCK_IDD_POMODORO_TIME_DIALOG, CLOCK_IDC_STATIC, 
+     L"25=25 minutes\\n25h=25 hours\\n25s=25 seconds\\n25 30=25 minutes 30 seconds\\n25 30m=25 hours 30 minutes\\n1 30 20=1 hour 30 minutes 20 seconds", 
      L"25=25 minutes\n25h=25 hours\n25s=25 seconds\n25 30=25 minutes 30 seconds\n25 30m=25 hours 30 minutes\n1 30 20=1 hour 30 minutes 20 seconds"},
     
-    // 番茄钟组合对话框特殊处理的静态文本
+    // 番茄钟组合对话框特殊处理的静态文本 - 使用实际的INI键名
     {CLOCK_IDD_POMODORO_COMBO_DIALOG, CLOCK_IDC_STATIC, 
-     L"Enter pomodoro time sequence, separated by spaces:\n\n25m = 25 minutes\n30s = 30 seconds\n1h30m = 1 hour 30 minutes\nExample: 25m 5m 25m 10m - work 25min, short break 5min, work 25min, long break 10min", 
+     L"Enter pomodoro time sequence, separated by spaces:\\n\\n25m = 25 minutes\\n30s = 30 seconds\\n1h30m = 1 hour 30 minutes\\nExample: 25m 5m 25m 10m - work 25min, short break 5min, work 25min, long break 10min", 
      L"Enter pomodoro time sequence, separated by spaces:\n\n25m = 25 minutes\n30s = 30 seconds\n1h30m = 1 hour 30 minutes\nExample: 25m 5m 25m 10m - work 25min, short break 5min, work 25min, long break 10min"}
 };
 
@@ -90,7 +91,14 @@ static const wchar_t* FindSpecialControlText(int dialogID, int controlID) {
     for (int i = 0; i < SPECIAL_CONTROLS_COUNT; i++) {
         if (g_specialControls[i].dialogID == dialogID && 
             g_specialControls[i].controlID == controlID) {
-            return GetLocalizedString(NULL, g_specialControls[i].textKey);
+            // 将textKey作为查找本地化字符串的键名
+            const wchar_t* localizedText = GetLocalizedString(NULL, g_specialControls[i].textKey);
+            if (localizedText) {
+                return localizedText;
+            } else {
+                // 如果找不到本地化文本，返回fallbackText
+                return g_specialControls[i].fallbackText;
+            }
         }
     }
     return NULL;
@@ -158,7 +166,7 @@ static BOOL GetControlOriginalText(HWND hwndCtl, wchar_t* buffer, int bufferSize
  * @return BOOL 是否成功处理
  */
 static BOOL ProcessSpecialControlText(HWND hwndCtl, const wchar_t* localizedText, int dialogID, int controlID) {
-    // 特殊处理番茄钟组合对话框的静态文本换行
+    // 特殊处理番茄钟相关对话框的静态文本换行
     if ((dialogID == CLOCK_IDD_POMODORO_COMBO_DIALOG || dialogID == CLOCK_IDD_POMODORO_TIME_DIALOG) && 
         controlID == CLOCK_IDC_STATIC) {
         wchar_t processedText[1024]; // 假设文本不会超过1024个宽字符
@@ -166,10 +174,17 @@ static BOOL ProcessSpecialControlText(HWND hwndCtl, const wchar_t* localizedText
         wchar_t* dst = processedText;
         
         while (*src) {
+            // 处理INI文件中的转义换行符 \n
             if (src[0] == L'\\' && src[1] == L'n') {
-                *dst++ = L'\n';
+                *dst++ = L'\n'; // 转换为实际的换行符
                 src += 2;
-            } else {
+            } 
+            // 处理文本中可能存在的字面换行符
+            else if (src[0] == L'\n') {
+                *dst++ = L'\n';
+                src++;
+            }
+            else {
                 *dst++ = *src++;
             }
         }
