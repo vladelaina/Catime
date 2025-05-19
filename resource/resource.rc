@@ -93,7 +93,10 @@ BEGIN
     PUSHBUTTON      "取消", IDCANCEL, 183, 69, 50, 14
 END
 
-#include "input_dialog.rc"
+#include "countdown_dialog.rc"
+#include "color_dialog.rc"
+#include "startup_dialog.rc"
+#include "shortcut_dialog.rc"
 #include "about_dialog.rc"
 #include "error_dialog.rc"
 #include "pomodoro_dialog.rc"

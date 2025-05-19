@@ -9,6 +9,7 @@
 #include <wchar.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <strsafe.h>
 #include "../include/dialog_language.h"
 #include "../include/language.h"
 #include "../resource/resource.h"

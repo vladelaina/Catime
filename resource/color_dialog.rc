@@ -1,0 +1,16 @@
+#include <windows.h>
+#include "resource.h"
+
+// 设置 UTF-8 编码
+#pragma code_page(65001)
+
+// 颜色值输入对话框
+CLOCK_IDD_COLOR_DIALOG DIALOGEX 0, 0, 200, 130
+STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "设置颜色值"
+FONT 9, "Segoe UI"
+BEGIN
+    LTEXT           "支持以下格式：\n\n1. HEX格式：#FFB6C1、FFB6C1\n2. RGB格式：255,182,193、255 182 193\n3. 颜色名：white、red、black、pink", CLOCK_IDC_STATIC, 10, 10, 180, 50
+    EDITTEXT        CLOCK_IDC_EDIT, 10, 75, 180, 20, ES_AUTOHSCROLL | ES_MULTILINE
+    PUSHBUTTON      "确定", CLOCK_IDC_BUTTON_OK, 140, 105, 50, 14
+END 
