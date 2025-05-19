@@ -728,6 +728,9 @@ BOOL IsValidNumberInput(const wchar_t* str) {
 INT_PTR CALLBACK PomodoroLoopDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_INITDIALOG: {
+            // 应用多语言支持
+            ApplyDialogLanguage(hwndDlg, CLOCK_IDD_POMODORO_LOOP_DIALOG);
+            
             // 设置编辑框焦点
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
             SetFocus(hwndEdit);

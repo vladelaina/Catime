@@ -64,9 +64,20 @@ static DialogLocalizedElement g_notificationDialogElements[] = {
     {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDOK, L"确定"}
 };
 
+// 番茄钟循环次数设置对话框元素本地化映射表
+static DialogLocalizedElement g_pomodoroLoopDialogElements[] = {
+    // 对话框标题
+    {CLOCK_IDD_POMODORO_LOOP_DIALOG, -1, L"设置番茄钟循环次数"},
+    // 提示文本
+    {CLOCK_IDD_POMODORO_LOOP_DIALOG, CLOCK_IDC_STATIC, L"请输入循环次数（1-10）："},
+    // 确定按钮
+    {CLOCK_IDD_POMODORO_LOOP_DIALOG, CLOCK_IDC_BUTTON_OK, L"确定"}
+};
+
 // 本地化元素计数
 #define ABOUT_DIALOG_ELEMENTS_COUNT (sizeof(g_aboutDialogElements) / sizeof(g_aboutDialogElements[0]))
 #define NOTIFICATION_DIALOG_ELEMENTS_COUNT (sizeof(g_notificationDialogElements) / sizeof(g_notificationDialogElements[0]))
+#define POMODORO_LOOP_DIALOG_ELEMENTS_COUNT (sizeof(g_pomodoroLoopDialogElements) / sizeof(g_pomodoroLoopDialogElements[0]))
 
 /**
  * @brief 初始化对话框多语言支持
@@ -94,6 +105,9 @@ BOOL ApplyDialogLanguage(HWND hwndDlg, int dialogID) {
     } else if (dialogID == CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG) {
         elements = g_notificationDialogElements;
         elementsCount = NOTIFICATION_DIALOG_ELEMENTS_COUNT;
+    } else if (dialogID == CLOCK_IDD_POMODORO_LOOP_DIALOG) {
+        elements = g_pomodoroLoopDialogElements;
+        elementsCount = POMODORO_LOOP_DIALOG_ELEMENTS_COUNT;
     } else {
         // 不支持的对话框ID
         return FALSE;
@@ -150,6 +164,9 @@ const wchar_t* GetDialogLocalizedString(int dialogID, int controlID) {
     } else if (dialogID == CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG) {
         elements = g_notificationDialogElements;
         elementsCount = NOTIFICATION_DIALOG_ELEMENTS_COUNT;
+    } else if (dialogID == CLOCK_IDD_POMODORO_LOOP_DIALOG) {
+        elements = g_pomodoroLoopDialogElements;
+        elementsCount = POMODORO_LOOP_DIALOG_ELEMENTS_COUNT;
     } else {
         // 不支持的对话框ID
         return NULL;
