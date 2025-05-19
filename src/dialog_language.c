@@ -3,6 +3,7 @@
  * @brief 对话框多语言支持模块实现文件
  * 
  * 本文件实现了对话框多语言支持功能，管理对话框文本的本地化显示。
+ * 新版本使用Windows API动态遍历对话框控件，而不是手动定义控件映射。
  */
 
 #include <windows.h>
@@ -14,99 +15,234 @@
 #include "../include/language.h"
 #include "../resource/resource.h"
 
-/**
- * @brief 对话框元素本地化字符串结构
- */
+// 定义对话框标题的字典项
+typedef struct {
+    int dialogID;      // 对话框资源ID
+    wchar_t* titleKey; // 对话框标题的键名
+} DialogTitleEntry;
+
+// 特殊处理的控件定义
 typedef struct {
     int dialogID;      // 对话框资源ID
     int controlID;     // 控件资源ID
     wchar_t* textKey;  // ini文件中的键名
-} DialogLocalizedElement;
+    wchar_t* fallbackText; // 硬编码的备用文本
+} SpecialControlEntry;
 
-// 关于对话框元素本地化映射表
-static DialogLocalizedElement g_aboutDialogElements[] = {
-    // 对话框标题不包括在元素数组中，单独处理
-    {IDD_ABOUT_DIALOG, IDC_VERSION_TEXT, L"Version: %hs"},
-    {IDD_ABOUT_DIALOG, IDC_BUILD_DATE, L"Build Date:"},
-    {IDD_ABOUT_DIALOG, IDC_COPYRIGHT, L"Copyright © 2023-2024 VladeLaina"},
-    {IDD_ABOUT_DIALOG, IDC_CREDIT_LINK, L"Special thanks to Neko House Lili Official for the icon"},
-    {IDD_ABOUT_DIALOG, IDC_CREDITS, L"Credits"},
-    {IDD_ABOUT_DIALOG, IDC_BILIBILI_LINK, L"BiliBili"},
-    {IDD_ABOUT_DIALOG, IDC_GITHUB_LINK, L"GitHub"},
-    {IDD_ABOUT_DIALOG, IDC_COPYRIGHT_LINK, L"Copyright Notice"},
-    {IDD_ABOUT_DIALOG, IDC_SUPPORT, L"Support"}
+// 结构化列举回调函数的数据
+typedef struct {
+    HWND hwndDlg;      // 对话框句柄
+    int dialogID;      // 对话框资源ID
+} EnumChildWindowsData;
+
+// 对话框标题映射表
+static DialogTitleEntry g_dialogTitles[] = {
+    {IDD_ABOUT_DIALOG, L"About"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, L"Notification Settings"},
+    {CLOCK_IDD_POMODORO_LOOP_DIALOG, L"Set Pomodoro Loop Count"},
+    {CLOCK_IDD_POMODORO_COMBO_DIALOG, L"Set Pomodoro Time Combination"},
+    {CLOCK_IDD_POMODORO_TIME_DIALOG, L"Set Pomodoro Time"},
+    {CLOCK_IDD_SHORTCUT_DIALOG, L"Countdown Presets"},
+    {CLOCK_IDD_WEBSITE_DIALOG, L"Open Website"}
 };
 
-// 通知设置对话框元素本地化映射表
-static DialogLocalizedElement g_notificationDialogElements[] = {
-    // 对话框标题
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, -1, L"Notification Settings"},
-    // 通知内容组
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_CONTENT_GROUP, L"Notification Content"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_LABEL1, L"Countdown timeout message:"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_LABEL2, L"Pomodoro timeout message:"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_LABEL3, L"Pomodoro cycle complete message:"},
-    // 通知显示组
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_DISPLAY_GROUP, L"Notification Display"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_TIME_LABEL, L"Notification display time:"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_OPACITY_LABEL, L"Maximum notification opacity (1-100%):"},
-    // 通知方式组
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_METHOD_GROUP, L"Notification Method"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_TYPE_CATIME, L"Catime notification window"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_TYPE_OS, L"System notification"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_TYPE_SYSTEM_MODAL, L"System modal window"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_SOUND_LABEL, L"Sound (supports .mp3/.wav/.flac):"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_TEST_SOUND_BUTTON, L"Test"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_OPEN_SOUND_DIR_BUTTON, L"Audio folder"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_VOLUME_LABEL, L"Volume (0-100%):"},
-    // 底部按钮
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDCANCEL, L"Cancel"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDOK, L"OK"}
+// 特殊控件映射表（需要特殊处理的控件）
+static SpecialControlEntry g_specialControls[] = {
+    // 关于对话框
+    {IDD_ABOUT_DIALOG, IDC_VERSION_TEXT, L"Version: %hs", L"Version: %hs"},
+    {IDD_ABOUT_DIALOG, IDC_BUILD_DATE, L"Build Date:", L"Build Date:"},
+    {IDD_ABOUT_DIALOG, IDC_COPYRIGHT, L"Copyright © 2023-2024 VladeLaina", L"Copyright © 2023-2024 VladeLaina"},
+    
+    // 番茄钟时间设置对话框特殊处理的静态文本
+    {CLOCK_IDD_POMODORO_TIME_DIALOG, CLOCK_IDC_STATIC, L"25=25 minutes\n25h=25 hours\n25s=25 seconds\n25 30=25 minutes 30 seconds\n25 30m=25 hours 30 minutes\n1 30 20=1 hour 30 minutes 20 seconds", 
+     L"25=25 minutes\n25h=25 hours\n25s=25 seconds\n25 30=25 minutes 30 seconds\n25 30m=25 hours 30 minutes\n1 30 20=1 hour 30 minutes 20 seconds"},
+    
+    // 番茄钟组合对话框特殊处理的静态文本
+    {CLOCK_IDD_POMODORO_COMBO_DIALOG, CLOCK_IDC_STATIC, 
+     L"Enter pomodoro time sequence, separated by spaces:\n\n25m = 25 minutes\n30s = 30 seconds\n1h30m = 1 hour 30 minutes\nExample: 25m 5m 25m 10m - work 25min, short break 5min, work 25min, long break 10min", 
+     L"Enter pomodoro time sequence, separated by spaces:\n\n25m = 25 minutes\n30s = 30 seconds\n1h30m = 1 hour 30 minutes\nExample: 25m 5m 25m 10m - work 25min, short break 5min, work 25min, long break 10min"}
 };
 
-// 番茄钟循环次数设置对话框元素本地化映射表
-static DialogLocalizedElement g_pomodoroLoopDialogElements[] = {
-    // 对话框标题
-    {CLOCK_IDD_POMODORO_LOOP_DIALOG, -1, L"Set Pomodoro Loop Count"},
-    // 提示文本
-    {CLOCK_IDD_POMODORO_LOOP_DIALOG, CLOCK_IDC_STATIC, L"Please enter loop count (1-10):"},
-    // 确定按钮
-    {CLOCK_IDD_POMODORO_LOOP_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK"}
+// 特殊按钮文本
+static SpecialControlEntry g_specialButtons[] = {
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_TEST_SOUND_BUTTON, L"Test", L"Test"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_OPEN_SOUND_DIR_BUTTON, L"Audio folder", L"Audio folder"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDOK, L"OK", L"OK"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDCANCEL, L"Cancel", L"Cancel"},
+    
+    {CLOCK_IDD_POMODORO_LOOP_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"},
+    {CLOCK_IDD_POMODORO_COMBO_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"},
+    {CLOCK_IDD_POMODORO_TIME_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"}
 };
 
-// 番茄钟时间组合设置对话框元素本地化映射表
-static DialogLocalizedElement g_pomodoroComboDialogElements[] = {
-    // 对话框标题
-    {CLOCK_IDD_POMODORO_COMBO_DIALOG, -1, L"Set Pomodoro Time Combination"},
-    // 提示文本
-    {CLOCK_IDD_POMODORO_COMBO_DIALOG, CLOCK_IDC_STATIC, L"Enter pomodoro time sequence, separated by spaces:\\n\\n25m = 25 minutes\\n30s = 30 seconds\\n1h30m = 1 hour 30 minutes\\nExample: 25m 5m 25m 10m - work 25min, short break 5min, work 25min, long break 10min"},
-    // 确定按钮
-    {CLOCK_IDD_POMODORO_COMBO_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK"}
-};
+// 对话框映射表的大小
+#define DIALOG_TITLES_COUNT (sizeof(g_dialogTitles) / sizeof(g_dialogTitles[0]))
+#define SPECIAL_CONTROLS_COUNT (sizeof(g_specialControls) / sizeof(g_specialControls[0]))
+#define SPECIAL_BUTTONS_COUNT (sizeof(g_specialButtons) / sizeof(g_specialButtons[0]))
 
-// 番茄钟时间设置对话框元素本地化映射表
-static DialogLocalizedElement g_pomodoroTimeDialogElements[] = {
-    // 对话框标题
-    {CLOCK_IDD_POMODORO_TIME_DIALOG, -1, L"PomodoroTimeSettingTitle"},
-    // 提示文本
-    {CLOCK_IDD_POMODORO_TIME_DIALOG, CLOCK_IDC_STATIC, L"PomodoroTimeSettingPrompt"},
-    // 确定按钮
-    {CLOCK_IDD_POMODORO_TIME_DIALOG, CLOCK_IDC_BUTTON_OK, L"OkButton"}
-};
+/**
+ * @brief 查找特殊控件的对应本地化文本
+ * @param dialogID 对话框ID
+ * @param controlID 控件ID
+ * @return const wchar_t* 找到的本地化文本，如果未找到则返回NULL
+ */
+static const wchar_t* FindSpecialControlText(int dialogID, int controlID) {
+    for (int i = 0; i < SPECIAL_CONTROLS_COUNT; i++) {
+        if (g_specialControls[i].dialogID == dialogID && 
+            g_specialControls[i].controlID == controlID) {
+            return GetLocalizedString(NULL, g_specialControls[i].textKey);
+        }
+    }
+    return NULL;
+}
 
-// 本地化元素计数
-#define ABOUT_DIALOG_ELEMENTS_COUNT (sizeof(g_aboutDialogElements) / sizeof(g_aboutDialogElements[0]))
-#define NOTIFICATION_DIALOG_ELEMENTS_COUNT (sizeof(g_notificationDialogElements) / sizeof(g_notificationDialogElements[0]))
-#define POMODORO_LOOP_DIALOG_ELEMENTS_COUNT (sizeof(g_pomodoroLoopDialogElements) / sizeof(g_pomodoroLoopDialogElements[0]))
-#define POMODORO_COMBO_DIALOG_ELEMENTS_COUNT (sizeof(g_pomodoroComboDialogElements) / sizeof(g_pomodoroComboDialogElements[0]))
-#define POMODORO_TIME_DIALOG_ELEMENTS_COUNT (sizeof(g_pomodoroTimeDialogElements) / sizeof(g_pomodoroTimeDialogElements[0]))
+/**
+ * @brief 查找特殊按钮的对应本地化文本
+ * @param dialogID 对话框ID
+ * @param controlID 控件ID
+ * @return const wchar_t* 找到的本地化文本，如果未找到则返回NULL
+ */
+static const wchar_t* FindSpecialButtonText(int dialogID, int controlID) {
+    for (int i = 0; i < SPECIAL_BUTTONS_COUNT; i++) {
+        if (g_specialButtons[i].dialogID == dialogID && 
+            g_specialButtons[i].controlID == controlID) {
+            return GetLocalizedString(NULL, g_specialButtons[i].textKey);
+        }
+    }
+    return NULL;
+}
+
+/**
+ * @brief 获取对话框标题的本地化文本
+ * @param dialogID 对话框ID
+ * @return const wchar_t* 找到的本地化文本，如果未找到则返回NULL
+ */
+static const wchar_t* GetDialogTitleText(int dialogID) {
+    for (int i = 0; i < DIALOG_TITLES_COUNT; i++) {
+        if (g_dialogTitles[i].dialogID == dialogID) {
+            return GetLocalizedString(NULL, g_dialogTitles[i].titleKey);
+        }
+    }
+    return NULL;
+}
+
+/**
+ * @brief 获取控件的原始文本，用于翻译查找
+ * @param hwndCtl 控件句柄
+ * @param buffer 存储文本的缓冲区
+ * @param bufferSize 缓冲区大小（字符数，不是字节数）
+ * @return BOOL 是否成功获取文本
+ */
+static BOOL GetControlOriginalText(HWND hwndCtl, wchar_t* buffer, int bufferSize) {
+    // 获取控件类名
+    wchar_t className[256];
+    GetClassNameW(hwndCtl, className, 256);
+    
+    // 按钮类控件需要获取其文本
+    if (wcscmp(className, L"Button") == 0 || 
+        wcscmp(className, L"Static") == 0 ||
+        wcscmp(className, L"ComboBox") == 0 ||
+        wcscmp(className, L"Edit") == 0) {
+        return GetWindowTextW(hwndCtl, buffer, bufferSize) > 0;
+    }
+    
+    return FALSE;
+}
+
+/**
+ * @brief 处理特殊控件的文本设置，如换行符等
+ * @param hwndCtl 控件句柄
+ * @param localizedText 本地化后的文本
+ * @param dialogID 对话框ID
+ * @param controlID 控件ID
+ * @return BOOL 是否成功处理
+ */
+static BOOL ProcessSpecialControlText(HWND hwndCtl, const wchar_t* localizedText, int dialogID, int controlID) {
+    // 特殊处理番茄钟组合对话框的静态文本换行
+    if ((dialogID == CLOCK_IDD_POMODORO_COMBO_DIALOG || dialogID == CLOCK_IDD_POMODORO_TIME_DIALOG) && 
+        controlID == CLOCK_IDC_STATIC) {
+        wchar_t processedText[1024]; // 假设文本不会超过1024个宽字符
+        const wchar_t* src = localizedText;
+        wchar_t* dst = processedText;
+        
+        while (*src) {
+            if (src[0] == L'\\' && src[1] == L'n') {
+                *dst++ = L'\n';
+                src += 2;
+            } else {
+                *dst++ = *src++;
+            }
+        }
+        *dst = L'\0';
+        
+        SetWindowTextW(hwndCtl, processedText);
+        return TRUE;
+    }
+    
+    // 特殊处理版本信息文本
+    if (controlID == IDC_VERSION_TEXT && dialogID == IDD_ABOUT_DIALOG) {
+        wchar_t versionText[256];
+        StringCbPrintfW(versionText, sizeof(versionText), localizedText, CATIME_VERSION);
+        SetWindowTextW(hwndCtl, versionText);
+        return TRUE;
+    }
+    
+    return FALSE;
+}
+
+/**
+ * @brief 对话框子窗口遍历回调函数
+ * @param hwndCtl 子窗口句柄
+ * @param lParam 回调参数，包含父对话框句柄和对话框ID
+ * @return BOOL 是否继续遍历
+ */
+static BOOL CALLBACK EnumChildProc(HWND hwndCtl, LPARAM lParam) {
+    EnumChildWindowsData* data = (EnumChildWindowsData*)lParam;
+    HWND hwndDlg = data->hwndDlg;
+    int dialogID = data->dialogID;
+    
+    // 获取控件ID
+    int controlID = GetDlgCtrlID(hwndCtl);
+    if (controlID == 0) {
+        return TRUE; // 继续遍历
+    }
+
+    // 根据对话框ID和控件ID特殊处理一些控件
+    const wchar_t* specialText = FindSpecialControlText(dialogID, controlID);
+    if (specialText) {
+        if (ProcessSpecialControlText(hwndCtl, specialText, dialogID, controlID)) {
+            return TRUE; // 已处理特殊控件
+        }
+        SetWindowTextW(hwndCtl, specialText);
+        return TRUE;
+    }
+    
+    // 检查按钮特殊文本
+    const wchar_t* buttonText = FindSpecialButtonText(dialogID, controlID);
+    if (buttonText) {
+        SetWindowTextW(hwndCtl, buttonText);
+        return TRUE;
+    }
+
+    // 获取控件当前文本
+    wchar_t originalText[512] = {0};
+    if (GetControlOriginalText(hwndCtl, originalText, 512) && originalText[0] != L'\0') {
+        // 查找本地化文本
+        const wchar_t* localizedText = GetLocalizedString(NULL, originalText);
+        if (localizedText && wcscmp(localizedText, originalText) != 0) {
+            // 设置本地化文本
+            SetWindowTextW(hwndCtl, localizedText);
+        }
+    }
+    
+    return TRUE; // 继续遍历
+}
 
 /**
  * @brief 初始化对话框多语言支持
  */
 BOOL InitDialogLanguageSupport(void) {
-    // 由于我们使用的是现有的语言系统，所以这里不需要额外初始化
-    // 如果将来需要额外的初始化操作，可以在这里添加
+    // 这里不需要额外初始化操作
     return TRUE;
 }
 
@@ -116,106 +252,20 @@ BOOL InitDialogLanguageSupport(void) {
 BOOL ApplyDialogLanguage(HWND hwndDlg, int dialogID) {
     if (!hwndDlg) return FALSE;
     
-    // 其他对话框的常规处理
-    int i;
-    const DialogLocalizedElement* elements = NULL;
-    size_t elementsCount = 0;
-    
-    // 根据对话框ID选择相应的本地化元素数组
-    if (dialogID == IDD_ABOUT_DIALOG) {
-        elements = g_aboutDialogElements;
-        elementsCount = ABOUT_DIALOG_ELEMENTS_COUNT;
-    } else if (dialogID == CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG) {
-        elements = g_notificationDialogElements;
-        elementsCount = NOTIFICATION_DIALOG_ELEMENTS_COUNT;
-    } else if (dialogID == CLOCK_IDD_POMODORO_LOOP_DIALOG) {
-        elements = g_pomodoroLoopDialogElements;
-        elementsCount = POMODORO_LOOP_DIALOG_ELEMENTS_COUNT;
-    } else if (dialogID == CLOCK_IDD_POMODORO_COMBO_DIALOG) {
-        elements = g_pomodoroComboDialogElements;
-        elementsCount = POMODORO_COMBO_DIALOG_ELEMENTS_COUNT;
-    } else if (dialogID == CLOCK_IDD_POMODORO_TIME_DIALOG) {
-        elements = g_pomodoroTimeDialogElements;
-        elementsCount = POMODORO_TIME_DIALOG_ELEMENTS_COUNT;
-    } else {
-        // 不支持的对话框ID
-        return FALSE;
+    // 设置对话框标题
+    const wchar_t* titleText = GetDialogTitleText(dialogID);
+    if (titleText) {
+        SetWindowTextW(hwndDlg, titleText);
     }
     
-    // 遍历所有元素并应用本地化文本
-    for (i = 0; i < elementsCount; i++) {
-        // 跳过不匹配当前对话框ID的元素
-        if (elements[i].dialogID != dialogID) continue;
-        
-        // 对话框标题特殊处理
-        if (elements[i].controlID == -1) {
-            // 设置对话框标题
-            const wchar_t* localizedText = GetLocalizedString(elements[i].textKey, elements[i].textKey);
-            if (localizedText) {
-                // 为番茄钟时间设置对话框添加特殊处理
-                if (dialogID == CLOCK_IDD_POMODORO_TIME_DIALOG && wcscmp(localizedText, L"PomodoroTimeSettingTitle") == 0) {
-                    SetWindowTextW(hwndDlg, L"Set Pomodoro Time");
-                } else {
-                    SetWindowTextW(hwndDlg, localizedText);
-                }
-            }
-            continue;
-        }
-        
-        // 获取控件句柄
-        HWND hwndControl = GetDlgItem(hwndDlg, elements[i].controlID);
-        if (!hwndControl) continue;
-        
-        // 获取本地化文本
-        const wchar_t* localizedText = GetLocalizedString(elements[i].textKey, elements[i].textKey);
-        if (!localizedText) continue;
-        
-        // 如果返回的文本与键名相同，表示未找到翻译，尝试使用硬编码的备用文本
-        if (dialogID == CLOCK_IDD_POMODORO_TIME_DIALOG) {
-            // 针对番茄钟时间设置对话框的特殊处理
-            if (elements[i].controlID == -1) {
-                // 对话框标题
-                if (wcscmp(localizedText, L"PomodoroTimeSettingTitle") == 0) {
-                    localizedText = L"Set Pomodoro Time";
-                }
-            } else if (elements[i].controlID == CLOCK_IDC_STATIC) {
-                // 静态文本
-                if (wcscmp(localizedText, L"PomodoroTimeSettingPrompt") == 0) {
-                    localizedText = L"25=25 minutes\n25h=25 hours\n25s=25 seconds\n25 30=25 minutes 30 seconds\n25 30m=25 hours 30 minutes\n1 30 20=1 hour 30 minutes 20 seconds";
-                }
-            } else if (elements[i].controlID == CLOCK_IDC_BUTTON_OK) {
-                // 确定按钮
-                if (wcscmp(localizedText, L"OkButton") == 0) {
-                    localizedText = L"OK";
-                }
-            }
-        }
-        
-        // 特殊处理番茄钟组合对话框的静态文本换行
-        if ((dialogID == CLOCK_IDD_POMODORO_COMBO_DIALOG || dialogID == CLOCK_IDD_POMODORO_TIME_DIALOG) && 
-            elements[i].controlID == CLOCK_IDC_STATIC) {
-            wchar_t processedText[1024]; // 假设文本不会超过1024个宽字符
-            const wchar_t* src = localizedText;
-            wchar_t* dst = processedText;
-            while (*src) {
-                if (src[0] == L'\\' && src[1] == L'n') {
-                    *dst++ = L'\n';
-                    src += 2;
-                } else {
-                    *dst++ = *src++;
-                }
-            }
-            *dst = L'\0';
-            SetWindowTextW(hwndControl, processedText);
-        } else if (elements[i].controlID == IDC_VERSION_TEXT && dialogID == IDD_ABOUT_DIALOG) {
-            wchar_t versionText[256];
-            StringCbPrintfW(versionText, sizeof(versionText), localizedText, CATIME_VERSION);
-            SetWindowTextW(hwndControl, versionText);
-        } else {
-            // 设置控件文本
-            SetWindowTextW(hwndControl, localizedText);
-        }
-    }
+    // 设置遍历数据
+    EnumChildWindowsData data = {
+        .hwndDlg = hwndDlg,
+        .dialogID = dialogID
+    };
+    
+    // 遍历所有子窗口并应用本地化文本
+    EnumChildWindows(hwndDlg, EnumChildProc, (LPARAM)&data);
     
     return TRUE;
 }
@@ -224,36 +274,21 @@ BOOL ApplyDialogLanguage(HWND hwndDlg, int dialogID) {
  * @brief 获取对话框元素的本地化文本
  */
 const wchar_t* GetDialogLocalizedString(int dialogID, int controlID) {
-    const DialogLocalizedElement* elements = NULL;
-    size_t elementsCount = 0;
-    
-    // 根据对话框ID选择相应的本地化元素数组
-    if (dialogID == IDD_ABOUT_DIALOG) {
-        elements = g_aboutDialogElements;
-        elementsCount = ABOUT_DIALOG_ELEMENTS_COUNT;
-    } else if (dialogID == CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG) {
-        elements = g_notificationDialogElements;
-        elementsCount = NOTIFICATION_DIALOG_ELEMENTS_COUNT;
-    } else if (dialogID == CLOCK_IDD_POMODORO_LOOP_DIALOG) {
-        elements = g_pomodoroLoopDialogElements;
-        elementsCount = POMODORO_LOOP_DIALOG_ELEMENTS_COUNT;
-    } else if (dialogID == CLOCK_IDD_POMODORO_COMBO_DIALOG) {
-        elements = g_pomodoroComboDialogElements;
-        elementsCount = POMODORO_COMBO_DIALOG_ELEMENTS_COUNT;
-    } else if (dialogID == CLOCK_IDD_POMODORO_TIME_DIALOG) {
-        elements = g_pomodoroTimeDialogElements;
-        elementsCount = POMODORO_TIME_DIALOG_ELEMENTS_COUNT;
-    } else {
-        // 不支持的对话框ID
-        return NULL;
+    // 检查是否是特殊控件
+    const wchar_t* specialText = FindSpecialControlText(dialogID, controlID);
+    if (specialText) {
+        return specialText;
     }
     
-    // 查找匹配的元素
-    for (int i = 0; i < elementsCount; i++) {
-        if (elements[i].dialogID == dialogID && elements[i].controlID == controlID) {
-            // 返回本地化文本
-            return GetLocalizedString(elements[i].textKey, elements[i].textKey);
-        }
+    // 检查是否是特殊按钮
+    const wchar_t* buttonText = FindSpecialButtonText(dialogID, controlID);
+    if (buttonText) {
+        return buttonText;
+    }
+    
+    // 如果是对话框标题
+    if (controlID == -1) {
+        return GetDialogTitleText(dialogID);
     }
     
     return NULL;
