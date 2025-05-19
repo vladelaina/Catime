@@ -638,7 +638,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     }
                     while (1) {
                         memset(inputText, 0, sizeof(inputText));
-                        DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc);
+                        DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc, (LPARAM)CLOCK_IDD_DIALOG1);
 
                         if (inputText[0] == '\0') {
                             break;
@@ -752,7 +752,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDC_MODIFY_TIME_OPTIONS: {
                     while (1) {
                         memset(inputText, 0, sizeof(inputText));
-                        DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_SHORTCUT_DIALOG), NULL, DlgProc);
+                        DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_SHORTCUT_DIALOG), NULL, DlgProc, (LPARAM)CLOCK_IDD_SHORTCUT_DIALOG);
 
                         // 检查输入是否为空或只包含空格
                         BOOL isAllSpaces = TRUE;
@@ -812,7 +812,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDC_MODIFY_DEFAULT_TIME: {
                     while (1) {
                         memset(inputText, 0, sizeof(inputText));
-                        DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_STARTUP_DIALOG), NULL, DlgProc);
+                        DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_STARTUP_DIALOG), NULL, DlgProc, (LPARAM)CLOCK_IDD_STARTUP_DIALOG);
 
                         if (inputText[0] == '\0') {
                             break;
@@ -1631,7 +1631,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDC_SET_COUNTDOWN_TIME: {
                     while (1) {
                         memset(inputText, 0, sizeof(inputText));
-                        DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc);
+                        DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc, (LPARAM)CLOCK_IDD_DIALOG1);
 
                         if (inputText[0] == '\0') {
                             
@@ -1804,9 +1804,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         
                         // 使用通用对话框修改番茄钟时间
                         memset(inputText, 0, sizeof(inputText));
-                        DialogBox(GetModuleHandle(NULL), 
+                        DialogBoxParam(GetModuleHandle(NULL), 
                                  MAKEINTRESOURCE(CLOCK_IDD_POMODORO_TIME_DIALOG),
-                                 hwnd, DlgProc);
+                                 hwnd, DlgProc, (LPARAM)CLOCK_IDD_POMODORO_TIME_DIALOG);
                         
                         // 处理输入结果
                         if (inputText[0] && !isAllSpacesOnly(inputText)) {
@@ -1816,11 +1816,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                                 POMODORO_TIMES[selectedIndex] = total_seconds;
                                 
                                 // 使用已有函数更新配置
-                                if (POMODORO_TIMES_COUNT >= 3) {
-                                    WriteConfigPomodoroTimes(POMODORO_TIMES[0], 
-                                                           POMODORO_TIMES[1], 
-                                                           POMODORO_TIMES[2]);
-                                }
+                                // IMPORTANT: Add config write for dynamic IDs
+                                WriteConfigPomodoroTimeOptions(POMODORO_TIMES, POMODORO_TIMES_COUNT);
                                 
                                 // 更新核心变量
                                 if (selectedIndex == 0) POMODORO_WORK_TIME = total_seconds;
@@ -1842,9 +1839,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         if (selectedIndex >= 0 && selectedIndex < POMODORO_TIMES_COUNT) {
                             // 使用通用对话框修改番茄钟时间
                             memset(inputText, 0, sizeof(inputText));
-                            DialogBox(GetModuleHandle(NULL), 
+                            DialogBoxParam(GetModuleHandle(NULL), 
                                      MAKEINTRESOURCE(CLOCK_IDD_POMODORO_TIME_DIALOG),
-                                     hwnd, DlgProc);
+                                     hwnd, DlgProc, (LPARAM)CLOCK_IDD_POMODORO_TIME_DIALOG);
                             
                             // 处理输入结果
                             if (inputText[0] && !isAllSpacesOnly(inputText)) {
@@ -1854,11 +1851,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                                     POMODORO_TIMES[selectedIndex] = total_seconds;
                                     
                                     // 使用已有函数更新配置
-                                    if (POMODORO_TIMES_COUNT >= 3) {
-                                        WriteConfigPomodoroTimes(POMODORO_TIMES[0], 
-                                                               POMODORO_TIMES[1], 
-                                                               POMODORO_TIMES[2]);
-                                    }
+                                    // IMPORTANT: Add config write for dynamic IDs
+                                    WriteConfigPomodoroTimeOptions(POMODORO_TIMES, POMODORO_TIMES_COUNT);
                                     
                                     // 更新核心变量
                                     if (selectedIndex == 0) POMODORO_WORK_TIME = total_seconds;
@@ -2158,9 +2152,9 @@ refresh_window:
                 memset(inputText, 0, sizeof(inputText));
                 
                 // 显示输入对话框
-                INT_PTR result = DialogBox(GetModuleHandle(NULL), 
+                INT_PTR result = DialogBoxParam(GetModuleHandle(NULL), 
                                          MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), 
-                                         hwnd, DlgProc);
+                                         hwnd, DlgProc, (LPARAM)CLOCK_IDD_DIALOG1);
                 
                 // 如果对话框有输入并确认
                 if (inputText[0] != '\0') {

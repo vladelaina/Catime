@@ -84,7 +84,8 @@ LRESULT APIENTRY EditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
         // 回车键处理
         if (wParam == VK_RETURN) {
             // 发送BM_CLICK消息给父窗口的OK按钮
-            SendMessage(GetParent(hwnd), WM_COMMAND, MAKEWPARAM(IDOK, BN_CLICKED), (LPARAM)GetDlgItem(GetParent(hwnd), IDOK));
+            HWND hwndOkButton = GetDlgItem(GetParent(hwnd), CLOCK_IDC_BUTTON_OK);
+            SendMessage(GetParent(hwnd), WM_COMMAND, MAKEWPARAM(CLOCK_IDC_BUTTON_OK, BN_CLICKED), (LPARAM)hwndOkButton);
             return 0;
         }
         // Ctrl+A全选处理
@@ -160,6 +161,9 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 
     switch (msg) {
         case WM_INITDIALOG: {
+            // 保存对话框ID到GWLP_USERDATA
+            SetWindowLongPtr(hwndDlg, GWLP_USERDATA, lParam);
+            
             // 保存对话框句柄
             g_hwndInputDialog = hwndDlg;
             
@@ -169,9 +173,8 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
             hButtonBrush = CreateSolidBrush(RGB(0xFD, 0xFD, 0xFD));
 
             // 检查对话框ID是否为快捷倒计时选项对话框，如果是则设置标题
-            DWORD dlgId = GetWindowLongPtr(hwndDlg, GWLP_USERDATA);
-            if (dlgId == CLOCK_IDD_SHORTCUT_DIALOG || 
-                GetDlgCtrlID((HWND)lParam) == CLOCK_IDD_SHORTCUT_DIALOG) {
+            DWORD dlgId = GetWindowLongPtr(hwndDlg, GWLP_USERDATA); // 现在可以正确获取dlgId
+            if (dlgId == CLOCK_IDD_SHORTCUT_DIALOG) { // 移除 GetDlgCtrlID((HWND)lParam) 的判断
                 SetWindowTextW(hwndDlg, GetLocalizedString(L"倒计时预设", L"Countdown Presets"));
             }
 
@@ -288,20 +291,22 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                     if (dialogId == CLOCK_IDD_POMODORO_TIME_DIALOG) {
                         // 通用番茄钟时间设置，由调用者处理具体更新逻辑
                         g_hwndInputDialog = NULL;
-                        EndDialog(hwndDlg, 0);
+                        EndDialog(hwndDlg, IDOK); // 返回 IDOK 表示成功
                     } else if (dialogId == CLOCK_IDD_POMODORO_LOOP_DIALOG) {
                         // 番茄钟循环次数
                         WriteConfigPomodoroLoopCount(total_seconds);
                         g_hwndInputDialog = NULL;
-                        EndDialog(hwndDlg, 0);
-                    } else if (dialogId == CLOCK_IDD_DIALOG1 || dialogId == CLOCK_IDD_STARTUP_DIALOG) {
-                        // 默认倒计时时间
-                        WriteConfigDefaultStartTime(total_seconds);
+                        EndDialog(hwndDlg, IDOK);
+                    } else if (dialogId == CLOCK_IDD_DIALOG1 || dialogId == CLOCK_IDD_STARTUP_DIALOG || dialogId == CLOCK_IDD_SHORTCUT_DIALOG) {
+                        // 默认倒计时时间或快捷方式时间 (IDD_SHORTCUT_DIALOG 也应在此处理)
+                        WriteConfigDefaultStartTime(total_seconds); // 假设 CLOCK_IDD_SHORTCUT_DIALOG 也用这个函数，或者需要 আলাদা处理
                         g_hwndInputDialog = NULL;
-                        EndDialog(hwndDlg, 0);
+                        EndDialog(hwndDlg, IDOK);
                     } else {
+                        // 对于未明确处理的对话框ID，如果输入有效，也返回IDOK
+                        // 或者根据需要进行错误处理或返回特定值
                         g_hwndInputDialog = NULL;
-                        EndDialog(hwndDlg, 0);
+                        EndDialog(hwndDlg, IDOK); // 假设成功获取输入即可
                     }
                 } else {
                     ShowErrorDialog(hwndDlg);
