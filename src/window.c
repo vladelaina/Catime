@@ -629,9 +629,10 @@ BOOL InitializeApplication(HINSTANCE hInstance) {
     SetConsoleOutputCP(936);
     SetConsoleCP(936);
 
-    InitializeDefaultLanguage();
-    UpdateStartupShortcut();
+    // 修改初始化顺序：先读取配置文件，再初始化其他功能
     ReadConfig();
+    UpdateStartupShortcut();
+    InitializeDefaultLanguage();
 
     int defaultFontIndex = -1;
     for (int i = 0; i < FONT_RESOURCES_COUNT; i++) {

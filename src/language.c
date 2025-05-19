@@ -279,10 +279,11 @@ static void DetectSystemLanguage() {
  * 根据当前语言设置返回对应语言的字符串。
  */
 const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english) {
-    // 首次调用时自动检测系统语言并加载翻译资源
+    // 首次调用时初始化翻译资源，但不自动检测系统语言
     static BOOL initialized = FALSE;
     if (!initialized) {
-        DetectSystemLanguage();
+        // 不再调用DetectSystemLanguage()函数自动检测系统语言
+        // 而是使用当前已设置的CURRENT_LANGUAGE值（可能来自配置文件）
         LoadLanguageResource(CURRENT_LANGUAGE);
         initialized = TRUE;
     }

@@ -250,6 +250,13 @@ void ReadNotificationTypeConfig(void);
 void WriteConfigNotificationType(NotificationType type);
 
 /**
+ * @brief 将当前语言设置写入配置文件
+ * 
+ * @param language 语言枚举值(APP_LANG_ENUM)
+ */
+void WriteConfigLanguage(int language);
+
+/**
  * @brief 获取音频文件夹路径
  * @param path 存储音频文件夹路径的缓冲区
  * @param size 缓冲区大小

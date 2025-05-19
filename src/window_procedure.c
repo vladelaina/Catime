@@ -1051,6 +1051,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_LANG_CHINESE: {
                     SetLanguage(APP_LANG_CHINESE_SIMP);
+                    WriteConfigLanguage(APP_LANG_CHINESE_SIMP);
                     // 刷新窗口
                     InvalidateRect(hwnd, NULL, TRUE);
                     // 刷新托盘菜单
@@ -1060,6 +1061,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_LANG_CHINESE_TRAD: {
                     SetLanguage(APP_LANG_CHINESE_TRAD);
+                    WriteConfigLanguage(APP_LANG_CHINESE_TRAD);
                     // 刷新窗口
                     InvalidateRect(hwnd, NULL, TRUE);
                     // 刷新托盘菜单
@@ -1069,6 +1071,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_LANG_ENGLISH: {
                     SetLanguage(APP_LANG_ENGLISH);
+                    WriteConfigLanguage(APP_LANG_ENGLISH);
                     // 刷新窗口
                     InvalidateRect(hwnd, NULL, TRUE);
                     // 刷新托盘菜单
@@ -1078,6 +1081,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_LANG_SPANISH: {
                     SetLanguage(APP_LANG_SPANISH);
+                    WriteConfigLanguage(APP_LANG_SPANISH);
                     // 刷新窗口
                     InvalidateRect(hwnd, NULL, TRUE);
                     // 刷新托盘菜单
@@ -1087,6 +1091,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_LANG_FRENCH: {
                     SetLanguage(APP_LANG_FRENCH);
+                    WriteConfigLanguage(APP_LANG_FRENCH);
                     // 刷新窗口
                     InvalidateRect(hwnd, NULL, TRUE);
                     // 刷新托盘菜单
@@ -1096,6 +1101,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_LANG_GERMAN: {
                     SetLanguage(APP_LANG_GERMAN);
+                    WriteConfigLanguage(APP_LANG_GERMAN);
                     // 刷新窗口
                     InvalidateRect(hwnd, NULL, TRUE);
                     // 刷新托盘菜单
@@ -1105,6 +1111,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_LANG_RUSSIAN: {
                     SetLanguage(APP_LANG_RUSSIAN);
+                    WriteConfigLanguage(APP_LANG_RUSSIAN);
                     // 刷新窗口
                     InvalidateRect(hwnd, NULL, TRUE);
                     // 刷新托盘菜单
@@ -1114,6 +1121,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_LANG_PORTUGUESE: {
                     SetLanguage(APP_LANG_PORTUGUESE);
+                    WriteConfigLanguage(APP_LANG_PORTUGUESE);
                     // 刷新窗口
                     InvalidateRect(hwnd, NULL, TRUE);
                     // 刷新托盘菜单
@@ -1123,6 +1131,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_LANG_JAPANESE: {
                     SetLanguage(APP_LANG_JAPANESE);
+                    WriteConfigLanguage(APP_LANG_JAPANESE);
                     // 刷新窗口
                     InvalidateRect(hwnd, NULL, TRUE);
                     // 刷新托盘菜单
@@ -1132,6 +1141,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_LANG_KOREAN: {
                     SetLanguage(APP_LANG_KOREAN);
+                    WriteConfigLanguage(APP_LANG_KOREAN);
                     // 刷新窗口
                     InvalidateRect(hwnd, NULL, TRUE);
                     // 刷新托盘菜单

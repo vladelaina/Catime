@@ -8,6 +8,7 @@
  */
 
 #include "../include/config.h"
+#include "../include/language.h"
 #include "../resource/resource.h"  // 添加这一行以访问CATIME_VERSION常量
 #include <stdio.h>
 #include <stdlib.h>
@@ -111,6 +112,60 @@ void CreateDefaultConfig(const char* config_path) {
     if (file) {
         // 添加版本标识 - 作为配置文件第一行
         fprintf(file, "CONFIG_VERSION=%s\n", CATIME_VERSION);
+        
+        // 获取系统默认语言ID
+        LANGID systemLangID = GetUserDefaultUILanguage();
+        int defaultLanguage = APP_LANG_ENGLISH; // 默认为英语
+        const char* langName = "English"; // 默认语言名称
+        
+        // 根据系统语言ID设置默认语言
+        switch (PRIMARYLANGID(systemLangID)) {
+            case LANG_CHINESE:
+                if (SUBLANGID(systemLangID) == SUBLANG_CHINESE_SIMPLIFIED) {
+                    defaultLanguage = APP_LANG_CHINESE_SIMP;
+                    langName = "Chinese_Simplified";
+                } else {
+                    defaultLanguage = APP_LANG_CHINESE_TRAD;
+                    langName = "Chinese_Traditional";
+                }
+                break;
+            case LANG_SPANISH:
+                defaultLanguage = APP_LANG_SPANISH;
+                langName = "Spanish";
+                break;
+            case LANG_FRENCH:
+                defaultLanguage = APP_LANG_FRENCH;
+                langName = "French";
+                break;
+            case LANG_GERMAN:
+                defaultLanguage = APP_LANG_GERMAN;
+                langName = "German";
+                break;
+            case LANG_RUSSIAN:
+                defaultLanguage = APP_LANG_RUSSIAN;
+                langName = "Russian";
+                break;
+            case LANG_PORTUGUESE:
+                defaultLanguage = APP_LANG_PORTUGUESE;
+                langName = "Portuguese";
+                break;
+            case LANG_JAPANESE:
+                defaultLanguage = APP_LANG_JAPANESE;
+                langName = "Japanese";
+                break;
+            case LANG_KOREAN:
+                defaultLanguage = APP_LANG_KOREAN;
+                langName = "Korean";
+                break;
+            case LANG_ENGLISH:
+            default:
+                defaultLanguage = APP_LANG_ENGLISH;
+                langName = "English";
+                break;
+        }
+        
+        // 将语言选项写入配置
+        fprintf(file, "LANGUAGE=%s\n", langName);
         
         // 基本设置区块 - 与WriteConfig函数保持相同顺序
         fprintf(file, "CLOCK_TEXT_COLOR=#FFB6C1\n");
@@ -386,6 +441,10 @@ void ReadConfig() {
     
     // 重置最近文件计数
     CLOCK_RECENT_FILES_COUNT = 0;
+    
+    // 默认语言设置为英语
+    int languageSetting = APP_LANG_ENGLISH;
+    BOOL languageFound = FALSE;
 
     while (fgets(line, sizeof(line), file)) {
         size_t len = strlen(line);
@@ -401,8 +460,45 @@ void ReadConfig() {
         if (strncmp(line, "COLOR_OPTIONS=", 13) == 0) {
             continue;
         }
-
-        if (strncmp(line, "CLOCK_TIME_OPTIONS=", 19) == 0) {
+        
+        // 读取语言设置
+        if (strncmp(line, "LANGUAGE=", 9) == 0) {
+            char langName[50] = {0};
+            strncpy(langName, line + 9, sizeof(langName) - 1);
+            languageFound = TRUE;
+            
+            // 将语言名称转换为枚举值
+            if (strcmp(langName, "Chinese_Simplified") == 0) {
+                languageSetting = APP_LANG_CHINESE_SIMP;
+            } else if (strcmp(langName, "Chinese_Traditional") == 0) {
+                languageSetting = APP_LANG_CHINESE_TRAD;
+            } else if (strcmp(langName, "English") == 0) {
+                languageSetting = APP_LANG_ENGLISH;
+            } else if (strcmp(langName, "Spanish") == 0) {
+                languageSetting = APP_LANG_SPANISH;
+            } else if (strcmp(langName, "French") == 0) {
+                languageSetting = APP_LANG_FRENCH;
+            } else if (strcmp(langName, "German") == 0) {
+                languageSetting = APP_LANG_GERMAN;
+            } else if (strcmp(langName, "Russian") == 0) {
+                languageSetting = APP_LANG_RUSSIAN;
+            } else if (strcmp(langName, "Portuguese") == 0) {
+                languageSetting = APP_LANG_PORTUGUESE;
+            } else if (strcmp(langName, "Japanese") == 0) {
+                languageSetting = APP_LANG_JAPANESE;
+            } else if (strcmp(langName, "Korean") == 0) {
+                languageSetting = APP_LANG_KOREAN;
+            } else {
+                // 尝试按数字解析（向后兼容）
+                int langValue = atoi(langName);
+                if (langValue >= 0 && langValue < APP_LANG_COUNT) {
+                    languageSetting = langValue;
+                } else {
+                    languageSetting = APP_LANG_ENGLISH; // 默认英语
+                }
+            }
+        }
+        else if (strncmp(line, "CLOCK_TIME_OPTIONS=", 19) == 0) {
             char *token = strtok(line + 19, ",");
             while (token && time_options_count < MAX_TIME_OPTIONS) {
                 while (*token == ' ') token++;
@@ -708,6 +804,12 @@ void ReadConfig() {
     
     // 查找通知音频音量配置
     ReadNotificationVolumeConfig();
+    
+    // 应用语言设置
+    if (languageFound) {
+        // 引入头文件：#include "../include/language.h"
+        SetLanguage((AppLanguage)languageSetting);
+    }
     
     // 关闭文件
     fclose(file);
@@ -1236,6 +1338,47 @@ void WriteConfig(const char* config_path) {
     
     // 添加版本标识 - 作为配置文件第一行
     fprintf(file, "CONFIG_VERSION=%s\n", CATIME_VERSION);
+    
+    // 获取当前语言的名称
+    AppLanguage currentLang = GetCurrentLanguage();
+    const char* langName;
+    
+    switch (currentLang) {
+        case APP_LANG_CHINESE_SIMP:
+            langName = "Chinese_Simplified";
+            break;
+        case APP_LANG_CHINESE_TRAD:
+            langName = "Chinese_Traditional";
+            break;
+        case APP_LANG_SPANISH:
+            langName = "Spanish";
+            break;
+        case APP_LANG_FRENCH:
+            langName = "French";
+            break;
+        case APP_LANG_GERMAN:
+            langName = "German";
+            break;
+        case APP_LANG_RUSSIAN:
+            langName = "Russian";
+            break;
+        case APP_LANG_PORTUGUESE:
+            langName = "Portuguese";
+            break;
+        case APP_LANG_JAPANESE:
+            langName = "Japanese";
+            break;
+        case APP_LANG_KOREAN:
+            langName = "Korean";
+            break;
+        case APP_LANG_ENGLISH:
+        default:
+            langName = "English";
+            break;
+    }
+    
+    // 添加当前语言设置
+    fprintf(file, "LANGUAGE=%s\n", langName);
     
     // 基本设置区块
     fprintf(file, "CLOCK_TEXT_COLOR=%s\n", CLOCK_TEXT_COLOR);
@@ -3087,4 +3230,52 @@ void WriteConfigKeyValue(const char* key, const char* value) {
     // 替换原文件
     remove(config_path);
     rename(temp_path, config_path);
+}
+
+/**
+ * @brief 将当前语言设置写入配置文件
+ * 
+ * @param language 语言枚举值(APP_LANG_ENUM)
+ */
+void WriteConfigLanguage(int language) {
+    const char* langName;
+    
+    // 将语言枚举值转换为可读的语言名称
+    switch (language) {
+        case APP_LANG_CHINESE_SIMP:
+            langName = "Chinese_Simplified";
+            break;
+        case APP_LANG_CHINESE_TRAD:
+            langName = "Chinese_Traditional";
+            break;
+        case APP_LANG_ENGLISH:
+            langName = "English";
+            break;
+        case APP_LANG_SPANISH:
+            langName = "Spanish";
+            break;
+        case APP_LANG_FRENCH:
+            langName = "French";
+            break;
+        case APP_LANG_GERMAN:
+            langName = "German";
+            break;
+        case APP_LANG_RUSSIAN:
+            langName = "Russian";
+            break;
+        case APP_LANG_PORTUGUESE:
+            langName = "Portuguese";
+            break;
+        case APP_LANG_JAPANESE:
+            langName = "Japanese";
+            break;
+        case APP_LANG_KOREAN:
+            langName = "Korean";
+            break;
+        default:
+            langName = "English"; // 默认为英语
+            break;
+    }
+    
+    WriteConfigKeyValue("LANGUAGE", langName);
 }
