@@ -181,6 +181,11 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
             if (dlgId == CLOCK_IDD_SHORTCUT_DIALOG) { // 移除 GetDlgCtrlID((HWND)lParam) 的判断
                 SetWindowTextW(hwndDlg, GetLocalizedString(L"倒计时预设", L"Countdown Presets"));
             }
+            
+            // 应用多语言支持
+            if (dlgId == CLOCK_IDD_POMODORO_TIME_DIALOG) {
+                ApplyDialogLanguage(hwndDlg, CLOCK_IDD_POMODORO_TIME_DIALOG);
+            }
 
             // 获取编辑框控件的句柄
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);

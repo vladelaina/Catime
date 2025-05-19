@@ -84,11 +84,22 @@ static DialogLocalizedElement g_pomodoroComboDialogElements[] = {
     {CLOCK_IDD_POMODORO_COMBO_DIALOG, CLOCK_IDC_BUTTON_OK, L"确定"}
 };
 
+// 番茄钟时间设置对话框元素本地化映射表
+static DialogLocalizedElement g_pomodoroTimeDialogElements[] = {
+    // 对话框标题
+    {CLOCK_IDD_POMODORO_TIME_DIALOG, -1, L"PomodoroTimeSettingTitle"},
+    // 提示文本
+    {CLOCK_IDD_POMODORO_TIME_DIALOG, CLOCK_IDC_STATIC, L"PomodoroTimeSettingPrompt"},
+    // 确定按钮
+    {CLOCK_IDD_POMODORO_TIME_DIALOG, CLOCK_IDC_BUTTON_OK, L"OkButton"}
+};
+
 // 本地化元素计数
 #define ABOUT_DIALOG_ELEMENTS_COUNT (sizeof(g_aboutDialogElements) / sizeof(g_aboutDialogElements[0]))
 #define NOTIFICATION_DIALOG_ELEMENTS_COUNT (sizeof(g_notificationDialogElements) / sizeof(g_notificationDialogElements[0]))
 #define POMODORO_LOOP_DIALOG_ELEMENTS_COUNT (sizeof(g_pomodoroLoopDialogElements) / sizeof(g_pomodoroLoopDialogElements[0]))
 #define POMODORO_COMBO_DIALOG_ELEMENTS_COUNT (sizeof(g_pomodoroComboDialogElements) / sizeof(g_pomodoroComboDialogElements[0]))
+#define POMODORO_TIME_DIALOG_ELEMENTS_COUNT (sizeof(g_pomodoroTimeDialogElements) / sizeof(g_pomodoroTimeDialogElements[0]))
 
 /**
  * @brief 初始化对话框多语言支持
@@ -123,6 +134,9 @@ BOOL ApplyDialogLanguage(HWND hwndDlg, int dialogID) {
     } else if (dialogID == CLOCK_IDD_POMODORO_COMBO_DIALOG) {
         elements = g_pomodoroComboDialogElements;
         elementsCount = POMODORO_COMBO_DIALOG_ELEMENTS_COUNT;
+    } else if (dialogID == CLOCK_IDD_POMODORO_TIME_DIALOG) {
+        elements = g_pomodoroTimeDialogElements;
+        elementsCount = POMODORO_TIME_DIALOG_ELEMENTS_COUNT;
     } else {
         // 不支持的对话框ID
         return FALSE;
@@ -152,7 +166,8 @@ BOOL ApplyDialogLanguage(HWND hwndDlg, int dialogID) {
         if (!localizedText) continue;
         
         // 特殊处理番茄钟组合对话框的静态文本换行
-        if (dialogID == CLOCK_IDD_POMODORO_COMBO_DIALOG && elements[i].controlID == CLOCK_IDC_STATIC) {
+        if ((dialogID == CLOCK_IDD_POMODORO_COMBO_DIALOG || dialogID == CLOCK_IDD_POMODORO_TIME_DIALOG) && 
+            elements[i].controlID == CLOCK_IDC_STATIC) {
             wchar_t processedText[1024]; // 假设文本不会超过1024个宽字符
             const wchar_t* src = localizedText;
             wchar_t* dst = processedText;
@@ -199,6 +214,9 @@ const wchar_t* GetDialogLocalizedString(int dialogID, int controlID) {
     } else if (dialogID == CLOCK_IDD_POMODORO_COMBO_DIALOG) {
         elements = g_pomodoroComboDialogElements;
         elementsCount = POMODORO_COMBO_DIALOG_ELEMENTS_COUNT;
+    } else if (dialogID == CLOCK_IDD_POMODORO_TIME_DIALOG) {
+        elements = g_pomodoroTimeDialogElements;
+        elementsCount = POMODORO_TIME_DIALOG_ELEMENTS_COUNT;
     } else {
         // 不支持的对话框ID
         return NULL;
