@@ -152,7 +152,12 @@ BOOL ApplyDialogLanguage(HWND hwndDlg, int dialogID) {
             // 设置对话框标题
             const wchar_t* localizedText = GetLocalizedString(elements[i].textKey, elements[i].textKey);
             if (localizedText) {
-                SetWindowTextW(hwndDlg, localizedText);
+                // 为番茄钟时间设置对话框添加特殊处理
+                if (dialogID == CLOCK_IDD_POMODORO_TIME_DIALOG && wcscmp(localizedText, L"PomodoroTimeSettingTitle") == 0) {
+                    SetWindowTextW(hwndDlg, L"设置番茄钟时间");
+                } else {
+                    SetWindowTextW(hwndDlg, localizedText);
+                }
             }
             continue;
         }
@@ -164,6 +169,27 @@ BOOL ApplyDialogLanguage(HWND hwndDlg, int dialogID) {
         // 获取本地化文本
         const wchar_t* localizedText = GetLocalizedString(elements[i].textKey, elements[i].textKey);
         if (!localizedText) continue;
+        
+        // 如果返回的文本与键名相同，表示未找到翻译，尝试使用硬编码的备用文本
+        if (dialogID == CLOCK_IDD_POMODORO_TIME_DIALOG) {
+            // 针对番茄钟时间设置对话框的特殊处理
+            if (elements[i].controlID == -1) {
+                // 对话框标题
+                if (wcscmp(localizedText, L"PomodoroTimeSettingTitle") == 0) {
+                    localizedText = L"设置番茄钟时间";
+                }
+            } else if (elements[i].controlID == CLOCK_IDC_STATIC) {
+                // 静态文本
+                if (wcscmp(localizedText, L"PomodoroTimeSettingPrompt") == 0) {
+                    localizedText = L"25=25分钟\n25h=25小时\n25s=25秒\n25 30=25分钟30秒\n25 30m=25小时30分钟\n1 30 20=1小时30分钟20秒";
+                }
+            } else if (elements[i].controlID == CLOCK_IDC_BUTTON_OK) {
+                // 确定按钮
+                if (wcscmp(localizedText, L"OkButton") == 0) {
+                    localizedText = L"确定";
+                }
+            }
+        }
         
         // 特殊处理番茄钟组合对话框的静态文本换行
         if ((dialogID == CLOCK_IDD_POMODORO_COMBO_DIALOG || dialogID == CLOCK_IDD_POMODORO_TIME_DIALOG) && 
