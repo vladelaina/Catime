@@ -100,6 +100,10 @@ LRESULT APIENTRY EditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
         if (wParam == 1 || (wParam == 'a' || wParam == 'A') && GetKeyState(VK_CONTROL) < 0) {
             return 0;
         }
+        // 阻止回车键产生的字符消息进一步处理，防止发出提示音
+        if (wParam == VK_RETURN) { // VK_RETURN (0x0D) is the char code for Enter
+            return 0;
+        }
         break;
     }
     
@@ -684,6 +688,10 @@ LRESULT APIENTRY LoopEditSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARA
     case WM_CHAR: {
         // 处理Ctrl+A的字符消息，防止发出提示音
         if (GetKeyState(VK_CONTROL) < 0 && (wParam == 1 || wParam == 'a' || wParam == 'A')) {
+            return 0;
+        }
+        // 阻止回车键产生的字符消息进一步处理，防止发出提示音
+        if (wParam == VK_RETURN) { // VK_RETURN (0x0D) is the char code for Enter
             return 0;
         }
         break;
