@@ -105,28 +105,6 @@ BOOL InitDialogLanguageSupport(void) {
 BOOL ApplyDialogLanguage(HWND hwndDlg, int dialogID) {
     if (!hwndDlg) return FALSE;
     
-    // 番茄钟组合对话框特殊处理
-    if (dialogID == CLOCK_IDD_POMODORO_COMBO_DIALOG) {
-        // 设置对话框标题
-        SetWindowTextW(hwndDlg, GetLocalizedString(L"设置番茄钟时间组合", L"Set Pomodoro Time Combination"));
-        
-        // 设置静态文本
-        HWND hwndStatic = GetDlgItem(hwndDlg, CLOCK_IDC_STATIC);
-        if (hwndStatic) {
-            SetWindowTextW(hwndStatic, GetLocalizedString(
-                L"输入番茄钟时间组合，用空格分隔：\n\n25m = 25分钟\n30s = 30秒\n1h30m = 1小时30分钟\n例如: 25m 5m 25m 10m - 工作25分钟，短休息5分钟，工作25分钟，长休息10分钟",
-                L"Enter pomodoro time sequence, separated by spaces:\n\n25m = 25 minutes\n30s = 30 seconds\n1h30m = 1 hour 30 minutes\nExample: 25m 5m 25m 10m - work 25min, short break 5min, work 25min, long break 10min"));
-        }
-        
-        // 设置确定按钮
-        HWND hwndButton = GetDlgItem(hwndDlg, CLOCK_IDC_BUTTON_OK);
-        if (hwndButton) {
-            SetWindowTextW(hwndButton, GetLocalizedString(L"确定", L"OK"));
-        }
-        
-        return TRUE;
-    }
-    
     // 其他对话框的常规处理
     int i;
     const DialogLocalizedElement* elements = NULL;
@@ -142,6 +120,9 @@ BOOL ApplyDialogLanguage(HWND hwndDlg, int dialogID) {
     } else if (dialogID == CLOCK_IDD_POMODORO_LOOP_DIALOG) {
         elements = g_pomodoroLoopDialogElements;
         elementsCount = POMODORO_LOOP_DIALOG_ELEMENTS_COUNT;
+    } else if (dialogID == CLOCK_IDD_POMODORO_COMBO_DIALOG) {
+        elements = g_pomodoroComboDialogElements;
+        elementsCount = POMODORO_COMBO_DIALOG_ELEMENTS_COUNT;
     } else {
         // 不支持的对话框ID
         return FALSE;
@@ -171,7 +152,7 @@ BOOL ApplyDialogLanguage(HWND hwndDlg, int dialogID) {
         if (!localizedText) continue;
         
         // 特殊处理版本信息（包含格式化参数）
-        if (elements[i].controlID == IDC_VERSION_TEXT) {
+        if (elements[i].controlID == IDC_VERSION_TEXT && dialogID == IDD_ABOUT_DIALOG) {
             wchar_t versionText[256];
             StringCbPrintfW(versionText, sizeof(versionText), localizedText, CATIME_VERSION);
             SetWindowTextW(hwndControl, versionText);
