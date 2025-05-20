@@ -98,12 +98,17 @@ static bool IsStoreOrWingetInstall(char* exe_path, size_t path_size) {
 }
 
 /**
- * @brief 检查桌面是否已有快捷方式
+ * @brief 检查桌面是否已有快捷方式以及快捷方式是否指向当前程序
  * 
  * @param exe_path 程序路径
- * @return bool true表示已有快捷方式，false表示没有
+ * @param shortcut_path_out 如果找到快捷方式，输出快捷方式路径
+ * @param shortcut_path_size 快捷方式路径缓冲区大小
+ * @param target_path_out 如果找到快捷方式，输出快捷方式目标路径
+ * @param target_path_size 目标路径缓冲区大小
+ * @return int 0=未找到快捷方式, 1=找到快捷方式且指向当前程序, 2=找到快捷方式但指向其他路径
  */
-static bool ShortcutExists(const char* exe_path) {
+static int CheckShortcutTarget(const char* exe_path, char* shortcut_path_out, size_t shortcut_path_size, 
+                              char* target_path_out, size_t target_path_size) {
     char desktop_path[MAX_PATH];
     char public_desktop_path[MAX_PATH];
     char shortcut_path[MAX_PATH];
@@ -112,13 +117,13 @@ static bool ShortcutExists(const char* exe_path) {
     IShellLinkA* psl = NULL;
     IPersistFile* ppf = NULL;
     WIN32_FIND_DATAA find_data;
-    bool exists = false;
+    int result = 0;
     
     // 获取用户桌面路径
     hr = SHGetFolderPathA(NULL, CSIDL_DESKTOP, NULL, 0, desktop_path);
     if (FAILED(hr)) {
         LOG_ERROR("获取桌面路径失败, hr=0x%08X", (unsigned int)hr);
-        return false;
+        return 0;
     }
     LOG_DEBUG("用户桌面路径: %s", desktop_path);
     
@@ -126,7 +131,6 @@ static bool ShortcutExists(const char* exe_path) {
     hr = SHGetFolderPathA(NULL, CSIDL_COMMON_DESKTOPDIRECTORY, NULL, 0, public_desktop_path);
     if (FAILED(hr)) {
         LOG_WARNING("获取公共桌面路径失败, hr=0x%08X", (unsigned int)hr);
-        // 继续检查用户桌面，不返回
     } else {
         LOG_DEBUG("公共桌面路径: %s", public_desktop_path);
     }
@@ -136,34 +140,34 @@ static bool ShortcutExists(const char* exe_path) {
     LOG_DEBUG("检查用户桌面快捷方式: %s", shortcut_path);
     
     // 检查用户桌面快捷方式文件是否存在
-    if (GetFileAttributesA(shortcut_path) != INVALID_FILE_ATTRIBUTES) {
-        LOG_DEBUG("用户桌面上发现快捷方式文件");
-        exists = true;
-    }
+    bool file_exists = (GetFileAttributesA(shortcut_path) != INVALID_FILE_ATTRIBUTES);
     
     // 如果用户桌面没有，检查公共桌面
-    if (!exists && SUCCEEDED(hr)) {
+    if (!file_exists && SUCCEEDED(hr)) {
         snprintf(shortcut_path, sizeof(shortcut_path), "%s\\Catime.lnk", public_desktop_path);
         LOG_DEBUG("检查公共桌面快捷方式: %s", shortcut_path);
         
-        if (GetFileAttributesA(shortcut_path) != INVALID_FILE_ATTRIBUTES) {
-            LOG_DEBUG("公共桌面上发现快捷方式文件");
-            exists = true;
-        }
+        file_exists = (GetFileAttributesA(shortcut_path) != INVALID_FILE_ATTRIBUTES);
     }
     
-    // 如果没找到快捷方式文件，直接返回false
-    if (!exists) {
+    // 如果没找到快捷方式文件，直接返回0
+    if (!file_exists) {
         LOG_DEBUG("未找到任何快捷方式文件");
-        return false;
+        return 0;
     }
     
-    // 找到了快捷方式文件，验证其指向的目标
+    // 保存找到的快捷方式路径到输出参数
+    if (shortcut_path_out && shortcut_path_size > 0) {
+        strncpy(shortcut_path_out, shortcut_path, shortcut_path_size);
+        shortcut_path_out[shortcut_path_size - 1] = '\0';
+    }
+    
+    // 找到了快捷方式文件，获取其指向的目标
     hr = CoCreateInstance(&CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER,
                           &IID_IShellLinkA, (void**)&psl);
     if (FAILED(hr)) {
         LOG_ERROR("创建IShellLink接口失败, hr=0x%08X", (unsigned int)hr);
-        return false;
+        return 0;
     }
     
     // 获取IPersistFile接口
@@ -171,7 +175,7 @@ static bool ShortcutExists(const char* exe_path) {
     if (FAILED(hr)) {
         LOG_ERROR("获取IPersistFile接口失败, hr=0x%08X", (unsigned int)hr);
         psl->lpVtbl->Release(psl);
-        return false;
+        return 0;
     }
     
     // 转换为宽字符
@@ -184,58 +188,49 @@ static bool ShortcutExists(const char* exe_path) {
         LOG_ERROR("加载快捷方式失败, hr=0x%08X", (unsigned int)hr);
         ppf->lpVtbl->Release(ppf);
         psl->lpVtbl->Release(psl);
-        return false;
+        return 0;
     }
     
     // 获取快捷方式目标路径
     hr = psl->lpVtbl->GetPath(psl, link_target, MAX_PATH, &find_data, 0);
     if (FAILED(hr)) {
         LOG_ERROR("获取快捷方式目标路径失败, hr=0x%08X", (unsigned int)hr);
+        result = 0;
     } else {
         LOG_DEBUG("快捷方式目标路径: %s", link_target);
         LOG_DEBUG("当前程序路径: %s", exe_path);
         
-        // 检查快捷方式指向的是否就是我们的程序
-        // 放宽条件 - 只要目标文件名匹配即可
-        char* shortcut_target_filename = strrchr(link_target, '\\');
-        char* program_filename = strrchr(exe_path, '\\');
-        
-        if (shortcut_target_filename && program_filename) {
-            shortcut_target_filename++; // 跳过反斜杠
-            program_filename++; // 跳过反斜杠
-            
-            LOG_DEBUG("比较文件名: 快捷方式=%s, 程序=%s", shortcut_target_filename, program_filename);
-            
-            // 检查文件名是否相同，忽略大小写
-            exists = (_stricmp(shortcut_target_filename, program_filename) == 0);
-            
-            // 如果文件名相同或包含程序名，则认为是有效的快捷方式
-            if (!exists && strstr(shortcut_target_filename, "catime") != NULL) {
-                LOG_DEBUG("目标文件名包含程序名，认为是有效快捷方式");
-                exists = true;
-            }
-        } else {
-            // 回退到完整路径比较
-            exists = (_stricmp(link_target, exe_path) == 0);
+        // 保存目标路径到输出参数
+        if (target_path_out && target_path_size > 0) {
+            strncpy(target_path_out, link_target, target_path_size);
+            target_path_out[target_path_size - 1] = '\0';
         }
         
-        LOG_DEBUG("快捷方式是否指向当前程序: %s", exists ? "是" : "否");
+        // 检查快捷方式是否指向当前程序
+        if (_stricmp(link_target, exe_path) == 0) {
+            LOG_DEBUG("快捷方式指向当前程序");
+            result = 1;
+        } else {
+            LOG_DEBUG("快捷方式指向其他路径");
+            result = 2;
+        }
     }
     
     // 释放接口
     ppf->lpVtbl->Release(ppf);
     psl->lpVtbl->Release(psl);
     
-    return exists;
+    return result;
 }
 
 /**
- * @brief 创建桌面快捷方式
+ * @brief 创建或更新桌面快捷方式
  * 
  * @param exe_path 程序路径
- * @return bool true表示创建成功，false表示创建失败
+ * @param existing_shortcut_path 已存在的快捷方式路径，为NULL则创建新的
+ * @return bool true表示创建/更新成功，false表示失败
  */
-static bool CreateDesktopShortcut(const char* exe_path) {
+static bool CreateOrUpdateDesktopShortcut(const char* exe_path, const char* existing_shortcut_path) {
     char desktop_path[MAX_PATH];
     char shortcut_path[MAX_PATH];
     char icon_path[MAX_PATH];
@@ -244,31 +239,29 @@ static bool CreateDesktopShortcut(const char* exe_path) {
     IPersistFile* ppf = NULL;
     bool success = false;
     
-    LOG_INFO("开始创建桌面快捷方式，程序路径: %s", exe_path);
-    
-    // 获取桌面路径
-    hr = SHGetFolderPathA(NULL, CSIDL_DESKTOP, NULL, 0, desktop_path);
-    if (FAILED(hr)) {
-        LOG_ERROR("获取桌面路径失败, hr=0x%08X", (unsigned int)hr);
-        return false;
+    // 如果提供了已存在的快捷方式路径，使用它；否则创建新的快捷方式在用户桌面
+    if (existing_shortcut_path && *existing_shortcut_path) {
+        LOG_INFO("开始更新桌面快捷方式: %s 指向: %s", existing_shortcut_path, exe_path);
+        strcpy(shortcut_path, existing_shortcut_path);
+    } else {
+        LOG_INFO("开始创建桌面快捷方式，程序路径: %s", exe_path);
+        
+        // 获取桌面路径
+        hr = SHGetFolderPathA(NULL, CSIDL_DESKTOP, NULL, 0, desktop_path);
+        if (FAILED(hr)) {
+            LOG_ERROR("获取桌面路径失败, hr=0x%08X", (unsigned int)hr);
+            return false;
+        }
+        LOG_DEBUG("桌面路径: %s", desktop_path);
+        
+        // 构建快捷方式完整路径
+        snprintf(shortcut_path, sizeof(shortcut_path), "%s\\Catime.lnk", desktop_path);
     }
-    LOG_DEBUG("桌面路径: %s", desktop_path);
     
-    // 构建快捷方式完整路径
-    snprintf(shortcut_path, sizeof(shortcut_path), "%s\\Catime.lnk", desktop_path);
     LOG_DEBUG("快捷方式路径: %s", shortcut_path);
     
     // 使用程序路径作为图标路径
     strcpy(icon_path, exe_path);
-    
-    // 如果文件已存在，先删除
-    if (GetFileAttributesA(shortcut_path) != INVALID_FILE_ATTRIBUTES) {
-        LOG_DEBUG("删除已存在的快捷方式");
-        if (!DeleteFileA(shortcut_path)) {
-            LOG_WARNING("删除已存在的快捷方式失败: %lu", GetLastError());
-            // 继续尝试创建
-        }
-    }
     
     // 创建IShellLink接口
     hr = CoCreateInstance(&CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER,
@@ -332,7 +325,7 @@ static bool CreateDesktopShortcut(const char* exe_path) {
     if (FAILED(hr)) {
         LOG_ERROR("保存快捷方式失败, hr=0x%08X", (unsigned int)hr);
     } else {
-        LOG_INFO("桌面快捷方式创建成功: %s", shortcut_path);
+        LOG_INFO("桌面快捷方式%s成功: %s", existing_shortcut_path ? "更新" : "创建", shortcut_path);
         success = true;
     }
     
@@ -346,18 +339,28 @@ static bool CreateDesktopShortcut(const char* exe_path) {
 /**
  * @brief 检查并创建桌面快捷方式
  * 
- * 检查程序是否从Windows应用商店或WinGet安装，
- * 如果是且配置中没有标记为已检查过，则检查桌面
- * 是否有程序的快捷方式，如果没有则创建一个。
+ * 所有安装类型都会检查桌面快捷方式是否存在且指向当前程序，
+ * 如果快捷方式已存在但指向其他程序，则更新为当前路径。
+ * 但只有从Windows应用商店或WinGet安装的版本才会创建新的快捷方式。
+ * 如果配置文件中已标记SHORTCUT_CHECK_DONE=TRUE，则即使快捷方式被删除也不会重新创建。
  * 
- * @return int 0表示无需创建或创建成功，1表示创建失败
+ * @return int 0表示无需创建/更新或创建/更新成功，1表示失败
  */
 int CheckAndCreateShortcut(void) {
     char exe_path[MAX_PATH];
     char config_path[MAX_PATH];
+    char shortcut_path[MAX_PATH];
+    char target_path[MAX_PATH];
     bool shortcut_check_done = false;
+    bool isStoreInstall = false;
     
-    // 用于调试的消息
+    // 初始化 COM 库，后续创建快捷方式需要
+    HRESULT hr = CoInitialize(NULL);
+    if (FAILED(hr)) {
+        LOG_ERROR("COM库初始化失败, hr=0x%08X", (unsigned int)hr);
+        return 1;
+    }
+    
     LOG_DEBUG("开始检查快捷方式");
     
     // 读取配置文件中的标记，判断是否已检查过
@@ -366,41 +369,75 @@ int CheckAndCreateShortcut(void) {
     
     LOG_DEBUG("配置路径: %s, 是否已检查: %d", config_path, shortcut_check_done);
     
-    // 如果已经检查过，无需再检查
-    if (shortcut_check_done) {
-        LOG_DEBUG("已检查过快捷方式，无需再检查");
+    // 获取当前程序路径
+    if (GetModuleFileNameA(NULL, exe_path, MAX_PATH) == 0) {
+        LOG_ERROR("获取程序路径失败");
+        CoUninitialize();
+        return 1;
+    }
+    LOG_DEBUG("程序路径: %s", exe_path);
+    
+    // 检查是否是应用商店或WinGet安装（仅影响创建新快捷方式的行为）
+    isStoreInstall = IsStoreOrWingetInstall(exe_path, MAX_PATH);
+    LOG_DEBUG("是否商店/WinGet安装: %d", isStoreInstall);
+    
+    // 检查快捷方式是否存在以及是否指向当前程序
+    // 返回值: 0=不存在, 1=存在且指向当前程序, 2=存在但指向其他程序
+    int shortcut_status = CheckShortcutTarget(exe_path, shortcut_path, MAX_PATH, target_path, MAX_PATH);
+    
+    if (shortcut_status == 0) {
+        // 不存在快捷方式
+        if (shortcut_check_done) {
+            // 如果配置中已经标记为检查过，即使没有快捷方式也不再创建
+            LOG_INFO("桌面未发现快捷方式，但配置已标记为检查过，不再创建");
+            CoUninitialize();
+            return 0;
+        } else if (isStoreInstall) {
+            // 只有首次运行的商店或WinGet安装才创建
+            LOG_INFO("桌面未发现快捷方式，首次运行的商店/WinGet安装，开始创建");
+            bool success = CreateOrUpdateDesktopShortcut(exe_path, NULL);
+            
+            // 标记为已检查，无论是否创建成功
+            SetShortcutCheckDone(true);
+            
+            CoUninitialize();
+            return success ? 0 : 1;
+        } else {
+            LOG_INFO("桌面未发现快捷方式，非商店/WinGet安装，不创建快捷方式");
+            
+            // 标记为已检查
+            SetShortcutCheckDone(true);
+            
+            CoUninitialize();
+            return 0;
+        }
+    } else if (shortcut_status == 1) {
+        // 存在快捷方式且指向当前程序，无需操作
+        LOG_INFO("桌面快捷方式已存在且指向当前程序");
+        
+        // 标记为已检查
+        if (!shortcut_check_done) {
+            SetShortcutCheckDone(true);
+        }
+        
+        CoUninitialize();
         return 0;
+    } else if (shortcut_status == 2) {
+        // 存在快捷方式但指向其他程序，任何安装方式都要更新
+        LOG_INFO("桌面快捷方式指向其他路径: %s，将更新为: %s", target_path, exe_path);
+        bool success = CreateOrUpdateDesktopShortcut(exe_path, shortcut_path);
+        
+        // 标记为已检查，无论是否更新成功
+        if (!shortcut_check_done) {
+            SetShortcutCheckDone(true);
+        }
+        
+        CoUninitialize();
+        return success ? 0 : 1;
     }
     
-    // 检查是否是应用商店或WinGet安装
-    BOOL isStoreInstall = IsStoreOrWingetInstall(exe_path, MAX_PATH);
-    LOG_DEBUG("程序路径: %s, 是否商店安装: %d", exe_path, isStoreInstall);
-    
-    if (!isStoreInstall) {
-        // 不是应用商店或WinGet安装，标记为已检查
-        LOG_DEBUG("不是应用商店安装，标记已检查");
-        SetShortcutCheckDone(true);
-        return 0;
-    }
-    
-    // 检查桌面是否已有快捷方式
-    BOOL hasShortcut = ShortcutExists(exe_path);
-    LOG_DEBUG("是否已有快捷方式: %d", hasShortcut);
-    
-    if (hasShortcut) {
-        // 已有快捷方式，标记为已检查
-        LOG_DEBUG("已有快捷方式，标记已检查");
-        SetShortcutCheckDone(true);
-        return 0;
-    }
-    
-    // 创建桌面快捷方式
-    LOG_INFO("开始创建快捷方式");
-    bool success = CreateDesktopShortcut(exe_path);
-    LOG_DEBUG("创建快捷方式结果: %d", success);
-    
-    // 标记为已检查，无论是否创建成功
-    SetShortcutCheckDone(true);
-    
-    return success ? 0 : 1;
+    // 不应该走到这里
+    LOG_ERROR("检查快捷方式状态未知");
+    CoUninitialize();
+    return 1;
 } 
