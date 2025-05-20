@@ -426,6 +426,9 @@ function translateSupportElements() {
         if (td.textContent === '加油啊，你可以的') {
             td.textContent = 'Come on, you can do it!';
         }
+        if (td.textContent === '加油，你可以的🫡') {
+            td.textContent = 'Keep going, you can do it! 🫡';
+        }
         if (td.textContent === '好用，爱用，希望增加个鼠标悬停时隐藏时钟的功能') {
             td.textContent = 'Love it! Hope to add a feature to hide the clock when hovering with mouse';
         }
