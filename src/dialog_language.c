@@ -52,7 +52,7 @@ static SpecialControlEntry g_specialControls[] = {
     // 关于对话框
     {IDD_ABOUT_DIALOG, IDC_VERSION_TEXT, L"Version: %hs", L"Version: %hs"},
     {IDD_ABOUT_DIALOG, IDC_BUILD_DATE, L"Build Date:", L"Build Date:"},
-    {IDD_ABOUT_DIALOG, IDC_COPYRIGHT, L"Copyright © 2023-2024 VladeLaina", L"Copyright © 2023-2024 VladeLaina"},
+    {IDD_ABOUT_DIALOG, IDC_COPYRIGHT, L"Copyright © 2023-2024 vladelaina", L"Copyright © 2023-2024 vladelaina"},
     
     // 番茄钟时间设置对话框特殊处理的静态文本 - 使用实际的INI键名
     {CLOCK_IDD_POMODORO_TIME_DIALOG, CLOCK_IDC_STATIC, 
