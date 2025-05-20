@@ -379,6 +379,24 @@ void ReadTimeHotkey(WORD* hotkey);
  */
 void WriteConfigKeyValue(const char* key, const char* value);
 
+/**
+ * @brief 判断是否已经执行过快捷方式检查
+ * 
+ * 读取配置文件，判断是否有SHORTCUT_CHECK_DONE=TRUE标记
+ * 
+ * @return bool true表示已检查过，false表示未检查过
+ */
+bool IsShortcutCheckDone(void);
+
+/**
+ * @brief 设置快捷方式检查状态
+ * 
+ * 在配置文件中写入SHORTCUT_CHECK_DONE=TRUE/FALSE
+ * 
+ * @param done 是否已检查完成
+ */
+void SetShortcutCheckDone(bool done);
+
 /// @}
 
 #endif // CONFIG_H

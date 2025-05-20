@@ -251,6 +251,9 @@ void CreateDefaultConfig(const char* config_path) {
         // 新增：通知音频音量
         fprintf(file, "NOTIFICATION_SOUND_VOLUME=100\n");  // 默认音量100%
         
+        // 新增：快捷方式检查状态
+        fprintf(file, "SHORTCUT_CHECK_DONE=FALSE\n");  // 默认未检查
+        
         fclose(file);
     }
 }
@@ -1524,6 +1527,9 @@ void WriteConfig(const char* config_path) {
     
     // 新增：通知音频音量
     fprintf(file, "NOTIFICATION_SOUND_VOLUME=%d\n", NOTIFICATION_SOUND_VOLUME);
+    
+    // 写入快捷方式检查状态
+    fprintf(file, "SHORTCUT_CHECK_DONE=%s\n", IsShortcutCheckDone() ? "TRUE" : "FALSE");
     
     fclose(file);
 }
@@ -3278,4 +3284,53 @@ void WriteConfigLanguage(int language) {
     }
     
     WriteConfigKeyValue("LANGUAGE", langName);
+}
+
+/**
+ * @brief 判断是否已经执行过快捷方式检查
+ * 
+ * 读取配置文件，判断是否有SHORTCUT_CHECK_DONE=TRUE标记
+ * 
+ * @return bool true表示已检查过，false表示未检查过
+ */
+bool IsShortcutCheckDone(void) {
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    
+    FILE* file = fopen(config_path, "r");
+    if (!file) {
+        return false;
+    }
+    
+    char line[256];
+    bool check_done = false;
+    
+    while (fgets(line, sizeof(line), file)) {
+        // 移除行尾换行符
+        size_t len = strlen(line);
+        if (len > 0 && line[len-1] == '\n') {
+            line[len-1] = '\0';
+            len--;
+        }
+        
+        if (strncmp(line, "SHORTCUT_CHECK_DONE=", 20) == 0) {
+            check_done = (strcmp(line + 20, "TRUE") == 0);
+            break;
+        }
+    }
+    
+    fclose(file);
+    return check_done;
+}
+
+/**
+ * @brief 设置快捷方式检查状态
+ * 
+ * 在配置文件中写入SHORTCUT_CHECK_DONE=TRUE/FALSE
+ * 
+ * @param done 是否已检查完成
+ */
+void SetShortcutCheckDone(bool done) {
+    const char* value = done ? "TRUE" : "FALSE";
+    WriteConfigKeyValue("SHORTCUT_CHECK_DONE", value);
 }

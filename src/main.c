@@ -34,6 +34,7 @@
 #include "../include/async_update_checker.h"
 #include "../include/log.h"
 #include "../include/dialog_language.h"
+#include "../include/shortcut_checker.h"
 
 // 较旧的Windows SDK所需
 #ifndef CSIDL_STARTUP
@@ -168,6 +169,40 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             return 1;
         }
         LOG_INFO("应用程序初始化成功");
+
+        // 检查并创建桌面快捷方式（如有必要）
+        LOG_INFO("检查桌面快捷方式...");
+        char exe_path[MAX_PATH];
+        GetModuleFileNameA(NULL, exe_path, MAX_PATH);
+        LOG_INFO("当前程序路径: %s", exe_path);
+        
+        // 设置日志级别为DEBUG以显示详细信息
+        WriteLog(LOG_LEVEL_DEBUG, "开始检测快捷方式，检查路径: %s", exe_path);
+        
+        // 检查路径中是否包含WinGet标识
+        if (strstr(exe_path, "WinGet") != NULL) {
+            WriteLog(LOG_LEVEL_DEBUG, "路径中包含WinGet关键字");
+        }
+        
+        // 附加测试：直接测试文件是否存在
+        char desktop_path[MAX_PATH];
+        char shortcut_path[MAX_PATH];
+        if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_DESKTOP, NULL, 0, desktop_path))) {
+            sprintf(shortcut_path, "%s\\Catime.lnk", desktop_path);
+            WriteLog(LOG_LEVEL_DEBUG, "检查桌面快捷方式是否存在: %s", shortcut_path);
+            if (GetFileAttributesA(shortcut_path) == INVALID_FILE_ATTRIBUTES) {
+                WriteLog(LOG_LEVEL_DEBUG, "桌面快捷方式不存在，需要创建");
+            } else {
+                WriteLog(LOG_LEVEL_DEBUG, "桌面快捷方式已存在");
+            }
+        }
+        
+        int shortcut_result = CheckAndCreateShortcut();
+        if (shortcut_result == 0) {
+            LOG_INFO("桌面快捷方式检查完成");
+        } else {
+            LOG_WARNING("桌面快捷方式创建失败，错误码: %d", shortcut_result);
+        }
 
         // 初始化对话框多语言支持
         LOG_INFO("开始初始化对话框多语言支持...");

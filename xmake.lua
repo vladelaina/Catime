@@ -53,7 +53,7 @@ target("catime")
     -- 添加Windows特有设置
     add_defines("_WINDOWS")
     add_ldflags("-mwindows", {force = true})
-    add_links("ole32", "shell32", "comdlg32", "uuid", "wininet", "winmm", "comctl32", "dwmapi", "user32", "gdi32")
+    add_links("ole32", "shell32", "comdlg32", "uuid", "wininet", "winmm", "comctl32", "dwmapi", "user32", "gdi32", "shlwapi", "advapi32")
     
     -- 添加资源文件
     add_files("resource/resource.rc")
