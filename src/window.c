@@ -286,7 +286,6 @@ void SaveWindowSettings(HWND hwnd) {
     
     char *start = config;
     char *end = config + strlen(config);
-    BOOL has_edit_mode = FALSE;
     BOOL has_window_scale = FALSE;
     size_t new_config_len = 0;
     
@@ -312,11 +311,6 @@ void SaveWindowSettings(HWND hwnd) {
                 buffer_size - new_config_len,
                 "WINDOW_SCALE=%.2f\n", CLOCK_WINDOW_SCALE);
             has_window_scale = TRUE;
-        } else if (strncmp(temp, "CLOCK_EDIT_MODE=", 15) == 0) {
-            new_config_len += snprintf(new_config + new_config_len,
-                buffer_size - new_config_len,
-                "CLOCK_EDIT_MODE=%s\n", CLOCK_EDIT_MODE ? "TRUE" : "FALSE");
-            has_edit_mode = TRUE;
         } else {
             size_t remaining = buffer_size - new_config_len;
             if (remaining > line_len + 1) {
@@ -330,11 +324,6 @@ void SaveWindowSettings(HWND hwnd) {
         if (start > end) break;
     }
     
-    if (!has_edit_mode && buffer_size - new_config_len > 50) {
-        new_config_len += snprintf(new_config + new_config_len,
-            buffer_size - new_config_len,
-            "CLOCK_EDIT_MODE=%s\n", CLOCK_EDIT_MODE ? "TRUE" : "FALSE");
-    }
     if (!has_window_scale && buffer_size - new_config_len > 50) {
         new_config_len += snprintf(new_config + new_config_len,
             buffer_size - new_config_len,
