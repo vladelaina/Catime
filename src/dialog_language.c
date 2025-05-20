@@ -43,7 +43,8 @@ static DialogTitleEntry g_dialogTitles[] = {
     {CLOCK_IDD_POMODORO_COMBO_DIALOG, L"Set Pomodoro Time Combination"},
     {CLOCK_IDD_POMODORO_TIME_DIALOG, L"Set Pomodoro Time"},
     {CLOCK_IDD_SHORTCUT_DIALOG, L"Countdown Presets"},
-    {CLOCK_IDD_WEBSITE_DIALOG, L"Open Website"}
+    {CLOCK_IDD_WEBSITE_DIALOG, L"Open Website"},
+    {CLOCK_IDD_DIALOG1, L"Set Countdown"}
 };
 
 // 特殊控件映射表（需要特殊处理的控件）
@@ -65,8 +66,13 @@ static SpecialControlEntry g_specialControls[] = {
     
     // 网站URL输入对话框说明文本
     {CLOCK_IDD_WEBSITE_DIALOG, CLOCK_IDC_STATIC, 
-     L"Enter the website URL to open when the countdown ends:\\nExample: https://github.com/vladelaina/Catime", 
-     L"请输入要在倒计时结束时打开的网站URL：\n例如：https://github.com/vladelaina/Catime"}
+     L"Enter the website URL to open when the countdown ends:\nExample: https://github.com/vladelaina/Catime", 
+     L"请输入要在倒计时结束时打开的网站URL：\n例如：https://github.com/vladelaina/Catime"},
+    
+    // 主倒计时对话框 (CLOCK_IDD_DIALOG1) 的静态帮助文本
+    {CLOCK_IDD_DIALOG1, CLOCK_IDC_STATIC,
+     L"CountdownDialogStaticText",
+     L"25=25 minutes\n25h=25 hours\n25s=25 seconds\n25 30=25 minutes 30 seconds\n25 30m=25 hours 30 minutes\n1 30 20=1 hour 30 minutes 20 seconds\n17 20t=Countdown to 17:20\n9 9 9t=Countdown to 09:09:09"}
 };
 
 // 特殊按钮文本
@@ -79,7 +85,8 @@ static SpecialControlEntry g_specialButtons[] = {
     {CLOCK_IDD_POMODORO_LOOP_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"},
     {CLOCK_IDD_POMODORO_COMBO_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"},
     {CLOCK_IDD_POMODORO_TIME_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"},
-    {CLOCK_IDD_WEBSITE_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"}
+    {CLOCK_IDD_WEBSITE_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"},
+    {CLOCK_IDD_DIALOG1, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"}
 };
 
 // 对话框映射表的大小
@@ -175,7 +182,8 @@ static BOOL ProcessSpecialControlText(HWND hwndCtl, const wchar_t* localizedText
     // 特殊处理番茄钟相关对话框和网站URL对话框的静态文本换行
     if ((dialogID == CLOCK_IDD_POMODORO_COMBO_DIALOG || 
          dialogID == CLOCK_IDD_POMODORO_TIME_DIALOG ||
-         dialogID == CLOCK_IDD_WEBSITE_DIALOG) && 
+         dialogID == CLOCK_IDD_WEBSITE_DIALOG ||
+         dialogID == CLOCK_IDD_DIALOG1) && 
         controlID == CLOCK_IDC_STATIC) {
         wchar_t processedText[1024]; // 假设文本不会超过1024个宽字符
         const wchar_t* src = localizedText;

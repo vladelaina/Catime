@@ -176,17 +176,17 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
             hEditBrush = CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF));
             hButtonBrush = CreateSolidBrush(RGB(0xFD, 0xFD, 0xFD));
 
-            // 检查对话框ID是否为快捷倒计时选项对话框，如果是则设置标题
-            DWORD dlgId = GetWindowLongPtr(hwndDlg, GWLP_USERDATA); // 现在可以正确获取dlgId
-            if (dlgId == CLOCK_IDD_SHORTCUT_DIALOG) { // 移除 GetDlgCtrlID((HWND)lParam) 的判断
-                SetWindowTextW(hwndDlg, GetLocalizedString(L"Countdown Presets", L"Countdown Presets"));
+            DWORD dlgId = GetWindowLongPtr(hwndDlg, GWLP_USERDATA);
+            
+            // 应用多语言支持 - 通用化处理
+            ApplyDialogLanguage(hwndDlg, (int)dlgId);
+
+            // 检查对话框ID是否为快捷倒计时选项对话框，如果是则设置标题 (这部分可能会被ApplyDialogLanguage覆盖，但保留以防万一)
+            if (dlgId == CLOCK_IDD_SHORTCUT_DIALOG) { 
+                // SetWindowTextW(hwndDlg, GetLocalizedString(L"Countdown Presets", L"Countdown Presets"));
+                // 上一行由 ApplyDialogLanguage 处理，如果 g_dialogTitles 包含 CLOCK_IDD_SHORTCUT_DIALOG
             }
             
-            // 应用多语言支持
-            if (dlgId == CLOCK_IDD_POMODORO_TIME_DIALOG) {
-                ApplyDialogLanguage(hwndDlg, CLOCK_IDD_POMODORO_TIME_DIALOG);
-            }
-
             // 获取编辑框控件的句柄
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
 
