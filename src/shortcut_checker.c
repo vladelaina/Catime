@@ -300,7 +300,7 @@ static bool CreateOrUpdateDesktopShortcut(const char* exe_path, const char* exis
     }
     
     // 设置描述
-    hr = psl->lpVtbl->SetDescription(psl, "Catime - 优雅的计时工具");
+    hr = psl->lpVtbl->SetDescription(psl, "A simple Windows countdown tool with Pomodoro clock functionality, featuring a transparent interface and a variety of customization options.");
     if (FAILED(hr)) {
         LOG_ERROR("设置描述失败, hr=0x%08X", (unsigned int)hr);
     }
