@@ -17,9 +17,12 @@
 
   <br/>
 
-  <a href="https://github.com/vladelaina/Catime/blob/main/LICENSE">
-    <img alt="License" src="https://img.shields.io/github/license/vladelaina/Catime?label=License&style=for-the-badge&color=blue" />
-  </a>
+<a href="https://space.bilibili.com/1862395225" target="_blank" rel="noopener noreferrer">
+  <img alt="Bilibili" src="https://img.shields.io/badge/Bilibili-FF69B4?style=for-the-badge&logo=bilibili&logoColor=white" />
+</a>
+
+
+
   <a href="https://github.com/vladelaina/Catime/releases/latest">
     <img alt="Release" src="https://img.shields.io/github/release/vladelaina/Catime.svg?label=Release&style=for-the-badge&color=brightgreen" />
   </a>
