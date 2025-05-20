@@ -172,8 +172,10 @@ static BOOL GetControlOriginalText(HWND hwndCtl, wchar_t* buffer, int bufferSize
  * @return BOOL 是否成功处理
  */
 static BOOL ProcessSpecialControlText(HWND hwndCtl, const wchar_t* localizedText, int dialogID, int controlID) {
-    // 特殊处理番茄钟相关对话框的静态文本换行
-    if ((dialogID == CLOCK_IDD_POMODORO_COMBO_DIALOG || dialogID == CLOCK_IDD_POMODORO_TIME_DIALOG) && 
+    // 特殊处理番茄钟相关对话框和网站URL对话框的静态文本换行
+    if ((dialogID == CLOCK_IDD_POMODORO_COMBO_DIALOG || 
+         dialogID == CLOCK_IDD_POMODORO_TIME_DIALOG ||
+         dialogID == CLOCK_IDD_WEBSITE_DIALOG) && 
         controlID == CLOCK_IDC_STATIC) {
         wchar_t processedText[1024]; // 假设文本不会超过1024个宽字符
         const wchar_t* src = localizedText;
