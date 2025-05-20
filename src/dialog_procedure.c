@@ -127,10 +127,10 @@ INT_PTR CALLBACK ErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
         case WM_INITDIALOG:
             // 设置本地化的错误提示文本
             SetDlgItemTextW(hwndDlg, IDC_ERROR_TEXT, 
-                GetLocalizedString(L"Invalid input format, please try again.", L"Invalid input format, please try again."));
+                GetLocalizedString(L"输入格式无效，请重新输入。", L"Invalid input format, please try again."));
             
             // 设置对话框标题
-            SetWindowTextW(hwndDlg, GetLocalizedString(L"Error", L"Error"));
+            SetWindowTextW(hwndDlg, GetLocalizedString(L"错误", L"Error"));
             return TRUE;
 
         case WM_COMMAND:
