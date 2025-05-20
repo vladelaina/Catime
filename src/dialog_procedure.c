@@ -486,12 +486,6 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             // 应用多语言支持
             ApplyDialogLanguage(hwndDlg, IDD_ABOUT_DIALOG);
             
-            // 设置对话框标题
-            const wchar_t* titleText = GetLocalizedString(L"About", L"About");
-            if (titleText) {
-                SetWindowTextW(hwndDlg, titleText);
-            }
-            
             // 设置版本信息（会覆盖ApplyDialogLanguage的版本设置）
             const wchar_t* versionFormat = GetDialogLocalizedString(IDD_ABOUT_DIALOG, IDC_VERSION_TEXT);
             if (versionFormat) {
