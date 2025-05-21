@@ -66,13 +66,17 @@
 </div>
 <!-- 项目描述 + 火箭图标 -->
 <p align="center" style="font-size: 18px; margin-bottom: 30px;">
-  🚀 No installation or complex setup required — just double-click to get started.
-A clean interface, smooth experience, and keyboard shortcuts ensure efficient operation. 🚀 🚀 🚀
+  🎉 No installation or setup required — just double-click to get started.<br/>
+  🌸 Clean, elegant interface with smooth operation.<br/>
+  🚀 Powerful keyboard shortcuts for lightning-fast productivity.
 </p>
 
 <p align="center" style="font-size: 16px; color: #666; margin-bottom: 20px;">
-  <span>A simple Windows countdown tool with Pomodoro clock functionality, featuring a transparent interface and a variety of customization options.</span>
+  A simple yet powerful Windows countdown tool with Pomodoro functionality,<br/>
+  featuring a transparent interface and rich customization options.
 </p>
+
+
 
 <!-- 演示视频 -->
 <div align="center" style="margin-bottom: 30px;">
