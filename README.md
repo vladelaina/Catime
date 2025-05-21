@@ -1,7 +1,7 @@
 <!-- 项目标题 + Logo -->
 <div align="center">
   <a href="https://vladelaina.github.io/Catime" target="_blank">
-    <img src="Images/catime.png" alt="Catime" width="240">
+    <img src="Images/catime_resize.png" alt="Catime" width="240">
   </a>
   <h1 style="margin-top: 10px; font-size: 42px; font-weight: 700;">Catime</h1>
 </div>
