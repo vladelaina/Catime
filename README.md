@@ -17,9 +17,9 @@
   <a href="https://github.com/vladelaina/Catime/issues">
     <img src="https://img.shields.io/github/issues/vladelaina/Catime?style=flat-square&label=open%20issues&color=orange" alt="Open Issues" />
   </a>
-  <a href="https://github.com/vladelaina/Catime/issues?q=is%3Aissue+is%3Aclosed">
-    <img src="https://img.shields.io/github/issues-closed/vladelaina/Catime?style=flat-square&label=closed%20issues&color=success" alt="Closed Issues" />
-  </a>
+<a href="https://github.com/users/vladelaina/projects/2">
+  <img src="https://img.shields.io/badge/Project%20Board-Planning-blueviolet?style=flat-square" alt="Project Board" />
+</a>
 </div>
 
 <!-- 第二行 - 下载 -->
