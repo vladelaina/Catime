@@ -109,7 +109,6 @@
 - 🕰️ Desktop clock
 - ⏱️ Count-up/countdown timer
 
- Demo video (based on V1.0.5): <img src="https://www.bilibili.com/favicon.ico" width="20" height="20"> [BiliBili](https://www.bilibili.com/video/BV1AsoKYgE3r/)
 
 ## [📑User Guide](https://vladelaina.github.io/Catime/guide)
 
