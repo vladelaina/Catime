@@ -61,7 +61,7 @@
 
 <!-- 语言切换 -->
 <div align="center" style="margin-top: 25px; margin-bottom: 25px;">
-  <a href="./README.md" style="text-decoration: none; color: #58a6ff; font-weight: bold; font-size: 18px;">English</a> | 
+  <a href="https://github.com/vladelaina/Catime" style="text-decoration: none; color: #58a6ff; font-weight: bold; font-size: 18px;">English</a> | 
   <a href="#" style="text-decoration: none; color: #58a6ff; font-weight: bold; font-size: 18px;">简体中文</a>
 </div>
 
