@@ -348,7 +348,6 @@ Special thanks to the following contributors:
       <td align="center" valign="top" width="14.28%">
         <a href="https://github.com/choyy"><img src="https://avatars.githubusercontent.com/u/68107073?v=4" width="100px;" alt="choyy"/><br /><sub><b>choyy</b></sub></a><br />
       </td>
-       </td>
       <td align="center" valign="top" width="14.28%">
         <a href="https://space.bilibili.com/378034263?spm_id_from=333.1007.0.0"><img src="https://github.com/user-attachments/assets/ec961664-258b-404f-8f9b-f4b396208473" width="100px;" alt="益渊Yyuan"/><br /><sub><b>益渊Yyuan</b></sub></a><br />
       </td>
@@ -361,7 +360,10 @@ Special thanks to the following contributors:
       <td align="center" valign="top" width="14.28%">
         <a href="https://github.com/xlr134"><img src="https://avatars.githubusercontent.com/u/138568644?v=4" width="100px;" alt="xlr134"/><br /><sub><b>xlr134</b></sub></a><br />
       </td>
-    </tr>  
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://github.com/leisure365"><img src="https://github.com/user-attachments/assets/dc2dcb8e-0698-41c1-8316-8e17341ff633" width="100px;" alt="莫颜"/><br /><sub><b>莫颜</b></sub></a><br />
+      </td>
+    </tr>
   </tbody>
 </table>
 

@@ -361,7 +361,10 @@ xmake clean   # 清理构建产物
       <td align="center" valign="top" width="14.28%">
         <a href="https://github.com/xlr134"><img src="https://avatars.githubusercontent.com/u/138568644?v=4" width="100px;" alt="xlr134"/><br /><sub><b>xlr134</b></sub></a><br />
       </td>
-    </tr>  
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://github.com/leisure365"><img src="https://github.com/user-attachments/assets/dc2dcb8e-0698-41c1-8316-8e17341ff633" width="100px;" alt="莫颜"/><br /><sub><b>莫颜</b></sub></a><br />
+      </td>
+    </tr>
   </tbody>
 </table>
 
