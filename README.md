@@ -1,59 +1,91 @@
-<p align="center">
-<a href="https://github.com/vladelaina/Catime" target="_blank">
-<img align="center" alt="catime" width="230" src="Images/catime.png" />
-</a>
-  
-<p align="center">
-<a href="https://qm.qq.com/q/LgscIMw9i0" target="_blank">
-    <img src="https://img.shields.io/badge/QQ%20Group%20-%20%201027327912-blue?logo=tencentqq&logoColor=white&style=for-the-badge" alt="Join QQ Group" />
-</a>
-
-  <a href="https://discord.com/invite/W3tW2gtp6g" target="_blank">
-    <img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white&style=for-the-badge" alt="Join Discord" />
+<!-- 项目标题 + Logo -->
+<div align="center">
+  <a href="https://vladelaina.github.io/Catime" target="_blank">
+    <img src="Images/catime.png" alt="Catime" width="240">
   </a>
-  <a href="https://vladelaina.github.io/Catime/support" target="_blank">
-    <img src="https://img.shields.io/badge/Buy%20me%20a%20coffee-Support%20-critical?logo=buymeacoffee&logoColor=white&style=for-the-badge" alt="Buy me a coffee" />
+  <h1 style="margin-top: 10px; font-size: 42px; font-weight: 700;">Catime</h1>
+</div>
+
+<!-- 顶部统计徽章行 -->
+<div align="center">
+  <a href="https://github.com/vladelaina/Catime/stargazers">
+    <img src="https://img.shields.io/github/stars/vladelaina/Catime?style=flat-square&logo=github&color=yellow&label=Stars" alt="Stars" />
   </a>
-
-  <br/>
-
-<a href="https://space.bilibili.com/1862395225" target="_blank" rel="noopener noreferrer">
-  <img alt="Bilibili" src="https://img.shields.io/badge/Bilibili-FF69B4?style=for-the-badge&logo=bilibili&logoColor=white" />
-</a>
-
-
-
-  <a href="https://github.com/vladelaina/Catime/releases/latest">
-    <img alt="Release" src="https://img.shields.io/github/release/vladelaina/Catime.svg?label=Release&style=for-the-badge&color=brightgreen" />
+  <a href="https://github.com/vladelaina/Catime/network/members">
+    <img src="https://img.shields.io/github/forks/vladelaina/Catime?style=flat-square&logo=github&color=blue&label=Forks" alt="Forks" />
   </a>
+  <a href="https://github.com/vladelaina/Catime/issues">
+    <img src="https://img.shields.io/github/issues/vladelaina/Catime?style=flat-square&label=open%20issues&color=orange" alt="Open Issues" />
+  </a>
+  <a href="https://github.com/vladelaina/Catime/issues?q=is%3Aissue+is%3Aclosed">
+    <img src="https://img.shields.io/github/issues-closed/vladelaina/Catime?style=flat-square&label=closed%20issues&color=success" alt="Closed Issues" />
+  </a>
+</div>
+
+<!-- 第二行 - 下载 -->
+<div align="center">
   <a href="https://github.com/vladelaina/Catime/releases">
-    <img alt="Downloads" src="https://img.shields.io/github/downloads/vladelaina/Catime/total?label=Downloads&style=for-the-badge&color=orange" />
+    <img src="https://img.shields.io/github/downloads/vladelaina/Catime/total?style=flat-square&color=blue&label=downloads" alt="Downloads" />
+  </a>
+  <a href="https://github.com/vladelaina/Catime/releases/latest">
+    <img src="https://img.shields.io/github/v/release/vladelaina/Catime?style=flat-square&color=brightgreen&label=latest%20release" alt="Latest Release" />
   </a>
   <a href="https://github.com/vladelaina/Catime/releases" target="_blank">
-    <img src="https://img.shields.io/badge/Software%20Size-834%20KB-blue?logo=appveyor&logoColor=white&style=for-the-badge" alt="Software Size" />
+    <img src="https://img.shields.io/badge/software%20size-834%20KB-blue?style=flat-square&logo=appveyor&logoColor=white" alt="Software Size" />
   </a>
+</div>
+
+<!-- 第三行 - Demo 链接 -->
+<div align="center">
+  <a href="https://vladelaina.github.io/Catime" target="_blank">
+    <img src="https://img.shields.io/badge/🌐_Official_Website-Visit-4285F4?style=for-the-badge" alt="Official Website" />
+  </a>
+  <a href="https://www.bilibili.com/video/BV1AsoKYgE3r/" target="_blank">
+    <img src="https://img.shields.io/badge/📺_Demo_Video-BiliBili-ff69b4?style=for-the-badge" alt="Demo on BiliBili" />
+  </a>
+  <a href="https://vladelaina.github.io/Catime/guide" target="_blank">
+    <img src="https://img.shields.io/badge/📖_User_Guide-Read-1DB954?style=for-the-badge" alt="User Guide" />
+  </a>
+</div>
+
+<!-- GitHub Trending 区域 -->
+<div align="center">
+  <a href="https://hellogithub.com/repository/00a7a32b7bc647e1a62747530bc16115" target="_blank">
+    <div style="background-color: #f5f5f5; border-radius: 12px; padding: 15px; display: inline-block; margin-top: 20px; border: 1px solid #e1e4e8;">
+      <div style="display: flex; align-items: center; justify-content: center;">
+        <img src="https://api.hellogithub.com/v1/widgets/recommend.svg?rid=00a7a32b7bc647e1a62747530bc16115&claim_uid=JBczix10rXqNblQ" alt="Featured｜HelloGitHub" style="width: 250px; height: 54px;" width="250" height="54" />
+      </div>
+    </div>
+  </a>
+</div>
+
+<!-- 语言切换 -->
+<div align="center" style="margin-top: 25px; margin-bottom: 25px;">
+  <a href="#" style="text-decoration: none; color: #58a6ff; font-weight: bold; font-size: 18px;">English</a> | 
+  <a href="./README-zh.md" style="text-decoration: none; color: #58a6ff; font-weight: bold; font-size: 18px;">简体中文</a>
+</div>
+<!-- 项目描述 + 火箭图标 -->
+<p align="center" style="font-size: 18px; margin-bottom: 30px;">
+  🚀 Easier to use: Just grab your mouse. No coding, no complex setup, just a simple<br>
+  interface and smooth interactions. Enjoy it without any fuss! 🚀 🚀 🚀
 </p>
 
+<p align="center" style="font-size: 16px; color: #666; margin-bottom: 20px;">
+  <span>A simple Windows countdown tool with Pomodoro clock functionality, featuring a transparent interface and a variety of customization options.</span>
+</p>
 
-
-
-
-
-<h1 align="center">Catime</h1>
-
-<div align="center">
-<a href="https://hellogithub.com/repository/00a7a32b7bc647e1a62747530bc16115" target="_blank"><img src="https://api.hellogithub.com/v1/widgets/recommend.svg?rid=00a7a32b7bc647e1a62747530bc16115&claim_uid=JBczix10rXqNblQ" alt="Featured｜HelloGitHub" style="width: 250px; height: 54px;" width="250" height="54" /></a>
+<!-- 演示视频 -->
+<div align="center" style="margin-bottom: 30px;">
+  <video src="https://github.com/user-attachments/assets/2f733378-8ddd-468f-b971-7e98ea4824c2" autoplay loop style="border-radius: 8px; max-width: 800px;"></video>
 </div>
 
-<p align="center">一款简洁的 Windows 倒计时工具，支持番茄时钟功能，具有透明界面和丰富的自定义选项。</p>
-<p align="center">A simple Windows countdown tool with Pomodoro clock functionality, featuring a transparent interface and a variety of customization options.</p>
-
-
-<div align="center">
-<video src="https://github.com/user-attachments/assets/2f733378-8ddd-468f-b971-7e98ea4824c2" autoplay loop></video>
+<!-- 社区链接 -->
+<div align="center" style="margin-bottom: 30px;">
+  👋 Join us on 
+  <a href="https://discord.com/invite/W3tW2gtp6g" target="_blank" style="text-decoration: none; font-weight: bold; color: #5865F2;">Discord</a> 
+  and 
+  <a href="https://qm.qq.com/q/LgscIMw9i0" target="_blank" style="text-decoration: none; font-weight: bold; color: #12B7F5;">QQ Group</a>
 </div>
-
-**English** | [**简体中文**](./README-zh.md)
 
 ## [🌟Features](https://vladelaina.github.io/Catime/#core-features)
 
