@@ -66,8 +66,13 @@ static SpecialControlEntry g_specialControls[] = {
     
     // 网站URL输入对话框说明文本
     {CLOCK_IDD_WEBSITE_DIALOG, CLOCK_IDC_STATIC, 
-     L"Enter the website URL to open when the countdown ends:\nExample: https://github.com/vladelaina/Catime", 
-     L"请输入要在倒计时结束时打开的网站URL：\n例如：https://github.com/vladelaina/Catime"},
+     L"Enter the website URL to open when the countdown ends:\\nExample: https://github.com/vladelaina/Catime", 
+     L"Enter the website URL to open when the countdown ends:\nExample: https://github.com/vladelaina/Catime"},
+    
+    // 快捷时间选项设置对话框说明文本
+    {CLOCK_IDD_SHORTCUT_DIALOG, CLOCK_IDC_STATIC, 
+     L"CountdownPresetDialogStaticText", 
+     L"Enter numbers (minutes), separated by spaces\n\n25 10 5\n\nThis will create options for 25 minutes, 10 minutes, and 5 minutes"},
     
     // 主倒计时对话框 (CLOCK_IDD_DIALOG1) 的静态帮助文本
     {CLOCK_IDD_DIALOG1, CLOCK_IDC_STATIC,
@@ -86,6 +91,7 @@ static SpecialControlEntry g_specialButtons[] = {
     {CLOCK_IDD_POMODORO_COMBO_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"},
     {CLOCK_IDD_POMODORO_TIME_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"},
     {CLOCK_IDD_WEBSITE_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"},
+    {CLOCK_IDD_SHORTCUT_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"},
     {CLOCK_IDD_DIALOG1, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"}
 };
 
@@ -183,6 +189,7 @@ static BOOL ProcessSpecialControlText(HWND hwndCtl, const wchar_t* localizedText
     if ((dialogID == CLOCK_IDD_POMODORO_COMBO_DIALOG || 
          dialogID == CLOCK_IDD_POMODORO_TIME_DIALOG ||
          dialogID == CLOCK_IDD_WEBSITE_DIALOG ||
+         dialogID == CLOCK_IDD_SHORTCUT_DIALOG ||
          dialogID == CLOCK_IDD_DIALOG1) && 
         controlID == CLOCK_IDC_STATIC) {
         wchar_t processedText[1024]; // 假设文本不会超过1024个宽字符
