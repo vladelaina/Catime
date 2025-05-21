@@ -2,7 +2,7 @@
 #define CATIME_RESOURCE_H
 
 /* 版本与更新信息 */
-#define CATIME_VERSION "1.1.1-pre1"
+#define CATIME_VERSION "1.1.1"
 
 /* 鸣谢链接 */
 #define CREDIT_LINK_URL L"https://space.bilibili.com/26087398"
