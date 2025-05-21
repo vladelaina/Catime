@@ -66,8 +66,8 @@
 </div>
 <!-- 项目描述 + 火箭图标 -->
 <p align="center" style="font-size: 18px; margin-bottom: 30px;">
-  🚀 Easier to use: Just grab your mouse. No coding, no complex setup, just a simple<br>
-  interface and smooth interactions. Enjoy it without any fuss! 🚀 🚀 🚀
+  🚀 No installation or complex setup required — just double-click to get started.
+A clean interface, smooth experience, and keyboard shortcuts ensure efficient operation. 🚀 🚀 🚀
 </p>
 
 <p align="center" style="font-size: 16px; color: #666; margin-bottom: 20px;">
