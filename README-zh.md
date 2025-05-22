@@ -99,6 +99,19 @@
 - **超时动作**: 显示消息、显示当前时间、正计时、锁定屏幕、打开文件/软件、打开网站、关机、重启
 - **自定义丰富**: 47种字体、15种预设颜色、支持输入颜色值、使用调色板选择颜色、支持实时预览
 
+## 📥 下载
+
+[<img src="https://get.microsoft.com/images/en-us%20dark.svg" alt="Get it from Microsoft" height="104">](https://apps.microsoft.com/detail/9n3mzdf1z34v?referrer=appbadge&launch=true&mode=full)
+#### 🪟 Winget
+
+```
+winget install catime
+```
+
+#### 💾 手动下载
+
+从 [GitHub Releases](https://github.com/vladelaina/Catime/releases/latest) 下载最新版本。
+
 ## [💡使用场景](https://vladelaina.github.io/Catime/#use-cases)
 
 - 👔 下班倒计时
@@ -123,21 +136,6 @@
 - **编辑模式**: 鼠标可以拖拽调整位置，滚轮调整大小，🖱️鼠标右键关闭编辑模式
 
 > 配置文件保存在 `C:\Users\用户名\AppData\Local\Catime\config.txt`
-
-
-## 📥 下载
-
-[<img src="https://get.microsoft.com/images/en-us%20dark.svg" alt="Get it from Microsoft" height="104">](https://apps.microsoft.com/detail/9n3mzdf1z34v?referrer=appbadge&launch=true&mode=full)
-#### 🪟 Winget
-
-```
-winget install catime
-```
-
-#### 💾 手动下载
-
-从 [GitHub Releases](https://github.com/vladelaina/Catime/releases/latest) 下载最新版本。
-
 
 
 ## 🛠️ [从源代码构建](https://vladelaina.com/blog-post?slug=Build_catime_from_source)
