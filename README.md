@@ -91,12 +91,28 @@
   <a href="https://qm.qq.com/q/LgscIMw9i0" target="_blank" style="text-decoration: none; font-weight: bold; color: #12B7F5;">QQ Group</a>
 </div>
 
+
+
 ## [🌟Features](https://vladelaina.github.io/Catime/#core-features)
 
 - **Minimalist Design**: Transparent interface, click-through capability, free dragging and resizing, no complex graphical settings interface, won't feel like an additional application running
 - **Flexible Timing**: Quick presets, custom time input, current time display (12/24-hour format), countdown, count-up, Pomodoro clock
 - **Timeout Actions**: Display messages, show current time, count up, lock screen, open files/applications, open websites, shutdown, restart
 - **Rich Customization**: 47 fonts, 15 preset colors, support for custom color values, color palette selection, real-time preview
+
+## 📥 Download
+
+[<img src="https://get.microsoft.com/images/en-us%20dark.svg" alt="Get it from Microsoft" height="104">](https://apps.microsoft.com/detail/9n3mzdf1z34v?referrer=appbadge&launch=true&mode=full)
+#### 🪟 Winget
+
+```
+winget install catime
+```
+
+#### 💾 Manual Download
+
+Download the latest release from [GitHub Releases](https://github.com/vladelaina/Catime/releases/latest).
+
 
 ## [💡Use Cases](https://vladelaina.github.io/Catime/#use-cases)
 
@@ -122,19 +138,6 @@
 
 > Configuration file saved at `C:\Users\<username>\AppData\Local\Catime\config.txt`
 
-
-## 📥 Download
-
-[<img src="https://get.microsoft.com/images/en-us%20dark.svg" alt="Get it from Microsoft" height="104">](https://apps.microsoft.com/detail/9n3mzdf1z34v?referrer=appbadge&launch=true&mode=full)
-#### 🪟 Winget
-
-```
-winget install catime
-```
-
-#### 💾 Manual Download
-
-Download the latest release from [GitHub Releases](https://github.com/vladelaina/Catime/releases/latest).
 
 
 
