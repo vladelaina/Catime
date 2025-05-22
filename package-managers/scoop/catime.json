@@ -1,0 +1,19 @@
+{
+  "version": "1.0.5",
+  "url": "https://github.com/vladelaina/Catime/releases/download/v1.0.5/catime_1.0.5.exe",
+  "bin": "catime_1.0.5.exe",
+  "hash": "9A84B8BD6F4C2F4A185056837882283C06FCE36351269DA247CB8AD24FFDA511",
+  "description": "A simple Windows countdown tool with Pomodoro clock functionality, featuring a transparent interface and a variety of customization options.",
+  "homepage": "https://github.com/vladelaina/Catime",
+  "license": "Apache-2.0",
+  "post_install": [
+    "$desktop = [System.Environment]::GetFolderPath('Desktop')",
+    "Copy-Item \"$dir\\catime_1.0.5.exe\" -Destination $desktop -Force",
+    "Remove-Item \"$dir\\*\" -Force -Recurse"
+  ],
+  "post_uninstall": [
+    "$desktop = [System.Environment]::GetFolderPath('Desktop')",
+    "$exePath = Join-Path $desktop 'catime_1.0.5.exe'",
+    "if (Test-Path $exePath) { Remove-Item $exePath -Force }"
+  ]
+}
