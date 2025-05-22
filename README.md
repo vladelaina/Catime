@@ -125,7 +125,6 @@
 
 ## 📥 Download
 
-### Windows
 
 #### 🪟 Winget
 
