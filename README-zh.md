@@ -125,6 +125,22 @@
 > 配置文件保存在 `C:\Users\用户名\AppData\Local\Catime\config.txt`
 
 
+## 📥 下载
+
+### Windows
+
+#### 🪟 Winget
+
+```
+winget install catime
+```
+
+#### 💾 手动下载
+
+从 [GitHub Releases](https://github.com/vladelaina/Catime/releases/latest) 下载最新版本。
+
+
+
 ## 🛠️ [从源代码构建](https://vladelaina.com/blog-post?slug=Build_catime_from_source)
 
 ### 一、克隆：

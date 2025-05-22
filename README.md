@@ -123,6 +123,20 @@
 > Configuration file saved at `C:\Users\<username>\AppData\Local\Catime\config.txt`
 
 
+## 📥 Download
+
+### Windows
+
+#### 🪟 Winget
+
+```
+winget install catime
+```
+
+#### 💾 Manual Download
+
+Download the latest release from [GitHub Releases](https://github.com/vladelaina/Catime/releases/latest).
+
 
 
 ## 🛠️ [Building from Source](https://vladelaina.com/blog-post?slug=Build_catime_from_source)
