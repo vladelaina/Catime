@@ -1226,10 +1226,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     WriteConfigFont("Terminess Nerd Font Propo Essence.ttf");
                     goto refresh_window;
                 }
-                case CLOCK_IDC_FONT_GOHUFONT: {  
-                    WriteConfigFont("GohuFont uni11 Nerd Font Mono.ttf");
-                    goto refresh_window;
-                }
                 case CLOCK_IDC_FONT_ARBUTUS: {
                     WriteConfigFont("Arbutus Essence.ttf");
                     goto refresh_window;
