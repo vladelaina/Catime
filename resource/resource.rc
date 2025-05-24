@@ -16,7 +16,7 @@ IDI_CATIME ICON "../asset/icon/catime.ico"
 //-----------------------------------------------------------------------------
 // Fonts - MIT License
 //-----------------------------------------------------------------------------
-IDR_FONT_PROFONT         FONT "../asset/font/MIT/ProFont IIx Nerd Font.ttf"
+IDR_FONT_PROFONT         FONT "../asset/font/MIT/ProFont IIx Nerd Font Essence.ttf"
 
 //-----------------------------------------------------------------------------
 // Fonts - SIL Open Font License

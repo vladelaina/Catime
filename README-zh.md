@@ -392,7 +392,7 @@ xmake clean   # 清理构建产物
 
 字体许可：
 - MIT: 
-  - ProFont IIx Nerd Font.ttf
+  - ProFont IIx Nerd Font Essence.ttf
 - SIL Open Font License (OFL): 
   - DaddyTimeMono Nerd Font Propo Essence.ttf, DepartureMono Nerd Font Propo Essence.ttf,
     LiterationSerif Nerd Font Essence.ttf, RecMonoCasual Nerd Font Mono Essence.ttf,

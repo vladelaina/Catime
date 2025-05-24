@@ -1391,7 +1391,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_PROFONT: {
-                    WriteConfigFont("ProFont IIx Nerd Font.ttf");
+                    WriteConfigFont("ProFont IIx Nerd Font Essence.ttf");
                     goto refresh_window;
                 }
                 case CLOCK_IDC_FONT_DADDYTIME: {

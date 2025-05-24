@@ -394,7 +394,7 @@ Icon copyright notice:
 
 Font licenses:
 - MIT: 
-  - ProFont IIx Nerd Font.ttf
+  - ProFont IIx Nerd Font Essence.ttf
 - SIL Open Font License (OFL): 
   - DaddyTimeMono Nerd Font Propo Essence.ttf, DepartureMono Nerd Font Propo Essence.ttf,
     LiterationSerif Nerd Font Essence.ttf, RecMonoCasual Nerd Font Mono Essence.ttf,

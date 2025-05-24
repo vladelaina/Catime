@@ -426,7 +426,7 @@ void ShowColorMenu(HWND hwnd) {
             strcmp(fontResources[i].fontName, "Pixelify Sans Medium Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Rubik Burned Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Rubik Glitch Essence.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "ProFont IIx Nerd Font.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "ProFont IIx Nerd Font Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Wallpoet Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Yesteryear Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "ZCOOL KuaiLe Essence.ttf") == 0) {
@@ -456,7 +456,7 @@ void ShowColorMenu(HWND hwnd) {
             strcmp(fontResources[i].fontName, "Pixelify Sans Medium Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Rubik Burned Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Rubik Glitch Essence.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "ProFont IIx Nerd Font.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "ProFont IIx Nerd Font Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Wallpoet Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Yesteryear Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "ZCOOL KuaiLe Essence.ttf") == 0) {
