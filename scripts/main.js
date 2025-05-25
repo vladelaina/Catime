@@ -579,7 +579,7 @@ function initLanguageToggle() {
         const footerArtist = document.querySelector('.main-footer p:nth-child(3)');
         
         if (footerCopyright) {
-            footerCopyright.innerHTML = '&copy; 2024 Catime Project by <a href="https://github.com/vladelaina" target="_blank" rel="noopener noreferrer">vladelaina</a>';
+            footerCopyright.innerHTML = '&copy; 2024 Catime Project by <a href="https://vladelaina.com/" target="_blank" rel="noopener noreferrer">vladelaina</a>';
         }
         
         if (footerLicense) {
