@@ -21,7 +21,7 @@ Catime explicitly commits to:
 Catime only saves the following information locally:
 
 1. **Configuration Data**
-   Includes interface settings, timer configurations, and user preferences, stored in `%LOCALAPPDATA%\Catime\config.txt`.
+   Includes interface settings, timer configurations, and user preferences, stored in `%LOCALAPPDATA%\Catime\config.ini`.
 
 2. **Log Information**
    Saved in the `Catime_Logs.log` file, containing:

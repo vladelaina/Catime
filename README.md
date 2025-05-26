@@ -136,7 +136,7 @@ Download the latest release from [GitHub Releases](https://github.com/vladelaina
 - **Right-click tray icon**: Set **menu**
 - **Edit mode**: Drag to adjust position, scroll wheel to resize, 🖱️ right-click to exit edit mode
 
-> Configuration file saved at `C:\Users\<username>\AppData\Local\Catime\config.txt`
+> Configuration file saved at `C:\Users\<username>\AppData\Local\Catime\config.ini`
 
 
 

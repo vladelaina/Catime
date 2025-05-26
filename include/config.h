@@ -454,14 +454,6 @@ int ReadIniInt(const char* section, const char* key, int defaultValue,
 BOOL WriteIniInt(const char* section, const char* key, int value,
                const char* filePath);
 
-/**
- * @brief 将旧的txt格式配置文件转换为新的ini格式
- * @param oldPath 旧配置文件路径
- * @param newPath 新配置文件路径
- * @return 是否成功转换
- */
-BOOL ConvertConfigTxtToIni(const char* oldPath, const char* newPath);
-
 /// @}
 
 #endif // CONFIG_H

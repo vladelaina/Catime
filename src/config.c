@@ -155,125 +155,6 @@ BOOL FileExists(const char* filePath) {
 }
 
 /**
- * @brief 将旧的txt格式配置文件转换为新的ini格式
- * @param oldPath 旧配置文件路径
- * @param newPath 新配置文件路径
- * @return 是否成功转换
- */
-BOOL ConvertConfigTxtToIni(const char* oldPath, const char* newPath) {
-    FILE* oldFile = fopen(oldPath, "r");
-    if (!oldFile) {
-        return FALSE;
-    }
-    
-    // 创建新的INI文件
-    FILE* tempFile = fopen(newPath, "w");
-    if (!tempFile) {
-        fclose(oldFile);
-        return FALSE;
-    }
-    
-    // 写入各个分节标题
-    fprintf(tempFile, "[%s]\n", INI_SECTION_GENERAL);
-    fprintf(tempFile, "[%s]\n", INI_SECTION_DISPLAY);
-    fprintf(tempFile, "[%s]\n", INI_SECTION_TIMER);
-    fprintf(tempFile, "[%s]\n", INI_SECTION_POMODORO);
-    fprintf(tempFile, "[%s]\n", INI_SECTION_NOTIFICATION);
-    fprintf(tempFile, "[%s]\n", INI_SECTION_HOTKEYS);
-    fprintf(tempFile, "[%s]\n", INI_SECTION_RECENTFILES);
-    fprintf(tempFile, "[%s]\n", INI_SECTION_COLORS);
-    fprintf(tempFile, "[%s]\n", INI_SECTION_OPTIONS);
-    
-    fclose(tempFile);
-    
-    // 读取旧配置文件的每一行，并按类别写入到INI文件中
-    char line[1024];
-    while (fgets(line, sizeof(line), oldFile)) {
-        // 移除行尾换行符
-        size_t len = strlen(line);
-        if (len > 0 && line[len-1] == '\n') {
-            line[len-1] = '\0';
-            len--;
-        }
-        
-        // 跳过空行
-        if (len == 0) {
-            continue;
-        }
-        
-        char key[256] = {0};
-        char value[768] = {0};
-        
-        // 找到等号分割键值对
-        char* equalSign = strchr(line, '=');
-        if (equalSign) {
-            // 提取键名
-            size_t keyLen = equalSign - line;
-            if (keyLen < sizeof(key)) {
-                strncpy(key, line, keyLen);
-                key[keyLen] = '\0';
-            }
-            
-            // 提取值
-            strncpy(value, equalSign + 1, sizeof(value) - 1);
-            value[sizeof(value) - 1] = '\0';
-            
-            // 根据键名分类写入到不同的节
-            const char* section;
-            
-            if (strcmp(key, "CONFIG_VERSION") == 0) {
-                section = INI_SECTION_GENERAL;
-            }
-            else if (strcmp(key, "LANGUAGE") == 0) {
-                section = INI_SECTION_GENERAL;
-            }
-            else if (strncmp(key, "CLOCK_TEXT_COLOR", 16) == 0 ||
-                   strncmp(key, "FONT_FILE_NAME", 14) == 0 ||
-                   strncmp(key, "CLOCK_BASE_FONT_SIZE", 20) == 0 ||
-                   strncmp(key, "WINDOW_SCALE", 12) == 0 ||
-                   strncmp(key, "CLOCK_WINDOW_POS_X", 18) == 0 ||
-                   strncmp(key, "CLOCK_WINDOW_POS_Y", 18) == 0 ||
-                   strncmp(key, "WINDOW_TOPMOST", 14) == 0) {
-                section = INI_SECTION_DISPLAY;
-            }
-            else if (strncmp(key, "CLOCK_DEFAULT_START_TIME", 24) == 0 ||
-                   strncmp(key, "CLOCK_USE_24HOUR", 16) == 0 ||
-                   strncmp(key, "CLOCK_SHOW_SECONDS", 18) == 0 ||
-                   strncmp(key, "CLOCK_TIME_OPTIONS", 18) == 0 ||
-                   strncmp(key, "STARTUP_MODE", 12) == 0) {
-                section = INI_SECTION_TIMER;
-            }
-            else if (strncmp(key, "POMODORO_", 9) == 0) {
-                section = INI_SECTION_POMODORO;
-            }
-            else if (strncmp(key, "NOTIFICATION_", 13) == 0 ||
-                   strncmp(key, "CLOCK_TIMEOUT_MESSAGE_TEXT", 26) == 0) {
-                section = INI_SECTION_NOTIFICATION;
-            }
-            else if (strncmp(key, "HOTKEY_", 7) == 0) {
-                section = INI_SECTION_HOTKEYS;
-            }
-            else if (strncmp(key, "CLOCK_RECENT_FILE", 17) == 0) {
-                section = INI_SECTION_RECENTFILES;
-            }
-            else if (strncmp(key, "COLOR_OPTIONS", 13) == 0) {
-                section = INI_SECTION_COLORS;
-            }
-            else {
-                // 其他设置放在OPTIONS节
-                section = INI_SECTION_OPTIONS;
-            }
-            
-            // 写入到INI文件
-            WriteIniString(section, key, value, newPath);
-        }
-    }
-    
-    fclose(oldFile);
-    return TRUE;
-}
-
-/**
  * @brief 获取配置文件路径
  * @param path 存储路径的缓冲区
  * @param size 缓冲区大小
@@ -577,7 +458,6 @@ void CheckAndCreateResourceFolders() {
  * 
  * 从配置路径读取配置项，若文件不存在则自动创建默认配置。
  * 解析各配置项并更新程序全局状态变量，最后刷新窗口位置。
- * 支持从旧的 txt 格式文件迁移至新的 ini 格式文件。
  */
 void ReadConfig() {
     // 检查并创建资源文件夹
@@ -586,22 +466,8 @@ void ReadConfig() {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    // 检查旧版配置文件是否存在
-    char old_config_path[MAX_PATH];
-    strcpy(old_config_path, config_path);
-    size_t len = strlen(old_config_path);
-    if (len > 4) {
-        strcpy(old_config_path + len - 4, ".txt");
-    }
-    
-    // 如果新版配置不存在，但旧版存在，则尝试迁移
-    if (!FileExists(config_path) && FileExists(old_config_path)) {
-        if (!ConvertConfigTxtToIni(old_config_path, config_path)) {
-            // 如果迁移失败，创建默认配置
-            CreateDefaultConfig(config_path);
-        }
-    } else if (!FileExists(config_path)) {
-        // 如果都不存在，创建默认配置
+    // 检查配置文件是否存在，不存在则创建默认配置
+    if (!FileExists(config_path)) {
         CreateDefaultConfig(config_path);
     }
     

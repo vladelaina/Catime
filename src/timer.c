@@ -7,6 +7,7 @@
  */
 
 #include "../include/timer.h"
+#include "../include/config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -550,52 +551,14 @@ void TogglePauseTimer(void) {
  * @brief 将默认启动时间写入配置文件
  * @param seconds 默认启动时间（秒）
  * 
- * 配置文件路径：
- * - 优先使用 %LOCALAPPDATA%\Catime\config.txt
- * - 备用路径 .\\asset\\config.txt
+ * 使用配置管理模块中的通用路径获取方法，写入INI格式配置文件
  */
 void WriteConfigDefaultStartTime(int seconds) {
     char config_path[MAX_PATH];
-    char temp_path[MAX_PATH];
     
     // 获取配置文件路径
-    char* appdata_path = getenv("LOCALAPPDATA");
-    if (appdata_path) {
-        snprintf(config_path, MAX_PATH, "%s\\Catime\\config.txt", appdata_path);
-        snprintf(temp_path, MAX_PATH, "%s\\Catime\\config.txt.tmp", appdata_path);
-    } else {
-        strcpy(config_path, ".\\asset\\config.txt");
-        strcpy(temp_path, ".\\asset\\config.txt.tmp");
-    }
+    GetConfigPath(config_path, MAX_PATH);
     
-    FILE* file = fopen(config_path, "r");
-    FILE* temp = fopen(temp_path, "w");
-    
-    if (!file || !temp) {
-        if (file) fclose(file);
-        if (temp) fclose(temp);
-        return;
-    }
-    
-    char line[256];
-    int found = 0;
-    
-    while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, "CLOCK_DEFAULT_START_TIME=", 25) == 0) {
-            fprintf(temp, "CLOCK_DEFAULT_START_TIME=%d\n", seconds);
-            found = 1;
-        } else {
-            fputs(line, temp);
-        }
-    }
-    
-    if (!found) {
-        fprintf(temp, "CLOCK_DEFAULT_START_TIME=%d\n", seconds);
-    }
-    
-    fclose(file);
-    fclose(temp);
-    
-    remove(config_path);
-    rename(temp_path, config_path);
+    // 使用INI格式写入
+    WriteIniInt(INI_SECTION_TIMER, "CLOCK_DEFAULT_START_TIME", seconds, config_path);
 }
