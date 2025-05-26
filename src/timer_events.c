@@ -203,7 +203,9 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
 
                     // 在显示通知前，重新读取配置文件中的消息文本
                     ReadNotificationMessagesConfig();
-
+                    // 强制重新读取通知类型配置，确保使用最新设置
+                    ReadNotificationTypeConfig();
+                    
                     // 变量声明放在分支前面，保证在所有分支中可用
                     wchar_t* timeoutMsgW = NULL;
 

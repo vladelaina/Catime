@@ -2176,10 +2176,17 @@ refresh_window:
                     return 0;
                 }
                 
+                // 重置通知标志，确保倒计时结束时可以显示通知
+                extern BOOL countdown_message_shown;
+                countdown_message_shown = FALSE;
+                
+                // 确保读取最新的通知配置
+                extern void ReadNotificationTypeConfig(void);
+                ReadNotificationTypeConfig();
+                
                 // 显示输入对话框以设置倒计时
                 extern int elapsed_time;
                 extern BOOL message_shown;
-                extern BOOL countdown_message_shown;
                 
                 // 清空输入文本
                 memset(inputText, 0, sizeof(inputText));
@@ -2369,6 +2376,14 @@ void StartDefaultCountDown(HWND hwnd) {
     // 关闭所有通知窗口
     CloseAllNotifications();
     
+    // 重置通知标志，确保倒计时结束时可以显示通知
+    extern BOOL countdown_message_shown;
+    countdown_message_shown = FALSE;
+    
+    // 确保读取最新的通知配置
+    extern void ReadNotificationTypeConfig(void);
+    ReadNotificationTypeConfig();
+    
     // 保存先前状态以确定是否需要重置计时器
     BOOL wasShowingTime = CLOCK_SHOW_CURRENT_TIME;
     
@@ -2527,6 +2542,14 @@ void StartQuickCountdown1(HWND hwnd) {
     // 关闭所有通知窗口
     CloseAllNotifications();
     
+    // 重置通知标志，确保倒计时结束时可以显示通知
+    extern BOOL countdown_message_shown;
+    countdown_message_shown = FALSE;
+    
+    // 确保读取最新的通知配置
+    extern void ReadNotificationTypeConfig(void);
+    ReadNotificationTypeConfig();
+    
     extern int time_options[];
     extern int time_options_count;
     
@@ -2567,6 +2590,14 @@ void StartQuickCountdown2(HWND hwnd) {
     // 关闭所有通知窗口
     CloseAllNotifications();
     
+    // 重置通知标志，确保倒计时结束时可以显示通知
+    extern BOOL countdown_message_shown;
+    countdown_message_shown = FALSE;
+    
+    // 确保读取最新的通知配置
+    extern void ReadNotificationTypeConfig(void);
+    ReadNotificationTypeConfig();
+    
     extern int time_options[];
     extern int time_options_count;
     
@@ -2606,6 +2637,14 @@ void StartQuickCountdown3(HWND hwnd) {
     
     // 关闭所有通知窗口
     CloseAllNotifications();
+    
+    // 重置通知标志，确保倒计时结束时可以显示通知
+    extern BOOL countdown_message_shown;
+    countdown_message_shown = FALSE;
+    
+    // 确保读取最新的通知配置
+    extern void ReadNotificationTypeConfig(void);
+    ReadNotificationTypeConfig();
     
     extern int time_options[];
     extern int time_options_count;
