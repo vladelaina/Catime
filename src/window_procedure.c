@@ -1053,6 +1053,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_TIMER_RESTART: {
+                    // 关闭所有通知窗口
+                    CloseAllNotifications();
                     RestartTimer(hwnd);
                     break;
                 }
@@ -2254,6 +2256,8 @@ refresh_window:
                 TogglePauseResume(hwnd);
                 return 0;
             } else if (wp == HOTKEY_ID_RESTART_TIMER) {
+                // 关闭所有通知窗口
+                CloseAllNotifications();
                 // 重新开始当前计时
                 RestartCurrentTimer(hwnd);
                 return 0;
