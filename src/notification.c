@@ -498,3 +498,36 @@ void DrawRoundedRectangle(HDC hdc, RECT rect, int radius) {
     SelectObject(hdc, oldPen);
     DeleteObject(pen);
 }
+
+/**
+ * @brief 关闭所有当前显示的Catime通知窗口
+ * 
+ * 查找并关闭所有由Catime创建的通知窗口，无视它们当前的显示时间设置，
+ * 直接开始淡出动画。通常在切换计时器模式时调用，确保通知不会继续显示。
+ */
+void CloseAllNotifications(void) {
+    // 查找由Catime创建的所有通知窗口
+    HWND hwnd = NULL;
+    HWND hwndPrev = NULL;
+    
+    // 使用FindWindowExW逐个查找所有匹配的窗口
+    // 第一次调用时hwndPrev为NULL，找到的是第一个窗口
+    // 之后每次调用传入上一次找到的窗口句柄，找到下一个窗口
+    while ((hwnd = FindWindowExW(NULL, hwndPrev, NOTIFICATION_CLASS_NAME, NULL)) != NULL) {
+        // 检查当前状态
+        AnimationState currentState = (AnimationState)GetPropW(hwnd, L"AnimState");
+        
+        // 停止当前自动关闭定时器
+        KillTimer(hwnd, NOTIFICATION_TIMER_ID);
+        
+        // 如果窗口还没有开始淡出，则开始淡出动画
+        if (currentState != ANIM_FADE_OUT) {
+            SetPropW(hwnd, L"AnimState", (HANDLE)ANIM_FADE_OUT);
+            // 启动淡出动画
+            SetTimer(hwnd, ANIMATION_TIMER_ID, ANIMATION_INTERVAL, NULL);
+        }
+        
+        // 保存当前窗口句柄，用于下一次查找
+        hwndPrev = hwnd;
+    }
+}

@@ -41,6 +41,7 @@
 #include "../include/update_checker.h"
 #include "../include/async_update_checker.h"
 #include "../include/hotkey.h"
+#include "../include/notification.h"  // 添加通知头文件
 
 // 从main.c引入的变量
 extern char inputText[256];
@@ -662,6 +663,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             extern void StopNotificationSound(void);
                             StopNotificationSound();
                             
+                            // 关闭所有通知窗口
+                            CloseAllNotifications();
+                            
                             KillTimer(hwnd, 1);
                             CLOCK_TOTAL_TIME = total_seconds;
                             countdown_elapsed_time = 0;
@@ -713,6 +717,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     // 停止任何可能正在播放的通知音频
                     extern void StopNotificationSound(void);
                     StopNotificationSound();
+                    
+                    // 关闭所有通知窗口
+                    CloseAllNotifications();
                     
                     int index = cmd - 102;
                     if (index >= 0 && index < time_options_count) {
@@ -1173,6 +1180,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     // 停止任何可能正在播放的通知音频
                     extern void StopNotificationSound(void);
                     StopNotificationSound();
+                    
+                    // 关闭所有通知窗口
+                    CloseAllNotifications();
 
                     if (CLOCK_COUNT_UP) {
                         CLOCK_COUNT_UP = FALSE;  // 切换到倒计时模式
@@ -1398,6 +1408,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     // 停止任何可能正在播放的通知音频
                     extern void StopNotificationSound(void);
                     StopNotificationSound();
+                    
+                    // 关闭所有通知窗口
+                    CloseAllNotifications();
 
                     CLOCK_SHOW_CURRENT_TIME = !CLOCK_SHOW_CURRENT_TIME;
                     if (CLOCK_SHOW_CURRENT_TIME) {
@@ -1590,6 +1603,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     // 停止任何可能正在播放的通知音频
                     extern void StopNotificationSound(void);
                     StopNotificationSound();
+                    
+                    // 关闭所有通知窗口
+                    CloseAllNotifications();
 
                     CLOCK_COUNT_UP = !CLOCK_COUNT_UP;
                     if (CLOCK_COUNT_UP) {
@@ -1606,6 +1622,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     // 停止任何可能正在播放的通知音频
                     extern void StopNotificationSound(void);
                     StopNotificationSound();
+                    
+                    // 关闭所有通知窗口
+                    CloseAllNotifications();
 
                     if (!CLOCK_COUNT_UP) {
                         CLOCK_COUNT_UP = TRUE;
@@ -1627,6 +1646,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     // 停止任何可能正在播放的通知音频
                     extern void StopNotificationSound(void);
                     StopNotificationSound();
+                    
+                    // 关闭所有通知窗口
+                    CloseAllNotifications();
 
                     // 重置正计时计数器
                     extern void ResetTimer(void);
@@ -1757,6 +1779,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     // 停止任何可能正在播放的通知音频
                     extern void StopNotificationSound(void);
                     StopNotificationSound();
+                    
+                    // 关闭所有通知窗口
+                    CloseAllNotifications();
                     
                     if (!IsWindowVisible(hwnd)) {
                         ShowWindow(hwnd, SW_SHOW);
@@ -2171,6 +2196,9 @@ refresh_window:
                         extern void StopNotificationSound(void);
                         StopNotificationSound();
                         
+                        // 关闭所有通知窗口
+                        CloseAllNotifications();
+                        
                         // 设置倒计时状态
                         CLOCK_TOTAL_TIME = total_seconds;
                         countdown_elapsed_time = 0;
@@ -2270,6 +2298,9 @@ void ToggleShowTimeMode(HWND hwnd) {
     extern void StopNotificationSound(void);
     StopNotificationSound();
     
+    // 关闭所有通知窗口
+    CloseAllNotifications();
+    
     // 如果当前不是显示当前时间模式，则开启
     // 如果已经是显示当前时间模式，则不做任何改变（不关闭）
     if (!CLOCK_SHOW_CURRENT_TIME) {
@@ -2294,6 +2325,9 @@ void StartCountUp(HWND hwnd) {
     // 停止任何可能正在播放的通知音频
     extern void StopNotificationSound(void);
     StopNotificationSound();
+    
+    // 关闭所有通知窗口
+    CloseAllNotifications();
     
     // 声明外部变量
     extern int countup_elapsed_time;
@@ -2328,6 +2362,9 @@ void StartDefaultCountDown(HWND hwnd) {
     extern void StopNotificationSound(void);
     StopNotificationSound();
     
+    // 关闭所有通知窗口
+    CloseAllNotifications();
+    
     // 保存先前状态以确定是否需要重置计时器
     BOOL wasShowingTime = CLOCK_SHOW_CURRENT_TIME;
     
@@ -2358,6 +2395,13 @@ void StartDefaultCountDown(HWND hwnd) {
  * @param hwnd 窗口句柄
  */
 void StartPomodoroTimer(HWND hwnd) {
+    // 停止任何可能正在播放的通知音频
+    extern void StopNotificationSound(void);
+    StopNotificationSound();
+    
+    // 关闭所有通知窗口
+    CloseAllNotifications();
+    
     // 保存先前状态以确定是否需要重置计时器
     BOOL wasShowingTime = CLOCK_SHOW_CURRENT_TIME;
     
@@ -2476,6 +2520,9 @@ void StartQuickCountdown1(HWND hwnd) {
     extern void StopNotificationSound(void);
     StopNotificationSound();
     
+    // 关闭所有通知窗口
+    CloseAllNotifications();
+    
     extern int time_options[];
     extern int time_options_count;
     
@@ -2513,6 +2560,9 @@ void StartQuickCountdown2(HWND hwnd) {
     extern void StopNotificationSound(void);
     StopNotificationSound();
     
+    // 关闭所有通知窗口
+    CloseAllNotifications();
+    
     extern int time_options[];
     extern int time_options_count;
     
@@ -2549,6 +2599,9 @@ void StartQuickCountdown3(HWND hwnd) {
     // 停止任何可能正在播放的通知音频
     extern void StopNotificationSound(void);
     StopNotificationSound();
+    
+    // 关闭所有通知窗口
+    CloseAllNotifications();
     
     extern int time_options[];
     extern int time_options_count;

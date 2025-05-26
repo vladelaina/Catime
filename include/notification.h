@@ -44,6 +44,14 @@ void ShowToastNotification(HWND hwnd, const char* message);
  */
 void ShowModalNotification(HWND hwnd, const char* message);
 
+/**
+ * @brief 关闭所有当前显示的Catime通知窗口
+ * 
+ * 查找并关闭所有由Catime创建的通知窗口，无视它们当前的显示时间设置，
+ * 直接开始淡出动画。通常在切换计时器模式时调用，确保通知不会继续显示。
+ */
+void CloseAllNotifications(void);
+
 // 系统托盘通知已在tray.h中定义：void ShowTrayNotification(HWND hwnd, const char* message);
 
 #endif // NOTIFICATION_H
