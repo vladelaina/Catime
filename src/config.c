@@ -61,6 +61,219 @@ char NOTIFICATION_SOUND_FILE[MAX_PATH] = "";  // 默认为空
 int NOTIFICATION_SOUND_VOLUME = 100;  // 默认音量100%
 
 /**
+ * @brief 从INI文件读取字符串值
+ * @param section 节名
+ * @param key 键名
+ * @param defaultValue 默认值
+ * @param returnValue 返回值缓冲区
+ * @param returnSize 缓冲区大小 
+ * @param filePath 文件路径
+ * @return 实际读取的字符数
+ */
+DWORD ReadIniString(const char* section, const char* key, const char* defaultValue,
+                  char* returnValue, DWORD returnSize, const char* filePath) {
+    return GetPrivateProfileStringA(section, key, defaultValue, returnValue, returnSize, filePath);
+}
+
+/**
+ * @brief 写入字符串值到INI文件
+ * @param section 节名
+ * @param key 键名
+ * @param value 值
+ * @param filePath 文件路径
+ * @return 是否成功
+ */
+BOOL WriteIniString(const char* section, const char* key, const char* value,
+                  const char* filePath) {
+    return WritePrivateProfileStringA(section, key, value, filePath);
+}
+
+/**
+ * @brief 读取INI整数值
+ * @param section 节名
+ * @param key 键名
+ * @param defaultValue 默认值
+ * @param filePath 文件路径
+ * @return 读取的整数值
+ */
+int ReadIniInt(const char* section, const char* key, int defaultValue, 
+             const char* filePath) {
+    return GetPrivateProfileIntA(section, key, defaultValue, filePath);
+}
+
+/**
+ * @brief 写入整数值到INI文件
+ * @param section 节名
+ * @param key 键名
+ * @param value 值
+ * @param filePath 文件路径
+ * @return 是否成功
+ */
+BOOL WriteIniInt(const char* section, const char* key, int value,
+               const char* filePath) {
+    char valueStr[32];
+    snprintf(valueStr, sizeof(valueStr), "%d", value);
+    return WritePrivateProfileStringA(section, key, valueStr, filePath);
+}
+
+/**
+ * @brief 写入布尔值到INI文件
+ * @param section 节名
+ * @param key 键名 
+ * @param value 布尔值
+ * @param filePath 文件路径
+ * @return 是否成功
+ */
+BOOL WriteIniBool(const char* section, const char* key, BOOL value,
+               const char* filePath) {
+    return WritePrivateProfileStringA(section, key, value ? "TRUE" : "FALSE", filePath);
+}
+
+/**
+ * @brief 读取INI布尔值
+ * @param section 节名
+ * @param key 键名
+ * @param defaultValue 默认值
+ * @param filePath 文件路径
+ * @return 读取的布尔值
+ */
+BOOL ReadIniBool(const char* section, const char* key, BOOL defaultValue, 
+               const char* filePath) {
+    char value[8];
+    GetPrivateProfileStringA(section, key, defaultValue ? "TRUE" : "FALSE", 
+                          value, sizeof(value), filePath);
+    return _stricmp(value, "TRUE") == 0;
+}
+
+/**
+ * @brief 检查配置文件是否存在
+ * @param filePath 文件路径
+ * @return 文件是否存在
+ */
+BOOL FileExists(const char* filePath) {
+    return GetFileAttributesA(filePath) != INVALID_FILE_ATTRIBUTES;
+}
+
+/**
+ * @brief 将旧的txt格式配置文件转换为新的ini格式
+ * @param oldPath 旧配置文件路径
+ * @param newPath 新配置文件路径
+ * @return 是否成功转换
+ */
+BOOL ConvertConfigTxtToIni(const char* oldPath, const char* newPath) {
+    FILE* oldFile = fopen(oldPath, "r");
+    if (!oldFile) {
+        return FALSE;
+    }
+    
+    // 创建新的INI文件
+    FILE* tempFile = fopen(newPath, "w");
+    if (!tempFile) {
+        fclose(oldFile);
+        return FALSE;
+    }
+    
+    // 写入各个分节标题
+    fprintf(tempFile, "[%s]\n", INI_SECTION_GENERAL);
+    fprintf(tempFile, "[%s]\n", INI_SECTION_DISPLAY);
+    fprintf(tempFile, "[%s]\n", INI_SECTION_TIMER);
+    fprintf(tempFile, "[%s]\n", INI_SECTION_POMODORO);
+    fprintf(tempFile, "[%s]\n", INI_SECTION_NOTIFICATION);
+    fprintf(tempFile, "[%s]\n", INI_SECTION_HOTKEYS);
+    fprintf(tempFile, "[%s]\n", INI_SECTION_RECENTFILES);
+    fprintf(tempFile, "[%s]\n", INI_SECTION_COLORS);
+    fprintf(tempFile, "[%s]\n", INI_SECTION_OPTIONS);
+    
+    fclose(tempFile);
+    
+    // 读取旧配置文件的每一行，并按类别写入到INI文件中
+    char line[1024];
+    while (fgets(line, sizeof(line), oldFile)) {
+        // 移除行尾换行符
+        size_t len = strlen(line);
+        if (len > 0 && line[len-1] == '\n') {
+            line[len-1] = '\0';
+            len--;
+        }
+        
+        // 跳过空行
+        if (len == 0) {
+            continue;
+        }
+        
+        char key[256] = {0};
+        char value[768] = {0};
+        
+        // 找到等号分割键值对
+        char* equalSign = strchr(line, '=');
+        if (equalSign) {
+            // 提取键名
+            size_t keyLen = equalSign - line;
+            if (keyLen < sizeof(key)) {
+                strncpy(key, line, keyLen);
+                key[keyLen] = '\0';
+            }
+            
+            // 提取值
+            strncpy(value, equalSign + 1, sizeof(value) - 1);
+            value[sizeof(value) - 1] = '\0';
+            
+            // 根据键名分类写入到不同的节
+            const char* section;
+            
+            if (strcmp(key, "CONFIG_VERSION") == 0) {
+                section = INI_SECTION_GENERAL;
+            }
+            else if (strcmp(key, "LANGUAGE") == 0) {
+                section = INI_SECTION_GENERAL;
+            }
+            else if (strncmp(key, "CLOCK_TEXT_COLOR", 16) == 0 ||
+                   strncmp(key, "FONT_FILE_NAME", 14) == 0 ||
+                   strncmp(key, "CLOCK_BASE_FONT_SIZE", 20) == 0 ||
+                   strncmp(key, "WINDOW_SCALE", 12) == 0 ||
+                   strncmp(key, "CLOCK_WINDOW_POS_X", 18) == 0 ||
+                   strncmp(key, "CLOCK_WINDOW_POS_Y", 18) == 0 ||
+                   strncmp(key, "WINDOW_TOPMOST", 14) == 0) {
+                section = INI_SECTION_DISPLAY;
+            }
+            else if (strncmp(key, "CLOCK_DEFAULT_START_TIME", 24) == 0 ||
+                   strncmp(key, "CLOCK_USE_24HOUR", 16) == 0 ||
+                   strncmp(key, "CLOCK_SHOW_SECONDS", 18) == 0 ||
+                   strncmp(key, "CLOCK_TIME_OPTIONS", 18) == 0 ||
+                   strncmp(key, "STARTUP_MODE", 12) == 0) {
+                section = INI_SECTION_TIMER;
+            }
+            else if (strncmp(key, "POMODORO_", 9) == 0) {
+                section = INI_SECTION_POMODORO;
+            }
+            else if (strncmp(key, "NOTIFICATION_", 13) == 0 ||
+                   strncmp(key, "CLOCK_TIMEOUT_MESSAGE_TEXT", 26) == 0) {
+                section = INI_SECTION_NOTIFICATION;
+            }
+            else if (strncmp(key, "HOTKEY_", 7) == 0) {
+                section = INI_SECTION_HOTKEYS;
+            }
+            else if (strncmp(key, "CLOCK_RECENT_FILE", 17) == 0) {
+                section = INI_SECTION_RECENTFILES;
+            }
+            else if (strncmp(key, "COLOR_OPTIONS", 13) == 0) {
+                section = INI_SECTION_COLORS;
+            }
+            else {
+                // 其他设置放在OPTIONS节
+                section = INI_SECTION_OPTIONS;
+            }
+            
+            // 写入到INI文件
+            WriteIniString(section, key, value, newPath);
+        }
+    }
+    
+    fclose(oldFile);
+    return TRUE;
+}
+
+/**
  * @brief 获取配置文件路径
  * @param path 存储路径的缓冲区
  * @param size 缓冲区大小
@@ -73,8 +286,8 @@ void GetConfigPath(char* path, size_t size) {
 
     char* appdata_path = getenv("LOCALAPPDATA");
     if (appdata_path) {
-        if (snprintf(path, size, "%s\\Catime\\config.txt", appdata_path) >= size) {
-            strncpy(path, ".\\asset\\config.txt", size - 1);
+        if (snprintf(path, size, "%s\\Catime\\config.ini", appdata_path) >= size) {
+            strncpy(path, ".\\asset\\config.ini", size - 1);
             path[size - 1] = '\0';
             return;
         }
@@ -82,12 +295,12 @@ void GetConfigPath(char* path, size_t size) {
         char dir_path[MAX_PATH];
         if (snprintf(dir_path, sizeof(dir_path), "%s\\Catime", appdata_path) < sizeof(dir_path)) {
             if (!CreateDirectoryA(dir_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
-                strncpy(path, ".\\asset\\config.txt", size - 1);
+                strncpy(path, ".\\asset\\config.ini", size - 1);
                 path[size - 1] = '\0';
             }
         }
     } else {
-        strncpy(path, ".\\asset\\config.txt", size - 1);
+        strncpy(path, ".\\asset\\config.ini", size - 1);
         path[size - 1] = '\0';
     }
 }
@@ -96,166 +309,150 @@ void GetConfigPath(char* path, size_t size) {
  * @brief 创建默认配置文件
  * @param config_path 配置文件完整路径
  * 
- * 生成包含所有必要参数的默认配置文件，配置项按以下顺序组织：
- * 1. 基本设置（颜色、字体、窗口位置等UI设置）
- * 2. 颜色选项列表（用户可选的颜色方案）
- * 3. 超时提示文本与自定义通知消息
- * 4. 番茄钟相关时间设置与循环参数
- * 5. 超时后的动作设置与相关资源路径
- * 6. 最近使用文件列表
- * 7. 预设时间选项
- * 
- * 该顺序与WriteConfig函数保持一致，确保配置文件结构统一。
+ * 生成包含所有必要参数的默认配置文件，配置项按节进行组织：
+ * 1. [General] - 基本设置（版本信息、语言设置）
+ * 2. [Display] - 显示设置（颜色、字体、窗口位置等）
+ * 3. [Timer] - 计时器相关设置（默认时间等）
+ * 4. [Pomodoro] - 番茄钟相关设置
+ * 5. [Notification] - 通知相关设置
+ * 6. [Hotkeys] - 热键设置
+ * 7. [RecentFiles] - 最近使用的文件
+ * 8. [Colors] - 颜色选项
+ * 9. [Options] - 其他选项
  */
 void CreateDefaultConfig(const char* config_path) {
-    FILE *file = fopen(config_path, "w");
-    if (file) {
-        // 添加版本标识 - 作为配置文件第一行
-        fprintf(file, "CONFIG_VERSION=%s\n", CATIME_VERSION);
-        
-        // 获取系统默认语言ID
-        LANGID systemLangID = GetUserDefaultUILanguage();
-        int defaultLanguage = APP_LANG_ENGLISH; // 默认为英语
-        const char* langName = "English"; // 默认语言名称
-        
-        // 根据系统语言ID设置默认语言
-        switch (PRIMARYLANGID(systemLangID)) {
-            case LANG_CHINESE:
-                if (SUBLANGID(systemLangID) == SUBLANG_CHINESE_SIMPLIFIED) {
-                    defaultLanguage = APP_LANG_CHINESE_SIMP;
-                    langName = "Chinese_Simplified";
-                } else {
-                    defaultLanguage = APP_LANG_CHINESE_TRAD;
-                    langName = "Chinese_Traditional";
-                }
-                break;
-            case LANG_SPANISH:
-                defaultLanguage = APP_LANG_SPANISH;
-                langName = "Spanish";
-                break;
-            case LANG_FRENCH:
-                defaultLanguage = APP_LANG_FRENCH;
-                langName = "French";
-                break;
-            case LANG_GERMAN:
-                defaultLanguage = APP_LANG_GERMAN;
-                langName = "German";
-                break;
-            case LANG_RUSSIAN:
-                defaultLanguage = APP_LANG_RUSSIAN;
-                langName = "Russian";
-                break;
-            case LANG_PORTUGUESE:
-                defaultLanguage = APP_LANG_PORTUGUESE;
-                langName = "Portuguese";
-                break;
-            case LANG_JAPANESE:
-                defaultLanguage = APP_LANG_JAPANESE;
-                langName = "Japanese";
-                break;
-            case LANG_KOREAN:
-                defaultLanguage = APP_LANG_KOREAN;
-                langName = "Korean";
-                break;
-            case LANG_ENGLISH:
-            default:
-                defaultLanguage = APP_LANG_ENGLISH;
-                langName = "English";
-                break;
-        }
-        
-        // 将语言选项写入配置
-        fprintf(file, "LANGUAGE=%s\n", langName);
-        
-        // 基本设置区块 - 与WriteConfig函数保持相同顺序
-        fprintf(file, "CLOCK_TEXT_COLOR=#FFB6C1\n");
-        fprintf(file, "CLOCK_BASE_FONT_SIZE=20\n");
-        fprintf(file, "FONT_FILE_NAME=Wallpoet Essence.ttf\n");
-        fprintf(file, "CLOCK_DEFAULT_START_TIME=1500\n");
-        fprintf(file, "CLOCK_WINDOW_POS_X=960\n");
-        fprintf(file, "CLOCK_WINDOW_POS_Y=-1\n");
-        // 移除CLOCK_EDIT_MODE配置项，它只在运行时使用
-        fprintf(file, "WINDOW_SCALE=1.62\n");
-        fprintf(file, "CLOCK_USE_24HOUR=FALSE\n");
-        fprintf(file, "CLOCK_SHOW_SECONDS=FALSE\n");
-        fprintf(file, "WINDOW_TOPMOST=TRUE\n");
-        
-        // 颜色选项区块
-        fprintf(file, "COLOR_OPTIONS=#FFFFFF,#F9DB91,#F4CAE0,#FFB6C1,#A8E7DF,#A3CFB3,#92CBFC,#BDA5E7,#9370DB,#8C92CF,#72A9A5,#EB99A7,#EB96BD,#FFAE8B,#FF7F50,#CA6174\n");
-        
-        // 超时文本区块
-        fprintf(file, "CLOCK_TIMEOUT_TEXT=0\n");
-        
-        // 新增：自定义通知消息 - 使用硬编码的默认值，而不是全局变量的当前值
-        fprintf(file, "CLOCK_TIMEOUT_MESSAGE_TEXT=时间到啦！\n");
-        fprintf(file, "POMODORO_TIMEOUT_MESSAGE_TEXT=番茄钟时间到！\n"); // 添加番茄钟专用提示
-        fprintf(file, "POMODORO_CYCLE_COMPLETE_TEXT=所有番茄钟循环完成！\n");
-        
-        // 新增：通知显示时间
-        fprintf(file, "NOTIFICATION_TIMEOUT_MS=3000\n");  // 默认3秒
-        
-        // 新增：通知窗口最大透明度
-        fprintf(file, "NOTIFICATION_MAX_OPACITY=95\n");   // 默认95%
-        
-        // 新增：通知类型
-        const char* typeStr;
-        switch (NOTIFICATION_TYPE) {
-            case NOTIFICATION_TYPE_CATIME:
-                typeStr = "CATIME";
-                break;
-            case NOTIFICATION_TYPE_SYSTEM_MODAL:
-                typeStr = "SYSTEM_MODAL";
-                break;
-            case NOTIFICATION_TYPE_OS:
-                typeStr = "OS";
-                break;
-            default:
-                typeStr = "CATIME"; // 默认值
-                break;
-        }
-        fprintf(file, "NOTIFICATION_TYPE=%s\n", typeStr);
-        
-        // 番茄钟设置区块
-        fprintf(file, "POMODORO_TIME_OPTIONS=1500,300,1500,600\n"); // 时间1,时间2,时间3,时间4...
-        fprintf(file, "POMODORO_LOOP_COUNT=1\n");       // 循环次数
-        
-        // 超时动作设置区块
-        fprintf(file, "CLOCK_TIMEOUT_ACTION=MESSAGE\n");
-        fprintf(file, "CLOCK_TIMEOUT_FILE=\n");         // 空文件路径占位
-        fprintf(file, "CLOCK_TIMEOUT_WEBSITE=\n");      // 空网站URL占位
-        
-        // 最近文件列表区块
-        for (int i = 1; i <= 5; i++) {
-            fprintf(file, "CLOCK_RECENT_FILE_%d=\n", i); // 空文件记录占位
-        }
-        
-        // 时间选项区块
-        fprintf(file, "CLOCK_TIME_OPTIONS=25,10,5\n");
-        
-        // 热键配置区块 - 默认不设置热键
-        fprintf(file, "HOTKEY_SHOW_TIME=None\n");
-        fprintf(file, "HOTKEY_COUNT_UP=None\n");
-        fprintf(file, "HOTKEY_COUNTDOWN=None\n");
-        fprintf(file, "HOTKEY_QUICK_COUNTDOWN1=None\n");
-        fprintf(file, "HOTKEY_QUICK_COUNTDOWN2=None\n");
-        fprintf(file, "HOTKEY_QUICK_COUNTDOWN3=None\n");
-        fprintf(file, "HOTKEY_POMODORO=None\n");
-        fprintf(file, "HOTKEY_TOGGLE_VISIBILITY=None\n");
-        fprintf(file, "HOTKEY_EDIT_MODE=None\n");
-        fprintf(file, "HOTKEY_PAUSE_RESUME=None\n");
-        fprintf(file, "HOTKEY_RESTART_TIMER=None\n");
-        
-        // 新增：通知音频文件路径
-        fprintf(file, "NOTIFICATION_SOUND_FILE=\n");  // 默认为空
-        
-        // 新增：通知音频音量
-        fprintf(file, "NOTIFICATION_SOUND_VOLUME=100\n");  // 默认音量100%
-        
-        // 新增：快捷方式检查状态
-        fprintf(file, "SHORTCUT_CHECK_DONE=FALSE\n");  // 默认未检查
-        
-        fclose(file);
+    // 获取系统默认语言ID
+    LANGID systemLangID = GetUserDefaultUILanguage();
+    int defaultLanguage = APP_LANG_ENGLISH; // 默认为英语
+    const char* langName = "English"; // 默认语言名称
+    
+    // 根据系统语言ID设置默认语言
+    switch (PRIMARYLANGID(systemLangID)) {
+        case LANG_CHINESE:
+            if (SUBLANGID(systemLangID) == SUBLANG_CHINESE_SIMPLIFIED) {
+                defaultLanguage = APP_LANG_CHINESE_SIMP;
+                langName = "Chinese_Simplified";
+            } else {
+                defaultLanguage = APP_LANG_CHINESE_TRAD;
+                langName = "Chinese_Traditional";
+            }
+            break;
+        case LANG_SPANISH:
+            defaultLanguage = APP_LANG_SPANISH;
+            langName = "Spanish";
+            break;
+        case LANG_FRENCH:
+            defaultLanguage = APP_LANG_FRENCH;
+            langName = "French";
+            break;
+        case LANG_GERMAN:
+            defaultLanguage = APP_LANG_GERMAN;
+            langName = "German";
+            break;
+        case LANG_RUSSIAN:
+            defaultLanguage = APP_LANG_RUSSIAN;
+            langName = "Russian";
+            break;
+        case LANG_PORTUGUESE:
+            defaultLanguage = APP_LANG_PORTUGUESE;
+            langName = "Portuguese";
+            break;
+        case LANG_JAPANESE:
+            defaultLanguage = APP_LANG_JAPANESE;
+            langName = "Japanese";
+            break;
+        case LANG_KOREAN:
+            defaultLanguage = APP_LANG_KOREAN;
+            langName = "Korean";
+            break;
+        case LANG_ENGLISH:
+        default:
+            defaultLanguage = APP_LANG_ENGLISH;
+            langName = "English";
+            break;
     }
+    
+    // 根据通知类型选择默认设置
+    const char* typeStr;
+    switch (NOTIFICATION_TYPE) {
+        case NOTIFICATION_TYPE_CATIME:
+            typeStr = "CATIME";
+            break;
+        case NOTIFICATION_TYPE_SYSTEM_MODAL:
+            typeStr = "SYSTEM_MODAL";
+            break;
+        case NOTIFICATION_TYPE_OS:
+            typeStr = "OS";
+            break;
+        default:
+            typeStr = "CATIME"; // 默认值
+            break;
+    }
+    
+    // ======== [General] 节 ========
+    WriteIniString(INI_SECTION_GENERAL, "CONFIG_VERSION", CATIME_VERSION, config_path);
+    WriteIniString(INI_SECTION_GENERAL, "LANGUAGE", langName, config_path);
+    WriteIniString(INI_SECTION_GENERAL, "SHORTCUT_CHECK_DONE", "FALSE", config_path);
+    
+    // ======== [Display] 节 ========
+    WriteIniString(INI_SECTION_DISPLAY, "CLOCK_TEXT_COLOR", "#FFB6C1", config_path);
+    WriteIniInt(INI_SECTION_DISPLAY, "CLOCK_BASE_FONT_SIZE", 20, config_path);
+    WriteIniString(INI_SECTION_DISPLAY, "FONT_FILE_NAME", "Wallpoet Essence.ttf", config_path);
+    WriteIniInt(INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_X", 960, config_path);
+    WriteIniInt(INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_Y", -1, config_path);
+    WriteIniString(INI_SECTION_DISPLAY, "WINDOW_SCALE", "1.62", config_path);
+    WriteIniString(INI_SECTION_DISPLAY, "WINDOW_TOPMOST", "TRUE", config_path);
+    
+    // ======== [Timer] 节 ========
+    WriteIniInt(INI_SECTION_TIMER, "CLOCK_DEFAULT_START_TIME", 1500, config_path);
+    WriteIniString(INI_SECTION_TIMER, "CLOCK_USE_24HOUR", "FALSE", config_path);
+    WriteIniString(INI_SECTION_TIMER, "CLOCK_SHOW_SECONDS", "FALSE", config_path);
+    WriteIniString(INI_SECTION_TIMER, "CLOCK_TIME_OPTIONS", "25,10,5", config_path);
+    WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_TEXT", "0", config_path);
+    WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_ACTION", "MESSAGE", config_path);
+    WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_FILE", "", config_path);
+    WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_WEBSITE", "", config_path);
+    WriteIniString(INI_SECTION_TIMER, "STARTUP_MODE", "COUNTDOWN", config_path);
+    
+    // ======== [Pomodoro] 节 ========
+    WriteIniString(INI_SECTION_POMODORO, "POMODORO_TIME_OPTIONS", "1500,300,1500,600", config_path);
+    WriteIniInt(INI_SECTION_POMODORO, "POMODORO_LOOP_COUNT", 1, config_path);
+    
+    // ======== [Notification] 节 ========
+    WriteIniString(INI_SECTION_NOTIFICATION, "CLOCK_TIMEOUT_MESSAGE_TEXT", "时间到啦！", config_path);
+    WriteIniString(INI_SECTION_NOTIFICATION, "POMODORO_TIMEOUT_MESSAGE_TEXT", "番茄钟时间到！", config_path);
+    WriteIniString(INI_SECTION_NOTIFICATION, "POMODORO_CYCLE_COMPLETE_TEXT", "所有番茄钟循环完成！", config_path);
+    WriteIniInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_TIMEOUT_MS", 3000, config_path);
+    WriteIniInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_MAX_OPACITY", 95, config_path);
+    WriteIniString(INI_SECTION_NOTIFICATION, "NOTIFICATION_TYPE", typeStr, config_path);
+    WriteIniString(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_FILE", "", config_path);
+    WriteIniInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_VOLUME", 100, config_path);
+    
+    // ======== [Hotkeys] 节 ========
+    WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_SHOW_TIME", "None", config_path);
+    WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_COUNT_UP", "None", config_path);
+    WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_COUNTDOWN", "None", config_path);
+    WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_QUICK_COUNTDOWN1", "None", config_path);
+    WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_QUICK_COUNTDOWN2", "None", config_path);
+    WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_QUICK_COUNTDOWN3", "None", config_path);
+    WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_POMODORO", "None", config_path);
+    WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_TOGGLE_VISIBILITY", "None", config_path);
+    WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_EDIT_MODE", "None", config_path);
+    WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_PAUSE_RESUME", "None", config_path);
+    WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_RESTART_TIMER", "None", config_path);
+    WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_CUSTOM_COUNTDOWN", "None", config_path);
+    
+    // ======== [RecentFiles] 节 ========
+    for (int i = 1; i <= 5; i++) {
+        char key[32];
+        snprintf(key, sizeof(key), "CLOCK_RECENT_FILE_%d", i);
+        WriteIniString(INI_SECTION_RECENTFILES, key, "", config_path);
+    }
+    
+    // ======== [Colors] 节 ========
+    WriteIniString(INI_SECTION_COLORS, "COLOR_OPTIONS", 
+                 "#FFFFFF,#F9DB91,#F4CAE0,#FFB6C1,#A8E7DF,#A3CFB3,#92CBFC,#BDA5E7,#9370DB,#8C92CF,#72A9A5,#EB99A7,#EB96BD,#FFAE8B,#FF7F50,#CA6174", 
+                 config_path);
 }
 
 /**
@@ -380,7 +577,7 @@ void CheckAndCreateResourceFolders() {
  * 
  * 从配置路径读取配置项，若文件不存在则自动创建默认配置。
  * 解析各配置项并更新程序全局状态变量，最后刷新窗口位置。
- * 支持兼容性处理，确保新旧版本配置文件均可正确读取。
+ * 支持从旧的 txt 格式文件迁移至新的 ini 格式文件。
  */
 void ReadConfig() {
     // 检查并创建资源文件夹
@@ -389,433 +586,356 @@ void ReadConfig() {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    FILE *file = fopen(config_path, "r");
-    if (!file) {
-        CreateDefaultConfig(config_path);
-        file = fopen(config_path, "r");
-        if (!file) {
-            fprintf(stderr, "Failed to open config file after creation: %s\n", config_path);
-            return;
-        }
+    // 检查旧版配置文件是否存在
+    char old_config_path[MAX_PATH];
+    strcpy(old_config_path, config_path);
+    size_t len = strlen(old_config_path);
+    if (len > 4) {
+        strcpy(old_config_path + len - 4, ".txt");
     }
-
+    
+    // 如果新版配置不存在，但旧版存在，则尝试迁移
+    if (!FileExists(config_path) && FileExists(old_config_path)) {
+        if (!ConvertConfigTxtToIni(old_config_path, config_path)) {
+            // 如果迁移失败，创建默认配置
+            CreateDefaultConfig(config_path);
+        }
+    } else if (!FileExists(config_path)) {
+        // 如果都不存在，创建默认配置
+        CreateDefaultConfig(config_path);
+    }
+    
     // 检查配置文件版本
-    char line[256];
-    BOOL versionFound = FALSE;
+    char version[32] = {0};
     BOOL versionMatched = FALSE;
     
-    // 读取第一行检查版本信息
-    if (fgets(line, sizeof(line), file)) {
-        size_t len = strlen(line);
-        if (len > 0 && line[len-1] == '\n') {
-            line[len-1] = '\0';
-        }
-        
-        if (strncmp(line, "CONFIG_VERSION=", 15) == 0) {
-            versionFound = TRUE;
-            // 比较版本是否匹配
-            if (strcmp(line + 15, CATIME_VERSION) == 0) {
-                versionMatched = TRUE;
-            }
-        }
+    // 读取当前版本信息
+    ReadIniString(INI_SECTION_GENERAL, "CONFIG_VERSION", "", version, sizeof(version), config_path);
+    
+    // 比较版本是否匹配
+    if (strcmp(version, CATIME_VERSION) == 0) {
+        versionMatched = TRUE;
     }
     
-    // 如果版本不匹配或不存在版本信息，重新创建配置文件
-    if (!versionFound || !versionMatched) {
-        // 关闭旧文件
-        fclose(file);
-        
-        // 创建新的默认配置文件
+    // 如果版本不匹配，重新创建配置文件
+    if (!versionMatched) {
         CreateDefaultConfig(config_path);
-        
-        // 重新打开配置文件
-        file = fopen(config_path, "r");
-        if (!file) {
-            fprintf(stderr, "Failed to open config file after recreation: %s\n", config_path);
-            return;
-        }
-    } else {
-        // 如果版本匹配，将文件指针重置到文件开始以便重新读取所有配置
-        rewind(file);
     }
 
+    // 重置时间选项
     time_options_count = 0;
     memset(time_options, 0, sizeof(time_options));
     
     // 重置最近文件计数
     CLOCK_RECENT_FILES_COUNT = 0;
     
-    // 默认语言设置为英语
-    int languageSetting = APP_LANG_ENGLISH;
-    BOOL languageFound = FALSE;
-
-    while (fgets(line, sizeof(line), file)) {
-        size_t len = strlen(line);
-        if (len > 0 && line[len-1] == '\n') {
-            line[len-1] = '\0';
+    // 读取基本设置
+    // ======== [General] 节 ========
+    char language[32] = {0};
+    ReadIniString(INI_SECTION_GENERAL, "LANGUAGE", "English", language, sizeof(language), config_path);
+    
+    // 将语言名称转换为枚举值
+    int languageSetting = APP_LANG_ENGLISH; // 默认为英语
+    
+    if (strcmp(language, "Chinese_Simplified") == 0) {
+        languageSetting = APP_LANG_CHINESE_SIMP;
+    } else if (strcmp(language, "Chinese_Traditional") == 0) {
+        languageSetting = APP_LANG_CHINESE_TRAD;
+    } else if (strcmp(language, "English") == 0) {
+        languageSetting = APP_LANG_ENGLISH;
+    } else if (strcmp(language, "Spanish") == 0) {
+        languageSetting = APP_LANG_SPANISH;
+    } else if (strcmp(language, "French") == 0) {
+        languageSetting = APP_LANG_FRENCH;
+    } else if (strcmp(language, "German") == 0) {
+        languageSetting = APP_LANG_GERMAN;
+    } else if (strcmp(language, "Russian") == 0) {
+        languageSetting = APP_LANG_RUSSIAN;
+    } else if (strcmp(language, "Portuguese") == 0) {
+        languageSetting = APP_LANG_PORTUGUESE;
+    } else if (strcmp(language, "Japanese") == 0) {
+        languageSetting = APP_LANG_JAPANESE;
+    } else if (strcmp(language, "Korean") == 0) {
+        languageSetting = APP_LANG_KOREAN;
+    } else {
+        // 尝试按数字解析（向后兼容）
+        int langValue = atoi(language);
+        if (langValue >= 0 && langValue < APP_LANG_COUNT) {
+            languageSetting = langValue;
+        } else {
+            languageSetting = APP_LANG_ENGLISH; // 默认英语
         }
-
-        // 跳过版本信息行
-        if (strncmp(line, "CONFIG_VERSION=", 15) == 0) {
-            continue;
-        }
-
-        if (strncmp(line, "COLOR_OPTIONS=", 13) == 0) {
-            continue;
-        }
+    }
+    
+    // ======== [Display] 节 ========
+    ReadIniString(INI_SECTION_DISPLAY, "CLOCK_TEXT_COLOR", "#FFB6C1", CLOCK_TEXT_COLOR, sizeof(CLOCK_TEXT_COLOR), config_path);
+    CLOCK_BASE_FONT_SIZE = ReadIniInt(INI_SECTION_DISPLAY, "CLOCK_BASE_FONT_SIZE", 20, config_path);
+    ReadIniString(INI_SECTION_DISPLAY, "FONT_FILE_NAME", "Wallpoet Essence.ttf", FONT_FILE_NAME, sizeof(FONT_FILE_NAME), config_path);
+    
+    // 从字体文件名中截取内部名称
+    size_t font_name_len = strlen(FONT_FILE_NAME);
+    if (font_name_len > 4 && strcmp(FONT_FILE_NAME + font_name_len - 4, ".ttf") == 0) {
+        // 确保目标大小足够，避免依赖源字符串长度
+        size_t copy_len = font_name_len - 4;
+        if (copy_len >= sizeof(FONT_INTERNAL_NAME))
+            copy_len = sizeof(FONT_INTERNAL_NAME) - 1;
         
-        // 读取语言设置
-        if (strncmp(line, "LANGUAGE=", 9) == 0) {
-            char langName[50] = {0};
-            strncpy(langName, line + 9, sizeof(langName) - 1);
-            languageFound = TRUE;
-            
-            // 将语言名称转换为枚举值
-            if (strcmp(langName, "Chinese_Simplified") == 0) {
-                languageSetting = APP_LANG_CHINESE_SIMP;
-            } else if (strcmp(langName, "Chinese_Traditional") == 0) {
-                languageSetting = APP_LANG_CHINESE_TRAD;
-            } else if (strcmp(langName, "English") == 0) {
-                languageSetting = APP_LANG_ENGLISH;
-            } else if (strcmp(langName, "Spanish") == 0) {
-                languageSetting = APP_LANG_SPANISH;
-            } else if (strcmp(langName, "French") == 0) {
-                languageSetting = APP_LANG_FRENCH;
-            } else if (strcmp(langName, "German") == 0) {
-                languageSetting = APP_LANG_GERMAN;
-            } else if (strcmp(langName, "Russian") == 0) {
-                languageSetting = APP_LANG_RUSSIAN;
-            } else if (strcmp(langName, "Portuguese") == 0) {
-                languageSetting = APP_LANG_PORTUGUESE;
-            } else if (strcmp(langName, "Japanese") == 0) {
-                languageSetting = APP_LANG_JAPANESE;
-            } else if (strcmp(langName, "Korean") == 0) {
-                languageSetting = APP_LANG_KOREAN;
-            } else {
-                // 尝试按数字解析（向后兼容）
-                int langValue = atoi(langName);
-                if (langValue >= 0 && langValue < APP_LANG_COUNT) {
-                    languageSetting = langValue;
-                } else {
-                    languageSetting = APP_LANG_ENGLISH; // 默认英语
-                }
-            }
-        }
-        else if (strncmp(line, "CLOCK_TIME_OPTIONS=", 19) == 0) {
-            char *token = strtok(line + 19, ",");
-            while (token && time_options_count < MAX_TIME_OPTIONS) {
-                while (*token == ' ') token++;
-                time_options[time_options_count++] = atoi(token);
-                token = strtok(NULL, ",");
-            }
-        }
-        else if (strncmp(line, "FONT_FILE_NAME=", 15) == 0) {
-            strncpy(FONT_FILE_NAME, line + 15, sizeof(FONT_FILE_NAME) - 1);
-            FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
-            
-            size_t name_len = strlen(FONT_FILE_NAME);
-            if (name_len > 4 && strcmp(FONT_FILE_NAME + name_len - 4, ".ttf") == 0) {
-                // 确保目标大小足够，避免依赖源字符串长度
-                size_t copy_len = name_len - 4;
-                if (copy_len >= sizeof(FONT_INTERNAL_NAME))
-                    copy_len = sizeof(FONT_INTERNAL_NAME) - 1;
+        memcpy(FONT_INTERNAL_NAME, FONT_FILE_NAME, copy_len);
+        FONT_INTERNAL_NAME[copy_len] = '\0';
+    } else {
+        strncpy(FONT_INTERNAL_NAME, FONT_FILE_NAME, sizeof(FONT_INTERNAL_NAME) - 1);
+        FONT_INTERNAL_NAME[sizeof(FONT_INTERNAL_NAME) - 1] = '\0';
+    }
+    
+    CLOCK_WINDOW_POS_X = ReadIniInt(INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_X", 960, config_path);
+    CLOCK_WINDOW_POS_Y = ReadIniInt(INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_Y", -1, config_path);
+    
+    char scaleStr[16] = {0};
+    ReadIniString(INI_SECTION_DISPLAY, "WINDOW_SCALE", "1.62", scaleStr, sizeof(scaleStr), config_path);
+    CLOCK_WINDOW_SCALE = atof(scaleStr);
+    
+    CLOCK_WINDOW_TOPMOST = ReadIniBool(INI_SECTION_DISPLAY, "WINDOW_TOPMOST", TRUE, config_path);
+    
+    // 检查并替换纯黑色
+    if (strcasecmp(CLOCK_TEXT_COLOR, "#000000") == 0) {
+        strncpy(CLOCK_TEXT_COLOR, "#000001", sizeof(CLOCK_TEXT_COLOR) - 1);
+    }
+    
+    // ======== [Timer] 节 ========
+    CLOCK_DEFAULT_START_TIME = ReadIniInt(INI_SECTION_TIMER, "CLOCK_DEFAULT_START_TIME", 1500, config_path);
+    CLOCK_USE_24HOUR = ReadIniBool(INI_SECTION_TIMER, "CLOCK_USE_24HOUR", FALSE, config_path);
+    CLOCK_SHOW_SECONDS = ReadIniBool(INI_SECTION_TIMER, "CLOCK_SHOW_SECONDS", FALSE, config_path);
+    ReadIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_TEXT", "0", CLOCK_TIMEOUT_TEXT, sizeof(CLOCK_TIMEOUT_TEXT), config_path);
+    
+    // 读取超时动作
+    char timeoutAction[32] = {0};
+    ReadIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_ACTION", "MESSAGE", timeoutAction, sizeof(timeoutAction), config_path);
+    
+    if (strcmp(timeoutAction, "MESSAGE") == 0) {
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
+    } else if (strcmp(timeoutAction, "LOCK") == 0) {
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_LOCK;
+    } else if (strcmp(timeoutAction, "SHUTDOWN") == 0) {
+        // 即使配置文件中有SHUTDOWN，也将其视为一次性操作，默认为MESSAGE
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
+    } else if (strcmp(timeoutAction, "RESTART") == 0) {
+        // 即使配置文件中有RESTART，也将其视为一次性操作，默认为MESSAGE
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
+    } else if (strcmp(timeoutAction, "OPEN_FILE") == 0) {
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
+    } else if (strcmp(timeoutAction, "SHOW_TIME") == 0) {
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SHOW_TIME;
+    } else if (strcmp(timeoutAction, "COUNT_UP") == 0) {
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_COUNT_UP;
+    } else if (strcmp(timeoutAction, "OPEN_WEBSITE") == 0) {
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_WEBSITE;
+    }
+    
+    // 读取超时文件和网站设置
+    ReadIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_FILE", "", CLOCK_TIMEOUT_FILE_PATH, MAX_PATH, config_path);
+    ReadIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_WEBSITE", "", CLOCK_TIMEOUT_WEBSITE_URL, MAX_PATH, config_path);
+    
+    // 如果文件路径有效，确保设置超时动作为打开文件
+    if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0 && 
+        GetFileAttributesA(CLOCK_TIMEOUT_FILE_PATH) != INVALID_FILE_ATTRIBUTES) {
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
+    }
+    
+    // 如果URL有效，确保设置超时动作为打开网站
+    if (strlen(CLOCK_TIMEOUT_WEBSITE_URL) > 0) {
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_WEBSITE;
+    }
+    
+    // 读取时间选项
+    char timeOptions[256] = {0};
+    ReadIniString(INI_SECTION_TIMER, "CLOCK_TIME_OPTIONS", "25,10,5", timeOptions, sizeof(timeOptions), config_path);
+    
+    char *token = strtok(timeOptions, ",");
+    while (token && time_options_count < MAX_TIME_OPTIONS) {
+        while (*token == ' ') token++;
+        time_options[time_options_count++] = atoi(token);
+        token = strtok(NULL, ",");
+    }
+    
+    // 读取启动模式
+    ReadIniString(INI_SECTION_TIMER, "STARTUP_MODE", "COUNTDOWN", CLOCK_STARTUP_MODE, sizeof(CLOCK_STARTUP_MODE), config_path);
+    
+    // ======== [Pomodoro] 节 ========
+    char pomodoroTimeOptions[256] = {0};
+    ReadIniString(INI_SECTION_POMODORO, "POMODORO_TIME_OPTIONS", "1500,300,1500,600", pomodoroTimeOptions, sizeof(pomodoroTimeOptions), config_path);
+    
+    // 重置番茄钟时间计数
+    POMODORO_TIMES_COUNT = 0;
+    
+    // 解析所有番茄钟时间值
+    token = strtok(pomodoroTimeOptions, ",");
+    while (token && POMODORO_TIMES_COUNT < MAX_POMODORO_TIMES) {
+        POMODORO_TIMES[POMODORO_TIMES_COUNT++] = atoi(token);
+        token = strtok(NULL, ",");
+    }
+    
+    // 即使我们现在使用新的数组存储所有时间，
+    // 为了向后兼容，依然保留这三个变量的设置
+    if (POMODORO_TIMES_COUNT > 0) {
+        POMODORO_WORK_TIME = POMODORO_TIMES[0];
+        if (POMODORO_TIMES_COUNT > 1) POMODORO_SHORT_BREAK = POMODORO_TIMES[1];
+        if (POMODORO_TIMES_COUNT > 2) POMODORO_LONG_BREAK = POMODORO_TIMES[3]; // 注意这是第4个值
+    }
+    
+    // 读取番茄钟循环次数
+    POMODORO_LOOP_COUNT = ReadIniInt(INI_SECTION_POMODORO, "POMODORO_LOOP_COUNT", 1, config_path);
+    if (POMODORO_LOOP_COUNT < 1) POMODORO_LOOP_COUNT = 1;
+    
+    // ======== [Notification] 节 ========
+    ReadIniString(INI_SECTION_NOTIFICATION, "CLOCK_TIMEOUT_MESSAGE_TEXT", "时间到啦！", 
+                 CLOCK_TIMEOUT_MESSAGE_TEXT, sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT), config_path);
+                 
+    ReadIniString(INI_SECTION_NOTIFICATION, "POMODORO_TIMEOUT_MESSAGE_TEXT", "番茄钟时间到！", 
+                 POMODORO_TIMEOUT_MESSAGE_TEXT, sizeof(POMODORO_TIMEOUT_MESSAGE_TEXT), config_path);
+                 
+    ReadIniString(INI_SECTION_NOTIFICATION, "POMODORO_CYCLE_COMPLETE_TEXT", "所有番茄钟循环完成！", 
+                 POMODORO_CYCLE_COMPLETE_TEXT, sizeof(POMODORO_CYCLE_COMPLETE_TEXT), config_path);
+                 
+    NOTIFICATION_TIMEOUT_MS = ReadIniInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_TIMEOUT_MS", 3000, config_path);
+    NOTIFICATION_MAX_OPACITY = ReadIniInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_MAX_OPACITY", 95, config_path);
+    
+    // 确保透明度在有效范围内(1-100)
+    if (NOTIFICATION_MAX_OPACITY < 1) NOTIFICATION_MAX_OPACITY = 1;
+    if (NOTIFICATION_MAX_OPACITY > 100) NOTIFICATION_MAX_OPACITY = 100;
+    
+    char notificationType[32] = {0};
+    ReadIniString(INI_SECTION_NOTIFICATION, "NOTIFICATION_TYPE", "CATIME", notificationType, sizeof(notificationType), config_path);
+    
+    // 设置通知类型
+    if (strcmp(notificationType, "CATIME") == 0) {
+        NOTIFICATION_TYPE = NOTIFICATION_TYPE_CATIME;
+    } else if (strcmp(notificationType, "SYSTEM_MODAL") == 0) {
+        NOTIFICATION_TYPE = NOTIFICATION_TYPE_SYSTEM_MODAL;
+    } else if (strcmp(notificationType, "OS") == 0) {
+        NOTIFICATION_TYPE = NOTIFICATION_TYPE_OS;
+    } else {
+        NOTIFICATION_TYPE = NOTIFICATION_TYPE_CATIME; // 默认值
+    }
+    
+    // 读取通知音频文件路径
+    ReadIniString(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_FILE", "", 
+                NOTIFICATION_SOUND_FILE, MAX_PATH, config_path);
                 
-                memcpy(FONT_INTERNAL_NAME, FONT_FILE_NAME, copy_len);
-                FONT_INTERNAL_NAME[copy_len] = '\0';
-            } else {
-                strncpy(FONT_INTERNAL_NAME, FONT_FILE_NAME, sizeof(FONT_INTERNAL_NAME) - 1);
-                FONT_INTERNAL_NAME[sizeof(FONT_INTERNAL_NAME) - 1] = '\0';
-            }
-        }
-        else if (strncmp(line, "CLOCK_TEXT_COLOR=", 17) == 0) {
-            strncpy(CLOCK_TEXT_COLOR, line + 17, sizeof(CLOCK_TEXT_COLOR) - 1);
-            CLOCK_TEXT_COLOR[sizeof(CLOCK_TEXT_COLOR) - 1] = '\0';
-            
-            // 检查并替换纯黑色
-            if (strcasecmp(CLOCK_TEXT_COLOR, "#000000") == 0) {
-                strncpy(CLOCK_TEXT_COLOR, "#000001", sizeof(CLOCK_TEXT_COLOR) - 1);
-            }
-        }
-        else if (strncmp(line, "CLOCK_DEFAULT_START_TIME=", 25) == 0) {
-            sscanf(line + 25, "%d", &CLOCK_DEFAULT_START_TIME);
-        }
-        else if (strncmp(line, "CLOCK_WINDOW_POS_X=", 19) == 0) {
-            sscanf(line + 19, "%d", &CLOCK_WINDOW_POS_X);
-        }
-        else if (strncmp(line, "CLOCK_WINDOW_POS_Y=", 19) == 0) {
-            sscanf(line + 19, "%d", &CLOCK_WINDOW_POS_Y);
-        }
-        else if (strncmp(line, "CLOCK_TIMEOUT_TEXT=", 19) == 0) {
-            sscanf(line + 19, "%49[^\n]", CLOCK_TIMEOUT_TEXT);
-        }
-        else if (strncmp(line, "CLOCK_TIMEOUT_ACTION=", 21) == 0) {
-            if (strcmp(line + 21, "MESSAGE") == 0) {
-                CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
-            } else if (strcmp(line + 21, "LOCK") == 0) {
-                CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_LOCK;
-            } else if (strcmp(line + 21, "SHUTDOWN") == 0) {
-                // 即使配置文件中有SHUTDOWN，也将其视为一次性操作，默认为MESSAGE
-                CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
-            } else if (strcmp(line + 21, "RESTART") == 0) {
-                // 即使配置文件中有RESTART，也将其视为一次性操作，默认为MESSAGE
-                CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
-            } else if (strcmp(line + 21, "OPEN_FILE") == 0) {
-                CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
-            } else if (strcmp(line + 21, "SHOW_TIME") == 0) {
-                CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SHOW_TIME;
-            } else if (strcmp(line + 21, "COUNT_UP") == 0) {
-                CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_COUNT_UP;
-            }
-        }
-        // 移除CLOCK_EDIT_MODE配置项的读取逻辑
-        else if (strncmp(line, "WINDOW_SCALE=", 13) == 0) {
-            CLOCK_WINDOW_SCALE = atof(line + 13);
-        }
-        else if (strncmp(line, "CLOCK_TIMEOUT_FILE_PATH=", 24) == 0) {
-            strncpy(CLOCK_TIMEOUT_FILE_PATH, line + 24, MAX_PATH - 1);
-            CLOCK_TIMEOUT_FILE_PATH[MAX_PATH - 1] = '\0';
-            
-            if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
-                CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
-            }
-        }
-        else if (strncmp(line, "COLOR_OPTIONS=", 14) == 0) {
-            char* token = strtok(line + 14, ",");
-            while (token) {
-                COLOR_OPTIONS = realloc(COLOR_OPTIONS, sizeof(PredefinedColor) * (COLOR_OPTIONS_COUNT + 1));
-                if (COLOR_OPTIONS) {
-                    COLOR_OPTIONS[COLOR_OPTIONS_COUNT].hexColor = strdup(token);
-                    COLOR_OPTIONS_COUNT++;
-                }
-                token = strtok(NULL, ",");
-            }
-        }
-        else if (strncmp(line, "STARTUP_MODE=", 13) == 0) {
-            sscanf(line, "STARTUP_MODE=%19s", CLOCK_STARTUP_MODE);
-        }
-        else if (strncmp(line, "CLOCK_USE_24HOUR=", 17) == 0) {
-            CLOCK_USE_24HOUR = (strncmp(line + 17, "TRUE", 4) == 0);
-        }
-        else if (strncmp(line, "CLOCK_SHOW_SECONDS=", 19) == 0) {
-            CLOCK_SHOW_SECONDS = (strncmp(line + 19, "TRUE", 4) == 0);
-        }
-        else if (strncmp(line, "WINDOW_TOPMOST=", 15) == 0) {
-            CLOCK_WINDOW_TOPMOST = (strcmp(line + 15, "TRUE") == 0);
-        }
-        // 支持新的CLOCK_RECENT_FILE_N格式，同时保持与旧格式的兼容
-        else if (strncmp(line, "CLOCK_RECENT_FILE_", 18) == 0) {
-            char *path = strchr(line + 18, '=');
-            if (path) {
-                path++; // 跳过等号
-                char *newline = strchr(path, '\n');
-                if (newline) *newline = '\0';
-
-                if (CLOCK_RECENT_FILES_COUNT < MAX_RECENT_FILES) {
-                    // Convert to wide characters for proper file existence check
-                    wchar_t widePath[MAX_PATH] = {0};
-                    MultiByteToWideChar(CP_UTF8, 0, path, -1, widePath, MAX_PATH);
-                    
-                    // Check if file exists using wide character function
-                    if (GetFileAttributesW(widePath) != INVALID_FILE_ATTRIBUTES) {
-                        strncpy(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path, path, MAX_PATH - 1);
-                        CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path[MAX_PATH - 1] = '\0';
-
-                        char *filename = strrchr(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path, '\\');
-                        if (filename) filename++;
-                        else filename = CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path;
-                        
-                        strncpy(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].name, filename, MAX_PATH - 1);
-                        CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].name[MAX_PATH - 1] = '\0';
-
-                        CLOCK_RECENT_FILES_COUNT++;
-                    }
-                }
-            }
-        }
-        // 保持对旧格式的兼容
-        else if (strncmp(line, "CLOCK_RECENT_FILE=", 18) == 0) {
-            char *path = line + 18;
-            char *newline = strchr(path, '\n');
-            if (newline) *newline = '\0';
-
-            if (CLOCK_RECENT_FILES_COUNT < MAX_RECENT_FILES) {
-                // Convert to wide characters for proper file existence check
-                wchar_t widePath[MAX_PATH] = {0};
-                MultiByteToWideChar(CP_UTF8, 0, path, -1, widePath, MAX_PATH);
+    // 读取通知音频音量
+    NOTIFICATION_SOUND_VOLUME = ReadIniInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_VOLUME", 100, config_path);
+    
+    // 确保音量在有效范围内(0-100)
+    if (NOTIFICATION_SOUND_VOLUME < 0) NOTIFICATION_SOUND_VOLUME = 0;
+    if (NOTIFICATION_SOUND_VOLUME > 100) NOTIFICATION_SOUND_VOLUME = 100;
+    
+    // ======== [Colors] 节 ========
+    char colorOptions[1024] = {0};
+    ReadIniString(INI_SECTION_COLORS, "COLOR_OPTIONS", 
+                "#FFFFFF,#F9DB91,#F4CAE0,#FFB6C1,#A8E7DF,#A3CFB3,#92CBFC,#BDA5E7,#9370DB,#8C92CF,#72A9A5,#EB99A7,#EB96BD,#FFAE8B,#FF7F50,#CA6174", 
+                colorOptions, sizeof(colorOptions), config_path);
                 
-                // Check if file exists using wide character function
-                if (GetFileAttributesW(widePath) != INVALID_FILE_ATTRIBUTES) {
-                    strncpy(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path, path, MAX_PATH - 1);
-                    CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path[MAX_PATH - 1] = '\0';
+    // 解析颜色选项
+    token = strtok(colorOptions, ",");
+    COLOR_OPTIONS_COUNT = 0;
+    while (token) {
+        COLOR_OPTIONS = realloc(COLOR_OPTIONS, sizeof(PredefinedColor) * (COLOR_OPTIONS_COUNT + 1));
+        if (COLOR_OPTIONS) {
+            COLOR_OPTIONS[COLOR_OPTIONS_COUNT].hexColor = strdup(token);
+            COLOR_OPTIONS_COUNT++;
+        }
+        token = strtok(NULL, ",");
+    }
+    
+    // ======== [RecentFiles] 节 ========
+    // 读取最近文件记录
+    for (int i = 1; i <= MAX_RECENT_FILES; i++) {
+        char key[32];
+        snprintf(key, sizeof(key), "CLOCK_RECENT_FILE_%d", i);
+        
+        char filePath[MAX_PATH] = {0};
+        ReadIniString(INI_SECTION_RECENTFILES, key, "", filePath, MAX_PATH, config_path);
+        
+        if (strlen(filePath) > 0) {
+            // 转换为宽字符以正确检查文件是否存在
+            wchar_t widePath[MAX_PATH] = {0};
+            MultiByteToWideChar(CP_UTF8, 0, filePath, -1, widePath, MAX_PATH);
+            
+            // 检查文件是否存在
+            if (GetFileAttributesW(widePath) != INVALID_FILE_ATTRIBUTES) {
+                strncpy(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path, filePath, MAX_PATH - 1);
+                CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path[MAX_PATH - 1] = '\0';
 
-                    char *filename = strrchr(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path, '\\');
-                    if (filename) filename++;
-                    else filename = CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path;
-                    
-                    strncpy(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].name, filename, MAX_PATH - 1);
-                    CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].name[MAX_PATH - 1] = '\0';
-
-                    CLOCK_RECENT_FILES_COUNT++;
-                }
-            }
-        }
-        else if (strncmp(line, "CLOCK_TIMEOUT_FILE=", 19) == 0) {
-            strncpy(CLOCK_TIMEOUT_FILE_PATH, line + 19, MAX_PATH - 1);
-            CLOCK_TIMEOUT_FILE_PATH[MAX_PATH - 1] = '\0';
-            
-            // 移除尾部的换行符
-            size_t len = strlen(CLOCK_TIMEOUT_FILE_PATH);
-            if (len > 0 && CLOCK_TIMEOUT_FILE_PATH[len-1] == '\n') {
-                CLOCK_TIMEOUT_FILE_PATH[len-1] = '\0';
-            }
-            
-            // 如果文件路径有效，确保设置超时动作为打开文件
-            if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0 && 
-                GetFileAttributesA(CLOCK_TIMEOUT_FILE_PATH) != INVALID_FILE_ATTRIBUTES) {
-                CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
-            }
-        }
-        else if (strncmp(line, "CLOCK_TIMEOUT_WEBSITE=", 22) == 0) {
-            strncpy(CLOCK_TIMEOUT_WEBSITE_URL, line + 22, MAX_PATH - 1);
-            CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH - 1] = '\0';
-            
-            // 移除尾部的换行符
-            size_t len = strlen(CLOCK_TIMEOUT_WEBSITE_URL);
-            if (len > 0 && CLOCK_TIMEOUT_WEBSITE_URL[len-1] == '\n') {
-                CLOCK_TIMEOUT_WEBSITE_URL[len-1] = '\0';
-            }
-            
-            // 如果URL有效，确保设置超时动作为打开网站
-            if (strlen(CLOCK_TIMEOUT_WEBSITE_URL) > 0) {
-                CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_WEBSITE;
-            }
-        }
-        else if (strncmp(line, "POMODORO_TIME_OPTIONS=", 22) == 0) {
-            char* options = line + 22;
-            char* token;
-            
-            // 重置番茄钟时间计数
-            POMODORO_TIMES_COUNT = 0;
-            
-            // 解析所有时间值
-            token = strtok(options, ",");
-            while (token && POMODORO_TIMES_COUNT < MAX_POMODORO_TIMES) {
-                POMODORO_TIMES[POMODORO_TIMES_COUNT++] = atoi(token);
-                token = strtok(NULL, ",");
-            }
-            
-            // 即使我们现在使用新的数组存储所有时间，
-            // 为了向后兼容，依然保留这三个变量的设置
-            if (POMODORO_TIMES_COUNT > 0) {
-                POMODORO_WORK_TIME = POMODORO_TIMES[0];
-                if (POMODORO_TIMES_COUNT > 1) POMODORO_SHORT_BREAK = POMODORO_TIMES[1];
-                if (POMODORO_TIMES_COUNT > 2) POMODORO_LONG_BREAK = POMODORO_TIMES[2];
-            }
-        }
-        // 新增：读取自定义通知消息
-        else if (strncmp(line, "CLOCK_TIMEOUT_MESSAGE_TEXT=", 27) == 0) {
-            strncpy(CLOCK_TIMEOUT_MESSAGE_TEXT, line + 27, sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT) - 1);
-            CLOCK_TIMEOUT_MESSAGE_TEXT[sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT) - 1] = '\0';
-        }
-        else if (strncmp(line, "POMODORO_CYCLE_COMPLETE_TEXT=", 29) == 0) {
-            strncpy(POMODORO_CYCLE_COMPLETE_TEXT, line + 29, sizeof(POMODORO_CYCLE_COMPLETE_TEXT) - 1);
-            POMODORO_CYCLE_COMPLETE_TEXT[sizeof(POMODORO_CYCLE_COMPLETE_TEXT) - 1] = '\0';
-        }
-        // 添加读取通知显示时间的代码
-        else if (strncmp(line, "NOTIFICATION_TIMEOUT_MS=", 24) == 0) {
-            int timeout = atoi(line + 24);
-            if (timeout > 0) {
-                NOTIFICATION_TIMEOUT_MS = timeout;
-            }
-        }
-        // 添加读取通知最大透明度的代码
-        else if (strncmp(line, "NOTIFICATION_MAX_OPACITY=", 25) == 0) {
-            int opacity = atoi(line + 25);
-            // 确保透明度在有效范围内(1-100)
-            if (opacity >= 1 && opacity <= 100) {
-                NOTIFICATION_MAX_OPACITY = opacity;
-            }
-        }
-        else if (strncmp(line, "NOTIFICATION_SOUND_FILE=", 23) == 0) {
-            char* value = line + 23;  // 正确的偏移量，跳过"NOTIFICATION_SOUND_FILE="
-            // 移除末尾的换行符
-            char* newline = strchr(value, '\n');
-            if (newline) *newline = '\0';
-            
-            // 确保路径不包含等号
-            if (value[0] == '=') {
-                value++; // 如果第一个字符是等号，跳过它
-            }
-            
-            // 复制到全局变量，确保清零
-            memset(NOTIFICATION_SOUND_FILE, 0, MAX_PATH);
-            strncpy(NOTIFICATION_SOUND_FILE, value, MAX_PATH - 1);
-            NOTIFICATION_SOUND_FILE[MAX_PATH - 1] = '\0';
-        }
-        else if (strncmp(line, "NOTIFICATION_SOUND_VOLUME=", 26) == 0) {
-            int volume = atoi(line + 26);
-            if (volume >= 0 && volume <= 100) {
-                NOTIFICATION_SOUND_VOLUME = volume;
+                ExtractFileName(filePath, CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].name, MAX_PATH);
+                CLOCK_RECENT_FILES_COUNT++;
             }
         }
     }
-
-    fclose(file);
+    
+    // ======== [Hotkeys] 节 ========
+    // 从INI文件读取热键配置
+    WORD showTimeHotkey = 0;
+    WORD countUpHotkey = 0;
+    WORD countdownHotkey = 0;
+    WORD quickCountdown1Hotkey = 0;
+    WORD quickCountdown2Hotkey = 0;
+    WORD quickCountdown3Hotkey = 0;
+    WORD pomodoroHotkey = 0;
+    WORD toggleVisibilityHotkey = 0;
+    WORD editModeHotkey = 0;
+    WORD pauseResumeHotkey = 0;
+    WORD restartTimerHotkey = 0;
+    WORD customCountdownHotkey = 0;
+    
+    // 读取各个热键设置
+    char hotkeyStr[32] = {0};
+    
+    ReadIniString(INI_SECTION_HOTKEYS, "HOTKEY_SHOW_TIME", "None", hotkeyStr, sizeof(hotkeyStr), config_path);
+    showTimeHotkey = StringToHotkey(hotkeyStr);
+    
+    ReadIniString(INI_SECTION_HOTKEYS, "HOTKEY_COUNT_UP", "None", hotkeyStr, sizeof(hotkeyStr), config_path);
+    countUpHotkey = StringToHotkey(hotkeyStr);
+    
+    ReadIniString(INI_SECTION_HOTKEYS, "HOTKEY_COUNTDOWN", "None", hotkeyStr, sizeof(hotkeyStr), config_path);
+    countdownHotkey = StringToHotkey(hotkeyStr);
+    
+    ReadIniString(INI_SECTION_HOTKEYS, "HOTKEY_QUICK_COUNTDOWN1", "None", hotkeyStr, sizeof(hotkeyStr), config_path);
+    quickCountdown1Hotkey = StringToHotkey(hotkeyStr);
+    
+    ReadIniString(INI_SECTION_HOTKEYS, "HOTKEY_QUICK_COUNTDOWN2", "None", hotkeyStr, sizeof(hotkeyStr), config_path);
+    quickCountdown2Hotkey = StringToHotkey(hotkeyStr);
+    
+    ReadIniString(INI_SECTION_HOTKEYS, "HOTKEY_QUICK_COUNTDOWN3", "None", hotkeyStr, sizeof(hotkeyStr), config_path);
+    quickCountdown3Hotkey = StringToHotkey(hotkeyStr);
+    
+    ReadIniString(INI_SECTION_HOTKEYS, "HOTKEY_POMODORO", "None", hotkeyStr, sizeof(hotkeyStr), config_path);
+    pomodoroHotkey = StringToHotkey(hotkeyStr);
+    
+    ReadIniString(INI_SECTION_HOTKEYS, "HOTKEY_TOGGLE_VISIBILITY", "None", hotkeyStr, sizeof(hotkeyStr), config_path);
+    toggleVisibilityHotkey = StringToHotkey(hotkeyStr);
+    
+    ReadIniString(INI_SECTION_HOTKEYS, "HOTKEY_EDIT_MODE", "None", hotkeyStr, sizeof(hotkeyStr), config_path);
+    editModeHotkey = StringToHotkey(hotkeyStr);
+    
+    ReadIniString(INI_SECTION_HOTKEYS, "HOTKEY_PAUSE_RESUME", "None", hotkeyStr, sizeof(hotkeyStr), config_path);
+    pauseResumeHotkey = StringToHotkey(hotkeyStr);
+    
+    ReadIniString(INI_SECTION_HOTKEYS, "HOTKEY_RESTART_TIMER", "None", hotkeyStr, sizeof(hotkeyStr), config_path);
+    restartTimerHotkey = StringToHotkey(hotkeyStr);
+    
+    ReadIniString(INI_SECTION_HOTKEYS, "HOTKEY_CUSTOM_COUNTDOWN", "None", hotkeyStr, sizeof(hotkeyStr), config_path);
+    customCountdownHotkey = StringToHotkey(hotkeyStr);
+    
     last_config_time = time(NULL);
 
+    // 应用窗口位置
     HWND hwnd = FindWindow("CatimeWindow", "Catime");
     if (hwnd) {
         SetWindowPos(hwnd, NULL, CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
         InvalidateRect(hwnd, NULL, TRUE);
     }
 
-    // 读取番茄钟时间设置
-    char work_time[32] = {0};
-    char short_break[32] = {0};
-    char long_break[32] = {0};
-    char loop_count[32] = {0};
-    
-    if(GetPrivateProfileStringA("Settings", "POMODORO_WORK_TIME", "1500", work_time, sizeof(work_time), config_path)) {
-        POMODORO_WORK_TIME = atoi(work_time);
-    }
-    
-    if(GetPrivateProfileStringA("Settings", "POMODORO_SHORT_BREAK", "300", short_break, sizeof(short_break), config_path)) {
-        POMODORO_SHORT_BREAK = atoi(short_break);
-    }
-    
-    if(GetPrivateProfileStringA("Settings", "POMODORO_LONG_BREAK", "600", long_break, sizeof(long_break), config_path)) {
-        POMODORO_LONG_BREAK = atoi(long_break);
-    }
-    
-    if(GetPrivateProfileStringA("Settings", "POMODORO_LOOP_COUNT", "1", loop_count, sizeof(loop_count), config_path)) {
-        POMODORO_LOOP_COUNT = atoi(loop_count);
-        // 确保循环次数至少为1
-        if (POMODORO_LOOP_COUNT < 1) POMODORO_LOOP_COUNT = 1;
-    }
-    
-    // 查找通知显示时间配置
-    ReadNotificationTimeoutConfig();
-    
-    // 查找通知透明度配置
-    ReadNotificationOpacityConfig();
-    
-    // 查找通知类型配置
-    ReadNotificationTypeConfig();
-    
-    // 查找通知音频配置
-    ReadNotificationSoundConfig();
-    
-    // 查找通知音频音量配置
-    ReadNotificationVolumeConfig();
-    
     // 应用语言设置
-    if (languageFound) {
-        // 引入头文件：#include "../include/language.h"
-        SetLanguage((AppLanguage)languageSetting);
-    }
-    
-    // 关闭文件
-    fclose(file);
+    SetLanguage((AppLanguage)languageSetting);
 }
 
 /**
@@ -1324,24 +1444,18 @@ void WriteConfigTimeoutFile(const char* filePath) {
  * @brief 写入所有配置设置到文件
  * @param config_path 配置文件路径
  * 
- * 按照统一的顺序写入所有配置项，确保配置文件结构一致：
- * 1. 基本设置（颜色、字体、窗口位置等）
- * 2. 颜色选项列表
- * 3. 超时文本与通知消息
- * 4. 番茄钟设置
- * 5. 超时动作及相关资源路径
- * 6. 最近文件列表
- * 7. 时间选项
- * 
- * 该顺序与CreateDefaultConfig函数保持一致，确保配置文件结构统一。
+ * 按照统一的组织结构写入所有配置项到INI格式文件中，包含以下分节：
+ * 1. [General] - 基本设置（版本信息、语言设置）
+ * 2. [Display] - 显示设置（颜色、字体、窗口位置等）
+ * 3. [Timer] - 计时器相关设置（默认时间等）
+ * 4. [Pomodoro] - 番茄钟相关设置
+ * 5. [Notification] - 通知相关设置
+ * 6. [Hotkeys] - 热键设置
+ * 7. [RecentFiles] - 最近使用的文件
+ * 8. [Colors] - 颜色选项
+ * 9. [Options] - 其他选项
  */
 void WriteConfig(const char* config_path) {
-    FILE* file = fopen(config_path, "w");
-    if (!file) return;
-    
-    // 添加版本标识 - 作为配置文件第一行
-    fprintf(file, "CONFIG_VERSION=%s\n", CATIME_VERSION);
-    
     // 获取当前语言的名称
     AppLanguage currentLang = GetCurrentLanguage();
     const char* langName;
@@ -1380,45 +1494,7 @@ void WriteConfig(const char* config_path) {
             break;
     }
     
-    // 添加当前语言设置
-    fprintf(file, "LANGUAGE=%s\n", langName);
-    
-    // 基本设置区块
-    fprintf(file, "CLOCK_TEXT_COLOR=%s\n", CLOCK_TEXT_COLOR);
-    fprintf(file, "CLOCK_BASE_FONT_SIZE=%d\n", CLOCK_BASE_FONT_SIZE);
-    fprintf(file, "FONT_FILE_NAME=%s\n", FONT_FILE_NAME);
-    fprintf(file, "CLOCK_DEFAULT_START_TIME=%d\n", CLOCK_DEFAULT_START_TIME);
-    fprintf(file, "CLOCK_WINDOW_POS_X=%d\n", CLOCK_WINDOW_POS_X);
-    fprintf(file, "CLOCK_WINDOW_POS_Y=%d\n", CLOCK_WINDOW_POS_Y);
-    // 移除CLOCK_EDIT_MODE的写入，它只在运行时使用
-    fprintf(file, "WINDOW_SCALE=%.2f\n", CLOCK_WINDOW_SCALE);
-    fprintf(file, "CLOCK_USE_24HOUR=%s\n", CLOCK_USE_24HOUR ? "TRUE" : "FALSE");
-    fprintf(file, "CLOCK_SHOW_SECONDS=%s\n", CLOCK_SHOW_SECONDS ? "TRUE" : "FALSE");
-    fprintf(file, "WINDOW_TOPMOST=%s\n", CLOCK_WINDOW_TOPMOST ? "TRUE" : "FALSE");
-    
-    // 颜色选项区块
-    fprintf(file, "COLOR_OPTIONS=");
-    for (int i = 0; i < COLOR_OPTIONS_COUNT; i++) {
-        if (i > 0) fprintf(file, ",");
-        fprintf(file, "%s", COLOR_OPTIONS[i].hexColor);
-    }
-    fprintf(file, "\n");
-    
-    // 超时文本区块
-    fprintf(file, "CLOCK_TIMEOUT_TEXT=%s\n", CLOCK_TIMEOUT_TEXT);
-    
-    // 新增：自定义通知消息
-    fprintf(file, "CLOCK_TIMEOUT_MESSAGE_TEXT=%s\n", CLOCK_TIMEOUT_MESSAGE_TEXT);
-    fprintf(file, "POMODORO_TIMEOUT_MESSAGE_TEXT=%s\n", POMODORO_TIMEOUT_MESSAGE_TEXT);
-    fprintf(file, "POMODORO_CYCLE_COMPLETE_TEXT=%s\n", POMODORO_CYCLE_COMPLETE_TEXT);
-    
-    // 新增：通知显示时间
-    fprintf(file, "NOTIFICATION_TIMEOUT_MS=%d\n", NOTIFICATION_TIMEOUT_MS);
-    
-    // 新增：通知最大透明度
-    fprintf(file, "NOTIFICATION_MAX_OPACITY=%d\n", NOTIFICATION_MAX_OPACITY);
-    
-    // 新增：通知类型
+    // 根据通知类型选择字符串表示
     const char* typeStr;
     switch (NOTIFICATION_TYPE) {
         case NOTIFICATION_TYPE_CATIME:
@@ -1434,63 +1510,8 @@ void WriteConfig(const char* config_path) {
             typeStr = "CATIME"; // 默认值
             break;
     }
-    fprintf(file, "NOTIFICATION_TYPE=%s\n", typeStr);
     
-    // 番茄钟设置区块
-    fprintf(file, "POMODORO_TIME_OPTIONS=");
-    for (int i = 0; i < POMODORO_TIMES_COUNT; i++) {
-        if (i > 0) fprintf(file, ",");
-        fprintf(file, "%d", POMODORO_TIMES[i]);
-    }
-    fprintf(file, "\n");
-    fprintf(file, "POMODORO_LOOP_COUNT=%d\n", POMODORO_LOOP_COUNT);
-    
-    // 超时动作设置区块
-    if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE && strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
-        fprintf(file, "CLOCK_TIMEOUT_ACTION=OPEN_FILE\n");
-        fprintf(file, "CLOCK_TIMEOUT_FILE=%s\n", CLOCK_TIMEOUT_FILE_PATH);
-    } else if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_WEBSITE && strlen(CLOCK_TIMEOUT_WEBSITE_URL) > 0) {
-        fprintf(file, "CLOCK_TIMEOUT_ACTION=OPEN_WEBSITE\n");
-        fprintf(file, "CLOCK_TIMEOUT_WEBSITE=%s\n", CLOCK_TIMEOUT_WEBSITE_URL);
-    } else {
-        // 确保关机和重启选项不会被永久保存到配置文件中
-        if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SHUTDOWN || 
-            CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_RESTART ||
-            CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SLEEP) {
-            fprintf(file, "CLOCK_TIMEOUT_ACTION=MESSAGE\n");
-        } else {
-            switch (CLOCK_TIMEOUT_ACTION) {
-                case TIMEOUT_ACTION_MESSAGE:
-                    fprintf(file, "CLOCK_TIMEOUT_ACTION=MESSAGE\n");
-                    break;
-                case TIMEOUT_ACTION_LOCK:
-                    fprintf(file, "CLOCK_TIMEOUT_ACTION=LOCK\n");
-                    break;
-                case TIMEOUT_ACTION_SHOW_TIME:
-                    fprintf(file, "CLOCK_TIMEOUT_ACTION=SHOW_TIME\n");
-                    break;
-                case TIMEOUT_ACTION_COUNT_UP:
-                    fprintf(file, "CLOCK_TIMEOUT_ACTION=COUNT_UP\n");
-                    break;
-            }
-        }
-    }
-    
-    // 最近文件列表区块
-    for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
-        fprintf(file, "CLOCK_RECENT_FILE_%d=%s\n", i+1, CLOCK_RECENT_FILES[i].path);
-    }
-    
-    // 时间选项区块
-    fprintf(file, "CLOCK_TIME_OPTIONS=");
-    for (int i = 0; i < time_options_count; i++) {
-        if (i > 0) fprintf(file, ",");
-        fprintf(file, "%d", time_options[i]);
-    }
-    fprintf(file, "\n");
-    
-    // 热键配置区块
-    // 从配置文件中读取当前热键设置
+    // 读取热键设置
     WORD showTimeHotkey = 0;
     WORD countUpHotkey = 0;
     WORD countdownHotkey = 0;
@@ -1502,36 +1523,186 @@ void WriteConfig(const char* config_path) {
     WORD editModeHotkey = 0;
     WORD pauseResumeHotkey = 0;
     WORD restartTimerHotkey = 0;
+    WORD customCountdownHotkey = 0;
     
     ReadConfigHotkeys(&showTimeHotkey, &countUpHotkey, &countdownHotkey,
                       &quickCountdown1Hotkey, &quickCountdown2Hotkey, &quickCountdown3Hotkey,
                       &pomodoroHotkey, &toggleVisibilityHotkey, &editModeHotkey,
                       &pauseResumeHotkey, &restartTimerHotkey);
     
-    // 写入热键配置
-    fprintf(file, "HOTKEY_SHOW_TIME=%d\n", showTimeHotkey);
-    fprintf(file, "HOTKEY_COUNT_UP=%d\n", countUpHotkey);
-    fprintf(file, "HOTKEY_COUNTDOWN=%d\n", countdownHotkey);
-    fprintf(file, "HOTKEY_QUICK_COUNTDOWN1=%d\n", quickCountdown1Hotkey);
-    fprintf(file, "HOTKEY_QUICK_COUNTDOWN2=%d\n", quickCountdown2Hotkey);
-    fprintf(file, "HOTKEY_QUICK_COUNTDOWN3=%d\n", quickCountdown3Hotkey);
-    fprintf(file, "HOTKEY_POMODORO=%d\n", pomodoroHotkey);
-    fprintf(file, "HOTKEY_TOGGLE_VISIBILITY=%d\n", toggleVisibilityHotkey);
-    fprintf(file, "HOTKEY_EDIT_MODE=%d\n", editModeHotkey);
-    fprintf(file, "HOTKEY_PAUSE_RESUME=%d\n", pauseResumeHotkey);
-    fprintf(file, "HOTKEY_RESTART_TIMER=%d\n", restartTimerHotkey);
+    ReadCustomCountdownHotkey(&customCountdownHotkey);
     
-    // 新增：通知音频文件路径
-    fprintf(file, "NOTIFICATION_SOUND_FILE=%s\n", NOTIFICATION_SOUND_FILE);
+    // 将热键值转换为可读格式
+    char showTimeStr[64] = {0};
+    char countUpStr[64] = {0};
+    char countdownStr[64] = {0};
+    char quickCountdown1Str[64] = {0};
+    char quickCountdown2Str[64] = {0};
+    char quickCountdown3Str[64] = {0};
+    char pomodoroStr[64] = {0};
+    char toggleVisibilityStr[64] = {0};
+    char editModeStr[64] = {0};
+    char pauseResumeStr[64] = {0};
+    char restartTimerStr[64] = {0};
+    char customCountdownStr[64] = {0};
     
+    HotkeyToString(showTimeHotkey, showTimeStr, sizeof(showTimeStr));
+    HotkeyToString(countUpHotkey, countUpStr, sizeof(countUpStr));
+    HotkeyToString(countdownHotkey, countdownStr, sizeof(countdownStr));
+    HotkeyToString(quickCountdown1Hotkey, quickCountdown1Str, sizeof(quickCountdown1Str));
+    HotkeyToString(quickCountdown2Hotkey, quickCountdown2Str, sizeof(quickCountdown2Str));
+    HotkeyToString(quickCountdown3Hotkey, quickCountdown3Str, sizeof(quickCountdown3Str));
+    HotkeyToString(pomodoroHotkey, pomodoroStr, sizeof(pomodoroStr));
+    HotkeyToString(toggleVisibilityHotkey, toggleVisibilityStr, sizeof(toggleVisibilityStr));
+    HotkeyToString(editModeHotkey, editModeStr, sizeof(editModeStr));
+    HotkeyToString(pauseResumeHotkey, pauseResumeStr, sizeof(pauseResumeStr));
+    HotkeyToString(restartTimerHotkey, restartTimerStr, sizeof(restartTimerStr));
+    HotkeyToString(customCountdownHotkey, customCountdownStr, sizeof(customCountdownStr));
     
-    // 新增：通知音频音量
-    fprintf(file, "NOTIFICATION_SOUND_VOLUME=%d\n", NOTIFICATION_SOUND_VOLUME);
+    // 准备时间选项字符串
+    char timeOptionsStr[256] = {0};
+    for (int i = 0; i < time_options_count; i++) {
+        char buffer[16];
+        snprintf(buffer, sizeof(buffer), "%d", time_options[i]);
+        
+        if (i > 0) {
+            strcat(timeOptionsStr, ",");
+        }
+        strcat(timeOptionsStr, buffer);
+    }
     
-    // 写入快捷方式检查状态
-    fprintf(file, "SHORTCUT_CHECK_DONE=%s\n", IsShortcutCheckDone() ? "TRUE" : "FALSE");
+    // 准备番茄钟时间选项字符串
+    char pomodoroTimesStr[256] = {0};
+    for (int i = 0; i < POMODORO_TIMES_COUNT; i++) {
+        char buffer[16];
+        snprintf(buffer, sizeof(buffer), "%d", POMODORO_TIMES[i]);
+        
+        if (i > 0) {
+            strcat(pomodoroTimesStr, ",");
+        }
+        strcat(pomodoroTimesStr, buffer);
+    }
     
-    fclose(file);
+    // 准备颜色选项字符串
+    char colorOptionsStr[1024] = {0};
+    for (int i = 0; i < COLOR_OPTIONS_COUNT; i++) {
+        if (i > 0) {
+            strcat(colorOptionsStr, ",");
+        }
+        strcat(colorOptionsStr, COLOR_OPTIONS[i].hexColor);
+    }
+    
+    // 确定超时动作字符串
+    const char* timeoutActionStr;
+    switch (CLOCK_TIMEOUT_ACTION) {
+        case TIMEOUT_ACTION_MESSAGE:
+            timeoutActionStr = "MESSAGE";
+            break;
+        case TIMEOUT_ACTION_LOCK:
+            timeoutActionStr = "LOCK";
+            break;
+        case TIMEOUT_ACTION_OPEN_FILE:
+            timeoutActionStr = "OPEN_FILE";
+            break;
+        case TIMEOUT_ACTION_OPEN_WEBSITE:
+            timeoutActionStr = "OPEN_WEBSITE";
+            break;
+        case TIMEOUT_ACTION_SHOW_TIME:
+            timeoutActionStr = "SHOW_TIME";
+            break;
+        case TIMEOUT_ACTION_COUNT_UP:
+            timeoutActionStr = "COUNT_UP";
+            break;
+        case TIMEOUT_ACTION_RESTART:
+            // 即使是重启操作，也将其视为一次性操作，存储默认值
+            timeoutActionStr = "MESSAGE";
+            break;
+        case TIMEOUT_ACTION_SHUTDOWN:
+            // 即使是关机操作，也将其视为一次性操作，存储默认值
+            timeoutActionStr = "MESSAGE";
+            break;
+        case TIMEOUT_ACTION_SLEEP:
+            // 即使是休眠操作，也将其视为一次性操作，存储默认值
+            timeoutActionStr = "MESSAGE";
+            break;
+        default:
+            timeoutActionStr = "MESSAGE";
+            break;
+    }
+    
+    // ======== [General] 节 ========
+    WriteIniString(INI_SECTION_GENERAL, "CONFIG_VERSION", CATIME_VERSION, config_path);
+    WriteIniString(INI_SECTION_GENERAL, "LANGUAGE", langName, config_path);
+    WriteIniString(INI_SECTION_GENERAL, "SHORTCUT_CHECK_DONE", IsShortcutCheckDone() ? "TRUE" : "FALSE", config_path);
+    
+    // ======== [Display] 节 ========
+    WriteIniString(INI_SECTION_DISPLAY, "CLOCK_TEXT_COLOR", CLOCK_TEXT_COLOR, config_path);
+    WriteIniInt(INI_SECTION_DISPLAY, "CLOCK_BASE_FONT_SIZE", CLOCK_BASE_FONT_SIZE, config_path);
+    WriteIniString(INI_SECTION_DISPLAY, "FONT_FILE_NAME", FONT_FILE_NAME, config_path);
+    WriteIniInt(INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_X", CLOCK_WINDOW_POS_X, config_path);
+    WriteIniInt(INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_Y", CLOCK_WINDOW_POS_Y, config_path);
+    
+    char scaleStr[16];
+    snprintf(scaleStr, sizeof(scaleStr), "%.2f", CLOCK_WINDOW_SCALE);
+    WriteIniString(INI_SECTION_DISPLAY, "WINDOW_SCALE", scaleStr, config_path);
+    
+    WriteIniString(INI_SECTION_DISPLAY, "WINDOW_TOPMOST", CLOCK_WINDOW_TOPMOST ? "TRUE" : "FALSE", config_path);
+    
+    // ======== [Timer] 节 ========
+    WriteIniInt(INI_SECTION_TIMER, "CLOCK_DEFAULT_START_TIME", CLOCK_DEFAULT_START_TIME, config_path);
+    WriteIniString(INI_SECTION_TIMER, "CLOCK_USE_24HOUR", CLOCK_USE_24HOUR ? "TRUE" : "FALSE", config_path);
+    WriteIniString(INI_SECTION_TIMER, "CLOCK_SHOW_SECONDS", CLOCK_SHOW_SECONDS ? "TRUE" : "FALSE", config_path);
+    WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_TEXT", CLOCK_TIMEOUT_TEXT, config_path);
+    WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_ACTION", timeoutActionStr, config_path);
+    WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_FILE", CLOCK_TIMEOUT_FILE_PATH, config_path);
+    WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_WEBSITE", CLOCK_TIMEOUT_WEBSITE_URL, config_path);
+    WriteIniString(INI_SECTION_TIMER, "CLOCK_TIME_OPTIONS", timeOptionsStr, config_path);
+    WriteIniString(INI_SECTION_TIMER, "STARTUP_MODE", CLOCK_STARTUP_MODE, config_path);
+    
+    // ======== [Pomodoro] 节 ========
+    WriteIniString(INI_SECTION_POMODORO, "POMODORO_TIME_OPTIONS", pomodoroTimesStr, config_path);
+    WriteIniInt(INI_SECTION_POMODORO, "POMODORO_LOOP_COUNT", POMODORO_LOOP_COUNT, config_path);
+    
+    // ======== [Notification] 节 ========
+    WriteIniString(INI_SECTION_NOTIFICATION, "CLOCK_TIMEOUT_MESSAGE_TEXT", CLOCK_TIMEOUT_MESSAGE_TEXT, config_path);
+    WriteIniString(INI_SECTION_NOTIFICATION, "POMODORO_TIMEOUT_MESSAGE_TEXT", POMODORO_TIMEOUT_MESSAGE_TEXT, config_path);
+    WriteIniString(INI_SECTION_NOTIFICATION, "POMODORO_CYCLE_COMPLETE_TEXT", POMODORO_CYCLE_COMPLETE_TEXT, config_path);
+    WriteIniInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_TIMEOUT_MS", NOTIFICATION_TIMEOUT_MS, config_path);
+    WriteIniInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_MAX_OPACITY", NOTIFICATION_MAX_OPACITY, config_path);
+    WriteIniString(INI_SECTION_NOTIFICATION, "NOTIFICATION_TYPE", typeStr, config_path);
+    WriteIniString(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_FILE", NOTIFICATION_SOUND_FILE, config_path);
+    WriteIniInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_VOLUME", NOTIFICATION_SOUND_VOLUME, config_path);
+    
+    // ======== [Hotkeys] 节 ========
+    WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_SHOW_TIME", showTimeStr, config_path);
+    WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_COUNT_UP", countUpStr, config_path);
+    WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_COUNTDOWN", countdownStr, config_path);
+    WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_QUICK_COUNTDOWN1", quickCountdown1Str, config_path);
+    WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_QUICK_COUNTDOWN2", quickCountdown2Str, config_path);
+    WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_QUICK_COUNTDOWN3", quickCountdown3Str, config_path);
+    WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_POMODORO", pomodoroStr, config_path);
+    WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_TOGGLE_VISIBILITY", toggleVisibilityStr, config_path);
+    WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_EDIT_MODE", editModeStr, config_path);
+    WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_PAUSE_RESUME", pauseResumeStr, config_path);
+    WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_RESTART_TIMER", restartTimerStr, config_path);
+    WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_CUSTOM_COUNTDOWN", customCountdownStr, config_path);
+    
+    // ======== [RecentFiles] 节 ========
+    for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
+        char key[32];
+        snprintf(key, sizeof(key), "CLOCK_RECENT_FILE_%d", i + 1);
+        WriteIniString(INI_SECTION_RECENTFILES, key, CLOCK_RECENT_FILES[i].path, config_path);
+    }
+    
+    // 清除未使用的文件记录
+    for (int i = CLOCK_RECENT_FILES_COUNT; i < MAX_RECENT_FILES; i++) {
+        char key[32];
+        snprintf(key, sizeof(key), "CLOCK_RECENT_FILE_%d", i + 1);
+        WriteIniString(INI_SECTION_RECENTFILES, key, "", config_path);
+    }
+    
+    // ======== [Colors] 节 ========
+    WriteIniString(INI_SECTION_COLORS, "COLOR_OPTIONS", colorOptionsStr, config_path);
 }
 
 /**
@@ -3178,7 +3349,7 @@ void ReadCustomCountdownHotkey(WORD* hotkey) {
  * @param key 配置项键名
  * @param value 配置项值
  * 
- * 在配置文件中添加或更新单个配置项
+ * 在配置文件中添加或更新单个配置项，根据键名自动选择节(section)
  */
 void WriteConfigKeyValue(const char* key, const char* value) {
     if (!key || !value) return;
@@ -3186,56 +3357,57 @@ void WriteConfigKeyValue(const char* key, const char* value) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    FILE* file = fopen(config_path, "r");
-    if (!file) {
-        // 文件不存在，创建新文件
-        file = fopen(config_path, "w");
-        if (!file) return;
-        
-        // 直接写入键值对
-        fprintf(file, "%s=%s\n", key, value);
-        fclose(file);
-        return;
+    // 根据键名确定应该放在哪个节
+    const char* section;
+    
+    if (strcmp(key, "CONFIG_VERSION") == 0 ||
+        strcmp(key, "LANGUAGE") == 0 ||
+        strcmp(key, "SHORTCUT_CHECK_DONE") == 0) {
+        section = INI_SECTION_GENERAL;
+    }
+    else if (strncmp(key, "CLOCK_TEXT_COLOR", 16) == 0 ||
+           strncmp(key, "FONT_FILE_NAME", 14) == 0 ||
+           strncmp(key, "CLOCK_BASE_FONT_SIZE", 20) == 0 ||
+           strncmp(key, "WINDOW_SCALE", 12) == 0 ||
+           strncmp(key, "CLOCK_WINDOW_POS_X", 18) == 0 ||
+           strncmp(key, "CLOCK_WINDOW_POS_Y", 18) == 0 ||
+           strncmp(key, "WINDOW_TOPMOST", 14) == 0) {
+        section = INI_SECTION_DISPLAY;
+    }
+    else if (strncmp(key, "CLOCK_DEFAULT_START_TIME", 24) == 0 ||
+           strncmp(key, "CLOCK_USE_24HOUR", 16) == 0 ||
+           strncmp(key, "CLOCK_SHOW_SECONDS", 18) == 0 ||
+           strncmp(key, "CLOCK_TIME_OPTIONS", 18) == 0 ||
+           strncmp(key, "STARTUP_MODE", 12) == 0 ||
+           strncmp(key, "CLOCK_TIMEOUT_TEXT", 18) == 0 ||
+           strncmp(key, "CLOCK_TIMEOUT_ACTION", 20) == 0 ||
+           strncmp(key, "CLOCK_TIMEOUT_FILE", 18) == 0 ||
+           strncmp(key, "CLOCK_TIMEOUT_WEBSITE", 21) == 0) {
+        section = INI_SECTION_TIMER;
+    }
+    else if (strncmp(key, "POMODORO_", 9) == 0) {
+        section = INI_SECTION_POMODORO;
+    }
+    else if (strncmp(key, "NOTIFICATION_", 13) == 0 ||
+           strncmp(key, "CLOCK_TIMEOUT_MESSAGE_TEXT", 26) == 0) {
+        section = INI_SECTION_NOTIFICATION;
+    }
+    else if (strncmp(key, "HOTKEY_", 7) == 0) {
+        section = INI_SECTION_HOTKEYS;
+    }
+    else if (strncmp(key, "CLOCK_RECENT_FILE", 17) == 0) {
+        section = INI_SECTION_RECENTFILES;
+    }
+    else if (strncmp(key, "COLOR_OPTIONS", 13) == 0) {
+        section = INI_SECTION_COLORS;
+    }
+    else {
+        // 其他设置放在OPTIONS节
+        section = INI_SECTION_OPTIONS;
     }
     
-    // 文件存在，读取所有内容到临时文件，修改对应行
-    char temp_path[MAX_PATH];
-    sprintf(temp_path, "%s.tmp", config_path);
-    FILE* temp_file = fopen(temp_path, "w");
-    
-    if (!temp_file) {
-        fclose(file);
-        return;
-    }
-    
-    char line[256];
-    BOOL found = FALSE;
-    size_t key_len = strlen(key);
-    
-    // 处理每一行
-    while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, key, key_len) == 0 && line[key_len] == '=') {
-            // 找到匹配的键，更新值
-            fprintf(temp_file, "%s=%s\n", key, value);
-            found = TRUE;
-        } else {
-            // 其他行直接复制
-            fputs(line, temp_file);
-        }
-    }
-    
-    // 如果没有找到对应的键，在文件末尾添加
-    if (!found) {
-        fprintf(temp_file, "%s=%s\n", key, value);
-    }
-    
-    // 关闭文件
-    fclose(file);
-    fclose(temp_file);
-    
-    // 替换原文件
-    remove(config_path);
-    rename(temp_path, config_path);
+    // 写入配置
+    WriteIniString(section, key, value, config_path);
 }
 
 /**
@@ -3297,30 +3469,8 @@ bool IsShortcutCheckDone(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    FILE* file = fopen(config_path, "r");
-    if (!file) {
-        return false;
-    }
-    
-    char line[256];
-    bool check_done = false;
-    
-    while (fgets(line, sizeof(line), file)) {
-        // 移除行尾换行符
-        size_t len = strlen(line);
-        if (len > 0 && line[len-1] == '\n') {
-            line[len-1] = '\0';
-            len--;
-        }
-        
-        if (strncmp(line, "SHORTCUT_CHECK_DONE=", 20) == 0) {
-            check_done = (strcmp(line + 20, "TRUE") == 0);
-            break;
-        }
-    }
-    
-    fclose(file);
-    return check_done;
+    // 使用INI读取方式获取设置
+    return ReadIniBool(INI_SECTION_GENERAL, "SHORTCUT_CHECK_DONE", FALSE, config_path);
 }
 
 /**
@@ -3331,6 +3481,9 @@ bool IsShortcutCheckDone(void) {
  * @param done 是否已检查完成
  */
 void SetShortcutCheckDone(bool done) {
-    const char* value = done ? "TRUE" : "FALSE";
-    WriteConfigKeyValue("SHORTCUT_CHECK_DONE", value);
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    
+    // 使用INI写入方式设置状态
+    WriteIniString(INI_SECTION_GENERAL, "SHORTCUT_CHECK_DONE", done ? "TRUE" : "FALSE", config_path);
 }

@@ -24,6 +24,17 @@
 // 定义最多保存5个最近文件
 #define MAX_RECENT_FILES 5
 
+// INI配置文件节定义
+#define INI_SECTION_GENERAL       "General"        // 一般设置（包括版本、语言等）
+#define INI_SECTION_DISPLAY       "Display"        // 显示设置（字体、颜色、窗口位置等）
+#define INI_SECTION_TIMER         "Timer"          // 计时器设置（默认时间等）
+#define INI_SECTION_POMODORO      "Pomodoro"       // 番茄钟设置
+#define INI_SECTION_NOTIFICATION  "Notification"   // 通知设置
+#define INI_SECTION_HOTKEYS       "Hotkeys"        // 热键设置
+#define INI_SECTION_RECENTFILES   "RecentFiles"    // 最近使用的文件
+#define INI_SECTION_COLORS        "Colors"         // 颜色选项
+#define INI_SECTION_OPTIONS       "Options"        // 其他选项
+
 typedef struct {
     char path[MAX_PATH];
     char name[MAX_PATH];
@@ -396,6 +407,60 @@ bool IsShortcutCheckDone(void);
  * @param done 是否已检查完成
  */
 void SetShortcutCheckDone(bool done);
+
+/**
+ * @brief 从INI文件读取字符串值
+ * @param section 节名
+ * @param key 键名
+ * @param defaultValue 默认值
+ * @param returnValue 返回值缓冲区
+ * @param returnSize 缓冲区大小
+ * @param filePath 文件路径
+ * @return 实际读取的字符数
+ */
+DWORD ReadIniString(const char* section, const char* key, const char* defaultValue,
+                  char* returnValue, DWORD returnSize, const char* filePath);
+
+/**
+ * @brief 写入字符串值到INI文件
+ * @param section 节名
+ * @param key 键名
+ * @param value 值
+ * @param filePath 文件路径
+ * @return 是否成功
+ */
+BOOL WriteIniString(const char* section, const char* key, const char* value,
+                  const char* filePath);
+
+/**
+ * @brief 读取INI整数值
+ * @param section 节名
+ * @param key 键名
+ * @param defaultValue 默认值
+ * @param filePath 文件路径
+ * @return 读取的整数值
+ */
+int ReadIniInt(const char* section, const char* key, int defaultValue, 
+             const char* filePath);
+
+/**
+ * @brief 写入整数值到INI文件
+ * @param section 节名
+ * @param key 键名
+ * @param value 值
+ * @param filePath 文件路径
+ * @return 是否成功
+ */
+BOOL WriteIniInt(const char* section, const char* key, int value,
+               const char* filePath);
+
+/**
+ * @brief 将旧的txt格式配置文件转换为新的ini格式
+ * @param oldPath 旧配置文件路径
+ * @param newPath 新配置文件路径
+ * @return 是否成功转换
+ */
+BOOL ConvertConfigTxtToIni(const char* oldPath, const char* newPath);
 
 /// @}
 
