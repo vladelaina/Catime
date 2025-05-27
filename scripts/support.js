@@ -420,6 +420,9 @@ function translateSupportElements() {
     
     // 翻译表格内容中的留言（这里只翻译重复出现的内容）
     document.querySelectorAll('.supporters-table td').forEach(td => {
+        if (td.textContent === '温州市宇波机车部件有限公司') {
+            td.textContent = 'Wenzhou Yubo Locomotive Parts CO.,LTD.';
+        }
         if (td.textContent === '加油') {
             td.textContent = 'Keep going';
         }
