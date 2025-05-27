@@ -474,6 +474,9 @@ function translateSupportElements() {
         if (td.textContent === '学生党，1块冲你和我一样喜欢蕾娜和伊蕾娜，1块冲你的产品确实挺好') {
             td.textContent = 'As a student, ¥1 because you like Laina and Elaina like me, another ¥1 because your product is really good';
         }
+        if (td.textContent === '我是最早提出来让你弄这个二维码，我们粉丝可以赞助') {
+            td.textContent = 'I was the first to suggest setting up these QR codes so we fans could support you';
+        }
         
         // 为所有留言单元格添加特殊样式，增强可读性
         if (td.parentElement && td.cellIndex === 3) { // 第四列是留言列
