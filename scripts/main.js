@@ -324,6 +324,7 @@ function initLanguageToggle() {
             '首页': 'Home',
             '指南': 'Guide',
             '关于': 'About',
+            '博客': 'Blog',
             '支持项目': 'Support',
             '下载': 'Download',
             
