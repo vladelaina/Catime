@@ -17,67 +17,67 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: 检出代码
+    - name: Checkout code
       uses: actions/checkout@v3
       
-    - name: 设置中国时区
+    - name: Set up China timezone
       run: |
         sudo timedatectl set-timezone Asia/Shanghai
-        echo "当前时区: $(date +%Z)"
-        echo "当前时间: $(date)"
+        echo "Current timezone: $(date +%Z)"
+        echo "Current time: $(date)"
         
-    - name: 安装MinGW编译器
+    - name: Install MinGW compiler
       run: |
         sudo apt-get update
         sudo apt-get install -y mingw-w64
         
-    - name: 安装XMake
+    - name: Install XMake
       run: |
         bash <(curl -fsSL https://xmake.io/shget.text)
         source ~/.xmake/profile
         xmake --version
         
-    - name: 提取版本号
+    - name: Extract version number
       id: get_version
       run: |
         VERSION=$(grep -oP '#define CATIME_VERSION "\K[^"]+' resource/resource.h)
         echo "VERSION=$VERSION" >> $GITHUB_ENV
-        echo "版本号: $VERSION"
+        echo "Version: $VERSION"
       
-    - name: 编译应用程序
+    - name: Build application
       run: |
-        # 创建输出目录
+        # Create output directory
         mkdir -p output
-        # 执行xmake构建
+        # Execute xmake build
         xmake -y
-        # 查找构建产物并复制到输出目录
+        # Find build artifacts and copy to output directory
         find . -name "catime.exe" -type f -print -exec cp {} output/ \;
-        echo "使用xmake完成构建"
+        echo "Build completed using xmake"
         
-    - name: 安装UPX压缩工具
+    - name: Install UPX compression tool
       run: |
         sudo apt-get install -y upx
         upx --version
         
-    - name: 创建压缩版和非压缩版
+    - name: Create compressed and uncompressed versions
       run: |
-        # 复制一份原始文件作为非压缩版
+        # Copy original file as uncompressed version
         cp output/catime.exe output/catime_original.exe
         
-        # 保存压缩前大小
+        # Save pre-compression size
         BEFORE_SIZE=$(stat -c %s output/catime.exe)
         BEFORE_SIZE_KB=$((BEFORE_SIZE / 1024))
         
-        # 对原始catime.exe进行压缩
+        # Compress the original catime.exe
         upx --ultra-brute --lzma output/catime.exe
         
-        # 保存压缩后大小并显示结果
+        # Save post-compression size and display results
         AFTER_SIZE=$(stat -c %s output/catime.exe)
         AFTER_SIZE_KB=$((AFTER_SIZE / 1024))
         
-        echo "UPX压缩: ${BEFORE_SIZE_KB}KiB → ${AFTER_SIZE_KB}KiB"
+        echo "UPX compression: ${BEFORE_SIZE_KB}KiB → ${AFTER_SIZE_KB}KiB"
         
-    - name: 添加版本信息文件
+    - name: Add version information file
       run: |
         echo "# Catime ${{ env.VERSION }} 版本说明" > output/README.txt
         echo "感谢您使用 catime_${{ env.VERSION }} 测试版！" >> output/README.txt
@@ -113,14 +113,14 @@ jobs:
         echo "## Important Notes" >> output/README.txt
         echo "If you encounter any issues, please provide feedback through the Issues page. Your opinions will help us improve product quality." >> output/README.txt
         
-    - name: 重命名文件
+    - name: Rename files
       run: |
-        # 重命名非压缩版本
+        # Rename uncompressed version
         mv output/catime_original.exe output/catime_${{ env.VERSION }}_${{ github.run_number }}.exe
-        # 重命名压缩版本
+        # Rename compressed version
         mv output/catime.exe output/catime_${{ env.VERSION }}_${{ github.run_number }}_upx.exe
         
-    - name: 创建发布包
+    - name: Create release package
       run: |
         mkdir -p release
         cp output/catime_${{ env.VERSION }}_${{ github.run_number }}.exe release/
@@ -130,7 +130,7 @@ jobs:
         zip -r catime_${{ env.VERSION }}_${{ github.run_number }}.zip *
         mv catime_${{ env.VERSION }}_${{ github.run_number }}.zip ../output/
         
-    - name: 上传构建结果
+    - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: catime-windows-${{ env.VERSION }}-${{ github.run_number }}
@@ -138,4 +138,3 @@ jobs:
           output/catime_${{ env.VERSION }}_${{ github.run_number }}.exe
           output/catime_${{ env.VERSION }}_${{ github.run_number }}_upx.exe
           output/README.txt
-        # 注意：构建完成后，您可以在GitHub Actions工作流运行页面的"Artifacts"部分下载构件
