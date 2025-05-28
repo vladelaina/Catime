@@ -477,6 +477,9 @@ function translateSupportElements() {
         if (td.textContent === '我是最早提出来让你弄这个二维码，我们粉丝可以赞助') {
             td.textContent = 'I was the first to suggest setting up these QR codes so we fans could support you';
         }
+        if (td.textContent === '不多感谢你的catime，让我下班有了倒计时盼头🤧') {
+            td.textContent = 'Just wanted to thank you for catime, it gives me something to look forward to counting down to when getting off work🤧';
+        }
         
         // 为所有留言单元格添加特殊样式，增强可读性
         if (td.parentElement && td.cellIndex === 3) { // 第四列是留言列
