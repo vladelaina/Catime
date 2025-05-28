@@ -65,7 +65,7 @@ If there are significant changes, we will post notifications within the applicat
 
 If you have questions or suggestions about this privacy policy, please contact us through the GitHub project page.
 
-> Last Updated: May 2025
+> Last Updated: May 28, 2025
 
 
 
