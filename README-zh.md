@@ -73,8 +73,8 @@
 </p>
 
 <p align="center" style="font-size: 16px; color: #666; margin-bottom: 20px;">
-  一款简洁的 Windows 倒计时工具，支持番茄时钟功能，<br/>
-  具有透明界面和丰富的自定义选项。
+  一款极致轻量的 Windows 倒计时工具，具有番茄工作法功能、透明界面和丰富自定义选项，<br/>
+  只需几 MB 内存且几乎不占用 CPU 资源，便可在Windows 上优雅掌控时间。
 </p>
 
 

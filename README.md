@@ -72,8 +72,10 @@
 </p>
 
 <p align="center" style="font-size: 16px; color: #666; margin-bottom: 20px;">
-  A simple yet powerful Windows countdown tool with Pomodoro functionality,<br/>
-  featuring a transparent interface and rich customization options.
+  An ultra-lightweight Windows countdown tool with Pomodoro functionality,<br/>
+  featuring a transparent interface and rich customization options,<br/>
+  using only a few MB of memory and almost no CPU resources,<br/>
+  elegantly helping you manage time on Windows.
 </p>
 
 
