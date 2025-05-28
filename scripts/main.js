@@ -386,7 +386,8 @@ function initLanguageToggle() {
             '基于': 'Released under',
             '许可开源': 'license',
             '图标画师:': 'Icon Artist:',
-            '问题反馈': 'Feedback'
+            '问题反馈': 'Feedback',
+            '隐私政策': 'Privacy Policy'
         };
         
         // 遍历所有文本节点进行翻译
