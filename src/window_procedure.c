@@ -1238,6 +1238,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     WriteConfigFont("Terminess Nerd Font Propo Essence.ttf");
                     goto refresh_window;
                 }
+                case CLOCK_IDC_FONT_PINYON_SCRIPT: {
+                    WriteConfigFont("Pinyon Script Essence.ttf");
+                    goto refresh_window;
+                }
                 case CLOCK_IDC_FONT_ARBUTUS: {
                     WriteConfigFont("Arbutus Essence.ttf");
                     goto refresh_window;

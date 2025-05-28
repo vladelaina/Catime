@@ -406,7 +406,7 @@ xmake clean   # 清理构建产物
     Kumar One Essence.ttf, Kumar One Outline Essence.ttf, Lakki Reddy Essence.ttf,
     Licorice Essence.ttf, Ma Shan Zheng Essence.ttf, Moirai One Essence.ttf,
     Mystery Quest Essence.ttf, Noto Nastaliq Urdu Medium Essence.ttf, Piedra Essence.ttf,
-    Pixelify Sans Medium Essence.ttf, Press Start 2P Essence.ttf,
+    Pinyon Script Essence.ttf, Pixelify Sans Medium Essence.ttf, Press Start 2P Essence.ttf,
     Rubik Bubbles Essence.ttf, Rubik Burned Essence.ttf, Rubik Glitch Essence.ttf,
     Rubik Marker Hatch Essence.ttf,
     Rubik Puddles Essence.ttf, Rubik Vinyl Essence.ttf, Rubik Wet Paint Essence.ttf,

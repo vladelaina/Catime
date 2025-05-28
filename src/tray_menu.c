@@ -429,6 +429,7 @@ void ShowColorMenu(HWND hwnd) {
             strcmp(fontResources[i].fontName, "ProFont IIx Nerd Font Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Wallpoet Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Yesteryear Essence.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Pinyon Script Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "ZCOOL KuaiLe Essence.ttf") == 0) {
             
             BOOL isCurrentFont = strcmp(FONT_FILE_NAME, fontResources[i].fontName) == 0;
@@ -459,6 +460,7 @@ void ShowColorMenu(HWND hwnd) {
             strcmp(fontResources[i].fontName, "ProFont IIx Nerd Font Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Wallpoet Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Yesteryear Essence.ttf") == 0 ||
+            strcmp(fontResources[i].fontName, "Pinyon Script Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "ZCOOL KuaiLe Essence.ttf") == 0) {
             continue;
         }
