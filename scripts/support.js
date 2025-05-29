@@ -480,6 +480,9 @@ function translateSupportElements() {
         if (td.textContent === '不多感谢你的catime，让我下班有了倒计时盼头🤧') {
             td.textContent = 'Just wanted to thank you for catime, it gives me something to look forward to counting down to when getting off work🤧';
         }
+        if (td.textContent === '为爱发电') {
+            td.textContent = 'Powered by love';
+        }
         
         // 为所有留言单元格添加特殊样式，增强可读性
         if (td.parentElement && td.cellIndex === 3) { // 第四列是留言列
