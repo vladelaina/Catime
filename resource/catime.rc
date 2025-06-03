@@ -1,0 +1,37 @@
+#include <windows.h>
+#include "../resource/resource.h"
+
+// 版本信息
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     1,1,1,0
+PRODUCTVERSION  1,1,1,0
+FILEFLAGSMASK   0x3fL
+#ifdef _DEBUG
+FILEFLAGS       0x1L
+#else
+FILEFLAGS       0x0L
+#endif
+FILEOS          0x40004L
+FILETYPE        0x1L
+FILESUBTYPE     0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "041104b0"
+        BEGIN
+            VALUE "Comments",         "https://github.com/vladelaina/Catime"
+            VALUE "CompanyName",      "vladelaina"
+            VALUE "FileDescription",  "Catime"
+            VALUE "FileVersion",      CATIME_VERSION
+            VALUE "InternalName",     "Catime"
+            VALUE "LegalCopyright",   "Copyright (C) 2025 By vladelaina. All rights reserved."
+            VALUE "OriginalFilename", "Catime.exe"
+            VALUE "ProductName",      "Catime"
+            VALUE "ProductVersion",   CATIME_VERSION
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x411, 1200
+    END
+END 

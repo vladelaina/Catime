@@ -58,6 +58,7 @@ target("catime")
     -- 添加资源文件
     add_files("resource/resource.rc")
     add_files("resource/languages.rc")
+    add_files("resource/catime.rc")
     
     -- 添加源文件
     add_files("src/*.c")
