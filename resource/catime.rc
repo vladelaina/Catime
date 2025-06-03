@@ -17,14 +17,14 @@ FILESUBTYPE     0x0L
 BEGIN
     BLOCK "StringFileInfo"
     BEGIN
-        BLOCK "041104b0"
+        BLOCK "000004b0"
         BEGIN
             VALUE "Comments",         "https://github.com/vladelaina/Catime"
             VALUE "CompanyName",      "vladelaina"
             VALUE "FileDescription",  "Catime"
             VALUE "FileVersion",      CATIME_VERSION
             VALUE "InternalName",     "Catime"
-            VALUE "LegalCopyright",   "Copyright (C) 2025 By vladelaina. All rights reserved."
+            VALUE "LegalCopyright",   "Apache License 2.0"
             VALUE "OriginalFilename", "Catime.exe"
             VALUE "ProductName",      "Catime"
             VALUE "ProductVersion",   CATIME_VERSION
@@ -32,6 +32,6 @@ BEGIN
     END
     BLOCK "VarFileInfo"
     BEGIN
-        VALUE "Translation", 0x411, 1200
+        VALUE "Translation", 0x0000, 1200
     END
 END 
