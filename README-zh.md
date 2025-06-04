@@ -105,7 +105,7 @@
 #### 🪟 Winget
 
 ```
-winget install catime
+winget install --id VladElaina.Catime
 ```
 
 #### 💾 手动下载
