@@ -145,7 +145,7 @@ winget install --id VladElaina.Catime
 > 配置文件保存在 `C:\Users\用户名\AppData\Local\Catime\config.ini`
 
 
-## 🛠️ [从源代码构建](https://vladelaina.com/blog-post?slug=Build_catime_from_source)
+## 🛠️ [从源代码构建](https://www.bilibili.com/video/BV1H97LzVEee)
 
 ### 一、克隆：
 

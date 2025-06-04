@@ -151,7 +151,7 @@ Download the latest release from [GitHub Releases](https://github.com/vladelaina
 
 
 
-## 🛠️ [Building from Source](https://vladelaina.com/blog-post?slug=Build_catime_from_source)
+## 🛠️ [Building from Source](https://www.bilibili.com/video/BV1H97LzVEee)
 
 ### 1. Clone:
 
