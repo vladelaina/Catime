@@ -17,9 +17,9 @@
   <a href="https://github.com/vladelaina/Catime/issues">
     <img src="https://img.shields.io/github/issues/vladelaina/Catime?style=flat-square&label=open%20issues&color=orange" alt="Open Issues" />
   </a>
-<a href="https://github.com/users/vladelaina/projects/2">
-  <img src="https://img.shields.io/badge/Project%20Board-Planning-blueviolet?style=flat-square" alt="Project Board" />
-</a>
+  <a href="https://github.com/users/vladelaina/projects/2">
+    <img src="https://img.shields.io/badge/Project%20Board-Planning-blueviolet?style=flat-square" alt="Project Board" />
+  </a>
 </div>
 
 <!-- 第二行 - 下载 -->
@@ -32,6 +32,13 @@
   </a>
   <a href="https://github.com/vladelaina/Catime/releases" target="_blank">
     <img src="https://img.shields.io/badge/software%20size-834%20KB-blue?style=flat-square&logo=appveyor&logoColor=white" alt="Software Size" />
+  </a>
+</div>
+
+<!-- 中间行 - 请我喝咖啡 -->
+<div align="center" style="margin: 10px 0;">
+  <a href="https://vladelaina.github.io/Catime/support.html" target="_blank">
+    <img src="https://img.shields.io/badge/请我喝咖啡-支持项目-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" alt="请我喝咖啡" />
   </a>
 </div>
 
