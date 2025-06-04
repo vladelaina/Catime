@@ -21,10 +21,10 @@ BEGIN
         BEGIN
             VALUE "Comments",         "https://github.com/vladelaina/Catime"
             VALUE "CompanyName",      "vladelaina"
-            VALUE "FileDescription",  "Catime"
+            VALUE "FileDescription",  "A very useful timer (Pomodoro Clock)"
             VALUE "FileVersion",      CATIME_VERSION
             VALUE "InternalName",     "Catime"
-            VALUE "LegalCopyright",   "Apache License 2.0"
+            VALUE "LegalCopyright",   "Copyright (C) 2025 vladelaina. Apache License 2.0"
             VALUE "OriginalFilename", "Catime.exe"
             VALUE "ProductName",      "Catime"
             VALUE "ProductVersion",   CATIME_VERSION
