@@ -3,8 +3,8 @@
 
 // 版本信息
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION     1,1,1,0
-PRODUCTVERSION  1,1,1,0
+FILEVERSION     CATIME_VERSION_MAJOR,CATIME_VERSION_MINOR,CATIME_VERSION_PATCH,CATIME_VERSION_BUILD
+PRODUCTVERSION  CATIME_VERSION_MAJOR,CATIME_VERSION_MINOR,CATIME_VERSION_PATCH,CATIME_VERSION_BUILD
 FILEFLAGSMASK   0x3fL
 #ifdef _DEBUG
 FILEFLAGS       0x1L
@@ -19,7 +19,6 @@ BEGIN
     BEGIN
         BLOCK "000004b0"
         BEGIN
-            VALUE "Comments",         "https://github.com/vladelaina/Catime"
             VALUE "CompanyName",      "vladelaina"
             VALUE "FileDescription",  "A very useful timer (Pomodoro Clock)"
             VALUE "FileVersion",      CATIME_VERSION
