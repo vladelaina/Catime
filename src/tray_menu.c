@@ -613,8 +613,10 @@ void ShowContextMenu(HWND hwnd) {
     // 当满足以下条件时计时器选项应该可用:
     // 1. 不处于显示当前时间模式
     // 2. 且正在进行倒计时或正计时
-    BOOL timerRunning = (!CLOCK_SHOW_CURRENT_TIME && (CLOCK_COUNT_UP || 
-                         (!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0)));
+    // 3. 如果是倒计时，则还没有结束（倒计时已用时间小于总时间）
+    BOOL timerRunning = (!CLOCK_SHOW_CURRENT_TIME && 
+                         (CLOCK_COUNT_UP || 
+                          (!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0 && countdown_elapsed_time < CLOCK_TOTAL_TIME)));
     
     // 暂停/继续文本根据当前状态变化
     const wchar_t* pauseResumeText = CLOCK_IS_PAUSED ? 
@@ -625,7 +627,13 @@ void ShowContextMenu(HWND hwnd) {
     AppendMenuW(hTimerManageMenu, MF_STRING | (timerRunning ? MF_ENABLED : MF_GRAYED),
                CLOCK_IDM_TIMER_PAUSE_RESUME, pauseResumeText);
     
-    AppendMenuW(hTimerManageMenu, MF_STRING | (timerRunning ? MF_ENABLED : MF_GRAYED),
+    // 重新开始选项应该在以下情况下可用：
+    // 1. 不处于显示当前时间模式
+    // 2. 且正在进行倒计时或正计时（不考虑倒计时是否结束）
+    BOOL canRestart = (!CLOCK_SHOW_CURRENT_TIME && (CLOCK_COUNT_UP || 
+                      (!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0)));
+    
+    AppendMenuW(hTimerManageMenu, MF_STRING | (canRestart ? MF_ENABLED : MF_GRAYED),
                CLOCK_IDM_TIMER_RESTART, 
                GetLocalizedString(L"重新开始", L"Start Over"));
     
