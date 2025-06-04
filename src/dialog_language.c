@@ -50,9 +50,11 @@ static DialogTitleEntry g_dialogTitles[] = {
 // 特殊控件映射表（需要特殊处理的控件）
 static SpecialControlEntry g_specialControls[] = {
     // 关于对话框
-    {IDD_ABOUT_DIALOG, IDC_VERSION_TEXT, L"Version: %hs", L"Version: %hs"},
-    {IDD_ABOUT_DIALOG, IDC_BUILD_DATE, L"Build Date:", L"Build Date:"},
-    {IDD_ABOUT_DIALOG, IDC_COPYRIGHT, L"Copyright © 2023-2024 vladelaina", L"Copyright © 2023-2024 vladelaina"},
+    {IDD_ABOUT_DIALOG, IDC_ABOUT_TITLE, L"关于", L"About"},
+    {IDD_ABOUT_DIALOG, IDC_VERSION_TEXT, L"版本: %hs", L"Version: %hs"},
+    {IDD_ABOUT_DIALOG, IDC_BUILD_DATE, L"构建日期:", L"Build Date:"},
+    {IDD_ABOUT_DIALOG, IDC_COPYRIGHT, L"COPYRIGHT_TEXT", L"COPYRIGHT_TEXT"},
+    {IDD_ABOUT_DIALOG, IDC_CREDITS, L"鸣谢", L"Credits"},
     
     // 番茄钟时间设置对话框特殊处理的静态文本 - 使用实际的INI键名
     {CLOCK_IDD_POMODORO_TIME_DIALOG, CLOCK_IDC_STATIC, 

@@ -266,8 +266,10 @@ extern int NOTIFICATION_TIMEOUT_MS; // 通知显示持续时间
 
 /* 关于对话框常量 */
 #define ABOUT_ICON_SIZE 200
-#define IDC_ABOUT_TITLE L"Catime"
-#define IDC_ABOUT_VERSION L"当前版本: "
+#define IDC_ABOUT_TITLE 1022
+#define IDC_ABOUT_TITLE_TEXT L"关于 Catime"
+#define IDC_ABOUT_VERSION L"版本: %hs"
+#define IDC_BUILD_DATE_TEXT L"构建日期: %hs"
 #define IDC_COPYRIGHT_TEXT L"Copyright (C) 2025 By vladelaina"
 
 /* 底部链接控件 */
