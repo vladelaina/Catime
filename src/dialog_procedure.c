@@ -306,14 +306,18 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                         WriteConfigPomodoroLoopCount(total_seconds);
                         g_hwndInputDialog = NULL;
                         EndDialog(hwndDlg, IDOK);
-                    } else if (dialogId == CLOCK_IDD_DIALOG1 || dialogId == CLOCK_IDD_STARTUP_DIALOG || dialogId == CLOCK_IDD_SHORTCUT_DIALOG) {
-                        // 默认倒计时时间或快捷方式时间 (IDD_SHORTCUT_DIALOG 也应在此处理)
-                        WriteConfigDefaultStartTime(total_seconds); // 假设 CLOCK_IDD_SHORTCUT_DIALOG 也用这个函数，或者需要 আলাদা处理
+                    } else if (dialogId == CLOCK_IDD_STARTUP_DIALOG) {
+                        // 只有CLOCK_IDD_STARTUP_DIALOG（即"预设管理"->"启动设置"->"倒计时"）才会修改默认启动时间
+                        WriteConfigDefaultStartTime(total_seconds);
+                        g_hwndInputDialog = NULL;
+                        EndDialog(hwndDlg, IDOK);
+                    } else if (dialogId == CLOCK_IDD_SHORTCUT_DIALOG) {
+                        // 倒计时预设管理
+                        WriteConfigDefaultStartTime(total_seconds);
                         g_hwndInputDialog = NULL;
                         EndDialog(hwndDlg, IDOK);
                     } else {
-                        // 对于未明确处理的对话框ID，如果输入有效，也返回IDOK
-                        // 或者根据需要进行错误处理或返回特定值
+                        // 对于其他对话框ID（包括CLOCK_IDD_DIALOG1，即普通倒计时），不修改默认启动时间配置
                         g_hwndInputDialog = NULL;
                         EndDialog(hwndDlg, IDOK); // 假设成功获取输入即可
                     }
