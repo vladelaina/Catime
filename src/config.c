@@ -53,6 +53,8 @@ int NOTIFICATION_TIMEOUT_MS = 3000;  // 默认3秒
 int NOTIFICATION_MAX_OPACITY = 95;   // 默认95%透明度
 // 新增配置变量：通知类型
 NotificationType NOTIFICATION_TYPE = NOTIFICATION_TYPE_CATIME; // 默认使用Catime通知窗口
+// 新增配置变量：是否禁用通知窗口
+BOOL NOTIFICATION_DISABLED = FALSE;  // 默认启用通知
 
 // 新增：通知音频文件路径全局变量
 char NOTIFICATION_SOUND_FILE[MAX_PATH] = "";  // 默认为空
@@ -308,6 +310,7 @@ void CreateDefaultConfig(const char* config_path) {
     WriteIniString(INI_SECTION_NOTIFICATION, "NOTIFICATION_TYPE", typeStr, config_path);
     WriteIniString(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_FILE", "", config_path);
     WriteIniInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_VOLUME", 100, config_path);
+    WriteIniString(INI_SECTION_NOTIFICATION, "NOTIFICATION_DISABLED", "FALSE", config_path);
     
     // ======== [Hotkeys] 节 ========
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_SHOW_TIME", "None", config_path);
@@ -689,6 +692,9 @@ void ReadConfig() {
                 
     // 读取通知音频音量
     NOTIFICATION_SOUND_VOLUME = ReadIniInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_VOLUME", 100, config_path);
+                
+    // 读取是否禁用通知窗口
+    NOTIFICATION_DISABLED = ReadIniBool(INI_SECTION_NOTIFICATION, "NOTIFICATION_DISABLED", FALSE, config_path);
     
     // 确保音量在有效范围内(0-100)
     if (NOTIFICATION_SOUND_VOLUME < 0) NOTIFICATION_SOUND_VOLUME = 0;
@@ -1538,6 +1544,7 @@ void WriteConfig(const char* config_path) {
     WriteIniString(INI_SECTION_NOTIFICATION, "NOTIFICATION_TYPE", typeStr, config_path);
     WriteIniString(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_FILE", NOTIFICATION_SOUND_FILE, config_path);
     WriteIniInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_VOLUME", NOTIFICATION_SOUND_VOLUME, config_path);
+    WriteIniString(INI_SECTION_NOTIFICATION, "NOTIFICATION_DISABLED", NOTIFICATION_DISABLED ? "TRUE" : "FALSE", config_path);
     
     // ======== [Hotkeys] 节 ========
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_SHOW_TIME", showTimeStr, config_path);
@@ -3352,4 +3359,79 @@ void SetShortcutCheckDone(bool done) {
     
     // 使用INI写入方式设置状态
     WriteIniString(INI_SECTION_GENERAL, "SHORTCUT_CHECK_DONE", done ? "TRUE" : "FALSE", config_path);
+}
+
+/**
+ * @brief 从配置文件中读取是否禁用通知设置
+ * 
+ * 专门读取 NOTIFICATION_DISABLED 配置项并更新相应的全局变量。
+ */
+void ReadNotificationDisabledConfig(void) {
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    
+    // 使用INI读取方式获取设置
+    NOTIFICATION_DISABLED = ReadIniBool(INI_SECTION_NOTIFICATION, "NOTIFICATION_DISABLED", FALSE, config_path);
+}
+
+/**
+ * @brief 写入是否禁用通知配置
+ * @param disabled 是否禁用通知 (TRUE/FALSE)
+ * 
+ * 更新配置文件中的是否禁用通知设置，
+ * 采用临时文件方式确保配置更新安全。
+ */
+void WriteConfigNotificationDisabled(BOOL disabled) {
+    char config_path[MAX_PATH];
+    char temp_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    snprintf(temp_path, MAX_PATH, "%s.tmp", config_path);
+    
+    FILE *source_file, *temp_file;
+    
+    source_file = fopen(config_path, "r");
+    temp_file = fopen(temp_path, "w");
+    
+    if (!source_file || !temp_file) {
+        if (source_file) fclose(source_file);
+        if (temp_file) fclose(temp_file);
+        return;
+    }
+    
+    char line[1024];
+    BOOL found = FALSE;
+    
+    // 逐行读取并写入
+    while (fgets(line, sizeof(line), source_file)) {
+        // 移除行尾换行符进行比较
+        size_t len = strlen(line);
+        if (len > 0 && (line[len-1] == '\n' || line[len-1] == '\r')) {
+            line[--len] = '\0';
+            if (len > 0 && line[len-1] == '\r')
+                line[--len] = '\0';
+        }
+        
+        if (strncmp(line, "NOTIFICATION_DISABLED=", 22) == 0) {
+            fprintf(temp_file, "NOTIFICATION_DISABLED=%s\n", disabled ? "TRUE" : "FALSE");
+            found = TRUE;
+        } else {
+            // 还原行尾换行符，原样写回
+            fprintf(temp_file, "%s\n", line);
+        }
+    }
+    
+    // 如果配置中没找到相应项，则添加
+    if (!found) {
+        fprintf(temp_file, "NOTIFICATION_DISABLED=%s\n", disabled ? "TRUE" : "FALSE");
+    }
+    
+    fclose(source_file);
+    fclose(temp_file);
+    
+    // 替换原文件
+    remove(config_path);
+    rename(temp_path, config_path);
+    
+    // 更新全局变量
+    NOTIFICATION_DISABLED = disabled;
 }

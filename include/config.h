@@ -66,6 +66,9 @@ typedef enum {
 // 通知类型全局变量声明
 extern NotificationType NOTIFICATION_TYPE;
 
+// 新增：是否禁用通知窗口
+extern BOOL NOTIFICATION_DISABLED;  ///< 是否禁用通知窗口
+
 // 新增：通知音频相关配置
 extern char NOTIFICATION_SOUND_FILE[MAX_PATH];  ///< 通知音频文件路径
 
@@ -253,7 +256,7 @@ void ReadNotificationTypeConfig(void);
 
 /**
  * @brief 写入通知类型配置
- * @param type 通知类型
+ * @param type 通知类型枚举值
  * 
  * 更新配置文件中的通知类型设置，
  * 采用临时文件方式确保配置更新安全。
@@ -261,48 +264,55 @@ void ReadNotificationTypeConfig(void);
 void WriteConfigNotificationType(NotificationType type);
 
 /**
- * @brief 将当前语言设置写入配置文件
+ * @brief 从配置文件中读取是否禁用通知设置
  * 
- * @param language 语言枚举值(APP_LANG_ENUM)
+ * 专门读取 NOTIFICATION_DISABLED 配置项并更新相应的全局变量。
+ */
+void ReadNotificationDisabledConfig(void);
+
+/**
+ * @brief 写入是否禁用通知配置
+ * @param disabled 是否禁用通知 (TRUE/FALSE)
+ * 
+ * 更新配置文件中的是否禁用通知设置，
+ * 采用临时文件方式确保配置更新安全。
+ */
+void WriteConfigNotificationDisabled(BOOL disabled);
+
+/**
+ * @brief 写入语言设置
+ * @param language 语言ID
+ * 
+ * 将当前的语言设置写入配置文件
  */
 void WriteConfigLanguage(int language);
 
 /**
  * @brief 获取音频文件夹路径
- * @param path 存储音频文件夹路径的缓冲区
+ * @param path 存储路径的缓冲区
  * @param size 缓冲区大小
  */
 void GetAudioFolderPath(char* path, size_t size);
 
 /**
  * @brief 从配置文件中读取通知音频设置
- * 
- * 专门读取 NOTIFICATION_SOUND_FILE 配置项并更新相应的全局变量。
  */
 void ReadNotificationSoundConfig(void);
 
 /**
  * @brief 写入通知音频配置
  * @param sound_file 音频文件路径
- * 
- * 更新配置文件中的通知音频设置，
- * 采用临时文件方式确保配置更新安全。
  */
 void WriteConfigNotificationSound(const char* sound_file);
 
 /**
  * @brief 从配置文件中读取通知音频音量
- * 
- * 专门读取 NOTIFICATION_SOUND_VOLUME 配置项并更新相应的全局变量。
  */
 void ReadNotificationVolumeConfig(void);
 
 /**
  * @brief 写入通知音频音量配置
- * @param volume 音量百分比值(0-100)
- * 
- * 更新配置文件中的通知音频音量设置，
- * 采用临时文件方式确保配置更新安全。
+ * @param volume 音量百分比 (0-100)
  */
 void WriteConfigNotificationVolume(int volume);
 
@@ -311,8 +321,6 @@ void WriteConfigNotificationVolume(int volume);
  * @param hotkey 热键值
  * @param buffer 输出缓冲区
  * @param bufferSize 缓冲区大小
- * 
- * 将WORD格式的热键值转换为可读字符串格式，例如"Ctrl+Alt+A"
  */
 void HotkeyToString(WORD hotkey, char* buffer, size_t bufferSize);
 
@@ -320,32 +328,8 @@ void HotkeyToString(WORD hotkey, char* buffer, size_t bufferSize);
  * @brief 将字符串转换为热键值
  * @param str 热键字符串
  * @return WORD 热键值
- * 
- * 将可读字符串格式的热键（如"Ctrl+Alt+A"）转换为WORD格式的热键值
  */
 WORD StringToHotkey(const char* str);
-
-/**
- * @brief 写入热键配置
- * @param showTimeHotkey 显示时间热键值
- * @param countUpHotkey 正计时热键值
- * @param countdownHotkey 倒计时热键值
- * @param quickCountdown1Hotkey 快捷倒计时1热键值
- * @param quickCountdown2Hotkey 快捷倒计时2热键值
- * @param quickCountdown3Hotkey 快捷倒计时3热键值
- * @param pomodoroHotkey 番茄钟热键值
- * @param toggleVisibilityHotkey 隐藏/显示热键值
- * @param editModeHotkey 编辑模式热键值
- * @param pauseResumeHotkey 暂停/继续热键值
- * @param restartTimerHotkey 重新开始热键值
- * 
- * 更新配置文件中的热键设置，
- * 采用临时文件方式确保配置更新安全。
- */
-void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownHotkey,
-                        WORD quickCountdown1Hotkey, WORD quickCountdown2Hotkey, WORD quickCountdown3Hotkey,
-                        WORD pomodoroHotkey, WORD toggleVisibilityHotkey, WORD editModeHotkey,
-                        WORD pauseResumeHotkey, WORD restartTimerHotkey);
 
 /**
  * @brief 从配置文件中读取热键设置
@@ -360,9 +344,6 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
  * @param editModeHotkey 存储编辑模式热键的指针
  * @param pauseResumeHotkey 存储暂停/继续热键的指针
  * @param restartTimerHotkey 存储重新开始热键的指针
- * 
- * 专门读取热键配置项并更新相应的参数值。
- * 支持解析可读性格式的热键字符串。
  */
 void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdownHotkey,
                       WORD* quickCountdown1Hotkey, WORD* quickCountdown2Hotkey, WORD* quickCountdown3Hotkey,
@@ -371,39 +352,44 @@ void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdow
 
 /**
  * @brief 从配置文件中读取自定义倒计时热键
- * @param hotkey 热键值指针
+ * @param hotkey 存储热键的指针
  */
 void ReadCustomCountdownHotkey(WORD* hotkey);
 
 /**
- * @brief 从配置文件中读取显示当前时间热键
- * @param hotkey 热键值指针
+ * @brief 写入热键配置
+ * @param showTimeHotkey 显示时间热键值
+ * @param countUpHotkey 正计时热键值
+ * @param countdownHotkey 倒计时热键值
+ * @param quickCountdown1Hotkey 快捷倒计时1热键值
+ * @param quickCountdown2Hotkey 快捷倒计时2热键值
+ * @param quickCountdown3Hotkey 快捷倒计时3热键值
+ * @param pomodoroHotkey 番茄钟热键值
+ * @param toggleVisibilityHotkey 隐藏/显示热键值
+ * @param editModeHotkey 编辑模式热键值
+ * @param pauseResumeHotkey 暂停/继续热键值
+ * @param restartTimerHotkey 重新开始热键值
  */
-void ReadTimeHotkey(WORD* hotkey);
+void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownHotkey,
+                        WORD quickCountdown1Hotkey, WORD quickCountdown2Hotkey, WORD quickCountdown3Hotkey,
+                        WORD pomodoroHotkey, WORD toggleVisibilityHotkey, WORD editModeHotkey,
+                        WORD pauseResumeHotkey, WORD restartTimerHotkey);
 
 /**
- * @brief 写入单个配置项到配置文件
+ * @brief 写入配置项
  * @param key 配置项键名
  * @param value 配置项值
- * 
- * 在配置文件中添加或更新单个配置项
  */
 void WriteConfigKeyValue(const char* key, const char* value);
 
 /**
  * @brief 判断是否已经执行过快捷方式检查
- * 
- * 读取配置文件，判断是否有SHORTCUT_CHECK_DONE=TRUE标记
- * 
  * @return bool true表示已检查过，false表示未检查过
  */
 bool IsShortcutCheckDone(void);
 
 /**
  * @brief 设置快捷方式检查状态
- * 
- * 在配置文件中写入SHORTCUT_CHECK_DONE=TRUE/FALSE
- * 
  * @param done 是否已检查完成
  */
 void SetShortcutCheckDone(bool done);

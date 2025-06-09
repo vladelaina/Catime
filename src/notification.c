@@ -63,6 +63,12 @@ int CalculateTextWidth(HDC hdc, const wchar_t* text, HFONT font) {
 void ShowNotification(HWND hwnd, const char* message) {
     // 读取最新的通知类型配置
     ReadNotificationTypeConfig();
+    ReadNotificationDisabledConfig();
+    
+    // 如果通知已被禁用，直接返回
+    if (NOTIFICATION_DISABLED) {
+        return;
+    }
     
     // 根据通知类型选择对应的通知方式
     switch (NOTIFICATION_TYPE) {
@@ -177,13 +183,13 @@ void ShowToastNotification(HWND hwnd, const char* message) {
     static BOOL isClassRegistered = FALSE;
     HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
     
-    // 在显示通知前动态读取最新的通知显示时间配置
+    // 在显示通知前动态读取最新的通知设置
     ReadNotificationTimeoutConfig();
-    // 新增：读取最新的通知透明度配置
     ReadNotificationOpacityConfig();
+    ReadNotificationDisabledConfig();
     
-    // 如果通知显示时间设置为0，则不显示通知
-    if (NOTIFICATION_TIMEOUT_MS == 0) {
+    // 如果通知已被禁用，直接返回
+    if (NOTIFICATION_DISABLED) {
         return;
     }
     

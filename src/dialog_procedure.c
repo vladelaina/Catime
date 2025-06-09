@@ -1690,25 +1690,22 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             SYSTEMTIME st = {0};
             GetLocalTime(&st);
             
-            // 检查是否为0（禁用通知）
-            if (NOTIFICATION_TIMEOUT_MS == 0) {
-                // 勾选禁用通知复选框
-                CheckDlgButton(hwndDlg, IDC_DISABLE_NOTIFICATION_CHECK, BST_CHECKED);
-                
-                // 禁用时间控件
-                EnableWindow(GetDlgItem(hwndDlg, IDC_NOTIFICATION_TIME_EDIT), FALSE);
-                
-                // 设置一个默认的非零时间值
+            // 读取禁用通知设置
+            ReadNotificationDisabledConfig();
+            
+            // 根据禁用状态设置复选框
+            CheckDlgButton(hwndDlg, IDC_DISABLE_NOTIFICATION_CHECK, NOTIFICATION_DISABLED ? BST_CHECKED : BST_UNCHECKED);
+            
+            // 设置时间控件的启用/禁用状态
+            EnableWindow(GetDlgItem(hwndDlg, IDC_NOTIFICATION_TIME_EDIT), !NOTIFICATION_DISABLED);
+            
+            // 设置时间控件的值
+            // 如果被禁用，显示一个默认的非零时间值
+            if (NOTIFICATION_DISABLED) {
                 st.wHour = 0;
                 st.wMinute = 0;
                 st.wSecond = 3;
             } else {
-                // 不勾选禁用通知复选框
-                CheckDlgButton(hwndDlg, IDC_DISABLE_NOTIFICATION_CHECK, BST_UNCHECKED);
-                
-                // 启用时间控件
-                EnableWindow(GetDlgItem(hwndDlg, IDC_NOTIFICATION_TIME_EDIT), TRUE);
-                
                 // 设置时间控件只关注时分秒部分
                 int totalSeconds = NOTIFICATION_TIMEOUT_MS / 1000;
                 st.wHour = totalSeconds / 3600;
@@ -1832,20 +1829,24 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 SYSTEMTIME st = {0};
                 
                 // 检查是否勾选了禁用通知复选框
-                if (IsDlgButtonChecked(hwndDlg, IDC_DISABLE_NOTIFICATION_CHECK)) {
-                    NOTIFICATION_TIMEOUT_MS = 0; // 特殊值：禁用通知
-                }
-                // 否则从时间控件获取正常值
-                else if (SendDlgItemMessage(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, DTM_GETSYSTEMTIME, 0, (LPARAM)&st) == GDT_VALID) {
+                BOOL isDisabled = (IsDlgButtonChecked(hwndDlg, IDC_DISABLE_NOTIFICATION_CHECK) == BST_CHECKED);
+                
+                // 先保存禁用状态
+                NOTIFICATION_DISABLED = isDisabled;
+                WriteConfigNotificationDisabled(isDisabled);
+                
+                // 如果不禁用，则获取通知时间
+                if (!isDisabled && SendDlgItemMessage(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, DTM_GETSYSTEMTIME, 0, (LPARAM)&st) == GDT_VALID) {
                     // 计算总秒数: 时*3600 + 分*60 + 秒
                     int totalSeconds = st.wHour * 3600 + st.wMinute * 60 + st.wSecond;
                     if (totalSeconds > 0) {
                         NOTIFICATION_TIMEOUT_MS = totalSeconds * 1000;
                     } else {
-                        // 如果时间为00:00:00，也视为禁用通知
-                        NOTIFICATION_TIMEOUT_MS = 0;
+                        // 如果时间为00:00:00，使用一个较小但非零的默认值
+                        NOTIFICATION_TIMEOUT_MS = 100;
                     }
                 }
+                // 注意：这里不再将NOTIFICATION_TIMEOUT_MS设置为0，而是保持原值
                 
                 // 获取通知透明度（从滑动条获取）
                 HWND hwndOpacitySlider = GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT);
