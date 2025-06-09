@@ -1827,17 +1827,24 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 NOTIFICATION_DISABLED = isDisabled;
                 WriteConfigNotificationDisabled(isDisabled);
                 
-                // 只有在启用通知且时间有效时才更新通知时间
-                if (!isDisabled && SendDlgItemMessage(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, DTM_GETSYSTEMTIME, 0, (LPARAM)&st) == GDT_VALID) {
+                // 获取通知时间设置
+                if (SendDlgItemMessage(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, DTM_GETSYSTEMTIME, 0, (LPARAM)&st) == GDT_VALID) {
                     // 计算总秒数: 时*3600 + 分*60 + 秒
                     int totalSeconds = st.wHour * 3600 + st.wMinute * 60 + st.wSecond;
-                    if (totalSeconds > 0) {
-                        NOTIFICATION_TIMEOUT_MS = totalSeconds * 1000;
-                        // 明确写入配置
+                    
+                    if (totalSeconds == 0) {
+                        // 如果时间为00:00:00，设置为0（表示禁用通知）
+                        NOTIFICATION_TIMEOUT_MS = 0;
                         WriteConfigNotificationTimeout(NOTIFICATION_TIMEOUT_MS);
-                    } else {
-                        // 如果时间为00:00:00，使用一个较小但非零的默认值
-                        NOTIFICATION_TIMEOUT_MS = 100;
+                        
+                        // 时间为0时也同时设置禁用标志
+                        if (!isDisabled) {
+                            NOTIFICATION_DISABLED = TRUE;
+                            WriteConfigNotificationDisabled(TRUE);
+                        }
+                    } else if (!isDisabled) {
+                        // 只有在不禁用的情况下才更新非零的通知时间
+                        NOTIFICATION_TIMEOUT_MS = totalSeconds * 1000;
                         WriteConfigNotificationTimeout(NOTIFICATION_TIMEOUT_MS);
                     }
                 }

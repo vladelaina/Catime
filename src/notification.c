@@ -65,8 +65,8 @@ void ShowNotification(HWND hwnd, const char* message) {
     ReadNotificationTypeConfig();
     ReadNotificationDisabledConfig();
     
-    // 如果通知已被禁用，直接返回
-    if (NOTIFICATION_DISABLED) {
+    // 如果通知已被禁用或通知时间为0，直接返回
+    if (NOTIFICATION_DISABLED || NOTIFICATION_TIMEOUT_MS == 0) {
         return;
     }
     
@@ -188,8 +188,8 @@ void ShowToastNotification(HWND hwnd, const char* message) {
     ReadNotificationOpacityConfig();
     ReadNotificationDisabledConfig();
     
-    // 如果通知已被禁用，直接返回
-    if (NOTIFICATION_DISABLED) {
+    // 如果通知已被禁用或通知时间为0，直接返回
+    if (NOTIFICATION_DISABLED || NOTIFICATION_TIMEOUT_MS == 0) {
         return;
     }
     
