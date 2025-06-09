@@ -1837,11 +1837,6 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                         NOTIFICATION_TIMEOUT_MS = 0;
                         WriteConfigNotificationTimeout(NOTIFICATION_TIMEOUT_MS);
                         
-                        // 时间为0时也同时设置禁用标志
-                        if (!isDisabled) {
-                            NOTIFICATION_DISABLED = TRUE;
-                            WriteConfigNotificationDisabled(TRUE);
-                        }
                     } else if (!isDisabled) {
                         // 只有在不禁用的情况下才更新非零的通知时间
                         NOTIFICATION_TIMEOUT_MS = totalSeconds * 1000;
