@@ -1461,8 +1461,8 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
                 float timeInSeconds = atof(timeStr);
                 int timeInMs = (int)(timeInSeconds * 1000.0f);
                 
-                // 确保时间至少为3000毫秒（3秒）
-                if (timeInMs < 100) timeInMs = 3000;
+                // 允许时间设置为0（不显示通知）或者至少为100毫秒
+                if (timeInMs > 0 && timeInMs < 100) timeInMs = 100;
                 
                 // 解析透明度
                 int opacity = atoi(opacityStr);
@@ -1687,16 +1687,34 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT3, wideText);
             
             // 设置通知显示时间
-            // 使用时间控件，设置初始化时间值
-            // 将秒数转换为SYSTEMTIME结构的时分秒
             SYSTEMTIME st = {0};
-            // 获取当地时间作为基础
             GetLocalTime(&st);
-            // 设置时间控件只关注时分秒部分
-            int totalSeconds = NOTIFICATION_TIMEOUT_MS / 1000;
-            st.wHour = totalSeconds / 3600;
-            st.wMinute = (totalSeconds % 3600) / 60;
-            st.wSecond = totalSeconds % 60;
+            
+            // 检查是否为0（禁用通知）
+            if (NOTIFICATION_TIMEOUT_MS == 0) {
+                // 勾选禁用通知复选框
+                CheckDlgButton(hwndDlg, IDC_DISABLE_NOTIFICATION_CHECK, BST_CHECKED);
+                
+                // 禁用时间控件
+                EnableWindow(GetDlgItem(hwndDlg, IDC_NOTIFICATION_TIME_EDIT), FALSE);
+                
+                // 设置一个默认的非零时间值
+                st.wHour = 0;
+                st.wMinute = 0;
+                st.wSecond = 3;
+            } else {
+                // 不勾选禁用通知复选框
+                CheckDlgButton(hwndDlg, IDC_DISABLE_NOTIFICATION_CHECK, BST_UNCHECKED);
+                
+                // 启用时间控件
+                EnableWindow(GetDlgItem(hwndDlg, IDC_NOTIFICATION_TIME_EDIT), TRUE);
+                
+                // 设置时间控件只关注时分秒部分
+                int totalSeconds = NOTIFICATION_TIMEOUT_MS / 1000;
+                st.wHour = totalSeconds / 3600;
+                st.wMinute = (totalSeconds % 3600) / 60;
+                st.wSecond = totalSeconds % 60;
+            }
             
             // 设置时间控件的初始值
             SendDlgItemMessage(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, DTM_SETSYSTEMTIME, 
@@ -1781,7 +1799,13 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
         }
         
         case WM_COMMAND:
-            if (LOWORD(wParam) == IDOK) {
+            // 处理禁用通知复选框状态变化
+            if (LOWORD(wParam) == IDC_DISABLE_NOTIFICATION_CHECK && HIWORD(wParam) == BN_CLICKED) {
+                BOOL isChecked = (IsDlgButtonChecked(hwndDlg, IDC_DISABLE_NOTIFICATION_CHECK) == BST_CHECKED);
+                EnableWindow(GetDlgItem(hwndDlg, IDC_NOTIFICATION_TIME_EDIT), !isChecked);
+                return TRUE;
+            }
+            else if (LOWORD(wParam) == IDOK) {
                 // 获取通知消息文本 - 使用Unicode函数
                 wchar_t wTimeout[256] = {0};
                 wchar_t wPomodoro[256] = {0};
@@ -1806,11 +1830,20 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 
                 // 获取通知显示时间
                 SYSTEMTIME st = {0};
-                if (SendDlgItemMessage(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, DTM_GETSYSTEMTIME, 0, (LPARAM)&st) == GDT_VALID) {
+                
+                // 检查是否勾选了禁用通知复选框
+                if (IsDlgButtonChecked(hwndDlg, IDC_DISABLE_NOTIFICATION_CHECK)) {
+                    NOTIFICATION_TIMEOUT_MS = 0; // 特殊值：禁用通知
+                }
+                // 否则从时间控件获取正常值
+                else if (SendDlgItemMessage(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, DTM_GETSYSTEMTIME, 0, (LPARAM)&st) == GDT_VALID) {
                     // 计算总秒数: 时*3600 + 分*60 + 秒
                     int totalSeconds = st.wHour * 3600 + st.wMinute * 60 + st.wSecond;
                     if (totalSeconds > 0) {
                         NOTIFICATION_TIMEOUT_MS = totalSeconds * 1000;
+                    } else {
+                        // 如果时间为00:00:00，也视为禁用通知
+                        NOTIFICATION_TIMEOUT_MS = 0;
                     }
                 }
                 
