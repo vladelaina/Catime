@@ -182,6 +182,11 @@ void ShowToastNotification(HWND hwnd, const char* message) {
     // 新增：读取最新的通知透明度配置
     ReadNotificationOpacityConfig();
     
+    // 如果通知显示时间设置为0，则不显示通知
+    if (NOTIFICATION_TIMEOUT_MS == 0) {
+        return;
+    }
+    
     // 注册通知窗口类（如果还未注册）
     if (!isClassRegistered) {
         RegisterNotificationClass(hInstance);
