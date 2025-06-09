@@ -1699,19 +1699,11 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             // 设置时间控件的启用/禁用状态
             EnableWindow(GetDlgItem(hwndDlg, IDC_NOTIFICATION_TIME_EDIT), !NOTIFICATION_DISABLED);
             
-            // 设置时间控件的值
-            // 如果被禁用，显示一个默认的非零时间值
-            if (NOTIFICATION_DISABLED) {
-                st.wHour = 0;
-                st.wMinute = 0;
-                st.wSecond = 3;
-            } else {
-                // 设置时间控件只关注时分秒部分
-                int totalSeconds = NOTIFICATION_TIMEOUT_MS / 1000;
-                st.wHour = totalSeconds / 3600;
-                st.wMinute = (totalSeconds % 3600) / 60;
-                st.wSecond = totalSeconds % 60;
-            }
+            // 设置时间控件的值 - 无论是否禁用都显示实际配置的时间
+            int totalSeconds = NOTIFICATION_TIMEOUT_MS / 1000;
+            st.wHour = totalSeconds / 3600;
+            st.wMinute = (totalSeconds % 3600) / 60;
+            st.wSecond = totalSeconds % 60;
             
             // 设置时间控件的初始值
             SendDlgItemMessage(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, DTM_SETSYSTEMTIME, 
@@ -1831,22 +1823,25 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 // 检查是否勾选了禁用通知复选框
                 BOOL isDisabled = (IsDlgButtonChecked(hwndDlg, IDC_DISABLE_NOTIFICATION_CHECK) == BST_CHECKED);
                 
-                // 先保存禁用状态
+                // 保存禁用状态
                 NOTIFICATION_DISABLED = isDisabled;
                 WriteConfigNotificationDisabled(isDisabled);
                 
-                // 如果不禁用，则获取通知时间
+                // 只有在启用通知且时间有效时才更新通知时间
                 if (!isDisabled && SendDlgItemMessage(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, DTM_GETSYSTEMTIME, 0, (LPARAM)&st) == GDT_VALID) {
                     // 计算总秒数: 时*3600 + 分*60 + 秒
                     int totalSeconds = st.wHour * 3600 + st.wMinute * 60 + st.wSecond;
                     if (totalSeconds > 0) {
                         NOTIFICATION_TIMEOUT_MS = totalSeconds * 1000;
+                        // 明确写入配置
+                        WriteConfigNotificationTimeout(NOTIFICATION_TIMEOUT_MS);
                     } else {
                         // 如果时间为00:00:00，使用一个较小但非零的默认值
                         NOTIFICATION_TIMEOUT_MS = 100;
+                        WriteConfigNotificationTimeout(NOTIFICATION_TIMEOUT_MS);
                     }
                 }
-                // 注意：这里不再将NOTIFICATION_TIMEOUT_MS设置为0，而是保持原值
+                // 如果禁用通知，则不修改通知时间配置
                 
                 // 获取通知透明度（从滑动条获取）
                 HWND hwndOpacitySlider = GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT);
