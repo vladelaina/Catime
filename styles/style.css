@@ -100,16 +100,16 @@ img {
 
 /* --- 页头/导航 --- */
 .main-header {
-    background-color: rgba(255, 255, 255, 0.92); /* 增加透明度，但保持清晰 */
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
-    border-bottom: 1px solid var(--border-color);
-    padding: 1rem 0; /* 稍微增加内边距 */
     position: sticky;
     top: 0;
     z-index: 1000;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    background-color: rgba(242, 244, 255, 0.7); /* 使用 --background-color 的 RGB 近似值 */
+    border-bottom: 1px solid rgba(224, 224, 255, 0.15); /* 使用 --border-color 的 RGB 近似值 */
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+    padding: 1rem 0;
     transition: box-shadow 0.3s ease, background-color 0.3s ease;
-    box-shadow: 0 2px 15px rgba(122, 162, 247, 0.08); /* 添加微妙的阴影 */
 }
 
 .main-header:hover {
