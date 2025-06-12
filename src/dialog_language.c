@@ -51,7 +51,7 @@ static DialogTitleEntry g_dialogTitles[] = {
 static SpecialControlEntry g_specialControls[] = {
     // 关于对话框
     {IDD_ABOUT_DIALOG, IDC_ABOUT_TITLE, L"关于", L"About"},
-    {IDD_ABOUT_DIALOG, IDC_VERSION_TEXT, L"版本: %hs", L"Version: %hs"},
+    {IDD_ABOUT_DIALOG, IDC_VERSION_TEXT, L"Version: %hs", L"Version: %hs"},
     {IDD_ABOUT_DIALOG, IDC_BUILD_DATE, L"构建日期:", L"Build Date:"},
     {IDD_ABOUT_DIALOG, IDC_COPYRIGHT, L"COPYRIGHT_TEXT", L"COPYRIGHT_TEXT"},
     {IDD_ABOUT_DIALOG, IDC_CREDITS, L"鸣谢", L"Credits"},
@@ -240,7 +240,14 @@ static BOOL ProcessSpecialControlText(HWND hwndCtl, const wchar_t* localizedText
     // 特殊处理版本信息文本
     if (controlID == IDC_VERSION_TEXT && dialogID == IDD_ABOUT_DIALOG) {
         wchar_t versionText[256];
-        StringCbPrintfW(versionText, sizeof(versionText), localizedText, CATIME_VERSION);
+        // 从语言文件获取本地化的版本字符串格式
+        const wchar_t* localizedVersionFormat = GetLocalizedString(NULL, L"Version: %hs");
+        if (localizedVersionFormat) {
+            StringCbPrintfW(versionText, sizeof(versionText), localizedVersionFormat, CATIME_VERSION);
+        } else {
+            // 如果找不到本地化版本，使用传入的格式
+            StringCbPrintfW(versionText, sizeof(versionText), localizedText, CATIME_VERSION);
+        }
         SetWindowTextW(hwndCtl, versionText);
         return TRUE;
     }
