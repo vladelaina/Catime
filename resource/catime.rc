@@ -20,7 +20,7 @@ BEGIN
         BLOCK "000004b0"
         BEGIN
             VALUE "CompanyName",      "vladelaina"
-            VALUE "FileDescription",  "A very useful timer (Pomodoro Clock)"
+            VALUE "FileDescription",  "Catime"
             VALUE "FileVersion",      CATIME_VERSION
             VALUE "InternalName",     "Catime"
             VALUE "LegalCopyright",   "Copyright (C) 2025 vladelaina. Apache License 2.0"
