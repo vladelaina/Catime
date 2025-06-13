@@ -22,7 +22,7 @@ body:
     attributes:
       label: "📝 Steps to Reproduce the Issue"
       description: "Can you tell us how you encountered this bug? List the steps so we can find the problem faster."
-      placeholder: "For example:\n1. Click on Edit mode\n2. Then this happened...\n3. Oops! Problem occurred!"
+      placeholder: "For example:\n1. Used what feature\n2. Then this happened...\n3. Oops! Problem occurred!"
     validations:
       required: false
   - type: textarea
