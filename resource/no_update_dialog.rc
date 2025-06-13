@@ -1,0 +1,14 @@
+#include <windows.h>
+#include "resource.h"
+
+// 设置 UTF-8 编码
+#pragma code_page(65001)
+
+// 无需更新对话框资源定义
+IDD_NO_UPDATE_DIALOG DIALOGEX 0, 0, 160, 60
+STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+FONT 12, "Microsoft YaHei UI"
+BEGIN
+    CTEXT           "您已经使用的是最新版本!", IDC_NO_UPDATE_TEXT, 0, 10, 160, 25
+    DEFPUSHBUTTON   "确定", IDOK, 60, 40, 40, 15
+END 

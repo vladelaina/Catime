@@ -106,6 +106,7 @@ END
 #include "website_dialog.rc"
 #include "notification_dialog.rc"
 #include "update_dialog.rc"
+#include "no_update_dialog.rc"
 #include "hotkey_dialog.rc"
 
 1 RT_MANIFEST "app.manifest"
