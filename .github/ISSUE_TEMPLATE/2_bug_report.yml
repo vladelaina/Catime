@@ -1,6 +1,6 @@
-name:  Bug Report
+name:  🐛 Bug Report 🐛
 description: "🛠️ Found a problem? Let us know here!"
-title: "[Bug]: "
+title: "[🐛Bug]: "
 labels: ["bug"]
 body:
   - type: input
