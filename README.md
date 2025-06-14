@@ -171,18 +171,18 @@ cd Catime
 ### 2. Tools (MinGW, xmake)
 
 
-#### 🐧Linux
+#### <img src="Images/linux.svg"  height="25" />Linux
 
-- Ubuntu
+- <img src="Images/ubuntu.svg"  height="25" />Ubuntu
    ```bash
    sudo apt update && sudo apt install -y mingw-w64 && curl -fsSL https://xmake.io/shget.text | bash
    ```
-- Arch
+- <img src="Images/archlinux.svg"  height="25" />Arch
   ```bash
   sudo pacman -Syu --noconfirm mingw-w64 xmake
   ```
 
-#### 🪟Windows
+#### <img src="Images/windows.svg"  height="25" />Windows
   
   1. Prepare tools
 
