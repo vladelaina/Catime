@@ -483,6 +483,9 @@ function translateSupportElements() {
         if (td.textContent === '为爱发电') {
             td.textContent = 'Powered by love';
         }
+        if (td.textContent === 'catime小小支持') {
+            td.textContent = 'A little support for catime';
+        }
         
         // 为所有留言单元格添加特殊样式，增强可读性
         if (td.parentElement && td.cellIndex === 3) { // 第四列是留言列
