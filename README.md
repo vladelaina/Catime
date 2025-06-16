@@ -26,9 +26,10 @@
 <div align="center">
   
 
+
 [![GitHub Release](https://img.shields.io/github/v/release/vladelaina/Catime?color=369eff&labelColor=black&logo=github&style=flat-square)](https://github.com/vladelaina/Catime/releases)
 ![C](https://img.shields.io/badge/language-C-blue?logo=c&logoColor=white&labelColor=black&style=flat-square)
-[![Discord](https://img.shields.io/discord/1341627294833184818?color=5865F2&label=discord&labelColor=black&logo=discord&logoColor=white&style=flat-square)](https://discord.com/invite/W3tW2gtp6g)
+[![EXE Size](https://img.shields.io/badge/EXE%20Size-889KB-blue?style=flat-square&labelColor=black)](https://github.com/vladelaina/Catime/releases)
 [![Last Commit](https://img.shields.io/github/last-commit/vladelaina/Catime?label=last%20commit&labelColor=black&style=flat-square)](https://github.com/vladelaina/Catime/commits)<br/>
 [![Downloads](https://img.shields.io/github/downloads/vladelaina/Catime/total?color=blue&label=downloads&labelColor=black&style=flat-square)](https://github.com/vladelaina/Catime/releases)
 [![Forks](https://img.shields.io/github/forks/vladelaina/Catime?color=8ae8ff&labelColor=black&style=flat-square)](https://github.com/vladelaina/Catime/network/members)
