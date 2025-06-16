@@ -20,11 +20,8 @@
   elegantly helping you manage time on Windows.
 </p>
 
-<!-- 语言切换 -->
-<div align="center" style="margin-top: 25px; margin-bottom: 25px;">
-  <a href="#" style="text-decoration: none; color: #58a6ff; font-weight: bold; font-size: 18px;">English</a> | 
-  <a href="./README-zh.md" style="text-decoration: none; color: #58a6ff; font-weight: bold; font-size: 18px;">简体中文</a>
-</div>
+
+<p align="center"><strong>English</strong> · <a href="./README-zh.md">简体中文</a> · <a href="https://vladelaina.github.io/Catime/">Official Site</a> · <a href="https://vladelaina.github.io/Catime/guide.html">Guide</a> · <a href="https://vladelaina.github.io/Catime/about.html">About</a> · <a href="https://vladelaina.com/blog">Blog</a> · <a href="https://github.com/vladelaina/Catime/issues">Feedback</a></p>
 
 <!-- 顶部统计徽章行 -->
 <div align="center">
