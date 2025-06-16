@@ -6,6 +6,26 @@
   <h1 style="margin-top: 10px; font-size: 42px; font-weight: 700;">Catime</h1>
 </div>
 
+<!-- 项目描述 + 火箭图标 -->
+<p align="center" style="font-size: 18px; margin-bottom: 30px;">
+  🎉 No installation or setup required — just double-click to get started.<br/>
+  🌸 Clean, elegant interface with smooth operation.<br/>
+  🚀 Powerful keyboard shortcuts for lightning-fast productivity.
+</p>
+
+<p align="center" style="font-size: 16px; color: #666; margin-bottom: 20px;">
+  An ultra-lightweight Windows countdown tool with Pomodoro functionality,<br/>
+  featuring a transparent interface and rich customization options,<br/>
+  using only a few MB of memory and almost no CPU resources,<br/>
+  elegantly helping you manage time on Windows.
+</p>
+
+<!-- 语言切换 -->
+<div align="center" style="margin-top: 25px; margin-bottom: 25px;">
+  <a href="#" style="text-decoration: none; color: #58a6ff; font-weight: bold; font-size: 18px;">English</a> | 
+  <a href="./README-zh.md" style="text-decoration: none; color: #58a6ff; font-weight: bold; font-size: 18px;">简体中文</a>
+</div>
+
 <!-- 顶部统计徽章行 -->
 <div align="center">
   <a href="https://github.com/vladelaina/Catime/stargazers">
@@ -67,24 +87,8 @@
   </a>
 </div>
 
-<!-- 语言切换 -->
-<div align="center" style="margin-top: 25px; margin-bottom: 25px;">
-  <a href="#" style="text-decoration: none; color: #58a6ff; font-weight: bold; font-size: 18px;">English</a> | 
-  <a href="./README-zh.md" style="text-decoration: none; color: #58a6ff; font-weight: bold; font-size: 18px;">简体中文</a>
-</div>
-<!-- 项目描述 + 火箭图标 -->
-<p align="center" style="font-size: 18px; margin-bottom: 30px;">
-  🎉 No installation or setup required — just double-click to get started.<br/>
-  🌸 Clean, elegant interface with smooth operation.<br/>
-  🚀 Powerful keyboard shortcuts for lightning-fast productivity.
-</p>
 
-<p align="center" style="font-size: 16px; color: #666; margin-bottom: 20px;">
-  An ultra-lightweight Windows countdown tool with Pomodoro functionality,<br/>
-  featuring a transparent interface and rich customization options,<br/>
-  using only a few MB of memory and almost no CPU resources,<br/>
-  elegantly helping you manage time on Windows.
-</p>
+
 
 
 
