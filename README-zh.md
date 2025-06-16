@@ -6,70 +6,21 @@
   <h1 style="margin-top: 10px; font-size: 42px; font-weight: 700;">Catime</h1>
 </div>
 
-<!-- 顶部统计徽章行 -->
+<!-- 顶部导航链接 -->
+<p align="center"><a href="./README.md">English</a> · <strong>简体中文</strong> · <a href="https://vladelaina.github.io/Catime/">官方网站</a> · <a href="https://vladelaina.github.io/Catime/guide.html">用户指南</a> · <a href="https://vladelaina.github.io/Catime/about.html">关于</a> · <a href="https://github.com/users/vladelaina/projects/2/views/1">项目看板</a> · <a href="https://github.com/vladelaina/Catime/issues">反馈</a></p>
+
+<!-- 顶部徽章区块 -->
 <div align="center">
-  <a href="https://github.com/vladelaina/Catime/stargazers">
-    <img src="https://img.shields.io/github/stars/vladelaina/Catime?style=flat-square&logo=github&color=yellow&label=Stars" alt="Stars" />
-  </a>
-  <a href="https://github.com/vladelaina/Catime/network/members">
-    <img src="https://img.shields.io/github/forks/vladelaina/Catime?style=flat-square&logo=github&color=blue&label=Forks" alt="Forks" />
-  </a>
-  <a href="https://github.com/vladelaina/Catime/issues">
-    <img src="https://img.shields.io/github/issues/vladelaina/Catime?style=flat-square&label=open%20issues&color=orange" alt="Open Issues" />
-  </a>
-  <a href="https://github.com/users/vladelaina/projects/2">
-    <img src="https://img.shields.io/badge/Project%20Board-Planning-blueviolet?style=flat-square" alt="Project Board" />
-  </a>
-</div>
-
-<!-- 第二行 - 下载 -->
-<div align="center">
-  <a href="https://github.com/vladelaina/Catime/releases">
-    <img src="https://img.shields.io/github/downloads/vladelaina/Catime/total?style=flat-square&color=blue&label=downloads" alt="Downloads" />
-  </a>
-  <a href="https://github.com/vladelaina/Catime/releases/latest">
-    <img src="https://img.shields.io/github/v/release/vladelaina/Catime?style=flat-square&color=brightgreen&label=latest%20release" alt="Latest Release" />
-  </a>
-  <a href="https://github.com/vladelaina/Catime/releases" target="_blank">
-    <img src="https://img.shields.io/badge/software%20size-834%20KB-blue?style=flat-square&logo=appveyor&logoColor=white" alt="Software Size" />
-  </a>
-</div>
-
-<!-- 中间行 - 请我喝咖啡 -->
-<div align="center" style="margin: 10px 0;">
-  <a href="https://vladelaina.github.io/Catime/support.html" target="_blank">
-    <img src="https://img.shields.io/badge/请我喝咖啡-支持项目-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" alt="请我喝咖啡" />
-  </a>
-</div>
-
-<!-- 第三行 - Demo 链接 -->
-<div align="center">
-  <a href="https://vladelaina.github.io/Catime" target="_blank">
-    <img src="https://img.shields.io/badge/🌐_官方网站-访问-4285F4?style=for-the-badge" alt="官方网站" />
-  </a>
-  <a href="https://www.bilibili.com/video/BV1AsoKYgE3r/" target="_blank">
-    <img src="https://img.shields.io/badge/📺_演示视频-BiliBili-ff69b4?style=for-the-badge" alt="BiliBili演示" />
-  </a>
-  <a href="https://vladelaina.github.io/Catime/guide" target="_blank">
-    <img src="https://img.shields.io/badge/📖_用户指南-阅读-1DB954?style=for-the-badge" alt="用户指南" />
-  </a>
-</div>
-
-<!-- GitHub Trending 区域 -->
-<div align="center">
-  <a href="https://hellogithub.com/repository/00a7a32b7bc647e1a62747530bc16115" target="_blank">
-    <div style="background-color: #f5f5f5; border-radius: 12px; padding: 15px; display: inline-block; margin-top: 20px; border: 1px solid #e1e4e8;">
-      <div style="display: flex; align-items: center; justify-content: center;">
-        <img src="https://api.hellogithub.com/v1/widgets/recommend.svg?rid=00a7a32b7bc647e1a62747530bc16115&claim_uid=JBczix10rXqNblQ" alt="Featured｜HelloGitHub" style="width: 250px; height: 54px;" width="250" height="54" />
-      </div>
-    </div>
-  </a>
-</div>
-
-<!-- 语言切换 -->
-<div align="center" style="margin-top: 25px; margin-bottom: 25px;">
-  <a href="https://github.com/vladelaina/Catime" style="text-decoration: none; color: #58a6ff; font-weight: bold; font-size: 18px;">English</a> | 
-  <a href="#" style="text-decoration: none; color: #58a6ff; font-weight: bold; font-size: 18px;">简体中文</a>
+[![GitHub Release](https://img.shields.io/github/v/release/vladelaina/Catime?color=369eff&labelColor=black&logo=github&style=flat-square)](https://github.com/vladelaina/Catime/releases)
+![C](https://img.shields.io/badge/language-C-blue?logo=c&logoColor=white&labelColor=black&style=flat-square)
+[![EXE Size](https://img.shields.io/badge/EXE%20Size-889KB-blue?style=flat-square&labelColor=black)](https://github.com/vladelaina/Catime/releases)
+[![Last Commit](https://img.shields.io/github/last-commit/vladelaina/Catime?label=last%20commit&labelColor=black&style=flat-square)](https://github.com/vladelaina/Catime/commits)<br/>
+[![Downloads](https://img.shields.io/github/downloads/vladelaina/Catime/total?color=blue&label=downloads&labelColor=black&style=flat-square)](https://github.com/vladelaina/Catime/releases)
+[![Forks](https://img.shields.io/github/forks/vladelaina/Catime?color=8ae8ff&labelColor=black&style=flat-square)](https://github.com/vladelaina/Catime/network/members)
+[![Stars](https://img.shields.io/github/stars/vladelaina/Catime?color=ffcb47&labelColor=black&style=flat-square)](https://github.com/vladelaina/Catime/stargazers)
+[![Issues](https://img.shields.io/github/issues/vladelaina/Catime?color=ff80eb&labelColor=black&style=flat-square)](https://github.com/vladelaina/Catime/issues)
+[![License](https://img.shields.io/badge/license-apache%202.0-white?labelColor=black&style=flat-square)](https://github.com/vladelaina/Catime/blob/main/LICENSE)<br>
+[![Support Catime](https://img.shields.io/badge/支持Catime-EA4AAA?style=for-the-badge&logo=githubsponsors&logoColor=white)](https://vladelaina.github.io/Catime/support.html)
 </div>
 
 <!-- 项目描述 + 图标 -->
@@ -81,10 +32,8 @@
 
 <p align="center" style="font-size: 16px; color: #666; margin-bottom: 20px;">
   一款极致轻量的 Windows 倒计时工具，具有番茄工作法功能、透明界面和丰富自定义选项，<br/>
-  只需几 MB 内存且几乎不占用 CPU 资源，便可在Windows 上优雅掌控时间。
+  只需几 MB 内存且几乎不占用 CPU 资源，便可在 Windows 上优雅掌控时间。
 </p>
-
-
 
 <!-- 演示视频 -->
 <div align="center" style="margin-bottom: 30px;">
@@ -101,14 +50,15 @@
 
 ## [🌟特点](https://vladelaina.github.io/Catime/#core-features)
 
-- **极简设计**: 透明界面、点击穿透、随意拖拽和缩放、没有繁琐的图形化设置界面，不会让人有直观上多开一个软件的感觉
-- **灵活计时**: 快速预设、自定义时间输入、显示当前时间(12/24小时制)、倒计时、正计时、番茄时钟
-- **超时动作**: 显示消息、显示当前时间、正计时、锁定屏幕、打开文件/软件、打开网站、关机、重启
-- **自定义丰富**: 47种字体、15种预设颜色、支持输入颜色值、使用调色板选择颜色、支持实时预览
+- **极简设计**：透明界面、点击穿透、自由拖拽和缩放，无繁琐设置界面，不会让你觉得多开了一个软件
+- **灵活计时**：快速预设、自定义时间、显示当前时间（12/24小时制）、倒计时、正计时、番茄钟
+- **超时动作**：显示消息、显示当前时间、正计时、锁屏、打开文件/应用、打开网站、关机、重启
+- **丰富自定义**：47种字体、15种预设颜色、支持自定义颜色值、调色板选择、实时预览
 
 ## 📥 下载
 
 [<img src="https://get.microsoft.com/images/en-us%20dark.svg" alt="Get it from Microsoft" height="104">](https://apps.microsoft.com/detail/9n3mzdf1z34v?referrer=appbadge&launch=true&mode=full)
+
 #### 🪟 Winget
 
 ```
@@ -117,24 +67,24 @@ winget install --id VladElaina.Catime
 
 #### 💾 手动下载
 
-从 [GitHub Releases](https://github.com/vladelaina/Catime/releases/latest) 下载最新版本。
+前往 [GitHub Releases](https://github.com/vladelaina/Catime/releases/latest) 下载最新版本。
 
 ## [💡使用场景](https://vladelaina.github.io/Catime/#use-cases)
 
 - 👔 下班倒计时
-- 🍅 番茄时钟
-- 🎮 打游戏时使用，可以随时看时间，避免玩过头
-- ⏰ 定时打开
+- 🍅 番茄工作法
+- 🎮 游戏时随时掌控时间，避免沉迷
+- ⏰ 定时打开：
   - 🌐 网站
-  - 💻 软件
+  - 💻 应用
   - 📄 文件
   - 📝 批处理脚本
   - 🔄 定时关机/重启
-- 📊 ppt演示倒计时
-- 🕰️ 作为桌面时钟使用
-- ⏱️正计时/倒计时
+- 📊 演示/演讲倒计时
+- 🕰️ 桌面时钟
+- ⏱️ 正计时/倒计时
 
- 演示视频(基于V1.0.5)：<img src="https://www.bilibili.com/favicon.ico" width="20" height="20"> [BiliBili](https://www.bilibili.com/video/BV1AsoKYgE3r/)
+演示视频(基于V1.0.5)：<img src="https://www.bilibili.com/favicon.ico" width="20" height="20"> [BiliBili](https://www.bilibili.com/video/BV1AsoKYgE3r/)
 
 ## [📑使用指南](https://vladelaina.github.io/Catime/guide)
 
