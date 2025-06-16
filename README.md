@@ -23,54 +23,23 @@
 
 <p align="center"><strong>English</strong> · <a href="./README-zh.md">简体中文</a> · <a href="https://vladelaina.github.io/Catime/">Official Site</a> · <a href="https://vladelaina.github.io/Catime/guide.html">Guide</a> · <a href="https://vladelaina.github.io/Catime/about.html">About</a> · <a href="https://vladelaina.com/blog">Blog</a> · <a href="https://github.com/vladelaina/Catime/issues">Feedback</a></p>
 
-<!-- 顶部统计徽章行 -->
 <div align="center">
-  <a href="https://github.com/vladelaina/Catime/stargazers">
-    <img src="https://img.shields.io/github/stars/vladelaina/Catime?style=flat-square&logo=github&color=yellow&label=Stars" alt="Stars" />
-  </a>
-  <a href="https://github.com/vladelaina/Catime/network/members">
-    <img src="https://img.shields.io/github/forks/vladelaina/Catime?style=flat-square&logo=github&color=blue&label=Forks" alt="Forks" />
-  </a>
-  <a href="https://github.com/vladelaina/Catime/issues">
-    <img src="https://img.shields.io/github/issues/vladelaina/Catime?style=flat-square&label=open%20issues&color=orange" alt="Open Issues" />
-  </a>
-  <a href="https://github.com/users/vladelaina/projects/2">
-    <img src="https://img.shields.io/badge/Project%20Board-Planning-blueviolet?style=flat-square" alt="Project Board" />
-  </a>
+  
+[![Discord](https://img.shields.io/discord/1127171173982154893?color=5865F2&label=discord&labelColor=black&logo=discord&logoColor=white&style=flat-square)](https://discord.com/invite/W3tW2gtp6g)
+[![GitHub Release](https://img.shields.io/github/v/release/vladelaina/Catime?color=369eff&labelColor=black&logo=github&style=flat-square)](https://github.com/vladelaina/Catime/releases)
+![C](https://img.shields.io/badge/language-C-blue?logo=c&logoColor=white&labelColor=black&style=flat-square)
+[![Discord](https://img.shields.io/discord/1127171173982154893?color=5865F2&label=discord&labelColor=black&logo=discord&logoColor=white&style=flat-square)](https://discord.gg/AYFPHvv2jT)
+[![Last Commit](https://img.shields.io/github/last-commit/vladelaina/Catime?label=last%20commit&labelColor=black&style=flat-square)](https://github.com/vladelaina/Catime/commits)<br/>
+[![Downloads](https://img.shields.io/github/downloads/vladelaina/Catime/total?color=blue&label=downloads&labelColor=black&style=flat-square)](https://github.com/vladelaina/Catime/releases)
+[![Forks](https://img.shields.io/github/forks/vladelaina/Catime?color=8ae8ff&labelColor=black&style=flat-square)](https://github.com/vladelaina/Catime/network/members)
+[![Stars](https://img.shields.io/github/stars/vladelaina/Catime?color=ffcb47&labelColor=black&style=flat-square)](https://github.com/vladelaina/Catime/stargazers)
+[![Issues](https://img.shields.io/github/issues/vladelaina/Catime?color=ff80eb&labelColor=black&style=flat-square)](https://github.com/vladelaina/Catime/issues)
+[![License](https://img.shields.io/badge/license-apache%202.0-white?labelColor=black&style=flat-square)](https://github.com/vladelaina/Catime/blob/main/LICENSE)<br>
+[![Catime Support](https://img.shields.io/badge/Catime%20Support-EA4AAA?style=for-the-badge&logo=githubsponsors&logoColor=white)](https://vladelaina.github.io/Catime/support.html)
+
 </div>
 
-<!-- 第二行 - 下载 -->
-<div align="center">
-  <a href="https://github.com/vladelaina/Catime/releases">
-    <img src="https://img.shields.io/github/downloads/vladelaina/Catime/total?style=flat-square&color=blue&label=downloads" alt="Downloads" />
-  </a>
-  <a href="https://github.com/vladelaina/Catime/releases/latest">
-    <img src="https://img.shields.io/github/v/release/vladelaina/Catime?style=flat-square&color=brightgreen&label=latest%20release" alt="Latest Release" />
-  </a>
-  <a href="https://github.com/vladelaina/Catime/releases" target="_blank">
-    <img src="https://img.shields.io/badge/software%20size-834%20KB-blue?style=flat-square&logo=appveyor&logoColor=white" alt="Software Size" />
-  </a>
-</div>
 
-<!-- 中间行 - 请我喝咖啡 -->
-<div align="center" style="margin: 10px 0;">
-  <a href="https://vladelaina.github.io/Catime/support.html" target="_blank">
-    <img src="https://img.shields.io/badge/Buy_Me_a_Coffee-Support_Me-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me a Coffee" />
-  </a>
-</div>
-
-<!-- 第三行 - Demo 链接 -->
-<div align="center">
-  <a href="https://vladelaina.github.io/Catime" target="_blank">
-    <img src="https://img.shields.io/badge/🌐_Official_Website-Visit-4285F4?style=for-the-badge" alt="Official Website" />
-  </a>
-  <a href="https://www.bilibili.com/video/BV1AsoKYgE3r/" target="_blank">
-    <img src="https://img.shields.io/badge/📺_Demo_Video-BiliBili-ff69b4?style=for-the-badge" alt="Demo on BiliBili" />
-  </a>
-  <a href="https://vladelaina.github.io/Catime/guide" target="_blank">
-    <img src="https://img.shields.io/badge/📖_User_Guide-Read-1DB954?style=for-the-badge" alt="User Guide" />
-  </a>
-</div>
 
 
 <!-- GitHub Trending 区域 -->
