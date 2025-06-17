@@ -187,7 +187,7 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
             // 格式化显示文本
             if (versionInfo) {
                 wchar_t displayText[256];
-                swprintf(displayText, sizeof(displayText)/sizeof(wchar_t),
+                StringCbPrintfW(displayText, sizeof(displayText),
                         L"当前版本: %S\n新版本: %S",
                         versionInfo->currentVersion, versionInfo->latestVersion);
                 
@@ -326,7 +326,7 @@ INT_PTR CALLBACK NoUpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM l
                 
                 // 创建完整的消息，包含版本号
                 wchar_t fullMessage[256];
-                swprintf(fullMessage, sizeof(fullMessage)/sizeof(wchar_t),
+                StringCbPrintfW(fullMessage, sizeof(fullMessage),
                         L"%s\n%s %hs", baseText, versionText, currentVersion);
                 
                 // 设置对话框文本
@@ -379,7 +379,7 @@ BOOL OpenBrowserForUpdateAndExit(const char* url, HWND hwnd) {
     
     // 提示用户
     wchar_t message[512];
-    swprintf(message, sizeof(message)/sizeof(wchar_t),
+    StringCbPrintfW(message, sizeof(message),
             L"即将退出程序");
     
     LOG_INFO("发送退出消息到主窗口");
