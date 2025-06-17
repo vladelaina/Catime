@@ -287,11 +287,23 @@ INT_PTR CALLBACK NoUpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM l
             // 应用对话框多语言支持
             ApplyDialogLanguage(hwndDlg, IDD_NO_UPDATE_DIALOG);
             
-            // 可以接收额外信息如当前版本
-            const wchar_t* versionInfo = (const wchar_t*)lParam;
-            if (versionInfo) {
-                // 设置对话框文本，添加当前版本信息
-                SetDlgItemTextW(hwndDlg, IDC_NO_UPDATE_TEXT, versionInfo);
+            // 获取当前版本信息
+            const char* currentVersion = (const char*)lParam;
+            if (currentVersion) {
+                // 获取本地化的基本文本
+                const wchar_t* baseText = GetDialogLocalizedString(IDD_NO_UPDATE_DIALOG, IDC_NO_UPDATE_TEXT);
+                if (!baseText) {
+                    // 如果找不到本地化文本，使用默认文本
+                    baseText = L"You are already using the latest version!";
+                }
+                
+                // 创建完整的消息，包含版本号
+                wchar_t fullMessage[256];
+                swprintf(fullMessage, sizeof(fullMessage)/sizeof(wchar_t),
+                        L"%s\nCurrent version: %hs", baseText, currentVersion);
+                
+                // 设置对话框文本
+                SetDlgItemTextW(hwndDlg, IDC_NO_UPDATE_TEXT, fullMessage);
             }
             return TRUE;
         }
@@ -312,13 +324,15 @@ INT_PTR CALLBACK NoUpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM l
 
 /**
  * @brief 显示无需更新对话框
+ * @param hwnd 父窗口句柄
+ * @param currentVersion 当前版本号
  */
-void ShowNoUpdateDialog(HWND hwnd, const wchar_t* versionInfo) {
+void ShowNoUpdateDialog(HWND hwnd, const char* currentVersion) {
     DialogBoxParam(GetModuleHandle(NULL), 
                  MAKEINTRESOURCE(IDD_NO_UPDATE_DIALOG), 
                  hwnd, 
                  NoUpdateDlgProc, 
-                 (LPARAM)versionInfo);
+                 (LPARAM)currentVersion);
 }
 
 /**
@@ -472,14 +486,9 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
     } else if (!silentCheck) {
         // 已是最新版本
         LOG_INFO("当前已是最新版本 %s，无需更新", currentVersion);
-        wchar_t message[256];
-        swprintf(message, sizeof(message)/sizeof(wchar_t),
-                GetLocalizedString(
-                    L"您的软件已是最新版本！\n当前版本: %S",
-                    L"Your software is up to date!\nCurrent version: %S"),
-                currentVersion);
         
-        ShowNoUpdateDialog(hwnd, message);
+        // 使用本地化字符串，而不是构建完整消息
+        ShowNoUpdateDialog(hwnd, currentVersion);
     } else {
         LOG_INFO("静默检查模式：当前已是最新版本 %s，无需显示提示", currentVersion);
     }
