@@ -62,4 +62,12 @@ BOOL SetLanguage(AppLanguage language);
  */
 AppLanguage GetCurrentLanguage(void);
 
+/**
+ * @brief 获取当前语言的名称
+ * @param buffer 用于存储语言名称的缓冲区
+ * @param bufferSize 缓冲区大小（字符数）
+ * @return 是否成功获取语言名称
+ */
+BOOL GetCurrentLanguageName(wchar_t* buffer, size_t bufferSize);
+
 #endif /* LANGUAGE_H */

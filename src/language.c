@@ -334,3 +334,55 @@ BOOL SetLanguage(AppLanguage language) {
 AppLanguage GetCurrentLanguage() {
     return CURRENT_LANGUAGE;
 }
+
+/**
+ * @brief 获取当前语言的名称
+ * @param buffer 用于存储语言名称的缓冲区
+ * @param bufferSize 缓冲区大小（字符数）
+ * @return 是否成功获取语言名称
+ */
+BOOL GetCurrentLanguageName(wchar_t* buffer, size_t bufferSize) {
+    if (!buffer || bufferSize == 0) {
+        return FALSE;
+    }
+    
+    // 获取当前语言
+    AppLanguage language = GetCurrentLanguage();
+    
+    // 根据语言枚举返回对应的名称
+    switch (language) {
+        case APP_LANG_CHINESE_SIMP:
+            wcscpy_s(buffer, bufferSize, L"zh_CN");
+            break;
+        case APP_LANG_CHINESE_TRAD:
+            wcscpy_s(buffer, bufferSize, L"zh-Hant");
+            break;
+        case APP_LANG_SPANISH:
+            wcscpy_s(buffer, bufferSize, L"es");
+            break;
+        case APP_LANG_FRENCH:
+            wcscpy_s(buffer, bufferSize, L"fr");
+            break;
+        case APP_LANG_GERMAN:
+            wcscpy_s(buffer, bufferSize, L"de");
+            break;
+        case APP_LANG_RUSSIAN:
+            wcscpy_s(buffer, bufferSize, L"ru");
+            break;
+        case APP_LANG_PORTUGUESE:
+            wcscpy_s(buffer, bufferSize, L"pt");
+            break;
+        case APP_LANG_JAPANESE:
+            wcscpy_s(buffer, bufferSize, L"ja");
+            break;
+        case APP_LANG_KOREAN:
+            wcscpy_s(buffer, bufferSize, L"ko");
+            break;
+        case APP_LANG_ENGLISH:
+        default:
+            wcscpy_s(buffer, bufferSize, L"en");
+            break;
+    }
+    
+    return TRUE;
+}
