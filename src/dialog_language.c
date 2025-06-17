@@ -44,7 +44,8 @@ static DialogTitleEntry g_dialogTitles[] = {
     {CLOCK_IDD_POMODORO_TIME_DIALOG, L"Set Pomodoro Time"},
     {CLOCK_IDD_SHORTCUT_DIALOG, L"Countdown Presets"},
     {CLOCK_IDD_WEBSITE_DIALOG, L"Open Website"},
-    {CLOCK_IDD_DIALOG1, L"Set Countdown"}
+    {CLOCK_IDD_DIALOG1, L"Set Countdown"},
+    {IDD_NO_UPDATE_DIALOG, L"Update Check"}
 };
 
 // 特殊控件映射表（需要特殊处理的控件）
@@ -55,6 +56,9 @@ static SpecialControlEntry g_specialControls[] = {
     {IDD_ABOUT_DIALOG, IDC_BUILD_DATE, L"构建日期:", L"Build Date:"},
     {IDD_ABOUT_DIALOG, IDC_COPYRIGHT, L"COPYRIGHT_TEXT", L"COPYRIGHT_TEXT"},
     {IDD_ABOUT_DIALOG, IDC_CREDITS, L"鸣谢", L"Credits"},
+    
+    // 无需更新对话框
+    {IDD_NO_UPDATE_DIALOG, IDC_NO_UPDATE_TEXT, L"NoUpdateRequired", L"You are already using the latest version!"},
     
     // 通知设置对话框的控件 - 添加这部分来解决问题
     {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_CONTENT_GROUP, L"Notification Content", L"Notification Content"},

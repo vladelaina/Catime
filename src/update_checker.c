@@ -8,10 +8,13 @@
 #include <windows.h>
 #include <wininet.h>
 #include <stdio.h>
-#include <shlobj.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strsafe.h>
 #include "../include/update_checker.h"
-#include "../include/language.h"
 #include "../include/log.h"
+#include "../include/language.h"
+#include "../include/dialog_language.h"
 #include "../resource/resource.h"
 
 #pragma comment(lib, "wininet.lib")
@@ -281,6 +284,9 @@ void ShowUpdateErrorDialog(HWND hwnd, const wchar_t* errorMsg) {
 INT_PTR CALLBACK NoUpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_INITDIALOG: {
+            // 应用对话框多语言支持
+            ApplyDialogLanguage(hwndDlg, IDD_NO_UPDATE_DIALOG);
+            
             // 可以接收额外信息如当前版本
             const wchar_t* versionInfo = (const wchar_t*)lParam;
             if (versionInfo) {
