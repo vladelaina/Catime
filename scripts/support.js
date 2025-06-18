@@ -486,6 +486,9 @@ function translateSupportElements() {
         if (td.textContent === 'catime小小支持') {
             td.textContent = 'A little support for catime';
         }
+        if (td.textContent === '支持一下') {
+            td.textContent = 'Just a little support';
+        }
         
         // 为所有留言单元格添加特殊样式，增强可读性
         if (td.parentElement && td.cellIndex === 3) { // 第四列是留言列
