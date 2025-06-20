@@ -45,7 +45,8 @@ static DialogTitleEntry g_dialogTitles[] = {
     {CLOCK_IDD_SHORTCUT_DIALOG, L"Countdown Presets"},
     {CLOCK_IDD_WEBSITE_DIALOG, L"Open Website"},
     {CLOCK_IDD_DIALOG1, L"Set Countdown"},
-    {IDD_NO_UPDATE_DIALOG, L"Update Check"}
+    {IDD_NO_UPDATE_DIALOG, L"Update Check"},
+    {IDD_UPDATE_DIALOG, L"Update Available"}
 };
 
 // 特殊控件映射表（需要特殊处理的控件）
@@ -59,6 +60,10 @@ static SpecialControlEntry g_specialControls[] = {
     
     // 无需更新对话框
     {IDD_NO_UPDATE_DIALOG, IDC_NO_UPDATE_TEXT, L"NoUpdateRequired", L"You are already using the latest version!"},
+    
+    // 更新提示对话框
+    {IDD_UPDATE_DIALOG, IDC_UPDATE_TEXT, L"CurrentVersion: %s\nNewVersion: %s", L"Current Version: %s\nNew Version: %s"},
+    {IDD_UPDATE_DIALOG, IDC_UPDATE_EXIT_TEXT, L"The application will exit now", L"The application will exit now"},
     
     // 通知设置对话框的控件 - 添加这部分来解决问题
     {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_CONTENT_GROUP, L"Notification Content", L"Notification Content"},
@@ -106,6 +111,11 @@ static SpecialControlEntry g_specialControls[] = {
 
 // 特殊按钮文本
 static SpecialControlEntry g_specialButtons[] = {
+    // 更新对话框按钮
+    {IDD_UPDATE_DIALOG, IDYES, L"Yes", L"Yes"},
+    {IDD_UPDATE_DIALOG, IDNO, L"No", L"No"},
+    {IDD_UPDATE_DIALOG, IDOK, L"OK", L"OK"},
+    
     {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_TEST_SOUND_BUTTON, L"Test", L"Test"},
     {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_OPEN_SOUND_DIR_BUTTON, L"Audio folder", L"Audio folder"},
     {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDOK, L"OK", L"OK"},

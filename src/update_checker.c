@@ -130,20 +130,27 @@ BOOL ParseLatestVersionFromJson(const char* jsonResponse, char* latestVersion, s
 INT_PTR CALLBACK ExitMsgDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_INITDIALOG: {
+            // 应用对话框多语言支持
+            ApplyDialogLanguage(hwndDlg, IDD_UPDATE_DIALOG);
+            
             // 获取消息文本
             const wchar_t* exitMsg = (const wchar_t*)lParam;
             if (exitMsg) {
+                // 获取本地化的退出文本
+                const wchar_t* exitText = GetDialogLocalizedString(IDD_UPDATE_DIALOG, IDC_UPDATE_EXIT_TEXT);
+                if (!exitText) {
+                    // 如果找不到本地化文本，使用默认文本
+                    exitText = exitMsg;
+                }
+                
                 // 设置对话框文本
-                SetDlgItemTextW(hwndDlg, IDC_UPDATE_EXIT_TEXT, exitMsg);
+                SetDlgItemTextW(hwndDlg, IDC_UPDATE_EXIT_TEXT, exitText);
                 SetDlgItemTextW(hwndDlg, IDC_UPDATE_TEXT, L"");  // 清空版本文本
                 
                 // 隐藏是否按钮，只显示确定按钮
                 ShowWindow(GetDlgItem(hwndDlg, IDYES), SW_HIDE);
                 ShowWindow(GetDlgItem(hwndDlg, IDNO), SW_HIDE);
                 ShowWindow(GetDlgItem(hwndDlg, IDOK), SW_SHOW);
-                
-                // 设置窗口标题
-                SetWindowTextW(hwndDlg, GetLocalizedString(L"Catime - 更新提示", L"Catime - Update Notice"));
             }
             return TRUE;
         }
@@ -181,21 +188,29 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
     
     switch (msg) {
         case WM_INITDIALOG: {
+            // 应用对话框多语言支持
+            ApplyDialogLanguage(hwndDlg, IDD_UPDATE_DIALOG);
+            
             // 保存版本信息
             versionInfo = (UpdateVersionInfo*)lParam;
             
             // 格式化显示文本
             if (versionInfo) {
+                // 获取本地化的版本文本格式
+                const wchar_t* versionFormat = GetDialogLocalizedString(IDD_UPDATE_DIALOG, IDC_UPDATE_TEXT);
+                if (!versionFormat) {
+                    // 如果找不到本地化文本，使用默认格式
+                    versionFormat = L"Current Version: %S\nNew Version: %S";
+                }
+                
+                // 格式化版本信息
                 wchar_t displayText[256];
                 StringCbPrintfW(displayText, sizeof(displayText),
-                        L"当前版本: %S\n新版本: %S",
+                        versionFormat,
                         versionInfo->currentVersion, versionInfo->latestVersion);
                 
                 // 设置对话框文本
                 SetDlgItemTextW(hwndDlg, IDC_UPDATE_TEXT, displayText);
-                
-                // 设置窗口标题
-                SetWindowTextW(hwndDlg, GetLocalizedString(L"Catime - 更新可用", L"Catime - Update Available"));
                 
                 // 隐藏退出文本和确定按钮，显示是/否按钮
                 SetDlgItemTextW(hwndDlg, IDC_UPDATE_EXIT_TEXT, L"");
