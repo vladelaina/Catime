@@ -133,25 +133,26 @@ INT_PTR CALLBACK ExitMsgDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lP
             // 应用对话框多语言支持
             ApplyDialogLanguage(hwndDlg, IDD_UPDATE_DIALOG);
             
-            // 获取消息文本
-            const wchar_t* exitMsg = (const wchar_t*)lParam;
-            if (exitMsg) {
-                // 获取本地化的退出文本
-                const wchar_t* exitText = GetDialogLocalizedString(IDD_UPDATE_DIALOG, IDC_UPDATE_EXIT_TEXT);
-                if (!exitText) {
-                    // 如果找不到本地化文本，使用默认文本
-                    exitText = exitMsg;
-                }
-                
-                // 设置对话框文本
-                SetDlgItemTextW(hwndDlg, IDC_UPDATE_EXIT_TEXT, exitText);
-                SetDlgItemTextW(hwndDlg, IDC_UPDATE_TEXT, L"");  // 清空版本文本
-                
-                // 隐藏是否按钮，只显示确定按钮
-                ShowWindow(GetDlgItem(hwndDlg, IDYES), SW_HIDE);
-                ShowWindow(GetDlgItem(hwndDlg, IDNO), SW_HIDE);
-                ShowWindow(GetDlgItem(hwndDlg, IDOK), SW_SHOW);
-            }
+            // 获取本地化的退出文本
+            const wchar_t* exitText = GetLocalizedString(L"程序即将退出", L"The application will exit now");
+            
+            // 设置对话框文本
+            SetDlgItemTextW(hwndDlg, IDC_UPDATE_EXIT_TEXT, exitText);
+            SetDlgItemTextW(hwndDlg, IDC_UPDATE_TEXT, L"");  // 清空版本文本
+            
+            // 设置确定按钮文本
+            const wchar_t* okText = GetLocalizedString(L"确定", L"OK");
+            SetDlgItemTextW(hwndDlg, IDOK, okText);
+            
+            // 隐藏是否按钮，只显示确定按钮
+            ShowWindow(GetDlgItem(hwndDlg, IDYES), SW_HIDE);
+            ShowWindow(GetDlgItem(hwndDlg, IDNO), SW_HIDE);
+            ShowWindow(GetDlgItem(hwndDlg, IDOK), SW_SHOW);
+            
+            // 设置对话框标题
+            const wchar_t* titleText = GetLocalizedString(L"Catime - 更新提示", L"Catime - Update Notice");
+            SetWindowTextW(hwndDlg, titleText);
+            
             return TRUE;
         }
         
@@ -172,12 +173,11 @@ INT_PTR CALLBACK ExitMsgDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lP
 /**
  * @brief 显示自定义的退出消息对话框
  */
-void ShowExitMessageDialog(HWND hwnd, const wchar_t* message) {
-    DialogBoxParam(GetModuleHandle(NULL), 
-                 MAKEINTRESOURCE(IDD_UPDATE_DIALOG), 
-                 hwnd, 
-                 ExitMsgDlgProc, 
-                 (LPARAM)message);
+void ShowExitMessageDialog(HWND hwnd) {
+    DialogBox(GetModuleHandle(NULL), 
+             MAKEINTRESOURCE(IDD_UPDATE_DIALOG), 
+             hwnd, 
+             ExitMsgDlgProc);
 }
 
 /**
@@ -196,21 +196,43 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
             
             // 格式化显示文本
             if (versionInfo) {
-                // 获取本地化的版本文本格式
-                const wchar_t* versionFormat = GetDialogLocalizedString(IDD_UPDATE_DIALOG, IDC_UPDATE_TEXT);
-                if (!versionFormat) {
-                    // 如果找不到本地化文本，使用默认格式
-                    versionFormat = L"Current Version: %S\nNew Version: %S";
-                }
+                // 将ASCII版本号转换为Unicode版本
+                wchar_t currentVersionW[64] = {0};
+                wchar_t newVersionW[64] = {0};
                 
-                // 格式化版本信息
+                // 转换版本号为宽字符
+                MultiByteToWideChar(CP_UTF8, 0, versionInfo->currentVersion, -1, 
+                                   currentVersionW, sizeof(currentVersionW)/sizeof(wchar_t));
+                MultiByteToWideChar(CP_UTF8, 0, versionInfo->latestVersion, -1, 
+                                   newVersionW, sizeof(newVersionW)/sizeof(wchar_t));
+                
+                // 直接使用格式化好的字符串，而不是尝试自己格式化
                 wchar_t displayText[256];
-                StringCbPrintfW(displayText, sizeof(displayText),
-                        versionFormat,
-                        versionInfo->currentVersion, versionInfo->latestVersion);
+                
+                // 获取本地化的版本文本（已格式化好的）
+                const wchar_t* currentVersionText = GetLocalizedString(L"当前版本: ", L"Current version: ");
+                const wchar_t* newVersionText = GetLocalizedString(L"新版本: ", L"New version: ");
+                
+                // 手动构建格式化字符串
+                StringCbPrintfW(displayText, sizeof(displayText), 
+                              L"%s%s\n%s%s",
+                              currentVersionText, currentVersionW,
+                              newVersionText, newVersionW);
                 
                 // 设置对话框文本
                 SetDlgItemTextW(hwndDlg, IDC_UPDATE_TEXT, displayText);
+                
+                // 设置按钮文本
+                const wchar_t* yesText = GetLocalizedString(L"是", L"Yes");
+                const wchar_t* noText = GetLocalizedString(L"否", L"No");
+                
+                // 明确设置按钮文本，而不是依赖对话框资源
+                SetDlgItemTextW(hwndDlg, IDYES, yesText);
+                SetDlgItemTextW(hwndDlg, IDNO, noText);
+                
+                // 设置对话框标题
+                const wchar_t* titleText = GetLocalizedString(L"发现新版本", L"Update Available");
+                SetWindowTextW(hwndDlg, titleText);
                 
                 // 隐藏退出文本和确定按钮，显示是/否按钮
                 SetDlgItemTextW(hwndDlg, IDC_UPDATE_EXIT_TEXT, L"");
@@ -399,7 +421,7 @@ BOOL OpenBrowserForUpdateAndExit(const char* url, HWND hwnd) {
     
     LOG_INFO("发送退出消息到主窗口");
     // 使用自定义对话框显示退出消息
-    ShowExitMessageDialog(hwnd, message);
+    ShowExitMessageDialog(hwnd);
     
     // 退出程序
     PostMessage(hwnd, WM_CLOSE, 0, 0);
