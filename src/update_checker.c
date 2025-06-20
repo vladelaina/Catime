@@ -210,12 +210,12 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                 wchar_t displayText[256];
                 
                 // 获取本地化的版本文本（已格式化好的）
-                const wchar_t* currentVersionText = GetLocalizedString(L"当前版本: ", L"Current version: ");
-                const wchar_t* newVersionText = GetLocalizedString(L"新版本: ", L"New version: ");
-                
+                const wchar_t* currentVersionText = GetLocalizedString(L"当前版本:", L"Current version:");
+                const wchar_t* newVersionText = GetLocalizedString(L"新版本:", L"New version:");
+
                 // 手动构建格式化字符串
-                StringCbPrintfW(displayText, sizeof(displayText), 
-                              L"%s%s\n%s%s",
+                StringCbPrintfW(displayText, sizeof(displayText),
+                              L"%s %s\n%s %s",
                               currentVersionText, currentVersionW,
                               newVersionText, newVersionW);
                 
@@ -335,31 +335,7 @@ INT_PTR CALLBACK NoUpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM l
                 }
                 
                 // 获取本地化的"当前版本"文本
-                const wchar_t* versionText = NULL;
-                
-                // 尝试直接通过语言模块获取翻译
-                versionText = GetLocalizedString(L"Current version:", L"Current version:");
-                
-                // 记录获取到的翻译
-                LOG_INFO("获取到的版本字符串翻译: %ls", versionText ? versionText : L"<未找到>");
-                
-                // 如果没有找到翻译或返回的是默认英文，使用硬编码的中文
-                // 这是一个临时解决方案，确保至少中文界面显示正确
-                if (!versionText || wcscmp(versionText, L"Current version:") == 0) {
-                    // 检测当前语言
-                    wchar_t langName[256] = {0};
-                    GetCurrentLanguageName(langName, sizeof(langName)/sizeof(wchar_t));
-                    LOG_INFO("当前语言: %ls", langName);
-                    
-                    // 如果是中文，使用硬编码的中文翻译
-                    if (wcscmp(langName, L"zh_CN") == 0) {
-                        versionText = L"当前版本：";
-                    } else if (wcscmp(langName, L"zh-Hant") == 0) {
-                        versionText = L"當前版本：";
-                    } else {
-                        versionText = L"Current version:";
-                    }
-                }
+                const wchar_t* versionText = GetLocalizedString(L"当前版本:", L"Current version:");
                 
                 // 创建完整的消息，包含版本号
                 wchar_t fullMessage[256];
