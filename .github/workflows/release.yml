@@ -1,0 +1,68 @@
+name: Release Catime
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+# 添加权限配置
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Set up China timezone
+      run: |
+        sudo timedatectl set-timezone Asia/Shanghai
+        echo "Current timezone: $(date +%Z)"
+        echo "Current time: $(date)"
+        
+    - name: Install MinGW compiler
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y mingw-w64
+        
+    - name: Install XMake
+      run: |
+        bash <(curl -fsSL https://xmake.io/shget.text)
+        source ~/.xmake/profile
+        xmake --version
+        
+    - name: Extract version number
+      id: get_version
+      run: |
+        VERSION=$(grep -oP '#define CATIME_VERSION "\K[^"]+' resource/resource.h)
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+        echo "Version: $VERSION"
+        # Get tag name without 'v' prefix
+        TAG_VERSION=${GITHUB_REF#refs/tags/v}
+        echo "TAG_VERSION=$TAG_VERSION" >> $GITHUB_ENV
+      
+    - name: Build application
+      run: |
+        # Execute xmake build
+        xmake -y
+        # Find build artifacts and rename with version
+        find . -name "catime.exe" -type f -print -exec cp {} catime_${{ env.TAG_VERSION }}.exe \;
+        echo "Build completed using xmake"
+        
+    - name: Create GitHub Release
+      id: create_release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: catime_${{ env.TAG_VERSION }}.exe
+        name: ${{ github.ref_name }}
+        body: |
+          # 📝 Changelog
+
+          > [!TIP]
+          > My friend, while downloading Catime, why not check out my friend's [Easy-Cat-Timer](https://github.com/xujiangjiang/Easy-Cat-Timer)— a super cute and practical countdown timer!
+          > 我的朋友，在下载 Catime 时，不妨顺便看看我朋友开发的 [Easy-Cat-Timer](https://github.com/xujiangjiang/Easy-Cat-Timer)——一款超级可爱又实用的倒计时软件！
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
