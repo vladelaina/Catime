@@ -1,4 +1,4 @@
-/**
+ /**
  * @file dialog_language.c
  * @brief 对话框多语言支持模块实现文件
  * 

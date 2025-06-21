@@ -31,7 +31,7 @@ static void DrawColorSelectButton(HDC hdc, HWND hwnd);
 extern char inputText[256];
 
 // 添加番茄钟相关的外部变量声明
-#define MAX_POMODORO_TIMES 10
+#define MAX_POMODORO_TIMES 10  // 保持番茄钟时间数量上限不变
 extern int POMODORO_TIMES[MAX_POMODORO_TIMES]; // 存储所有番茄钟时间
 extern int POMODORO_TIMES_COUNT;               // 实际的番茄钟时间数量
 extern int POMODORO_WORK_TIME;                 // 番茄钟工作时间（秒）
@@ -743,7 +743,7 @@ INT_PTR CALLBACK PomodoroLoopDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPAR
             ApplyDialogLanguage(hwndDlg, CLOCK_IDD_POMODORO_LOOP_DIALOG);
             
             // 设置静态文本
-            SetDlgItemTextW(hwndDlg, CLOCK_IDC_STATIC, GetLocalizedString(L"请输入循环次数（1-10）：", L"Please enter loop count (1-10):"));
+            SetDlgItemTextW(hwndDlg, CLOCK_IDC_STATIC, GetLocalizedString(L"请输入循环次数（1-100）：", L"Please enter loop count (1-100):"));
             
             // 设置编辑框焦点
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
@@ -794,7 +794,7 @@ INT_PTR CALLBACK PomodoroLoopDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPAR
                 }
                 
                 int new_loop_count = _wtoi(cleanStr);
-                if (new_loop_count >= 1 && new_loop_count <= 99) {
+                if (new_loop_count >= 1 && new_loop_count <= 100) {
                     // 更新配置文件和全局变量
                     WriteConfigPomodoroLoopCount(new_loop_count);
                     EndDialog(hwndDlg, IDOK);

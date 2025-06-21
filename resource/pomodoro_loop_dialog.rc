@@ -7,7 +7,7 @@
 // 番茄钟循环次数设置对话框
 CLOCK_IDD_POMODORO_LOOP_DIALOG DIALOGEX 0, 0, 200, 130
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "" // 通过代码设置本地化标题
+CAPTION "" // 通过代码设置本地化标题（支持1-100次循环）
 FONT 9, "Segoe UI"
 BEGIN
     LTEXT           "", CLOCK_IDC_STATIC, 10, 10, 180, 60
