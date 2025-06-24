@@ -1,9 +1,9 @@
  /**
  * @file dialog_language.c
- * @brief 对话框多语言支持模块实现文件
+ * @brief Dialog multi-language support module implementation file
  * 
- * 本文件实现了对话框多语言支持功能，管理对话框文本的本地化显示。
- * 新版本使用Windows API动态遍历对话框控件，而不是手动定义控件映射。
+ * This file implements the dialog multi-language support functionality, managing localized display of dialog text.
+ * The new version uses Windows API to dynamically traverse dialog controls, instead of manually defining control mappings.
  */
 
 #include <windows.h>
@@ -15,27 +15,27 @@
 #include "../include/language.h"
 #include "../resource/resource.h"
 
-// 定义对话框标题的字典项
+// Define dialog title dictionary entries
 typedef struct {
-    int dialogID;      // 对话框资源ID
-    wchar_t* titleKey; // 对话框标题的键名
+    int dialogID;      // Dialog resource ID
+    wchar_t* titleKey; // Key name for dialog title
 } DialogTitleEntry;
 
-// 特殊处理的控件定义
+// Special control definitions
 typedef struct {
-    int dialogID;      // 对话框资源ID
-    int controlID;     // 控件资源ID
-    wchar_t* textKey;  // ini文件中的键名
-    wchar_t* fallbackText; // 硬编码的备用文本
+    int dialogID;      // Dialog resource ID
+    int controlID;     // Control resource ID
+    wchar_t* textKey;  // Key name in ini file
+    wchar_t* fallbackText; // Hardcoded fallback text
 } SpecialControlEntry;
 
-// 结构化列举回调函数的数据
+// Structured data for enumeration callback function
 typedef struct {
-    HWND hwndDlg;      // 对话框句柄
-    int dialogID;      // 对话框资源ID
+    HWND hwndDlg;      // Dialog handle
+    int dialogID;      // Dialog resource ID
 } EnumChildWindowsData;
 
-// 对话框标题映射表
+// Dialog title mapping table
 static DialogTitleEntry g_dialogTitles[] = {
     {IDD_ABOUT_DIALOG, L"About"},
     {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, L"Notification Settings"},
@@ -49,23 +49,23 @@ static DialogTitleEntry g_dialogTitles[] = {
     {IDD_UPDATE_DIALOG, L"Update Available"}
 };
 
-// 特殊控件映射表（需要特殊处理的控件）
+// Special control mapping table (controls that need special handling)
 static SpecialControlEntry g_specialControls[] = {
-    // 关于对话框
+    // About dialog
     {IDD_ABOUT_DIALOG, IDC_ABOUT_TITLE, L"关于", L"About"},
     {IDD_ABOUT_DIALOG, IDC_VERSION_TEXT, L"Version: %hs", L"Version: %hs"},
     {IDD_ABOUT_DIALOG, IDC_BUILD_DATE, L"构建日期:", L"Build Date:"},
     {IDD_ABOUT_DIALOG, IDC_COPYRIGHT, L"COPYRIGHT_TEXT", L"COPYRIGHT_TEXT"},
     {IDD_ABOUT_DIALOG, IDC_CREDITS, L"鸣谢", L"Credits"},
     
-    // 无需更新对话框
+    // No update dialog
     {IDD_NO_UPDATE_DIALOG, IDC_NO_UPDATE_TEXT, L"NoUpdateRequired", L"You are already using the latest version!"},
     
-    // 更新提示对话框
+    // Update prompt dialog
     {IDD_UPDATE_DIALOG, IDC_UPDATE_TEXT, L"CurrentVersion: %s\nNewVersion: %s", L"Current Version: %s\nNew Version: %s"},
     {IDD_UPDATE_DIALOG, IDC_UPDATE_EXIT_TEXT, L"The application will exit now", L"The application will exit now"},
     
-    // 通知设置对话框的控件 - 添加这部分来解决问题
+    // Notification settings dialog controls - added to solve the problem
     {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_CONTENT_GROUP, L"Notification Content", L"Notification Content"},
     {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_LABEL1, L"Countdown timeout message:", L"Countdown timeout message:"},
     {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_LABEL2, L"Pomodoro timeout message:", L"Pomodoro timeout message:"},
@@ -83,35 +83,35 @@ static SpecialControlEntry g_specialControls[] = {
     {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_VOLUME_TEXT, L"100%", L"100%"},
     {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_OPACITY_TEXT, L"100%", L"100%"},
     
-    // 番茄钟时间设置对话框特殊处理的静态文本 - 使用实际的INI键名
+    // Special handling of static text for Pomodoro time setting dialog - using actual INI key name
     {CLOCK_IDD_POMODORO_TIME_DIALOG, CLOCK_IDC_STATIC, 
      L"25=25 minutes\\n25h=25 hours\\n25s=25 seconds\\n25 30=25 minutes 30 seconds\\n25 30m=25 hours 30 minutes\\n1 30 20=1 hour 30 minutes 20 seconds", 
      L"25=25 minutes\n25h=25 hours\n25s=25 seconds\n25 30=25 minutes 30 seconds\n25 30m=25 hours 30 minutes\n1 30 20=1 hour 30 minutes 20 seconds"},
     
-    // 番茄钟组合对话框特殊处理的静态文本 - 使用实际的INI键名
+    // Special handling of static text for Pomodoro combination dialog - using actual INI key name
     {CLOCK_IDD_POMODORO_COMBO_DIALOG, CLOCK_IDC_STATIC, 
      L"Enter pomodoro time sequence, separated by spaces:\\n\\n25m = 25 minutes\\n30s = 30 seconds\\n1h30m = 1 hour 30 minutes\\nExample: 25m 5m 25m 10m - work 25min, short break 5min, work 25min, long break 10min", 
      L"Enter pomodoro time sequence, separated by spaces:\n\n25m = 25 minutes\n30s = 30 seconds\n1h30m = 1 hour 30 minutes\nExample: 25m 5m 25m 10m - work 25min, short break 5min, work 25min, long break 10min"},
     
-    // 网站URL输入对话框说明文本
+    // Website URL input dialog explanation text
     {CLOCK_IDD_WEBSITE_DIALOG, CLOCK_IDC_STATIC, 
      L"Enter the website URL to open when the countdown ends:\\nExample: https://github.com/vladelaina/Catime", 
      L"Enter the website URL to open when the countdown ends:\nExample: https://github.com/vladelaina/Catime"},
     
-    // 快捷时间选项设置对话框说明文本
+    // Shortcut time options settings dialog explanation text
     {CLOCK_IDD_SHORTCUT_DIALOG, CLOCK_IDC_STATIC, 
      L"CountdownPresetDialogStaticText", 
      L"Enter numbers (minutes), separated by spaces\n\n25 10 5\n\nThis will create options for 25 minutes, 10 minutes, and 5 minutes"},
     
-    // 主倒计时对话框 (CLOCK_IDD_DIALOG1) 的静态帮助文本
+    // Main countdown dialog (CLOCK_IDD_DIALOG1) static help text
     {CLOCK_IDD_DIALOG1, CLOCK_IDC_STATIC,
      L"CountdownDialogStaticText",
      L"25=25 minutes\n25h=25 hours\n25s=25 seconds\n25 30=25 minutes 30 seconds\n25 30m=25 hours 30 minutes\n1 30 20=1 hour 30 minutes 20 seconds\n17 20t=Countdown to 17:20\n9 9 9t=Countdown to 09:09:09"}
 };
 
-// 特殊按钮文本
+// Special button text
 static SpecialControlEntry g_specialButtons[] = {
-    // 更新对话框按钮
+    // Update dialog buttons
     {IDD_UPDATE_DIALOG, IDYES, L"Yes", L"Yes"},
     {IDD_UPDATE_DIALOG, IDNO, L"No", L"No"},
     {IDD_UPDATE_DIALOG, IDOK, L"OK", L"OK"},
@@ -129,27 +129,27 @@ static SpecialControlEntry g_specialButtons[] = {
     {CLOCK_IDD_DIALOG1, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"}
 };
 
-// 对话框映射表的大小
+// Size of dialog mapping tables
 #define DIALOG_TITLES_COUNT (sizeof(g_dialogTitles) / sizeof(g_dialogTitles[0]))
 #define SPECIAL_CONTROLS_COUNT (sizeof(g_specialControls) / sizeof(g_specialControls[0]))
 #define SPECIAL_BUTTONS_COUNT (sizeof(g_specialButtons) / sizeof(g_specialButtons[0]))
 
 /**
- * @brief 查找特殊控件的对应本地化文本
- * @param dialogID 对话框ID
- * @param controlID 控件ID
- * @return const wchar_t* 找到的本地化文本，如果未找到则返回NULL
+ * @brief Find localized text for special controls
+ * @param dialogID Dialog ID
+ * @param controlID Control ID
+ * @return const wchar_t* Found localized text, returns NULL if not found
  */
 static const wchar_t* FindSpecialControlText(int dialogID, int controlID) {
     for (int i = 0; i < SPECIAL_CONTROLS_COUNT; i++) {
         if (g_specialControls[i].dialogID == dialogID && 
             g_specialControls[i].controlID == controlID) {
-            // 将textKey作为查找本地化字符串的键名
+            // Use textKey as key name to find localized string
             const wchar_t* localizedText = GetLocalizedString(NULL, g_specialControls[i].textKey);
             if (localizedText) {
                 return localizedText;
             } else {
-                // 如果找不到本地化文本，返回fallbackText
+                // If localized text is not found, return fallbackText
                 return g_specialControls[i].fallbackText;
             }
         }
@@ -158,10 +158,10 @@ static const wchar_t* FindSpecialControlText(int dialogID, int controlID) {
 }
 
 /**
- * @brief 查找特殊按钮的对应本地化文本
- * @param dialogID 对话框ID
- * @param controlID 控件ID
- * @return const wchar_t* 找到的本地化文本，如果未找到则返回NULL
+ * @brief Find localized text for special buttons
+ * @param dialogID Dialog ID
+ * @param controlID Control ID
+ * @return const wchar_t* Found localized text, returns NULL if not found
  */
 static const wchar_t* FindSpecialButtonText(int dialogID, int controlID) {
     for (int i = 0; i < SPECIAL_BUTTONS_COUNT; i++) {
@@ -174,9 +174,9 @@ static const wchar_t* FindSpecialButtonText(int dialogID, int controlID) {
 }
 
 /**
- * @brief 获取对话框标题的本地化文本
- * @param dialogID 对话框ID
- * @return const wchar_t* 找到的本地化文本，如果未找到则返回NULL
+ * @brief Get localized text for dialog title
+ * @param dialogID Dialog ID
+ * @return const wchar_t* Found localized text, returns NULL if not found
  */
 static const wchar_t* GetDialogTitleText(int dialogID) {
     for (int i = 0; i < DIALOG_TITLES_COUNT; i++) {
@@ -188,18 +188,18 @@ static const wchar_t* GetDialogTitleText(int dialogID) {
 }
 
 /**
- * @brief 获取控件的原始文本，用于翻译查找
- * @param hwndCtl 控件句柄
- * @param buffer 存储文本的缓冲区
- * @param bufferSize 缓冲区大小（字符数，不是字节数）
- * @return BOOL 是否成功获取文本
+ * @brief Get original text of a control for translation lookup
+ * @param hwndCtl Control handle
+ * @param buffer Buffer to store text
+ * @param bufferSize Buffer size (in characters, not bytes)
+ * @return BOOL Whether text was successfully retrieved
  */
 static BOOL GetControlOriginalText(HWND hwndCtl, wchar_t* buffer, int bufferSize) {
-    // 获取控件类名
+    // Get control class name
     wchar_t className[256];
     GetClassNameW(hwndCtl, className, 256);
     
-    // 按钮类控件需要获取其文本
+    // Button class controls need to get their text
     if (wcscmp(className, L"Button") == 0 || 
         wcscmp(className, L"Static") == 0 ||
         wcscmp(className, L"ComboBox") == 0 ||
@@ -211,32 +211,32 @@ static BOOL GetControlOriginalText(HWND hwndCtl, wchar_t* buffer, int bufferSize
 }
 
 /**
- * @brief 处理特殊控件的文本设置，如换行符等
- * @param hwndCtl 控件句柄
- * @param localizedText 本地化后的文本
- * @param dialogID 对话框ID
- * @param controlID 控件ID
- * @return BOOL 是否成功处理
+ * @brief Process special control text settings, such as line breaks
+ * @param hwndCtl Control handle
+ * @param localizedText Localized text
+ * @param dialogID Dialog ID
+ * @param controlID Control ID
+ * @return BOOL Whether processing was successful
  */
 static BOOL ProcessSpecialControlText(HWND hwndCtl, const wchar_t* localizedText, int dialogID, int controlID) {
-    // 特殊处理番茄钟相关对话框和网站URL对话框的静态文本换行
+    // Special handling for line breaks in static text of Pomodoro related dialogs and website URL dialog
     if ((dialogID == CLOCK_IDD_POMODORO_COMBO_DIALOG || 
          dialogID == CLOCK_IDD_POMODORO_TIME_DIALOG ||
          dialogID == CLOCK_IDD_WEBSITE_DIALOG ||
          dialogID == CLOCK_IDD_SHORTCUT_DIALOG ||
          dialogID == CLOCK_IDD_DIALOG1) && 
         controlID == CLOCK_IDC_STATIC) {
-        wchar_t processedText[1024]; // 假设文本不会超过1024个宽字符
+        wchar_t processedText[1024]; // Assume text won't exceed 1024 wide characters
         const wchar_t* src = localizedText;
         wchar_t* dst = processedText;
         
         while (*src) {
-            // 处理INI文件中的转义换行符 \n
+            // Process escaped line breaks \n in INI file
             if (src[0] == L'\\' && src[1] == L'n') {
-                *dst++ = L'\n'; // 转换为实际的换行符
+                *dst++ = L'\n'; // Convert to actual line break
                 src += 2;
             } 
-            // 处理文本中可能存在的字面换行符
+            // Handle literal line breaks that may exist in the text
             else if (src[0] == L'\n') {
                 *dst++ = L'\n';
                 src++;
@@ -251,15 +251,15 @@ static BOOL ProcessSpecialControlText(HWND hwndCtl, const wchar_t* localizedText
         return TRUE;
     }
     
-    // 特殊处理版本信息文本
+    // Special handling for version information text
     if (controlID == IDC_VERSION_TEXT && dialogID == IDD_ABOUT_DIALOG) {
         wchar_t versionText[256];
-        // 从语言文件获取本地化的版本字符串格式
+        // Get localized version string format from language file
         const wchar_t* localizedVersionFormat = GetLocalizedString(NULL, L"Version: %hs");
         if (localizedVersionFormat) {
             StringCbPrintfW(versionText, sizeof(versionText), localizedVersionFormat, CATIME_VERSION);
         } else {
-            // 如果找不到本地化版本，使用传入的格式
+            // If localized version is not found, use the provided format
             StringCbPrintfW(versionText, sizeof(versionText), localizedText, CATIME_VERSION);
         }
         SetWindowTextW(hwndCtl, versionText);
@@ -270,102 +270,102 @@ static BOOL ProcessSpecialControlText(HWND hwndCtl, const wchar_t* localizedText
 }
 
 /**
- * @brief 对话框子窗口遍历回调函数
- * @param hwndCtl 子窗口句柄
- * @param lParam 回调参数，包含父对话框句柄和对话框ID
- * @return BOOL 是否继续遍历
+ * @brief Dialog child window enumeration callback function
+ * @param hwndCtl Child window handle
+ * @param lParam Callback parameter, contains parent dialog handle and dialog ID
+ * @return BOOL Whether to continue enumeration
  */
 static BOOL CALLBACK EnumChildProc(HWND hwndCtl, LPARAM lParam) {
     EnumChildWindowsData* data = (EnumChildWindowsData*)lParam;
     HWND hwndDlg = data->hwndDlg;
     int dialogID = data->dialogID;
     
-    // 获取控件ID
+    // Get control ID
     int controlID = GetDlgCtrlID(hwndCtl);
     if (controlID == 0) {
-        return TRUE; // 继续遍历
+        return TRUE; // Continue enumeration
     }
 
-    // 根据对话框ID和控件ID特殊处理一些控件
+    // Special handling for some controls based on dialog ID and control ID
     const wchar_t* specialText = FindSpecialControlText(dialogID, controlID);
     if (specialText) {
         if (ProcessSpecialControlText(hwndCtl, specialText, dialogID, controlID)) {
-            return TRUE; // 已处理特殊控件
+            return TRUE; // Special control already processed
         }
         SetWindowTextW(hwndCtl, specialText);
         return TRUE;
     }
     
-    // 检查按钮特殊文本
+    // Check for special button text
     const wchar_t* buttonText = FindSpecialButtonText(dialogID, controlID);
     if (buttonText) {
         SetWindowTextW(hwndCtl, buttonText);
         return TRUE;
     }
 
-    // 获取控件当前文本
+    // Get current control text
     wchar_t originalText[512] = {0};
     if (GetControlOriginalText(hwndCtl, originalText, 512) && originalText[0] != L'\0') {
-        // 查找本地化文本
+        // Look for localized text
         const wchar_t* localizedText = GetLocalizedString(NULL, originalText);
         if (localizedText && wcscmp(localizedText, originalText) != 0) {
-            // 设置本地化文本
+            // Set localized text
             SetWindowTextW(hwndCtl, localizedText);
         }
     }
     
-    return TRUE; // 继续遍历
+    return TRUE; // Continue enumeration
 }
 
 /**
- * @brief 初始化对话框多语言支持
+ * @brief Initialize dialog multi-language support
  */
 BOOL InitDialogLanguageSupport(void) {
-    // 这里不需要额外初始化操作
+    // No additional initialization needed here
     return TRUE;
 }
 
 /**
- * @brief 对对话框应用多语言支持
+ * @brief Apply multi-language support to dialog
  */
 BOOL ApplyDialogLanguage(HWND hwndDlg, int dialogID) {
     if (!hwndDlg) return FALSE;
     
-    // 设置对话框标题
+    // Set dialog title
     const wchar_t* titleText = GetDialogTitleText(dialogID);
     if (titleText) {
         SetWindowTextW(hwndDlg, titleText);
     }
     
-    // 设置遍历数据
+    // Set enumeration data
     EnumChildWindowsData data = {
         .hwndDlg = hwndDlg,
         .dialogID = dialogID
     };
     
-    // 遍历所有子窗口并应用本地化文本
+    // Enumerate all child windows and apply localized text
     EnumChildWindows(hwndDlg, EnumChildProc, (LPARAM)&data);
     
     return TRUE;
 }
 
 /**
- * @brief 获取对话框元素的本地化文本
+ * @brief Get localized text for dialog element
  */
 const wchar_t* GetDialogLocalizedString(int dialogID, int controlID) {
-    // 检查是否是特殊控件
+    // Check if it's a special control
     const wchar_t* specialText = FindSpecialControlText(dialogID, controlID);
     if (specialText) {
         return specialText;
     }
     
-    // 检查是否是特殊按钮
+    // Check if it's a special button
     const wchar_t* buttonText = FindSpecialButtonText(dialogID, controlID);
     if (buttonText) {
         return buttonText;
     }
     
-    // 如果是对话框标题
+    // If it's a dialog title
     if (controlID == -1) {
         return GetDialogTitleText(dialogID);
     }

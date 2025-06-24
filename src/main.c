@@ -1,9 +1,9 @@
 /**
  * @file main.c
- * @brief 应用程序主入口模块实现文件
+ * @brief Application main entry module implementation file
  * 
- * 本文件实现了应用程序的主要入口点和初始化流程，包括窗口创建、
- * 消息循环处理、启动模式管理等核心功能。
+ * This file implements the main entry point and initialization process of the application,
+ * including window creation, message loop handling, startup mode management, and other core functionalities.
  */
 
 #include <stdio.h>
@@ -36,7 +36,7 @@
 #include "../include/dialog_language.h"
 #include "../include/shortcut_checker.h"
 
-// 较旧的Windows SDK所需
+// Required for older Windows SDK
 #ifndef CSIDL_STARTUP
 #endif
 
@@ -48,67 +48,67 @@ EXTERN_C const CLSID CLSID_ShellLink;
 EXTERN_C const IID IID_IShellLinkW;
 #endif
 
-// 编译器指令
+// Compiler directives
 #pragma comment(lib, "dwmapi.lib")
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "gdi32.lib")
 #pragma comment(lib, "comdlg32.lib")
-#pragma comment(lib, "dbghelp.lib") // 用于异常处理功能
-#pragma comment(lib, "comctl32.lib") // 用于Common Controls
+#pragma comment(lib, "dbghelp.lib") // For exception handling functionality
+#pragma comment(lib, "comctl32.lib") // For Common Controls
 
-// 来自log.c的函数声明
+// Function declaration from log.c
 extern void CleanupLogSystem(void);
 
-/// @name 全局变量
+/// @name Global variables
 /// @{
-int default_countdown_time = 0;          ///< 默认倒计时时间
-int CLOCK_DEFAULT_START_TIME = 300;      ///< 默认启动时间(秒)
-int elapsed_time = 0;                    ///< 已经过时间
-char inputText[256] = {0};              ///< 输入文本缓冲区
-int message_shown = 0;                   ///< 消息显示标志
-time_t last_config_time = 0;             ///< 最后配置时间
-RecentFile CLOCK_RECENT_FILES[MAX_RECENT_FILES];  ///< 最近文件列表
-int CLOCK_RECENT_FILES_COUNT = 0;        ///< 最近文件数量
+int default_countdown_time = 0;          ///< Default countdown time
+int CLOCK_DEFAULT_START_TIME = 300;      ///< Default startup time (seconds)
+int elapsed_time = 0;                    ///< Elapsed time
+char inputText[256] = {0};              ///< Input text buffer
+int message_shown = 0;                   ///< Message display flag
+time_t last_config_time = 0;             ///< Last configuration time
+RecentFile CLOCK_RECENT_FILES[MAX_RECENT_FILES];  ///< Recent files list
+int CLOCK_RECENT_FILES_COUNT = 0;        ///< Recent files count
 char CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH] = "";
 /// @}
 
-/// @name 外部变量声明
+/// @name External variable declarations
 /// @{
-extern char CLOCK_TEXT_COLOR[10];        ///< 时钟文本颜色
-extern char FONT_FILE_NAME[];            ///< 当前字体文件名
-extern char FONT_INTERNAL_NAME[];        ///< 字体内部名称
-extern char PREVIEW_FONT_NAME[];         ///< 预览字体文件名
-extern char PREVIEW_INTERNAL_NAME[];     ///< 预览字体内部名称
-extern BOOL IS_PREVIEWING;               ///< 是否正在预览字体
+extern char CLOCK_TEXT_COLOR[10];        ///< Clock text color
+extern char FONT_FILE_NAME[];            ///< Current font file name
+extern char FONT_INTERNAL_NAME[];        ///< Font internal name
+extern char PREVIEW_FONT_NAME[];         ///< Preview font file name
+extern char PREVIEW_INTERNAL_NAME[];     ///< Preview font internal name
+extern BOOL IS_PREVIEWING;               ///< Whether font is being previewed
 /// @}
 
-/// @name 函数声明
+/// @name Function declarations
 /// @{
 INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 void ExitProgram(HWND hwnd);
 /// @}
 
-// 功能原型
+// Function prototypes
 INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 void ExitProgram(HWND hwnd);
 
 // Helper function to handle startup mode
 /**
- * @brief 处理应用程序启动模式
- * @param hwnd 主窗口句柄
+ * @brief Handle application startup mode
+ * @param hwnd Main window handle
  * 
- * 根据配置的启动模式(CLOCK_STARTUP_MODE)设置相应的应用程序状态，
- * 包括计时模式、显示状态等。
+ * Sets the appropriate application state according to the configured startup mode (CLOCK_STARTUP_MODE),
+ * including timer mode, display state, etc.
  */
 static void HandleStartupMode(HWND hwnd) {
-    LOG_INFO("设置启动模式: %s", CLOCK_STARTUP_MODE);
+    LOG_INFO("Setting startup mode: %s", CLOCK_STARTUP_MODE);
     
     if (strcmp(CLOCK_STARTUP_MODE, "COUNT_UP") == 0) {
-        LOG_INFO("设置为正计时模式");
+        LOG_INFO("Setting to count-up mode");
         CLOCK_COUNT_UP = TRUE;
         elapsed_time = 0;
     } else if (strcmp(CLOCK_STARTUP_MODE, "NO_DISPLAY") == 0) {
-        LOG_INFO("设置为隐藏模式，窗口将被隐藏");
+        LOG_INFO("Setting to hidden mode, window will be hidden");
         ShowWindow(hwnd, SW_HIDE);
         KillTimer(hwnd, 1);
         elapsed_time = CLOCK_TOTAL_TIME;
@@ -119,175 +119,175 @@ static void HandleStartupMode(HWND hwnd) {
         countdown_elapsed_time = 0;
         countup_elapsed_time = 0;
     } else if (strcmp(CLOCK_STARTUP_MODE, "SHOW_TIME") == 0) {
-        LOG_INFO("设置为显示当前时间模式");
+        LOG_INFO("Setting to show current time mode");
         CLOCK_SHOW_CURRENT_TIME = TRUE;
         CLOCK_LAST_TIME_UPDATE = 0;
     } else {
-        LOG_INFO("使用默认倒计时模式");
+        LOG_INFO("Using default countdown mode");
     }
 }
 
 /**
- * @brief 应用程序主入口点
- * @param hInstance 当前实例句柄
- * @param hPrevInstance 前一个实例句柄(总是NULL)
- * @param lpCmdLine 命令行参数
- * @param nCmdShow 窗口显示方式
- * @return int 程序退出码
+ * @brief Application main entry point
+ * @param hInstance Current instance handle
+ * @param hPrevInstance Previous instance handle (always NULL)
+ * @param lpCmdLine Command line parameters
+ * @param nCmdShow Window display mode
+ * @return int Program exit code
  * 
- * 初始化应用程序环境，创建主窗口，并进入消息循环。
- * 处理单实例检查，确保只有一个程序实例在运行。
+ * Initializes the application environment, creates the main window, and enters the message loop.
+ * Handles single instance check to ensure only one program instance is running.
  */
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-    // 初始化Common Controls
+    // Initialize Common Controls
     InitCommonControls();
     
-    // 初始化日志系统
+    // Initialize log system
     if (!InitializeLogSystem()) {
-        // 如果日志系统初始化失败，仍然继续运行，但不记录日志
-        MessageBox(NULL, "日志系统初始化失败，程序将继续运行但不记录日志。", "警告", MB_ICONWARNING);
+        // If log system initialization fails, continue running but without logging
+        MessageBox(NULL, "Log system initialization failed, the program will continue running but will not log.", "Warning", MB_ICONWARNING);
     }
 
-    // 设置异常处理器
+    // Set up exception handler
     SetupExceptionHandler();
 
-    LOG_INFO("Catime 正在启动...");
-        // 初始化COM
+    LOG_INFO("Catime is starting...");
+        // Initialize COM
         HRESULT hr = CoInitialize(NULL);
         if (FAILED(hr)) {
-            LOG_ERROR("COM 初始化失败，错误码: 0x%08X", hr);
+            LOG_ERROR("COM initialization failed, error code: 0x%08X", hr);
             MessageBox(NULL, "COM initialization failed!", "Error", MB_ICONERROR);
             return 1;
         }
-        LOG_INFO("COM 初始化成功");
+        LOG_INFO("COM initialization successful");
 
-        // 初始化应用程序
-        LOG_INFO("开始初始化应用程序...");
+        // Initialize application
+        LOG_INFO("Starting application initialization...");
         if (!InitializeApplication(hInstance)) {
-            LOG_ERROR("应用程序初始化失败");
+            LOG_ERROR("Application initialization failed");
             MessageBox(NULL, "Application initialization failed!", "Error", MB_ICONERROR);
             return 1;
         }
-        LOG_INFO("应用程序初始化成功");
+        LOG_INFO("Application initialization successful");
 
-        // 检查并创建桌面快捷方式（如有必要）
-        LOG_INFO("检查桌面快捷方式...");
+        // Check and create desktop shortcut (if necessary)
+        LOG_INFO("Checking desktop shortcut...");
         char exe_path[MAX_PATH];
         GetModuleFileNameA(NULL, exe_path, MAX_PATH);
-        LOG_INFO("当前程序路径: %s", exe_path);
+        LOG_INFO("Current program path: %s", exe_path);
         
-        // 设置日志级别为DEBUG以显示详细信息
-        WriteLog(LOG_LEVEL_DEBUG, "开始检测快捷方式，检查路径: %s", exe_path);
+        // Set log level to DEBUG to show detailed information
+        WriteLog(LOG_LEVEL_DEBUG, "Starting shortcut detection, checking path: %s", exe_path);
         
-        // 检查路径中是否包含WinGet标识
+        // Check if path contains WinGet identifier
         if (strstr(exe_path, "WinGet") != NULL) {
-            WriteLog(LOG_LEVEL_DEBUG, "路径中包含WinGet关键字");
+            WriteLog(LOG_LEVEL_DEBUG, "Path contains WinGet keyword");
         }
         
-        // 附加测试：直接测试文件是否存在
+        // Additional test: directly test if file exists
         char desktop_path[MAX_PATH];
         char shortcut_path[MAX_PATH];
         if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_DESKTOP, NULL, 0, desktop_path))) {
             sprintf(shortcut_path, "%s\\Catime.lnk", desktop_path);
-            WriteLog(LOG_LEVEL_DEBUG, "检查桌面快捷方式是否存在: %s", shortcut_path);
+            WriteLog(LOG_LEVEL_DEBUG, "Checking if desktop shortcut exists: %s", shortcut_path);
             if (GetFileAttributesA(shortcut_path) == INVALID_FILE_ATTRIBUTES) {
-                WriteLog(LOG_LEVEL_DEBUG, "桌面快捷方式不存在，需要创建");
+                WriteLog(LOG_LEVEL_DEBUG, "Desktop shortcut does not exist, need to create");
             } else {
-                WriteLog(LOG_LEVEL_DEBUG, "桌面快捷方式已存在");
+                WriteLog(LOG_LEVEL_DEBUG, "Desktop shortcut already exists");
             }
         }
         
         int shortcut_result = CheckAndCreateShortcut();
         if (shortcut_result == 0) {
-            LOG_INFO("桌面快捷方式检查完成");
+            LOG_INFO("Desktop shortcut check completed");
         } else {
-            LOG_WARNING("桌面快捷方式创建失败，错误码: %d", shortcut_result);
+            LOG_WARNING("Desktop shortcut creation failed, error code: %d", shortcut_result);
         }
 
-        // 初始化对话框多语言支持
-        LOG_INFO("开始初始化对话框多语言支持...");
+        // Initialize dialog multi-language support
+        LOG_INFO("Starting dialog multi-language support initialization...");
         if (!InitDialogLanguageSupport()) {
-            LOG_WARNING("对话框多语言支持初始化失败，但程序将继续运行");
+            LOG_WARNING("Dialog multi-language support initialization failed, but program will continue running");
         }
-        LOG_INFO("对话框多语言支持初始化成功");
+        LOG_INFO("Dialog multi-language support initialization successful");
 
-        // 处理单实例
-        LOG_INFO("检查是否有其他实例正在运行...");
+        // Handle single instance
+        LOG_INFO("Checking if another instance is running...");
         HANDLE hMutex = CreateMutex(NULL, TRUE, "CatimeMutex");
         DWORD mutexError = GetLastError();
         
         if (mutexError == ERROR_ALREADY_EXISTS) {
-            LOG_INFO("检测到已有实例正在运行，尝试关闭该实例");
+            LOG_INFO("Detected another instance is running, trying to close that instance");
             HWND hwndExisting = FindWindow("CatimeWindow", "Catime");
             if (hwndExisting) {
-                // 关闭已存在的窗口实例
-                LOG_INFO("向已有实例发送关闭消息");
+                // Close existing window instance
+                LOG_INFO("Sending close message to existing instance");
                 SendMessage(hwndExisting, WM_CLOSE, 0, 0);
-                // 等待旧实例关闭
+                // Wait for old instance to close
                 Sleep(200);
             } else {
-                LOG_WARNING("找不到已有实例的窗口句柄，但互斥锁已存在");
+                LOG_WARNING("Could not find window handle of existing instance, but mutex exists");
             }
-            // 释放旧互斥锁
+            // Release old mutex
             ReleaseMutex(hMutex);
             CloseHandle(hMutex);
             
-            // 创建新的互斥锁
-            LOG_INFO("创建新的互斥锁");
+            // Create new mutex
+            LOG_INFO("Creating new mutex");
             hMutex = CreateMutex(NULL, TRUE, "CatimeMutex");
             if (GetLastError() == ERROR_ALREADY_EXISTS) {
-                LOG_WARNING("创建新互斥锁后仍然有冲突，可能有竞争条件");
+                LOG_WARNING("Still have conflict after creating new mutex, possible race condition");
             }
         }
         Sleep(50);
 
-        // 创建主窗口
-        LOG_INFO("开始创建主窗口...");
+        // Create main window
+        LOG_INFO("Starting main window creation...");
         HWND hwnd = CreateMainWindow(hInstance, nCmdShow);
         if (!hwnd) {
-            LOG_ERROR("主窗口创建失败");
+            LOG_ERROR("Main window creation failed");
             MessageBox(NULL, "Window Creation Failed!", "Error", MB_ICONEXCLAMATION | MB_OK);
             return 0;
         }
-        LOG_INFO("主窗口创建成功，句柄: 0x%p", hwnd);
+        LOG_INFO("Main window creation successful, handle: 0x%p", hwnd);
 
-        // 设置定时器
-        LOG_INFO("设置主定时器...");
+        // Set timer
+        LOG_INFO("Setting main timer...");
         if (SetTimer(hwnd, 1, 1000, NULL) == 0) {
             DWORD timerError = GetLastError();
-            LOG_ERROR("定时器创建失败，错误码: %lu", timerError);
+            LOG_ERROR("Timer creation failed, error code: %lu", timerError);
             MessageBox(NULL, "Timer Creation Failed!", "Error", MB_ICONEXCLAMATION | MB_OK);
             return 0;
         }
-        LOG_INFO("定时器设置成功");
+        LOG_INFO("Timer set successfully");
 
-        // 处理启动模式
-        LOG_INFO("处理启动模式: %s", CLOCK_STARTUP_MODE);
+        // Handle startup mode
+        LOG_INFO("Handling startup mode: %s", CLOCK_STARTUP_MODE);
         HandleStartupMode(hwnd);
         
-        // 已移除自动检查更新代码
+        // Automatic update check code has been removed
 
-        // 消息循环
-        LOG_INFO("进入主消息循环");
+        // Message loop
+        LOG_INFO("Entering main message loop");
         MSG msg;
         while (GetMessage(&msg, NULL, 0, 0) > 0) {
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
 
-        // 清理资源
-        LOG_INFO("程序准备退出，开始清理资源");
+        // Clean up resources
+        LOG_INFO("Program preparing to exit, starting resource cleanup");
         
-        // 清理更新检查线程资源
-        LOG_INFO("准备清理更新检查线程资源");
+        // Clean up update check thread resources
+        LOG_INFO("Preparing to clean up update check thread resources");
         CleanupUpdateThread();
         
         CloseHandle(hMutex);
         CoUninitialize();
         
-        // 关闭日志系统
+        // Close log system
         CleanupLogSystem();
         
         return (int)msg.wParam;
-    // 如果执行到这里，说明程序正常退出
+    // If execution reaches here, the program has exited normally
 }

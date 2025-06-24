@@ -1,9 +1,9 @@
 /**
  * @file drag_scale.c
- * @brief 窗口拖动和缩放功能实现
+ * @brief Window dragging and scaling functionality implementation
  * 
- * 本文件实现了应用程序窗口的拖动和缩放功能，
- * 包括鼠标拖动窗口和滚轮缩放窗口的功能。
+ * This file implements the dragging and scaling functionality of the application window,
+ * including mouse dragging of the window and mouse wheel scaling of the window.
  */
 
 #include <windows.h>
@@ -11,15 +11,15 @@
 #include "../include/config.h"
 #include "../include/drag_scale.h"
 
-// 添加变量来记录编辑模式前的置顶状态
+// Add variable to record the topmost state before edit mode
 BOOL PREVIOUS_TOPMOST_STATE = FALSE;
 
 /**
- * @brief 开始拖动窗口
- * @param hwnd 窗口句柄
+ * @brief Start dragging window
+ * @param hwnd Window handle
  * 
- * 在编辑模式下，开始拖动窗口操作。
- * 记录初始鼠标位置并设置捕获。
+ * In edit mode, start the window dragging operation.
+ * Record initial mouse position and set capture.
  */
 void StartDragWindow(HWND hwnd) {
     if (CLOCK_EDIT_MODE) {
@@ -30,91 +30,91 @@ void StartDragWindow(HWND hwnd) {
 }
 
 /**
- * @brief 开始编辑模式
- * @param hwnd 窗口句柄
+ * @brief Start edit mode
+ * @param hwnd Window handle
  * 
- * 启用编辑模式前，确保窗口为置顶状态，
- * 记录原始置顶状态以便退出编辑模式时恢复。
+ * Before enabling edit mode, ensure the window is in topmost state,
+ * record the original topmost state to restore when exiting edit mode.
  */
 void StartEditMode(HWND hwnd) {
-    // 记录当前的置顶状态
+    // Record current topmost state
     PREVIOUS_TOPMOST_STATE = CLOCK_WINDOW_TOPMOST;
     
-    // 如果当前不是置顶状态，先设为置顶
+    // If currently not in topmost state, set to topmost
     if (!CLOCK_WINDOW_TOPMOST) {
         SetWindowTopmost(hwnd, TRUE);
     }
     
-    // 然后启用编辑模式
+    // Then enable edit mode
     CLOCK_EDIT_MODE = TRUE;
     
-    // 应用模糊效果
+    // Apply blur effect
     SetBlurBehind(hwnd, TRUE);
     
-    // 禁用点击穿透
+    // Disable click-through
     SetClickThrough(hwnd, FALSE);
     
-    // 确保鼠标光标为默认箭头
+    // Ensure mouse cursor is default arrow
     SetCursor(LoadCursor(NULL, IDC_ARROW));
     
-    // 刷新窗口，添加立即更新
+    // Refresh window, add immediate update
     InvalidateRect(hwnd, NULL, TRUE);
-    UpdateWindow(hwnd);  // 确保立即刷新
+    UpdateWindow(hwnd);  // Ensure immediate refresh
 }
 
 /**
- * @brief 结束编辑模式
- * @param hwnd 窗口句柄
+ * @brief End edit mode
+ * @param hwnd Window handle
  * 
- * 退出编辑模式，恢复窗口原始置顶状态，
- * 清除模糊效果并更新相关设置。
+ * Exit edit mode, restore original window topmost state,
+ * clear blur effect and update related settings.
  */
 void EndEditMode(HWND hwnd) {
     if (CLOCK_EDIT_MODE) {
         CLOCK_EDIT_MODE = FALSE;
         
-        // 移除模糊效果
+        // Remove blur effect
         SetBlurBehind(hwnd, FALSE);
         SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), 255, LWA_COLORKEY);
         
-        // 恢复点击穿透
+        // Restore click-through
         SetClickThrough(hwnd, !CLOCK_EDIT_MODE);
         
-        // 如果之前不是置顶状态，恢复为非置顶
+        // If previously not in topmost state, restore to non-topmost
         if (!PREVIOUS_TOPMOST_STATE) {
             SetWindowTopmost(hwnd, FALSE);
         }
         
-        // 刷新窗口，添加立即更新
+        // Refresh window, add immediate update
         InvalidateRect(hwnd, NULL, TRUE);
-        UpdateWindow(hwnd);  // 确保立即刷新
+        UpdateWindow(hwnd);  // Ensure immediate refresh
     }
 }
 
 /**
- * @brief 结束拖动窗口
- * @param hwnd 窗口句柄
+ * @brief End window dragging
+ * @param hwnd Window handle
  * 
- * 结束拖动窗口操作。
- * 释放鼠标捕获并调整窗口位置。
+ * End the window dragging operation.
+ * Release mouse capture and adjust window position.
  */
 void EndDragWindow(HWND hwnd) {
     if (CLOCK_EDIT_MODE && CLOCK_IS_DRAGGING) {
         CLOCK_IS_DRAGGING = FALSE;
         ReleaseCapture();
-        // 编辑模式下不强制窗口在屏幕内，允许拖出
+        // In edit mode, don't force window to stay on screen, allow dragging out
         AdjustWindowPosition(hwnd, FALSE);
         InvalidateRect(hwnd, NULL, TRUE);
     }
 }
 
 /**
- * @brief 处理窗口拖动事件
- * @param hwnd 窗口句柄
- * @return BOOL 是否处理了事件
+ * @brief Handle window dragging event
+ * @param hwnd Window handle
+ * @return BOOL Whether the event was handled
  * 
- * 在编辑模式下，处理鼠标拖动窗口的事件。
- * 根据鼠标移动距离更新窗口位置。
+ * In edit mode, handle mouse dragging window event.
+ * Update window position based on mouse movement distance.
  */
 BOOL HandleDragWindow(HWND hwnd) {
     if (CLOCK_EDIT_MODE && CLOCK_IS_DRAGGING) {
@@ -139,7 +139,7 @@ BOOL HandleDragWindow(HWND hwnd) {
         
         UpdateWindow(hwnd);
         
-        // 更新位置变量并保存设置
+        // Update position variables and save settings
         CLOCK_WINDOW_POS_X = windowRect.left + deltaX;
         CLOCK_WINDOW_POS_Y = windowRect.top + deltaY;
         SaveWindowSettings(hwnd);
@@ -150,13 +150,13 @@ BOOL HandleDragWindow(HWND hwnd) {
 }
 
 /**
- * @brief 处理窗口缩放事件
- * @param hwnd 窗口句柄
- * @param delta 鼠标滚轮增量
- * @return BOOL 是否处理了事件
+ * @brief Handle window scaling event
+ * @param hwnd Window handle
+ * @param delta Mouse wheel delta
+ * @return BOOL Whether the event was handled
  * 
- * 在编辑模式下，处理鼠标滚轮缩放窗口的事件。
- * 根据滚轮方向调整窗口和字体大小。
+ * In edit mode, handle mouse wheel window scaling event.
+ * Adjust window and font size based on wheel direction.
  */
 BOOL HandleScaleWindow(HWND hwnd, int delta) {
     if (CLOCK_EDIT_MODE) {
@@ -176,7 +176,7 @@ BOOL HandleScaleWindow(HWND hwnd, int delta) {
             CLOCK_WINDOW_SCALE = CLOCK_FONT_SCALE_FACTOR;
         }
         
-        // 保持缩放范围限制
+        // Maintain scale range limits
         if (CLOCK_FONT_SCALE_FACTOR < MIN_SCALE_FACTOR) {
             CLOCK_FONT_SCALE_FACTOR = MIN_SCALE_FACTOR;
             CLOCK_WINDOW_SCALE = MIN_SCALE_FACTOR;
@@ -187,11 +187,11 @@ BOOL HandleScaleWindow(HWND hwnd, int delta) {
         }
         
         if (old_scale != CLOCK_FONT_SCALE_FACTOR) {
-            // 计算新尺寸
+            // Calculate new dimensions
             int newWidth = (int)(oldWidth * (CLOCK_FONT_SCALE_FACTOR / old_scale));
             int newHeight = (int)(oldHeight * (CLOCK_FONT_SCALE_FACTOR / old_scale));
             
-            // 保持窗口中心位置不变
+            // Keep window center position unchanged
             int newX = windowRect.left + (oldWidth - newWidth)/2;
             int newY = windowRect.top + (oldHeight - newHeight)/2;
             
@@ -200,11 +200,11 @@ BOOL HandleScaleWindow(HWND hwnd, int delta) {
                 newWidth, newHeight,
                 SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOREDRAW);
             
-            // 触发重绘
+            // Trigger redraw
             InvalidateRect(hwnd, NULL, FALSE);
             UpdateWindow(hwnd);
             
-            // 保存设置
+            // Save settings
             SaveWindowSettings(hwnd);
             return TRUE;
         }

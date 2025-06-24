@@ -1,26 +1,26 @@
--- 定义项目信息
+-- Project information
 set_project("Catime")
 set_version("1.0.0")
 
--- 设置xmake最低版本要求
+-- Set minimum xmake version requirement
 set_xmakever("2.5.0")
 
--- 设置默认编译模式
+-- Set default compilation mode
 set_defaultmode("release")
 
--- 允许使用平台API
+-- Allow platform API usage
 add_rules("mode.debug", "mode.release")
 
--- 强制设定平台为Windows
+-- Force platform to Windows
 set_plat("mingw")
 
--- 设置默认架构
+-- Set default architecture
 set_arch("x86_64")
 
--- 设置MinGW工具链
+-- Set MinGW toolchain
 set_toolchains("mingw")
 
--- 定义ASCII艺术标志
+-- Define ASCII art logo
 local catime_logo = [[
 
 ██████╗  █████╗ ████████╗██╗███╗   ███╗███████╗
@@ -32,14 +32,14 @@ local catime_logo = [[
 
 ]]
 
--- 定义目标
+-- Define target
 target("catime")
-    -- 设置为可执行程序
+    -- Set as executable program
     set_kind("binary")
     
-    -- 在构建开始前显示标志
+    -- Display logo before build
     before_build(function (target)
-        -- 显示ASCII艺术标志
+        -- Display ASCII art logo
         print("")
         print("\x1b[36m" .. "██████╗  █████╗ ████████╗██╗███╗   ███╗███████╗" .. "\x1b[0m")
         print("\x1b[36m" .. "██╔════╝ ██╔══██╗╚══██╔══╝██║████╗ ████║██╔════╝" .. "\x1b[0m")
@@ -50,64 +50,64 @@ target("catime")
         print("")
     end)
     
-    -- 添加Windows特有设置
+    -- Add Windows specific settings
     add_defines("_WINDOWS")
     add_ldflags("-mwindows", {force = true})
     add_links("ole32", "shell32", "comdlg32", "uuid", "wininet", "winmm", "comctl32", "dwmapi", "user32", "gdi32", "shlwapi", "advapi32")
     
-    -- 添加资源文件
+    -- Add resource files
     add_files("resource/resource.rc")
     add_files("resource/languages.rc")
     add_files("resource/catime.rc")
     
-    -- 添加源文件
+    -- Add source files
     add_files("src/*.c")
     
-    -- 添加头文件搜索路径
+    -- Add header search paths
     add_includedirs("include", "libs/miniaudio")
     
-    -- 禁用某些警告选项
-    add_cxflags("-Wno-unknown-warning-option", {force = false})  -- 禁用未知警告的警告
+    -- Disable certain warning options
+    add_cxflags("-Wno-unknown-warning-option", {force = false})  -- Disable warnings about unknown warnings
     
-    -- 添加编译选项
+    -- Add compilation options
     if is_mode("release") then
-        -- 基本优化选项
+        -- Basic optimization options
         add_cflags("-O3", "-mtune=generic", "-ffunction-sections", "-fdata-sections", "-fno-strict-aliasing")
         
-        -- 添加LTO(链接时优化)支持
+        -- Add LTO (Link Time Optimization) support
         add_cflags("-flto")
         add_ldflags("-flto")
         
-        -- 更多的优化标志
+        -- More optimization flags
         add_cflags("-fno-exceptions", "-fomit-frame-pointer", "-fmerge-all-constants")
         add_cflags("-fno-math-errno", "-fno-trapping-math", "-ffast-math")
         
-        -- 去除不必要的部分
+        -- Remove unnecessary parts
         add_ldflags("-Wl,--gc-sections", "-s", "-Wl,--strip-all")
         
-        -- 使用更小的运行时库
-        add_cflags("-Os", {force = true})  -- 更倾向于体积优化而非速度优化
+        -- Use smaller runtime library
+        add_cflags("-Os", {force = true})  -- Prefer size optimization over speed
         
         add_defines("NDEBUG")
     end
     
-    -- 设置输出目录
+    -- Set output directory
     set_targetdir("$(buildir)")
     set_objectdir("build")
     
-    -- 添加miniaudio实现定义
+    -- Add miniaudio implementation definition
     add_defines("MINIAUDIO_IMPLEMENTATION")
     
--- 配置自定义构建事件
+-- Configure custom build events
 after_build(function (target)
-    -- 显示构建信息
+    -- Display build information
     print("\x1b[38;2;0;255;0m[" .. " 99%]:\x1b[0m " .. "Output directory: " .. target:targetdir())
     
-    -- 获取并显示编译后的文件大小
+    -- Get and display compiled file size
     local targetfile = target:targetfile()
     local filesize = os.filesize(targetfile)
     
-    -- 格式化文件大小显示
+    -- Format file size display
     local size_text = ""
     if filesize < 1024 then
         size_text = string.format("%.2f B", filesize)
@@ -120,7 +120,7 @@ after_build(function (target)
     print("\x1b[38;2;0;255;0m[" .. " 99%]:\x1b[0m " .. "Size: " .. size_text)
 end)
 
--- 自定义菜单
+-- Custom menu
 option("debug")
     set_default(false)
     set_showmenu(true)
