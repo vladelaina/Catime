@@ -1,9 +1,9 @@
 /**
  * @file tray_events.h
- * @brief 系统托盘事件处理接口
+ * @brief System tray event handling interface
  * 
- * 本文件定义了应用程序系统托盘事件处理相关的函数接口，
- * 包括托盘图标的点击事件处理等功能。
+ * This file defines the application's system tray event handling function interfaces,
+ * including handling of tray icon click events and other functionalities.
  */
 
 #ifndef CLOCK_TRAY_EVENTS_H
@@ -12,62 +12,62 @@
 #include <windows.h>
 
 /**
- * @brief 处理系统托盘消息
- * @param hwnd 窗口句柄
- * @param uID 托盘图标ID
- * @param uMouseMsg 鼠标消息类型
+ * @brief Handle system tray messages
+ * @param hwnd Window handle
+ * @param uID Tray icon ID
+ * @param uMouseMsg Mouse message type
  * 
- * 处理系统托盘的鼠标事件，包括：
- * - 左键点击：显示上下文菜单
- * - 右键点击：显示颜色菜单
+ * Process system tray mouse events, including:
+ * - Left click: Display context menu
+ * - Right click: Display color menu
  */
 void HandleTrayIconMessage(HWND hwnd, UINT uID, UINT uMouseMsg);
 
 /**
- * @brief 暂停或继续计时器
- * @param hwnd 窗口句柄
+ * @brief Pause or resume timer
+ * @param hwnd Window handle
  * 
- * 根据当前状态暂停或继续计时器，并更新相关状态变量
+ * Pause or resume the timer based on current state, and update related status variables
  */
 void PauseResumeTimer(HWND hwnd);
 
 /**
- * @brief 重新开始计时器
- * @param hwnd 窗口句柄
+ * @brief Restart timer
+ * @param hwnd Window handle
  * 
- * 重置计时器到初始状态并继续运行
+ * Reset the timer to initial state and continue running
  */
 void RestartTimer(HWND hwnd);
 
 /**
- * @brief 设置启动模式
- * @param hwnd 窗口句柄
- * @param mode 启动模式字符串
+ * @brief Set startup mode
+ * @param hwnd Window handle
+ * @param mode Startup mode string
  * 
- * 根据给定的模式设置启动模式，并更新相关状态变量
+ * Set the startup mode according to the given mode, and update related status variables
  */
 void SetStartupMode(HWND hwnd, const char* mode);
 
 /**
- * @brief 打开用户指南
+ * @brief Open user guide
  * 
- * 打开用户指南，提供应用程序的使用说明和帮助
+ * Open the user guide, providing application usage instructions and help
  */
 void OpenUserGuide(void);
 
 /**
- * @brief 打开支持页面
+ * @brief Open support page
  * 
- * 打开支持页面，提供支持开发者的渠道
+ * Open the support page, providing channels to support the developer
  */
 void OpenSupportPage(void);
 
 /**
- * @brief 打开反馈页面
+ * @brief Open feedback page
  * 
- * 根据当前语言设置打开不同的反馈渠道：
- * - 简体中文：打开bilibili私信页面
- * - 其他语言：打开GitHub Issues页面
+ * Open different feedback channels based on current language settings:
+ * - Simplified Chinese: Open bilibili private message page
+ * - Other languages: Open GitHub Issues page
  */
 void OpenFeedbackPage(void);
 

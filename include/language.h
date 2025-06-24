@@ -1,8 +1,8 @@
 /**
  * @file language.h
- * @brief 多语言支持模块头文件
+ * @brief Multilingual support module header file
  * 
- * 本文件定义了应用程序支持的语言枚举和本地化字符串获取接口。
+ * This file defines language enumerations supported by the application and localized string retrieval interfaces.
  */
 
 #ifndef LANGUAGE_H
@@ -13,34 +13,34 @@
 
 /**
  * @enum AppLanguage
- * @brief 应用程序支持的语言枚举
+ * @brief Enumeration of languages supported by the application
  * 
- * 定义应用程序支持的所有语言选项，用于国际化功能实现。
+ * Defines all language options supported by the application for internationalization functionality.
  */
 typedef enum {
-    APP_LANG_CHINESE_SIMP,   ///< 简体中文 (Simplified Chinese)
-    APP_LANG_CHINESE_TRAD,   ///< 繁体中文 (Traditional Chinese)
-    APP_LANG_ENGLISH,        ///< 英语 (English)
-    APP_LANG_SPANISH,        ///< 西班牙语 (Spanish)
-    APP_LANG_FRENCH,         ///< 法语 (French)
-    APP_LANG_GERMAN,         ///< 德语 (German)
-    APP_LANG_RUSSIAN,        ///< 俄语 (Russian)
-    APP_LANG_PORTUGUESE,     ///< 葡萄牙语 (Portuguese)
-    APP_LANG_JAPANESE,       ///< 日语 (Japanese)
-    APP_LANG_KOREAN,         ///< 韩语 (Korean)
-    APP_LANG_COUNT           ///< 语言总数，用于范围检查
+    APP_LANG_CHINESE_SIMP,   ///< Simplified Chinese
+    APP_LANG_CHINESE_TRAD,   ///< Traditional Chinese
+    APP_LANG_ENGLISH,        ///< English
+    APP_LANG_SPANISH,        ///< Spanish
+    APP_LANG_FRENCH,         ///< French
+    APP_LANG_GERMAN,         ///< German
+    APP_LANG_RUSSIAN,        ///< Russian
+    APP_LANG_PORTUGUESE,     ///< Portuguese
+    APP_LANG_JAPANESE,       ///< Japanese
+    APP_LANG_KOREAN,         ///< Korean
+    APP_LANG_COUNT           ///< Total number of languages, used for range checking
 } AppLanguage;
 
-/// 当前应用程序使用的语言，默认根据系统语言自动检测
+/// Current language used by the application, defaults to automatic detection based on system language
 extern AppLanguage CURRENT_LANGUAGE;
 
 /**
- * @brief 获取本地化字符串
- * @param chinese 简体中文版本的字符串
- * @param english 英语版本的字符串
- * @return 根据当前语言设置返回对应语言的字符串指针
+ * @brief Get localized string
+ * @param chinese Simplified Chinese version of the string
+ * @param english English version of the string
+ * @return Pointer to the string in the current language setting
  * 
- * 示例用法：
+ * Example usage:
  * @code
  * const wchar_t* text = GetLocalizedString(L"你好", L"Hello");
  * @endcode
@@ -48,25 +48,25 @@ extern AppLanguage CURRENT_LANGUAGE;
 const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english);
 
 /**
- * @brief 设置应用程序语言
- * @param language 要设置的语言
- * @return 是否设置成功
+ * @brief Set application language
+ * @param language The language to set
+ * @return Whether the setting was successful
  * 
- * 手动设置应用程序语言，会自动重新加载对应语言的翻译文件。
+ * Manually set the application language, automatically reloads the corresponding language translation file.
  */
 BOOL SetLanguage(AppLanguage language);
 
 /**
- * @brief 获取当前应用程序语言
- * @return 当前设置的语言
+ * @brief Get current application language
+ * @return Currently set language
  */
 AppLanguage GetCurrentLanguage(void);
 
 /**
- * @brief 获取当前语言的名称
- * @param buffer 用于存储语言名称的缓冲区
- * @param bufferSize 缓冲区大小（字符数）
- * @return 是否成功获取语言名称
+ * @brief Get the name of the current language
+ * @param buffer Buffer to store the language name
+ * @param bufferSize Buffer size (in characters)
+ * @return Whether the language name was successfully retrieved
  */
 BOOL GetCurrentLanguageName(wchar_t* buffer, size_t bufferSize);
 

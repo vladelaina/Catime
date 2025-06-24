@@ -1,8 +1,8 @@
 /**
  * @file font.h
- * @brief 字体管理模块头文件
+ * @brief Font management module header file
  * 
- * 本文件定义了应用程序的字体管理相关接口，包括字体加载、设置和管理功能。
+ * This file defines the application's font management related interfaces, including font loading, setting, and management functionality.
  */
 
 #ifndef FONT_H
@@ -11,84 +11,84 @@
 #include <windows.h>
 #include <stdbool.h>
 
-/// 字体资源结构体，用于管理字体资源
+/// Font resource structure, used to manage font resources
 typedef struct {
     int menuId;
     int resourceId;
     const char* fontName;
 } FontResource;
 
-/// 字体资源数组，存储所有可用的字体资源
+/// Font resource array, stores all available font resources
 extern FontResource fontResources[];
 
-/// 字体资源数组的大小
+/// Size of the font resource array
 extern const int FONT_RESOURCES_COUNT;
 
-/// 字体文件名
+/// Font file name
 extern char FONT_FILE_NAME[100];
 
-/// 字体内部名称
+/// Font internal name
 extern char FONT_INTERNAL_NAME[100];
 
-/// 预览字体名称
+/// Preview font name
 extern char PREVIEW_FONT_NAME[100];
 
-/// 预览字体内部名称
+/// Preview font internal name
 extern char PREVIEW_INTERNAL_NAME[100];
 
-/// 是否正在预览字体
+/// Whether font is being previewed
 extern BOOL IS_PREVIEWING;
 
 /**
- * @brief 从资源加载字体
- * @param hInstance 应用程序实例句柄
- * @param resourceId 字体资源ID
- * @return 加载是否成功
+ * @brief Load font from resource
+ * @param hInstance Application instance handle
+ * @param resourceId Font resource ID
+ * @return Whether loading was successful
  */
 BOOL LoadFontFromResource(HINSTANCE hInstance, int resourceId);
 
 /**
- * @brief 根据字体名称加载字体
- * @param hInstance 应用程序实例句柄
- * @param fontName 字体名称
- * @return 加载是否成功
+ * @brief Load font by name
+ * @param hInstance Application instance handle
+ * @param fontName Font name
+ * @return Whether loading was successful
  */
 BOOL LoadFontByName(HINSTANCE hInstance, const char* fontName);
 
 /**
- * @brief 写入字体配置到配置文件
- * @param font_file_name 字体文件名
+ * @brief Write font configuration to configuration file
+ * @param font_file_name Font file name
  */
 void WriteConfigFont(const char* font_file_name);
 
 /**
- * @brief 列出系统中可用的字体
+ * @brief List available fonts in the system
  */
 void ListAvailableFonts(void);
 
 /**
- * @brief 预览字体
- * @param hInstance 应用程序实例句柄
- * @param fontName 要预览的字体名称
- * @return 预览是否成功
+ * @brief Preview font
+ * @param hInstance Application instance handle
+ * @param fontName Font name to preview
+ * @return Whether preview was successful
  */
 BOOL PreviewFont(HINSTANCE hInstance, const char* fontName);
 
 /**
- * @brief 取消字体预览
+ * @brief Cancel font preview
  */
 void CancelFontPreview(void);
 
 /**
- * @brief 应用字体预览
+ * @brief Apply font preview
  */
 void ApplyFontPreview(void);
 
 /**
- * @brief 切换字体
- * @param hInstance 应用程序实例句柄
- * @param fontName 要切换的字体名称
- * @return 切换是否成功
+ * @brief Switch font
+ * @param hInstance Application instance handle
+ * @param fontName Font name to switch to
+ * @return Whether switch was successful
  */
 BOOL SwitchFont(HINSTANCE hInstance, const char* fontName);
 

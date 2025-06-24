@@ -1,8 +1,8 @@
 /**
  * @file log.h
- * @brief 日志记录功能头文件
+ * @brief Logging functionality header file
  * 
- * 提供日志记录功能，记录应用程序错误和关键事件信息
+ * Provides logging functionality to record application errors and critical event information
  */
 
 #ifndef LOG_H
@@ -12,71 +12,71 @@
 #include <windows.h>
 #include <signal.h>
 
-// 日志级别枚举
+// Log level enumeration
 typedef enum {
-    LOG_LEVEL_DEBUG,   // 调试信息
-    LOG_LEVEL_INFO,    // 一般信息
-    LOG_LEVEL_WARNING, // 警告信息
-    LOG_LEVEL_ERROR,   // 错误信息
-    LOG_LEVEL_FATAL    // 致命错误
+    LOG_LEVEL_DEBUG,   // Debug information
+    LOG_LEVEL_INFO,    // General information
+    LOG_LEVEL_WARNING, // Warning information
+    LOG_LEVEL_ERROR,   // Error information
+    LOG_LEVEL_FATAL    // Fatal error
 } LogLevel;
 
 /**
- * @brief 初始化日志系统
+ * @brief Initialize the logging system
  * 
- * 设置日志文件路径，根据应用配置文件所在目录自动创建日志目录
+ * Sets up the log file path, automatically creates a log directory based on the application configuration file location
  * 
- * @return BOOL 初始化是否成功
+ * @return BOOL Whether initialization was successful
  */
 BOOL InitializeLogSystem(void);
 
 /**
- * @brief 写入日志
+ * @brief Write to log
  * 
- * 根据指定的日志级别写入日志信息
+ * Write log information according to the specified log level
  * 
- * @param level 日志级别
- * @param format 格式化字符串
- * @param ... 可变参数列表
+ * @param level Log level
+ * @param format Format string
+ * @param ... Variable argument list
  */
 void WriteLog(LogLevel level, const char* format, ...);
 
 /**
- * @brief 获取最后一个Windows错误的描述
+ * @brief Get description of the last Windows error
  * 
- * @param errorCode Windows错误代码
- * @param buffer 用于存储错误描述的缓冲区
- * @param bufferSize 缓冲区大小
+ * @param errorCode Windows error code
+ * @param buffer Buffer to store the error description
+ * @param bufferSize Buffer size
  */
 void GetLastErrorDescription(DWORD errorCode, char* buffer, int bufferSize);
 
 /**
- * @brief 设置全局异常处理器
+ * @brief Set up global exception handler
  * 
- * 捕获标准C信号(SIGFPE, SIGILL, SIGSEGV等)并处理
+ * Capture standard C signals (SIGFPE, SIGILL, SIGSEGV, etc.) and handle them
  */
 void SetupExceptionHandler(void);
 
 /**
- * @brief 清理日志系统资源
+ * @brief Clean up logging system resources
  * 
- * 程序正常退出时关闭日志文件并释放相关资源
+ * Close log files and release related resources when the program exits normally
  */
 void CleanupLogSystem(void);
 
-// 宏定义，便于调用
+// Macro definitions for convenience
 #define LOG_DEBUG(format, ...) WriteLog(LOG_LEVEL_DEBUG, format, ##__VA_ARGS__)
 #define LOG_INFO(format, ...) WriteLog(LOG_LEVEL_INFO, format, ##__VA_ARGS__)
 #define LOG_WARNING(format, ...) WriteLog(LOG_LEVEL_WARNING, format, ##__VA_ARGS__)
 #define LOG_ERROR(format, ...) WriteLog(LOG_LEVEL_ERROR, format, ##__VA_ARGS__)
 #define LOG_FATAL(format, ...) WriteLog(LOG_LEVEL_FATAL, format, ##__VA_ARGS__)
 
-// 带错误代码的日志宏
+// Log macro with error code
 #define LOG_WINDOWS_ERROR(format, ...) do { \
     DWORD errorCode = GetLastError(); \
     char errorMessage[256] = {0}; \
     GetLastErrorDescription(errorCode, errorMessage, sizeof(errorMessage)); \
-    WriteLog(LOG_LEVEL_ERROR, format " (错误码: %lu, 描述: %s)", ##__VA_ARGS__, errorCode, errorMessage); \
+    WriteLog(LOG_LEVEL_ERROR, format " (Error code: %lu, Description: %s)", ##__VA_ARGS__, errorCode, errorMessage); \
 } while(0)
 
 #endif // LOG_H

@@ -1,9 +1,9 @@
 /**
  * @file shortcut_checker.h
- * @brief 检测和创建桌面快捷方式的功能
+ * @brief Functionality for detecting and creating desktop shortcuts
  *
- * 提供检测程序是否从应用商店或WinGet安装，
- * 并在需要时在桌面创建快捷方式的功能。
+ * Provides functionality to detect if the program is installed from the app store or WinGet,
+ * and create desktop shortcuts when needed.
  */
 
 #ifndef SHORTCUT_CHECKER_H
@@ -12,13 +12,13 @@
 #include <windows.h>
 
 /**
- * @brief 检查并创建桌面快捷方式
+ * @brief Check and create desktop shortcut
  * 
- * 检查程序是否从Windows应用商店或WinGet安装，
- * 如果是且配置中没有标记为已检查过，则检查桌面
- * 是否有程序的快捷方式，如果没有则创建一个。
+ * Checks if the program is installed from the Windows App Store or WinGet,
+ * and if it is and not marked as already checked in the configuration, checks if
+ * there is a shortcut for the program on the desktop, and creates one if there isn't.
  * 
- * @return int 0表示无需创建或创建成功，1表示创建失败
+ * @return int 0 indicates no need to create or creation successful, 1 indicates creation failed
  */
 int CheckAndCreateShortcut(void);
 

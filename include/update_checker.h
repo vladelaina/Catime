@@ -1,8 +1,8 @@
 /**
  * @file update_checker.h
- * @brief 极简的应用程序更新检查功能接口
+ * @brief Minimalist application update checking functionality interface
  * 
- * 本文件定义了应用程序检查更新、打开浏览器下载和删除配置文件的功能接口。
+ * This file defines the application's interfaces for checking updates, opening browser for downloads, and deleting configuration files.
  */
 
 #ifndef UPDATE_CHECKER_H
@@ -11,30 +11,30 @@
 #include <windows.h>
 
 /**
- * @brief 检查应用程序更新
- * @param hwnd 窗口句柄
+ * @brief Check for application updates
+ * @param hwnd Window handle
  * 
- * 连接到GitHub检查是否有新版本。如果有，会提示用户是否通过浏览器下载。
- * 如果用户确认，将打开浏览器到下载页面，删除配置文件，并退出程序。
+ * Connects to GitHub to check if there's a new version. If available, prompts the user whether to download via browser.
+ * If the user confirms, opens the browser to the download page, deletes the configuration file, and exits the program.
  */
 void CheckForUpdate(HWND hwnd);
 
 /**
- * @brief 静默检查应用程序更新
- * @param hwnd 窗口句柄
- * @param silentCheck 是否仅在有更新时显示提示
+ * @brief Silently check for application updates
+ * @param hwnd Window handle
+ * @param silentCheck Whether to show prompt only when updates are available
  * 
- * 连接到GitHub检查是否有新版本。
- * 如果silentCheck为TRUE，仅在有更新时才显示提示；
- * 如果为FALSE，则无论是否有更新都会显示结果。
+ * Connects to GitHub to check if there's a new version.
+ * If silentCheck is TRUE, only shows a prompt when updates are available;
+ * If FALSE, shows results regardless of whether updates are available.
  */
 void CheckForUpdateSilent(HWND hwnd, BOOL silentCheck);
 
 /**
- * @brief 比较版本号
- * @param version1 第一个版本号字符串
- * @param version2 第二个版本号字符串
- * @return 如果version1 > version2返回1，如果相等返回0，如果version1 < version2返回-1
+ * @brief Compare version numbers
+ * @param version1 First version number string
+ * @param version2 Second version number string
+ * @return Returns 1 if version1 > version2, 0 if equal, -1 if version1 < version2
  */
 int CompareVersions(const char* version1, const char* version2);
 

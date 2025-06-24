@@ -1,9 +1,9 @@
 /**
  * @file window_events.h
- * @brief 基本窗口事件处理接口
+ * @brief Basic window event handling interface
  * 
- * 本文件定义了应用程序窗口的基本事件处理功能接口，
- * 包括窗口创建、销毁、大小调整和位置调整等基本功能。
+ * This file defines the application window's basic event handling functionality interfaces,
+ * including window creation, destruction, resizing, and position adjustment functions.
  */
 
 #ifndef WINDOW_EVENTS_H
@@ -12,36 +12,36 @@
 #include <windows.h>
 
 /**
- * @brief 处理窗口创建事件
- * @param hwnd 窗口句柄
- * @return BOOL 处理结果
+ * @brief Handle window creation event
+ * @param hwnd Window handle
+ * @return BOOL Processing result
  */
 BOOL HandleWindowCreate(HWND hwnd);
 
 /**
- * @brief 处理窗口销毁事件
- * @param hwnd 窗口句柄
+ * @brief Handle window destruction event
+ * @param hwnd Window handle
  */
 void HandleWindowDestroy(HWND hwnd);
 
 /**
- * @brief 处理窗口重置事件
- * @param hwnd 窗口句柄
+ * @brief Handle window reset event
+ * @param hwnd Window handle
  */
 void HandleWindowReset(HWND hwnd);
 
 /**
- * @brief 处理窗口大小调整事件
- * @param hwnd 窗口句柄
- * @param delta 鼠标滚轮增量
- * @return BOOL 是否处理了事件
+ * @brief Handle window resize event
+ * @param hwnd Window handle
+ * @param delta Mouse wheel increment
+ * @return BOOL Whether the event was handled
  */
 BOOL HandleWindowResize(HWND hwnd, int delta);
 
 /**
- * @brief 处理窗口位置调整事件
- * @param hwnd 窗口句柄
- * @return BOOL 是否处理了事件
+ * @brief Handle window move event
+ * @param hwnd Window handle
+ * @return BOOL Whether the event was handled
  */
 BOOL HandleWindowMove(HWND hwnd);
 

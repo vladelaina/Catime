@@ -1,31 +1,31 @@
 /**
  * @file pomodoro.h
- * @brief 番茄钟相关定义
+ * @brief Pomodoro timer related definitions
  * 
- * 定义番茄钟的阶段和共享变量
+ * Defines Pomodoro timer phases and shared variables
  */
 
 #ifndef POMODORO_H
 #define POMODORO_H
 
-// 番茄钟阶段枚举
+// Pomodoro phase enumeration
 typedef enum {
-    POMODORO_PHASE_IDLE = 0,  // 空闲状态
-    POMODORO_PHASE_WORK,      // 工作阶段
-    POMODORO_PHASE_BREAK,     // 休息阶段
-    POMODORO_PHASE_LONG_BREAK // 长休息阶段
+    POMODORO_PHASE_IDLE = 0,  // Idle state
+    POMODORO_PHASE_WORK,      // Work phase
+    POMODORO_PHASE_BREAK,     // Break phase
+    POMODORO_PHASE_LONG_BREAK // Long break phase
 } POMODORO_PHASE;
 
-// 当前番茄钟阶段
+// Current Pomodoro phase
 extern POMODORO_PHASE current_pomodoro_phase;
 
-// 当前正在执行的番茄钟时间索引
+// Current Pomodoro time index being executed
 extern int current_pomodoro_time_index;
 
-// 完成的番茄钟循环次数
+// Number of completed Pomodoro cycles
 extern int complete_pomodoro_cycles;
 
-// 初始化番茄钟状态为工作阶段
+// Initialize Pomodoro state to work phase
 void InitializePomodoro(void);
 
 #endif // POMODORO_H

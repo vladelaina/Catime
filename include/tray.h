@@ -1,8 +1,8 @@
 /**
  * @file tray.h
- * @brief 系统托盘功能接口
+ * @brief System tray functionality interface
  * 
- * 本文件定义了应用程序的系统托盘操作接口，包括初始化、移除和通知显示功能。
+ * This file defines the application's system tray operation interface, including initialization, removal, and notification display functions.
  */
 
 #ifndef TRAY_H
@@ -10,70 +10,70 @@
 
 #include <windows.h>
 
-/// @name 系统托盘消息常量
+/// @name System tray message constants
 /// @{
-#define CLOCK_WM_TRAYICON (WM_USER + 2)  ///< 自定义托盘图标消息ID
+#define CLOCK_WM_TRAYICON (WM_USER + 2)  ///< Custom tray icon message ID
 /// @}
 
-/// @name 系统托盘标识常量
+/// @name System tray identifier constants
 /// @{
-#define CLOCK_ID_TRAY_APP_ICON 1001      ///< 托盘图标标识ID
+#define CLOCK_ID_TRAY_APP_ICON 1001      ///< Tray icon identifier ID
 /// @}
 
-/// TaskbarCreated消息ID
+/// TaskbarCreated message ID
 extern UINT WM_TASKBARCREATED;
 
 /**
- * @brief 注册TaskbarCreated消息
+ * @brief Register TaskbarCreated message
  * 
- * 注册系统发送的TaskbarCreated消息，用于在资源管理器重启后重新创建托盘图标
+ * Register the TaskbarCreated message sent by the system, used to recreate the tray icon after Explorer restarts
  */
 void RegisterTaskbarCreatedMessage(void);
 
 /**
- * @brief 初始化系统托盘图标
- * @param hwnd 与托盘图标关联的窗口句柄
- * @param hInstance 应用程序实例句柄
+ * @brief Initialize system tray icon
+ * @param hwnd Window handle associated with the tray icon
+ * @param hInstance Application instance handle
  * 
- * 创建并显示带有默认设置的系统托盘图标。
- * 该图标将通过CLOCK_WM_TRAYICON回调接收消息。
+ * Create and display a system tray icon with default settings.
+ * This icon will receive messages through CLOCK_WM_TRAYICON callback.
  */
 void InitTrayIcon(HWND hwnd, HINSTANCE hInstance);
 
 /**
- * @brief 删除系统托盘图标
+ * @brief Remove system tray icon
  * 
- * 从系统托盘中移除应用程序的图标。
- * 应在应用程序关闭时调用。
+ * Remove the application's icon from the system tray.
+ * Should be called when the application is closing.
  */
 void RemoveTrayIcon(void);
 
 /**
- * @brief 在系统托盘中显示通知
- * @param hwnd 与通知关联的窗口句柄
- * @param message 要在通知中显示的文本消息
+ * @brief Display notification in system tray
+ * @param hwnd Window handle associated with the notification
+ * @param message Text message to display in the notification
  * 
- * 从系统托盘图标显示气球提示通知。
- * 通知使用NIIF_NONE样式（无图标）并在3秒后超时。
+ * Display a balloon tip notification from the system tray icon.
+ * The notification uses NIIF_NONE style (no icon) and times out after 3 seconds.
  */
 void ShowTrayNotification(HWND hwnd, const char* message);
 
 /**
- * @brief 重新创建托盘图标
- * @param hwnd 窗口句柄
- * @param hInstance 实例句柄
+ * @brief Recreate tray icon
+ * @param hwnd Window handle
+ * @param hInstance Instance handle
  * 
- * 在Windows资源管理器重启后重新创建托盘图标。
- * 应在收到TaskbarCreated消息时调用此函数。
+ * Recreate the tray icon after Windows Explorer restarts.
+ * This function should be called when receiving the TaskbarCreated message.
  */
 void RecreateTaskbarIcon(HWND hwnd, HINSTANCE hInstance);
 
 /**
- * @brief 更新托盘图标和菜单
- * @param hwnd 窗口句柄
+ * @brief Update tray icon and menu
+ * @param hwnd Window handle
  * 
- * 在应用程序语言或设置更改后更新托盘图标和菜单。
- * 用于确保托盘菜单显示的文本与当前语言设置一致。
+ * Update the tray icon and menu after application language or settings change.
+ * Used to ensure the text displayed in the tray menu matches the current language settings.
  */
 void UpdateTrayIcon(HWND hwnd);
 

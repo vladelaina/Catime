@@ -1,9 +1,9 @@
 /**
  * @file startup.h
- * @brief 开机自启动功能接口
+ * @brief Auto-start functionality interface
  * 
- * 本文件定义了应用程序开机自启动相关的函数接口，
- * 包括检查是否已启用自启动、创建和删除自启动快捷方式的功能。
+ * This file defines the application's auto-start related function interfaces,
+ * including checking if auto-start is enabled, creating and deleting auto-start shortcuts.
  */
 
 #ifndef STARTUP_H
@@ -13,36 +13,36 @@
 #include <shlobj.h>
 
 /**
- * @brief 检查应用程序是否已设置为开机自启动
- * @return BOOL 如果已启用开机自启动则返回TRUE，否则返回FALSE
+ * @brief Check if the application is set to auto-start on system boot
+ * @return BOOL Returns TRUE if auto-start is enabled, otherwise FALSE
  * 
- * 通过检查启动文件夹中是否存在应用程序的快捷方式来判断是否已启用自启动。
+ * Determines if auto-start is enabled by checking if the application's shortcut exists in the startup folder.
  */
 BOOL IsAutoStartEnabled(void);
 
 /**
- * @brief 创建开机自启动快捷方式
- * @return BOOL 如果创建成功则返回TRUE，否则返回FALSE
+ * @brief Create auto-start shortcut
+ * @return BOOL Returns TRUE if creation is successful, otherwise FALSE
  * 
- * 在系统启动文件夹中创建应用程序的快捷方式，使其能够在系统启动时自动运行。
+ * Creates a shortcut for the application in the system startup folder, allowing it to run automatically when the system starts.
  */
 BOOL CreateShortcut(void);
 
 /**
- * @brief 删除开机自启动快捷方式
- * @return BOOL 如果删除成功则返回TRUE，否则返回FALSE
+ * @brief Delete auto-start shortcut
+ * @return BOOL Returns TRUE if deletion is successful, otherwise FALSE
  * 
- * 从系统启动文件夹中删除应用程序的快捷方式，禁用其开机自启动功能。
+ * Removes the application's shortcut from the system startup folder, disabling its auto-start functionality.
  */
 BOOL RemoveShortcut(void);
 
 /**
- * @brief 更新开机自启动快捷方式
+ * @brief Update auto-start shortcut
  * 
- * 检查是否已启用自启动，如果已启用，则删除旧的快捷方式并创建新的，
- * 确保即使应用程序位置发生变化，自启动功能也能正常工作。
+ * Checks if auto-start is enabled, and if so, deletes the old shortcut and creates a new one,
+ * ensuring that the auto-start functionality works properly even if the application location changes.
  * 
- * @return BOOL 如果更新成功则返回TRUE，否则返回FALSE
+ * @return BOOL Returns TRUE if the update is successful, otherwise FALSE
  */
 BOOL UpdateStartupShortcut(void);
 

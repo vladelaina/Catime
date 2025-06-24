@@ -1,9 +1,9 @@
 /**
  * @file window_procedure.h
- * @brief 窗口消息处理过程接口
+ * @brief Window message handling procedure interface
  * 
- * 本文件定义了应用程序的主窗口消息处理回调函数接口，
- * 处理窗口的所有消息事件包括绘制、鼠标、键盘、菜单和定时器事件。
+ * This file defines the application's main window message handling callback function interface,
+ * processing all window message events including drawing, mouse, keyboard, menu, and timer events.
  */
 
 #ifndef WINDOW_PROCEDURE_H
@@ -12,121 +12,121 @@
 #include <windows.h>
 
 /**
- * @brief 热键ID定义
+ * @brief Hotkey ID definitions
  */
-#define HOTKEY_ID_SHOW_TIME       100  // 显示当前时间热键ID
-#define HOTKEY_ID_COUNT_UP        101  // 正计时热键ID
-#define HOTKEY_ID_COUNTDOWN       102  // 倒计时热键ID
-#define HOTKEY_ID_QUICK_COUNTDOWN1 103 // 快捷倒计时1热键ID
-#define HOTKEY_ID_QUICK_COUNTDOWN2 104 // 快捷倒计时2热键ID
-#define HOTKEY_ID_QUICK_COUNTDOWN3 105 // 快捷倒计时3热键ID
-#define HOTKEY_ID_POMODORO        106  // 番茄钟热键ID
-#define HOTKEY_ID_TOGGLE_VISIBILITY 107 // 隐藏/显示热键ID
-#define HOTKEY_ID_EDIT_MODE       108  // 编辑模式热键ID
-#define HOTKEY_ID_PAUSE_RESUME    109  // 暂停/继续热键ID
-#define HOTKEY_ID_RESTART_TIMER   110  // 重新开始热键ID
+#define HOTKEY_ID_SHOW_TIME       100  // Show current time hotkey ID
+#define HOTKEY_ID_COUNT_UP        101  // Count-up hotkey ID
+#define HOTKEY_ID_COUNTDOWN       102  // Countdown hotkey ID
+#define HOTKEY_ID_QUICK_COUNTDOWN1 103 // Quick countdown 1 hotkey ID
+#define HOTKEY_ID_QUICK_COUNTDOWN2 104 // Quick countdown 2 hotkey ID
+#define HOTKEY_ID_QUICK_COUNTDOWN3 105 // Quick countdown 3 hotkey ID
+#define HOTKEY_ID_POMODORO        106  // Pomodoro hotkey ID
+#define HOTKEY_ID_TOGGLE_VISIBILITY 107 // Hide/Show hotkey ID
+#define HOTKEY_ID_EDIT_MODE       108  // Edit mode hotkey ID
+#define HOTKEY_ID_PAUSE_RESUME    109  // Pause/Resume hotkey ID
+#define HOTKEY_ID_RESTART_TIMER   110  // Restart timer hotkey ID
 
 /**
- * @brief 主窗口消息处理函数
- * @param hwnd 窗口句柄
- * @param msg 消息ID
- * @param wp 消息参数
- * @param lp 消息参数
- * @return LRESULT 消息处理结果
+ * @brief Main window message handling function
+ * @param hwnd Window handle
+ * @param msg Message ID
+ * @param wp Message parameter
+ * @param lp Message parameter
+ * @return LRESULT Message handling result
  * 
- * 处理应用程序主窗口的所有窗口消息，包括：
- * - 创建和销毁事件
- * - 绘制和重绘
- * - 鼠标和键盘输入
- * - 窗口位置和大小变化
- * - 托盘图标事件
- * - 菜单命令消息
- * - 定时器事件
+ * Processes all window messages for the application's main window, including:
+ * - Creation and destruction events
+ * - Drawing and repainting
+ * - Mouse and keyboard input
+ * - Window position and size changes
+ * - Tray icon events
+ * - Menu command messages
+ * - Timer events
  */
 LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
 
 /**
- * @brief 注册全局热键
- * @param hwnd 窗口句柄
+ * @brief Register global hotkeys
+ * @param hwnd Window handle
  * 
- * 从配置文件读取并注册全局热键设置，用于快速切换显示当前时间、正计时和默认倒计时。
- * 如果热键已注册，会先取消注册再重新注册。
+ * Reads and registers global hotkey settings from the configuration file, used for quickly switching to show current time, count-up, and default countdown.
+ * If hotkeys are already registered, they will be unregistered first and then re-registered.
  * 
- * @return BOOL 是否成功注册至少一个热键
+ * @return BOOL Whether at least one hotkey was successfully registered
  */
 BOOL RegisterGlobalHotkeys(HWND hwnd);
 
 /**
- * @brief 取消注册全局热键
- * @param hwnd 窗口句柄
+ * @brief Unregister global hotkeys
+ * @param hwnd Window handle
  * 
- * 取消注册所有已注册的全局热键。
+ * Unregisters all previously registered global hotkeys.
  */
 void UnregisterGlobalHotkeys(HWND hwnd);
 
 /**
- * @brief 切换到显示当前时间模式
- * @param hwnd 窗口句柄
+ * @brief Switch to show current time mode
+ * @param hwnd Window handle
  */
 void ToggleShowTimeMode(HWND hwnd);
 
 /**
- * @brief 开始正计时
- * @param hwnd 窗口句柄
+ * @brief Start count-up timer
+ * @param hwnd Window handle
  */
 void StartCountUp(HWND hwnd);
 
 /**
- * @brief 开始默认倒计时
- * @param hwnd 窗口句柄
+ * @brief Start default countdown
+ * @param hwnd Window handle
  */
 void StartDefaultCountDown(HWND hwnd);
 
 /**
- * @brief 开始番茄钟
- * @param hwnd 窗口句柄
+ * @brief Start Pomodoro timer
+ * @param hwnd Window handle
  */
 void StartPomodoroTimer(HWND hwnd);
 
 /**
- * @brief 切换编辑模式
- * @param hwnd 窗口句柄
+ * @brief Toggle edit mode
+ * @param hwnd Window handle
  */
 void ToggleEditMode(HWND hwnd);
 
 /**
- * @brief 暂停/继续计时
- * @param hwnd 窗口句柄
+ * @brief Pause/Resume timer
+ * @param hwnd Window handle
  */
 void TogglePauseResume(HWND hwnd);
 
 /**
- * @brief 重新开始当前计时
- * @param hwnd 窗口句柄
+ * @brief Restart current timer
+ * @param hwnd Window handle
  */
 void RestartCurrentTimer(HWND hwnd);
 
 /**
- * @brief 快捷倒计时1函数
- * @param hwnd 窗口句柄
+ * @brief Quick countdown 1 function
+ * @param hwnd Window handle
  * 
- * 使用预设时间选项中的第一项启动倒计时
+ * Start countdown using the first item in the preset time options
  */
 void StartQuickCountdown1(HWND hwnd);
 
 /**
- * @brief 快捷倒计时2函数
- * @param hwnd 窗口句柄
+ * @brief Quick countdown 2 function
+ * @param hwnd Window handle
  * 
- * 使用预设时间选项中的第二项启动倒计时
+ * Start countdown using the second item in the preset time options
  */
 void StartQuickCountdown2(HWND hwnd);
 
 /**
- * @brief 快捷倒计时3函数
- * @param hwnd 窗口句柄
+ * @brief Quick countdown 3 function
+ * @param hwnd Window handle
  * 
- * 使用预设时间选项中的第三项启动倒计时
+ * Start countdown using the third item in the preset time options
  */
 void StartQuickCountdown3(HWND hwnd);
 

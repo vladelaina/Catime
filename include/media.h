@@ -1,9 +1,9 @@
 /**
  * @file media.h
- * @brief 媒体控制功能接口
+ * @brief Media control functionality interface
  * 
- * 本文件定义了应用程序媒体控制相关的函数接口，
- * 包括暂停、播放等媒体控制操作。
+ * This file defines the application's media control related function interfaces,
+ * including pause, play and other media control operations.
  */
 
 #ifndef CLOCK_MEDIA_H
@@ -12,10 +12,10 @@
 #include <windows.h>
 
 /**
- * @brief 暂停媒体播放
+ * @brief Pause media playback
  * 
- * 通过模拟媒体控制键的按键事件来暂停当前正在播放的媒体。
- * 包括停止和暂停/播放的组合操作，以确保媒体被正确暂停。
+ * Pauses currently playing media by simulating media control key press events.
+ * Includes a combination of stop and pause/play operations to ensure the media is properly paused.
  */
 void PauseMediaPlayback(void);
 

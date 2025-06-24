@@ -1,9 +1,9 @@
 /**
  * @file window.h
- * @brief 窗口管理功能接口
+ * @brief Window management functionality interface
  * 
- * 本文件定义了应用程序窗口管理相关的常量和函数接口，
- * 包括窗口创建、位置调整、透明度、点击穿透和拖拽功能。
+ * This file defines constants and function interfaces related to application window management,
+ * including window creation, position adjustment, transparency, click-through, and drag functionality.
  */
 
 #ifndef WINDOW_H
@@ -12,152 +12,152 @@
 #include <windows.h>
 #include <dwmapi.h>
 
-/// @name 窗口尺寸和位置常量
+/// @name Window size and position constants
 /// @{
-extern int CLOCK_BASE_WINDOW_WIDTH;    ///< 基础窗口宽度
-extern int CLOCK_BASE_WINDOW_HEIGHT;   ///< 基础窗口高度
-extern float CLOCK_WINDOW_SCALE;       ///< 窗口缩放比例
-extern int CLOCK_WINDOW_POS_X;         ///< 窗口X坐标
-extern int CLOCK_WINDOW_POS_Y;         ///< 窗口Y坐标
+extern int CLOCK_BASE_WINDOW_WIDTH;    ///< Base window width
+extern int CLOCK_BASE_WINDOW_HEIGHT;   ///< Base window height
+extern float CLOCK_WINDOW_SCALE;       ///< Window scaling ratio
+extern int CLOCK_WINDOW_POS_X;         ///< Window X coordinate
+extern int CLOCK_WINDOW_POS_Y;         ///< Window Y coordinate
 /// @}
 
-/// @name 窗口状态变量
+/// @name Window state variables
 /// @{
-extern BOOL CLOCK_EDIT_MODE;           ///< 是否处于编辑模式
-extern BOOL CLOCK_IS_DRAGGING;         ///< 是否正在拖拽窗口
-extern POINT CLOCK_LAST_MOUSE_POS;     ///< 上次鼠标位置
-extern BOOL CLOCK_WINDOW_TOPMOST;       ///< 窗口是否置顶
+extern BOOL CLOCK_EDIT_MODE;           ///< Whether in edit mode
+extern BOOL CLOCK_IS_DRAGGING;         ///< Whether currently dragging the window
+extern POINT CLOCK_LAST_MOUSE_POS;     ///< Last mouse position
+extern BOOL CLOCK_WINDOW_TOPMOST;       ///< Whether window is topmost
 /// @}
 
-/// @name 文本区域变量
+/// @name Text area variables
 /// @{
-extern RECT CLOCK_TEXT_RECT;           ///< 文本区域矩形
-extern BOOL CLOCK_TEXT_RECT_VALID;     ///< 文本区域是否有效
+extern RECT CLOCK_TEXT_RECT;           ///< Text area rectangle
+extern BOOL CLOCK_TEXT_RECT_VALID;     ///< Whether text area is valid
 /// @}
 
-/// @name 缩放限制常量
+/// @name Scaling limit constants
 /// @{
-#define MIN_SCALE_FACTOR 0.5f          ///< 最小缩放比例
-#define MAX_SCALE_FACTOR 100.0f        ///< 最大缩放比例
+#define MIN_SCALE_FACTOR 0.5f          ///< Minimum scaling ratio
+#define MAX_SCALE_FACTOR 100.0f        ///< Maximum scaling ratio
 /// @}
 
-/// @name 字体相关常量
+/// @name Font related constants
 /// @{
-extern float CLOCK_FONT_SCALE_FACTOR;    ///< 字体缩放比例
-extern int CLOCK_BASE_FONT_SIZE;         ///< 基础字体大小 
+extern float CLOCK_FONT_SCALE_FACTOR;    ///< Font scaling ratio
+extern int CLOCK_BASE_FONT_SIZE;         ///< Base font size
 /// @}
 
 /**
- * @brief 设置窗口点击穿透属性
- * @param hwnd 窗口句柄
- * @param enable 是否启用点击穿透
+ * @brief Set window click-through property
+ * @param hwnd Window handle
+ * @param enable Whether to enable click-through
  * 
- * 控制窗口是否让鼠标点击事件穿透到下层窗口。
- * 在启用时，窗口将不接收任何鼠标事件。
+ * Controls whether the window allows mouse click events to pass through to underlying windows.
+ * When enabled, the window will not receive any mouse events.
  */
 void SetClickThrough(HWND hwnd, BOOL enable);
 
 /**
- * @brief 设置窗口背景模糊效果
- * @param hwnd 窗口句柄
- * @param enable 是否启用模糊效果
+ * @brief Set window background blur effect
+ * @param hwnd Window handle
+ * @param enable Whether to enable blur effect
  * 
- * 控制窗口背景是否应用DWM模糊效果，
- * 使背景半透明并具有磨砂玻璃效果。
+ * Controls whether to apply DWM blur effect to the window background,
+ * making the background semi-transparent with a frosted glass effect.
  */
 void SetBlurBehind(HWND hwnd, BOOL enable);
 
 /**
- * @brief 调整窗口位置
- * @param hwnd 窗口句柄
- * @param forceOnScreen 是否强制窗口在屏幕内
+ * @brief Adjust window position
+ * @param hwnd Window handle
+ * @param forceOnScreen Whether to force the window to stay on screen
  * 
- * 当forceOnScreen为TRUE时，确保窗口位置在屏幕边界内，
- * 当窗口位置超出边界时自动调整到合适位置。
- * 在编辑模式下可以将forceOnScreen设置为FALSE，允许窗口拖出屏幕。
+ * When forceOnScreen is TRUE, ensures the window position is within screen boundaries,
+ * automatically adjusting to a suitable position when the window position exceeds boundaries.
+ * In edit mode, forceOnScreen can be set to FALSE, allowing the window to be dragged off-screen.
  */
 void AdjustWindowPosition(HWND hwnd, BOOL forceOnScreen);
 
 /**
- * @brief 保存窗口设置
- * @param hwnd 窗口句柄
+ * @brief Save window settings
+ * @param hwnd Window handle
  * 
- * 将窗口的当前位置、大小和缩放状态保存到配置文件。
+ * Saves the window's current position, size, and scaling state to the configuration file.
  */
 void SaveWindowSettings(HWND hwnd);
 
 /**
- * @brief 加载窗口设置
- * @param hwnd 窗口句柄
+ * @brief Load window settings
+ * @param hwnd Window handle
  * 
- * 从配置文件加载窗口的位置、大小和缩放状态，
- * 并应用到指定窗口。
+ * Loads the window's position, size, and scaling state from the configuration file,
+ * and applies them to the specified window.
  */
 void LoadWindowSettings(HWND hwnd);
 
 /**
- * @brief 初始化DWM模糊功能
- * @return BOOL 初始化是否成功
+ * @brief Initialize DWM blur functionality
+ * @return BOOL Whether initialization was successful
  * 
- * 加载并初始化DWM API函数指针，用于窗口模糊效果。
+ * Loads and initializes DWM API function pointers, used for window blur effects.
  */
 BOOL InitDWMFunctions(void);
 
 /**
- * @brief 处理窗口鼠标滚轮消息
- * @param hwnd 窗口句柄
- * @param delta 滚轮滚动量
- * @return BOOL 是否处理了消息
+ * @brief Handle window mouse wheel messages
+ * @param hwnd Window handle
+ * @param delta Wheel scroll amount
+ * @return BOOL Whether the message was handled
  * 
- * 处理鼠标滚轮事件，在编辑模式下调整窗口大小。
+ * Processes mouse wheel events, adjusting window size in edit mode.
  */
 BOOL HandleMouseWheel(HWND hwnd, int delta);
 
 /**
- * @brief 处理窗口鼠标移动消息
- * @param hwnd 窗口句柄
- * @return BOOL 是否处理了消息
+ * @brief Handle window mouse move messages
+ * @param hwnd Window handle
+ * @return BOOL Whether the message was handled
  * 
- * 处理鼠标移动事件，在编辑模式下拖拽窗口。
+ * Processes mouse move events, dragging the window in edit mode.
  */
 BOOL HandleMouseMove(HWND hwnd);
 
 /**
- * @brief 创建并初始化主窗口
- * @param hInstance 应用实例句柄
- * @param nCmdShow 显示命令参数
- * @return HWND 创建的窗口句柄
+ * @brief Create and initialize main window
+ * @param hInstance Application instance handle
+ * @param nCmdShow Display command parameter
+ * @return HWND Created window handle
  * 
- * 创建应用程序的主窗口，并设置初始属性。
+ * Creates the application's main window and sets initial properties.
  */
 HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow);
 
 /**
- * @brief 初始化应用程序
- * @param hInstance 应用程序实例句柄
- * @return BOOL 初始化是否成功
+ * @brief Initialize application
+ * @param hInstance Application instance handle
+ * @return BOOL Whether initialization was successful
  * 
- * 执行应用程序启动时的初始化工作，包括设置控制台代码页、
- * 初始化语言、更新自启动快捷方式、读取配置文件和加载字体资源。
+ * Performs initialization work when the application starts, including setting console code page,
+ * initializing language, updating auto-start shortcuts, reading configuration files, and loading font resources.
  */
 BOOL InitializeApplication(HINSTANCE hInstance);
 
 /**
- * @brief 打开文件选择对话框
- * @param hwnd 父窗口句柄
- * @param filePath 存储选中文件路径的缓冲区
- * @param maxPath 缓冲区最大长度
- * @return BOOL 是否成功选择文件
+ * @brief Open file selection dialog
+ * @param hwnd Parent window handle
+ * @param filePath Buffer to store the selected file path
+ * @param maxPath Maximum buffer length
+ * @return BOOL Whether a file was successfully selected
  */
 BOOL OpenFileDialog(HWND hwnd, char* filePath, DWORD maxPath);
 
 /**
- * @brief 设置窗口置顶状态
- * @param hwnd 窗口句柄
- * @param topmost 是否置顶
+ * @brief Set window topmost state
+ * @param hwnd Window handle
+ * @param topmost Whether to set as topmost
  * 
- * 控制窗口是否始终显示在其他窗口之上。
- * 同时更新全局状态变量并保存配置。
+ * Controls whether the window is always displayed above other windows.
+ * Also updates the global state variable and saves the configuration.
  */
 void SetWindowTopmost(HWND hwnd, BOOL topmost);
 

@@ -1,9 +1,9 @@
 /**
  * @file drawing.h
- * @brief 窗口绘图功能接口
+ * @brief Window drawing functionality interface
  * 
- * 本文件定义了应用程序窗口绘图相关的函数接口，
- * 包括文本渲染、颜色设置和窗口内容绘制等功能。
+ * This file defines the application window's drawing-related function interfaces,
+ * including text rendering, color settings, and window content drawing functionality.
  */
 
 #ifndef DRAWING_H
@@ -12,17 +12,17 @@
 #include <windows.h>
 
 /**
- * @brief 处理窗口绘制
- * @param hwnd 窗口句柄
- * @param ps 绘制结构体
+ * @brief Handle window painting
+ * @param hwnd Window handle
+ * @param ps Paint structure
  * 
- * 处理窗口的WM_PAINT消息，执行以下操作：
- * 1. 创建内存DC双缓冲防止闪烁
- * 2. 根据模式计算剩余时间/获取当前时间
- * 3. 动态加载字体资源(支持实时预览)
- * 4. 解析颜色配置(支持HEX/RGB格式)
- * 5. 使用双缓冲机制绘制文本
- * 6. 自动调整窗口尺寸适应文本内容
+ * Handle window's WM_PAINT message, performing the following operations:
+ * 1. Create memory DC double-buffering to prevent flickering
+ * 2. Calculate remaining time/get current time based on mode
+ * 3. Dynamically load font resources (supporting real-time preview)
+ * 4. Parse color configuration (supporting HEX/RGB formats)
+ * 5. Draw text using double-buffering mechanism
+ * 6. Automatically adjust window size to fit text content
  */
 void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps);
 

@@ -1,9 +1,9 @@
 /**
  * @file hotkey.h
- * @brief 热键管理接口
+ * @brief Hotkey management interface
  * 
- * 本文件定义了应用程序的热键管理接口，
- * 处理全局热键的设置、对话框交互和配置保存。
+ * This file defines the application's hotkey management interface,
+ * handling global hotkey setup, dialog interaction, and configuration saving.
  */
 
 #ifndef HOTKEY_H
@@ -12,37 +12,37 @@
 #include <windows.h>
 
 /**
- * @brief 显示热键设置对话框
- * @param hwndParent 父窗口句柄
+ * @brief Show hotkey settings dialog
+ * @param hwndParent Parent window handle
  * 
- * 显示热键设置对话框，用于设置全局热键。
+ * Display the hotkey settings dialog for setting global hotkeys.
  */
 void ShowHotkeySettingsDialog(HWND hwndParent);
 
 /**
- * @brief 热键设置对话框消息处理过程
- * @param hwndDlg 对话框句柄
- * @param msg 消息类型
- * @param wParam 消息参数
- * @param lParam 消息参数
- * @return INT_PTR 消息处理结果
+ * @brief Hotkey settings dialog message handling procedure
+ * @param hwndDlg Dialog handle
+ * @param msg Message type
+ * @param wParam Message parameter
+ * @param lParam Message parameter
+ * @return INT_PTR Message handling result
  * 
- * 处理热键设置对话框的所有消息事件，包括初始化、背景颜色和按钮点击。
+ * Handle all message events for the hotkey settings dialog, including initialization, background color, and button clicks.
  */
 INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 
 /**
- * @brief 热键控件子类化处理函数
- * @param hwnd 热键控件窗口句柄
- * @param uMsg 消息类型
- * @param wParam 消息参数
- * @param lParam 消息参数
- * @param uIdSubclass 子类ID
- * @param dwRefData 引用数据
- * @return LRESULT 消息处理结果
+ * @brief Hotkey control subclass handling function
+ * @param hwnd Hotkey control window handle
+ * @param uMsg Message type
+ * @param wParam Message parameter
+ * @param lParam Message parameter
+ * @param uIdSubclass Subclass ID
+ * @param dwRefData Reference data
+ * @return LRESULT Message handling result
  * 
- * 处理热键控件的消息，特别是拦截Alt键和Alt+Shift组合键
- * 防止Windows系统发出提示音
+ * Handle hotkey control messages, especially intercepting Alt key and Alt+Shift combinations
+ * to prevent Windows system from emitting beep sounds
  */
 LRESULT CALLBACK HotkeyControlSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, 
                                          LPARAM lParam, UINT_PTR uIdSubclass, 

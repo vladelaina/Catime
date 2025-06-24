@@ -1,9 +1,9 @@
 /**
  * @file timer_events.h
- * @brief 计时器事件处理接口
+ * @brief Timer event handling interface
  * 
- * 本文件定义了应用程序计时器事件处理相关的函数接口，
- * 包括倒计时和正计时模式的事件处理。
+ * This file defines the application's timer event handling function interfaces,
+ * including event handling for countdown and count-up modes.
  */
 
 #ifndef TIMER_EVENTS_H
@@ -12,15 +12,15 @@
 #include <windows.h>
 
 /**
- * @brief 处理计时器消息
- * @param hwnd 窗口句柄
- * @param wp 消息参数
- * @return BOOL 是否处理了消息
+ * @brief Handle timer messages
+ * @param hwnd Window handle
+ * @param wp Message parameter
+ * @return BOOL Whether the message was handled
  * 
- * 处理WM_TIMER消息，包括：
- * 1. 倒计时模式：更新剩余时间并执行超时动作
- * 2. 计时模式：累计已过时间
- * 3. 显示当前时间模式
+ * Process WM_TIMER messages, including:
+ * 1. Countdown mode: Update remaining time and execute timeout actions
+ * 2. Count-up mode: Accumulate elapsed time
+ * 3. Display current time mode
  */
 BOOL HandleTimerEvent(HWND hwnd, WPARAM wp);
 

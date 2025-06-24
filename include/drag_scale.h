@@ -1,9 +1,9 @@
 /**
  * @file drag_scale.h
- * @brief 窗口拖动和缩放功能接口
+ * @brief Window dragging and scaling functionality interface
  * 
- * 本文件定义了应用程序窗口的拖动和缩放功能接口，
- * 包括鼠标拖动窗口和滚轮缩放窗口的功能。
+ * This file defines the application window's dragging and scaling functionality interfaces,
+ * including mouse dragging of windows and mouse wheel scaling of windows.
  */
 
 #ifndef DRAG_SCALE_H
@@ -11,63 +11,63 @@
 
 #include <windows.h>
 
-// 记录编辑模式前的置顶状态
+// Record topmost state before edit mode
 extern BOOL PREVIOUS_TOPMOST_STATE;
 
 /**
- * @brief 处理窗口拖动事件
- * @param hwnd 窗口句柄
- * @return BOOL 是否处理了事件
+ * @brief Handle window dragging events
+ * @param hwnd Window handle
+ * @return BOOL Whether the event was handled
  * 
- * 在编辑模式下，处理鼠标拖动窗口的事件。
- * 根据鼠标移动距离更新窗口位置。
+ * In edit mode, handle mouse dragging window events.
+ * Update window position based on mouse movement distance.
  */
 BOOL HandleDragWindow(HWND hwnd);
 
 /**
- * @brief 处理窗口缩放事件
- * @param hwnd 窗口句柄
- * @param delta 鼠标滚轮增量
- * @return BOOL 是否处理了事件
+ * @brief Handle window scaling events
+ * @param hwnd Window handle
+ * @param delta Mouse wheel increment
+ * @return BOOL Whether the event was handled
  * 
- * 在编辑模式下，处理鼠标滚轮缩放窗口的事件。
- * 根据滚轮方向调整窗口和字体大小。
+ * In edit mode, handle mouse wheel window scaling events.
+ * Adjust window and font size based on wheel direction.
  */
 BOOL HandleScaleWindow(HWND hwnd, int delta);
 
 /**
- * @brief 开始拖动窗口
- * @param hwnd 窗口句柄
+ * @brief Start dragging window
+ * @param hwnd Window handle
  * 
- * 在编辑模式下，开始拖动窗口操作。
- * 记录初始鼠标位置并设置捕获。
+ * In edit mode, start window dragging operation.
+ * Record initial mouse position and set capture.
  */
 void StartDragWindow(HWND hwnd);
 
 /**
- * @brief 结束拖动窗口
- * @param hwnd 窗口句柄
+ * @brief End dragging window
+ * @param hwnd Window handle
  * 
- * 结束拖动窗口操作。
- * 释放鼠标捕获并调整窗口位置。
+ * End window dragging operation.
+ * Release mouse capture and adjust window position.
  */
 void EndDragWindow(HWND hwnd);
 
 /**
- * @brief 开始编辑模式
- * @param hwnd 窗口句柄
+ * @brief Start edit mode
+ * @param hwnd Window handle
  * 
- * 启用编辑模式前，确保窗口为置顶状态，
- * 记录原始置顶状态以便退出编辑模式时恢复。
+ * Before enabling edit mode, ensure the window is in topmost state,
+ * record original topmost state for restoration when exiting edit mode.
  */
 void StartEditMode(HWND hwnd);
 
 /**
- * @brief 结束编辑模式
- * @param hwnd 窗口句柄
+ * @brief End edit mode
+ * @param hwnd Window handle
  * 
- * 退出编辑模式，恢复窗口原始置顶状态，
- * 清除模糊效果并更新相关设置。
+ * Exit edit mode, restore window's original topmost state,
+ * clear blur effect and update related settings.
  */
 void EndEditMode(HWND hwnd);
 
