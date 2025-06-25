@@ -966,10 +966,10 @@ void ShowWebsiteDialog(HWND hwndParent) {
     // If the user cancels or closes the dialog, the timeout action won't be changed
 }
 
-// 设置全局变量来跟踪番茄钟组合对话框句柄
+// Set global variable to track the Pomodoro combination dialog handle
 static HWND g_hwndPomodoroComboDialog = NULL;
 
-// 添加番茄钟组合对话框处理函数
+// Add Pomodoro combination dialog procedure
 INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     static HBRUSH hBackgroundBrush = NULL;
     static HBRUSH hEditBrush = NULL;
@@ -977,22 +977,22 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
     
     switch (msg) {
         case WM_INITDIALOG: {
-            // 设置背景和控件颜色
+            // Set background and control colors
             hBackgroundBrush = CreateSolidBrush(RGB(240, 240, 240));
             hEditBrush = CreateSolidBrush(RGB(255, 255, 255));
             hButtonBrush = CreateSolidBrush(RGB(240, 240, 240));
             
-            // 子类化编辑框以支持回车键提交
+            // Subclass the edit control to support Enter key submission
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
             wpOrigEditProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
             
-            // 从配置中读取当前的番茄钟时间选项并格式化显示
+            // Read current pomodoro time options from configuration and format for display
             char currentOptions[256] = {0};
             for (int i = 0; i < POMODORO_TIMES_COUNT; i++) {
                 char timeStr[32];
                 int seconds = POMODORO_TIMES[i];
                 
-                // 格式化时间，转换为人类可读格式
+                // Format time into human-readable format
                 if (seconds >= 3600) {
                     int hours = seconds / 3600;
                     int mins = (seconds % 3600) / 60;
@@ -1017,22 +1017,22 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
                 StringCbCatA(currentOptions, sizeof(currentOptions), timeStr);
             }
             
-            // 去掉末尾的空格
+            // Remove trailing space
             if (strlen(currentOptions) > 0 && currentOptions[strlen(currentOptions) - 1] == ' ') {
                 currentOptions[strlen(currentOptions) - 1] = '\0';
             }
             
-            // 设置编辑框文本
+            // Set edit box text
             SetDlgItemTextA(hwndDlg, CLOCK_IDC_EDIT, currentOptions);
             
-            // 应用多语言支持 - 移到这里确保覆盖所有默认文本
+            // Apply multilingual support - moved here to ensure all default text is covered
             ApplyDialogLanguage(hwndDlg, CLOCK_IDD_POMODORO_COMBO_DIALOG);
             
-            // 设置焦点到编辑框并选中所有文本
+            // Set focus to edit box and select all text
             SetFocus(hwndEdit);
             SendMessage(hwndEdit, EM_SETSEL, 0, -1);
             
-            return FALSE;  // 因为我们手动设置了焦点
+            return FALSE;  // Because we manually set the focus
         }
         
         case WM_CTLCOLORDLG:
@@ -1054,7 +1054,7 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
                 char input[256] = {0};
                 GetDlgItemTextA(hwndDlg, CLOCK_IDC_EDIT, input, sizeof(input));
                 
-                // 解析输入的时间格式，转换为秒数数组
+                // Parse input time format and convert to seconds array
                 char *token, *saveptr;
                 char input_copy[256];
                 StringCbCopyA(input_copy, sizeof(input_copy), input);
@@ -1072,18 +1072,18 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
                 }
                 
                 if (times_count > 0) {
-                    // 更新全局变量
+                    // Update global variables
                     POMODORO_TIMES_COUNT = times_count;
                     for (int i = 0; i < times_count; i++) {
                         POMODORO_TIMES[i] = times[i];
                     }
                     
-                    // 更新基本的番茄钟时间
+                    // Update basic pomodoro times
                     if (times_count > 0) POMODORO_WORK_TIME = times[0];
                     if (times_count > 1) POMODORO_SHORT_BREAK = times[1];
                     if (times_count > 2) POMODORO_LONG_BREAK = times[2];
                     
-                    // 写入配置文件
+                    // Write to configuration file
                     WriteConfigPomodoroTimeOptions(times, times_count);
                 }
                 
@@ -1123,12 +1123,12 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
     return FALSE;
 }
 
-// 显示番茄钟组合对话框
+// Display Pomodoro combination dialog
 void ShowPomodoroComboDialog(HWND hwndParent) {
     if (!g_hwndPomodoroComboDialog) {
         g_hwndPomodoroComboDialog = CreateDialog(
             GetModuleHandle(NULL),
-            MAKEINTRESOURCE(CLOCK_IDD_POMODORO_COMBO_DIALOG), // 使用新的对话框资源
+            MAKEINTRESOURCE(CLOCK_IDD_POMODORO_COMBO_DIALOG), // Use new dialog resource
             hwndParent,
             PomodoroComboDialogProc
         );
@@ -1140,7 +1140,7 @@ void ShowPomodoroComboDialog(HWND hwndParent) {
     }
 }
 
-// 解析时间输入 (如 "25m", "30s", "1h30m" 等)
+// Parse time input (such as "25m", "30s", "1h30m" etc.)
 BOOL ParseTimeInput(const char* input, int* seconds) {
     if (!input || !seconds) return FALSE;
     
@@ -1154,7 +1154,7 @@ BOOL ParseTimeInput(const char* input, int* seconds) {
     int tempSeconds = 0;
     
     while (*pos) {
-        // 读取数字
+        // Read digits
         if (isdigit((unsigned char)*pos)) {
             value = 0;
             while (isdigit((unsigned char)*pos)) {
@@ -1162,26 +1162,26 @@ BOOL ParseTimeInput(const char* input, int* seconds) {
                 pos++;
             }
             
-            // 读取单位
+            // Read units
             if (*pos == 'h' || *pos == 'H') {
-                tempSeconds += value * 3600; // 小时转秒
+                tempSeconds += value * 3600; // Hours to seconds
                 pos++;
             } else if (*pos == 'm' || *pos == 'M') {
-                tempSeconds += value * 60;   // 分钟转秒
+                tempSeconds += value * 60;   // Minutes to seconds
                 pos++;
             } else if (*pos == 's' || *pos == 'S') {
-                tempSeconds += value;        // 秒
+                tempSeconds += value;        // Seconds
                 pos++;
             } else if (*pos == '\0') {
-                // 没有单位，默认为分钟
+                // No unit, default to minutes
                 tempSeconds += value * 60;
             } else {
-                // 无效字符
+                // Invalid character
                 free(buffer);
                 return FALSE;
             }
         } else {
-            // 非数字起始
+            // Non-digit starting character
             pos++;
         }
     }
@@ -1191,45 +1191,45 @@ BOOL ParseTimeInput(const char* input, int* seconds) {
     return TRUE;
 }
 
-// 添加全局变量来跟踪通知消息对话框句柄
+// Add global variable to track notification message dialog handle
 static HWND g_hwndNotificationMessagesDialog = NULL;
 
-// 添加通知消息对话框处理程序
+// Add notification messages dialog procedure
 INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     static HBRUSH hBackgroundBrush = NULL;
     static HBRUSH hEditBrush = NULL;
     
     switch (msg) {
         case WM_INITDIALOG: {
-            // 设置窗口置顶
+            // Set window topmost
             SetWindowPos(hwndDlg, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
             
-            // 创建画刷
+            // Create brushes
             hBackgroundBrush = CreateSolidBrush(RGB(0xF3, 0xF3, 0xF3));
             hEditBrush = CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF));
             
-            // 读取最新配置到全局变量
+            // Read latest configuration to global variables
             ReadNotificationMessagesConfig();
             
-            // 为了处理UTF-8中文，我们需要转换到Unicode
+            // For handling UTF-8 Chinese characters, we need to convert to Unicode
             wchar_t wideText[sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT)];
             
-            // 第一个编辑框 - 倒计时超时提示
+            // First edit box - Countdown timeout message
             MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_MESSAGE_TEXT, -1, 
                                wideText, sizeof(wideText)/sizeof(wchar_t));
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, wideText);
             
-            // 第二个编辑框 - 番茄钟超时提示
+            // Second edit box - Pomodoro timeout message
             MultiByteToWideChar(CP_UTF8, 0, POMODORO_TIMEOUT_MESSAGE_TEXT, -1, 
                                wideText, sizeof(wideText)/sizeof(wchar_t));
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT2, wideText);
             
-            // 第三个编辑框 - 番茄钟循环完成提示
+            // Third edit box - Pomodoro cycle completion message
             MultiByteToWideChar(CP_UTF8, 0, POMODORO_CYCLE_COMPLETE_TEXT, -1, 
                                wideText, sizeof(wideText)/sizeof(wchar_t));
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT3, wideText);
             
-            // 本地化标签文本
+            // Localize label text
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_LABEL1, 
                            GetLocalizedString(L"Countdown timeout message:", L"Countdown timeout message:"));
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_LABEL2, 
@@ -1237,29 +1237,29 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_LABEL3,
                            GetLocalizedString(L"Pomodoro cycle complete message:", L"Pomodoro cycle complete message:"));
             
-            // 本地化按钮文本
+            // Localize button text
             SetDlgItemTextW(hwndDlg, IDOK, GetLocalizedString(L"OK", L"OK"));
             SetDlgItemTextW(hwndDlg, IDCANCEL, GetLocalizedString(L"Cancel", L"Cancel"));
             
-            // 子类化编辑框以支持Ctrl+A全选
+            // Subclass edit boxes to support Ctrl+A for select all
             HWND hEdit1 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT1);
             HWND hEdit2 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT2);
             HWND hEdit3 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT3);
             
-            // 保存原始的窗口过程
+            // Save original window procedure
             wpOrigEditProc = (WNDPROC)SetWindowLongPtr(hEdit1, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
             
-            // 对其他编辑框也应用相同的子类化过程
+            // Apply the same subclassing process to other edit boxes
             SetWindowLongPtr(hEdit2, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
             SetWindowLongPtr(hEdit3, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
             
-            // 全选第一个编辑框文本
+            // Select all text in the first edit box
             SendDlgItemMessage(hwndDlg, IDC_NOTIFICATION_EDIT1, EM_SETSEL, 0, -1);
             
-            // 设置焦点到第一个编辑框
+            // Set focus to the first edit box
             SetFocus(GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT1));
             
-            return FALSE;  // 返回FALSE因为我们手动设置了焦点
+            return FALSE;  // Return FALSE because we manually set focus
         }
         
         case WM_CTLCOLORDLG:
@@ -1275,17 +1275,17 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
         
         case WM_COMMAND:
             if (LOWORD(wParam) == IDOK) {
-                // 获取编辑框中的文本（Unicode方式）
+                // Get text from edit boxes (Unicode method)
                 wchar_t wTimeout[256] = {0};
                 wchar_t wPomodoro[256] = {0};
                 wchar_t wCycle[256] = {0};
                 
-                // 获取Unicode文本
+                // Get Unicode text
                 GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, wTimeout, sizeof(wTimeout)/sizeof(wchar_t));
                 GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT2, wPomodoro, sizeof(wPomodoro)/sizeof(wchar_t));
                 GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT3, wCycle, sizeof(wCycle)/sizeof(wchar_t));
                 
-                // 转换为UTF-8
+                // Convert to UTF-8
                 char timeout_msg[256] = {0};
                 char pomodoro_msg[256] = {0};
                 char cycle_complete_msg[256] = {0};
@@ -1297,7 +1297,7 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 WideCharToMultiByte(CP_UTF8, 0, wCycle, -1, 
                                     cycle_complete_msg, sizeof(cycle_complete_msg), NULL, NULL);
                 
-                // 保存到配置文件并更新全局变量
+                // Save to configuration file and update global variables
                 WriteConfigNotificationMessages(timeout_msg, pomodoro_msg, cycle_complete_msg);
                 
                 EndDialog(hwndDlg, IDOK);
@@ -1311,7 +1311,7 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             break;
             
         case WM_DESTROY:
-            // 恢复原始窗口过程
+            // Restore original window procedure
             {
             HWND hEdit1 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT1);
             HWND hEdit2 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT2);
@@ -1333,14 +1333,14 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
 }
 
 /**
- * @brief 显示通知消息设置对话框
- * @param hwndParent 父窗口句柄
+ * @brief Display notification message settings dialog
+ * @param hwndParent Parent window handle
  * 
- * 显示通知消息设置对话框，用于修改各种通知提示文本。
+ * Displays the notification message settings dialog for modifying various notification prompt texts.
  */
 void ShowNotificationMessagesDialog(HWND hwndParent) {
     if (!g_hwndNotificationMessagesDialog) {
-        // 确保首先读取最新的配置值
+        // Ensure latest configuration values are read first
         ReadNotificationMessagesConfig();
         
         DialogBox(GetModuleHandle(NULL), 
@@ -1352,10 +1352,10 @@ void ShowNotificationMessagesDialog(HWND hwndParent) {
     }
 }
 
-// 添加全局变量来跟踪通知显示设置对话框句柄
+// Add global variable to track notification display settings dialog handle
 static HWND g_hwndNotificationDisplayDialog = NULL;
 
-// 添加通知显示设置对话框处理程序
+// Add notification display settings dialog procedure
 INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     static HBRUSH hBackgroundBrush = NULL;
     static HBRUSH hEditBrush = NULL;
