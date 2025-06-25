@@ -1,9 +1,9 @@
 /**
  * @file color.c
- * @brief 颜色处理功能实现
+ * @brief Color processing functionality implementation
  * 
- * 本文件实现了应用程序的颜色配置管理，包括颜色选项的读取、保存、
- * 颜色格式转换和颜色预览功能。支持多种颜色格式，如HEX、RGB和颜色名。
+ * This file implements the application's color configuration management, including reading and saving color options,
+ * color format conversion, and color preview functionality. Supports various color formats such as HEX, RGB, and color names.
  */
 
 #include <stdio.h>
@@ -15,16 +15,16 @@
 #include "../resource/resource.h"
 #include "../include/dialog_procedure.h"
 
-/// @name 全局变量定义
+/// @name Global variable definitions
 /// @{
-PredefinedColor* COLOR_OPTIONS = NULL;    ///< 预定义颜色选项数组
-size_t COLOR_OPTIONS_COUNT = 0;           ///< 预定义颜色选项数量
-char PREVIEW_COLOR[10] = "";              ///< 预览颜色值
-BOOL IS_COLOR_PREVIEWING = FALSE;         ///< 是否正在预览颜色
-char CLOCK_TEXT_COLOR[10] = "#FFFFFF";    ///< 当前文本颜色值
+PredefinedColor* COLOR_OPTIONS = NULL;    ///< Predefined color options array
+size_t COLOR_OPTIONS_COUNT = 0;           ///< Number of predefined color options
+char PREVIEW_COLOR[10] = "";              ///< Preview color value
+BOOL IS_COLOR_PREVIEWING = FALSE;         ///< Whether color is being previewed
+char CLOCK_TEXT_COLOR[10] = "#FFFFFF";    ///< Current text color value
 /// @}
 
-/// @name 函数原型声明
+/// @name Function prototype declarations
 /// @{
 void GetConfigPath(char* path, size_t size);
 void CreateDefaultConfig(const char* config_path);
@@ -34,9 +34,9 @@ void replaceBlackColor(const char* color, char* output, size_t output_size);
 /// @}
 
 /**
- * @brief CSS标准颜色定义
+ * @brief CSS standard color definitions
  * 
- * 包含CSS标准定义的颜色名称及其对应的十六进制值
+ * Contains CSS standard defined color names and their corresponding hexadecimal values
  */
 static const CSSColor CSS_COLORS[] = {
     {"white", "#FFFFFF"},
@@ -74,9 +74,9 @@ static const CSSColor CSS_COLORS[] = {
 #define CSS_COLORS_COUNT (sizeof(CSS_COLORS) / sizeof(CSS_COLORS[0]))
 
 /**
- * @brief 默认颜色选项
+ * @brief Default color options
  * 
- * 当配置文件未指定颜色选项时使用的默认颜色列表
+ * Default color list used when color options are not specified in the configuration file
  */
 static const char* DEFAULT_COLOR_OPTIONS[] = {
     "#FFFFFF",
@@ -99,14 +99,14 @@ static const char* DEFAULT_COLOR_OPTIONS[] = {
 
 #define DEFAULT_COLOR_OPTIONS_COUNT (sizeof(DEFAULT_COLOR_OPTIONS) / sizeof(DEFAULT_COLOR_OPTIONS[0]))
 
-/// 编辑框子类化过程的原始窗口过程
+/// Original window procedure for the subclassed edit control
 WNDPROC g_OldEditProc;
 
 /**
- * @brief 初始化默认语言和颜色设置
+ * @brief Initialize default language and color settings
  * 
- * 读取配置文件中的颜色设置，若未找到则创建默认配置。
- * 解析颜色选项并存储到全局颜色选项数组中。
+ * Reads color settings from the configuration file, creates default config if not found.
+ * Parses color options and stores them in the global color options array.
  */
 #include <commdlg.h>
 
@@ -341,7 +341,7 @@ void InitializeDefaultLanguage(void) {
     
     ClearColorOptions();
     
-    // 尝试打开配置文件，若不存在则创建默认配置
+    // Try to open the configuration file, create default config if it doesn't exist
     FILE *file = fopen(config_path, "r");
     if (!file) {
         CreateDefaultConfig(config_path);
@@ -352,7 +352,7 @@ void InitializeDefaultLanguage(void) {
         char line[1024];
         BOOL found_colors = FALSE;
         
-        // 读取配置文件中的颜色选项
+        // Read color options from the configuration file
         while (fgets(line, sizeof(line), file)) {
             if (strncmp(line, "COLOR_OPTIONS=", 13) == 0) {
                 ClearColorOptions();
@@ -365,7 +365,7 @@ void InitializeDefaultLanguage(void) {
                 char* newline = strchr(colors, '\n');
                 if (newline) *newline = '\0';
                 
-                // 分割并处理每个颜色选项
+                // Split and process each color option
                 char* token = strtok(colors, ",");
                 while (token) {
                     while (*token == ' ') token++;
@@ -392,7 +392,7 @@ void InitializeDefaultLanguage(void) {
         }
         fclose(file);
         
-        // 若未找到颜色选项或选项为空，则使用默认选项
+        // Use default options if color options are not found or empty
         if (!found_colors || COLOR_OPTIONS_COUNT == 0) {
             for (size_t i = 0; i < DEFAULT_COLOR_OPTIONS_COUNT; i++) {
                 AddColorOption(DEFAULT_COLOR_OPTIONS[i]);
@@ -402,18 +402,18 @@ void InitializeDefaultLanguage(void) {
 }
 
 /**
- * @brief 添加颜色选项
- * @param hexColor 颜色的十六进制值
+ * @brief Add color option
+ * @param hexColor Hexadecimal color value
  * 
- * 添加一个颜色选项到全局颜色选项数组中。
- * 会对颜色格式进行标准化处理，并检查重复项。
+ * Adds a color option to the global color options array.
+ * Standardizes the color format and checks for duplicates.
  */
 void AddColorOption(const char* hexColor) {
     if (!hexColor || !*hexColor) {
         return;
     }
     
-    // 标准化颜色格式
+    // Standardize color format
     char normalizedColor[10];
     const char* hex = (hexColor[0] == '#') ? hexColor + 1 : hexColor;
     
@@ -422,7 +422,7 @@ void AddColorOption(const char* hexColor) {
         return;
     }
     
-    // 检查是否为有效的十六进制值
+    // Check if it's a valid hexadecimal value
     for (int i = 0; i < 6; i++) {
         if (!isxdigit((unsigned char)hex[i])) {
             return;
@@ -434,17 +434,17 @@ void AddColorOption(const char* hexColor) {
         return;
     }
     
-    // 格式化为标准的十六进制颜色格式
+    // Format to standard hexadecimal color format
     snprintf(normalizedColor, sizeof(normalizedColor), "#%06X", color);
     
-    // 检查是否已存在相同颜色
+    // Check if the same color already exists
     for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
         if (strcasecmp(normalizedColor, COLOR_OPTIONS[i].hexColor) == 0) {
             return;
         }
     }
     
-    // 添加新颜色选项
+    // Add new color option
     PredefinedColor* newArray = realloc(COLOR_OPTIONS, 
                                       (COLOR_OPTIONS_COUNT + 1) * sizeof(PredefinedColor));
     if (newArray) {
@@ -455,9 +455,9 @@ void AddColorOption(const char* hexColor) {
 }
 
 /**
- * @brief 清除所有颜色选项
+ * @brief Clear all color options
  * 
- * 释放所有颜色选项占用的内存，并重置颜色选项计数。
+ * Frees memory used by all color options and resets the color option count.
  */
 void ClearColorOptions(void) {
     if (COLOR_OPTIONS) {
@@ -471,23 +471,23 @@ void ClearColorOptions(void) {
 }
 
 /**
- * @brief 将颜色写入配置文件
- * @param color_input 要写入的颜色值
+ * @brief Write color to configuration file
+ * @param color_input Color value to write
  * 
- * 更新配置文件中的文本颜色设置，并重新加载配置。
+ * Updates the text color setting in the configuration file and reloads the configuration.
  */
 void WriteConfigColor(const char* color_input) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    // 打开配置文件进行读取
+    // Open configuration file for reading
     FILE *file = fopen(config_path, "r");
     if (!file) {
         fprintf(stderr, "Failed to open config file for reading: %s\n", config_path);
         return;
     }
 
-    // 读取整个配置文件内容
+    // Read the entire configuration file content
     fseek(file, 0, SEEK_END);
     long file_size = ftell(file);
     fseek(file, 0, SEEK_SET);
@@ -502,7 +502,7 @@ void WriteConfigColor(const char* color_input) {
     config_content[file_size] = '\0';
     fclose(file);
 
-    // 准备新的配置内容
+    // Prepare new configuration content
     char *new_config = (char *)malloc(file_size + 100);
     if (!new_config) {
         fprintf(stderr, "Memory allocation failed!\n");
@@ -511,7 +511,7 @@ void WriteConfigColor(const char* color_input) {
     }
     new_config[0] = '\0';
 
-    // 逐行处理，更新颜色设置行
+    // Process line by line, update the color setting line
     char *line = strtok(config_content, "\n");
     while (line) {
         if (strncmp(line, "CLOCK_TEXT_COLOR=", 17) == 0) {
@@ -527,7 +527,7 @@ void WriteConfigColor(const char* color_input) {
 
     free(config_content);
 
-    // 写入新的配置内容
+    // Write the new configuration content
     file = fopen(config_path, "w");
     if (!file) {
         fprintf(stderr, "Failed to open config file for writing: %s\n", config_path);
@@ -539,24 +539,24 @@ void WriteConfigColor(const char* color_input) {
 
     free(new_config);
 
-    // 重新加载配置
+    // Reload configuration
     ReadConfig();
 }
 
 /**
- * @brief 标准化颜色格式
- * @param input 输入的颜色字符串
- * @param output 输出缓冲区
- * @param output_size 输出缓冲区大小
+ * @brief Normalize color format
+ * @param input Input color string
+ * @param output Output buffer
+ * @param output_size Output buffer size
  * 
- * 将各种格式的颜色表示(颜色名、RGB、十六进制等)转换为标准的十六进制格式。
- * 支持CSS颜色名称、RGB格式和短十六进制格式的转换。
+ * Converts various color formats (color names, RGB, hex, etc.) to standard hexadecimal format.
+ * Supports conversion of CSS color names, RGB format, and short hexadecimal format.
  */
 void normalizeColor(const char* input, char* output, size_t output_size) {
-    // 跳过前导空格
+    // Skip leading spaces
     while (isspace(*input)) input++;
     
-    // 转换为小写以便匹配颜色名
+    // Convert to lowercase for color name matching
     char color[32];
     strncpy(color, input, sizeof(color)-1);
     color[sizeof(color)-1] = '\0';
@@ -564,7 +564,7 @@ void normalizeColor(const char* input, char* output, size_t output_size) {
         *p = tolower(*p);
     }
     
-    // 检查是否为CSS颜色名
+    // Check if it's a CSS color name
     for (size_t i = 0; i < CSS_COLORS_COUNT; i++) {
         if (strcmp(color, CSS_COLORS[i].name) == 0) {
             strncpy(output, CSS_COLORS[i].hex, output_size);
@@ -572,7 +572,7 @@ void normalizeColor(const char* input, char* output, size_t output_size) {
         }
     }
     
-    // 清理输入字符串，移除空格和特殊字符
+    // Clean input string, remove spaces and special characters
     char cleaned[32] = {0};
     int j = 0;
     for (int i = 0; color[i]; i++) {
@@ -582,35 +582,35 @@ void normalizeColor(const char* input, char* output, size_t output_size) {
     }
     cleaned[j] = '\0';
     
-    // 移除可能的#前缀
+    // Remove possible # prefix
     if (cleaned[0] == '#') {
         memmove(cleaned, cleaned + 1, strlen(cleaned));
     }
     
-    // 处理简写的十六进制格式 (#RGB)
+    // Handle short hexadecimal format (#RGB)
     if (strlen(cleaned) == 3) {
         snprintf(output, output_size, "#%c%c%c%c%c%c",
             cleaned[0], cleaned[0], cleaned[1], cleaned[1], cleaned[2], cleaned[2]);
         return;
     }
     
-    // 处理标准的十六进制格式 (#RRGGBB)
+    // Handle standard hexadecimal format (#RRGGBB)
     if (strlen(cleaned) == 6 && strspn(cleaned, "0123456789abcdefABCDEF") == 6) {
         snprintf(output, output_size, "#%s", cleaned);
         return;
     }
     
-    // 尝试解析RGB格式
+    // Try to parse RGB format
     int r = -1, g = -1, b = -1;
     char* rgb_str = color;
     
-    // 跳过"rgb"前缀
+    // Skip "rgb" prefix
     if (strncmp(rgb_str, "rgb", 3) == 0) {
         rgb_str += 3;
         while (*rgb_str && (*rgb_str == '(' || isspace(*rgb_str))) rgb_str++;
     }
     
-    // 尝试多种分隔符格式
+    // Try various delimiter formats
     if (sscanf(rgb_str, "%d,%d,%d", &r, &g, &b) == 3 ||
         sscanf(rgb_str, "%d，%d，%d", &r, &g, &b) == 3 ||
         sscanf(rgb_str, "%d;%d;%d", &r, &g, &b) == 3 ||
@@ -624,17 +624,17 @@ void normalizeColor(const char* input, char* output, size_t output_size) {
         }
     }
     
-    // 如果无法解析，返回原始输入
+    // If unable to parse, return original input
     strncpy(output, input, output_size);
 }
 
 /**
- * @brief 检查颜色是否有效
- * @param input 要检查的颜色字符串
- * @return BOOL 如果颜色有效则返回TRUE，否则返回FALSE
+ * @brief Check if color is valid
+ * @param input Color string to check
+ * @return BOOL Returns TRUE if color is valid, FALSE otherwise
  * 
- * 验证给定的颜色表示是否可以被解析为有效的颜色。
- * 通过标准化后检查是否为有效的十六进制颜色格式。
+ * Validates whether the given color representation can be parsed as a valid color.
+ * Checks if it's a valid hexadecimal color format after normalization.
  */
 BOOL isValidColor(const char* input) {
     if (!input || !*input) return FALSE;
@@ -646,14 +646,14 @@ BOOL isValidColor(const char* input) {
         return FALSE;
     }
     
-    // 检查十六进制字符
+    // Check hexadecimal characters
     for (int i = 1; i < 7; i++) {
         if (!isxdigit((unsigned char)normalized[i])) {
             return FALSE;
         }
     }
     
-    // 检查RGB值范围
+    // Check RGB value range
     int r, g, b;
     if (sscanf(normalized + 1, "%02x%02x%02x", &r, &g, &b) == 3) {
         return (r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255);
@@ -663,22 +663,22 @@ BOOL isValidColor(const char* input) {
 }
 
 /**
- * @brief 颜色编辑框子类化处理过程
- * @param hwnd 窗口句柄
- * @param msg 消息ID
- * @param wParam 消息参数
- * @param lParam 消息参数
- * @return LRESULT 消息处理结果
+ * @brief Color edit box subclass procedure
+ * @param hwnd Window handle
+ * @param msg Message ID
+ * @param wParam Message parameter
+ * @param lParam Message parameter
+ * @return LRESULT Message processing result
  * 
- * 处理颜色编辑框的键盘输入和剪贴板操作，实时更新颜色预览。
- * 实现了Ctrl+A全选和回车确认等快捷键功能。
+ * Handles keyboard input and clipboard operations for the color edit box, updating color preview in real-time.
+ * Implements Ctrl+A for select all and Enter for confirmation shortcuts.
  */
 LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_KEYDOWN:
             if (wParam == 'A' && GetKeyState(VK_CONTROL) < 0) {
                 SendMessage(hwnd, EM_SETSEL, 0, -1);
-                // 返回0，阻止消息继续传递，禁用提示音
+                // Return 0 to prevent message from continuing to pass, disable beep
                 return 0;
             }
         case WM_COMMAND:
@@ -697,16 +697,16 @@ LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
             }
             LRESULT result = CallWindowProc(g_OldEditProc, hwnd, msg, wParam, lParam);
             
-            // 获取当前输入的颜色文本
+            // Get current input color text
             char color[32];
             GetWindowTextA(hwnd, color, sizeof(color));
             
-            // 标准化颜色并更新预览
+            // Normalize color and update preview
             char normalized[32];
             normalizeColor(color, normalized, sizeof(normalized));
             
             if (normalized[0] == '#') {
-                // 替换纯黑色为近似黑色
+                // Replace pure black with near-black
                 char finalColor[32];
                 replaceBlackColor(normalized, finalColor, sizeof(finalColor));
                 
@@ -730,7 +730,7 @@ LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
         case WM_CUT: {
             LRESULT result = CallWindowProc(g_OldEditProc, hwnd, msg, wParam, lParam);
             
-            // 处理粘贴或剪切操作后的文本
+            // Handle paste or cut operation text
             char color[32];
             GetWindowTextA(hwnd, color, sizeof(color));
             
@@ -738,7 +738,7 @@ LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
             normalizeColor(color, normalized, sizeof(normalized));
             
             if (normalized[0] == '#') {
-                // 替换纯黑色为近似黑色
+                // Replace pure black with near-black
                 char finalColor[32];
                 replaceBlackColor(normalized, finalColor, sizeof(finalColor));
                 
@@ -761,26 +761,26 @@ LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
 }
 
 /**
- * @brief 颜色设置对话框处理过程
- * @param hwndDlg 对话框窗口句柄
- * @param msg 消息ID
- * @param wParam 消息参数
- * @param lParam 消息参数
- * @return INT_PTR 消息处理结果
+ * @brief Color settings dialog procedure
+ * @param hwndDlg Dialog window handle
+ * @param msg Message ID
+ * @param wParam Message parameter
+ * @param lParam Message parameter
+ * @return INT_PTR Message processing result
  * 
- * 处理颜色设置对话框的初始化、用户输入验证和确认操作。
- * 实现了颜色输入验证和实时预览功能。
+ * Handles color settings dialog initialization, user input validation, and confirmation.
+ * Implements color input validation and real-time preview functionality.
  */
 INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_INITDIALOG: {
-            // 使用对话框资源中定义的静态文本
+            // Use dialog resource static text
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
             if (hwndEdit) {
                 g_OldEditProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, 
                                                          (LONG_PTR)ColorEditSubclassProc);
                 
-                // 设置当前颜色为默认文本
+                // Set current color to default text
                 if (CLOCK_TEXT_COLOR[0] != '\0') {
                     SetWindowTextA(hwndEdit, CLOCK_TEXT_COLOR);
                 }
@@ -790,11 +790,11 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
         
         case WM_COMMAND: {
             if (LOWORD(wParam) == CLOCK_IDC_BUTTON_OK) {
-                // 获取编辑框中的颜色文本
+                // Get edit box color text
                 char color[32];
                 GetDlgItemTextA(hwndDlg, CLOCK_IDC_EDIT, color, sizeof(color));
                 
-                // 检查是否为空输入
+                // Check for empty input
                 BOOL isAllSpaces = TRUE;
                 for (int i = 0; color[i]; i++) {
                     if (!isspace((unsigned char)color[i])) {
@@ -807,19 +807,19 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                     return TRUE;
                 }
                 
-                // 验证并应用颜色
+                // Validate and apply color
                 if (isValidColor(color)) {
                     char normalized_color[10];
                     normalizeColor(color, normalized_color, sizeof(normalized_color));
                     strncpy(CLOCK_TEXT_COLOR, normalized_color, sizeof(CLOCK_TEXT_COLOR)-1);
                     CLOCK_TEXT_COLOR[sizeof(CLOCK_TEXT_COLOR)-1] = '\0';
                     
-                    // 写入配置并关闭对话框
+                    // Write to config and close dialog
                     WriteConfigColor(CLOCK_TEXT_COLOR);
                     EndDialog(hwndDlg, IDOK);
                     return TRUE;
                 } else {
-                    // 使用统一的错误对话框
+                    // Use unified error dialog
                     ShowErrorDialog(hwndDlg);
                     SetWindowTextA(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT), "");
                     SetFocus(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT));
@@ -836,12 +836,12 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
 }
 
 /**
- * @brief 替换纯黑色为近似黑色
- * @param color 原始颜色字符串
- * @param output 输出缓冲区
- * @param output_size 输出缓冲区大小
+ * @brief Replace pure black color with near-black
+ * @param color Original color string
+ * @param output Output buffer
+ * @param output_size Output buffer size
  * 
- * 如果输入颜色是纯黑色(#000000)，则替换为#000001
+ * If the input color is pure black (#000000), replaces it with #000001
  */
 void replaceBlackColor(const char* color, char* output, size_t output_size) {
     if (color && (strcasecmp(color, "#000000") == 0)) {
