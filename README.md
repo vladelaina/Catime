@@ -1,4 +1,4 @@
-<!-- 项目标题 + Logo -->
+<!-- Project Title + Logo -->
 <div align="center">
   <a href="https://vladelaina.github.io/Catime" target="_blank">
     <img src="Images/catime_resize.png" alt="Catime" width="240">
@@ -6,7 +6,7 @@
   <h1 style="margin-top: 10px; font-size: 42px; font-weight: 700;">Catime</h1>
 </div>
 
-<!-- 项目描述 + 火箭图标 -->
+<!-- Project Description + Rocket Icon -->
 <p align="center" style="font-size: 18px; margin-bottom: 30px;">
   🎉 No installation or setup required — just double-click to get started.<br/>
   🌸 Clean, elegant interface with smooth operation.<br/>
@@ -20,13 +20,9 @@
   elegantly helping you manage time on Windows.
 </p>
 
-
 <p align="center"><strong>English</strong> · <a href="./README-zh.md">简体中文</a> · <a href="https://vladelaina.github.io/Catime/">Official Site</a> · <a href="https://vladelaina.github.io/Catime/guide.html">Guide</a> · <a href="https://vladelaina.github.io/Catime/about.html">About</a> · <a href="https://github.com/users/vladelaina/projects/2/views/1">Project Board</a> · <a href="https://github.com/vladelaina/Catime/issues">Feedback</a></p>
 
 <div align="center">
-  
-
-
 [![GitHub Release](https://img.shields.io/github/v/release/vladelaina/Catime?color=369eff&labelColor=black&logo=github&style=flat-square)](https://github.com/vladelaina/Catime/releases)
 ![C](https://img.shields.io/badge/language-C-blue?logo=c&logoColor=white&labelColor=black&style=flat-square)
 [![EXE Size](https://img.shields.io/badge/EXE%20Size-889KB-blue?style=flat-square&labelColor=black)](https://github.com/vladelaina/Catime/releases)
@@ -39,10 +35,7 @@
 [![Support Catime](https://img.shields.io/badge/Support%20Catime-EA4AAA?style=for-the-badge&logo=githubsponsors&logoColor=white)](https://vladelaina.github.io/Catime/support.html)
 </div>
 
-
-
-
-<!-- GitHub Trending 区域 -->
+<!-- GitHub Trending Area -->
 <div align="center">
   <a href="https://hellogithub.com/repository/00a7a32b7bc647e1a62747530bc16115" target="_blank">
     <div style="background-color: #f5f5f5; border-radius: 12px; padding: 15px; display: inline-block; margin-top: 20px; border: 1px solid #e1e4e8;">
@@ -53,31 +46,18 @@
   </a>
 </div>
 
-
-
-
-
-
-<!-- 演示视频 -->
+<!-- Demo Video -->
 <div align="center" style="margin-bottom: 30px;">
   <video src="https://github.com/user-attachments/assets/99793950-3a07-452b-85ee-c26711d2d9a1" autoplay loop style="border-radius: 8px; max-width: 800px;"></video>
 </div>
 
-
-
-
-
-
-
-<!-- 社区链接 -->
+<!-- Community Links -->
 <div align="center" style="margin-bottom: 30px;">
   👋 Join us on 
   <a href="https://discord.com/invite/W3tW2gtp6g" target="_blank" style="text-decoration: none; font-weight: bold; color: #5865F2;">Discord</a> 
   and 
   <a href="https://qm.qq.com/q/LgscIMw9i0" target="_blank" style="text-decoration: none; font-weight: bold; color: #12B7F5;">QQ Group</a>
 </div>
-
-
 
 ## [🌟Features](https://vladelaina.github.io/Catime/#core-features)
 
@@ -135,8 +115,6 @@ Download the latest release from [GitHub Releases](https://github.com/vladelaina
 git clone git@github.com:vladelaina/Catime.git
 cd Catime
 ```
-
-
 
 ### 2. Tools (MinGW, xmake)
 
@@ -235,10 +213,6 @@ xmake run     # Compile and run the project
 xmake clean   # Clean build artifacts
 ```
 
-
-
-
-
 ## ⭐Star History
 
 <a href="https://www.star-history.com/#vladelaina/Catime&Date">
@@ -248,7 +222,6 @@ xmake clean   # Clean build artifacts
    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=vladelaina/Catime&type=Date" />
  </picture>
 </a>
-
 
 ## [✨Acknowledgements](https://vladelaina.github.io/Catime/#thanks) 
 
