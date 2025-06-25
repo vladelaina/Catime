@@ -20,7 +20,7 @@
   elegantly helping you manage time on Windows.
 </p>
 
-<p align="center"><strong>English</strong> · <a href="./README-zh.md">简体中文</a> · <a href="https://vladelaina.github.io/Catime/">Official Site</a> · <a href="https://vladelaina.github.io/Catime/guide.html">Guide</a> · <a href="https://vladelaina.github.io/Catime/about.html">About</a> · <a href="https://github.com/users/vladelaina/projects/2/views/1">Project Board</a> · <a href="https://github.com/vladelaina/Catime/issues">Feedback</a></p>
+<p align="center"><a href="https://vladelaina.github.io/Catime/">Official Site</a> · <a href="https://vladelaina.github.io/Catime/guide.html">Guide</a> · <a href="https://vladelaina.github.io/Catime/about.html">About</a> · <a href="https://github.com/users/vladelaina/projects/2/views/1">Project Board</a> · <a href="https://github.com/vladelaina/Catime/issues">Feedback</a></p>
 
 <div align="center">
 
