@@ -1,10 +1,10 @@
 /**
  * @file config.c
- * @brief 配置文件管理模块实现
+ * @brief Configuration file management module implementation
  * 
- * 本模块负责配置文件的路径获取、创建、读写等核心管理功能，
- * 包含默认配置生成、配置持久化存储、最近文件记录维护等功能。
- * 支持UTF-8编码与中文路径处理。
+ * This module is responsible for core management functions such as configuration file path retrieval, creation, reading and writing,
+ * including default configuration generation, configuration persistence storage, and maintenance of recent file records.
+ * Supports UTF-8 encoding and Chinese path processing.
  */
 
 #include "../include/config.h"
@@ -25,52 +25,52 @@
 #include <shobjidl.h>
 #include <shlguid.h>
 
-// 定义番茄钟时间数组的最大容量
+// Define the maximum capacity of the pomodoro time array
 #define MAX_POMODORO_TIMES 10
 
 /**
- * 全局变量声明区域
- * 以下变量定义了应用的默认配置值，可被配置文件覆盖
+ * Global variable declaration area
+ * The following variables define the default configuration values for the application, which can be overridden by the configuration file
  */
-// 修改全局变量的默认值(单位:秒)
-extern int POMODORO_WORK_TIME;       // 默认工作时间25分钟(1500秒)
-extern int POMODORO_SHORT_BREAK;     // 默认短休息5分钟(300秒)
-extern int POMODORO_LONG_BREAK;      // 默认长休息10分钟(600秒)
-extern int POMODORO_LOOP_COUNT;      // 默认循环次数1次
+// Modify the default values of global variables (unit: seconds)
+extern int POMODORO_WORK_TIME;       // Default work time of 25 minutes (1500 seconds)
+extern int POMODORO_SHORT_BREAK;     // Default short break of 5 minutes (300 seconds)
+extern int POMODORO_LONG_BREAK;      // Default long break of 10 minutes (600 seconds)
+extern int POMODORO_LOOP_COUNT;      // Default loop count of 1 time
 
-// 番茄钟时间序列，格式为：[工作时间, 短休息, 工作时间, 长休息]
-int POMODORO_TIMES[MAX_POMODORO_TIMES] = {1500, 300, 1500, 600}; // 默认时间
-int POMODORO_TIMES_COUNT = 4;                             // 默认有4个时间段
+// Pomodoro time sequence, format: [work time, short break, work time, long break]
+int POMODORO_TIMES[MAX_POMODORO_TIMES] = {1500, 300, 1500, 600}; // Default times
+int POMODORO_TIMES_COUNT = 4;                             // Default of 4 time periods
 
-// 自定义提示信息文本 (使用 UTF-8 编码)
+// Custom prompt message text (using UTF-8 encoding)
 char CLOCK_TIMEOUT_MESSAGE_TEXT[100] = "时间到啦！";
-char POMODORO_TIMEOUT_MESSAGE_TEXT[100] = "番茄钟时间到！"; // 新增番茄钟专用提示信息
+char POMODORO_TIMEOUT_MESSAGE_TEXT[100] = "番茄钟时间到！"; // Added dedicated pomodoro prompt message
 char POMODORO_CYCLE_COMPLETE_TEXT[100] = "所有番茄钟循环完成！";
 
-// 新增配置变量：通知显示持续时间(毫秒)
-int NOTIFICATION_TIMEOUT_MS = 3000;  // 默认3秒
-// 新增配置变量：通知窗口最大透明度(百分比)
-int NOTIFICATION_MAX_OPACITY = 95;   // 默认95%透明度
-// 新增配置变量：通知类型
-NotificationType NOTIFICATION_TYPE = NOTIFICATION_TYPE_CATIME; // 默认使用Catime通知窗口
-// 新增配置变量：是否禁用通知窗口
-BOOL NOTIFICATION_DISABLED = FALSE;  // 默认启用通知
+// Added configuration variable: notification display duration (milliseconds)
+int NOTIFICATION_TIMEOUT_MS = 3000;  // Default 3 seconds
+// Added configuration variable: maximum notification window opacity (percentage)
+int NOTIFICATION_MAX_OPACITY = 95;   // Default 95% opacity
+// Added configuration variable: notification type
+NotificationType NOTIFICATION_TYPE = NOTIFICATION_TYPE_CATIME; // Default use Catime notification window
+// Added configuration variable: whether to disable notification window
+BOOL NOTIFICATION_DISABLED = FALSE;  // Default enable notification
 
-// 新增：通知音频文件路径全局变量
-char NOTIFICATION_SOUND_FILE[MAX_PATH] = "";  // 默认为空
+// Added: notification audio file path global variable
+char NOTIFICATION_SOUND_FILE[MAX_PATH] = "";  // Default empty
 
-// 新增：通知音频音量全局变量
-int NOTIFICATION_SOUND_VOLUME = 100;  // 默认音量100%
+// Added: notification audio volume global variable
+int NOTIFICATION_SOUND_VOLUME = 100;  // Default volume 100%
 
 /**
- * @brief 从INI文件读取字符串值
- * @param section 节名
- * @param key 键名
- * @param defaultValue 默认值
- * @param returnValue 返回值缓冲区
- * @param returnSize 缓冲区大小 
- * @param filePath 文件路径
- * @return 实际读取的字符数
+ * @brief Read string value from INI file
+ * @param section Section name
+ * @param key Key name
+ * @param defaultValue Default value
+ * @param returnValue Return value buffer
+ * @param returnSize Buffer size
+ * @param filePath File path
+ * @return Actual number of characters read
  */
 DWORD ReadIniString(const char* section, const char* key, const char* defaultValue,
                   char* returnValue, DWORD returnSize, const char* filePath) {
@@ -78,12 +78,12 @@ DWORD ReadIniString(const char* section, const char* key, const char* defaultVal
 }
 
 /**
- * @brief 写入字符串值到INI文件
- * @param section 节名
- * @param key 键名
- * @param value 值
- * @param filePath 文件路径
- * @return 是否成功
+ * @brief Write string value to INI file
+ * @param section Section name
+ * @param key Key name
+ * @param value Value
+ * @param filePath File path
+ * @return Whether successful
  */
 BOOL WriteIniString(const char* section, const char* key, const char* value,
                   const char* filePath) {
@@ -91,12 +91,12 @@ BOOL WriteIniString(const char* section, const char* key, const char* value,
 }
 
 /**
- * @brief 读取INI整数值
- * @param section 节名
- * @param key 键名
- * @param defaultValue 默认值
- * @param filePath 文件路径
- * @return 读取的整数值
+ * @brief Read integer value from INI
+ * @param section Section name
+ * @param key Key name
+ * @param defaultValue Default value
+ * @param filePath File path
+ * @return Read integer value
  */
 int ReadIniInt(const char* section, const char* key, int defaultValue, 
              const char* filePath) {
@@ -104,12 +104,12 @@ int ReadIniInt(const char* section, const char* key, int defaultValue,
 }
 
 /**
- * @brief 写入整数值到INI文件
- * @param section 节名
- * @param key 键名
- * @param value 值
- * @param filePath 文件路径
- * @return 是否成功
+ * @brief Write integer value to INI file
+ * @param section Section name
+ * @param key Key name
+ * @param value Value
+ * @param filePath File path
+ * @return Whether successful
  */
 BOOL WriteIniInt(const char* section, const char* key, int value,
                const char* filePath) {
@@ -119,12 +119,12 @@ BOOL WriteIniInt(const char* section, const char* key, int value,
 }
 
 /**
- * @brief 写入布尔值到INI文件
- * @param section 节名
- * @param key 键名 
- * @param value 布尔值
- * @param filePath 文件路径
- * @return 是否成功
+ * @brief Write boolean value to INI file
+ * @param section Section name
+ * @param key Key name
+ * @param value Boolean value
+ * @param filePath File path
+ * @return Whether successful
  */
 BOOL WriteIniBool(const char* section, const char* key, BOOL value,
                const char* filePath) {
@@ -132,12 +132,12 @@ BOOL WriteIniBool(const char* section, const char* key, BOOL value,
 }
 
 /**
- * @brief 读取INI布尔值
- * @param section 节名
- * @param key 键名
- * @param defaultValue 默认值
- * @param filePath 文件路径
- * @return 读取的布尔值
+ * @brief Read boolean value from INI
+ * @param section Section name
+ * @param key Key name
+ * @param defaultValue Default value
+ * @param filePath File path
+ * @return Read boolean value
  */
 BOOL ReadIniBool(const char* section, const char* key, BOOL defaultValue, 
                const char* filePath) {
@@ -148,21 +148,21 @@ BOOL ReadIniBool(const char* section, const char* key, BOOL defaultValue,
 }
 
 /**
- * @brief 检查配置文件是否存在
- * @param filePath 文件路径
- * @return 文件是否存在
+ * @brief Check if configuration file exists
+ * @param filePath File path
+ * @return Whether file exists
  */
 BOOL FileExists(const char* filePath) {
     return GetFileAttributesA(filePath) != INVALID_FILE_ATTRIBUTES;
 }
 
 /**
- * @brief 获取配置文件路径
- * @param path 存储路径的缓冲区
- * @param size 缓冲区大小
+ * @brief Get configuration file path
+ * @param path Buffer to store the path
+ * @param size Buffer size
  * 
- * 优先获取LOCALAPPDATA环境变量路径，若不存在则回退至程序目录。
- * 自动创建配置目录结构，若创建失败则使用本地备用路径。
+ * Prioritizes getting the LOCALAPPDATA environment variable path, falls back to the program directory if it doesn't exist.
+ * Automatically creates the configuration directory structure, uses a local backup path if creation fails.
  */
 void GetConfigPath(char* path, size_t size) {
     if (!path || size == 0) return;
@@ -189,19 +189,19 @@ void GetConfigPath(char* path, size_t size) {
 }
 
 /**
- * @brief 创建默认配置文件
- * @param config_path 配置文件完整路径
+ * @brief Create default configuration file
+ * @param config_path Full path of configuration file
  * 
- * 生成包含所有必要参数的默认配置文件，配置项按节进行组织：
- * 1. [General] - 基本设置（版本信息、语言设置）
- * 2. [Display] - 显示设置（颜色、字体、窗口位置等）
- * 3. [Timer] - 计时器相关设置（默认时间等）
- * 4. [Pomodoro] - 番茄钟相关设置
- * 5. [Notification] - 通知相关设置
- * 6. [Hotkeys] - 热键设置
- * 7. [RecentFiles] - 最近使用的文件
- * 8. [Colors] - 颜色选项
- * 9. [Options] - 其他选项
+ * Generates a default configuration file containing all necessary parameters, organized by sections:
+ * 1. [General] - Basic settings (version information, language settings)
+ * 2. [Display] - Display settings (color, font, window position, etc.)
+ * 3. [Timer] - Timer related settings (default time, etc.)
+ * 4. [Pomodoro] - Pomodoro related settings
+ * 5. [Notification] - Notification related settings
+ * 6. [Hotkeys] - Hotkey settings
+ * 7. [RecentFiles] - Recently used files
+ * 8. [Colors] - Color options
+ * 9. [Options] - Other options
  */
 void CreateDefaultConfig(const char* config_path) {
     // 获取系统默认语言ID
@@ -340,13 +340,13 @@ void CreateDefaultConfig(const char* config_path) {
 }
 
 /**
- * @brief 从文件路径中提取文件名
- * @param path 完整文件路径
- * @param name 输出文件名缓冲区
- * @param nameSize 缓冲区大小
+ * @brief Extract filename from file path
+ * @param path Complete file path
+ * @param name Output filename buffer
+ * @param nameSize Buffer size
  * 
- * 从完整文件路径中提取文件名部分，支持UTF-8编码的中文路径。
- * 使用Windows API转换编码以确保正确处理Unicode字符。
+ * Extracts the filename part from the complete file path, supports UTF-8 encoded Chinese paths.
+ * Uses Windows API to convert encoding to ensure correct handling of Unicode characters.
  */
 void ExtractFileName(const char* path, char* name, size_t nameSize) {
     if (!path || !name || nameSize == 0) return;
@@ -371,10 +371,10 @@ void ExtractFileName(const char* path, char* name, size_t nameSize) {
 }
 
 /**
- * @brief 检查并创建资源文件夹
+ * @brief Check and create resource folders
  * 
- * 检查配置文件同目录下是否存在resources目录结构，如果不存在则创建
- * 创建的目录结构为：resources/audio, resources/images, resources/animations, resources/themes
+ * Checks if the resources directory structure exists in the same directory as the configuration file, creates it if not
+ * The created directory structure is: resources/audio, resources/images, resources/animations, resources/themes
  */
 void CheckAndCreateResourceFolders() {
     char config_path[MAX_PATH];
@@ -457,10 +457,10 @@ void CheckAndCreateResourceFolders() {
 }
 
 /**
- * @brief 读取并解析配置文件
+ * @brief Read and parse configuration file
  * 
- * 从配置路径读取配置项，若文件不存在则自动创建默认配置。
- * 解析各配置项并更新程序全局状态变量，最后刷新窗口位置。
+ * Reads configuration items from the configuration path, automatically creates default configuration if the file doesn't exist.
+ * Parses various configuration items and updates program global state variables, finally refreshes the window position.
  */
 void ReadConfig() {
     // 检查并创建资源文件夹
@@ -811,12 +811,12 @@ void ReadConfig() {
 }
 
 /**
- * @brief 写入超时动作配置
- * @param action 要写入的超时动作类型
+ * @brief Write timeout action configuration
+ * @param action Type of timeout action to write
  * 
- * 使用临时文件方式安全更新配置文件中的超时动作设置，
- * 处理OPEN_FILE动作时自动关联超时文件路径。
- * 注意："RESTART"和"SHUTDOWN"选项为一次性操作，不会持久化保存。
+ * Safely updates the timeout action settings in the configuration file using temporary file method,
+ * automatically associates the timeout file path when handling OPEN_FILE action.
+ * Note: "RESTART" and "SHUTDOWN" options are one-time operations and are not persistently saved.
  */
 void WriteConfigTimeoutAction(const char* action) {
     char config_path[MAX_PATH];
@@ -865,12 +865,12 @@ void WriteConfigTimeoutAction(const char* action) {
 }
 
 /**
- * @brief 写入时间选项配置
- * @param options 逗号分隔的时间选项字符串
+ * @brief Write time options configuration
+ * @param options Comma-separated time options string
  * 
- * 更新配置文件中的预设时间选项，支持动态调整
- * 倒计时时长选项列表，最大支持MAX_TIME_OPTIONS个选项。
- * 采用临时文件方式确保写入过程的原子性和安全性。
+ * Updates preset time options in the configuration file, supports dynamic adjustment
+ * of the countdown duration options list, supports up to MAX_TIME_OPTIONS options.
+ * Uses temporary file method to ensure atomicity and safety of the writing process.
  */
 void WriteConfigTimeOptions(const char* options) {
     char config_path[MAX_PATH];
@@ -911,11 +911,11 @@ void WriteConfigTimeOptions(const char* options) {
 }
 
 /**
- * @brief 加载最近使用文件记录
+ * @brief Load recently used file records
  * 
- * 从配置文件中解析CLOCK_RECENT_FILE条目，
- * 提取文件路径和文件名供快速访问使用。
- * 支持新旧两种格式的最近文件记录，自动过滤不存在的文件。
+ * Parses CLOCK_RECENT_FILE entries from the configuration file,
+ * extracts file paths and filenames for quick access.
+ * Supports both old and new formats of recent file records, automatically filters non-existent files.
  */
 void LoadRecentFiles(void) {
     char config_path[MAX_PATH];
@@ -991,12 +991,12 @@ void LoadRecentFiles(void) {
 }
 
 /**
- * @brief 保存最近使用文件记录
- * @param filePath 要保存的文件路径
+ * @brief Save recently used file record
+ * @param filePath File path to save
  * 
- * 维护最近文件列表(最多MAX_RECENT_FILES个)，
- * 自动去重并更新配置文件，保持最新使用的文件在列表首位。
- * 自动处理中文路径，支持UTF8编码，确保文件存在后再添加。
+ * Maintains a list of recent files (up to MAX_RECENT_FILES),
+ * automatically deduplicates and updates the configuration file, keeping the most recently used file at the top of the list.
+ * Automatically handles Chinese paths, supports UTF-8 encoding, ensures the file exists before adding.
  */
 void SaveRecentFile(const char* filePath) {
     // 检查文件路径是否有效
@@ -1063,12 +1063,12 @@ void SaveRecentFile(const char* filePath) {
 }
 
 /**
- * @brief UTF8转ANSI编码
- * @param utf8Str 要转换的UTF8字符串
- * @return char* 转换后的ANSI字符串指针（需手动释放）
+ * @brief Convert UTF8 to ANSI encoding
+ * @param utf8Str UTF8 string to convert
+ * @return char* Pointer to the converted ANSI string (needs manual release)
  * 
- * 用于处理中文路径的编码转换，确保Windows API能正确处理路径。
- * 转换失败时会返回原字符串的副本，需手动释放返回的内存。
+ * Used for encoding conversion of Chinese paths to ensure Windows API can correctly handle the path.
+ * Returns a copy of the original string if conversion fails, returned memory needs to be manually released.
  */
 char* UTF8ToANSI(const char* utf8Str) {
     int wlen = MultiByteToWideChar(CP_UTF8, 0, utf8Str, -1, NULL, 0);
@@ -1109,14 +1109,14 @@ char* UTF8ToANSI(const char* utf8Str) {
 }
 
 /**
- * @brief 写入番茄钟时间设置
- * @param work 工作时间(秒)
- * @param short_break 短休息时间(秒)
- * @param long_break 长休息时间(秒)
+ * @brief Write pomodoro time settings
+ * @param work Work time (seconds)
+ * @param short_break Short break time (seconds)
+ * @param long_break Long break time (seconds)
  * 
- * 更新番茄钟相关时间设置并保存到配置文件，
- * 同时更新全局变量与POMODORO_TIMES数组，保持一致性。
- * 采用临时文件方式确保写入过程安全可靠。
+ * Updates pomodoro related time settings and saves to configuration file,
+ * also updates global variables and POMODORO_TIMES array to maintain consistency.
+ * Uses temporary file method to ensure safe and reliable writing process.
  */
 void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
     char config_path[MAX_PATH];
@@ -1194,12 +1194,12 @@ void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
 }
 
 /**
- * @brief 写入番茄钟循环次数配置
- * @param loop_count 循环次数
+ * @brief Write pomodoro loop count configuration
+ * @param loop_count Loop count
  * 
- * 更新番茄钟循环次数并保存到配置文件，
- * 采用临时文件方式确保配置更新过程不会损坏原文件。
- * 若配置项不存在则会自动添加到文件中。
+ * Updates pomodoro loop count and saves to configuration file,
+ * uses temporary file method to ensure the configuration update process doesn't damage the original file.
+ * Automatically adds to the file if the configuration item doesn't exist.
  */
 void WriteConfigPomodoroLoopCount(int loop_count) {
     char config_path[MAX_PATH];
@@ -1244,11 +1244,11 @@ void WriteConfigPomodoroLoopCount(int loop_count) {
 }
 
 /**
- * @brief 写入窗口置顶状态配置
- * @param topmost 置顶状态("TRUE"/"FALSE")
+ * @brief Write window topmost status configuration
+ * @param topmost Topmost status ("TRUE"/"FALSE")
  * 
- * 更新窗口是否置顶的配置并保存到文件，
- * 使用临时文件方式确保写入过程安全完整。
+ * Updates configuration for whether window is topmost and saves to file,
+ * uses temporary file method to ensure writing process is safe and complete.
  */
 void WriteConfigTopmost(const char* topmost) {
     char config_path[MAX_PATH];
@@ -1291,14 +1291,14 @@ void WriteConfigTopmost(const char* topmost) {
 }
 
 /**
- * @brief 写入超时打开文件路径
- * @param filePath 目标文件路径
+ * @brief Write timeout open file path
+ * @param filePath Target file path
  * 
- * 更新配置文件中的超时打开文件路径，同时设置超时动作为打开文件。
- * 使用WriteConfig函数完全重写配置文件，确保：
- * 1. 保留所有现有设置
- * 2. 维持配置文件结构一致性
- * 3. 不会丢失其他已配置设置
+ * Updates the timeout open file path in the configuration file, also sets the timeout action to open file.
+ * Uses WriteConfig function to completely rewrite the configuration file, ensuring:
+ * 1. All existing settings are preserved
+ * 2. Configuration file structure consistency is maintained
+ * 3. Other configured settings are not lost
  */
 void WriteConfigTimeoutFile(const char* filePath) {
     // 首先更新全局变量
@@ -1313,19 +1313,19 @@ void WriteConfigTimeoutFile(const char* filePath) {
 }
 
 /**
- * @brief 写入所有配置设置到文件
- * @param config_path 配置文件路径
+ * @brief Write all configuration settings to file
+ * @param config_path Configuration file path
  * 
- * 按照统一的组织结构写入所有配置项到INI格式文件中，包含以下分节：
- * 1. [General] - 基本设置（版本信息、语言设置）
- * 2. [Display] - 显示设置（颜色、字体、窗口位置等）
- * 3. [Timer] - 计时器相关设置（默认时间等）
- * 4. [Pomodoro] - 番茄钟相关设置
- * 5. [Notification] - 通知相关设置
- * 6. [Hotkeys] - 热键设置
- * 7. [RecentFiles] - 最近使用的文件
- * 8. [Colors] - 颜色选项
- * 9. [Options] - 其他选项
+ * Writes all configuration items to INI format file according to a unified organizational structure, including the following sections:
+ * 1. [General] - Basic settings (version information, language settings)
+ * 2. [Display] - Display settings (color, font, window position, etc.)
+ * 3. [Timer] - Timer related settings (default time, etc.)
+ * 4. [Pomodoro] - Pomodoro related settings
+ * 5. [Notification] - Notification related settings
+ * 6. [Hotkeys] - Hotkey settings
+ * 7. [RecentFiles] - Recently used files
+ * 8. [Colors] - Color options
+ * 9. [Options] - Other options
  */
 void WriteConfig(const char* config_path) {
     // 获取当前语言的名称
@@ -1579,11 +1579,11 @@ void WriteConfig(const char* config_path) {
 }
 
 /**
- * @brief 写入超时打开网站的URL
- * @param url 目标网站URL
+ * @brief Write timeout open website URL
+ * @param url Target website URL
  * 
- * 更新配置文件中的超时打开网站URL，同时设置超时动作为打开网站。
- * 使用临时文件方式确保配置更新过程安全可靠。
+ * Updates the timeout open website URL in the configuration file, also sets the timeout action to open website.
+ * Uses temporary file method to ensure the configuration update process is safe and reliable.
  */
 void WriteConfigTimeoutWebsite(const char* url) {
     // 只有在提供了有效URL的情况下才设置超时动作为打开网站
@@ -1645,11 +1645,11 @@ void WriteConfigTimeoutWebsite(const char* url) {
 }
 
 /**
- * @brief 写入启动模式配置
- * @param mode 启动模式字符串("COUNTDOWN"/"COUNT_UP"/"SHOW_TIME"/"NO_DISPLAY")
+ * @brief Write startup mode configuration
+ * @param mode Startup mode string ("COUNTDOWN"/"COUNT_UP"/"SHOW_TIME"/"NO_DISPLAY")
  * 
- * 修改配置文件中的STARTUP_MODE项，控制程序启动时的默认计时模式。
- * 同时更新全局变量，确保设置立即生效。
+ * Modifies the STARTUP_MODE item in the configuration file, controls the default timing mode when the program starts.
+ * Also updates global variables to ensure settings take effect immediately.
  */
 void WriteConfigStartupMode(const char* mode) {
     char config_path[MAX_PATH];
@@ -1695,13 +1695,13 @@ void WriteConfigStartupMode(const char* mode) {
 }
 
 /**
- * @brief 写入番茄钟时间选项
- * @param times 时间数组（秒）
- * @param count 时间数组长度
+ * @brief Write pomodoro time options
+ * @param times Time array (seconds)
+ * @param count Length of time array
  * 
- * 将番茄钟自定义时间序列写入配置文件，
- * 格式为逗号分隔的时间值列表。
- * 采用临时文件方式确保配置更新安全。
+ * Writes the pomodoro custom time sequence to the configuration file,
+ * in the format of a comma-separated list of time values.
+ * Uses temporary file method to ensure safe configuration update.
  */
 void WriteConfigPomodoroTimeOptions(int* times, int count) {
     if (!times || count <= 0) return;
@@ -1760,13 +1760,13 @@ void WriteConfigPomodoroTimeOptions(int* times, int count) {
 }
 
 /**
- * @brief 写入通知消息配置
- * @param timeout_msg 倒计时超时提示文本
- * @param pomodoro_msg 番茄钟超时提示文本
- * @param cycle_complete_msg 番茄钟循环完成提示文本
+ * @brief Write notification message configuration
+ * @param timeout_msg Countdown timeout prompt text
+ * @param pomodoro_msg Pomodoro timeout prompt text
+ * @param cycle_complete_msg Pomodoro cycle completion prompt text
  * 
- * 更新配置文件中的通知消息设置，
- * 采用临时文件方式确保配置更新安全。
+ * Updates notification message settings in the configuration file,
+ * uses temporary file method to ensure safe configuration update.
  */
 void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodoro_msg, const char* cycle_complete_msg) {
     char config_path[MAX_PATH];
@@ -1848,11 +1848,11 @@ void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodo
 }
 
 /**
- * @brief 从配置文件中读取通知消息文本
+ * @brief Read notification message text from configuration file
  * 
- * 专门读取 CLOCK_TIMEOUT_MESSAGE_TEXT、POMODORO_TIMEOUT_MESSAGE_TEXT 和 POMODORO_CYCLE_COMPLETE_TEXT
- * 并更新相应的全局变量。若配置不存在则保持默认值不变。
- * 支持UTF-8编码的中文消息文本。
+ * Specifically reads CLOCK_TIMEOUT_MESSAGE_TEXT, POMODORO_TIMEOUT_MESSAGE_TEXT and POMODORO_CYCLE_COMPLETE_TEXT
+ * and updates the corresponding global variables. If configuration doesn't exist, default values remain unchanged.
+ * Supports UTF-8 encoded Chinese message text.
  */
 void ReadNotificationMessagesConfig(void) {
     char config_path[MAX_PATH];
@@ -1962,10 +1962,10 @@ void ReadNotificationMessagesConfig(void) {
 }
 
 /**
- * @brief 从配置文件中读取通知显示时间
+ * @brief Read notification display time from configuration file
  * 
- * 专门读取 NOTIFICATION_TIMEOUT_MS 配置项
- * 并更新相应的全局变量。若配置不存在则保持默认值不变。
+ * Specifically reads the NOTIFICATION_TIMEOUT_MS configuration item
+ * and updates the corresponding global variable. If configuration doesn't exist, default value remains unchanged.
  */
 void ReadNotificationTimeoutConfig(void) {
     char config_path[MAX_PATH];
@@ -2054,10 +2054,10 @@ void ReadNotificationTimeoutConfig(void) {
 }
 
 /**
- * @brief 写入通知显示时间配置
- * @param timeout_ms 通知显示时间(毫秒)
+ * @brief Write notification display time configuration
+ * @param timeout_ms Notification display time (milliseconds)
  * 
- * 更新配置文件中的通知显示时间，并更新全局变量。
+ * Updates the notification display time in the configuration file, and updates the global variable.
  */
 void WriteConfigNotificationTimeout(int timeout_ms) {
     char config_path[MAX_PATH];
@@ -2115,10 +2115,10 @@ void WriteConfigNotificationTimeout(int timeout_ms) {
 }
 
 /**
- * @brief 从配置文件中读取通知最大透明度
+ * @brief Read maximum notification opacity from configuration file
  * 
- * 专门读取 NOTIFICATION_MAX_OPACITY 配置项
- * 并更新相应的全局变量。若配置不存在则保持默认值不变。
+ * Specifically reads the NOTIFICATION_MAX_OPACITY configuration item
+ * and updates the corresponding global variable. If configuration doesn't exist, default value remains unchanged.
  */
 void ReadNotificationOpacityConfig(void) {
     char config_path[MAX_PATH];
@@ -2208,11 +2208,11 @@ void ReadNotificationOpacityConfig(void) {
 }
 
 /**
- * @brief 写入通知最大透明度配置
- * @param opacity 透明度百分比值(1-100)
+ * @brief Write maximum notification opacity configuration
+ * @param opacity Opacity percentage value (1-100)
  * 
- * 更新配置文件中的通知最大透明度设置，
- * 采用临时文件方式确保配置更新安全。
+ * Updates the maximum notification opacity setting in the configuration file,
+ * uses temporary file method to ensure safe configuration update.
  */
 void WriteConfigNotificationOpacity(int opacity) {
     char config_path[MAX_PATH];
@@ -2270,10 +2270,10 @@ void WriteConfigNotificationOpacity(int opacity) {
 }
 
 /**
- * @brief 从配置文件中读取通知类型设置
+ * @brief Read notification type setting from configuration file
  *
- * 读取配置文件中的NOTIFICATION_TYPE项，并更新全局变量。
- * 若配置项不存在，保持默认值（Catime通知窗口）。
+ * Reads the NOTIFICATION_TYPE item from the configuration file, and updates the global variable.
+ * If the configuration item doesn't exist, keeps the default value (Catime notification window).
  */
 void ReadNotificationTypeConfig(void) {
     char config_path[MAX_PATH];
@@ -2306,10 +2306,10 @@ void ReadNotificationTypeConfig(void) {
 }
 
 /**
- * @brief 写入通知类型配置
- * @param type 通知类型枚举值
+ * @brief Write notification type configuration
+ * @param type Notification type enum value
  *
- * 更新配置文件中的通知类型设置，采用临时文件方式确保配置更新安全。
+ * Updates the notification type setting in the configuration file, uses temporary file method to ensure safe configuration update.
  */
 void WriteConfigNotificationType(NotificationType type) {
     char config_path[MAX_PATH];
@@ -2381,9 +2381,9 @@ void WriteConfigNotificationType(NotificationType type) {
 }
 
 /**
- * @brief 获取音频文件夹路径
- * @param path 存储音频文件夹路径的缓冲区
- * @param size 缓冲区大小
+ * @brief Get audio folder path
+ * @param path Buffer to store the audio folder path
+ * @param size Buffer size
  */
 void GetAudioFolderPath(char* path, size_t size) {
     if (!path || size == 0) return;
@@ -2410,7 +2410,7 @@ void GetAudioFolderPath(char* path, size_t size) {
 }
 
 /**
- * @brief 从配置文件中读取通知音频设置
+ * @brief Read notification audio settings from configuration file
  */
 void ReadNotificationSoundConfig(void) {
     char config_path[MAX_PATH];
@@ -2444,8 +2444,8 @@ void ReadNotificationSoundConfig(void) {
 }
 
 /**
- * @brief 写入通知音频配置
- * @param sound_file 音频文件路径
+ * @brief Write notification audio configuration
+ * @param sound_file Audio file path
  */
 void WriteConfigNotificationSound(const char* sound_file) {
     if (!sound_file) return;
@@ -2511,7 +2511,7 @@ void WriteConfigNotificationSound(const char* sound_file) {
 }
 
 /**
- * @brief 从配置文件中读取通知音频音量
+ * @brief Read notification audio volume from configuration file
  */
 void ReadNotificationVolumeConfig(void) {
     char config_path[MAX_PATH];
@@ -2535,8 +2535,8 @@ void ReadNotificationVolumeConfig(void) {
 }
 
 /**
- * @brief 写入通知音频音量配置
- * @param volume 音量百分比值(0-100)
+ * @brief Write notification audio volume configuration
+ * @param volume Volume percentage value (0-100)
  */
 void WriteConfigNotificationVolume(int volume) {
     // 验证音量范围
@@ -2586,21 +2586,21 @@ void WriteConfigNotificationVolume(int volume) {
 }
 
 /**
- * @brief 从配置文件中读取热键设置
- * @param showTimeHotkey 存储显示时间热键的指针
- * @param countUpHotkey 存储正计时热键的指针
- * @param countdownHotkey 存储倒计时热键的指针
- * @param quickCountdown1Hotkey 存储快捷倒计时1热键的指针
- * @param quickCountdown2Hotkey 存储快捷倒计时2热键的指针
- * @param quickCountdown3Hotkey 存储快捷倒计时3热键的指针
- * @param pomodoroHotkey 存储番茄钟热键的指针
- * @param toggleVisibilityHotkey 存储隐藏/显示热键的指针
- * @param editModeHotkey 存储编辑模式热键的指针
- * @param pauseResumeHotkey 存储暂停/继续热键的指针
- * @param restartTimerHotkey 存储重新开始热键的指针
+ * @brief Read hotkey settings from configuration file
+ * @param showTimeHotkey Pointer to store show time hotkey
+ * @param countUpHotkey Pointer to store count up hotkey
+ * @param countdownHotkey Pointer to store countdown hotkey
+ * @param quickCountdown1Hotkey Pointer to store quick countdown 1 hotkey
+ * @param quickCountdown2Hotkey Pointer to store quick countdown 2 hotkey
+ * @param quickCountdown3Hotkey Pointer to store quick countdown 3 hotkey
+ * @param pomodoroHotkey Pointer to store pomodoro hotkey
+ * @param toggleVisibilityHotkey Pointer to store hide/show hotkey
+ * @param editModeHotkey Pointer to store edit mode hotkey
+ * @param pauseResumeHotkey Pointer to store pause/resume hotkey
+ * @param restartTimerHotkey Pointer to store restart hotkey
  * 
- * 专门读取热键配置项并更新相应的参数值。
- * 支持解析可读性格式的热键字符串。
+ * Specifically reads hotkey configuration items and updates the corresponding parameter values.
+ * Supports parsing readable format hotkey strings.
  */
 void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdownHotkey,
                        WORD* quickCountdown1Hotkey, WORD* quickCountdown2Hotkey, WORD* quickCountdown3Hotkey,
@@ -2739,22 +2739,22 @@ void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdow
 }
 
 /**
- * @brief 写入热键配置
- * @param showTimeHotkey 显示时间热键值
- * @param countUpHotkey 正计时热键值
- * @param countdownHotkey 倒计时热键值
- * @param quickCountdown1Hotkey 快捷倒计时1热键值
- * @param quickCountdown2Hotkey 快捷倒计时2热键值
- * @param quickCountdown3Hotkey 快捷倒计时3热键值
- * @param pomodoroHotkey 番茄钟热键值
- * @param toggleVisibilityHotkey 隐藏/显示热键值
- * @param editModeHotkey 编辑模式热键值
- * @param pauseResumeHotkey 暂停/继续热键值
- * @param restartTimerHotkey 重新开始热键值
+ * @brief Write hotkey configuration
+ * @param showTimeHotkey Show time hotkey value
+ * @param countUpHotkey Count up hotkey value
+ * @param countdownHotkey Countdown hotkey value
+ * @param quickCountdown1Hotkey Quick countdown 1 hotkey value
+ * @param quickCountdown2Hotkey Quick countdown 2 hotkey value
+ * @param quickCountdown3Hotkey Quick countdown 3 hotkey value
+ * @param pomodoroHotkey Pomodoro hotkey value
+ * @param toggleVisibilityHotkey Hide/show hotkey value
+ * @param editModeHotkey Edit mode hotkey value
+ * @param pauseResumeHotkey Pause/resume hotkey value
+ * @param restartTimerHotkey Restart hotkey value
  * 
- * 更新配置文件中的热键设置，
- * 采用临时文件方式确保配置更新安全。
- * 将热键值转换为可读性更好的格式再保存。
+ * Updates hotkey settings in the configuration file,
+ * uses temporary file method to ensure safe configuration update.
+ * Converts hotkey values to a more readable format before saving.
  */
 void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownHotkey,
                         WORD quickCountdown1Hotkey, WORD quickCountdown2Hotkey, WORD quickCountdown3Hotkey,
@@ -2963,12 +2963,12 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
 }
 
 /**
- * @brief 将热键值转换为可读字符串
- * @param hotkey 热键值
- * @param buffer 输出缓冲区
- * @param bufferSize 缓冲区大小
+ * @brief Convert hotkey value to readable string
+ * @param hotkey Hotkey value
+ * @param buffer Output buffer
+ * @param bufferSize Buffer size
  * 
- * 将WORD格式的热键值转换为可读字符串格式，例如"Ctrl+Alt+A"
+ * Converts WORD format hotkey value to readable string format, such as "Ctrl+Alt+A"
  */
 void HotkeyToString(WORD hotkey, char* buffer, size_t bufferSize) {
     if (!buffer || bufferSize == 0) return;
@@ -3087,11 +3087,11 @@ void HotkeyToString(WORD hotkey, char* buffer, size_t bufferSize) {
 }
 
 /**
- * @brief 将字符串转换为热键值
- * @param str 热键字符串
- * @return WORD 热键值
+ * @brief Convert string to hotkey value
+ * @param str Hotkey string
+ * @return WORD Hotkey value
  * 
- * 将可读字符串格式的热键（如"Ctrl+Alt+A"）转换为WORD格式的热键值
+ * Converts readable string format hotkey (such as "Ctrl+Alt+A") to WORD format hotkey value
  */
 WORD StringToHotkey(const char* str) {
     if (!str || str[0] == '\0' || strcmp(str, "None") == 0) {
@@ -3186,8 +3186,8 @@ WORD StringToHotkey(const char* str) {
 }
 
 /**
- * @brief 从配置文件中读取自定义倒计时热键设置
- * @param hotkey 存储热键的指针
+ * @brief Read custom countdown hotkey setting from configuration file
+ * @param hotkey Pointer to store the hotkey
  */
 void ReadCustomCountdownHotkey(WORD* hotkey) {
     if (!hotkey) return;
@@ -3218,11 +3218,11 @@ void ReadCustomCountdownHotkey(WORD* hotkey) {
 }
 
 /**
- * @brief 写入单个配置项到配置文件
- * @param key 配置项键名
- * @param value 配置项值
+ * @brief Write a single configuration item to the configuration file
+ * @param key Configuration item key name
+ * @param value Configuration item value
  * 
- * 在配置文件中添加或更新单个配置项，根据键名自动选择节(section)
+ * Adds or updates a single configuration item in the configuration file, automatically selects section based on key name
  */
 void WriteConfigKeyValue(const char* key, const char* value) {
     if (!key || !value) return;
@@ -3284,9 +3284,9 @@ void WriteConfigKeyValue(const char* key, const char* value) {
 }
 
 /**
- * @brief 将当前语言设置写入配置文件
+ * @brief Write current language setting to configuration file
  * 
- * @param language 语言枚举值(APP_LANG_ENUM)
+ * @param language Language enum value (APP_LANG_ENUM)
  */
 void WriteConfigLanguage(int language) {
     const char* langName;
@@ -3332,11 +3332,11 @@ void WriteConfigLanguage(int language) {
 }
 
 /**
- * @brief 判断是否已经执行过快捷方式检查
+ * @brief Determine if shortcut check has been performed
  * 
- * 读取配置文件，判断是否有SHORTCUT_CHECK_DONE=TRUE标记
+ * Reads the configuration file to check if there is a SHORTCUT_CHECK_DONE=TRUE flag
  * 
- * @return bool true表示已检查过，false表示未检查过
+ * @return bool true indicates checked, false indicates not checked
  */
 bool IsShortcutCheckDone(void) {
     char config_path[MAX_PATH];
@@ -3347,11 +3347,11 @@ bool IsShortcutCheckDone(void) {
 }
 
 /**
- * @brief 设置快捷方式检查状态
+ * @brief Set shortcut check status
  * 
- * 在配置文件中写入SHORTCUT_CHECK_DONE=TRUE/FALSE
+ * Writes SHORTCUT_CHECK_DONE=TRUE/FALSE in the configuration file
  * 
- * @param done 是否已检查完成
+ * @param done Whether check is completed
  */
 void SetShortcutCheckDone(bool done) {
     char config_path[MAX_PATH];
@@ -3362,9 +3362,9 @@ void SetShortcutCheckDone(bool done) {
 }
 
 /**
- * @brief 从配置文件中读取是否禁用通知设置
+ * @brief Read whether to disable notification setting from configuration file
  * 
- * 专门读取 NOTIFICATION_DISABLED 配置项并更新相应的全局变量。
+ * Specifically reads the NOTIFICATION_DISABLED configuration item and updates the corresponding global variable.
  */
 void ReadNotificationDisabledConfig(void) {
     char config_path[MAX_PATH];
@@ -3375,11 +3375,11 @@ void ReadNotificationDisabledConfig(void) {
 }
 
 /**
- * @brief 写入是否禁用通知配置
- * @param disabled 是否禁用通知 (TRUE/FALSE)
+ * @brief Write whether to disable notification configuration
+ * @param disabled Whether to disable notification (TRUE/FALSE)
  * 
- * 更新配置文件中的是否禁用通知设置，
- * 采用临时文件方式确保配置更新安全。
+ * Updates the setting for whether to disable notification in the configuration file,
+ * uses temporary file method to ensure safe configuration update.
  */
 void WriteConfigNotificationDisabled(BOOL disabled) {
     char config_path[MAX_PATH];
