@@ -491,11 +491,11 @@ void ReadConfig() {
         CreateDefaultConfig(config_path);
     }
 
-    // 重置时间选项
+    // Reset time options
     time_options_count = 0;
     memset(time_options, 0, sizeof(time_options));
     
-    // 重置最近文件计数
+    // Reset recent files count
     CLOCK_RECENT_FILES_COUNT = 0;
     
     // Read basic settings
@@ -2287,7 +2287,7 @@ void ReadNotificationTypeConfig(void) {
                 char typeStr[32] = {0};
                 sscanf(line + 18, "%31s", typeStr);
                 
-                // 根据字符串设置通知类型
+                // Set notification type based on the string
                 if (strcmp(typeStr, "CATIME") == 0) {
                     NOTIFICATION_TYPE = NOTIFICATION_TYPE_CATIME;
                 } else if (strcmp(typeStr, "SYSTEM_MODAL") == 0) {
@@ -2295,7 +2295,7 @@ void ReadNotificationTypeConfig(void) {
                 } else if (strcmp(typeStr, "OS") == 0) {
                     NOTIFICATION_TYPE = NOTIFICATION_TYPE_OS;
                 } else {
-                    // 无效类型使用默认值
+                    // Use default value for invalid type
                     NOTIFICATION_TYPE = NOTIFICATION_TYPE_CATIME;
                 }
                 break;
@@ -2315,15 +2315,15 @@ void WriteConfigNotificationType(NotificationType type) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    // 确保类型值在有效范围内
+    // Ensure type value is within valid range
     if (type < NOTIFICATION_TYPE_CATIME || type > NOTIFICATION_TYPE_OS) {
-        type = NOTIFICATION_TYPE_CATIME; // 默认值
+        type = NOTIFICATION_TYPE_CATIME; // Default value
     }
     
-    // 更新全局变量
+    // Update global variable
     NOTIFICATION_TYPE = type;
     
-    // 将枚举转换为字符串
+    // Convert enum to string
     const char* typeStr;
     switch (type) {
         case NOTIFICATION_TYPE_CATIME:
@@ -2336,11 +2336,11 @@ void WriteConfigNotificationType(NotificationType type) {
             typeStr = "OS";
             break;
         default:
-            typeStr = "CATIME"; // 默认值
+            typeStr = "CATIME"; // Default value
             break;
     }
     
-    // 构建临时文件路径
+    // Create temporary file path
     char temp_path[MAX_PATH];
     strncpy(temp_path, config_path, MAX_PATH - 5);
     strcat(temp_path, ".tmp");
@@ -2352,7 +2352,7 @@ void WriteConfigNotificationType(NotificationType type) {
         char line[256];
         BOOL found = FALSE;
         
-        // 复制文件内容，替换目标配置行
+        // Copy file content, replace target configuration line
         while (fgets(line, sizeof(line), source)) {
             if (strncmp(line, "NOTIFICATION_TYPE=", 18) == 0) {
                 fprintf(target, "NOTIFICATION_TYPE=%s\n", typeStr);
@@ -2362,7 +2362,7 @@ void WriteConfigNotificationType(NotificationType type) {
             }
         }
         
-        // 如果没找到配置项，添加到文件末尾
+        // If configuration item not found, add it to the end of file
         if (!found) {
             fprintf(target, "NOTIFICATION_TYPE=%s\n", typeStr);
         }
@@ -2370,11 +2370,11 @@ void WriteConfigNotificationType(NotificationType type) {
         fclose(source);
         fclose(target);
         
-        // 替换原始文件
+        // Replace original file
         remove(config_path);
         rename(temp_path, config_path);
     } else {
-        // 清理可能打开的文件
+        // Clean up potentially open files
         if (source) fclose(source);
         if (target) fclose(target);
     }
@@ -2450,7 +2450,7 @@ void ReadNotificationSoundConfig(void) {
 void WriteConfigNotificationSound(const char* sound_file) {
     if (!sound_file) return;
     
-    // 检查路径是否包含等号，如果有则移除
+    // Check if the path contains equals sign, remove if present
     char clean_path[MAX_PATH] = {0};
     const char* src = sound_file;
     char* dst = clean_path;
@@ -2467,7 +2467,7 @@ void WriteConfigNotificationSound(const char* sound_file) {
     char temp_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    // 创建临时文件路径
+    // Create temporary file path
     snprintf(temp_path, MAX_PATH, "%s.tmp", config_path);
     
     FILE* source = fopen(config_path, "r");
@@ -2482,7 +2482,7 @@ void WriteConfigNotificationSound(const char* sound_file) {
     char line[1024];
     int found = 0;
     
-    // 复制文件内容，替换或添加通知音频设置
+    // Copy file content, replace or add notification audio settings
     while (fgets(line, sizeof(line), source)) {
         if (strncmp(line, "NOTIFICATION_SOUND_FILE=", 23) == 0) {
             fprintf(dest, "NOTIFICATION_SOUND_FILE=%s\n", clean_path);
@@ -2492,7 +2492,7 @@ void WriteConfigNotificationSound(const char* sound_file) {
         }
     }
     
-    // 如果没有找到配置项，添加到文件末尾
+    // If configuration item not found, add to end of file
     if (!found) {
         fprintf(dest, "NOTIFICATION_SOUND_FILE=%s\n", clean_path);
     }
@@ -2500,11 +2500,11 @@ void WriteConfigNotificationSound(const char* sound_file) {
     fclose(source);
     fclose(dest);
     
-    // 替换原文件
+    // Replace original file
     remove(config_path);
     rename(temp_path, config_path);
     
-    // 更新全局变量
+    // Update global variable
     memset(NOTIFICATION_SOUND_FILE, 0, MAX_PATH);
     strncpy(NOTIFICATION_SOUND_FILE, clean_path, MAX_PATH - 1);
     NOTIFICATION_SOUND_FILE[MAX_PATH - 1] = '\0';
@@ -2539,11 +2539,11 @@ void ReadNotificationVolumeConfig(void) {
  * @param volume Volume percentage value (0-100)
  */
 void WriteConfigNotificationVolume(int volume) {
-    // 验证音量范围
+    // Validate volume range
     if (volume < 0) volume = 0;
     if (volume > 100) volume = 100;
     
-    // 更新全局变量
+    // Update global variable
     NOTIFICATION_SOUND_VOLUME = volume;
     
     char config_path[MAX_PATH];
@@ -3230,7 +3230,7 @@ void WriteConfigKeyValue(const char* key, const char* value) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    // 根据键名确定应该放在哪个节
+    // Determine which section to place in based on the key name
     const char* section;
     
     if (strcmp(key, "CONFIG_VERSION") == 0 ||
@@ -3291,7 +3291,7 @@ void WriteConfigKeyValue(const char* key, const char* value) {
 void WriteConfigLanguage(int language) {
     const char* langName;
     
-    // 将语言枚举值转换为可读的语言名称
+    // Convert language enum value to readable language name
     switch (language) {
         case APP_LANG_CHINESE_SIMP:
             langName = "Chinese_Simplified";
@@ -3324,7 +3324,7 @@ void WriteConfigLanguage(int language) {
             langName = "Korean";
             break;
         default:
-            langName = "English"; // 默认为英语
+            langName = "English"; // Default to English
             break;
     }
     
@@ -3342,7 +3342,7 @@ bool IsShortcutCheckDone(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    // 使用INI读取方式获取设置
+    // Use INI reading method to get settings
     return ReadIniBool(INI_SECTION_GENERAL, "SHORTCUT_CHECK_DONE", FALSE, config_path);
 }
 
@@ -3370,7 +3370,7 @@ void ReadNotificationDisabledConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    // 使用INI读取方式获取设置
+    // Use INI reading method to get settings
     NOTIFICATION_DISABLED = ReadIniBool(INI_SECTION_NOTIFICATION, "NOTIFICATION_DISABLED", FALSE, config_path);
 }
 
@@ -3401,9 +3401,9 @@ void WriteConfigNotificationDisabled(BOOL disabled) {
     char line[1024];
     BOOL found = FALSE;
     
-    // 逐行读取并写入
+    // Read and write line by line
     while (fgets(line, sizeof(line), source_file)) {
-        // 移除行尾换行符进行比较
+        // Remove trailing newline characters for comparison
         size_t len = strlen(line);
         if (len > 0 && (line[len-1] == '\n' || line[len-1] == '\r')) {
             line[--len] = '\0';
@@ -3415,12 +3415,12 @@ void WriteConfigNotificationDisabled(BOOL disabled) {
             fprintf(temp_file, "NOTIFICATION_DISABLED=%s\n", disabled ? "TRUE" : "FALSE");
             found = TRUE;
         } else {
-            // 还原行尾换行符，原样写回
+            // Restore newline and write back as is
             fprintf(temp_file, "%s\n", line);
         }
     }
     
-    // 如果配置中没找到相应项，则添加
+    // If configuration item not found in the configuration, add it
     if (!found) {
         fprintf(temp_file, "NOTIFICATION_DISABLED=%s\n", disabled ? "TRUE" : "FALSE");
     }
@@ -3428,10 +3428,10 @@ void WriteConfigNotificationDisabled(BOOL disabled) {
     fclose(source_file);
     fclose(temp_file);
     
-    // 替换原文件
+    // Replace original file
     remove(config_path);
     rename(temp_path, config_path);
     
-    // 更新全局变量
+    // Update global variable
     NOTIFICATION_DISABLED = disabled;
 }
