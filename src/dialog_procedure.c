@@ -1,9 +1,9 @@
 /**
  * @file dialog_procedure.c
- * @brief 对话框消息处理过程实现
+ * @brief Implementation of dialog message handling procedures
  * 
- * 本文件实现了应用程序的对话框消息处理回调函数，
- * 处理对话框的所有消息事件包括初始化、颜色管理、按钮点击和键盘事件。
+ * This file implements the dialog message handling callback functions for the application,
+ * processing all dialog message events including initialization, color management, button clicks, and keyboard events.
  */
 
 #include <windows.h>
@@ -20,75 +20,75 @@
 #include "../include/language.h"
 #include "../include/config.h"
 #include "../include/audio_player.h" 
-#include "../include/window_procedure.h"  // 添加窗口处理头文件以使用RegisterGlobalHotkeys和UnregisterGlobalHotkeys函数
-#include "../include/hotkey.h"  // 引入热键管理头文件
-#include "../include/dialog_language.h"  // 添加对话框语言支持头文件
+#include "../include/window_procedure.h"  // Add window handling header to use RegisterGlobalHotkeys and UnregisterGlobalHotkeys functions
+#include "../include/hotkey.h"  // Include hotkey management header
+#include "../include/dialog_language.h"  // Add dialog language support header
 
-// 函数声明
+// Function declaration
 static void DrawColorSelectButton(HDC hdc, HWND hwnd);
 
-// 从main.c引入的变量
+// Variables imported from main.c
 extern char inputText[256];
 
-// 添加番茄钟相关的外部变量声明
-#define MAX_POMODORO_TIMES 10  // 保持番茄钟时间数量上限不变
-extern int POMODORO_TIMES[MAX_POMODORO_TIMES]; // 存储所有番茄钟时间
-extern int POMODORO_TIMES_COUNT;               // 实际的番茄钟时间数量
-extern int POMODORO_WORK_TIME;                 // 番茄钟工作时间（秒）
-extern int POMODORO_SHORT_BREAK;               // 番茄钟短休息时间（秒）
-extern int POMODORO_LONG_BREAK;                // 番茄钟长休息时间（秒）
-extern int POMODORO_LOOP_COUNT;                // 番茄钟循环次数
+// External declarations for pomodoro related variables
+#define MAX_POMODORO_TIMES 10  // Keep the maximum number of pomodoro time entries unchanged
+extern int POMODORO_TIMES[MAX_POMODORO_TIMES]; // Store all pomodoro times
+extern int POMODORO_TIMES_COUNT;               // Actual number of pomodoro times
+extern int POMODORO_WORK_TIME;                 // Pomodoro work time (seconds)
+extern int POMODORO_SHORT_BREAK;               // Pomodoro short break time (seconds)
+extern int POMODORO_LONG_BREAK;                // Pomodoro long break time (seconds)
+extern int POMODORO_LOOP_COUNT;                // Pomodoro loop count
 
-// 存储旧的编辑框过程
+// Store old edit control procedure
 WNDPROC wpOrigEditProc;
 
-// 添加全局变量来跟踪关于对话框句柄
+// Add global variable to track about dialog handle
 static HWND g_hwndAboutDlg = NULL;
 
-// 添加全局变量来跟踪错误对话框句柄
+// Add global variable to track error dialog handle
 static HWND g_hwndErrorDlg = NULL;
 
-// 添加全局变量来跟踪倒计时输入对话框句柄
+// Add global variable to track countdown input dialog handle
 HWND g_hwndInputDialog = NULL;
 
-// 添加循环次数编辑框的子类化过程
-static WNDPROC wpOrigLoopEditProc;  // 存储原始的编辑框过程
+// Add subclassing procedure for loop count edit box
+static WNDPROC wpOrigLoopEditProc;  // Store original edit control procedure
 
-// 添加常量字符串
+// Add constant strings
 #define URL_GITHUB_REPO L"https://github.com/vladelaina/Catime"
 
-// 子类化编辑框过程
+// Subclassing procedure for edit controls
 LRESULT APIENTRY EditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     static BOOL firstKeyProcessed = FALSE;
     
     switch (msg) {
     case WM_SETFOCUS:
-        // 当获取焦点时，确保选中全部文本
+        // When getting focus, ensure all text is selected
         PostMessage(hwnd, EM_SETSEL, 0, -1);
-        // 重置首次按键标记
+        // Reset first key flag
         firstKeyProcessed = FALSE;
         break;
         
     case WM_KEYDOWN:
-        // 处理首次按键问题
+        // Handle first key press issue
         if (!firstKeyProcessed) {
-            // 强制清除所有修饰键状态
-            // 这有助于解决热键残留状态问题
+            // Force clear all modifier key states
+            // This helps resolve hotkey residual state issues
             firstKeyProcessed = TRUE;
             
-            // 标记已经处理了首次按键，但不做特殊处理
-            // 让系统正常处理这个按键，避免重复输入
+            // Mark that we've processed the first key, but don't do special handling
+            // Let the system handle this key normally to avoid duplicate input
         }
         
-        // 回车键处理
+        // Enter key handling
         if (wParam == VK_RETURN) {
-            // 发送BM_CLICK消息给父窗口的OK按钮
+            // Send BM_CLICK message to the parent window's OK button
             HWND hwndOkButton = GetDlgItem(GetParent(hwnd), CLOCK_IDC_BUTTON_OK);
             SendMessage(GetParent(hwnd), WM_COMMAND, MAKEWPARAM(CLOCK_IDC_BUTTON_OK, BN_CLICKED), (LPARAM)hwndOkButton);
             return 0;
         }
-        // Ctrl+A全选处理
+        // Ctrl+A select all handling
         if (wParam == 'A' && GetKeyState(VK_CONTROL) < 0) {
             SendMessage(hwnd, EM_SETSEL, 0, -1);
             return 0;
@@ -96,11 +96,11 @@ LRESULT APIENTRY EditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
         break;
     
     case WM_CHAR:
-        // 阻止Ctrl+A生成字符，避免发出提示音
+        // Prevent Ctrl+A from generating a character to avoid alert sound
         if (wParam == 1 || (wParam == 'a' || wParam == 'A') && GetKeyState(VK_CONTROL) < 0) {
             return 0;
         }
-        // 阻止回车键产生的字符消息进一步处理，防止发出提示音
+        // Prevent Enter key from generating character messages for further processing to avoid alert sound
         if (wParam == VK_RETURN) { // VK_RETURN (0x0D) is the char code for Enter
             return 0;
         }
@@ -110,10 +110,10 @@ LRESULT APIENTRY EditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
     return CallWindowProc(wpOrigEditProc, hwnd, msg, wParam, lParam);
 }
 
-// 在文件开头添加错误对话框处理函数声明
+// Add error dialog handling function declaration at the beginning of the file
 INT_PTR CALLBACK ErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 
-// 添加显示错误对话框的函数
+// Add function to display error dialog
 void ShowErrorDialog(HWND hwndParent) {
     DialogBox(GetModuleHandle(NULL), 
              MAKEINTRESOURCE(IDD_ERROR_DIALOG), 
@@ -121,15 +121,15 @@ void ShowErrorDialog(HWND hwndParent) {
              ErrorDlgProc);
 }
 
-// 添加错误对话框处理函数
+// Add error dialog handling function
 INT_PTR CALLBACK ErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_INITDIALOG:
-            // 设置本地化的错误提示文本
+            // Set localized error prompt text
             SetDlgItemTextW(hwndDlg, IDC_ERROR_TEXT, 
                 GetLocalizedString(L"输入格式无效，请重新输入。", L"Invalid input format, please try again."));
             
-            // 设置对话框标题
+            // Set dialog title
             SetWindowTextW(hwndDlg, GetLocalizedString(L"错误", L"Error"));
             return TRUE;
 
@@ -144,19 +144,19 @@ INT_PTR CALLBACK ErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
 }
 
 /**
- * @brief 输入对话框过程
- * @param hwndDlg 对话框句柄
- * @param msg 消息类型
- * @param wParam 消息参数
- * @param lParam 消息参数
- * @return INT_PTR 消息处理结果
+ * @brief Input dialog procedure
+ * @param hwndDlg Dialog handle
+ * @param msg Message type
+ * @param wParam Message parameter
+ * @param lParam Message parameter
+ * @return INT_PTR Message processing result
  * 
- * 处理倒计时输入对话框的：
- * 1. 控件初始化与焦点设置
- * 2. 背景/控件颜色管理
- * 3. 确定按钮点击处理
- * 4. 回车键响应
- * 5. 资源清理
+ * Handles the countdown input dialog's:
+ * 1. Control initialization and focus setting
+ * 2. Background/control color management
+ * 3. OK button click processing
+ * 4. Enter key response
+ * 5. Resource cleanup
  */
 INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     static HBRUSH hBackgroundBrush = NULL;
@@ -165,10 +165,10 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 
     switch (msg) {
         case WM_INITDIALOG: {
-            // 保存对话框ID到GWLP_USERDATA
+            // Save dialog ID to GWLP_USERDATA
             SetWindowLongPtr(hwndDlg, GWLP_USERDATA, lParam);
             
-            // 保存对话框句柄
+            // Save dialog handle
             g_hwndInputDialog = hwndDlg;
             
             SetWindowPos(hwndDlg, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
@@ -178,70 +178,70 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 
             DWORD dlgId = GetWindowLongPtr(hwndDlg, GWLP_USERDATA);
             
-            // 应用多语言支持 - 通用化处理
+            // Apply multi-language support - generalized handling
             ApplyDialogLanguage(hwndDlg, (int)dlgId);
 
-            // 检查对话框ID是否为快捷倒计时选项对话框，如果是则设置标题 (这部分可能会被ApplyDialogLanguage覆盖，但保留以防万一)
+            // Check if dialog ID is for quick countdown options dialog, and if so set title (this part may be overridden by ApplyDialogLanguage, but keep it just in case)
             if (dlgId == CLOCK_IDD_SHORTCUT_DIALOG) { 
                 // SetWindowTextW(hwndDlg, GetLocalizedString(L"Countdown Presets", L"Countdown Presets"));
-                // 上一行由 ApplyDialogLanguage 处理，如果 g_dialogTitles 包含 CLOCK_IDD_SHORTCUT_DIALOG
+                // The line above is handled by ApplyDialogLanguage if g_dialogTitles contains CLOCK_IDD_SHORTCUT_DIALOG
             }
             
-            // 获取编辑框控件的句柄
+            // Get handle of the edit control
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
 
-            // 子类化编辑框控件
+            // Subclass the edit control
             wpOrigEditProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
 
-            // 确保输入框获得焦点 - 使用多种方法保证焦点设置
+            // Ensure input box gets focus - use multiple methods to guarantee focus setting
             SetFocus(hwndEdit);
             
-            // 使用多个延迟消息，以不同的延迟时间确保焦点和文本选择能正确生效
+            // Use multiple delayed messages with different delay times to ensure focus and text selection take effect correctly
             PostMessage(hwndDlg, WM_APP+100, 0, (LPARAM)hwndEdit);
             PostMessage(hwndDlg, WM_APP+101, 0, (LPARAM)hwndEdit);
             PostMessage(hwndDlg, WM_APP+102, 0, (LPARAM)hwndEdit);
             
-            // 全选编辑框中的文本
+            // Select all text in edit box
             SendDlgItemMessage(hwndDlg, CLOCK_IDC_EDIT, EM_SETSEL, 0, -1);
             
-            // 设置默认按钮ID
+            // Set default button ID
             SendMessage(hwndDlg, DM_SETDEFID, CLOCK_IDC_BUTTON_OK, 0);
 
-            // 设置一个特殊的定时器，在对话框完全显示后设置焦点
+            // Set a special timer to set focus after the dialog is fully displayed
             SetTimer(hwndDlg, 9999, 50, NULL);
             
-            // 强制重置所有修饰键状态（防止热键残留）
-            // 这会解决使用热键打开对话框后第一个按键被忽略的问题
+            // Force reset all modifier key states (prevent hotkey residual states)
+            // This resolves the issue of the first key press being ignored after opening the dialog with a hotkey
             PostMessage(hwndDlg, WM_APP+103, 0, 0);
             
-            // 设置编译时间（优化后的宽字符处理）
+            // Set build time (optimized wide character handling)
             char month[4];
             int day, year, hour, min, sec;
             
-            // 解析编译器生成的日期时间
+            // Parse compiler-generated date and time
             sscanf(__DATE__, "%3s %d %d", month, &day, &year);
             sscanf(__TIME__, "%d:%d:%d", &hour, &min, &sec);
 
-            // 月份缩写转数字
+            // Convert month abbreviation to number
             const char* months[] = {"Jan","Feb","Mar","Apr","May","Jun",
                                    "Jul","Aug","Sep","Oct","Nov","Dec"};
             int month_num = 0;
             while (++month_num <= 12 && strcmp(month, months[month_num-1]));
 
-            // 格式化日期时间为YYYY/MM/DD HH:MM:SS 并添加 UTC+8 标识
+            // Format date and time as YYYY/MM/DD HH:MM:SS and add UTC+8 identifier
             wchar_t timeStr[60];
             StringCbPrintfW(timeStr, sizeof(timeStr), L"Build Date: %04d/%02d/%02d %02d:%02d:%02d (UTC+8)",
                     year, month_num, day, hour, min, sec);
 
-            // 设置控件文本
+            // Set control text
             SetDlgItemTextW(hwndDlg, IDC_BUILD_DATE, timeStr);
 
             return FALSE;  
         }
 
-        // 添加处理WM_CLOSE消息的代码，当通过快捷键关闭对话框时不检查输入值合法性
+        // Add code to handle WM_CLOSE message, when closing dialog via shortcut key, don't check input validity
         case WM_CLOSE: {
-            // 直接关闭对话框，不进行输入验证
+            // Directly close the dialog without input validation
             g_hwndInputDialog = NULL;
             EndDialog(hwndDlg, 0);
             return TRUE;
@@ -295,32 +295,32 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                 
                 int total_seconds;
                 if (ParseInput(inputText, &total_seconds)) {
-                    // 根据对话框ID调用不同的配置更新函数
-                    int dialogId = GetWindowLongPtr(hwndDlg, GWLP_USERDATA);
-                    if (dialogId == CLOCK_IDD_POMODORO_TIME_DIALOG) {
-                        // 通用番茄钟时间设置，由调用者处理具体更新逻辑
-                        g_hwndInputDialog = NULL;
-                        EndDialog(hwndDlg, IDOK); // 返回 IDOK 表示成功
-                    } else if (dialogId == CLOCK_IDD_POMODORO_LOOP_DIALOG) {
-                        // 番茄钟循环次数
-                        WriteConfigPomodoroLoopCount(total_seconds);
-                        g_hwndInputDialog = NULL;
-                        EndDialog(hwndDlg, IDOK);
-                    } else if (dialogId == CLOCK_IDD_STARTUP_DIALOG) {
-                        // 只有CLOCK_IDD_STARTUP_DIALOG（即"预设管理"->"启动设置"->"倒计时"）才会修改默认启动时间
-                        WriteConfigDefaultStartTime(total_seconds);
-                        g_hwndInputDialog = NULL;
-                        EndDialog(hwndDlg, IDOK);
-                    } else if (dialogId == CLOCK_IDD_SHORTCUT_DIALOG) {
-                        // 倒计时预设管理
-                        WriteConfigDefaultStartTime(total_seconds);
-                        g_hwndInputDialog = NULL;
-                        EndDialog(hwndDlg, IDOK);
-                    } else {
-                        // 对于其他对话框ID（包括CLOCK_IDD_DIALOG1，即普通倒计时），不修改默认启动时间配置
-                        g_hwndInputDialog = NULL;
-                        EndDialog(hwndDlg, IDOK); // 假设成功获取输入即可
-                    }
+                                    // Call different configuration update functions based on dialog ID
+                int dialogId = GetWindowLongPtr(hwndDlg, GWLP_USERDATA);
+                if (dialogId == CLOCK_IDD_POMODORO_TIME_DIALOG) {
+                    // General pomodoro time settings, specific update logic handled by caller
+                    g_hwndInputDialog = NULL;
+                    EndDialog(hwndDlg, IDOK); // Return IDOK to indicate success
+                } else if (dialogId == CLOCK_IDD_POMODORO_LOOP_DIALOG) {
+                    // Pomodoro loop count
+                    WriteConfigPomodoroLoopCount(total_seconds);
+                    g_hwndInputDialog = NULL;
+                    EndDialog(hwndDlg, IDOK);
+                } else if (dialogId == CLOCK_IDD_STARTUP_DIALOG) {
+                    // Only CLOCK_IDD_STARTUP_DIALOG (i.e., "Preset Management"->"Startup Settings"->"Countdown") will modify the default start time
+                    WriteConfigDefaultStartTime(total_seconds);
+                    g_hwndInputDialog = NULL;
+                    EndDialog(hwndDlg, IDOK);
+                } else if (dialogId == CLOCK_IDD_SHORTCUT_DIALOG) {
+                    // Countdown preset management
+                    WriteConfigDefaultStartTime(total_seconds);
+                    g_hwndInputDialog = NULL;
+                    EndDialog(hwndDlg, IDOK);
+                } else {
+                    // For other dialog IDs (including CLOCK_IDD_DIALOG1, i.e., regular countdown), don't modify default start time configuration
+                    g_hwndInputDialog = NULL;
+                    EndDialog(hwndDlg, IDOK); // Just assume successful input acquisition
+                }
                 } else {
                     ShowErrorDialog(hwndDlg);
                     SetWindowTextA(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT), "");
@@ -333,16 +333,16 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 
         case WM_TIMER:
             if (wParam == 9999) {
-                // 定时器用于在对话框完全显示后设置焦点
+                // Timer used to set focus after the dialog is fully displayed
                 KillTimer(hwndDlg, 9999);
                 
                 HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
                 if (hwndEdit && IsWindow(hwndEdit)) {
-                    // 确保窗口位于前台
+                    // Ensure window is in the foreground
                     SetForegroundWindow(hwndDlg);
-                    // 确保编辑框获得焦点
+                    // Ensure edit box gets focus
                     SetFocus(hwndEdit);
-                    // 全选文本
+                    // Select all text
                     SendMessage(hwndEdit, EM_SETSEL, 0, -1);
                 }
                 return TRUE;
@@ -364,89 +364,89 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
         case WM_APP+100:
         case WM_APP+101:
         case WM_APP+102:
-            // 延迟执行的焦点和选择设置
+            // Delayed execution of focus and selection settings
             if (lParam) {
                 HWND hwndEdit = (HWND)lParam;
-                // 确保窗口有效并可见
+                // Ensure window is valid and visible
                 if (IsWindow(hwndEdit) && IsWindowVisible(hwndEdit)) {
-                    // 确保窗口在前台
+                    // Ensure window is in foreground
                     SetForegroundWindow(hwndDlg);
-                    // 设置焦点到输入框
+                    // Set focus to input box
                     SetFocus(hwndEdit);
-                    // 全选文本
+                    // Select all text
                     SendMessage(hwndEdit, EM_SETSEL, 0, -1);
                 }
             }
             return TRUE;
             
         case WM_APP+103:
-            // 强制重置所有修饰键状态
-            // 模拟所有可能的修饰键的释放
-            // 这会帮助清除任何可能残留的热键状态
+            // Force reset all modifier key states
+            // Simulate release of all possible modifier keys
+            // This helps clear any potentially lingering hotkey states
             {
                 INPUT inputs[8] = {0};
                 int inputCount = 0;
                 
-                // 左Shift键释放
+                // Left Shift key release
                 inputs[inputCount].type = INPUT_KEYBOARD;
                 inputs[inputCount].ki.wVk = VK_LSHIFT;
                 inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
                 inputCount++;
                 
-                // 右Shift键释放
+                // Right Shift key release
                 inputs[inputCount].type = INPUT_KEYBOARD;
                 inputs[inputCount].ki.wVk = VK_RSHIFT;
                 inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
                 inputCount++;
                 
-                // 左Ctrl键释放
+                // Left Ctrl key release
                 inputs[inputCount].type = INPUT_KEYBOARD;
                 inputs[inputCount].ki.wVk = VK_LCONTROL;
                 inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
                 inputCount++;
                 
-                // 右Ctrl键释放
+                // Right Ctrl key release
                 inputs[inputCount].type = INPUT_KEYBOARD;
                 inputs[inputCount].ki.wVk = VK_RCONTROL;
                 inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
                 inputCount++;
                 
-                // 左Alt键释放
+                // Left Alt key release
                 inputs[inputCount].type = INPUT_KEYBOARD;
                 inputs[inputCount].ki.wVk = VK_LMENU;
                 inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
                 inputCount++;
                 
-                // 右Alt键释放
+                // Right Alt key release
                 inputs[inputCount].type = INPUT_KEYBOARD;
                 inputs[inputCount].ki.wVk = VK_RMENU;
                 inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
                 inputCount++;
                 
-                // 左Win键释放
+                // Left Win key release
                 inputs[inputCount].type = INPUT_KEYBOARD;
                 inputs[inputCount].ki.wVk = VK_LWIN;
                 inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
                 inputCount++;
                 
-                // 右Win键释放
+                // Right Win key release
                 inputs[inputCount].type = INPUT_KEYBOARD;
                 inputs[inputCount].ki.wVk = VK_RWIN;
                 inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
                 inputCount++;
                 
-                // 发送所有按键释放事件
+                // Send all key release events
                 SendInput(inputCount, inputs, sizeof(INPUT));
             }
             return TRUE;
 
         case WM_DESTROY:
-            // 恢复原始编辑框过程
+            // Restore original edit control procedure
             {
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
             SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
             
-            // 释放资源
+            // Release resources
             if (hBackgroundBrush) {
                 DeleteObject(hBackgroundBrush);
                 hBackgroundBrush = NULL;
@@ -460,7 +460,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                 hButtonBrush = NULL;
             }
             
-            // 清除对话框句柄
+            // Clear dialog handle
             g_hwndInputDialog = NULL;
             }
             break;
@@ -603,27 +603,27 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
     return FALSE;
 }
 
-// 添加DPI感知相关类型定义（如果编译器没有提供）
+// Add DPI awareness related type definitions (if not provided by the compiler)
 #ifndef DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
-// DPI_AWARENESS_CONTEXT是一个HANDLE
+// DPI_AWARENESS_CONTEXT is a HANDLE
 typedef HANDLE DPI_AWARENESS_CONTEXT;
-// 相关DPI上下文常量定义
+// Related DPI context constants definition
 #define DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 ((DPI_AWARENESS_CONTEXT)-4)
 #endif
 
-// 显示关于对话框
+// Show the About dialog
 void ShowAboutDialog(HWND hwndParent) {
-    // 如果已经存在关于对话框，先关闭它
+    // If an About dialog already exists, close it first
     if (g_hwndAboutDlg != NULL && IsWindow(g_hwndAboutDlg)) {
         EndDialog(g_hwndAboutDlg, 0);
         g_hwndAboutDlg = NULL;
     }
     
-    // 保存当前DPI感知上下文
+    // Save current DPI awareness context
     HANDLE hOldDpiContext = NULL;
     HMODULE hUser32 = GetModuleHandleA("user32.dll");
     if (hUser32) {
-        // 函数指针类型定义
+        // Function pointer type definitions
         typedef HANDLE (WINAPI* GetThreadDpiAwarenessContextFunc)(void);
         typedef HANDLE (WINAPI* SetThreadDpiAwarenessContextFunc)(HANDLE);
         
@@ -633,20 +633,20 @@ void ShowAboutDialog(HWND hwndParent) {
             (SetThreadDpiAwarenessContextFunc)GetProcAddress(hUser32, "SetThreadDpiAwarenessContext");
         
         if (getThreadDpiAwarenessContextFunc && setThreadDpiAwarenessContextFunc) {
-            // 保存当前DPI上下文
+            // Save current DPI context
             hOldDpiContext = getThreadDpiAwarenessContextFunc();
-            // 设置为每显示器DPI感知V2模式
+            // Set to per-monitor DPI awareness V2 mode
             setThreadDpiAwarenessContextFunc(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
         }
     }
     
-    // 创建新的关于对话框
+    // Create new About dialog
     g_hwndAboutDlg = CreateDialog(GetModuleHandle(NULL), 
                                  MAKEINTRESOURCE(IDD_ABOUT_DIALOG), 
                                  hwndParent, 
                                  AboutDlgProc);
     
-    // 恢复原来的DPI感知上下文
+    // Restore original DPI awareness context
     if (hUser32 && hOldDpiContext) {
         typedef HANDLE (WINAPI* SetThreadDpiAwarenessContextFunc)(HANDLE);
         SetThreadDpiAwarenessContextFunc setThreadDpiAwarenessContextFunc = 
@@ -660,7 +660,7 @@ void ShowAboutDialog(HWND hwndParent) {
     ShowWindow(g_hwndAboutDlg, SW_SHOW);
 }
 
-// 添加全局变量来跟踪番茄钟循环次数设置对话框句柄
+// Add global variable to track pomodoro loop count setting dialog handle
 static HWND g_hwndPomodoroLoopDialog = NULL;
 
 void ShowPomodoroLoopDialog(HWND hwndParent) {
@@ -679,7 +679,7 @@ void ShowPomodoroLoopDialog(HWND hwndParent) {
     }
 }
 
-// 添加循环次数编辑框的子类化过程
+// Add subclassing procedure for loop count edit box
 LRESULT APIENTRY LoopEditSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     switch (uMsg) {
@@ -711,28 +711,28 @@ LRESULT APIENTRY LoopEditSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARA
     return CallWindowProc(wpOrigLoopEditProc, hwnd, uMsg, wParam, lParam);
 }
 
-// 修改辅助函数来处理带空格的数字输入
+// Modify helper function to handle numeric input with spaces
 BOOL IsValidNumberInput(const wchar_t* str) {
-    // 检查是否为空
+    // Check if empty
     if (!str || !*str) {
         return FALSE;
     }
     
-    BOOL hasDigit = FALSE;  // 用于跟踪是否找到至少一个数字
-    wchar_t cleanStr[16] = {0};  // 用于存储清理后的字符串
+    BOOL hasDigit = FALSE;  // Used to track if at least one digit is found
+    wchar_t cleanStr[16] = {0};  // Used to store cleaned string
     int cleanIndex = 0;
     
-    // 遍历字符串，忽略空格，只保留数字
+    // Traverse string, ignore spaces, only keep digits
     for (int i = 0; str[i]; i++) {
         if (iswdigit(str[i])) {
             cleanStr[cleanIndex++] = str[i];
             hasDigit = TRUE;
-        } else if (!iswspace(str[i])) {  // 如果不是空格也不是数字，则无效
+        } else if (!iswspace(str[i])) {  // If not a space and not a digit, then invalid
             return FALSE;
         }
     }
     
-    return hasDigit;  // 只要有数字就返回TRUE
+    return hasDigit;  // Return TRUE as long as there is at least one digit
 }
 
 // 修改 PomodoroLoopDlgProc 函数
@@ -828,10 +828,10 @@ INT_PTR CALLBACK PomodoroLoopDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPAR
     return FALSE;
 }
 
-// 添加全局变量跟踪网站URL对话框句柄
+// Add global variable to track website URL dialog handle
 static HWND g_hwndWebsiteDialog = NULL;
 
-// 网站URL输入对话框过程
+// Website URL input dialog procedure
 INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     static HBRUSH hBackgroundBrush = NULL;
     static HBRUSH hEditBrush = NULL;
@@ -900,21 +900,21 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
                     return TRUE;
                 }
                 
-                // 验证URL格式 - 简单检查，至少应该包含http://或https://
+                // Validate URL format - simple check, should at least contain http:// or https://
                 if (strncmp(url, "http://", 7) != 0 && strncmp(url, "https://", 8) != 0) {
-                    // 添加https://前缀
+                    // Add https:// prefix
                     char tempUrl[MAX_PATH] = "https://";
                     StringCbCatA(tempUrl, sizeof(tempUrl), url);
                     StringCbCopyA(url, sizeof(url), tempUrl);
                 }
                 
-                // 更新配置
+                // Update configuration
                 WriteConfigTimeoutWebsite(url);
                 EndDialog(hwndDlg, IDOK);
                 g_hwndWebsiteDialog = NULL;
                 return TRUE;
             } else if (LOWORD(wParam) == IDCANCEL) {
-                // 用户取消，不更改超时动作
+                // User cancelled, don't change timeout action
                 EndDialog(hwndDlg, IDCANCEL);
                 g_hwndWebsiteDialog = NULL;
                 return TRUE;
@@ -952,9 +952,9 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
     return FALSE;
 }
 
-// 显示网站URL输入对话框
+// Show website URL input dialog
 void ShowWebsiteDialog(HWND hwndParent) {
-    // 使用模态对话框代替非模态对话框，这样可以知道用户是确认还是取消
+    // Use modal dialog instead of modeless dialog, so we can know whether the user confirmed or cancelled
     INT_PTR result = DialogBox(
         GetModuleHandle(NULL),
         MAKEINTRESOURCE(CLOCK_IDD_WEBSITE_DIALOG),
@@ -962,8 +962,8 @@ void ShowWebsiteDialog(HWND hwndParent) {
         WebsiteDialogProc
     );
     
-    // 只有用户点击确定，且输入有效URL时才会返回IDOK，此时WebsiteDialogProc已设置CLOCK_TIMEOUT_ACTION
-    // 如果用户取消或关闭对话框，不会更改超时动作
+    // Only when the user clicks OK and inputs a valid URL will IDOK be returned, at which point WebsiteDialogProc has already set CLOCK_TIMEOUT_ACTION
+    // If the user cancels or closes the dialog, the timeout action won't be changed
 }
 
 // 设置全局变量来跟踪番茄钟组合对话框句柄
