@@ -1,9 +1,9 @@
 /**
  * @file tray.c
- * @brief 系统托盘功能实现
+ * @brief System tray functionality implementation
  * 
- * 本文件实现了应用程序的系统托盘操作，包括初始化、移除和通知显示功能，
- * 以及处理Windows资源管理器重启时托盘图标自动恢复的机制。
+ * This file implements the application's system tray operations, including initialization, removal and notification display,
+ * as well as the mechanism for automatically restoring the tray icon when Windows Explorer restarts.
  */
 
 #include <windows.h>
@@ -12,32 +12,32 @@
 #include "../resource/resource.h"
 #include "../include/tray.h"
 
-/// 全局通知图标数据结构
+/// Global notification icon data structure
 NOTIFYICONDATAW nid;
 
-/// 记录TaskbarCreated消息的ID
+/// ID for the TaskbarCreated message
 UINT WM_TASKBARCREATED = 0;
 
 /**
- * @brief 注册TaskbarCreated消息
+ * @brief Register the TaskbarCreated message
  * 
- * 注册系统发送的TaskbarCreated消息，用于在Windows资源管理器重启后
- * 能够接收到消息并重新创建托盘图标。此机制确保程序在系统托盘刷新后
- * 仍然正常显示图标。
+ * Registers the TaskbarCreated message sent by the system, used to receive messages
+ * and recreate the tray icon after Windows Explorer restarts. This mechanism ensures
+ * that the program still displays the icon normally after the system tray is refreshed.
  */
 void RegisterTaskbarCreatedMessage() {
-    // 注册接收资源管理器重启后发送的消息
+    // Register to receive message sent after Explorer restarts
     WM_TASKBARCREATED = RegisterWindowMessage(TEXT("TaskbarCreated"));
 }
 
 /**
- * @brief 初始化系统托盘图标
- * @param hwnd 与托盘图标关联的窗口句柄
- * @param hInstance 应用程序实例句柄
+ * @brief Initialize the system tray icon
+ * @param hwnd Window handle associated with the tray icon
+ * @param hInstance Application instance handle
  * 
- * 创建并显示带有默认设置的系统托盘图标。
- * 该图标将通过CLOCK_WM_TRAYICON回调接收消息。
- * 同时确保已注册TaskbarCreated消息，以支持托盘图标的自动恢复。
+ * Creates and displays a system tray icon with default settings.
+ * The icon will receive messages through the CLOCK_WM_TRAYICON callback.
+ * Also ensures that the TaskbarCreated message is registered to support automatic icon recovery.
  */
 void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
     memset(&nid, 0, sizeof(nid));
@@ -48,9 +48,9 @@ void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
     nid.hWnd = hwnd;
     nid.uCallbackMessage = CLOCK_WM_TRAYICON;
     
-    // 创建包含应用名称和版本号的提示文本
+    // Create tooltip text containing the application name and version number
     wchar_t versionText[128] = {0};
-    // 将版本号从UTF-8转换为Unicode
+    // Convert version number from UTF-8 to Unicode
     wchar_t versionWide[64] = {0};
     MultiByteToWideChar(CP_UTF8, 0, CATIME_VERSION, -1, versionWide, _countof(versionWide));
     swprintf_s(versionText, _countof(versionText), L"Catime %s", versionWide);
@@ -58,31 +58,31 @@ void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
     
     Shell_NotifyIconW(NIM_ADD, &nid);
     
-    // 确保已注册TaskbarCreated消息
+    // Ensure TaskbarCreated message is registered
     if (WM_TASKBARCREATED == 0) {
         RegisterTaskbarCreatedMessage();
     }
 }
 
 /**
- * @brief 删除系统托盘图标
+ * @brief Remove the system tray icon
  * 
- * 从系统托盘中移除应用程序的图标。
- * 应在应用程序关闭时调用，确保系统资源的正确释放。
+ * Removes the application's icon from the system tray.
+ * Should be called when the application closes to ensure proper release of system resources.
  */
 void RemoveTrayIcon(void) {
     Shell_NotifyIconW(NIM_DELETE, &nid);
 }
 
 /**
- * @brief 在系统托盘中显示通知
- * @param hwnd 与通知关联的窗口句柄
- * @param message 要在通知中显示的文本消息
+ * @brief Display a notification in the system tray
+ * @param hwnd Window handle associated with the notification
+ * @param message Text message to display in the notification
  * 
- * 从系统托盘图标显示气球提示通知。
- * 通知使用NIIF_NONE样式（无图标）并在3秒后超时。
+ * Displays a balloon tip notification from the system tray icon.
+ * The notification uses NIIF_NONE style (no icon) and times out after 3 seconds.
  * 
- * @note 消息文本从UTF-8转换为Unicode以正确显示各种语言字符。
+ * @note Message text is converted from UTF-8 to Unicode to correctly display various language characters.
  */
 void ShowTrayNotification(HWND hwnd, const char* message) {
     NOTIFYICONDATAW nid_notify = {0};
@@ -90,46 +90,46 @@ void ShowTrayNotification(HWND hwnd, const char* message) {
     nid_notify.hWnd = hwnd;
     nid_notify.uID = CLOCK_ID_TRAY_APP_ICON;
     nid_notify.uFlags = NIF_INFO;
-    nid_notify.dwInfoFlags = NIIF_NONE; // 不显示图标
+    nid_notify.dwInfoFlags = NIIF_NONE; // Don't display an icon
     nid_notify.uTimeout = 3000;
     
-    // 将UTF-8字符串转换为Unicode
+    // Convert UTF-8 string to Unicode
     MultiByteToWideChar(CP_UTF8, 0, message, -1, nid_notify.szInfo, sizeof(nid_notify.szInfo)/sizeof(WCHAR));
-    // 保持标题为空
+    // Keep the title empty
     nid_notify.szInfoTitle[0] = L'\0';
     
     Shell_NotifyIconW(NIM_MODIFY, &nid_notify);
 }
 
 /**
- * @brief 重新创建托盘图标
- * @param hwnd 窗口句柄
- * @param hInstance 实例句柄
+ * @brief Recreate the taskbar icon
+ * @param hwnd Window handle
+ * @param hInstance Instance handle
  * 
- * 在Windows资源管理器重启后重新创建托盘图标。
- * 应在收到TaskbarCreated消息时调用此函数，确保托盘图标自动恢复，
- * 避免出现程序运行但托盘图标消失的情况。
+ * Recreates the tray icon after Windows Explorer restarts.
+ * This function should be called when receiving the TaskbarCreated message to ensure automatic recovery of the tray icon,
+ * preventing situations where the program is running but the tray icon has disappeared.
  */
 void RecreateTaskbarIcon(HWND hwnd, HINSTANCE hInstance) {
-    // 首先尝试删除可能存在的旧图标
+    // First try to delete any existing old icon
     RemoveTrayIcon();
     
-    // 重新创建托盘图标
+    // Recreate the tray icon
     InitTrayIcon(hwnd, hInstance);
 }
 
 /**
- * @brief 更新托盘图标和菜单
- * @param hwnd 窗口句柄
+ * @brief Update the tray icon and menu
+ * @param hwnd Window handle
  * 
- * 在应用程序语言或设置更改后更新托盘图标和菜单。
- * 此函数先移除当前的托盘图标，然后重新创建它，
- * 确保托盘菜单显示的文本与当前语言设置一致。
+ * Updates the tray icon and menu after the application language or settings change.
+ * This function first removes the current tray icon and then recreates it,
+ * ensuring that the text displayed in the tray menu is consistent with the current language settings.
  */
 void UpdateTrayIcon(HWND hwnd) {
-    // 获取实例句柄
+    // Get the instance handle
     HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
     
-    // 使用重新创建托盘图标函数来完成更新
+    // Use the recreate taskbar icon function to complete the update
     RecreateTaskbarIcon(hwnd, hInstance);
 }
