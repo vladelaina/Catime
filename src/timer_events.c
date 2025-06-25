@@ -1,9 +1,9 @@
 /**
  * @file timer_events.c
- * @brief 计时器事件处理实现
+ * @brief Implementation of timer event handling
  * 
- * 本文件实现了应用程序计时器事件处理相关的功能，
- * 包括倒计时和正计时模式的事件处理。
+ * This file implements the functionality related to the application's timer event handling,
+ * including countdown and count-up mode event processing.
  */
 
 #include <windows.h>
@@ -17,35 +17,35 @@
 #include <stdio.h>
 #include <string.h>
 #include "../include/window.h"
-#include "audio_player.h"  // 添加头文件引用
+#include "audio_player.h"  // Include header reference
 
-// 番茄钟时间列表最大容量
+// Maximum capacity of Pomodoro time list
 #define MAX_POMODORO_TIMES 10
-extern int POMODORO_TIMES[MAX_POMODORO_TIMES]; // 存储所有番茄钟时间
-extern int POMODORO_TIMES_COUNT;              // 实际的番茄钟时间数量
+extern int POMODORO_TIMES[MAX_POMODORO_TIMES]; // Store all Pomodoro times
+extern int POMODORO_TIMES_COUNT;              // Actual number of Pomodoro times
 
-// 当前正在执行的番茄钟时间索引
+// Index of the currently executing Pomodoro time
 int current_pomodoro_time_index = 0;
 
-// 定义 current_pomodoro_phase 变量，它在 pomodoro.h 中被声明为 extern
+// Define current_pomodoro_phase variable, which is declared as extern in pomodoro.h
 POMODORO_PHASE current_pomodoro_phase = POMODORO_PHASE_IDLE;
 
-// 完成的番茄钟循环次数
+// Number of completed Pomodoro cycles
 int complete_pomodoro_cycles = 0;
 
-// 从main.c引入的函数声明
+// Function declarations imported from main.c
 extern void ShowNotification(HWND hwnd, const char* message);
 
-// 从main.c引入的变量声明，用于超时动作
+// Variable declarations imported from main.c, for timeout actions
 extern int elapsed_time;
 extern BOOL message_shown;
 
-// 从config.c引入的自定义消息文本
+// Custom message text imported from config.c
 extern char CLOCK_TIMEOUT_MESSAGE_TEXT[100];
-extern char POMODORO_TIMEOUT_MESSAGE_TEXT[100]; // 新增番茄钟专用提示
+extern char POMODORO_TIMEOUT_MESSAGE_TEXT[100]; // New Pomodoro-specific prompt
 extern char POMODORO_CYCLE_COMPLETE_TEXT[100];
 
-// 定义ClockState类型
+// Define ClockState type
 typedef enum {
     CLOCK_STATE_IDLE,
     CLOCK_STATE_COUNTDOWN,
@@ -53,18 +53,18 @@ typedef enum {
     CLOCK_STATE_POMODORO
 } ClockState;
 
-// 定义PomodoroState类型
+// Define PomodoroState type
 typedef struct {
     BOOL isLastCycle;
     int cycleIndex;
     int totalCycles;
 } PomodoroState;
 
-extern HWND g_hwnd; // 主窗口句柄
+extern HWND g_hwnd; // Main window handle
 extern ClockState g_clockState;
 extern PomodoroState g_pomodoroState;
 
-// 计时器行为函数声明
+// Timer behavior function declarations
 extern void ShowTrayNotification(HWND hwnd, const char* message);
 extern void ShowNotification(HWND hwnd, const char* message);
 extern void OpenFileByPath(const char* filePath);
@@ -75,31 +75,31 @@ extern void RestartComputer(void);
 extern void SetTimeDisplay(void);
 extern void ShowCountUp(HWND hwnd);
 
-// 添加外部函数声明到文件开头或函数前
+// Add external function declaration to the beginning of the file or before the function
 extern void StopNotificationSound(void);
 
 /**
- * @brief 将 UTF-8 编码的 char* 字符串转换为 wchar_t* 字符串
- * @param utf8String 输入的 UTF-8 字符串
- * @return 转换后的 wchar_t* 字符串，使用后需要调用 free() 释放内存。转换失败返回 NULL。
+ * @brief Convert UTF-8 encoded char* string to wchar_t* string
+ * @param utf8String Input UTF-8 string
+ * @return Converted wchar_t* string, memory needs to be freed with free() after use. Returns NULL if conversion fails.
  */
 static wchar_t* Utf8ToWideChar(const char* utf8String) {
     if (!utf8String || utf8String[0] == '\0') {
-        return NULL; // 返回 NULL 处理空字符串或 NULL 指针
+        return NULL; // Return NULL to handle empty strings or NULL pointers
     }
     int size_needed = MultiByteToWideChar(CP_UTF8, 0, utf8String, -1, NULL, 0);
     if (size_needed == 0) {
-        // 转换失败
+        // Conversion failed
         return NULL;
     }
     wchar_t* wideString = (wchar_t*)malloc(size_needed * sizeof(wchar_t));
     if (!wideString) {
-        // 内存分配失败
+        // Memory allocation failed
         return NULL;
     }
     int result = MultiByteToWideChar(CP_UTF8, 0, utf8String, -1, wideString, size_needed);
     if (result == 0) {
-        // 转换失败
+        // Conversion failed
         free(wideString);
         return NULL;
     }
@@ -107,61 +107,61 @@ static wchar_t* Utf8ToWideChar(const char* utf8String) {
 }
 
 /**
- * @brief 将宽字符串转换为UTF-8编码的普通字符串并显示通知
- * @param hwnd 窗口句柄
- * @param message 要显示的宽字符串消息 (从配置读取并转换而来)
+ * @brief Convert wide character string to UTF-8 encoded regular string and display notification
+ * @param hwnd Window handle
+ * @param message Wide character string message to display (read from configuration and converted)
  */
 static void ShowLocalizedNotification(HWND hwnd, const wchar_t* message) {
-    // 如果消息为空，则不显示
+    // Don't display if message is empty
     if (!message || message[0] == L'\0') {
         return;
     }
 
-    // 计算所需的缓冲区大小
+    // Calculate required buffer size
     int size_needed = WideCharToMultiByte(CP_UTF8, 0, message, -1, NULL, 0, NULL, NULL);
-    if (size_needed == 0) return; // 转换失败
+    if (size_needed == 0) return; // Conversion failed
 
-    // 分配内存
+    // Allocate memory
     char* utf8Msg = (char*)malloc(size_needed);
     if (utf8Msg) {
-        // 转换为UTF-8
+        // Convert to UTF-8
         int result = WideCharToMultiByte(CP_UTF8, 0, message, -1, utf8Msg, size_needed, NULL, NULL);
 
         if (result > 0) {
-            // 显示通知，使用新的ShowNotification函数
+            // Display notification using the new ShowNotification function
             ShowNotification(hwnd, utf8Msg);
             
-            // 如果超时动作是MESSAGE，播放通知音频
+            // If timeout action is MESSAGE, play notification audio
             if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_MESSAGE) {
-                // 读取最新的音频设置
+                // Read the latest audio settings
                 ReadNotificationSoundConfig();
                 
-                // 播放通知音频
+                // Play notification audio
                 PlayNotificationSound(hwnd);
             }
         }
 
-        // 释放内存
+        // Free memory
         free(utf8Msg);
     }
 }
 
 /**
- * @brief 设置番茄钟为工作阶段
+ * @brief Set Pomodoro to work phase
  * 
- * 重置所有计时器计数并将番茄钟设置为工作阶段
+ * Reset all timer counts and set Pomodoro to work phase
  */
 void InitializePomodoro(void) {
-    // 使用已有的枚举值 POMODORO_PHASE_WORK 代替 POMODORO_PHASE_RUNNING
+    // Use existing enum value POMODORO_PHASE_WORK instead of POMODORO_PHASE_RUNNING
     current_pomodoro_phase = POMODORO_PHASE_WORK;
     current_pomodoro_time_index = 0;
     complete_pomodoro_cycles = 0;
     
-    // 设置初始倒计时为第一个时间值
+    // Set initial countdown to the first time value
     if (POMODORO_TIMES_COUNT > 0) {
         CLOCK_TOTAL_TIME = POMODORO_TIMES[0];
     } else {
-        // 如果没有配置时间，使用默认的25分钟
+        // If no time is configured, use default 25 minutes
         CLOCK_TOTAL_TIME = 1500;
     }
     
@@ -170,24 +170,24 @@ void InitializePomodoro(void) {
 }
 
 /**
- * @brief 处理计时器消息
- * @param hwnd 窗口句柄
- * @param wp 消息参数
- * @return BOOL 是否处理了消息
+ * @brief Handle timer messages
+ * @param hwnd Window handle
+ * @param wp Message parameter
+ * @return BOOL Whether the message was handled
  */
 BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
     if (wp == 1) {
         if (CLOCK_SHOW_CURRENT_TIME) {
-            // 在显示当前时间模式下，每次定时器触发都重置上次显示的秒数，确保显示最新时间
+            // In current time display mode, reset the last displayed second on each timer trigger to ensure the latest time is displayed
             extern int last_displayed_second;
-            last_displayed_second = -1; // 强制重置秒数缓存，确保每次都显示最新系统时间
+            last_displayed_second = -1; // Force reset of seconds cache to ensure the latest system time is displayed each time
             
-            // 刷新显示
+            // Refresh display
             InvalidateRect(hwnd, NULL, TRUE);
             return TRUE;
         }
 
-        // 如果计时器暂停，不进行时间更新
+        // If timer is paused, don't update time
         if (CLOCK_IS_PAUSED) {
             return TRUE;
         }
@@ -201,105 +201,105 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                 if (countdown_elapsed_time >= CLOCK_TOTAL_TIME && !countdown_message_shown) {
                     countdown_message_shown = TRUE;
 
-                    // 在显示通知前，重新读取配置文件中的消息文本
+                    // Re-read message text from config file before displaying notification
                     ReadNotificationMessagesConfig();
-                    // 强制重新读取通知类型配置，确保使用最新设置
+                    // Force re-read notification type config to ensure latest settings are used
                     ReadNotificationTypeConfig();
                     
-                    // 变量声明放在分支前面，保证在所有分支中可用
+                    // Variable declaration before branches to ensure availability in all branches
                     wchar_t* timeoutMsgW = NULL;
 
-                    // 检查是否处于番茄钟模式 - 必须同时满足两个条件：
-                    // 1. 当前番茄钟阶段不为IDLE 
-                    // 2. 番茄钟时间配置有效
-                    // 3. 当前倒计时总时长与番茄钟时间列表中的当前索引时间匹配
+                    // Check if in Pomodoro mode - must meet all three conditions:
+                    // 1. Current Pomodoro phase is not IDLE 
+                    // 2. Pomodoro time configuration is valid
+                    // 3. Current countdown total time matches the time at current index in the Pomodoro time list
                     if (current_pomodoro_phase != POMODORO_PHASE_IDLE && 
                         POMODORO_TIMES_COUNT > 0 && 
                         current_pomodoro_time_index < POMODORO_TIMES_COUNT &&
                         CLOCK_TOTAL_TIME == POMODORO_TIMES[current_pomodoro_time_index]) {
                         
-                        // 使用番茄钟专用提示消息
+                        // Use Pomodoro-specific prompt message
                         timeoutMsgW = Utf8ToWideChar(POMODORO_TIMEOUT_MESSAGE_TEXT);
                         
-                        // 显示超时消息 (使用配置或默认值)
+                        // Display timeout message (using config or default value)
                         if (timeoutMsgW) {
                             ShowLocalizedNotification(hwnd, timeoutMsgW);
                         } else {
                             ShowLocalizedNotification(hwnd, L"番茄钟时间到！"); // Fallback
                         }
                         
-                        // 移动到下一个时间段
+                        // Move to next time period
                         current_pomodoro_time_index++;
                         
-                        // 检查是否已经完成了一个完整的循环
+                        // Check if a complete cycle has been finished
                         if (current_pomodoro_time_index >= POMODORO_TIMES_COUNT) {
-                            // 重置索引回到第一个时间
+                            // Reset index back to the first time
                             current_pomodoro_time_index = 0;
                             
-                            // 增加完成的循环计数
+                            // Increase completed cycle count
                             complete_pomodoro_cycles++;
                             
-                            // 检查是否已完成所有配置的循环次数
+                            // Check if all configured loop counts have been completed
                             if (complete_pomodoro_cycles >= POMODORO_LOOP_COUNT) {
-                                // 已完成所有循环次数，结束番茄钟
+                                // All loop counts completed, end Pomodoro
                                 countdown_elapsed_time = 0;
                                 countdown_message_shown = FALSE;
                                 CLOCK_TOTAL_TIME = 0;
                                 
-                                // 重置番茄钟状态
+                                // Reset Pomodoro state
                                 current_pomodoro_phase = POMODORO_PHASE_IDLE;
                                 
-                                // 尝试从配置读取并转换完成消息
+                                // Try to read and convert completion message from config
                                 wchar_t* cycleCompleteMsgW = Utf8ToWideChar(POMODORO_CYCLE_COMPLETE_TEXT);
-                                // 显示完成提示 (使用配置或默认值)
+                                // Display completion prompt (using config or default value)
                                 if (cycleCompleteMsgW) {
                                     ShowLocalizedNotification(hwnd, cycleCompleteMsgW);
-                                    free(cycleCompleteMsgW); // 释放完成消息内存
+                                    free(cycleCompleteMsgW); // Free completion message memory
                                 } else {
                                     ShowLocalizedNotification(hwnd, L"所有番茄钟循环完成！"); // Fallback
                                 }
                                 
-                                // 切换到空闲状态 - 添加以下代码
-                                CLOCK_COUNT_UP = FALSE;       // 确保不是正计时模式
-                                CLOCK_SHOW_CURRENT_TIME = FALSE; // 确保不是显示当前时间模式
-                                message_shown = TRUE;         // 标记消息已显示
+                                // Switch to idle state - add the following code
+                                CLOCK_COUNT_UP = FALSE;       // Ensure not in count-up mode
+                                CLOCK_SHOW_CURRENT_TIME = FALSE; // Ensure not in current time display mode
+                                message_shown = TRUE;         // Mark message as shown
                                 
-                                // 强制重绘窗口以清除显示
+                                // Force redraw window to clear display
                                 InvalidateRect(hwnd, NULL, TRUE);
                                 KillTimer(hwnd, 1);
-                                if (timeoutMsgW) free(timeoutMsgW); // 释放超时消息内存
+                                if (timeoutMsgW) free(timeoutMsgW); // Free timeout message memory
                                 return TRUE;
                             }
                         }
                         
-                        // 设置下一个时间段的倒计时
+                        // Set countdown for next time period
                         CLOCK_TOTAL_TIME = POMODORO_TIMES[current_pomodoro_time_index];
                         countdown_elapsed_time = 0;
                         countdown_message_shown = FALSE;
                         
-                        // 如果是新一轮的第一个时间段，显示循环提示
+                        // If it's the first time period in a new round, display cycle prompt
                         if (current_pomodoro_time_index == 0 && complete_pomodoro_cycles > 0) {
                             wchar_t cycleMsg[100];
-                            // GetLocalizedString 需要重新考虑，或者硬编码英文/中文
-                            // 暂时保留原来的方式，但理想情况下也应配置化
+                            // GetLocalizedString needs to be reconsidered, or hardcode English/Chinese
+                            // Temporarily keep the original approach, but ideally should be configurable
                             const wchar_t* formatStr = GetLocalizedString(L"开始第 %d 轮番茄钟", L"Starting Pomodoro cycle %d");
                             swprintf(cycleMsg, 100, formatStr, complete_pomodoro_cycles + 1);
-                            ShowLocalizedNotification(hwnd, cycleMsg); // 调用修改后的函数
+                            ShowLocalizedNotification(hwnd, cycleMsg); // Call the modified function
                         }
                         
                         InvalidateRect(hwnd, NULL, TRUE);
                     } else {
-                        // 非番茄钟模式，或者已经切换到普通倒计时模式
-                        // 使用普通倒计时提示消息
+                        // Not in Pomodoro mode, or switched to normal countdown mode
+                        // Use normal countdown prompt message
                         timeoutMsgW = Utf8ToWideChar(CLOCK_TIMEOUT_MESSAGE_TEXT);
                         
-                        // 如果超时动作不是打开文件、锁屏、关机或重启，才显示通知消息
+                        // Only display notification message if timeout action is not open file, lock, shutdown, or restart
                         if (CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_OPEN_FILE && 
                             CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_LOCK &&
                             CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_SHUTDOWN &&
                             CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_RESTART &&
                             CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_SLEEP) {
-                            // 显示超时消息 (使用配置或默认值)
+                            // Display timeout message (using config or default value)
                             if (timeoutMsgW) {
                                 ShowLocalizedNotification(hwnd, timeoutMsgW);
                             } else {
@@ -307,88 +307,88 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                             }
                         }
                         
-                        // 如果当前模式不是番茄钟（手动切换到了普通倒计时），确保不会回到番茄钟循环
+                        // If current mode is not Pomodoro (manually switched to normal countdown), ensure not to return to Pomodoro cycle
                         if (current_pomodoro_phase != POMODORO_PHASE_IDLE &&
                             (current_pomodoro_time_index >= POMODORO_TIMES_COUNT ||
                              CLOCK_TOTAL_TIME != POMODORO_TIMES[current_pomodoro_time_index])) {
-                            // 如果已经切换到普通倒计时，重置番茄钟状态
+                            // If switched to normal countdown, reset Pomodoro state
                             current_pomodoro_phase = POMODORO_PHASE_IDLE;
                             current_pomodoro_time_index = 0;
                             complete_pomodoro_cycles = 0;
                         }
                         
-                        // 如果是睡眠选项，立即处理，跳过其他处理逻辑
+                        // If sleep option, process immediately, skip other processing logic
                         if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SLEEP) {
-                            // 重置显示并应用更改
+                            // Reset display and apply changes
                             CLOCK_TOTAL_TIME = 0;
                             countdown_elapsed_time = 0;
                             
-                            // 停止计时器
+                            // Stop timer
                             KillTimer(hwnd, 1);
                             
-                            // 立即强制重绘窗口以清除显示
+                            // Immediately force redraw window to clear display
                             InvalidateRect(hwnd, NULL, TRUE);
                             UpdateWindow(hwnd);
                             
-                            // 释放内存
+                            // Free memory
                             if (timeoutMsgW) {
                                 free(timeoutMsgW);
                             }
                             
-                            // 执行睡眠命令
+                            // Execute sleep command
                             system("rundll32.exe powrprof.dll,SetSuspendState 0,1,0");
                             return TRUE;
                         }
                         
-                        // 如果是关机选项，立即处理，跳过其他处理逻辑
+                        // If shutdown option, process immediately, skip other processing logic
                         if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SHUTDOWN) {
-                            // 重置显示并应用更改
+                            // Reset display and apply changes
                             CLOCK_TOTAL_TIME = 0;
                             countdown_elapsed_time = 0;
                             
-                            // 停止计时器
+                            // Stop timer
                             KillTimer(hwnd, 1);
                             
-                            // 立即强制重绘窗口以清除显示
+                            // Immediately force redraw window to clear display
                             InvalidateRect(hwnd, NULL, TRUE);
                             UpdateWindow(hwnd);
                             
-                            // 释放内存
+                            // Free memory
                             if (timeoutMsgW) {
                                 free(timeoutMsgW);
                             }
                             
-                            // 执行关机命令
+                            // Execute shutdown command
                             system("shutdown /s /t 0");
                             return TRUE;
                         }
                         
-                        // 如果是重启选项，立即处理，跳过其他处理逻辑
+                        // If restart option, process immediately, skip other processing logic
                         if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_RESTART) {
-                            // 重置显示并应用更改
+                            // Reset display and apply changes
                             CLOCK_TOTAL_TIME = 0;
                             countdown_elapsed_time = 0;
                             
-                            // 停止计时器
+                            // Stop timer
                             KillTimer(hwnd, 1);
                             
-                            // 立即强制重绘窗口以清除显示
+                            // Immediately force redraw window to clear display
                             InvalidateRect(hwnd, NULL, TRUE);
                             UpdateWindow(hwnd);
                             
-                            // 释放内存
+                            // Free memory
                             if (timeoutMsgW) {
                                 free(timeoutMsgW);
                             }
                             
-                            // 执行重启命令
+                            // Execute restart command
                             system("shutdown /r /t 0");
                             return TRUE;
                         }
                         
                         switch (CLOCK_TIMEOUT_ACTION) {
                             case TIMEOUT_ACTION_MESSAGE:
-                                // 已经显示了通知，不需要额外操作
+                                // Notification already displayed, no additional operation needed
                                 break;
                             case TIMEOUT_ACTION_LOCK:
                                 LockWorkStation();
@@ -410,10 +410,10 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                                 break;
                             }
                             case TIMEOUT_ACTION_SHOW_TIME:
-                                // 停止任何正在播放的通知音频
+                                // Stop any playing notification audio
                                 StopNotificationSound();
                                 
-                                // 切换到显示当前时间模式
+                                // Switch to current time display mode
                                 CLOCK_SHOW_CURRENT_TIME = TRUE;
                                 CLOCK_COUNT_UP = FALSE;
                                 KillTimer(hwnd, 1);
@@ -421,10 +421,10 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                                 InvalidateRect(hwnd, NULL, TRUE);
                                 break;
                             case TIMEOUT_ACTION_COUNT_UP:
-                                // 停止任何正在播放的通知音频
+                                // Stop any playing notification audio
                                 StopNotificationSound();
                                 
-                                // 切换到正计时模式并重置
+                                // Switch to count-up mode and reset
                                 CLOCK_COUNT_UP = TRUE;
                                 CLOCK_SHOW_CURRENT_TIME = FALSE;
                                 countup_elapsed_time = 0;
@@ -433,7 +433,7 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                                 countdown_message_shown = FALSE;
                                 countup_message_shown = FALSE;
                                 
-                                // 设置番茄钟状态为空闲
+                                // Set Pomodoro state to idle
                                 CLOCK_IS_PAUSED = FALSE;
                                 KillTimer(hwnd, 1);
                                 SetTimer(hwnd, 1, 1000, NULL);
@@ -449,7 +449,7 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                         }
                     }
 
-                    // 释放转换后的宽字符串内存
+                    // Free converted wide string memory
                     if (timeoutMsgW) {
                         free(timeoutMsgW);
                     }
@@ -463,14 +463,14 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
 }
 
 void OnTimerTimeout(HWND hwnd) {
-    // 根据timeout action执行不同的行为
+    // Execute different behaviors based on timeout action
     switch (CLOCK_TIMEOUT_ACTION) {
         case TIMEOUT_ACTION_MESSAGE: {
             char utf8Msg[256] = {0};
             
-            // 根据当前状态选择不同的提示信息
+            // Select different prompt messages based on current state
             if (g_clockState == CLOCK_STATE_POMODORO) {
-                // 检查番茄钟是否完成所有循环
+                // Check if Pomodoro has completed all cycles
                 if (g_pomodoroState.isLastCycle && g_pomodoroState.cycleIndex >= g_pomodoroState.totalCycles - 1) {
                     strncpy(utf8Msg, POMODORO_CYCLE_COMPLETE_TEXT, sizeof(utf8Msg) - 1);
                 } else {
@@ -480,38 +480,37 @@ void OnTimerTimeout(HWND hwnd) {
                 strncpy(utf8Msg, CLOCK_TIMEOUT_MESSAGE_TEXT, sizeof(utf8Msg) - 1);
             }
             
-            utf8Msg[sizeof(utf8Msg) - 1] = '\0'; // 确保字符串以空字符结尾
+            utf8Msg[sizeof(utf8Msg) - 1] = '\0'; // Ensure string ends with null character
             
-            // 显示自定义提示信息
+            // Display custom prompt message
             ShowNotification(hwnd, utf8Msg);
             
-            // 读取最新的音频设置并播放提示音
+            // Read latest audio settings and play alert sound
             ReadNotificationSoundConfig();
             PlayNotificationSound(hwnd);
             
             break;
         }
-        
-        // ... existing code ...
+
     }
 }
 
-// 添加缺失的全局变量定义（如果其他地方没有定义）
+// Add missing global variable definitions (if not defined elsewhere)
 #ifndef STUB_VARIABLES_DEFINED
 #define STUB_VARIABLES_DEFINED
-// 主窗口句柄
+// Main window handle
 HWND g_hwnd = NULL;
-// 当前时钟状态
+// Current clock state
 ClockState g_clockState = CLOCK_STATE_IDLE;
-// 番茄钟状态
+// Pomodoro state
 PomodoroState g_pomodoroState = {FALSE, 0, 1};
 #endif
 
-// 添加stub函数定义，如果需要的话
+// Add stub function definitions if needed
 #ifndef STUB_FUNCTIONS_DEFINED
 #define STUB_FUNCTIONS_DEFINED
 __attribute__((weak)) void SleepComputer(void) {
-    // 这是一个弱符号定义，如果其他地方有实际实现，将使用那个实现
+    // This is a weak symbol definition, if there's an actual implementation elsewhere, that implementation will be used
     system("rundll32.exe powrprof.dll,SetSuspendState 0,1,0");
 }
 
@@ -524,10 +523,10 @@ __attribute__((weak)) void RestartComputer(void) {
 }
 
 __attribute__((weak)) void SetTimeDisplay(void) {
-    // 设置时间显示的stub实现
+    // Stub implementation for setting time display
 }
 
 __attribute__((weak)) void ShowCountUp(HWND hwnd) {
-    // 显示正计时的stub实现
+    // Stub implementation for showing count-up
 }
 #endif
