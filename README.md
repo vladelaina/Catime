@@ -23,6 +23,7 @@
 <p align="center"><strong>English</strong> · <a href="./README-zh.md">简体中文</a> · <a href="https://vladelaina.github.io/Catime/">Official Site</a> · <a href="https://vladelaina.github.io/Catime/guide.html">Guide</a> · <a href="https://vladelaina.github.io/Catime/about.html">About</a> · <a href="https://github.com/users/vladelaina/projects/2/views/1">Project Board</a> · <a href="https://github.com/vladelaina/Catime/issues">Feedback</a></p>
 
 <div align="center">
+
 [![GitHub Release](https://img.shields.io/github/v/release/vladelaina/Catime?color=369eff&labelColor=black&logo=github&style=flat-square)](https://github.com/vladelaina/Catime/releases)
 ![C](https://img.shields.io/badge/language-C-blue?logo=c&logoColor=white&labelColor=black&style=flat-square)
 [![EXE Size](https://img.shields.io/badge/EXE%20Size-889KB-blue?style=flat-square&labelColor=black)](https://github.com/vladelaina/Catime/releases)
