@@ -1,9 +1,9 @@
 /**
  * @file window_events.c
- * @brief 基本窗口事件处理实现
+ * @brief Implementation of basic window event handling
  * 
- * 本文件实现了应用程序窗口的基本事件处理功能，
- * 包括窗口创建、销毁、大小调整和位置调整等基本功能。
+ * This file implements the basic event handling functionality for the application window,
+ * including window creation, destruction, resizing, and position adjustment.
  */
 
 #include <windows.h>
@@ -14,9 +14,9 @@
 #include "../include/window_events.h"
 
 /**
- * @brief 处理窗口创建事件
- * @param hwnd 窗口句柄
- * @return BOOL 处理结果
+ * @brief Handle window creation event
+ * @param hwnd Window handle
+ * @return BOOL Processing result
  */
 BOOL HandleWindowCreate(HWND hwnd) {
     HWND hwndParent = GetParent(hwnd);
@@ -24,28 +24,28 @@ BOOL HandleWindowCreate(HWND hwnd) {
         EnableWindow(hwndParent, TRUE);
     }
     
-    // 加载窗口设置
+    // Load window settings
     LoadWindowSettings(hwnd);
     
-    // 设置点击穿透
+    // Set click-through
     SetClickThrough(hwnd, !CLOCK_EDIT_MODE);
     
-    // 确保窗口处于置顶状态
+    // Ensure window is in topmost state
     SetWindowTopmost(hwnd, CLOCK_WINDOW_TOPMOST);
     
     return TRUE;
 }
 
 /**
- * @brief 处理窗口销毁事件
- * @param hwnd 窗口句柄
+ * @brief Handle window destruction event
+ * @param hwnd Window handle
  */
 void HandleWindowDestroy(HWND hwnd) {
-    SaveWindowSettings(hwnd);  // 保存窗口设置
+    SaveWindowSettings(hwnd);  // Save window settings
     KillTimer(hwnd, 1);
     RemoveTrayIcon();
     
-    // 清理更新检查线程
+    // Clean up update check thread
     extern void CleanupUpdateThread(void);
     CleanupUpdateThread();
     
@@ -53,26 +53,26 @@ void HandleWindowDestroy(HWND hwnd) {
 }
 
 /**
- * @brief 处理窗口重置事件
- * @param hwnd 窗口句柄
+ * @brief Handle window reset event
+ * @param hwnd Window handle
  */
 void HandleWindowReset(HWND hwnd) {
-    // 无条件应用配置中的置顶设置
-    // 不管CLOCK_WINDOW_TOPMOST当前值是什么，都强制设为TRUE并应用
+    // Unconditionally apply topmost setting from configuration
+    // Regardless of the current CLOCK_WINDOW_TOPMOST value, force it to TRUE and apply
     CLOCK_WINDOW_TOPMOST = TRUE;
     SetWindowTopmost(hwnd, TRUE);
     WriteConfigTopmost("TRUE");
     
-    // 确保窗口总是可见的 - 解决计时器重置后不可见的问题
+    // Ensure window is always visible - solves the issue of timer not being visible after reset
     ShowWindow(hwnd, SW_SHOW);
 }
 
-// 该函数已移至drag_scale.c
+// This function has been moved to drag_scale.c
 BOOL HandleWindowResize(HWND hwnd, int delta) {
     return HandleScaleWindow(hwnd, delta);
 }
 
-// 该函数已移至drag_scale.c
+// This function has been moved to drag_scale.c
 BOOL HandleWindowMove(HWND hwnd) {
     return HandleDragWindow(hwnd);
 }
