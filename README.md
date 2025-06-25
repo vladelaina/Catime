@@ -27,7 +27,7 @@
 [![GitHub Release](https://img.shields.io/github/v/release/vladelaina/Catime?color=369eff&labelColor=black&logo=github&style=flat-square)](https://github.com/vladelaina/Catime/releases)
 ![C](https://img.shields.io/badge/language-C-blue?logo=c&logoColor=white&labelColor=black&style=flat-square)
 [![EXE Size](https://img.shields.io/badge/EXE%20Size-889KB-blue?style=flat-square&labelColor=black)](https://github.com/vladelaina/Catime/releases)
-[![Last Commit](https://img.shields.io/github/last-commit/vladelaina/Catime?label=last%20commit&labelColor=black&style=flat-square)](https://github.com/vladelaina/Catime/commits)<br/>
+[![GitHub Release Date](https://img.shields.io/github/release-date/vladelaina/Catime?label=release%20date&labelColor=black&style=flat-square)](https://github.com/vladelaina/Catime/releases)<br/>
 [![Downloads](https://img.shields.io/github/downloads/vladelaina/Catime/total?color=blue&label=downloads&labelColor=black&style=flat-square)](https://github.com/vladelaina/Catime/releases)
 [![Forks](https://img.shields.io/github/forks/vladelaina/Catime?color=8ae8ff&labelColor=black&style=flat-square)](https://github.com/vladelaina/Catime/network/members)
 [![Stars](https://img.shields.io/github/stars/vladelaina/Catime?color=ffcb47&labelColor=black&style=flat-square)](https://github.com/vladelaina/Catime/stargazers)
