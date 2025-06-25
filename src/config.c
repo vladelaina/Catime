@@ -9,7 +9,7 @@
 
 #include "../include/config.h"
 #include "../include/language.h"
-#include "../resource/resource.h"  // 添加这一行以访问CATIME_VERSION常量
+#include "../resource/resource.h"  // Add this line to access CATIME_VERSION constant
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -204,12 +204,12 @@ void GetConfigPath(char* path, size_t size) {
  * 9. [Options] - Other options
  */
 void CreateDefaultConfig(const char* config_path) {
-    // 获取系统默认语言ID
+    // Get system default language ID
     LANGID systemLangID = GetUserDefaultUILanguage();
-    int defaultLanguage = APP_LANG_ENGLISH; // 默认为英语
-    const char* langName = "English"; // 默认语言名称
+    int defaultLanguage = APP_LANG_ENGLISH; // Default to English
+    const char* langName = "English"; // Default language name
     
-    // 根据系统语言ID设置默认语言
+    // Set default language based on system language ID
     switch (PRIMARYLANGID(systemLangID)) {
         case LANG_CHINESE:
             if (SUBLANGID(systemLangID) == SUBLANG_CHINESE_SIMPLIFIED) {
@@ -255,7 +255,7 @@ void CreateDefaultConfig(const char* config_path) {
             break;
     }
     
-    // 根据通知类型选择默认设置
+    // Choose default settings based on notification type
     const char* typeStr;
     switch (NOTIFICATION_TYPE) {
         case NOTIFICATION_TYPE_CATIME:
@@ -268,16 +268,16 @@ void CreateDefaultConfig(const char* config_path) {
             typeStr = "OS";
             break;
         default:
-            typeStr = "CATIME"; // 默认值
+            typeStr = "CATIME"; // Default value
             break;
     }
     
-    // ======== [General] 节 ========
+    // ======== [General] Section ========
     WriteIniString(INI_SECTION_GENERAL, "CONFIG_VERSION", CATIME_VERSION, config_path);
     WriteIniString(INI_SECTION_GENERAL, "LANGUAGE", langName, config_path);
     WriteIniString(INI_SECTION_GENERAL, "SHORTCUT_CHECK_DONE", "FALSE", config_path);
     
-    // ======== [Display] 节 ========
+    // ======== [Display] Section ========
     WriteIniString(INI_SECTION_DISPLAY, "CLOCK_TEXT_COLOR", "#FFB6C1", config_path);
     WriteIniInt(INI_SECTION_DISPLAY, "CLOCK_BASE_FONT_SIZE", 20, config_path);
     WriteIniString(INI_SECTION_DISPLAY, "FONT_FILE_NAME", "Wallpoet Essence.ttf", config_path);
@@ -286,7 +286,7 @@ void CreateDefaultConfig(const char* config_path) {
     WriteIniString(INI_SECTION_DISPLAY, "WINDOW_SCALE", "1.62", config_path);
     WriteIniString(INI_SECTION_DISPLAY, "WINDOW_TOPMOST", "TRUE", config_path);
     
-    // ======== [Timer] 节 ========
+    // ======== [Timer] Section ========
     WriteIniInt(INI_SECTION_TIMER, "CLOCK_DEFAULT_START_TIME", 1500, config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_USE_24HOUR", "FALSE", config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_SHOW_SECONDS", "FALSE", config_path);
@@ -297,11 +297,11 @@ void CreateDefaultConfig(const char* config_path) {
     WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_WEBSITE", "", config_path);
     WriteIniString(INI_SECTION_TIMER, "STARTUP_MODE", "COUNTDOWN", config_path);
     
-    // ======== [Pomodoro] 节 ========
+    // ======== [Pomodoro] Section ========
     WriteIniString(INI_SECTION_POMODORO, "POMODORO_TIME_OPTIONS", "1500,300,1500,600", config_path);
     WriteIniInt(INI_SECTION_POMODORO, "POMODORO_LOOP_COUNT", 1, config_path);
     
-    // ======== [Notification] 节 ========
+    // ======== [Notification] Section ========
     WriteIniString(INI_SECTION_NOTIFICATION, "CLOCK_TIMEOUT_MESSAGE_TEXT", "时间到啦！", config_path);
     WriteIniString(INI_SECTION_NOTIFICATION, "POMODORO_TIMEOUT_MESSAGE_TEXT", "番茄钟时间到！", config_path);
     WriteIniString(INI_SECTION_NOTIFICATION, "POMODORO_CYCLE_COMPLETE_TEXT", "所有番茄钟循环完成！", config_path);
@@ -312,7 +312,7 @@ void CreateDefaultConfig(const char* config_path) {
     WriteIniInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_VOLUME", 100, config_path);
     WriteIniString(INI_SECTION_NOTIFICATION, "NOTIFICATION_DISABLED", "FALSE", config_path);
     
-    // ======== [Hotkeys] 节 ========
+    // ======== [Hotkeys] Section ========
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_SHOW_TIME", "None", config_path);
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_COUNT_UP", "None", config_path);
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_COUNTDOWN", "None", config_path);
@@ -326,14 +326,14 @@ void CreateDefaultConfig(const char* config_path) {
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_RESTART_TIMER", "None", config_path);
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_CUSTOM_COUNTDOWN", "None", config_path);
     
-    // ======== [RecentFiles] 节 ========
+    // ======== [RecentFiles] Section ========
     for (int i = 1; i <= 5; i++) {
         char key[32];
         snprintf(key, sizeof(key), "CLOCK_RECENT_FILE_%d", i);
         WriteIniString(INI_SECTION_RECENTFILES, key, "", config_path);
     }
     
-    // ======== [Colors] 节 ========
+    // ======== [Colors] Section ========
     WriteIniString(INI_SECTION_COLORS, "COLOR_OPTIONS", 
                  "#FFFFFF,#F9DB91,#F4CAE0,#FFB6C1,#A8E7DF,#A3CFB3,#92CBFC,#BDA5E7,#9370DB,#8C92CF,#72A9A5,#EB99A7,#EB96BD,#FFAE8B,#FF7F50,#CA6174", 
                  config_path);
@@ -351,11 +351,11 @@ void CreateDefaultConfig(const char* config_path) {
 void ExtractFileName(const char* path, char* name, size_t nameSize) {
     if (!path || !name || nameSize == 0) return;
     
-    // 首先转换为宽字符以正确处理Unicode路径
+    // First convert to wide characters to properly handle Unicode paths
     wchar_t wPath[MAX_PATH] = {0};
     MultiByteToWideChar(CP_UTF8, 0, path, -1, wPath, MAX_PATH);
     
-    // 查找最后一个反斜杠或正斜杠
+    // Look for the last backslash or forward slash
     wchar_t* lastSlash = wcsrchr(wPath, L'\\');
     if (!lastSlash) lastSlash = wcsrchr(wPath, L'/');
     
@@ -366,7 +366,7 @@ void ExtractFileName(const char* path, char* name, size_t nameSize) {
         wcscpy(wName, wPath);
     }
     
-    // 转换回UTF-8
+    // Convert back to UTF-8
     WideCharToMultiByte(CP_UTF8, 0, wName, -1, name, nameSize, NULL, NULL);
 }
 
@@ -382,24 +382,24 @@ void CheckAndCreateResourceFolders() {
     char resource_path[MAX_PATH];
     char *last_slash;
     
-    // 获取配置文件路径
+    // Get configuration file path
     GetConfigPath(config_path, MAX_PATH);
     
-    // 复制配置文件路径
+    // Copy configuration file path
     strncpy(base_path, config_path, MAX_PATH - 1);
     base_path[MAX_PATH - 1] = '\0';
     
-    // 找到最后一个斜杠或反斜杠，即文件名部分的起始位置
+    // Find the last slash or backslash, which marks the beginning of the filename
     last_slash = strrchr(base_path, '\\');
     if (!last_slash) {
         last_slash = strrchr(base_path, '/');
     }
     
     if (last_slash) {
-        // 截断路径到目录部分
+        // Truncate path to directory part
         *(last_slash + 1) = '\0';
         
-        // 创建resources主目录
+        // Create resources main directory
         snprintf(resource_path, MAX_PATH, "%sresources", base_path);
         DWORD attrs = GetFileAttributesA(resource_path);
         if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
@@ -409,7 +409,7 @@ void CheckAndCreateResourceFolders() {
             }
         }
         
-        // 创建audio子目录
+        // Create audio subdirectory
         snprintf(resource_path, MAX_PATH, "%sresources\\audio", base_path);
         attrs = GetFileAttributesA(resource_path);
         if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
@@ -418,7 +418,7 @@ void CheckAndCreateResourceFolders() {
             }
         }
         
-        // 创建images子目录
+        // Create images subdirectory
         snprintf(resource_path, MAX_PATH, "%sresources\\images", base_path);
         attrs = GetFileAttributesA(resource_path);
         if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
@@ -427,7 +427,7 @@ void CheckAndCreateResourceFolders() {
             }
         }
         
-        // 创建animations子目录
+        // Create animations subdirectory
         snprintf(resource_path, MAX_PATH, "%sresources\\animations", base_path);
         attrs = GetFileAttributesA(resource_path);
         if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
@@ -436,7 +436,7 @@ void CheckAndCreateResourceFolders() {
             }
         }
         
-        // 创建themes子目录
+        // Create themes subdirectory
         snprintf(resource_path, MAX_PATH, "%sresources\\themes", base_path);
         attrs = GetFileAttributesA(resource_path);
         if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
@@ -445,7 +445,7 @@ void CheckAndCreateResourceFolders() {
             }
         }
         
-        // 创建plug-in子目录
+        // Create plug-in subdirectory
         snprintf(resource_path, MAX_PATH, "%sresources\\plug-in", base_path);
         attrs = GetFileAttributesA(resource_path);
         if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
@@ -463,30 +463,30 @@ void CheckAndCreateResourceFolders() {
  * Parses various configuration items and updates program global state variables, finally refreshes the window position.
  */
 void ReadConfig() {
-    // 检查并创建资源文件夹
+    // Check and create resource folders
     CheckAndCreateResourceFolders();
     
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    // 检查配置文件是否存在，不存在则创建默认配置
+    // Check if configuration file exists, create default configuration if it doesn't
     if (!FileExists(config_path)) {
         CreateDefaultConfig(config_path);
     }
     
-    // 检查配置文件版本
+    // Check configuration file version
     char version[32] = {0};
     BOOL versionMatched = FALSE;
     
-    // 读取当前版本信息
+    // Read current version information
     ReadIniString(INI_SECTION_GENERAL, "CONFIG_VERSION", "", version, sizeof(version), config_path);
     
-    // 比较版本是否匹配
+    // Compare if version matches
     if (strcmp(version, CATIME_VERSION) == 0) {
         versionMatched = TRUE;
     }
     
-    // 如果版本不匹配，重新创建配置文件
+    // If version doesn't match, recreate the configuration file
     if (!versionMatched) {
         CreateDefaultConfig(config_path);
     }
@@ -498,13 +498,13 @@ void ReadConfig() {
     // 重置最近文件计数
     CLOCK_RECENT_FILES_COUNT = 0;
     
-    // 读取基本设置
-    // ======== [General] 节 ========
+    // Read basic settings
+    // ======== [General] Section ========
     char language[32] = {0};
     ReadIniString(INI_SECTION_GENERAL, "LANGUAGE", "English", language, sizeof(language), config_path);
     
-    // 将语言名称转换为枚举值
-    int languageSetting = APP_LANG_ENGLISH; // 默认为英语
+    // Convert language name to enum value
+    int languageSetting = APP_LANG_ENGLISH; // Default to English
     
     if (strcmp(language, "Chinese_Simplified") == 0) {
         languageSetting = APP_LANG_CHINESE_SIMP;
@@ -527,24 +527,24 @@ void ReadConfig() {
     } else if (strcmp(language, "Korean") == 0) {
         languageSetting = APP_LANG_KOREAN;
     } else {
-        // 尝试按数字解析（向后兼容）
+        // Try to parse as number (for backward compatibility)
         int langValue = atoi(language);
         if (langValue >= 0 && langValue < APP_LANG_COUNT) {
             languageSetting = langValue;
         } else {
-            languageSetting = APP_LANG_ENGLISH; // 默认英语
+            languageSetting = APP_LANG_ENGLISH; // Default to English
         }
     }
     
-    // ======== [Display] 节 ========
+    // ======== [Display] Section ========
     ReadIniString(INI_SECTION_DISPLAY, "CLOCK_TEXT_COLOR", "#FFB6C1", CLOCK_TEXT_COLOR, sizeof(CLOCK_TEXT_COLOR), config_path);
     CLOCK_BASE_FONT_SIZE = ReadIniInt(INI_SECTION_DISPLAY, "CLOCK_BASE_FONT_SIZE", 20, config_path);
     ReadIniString(INI_SECTION_DISPLAY, "FONT_FILE_NAME", "Wallpoet Essence.ttf", FONT_FILE_NAME, sizeof(FONT_FILE_NAME), config_path);
     
-    // 从字体文件名中截取内部名称
+    // Extract internal name from font filename
     size_t font_name_len = strlen(FONT_FILE_NAME);
     if (font_name_len > 4 && strcmp(FONT_FILE_NAME + font_name_len - 4, ".ttf") == 0) {
-        // 确保目标大小足够，避免依赖源字符串长度
+        // Ensure target size is sufficient, avoid depending on source string length
         size_t copy_len = font_name_len - 4;
         if (copy_len >= sizeof(FONT_INTERNAL_NAME))
             copy_len = sizeof(FONT_INTERNAL_NAME) - 1;
@@ -565,18 +565,18 @@ void ReadConfig() {
     
     CLOCK_WINDOW_TOPMOST = ReadIniBool(INI_SECTION_DISPLAY, "WINDOW_TOPMOST", TRUE, config_path);
     
-    // 检查并替换纯黑色
+    // Check and replace pure black color
     if (strcasecmp(CLOCK_TEXT_COLOR, "#000000") == 0) {
         strncpy(CLOCK_TEXT_COLOR, "#000001", sizeof(CLOCK_TEXT_COLOR) - 1);
     }
     
-    // ======== [Timer] 节 ========
+    // ======== [Timer] Section ========
     CLOCK_DEFAULT_START_TIME = ReadIniInt(INI_SECTION_TIMER, "CLOCK_DEFAULT_START_TIME", 1500, config_path);
     CLOCK_USE_24HOUR = ReadIniBool(INI_SECTION_TIMER, "CLOCK_USE_24HOUR", FALSE, config_path);
     CLOCK_SHOW_SECONDS = ReadIniBool(INI_SECTION_TIMER, "CLOCK_SHOW_SECONDS", FALSE, config_path);
     ReadIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_TEXT", "0", CLOCK_TIMEOUT_TEXT, sizeof(CLOCK_TIMEOUT_TEXT), config_path);
     
-    // 读取超时动作
+    // Read timeout action
     char timeoutAction[32] = {0};
     ReadIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_ACTION", "MESSAGE", timeoutAction, sizeof(timeoutAction), config_path);
     
@@ -585,10 +585,10 @@ void ReadConfig() {
     } else if (strcmp(timeoutAction, "LOCK") == 0) {
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_LOCK;
     } else if (strcmp(timeoutAction, "SHUTDOWN") == 0) {
-        // 即使配置文件中有SHUTDOWN，也将其视为一次性操作，默认为MESSAGE
+        // Even if SHUTDOWN exists in the config file, treat it as a one-time operation, default to MESSAGE
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
     } else if (strcmp(timeoutAction, "RESTART") == 0) {
-        // 即使配置文件中有RESTART，也将其视为一次性操作，默认为MESSAGE
+        // Even if RESTART exists in the config file, treat it as a one-time operation, default to MESSAGE
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
     } else if (strcmp(timeoutAction, "OPEN_FILE") == 0) {
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
@@ -600,22 +600,22 @@ void ReadConfig() {
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_WEBSITE;
     }
     
-    // 读取超时文件和网站设置
+    // Read timeout file and website settings
     ReadIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_FILE", "", CLOCK_TIMEOUT_FILE_PATH, MAX_PATH, config_path);
     ReadIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_WEBSITE", "", CLOCK_TIMEOUT_WEBSITE_URL, MAX_PATH, config_path);
     
-    // 如果文件路径有效，确保设置超时动作为打开文件
+    // If file path is valid, ensure timeout action is set to open file
     if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0 && 
         GetFileAttributesA(CLOCK_TIMEOUT_FILE_PATH) != INVALID_FILE_ATTRIBUTES) {
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
     }
     
-    // 如果URL有效，确保设置超时动作为打开网站
+    // If URL is valid, ensure timeout action is set to open website
     if (strlen(CLOCK_TIMEOUT_WEBSITE_URL) > 0) {
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_WEBSITE;
     }
     
-    // 读取时间选项
+    // Read time options
     char timeOptions[256] = {0};
     ReadIniString(INI_SECTION_TIMER, "CLOCK_TIME_OPTIONS", "25,10,5", timeOptions, sizeof(timeOptions), config_path);
     
@@ -626,36 +626,36 @@ void ReadConfig() {
         token = strtok(NULL, ",");
     }
     
-    // 读取启动模式
+    // Read startup mode
     ReadIniString(INI_SECTION_TIMER, "STARTUP_MODE", "COUNTDOWN", CLOCK_STARTUP_MODE, sizeof(CLOCK_STARTUP_MODE), config_path);
     
-    // ======== [Pomodoro] 节 ========
+    // ======== [Pomodoro] Section ========
     char pomodoroTimeOptions[256] = {0};
     ReadIniString(INI_SECTION_POMODORO, "POMODORO_TIME_OPTIONS", "1500,300,1500,600", pomodoroTimeOptions, sizeof(pomodoroTimeOptions), config_path);
     
-    // 重置番茄钟时间计数
+    // Reset pomodoro time count
     POMODORO_TIMES_COUNT = 0;
     
-    // 解析所有番茄钟时间值
+    // Parse all pomodoro time values
     token = strtok(pomodoroTimeOptions, ",");
     while (token && POMODORO_TIMES_COUNT < MAX_POMODORO_TIMES) {
         POMODORO_TIMES[POMODORO_TIMES_COUNT++] = atoi(token);
         token = strtok(NULL, ",");
     }
     
-    // 即使我们现在使用新的数组存储所有时间，
-    // 为了向后兼容，依然保留这三个变量的设置
+    // Even though we now use a new array to store all times,
+    // keep these three variables for backward compatibility
     if (POMODORO_TIMES_COUNT > 0) {
         POMODORO_WORK_TIME = POMODORO_TIMES[0];
         if (POMODORO_TIMES_COUNT > 1) POMODORO_SHORT_BREAK = POMODORO_TIMES[1];
-        if (POMODORO_TIMES_COUNT > 2) POMODORO_LONG_BREAK = POMODORO_TIMES[3]; // 注意这是第4个值
+        if (POMODORO_TIMES_COUNT > 2) POMODORO_LONG_BREAK = POMODORO_TIMES[3]; // Note this is the 4th value
     }
     
-    // 读取番茄钟循环次数
+    // Read pomodoro loop count
     POMODORO_LOOP_COUNT = ReadIniInt(INI_SECTION_POMODORO, "POMODORO_LOOP_COUNT", 1, config_path);
     if (POMODORO_LOOP_COUNT < 1) POMODORO_LOOP_COUNT = 1;
     
-    // ======== [Notification] 节 ========
+    // ======== [Notification] Section ========
     ReadIniString(INI_SECTION_NOTIFICATION, "CLOCK_TIMEOUT_MESSAGE_TEXT", "时间到啦！", 
                  CLOCK_TIMEOUT_MESSAGE_TEXT, sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT), config_path);
                  
@@ -668,14 +668,14 @@ void ReadConfig() {
     NOTIFICATION_TIMEOUT_MS = ReadIniInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_TIMEOUT_MS", 3000, config_path);
     NOTIFICATION_MAX_OPACITY = ReadIniInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_MAX_OPACITY", 95, config_path);
     
-    // 确保透明度在有效范围内(1-100)
+    // Ensure opacity is within valid range (1-100)
     if (NOTIFICATION_MAX_OPACITY < 1) NOTIFICATION_MAX_OPACITY = 1;
     if (NOTIFICATION_MAX_OPACITY > 100) NOTIFICATION_MAX_OPACITY = 100;
     
     char notificationType[32] = {0};
     ReadIniString(INI_SECTION_NOTIFICATION, "NOTIFICATION_TYPE", "CATIME", notificationType, sizeof(notificationType), config_path);
     
-    // 设置通知类型
+    // Set notification type
     if (strcmp(notificationType, "CATIME") == 0) {
         NOTIFICATION_TYPE = NOTIFICATION_TYPE_CATIME;
     } else if (strcmp(notificationType, "SYSTEM_MODAL") == 0) {
@@ -683,30 +683,30 @@ void ReadConfig() {
     } else if (strcmp(notificationType, "OS") == 0) {
         NOTIFICATION_TYPE = NOTIFICATION_TYPE_OS;
     } else {
-        NOTIFICATION_TYPE = NOTIFICATION_TYPE_CATIME; // 默认值
+        NOTIFICATION_TYPE = NOTIFICATION_TYPE_CATIME; // Default value
     }
     
-    // 读取通知音频文件路径
+    // Read notification audio file path
     ReadIniString(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_FILE", "", 
                 NOTIFICATION_SOUND_FILE, MAX_PATH, config_path);
                 
-    // 读取通知音频音量
+    // Read notification audio volume
     NOTIFICATION_SOUND_VOLUME = ReadIniInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_VOLUME", 100, config_path);
                 
-    // 读取是否禁用通知窗口
+    // Read whether to disable notification window
     NOTIFICATION_DISABLED = ReadIniBool(INI_SECTION_NOTIFICATION, "NOTIFICATION_DISABLED", FALSE, config_path);
     
-    // 确保音量在有效范围内(0-100)
+    // Ensure volume is within valid range (0-100)
     if (NOTIFICATION_SOUND_VOLUME < 0) NOTIFICATION_SOUND_VOLUME = 0;
     if (NOTIFICATION_SOUND_VOLUME > 100) NOTIFICATION_SOUND_VOLUME = 100;
     
-    // ======== [Colors] 节 ========
+    // ======== [Colors] Section ========
     char colorOptions[1024] = {0};
     ReadIniString(INI_SECTION_COLORS, "COLOR_OPTIONS", 
                 "#FFFFFF,#F9DB91,#F4CAE0,#FFB6C1,#A8E7DF,#A3CFB3,#92CBFC,#BDA5E7,#9370DB,#8C92CF,#72A9A5,#EB99A7,#EB96BD,#FFAE8B,#FF7F50,#CA6174", 
                 colorOptions, sizeof(colorOptions), config_path);
                 
-    // 解析颜色选项
+    // Parse color options
     token = strtok(colorOptions, ",");
     COLOR_OPTIONS_COUNT = 0;
     while (token) {
@@ -718,8 +718,8 @@ void ReadConfig() {
         token = strtok(NULL, ",");
     }
     
-    // ======== [RecentFiles] 节 ========
-    // 读取最近文件记录
+    // ======== [RecentFiles] Section ========
+    // Read recent file records
     for (int i = 1; i <= MAX_RECENT_FILES; i++) {
         char key[32];
         snprintf(key, sizeof(key), "CLOCK_RECENT_FILE_%d", i);
@@ -728,11 +728,11 @@ void ReadConfig() {
         ReadIniString(INI_SECTION_RECENTFILES, key, "", filePath, MAX_PATH, config_path);
         
         if (strlen(filePath) > 0) {
-            // 转换为宽字符以正确检查文件是否存在
+            // Convert to wide characters to properly check if the file exists
             wchar_t widePath[MAX_PATH] = {0};
             MultiByteToWideChar(CP_UTF8, 0, filePath, -1, widePath, MAX_PATH);
             
-            // 检查文件是否存在
+            // Check if file exists
             if (GetFileAttributesW(widePath) != INVALID_FILE_ATTRIBUTES) {
                 strncpy(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path, filePath, MAX_PATH - 1);
                 CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path[MAX_PATH - 1] = '\0';
@@ -743,8 +743,8 @@ void ReadConfig() {
         }
     }
     
-    // ======== [Hotkeys] 节 ========
-    // 从INI文件读取热键配置
+    // ======== [Hotkeys] Section ========
+    // Read hotkey configurations from INI file
     WORD showTimeHotkey = 0;
     WORD countUpHotkey = 0;
     WORD countdownHotkey = 0;
@@ -799,14 +799,14 @@ void ReadConfig() {
     
     last_config_time = time(NULL);
 
-    // 应用窗口位置
+    // Apply window position
     HWND hwnd = FindWindow("CatimeWindow", "Catime");
     if (hwnd) {
         SetWindowPos(hwnd, NULL, CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
         InvalidateRect(hwnd, NULL, TRUE);
     }
 
-    // 应用语言设置
+    // Apply language settings
     SetLanguage((AppLanguage)languageSetting);
 }
 
@@ -838,7 +838,7 @@ void WriteConfigTimeoutAction(const char* action) {
     char line[256];
     BOOL found = FALSE;
     
-    // 如果是关机或重启，不写入配置文件，而是写入"MESSAGE"
+    // For shutdown or restart actions, don't write them to the config file, write "MESSAGE" instead
     const char* actual_action = action;
     if (strcmp(action, "RESTART") == 0 || strcmp(action, "SHUTDOWN") == 0 || strcmp(action, "SLEEP") == 0) {
         actual_action = "MESSAGE";
@@ -999,19 +999,19 @@ void LoadRecentFiles(void) {
  * Automatically handles Chinese paths, supports UTF-8 encoding, ensures the file exists before adding.
  */
 void SaveRecentFile(const char* filePath) {
-    // 检查文件路径是否有效
+    // Check if the file path is valid
     if (!filePath || strlen(filePath) == 0) return;
     
-    // 转换为宽字符以检查文件是否存在
+    // Convert to wide characters to check if the file exists
     wchar_t wPath[MAX_PATH] = {0};
     MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wPath, MAX_PATH);
     
     if (GetFileAttributesW(wPath) == INVALID_FILE_ATTRIBUTES) {
-        // 文件不存在，不添加
+        // File doesn't exist, don't add it
         return;
     }
     
-    // 检查文件是否已在列表中
+    // Check if the file is already in the list
     int existingIndex = -1;
     for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
         if (strcmp(CLOCK_RECENT_FILES[i].path, filePath) == 0) {
@@ -1021,42 +1021,42 @@ void SaveRecentFile(const char* filePath) {
     }
     
     if (existingIndex == 0) {
-        // 文件已经在列表最前面，无需操作
+        // File is already at the top of the list, no action needed
         return;
     }
     
     if (existingIndex > 0) {
-        // 文件已在列表中，但不在最前面，需要移动
+        // File is in the list, but not at the top, need to move it
         RecentFile temp = CLOCK_RECENT_FILES[existingIndex];
         
-        // 向后移动元素
+        // Move elements backward
         for (int i = existingIndex; i > 0; i--) {
             CLOCK_RECENT_FILES[i] = CLOCK_RECENT_FILES[i - 1];
         }
         
-        // 放到第一位
+        // Put it at the first position
         CLOCK_RECENT_FILES[0] = temp;
     } else {
-        // 文件不在列表中，需要添加
-        // 首先确保列表不超过5个
+        // File is not in the list, need to add it
+        // First ensure the list doesn't exceed 5 items
         if (CLOCK_RECENT_FILES_COUNT < MAX_RECENT_FILES) {
             CLOCK_RECENT_FILES_COUNT++;
         }
         
-        // 向后移动元素
+        // Move elements backward
         for (int i = CLOCK_RECENT_FILES_COUNT - 1; i > 0; i--) {
             CLOCK_RECENT_FILES[i] = CLOCK_RECENT_FILES[i - 1];
         }
         
-        // 添加新文件到第一位
+        // Add new file to the first position
         strncpy(CLOCK_RECENT_FILES[0].path, filePath, MAX_PATH - 1);
         CLOCK_RECENT_FILES[0].path[MAX_PATH - 1] = '\0';
         
-        // 提取文件名
+        // Extract filename
         ExtractFileName(filePath, CLOCK_RECENT_FILES[0].name, MAX_PATH);
     }
     
-    // 更新配置文件
+    // Update configuration file
     char configPath[MAX_PATH];
     GetConfigPath(configPath, MAX_PATH);
     WriteConfig(configPath);
@@ -1127,13 +1127,13 @@ void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
     char line[256];
     int found = 0;
     
-    // 更新全局变量
-    // 保持向后兼容，同时更新POMODORO_TIMES数组
+    // Update global variables
+    // Maintain backward compatibility, while updating the POMODORO_TIMES array
     POMODORO_WORK_TIME = work;
     POMODORO_SHORT_BREAK = short_break;
     POMODORO_LONG_BREAK = long_break;
     
-    // 确保至少有这三个时间值
+    // Ensure at least these three time values exist
     POMODORO_TIMES[0] = work;
     if (POMODORO_TIMES_COUNT < 1) POMODORO_TIMES_COUNT = 1;
     
@@ -1161,9 +1161,9 @@ void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
     }
     
     while (fgets(line, sizeof(line), file)) {
-        // 查找POMODORO_TIME_OPTIONS行
+        // Look for POMODORO_TIME_OPTIONS line
         if (strncmp(line, "POMODORO_TIME_OPTIONS=", 22) == 0) {
-            // 写入所有番茄钟时间
+            // Write all pomodoro times
             fprintf(temp_file, "POMODORO_TIME_OPTIONS=");
             for (int i = 0; i < POMODORO_TIMES_COUNT; i++) {
                 if (i > 0) fprintf(temp_file, ",");
@@ -1176,7 +1176,7 @@ void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
         }
     }
     
-    // 如果没有找到POMODORO_TIME_OPTIONS，则添加它
+    // If POMODORO_TIME_OPTIONS was not found, add it
     if (!found) {
         fprintf(temp_file, "POMODORO_TIME_OPTIONS=");
         for (int i = 0; i < POMODORO_TIMES_COUNT; i++) {
@@ -1228,7 +1228,7 @@ void WriteConfigPomodoroLoopCount(int loop_count) {
         }
     }
     
-    // 如果配置文件中没有找到对应的键，则添加
+    // If the key was not found in the configuration file, add it
     if (!found) {
         fprintf(temp_file, "POMODORO_LOOP_COUNT=%d\n", loop_count);
     }
@@ -1239,7 +1239,7 @@ void WriteConfigPomodoroLoopCount(int loop_count) {
     remove(config_path);
     rename(temp_path, config_path);
     
-    // 更新全局变量
+    // Update global variable
     POMODORO_LOOP_COUNT = loop_count;
 }
 
@@ -1301,12 +1301,12 @@ void WriteConfigTopmost(const char* topmost) {
  * 3. Other configured settings are not lost
  */
 void WriteConfigTimeoutFile(const char* filePath) {
-    // 首先更新全局变量
+    // First update global variables
     CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
     strncpy(CLOCK_TIMEOUT_FILE_PATH, filePath, MAX_PATH - 1);
     CLOCK_TIMEOUT_FILE_PATH[MAX_PATH - 1] = '\0';
     
-    // 使用WriteConfig完全重写配置文件，保持结构一致
+    // Use WriteConfig to completely rewrite the configuration file, maintaining structural consistency
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     WriteConfig(config_path);
@@ -1328,7 +1328,7 @@ void WriteConfigTimeoutFile(const char* filePath) {
  * 9. [Options] - Other options
  */
 void WriteConfig(const char* config_path) {
-    // 获取当前语言的名称
+    // Get the name of the current language
     AppLanguage currentLang = GetCurrentLanguage();
     const char* langName;
     
@@ -1366,7 +1366,7 @@ void WriteConfig(const char* config_path) {
             break;
     }
     
-    // 根据通知类型选择字符串表示
+    // Choose string representation based on notification type
     const char* typeStr;
     switch (NOTIFICATION_TYPE) {
         case NOTIFICATION_TYPE_CATIME:
@@ -1379,11 +1379,11 @@ void WriteConfig(const char* config_path) {
             typeStr = "OS";
             break;
         default:
-            typeStr = "CATIME"; // 默认值
+            typeStr = "CATIME"; // Default value
             break;
     }
     
-    // 读取热键设置
+    // Read hotkey settings
     WORD showTimeHotkey = 0;
     WORD countUpHotkey = 0;
     WORD countdownHotkey = 0;
@@ -1404,7 +1404,7 @@ void WriteConfig(const char* config_path) {
     
     ReadCustomCountdownHotkey(&customCountdownHotkey);
     
-    // 将热键值转换为可读格式
+    // Convert hotkey values to readable format
     char showTimeStr[64] = {0};
     char countUpStr[64] = {0};
     char countdownStr[64] = {0};
@@ -1431,7 +1431,7 @@ void WriteConfig(const char* config_path) {
     HotkeyToString(restartTimerHotkey, restartTimerStr, sizeof(restartTimerStr));
     HotkeyToString(customCountdownHotkey, customCountdownStr, sizeof(customCountdownStr));
     
-    // 准备时间选项字符串
+    // Prepare time options string
     char timeOptionsStr[256] = {0};
     for (int i = 0; i < time_options_count; i++) {
         char buffer[16];
@@ -1443,7 +1443,7 @@ void WriteConfig(const char* config_path) {
         strcat(timeOptionsStr, buffer);
     }
     
-    // 准备番茄钟时间选项字符串
+    // Prepare pomodoro time options string
     char pomodoroTimesStr[256] = {0};
     for (int i = 0; i < POMODORO_TIMES_COUNT; i++) {
         char buffer[16];
@@ -1455,7 +1455,7 @@ void WriteConfig(const char* config_path) {
         strcat(pomodoroTimesStr, buffer);
     }
     
-    // 准备颜色选项字符串
+    // Prepare color options string
     char colorOptionsStr[1024] = {0};
     for (int i = 0; i < COLOR_OPTIONS_COUNT; i++) {
         if (i > 0) {
@@ -1464,7 +1464,7 @@ void WriteConfig(const char* config_path) {
         strcat(colorOptionsStr, COLOR_OPTIONS[i].hexColor);
     }
     
-    // 确定超时动作字符串
+    // Determine timeout action string
     const char* timeoutActionStr;
     switch (CLOCK_TIMEOUT_ACTION) {
         case TIMEOUT_ACTION_MESSAGE:
@@ -1486,15 +1486,15 @@ void WriteConfig(const char* config_path) {
             timeoutActionStr = "COUNT_UP";
             break;
         case TIMEOUT_ACTION_RESTART:
-            // 即使是重启操作，也将其视为一次性操作，存储默认值
+            // Even for restart operation, treat it as a one-time action and store the default value
             timeoutActionStr = "MESSAGE";
             break;
         case TIMEOUT_ACTION_SHUTDOWN:
-            // 即使是关机操作，也将其视为一次性操作，存储默认值
+            // Even for shutdown operation, treat it as a one-time action and store the default value
             timeoutActionStr = "MESSAGE";
             break;
         case TIMEOUT_ACTION_SLEEP:
-            // 即使是休眠操作，也将其视为一次性操作，存储默认值
+            // Even for sleep operation, treat it as a one-time action and store the default value
             timeoutActionStr = "MESSAGE";
             break;
         default:
@@ -1502,12 +1502,12 @@ void WriteConfig(const char* config_path) {
             break;
     }
     
-    // ======== [General] 节 ========
+    // ======== [General] Section ========
     WriteIniString(INI_SECTION_GENERAL, "CONFIG_VERSION", CATIME_VERSION, config_path);
     WriteIniString(INI_SECTION_GENERAL, "LANGUAGE", langName, config_path);
     WriteIniString(INI_SECTION_GENERAL, "SHORTCUT_CHECK_DONE", IsShortcutCheckDone() ? "TRUE" : "FALSE", config_path);
     
-    // ======== [Display] 节 ========
+    // ======== [Display] Section ========
     WriteIniString(INI_SECTION_DISPLAY, "CLOCK_TEXT_COLOR", CLOCK_TEXT_COLOR, config_path);
     WriteIniInt(INI_SECTION_DISPLAY, "CLOCK_BASE_FONT_SIZE", CLOCK_BASE_FONT_SIZE, config_path);
     WriteIniString(INI_SECTION_DISPLAY, "FONT_FILE_NAME", FONT_FILE_NAME, config_path);
@@ -1520,7 +1520,7 @@ void WriteConfig(const char* config_path) {
     
     WriteIniString(INI_SECTION_DISPLAY, "WINDOW_TOPMOST", CLOCK_WINDOW_TOPMOST ? "TRUE" : "FALSE", config_path);
     
-    // ======== [Timer] 节 ========
+    // ======== [Timer] Section ========
     WriteIniInt(INI_SECTION_TIMER, "CLOCK_DEFAULT_START_TIME", CLOCK_DEFAULT_START_TIME, config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_USE_24HOUR", CLOCK_USE_24HOUR ? "TRUE" : "FALSE", config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_SHOW_SECONDS", CLOCK_SHOW_SECONDS ? "TRUE" : "FALSE", config_path);
@@ -1531,11 +1531,11 @@ void WriteConfig(const char* config_path) {
     WriteIniString(INI_SECTION_TIMER, "CLOCK_TIME_OPTIONS", timeOptionsStr, config_path);
     WriteIniString(INI_SECTION_TIMER, "STARTUP_MODE", CLOCK_STARTUP_MODE, config_path);
     
-    // ======== [Pomodoro] 节 ========
+    // ======== [Pomodoro] Section ========
     WriteIniString(INI_SECTION_POMODORO, "POMODORO_TIME_OPTIONS", pomodoroTimesStr, config_path);
     WriteIniInt(INI_SECTION_POMODORO, "POMODORO_LOOP_COUNT", POMODORO_LOOP_COUNT, config_path);
     
-    // ======== [Notification] 节 ========
+    // ======== [Notification] Section ========
     WriteIniString(INI_SECTION_NOTIFICATION, "CLOCK_TIMEOUT_MESSAGE_TEXT", CLOCK_TIMEOUT_MESSAGE_TEXT, config_path);
     WriteIniString(INI_SECTION_NOTIFICATION, "POMODORO_TIMEOUT_MESSAGE_TEXT", POMODORO_TIMEOUT_MESSAGE_TEXT, config_path);
     WriteIniString(INI_SECTION_NOTIFICATION, "POMODORO_CYCLE_COMPLETE_TEXT", POMODORO_CYCLE_COMPLETE_TEXT, config_path);
@@ -1546,7 +1546,7 @@ void WriteConfig(const char* config_path) {
     WriteIniInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_VOLUME", NOTIFICATION_SOUND_VOLUME, config_path);
     WriteIniString(INI_SECTION_NOTIFICATION, "NOTIFICATION_DISABLED", NOTIFICATION_DISABLED ? "TRUE" : "FALSE", config_path);
     
-    // ======== [Hotkeys] 节 ========
+    // ======== [Hotkeys] Section ========
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_SHOW_TIME", showTimeStr, config_path);
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_COUNT_UP", countUpStr, config_path);
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_COUNTDOWN", countdownStr, config_path);
@@ -1560,21 +1560,21 @@ void WriteConfig(const char* config_path) {
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_RESTART_TIMER", restartTimerStr, config_path);
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_CUSTOM_COUNTDOWN", customCountdownStr, config_path);
     
-    // ======== [RecentFiles] 节 ========
+    // ======== [RecentFiles] Section ========
     for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
         char key[32];
         snprintf(key, sizeof(key), "CLOCK_RECENT_FILE_%d", i + 1);
         WriteIniString(INI_SECTION_RECENTFILES, key, CLOCK_RECENT_FILES[i].path, config_path);
     }
     
-    // 清除未使用的文件记录
+    // Clear unused file records
     for (int i = CLOCK_RECENT_FILES_COUNT; i < MAX_RECENT_FILES; i++) {
         char key[32];
         snprintf(key, sizeof(key), "CLOCK_RECENT_FILE_%d", i + 1);
         WriteIniString(INI_SECTION_RECENTFILES, key, "", config_path);
     }
     
-    // ======== [Colors] 节 ========
+    // ======== [Colors] Section ========
     WriteIniString(INI_SECTION_COLORS, "COLOR_OPTIONS", colorOptionsStr, config_path);
 }
 
@@ -1586,14 +1586,14 @@ void WriteConfig(const char* config_path) {
  * Uses temporary file method to ensure the configuration update process is safe and reliable.
  */
 void WriteConfigTimeoutWebsite(const char* url) {
-    // 只有在提供了有效URL的情况下才设置超时动作为打开网站
+    // Only set timeout action to open website if a valid URL is provided
     if (url && url[0] != '\0') {
-        // 首先更新全局变量
+        // First update global variables
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_WEBSITE;
         strncpy(CLOCK_TIMEOUT_WEBSITE_URL, url, MAX_PATH - 1);
         CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH - 1] = '\0';
         
-        // 然后更新配置文件
+        // Then update the configuration file
         char config_path[MAX_PATH];
         GetConfigPath(config_path, MAX_PATH);
         
@@ -1614,7 +1614,7 @@ void WriteConfigTimeoutWebsite(const char* url) {
         BOOL actionFound = FALSE;
         BOOL urlFound = FALSE;
         
-        // 读取原配置文件，更新超时动作和URL
+        // Read original configuration file, update timeout action and URL
         while (fgets(line, sizeof(line), file)) {
             if (strncmp(line, "CLOCK_TIMEOUT_ACTION=", 21) == 0) {
                 fprintf(temp, "CLOCK_TIMEOUT_ACTION=OPEN_WEBSITE\n");
@@ -1623,12 +1623,12 @@ void WriteConfigTimeoutWebsite(const char* url) {
                 fprintf(temp, "CLOCK_TIMEOUT_WEBSITE=%s\n", url);
                 urlFound = TRUE;
             } else {
-                // 保留其他所有配置
+                // Preserve all other configurations
                 fputs(line, temp);
             }
         }
         
-        // 如果配置中没有这些项，添加它们
+        // If these items are not in the configuration, add them
         if (!actionFound) {
             fprintf(temp, "CLOCK_TIMEOUT_ACTION=OPEN_WEBSITE\n");
         }
@@ -1670,7 +1670,7 @@ void WriteConfigStartupMode(const char* mode) {
         return;
     }
     
-    // 更新全局变量
+    // Update global variable
     strncpy(CLOCK_STARTUP_MODE, mode, sizeof(CLOCK_STARTUP_MODE) - 1);
     CLOCK_STARTUP_MODE[sizeof(CLOCK_STARTUP_MODE) - 1] = '\0';
     
@@ -1725,10 +1725,10 @@ void WriteConfigPomodoroTimeOptions(int* times, int count) {
     char line[MAX_PATH];
     BOOL optionsFound = FALSE;
     
-    // 读取原配置文件，更新番茄钟时间选项
+    // Read original configuration file, update pomodoro time options
     while (fgets(line, sizeof(line), file)) {
         if (strncmp(line, "POMODORO_TIME_OPTIONS=", 22) == 0) {
-            // 写入新的时间选项
+            // Write new time options
             fprintf(temp, "POMODORO_TIME_OPTIONS=");
             for (int i = 0; i < count; i++) {
                 fprintf(temp, "%d", times[i]);
@@ -1737,12 +1737,12 @@ void WriteConfigPomodoroTimeOptions(int* times, int count) {
             fprintf(temp, "\n");
             optionsFound = TRUE;
         } else {
-            // 保留其他所有配置
+            // Preserve all other configurations
             fputs(line, temp);
         }
     }
     
-    // 如果配置中没有这一项，添加它
+    // If this item is not in the configuration, add it
     if (!optionsFound) {
         fprintf(temp, "POMODORO_TIME_OPTIONS=");
         for (int i = 0; i < count; i++) {
@@ -1776,7 +1776,7 @@ void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodo
     
     FILE *source_file, *temp_file;
     
-    // 使用标准C文件操作代替Windows API
+    // Use standard C file operations instead of Windows API
     source_file = fopen(config_path, "r");
     temp_file = fopen(temp_path, "w");
     
@@ -1791,9 +1791,9 @@ void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodo
     BOOL pomodoroFound = FALSE;
     BOOL cycleFound = FALSE;
     
-    // 逐行读取并写入
+    // Read and write line by line
     while (fgets(line, sizeof(line), source_file)) {
-        // 移除行尾换行符进行比较
+        // Remove trailing newline characters for comparison
         size_t len = strlen(line);
         if (len > 0 && (line[len-1] == '\n' || line[len-1] == '\r')) {
             line[--len] = '\0';
@@ -1811,12 +1811,12 @@ void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodo
             fprintf(temp_file, "POMODORO_CYCLE_COMPLETE_TEXT=%s\n", cycle_complete_msg);
             cycleFound = TRUE;
         } else {
-            // 还原行尾换行符，原样写回
+            // Restore newline and write back as is
             fprintf(temp_file, "%s\n", line);
         }
     }
     
-    // 如果配置中没找到相应项，则添加
+    // If corresponding items are not found in the configuration, add them
     if (!timeoutFound) {
         fprintf(temp_file, "CLOCK_TIMEOUT_MESSAGE_TEXT=%s\n", timeout_msg);
     }
@@ -1832,11 +1832,11 @@ void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodo
     fclose(source_file);
     fclose(temp_file);
     
-    // 替换原文件
+    // Replace original file
     remove(config_path);
     rename(temp_path, config_path);
     
-    // 更新全局变量
+    // Update global variables
     strncpy(CLOCK_TIMEOUT_MESSAGE_TEXT, timeout_msg, sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT) - 1);
     CLOCK_TIMEOUT_MESSAGE_TEXT[sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT) - 1] = '\0';
     
@@ -1869,17 +1869,17 @@ void ReadNotificationMessagesConfig(void) {
     );
     
     if (hFile == INVALID_HANDLE_VALUE) {
-        // 文件无法打开，保留内存中的当前值或默认值
+        // File cannot be opened, keep current values in memory or default values
         return;
     }
 
-    // 跳过UTF-8 BOM标记（如果有）
+    // Skip UTF-8 BOM marker (if present)
     char bom[3];
     DWORD bytesRead;
     ReadFile(hFile, bom, 3, &bytesRead, NULL);
     
     if (bytesRead != 3 || bom[0] != 0xEF || bom[1] != 0xBB || bom[2] != 0xBF) {
-        // 不是BOM，需要回退文件指针
+        // Not a BOM, need to rewind file pointer
         SetFilePointer(hFile, 0, NULL, FILE_BEGIN);
     }
     
@@ -1888,12 +1888,12 @@ void ReadNotificationMessagesConfig(void) {
     BOOL pomodoroTimeoutMsgFound = FALSE;
     BOOL cycleCompleteMsgFound = FALSE;
     
-    // 逐行读取文件内容
+    // Read file content line by line
     BOOL readingLine = TRUE;
     int pos = 0;
     
     while (readingLine) {
-        // 逐字节读取，构建行
+        // Read byte by byte, build line
         bytesRead = 0;
         pos = 0;
         memset(line, 0, sizeof(line));
@@ -1902,29 +1902,29 @@ void ReadNotificationMessagesConfig(void) {
             char ch;
             ReadFile(hFile, &ch, 1, &bytesRead, NULL);
             
-            if (bytesRead == 0) { // 文件结束
+            if (bytesRead == 0) { // End of file
                 readingLine = FALSE;
                 break;
             }
             
-            if (ch == '\n') { // 行结束
+            if (ch == '\n') { // End of line
                 break;
             }
             
-            if (ch != '\r') { // 忽略回车符
+            if (ch != '\r') { // Ignore carriage return
                 line[pos++] = ch;
-                if (pos >= sizeof(line) - 1) break; // 防止缓冲区溢出
+                if (pos >= sizeof(line) - 1) break; // Prevent buffer overflow
             }
         }
         
-        line[pos] = '\0'; // 确保字符串结束
+        line[pos] = '\0'; // Ensure string termination
         
-        // 如果没有内容且文件已结束，退出循环
+        // If no content and file has ended, exit loop
         if (pos == 0 && !readingLine) {
             break;
         }
         
-        // 处理这一行
+        // Process this line
         if (strncmp(line, "CLOCK_TIMEOUT_MESSAGE_TEXT=", 27) == 0) {
             strncpy(CLOCK_TIMEOUT_MESSAGE_TEXT, line + 27, sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT) - 1);
             CLOCK_TIMEOUT_MESSAGE_TEXT[sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT) - 1] = '\0';
@@ -1941,7 +1941,7 @@ void ReadNotificationMessagesConfig(void) {
             cycleCompleteMsgFound = TRUE;
         }
         
-        // 如果所有消息都找到了，可以提前退出循环
+        // If all messages have been found, can exit loop early
         if (timeoutMsgFound && pomodoroTimeoutMsgFound && cycleCompleteMsgFound) {
             break;
         }
@@ -1949,15 +1949,15 @@ void ReadNotificationMessagesConfig(void) {
     
     CloseHandle(hFile);
     
-    // 如果文件中没有找到对应的配置项，确保变量有默认值
+    // If corresponding configuration items are not found in the file, ensure variables have default values
     if (!timeoutMsgFound) {
-        strcpy(CLOCK_TIMEOUT_MESSAGE_TEXT, "时间到啦！"); // 默认值
+        strcpy(CLOCK_TIMEOUT_MESSAGE_TEXT, "时间到啦！"); // Default value
     }
     if (!pomodoroTimeoutMsgFound) {
-        strcpy(POMODORO_TIMEOUT_MESSAGE_TEXT, "番茄钟时间到！"); // 默认值
+        strcpy(POMODORO_TIMEOUT_MESSAGE_TEXT, "番茄钟时间到！"); // Default value
     }
     if (!cycleCompleteMsgFound) {
-        strcpy(POMODORO_CYCLE_COMPLETE_TEXT, "所有番茄钟循环完成！"); // 默认值
+        strcpy(POMODORO_CYCLE_COMPLETE_TEXT, "所有番茄钟循环完成！"); // Default value
     }
 }
 
@@ -1982,29 +1982,29 @@ void ReadNotificationTimeoutConfig(void) {
     );
     
     if (hFile == INVALID_HANDLE_VALUE) {
-        // 文件无法打开，保留当前默认值
+        // File cannot be opened, keep current default value
         return;
     }
     
-    // 跳过UTF-8 BOM标记（如果有）
+    // Skip UTF-8 BOM marker (if present)
     char bom[3];
     DWORD bytesRead;
     ReadFile(hFile, bom, 3, &bytesRead, NULL);
     
     if (bytesRead != 3 || bom[0] != 0xEF || bom[1] != 0xBB || bom[2] != 0xBF) {
-        // 不是BOM，需要回退文件指针
+        // Not a BOM, need to rewind file pointer
         SetFilePointer(hFile, 0, NULL, FILE_BEGIN);
     }
     
     char line[256];
     BOOL timeoutFound = FALSE;
     
-    // 逐行读取文件内容
+    // Read file content line by line
     BOOL readingLine = TRUE;
     int pos = 0;
     
     while (readingLine) {
-        // 逐字节读取，构建行
+        // Read byte by byte, build line
         bytesRead = 0;
         pos = 0;
         memset(line, 0, sizeof(line));
@@ -2013,24 +2013,24 @@ void ReadNotificationTimeoutConfig(void) {
             char ch;
             ReadFile(hFile, &ch, 1, &bytesRead, NULL);
             
-            if (bytesRead == 0) { // 文件结束
+            if (bytesRead == 0) { // End of file
                 readingLine = FALSE;
                 break;
             }
             
-            if (ch == '\n') { // 行结束
+            if (ch == '\n') { // End of line
                 break;
             }
             
-            if (ch != '\r') { // 忽略回车符
+            if (ch != '\r') { // Ignore carriage return
                 line[pos++] = ch;
-                if (pos >= sizeof(line) - 1) break; // 防止缓冲区溢出
+                if (pos >= sizeof(line) - 1) break; // Prevent buffer overflow
             }
         }
         
-        line[pos] = '\0'; // 确保字符串结束
+        line[pos] = '\0'; // Ensure string termination
         
-        // 如果没有内容且文件已结束，退出循环
+        // If no content and file has ended, exit loop
         if (pos == 0 && !readingLine) {
             break;
         }
@@ -2041,15 +2041,15 @@ void ReadNotificationTimeoutConfig(void) {
                 NOTIFICATION_TIMEOUT_MS = timeout;
             }
             timeoutFound = TRUE;
-            break; // 找到后就可以退出循环了
+            break; // Found what we're looking for, can exit the loop
         }
     }
     
     CloseHandle(hFile);
     
-    // 如果配置中没找到，保留默认值
+    // If not found in configuration, keep default value
     if (!timeoutFound) {
-        NOTIFICATION_TIMEOUT_MS = 3000; // 确保有默认值
+        NOTIFICATION_TIMEOUT_MS = 3000; // Ensure there's a default value
     }
 }
 
@@ -2079,9 +2079,9 @@ void WriteConfigNotificationTimeout(int timeout_ms) {
     char line[1024];
     BOOL found = FALSE;
     
-    // 逐行读取并写入
+    // Read file content line by line
     while (fgets(line, sizeof(line), source_file)) {
-        // 移除行尾换行符进行比较
+        // Remove trailing newline characters for comparison
         size_t len = strlen(line);
         if (len > 0 && (line[len-1] == '\n' || line[len-1] == '\r')) {
             line[--len] = '\0';
@@ -2093,12 +2093,12 @@ void WriteConfigNotificationTimeout(int timeout_ms) {
             fprintf(temp_file, "NOTIFICATION_TIMEOUT_MS=%d\n", timeout_ms);
             found = TRUE;
         } else {
-            // 还原行尾换行符，原样写回
+            // Restore newline and write back as is
             fprintf(temp_file, "%s\n", line);
         }
     }
     
-    // 如果配置中没找到相应项，则添加
+    // If not found in configuration, add new line
     if (!found) {
         fprintf(temp_file, "NOTIFICATION_TIMEOUT_MS=%d\n", timeout_ms);
     }
@@ -2106,11 +2106,11 @@ void WriteConfigNotificationTimeout(int timeout_ms) {
     fclose(source_file);
     fclose(temp_file);
     
-    // 替换原文件
+    // Replace original file
     remove(config_path);
     rename(temp_path, config_path);
     
-    // 更新全局变量
+    // Update global variable
     NOTIFICATION_TIMEOUT_MS = timeout_ms;
 }
 
@@ -2135,29 +2135,29 @@ void ReadNotificationOpacityConfig(void) {
     );
     
     if (hFile == INVALID_HANDLE_VALUE) {
-        // 文件无法打开，保留当前默认值
+        // File cannot be opened, keep current default value
         return;
     }
     
-    // 跳过UTF-8 BOM标记（如果有）
+    // Skip UTF-8 BOM marker (if present)
     char bom[3];
     DWORD bytesRead;
     ReadFile(hFile, bom, 3, &bytesRead, NULL);
     
     if (bytesRead != 3 || bom[0] != 0xEF || bom[1] != 0xBB || bom[2] != 0xBF) {
-        // 不是BOM，需要回退文件指针
+        // Not a BOM, need to rewind file pointer
         SetFilePointer(hFile, 0, NULL, FILE_BEGIN);
     }
     
     char line[256];
     BOOL opacityFound = FALSE;
     
-    // 逐行读取文件内容
+    // Read file content line by line
     BOOL readingLine = TRUE;
     int pos = 0;
     
     while (readingLine) {
-        // 逐字节读取，构建行
+        // Read byte by byte, build line
         bytesRead = 0;
         pos = 0;
         memset(line, 0, sizeof(line));
@@ -2166,44 +2166,44 @@ void ReadNotificationOpacityConfig(void) {
             char ch;
             ReadFile(hFile, &ch, 1, &bytesRead, NULL);
             
-            if (bytesRead == 0) { // 文件结束
+            if (bytesRead == 0) { // End of file
                 readingLine = FALSE;
                 break;
             }
             
-            if (ch == '\n') { // 行结束
+            if (ch == '\n') { // End of line
                 break;
             }
             
-            if (ch != '\r') { // 忽略回车符
+            if (ch != '\r') { // Ignore carriage return
                 line[pos++] = ch;
-                if (pos >= sizeof(line) - 1) break; // 防止缓冲区溢出
+                if (pos >= sizeof(line) - 1) break; // Prevent buffer overflow
             }
         }
         
-        line[pos] = '\0'; // 确保字符串结束
+        line[pos] = '\0'; // Ensure string termination
         
-        // 如果没有内容且文件已结束，退出循环
+        // If no content and file has ended, exit loop
         if (pos == 0 && !readingLine) {
             break;
         }
         
         if (strncmp(line, "NOTIFICATION_MAX_OPACITY=", 25) == 0) {
             int opacity = atoi(line + 25);
-            // 确保透明度在有效范围内(1-100)
+            // Ensure opacity is within valid range (1-100)
             if (opacity >= 1 && opacity <= 100) {
                 NOTIFICATION_MAX_OPACITY = opacity;
             }
             opacityFound = TRUE;
-            break; // 找到后就可以退出循环了
+            break; // Found what we're looking for, can exit the loop
         }
     }
     
     CloseHandle(hFile);
     
-    // 如果配置中没找到，保留默认值
+    // If not found in configuration, keep default value
     if (!opacityFound) {
-        NOTIFICATION_MAX_OPACITY = 95; // 确保有默认值
+        NOTIFICATION_MAX_OPACITY = 95; // Ensure there's a default value
     }
 }
 
@@ -2234,9 +2234,9 @@ void WriteConfigNotificationOpacity(int opacity) {
     char line[1024];
     BOOL found = FALSE;
     
-    // 逐行读取并写入
+    // Read file content line by line
     while (fgets(line, sizeof(line), source_file)) {
-        // 移除行尾换行符进行比较
+        // Remove trailing newline characters for comparison
         size_t len = strlen(line);
         if (len > 0 && (line[len-1] == '\n' || line[len-1] == '\r')) {
             line[--len] = '\0';
@@ -2248,12 +2248,12 @@ void WriteConfigNotificationOpacity(int opacity) {
             fprintf(temp_file, "NOTIFICATION_MAX_OPACITY=%d\n", opacity);
             found = TRUE;
         } else {
-            // 还原行尾换行符，原样写回
+            // Restore newline and write back as is
             fprintf(temp_file, "%s\n", line);
         }
     }
     
-    // 如果配置中没找到相应项，则添加
+    // If not found in configuration, add new line
     if (!found) {
         fprintf(temp_file, "NOTIFICATION_MAX_OPACITY=%d\n", opacity);
     }
@@ -2261,11 +2261,11 @@ void WriteConfigNotificationOpacity(int opacity) {
     fclose(source_file);
     fclose(temp_file);
     
-    // 替换原文件
+    // Replace original file
     remove(config_path);
     rename(temp_path, config_path);
     
-    // 更新全局变量
+    // Update global variable
     NOTIFICATION_MAX_OPACITY = opacity;
 }
 
