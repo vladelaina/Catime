@@ -1,9 +1,9 @@
 /**
  * @file window.c
- * @brief 窗口管理功能实现
+ * @brief Window management functionality implementation
  * 
- * 本文件实现了应用程序窗口管理相关的功能，
- * 包括窗口创建、位置调整、透明度、点击穿透和拖拽功能。
+ * This file implements the functionality related to application window management,
+ * including window creation, position adjustment, transparency, click-through, and drag functionality.
  */
 
 #include "../include/window.h"
@@ -22,34 +22,34 @@
 // Forward declaration of WindowProcedure (defined in main.c)
 extern LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-// 添加SetProcessDPIAware函数的声明
+// Add declaration for SetProcessDPIAware function
 #ifndef _INC_WINUSER
-// 如果没有被windows.h包含，添加SetProcessDPIAware函数声明
+// If not included by windows.h, add SetProcessDPIAware function declaration
 WINUSERAPI BOOL WINAPI SetProcessDPIAware(VOID);
 #endif
 
-// 窗口尺寸和位置变量
+// Window size and position variables
 int CLOCK_BASE_WINDOW_WIDTH = 200;
 int CLOCK_BASE_WINDOW_HEIGHT = 100;
 float CLOCK_WINDOW_SCALE = 1.0f;
 int CLOCK_WINDOW_POS_X = 100;
 int CLOCK_WINDOW_POS_Y = 100;
 
-// 窗口状态变量
+// Window state variables
 BOOL CLOCK_EDIT_MODE = FALSE;
 BOOL CLOCK_IS_DRAGGING = FALSE;
 POINT CLOCK_LAST_MOUSE_POS = {0, 0};
-BOOL CLOCK_WINDOW_TOPMOST = TRUE;  // 默认置顶
+BOOL CLOCK_WINDOW_TOPMOST = TRUE;  // Default topmost
 
-// 文本区域变量
+// Text area variables
 RECT CLOCK_TEXT_RECT = {0, 0, 0, 0};
 BOOL CLOCK_TEXT_RECT_VALID = FALSE;
 
-// DWM函数指针类型定义
+// DWM function pointer type definition
 typedef HRESULT (WINAPI *pfnDwmEnableBlurBehindWindow)(HWND hWnd, const DWM_BLURBEHIND* pBlurBehind);
 static pfnDwmEnableBlurBehindWindow _DwmEnableBlurBehindWindow = NULL;
 
-// 窗口组合属性类型定义
+// Window composition attribute type definition
 typedef enum _WINDOWCOMPOSITIONATTRIB {
     WCA_UNDEFINED = 0,
     WCA_NCRENDERING_ENABLED = 1,
@@ -108,28 +108,28 @@ typedef struct _ACCENT_POLICY {
 void SetClickThrough(HWND hwnd, BOOL enable) {
     LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
     
-    // 清除之前可能设置的相关样式
+    // Clear previously set related styles
     exStyle &= ~WS_EX_TRANSPARENT;
     
     if (enable) {
-        // 设置为点击穿透
+        // Set click-through
         exStyle |= WS_EX_TRANSPARENT;
         
-        // 如果窗口是分层窗口，确保它正确处理鼠标输入
+        // If the window is a layered window, ensure it properly handles mouse input
         if (exStyle & WS_EX_LAYERED) {
             SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), 255, LWA_COLORKEY);
         }
     } else {
-        // 确保窗口接收所有鼠标输入
+        // Ensure window receives all mouse input
         if (exStyle & WS_EX_LAYERED) {
-            // 保持透明度但允许接收鼠标输入
+            // Maintain transparency but allow receiving mouse input
             SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
         }
     }
     
     SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
     
-    // 更新窗口以应用新样式
+    // Update window to apply new style
     SetWindowPos(hwnd, NULL, 0, 0, 0, 0, 
                  SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
 }
@@ -148,7 +148,7 @@ void SetBlurBehind(HWND hwnd, BOOL enable) {
         ACCENT_POLICY policy = {0};
         policy.AccentState = ACCENT_ENABLE_BLURBEHIND;
         policy.AccentFlags = 0;
-        policy.GradientColor = (180 << 24) | 0x00202020;  // 改为透明度180的深灰色背景
+        policy.GradientColor = (180 << 24) | 0x00202020;  // Changed to dark gray background with 180 transparency
         
         WINDOWCOMPOSITIONATTRIBDATA data = {0};
         data.Attrib = WCA_ACCENT_POLICY;
@@ -186,11 +186,11 @@ void SetBlurBehind(HWND hwnd, BOOL enable) {
 
 void AdjustWindowPosition(HWND hwnd, BOOL forceOnScreen) {
     if (!forceOnScreen) {
-        // 不强制窗口在屏幕内，直接返回
+        // Do not force window to be on screen, return directly
         return;
     }
     
-    // 原有的代码，确保窗口在屏幕内
+    // Original code to ensure window is on screen
     RECT rect;
     GetWindowRect(hwnd, &rect);
     
@@ -203,27 +203,27 @@ void AdjustWindowPosition(HWND hwnd, BOOL forceOnScreen) {
     int x = rect.left;
     int y = rect.top;
     
-    // 确保窗口右边缘不会超出屏幕
+    // Ensure window right edge doesn't exceed screen
     if (x + width > screenWidth) {
         x = screenWidth - width;
     }
     
-    // 确保窗口下边缘不会超出屏幕
+    // Ensure window bottom edge doesn't exceed screen
     if (y + height > screenHeight) {
         y = screenHeight - height;
     }
     
-    // 确保窗口左边缘不会超出屏幕
+    // Ensure window left edge doesn't exceed screen
     if (x < 0) {
         x = 0;
     }
     
-    // 确保窗口上边缘不会超出屏幕
+    // Ensure window top edge doesn't exceed screen
     if (y < 0) {
         y = 0;
     }
     
-    // 如果窗口位置需要调整，则移动窗口
+    // If window position needs adjustment, move the window
     if (x != rect.left || y != rect.top) {
         SetWindowPos(hwnd, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
     }
@@ -368,7 +368,7 @@ void LoadWindowSettings(HWND hwnd) {
     }
     fclose(fp);
     
-    // 直接应用配置文件中的位置，不进行额外调整
+    // Apply position from config file directly, without additional adjustments
     SetWindowPos(hwnd, NULL, 
         CLOCK_WINDOW_POS_X, 
         CLOCK_WINDOW_POS_Y,
@@ -377,20 +377,20 @@ void LoadWindowSettings(HWND hwnd) {
         SWP_NOZORDER
     );
     
-    // 不调用AdjustWindowPosition，避免覆盖用户设置
+    // Don't call AdjustWindowPosition to avoid overriding user settings
 }
 
 BOOL HandleMouseWheel(HWND hwnd, int delta) {
     if (CLOCK_EDIT_MODE) {
         float old_scale = CLOCK_FONT_SCALE_FACTOR;
         
-        // 移除原有的位置计算逻辑，直接使用窗口中心作为缩放基准点
+        // Remove original position calculation logic, directly use window center as scaling reference point
         RECT windowRect;
         GetWindowRect(hwnd, &windowRect);
         int oldWidth = windowRect.right - windowRect.left;
         int oldHeight = windowRect.bottom - windowRect.top;
         
-        // 使用窗口中心作为缩放基准
+        // Use window center as scaling reference
         float relativeX = 0.5f;
         float relativeY = 0.5f;
         
@@ -403,7 +403,7 @@ BOOL HandleMouseWheel(HWND hwnd, int delta) {
             CLOCK_WINDOW_SCALE = CLOCK_FONT_SCALE_FACTOR;
         }
         
-        // 保持缩放范围限制
+        // Maintain scale range limits
         if (CLOCK_FONT_SCALE_FACTOR < MIN_SCALE_FACTOR) {
             CLOCK_FONT_SCALE_FACTOR = MIN_SCALE_FACTOR;
             CLOCK_WINDOW_SCALE = MIN_SCALE_FACTOR;
@@ -414,11 +414,11 @@ BOOL HandleMouseWheel(HWND hwnd, int delta) {
         }
         
         if (old_scale != CLOCK_FONT_SCALE_FACTOR) {
-            // 计算新尺寸
+            // Calculate new dimensions
             int newWidth = (int)(oldWidth * (CLOCK_FONT_SCALE_FACTOR / old_scale));
             int newHeight = (int)(oldHeight * (CLOCK_FONT_SCALE_FACTOR / old_scale));
             
-            // 保持窗口中心位置不变
+            // Keep window center position unchanged
             int newX = windowRect.left + (oldWidth - newWidth)/2;
             int newY = windowRect.top + (oldHeight - newHeight)/2;
             
@@ -427,7 +427,7 @@ BOOL HandleMouseWheel(HWND hwnd, int delta) {
                 newWidth, newHeight,
                 SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOREDRAW);
             
-            // 触发重绘
+            // Trigger redraw
             InvalidateRect(hwnd, NULL, FALSE);
             UpdateWindow(hwnd);
             
@@ -473,7 +473,7 @@ BOOL HandleMouseMove(HWND hwnd) {
 }
 
 HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
-    // 窗口类注册
+    // Window class registration
     WNDCLASS wc = {0};
     wc.lpfnWndProc = WindowProcedure;
     wc.hInstance = hInstance;
@@ -484,15 +484,15 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
         return NULL;
     }
 
-    // 设置扩展样式
+    // Set extended style
     DWORD exStyle = WS_EX_LAYERED | WS_EX_TOOLWINDOW;
     
-    // 如果不是置顶模式，添加WS_EX_NOACTIVATE扩展样式
+    // If not in topmost mode, add WS_EX_NOACTIVATE extended style
     if (!CLOCK_WINDOW_TOPMOST) {
         exStyle |= WS_EX_NOACTIVATE;
     }
     
-    // 创建窗口
+    // Create window
     HWND hwnd = CreateWindowEx(
         exStyle,
         "CatimeWindow",
@@ -514,31 +514,31 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
     EnableWindow(hwnd, TRUE);
     SetFocus(hwnd);
 
-    // 设置窗口透明度
+    // Set window transparency
     SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), 255, LWA_COLORKEY);
 
-    // 设置模糊效果
+    // Set blur effect
     SetBlurBehind(hwnd, FALSE);
 
-    // 初始化托盘图标
+    // Initialize tray icon
     InitTrayIcon(hwnd, hInstance);
 
-    // 显示窗口
+    // Show window
     ShowWindow(hwnd, nCmdShow);
     UpdateWindow(hwnd);
 
-    // 根据置顶状态设置窗口位置和父窗口
+    // Set window position and parent based on topmost status
     if (CLOCK_WINDOW_TOPMOST) {
         SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, 
                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
     } else {
-        // 找到桌面窗口并设置为父窗口
+        // Find desktop window and set as parent
         HWND hProgman = FindWindow("Progman", NULL);
         if (hProgman != NULL) {
-            // 尝试寻找真正的桌面窗口
+            // Try to find the real desktop window
             HWND hDesktop = hProgman;
             
-            // 寻找WorkerW窗口(Win10+常见)
+            // Look for WorkerW window (common in Win10+)
             HWND hWorkerW = FindWindowEx(NULL, NULL, "WorkerW", NULL);
             while (hWorkerW != NULL) {
                 HWND hView = FindWindowEx(hWorkerW, NULL, "SHELLDLL_DefView", NULL);
@@ -549,10 +549,10 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
                 hWorkerW = FindWindowEx(NULL, hWorkerW, "WorkerW", NULL);
             }
             
-            // 设置为桌面的子窗口
+            // Set as child window of desktop
             SetParent(hwnd, hDesktop);
         } else {
-            // 如果找不到桌面窗口，设置为Z顺序底部
+            // If desktop window not found, set to bottom of Z-order
             SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, 
                         SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
         }
@@ -565,16 +565,16 @@ float CLOCK_FONT_SCALE_FACTOR = 1.0f;
 int CLOCK_BASE_FONT_SIZE = 24;
 
 BOOL InitializeApplication(HINSTANCE hInstance) {
-    // 设置DPI感知模式为Per-Monitor DPI Aware，以便在不同DPI显示器之间移动窗口时正确处理缩放
-    // 使用较新的API SetProcessDpiAwarenessContext如果可用，否则回退到旧API
+    // Set DPI awareness mode to Per-Monitor DPI Aware to properly handle scaling when moving window between displays with different DPIs
+    // Use newer API SetProcessDpiAwarenessContext if available, otherwise fallback to older APIs
     
-    // 定义DPI感知相关的常量和类型
+    // Define DPI awareness related constants and types
     #ifndef DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
     DECLARE_HANDLE(DPI_AWARENESS_CONTEXT);
     #define DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 ((DPI_AWARENESS_CONTEXT)-4)
     #endif
     
-    // 定义PROCESS_DPI_AWARENESS枚举
+    // Define PROCESS_DPI_AWARENESS enum
     typedef enum {
         PROCESS_DPI_UNAWARE = 0,
         PROCESS_SYSTEM_DPI_AWARE = 1,
@@ -588,11 +588,11 @@ BOOL InitializeApplication(HINSTANCE hInstance) {
             (SetProcessDpiAwarenessContextFunc)GetProcAddress(hUser32, "SetProcessDpiAwarenessContext");
         
         if (setProcessDpiAwarenessContextFunc) {
-            // DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 是最新的DPI感知模式
-            // 它提供了更好的多显示器DPI支持
+            // DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 is the latest DPI awareness mode
+            // It provides better multi-monitor DPI support
             setProcessDpiAwarenessContextFunc(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
         } else {
-            // 尝试使用较旧的API
+            // Try using older API
             HMODULE hShcore = LoadLibraryA("shcore.dll");
             if (hShcore) {
                 typedef HRESULT(WINAPI* SetProcessDpiAwarenessFunc)(PROCESS_DPI_AWARENESS);
@@ -600,16 +600,16 @@ BOOL InitializeApplication(HINSTANCE hInstance) {
                     (SetProcessDpiAwarenessFunc)GetProcAddress(hShcore, "SetProcessDpiAwareness");
                 
                 if (setProcessDpiAwarenessFunc) {
-                    // PROCESS_PER_MONITOR_DPI_AWARE 对应于每个显示器的DPI感知
+                    // PROCESS_PER_MONITOR_DPI_AWARE corresponds to per-monitor DPI awareness
                     setProcessDpiAwarenessFunc(PROCESS_PER_MONITOR_DPI_AWARE);
                 } else {
-                    // 最后尝试最旧的API
+                    // Finally try the oldest API
                     SetProcessDPIAware();
                 }
                 
                 FreeLibrary(hShcore);
             } else {
-                // 如果shcore.dll不可用，使用最基本的DPI感知API
+                // If shcore.dll is not available, use the most basic DPI awareness API
                 SetProcessDPIAware();
             }
         }
@@ -618,7 +618,7 @@ BOOL InitializeApplication(HINSTANCE hInstance) {
     SetConsoleOutputCP(936);
     SetConsoleCP(936);
 
-    // 修改初始化顺序：先读取配置文件，再初始化其他功能
+    // Modified initialization order: read config file first, then initialize other features
     ReadConfig();
     UpdateStartupShortcut();
     InitializeDefaultLanguage();
@@ -653,46 +653,46 @@ BOOL OpenFileDialog(HWND hwnd, char* filePath, DWORD maxPath) {
     return GetOpenFileName(&ofn);
 }
 
-// 添加设置窗口置顶状态函数
+// Add function to set window topmost state
 void SetWindowTopmost(HWND hwnd, BOOL topmost) {
     CLOCK_WINDOW_TOPMOST = topmost;
     
-    // 获取当前窗口样式
+    // Get current window style
     LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
     
     if (topmost) {
-        // 置顶模式：移除不激活样式（如果存在），添加置顶样式
+        // Topmost mode: remove no-activate style (if exists), add topmost style
         exStyle &= ~WS_EX_NOACTIVATE;
         
-        // 如果之前将窗口设为桌面子窗口，现在需要恢复
-        // 首先将窗口设为顶级窗口，清除父窗口关系
+        // If window was previously set as desktop child window, need to restore
+        // First set window as top-level window, clear parent window relationship
         SetParent(hwnd, NULL);
         
-        // 重置窗口所有者，确保Z-order正确
+        // Reset window owner, ensure Z-order is correct
         SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, 0);
         
-        // 设置窗口位置为顶层，并强制更新窗口
+        // Set window position to top layer, and force window update
         SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED);
     } else {
-        // 非置顶模式：添加不激活样式，防止窗口获得焦点
+        // Non-topmost mode: add no-activate style to prevent window from gaining focus
         exStyle |= WS_EX_NOACTIVATE;
         
-        // 设置为桌面的子窗口
+        // Set as child window of desktop
         HWND hProgman = FindWindow("Progman", NULL);
         HWND hDesktop = NULL;
         
-        // 尝试找到真正的桌面窗口
+        // Try to find the real desktop window
         if (hProgman != NULL) {
-            // 先尝试使用Progman
+            // First try using Progman
             hDesktop = hProgman;
             
-            // 查找WorkerW窗口（Win10上更常见）
+            // Look for WorkerW window (more common on Win10)
             HWND hWorkerW = FindWindowEx(NULL, NULL, "WorkerW", NULL);
             while (hWorkerW != NULL) {
                 HWND hView = FindWindowEx(hWorkerW, NULL, "SHELLDLL_DefView", NULL);
                 if (hView != NULL) {
-                    // 找到了真正的桌面容器
+                    // Found the real desktop container
                     hDesktop = hWorkerW;
                     break;
                 }
@@ -701,22 +701,22 @@ void SetWindowTopmost(HWND hwnd, BOOL topmost) {
         }
         
         if (hDesktop != NULL) {
-            // 将窗口设置为桌面的子窗口，这样可以保持在桌面上
+            // Set window as child of desktop, this keeps it on the desktop
             SetParent(hwnd, hDesktop);
         } else {
-            // 如果找不到桌面窗口，至少放到Z顺序底部
+            // If desktop window not found, at least place at bottom of Z-order
             SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0,
                         SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
         }
     }
     
-    // 应用新的窗口样式
+    // Apply new window style
     SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
     
-    // 强制更新窗口
+    // Force window update
     SetWindowPos(hwnd, NULL, 0, 0, 0, 0,
                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
     
-    // 保存窗口置顶设置
+    // Save window topmost setting
     WriteConfigTopmost(topmost ? "TRUE" : "FALSE");
 }
