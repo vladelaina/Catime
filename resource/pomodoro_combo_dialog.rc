@@ -1,10 +1,10 @@
 #include <windows.h>
 #include "resource.h"
 
-// 设置 UTF-8 编码
+// Set UTF-8 encoding
 #pragma code_page(65001)
 
-// 番茄钟时间组合设置对话框
+// Pomodoro time combination settings dialog
 CLOCK_IDD_POMODORO_COMBO_DIALOG DIALOGEX 0, 0, 200, 130
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION ""

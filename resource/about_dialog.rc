@@ -1,32 +1,32 @@
 #include <windows.h>
 #include "resource.h"
 
-// 设置 UTF-8 编码
+// Set UTF-8 encoding
 #pragma code_page(65001)
 
-// 关于对话框资源定义
+// About dialog resource definition
 IDD_ABOUT_DIALOG DIALOGEX 0, 0, 255, 80
-// 对话框样式：模态框架、居中显示、弹出式窗口、带标题栏和系统菜单
+// Dialog style: modal frame, centered, popup window, with title bar and system menu
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
-// 对话框标题
+// Dialog title
 CAPTION IDC_ABOUT_TITLE_TEXT
-// 使用微软雅黑字体，大小为9
+// Use Microsoft YaHei UI font, size 12
 FONT 12, "Microsoft YaHei UI"
 BEGIN
-    // 程序图标
+    // Program icon
     CONTROL     "",                          IDC_ABOUT_ICON,    "Static", SS_ICON,                   
                                                                           5,  -10, ABOUT_ICON_SIZE, ABOUT_ICON_SIZE
 
-    // 版本信息组
+    // Version information group
     LTEXT       "",                          IDC_VERSION_TEXT,          130,  15, 160, 12
     LTEXT       "",                          IDC_BUILD_DATE,            100,  25, 180, 12
     LTEXT       "",                          IDC_COPYRIGHT,             100,  35, 180, 12
 
-    // 感谢信息
+    // Credits information
     CONTROL     "",                          IDC_CREDIT_LINK,    "Static", SS_NOTIFY | SS_CENTERIMAGE,
                                                                           100,  45, 145, 12
 
-    // 底部链接栏
+    // Bottom links bar
     CONTROL     "",                          IDC_CREDITS,        "Static", SS_NOTIFY | SS_CENTERIMAGE,
                                                                           40,   65,  25, 12
     CONTROL     "",                          IDC_BILIBILI_LINK,  "Static", SS_NOTIFY | SS_CENTERIMAGE,

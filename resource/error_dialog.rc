@@ -1,10 +1,10 @@
 #include <windows.h>
 #include "resource.h"
 
-// 设置 UTF-8 编码
+// Set UTF-8 encoding
 #pragma code_page(65001)
 
-// 错误提示对话框资源定义
+// Error message dialog resource definition
 IDD_ERROR_DIALOG DIALOGEX 0, 0, 160, 40
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 FONT 12, "Microsoft YaHei UI"

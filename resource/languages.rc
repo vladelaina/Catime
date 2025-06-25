@@ -1,7 +1,7 @@
 #include <windows.h>
 #include "resource.h"
 
-// 语言资源ID
+// Language resource IDs
 #define LANG_EN_INI       1001
 #define LANG_ZH_CN_INI    1002
 #define LANG_ZH_TW_INI    1003
@@ -13,7 +13,7 @@
 #define LANG_JA_INI       1009
 #define LANG_KO_INI       1010
 
-// 语言资源数据
+// Language resource data
 LANG_EN_INI RCDATA "languages/en.ini"
 LANG_ZH_CN_INI RCDATA "languages/zh_CN.ini"
 LANG_ZH_TW_INI RCDATA "languages/zh-Hant.ini"
