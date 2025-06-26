@@ -1,9 +1,10 @@
 /**
  * @file language.c
- * @brief 多语言支持模块实现文件
+ * @brief Multilingual support module implementation
  * 
- * 本文件实现了应用程序的多语言支持功能，包含语言检测和本地化字符串处理。
- * 翻译内容作为资源嵌入到可执行文件中。
+ * This file implements the multilingual support functionality for the application, 
+ * including language detection and localized string handling.
+ * Translation content is embedded as resources in the executable file.
  */
 
 #include <windows.h>
@@ -12,41 +13,41 @@
 #include "../include/language.h"
 #include "../resource/resource.h"
 
-/// 全局语言变量，存储当前应用语言设置
-AppLanguage CURRENT_LANGUAGE = APP_LANG_ENGLISH;  // 默认英语
+/// Global language variable, stores the current application language setting
+AppLanguage CURRENT_LANGUAGE = APP_LANG_ENGLISH;  // Default to English
 
-/// 全局哈希表，用于存储当前语言的翻译
+/// Global hash table for storing translations of the current language
 #define MAX_TRANSLATIONS 200
 #define MAX_STRING_LENGTH 1024
 
-// 语言资源ID (定义在languages.rc中)
-#define LANG_EN_INI       1001  // 对应languages/en.ini
-#define LANG_ZH_CN_INI    1002  // 对应languages/zh_CN.ini
-#define LANG_ZH_TW_INI    1003  // 对应languages/zh-Hant.ini
-#define LANG_ES_INI       1004  // 对应languages/es.ini
-#define LANG_FR_INI       1005  // 对应languages/fr.ini
-#define LANG_DE_INI       1006  // 对应languages/de.ini
-#define LANG_RU_INI       1007  // 对应languages/ru.ini
-#define LANG_PT_INI       1008  // 对应languages/pt.ini
-#define LANG_JA_INI       1009  // 对应languages/ja.ini
-#define LANG_KO_INI       1010  // 对应languages/ko.ini
+// Language resource IDs (defined in languages.rc)
+#define LANG_EN_INI       1001  // Corresponds to languages/en.ini
+#define LANG_ZH_CN_INI    1002  // Corresponds to languages/zh_CN.ini
+#define LANG_ZH_TW_INI    1003  // Corresponds to languages/zh-Hant.ini
+#define LANG_ES_INI       1004  // Corresponds to languages/es.ini
+#define LANG_FR_INI       1005  // Corresponds to languages/fr.ini
+#define LANG_DE_INI       1006  // Corresponds to languages/de.ini
+#define LANG_RU_INI       1007  // Corresponds to languages/ru.ini
+#define LANG_PT_INI       1008  // Corresponds to languages/pt.ini
+#define LANG_JA_INI       1009  // Corresponds to languages/ja.ini
+#define LANG_KO_INI       1010  // Corresponds to languages/ko.ini
 
 /**
- * @brief 定义语言字符串键值对结构
+ * @brief Define language string key-value pair structure
  */
 typedef struct {
-    wchar_t english[MAX_STRING_LENGTH];  // 英文键
-    wchar_t translation[MAX_STRING_LENGTH];  // 翻译值
+    wchar_t english[MAX_STRING_LENGTH];  // English key
+    wchar_t translation[MAX_STRING_LENGTH];  // Translated value
 } LocalizedString;
 
 static LocalizedString g_translations[MAX_TRANSLATIONS];
 static int g_translation_count = 0;
 
 /**
- * @brief 获取语言对应的资源ID
+ * @brief Get the resource ID corresponding to a language
  * 
- * @param language 语言枚举值
- * @return UINT 对应的资源ID
+ * @param language Language enumeration value
+ * @return UINT Corresponding resource ID
  */
 static UINT GetLanguageResourceID(AppLanguage language) {
     switch (language) {
@@ -75,55 +76,55 @@ static UINT GetLanguageResourceID(AppLanguage language) {
 }
 
 /**
- * @brief 将UTF-8字符串转换为宽字符（UTF-16）字符串
+ * @brief Convert UTF-8 string to wide character (UTF-16) string
  * 
- * @param utf8 UTF-8字符串
- * @param wstr 输出的宽字符串缓冲区
- * @param wstr_size 缓冲区大小（字符数）
- * @return int 转换后的字符数，失败返回-1
+ * @param utf8 UTF-8 string
+ * @param wstr Output wide character string buffer
+ * @param wstr_size Buffer size (in characters)
+ * @return int Number of characters after conversion, returns -1 if failed
  */
 static int UTF8ToWideChar(const char* utf8, wchar_t* wstr, int wstr_size) {
     return MultiByteToWideChar(CP_UTF8, 0, utf8, -1, wstr, wstr_size) - 1;
 }
 
 /**
- * @brief 解析ini文件中的一行
+ * @brief Parse a line in an ini file
  * 
- * @param line ini文件中的一行
- * @return int 是否解析成功（1成功，0失败）
+ * @param line A line from the ini file
+ * @return int Whether parsing was successful (1 for success, 0 for failure)
  */
 static int ParseIniLine(const wchar_t* line) {
-    // 跳过空行和注释行
+    // Skip empty lines and comment lines
     if (line[0] == L'\0' || line[0] == L';' || line[0] == L'[') {
         return 0;
     }
 
-    // 寻找第一个引号和最后一个引号之间的内容作为key
+    // Find content between the first and last quotes as the key
     const wchar_t* key_start = wcschr(line, L'"');
     if (!key_start) return 0;
-    key_start++; // 跳过第一个引号
+    key_start++; // Skip the first quote
 
     const wchar_t* key_end = wcschr(key_start, L'"');
     if (!key_end) return 0;
 
-    // 寻找等号后面的第一个引号和最后一个引号之间的内容作为value
+    // Find content between the first and last quotes after the equal sign as the value
     const wchar_t* value_start = wcschr(key_end + 1, L'=');
     if (!value_start) return 0;
     
     value_start = wcschr(value_start, L'"');
     if (!value_start) return 0;
-    value_start++; // 跳过第一个引号
+    value_start++; // Skip the first quote
 
     const wchar_t* value_end = wcsrchr(value_start, L'"');
     if (!value_end) return 0;
 
-    // 复制key
+    // Copy key
     size_t key_len = key_end - key_start;
     if (key_len >= MAX_STRING_LENGTH) key_len = MAX_STRING_LENGTH - 1;
     wcsncpy(g_translations[g_translation_count].english, key_start, key_len);
     g_translations[g_translation_count].english[key_len] = L'\0';
 
-    // 复制value
+    // Copy value
     size_t value_len = value_end - value_start;
     if (value_len >= MAX_STRING_LENGTH) value_len = MAX_STRING_LENGTH - 1;
     wcsncpy(g_translations[g_translation_count].translation, value_start, value_len);
@@ -134,26 +135,26 @@ static int ParseIniLine(const wchar_t* line) {
 }
 
 /**
- * @brief 从资源加载指定语言的翻译
+ * @brief Load translations for a specified language from resources
  * 
- * @param language 语言枚举值
- * @return int 是否加载成功
+ * @param language Language enumeration value
+ * @return int Whether loading was successful
  */
 static int LoadLanguageResource(AppLanguage language) {
     UINT resourceID = GetLanguageResourceID(language);
     
-    // 重置翻译计数
+    // Reset translation count
     g_translation_count = 0;
     
-    // 查找资源
+    // Find resource
     HRSRC hResInfo = FindResource(NULL, MAKEINTRESOURCE(resourceID), RT_RCDATA);
     if (!hResInfo) {
-        // 如果找不到，检查是否是中文并返回
+        // If not found, check if it's Chinese and return
         if (language == APP_LANG_CHINESE_SIMP || language == APP_LANG_CHINESE_TRAD) {
             return 0;
         }
         
-        // 非中文，加载英文作为后备
+        // If not Chinese, load English as fallback
         if (language != APP_LANG_ENGLISH) {
             return LoadLanguageResource(APP_LANG_ENGLISH);
         }
@@ -161,46 +162,46 @@ static int LoadLanguageResource(AppLanguage language) {
         return 0;
     }
     
-    // 获取资源大小
+    // Get resource size
     DWORD dwSize = SizeofResource(NULL, hResInfo);
     if (dwSize == 0) {
         return 0;
     }
     
-    // 加载资源
+    // Load resource
     HGLOBAL hResData = LoadResource(NULL, hResInfo);
     if (!hResData) {
         return 0;
     }
     
-    // 锁定资源获取指针
+    // Lock resource to get pointer
     const char* pData = (const char*)LockResource(hResData);
     if (!pData) {
         return 0;
     }
     
-    // 创建内存缓冲区副本
+    // Create memory buffer copy
     char* buffer = (char*)malloc(dwSize + 1);
     if (!buffer) {
         return 0;
     }
     
-    // 复制资源数据到缓冲区
+    // Copy resource data to buffer
     memcpy(buffer, pData, dwSize);
     buffer[dwSize] = '\0';
     
-    // 按行分割并解析
+    // Split by lines and parse
     char* line = strtok(buffer, "\r\n");
     wchar_t wide_buffer[MAX_STRING_LENGTH];
     
     while (line && g_translation_count < MAX_TRANSLATIONS) {
-        // 跳过空行和BOM标记
+        // Skip empty lines and BOM markers
         if (line[0] == '\0' || (line[0] == (char)0xEF && line[1] == (char)0xBB && line[2] == (char)0xBF)) {
             line = strtok(NULL, "\r\n");
             continue;
         }
         
-        // 转换为宽字符
+        // Convert to wide characters
         if (UTF8ToWideChar(line, wide_buffer, MAX_STRING_LENGTH) > 0) {
             ParseIniLine(wide_buffer);
         }
@@ -213,10 +214,10 @@ static int LoadLanguageResource(AppLanguage language) {
 }
 
 /**
- * @brief 在全局翻译表中查找对应翻译
+ * @brief Find corresponding translation in the global translation table
  * 
- * @param english 英文原文
- * @return const wchar_t* 找到的翻译，如果未找到则返回NULL
+ * @param english English original text
+ * @return const wchar_t* Found translation, returns NULL if not found
  */
 static const wchar_t* FindTranslation(const wchar_t* english) {
     for (int i = 0; i < g_translation_count; i++) {
@@ -228,16 +229,16 @@ static const wchar_t* FindTranslation(const wchar_t* english) {
 }
 
 /**
- * @brief 初始化应用程序语言环境
+ * @brief Initialize the application language environment
  * 
- * 根据系统语言自动检测并设置应用程序的当前语言。
- * 支持检测简体中文、繁体中文及其他预设语言。
+ * Automatically detect and set the current language of the application based on system language.
+ * Supports detection of Simplified Chinese, Traditional Chinese, and other preset languages.
  */
 static void DetectSystemLanguage() {
     LANGID langID = GetUserDefaultUILanguage();
     switch (PRIMARYLANGID(langID)) {
         case LANG_CHINESE:
-            // 区分简繁体中文
+            // Distinguish between Simplified and Traditional Chinese
             if (SUBLANGID(langID) == SUBLANG_CHINESE_SIMPLIFIED) {
                 CURRENT_LANGUAGE = APP_LANG_CHINESE_SIMP;
             } else {
@@ -266,55 +267,55 @@ static void DetectSystemLanguage() {
             CURRENT_LANGUAGE = APP_LANG_KOREAN;
             break;
         default:
-            CURRENT_LANGUAGE = APP_LANG_ENGLISH;  // 默认回退到英语
+            CURRENT_LANGUAGE = APP_LANG_ENGLISH;  // Default fallback to English
     }
 }
 
 /**
- * @brief 获取本地化字符串
- * @param chinese 简体中文版本的字符串
- * @param english 英语版本的字符串
- * @return const wchar_t* 当前语言对应的字符串指针
+ * @brief Get localized string
+ * @param chinese Simplified Chinese version of the string
+ * @param english English version of the string
+ * @return const wchar_t* Pointer to the string corresponding to the current language
  * 
- * 根据当前语言设置返回对应语言的字符串。
+ * Returns the string in the corresponding language based on the current language setting.
  */
 const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english) {
-    // 首次调用时初始化翻译资源，但不自动检测系统语言
+    // Initialize translation resources on first call, but don't automatically detect system language
     static BOOL initialized = FALSE;
     if (!initialized) {
-        // 不再调用DetectSystemLanguage()函数自动检测系统语言
-        // 而是使用当前已设置的CURRENT_LANGUAGE值（可能来自配置文件）
+        // No longer call DetectSystemLanguage() to automatically detect system language
+        // Instead, use the currently set CURRENT_LANGUAGE value (possibly from a configuration file)
         LoadLanguageResource(CURRENT_LANGUAGE);
         initialized = TRUE;
     }
 
     const wchar_t* translation = NULL;
 
-    // 如果是简体中文并且提供了中文字符串，直接返回
+    // If Simplified Chinese and Chinese string is provided, return directly
     if (CURRENT_LANGUAGE == APP_LANG_CHINESE_SIMP && chinese) {
         return chinese;
     }
 
-    // 查找翻译
+    // Find translation
     translation = FindTranslation(english);
     if (translation) {
         return translation;
     }
 
-    // 繁体中文但未找到翻译时，返回简体中文作为备选
+    // For Traditional Chinese but no translation found, return Simplified Chinese as a fallback
     if (CURRENT_LANGUAGE == APP_LANG_CHINESE_TRAD && chinese) {
         return chinese;
     }
 
-    // 默认返回英文
+    // Default to English
     return english;
 }
 
 /**
- * @brief 设置应用程序语言
+ * @brief Set application language
  * 
- * @param language 要设置的语言
- * @return BOOL 是否设置成功
+ * @param language The language to set
+ * @return BOOL Whether the setting was successful
  */
 BOOL SetLanguage(AppLanguage language) {
     if (language < 0 || language >= APP_LANG_COUNT) {
@@ -322,34 +323,34 @@ BOOL SetLanguage(AppLanguage language) {
     }
     
     CURRENT_LANGUAGE = language;
-    g_translation_count = 0;  // 清空现有翻译
+    g_translation_count = 0;  // Clear existing translations
     return LoadLanguageResource(language);
 }
 
 /**
- * @brief 获取当前应用程序语言
+ * @brief Get current application language
  * 
- * @return AppLanguage 当前语言
+ * @return AppLanguage Current language
  */
 AppLanguage GetCurrentLanguage() {
     return CURRENT_LANGUAGE;
 }
 
 /**
- * @brief 获取当前语言的名称
- * @param buffer 用于存储语言名称的缓冲区
- * @param bufferSize 缓冲区大小（字符数）
- * @return 是否成功获取语言名称
+ * @brief Get the name of the current language
+ * @param buffer Buffer to store the language name
+ * @param bufferSize Buffer size (in characters)
+ * @return Whether the language name was successfully retrieved
  */
 BOOL GetCurrentLanguageName(wchar_t* buffer, size_t bufferSize) {
     if (!buffer || bufferSize == 0) {
         return FALSE;
     }
     
-    // 获取当前语言
+    // Get current language
     AppLanguage language = GetCurrentLanguage();
     
-    // 根据语言枚举返回对应的名称
+    // Return corresponding name based on language enumeration
     switch (language) {
         case APP_LANG_CHINESE_SIMP:
             wcscpy_s(buffer, bufferSize, L"zh_CN");
