@@ -1,8 +1,8 @@
 /**
  * @file log.c
- * @brief 日志记录功能实现
+ * @brief Log recording functionality implementation
  * 
- * 实现日志记录功能，包括文件写入、错误代码获取等
+ * Implements logging functionality, including file writing, error code retrieval, etc.
  */
 
 #include <stdio.h>
@@ -17,17 +17,17 @@
 #include "../include/config.h"
 #include "../resource/resource.h"
 
-// 添加对ARM64宏的检查
+// Add check for ARM64 macro
 #ifndef PROCESSOR_ARCHITECTURE_ARM64
 #define PROCESSOR_ARCHITECTURE_ARM64 12
 #endif
 
-// 日志文件路径
+// Log file path
 static char LOG_FILE_PATH[MAX_PATH] = {0};
 static FILE* logFile = NULL;
 static CRITICAL_SECTION logCS;
 
-// 日志级别字符串表示
+// Log level string representations
 static const char* LOG_LEVEL_STRINGS[] = {
     "DEBUG",
     "INFO",
@@ -37,16 +37,16 @@ static const char* LOG_LEVEL_STRINGS[] = {
 };
 
 /**
- * @brief 获取操作系统版本信息
+ * @brief Get operating system version information
  * 
- * 使用Windows API获取操作系统版本、版本号、构建等信息
+ * Use Windows API to get operating system version, version number, build and other information
  */
 static void LogSystemInformation(void) {
-    // 获取系统信息
+    // Get system information
     SYSTEM_INFO si;
     GetNativeSystemInfo(&si);
     
-    // 使用RtlGetVersion更精确地获取系统版本，因为GetVersionEx在新版Windows上被改变了
+    // Use RtlGetVersion to get system version more accurately, because GetVersionEx was changed in newer Windows versions
     typedef NTSTATUS(WINAPI* RtlGetVersionPtr)(PRTL_OSVERSIONINFOW);
     HMODULE hNtdll = GetModuleHandleW(L"ntdll.dll");
     
@@ -67,7 +67,7 @@ static void LogSystemInformation(void) {
         }
     }
     
-    // 如果上面的方法失败，尝试下面的方法
+    // If the above method fails, try the method below
     if (major == 0) {
         OSVERSIONINFOEXA osvi;
         ZeroMemory(&osvi, sizeof(OSVERSIONINFOEXA));
@@ -85,7 +85,7 @@ static void LogSystemInformation(void) {
             isWorkstation = (osvi.wProductType == VER_NT_WORKSTATION);
             isServer = !isWorkstation;
         } else {
-            // 最后尝试使用GetVersionExA，虽然可能不准确
+            // Finally try using GetVersionExA, although it may not be accurate
             if (GetVersionExA((OSVERSIONINFOA*)&osvi)) {
                 major = osvi.dwMajorVersion;
                 minor = osvi.dwMinorVersion;
@@ -98,10 +98,10 @@ static void LogSystemInformation(void) {
         }
     }
     
-    // 检测具体的Windows版本
+    // Detect specific Windows version
     const char* windowsVersion = "未知版本";
     
-    // 根据版本号确定具体版本
+    // Determine specific version based on version number
     if (major == 10) {
         if (build >= 22000) {
             windowsVersion = "Windows 11";
@@ -137,7 +137,7 @@ static void LogSystemInformation(void) {
         build, 
         isWorkstation ? "工作站" : "服务器");
     
-    // CPU架构
+    // CPU architecture
     const char* arch;
     switch (si.wProcessorArchitecture) {
         case PROCESSOR_ARCHITECTURE_AMD64:
@@ -158,7 +158,7 @@ static void LogSystemInformation(void) {
     }
     WriteLog(LOG_LEVEL_INFO, "CPU架构: %s", arch);
     
-    // 系统内存信息
+    // System memory information
     MEMORYSTATUSEX memInfo;
     memInfo.dwLength = sizeof(MEMORYSTATUSEX);
     if (GlobalMemoryStatusEx(&memInfo)) {
@@ -168,9 +168,9 @@ static void LogSystemInformation(void) {
             memInfo.dwMemoryLoad);
     }
     
-    // 不获取屏幕分辨率信息，因为这些信息不准确且对于调试并非必要
+    // Don't get screen resolution information as it's not accurate and not necessary for debugging
     
-    // 检查是否启用了UAC
+    // Check if UAC is enabled
     BOOL uacEnabled = FALSE;
     HANDLE hToken;
     if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
@@ -183,7 +183,7 @@ static void LogSystemInformation(void) {
     }
     WriteLog(LOG_LEVEL_INFO, "UAC状态: %s", uacEnabled ? "已启用" : "未启用");
     
-    // 检查是否以管理员运行
+    // Check if running as administrator
     BOOL isAdmin = FALSE;
     SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
     PSID AdministratorsGroup;
@@ -196,31 +196,31 @@ static void LogSystemInformation(void) {
 }
 
 /**
- * @brief 获取日志文件路径
+ * @brief Get log file path
  * 
- * 基于配置文件路径，构建日志文件名
+ * Build log filename based on config file path
  * 
- * @param logPath 日志路径缓冲区
- * @param size 缓冲区大小
+ * @param logPath Log path buffer
+ * @param size Buffer size
  */
 static void GetLogFilePath(char* logPath, size_t size) {
     char configPath[MAX_PATH] = {0};
     
-    // 获取配置文件所在目录
+    // Get directory containing config file
     GetConfigPath(configPath, MAX_PATH);
     
-    // 确定配置文件目录
+    // Determine config file directory
     char* lastSeparator = strrchr(configPath, '\\');
     if (lastSeparator) {
         size_t dirLen = lastSeparator - configPath + 1;
         
-        // 复制目录部分
+        // Copy directory part
         strncpy(logPath, configPath, dirLen);
         
-        // 使用简单的日志文件名
+        // Use simple log filename
         _snprintf_s(logPath + dirLen, size - dirLen, _TRUNCATE, "Catime_Logs.log");
     } else {
-        // 如果无法确定配置目录，使用当前目录
+        // If config directory can't be determined, use current directory
         _snprintf_s(logPath, size, _TRUNCATE, "Catime_Logs.log");
     }
 }
@@ -230,18 +230,18 @@ BOOL InitializeLogSystem(void) {
     
     GetLogFilePath(LOG_FILE_PATH, MAX_PATH);
     
-    // 每次启动时以写入模式打开文件，这会清空原有内容
+    // Open file in write mode each startup, which clears existing content
     logFile = fopen(LOG_FILE_PATH, "w");
     if (!logFile) {
-        // 创建日志文件失败
+        // Failed to create log file
         return FALSE;
     }
     
-    // 记录日志系统初始化信息
+    // Record log system initialization information
     WriteLog(LOG_LEVEL_INFO, "==================================================");
-    // 首先记录软件版本
+    // First record software version
     WriteLog(LOG_LEVEL_INFO, "Catime 版本: %s", CATIME_VERSION);
-    // 然后记录系统环境信息(在任何可能的错误之前)
+    // Then record system environment information (before any possible errors)
     WriteLog(LOG_LEVEL_INFO, "-----------------系统信息-----------------");
     LogSystemInformation();
     WriteLog(LOG_LEVEL_INFO, "-----------------应用信息-----------------");
@@ -257,7 +257,7 @@ void WriteLog(LogLevel level, const char* format, ...) {
     
     EnterCriticalSection(&logCS);
     
-    // 获取当前时间
+    // Get current time
     time_t now;
     struct tm local_time;
     char timeStr[32] = {0};
@@ -266,19 +266,19 @@ void WriteLog(LogLevel level, const char* format, ...) {
     localtime_s(&local_time, &now);
     strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", &local_time);
     
-    // 写入日志头
+    // Write log header
     fprintf(logFile, "[%s] [%s] ", timeStr, LOG_LEVEL_STRINGS[level]);
     
-    // 格式化并写入日志内容
+    // Format and write log content
     va_list args;
     va_start(args, format);
     vfprintf(logFile, format, args);
     va_end(args);
     
-    // 换行
+    // New line
     fprintf(logFile, "\n");
     
-    // 立即刷新缓冲区，确保即使程序崩溃也能保存日志
+    // Flush buffer immediately to ensure logs are saved even if program crashes
     fflush(logFile);
     
     LeaveCriticalSection(&logCS);
@@ -301,7 +301,7 @@ void GetLastErrorDescription(DWORD errorCode, char* buffer, int bufferSize) {
         0, NULL);
     
     if (size > 0) {
-        // 移除末尾的换行符
+        // Remove trailing newlines
         if (size >= 2 && messageBuffer[size-2] == '\r' && messageBuffer[size-1] == '\n') {
             messageBuffer[size-2] = '\0';
         }
@@ -313,7 +313,7 @@ void GetLastErrorDescription(DWORD errorCode, char* buffer, int bufferSize) {
     }
 }
 
-// 信号处理函数 - 用于处理各种C标准信号
+// Signal handler function - used to handle various C standard signals
 void SignalHandler(int signal) {
     char errorMsg[256] = {0};
     
@@ -341,35 +341,35 @@ void SignalHandler(int signal) {
             break;
     }
     
-    // 记录异常信息
+    // Record exception information
     if (logFile) {
         fprintf(logFile, "[FATAL] 发生致命信号: %s (信号编号: %d)\n", 
                 errorMsg, signal);
         fflush(logFile);
         
-        // 关闭日志文件
+        // Close log file
         fclose(logFile);
         logFile = NULL;
     }
     
-    // 显示错误消息框
+    // Display error message box
     MessageBox(NULL, "程序发生严重错误，请查看日志文件获取详细信息。", "致命错误", MB_ICONERROR | MB_OK);
     
-    // 终止程序
+    // Terminate program
     exit(signal);
 }
 
 void SetupExceptionHandler(void) {
-    // 设置标准C信号处理器
-    signal(SIGFPE, SignalHandler);   // 浮点数异常
-    signal(SIGILL, SignalHandler);   // 非法指令
-    signal(SIGSEGV, SignalHandler);  // 段错误
-    signal(SIGTERM, SignalHandler);  // 终止信号
-    signal(SIGABRT, SignalHandler);  // 异常终止
-    signal(SIGINT, SignalHandler);   // 用户中断
+    // Set up standard C signal handlers
+    signal(SIGFPE, SignalHandler);   // Floating point exception
+    signal(SIGILL, SignalHandler);   // Illegal instruction
+    signal(SIGSEGV, SignalHandler);  // Segmentation fault
+    signal(SIGTERM, SignalHandler);  // Termination signal
+    signal(SIGABRT, SignalHandler);  // Abnormal termination
+    signal(SIGINT, SignalHandler);   // User interrupt
 }
 
-// 程序退出时调用此函数清理日志资源
+// Call this function when program exits to clean up log resources
 void CleanupLogSystem(void) {
     if (logFile) {
         WriteLog(LOG_LEVEL_INFO, "Catime 正常退出");
