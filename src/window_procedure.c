@@ -602,7 +602,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             break;
         }
         case WM_DESTROY: {
-            // 窗口销毁时取消注册全局热键
+            // Unregister global hotkeys when window is destroyed
             UnregisterGlobalHotkeys(hwnd);
             HandleWindowDestroy(hwnd);
             return 0;
@@ -612,21 +612,21 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             break;
         }
         case WM_COMMAND: {
-            // 处理预设颜色选项(ID: 201 ~ 201+COLOR_OPTIONS_COUNT-1)
+            // Handle preset color options (ID: 201 ~ 201+COLOR_OPTIONS_COUNT-1)
             if (LOWORD(wp) >= 201 && LOWORD(wp) < 201 + COLOR_OPTIONS_COUNT) {
                 int colorIndex = LOWORD(wp) - 201;
                 if (colorIndex >= 0 && colorIndex < COLOR_OPTIONS_COUNT) {
-                    // 更新当前颜色
+                    // Update current color
                     strncpy(CLOCK_TEXT_COLOR, COLOR_OPTIONS[colorIndex].hexColor, 
                             sizeof(CLOCK_TEXT_COLOR) - 1);
                     CLOCK_TEXT_COLOR[sizeof(CLOCK_TEXT_COLOR) - 1] = '\0';
                     
-                    // 写入配置文件
+                    // Write to config file
                     char config_path[MAX_PATH];
                     GetConfigPath(config_path, MAX_PATH);
                     WriteConfig(config_path);
                     
-                    // 重绘窗口以显示新颜色
+                    // Redraw window to show new color
                     InvalidateRect(hwnd, NULL, TRUE);
                     return 0;
                 }
@@ -665,7 +665,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             extern void StopNotificationSound(void);
                             StopNotificationSound();
                             
-                            // 关闭所有通知窗口
+                            // Close all notification windows
                             CloseAllNotifications();
                             
                             KillTimer(hwnd, 1);
@@ -713,7 +713,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     }
                     break;
                 }
-                // 处理便捷时间选项 (102-102+MAX_TIME_OPTIONS)
+                // Handle quick time options (102-102+MAX_TIME_OPTIONS)
                 case 102: case 103: case 104: case 105: case 106:
                 case 107: case 108: {
                     // 停止任何可能正在播放的通知音频
@@ -728,7 +728,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         int minutes = time_options[index];
                         if (minutes > 0) {
                             KillTimer(hwnd, 1);
-                            CLOCK_TOTAL_TIME = minutes * 60; // 转换为秒
+                            CLOCK_TOTAL_TIME = minutes * 60; // Convert to seconds
                             countdown_elapsed_time = 0;
                             countdown_message_shown = FALSE;
                             CLOCK_COUNT_UP = FALSE;
@@ -753,7 +753,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     }
                     break;
                 }
-                // 处理退出选项
+                // Handle exit option
                 case 109: {
                     ExitProgram(hwnd);
                     break;
@@ -763,7 +763,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         memset(inputText, 0, sizeof(inputText));
                         DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_SHORTCUT_DIALOG), NULL, DlgProc, (LPARAM)CLOCK_IDD_SHORTCUT_DIALOG);
 
-                        // 检查输入是否为空或只包含空格
+                        // Check if input is empty or contains only spaces
                         BOOL isAllSpaces = TRUE;
                         for (int i = 0; inputText[i]; i++) {
                             if (!isspace((unsigned char)inputText[i])) {
@@ -772,7 +772,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             }
                         }
                         
-                        // 如果输入为空或只包含空格，直接退出循环
+                        // If input is empty or contains only spaces, exit the loop
                         if (inputText[0] == '\0' || isAllSpaces) {
                             break;
                         }
@@ -897,7 +897,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     extern void ReadNotificationMessagesConfig(void); // 读取通知消息配置
                     
                     // 重置所有计时器状态变量 - 顺序很重要!
-                    CLOCK_TOTAL_TIME = 25 * 60;      // 1. 先设置总时间为25分钟
+                    CLOCK_TOTAL_TIME = 25 * 60;      // 1. First set total time to 25 minutes
                     elapsed_time = 0;                // 2. 重置main.c中的elapsed_time
                     countdown_elapsed_time = 0;      // 3. 重置timer.c中的countdown_elapsed_time
                     countup_elapsed_time = 0;        // 4. 重置timer.c中的countup_elapsed_time
@@ -905,7 +905,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     countdown_message_shown = FALSE;
                     countup_message_shown = FALSE;
                     
-                    // 设置计时器状态为倒计时模式
+                    // Set timer state to countdown mode
                     CLOCK_COUNT_UP = FALSE;
                     CLOCK_SHOW_CURRENT_TIME = FALSE;
                     CLOCK_IS_PAUSED = FALSE;
@@ -1438,7 +1438,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         countdown_elapsed_time = 0;
                         CLOCK_TOTAL_TIME = 0;
                         message_shown = 0;   // 重置消息显示状态
-                        // 设置定时器但使用更长的间隔，因为不再需要秒级更新
+                        // Set timer with longer interval because second-level updates are no longer needed
                         SetTimer(hwnd, 1, 1000, NULL); 
                     }
                     InvalidateRect(hwnd, NULL, TRUE);
