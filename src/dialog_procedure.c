@@ -685,11 +685,11 @@ LRESULT APIENTRY LoopEditSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARA
     switch (uMsg) {
     case WM_KEYDOWN: {
         if (wParam == VK_RETURN) {
-            // 发送BM_CLICK消息给父窗口（对话框）
+            // Send BM_CLICK message to the parent window (dialog)
             SendMessage(GetParent(hwnd), WM_COMMAND, MAKEWPARAM(CLOCK_IDC_BUTTON_OK, BN_CLICKED), (LPARAM)hwnd);
             return 0;
         }
-        // 处理Ctrl+A全选
+        // Handle Ctrl+A select all
         if (wParam == 'A' && GetKeyState(VK_CONTROL) < 0) {
             SendMessage(hwnd, EM_SETSEL, 0, -1);
             return 0;
@@ -697,11 +697,11 @@ LRESULT APIENTRY LoopEditSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARA
         break;
     }
     case WM_CHAR: {
-        // 处理Ctrl+A的字符消息，防止发出提示音
+        // Handle Ctrl+A character message to prevent alert sound
         if (GetKeyState(VK_CONTROL) < 0 && (wParam == 1 || wParam == 'a' || wParam == 'A')) {
             return 0;
         }
-        // 阻止回车键产生的字符消息进一步处理，防止发出提示音
+        // Prevent Enter key from generating character messages for further processing to avoid alert sound
         if (wParam == VK_RETURN) { // VK_RETURN (0x0D) is the char code for Enter
             return 0;
         }
@@ -1921,19 +1921,19 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 g_hwndNotificationSettingsDialog = NULL;
                 return TRUE;
             } else if (LOWORD(wParam) == IDCANCEL) {
-                // 确保停止正在播放的音频
+                // Ensure any playing audio is stopped
                 if (isPlaying) {
                     StopNotificationSound();
                     isPlaying = FALSE;
                 }
                 
-                // 恢复原始音量设置
+                // Restore original volume setting
                 NOTIFICATION_SOUND_VOLUME = originalVolume;
                 
-                // 重新应用原始音量
+                // Reapply original volume
                 SetAudioVolume(originalVolume);
                 
-                // 关闭对话框前清理回调
+                // Clean up callback before closing dialog
                 SetAudioPlaybackCompleteCallback(NULL, NULL);
                 
                 EndDialog(hwndDlg, IDCANCEL);
