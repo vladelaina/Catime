@@ -21,6 +21,8 @@
 </p>
 
 <p align="center"><a href="https://vladelaina.github.io/Catime/">Official Site</a> · <a href="https://vladelaina.github.io/Catime/guide.html">Guide</a> · <a href="https://vladelaina.github.io/Catime/about.html">About</a> · <a href="https://github.com/users/vladelaina/projects/2/views/1">Project Board</a> · <a href="https://github.com/vladelaina/Catime/issues">Feedback</a></p>
+<p align="center">English· <a href="./i18n/README_zh-CN.md">简体中文</a> · <a href="./i18n/README_zh-Hant.md">繁體中文</a> · <a href="./i18n/README_ja.md">日本語</a> · <a href="./i18n/README_es.md">Español</a> · <a href="./i18n/README_fr.md">Français</a> · <a href="./i18n/README_de.md">Deutsch</a> · <a href="./i18n/README_ru.md">Русский</a> · <a href="./i18n/README_pt.md">Português</a> · <a href="./i18n/README_ko.md">한국어</a></p>
+
 
 <div align="center">
 
@@ -51,8 +53,6 @@
 <div align="center" style="margin-bottom: 30px;">
   <video src="https://github.com/user-attachments/assets/99793950-3a07-452b-85ee-c26711d2d9a1" autoplay loop style="border-radius: 8px; max-width: 800px;"></video>
 </div>
-
-<p align="center">English· <a href="./i18n/README_zh-CN.md">简体中文</a> · <a href="./i18n/README_zh-Hant.md">繁體中文</a> · <a href="./i18n/README_ja.md">日本語</a> · <a href="./i18n/README_es.md">Español</a> · <a href="./i18n/README_fr.md">Français</a> · <a href="./i18n/README_de.md">Deutsch</a> · <a href="./i18n/README_ru.md">Русский</a> · <a href="./i18n/README_pt.md">Português</a> · <a href="./i18n/README_ko.md">한국어</a></p>
 
 <!-- Community Links -->
 <div align="center" style="margin-bottom: 30px;">
