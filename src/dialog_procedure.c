@@ -1639,22 +1639,22 @@ static void PopulateSoundComboBox(HWND hwndDlg) {
 }
 
 /**
- * @brief 整合后的通知设置对话框处理程序
- * @param hwndDlg 对话框句柄
- * @param msg 消息类型
- * @param wParam 消息参数
- * @param lParam 消息参数
- * @return INT_PTR 消息处理结果
+ * @brief Integrated notification settings dialog procedure
+ * @param hwndDlg Dialog handle
+ * @param msg Message type
+ * @param wParam Message parameter
+ * @param lParam Message parameter
+ * @return INT_PTR Message processing result
  * 
- * 整合了通知内容和通知显示的统一设置界面
+ * Integrates notification content and notification display settings in a unified interface
  */
 INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
-    static BOOL isPlaying = FALSE; // 添加一个静态变量来跟踪播放状态
-    static int originalVolume = 0; // 添加一个静态变量保存原始音量
+    static BOOL isPlaying = FALSE; // Add a static variable to track playback status
+    static int originalVolume = 0; // Add a static variable to store original volume
     
     switch (msg) {
         case WM_INITDIALOG: {
-            // 读取最新配置到全局变量
+            // Read latest configuration to global variables
             ReadNotificationMessagesConfig();
             ReadNotificationTimeoutConfig();
             ReadNotificationOpacityConfig();
@@ -1662,64 +1662,64 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             ReadNotificationSoundConfig();
             ReadNotificationVolumeConfig();
             
-            // 保存原始音量值，用于取消操作时恢复
+            // Save original volume value for restoration when canceling
             originalVolume = NOTIFICATION_SOUND_VOLUME;
             
-            // 应用多语言支持
+            // Apply multilingual support
             ApplyDialogLanguage(hwndDlg, CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG);
             
-            // 设置通知消息文本 - 使用Unicode函数
+            // Set notification message text - using Unicode functions
             wchar_t wideText[256];
             
-            // 第一个编辑框 - 倒计时超时提示
+            // First edit box - Countdown timeout message
             MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_MESSAGE_TEXT, -1, 
                                wideText, sizeof(wideText)/sizeof(wchar_t));
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, wideText);
             
-            // 第二个编辑框 - 番茄钟超时提示
+            // Second edit box - Pomodoro timeout message
             MultiByteToWideChar(CP_UTF8, 0, POMODORO_TIMEOUT_MESSAGE_TEXT, -1, 
                                wideText, sizeof(wideText)/sizeof(wchar_t));
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT2, wideText);
             
-            // 第三个编辑框 - 番茄钟循环完成提示
+            // Third edit box - Pomodoro cycle completion message
             MultiByteToWideChar(CP_UTF8, 0, POMODORO_CYCLE_COMPLETE_TEXT, -1, 
                                wideText, sizeof(wideText)/sizeof(wchar_t));
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT3, wideText);
             
-            // 设置通知显示时间
+            // Set notification display time
             SYSTEMTIME st = {0};
             GetLocalTime(&st);
             
-            // 读取禁用通知设置
+            // Read notification disabled setting
             ReadNotificationDisabledConfig();
             
-            // 根据禁用状态设置复选框
+            // Set checkbox based on disabled state
             CheckDlgButton(hwndDlg, IDC_DISABLE_NOTIFICATION_CHECK, NOTIFICATION_DISABLED ? BST_CHECKED : BST_UNCHECKED);
             
-            // 设置时间控件的启用/禁用状态
+            // Enable/disable time control based on state
             EnableWindow(GetDlgItem(hwndDlg, IDC_NOTIFICATION_TIME_EDIT), !NOTIFICATION_DISABLED);
             
-            // 设置时间控件的值 - 无论是否禁用都显示实际配置的时间
+            // Set time control value - display actual configured time regardless of disabled state
             int totalSeconds = NOTIFICATION_TIMEOUT_MS / 1000;
             st.wHour = totalSeconds / 3600;
             st.wMinute = (totalSeconds % 3600) / 60;
             st.wSecond = totalSeconds % 60;
             
-            // 设置时间控件的初始值
+            // Set time control's initial value
             SendDlgItemMessage(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, DTM_SETSYSTEMTIME, 
                               GDT_VALID, (LPARAM)&st);
 
-            // 设置通知透明度滑动条
+            // Set notification opacity slider
             HWND hwndOpacitySlider = GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT);
             SendMessage(hwndOpacitySlider, TBM_SETRANGE, TRUE, MAKELONG(1, 100));
             SendMessage(hwndOpacitySlider, TBM_SETPOS, TRUE, NOTIFICATION_MAX_OPACITY);
             
-            // 更新透明度文本
+            // Update opacity text
             wchar_t opacityText[16];
             StringCbPrintfW(opacityText, sizeof(opacityText), L"%d%%", NOTIFICATION_MAX_OPACITY);
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_OPACITY_TEXT, opacityText);
             
-            // 设置通知类型单选按钮
+            // Set notification type radio buttons
             switch (NOTIFICATION_TYPE) {
                 case NOTIFICATION_TYPE_CATIME:
                     CheckDlgButton(hwndDlg, IDC_NOTIFICATION_TYPE_CATIME, BST_CHECKED);
@@ -1732,52 +1732,52 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                     break;
             }
             
-            // 填充音频下拉框
+            // Populate audio dropdown
             PopulateSoundComboBox(hwndDlg);
             
-            // 设置音量滑块
+            // Set volume slider
             HWND hwndSlider = GetDlgItem(hwndDlg, IDC_VOLUME_SLIDER);
             SendMessage(hwndSlider, TBM_SETRANGE, TRUE, MAKELONG(0, 100));
             SendMessage(hwndSlider, TBM_SETPOS, TRUE, NOTIFICATION_SOUND_VOLUME);
             
-            // 更新音量文本
+            // Update volume text
             wchar_t volumeText[16];
             StringCbPrintfW(volumeText, sizeof(volumeText), L"%d%%", NOTIFICATION_SOUND_VOLUME);
             SetDlgItemTextW(hwndDlg, IDC_VOLUME_TEXT, volumeText);
             
-            // 在初始化时重置播放状态
+            // Reset playback state on initialization
             isPlaying = FALSE;
             
-            // 设置音频播放完成回调函数
+            // Set audio playback completion callback
             SetAudioPlaybackCompleteCallback(hwndDlg, OnAudioPlaybackComplete);
             
-            // 保存对话框句柄
+            // Save dialog handle
             g_hwndNotificationSettingsDialog = hwndDlg;
             
             return TRUE;
         }
         
         case WM_HSCROLL: {
-            // 处理滑块拖动事件
+            // Handle slider drag events
             if (GetDlgItem(hwndDlg, IDC_VOLUME_SLIDER) == (HWND)lParam) {
-                // 获取滑块当前位置
+                // Get slider's current position
                 int volume = (int)SendMessage((HWND)lParam, TBM_GETPOS, 0, 0);
                 
-                // 更新音量百分比文本
+                // Update volume percentage text
                 wchar_t volumeText[16];
                 StringCbPrintfW(volumeText, sizeof(volumeText), L"%d%%", volume);
                 SetDlgItemTextW(hwndDlg, IDC_VOLUME_TEXT, volumeText);
                 
-                // 实时应用音量设置
+                // Apply volume setting in real-time
                 SetAudioVolume(volume);
                 
                 return TRUE;
             }
             else if (GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT) == (HWND)lParam) {
-                // 获取滑块当前位置
+                // Get slider's current position
                 int opacity = (int)SendMessage((HWND)lParam, TBM_GETPOS, 0, 0);
                 
-                // 更新透明度百分比文本
+                // Update opacity percentage text
                 wchar_t opacityText[16];
                 StringCbPrintfW(opacityText, sizeof(opacityText), L"%d%%", opacity);
                 SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_OPACITY_TEXT, opacityText);
@@ -1788,24 +1788,24 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
         }
         
         case WM_COMMAND:
-            // 处理禁用通知复选框状态变化
+            // Handle notification disable checkbox state change
             if (LOWORD(wParam) == IDC_DISABLE_NOTIFICATION_CHECK && HIWORD(wParam) == BN_CLICKED) {
                 BOOL isChecked = (IsDlgButtonChecked(hwndDlg, IDC_DISABLE_NOTIFICATION_CHECK) == BST_CHECKED);
                 EnableWindow(GetDlgItem(hwndDlg, IDC_NOTIFICATION_TIME_EDIT), !isChecked);
                 return TRUE;
             }
             else if (LOWORD(wParam) == IDOK) {
-                // 获取通知消息文本 - 使用Unicode函数
+                // Get notification message text - using Unicode functions
                 wchar_t wTimeout[256] = {0};
                 wchar_t wPomodoro[256] = {0};
                 wchar_t wCycle[256] = {0};
                 
-                // 获取Unicode文本
+                // Get Unicode text
                 GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, wTimeout, sizeof(wTimeout)/sizeof(wchar_t));
                 GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT2, wPomodoro, sizeof(wPomodoro)/sizeof(wchar_t));
                 GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT3, wCycle, sizeof(wCycle)/sizeof(wchar_t));
                 
-                // 转换为UTF-8
+                // Convert to UTF-8
                 char timeout_msg[256] = {0};
                 char pomodoro_msg[256] = {0};
                 char cycle_complete_msg[256] = {0};
@@ -1817,42 +1817,43 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 WideCharToMultiByte(CP_UTF8, 0, wCycle, -1, 
                                     cycle_complete_msg, sizeof(cycle_complete_msg), NULL, NULL);
                 
-                // 获取通知显示时间
+                // Get notification display time
                 SYSTEMTIME st = {0};
                 
-                // 检查是否勾选了禁用通知复选框
+                // Check if notification disable checkbox is checked
                 BOOL isDisabled = (IsDlgButtonChecked(hwndDlg, IDC_DISABLE_NOTIFICATION_CHECK) == BST_CHECKED);
                 
-                // 保存禁用状态
+                // Save disabled state
                 NOTIFICATION_DISABLED = isDisabled;
                 WriteConfigNotificationDisabled(isDisabled);
                 
-                // 获取通知时间设置
+                // Get notification time settings
+                // Get notification time settings
                 if (SendDlgItemMessage(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, DTM_GETSYSTEMTIME, 0, (LPARAM)&st) == GDT_VALID) {
-                    // 计算总秒数: 时*3600 + 分*60 + 秒
+                    // Calculate total seconds: hours*3600 + minutes*60 + seconds
                     int totalSeconds = st.wHour * 3600 + st.wMinute * 60 + st.wSecond;
                     
                     if (totalSeconds == 0) {
-                        // 如果时间为00:00:00，设置为0（表示禁用通知）
+                        // If time is 00:00:00, set to 0 (meaning disable notifications)
                         NOTIFICATION_TIMEOUT_MS = 0;
                         WriteConfigNotificationTimeout(NOTIFICATION_TIMEOUT_MS);
                         
                     } else if (!isDisabled) {
-                        // 只有在不禁用的情况下才更新非零的通知时间
+                        // Only update non-zero notification time if not disabled
                         NOTIFICATION_TIMEOUT_MS = totalSeconds * 1000;
                         WriteConfigNotificationTimeout(NOTIFICATION_TIMEOUT_MS);
                     }
                 }
-                // 如果禁用通知，则不修改通知时间配置
+                // If notifications are disabled, don't modify notification time configuration
                 
-                // 获取通知透明度（从滑动条获取）
+                // Get notification opacity (from slider)
                 HWND hwndOpacitySlider = GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT);
                 int opacity = (int)SendMessage(hwndOpacitySlider, TBM_GETPOS, 0, 0);
                 if (opacity >= 1 && opacity <= 100) {
                     NOTIFICATION_MAX_OPACITY = opacity;
                 }
                 
-                // 获取通知类型
+                // Get notification type
                 if (IsDlgButtonChecked(hwndDlg, IDC_NOTIFICATION_TYPE_CATIME)) {
                     NOTIFICATION_TYPE = NOTIFICATION_TYPE_CATIME;
                 } else if (IsDlgButtonChecked(hwndDlg, IDC_NOTIFICATION_TYPE_OS)) {
@@ -1861,28 +1862,28 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                     NOTIFICATION_TYPE = NOTIFICATION_TYPE_SYSTEM_MODAL;
                 }
                 
-                // 获取选中的音频文件
+                // Get selected audio file
                 HWND hwndCombo = GetDlgItem(hwndDlg, IDC_NOTIFICATION_SOUND_COMBO);
                 int index = SendMessage(hwndCombo, CB_GETCURSEL, 0, 0);
-                if (index > 0) { // 0是"无"选项
+                if (index > 0) { // 0 is "None" option
                     wchar_t wFileName[MAX_PATH];
                     SendMessageW(hwndCombo, CB_GETLBTEXT, index, (LPARAM)wFileName);
                     
-                    // 检查是否选择了"系统提示音"
+                    // Check if "System Beep" is selected
                     const wchar_t* sysBeepText = GetLocalizedString(L"System Beep", L"System Beep");
                     if (wcscmp(wFileName, sysBeepText) == 0) {
-                        // 使用特殊标记来表示系统提示音
+                        // Use special marker to represent system beep
                         StringCbCopyA(NOTIFICATION_SOUND_FILE, sizeof(NOTIFICATION_SOUND_FILE), "SYSTEM_BEEP");
                     } else {
-                        // 获取音频文件夹路径
+                        // Get audio folder path
                         char audio_path[MAX_PATH];
                         GetAudioFolderPath(audio_path, MAX_PATH);
                         
-                        // 转换为UTF-8路径
+                        // Convert to UTF-8 path
                         char fileName[MAX_PATH];
                         WideCharToMultiByte(CP_UTF8, 0, wFileName, -1, fileName, MAX_PATH, NULL, NULL);
                         
-                        // 构建完整的文件路径
+                        // Build complete file path
                         memset(NOTIFICATION_SOUND_FILE, 0, MAX_PATH);
                         StringCbPrintfA(NOTIFICATION_SOUND_FILE, MAX_PATH, "%s\\%s", audio_path, fileName);
                     }
@@ -1890,12 +1891,12 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                     NOTIFICATION_SOUND_FILE[0] = '\0';
                 }
                 
-                // 获取音量滑块位置
+                // Get volume slider position
                 HWND hwndSlider = GetDlgItem(hwndDlg, IDC_VOLUME_SLIDER);
                 int volume = (int)SendMessage(hwndSlider, TBM_GETPOS, 0, 0);
                 NOTIFICATION_SOUND_VOLUME = volume;
                 
-                // 保存所有设置
+                // Save all settings
                 WriteConfigNotificationMessages(
                     timeout_msg,
                     pomodoro_msg,
@@ -1907,13 +1908,13 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 WriteConfigNotificationSound(NOTIFICATION_SOUND_FILE);
                 WriteConfigNotificationVolume(NOTIFICATION_SOUND_VOLUME);
                 
-                // 确保停止正在播放的音频
+                // Ensure any playing audio is stopped
                 if (isPlaying) {
                     StopNotificationSound();
                     isPlaying = FALSE;
                 }
                 
-                // 关闭对话框前清理回调
+                // Clean up callback before closing dialog
                 SetAudioPlaybackCompleteCallback(NULL, NULL);
                 
                 EndDialog(hwndDlg, IDOK);
