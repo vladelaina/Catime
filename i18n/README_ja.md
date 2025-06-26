@@ -70,12 +70,12 @@
 
 ## 📥 ダウンロード
 
-[<img src="https://get.microsoft.com/images/ja-jp%20dark.svg" alt="Microsoftから取得" height="104">](https://apps.microsoft.com/detail/9n3mzdf1z34v?referrer=appbadge&launch=true&mode=full)
+[<img src="https://get.microsoft.com/images/en-us%20dark.svg" alt="Get it from Microsoft" height="104">](https://apps.microsoft.com/detail/9n3mzdf1z34v?referrer=appbadge&launch=true&mode=full)
 #### 🪟 Winget
 
 ```bash
 winget install --id VladElaina.Catime
-
+```
 #### 💾 手動ダウンロード
 
 [GitHub Releases](https://github.com/vladelaina/Catime/releases/latest)から最新バージョンをダウンロード。
@@ -386,5 +386,5 @@ By vladelaina\
 Made with ❤️ & ⌨️
 
 </div>
-```
+
 
