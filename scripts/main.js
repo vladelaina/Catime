@@ -370,11 +370,13 @@ function initLanguageToggle() {
             
             // 特别感谢区域
             '特别感谢 🙏': 'Special Thanks 🙏',
-            '特别感谢以下大佬对于本项目的推荐（按时间排序）': 'Special thanks to the following creators for recommending this project (chronological order)',
+            '特别感谢以下大佬对于本项目的推荐': 'Special thanks to the following creators for recommending this project',
+            '（按时间排序）': '(chronological order)',
             
             // 贡献者区域
             '致谢贡献者 🙏': 'Contributors 🙏',
             '感谢所有为 Catime 做出贡献的小伙伴们！': 'Thanks to everyone who contributed to Catime!',
+            '（按时间排序）': '(chronological order)',
             
             // 动态生成的文本
             '准备好和 Catime 一起管理时间了吗？': 'Ready to manage time with Catime?',
