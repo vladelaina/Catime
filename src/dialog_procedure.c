@@ -1532,7 +1532,7 @@ void ShowNotificationDisplayDialog(HWND hwndParent) {
     }
 }
 
-// 添加全局变量来跟踪整合后的通知设置对话框句柄
+// Add global variable to track the integrated notification settings dialog handle
 static HWND g_hwndNotificationSettingsDialog = NULL;
 
 /**
@@ -1563,8 +1563,8 @@ static void OnAudioPlaybackComplete(HWND hwnd) {
 }
 
 /**
- * @brief 填充音频下拉框
- * @param hwndDlg 对话框句柄
+ * @brief Populate audio dropdown box
+ * @param hwndDlg Dialog handle
  */
 static void PopulateSoundComboBox(HWND hwndDlg) {
     HWND hwndCombo = GetDlgItem(hwndDlg, IDC_NOTIFICATION_SOUND_COMBO);
@@ -1941,12 +1941,12 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 return TRUE;
             } else if (LOWORD(wParam) == IDC_TEST_SOUND_BUTTON) {
                 if (!isPlaying) {
-                    // 当前不在播放，开始播放并更改按钮文本为"结束"
+                    // Currently not playing, start playback and change button text to "Stop"
                     HWND hwndCombo = GetDlgItem(hwndDlg, IDC_NOTIFICATION_SOUND_COMBO);
                     int index = SendMessage(hwndCombo, CB_GETCURSEL, 0, 0);
                     
-                    if (index > 0) { // 0是"无"选项
-                        // 获取当前滑块音量并应用
+                    if (index > 0) { // 0 is the "None" option
+                        // Get current slider volume and apply it
                         HWND hwndSlider = GetDlgItem(hwndDlg, IDC_VOLUME_SLIDER);
                         int volume = (int)SendMessage(hwndSlider, TBM_GETPOS, 0, 0);
                         SetAudioVolume(volume);
@@ -1954,59 +1954,59 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                         wchar_t wFileName[MAX_PATH];
                         SendMessageW(hwndCombo, CB_GETLBTEXT, index, (LPARAM)wFileName);
                         
-                        // 临时保存当前音频设置
+                        // Temporarily save current audio settings
                         char tempSoundFile[MAX_PATH];
                         StringCbCopyA(tempSoundFile, sizeof(tempSoundFile), NOTIFICATION_SOUND_FILE);
                         
-                        // 临时设置音频文件
+                        // Temporarily set audio file
                         const wchar_t* sysBeepText = GetLocalizedString(L"System Beep", L"System Beep");
                         if (wcscmp(wFileName, sysBeepText) == 0) {
-                            // 使用特殊标记
+                            // Use special marker
                             StringCbCopyA(NOTIFICATION_SOUND_FILE, sizeof(NOTIFICATION_SOUND_FILE), "SYSTEM_BEEP");
                         } else {
-                            // 获取音频文件夹路径
+                            // Get audio folder path
                             char audio_path[MAX_PATH];
                             GetAudioFolderPath(audio_path, MAX_PATH);
                             
-                            // 转换为UTF-8路径
+                            // Convert to UTF-8 path
                             char fileName[MAX_PATH];
                             WideCharToMultiByte(CP_UTF8, 0, wFileName, -1, fileName, MAX_PATH, NULL, NULL);
                             
-                            // 构建完整的文件路径
+                            // Build complete file path
                             memset(NOTIFICATION_SOUND_FILE, 0, MAX_PATH);
                             StringCbPrintfA(NOTIFICATION_SOUND_FILE, MAX_PATH, "%s\\%s", audio_path, fileName);
                         }
                         
-                        // 播放音频
+                        // Play audio
                         if (PlayNotificationSound(hwndDlg)) {
-                            // 播放成功，更改按钮文本为"结束"
+                            // Playback successful, change button text to "Stop"
                             SetDlgItemTextW(hwndDlg, IDC_TEST_SOUND_BUTTON, GetLocalizedString(L"Stop", L"Stop"));
                             isPlaying = TRUE;
                         }
                         
-                        // 恢复之前的设置
+                        // Restore previous settings
                         StringCbCopyA(NOTIFICATION_SOUND_FILE, sizeof(NOTIFICATION_SOUND_FILE), tempSoundFile);
                     }
                 } else {
-                    // 当前正在播放，停止播放并恢复按钮文本
+                    // Currently playing, stop playback and restore button text
                     StopNotificationSound();
                     SetDlgItemTextW(hwndDlg, IDC_TEST_SOUND_BUTTON, GetLocalizedString(L"Test", L"Test"));
                     isPlaying = FALSE;
                 }
                 return TRUE;
             } else if (LOWORD(wParam) == IDC_OPEN_SOUND_DIR_BUTTON) {
-                // 获取音频目录路径
+                // Get audio directory path
                 char audio_path[MAX_PATH];
                 GetAudioFolderPath(audio_path, MAX_PATH);
                 
-                // 确保目录存在
+                // Ensure directory exists
                 wchar_t wAudioPath[MAX_PATH];
                 MultiByteToWideChar(CP_UTF8, 0, audio_path, -1, wAudioPath, MAX_PATH);
                 
-                // 打开目录
+                // Open directory
                 ShellExecuteW(hwndDlg, L"open", wAudioPath, NULL, NULL, SW_SHOWNORMAL);
                 
-                // 记录当前选择的音频文件
+                // Record currently selected audio file
                 HWND hwndCombo = GetDlgItem(hwndDlg, IDC_NOTIFICATION_SOUND_COMBO);
                 int selectedIndex = SendMessage(hwndCombo, CB_GETCURSEL, 0, 0);
                 wchar_t selectedFile[MAX_PATH] = {0};
@@ -2014,36 +2014,36 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                     SendMessageW(hwndCombo, CB_GETLBTEXT, selectedIndex, (LPARAM)selectedFile);
                 }
                 
-                // 重新填充音频下拉框
+                // Repopulate audio dropdown
                 PopulateSoundComboBox(hwndDlg);
                 
-                // 尝试恢复之前的选择
+                // Try to restore previous selection
                 if (selectedFile[0] != L'\0') {
                     int newIndex = SendMessageW(hwndCombo, CB_FINDSTRINGEXACT, -1, (LPARAM)selectedFile);
                     if (newIndex != CB_ERR) {
                         SendMessage(hwndCombo, CB_SETCURSEL, newIndex, 0);
                     } else {
-                        // 如果找不到之前的选择，默认选择"无"
+                        // If previous selection not found, default to "None"
                         SendMessage(hwndCombo, CB_SETCURSEL, 0, 0);
                     }
                 }
                 
                 return TRUE;
             } else if (LOWORD(wParam) == IDC_NOTIFICATION_SOUND_COMBO && HIWORD(wParam) == CBN_DROPDOWN) {
-                // 下拉列表将要打开时，重新加载文件列表
+                // When dropdown is about to open, reload file list
                 HWND hwndCombo = GetDlgItem(hwndDlg, IDC_NOTIFICATION_SOUND_COMBO);
                 
-                // 记录当前选择的文件
+                // Record currently selected file
                 int selectedIndex = SendMessage(hwndCombo, CB_GETCURSEL, 0, 0);
                 wchar_t selectedFile[MAX_PATH] = {0};
                 if (selectedIndex > 0) {
                     SendMessageW(hwndCombo, CB_GETLBTEXT, selectedIndex, (LPARAM)selectedFile);
                 }
                 
-                // 重新填充下拉框
+                // Repopulate dropdown
                 PopulateSoundComboBox(hwndDlg);
                 
-                // 恢复之前的选择
+                // Restore previous selection
                 if (selectedFile[0] != L'\0') {
                     int newIndex = SendMessageW(hwndCombo, CB_FINDSTRINGEXACT, -1, (LPARAM)selectedFile);
                     if (newIndex != CB_ERR) {
@@ -2055,19 +2055,19 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             }
             break;
             
-        // 添加自定义消息处理，用于音频播放完成通知
+        // Add custom message handling for audio playback completion notification
         case WM_APP + 100:
-            // 音频播放已完成，更新按钮状态
+            // Audio playback is complete, update button state
             isPlaying = FALSE;
             return TRUE;
             
         case WM_CLOSE:
-            // 关闭对话框时确保停止播放
+            // Make sure to stop playback when closing dialog
             if (isPlaying) {
                 StopNotificationSound();
             }
             
-            // 清理回调
+            // Clean up callback
             SetAudioPlaybackCompleteCallback(NULL, NULL);
             
             EndDialog(hwndDlg, IDCANCEL);
@@ -2075,7 +2075,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             return TRUE;
             
         case WM_DESTROY:
-            // 对话框销毁时清理回调
+            // Clean up callback when dialog is destroyed
             SetAudioPlaybackCompleteCallback(NULL, NULL);
             g_hwndNotificationSettingsDialog = NULL;
             break;
@@ -2084,14 +2084,14 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
 }
 
 /**
- * @brief 显示整合后的通知设置对话框
- * @param hwndParent 父窗口句柄
+ * @brief Display integrated notification settings dialog
+ * @param hwndParent Parent window handle
  * 
- * 显示同时包含通知内容和通知显示设置的整合对话框
+ * Displays a unified dialog that includes both notification content and display settings
  */
 void ShowNotificationSettingsDialog(HWND hwndParent) {
     if (!g_hwndNotificationSettingsDialog) {
-        // 确保首先读取最新的配置值
+        // Ensure the latest configuration values are read first
         ReadNotificationMessagesConfig();
         ReadNotificationTimeoutConfig();
         ReadNotificationOpacityConfig();
