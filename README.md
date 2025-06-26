@@ -228,7 +228,7 @@ xmake clean   # Clean build artifacts
 
 ## [✨Acknowledgements](https://vladelaina.github.io/Catime/#thanks) 
 
-Special thanks to the following contributors:
+Special thanks to the following contributors(chronological order):
 <table>
   <tbody>
     <tr>
