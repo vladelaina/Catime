@@ -383,16 +383,16 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
         }
         
         case WM_LBUTTONDOWN: {
-            // 获取鼠标点击坐标
+            // Get mouse click coordinates
             POINT pt = {LOWORD(lParam), HIWORD(lParam)};
             HWND hwndHit = ChildWindowFromPoint(hwndDlg, pt);
             
-            // 如果点击的不是对话框本身，而是某个控件
+            // If click is not on the dialog itself, but on a control
             if (hwndHit != NULL && hwndHit != hwndDlg) {
-                // 获取控件ID
+                // Get control ID
                 int ctrlId = GetDlgCtrlID(hwndHit);
                 
-                // 检查点击的是否为热键输入框
+                // Check if the clicked control is a hotkey input box
                 BOOL isHotkeyEdit = FALSE;
                 for (int i = IDC_HOTKEY_EDIT1; i <= IDC_HOTKEY_EDIT11; i++) {
                     if (ctrlId == i) {
@@ -401,15 +401,15 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                     }
                 }
                 
-                // 如果点击的不是热键输入框控件，则清除焦点
+                // If the clicked control is not a hotkey input box, clear focus
                 if (!isHotkeyEdit) {
-                    // 将焦点设置到静态文本控件上
+                    // Set focus to static text control
                     SetFocus(GetDlgItem(hwndDlg, IDC_HOTKEY_NOTE));
                 }
             } 
-            // 如果点击的是对话框本身（空白区域）
+            // If click is on the dialog itself (blank area)
             else if (hwndHit == hwndDlg) {
-                // 将焦点设置到静态文本控件上
+                // Set focus to static text control
                 SetFocus(GetDlgItem(hwndDlg, IDC_HOTKEY_NOTE));
                 return TRUE;
             }
@@ -417,11 +417,11 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
         }
         
         case WM_COMMAND: {
-            // 检测热键控件通知消息
+            // Detect hotkey control notification messages
             WORD ctrlId = LOWORD(wParam);
             WORD notifyCode = HIWORD(wParam);
             
-            // 处理热键编辑控件的变更通知
+            // Handle hotkey edit control change notifications
             if (notifyCode == EN_CHANGE &&
                 (ctrlId == IDC_HOTKEY_EDIT1 || ctrlId == IDC_HOTKEY_EDIT2 ||
                  ctrlId == IDC_HOTKEY_EDIT3 || ctrlId == IDC_HOTKEY_EDIT4 ||
@@ -430,30 +430,30 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                  ctrlId == IDC_HOTKEY_EDIT9 || ctrlId == IDC_HOTKEY_EDIT10 ||
                  ctrlId == IDC_HOTKEY_EDIT11 || ctrlId == IDC_HOTKEY_EDIT12)) {
                 
-                // 获取当前控件的热键值
+                // Get current control's hotkey value
                 WORD newHotkey = (WORD)SendDlgItemMessage(hwndDlg, ctrlId, HKM_GETHOTKEY, 0, 0);
                 
-                // 提取修饰键和虚拟键
+                // Extract modifier and virtual key
                 BYTE vk = LOBYTE(newHotkey);
                 BYTE modifiers = HIBYTE(newHotkey);
                 
-                // 特殊处理: 中文输入法可能会产生Shift+0xE5这种组合，这是无效的
+                // Special handling: Chinese input method may produce Shift+0xE5 combination, which is invalid
                 if (vk == 0xE5 && modifiers == HOTKEYF_SHIFT) {
-                    // 清除无效的热键组合
+                    // Clear invalid hotkey combination
                     SendDlgItemMessage(hwndDlg, ctrlId, HKM_SETHOTKEY, 0, 0);
                     return TRUE;
                 }
                 
-                // 检查是否是单独的数字、字母或符号（无修饰键）
+                // Check if it's a standalone number, letter, or symbol (no modifier)
                 if (newHotkey != 0 && IsRestrictedSingleKey(newHotkey)) {
-                    // 发现无效热键，静默清除
+                    // Found invalid hotkey, silently clear it
                     SendDlgItemMessage(hwndDlg, ctrlId, HKM_SETHOTKEY, 0, 0);
                     return TRUE;
                 }
                 
-                // 如果热键为0（无），则不需要检查冲突
+                // If hotkey is 0 (none), no need to check for conflicts
                 if (newHotkey != 0) {
-                    // 定义热键控件ID数组
+                    // Define hotkey control ID array
                     static const int hotkeyCtrlIds[] = {
                         IDC_HOTKEY_EDIT1, IDC_HOTKEY_EDIT2, IDC_HOTKEY_EDIT3,
                         IDC_HOTKEY_EDIT9, IDC_HOTKEY_EDIT10, IDC_HOTKEY_EDIT11,
@@ -461,19 +461,19 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                         IDC_HOTKEY_EDIT7, IDC_HOTKEY_EDIT8, IDC_HOTKEY_EDIT12
                     };
                     
-                    // 检查是否与其他热键控件冲突
+                    // Check for conflicts with other hotkey controls
                     for (int i = 0; i < sizeof(hotkeyCtrlIds) / sizeof(hotkeyCtrlIds[0]); i++) {
-                        // 跳过当前控件
+                        // Skip current control
                         if (hotkeyCtrlIds[i] == ctrlId) {
                             continue;
                         }
                         
-                        // 获取其他控件的热键值
+                        // Get hotkey value from other control
                         WORD otherHotkey = (WORD)SendDlgItemMessage(hwndDlg, hotkeyCtrlIds[i], HKM_GETHOTKEY, 0, 0);
                         
-                        // 检查是否冲突
+                        // Check for conflict
                         if (otherHotkey != 0 && otherHotkey == newHotkey) {
-                            // 发现冲突，清除旧的热键（设置为0，即"无"）
+                            // Found conflict, clear the old hotkey (set to 0, meaning "none")
                             SendDlgItemMessage(hwndDlg, hotkeyCtrlIds[i], HKM_SETHOTKEY, 0, 0);
                         }
                     }
@@ -484,10 +484,10 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
             
             switch (LOWORD(wParam)) {
                 case IDOK: {
-                    // 获取热键控件中设置的热键值
+                    // Get hotkey values set in hotkey controls
                     WORD showTimeHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT1, HKM_GETHOTKEY, 0, 0);
                     WORD countUpHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT2, HKM_GETHOTKEY, 0, 0);
-                    WORD customCountdownHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT12, HKM_GETHOTKEY, 0, 0); // 获取新增倒计时热键
+                    WORD customCountdownHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT12, HKM_GETHOTKEY, 0, 0); // Get new countdown hotkey
                     WORD countdownHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT3, HKM_GETHOTKEY, 0, 0);
                     WORD quickCountdown1Hotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT9, HKM_GETHOTKEY, 0, 0);
                     WORD quickCountdown2Hotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT10, HKM_GETHOTKEY, 0, 0);
@@ -498,7 +498,7 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                     WORD pauseResumeHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT7, HKM_GETHOTKEY, 0, 0);
                     WORD restartTimerHotkey = (WORD)SendDlgItemMessage(hwndDlg, IDC_HOTKEY_EDIT8, HKM_GETHOTKEY, 0, 0);
                     
-                    // 再次检查所有热键，确保没有单个键的热键
+                    // Check all hotkeys again to ensure there are no single-key hotkeys
                     WORD* hotkeys[] = {
                         &showTimeHotkey, &countUpHotkey, &countdownHotkey,
                         &quickCountdown1Hotkey, &quickCountdown2Hotkey, &quickCountdown3Hotkey,
@@ -506,10 +506,10 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                         &pauseResumeHotkey, &restartTimerHotkey, &customCountdownHotkey
                     };
                     
-                    // 静默清除任何无效热键
-                    // BOOL needsRefresh = FALSE; // (已注释) 用于标记是否需要刷新界面，目前未使用。
+                    // Silently clear any invalid hotkeys
+                    // BOOL needsRefresh = FALSE; // (commented out) Used to mark whether UI refresh is needed, currently unused.
                     for (int i = 0; i < sizeof(hotkeys) / sizeof(hotkeys[0]); i++) {
-                        // 检查是否是无效的中文输入法热键组合 (Shift+0xE5)
+                        // Check for invalid Chinese input method hotkey combination (Shift+0xE5)
                         if (LOBYTE(*hotkeys[i]) == 0xE5 && HIBYTE(*hotkeys[i]) == HOTKEYF_SHIFT) {
                             *hotkeys[i] = 0;
                             // needsRefresh = TRUE;
@@ -517,33 +517,33 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                         }
                         
                         if (*hotkeys[i] != 0 && IsRestrictedSingleKey(*hotkeys[i])) {
-                            // 发现单键热键，直接置为0
+                            // Found single-key hotkey, set to 0 directly
                             *hotkeys[i] = 0;
                             // needsRefresh = TRUE;
                         }
                     }
                     
-                    // 使用新的函数保存热键设置到配置文件
+                    // Use the new function to save hotkey settings to configuration file
                     WriteConfigHotkeys(showTimeHotkey, countUpHotkey, countdownHotkey,
                                       quickCountdown1Hotkey, quickCountdown2Hotkey, quickCountdown3Hotkey,
                                       pomodoroHotkey, toggleVisibilityHotkey, editModeHotkey,
                                       pauseResumeHotkey, restartTimerHotkey);
-                    // 单独保存自定义倒计时热键 - 同时更新全局静态变量
+                    // Save custom countdown hotkey separately - also update global static variable
                     g_dlgCustomCountdownHotkey = customCountdownHotkey;
                     char customCountdownStr[64] = {0};
                     HotkeyToString(customCountdownHotkey, customCountdownStr, sizeof(customCountdownStr));
                     WriteConfigKeyValue("HOTKEY_CUSTOM_COUNTDOWN", customCountdownStr);
                     
-                    // 通知主窗口热键设置已更改，需要重新注册
+                    // Notify main window that hotkey settings have changed and need to be re-registered
                     PostMessage(GetParent(hwndDlg), WM_APP+1, 0, 0);
                     
-                    // 关闭对话框
+                    // Close dialog
                     EndDialog(hwndDlg, IDOK);
                     return TRUE;
                 }
                 
                 case IDCANCEL:
-                    // 重新注册原有的热键
+                    // Re-register original hotkeys
                     PostMessage(GetParent(hwndDlg), WM_APP+1, 0, 0);
                     EndDialog(hwndDlg, IDCANCEL);
                     return TRUE;
@@ -552,7 +552,7 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
         }
         
         case WM_DESTROY:
-            // 清理资源
+            // Clean up resources
             if (hBackgroundBrush) {
                 DeleteObject(hBackgroundBrush);
                 hBackgroundBrush = NULL;
@@ -562,13 +562,13 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                 hButtonBrush = NULL;
             }
             
-            // 如果存在原始窗口过程，恢复它
+            // If original window procedure exists, restore it
             if (g_OldHotkeyDlgProc) {
                 SetWindowLongPtr(hwndDlg, GWLP_WNDPROC, (LONG_PTR)g_OldHotkeyDlgProc);
                 g_OldHotkeyDlgProc = NULL;
             }
             
-            // 移除所有热键编辑控件的子类处理函数
+            // Remove subclass procedure from all hotkey edit controls
             for (int i = IDC_HOTKEY_EDIT1; i <= IDC_HOTKEY_EDIT12; i++) {
                 HWND hHotkeyCtrl = GetDlgItem(hwndDlg, i);
                 if (hHotkeyCtrl) {
@@ -582,33 +582,33 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
 }
 
 /**
- * @brief 热键控件子类化处理函数
- * @param hwnd 热键控件窗口句柄
- * @param uMsg 消息类型
- * @param wParam 消息参数
- * @param lParam 消息参数
- * @param uIdSubclass 子类ID
- * @param dwRefData 引用数据
- * @return LRESULT 消息处理结果
+ * @brief Hotkey control subclass procedure
+ * @param hwnd Hotkey control window handle
+ * @param uMsg Message type
+ * @param wParam Message parameter
+ * @param lParam Message parameter
+ * @param uIdSubclass Subclass ID
+ * @param dwRefData Reference data
+ * @return LRESULT Message processing result
  * 
- * 处理热键控件的消息，特别是拦截Alt键和Alt+Shift组合键
- * 防止Windows系统发出提示音
+ * Handles hotkey control messages, especially intercepting Alt key and Alt+Shift combinations
+ * to prevent Windows system alert sounds
  */
 LRESULT CALLBACK HotkeyControlSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, 
                                          LPARAM lParam, UINT_PTR uIdSubclass, 
                                          DWORD_PTR dwRefData) {
     switch (uMsg) {
         case WM_GETDLGCODE:
-            // 告诉Windows我们要处理所有键盘输入，包括Alt和菜单键
+            // Tell Windows we want to handle all keyboard input, including Alt and menu keys
             return DLGC_WANTALLKEYS | DLGC_WANTCHARS;
             
         case WM_KEYDOWN:
-            // 处理回车键 - 当按下回车时模拟点击确定按钮
+            // Handle Enter key - simulate clicking the OK button when Enter is pressed
             if (wParam == VK_RETURN) {
-                // 获取父对话框句柄
+                // Get parent dialog handle
                 HWND hwndDlg = GetParent(hwnd);
                 if (hwndDlg) {
-                    // 发送模拟点击确定按钮的消息
+                    // Send message to simulate clicking the OK button
                     SendMessage(hwndDlg, WM_COMMAND, MAKEWPARAM(IDOK, BN_CLICKED), (LPARAM)GetDlgItem(hwndDlg, IDOK));
                     return 0;
                 }
@@ -616,6 +616,6 @@ LRESULT CALLBACK HotkeyControlSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam,
             break;
     }
     
-    // 对于其他所有消息，调用原始的窗口过程
+    // For all other messages, call the original window procedure
     return DefSubclassProc(hwnd, uMsg, wParam, lParam);
 } 
