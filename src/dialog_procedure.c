@@ -279,7 +279,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
             if (LOWORD(wParam) == CLOCK_IDC_BUTTON_OK || HIWORD(wParam) == BN_CLICKED) {
                 GetDlgItemText(hwndDlg, CLOCK_IDC_EDIT, inputText, sizeof(inputText));
                 
-                // 检查是否为空输入或只有空格
+                // Check if the input is empty or contains only spaces
                 BOOL isAllSpaces = TRUE;
                 for (int i = 0; inputText[i]; i++) {
                     if (!isspace((unsigned char)inputText[i])) {
@@ -885,7 +885,7 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
                 char url[MAX_PATH] = {0};
                 GetDlgItemText(hwndDlg, CLOCK_IDC_EDIT, url, sizeof(url));
                 
-                // 检查是否为空输入或只有空格
+                // Check if the input is empty or contains only spaces
                 BOOL isAllSpaces = TRUE;
                 for (int i = 0; url[i]; i++) {
                     if (!isspace((unsigned char)url[i])) {
@@ -922,12 +922,12 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
             break;
             
         case WM_DESTROY:
-            // 恢复原始编辑框过程
+            // Restore original edit control procedure
             {
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
             SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
             
-            // 释放资源
+            // Release resources
             if (hBackgroundBrush) {
                 DeleteObject(hBackgroundBrush);
                 hBackgroundBrush = NULL;
@@ -1098,12 +1098,12 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
             break;
             
         case WM_DESTROY:
-            // 恢复原始编辑框过程
+            // Restore original edit control procedure
             {
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
             SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
             
-            // 释放资源
+            // Release resources
             if (hBackgroundBrush) {
                 DeleteObject(hBackgroundBrush);
                 hBackgroundBrush = NULL;
@@ -1362,45 +1362,45 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
     
     switch (msg) {
         case WM_INITDIALOG: {
-            // 设置窗口置顶
+            // Set window to topmost
             SetWindowPos(hwndDlg, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
             
-            // 创建画刷
+            // Create brushes
             hBackgroundBrush = CreateSolidBrush(RGB(0xF3, 0xF3, 0xF3));
             hEditBrush = CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF));
             
-            // 读取最新配置
+            // Read latest configuration
             ReadNotificationTimeoutConfig();
             ReadNotificationOpacityConfig();
             
-            // 设置当前值到编辑框
+            // Set current values to edit boxes
             char buffer[32];
             
-            // 显示时间（秒，支持小数点）- 毫秒转为秒
+            // Display time (seconds, support decimal) - convert milliseconds to seconds
             StringCbPrintfA(buffer, sizeof(buffer), "%.1f", (float)NOTIFICATION_TIMEOUT_MS / 1000.0f);
-            // 移除末尾的.0
+            // Remove trailing .0
             if (strlen(buffer) > 2 && buffer[strlen(buffer)-2] == '.' && buffer[strlen(buffer)-1] == '0') {
                 buffer[strlen(buffer)-2] = '\0';
             }
             SetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, buffer);
             
-            // 透明度（百分比）
+            // Opacity (percentage)
             StringCbPrintfA(buffer, sizeof(buffer), "%d", NOTIFICATION_MAX_OPACITY);
             SetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT, buffer);
             
-            // 本地化标签文本
+            // Localize label text
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_TIME_LABEL, 
                            GetLocalizedString(L"Notification display time (sec):", L"Notification display time (sec):"));
             
-            // 修改编辑框风格，移除ES_NUMBER以允许小数点
+            // Modify edit box style, remove ES_NUMBER to allow decimal point
             HWND hEditTime = GetDlgItem(hwndDlg, IDC_NOTIFICATION_TIME_EDIT);
             LONG style = GetWindowLong(hEditTime, GWL_STYLE);
             SetWindowLong(hEditTime, GWL_STYLE, style & ~ES_NUMBER);
             
-            // 子类化编辑框以支持回车键提交和限制输入
+            // Subclass edit boxes to support Enter key submission and input restrictions
             wpOrigEditProc = (WNDPROC)SetWindowLongPtr(hEditTime, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
             
-            // 设置焦点到时间编辑框
+            // Set focus to time edit box
             SetFocus(hEditTime);
             
             return FALSE;
@@ -1422,56 +1422,56 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
                 char timeStr[32] = {0};
                 char opacityStr[32] = {0};
                 
-                // 获取用户输入的值
+                // Get user input values
                 GetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, timeStr, sizeof(timeStr));
                 GetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT, opacityStr, sizeof(opacityStr));
                 
-                // 使用更健壮的方式替换中文句号
-                // 首先获取Unicode格式的文本
+                // Use more robust method to replace Chinese period
+                // First get the text in Unicode format
                 wchar_t wTimeStr[32] = {0};
                 GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, wTimeStr, sizeof(wTimeStr)/sizeof(wchar_t));
                 
-                // 在Unicode文本中替换中文句号
+                // Replace Chinese punctuation marks in Unicode text
                 for (int i = 0; wTimeStr[i] != L'\0'; i++) {
-                    // 将多种标点符号都识别为小数点
-                    if (wTimeStr[i] == L'。' ||  // 中文句号
-                        wTimeStr[i] == L'，' ||  // 中文逗号
-                        wTimeStr[i] == L',' ||   // 英文逗号
-                        wTimeStr[i] == L'·' ||   // 中文间隔号
-                        wTimeStr[i] == L'`' ||   // 反引号
-                        wTimeStr[i] == L'：' ||  // 中文冒号
-                        wTimeStr[i] == L':' ||   // 英文冒号
-                        wTimeStr[i] == L'；' ||  // 中文分号
-                        wTimeStr[i] == L';' ||   // 英文分号
-                        wTimeStr[i] == L'/' ||   // 斜杠
-                        wTimeStr[i] == L'\\' ||  // 反斜杠
-                        wTimeStr[i] == L'~' ||   // 波浪号
-                        wTimeStr[i] == L'～' ||  // 全角波浪号
-                        wTimeStr[i] == L'、' ||  // 顿号
-                        wTimeStr[i] == L'．') {  // 全角句点
-                        wTimeStr[i] = L'.';      // 替换为英文小数点
+                    // Recognize various punctuation marks as decimal point
+                    if (wTimeStr[i] == L'。' ||  // Chinese period
+                        wTimeStr[i] == L'，' ||  // Chinese comma
+                        wTimeStr[i] == L',' ||   // English comma
+                        wTimeStr[i] == L'·' ||   // Chinese middle dot
+                        wTimeStr[i] == L'`' ||   // Backtick
+                        wTimeStr[i] == L'：' ||  // Chinese colon
+                        wTimeStr[i] == L':' ||   // English colon
+                        wTimeStr[i] == L'；' ||  // Chinese semicolon
+                        wTimeStr[i] == L';' ||   // English semicolon
+                        wTimeStr[i] == L'/' ||   // Forward slash
+                        wTimeStr[i] == L'\\' ||  // Backslash
+                        wTimeStr[i] == L'~' ||   // Tilde
+                        wTimeStr[i] == L'～' ||  // Full-width tilde
+                        wTimeStr[i] == L'、' ||  // Chinese enumeration comma
+                        wTimeStr[i] == L'．') {  // Full-width period
+                        wTimeStr[i] = L'.';      // Replace with English decimal point
                     }
                 }
                 
-                // 将处理后的Unicode文本转回ASCII
+                // Convert processed Unicode text back to ASCII
                 WideCharToMultiByte(CP_ACP, 0, wTimeStr, -1, 
                                     timeStr, sizeof(timeStr), NULL, NULL);
                 
-                // 解析时间（秒）并转换为毫秒
+                // Parse time (seconds) and convert to milliseconds
                 float timeInSeconds = atof(timeStr);
                 int timeInMs = (int)(timeInSeconds * 1000.0f);
                 
-                // 允许时间设置为0（不显示通知）或者至少为100毫秒
+                // Allow time to be set to 0 (no notification) or at least 100 milliseconds
                 if (timeInMs > 0 && timeInMs < 100) timeInMs = 100;
                 
-                // 解析透明度
+                // Parse opacity
                 int opacity = atoi(opacityStr);
                 
-                // 确保透明度在1-100范围内
+                // Ensure opacity is in range 1-100
                 if (opacity < 1) opacity = 1;
                 if (opacity > 100) opacity = 100;
                 
-                // 写入配置
+                // Write to configuration
                 WriteConfigNotificationTimeout(timeInMs);
                 WriteConfigNotificationOpacity(opacity);
                 
@@ -1485,14 +1485,14 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
             }
             break;
             
-        // 添加对WM_CLOSE消息的处理
+        // Add handling for WM_CLOSE message
         case WM_CLOSE:
             EndDialog(hwndDlg, IDCANCEL);
             g_hwndNotificationDisplayDialog = NULL;
             return TRUE;
             
         case WM_DESTROY:
-            // 恢复原始窗口过程
+            // Restore original window procedure
             {
             HWND hEditTime = GetDlgItem(hwndDlg, IDC_NOTIFICATION_TIME_EDIT);
             HWND hEditOpacity = GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT);
@@ -1512,14 +1512,14 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
 }
 
 /**
- * @brief 显示通知显示设置对话框
- * @param hwndParent 父窗口句柄
+ * @brief Display notification display settings dialog
+ * @param hwndParent Parent window handle
  * 
- * 显示通知显示设置对话框，用于修改通知显示时间和透明度。
+ * Displays the notification display settings dialog for modifying notification display time and opacity.
  */
 void ShowNotificationDisplayDialog(HWND hwndParent) {
     if (!g_hwndNotificationDisplayDialog) {
-        // 确保首先读取最新的配置值
+        // Ensure latest configuration values are read first
         ReadNotificationTimeoutConfig();
         ReadNotificationOpacityConfig();
         
@@ -1536,27 +1536,27 @@ void ShowNotificationDisplayDialog(HWND hwndParent) {
 static HWND g_hwndNotificationSettingsDialog = NULL;
 
 /**
- * @brief 音频播放完成回调函数
- * @param hwnd 窗口句柄
+ * @brief Audio playback completion callback function
+ * @param hwnd Window handle
  * 
- * 当音频播放完成时，将"结束"按钮变回"测试"按钮
+ * When audio playback completes, changes "Stop" button back to "Test" button
  */
 static void OnAudioPlaybackComplete(HWND hwnd) {
     if (hwnd && IsWindow(hwnd)) {
         const wchar_t* testText = GetLocalizedString(L"Test", L"Test");
         SetDlgItemTextW(hwnd, IDC_TEST_SOUND_BUTTON, testText);
         
-        // 获取对话框数据
+        // Get dialog data
         HWND hwndTestButton = GetDlgItem(hwnd, IDC_TEST_SOUND_BUTTON);
         
-        // 发送WM_SETTEXT消息更新按钮文本
+        // Send WM_SETTEXT message to update button text
         if (hwndTestButton && IsWindow(hwndTestButton)) {
             SendMessageW(hwndTestButton, WM_SETTEXT, 0, (LPARAM)testText);
         }
         
-        // 更新全局播放状态
+        // Update global playback state
         if (g_hwndNotificationSettingsDialog == hwnd) {
-            // 发送消息给对话框，通知播放状态变更
+            // Send message to dialog to notify state change
             SendMessage(hwnd, WM_APP + 100, 0, 0);
         }
     }
@@ -1570,71 +1570,71 @@ static void PopulateSoundComboBox(HWND hwndDlg) {
     HWND hwndCombo = GetDlgItem(hwndDlg, IDC_NOTIFICATION_SOUND_COMBO);
     if (!hwndCombo) return;
 
-    // 清空下拉框
+    // Clear dropdown list
     SendMessage(hwndCombo, CB_RESETCONTENT, 0, 0);
 
-    // 添加"无"选项
+    // Add "None" option
     SendMessageW(hwndCombo, CB_ADDSTRING, 0, (LPARAM)GetLocalizedString(L"None", L"None"));
     
-    // 添加"系统提示音"选项
+    // Add "System Beep" option
     SendMessageW(hwndCombo, CB_ADDSTRING, 0, (LPARAM)GetLocalizedString(L"System Beep", L"System Beep"));
 
-    // 获取音频文件夹路径
+    // Get audio folder path
     char audio_path[MAX_PATH];
     GetAudioFolderPath(audio_path, MAX_PATH);
     
-    // 转换为宽字符路径
+    // Convert to wide character path
     wchar_t wAudioPath[MAX_PATH];
     MultiByteToWideChar(CP_UTF8, 0, audio_path, -1, wAudioPath, MAX_PATH);
 
-    // 构建搜索路径
+    // Build search path
     wchar_t wSearchPath[MAX_PATH];
     StringCbPrintfW(wSearchPath, sizeof(wSearchPath), L"%s\\*.*", wAudioPath);
 
-    // 查找音频文件 - 使用Unicode版本的API
+    // Find audio files - using Unicode version of API
     WIN32_FIND_DATAW find_data;
     HANDLE hFind = FindFirstFileW(wSearchPath, &find_data);
     if (hFind != INVALID_HANDLE_VALUE) {
         do {
-            // 检查文件扩展名
+            // Check file extension
             wchar_t* ext = wcsrchr(find_data.cFileName, L'.');
             if (ext && (
                 _wcsicmp(ext, L".flac") == 0 ||
                 _wcsicmp(ext, L".mp3") == 0 ||
                 _wcsicmp(ext, L".wav") == 0
             )) {
-                // 直接添加Unicode文件名到下拉框
+                // Add Unicode filename directly to dropdown
                 SendMessageW(hwndCombo, CB_ADDSTRING, 0, (LPARAM)find_data.cFileName);
             }
         } while (FindNextFileW(hFind, &find_data));
         FindClose(hFind);
     }
 
-    // 设置当前选中的音频文件
+    // Set currently selected audio file
     if (NOTIFICATION_SOUND_FILE[0] != '\0') {
-        // 检查是否是系统提示音特殊标记
+        // Check if it's the special system beep marker
         if (strcmp(NOTIFICATION_SOUND_FILE, "SYSTEM_BEEP") == 0) {
-            // 选择"系统提示音"选项（索引为1）
+            // Select "System Beep" option (index 1)
             SendMessage(hwndCombo, CB_SETCURSEL, 1, 0);
         } else {
             wchar_t wSoundFile[MAX_PATH];
             MultiByteToWideChar(CP_UTF8, 0, NOTIFICATION_SOUND_FILE, -1, wSoundFile, MAX_PATH);
             
-            // 获取文件名部分
+            // Get filename part
             wchar_t* fileName = wcsrchr(wSoundFile, L'\\');
             if (fileName) fileName++;
             else fileName = wSoundFile;
             
-            // 在下拉框中查找并选择该文件
+            // Find and select the file in dropdown
             int index = SendMessageW(hwndCombo, CB_FINDSTRINGEXACT, -1, (LPARAM)fileName);
             if (index != CB_ERR) {
                 SendMessage(hwndCombo, CB_SETCURSEL, index, 0);
             } else {
-                SendMessage(hwndCombo, CB_SETCURSEL, 0, 0); // 选择"无"
+                SendMessage(hwndCombo, CB_SETCURSEL, 0, 0); // Select "None"
             }
         }
     } else {
-        SendMessage(hwndCombo, CB_SETCURSEL, 0, 0); // 选择"无"
+        SendMessage(hwndCombo, CB_SETCURSEL, 0, 0); // Select "None"
     }
 }
 
