@@ -1,9 +1,9 @@
 /**
  * @file window_procedure.c
- * @brief 窗口消息处理过程实现
+ * @brief Window message processing implementation
  * 
- * 本文件实现了应用程序主窗口的消息处理回调函数，
- * 处理窗口的所有消息事件。
+ * This file implements the message processing callback function for the application's main window,
+ * handling all message events for the window.
  */
 
 #include <stdio.h>
@@ -41,33 +41,33 @@
 #include "../include/update_checker.h"
 #include "../include/async_update_checker.h"
 #include "../include/hotkey.h"
-#include "../include/notification.h"  // 添加通知头文件
+#include "../include/notification.h"  // Add notification header
 
-// 从main.c引入的变量
+// Variables imported from main.c
 extern char inputText[256];
 extern int elapsed_time;
 extern int message_shown;
 
-// 从main.c引入的函数声明
+// Function declarations imported from main.c
 extern void ShowNotification(HWND hwnd, const char* message);
 extern void PauseMediaPlayback(void);
 
-// 在文件开头添加这些外部变量声明
-extern int POMODORO_TIMES[10]; // 番茄钟时间数组
-extern int POMODORO_TIMES_COUNT; // 番茄钟时间选项个数
-extern int current_pomodoro_time_index; // 当前番茄钟时间索引
-extern int complete_pomodoro_cycles; // 完成的番茄钟循环次数
+// Add these external variable declarations at the beginning of the file
+extern int POMODORO_TIMES[10]; // Pomodoro time array
+extern int POMODORO_TIMES_COUNT; // Number of pomodoro time options
+extern int current_pomodoro_time_index; // Current pomodoro time index
+extern int complete_pomodoro_cycles; // Completed pomodoro cycles
 
-// 如果ShowInputDialog函数需要声明，可以在开始处添加
+// If ShowInputDialog function needs to be declared, add at the beginning
 extern BOOL ShowInputDialog(HWND hwnd, char* text);
 
-// 修改为正确的函数声明，与config.h中的定义匹配
+// Modify to match the correct function declaration in config.h
 extern void WriteConfigPomodoroTimeOptions(int* times, int count);
 
-// 如果函数不存在，可以使用现有的相似函数
-// 例如修改对WriteConfigPomodoroTimeOptions的调用为WriteConfigPomodoroTimes
+// If the function doesn't exist, use an existing similar function
+// For example, modify calls to WriteConfigPomodoroTimeOptions to WriteConfigPomodoroTimes
 
-// 在文件开头添加
+// Add at the beginning of the file
 typedef struct {
     const wchar_t* title;
     const wchar_t* prompt;
@@ -76,19 +76,19 @@ typedef struct {
     size_t maxLen;
 } INPUTBOX_PARAMS;
 
-// 在文件开头添加对ShowPomodoroLoopDialog函数的声明
+// Add declaration for ShowPomodoroLoopDialog function at the beginning of the file
 extern void ShowPomodoroLoopDialog(HWND hwndParent);
 
-// 添加对OpenUserGuide函数的声明
+// Add declaration for OpenUserGuide function
 extern void OpenUserGuide(void);
 
-// 添加对OpenSupportPage函数的声明
+// Add declaration for OpenSupportPage function
 extern void OpenSupportPage(void);
 
-// 添加对OpenFeedbackPage函数的声明
+// Add declaration for OpenFeedbackPage function
 extern void OpenFeedbackPage(void);
 
-// 辅助函数：检查字符串是否只包含空格
+// Helper function: Check if a string contains only spaces
 static BOOL isAllSpacesOnly(const char* str) {
     for (int i = 0; str[i]; i++) {
         if (!isspace((unsigned char)str[i])) {
@@ -99,12 +99,12 @@ static BOOL isAllSpacesOnly(const char* str) {
 }
 
 /**
- * @brief 输入对话框回调函数
- * @param hwndDlg 对话框句柄
- * @param uMsg 消息
- * @param wParam 消息参数
- * @param lParam 消息参数
- * @return 处理结果
+ * @brief Input dialog callback function
+ * @param hwndDlg Dialog handle
+ * @param uMsg Message
+ * @param wParam Message parameter
+ * @param lParam Message parameter
+ * @return Processing result
  */
 INT_PTR CALLBACK InputBoxProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     static wchar_t* result;
@@ -112,24 +112,24 @@ INT_PTR CALLBACK InputBoxProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
     
     switch (uMsg) {
         case WM_INITDIALOG: {
-            // 获取传递的参数
+            // Get passed parameters
             INPUTBOX_PARAMS* params = (INPUTBOX_PARAMS*)lParam;
             result = params->result;
             maxLen = params->maxLen;
             
-            // 设置对话框标题
+            // Set dialog title
             SetWindowTextW(hwndDlg, params->title);
             
-            // 设置提示消息
+            // Set prompt message
             SetDlgItemTextW(hwndDlg, IDC_STATIC_PROMPT, params->prompt);
             
-            // 设置默认文本
+            // Set default text
             SetDlgItemTextW(hwndDlg, IDC_EDIT_INPUT, params->defaultText);
             
-            // 选中文本
+            // Select text
             SendDlgItemMessageW(hwndDlg, IDC_EDIT_INPUT, EM_SETSEL, 0, -1);
             
-            // 设置焦点
+            // Set focus
             SetFocus(GetDlgItem(hwndDlg, IDC_EDIT_INPUT));
             return FALSE;
         }
@@ -137,14 +137,14 @@ INT_PTR CALLBACK InputBoxProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
         case WM_COMMAND:
             switch (LOWORD(wParam)) {
                 case IDOK: {
-                    // 获取输入文本
+                    // Get input text
                     GetDlgItemTextW(hwndDlg, IDC_EDIT_INPUT, result, (int)maxLen);
                     EndDialog(hwndDlg, TRUE);
                     return TRUE;
                 }
                 
                 case IDCANCEL:
-                    // 取消操作
+                    // Cancel operation
                     EndDialog(hwndDlg, FALSE);
                     return TRUE;
             }
@@ -155,18 +155,18 @@ INT_PTR CALLBACK InputBoxProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 }
 
 /**
- * @brief 显示输入对话框
- * @param hwndParent 父窗口句柄
- * @param title 对话框标题
- * @param prompt 提示信息
- * @param defaultText 默认文本
- * @param result 结果缓冲区
- * @param maxLen 缓冲区最大长度
- * @return 成功返回TRUE，取消返回FALSE
+ * @brief Display input dialog
+ * @param hwndParent Parent window handle
+ * @param title Dialog title
+ * @param prompt Prompt message
+ * @param defaultText Default text
+ * @param result Result buffer
+ * @param maxLen Maximum buffer length
+ * @return TRUE if successful, FALSE if canceled
  */
 BOOL InputBox(HWND hwndParent, const wchar_t* title, const wchar_t* prompt, 
               const wchar_t* defaultText, wchar_t* result, size_t maxLen) {
-    // 准备传递给对话框的参数
+    // Prepare parameters to pass to dialog
     INPUTBOX_PARAMS params;
     params.title = title;
     params.prompt = prompt;
@@ -174,7 +174,7 @@ BOOL InputBox(HWND hwndParent, const wchar_t* title, const wchar_t* prompt,
     params.result = result;
     params.maxLen = maxLen;
     
-    // 显示模态对话框
+    // Display modal dialog
     return DialogBoxParamW(GetModuleHandle(NULL), 
                           MAKEINTRESOURCEW(IDD_INPUTBOX), 
                           hwndParent, 
@@ -188,34 +188,36 @@ void ExitProgram(HWND hwnd) {
     PostQuitMessage(0);
 }
 
-#define HOTKEY_ID_SHOW_TIME       100  // 显示当前时间热键ID
-#define HOTKEY_ID_COUNT_UP        101  // 正计时热键ID
-#define HOTKEY_ID_COUNTDOWN       102  // 倒计时热键ID
-#define HOTKEY_ID_QUICK_COUNTDOWN1 103 // 快捷倒计时1热键ID
-#define HOTKEY_ID_QUICK_COUNTDOWN2 104 // 快捷倒计时2热键ID
-#define HOTKEY_ID_QUICK_COUNTDOWN3 105 // 快捷倒计时3热键ID
-#define HOTKEY_ID_POMODORO        106  // 番茄钟热键ID
-#define HOTKEY_ID_TOGGLE_VISIBILITY 107 // 隐藏/显示热键ID
-#define HOTKEY_ID_EDIT_MODE       108  // 编辑模式热键ID
-#define HOTKEY_ID_PAUSE_RESUME    109  // 暂停/继续热键ID
-#define HOTKEY_ID_RESTART_TIMER   110  // 重新开始热键ID
-#define HOTKEY_ID_CUSTOM_COUNTDOWN 111 // 自定义倒计时热键ID
+#define HOTKEY_ID_SHOW_TIME       100  // Hotkey ID to show current time
+#define HOTKEY_ID_COUNT_UP        101  // Hotkey ID for count up timer
+#define HOTKEY_ID_COUNTDOWN       102  // Hotkey ID for countdown timer
+#define HOTKEY_ID_QUICK_COUNTDOWN1 103 // Hotkey ID for quick countdown 1
+#define HOTKEY_ID_QUICK_COUNTDOWN2 104 // Hotkey ID for quick countdown 2
+#define HOTKEY_ID_QUICK_COUNTDOWN3 105 // Hotkey ID for quick countdown 3
+#define HOTKEY_ID_POMODORO        106  // Hotkey ID for pomodoro timer
+#define HOTKEY_ID_TOGGLE_VISIBILITY 107 // Hotkey ID for hide/show
+#define HOTKEY_ID_EDIT_MODE       108  // Hotkey ID for edit mode
+#define HOTKEY_ID_PAUSE_RESUME    109  // Hotkey ID for pause/resume
+#define HOTKEY_ID_RESTART_TIMER   110  // Hotkey ID for restart timer
+#define HOTKEY_ID_CUSTOM_COUNTDOWN 111 // Hotkey ID for custom countdown
 
 /**
- * @brief 注册全局热键
- * @param hwnd 窗口句柄
+ * @brief Register global hotkeys
+ * @param hwnd Window handle
  * 
- * 从配置文件读取并注册全局热键设置，用于快速切换显示当前时间、正计时和默认倒计时。
- * 如果热键已注册，会先取消注册再重新注册。
- * 如果热键无法注册（可能被其他程序占用），则将该热键设置为无并更新配置文件。
+ * Reads and registers global hotkey settings from the configuration file for quickly switching between
+ * displaying current time, count up timer, and default countdown.
+ * If a hotkey is already registered, it will be unregistered before re-registering.
+ * If a hotkey cannot be registered (possibly because it's being used by another program),
+ * that hotkey setting will be set to none and the configuration file will be updated.
  * 
- * @return BOOL 是否成功注册至少一个热键
+ * @return BOOL Whether at least one hotkey was successfully registered
  */
 BOOL RegisterGlobalHotkeys(HWND hwnd) {
-    // 先注销所有已注册的热键
+    // First unregister all previously registered hotkeys
     UnregisterGlobalHotkeys(hwnd);
     
-    // 使用新函数读取热键配置
+    // Use new function to read hotkey configuration
     WORD showTimeHotkey = 0;
     WORD countUpHotkey = 0;
     WORD countdownHotkey = 0;
@@ -237,10 +239,10 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
     BOOL success = FALSE;
     BOOL configChanged = FALSE;
     
-    // 注册显示当前时间热键
+    // Register show current time hotkey
     if (showTimeHotkey != 0) {
-        BYTE vk = LOBYTE(showTimeHotkey);  // 虚拟键码
-        BYTE mod = HIBYTE(showTimeHotkey); // 修饰键
+        BYTE vk = LOBYTE(showTimeHotkey);  // Virtual key code
+        BYTE mod = HIBYTE(showTimeHotkey); // Modifier keys
         
         UINT fsModifiers = 0;
         if (mod & HOTKEYF_ALT) fsModifiers |= MOD_ALT;
@@ -250,13 +252,13 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         if (RegisterHotKey(hwnd, HOTKEY_ID_SHOW_TIME, fsModifiers, vk)) {
             success = TRUE;
         } else {
-            // 热键注册失败，清除配置
+            // Hotkey registration failed, clear configuration
             showTimeHotkey = 0;
             configChanged = TRUE;
         }
     }
     
-    // 注册正计时热键
+    // Register count up hotkey
     if (countUpHotkey != 0) {
         BYTE vk = LOBYTE(countUpHotkey);
         BYTE mod = HIBYTE(countUpHotkey);
@@ -269,13 +271,13 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         if (RegisterHotKey(hwnd, HOTKEY_ID_COUNT_UP, fsModifiers, vk)) {
             success = TRUE;
         } else {
-            // 热键注册失败，清除配置
+            // Hotkey registration failed, clear configuration
             countUpHotkey = 0;
             configChanged = TRUE;
         }
     }
     
-    // 注册倒计时热键
+    // Register countdown hotkey
     if (countdownHotkey != 0) {
         BYTE vk = LOBYTE(countdownHotkey);
         BYTE mod = HIBYTE(countdownHotkey);
@@ -288,13 +290,13 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         if (RegisterHotKey(hwnd, HOTKEY_ID_COUNTDOWN, fsModifiers, vk)) {
             success = TRUE;
         } else {
-            // 热键注册失败，清除配置
+            // Hotkey registration failed, clear configuration
             countdownHotkey = 0;
             configChanged = TRUE;
         }
     }
     
-    // 注册快捷倒计时1热键
+    // Register quick countdown 1 hotkey
     if (quickCountdown1Hotkey != 0) {
         BYTE vk = LOBYTE(quickCountdown1Hotkey);
         BYTE mod = HIBYTE(quickCountdown1Hotkey);
@@ -307,13 +309,13 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         if (RegisterHotKey(hwnd, HOTKEY_ID_QUICK_COUNTDOWN1, fsModifiers, vk)) {
             success = TRUE;
         } else {
-            // 热键注册失败，清除配置
+            // Hotkey registration failed, clear configuration
             quickCountdown1Hotkey = 0;
             configChanged = TRUE;
         }
     }
     
-    // 注册快捷倒计时2热键
+    // Register quick countdown 2 hotkey
     if (quickCountdown2Hotkey != 0) {
         BYTE vk = LOBYTE(quickCountdown2Hotkey);
         BYTE mod = HIBYTE(quickCountdown2Hotkey);
@@ -326,13 +328,13 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         if (RegisterHotKey(hwnd, HOTKEY_ID_QUICK_COUNTDOWN2, fsModifiers, vk)) {
             success = TRUE;
         } else {
-            // 热键注册失败，清除配置
+            // Hotkey registration failed, clear configuration
             quickCountdown2Hotkey = 0;
             configChanged = TRUE;
         }
     }
     
-    // 注册快捷倒计时3热键
+    // Register quick countdown 3 hotkey
     if (quickCountdown3Hotkey != 0) {
         BYTE vk = LOBYTE(quickCountdown3Hotkey);
         BYTE mod = HIBYTE(quickCountdown3Hotkey);
@@ -345,13 +347,13 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         if (RegisterHotKey(hwnd, HOTKEY_ID_QUICK_COUNTDOWN3, fsModifiers, vk)) {
             success = TRUE;
         } else {
-            // 热键注册失败，清除配置
+            // Hotkey registration failed, clear configuration
             quickCountdown3Hotkey = 0;
             configChanged = TRUE;
         }
     }
     
-    // 注册番茄钟热键
+    // Register pomodoro hotkey
     if (pomodoroHotkey != 0) {
         BYTE vk = LOBYTE(pomodoroHotkey);
         BYTE mod = HIBYTE(pomodoroHotkey);
@@ -364,13 +366,13 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         if (RegisterHotKey(hwnd, HOTKEY_ID_POMODORO, fsModifiers, vk)) {
             success = TRUE;
         } else {
-            // 热键注册失败，清除配置
+            // Hotkey registration failed, clear configuration
             pomodoroHotkey = 0;
             configChanged = TRUE;
         }
     }
     
-    // 注册隐藏/显示窗口热键
+    // Register hide/show window hotkey
     if (toggleVisibilityHotkey != 0) {
         BYTE vk = LOBYTE(toggleVisibilityHotkey);
         BYTE mod = HIBYTE(toggleVisibilityHotkey);
@@ -383,13 +385,13 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         if (RegisterHotKey(hwnd, HOTKEY_ID_TOGGLE_VISIBILITY, fsModifiers, vk)) {
             success = TRUE;
         } else {
-            // 热键注册失败，清除配置
+            // Hotkey registration failed, clear configuration
             toggleVisibilityHotkey = 0;
             configChanged = TRUE;
         }
     }
     
-    // 注册编辑模式热键
+    // Register edit mode hotkey
     if (editModeHotkey != 0) {
         BYTE vk = LOBYTE(editModeHotkey);
         BYTE mod = HIBYTE(editModeHotkey);
@@ -402,13 +404,13 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         if (RegisterHotKey(hwnd, HOTKEY_ID_EDIT_MODE, fsModifiers, vk)) {
             success = TRUE;
         } else {
-            // 热键注册失败，清除配置
+            // Hotkey registration failed, clear configuration
             editModeHotkey = 0;
             configChanged = TRUE;
         }
     }
     
-    // 注册暂停/继续热键
+    // Register pause/resume hotkey
     if (pauseResumeHotkey != 0) {
         BYTE vk = LOBYTE(pauseResumeHotkey);
         BYTE mod = HIBYTE(pauseResumeHotkey);
@@ -421,13 +423,13 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         if (RegisterHotKey(hwnd, HOTKEY_ID_PAUSE_RESUME, fsModifiers, vk)) {
             success = TRUE;
         } else {
-            // 热键注册失败，清除配置
+            // Hotkey registration failed, clear configuration
             pauseResumeHotkey = 0;
             configChanged = TRUE;
         }
     }
     
-    // 注册重新开始热键
+    // Register restart timer hotkey
     if (restartTimerHotkey != 0) {
         BYTE vk = LOBYTE(restartTimerHotkey);
         BYTE mod = HIBYTE(restartTimerHotkey);
@@ -440,30 +442,30 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         if (RegisterHotKey(hwnd, HOTKEY_ID_RESTART_TIMER, fsModifiers, vk)) {
             success = TRUE;
         } else {
-            // 热键注册失败，清除配置
+            // Hotkey registration failed, clear configuration
             restartTimerHotkey = 0;
             configChanged = TRUE;
         }
     }
     
-    // 如果有热键注册失败，更新配置文件
+    // If any hotkey registration failed, update config file
     if (configChanged) {
         WriteConfigHotkeys(showTimeHotkey, countUpHotkey, countdownHotkey,
                            quickCountdown1Hotkey, quickCountdown2Hotkey, quickCountdown3Hotkey,
                            pomodoroHotkey, toggleVisibilityHotkey, editModeHotkey,
                            pauseResumeHotkey, restartTimerHotkey);
         
-        // 检查自定义倒计时热键是否被清除，如果是，同时更新配置
+        // Check if custom countdown hotkey was cleared, if so, update config
         if (customCountdownHotkey == 0) {
             WriteConfigKeyValue("HOTKEY_CUSTOM_COUNTDOWN", "None");
         }
     }
     
-    // 在读取热键配置后添加
+    // Added after reading hotkey configuration
     ReadCustomCountdownHotkey(&customCountdownHotkey);
     
-    // 在注册倒计时热键后添加
-    // 注册自定义倒计时热键
+    // Added after registering countdown hotkey
+    // Register custom countdown hotkey
     if (customCountdownHotkey != 0) {
         BYTE vk = LOBYTE(customCountdownHotkey);
         BYTE mod = HIBYTE(customCountdownHotkey);
@@ -476,7 +478,7 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         if (RegisterHotKey(hwnd, HOTKEY_ID_CUSTOM_COUNTDOWN, fsModifiers, vk)) {
             success = TRUE;
         } else {
-            // 热键注册失败，清除配置
+            // Hotkey registration failed, clear configuration
             customCountdownHotkey = 0;
             configChanged = TRUE;
         }
@@ -486,13 +488,13 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
 }
 
 /**
- * @brief 取消注册全局热键
- * @param hwnd 窗口句柄
+ * @brief Unregister global hotkeys
+ * @param hwnd Window handle
  * 
- * 取消注册所有已注册的全局热键。
+ * Unregister all previously registered global hotkeys.
  */
 void UnregisterGlobalHotkeys(HWND hwnd) {
-    // 注销所有已注册的热键
+    // Unregister all previously registered hotkeys
     UnregisterHotKey(hwnd, HOTKEY_ID_SHOW_TIME);
     UnregisterHotKey(hwnd, HOTKEY_ID_COUNT_UP);
     UnregisterHotKey(hwnd, HOTKEY_ID_COUNTDOWN);
@@ -508,20 +510,20 @@ void UnregisterGlobalHotkeys(HWND hwnd) {
 }
 
 /**
- * @brief 主窗口消息处理回调函数
- * @param hwnd 窗口句柄
- * @param msg 消息类型
- * @param wp 消息参数(具体含义取决于消息类型)
- * @param lp 消息参数(具体含义取决于消息类型)
- * @return LRESULT 消息处理结果
+ * @brief Main window message processing callback function
+ * @param hwnd Window handle
+ * @param msg Message type
+ * @param wp Message parameter (specific meaning depends on message type)
+ * @param lp Message parameter (specific meaning depends on message type)
+ * @return LRESULT Message processing result
  * 
- * 处理主窗口的所有消息事件，包括：
- * - 窗口创建/销毁
- * - 鼠标事件(拖动、滚轮缩放)
- * - 定时器事件
- * - 系统托盘交互
- * - 绘图事件
- * - 菜单命令处理
+ * Handles all message events for the main window, including:
+ * - Window creation/destruction
+ * - Mouse events (dragging, wheel scaling)
+ * - Timer events
+ * - System tray interaction
+ * - Drawing events
+ * - Menu command processing
  */
 LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
@@ -529,12 +531,12 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     UINT uID;
     UINT uMouseMsg;
 
-    // 检查是否是TaskbarCreated消息
-    // TaskbarCreated是Windows在资源管理器重启时广播的系统消息
-    // 此时所有托盘图标都会被销毁，需要应用程序自行重建
-    // 处理此消息可以解决系统托盘刷新后图标消失但程序仍在运行的问题
+    // Check if this is a TaskbarCreated message
+    // TaskbarCreated is a system message broadcasted when Windows Explorer restarts
+    // At this time all tray icons are destroyed and need to be recreated by applications
+    // Handling this message solves the issue of the tray icon disappearing while the program is still running
     if (msg == WM_TASKBARCREATED) {
-        // 资源管理器重启，需要重新创建托盘图标
+        // Explorer has restarted, need to recreate the tray icon
         RecreateTaskbarIcon(hwnd, GetModuleHandle(NULL));
         return 0;
     }
@@ -542,20 +544,20 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     switch(msg)
     {
         case WM_CREATE: {
-            // 在窗口创建时注册全局热键
+            // Register global hotkeys when window is created
             RegisterGlobalHotkeys(hwnd);
             HandleWindowCreate(hwnd);
             break;
         }
 
         case WM_SETCURSOR: {
-            // 当在编辑模式下时，总是使用默认箭头光标
+            // When in edit mode, always use default arrow cursor
             if (CLOCK_EDIT_MODE && LOWORD(lp) == HTCLIENT) {
                 SetCursor(LoadCursor(NULL, IDC_ARROW));
-                return TRUE; // 表示我们已经处理了此消息
+                return TRUE; // Indicates we've handled this message
             }
             
-            // 处理托盘图标相关操作时，也使用默认箭头光标
+            // Also use default arrow cursor when handling tray icon operations
             if (LOWORD(lp) == HTCLIENT || msg == CLOCK_WM_TRAYICON) {
                 SetCursor(LoadCursor(NULL, IDC_ARROW));
                 return TRUE;
