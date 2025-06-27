@@ -215,7 +215,7 @@ xmake clean   # Очистить файлы сборки
 
 ## [✨ Благодарности](https://vladelaina.github.io/Catime/#thanks)
 
-Особая благодарность следующим участникам:
+Особая благодарность следующим участникам (в хронологическом порядке):
 <table>
   <tbody>
     <tr>
@@ -336,6 +336,9 @@ xmake clean   # Очистить файлы сборки
     <tr>
       <td align="center" valign="top" width="14.28%">
         <a href="https://github.com/LuSrackhall"><img src="https://avatars.githubusercontent.com/u/142690689?v=4" width="100px;" alt="LuSrackhall"/><br /><sub><b>LuSrackhall</b></sub></a><br />
+      </td>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://github.com/sakuraxy2004"><img src="https://avatars.githubusercontent.com/u/107749059?v=4" width="100px;" alt="是玄夜不是玄月"/><br /><sub><b>是玄夜不是玄月</b></sub></a><br />
       </td>
     </tr>
   </tbody>

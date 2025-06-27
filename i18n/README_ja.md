@@ -217,7 +217,7 @@ xmake clean   # ビルドファイルをクリーン
 
 ## [✨謝辞](https://vladelaina.github.io/Catime/#thanks) 
 
-以下の貢献者に特別な感謝を：
+以下の貢献者に特別な感謝を（時系列順）：
 <table>
   <tbody>
     <tr>
@@ -338,6 +338,9 @@ xmake clean   # ビルドファイルをクリーン
     <tr>
       <td align="center" valign="top" width="14.28%">
         <a href="https://github.com/LuSrackhall"><img src="https://avatars.githubusercontent.com/u/142690689?v=4" width="100px;" alt="LuSrackhall"/><br /><sub><b>LuSrackhall</b></sub></a><br />
+      </td>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://github.com/sakuraxy2004"><img src="https://avatars.githubusercontent.com/u/107749059?v=4" width="100px;" alt="是玄夜不是玄月"/><br /><sub><b>是玄夜不是玄月</b></sub></a><br />
       </td>
     </tr>
   </tbody>
