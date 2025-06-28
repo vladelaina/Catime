@@ -172,7 +172,7 @@ cd Catime
      gcc --version
      ```
 
-     If version number displays successfully, MinGW installation is complete ✅
+     If version number displays successfully, the MinGW installation is complete ✅
 
   #### 📦 2.2 Install [xmake](https://github.com/xmake-io/xmake/releases/latest)
 
