@@ -348,6 +348,9 @@ xmake clean   # 清理構建檔案
       <td align="center" valign="top" width="14.28%">
         <a href="https://github.com/sakuraxy2004"><img src="https://avatars.githubusercontent.com/u/107749059?v=4" width="100px;" alt="是玄夜不是玄月"/><br /><sub><b>是玄夜不是玄月</b></sub></a><br />
       </td>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://github.com/YangCangShu"><img src="https://avatars.githubusercontent.com/u/117985990?v=4" width="100px;" alt="YangCangShu"/><br /><sub><b>YangCangShu</b></sub></a><br />
+      </td>
     </tr>
   </tbody>
 </table>
