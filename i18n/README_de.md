@@ -21,7 +21,7 @@
 </p>
 
 <p align="center"><a href="https://vladelaina.github.io/Catime/">Offizielle Website</a> · <a href="https://vladelaina.github.io/Catime/guide.html">Leitfaden</a> · <a href="https://vladelaina.github.io/Catime/about.html">Über</a> · <a href="https://github.com/users/vladelaina/projects/2/views/1">Projektausschuss</a> · <a href="https://github.com/vladelaina/Catime/issues">Rückmeldung</a></p>
-<p align="center"><a href="https://github.com/vladelaina/Catime">English</a> · <a href="./i18n/README_zh-CN.md">简体中文</a> · <a href="./i18n/README_zh-Hant.md">繁體中文</a> · <a href="./i18n/README_ja.md">日本語</a> · <a href="./i18n/README_es.md">Español</a> · <a href="./i18n/README_fr.md">Français</a> · <a href="./i18n/README_de.md">Deutsch</a> · <a href="./i18n/README_ru.md">Русский</a> · <a href="./i18n/README_pt.md">Português</a> · <a href="./i18n/README_ko.md">한국어</a></p>
+<p align="center"><a href="https://github.com/vladelaina/Catime">English</a> · <a href="./README_zh-CN.md">简体中文</a>  · <a href="./README_zh-Hant.md">繁體中文</a> · <a href="./README_ja.md">日本語</a> · <a href="./README_es.md">Español</a> · <a href="./README_fr.md">Français</a> · <a href="./README_de.md">Deutsch</a> · <a href="./README_ru.md">Русский</a> · <a href="./README_pt.md">Português</a> · <a href="./README_ko.md">한국어</a></p>
 
 
 <div align="center">
