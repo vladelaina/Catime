@@ -93,13 +93,13 @@ static void LogSystemInformation(void) {
                 isWorkstation = (osvi.wProductType == VER_NT_WORKSTATION);
                 isServer = !isWorkstation;
             } else {
-                WriteLog(LOG_LEVEL_WARNING, "无法获取操作系统版本信息");
+                WriteLog(LOG_LEVEL_WARNING, "Unable to get operating system version information");
             }
         }
     }
     
     // Detect specific Windows version
-    const char* windowsVersion = "未知版本";
+    const char* windowsVersion = "Unknown version";
     
     // Determine specific version based on version number
     if (major == 10) {
@@ -131,11 +131,11 @@ static void LogSystemInformation(void) {
         }
     }
     
-    WriteLog(LOG_LEVEL_INFO, "操作系统: %s (%d.%d) Build %d %s", 
+    WriteLog(LOG_LEVEL_INFO, "Operating System: %s (%d.%d) Build %d %s", 
         windowsVersion,
         major, minor, 
         build, 
-        isWorkstation ? "工作站" : "服务器");
+        isWorkstation ? "Workstation" : "Server");
     
     // CPU architecture
     const char* arch;
@@ -153,16 +153,16 @@ static void LogSystemInformation(void) {
             arch = "ARM64";
             break;
         default:
-            arch = "未知";
+            arch = "Unknown";
             break;
     }
-    WriteLog(LOG_LEVEL_INFO, "CPU架构: %s", arch);
+    WriteLog(LOG_LEVEL_INFO, "CPU Architecture: %s", arch);
     
     // System memory information
     MEMORYSTATUSEX memInfo;
     memInfo.dwLength = sizeof(MEMORYSTATUSEX);
     if (GlobalMemoryStatusEx(&memInfo)) {
-        WriteLog(LOG_LEVEL_INFO, "物理内存: %.2f GB / %.2f GB (已用 %d%%)", 
+        WriteLog(LOG_LEVEL_INFO, "Physical Memory: %.2f GB / %.2f GB (%d%% used)", 
             (memInfo.ullTotalPhys - memInfo.ullAvailPhys) / (1024.0 * 1024 * 1024), 
             memInfo.ullTotalPhys / (1024.0 * 1024 * 1024),
             memInfo.dwMemoryLoad);
@@ -181,7 +181,7 @@ static void LogSystemInformation(void) {
         }
         CloseHandle(hToken);
     }
-    WriteLog(LOG_LEVEL_INFO, "UAC状态: %s", uacEnabled ? "已启用" : "未启用");
+    WriteLog(LOG_LEVEL_INFO, "UAC Status: %s", uacEnabled ? "Enabled" : "Disabled");
     
     // Check if running as administrator
     BOOL isAdmin = FALSE;
@@ -189,7 +189,7 @@ static void LogSystemInformation(void) {
     PSID AdministratorsGroup;
     if (AllocateAndInitializeSid(&NtAuthority, 2, SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0, &AdministratorsGroup)) {
         if (CheckTokenMembership(NULL, AdministratorsGroup, &isAdmin)) {
-            WriteLog(LOG_LEVEL_INFO, "管理员权限: %s", isAdmin ? "是" : "否");
+            WriteLog(LOG_LEVEL_INFO, "Administrator Privileges: %s", isAdmin ? "Yes" : "No");
         }
         FreeSid(AdministratorsGroup);
     }
@@ -240,12 +240,12 @@ BOOL InitializeLogSystem(void) {
     // Record log system initialization information
     WriteLog(LOG_LEVEL_INFO, "==================================================");
     // First record software version
-    WriteLog(LOG_LEVEL_INFO, "Catime 版本: %s", CATIME_VERSION);
+    WriteLog(LOG_LEVEL_INFO, "Catime Version: %s", CATIME_VERSION);
     // Then record system environment information (before any possible errors)
-    WriteLog(LOG_LEVEL_INFO, "-----------------系统信息-----------------");
+    WriteLog(LOG_LEVEL_INFO, "-----------------System Information-----------------");
     LogSystemInformation();
-    WriteLog(LOG_LEVEL_INFO, "-----------------应用信息-----------------");
-    WriteLog(LOG_LEVEL_INFO, "日志系统初始化完成，Catime 启动");
+    WriteLog(LOG_LEVEL_INFO, "-----------------Application Information-----------------");
+    WriteLog(LOG_LEVEL_INFO, "Log system initialization complete, Catime started");
     
     return TRUE;
 }
@@ -309,7 +309,7 @@ void GetLastErrorDescription(DWORD errorCode, char* buffer, int bufferSize) {
         strncpy_s(buffer, bufferSize, messageBuffer, _TRUNCATE);
         LocalFree(messageBuffer);
     } else {
-        _snprintf_s(buffer, bufferSize, _TRUNCATE, "未知错误 (代码: %lu)", errorCode);
+        _snprintf_s(buffer, bufferSize, _TRUNCATE, "Unknown error (code: %lu)", errorCode);
     }
 }
 
@@ -319,31 +319,31 @@ void SignalHandler(int signal) {
     
     switch (signal) {
         case SIGFPE:
-            strcpy_s(errorMsg, sizeof(errorMsg), "浮点数异常");
+            strcpy_s(errorMsg, sizeof(errorMsg), "Floating point exception");
             break;
         case SIGILL:
-            strcpy_s(errorMsg, sizeof(errorMsg), "非法指令");
+            strcpy_s(errorMsg, sizeof(errorMsg), "Illegal instruction");
             break;
         case SIGSEGV:
-            strcpy_s(errorMsg, sizeof(errorMsg), "段错误/内存访问异常");
+            strcpy_s(errorMsg, sizeof(errorMsg), "Segmentation fault/memory access error");
             break;
         case SIGTERM:
-            strcpy_s(errorMsg, sizeof(errorMsg), "终止信号");
+            strcpy_s(errorMsg, sizeof(errorMsg), "Termination signal");
             break;
         case SIGABRT:
-            strcpy_s(errorMsg, sizeof(errorMsg), "异常终止/中止");
+            strcpy_s(errorMsg, sizeof(errorMsg), "Abnormal termination/abort");
             break;
         case SIGINT:
-            strcpy_s(errorMsg, sizeof(errorMsg), "用户中断");
+            strcpy_s(errorMsg, sizeof(errorMsg), "User interrupt");
             break;
         default:
-            strcpy_s(errorMsg, sizeof(errorMsg), "未知信号");
+            strcpy_s(errorMsg, sizeof(errorMsg), "Unknown signal");
             break;
     }
     
     // Record exception information
     if (logFile) {
-        fprintf(logFile, "[FATAL] 发生致命信号: %s (信号编号: %d)\n", 
+        fprintf(logFile, "[FATAL] Fatal signal occurred: %s (signal number: %d)\n", 
                 errorMsg, signal);
         fflush(logFile);
         
@@ -353,7 +353,7 @@ void SignalHandler(int signal) {
     }
     
     // Display error message box
-    MessageBox(NULL, "程序发生严重错误，请查看日志文件获取详细信息。", "致命错误", MB_ICONERROR | MB_OK);
+    MessageBox(NULL, "The program encountered a serious error. Please check the log file for detailed information.", "Fatal Error", MB_ICONERROR | MB_OK);
     
     // Terminate program
     exit(signal);
@@ -372,7 +372,7 @@ void SetupExceptionHandler(void) {
 // Call this function when program exits to clean up log resources
 void CleanupLogSystem(void) {
     if (logFile) {
-        WriteLog(LOG_LEVEL_INFO, "Catime 正常退出");
+        WriteLog(LOG_LEVEL_INFO, "Catime exited normally");
         WriteLog(LOG_LEVEL_INFO, "==================================================");
         fclose(logFile);
         logFile = NULL;
