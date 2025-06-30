@@ -28,25 +28,25 @@ static BOOL g_bUpdateThreadRunning = FALSE;
  * Close thread handle and release related resources.
  */
 void CleanupUpdateThread() {
-    LOG_INFO("清理更新检查线程资源");
+    LOG_INFO("Cleaning up update check thread resources");
     if (g_hUpdateThread != NULL) {
-        LOG_INFO("等待更新检查线程结束，超时设为1秒");
+        LOG_INFO("Waiting for update check thread to end, timeout set to 1 second");
         // Wait for thread to end, but no more than 1 second
         DWORD waitResult = WaitForSingleObject(g_hUpdateThread, 1000);
         if (waitResult == WAIT_TIMEOUT) {
-            LOG_WARNING("等待线程结束超时，强制关闭线程句柄");
+            LOG_WARNING("Wait for thread end timed out, forcibly closing thread handle");
         } else if (waitResult == WAIT_OBJECT_0) {
-            LOG_INFO("线程已正常结束");
+            LOG_INFO("Thread has ended normally");
         } else {
-            LOG_WARNING("等待线程返回意外结果：%lu", waitResult);
+            LOG_WARNING("Wait for thread returned unexpected result: %lu", waitResult);
         }
         
         CloseHandle(g_hUpdateThread);
         g_hUpdateThread = NULL;
         g_bUpdateThreadRunning = FALSE;
-        LOG_INFO("线程资源已清理完毕");
+        LOG_INFO("Thread resources have been cleaned up");
     } else {
-        LOG_INFO("更新检查线程未运行，无需清理");
+        LOG_INFO("Update check thread not running, no cleanup needed");
     }
 }
 
@@ -57,12 +57,12 @@ void CleanupUpdateThread() {
  * Performs update check in a separate thread, without blocking the main thread.
  */
 unsigned __stdcall UpdateCheckThreadProc(void* param) {
-    LOG_INFO("更新检查线程已启动");
+    LOG_INFO("Update check thread started");
     
     // Parse thread parameters
     UpdateThreadParams* threadParams = (UpdateThreadParams*)param;
     if (!threadParams) {
-        LOG_ERROR("线程参数为空，无法执行更新检查");
+        LOG_ERROR("Thread parameters are null, cannot perform update check");
         g_bUpdateThreadRunning = FALSE;
         _endthreadex(1);
         return 1;
@@ -71,17 +71,17 @@ unsigned __stdcall UpdateCheckThreadProc(void* param) {
     HWND hwnd = threadParams->hwnd;
     BOOL silentCheck = threadParams->silentCheck;
     
-    LOG_INFO("解析线程参数成功，窗口句柄：0x%p，静默检查模式：%s", 
-             hwnd, silentCheck ? "是" : "否");
+    LOG_INFO("Thread parameters parsed successfully, window handle: 0x%p, silent check mode: %s", 
+             hwnd, silentCheck ? "yes" : "no");
     
     // Free thread parameter memory
     free(threadParams);
-    LOG_INFO("释放线程参数内存");
+    LOG_INFO("Thread parameter memory freed");
     
     // Call the original update check function, passing the silent check parameter
-    LOG_INFO("开始执行更新检查");
+    LOG_INFO("Starting update check");
     CheckForUpdateSilent(hwnd, silentCheck);
-    LOG_INFO("更新检查完成");
+    LOG_INFO("Update check completed");
     
     // Mark thread as ended
     g_bUpdateThreadRunning = FALSE;
@@ -101,41 +101,41 @@ unsigned __stdcall UpdateCheckThreadProc(void* param) {
  * This function returns immediately, without blocking the main thread.
  */
 void CheckForUpdateAsync(HWND hwnd, BOOL silentCheck) {
-    LOG_INFO("异步更新检查请求，窗口句柄：0x%p，静默模式：%s", 
-             hwnd, silentCheck ? "是" : "否");
+    LOG_INFO("Asynchronous update check requested, window handle: 0x%p, silent mode: %s", 
+             hwnd, silentCheck ? "yes" : "no");
     
     // If an update check thread is already running, don't start a new one
     if (g_bUpdateThreadRunning) {
-        LOG_INFO("已有更新检查线程正在运行，跳过本次检查请求");
+        LOG_INFO("Update check thread already running, skipping this check request");
         return;
     }
     
     // Clean up previous thread handle (if any)
     if (g_hUpdateThread != NULL) {
-        LOG_INFO("发现旧的线程句柄，清理中...");
+        LOG_INFO("Found old thread handle, cleaning up...");
         CloseHandle(g_hUpdateThread);
         g_hUpdateThread = NULL;
-        LOG_INFO("旧线程句柄已关闭");
+        LOG_INFO("Old thread handle closed");
     }
     
     // Allocate memory for thread parameters
-    LOG_INFO("为线程参数分配内存");
+    LOG_INFO("Allocating memory for thread parameters");
     UpdateThreadParams* threadParams = (UpdateThreadParams*)malloc(sizeof(UpdateThreadParams));
     if (!threadParams) {
         // Memory allocation failed
-        LOG_ERROR("线程参数内存分配失败，无法启动更新检查线程");
+        LOG_ERROR("Thread parameter memory allocation failed, cannot start update check thread");
         return;
     }
     
     // Set thread parameters
     threadParams->hwnd = hwnd;
     threadParams->silentCheck = silentCheck;
-    LOG_INFO("线程参数设置完成");
+    LOG_INFO("Thread parameters set up");
     
     // Mark thread as about to run
     g_bUpdateThreadRunning = TRUE;
     
-    LOG_INFO("准备创建更新检查线程");
+    LOG_INFO("Preparing to create update check thread");
     // Create thread to perform update check
     HANDLE hThread = (HANDLE)_beginthreadex(
         NULL,               // Default security attributes
@@ -148,14 +148,14 @@ void CheckForUpdateAsync(HWND hwnd, BOOL silentCheck) {
     
     if (hThread) {
         // Save thread handle for later checking
-        LOG_INFO("更新检查线程创建成功，线程句柄：0x%p", hThread);
+        LOG_INFO("Update check thread created successfully, thread handle: 0x%p", hThread);
         g_hUpdateThread = hThread;
     } else {
         // Thread creation failed, free parameter memory
         DWORD errorCode = GetLastError();
         char errorMsg[256] = {0};
         GetLastErrorDescription(errorCode, errorMsg, sizeof(errorMsg));
-        LOG_ERROR("更新检查线程创建失败，错误码：%lu，错误信息：%s", errorCode, errorMsg);
+        LOG_ERROR("Update check thread creation failed, error code: %lu, error message: %s", errorCode, errorMsg);
         
         free(threadParams);
         g_bUpdateThreadRunning = FALSE;
