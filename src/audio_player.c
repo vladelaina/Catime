@@ -99,7 +99,7 @@ static BOOL FileExists(const char* filePath) {
  * @param errorMsg Error message
  */
 static void ShowErrorMessage(HWND hwnd, const wchar_t* errorMsg) {
-    MessageBoxW(hwnd, errorMsg, L"音频播放错误", MB_ICONERROR | MB_OK);
+    MessageBoxW(hwnd, errorMsg, L"Audio Playback Error", MB_ICONERROR | MB_OK);
 }
 
 /**
@@ -217,7 +217,7 @@ static BOOL PlayAudioWithMiniaudio(HWND hwnd, const char* filePath) {
     if (MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wFilePath, MAX_PATH * 2) == 0) {
         DWORD error = GetLastError();
         wchar_t errorMsg[256];
-        StringCbPrintfW(errorMsg, sizeof(errorMsg), L"路径转换错误 (UTF-8->Unicode): %lu", error);
+        StringCbPrintfW(errorMsg, sizeof(errorMsg), L"Path conversion error (UTF-8->Unicode): %lu", error);
         ShowErrorMessage(hwnd, errorMsg);
         return FALSE;
     }
@@ -241,7 +241,7 @@ static BOOL PlayAudioWithMiniaudio(HWND hwnd, const char* filePath) {
         
         // If fallback method also fails, show error message
         wchar_t errorMsg[512];
-        StringCbPrintfW(errorMsg, sizeof(errorMsg), L"获取短路径失败: %ls\n错误代码: %lu", wFilePath, error);
+        StringCbPrintfW(errorMsg, sizeof(errorMsg), L"Failed to get short path: %ls\nError code: %lu", wFilePath, error);
         ShowErrorMessage(hwnd, errorMsg);
         return FALSE;
     }
@@ -251,7 +251,7 @@ static BOOL PlayAudioWithMiniaudio(HWND hwnd, const char* filePath) {
     if (WideCharToMultiByte(CP_ACP, 0, shortPath, -1, asciiPath, MAX_PATH, NULL, NULL) == 0) {
         DWORD error = GetLastError();
         wchar_t errorMsg[256];
-        StringCbPrintfW(errorMsg, sizeof(errorMsg), L"路径转换错误 (Short Path->ASCII): %lu", error);
+        StringCbPrintfW(errorMsg, sizeof(errorMsg), L"Path conversion error (Short Path->ASCII): %lu", error);
         ShowErrorMessage(hwnd, errorMsg);
         
         // Try using Windows native API for playback
@@ -291,7 +291,7 @@ static BOOL PlayAudioWithMiniaudio(HWND hwnd, const char* filePath) {
             
             // If all methods fail, show error message
             wchar_t errorMsg[512];
-            StringCbPrintfW(errorMsg, sizeof(errorMsg), L"无法加载音频文件: %ls\n错误代码: %d", wFilePath, result);
+            StringCbPrintfW(errorMsg, sizeof(errorMsg), L"Unable to load audio file: %ls\nError code: %d", wFilePath, result);
             ShowErrorMessage(hwnd, errorMsg);
             return FALSE;
         }
@@ -314,7 +314,7 @@ static BOOL PlayAudioWithMiniaudio(HWND hwnd, const char* filePath) {
             return TRUE;
         }
         
-        ShowErrorMessage(hwnd, L"无法开始播放音频");
+        ShowErrorMessage(hwnd, L"Cannot start audio playback");
         return FALSE;
     }
     
@@ -420,7 +420,7 @@ BOOL PlayNotificationSound(HWND hwnd) {
         // Validate if file path is legal
         if (!IsValidFilePath(NOTIFICATION_SOUND_FILE)) {
             wchar_t errorMsg[MAX_PATH + 64];
-            StringCbPrintfW(errorMsg, sizeof(errorMsg), L"音频文件路径无效:\n%hs", NOTIFICATION_SOUND_FILE);
+            StringCbPrintfW(errorMsg, sizeof(errorMsg), L"Invalid audio file path:\n%hs", NOTIFICATION_SOUND_FILE);
             ShowErrorMessage(hwnd, errorMsg);
             
             // Play system default notification sound as fallback
@@ -457,7 +457,7 @@ BOOL PlayNotificationSound(HWND hwnd) {
         } else {
             // File doesn't exist
             wchar_t errorMsg[MAX_PATH + 64];
-            StringCbPrintfW(errorMsg, sizeof(errorMsg), L"找不到配置的音频文件:\n%hs", NOTIFICATION_SOUND_FILE);
+            StringCbPrintfW(errorMsg, sizeof(errorMsg), L"Cannot find the configured audio file:\n%hs", NOTIFICATION_SOUND_FILE);
             ShowErrorMessage(hwnd, errorMsg);
             
             // Play system default notification sound as fallback
