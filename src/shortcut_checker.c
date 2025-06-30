@@ -61,39 +61,39 @@ static bool Contains(const char* str, const char* substring) {
 static bool IsStoreOrWingetInstall(char* exe_path, size_t path_size) {
     // Get program path
     if (GetModuleFileNameA(NULL, exe_path, path_size) == 0) {
-        LOG_ERROR("获取程序路径失败");
+        LOG_ERROR("Failed to get program path");
         return false;
     }
     
-    LOG_DEBUG("检查程序路径: %s", exe_path);
+    LOG_DEBUG("Checking program path: %s", exe_path);
     
     // Check if it's an App Store installation path (starts with C:\Program Files\WindowsApps)
     if (StartsWith(exe_path, "C:\\Program Files\\WindowsApps")) {
-        LOG_DEBUG("检测到应用商店安装路径");
+        LOG_DEBUG("Detected App Store installation path");
         return true;
     }
     
     // Check if it's a WinGet installation path
     // 1. Regular path containing \AppData\Local\Microsoft\WinGet\Packages
     if (Contains(exe_path, "\\AppData\\Local\\Microsoft\\WinGet\\Packages")) {
-        LOG_DEBUG("检测到WinGet安装路径(常规)");
+        LOG_DEBUG("Detected WinGet installation path (regular)");
         return true;
     }
     
     // 2. Possible custom WinGet installation path (if in C:\Users\username\AppData\Local\Microsoft\*)
     if (Contains(exe_path, "\\AppData\\Local\\Microsoft\\") && Contains(exe_path, "WinGet")) {
-        LOG_DEBUG("检测到可能的WinGet安装路径(自定义)");
+        LOG_DEBUG("Detected possible WinGet installation path (custom)");
         return true;
     }
     
     // Force test: When the path contains specific strings, consider it a path that needs to create shortcuts
     // This test path matches the installation path seen in user logs
     if (Contains(exe_path, "\\WinGet\\catime.exe")) {
-        LOG_DEBUG("检测到特定WinGet安装路径");
+        LOG_DEBUG("Detected specific WinGet installation path");
         return true;
     }
     
-    LOG_DEBUG("不是商店或WinGet安装路径");
+    LOG_DEBUG("Not a Store or WinGet installation path");
     return false;
 }
 
@@ -122,22 +122,22 @@ static int CheckShortcutTarget(const char* exe_path, char* shortcut_path_out, si
     // Get user desktop path
     hr = SHGetFolderPathA(NULL, CSIDL_DESKTOP, NULL, 0, desktop_path);
     if (FAILED(hr)) {
-        LOG_ERROR("获取桌面路径失败, hr=0x%08X", (unsigned int)hr);
+        LOG_ERROR("Failed to get desktop path, hr=0x%08X", (unsigned int)hr);
         return 0;
     }
-    LOG_DEBUG("用户桌面路径: %s", desktop_path);
+    LOG_DEBUG("User desktop path: %s", desktop_path);
     
     // Get public desktop path
     hr = SHGetFolderPathA(NULL, CSIDL_COMMON_DESKTOPDIRECTORY, NULL, 0, public_desktop_path);
     if (FAILED(hr)) {
-        LOG_WARNING("获取公共桌面路径失败, hr=0x%08X", (unsigned int)hr);
+        LOG_WARNING("Failed to get public desktop path, hr=0x%08X", (unsigned int)hr);
     } else {
-        LOG_DEBUG("公共桌面路径: %s", public_desktop_path);
+        LOG_DEBUG("Public desktop path: %s", public_desktop_path);
     }
     
     // First check user desktop - build complete shortcut path (Catime.lnk)
     snprintf(shortcut_path, sizeof(shortcut_path), "%s\\Catime.lnk", desktop_path);
-    LOG_DEBUG("检查用户桌面快捷方式: %s", shortcut_path);
+    LOG_DEBUG("Checking user desktop shortcut: %s", shortcut_path);
     
     // Check if the user desktop shortcut file exists
     bool file_exists = (GetFileAttributesA(shortcut_path) != INVALID_FILE_ATTRIBUTES);
@@ -145,14 +145,14 @@ static int CheckShortcutTarget(const char* exe_path, char* shortcut_path_out, si
     // If not found on user desktop, check public desktop
     if (!file_exists && SUCCEEDED(hr)) {
         snprintf(shortcut_path, sizeof(shortcut_path), "%s\\Catime.lnk", public_desktop_path);
-        LOG_DEBUG("检查公共桌面快捷方式: %s", shortcut_path);
+        LOG_DEBUG("Checking public desktop shortcut: %s", shortcut_path);
         
         file_exists = (GetFileAttributesA(shortcut_path) != INVALID_FILE_ATTRIBUTES);
     }
     
     // If no shortcut file is found, return 0 directly
     if (!file_exists) {
-        LOG_DEBUG("未找到任何快捷方式文件");
+        LOG_DEBUG("No shortcut files found");
         return 0;
     }
     
@@ -166,14 +166,14 @@ static int CheckShortcutTarget(const char* exe_path, char* shortcut_path_out, si
     hr = CoCreateInstance(&CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER,
                           &IID_IShellLinkA, (void**)&psl);
     if (FAILED(hr)) {
-        LOG_ERROR("创建IShellLink接口失败, hr=0x%08X", (unsigned int)hr);
+        LOG_ERROR("Failed to create IShellLink interface, hr=0x%08X", (unsigned int)hr);
         return 0;
     }
     
     // Get IPersistFile interface
     hr = psl->lpVtbl->QueryInterface(psl, &IID_IPersistFile, (void**)&ppf);
     if (FAILED(hr)) {
-        LOG_ERROR("获取IPersistFile接口失败, hr=0x%08X", (unsigned int)hr);
+        LOG_ERROR("Failed to get IPersistFile interface, hr=0x%08X", (unsigned int)hr);
         psl->lpVtbl->Release(psl);
         return 0;
     }
@@ -185,7 +185,7 @@ static int CheckShortcutTarget(const char* exe_path, char* shortcut_path_out, si
     // Load shortcut
     hr = ppf->lpVtbl->Load(ppf, wide_path, STGM_READ);
     if (FAILED(hr)) {
-        LOG_ERROR("加载快捷方式失败, hr=0x%08X", (unsigned int)hr);
+        LOG_ERROR("Failed to load shortcut, hr=0x%08X", (unsigned int)hr);
         ppf->lpVtbl->Release(ppf);
         psl->lpVtbl->Release(psl);
         return 0;
@@ -194,11 +194,11 @@ static int CheckShortcutTarget(const char* exe_path, char* shortcut_path_out, si
     // Get shortcut target path
     hr = psl->lpVtbl->GetPath(psl, link_target, MAX_PATH, &find_data, 0);
     if (FAILED(hr)) {
-        LOG_ERROR("获取快捷方式目标路径失败, hr=0x%08X", (unsigned int)hr);
+        LOG_ERROR("Failed to get shortcut target path, hr=0x%08X", (unsigned int)hr);
         result = 0;
     } else {
-        LOG_DEBUG("快捷方式目标路径: %s", link_target);
-        LOG_DEBUG("当前程序路径: %s", exe_path);
+        LOG_DEBUG("Shortcut target path: %s", link_target);
+        LOG_DEBUG("Current program path: %s", exe_path);
         
         // Save target path to output parameter
         if (target_path_out && target_path_size > 0) {
@@ -208,10 +208,10 @@ static int CheckShortcutTarget(const char* exe_path, char* shortcut_path_out, si
         
         // Check if the shortcut points to the current program
         if (_stricmp(link_target, exe_path) == 0) {
-            LOG_DEBUG("快捷方式指向当前程序");
+            LOG_DEBUG("Shortcut points to current program");
             result = 1;
         } else {
-            LOG_DEBUG("快捷方式指向其他路径");
+            LOG_DEBUG("Shortcut points to another path");
             result = 2;
         }
     }
@@ -241,24 +241,24 @@ static bool CreateOrUpdateDesktopShortcut(const char* exe_path, const char* exis
     
     // If an existing shortcut path is provided, use it; otherwise create a new shortcut on the user's desktop
     if (existing_shortcut_path && *existing_shortcut_path) {
-        LOG_INFO("开始更新桌面快捷方式: %s 指向: %s", existing_shortcut_path, exe_path);
+        LOG_INFO("Starting to update desktop shortcut: %s pointing to: %s", existing_shortcut_path, exe_path);
         strcpy(shortcut_path, existing_shortcut_path);
     } else {
-        LOG_INFO("开始创建桌面快捷方式，程序路径: %s", exe_path);
+        LOG_INFO("Starting to create desktop shortcut, program path: %s", exe_path);
         
         // Get desktop path
         hr = SHGetFolderPathA(NULL, CSIDL_DESKTOP, NULL, 0, desktop_path);
         if (FAILED(hr)) {
-            LOG_ERROR("获取桌面路径失败, hr=0x%08X", (unsigned int)hr);
+            LOG_ERROR("Failed to get desktop path, hr=0x%08X", (unsigned int)hr);
             return false;
         }
-        LOG_DEBUG("桌面路径: %s", desktop_path);
+        LOG_DEBUG("Desktop path: %s", desktop_path);
         
         // Build complete shortcut path
         snprintf(shortcut_path, sizeof(shortcut_path), "%s\\Catime.lnk", desktop_path);
     }
     
-    LOG_DEBUG("快捷方式路径: %s", shortcut_path);
+    LOG_DEBUG("Shortcut path: %s", shortcut_path);
     
     // Use program path as icon path
     strcpy(icon_path, exe_path);
@@ -267,14 +267,14 @@ static bool CreateOrUpdateDesktopShortcut(const char* exe_path, const char* exis
     hr = CoCreateInstance(&CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER,
                           &IID_IShellLinkA, (void**)&psl);
     if (FAILED(hr)) {
-        LOG_ERROR("创建IShellLink接口失败, hr=0x%08X", (unsigned int)hr);
+        LOG_ERROR("Failed to create IShellLink interface, hr=0x%08X", (unsigned int)hr);
         return false;
     }
     
     // Set target path
     hr = psl->lpVtbl->SetPath(psl, exe_path);
     if (FAILED(hr)) {
-        LOG_ERROR("设置快捷方式目标路径失败, hr=0x%08X", (unsigned int)hr);
+        LOG_ERROR("Failed to set shortcut target path, hr=0x%08X", (unsigned int)hr);
         psl->lpVtbl->Release(psl);
         return false;
     }
@@ -286,23 +286,23 @@ static bool CreateOrUpdateDesktopShortcut(const char* exe_path, const char* exis
     if (last_slash) {
         *last_slash = '\0';
     }
-    LOG_DEBUG("工作目录: %s", work_dir);
+    LOG_DEBUG("Working directory: %s", work_dir);
     
     hr = psl->lpVtbl->SetWorkingDirectory(psl, work_dir);
     if (FAILED(hr)) {
-        LOG_ERROR("设置工作目录失败, hr=0x%08X", (unsigned int)hr);
+        LOG_ERROR("Failed to set working directory, hr=0x%08X", (unsigned int)hr);
     }
     
     // Set icon
     hr = psl->lpVtbl->SetIconLocation(psl, icon_path, 0);
     if (FAILED(hr)) {
-        LOG_ERROR("设置图标失败, hr=0x%08X", (unsigned int)hr);
+        LOG_ERROR("Failed to set icon, hr=0x%08X", (unsigned int)hr);
     }
     
     // Set description
     hr = psl->lpVtbl->SetDescription(psl, "A very useful timer (Pomodoro Clock)");
     if (FAILED(hr)) {
-        LOG_ERROR("设置描述失败, hr=0x%08X", (unsigned int)hr);
+        LOG_ERROR("Failed to set description, hr=0x%08X", (unsigned int)hr);
     }
     
     // Set window style (normal window)
@@ -311,7 +311,7 @@ static bool CreateOrUpdateDesktopShortcut(const char* exe_path, const char* exis
     // Get IPersistFile interface
     hr = psl->lpVtbl->QueryInterface(psl, &IID_IPersistFile, (void**)&ppf);
     if (FAILED(hr)) {
-        LOG_ERROR("获取IPersistFile接口失败, hr=0x%08X", (unsigned int)hr);
+        LOG_ERROR("Failed to get IPersistFile interface, hr=0x%08X", (unsigned int)hr);
         psl->lpVtbl->Release(psl);
         return false;
     }
@@ -323,9 +323,9 @@ static bool CreateOrUpdateDesktopShortcut(const char* exe_path, const char* exis
     // Save shortcut
     hr = ppf->lpVtbl->Save(ppf, wide_path, TRUE);
     if (FAILED(hr)) {
-        LOG_ERROR("保存快捷方式失败, hr=0x%08X", (unsigned int)hr);
+        LOG_ERROR("Failed to save shortcut, hr=0x%08X", (unsigned int)hr);
     } else {
-        LOG_INFO("桌面快捷方式%s成功: %s", existing_shortcut_path ? "更新" : "创建", shortcut_path);
+        LOG_INFO("Desktop shortcut %s successful: %s", existing_shortcut_path ? "update" : "creation", shortcut_path);
         success = true;
     }
     
@@ -357,29 +357,29 @@ int CheckAndCreateShortcut(void) {
     // Initialize COM library, needed for creating shortcuts later
     HRESULT hr = CoInitialize(NULL);
     if (FAILED(hr)) {
-        LOG_ERROR("COM库初始化失败, hr=0x%08X", (unsigned int)hr);
+        LOG_ERROR("COM library initialization failed, hr=0x%08X", (unsigned int)hr);
         return 1;
     }
     
-    LOG_DEBUG("开始检查快捷方式");
+    LOG_DEBUG("Starting shortcut check");
     
     // Read the flag from the configuration file to determine if it has been checked
     GetConfigPath(config_path, MAX_PATH);
     shortcut_check_done = IsShortcutCheckDone();
     
-    LOG_DEBUG("配置路径: %s, 是否已检查: %d", config_path, shortcut_check_done);
+    LOG_DEBUG("Configuration path: %s, already checked: %d", config_path, shortcut_check_done);
     
     // Get current program path
     if (GetModuleFileNameA(NULL, exe_path, MAX_PATH) == 0) {
-        LOG_ERROR("获取程序路径失败");
+        LOG_ERROR("Failed to get program path");
         CoUninitialize();
         return 1;
     }
-    LOG_DEBUG("程序路径: %s", exe_path);
+    LOG_DEBUG("Program path: %s", exe_path);
     
     // Check if it's an App Store or WinGet installation (only affects the behavior of creating new shortcuts)
     isStoreInstall = IsStoreOrWingetInstall(exe_path, MAX_PATH);
-    LOG_DEBUG("是否商店/WinGet安装: %d", isStoreInstall);
+    LOG_DEBUG("Is Store/WinGet installation: %d", isStoreInstall);
     
     // Check if the shortcut exists and points to the current program
     // Return value: 0=does not exist, 1=exists and points to the current program, 2=exists but points to another path
@@ -389,12 +389,12 @@ int CheckAndCreateShortcut(void) {
         // Shortcut does not exist
         if (shortcut_check_done) {
             // If the configuration has already been marked as checked, don't create it even if there's no shortcut
-            LOG_INFO("桌面未发现快捷方式，但配置已标记为检查过，不再创建");
+            LOG_INFO("No shortcut found on desktop, but configuration marked as checked, not creating");
             CoUninitialize();
             return 0;
         } else if (isStoreInstall) {
             // Only first-run Store or WinGet installations create shortcuts
-            LOG_INFO("桌面未发现快捷方式，首次运行的商店/WinGet安装，开始创建");
+            LOG_INFO("No shortcut found on desktop, first run of Store/WinGet installation, starting to create");
             bool success = CreateOrUpdateDesktopShortcut(exe_path, NULL);
             
             // Mark as checked, regardless of whether creation was successful
@@ -403,7 +403,7 @@ int CheckAndCreateShortcut(void) {
             CoUninitialize();
             return success ? 0 : 1;
         } else {
-            LOG_INFO("桌面未发现快捷方式，非商店/WinGet安装，不创建快捷方式");
+            LOG_INFO("No shortcut found on desktop, not a Store/WinGet installation, not creating shortcut");
             
             // Mark as checked
             SetShortcutCheckDone(true);
@@ -413,7 +413,7 @@ int CheckAndCreateShortcut(void) {
         }
     } else if (shortcut_status == 1) {
         // Shortcut exists and points to the current program, no action needed
-        LOG_INFO("桌面快捷方式已存在且指向当前程序");
+        LOG_INFO("Desktop shortcut already exists and points to the current program");
         
         // Mark as checked
         if (!shortcut_check_done) {
@@ -424,7 +424,7 @@ int CheckAndCreateShortcut(void) {
         return 0;
     } else if (shortcut_status == 2) {
         // Shortcut exists but points to another program, any installation method will update it
-        LOG_INFO("桌面快捷方式指向其他路径: %s，将更新为: %s", target_path, exe_path);
+        LOG_INFO("Desktop shortcut points to another path: %s, will update to: %s", target_path, exe_path);
         bool success = CreateOrUpdateDesktopShortcut(exe_path, shortcut_path);
         
         // Mark as checked, regardless of whether the update was successful
@@ -437,7 +437,7 @@ int CheckAndCreateShortcut(void) {
     }
     
     // Should not reach here
-    LOG_ERROR("检查快捷方式状态未知");
+    LOG_ERROR("Unknown shortcut check status");
     CoUninitialize();
     return 1;
 } 
