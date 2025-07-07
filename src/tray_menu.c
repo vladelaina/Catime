@@ -86,7 +86,9 @@ typedef enum {
     TIMEOUT_ACTION_SHOW_TIME = 5, ///< Show current time
     TIMEOUT_ACTION_COUNT_UP = 6,   ///< Switch to count-up mode
     TIMEOUT_ACTION_OPEN_WEBSITE = 7, ///< Open website
-    TIMEOUT_ACTION_SLEEP = 8        ///< Sleep
+    TIMEOUT_ACTION_SLEEP = 8,        ///< Sleep
+    TIMEOUT_ACTION_RUN_COMMAND = 9,  ///< Run command
+    TIMEOUT_ACTION_HTTP_REQUEST = 10 ///< Send HTTP request
 } TimeoutActionType;
 
 extern TimeoutActionType CLOCK_TIMEOUT_ACTION;
@@ -330,6 +332,26 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SLEEP ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_SLEEP,
                GetLocalizedString(L"睡眠", L"Sleep"));
+
+    // Third separator and Advanced menu
+    AppendMenuW(hTimeoutMenu, MF_SEPARATOR, 0, NULL);
+
+    // Create Advanced submenu
+    HMENU hAdvancedMenu = CreatePopupMenu();
+
+    // Add "Run Command" option
+    AppendMenuW(hAdvancedMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_RUN_COMMAND ? MF_CHECKED : MF_UNCHECKED),
+               CLOCK_IDM_RUN_COMMAND,
+               GetLocalizedString(L"运行命令", L"Run Command"));
+
+    // Add "HTTP Request" option
+    AppendMenuW(hAdvancedMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_HTTP_REQUEST ? MF_CHECKED : MF_UNCHECKED),
+               CLOCK_IDM_HTTP_REQUEST,
+               GetLocalizedString(L"HTTP 请求", L"HTTP Request"));
+
+    // Add Advanced submenu to timeout menu
+    AppendMenuW(hTimeoutMenu, MF_POPUP, (UINT_PTR)hAdvancedMenu,
+               GetLocalizedString(L"高级", L"Advanced"));
 
     // Add timeout action menu to main menu
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeoutMenu, 

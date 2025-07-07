@@ -96,6 +96,9 @@
 #define CLOCK_IDM_TIMEOUT_COUNT_UP 136  // Timeout action: Count up
 #define CLOCK_IDM_OPEN_WEBSITE 137      // Timeout action: Open website
 #define CLOCK_IDM_CURRENT_WEBSITE 138   // Current website menu item ID
+#define CLOCK_IDM_ADVANCED 142          // Advanced options menu
+#define CLOCK_IDM_RUN_COMMAND 143       // Run command timeout action
+#define CLOCK_IDM_HTTP_REQUEST 144      // HTTP request timeout action
 
 /* Basic settings */
 #define CLOCK_IDM_SHOW_CURRENT_TIME 150
