@@ -34,6 +34,8 @@ extern int POMODORO_LOOP_COUNT;   ///< Pomodoro loop count (default 1 cycle)
  * - COUNT_UP: Start count-up timer
  * - OPEN_WEBSITE: Open website
  * - SLEEP: Sleep mode
+ * - RUN_COMMAND: Execute a command
+ * - HTTP_REQUEST: Send HTTP request
  */
 typedef enum {
     TIMEOUT_ACTION_MESSAGE = 0,
@@ -44,7 +46,9 @@ typedef enum {
     TIMEOUT_ACTION_SHOW_TIME = 5,
     TIMEOUT_ACTION_COUNT_UP = 6,
     TIMEOUT_ACTION_OPEN_WEBSITE = 7,
-    TIMEOUT_ACTION_SLEEP = 8
+    TIMEOUT_ACTION_SLEEP = 8,
+    TIMEOUT_ACTION_RUN_COMMAND = 9,
+    TIMEOUT_ACTION_HTTP_REQUEST = 10
 } TimeoutActionType;
 
 // Timer status --------------------------------------------------

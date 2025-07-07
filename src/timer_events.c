@@ -446,6 +446,20 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                                     ShellExecuteW(NULL, L"open", wideUrl, NULL, NULL, SW_NORMAL);
                                 }
                                 break;
+                            case TIMEOUT_ACTION_RUN_COMMAND:
+                                // TODO: 实现运行命令功能
+                                MessageBoxW(hwnd, 
+                                    GetLocalizedString(L"运行命令功能正在开发中", L"Run Command feature is under development"),
+                                    GetLocalizedString(L"提示", L"Notice"),
+                                    MB_ICONINFORMATION);
+                                break;
+                            case TIMEOUT_ACTION_HTTP_REQUEST:
+                                // TODO: 实现HTTP请求功能
+                                MessageBoxW(hwnd, 
+                                    GetLocalizedString(L"HTTP请求功能正在开发中", L"HTTP Request feature is under development"),
+                                    GetLocalizedString(L"提示", L"Notice"),
+                                    MB_ICONINFORMATION);
+                                break;
                         }
                     }
 
@@ -489,6 +503,22 @@ void OnTimerTimeout(HWND hwnd) {
             ReadNotificationSoundConfig();
             PlayNotificationSound(hwnd);
             
+            break;
+        }
+        case TIMEOUT_ACTION_RUN_COMMAND: {
+            // TODO: 实现运行命令功能
+            MessageBoxW(hwnd, 
+                GetLocalizedString(L"运行命令功能正在开发中", L"Run Command feature is under development"),
+                GetLocalizedString(L"提示", L"Notice"),
+                MB_ICONINFORMATION);
+            break;
+        }
+        case TIMEOUT_ACTION_HTTP_REQUEST: {
+            // TODO: 实现HTTP请求功能
+            MessageBoxW(hwnd, 
+                GetLocalizedString(L"HTTP请求功能正在开发中", L"HTTP Request feature is under development"),
+                GetLocalizedString(L"提示", L"Notice"),
+                MB_ICONINFORMATION);
             break;
         }
 

@@ -598,6 +598,12 @@ void ReadConfig() {
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_COUNT_UP;
     } else if (strcmp(timeoutAction, "OPEN_WEBSITE") == 0) {
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_WEBSITE;
+    } else if (strcmp(timeoutAction, "SLEEP") == 0) {
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SLEEP;
+    } else if (strcmp(timeoutAction, "RUN_COMMAND") == 0) {
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_RUN_COMMAND;
+    } else if (strcmp(timeoutAction, "HTTP_REQUEST") == 0) {
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_HTTP_REQUEST;
     }
     
     // Read timeout file and website settings
@@ -1473,11 +1479,16 @@ void WriteConfig(const char* config_path) {
         case TIMEOUT_ACTION_LOCK:
             timeoutActionStr = "LOCK";
             break;
+        case TIMEOUT_ACTION_SHUTDOWN:
+            // Don't save one-time operations, revert to MESSAGE
+            timeoutActionStr = "MESSAGE";
+            break;
+        case TIMEOUT_ACTION_RESTART:
+            // Don't save one-time operations, revert to MESSAGE
+            timeoutActionStr = "MESSAGE";
+            break;
         case TIMEOUT_ACTION_OPEN_FILE:
             timeoutActionStr = "OPEN_FILE";
-            break;
-        case TIMEOUT_ACTION_OPEN_WEBSITE:
-            timeoutActionStr = "OPEN_WEBSITE";
             break;
         case TIMEOUT_ACTION_SHOW_TIME:
             timeoutActionStr = "SHOW_TIME";
@@ -1485,21 +1496,21 @@ void WriteConfig(const char* config_path) {
         case TIMEOUT_ACTION_COUNT_UP:
             timeoutActionStr = "COUNT_UP";
             break;
-        case TIMEOUT_ACTION_RESTART:
-            // Even for restart operation, treat it as a one-time action and store the default value
-            timeoutActionStr = "MESSAGE";
-            break;
-        case TIMEOUT_ACTION_SHUTDOWN:
-            // Even for shutdown operation, treat it as a one-time action and store the default value
-            timeoutActionStr = "MESSAGE";
+        case TIMEOUT_ACTION_OPEN_WEBSITE:
+            timeoutActionStr = "OPEN_WEBSITE";
             break;
         case TIMEOUT_ACTION_SLEEP:
-            // Even for sleep operation, treat it as a one-time action and store the default value
+            // Don't save one-time operations, revert to MESSAGE
             timeoutActionStr = "MESSAGE";
+            break;
+        case TIMEOUT_ACTION_RUN_COMMAND:
+            timeoutActionStr = "RUN_COMMAND";
+            break;
+        case TIMEOUT_ACTION_HTTP_REQUEST:
+            timeoutActionStr = "HTTP_REQUEST";
             break;
         default:
             timeoutActionStr = "MESSAGE";
-            break;
     }
     
     // ======== [General] Section ========

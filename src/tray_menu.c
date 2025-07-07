@@ -22,6 +22,7 @@
 #include "../include/color.h"
 #include "../include/drag_scale.h"
 #include "../include/pomodoro.h"
+#include "../include/timer.h"
 #include "../resource/resource.h"
 
 /// @name External variable declarations
@@ -71,27 +72,6 @@ extern void WriteConfigStartupMode(const char* mode);
 extern void ClearColorOptions(void);
 extern void AddColorOption(const char* color);
 /// @}
-
-/**
- * @brief Timeout action type enumeration
- * 
- * Defines different types of operations that can be executed after timer completion
- */
-typedef enum {
-    TIMEOUT_ACTION_MESSAGE = 0,   ///< Display message reminder
-    TIMEOUT_ACTION_LOCK = 1,      ///< Lock screen
-    TIMEOUT_ACTION_SHUTDOWN = 2,  ///< Shutdown
-    TIMEOUT_ACTION_RESTART = 3,   ///< Restart system
-    TIMEOUT_ACTION_OPEN_FILE = 4, ///< Open specified file
-    TIMEOUT_ACTION_SHOW_TIME = 5, ///< Show current time
-    TIMEOUT_ACTION_COUNT_UP = 6,   ///< Switch to count-up mode
-    TIMEOUT_ACTION_OPEN_WEBSITE = 7, ///< Open website
-    TIMEOUT_ACTION_SLEEP = 8,        ///< Sleep
-    TIMEOUT_ACTION_RUN_COMMAND = 9,  ///< Run command
-    TIMEOUT_ACTION_HTTP_REQUEST = 10 ///< Send HTTP request
-} TimeoutActionType;
-
-extern TimeoutActionType CLOCK_TIMEOUT_ACTION;
 
 /**
  * @brief Read timeout action settings from configuration file
