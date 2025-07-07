@@ -329,8 +329,13 @@ void ShowColorMenu(HWND hwnd) {
                CLOCK_IDM_HTTP_REQUEST,
                GetLocalizedString(L"HTTP 请求", L"HTTP Request"));
 
-    // Add Advanced submenu to timeout menu
-    AppendMenuW(hTimeoutMenu, MF_POPUP, (UINT_PTR)hAdvancedMenu,
+    // Check if any advanced option is selected to determine if the Advanced submenu should be checked
+    BOOL isAdvancedOptionSelected = (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_RUN_COMMAND ||
+                                    CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_HTTP_REQUEST);
+
+    // Add Advanced submenu to timeout menu - mark as checked if any advanced option is selected
+    AppendMenuW(hTimeoutMenu, MF_POPUP | (isAdvancedOptionSelected ? MF_CHECKED : MF_UNCHECKED),
+               (UINT_PTR)hAdvancedMenu,
                GetLocalizedString(L"高级", L"Advanced"));
 
     // Add timeout action menu to main menu
