@@ -1,9 +1,6 @@
 /**
  * @file dialog_procedure.c
  * @brief Implementation of dialog message handling procedures
- * 
- * This file implements the dialog message handling callback functions for the application,
- * processing all dialog message events including initialization, color management, button clicks, and keyboard events.
  */
 
 #include <windows.h>
@@ -19,117 +16,86 @@
 #include "../include/dialog_procedure.h"
 #include "../include/language.h"
 #include "../include/config.h"
-#include "../include/audio_player.h" 
-#include "../include/window_procedure.h"  // Add window handling header to use RegisterGlobalHotkeys and UnregisterGlobalHotkeys functions
-#include "../include/hotkey.h"  // Include hotkey management header
-#include "../include/dialog_language.h"  // Add dialog language support header
+#include "../include/audio_player.h"
+#include "../include/window_procedure.h"
+#include "../include/hotkey.h"
+#include "../include/dialog_language.h"
 
-// Function declaration
 static void DrawColorSelectButton(HDC hdc, HWND hwnd);
 
-// Variables imported from main.c
 extern char inputText[256];
 
-// External declarations for pomodoro related variables
-#define MAX_POMODORO_TIMES 10  // Keep the maximum number of pomodoro time entries unchanged
-extern int POMODORO_TIMES[MAX_POMODORO_TIMES]; // Store all pomodoro times
-extern int POMODORO_TIMES_COUNT;               // Actual number of pomodoro times
-extern int POMODORO_WORK_TIME;                 // Pomodoro work time (seconds)
-extern int POMODORO_SHORT_BREAK;               // Pomodoro short break time (seconds)
-extern int POMODORO_LONG_BREAK;                // Pomodoro long break time (seconds)
-extern int POMODORO_LOOP_COUNT;                // Pomodoro loop count
+#define MAX_POMODORO_TIMES 10
+extern int POMODORO_TIMES[MAX_POMODORO_TIMES];
+extern int POMODORO_TIMES_COUNT;
+extern int POMODORO_WORK_TIME;
+extern int POMODORO_SHORT_BREAK;
+extern int POMODORO_LONG_BREAK;
+extern int POMODORO_LOOP_COUNT;
 
-// Store old edit control procedure
 WNDPROC wpOrigEditProc;
 
-// Add global variable to track about dialog handle
 static HWND g_hwndAboutDlg = NULL;
-
-// Add global variable to track error dialog handle
 static HWND g_hwndErrorDlg = NULL;
-
-// Add global variable to track countdown input dialog handle
 HWND g_hwndInputDialog = NULL;
+static WNDPROC wpOrigLoopEditProc;
 
-// Add subclassing procedure for loop count edit box
-static WNDPROC wpOrigLoopEditProc;  // Store original edit control procedure
-
-// Add constant strings
 #define URL_GITHUB_REPO L"https://github.com/vladelaina/Catime"
 
-// Subclassing procedure for edit controls
 LRESULT APIENTRY EditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     static BOOL firstKeyProcessed = FALSE;
-    
+
     switch (msg) {
     case WM_SETFOCUS:
-        // When getting focus, ensure all text is selected
         PostMessage(hwnd, EM_SETSEL, 0, -1);
-        // Reset first key flag
         firstKeyProcessed = FALSE;
         break;
-        
+
     case WM_KEYDOWN:
-        // Handle first key press issue
         if (!firstKeyProcessed) {
-            // Force clear all modifier key states
-            // This helps resolve hotkey residual state issues
             firstKeyProcessed = TRUE;
-            
-            // Mark that we've processed the first key, but don't do special handling
-            // Let the system handle this key normally to avoid duplicate input
         }
-        
-        // Enter key handling
+
         if (wParam == VK_RETURN) {
-            // Send BM_CLICK message to the parent window's OK button
             HWND hwndOkButton = GetDlgItem(GetParent(hwnd), CLOCK_IDC_BUTTON_OK);
             SendMessage(GetParent(hwnd), WM_COMMAND, MAKEWPARAM(CLOCK_IDC_BUTTON_OK, BN_CLICKED), (LPARAM)hwndOkButton);
             return 0;
         }
-        // Ctrl+A select all handling
         if (wParam == 'A' && GetKeyState(VK_CONTROL) < 0) {
             SendMessage(hwnd, EM_SETSEL, 0, -1);
             return 0;
         }
         break;
-    
+
     case WM_CHAR:
-        // Prevent Ctrl+A from generating a character to avoid alert sound
         if (wParam == 1 || (wParam == 'a' || wParam == 'A') && GetKeyState(VK_CONTROL) < 0) {
             return 0;
         }
-        // Prevent Enter key from generating character messages for further processing to avoid alert sound
-        if (wParam == VK_RETURN) { // VK_RETURN (0x0D) is the char code for Enter
+        if (wParam == VK_RETURN) {
             return 0;
         }
         break;
     }
-    
+
     return CallWindowProc(wpOrigEditProc, hwnd, msg, wParam, lParam);
 }
 
-// Add error dialog handling function declaration at the beginning of the file
 INT_PTR CALLBACK ErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 
-// Add function to display error dialog
 void ShowErrorDialog(HWND hwndParent) {
-    DialogBox(GetModuleHandle(NULL), 
-             MAKEINTRESOURCE(IDD_ERROR_DIALOG), 
-             hwndParent, 
+    DialogBox(GetModuleHandle(NULL),
+             MAKEINTRESOURCE(IDD_ERROR_DIALOG),
+             hwndParent,
              ErrorDlgProc);
 }
 
-// Add error dialog handling function
 INT_PTR CALLBACK ErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_INITDIALOG:
-            // Set localized error prompt text
-            SetDlgItemTextW(hwndDlg, IDC_ERROR_TEXT, 
+            SetDlgItemTextW(hwndDlg, IDC_ERROR_TEXT,
                 GetLocalizedString(L"输入格式无效，请重新输入。", L"Invalid input format, please try again."));
-            
-            // Set dialog title
+
             SetWindowTextW(hwndDlg, GetLocalizedString(L"错误", L"Error"));
             return TRUE;
 
@@ -145,18 +111,6 @@ INT_PTR CALLBACK ErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
 
 /**
  * @brief Input dialog procedure
- * @param hwndDlg Dialog handle
- * @param msg Message type
- * @param wParam Message parameter
- * @param lParam Message parameter
- * @return INT_PTR Message processing result
- * 
- * Handles the countdown input dialog's:
- * 1. Control initialization and focus setting
- * 2. Background/control color management
- * 3. OK button click processing
- * 4. Enter key response
- * 5. Resource cleanup
  */
 INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     static HBRUSH hBackgroundBrush = NULL;
@@ -165,83 +119,61 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 
     switch (msg) {
         case WM_INITDIALOG: {
-            // Save dialog ID to GWLP_USERDATA
             SetWindowLongPtr(hwndDlg, GWLP_USERDATA, lParam);
-            
-            // Save dialog handle
+
             g_hwndInputDialog = hwndDlg;
-            
+
             SetWindowPos(hwndDlg, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
             hBackgroundBrush = CreateSolidBrush(RGB(0xF3, 0xF3, 0xF3));
             hEditBrush = CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF));
             hButtonBrush = CreateSolidBrush(RGB(0xFD, 0xFD, 0xFD));
 
             DWORD dlgId = GetWindowLongPtr(hwndDlg, GWLP_USERDATA);
-            
-            // Apply multi-language support - generalized handling
+
             ApplyDialogLanguage(hwndDlg, (int)dlgId);
 
-            // Check if dialog ID is for quick countdown options dialog, and if so set title (this part may be overridden by ApplyDialogLanguage, but keep it just in case)
-            if (dlgId == CLOCK_IDD_SHORTCUT_DIALOG) { 
-                // SetWindowTextW(hwndDlg, GetLocalizedString(L"Countdown Presets", L"Countdown Presets"));
-                // The line above is handled by ApplyDialogLanguage if g_dialogTitles contains CLOCK_IDD_SHORTCUT_DIALOG
+            if (dlgId == CLOCK_IDD_SHORTCUT_DIALOG) {
             }
-            
-            // Get handle of the edit control
+
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
 
-            // Subclass the edit control
             wpOrigEditProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
 
-            // Ensure input box gets focus - use multiple methods to guarantee focus setting
             SetFocus(hwndEdit);
-            
-            // Use multiple delayed messages with different delay times to ensure focus and text selection take effect correctly
+
             PostMessage(hwndDlg, WM_APP+100, 0, (LPARAM)hwndEdit);
             PostMessage(hwndDlg, WM_APP+101, 0, (LPARAM)hwndEdit);
             PostMessage(hwndDlg, WM_APP+102, 0, (LPARAM)hwndEdit);
-            
-            // Select all text in edit box
+
             SendDlgItemMessage(hwndDlg, CLOCK_IDC_EDIT, EM_SETSEL, 0, -1);
-            
-            // Set default button ID
+
             SendMessage(hwndDlg, DM_SETDEFID, CLOCK_IDC_BUTTON_OK, 0);
 
-            // Set a special timer to set focus after the dialog is fully displayed
             SetTimer(hwndDlg, 9999, 50, NULL);
-            
-            // Force reset all modifier key states (prevent hotkey residual states)
-            // This resolves the issue of the first key press being ignored after opening the dialog with a hotkey
+
             PostMessage(hwndDlg, WM_APP+103, 0, 0);
-            
-            // Set build time (optimized wide character handling)
+
             char month[4];
             int day, year, hour, min, sec;
-            
-            // Parse compiler-generated date and time
+
             sscanf(__DATE__, "%3s %d %d", month, &day, &year);
             sscanf(__TIME__, "%d:%d:%d", &hour, &min, &sec);
 
-            // Convert month abbreviation to number
             const char* months[] = {"Jan","Feb","Mar","Apr","May","Jun",
                                    "Jul","Aug","Sep","Oct","Nov","Dec"};
             int month_num = 0;
             while (++month_num <= 12 && strcmp(month, months[month_num-1]));
 
-            // Format date and time as YYYY/MM/DD HH:MM:SS and add UTC+8 identifier
             wchar_t timeStr[60];
             StringCbPrintfW(timeStr, sizeof(timeStr), L"Build Date: %04d/%02d/%02d %02d:%02d:%02d (UTC+8)",
                     year, month_num, day, hour, min, sec);
 
-            // Set control text
             SetDlgItemTextW(hwndDlg, IDC_BUILD_DATE, timeStr);
 
-            return FALSE;  
+            return FALSE;
         }
 
-        // Add code to handle WM_CLOSE message, when closing dialog via shortcut key, don't check input validity
         case WM_CLOSE: {
-            // Directly close the dialog without input validation
             g_hwndInputDialog = NULL;
             EndDialog(hwndDlg, 0);
             return TRUE;
@@ -278,8 +210,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
         case WM_COMMAND:
             if (LOWORD(wParam) == CLOCK_IDC_BUTTON_OK || HIWORD(wParam) == BN_CLICKED) {
                 GetDlgItemText(hwndDlg, CLOCK_IDC_EDIT, inputText, sizeof(inputText));
-                
-                // Check if the input is empty or contains only spaces
+
                 BOOL isAllSpaces = TRUE;
                 for (int i = 0; inputText[i]; i++) {
                     if (!isspace((unsigned char)inputText[i])) {
@@ -292,34 +223,28 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                     EndDialog(hwndDlg, 0);
                     return TRUE;
                 }
-                
+
                 int total_seconds;
                 if (ParseInput(inputText, &total_seconds)) {
-                                    // Call different configuration update functions based on dialog ID
                 int dialogId = GetWindowLongPtr(hwndDlg, GWLP_USERDATA);
                 if (dialogId == CLOCK_IDD_POMODORO_TIME_DIALOG) {
-                    // General pomodoro time settings, specific update logic handled by caller
                     g_hwndInputDialog = NULL;
-                    EndDialog(hwndDlg, IDOK); // Return IDOK to indicate success
+                    EndDialog(hwndDlg, IDOK);
                 } else if (dialogId == CLOCK_IDD_POMODORO_LOOP_DIALOG) {
-                    // Pomodoro loop count
                     WriteConfigPomodoroLoopCount(total_seconds);
                     g_hwndInputDialog = NULL;
                     EndDialog(hwndDlg, IDOK);
                 } else if (dialogId == CLOCK_IDD_STARTUP_DIALOG) {
-                    // Only CLOCK_IDD_STARTUP_DIALOG (i.e., "Preset Management"->"Startup Settings"->"Countdown") will modify the default start time
                     WriteConfigDefaultStartTime(total_seconds);
                     g_hwndInputDialog = NULL;
                     EndDialog(hwndDlg, IDOK);
                 } else if (dialogId == CLOCK_IDD_SHORTCUT_DIALOG) {
-                    // Countdown preset management
                     WriteConfigDefaultStartTime(total_seconds);
                     g_hwndInputDialog = NULL;
                     EndDialog(hwndDlg, IDOK);
                 } else {
-                    // For other dialog IDs (including CLOCK_IDD_DIALOG1, i.e., regular countdown), don't modify default start time configuration
                     g_hwndInputDialog = NULL;
-                    EndDialog(hwndDlg, IDOK); // Just assume successful input acquisition
+                    EndDialog(hwndDlg, IDOK);
                 }
                 } else {
                     ShowErrorDialog(hwndDlg);
@@ -333,16 +258,12 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 
         case WM_TIMER:
             if (wParam == 9999) {
-                // Timer used to set focus after the dialog is fully displayed
                 KillTimer(hwndDlg, 9999);
-                
+
                 HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
                 if (hwndEdit && IsWindow(hwndEdit)) {
-                    // Ensure window is in the foreground
                     SetForegroundWindow(hwndDlg);
-                    // Ensure edit box gets focus
                     SetFocus(hwndEdit);
-                    // Select all text
                     SendMessage(hwndEdit, EM_SETSEL, 0, -1);
                 }
                 return TRUE;
@@ -364,89 +285,70 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
         case WM_APP+100:
         case WM_APP+101:
         case WM_APP+102:
-            // Delayed execution of focus and selection settings
             if (lParam) {
                 HWND hwndEdit = (HWND)lParam;
-                // Ensure window is valid and visible
                 if (IsWindow(hwndEdit) && IsWindowVisible(hwndEdit)) {
-                    // Ensure window is in foreground
                     SetForegroundWindow(hwndDlg);
-                    // Set focus to input box
                     SetFocus(hwndEdit);
-                    // Select all text
                     SendMessage(hwndEdit, EM_SETSEL, 0, -1);
                 }
             }
             return TRUE;
-            
+
         case WM_APP+103:
-            // Force reset all modifier key states
-            // Simulate release of all possible modifier keys
-            // This helps clear any potentially lingering hotkey states
             {
                 INPUT inputs[8] = {0};
                 int inputCount = 0;
-                
-                // Left Shift key release
+
                 inputs[inputCount].type = INPUT_KEYBOARD;
                 inputs[inputCount].ki.wVk = VK_LSHIFT;
                 inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
                 inputCount++;
-                
-                // Right Shift key release
+
                 inputs[inputCount].type = INPUT_KEYBOARD;
                 inputs[inputCount].ki.wVk = VK_RSHIFT;
                 inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
                 inputCount++;
-                
-                // Left Ctrl key release
+
                 inputs[inputCount].type = INPUT_KEYBOARD;
                 inputs[inputCount].ki.wVk = VK_LCONTROL;
                 inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
                 inputCount++;
-                
-                // Right Ctrl key release
+
                 inputs[inputCount].type = INPUT_KEYBOARD;
                 inputs[inputCount].ki.wVk = VK_RCONTROL;
                 inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
                 inputCount++;
-                
-                // Left Alt key release
+
                 inputs[inputCount].type = INPUT_KEYBOARD;
                 inputs[inputCount].ki.wVk = VK_LMENU;
                 inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
                 inputCount++;
-                
-                // Right Alt key release
+
                 inputs[inputCount].type = INPUT_KEYBOARD;
                 inputs[inputCount].ki.wVk = VK_RMENU;
                 inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
                 inputCount++;
-                
-                // Left Win key release
+
                 inputs[inputCount].type = INPUT_KEYBOARD;
                 inputs[inputCount].ki.wVk = VK_LWIN;
                 inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
                 inputCount++;
-                
-                // Right Win key release
+
                 inputs[inputCount].type = INPUT_KEYBOARD;
                 inputs[inputCount].ki.wVk = VK_RWIN;
                 inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
                 inputCount++;
-                
-                // Send all key release events
+
                 SendInput(inputCount, inputs, sizeof(INPUT));
             }
             return TRUE;
 
         case WM_DESTROY:
-            // Restore original edit control procedure
             {
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
             SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
-            
-            // Release resources
+
             if (hBackgroundBrush) {
                 DeleteObject(hBackgroundBrush);
                 hBackgroundBrush = NULL;
@@ -459,8 +361,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                 DeleteObject(hButtonBrush);
                 hButtonBrush = NULL;
             }
-            
-            // Clear dialog handle
+
             g_hwndInputDialog = NULL;
             }
             break;
@@ -468,29 +369,24 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     return FALSE;
 }
 
-// About Dialog Procedure
 INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     static HICON hLargeIcon = NULL;
 
     switch (msg) {
         case WM_INITDIALOG: {
-            // Load large icon, using the defined size
             hLargeIcon = (HICON)LoadImage(GetModuleHandle(NULL),
                 MAKEINTRESOURCE(IDI_CATIME),
                 IMAGE_ICON,
-                ABOUT_ICON_SIZE,    // Use the defined size
-                ABOUT_ICON_SIZE,    // Use the defined size
+                ABOUT_ICON_SIZE,
+                ABOUT_ICON_SIZE,
                 LR_DEFAULTCOLOR);
-            
+
             if (hLargeIcon) {
-                // Set the icon for the static control
                 SendDlgItemMessage(hwndDlg, IDC_ABOUT_ICON, STM_SETICON, (WPARAM)hLargeIcon, 0);
             }
-            
-            // Apply multilingual support
+
             ApplyDialogLanguage(hwndDlg, IDD_ABOUT_DIALOG);
-            
-            // Set version information (will override the version setting from ApplyDialogLanguage)
+
             const wchar_t* versionFormat = GetDialogLocalizedString(IDD_ABOUT_DIALOG, IDC_VERSION_TEXT);
             if (versionFormat) {
                 wchar_t versionText[256];
@@ -498,7 +394,6 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 SetDlgItemTextW(hwndDlg, IDC_VERSION_TEXT, versionText);
             }
 
-            // Set link texts
             SetDlgItemTextW(hwndDlg, IDC_CREDIT_LINK, GetLocalizedString(L"特别感谢猫屋敷梨梨Official提供的图标", L"Special thanks to Neko House Lili Official for the icon"));
             SetDlgItemTextW(hwndDlg, IDC_CREDITS, GetLocalizedString(L"鸣谢", L"Credits"));
             SetDlgItemTextW(hwndDlg, IDC_BILIBILI_LINK, GetLocalizedString(L"BiliBili", L"BiliBili"));
@@ -506,30 +401,24 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             SetDlgItemTextW(hwndDlg, IDC_COPYRIGHT_LINK, GetLocalizedString(L"版权声明", L"Copyright Notice"));
             SetDlgItemTextW(hwndDlg, IDC_SUPPORT, GetLocalizedString(L"支持", L"Support"));
 
-            // Set build time (optimized wide character handling)
             char month[4];
             int day, year, hour, min, sec;
-            
-            // Parse date and time generated by compiler
+
             sscanf(__DATE__, "%3s %d %d", month, &day, &year);
             sscanf(__TIME__, "%d:%d:%d", &hour, &min, &sec);
 
-            // Convert month abbreviation to number
             const char* months[] = {"Jan","Feb","Mar","Apr","May","Jun",
                                    "Jul","Aug","Sep","Oct","Nov","Dec"};
             int month_num = 0;
             while (++month_num <= 12 && strcmp(month, months[month_num-1]));
 
-            // Get localized date format string
             const wchar_t* dateFormat = GetLocalizedString(L"Build Date: %04d/%02d/%02d %02d:%02d:%02d (UTC+8)",
                                                          L"Build Date: %04d/%02d/%02d %02d:%02d:%02d (UTC+8)");
-            
-            // Format date and time
+
             wchar_t timeStr[60];
             StringCbPrintfW(timeStr, sizeof(timeStr), dateFormat,
                     year, month_num, day, hour, min, sec);
 
-            // Set control text
             SetDlgItemTextW(hwndDlg, IDC_BUILD_DATE, timeStr);
 
             return TRUE;
@@ -540,7 +429,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 DestroyIcon(hLargeIcon);
                 hLargeIcon = NULL;
             }
-            g_hwndAboutDlg = NULL;  // Clear dialog handle
+            g_hwndAboutDlg = NULL;
             break;
 
         case WM_COMMAND:
@@ -554,7 +443,6 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 return TRUE;
             }
             if (LOWORD(wParam) == IDC_BILIBILI_LINK) {
-                // Directly open BiliBili personal homepage
                 ShellExecuteW(NULL, L"open", URL_BILIBILI_SPACE, NULL, NULL, SW_SHOWNORMAL);
                 return TRUE;
             }
@@ -1123,12 +1011,11 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
     return FALSE;
 }
 
-// Display Pomodoro combination dialog
 void ShowPomodoroComboDialog(HWND hwndParent) {
     if (!g_hwndPomodoroComboDialog) {
         g_hwndPomodoroComboDialog = CreateDialog(
             GetModuleHandle(NULL),
-            MAKEINTRESOURCE(CLOCK_IDD_POMODORO_COMBO_DIALOG), // Use new dialog resource
+            MAKEINTRESOURCE(CLOCK_IDD_POMODORO_COMBO_DIALOG),
             hwndParent,
             PomodoroComboDialogProc
         );
@@ -1140,75 +1027,64 @@ void ShowPomodoroComboDialog(HWND hwndParent) {
     }
 }
 
-// Parse time input (such as "25m", "30s", "1h30m" etc.)
 BOOL ParseTimeInput(const char* input, int* seconds) {
     if (!input || !seconds) return FALSE;
-    
+
     *seconds = 0;
     char* buffer = _strdup(input);
     if (!buffer) return FALSE;
-    
+
     int len = strlen(buffer);
     char* pos = buffer;
     int value = 0;
     int tempSeconds = 0;
-    
+
     while (*pos) {
-        // Read digits
         if (isdigit((unsigned char)*pos)) {
             value = 0;
             while (isdigit((unsigned char)*pos)) {
                 value = value * 10 + (*pos - '0');
                 pos++;
             }
-            
-            // Read units
+
             if (*pos == 'h' || *pos == 'H') {
-                tempSeconds += value * 3600; // Hours to seconds
+                tempSeconds += value * 3600;
                 pos++;
             } else if (*pos == 'm' || *pos == 'M') {
-                tempSeconds += value * 60;   // Minutes to seconds
+                tempSeconds += value * 60;
                 pos++;
             } else if (*pos == 's' || *pos == 'S') {
-                tempSeconds += value;        // Seconds
+                tempSeconds += value;
                 pos++;
             } else if (*pos == '\0') {
-                // No unit, default to minutes
                 tempSeconds += value * 60;
             } else {
-                // Invalid character
                 free(buffer);
                 return FALSE;
             }
         } else {
-            // Non-digit starting character
             pos++;
         }
     }
-    
+
     free(buffer);
     *seconds = tempSeconds;
     return TRUE;
 }
 
-// Add global variable to track notification message dialog handle
 static HWND g_hwndNotificationMessagesDialog = NULL;
 
-// Add notification messages dialog procedure
 INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     static HBRUSH hBackgroundBrush = NULL;
     static HBRUSH hEditBrush = NULL;
-    
+
     switch (msg) {
         case WM_INITDIALOG: {
-            // Set window topmost
             SetWindowPos(hwndDlg, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-            
-            // Create brushes
+
             hBackgroundBrush = CreateSolidBrush(RGB(0xF3, 0xF3, 0xF3));
             hEditBrush = CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF));
-            
-            // Read latest configuration to global variables
+
             ReadNotificationMessagesConfig();
             
             // For handling UTF-8 Chinese characters, we need to convert to Unicode
