@@ -1,9 +1,6 @@
- /**
+/**
  * @file dialog_language.c
- * @brief Dialog multi-language support module implementation file
- * 
- * This file implements the dialog multi-language support functionality, managing localized display of dialog text.
- * The new version uses Windows API to dynamically traverse dialog controls, instead of manually defining control mappings.
+ * @brief Dialog multi-language support module implementation
  */
 
 #include <windows.h>
@@ -15,27 +12,23 @@
 #include "../include/language.h"
 #include "../resource/resource.h"
 
-// Define dialog title dictionary entries
 typedef struct {
-    int dialogID;      // Dialog resource ID
-    wchar_t* titleKey; // Key name for dialog title
+    int dialogID;
+    wchar_t* titleKey;
 } DialogTitleEntry;
 
-// Special control definitions
 typedef struct {
-    int dialogID;      // Dialog resource ID
-    int controlID;     // Control resource ID
-    wchar_t* textKey;  // Key name in ini file
-    wchar_t* fallbackText; // Hardcoded fallback text
+    int dialogID;
+    int controlID;
+    wchar_t* textKey;
+    wchar_t* fallbackText;
 } SpecialControlEntry;
 
-// Structured data for enumeration callback function
 typedef struct {
-    HWND hwndDlg;      // Dialog handle
-    int dialogID;      // Dialog resource ID
+    HWND hwndDlg;
+    int dialogID;
 } EnumChildWindowsData;
 
-// Dialog title mapping table
 static DialogTitleEntry g_dialogTitles[] = {
     {IDD_ABOUT_DIALOG, L"About"},
     {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, L"Notification Settings"},
@@ -49,23 +42,18 @@ static DialogTitleEntry g_dialogTitles[] = {
     {IDD_UPDATE_DIALOG, L"Update Available"}
 };
 
-// Special control mapping table (controls that need special handling)
 static SpecialControlEntry g_specialControls[] = {
-    // About dialog
     {IDD_ABOUT_DIALOG, IDC_ABOUT_TITLE, L"关于", L"About"},
     {IDD_ABOUT_DIALOG, IDC_VERSION_TEXT, L"Version: %hs", L"Version: %hs"},
     {IDD_ABOUT_DIALOG, IDC_BUILD_DATE, L"构建日期:", L"Build Date:"},
     {IDD_ABOUT_DIALOG, IDC_COPYRIGHT, L"COPYRIGHT_TEXT", L"COPYRIGHT_TEXT"},
     {IDD_ABOUT_DIALOG, IDC_CREDITS, L"鸣谢", L"Credits"},
-    
-    // No update dialog
+
     {IDD_NO_UPDATE_DIALOG, IDC_NO_UPDATE_TEXT, L"NoUpdateRequired", L"You are already using the latest version!"},
-    
-    // Update prompt dialog
+
     {IDD_UPDATE_DIALOG, IDC_UPDATE_TEXT, L"CurrentVersion: %s\nNewVersion: %s", L"Current Version: %s\nNew Version: %s"},
     {IDD_UPDATE_DIALOG, IDC_UPDATE_EXIT_TEXT, L"The application will exit now", L"The application will exit now"},
-    
-    // Notification settings dialog controls - added to solve the problem
+
     {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_CONTENT_GROUP, L"Notification Content", L"Notification Content"},
     {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_LABEL1, L"Countdown timeout message:", L"Countdown timeout message:"},
     {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_LABEL2, L"Pomodoro timeout message:", L"Pomodoro timeout message:"},
@@ -82,45 +70,38 @@ static SpecialControlEntry g_specialControls[] = {
     {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_VOLUME_LABEL, L"Volume (0-100%):", L"Volume (0-100%):"},
     {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_VOLUME_TEXT, L"100%", L"100%"},
     {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_OPACITY_TEXT, L"100%", L"100%"},
-    
-    // Special handling of static text for Pomodoro time setting dialog - using actual INI key name
-    {CLOCK_IDD_POMODORO_TIME_DIALOG, CLOCK_IDC_STATIC, 
-     L"25=25 minutes\\n25h=25 hours\\n25s=25 seconds\\n25 30=25 minutes 30 seconds\\n25 30m=25 hours 30 minutes\\n1 30 20=1 hour 30 minutes 20 seconds", 
+
+    {CLOCK_IDD_POMODORO_TIME_DIALOG, CLOCK_IDC_STATIC,
+     L"25=25 minutes\\n25h=25 hours\\n25s=25 seconds\\n25 30=25 minutes 30 seconds\\n25 30m=25 hours 30 minutes\\n1 30 20=1 hour 30 minutes 20 seconds",
      L"25=25 minutes\n25h=25 hours\n25s=25 seconds\n25 30=25 minutes 30 seconds\n25 30m=25 hours 30 minutes\n1 30 20=1 hour 30 minutes 20 seconds"},
-    
-    // Special handling of static text for Pomodoro combination dialog - using actual INI key name
-    {CLOCK_IDD_POMODORO_COMBO_DIALOG, CLOCK_IDC_STATIC, 
-     L"Enter pomodoro time sequence, separated by spaces:\\n\\n25m = 25 minutes\\n30s = 30 seconds\\n1h30m = 1 hour 30 minutes\\nExample: 25m 5m 25m 10m - work 25min, short break 5min, work 25min, long break 10min", 
+
+    {CLOCK_IDD_POMODORO_COMBO_DIALOG, CLOCK_IDC_STATIC,
+     L"Enter pomodoro time sequence, separated by spaces:\\n\\n25m = 25 minutes\\n30s = 30 seconds\\n1h30m = 1 hour 30 minutes\\nExample: 25m 5m 25m 10m - work 25min, short break 5min, work 25min, long break 10min",
      L"Enter pomodoro time sequence, separated by spaces:\n\n25m = 25 minutes\n30s = 30 seconds\n1h30m = 1 hour 30 minutes\nExample: 25m 5m 25m 10m - work 25min, short break 5min, work 25min, long break 10min"},
-    
-    // Website URL input dialog explanation text
-    {CLOCK_IDD_WEBSITE_DIALOG, CLOCK_IDC_STATIC, 
-     L"Enter the website URL to open when the countdown ends:\\nExample: https://github.com/vladelaina/Catime", 
+
+    {CLOCK_IDD_WEBSITE_DIALOG, CLOCK_IDC_STATIC,
+     L"Enter the website URL to open when the countdown ends:\\nExample: https://github.com/vladelaina/Catime",
      L"Enter the website URL to open when the countdown ends:\nExample: https://github.com/vladelaina/Catime"},
-    
-    // Shortcut time options settings dialog explanation text
-    {CLOCK_IDD_SHORTCUT_DIALOG, CLOCK_IDC_STATIC, 
-     L"CountdownPresetDialogStaticText", 
+
+    {CLOCK_IDD_SHORTCUT_DIALOG, CLOCK_IDC_STATIC,
+     L"CountdownPresetDialogStaticText",
      L"Enter numbers (minutes), separated by spaces\n\n25 10 5\n\nThis will create options for 25 minutes, 10 minutes, and 5 minutes"},
-    
-    // Main countdown dialog (CLOCK_IDD_DIALOG1) static help text
+
     {CLOCK_IDD_DIALOG1, CLOCK_IDC_STATIC,
      L"CountdownDialogStaticText",
      L"25=25 minutes\n25h=25 hours\n25s=25 seconds\n25 30=25 minutes 30 seconds\n25 30m=25 hours 30 minutes\n1 30 20=1 hour 30 minutes 20 seconds\n17 20t=Countdown to 17:20\n9 9 9t=Countdown to 09:09:09"}
 };
 
-// Special button text
 static SpecialControlEntry g_specialButtons[] = {
-    // Update dialog buttons
     {IDD_UPDATE_DIALOG, IDYES, L"Yes", L"Yes"},
     {IDD_UPDATE_DIALOG, IDNO, L"No", L"No"},
     {IDD_UPDATE_DIALOG, IDOK, L"OK", L"OK"},
-    
+
     {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_TEST_SOUND_BUTTON, L"Test", L"Test"},
     {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_OPEN_SOUND_DIR_BUTTON, L"Audio folder", L"Audio folder"},
     {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDOK, L"OK", L"OK"},
     {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDCANCEL, L"Cancel", L"Cancel"},
-    
+
     {CLOCK_IDD_POMODORO_LOOP_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"},
     {CLOCK_IDD_POMODORO_COMBO_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"},
     {CLOCK_IDD_POMODORO_TIME_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"},
@@ -129,27 +110,21 @@ static SpecialControlEntry g_specialButtons[] = {
     {CLOCK_IDD_DIALOG1, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"}
 };
 
-// Size of dialog mapping tables
 #define DIALOG_TITLES_COUNT (sizeof(g_dialogTitles) / sizeof(g_dialogTitles[0]))
 #define SPECIAL_CONTROLS_COUNT (sizeof(g_specialControls) / sizeof(g_specialControls[0]))
 #define SPECIAL_BUTTONS_COUNT (sizeof(g_specialButtons) / sizeof(g_specialButtons[0]))
 
 /**
  * @brief Find localized text for special controls
- * @param dialogID Dialog ID
- * @param controlID Control ID
- * @return const wchar_t* Found localized text, returns NULL if not found
  */
 static const wchar_t* FindSpecialControlText(int dialogID, int controlID) {
     for (int i = 0; i < SPECIAL_CONTROLS_COUNT; i++) {
-        if (g_specialControls[i].dialogID == dialogID && 
+        if (g_specialControls[i].dialogID == dialogID &&
             g_specialControls[i].controlID == controlID) {
-            // Use textKey as key name to find localized string
             const wchar_t* localizedText = GetLocalizedString(NULL, g_specialControls[i].textKey);
             if (localizedText) {
                 return localizedText;
             } else {
-                // If localized text is not found, return fallbackText
                 return g_specialControls[i].fallbackText;
             }
         }
@@ -159,13 +134,10 @@ static const wchar_t* FindSpecialControlText(int dialogID, int controlID) {
 
 /**
  * @brief Find localized text for special buttons
- * @param dialogID Dialog ID
- * @param controlID Control ID
- * @return const wchar_t* Found localized text, returns NULL if not found
  */
 static const wchar_t* FindSpecialButtonText(int dialogID, int controlID) {
     for (int i = 0; i < SPECIAL_BUTTONS_COUNT; i++) {
-        if (g_specialButtons[i].dialogID == dialogID && 
+        if (g_specialButtons[i].dialogID == dialogID &&
             g_specialButtons[i].controlID == controlID) {
             return GetLocalizedString(NULL, g_specialButtons[i].textKey);
         }
@@ -175,8 +147,6 @@ static const wchar_t* FindSpecialButtonText(int dialogID, int controlID) {
 
 /**
  * @brief Get localized text for dialog title
- * @param dialogID Dialog ID
- * @return const wchar_t* Found localized text, returns NULL if not found
  */
 static const wchar_t* GetDialogTitleText(int dialogID) {
     for (int i = 0; i < DIALOG_TITLES_COUNT; i++) {
@@ -189,54 +159,40 @@ static const wchar_t* GetDialogTitleText(int dialogID) {
 
 /**
  * @brief Get original text of a control for translation lookup
- * @param hwndCtl Control handle
- * @param buffer Buffer to store text
- * @param bufferSize Buffer size (in characters, not bytes)
- * @return BOOL Whether text was successfully retrieved
  */
 static BOOL GetControlOriginalText(HWND hwndCtl, wchar_t* buffer, int bufferSize) {
-    // Get control class name
     wchar_t className[256];
     GetClassNameW(hwndCtl, className, 256);
-    
-    // Button class controls need to get their text
-    if (wcscmp(className, L"Button") == 0 || 
+
+    if (wcscmp(className, L"Button") == 0 ||
         wcscmp(className, L"Static") == 0 ||
         wcscmp(className, L"ComboBox") == 0 ||
         wcscmp(className, L"Edit") == 0) {
         return GetWindowTextW(hwndCtl, buffer, bufferSize) > 0;
     }
-    
+
     return FALSE;
 }
 
 /**
  * @brief Process special control text settings, such as line breaks
- * @param hwndCtl Control handle
- * @param localizedText Localized text
- * @param dialogID Dialog ID
- * @param controlID Control ID
- * @return BOOL Whether processing was successful
  */
 static BOOL ProcessSpecialControlText(HWND hwndCtl, const wchar_t* localizedText, int dialogID, int controlID) {
-    // Special handling for line breaks in static text of Pomodoro related dialogs and website URL dialog
-    if ((dialogID == CLOCK_IDD_POMODORO_COMBO_DIALOG || 
+    if ((dialogID == CLOCK_IDD_POMODORO_COMBO_DIALOG ||
          dialogID == CLOCK_IDD_POMODORO_TIME_DIALOG ||
          dialogID == CLOCK_IDD_WEBSITE_DIALOG ||
          dialogID == CLOCK_IDD_SHORTCUT_DIALOG ||
-         dialogID == CLOCK_IDD_DIALOG1) && 
+         dialogID == CLOCK_IDD_DIALOG1) &&
         controlID == CLOCK_IDC_STATIC) {
-        wchar_t processedText[1024]; // Assume text won't exceed 1024 wide characters
+        wchar_t processedText[1024];
         const wchar_t* src = localizedText;
         wchar_t* dst = processedText;
-        
+
         while (*src) {
-            // Process escaped line breaks \n in INI file
             if (src[0] == L'\\' && src[1] == L'n') {
-                *dst++ = L'\n'; // Convert to actual line break
+                *dst++ = L'\n';
                 src += 2;
-            } 
-            // Handle literal line breaks that may exist in the text
+            }
             else if (src[0] == L'\n') {
                 *dst++ = L'\n';
                 src++;
@@ -246,82 +202,69 @@ static BOOL ProcessSpecialControlText(HWND hwndCtl, const wchar_t* localizedText
             }
         }
         *dst = L'\0';
-        
+
         SetWindowTextW(hwndCtl, processedText);
         return TRUE;
     }
-    
-    // Special handling for version information text
+
     if (controlID == IDC_VERSION_TEXT && dialogID == IDD_ABOUT_DIALOG) {
         wchar_t versionText[256];
-        // Get localized version string format from language file
         const wchar_t* localizedVersionFormat = GetLocalizedString(NULL, L"Version: %hs");
         if (localizedVersionFormat) {
             StringCbPrintfW(versionText, sizeof(versionText), localizedVersionFormat, CATIME_VERSION);
         } else {
-            // If localized version is not found, use the provided format
             StringCbPrintfW(versionText, sizeof(versionText), localizedText, CATIME_VERSION);
         }
         SetWindowTextW(hwndCtl, versionText);
         return TRUE;
     }
-    
+
     return FALSE;
 }
 
 /**
  * @brief Dialog child window enumeration callback function
- * @param hwndCtl Child window handle
- * @param lParam Callback parameter, contains parent dialog handle and dialog ID
- * @return BOOL Whether to continue enumeration
  */
 static BOOL CALLBACK EnumChildProc(HWND hwndCtl, LPARAM lParam) {
     EnumChildWindowsData* data = (EnumChildWindowsData*)lParam;
     HWND hwndDlg = data->hwndDlg;
     int dialogID = data->dialogID;
-    
-    // Get control ID
+
     int controlID = GetDlgCtrlID(hwndCtl);
     if (controlID == 0) {
-        return TRUE; // Continue enumeration
+        return TRUE;
     }
 
-    // Special handling for some controls based on dialog ID and control ID
     const wchar_t* specialText = FindSpecialControlText(dialogID, controlID);
     if (specialText) {
         if (ProcessSpecialControlText(hwndCtl, specialText, dialogID, controlID)) {
-            return TRUE; // Special control already processed
+            return TRUE;
         }
         SetWindowTextW(hwndCtl, specialText);
         return TRUE;
     }
-    
-    // Check for special button text
+
     const wchar_t* buttonText = FindSpecialButtonText(dialogID, controlID);
     if (buttonText) {
         SetWindowTextW(hwndCtl, buttonText);
         return TRUE;
     }
 
-    // Get current control text
     wchar_t originalText[512] = {0};
     if (GetControlOriginalText(hwndCtl, originalText, 512) && originalText[0] != L'\0') {
-        // Look for localized text
         const wchar_t* localizedText = GetLocalizedString(NULL, originalText);
         if (localizedText && wcscmp(localizedText, originalText) != 0) {
-            // Set localized text
             SetWindowTextW(hwndCtl, localizedText);
         }
     }
-    
-    return TRUE; // Continue enumeration
+
+    return TRUE;
 }
 
 /**
  * @brief Initialize dialog multi-language support
  */
 BOOL InitDialogLanguageSupport(void) {
-    // No additional initialization needed here
     return TRUE;
 }
 
@@ -330,22 +273,19 @@ BOOL InitDialogLanguageSupport(void) {
  */
 BOOL ApplyDialogLanguage(HWND hwndDlg, int dialogID) {
     if (!hwndDlg) return FALSE;
-    
-    // Set dialog title
+
     const wchar_t* titleText = GetDialogTitleText(dialogID);
     if (titleText) {
         SetWindowTextW(hwndDlg, titleText);
     }
-    
-    // Set enumeration data
+
     EnumChildWindowsData data = {
         .hwndDlg = hwndDlg,
         .dialogID = dialogID
     };
-    
-    // Enumerate all child windows and apply localized text
+
     EnumChildWindows(hwndDlg, EnumChildProc, (LPARAM)&data);
-    
+
     return TRUE;
 }
 
@@ -353,22 +293,19 @@ BOOL ApplyDialogLanguage(HWND hwndDlg, int dialogID) {
  * @brief Get localized text for dialog element
  */
 const wchar_t* GetDialogLocalizedString(int dialogID, int controlID) {
-    // Check if it's a special control
     const wchar_t* specialText = FindSpecialControlText(dialogID, controlID);
     if (specialText) {
         return specialText;
     }
-    
-    // Check if it's a special button
+
     const wchar_t* buttonText = FindSpecialButtonText(dialogID, controlID);
     if (buttonText) {
         return buttonText;
     }
-    
-    // If it's a dialog title
+
     if (controlID == -1) {
         return GetDialogTitleText(dialogID);
     }
-    
+
     return NULL;
-} 
+}
