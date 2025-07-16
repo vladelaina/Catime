@@ -1,9 +1,6 @@
 /**
  * @file main.c
  * @brief Application main entry module implementation file
- * 
- * This file implements the main entry point and initialization process of the application,
- * including window creation, message loop handling, startup mode management, and other core functionalities.
  */
 
 #include <stdio.h>
@@ -53,52 +50,34 @@ EXTERN_C const IID IID_IShellLinkW;
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "gdi32.lib")
 #pragma comment(lib, "comdlg32.lib")
-#pragma comment(lib, "dbghelp.lib") // For exception handling functionality
-#pragma comment(lib, "comctl32.lib") // For Common Controls
+#pragma comment(lib, "dbghelp.lib")
+#pragma comment(lib, "comctl32.lib")
 
-// Function declaration from log.c
 extern void CleanupLogSystem(void);
 
-/// @name Global variables
-/// @{
-int default_countdown_time = 0;          ///< Default countdown time
-int CLOCK_DEFAULT_START_TIME = 300;      ///< Default startup time (seconds)
-int elapsed_time = 0;                    ///< Elapsed time
-char inputText[256] = {0};              ///< Input text buffer
-int message_shown = 0;                   ///< Message display flag
-time_t last_config_time = 0;             ///< Last configuration time
-RecentFile CLOCK_RECENT_FILES[MAX_RECENT_FILES];  ///< Recent files list
-int CLOCK_RECENT_FILES_COUNT = 0;        ///< Recent files count
+int default_countdown_time = 0;
+int CLOCK_DEFAULT_START_TIME = 300;
+int elapsed_time = 0;
+char inputText[256] = {0};
+int message_shown = 0;
+time_t last_config_time = 0;
+RecentFile CLOCK_RECENT_FILES[MAX_RECENT_FILES];
+int CLOCK_RECENT_FILES_COUNT = 0;
 char CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH] = "";
-/// @}
 
-/// @name External variable declarations
-/// @{
-extern char CLOCK_TEXT_COLOR[10];        ///< Clock text color
-extern char FONT_FILE_NAME[];            ///< Current font file name
-extern char FONT_INTERNAL_NAME[];        ///< Font internal name
-extern char PREVIEW_FONT_NAME[];         ///< Preview font file name
-extern char PREVIEW_INTERNAL_NAME[];     ///< Preview font internal name
-extern BOOL IS_PREVIEWING;               ///< Whether font is being previewed
-/// @}
+extern char CLOCK_TEXT_COLOR[10];
+extern char FONT_FILE_NAME[];
+extern char FONT_INTERNAL_NAME[];
+extern char PREVIEW_FONT_NAME[];
+extern char PREVIEW_INTERNAL_NAME[];
+extern BOOL IS_PREVIEWING;
 
-/// @name Function declarations
-/// @{
-INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
-void ExitProgram(HWND hwnd);
-/// @}
-
-// Function prototypes
 INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 void ExitProgram(HWND hwnd);
 
-// Helper function to handle startup mode
 /**
  * @brief Handle application startup mode
  * @param hwnd Main window handle
- * 
- * Sets the appropriate application state according to the configured startup mode (CLOCK_STARTUP_MODE),
- * including timer mode, display state, etc.
  */
 static void HandleStartupMode(HWND hwnd) {
     LOG_INFO("Setting startup mode: %s", CLOCK_STARTUP_MODE);
@@ -129,14 +108,6 @@ static void HandleStartupMode(HWND hwnd) {
 
 /**
  * @brief Application main entry point
- * @param hInstance Current instance handle
- * @param hPrevInstance Previous instance handle (always NULL)
- * @param lpCmdLine Command line parameters
- * @param nCmdShow Window display mode
- * @return int Program exit code
- * 
- * Initializes the application environment, creates the main window, and enters the message loop.
- * Handles single instance check to ensure only one program instance is running.
  */
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     // Initialize Common Controls
