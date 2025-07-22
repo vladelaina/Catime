@@ -492,6 +492,9 @@ function translateSupportElements() {
         if (td.textContent === '支持一下') {
             td.textContent = 'Just a little support';
         }
+        if (td.textContent === '茉莉蜜茶行不行') {
+            td.textContent = 'How about jasmine honey tea';
+        }
         if (td.textContent === '好喜欢catime，请你喝奶茶') {
             td.textContent = 'I really like catime, please have some milk tea';
         }
