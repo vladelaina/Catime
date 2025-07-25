@@ -1,15 +1,11 @@
 /**
  * @file config.c
  * @brief Configuration file management module implementation
- * 
- * This module is responsible for core management functions such as configuration file path retrieval, creation, reading and writing,
- * including default configuration generation, configuration persistence storage, and maintenance of recent file records.
- * Supports UTF-8 encoding and Chinese path processing.
  */
 
 #include "../include/config.h"
 #include "../include/language.h"
-#include "../resource/resource.h"  // Add this line to access CATIME_VERSION constant
+#include "../resource/resource.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,92 +21,47 @@
 #include <shobjidl.h>
 #include <shlguid.h>
 
-// Define the maximum capacity of the pomodoro time array
 #define MAX_POMODORO_TIMES 10
 
-/**
- * Global variable declaration area
- * The following variables define the default configuration values for the application, which can be overridden by the configuration file
- */
-// Modify the default values of global variables (unit: seconds)
-extern int POMODORO_WORK_TIME;       // Default work time of 25 minutes (1500 seconds)
-extern int POMODORO_SHORT_BREAK;     // Default short break of 5 minutes (300 seconds)
-extern int POMODORO_LONG_BREAK;      // Default long break of 10 minutes (600 seconds)
-extern int POMODORO_LOOP_COUNT;      // Default loop count of 1 time
+extern int POMODORO_WORK_TIME;
+extern int POMODORO_SHORT_BREAK;
+extern int POMODORO_LONG_BREAK;
+extern int POMODORO_LOOP_COUNT;
 
-// Pomodoro time sequence, format: [work time, short break, work time, long break]
-int POMODORO_TIMES[MAX_POMODORO_TIMES] = {1500, 300, 1500, 600}; // Default times
-int POMODORO_TIMES_COUNT = 4;                             // Default of 4 time periods
+int POMODORO_TIMES[MAX_POMODORO_TIMES] = {1500, 300, 1500, 600};
+int POMODORO_TIMES_COUNT = 4;
 
-// Custom prompt message text (using UTF-8 encoding)
 char CLOCK_TIMEOUT_MESSAGE_TEXT[100] = "时间到啦！";
-char POMODORO_TIMEOUT_MESSAGE_TEXT[100] = "番茄钟时间到！"; // Added dedicated pomodoro prompt message
+char POMODORO_TIMEOUT_MESSAGE_TEXT[100] = "番茄钟时间到！";
 char POMODORO_CYCLE_COMPLETE_TEXT[100] = "所有番茄钟循环完成！";
 
-// Added configuration variable: notification display duration (milliseconds)
-int NOTIFICATION_TIMEOUT_MS = 3000;  // Default 3 seconds
-// Added configuration variable: maximum notification window opacity (percentage)
-int NOTIFICATION_MAX_OPACITY = 95;   // Default 95% opacity
-// Added configuration variable: notification type
-NotificationType NOTIFICATION_TYPE = NOTIFICATION_TYPE_CATIME; // Default use Catime notification window
-// Added configuration variable: whether to disable notification window
-BOOL NOTIFICATION_DISABLED = FALSE;  // Default enable notification
+int NOTIFICATION_TIMEOUT_MS = 3000;
+int NOTIFICATION_MAX_OPACITY = 95;
+NotificationType NOTIFICATION_TYPE = NOTIFICATION_TYPE_CATIME;
+BOOL NOTIFICATION_DISABLED = FALSE;
 
-// Added: notification audio file path global variable
-char NOTIFICATION_SOUND_FILE[MAX_PATH] = "";  // Default empty
+char NOTIFICATION_SOUND_FILE[MAX_PATH] = "";
+int NOTIFICATION_SOUND_VOLUME = 100;
 
-// Added: notification audio volume global variable
-int NOTIFICATION_SOUND_VOLUME = 100;  // Default volume 100%
-
-/**
- * @brief Read string value from INI file
- * @param section Section name
- * @param key Key name
- * @param defaultValue Default value
- * @param returnValue Return value buffer
- * @param returnSize Buffer size
- * @param filePath File path
- * @return Actual number of characters read
- */
+/** @brief Read string value from INI file */
 DWORD ReadIniString(const char* section, const char* key, const char* defaultValue,
                   char* returnValue, DWORD returnSize, const char* filePath) {
     return GetPrivateProfileStringA(section, key, defaultValue, returnValue, returnSize, filePath);
 }
 
-/**
- * @brief Write string value to INI file
- * @param section Section name
- * @param key Key name
- * @param value Value
- * @param filePath File path
- * @return Whether successful
- */
+/** @brief Write string value to INI file */
 BOOL WriteIniString(const char* section, const char* key, const char* value,
                   const char* filePath) {
     return WritePrivateProfileStringA(section, key, value, filePath);
 }
 
-/**
- * @brief Read integer value from INI
- * @param section Section name
- * @param key Key name
- * @param defaultValue Default value
- * @param filePath File path
- * @return Read integer value
- */
+/** @brief Read integer value from INI */
 int ReadIniInt(const char* section, const char* key, int defaultValue, 
              const char* filePath) {
     return GetPrivateProfileIntA(section, key, defaultValue, filePath);
 }
 
-/**
- * @brief Write integer value to INI file
- * @param section Section name
- * @param key Key name
- * @param value Value
- * @param filePath File path
- * @return Whether successful
- */
+/** @brief Write integer value to INI file */
 BOOL WriteIniInt(const char* section, const char* key, int value,
                const char* filePath) {
     char valueStr[32];
@@ -118,27 +69,13 @@ BOOL WriteIniInt(const char* section, const char* key, int value,
     return WritePrivateProfileStringA(section, key, valueStr, filePath);
 }
 
-/**
- * @brief Write boolean value to INI file
- * @param section Section name
- * @param key Key name
- * @param value Boolean value
- * @param filePath File path
- * @return Whether successful
- */
+/** @brief Write boolean value to INI file */
 BOOL WriteIniBool(const char* section, const char* key, BOOL value,
                const char* filePath) {
     return WritePrivateProfileStringA(section, key, value ? "TRUE" : "FALSE", filePath);
 }
 
-/**
- * @brief Read boolean value from INI
- * @param section Section name
- * @param key Key name
- * @param defaultValue Default value
- * @param filePath File path
- * @return Read boolean value
- */
+/** @brief Read boolean value from INI */
 BOOL ReadIniBool(const char* section, const char* key, BOOL defaultValue, 
                const char* filePath) {
     char value[8];
@@ -147,23 +84,12 @@ BOOL ReadIniBool(const char* section, const char* key, BOOL defaultValue,
     return _stricmp(value, "TRUE") == 0;
 }
 
-/**
- * @brief Check if configuration file exists
- * @param filePath File path
- * @return Whether file exists
- */
+/** @brief Check if configuration file exists */
 BOOL FileExists(const char* filePath) {
     return GetFileAttributesA(filePath) != INVALID_FILE_ATTRIBUTES;
 }
 
-/**
- * @brief Get configuration file path
- * @param path Buffer to store the path
- * @param size Buffer size
- * 
- * Prioritizes getting the LOCALAPPDATA environment variable path, falls back to the program directory if it doesn't exist.
- * Automatically creates the configuration directory structure, uses a local backup path if creation fails.
- */
+/** @brief Get configuration file path */
 void GetConfigPath(char* path, size_t size) {
     if (!path || size == 0) return;
 
@@ -188,21 +114,7 @@ void GetConfigPath(char* path, size_t size) {
     }
 }
 
-/**
- * @brief Create default configuration file
- * @param config_path Full path of configuration file
- * 
- * Generates a default configuration file containing all necessary parameters, organized by sections:
- * 1. [General] - Basic settings (version information, language settings)
- * 2. [Display] - Display settings (color, font, window position, etc.)
- * 3. [Timer] - Timer related settings (default time, etc.)
- * 4. [Pomodoro] - Pomodoro related settings
- * 5. [Notification] - Notification related settings
- * 6. [Hotkeys] - Hotkey settings
- * 7. [RecentFiles] - Recently used files
- * 8. [Colors] - Color options
- * 9. [Options] - Other options
- */
+/** @brief Create default configuration file */
 void CreateDefaultConfig(const char* config_path) {
     // Get system default language ID
     LANGID systemLangID = GetUserDefaultUILanguage();
@@ -339,15 +251,7 @@ void CreateDefaultConfig(const char* config_path) {
                  config_path);
 }
 
-/**
- * @brief Extract filename from file path
- * @param path Complete file path
- * @param name Output filename buffer
- * @param nameSize Buffer size
- * 
- * Extracts the filename part from the complete file path, supports UTF-8 encoded Chinese paths.
- * Uses Windows API to convert encoding to ensure correct handling of Unicode characters.
- */
+/** @brief Extract filename from file path */
 void ExtractFileName(const char* path, char* name, size_t nameSize) {
     if (!path || !name || nameSize == 0) return;
     
@@ -370,12 +274,7 @@ void ExtractFileName(const char* path, char* name, size_t nameSize) {
     WideCharToMultiByte(CP_UTF8, 0, wName, -1, name, nameSize, NULL, NULL);
 }
 
-/**
- * @brief Check and create resource folders
- * 
- * Checks if the resources directory structure exists in the same directory as the configuration file, creates it if not
- * The created directory structure is: resources/audio, resources/images, resources/animations, resources/themes
- */
+/** @brief Check and create resource folders */
 void CheckAndCreateResourceFolders() {
     char config_path[MAX_PATH];
     char base_path[MAX_PATH];
@@ -456,12 +355,7 @@ void CheckAndCreateResourceFolders() {
     }
 }
 
-/**
- * @brief Read and parse configuration file
- * 
- * Reads configuration items from the configuration path, automatically creates default configuration if the file doesn't exist.
- * Parses various configuration items and updates program global state variables, finally refreshes the window position.
- */
+/** @brief Read and parse configuration file */
 void ReadConfig() {
     // Check and create resource folders
     CheckAndCreateResourceFolders();
@@ -1114,16 +1008,7 @@ char* UTF8ToANSI(const char* utf8Str) {
     return str;
 }
 
-/**
- * @brief Write pomodoro time settings
- * @param work Work time (seconds)
- * @param short_break Short break time (seconds)
- * @param long_break Long break time (seconds)
- * 
- * Updates pomodoro related time settings and saves to configuration file,
- * also updates global variables and POMODORO_TIMES array to maintain consistency.
- * Uses temporary file method to ensure safe and reliable writing process.
- */
+/** @brief Write pomodoro time settings */
 void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
     char config_path[MAX_PATH];
     char temp_path[MAX_PATH];
@@ -1199,14 +1084,7 @@ void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
     rename(temp_path, config_path);
 }
 
-/**
- * @brief Write pomodoro loop count configuration
- * @param loop_count Loop count
- * 
- * Updates pomodoro loop count and saves to configuration file,
- * uses temporary file method to ensure the configuration update process doesn't damage the original file.
- * Automatically adds to the file if the configuration item doesn't exist.
- */
+/** @brief Write pomodoro loop count configuration */
 void WriteConfigPomodoroLoopCount(int loop_count) {
     char config_path[MAX_PATH];
     char temp_path[MAX_PATH];
@@ -1249,13 +1127,7 @@ void WriteConfigPomodoroLoopCount(int loop_count) {
     POMODORO_LOOP_COUNT = loop_count;
 }
 
-/**
- * @brief Write window topmost status configuration
- * @param topmost Topmost status ("TRUE"/"FALSE")
- * 
- * Updates configuration for whether window is topmost and saves to file,
- * uses temporary file method to ensure writing process is safe and complete.
- */
+/** @brief Write window topmost status configuration */
 void WriteConfigTopmost(const char* topmost) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -1296,16 +1168,7 @@ void WriteConfigTopmost(const char* topmost) {
     rename(temp_path, config_path);
 }
 
-/**
- * @brief Write timeout open file path
- * @param filePath Target file path
- * 
- * Updates the timeout open file path in the configuration file, also sets the timeout action to open file.
- * Uses WriteConfig function to completely rewrite the configuration file, ensuring:
- * 1. All existing settings are preserved
- * 2. Configuration file structure consistency is maintained
- * 3. Other configured settings are not lost
- */
+/** @brief Write timeout open file path */
 void WriteConfigTimeoutFile(const char* filePath) {
     // First update global variables
     CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
@@ -1318,21 +1181,7 @@ void WriteConfigTimeoutFile(const char* filePath) {
     WriteConfig(config_path);
 }
 
-/**
- * @brief Write all configuration settings to file
- * @param config_path Configuration file path
- * 
- * Writes all configuration items to INI format file according to a unified organizational structure, including the following sections:
- * 1. [General] - Basic settings (version information, language settings)
- * 2. [Display] - Display settings (color, font, window position, etc.)
- * 3. [Timer] - Timer related settings (default time, etc.)
- * 4. [Pomodoro] - Pomodoro related settings
- * 5. [Notification] - Notification related settings
- * 6. [Hotkeys] - Hotkey settings
- * 7. [RecentFiles] - Recently used files
- * 8. [Colors] - Color options
- * 9. [Options] - Other options
- */
+/** @brief Write all configuration settings to file */
 void WriteConfig(const char* config_path) {
     // Get the name of the current language
     AppLanguage currentLang = GetCurrentLanguage();
@@ -1589,13 +1438,7 @@ void WriteConfig(const char* config_path) {
     WriteIniString(INI_SECTION_COLORS, "COLOR_OPTIONS", colorOptionsStr, config_path);
 }
 
-/**
- * @brief Write timeout open website URL
- * @param url Target website URL
- * 
- * Updates the timeout open website URL in the configuration file, also sets the timeout action to open website.
- * Uses temporary file method to ensure the configuration update process is safe and reliable.
- */
+/** @brief Write timeout open website URL */
 void WriteConfigTimeoutWebsite(const char* url) {
     // Only set timeout action to open website if a valid URL is provided
     if (url && url[0] != '\0') {
@@ -1655,13 +1498,7 @@ void WriteConfigTimeoutWebsite(const char* url) {
     }
 }
 
-/**
- * @brief Write startup mode configuration
- * @param mode Startup mode string ("COUNTDOWN"/"COUNT_UP"/"SHOW_TIME"/"NO_DISPLAY")
- * 
- * Modifies the STARTUP_MODE item in the configuration file, controls the default timing mode when the program starts.
- * Also updates global variables to ensure settings take effect immediately.
- */
+/** @brief Write startup mode configuration */
 void WriteConfigStartupMode(const char* mode) {
     char config_path[MAX_PATH];
     char temp_path[MAX_PATH];
@@ -1705,15 +1542,7 @@ void WriteConfigStartupMode(const char* mode) {
     rename(temp_path, config_path);
 }
 
-/**
- * @brief Write pomodoro time options
- * @param times Time array (seconds)
- * @param count Length of time array
- * 
- * Writes the pomodoro custom time sequence to the configuration file,
- * in the format of a comma-separated list of time values.
- * Uses temporary file method to ensure safe configuration update.
- */
+/** @brief Write pomodoro time options */
 void WriteConfigPomodoroTimeOptions(int* times, int count) {
     if (!times || count <= 0) return;
     
@@ -1770,15 +1599,7 @@ void WriteConfigPomodoroTimeOptions(int* times, int count) {
     rename(temp_path, config_path);
 }
 
-/**
- * @brief Write notification message configuration
- * @param timeout_msg Countdown timeout prompt text
- * @param pomodoro_msg Pomodoro timeout prompt text
- * @param cycle_complete_msg Pomodoro cycle completion prompt text
- * 
- * Updates notification message settings in the configuration file,
- * uses temporary file method to ensure safe configuration update.
- */
+/** @brief Write notification message configuration */
 void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodoro_msg, const char* cycle_complete_msg) {
     char config_path[MAX_PATH];
     char temp_path[MAX_PATH];
@@ -1858,13 +1679,7 @@ void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodo
     POMODORO_CYCLE_COMPLETE_TEXT[sizeof(POMODORO_CYCLE_COMPLETE_TEXT) - 1] = '\0';
 }
 
-/**
- * @brief Read notification message text from configuration file
- * 
- * Specifically reads CLOCK_TIMEOUT_MESSAGE_TEXT, POMODORO_TIMEOUT_MESSAGE_TEXT and POMODORO_CYCLE_COMPLETE_TEXT
- * and updates the corresponding global variables. If configuration doesn't exist, default values remain unchanged.
- * Supports UTF-8 encoded Chinese message text.
- */
+/** @brief Read notification message text from configuration file */
 void ReadNotificationMessagesConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -2064,12 +1879,7 @@ void ReadNotificationTimeoutConfig(void) {
     }
 }
 
-/**
- * @brief Write notification display time configuration
- * @param timeout_ms Notification display time (milliseconds)
- * 
- * Updates the notification display time in the configuration file, and updates the global variable.
- */
+/** @brief Write notification display time configuration */
 void WriteConfigNotificationTimeout(int timeout_ms) {
     char config_path[MAX_PATH];
     char temp_path[MAX_PATH];
@@ -2125,12 +1935,7 @@ void WriteConfigNotificationTimeout(int timeout_ms) {
     NOTIFICATION_TIMEOUT_MS = timeout_ms;
 }
 
-/**
- * @brief Read maximum notification opacity from configuration file
- * 
- * Specifically reads the NOTIFICATION_MAX_OPACITY configuration item
- * and updates the corresponding global variable. If configuration doesn't exist, default value remains unchanged.
- */
+/** @brief Read maximum notification opacity from configuration file */
 void ReadNotificationOpacityConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -2218,13 +2023,7 @@ void ReadNotificationOpacityConfig(void) {
     }
 }
 
-/**
- * @brief Write maximum notification opacity configuration
- * @param opacity Opacity percentage value (1-100)
- * 
- * Updates the maximum notification opacity setting in the configuration file,
- * uses temporary file method to ensure safe configuration update.
- */
+/** @brief Write maximum notification opacity configuration */
 void WriteConfigNotificationOpacity(int opacity) {
     char config_path[MAX_PATH];
     char temp_path[MAX_PATH];
@@ -2280,12 +2079,7 @@ void WriteConfigNotificationOpacity(int opacity) {
     NOTIFICATION_MAX_OPACITY = opacity;
 }
 
-/**
- * @brief Read notification type setting from configuration file
- *
- * Reads the NOTIFICATION_TYPE item from the configuration file, and updates the global variable.
- * If the configuration item doesn't exist, keeps the default value (Catime notification window).
- */
+/** @brief Read notification type setting from configuration file */
 void ReadNotificationTypeConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -2316,12 +2110,7 @@ void ReadNotificationTypeConfig(void) {
     }
 }
 
-/**
- * @brief Write notification type configuration
- * @param type Notification type enum value
- *
- * Updates the notification type setting in the configuration file, uses temporary file method to ensure safe configuration update.
- */
+/** @brief Write notification type configuration */
 void WriteConfigNotificationType(NotificationType type) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -2391,11 +2180,7 @@ void WriteConfigNotificationType(NotificationType type) {
     }
 }
 
-/**
- * @brief Get audio folder path
- * @param path Buffer to store the audio folder path
- * @param size Buffer size
- */
+/** @brief Get audio folder path */
 void GetAudioFolderPath(char* path, size_t size) {
     if (!path || size == 0) return;
 
@@ -2420,9 +2205,7 @@ void GetAudioFolderPath(char* path, size_t size) {
     }
 }
 
-/**
- * @brief Read notification audio settings from configuration file
- */
+/** @brief Read notification audio settings from configuration file */
 void ReadNotificationSoundConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -2454,10 +2237,7 @@ void ReadNotificationSoundConfig(void) {
     fclose(file);
 }
 
-/**
- * @brief Write notification audio configuration
- * @param sound_file Audio file path
- */
+/** @brief Write notification audio configuration */
 void WriteConfigNotificationSound(const char* sound_file) {
     if (!sound_file) return;
     
@@ -2521,9 +2301,7 @@ void WriteConfigNotificationSound(const char* sound_file) {
     NOTIFICATION_SOUND_FILE[MAX_PATH - 1] = '\0';
 }
 
-/**
- * @brief Read notification audio volume from configuration file
- */
+/** @brief Read notification audio volume from configuration file */
 void ReadNotificationVolumeConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -2545,10 +2323,7 @@ void ReadNotificationVolumeConfig(void) {
     fclose(file);
 }
 
-/**
- * @brief Write notification audio volume configuration
- * @param volume Volume percentage value (0-100)
- */
+/** @brief Write notification audio volume configuration */
 void WriteConfigNotificationVolume(int volume) {
     // Validate volume range
     if (volume < 0) volume = 0;
@@ -2596,23 +2371,7 @@ void WriteConfigNotificationVolume(int volume) {
     rename(temp_path, config_path);
 }
 
-/**
- * @brief Read hotkey settings from configuration file
- * @param showTimeHotkey Pointer to store show time hotkey
- * @param countUpHotkey Pointer to store count up hotkey
- * @param countdownHotkey Pointer to store countdown hotkey
- * @param quickCountdown1Hotkey Pointer to store quick countdown 1 hotkey
- * @param quickCountdown2Hotkey Pointer to store quick countdown 2 hotkey
- * @param quickCountdown3Hotkey Pointer to store quick countdown 3 hotkey
- * @param pomodoroHotkey Pointer to store pomodoro hotkey
- * @param toggleVisibilityHotkey Pointer to store hide/show hotkey
- * @param editModeHotkey Pointer to store edit mode hotkey
- * @param pauseResumeHotkey Pointer to store pause/resume hotkey
- * @param restartTimerHotkey Pointer to store restart hotkey
- * 
- * Specifically reads hotkey configuration items and updates the corresponding parameter values.
- * Supports parsing readable format hotkey strings.
- */
+/** @brief Read hotkey settings from configuration file */
 void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdownHotkey,
                        WORD* quickCountdown1Hotkey, WORD* quickCountdown2Hotkey, WORD* quickCountdown3Hotkey,
                        WORD* pomodoroHotkey, WORD* toggleVisibilityHotkey, WORD* editModeHotkey,
@@ -2749,24 +2508,7 @@ void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdow
     fclose(file);
 }
 
-/**
- * @brief Write hotkey configuration
- * @param showTimeHotkey Show time hotkey value
- * @param countUpHotkey Count up hotkey value
- * @param countdownHotkey Countdown hotkey value
- * @param quickCountdown1Hotkey Quick countdown 1 hotkey value
- * @param quickCountdown2Hotkey Quick countdown 2 hotkey value
- * @param quickCountdown3Hotkey Quick countdown 3 hotkey value
- * @param pomodoroHotkey Pomodoro hotkey value
- * @param toggleVisibilityHotkey Hide/show hotkey value
- * @param editModeHotkey Edit mode hotkey value
- * @param pauseResumeHotkey Pause/resume hotkey value
- * @param restartTimerHotkey Restart hotkey value
- * 
- * Updates hotkey settings in the configuration file,
- * uses temporary file method to ensure safe configuration update.
- * Converts hotkey values to a more readable format before saving.
- */
+/** @brief Write hotkey configuration */
 void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownHotkey,
                         WORD quickCountdown1Hotkey, WORD quickCountdown2Hotkey, WORD quickCountdown3Hotkey,
                         WORD pomodoroHotkey, WORD toggleVisibilityHotkey, WORD editModeHotkey,
@@ -2973,14 +2715,7 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
     rename(temp_path, config_path);
 }
 
-/**
- * @brief Convert hotkey value to readable string
- * @param hotkey Hotkey value
- * @param buffer Output buffer
- * @param bufferSize Buffer size
- * 
- * Converts WORD format hotkey value to readable string format, such as "Ctrl+Alt+A"
- */
+/** @brief Convert hotkey value to readable string */
 void HotkeyToString(WORD hotkey, char* buffer, size_t bufferSize) {
     if (!buffer || bufferSize == 0) return;
     
