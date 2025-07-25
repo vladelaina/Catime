@@ -21,19 +21,6 @@ extern int elapsed_time;
 
 // Using window drawing related constants defined in resource.h
 
-/**
- * @brief Handle window painting
- * @param hwnd Window handle
- * @param ps Paint structure
- * 
- * Process the window's WM_PAINT message, performing the following operations:
- * 1. Create memory DC double buffering to prevent flickering
- * 2. Calculate remaining time/get current time based on mode
- * 3. Dynamically load font resources (supports real-time preview)
- * 4. Parse color configuration (supports HEX/RGB formats)
- * 5. Draw text using double buffering mechanism
- * 6. Automatically adjust window size to fit text content
- */
 void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
     static char time_text[50];
     HDC hdc = ps->hdc;
