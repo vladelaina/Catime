@@ -658,7 +658,7 @@ void ReadConfig() {
     WORD restartTimerHotkey = 0;
     WORD customCountdownHotkey = 0;
     
-    // 读取各个热键设置
+    // Read hotkey settings
     char hotkeyStr[32] = {0};
     
     ReadIniString(INI_SECTION_HOTKEYS, "HOTKEY_SHOW_TIME", "None", hotkeyStr, sizeof(hotkeyStr), config_path);
@@ -710,14 +710,7 @@ void ReadConfig() {
     SetLanguage((AppLanguage)languageSetting);
 }
 
-/**
- * @brief Write timeout action configuration
- * @param action Type of timeout action to write
- * 
- * Safely updates the timeout action settings in the configuration file using temporary file method,
- * automatically associates the timeout file path when handling OPEN_FILE action.
- * Note: "RESTART" and "SHUTDOWN" options are one-time operations and are not persistently saved.
- */
+/** @brief Write timeout action configuration */
 void WriteConfigTimeoutAction(const char* action) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -764,14 +757,7 @@ void WriteConfigTimeoutAction(const char* action) {
     rename(temp_path, config_path);
 }
 
-/**
- * @brief Write time options configuration
- * @param options Comma-separated time options string
- * 
- * Updates preset time options in the configuration file, supports dynamic adjustment
- * of the countdown duration options list, supports up to MAX_TIME_OPTIONS options.
- * Uses temporary file method to ensure atomicity and safety of the writing process.
- */
+/** @brief Write time options configuration */
 void WriteConfigTimeOptions(const char* options) {
     char config_path[MAX_PATH];
     char temp_path[MAX_PATH];
@@ -810,13 +796,7 @@ void WriteConfigTimeOptions(const char* options) {
     rename(temp_path, config_path);
 }
 
-/**
- * @brief Load recently used file records
- * 
- * Parses CLOCK_RECENT_FILE entries from the configuration file,
- * extracts file paths and filenames for quick access.
- * Supports both old and new formats of recent file records, automatically filters non-existent files.
- */
+/** @brief Load recently used file records */
 void LoadRecentFiles(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -890,14 +870,7 @@ void LoadRecentFiles(void) {
     fclose(file);
 }
 
-/**
- * @brief Save recently used file record
- * @param filePath File path to save
- * 
- * Maintains a list of recent files (up to MAX_RECENT_FILES),
- * automatically deduplicates and updates the configuration file, keeping the most recently used file at the top of the list.
- * Automatically handles Chinese paths, supports UTF-8 encoding, ensures the file exists before adding.
- */
+/** @brief Save recently used file record */
 void SaveRecentFile(const char* filePath) {
     // Check if the file path is valid
     if (!filePath || strlen(filePath) == 0) return;
@@ -962,14 +935,7 @@ void SaveRecentFile(const char* filePath) {
     WriteConfig(configPath);
 }
 
-/**
- * @brief Convert UTF8 to ANSI encoding
- * @param utf8Str UTF8 string to convert
- * @return char* Pointer to the converted ANSI string (needs manual release)
- * 
- * Used for encoding conversion of Chinese paths to ensure Windows API can correctly handle the path.
- * Returns a copy of the original string if conversion fails, returned memory needs to be manually released.
- */
+/** @brief Convert UTF8 to ANSI encoding */
 char* UTF8ToANSI(const char* utf8Str) {
     int wlen = MultiByteToWideChar(CP_UTF8, 0, utf8Str, -1, NULL, 0);
     if (wlen == 0) {
@@ -1787,12 +1753,7 @@ void ReadNotificationMessagesConfig(void) {
     }
 }
 
-/**
- * @brief Read notification display time from configuration file
- * 
- * Specifically reads the NOTIFICATION_TIMEOUT_MS configuration item
- * and updates the corresponding global variable. If configuration doesn't exist, default value remains unchanged.
- */
+/** @brief Read notification display time from configuration file */
 void ReadNotificationTimeoutConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -2216,17 +2177,17 @@ void ReadNotificationSoundConfig(void) {
     char line[1024];
     while (fgets(line, sizeof(line), file)) {
         if (strncmp(line, "NOTIFICATION_SOUND_FILE=", 23) == 0) {
-            char* value = line + 23;  // 正确的偏移量，跳过"NOTIFICATION_SOUND_FILE="
-            // 移除末尾的换行符
+            char* value = line + 23;  // Correct offset, skip "NOTIFICATION_SOUND_FILE="
+            // Remove trailing newline
             char* newline = strchr(value, '\n');
             if (newline) *newline = '\0';
             
-            // 确保路径不包含等号
+            // Ensure path doesn't contain equals sign
             if (value[0] == '=') {
-                value++; // 如果第一个字符是等号，跳过它
+                value++; // If first character is equals sign, skip it
             }
             
-            // 复制到全局变量，确保清零
+            // Copy to global variable, ensure cleared
             memset(NOTIFICATION_SOUND_FILE, 0, MAX_PATH);
             strncpy(NOTIFICATION_SOUND_FILE, value, MAX_PATH - 1);
             NOTIFICATION_SOUND_FILE[MAX_PATH - 1] = '\0';
@@ -2377,13 +2338,13 @@ void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdow
                        WORD* pomodoroHotkey, WORD* toggleVisibilityHotkey, WORD* editModeHotkey,
                        WORD* pauseResumeHotkey, WORD* restartTimerHotkey)
 {
-    // 参数校验
+    // Parameter validation
     if (!showTimeHotkey || !countUpHotkey || !countdownHotkey || 
         !quickCountdown1Hotkey || !quickCountdown2Hotkey || !quickCountdown3Hotkey ||
         !pomodoroHotkey || !toggleVisibilityHotkey || !editModeHotkey || 
         !pauseResumeHotkey || !restartTimerHotkey) return;
     
-    // 初始化为0（表示未设置热键）
+    // Initialize to 0 (indicates no hotkey set)
     *showTimeHotkey = 0;
     *countUpHotkey = 0;
     *countdownHotkey = 0;
@@ -2406,101 +2367,101 @@ void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdow
     while (fgets(line, sizeof(line), file)) {
         if (strncmp(line, "HOTKEY_SHOW_TIME=", 17) == 0) {
             char* value = line + 17;
-            // 去除末尾的换行符
+            // Remove trailing newline
             char* newline = strchr(value, '\n');
             if (newline) *newline = '\0';
             
-            // 解析热键字符串
+            // Parse hotkey string
             *showTimeHotkey = StringToHotkey(value);
         }
         else if (strncmp(line, "HOTKEY_COUNT_UP=", 16) == 0) {
             char* value = line + 16;
-            // 去除末尾的换行符
+            // Remove trailing newline
             char* newline = strchr(value, '\n');
             if (newline) *newline = '\0';
             
-            // 解析热键字符串
+            // Parse hotkey string
             *countUpHotkey = StringToHotkey(value);
         }
         else if (strncmp(line, "HOTKEY_COUNTDOWN=", 17) == 0) {
             char* value = line + 17;
-            // 去除末尾的换行符
+            // Remove trailing newline
             char* newline = strchr(value, '\n');
             if (newline) *newline = '\0';
             
-            // 解析热键字符串
+            // Parse hotkey string
             *countdownHotkey = StringToHotkey(value);
         }
         else if (strncmp(line, "HOTKEY_QUICK_COUNTDOWN1=", 24) == 0) {
             char* value = line + 24;
-            // 去除末尾的换行符
+            // Remove trailing newline
             char* newline = strchr(value, '\n');
             if (newline) *newline = '\0';
             
-            // 解析热键字符串
+            // Parse hotkey string
             *quickCountdown1Hotkey = StringToHotkey(value);
         }
         else if (strncmp(line, "HOTKEY_QUICK_COUNTDOWN2=", 24) == 0) {
             char* value = line + 24;
-            // 去除末尾的换行符
+            // Remove trailing newline
             char* newline = strchr(value, '\n');
             if (newline) *newline = '\0';
             
-            // 解析热键字符串
+            // Parse hotkey string
             *quickCountdown2Hotkey = StringToHotkey(value);
         }
         else if (strncmp(line, "HOTKEY_QUICK_COUNTDOWN3=", 24) == 0) {
             char* value = line + 24;
-            // 去除末尾的换行符
+            // Remove trailing newline
             char* newline = strchr(value, '\n');
             if (newline) *newline = '\0';
             
-            // 解析热键字符串
+            // Parse hotkey string
             *quickCountdown3Hotkey = StringToHotkey(value);
         }
         else if (strncmp(line, "HOTKEY_POMODORO=", 16) == 0) {
             char* value = line + 16;
-            // 去除末尾的换行符
+            // Remove trailing newline
             char* newline = strchr(value, '\n');
             if (newline) *newline = '\0';
             
-            // 解析热键字符串
+            // Parse hotkey string
             *pomodoroHotkey = StringToHotkey(value);
         }
         else if (strncmp(line, "HOTKEY_TOGGLE_VISIBILITY=", 25) == 0) {
             char* value = line + 25;
-            // 去除末尾的换行符
+            // Remove trailing newline
             char* newline = strchr(value, '\n');
             if (newline) *newline = '\0';
             
-            // 解析热键字符串
+            // Parse hotkey string
             *toggleVisibilityHotkey = StringToHotkey(value);
         }
         else if (strncmp(line, "HOTKEY_EDIT_MODE=", 17) == 0) {
             char* value = line + 17;
-            // 去除末尾的换行符
+            // Remove trailing newline
             char* newline = strchr(value, '\n');
             if (newline) *newline = '\0';
             
-            // 解析热键字符串
+            // Parse hotkey string
             *editModeHotkey = StringToHotkey(value);
         }
         else if (strncmp(line, "HOTKEY_PAUSE_RESUME=", 20) == 0) {
             char* value = line + 20;
-            // 去除末尾的换行符
+            // Remove trailing newline
             char* newline = strchr(value, '\n');
             if (newline) *newline = '\0';
             
-            // 解析热键字符串
+            // Parse hotkey string
             *pauseResumeHotkey = StringToHotkey(value);
         }
         else if (strncmp(line, "HOTKEY_RESTART_TIMER=", 21) == 0) {
             char* value = line + 21;
-            // 去除末尾的换行符
+            // Remove trailing newline
             char* newline = strchr(value, '\n');
             if (newline) *newline = '\0';
             
-            // 解析热键字符串
+            // Parse hotkey string
             *restartTimerHotkey = StringToHotkey(value);
         }
     }
@@ -2518,11 +2479,11 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
     
     FILE* file = fopen(config_path, "r");
     if (!file) {
-        // 如果文件不存在，则创建新文件
+        // If file doesn't exist, create new file
         file = fopen(config_path, "w");
         if (!file) return;
         
-        // 将热键值转换为可读格式
+        // Convert hotkey values to readable format
         char showTimeStr[64] = {0};
         char countUpStr[64] = {0};
         char countdownStr[64] = {0};
@@ -2534,9 +2495,9 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
         char editModeStr[64] = {0};
         char pauseResumeStr[64] = {0};
         char restartTimerStr[64] = {0};
-        char customCountdownStr[64] = {0}; // 新增自定义倒计时热键
+        char customCountdownStr[64] = {0}; // Add custom countdown hotkey
         
-        // 转换各个热键
+        // Convert each hotkey
         HotkeyToString(showTimeHotkey, showTimeStr, sizeof(showTimeStr));
         HotkeyToString(countUpHotkey, countUpStr, sizeof(countUpStr));
         HotkeyToString(countdownHotkey, countdownStr, sizeof(countdownStr));
@@ -2548,12 +2509,12 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
         HotkeyToString(editModeHotkey, editModeStr, sizeof(editModeStr));
         HotkeyToString(pauseResumeHotkey, pauseResumeStr, sizeof(pauseResumeStr));
         HotkeyToString(restartTimerHotkey, restartTimerStr, sizeof(restartTimerStr));
-        // 获取自定义倒计时热键的值
+        // Get custom countdown hotkey value
         WORD customCountdownHotkey = 0;
         ReadCustomCountdownHotkey(&customCountdownHotkey);
         HotkeyToString(customCountdownHotkey, customCountdownStr, sizeof(customCountdownStr));
         
-        // 写入热键配置
+        // Write hotkey configuration
         fprintf(file, "HOTKEY_SHOW_TIME=%s\n", showTimeStr);
         fprintf(file, "HOTKEY_COUNT_UP=%s\n", countUpStr);
         fprintf(file, "HOTKEY_COUNTDOWN=%s\n", countdownStr);
@@ -2565,13 +2526,13 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
         fprintf(file, "HOTKEY_EDIT_MODE=%s\n", editModeStr);
         fprintf(file, "HOTKEY_PAUSE_RESUME=%s\n", pauseResumeStr);
         fprintf(file, "HOTKEY_RESTART_TIMER=%s\n", restartTimerStr);
-        fprintf(file, "HOTKEY_CUSTOM_COUNTDOWN=%s\n", customCountdownStr); // 添加新的热键
+        fprintf(file, "HOTKEY_CUSTOM_COUNTDOWN=%s\n", customCountdownStr); // Add new hotkey
         
         fclose(file);
         return;
     }
     
-    // 文件存在，读取所有行并更新热键设置
+    // File exists, read all lines and update hotkey settings
     char temp_path[MAX_PATH];
     sprintf(temp_path, "%s.tmp", config_path);
     FILE* temp_file = fopen(temp_path, "w");
@@ -2594,7 +2555,7 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
     BOOL foundPauseResume = FALSE;
     BOOL foundRestartTimer = FALSE;
     
-    // 将热键值转换为可读格式
+    // Convert hotkey values to readable format
     char showTimeStr[64] = {0};
     char countUpStr[64] = {0};
     char countdownStr[64] = {0};
@@ -2607,7 +2568,7 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
     char pauseResumeStr[64] = {0};
     char restartTimerStr[64] = {0};
     
-    // 转换各个热键
+    // Convert each hotkey
     HotkeyToString(showTimeHotkey, showTimeStr, sizeof(showTimeStr));
     HotkeyToString(countUpHotkey, countUpStr, sizeof(countUpStr));
     HotkeyToString(countdownHotkey, countdownStr, sizeof(countdownStr));
@@ -2620,7 +2581,7 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
     HotkeyToString(pauseResumeHotkey, pauseResumeStr, sizeof(pauseResumeStr));
     HotkeyToString(restartTimerHotkey, restartTimerStr, sizeof(restartTimerStr));
     
-    // 处理每一行
+    // Process each line
     while (fgets(line, sizeof(line), file)) {
         if (strncmp(line, "HOTKEY_SHOW_TIME=", 17) == 0) {
             fprintf(temp_file, "HOTKEY_SHOW_TIME=%s\n", showTimeStr);
@@ -2667,12 +2628,12 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
             foundRestartTimer = TRUE;
         }
         else {
-            // 保留其他行
+            // Keep other lines
             fputs(line, temp_file);
         }
     }
     
-    // 添加未找到的热键配置项
+    // Add hotkey configuration items not found
     if (!foundShowTime) {
         fprintf(temp_file, "HOTKEY_SHOW_TIME=%s\n", showTimeStr);
     }
@@ -2710,7 +2671,7 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
     fclose(file);
     fclose(temp_file);
     
-    // 替换原文件
+    // Replace original file
     remove(config_path);
     rename(temp_path, config_path);
 }
@@ -2832,13 +2793,7 @@ void HotkeyToString(WORD hotkey, char* buffer, size_t bufferSize) {
     }
 }
 
-/**
- * @brief Convert string to hotkey value
- * @param str Hotkey string
- * @return WORD Hotkey value
- * 
- * Converts readable string format hotkey (such as "Ctrl+Alt+A") to WORD format hotkey value
- */
+/** @brief Convert string to hotkey value */
 WORD StringToHotkey(const char* str) {
     if (!str || str[0] == '\0' || strcmp(str, "None") == 0) {
         return 0;  // 未设置热键
@@ -3029,11 +2984,7 @@ void WriteConfigKeyValue(const char* key, const char* value) {
     WriteIniString(section, key, value, config_path);
 }
 
-/**
- * @brief Write current language setting to configuration file
- * 
- * @param language Language enum value (APP_LANG_ENUM)
- */
+/** @brief Write current language setting to configuration file */
 void WriteConfigLanguage(int language) {
     const char* langName;
     
@@ -3077,13 +3028,7 @@ void WriteConfigLanguage(int language) {
     WriteConfigKeyValue("LANGUAGE", langName);
 }
 
-/**
- * @brief Determine if shortcut check has been performed
- * 
- * Reads the configuration file to check if there is a SHORTCUT_CHECK_DONE=TRUE flag
- * 
- * @return bool true indicates checked, false indicates not checked
- */
+/** @brief Determine if shortcut check has been performed */
 bool IsShortcutCheckDone(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -3092,13 +3037,7 @@ bool IsShortcutCheckDone(void) {
     return ReadIniBool(INI_SECTION_GENERAL, "SHORTCUT_CHECK_DONE", FALSE, config_path);
 }
 
-/**
- * @brief Set shortcut check status
- * 
- * Writes SHORTCUT_CHECK_DONE=TRUE/FALSE in the configuration file
- * 
- * @param done Whether check is completed
- */
+/** @brief Set shortcut check status */
 void SetShortcutCheckDone(bool done) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -3107,11 +3046,7 @@ void SetShortcutCheckDone(bool done) {
     WriteIniString(INI_SECTION_GENERAL, "SHORTCUT_CHECK_DONE", done ? "TRUE" : "FALSE", config_path);
 }
 
-/**
- * @brief Read whether to disable notification setting from configuration file
- * 
- * Specifically reads the NOTIFICATION_DISABLED configuration item and updates the corresponding global variable.
- */
+/** @brief Read whether to disable notification setting from configuration file */
 void ReadNotificationDisabledConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -3120,13 +3055,7 @@ void ReadNotificationDisabledConfig(void) {
     NOTIFICATION_DISABLED = ReadIniBool(INI_SECTION_NOTIFICATION, "NOTIFICATION_DISABLED", FALSE, config_path);
 }
 
-/**
- * @brief Write whether to disable notification configuration
- * @param disabled Whether to disable notification (TRUE/FALSE)
- * 
- * Updates the setting for whether to disable notification in the configuration file,
- * uses temporary file method to ensure safe configuration update.
- */
+/** @brief Write whether to disable notification configuration */
 void WriteConfigNotificationDisabled(BOOL disabled) {
     char config_path[MAX_PATH];
     char temp_path[MAX_PATH];
