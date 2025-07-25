@@ -14,13 +14,6 @@
 // Add variable to record the topmost state before edit mode
 BOOL PREVIOUS_TOPMOST_STATE = FALSE;
 
-/**
- * @brief Start dragging window
- * @param hwnd Window handle
- * 
- * In edit mode, start the window dragging operation.
- * Record initial mouse position and set capture.
- */
 void StartDragWindow(HWND hwnd) {
     if (CLOCK_EDIT_MODE) {
         CLOCK_IS_DRAGGING = TRUE;
@@ -29,13 +22,6 @@ void StartDragWindow(HWND hwnd) {
     }
 }
 
-/**
- * @brief Start edit mode
- * @param hwnd Window handle
- * 
- * Before enabling edit mode, ensure the window is in topmost state,
- * record the original topmost state to restore when exiting edit mode.
- */
 void StartEditMode(HWND hwnd) {
     // Record current topmost state
     PREVIOUS_TOPMOST_STATE = CLOCK_WINDOW_TOPMOST;
@@ -62,13 +48,6 @@ void StartEditMode(HWND hwnd) {
     UpdateWindow(hwnd);  // Ensure immediate refresh
 }
 
-/**
- * @brief End edit mode
- * @param hwnd Window handle
- * 
- * Exit edit mode, restore original window topmost state,
- * clear blur effect and update related settings.
- */
 void EndEditMode(HWND hwnd) {
     if (CLOCK_EDIT_MODE) {
         CLOCK_EDIT_MODE = FALSE;
@@ -91,13 +70,6 @@ void EndEditMode(HWND hwnd) {
     }
 }
 
-/**
- * @brief End window dragging
- * @param hwnd Window handle
- * 
- * End the window dragging operation.
- * Release mouse capture and adjust window position.
- */
 void EndDragWindow(HWND hwnd) {
     if (CLOCK_EDIT_MODE && CLOCK_IS_DRAGGING) {
         CLOCK_IS_DRAGGING = FALSE;
@@ -108,14 +80,6 @@ void EndDragWindow(HWND hwnd) {
     }
 }
 
-/**
- * @brief Handle window dragging event
- * @param hwnd Window handle
- * @return BOOL Whether the event was handled
- * 
- * In edit mode, handle mouse dragging window event.
- * Update window position based on mouse movement distance.
- */
 BOOL HandleDragWindow(HWND hwnd) {
     if (CLOCK_EDIT_MODE && CLOCK_IS_DRAGGING) {
         POINT currentPos;
@@ -149,15 +113,6 @@ BOOL HandleDragWindow(HWND hwnd) {
     return FALSE;
 }
 
-/**
- * @brief Handle window scaling event
- * @param hwnd Window handle
- * @param delta Mouse wheel delta
- * @return BOOL Whether the event was handled
- * 
- * In edit mode, handle mouse wheel window scaling event.
- * Adjust window and font size based on wheel direction.
- */
 BOOL HandleScaleWindow(HWND hwnd, int delta) {
     if (CLOCK_EDIT_MODE) {
         float old_scale = CLOCK_FONT_SCALE_FACTOR;
