@@ -92,14 +92,6 @@ extern void ReadConfig(void);                                  ///< Read configu
 extern int CALLBACK EnumFontFamExProc(ENUMLOGFONTEX *lpelfe, NEWTEXTMETRICEX *lpntme, DWORD FontType, LPARAM lParam); ///< Font enumeration callback function
 /// @}
 
-/**
- * @brief Load font from resource
- * @param hInstance Application instance handle
- * @param resourceId Font resource ID
- * @return BOOL Returns TRUE on success, FALSE on failure
- * 
- * Load font from application resources and add it to the system font collection.
- */
 BOOL LoadFontFromResource(HINSTANCE hInstance, int resourceId) {
     // Find font resource
     HRSRC hResource = FindResource(hInstance, MAKEINTRESOURCE(resourceId), RT_FONT);
@@ -131,14 +123,6 @@ BOOL LoadFontFromResource(HINSTANCE hInstance, int resourceId) {
     return TRUE;
 }
 
-/**
- * @brief Load font by name
- * @param hInstance Application instance handle
- * @param fontName Font file name
- * @return BOOL Returns TRUE on success, FALSE on failure
- * 
- * Search for a font with the specified name in the predefined font resource list and load it.
- */
 BOOL LoadFontByName(HINSTANCE hInstance, const char* fontName) {
     // Iterate through the font resource array to find a matching font
     for (int i = 0; i < sizeof(fontResources) / sizeof(FontResource); i++) {
@@ -149,12 +133,6 @@ BOOL LoadFontByName(HINSTANCE hInstance, const char* fontName) {
     return FALSE;
 }
 
-/**
- * @brief Write font name to configuration file
- * @param font_file_name Font file name to write
- * 
- * Update font settings in the configuration file, preserving other configuration items.
- */
 void WriteConfigFont(const char* font_file_name) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -222,11 +200,6 @@ void WriteConfigFont(const char* font_file_name) {
     ReadConfig();
 }
 
-/**
- * @brief List available fonts in the system
- * 
- * Enumerate all available fonts in the system, processing font information through callback function.
- */
 void ListAvailableFonts(void) {
     HDC hdc = GetDC(NULL);
     LOGFONT lf;
@@ -247,16 +220,6 @@ void ListAvailableFonts(void) {
     ReleaseDC(NULL, hdc);
 }
 
-/**
- * @brief Font enumeration callback function
- * @param lpelfe Font enumeration information
- * @param lpntme Font metrics information
- * @param FontType Font type
- * @param lParam Callback parameter
- * @return int Return 1 to continue enumeration
- * 
- * Called by EnumFontFamiliesEx, processes each enumerated font information.
- */
 int CALLBACK EnumFontFamExProc(
     ENUMLOGFONTEX *lpelfe,
     NEWTEXTMETRICEX *lpntme,
@@ -266,14 +229,6 @@ int CALLBACK EnumFontFamExProc(
     return 1;
 }
 
-/**
- * @brief Preview font
- * @param hInstance Application instance handle
- * @param fontName Font name to preview
- * @return BOOL Returns TRUE on success, FALSE on failure
- * 
- * Load and set preview font, but don't apply to configuration file.
- */
 BOOL PreviewFont(HINSTANCE hInstance, const char* fontName) {
     if (!fontName) return FALSE;
     
@@ -305,22 +260,12 @@ BOOL PreviewFont(HINSTANCE hInstance, const char* fontName) {
     return TRUE;
 }
 
-/**
- * @brief Cancel font preview
- * 
- * Clear preview state and restore to the currently set font.
- */
 void CancelFontPreview(void) {
     IS_PREVIEWING = FALSE;
     PREVIEW_FONT_NAME[0] = '\0';
     PREVIEW_INTERNAL_NAME[0] = '\0';
 }
 
-/**
- * @brief Apply font preview
- * 
- * Set the currently previewed font as the actual font in use, and write to configuration file.
- */
 void ApplyFontPreview(void) {
     // Check if there is a valid preview font
     if (!IS_PREVIEWING || strlen(PREVIEW_FONT_NAME) == 0) return;
@@ -337,14 +282,6 @@ void ApplyFontPreview(void) {
     CancelFontPreview();
 }
 
-/**
- * @brief Switch font
- * @param hInstance Application instance handle
- * @param fontName Font name to switch to
- * @return BOOL Returns TRUE on success, FALSE on failure
- * 
- * Switch directly to the specified font, without going through the preview process.
- */
 BOOL SwitchFont(HINSTANCE hInstance, const char* fontName) {
     if (!fontName) return FALSE;
     
