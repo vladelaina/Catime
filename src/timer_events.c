@@ -472,6 +472,17 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
             }
         }
         return TRUE;
+    } else if (wp == 999) {
+        // Handle startup window state re-application timer
+        if (CLOCK_WINDOW_TOPMOST) {
+            // Re-apply topmost status to ensure window stays on top
+            // This is particularly important for auto-startup scenarios
+            SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, 
+                        SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+        }
+        // Kill this one-time timer
+        KillTimer(hwnd, 999);
+        return TRUE;
     }
     return FALSE;
 }
