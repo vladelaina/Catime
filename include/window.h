@@ -161,4 +161,12 @@ BOOL OpenFileDialog(HWND hwnd, char* filePath, DWORD maxPath);
  */
 void SetWindowTopmost(HWND hwnd, BOOL topmost);
 
+ /**
+  * @brief Reattach window to desktop (WorkerW/Progman) in non-topmost mode
+  * @param hwnd Window handle
+  * 
+  * Ensures the window is parented to the desktop container so it is not minimized by Win+D.
+  */
+ void ReattachToDesktop(HWND hwnd);
+
 #endif // WINDOW_H

@@ -537,30 +537,9 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
         // might affect window Z-order during startup
         SetTimer(hwnd, 999, 2000, NULL); // Timer ID 999, 2 seconds delay
     } else {
-        // Find desktop window and set as parent
-        HWND hProgman = FindWindow("Progman", NULL);
-        if (hProgman != NULL) {
-            // Try to find the real desktop window
-            HWND hDesktop = hProgman;
-            
-            // Look for WorkerW window (common in Win10+)
-            HWND hWorkerW = FindWindowEx(NULL, NULL, "WorkerW", NULL);
-            while (hWorkerW != NULL) {
-                HWND hView = FindWindowEx(hWorkerW, NULL, "SHELLDLL_DefView", NULL);
-                if (hView != NULL) {
-                    hDesktop = hWorkerW;
-                    break;
-                }
-                hWorkerW = FindWindowEx(NULL, hWorkerW, "WorkerW", NULL);
-            }
-            
-            // Set as child window of desktop
-            SetParent(hwnd, hDesktop);
-        } else {
-            // If desktop window not found, set to bottom of Z-order
-            SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, 
-                        SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
-        }
+        ReattachToDesktop(hwnd);
+        // Schedule retries to survive Explorer re-creation during login
+        SetTimer(hwnd, 1001, 1500, NULL); // retry desktop reattach a few times
     }
 
     return hwnd;
@@ -682,37 +661,7 @@ void SetWindowTopmost(HWND hwnd, BOOL topmost) {
     } else {
         // Non-topmost mode: add no-activate style to prevent window from gaining focus
         exStyle |= WS_EX_NOACTIVATE;
-        
-        // Set as child window of desktop
-        HWND hProgman = FindWindow("Progman", NULL);
-        HWND hDesktop = NULL;
-        
-        // Try to find the real desktop window
-        if (hProgman != NULL) {
-            // First try using Progman
-            hDesktop = hProgman;
-            
-            // Look for WorkerW window (more common on Win10)
-            HWND hWorkerW = FindWindowEx(NULL, NULL, "WorkerW", NULL);
-            while (hWorkerW != NULL) {
-                HWND hView = FindWindowEx(hWorkerW, NULL, "SHELLDLL_DefView", NULL);
-                if (hView != NULL) {
-                    // Found the real desktop container
-                    hDesktop = hWorkerW;
-                    break;
-                }
-                hWorkerW = FindWindowEx(NULL, hWorkerW, "WorkerW", NULL);
-            }
-        }
-        
-        if (hDesktop != NULL) {
-            // Set window as child of desktop, this keeps it on the desktop
-            SetParent(hwnd, hDesktop);
-        } else {
-            // If desktop window not found, at least place at bottom of Z-order
-            SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0,
-                        SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
-        }
+        ReattachToDesktop(hwnd);
     }
     
     // Apply new window style
@@ -724,4 +673,34 @@ void SetWindowTopmost(HWND hwnd, BOOL topmost) {
     
     // Save window topmost setting
     WriteConfigTopmost(topmost ? "TRUE" : "FALSE");
+}
+
+void ReattachToDesktop(HWND hwnd) {
+    // Set as child window of desktop (WorkerW preferred), so Win+D won't minimize it
+    HWND hProgman = FindWindow("Progman", NULL);
+    HWND hDesktop = NULL;
+    
+    if (hProgman != NULL) {
+        hDesktop = hProgman;
+        HWND hWorkerW = FindWindowEx(NULL, NULL, "WorkerW", NULL);
+        while (hWorkerW != NULL) {
+            HWND hView = FindWindowEx(hWorkerW, NULL, "SHELLDLL_DefView", NULL);
+            if (hView != NULL) {
+                hDesktop = hWorkerW;
+                break;
+            }
+            hWorkerW = FindWindowEx(NULL, hWorkerW, "WorkerW", NULL);
+        }
+    }
+    
+    if (hDesktop != NULL) {
+        SetParent(hwnd, hDesktop);
+        // Keep it at the bottom of Z in non-topmost case but visible
+        SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0,
+                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    } else {
+        // Fallback: still place to bottom if desktop container not found
+        SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0,
+                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    }
 }

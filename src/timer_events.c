@@ -176,6 +176,57 @@ void InitializePomodoro(void) {
  * @return BOOL Whether the message was handled
  */
 BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
+    // Re-apply topmost state shortly after startup to resist Win+D/Explorer Z-order changes
+    // Timer 999 is scheduled at window creation when topmost is enabled
+    if (wp == 999) {
+        static int s_topmost_retry_remaining = 0;
+        if (s_topmost_retry_remaining == 0) {
+            s_topmost_retry_remaining = 3; // Try several times during early startup
+        }
+
+        if (CLOCK_WINDOW_TOPMOST) {
+            // Re-assert topmost without activating the window
+            SetWindowTopmost(hwnd, TRUE);
+            SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
+                         SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+        }
+        // Ensure the window is visible in case it was minimized/hidden by system actions
+        if (!IsWindowVisible(hwnd)) {
+            ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+        }
+
+        // Schedule a few more retries to survive Explorer/Show Desktop toggles
+        s_topmost_retry_remaining--;
+        if (s_topmost_retry_remaining > 0) {
+            SetTimer(hwnd, 999, 1500, NULL);
+        } else {
+            KillTimer(hwnd, 999);
+        }
+        return TRUE;
+    }
+
+    // Retry attaching to desktop in non-topmost mode during shell startup
+    if (wp == 1001) {
+        static int s_desktop_retry_remaining = 0;
+        if (s_desktop_retry_remaining == 0) {
+            s_desktop_retry_remaining = 3; // retry a few times
+        }
+
+        if (!CLOCK_WINDOW_TOPMOST) {
+            ReattachToDesktop(hwnd);
+            if (!IsWindowVisible(hwnd)) {
+                ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+            }
+        }
+
+        s_desktop_retry_remaining--;
+        if (s_desktop_retry_remaining > 0) {
+            SetTimer(hwnd, 1001, 1500, NULL);
+        } else {
+            KillTimer(hwnd, 1001);
+        }
+        return TRUE;
+    }
     if (wp == 1) {
         if (CLOCK_SHOW_CURRENT_TIME) {
             // In current time display mode, reset the last displayed second on each timer trigger to ensure the latest time is displayed
