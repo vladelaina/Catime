@@ -130,14 +130,31 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 
             DWORD dlgId = GetWindowLongPtr(hwndDlg, GWLP_USERDATA);
 
-            ApplyDialogLanguage(hwndDlg, (int)dlgId);
-
-            if (dlgId == CLOCK_IDD_SHORTCUT_DIALOG) {
-            }
-
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
 
             wpOrigEditProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
+
+            if (dlgId == CLOCK_IDD_SHORTCUT_DIALOG) {
+                // Read current countdown preset time options from configuration and format for display
+                extern int time_options[];
+                extern int time_options_count;
+                
+                char currentOptions[256] = {0};
+                for (int i = 0; i < time_options_count; i++) {
+                    char timeStr[32];
+                    snprintf(timeStr, sizeof(timeStr), "%d", time_options[i]);
+                    
+                    if (i > 0) {
+                        strcat(currentOptions, " ");
+                    }
+                    strcat(currentOptions, timeStr);
+                }
+                
+                // Set edit box text with current preset values
+                SetDlgItemTextA(hwndDlg, CLOCK_IDC_EDIT, currentOptions);
+            }
+
+            ApplyDialogLanguage(hwndDlg, (int)dlgId);
 
             SetFocus(hwndEdit);
 
@@ -239,9 +256,52 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                     g_hwndInputDialog = NULL;
                     EndDialog(hwndDlg, IDOK);
                 } else if (dialogId == CLOCK_IDD_SHORTCUT_DIALOG) {
-                    WriteConfigDefaultStartTime(total_seconds);
-                    g_hwndInputDialog = NULL;
-                    EndDialog(hwndDlg, IDOK);
+                    // Parse input as space-separated time options (like in window_procedure.c)
+                    // Use a local copy to avoid modifying the original inputText
+                    char inputCopy[256];
+                    strncpy(inputCopy, inputText, sizeof(inputCopy) - 1);
+                    inputCopy[sizeof(inputCopy) - 1] = '\0';
+                    
+                    char* token = strtok(inputCopy, " ");
+                    char options[256] = {0};
+                    int valid = 1;
+                    int count = 0;
+                    
+                    while (token && count < MAX_TIME_OPTIONS) {
+                        int num = atoi(token);
+                        if (num <= 0) {
+                            valid = 0;
+                            break;
+                        }
+                        
+                        if (count > 0) {
+                            strcat(options, ",");
+                        }
+                        strcat(options, token);
+                        count++;
+                        token = strtok(NULL, " ");
+                    }
+                    
+                    if (valid && count > 0) {
+                        WriteConfigTimeOptions(options);
+                        extern void ReadConfig(void);
+                        ReadConfig();
+                        g_hwndInputDialog = NULL;
+                        EndDialog(hwndDlg, IDOK);
+                    } else {
+                        // Show error message and keep dialog open
+                        MessageBoxW(hwndDlg,
+                            GetLocalizedString(
+                                L"请输入用空格分隔的数字\n"
+                                L"例如: 25 10 5",
+                                L"Enter numbers separated by spaces\n"
+                                L"Example: 25 10 5"),
+                            GetLocalizedString(L"无效输入", L"Invalid Input"), 
+                            MB_OK);
+                        SetWindowTextA(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT), "");
+                        SetFocus(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT));
+                        return TRUE;
+                    }
                 } else {
                     g_hwndInputDialog = NULL;
                     EndDialog(hwndDlg, IDOK);
