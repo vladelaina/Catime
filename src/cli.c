@@ -12,6 +12,7 @@
 
 #include "../include/timer.h"
 #include "../include/window.h"
+#include "../include/window_procedure.h"
 #include "../include/notification.h"
 #include "../include/audio_player.h"
 
@@ -109,6 +110,21 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
 	input[sizeof(input) - 1] = '\0';
 	trimSpaces(input);
 	if (input[0] == '\0') return FALSE;
+
+    // Single-letter mode shortcuts: u (count up), s (show current time), p (pomodoro)
+    if (input[1] == '\0') {
+        char c = (char)tolower((unsigned char)input[0]);
+        if (c == 'u') {
+            StartCountUp(hwnd);
+            return TRUE;
+        } else if (c == 's') {
+            ToggleShowTimeMode(hwnd);
+            return TRUE;
+        } else if (c == 'p') {
+            StartPomodoroTimer(hwnd);
+            return TRUE;
+        }
+    }
 
 	// Normalize consecutive spaces to single spaces
 	{
