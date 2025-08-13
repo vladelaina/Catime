@@ -76,6 +76,8 @@ BOOL CreateShortcut(void) {
         if (SUCCEEDED(hr)) {
             hr = pShellLink->lpVtbl->SetPath(pShellLink, exePath);
             if (SUCCEEDED(hr)) {
+                // Mark this launch as system startup so the app can adjust behavior (e.g., topmost retries)
+                pShellLink->lpVtbl->SetArguments(pShellLink, L"--startup");
                 hr = pShellLink->lpVtbl->QueryInterface(pShellLink,
                                                       &IID_IPersistFile,
                                                       (void**)&pPersistFile);

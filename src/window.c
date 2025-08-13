@@ -531,15 +531,8 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
     if (CLOCK_WINDOW_TOPMOST) {
         SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, 
                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
-        
-        // For auto-startup scenarios, set a timer to re-apply topmost status
-        // This helps handle cases where Win+D or other system operations
-        // might affect window Z-order during startup
-        SetTimer(hwnd, 999, 2000, NULL); // Timer ID 999, 2 seconds delay
     } else {
         ReattachToDesktop(hwnd);
-        // Schedule retries to survive Explorer re-creation during login
-        SetTimer(hwnd, 1001, 1500, NULL); // retry desktop reattach a few times
     }
 
     return hwnd;

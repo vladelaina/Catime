@@ -177,7 +177,7 @@ void InitializePomodoro(void) {
  */
 BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
     // Re-apply topmost state shortly after startup to resist Win+D/Explorer Z-order changes
-    // Timer 999 is scheduled at window creation when topmost is enabled
+    // Timer 999 is scheduled only when launched via system startup (flagged by --startup)
     if (wp == 999) {
         static int s_topmost_retry_remaining = 0;
         if (s_topmost_retry_remaining == 0) {
@@ -205,7 +205,7 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
         return TRUE;
     }
 
-    // Retry attaching to desktop in non-topmost mode during shell startup
+    // Retry attaching to desktop in non-topmost mode during shell startup (only in --startup)
     if (wp == 1001) {
         static int s_desktop_retry_remaining = 0;
         if (s_desktop_retry_remaining == 0) {

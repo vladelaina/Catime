@@ -244,10 +244,21 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         }
         LOG_INFO("Main window creation successful, handle: 0x%p", hwnd);
 
-        // If command line has time expression, start countdown directly
+        // Determine if launched via system startup
+        BOOL launchedFromStartup = FALSE;
+        char cmdBuf[512] = {0};
         if (lpCmdLine && lpCmdLine[0] != '\0') {
+            strncpy(cmdBuf, lpCmdLine, sizeof(cmdBuf) - 1);
+            cmdBuf[sizeof(cmdBuf) - 1] = '\0';
+            // Check and strip internal flag "--startup"
+            char* pStartup = strstr(cmdBuf, "--startup");
+            if (pStartup) {
+                launchedFromStartup = TRUE;
+                size_t len = strlen("--startup");
+                memmove(pStartup, pStartup + len, strlen(pStartup + len) + 1);
+            }
             LOG_INFO("Command line detected: %s", lpCmdLine);
-            if (HandleCliArguments(hwnd, lpCmdLine)) {
+            if (HandleCliArguments(hwnd, cmdBuf)) {
                 LOG_INFO("CLI countdown started successfully");
             } else {
                 LOG_INFO("CLI arguments not parsed as countdown");
@@ -267,6 +278,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         // Handle startup mode
         LOG_INFO("Handling startup mode: %s", CLOCK_STARTUP_MODE);
         HandleStartupMode(hwnd);
+
+        // Only when launched via system startup do we schedule topmost/desktop reattach retries
+        if (launchedFromStartup) {
+            if (CLOCK_WINDOW_TOPMOST) {
+                SetTimer(hwnd, 999, 2000, NULL);
+            } else {
+                SetTimer(hwnd, 1001, 1500, NULL);
+            }
+        }
         
         // Automatic update check code has been removed
 
