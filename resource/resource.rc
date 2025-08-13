@@ -108,5 +108,6 @@ END
 #include "update_dialog.rc"
 #include "no_update_dialog.rc"
 #include "hotkey_dialog.rc"
+#include "help_dialog.rc"
 
 1 RT_MANIFEST "app.manifest"

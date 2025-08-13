@@ -13,6 +13,7 @@
 #include "../include/timer.h"
 #include "../include/window.h"
 #include "../include/window_procedure.h"
+#include "../resource/resource.h"
 #include "../include/notification.h"
 #include "../include/audio_player.h"
 
@@ -122,6 +123,10 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
             return TRUE;
         } else if (c == 'p') {
             StartPomodoroTimer(hwnd);
+            return TRUE;
+        } else if (c == 'h') {
+            // Show help dialog
+            DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_CLI_HELP_DIALOG), hwnd, NULL, 0);
             return TRUE;
         }
     }

@@ -286,6 +286,12 @@ extern int NOTIFICATION_TIMEOUT_MS; // Notification display duration
 #define IDC_GITHUB_LINK 1021    // GitHub link
 
 /*==================================
+ * CLI Help dialog (1100-1199)
+ *==================================*/
+#define IDD_CLI_HELP_DIALOG 1100
+#define IDC_CLI_HELP_EDIT 1101
+
+/*==================================
  * Color dialog (1300-1399)
  *==================================*/
 #define IDD_COLOR_DIALOG 1003

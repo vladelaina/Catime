@@ -1,0 +1,40 @@
+#include <windows.h>
+#include "resource.h"
+
+// Help dialog for CLI usage
+// English-only contents for simplicity
+
+IDD_CLI_HELP_DIALOG DIALOGEX 0, 0, 360, 260
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Catime CLI Help"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    CONTROL \
+"Usage: catime <argument>\r\n\r\n"
+"Countdown inputs (same rules as UI):\r\n"
+"  25        = 25 minutes\r\n"
+"  25h       = 25 hours\r\n"
+"  25s       = 25 seconds\r\n"
+"  25 30     = 25 minutes 30 seconds\r\n"
+"  25 30m    = 25 hours 30 minutes\r\n"
+"  1 30 20   = 1 hour 30 minutes 20 seconds\r\n"
+"  130 20    = 1 hour 30 minutes 20 seconds (compact HMM + SS)\r\n"
+"  17 20t    = countdown to 17:20 today (or tomorrow if passed)\r\n"
+"  1720t     = countdown to 17:20 (compact HHMMt)\r\n"
+"  9 9 9t    = countdown to 9:9:9\r\n\r\n"
+"Quick modes:\r\n"
+"  u         = start count up\r\n"
+"  s         = show current time\r\n"
+"  p         = start Pomodoro\r\n"
+"  h         = show this help dialog\r\n\r\n"
+"Examples:\r\n"
+"  catime 25\r\n"
+"  catime 1720t\r\n"
+"  catime u\r\n"
+"  catime p\r\n",
+            IDC_CLI_HELP_EDIT, "EDIT", WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL, 10, 10, 340, 215
+    DEFPUSHBUTTON   "OK", IDOK, 210, 235, 65, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 285, 235, 65, 14
+END
+
+
