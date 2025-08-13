@@ -65,6 +65,21 @@ static INT_PTR CALLBACK CliHelpDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
 	return FALSE;
 }
 
+void ShowCliHelpDialog(HWND hwnd) {
+	// Show modeless help dialog to avoid system beep when other instance closes this one
+	if (!g_cliHelpDialog || !IsWindow(g_cliHelpDialog)) {
+		g_cliHelpDialog = CreateDialogParam(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_CLI_HELP_DIALOG), hwnd, CliHelpDlgProc, 0);
+		if (g_cliHelpDialog) {
+			ShowWindow(g_cliHelpDialog, SW_SHOW);
+			SetFocus(g_cliHelpDialog);
+		}
+	} else {
+		ShowWindow(g_cliHelpDialog, SW_SHOW);
+		SetForegroundWindow(g_cliHelpDialog);
+		SetFocus(g_cliHelpDialog);
+	}
+}
+
 static void trimSpaces(char* s) {
 	if (!s) return;
 	char* p = s;
@@ -165,22 +180,11 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
         } else if (c == 's') {
             ToggleShowTimeMode(hwnd);
             return TRUE;
-        } else if (c == 'p') {
+		} else if (c == 'p') {
             StartPomodoroTimer(hwnd);
             return TRUE;
 		} else if (c == 'h') {
-			// Show modeless help dialog to avoid system beep when other instance closes this one
-			if (!g_cliHelpDialog || !IsWindow(g_cliHelpDialog)) {
-				g_cliHelpDialog = CreateDialogParam(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_CLI_HELP_DIALOG), hwnd, CliHelpDlgProc, 0);
-				if (g_cliHelpDialog) {
-					ShowWindow(g_cliHelpDialog, SW_SHOW);
-                    SetFocus(g_cliHelpDialog);
-				}
-			} else {
-				ShowWindow(g_cliHelpDialog, SW_SHOW);
-				SetForegroundWindow(g_cliHelpDialog);
-                SetFocus(g_cliHelpDialog);
-			}
+			ShowCliHelpDialog(hwnd);
 			return TRUE;
         }
     }

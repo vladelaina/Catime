@@ -42,6 +42,7 @@
 #include "../include/async_update_checker.h"
 #include "../include/hotkey.h"
 #include "../include/notification.h"  // Add notification header
+#include "../include/cli.h"
 
 // Variables imported from main.c
 extern char inputText[256];
@@ -543,6 +544,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
     switch(msg)
     {
+        case WM_APP_SHOW_CLI_HELP: {
+            ShowCliHelpDialog(hwnd);
+            return 0;
+        }
         case WM_CREATE: {
             // Register global hotkeys when window is created
             RegisterGlobalHotkeys(hwnd);

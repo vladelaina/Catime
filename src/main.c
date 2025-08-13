@@ -189,13 +189,34 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         DWORD mutexError = GetLastError();
         
         if (mutexError == ERROR_ALREADY_EXISTS) {
-            LOG_INFO("Detected another instance is running, trying to close that instance");
+            LOG_INFO("Detected another instance is running");
             HWND hwndExisting = FindWindow("CatimeWindow", "Catime");
             if (hwndExisting) {
-                // Close existing window instance
-                LOG_INFO("Sending close message to existing instance");
+                // If command line is just 'h' (help), forward to existing instance and exit
+                if (lpCmdLine && lpCmdLine[0] != '\0') {
+                    // Trim spaces
+                    char buf[256];
+                    strncpy(buf, lpCmdLine, sizeof(buf) - 1);
+                    buf[sizeof(buf) - 1] = '\0';
+                    // left trim
+                    char* p = buf; while (*p && isspace((unsigned char)*p)) p++;
+                    // right trim
+                    size_t len = strlen(p);
+                    while (len > 0 && isspace((unsigned char)p[len - 1])) { p[--len] = '\0'; }
+                    if ((len == 1) && (p[0] == 'h' || p[0] == 'H')) {
+                        LOG_INFO("Forwarding CLI help request to existing instance");
+                        PostMessage(hwndExisting, WM_APP_SHOW_CLI_HELP, 0, 0);
+                        // Clean up and exit early without restarting the app
+                        ReleaseMutex(hMutex);
+                        CloseHandle(hMutex);
+                        CoUninitialize();
+                        CleanupLogSystem();
+                        return 0;
+                    }
+                }
+                // Otherwise, close existing instance and continue startup
+                LOG_INFO("Closing existing instance to apply CLI arguments");
                 SendMessage(hwndExisting, WM_CLOSE, 0, 0);
-                // Wait for old instance to close
                 Sleep(200);
             } else {
                 LOG_WARNING("Could not find window handle of existing instance, but mutex exists");

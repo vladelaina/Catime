@@ -9,6 +9,12 @@
 #include <windows.h>
 
 /**
+ * @brief Show the CLI help dialog (modeless). Safe to call multiple times.
+ * @param hwnd Main window handle (used as parent)
+ */
+void ShowCliHelpDialog(HWND hwnd);
+
+/**
  * @brief Handle command line arguments to start countdown if present
  * @param hwnd Main window handle (needed to reset timers)
  * @param cmdLine Raw command line string from WinMain (lpCmdLine)

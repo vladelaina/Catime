@@ -11,6 +11,12 @@
 
 #include <windows.h>
 
+// Custom application messages
+// Used for inter-instance communication (e.g., show CLI help without resetting timer)
+#ifndef WM_APP_SHOW_CLI_HELP
+#define WM_APP_SHOW_CLI_HELP (WM_APP + 2)
+#endif
+
 /**
  * @brief Hotkey ID definitions
  */
