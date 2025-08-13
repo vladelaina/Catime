@@ -1182,6 +1182,25 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         // Not in edit mode, apply it immediately
                         SetWindowTopmost(hwnd, newTopmost);
                         WriteConfigTopmost(newTopmost ? "TRUE" : "FALSE");
+                        // Force ensure visibility after toggling
+                        InvalidateRect(hwnd, NULL, TRUE);
+                        if (newTopmost) {
+                            ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+                            SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
+                                         SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+                        } else {
+                            // Reattach to desktop for non-topmost mode and ensure visible
+                            extern void ReattachToDesktop(HWND);
+                            ReattachToDesktop(hwnd);
+                            ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+                            SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0,
+                                         SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+                            // Force redraw and schedule a short delayed re-assertion for stability
+                            InvalidateRect(hwnd, NULL, TRUE);
+                            RedrawWindow(hwnd, NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW);
+                            KillTimer(hwnd, 1002);
+                            SetTimer(hwnd, 1002, 150, NULL);
+                        }
                     }
                     break;
                 }

@@ -227,6 +227,18 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
         }
         return TRUE;
     }
+    // One-shot delayed reassert for toggling to non-topmost to ensure visibility in some shells
+    if (wp == 1002) {
+        KillTimer(hwnd, 1002);
+        extern void ReattachToDesktop(HWND);
+        ReattachToDesktop(hwnd);
+        ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+        SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0,
+                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+        InvalidateRect(hwnd, NULL, TRUE);
+        RedrawWindow(hwnd, NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW);
+        return TRUE;
+    }
     if (wp == 1) {
         if (CLOCK_SHOW_CURRENT_TIME) {
             // In current time display mode, reset the last displayed second on each timer trigger to ensure the latest time is displayed

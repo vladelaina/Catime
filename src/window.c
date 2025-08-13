@@ -532,7 +532,9 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
         SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, 
                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
     } else {
+        // Reattach to desktop container for non-topmost mode
         ReattachToDesktop(hwnd);
+        ShowWindow(hwnd, SW_SHOWNOACTIVATE);
     }
 
     return hwnd;
@@ -652,9 +654,12 @@ void SetWindowTopmost(HWND hwnd, BOOL topmost) {
         SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED);
     } else {
-        // Non-topmost mode: add no-activate style to prevent window from gaining focus
+        // Non-topmost mode: attach to desktop to avoid being minimized by Win+D, but ensure visible
         exStyle |= WS_EX_NOACTIVATE;
         ReattachToDesktop(hwnd);
+        ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+        SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_FRAMECHANGED);
     }
     
     // Apply new window style
@@ -688,12 +693,15 @@ void ReattachToDesktop(HWND hwnd) {
     
     if (hDesktop != NULL) {
         SetParent(hwnd, hDesktop);
-        // Keep it at the bottom of Z in non-topmost case but visible
-        SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0,
-                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+        // Keep it visible
+        ShowWindow(hwnd, SW_SHOW);
+        SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0,
+                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
     } else {
-        // Fallback: still place to bottom if desktop container not found
-        SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0,
-                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+        // Fallback: ensure as normal not-topmost and show
+        SetParent(hwnd, NULL);
+        ShowWindow(hwnd, SW_SHOW);
+        SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0,
+                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
     }
 }
