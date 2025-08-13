@@ -253,6 +253,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         LOG_INFO("Entering main message loop");
         MSG msg;
         while (GetMessage(&msg, NULL, 0, 0) > 0) {
+            // Route messages to modeless CLI help dialog if present
+            HWND hCliHelp = GetCliHelpDialog();
+            if (hCliHelp && IsDialogMessage(hCliHelp, &msg)) {
+                continue;
+            }
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }

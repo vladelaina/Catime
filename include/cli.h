@@ -28,6 +28,16 @@
  */
 BOOL HandleCliArguments(HWND hwnd, const char* cmdLine);
 
+/**
+ * @brief Get current CLI help dialog handle (if visible)
+ */
+HWND GetCliHelpDialog(void);
+
+/**
+ * @brief Close CLI help dialog if exists
+ */
+void CloseCliHelpDialog(void);
+
 #endif // CLI_H
 
 

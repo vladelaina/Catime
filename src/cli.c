@@ -26,22 +26,24 @@ static HWND g_cliHelpDialog = NULL;
 static INT_PTR CALLBACK CliHelpDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 	switch (msg) {
 	case WM_INITDIALOG:
-		return TRUE;
+        // Make sure focus is on the OK button so Enter will trigger it
+        SetFocus(GetDlgItem(hwndDlg, IDOK));
+        return FALSE; // we set focus manually
 	case WM_COMMAND:
 		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
-			EndDialog(hwndDlg, LOWORD(wParam));
+            DestroyWindow(hwndDlg);
 			return TRUE;
 		}
 		break;
 	case WM_KEYDOWN:
 		if (wParam == VK_RETURN) {
-			DestroyWindow(hwndDlg);
+            DestroyWindow(hwndDlg);
 			return TRUE;
 		}
 		break;
 	case WM_CHAR:
 		if (wParam == VK_RETURN) {
-			DestroyWindow(hwndDlg);
+            DestroyWindow(hwndDlg);
 			return TRUE;
 		}
 		break;
@@ -172,10 +174,12 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
 				g_cliHelpDialog = CreateDialogParam(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_CLI_HELP_DIALOG), hwnd, CliHelpDlgProc, 0);
 				if (g_cliHelpDialog) {
 					ShowWindow(g_cliHelpDialog, SW_SHOW);
+                    SetFocus(g_cliHelpDialog);
 				}
 			} else {
 				ShowWindow(g_cliHelpDialog, SW_SHOW);
 				SetForegroundWindow(g_cliHelpDialog);
+                SetFocus(g_cliHelpDialog);
 			}
 			return TRUE;
         }
@@ -201,7 +205,6 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
 	if (!ParseInput(input, &total_seconds)) {
 		return FALSE;
 	}
-
 	// Stop any notification sound and close notifications
 	StopNotificationSound();
 	CloseAllNotifications();
@@ -222,4 +225,13 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
 	return TRUE;
 }
 
+HWND GetCliHelpDialog(void) {
+    return g_cliHelpDialog;
+}
 
+void CloseCliHelpDialog(void) {
+    if (g_cliHelpDialog && IsWindow(g_cliHelpDialog)) {
+        DestroyWindow(g_cliHelpDialog);
+        g_cliHelpDialog = NULL;
+    }
+}
