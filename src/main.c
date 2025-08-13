@@ -34,6 +34,8 @@
 #include "../include/dialog_language.h"
 #include "../include/shortcut_checker.h"
 
+#include <tlhelp32.h>
+
 // Required for older Windows SDK
 #ifndef CSIDL_STARTUP
 #endif
@@ -105,6 +107,44 @@ static void HandleStartupMode(HWND hwnd) {
     } else {
         LOG_INFO("Using default countdown mode");
     }
+}
+
+/**
+ * @brief Find existing Catime window, regardless of topmost or desktop-child mode
+ *
+ * The app may reparent the main window to the desktop container (WorkerW/Progman)
+ * when in non-topmost mode, which makes it a child window and thus invisible to
+ * FindWindow (which only enumerates top-level windows). This helper searches both
+ * the top-level window list and the desktop container for the window class
+ * "CatimeWindow".
+ */
+static HWND FindExistingInstanceWindow(void) {
+    // First try top-level window (topmost mode or before reattach)
+    HWND hwnd = FindWindow("CatimeWindow", "Catime");
+    if (hwnd) return hwnd;
+
+    // Then try to locate our window as a child of the desktop container
+    HWND hProgman = FindWindow("Progman", NULL);
+    HWND hDesktop = NULL;
+    if (hProgman != NULL) {
+        hDesktop = hProgman;
+        HWND hWorkerW = FindWindowEx(NULL, NULL, "WorkerW", NULL);
+        while (hWorkerW != NULL) {
+            HWND hView = FindWindowEx(hWorkerW, NULL, "SHELLDLL_DefView", NULL);
+            if (hView != NULL) {
+                hDesktop = hWorkerW;
+                break;
+            }
+            hWorkerW = FindWindowEx(NULL, hWorkerW, "WorkerW", NULL);
+        }
+    }
+    if (hDesktop != NULL) {
+        // Window name may be NULL when WS_POPUP child; match by class only
+        hwnd = FindWindowEx(hDesktop, NULL, "CatimeWindow", NULL);
+        if (hwnd) return hwnd;
+    }
+
+    return NULL;
 }
 
 /**
@@ -190,7 +230,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         
         if (mutexError == ERROR_ALREADY_EXISTS) {
             LOG_INFO("Detected another instance is running");
-            HWND hwndExisting = FindWindow("CatimeWindow", "Catime");
+            HWND hwndExisting = FindExistingInstanceWindow();
             if (hwndExisting) {
                 // If command line is just 'h' (help), forward to existing instance and exit
                 if (lpCmdLine && lpCmdLine[0] != '\0') {
