@@ -22,13 +22,36 @@ extern int elapsed_time;
 extern int message_shown;
 
 static HWND g_cliHelpDialog = NULL;
+static void ForceForegroundAndFocus(HWND hwndDialog) {
+	HWND hwndFore = GetForegroundWindow();
+	DWORD foreThread = hwndFore ? GetWindowThreadProcessId(hwndFore, NULL) : 0;
+	DWORD curThread = GetCurrentThreadId();
+	if (foreThread && foreThread != curThread) {
+		AttachThreadInput(foreThread, curThread, TRUE);
+	}
+	// Try allow foreground switch (best-effort)
+	AllowSetForegroundWindow(ASFW_ANY);
+	// Toggle topmost to bring to front reliably
+	SetWindowPos(hwndDialog, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+	SetWindowPos(hwndDialog, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+	BringWindowToTop(hwndDialog);
+	SetForegroundWindow(hwndDialog);
+	SetActiveWindow(hwndDialog);
+	HWND hOk = GetDlgItem(hwndDialog, IDOK);
+	if (hOk) SetFocus(hOk);
+	if (foreThread && foreThread != curThread) {
+		AttachThreadInput(foreThread, curThread, FALSE);
+	}
+}
 
 static INT_PTR CALLBACK CliHelpDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 	switch (msg) {
 	case WM_INITDIALOG:
-        // Make sure focus is on the OK button so Enter will trigger it
-        SetFocus(GetDlgItem(hwndDlg, IDOK));
-        return FALSE; // we set focus manually
+		// Set OK as default and focus so Enter will close immediately even if not clicked first
+		SendMessage(hwndDlg, DM_SETDEFID, (WPARAM)IDOK, 0);
+		HWND hOk = GetDlgItem(hwndDlg, IDOK);
+		if (hOk) SetFocus(hOk);
+		return FALSE; // allow dialog manager to set focus since we set it explicitly
 	case WM_COMMAND:
 		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
             DestroyWindow(hwndDlg);
@@ -71,12 +94,11 @@ void ShowCliHelpDialog(HWND hwnd) {
 		g_cliHelpDialog = CreateDialogParam(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_CLI_HELP_DIALOG), hwnd, CliHelpDlgProc, 0);
 		if (g_cliHelpDialog) {
 			ShowWindow(g_cliHelpDialog, SW_SHOW);
-			SetFocus(g_cliHelpDialog);
+			ForceForegroundAndFocus(g_cliHelpDialog);
 		}
 	} else {
 		ShowWindow(g_cliHelpDialog, SW_SHOW);
-		SetForegroundWindow(g_cliHelpDialog);
-		SetFocus(g_cliHelpDialog);
+		ForceForegroundAndFocus(g_cliHelpDialog);
 	}
 }
 
