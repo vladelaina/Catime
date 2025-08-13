@@ -28,6 +28,7 @@
 #include "../include/window_procedure.h"
 #include "../include/media.h"
 #include "../include/notification.h"
+#include "../include/cli.h"
 #include "../include/async_update_checker.h"
 #include "../include/log.h"
 #include "../include/dialog_language.h"
@@ -222,7 +223,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         }
         LOG_INFO("Main window creation successful, handle: 0x%p", hwnd);
 
-        // Set timer
+        // If command line has time expression, start countdown directly
+        if (lpCmdLine && lpCmdLine[0] != '\0') {
+            LOG_INFO("Command line detected: %s", lpCmdLine);
+            if (HandleCliArguments(hwnd, lpCmdLine)) {
+                LOG_INFO("CLI countdown started successfully");
+            } else {
+                LOG_INFO("CLI arguments not parsed as countdown");
+            }
+        }
+
+        // Set timer (ensure timer exists even if not started by CLI)
         LOG_INFO("Setting main timer...");
         if (SetTimer(hwnd, 1, 1000, NULL) == 0) {
             DWORD timerError = GetLastError();
