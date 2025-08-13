@@ -145,9 +145,9 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                     snprintf(timeStr, sizeof(timeStr), "%d", time_options[i]);
                     
                     if (i > 0) {
-                        strcat(currentOptions, " ");
+                        StringCbCatA(currentOptions, sizeof(currentOptions), " ");
                     }
-                    strcat(currentOptions, timeStr);
+                    StringCbCatA(currentOptions, sizeof(currentOptions), timeStr);
                 }
                 
                 // Set edit box text with current preset values
@@ -275,9 +275,9 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                         }
                         
                         if (count > 0) {
-                            strcat(options, ",");
+                            StringCbCatA(options, sizeof(options), ",");
                         }
-                        strcat(options, token);
+                        StringCbCatA(options, sizeof(options), token);
                         count++;
                         token = strtok(NULL, " ");
                     }
