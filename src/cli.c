@@ -21,6 +21,48 @@
 extern int elapsed_time;
 extern int message_shown;
 
+static HWND g_cliHelpDialog = NULL;
+
+static INT_PTR CALLBACK CliHelpDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+	switch (msg) {
+	case WM_INITDIALOG:
+		return TRUE;
+	case WM_COMMAND:
+		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
+			EndDialog(hwndDlg, LOWORD(wParam));
+			return TRUE;
+		}
+		break;
+	case WM_KEYDOWN:
+		if (wParam == VK_RETURN) {
+			DestroyWindow(hwndDlg);
+			return TRUE;
+		}
+		break;
+	case WM_CHAR:
+		if (wParam == VK_RETURN) {
+			DestroyWindow(hwndDlg);
+			return TRUE;
+		}
+		break;
+	case WM_SYSCOMMAND:
+		if ((wParam & 0xFFF0) == SC_CLOSE) {
+			DestroyWindow(hwndDlg);
+			return TRUE;
+		}
+		break;
+	case WM_CLOSE:
+		DestroyWindow(hwndDlg);
+		return TRUE;
+	case WM_DESTROY:
+		if (hwndDlg == g_cliHelpDialog) {
+			g_cliHelpDialog = NULL;
+		}
+		return TRUE;
+	}
+	return FALSE;
+}
+
 static void trimSpaces(char* s) {
 	if (!s) return;
 	char* p = s;
@@ -124,10 +166,18 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
         } else if (c == 'p') {
             StartPomodoroTimer(hwnd);
             return TRUE;
-        } else if (c == 'h') {
-            // Show help dialog
-            DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_CLI_HELP_DIALOG), hwnd, NULL, 0);
-            return TRUE;
+		} else if (c == 'h') {
+			// Show modeless help dialog to avoid system beep when other instance closes this one
+			if (!g_cliHelpDialog || !IsWindow(g_cliHelpDialog)) {
+				g_cliHelpDialog = CreateDialogParam(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_CLI_HELP_DIALOG), hwnd, CliHelpDlgProc, 0);
+				if (g_cliHelpDialog) {
+					ShowWindow(g_cliHelpDialog, SW_SHOW);
+				}
+			} else {
+				ShowWindow(g_cliHelpDialog, SW_SHOW);
+				SetForegroundWindow(g_cliHelpDialog);
+			}
+			return TRUE;
         }
     }
 
