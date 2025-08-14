@@ -110,6 +110,50 @@ static void HandleStartupMode(HWND hwnd) {
 }
 
 /**
+ * @brief Forward simple CLI commands to an existing instance via WM_HOTKEY.
+ *        Returns TRUE if forwarded and caller should exit without restarting.
+ */
+static BOOL TryForwardSimpleCliToExisting(HWND hwndExisting, const char* lpCmdLine) {
+    if (!lpCmdLine || lpCmdLine[0] == '\0') return FALSE;
+
+    // Trim spaces into buf
+    char buf[256];
+    strncpy(buf, lpCmdLine, sizeof(buf) - 1);
+    buf[sizeof(buf) - 1] = '\0';
+    char* p = buf; while (*p && isspace((unsigned char)*p)) p++;
+    size_t len = strlen(p);
+    while (len > 0 && isspace((unsigned char)p[len - 1])) { p[--len] = '\0'; }
+    if (len == 0) return FALSE;
+
+    // Single-letter or short tokens that map 1:1 to hotkeys
+    if (len == 1) {
+        char c = (char)tolower((unsigned char)p[0]);
+        if (c == 's') { PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_SHOW_TIME, 0); return TRUE; }
+        if (c == 'u') { PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_COUNT_UP, 0); return TRUE; }
+        if (c == 'p') { PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_POMODORO, 0); return TRUE; }
+        if (c == 'v') { PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_TOGGLE_VISIBILITY, 0); return TRUE; }
+        if (c == 'e') { PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_EDIT_MODE, 0); return TRUE; }
+        if (c == 'r') { PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_RESTART_TIMER, 0); return TRUE; }
+        if (c == 'h') { PostMessage(hwndExisting, WM_APP_SHOW_CLI_HELP, 0, 0); return TRUE; }
+    }
+
+    // Two-char tokens
+    if ((len == 2) && (tolower((unsigned char)p[0]) == 'p') && (tolower((unsigned char)p[1]) == 'r')) {
+        PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_PAUSE_RESUME, 0);
+        return TRUE;
+    }
+
+    // q1/q2/q3
+    if (len == 2 && tolower((unsigned char)p[0]) == 'q' && (p[1] >= '1' && p[1] <= '3')) {
+        if (p[1] == '1') { PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_QUICK_COUNTDOWN1, 0); return TRUE; }
+        if (p[1] == '2') { PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_QUICK_COUNTDOWN2, 0); return TRUE; }
+        if (p[1] == '3') { PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_QUICK_COUNTDOWN3, 0); return TRUE; }
+    }
+
+    return FALSE;
+}
+
+/**
  * @brief Find existing Catime window, regardless of topmost or desktop-child mode
  *
  * The app may reparent the main window to the desktop container (WorkerW/Progman)
@@ -234,19 +278,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             if (hwndExisting) {
                 // If command line is just 'h' (help), forward to existing instance and exit
                 if (lpCmdLine && lpCmdLine[0] != '\0') {
-                    // Trim spaces
-                    char buf[256];
-                    strncpy(buf, lpCmdLine, sizeof(buf) - 1);
-                    buf[sizeof(buf) - 1] = '\0';
-                    // left trim
-                    char* p = buf; while (*p && isspace((unsigned char)*p)) p++;
-                    // right trim
-                    size_t len = strlen(p);
-                    while (len > 0 && isspace((unsigned char)p[len - 1])) { p[--len] = '\0'; }
-                    if ((len == 1) && (p[0] == 'h' || p[0] == 'H')) {
-                        LOG_INFO("Forwarding CLI help request to existing instance");
-                        PostMessage(hwndExisting, WM_APP_SHOW_CLI_HELP, 0, 0);
-                        // Clean up and exit early without restarting the app
+                    if (TryForwardSimpleCliToExisting(hwndExisting, lpCmdLine)) {
+                        LOG_INFO("Forwarded simple CLI command to existing instance and exiting");
                         ReleaseMutex(hMutex);
                         CloseHandle(hMutex);
                         CoUninitialize();

@@ -41,7 +41,7 @@
 #include "../include/update_checker.h"
 #include "../include/async_update_checker.h"
 #include "../include/hotkey.h"
-#include "../include/notification.h"  // Add notification header
+#include "../include/notification.h"
 #include "../include/cli.h"
 
 // Variables imported from main.c
