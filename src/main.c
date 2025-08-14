@@ -164,6 +164,18 @@ static BOOL TryForwardSimpleCliToExisting(HWND hwndExisting, const char* lpCmdLi
         }
     }
 
+    // If looks like a countdown expression, forward as CLI text to avoid restarting
+    // We reuse the same normalization in cli.c, but at least detect a leading digit/space or endswith 't'
+    int hasDigit = 0;
+    for (size_t i = 0; i < len; ++i) { if (isdigit((unsigned char)p[i])) { hasDigit = 1; break; } }
+    if (hasDigit) {
+        COPYDATASTRUCT cds;
+        cds.dwData = COPYDATA_ID_CLI_TEXT;
+        cds.cbData = (DWORD)(len + 1);
+        cds.lpData = p;
+        SendMessage(hwndExisting, WM_COPYDATA, 0, (LPARAM)&cds);
+        return TRUE;
+    }
     return FALSE;
 }
 

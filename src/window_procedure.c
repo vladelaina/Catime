@@ -548,6 +548,21 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             ShowCliHelpDialog(hwnd);
             return 0;
         }
+        case WM_COPYDATA: {
+            PCOPYDATASTRUCT pcds = (PCOPYDATASTRUCT)lp;
+            if (pcds && pcds->dwData == COPYDATA_ID_CLI_TEXT && pcds->lpData && pcds->cbData > 0) {
+                // Ensure null-terminated
+                const size_t maxLen = 255;
+                char buf[256];
+                size_t n = (pcds->cbData > maxLen) ? maxLen : pcds->cbData;
+                memcpy(buf, pcds->lpData, n);
+                buf[maxLen] = '\0';
+                buf[n] = '\0';
+                HandleCliArguments(hwnd, buf);
+                return 0;
+            }
+            break;
+        }
         case WM_APP_QUICK_COUNTDOWN_INDEX: {
             // lParam carries the 1-based index
             int idx = (int)lp;

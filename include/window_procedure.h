@@ -22,6 +22,11 @@
  #define WM_APP_QUICK_COUNTDOWN_INDEX (WM_APP + 3)
  #endif
 
+// COPYDATA identifier for forwarding CLI text (countdown arguments)
+#ifndef COPYDATA_ID_CLI_TEXT
+#define COPYDATA_ID_CLI_TEXT 0x10010001
+#endif
+
 /**
  * @brief Hotkey ID definitions
  */
