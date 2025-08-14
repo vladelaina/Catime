@@ -22,16 +22,24 @@ BEGIN
 "  17 20t    = countdown to 17:20 today (or tomorrow if passed)\r\n"
 "  1720t     = countdown to 17:20 (compact HHMMt)\r\n"
 "  9 9 9t    = countdown to 9:9:9\r\n\r\n"
-"Quick modes:\r\n"
+"Quick modes (single-letter):\r\n"
 "  u         = start count up\r\n"
 "  s         = show current time\r\n"
 "  p         = start Pomodoro\r\n"
 "  h         = show this help dialog\r\n\r\n"
+"Abbreviated commands:\r\n"
+"  qc1 / q1            = start Quick Countdown 1\r\n"
+"  qc2 / q2            = start Quick Countdown 2\r\n"
+"  qc3 / q3            = start Quick Countdown 3\r\n"
+"  vis / toggle        = toggle visibility\r\n"
+"  edit / e            = enter edit mode\r\n"
+"  pr / pause/resume   = pause or resume the timer\r\n"
+"  rst / r             = restart the current timer\r\n\r\n"
 "Examples:\r\n"
 "  catime 25\r\n"
 "  catime 1720t\r\n"
-"  catime u\r\n"
-"  catime p\r\n",
+"  catime qc1\r\n"
+"  catime vis\r\n",
             IDC_CLI_HELP_EDIT, "EDIT", WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL, 10, 10, 340, 215
     DEFPUSHBUTTON   "OK", IDOK, 285, 235, 65, 14
 END

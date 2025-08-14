@@ -193,17 +193,65 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
 	trimSpaces(input);
 	if (input[0] == '\0') return FALSE;
 
+    // Abbreviated commands (case-insensitive for ASCII)
+    {
+        // Quick countdown 1/2/3
+        if (_stricmp(input, "qc1") == 0 || _stricmp(input, "q1") == 0) {
+            StartQuickCountdown1(hwnd);
+            return TRUE;
+        }
+        if (_stricmp(input, "qc2") == 0 || _stricmp(input, "q2") == 0) {
+            StartQuickCountdown2(hwnd);
+            return TRUE;
+        }
+        if (_stricmp(input, "qc3") == 0 || _stricmp(input, "q3") == 0) {
+            StartQuickCountdown3(hwnd);
+            return TRUE;
+        }
+
+        // Hide/Show window (toggle visibility)
+        if (_stricmp(input, "vis") == 0 || _stricmp(input, "toggle") == 0) {
+            if (IsWindowVisible(hwnd)) {
+                ShowWindow(hwnd, SW_HIDE);
+            } else {
+                ShowWindow(hwnd, SW_SHOW);
+                SetForegroundWindow(hwnd);
+            }
+            return TRUE;
+        }
+
+        // Enter edit mode (use specific enter rather than toggle)
+        if (_stricmp(input, "edit") == 0 || _stricmp(input, "e") == 0) {
+            extern void StartEditMode(HWND hwnd);
+            StartEditMode(hwnd);
+            return TRUE;
+        }
+
+        // Pause/Resume timer (toggle)
+        if (_stricmp(input, "pr") == 0 || _stricmp(input, "pause") == 0 || _stricmp(input, "resume") == 0) {
+            TogglePauseResume(hwnd);
+            return TRUE;
+        }
+
+        // Restart current timer
+        if (_stricmp(input, "rst") == 0 || _stricmp(input, "r") == 0) {
+            CloseAllNotifications();
+            RestartCurrentTimer(hwnd);
+            return TRUE;
+        }
+    }
+
     // Single-letter mode shortcuts: u (count up), s (show current time), p (pomodoro)
     if (input[1] == '\0') {
         char c = (char)tolower((unsigned char)input[0]);
         if (c == 'u') {
-            StartCountUp(hwnd);
+            PostMessage(hwnd, WM_HOTKEY, HOTKEY_ID_COUNT_UP, 0);
             return TRUE;
         } else if (c == 's') {
-            ToggleShowTimeMode(hwnd);
+            PostMessage(hwnd, WM_HOTKEY, HOTKEY_ID_SHOW_TIME, 0);
             return TRUE;
 		} else if (c == 'p') {
-            StartPomodoroTimer(hwnd);
+            PostMessage(hwnd, WM_HOTKEY, HOTKEY_ID_POMODORO, 0);
             return TRUE;
 		} else if (c == 'h') {
 			ShowCliHelpDialog(hwnd);
