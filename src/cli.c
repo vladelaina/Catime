@@ -239,6 +239,23 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
             RestartCurrentTimer(hwnd);
             return TRUE;
         }
+
+        // Quick countdown by index: p<number> (e.g., p4 -> 4th preset)
+        if ((input[0] == 'p' || input[0] == 'P') && isdigit((unsigned char)input[1])) {
+            long val = 0;
+            const char* num = input + 1;
+            char* endp = NULL;
+            val = strtol(num, &endp, 10);
+            if (val > 0 && (endp == NULL || *endp == '\0')) {
+                extern void StartQuickCountdownByIndex(HWND hwnd, int index);
+                StartQuickCountdownByIndex(hwnd, (int)val);
+                return TRUE;
+            } else {
+                // Illegal p<number> -> fallback to default countdown
+                StartDefaultCountDown(hwnd);
+                return TRUE;
+            }
+        }
     }
 
     // Single-letter mode shortcuts: s (show current time), u (count up), p (pomodoro), h (help)
@@ -276,9 +293,11 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
 	expandCompactHourMinutePlusSecond(input); // e.g., 130 20 -> "1 30 20"
 
 	int total_seconds = 0;
-	if (!ParseInput(input, &total_seconds)) {
-		return FALSE;
-	}
+    if (!ParseInput(input, &total_seconds)) {
+        // Any unparsable CLI input should fallback to default countdown
+        StartDefaultCountDown(hwnd);
+        return TRUE;
+    }
 	// Stop any notification sound and close notifications
 	StopNotificationSound();
 	CloseAllNotifications();

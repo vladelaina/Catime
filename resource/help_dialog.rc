@@ -29,6 +29,7 @@ BEGIN
 "  q2        = start Quick Countdown 2\r\n"
 "  q3        = start Quick Countdown 3\r\n"
 "  p         = start Pomodoro\r\n"
+"  p<number> = start Quick Countdown by index (e.g., p4)\r\n"
 "  v         = toggle visibility\r\n"
 "  e         = enter edit mode\r\n"
 "  pr        = pause or resume the timer\r\n"
@@ -38,7 +39,8 @@ BEGIN
 "  catime 25\r\n"
 "  catime 1720t\r\n"
 "  catime q1\r\n"
-"  catime v\r\n",
+"  catime v\r\n"
+"  catime p4\r\n",
             IDC_CLI_HELP_EDIT, "EDIT", WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL, 10, 10, 340, 215
     DEFPUSHBUTTON   "OK", IDOK, 285, 235, 65, 14
 END

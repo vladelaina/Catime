@@ -548,6 +548,16 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             ShowCliHelpDialog(hwnd);
             return 0;
         }
+        case WM_APP_QUICK_COUNTDOWN_INDEX: {
+            // lParam carries the 1-based index
+            int idx = (int)lp;
+            if (idx >= 1) {
+                StartQuickCountdownByIndex(hwnd, idx);
+            } else {
+                StartDefaultCountDown(hwnd);
+            }
+            return 0;
+        }
         case WM_CREATE: {
             // Register global hotkeys when window is created
             RegisterGlobalHotkeys(hwnd);
@@ -2613,8 +2623,8 @@ void StartQuickCountdown1(HWND hwnd) {
         
         InvalidateRect(hwnd, NULL, TRUE);
     } else {
-        // If there are no preset time options, show the settings dialog
-        PostMessage(hwnd, WM_COMMAND, CLOCK_IDC_MODIFY_TIME_OPTIONS, 0);
+        // No preset -> fallback to default countdown
+        StartDefaultCountDown(hwnd);
     }
 }
 
@@ -2661,8 +2671,8 @@ void StartQuickCountdown2(HWND hwnd) {
         
         InvalidateRect(hwnd, NULL, TRUE);
     } else {
-        // If there are not enough preset time options, show the settings dialog
-        PostMessage(hwnd, WM_COMMAND, CLOCK_IDC_MODIFY_TIME_OPTIONS, 0);
+        // Not enough preset -> fallback to default countdown
+        StartDefaultCountDown(hwnd);
     }
 }
 
@@ -2709,7 +2719,54 @@ void StartQuickCountdown3(HWND hwnd) {
         
         InvalidateRect(hwnd, NULL, TRUE);
     } else {
-        // If there are not enough preset time options, show the settings dialog
-        PostMessage(hwnd, WM_COMMAND, CLOCK_IDC_MODIFY_TIME_OPTIONS, 0);
+        // Not enough preset -> fallback to default countdown
+        StartDefaultCountDown(hwnd);
+    }
+}
+
+/**
+ * @brief Start quick countdown by 1-based preset index
+ */
+void StartQuickCountdownByIndex(HWND hwnd, int index) {
+    if (index <= 0) return;
+
+    // Stop any notification sound that may be playing
+    extern void StopNotificationSound(void);
+    StopNotificationSound();
+
+    // Close all notification windows
+    CloseAllNotifications();
+
+    // Reset notification flag to ensure notification can be shown when countdown ends
+    extern BOOL countdown_message_shown;
+    countdown_message_shown = FALSE;
+
+    // Ensure latest notification configuration is read
+    extern void ReadNotificationTypeConfig(void);
+    ReadNotificationTypeConfig();
+
+    extern int time_options[];
+    extern int time_options_count;
+
+    BOOL wasShowingTime = CLOCK_SHOW_CURRENT_TIME;
+
+    CLOCK_COUNT_UP = FALSE;
+    CLOCK_SHOW_CURRENT_TIME = FALSE;
+
+    int zeroBased = index - 1;
+    if (zeroBased >= 0 && zeroBased < time_options_count) {
+        CLOCK_TOTAL_TIME = time_options[zeroBased] * 60; // minutes to seconds
+        countdown_elapsed_time = 0;
+        CLOCK_IS_PAUSED = FALSE;
+
+        if (wasShowingTime) {
+            KillTimer(hwnd, 1);
+            SetTimer(hwnd, 1, 1000, NULL);
+        }
+
+        InvalidateRect(hwnd, NULL, TRUE);
+    } else {
+        // Out of range -> fallback to default countdown
+        StartDefaultCountDown(hwnd);
     }
 }

@@ -17,6 +17,11 @@
 #define WM_APP_SHOW_CLI_HELP (WM_APP + 2)
 #endif
 
+ // Forward quick countdown by index from another instance
+ #ifndef WM_APP_QUICK_COUNTDOWN_INDEX
+ #define WM_APP_QUICK_COUNTDOWN_INDEX (WM_APP + 3)
+ #endif
+
 /**
  * @brief Hotkey ID definitions
  */
@@ -135,5 +140,12 @@ void StartQuickCountdown2(HWND hwnd);
  * Start countdown using the third item in the preset time options
  */
 void StartQuickCountdown3(HWND hwnd);
+
+ /**
+  * @brief Start quick countdown by preset index (1-based)
+  * @param hwnd Window handle
+  * @param index 1-based index into preset `time_options`
+  */
+ void StartQuickCountdownByIndex(HWND hwnd, int index);
 
 #endif // WINDOW_PROCEDURE_H 

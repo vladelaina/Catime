@@ -150,6 +150,20 @@ static BOOL TryForwardSimpleCliToExisting(HWND hwndExisting, const char* lpCmdLi
         if (p[1] == '3') { PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_QUICK_COUNTDOWN3, 0); return TRUE; }
     }
 
+    // p<number> => quick countdown by index
+    if ((tolower((unsigned char)p[0]) == 'p') && isdigit((unsigned char)p[1])) {
+        char* endp = NULL;
+        long idx = strtol(p + 1, &endp, 10);
+        if (idx > 0 && (endp == NULL || *endp == '\0')) {
+            PostMessage(hwndExisting, WM_APP_QUICK_COUNTDOWN_INDEX, 0, (LPARAM)idx);
+            return TRUE;
+        } else {
+            // Illegal p<number> -> fallback to default countdown
+            PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_COUNTDOWN, 0);
+            return TRUE;
+        }
+    }
+
     return FALSE;
 }
 
