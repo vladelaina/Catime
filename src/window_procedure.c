@@ -743,7 +743,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     }
                     break;
                 }
-                // Handle quick time options (102-102+MAX_TIME_OPTIONS)
+                // Handle quick time options (legacy IDs 102..)
                 case 102: case 103: case 104: case 105: case 106:
                 case 107: case 108: {
                     // Stop any notification sound that may be playing
@@ -783,6 +783,45 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     }
                     break;
                 }
+                // Handle quick time options (new ID base CLOCK_IDM_QUICK_TIME_BASE, support up to MAX_TIME_OPTIONS)
+                default: if (cmd >= CLOCK_IDM_QUICK_TIME_BASE && cmd < CLOCK_IDM_QUICK_TIME_BASE + MAX_TIME_OPTIONS) {
+                    // Stop any notification sound that may be playing
+                    extern void StopNotificationSound(void);
+                    StopNotificationSound();
+
+                    // Close all notification windows
+                    CloseAllNotifications();
+
+                    int index = cmd - CLOCK_IDM_QUICK_TIME_BASE;
+                    if (index >= 0 && index < time_options_count) {
+                        int minutes = time_options[index];
+                        if (minutes > 0) {
+                            KillTimer(hwnd, 1);
+                            CLOCK_TOTAL_TIME = minutes * 60; // Convert to seconds
+                            countdown_elapsed_time = 0;
+                            countdown_message_shown = FALSE;
+                            CLOCK_COUNT_UP = FALSE;
+                            CLOCK_SHOW_CURRENT_TIME = FALSE;
+
+                            CLOCK_IS_PAUSED = FALSE;
+                            elapsed_time = 0;
+                            message_shown = FALSE;
+                            countup_message_shown = FALSE;
+
+                            // If currently in Pomodoro mode, reset the Pomodoro state when switching to normal countdown
+                            if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
+                                current_pomodoro_phase = POMODORO_PHASE_IDLE;
+                                current_pomodoro_time_index = 0;
+                                complete_pomodoro_cycles = 0;
+                            }
+
+                            ShowWindow(hwnd, SW_SHOW);
+                            InvalidateRect(hwnd, NULL, TRUE);
+                            SetTimer(hwnd, 1, 1000, NULL);
+                        }
+                    }
+                    return 0;
+                } // end quick time base range
                 // Handle exit option
                 case 109: {
                     ExitProgram(hwnd);

@@ -16,7 +16,7 @@
  *==================================*/
 #define CSIDL_STARTUP 0x0007
 #define MAX_RECENT_FILES 5
-#define MAX_TIME_OPTIONS 10
+#define MAX_TIME_OPTIONS 50
 #define MIN_SCALE_FACTOR 0.5f
 #define MAX_SCALE_FACTOR 100.0f
 #define CLOCK_WM_TRAYICON (WM_USER + 2)
@@ -133,6 +133,9 @@
 #define CLOCK_IDC_START_NO_DISPLAY 174
 #define CLOCK_IDC_START_COUNT_UP 175
 #define CLOCK_IDC_START_SHOW_TIME 176
+
+/* Quick countdown dynamic menu base (avoid conflicts with other IDs) */
+#define CLOCK_IDM_QUICK_TIME_BASE 800
 
 #define CLOCK_IDC_MODIFY_TIME_OPTIONS 156
 #define CLOCK_IDC_MODIFY_DEFAULT_TIME 157

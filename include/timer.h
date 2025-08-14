@@ -13,7 +13,7 @@
 #include <time.h>
 
 /// Maximum number of preset time options
-#define MAX_TIME_OPTIONS 10
+#define MAX_TIME_OPTIONS 50
 
 /// Pomodoro time variables (in seconds)
 extern int POMODORO_WORK_TIME;    ///< Pomodoro work time (default 25 minutes)

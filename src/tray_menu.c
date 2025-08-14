@@ -770,11 +770,11 @@ void ShowContextMenu(HWND hwnd) {
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
-    // Add quick time options
+    // Add quick time options (use high, conflict-free ID base)
     for (int i = 0; i < time_options_count; i++) {
         wchar_t menu_item[20];
         _snwprintf(menu_item, sizeof(menu_item)/sizeof(wchar_t), L"%d", time_options[i]);
-        AppendMenuW(hMenu, MF_STRING, 102 + i, menu_item);
+        AppendMenuW(hMenu, MF_STRING, CLOCK_IDM_QUICK_TIME_BASE + i, menu_item);
     }
 
     // Display menu
