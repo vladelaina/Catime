@@ -196,21 +196,21 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
     // Abbreviated commands (case-insensitive for ASCII)
     {
         // Quick countdown 1/2/3
-        if (_stricmp(input, "qc1") == 0 || _stricmp(input, "q1") == 0) {
+        if (_stricmp(input, "q1") == 0) {
             StartQuickCountdown1(hwnd);
             return TRUE;
         }
-        if (_stricmp(input, "qc2") == 0 || _stricmp(input, "q2") == 0) {
+        if (_stricmp(input, "q2") == 0) {
             StartQuickCountdown2(hwnd);
             return TRUE;
         }
-        if (_stricmp(input, "qc3") == 0 || _stricmp(input, "q3") == 0) {
+        if (_stricmp(input, "q3") == 0) {
             StartQuickCountdown3(hwnd);
             return TRUE;
         }
 
         // Hide/Show window (toggle visibility)
-        if (_stricmp(input, "vis") == 0 || _stricmp(input, "toggle") == 0) {
+        if (_stricmp(input, "v") == 0) {
             if (IsWindowVisible(hwnd)) {
                 ShowWindow(hwnd, SW_HIDE);
             } else {
@@ -221,34 +221,34 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
         }
 
         // Enter edit mode (use specific enter rather than toggle)
-        if (_stricmp(input, "edit") == 0 || _stricmp(input, "e") == 0) {
+        if (_stricmp(input, "e") == 0) {
             extern void StartEditMode(HWND hwnd);
             StartEditMode(hwnd);
             return TRUE;
         }
 
         // Pause/Resume timer (toggle)
-        if (_stricmp(input, "pr") == 0 || _stricmp(input, "pause") == 0 || _stricmp(input, "resume") == 0) {
+        if (_stricmp(input, "pr") == 0) {
             TogglePauseResume(hwnd);
             return TRUE;
         }
 
         // Restart current timer
-        if (_stricmp(input, "rst") == 0 || _stricmp(input, "r") == 0) {
+        if (_stricmp(input, "r") == 0) {
             CloseAllNotifications();
             RestartCurrentTimer(hwnd);
             return TRUE;
         }
     }
 
-    // Single-letter mode shortcuts: u (count up), s (show current time), p (pomodoro)
+    // Single-letter mode shortcuts: s (show current time), u (count up), p (pomodoro), h (help)
     if (input[1] == '\0') {
         char c = (char)tolower((unsigned char)input[0]);
-        if (c == 'u') {
-            PostMessage(hwnd, WM_HOTKEY, HOTKEY_ID_COUNT_UP, 0);
-            return TRUE;
-        } else if (c == 's') {
+        if (c == 's') {
             PostMessage(hwnd, WM_HOTKEY, HOTKEY_ID_SHOW_TIME, 0);
+            return TRUE;
+        } else if (c == 'u') {
+            PostMessage(hwnd, WM_HOTKEY, HOTKEY_ID_COUNT_UP, 0);
             return TRUE;
 		} else if (c == 'p') {
             PostMessage(hwnd, WM_HOTKEY, HOTKEY_ID_POMODORO, 0);
