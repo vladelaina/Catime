@@ -74,6 +74,25 @@ spinner() {
     printf "\r\x1b[38;2;0;255;0m✓\x1b[0m %s\n" "$message"
 }
 
+# Function to format elapsed time
+format_time() {
+    local total_seconds=$1
+    local hours=$((total_seconds / 3600))
+    local minutes=$(((total_seconds % 3600) / 60))
+    local seconds=$((total_seconds % 60))
+    
+    if [ $hours -gt 0 ]; then
+        printf "%dh %dm %ds" $hours $minutes $seconds
+    elif [ $minutes -gt 0 ]; then
+        printf "%dm %ds" $minutes $seconds
+    else
+        printf "%ds" $seconds
+    fi
+}
+
+# Record start time
+START_TIME=$(date +%s)
+
 # Display logo with elegant purple gradient (matching xmake)
 echo ""
 echo -e "\x1b[1m\x1b[38;2;138;43;226m██████╗ \x1b[38;2;147;112;219m █████╗ \x1b[38;2;153;102;255m████████╗\x1b[38;2;160;120;255m██╗\x1b[38;2;186;85;211m███╗   ███╗\x1b[38;2;221;160;221m███████╗\x1b[0m"
@@ -253,7 +272,13 @@ fi
 
 # Check if executable was created
 if [ -f "catime.exe" ]; then
+    # Calculate elapsed time
+    END_TIME=$(date +%s)
+    ELAPSED_TIME=$((END_TIME - START_TIME))
+    FORMATTED_TIME=$(format_time $ELAPSED_TIME)
+    
     echo -e "${GREEN}✓ Build completed successfully!${NC}"
+    echo -e "${PURPLE}Build time: ${FORMATTED_TIME}${NC}"
     
     # Display file size with nice formatting
     SIZE=$(stat -c%s "catime.exe")
