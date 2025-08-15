@@ -101,22 +101,23 @@ mkdir -p "$BUILD_DIR"
 cd "$BUILD_DIR"
 
 # Step 1: Configure with CMake
-show_progress 1 4 "Configuring project..."
+show_progress 0 100 "Configuring project..."
 cmake .. \
     -DCMAKE_TOOLCHAIN_FILE="../$TOOLCHAIN_FILE" \
     -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
     > cmake_config.log 2>&1
+show_progress 100 100 "Configuring project... ✓"
 echo ""
 
 # Step 2: Count source files for progress tracking
-show_progress 2 4 "Analyzing source files..."
+show_progress 0 100 "Analyzing source files..."
 TOTAL_FILES=$(find ../src -name "*.c" | wc -l)
 TOTAL_FILES=$((TOTAL_FILES + 3))  # Add resource files
+show_progress 100 100 "Analyzing source files... ✓"
 echo ""
 
 # Step 3: Build with progress monitoring
-show_progress 3 4 "Compiling source files..."
-echo ""
+show_progress 0 100 "Compiling source files..."
 
 # Build in background and monitor progress
 cmake --build . --config "$BUILD_TYPE" -j$(nproc) > build.log 2>&1 &
@@ -140,12 +141,13 @@ done
 wait $BUILD_PID
 BUILD_RESULT=$?
 
-# Final progress update
-show_progress $TOTAL_FILES $TOTAL_FILES "Compilation complete"
+# Final progress update for compilation step
+show_progress 100 100 "Compiling source files... ✓"
 echo ""
 
 # Step 4: Finalize
-show_progress 4 4 "Finalizing build..."
+show_progress 0 100 "Finalizing build..."
+show_progress 100 100 "Finalizing build... ✓"
 echo ""
 
 # Check build result
