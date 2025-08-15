@@ -18,8 +18,7 @@ echo [1m[38;2;138;43;226m╚██████╗[38;2;147;112;219m ██║  �
 echo [1m[38;2;138;43;226m ╚═════╝[38;2;147;112;219m ╚═╝  ╚═╝[38;2;153;102;255m   ╚═╝   [38;2;160;120;255m╚═╝[38;2;186;85;211m╚═╝     ╚═╝[38;2;221;160;221m╚══════╝[0m
 echo.
 
-echo [94mBuilding Catime with CMake...[0m
-echo [93mBuild Type: %BUILD_TYPE%[0m
+
 
 REM Check if CMake is available
 cmake --version >nul 2>&1
@@ -72,18 +71,18 @@ REM Check if build was successful
 if exist "catime.exe" (
     echo.
     echo [92m✓ Build completed successfully![0m
-    echo [96m📁 Output: %CD%\catime.exe[0m
+    echo [96mOutput: %CD%\catime.exe[0m
     
     REM Display file size with nice formatting
     for %%A in (catime.exe) do set SIZE=%%~zA
     if !SIZE! LSS 1024 (
-        echo [96m📊 Size: !SIZE! B[0m
+        echo [96mSize: !SIZE! B[0m
     ) else if !SIZE! LSS 1048576 (
         set /a SIZE_KB=!SIZE!/1024
-        echo [96m📊 Size: !SIZE_KB! KB[0m
+        echo [96mSize: !SIZE_KB! KB[0m
     ) else (
         set /a SIZE_MB=!SIZE!/1048576
-        echo [96m📊 Size: !SIZE_MB! MB[0m
+        echo [96mSize: !SIZE_MB! MB[0m
     )
     
     REM Clean up log files

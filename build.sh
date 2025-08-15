@@ -62,8 +62,7 @@ BUILD_TYPE=${1:-Release}
 BUILD_DIR="build"
 TOOLCHAIN_FILE="mingw-w64-toolchain.cmake"
 
-echo -e "${BLUE}Building Catime with CMake...${NC}"
-echo -e "${YELLOW}Build Type: ${BUILD_TYPE}${NC}"
+
 
 # Check if MinGW-64 is installed
 if ! command -v x86_64-w64-mingw32-gcc &> /dev/null; then
@@ -159,7 +158,7 @@ fi
 # Check if executable was created
 if [ -f "catime.exe" ]; then
     echo -e "${GREEN}✓ Build completed successfully!${NC}"
-    echo -e "${CYAN}📁 Output: $(pwd)/catime.exe${NC}"
+    echo -e "${CYAN}Output: $(pwd)/catime.exe${NC}"
     
     # Display file size with nice formatting
     SIZE=$(stat -c%s "catime.exe")
@@ -170,7 +169,7 @@ if [ -f "catime.exe" ]; then
     else
         SIZE_TEXT="$((SIZE/1048576)) MB"
     fi
-    echo -e "${CYAN}📊 Size: ${SIZE_TEXT}${NC}"
+    echo -e "${CYAN}Size: ${SIZE_TEXT}${NC}"
     
     # Clean up log files
     rm -f cmake_config.log build.log
