@@ -40,8 +40,8 @@ REM Create build directory
 if not exist "%BUILD_DIR%" mkdir "%BUILD_DIR%"
 cd "%BUILD_DIR%"
 
-REM Step 1: Configure
-echo [93m[25%%] Configuring project...[0m
+REM Step 1: Configure with colored text
+echo [1m[38;2;147;112;219m[25%%][0m [38;2;100;200;255mConfiguring project...[0m
 cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=%BUILD_TYPE% >cmake_config.log 2>&1
 if errorlevel 1 (
     echo [91mConfiguration failed![0m
@@ -50,12 +50,12 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM Step 2: Analyze
-echo [93m[50%%] Analyzing source files...[0m
+REM Step 2: Analyze with colored text
+echo [1m[38;2;147;112;219m[50%%][0m [38;2;255;200;100mAnalyzing source files...[0m
 timeout /t 1 /nobreak >nul
 
-REM Step 3: Build
-echo [93m[75%%] Compiling source files...[0m
+REM Step 3: Build with colored text
+echo [1m[38;2;147;112;219m[75%%][0m [38;2;255;100;150mCompiling source files...[0m
 cmake --build . --config %BUILD_TYPE% >build.log 2>&1
 if errorlevel 1 (
     echo [91mBuild failed![0m
@@ -64,8 +64,8 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM Step 4: Finalize
-echo [93m[100%%] Finalizing build...[0m
+REM Step 4: Finalize with colored text
+echo [1m[38;2;147;112;219m[100%%][0m [38;2;100;255;150mFinalizing build...[0m
 
 REM Check if build was successful
 if exist "catime.exe" (

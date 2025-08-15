@@ -14,7 +14,7 @@ PURPLE='\033[0;35m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# Elegant progress bar function
+# Elegant progress bar function with gradient text colors
 show_progress() {
     local current=$1
     local total=$2
@@ -24,12 +24,26 @@ show_progress() {
     local filled=$((current * width / total))
     local empty=$((width - filled))
     
+    # Choose message color based on the stage
+    local message_color=""
+    if [[ "$message" == *"Configuring"* ]]; then
+        message_color="\x1b[38;2;100;200;255m"  # Light blue for configuring
+    elif [[ "$message" == *"Analyzing"* ]]; then
+        message_color="\x1b[38;2;255;200;100m"  # Orange for analyzing
+    elif [[ "$message" == *"Compiling"* ]]; then
+        message_color="\x1b[38;2;255;100;150m"  # Pink/red for compiling
+    elif [[ "$message" == *"Finalizing"* ]]; then
+        message_color="\x1b[38;2;100;255;150m"  # Green for finalizing
+    else
+        message_color="\x1b[38;2;200;200;200m"  # Default light gray
+    fi
+    
     printf "\r\x1b[1m\x1b[38;2;147;112;219m[%3d%%]\x1b[0m " $percentage
     printf "\x1b[38;2;138;43;226m"
     printf "%*s" $filled | tr ' ' '#'
     printf "\x1b[38;2;80;80;80m"
     printf "%*s" $empty | tr ' ' '.'
-    printf "\x1b[0m %s" "$message"
+    printf "\x1b[0m ${message_color}%s\x1b[0m" "$message"
 }
 
 # Spinner function for long operations
