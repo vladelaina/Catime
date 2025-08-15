@@ -26,9 +26,9 @@ show_progress() {
     
     printf "\r\x1b[38;2;147;112;219m[%3d%%]\x1b[0m " $percentage
     printf "\x1b[38;2;138;43;226m"
-    printf "%*s" $filled | tr ' ' '█'
+    printf "%*s" $filled | tr ' ' '='
     printf "\x1b[38;2;80;80;80m"
-    printf "%*s" $empty | tr ' ' '░'
+    printf "%*s" $empty | tr ' ' '-'
     printf "\x1b[0m %s" "$message"
 }
 
