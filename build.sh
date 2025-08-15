@@ -14,7 +14,7 @@ PURPLE='\033[0;35m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# Progress bar function
+# Elegant progress bar function
 show_progress() {
     local current=$1
     local total=$2
@@ -24,11 +24,11 @@ show_progress() {
     local filled=$((current * width / total))
     local empty=$((width - filled))
     
-    printf "\r\x1b[38;2;147;112;219m[%3d%%]\x1b[0m " $percentage
+    printf "\r\x1b[1m\x1b[38;2;147;112;219m[%3d%%]\x1b[0m " $percentage
     printf "\x1b[38;2;138;43;226m"
-    printf "%*s" $filled | tr ' ' '='
+    printf "%*s" $filled | tr ' ' '#'
     printf "\x1b[38;2;80;80;80m"
-    printf "%*s" $empty | tr ' ' '-'
+    printf "%*s" $empty | tr ' ' '.'
     printf "\x1b[0m %s" "$message"
 }
 
