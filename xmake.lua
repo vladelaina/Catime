@@ -92,7 +92,7 @@ target("catime")
     end
     
     -- Set output directory
-    set_targetdir("$(buildir)")
+    set_targetdir("$(builddir)")
     set_objectdir("build")
     
     -- Add miniaudio implementation definition
