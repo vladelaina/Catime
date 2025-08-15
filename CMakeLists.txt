@@ -101,7 +101,13 @@ target_link_libraries(catime PRIVATE
     advapi32
 )
 
-# Set output directory
+# Set output directory - use custom output dir if specified
+if(DEFINED CATIME_OUTPUT_DIR)
+    set(OUTPUT_DIR ${CATIME_OUTPUT_DIR})
+else()
+    set(OUTPUT_DIR ${CMAKE_BINARY_DIR})
+endif()
+
 set_target_properties(catime PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
     OUTPUT_NAME "catime"

@@ -2,6 +2,19 @@
 
 # Catime CMake Build Script for WSL with MinGW-64
 # This script builds the Catime project using CMake and MinGW-64 cross-compiler
+#
+# Usage:
+#   ./build.sh [BUILD_TYPE] [OUTPUT_DIR]
+#   
+# Parameters:
+#   BUILD_TYPE  - Build configuration (Release/Debug, default: Release)
+#   OUTPUT_DIR  - Output directory path (default: build)
+#
+# Examples:
+#   ./build.sh                    # Release build in 'build' directory
+#   ./build.sh Debug              # Debug build in 'build' directory
+#   ./build.sh Release ./dist     # Release build in 'dist' directory
+#   ./build.sh Debug ../output    # Debug build in '../output' directory
 
 set -e  # Exit on any error
 
@@ -71,10 +84,57 @@ echo -e "\x1b[1m\x1b[38;2;138;43;226m╚██████╗\x1b[38;2;147;112;2
 echo -e "\x1b[1m\x1b[38;2;138;43;226m ╚═════╝\x1b[38;2;147;112;219m ╚═╝  ╚═╝\x1b[38;2;153;102;255m   ╚═╝   \x1b[38;2;160;120;255m╚═╝\x1b[38;2;186;85;211m╚═╝     ╚═╝\x1b[38;2;221;160;221m╚══════╝\x1b[0m"
 echo ""
 
+# Function to show help
+show_help() {
+    echo -e "${CYAN}Catime Build Script${NC}"
+    echo ""
+    echo -e "${YELLOW}Usage:${NC}"
+    echo -e "  ./build.sh [BUILD_TYPE] [OUTPUT_DIR]"
+    echo ""
+    echo -e "${YELLOW}Parameters:${NC}"
+    echo -e "  BUILD_TYPE   Build configuration (Release/Debug, default: Release)"
+    echo -e "  OUTPUT_DIR   Output directory path (default: build)"
+    echo ""
+    echo -e "${YELLOW}Examples:${NC}"
+    echo -e "  ./build.sh                    # Release build in 'build' directory"
+    echo -e "  ./build.sh Debug              # Debug build in 'build' directory"
+    echo -e "  ./build.sh Release ./dist     # Release build in 'dist' directory"
+    echo -e "  ./build.sh Debug ../output    # Debug build in '../output' directory"
+    echo ""
+    echo -e "${YELLOW}Options:${NC}"
+    echo -e "  -h, --help   Show this help message"
+    echo ""
+}
+
+# Check for help flag
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    show_help
+    exit 0
+fi
+
 # Configuration
 BUILD_TYPE=${1:-Release}
-BUILD_DIR="build"
+BUILD_DIR=${2:-build}
 TOOLCHAIN_FILE="mingw-w64-toolchain.cmake"
+
+# Validate build type
+if [[ "$BUILD_TYPE" != "Release" && "$BUILD_TYPE" != "Debug" ]]; then
+    echo -e "${RED}✗ Invalid build type: $BUILD_TYPE${NC}"
+    echo -e "${YELLOW}Valid options: Release, Debug${NC}"
+    exit 1
+fi
+
+# Handle output directory
+OUTPUT_DIR=${2:-build}
+BUILD_DIR="build"
+
+# Convert relative path to absolute if needed and validate
+OUTPUT_DIR=$(realpath -m "$OUTPUT_DIR")
+
+echo -e "${CYAN}Build configuration:${NC}"
+echo -e "  Build type: ${YELLOW}$BUILD_TYPE${NC}"
+echo -e "  Output directory: ${YELLOW}$OUTPUT_DIR${NC}"
+echo ""
 
 
 
@@ -138,6 +198,7 @@ show_progress 0 100 "Configuring project..."
 cmake .. \
     -DCMAKE_TOOLCHAIN_FILE="../$TOOLCHAIN_FILE" \
     -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
+    -DCATIME_OUTPUT_DIR="$OUTPUT_DIR" \
     > cmake_config.log 2>&1
 show_progress 100 100 "Configuring project... ✓"
 echo ""
@@ -193,7 +254,6 @@ fi
 # Check if executable was created
 if [ -f "catime.exe" ]; then
     echo -e "${GREEN}✓ Build completed successfully!${NC}"
-    echo -e "${CYAN}Output: $(pwd)/catime.exe${NC}"
     
     # Display file size with nice formatting
     SIZE=$(stat -c%s "catime.exe")
@@ -206,8 +266,20 @@ if [ -f "catime.exe" ]; then
     fi
     echo -e "${CYAN}Size: ${SIZE_TEXT}${NC}"
     
+    # Create output directory and copy executable if different from build dir
+    if [ "$(realpath "$OUTPUT_DIR")" != "$(realpath "../$BUILD_DIR")" ]; then
+        mkdir -p "$OUTPUT_DIR"
+        cp "catime.exe" "$OUTPUT_DIR/"
+        echo -e "${CYAN}Output: $OUTPUT_DIR/catime.exe${NC}"
+    else
+        echo -e "${CYAN}Output: $(pwd)/catime.exe${NC}"
+    fi
+    
     # Clean up log files
     rm -f cmake_config.log build.log
+    
+    # Return to original directory
+    cd ..
 else
     echo -e "${RED}✗ Build failed - executable not found!${NC}"
     echo -e "${YELLOW}Check build.log for details${NC}"
