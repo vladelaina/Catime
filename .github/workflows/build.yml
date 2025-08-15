@@ -26,16 +26,11 @@ jobs:
         echo "Current timezone: $(date +%Z)"
         echo "Current time: $(date)"
         
-    - name: Install MinGW compiler
+    - name: Install MinGW compiler and CMake
       run: |
         sudo apt-get update
-        sudo apt-get install -y mingw-w64
-        
-    - name: Install XMake
-      run: |
-        bash <(curl -fsSL https://xmake.io/shget.text)
-        source ~/.xmake/profile
-        xmake --version
+        sudo apt-get install -y mingw-w64 cmake
+        cmake --version
         
     - name: Extract version number
       id: get_version
@@ -48,11 +43,14 @@ jobs:
       run: |
         # Create output directory
         mkdir -p output
-        # Execute xmake build
-        xmake -y
-        # Find build artifacts and copy to output directory
-        find . -name "catime.exe" -type f -print -exec cp {} output/ \;
-        echo "Build completed using xmake"
+        
+        # Run the build script which handles CMake configuration and compilation
+        chmod +x build.sh
+        ./build.sh
+        
+        # Copy the build artifact to output directory
+        cp build/catime.exe output/
+        echo "Build completed using CMake"
         
     - name: Install UPX compression tool
       run: |
