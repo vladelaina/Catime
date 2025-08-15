@@ -78,28 +78,48 @@ TOOLCHAIN_FILE="mingw-w64-toolchain.cmake"
 
 
 
-# Check if MinGW-64 is installed
+# Verify MinGW toolchain is available
 if ! command -v x86_64-w64-mingw32-gcc &> /dev/null; then
-    echo -e "${RED}Error: MinGW-64 cross-compiler not found!${NC}"
-    echo -e "${YELLOW}Please install it with: sudo apt install mingw-w64${NC}"
+    echo -e "${RED}✗ MinGW-64 toolchain not found!${NC}"
+    echo -e "${YELLOW}Please install mingw-w64 toolchain:${NC}"
+    echo -e "${CYAN}  Ubuntu/Debian: sudo apt install mingw-w64${NC}"
+    echo -e "${CYAN}  Arch Linux: sudo pacman -S mingw-w64-gcc${NC}"
+    echo -e "${CYAN}  Fedora: sudo dnf install mingw64-gcc${NC}"
     exit 1
 fi
 
-# Create toolchain file if it doesn't exist
-if [ ! -f "$TOOLCHAIN_FILE" ]; then
-    echo -e "${YELLOW}Creating MinGW-64 toolchain file...${NC}"
-    cat > "$TOOLCHAIN_FILE" << 'EOF'
+# Always ensure we have the latest toolchain file with correct paths
+echo -e "${YELLOW}Updating MinGW-64 toolchain file...${NC}"
+cat > "$TOOLCHAIN_FILE" << 'EOF'
 # MinGW-64 Cross-compilation toolchain file
 set(CMAKE_SYSTEM_NAME Windows)
 set(CMAKE_SYSTEM_PROCESSOR x86_64)
 
-# Specify the cross compiler
+# Specify the cross compiler (let CMake find them in PATH)
 set(CMAKE_C_COMPILER x86_64-w64-mingw32-gcc)
 set(CMAKE_CXX_COMPILER x86_64-w64-mingw32-g++)
 set(CMAKE_RC_COMPILER x86_64-w64-mingw32-windres)
 
-# Where to find the target environment
-set(CMAKE_FIND_ROOT_PATH /usr/x86_64-w64-mingw32)
+# Try to find the MinGW installation automatically
+# Common paths on different systems
+set(MINGW_PATHS 
+    /usr/x86_64-w64-mingw32
+    /usr/local/x86_64-w64-mingw32
+    /opt/mingw64/x86_64-w64-mingw32
+)
+
+# Find the actual installation path
+foreach(path ${MINGW_PATHS})
+    if(EXISTS ${path})
+        set(CMAKE_FIND_ROOT_PATH ${path})
+        break()
+    endif()
+endforeach()
+
+# Fallback if not found
+if(NOT CMAKE_FIND_ROOT_PATH)
+    set(CMAKE_FIND_ROOT_PATH /usr/x86_64-w64-mingw32)
+endif()
 
 # Search for programs in the build host directories
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
@@ -108,7 +128,6 @@ set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 EOF
-fi
 
 # Create build directory
 mkdir -p "$BUILD_DIR"
