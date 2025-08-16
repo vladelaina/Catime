@@ -754,8 +754,10 @@ INT_PTR CALLBACK PomodoroLoopDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPAR
                 // Validate input and handle spaces
                 if (!IsValidNumberInput(input_str)) {
                     ShowErrorDialog(hwndDlg);
-                    SetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, L"");
-                    SetFocus(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT));
+                    // Keep input content and select all text for easy editing
+                    HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
+                    SetFocus(hwndEdit);
+                    SendMessage(hwndEdit, EM_SETSEL, 0, -1);
                     return TRUE;
                 }
                 
@@ -776,8 +778,10 @@ INT_PTR CALLBACK PomodoroLoopDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPAR
                     g_hwndPomodoroLoopDialog = NULL;
                 } else {
                     ShowErrorDialog(hwndDlg);
-                    SetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, L"");
-                    SetFocus(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT));
+                    // Keep input content and select all text for easy editing
+                    HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
+                    SetFocus(hwndEdit);
+                    SendMessage(hwndEdit, EM_SETSEL, 0, -1);
                 }
                 return TRUE;
             } else if (LOWORD(wParam) == IDCANCEL) {
