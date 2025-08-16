@@ -94,18 +94,18 @@ Disponible sur [GitHub Releases](https://github.com/vladelaina/Catime/releases/l
 git clone git@github.com:vladelaina/Catime.git
 cd Catime
 ```
-### 2. Outils requis (MinGW, xmake)
+### 2. Outils requis (MinGW, CMake)
 
 
 #### <img src="../Images/linux.svg"  height="25" />Linux
 
 - <img src="../Images/ubuntu.svg"  height="25" />Ubuntu
    ```bash
-   sudo apt update && sudo apt install -y mingw-w64 && curl -fsSL https://xmake.io/shget.text | bash
+   sudo apt update && sudo apt install -y mingw-w64 cmake
    ```
 - <img src="../Images/archlinux.svg"  height="25" />Arch
   ```bash
-  sudo pacman -Syu --noconfirm mingw-w64 xmake
+  sudo pacman -Syu --noconfirm mingw-w64 cmake
   ```
 #### <img src="../Images/windows.svg"  height="25" />Windows
 
@@ -114,7 +114,7 @@ cd Catime
 | Outil       | Description            | Format de version recommandé                                    | Lien de téléchargement                                                                     |
 | ---------- | ---------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | **MinGW**  | Compilateur GCC           | `x86_64-<version>-release-win32-seh-ucrt-rtv<num>-rev<num>.7z` | [MinGW Build](https://github.com/niXman/mingw-builds-binaries/releases/latest)  |
-| **xmake**  | Outil de construction             | `xmake-v<version>-win64.exe`                                  | [xmake](https://github.com/xmake-io/xmake/releases/latest)                      |
+| **CMake**  | Outil de construction             | `cmake-<version>-windows-x86_64.msi`                         | [CMake](https://cmake.org/download/)                                            |
 
 <details>
 <summary>2. Installer les outils</summary>
@@ -144,10 +144,10 @@ Ouvrir l'invite de commandes (Win + R → taper `cmd` → Entrer), puis taper :
      ```
       Si la version s'affiche correctement, l'installation est réussie ✅
 
-#### 📦 2.2 Installer  [xmake](https://github.com/xmake-io/xmake/releases/latest)
+#### 📦 2.2 Installer  [CMake](https://cmake.org/download/)
 
-  1. Exécuter xmake-v<version>-win64.exe pour installer
-  2. Le PATH sera configuré automatiquement durant l'installation (sinon, ajouter manuellement le répertoire bin de xmake au PATH)
+  1. Exécuter cmake-<version>-windows-x86_64.msi pour installer
+  2. Le PATH sera configuré automatiquement durant l'installation (sinon, ajouter manuellement le répertoire bin de CMake au PATH)
 
   </details>
   
@@ -162,23 +162,23 @@ Ouvrir l'invite de commandes (Win + R → taper `cmd` → Entrer), puis taper :
   gcc --version
   ```
 
-  #### ✅ 3.2 Vérifier xmake
+  #### ✅ 3.2 Vérifier CMake
 
   ```bash
-  xmake --version
+  CMake --version
   ```
 
   Si les versions s'affichent correctement, la configuration est réussie 🎉
   </details>
 
-### 4.Construire avec xmake
+### 4.Construire avec CMake
 
 Dans le répertoire racine du projet, ouvrir l'invite de commandes et utiliser :
 
 ```bash
-xmake         # Compiler le projet
-xmake run     # Compiler et exécuter le projet
-xmake clean   # Nettoyer les fichiers de construction
+CMake         # Compiler le projet
+CMake run     # Compiler et exécuter le projet
+CMake clean   # Nettoyer les fichiers de construction
 ```
 
 ## ⭐ Historique des stars

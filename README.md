@@ -119,18 +119,18 @@ git clone git@github.com:vladelaina/Catime.git
 cd Catime
 ```
 
-### 2. Tools (MinGW, xmake)
+### 2. Tools (MinGW, CMake)
 
 
 #### <img src="Images/linux.svg"  height="25" />Linux
 
 - <img src="Images/ubuntu.svg"  height="25" />Ubuntu
    ```bash
-   sudo apt update && sudo apt install -y mingw-w64 && curl -fsSL https://xmake.io/shget.text | bash
+   sudo apt update && sudo apt install -y mingw-w64 cmake
    ```
 - <img src="Images/archlinux.svg"  height="25" />Arch
   ```bash
-  sudo pacman -Syu --noconfirm mingw-w64 xmake
+  sudo pacman -Syu --noconfirm mingw-w64 cmake
   ```
 
 #### <img src="Images/windows.svg"  height="25" />Windows
@@ -140,7 +140,7 @@ cd Catime
   | Tool       | Description            | Recommended Version Format                                    | Download Link                                                                     |
   | ---------- | ---------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------- |
   | **MinGW**  | GCC Compiler           | `x86_64-<version>-release-win32-seh-ucrt-rtv<num>-rev<num>.7z` | [MinGW Build](https://github.com/niXman/mingw-builds-binaries/releases/latest)  |
-  | **xmake**  | Build Tool             | `xmake-v<version>-win64.exe`                                  | [xmake](https://github.com/xmake-io/xmake/releases/latest)                      |
+  | **CMake**  | Build Tool             | `cmake-<version>-windows-x86_64.msi`                         | [CMake](https://cmake.org/download/)                                            |
 
   <details>
     <summary>2. Install tools</summary>
@@ -174,10 +174,11 @@ cd Catime
 
      If version number displays successfully, the MinGW installation is complete ✅
 
-  #### 📦 2.2 Install [xmake](https://github.com/xmake-io/xmake/releases/latest)
+  #### 📦 2.2 Install [CMake](https://cmake.org/download/)
 
-  1. Run `xmake-v<version>-win64.exe` to install
-  2. PATH will be configured automatically during installation (if not, manually add the `bin` directory of the xmake installation)
+  1. Download and run `cmake-<version>-windows-x86_64.msi` to install
+  2. During installation, select "Add CMake to the system PATH for all users" or "current user"
+  3. Alternatively, manually add CMake installation directory to PATH
 
   </details>
 
@@ -193,10 +194,10 @@ cd Catime
   gcc --version
   ```
 
-  #### ✅ 3.2 Verify xmake
+  #### ✅ 3.2 Verify CMake
 
   ```bash
-  xmake --version
+  cmake --version
   ```
 
   If all display version numbers correctly, tool configuration is successful 🎉
@@ -206,14 +207,50 @@ cd Catime
 
 
 
-### 4. Build with xmake
+### 4. Build with CMake
 
-Open a command prompt in the project root directory and use these commands:
+#### Windows
+
+Use the provided build script:
 
 ```bash
-xmake         # Compile the project
-xmake run     # Compile and run the project
-xmake clean   # Clean build artifacts
+build.bat             # Release build
+build.bat Debug       # Debug build
+```
+
+Or manually build with CMake:
+
+```bash
+mkdir build
+cd build
+cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+cmake --build .
+```
+
+#### Linux (Cross-compilation)
+
+Use the provided build script:
+
+```bash
+./build.sh            # Release build in 'build' directory
+./build.sh Debug      # Debug build in 'build' directory
+./build.sh Release ./dist  # Release build in 'dist' directory
+```
+
+Or manually build with CMake:
+
+```bash
+mkdir build
+cd build
+cmake .. -DCMAKE_TOOLCHAIN_FILE=../mingw-w64-toolchain.cmake -DCMAKE_BUILD_TYPE=Release
+cmake --build .
+```
+
+#### Common CMake Commands
+
+```bash
+cmake --build . --config Release  # Compile the project
+cmake --build . --target clean    # Clean build artifacts
 ```
 
 ## ⭐Star History

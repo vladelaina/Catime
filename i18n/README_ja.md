@@ -112,20 +112,20 @@ git clone git@github.com:vladelaina/Catime.git
 cd Catime
 ```
 
-### 2. ツール (MinGW, xmake)
+### 2. ツール (MinGW, CMake)
 
 #### <img src="../Images/linux.svg"  height="25" />Linux
 
 - <img src="../Images/ubuntu.svg"  height="25" />Ubuntu
    
 ```bash
-sudo apt update && sudo apt install -y mingw-w64 && curl -fsSL https://xmake.io/shget.text | bash
+   sudo apt update && sudo apt install -y mingw-w64 cmake
 ```
 
 - <img src="../Images/archlinux.svg"  height="25" />Arch
   
 ```bash
-sudo pacman -Syu --noconfirm mingw-w64 xmake
+  sudo pacman -Syu --noconfirm mingw-w64 cmake
 ```
 
 #### <img src="../Images/windows.svg"  height="25" />Windows
@@ -135,7 +135,7 @@ sudo pacman -Syu --noconfirm mingw-w64 xmake
   | ツール       | 説明            | 推奨バージョン形式                                    | ダウンロードリンク                                                                     |
   | ---------- | ---------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------- |
   | **MinGW**  | GCCコンパイラ           | x86_64-<version>-release-win32-seh-ucrt-rtv<num>-rev<num>.7z | [MinGW Build](https://github.com/niXman/mingw-builds-binaries/releases/latest)  |
-  | **xmake**  | ビルドツール             | xmake-v<version>-win64.exe                                  | [xmake](https://github.com/xmake-io/xmake/releases/latest)                      |
+  | **CMake**  | ビルドツール             | cmake-<version>-windows-x86_64.msi                         | [CMake](https://cmake.org/download/)                                            |
 
   <details>
     <summary>2. ツールのインストール</summary>
@@ -169,10 +169,11 @@ sudo pacman -Syu --noconfirm mingw-w64 xmake
 
      バージョン番号が正常に表示されれば、MinGWのインストール完了 ✅
 
-  #### 📦 2.2 [xmake](https://github.com/xmake-io/xmake/releases/latest)のインストール
+  #### 📦 2.2 [CMake](https://cmake.org/download/)のインストール
 
-  1. xmake-v<version>-win64.exe を実行してインストール
-  2. インストール中にPATHが自動的に設定されます（設定されない場合は、xmakeのインストールディレクトリの bin フォルダをPATHに手動で追加）
+  1. `cmake-<version>-windows-x86_64.msi`をダウンロードして実行
+  2. インストール時に「すべてのユーザーにCMakeをシステムPATHに追加」または「現在のユーザーに追加」を選択
+  3. または手動でCMakeインストールディレクトリをPATHに追加
 
   </details>
 
@@ -186,23 +187,59 @@ sudo pacman -Syu --noconfirm mingw-w64 xmake
   gcc --version
   ```
 
-  #### ✅ 3.2 xmakeの検証
+  #### ✅ 3.2 CMakeの検証
 
   ```bash
-  xmake --version
+  cmake --version
   ```
 
   両方のバージョン番号が正しく表示されれば、ツールの設定が成功 🎉
   </details>
 
-### 4. xmakeでビルド
+### 4. CMakeでビルド
 
-プロジェクトのルートディレクトリでコマンドプロンプトを開き、以下のコマンドを使用：
+#### Windows
+
+提供されたビルドスクリプトを使用：
 
 ```bash
-xmake         # プロジェクトをコンパイル
-xmake run     # コンパイルして実行
-xmake clean   # ビルドファイルをクリーン
+build.bat             # Releaseビルド
+build.bat Debug       # Debugビルド
+```
+
+または手動でCMakeビルド：
+
+```bash
+mkdir build
+cd build
+cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+cmake --build .
+```
+
+#### Linux（クロスコンパイル）
+
+提供されたビルドスクリプトを使用：
+
+```bash
+./build.sh            # 'build'ディレクトリでReleaseビルド
+./build.sh Debug      # 'build'ディレクトリでDebugビルド
+./build.sh Release ./dist  # 'dist'ディレクトリでReleaseビルド
+```
+
+または手動でCMakeビルド：
+
+```bash
+mkdir build
+cd build
+cmake .. -DCMAKE_TOOLCHAIN_FILE=../mingw-w64-toolchain.cmake -DCMAKE_BUILD_TYPE=Release
+cmake --build .
+```
+
+#### 一般的なCMakeコマンド
+
+```bash
+cmake --build . --config Release  # プロジェクトをコンパイル
+cmake --build . --target clean    # ビルドファイルをクリーンアップ
 ```
 
 ## ⭐Star履歴

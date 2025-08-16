@@ -117,19 +117,19 @@ git clone git@github.com:vladelaina/Catime.git
 cd Catime
 ```
 
-### 2. 工具 (MinGW, xmake)
+### 2. 工具 (MinGW, CMake)
 
 #### <img src="../Images/linux.svg"  height="25" />Linux
 
 * <img src="../Images/ubuntu.svg"  height="25" />Ubuntu
 
   ```bash
-  sudo apt update && sudo apt install -y mingw-w64 && curl -fsSL https://xmake.io/shget.text | bash
+  sudo apt update && sudo apt install -y mingw-w64 cmake
   ```
 * <img src="../Images/archlinux.svg"  height="25" />Arch
 
   ```bash
-  sudo pacman -Syu --noconfirm mingw-w64 xmake
+  sudo pacman -Syu --noconfirm mingw-w64 cmake
   ```
 
 #### <img src="../Images/windows.svg"  height="25" />Windows
@@ -139,7 +139,7 @@ cd Catime
 | 工具        | 描述      | 推薦版本格式                                                         | 下載連結                                                                           |
 | --------- | ------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | **MinGW** | GCC 編譯器 | `x86_64-<version>-release-win32-seh-ucrt-rtv<num>-rev<num>.7z` | [MinGW Build](https://github.com/niXman/mingw-builds-binaries/releases/latest) |
-| **xmake** | 構建工具    | `xmake-v<version>-win64.exe`                                   | [xmake](https://github.com/xmake-io/xmake/releases/latest)                     |
+| **CMake** | 構建工具    | `cmake-<version>-windows-x86_64.msi`                          | [CMake](https://cmake.org/download/)                                           |
 
   <details>
     <summary>2. 安裝工具</summary>
@@ -173,10 +173,11 @@ cd Catime
 
    若成功顯示版本號，即表示 MinGW 安裝完成 ✅
 
-#### 📦 2.2 安裝 [xmake](https://github.com/xmake-io/xmake/releases/latest)
+#### 📦 2.2 安裝 [CMake](https://cmake.org/download/)
 
-1. 執行 `xmake-v<version>-win64.exe` 進行安裝
-2. 安裝過程中會自動配置 PATH（若無，請手動將 xmake 安裝目錄中的 `bin` 資料夾加入 PATH）
+1. 下載並運行 `cmake-<version>-windows-x86_64.msi` 安裝
+2. 安裝時選擇「為所有用戶添加CMake到系統PATH」或「為當前用戶添加」
+3. 或者手動將CMake安裝目錄添加到PATH
 
   </details>
 
@@ -191,24 +192,60 @@ cd Catime
 gcc --version
 ```
 
-#### ✅ 3.2 驗證 xmake
+#### ✅ 3.2 驗證 CMake
 
 ```bash
-xmake --version
+cmake --version
 ```
 
 若皆正確顯示版本號，則工具配置成功 🎉
 
 </details>
 
-### 4. 使用 xmake 構建
+### 4. 使用 CMake 構建
 
-在專案根目錄打開命令提示字元，使用以下指令：
+#### Windows
+
+使用提供的構建腳本：
 
 ```bash
-xmake         # 編譯專案
-xmake run     # 編譯並執行專案
-xmake clean   # 清理構建檔案
+build.bat             # Release構建
+build.bat Debug       # Debug構建
+```
+
+或手動使用CMake構建：
+
+```bash
+mkdir build
+cd build
+cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+cmake --build .
+```
+
+#### Linux（交叉編譯）
+
+使用提供的構建腳本：
+
+```bash
+./build.sh            # 在'build'目錄下Release構建
+./build.sh Debug      # 在'build'目錄下Debug構建
+./build.sh Release ./dist  # 在'dist'目錄下Release構建
+```
+
+或手動使用CMake構建：
+
+```bash
+mkdir build
+cd build
+cmake .. -DCMAKE_TOOLCHAIN_FILE=../mingw-w64-toolchain.cmake -DCMAKE_BUILD_TYPE=Release
+cmake --build .
+```
+
+#### 常用CMake命令
+
+```bash
+cmake --build . --config Release  # 編譯專案
+cmake --build . --target clean    # 清理構建檔案
 ```
 
 ## ⭐Star 歷史

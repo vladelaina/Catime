@@ -119,18 +119,18 @@ git clone git@github.com:vladelaina/Catime.git
 cd Catime
 ```
 
-### 2. Tools (MinGW, xmake)
+### 2. Tools (MinGW, CMake)
 
 
 #### <img src="../Images/linux.svg"  height="25" />Linux
 
 - <img src="../Images/ubuntu.svg"  height="25" />Ubuntu
    ```bash
-   sudo apt update && sudo apt install -y mingw-w64 && curl -fsSL https://xmake.io/shget.text | bash
+   sudo apt update && sudo apt install -y mingw-w64 && curl -fsSL https://CMake.io/shget.text | bash
    ```
 - <img src="../Images/archlinux.svg"  height="25" />Arch
   ```bash
-  sudo pacman -Syu --noconfirm mingw-w64 xmake
+  sudo pacman -Syu --noconfirm mingw-w64 CMake
   ```
 
 #### <img src="../Images/windows.svg"  height="25" />Windows
@@ -140,7 +140,7 @@ cd Catime
   | Tool       | Beschreibung           | Empfohlene Version Format                                   | Link herunterladen                                                                   |
   | ---------- | ---------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------- |
   | **MinGW**  | GCC Compiler           | `x86_64-<version>-release-win32-seh-ucrt-rtv<num>-rev<num>.7z` | [MinGW Build](https://github.com/niXman/mingw-builds-binaries/releases/latest)  |
-  | **xmake**  | Build Tool             | `xmake-v<version>-win64.exe`                                  | [xmake](https://github.com/xmake-io/xmake/releases/latest)                      |
+  | **CMake**  | Build Tool             | `cmake-<version>-windows-x86_64.msi`                                  | [CMake](https://cmake.org/download/)                      |
 
   <details>
     <summary>2. Tools installieren</summary>
@@ -174,10 +174,10 @@ cd Catime
 
      Wenn die Versionsnummer erfolgreich angezeigt wird, ist die Installation von MinGW abgeschlossen. ✅
 
-  #### 📦 2.2 Installieren [xmake](https://github.com/xmake-io/xmake/releases/latest)
+  #### 📦 2.2 Installieren [CMake](https://cmake.org/download/)
 
-  1. Führen Sie „xmake-v<Version>-win64.exe“ zur Installation aus
-  2. PATH wird während der Installation automatisch konfiguriert (falls nicht, fügen Sie das `bin`-Verzeichnis der xmake-Installation manuell hinzu)
+  1. Führen Sie „CMake-v<Version>-win64.exe“ zur Installation aus
+  2. PATH wird während der Installation automatisch konfiguriert (falls nicht, fügen Sie das `bin`-Verzeichnis der CMake-Installation manuell hinzu)
 
   </details>
 
@@ -193,10 +193,10 @@ cd Catime
   gcc --version
   ```
 
-  #### ✅ 3.2 Überprüfen Sie xmake
+  #### ✅ 3.2 Überprüfen Sie CMake
 
   ```bash
-  xmake --version
+  CMake --version
   ```
 
   Wenn alle Versionsnummern korrekt angezeigt werden, ist die Konfiguration des Tools erfolgreich. 🎉
@@ -206,14 +206,14 @@ cd Catime
 
 
 
-### 4. Erstellen mit xmake
+### 4. Erstellen mit CMake
 
 Öffnen Sie eine Eingabeaufforderung im Stammverzeichnis des Projekts und verwenden Sie folgende Befehle:
 
 ```bash
-xmake         # Kompilieren Sie das Projekt
-xmake run     # Kompilieren und Ausführen des Projekts
-xmake clean   # Saubere Build-Artefakte
+CMake         # Kompilieren Sie das Projekt
+CMake run     # Kompilieren und Ausführen des Projekts
+CMake clean   # Saubere Build-Artefakte
 ```
 
 ## ⭐Geschichte der Stars

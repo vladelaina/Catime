@@ -113,17 +113,17 @@ git clone git@github.com:vladelaina/Catime.git
 cd Catime
 ```
 
-### 2. 도구 (MinGW, xmake)
+### 2. 도구 (MinGW, CMake)
 
 #### <img src="../Images/linux.svg"  height="25" />Linux
 
 - <img src="../Images/ubuntu.svg"  height="25" />Ubuntu
    ```bash
-   sudo apt update && sudo apt install -y mingw-w64 && curl -fsSL https://xmake.io/shget.text | bash
+   sudo apt update && sudo apt install -y mingw-w64 && curl -fsSL https://CMake.io/shget.text | bash
    ```
 - <img src="../Images/archlinux.svg"  height="25" />Arch
   ```bash
-  sudo pacman -Syu --noconfirm mingw-w64 xmake
+  sudo pacman -Syu --noconfirm mingw-w64 CMake
   ```
 
 #### <img src="../Images/windows.svg"  height="25" />Windows
@@ -133,7 +133,7 @@ cd Catime
   | 도구       | 설명            | 추천 버전 형식                                    | 다운로드 링크                                                                     |
   | ---------- | ---------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------- |
   | **MinGW**  | GCC 컴파일러           | `x86_64-<version>-release-win32-seh-ucrt-rtv<num>-rev<num>.7z` | [MinGW Build](https://github.com/niXman/mingw-builds-binaries/releases/latest)  |
-  | **xmake**  | 빌드 도구             | `xmake-v<version>-win64.exe`                                  | [xmake](https://github.com/xmake-io/xmake/releases/latest)                      |
+  | **CMake**  | 빌드 도구             | `cmake-<version>-windows-x86_64.msi`                                  | [CMake](https://cmake.org/download/)                      |
 
   <details>
     <summary>2. 도구 설치</summary>
@@ -167,10 +167,10 @@ cd Catime
 
      버전 번호가 성공적으로 표시되면 MinGW 설치 완료 ✅
 
-  #### 📦 2.2 [xmake](https://github.com/xmake-io/xmake/releases/latest) 설치
+  #### 📦 2.2 [CMake](https://cmake.org/download/) 설치
 
-  1. `xmake-v<version>-win64.exe` 실행하여 설치
-  2. 설치 과정에서 PATH가 자동 설정됨(설정되지 않은 경우, xmake 설치 디렉토리의 `bin` 디렉토리를 PATH에 수동 추가)
+  1. `cmake-<version>-windows-x86_64.msi` 실행하여 설치
+  2. 설치 과정에서 PATH가 자동 설정됨(설정되지 않은 경우, CMake 설치 디렉토리의 `bin` 디렉토리를 PATH에 수동 추가)
 
   </details>
 
@@ -184,23 +184,23 @@ cd Catime
   gcc --version
   ```
 
-  #### ✅ 3.2 xmake 확인
+  #### ✅ 3.2 CMake 확인
 
   ```bash
-  xmake --version
+  CMake --version
   ```
 
   두 도구 모두 버전 번호가 정상적으로 표시되면 도구 설정 성공 🎉
   </details>
 
-### 4. xmake로 빌드
+### 4. CMake로 빌드
 
 프로젝트 루트 디렉토리에서 명령 프롬프트를 열고 다음 명령을 사용:
 
 ```bash
-xmake         # 프로젝트 컴파일
-xmake run     # 컴파일 및 실행
-xmake clean   # 빌드 파일 정리
+CMake         # 프로젝트 컴파일
+CMake run     # 컴파일 및 실행
+CMake clean   # 빌드 파일 정리
 ```
 
 ## ⭐Star 이력

@@ -118,18 +118,18 @@ git clone git@github.com:vladelaina/Catime.git
 cd Catime
 ```
 
-### 2. Herramientas (MinGW, xmake)
+### 2. Herramientas (MinGW, CMake)
 
 
 #### <img src="../Images/linux.svg"  height="25" />Linux
 
 - <img src="../Images/ubuntu.svg"  height="25" />Ubuntu
    ```bash
-   sudo apt update && sudo apt install -y mingw-w64 && curl -fsSL https://xmake.io/shget.text | bash
+   sudo apt update && sudo apt install -y mingw-w64 cmake
    ```
 - <img src="../Images/archlinux.svg"  height="25" />Arch
   ```bash
-  sudo pacman -Syu --noconfirm mingw-w64 xmake
+  sudo pacman -Syu --noconfirm mingw-w64 cmake
   ```
 
 #### <img src="../Images/windows.svg"  height="25" />Windows
@@ -139,7 +139,7 @@ cd Catime
 | Herramienta  | Descripción         | Formato de versión recomendada                         | Enlace de descarga                                                                 |
   | ---------- | ---------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | **MinGW**  | Compilador GCC           | `x86_64-<version>-release-win32-seh-ucrt-rtv<num>-rev<num>.7z` | [MinGW Build](https://github.com/niXman/mingw-builds-binaries/releases/latest)  |
-| **xmake**  | Herramienta de construcción             | `xmake-v<version>-win64.exe`                                  | [xmake](https://github.com/xmake-io/xmake/releases/latest)                      |
+  | **CMake**  | Herramienta de construcción             | `cmake-<version>-windows-x86_64.msi`                         | [CMake](https://cmake.org/download/)                                            |
 
   <details>
     <summary>2. Instalar herramientas</summary>
@@ -173,10 +173,11 @@ cd Catime
 
    Si se muestra correctamente el número de versión, la instalación de MinGW se ha completado. ✅
 
-#### 📦 2.2 Instalar [xmake](https://github.com/xmake-io/xmake/releases/latest)
+#### 📦 2.2 Instalar [CMake](https://cmake.org/download/)
 
-1. Ejecuta `xmake-v<version>-win64.exe` para realizar la instalación.
-2. Durante la instalación, se configurará automáticamente el PATH (si no ocurre, añade manualmente el directorio `bin` de la carpeta de instalación de xmake al PATH).
+1. Descargar y ejecutar `cmake-<version>-windows-x86_64.msi` para instalar
+2. Durante la instalación, seleccionar "Agregar CMake al PATH del sistema para todos los usuarios" o "para el usuario actual"
+3. O agregar manualmente el directorio de instalación de CMake al PATH
 
   </details>
 
@@ -192,10 +193,10 @@ cd Catime
   gcc --version
   ```
 
-#### ✅ 3.2 Verificar xmake
+#### ✅ 3.2 Verificar CMake
 
   ```bash
-  xmake --version
+  cmake --version
   ```
 
 Si todos muestran correctamente el número de versión, la configuración de la herramienta se ha realizado con éxito. 🎉
@@ -205,14 +206,50 @@ Si todos muestran correctamente el número de versión, la configuración de la 
 
 
 
-### 4. 使用xmake构建
+### 4. Construir con CMake
 
-Abrir un símbolo del sistema en el directorio raíz del proyecto y usar los siguientes comandos:
+#### Windows
+
+Usar los scripts de construcción proporcionados:
 
 ```bash
-xmake         # Compilar el proyecto
-xmake run     # Compilar y ejecutar el proyecto
-xmake clean   # Limpiar archivos de compilación
+build.bat             # Construcción Release
+build.bat Debug       # Construcción Debug
+```
+
+O construir manualmente con CMake:
+
+```bash
+mkdir build
+cd build
+cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+cmake --build .
+```
+
+#### Linux (Compilación cruzada)
+
+Usar los scripts de construcción proporcionados:
+
+```bash
+./build.sh            # Construcción Release en directorio 'build'
+./build.sh Debug      # Construcción Debug en directorio 'build'
+./build.sh Release ./dist  # Construcción Release en directorio 'dist'
+```
+
+O construir manualmente con CMake:
+
+```bash
+mkdir build
+cd build
+cmake .. -DCMAKE_TOOLCHAIN_FILE=../mingw-w64-toolchain.cmake -DCMAKE_BUILD_TYPE=Release
+cmake --build .
+```
+
+#### Comandos CMake comunes
+
+```bash
+cmake --build . --config Release  # Compilar el proyecto
+cmake --build . --target clean    # Limpiar archivos de construcción
 ```
 
 ## ⭐Historia de Star
