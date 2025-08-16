@@ -89,16 +89,18 @@ static INT_PTR CALLBACK CliHelpDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
 }
 
 void ShowCliHelpDialog(HWND hwnd) {
-	// Show modeless help dialog to avoid system beep when other instance closes this one
-	if (!g_cliHelpDialog || !IsWindow(g_cliHelpDialog)) {
+	// Toggle help dialog: close if already open, show if closed
+	if (g_cliHelpDialog && IsWindow(g_cliHelpDialog)) {
+		// Dialog is already open, close it
+		DestroyWindow(g_cliHelpDialog);
+		g_cliHelpDialog = NULL;
+	} else {
+		// Dialog is not open, create and show it
 		g_cliHelpDialog = CreateDialogParam(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_CLI_HELP_DIALOG), hwnd, CliHelpDlgProc, 0);
 		if (g_cliHelpDialog) {
 			ShowWindow(g_cliHelpDialog, SW_SHOW);
 			ForceForegroundAndFocus(g_cliHelpDialog);
 		}
-	} else {
-		ShowWindow(g_cliHelpDialog, SW_SHOW);
-		ForceForegroundAndFocus(g_cliHelpDialog);
 	}
 }
 
