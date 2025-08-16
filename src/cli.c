@@ -271,7 +271,8 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
             PostMessage(hwnd, WM_HOTKEY, HOTKEY_ID_POMODORO, 0);
             return TRUE;
 		} else if (c == 'h') {
-			ShowCliHelpDialog(hwnd);
+			// Use PostMessage to be consistent with instance forwarding logic
+			PostMessage(hwnd, WM_APP_SHOW_CLI_HELP, 0, 0);
 			return TRUE;
         }
     }

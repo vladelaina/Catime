@@ -302,8 +302,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             LOG_INFO("Detected another instance is running");
             HWND hwndExisting = FindExistingInstanceWindow();
             if (hwndExisting) {
+                LOG_INFO("Found existing instance window handle: 0x%p", hwndExisting);
                 // If command line is just 'h' (help), forward to existing instance and exit
                 if (lpCmdLine && lpCmdLine[0] != '\0') {
+                    LOG_INFO("Command line arguments: '%s'", lpCmdLine);
                     if (TryForwardSimpleCliToExisting(hwndExisting, lpCmdLine)) {
                         LOG_INFO("Forwarded simple CLI command to existing instance and exiting");
                         ReleaseMutex(hMutex);
@@ -311,6 +313,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
                         CoUninitialize();
                         CleanupLogSystem();
                         return 0;
+                    } else {
+                        LOG_INFO("CLI command not suitable for forwarding, will restart instance");
                     }
                 }
                 // Otherwise, close existing instance and continue startup
@@ -319,6 +323,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
                 Sleep(200);
             } else {
                 LOG_WARNING("Could not find window handle of existing instance, but mutex exists");
+                LOG_INFO("Will continue with current instance startup");
             }
             // Release old mutex
             ReleaseMutex(hMutex);
