@@ -2,7 +2,7 @@
 #define CATIME_RESOURCE_H
 
 /* Version and update information */
-#define CATIME_VERSION "1.1.2"
+#define CATIME_VERSION "1.1.3-alpha"
 #define CATIME_VERSION_MAJOR 1
 #define CATIME_VERSION_MINOR 1
 #define CATIME_VERSION_PATCH 2
