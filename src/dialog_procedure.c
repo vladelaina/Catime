@@ -142,7 +142,8 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                 char currentOptions[256] = {0};
                 for (int i = 0; i < time_options_count; i++) {
                     char timeStr[32];
-                    snprintf(timeStr, sizeof(timeStr), "%d", time_options[i]);
+                    // Convert seconds to minutes for display
+                    snprintf(timeStr, sizeof(timeStr), "%d", time_options[i] / 60);
                     
                     if (i > 0) {
                         StringCbCatA(currentOptions, sizeof(currentOptions), " ");
@@ -277,7 +278,11 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                         if (count > 0) {
                             StringCbCatA(options, sizeof(options), ",");
                         }
-                        StringCbCatA(options, sizeof(options), token);
+                        
+                        // Convert minutes to seconds before saving
+                        char secondsStr[32];
+                        snprintf(secondsStr, sizeof(secondsStr), "%d", num * 60);
+                        StringCbCatA(options, sizeof(options), secondsStr);
                         count++;
                         token = strtok(NULL, " ");
                     }

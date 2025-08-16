@@ -202,7 +202,7 @@ void CreateDefaultConfig(const char* config_path) {
     WriteIniInt(INI_SECTION_TIMER, "CLOCK_DEFAULT_START_TIME", 1500, config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_USE_24HOUR", "FALSE", config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_SHOW_SECONDS", "FALSE", config_path);
-    WriteIniString(INI_SECTION_TIMER, "CLOCK_TIME_OPTIONS", "25,10,5", config_path);
+    WriteIniString(INI_SECTION_TIMER, "CLOCK_TIME_OPTIONS", "1500,600,300", config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_TEXT", "0", config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_ACTION", "MESSAGE", config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_FILE", "", config_path);
@@ -517,7 +517,7 @@ void ReadConfig() {
     
     // Read time options
     char timeOptions[256] = {0};
-    ReadIniString(INI_SECTION_TIMER, "CLOCK_TIME_OPTIONS", "25,10,5", timeOptions, sizeof(timeOptions), config_path);
+    ReadIniString(INI_SECTION_TIMER, "CLOCK_TIME_OPTIONS", "1500,600,300", timeOptions, sizeof(timeOptions), config_path);
     
     char *token = strtok(timeOptions, ",");
     while (token && time_options_count < MAX_TIME_OPTIONS) {

@@ -773,7 +773,7 @@ void ShowContextMenu(HWND hwnd) {
     // Add quick time options (use high, conflict-free ID base)
     for (int i = 0; i < time_options_count; i++) {
         wchar_t menu_item[20];
-        _snwprintf(menu_item, sizeof(menu_item)/sizeof(wchar_t), L"%d", time_options[i]);
+        FormatPomodoroTime(time_options[i], menu_item, sizeof(menu_item)/sizeof(wchar_t));
         AppendMenuW(hMenu, MF_STRING, CLOCK_IDM_QUICK_TIME_BASE + i, menu_item);
     }
 

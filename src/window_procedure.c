@@ -755,10 +755,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     
                     int index = cmd - 102;
                     if (index >= 0 && index < time_options_count) {
-                        int minutes = time_options[index];
-                        if (minutes > 0) {
+                        int seconds = time_options[index];
+                        if (seconds > 0) {
                             KillTimer(hwnd, 1);
-                            CLOCK_TOTAL_TIME = minutes * 60; // Convert to seconds
+                            CLOCK_TOTAL_TIME = seconds; // Already in seconds
                             countdown_elapsed_time = 0;
                             countdown_message_shown = FALSE;
                             CLOCK_COUNT_UP = FALSE;
@@ -794,10 +794,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
                     int index = cmd - CLOCK_IDM_QUICK_TIME_BASE;
                     if (index >= 0 && index < time_options_count) {
-                        int minutes = time_options[index];
-                        if (minutes > 0) {
+                        int seconds = time_options[index];
+                        if (seconds > 0) {
                             KillTimer(hwnd, 1);
-                            CLOCK_TOTAL_TIME = minutes * 60; // Convert to seconds
+                            CLOCK_TOTAL_TIME = seconds; // Already in seconds
                             countdown_elapsed_time = 0;
                             countdown_message_shown = FALSE;
                             CLOCK_COUNT_UP = FALSE;
@@ -861,7 +861,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             if (count > 0) {
                                 strcat(options, ",");
                             }
-                            strcat(options, token);
+                            
+                            // Convert minutes to seconds before saving
+                            char secondsStr[32];
+                            snprintf(secondsStr, sizeof(secondsStr), "%d", num * 60);
+                            strcat(options, secondsStr);
                             count++;
                             token = strtok(NULL, " ");
                         }
@@ -2665,7 +2669,7 @@ void StartQuickCountdown1(HWND hwnd) {
     
     // Check if there is at least one preset time option
     if (time_options_count > 0) {
-        CLOCK_TOTAL_TIME = time_options[0] * 60; // Convert minutes to seconds
+        CLOCK_TOTAL_TIME = time_options[0]; // Already in seconds
         countdown_elapsed_time = 0;
         CLOCK_IS_PAUSED = FALSE;
         
@@ -2713,7 +2717,7 @@ void StartQuickCountdown2(HWND hwnd) {
     
     // Check if there are at least two preset time options
     if (time_options_count > 1) {
-        CLOCK_TOTAL_TIME = time_options[1] * 60; // Convert minutes to seconds
+        CLOCK_TOTAL_TIME = time_options[1]; // Already in seconds
         countdown_elapsed_time = 0;
         CLOCK_IS_PAUSED = FALSE;
         
@@ -2761,7 +2765,7 @@ void StartQuickCountdown3(HWND hwnd) {
     
     // Check if there are at least three preset time options
     if (time_options_count > 2) {
-        CLOCK_TOTAL_TIME = time_options[2] * 60; // Convert minutes to seconds
+        CLOCK_TOTAL_TIME = time_options[2]; // Already in seconds
         countdown_elapsed_time = 0;
         CLOCK_IS_PAUSED = FALSE;
         
@@ -2809,7 +2813,7 @@ void StartQuickCountdownByIndex(HWND hwnd, int index) {
 
     int zeroBased = index - 1;
     if (zeroBased >= 0 && zeroBased < time_options_count) {
-        CLOCK_TOTAL_TIME = time_options[zeroBased] * 60; // minutes to seconds
+        CLOCK_TOTAL_TIME = time_options[zeroBased]; // in seconds
         countdown_elapsed_time = 0;
         CLOCK_IS_PAUSED = FALSE;
 
