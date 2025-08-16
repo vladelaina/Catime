@@ -194,7 +194,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                     } else if (hours > 0) {
                         snprintf(timeStr, sizeof(timeStr), "%dh", hours);
                     } else if (minutes > 0) {
-                        snprintf(timeStr, sizeof(timeStr), "%d", minutes);
+                        snprintf(timeStr, sizeof(timeStr), "%dm", minutes);
                     } else {
                         snprintf(timeStr, sizeof(timeStr), "%ds", seconds);
                     }
