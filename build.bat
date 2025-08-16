@@ -19,9 +19,6 @@ echo  / __/ _` ^| __^| ^| '_ ` _ \ / _ \
 echo ^| ^(_^| ^(_^| ^| ^|_^| ^| ^| ^| ^| ^| ^|  __/
 echo  \___\__,_^\^|__^|_^|_^| ^|_^| ^|_^|\_^|
 echo.
-echo                 CATIME
-echo              Timer Application
-echo.
 
 
 
