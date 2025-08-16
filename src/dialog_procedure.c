@@ -1033,6 +1033,20 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
                 char input[256] = {0};
                 GetDlgItemTextA(hwndDlg, CLOCK_IDC_EDIT, input, sizeof(input));
                 
+                // Check if input is empty or contains only spaces
+                BOOL isAllSpaces = TRUE;
+                for (int i = 0; input[i]; i++) {
+                    if (!isspace((unsigned char)input[i])) {
+                        isAllSpaces = FALSE;
+                        break;
+                    }
+                }
+                if (input[0] == '\0' || isAllSpaces) {
+                    EndDialog(hwndDlg, IDCANCEL);
+                    g_hwndPomodoroComboDialog = NULL;
+                    return TRUE;
+                }
+                
                 // Parse input time format and convert to seconds array
                 char *token, *saveptr;
                 char input_copy[256];
@@ -1040,31 +1054,43 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
                 
                 int times[MAX_POMODORO_TIMES] = {0};
                 int times_count = 0;
+                BOOL hasInvalidInput = FALSE;
                 
                 token = strtok_r(input_copy, " ", &saveptr);
                 while (token && times_count < MAX_POMODORO_TIMES) {
                     int seconds = 0;
                     if (ParseTimeInput(token, &seconds)) {
                         times[times_count++] = seconds;
+                    } else {
+                        hasInvalidInput = TRUE;
+                        break;
                     }
                     token = strtok_r(NULL, " ", &saveptr);
                 }
                 
-                if (times_count > 0) {
-                    // Update global variables
-                    POMODORO_TIMES_COUNT = times_count;
-                    for (int i = 0; i < times_count; i++) {
-                        POMODORO_TIMES[i] = times[i];
-                    }
-                    
-                    // Update basic pomodoro times
-                    if (times_count > 0) POMODORO_WORK_TIME = times[0];
-                    if (times_count > 1) POMODORO_SHORT_BREAK = times[1];
-                    if (times_count > 2) POMODORO_LONG_BREAK = times[2];
-                    
-                    // Write to configuration file
-                    WriteConfigPomodoroTimeOptions(times, times_count);
+                // If there's invalid input, show error dialog
+                if (hasInvalidInput || times_count == 0) {
+                    ShowErrorDialog(hwndDlg);
+                    // Keep input content and select all text for easy editing
+                    HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
+                    SetFocus(hwndEdit);
+                    SendMessage(hwndEdit, EM_SETSEL, 0, -1);
+                    return TRUE;
                 }
+                
+                // Update global variables
+                POMODORO_TIMES_COUNT = times_count;
+                for (int i = 0; i < times_count; i++) {
+                    POMODORO_TIMES[i] = times[i];
+                }
+                
+                // Update basic pomodoro times
+                if (times_count > 0) POMODORO_WORK_TIME = times[0];
+                if (times_count > 1) POMODORO_SHORT_BREAK = times[1];
+                if (times_count > 2) POMODORO_LONG_BREAK = times[2];
+                
+                // Write to configuration file
+                WriteConfigPomodoroTimeOptions(times, times_count);
                 
                 EndDialog(hwndDlg, IDOK);
                 g_hwndPomodoroComboDialog = NULL;
