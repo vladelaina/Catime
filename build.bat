@@ -13,11 +13,14 @@ if "%BUILD_TYPE%"=="" set BUILD_TYPE=Release
 set BUILD_DIR=build
 
 echo.
-echo  #####     #    ####### ##  ## ##     ## #######
-echo ##   ##   # #      ##   ##  ## ###   ### ##     
-echo ##       #   #     ##   ##  ## ## # # ## #####  
-echo ##       #####     ##   ##  ## ##  #  ## ##     
-echo  #####   ##  ##    ##   ##  ## ##     ## #######
+echo            _   _                
+echo   ___ __ _^| ^|_^(_^)_ __ ___   ___ 
+echo  / __/ _` ^| __^| ^| '_ ` _ \ / _ \
+echo ^| ^(_^| ^(_^| ^| ^|_^| ^| ^| ^| ^| ^| ^|  __/
+echo  \___\__,_^\^|__^|_^|_^| ^|_^| ^|_^|\_^|
+echo.
+echo                 CATIME
+echo              Timer Application
 echo.
 
 
@@ -68,7 +71,7 @@ if errorlevel 1 (
 
 REM Step 4: Finalize with colored text
 %ps_color% "Write-Host '[100%]' -ForegroundColor Magenta -NoNewline; Write-Host ' Finalizing build...' -ForegroundColor Green"
-
+script
 REM Check if build was successful
 if exist "catime.exe" (
     echo.
