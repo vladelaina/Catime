@@ -305,8 +305,10 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                     } else {
                         // Show unified error dialog
                         ShowErrorDialog(hwndDlg);
-                        SetWindowTextA(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT), "");
-                        SetFocus(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT));
+                        // Keep input content and select all text for easy editing
+                        HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
+                        SetFocus(hwndEdit);
+                        SendMessage(hwndEdit, EM_SETSEL, 0, -1);
                         return TRUE;
                     }
                 } else {
@@ -330,8 +332,10 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                         }
                     } else {
                         ShowErrorDialog(hwndDlg);
-                        SetWindowTextA(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT), "");
-                        SetFocus(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT));
+                        // Keep input content and select all text for easy editing
+                        HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
+                        SetFocus(hwndEdit);
+                        SendMessage(hwndEdit, EM_SETSEL, 0, -1);
                         return TRUE;
                     }
                 }

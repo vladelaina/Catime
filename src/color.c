@@ -715,8 +715,10 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                     return TRUE;
                 } else {
                     ShowErrorDialog(hwndDlg);
-                    SetWindowTextA(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT), "");
-                    SetFocus(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT));
+                    // Keep input content and select all text for easy editing
+                    HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
+                    SetFocus(hwndEdit);
+                    SendMessage(hwndEdit, EM_SETSEL, 0, -1);
                     return TRUE;
                 }
             } else if (LOWORD(wParam) == IDCANCEL) {
