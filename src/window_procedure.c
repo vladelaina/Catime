@@ -1722,7 +1722,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDC_SET_COUNTDOWN_TIME: {
                     while (1) {
                         memset(inputText, 0, sizeof(inputText));
-                        DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc, (LPARAM)CLOCK_IDD_DIALOG1);
+                        // Use a special parameter to indicate this is startup settings dialog
+                        DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc, (LPARAM)CLOCK_IDD_STARTUP_DIALOG);
 
                         if (inputText[0] == '\0') {
                             

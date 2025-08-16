@@ -173,6 +173,34 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                 
                 // Set edit box text with current preset values
                 SetDlgItemTextA(hwndDlg, CLOCK_IDC_EDIT, currentOptions);
+            } else if (dlgId == CLOCK_IDD_STARTUP_DIALOG) {
+                // For startup settings dialog, preload the current default countdown time
+                extern int CLOCK_DEFAULT_START_TIME;
+                if (CLOCK_DEFAULT_START_TIME > 0) {
+                    // Format the current default time for display
+                    char timeStr[64];
+                    int hours = CLOCK_DEFAULT_START_TIME / 3600;
+                    int minutes = (CLOCK_DEFAULT_START_TIME % 3600) / 60;
+                    int seconds = CLOCK_DEFAULT_START_TIME % 60;
+                    
+                    if (hours > 0 && minutes > 0 && seconds > 0) {
+                        snprintf(timeStr, sizeof(timeStr), "%d %d %d", hours, minutes, seconds);
+                    } else if (hours > 0 && minutes > 0) {
+                        snprintf(timeStr, sizeof(timeStr), "%dh%dm", hours, minutes);
+                    } else if (hours > 0 && seconds > 0) {
+                        snprintf(timeStr, sizeof(timeStr), "%dh%ds", hours, seconds);
+                    } else if (minutes > 0 && seconds > 0) {
+                        snprintf(timeStr, sizeof(timeStr), "%d %d", minutes, seconds);
+                    } else if (hours > 0) {
+                        snprintf(timeStr, sizeof(timeStr), "%dh", hours);
+                    } else if (minutes > 0) {
+                        snprintf(timeStr, sizeof(timeStr), "%d", minutes);
+                    } else {
+                        snprintf(timeStr, sizeof(timeStr), "%ds", seconds);
+                    }
+                    
+                    SetDlgItemTextA(hwndDlg, CLOCK_IDC_EDIT, timeStr);
+                }
             }
 
             ApplyDialogLanguage(hwndDlg, (int)dlgId);
