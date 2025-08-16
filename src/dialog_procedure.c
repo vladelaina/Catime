@@ -142,8 +142,28 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                 char currentOptions[256] = {0};
                 for (int i = 0; i < time_options_count; i++) {
                     char timeStr[32];
-                    // Convert seconds to minutes for display
-                    snprintf(timeStr, sizeof(timeStr), "%d", time_options[i] / 60);
+                    int totalSeconds = time_options[i];
+                    
+                    // Format time in a user-friendly way
+                    int hours = totalSeconds / 3600;
+                    int minutes = (totalSeconds % 3600) / 60;
+                    int seconds = totalSeconds % 60;
+                    
+                    if (hours > 0 && minutes > 0 && seconds > 0) {
+                        snprintf(timeStr, sizeof(timeStr), "%dh%dm%ds", hours, minutes, seconds);
+                    } else if (hours > 0 && minutes > 0) {
+                        snprintf(timeStr, sizeof(timeStr), "%dh%dm", hours, minutes);
+                    } else if (hours > 0 && seconds > 0) {
+                        snprintf(timeStr, sizeof(timeStr), "%dh%ds", hours, seconds);
+                    } else if (minutes > 0 && seconds > 0) {
+                        snprintf(timeStr, sizeof(timeStr), "%dm%ds", minutes, seconds);
+                    } else if (hours > 0) {
+                        snprintf(timeStr, sizeof(timeStr), "%dh", hours);
+                    } else if (minutes > 0) {
+                        snprintf(timeStr, sizeof(timeStr), "%dm", minutes);
+                    } else {
+                        snprintf(timeStr, sizeof(timeStr), "%ds", seconds);
+                    }
                     
                     if (i > 0) {
                         StringCbCatA(currentOptions, sizeof(currentOptions), " ");
@@ -242,22 +262,10 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                     return TRUE;
                 }
 
-                int total_seconds;
-                if (ParseInput(inputText, &total_seconds)) {
                 int dialogId = GetWindowLongPtr(hwndDlg, GWLP_USERDATA);
-                if (dialogId == CLOCK_IDD_POMODORO_TIME_DIALOG) {
-                    g_hwndInputDialog = NULL;
-                    EndDialog(hwndDlg, IDOK);
-                } else if (dialogId == CLOCK_IDD_POMODORO_LOOP_DIALOG) {
-                    WriteConfigPomodoroLoopCount(total_seconds);
-                    g_hwndInputDialog = NULL;
-                    EndDialog(hwndDlg, IDOK);
-                } else if (dialogId == CLOCK_IDD_STARTUP_DIALOG) {
-                    WriteConfigDefaultStartTime(total_seconds);
-                    g_hwndInputDialog = NULL;
-                    EndDialog(hwndDlg, IDOK);
-                } else if (dialogId == CLOCK_IDD_SHORTCUT_DIALOG) {
-                    // Parse input as space-separated time options (like in window_procedure.c)
+                
+                if (dialogId == CLOCK_IDD_SHORTCUT_DIALOG) {
+                    // Parse input as space-separated time options using ParseTimeInput for flexible format support
                     // Use a local copy to avoid modifying the original inputText
                     char inputCopy[256];
                     strncpy(inputCopy, inputText, sizeof(inputCopy) - 1);
@@ -269,8 +277,9 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                     int count = 0;
                     
                     while (token && count < MAX_TIME_OPTIONS) {
-                        int num = atoi(token);
-                        if (num <= 0) {
+                        int seconds = 0;
+                        // Use ParseTimeInput to support flexible time formats like 30s, 25m, 1h30m
+                        if (!ParseTimeInput(token, &seconds) || seconds <= 0) {
                             valid = 0;
                             break;
                         }
@@ -279,9 +288,9 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                             StringCbCatA(options, sizeof(options), ",");
                         }
                         
-                        // Convert minutes to seconds before saving
+                        // Store seconds directly (no conversion needed)
                         char secondsStr[32];
-                        snprintf(secondsStr, sizeof(secondsStr), "%d", num * 60);
+                        snprintf(secondsStr, sizeof(secondsStr), "%d", seconds);
                         StringCbCatA(options, sizeof(options), secondsStr);
                         count++;
                         token = strtok(NULL, " ");
@@ -297,10 +306,10 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                         // Show error message and keep dialog open
                         MessageBoxW(hwndDlg,
                             GetLocalizedString(
-                                L"请输入用空格分隔的数字\n"
-                                L"例如: 25 10 5",
-                                L"Enter numbers separated by spaces\n"
-                                L"Example: 25 10 5"),
+                                L"请输入用空格分隔的时间格式\n"
+                                L"例如: 25m 30s 1h30m",
+                                L"Enter time formats separated by spaces\n"
+                                L"Example: 25m 30s 1h30m"),
                             GetLocalizedString(L"无效输入", L"Invalid Input"), 
                             MB_OK);
                         SetWindowTextA(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT), "");
@@ -308,14 +317,30 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                         return TRUE;
                     }
                 } else {
-                    g_hwndInputDialog = NULL;
-                    EndDialog(hwndDlg, IDOK);
-                }
-                } else {
-                    ShowErrorDialog(hwndDlg);
-                    SetWindowTextA(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT), "");
-                    SetFocus(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT));
-                    return TRUE;
+                    // For other dialog types, use ParseInput for validation
+                    int total_seconds;
+                    if (ParseInput(inputText, &total_seconds)) {
+                        if (dialogId == CLOCK_IDD_POMODORO_TIME_DIALOG) {
+                            g_hwndInputDialog = NULL;
+                            EndDialog(hwndDlg, IDOK);
+                        } else if (dialogId == CLOCK_IDD_POMODORO_LOOP_DIALOG) {
+                            WriteConfigPomodoroLoopCount(total_seconds);
+                            g_hwndInputDialog = NULL;
+                            EndDialog(hwndDlg, IDOK);
+                        } else if (dialogId == CLOCK_IDD_STARTUP_DIALOG) {
+                            WriteConfigDefaultStartTime(total_seconds);
+                            g_hwndInputDialog = NULL;
+                            EndDialog(hwndDlg, IDOK);
+                        } else {
+                            g_hwndInputDialog = NULL;
+                            EndDialog(hwndDlg, IDOK);
+                        }
+                    } else {
+                        ShowErrorDialog(hwndDlg);
+                        SetWindowTextA(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT), "");
+                        SetFocus(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT));
+                        return TRUE;
+                    }
                 }
                 return TRUE;
             }
@@ -1096,22 +1121,32 @@ BOOL ParseTimeInput(const char* input, int* seconds) {
     if (!input || !seconds) return FALSE;
 
     *seconds = 0;
-    char* buffer = _strdup(input);
-    if (!buffer) return FALSE;
+    
+    // Create a local copy of the input string
+    char buffer[256];
+    strncpy(buffer, input, sizeof(buffer) - 1);
+    buffer[sizeof(buffer) - 1] = '\0';
 
-    int len = strlen(buffer);
     char* pos = buffer;
-    int value = 0;
     int tempSeconds = 0;
 
     while (*pos) {
+        // Skip whitespace
+        while (*pos == ' ' || *pos == '\t') pos++;
+        if (*pos == '\0') break;
+        
+        // Parse number
         if (isdigit((unsigned char)*pos)) {
-            value = 0;
+            int value = 0;
             while (isdigit((unsigned char)*pos)) {
                 value = value * 10 + (*pos - '0');
                 pos++;
             }
 
+            // Skip whitespace after number
+            while (*pos == ' ' || *pos == '\t') pos++;
+
+            // Check for unit
             if (*pos == 'h' || *pos == 'H') {
                 tempSeconds += value * 3600;
                 pos++;
@@ -1122,17 +1157,19 @@ BOOL ParseTimeInput(const char* input, int* seconds) {
                 tempSeconds += value;
                 pos++;
             } else if (*pos == '\0') {
+                // No unit at end of string, default to minutes
                 tempSeconds += value * 60;
+                break;
             } else {
-                free(buffer);
+                // Invalid character, return FALSE
                 return FALSE;
             }
         } else {
-            pos++;
+            // Invalid character, return FALSE
+            return FALSE;
         }
     }
 
-    free(buffer);
     *seconds = tempSeconds;
     return TRUE;
 }

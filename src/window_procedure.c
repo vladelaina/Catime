@@ -852,8 +852,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         int count = 0;
                         
                         while (token && count < MAX_TIME_OPTIONS) {
-                            int num = atoi(token);
-                            if (num <= 0) {
+                            int seconds = 0;
+                            // Use ParseTimeInput to support flexible time formats like 30s, 25m, 1h30m
+                            extern BOOL ParseTimeInput(const char* input, int* seconds);
+                            if (!ParseTimeInput(token, &seconds) || seconds <= 0) {
                                 valid = 0;
                                 break;
                             }
@@ -862,9 +864,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                                 strcat(options, ",");
                             }
                             
-                            // Convert minutes to seconds before saving
+                            // Store seconds directly (no conversion needed)
                             char secondsStr[32];
-                            snprintf(secondsStr, sizeof(secondsStr), "%d", num * 60);
+                            snprintf(secondsStr, sizeof(secondsStr), "%d", seconds);
                             strcat(options, secondsStr);
                             count++;
                             token = strtok(NULL, " ");
@@ -881,10 +883,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         } else {
                             MessageBoxW(hwnd,
                                 GetLocalizedString(
-                                    L"请输入用空格分隔的数字\n"
-                                    L"例如: 25 10 5",
-                                    L"Enter numbers separated by spaces\n"
-                                    L"Example: 25 10 5"),
+                                    L"请输入用空格分隔的时间格式\n"
+                                    L"例如: 25m 30s 1h30m",
+                                    L"Enter time formats separated by spaces\n"
+                                    L"Example: 25m 30s 1h30m"),
                                 GetLocalizedString(L"无效输入", L"Invalid Input"), 
                                 MB_OK);
                         }
