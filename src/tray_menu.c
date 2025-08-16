@@ -124,6 +124,9 @@ static void FormatPomodoroTime(int seconds, wchar_t* buffer, size_t bufferSize) 
     
     if (hours > 0) {
         _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d:%02d", hours, minutes, secs);
+    } else if (secs == 0) {
+        // For whole minutes (no seconds), display only the minute number
+        _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d", minutes);
     } else {
         _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d", minutes, secs);
     }
