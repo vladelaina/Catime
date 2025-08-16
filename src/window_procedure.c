@@ -722,23 +722,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             SetTimer(hwnd, 1, 1000, NULL);
                             break;
                         } else {
-                            MessageBoxW(hwnd, 
-                                GetLocalizedString(
-                                    L"25    = 25分钟\n"
-                                    L"25h   = 25小时\n"
-                                    L"25s   = 25秒\n"
-                                    L"25 30 = 25分钟30秒\n"
-                                    L"25 30m = 25小时30分钟\n"
-                                    L"1 30 20 = 1小时30分钟20秒",
-                                    
-                                    L"25    = 25 minutes\n"
-                                    L"25h   = 25 hours\n"
-                                    L"25s   = 25 seconds\n"
-                                    L"25 30 = 25 minutes 30 seconds\n"
-                                    L"25 30m = 25 hours 30 minutes\n"
-                                    L"1 30 20 = 1 hour 30 minutes 20 seconds"),
-                                GetLocalizedString(L"输入格式", L"Input Format"),
-                                MB_OK);
+                            ShowErrorDialog(hwnd);
                         }
                     }
                     break;
@@ -881,14 +865,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             ReadConfig();
                             break;
                         } else {
-                            MessageBoxW(hwnd,
-                                GetLocalizedString(
-                                    L"请输入用空格分隔的时间格式\n"
-                                    L"例如: 25m 30s 1h30m",
-                                    L"Enter time formats separated by spaces\n"
-                                    L"Example: 25m 30s 1h30m"),
-                                GetLocalizedString(L"无效输入", L"Invalid Input"), 
-                                MB_OK);
+                            ShowErrorDialog(hwnd);
                         }
                     }
                     break;
@@ -925,23 +902,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             ReadConfig();
                             break;
                         } else {
-                            MessageBoxW(hwnd, 
-                                GetLocalizedString(
-                                    L"25    = 25分钟\n"
-                                    L"25h   = 25小时\n"
-                                    L"25s   = 25秒\n"
-                                    L"25 30 = 25分钟30秒\n"
-                                    L"25 30m = 25小时30分钟\n"
-                                    L"1 30 20 = 1小时30分钟20秒",
-                                    
-                                    L"25    = 25 minutes\n"
-                                    L"25h   = 25 hours\n"
-                                    L"25s   = 25 seconds\n"
-                                    L"25 30 = 25 minutes 30 seconds\n"
-                                    L"25 30m = 25 hours 30 minutes\n"
-                                    L"1 30 20 = 1 hour 30 minutes 20 seconds"),
-                                GetLocalizedString(L"输入格式", L"Input Format"),
-                                MB_OK);
+                            ShowErrorDialog(hwnd);
                         }
                     }
                     break;

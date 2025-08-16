@@ -303,15 +303,8 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                         g_hwndInputDialog = NULL;
                         EndDialog(hwndDlg, IDOK);
                     } else {
-                        // Show error message and keep dialog open
-                        MessageBoxW(hwndDlg,
-                            GetLocalizedString(
-                                L"请输入用空格分隔的时间格式\n"
-                                L"例如: 25m 30s 1h30m",
-                                L"Enter time formats separated by spaces\n"
-                                L"Example: 25m 30s 1h30m"),
-                            GetLocalizedString(L"无效输入", L"Invalid Input"), 
-                            MB_OK);
+                        // Show unified error dialog
+                        ShowErrorDialog(hwndDlg);
                         SetWindowTextA(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT), "");
                         SetFocus(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT));
                         return TRUE;
