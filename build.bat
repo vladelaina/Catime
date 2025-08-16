@@ -1,6 +1,9 @@
 @echo off
 setlocal enabledelayedexpansion
 
+REM Helper function for colored output using PowerShell
+set "ps_color=powershell -Command"
+
 REM Catime CMake Build Script for Windows
 REM This script builds the Catime project using CMake and MinGW-64
 
@@ -10,12 +13,11 @@ if "%BUILD_TYPE%"=="" set BUILD_TYPE=Release
 set BUILD_DIR=build
 
 echo.
-echo [1m[38;2;138;43;226m██████╗ [38;2;147;112;219m █████╗ [38;2;153;102;255m████████╗[38;2;160;120;255m██╗[38;2;186;85;211m███╗   ███╗[38;2;221;160;221m███████╗[0m
-echo [1m[38;2;138;43;226m██╔════╝[38;2;147;112;219m ██╔══██╗[38;2;153;102;255m╚══██╔══╝[38;2;160;120;255m██║[38;2;186;85;211m████╗ ████║[38;2;221;160;221m██╔════╝[0m
-echo [1m[38;2;138;43;226m██║     [38;2;147;112;219m ███████║[38;2;153;102;255m   ██║   [38;2;160;120;255m██║[38;2;186;85;211m██╔████╔██║[38;2;221;160;221m█████╗  [0m
-echo [1m[38;2;138;43;226m██║     [38;2;147;112;219m ██╔══██║[38;2;153;102;255m   ██║   [38;2;160;120;255m██║[38;2;186;85;211m██║╚██╔╝██║[38;2;221;160;221m██╔══╝  [0m
-echo [1m[38;2;138;43;226m╚██████╗[38;2;147;112;219m ██║  ██║[38;2;153;102;255m   ██║   [38;2;160;120;255m██║[38;2;186;85;211m██║ ╚═╝ ██║[38;2;221;160;221m███████╗[0m
-echo [1m[38;2;138;43;226m ╚═════╝[38;2;147;112;219m ╚═╝  ╚═╝[38;2;153;102;255m   ╚═╝   [38;2;160;120;255m╚═╝[38;2;186;85;211m╚═╝     ╚═╝[38;2;221;160;221m╚══════╝[0m
+echo  #####     #    ####### ##  ## ##     ## #######
+echo ##   ##   # #      ##   ##  ## ###   ### ##     
+echo ##       #   #     ##   ##  ## ## # # ## #####  
+echo ##       #####     ##   ##  ## ##  #  ## ##     
+echo  #####   ##  ##    ##   ##  ## ##     ## #######
 echo.
 
 
@@ -41,54 +43,54 @@ if not exist "%BUILD_DIR%" mkdir "%BUILD_DIR%"
 cd "%BUILD_DIR%"
 
 REM Step 1: Configure with colored text
-echo [1m[38;2;147;112;219m[25%%][0m [38;2;100;200;255mConfiguring project...[0m
+%ps_color% "Write-Host '[25%]' -ForegroundColor Magenta -NoNewline; Write-Host ' Configuring project...' -ForegroundColor Cyan"
 cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=%BUILD_TYPE% >cmake_config.log 2>&1
 if errorlevel 1 (
-    echo [91mConfiguration failed![0m
+    %ps_color% "Write-Host 'Configuration failed!' -ForegroundColor Red"
     echo Check cmake_config.log for details
     pause
     exit /b 1
 )
 
 REM Step 2: Analyze with colored text
-echo [1m[38;2;147;112;219m[50%%][0m [38;2;255;200;100mAnalyzing source files...[0m
+%ps_color% "Write-Host '[50%]' -ForegroundColor Magenta -NoNewline; Write-Host ' Analyzing source files...' -ForegroundColor Yellow"
 timeout /t 1 /nobreak >nul
 
 REM Step 3: Build with colored text
-echo [1m[38;2;147;112;219m[75%%][0m [38;2;255;100;150mCompiling source files...[0m
+%ps_color% "Write-Host '[75%]' -ForegroundColor Magenta -NoNewline; Write-Host ' Compiling source files...' -ForegroundColor Red"
 cmake --build . --config %BUILD_TYPE% >build.log 2>&1
 if errorlevel 1 (
-    echo [91mBuild failed![0m
+    %ps_color% "Write-Host 'Build failed!' -ForegroundColor Red"
     echo Check build.log for details
     pause
     exit /b 1
 )
 
 REM Step 4: Finalize with colored text
-echo [1m[38;2;147;112;219m[100%%][0m [38;2;100;255;150mFinalizing build...[0m
+%ps_color% "Write-Host '[100%]' -ForegroundColor Magenta -NoNewline; Write-Host ' Finalizing build...' -ForegroundColor Green"
 
 REM Check if build was successful
 if exist "catime.exe" (
     echo.
-    echo [92m✓ Build completed successfully![0m
-    echo [96mOutput: %CD%\catime.exe[0m
+    %ps_color% "Write-Host '[OK] Build completed successfully!' -ForegroundColor Green"
+    %ps_color% "Write-Host 'Output: %CD%\catime.exe' -ForegroundColor Cyan"
     
     REM Display file size with nice formatting
     for %%A in (catime.exe) do set SIZE=%%~zA
     if !SIZE! LSS 1024 (
-        echo [96mSize: !SIZE! B[0m
+        %ps_color% "Write-Host 'Size: !SIZE! B' -ForegroundColor Cyan"
     ) else if !SIZE! LSS 1048576 (
         set /a SIZE_KB=!SIZE!/1024
-        echo [96mSize: !SIZE_KB! KB[0m
+        %ps_color% "Write-Host 'Size: !SIZE_KB! KB' -ForegroundColor Cyan"
     ) else (
         set /a SIZE_MB=!SIZE!/1048576
-        echo [96mSize: !SIZE_MB! MB[0m
+        %ps_color% "Write-Host 'Size: !SIZE_MB! MB' -ForegroundColor Cyan"
     )
     
     REM Clean up log files
     del cmake_config.log build.log 2>nul
 ) else (
-    echo [91m✗ Build failed - executable not found![0m
+    %ps_color% "Write-Host '[ERROR] Build failed - executable not found!' -ForegroundColor Red"
     echo Check build.log for details
     pause
     exit /b 1
