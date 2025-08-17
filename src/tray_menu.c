@@ -216,7 +216,7 @@ void ShowColorMenu(HWND hwnd) {
     ReadTimeoutActionFromConfig();
     
     // Set mouse cursor to default arrow to prevent wait cursor display
-    SetCursor(LoadCursor(NULL, IDC_ARROW));
+    SetCursor(LoadCursorW(NULL, MAKEINTRESOURCEW(IDC_ARROW)));
     
     HMENU hMenu = CreatePopupMenu();
     
@@ -612,7 +612,7 @@ void ShowContextMenu(HWND hwnd) {
     ReadTimeoutActionFromConfig();
     
     // Set mouse cursor to default arrow to prevent wait cursor display
-    SetCursor(LoadCursor(NULL, IDC_ARROW));
+    SetCursor(LoadCursorW(NULL, MAKEINTRESOURCEW(IDC_ARROW)));
     
     HMENU hMenu = CreatePopupMenu();
     
