@@ -45,7 +45,7 @@
 #include "../include/cli.h"
 
 // Variables imported from main.c
-extern char inputText[256];
+extern wchar_t inputText[256];
 extern int elapsed_time;
 extern int message_shown;
 
@@ -60,7 +60,7 @@ extern int current_pomodoro_time_index; // Current pomodoro time index
 extern int complete_pomodoro_cycles; // Completed pomodoro cycles
 
 // If ShowInputDialog function needs to be declared, add at the beginning
-extern BOOL ShowInputDialog(HWND hwnd, char* text);
+extern BOOL ShowInputDialog(HWND hwnd, wchar_t* text);
 
 // Modify to match the correct function declaration in config.h
 extern void WriteConfigPomodoroTimeOptions(int* times, int count);
@@ -90,9 +90,9 @@ extern void OpenSupportPage(void);
 extern void OpenFeedbackPage(void);
 
 // Helper function: Check if a string contains only spaces
-static BOOL isAllSpacesOnly(const char* str) {
+static BOOL isAllSpacesOnly(const wchar_t* str) {
     for (int i = 0; str[i]; i++) {
-        if (!isspace((unsigned char)str[i])) {
+        if (!iswspace(str[i])) {
             return FALSE;
         }
     }
@@ -528,7 +528,7 @@ void UnregisterGlobalHotkeys(HWND hwnd) {
  */
 LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
-    static char time_text[50];
+    static wchar_t time_text[50];
     UINT uID;
     UINT uMouseMsg;
 
@@ -673,14 +673,14 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         memset(inputText, 0, sizeof(inputText));
                         DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), hwnd, DlgProc, (LPARAM)CLOCK_IDD_DIALOG1);
 
-                        if (inputText[0] == '\0') {
+                        if (inputText[0] == L'\0') {
                             break;
                         }
 
                         // Check if it's only spaces
                         BOOL isAllSpaces = TRUE;
                         for (int i = 0; inputText[i]; i++) {
-                            if (!isspace((unsigned char)inputText[i])) {
+                            if (!iswspace(inputText[i])) {
                                 isAllSpaces = FALSE;
                                 break;
                             }
@@ -690,7 +690,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         }
 
                         int total_seconds = 0;
-                        if (ParseInput(inputText, &total_seconds)) {
+                        // Convert wide char input to char for ParseInput
+                        char inputTextA[256];
+                        WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
+                        if (ParseInput(inputTextA, &total_seconds)) {
                             // Stop any notification sound that may be playing
                             extern void StopNotificationSound(void);
                             StopNotificationSound();
@@ -819,7 +822,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         // Check if input is empty or contains only spaces
                         BOOL isAllSpaces = TRUE;
                         for (int i = 0; inputText[i]; i++) {
-                            if (!isspace((unsigned char)inputText[i])) {
+                            if (!iswspace(inputText[i])) {
                                 isAllSpaces = FALSE;
                                 break;
                             }
@@ -830,7 +833,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             break;
                         }
 
-                        char* token = strtok(inputText, " ");
+                        // Convert inputText to char for parsing
+                        char inputTextA[256];
+                        WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
+                        
+                        char* token = strtok(inputTextA, " ");
                         char options[256] = {0};
                         int valid = 1;
                         int count = 0;
@@ -875,14 +882,14 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         memset(inputText, 0, sizeof(inputText));
                         DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_STARTUP_DIALOG), NULL, DlgProc, (LPARAM)CLOCK_IDD_STARTUP_DIALOG);
 
-                        if (inputText[0] == '\0') {
+                        if (inputText[0] == L'\0') {
                             break;
                         }
 
                         // Check if it's only spaces
                         BOOL isAllSpaces = TRUE;
                         for (int i = 0; inputText[i]; i++) {
-                            if (!isspace((unsigned char)inputText[i])) {
+                            if (!iswspace(inputText[i])) {
                                 isAllSpaces = FALSE;
                                 break;
                             }
@@ -892,7 +899,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         }
 
                         int total_seconds = 0;
-                        if (ParseInput(inputText, &total_seconds)) {
+                        // Convert wide char input to char for ParseInput
+                        char inputTextA[256];
+                        WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
+                        if (ParseInput(inputTextA, &total_seconds)) {
                             // Stop any notification sound that may be playing
                             extern void StopNotificationSound(void);
                             StopNotificationSound();
@@ -1725,7 +1735,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         // Use a special parameter to indicate this is startup settings dialog
                         DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), hwnd, DlgProc, (LPARAM)CLOCK_IDD_STARTUP_DIALOG);
 
-                        if (inputText[0] == '\0') {
+                        if (inputText[0] == L'\0') {
                             
                             WriteConfigStartupMode("COUNTDOWN");
                             
@@ -1742,7 +1752,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         }
 
                         int total_seconds = 0;
-                        if (ParseInput(inputText, &total_seconds)) {
+                        // Convert wide char input to char for ParseInput
+                        char inputTextA[256];
+                        WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
+                        if (ParseInput(inputTextA, &total_seconds)) {
                             
                             WriteConfigDefaultStartTime(total_seconds);
                             WriteConfigStartupMode("COUNTDOWN");
@@ -1906,7 +1919,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         // Process input result
                         if (inputText[0] && !isAllSpacesOnly(inputText)) {
                             int total_seconds = 0;
-                            if (ParseInput(inputText, &total_seconds)) {
+                            // Convert wide char input to char for ParseInput
+                        char inputTextA[256];
+                        WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
+                        if (ParseInput(inputTextA, &total_seconds)) {
                                 // Update selected time
                                 POMODORO_TIMES[selectedIndex] = total_seconds;
                                 
@@ -1941,7 +1957,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             // Process input result
                             if (inputText[0] && !isAllSpacesOnly(inputText)) {
                                 int total_seconds = 0;
-                                if (ParseInput(inputText, &total_seconds)) {
+                                // Convert wide char input to char for ParseInput
+                        char inputTextA[256];
+                        WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
+                        if (ParseInput(inputTextA, &total_seconds)) {
                                     // Update selected time
                                     POMODORO_TIMES[selectedIndex] = total_seconds;
                                     
@@ -2269,10 +2288,13 @@ refresh_window:
                                          hwnd, DlgProc, (LPARAM)CLOCK_IDD_DIALOG1);
                 
                 // If the dialog has input and was confirmed
-                if (inputText[0] != '\0') {
+                if (inputText[0] != L'\0') {
                     // Check if input is valid
                     int total_seconds = 0;
-                    if (ParseInput(inputText, &total_seconds)) {
+                    // Convert wide char input to char for ParseInput
+                    char inputTextA[256];
+                    WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
+                    if (ParseInput(inputTextA, &total_seconds)) {
                         // Stop any notification sound that may be playing
                         extern void StopNotificationSound(void);
                         StopNotificationSound();
