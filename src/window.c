@@ -135,7 +135,7 @@ void SetClickThrough(HWND hwnd, BOOL enable) {
 }
 
 BOOL InitDWMFunctions() {
-    HMODULE hDwmapi = LoadLibraryA("dwmapi.dll");
+    HMODULE hDwmapi = LoadLibraryW(L"dwmapi.dll");
     if (hDwmapi) {
         _DwmEnableBlurBehindWindow = (pfnDwmEnableBlurBehindWindow)GetProcAddress(hDwmapi, "DwmEnableBlurBehindWindow");
         return _DwmEnableBlurBehindWindow != NULL;
@@ -474,13 +474,13 @@ BOOL HandleMouseMove(HWND hwnd) {
 
 HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
     // Window class registration
-    WNDCLASS wc = {0};
+    WNDCLASSW wc = {0};
     wc.lpfnWndProc = WindowProcedure;
     wc.hInstance = hInstance;
-    wc.lpszClassName = "CatimeWindow";
+    wc.lpszClassName = L"CatimeWindow";
     
-    if (!RegisterClass(&wc)) {
-        MessageBox(NULL, "Window Registration Failed!", "Error", MB_ICONEXCLAMATION | MB_OK);
+    if (!RegisterClassW(&wc)) {
+        MessageBoxW(NULL, L"Window Registration Failed!", L"Error", MB_ICONEXCLAMATION | MB_OK);
         return NULL;
     }
 
@@ -493,10 +493,10 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
     }
     
     // Create window
-    HWND hwnd = CreateWindowEx(
+    HWND hwnd = CreateWindowExW(
         exStyle,
-        "CatimeWindow",
-        "Catime",
+        L"CatimeWindow",
+        L"Catime",
         WS_POPUP,
         CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y,
         CLOCK_BASE_WINDOW_WIDTH, CLOCK_BASE_WINDOW_HEIGHT,
@@ -507,7 +507,7 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
     );
 
     if (!hwnd) {
-        MessageBox(NULL, "Window Creation Failed!", "Error", MB_ICONEXCLAMATION | MB_OK);
+        MessageBoxW(NULL, L"Window Creation Failed!", L"Error", MB_ICONEXCLAMATION | MB_OK);
         return NULL;
     }
 
@@ -560,7 +560,7 @@ BOOL InitializeApplication(HINSTANCE hInstance) {
         PROCESS_PER_MONITOR_DPI_AWARE = 2
     } PROCESS_DPI_AWARENESS;
     
-    HMODULE hUser32 = GetModuleHandleA("user32.dll");
+    HMODULE hUser32 = GetModuleHandleW(L"user32.dll");
     if (hUser32) {
         typedef BOOL(WINAPI* SetProcessDpiAwarenessContextFunc)(DPI_AWARENESS_CONTEXT);
         SetProcessDpiAwarenessContextFunc setProcessDpiAwarenessContextFunc =
@@ -572,7 +572,7 @@ BOOL InitializeApplication(HINSTANCE hInstance) {
             setProcessDpiAwarenessContextFunc(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
         } else {
             // Try using older API
-            HMODULE hShcore = LoadLibraryA("shcore.dll");
+            HMODULE hShcore = LoadLibraryW(L"shcore.dll");
             if (hShcore) {
                 typedef HRESULT(WINAPI* SetProcessDpiAwarenessFunc)(PROCESS_DPI_AWARENESS);
                 SetProcessDpiAwarenessFunc setProcessDpiAwarenessFunc =
@@ -619,17 +619,17 @@ BOOL InitializeApplication(HINSTANCE hInstance) {
     return TRUE;
 }
 
-BOOL OpenFileDialog(HWND hwnd, char* filePath, DWORD maxPath) {
-    OPENFILENAME ofn = { 0 };
-    ofn.lStructSize = sizeof(OPENFILENAME);
+BOOL OpenFileDialog(HWND hwnd, wchar_t* filePath, DWORD maxPath) {
+    OPENFILENAMEW ofn = { 0 };
+    ofn.lStructSize = sizeof(OPENFILENAMEW);
     ofn.hwndOwner = hwnd;
-    ofn.lpstrFilter = "All Files\0*.*\0";
+    ofn.lpstrFilter = L"All Files\0*.*\0";
     ofn.lpstrFile = filePath;
     ofn.nMaxFile = maxPath;
     ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
-    ofn.lpstrDefExt = "";
+    ofn.lpstrDefExt = L"";
     
-    return GetOpenFileName(&ofn);
+    return GetOpenFileNameW(&ofn);
 }
 
 // Add function to set window topmost state
@@ -675,19 +675,19 @@ void SetWindowTopmost(HWND hwnd, BOOL topmost) {
 
 void ReattachToDesktop(HWND hwnd) {
     // Set as child window of desktop (WorkerW preferred), so Win+D won't minimize it
-    HWND hProgman = FindWindow("Progman", NULL);
+    HWND hProgman = FindWindowW(L"Progman", NULL);
     HWND hDesktop = NULL;
     
     if (hProgman != NULL) {
         hDesktop = hProgman;
-        HWND hWorkerW = FindWindowEx(NULL, NULL, "WorkerW", NULL);
+        HWND hWorkerW = FindWindowExW(NULL, NULL, L"WorkerW", NULL);
         while (hWorkerW != NULL) {
-            HWND hView = FindWindowEx(hWorkerW, NULL, "SHELLDLL_DefView", NULL);
+            HWND hView = FindWindowExW(hWorkerW, NULL, L"SHELLDLL_DefView", NULL);
             if (hView != NULL) {
                 hDesktop = hWorkerW;
                 break;
             }
-            hWorkerW = FindWindowEx(NULL, hWorkerW, "WorkerW", NULL);
+            hWorkerW = FindWindowExW(NULL, hWorkerW, L"WorkerW", NULL);
         }
     }
     

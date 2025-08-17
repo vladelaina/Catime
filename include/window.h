@@ -149,7 +149,7 @@ BOOL InitializeApplication(HINSTANCE hInstance);
  * @param maxPath Maximum buffer length
  * @return BOOL Whether a file was successfully selected
  */
-BOOL OpenFileDialog(HWND hwnd, char* filePath, DWORD maxPath);
+BOOL OpenFileDialog(HWND hwnd, wchar_t* filePath, DWORD maxPath);
 
 /**
  * @brief Set window topmost state
