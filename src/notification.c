@@ -38,6 +38,8 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 void RegisterNotificationClass(HINSTANCE hInstance);
 void DrawRoundedRectangle(HDC hdc, RECT rect, int radius);
 
+
+
 /**
  * @brief Calculate the width required for text rendering
  * @param hdc Device context
@@ -56,11 +58,11 @@ int CalculateTextWidth(HDC hdc, const wchar_t* text, HFONT font) {
 /**
  * @brief Show notification (based on configured notification type)
  * @param hwnd Parent window handle, used to get application instance and calculate position
- * @param message Notification message text to display (UTF-8 encoded)
+ * @param message Notification message text to display (Unicode string)
  * 
  * Displays different styles of notifications based on the configured notification type
  */
-void ShowNotification(HWND hwnd, const char* message) {
+void ShowNotification(HWND hwnd, const wchar_t* message) {
     // Read the latest notification type configuration
     ReadNotificationTypeConfig();
     ReadNotificationDisabledConfig();
@@ -79,7 +81,16 @@ void ShowNotification(HWND hwnd, const char* message) {
             ShowModalNotification(hwnd, message);
             break;
         case NOTIFICATION_TYPE_OS:
-            ShowTrayNotification(hwnd, message);
+            // Convert Unicode to UTF-8 for ShowTrayNotification (legacy function)
+            int len = WideCharToMultiByte(CP_UTF8, 0, message, -1, NULL, 0, NULL, NULL);
+            if (len > 0) {
+                char* ansiMessage = (char*)malloc(len);
+                if (ansiMessage) {
+                    WideCharToMultiByte(CP_UTF8, 0, message, -1, ansiMessage, len, NULL, NULL);
+                    ShowTrayNotification(hwnd, ansiMessage);
+                    free(ansiMessage);
+                }
+            }
             break;
         default:
             // Default to using Catime notification window
@@ -93,7 +104,7 @@ void ShowNotification(HWND hwnd, const char* message) {
  */
 typedef struct {
     HWND hwnd;               // Parent window handle
-    char message[512];       // Message content
+    wchar_t message[512];    // Message content
 } DialogThreadParams;
 
 /**
@@ -104,23 +115,10 @@ typedef struct {
 DWORD WINAPI ShowModalDialogThread(LPVOID lpParam) {
     DialogThreadParams* params = (DialogThreadParams*)lpParam;
     
-    // Convert UTF-8 message to wide characters to support Unicode display
-    int wlen = MultiByteToWideChar(CP_UTF8, 0, params->message, -1, NULL, 0);
-    wchar_t* wmessage = (wchar_t*)malloc(wlen * sizeof(wchar_t));
-    if (!wmessage) {
-        // Memory allocation failed, display English version directly
-        MessageBoxA(params->hwnd, params->message, "Catime", MB_OK);
-        free(params);
-        return 0;
-    }
-    
-    MultiByteToWideChar(CP_UTF8, 0, params->message, -1, wmessage, wlen);
-    
-    // Display modal dialog with fixed title "Catime"
-    MessageBoxW(params->hwnd, wmessage, L"Catime", MB_OK);
+    // Display modal dialog with fixed title "Catime" - no conversion needed as message is already Unicode
+    MessageBoxW(params->hwnd, params->message, L"Catime", MB_OK);
     
     // Free allocated memory
-    free(wmessage);
     free(params);
     
     return 0;
@@ -129,19 +127,19 @@ DWORD WINAPI ShowModalDialogThread(LPVOID lpParam) {
 /**
  * @brief Display system modal dialog notification
  * @param hwnd Parent window handle
- * @param message Notification message text to display (UTF-8 encoded)
+ * @param message Notification message text to display (Unicode string)
  * 
  * Displays a modal dialog in a separate thread, which won't block the main program
  */
-void ShowModalNotification(HWND hwnd, const char* message) {
+void ShowModalNotification(HWND hwnd, const wchar_t* message) {
     // Create thread parameter structure
     DialogThreadParams* params = (DialogThreadParams*)malloc(sizeof(DialogThreadParams));
     if (!params) return;
     
     // Copy parameters
     params->hwnd = hwnd;
-    strncpy(params->message, message, sizeof(params->message) - 1);
-    params->message[sizeof(params->message) - 1] = '\0';
+    wcsncpy(params->message, message, sizeof(params->message)/sizeof(wchar_t) - 1);
+    params->message[sizeof(params->message)/sizeof(wchar_t) - 1] = L'\0';
     
     // Create new thread to display dialog
     HANDLE hThread = CreateThread(
@@ -158,7 +156,16 @@ void ShowModalNotification(HWND hwnd, const char* message) {
         free(params);
         // Fall back to non-blocking notification method
         MessageBeep(MB_OK);
-        ShowTrayNotification(hwnd, message);
+        // Convert Unicode to UTF-8 for ShowTrayNotification (legacy function)
+        int len = WideCharToMultiByte(CP_UTF8, 0, message, -1, NULL, 0, NULL, NULL);
+        if (len > 0) {
+            char* ansiMessage = (char*)malloc(len);
+            if (ansiMessage) {
+                WideCharToMultiByte(CP_UTF8, 0, message, -1, ansiMessage, len, NULL, NULL);
+                ShowTrayNotification(hwnd, ansiMessage);
+                free(ansiMessage);
+            }
+        }
         return;
     }
     
@@ -169,7 +176,7 @@ void ShowModalNotification(HWND hwnd, const char* message) {
 /**
  * @brief Display custom styled toast notification
  * @param hwnd Parent window handle, used to get application instance and calculate position
- * @param message Notification message text to display (UTF-8 encoded)
+ * @param message Notification message text to display (Unicode string)
  * 
  * Displays a custom notification window with animation effects in the bottom right corner of the screen:
  * 1. Register notification window class (if needed)
@@ -179,7 +186,7 @@ void ShowModalNotification(HWND hwnd, const char* message) {
  * 
  * Note: If creating custom notification window fails, will fall back to using system tray notification
  */
-void ShowToastNotification(HWND hwnd, const char* message) {
+void ShowToastNotification(HWND hwnd, const wchar_t* message) {
     static BOOL isClassRegistered = FALSE;
     HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
     
@@ -199,15 +206,24 @@ void ShowToastNotification(HWND hwnd, const char* message) {
         isClassRegistered = TRUE;
     }
     
-    // Convert message to wide characters to support Unicode display
-    int wlen = MultiByteToWideChar(CP_UTF8, 0, message, -1, NULL, 0);
-    wchar_t* wmessage = (wchar_t*)malloc(wlen * sizeof(wchar_t));
+    // Make a copy of the message for window properties (message is already Unicode)
+    size_t messageLen = wcslen(message) + 1;
+    wchar_t* wmessage = (wchar_t*)malloc(messageLen * sizeof(wchar_t));
     if (!wmessage) {
         // Memory allocation failed, fall back to system tray notification
-        ShowTrayNotification(hwnd, message);
+        // Convert Unicode to UTF-8 for ShowTrayNotification (legacy function)
+        int len = WideCharToMultiByte(CP_UTF8, 0, message, -1, NULL, 0, NULL, NULL);
+        if (len > 0) {
+            char* ansiMessage = (char*)malloc(len);
+            if (ansiMessage) {
+                WideCharToMultiByte(CP_UTF8, 0, message, -1, ansiMessage, len, NULL, NULL);
+                ShowTrayNotification(hwnd, ansiMessage);
+                free(ansiMessage);
+            }
+        }
         return;
     }
-    MultiByteToWideChar(CP_UTF8, 0, message, -1, wmessage, wlen);
+    wcscpy(wmessage, message);
     
     // Calculate width needed for text
     HDC hdc = GetDC(hwnd);
@@ -216,7 +232,7 @@ void ShowToastNotification(HWND hwnd, const char* message) {
                                  DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei");
     
     // Calculate text width and add margins
-    int textWidth = CalculateTextWidth(hdc, wmessage, contentFont);
+    int textWidth = CalculateTextWidth(hdc, message, contentFont);
     int notificationWidth = textWidth + 40; // 20 pixel margin on each side
     
     // Ensure width is within allowed range
@@ -249,7 +265,16 @@ void ShowToastNotification(HWND hwnd, const char* message) {
     // Fall back to system tray notification if creation fails
     if (!hNotification) {
         free(wmessage);
-        ShowTrayNotification(hwnd, message);
+        // Convert Unicode to UTF-8 for ShowTrayNotification (legacy function)
+        int len = WideCharToMultiByte(CP_UTF8, 0, message, -1, NULL, 0, NULL, NULL);
+        if (len > 0) {
+            char* ansiMessage = (char*)malloc(len);
+            if (ansiMessage) {
+                WideCharToMultiByte(CP_UTF8, 0, message, -1, ansiMessage, len, NULL, NULL);
+                ShowTrayNotification(hwnd, ansiMessage);
+                free(ansiMessage);
+            }
+        }
         return;
     }
     

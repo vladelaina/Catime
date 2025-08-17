@@ -17,32 +17,32 @@ extern int NOTIFICATION_TIMEOUT_MS;  // New: notification display time variable
 /**
  * @brief Show notification (based on configured notification type)
  * @param hwnd Parent window handle, used to get application instance and calculate position
- * @param message Notification message text to display (UTF-8 encoded)
+ * @param message Notification message text to display (Unicode string)
  * 
  * Displays different styles of notifications based on the configured notification type:
  * - NOTIFICATION_TYPE_CATIME: Uses Catime custom notification window
  * - NOTIFICATION_TYPE_SYSTEM_MODAL: Uses system modal dialog
  * - NOTIFICATION_TYPE_OS: Uses system tray notification
  */
-void ShowNotification(HWND hwnd, const char* message);
+void ShowNotification(HWND hwnd, const wchar_t* message);
 
 /**
  * @brief Display custom styled toast notification
  * @param hwnd Parent window handle, used to get application instance and calculate position
- * @param message Notification message text to display (UTF-8 encoded)
+ * @param message Notification message text to display (Unicode string)
  * 
  * Displays a custom notification window with animation effects in the bottom right corner of the screen
  */
-void ShowToastNotification(HWND hwnd, const char* message);
+void ShowToastNotification(HWND hwnd, const wchar_t* message);
 
 /**
  * @brief Display system modal dialog notification
  * @param hwnd Parent window handle
- * @param message Notification message text to display (UTF-8 encoded)
+ * @param message Notification message text to display (Unicode string)
  * 
  * Displays a blocking system message box notification
  */
-void ShowModalNotification(HWND hwnd, const char* message);
+void ShowModalNotification(HWND hwnd, const wchar_t* message);
 
 /**
  * @brief Close all currently displayed Catime notification windows

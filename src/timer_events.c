@@ -34,7 +34,7 @@ POMODORO_PHASE current_pomodoro_phase = POMODORO_PHASE_IDLE;
 int complete_pomodoro_cycles = 0;
 
 // Function declarations imported from main.c
-extern void ShowNotification(HWND hwnd, const char* message);
+extern void ShowNotification(HWND hwnd, const wchar_t* message);
 
 // Variable declarations imported from main.c, for timeout actions
 extern int elapsed_time;
@@ -66,7 +66,6 @@ extern PomodoroState g_pomodoroState;
 
 // Timer behavior function declarations
 extern void ShowTrayNotification(HWND hwnd, const char* message);
-extern void ShowNotification(HWND hwnd, const char* message);
 extern void OpenFileByPath(const char* filePath);
 extern void OpenWebsite(const char* url);
 extern void SleepComputer(void);
@@ -107,9 +106,9 @@ static wchar_t* Utf8ToWideChar(const char* utf8String) {
 }
 
 /**
- * @brief Convert wide character string to UTF-8 encoded regular string and display notification
+ * @brief Display notification with Unicode message
  * @param hwnd Window handle
- * @param message Wide character string message to display (read from configuration and converted)
+ * @param message Unicode message to display
  */
 static void ShowLocalizedNotification(HWND hwnd, const wchar_t* message) {
     // Don't display if message is empty
@@ -117,32 +116,16 @@ static void ShowLocalizedNotification(HWND hwnd, const wchar_t* message) {
         return;
     }
 
-    // Calculate required buffer size
-    int size_needed = WideCharToMultiByte(CP_UTF8, 0, message, -1, NULL, 0, NULL, NULL);
-    if (size_needed == 0) return; // Conversion failed
-
-    // Allocate memory
-    char* utf8Msg = (char*)malloc(size_needed);
-    if (utf8Msg) {
-        // Convert to UTF-8
-        int result = WideCharToMultiByte(CP_UTF8, 0, message, -1, utf8Msg, size_needed, NULL, NULL);
-
-        if (result > 0) {
-            // Display notification using the new ShowNotification function
-            ShowNotification(hwnd, utf8Msg);
+    // Display notification directly with Unicode message
+    ShowNotification(hwnd, message);
             
-            // If timeout action is MESSAGE, play notification audio
-            if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_MESSAGE) {
-                // Read the latest audio settings
-                ReadNotificationSoundConfig();
-                
-                // Play notification audio
-                PlayNotificationSound(hwnd);
-            }
-        }
-
-        // Free memory
-        free(utf8Msg);
+    // If timeout action is MESSAGE, play notification audio
+    if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_MESSAGE) {
+        // Read the latest audio settings
+        ReadNotificationSoundConfig();
+        
+        // Play notification audio
+        PlayNotificationSound(hwnd);
     }
 }
 
@@ -554,24 +537,29 @@ void OnTimerTimeout(HWND hwnd) {
     // Execute different behaviors based on timeout action
     switch (CLOCK_TIMEOUT_ACTION) {
         case TIMEOUT_ACTION_MESSAGE: {
-            char utf8Msg[256] = {0};
+            wchar_t unicodeMsg[256] = {0};
+            const char* utf8Message = NULL;
             
             // Select different prompt messages based on current state
             if (g_clockState == CLOCK_STATE_POMODORO) {
                 // Check if Pomodoro has completed all cycles
                 if (g_pomodoroState.isLastCycle && g_pomodoroState.cycleIndex >= g_pomodoroState.totalCycles - 1) {
-                    strncpy(utf8Msg, POMODORO_CYCLE_COMPLETE_TEXT, sizeof(utf8Msg) - 1);
+                    utf8Message = POMODORO_CYCLE_COMPLETE_TEXT;
                 } else {
-                    strncpy(utf8Msg, POMODORO_TIMEOUT_MESSAGE_TEXT, sizeof(utf8Msg) - 1);
+                    utf8Message = POMODORO_TIMEOUT_MESSAGE_TEXT;
                 }
             } else {
-                strncpy(utf8Msg, CLOCK_TIMEOUT_MESSAGE_TEXT, sizeof(utf8Msg) - 1);
+                utf8Message = CLOCK_TIMEOUT_MESSAGE_TEXT;
             }
             
-            utf8Msg[sizeof(utf8Msg) - 1] = '\0'; // Ensure string ends with null character
-            
-            // Display custom prompt message
-            ShowNotification(hwnd, utf8Msg);
+            // Convert UTF-8 to Unicode and display
+            if (utf8Message && utf8Message[0] != '\0') {
+                int len = MultiByteToWideChar(CP_UTF8, 0, utf8Message, -1, unicodeMsg, 
+                                            sizeof(unicodeMsg)/sizeof(wchar_t));
+                if (len > 0) {
+                    ShowNotification(hwnd, unicodeMsg);
+                }
+            }
             
             // Read latest audio settings and play alert sound
             ReadNotificationSoundConfig();

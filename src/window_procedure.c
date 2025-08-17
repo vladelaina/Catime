@@ -50,7 +50,7 @@ extern int elapsed_time;
 extern int message_shown;
 
 // Function declarations imported from main.c
-extern void ShowNotification(HWND hwnd, const char* message);
+extern void ShowNotification(HWND hwnd, const wchar_t* message);
 extern void PauseMediaPlayback(void);
 
 // Add these external variable declarations at the beginning of the file
