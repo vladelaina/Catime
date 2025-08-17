@@ -671,7 +671,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     }
                     while (1) {
                         memset(inputText, 0, sizeof(inputText));
-                        DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), hwnd, DlgProc, (LPARAM)CLOCK_IDD_DIALOG1);
+                        DialogBoxParamW(GetModuleHandle(NULL), MAKEINTRESOURCEW(CLOCK_IDD_DIALOG1), hwnd, DlgProc, (LPARAM)CLOCK_IDD_DIALOG1);
 
                         if (inputText[0] == L'\0') {
                             break;
@@ -690,7 +690,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         }
 
                         int total_seconds = 0;
-                        // Convert wide char input to char for ParseInput
+                        // Convert Unicode to ANSI for ParseInput
                         char inputTextA[256];
                         WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
                         if (ParseInput(inputTextA, &total_seconds)) {
@@ -817,7 +817,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDC_MODIFY_TIME_OPTIONS: {
                     while (1) {
                         memset(inputText, 0, sizeof(inputText));
-                        DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_SHORTCUT_DIALOG), NULL, DlgProc, (LPARAM)CLOCK_IDD_SHORTCUT_DIALOG);
+                        DialogBoxParamW(GetModuleHandle(NULL), MAKEINTRESOURCEW(CLOCK_IDD_SHORTCUT_DIALOG), NULL, DlgProc, (LPARAM)CLOCK_IDD_SHORTCUT_DIALOG);
 
                         // Check if input is empty or contains only spaces
                         BOOL isAllSpaces = TRUE;
@@ -880,7 +880,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDC_MODIFY_DEFAULT_TIME: {
                     while (1) {
                         memset(inputText, 0, sizeof(inputText));
-                        DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_STARTUP_DIALOG), NULL, DlgProc, (LPARAM)CLOCK_IDD_STARTUP_DIALOG);
+                        DialogBoxParamW(GetModuleHandle(NULL), MAKEINTRESOURCEW(CLOCK_IDD_STARTUP_DIALOG), NULL, DlgProc, (LPARAM)CLOCK_IDD_STARTUP_DIALOG);
 
                         if (inputText[0] == L'\0') {
                             break;
@@ -899,7 +899,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         }
 
                         int total_seconds = 0;
-                        // Convert wide char input to char for ParseInput
+                        // Convert Unicode to ANSI for ParseInput
                         char inputTextA[256];
                         WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
                         if (ParseInput(inputTextA, &total_seconds)) {
@@ -1733,7 +1733,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     while (1) {
                         memset(inputText, 0, sizeof(inputText));
                         // Use a special parameter to indicate this is startup settings dialog
-                        DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), hwnd, DlgProc, (LPARAM)CLOCK_IDD_STARTUP_DIALOG);
+                        DialogBoxParamW(GetModuleHandle(NULL), MAKEINTRESOURCEW(CLOCK_IDD_DIALOG1), hwnd, DlgProc, (LPARAM)CLOCK_IDD_STARTUP_DIALOG);
 
                         if (inputText[0] == L'\0') {
                             
@@ -1752,7 +1752,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         }
 
                         int total_seconds = 0;
-                        // Convert wide char input to char for ParseInput
+                        // Convert Unicode to ANSI for ParseInput
                         char inputTextA[256];
                         WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
                         if (ParseInput(inputTextA, &total_seconds)) {
@@ -1839,8 +1839,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDC_COLOR_VALUE: {
-                    DialogBox(GetModuleHandle(NULL), 
-                             MAKEINTRESOURCE(CLOCK_IDD_COLOR_DIALOG), 
+                    DialogBoxW(GetModuleHandle(NULL), 
+                             MAKEINTRESOURCEW(CLOCK_IDD_COLOR_DIALOG), 
                              hwnd, 
                              (DLGPROC)ColorDlgProc);
                     break;
@@ -1912,14 +1912,14 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         
                         // Use a common dialog to modify Pomodoro time
                         memset(inputText, 0, sizeof(inputText));
-                        DialogBoxParam(GetModuleHandle(NULL), 
-                                 MAKEINTRESOURCE(CLOCK_IDD_POMODORO_TIME_DIALOG),
+                        DialogBoxParamW(GetModuleHandle(NULL), 
+                                 MAKEINTRESOURCEW(CLOCK_IDD_POMODORO_TIME_DIALOG),
                                  hwnd, DlgProc, (LPARAM)CLOCK_IDD_POMODORO_TIME_DIALOG);
                         
                         // Process input result
                         if (inputText[0] && !isAllSpacesOnly(inputText)) {
                             int total_seconds = 0;
-                            // Convert wide char input to char for ParseInput
+                            // Convert Unicode to ANSI for ParseInput
                         char inputTextA[256];
                         WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
                         if (ParseInput(inputTextA, &total_seconds)) {
@@ -1950,14 +1950,14 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         if (selectedIndex >= 0 && selectedIndex < POMODORO_TIMES_COUNT) {
                             // Use a common dialog to modify Pomodoro time
                             memset(inputText, 0, sizeof(inputText));
-                            DialogBoxParam(GetModuleHandle(NULL), 
-                                     MAKEINTRESOURCE(CLOCK_IDD_POMODORO_TIME_DIALOG),
+                            DialogBoxParamW(GetModuleHandle(NULL), 
+                                     MAKEINTRESOURCEW(CLOCK_IDD_POMODORO_TIME_DIALOG),
                                      hwnd, DlgProc, (LPARAM)CLOCK_IDD_POMODORO_TIME_DIALOG);
                             
                             // Process input result
                             if (inputText[0] && !isAllSpacesOnly(inputText)) {
                                 int total_seconds = 0;
-                                // Convert wide char input to char for ParseInput
+                                // Convert Unicode to ANSI for ParseInput
                         char inputTextA[256];
                         WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
                         if (ParseInput(inputTextA, &total_seconds)) {
@@ -2283,15 +2283,15 @@ refresh_window:
                 memset(inputText, 0, sizeof(inputText));
                 
                 // Show input dialog
-                INT_PTR result = DialogBoxParam(GetModuleHandle(NULL), 
-                                         MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), 
+                INT_PTR result = DialogBoxParamW(GetModuleHandle(NULL), 
+                                         MAKEINTRESOURCEW(CLOCK_IDD_DIALOG1), 
                                          hwnd, DlgProc, (LPARAM)CLOCK_IDD_DIALOG1);
                 
                 // If the dialog has input and was confirmed
                 if (inputText[0] != L'\0') {
-                    // Check if input is valid
+                                        // Check if input is valid
                     int total_seconds = 0;
-                    // Convert wide char input to char for ParseInput
+                    // Convert Unicode to ANSI for ParseInput
                     char inputTextA[256];
                     WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
                     if (ParseInput(inputTextA, &total_seconds)) {
@@ -2389,10 +2389,10 @@ extern int CLOCK_TOTAL_TIME;
 void RemoveMenuItems(HMENU hMenu, int count);
 
 // Add menu item
-void AddMenuItem(HMENU hMenu, UINT id, const char* text, BOOL isEnabled);
+void AddMenuItem(HMENU hMenu, UINT id, const wchar_t* text, BOOL isEnabled);
 
 // Modify menu item text
-void ModifyMenuItemText(HMENU hMenu, UINT id, const char* text);
+void ModifyMenuItemText(HMENU hMenu, UINT id, const wchar_t* text);
 
 /**
  * @brief Toggle show current time mode
