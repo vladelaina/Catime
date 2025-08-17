@@ -2541,6 +2541,14 @@ void ToggleEditMode(HWND hwnd) {
         // If it was not topmost before, restore to non-topmost
         if (!PREVIOUS_TOPMOST_STATE) {
             SetWindowTopmost(hwnd, FALSE);
+            
+            // Force redraw and schedule a delayed re-assertion to ensure visibility
+            // This follows the same pattern used for topmost toggle
+            InvalidateRect(hwnd, NULL, TRUE);
+            RedrawWindow(hwnd, NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW);
+            KillTimer(hwnd, 1002);
+            SetTimer(hwnd, 1002, 150, NULL);
+            return; // Early return to avoid duplicate InvalidateRect call
         }
         
         // Save window settings and color settings

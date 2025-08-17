@@ -62,11 +62,18 @@ void EndEditMode(HWND hwnd) {
         // If previously not in topmost state, restore to non-topmost
         if (!PREVIOUS_TOPMOST_STATE) {
             SetWindowTopmost(hwnd, FALSE);
+            
+            // Force redraw and schedule a delayed re-assertion to ensure visibility
+            // This follows the same pattern used in window_procedure.c for topmost toggle
+            InvalidateRect(hwnd, NULL, TRUE);
+            RedrawWindow(hwnd, NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW);
+            KillTimer(hwnd, 1002);
+            SetTimer(hwnd, 1002, 150, NULL);
+        } else {
+            // If restoring to topmost state, just refresh normally
+            InvalidateRect(hwnd, NULL, TRUE);
+            UpdateWindow(hwnd);  // Ensure immediate refresh
         }
-        
-        // Refresh window, add immediate update
-        InvalidateRect(hwnd, NULL, TRUE);
-        UpdateWindow(hwnd);  // Ensure immediate refresh
     }
 }
 
