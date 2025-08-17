@@ -671,7 +671,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     }
                     while (1) {
                         memset(inputText, 0, sizeof(inputText));
-                        DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc, (LPARAM)CLOCK_IDD_DIALOG1);
+                        DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), hwnd, DlgProc, (LPARAM)CLOCK_IDD_DIALOG1);
 
                         if (inputText[0] == '\0') {
                             break;
@@ -1723,7 +1723,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     while (1) {
                         memset(inputText, 0, sizeof(inputText));
                         // Use a special parameter to indicate this is startup settings dialog
-                        DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), NULL, DlgProc, (LPARAM)CLOCK_IDD_STARTUP_DIALOG);
+                        DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(CLOCK_IDD_DIALOG1), hwnd, DlgProc, (LPARAM)CLOCK_IDD_STARTUP_DIALOG);
 
                         if (inputText[0] == '\0') {
                             
