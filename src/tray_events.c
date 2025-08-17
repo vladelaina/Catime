@@ -35,7 +35,7 @@ extern void ReadTimeoutActionFromConfig(void);
  */
 void HandleTrayIconMessage(HWND hwnd, UINT uID, UINT uMouseMsg) {
     // Set default cursor to prevent wait cursor display
-    SetCursor(LoadCursor(NULL, IDC_ARROW));
+    SetCursor(LoadCursorW(NULL, MAKEINTRESOURCEW(IDC_ARROW)));
     
     if (uMouseMsg == WM_RBUTTONUP) {
         ShowColorMenu(hwnd);
