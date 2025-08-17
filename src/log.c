@@ -23,7 +23,7 @@
 #endif
 
 // Log file path
-static char LOG_FILE_PATH[MAX_PATH] = {0};
+static wchar_t LOG_FILE_PATH[MAX_PATH] = {0};
 static FILE* logFile = NULL;
 static CRITICAL_SECTION logCS;
 
@@ -75,7 +75,7 @@ static void LogSystemInformation(void) {
         
         typedef LONG (WINAPI* PRTLGETVERSION)(OSVERSIONINFOEXW*);
         PRTLGETVERSION pRtlGetVersion;
-        pRtlGetVersion = (PRTLGETVERSION)GetProcAddress(GetModuleHandle(TEXT("ntdll.dll")), "RtlGetVersion");
+        pRtlGetVersion = (PRTLGETVERSION)GetProcAddress(GetModuleHandle(L"ntdll.dll"), "RtlGetVersion");
         
         if (pRtlGetVersion) {
             pRtlGetVersion((OSVERSIONINFOEXW*)&osvi);
@@ -85,8 +85,8 @@ static void LogSystemInformation(void) {
             isWorkstation = (osvi.wProductType == VER_NT_WORKSTATION);
             isServer = !isWorkstation;
         } else {
-            // Finally try using GetVersionExA, although it may not be accurate
-            if (GetVersionExA((OSVERSIONINFOA*)&osvi)) {
+            // Finally try using GetVersionEx, although it may not be accurate
+            if (GetVersionEx((OSVERSIONINFO*)&osvi)) {
                 major = osvi.dwMajorVersion;
                 minor = osvi.dwMinorVersion;
                 build = osvi.dwBuildNumber;
@@ -203,25 +203,29 @@ static void LogSystemInformation(void) {
  * @param logPath Log path buffer
  * @param size Buffer size
  */
-static void GetLogFilePath(char* logPath, size_t size) {
+static void GetLogFilePath(wchar_t* logPath, size_t size) {
     char configPath[MAX_PATH] = {0};
     
-    // Get directory containing config file
+    // Get directory containing config file (still UTF-8)
     GetConfigPath(configPath, MAX_PATH);
     
+    // Convert config path to Unicode
+    wchar_t configPathW[MAX_PATH] = {0};
+    MultiByteToWideChar(CP_UTF8, 0, configPath, -1, configPathW, MAX_PATH);
+    
     // Determine config file directory
-    char* lastSeparator = strrchr(configPath, '\\');
+    wchar_t* lastSeparator = wcsrchr(configPathW, L'\\');
     if (lastSeparator) {
-        size_t dirLen = lastSeparator - configPath + 1;
+        size_t dirLen = lastSeparator - configPathW + 1;
         
         // Copy directory part
-        strncpy(logPath, configPath, dirLen);
+        wcsncpy(logPath, configPathW, dirLen);
         
         // Use simple log filename
-        _snprintf_s(logPath + dirLen, size - dirLen, _TRUNCATE, "Catime_Logs.log");
+        _snwprintf_s(logPath + dirLen, size - dirLen, _TRUNCATE, L"Catime_Logs.log");
     } else {
         // If config directory can't be determined, use current directory
-        _snprintf_s(logPath, size, _TRUNCATE, "Catime_Logs.log");
+        _snwprintf_s(logPath, size, _TRUNCATE, L"Catime_Logs.log");
     }
 }
 
@@ -231,7 +235,7 @@ BOOL InitializeLogSystem(void) {
     GetLogFilePath(LOG_FILE_PATH, MAX_PATH);
     
     // Open file in write mode each startup, which clears existing content
-    logFile = fopen(LOG_FILE_PATH, "w");
+    logFile = _wfopen(LOG_FILE_PATH, L"w");
     if (!logFile) {
         // Failed to create log file
         return FALSE;
@@ -289,24 +293,25 @@ void GetLastErrorDescription(DWORD errorCode, char* buffer, int bufferSize) {
         return;
     }
     
-    LPSTR messageBuffer = NULL;
-    DWORD size = FormatMessageA(
+    LPWSTR messageBuffer = NULL;
+    DWORD size = FormatMessage(
         FORMAT_MESSAGE_ALLOCATE_BUFFER | 
         FORMAT_MESSAGE_FROM_SYSTEM |
         FORMAT_MESSAGE_IGNORE_INSERTS,
         NULL,
         errorCode,
         MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        (LPSTR)&messageBuffer,
+        (LPWSTR)&messageBuffer,
         0, NULL);
     
     if (size > 0) {
         // Remove trailing newlines
-        if (size >= 2 && messageBuffer[size-2] == '\r' && messageBuffer[size-1] == '\n') {
-            messageBuffer[size-2] = '\0';
+        if (size >= 2 && messageBuffer[size-2] == L'\r' && messageBuffer[size-1] == L'\n') {
+            messageBuffer[size-2] = L'\0';
         }
         
-        strncpy_s(buffer, bufferSize, messageBuffer, _TRUNCATE);
+        // Convert Unicode message to UTF-8 for output buffer
+        WideCharToMultiByte(CP_UTF8, 0, messageBuffer, -1, buffer, bufferSize, NULL, NULL);
         LocalFree(messageBuffer);
     } else {
         _snprintf_s(buffer, bufferSize, _TRUNCATE, "Unknown error (code: %lu)", errorCode);
