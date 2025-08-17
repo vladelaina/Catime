@@ -16,7 +16,7 @@ UINT WM_TASKBARCREATED = 0;
  * @brief Register the TaskbarCreated message
  */
 void RegisterTaskbarCreatedMessage() {
-    WM_TASKBARCREATED = RegisterWindowMessage(TEXT("TaskbarCreated"));
+    WM_TASKBARCREATED = RegisterWindowMessageW(L"TaskbarCreated");
 }
 
 /**
@@ -29,7 +29,7 @@ void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
     nid.cbSize = sizeof(nid);
     nid.uID = CLOCK_ID_TRAY_APP_ICON;
     nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
-    nid.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_CATIME));
+    nid.hIcon = LoadIconW(hInstance, MAKEINTRESOURCEW(IDI_CATIME));
     nid.hWnd = hwnd;
     nid.uCallbackMessage = CLOCK_WM_TRAYICON;
     
