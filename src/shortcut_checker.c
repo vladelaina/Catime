@@ -20,7 +20,7 @@
 // Import required COM interfaces
 #include <shobjidl.h>
 
-// We don't need to manually define IID_IShellLinkA, it's already defined in system headers
+// We don't need to manually define IID_IShellLinkW, it's already defined in system headers
 
 /**
  * @brief Check if a string starts with a specified prefix
@@ -60,10 +60,14 @@ static bool Contains(const char* str, const char* substring) {
  */
 static bool IsStoreOrWingetInstall(char* exe_path, size_t path_size) {
     // Get program path
-    if (GetModuleFileNameA(NULL, exe_path, path_size) == 0) {
+    wchar_t exe_path_w[MAX_PATH];
+    if (GetModuleFileNameW(NULL, exe_path_w, MAX_PATH) == 0) {
         LOG_ERROR("Failed to get program path");
         return false;
     }
+    
+    // Convert to UTF-8
+    WideCharToMultiByte(CP_UTF8, 0, exe_path_w, -1, exe_path, path_size, NULL, NULL);
     
     LOG_DEBUG("Checking program path: %s", exe_path);
     
@@ -114,24 +118,28 @@ static int CheckShortcutTarget(const char* exe_path, char* shortcut_path_out, si
     char shortcut_path[MAX_PATH];
     char link_target[MAX_PATH];
     HRESULT hr;
-    IShellLinkA* psl = NULL;
+    IShellLinkW* psl = NULL;
     IPersistFile* ppf = NULL;
-    WIN32_FIND_DATAA find_data;
+    WIN32_FIND_DATAW find_data;
     int result = 0;
     
     // Get user desktop path
-    hr = SHGetFolderPathA(NULL, CSIDL_DESKTOP, NULL, 0, desktop_path);
+    wchar_t desktop_path_w[MAX_PATH];
+    hr = SHGetFolderPathW(NULL, CSIDL_DESKTOP, NULL, 0, desktop_path_w);
     if (FAILED(hr)) {
         LOG_ERROR("Failed to get desktop path, hr=0x%08X", (unsigned int)hr);
         return 0;
     }
+    WideCharToMultiByte(CP_UTF8, 0, desktop_path_w, -1, desktop_path, MAX_PATH, NULL, NULL);
     LOG_DEBUG("User desktop path: %s", desktop_path);
     
     // Get public desktop path
-    hr = SHGetFolderPathA(NULL, CSIDL_COMMON_DESKTOPDIRECTORY, NULL, 0, public_desktop_path);
+    wchar_t public_desktop_path_w[MAX_PATH];
+    hr = SHGetFolderPathW(NULL, CSIDL_COMMON_DESKTOPDIRECTORY, NULL, 0, public_desktop_path_w);
     if (FAILED(hr)) {
         LOG_WARNING("Failed to get public desktop path, hr=0x%08X", (unsigned int)hr);
     } else {
+        WideCharToMultiByte(CP_UTF8, 0, public_desktop_path_w, -1, public_desktop_path, MAX_PATH, NULL, NULL);
         LOG_DEBUG("Public desktop path: %s", public_desktop_path);
     }
     
@@ -140,14 +148,17 @@ static int CheckShortcutTarget(const char* exe_path, char* shortcut_path_out, si
     LOG_DEBUG("Checking user desktop shortcut: %s", shortcut_path);
     
     // Check if the user desktop shortcut file exists
-    bool file_exists = (GetFileAttributesA(shortcut_path) != INVALID_FILE_ATTRIBUTES);
+    wchar_t shortcut_path_w[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, shortcut_path, -1, shortcut_path_w, MAX_PATH);
+    bool file_exists = (GetFileAttributesW(shortcut_path_w) != INVALID_FILE_ATTRIBUTES);
     
     // If not found on user desktop, check public desktop
     if (!file_exists && SUCCEEDED(hr)) {
         snprintf(shortcut_path, sizeof(shortcut_path), "%s\\Catime.lnk", public_desktop_path);
         LOG_DEBUG("Checking public desktop shortcut: %s", shortcut_path);
         
-        file_exists = (GetFileAttributesA(shortcut_path) != INVALID_FILE_ATTRIBUTES);
+        MultiByteToWideChar(CP_UTF8, 0, shortcut_path, -1, shortcut_path_w, MAX_PATH);
+        file_exists = (GetFileAttributesW(shortcut_path_w) != INVALID_FILE_ATTRIBUTES);
     }
     
     // If no shortcut file is found, return 0 directly
@@ -164,7 +175,7 @@ static int CheckShortcutTarget(const char* exe_path, char* shortcut_path_out, si
     
     // Found shortcut file, get its target
     hr = CoCreateInstance(&CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER,
-                          &IID_IShellLinkA, (void**)&psl);
+                          &IID_IShellLinkW, (void**)&psl);
     if (FAILED(hr)) {
         LOG_ERROR("Failed to create IShellLink interface, hr=0x%08X", (unsigned int)hr);
         return 0;
@@ -178,12 +189,8 @@ static int CheckShortcutTarget(const char* exe_path, char* shortcut_path_out, si
         return 0;
     }
     
-    // Convert to wide character
-    WCHAR wide_path[MAX_PATH];
-    MultiByteToWideChar(CP_ACP, 0, shortcut_path, -1, wide_path, MAX_PATH);
-    
-    // Load shortcut
-    hr = ppf->lpVtbl->Load(ppf, wide_path, STGM_READ);
+    // Load shortcut (shortcut_path_w is already converted above)
+    hr = ppf->lpVtbl->Load(ppf, shortcut_path_w, STGM_READ);
     if (FAILED(hr)) {
         LOG_ERROR("Failed to load shortcut, hr=0x%08X", (unsigned int)hr);
         ppf->lpVtbl->Release(ppf);
@@ -192,11 +199,15 @@ static int CheckShortcutTarget(const char* exe_path, char* shortcut_path_out, si
     }
     
     // Get shortcut target path
-    hr = psl->lpVtbl->GetPath(psl, link_target, MAX_PATH, &find_data, 0);
+    wchar_t link_target_w[MAX_PATH];
+    hr = psl->lpVtbl->GetPath(psl, link_target_w, MAX_PATH, &find_data, 0);
     if (FAILED(hr)) {
         LOG_ERROR("Failed to get shortcut target path, hr=0x%08X", (unsigned int)hr);
         result = 0;
     } else {
+        // Convert target path to UTF-8
+        WideCharToMultiByte(CP_UTF8, 0, link_target_w, -1, link_target, MAX_PATH, NULL, NULL);
+        
         LOG_DEBUG("Shortcut target path: %s", link_target);
         LOG_DEBUG("Current program path: %s", exe_path);
         
@@ -235,7 +246,7 @@ static bool CreateOrUpdateDesktopShortcut(const char* exe_path, const char* exis
     char shortcut_path[MAX_PATH];
     char icon_path[MAX_PATH];
     HRESULT hr;
-    IShellLinkA* psl = NULL;
+    IShellLinkW* psl = NULL;
     IPersistFile* ppf = NULL;
     bool success = false;
     
@@ -247,11 +258,13 @@ static bool CreateOrUpdateDesktopShortcut(const char* exe_path, const char* exis
         LOG_INFO("Starting to create desktop shortcut, program path: %s", exe_path);
         
         // Get desktop path
-        hr = SHGetFolderPathA(NULL, CSIDL_DESKTOP, NULL, 0, desktop_path);
+        wchar_t desktop_path_w[MAX_PATH];
+        hr = SHGetFolderPathW(NULL, CSIDL_DESKTOP, NULL, 0, desktop_path_w);
         if (FAILED(hr)) {
             LOG_ERROR("Failed to get desktop path, hr=0x%08X", (unsigned int)hr);
             return false;
         }
+        WideCharToMultiByte(CP_UTF8, 0, desktop_path_w, -1, desktop_path, MAX_PATH, NULL, NULL);
         LOG_DEBUG("Desktop path: %s", desktop_path);
         
         // Build complete shortcut path
@@ -265,14 +278,18 @@ static bool CreateOrUpdateDesktopShortcut(const char* exe_path, const char* exis
     
     // Create IShellLink interface
     hr = CoCreateInstance(&CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER,
-                          &IID_IShellLinkA, (void**)&psl);
+                          &IID_IShellLinkW, (void**)&psl);
     if (FAILED(hr)) {
         LOG_ERROR("Failed to create IShellLink interface, hr=0x%08X", (unsigned int)hr);
         return false;
     }
     
+    // Convert paths to Unicode
+    wchar_t exe_path_w[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, exe_path, -1, exe_path_w, MAX_PATH);
+    
     // Set target path
-    hr = psl->lpVtbl->SetPath(psl, exe_path);
+    hr = psl->lpVtbl->SetPath(psl, exe_path_w);
     if (FAILED(hr)) {
         LOG_ERROR("Failed to set shortcut target path, hr=0x%08X", (unsigned int)hr);
         psl->lpVtbl->Release(psl);
@@ -288,19 +305,23 @@ static bool CreateOrUpdateDesktopShortcut(const char* exe_path, const char* exis
     }
     LOG_DEBUG("Working directory: %s", work_dir);
     
-    hr = psl->lpVtbl->SetWorkingDirectory(psl, work_dir);
+    wchar_t work_dir_w[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, work_dir, -1, work_dir_w, MAX_PATH);
+    hr = psl->lpVtbl->SetWorkingDirectory(psl, work_dir_w);
     if (FAILED(hr)) {
         LOG_ERROR("Failed to set working directory, hr=0x%08X", (unsigned int)hr);
     }
     
     // Set icon
-    hr = psl->lpVtbl->SetIconLocation(psl, icon_path, 0);
+    wchar_t icon_path_w[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, icon_path, -1, icon_path_w, MAX_PATH);
+    hr = psl->lpVtbl->SetIconLocation(psl, icon_path_w, 0);
     if (FAILED(hr)) {
         LOG_ERROR("Failed to set icon, hr=0x%08X", (unsigned int)hr);
     }
     
     // Set description
-    hr = psl->lpVtbl->SetDescription(psl, "A very useful timer (Pomodoro Clock)");
+    hr = psl->lpVtbl->SetDescription(psl, L"A very useful timer (Pomodoro Clock)");
     if (FAILED(hr)) {
         LOG_ERROR("Failed to set description, hr=0x%08X", (unsigned int)hr);
     }
@@ -370,11 +391,13 @@ int CheckAndCreateShortcut(void) {
     LOG_DEBUG("Configuration path: %s, already checked: %d", config_path, shortcut_check_done);
     
     // Get current program path
-    if (GetModuleFileNameA(NULL, exe_path, MAX_PATH) == 0) {
+    wchar_t exe_path_w[MAX_PATH];
+    if (GetModuleFileNameW(NULL, exe_path_w, MAX_PATH) == 0) {
         LOG_ERROR("Failed to get program path");
         CoUninitialize();
         return 1;
     }
+    WideCharToMultiByte(CP_UTF8, 0, exe_path_w, -1, exe_path, MAX_PATH, NULL, NULL);
     LOG_DEBUG("Program path: %s", exe_path);
     
     // Check if it's an App Store or WinGet installation (only affects the behavior of creating new shortcuts)
