@@ -16,7 +16,7 @@
 #   ./build.sh Release ./dist     # Release build in 'dist' directory
 #   ./build.sh Debug ../output    # Debug build in '../output' directory
 
-set -e  # Exit on any error
+# set -e  # Disabled to allow proper error handling
 
 # Colors for output
 RED='\033[0;31m'
@@ -219,6 +219,38 @@ cmake .. \
     -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
     -DCATIME_OUTPUT_DIR="$OUTPUT_DIR" \
     > cmake_config.log 2>&1
+
+CMAKE_RESULT=$?
+if [ $CMAKE_RESULT -ne 0 ]; then
+    echo ""
+    echo -e "${RED}✗ CMake配置失败！${NC}"
+    echo ""
+    echo -e "${YELLOW}配置错误信息:${NC}"
+    echo -e "${CYAN}─────────────────────────────────────────────────────────────${NC}"
+    
+    # Try to show relevant error lines first, fallback to full log
+    ERROR_LINES=$(grep -E "(error|Error|ERROR|failed|Failed|FAILED|CMake Error|错误)" cmake_config.log 2>/dev/null)
+    if [ -n "$ERROR_LINES" ]; then
+        echo "$ERROR_LINES"
+    else
+        echo -e "${YELLOW}未找到明确的错误信息，显示完整配置日志:${NC}"
+        echo ""
+        cat cmake_config.log
+    fi
+    
+    echo -e "${CYAN}─────────────────────────────────────────────────────────────${NC}"
+    echo ""
+    echo -e "${YELLOW}完整的配置日志已保存到: ${CYAN}$(pwd)/cmake_config.log${NC}"
+    echo ""
+    echo -e "${PURPLE}常见解决方案:${NC}"
+    echo -e "  • 检查MinGW工具链: ${CYAN}x86_64-w64-mingw32-gcc --version${NC}"
+    echo -e "  • 检查CMake版本: ${CYAN}cmake --version${NC}"
+    echo -e "  • 清理重试: ${CYAN}rm -rf $(pwd) && ./build.sh${NC}"
+    echo ""
+    cd ..
+    exit 1
+fi
+
 show_progress 100 100 "Configuring project... ✓"
 echo ""
 
@@ -232,41 +264,142 @@ echo ""
 # Step 3: Build with progress monitoring
 show_progress 0 100 "Compiling source files..."
 
-# Build in background and monitor progress
+# Build in background and capture output
 cmake --build . --config "$BUILD_TYPE" -j$(nproc) > build.log 2>&1 &
 BUILD_PID=$!
 
-# Monitor build progress
+# Monitor build progress with timeout
 CURRENT_FILE=0
+TIMEOUT_COUNT=0
+MAX_TIMEOUT=600  # 10 minutes timeout
+LAST_UPDATE_TIME=$(date +%s)
+
 while kill -0 $BUILD_PID 2>/dev/null; do
     # Count compiled object files
     COMPILED=$(find . -name "*.obj" 2>/dev/null | wc -l)
+    CURRENT_TIME=$(date +%s)
+    
     if [ $COMPILED -gt $CURRENT_FILE ]; then
         CURRENT_FILE=$COMPILED
+        LAST_UPDATE_TIME=$CURRENT_TIME
         if [ $CURRENT_FILE -le $TOTAL_FILES ]; then
             show_progress $CURRENT_FILE $TOTAL_FILES "Compiling ($CURRENT_FILE/$TOTAL_FILES files)..."
+        fi
+    else
+        # Check if no progress for too long
+        TIME_DIFF=$((CURRENT_TIME - LAST_UPDATE_TIME))
+        if [ $TIME_DIFF -gt 30 ]; then  # 30 seconds without progress
+            # Check if build process is actually dead or stuck
+            if ! kill -0 $BUILD_PID 2>/dev/null; then
+                break
+            fi
+            # Force break after timeout
+            if [ $TIME_DIFF -gt $MAX_TIMEOUT ]; then
+                echo ""
+                echo -e "${YELLOW}⚠ 构建超时，强制结束进程...${NC}"
+                kill $BUILD_PID 2>/dev/null
+                sleep 1
+                kill -9 $BUILD_PID 2>/dev/null
+                break
+            fi
         fi
     fi
     sleep 0.2
 done
 
-# Wait for build to complete
-wait $BUILD_PID
+# Wait for build to complete and get result
+wait $BUILD_PID 2>/dev/null
 BUILD_RESULT=$?
 
+# Ensure BUILD_RESULT is set (fallback to 1 if empty)
+if [ -z "$BUILD_RESULT" ]; then
+    BUILD_RESULT=1
+fi
+
+# If the process was killed due to timeout, mark as failed
+WAIT_RESULT=$?
+if [ $WAIT_RESULT -eq 143 ] || [ $WAIT_RESULT -eq 137 ]; then
+    BUILD_RESULT=1
+fi
+
 # Final progress update for compilation step
-show_progress 100 100 "Compiling source files... ✓"
+if [ "$BUILD_RESULT" -eq 0 ]; then
+    show_progress 100 100 "Compiling source files... ✓"
+else
+    echo ""
+    echo -e "${RED}✗ 编译过程中断 (退出码: $BUILD_RESULT)${NC}"
+    
+    # Show immediate error preview if available
+    if [ -f "build.log" ] && [ -s "build.log" ]; then
+        echo -e "${YELLOW}检测到编译错误，准备显示详细信息...${NC}"
+    fi
+fi
 echo ""
 
-# Step 4: Finalize
-show_progress 0 100 "Finalizing build..."
-show_progress 100 100 "Finalizing build... ✓"
-echo ""
+# Step 4: Finalize (only if build succeeded)
+if [ "$BUILD_RESULT" -eq 0 ]; then
+    show_progress 0 100 "Finalizing build..."
+    show_progress 100 100 "Finalizing build... ✓"
+    echo ""
+fi
+
+# Function to show build errors
+show_build_errors() {
+    echo ""
+    echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+    echo -e "${RED}                           构建失败详情                          ${NC}"
+    echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+    echo ""
+    
+    # Show build log content
+    if [ -f "build.log" ]; then
+        echo -e "${YELLOW}构建错误信息:${NC}"
+        echo -e "${CYAN}─────────────────────────────────────────────────────────────${NC}"
+        
+        # First try to show error lines, if none found, show last 30 lines
+        ERROR_LINES=$(grep -E "(error|Error|ERROR|failed|Failed|FAILED|undefined|Undefined|Error:|错误)" build.log 2>/dev/null)
+        
+        if [ -n "$ERROR_LINES" ]; then
+            echo "$ERROR_LINES" | tail -n 20
+        else
+            echo -e "${YELLOW}未找到明确的错误行，显示最后30行构建输出:${NC}"
+            echo ""
+            tail -n 30 build.log
+        fi
+        
+        echo -e "${CYAN}─────────────────────────────────────────────────────────────${NC}"
+        echo ""
+        echo -e "${YELLOW}完整的构建日志已保存到: ${CYAN}$(pwd)/build.log${NC}"
+        echo -e "${YELLOW}CMake配置日志保存到: ${CYAN}$(pwd)/cmake_config.log${NC}"
+        echo ""
+        echo -e "${PURPLE}建议的调试步骤:${NC}"
+        echo -e "  1. 查看完整构建日志: ${CYAN}cat $(pwd)/build.log${NC}"
+        echo -e "  2. 查看CMake配置日志: ${CYAN}cat $(pwd)/cmake_config.log${NC}"
+        echo -e "  3. 清理并重新构建: ${CYAN}rm -rf $(pwd) && ./build.sh${NC}"
+        echo -e "  4. 检查依赖是否安装: ${CYAN}x86_64-w64-mingw32-gcc --version${NC}"
+        echo ""
+    else
+        echo -e "${RED}构建日志文件未找到！这可能表示CMake配置阶段就失败了。${NC}"
+        echo ""
+        if [ -f "cmake_config.log" ]; then
+            echo -e "${YELLOW}CMake配置错误:${NC}"
+            echo -e "${CYAN}─────────────────────────────────────────────────────────────${NC}"
+            cat cmake_config.log
+            echo -e "${CYAN}─────────────────────────────────────────────────────────────${NC}"
+        fi
+    fi
+}
+
+# Debug: Show what BUILD_RESULT is
+echo -e "${CYAN}调试信息: BUILD_RESULT = '$BUILD_RESULT'${NC}"
 
 # Check build result
-if [ $BUILD_RESULT -ne 0 ]; then
-    echo -e "${RED}✗ Build failed!${NC}"
-    echo -e "${YELLOW}Check build.log for details${NC}"
+if [ "$BUILD_RESULT" -ne 0 ]; then
+    echo -e "${RED}✗ 构建失败！${NC}"
+    show_build_errors
+    
+    # Return to original directory before exiting
+    cd ..
     exit 1
 fi
 
@@ -277,8 +410,8 @@ if [ -f "catime.exe" ]; then
     ELAPSED_TIME=$((END_TIME - START_TIME))
     FORMATTED_TIME=$(format_time $ELAPSED_TIME)
     
-    echo -e "${GREEN}✓ Build completed successfully!${NC}"
-    echo -e "${PURPLE}Build time: ${FORMATTED_TIME}${NC}"
+    echo -e "${GREEN}✓ 构建成功完成！${NC}"
+    echo -e "${PURPLE}构建用时: ${FORMATTED_TIME}${NC}"
     
     # Display file size with nice formatting
     SIZE=$(stat -c%s "catime.exe")
@@ -289,24 +422,28 @@ if [ -f "catime.exe" ]; then
     else
         SIZE_TEXT="$((SIZE/1048576)) MB"
     fi
-    echo -e "${CYAN}Size: ${SIZE_TEXT}${NC}"
+    echo -e "${CYAN}文件大小: ${SIZE_TEXT}${NC}"
     
     # Create output directory and copy executable if different from build dir
     if [ "$(realpath "$OUTPUT_DIR")" != "$(realpath "../$BUILD_DIR")" ]; then
         mkdir -p "$OUTPUT_DIR"
         cp "catime.exe" "$OUTPUT_DIR/"
-        echo -e "${CYAN}Output: $OUTPUT_DIR/catime.exe${NC}"
+        echo -e "${CYAN}输出路径: $OUTPUT_DIR/catime.exe${NC}"
     else
-        echo -e "${CYAN}Output: $(pwd)/catime.exe${NC}"
+        echo -e "${CYAN}输出路径: $(pwd)/catime.exe${NC}"
     fi
     
-    # Clean up log files
+    # Only clean up log files on successful build
+    echo -e "${YELLOW}清理临时文件...${NC}"
     rm -f cmake_config.log build.log
     
     # Return to original directory
     cd ..
 else
-    echo -e "${RED}✗ Build failed - executable not found!${NC}"
-    echo -e "${YELLOW}Check build.log for details${NC}"
+    echo -e "${RED}✗ 构建失败 - 未找到可执行文件！${NC}"
+    show_build_errors
+    
+    # Return to original directory before exiting
+    cd ..
     exit 1
 fi
