@@ -174,10 +174,10 @@ INT_PTR CALLBACK ExitMsgDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lP
  * @brief Display custom exit message dialog
  */
 void ShowExitMessageDialog(HWND hwnd) {
-    DialogBox(GetModuleHandle(NULL), 
-             MAKEINTRESOURCE(IDD_UPDATE_DIALOG), 
-             hwnd, 
-             ExitMsgDlgProc);
+    DialogBoxW(GetModuleHandle(NULL), 
+              MAKEINTRESOURCEW(IDD_UPDATE_DIALOG), 
+              hwnd, 
+              ExitMsgDlgProc);
 }
 
 /**
@@ -268,11 +268,11 @@ int ShowUpdateNotification(HWND hwnd, const char* currentVersion, const char* la
     versionInfo.downloadUrl = downloadUrl;
     
     // Display custom dialog
-    return DialogBoxParam(GetModuleHandle(NULL), 
-                        MAKEINTRESOURCE(IDD_UPDATE_DIALOG), 
-                        hwnd, 
-                        UpdateDlgProc, 
-                        (LPARAM)&versionInfo);
+    return DialogBoxParamW(GetModuleHandle(NULL), 
+                          MAKEINTRESOURCEW(IDD_UPDATE_DIALOG), 
+                          hwnd, 
+                          UpdateDlgProc, 
+                          (LPARAM)&versionInfo);
 }
 
 /**
@@ -308,11 +308,11 @@ INT_PTR CALLBACK UpdateErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARA
  * @brief Display update error dialog
  */
 void ShowUpdateErrorDialog(HWND hwnd, const wchar_t* errorMsg) {
-    DialogBoxParam(GetModuleHandle(NULL), 
-                 MAKEINTRESOURCE(IDD_UPDATE_ERROR_DIALOG), 
-                 hwnd, 
-                 UpdateErrorDlgProc, 
-                 (LPARAM)errorMsg);
+    DialogBoxParamW(GetModuleHandle(NULL), 
+                   MAKEINTRESOURCEW(IDD_UPDATE_ERROR_DIALOG), 
+                   hwnd, 
+                   UpdateErrorDlgProc, 
+                   (LPARAM)errorMsg);
 }
 
 /**
@@ -368,19 +368,23 @@ INT_PTR CALLBACK NoUpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM l
  * @param currentVersion Current version number
  */
 void ShowNoUpdateDialog(HWND hwnd, const char* currentVersion) {
-    DialogBoxParam(GetModuleHandle(NULL), 
-                 MAKEINTRESOURCE(IDD_NO_UPDATE_DIALOG), 
-                 hwnd, 
-                 NoUpdateDlgProc, 
-                 (LPARAM)currentVersion);
+    DialogBoxParamW(GetModuleHandle(NULL), 
+                   MAKEINTRESOURCEW(IDD_NO_UPDATE_DIALOG), 
+                   hwnd, 
+                   NoUpdateDlgProc, 
+                   (LPARAM)currentVersion);
 }
 
 /**
  * @brief Open browser to download update and exit program
  */
 BOOL OpenBrowserForUpdateAndExit(const char* url, HWND hwnd) {
+    // Convert URL to wide string
+    wchar_t urlW[512];
+    MultiByteToWideChar(CP_UTF8, 0, url, -1, urlW, sizeof(urlW)/sizeof(wchar_t));
+    
     // Open browser
-    HINSTANCE hInstance = ShellExecuteA(hwnd, "open", url, NULL, NULL, SW_SHOWNORMAL);
+    HINSTANCE hInstance = ShellExecuteW(hwnd, L"open", urlW, NULL, NULL, SW_SHOWNORMAL);
     
     if ((INT_PTR)hInstance <= 32) {
         // Failed to open browser
