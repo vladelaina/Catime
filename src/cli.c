@@ -31,12 +31,16 @@ static void ForceForegroundAndFocus(HWND hwndDialog) {
 	}
 	// Try allow foreground switch (best-effort)
 	AllowSetForegroundWindow(ASFW_ANY);
-	// Toggle topmost to bring to front reliably
-	SetWindowPos(hwndDialog, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
-	SetWindowPos(hwndDialog, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+	// Use a gentler approach to bring dialog to front without affecting other topmost windows
+	// Only set topmost if needed, and avoid the topmost toggle trick that can affect main window
 	BringWindowToTop(hwndDialog);
 	SetForegroundWindow(hwndDialog);
 	SetActiveWindow(hwndDialog);
+	// If still not visible, then use topmost briefly but restore immediately
+	if (GetForegroundWindow() != hwndDialog) {
+		SetWindowPos(hwndDialog, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+		SetWindowPos(hwndDialog, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+	}
 	HWND hOk = GetDlgItem(hwndDialog, IDOK);
 	if (hOk) SetFocus(hOk);
 	if (foreThread && foreThread != curThread) {
@@ -82,6 +86,15 @@ static INT_PTR CALLBACK CliHelpDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
 	case WM_DESTROY:
 		if (hwndDlg == g_cliHelpDialog) {
 			g_cliHelpDialog = NULL;
+			// Restore main window topmost state after dialog closes
+			// This fixes the issue where Win+D can minimize the main window after CLI help
+			extern BOOL CLOCK_WINDOW_TOPMOST;
+			extern void SetWindowTopmost(HWND hwnd, BOOL topmost);
+			HWND hMainWnd = GetParent(hwndDlg);
+			if (hMainWnd && CLOCK_WINDOW_TOPMOST) {
+				// Re-apply topmost state to ensure main window is not affected by dialog Z-order changes
+				SetWindowTopmost(hMainWnd, TRUE);
+			}
 		}
 		return TRUE;
 	}
