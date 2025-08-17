@@ -829,7 +829,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         }
                         
                         // If input is empty or contains only spaces, exit the loop
-                        if (inputText[0] == '\0' || isAllSpaces) {
+                        if (inputText[0] == L'\0' || isAllSpaces) {
                             break;
                         }
 
