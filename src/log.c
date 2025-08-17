@@ -353,7 +353,7 @@ void SignalHandler(int signal) {
     }
     
     // Display error message box
-    MessageBox(NULL, "The program encountered a serious error. Please check the log file for detailed information.", "Fatal Error", MB_ICONERROR | MB_OK);
+    MessageBox(NULL, L"The program encountered a serious error. Please check the log file for detailed information.", L"Fatal Error", MB_ICONERROR | MB_OK);
     
     // Terminate program
     exit(signal);

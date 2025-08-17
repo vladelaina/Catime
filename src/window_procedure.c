@@ -1049,19 +1049,29 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     
                     // Recalculate window size
                     HDC hdc = GetDC(hwnd);
+                    
+                    // Convert font name to Unicode
+                    wchar_t fontNameW[256];
+                    MultiByteToWideChar(CP_UTF8, 0, FONT_INTERNAL_NAME, -1, fontNameW, 256);
+                    
                     HFONT hFont = CreateFont(
                         -CLOCK_BASE_FONT_SIZE,   
                         0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
                         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
                         CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,
-                        DEFAULT_PITCH | FF_DONTCARE, FONT_INTERNAL_NAME
+                        DEFAULT_PITCH | FF_DONTCARE, fontNameW
                     );
                     HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
                     
                     char time_text[50];
                     FormatTime(CLOCK_TOTAL_TIME, time_text);
+                    
+                    // Convert time text to Unicode
+                    wchar_t time_textW[50];
+                    MultiByteToWideChar(CP_UTF8, 0, time_text, -1, time_textW, 50);
+                    
                     SIZE textSize;
-                    GetTextExtentPoint32(hdc, time_text, strlen(time_text), &textSize);
+                    GetTextExtentPoint32(hdc, time_textW, wcslen(time_textW), &textSize);
                     
                     SelectObject(hdc, hOldFont);
                     DeleteObject(hFont);

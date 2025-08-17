@@ -75,7 +75,7 @@ extern int pomodoro_work_cycles;     ///< Pomodoro work cycle count
 extern TimeoutActionType CLOCK_TIMEOUT_ACTION; ///< Current timeout action type
 extern char CLOCK_TIMEOUT_TEXT[50];            ///< Timeout notification text content
 extern char CLOCK_TIMEOUT_FILE_PATH[MAX_PATH];  ///< Timeout file path to open
-extern char CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH]; ///< Timeout website URL to open
+extern wchar_t CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH]; ///< Timeout website URL to open
 
 // Time options configuration ------------------------------------
 extern int time_options[MAX_TIME_OPTIONS]; ///< Preset time options array

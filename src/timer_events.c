@@ -486,10 +486,8 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                                 InvalidateRect(hwnd, NULL, TRUE);
                                 break;
                             case TIMEOUT_ACTION_OPEN_WEBSITE:
-                                if (strlen(CLOCK_TIMEOUT_WEBSITE_URL) > 0) {
-                                    wchar_t wideUrl[MAX_PATH];
-                                    MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_WEBSITE_URL, -1, wideUrl, MAX_PATH);
-                                    ShellExecuteW(NULL, L"open", wideUrl, NULL, NULL, SW_NORMAL);
+                                if (wcslen(CLOCK_TIMEOUT_WEBSITE_URL) > 0) {
+                                    ShellExecuteW(NULL, L"open", CLOCK_TIMEOUT_WEBSITE_URL, NULL, NULL, SW_NORMAL);
                                 }
                                 break;
                             case TIMEOUT_ACTION_RUN_COMMAND:

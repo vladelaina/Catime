@@ -40,6 +40,8 @@ target_include_directories(catime PRIVATE
 # Add compile definitions
 target_compile_definitions(catime PRIVATE
     MINIAUDIO_IMPLEMENTATION
+    UNICODE
+    _UNICODE
 )
 
 # Set compiler flags based on build type

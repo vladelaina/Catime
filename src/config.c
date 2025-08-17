@@ -502,7 +502,15 @@ void ReadConfig() {
     
     // Read timeout file and website settings
     ReadIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_FILE", "", CLOCK_TIMEOUT_FILE_PATH, MAX_PATH, config_path);
-    ReadIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_WEBSITE", "", CLOCK_TIMEOUT_WEBSITE_URL, MAX_PATH, config_path);
+    
+    // Read website URL as UTF-8 then convert to Unicode
+    char tempWebsiteUrl[MAX_PATH] = {0};
+    ReadIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_WEBSITE", "", tempWebsiteUrl, MAX_PATH, config_path);
+    if (tempWebsiteUrl[0] != '\0') {
+        MultiByteToWideChar(CP_UTF8, 0, tempWebsiteUrl, -1, CLOCK_TIMEOUT_WEBSITE_URL, MAX_PATH);
+    } else {
+        CLOCK_TIMEOUT_WEBSITE_URL[0] = L'\0';
+    }
     
     // If file path is valid, ensure timeout action is set to open file
     if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0 && 
@@ -511,7 +519,7 @@ void ReadConfig() {
     }
     
     // If URL is valid, ensure timeout action is set to open website
-    if (strlen(CLOCK_TIMEOUT_WEBSITE_URL) > 0) {
+    if (wcslen(CLOCK_TIMEOUT_WEBSITE_URL) > 0) {
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_WEBSITE;
     }
     
@@ -700,7 +708,7 @@ void ReadConfig() {
     last_config_time = time(NULL);
 
     // Apply window position
-    HWND hwnd = FindWindow("CatimeWindow", "Catime");
+    HWND hwnd = FindWindow(L"CatimeWindow", L"Catime");
     if (hwnd) {
         SetWindowPos(hwnd, NULL, CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
         InvalidateRect(hwnd, NULL, TRUE);
@@ -1353,7 +1361,10 @@ void WriteConfig(const char* config_path) {
     WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_TEXT", CLOCK_TIMEOUT_TEXT, config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_ACTION", timeoutActionStr, config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_FILE", CLOCK_TIMEOUT_FILE_PATH, config_path);
-    WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_WEBSITE", CLOCK_TIMEOUT_WEBSITE_URL, config_path);
+    // Convert Unicode URL to UTF-8 for writing to config
+    char tempWebsiteUrl[MAX_PATH * 3] = {0};
+    WideCharToMultiByte(CP_UTF8, 0, CLOCK_TIMEOUT_WEBSITE_URL, -1, tempWebsiteUrl, sizeof(tempWebsiteUrl), NULL, NULL);
+    WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_WEBSITE", tempWebsiteUrl, config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_TIME_OPTIONS", timeOptionsStr, config_path);
     WriteIniString(INI_SECTION_TIMER, "STARTUP_MODE", CLOCK_STARTUP_MODE, config_path);
     
@@ -1410,8 +1421,11 @@ void WriteConfigTimeoutWebsite(const char* url) {
     if (url && url[0] != '\0') {
         // First update global variables
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_WEBSITE;
-        strncpy(CLOCK_TIMEOUT_WEBSITE_URL, url, MAX_PATH - 1);
-        CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH - 1] = '\0';
+        // Convert UTF-8 URL to Unicode
+        int len = MultiByteToWideChar(CP_UTF8, 0, url, -1, CLOCK_TIMEOUT_WEBSITE_URL, MAX_PATH);
+        if (len == 0) {
+            CLOCK_TIMEOUT_WEBSITE_URL[0] = L'\0';
+        }
         
         // Then update the configuration file
         char config_path[MAX_PATH];

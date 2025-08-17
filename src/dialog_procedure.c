@@ -23,7 +23,7 @@
 
 static void DrawColorSelectButton(HDC hdc, HWND hwnd);
 
-extern char inputText[256];
+extern wchar_t inputText[256];
 
 #define MAX_POMODORO_TIMES 10
 extern int POMODORO_TIMES[MAX_POMODORO_TIMES];
@@ -275,16 +275,16 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 
         case WM_COMMAND:
             if (LOWORD(wParam) == CLOCK_IDC_BUTTON_OK || HIWORD(wParam) == BN_CLICKED) {
-                GetDlgItemText(hwndDlg, CLOCK_IDC_EDIT, inputText, sizeof(inputText));
+                GetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, inputText, sizeof(inputText)/sizeof(wchar_t));
 
                 BOOL isAllSpaces = TRUE;
                 for (int i = 0; inputText[i]; i++) {
-                    if (!isspace((unsigned char)inputText[i])) {
+                    if (!iswspace(inputText[i])) {
                         isAllSpaces = FALSE;
                         break;
                     }
                 }
-                if (inputText[0] == '\0' || isAllSpaces) {
+                if (inputText[0] == L'\0' || isAllSpaces) {
                     g_hwndInputDialog = NULL;
                     EndDialog(hwndDlg, 0);
                     return TRUE;
@@ -294,10 +294,9 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                 
                 if (dialogId == CLOCK_IDD_SHORTCUT_DIALOG) {
                     // Parse input as space-separated time options using ParseTimeInput for flexible format support
-                    // Use a local copy to avoid modifying the original inputText
+                    // Convert Unicode input to UTF-8 for processing
                     char inputCopy[256];
-                    strncpy(inputCopy, inputText, sizeof(inputCopy) - 1);
-                    inputCopy[sizeof(inputCopy) - 1] = '\0';
+                    WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputCopy, sizeof(inputCopy), NULL, NULL);
                     
                     char* token = strtok(inputCopy, " ");
                     char options[256] = {0};
@@ -341,8 +340,12 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                     }
                 } else {
                     // For other dialog types, use ParseInput for validation
+                    // Convert Unicode input to UTF-8 for ParseInput
+                    char inputUtf8[256];
+                    WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputUtf8, sizeof(inputUtf8), NULL, NULL);
+                    
                     int total_seconds;
-                    if (ParseInput(inputText, &total_seconds)) {
+                    if (ParseInput(inputUtf8, &total_seconds)) {
                         if (dialogId == CLOCK_IDD_POMODORO_TIME_DIALOG) {
                             g_hwndInputDialog = NULL;
                             EndDialog(hwndDlg, IDOK);
@@ -859,8 +862,8 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
             wpOrigEditProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
             
             // If URL already exists, prefill the edit box
-            if (strlen(CLOCK_TIMEOUT_WEBSITE_URL) > 0) {
-                SetDlgItemTextA(hwndDlg, CLOCK_IDC_EDIT, CLOCK_TIMEOUT_WEBSITE_URL);
+            if (wcslen(CLOCK_TIMEOUT_WEBSITE_URL) > 0) {
+                SetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, CLOCK_TIMEOUT_WEBSITE_URL);
             }
             
             // Apply multilingual support
@@ -889,34 +892,36 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
             
         case WM_COMMAND:
             if (LOWORD(wParam) == CLOCK_IDC_BUTTON_OK || HIWORD(wParam) == BN_CLICKED) {
-                char url[MAX_PATH] = {0};
-                GetDlgItemText(hwndDlg, CLOCK_IDC_EDIT, url, sizeof(url));
+                wchar_t url[MAX_PATH] = {0};
+                GetDlgItemText(hwndDlg, CLOCK_IDC_EDIT, url, sizeof(url)/sizeof(wchar_t));
                 
                 // Check if the input is empty or contains only spaces
                 BOOL isAllSpaces = TRUE;
                 for (int i = 0; url[i]; i++) {
-                    if (!isspace((unsigned char)url[i])) {
+                    if (!iswspace(url[i])) {
                         isAllSpaces = FALSE;
                         break;
                     }
                 }
                 
-                if (url[0] == '\0' || isAllSpaces) {
+                if (url[0] == L'\0' || isAllSpaces) {
                     EndDialog(hwndDlg, IDCANCEL);
                     g_hwndWebsiteDialog = NULL;
                     return TRUE;
                 }
                 
                 // Validate URL format - simple check, should at least contain http:// or https://
-                if (strncmp(url, "http://", 7) != 0 && strncmp(url, "https://", 8) != 0) {
+                if (wcsncmp(url, L"http://", 7) != 0 && wcsncmp(url, L"https://", 8) != 0) {
                     // Add https:// prefix
-                    char tempUrl[MAX_PATH] = "https://";
-                    StringCbCatA(tempUrl, sizeof(tempUrl), url);
-                    StringCbCopyA(url, sizeof(url), tempUrl);
+                    wchar_t tempUrl[MAX_PATH] = L"https://";
+                    StringCbCatW(tempUrl, sizeof(tempUrl), url);
+                    StringCbCopyW(url, sizeof(url), tempUrl);
                 }
                 
-                // Update configuration
-                WriteConfigTimeoutWebsite(url);
+                // Convert Unicode URL to UTF-8 for configuration
+                char urlUtf8[MAX_PATH * 3];
+                WideCharToMultiByte(CP_UTF8, 0, url, -1, urlUtf8, sizeof(urlUtf8), NULL, NULL);
+                WriteConfigTimeoutWebsite(urlUtf8);
                 EndDialog(hwndDlg, IDOK);
                 g_hwndWebsiteDialog = NULL;
                 return TRUE;

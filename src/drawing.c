@@ -22,7 +22,7 @@ extern int elapsed_time;
 // Using window drawing related constants defined in resource.h
 
 void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
-    static char time_text[50];
+    static wchar_t time_text[50];
     HDC hdc = ps->hdc;
     RECT rect;
     GetClientRect(hwnd, &rect);
@@ -51,10 +51,10 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
         }
 
         if (CLOCK_SHOW_SECONDS) {
-            sprintf(time_text, "%d:%02d:%02d", 
+            swprintf(time_text, 50, L"%d:%02d:%02d", 
                     hour, tm_info->tm_min, tm_info->tm_sec);
         } else {
-            sprintf(time_text, "%d:%02d", 
+            swprintf(time_text, 50, L"%d:%02d", 
                     hour, tm_info->tm_min);
         }
     } else if (CLOCK_COUNT_UP) {
@@ -64,11 +64,11 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
         int seconds = countup_elapsed_time % 60;
 
         if (hours > 0) {
-            sprintf(time_text, "%d:%02d:%02d", hours, minutes, seconds);
+            swprintf(time_text, 50, L"%d:%02d:%02d", hours, minutes, seconds);
         } else if (minutes > 0) {
-            sprintf(time_text, "%d:%02d", minutes, seconds);
+            swprintf(time_text, 50, L"%d:%02d", minutes, seconds);
         } else {
-            sprintf(time_text, "%d", seconds);
+            swprintf(time_text, 50, L"%d", seconds);
         }
     } else {
         // Countdown mode
@@ -77,14 +77,14 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
             // Timeout reached, decide whether to display content based on conditions
             if (CLOCK_TOTAL_TIME == 0 && countdown_elapsed_time == 0) {
                 // This is the case after sleep operation, don't display anything
-                time_text[0] = '\0';
+                time_text[0] = L'\0';
             } else if (strcmp(CLOCK_TIMEOUT_TEXT, "0") == 0) {
-                time_text[0] = '\0';
+                time_text[0] = L'\0';
             } else if (strlen(CLOCK_TIMEOUT_TEXT) > 0) {
-                strncpy(time_text, CLOCK_TIMEOUT_TEXT, sizeof(time_text) - 1);
-                time_text[sizeof(time_text) - 1] = '\0';
+                // Convert UTF-8 timeout text to Unicode
+                MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_TEXT, -1, time_text, 50);
             } else {
-                time_text[0] = '\0';
+                time_text[0] = L'\0';
             }
         } else {
             int hours = remaining_time / 3600;
@@ -92,23 +92,29 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
             int seconds = remaining_time % 60;
 
             if (hours > 0) {
-                sprintf(time_text, "%d:%02d:%02d", hours, minutes, seconds);
+                swprintf(time_text, 50, L"%d:%02d:%02d", hours, minutes, seconds);
             } else if (minutes > 0) {
-                sprintf(time_text, "%d:%02d", minutes, seconds);
+                swprintf(time_text, 50, L"%d:%02d", minutes, seconds);
             } else {
-                sprintf(time_text, "%d", seconds);
+                swprintf(time_text, 50, L"%d", seconds);
             }
         }
     }
 
     const char* fontToUse = IS_PREVIEWING ? PREVIEW_FONT_NAME : FONT_FILE_NAME;
+    
+    // Convert font internal name to Unicode
+    const char* fontInternalName = IS_PREVIEWING ? PREVIEW_INTERNAL_NAME : FONT_INTERNAL_NAME;
+    wchar_t fontInternalNameW[256];
+    MultiByteToWideChar(CP_UTF8, 0, fontInternalName, -1, fontInternalNameW, 256);
+    
     HFONT hFont = CreateFont(
         -CLOCK_BASE_FONT_SIZE * CLOCK_FONT_SCALE_FACTOR,
         0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_TT_PRECIS,
         CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,   
         VARIABLE_PITCH | FF_SWISS,
-        IS_PREVIEWING ? PREVIEW_INTERNAL_NAME : FONT_INTERNAL_NAME
+        fontInternalNameW
     );
     HFONT oldFont = (HFONT)SelectObject(memDC, hFont);
 
@@ -143,9 +149,9 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
         DeleteObject(hBrush);
     }
 
-    if (strlen(time_text) > 0) {
+    if (wcslen(time_text) > 0) {
         SIZE textSize;
-        GetTextExtentPoint32(memDC, time_text, strlen(time_text), &textSize);
+        GetTextExtentPoint32(memDC, time_text, wcslen(time_text), &textSize);
 
         if (textSize.cx != (rect.right - rect.left) || 
             textSize.cy != (rect.bottom - rect.top)) {
@@ -170,19 +176,19 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
             
             // Add black outline effect
             SetTextColor(memDC, RGB(0, 0, 0));
-            TextOutA(memDC, x-1, y, time_text, strlen(time_text));
-            TextOutA(memDC, x+1, y, time_text, strlen(time_text));
-            TextOutA(memDC, x, y-1, time_text, strlen(time_text));
-            TextOutA(memDC, x, y+1, time_text, strlen(time_text));
+            TextOut(memDC, x-1, y, time_text, wcslen(time_text));
+            TextOut(memDC, x+1, y, time_text, wcslen(time_text));
+            TextOut(memDC, x, y-1, time_text, wcslen(time_text));
+            TextOut(memDC, x, y+1, time_text, wcslen(time_text));
             
             // Set back to white for drawing text
             SetTextColor(memDC, RGB(255, 255, 255));
-            TextOutA(memDC, x, y, time_text, strlen(time_text));
+            TextOut(memDC, x, y, time_text, wcslen(time_text));
         } else {
             SetTextColor(memDC, RGB(r, g, b));
             
             for (int i = 0; i < 8; i++) {
-                TextOutA(memDC, x, y, time_text, strlen(time_text));
+                TextOut(memDC, x, y, time_text, wcslen(time_text));
             }
         }
     }

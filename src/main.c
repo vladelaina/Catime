@@ -61,12 +61,12 @@ extern void CleanupLogSystem(void);
 int default_countdown_time = 0;
 int CLOCK_DEFAULT_START_TIME = 300;
 int elapsed_time = 0;
-char inputText[256] = {0};
+wchar_t inputText[256] = {0};
 int message_shown = 0;
 time_t last_config_time = 0;
 RecentFile CLOCK_RECENT_FILES[MAX_RECENT_FILES];
 int CLOCK_RECENT_FILES_COUNT = 0;
-char CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH] = "";
+wchar_t CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH] = L"";
 
 extern char CLOCK_TEXT_COLOR[10];
 extern char FONT_FILE_NAME[];
@@ -113,48 +113,48 @@ static void HandleStartupMode(HWND hwnd) {
  * @brief Forward simple CLI commands to an existing instance via WM_HOTKEY.
  *        Returns TRUE if forwarded and caller should exit without restarting.
  */
-static BOOL TryForwardSimpleCliToExisting(HWND hwndExisting, const char* lpCmdLine) {
-    if (!lpCmdLine || lpCmdLine[0] == '\0') return FALSE;
+static BOOL TryForwardSimpleCliToExisting(HWND hwndExisting, const wchar_t* lpCmdLine) {
+    if (!lpCmdLine || lpCmdLine[0] == L'\0') return FALSE;
 
     // Trim spaces into buf
-    char buf[256];
-    strncpy(buf, lpCmdLine, sizeof(buf) - 1);
-    buf[sizeof(buf) - 1] = '\0';
-    char* p = buf; while (*p && isspace((unsigned char)*p)) p++;
-    size_t len = strlen(p);
-    while (len > 0 && isspace((unsigned char)p[len - 1])) { p[--len] = '\0'; }
+    wchar_t buf[256];
+    wcsncpy(buf, lpCmdLine, sizeof(buf)/sizeof(wchar_t) - 1);
+    buf[sizeof(buf)/sizeof(wchar_t) - 1] = L'\0';
+    wchar_t* p = buf; while (*p && iswspace(*p)) p++;
+    size_t len = wcslen(p);
+    while (len > 0 && iswspace(p[len - 1])) { p[--len] = L'\0'; }
     if (len == 0) return FALSE;
 
     // Single-letter or short tokens that map 1:1 to hotkeys
     if (len == 1) {
-        char c = (char)tolower((unsigned char)p[0]);
-        if (c == 's') { PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_SHOW_TIME, 0); return TRUE; }
-        if (c == 'u') { PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_COUNT_UP, 0); return TRUE; }
-        if (c == 'p') { PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_POMODORO, 0); return TRUE; }
-        if (c == 'v') { PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_TOGGLE_VISIBILITY, 0); return TRUE; }
-        if (c == 'e') { PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_EDIT_MODE, 0); return TRUE; }
-        if (c == 'r') { PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_RESTART_TIMER, 0); return TRUE; }
-        if (c == 'h') { PostMessage(hwndExisting, WM_APP_SHOW_CLI_HELP, 0, 0); return TRUE; }
+        wchar_t c = towlower(p[0]);
+        if (c == L's') { PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_SHOW_TIME, 0); return TRUE; }
+        if (c == L'u') { PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_COUNT_UP, 0); return TRUE; }
+        if (c == L'p') { PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_POMODORO, 0); return TRUE; }
+        if (c == L'v') { PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_TOGGLE_VISIBILITY, 0); return TRUE; }
+        if (c == L'e') { PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_EDIT_MODE, 0); return TRUE; }
+        if (c == L'r') { PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_RESTART_TIMER, 0); return TRUE; }
+        if (c == L'h') { PostMessage(hwndExisting, WM_APP_SHOW_CLI_HELP, 0, 0); return TRUE; }
     }
 
     // Two-char tokens
-    if ((len == 2) && (tolower((unsigned char)p[0]) == 'p') && (tolower((unsigned char)p[1]) == 'r')) {
+    if ((len == 2) && (towlower(p[0]) == L'p') && (towlower(p[1]) == L'r')) {
         PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_PAUSE_RESUME, 0);
         return TRUE;
     }
 
     // q1/q2/q3
-    if (len == 2 && tolower((unsigned char)p[0]) == 'q' && (p[1] >= '1' && p[1] <= '3')) {
-        if (p[1] == '1') { PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_QUICK_COUNTDOWN1, 0); return TRUE; }
-        if (p[1] == '2') { PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_QUICK_COUNTDOWN2, 0); return TRUE; }
-        if (p[1] == '3') { PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_QUICK_COUNTDOWN3, 0); return TRUE; }
+    if (len == 2 && towlower(p[0]) == L'q' && (p[1] >= L'1' && p[1] <= L'3')) {
+        if (p[1] == L'1') { PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_QUICK_COUNTDOWN1, 0); return TRUE; }
+        if (p[1] == L'2') { PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_QUICK_COUNTDOWN2, 0); return TRUE; }
+        if (p[1] == L'3') { PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_QUICK_COUNTDOWN3, 0); return TRUE; }
     }
 
     // p<number> => quick countdown by index
-    if ((tolower((unsigned char)p[0]) == 'p') && isdigit((unsigned char)p[1])) {
-        char* endp = NULL;
-        long idx = strtol(p + 1, &endp, 10);
-        if (idx > 0 && (endp == NULL || *endp == '\0')) {
+    if ((towlower(p[0]) == L'p') && iswdigit(p[1])) {
+        wchar_t* endp = NULL;
+        long idx = wcstol(p + 1, &endp, 10);
+        if (idx > 0 && (endp == NULL || *endp == L'\0')) {
             PostMessage(hwndExisting, WM_APP_QUICK_COUNTDOWN_INDEX, 0, (LPARAM)idx);
             return TRUE;
         } else {
@@ -167,14 +167,23 @@ static BOOL TryForwardSimpleCliToExisting(HWND hwndExisting, const char* lpCmdLi
     // If looks like a countdown expression, forward as CLI text to avoid restarting
     // We reuse the same normalization in cli.c, but at least detect a leading digit/space or endswith 't'
     int hasDigit = 0;
-    for (size_t i = 0; i < len; ++i) { if (isdigit((unsigned char)p[i])) { hasDigit = 1; break; } }
+    for (size_t i = 0; i < len; ++i) { if (iswdigit(p[i])) { hasDigit = 1; break; } }
     if (hasDigit) {
-        COPYDATASTRUCT cds;
-        cds.dwData = COPYDATA_ID_CLI_TEXT;
-        cds.cbData = (DWORD)(len + 1);
-        cds.lpData = p;
-        SendMessage(hwndExisting, WM_COPYDATA, 0, (LPARAM)&cds);
-        return TRUE;
+        // Convert Unicode to UTF-8 for COPYDATASTRUCT
+        int utf8Len = WideCharToMultiByte(CP_UTF8, 0, p, -1, NULL, 0, NULL, NULL);
+        if (utf8Len > 0) {
+            char* utf8Str = (char*)malloc(utf8Len);
+            if (utf8Str) {
+                WideCharToMultiByte(CP_UTF8, 0, p, -1, utf8Str, utf8Len, NULL, NULL);
+                COPYDATASTRUCT cds;
+                cds.dwData = COPYDATA_ID_CLI_TEXT;
+                cds.cbData = (DWORD)utf8Len;
+                cds.lpData = utf8Str;
+                SendMessage(hwndExisting, WM_COPYDATA, 0, (LPARAM)&cds);
+                free(utf8Str);
+                return TRUE;
+            }
+        }
     }
     return FALSE;
 }
@@ -190,27 +199,27 @@ static BOOL TryForwardSimpleCliToExisting(HWND hwndExisting, const char* lpCmdLi
  */
 static HWND FindExistingInstanceWindow(void) {
     // First try top-level window (topmost mode or before reattach)
-    HWND hwnd = FindWindow("CatimeWindow", "Catime");
+    HWND hwnd = FindWindowW(L"CatimeWindow", L"Catime");
     if (hwnd) return hwnd;
 
     // Then try to locate our window as a child of the desktop container
-    HWND hProgman = FindWindow("Progman", NULL);
+    HWND hProgman = FindWindowW(L"Progman", NULL);
     HWND hDesktop = NULL;
     if (hProgman != NULL) {
         hDesktop = hProgman;
-        HWND hWorkerW = FindWindowEx(NULL, NULL, "WorkerW", NULL);
+        HWND hWorkerW = FindWindowExW(NULL, NULL, L"WorkerW", NULL);
         while (hWorkerW != NULL) {
-            HWND hView = FindWindowEx(hWorkerW, NULL, "SHELLDLL_DefView", NULL);
+            HWND hView = FindWindowExW(hWorkerW, NULL, L"SHELLDLL_DefView", NULL);
             if (hView != NULL) {
                 hDesktop = hWorkerW;
                 break;
             }
-            hWorkerW = FindWindowEx(NULL, hWorkerW, "WorkerW", NULL);
+            hWorkerW = FindWindowExW(NULL, hWorkerW, L"WorkerW", NULL);
         }
     }
     if (hDesktop != NULL) {
         // Window name may be NULL when WS_POPUP child; match by class only
-        hwnd = FindWindowEx(hDesktop, NULL, "CatimeWindow", NULL);
+        hwnd = FindWindowExW(hDesktop, NULL, L"CatimeWindow", NULL);
         if (hwnd) return hwnd;
     }
 
@@ -227,7 +236,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     // Initialize log system
     if (!InitializeLogSystem()) {
         // If log system initialization fails, continue running but without logging
-        MessageBox(NULL, "Log system initialization failed, the program will continue running but will not log.", "Warning", MB_ICONWARNING);
+        MessageBox(NULL, L"Log system initialization failed, the program will continue running but will not log.", L"Warning", MB_ICONWARNING);
     }
 
     // Set up exception handler
@@ -238,7 +247,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         HRESULT hr = CoInitialize(NULL);
         if (FAILED(hr)) {
             LOG_ERROR("COM initialization failed, error code: 0x%08X", hr);
-            MessageBox(NULL, "COM initialization failed!", "Error", MB_ICONERROR);
+            MessageBox(NULL, L"COM initialization failed!", L"Error", MB_ICONERROR);
             return 1;
         }
         LOG_INFO("COM initialization successful");
@@ -247,32 +256,41 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         LOG_INFO("Starting application initialization...");
         if (!InitializeApplication(hInstance)) {
             LOG_ERROR("Application initialization failed");
-            MessageBox(NULL, "Application initialization failed!", "Error", MB_ICONERROR);
+            MessageBox(NULL, L"Application initialization failed!", L"Error", MB_ICONERROR);
             return 1;
         }
         LOG_INFO("Application initialization successful");
 
         // Check and create desktop shortcut (if necessary)
         LOG_INFO("Checking desktop shortcut...");
-        char exe_path[MAX_PATH];
-        GetModuleFileNameA(NULL, exe_path, MAX_PATH);
-        LOG_INFO("Current program path: %s", exe_path);
+        wchar_t exe_path[MAX_PATH];
+        GetModuleFileNameW(NULL, exe_path, MAX_PATH);
+        
+        // Convert Unicode path to UTF-8 for logging
+        char exe_path_utf8[MAX_PATH * 3];
+        WideCharToMultiByte(CP_UTF8, 0, exe_path, -1, exe_path_utf8, sizeof(exe_path_utf8), NULL, NULL);
+        LOG_INFO("Current program path: %s", exe_path_utf8);
         
         // Set log level to DEBUG to show detailed information
-        WriteLog(LOG_LEVEL_DEBUG, "Starting shortcut detection, checking path: %s", exe_path);
+        WriteLog(LOG_LEVEL_DEBUG, "Starting shortcut detection, checking path: %s", exe_path_utf8);
         
         // Check if path contains WinGet identifier
-        if (strstr(exe_path, "WinGet") != NULL) {
+        if (wcsstr(exe_path, L"WinGet") != NULL) {
             WriteLog(LOG_LEVEL_DEBUG, "Path contains WinGet keyword");
         }
         
         // Additional test: directly test if file exists
-        char desktop_path[MAX_PATH];
-        char shortcut_path[MAX_PATH];
-        if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_DESKTOP, NULL, 0, desktop_path))) {
-            sprintf(shortcut_path, "%s\\Catime.lnk", desktop_path);
-            WriteLog(LOG_LEVEL_DEBUG, "Checking if desktop shortcut exists: %s", shortcut_path);
-            if (GetFileAttributesA(shortcut_path) == INVALID_FILE_ATTRIBUTES) {
+        wchar_t desktop_path[MAX_PATH];
+        wchar_t shortcut_path[MAX_PATH];
+        if (SUCCEEDED(SHGetFolderPathW(NULL, CSIDL_DESKTOP, NULL, 0, desktop_path))) {
+            swprintf(shortcut_path, MAX_PATH, L"%s\\Catime.lnk", desktop_path);
+            
+            // Convert to UTF-8 for logging
+            char shortcut_path_utf8[MAX_PATH * 3];
+            WideCharToMultiByte(CP_UTF8, 0, shortcut_path, -1, shortcut_path_utf8, sizeof(shortcut_path_utf8), NULL, NULL);
+            WriteLog(LOG_LEVEL_DEBUG, "Checking if desktop shortcut exists: %s", shortcut_path_utf8);
+            
+            if (GetFileAttributesW(shortcut_path) == INVALID_FILE_ATTRIBUTES) {
                 WriteLog(LOG_LEVEL_DEBUG, "Desktop shortcut does not exist, need to create");
             } else {
                 WriteLog(LOG_LEVEL_DEBUG, "Desktop shortcut already exists");
@@ -295,7 +313,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
         // Handle single instance
         LOG_INFO("Checking if another instance is running...");
-        HANDLE hMutex = CreateMutex(NULL, TRUE, "CatimeMutex");
+        HANDLE hMutex = CreateMutex(NULL, TRUE, L"CatimeMutex");
         DWORD mutexError = GetLastError();
         
         if (mutexError == ERROR_ALREADY_EXISTS) {
@@ -304,9 +322,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             if (hwndExisting) {
                 LOG_INFO("Found existing instance window handle: 0x%p", hwndExisting);
                 // If command line is just 'h' (help), forward to existing instance and exit
+                LPWSTR lpCmdLineExisting = GetCommandLineW();
+                // Skip program name
+                while (*lpCmdLineExisting && *lpCmdLineExisting != L' ') lpCmdLineExisting++;
+                while (*lpCmdLineExisting == L' ') lpCmdLineExisting++;
+                
                 if (lpCmdLine && lpCmdLine[0] != '\0') {
                     LOG_INFO("Command line arguments: '%s'", lpCmdLine);
-                    if (TryForwardSimpleCliToExisting(hwndExisting, lpCmdLine)) {
+                    if (TryForwardSimpleCliToExisting(hwndExisting, lpCmdLineExisting)) {
                         LOG_INFO("Forwarded simple CLI command to existing instance and exiting");
                         ReleaseMutex(hMutex);
                         CloseHandle(hMutex);
@@ -331,7 +354,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             
             // Create new mutex
             LOG_INFO("Creating new mutex");
-            hMutex = CreateMutex(NULL, TRUE, "CatimeMutex");
+            hMutex = CreateMutex(NULL, TRUE, L"CatimeMutex");
             if (GetLastError() == ERROR_ALREADY_EXISTS) {
                 LOG_WARNING("Still have conflict after creating new mutex, possible race condition");
             }
@@ -343,26 +366,41 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         HWND hwnd = CreateMainWindow(hInstance, nCmdShow);
         if (!hwnd) {
             LOG_ERROR("Main window creation failed");
-            MessageBox(NULL, "Window Creation Failed!", "Error", MB_ICONEXCLAMATION | MB_OK);
+            MessageBox(NULL, L"Window Creation Failed!", L"Error", MB_ICONEXCLAMATION | MB_OK);
             return 0;
         }
         LOG_INFO("Main window creation successful, handle: 0x%p", hwnd);
 
         // Determine if launched via system startup
         BOOL launchedFromStartup = FALSE;
-        char cmdBuf[512] = {0};
-        if (lpCmdLine && lpCmdLine[0] != '\0') {
-            strncpy(cmdBuf, lpCmdLine, sizeof(cmdBuf) - 1);
-            cmdBuf[sizeof(cmdBuf) - 1] = '\0';
+        
+        // Get Unicode command line
+        LPWSTR lpCmdLineW = GetCommandLineW();
+        // Skip program name (find first space or end)
+        while (*lpCmdLineW && *lpCmdLineW != L' ') lpCmdLineW++;
+        while (*lpCmdLineW == L' ') lpCmdLineW++;
+        
+        wchar_t cmdBuf[512] = {0};
+        if (lpCmdLineW && lpCmdLineW[0] != L'\0') {
+            wcsncpy(cmdBuf, lpCmdLineW, sizeof(cmdBuf)/sizeof(wchar_t) - 1);
+            cmdBuf[sizeof(cmdBuf)/sizeof(wchar_t) - 1] = L'\0';
             // Check and strip internal flag "--startup"
-            char* pStartup = strstr(cmdBuf, "--startup");
+            wchar_t* pStartup = wcsstr(cmdBuf, L"--startup");
             if (pStartup) {
                 launchedFromStartup = TRUE;
-                size_t len = strlen("--startup");
-                memmove(pStartup, pStartup + len, strlen(pStartup + len) + 1);
+                size_t len = wcslen(L"--startup");
+                wmemmove(pStartup, pStartup + len, wcslen(pStartup + len) + 1);
             }
-            LOG_INFO("Command line detected: %s", lpCmdLine);
-            if (HandleCliArguments(hwnd, cmdBuf)) {
+            
+            // Convert Unicode to UTF-8 for logging
+            char cmdBuf_utf8[512 * 3];
+            WideCharToMultiByte(CP_UTF8, 0, lpCmdLineW, -1, cmdBuf_utf8, sizeof(cmdBuf_utf8), NULL, NULL);
+            LOG_INFO("Command line detected: %s", cmdBuf_utf8);
+            
+            // Convert Unicode to UTF-8 for HandleCliArguments (if it expects char*)
+            char cmdBuf_cli[512 * 3];
+            WideCharToMultiByte(CP_UTF8, 0, cmdBuf, -1, cmdBuf_cli, sizeof(cmdBuf_cli), NULL, NULL);
+            if (HandleCliArguments(hwnd, cmdBuf_cli)) {
                 LOG_INFO("CLI countdown started successfully");
             } else {
                 LOG_INFO("CLI arguments not parsed as countdown");
@@ -374,7 +412,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         if (SetTimer(hwnd, 1, 1000, NULL) == 0) {
             DWORD timerError = GetLastError();
             LOG_ERROR("Timer creation failed, error code: %lu", timerError);
-            MessageBox(NULL, "Timer Creation Failed!", "Error", MB_ICONEXCLAMATION | MB_OK);
+            MessageBox(NULL, L"Timer Creation Failed!", L"Error", MB_ICONEXCLAMATION | MB_OK);
             return 0;
         }
         LOG_INFO("Timer set successfully");

@@ -59,7 +59,7 @@ extern int POMODORO_TIMES[MAX_POMODORO_TIMES]; // Store all Pomodoro times
 extern int POMODORO_TIMES_COUNT;              // Actual number of Pomodoro times
 
 // Add to external variable declaration section
-extern char CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH];   ///< URL for timeout open website
+extern wchar_t CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH];   ///< URL for timeout open website
 extern int current_pomodoro_time_index; // Current Pomodoro time index
 extern POMODORO_PHASE current_pomodoro_phase; // Pomodoro phase
 /// @}
@@ -494,12 +494,16 @@ void ShowColorMenu(HWND hwnd) {
     for (int i = 0; i < COLOR_OPTIONS_COUNT; i++) {
         const char* hexColor = COLOR_OPTIONS[i].hexColor;
         
+        // Convert hexColor to Unicode
+        wchar_t hexColorW[16];
+        MultiByteToWideChar(CP_UTF8, 0, hexColor, -1, hexColorW, 16);
+        
         MENUITEMINFO mii = { sizeof(MENUITEMINFO) };
         mii.fMask = MIIM_STRING | MIIM_ID | MIIM_STATE | MIIM_FTYPE;
         mii.fType = MFT_STRING | MFT_OWNERDRAW;
         mii.fState = strcmp(CLOCK_TEXT_COLOR, hexColor) == 0 ? MFS_CHECKED : MFS_UNCHECKED;
         mii.wID = 201 + i;  // Preset color menu item IDs start from 201
-        mii.dwTypeData = (LPSTR)hexColor;
+        mii.dwTypeData = hexColorW;
         
         InsertMenuItem(hColorSubMenu, i, TRUE, &mii);
     }
