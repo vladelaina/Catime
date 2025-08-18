@@ -1005,9 +1005,9 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
             wpOrigEditProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
             
             // Read current pomodoro time options from configuration and format for display
-            char currentOptions[256] = {0};
+            wchar_t currentOptions[256] = {0};
             for (int i = 0; i < POMODORO_TIMES_COUNT; i++) {
-                char timeStr[32];
+                wchar_t timeStr[32];
                 int seconds = POMODORO_TIMES[i];
                 
                 // Format time into human-readable format
@@ -1016,35 +1016,32 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
                     int mins = (seconds % 3600) / 60;
                     int secs = seconds % 60;
                     if (mins == 0 && secs == 0)
-                        StringCbPrintfA(timeStr, sizeof(timeStr), "%dh ", hours);
+                        StringCbPrintfW(timeStr, sizeof(timeStr), L"%dh ", hours);
                     else if (secs == 0)
-                        StringCbPrintfA(timeStr, sizeof(timeStr), "%dh%dm ", hours, mins);
+                        StringCbPrintfW(timeStr, sizeof(timeStr), L"%dh%dm ", hours, mins);
                     else
-                        StringCbPrintfA(timeStr, sizeof(timeStr), "%dh%dm%ds ", hours, mins, secs);
+                        StringCbPrintfW(timeStr, sizeof(timeStr), L"%dh%dm%ds ", hours, mins, secs);
                 } else if (seconds >= 60) {
                     int mins = seconds / 60;
                     int secs = seconds % 60;
                     if (secs == 0)
-                        StringCbPrintfA(timeStr, sizeof(timeStr), "%dm ", mins);
+                        StringCbPrintfW(timeStr, sizeof(timeStr), L"%dm ", mins);
                     else
-                        StringCbPrintfA(timeStr, sizeof(timeStr), "%dm%ds ", mins, secs);
+                        StringCbPrintfW(timeStr, sizeof(timeStr), L"%dm%ds ", mins, secs);
                 } else {
-                    StringCbPrintfA(timeStr, sizeof(timeStr), "%ds ", seconds);
+                    StringCbPrintfW(timeStr, sizeof(timeStr), L"%ds ", seconds);
                 }
                 
-                StringCbCatA(currentOptions, sizeof(currentOptions), timeStr);
+                StringCbCatW(currentOptions, sizeof(currentOptions), timeStr);
             }
             
             // Remove trailing space
-            if (strlen(currentOptions) > 0 && currentOptions[strlen(currentOptions) - 1] == ' ') {
-                currentOptions[strlen(currentOptions) - 1] = '\0';
+            if (wcslen(currentOptions) > 0 && currentOptions[wcslen(currentOptions) - 1] == L' ') {
+                currentOptions[wcslen(currentOptions) - 1] = L'\0';
             }
             
             // Set edit box text
-            // Convert ANSI string to Unicode for the API call
-            wchar_t wcurrentOptions2[256];
-            MultiByteToWideChar(CP_ACP, 0, currentOptions, -1, wcurrentOptions2, 256);
-            SetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, wcurrentOptions2);
+            SetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, currentOptions);
             
             // Apply multilingual support - moved here to ensure all default text is covered
             ApplyDialogLanguage(hwndDlg, CLOCK_IDD_POMODORO_COMBO_DIALOG);
@@ -1424,22 +1421,18 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
             ReadNotificationOpacityConfig();
             
             // Set current values to edit boxes
-            char buffer[32];
+            wchar_t wbuffer[32];
             
             // Display time (seconds, support decimal) - convert milliseconds to seconds
-            StringCbPrintfA(buffer, sizeof(buffer), "%.1f", (float)NOTIFICATION_TIMEOUT_MS / 1000.0f);
+            StringCbPrintfW(wbuffer, sizeof(wbuffer), L"%.1f", (float)NOTIFICATION_TIMEOUT_MS / 1000.0f);
             // Remove trailing .0
-            if (strlen(buffer) > 2 && buffer[strlen(buffer)-2] == '.' && buffer[strlen(buffer)-1] == '0') {
-                buffer[strlen(buffer)-2] = '\0';
+            if (wcslen(wbuffer) > 2 && wbuffer[wcslen(wbuffer)-2] == L'.' && wbuffer[wcslen(wbuffer)-1] == L'0') {
+                wbuffer[wcslen(wbuffer)-2] = L'\0';
             }
-            // Convert ANSI string to Unicode for the API call
-            wchar_t wbuffer[32];
-            MultiByteToWideChar(CP_ACP, 0, buffer, -1, wbuffer, 32);
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, wbuffer);
             
             // Opacity (percentage)
-            StringCbPrintfA(buffer, sizeof(buffer), "%d", NOTIFICATION_MAX_OPACITY);
-            MultiByteToWideChar(CP_ACP, 0, buffer, -1, wbuffer, 32);
+            StringCbPrintfW(wbuffer, sizeof(wbuffer), L"%d", NOTIFICATION_MAX_OPACITY);
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT, wbuffer);
             
             // Localize label text
