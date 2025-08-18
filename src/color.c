@@ -612,7 +612,9 @@ LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
             LRESULT result = CallWindowProc(g_OldEditProc, hwnd, msg, wParam, lParam);
 
             char color[32];
-            GetWindowTextA(hwnd, color, sizeof(color));
+            wchar_t wcolor[32];
+            GetWindowTextW(hwnd, wcolor, sizeof(wcolor)/sizeof(wchar_t));
+            WideCharToMultiByte(CP_ACP, 0, wcolor, -1, color, sizeof(color), NULL, NULL);
 
             char normalized[32];
             normalizeColor(color, normalized, sizeof(normalized));
@@ -642,7 +644,9 @@ LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
             LRESULT result = CallWindowProc(g_OldEditProc, hwnd, msg, wParam, lParam);
 
             char color[32];
-            GetWindowTextA(hwnd, color, sizeof(color));
+            wchar_t wcolor[32];
+            GetWindowTextW(hwnd, wcolor, sizeof(wcolor)/sizeof(wchar_t));
+            WideCharToMultiByte(CP_ACP, 0, wcolor, -1, color, sizeof(color), NULL, NULL);
 
             char normalized[32];
             normalizeColor(color, normalized, sizeof(normalized));
@@ -681,7 +685,9 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                                                          (LONG_PTR)ColorEditSubclassProc);
 
                 if (CLOCK_TEXT_COLOR[0] != '\0') {
-                    SetWindowTextA(hwndEdit, CLOCK_TEXT_COLOR);
+                    wchar_t wcolor[32];
+                    MultiByteToWideChar(CP_ACP, 0, CLOCK_TEXT_COLOR, -1, wcolor, sizeof(wcolor)/sizeof(wchar_t));
+                    SetWindowTextW(hwndEdit, wcolor);
                 }
             }
             return TRUE;

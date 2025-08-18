@@ -46,19 +46,48 @@ int NOTIFICATION_SOUND_VOLUME = 100;
 /** @brief Read string value from INI file */
 DWORD ReadIniString(const char* section, const char* key, const char* defaultValue,
                   char* returnValue, DWORD returnSize, const char* filePath) {
-    return GetPrivateProfileStringA(section, key, defaultValue, returnValue, returnSize, filePath);
+    // Convert ANSI strings to Unicode for the API call
+    wchar_t wsection[256], wkey[256], wdefaultValue[1024], wfilePath[MAX_PATH];
+    wchar_t wreturnValue[1024];
+    
+    MultiByteToWideChar(CP_ACP, 0, section, -1, wsection, 256);
+    MultiByteToWideChar(CP_ACP, 0, key, -1, wkey, 256);
+    MultiByteToWideChar(CP_ACP, 0, defaultValue, -1, wdefaultValue, 1024);
+    MultiByteToWideChar(CP_ACP, 0, filePath, -1, wfilePath, MAX_PATH);
+    
+    DWORD result = GetPrivateProfileStringW(wsection, wkey, wdefaultValue, wreturnValue, 1024, wfilePath);
+    
+    // Convert result back to ANSI
+    WideCharToMultiByte(CP_ACP, 0, wreturnValue, -1, returnValue, returnSize, NULL, NULL);
+    
+    return result;
 }
 
 /** @brief Write string value to INI file */
 BOOL WriteIniString(const char* section, const char* key, const char* value,
                   const char* filePath) {
-    return WritePrivateProfileStringA(section, key, value, filePath);
+    // Convert ANSI strings to Unicode for the API call
+    wchar_t wsection[256], wkey[256], wvalue[1024], wfilePath[MAX_PATH];
+    
+    MultiByteToWideChar(CP_ACP, 0, section, -1, wsection, 256);
+    MultiByteToWideChar(CP_ACP, 0, key, -1, wkey, 256);
+    MultiByteToWideChar(CP_ACP, 0, value, -1, wvalue, 1024);
+    MultiByteToWideChar(CP_ACP, 0, filePath, -1, wfilePath, MAX_PATH);
+    
+    return WritePrivateProfileStringW(wsection, wkey, wvalue, wfilePath);
 }
 
 /** @brief Read integer value from INI */
 int ReadIniInt(const char* section, const char* key, int defaultValue, 
              const char* filePath) {
-    return GetPrivateProfileIntA(section, key, defaultValue, filePath);
+    // Convert ANSI strings to Unicode for the API call
+    wchar_t wsection[256], wkey[256], wfilePath[MAX_PATH];
+    
+    MultiByteToWideChar(CP_ACP, 0, section, -1, wsection, 256);
+    MultiByteToWideChar(CP_ACP, 0, key, -1, wkey, 256);
+    MultiByteToWideChar(CP_ACP, 0, filePath, -1, wfilePath, MAX_PATH);
+    
+    return GetPrivateProfileIntW(wsection, wkey, defaultValue, wfilePath);
 }
 
 /** @brief Write integer value to INI file */
@@ -66,27 +95,64 @@ BOOL WriteIniInt(const char* section, const char* key, int value,
                const char* filePath) {
     char valueStr[32];
     snprintf(valueStr, sizeof(valueStr), "%d", value);
-    return WritePrivateProfileStringA(section, key, valueStr, filePath);
+    
+    // Convert ANSI strings to Unicode for the API call
+    wchar_t wsection[256], wkey[256], wvalue[32], wfilePath[MAX_PATH];
+    
+    MultiByteToWideChar(CP_ACP, 0, section, -1, wsection, 256);
+    MultiByteToWideChar(CP_ACP, 0, key, -1, wkey, 256);
+    MultiByteToWideChar(CP_ACP, 0, valueStr, -1, wvalue, 32);
+    MultiByteToWideChar(CP_ACP, 0, filePath, -1, wfilePath, MAX_PATH);
+    
+    return WritePrivateProfileStringW(wsection, wkey, wvalue, wfilePath);
 }
 
 /** @brief Write boolean value to INI file */
 BOOL WriteIniBool(const char* section, const char* key, BOOL value,
                const char* filePath) {
-    return WritePrivateProfileStringA(section, key, value ? "TRUE" : "FALSE", filePath);
+    const char* valueStr = value ? "TRUE" : "FALSE";
+    
+    // Convert ANSI strings to Unicode for the API call
+    wchar_t wsection[256], wkey[256], wvalue[8], wfilePath[MAX_PATH];
+    
+    MultiByteToWideChar(CP_ACP, 0, section, -1, wsection, 256);
+    MultiByteToWideChar(CP_ACP, 0, key, -1, wkey, 256);
+    MultiByteToWideChar(CP_ACP, 0, valueStr, -1, wvalue, 8);
+    MultiByteToWideChar(CP_ACP, 0, filePath, -1, wfilePath, MAX_PATH);
+    
+    return WritePrivateProfileStringW(wsection, wkey, wvalue, wfilePath);
 }
 
 /** @brief Read boolean value from INI */
 BOOL ReadIniBool(const char* section, const char* key, BOOL defaultValue, 
                const char* filePath) {
     char value[8];
-    GetPrivateProfileStringA(section, key, defaultValue ? "TRUE" : "FALSE", 
-                          value, sizeof(value), filePath);
+    const char* defaultStr = defaultValue ? "TRUE" : "FALSE";
+    
+    // Convert ANSI strings to Unicode for the API call
+    wchar_t wsection[256], wkey[256], wdefaultValue[8], wfilePath[MAX_PATH];
+    wchar_t wvalue[8];
+    
+    MultiByteToWideChar(CP_ACP, 0, section, -1, wsection, 256);
+    MultiByteToWideChar(CP_ACP, 0, key, -1, wkey, 256);
+    MultiByteToWideChar(CP_ACP, 0, defaultStr, -1, wdefaultValue, 8);
+    MultiByteToWideChar(CP_ACP, 0, filePath, -1, wfilePath, MAX_PATH);
+    
+    GetPrivateProfileStringW(wsection, wkey, wdefaultValue, wvalue, 8, wfilePath);
+    
+    // Convert result back to ANSI
+    WideCharToMultiByte(CP_ACP, 0, wvalue, -1, value, sizeof(value), NULL, NULL);
+    
     return _stricmp(value, "TRUE") == 0;
 }
 
 /** @brief Check if configuration file exists */
 BOOL FileExists(const char* filePath) {
-    return GetFileAttributesA(filePath) != INVALID_FILE_ATTRIBUTES;
+    // Convert ANSI string to Unicode for the API call
+    wchar_t wfilePath[MAX_PATH];
+    MultiByteToWideChar(CP_ACP, 0, filePath, -1, wfilePath, MAX_PATH);
+    
+    return GetFileAttributesW(wfilePath) != INVALID_FILE_ATTRIBUTES;
 }
 
 /** @brief Get configuration file path */
@@ -103,7 +169,10 @@ void GetConfigPath(char* path, size_t size) {
         
         char dir_path[MAX_PATH];
         if (snprintf(dir_path, sizeof(dir_path), "%s\\Catime", appdata_path) < sizeof(dir_path)) {
-            if (!CreateDirectoryA(dir_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
+            // Convert ANSI string to Unicode for the API call
+            wchar_t wdir_path[MAX_PATH];
+            MultiByteToWideChar(CP_ACP, 0, dir_path, -1, wdir_path, MAX_PATH);
+            if (!CreateDirectoryW(wdir_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
                 strncpy(path, ".\\asset\\config.ini", size - 1);
                 path[size - 1] = '\0';
             }
@@ -300,9 +369,15 @@ void CheckAndCreateResourceFolders() {
         
         // Create resources main directory
         snprintf(resource_path, MAX_PATH, "%sresources", base_path);
-        DWORD attrs = GetFileAttributesA(resource_path);
+        // Convert ANSI string to Unicode for the API call
+        wchar_t wresource_path_check[MAX_PATH];
+        MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path_check, MAX_PATH);
+        DWORD attrs = GetFileAttributesW(wresource_path_check);
         if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
-            if (!CreateDirectoryA(resource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
+            // Convert ANSI string to Unicode for the API call
+            wchar_t wresource_path[MAX_PATH];
+            MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path, MAX_PATH);
+            if (!CreateDirectoryW(wresource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
                 fprintf(stderr, "Failed to create resources folder: %s (Error: %lu)\n", resource_path, GetLastError());
                 return;
             }
@@ -310,45 +385,70 @@ void CheckAndCreateResourceFolders() {
         
         // Create audio subdirectory
         snprintf(resource_path, MAX_PATH, "%sresources\\audio", base_path);
-        attrs = GetFileAttributesA(resource_path);
+        // Convert ANSI string to Unicode for the API call
+        MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path_check, MAX_PATH);
+        attrs = GetFileAttributesW(wresource_path_check);
         if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
-            if (!CreateDirectoryA(resource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
+            // Convert ANSI string to Unicode for the API call
+            wchar_t wresource_path[MAX_PATH];
+            MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path, MAX_PATH);
+            if (!CreateDirectoryW(wresource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
                 fprintf(stderr, "Failed to create audio folder: %s (Error: %lu)\n", resource_path, GetLastError());
             }
         }
         
         // Create images subdirectory
         snprintf(resource_path, MAX_PATH, "%sresources\\images", base_path);
-        attrs = GetFileAttributesA(resource_path);
+        // Convert ANSI string to Unicode for the API call
+        MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path_check, MAX_PATH);
+        attrs = GetFileAttributesW(wresource_path_check);
         if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
-            if (!CreateDirectoryA(resource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
+            // Convert ANSI string to Unicode for the API call
+            wchar_t wresource_path[MAX_PATH];
+            MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path, MAX_PATH);
+            if (!CreateDirectoryW(wresource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
                 fprintf(stderr, "Failed to create images folder: %s (Error: %lu)\n", resource_path, GetLastError());
             }
         }
         
         // Create animations subdirectory
         snprintf(resource_path, MAX_PATH, "%sresources\\animations", base_path);
-        attrs = GetFileAttributesA(resource_path);
+        // Convert ANSI string to Unicode for the API call
+        MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path_check, MAX_PATH);
+        attrs = GetFileAttributesW(wresource_path_check);
         if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
-            if (!CreateDirectoryA(resource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
+            // Convert ANSI string to Unicode for the API call
+            wchar_t wresource_path[MAX_PATH];
+            MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path, MAX_PATH);
+            if (!CreateDirectoryW(wresource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
                 fprintf(stderr, "Failed to create animations folder: %s (Error: %lu)\n", resource_path, GetLastError());
             }
         }
         
         // Create themes subdirectory
         snprintf(resource_path, MAX_PATH, "%sresources\\themes", base_path);
-        attrs = GetFileAttributesA(resource_path);
+        // Convert ANSI string to Unicode for the API call
+        MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path_check, MAX_PATH);
+        attrs = GetFileAttributesW(wresource_path_check);
         if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
-            if (!CreateDirectoryA(resource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
+            // Convert ANSI string to Unicode for the API call
+            wchar_t wresource_path[MAX_PATH];
+            MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path, MAX_PATH);
+            if (!CreateDirectoryW(wresource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
                 fprintf(stderr, "Failed to create themes folder: %s (Error: %lu)\n", resource_path, GetLastError());
             }
         }
         
         // Create plug-in subdirectory
         snprintf(resource_path, MAX_PATH, "%sresources\\plug-in", base_path);
-        attrs = GetFileAttributesA(resource_path);
+        // Convert ANSI string to Unicode for the API call
+        MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path_check, MAX_PATH);
+        attrs = GetFileAttributesW(wresource_path_check);
         if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
-            if (!CreateDirectoryA(resource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
+            // Convert ANSI string to Unicode for the API call
+            wchar_t wresource_path[MAX_PATH];
+            MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path, MAX_PATH);
+            if (!CreateDirectoryW(wresource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
                 fprintf(stderr, "Failed to create plug-in folder: %s (Error: %lu)\n", resource_path, GetLastError());
             }
         }
@@ -513,9 +613,13 @@ void ReadConfig() {
     }
     
     // If file path is valid, ensure timeout action is set to open file
-    if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0 && 
-        GetFileAttributesA(CLOCK_TIMEOUT_FILE_PATH) != INVALID_FILE_ATTRIBUTES) {
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
+    if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
+        // Convert ANSI string to Unicode for the API call
+        wchar_t wfile_path[MAX_PATH];
+        MultiByteToWideChar(CP_ACP, 0, CLOCK_TIMEOUT_FILE_PATH, -1, wfile_path, MAX_PATH);
+        if (GetFileAttributesW(wfile_path) != INVALID_FILE_ATTRIBUTES) {
+            CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
+        }
     }
     
     // If URL is valid, ensure timeout action is set to open website
@@ -1664,8 +1768,12 @@ void ReadNotificationMessagesConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
 
-    HANDLE hFile = CreateFileA(
-        config_path,
+    // Convert ANSI string to Unicode for the API call
+    wchar_t wconfig_path[MAX_PATH];
+    MultiByteToWideChar(CP_ACP, 0, config_path, -1, wconfig_path, MAX_PATH);
+    
+    HANDLE hFile = CreateFileW(
+        wconfig_path,
         GENERIC_READ,
         FILE_SHARE_READ,
         NULL,
@@ -1772,8 +1880,12 @@ void ReadNotificationTimeoutConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    HANDLE hFile = CreateFileA(
-        config_path,
+    // Convert ANSI string to Unicode for the API call
+    wchar_t wconfig_path[MAX_PATH];
+    MultiByteToWideChar(CP_ACP, 0, config_path, -1, wconfig_path, MAX_PATH);
+    
+    HANDLE hFile = CreateFileW(
+        wconfig_path,
         GENERIC_READ,
         FILE_SHARE_READ,
         NULL,
@@ -1915,8 +2027,12 @@ void ReadNotificationOpacityConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    HANDLE hFile = CreateFileA(
-        config_path,
+    // Convert ANSI string to Unicode for the API call
+    wchar_t wconfig_path[MAX_PATH];
+    MultiByteToWideChar(CP_ACP, 0, config_path, -1, wconfig_path, MAX_PATH);
+    
+    HANDLE hFile = CreateFileW(
+        wconfig_path,
         GENERIC_READ,
         FILE_SHARE_READ,
         NULL,
@@ -2169,7 +2285,10 @@ void GetAudioFolderPath(char* path, size_t size) {
         
         char dir_path[MAX_PATH];
         if (snprintf(dir_path, sizeof(dir_path), "%s\\Catime\\resources\\audio", appdata_path) < sizeof(dir_path)) {
-            if (!CreateDirectoryA(dir_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
+            // Convert ANSI string to Unicode for the API call
+            wchar_t wdir_path[MAX_PATH];
+            MultiByteToWideChar(CP_ACP, 0, dir_path, -1, wdir_path, MAX_PATH);
+            if (!CreateDirectoryW(wdir_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
                 strncpy(path, ".\\resources\\audio", size - 1);
                 path[size - 1] = '\0';
             }

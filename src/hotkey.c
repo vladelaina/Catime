@@ -146,10 +146,10 @@ LRESULT CALLBACK HotkeyDialogSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LP
  * @brief Show hotkey settings dialog
  */
 void ShowHotkeySettingsDialog(HWND hwndParent) {
-    DialogBox(GetModuleHandle(NULL),
-             MAKEINTRESOURCE(CLOCK_IDD_HOTKEY_DIALOG),
-             hwndParent,
-             HotkeySettingsDlgProc);
+    DialogBoxW(GetModuleHandle(NULL),
+              MAKEINTRESOURCE(CLOCK_IDD_HOTKEY_DIALOG),
+              hwndParent,
+              HotkeySettingsDlgProc);
 }
 
 /**
