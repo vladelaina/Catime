@@ -812,7 +812,7 @@ void ReadConfig() {
     last_config_time = time(NULL);
 
     // Apply window position
-    HWND hwnd = FindWindow(L"CatimeWindow", L"Catime");
+    HWND hwnd = FindWindowW(L"CatimeWindow", L"Catime");
     if (hwnd) {
         SetWindowPos(hwnd, NULL, CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
         InvalidateRect(hwnd, NULL, TRUE);
