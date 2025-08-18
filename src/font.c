@@ -89,12 +89,12 @@ extern char CLOCK_TEXT_COLOR[];  ///< Current clock text color
 /// @{
 extern void GetConfigPath(char* path, size_t maxLen);             ///< Get configuration file path
 extern void ReadConfig(void);                                  ///< Read configuration file
-extern int CALLBACK EnumFontFamExProc(ENUMLOGFONTEX *lpelfe, NEWTEXTMETRICEX *lpntme, DWORD FontType, LPARAM lParam); ///< Font enumeration callback function
+extern int CALLBACK EnumFontFamExProc(ENUMLOGFONTEXW *lpelfe, NEWTEXTMETRICEX *lpntme, DWORD FontType, LPARAM lParam); ///< Font enumeration callback function
 /// @}
 
 BOOL LoadFontFromResource(HINSTANCE hInstance, int resourceId) {
     // Find font resource
-    HRSRC hResource = FindResource(hInstance, MAKEINTRESOURCE(resourceId), RT_FONT);
+    HRSRC hResource = FindResourceW(hInstance, MAKEINTRESOURCE(resourceId), RT_FONT);
     if (hResource == NULL) {
         return FALSE;
     }
@@ -138,7 +138,11 @@ void WriteConfigFont(const char* font_file_name) {
     GetConfigPath(config_path, MAX_PATH);
     
     // Open configuration file for reading
-    FILE *file = fopen(config_path, "r");
+    // Convert ANSI path to Unicode for file operation
+    wchar_t wconfig_path[MAX_PATH];
+    MultiByteToWideChar(CP_ACP, 0, config_path, -1, wconfig_path, MAX_PATH);
+    
+    FILE *file = _wfopen(wconfig_path, L"r");
     if (!file) {
         fprintf(stderr, "Failed to open config file for reading: %s\n", config_path);
         return;
@@ -185,7 +189,7 @@ void WriteConfigFont(const char* font_file_name) {
     free(config_content);
 
     // Write new configuration content
-    file = fopen(config_path, "w");
+    file = _wfopen(wconfig_path, L"w");
     if (!file) {
         fprintf(stderr, "Failed to open config file for writing: %s\n", config_path);
         free(new_config);
@@ -207,13 +211,13 @@ void ListAvailableFonts(void) {
     lf.lfCharSet = DEFAULT_CHARSET;
 
     // Create temporary font and enumerate fonts
-    HFONT hFont = CreateFont(12, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-                             lf.lfCharSet, OUT_DEFAULT_PRECIS,
-                             CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,
-                             DEFAULT_PITCH | FF_DONTCARE, NULL);
+    HFONT hFont = CreateFontW(12, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+                              lf.lfCharSet, OUT_DEFAULT_PRECIS,
+                              CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,
+                              DEFAULT_PITCH | FF_DONTCARE, NULL);
     SelectObject(hdc, hFont);
 
-    EnumFontFamiliesEx(hdc, &lf, (FONTENUMPROC)EnumFontFamExProc, 0, 0);
+    EnumFontFamiliesExW(hdc, &lf, (FONTENUMPROCW)EnumFontFamExProc, 0, 0);
 
     // Clean up resources
     DeleteObject(hFont);
@@ -221,7 +225,7 @@ void ListAvailableFonts(void) {
 }
 
 int CALLBACK EnumFontFamExProc(
-    ENUMLOGFONTEX *lpelfe,
+    ENUMLOGFONTEXW *lpelfe,
     NEWTEXTMETRICEX *lpntme,
     DWORD FontType,
     LPARAM lParam

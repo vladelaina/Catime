@@ -11,6 +11,9 @@
 #include <windows.h>
 #include <stdbool.h>
 
+// Forward declaration for font enumeration callback
+int CALLBACK EnumFontFamExProc(ENUMLOGFONTEXW *lpelfe, NEWTEXTMETRICEX *lpntme, DWORD FontType, LPARAM lParam);
+
 /// Font resource structure, used to manage font resources
 typedef struct {
     int menuId;
