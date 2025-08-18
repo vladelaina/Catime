@@ -127,7 +127,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
             wpOrigEditProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
 
             if (dlgId == CLOCK_IDD_SHORTCUT_DIALOG) {
-                // Read current countdown preset time options from configuration and format for display
+
                 extern int time_options[];
                 extern int time_options_count;
                 
@@ -136,7 +136,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                     char timeStr[32];
                     int totalSeconds = time_options[i];
                     
-                    // Format time in a user-friendly way
+
                     int hours = totalSeconds / 3600;
                     int minutes = (totalSeconds % 3600) / 60;
                     int seconds = totalSeconds % 60;
@@ -163,16 +163,16 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                     StringCbCatA(currentOptions, sizeof(currentOptions), timeStr);
                 }
                 
-                // Set edit box text with current preset values
-                // Convert ANSI string to Unicode for the API call
+
+
                 wchar_t wcurrentOptions[256];
                 MultiByteToWideChar(CP_ACP, 0, currentOptions, -1, wcurrentOptions, 256);
                 SetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, wcurrentOptions);
             } else if (dlgId == CLOCK_IDD_STARTUP_DIALOG) {
-                // For startup settings dialog, preload the current default countdown time
+
                 extern int CLOCK_DEFAULT_START_TIME;
                 if (CLOCK_DEFAULT_START_TIME > 0) {
-                    // Format the current default time for display
+
                     char timeStr[64];
                     int hours = CLOCK_DEFAULT_START_TIME / 3600;
                     int minutes = (CLOCK_DEFAULT_START_TIME % 3600) / 60;
@@ -194,7 +194,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                         snprintf(timeStr, sizeof(timeStr), "%ds", seconds);
                     }
                     
-                    // Convert ANSI string to Unicode for the API call
+    
                     wchar_t wtimeStr[64];
                     MultiByteToWideChar(CP_ACP, 0, timeStr, -1, wtimeStr, 64);
                     SetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, wtimeStr);
@@ -291,8 +291,8 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                 int dialogId = GetWindowLongPtr(hwndDlg, GWLP_USERDATA);
                 
                 if (dialogId == CLOCK_IDD_SHORTCUT_DIALOG) {
-                    // Parse input as space-separated time options using ParseTimeInput for flexible format support
-                    // Convert Unicode input to UTF-8 for processing
+
+
                     char inputCopy[256];
                     WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputCopy, sizeof(inputCopy), NULL, NULL);
                     
@@ -303,7 +303,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                     
                     while (token && count < MAX_TIME_OPTIONS) {
                         int seconds = 0;
-                        // Use ParseTimeInput to support flexible time formats like 30s, 25m, 1h30m
+
                         if (!ParseTimeInput(token, &seconds) || seconds <= 0) {
                             valid = 0;
                             break;
@@ -313,7 +313,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                             StringCbCatA(options, sizeof(options), ",");
                         }
                         
-                        // Store seconds directly (no conversion needed)
+
                         char secondsStr[32];
                         snprintf(secondsStr, sizeof(secondsStr), "%d", seconds);
                         StringCbCatA(options, sizeof(options), secondsStr);
@@ -328,17 +328,17 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                         g_hwndInputDialog = NULL;
                         EndDialog(hwndDlg, IDOK);
                     } else {
-                        // Show unified error dialog
+
                         ShowErrorDialog(hwndDlg);
-                        // Keep input content and select all text for easy editing
+
                         HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
                         SetFocus(hwndEdit);
                         SendMessage(hwndEdit, EM_SETSEL, 0, -1);
                         return TRUE;
                     }
                 } else {
-                    // For other dialog types, use ParseInput for validation
-                    // Convert Unicode input to UTF-8 for ParseInput
+
+
                     char inputUtf8[256];
                     WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputUtf8, sizeof(inputUtf8), NULL, NULL);
                     
@@ -361,7 +361,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                         }
                     } else {
                         ShowErrorDialog(hwndDlg);
-                        // Keep input content and select all text for easy editing
+
                         HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
                         SetFocus(hwndEdit);
                         SendMessage(hwndEdit, EM_SETSEL, 0, -1);
@@ -581,9 +581,9 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             break;
 
         case WM_CLOSE:
-            // Close all child dialogs
+
             EndDialog(hwndDlg, 0);
-            g_hwndAboutDlg = NULL;  // Clear dialog handle
+            g_hwndAboutDlg = NULL;
             return TRUE;
 
         case WM_CTLCOLORSTATIC:
@@ -597,7 +597,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 GetDlgCtrlID(hwndCtl) == IDC_CREDITS ||
                 GetDlgCtrlID(hwndCtl) == IDC_COPYRIGHT_LINK ||
                 GetDlgCtrlID(hwndCtl) == IDC_SUPPORT) {
-                SetTextColor(hdc, 0x00D26919); // Keep the same orange color (BGR format)
+                SetTextColor(hdc, 0x00D26919);
                 SetBkMode(hdc, TRANSPARENT);
                 return (INT_PTR)GetStockObject(NULL_BRUSH);
             }
@@ -607,27 +607,27 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
     return FALSE;
 }
 
-// Add DPI awareness related type definitions (if not provided by the compiler)
+
 #ifndef DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
-// DPI_AWARENESS_CONTEXT is a HANDLE
+
 typedef HANDLE DPI_AWARENESS_CONTEXT;
-// Related DPI context constants definition
+
 #define DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 ((DPI_AWARENESS_CONTEXT)-4)
 #endif
 
-// Show the About dialog
+
 void ShowAboutDialog(HWND hwndParent) {
-    // If an About dialog already exists, close it first
+
     if (g_hwndAboutDlg != NULL && IsWindow(g_hwndAboutDlg)) {
         EndDialog(g_hwndAboutDlg, 0);
         g_hwndAboutDlg = NULL;
     }
     
-    // Save current DPI awareness context
+
     HANDLE hOldDpiContext = NULL;
     HMODULE hUser32 = GetModuleHandleW(L"user32.dll");
     if (hUser32) {
-        // Function pointer type definitions
+
         typedef HANDLE (WINAPI* GetThreadDpiAwarenessContextFunc)(void);
         typedef HANDLE (WINAPI* SetThreadDpiAwarenessContextFunc)(HANDLE);
         
@@ -637,20 +637,20 @@ void ShowAboutDialog(HWND hwndParent) {
             (SetThreadDpiAwarenessContextFunc)GetProcAddress(hUser32, "SetThreadDpiAwarenessContext");
         
         if (getThreadDpiAwarenessContextFunc && setThreadDpiAwarenessContextFunc) {
-            // Save current DPI context
+
             hOldDpiContext = getThreadDpiAwarenessContextFunc();
-            // Set to per-monitor DPI awareness V2 mode
+
             setThreadDpiAwarenessContextFunc(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
         }
     }
     
-    // Create new About dialog
+
     g_hwndAboutDlg = CreateDialogW(GetModuleHandle(NULL), 
                                   MAKEINTRESOURCE(IDD_ABOUT_DIALOG), 
                                   hwndParent, 
                                   AboutDlgProc);
     
-    // Restore original DPI awareness context
+
     if (hUser32 && hOldDpiContext) {
         typedef HANDLE (WINAPI* SetThreadDpiAwarenessContextFunc)(HANDLE);
         SetThreadDpiAwarenessContextFunc setThreadDpiAwarenessContextFunc = 
@@ -1595,10 +1595,10 @@ static void PopulateSoundComboBox(HWND hwndDlg) {
     // Clear dropdown list
     SendMessage(hwndCombo, CB_RESETCONTENT, 0, 0);
 
-    // Add "None" option
+
     SendMessageW(hwndCombo, CB_ADDSTRING, 0, (LPARAM)GetLocalizedString(L"None", L"None"));
     
-    // Add "System Beep" option
+
     SendMessageW(hwndCombo, CB_ADDSTRING, 0, (LPARAM)GetLocalizedString(L"System Beep", L"System Beep"));
 
     // Get audio folder path
@@ -1636,7 +1636,7 @@ static void PopulateSoundComboBox(HWND hwndDlg) {
     if (NOTIFICATION_SOUND_FILE[0] != '\0') {
         // Check if it's the special system beep marker
         if (strcmp(NOTIFICATION_SOUND_FILE, "SYSTEM_BEEP") == 0) {
-            // Select "System Beep" option (index 1)
+
             SendMessage(hwndCombo, CB_SETCURSEL, 1, 0);
         } else {
             wchar_t wSoundFile[MAX_PATH];
@@ -1652,21 +1652,21 @@ static void PopulateSoundComboBox(HWND hwndDlg) {
             if (index != CB_ERR) {
                 SendMessage(hwndCombo, CB_SETCURSEL, index, 0);
             } else {
-                SendMessage(hwndCombo, CB_SETCURSEL, 0, 0); // Select "None"
+                SendMessage(hwndCombo, CB_SETCURSEL, 0, 0);
             }
         }
     } else {
-        SendMessage(hwndCombo, CB_SETCURSEL, 0, 0); // Select "None"
+        SendMessage(hwndCombo, CB_SETCURSEL, 0, 0);
     }
 }
 
 INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
-    static BOOL isPlaying = FALSE; // Add a static variable to track playback status
-    static int originalVolume = 0; // Add a static variable to store original volume
+    static BOOL isPlaying = FALSE;
+    static int originalVolume = 0;
     
     switch (msg) {
         case WM_INITDIALOG: {
-            // Read latest configuration to global variables
+
             ReadNotificationMessagesConfig();
             ReadNotificationTimeoutConfig();
             ReadNotificationOpacityConfig();
@@ -1877,11 +1877,11 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 // Get selected audio file
                 HWND hwndCombo = GetDlgItem(hwndDlg, IDC_NOTIFICATION_SOUND_COMBO);
                 int index = SendMessage(hwndCombo, CB_GETCURSEL, 0, 0);
-                if (index > 0) { // 0 is "None" option
+                if (index > 0) {
                     wchar_t wFileName[MAX_PATH];
                     SendMessageW(hwndCombo, CB_GETLBTEXT, index, (LPARAM)wFileName);
                     
-                    // Check if "System Beep" is selected
+
                     const wchar_t* sysBeepText = GetLocalizedString(L"System Beep", L"System Beep");
                     if (wcscmp(wFileName, sysBeepText) == 0) {
                         // Use special marker to represent system beep
@@ -1953,11 +1953,11 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 return TRUE;
             } else if (LOWORD(wParam) == IDC_TEST_SOUND_BUTTON) {
                 if (!isPlaying) {
-                    // Currently not playing, start playback and change button text to "Stop"
+
                     HWND hwndCombo = GetDlgItem(hwndDlg, IDC_NOTIFICATION_SOUND_COMBO);
                     int index = SendMessage(hwndCombo, CB_GETCURSEL, 0, 0);
                     
-                    if (index > 0) { // 0 is the "None" option
+                    if (index > 0) {
                         // Get current slider volume and apply it
                         HWND hwndSlider = GetDlgItem(hwndDlg, IDC_VOLUME_SLIDER);
                         int volume = (int)SendMessage(hwndSlider, TBM_GETPOS, 0, 0);
@@ -1991,7 +1991,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                         
                         // Play audio
                         if (PlayNotificationSound(hwndDlg)) {
-                            // Playback successful, change button text to "Stop"
+
                             SetDlgItemTextW(hwndDlg, IDC_TEST_SOUND_BUTTON, GetLocalizedString(L"Stop", L"Stop"));
                             isPlaying = TRUE;
                         }
@@ -2035,7 +2035,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                     if (newIndex != CB_ERR) {
                         SendMessage(hwndCombo, CB_SETCURSEL, newIndex, 0);
                     } else {
-                        // If previous selection not found, default to "None"
+
                         SendMessage(hwndCombo, CB_SETCURSEL, 0, 0);
                     }
                 }

@@ -37,11 +37,11 @@ BOOL CLOCK_WINDOW_TOPMOST = TRUE;
 RECT CLOCK_TEXT_RECT = {0, 0, 0, 0};
 BOOL CLOCK_TEXT_RECT_VALID = FALSE;
 
-// DWM function pointer type definition
+
 typedef HRESULT (WINAPI *pfnDwmEnableBlurBehindWindow)(HWND hWnd, const DWM_BLURBEHIND* pBlurBehind);
 static pfnDwmEnableBlurBehindWindow _DwmEnableBlurBehindWindow = NULL;
 
-// Window composition attribute type definition
+
 typedef enum _WINDOWCOMPOSITIONATTRIB {
     WCA_UNDEFINED = 0,
     WCA_NCRENDERING_ENABLED = 1,
@@ -100,28 +100,28 @@ typedef struct _ACCENT_POLICY {
 void SetClickThrough(HWND hwnd, BOOL enable) {
     LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
     
-    // Clear previously set related styles
+
     exStyle &= ~WS_EX_TRANSPARENT;
     
     if (enable) {
-        // Set click-through
+
         exStyle |= WS_EX_TRANSPARENT;
         
-        // If the window is a layered window, ensure it properly handles mouse input
+
         if (exStyle & WS_EX_LAYERED) {
             SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), 255, LWA_COLORKEY);
         }
     } else {
-        // Ensure window receives all mouse input
+
         if (exStyle & WS_EX_LAYERED) {
-            // Maintain transparency but allow receiving mouse input
+
             SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
         }
     }
     
     SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
     
-    // Update window to apply new style
+
     SetWindowPos(hwnd, NULL, 0, 0, 0, 0, 
                  SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
 }
@@ -140,7 +140,7 @@ void SetBlurBehind(HWND hwnd, BOOL enable) {
         ACCENT_POLICY policy = {0};
         policy.AccentState = ACCENT_ENABLE_BLURBEHIND;
         policy.AccentFlags = 0;
-        policy.GradientColor = (180 << 24) | 0x00202020;  // Changed to dark gray background with 180 transparency
+        policy.GradientColor = (180 << 24) | 0x00202020;
         
         WINDOWCOMPOSITIONATTRIBDATA data = {0};
         data.Attrib = WCA_ACCENT_POLICY;
@@ -178,11 +178,11 @@ void SetBlurBehind(HWND hwnd, BOOL enable) {
 
 void AdjustWindowPosition(HWND hwnd, BOOL forceOnScreen) {
     if (!forceOnScreen) {
-        // Do not force window to be on screen, return directly
+
         return;
     }
     
-    // Original code to ensure window is on screen
+
     RECT rect;
     GetWindowRect(hwnd, &rect);
     
@@ -195,27 +195,27 @@ void AdjustWindowPosition(HWND hwnd, BOOL forceOnScreen) {
     int x = rect.left;
     int y = rect.top;
     
-    // Ensure window right edge doesn't exceed screen
+
     if (x + width > screenWidth) {
         x = screenWidth - width;
     }
     
-    // Ensure window bottom edge doesn't exceed screen
+
     if (y + height > screenHeight) {
         y = screenHeight - height;
     }
     
-    // Ensure window left edge doesn't exceed screen
+
     if (x < 0) {
         x = 0;
     }
     
-    // Ensure window top edge doesn't exceed screen
+
     if (y < 0) {
         y = 0;
     }
     
-    // If window position needs adjustment, move the window
+
     if (x != rect.left || y != rect.top) {
         SetWindowPos(hwnd, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
     }
@@ -360,7 +360,7 @@ void LoadWindowSettings(HWND hwnd) {
     }
     fclose(fp);
     
-    // Apply position from config file directly, without additional adjustments
+
     SetWindowPos(hwnd, NULL, 
         CLOCK_WINDOW_POS_X, 
         CLOCK_WINDOW_POS_Y,
@@ -369,20 +369,20 @@ void LoadWindowSettings(HWND hwnd) {
         SWP_NOZORDER
     );
     
-    // Don't call AdjustWindowPosition to avoid overriding user settings
+
 }
 
 BOOL HandleMouseWheel(HWND hwnd, int delta) {
     if (CLOCK_EDIT_MODE) {
         float old_scale = CLOCK_FONT_SCALE_FACTOR;
         
-        // Remove original position calculation logic, directly use window center as scaling reference point
+
         RECT windowRect;
         GetWindowRect(hwnd, &windowRect);
         int oldWidth = windowRect.right - windowRect.left;
         int oldHeight = windowRect.bottom - windowRect.top;
         
-        // Use window center as scaling reference
+
         float relativeX = 0.5f;
         float relativeY = 0.5f;
         
@@ -395,7 +395,7 @@ BOOL HandleMouseWheel(HWND hwnd, int delta) {
             CLOCK_WINDOW_SCALE = CLOCK_FONT_SCALE_FACTOR;
         }
         
-        // Maintain scale range limits
+
         if (CLOCK_FONT_SCALE_FACTOR < MIN_SCALE_FACTOR) {
             CLOCK_FONT_SCALE_FACTOR = MIN_SCALE_FACTOR;
             CLOCK_WINDOW_SCALE = MIN_SCALE_FACTOR;
@@ -406,11 +406,11 @@ BOOL HandleMouseWheel(HWND hwnd, int delta) {
         }
         
         if (old_scale != CLOCK_FONT_SCALE_FACTOR) {
-            // Calculate new dimensions
+
             int newWidth = (int)(oldWidth * (CLOCK_FONT_SCALE_FACTOR / old_scale));
             int newHeight = (int)(oldHeight * (CLOCK_FONT_SCALE_FACTOR / old_scale));
             
-            // Keep window center position unchanged
+
             int newX = windowRect.left + (oldWidth - newWidth)/2;
             int newY = windowRect.top + (oldHeight - newHeight)/2;
             
@@ -419,11 +419,11 @@ BOOL HandleMouseWheel(HWND hwnd, int delta) {
                 newWidth, newHeight,
                 SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOREDRAW);
             
-            // Trigger redraw
+
             InvalidateRect(hwnd, NULL, FALSE);
             UpdateWindow(hwnd);
             
-            // Save settings after resizing
+
             SaveWindowSettings(hwnd);
         }
         return TRUE;
@@ -454,7 +454,7 @@ BOOL HandleMouseMove(HWND hwnd) {
         
         UpdateWindow(hwnd);
         
-        // Update the position variables and save settings
+
         CLOCK_WINDOW_POS_X = windowRect.left + deltaX;
         CLOCK_WINDOW_POS_Y = windowRect.top + deltaY;
         SaveWindowSettings(hwnd);
@@ -465,7 +465,7 @@ BOOL HandleMouseMove(HWND hwnd) {
 }
 
 HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
-    // Window class registration
+
     WNDCLASSW wc = {0};
     wc.lpfnWndProc = WindowProcedure;
     wc.hInstance = hInstance;
@@ -476,15 +476,15 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
         return NULL;
     }
 
-    // Set extended style
+
     DWORD exStyle = WS_EX_LAYERED | WS_EX_TOOLWINDOW;
     
-    // If not in topmost mode, add WS_EX_NOACTIVATE extended style
+
     if (!CLOCK_WINDOW_TOPMOST) {
         exStyle |= WS_EX_NOACTIVATE;
     }
     
-    // Create window
+
     HWND hwnd = CreateWindowExW(
         exStyle,
         L"CatimeWindow",
@@ -506,25 +506,25 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
     EnableWindow(hwnd, TRUE);
     SetFocus(hwnd);
 
-    // Set window transparency
+
     SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), 255, LWA_COLORKEY);
 
-    // Set blur effect
+
     SetBlurBehind(hwnd, FALSE);
 
-    // Initialize tray icon
+
     InitTrayIcon(hwnd, hInstance);
 
-    // Show window
+
     ShowWindow(hwnd, nCmdShow);
     UpdateWindow(hwnd);
 
-    // Set window position and parent based on topmost status
+
     if (CLOCK_WINDOW_TOPMOST) {
         SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, 
                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
     } else {
-        // Reattach to desktop container for non-topmost mode
+
         ReattachToDesktop(hwnd);
         ShowWindow(hwnd, SW_SHOWNOACTIVATE);
     }
@@ -536,16 +536,16 @@ float CLOCK_FONT_SCALE_FACTOR = 1.0f;
 int CLOCK_BASE_FONT_SIZE = 24;
 
 BOOL InitializeApplication(HINSTANCE hInstance) {
-    // Set DPI awareness mode to Per-Monitor DPI Aware to properly handle scaling when moving window between displays with different DPIs
-    // Use newer API SetProcessDpiAwarenessContext if available, otherwise fallback to older APIs
+
+
     
-    // Define DPI awareness related constants and types
+
     #ifndef DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
     DECLARE_HANDLE(DPI_AWARENESS_CONTEXT);
     #define DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 ((DPI_AWARENESS_CONTEXT)-4)
     #endif
     
-    // Define PROCESS_DPI_AWARENESS enum
+
     typedef enum {
         PROCESS_DPI_UNAWARE = 0,
         PROCESS_SYSTEM_DPI_AWARE = 1,
@@ -559,11 +559,11 @@ BOOL InitializeApplication(HINSTANCE hInstance) {
             (SetProcessDpiAwarenessContextFunc)GetProcAddress(hUser32, "SetProcessDpiAwarenessContext");
         
         if (setProcessDpiAwarenessContextFunc) {
-            // DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 is the latest DPI awareness mode
-            // It provides better multi-monitor DPI support
+
+
             setProcessDpiAwarenessContextFunc(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
         } else {
-            // Try using older API
+
             HMODULE hShcore = LoadLibraryW(L"shcore.dll");
             if (hShcore) {
                 typedef HRESULT(WINAPI* SetProcessDpiAwarenessFunc)(PROCESS_DPI_AWARENESS);
@@ -571,16 +571,16 @@ BOOL InitializeApplication(HINSTANCE hInstance) {
                     (SetProcessDpiAwarenessFunc)GetProcAddress(hShcore, "SetProcessDpiAwareness");
                 
                 if (setProcessDpiAwarenessFunc) {
-                    // PROCESS_PER_MONITOR_DPI_AWARE corresponds to per-monitor DPI awareness
+
                     setProcessDpiAwarenessFunc(PROCESS_PER_MONITOR_DPI_AWARE);
                 } else {
-                    // Finally try the oldest API
+
                     SetProcessDPIAware();
                 }
                 
                 FreeLibrary(hShcore);
             } else {
-                // If shcore.dll is not available, use the most basic DPI awareness API
+
                 SetProcessDPIAware();
             }
         }
@@ -589,7 +589,7 @@ BOOL InitializeApplication(HINSTANCE hInstance) {
     SetConsoleOutputCP(936);
     SetConsoleCP(936);
 
-    // Modified initialization order: read config file first, then initialize other features
+
     ReadConfig();
     UpdateStartupShortcut();
     InitializeDefaultLanguage();
@@ -624,29 +624,29 @@ BOOL OpenFileDialog(HWND hwnd, wchar_t* filePath, DWORD maxPath) {
     return GetOpenFileNameW(&ofn);
 }
 
-// Add function to set window topmost state
+
 void SetWindowTopmost(HWND hwnd, BOOL topmost) {
     CLOCK_WINDOW_TOPMOST = topmost;
     
-    // Get current window style
+
     LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
     
     if (topmost) {
-        // Topmost mode: remove no-activate style (if exists), add topmost style
+
         exStyle &= ~WS_EX_NOACTIVATE;
         
-        // If window was previously set as desktop child window, need to restore
-        // First set window as top-level window, clear parent window relationship
+
+
         SetParent(hwnd, NULL);
         
-        // Reset window owner, ensure Z-order is correct
+
         SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, 0);
         
-        // Set window position to top layer, and force window update
+
         SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED);
     } else {
-        // Non-topmost mode: attach to desktop to avoid being minimized by Win+D, but ensure visible
+
         exStyle |= WS_EX_NOACTIVATE;
         ReattachToDesktop(hwnd);
         ShowWindow(hwnd, SW_SHOWNOACTIVATE);
@@ -654,19 +654,19 @@ void SetWindowTopmost(HWND hwnd, BOOL topmost) {
                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_FRAMECHANGED);
     }
     
-    // Apply new window style
+
     SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
     
-    // Force window update
+
     SetWindowPos(hwnd, NULL, 0, 0, 0, 0,
                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
     
-    // Save window topmost setting
+
     WriteConfigTopmost(topmost ? "TRUE" : "FALSE");
 }
 
 void ReattachToDesktop(HWND hwnd) {
-    // Set as child window of desktop (WorkerW preferred), so Win+D won't minimize it
+
     HWND hProgman = FindWindowW(L"Progman", NULL);
     HWND hDesktop = NULL;
     
@@ -685,12 +685,12 @@ void ReattachToDesktop(HWND hwnd) {
     
     if (hDesktop != NULL) {
         SetParent(hwnd, hDesktop);
-        // Keep it visible
+
         ShowWindow(hwnd, SW_SHOW);
         SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0,
                      SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
     } else {
-        // Fallback: ensure as normal not-topmost and show
+
         SetParent(hwnd, NULL);
         ShowWindow(hwnd, SW_SHOW);
         SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0,

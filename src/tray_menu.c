@@ -40,31 +40,27 @@ extern int POMODORO_SHORT_BREAK;
 extern int POMODORO_LONG_BREAK;
 extern int POMODORO_LOOP_COUNT;
 
-// Pomodoro time array and count variables
+
 #define MAX_POMODORO_TIMES 10
-extern int POMODORO_TIMES[MAX_POMODORO_TIMES]; // Store all Pomodoro times
-extern int POMODORO_TIMES_COUNT;              // Actual number of Pomodoro times
+extern int POMODORO_TIMES[MAX_POMODORO_TIMES];
+extern int POMODORO_TIMES_COUNT;
 
-// Add to external variable declaration section
-extern wchar_t CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH];   ///< URL for timeout open website
-extern int current_pomodoro_time_index; // Current Pomodoro time index
-extern POMODORO_PHASE current_pomodoro_phase; // Pomodoro phase
-/// @}
 
-/// @name External function declarations
-/// @{
+extern wchar_t CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH];
+extern int current_pomodoro_time_index;
+extern POMODORO_PHASE current_pomodoro_phase;
+
+
+
+
 extern void GetConfigPath(char* path, size_t size);
 extern BOOL IsAutoStartEnabled(void);
 extern void WriteConfigStartupMode(const char* mode);
 extern void ClearColorOptions(void);
 extern void AddColorOption(const char* color);
-/// @}
 
-/**
- * @brief Read timeout action settings from configuration file
- * 
- * Read the timeout action settings saved in the configuration file and update the global variable CLOCK_TIMEOUT_ACTION
- */
+
+
 void ReadTimeoutActionFromConfig() {
     char configPath[MAX_PATH];
     GetConfigPath(configPath, MAX_PATH);
@@ -84,25 +80,16 @@ void ReadTimeoutActionFromConfig() {
     }
 }
 
-/**
- * @brief Recent file structure
- * 
- * Store information about recently used files, including full path and display name
- */
+
 typedef struct {
-    char path[MAX_PATH];  ///< Full file path
-    char name[MAX_PATH];  ///< File display name (may be truncated)
+    char path[MAX_PATH];
+    char name[MAX_PATH];
 } RecentFile;
 
 extern RecentFile CLOCK_RECENT_FILES[];
 extern int CLOCK_RECENT_FILES_COUNT;
 
-/**
- * @brief Format Pomodoro time to wide string
- * @param seconds Number of seconds
- * @param buffer Output buffer
- * @param bufferSize Buffer size
- */
+
 static void FormatPomodoroTime(int seconds, wchar_t* buffer, size_t bufferSize) {
     int minutes = seconds / 60;
     int secs = seconds % 60;
@@ -112,34 +99,25 @@ static void FormatPomodoroTime(int seconds, wchar_t* buffer, size_t bufferSize) 
     if (hours > 0) {
         _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d:%02d", hours, minutes, secs);
     } else if (secs == 0) {
-        // For whole minutes (no seconds), display only the minute number
+
         _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d", minutes);
     } else {
         _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d", minutes, secs);
     }
 }
 
-/**
- * @brief Truncate long file names
- * 
- * @param fileName Original file name
- * @param truncated Truncated file name buffer
- * @param maxLen Maximum display length (excluding terminator)
- * 
- * If the file name exceeds the specified length, it uses the format "first 12 characters...last 12 characters.extension" for intelligent truncation.
- * This function preserves the file extension to ensure users can identify the file type.
- */
+
 void TruncateFileName(const wchar_t* fileName, wchar_t* truncated, size_t maxLen) {
-    if (!fileName || !truncated || maxLen <= 7) return; // At least need to display "x...y"
+    if (!fileName || !truncated || maxLen <= 7) return;
     
     size_t nameLen = wcslen(fileName);
     if (nameLen <= maxLen) {
-        // File name does not exceed the length limit, copy directly
+
         wcscpy(truncated, fileName);
         return;
     }
     
-    // Find the position of the last dot (extension separator)
+
     const wchar_t* lastDot = wcsrchr(fileName, L'.');
     const wchar_t* fileNameNoExt = fileName;
     const wchar_t* ext = L"";
@@ -147,15 +125,15 @@ void TruncateFileName(const wchar_t* fileName, wchar_t* truncated, size_t maxLen
     size_t extLen = 0;
     
     if (lastDot && lastDot != fileName) {
-        // Has valid extension
-        ext = lastDot;  // Extension including dot
+
+        ext = lastDot;
         extLen = wcslen(ext);
-        nameNoExtLen = lastDot - fileName;  // Length of file name without extension
+        nameNoExtLen = lastDot - fileName;
     }
     
-    // If the pure file name length is less than or equal to 27 characters (12+3+12), use the old truncation method
+
     if (nameNoExtLen <= 27) {
-        // Simple truncation of main file name, preserving extension
+
         wcsncpy(truncated, fileName, maxLen - extLen - 3);
         truncated[maxLen - extLen - 3] = L'\0';
         wcscat(truncated, L"...");
@@ -163,57 +141,43 @@ void TruncateFileName(const wchar_t* fileName, wchar_t* truncated, size_t maxLen
         return;
     }
     
-    // Use new truncation method: first 12 characters + ... + last 12 characters + extension
+
     wchar_t buffer[MAX_PATH];
     
-    // Copy first 12 characters
+
     wcsncpy(buffer, fileName, 12);
     buffer[12] = L'\0';
     
-    // Add ellipsis
+
     wcscat(buffer, L"...");
     
-    // Copy last 12 characters (excluding extension part)
+
     wcsncat(buffer, fileName + nameNoExtLen - 12, 12);
     
-    // Add extension
+
     wcscat(buffer, ext);
     
-    // Copy result to output buffer
+
     wcscpy(truncated, buffer);
 }
 
-/**
- * @brief Display color and settings menu
- * 
- * @param hwnd Window handle
- * 
- * Create and display the application's main settings menu, including:
- * - Edit mode toggle
- * - Timeout action settings
- * - Preset time management
- * - Startup mode settings
- * - Font selection
- * - Color settings
- * - Language selection
- * - Help and about information
- */
+
 void ShowColorMenu(HWND hwnd) {
-    // Read timeout action settings from the configuration file before creating the menu
+
     ReadTimeoutActionFromConfig();
     
-    // Set mouse cursor to default arrow to prevent wait cursor display
+
     SetCursor(LoadCursorW(NULL, MAKEINTRESOURCEW(IDC_ARROW)));
     
     HMENU hMenu = CreatePopupMenu();
     
-    // Add edit mode option
+
     AppendMenuW(hMenu, MF_STRING | (CLOCK_EDIT_MODE ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDC_EDIT_MODE, 
                GetLocalizedString(L"编辑模式", L"Edit Mode"));
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
-    // Timeout action menu
+
     HMENU hTimeoutMenu = CreatePopupMenu();
     
     // 1. Show message
@@ -251,7 +215,7 @@ void ShowColorMenu(HWND hwnd) {
         wchar_t truncatedName[MAX_PATH];
         TruncateFileName(wFileName, truncatedName, 25); // Limit to 25 characters
         
-        // Check if this is the currently selected file and the current timeout action is "open file"
+
         BOOL isCurrentFile = (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE && 
                              strlen(CLOCK_TIMEOUT_FILE_PATH) > 0 && 
                              strcmp(CLOCK_RECENT_FILES[i].path, CLOCK_TIMEOUT_FILE_PATH) == 0);
@@ -270,7 +234,7 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hFileMenu, MF_STRING, CLOCK_IDM_BROWSE_FILE,
                GetLocalizedString(L"浏览...", L"Browse..."));
 
-    // Add "Open File" as a submenu to the timeout action menu
+
     AppendMenuW(hTimeoutMenu, MF_POPUP | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE ? MF_CHECKED : MF_UNCHECKED), 
                (UINT_PTR)hFileMenu, 
                GetLocalizedString(L"打开文件/软件", L"Open File/Software"));
@@ -309,12 +273,12 @@ void ShowColorMenu(HWND hwnd) {
     // Create Advanced submenu
     HMENU hAdvancedMenu = CreatePopupMenu();
 
-    // Add "Run Command" option
+
     AppendMenuW(hAdvancedMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_RUN_COMMAND ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_RUN_COMMAND,
                GetLocalizedString(L"运行命令", L"Run Command"));
 
-    // Add "HTTP Request" option
+
     AppendMenuW(hAdvancedMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_HTTP_REQUEST ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_HTTP_REQUEST,
                GetLocalizedString(L"HTTP 请求", L"HTTP Request"));
@@ -401,7 +365,7 @@ void ShowColorMenu(HWND hwnd) {
                 CLOCK_IDM_TOPMOST,
                 GetLocalizedString(L"置顶", L"Always on Top"));
 
-    // Add "Hotkey Settings" option after preset management menu
+
     AppendMenuW(hMenu, MF_STRING, CLOCK_IDM_HOTKEY_SETTINGS,
                 GetLocalizedString(L"热键设置", L"Hotkey Settings"));
 
@@ -442,7 +406,7 @@ void ShowColorMenu(HWND hwnd) {
 
     AppendMenuW(hFontSubMenu, MF_SEPARATOR, 0, NULL);
 
-    // Add other fonts to the "More" submenu
+
     for (int i = 0; i < FONT_RESOURCES_COUNT; i++) {
         // Exclude fonts already added to the main menu
         if (strcmp(fontResources[i].fontName, "Terminess Nerd Font Propo Essence.ttf") == 0 ||
@@ -472,7 +436,7 @@ void ShowColorMenu(HWND hwnd) {
                   fontResources[i].menuId, wDisplayNameMore);
     }
 
-    // Add "More" submenu to main font menu
+
     AppendMenuW(hFontSubMenu, MF_POPUP, (UINT_PTR)hMoreFontsMenu, GetLocalizedString(L"更多", L"More"));
 
     // Color menu
@@ -517,25 +481,25 @@ void ShowColorMenu(HWND hwnd) {
     // About menu
     HMENU hAboutMenu = CreatePopupMenu();
 
-    // Add "About" menu item here
+
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_ABOUT, GetLocalizedString(L"关于", L"About"));
 
     // Add separator
     AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);
 
-    // Add "Support" option - open sponsorship page
+
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_SUPPORT, GetLocalizedString(L"支持", L"Support"));
     
-    // Add "Feedback" option - open different feedback links based on language
+
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_FEEDBACK, GetLocalizedString(L"反馈", L"Feedback"));
     
     // Add separator
     AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);
     
-    // Add "Help" option - open user guide webpage
+
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_HELP, GetLocalizedString(L"使用指南", L"User Guide"));
 
-    // Add "Check for Updates" option
+
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_CHECK_UPDATE, 
                GetLocalizedString(L"检查更新", L"Check for Updates"));
 
@@ -586,23 +550,12 @@ void ShowColorMenu(HWND hwnd) {
     DestroyMenu(hMenu);
 }
 
-/**
- * @brief Display tray right-click menu
- * 
- * @param hwnd Window handle
- * 
- * Create and display the system tray right-click menu, dynamically adjusting menu items based on current application state. Includes:
- * - Timer control (pause/resume, restart)
- * - Time display settings (24-hour format, show seconds)
- * - Pomodoro clock settings
- * - Count-up and countdown mode switching
- * - Quick time preset options
- */
+
 void ShowContextMenu(HWND hwnd) {
-    // Read timeout action settings from configuration file before creating the menu
+
     ReadTimeoutActionFromConfig();
     
-    // Set mouse cursor to default arrow to prevent wait cursor display
+
     SetCursor(LoadCursorW(NULL, MAKEINTRESOURCEW(IDC_ARROW)));
     
     HMENU hMenu = CreatePopupMenu();
@@ -758,7 +711,7 @@ void ShowContextMenu(HWND hwnd) {
                CLOCK_IDM_COUNT_UP_START,
                GetLocalizedString(L"正计时", L"Count Up"));
 
-    // Add "Set Countdown" option below Count-up
+
     AppendMenuW(hMenu, MF_STRING, 101, 
                 GetLocalizedString(L"倒计时", L"Countdown"));
 
