@@ -1,11 +1,3 @@
-/**
- * @file drawing.c
- * @brief Window drawing functionality implementation
- * 
- * This file implements the drawing-related functionality of the application window,
- * including text rendering, color settings, and window content drawing.
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,10 +8,7 @@
 #include "../include/timer.h"
 #include "../include/config.h"
 
-// Variable imported from window_procedure.c
 extern int elapsed_time;
-
-// Using window drawing related constants defined in resource.h
 
 void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
     static wchar_t time_text[50];
@@ -36,7 +25,6 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
     SetStretchBltMode(memDC, HALFTONE);
     SetBrushOrgEx(memDC, 0, 0, NULL);
 
-    // Generate display text based on different modes
     if (CLOCK_SHOW_CURRENT_TIME) {
         time_t now = time(NULL);
         struct tm *tm_info = localtime(&now);
@@ -58,7 +46,6 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
                     hour, tm_info->tm_min);
         }
     } else if (CLOCK_COUNT_UP) {
-        // Count-up mode
         int hours = countup_elapsed_time / 3600;
         int minutes = (countup_elapsed_time % 3600) / 60;
         int seconds = countup_elapsed_time % 60;
@@ -71,17 +58,13 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
             swprintf(time_text, 50, L"%d", seconds);
         }
     } else {
-        // Countdown mode
         int remaining_time = CLOCK_TOTAL_TIME - countdown_elapsed_time;
         if (remaining_time <= 0) {
-            // Timeout reached, decide whether to display content based on conditions
             if (CLOCK_TOTAL_TIME == 0 && countdown_elapsed_time == 0) {
-                // This is the case after sleep operation, don't display anything
                 time_text[0] = L'\0';
             } else if (strcmp(CLOCK_TIMEOUT_TEXT, "0") == 0) {
                 time_text[0] = L'\0';
             } else if (strlen(CLOCK_TIMEOUT_TEXT) > 0) {
-                // Convert UTF-8 timeout text to Unicode
                 MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_TEXT, -1, time_text, 50);
             } else {
                 time_text[0] = L'\0';
@@ -103,7 +86,6 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
 
     const char* fontToUse = IS_PREVIEWING ? PREVIEW_FONT_NAME : FONT_FILE_NAME;
     
-    // Convert font internal name to Unicode
     const char* fontInternalName = IS_PREVIEWING ? PREVIEW_INTERNAL_NAME : FONT_INTERNAL_NAME;
     wchar_t fontInternalNameW[256];
     MultiByteToWideChar(CP_UTF8, 0, fontInternalName, -1, fontInternalNameW, 256);
@@ -140,7 +122,7 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
     SetTextColor(memDC, RGB(r, g, b));
 
     if (CLOCK_EDIT_MODE) {
-        HBRUSH hBrush = CreateSolidBrush(RGB(20, 20, 20));  // Dark gray background
+        HBRUSH hBrush = CreateSolidBrush(RGB(20, 20, 20));
         FillRect(memDC, &rect, hBrush);
         DeleteObject(hBrush);
     } else {
@@ -170,18 +152,15 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
         int x = (rect.right - textSize.cx) / 2;
         int y = (rect.bottom - textSize.cy) / 2;
 
-        // If in edit mode, force white text and add outline effect
         if (CLOCK_EDIT_MODE) {
             SetTextColor(memDC, RGB(255, 255, 255));
             
-            // Add black outline effect
             SetTextColor(memDC, RGB(0, 0, 0));
             TextOutW(memDC, x-1, y, time_text, wcslen(time_text));
             TextOutW(memDC, x+1, y, time_text, wcslen(time_text));
             TextOutW(memDC, x, y-1, time_text, wcslen(time_text));
             TextOutW(memDC, x, y+1, time_text, wcslen(time_text));
             
-            // Set back to white for drawing text
             SetTextColor(memDC, RGB(255, 255, 255));
             TextOutW(memDC, x, y, time_text, wcslen(time_text));
         } else {

@@ -1,10 +1,4 @@
-/**
- * @file window.c
- * @brief Window management functionality implementation
- * 
- * This file implements the functionality related to application window management,
- * including window creation, position adjustment, transparency, click-through, and drag functionality.
- */
+
 
 #include "../include/window.h"
 #include "../include/timer.h"
@@ -19,29 +13,27 @@
 #include <stdlib.h>
 #include <windows.h>
 
-// Forward declaration of WindowProcedure (defined in main.c)
+
 extern LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-// Add declaration for SetProcessDPIAware function
 #ifndef _INC_WINUSER
-// If not included by windows.h, add SetProcessDPIAware function declaration
 WINUSERAPI BOOL WINAPI SetProcessDPIAware(VOID);
 #endif
 
-// Window size and position variables
+
 int CLOCK_BASE_WINDOW_WIDTH = 200;
 int CLOCK_BASE_WINDOW_HEIGHT = 100;
 float CLOCK_WINDOW_SCALE = 1.0f;
 int CLOCK_WINDOW_POS_X = 100;
 int CLOCK_WINDOW_POS_Y = 100;
 
-// Window state variables
+
 BOOL CLOCK_EDIT_MODE = FALSE;
 BOOL CLOCK_IS_DRAGGING = FALSE;
 POINT CLOCK_LAST_MOUSE_POS = {0, 0};
-BOOL CLOCK_WINDOW_TOPMOST = TRUE;  // Default topmost
+BOOL CLOCK_WINDOW_TOPMOST = TRUE;
 
-// Text area variables
+
 RECT CLOCK_TEXT_RECT = {0, 0, 0, 0};
 BOOL CLOCK_TEXT_RECT_VALID = FALSE;
 

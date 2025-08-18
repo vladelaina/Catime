@@ -1,8 +1,3 @@
-/**
- * @file color.c
- * @brief Color processing functionality implementation
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -312,7 +307,6 @@ void InitializeDefaultLanguage(void) {
 
     ClearColorOptions();
 
-    // Convert ANSI string to Unicode for the API call
     wchar_t wconfig_path[MAX_PATH];
     MultiByteToWideChar(CP_ACP, 0, config_path, -1, wconfig_path, MAX_PATH);
     
@@ -372,9 +366,6 @@ void InitializeDefaultLanguage(void) {
     }
 }
 
-/**
- * @brief Add color option
- */
 void AddColorOption(const char* hexColor) {
     if (!hexColor || !*hexColor) {
         return;
@@ -416,9 +407,6 @@ void AddColorOption(const char* hexColor) {
     }
 }
 
-/**
- * @brief Clear all color options
- */
 void ClearColorOptions(void) {
     if (COLOR_OPTIONS) {
         for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
@@ -430,14 +418,10 @@ void ClearColorOptions(void) {
     }
 }
 
-/**
- * @brief Write color to configuration file
- */
 void WriteConfigColor(const char* color_input) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
 
-    // Convert ANSI string to Unicode for the API call
     wchar_t wconfig_path[MAX_PATH];
     MultiByteToWideChar(CP_ACP, 0, config_path, -1, wconfig_path, MAX_PATH);
     
@@ -498,9 +482,6 @@ void WriteConfigColor(const char* color_input) {
     ReadConfig();
 }
 
-/**
- * @brief Normalize color format
- */
 void normalizeColor(const char* input, char* output, size_t output_size) {
     while (isspace(*input)) input++;
 
@@ -566,9 +547,6 @@ void normalizeColor(const char* input, char* output, size_t output_size) {
     strncpy(output, input, output_size);
 }
 
-/**
- * @brief Check if color is valid
- */
 BOOL isValidColor(const char* input) {
     if (!input || !*input) return FALSE;
 
@@ -593,9 +571,6 @@ BOOL isValidColor(const char* input) {
     return FALSE;
 }
 
-/**
- * @brief Color edit box subclass procedure
- */
 LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_KEYDOWN:
@@ -681,9 +656,6 @@ LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
     return CallWindowProc(g_OldEditProc, hwnd, msg, wParam, lParam);
 }
 
-/**
- * @brief Color settings dialog procedure
- */
 INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_INITDIALOG: {
@@ -704,7 +676,6 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
         case WM_COMMAND: {
             if (LOWORD(wParam) == CLOCK_IDC_BUTTON_OK) {
                 char color[32];
-                // Convert from Unicode to ANSI for internal processing
                 wchar_t wcolor[32];
                 GetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, wcolor, sizeof(wcolor)/sizeof(wchar_t));
                 WideCharToMultiByte(CP_ACP, 0, wcolor, -1, color, sizeof(color), NULL, NULL);
@@ -732,7 +703,6 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                     return TRUE;
                 } else {
                     ShowErrorDialog(hwndDlg);
-                    // Keep input content and select all text for easy editing
                     HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
                     SetFocus(hwndEdit);
                     SendMessage(hwndEdit, EM_SETSEL, 0, -1);
@@ -748,9 +718,6 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
     return FALSE;
 }
 
-/**
- * @brief Replace pure black color with near-black
- */
 void replaceBlackColor(const char* color, char* output, size_t output_size) {
     if (color && (strcasecmp(color, "#000000") == 0)) {
         strncpy(output, "#000001", output_size);

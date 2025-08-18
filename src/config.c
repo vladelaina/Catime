@@ -1,8 +1,3 @@
-/**
- * @file config.c
- * @brief Configuration file management module implementation
- */
-
 #include "../include/config.h"
 #include "../include/language.h"
 #include "../resource/resource.h"
@@ -43,10 +38,10 @@ BOOL NOTIFICATION_DISABLED = FALSE;
 char NOTIFICATION_SOUND_FILE[MAX_PATH] = "";
 int NOTIFICATION_SOUND_VOLUME = 100;
 
-/** @brief Read string value from INI file */
+
 DWORD ReadIniString(const char* section, const char* key, const char* defaultValue,
                   char* returnValue, DWORD returnSize, const char* filePath) {
-    // Convert ANSI strings to Unicode for the API call
+
     wchar_t wsection[256], wkey[256], wdefaultValue[1024], wfilePath[MAX_PATH];
     wchar_t wreturnValue[1024];
     
@@ -57,16 +52,16 @@ DWORD ReadIniString(const char* section, const char* key, const char* defaultVal
     
     DWORD result = GetPrivateProfileStringW(wsection, wkey, wdefaultValue, wreturnValue, 1024, wfilePath);
     
-    // Convert result back to ANSI
+
     WideCharToMultiByte(CP_ACP, 0, wreturnValue, -1, returnValue, returnSize, NULL, NULL);
     
     return result;
 }
 
-/** @brief Write string value to INI file */
+
 BOOL WriteIniString(const char* section, const char* key, const char* value,
                   const char* filePath) {
-    // Convert ANSI strings to Unicode for the API call
+
     wchar_t wsection[256], wkey[256], wvalue[1024], wfilePath[MAX_PATH];
     
     MultiByteToWideChar(CP_ACP, 0, section, -1, wsection, 256);
@@ -77,10 +72,10 @@ BOOL WriteIniString(const char* section, const char* key, const char* value,
     return WritePrivateProfileStringW(wsection, wkey, wvalue, wfilePath);
 }
 
-/** @brief Read integer value from INI */
+
 int ReadIniInt(const char* section, const char* key, int defaultValue, 
              const char* filePath) {
-    // Convert ANSI strings to Unicode for the API call
+
     wchar_t wsection[256], wkey[256], wfilePath[MAX_PATH];
     
     MultiByteToWideChar(CP_ACP, 0, section, -1, wsection, 256);
@@ -90,13 +85,13 @@ int ReadIniInt(const char* section, const char* key, int defaultValue,
     return GetPrivateProfileIntW(wsection, wkey, defaultValue, wfilePath);
 }
 
-/** @brief Write integer value to INI file */
+
 BOOL WriteIniInt(const char* section, const char* key, int value,
                const char* filePath) {
     char valueStr[32];
     snprintf(valueStr, sizeof(valueStr), "%d", value);
     
-    // Convert ANSI strings to Unicode for the API call
+
     wchar_t wsection[256], wkey[256], wvalue[32], wfilePath[MAX_PATH];
     
     MultiByteToWideChar(CP_ACP, 0, section, -1, wsection, 256);
@@ -107,12 +102,12 @@ BOOL WriteIniInt(const char* section, const char* key, int value,
     return WritePrivateProfileStringW(wsection, wkey, wvalue, wfilePath);
 }
 
-/** @brief Write boolean value to INI file */
+
 BOOL WriteIniBool(const char* section, const char* key, BOOL value,
                const char* filePath) {
     const char* valueStr = value ? "TRUE" : "FALSE";
     
-    // Convert ANSI strings to Unicode for the API call
+
     wchar_t wsection[256], wkey[256], wvalue[8], wfilePath[MAX_PATH];
     
     MultiByteToWideChar(CP_ACP, 0, section, -1, wsection, 256);
@@ -123,13 +118,13 @@ BOOL WriteIniBool(const char* section, const char* key, BOOL value,
     return WritePrivateProfileStringW(wsection, wkey, wvalue, wfilePath);
 }
 
-/** @brief Read boolean value from INI */
+
 BOOL ReadIniBool(const char* section, const char* key, BOOL defaultValue, 
                const char* filePath) {
     char value[8];
     const char* defaultStr = defaultValue ? "TRUE" : "FALSE";
     
-    // Convert ANSI strings to Unicode for the API call
+
     wchar_t wsection[256], wkey[256], wdefaultValue[8], wfilePath[MAX_PATH];
     wchar_t wvalue[8];
     
@@ -140,22 +135,22 @@ BOOL ReadIniBool(const char* section, const char* key, BOOL defaultValue,
     
     GetPrivateProfileStringW(wsection, wkey, wdefaultValue, wvalue, 8, wfilePath);
     
-    // Convert result back to ANSI
+
     WideCharToMultiByte(CP_ACP, 0, wvalue, -1, value, sizeof(value), NULL, NULL);
     
     return _stricmp(value, "TRUE") == 0;
 }
 
-/** @brief Check if configuration file exists */
+
 BOOL FileExists(const char* filePath) {
-    // Convert ANSI string to Unicode for the API call
+
     wchar_t wfilePath[MAX_PATH];
     MultiByteToWideChar(CP_ACP, 0, filePath, -1, wfilePath, MAX_PATH);
     
     return GetFileAttributesW(wfilePath) != INVALID_FILE_ATTRIBUTES;
 }
 
-/** @brief Get configuration file path */
+
 void GetConfigPath(char* path, size_t size) {
     if (!path || size == 0) return;
 
@@ -169,7 +164,7 @@ void GetConfigPath(char* path, size_t size) {
         
         char dir_path[MAX_PATH];
         if (snprintf(dir_path, sizeof(dir_path), "%s\\Catime", appdata_path) < sizeof(dir_path)) {
-            // Convert ANSI string to Unicode for the API call
+        
             wchar_t wdir_path[MAX_PATH];
             MultiByteToWideChar(CP_ACP, 0, dir_path, -1, wdir_path, MAX_PATH);
             if (!CreateDirectoryW(wdir_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
@@ -183,14 +178,14 @@ void GetConfigPath(char* path, size_t size) {
     }
 }
 
-/** @brief Create default configuration file */
+
 void CreateDefaultConfig(const char* config_path) {
-    // Get system default language ID
+
     LANGID systemLangID = GetUserDefaultUILanguage();
-    int defaultLanguage = APP_LANG_ENGLISH; // Default to English
-    const char* langName = "English"; // Default language name
+    int defaultLanguage = APP_LANG_ENGLISH;
+    const char* langName = "English";
     
-    // Set default language based on system language ID
+
     switch (PRIMARYLANGID(systemLangID)) {
         case LANG_CHINESE:
             if (SUBLANGID(systemLangID) == SUBLANG_CHINESE_SIMPLIFIED) {
@@ -236,7 +231,7 @@ void CreateDefaultConfig(const char* config_path) {
             break;
     }
     
-    // Choose default settings based on notification type
+
     const char* typeStr;
     switch (NOTIFICATION_TYPE) {
         case NOTIFICATION_TYPE_CATIME:
@@ -249,16 +244,16 @@ void CreateDefaultConfig(const char* config_path) {
             typeStr = "OS";
             break;
         default:
-            typeStr = "CATIME"; // Default value
+            typeStr = "CATIME";
             break;
     }
     
-    // ======== [General] Section ========
+
     WriteIniString(INI_SECTION_GENERAL, "CONFIG_VERSION", CATIME_VERSION, config_path);
     WriteIniString(INI_SECTION_GENERAL, "LANGUAGE", langName, config_path);
     WriteIniString(INI_SECTION_GENERAL, "SHORTCUT_CHECK_DONE", "FALSE", config_path);
     
-    // ======== [Display] Section ========
+
     WriteIniString(INI_SECTION_DISPLAY, "CLOCK_TEXT_COLOR", "#FFB6C1", config_path);
     WriteIniInt(INI_SECTION_DISPLAY, "CLOCK_BASE_FONT_SIZE", 20, config_path);
     WriteIniString(INI_SECTION_DISPLAY, "FONT_FILE_NAME", "Wallpoet Essence.ttf", config_path);
@@ -267,7 +262,7 @@ void CreateDefaultConfig(const char* config_path) {
     WriteIniString(INI_SECTION_DISPLAY, "WINDOW_SCALE", "1.62", config_path);
     WriteIniString(INI_SECTION_DISPLAY, "WINDOW_TOPMOST", "TRUE", config_path);
     
-    // ======== [Timer] Section ========
+
     WriteIniInt(INI_SECTION_TIMER, "CLOCK_DEFAULT_START_TIME", 1500, config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_USE_24HOUR", "FALSE", config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_SHOW_SECONDS", "FALSE", config_path);
@@ -278,11 +273,11 @@ void CreateDefaultConfig(const char* config_path) {
     WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_WEBSITE", "", config_path);
     WriteIniString(INI_SECTION_TIMER, "STARTUP_MODE", "COUNTDOWN", config_path);
     
-    // ======== [Pomodoro] Section ========
+
     WriteIniString(INI_SECTION_POMODORO, "POMODORO_TIME_OPTIONS", "1500,300,1500,600", config_path);
     WriteIniInt(INI_SECTION_POMODORO, "POMODORO_LOOP_COUNT", 1, config_path);
     
-    // ======== [Notification] Section ========
+
     WriteIniString(INI_SECTION_NOTIFICATION, "CLOCK_TIMEOUT_MESSAGE_TEXT", "时间到啦！", config_path);
     WriteIniString(INI_SECTION_NOTIFICATION, "POMODORO_TIMEOUT_MESSAGE_TEXT", "番茄钟时间到！", config_path);
     WriteIniString(INI_SECTION_NOTIFICATION, "POMODORO_CYCLE_COMPLETE_TEXT", "所有番茄钟循环完成！", config_path);
@@ -293,7 +288,7 @@ void CreateDefaultConfig(const char* config_path) {
     WriteIniInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_VOLUME", 100, config_path);
     WriteIniString(INI_SECTION_NOTIFICATION, "NOTIFICATION_DISABLED", "FALSE", config_path);
     
-    // ======== [Hotkeys] Section ========
+
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_SHOW_TIME", "None", config_path);
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_COUNT_UP", "None", config_path);
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_COUNTDOWN", "None", config_path);
@@ -307,28 +302,28 @@ void CreateDefaultConfig(const char* config_path) {
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_RESTART_TIMER", "None", config_path);
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_CUSTOM_COUNTDOWN", "None", config_path);
     
-    // ======== [RecentFiles] Section ========
+
     for (int i = 1; i <= 5; i++) {
         char key[32];
         snprintf(key, sizeof(key), "CLOCK_RECENT_FILE_%d", i);
         WriteIniString(INI_SECTION_RECENTFILES, key, "", config_path);
     }
     
-    // ======== [Colors] Section ========
+
     WriteIniString(INI_SECTION_COLORS, "COLOR_OPTIONS", 
                  "#FFFFFF,#F9DB91,#F4CAE0,#FFB6C1,#A8E7DF,#A3CFB3,#92CBFC,#BDA5E7,#9370DB,#8C92CF,#72A9A5,#EB99A7,#EB96BD,#FFAE8B,#FF7F50,#CA6174", 
                  config_path);
 }
 
-/** @brief Extract filename from file path */
+
 void ExtractFileName(const char* path, char* name, size_t nameSize) {
     if (!path || !name || nameSize == 0) return;
     
-    // First convert to wide characters to properly handle Unicode paths
+
     wchar_t wPath[MAX_PATH] = {0};
     MultiByteToWideChar(CP_UTF8, 0, path, -1, wPath, MAX_PATH);
     
-    // Look for the last backslash or forward slash
+
     wchar_t* lastSlash = wcsrchr(wPath, L'\\');
     if (!lastSlash) lastSlash = wcsrchr(wPath, L'/');
     
@@ -339,42 +334,42 @@ void ExtractFileName(const char* path, char* name, size_t nameSize) {
         wcscpy(wName, wPath);
     }
     
-    // Convert back to UTF-8
+
     WideCharToMultiByte(CP_UTF8, 0, wName, -1, name, nameSize, NULL, NULL);
 }
 
-/** @brief Check and create resource folders */
+
 void CheckAndCreateResourceFolders() {
     char config_path[MAX_PATH];
     char base_path[MAX_PATH];
     char resource_path[MAX_PATH];
     char *last_slash;
     
-    // Get configuration file path
+
     GetConfigPath(config_path, MAX_PATH);
     
-    // Copy configuration file path
+
     strncpy(base_path, config_path, MAX_PATH - 1);
     base_path[MAX_PATH - 1] = '\0';
     
-    // Find the last slash or backslash, which marks the beginning of the filename
+
     last_slash = strrchr(base_path, '\\');
     if (!last_slash) {
         last_slash = strrchr(base_path, '/');
     }
     
     if (last_slash) {
-        // Truncate path to directory part
+
         *(last_slash + 1) = '\0';
         
-        // Create resources main directory
+
         snprintf(resource_path, MAX_PATH, "%sresources", base_path);
-        // Convert ANSI string to Unicode for the API call
+    
         wchar_t wresource_path_check[MAX_PATH];
         MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path_check, MAX_PATH);
         DWORD attrs = GetFileAttributesW(wresource_path_check);
         if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
-            // Convert ANSI string to Unicode for the API call
+        
             wchar_t wresource_path[MAX_PATH];
             MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path, MAX_PATH);
             if (!CreateDirectoryW(wresource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
@@ -383,13 +378,13 @@ void CheckAndCreateResourceFolders() {
             }
         }
         
-        // Create audio subdirectory
+
         snprintf(resource_path, MAX_PATH, "%sresources\\audio", base_path);
-        // Convert ANSI string to Unicode for the API call
+    
         MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path_check, MAX_PATH);
         attrs = GetFileAttributesW(wresource_path_check);
         if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
-            // Convert ANSI string to Unicode for the API call
+        
             wchar_t wresource_path[MAX_PATH];
             MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path, MAX_PATH);
             if (!CreateDirectoryW(wresource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
@@ -397,13 +392,13 @@ void CheckAndCreateResourceFolders() {
             }
         }
         
-        // Create images subdirectory
+
         snprintf(resource_path, MAX_PATH, "%sresources\\images", base_path);
-        // Convert ANSI string to Unicode for the API call
+    
         MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path_check, MAX_PATH);
         attrs = GetFileAttributesW(wresource_path_check);
         if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
-            // Convert ANSI string to Unicode for the API call
+        
             wchar_t wresource_path[MAX_PATH];
             MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path, MAX_PATH);
             if (!CreateDirectoryW(wresource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
@@ -411,13 +406,13 @@ void CheckAndCreateResourceFolders() {
             }
         }
         
-        // Create animations subdirectory
+
         snprintf(resource_path, MAX_PATH, "%sresources\\animations", base_path);
-        // Convert ANSI string to Unicode for the API call
+    
         MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path_check, MAX_PATH);
         attrs = GetFileAttributesW(wresource_path_check);
         if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
-            // Convert ANSI string to Unicode for the API call
+        
             wchar_t wresource_path[MAX_PATH];
             MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path, MAX_PATH);
             if (!CreateDirectoryW(wresource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
@@ -425,13 +420,13 @@ void CheckAndCreateResourceFolders() {
             }
         }
         
-        // Create themes subdirectory
+
         snprintf(resource_path, MAX_PATH, "%sresources\\themes", base_path);
-        // Convert ANSI string to Unicode for the API call
+    
         MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path_check, MAX_PATH);
         attrs = GetFileAttributesW(wresource_path_check);
         if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
-            // Convert ANSI string to Unicode for the API call
+        
             wchar_t wresource_path[MAX_PATH];
             MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path, MAX_PATH);
             if (!CreateDirectoryW(wresource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
@@ -439,13 +434,13 @@ void CheckAndCreateResourceFolders() {
             }
         }
         
-        // Create plug-in subdirectory
+
         snprintf(resource_path, MAX_PATH, "%sresources\\plug-in", base_path);
-        // Convert ANSI string to Unicode for the API call
+    
         MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path_check, MAX_PATH);
         attrs = GetFileAttributesW(wresource_path_check);
         if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
-            // Convert ANSI string to Unicode for the API call
+        
             wchar_t wresource_path[MAX_PATH];
             MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path, MAX_PATH);
             if (!CreateDirectoryW(wresource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
@@ -455,50 +450,50 @@ void CheckAndCreateResourceFolders() {
     }
 }
 
-/** @brief Read and parse configuration file */
+
 void ReadConfig() {
-    // Check and create resource folders
+
     CheckAndCreateResourceFolders();
     
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    // Check if configuration file exists, create default configuration if it doesn't
+
     if (!FileExists(config_path)) {
         CreateDefaultConfig(config_path);
     }
     
-    // Check configuration file version
+
     char version[32] = {0};
     BOOL versionMatched = FALSE;
     
-    // Read current version information
+
     ReadIniString(INI_SECTION_GENERAL, "CONFIG_VERSION", "", version, sizeof(version), config_path);
     
-    // Compare if version matches
+
     if (strcmp(version, CATIME_VERSION) == 0) {
         versionMatched = TRUE;
     }
     
-    // If version doesn't match, recreate the configuration file
+
     if (!versionMatched) {
         CreateDefaultConfig(config_path);
     }
 
-    // Reset time options
+
     time_options_count = 0;
     memset(time_options, 0, sizeof(time_options));
     
-    // Reset recent files count
+
     CLOCK_RECENT_FILES_COUNT = 0;
     
-    // Read basic settings
-    // ======== [General] Section ========
+
+
     char language[32] = {0};
     ReadIniString(INI_SECTION_GENERAL, "LANGUAGE", "English", language, sizeof(language), config_path);
     
-    // Convert language name to enum value
-    int languageSetting = APP_LANG_ENGLISH; // Default to English
+
+    int languageSetting = APP_LANG_ENGLISH;
     
     if (strcmp(language, "Chinese_Simplified") == 0) {
         languageSetting = APP_LANG_CHINESE_SIMP;
@@ -521,24 +516,24 @@ void ReadConfig() {
     } else if (strcmp(language, "Korean") == 0) {
         languageSetting = APP_LANG_KOREAN;
     } else {
-        // Try to parse as number (for backward compatibility)
+
         int langValue = atoi(language);
         if (langValue >= 0 && langValue < APP_LANG_COUNT) {
             languageSetting = langValue;
         } else {
-            languageSetting = APP_LANG_ENGLISH; // Default to English
+            languageSetting = APP_LANG_ENGLISH;
         }
     }
     
-    // ======== [Display] Section ========
+
     ReadIniString(INI_SECTION_DISPLAY, "CLOCK_TEXT_COLOR", "#FFB6C1", CLOCK_TEXT_COLOR, sizeof(CLOCK_TEXT_COLOR), config_path);
     CLOCK_BASE_FONT_SIZE = ReadIniInt(INI_SECTION_DISPLAY, "CLOCK_BASE_FONT_SIZE", 20, config_path);
     ReadIniString(INI_SECTION_DISPLAY, "FONT_FILE_NAME", "Wallpoet Essence.ttf", FONT_FILE_NAME, sizeof(FONT_FILE_NAME), config_path);
     
-    // Extract internal name from font filename
+
     size_t font_name_len = strlen(FONT_FILE_NAME);
     if (font_name_len > 4 && strcmp(FONT_FILE_NAME + font_name_len - 4, ".ttf") == 0) {
-        // Ensure target size is sufficient, avoid depending on source string length
+
         size_t copy_len = font_name_len - 4;
         if (copy_len >= sizeof(FONT_INTERNAL_NAME))
             copy_len = sizeof(FONT_INTERNAL_NAME) - 1;
@@ -559,18 +554,18 @@ void ReadConfig() {
     
     CLOCK_WINDOW_TOPMOST = ReadIniBool(INI_SECTION_DISPLAY, "WINDOW_TOPMOST", TRUE, config_path);
     
-    // Check and replace pure black color
+
     if (strcasecmp(CLOCK_TEXT_COLOR, "#000000") == 0) {
         strncpy(CLOCK_TEXT_COLOR, "#000001", sizeof(CLOCK_TEXT_COLOR) - 1);
     }
     
-    // ======== [Timer] Section ========
+
     CLOCK_DEFAULT_START_TIME = ReadIniInt(INI_SECTION_TIMER, "CLOCK_DEFAULT_START_TIME", 1500, config_path);
     CLOCK_USE_24HOUR = ReadIniBool(INI_SECTION_TIMER, "CLOCK_USE_24HOUR", FALSE, config_path);
     CLOCK_SHOW_SECONDS = ReadIniBool(INI_SECTION_TIMER, "CLOCK_SHOW_SECONDS", FALSE, config_path);
     ReadIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_TEXT", "0", CLOCK_TIMEOUT_TEXT, sizeof(CLOCK_TIMEOUT_TEXT), config_path);
     
-    // Read timeout action
+
     char timeoutAction[32] = {0};
     ReadIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_ACTION", "MESSAGE", timeoutAction, sizeof(timeoutAction), config_path);
     
@@ -579,10 +574,10 @@ void ReadConfig() {
     } else if (strcmp(timeoutAction, "LOCK") == 0) {
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_LOCK;
     } else if (strcmp(timeoutAction, "SHUTDOWN") == 0) {
-        // Even if SHUTDOWN exists in the config file, treat it as a one-time operation, default to MESSAGE
+
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
     } else if (strcmp(timeoutAction, "RESTART") == 0) {
-        // Even if RESTART exists in the config file, treat it as a one-time operation, default to MESSAGE
+
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
     } else if (strcmp(timeoutAction, "OPEN_FILE") == 0) {
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
@@ -600,10 +595,10 @@ void ReadConfig() {
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_HTTP_REQUEST;
     }
     
-    // Read timeout file and website settings
+
     ReadIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_FILE", "", CLOCK_TIMEOUT_FILE_PATH, MAX_PATH, config_path);
     
-    // Read website URL as UTF-8 then convert to Unicode
+
     char tempWebsiteUrl[MAX_PATH] = {0};
     ReadIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_WEBSITE", "", tempWebsiteUrl, MAX_PATH, config_path);
     if (tempWebsiteUrl[0] != '\0') {
@@ -612,9 +607,9 @@ void ReadConfig() {
         CLOCK_TIMEOUT_WEBSITE_URL[0] = L'\0';
     }
     
-    // If file path is valid, ensure timeout action is set to open file
+
     if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
-        // Convert ANSI string to Unicode for the API call
+    
         wchar_t wfile_path[MAX_PATH];
         MultiByteToWideChar(CP_ACP, 0, CLOCK_TIMEOUT_FILE_PATH, -1, wfile_path, MAX_PATH);
         if (GetFileAttributesW(wfile_path) != INVALID_FILE_ATTRIBUTES) {
@@ -622,12 +617,12 @@ void ReadConfig() {
         }
     }
     
-    // If URL is valid, ensure timeout action is set to open website
+
     if (wcslen(CLOCK_TIMEOUT_WEBSITE_URL) > 0) {
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_WEBSITE;
     }
     
-    // Read time options
+
     char timeOptions[256] = {0};
     ReadIniString(INI_SECTION_TIMER, "CLOCK_TIME_OPTIONS", "1500,600,300", timeOptions, sizeof(timeOptions), config_path);
     
@@ -638,17 +633,17 @@ void ReadConfig() {
         token = strtok(NULL, ",");
     }
     
-    // Read startup mode
+
     ReadIniString(INI_SECTION_TIMER, "STARTUP_MODE", "COUNTDOWN", CLOCK_STARTUP_MODE, sizeof(CLOCK_STARTUP_MODE), config_path);
     
-    // ======== [Pomodoro] Section ========
+
     char pomodoroTimeOptions[256] = {0};
     ReadIniString(INI_SECTION_POMODORO, "POMODORO_TIME_OPTIONS", "1500,300,1500,600", pomodoroTimeOptions, sizeof(pomodoroTimeOptions), config_path);
     
-    // Reset pomodoro time count
+
     POMODORO_TIMES_COUNT = 0;
     
-    // Parse all pomodoro time values
+
     token = strtok(pomodoroTimeOptions, ",");
     while (token && POMODORO_TIMES_COUNT < MAX_POMODORO_TIMES) {
         POMODORO_TIMES[POMODORO_TIMES_COUNT++] = atoi(token);
@@ -667,7 +662,7 @@ void ReadConfig() {
     POMODORO_LOOP_COUNT = ReadIniInt(INI_SECTION_POMODORO, "POMODORO_LOOP_COUNT", 1, config_path);
     if (POMODORO_LOOP_COUNT < 1) POMODORO_LOOP_COUNT = 1;
     
-    // ======== [Notification] Section ========
+
     ReadIniString(INI_SECTION_NOTIFICATION, "CLOCK_TIMEOUT_MESSAGE_TEXT", "时间到啦！", 
                  CLOCK_TIMEOUT_MESSAGE_TEXT, sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT), config_path);
                  
@@ -712,7 +707,7 @@ void ReadConfig() {
     if (NOTIFICATION_SOUND_VOLUME < 0) NOTIFICATION_SOUND_VOLUME = 0;
     if (NOTIFICATION_SOUND_VOLUME > 100) NOTIFICATION_SOUND_VOLUME = 100;
     
-    // ======== [Colors] Section ========
+
     char colorOptions[1024] = {0};
     ReadIniString(INI_SECTION_COLORS, "COLOR_OPTIONS", 
                 "#FFFFFF,#F9DB91,#F4CAE0,#FFB6C1,#A8E7DF,#A3CFB3,#92CBFC,#BDA5E7,#9370DB,#8C92CF,#72A9A5,#EB99A7,#EB96BD,#FFAE8B,#FF7F50,#CA6174", 
@@ -730,7 +725,7 @@ void ReadConfig() {
         token = strtok(NULL, ",");
     }
     
-    // ======== [RecentFiles] Section ========
+
     // Read recent file records
     for (int i = 1; i <= MAX_RECENT_FILES; i++) {
         char key[32];
@@ -755,7 +750,7 @@ void ReadConfig() {
         }
     }
     
-    // ======== [Hotkeys] Section ========
+
     // Read hotkey configurations from INI file
     WORD showTimeHotkey = 0;
     WORD countUpHotkey = 0;
@@ -822,7 +817,7 @@ void ReadConfig() {
     SetLanguage((AppLanguage)languageSetting);
 }
 
-/** @brief Write timeout action configuration */
+
 void WriteConfigTimeoutAction(const char* action) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -869,7 +864,7 @@ void WriteConfigTimeoutAction(const char* action) {
     rename(temp_path, config_path);
 }
 
-/** @brief Write time options configuration */
+
 void WriteConfigTimeOptions(const char* options) {
     char config_path[MAX_PATH];
     char temp_path[MAX_PATH];
@@ -908,7 +903,7 @@ void WriteConfigTimeOptions(const char* options) {
     rename(temp_path, config_path);
 }
 
-/** @brief Load recently used file records */
+
 void LoadRecentFiles(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -982,7 +977,7 @@ void LoadRecentFiles(void) {
     fclose(file);
 }
 
-/** @brief Save recently used file record */
+
 void SaveRecentFile(const char* filePath) {
     // Check if the file path is valid
     if (!filePath || strlen(filePath) == 0) return;
@@ -1047,7 +1042,7 @@ void SaveRecentFile(const char* filePath) {
     WriteConfig(configPath);
 }
 
-/** @brief Convert UTF8 to ANSI encoding */
+
 char* UTF8ToANSI(const char* utf8Str) {
     int wlen = MultiByteToWideChar(CP_UTF8, 0, utf8Str, -1, NULL, 0);
     if (wlen == 0) {
@@ -1086,7 +1081,7 @@ char* UTF8ToANSI(const char* utf8Str) {
     return str;
 }
 
-/** @brief Write pomodoro time settings */
+
 void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
     char config_path[MAX_PATH];
     char temp_path[MAX_PATH];
@@ -1162,7 +1157,7 @@ void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
     rename(temp_path, config_path);
 }
 
-/** @brief Write pomodoro loop count configuration */
+
 void WriteConfigPomodoroLoopCount(int loop_count) {
     char config_path[MAX_PATH];
     char temp_path[MAX_PATH];
@@ -1205,7 +1200,7 @@ void WriteConfigPomodoroLoopCount(int loop_count) {
     POMODORO_LOOP_COUNT = loop_count;
 }
 
-/** @brief Write window topmost status configuration */
+
 void WriteConfigTopmost(const char* topmost) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -1246,7 +1241,7 @@ void WriteConfigTopmost(const char* topmost) {
     rename(temp_path, config_path);
 }
 
-/** @brief Write timeout open file path */
+
 void WriteConfigTimeoutFile(const char* filePath) {
     // First update global variables
     CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
@@ -1259,7 +1254,7 @@ void WriteConfigTimeoutFile(const char* filePath) {
     WriteConfig(config_path);
 }
 
-/** @brief Write all configuration settings to file */
+
 void WriteConfig(const char* config_path) {
     // Get the name of the current language
     AppLanguage currentLang = GetCurrentLanguage();
@@ -1312,7 +1307,7 @@ void WriteConfig(const char* config_path) {
             typeStr = "OS";
             break;
         default:
-            typeStr = "CATIME"; // Default value
+            typeStr = "CATIME";
             break;
     }
     
@@ -1440,12 +1435,12 @@ void WriteConfig(const char* config_path) {
             timeoutActionStr = "MESSAGE";
     }
     
-    // ======== [General] Section ========
+
     WriteIniString(INI_SECTION_GENERAL, "CONFIG_VERSION", CATIME_VERSION, config_path);
     WriteIniString(INI_SECTION_GENERAL, "LANGUAGE", langName, config_path);
     WriteIniString(INI_SECTION_GENERAL, "SHORTCUT_CHECK_DONE", IsShortcutCheckDone() ? "TRUE" : "FALSE", config_path);
     
-    // ======== [Display] Section ========
+
     WriteIniString(INI_SECTION_DISPLAY, "CLOCK_TEXT_COLOR", CLOCK_TEXT_COLOR, config_path);
     WriteIniInt(INI_SECTION_DISPLAY, "CLOCK_BASE_FONT_SIZE", CLOCK_BASE_FONT_SIZE, config_path);
     WriteIniString(INI_SECTION_DISPLAY, "FONT_FILE_NAME", FONT_FILE_NAME, config_path);
@@ -1458,7 +1453,7 @@ void WriteConfig(const char* config_path) {
     
     WriteIniString(INI_SECTION_DISPLAY, "WINDOW_TOPMOST", CLOCK_WINDOW_TOPMOST ? "TRUE" : "FALSE", config_path);
     
-    // ======== [Timer] Section ========
+
     WriteIniInt(INI_SECTION_TIMER, "CLOCK_DEFAULT_START_TIME", CLOCK_DEFAULT_START_TIME, config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_USE_24HOUR", CLOCK_USE_24HOUR ? "TRUE" : "FALSE", config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_SHOW_SECONDS", CLOCK_SHOW_SECONDS ? "TRUE" : "FALSE", config_path);
@@ -1472,11 +1467,11 @@ void WriteConfig(const char* config_path) {
     WriteIniString(INI_SECTION_TIMER, "CLOCK_TIME_OPTIONS", timeOptionsStr, config_path);
     WriteIniString(INI_SECTION_TIMER, "STARTUP_MODE", CLOCK_STARTUP_MODE, config_path);
     
-    // ======== [Pomodoro] Section ========
+
     WriteIniString(INI_SECTION_POMODORO, "POMODORO_TIME_OPTIONS", pomodoroTimesStr, config_path);
     WriteIniInt(INI_SECTION_POMODORO, "POMODORO_LOOP_COUNT", POMODORO_LOOP_COUNT, config_path);
     
-    // ======== [Notification] Section ========
+
     WriteIniString(INI_SECTION_NOTIFICATION, "CLOCK_TIMEOUT_MESSAGE_TEXT", CLOCK_TIMEOUT_MESSAGE_TEXT, config_path);
     WriteIniString(INI_SECTION_NOTIFICATION, "POMODORO_TIMEOUT_MESSAGE_TEXT", POMODORO_TIMEOUT_MESSAGE_TEXT, config_path);
     WriteIniString(INI_SECTION_NOTIFICATION, "POMODORO_CYCLE_COMPLETE_TEXT", POMODORO_CYCLE_COMPLETE_TEXT, config_path);
@@ -1487,7 +1482,7 @@ void WriteConfig(const char* config_path) {
     WriteIniInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_VOLUME", NOTIFICATION_SOUND_VOLUME, config_path);
     WriteIniString(INI_SECTION_NOTIFICATION, "NOTIFICATION_DISABLED", NOTIFICATION_DISABLED ? "TRUE" : "FALSE", config_path);
     
-    // ======== [Hotkeys] Section ========
+
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_SHOW_TIME", showTimeStr, config_path);
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_COUNT_UP", countUpStr, config_path);
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_COUNTDOWN", countdownStr, config_path);
@@ -1501,7 +1496,7 @@ void WriteConfig(const char* config_path) {
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_RESTART_TIMER", restartTimerStr, config_path);
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_CUSTOM_COUNTDOWN", customCountdownStr, config_path);
     
-    // ======== [RecentFiles] Section ========
+
     for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
         char key[32];
         snprintf(key, sizeof(key), "CLOCK_RECENT_FILE_%d", i + 1);
@@ -1515,11 +1510,11 @@ void WriteConfig(const char* config_path) {
         WriteIniString(INI_SECTION_RECENTFILES, key, "", config_path);
     }
     
-    // ======== [Colors] Section ========
+
     WriteIniString(INI_SECTION_COLORS, "COLOR_OPTIONS", colorOptionsStr, config_path);
 }
 
-/** @brief Write timeout open website URL */
+
 void WriteConfigTimeoutWebsite(const char* url) {
     // Only set timeout action to open website if a valid URL is provided
     if (url && url[0] != '\0') {
@@ -1582,7 +1577,7 @@ void WriteConfigTimeoutWebsite(const char* url) {
     }
 }
 
-/** @brief Write startup mode configuration */
+
 void WriteConfigStartupMode(const char* mode) {
     char config_path[MAX_PATH];
     char temp_path[MAX_PATH];
@@ -1626,7 +1621,7 @@ void WriteConfigStartupMode(const char* mode) {
     rename(temp_path, config_path);
 }
 
-/** @brief Write pomodoro time options */
+
 void WriteConfigPomodoroTimeOptions(int* times, int count) {
     if (!times || count <= 0) return;
     
@@ -1683,7 +1678,7 @@ void WriteConfigPomodoroTimeOptions(int* times, int count) {
     rename(temp_path, config_path);
 }
 
-/** @brief Write notification message configuration */
+
 void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodoro_msg, const char* cycle_complete_msg) {
     char config_path[MAX_PATH];
     char temp_path[MAX_PATH];
@@ -1763,12 +1758,12 @@ void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodo
     POMODORO_CYCLE_COMPLETE_TEXT[sizeof(POMODORO_CYCLE_COMPLETE_TEXT) - 1] = '\0';
 }
 
-/** @brief Read notification message text from configuration file */
+
 void ReadNotificationMessagesConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
 
-    // Convert ANSI string to Unicode for the API call
+
     wchar_t wconfig_path[MAX_PATH];
     MultiByteToWideChar(CP_ACP, 0, config_path, -1, wconfig_path, MAX_PATH);
     
@@ -1875,12 +1870,12 @@ void ReadNotificationMessagesConfig(void) {
     }
 }
 
-/** @brief Read notification display time from configuration file */
+
 void ReadNotificationTimeoutConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    // Convert ANSI string to Unicode for the API call
+
     wchar_t wconfig_path[MAX_PATH];
     MultiByteToWideChar(CP_ACP, 0, config_path, -1, wconfig_path, MAX_PATH);
     
@@ -1966,7 +1961,7 @@ void ReadNotificationTimeoutConfig(void) {
     }
 }
 
-/** @brief Write notification display time configuration */
+
 void WriteConfigNotificationTimeout(int timeout_ms) {
     char config_path[MAX_PATH];
     char temp_path[MAX_PATH];
@@ -2022,12 +2017,12 @@ void WriteConfigNotificationTimeout(int timeout_ms) {
     NOTIFICATION_TIMEOUT_MS = timeout_ms;
 }
 
-/** @brief Read maximum notification opacity from configuration file */
+
 void ReadNotificationOpacityConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    // Convert ANSI string to Unicode for the API call
+
     wchar_t wconfig_path[MAX_PATH];
     MultiByteToWideChar(CP_ACP, 0, config_path, -1, wconfig_path, MAX_PATH);
     
@@ -2114,7 +2109,7 @@ void ReadNotificationOpacityConfig(void) {
     }
 }
 
-/** @brief Write maximum notification opacity configuration */
+
 void WriteConfigNotificationOpacity(int opacity) {
     char config_path[MAX_PATH];
     char temp_path[MAX_PATH];
@@ -2170,7 +2165,7 @@ void WriteConfigNotificationOpacity(int opacity) {
     NOTIFICATION_MAX_OPACITY = opacity;
 }
 
-/** @brief Read notification type setting from configuration file */
+
 void ReadNotificationTypeConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -2201,7 +2196,7 @@ void ReadNotificationTypeConfig(void) {
     }
 }
 
-/** @brief Write notification type configuration */
+
 void WriteConfigNotificationType(NotificationType type) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -2227,7 +2222,7 @@ void WriteConfigNotificationType(NotificationType type) {
             typeStr = "OS";
             break;
         default:
-            typeStr = "CATIME"; // Default value
+            typeStr = "CATIME";
             break;
     }
     
@@ -2271,7 +2266,7 @@ void WriteConfigNotificationType(NotificationType type) {
     }
 }
 
-/** @brief Get audio folder path */
+
 void GetAudioFolderPath(char* path, size_t size) {
     if (!path || size == 0) return;
 
@@ -2285,7 +2280,7 @@ void GetAudioFolderPath(char* path, size_t size) {
         
         char dir_path[MAX_PATH];
         if (snprintf(dir_path, sizeof(dir_path), "%s\\Catime\\resources\\audio", appdata_path) < sizeof(dir_path)) {
-            // Convert ANSI string to Unicode for the API call
+        
             wchar_t wdir_path[MAX_PATH];
             MultiByteToWideChar(CP_ACP, 0, dir_path, -1, wdir_path, MAX_PATH);
             if (!CreateDirectoryW(wdir_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
@@ -2299,7 +2294,7 @@ void GetAudioFolderPath(char* path, size_t size) {
     }
 }
 
-/** @brief Read notification audio settings from configuration file */
+
 void ReadNotificationSoundConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -2331,7 +2326,7 @@ void ReadNotificationSoundConfig(void) {
     fclose(file);
 }
 
-/** @brief Write notification audio configuration */
+
 void WriteConfigNotificationSound(const char* sound_file) {
     if (!sound_file) return;
     
@@ -2395,7 +2390,7 @@ void WriteConfigNotificationSound(const char* sound_file) {
     NOTIFICATION_SOUND_FILE[MAX_PATH - 1] = '\0';
 }
 
-/** @brief Read notification audio volume from configuration file */
+
 void ReadNotificationVolumeConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -2417,7 +2412,7 @@ void ReadNotificationVolumeConfig(void) {
     fclose(file);
 }
 
-/** @brief Write notification audio volume configuration */
+
 void WriteConfigNotificationVolume(int volume) {
     // Validate volume range
     if (volume < 0) volume = 0;
@@ -2465,7 +2460,7 @@ void WriteConfigNotificationVolume(int volume) {
     rename(temp_path, config_path);
 }
 
-/** @brief Read hotkey settings from configuration file */
+
 void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdownHotkey,
                        WORD* quickCountdown1Hotkey, WORD* quickCountdown2Hotkey, WORD* quickCountdown3Hotkey,
                        WORD* pomodoroHotkey, WORD* toggleVisibilityHotkey, WORD* editModeHotkey,
@@ -2602,7 +2597,7 @@ void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdow
     fclose(file);
 }
 
-/** @brief Write hotkey configuration */
+
 void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownHotkey,
                         WORD quickCountdown1Hotkey, WORD quickCountdown2Hotkey, WORD quickCountdown3Hotkey,
                         WORD pomodoroHotkey, WORD toggleVisibilityHotkey, WORD editModeHotkey,
@@ -2809,7 +2804,7 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
     rename(temp_path, config_path);
 }
 
-/** @brief Convert hotkey value to readable string */
+
 void HotkeyToString(WORD hotkey, char* buffer, size_t bufferSize) {
     if (!buffer || bufferSize == 0) return;
     
@@ -2926,7 +2921,7 @@ void HotkeyToString(WORD hotkey, char* buffer, size_t bufferSize) {
     }
 }
 
-/** @brief Convert string to hotkey value */
+
 WORD StringToHotkey(const char* str) {
     if (!str || str[0] == '\0' || strcmp(str, "None") == 0) {
         return 0;  // 未设置热键
@@ -3117,7 +3112,7 @@ void WriteConfigKeyValue(const char* key, const char* value) {
     WriteIniString(section, key, value, config_path);
 }
 
-/** @brief Write current language setting to configuration file */
+
 void WriteConfigLanguage(int language) {
     const char* langName;
     
@@ -3161,7 +3156,7 @@ void WriteConfigLanguage(int language) {
     WriteConfigKeyValue("LANGUAGE", langName);
 }
 
-/** @brief Determine if shortcut check has been performed */
+
 bool IsShortcutCheckDone(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -3170,7 +3165,7 @@ bool IsShortcutCheckDone(void) {
     return ReadIniBool(INI_SECTION_GENERAL, "SHORTCUT_CHECK_DONE", FALSE, config_path);
 }
 
-/** @brief Set shortcut check status */
+
 void SetShortcutCheckDone(bool done) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -3179,7 +3174,7 @@ void SetShortcutCheckDone(bool done) {
     WriteIniString(INI_SECTION_GENERAL, "SHORTCUT_CHECK_DONE", done ? "TRUE" : "FALSE", config_path);
 }
 
-/** @brief Read whether to disable notification setting from configuration file */
+
 void ReadNotificationDisabledConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -3188,7 +3183,7 @@ void ReadNotificationDisabledConfig(void) {
     NOTIFICATION_DISABLED = ReadIniBool(INI_SECTION_NOTIFICATION, "NOTIFICATION_DISABLED", FALSE, config_path);
 }
 
-/** @brief Write whether to disable notification configuration */
+
 void WriteConfigNotificationDisabled(BOOL disabled) {
     char config_path[MAX_PATH];
     char temp_path[MAX_PATH];

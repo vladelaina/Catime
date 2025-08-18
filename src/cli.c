@@ -1,8 +1,3 @@
-/**
- * @file cli.c
- * @brief Command line helper to parse countdown arguments and start timer
- */
-
 #include <windows.h>
 #include <shellapi.h>
 #include <string.h>
@@ -17,7 +12,6 @@
 #include "../include/notification.h"
 #include "../include/audio_player.h"
 
-// Variables defined in main.c
 extern int elapsed_time;
 extern int message_shown;
 
@@ -29,14 +23,10 @@ static void ForceForegroundAndFocus(HWND hwndDialog) {
 	if (foreThread && foreThread != curThread) {
 		AttachThreadInput(foreThread, curThread, TRUE);
 	}
-	// Try allow foreground switch (best-effort)
 	AllowSetForegroundWindow(ASFW_ANY);
-	// Use a gentler approach to bring dialog to front without affecting other topmost windows
-	// Only set topmost if needed, and avoid the topmost toggle trick that can affect main window
 	BringWindowToTop(hwndDialog);
 	SetForegroundWindow(hwndDialog);
 	SetActiveWindow(hwndDialog);
-	// If still not visible, then use topmost briefly but restore immediately
 	if (GetForegroundWindow() != hwndDialog) {
 		SetWindowPos(hwndDialog, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
 		SetWindowPos(hwndDialog, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
@@ -51,11 +41,10 @@ static void ForceForegroundAndFocus(HWND hwndDialog) {
 static INT_PTR CALLBACK CliHelpDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 	switch (msg) {
 	case WM_INITDIALOG:
-		// Set OK as default and focus so Enter will close immediately even if not clicked first
 		SendMessage(hwndDlg, DM_SETDEFID, (WPARAM)IDOK, 0);
 		HWND hOk = GetDlgItem(hwndDlg, IDOK);
 		if (hOk) SetFocus(hOk);
-		return FALSE; // allow dialog manager to set focus since we set it explicitly
+		return FALSE;
 	case WM_COMMAND:
 		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
             DestroyWindow(hwndDlg);
@@ -86,13 +75,10 @@ static INT_PTR CALLBACK CliHelpDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
 	case WM_DESTROY:
 		if (hwndDlg == g_cliHelpDialog) {
 			g_cliHelpDialog = NULL;
-			// Restore main window topmost state after dialog closes
-			// This fixes the issue where Win+D can minimize the main window after CLI help
 			extern BOOL CLOCK_WINDOW_TOPMOST;
 			extern void SetWindowTopmost(HWND hwnd, BOOL topmost);
 			HWND hMainWnd = GetParent(hwndDlg);
 			if (hMainWnd && CLOCK_WINDOW_TOPMOST) {
-				// Re-apply topmost state to ensure main window is not affected by dialog Z-order changes
 				SetWindowTopmost(hMainWnd, TRUE);
 			}
 		}
@@ -102,13 +88,10 @@ static INT_PTR CALLBACK CliHelpDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
 }
 
 void ShowCliHelpDialog(HWND hwnd) {
-	// Toggle help dialog: close if already open, show if closed
 	if (g_cliHelpDialog && IsWindow(g_cliHelpDialog)) {
-		// Dialog is already open, close it
 		DestroyWindow(g_cliHelpDialog);
 		g_cliHelpDialog = NULL;
 	} else {
-		// Dialog is not open, create and show it
 		g_cliHelpDialog = CreateDialogParamW(GetModuleHandleW(NULL), MAKEINTRESOURCE(IDD_CLI_HELP_DIALOG), hwnd, CliHelpDlgProc, 0);
 		if (g_cliHelpDialog) {
 			ShowWindow(g_cliHelpDialog, SW_SHOW);
@@ -128,32 +111,26 @@ static void trimSpaces(char* s) {
 	}
 }
 
-// Convert compact HHMMt -> "HH MMt" (e.g., 1720t -> "17 20t")
 static void expandCompactTargetTime(char* s) {
 	if (!s) return;
 	size_t len = strlen(s);
 	if (len >= 2 && (s[len - 1] == 't' || s[len - 1] == 'T')) {
-		// find last non-space before t
 		s[len - 1] = '\0';
 		trimSpaces(s);
-		// now s is digits possibly with spaces; only handle pure digits of length 3-4
 		size_t dlen = strlen(s);
 		int allDigits = 1;
 		for (size_t i = 0; i < dlen; ++i) {
 			if (!isdigit((unsigned char)s[i])) { allDigits = 0; break; }
 		}
 		if (allDigits && (dlen == 3 || dlen == 4)) {
-			// HHMM or HMM -> split hour/min
 			char buf[64];
 			if (dlen == 3) {
-				// HMM -> H MM
 				buf[0] = s[0]; buf[1] = '\0';
 				int mm = atoi(s + 1);
 				char out[64];
 				snprintf(out, sizeof(out), "%s %dT", buf, mm);
 				strncpy(s, out, 255); s[255] = '\0';
             } else {
-                // HHMM -> HH MM
                 char hh[8] = {0};
                 char mm[8] = {0};
                 strncpy(hh, s, 2);
@@ -165,16 +142,13 @@ static void expandCompactTargetTime(char* s) {
                 strncpy(s, out, 255); s[255] = '\0';
             }
 		} else {
-			// restore trailing t
 			s[len - 1] = 't';
 		}
 	}
 }
 
-// Convert patterns like "130 20" into "1 30 20" only when the first token is 3 digits (HMM)
 static void expandCompactHourMinutePlusSecond(char* s) {
 	if (!s) return;
-	// copy to buffer to tokenize safely
 	char copy[256];
 	strncpy(copy, s, sizeof(copy) - 1);
 	copy[sizeof(copy) - 1] = '\0';
@@ -183,14 +157,12 @@ static void expandCompactHourMinutePlusSecond(char* s) {
 	if (!tok1) return;
 	char* tok2 = strtok(NULL, " ");
 	char* tok3 = strtok(NULL, " ");
-	if (!tok2 || tok3) return; // only handle exactly two tokens
+	if (!tok2 || tok3) return;
 
-	// Only when tok1 is 3 digits and tok2 is digits-only (seconds)
 	if (strlen(tok1) == 3) {
 		if (isdigit((unsigned char)tok1[0]) && isdigit((unsigned char)tok1[1]) && isdigit((unsigned char)tok1[2])) {
 			int hour = tok1[0] - '0';
 			int minute = (tok1[1] - '0') * 10 + (tok1[2] - '0');
-			// verify tok2 is digits
 			for (const char* p = tok2; *p; ++p) { if (!isdigit((unsigned char)*p)) return; }
 			char out[256];
 			snprintf(out, sizeof(out), "%d %d %s", hour, minute, tok2);
@@ -208,9 +180,7 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
 	trimSpaces(input);
 	if (input[0] == '\0') return FALSE;
 
-    // Abbreviated commands (case-insensitive for ASCII)
     {
-        // Quick countdown 1/2/3
         if (_stricmp(input, "q1") == 0) {
             StartQuickCountdown1(hwnd);
             return TRUE;
@@ -224,7 +194,6 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
             return TRUE;
         }
 
-        // Hide/Show window (toggle visibility)
         if (_stricmp(input, "v") == 0) {
             if (IsWindowVisible(hwnd)) {
                 ShowWindow(hwnd, SW_HIDE);
@@ -235,27 +204,23 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
             return TRUE;
         }
 
-        // Enter edit mode (use specific enter rather than toggle)
         if (_stricmp(input, "e") == 0) {
             extern void StartEditMode(HWND hwnd);
             StartEditMode(hwnd);
             return TRUE;
         }
 
-        // Pause/Resume timer (toggle)
         if (_stricmp(input, "pr") == 0) {
             TogglePauseResume(hwnd);
             return TRUE;
         }
 
-        // Restart current timer
         if (_stricmp(input, "r") == 0) {
             CloseAllNotifications();
             RestartCurrentTimer(hwnd);
             return TRUE;
         }
 
-        // Quick countdown by index: p<number> (e.g., p4 -> 4th preset)
         if ((input[0] == 'p' || input[0] == 'P') && isdigit((unsigned char)input[1])) {
             long val = 0;
             const char* num = input + 1;
@@ -266,14 +231,12 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
                 StartQuickCountdownByIndex(hwnd, (int)val);
                 return TRUE;
             } else {
-                // Illegal p<number> -> fallback to default countdown
                 StartDefaultCountDown(hwnd);
                 return TRUE;
             }
         }
     }
 
-    // Single-letter mode shortcuts: s (show current time), u (count up), p (pomodoro), h (help)
     if (input[1] == '\0') {
         char c = (char)tolower((unsigned char)input[0]);
         if (c == 's') {
@@ -286,13 +249,11 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
             PostMessage(hwnd, WM_HOTKEY, HOTKEY_ID_POMODORO, 0);
             return TRUE;
 		} else if (c == 'h') {
-			// Use PostMessage to be consistent with instance forwarding logic
 			PostMessage(hwnd, WM_APP_SHOW_CLI_HELP, 0, 0);
 			return TRUE;
         }
     }
 
-	// Normalize consecutive spaces to single spaces
 	{
 		char norm[256]; size_t j = 0; int inSpace = 0;
 		for (size_t i = 0; input[i] && j < sizeof(norm) - 1; ++i) {
@@ -304,21 +265,17 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
 		strncpy(input, norm, sizeof(input) - 1); input[sizeof(input) - 1] = '\0';
 	}
 
-	// Apply CLI conveniences
-	expandCompactTargetTime(input);      // e.g., 1720t -> "17 20t"
-	expandCompactHourMinutePlusSecond(input); // e.g., 130 20 -> "1 30 20"
+	expandCompactTargetTime(input);
+	expandCompactHourMinutePlusSecond(input);
 
 	int total_seconds = 0;
     if (!ParseInput(input, &total_seconds)) {
-        // Any unparsable CLI input should fallback to default countdown
         StartDefaultCountDown(hwnd);
         return TRUE;
     }
-	// Stop any notification sound and close notifications
 	StopNotificationSound();
 	CloseAllNotifications();
 
-	// Apply countdown state (mirror logic used in window_procedure)
 	KillTimer(hwnd, 1);
 	CLOCK_TOTAL_TIME = total_seconds;
 	countdown_elapsed_time = 0;

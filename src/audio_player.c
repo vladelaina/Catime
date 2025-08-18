@@ -1,8 +1,3 @@
-/**
- * @file audio_player.c
- * @brief Audio playback functionality handler
- */
-
 #include <windows.h>
 #include <stdio.h>
 #include <strsafe.h>
@@ -29,9 +24,6 @@ static ma_bool32 g_isPaused = MA_FALSE;
 
 static void CheckAudioPlaybackComplete(HWND hwnd, UINT message, UINT_PTR idEvent, DWORD dwTime);
 
-/**
- * @brief Initialize audio engine
- */
 static BOOL InitializeAudioEngine() {
     if (g_engineInitialized) {
         return TRUE;
@@ -46,9 +38,6 @@ static BOOL InitializeAudioEngine() {
     return TRUE;
 }
 
-/**
- * @brief Clean up audio engine resources
- */
 static void UninitializeAudioEngine() {
     if (g_engineInitialized) {
         if (g_soundInitialized) {
@@ -61,9 +50,6 @@ static void UninitializeAudioEngine() {
     }
 }
 
-/**
- * @brief Check if a file exists
- */
 static BOOL FileExists(const char* filePath) {
     if (!filePath || filePath[0] == '\0') return FALSE;
 
@@ -75,16 +61,10 @@ static BOOL FileExists(const char* filePath) {
             !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
 }
 
-/**
- * @brief Show error message dialog
- */
 static void ShowErrorMessage(HWND hwnd, const wchar_t* errorMsg) {
     MessageBoxW(hwnd, errorMsg, L"Audio Playback Error", MB_ICONERROR | MB_OK);
 }
 
-/**
- * @brief Timer callback to check if audio playback is complete
- */
 static void CALLBACK CheckAudioPlaybackComplete(HWND hwnd, UINT message, UINT_PTR idEvent, DWORD dwTime) {
     if (g_engineInitialized && g_soundInitialized) {
         if (!ma_sound_is_playing(&g_sound) && !g_isPaused) {
@@ -114,9 +94,6 @@ static void CALLBACK CheckAudioPlaybackComplete(HWND hwnd, UINT message, UINT_PT
     }
 }
 
-/**
- * @brief System beep playback completion callback timer function
- */
 static void CALLBACK SystemBeepDoneCallback(HWND hwnd, UINT message, UINT_PTR idEvent, DWORD dwTime) {
     KillTimer(hwnd, idEvent);
     g_audioTimerId = 0;
@@ -128,10 +105,6 @@ static void CALLBACK SystemBeepDoneCallback(HWND hwnd, UINT message, UINT_PTR id
     }
 }
 
-/**
- * @brief Set audio playback volume
- * @param volume Volume percentage (0-100)
- */
 void SetAudioVolume(int volume) {
     if (volume < 0) volume = 0;
     if (volume > 100) volume = 100;
@@ -146,9 +119,6 @@ void SetAudioVolume(int volume) {
     }
 }
 
-/**
- * @brief Play audio file using miniaudio
- */
 static BOOL PlayAudioWithMiniaudio(HWND hwnd, const char* filePath) {
     if (!filePath || filePath[0] == '\0') return FALSE;
 
@@ -268,9 +238,6 @@ static BOOL PlayAudioWithMiniaudio(HWND hwnd, const char* filePath) {
     return TRUE;
 }
 
-/**
- * @brief Validate if file path is legal
- */
 static BOOL IsValidFilePath(const char* filePath) {
     if (!filePath || filePath[0] == '\0') return FALSE;
 
@@ -281,9 +248,6 @@ static BOOL IsValidFilePath(const char* filePath) {
     return TRUE;
 }
 
-/**
- * @brief Clean up audio resources
- */
 void CleanupAudioResources(void) {
     PlaySoundW(NULL, NULL, SND_PURGE);
 
@@ -302,17 +266,11 @@ void CleanupAudioResources(void) {
     g_isPaused = MA_FALSE;
 }
 
-/**
- * @brief Set audio playback completion callback function
- */
 void SetAudioPlaybackCompleteCallback(HWND hwnd, AudioPlaybackCompleteCallback callback) {
     g_audioCallbackHwnd = hwnd;
     g_audioCompleteCallback = callback;
 }
 
-/**
- * @brief Play notification audio
- */
 BOOL PlayNotificationSound(HWND hwnd) {
     CleanupAudioResources();
 
@@ -381,9 +339,6 @@ BOOL PlayNotificationSound(HWND hwnd) {
     return TRUE;
 }
 
-/**
- * @brief Pause currently playing notification audio
- */
 BOOL PauseNotificationSound(void) {
     if (g_isPlaying && !g_isPaused && g_engineInitialized && g_soundInitialized) {
         ma_sound_stop(&g_sound);
@@ -393,9 +348,6 @@ BOOL PauseNotificationSound(void) {
     return FALSE;
 }
 
-/**
- * @brief Resume previously paused notification audio
- */
 BOOL ResumeNotificationSound(void) {
     if (g_isPlaying && g_isPaused && g_engineInitialized && g_soundInitialized) {
         ma_sound_start(&g_sound);
@@ -405,9 +357,6 @@ BOOL ResumeNotificationSound(void) {
     return FALSE;
 }
 
-/**
- * @brief Stop playing notification audio
- */
 void StopNotificationSound(void) {
     CleanupAudioResources();
 }

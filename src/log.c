@@ -1,10 +1,3 @@
-/**
- * @file log.c
- * @brief Log recording functionality implementation
- * 
- * Implements logging functionality, including file writing, error code retrieval, etc.
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -17,17 +10,14 @@
 #include "../include/config.h"
 #include "../resource/resource.h"
 
-// Add check for ARM64 macro
 #ifndef PROCESSOR_ARCHITECTURE_ARM64
 #define PROCESSOR_ARCHITECTURE_ARM64 12
 #endif
 
-// Log file path
 static wchar_t LOG_FILE_PATH[MAX_PATH] = {0};
 static FILE* logFile = NULL;
 static CRITICAL_SECTION logCS;
 
-// Log level string representations
 static const char* LOG_LEVEL_STRINGS[] = {
     "DEBUG",
     "INFO",
@@ -36,17 +26,10 @@ static const char* LOG_LEVEL_STRINGS[] = {
     "FATAL"
 };
 
-/**
- * @brief Get operating system version information
- * 
- * Use Windows API to get operating system version, version number, build and other information
- */
 static void LogSystemInformation(void) {
-    // Get system information
     SYSTEM_INFO si;
     GetNativeSystemInfo(&si);
     
-    // Use RtlGetVersion to get system version more accurately, because GetVersionEx was changed in newer Windows versions
     typedef NTSTATUS(WINAPI* RtlGetVersionPtr)(PRTL_OSVERSIONINFOW);
     HMODULE hNtdll = GetModuleHandleW(L"ntdll.dll");
     
@@ -59,7 +42,7 @@ static void LogSystemInformation(void) {
         if (pRtlGetVersion) {
             RTL_OSVERSIONINFOW rovi = { 0 };
             rovi.dwOSVersionInfoSize = sizeof(rovi);
-            if (pRtlGetVersion(&rovi) == 0) { // STATUS_SUCCESS = 0
+            if (pRtlGetVersion(&rovi) == 0) {
                 major = rovi.dwMajorVersion;
                 minor = rovi.dwMinorVersion;
                 build = rovi.dwBuildNumber;
@@ -67,7 +50,6 @@ static void LogSystemInformation(void) {
         }
     }
     
-    // If the above method fails, try the method below
     if (major == 0) {
         OSVERSIONINFOEXA osvi;
         ZeroMemory(&osvi, sizeof(OSVERSIONINFOEXA));
@@ -85,7 +67,6 @@ static void LogSystemInformation(void) {
             isWorkstation = (osvi.wProductType == VER_NT_WORKSTATION);
             isServer = !isWorkstation;
         } else {
-            // Finally try using GetVersionEx, although it may not be accurate
             if (GetVersionEx((OSVERSIONINFO*)&osvi)) {
                 major = osvi.dwMajorVersion;
                 minor = osvi.dwMinorVersion;
@@ -98,10 +79,8 @@ static void LogSystemInformation(void) {
         }
     }
     
-    // Detect specific Windows version
     const char* windowsVersion = "Unknown version";
     
-    // Determine specific version based on version number
     if (major == 10) {
         if (build >= 22000) {
             windowsVersion = "Windows 11";
@@ -137,7 +116,6 @@ static void LogSystemInformation(void) {
         build, 
         isWorkstation ? "Workstation" : "Server");
     
-    // CPU architecture
     const char* arch;
     switch (si.wProcessorArchitecture) {
         case PROCESSOR_ARCHITECTURE_AMD64:
@@ -158,7 +136,6 @@ static void LogSystemInformation(void) {
     }
     WriteLog(LOG_LEVEL_INFO, "CPU Architecture: %s", arch);
     
-    // System memory information
     MEMORYSTATUSEX memInfo;
     memInfo.dwLength = sizeof(MEMORYSTATUSEX);
     if (GlobalMemoryStatusEx(&memInfo)) {
@@ -168,9 +145,6 @@ static void LogSystemInformation(void) {
             memInfo.dwMemoryLoad);
     }
     
-    // Don't get screen resolution information as it's not accurate and not necessary for debugging
-    
-    // Check if UAC is enabled
     BOOL uacEnabled = FALSE;
     HANDLE hToken;
     if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
@@ -183,7 +157,6 @@ static void LogSystemInformation(void) {
     }
     WriteLog(LOG_LEVEL_INFO, "UAC Status: %s", uacEnabled ? "Enabled" : "Disabled");
     
-    // Check if running as administrator
     BOOL isAdmin = FALSE;
     SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
     PSID AdministratorsGroup;
@@ -195,36 +168,22 @@ static void LogSystemInformation(void) {
     }
 }
 
-/**
- * @brief Get log file path
- * 
- * Build log filename based on config file path
- * 
- * @param logPath Log path buffer
- * @param size Buffer size
- */
 static void GetLogFilePath(wchar_t* logPath, size_t size) {
     char configPath[MAX_PATH] = {0};
     
-    // Get directory containing config file (still UTF-8)
     GetConfigPath(configPath, MAX_PATH);
     
-    // Convert config path to Unicode
     wchar_t configPathW[MAX_PATH] = {0};
     MultiByteToWideChar(CP_UTF8, 0, configPath, -1, configPathW, MAX_PATH);
     
-    // Determine config file directory
     wchar_t* lastSeparator = wcsrchr(configPathW, L'\\');
     if (lastSeparator) {
         size_t dirLen = lastSeparator - configPathW + 1;
         
-        // Copy directory part
         wcsncpy(logPath, configPathW, dirLen);
         
-        // Use simple log filename
         _snwprintf_s(logPath + dirLen, size - dirLen, _TRUNCATE, L"Catime_Logs.log");
     } else {
-        // If config directory can't be determined, use current directory
         _snwprintf_s(logPath, size, _TRUNCATE, L"Catime_Logs.log");
     }
 }
@@ -234,18 +193,13 @@ BOOL InitializeLogSystem(void) {
     
     GetLogFilePath(LOG_FILE_PATH, MAX_PATH);
     
-    // Open file in write mode each startup, which clears existing content
     logFile = _wfopen(LOG_FILE_PATH, L"w");
     if (!logFile) {
-        // Failed to create log file
         return FALSE;
     }
     
-    // Record log system initialization information
     WriteLog(LOG_LEVEL_INFO, "==================================================");
-    // First record software version
     WriteLog(LOG_LEVEL_INFO, "Catime Version: %s", CATIME_VERSION);
-    // Then record system environment information (before any possible errors)
     WriteLog(LOG_LEVEL_INFO, "-----------------System Information-----------------");
     LogSystemInformation();
     WriteLog(LOG_LEVEL_INFO, "-----------------Application Information-----------------");
@@ -261,7 +215,6 @@ void WriteLog(LogLevel level, const char* format, ...) {
     
     EnterCriticalSection(&logCS);
     
-    // Get current time
     time_t now;
     struct tm local_time;
     char timeStr[32] = {0};
@@ -270,19 +223,15 @@ void WriteLog(LogLevel level, const char* format, ...) {
     localtime_s(&local_time, &now);
     strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", &local_time);
     
-    // Write log header
     fprintf(logFile, "[%s] [%s] ", timeStr, LOG_LEVEL_STRINGS[level]);
     
-    // Format and write log content
     va_list args;
     va_start(args, format);
     vfprintf(logFile, format, args);
     va_end(args);
     
-    // New line
     fprintf(logFile, "\n");
     
-    // Flush buffer immediately to ensure logs are saved even if program crashes
     fflush(logFile);
     
     LeaveCriticalSection(&logCS);
@@ -305,12 +254,10 @@ void GetLastErrorDescription(DWORD errorCode, char* buffer, int bufferSize) {
         0, NULL);
     
     if (size > 0) {
-        // Remove trailing newlines
         if (size >= 2 && messageBuffer[size-2] == L'\r' && messageBuffer[size-1] == L'\n') {
             messageBuffer[size-2] = L'\0';
         }
         
-        // Convert Unicode message to UTF-8 for output buffer
         WideCharToMultiByte(CP_UTF8, 0, messageBuffer, -1, buffer, bufferSize, NULL, NULL);
         LocalFree(messageBuffer);
     } else {
@@ -318,7 +265,6 @@ void GetLastErrorDescription(DWORD errorCode, char* buffer, int bufferSize) {
     }
 }
 
-// Signal handler function - used to handle various C standard signals
 void SignalHandler(int signal) {
     char errorMsg[256] = {0};
     
@@ -346,35 +292,29 @@ void SignalHandler(int signal) {
             break;
     }
     
-    // Record exception information
     if (logFile) {
         fprintf(logFile, "[FATAL] Fatal signal occurred: %s (signal number: %d)\n", 
                 errorMsg, signal);
         fflush(logFile);
         
-        // Close log file
         fclose(logFile);
         logFile = NULL;
     }
     
-    // Display error message box
     MessageBoxW(NULL, L"The program encountered a serious error. Please check the log file for detailed information.", L"Fatal Error", MB_ICONERROR | MB_OK);
     
-    // Terminate program
     exit(signal);
 }
 
 void SetupExceptionHandler(void) {
-    // Set up standard C signal handlers
-    signal(SIGFPE, SignalHandler);   // Floating point exception
-    signal(SIGILL, SignalHandler);   // Illegal instruction
-    signal(SIGSEGV, SignalHandler);  // Segmentation fault
-    signal(SIGTERM, SignalHandler);  // Termination signal
-    signal(SIGABRT, SignalHandler);  // Abnormal termination
-    signal(SIGINT, SignalHandler);   // User interrupt
+    signal(SIGFPE, SignalHandler);
+    signal(SIGILL, SignalHandler);
+    signal(SIGSEGV, SignalHandler);
+    signal(SIGTERM, SignalHandler);
+    signal(SIGABRT, SignalHandler);
+    signal(SIGINT, SignalHandler);
 }
 
-// Call this function when program exits to clean up log resources
 void CleanupLogSystem(void) {
     if (logFile) {
         WriteLog(LOG_LEVEL_INFO, "Catime exited normally");

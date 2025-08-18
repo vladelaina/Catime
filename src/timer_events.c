@@ -1,11 +1,3 @@
-/**
- * @file timer_events.c
- * @brief Implementation of timer event handling
- * 
- * This file implements the functionality related to the application's timer event handling,
- * including countdown and count-up mode event processing.
- */
-
 #include <windows.h>
 #include <stdlib.h>
 #include "../include/timer_events.h"
@@ -17,35 +9,27 @@
 #include <stdio.h>
 #include <string.h>
 #include "../include/window.h"
-#include "audio_player.h"  // Include header reference
+#include "audio_player.h"
 
-// Maximum capacity of Pomodoro time list
 #define MAX_POMODORO_TIMES 10
-extern int POMODORO_TIMES[MAX_POMODORO_TIMES]; // Store all Pomodoro times
-extern int POMODORO_TIMES_COUNT;              // Actual number of Pomodoro times
+extern int POMODORO_TIMES[MAX_POMODORO_TIMES];
+extern int POMODORO_TIMES_COUNT;
 
-// Index of the currently executing Pomodoro time
 int current_pomodoro_time_index = 0;
 
-// Define current_pomodoro_phase variable, which is declared as extern in pomodoro.h
 POMODORO_PHASE current_pomodoro_phase = POMODORO_PHASE_IDLE;
 
-// Number of completed Pomodoro cycles
 int complete_pomodoro_cycles = 0;
 
-// Function declarations imported from main.c
 extern void ShowNotification(HWND hwnd, const wchar_t* message);
 
-// Variable declarations imported from main.c, for timeout actions
 extern int elapsed_time;
 extern BOOL message_shown;
 
-// Custom message text imported from config.c
 extern char CLOCK_TIMEOUT_MESSAGE_TEXT[100];
-extern char POMODORO_TIMEOUT_MESSAGE_TEXT[100]; // New Pomodoro-specific prompt
+extern char POMODORO_TIMEOUT_MESSAGE_TEXT[100];
 extern char POMODORO_CYCLE_COMPLETE_TEXT[100];
 
-// Define ClockState type
 typedef enum {
     CLOCK_STATE_IDLE,
     CLOCK_STATE_COUNTDOWN,
@@ -53,18 +37,16 @@ typedef enum {
     CLOCK_STATE_POMODORO
 } ClockState;
 
-// Define PomodoroState type
 typedef struct {
     BOOL isLastCycle;
     int cycleIndex;
     int totalCycles;
 } PomodoroState;
 
-extern HWND g_hwnd; // Main window handle
+extern HWND g_hwnd;
 extern ClockState g_clockState;
 extern PomodoroState g_pomodoroState;
 
-// Timer behavior function declarations
 extern void ShowTrayNotification(HWND hwnd, const char* message);
 extern void OpenFileByPath(const char* filePath);
 extern void OpenWebsite(const char* url);
@@ -74,77 +56,50 @@ extern void RestartComputer(void);
 extern void SetTimeDisplay(void);
 extern void ShowCountUp(HWND hwnd);
 
-// Add external function declaration to the beginning of the file or before the function
 extern void StopNotificationSound(void);
 
-/**
- * @brief Convert UTF-8 encoded char* string to wchar_t* string
- * @param utf8String Input UTF-8 string
- * @return Converted wchar_t* string, memory needs to be freed with free() after use. Returns NULL if conversion fails.
- */
 static wchar_t* Utf8ToWideChar(const char* utf8String) {
     if (!utf8String || utf8String[0] == '\0') {
-        return NULL; // Return NULL to handle empty strings or NULL pointers
+        return NULL;
     }
     int size_needed = MultiByteToWideChar(CP_UTF8, 0, utf8String, -1, NULL, 0);
     if (size_needed == 0) {
-        // Conversion failed
         return NULL;
     }
     wchar_t* wideString = (wchar_t*)malloc(size_needed * sizeof(wchar_t));
     if (!wideString) {
-        // Memory allocation failed
         return NULL;
     }
     int result = MultiByteToWideChar(CP_UTF8, 0, utf8String, -1, wideString, size_needed);
     if (result == 0) {
-        // Conversion failed
         free(wideString);
         return NULL;
     }
     return wideString;
 }
 
-/**
- * @brief Display notification with Unicode message
- * @param hwnd Window handle
- * @param message Unicode message to display
- */
 static void ShowLocalizedNotification(HWND hwnd, const wchar_t* message) {
-    // Don't display if message is empty
     if (!message || message[0] == L'\0') {
         return;
     }
 
-    // Display notification directly with Unicode message
     ShowNotification(hwnd, message);
             
-    // If timeout action is MESSAGE, play notification audio
     if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_MESSAGE) {
-        // Read the latest audio settings
         ReadNotificationSoundConfig();
         
-        // Play notification audio
         PlayNotificationSound(hwnd);
     }
 }
 
-/**
- * @brief Set Pomodoro to work phase
- * 
- * Reset all timer counts and set Pomodoro to work phase
- */
 void InitializePomodoro(void) {
-    // Use existing enum value POMODORO_PHASE_WORK instead of POMODORO_PHASE_RUNNING
     current_pomodoro_phase = POMODORO_PHASE_WORK;
     current_pomodoro_time_index = 0;
     complete_pomodoro_cycles = 0;
     
-    // Set initial countdown to the first time value
     if (POMODORO_TIMES_COUNT > 0) {
         CLOCK_TOTAL_TIME = POMODORO_TIMES[0];
     } else {
-        // If no time is configured, use default 25 minutes
         CLOCK_TOTAL_TIME = 1500;
     }
     
@@ -152,33 +107,22 @@ void InitializePomodoro(void) {
     countdown_message_shown = FALSE;
 }
 
-/**
- * @brief Handle timer messages
- * @param hwnd Window handle
- * @param wp Message parameter
- * @return BOOL Whether the message was handled
- */
 BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
-    // Re-apply topmost state shortly after startup to resist Win+D/Explorer Z-order changes
-    // Timer 999 is scheduled only when launched via system startup (flagged by --startup)
     if (wp == 999) {
         static int s_topmost_retry_remaining = 0;
         if (s_topmost_retry_remaining == 0) {
-            s_topmost_retry_remaining = 3; // Try several times during early startup
+            s_topmost_retry_remaining = 3;
         }
 
         if (CLOCK_WINDOW_TOPMOST) {
-            // Re-assert topmost without activating the window
             SetWindowTopmost(hwnd, TRUE);
             SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
                          SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
         }
-        // Ensure the window is visible in case it was minimized/hidden by system actions
         if (!IsWindowVisible(hwnd)) {
             ShowWindow(hwnd, SW_SHOWNOACTIVATE);
         }
 
-        // Schedule a few more retries to survive Explorer/Show Desktop toggles
         s_topmost_retry_remaining--;
         if (s_topmost_retry_remaining > 0) {
             SetTimer(hwnd, 999, 1500, NULL);
@@ -188,11 +132,10 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
         return TRUE;
     }
 
-    // Retry attaching to desktop in non-topmost mode during shell startup (only in --startup)
     if (wp == 1001) {
         static int s_desktop_retry_remaining = 0;
         if (s_desktop_retry_remaining == 0) {
-            s_desktop_retry_remaining = 3; // retry a few times
+            s_desktop_retry_remaining = 3;
         }
 
         if (!CLOCK_WINDOW_TOPMOST) {
@@ -210,7 +153,6 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
         }
         return TRUE;
     }
-    // One-shot delayed reassert for toggling to non-topmost to ensure visibility in some shells
     if (wp == 1002) {
         KillTimer(hwnd, 1002);
         extern void ReattachToDesktop(HWND);
@@ -224,16 +166,13 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
     }
     if (wp == 1) {
         if (CLOCK_SHOW_CURRENT_TIME) {
-            // In current time display mode, reset the last displayed second on each timer trigger to ensure the latest time is displayed
             extern int last_displayed_second;
-            last_displayed_second = -1; // Force reset of seconds cache to ensure the latest system time is displayed each time
+            last_displayed_second = -1;
             
-            // Refresh display
             InvalidateRect(hwnd, NULL, TRUE);
             return TRUE;
         }
 
-        // If timer is paused, don't update time
         if (CLOCK_IS_PAUSED) {
             return TRUE;
         }
@@ -247,194 +186,145 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                 if (countdown_elapsed_time >= CLOCK_TOTAL_TIME && !countdown_message_shown) {
                     countdown_message_shown = TRUE;
 
-                    // Re-read message text from config file before displaying notification
                     ReadNotificationMessagesConfig();
-                    // Force re-read notification type config to ensure latest settings are used
                     ReadNotificationTypeConfig();
                     
-                    // Variable declaration before branches to ensure availability in all branches
                     wchar_t* timeoutMsgW = NULL;
 
-                    // Check if in Pomodoro mode - must meet all three conditions:
-                    // 1. Current Pomodoro phase is not IDLE 
-                    // 2. Pomodoro time configuration is valid
-                    // 3. Current countdown total time matches the time at current index in the Pomodoro time list
                     if (current_pomodoro_phase != POMODORO_PHASE_IDLE && 
                         POMODORO_TIMES_COUNT > 0 && 
                         current_pomodoro_time_index < POMODORO_TIMES_COUNT &&
                         CLOCK_TOTAL_TIME == POMODORO_TIMES[current_pomodoro_time_index]) {
                         
-                        // Use Pomodoro-specific prompt message
                         timeoutMsgW = Utf8ToWideChar(POMODORO_TIMEOUT_MESSAGE_TEXT);
                         
-                        // Display timeout message (using config or default value)
                         if (timeoutMsgW) {
                             ShowLocalizedNotification(hwnd, timeoutMsgW);
                         } else {
-                            ShowLocalizedNotification(hwnd, L"番茄钟时间到！"); // Fallback
+                            ShowLocalizedNotification(hwnd, L"番茄钟时间到！");
                         }
                         
-                        // Move to next time period
                         current_pomodoro_time_index++;
                         
-                        // Check if a complete cycle has been finished
                         if (current_pomodoro_time_index >= POMODORO_TIMES_COUNT) {
-                            // Reset index back to the first time
                             current_pomodoro_time_index = 0;
                             
-                            // Increase completed cycle count
                             complete_pomodoro_cycles++;
                             
-                            // Check if all configured loop counts have been completed
                             if (complete_pomodoro_cycles >= POMODORO_LOOP_COUNT) {
-                                // All loop counts completed, end Pomodoro
                                 countdown_elapsed_time = 0;
                                 countdown_message_shown = FALSE;
                                 CLOCK_TOTAL_TIME = 0;
                                 
-                                // Reset Pomodoro state
                                 current_pomodoro_phase = POMODORO_PHASE_IDLE;
                                 
-                                // Try to read and convert completion message from config
                                 wchar_t* cycleCompleteMsgW = Utf8ToWideChar(POMODORO_CYCLE_COMPLETE_TEXT);
-                                // Display completion prompt (using config or default value)
                                 if (cycleCompleteMsgW) {
                                     ShowLocalizedNotification(hwnd, cycleCompleteMsgW);
-                                    free(cycleCompleteMsgW); // Free completion message memory
+                                    free(cycleCompleteMsgW);
                                 } else {
-                                    ShowLocalizedNotification(hwnd, L"所有番茄钟循环完成！"); // Fallback
+                                    ShowLocalizedNotification(hwnd, L"所有番茄钟循环完成！");
                                 }
                                 
-                                // Switch to idle state - add the following code
-                                CLOCK_COUNT_UP = FALSE;       // Ensure not in count-up mode
-                                CLOCK_SHOW_CURRENT_TIME = FALSE; // Ensure not in current time display mode
-                                message_shown = TRUE;         // Mark message as shown
+                                CLOCK_COUNT_UP = FALSE;
+                                CLOCK_SHOW_CURRENT_TIME = FALSE;
+                                message_shown = TRUE;
                                 
-                                // Force redraw window to clear display
                                 InvalidateRect(hwnd, NULL, TRUE);
                                 KillTimer(hwnd, 1);
-                                if (timeoutMsgW) free(timeoutMsgW); // Free timeout message memory
+                                if (timeoutMsgW) free(timeoutMsgW);
                                 return TRUE;
                             }
                         }
                         
-                        // Set countdown for next time period
                         CLOCK_TOTAL_TIME = POMODORO_TIMES[current_pomodoro_time_index];
                         countdown_elapsed_time = 0;
                         countdown_message_shown = FALSE;
                         
-                        // If it's the first time period in a new round, display cycle prompt
                         if (current_pomodoro_time_index == 0 && complete_pomodoro_cycles > 0) {
                             wchar_t cycleMsg[100];
-                            // GetLocalizedString needs to be reconsidered, or hardcode English/Chinese
-                            // Temporarily keep the original approach, but ideally should be configurable
                             const wchar_t* formatStr = GetLocalizedString(L"开始第 %d 轮番茄钟", L"Starting Pomodoro cycle %d");
                             swprintf(cycleMsg, 100, formatStr, complete_pomodoro_cycles + 1);
-                            ShowLocalizedNotification(hwnd, cycleMsg); // Call the modified function
+                            ShowLocalizedNotification(hwnd, cycleMsg);
                         }
                         
                         InvalidateRect(hwnd, NULL, TRUE);
                     } else {
-                        // Not in Pomodoro mode, or switched to normal countdown mode
-                        // Use normal countdown prompt message
                         timeoutMsgW = Utf8ToWideChar(CLOCK_TIMEOUT_MESSAGE_TEXT);
                         
-                        // Only display notification message if timeout action is not open file, lock, shutdown, or restart
                         if (CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_OPEN_FILE && 
                             CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_LOCK &&
                             CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_SHUTDOWN &&
                             CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_RESTART &&
                             CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_SLEEP) {
-                            // Display timeout message (using config or default value)
                             if (timeoutMsgW) {
                                 ShowLocalizedNotification(hwnd, timeoutMsgW);
                             } else {
-                                ShowLocalizedNotification(hwnd, L"时间到！"); // Fallback
+                                ShowLocalizedNotification(hwnd, L"时间到！");
                             }
                         }
                         
-                        // If current mode is not Pomodoro (manually switched to normal countdown), ensure not to return to Pomodoro cycle
                         if (current_pomodoro_phase != POMODORO_PHASE_IDLE &&
                             (current_pomodoro_time_index >= POMODORO_TIMES_COUNT ||
                              CLOCK_TOTAL_TIME != POMODORO_TIMES[current_pomodoro_time_index])) {
-                            // If switched to normal countdown, reset Pomodoro state
                             current_pomodoro_phase = POMODORO_PHASE_IDLE;
                             current_pomodoro_time_index = 0;
                             complete_pomodoro_cycles = 0;
                         }
                         
-                        // If sleep option, process immediately, skip other processing logic
                         if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SLEEP) {
-                            // Reset display and apply changes
                             CLOCK_TOTAL_TIME = 0;
                             countdown_elapsed_time = 0;
                             
-                            // Stop timer
                             KillTimer(hwnd, 1);
                             
-                            // Immediately force redraw window to clear display
                             InvalidateRect(hwnd, NULL, TRUE);
                             UpdateWindow(hwnd);
                             
-                            // Free memory
                             if (timeoutMsgW) {
                                 free(timeoutMsgW);
                             }
                             
-                            // Execute sleep command
                             system("rundll32.exe powrprof.dll,SetSuspendState 0,1,0");
                             return TRUE;
                         }
                         
-                        // If shutdown option, process immediately, skip other processing logic
                         if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SHUTDOWN) {
-                            // Reset display and apply changes
                             CLOCK_TOTAL_TIME = 0;
                             countdown_elapsed_time = 0;
                             
-                            // Stop timer
                             KillTimer(hwnd, 1);
                             
-                            // Immediately force redraw window to clear display
                             InvalidateRect(hwnd, NULL, TRUE);
                             UpdateWindow(hwnd);
                             
-                            // Free memory
                             if (timeoutMsgW) {
                                 free(timeoutMsgW);
                             }
                             
-                            // Execute shutdown command
                             system("shutdown /s /t 0");
                             return TRUE;
                         }
                         
-                        // If restart option, process immediately, skip other processing logic
                         if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_RESTART) {
-                            // Reset display and apply changes
                             CLOCK_TOTAL_TIME = 0;
                             countdown_elapsed_time = 0;
                             
-                            // Stop timer
                             KillTimer(hwnd, 1);
                             
-                            // Immediately force redraw window to clear display
                             InvalidateRect(hwnd, NULL, TRUE);
                             UpdateWindow(hwnd);
                             
-                            // Free memory
                             if (timeoutMsgW) {
                                 free(timeoutMsgW);
                             }
                             
-                            // Execute restart command
                             system("shutdown /r /t 0");
                             return TRUE;
                         }
                         
                         switch (CLOCK_TIMEOUT_ACTION) {
                             case TIMEOUT_ACTION_MESSAGE:
-                                // Notification already displayed, no additional operation needed
                                 break;
                             case TIMEOUT_ACTION_LOCK:
                                 LockWorkStation();
@@ -456,10 +346,8 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                                 break;
                             }
                             case TIMEOUT_ACTION_SHOW_TIME:
-                                // Stop any playing notification audio
                                 StopNotificationSound();
                                 
-                                // Switch to current time display mode
                                 CLOCK_SHOW_CURRENT_TIME = TRUE;
                                 CLOCK_COUNT_UP = FALSE;
                                 KillTimer(hwnd, 1);
@@ -467,10 +355,8 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                                 InvalidateRect(hwnd, NULL, TRUE);
                                 break;
                             case TIMEOUT_ACTION_COUNT_UP:
-                                // Stop any playing notification audio
                                 StopNotificationSound();
                                 
-                                // Switch to count-up mode and reset
                                 CLOCK_COUNT_UP = TRUE;
                                 CLOCK_SHOW_CURRENT_TIME = FALSE;
                                 countup_elapsed_time = 0;
@@ -479,7 +365,6 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                                 countdown_message_shown = FALSE;
                                 countup_message_shown = FALSE;
                                 
-                                // Set Pomodoro state to idle
                                 CLOCK_IS_PAUSED = FALSE;
                                 KillTimer(hwnd, 1);
                                 SetTimer(hwnd, 1, 1000, NULL);
@@ -491,14 +376,12 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                                 }
                                 break;
                             case TIMEOUT_ACTION_RUN_COMMAND:
-                                // TODO: 实现运行命令功能
                                 MessageBoxW(hwnd, 
                                     GetLocalizedString(L"运行命令功能正在开发中", L"Run Command feature is under development"),
                                     GetLocalizedString(L"提示", L"Notice"),
                                     MB_ICONINFORMATION);
                                 break;
                             case TIMEOUT_ACTION_HTTP_REQUEST:
-                                // TODO: 实现HTTP请求功能
                                 MessageBoxW(hwnd, 
                                     GetLocalizedString(L"HTTP请求功能正在开发中", L"HTTP Request feature is under development"),
                                     GetLocalizedString(L"提示", L"Notice"),
@@ -507,7 +390,6 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                         }
                     }
 
-                    // Free converted wide string memory
                     if (timeoutMsgW) {
                         free(timeoutMsgW);
                     }
@@ -517,14 +399,10 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
         }
         return TRUE;
     } else if (wp == 999) {
-        // Handle startup window state re-application timer
         if (CLOCK_WINDOW_TOPMOST) {
-            // Re-apply topmost status to ensure window stays on top
-            // This is particularly important for auto-startup scenarios
             SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, 
                         SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
         }
-        // Kill this one-time timer
         KillTimer(hwnd, 999);
         return TRUE;
     }
@@ -532,15 +410,12 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
 }
 
 void OnTimerTimeout(HWND hwnd) {
-    // Execute different behaviors based on timeout action
     switch (CLOCK_TIMEOUT_ACTION) {
         case TIMEOUT_ACTION_MESSAGE: {
             wchar_t unicodeMsg[256] = {0};
             const char* utf8Message = NULL;
             
-            // Select different prompt messages based on current state
             if (g_clockState == CLOCK_STATE_POMODORO) {
-                // Check if Pomodoro has completed all cycles
                 if (g_pomodoroState.isLastCycle && g_pomodoroState.cycleIndex >= g_pomodoroState.totalCycles - 1) {
                     utf8Message = POMODORO_CYCLE_COMPLETE_TEXT;
                 } else {
@@ -550,7 +425,6 @@ void OnTimerTimeout(HWND hwnd) {
                 utf8Message = CLOCK_TIMEOUT_MESSAGE_TEXT;
             }
             
-            // Convert UTF-8 to Unicode and display
             if (utf8Message && utf8Message[0] != '\0') {
                 int len = MultiByteToWideChar(CP_UTF8, 0, utf8Message, -1, unicodeMsg, 
                                             sizeof(unicodeMsg)/sizeof(wchar_t));
@@ -559,14 +433,12 @@ void OnTimerTimeout(HWND hwnd) {
                 }
             }
             
-            // Read latest audio settings and play alert sound
             ReadNotificationSoundConfig();
             PlayNotificationSound(hwnd);
             
             break;
         }
         case TIMEOUT_ACTION_RUN_COMMAND: {
-            // TODO: 实现运行命令功能
             MessageBoxW(hwnd, 
                 GetLocalizedString(L"运行命令功能正在开发中", L"Run Command feature is under development"),
                 GetLocalizedString(L"提示", L"Notice"),
@@ -574,7 +446,6 @@ void OnTimerTimeout(HWND hwnd) {
             break;
         }
         case TIMEOUT_ACTION_HTTP_REQUEST: {
-            // TODO: 实现HTTP请求功能
             MessageBoxW(hwnd, 
                 GetLocalizedString(L"HTTP请求功能正在开发中", L"HTTP Request feature is under development"),
                 GetLocalizedString(L"提示", L"Notice"),
@@ -585,22 +456,16 @@ void OnTimerTimeout(HWND hwnd) {
     }
 }
 
-// Add missing global variable definitions (if not defined elsewhere)
 #ifndef STUB_VARIABLES_DEFINED
 #define STUB_VARIABLES_DEFINED
-// Main window handle
 HWND g_hwnd = NULL;
-// Current clock state
 ClockState g_clockState = CLOCK_STATE_IDLE;
-// Pomodoro state
 PomodoroState g_pomodoroState = {FALSE, 0, 1};
 #endif
 
-// Add stub function definitions if needed
 #ifndef STUB_FUNCTIONS_DEFINED
 #define STUB_FUNCTIONS_DEFINED
 __attribute__((weak)) void SleepComputer(void) {
-    // This is a weak symbol definition, if there's an actual implementation elsewhere, that implementation will be used
     system("rundll32.exe powrprof.dll,SetSuspendState 0,1,0");
 }
 
@@ -613,10 +478,8 @@ __attribute__((weak)) void RestartComputer(void) {
 }
 
 __attribute__((weak)) void SetTimeDisplay(void) {
-    // Stub implementation for setting time display
 }
 
 __attribute__((weak)) void ShowCountUp(HWND hwnd) {
-    // Stub implementation for showing count-up
 }
 #endif

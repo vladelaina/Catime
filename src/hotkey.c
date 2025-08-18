@@ -1,8 +1,3 @@
-/**
- * @file hotkey.c
- * @brief Hotkey management implementation
- */
-
 #include <windows.h>
 #include <commctrl.h>
 #include <strsafe.h>
@@ -44,9 +39,6 @@ static WORD g_dlgRestartTimerHotkey = 0;
 
 static WNDPROC g_OldHotkeyDlgProc = NULL;
 
-/**
- * @brief Dialog subclassing procedure
- */
 LRESULT CALLBACK HotkeyDialogSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     if (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN || msg == WM_KEYUP || msg == WM_SYSKEYUP) {
         BYTE vk = (BYTE)wParam;
@@ -142,9 +134,6 @@ LRESULT CALLBACK HotkeyDialogSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LP
     return CallWindowProc(g_OldHotkeyDlgProc, hwnd, msg, wParam, lParam);
 }
 
-/**
- * @brief Show hotkey settings dialog
- */
 void ShowHotkeySettingsDialog(HWND hwndParent) {
     DialogBoxW(GetModuleHandle(NULL),
               MAKEINTRESOURCE(CLOCK_IDD_HOTKEY_DIALOG),
@@ -152,18 +141,12 @@ void ShowHotkeySettingsDialog(HWND hwndParent) {
               HotkeySettingsDlgProc);
 }
 
-/**
- * @brief Check if a hotkey is a single key
- */
 BOOL IsSingleKey(WORD hotkey) {
     BYTE modifiers = HIBYTE(hotkey);
 
     return modifiers == 0;
 }
 
-/**
- * @brief Check if a hotkey is a standalone letter, number, or symbol
- */
 BOOL IsRestrictedSingleKey(WORD hotkey) {
     if (hotkey == 0) {
         return FALSE;
@@ -210,9 +193,6 @@ BOOL IsRestrictedSingleKey(WORD hotkey) {
     return FALSE;
 }
 
-/**
- * @brief Hotkey settings dialog message processing procedure
- */
 INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     static HBRUSH hBackgroundBrush = NULL;
     static HBRUSH hButtonBrush = NULL;
@@ -471,9 +451,6 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
     return FALSE;
 }
 
-/**
- * @brief Hotkey control subclass procedure
- */
 LRESULT CALLBACK HotkeyControlSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam,
                                          LPARAM lParam, UINT_PTR uIdSubclass,
                                          DWORD_PTR dwRefData) {

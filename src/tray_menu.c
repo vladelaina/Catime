@@ -1,16 +1,4 @@
-/**
- * @file tray_menu.c
- * @brief Implementation of system tray menu functionality
- * 
- * This file implements the system tray menu functionality for the application, including:
- * - Right-click menu and its submenus
- * - Color selection menu
- * - Font settings menu
- * - Timeout action settings
- * - Pomodoro functionality
- * - Preset time management
- * - Multi-language interface support
- */
+
 
 #include <windows.h>
 #include <shellapi.h>
@@ -25,8 +13,7 @@
 #include "../include/timer.h"
 #include "../resource/resource.h"
 
-/// @name External variable declarations
-/// @{
+
 extern BOOL CLOCK_SHOW_CURRENT_TIME;
 extern BOOL CLOCK_USE_24HOUR;
 extern BOOL CLOCK_SHOW_SECONDS;
@@ -45,13 +32,13 @@ extern int CLOCK_TOTAL_TIME;
 extern int countdown_elapsed_time;
 extern char CLOCK_TIMEOUT_FILE_PATH[MAX_PATH];
 extern char CLOCK_TIMEOUT_TEXT[50];
-extern BOOL CLOCK_WINDOW_TOPMOST;       ///< Whether the window is always on top
+extern BOOL CLOCK_WINDOW_TOPMOST;
 
-// Add Pomodoro related variable declarations
-extern int POMODORO_WORK_TIME;      ///< Work time (seconds)
-extern int POMODORO_SHORT_BREAK;    ///< Short break time (seconds)
-extern int POMODORO_LONG_BREAK;     ///< Long break time (seconds)
-extern int POMODORO_LOOP_COUNT;     ///< Loop count
+
+extern int POMODORO_WORK_TIME;
+extern int POMODORO_SHORT_BREAK;
+extern int POMODORO_LONG_BREAK;
+extern int POMODORO_LOOP_COUNT;
 
 // Pomodoro time array and count variables
 #define MAX_POMODORO_TIMES 10
