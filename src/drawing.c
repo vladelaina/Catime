@@ -108,7 +108,7 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
     wchar_t fontInternalNameW[256];
     MultiByteToWideChar(CP_UTF8, 0, fontInternalName, -1, fontInternalNameW, 256);
     
-    HFONT hFont = CreateFont(
+    HFONT hFont = CreateFontW(
         -CLOCK_BASE_FONT_SIZE * CLOCK_FONT_SCALE_FACTOR,
         0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_TT_PRECIS,
@@ -151,7 +151,7 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
 
     if (wcslen(time_text) > 0) {
         SIZE textSize;
-        GetTextExtentPoint32(memDC, time_text, wcslen(time_text), &textSize);
+        GetTextExtentPoint32W(memDC, time_text, wcslen(time_text), &textSize);
 
         if (textSize.cx != (rect.right - rect.left) || 
             textSize.cy != (rect.bottom - rect.top)) {
@@ -176,19 +176,19 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
             
             // Add black outline effect
             SetTextColor(memDC, RGB(0, 0, 0));
-            TextOut(memDC, x-1, y, time_text, wcslen(time_text));
-            TextOut(memDC, x+1, y, time_text, wcslen(time_text));
-            TextOut(memDC, x, y-1, time_text, wcslen(time_text));
-            TextOut(memDC, x, y+1, time_text, wcslen(time_text));
+            TextOutW(memDC, x-1, y, time_text, wcslen(time_text));
+            TextOutW(memDC, x+1, y, time_text, wcslen(time_text));
+            TextOutW(memDC, x, y-1, time_text, wcslen(time_text));
+            TextOutW(memDC, x, y+1, time_text, wcslen(time_text));
             
             // Set back to white for drawing text
             SetTextColor(memDC, RGB(255, 255, 255));
-            TextOut(memDC, x, y, time_text, wcslen(time_text));
+            TextOutW(memDC, x, y, time_text, wcslen(time_text));
         } else {
             SetTextColor(memDC, RGB(r, g, b));
             
             for (int i = 0; i < 8; i++) {
-                TextOut(memDC, x, y, time_text, wcslen(time_text));
+                TextOutW(memDC, x, y, time_text, wcslen(time_text));
             }
         }
     }
