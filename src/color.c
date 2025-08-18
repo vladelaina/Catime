@@ -112,7 +112,7 @@ COLORREF ShowColorDialog(HWND hwnd) {
     cc.Flags = CC_FULLOPEN | CC_RGBINIT | CC_ENABLEHOOK;
     cc.lpfnHook = ColorDialogHookProc;
 
-    if (ChooseColor(&cc)) {
+    if (ChooseColorW(&cc)) {
         COLORREF finalColor;
         if (IS_COLOR_PREVIEWING && PREVIEW_COLOR[0] == '#') {
             int r, g, b;
@@ -312,10 +312,14 @@ void InitializeDefaultLanguage(void) {
 
     ClearColorOptions();
 
-    FILE *file = fopen(config_path, "r");
+    // Convert ANSI string to Unicode for the API call
+    wchar_t wconfig_path[MAX_PATH];
+    MultiByteToWideChar(CP_ACP, 0, config_path, -1, wconfig_path, MAX_PATH);
+    
+    FILE *file = _wfopen(wconfig_path, L"r");
     if (!file) {
         CreateDefaultConfig(config_path);
-        file = fopen(config_path, "r");
+        file = _wfopen(wconfig_path, L"r");
     }
 
     if (file) {
@@ -433,7 +437,11 @@ void WriteConfigColor(const char* color_input) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
 
-    FILE *file = fopen(config_path, "r");
+    // Convert ANSI string to Unicode for the API call
+    wchar_t wconfig_path[MAX_PATH];
+    MultiByteToWideChar(CP_ACP, 0, config_path, -1, wconfig_path, MAX_PATH);
+    
+    FILE *file = _wfopen(wconfig_path, L"r");
     if (!file) {
         fprintf(stderr, "Failed to open config file for reading: %s\n", config_path);
         return;
@@ -476,7 +484,7 @@ void WriteConfigColor(const char* color_input) {
 
     free(config_content);
 
-    file = fopen(config_path, "w");
+    file = _wfopen(wconfig_path, L"w");
     if (!file) {
         fprintf(stderr, "Failed to open config file for writing: %s\n", config_path);
         free(new_config);
@@ -696,7 +704,10 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
         case WM_COMMAND: {
             if (LOWORD(wParam) == CLOCK_IDC_BUTTON_OK) {
                 char color[32];
-                GetDlgItemTextA(hwndDlg, CLOCK_IDC_EDIT, color, sizeof(color));
+                // Convert from Unicode to ANSI for internal processing
+                wchar_t wcolor[32];
+                GetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, wcolor, sizeof(wcolor)/sizeof(wchar_t));
+                WideCharToMultiByte(CP_ACP, 0, wcolor, -1, color, sizeof(color), NULL, NULL);
 
                 BOOL isAllSpaces = TRUE;
                 for (int i = 0; color[i]; i++) {
