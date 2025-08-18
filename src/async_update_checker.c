@@ -1,8 +1,3 @@
-/**
- * @file async_update_checker.c
- * @brief Asynchronous application update checking functionality
- */
-
 #include <windows.h>
 #include <process.h>
 #include "../include/async_update_checker.h"
@@ -17,9 +12,6 @@ typedef struct {
 static HANDLE g_hUpdateThread = NULL;
 static BOOL g_bUpdateThreadRunning = FALSE;
 
-/**
- * @brief Clean up update check thread resources
- */
 void CleanupUpdateThread() {
     LOG_INFO("Cleaning up update check thread resources");
     if (g_hUpdateThread != NULL) {
@@ -41,10 +33,6 @@ void CleanupUpdateThread() {
     }
 }
 
-/**
- * @brief Update check thread function
- * @param param Thread parameters
- */
 unsigned __stdcall UpdateCheckThreadProc(void* param) {
     LOG_INFO("Update check thread started");
 
@@ -75,11 +63,6 @@ unsigned __stdcall UpdateCheckThreadProc(void* param) {
     return 0;
 }
 
-/**
- * @brief Check for application updates asynchronously
- * @param hwnd Window handle
- * @param silentCheck Whether to perform a silent check
- */
 void CheckForUpdateAsync(HWND hwnd, BOOL silentCheck) {
     LOG_INFO("Asynchronous update check requested, window handle: 0x%p, silent mode: %s",
              hwnd, silentCheck ? "yes" : "no");

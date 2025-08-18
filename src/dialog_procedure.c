@@ -1,8 +1,3 @@
-/**
- * @file dialog_procedure.c
- * @brief Implementation of dialog message handling procedures
- */
-
 #include <windows.h>
 #include <stdio.h>
 #include <ctype.h>
@@ -109,9 +104,6 @@ INT_PTR CALLBACK ErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
     return FALSE;
 }
 
-/**
- * @brief Input dialog procedure
- */
 INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     static HBRUSH hBackgroundBrush = NULL;
     static HBRUSH hEditBrush = NULL;
@@ -1379,12 +1371,6 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
     return FALSE;
 }
 
-/**
- * @brief Display notification message settings dialog
- * @param hwndParent Parent window handle
- * 
- * Displays the notification message settings dialog for modifying various notification prompt texts.
- */
 void ShowNotificationMessagesDialog(HWND hwndParent) {
     if (!g_hwndNotificationMessagesDialog) {
         // Ensure latest configuration values are read first
@@ -1563,12 +1549,6 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
     return FALSE;
 }
 
-/**
- * @brief Display notification display settings dialog
- * @param hwndParent Parent window handle
- * 
- * Displays the notification display settings dialog for modifying notification display time and opacity.
- */
 void ShowNotificationDisplayDialog(HWND hwndParent) {
     if (!g_hwndNotificationDisplayDialog) {
         // Ensure latest configuration values are read first
@@ -1587,12 +1567,6 @@ void ShowNotificationDisplayDialog(HWND hwndParent) {
 // Add global variable to track the integrated notification settings dialog handle
 static HWND g_hwndNotificationSettingsDialog = NULL;
 
-/**
- * @brief Audio playback completion callback function
- * @param hwnd Window handle
- * 
- * When audio playback completes, changes "Stop" button back to "Test" button
- */
 static void OnAudioPlaybackComplete(HWND hwnd) {
     if (hwnd && IsWindow(hwnd)) {
         const wchar_t* testText = GetLocalizedString(L"Test", L"Test");
@@ -1614,10 +1588,6 @@ static void OnAudioPlaybackComplete(HWND hwnd) {
     }
 }
 
-/**
- * @brief Populate audio dropdown box
- * @param hwndDlg Dialog handle
- */
 static void PopulateSoundComboBox(HWND hwndDlg) {
     HWND hwndCombo = GetDlgItem(hwndDlg, IDC_NOTIFICATION_SOUND_COMBO);
     if (!hwndCombo) return;
@@ -1690,16 +1660,6 @@ static void PopulateSoundComboBox(HWND hwndDlg) {
     }
 }
 
-/**
- * @brief Integrated notification settings dialog procedure
- * @param hwndDlg Dialog handle
- * @param msg Message type
- * @param wParam Message parameter
- * @param lParam Message parameter
- * @return INT_PTR Message processing result
- * 
- * Integrates notification content and notification display settings in a unified interface
- */
 INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     static BOOL isPlaying = FALSE; // Add a static variable to track playback status
     static int originalVolume = 0; // Add a static variable to store original volume
@@ -2135,12 +2095,6 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
     return FALSE;
 }
 
-/**
- * @brief Display integrated notification settings dialog
- * @param hwndParent Parent window handle
- * 
- * Displays a unified dialog that includes both notification content and display settings
- */
 void ShowNotificationSettingsDialog(HWND hwndParent) {
     if (!g_hwndNotificationSettingsDialog) {
         // Ensure the latest configuration values are read first

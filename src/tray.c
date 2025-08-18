@@ -1,8 +1,3 @@
-/**
- * @file tray.c
- * @brief System tray functionality implementation
- */
-
 #include <windows.h>
 #include <shellapi.h>
 #include "../include/language.h"
@@ -12,18 +7,10 @@
 NOTIFYICONDATAW nid;
 UINT WM_TASKBARCREATED = 0;
 
-/**
- * @brief Register the TaskbarCreated message
- */
 void RegisterTaskbarCreatedMessage() {
     WM_TASKBARCREATED = RegisterWindowMessageW(L"TaskbarCreated");
 }
 
-/**
- * @brief Initialize the system tray icon
- * @param hwnd Window handle
- * @param hInstance Application instance handle
- */
 void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
     memset(&nid, 0, sizeof(nid));
     nid.cbSize = sizeof(nid);
@@ -45,18 +32,10 @@ void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
     }
 }
 
-/**
- * @brief Remove the system tray icon
- */
 void RemoveTrayIcon(void) {
     Shell_NotifyIconW(NIM_DELETE, &nid);
 }
 
-/**
- * @brief Display a notification in the system tray
- * @param hwnd Window handle
- * @param message Text message to display
- */
 void ShowTrayNotification(HWND hwnd, const char* message) {
     NOTIFYICONDATAW nid_notify = {0};
     nid_notify.cbSize = sizeof(NOTIFYICONDATAW);
@@ -72,20 +51,11 @@ void ShowTrayNotification(HWND hwnd, const char* message) {
     Shell_NotifyIconW(NIM_MODIFY, &nid_notify);
 }
 
-/**
- * @brief Recreate the taskbar icon
- * @param hwnd Window handle
- * @param hInstance Instance handle
- */
 void RecreateTaskbarIcon(HWND hwnd, HINSTANCE hInstance) {
     RemoveTrayIcon();
     InitTrayIcon(hwnd, hInstance);
 }
 
-/**
- * @brief Update the tray icon and menu
- * @param hwnd Window handle
- */
 void UpdateTrayIcon(HWND hwnd) {
     HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
     RecreateTaskbarIcon(hwnd, hInstance);

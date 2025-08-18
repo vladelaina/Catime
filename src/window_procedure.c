@@ -1,11 +1,3 @@
-/**
- * @file window_procedure.c
- * @brief Window message processing implementation
- * 
- * This file implements the message processing callback function for the application's main window,
- * handling all message events for the window.
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -44,31 +36,21 @@
 #include "../include/notification.h"
 #include "../include/cli.h"
 
-// Variables imported from main.c
 extern wchar_t inputText[256];
 extern int elapsed_time;
 extern int message_shown;
 
-// Function declarations imported from main.c
 extern void ShowNotification(HWND hwnd, const wchar_t* message);
 extern void PauseMediaPlayback(void);
 
-// Add these external variable declarations at the beginning of the file
-extern int POMODORO_TIMES[10]; // Pomodoro time array
-extern int POMODORO_TIMES_COUNT; // Number of pomodoro time options
-extern int current_pomodoro_time_index; // Current pomodoro time index
-extern int complete_pomodoro_cycles; // Completed pomodoro cycles
+extern int POMODORO_TIMES[10];
+extern int POMODORO_TIMES_COUNT;
+extern int current_pomodoro_time_index;
+extern int complete_pomodoro_cycles;
 
-// If ShowInputDialog function needs to be declared, add at the beginning
 extern BOOL ShowInputDialog(HWND hwnd, wchar_t* text);
 
-// Modify to match the correct function declaration in config.h
 extern void WriteConfigPomodoroTimeOptions(int* times, int count);
-
-// If the function doesn't exist, use an existing similar function
-// For example, modify calls to WriteConfigPomodoroTimeOptions to WriteConfigPomodoroTimes
-
-// Add at the beginning of the file
 typedef struct {
     const wchar_t* title;
     const wchar_t* prompt;
@@ -77,19 +59,13 @@ typedef struct {
     size_t maxLen;
 } INPUTBOX_PARAMS;
 
-// Add declaration for ShowPomodoroLoopDialog function at the beginning of the file
 extern void ShowPomodoroLoopDialog(HWND hwndParent);
 
-// Add declaration for OpenUserGuide function
 extern void OpenUserGuide(void);
 
-// Add declaration for OpenSupportPage function
 extern void OpenSupportPage(void);
 
-// Add declaration for OpenFeedbackPage function
 extern void OpenFeedbackPage(void);
-
-// Helper function: Check if a string contains only spaces
 static BOOL isAllSpacesOnly(const wchar_t* str) {
     for (int i = 0; str[i]; i++) {
         if (!iswspace(str[i])) {
@@ -99,14 +75,6 @@ static BOOL isAllSpacesOnly(const wchar_t* str) {
     return TRUE;
 }
 
-/**
- * @brief Input dialog callback function
- * @param hwndDlg Dialog handle
- * @param uMsg Message
- * @param wParam Message parameter
- * @param lParam Message parameter
- * @return Processing result
- */
 INT_PTR CALLBACK InputBoxProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     static wchar_t* result;
     static size_t maxLen;
@@ -155,16 +123,6 @@ INT_PTR CALLBACK InputBoxProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
     return FALSE;
 }
 
-/**
- * @brief Display input dialog
- * @param hwndParent Parent window handle
- * @param title Dialog title
- * @param prompt Prompt message
- * @param defaultText Default text
- * @param result Result buffer
- * @param maxLen Maximum buffer length
- * @return TRUE if successful, FALSE if canceled
- */
 BOOL InputBox(HWND hwndParent, const wchar_t* title, const wchar_t* prompt, 
               const wchar_t* defaultText, wchar_t* result, size_t maxLen) {
     // Prepare parameters to pass to dialog
@@ -202,18 +160,6 @@ void ExitProgram(HWND hwnd) {
 #define HOTKEY_ID_RESTART_TIMER   110  // Hotkey ID for restart timer
 #define HOTKEY_ID_CUSTOM_COUNTDOWN 111 // Hotkey ID for custom countdown
 
-/**
- * @brief Register global hotkeys
- * @param hwnd Window handle
- * 
- * Reads and registers global hotkey settings from the configuration file for quickly switching between
- * displaying current time, count up timer, and default countdown.
- * If a hotkey is already registered, it will be unregistered before re-registering.
- * If a hotkey cannot be registered (possibly because it's being used by another program),
- * that hotkey setting will be set to none and the configuration file will be updated.
- * 
- * @return BOOL Whether at least one hotkey was successfully registered
- */
 BOOL RegisterGlobalHotkeys(HWND hwnd) {
     // First unregister all previously registered hotkeys
     UnregisterGlobalHotkeys(hwnd);
@@ -488,12 +434,6 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
     return success;
 }
 
-/**
- * @brief Unregister global hotkeys
- * @param hwnd Window handle
- * 
- * Unregister all previously registered global hotkeys.
- */
 void UnregisterGlobalHotkeys(HWND hwnd) {
     // Unregister all previously registered hotkeys
     UnregisterHotKey(hwnd, HOTKEY_ID_SHOW_TIME);
@@ -510,22 +450,6 @@ void UnregisterGlobalHotkeys(HWND hwnd) {
     UnregisterHotKey(hwnd, HOTKEY_ID_CUSTOM_COUNTDOWN);
 }
 
-/**
- * @brief Main window message processing callback function
- * @param hwnd Window handle
- * @param msg Message type
- * @param wp Message parameter (specific meaning depends on message type)
- * @param lp Message parameter (specific meaning depends on message type)
- * @return LRESULT Message processing result
- * 
- * Handles all message events for the main window, including:
- * - Window creation/destruction
- * - Mouse events (dragging, wheel scaling)
- * - Timer events
- * - System tray interaction
- * - Drawing events
- * - Menu command processing
- */
 LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
     static wchar_t time_text[50];
@@ -2404,10 +2328,6 @@ void AddMenuItem(HMENU hMenu, UINT id, const wchar_t* text, BOOL isEnabled);
 // Modify menu item text
 void ModifyMenuItemText(HMENU hMenu, UINT id, const wchar_t* text);
 
-/**
- * @brief Toggle show current time mode
- * @param hwnd Window handle
- */
 void ToggleShowTimeMode(HWND hwnd) {
     // Stop any notification sound that may be playing
     extern void StopNotificationSound(void);
@@ -2432,10 +2352,6 @@ void ToggleShowTimeMode(HWND hwnd) {
     // Already in show current time mode, do nothing
 }
 
-/**
- * @brief Start count up timer
- * @param hwnd Window handle
- */
 void StartCountUp(HWND hwnd) {
     // Stop any notification sound that may be playing
     extern void StopNotificationSound(void);
@@ -2468,10 +2384,7 @@ void StartCountUp(HWND hwnd) {
     InvalidateRect(hwnd, NULL, TRUE);
 }
 
-/**
- * @brief Start default countdown
- * @param hwnd Window handle
- */
+
 void StartDefaultCountDown(HWND hwnd) {
     // Stop any notification sound that may be playing
     extern void StopNotificationSound(void);
@@ -2513,10 +2426,7 @@ void StartDefaultCountDown(HWND hwnd) {
     InvalidateRect(hwnd, NULL, TRUE);
 }
 
-/**
- * @brief Start Pomodoro timer
- * @param hwnd Window handle
- */
+
 void StartPomodoroTimer(HWND hwnd) {
     // Stop any notification sound that may be playing
     extern void StopNotificationSound(void);
@@ -2537,10 +2447,7 @@ void StartPomodoroTimer(HWND hwnd) {
     PostMessage(hwnd, WM_COMMAND, CLOCK_IDM_POMODORO_START, 0);
 }
 
-/**
- * @brief Toggle edit mode
- * @param hwnd Window handle
- */
+
 void ToggleEditMode(HWND hwnd) {
     CLOCK_EDIT_MODE = !CLOCK_EDIT_MODE;
     
@@ -2592,10 +2499,7 @@ void ToggleEditMode(HWND hwnd) {
     InvalidateRect(hwnd, NULL, TRUE);
 }
 
-/**
- * @brief Pause/resume timer
- * @param hwnd Window handle
- */
+
 void TogglePauseResume(HWND hwnd) {
     // Stop any notification sound that may be playing
     extern void StopNotificationSound(void);
@@ -2608,10 +2512,7 @@ void TogglePauseResume(HWND hwnd) {
     }
 }
 
-/**
- * @brief Restart the current timer
- * @param hwnd Window handle
- */
+
 void RestartCurrentTimer(HWND hwnd) {
     // Stop any notification sound that may be playing
     extern void StopNotificationSound(void);
@@ -2642,10 +2543,7 @@ void RestartCurrentTimer(HWND hwnd) {
     }
 }
 
-/**
- * @brief Start quick countdown 1
- * @param hwnd Window handle
- */
+
 void StartQuickCountdown1(HWND hwnd) {
     // Stop any notification sound that may be playing
     extern void StopNotificationSound(void);
@@ -2690,10 +2588,7 @@ void StartQuickCountdown1(HWND hwnd) {
     }
 }
 
-/**
- * @brief Start quick countdown 2
- * @param hwnd Window handle
- */
+
 void StartQuickCountdown2(HWND hwnd) {
     // Stop any notification sound that may be playing
     extern void StopNotificationSound(void);
@@ -2738,10 +2633,7 @@ void StartQuickCountdown2(HWND hwnd) {
     }
 }
 
-/**
- * @brief Start quick countdown 3
- * @param hwnd Window handle
- */
+
 void StartQuickCountdown3(HWND hwnd) {
     // Stop any notification sound that may be playing
     extern void StopNotificationSound(void);
@@ -2786,9 +2678,7 @@ void StartQuickCountdown3(HWND hwnd) {
     }
 }
 
-/**
- * @brief Start quick countdown by 1-based preset index
- */
+
 void StartQuickCountdownByIndex(HWND hwnd, int index) {
     if (index <= 0) return;
 

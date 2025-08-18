@@ -1,8 +1,3 @@
-/**
- * @file dialog_language.c
- * @brief Dialog multi-language support module implementation
- */
-
 #include <windows.h>
 #include <wchar.h>
 #include <stdio.h>
@@ -114,9 +109,6 @@ static SpecialControlEntry g_specialButtons[] = {
 #define SPECIAL_CONTROLS_COUNT (sizeof(g_specialControls) / sizeof(g_specialControls[0]))
 #define SPECIAL_BUTTONS_COUNT (sizeof(g_specialButtons) / sizeof(g_specialButtons[0]))
 
-/**
- * @brief Find localized text for special controls
- */
 static const wchar_t* FindSpecialControlText(int dialogID, int controlID) {
     for (int i = 0; i < SPECIAL_CONTROLS_COUNT; i++) {
         if (g_specialControls[i].dialogID == dialogID &&
@@ -132,9 +124,6 @@ static const wchar_t* FindSpecialControlText(int dialogID, int controlID) {
     return NULL;
 }
 
-/**
- * @brief Find localized text for special buttons
- */
 static const wchar_t* FindSpecialButtonText(int dialogID, int controlID) {
     for (int i = 0; i < SPECIAL_BUTTONS_COUNT; i++) {
         if (g_specialButtons[i].dialogID == dialogID &&
@@ -145,9 +134,6 @@ static const wchar_t* FindSpecialButtonText(int dialogID, int controlID) {
     return NULL;
 }
 
-/**
- * @brief Get localized text for dialog title
- */
 static const wchar_t* GetDialogTitleText(int dialogID) {
     for (int i = 0; i < DIALOG_TITLES_COUNT; i++) {
         if (g_dialogTitles[i].dialogID == dialogID) {
@@ -157,9 +143,6 @@ static const wchar_t* GetDialogTitleText(int dialogID) {
     return NULL;
 }
 
-/**
- * @brief Get original text of a control for translation lookup
- */
 static BOOL GetControlOriginalText(HWND hwndCtl, wchar_t* buffer, int bufferSize) {
     wchar_t className[256];
     GetClassNameW(hwndCtl, className, 256);
@@ -174,9 +157,6 @@ static BOOL GetControlOriginalText(HWND hwndCtl, wchar_t* buffer, int bufferSize
     return FALSE;
 }
 
-/**
- * @brief Process special control text settings, such as line breaks
- */
 static BOOL ProcessSpecialControlText(HWND hwndCtl, const wchar_t* localizedText, int dialogID, int controlID) {
     if ((dialogID == CLOCK_IDD_POMODORO_COMBO_DIALOG ||
          dialogID == CLOCK_IDD_POMODORO_TIME_DIALOG ||
@@ -222,9 +202,6 @@ static BOOL ProcessSpecialControlText(HWND hwndCtl, const wchar_t* localizedText
     return FALSE;
 }
 
-/**
- * @brief Dialog child window enumeration callback function
- */
 static BOOL CALLBACK EnumChildProc(HWND hwndCtl, LPARAM lParam) {
     EnumChildWindowsData* data = (EnumChildWindowsData*)lParam;
     HWND hwndDlg = data->hwndDlg;
@@ -261,16 +238,10 @@ static BOOL CALLBACK EnumChildProc(HWND hwndCtl, LPARAM lParam) {
     return TRUE;
 }
 
-/**
- * @brief Initialize dialog multi-language support
- */
 BOOL InitDialogLanguageSupport(void) {
     return TRUE;
 }
 
-/**
- * @brief Apply multi-language support to dialog
- */
 BOOL ApplyDialogLanguage(HWND hwndDlg, int dialogID) {
     if (!hwndDlg) return FALSE;
 
@@ -289,9 +260,6 @@ BOOL ApplyDialogLanguage(HWND hwndDlg, int dialogID) {
     return TRUE;
 }
 
-/**
- * @brief Get localized text for dialog element
- */
 const wchar_t* GetDialogLocalizedString(int dialogID, int controlID) {
     const wchar_t* specialText = FindSpecialControlText(dialogID, controlID);
     if (specialText) {
