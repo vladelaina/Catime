@@ -109,7 +109,7 @@ void ShowCliHelpDialog(HWND hwnd) {
 		g_cliHelpDialog = NULL;
 	} else {
 		// Dialog is not open, create and show it
-		g_cliHelpDialog = CreateDialogParam(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_CLI_HELP_DIALOG), hwnd, CliHelpDlgProc, 0);
+		g_cliHelpDialog = CreateDialogParamW(GetModuleHandleW(NULL), MAKEINTRESOURCE(IDD_CLI_HELP_DIALOG), hwnd, CliHelpDlgProc, 0);
 		if (g_cliHelpDialog) {
 			ShowWindow(g_cliHelpDialog, SW_SHOW);
 			ForceForegroundAndFocus(g_cliHelpDialog);
