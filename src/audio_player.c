@@ -285,7 +285,7 @@ static BOOL IsValidFilePath(const char* filePath) {
  * @brief Clean up audio resources
  */
 void CleanupAudioResources(void) {
-    PlaySound(NULL, NULL, SND_PURGE);
+    PlaySoundW(NULL, NULL, SND_PURGE);
 
     if (g_engineInitialized && g_soundInitialized) {
         ma_sound_stop(&g_sound);
