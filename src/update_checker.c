@@ -416,7 +416,11 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
     
     // Create Internet session
     LOG_INFO("Attempting to create Internet session");
-    HINTERNET hInternet = InternetOpenA(USER_AGENT, INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
+    // Convert USER_AGENT to Unicode for the API call
+    wchar_t wUserAgent[256];
+    MultiByteToWideChar(CP_ACP, 0, USER_AGENT, -1, wUserAgent, 256);
+    
+    HINTERNET hInternet = InternetOpenW(wUserAgent, INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
     if (!hInternet) {
         DWORD errorCode = GetLastError();
         char errorMsg[256] = {0};
@@ -432,7 +436,11 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
     
     // Connect to update API
     LOG_INFO("Attempting to connect to GitHub API: %s", GITHUB_API_URL);
-    HINTERNET hConnect = InternetOpenUrlA(hInternet, GITHUB_API_URL, NULL, 0, 
+    // Convert GITHUB_API_URL to Unicode for the API call
+    wchar_t wGitHubApiUrl[512];
+    MultiByteToWideChar(CP_ACP, 0, GITHUB_API_URL, -1, wGitHubApiUrl, 512);
+    
+    HINTERNET hConnect = InternetOpenUrlW(hInternet, wGitHubApiUrl, NULL, 0, 
                                         INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_CACHE_WRITE, 0);
     if (!hConnect) {
         DWORD errorCode = GetLastError();

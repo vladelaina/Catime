@@ -147,7 +147,7 @@ static int LoadLanguageResource(AppLanguage language) {
     g_translation_count = 0;
     
     // Find resource
-    HRSRC hResInfo = FindResource(NULL, MAKEINTRESOURCE(resourceID), RT_RCDATA);
+    HRSRC hResInfo = FindResourceW(NULL, MAKEINTRESOURCE(resourceID), RT_RCDATA);
     if (!hResInfo) {
         // If not found, check if it's Chinese and return
         if (language == APP_LANG_CHINESE_SIMP || language == APP_LANG_CHINESE_TRAD) {

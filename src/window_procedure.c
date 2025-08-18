@@ -583,13 +583,13 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         case WM_SETCURSOR: {
             // When in edit mode, always use default arrow cursor
             if (CLOCK_EDIT_MODE && LOWORD(lp) == HTCLIENT) {
-                SetCursor(LoadCursor(NULL, IDC_ARROW));
+                SetCursor(LoadCursorW(NULL, IDC_ARROW));
                 return TRUE; // Indicates we've handled this message
             }
             
             // Also use default arrow cursor when handling tray icon operations
             if (LOWORD(lp) == HTCLIENT || msg == CLOCK_WM_TRAYICON) {
-                SetCursor(LoadCursor(NULL, IDC_ARROW));
+                SetCursor(LoadCursorW(NULL, IDC_ARROW));
                 return TRUE;
             }
             break;
@@ -1054,7 +1054,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     wchar_t fontNameW[256];
                     MultiByteToWideChar(CP_UTF8, 0, FONT_INTERNAL_NAME, -1, fontNameW, 256);
                     
-                    HFONT hFont = CreateFont(
+                    HFONT hFont = CreateFontW(
                         -CLOCK_BASE_FONT_SIZE,   
                         0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
                         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,

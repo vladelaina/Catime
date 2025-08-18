@@ -236,7 +236,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     // Initialize log system
     if (!InitializeLogSystem()) {
         // If log system initialization fails, continue running but without logging
-        MessageBox(NULL, L"Log system initialization failed, the program will continue running but will not log.", L"Warning", MB_ICONWARNING);
+        MessageBoxW(NULL, L"Log system initialization failed, the program will continue running but will not log.", L"Warning", MB_ICONWARNING);
     }
 
     // Set up exception handler
@@ -247,7 +247,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         HRESULT hr = CoInitialize(NULL);
         if (FAILED(hr)) {
             LOG_ERROR("COM initialization failed, error code: 0x%08X", hr);
-            MessageBox(NULL, L"COM initialization failed!", L"Error", MB_ICONERROR);
+            MessageBoxW(NULL, L"COM initialization failed!", L"Error", MB_ICONERROR);
             return 1;
         }
         LOG_INFO("COM initialization successful");
@@ -256,7 +256,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         LOG_INFO("Starting application initialization...");
         if (!InitializeApplication(hInstance)) {
             LOG_ERROR("Application initialization failed");
-            MessageBox(NULL, L"Application initialization failed!", L"Error", MB_ICONERROR);
+            MessageBoxW(NULL, L"Application initialization failed!", L"Error", MB_ICONERROR);
             return 1;
         }
         LOG_INFO("Application initialization successful");
@@ -366,7 +366,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         HWND hwnd = CreateMainWindow(hInstance, nCmdShow);
         if (!hwnd) {
             LOG_ERROR("Main window creation failed");
-            MessageBox(NULL, L"Window Creation Failed!", L"Error", MB_ICONEXCLAMATION | MB_OK);
+            MessageBoxW(NULL, L"Window Creation Failed!", L"Error", MB_ICONEXCLAMATION | MB_OK);
             return 0;
         }
         LOG_INFO("Main window creation successful, handle: 0x%p", hwnd);
@@ -412,7 +412,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         if (SetTimer(hwnd, 1, 1000, NULL) == 0) {
             DWORD timerError = GetLastError();
             LOG_ERROR("Timer creation failed, error code: %lu", timerError);
-            MessageBox(NULL, L"Timer Creation Failed!", L"Error", MB_ICONEXCLAMATION | MB_OK);
+            MessageBoxW(NULL, L"Timer Creation Failed!", L"Error", MB_ICONEXCLAMATION | MB_OK);
             return 0;
         }
         LOG_INFO("Timer set successfully");

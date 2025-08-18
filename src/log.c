@@ -75,7 +75,7 @@ static void LogSystemInformation(void) {
         
         typedef LONG (WINAPI* PRTLGETVERSION)(OSVERSIONINFOEXW*);
         PRTLGETVERSION pRtlGetVersion;
-        pRtlGetVersion = (PRTLGETVERSION)GetProcAddress(GetModuleHandle(L"ntdll.dll"), "RtlGetVersion");
+        pRtlGetVersion = (PRTLGETVERSION)GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "RtlGetVersion");
         
         if (pRtlGetVersion) {
             pRtlGetVersion((OSVERSIONINFOEXW*)&osvi);
@@ -358,7 +358,7 @@ void SignalHandler(int signal) {
     }
     
     // Display error message box
-    MessageBox(NULL, L"The program encountered a serious error. Please check the log file for detailed information.", L"Fatal Error", MB_ICONERROR | MB_OK);
+    MessageBoxW(NULL, L"The program encountered a serious error. Please check the log file for detailed information.", L"Fatal Error", MB_ICONERROR | MB_OK);
     
     // Terminate program
     exit(signal);
