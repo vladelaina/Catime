@@ -103,7 +103,7 @@ void OpenSupportPage(void) {
 }
 
 void OpenFeedbackPage(void) {
-    extern AppLanguage CURRENT_LANGUAGE; // Declare external variable
+    extern AppLanguage CURRENT_LANGUAGE;
     
 
     if (CURRENT_LANGUAGE == APP_LANG_CHINESE_SIMP) {

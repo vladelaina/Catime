@@ -1,10 +1,10 @@
 #include <windows.h>
 #include "resource.h"
 
-// Set UTF-8 encoding
+
 #pragma code_page(65001)
 
-// Shortcut time options settings dialog
+
 CLOCK_IDD_SHORTCUT_DIALOG DIALOGEX 0, 0, 200, 130
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Countdown Presets"

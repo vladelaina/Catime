@@ -2,16 +2,16 @@
 #include <commctrl.h>
 #include "resource.h"
 
-// Set UTF-8 encoding
+
 #pragma code_page(65001)
 
-// Integrated notification settings dialog
+
 CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG DIALOGEX 0, 0, 350, 410
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Notification Settings"
 FONT 9, "Segoe UI"
 BEGIN
-    // Notification content section
+
     GROUPBOX        "Notification Content", IDC_NOTIFICATION_CONTENT_GROUP, 10, 10, 330, 160
     
     LTEXT           "Countdown timeout message:", IDC_NOTIFICATION_LABEL1, 20, 30, 80, 15
@@ -23,7 +23,7 @@ BEGIN
     LTEXT           "Pomodoro cycle completion message:", IDC_NOTIFICATION_LABEL3, 20, 120, 100, 15
     EDITTEXT        IDC_NOTIFICATION_EDIT3, 20, 135, 310, 20, ES_AUTOHSCROLL
     
-    // Notification display section
+
     GROUPBOX        "Notification Display", IDC_NOTIFICATION_DISPLAY_GROUP, 10, 180, 330, 70
     
     LTEXT           "Notification display time:", IDC_NOTIFICATION_TIME_LABEL, 20, 200, 110, 15
@@ -34,7 +34,7 @@ BEGIN
     CONTROL         "", IDC_NOTIFICATION_OPACITY_EDIT, "msctls_trackbar32", TBS_BOTH | TBS_NOTICKS | WS_TABSTOP, 130, 223, 180, 15
     LTEXT           "100%", IDC_NOTIFICATION_OPACITY_TEXT, 315, 225, 35, 15
     
-    // Notification method selection section
+
     GROUPBOX        "Notification Method", IDC_NOTIFICATION_METHOD_GROUP, 10, 260, 330, 110
     AUTORADIOBUTTON "Catime notification window", IDC_NOTIFICATION_TYPE_CATIME, 20, 280, 90, 15
     AUTORADIOBUTTON "Operating system notification", IDC_NOTIFICATION_TYPE_OS, 120, 280, 90, 15
@@ -49,7 +49,7 @@ BEGIN
     CONTROL         "", IDC_VOLUME_SLIDER, "msctls_trackbar32", TBS_BOTH | TBS_NOTICKS | WS_TABSTOP, 90, 335, 180, 15
     LTEXT           "100%", IDC_VOLUME_TEXT, 275, 335, 35, 15
     
-    // OK and Cancel buttons
+
     PUSHBUTTON      "Cancel", IDCANCEL, 235, 380, 50, 15
     PUSHBUTTON      "OK", IDOK, 290, 380, 50, 15
 END 

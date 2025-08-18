@@ -180,57 +180,46 @@ void ShowColorMenu(HWND hwnd) {
 
     HMENU hTimeoutMenu = CreatePopupMenu();
     
-    // 1. Show message
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_MESSAGE ? MF_CHECKED : MF_UNCHECKED), 
                CLOCK_IDM_SHOW_MESSAGE, 
                GetLocalizedString(L"显示消息", L"Show Message"));
 
-    // 2. Show current time
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SHOW_TIME ? MF_CHECKED : MF_UNCHECKED), 
                CLOCK_IDM_TIMEOUT_SHOW_TIME, 
                GetLocalizedString(L"显示当前时间", L"Show Current Time"));
 
-    // 3. Count up
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_COUNT_UP ? MF_CHECKED : MF_UNCHECKED), 
                CLOCK_IDM_TIMEOUT_COUNT_UP, 
                GetLocalizedString(L"正计时", L"Count Up"));
 
-    // 4. Lock screen
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_LOCK ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_LOCK_SCREEN,
                GetLocalizedString(L"锁定屏幕", L"Lock Screen"));
 
-    // First separator
     AppendMenuW(hTimeoutMenu, MF_SEPARATOR, 0, NULL);
 
-    // 5. Open file (submenu)
     HMENU hFileMenu = CreatePopupMenu();
 
-    // First add recent files list
     for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
         wchar_t wFileName[MAX_PATH];
         MultiByteToWideChar(CP_UTF8, 0, CLOCK_RECENT_FILES[i].name, -1, wFileName, MAX_PATH);
         
-        // Truncate long file names
         wchar_t truncatedName[MAX_PATH];
-        TruncateFileName(wFileName, truncatedName, 25); // Limit to 25 characters
+        TruncateFileName(wFileName, truncatedName, 25);
         
 
         BOOL isCurrentFile = (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE && 
                              strlen(CLOCK_TIMEOUT_FILE_PATH) > 0 && 
                              strcmp(CLOCK_RECENT_FILES[i].path, CLOCK_TIMEOUT_FILE_PATH) == 0);
         
-        // Use menu item check state to indicate selection
         AppendMenuW(hFileMenu, MF_STRING | (isCurrentFile ? MF_CHECKED : 0), 
                    CLOCK_IDM_RECENT_FILE_1 + i, truncatedName);
     }
                
-    // Add separator if there are recent files
     if (CLOCK_RECENT_FILES_COUNT > 0) {
         AppendMenuW(hFileMenu, MF_SEPARATOR, 0, NULL);
     }
 
-    // Finally add "Browse..." option
     AppendMenuW(hFileMenu, MF_STRING, CLOCK_IDM_BROWSE_FILE,
                GetLocalizedString(L"浏览...", L"Browse..."));
 
@@ -239,38 +228,33 @@ void ShowColorMenu(HWND hwnd) {
                (UINT_PTR)hFileMenu, 
                GetLocalizedString(L"打开文件/软件", L"Open File/Software"));
 
-    // 6. Open website
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_WEBSITE ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_OPEN_WEBSITE,
                GetLocalizedString(L"打开网站", L"Open Website"));
 
-    // Second separator
     AppendMenuW(hTimeoutMenu, MF_SEPARATOR, 0, NULL);
 
-    // Add a non-selectable hint option
+
     AppendMenuW(hTimeoutMenu, MF_STRING | MF_GRAYED | MF_DISABLED, 
-               0,  // Use ID 0 to indicate non-selectable menu item
+               0,
                GetLocalizedString(L"以下超时动作为一次性", L"Following actions are one-time only"));
 
-    // 7. Shutdown
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SHUTDOWN ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_SHUTDOWN,
                GetLocalizedString(L"关机", L"Shutdown"));
 
-    // 8. Restart
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_RESTART ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_RESTART,
                GetLocalizedString(L"重启", L"Restart"));
 
-    // 9. Sleep
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SLEEP ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_SLEEP,
                GetLocalizedString(L"睡眠", L"Sleep"));
 
-    // Third separator and Advanced menu
+
     AppendMenuW(hTimeoutMenu, MF_SEPARATOR, 0, NULL);
 
-    // Create Advanced submenu
+
     HMENU hAdvancedMenu = CreatePopupMenu();
 
 
@@ -283,28 +267,28 @@ void ShowColorMenu(HWND hwnd) {
                CLOCK_IDM_HTTP_REQUEST,
                GetLocalizedString(L"HTTP 请求", L"HTTP Request"));
 
-    // Check if any advanced option is selected to determine if the Advanced submenu should be checked
+
     BOOL isAdvancedOptionSelected = (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_RUN_COMMAND ||
                                     CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_HTTP_REQUEST);
 
-    // Add Advanced submenu to timeout menu - mark as checked if any advanced option is selected
+
     AppendMenuW(hTimeoutMenu, MF_POPUP | (isAdvancedOptionSelected ? MF_CHECKED : MF_UNCHECKED),
                (UINT_PTR)hAdvancedMenu,
                GetLocalizedString(L"高级", L"Advanced"));
 
-    // Add timeout action menu to main menu
+
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeoutMenu, 
                 GetLocalizedString(L"超时动作", L"Timeout Action"));
 
-    // Preset management menu
+
     HMENU hTimeOptionsMenu = CreatePopupMenu();
     AppendMenuW(hTimeOptionsMenu, MF_STRING, CLOCK_IDC_MODIFY_TIME_OPTIONS,
                 GetLocalizedString(L"倒计时预设", L"Modify Quick Countdown Options"));
     
-    // Startup settings submenu
+
     HMENU hStartupSettingsMenu = CreatePopupMenu();
 
-    // Read current startup mode
+
     char currentStartupMode[20] = "COUNTDOWN";
     char configPath[MAX_PATH];  
     GetConfigPath(configPath, MAX_PATH);
@@ -320,7 +304,7 @@ void ShowColorMenu(HWND hwnd) {
         fclose(configFile);
     }
     
-    // Add startup mode options
+
     AppendMenuW(hStartupSettingsMenu, MF_STRING | 
                 (strcmp(currentStartupMode, "COUNTDOWN") == 0 ? MF_CHECKED : 0),
                 CLOCK_IDC_SET_COUNTDOWN_TIME,

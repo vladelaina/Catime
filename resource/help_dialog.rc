@@ -1,8 +1,8 @@
 #include <windows.h>
 #include "resource.h"
 
-// Help dialog for CLI usage
-// English-only contents for simplicity
+
+
 
 IDD_CLI_HELP_DIALOG DIALOGEX 0, 0, 360, 260
 STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU

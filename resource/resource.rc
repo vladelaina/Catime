@@ -1,49 +1,48 @@
 #include <windows.h>
 #include "resource.h"
 
-//-----------------------------------------------------------------------------
-// Program Icon
-//-----------------------------------------------------------------------------
-// Copyright notice: catime.ico is created by 猫屋敷梨梨Official 
-// (https://space.bilibili.com/26087398) with all rights reserved. 
-// Not for commercial use without explicit permission.
+
+
+
+ 
+ 
+
 IDI_CATIME ICON "../asset/icon/catime.ico"
 
-//-----------------------------------------------------------------------------
-// Fonts - CC BY-SA 4.0 License
-//-----------------------------------------------------------------------------
 
-//-----------------------------------------------------------------------------
-// Fonts - MIT License
-//-----------------------------------------------------------------------------
+
+
+
+
+
+
 IDR_FONT_PROFONT         FONT "../asset/font/MIT/ProFont IIx Nerd Font Essence.ttf"
 
-//-----------------------------------------------------------------------------
-// Fonts - SIL Open Font License
-//-----------------------------------------------------------------------------
+
+
 IDR_FONT_DEPARTURE         FONT "../asset/font/SIL/DepartureMono Nerd Font Propo Essence.ttf"
 IDR_FONT_DADDYTIME        FONT "../asset/font/SIL/DaddyTimeMono Nerd Font Propo Essence.ttf"
 IDR_FONT_RECMONO           FONT "../asset/font/SIL/RecMonoCasual Nerd Font Mono Essence.ttf"
 IDR_FONT_TERMINESS         FONT "../asset/font/SIL/Terminess Nerd Font Propo Essence.ttf"
 
-//-----------------------------------------------------------------------------
-// Fonts - WTFPL License
-//-----------------------------------------------------------------------------
 
-//-----------------------------------------------------------------------------
-// Fonts - SIL Open Font License (OFL)
-//-----------------------------------------------------------------------------
+
+
+
+
+
+
 IDR_FONT_ARBUTUS           FONT "../asset/font/OFL/Arbutus Essence.ttf"
 IDR_FONT_BERKSHIRE         FONT "../asset/font/OFL/Berkshire Swash Essence.ttf"
 IDR_FONT_CAVEAT            FONT "../asset/font/OFL/Caveat Brush Essence.ttf"
 IDR_FONT_CREEPSTER         FONT "../asset/font/OFL/Creepster Essence.ttf"
 IDR_FONT_DOTGOTHIC         FONT "../asset/font/OFL/DotGothic16 Essence.ttf"
 IDR_FONT_DOTO              FONT "../asset/font/OFL/Doto ExtraBold Essence.ttf"
-// IDR_FONT_FLAVORS           FONT "font/OFL/Flavors.ttf"
+
 IDR_FONT_FOLDIT            FONT "../asset/font/OFL/Foldit SemiBold Essence.ttf"
 IDR_FONT_FREDERICKA        FONT "../asset/font/OFL/Fredericka the Great Essence.ttf"
 IDR_FONT_FRIJOLE           FONT "../asset/font/OFL/Frijole Essence.ttf"
-// IDR_FONT_GRIFFY            FONT "font/OFL/Griffy.ttf"
+
 IDR_FONT_GWENDOLYN         FONT "../asset/font/OFL/Gwendolyn Essence.ttf"
 IDR_FONT_HANDJET           FONT "../asset/font/OFL/Handjet Essence.ttf"
 IDR_FONT_INKNUT            FONT "../asset/font/OFL/Inknut Antiqua Medium Essence.ttf"
@@ -62,7 +61,7 @@ IDR_FONT_PIEDRA            FONT "../asset/font/OFL/Piedra Essence.ttf"
 IDR_FONT_PINYON_SCRIPT     FONT "../asset/font/OFL/Pinyon Script Essence.ttf"
 IDR_FONT_PIXELIFY          FONT "../asset/font/OFL/Pixelify Sans Medium Essence.ttf"
 IDR_FONT_PRESS_START       FONT "../asset/font/OFL/Press Start 2P Essence.ttf"
-// IDR_FONT_RUBIK_BEASTLY     FONT "font/OFL/Rubik Beastly.ttf"
+
 IDR_FONT_RUBIK_BUBBLES     FONT "../asset/font/OFL/Rubik Bubbles Essence.ttf"
 IDR_FONT_RUBIK_BURNED      FONT "../asset/font/OFL/Rubik Burned Essence.ttf"
 IDR_FONT_RUBIK_GLITCH      FONT "../asset/font/OFL/Rubik Glitch Essence.ttf"
@@ -79,10 +78,10 @@ IDR_FONT_WALLPOET          FONT "../asset/font/OFL/Wallpoet Essence.ttf"
 IDR_FONT_YESTERYEAR        FONT "../asset/font/OFL/Yesteryear Essence.ttf"
 IDR_FONT_ZCOOL_KUAILE      FONT "../asset/font/OFL/ZCOOL KuaiLe Essence.ttf"
 
-//-----------------------------------------------------------------------------
-// Dialog Resources
-//-----------------------------------------------------------------------------
-// Input dialog box
+
+
+
+
 IDD_INPUTBOX DIALOGEX 0, 0, 240, 90
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Input"

@@ -2,10 +2,10 @@
 #include "resource.h"
 #include <commctrl.h>
 
-// Set UTF-8 encoding
+
 #pragma code_page(65001)
 
-// Hotkey settings dialog
+
 CLOCK_IDD_HOTKEY_DIALOG DIALOGEX 0, 0, 280, 300
 STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION ""

@@ -81,24 +81,18 @@ INT_PTR CALLBACK InputBoxProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
     
     switch (uMsg) {
         case WM_INITDIALOG: {
-            // Get passed parameters
             INPUTBOX_PARAMS* params = (INPUTBOX_PARAMS*)lParam;
             result = params->result;
             maxLen = params->maxLen;
             
-            // Set dialog title
             SetWindowTextW(hwndDlg, params->title);
             
-            // Set prompt message
             SetDlgItemTextW(hwndDlg, IDC_STATIC_PROMPT, params->prompt);
             
-            // Set default text
             SetDlgItemTextW(hwndDlg, IDC_EDIT_INPUT, params->defaultText);
             
-            // Select text
             SendDlgItemMessageW(hwndDlg, IDC_EDIT_INPUT, EM_SETSEL, 0, -1);
             
-            // Set focus
             SetFocus(GetDlgItem(hwndDlg, IDC_EDIT_INPUT));
             return FALSE;
         }
@@ -106,14 +100,12 @@ INT_PTR CALLBACK InputBoxProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
         case WM_COMMAND:
             switch (LOWORD(wParam)) {
                 case IDOK: {
-                    // Get input text
                     GetDlgItemTextW(hwndDlg, IDC_EDIT_INPUT, result, (int)maxLen);
                     EndDialog(hwndDlg, TRUE);
                     return TRUE;
                 }
                 
                 case IDCANCEL:
-                    // Cancel operation
                     EndDialog(hwndDlg, FALSE);
                     return TRUE;
             }
@@ -125,7 +117,6 @@ INT_PTR CALLBACK InputBoxProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 
 BOOL InputBox(HWND hwndParent, const wchar_t* title, const wchar_t* prompt, 
               const wchar_t* defaultText, wchar_t* result, size_t maxLen) {
-    // Prepare parameters to pass to dialog
     INPUTBOX_PARAMS params;
     params.title = title;
     params.prompt = prompt;
@@ -133,7 +124,6 @@ BOOL InputBox(HWND hwndParent, const wchar_t* title, const wchar_t* prompt,
     params.result = result;
     params.maxLen = maxLen;
     
-    // Display modal dialog
     return DialogBoxParamW(GetModuleHandle(NULL), 
                           MAKEINTRESOURCEW(IDD_INPUTBOX), 
                           hwndParent, 
@@ -147,24 +137,22 @@ void ExitProgram(HWND hwnd) {
     PostQuitMessage(0);
 }
 
-#define HOTKEY_ID_SHOW_TIME       100  // Hotkey ID to show current time
-#define HOTKEY_ID_COUNT_UP        101  // Hotkey ID for count up timer
-#define HOTKEY_ID_COUNTDOWN       102  // Hotkey ID for countdown timer
-#define HOTKEY_ID_QUICK_COUNTDOWN1 103 // Hotkey ID for quick countdown 1
-#define HOTKEY_ID_QUICK_COUNTDOWN2 104 // Hotkey ID for quick countdown 2
-#define HOTKEY_ID_QUICK_COUNTDOWN3 105 // Hotkey ID for quick countdown 3
-#define HOTKEY_ID_POMODORO        106  // Hotkey ID for pomodoro timer
-#define HOTKEY_ID_TOGGLE_VISIBILITY 107 // Hotkey ID for hide/show
-#define HOTKEY_ID_EDIT_MODE       108  // Hotkey ID for edit mode
-#define HOTKEY_ID_PAUSE_RESUME    109  // Hotkey ID for pause/resume
-#define HOTKEY_ID_RESTART_TIMER   110  // Hotkey ID for restart timer
-#define HOTKEY_ID_CUSTOM_COUNTDOWN 111 // Hotkey ID for custom countdown
+#define HOTKEY_ID_SHOW_TIME       100
+#define HOTKEY_ID_COUNT_UP        101
+#define HOTKEY_ID_COUNTDOWN       102
+#define HOTKEY_ID_QUICK_COUNTDOWN1 103
+#define HOTKEY_ID_QUICK_COUNTDOWN2 104
+#define HOTKEY_ID_QUICK_COUNTDOWN3 105
+#define HOTKEY_ID_POMODORO        106
+#define HOTKEY_ID_TOGGLE_VISIBILITY 107
+#define HOTKEY_ID_EDIT_MODE       108
+#define HOTKEY_ID_PAUSE_RESUME    109
+#define HOTKEY_ID_RESTART_TIMER   110
+#define HOTKEY_ID_CUSTOM_COUNTDOWN 111
 
 BOOL RegisterGlobalHotkeys(HWND hwnd) {
-    // First unregister all previously registered hotkeys
     UnregisterGlobalHotkeys(hwnd);
     
-    // Use new function to read hotkey configuration
     WORD showTimeHotkey = 0;
     WORD countUpHotkey = 0;
     WORD countdownHotkey = 0;
@@ -186,10 +174,9 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
     BOOL success = FALSE;
     BOOL configChanged = FALSE;
     
-    // Register show current time hotkey
     if (showTimeHotkey != 0) {
-        BYTE vk = LOBYTE(showTimeHotkey);  // Virtual key code
-        BYTE mod = HIBYTE(showTimeHotkey); // Modifier keys
+        BYTE vk = LOBYTE(showTimeHotkey);
+        BYTE mod = HIBYTE(showTimeHotkey);
         
         UINT fsModifiers = 0;
         if (mod & HOTKEYF_ALT) fsModifiers |= MOD_ALT;
@@ -199,13 +186,11 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         if (RegisterHotKey(hwnd, HOTKEY_ID_SHOW_TIME, fsModifiers, vk)) {
             success = TRUE;
         } else {
-            // Hotkey registration failed, clear configuration
             showTimeHotkey = 0;
             configChanged = TRUE;
         }
     }
     
-    // Register count up hotkey
     if (countUpHotkey != 0) {
         BYTE vk = LOBYTE(countUpHotkey);
         BYTE mod = HIBYTE(countUpHotkey);
@@ -218,13 +203,11 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         if (RegisterHotKey(hwnd, HOTKEY_ID_COUNT_UP, fsModifiers, vk)) {
             success = TRUE;
         } else {
-            // Hotkey registration failed, clear configuration
             countUpHotkey = 0;
             configChanged = TRUE;
         }
     }
     
-    // Register countdown hotkey
     if (countdownHotkey != 0) {
         BYTE vk = LOBYTE(countdownHotkey);
         BYTE mod = HIBYTE(countdownHotkey);
@@ -237,13 +220,11 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         if (RegisterHotKey(hwnd, HOTKEY_ID_COUNTDOWN, fsModifiers, vk)) {
             success = TRUE;
         } else {
-            // Hotkey registration failed, clear configuration
             countdownHotkey = 0;
             configChanged = TRUE;
         }
     }
     
-    // Register quick countdown 1 hotkey
     if (quickCountdown1Hotkey != 0) {
         BYTE vk = LOBYTE(quickCountdown1Hotkey);
         BYTE mod = HIBYTE(quickCountdown1Hotkey);
@@ -256,13 +237,11 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         if (RegisterHotKey(hwnd, HOTKEY_ID_QUICK_COUNTDOWN1, fsModifiers, vk)) {
             success = TRUE;
         } else {
-            // Hotkey registration failed, clear configuration
             quickCountdown1Hotkey = 0;
             configChanged = TRUE;
         }
     }
     
-    // Register quick countdown 2 hotkey
     if (quickCountdown2Hotkey != 0) {
         BYTE vk = LOBYTE(quickCountdown2Hotkey);
         BYTE mod = HIBYTE(quickCountdown2Hotkey);
@@ -275,13 +254,11 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         if (RegisterHotKey(hwnd, HOTKEY_ID_QUICK_COUNTDOWN2, fsModifiers, vk)) {
             success = TRUE;
         } else {
-            // Hotkey registration failed, clear configuration
             quickCountdown2Hotkey = 0;
             configChanged = TRUE;
         }
     }
     
-    // Register quick countdown 3 hotkey
     if (quickCountdown3Hotkey != 0) {
         BYTE vk = LOBYTE(quickCountdown3Hotkey);
         BYTE mod = HIBYTE(quickCountdown3Hotkey);
@@ -294,13 +271,11 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         if (RegisterHotKey(hwnd, HOTKEY_ID_QUICK_COUNTDOWN3, fsModifiers, vk)) {
             success = TRUE;
         } else {
-            // Hotkey registration failed, clear configuration
             quickCountdown3Hotkey = 0;
             configChanged = TRUE;
         }
     }
     
-    // Register pomodoro hotkey
     if (pomodoroHotkey != 0) {
         BYTE vk = LOBYTE(pomodoroHotkey);
         BYTE mod = HIBYTE(pomodoroHotkey);
@@ -313,13 +288,11 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         if (RegisterHotKey(hwnd, HOTKEY_ID_POMODORO, fsModifiers, vk)) {
             success = TRUE;
         } else {
-            // Hotkey registration failed, clear configuration
             pomodoroHotkey = 0;
             configChanged = TRUE;
         }
     }
     
-    // Register hide/show window hotkey
     if (toggleVisibilityHotkey != 0) {
         BYTE vk = LOBYTE(toggleVisibilityHotkey);
         BYTE mod = HIBYTE(toggleVisibilityHotkey);
@@ -332,13 +305,11 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         if (RegisterHotKey(hwnd, HOTKEY_ID_TOGGLE_VISIBILITY, fsModifiers, vk)) {
             success = TRUE;
         } else {
-            // Hotkey registration failed, clear configuration
             toggleVisibilityHotkey = 0;
             configChanged = TRUE;
         }
     }
     
-    // Register edit mode hotkey
     if (editModeHotkey != 0) {
         BYTE vk = LOBYTE(editModeHotkey);
         BYTE mod = HIBYTE(editModeHotkey);
@@ -351,13 +322,11 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         if (RegisterHotKey(hwnd, HOTKEY_ID_EDIT_MODE, fsModifiers, vk)) {
             success = TRUE;
         } else {
-            // Hotkey registration failed, clear configuration
             editModeHotkey = 0;
             configChanged = TRUE;
         }
     }
     
-    // Register pause/resume hotkey
     if (pauseResumeHotkey != 0) {
         BYTE vk = LOBYTE(pauseResumeHotkey);
         BYTE mod = HIBYTE(pauseResumeHotkey);
@@ -370,13 +339,11 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         if (RegisterHotKey(hwnd, HOTKEY_ID_PAUSE_RESUME, fsModifiers, vk)) {
             success = TRUE;
         } else {
-            // Hotkey registration failed, clear configuration
             pauseResumeHotkey = 0;
             configChanged = TRUE;
         }
     }
     
-    // Register restart timer hotkey
     if (restartTimerHotkey != 0) {
         BYTE vk = LOBYTE(restartTimerHotkey);
         BYTE mod = HIBYTE(restartTimerHotkey);
@@ -389,30 +356,24 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         if (RegisterHotKey(hwnd, HOTKEY_ID_RESTART_TIMER, fsModifiers, vk)) {
             success = TRUE;
         } else {
-            // Hotkey registration failed, clear configuration
             restartTimerHotkey = 0;
             configChanged = TRUE;
         }
     }
     
-    // If any hotkey registration failed, update config file
     if (configChanged) {
         WriteConfigHotkeys(showTimeHotkey, countUpHotkey, countdownHotkey,
                            quickCountdown1Hotkey, quickCountdown2Hotkey, quickCountdown3Hotkey,
                            pomodoroHotkey, toggleVisibilityHotkey, editModeHotkey,
                            pauseResumeHotkey, restartTimerHotkey);
         
-        // Check if custom countdown hotkey was cleared, if so, update config
         if (customCountdownHotkey == 0) {
             WriteConfigKeyValue("HOTKEY_CUSTOM_COUNTDOWN", "None");
         }
     }
     
-    // Added after reading hotkey configuration
     ReadCustomCountdownHotkey(&customCountdownHotkey);
     
-    // Added after registering countdown hotkey
-    // Register custom countdown hotkey
     if (customCountdownHotkey != 0) {
         BYTE vk = LOBYTE(customCountdownHotkey);
         BYTE mod = HIBYTE(customCountdownHotkey);
@@ -425,7 +386,6 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         if (RegisterHotKey(hwnd, HOTKEY_ID_CUSTOM_COUNTDOWN, fsModifiers, vk)) {
             success = TRUE;
         } else {
-            // Hotkey registration failed, clear configuration
             customCountdownHotkey = 0;
             configChanged = TRUE;
         }
@@ -435,7 +395,7 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
 }
 
 void UnregisterGlobalHotkeys(HWND hwnd) {
-    // Unregister all previously registered hotkeys
+
     UnregisterHotKey(hwnd, HOTKEY_ID_SHOW_TIME);
     UnregisterHotKey(hwnd, HOTKEY_ID_COUNT_UP);
     UnregisterHotKey(hwnd, HOTKEY_ID_COUNTDOWN);
@@ -456,12 +416,12 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     UINT uID;
     UINT uMouseMsg;
 
-    // Check if this is a TaskbarCreated message
-    // TaskbarCreated is a system message broadcasted when Windows Explorer restarts
-    // At this time all tray icons are destroyed and need to be recreated by applications
-    // Handling this message solves the issue of the tray icon disappearing while the program is still running
+
+
+
+
     if (msg == WM_TASKBARCREATED) {
-        // Explorer has restarted, need to recreate the tray icon
+
         RecreateTaskbarIcon(hwnd, GetModuleHandle(NULL));
         return 0;
     }
@@ -475,7 +435,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         case WM_COPYDATA: {
             PCOPYDATASTRUCT pcds = (PCOPYDATASTRUCT)lp;
             if (pcds && pcds->dwData == COPYDATA_ID_CLI_TEXT && pcds->lpData && pcds->cbData > 0) {
-                // Ensure null-terminated
+
                 const size_t maxLen = 255;
                 char buf[256];
                 size_t n = (pcds->cbData > maxLen) ? maxLen : pcds->cbData;
@@ -488,7 +448,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             break;
         }
         case WM_APP_QUICK_COUNTDOWN_INDEX: {
-            // lParam carries the 1-based index
+
             int idx = (int)lp;
             if (idx >= 1) {
                 StartQuickCountdownByIndex(hwnd, idx);
@@ -498,7 +458,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             return 0;
         }
         case WM_CREATE: {
-            // Register global hotkeys when window is created
+
             RegisterGlobalHotkeys(hwnd);
             HandleWindowCreate(hwnd);
             break;

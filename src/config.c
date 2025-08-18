@@ -928,7 +928,6 @@ void LoadRecentFiles(void) {
                     wchar_t widePath[MAX_PATH] = {0};
                     MultiByteToWideChar(CP_UTF8, 0, path, -1, widePath, MAX_PATH);
                     
-                    // Check if file exists using wide character function
                     if (GetFileAttributesW(widePath) != INVALID_FILE_ATTRIBUTES) {
                         strncpy(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path, path, MAX_PATH - 1);
                         CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path[MAX_PATH - 1] = '\0';
@@ -956,7 +955,6 @@ void LoadRecentFiles(void) {
                 wchar_t widePath[MAX_PATH] = {0};
                 MultiByteToWideChar(CP_UTF8, 0, path, -1, widePath, MAX_PATH);
                 
-                // Check if file exists using wide character function
                 if (GetFileAttributesW(widePath) != INVALID_FILE_ATTRIBUTES) {
                     strncpy(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path, path, MAX_PATH - 1);
                     CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path[MAX_PATH - 1] = '\0';
@@ -1092,12 +1090,10 @@ void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
     int found = 0;
     
 
-    // Maintain backward compatibility, while updating the POMODORO_TIMES array
     POMODORO_WORK_TIME = work;
     POMODORO_SHORT_BREAK = short_break;
     POMODORO_LONG_BREAK = long_break;
     
-    // Ensure at least these three time values exist
     POMODORO_TIMES[0] = work;
     if (POMODORO_TIMES_COUNT < 1) POMODORO_TIMES_COUNT = 1;
     
@@ -1125,9 +1121,7 @@ void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
     }
     
     while (fgets(line, sizeof(line), file)) {
-        // Look for POMODORO_TIME_OPTIONS line
         if (strncmp(line, "POMODORO_TIME_OPTIONS=", 22) == 0) {
-            // Write all pomodoro times
             fprintf(temp_file, "POMODORO_TIME_OPTIONS=");
             for (int i = 0; i < POMODORO_TIMES_COUNT; i++) {
                 if (i > 0) fprintf(temp_file, ",");
@@ -1140,7 +1134,6 @@ void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
         }
     }
     
-    // If POMODORO_TIME_OPTIONS was not found, add it
     if (!found) {
         fprintf(temp_file, "POMODORO_TIME_OPTIONS=");
         for (int i = 0; i < POMODORO_TIMES_COUNT; i++) {
@@ -1185,7 +1178,6 @@ void WriteConfigPomodoroLoopCount(int loop_count) {
         }
     }
     
-    // If the key was not found in the configuration file, add it
     if (!found) {
         fprintf(temp_file, "POMODORO_LOOP_COUNT=%d\n", loop_count);
     }
@@ -1196,7 +1188,6 @@ void WriteConfigPomodoroLoopCount(int loop_count) {
     remove(config_path);
     rename(temp_path, config_path);
     
-    // Update global variable
     POMODORO_LOOP_COUNT = loop_count;
 }
 
@@ -1243,12 +1234,10 @@ void WriteConfigTopmost(const char* topmost) {
 
 
 void WriteConfigTimeoutFile(const char* filePath) {
-    // First update global variables
     CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
     strncpy(CLOCK_TIMEOUT_FILE_PATH, filePath, MAX_PATH - 1);
     CLOCK_TIMEOUT_FILE_PATH[MAX_PATH - 1] = '\0';
     
-    // Use WriteConfig to completely rewrite the configuration file, maintaining structural consistency
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     WriteConfig(config_path);
@@ -1256,7 +1245,6 @@ void WriteConfigTimeoutFile(const char* filePath) {
 
 
 void WriteConfig(const char* config_path) {
-    // Get the name of the current language
     AppLanguage currentLang = GetCurrentLanguage();
     const char* langName;
     
@@ -1294,7 +1282,6 @@ void WriteConfig(const char* config_path) {
             break;
     }
     
-    // Choose string representation based on notification type
     const char* typeStr;
     switch (NOTIFICATION_TYPE) {
         case NOTIFICATION_TYPE_CATIME:
@@ -1332,7 +1319,6 @@ void WriteConfig(const char* config_path) {
     
     ReadCustomCountdownHotkey(&customCountdownHotkey);
     
-    // Convert hotkey values to readable format
     char showTimeStr[64] = {0};
     char countUpStr[64] = {0};
     char countdownStr[64] = {0};
@@ -1359,7 +1345,6 @@ void WriteConfig(const char* config_path) {
     HotkeyToString(restartTimerHotkey, restartTimerStr, sizeof(restartTimerStr));
     HotkeyToString(customCountdownHotkey, customCountdownStr, sizeof(customCountdownStr));
     
-    // Prepare time options string
     char timeOptionsStr[256] = {0};
     for (int i = 0; i < time_options_count; i++) {
         char buffer[16];
@@ -1371,7 +1356,6 @@ void WriteConfig(const char* config_path) {
         strcat(timeOptionsStr, buffer);
     }
     
-    // Prepare pomodoro time options string
     char pomodoroTimesStr[256] = {0};
     for (int i = 0; i < POMODORO_TIMES_COUNT; i++) {
         char buffer[16];
@@ -1383,7 +1367,6 @@ void WriteConfig(const char* config_path) {
         strcat(pomodoroTimesStr, buffer);
     }
     
-    // Prepare color options string
     char colorOptionsStr[1024] = {0};
     for (int i = 0; i < COLOR_OPTIONS_COUNT; i++) {
         if (i > 0) {
@@ -1392,7 +1375,6 @@ void WriteConfig(const char* config_path) {
         strcat(colorOptionsStr, COLOR_OPTIONS[i].hexColor);
     }
     
-    // Determine timeout action string
     const char* timeoutActionStr;
     switch (CLOCK_TIMEOUT_ACTION) {
         case TIMEOUT_ACTION_MESSAGE:
@@ -1402,11 +1384,9 @@ void WriteConfig(const char* config_path) {
             timeoutActionStr = "LOCK";
             break;
         case TIMEOUT_ACTION_SHUTDOWN:
-            // Don't save one-time operations, revert to MESSAGE
             timeoutActionStr = "MESSAGE";
             break;
         case TIMEOUT_ACTION_RESTART:
-            // Don't save one-time operations, revert to MESSAGE
             timeoutActionStr = "MESSAGE";
             break;
         case TIMEOUT_ACTION_OPEN_FILE:
@@ -1422,7 +1402,6 @@ void WriteConfig(const char* config_path) {
             timeoutActionStr = "OPEN_WEBSITE";
             break;
         case TIMEOUT_ACTION_SLEEP:
-            // Don't save one-time operations, revert to MESSAGE
             timeoutActionStr = "MESSAGE";
             break;
         case TIMEOUT_ACTION_RUN_COMMAND:
@@ -1460,7 +1439,7 @@ void WriteConfig(const char* config_path) {
     WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_TEXT", CLOCK_TIMEOUT_TEXT, config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_ACTION", timeoutActionStr, config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_FILE", CLOCK_TIMEOUT_FILE_PATH, config_path);
-    // Convert Unicode URL to UTF-8 for writing to config
+
     char tempWebsiteUrl[MAX_PATH * 3] = {0};
     WideCharToMultiByte(CP_UTF8, 0, CLOCK_TIMEOUT_WEBSITE_URL, -1, tempWebsiteUrl, sizeof(tempWebsiteUrl), NULL, NULL);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_WEBSITE", tempWebsiteUrl, config_path);
@@ -1503,7 +1482,7 @@ void WriteConfig(const char* config_path) {
         WriteIniString(INI_SECTION_RECENTFILES, key, CLOCK_RECENT_FILES[i].path, config_path);
     }
     
-    // Clear unused file records
+
     for (int i = CLOCK_RECENT_FILES_COUNT; i < MAX_RECENT_FILES; i++) {
         char key[32];
         snprintf(key, sizeof(key), "CLOCK_RECENT_FILE_%d", i + 1);
@@ -1516,17 +1495,14 @@ void WriteConfig(const char* config_path) {
 
 
 void WriteConfigTimeoutWebsite(const char* url) {
-    // Only set timeout action to open website if a valid URL is provided
+
     if (url && url[0] != '\0') {
-        // First update global variables
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_WEBSITE;
-        // Convert UTF-8 URL to Unicode
         int len = MultiByteToWideChar(CP_UTF8, 0, url, -1, CLOCK_TIMEOUT_WEBSITE_URL, MAX_PATH);
         if (len == 0) {
             CLOCK_TIMEOUT_WEBSITE_URL[0] = L'\0';
         }
         
-        // Then update the configuration file
         char config_path[MAX_PATH];
         GetConfigPath(config_path, MAX_PATH);
         
@@ -1547,7 +1523,6 @@ void WriteConfigTimeoutWebsite(const char* url) {
         BOOL actionFound = FALSE;
         BOOL urlFound = FALSE;
         
-        // Read original configuration file, update timeout action and URL
         while (fgets(line, sizeof(line), file)) {
             if (strncmp(line, "CLOCK_TIMEOUT_ACTION=", 21) == 0) {
                 fprintf(temp, "CLOCK_TIMEOUT_ACTION=OPEN_WEBSITE\n");
@@ -1556,12 +1531,10 @@ void WriteConfigTimeoutWebsite(const char* url) {
                 fprintf(temp, "CLOCK_TIMEOUT_WEBSITE=%s\n", url);
                 urlFound = TRUE;
             } else {
-                // Preserve all other configurations
                 fputs(line, temp);
             }
         }
         
-        // If these items are not in the configuration, add them
         if (!actionFound) {
             fprintf(temp, "CLOCK_TIMEOUT_ACTION=OPEN_WEBSITE\n");
         }
@@ -1597,7 +1570,6 @@ void WriteConfigStartupMode(const char* mode) {
         return;
     }
     
-    // Update global variable
     strncpy(CLOCK_STARTUP_MODE, mode, sizeof(CLOCK_STARTUP_MODE) - 1);
     CLOCK_STARTUP_MODE[sizeof(CLOCK_STARTUP_MODE) - 1] = '\0';
     
@@ -1644,10 +1616,8 @@ void WriteConfigPomodoroTimeOptions(int* times, int count) {
     char line[MAX_PATH];
     BOOL optionsFound = FALSE;
     
-    // Read original configuration file, update pomodoro time options
     while (fgets(line, sizeof(line), file)) {
         if (strncmp(line, "POMODORO_TIME_OPTIONS=", 22) == 0) {
-            // Write new time options
             fprintf(temp, "POMODORO_TIME_OPTIONS=");
             for (int i = 0; i < count; i++) {
                 fprintf(temp, "%d", times[i]);
@@ -1656,12 +1626,10 @@ void WriteConfigPomodoroTimeOptions(int* times, int count) {
             fprintf(temp, "\n");
             optionsFound = TRUE;
         } else {
-            // Preserve all other configurations
             fputs(line, temp);
         }
     }
     
-    // If this item is not in the configuration, add it
     if (!optionsFound) {
         fprintf(temp, "POMODORO_TIME_OPTIONS=");
         for (int i = 0; i < count; i++) {
@@ -1687,7 +1655,6 @@ void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodo
     
     FILE *source_file, *temp_file;
     
-    // Use standard C file operations instead of Windows API
     source_file = fopen(config_path, "r");
     temp_file = fopen(temp_path, "w");
     
@@ -1702,9 +1669,9 @@ void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodo
     BOOL pomodoroFound = FALSE;
     BOOL cycleFound = FALSE;
     
-    // Read and write line by line
+
     while (fgets(line, sizeof(line), source_file)) {
-        // Remove trailing newline characters for comparison
+
         size_t len = strlen(line);
         if (len > 0 && (line[len-1] == '\n' || line[len-1] == '\r')) {
             line[--len] = '\0';
@@ -1722,12 +1689,12 @@ void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodo
             fprintf(temp_file, "POMODORO_CYCLE_COMPLETE_TEXT=%s\n", cycle_complete_msg);
             cycleFound = TRUE;
         } else {
-            // Restore newline and write back as is
+
             fprintf(temp_file, "%s\n", line);
         }
     }
     
-    // If corresponding items are not found in the configuration, add them
+
     if (!timeoutFound) {
         fprintf(temp_file, "CLOCK_TIMEOUT_MESSAGE_TEXT=%s\n", timeout_msg);
     }
@@ -1743,7 +1710,7 @@ void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodo
     fclose(source_file);
     fclose(temp_file);
     
-    // Replace original file
+
     remove(config_path);
     rename(temp_path, config_path);
     
@@ -1778,17 +1745,17 @@ void ReadNotificationMessagesConfig(void) {
     );
     
     if (hFile == INVALID_HANDLE_VALUE) {
-        // File cannot be opened, keep current values in memory or default values
+
         return;
     }
 
-    // Skip UTF-8 BOM marker (if present)
+
     char bom[3];
     DWORD bytesRead;
     ReadFile(hFile, bom, 3, &bytesRead, NULL);
     
     if (bytesRead != 3 || bom[0] != 0xEF || bom[1] != 0xBB || bom[2] != 0xBF) {
-        // Not a BOM, need to rewind file pointer
+
         SetFilePointer(hFile, 0, NULL, FILE_BEGIN);
     }
     
@@ -1797,12 +1764,12 @@ void ReadNotificationMessagesConfig(void) {
     BOOL pomodoroTimeoutMsgFound = FALSE;
     BOOL cycleCompleteMsgFound = FALSE;
     
-    // Read file content line by line
+
     BOOL readingLine = TRUE;
     int pos = 0;
     
     while (readingLine) {
-        // Read byte by byte, build line
+
         bytesRead = 0;
         pos = 0;
         memset(line, 0, sizeof(line));
@@ -1811,29 +1778,29 @@ void ReadNotificationMessagesConfig(void) {
             char ch;
             ReadFile(hFile, &ch, 1, &bytesRead, NULL);
             
-            if (bytesRead == 0) { // End of file
+            if (bytesRead == 0) {
                 readingLine = FALSE;
                 break;
             }
             
-            if (ch == '\n') { // End of line
+            if (ch == '\n') {
                 break;
             }
             
-            if (ch != '\r') { // Ignore carriage return
+            if (ch != '\r') {
                 line[pos++] = ch;
-                if (pos >= sizeof(line) - 1) break; // Prevent buffer overflow
+                if (pos >= sizeof(line) - 1) break;
             }
         }
         
-        line[pos] = '\0'; // Ensure string termination
+        line[pos] = '\0';
         
-        // If no content and file has ended, exit loop
+
         if (pos == 0 && !readingLine) {
             break;
         }
         
-        // Process this line
+
         if (strncmp(line, "CLOCK_TIMEOUT_MESSAGE_TEXT=", 27) == 0) {
             strncpy(CLOCK_TIMEOUT_MESSAGE_TEXT, line + 27, sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT) - 1);
             CLOCK_TIMEOUT_MESSAGE_TEXT[sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT) - 1] = '\0';
@@ -1850,7 +1817,7 @@ void ReadNotificationMessagesConfig(void) {
             cycleCompleteMsgFound = TRUE;
         }
         
-        // If all messages have been found, can exit loop early
+
         if (timeoutMsgFound && pomodoroTimeoutMsgFound && cycleCompleteMsgFound) {
             break;
         }
@@ -1858,7 +1825,7 @@ void ReadNotificationMessagesConfig(void) {
     
     CloseHandle(hFile);
     
-    // If corresponding configuration items are not found in the file, ensure variables have default values
+
     if (!timeoutMsgFound) {
         strcpy(CLOCK_TIMEOUT_MESSAGE_TEXT, "时间到啦！");
     }
@@ -1890,29 +1857,29 @@ void ReadNotificationTimeoutConfig(void) {
     );
     
     if (hFile == INVALID_HANDLE_VALUE) {
-        // File cannot be opened, keep current default value
+
         return;
     }
     
-    // Skip UTF-8 BOM marker (if present)
+
     char bom[3];
     DWORD bytesRead;
     ReadFile(hFile, bom, 3, &bytesRead, NULL);
     
     if (bytesRead != 3 || bom[0] != 0xEF || bom[1] != 0xBB || bom[2] != 0xBF) {
-        // Not a BOM, need to rewind file pointer
+
         SetFilePointer(hFile, 0, NULL, FILE_BEGIN);
     }
     
     char line[256];
     BOOL timeoutFound = FALSE;
     
-    // Read file content line by line
+
     BOOL readingLine = TRUE;
     int pos = 0;
     
     while (readingLine) {
-        // Read byte by byte, build line
+
         bytesRead = 0;
         pos = 0;
         memset(line, 0, sizeof(line));
@@ -1921,24 +1888,24 @@ void ReadNotificationTimeoutConfig(void) {
             char ch;
             ReadFile(hFile, &ch, 1, &bytesRead, NULL);
             
-            if (bytesRead == 0) { // End of file
+            if (bytesRead == 0) {
                 readingLine = FALSE;
                 break;
             }
             
-            if (ch == '\n') { // End of line
+            if (ch == '\n') {
                 break;
             }
             
-            if (ch != '\r') { // Ignore carriage return
+            if (ch != '\r') {
                 line[pos++] = ch;
-                if (pos >= sizeof(line) - 1) break; // Prevent buffer overflow
+                if (pos >= sizeof(line) - 1) break;
             }
         }
         
-        line[pos] = '\0'; // Ensure string termination
+        line[pos] = '\0';
         
-        // If no content and file has ended, exit loop
+
         if (pos == 0 && !readingLine) {
             break;
         }
@@ -1949,15 +1916,15 @@ void ReadNotificationTimeoutConfig(void) {
                 NOTIFICATION_TIMEOUT_MS = timeout;
             }
             timeoutFound = TRUE;
-            break; // Found what we're looking for, can exit the loop
+            break;
         }
     }
     
     CloseHandle(hFile);
     
-    // If not found in configuration, keep default value
+
     if (!timeoutFound) {
-        NOTIFICATION_TIMEOUT_MS = 3000; // Ensure there's a default value
+        NOTIFICATION_TIMEOUT_MS = 3000;
     }
 }
 
@@ -1982,9 +1949,9 @@ void WriteConfigNotificationTimeout(int timeout_ms) {
     char line[1024];
     BOOL found = FALSE;
     
-    // Read file content line by line
+
     while (fgets(line, sizeof(line), source_file)) {
-        // Remove trailing newline characters for comparison
+
         size_t len = strlen(line);
         if (len > 0 && (line[len-1] == '\n' || line[len-1] == '\r')) {
             line[--len] = '\0';
@@ -1996,12 +1963,12 @@ void WriteConfigNotificationTimeout(int timeout_ms) {
             fprintf(temp_file, "NOTIFICATION_TIMEOUT_MS=%d\n", timeout_ms);
             found = TRUE;
         } else {
-            // Restore newline and write back as is
+
             fprintf(temp_file, "%s\n", line);
         }
     }
     
-    // If not found in configuration, add new line
+
     if (!found) {
         fprintf(temp_file, "NOTIFICATION_TIMEOUT_MS=%d\n", timeout_ms);
     }
@@ -2009,11 +1976,11 @@ void WriteConfigNotificationTimeout(int timeout_ms) {
     fclose(source_file);
     fclose(temp_file);
     
-    // Replace original file
+
     remove(config_path);
     rename(temp_path, config_path);
     
-    // Update global variable
+
     NOTIFICATION_TIMEOUT_MS = timeout_ms;
 }
 
@@ -2037,29 +2004,29 @@ void ReadNotificationOpacityConfig(void) {
     );
     
     if (hFile == INVALID_HANDLE_VALUE) {
-        // File cannot be opened, keep current default value
+
         return;
     }
     
-    // Skip UTF-8 BOM marker (if present)
+
     char bom[3];
     DWORD bytesRead;
     ReadFile(hFile, bom, 3, &bytesRead, NULL);
     
     if (bytesRead != 3 || bom[0] != 0xEF || bom[1] != 0xBB || bom[2] != 0xBF) {
-        // Not a BOM, need to rewind file pointer
+
         SetFilePointer(hFile, 0, NULL, FILE_BEGIN);
     }
     
     char line[256];
     BOOL opacityFound = FALSE;
     
-    // Read file content line by line
+
     BOOL readingLine = TRUE;
     int pos = 0;
     
     while (readingLine) {
-        // Read byte by byte, build line
+
         bytesRead = 0;
         pos = 0;
         memset(line, 0, sizeof(line));
@@ -2068,24 +2035,24 @@ void ReadNotificationOpacityConfig(void) {
             char ch;
             ReadFile(hFile, &ch, 1, &bytesRead, NULL);
             
-            if (bytesRead == 0) { // End of file
+            if (bytesRead == 0) {
                 readingLine = FALSE;
                 break;
             }
             
-            if (ch == '\n') { // End of line
+            if (ch == '\n') {
                 break;
             }
             
-            if (ch != '\r') { // Ignore carriage return
+            if (ch != '\r') {
                 line[pos++] = ch;
-                if (pos >= sizeof(line) - 1) break; // Prevent buffer overflow
+                if (pos >= sizeof(line) - 1) break;
             }
         }
         
-        line[pos] = '\0'; // Ensure string termination
+        line[pos] = '\0';
         
-        // If no content and file has ended, exit loop
+
         if (pos == 0 && !readingLine) {
             break;
         }
@@ -2097,15 +2064,15 @@ void ReadNotificationOpacityConfig(void) {
                 NOTIFICATION_MAX_OPACITY = opacity;
             }
             opacityFound = TRUE;
-            break; // Found what we're looking for, can exit the loop
+            break;
         }
     }
     
     CloseHandle(hFile);
     
-    // If not found in configuration, keep default value
+
     if (!opacityFound) {
-        NOTIFICATION_MAX_OPACITY = 95; // Ensure there's a default value
+        NOTIFICATION_MAX_OPACITY = 95;
     }
 }
 
@@ -2130,9 +2097,9 @@ void WriteConfigNotificationOpacity(int opacity) {
     char line[1024];
     BOOL found = FALSE;
     
-    // Read file content line by line
+
     while (fgets(line, sizeof(line), source_file)) {
-        // Remove trailing newline characters for comparison
+
         size_t len = strlen(line);
         if (len > 0 && (line[len-1] == '\n' || line[len-1] == '\r')) {
             line[--len] = '\0';
@@ -2144,12 +2111,12 @@ void WriteConfigNotificationOpacity(int opacity) {
             fprintf(temp_file, "NOTIFICATION_MAX_OPACITY=%d\n", opacity);
             found = TRUE;
         } else {
-            // Restore newline and write back as is
+
             fprintf(temp_file, "%s\n", line);
         }
     }
     
-    // If not found in configuration, add new line
+
     if (!found) {
         fprintf(temp_file, "NOTIFICATION_MAX_OPACITY=%d\n", opacity);
     }
@@ -2157,11 +2124,11 @@ void WriteConfigNotificationOpacity(int opacity) {
     fclose(source_file);
     fclose(temp_file);
     
-    // Replace original file
+
     remove(config_path);
     rename(temp_path, config_path);
     
-    // Update global variable
+
     NOTIFICATION_MAX_OPACITY = opacity;
 }
 
@@ -2178,7 +2145,7 @@ void ReadNotificationTypeConfig(void) {
                 char typeStr[32] = {0};
                 sscanf(line + 18, "%31s", typeStr);
                 
-                // Set notification type based on the string
+
                 if (strcmp(typeStr, "CATIME") == 0) {
                     NOTIFICATION_TYPE = NOTIFICATION_TYPE_CATIME;
                 } else if (strcmp(typeStr, "SYSTEM_MODAL") == 0) {
@@ -2186,7 +2153,7 @@ void ReadNotificationTypeConfig(void) {
                 } else if (strcmp(typeStr, "OS") == 0) {
                     NOTIFICATION_TYPE = NOTIFICATION_TYPE_OS;
                 } else {
-                    // Use default value for invalid type
+
                     NOTIFICATION_TYPE = NOTIFICATION_TYPE_CATIME;
                 }
                 break;
@@ -2201,15 +2168,15 @@ void WriteConfigNotificationType(NotificationType type) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    // Ensure type value is within valid range
+
     if (type < NOTIFICATION_TYPE_CATIME || type > NOTIFICATION_TYPE_OS) {
-        type = NOTIFICATION_TYPE_CATIME; // Default value
+        type = NOTIFICATION_TYPE_CATIME;
     }
     
-    // Update global variable
+
     NOTIFICATION_TYPE = type;
     
-    // Convert enum to string
+
     const char* typeStr;
     switch (type) {
         case NOTIFICATION_TYPE_CATIME:
@@ -2226,7 +2193,7 @@ void WriteConfigNotificationType(NotificationType type) {
             break;
     }
     
-    // Create temporary file path
+
     char temp_path[MAX_PATH];
     strncpy(temp_path, config_path, MAX_PATH - 5);
     strcat(temp_path, ".tmp");
@@ -2238,7 +2205,7 @@ void WriteConfigNotificationType(NotificationType type) {
         char line[256];
         BOOL found = FALSE;
         
-        // Copy file content, replace target configuration line
+
         while (fgets(line, sizeof(line), source)) {
             if (strncmp(line, "NOTIFICATION_TYPE=", 18) == 0) {
                 fprintf(target, "NOTIFICATION_TYPE=%s\n", typeStr);
@@ -2248,7 +2215,7 @@ void WriteConfigNotificationType(NotificationType type) {
             }
         }
         
-        // If configuration item not found, add it to the end of file
+
         if (!found) {
             fprintf(target, "NOTIFICATION_TYPE=%s\n", typeStr);
         }
@@ -2256,11 +2223,11 @@ void WriteConfigNotificationType(NotificationType type) {
         fclose(source);
         fclose(target);
         
-        // Replace original file
+    
         remove(config_path);
         rename(temp_path, config_path);
     } else {
-        // Clean up potentially open files
+
         if (source) fclose(source);
         if (target) fclose(target);
     }
@@ -2305,17 +2272,17 @@ void ReadNotificationSoundConfig(void) {
     char line[1024];
     while (fgets(line, sizeof(line), file)) {
         if (strncmp(line, "NOTIFICATION_SOUND_FILE=", 23) == 0) {
-            char* value = line + 23;  // Correct offset, skip "NOTIFICATION_SOUND_FILE="
-            // Remove trailing newline
+            char* value = line + 23;
+
             char* newline = strchr(value, '\n');
             if (newline) *newline = '\0';
             
-            // Ensure path doesn't contain equals sign
+
             if (value[0] == '=') {
-                value++; // If first character is equals sign, skip it
+                value++;
             }
             
-            // Copy to global variable, ensure cleared
+
             memset(NOTIFICATION_SOUND_FILE, 0, MAX_PATH);
             strncpy(NOTIFICATION_SOUND_FILE, value, MAX_PATH - 1);
             NOTIFICATION_SOUND_FILE[MAX_PATH - 1] = '\0';
@@ -2330,7 +2297,7 @@ void ReadNotificationSoundConfig(void) {
 void WriteConfigNotificationSound(const char* sound_file) {
     if (!sound_file) return;
     
-    // Check if the path contains equals sign, remove if present
+
     char clean_path[MAX_PATH] = {0};
     const char* src = sound_file;
     char* dst = clean_path;
@@ -2347,7 +2314,7 @@ void WriteConfigNotificationSound(const char* sound_file) {
     char temp_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    // Create temporary file path
+
     snprintf(temp_path, MAX_PATH, "%s.tmp", config_path);
     
     FILE* source = fopen(config_path, "r");
@@ -2362,7 +2329,7 @@ void WriteConfigNotificationSound(const char* sound_file) {
     char line[1024];
     int found = 0;
     
-    // Copy file content, replace or add notification audio settings
+
     while (fgets(line, sizeof(line), source)) {
         if (strncmp(line, "NOTIFICATION_SOUND_FILE=", 23) == 0) {
             fprintf(dest, "NOTIFICATION_SOUND_FILE=%s\n", clean_path);
@@ -2372,7 +2339,7 @@ void WriteConfigNotificationSound(const char* sound_file) {
         }
     }
     
-    // If configuration item not found, add to end of file
+
     if (!found) {
         fprintf(dest, "NOTIFICATION_SOUND_FILE=%s\n", clean_path);
     }
@@ -2380,11 +2347,11 @@ void WriteConfigNotificationSound(const char* sound_file) {
     fclose(source);
     fclose(dest);
     
-    // Replace original file
+
     remove(config_path);
     rename(temp_path, config_path);
     
-    // Update global variable
+
     memset(NOTIFICATION_SOUND_FILE, 0, MAX_PATH);
     strncpy(NOTIFICATION_SOUND_FILE, clean_path, MAX_PATH - 1);
     NOTIFICATION_SOUND_FILE[MAX_PATH - 1] = '\0';
@@ -2414,11 +2381,11 @@ void ReadNotificationVolumeConfig(void) {
 
 
 void WriteConfigNotificationVolume(int volume) {
-    // Validate volume range
+
     if (volume < 0) volume = 0;
     if (volume > 100) volume = 100;
     
-    // Update global variable
+
     NOTIFICATION_SOUND_VOLUME = volume;
     
     char config_path[MAX_PATH];
@@ -2466,13 +2433,13 @@ void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdow
                        WORD* pomodoroHotkey, WORD* toggleVisibilityHotkey, WORD* editModeHotkey,
                        WORD* pauseResumeHotkey, WORD* restartTimerHotkey)
 {
-    // Parameter validation
+
     if (!showTimeHotkey || !countUpHotkey || !countdownHotkey || 
         !quickCountdown1Hotkey || !quickCountdown2Hotkey || !quickCountdown3Hotkey ||
         !pomodoroHotkey || !toggleVisibilityHotkey || !editModeHotkey || 
         !pauseResumeHotkey || !restartTimerHotkey) return;
     
-    // Initialize to 0 (indicates no hotkey set)
+
     *showTimeHotkey = 0;
     *countUpHotkey = 0;
     *countdownHotkey = 0;
@@ -2495,101 +2462,101 @@ void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdow
     while (fgets(line, sizeof(line), file)) {
         if (strncmp(line, "HOTKEY_SHOW_TIME=", 17) == 0) {
             char* value = line + 17;
-            // Remove trailing newline
+
             char* newline = strchr(value, '\n');
             if (newline) *newline = '\0';
             
-            // Parse hotkey string
+
             *showTimeHotkey = StringToHotkey(value);
         }
         else if (strncmp(line, "HOTKEY_COUNT_UP=", 16) == 0) {
             char* value = line + 16;
-            // Remove trailing newline
+
             char* newline = strchr(value, '\n');
             if (newline) *newline = '\0';
             
-            // Parse hotkey string
+
             *countUpHotkey = StringToHotkey(value);
         }
         else if (strncmp(line, "HOTKEY_COUNTDOWN=", 17) == 0) {
             char* value = line + 17;
-            // Remove trailing newline
+
             char* newline = strchr(value, '\n');
             if (newline) *newline = '\0';
             
-            // Parse hotkey string
+
             *countdownHotkey = StringToHotkey(value);
         }
         else if (strncmp(line, "HOTKEY_QUICK_COUNTDOWN1=", 24) == 0) {
             char* value = line + 24;
-            // Remove trailing newline
+
             char* newline = strchr(value, '\n');
             if (newline) *newline = '\0';
             
-            // Parse hotkey string
+
             *quickCountdown1Hotkey = StringToHotkey(value);
         }
         else if (strncmp(line, "HOTKEY_QUICK_COUNTDOWN2=", 24) == 0) {
             char* value = line + 24;
-            // Remove trailing newline
+
             char* newline = strchr(value, '\n');
             if (newline) *newline = '\0';
             
-            // Parse hotkey string
+
             *quickCountdown2Hotkey = StringToHotkey(value);
         }
         else if (strncmp(line, "HOTKEY_QUICK_COUNTDOWN3=", 24) == 0) {
             char* value = line + 24;
-            // Remove trailing newline
+
             char* newline = strchr(value, '\n');
             if (newline) *newline = '\0';
             
-            // Parse hotkey string
+
             *quickCountdown3Hotkey = StringToHotkey(value);
         }
         else if (strncmp(line, "HOTKEY_POMODORO=", 16) == 0) {
             char* value = line + 16;
-            // Remove trailing newline
+
             char* newline = strchr(value, '\n');
             if (newline) *newline = '\0';
             
-            // Parse hotkey string
+
             *pomodoroHotkey = StringToHotkey(value);
         }
         else if (strncmp(line, "HOTKEY_TOGGLE_VISIBILITY=", 25) == 0) {
             char* value = line + 25;
-            // Remove trailing newline
+
             char* newline = strchr(value, '\n');
             if (newline) *newline = '\0';
             
-            // Parse hotkey string
+
             *toggleVisibilityHotkey = StringToHotkey(value);
         }
         else if (strncmp(line, "HOTKEY_EDIT_MODE=", 17) == 0) {
             char* value = line + 17;
-            // Remove trailing newline
+
             char* newline = strchr(value, '\n');
             if (newline) *newline = '\0';
             
-            // Parse hotkey string
+
             *editModeHotkey = StringToHotkey(value);
         }
         else if (strncmp(line, "HOTKEY_PAUSE_RESUME=", 20) == 0) {
             char* value = line + 20;
-            // Remove trailing newline
+
             char* newline = strchr(value, '\n');
             if (newline) *newline = '\0';
             
-            // Parse hotkey string
+
             *pauseResumeHotkey = StringToHotkey(value);
         }
         else if (strncmp(line, "HOTKEY_RESTART_TIMER=", 21) == 0) {
             char* value = line + 21;
-            // Remove trailing newline
+
             char* newline = strchr(value, '\n');
             if (newline) *newline = '\0';
             
-            // Parse hotkey string
+
             *restartTimerHotkey = StringToHotkey(value);
         }
     }
@@ -2607,11 +2574,11 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
     
     FILE* file = fopen(config_path, "r");
     if (!file) {
-        // If file doesn't exist, create new file
+
         file = fopen(config_path, "w");
         if (!file) return;
         
-        // Convert hotkey values to readable format
+
         char showTimeStr[64] = {0};
         char countUpStr[64] = {0};
         char countdownStr[64] = {0};
@@ -2625,7 +2592,7 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
         char restartTimerStr[64] = {0};
         char customCountdownStr[64] = {0};
         
-        // Convert each hotkey
+
         HotkeyToString(showTimeHotkey, showTimeStr, sizeof(showTimeStr));
         HotkeyToString(countUpHotkey, countUpStr, sizeof(countUpStr));
         HotkeyToString(countdownHotkey, countdownStr, sizeof(countdownStr));
@@ -2637,12 +2604,12 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
         HotkeyToString(editModeHotkey, editModeStr, sizeof(editModeStr));
         HotkeyToString(pauseResumeHotkey, pauseResumeStr, sizeof(pauseResumeStr));
         HotkeyToString(restartTimerHotkey, restartTimerStr, sizeof(restartTimerStr));
-        // Get custom countdown hotkey value
+
         WORD customCountdownHotkey = 0;
         ReadCustomCountdownHotkey(&customCountdownHotkey);
         HotkeyToString(customCountdownHotkey, customCountdownStr, sizeof(customCountdownStr));
         
-        // Write hotkey configuration
+
         fprintf(file, "HOTKEY_SHOW_TIME=%s\n", showTimeStr);
         fprintf(file, "HOTKEY_COUNT_UP=%s\n", countUpStr);
         fprintf(file, "HOTKEY_COUNTDOWN=%s\n", countdownStr);
@@ -2654,13 +2621,13 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
         fprintf(file, "HOTKEY_EDIT_MODE=%s\n", editModeStr);
         fprintf(file, "HOTKEY_PAUSE_RESUME=%s\n", pauseResumeStr);
         fprintf(file, "HOTKEY_RESTART_TIMER=%s\n", restartTimerStr);
-        fprintf(file, "HOTKEY_CUSTOM_COUNTDOWN=%s\n", customCountdownStr); // Add new hotkey
+        fprintf(file, "HOTKEY_CUSTOM_COUNTDOWN=%s\n", customCountdownStr);
         
         fclose(file);
         return;
     }
     
-    // File exists, read all lines and update hotkey settings
+
     char temp_path[MAX_PATH];
     sprintf(temp_path, "%s.tmp", config_path);
     FILE* temp_file = fopen(temp_path, "w");
@@ -2683,7 +2650,7 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
     BOOL foundPauseResume = FALSE;
     BOOL foundRestartTimer = FALSE;
     
-    // Convert hotkey values to readable format
+
     char showTimeStr[64] = {0};
     char countUpStr[64] = {0};
     char countdownStr[64] = {0};
@@ -2696,7 +2663,7 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
     char pauseResumeStr[64] = {0};
     char restartTimerStr[64] = {0};
     
-    // Convert each hotkey
+
     HotkeyToString(showTimeHotkey, showTimeStr, sizeof(showTimeStr));
     HotkeyToString(countUpHotkey, countUpStr, sizeof(countUpStr));
     HotkeyToString(countdownHotkey, countdownStr, sizeof(countdownStr));
@@ -2709,7 +2676,7 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
     HotkeyToString(pauseResumeHotkey, pauseResumeStr, sizeof(pauseResumeStr));
     HotkeyToString(restartTimerHotkey, restartTimerStr, sizeof(restartTimerStr));
     
-    // Process each line
+
     while (fgets(line, sizeof(line), file)) {
         if (strncmp(line, "HOTKEY_SHOW_TIME=", 17) == 0) {
             fprintf(temp_file, "HOTKEY_SHOW_TIME=%s\n", showTimeStr);
@@ -2756,12 +2723,12 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
             foundRestartTimer = TRUE;
         }
         else {
-            // Keep other lines
+
             fputs(line, temp_file);
         }
     }
     
-    // Add hotkey configuration items not found
+
     if (!foundShowTime) {
         fprintf(temp_file, "HOTKEY_SHOW_TIME=%s\n", showTimeStr);
     }
@@ -2799,7 +2766,7 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
     fclose(file);
     fclose(temp_file);
     
-    // Replace original file
+
     remove(config_path);
     rename(temp_path, config_path);
 }
@@ -2845,28 +2812,28 @@ void HotkeyToString(WORD hotkey, char* buffer, size_t bufferSize) {
         len = strlen(buffer);
     }
     
-    // 添加虚拟键
+
     if (len > 0 && len < bufferSize - 1 && vk != 0) {
         buffer[len++] = '+';
         buffer[len] = '\0';
     }
     
-    // 获取虚拟键名称
+
     if (vk >= 'A' && vk <= 'Z') {
-        // 字母键
+
         char keyName[2] = {vk, '\0'};
         strncat(buffer, keyName, bufferSize - len - 1);
     } else if (vk >= '0' && vk <= '9') {
-        // 数字键
+
         char keyName[2] = {vk, '\0'};
         strncat(buffer, keyName, bufferSize - len - 1);
     } else if (vk >= VK_F1 && vk <= VK_F24) {
-        // 功能键
+
         char keyName[4];
         sprintf(keyName, "F%d", vk - VK_F1 + 1);
         strncat(buffer, keyName, bufferSize - len - 1);
     } else {
-        // 其他特殊键
+
         switch (vk) {
             case VK_BACK:       strncat(buffer, "Backspace", bufferSize - len - 1); break;
             case VK_TAB:        strncat(buffer, "Tab", bufferSize - len - 1); break;
@@ -2910,7 +2877,7 @@ void HotkeyToString(WORD hotkey, char* buffer, size_t bufferSize) {
             case VK_OEM_6:      strncat(buffer, "]", bufferSize - len - 1); break;
             case VK_OEM_7:      strncat(buffer, "'", bufferSize - len - 1); break;
             default:            
-                // 对于其他未知键，使用十六进制表示
+
                 {
                 char keyName[8];
                 sprintf(keyName, "0x%02X", vk);
@@ -2924,23 +2891,23 @@ void HotkeyToString(WORD hotkey, char* buffer, size_t bufferSize) {
 
 WORD StringToHotkey(const char* str) {
     if (!str || str[0] == '\0' || strcmp(str, "None") == 0) {
-        return 0;  // 未设置热键
+        return 0;
     }
     
-    // 尝试直接解析为数字（兼容旧格式）
+
     if (isdigit(str[0])) {
         return (WORD)atoi(str);
     }
     
-    BYTE vk = 0;    // 虚拟键码
-    BYTE mod = 0;   // 修饰键
+    BYTE vk = 0;
+    BYTE mod = 0;
     
-    // 复制字符串以便使用strtok
+
     char buffer[256];
     strncpy(buffer, str, sizeof(buffer) - 1);
     buffer[sizeof(buffer) - 1] = '\0';
     
-    // 分割字符串，查找修饰键和主键
+
     char* token = strtok(buffer, "+");
     char* lastToken = NULL;
     
@@ -2952,29 +2919,29 @@ WORD StringToHotkey(const char* str) {
         } else if (stricmp(token, "Alt") == 0) {
             mod |= HOTKEYF_ALT;
         } else {
-            // 可能是主键
+
             lastToken = token;
         }
         token = strtok(NULL, "+");
     }
     
-    // 解析主键
+
     if (lastToken) {
-        // 检查是否是单个字符的字母或数字
+
         if (strlen(lastToken) == 1) {
             char ch = toupper(lastToken[0]);
             if ((ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9')) {
                 vk = ch;
             }
         } 
-        // 检查是否是功能键
+
         else if (lastToken[0] == 'F' && isdigit(lastToken[1])) {
             int fNum = atoi(lastToken + 1);
             if (fNum >= 1 && fNum <= 24) {
                 vk = VK_F1 + fNum - 1;
             }
         }
-        // 检查特殊键名
+
         else if (stricmp(lastToken, "Backspace") == 0) vk = VK_BACK;
         else if (stricmp(lastToken, "Tab") == 0) vk = VK_TAB;
         else if (stricmp(lastToken, "Enter") == 0) vk = VK_RETURN;
@@ -3005,7 +2972,7 @@ WORD StringToHotkey(const char* str) {
         else if (stricmp(lastToken, "Num-") == 0) vk = VK_SUBTRACT;
         else if (stricmp(lastToken, "Num.") == 0) vk = VK_DECIMAL;
         else if (stricmp(lastToken, "Num/") == 0) vk = VK_DIVIDE;
-        // 检查十六进制格式
+
         else if (strncmp(lastToken, "0x", 2) == 0) {
             vk = (BYTE)strtol(lastToken, NULL, 16);
         }
@@ -3018,7 +2985,7 @@ WORD StringToHotkey(const char* str) {
 void ReadCustomCountdownHotkey(WORD* hotkey) {
     if (!hotkey) return;
     
-    *hotkey = 0; // 默认为0（未设置）
+    *hotkey = 0;
     
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -3030,11 +2997,11 @@ void ReadCustomCountdownHotkey(WORD* hotkey) {
     while (fgets(line, sizeof(line), file)) {
         if (strncmp(line, "HOTKEY_CUSTOM_COUNTDOWN=", 24) == 0) {
             char* value = line + 24;
-            // 去除末尾的换行符
+
             char* newline = strchr(value, '\n');
             if (newline) *newline = '\0';
             
-            // 解析热键字符串
+
             *hotkey = StringToHotkey(value);
             break;
         }
@@ -3050,7 +3017,7 @@ void WriteConfigKeyValue(const char* key, const char* value) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    // Determine which section to place in based on the key name
+
     const char* section;
     
     if (strcmp(key, "CONFIG_VERSION") == 0 ||
@@ -3095,11 +3062,11 @@ void WriteConfigKeyValue(const char* key, const char* value) {
         section = INI_SECTION_COLORS;
     }
     else {
-        // 其他设置放在OPTIONS节
+
         section = INI_SECTION_OPTIONS;
     }
     
-    // 写入配置
+
     WriteIniString(section, key, value, config_path);
 }
 
@@ -3107,7 +3074,7 @@ void WriteConfigKeyValue(const char* key, const char* value) {
 void WriteConfigLanguage(int language) {
     const char* langName;
     
-    // Convert language enum value to readable language name
+
     switch (language) {
         case APP_LANG_CHINESE_SIMP:
             langName = "Chinese_Simplified";
@@ -3140,7 +3107,7 @@ void WriteConfigLanguage(int language) {
             langName = "Korean";
             break;
         default:
-            langName = "English"; // Default to English
+            langName = "English";
             break;
     }
     
@@ -3152,7 +3119,7 @@ bool IsShortcutCheckDone(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    // Use INI reading method to get settings
+
     return ReadIniBool(INI_SECTION_GENERAL, "SHORTCUT_CHECK_DONE", FALSE, config_path);
 }
 
@@ -3161,7 +3128,7 @@ void SetShortcutCheckDone(bool done) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    // 使用INI写入方式设置状态
+
     WriteIniString(INI_SECTION_GENERAL, "SHORTCUT_CHECK_DONE", done ? "TRUE" : "FALSE", config_path);
 }
 
@@ -3170,7 +3137,7 @@ void ReadNotificationDisabledConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    // Use INI reading method to get settings
+
     NOTIFICATION_DISABLED = ReadIniBool(INI_SECTION_NOTIFICATION, "NOTIFICATION_DISABLED", FALSE, config_path);
 }
 
@@ -3195,9 +3162,9 @@ void WriteConfigNotificationDisabled(BOOL disabled) {
     char line[1024];
     BOOL found = FALSE;
     
-    // Read and write line by line
+
     while (fgets(line, sizeof(line), source_file)) {
-        // Remove trailing newline characters for comparison
+
         size_t len = strlen(line);
         if (len > 0 && (line[len-1] == '\n' || line[len-1] == '\r')) {
             line[--len] = '\0';
@@ -3209,12 +3176,12 @@ void WriteConfigNotificationDisabled(BOOL disabled) {
             fprintf(temp_file, "NOTIFICATION_DISABLED=%s\n", disabled ? "TRUE" : "FALSE");
             found = TRUE;
         } else {
-            // Restore newline and write back as is
+
             fprintf(temp_file, "%s\n", line);
         }
     }
     
-    // If configuration item not found in the configuration, add it
+
     if (!found) {
         fprintf(temp_file, "NOTIFICATION_DISABLED=%s\n", disabled ? "TRUE" : "FALSE");
     }
@@ -3222,10 +3189,10 @@ void WriteConfigNotificationDisabled(BOOL disabled) {
     fclose(source_file);
     fclose(temp_file);
     
-    // Replace original file
+
     remove(config_path);
     rename(temp_path, config_path);
     
-    // Update global variable
+
     NOTIFICATION_DISABLED = disabled;
 }
