@@ -41,7 +41,7 @@ void StartEditMode(HWND hwnd) {
     SetClickThrough(hwnd, FALSE);
     
     // Ensure mouse cursor is default arrow
-    SetCursor(LoadCursor(NULL, IDC_ARROW));
+    SetCursor(LoadCursorW(NULL, IDC_ARROW));
     
     // Refresh window, add immediate update
     InvalidateRect(hwnd, NULL, TRUE);
