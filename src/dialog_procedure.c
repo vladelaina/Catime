@@ -84,10 +84,10 @@ LRESULT APIENTRY EditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 INT_PTR CALLBACK ErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 
 void ShowErrorDialog(HWND hwndParent) {
-    DialogBox(GetModuleHandle(NULL),
-             MAKEINTRESOURCE(IDD_ERROR_DIALOG),
-             hwndParent,
-             ErrorDlgProc);
+    DialogBoxW(GetModuleHandle(NULL),
+              MAKEINTRESOURCE(IDD_ERROR_DIALOG),
+              hwndParent,
+              ErrorDlgProc);
 }
 
 INT_PTR CALLBACK ErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -172,7 +172,10 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                 }
                 
                 // Set edit box text with current preset values
-                SetDlgItemTextA(hwndDlg, CLOCK_IDC_EDIT, currentOptions);
+                // Convert ANSI string to Unicode for the API call
+                wchar_t wcurrentOptions[256];
+                MultiByteToWideChar(CP_ACP, 0, currentOptions, -1, wcurrentOptions, 256);
+                SetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, wcurrentOptions);
             } else if (dlgId == CLOCK_IDD_STARTUP_DIALOG) {
                 // For startup settings dialog, preload the current default countdown time
                 extern int CLOCK_DEFAULT_START_TIME;
@@ -199,7 +202,10 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                         snprintf(timeStr, sizeof(timeStr), "%ds", seconds);
                     }
                     
-                    SetDlgItemTextA(hwndDlg, CLOCK_IDC_EDIT, timeStr);
+                    // Convert ANSI string to Unicode for the API call
+                    wchar_t wtimeStr[64];
+                    MultiByteToWideChar(CP_ACP, 0, timeStr, -1, wtimeStr, 64);
+                    SetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, wtimeStr);
                 }
             }
 
@@ -627,7 +633,7 @@ void ShowAboutDialog(HWND hwndParent) {
     
     // Save current DPI awareness context
     HANDLE hOldDpiContext = NULL;
-    HMODULE hUser32 = GetModuleHandleA("user32.dll");
+    HMODULE hUser32 = GetModuleHandleW(L"user32.dll");
     if (hUser32) {
         // Function pointer type definitions
         typedef HANDLE (WINAPI* GetThreadDpiAwarenessContextFunc)(void);
@@ -647,10 +653,10 @@ void ShowAboutDialog(HWND hwndParent) {
     }
     
     // Create new About dialog
-    g_hwndAboutDlg = CreateDialog(GetModuleHandle(NULL), 
-                                 MAKEINTRESOURCE(IDD_ABOUT_DIALOG), 
-                                 hwndParent, 
-                                 AboutDlgProc);
+    g_hwndAboutDlg = CreateDialogW(GetModuleHandle(NULL), 
+                                  MAKEINTRESOURCE(IDD_ABOUT_DIALOG), 
+                                  hwndParent, 
+                                  AboutDlgProc);
     
     // Restore original DPI awareness context
     if (hUser32 && hOldDpiContext) {
@@ -671,7 +677,7 @@ static HWND g_hwndPomodoroLoopDialog = NULL;
 
 void ShowPomodoroLoopDialog(HWND hwndParent) {
     if (!g_hwndPomodoroLoopDialog) {
-        g_hwndPomodoroLoopDialog = CreateDialog(
+        g_hwndPomodoroLoopDialog = CreateDialogW(
             GetModuleHandle(NULL),
             MAKEINTRESOURCE(CLOCK_IDD_POMODORO_LOOP_DIALOG),
             hwndParent,
@@ -967,7 +973,7 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
 // Show website URL input dialog
 void ShowWebsiteDialog(HWND hwndParent) {
     // Use modal dialog instead of modeless dialog, so we can know whether the user confirmed or cancelled
-    INT_PTR result = DialogBox(
+    INT_PTR result = DialogBoxW(
         GetModuleHandle(NULL),
         MAKEINTRESOURCE(CLOCK_IDD_WEBSITE_DIALOG),
         hwndParent,
@@ -1035,7 +1041,10 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
             }
             
             // Set edit box text
-            SetDlgItemTextA(hwndDlg, CLOCK_IDC_EDIT, currentOptions);
+            // Convert ANSI string to Unicode for the API call
+            wchar_t wcurrentOptions2[256];
+            MultiByteToWideChar(CP_ACP, 0, currentOptions, -1, wcurrentOptions2, 256);
+            SetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, wcurrentOptions2);
             
             // Apply multilingual support - moved here to ensure all default text is covered
             ApplyDialogLanguage(hwndDlg, CLOCK_IDD_POMODORO_COMBO_DIALOG);
@@ -1064,7 +1073,10 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
         case WM_COMMAND:
             if (LOWORD(wParam) == CLOCK_IDC_BUTTON_OK || LOWORD(wParam) == IDOK) {
                 char input[256] = {0};
-                GetDlgItemTextA(hwndDlg, CLOCK_IDC_EDIT, input, sizeof(input));
+                // Get text using Unicode API and convert to ANSI
+                wchar_t winput[256];
+                GetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, winput, sizeof(winput)/sizeof(wchar_t));
+                WideCharToMultiByte(CP_ACP, 0, winput, -1, input, sizeof(input), NULL, NULL);
                 
                 // Check if input is empty or contains only spaces
                 BOOL isAllSpaces = TRUE;
@@ -1163,7 +1175,7 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
 
 void ShowPomodoroComboDialog(HWND hwndParent) {
     if (!g_hwndPomodoroComboDialog) {
-        g_hwndPomodoroComboDialog = CreateDialog(
+        g_hwndPomodoroComboDialog = CreateDialogW(
             GetModuleHandle(NULL),
             MAKEINTRESOURCE(CLOCK_IDD_POMODORO_COMBO_DIALOG),
             hwndParent,
@@ -1381,10 +1393,10 @@ void ShowNotificationMessagesDialog(HWND hwndParent) {
         // Ensure latest configuration values are read first
         ReadNotificationMessagesConfig();
         
-        DialogBox(GetModuleHandle(NULL), 
-                 MAKEINTRESOURCE(CLOCK_IDD_NOTIFICATION_MESSAGES_DIALOG), 
-                 hwndParent, 
-                 NotificationMessagesDlgProc);
+        DialogBoxW(GetModuleHandle(NULL), 
+                  MAKEINTRESOURCE(CLOCK_IDD_NOTIFICATION_MESSAGES_DIALOG), 
+                  hwndParent, 
+                  NotificationMessagesDlgProc);
     } else {
         SetForegroundWindow(g_hwndNotificationMessagesDialog);
     }
@@ -1420,11 +1432,15 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
             if (strlen(buffer) > 2 && buffer[strlen(buffer)-2] == '.' && buffer[strlen(buffer)-1] == '0') {
                 buffer[strlen(buffer)-2] = '\0';
             }
-            SetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, buffer);
+            // Convert ANSI string to Unicode for the API call
+            wchar_t wbuffer[32];
+            MultiByteToWideChar(CP_ACP, 0, buffer, -1, wbuffer, 32);
+            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, wbuffer);
             
             // Opacity (percentage)
             StringCbPrintfA(buffer, sizeof(buffer), "%d", NOTIFICATION_MAX_OPACITY);
-            SetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT, buffer);
+            MultiByteToWideChar(CP_ACP, 0, buffer, -1, wbuffer, 32);
+            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT, wbuffer);
             
             // Localize label text
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_TIME_LABEL, 
@@ -1460,9 +1476,14 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
                 char timeStr[32] = {0};
                 char opacityStr[32] = {0};
                 
-                // Get user input values
-                GetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, timeStr, sizeof(timeStr));
-                GetDlgItemTextA(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT, opacityStr, sizeof(opacityStr));
+                // Get user input values using Unicode API
+                wchar_t wtimeStr[32], wopacityStr[32];
+                GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, wtimeStr, sizeof(wtimeStr)/sizeof(wchar_t));
+                GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT, wopacityStr, sizeof(wopacityStr)/sizeof(wchar_t));
+                
+                // Convert to ANSI for processing
+                WideCharToMultiByte(CP_ACP, 0, wtimeStr, -1, timeStr, sizeof(timeStr), NULL, NULL);
+                WideCharToMultiByte(CP_ACP, 0, wopacityStr, -1, opacityStr, sizeof(opacityStr), NULL, NULL);
                 
                 // Use more robust method to replace Chinese period
                 // First get the text in Unicode format
@@ -1561,10 +1582,10 @@ void ShowNotificationDisplayDialog(HWND hwndParent) {
         ReadNotificationTimeoutConfig();
         ReadNotificationOpacityConfig();
         
-        DialogBox(GetModuleHandle(NULL), 
-                 MAKEINTRESOURCE(CLOCK_IDD_NOTIFICATION_DISPLAY_DIALOG), 
-                 hwndParent, 
-                 NotificationDisplayDlgProc);
+        DialogBoxW(GetModuleHandle(NULL), 
+                  MAKEINTRESOURCE(CLOCK_IDD_NOTIFICATION_DISPLAY_DIALOG), 
+                  hwndParent, 
+                  NotificationDisplayDlgProc);
     } else {
         SetForegroundWindow(g_hwndNotificationDisplayDialog);
     }
@@ -2137,10 +2158,10 @@ void ShowNotificationSettingsDialog(HWND hwndParent) {
         ReadNotificationSoundConfig();
         ReadNotificationVolumeConfig();
         
-        DialogBox(GetModuleHandle(NULL), 
-                 MAKEINTRESOURCE(CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG), 
-                 hwndParent, 
-                 NotificationSettingsDlgProc);
+        DialogBoxW(GetModuleHandle(NULL), 
+                  MAKEINTRESOURCE(CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG), 
+                  hwndParent, 
+                  NotificationSettingsDlgProc);
     } else {
         SetForegroundWindow(g_hwndNotificationSettingsDialog);
     }
