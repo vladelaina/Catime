@@ -706,7 +706,7 @@ LRESULT APIENTRY LoopEditSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARA
             return 0;
         }
 
-        if (wParam == VK_RETURN) { // VK_RETURN (0x0D) is the char code for Enter
+        if (wParam == VK_RETURN) {
             return 0;
         }
         break;
@@ -761,7 +761,6 @@ INT_PTR CALLBACK PomodoroLoopDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPAR
                 wchar_t input_str[16];
                 GetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, input_str, sizeof(input_str)/sizeof(wchar_t));
                 
-                // Check if input is empty or contains only spaces
                 BOOL isAllSpaces = TRUE;
                 for (int i = 0; input_str[i]; i++) {
                     if (!iswspace(input_str[i])) {
@@ -776,17 +775,16 @@ INT_PTR CALLBACK PomodoroLoopDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPAR
                     return TRUE;
                 }
                 
-                // Validate input and handle spaces
                 if (!IsValidNumberInput(input_str)) {
                     ShowErrorDialog(hwndDlg);
-                    // Keep input content and select all text for easy editing
+
                     HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
                     SetFocus(hwndEdit);
                     SendMessage(hwndEdit, EM_SETSEL, 0, -1);
                     return TRUE;
                 }
                 
-                // Extract digits (ignoring spaces)
+
                 wchar_t cleanStr[16] = {0};
                 int cleanIndex = 0;
                 for (int i = 0; input_str[i]; i++) {
@@ -797,13 +795,13 @@ INT_PTR CALLBACK PomodoroLoopDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPAR
                 
                 int new_loop_count = _wtoi(cleanStr);
                 if (new_loop_count >= 1 && new_loop_count <= 100) {
-                    // Update configuration file and global variables
+
                     WriteConfigPomodoroLoopCount(new_loop_count);
                     EndDialog(hwndDlg, IDOK);
                     g_hwndPomodoroLoopDialog = NULL;
                 } else {
                     ShowErrorDialog(hwndDlg);
-                    // Keep input content and select all text for easy editing
+
                     HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
                     SetFocus(hwndEdit);
                     SendMessage(hwndEdit, EM_SETSEL, 0, -1);
@@ -817,7 +815,7 @@ INT_PTR CALLBACK PomodoroLoopDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPAR
             break;
 
         case WM_DESTROY:
-            // Restore original edit control procedure
+
             {
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
             SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)wpOrigLoopEditProc);
@@ -832,10 +830,10 @@ INT_PTR CALLBACK PomodoroLoopDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPAR
     return FALSE;
 }
 
-// Add global variable to track website URL dialog handle
+
 static HWND g_hwndWebsiteDialog = NULL;
 
-// Website URL input dialog procedure
+
 INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     static HBRUSH hBackgroundBrush = NULL;
     static HBRUSH hEditBrush = NULL;
@@ -843,31 +841,31 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
 
     switch (msg) {
         case WM_INITDIALOG: {
-            // Set dialog as modal
+
             SetWindowLongPtr(hwndDlg, GWLP_USERDATA, lParam);
             
-            // Set background and control colors
+
             hBackgroundBrush = CreateSolidBrush(RGB(240, 240, 240));
             hEditBrush = CreateSolidBrush(RGB(255, 255, 255));
             hButtonBrush = CreateSolidBrush(RGB(240, 240, 240));
             
-            // Subclass the edit control to support Enter key submission
+
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
             wpOrigEditProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
             
-            // If URL already exists, prefill the edit box
+
             if (wcslen(CLOCK_TIMEOUT_WEBSITE_URL) > 0) {
                 SetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, CLOCK_TIMEOUT_WEBSITE_URL);
             }
             
-            // Apply multilingual support
+
             ApplyDialogLanguage(hwndDlg, CLOCK_IDD_WEBSITE_DIALOG);
             
-            // Set focus to edit box and select all text
+
             SetFocus(hwndEdit);
             SendMessage(hwndEdit, EM_SETSEL, 0, -1);
             
-            return FALSE;  // Because we manually set the focus
+            return FALSE;
         }
         
         case WM_CTLCOLORDLG:
@@ -889,7 +887,7 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
                 wchar_t url[MAX_PATH] = {0};
                 GetDlgItemText(hwndDlg, CLOCK_IDC_EDIT, url, sizeof(url)/sizeof(wchar_t));
                 
-                // Check if the input is empty or contains only spaces
+
                 BOOL isAllSpaces = TRUE;
                 for (int i = 0; url[i]; i++) {
                     if (!iswspace(url[i])) {
@@ -904,15 +902,15 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
                     return TRUE;
                 }
                 
-                // Validate URL format - simple check, should at least contain http:// or https://
+
                 if (wcsncmp(url, L"http://", 7) != 0 && wcsncmp(url, L"https://", 8) != 0) {
-                    // Add https:// prefix
+
                     wchar_t tempUrl[MAX_PATH] = L"https://";
                     StringCbCatW(tempUrl, sizeof(tempUrl), url);
                     StringCbCopyW(url, sizeof(url), tempUrl);
                 }
                 
-                // Convert Unicode URL to UTF-8 for configuration
+
                 char urlUtf8[MAX_PATH * 3];
                 WideCharToMultiByte(CP_UTF8, 0, url, -1, urlUtf8, sizeof(urlUtf8), NULL, NULL);
                 WriteConfigTimeoutWebsite(urlUtf8);
@@ -920,7 +918,7 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
                 g_hwndWebsiteDialog = NULL;
                 return TRUE;
             } else if (LOWORD(wParam) == IDCANCEL) {
-                // User cancelled, don't change timeout action
+
                 EndDialog(hwndDlg, IDCANCEL);
                 g_hwndWebsiteDialog = NULL;
                 return TRUE;
@@ -928,12 +926,12 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
             break;
             
         case WM_DESTROY:
-            // Restore original edit control procedure
+
             {
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
             SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
             
-            // Release resources
+
             if (hBackgroundBrush) {
                 DeleteObject(hBackgroundBrush);
                 hBackgroundBrush = NULL;
@@ -958,9 +956,9 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
     return FALSE;
 }
 
-// Show website URL input dialog
+
 void ShowWebsiteDialog(HWND hwndParent) {
-    // Use modal dialog instead of modeless dialog, so we can know whether the user confirmed or cancelled
+
     INT_PTR result = DialogBoxW(
         GetModuleHandle(NULL),
         MAKEINTRESOURCE(CLOCK_IDD_WEBSITE_DIALOG),
@@ -968,14 +966,13 @@ void ShowWebsiteDialog(HWND hwndParent) {
         WebsiteDialogProc
     );
     
-    // Only when the user clicks OK and inputs a valid URL will IDOK be returned, at which point WebsiteDialogProc has already set CLOCK_TIMEOUT_ACTION
-    // If the user cancels or closes the dialog, the timeout action won't be changed
+
 }
 
-// Set global variable to track the Pomodoro combination dialog handle
+
 static HWND g_hwndPomodoroComboDialog = NULL;
 
-// Add Pomodoro combination dialog procedure
+
 INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     static HBRUSH hBackgroundBrush = NULL;
     static HBRUSH hEditBrush = NULL;
@@ -983,22 +980,22 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
     
     switch (msg) {
         case WM_INITDIALOG: {
-            // Set background and control colors
+
             hBackgroundBrush = CreateSolidBrush(RGB(240, 240, 240));
             hEditBrush = CreateSolidBrush(RGB(255, 255, 255));
             hButtonBrush = CreateSolidBrush(RGB(240, 240, 240));
             
-            // Subclass the edit control to support Enter key submission
+
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
             wpOrigEditProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
             
-            // Read current pomodoro time options from configuration and format for display
+
             wchar_t currentOptions[256] = {0};
             for (int i = 0; i < POMODORO_TIMES_COUNT; i++) {
                 wchar_t timeStr[32];
                 int seconds = POMODORO_TIMES[i];
                 
-                // Format time into human-readable format
+
                 if (seconds >= 3600) {
                     int hours = seconds / 3600;
                     int mins = (seconds % 3600) / 60;
@@ -1023,22 +1020,22 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
                 StringCbCatW(currentOptions, sizeof(currentOptions), timeStr);
             }
             
-            // Remove trailing space
+
             if (wcslen(currentOptions) > 0 && currentOptions[wcslen(currentOptions) - 1] == L' ') {
                 currentOptions[wcslen(currentOptions) - 1] = L'\0';
             }
             
-            // Set edit box text
+
             SetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, currentOptions);
             
-            // Apply multilingual support - moved here to ensure all default text is covered
+
             ApplyDialogLanguage(hwndDlg, CLOCK_IDD_POMODORO_COMBO_DIALOG);
             
-            // Set focus to edit box and select all text
+
             SetFocus(hwndEdit);
             SendMessage(hwndEdit, EM_SETSEL, 0, -1);
             
-            return FALSE;  // Because we manually set the focus
+            return FALSE;
         }
         
         case WM_CTLCOLORDLG:
@@ -1058,12 +1055,12 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
         case WM_COMMAND:
             if (LOWORD(wParam) == CLOCK_IDC_BUTTON_OK || LOWORD(wParam) == IDOK) {
                 char input[256] = {0};
-                // Get text using Unicode API and convert to ANSI
+
                 wchar_t winput[256];
                 GetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, winput, sizeof(winput)/sizeof(wchar_t));
                 WideCharToMultiByte(CP_ACP, 0, winput, -1, input, sizeof(input), NULL, NULL);
                 
-                // Check if input is empty or contains only spaces
+
                 BOOL isAllSpaces = TRUE;
                 for (int i = 0; input[i]; i++) {
                     if (!isspace((unsigned char)input[i])) {
@@ -1077,7 +1074,7 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
                     return TRUE;
                 }
                 
-                // Parse input time format and convert to seconds array
+
                 char *token, *saveptr;
                 char input_copy[256];
                 StringCbCopyA(input_copy, sizeof(input_copy), input);
@@ -1098,28 +1095,28 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
                     token = strtok_r(NULL, " ", &saveptr);
                 }
                 
-                // If there's invalid input, show error dialog
+
                 if (hasInvalidInput || times_count == 0) {
                     ShowErrorDialog(hwndDlg);
-                    // Keep input content and select all text for easy editing
+
                     HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
                     SetFocus(hwndEdit);
                     SendMessage(hwndEdit, EM_SETSEL, 0, -1);
                     return TRUE;
                 }
                 
-                // Update global variables
+
                 POMODORO_TIMES_COUNT = times_count;
                 for (int i = 0; i < times_count; i++) {
                     POMODORO_TIMES[i] = times[i];
                 }
                 
-                // Update basic pomodoro times
+
                 if (times_count > 0) POMODORO_WORK_TIME = times[0];
                 if (times_count > 1) POMODORO_SHORT_BREAK = times[1];
                 if (times_count > 2) POMODORO_LONG_BREAK = times[2];
                 
-                // Write to configuration file
+
                 WriteConfigPomodoroTimeOptions(times, times_count);
                 
                 EndDialog(hwndDlg, IDOK);
@@ -1133,12 +1130,12 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
             break;
             
         case WM_DESTROY:
-            // Restore original edit control procedure
+
             {
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
             SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
             
-            // Release resources
+
             if (hBackgroundBrush) {
                 DeleteObject(hBackgroundBrush);
                 hBackgroundBrush = NULL;
@@ -1179,7 +1176,7 @@ BOOL ParseTimeInput(const char* input, int* seconds) {
 
     *seconds = 0;
     
-    // Create a local copy of the input string
+
     char buffer[256];
     strncpy(buffer, input, sizeof(buffer) - 1);
     buffer[sizeof(buffer) - 1] = '\0';
@@ -1188,11 +1185,11 @@ BOOL ParseTimeInput(const char* input, int* seconds) {
     int tempSeconds = 0;
 
     while (*pos) {
-        // Skip whitespace
+
         while (*pos == ' ' || *pos == '\t') pos++;
         if (*pos == '\0') break;
         
-        // Parse number
+
         if (isdigit((unsigned char)*pos)) {
             int value = 0;
             while (isdigit((unsigned char)*pos)) {
@@ -1200,10 +1197,10 @@ BOOL ParseTimeInput(const char* input, int* seconds) {
                 pos++;
             }
 
-            // Skip whitespace after number
+
             while (*pos == ' ' || *pos == '\t') pos++;
 
-            // Check for unit
+
             if (*pos == 'h' || *pos == 'H') {
                 tempSeconds += value * 3600;
                 pos++;
@@ -1214,15 +1211,15 @@ BOOL ParseTimeInput(const char* input, int* seconds) {
                 tempSeconds += value;
                 pos++;
             } else if (*pos == '\0') {
-                // No unit at end of string, default to minutes
+
                 tempSeconds += value * 60;
                 break;
             } else {
-                // Invalid character, return FALSE
+
                 return FALSE;
             }
         } else {
-            // Invalid character, return FALSE
+
             return FALSE;
         }
     }
@@ -1246,25 +1243,25 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
 
             ReadNotificationMessagesConfig();
             
-            // For handling UTF-8 Chinese characters, we need to convert to Unicode
+
             wchar_t wideText[sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT)];
             
-            // First edit box - Countdown timeout message
+
             MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_MESSAGE_TEXT, -1, 
                                wideText, sizeof(wideText)/sizeof(wchar_t));
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, wideText);
             
-            // Second edit box - Pomodoro timeout message
+
             MultiByteToWideChar(CP_UTF8, 0, POMODORO_TIMEOUT_MESSAGE_TEXT, -1, 
                                wideText, sizeof(wideText)/sizeof(wchar_t));
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT2, wideText);
             
-            // Third edit box - Pomodoro cycle completion message
+
             MultiByteToWideChar(CP_UTF8, 0, POMODORO_CYCLE_COMPLETE_TEXT, -1, 
                                wideText, sizeof(wideText)/sizeof(wchar_t));
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT3, wideText);
             
-            // Localize label text
+
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_LABEL1, 
                            GetLocalizedString(L"Countdown timeout message:", L"Countdown timeout message:"));
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_LABEL2, 
@@ -1272,29 +1269,29 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_LABEL3,
                            GetLocalizedString(L"Pomodoro cycle complete message:", L"Pomodoro cycle complete message:"));
             
-            // Localize button text
+
             SetDlgItemTextW(hwndDlg, IDOK, GetLocalizedString(L"OK", L"OK"));
             SetDlgItemTextW(hwndDlg, IDCANCEL, GetLocalizedString(L"Cancel", L"Cancel"));
             
-            // Subclass edit boxes to support Ctrl+A for select all
+
             HWND hEdit1 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT1);
             HWND hEdit2 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT2);
             HWND hEdit3 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT3);
             
-            // Save original window procedure
+
             wpOrigEditProc = (WNDPROC)SetWindowLongPtr(hEdit1, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
             
-            // Apply the same subclassing process to other edit boxes
+
             SetWindowLongPtr(hEdit2, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
             SetWindowLongPtr(hEdit3, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
             
-            // Select all text in the first edit box
+
             SendDlgItemMessage(hwndDlg, IDC_NOTIFICATION_EDIT1, EM_SETSEL, 0, -1);
             
-            // Set focus to the first edit box
+
             SetFocus(GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT1));
             
-            return FALSE;  // Return FALSE because we manually set focus
+            return FALSE;
         }
         
         case WM_CTLCOLORDLG:
@@ -1310,17 +1307,17 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
         
         case WM_COMMAND:
             if (LOWORD(wParam) == IDOK) {
-                // Get text from edit boxes (Unicode method)
+
                 wchar_t wTimeout[256] = {0};
                 wchar_t wPomodoro[256] = {0};
                 wchar_t wCycle[256] = {0};
                 
-                // Get Unicode text
+
                 GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, wTimeout, sizeof(wTimeout)/sizeof(wchar_t));
                 GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT2, wPomodoro, sizeof(wPomodoro)/sizeof(wchar_t));
                 GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT3, wCycle, sizeof(wCycle)/sizeof(wchar_t));
                 
-                // Convert to UTF-8
+
                 char timeout_msg[256] = {0};
                 char pomodoro_msg[256] = {0};
                 char cycle_complete_msg[256] = {0};
@@ -1332,7 +1329,7 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 WideCharToMultiByte(CP_UTF8, 0, wCycle, -1, 
                                     cycle_complete_msg, sizeof(cycle_complete_msg), NULL, NULL);
                 
-                // Save to configuration file and update global variables
+
                 WriteConfigNotificationMessages(timeout_msg, pomodoro_msg, cycle_complete_msg);
                 
                 EndDialog(hwndDlg, IDOK);
@@ -1346,7 +1343,7 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             break;
             
         case WM_DESTROY:
-            // Restore original window procedure
+
             {
             HWND hEdit1 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT1);
             HWND hEdit2 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT2);
@@ -1369,7 +1366,7 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
 
 void ShowNotificationMessagesDialog(HWND hwndParent) {
     if (!g_hwndNotificationMessagesDialog) {
-        // Ensure latest configuration values are read first
+
         ReadNotificationMessagesConfig();
         
         DialogBoxW(GetModuleHandle(NULL), 
@@ -1381,55 +1378,55 @@ void ShowNotificationMessagesDialog(HWND hwndParent) {
     }
 }
 
-// Add global variable to track notification display settings dialog handle
+
 static HWND g_hwndNotificationDisplayDialog = NULL;
 
-// Add notification display settings dialog procedure
+
 INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     static HBRUSH hBackgroundBrush = NULL;
     static HBRUSH hEditBrush = NULL;
     
     switch (msg) {
         case WM_INITDIALOG: {
-            // Set window to topmost
+
             SetWindowPos(hwndDlg, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
             
-            // Create brushes
+
             hBackgroundBrush = CreateSolidBrush(RGB(0xF3, 0xF3, 0xF3));
             hEditBrush = CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF));
             
-            // Read latest configuration
+
             ReadNotificationTimeoutConfig();
             ReadNotificationOpacityConfig();
             
-            // Set current values to edit boxes
+
             wchar_t wbuffer[32];
             
-            // Display time (seconds, support decimal) - convert milliseconds to seconds
+
             StringCbPrintfW(wbuffer, sizeof(wbuffer), L"%.1f", (float)NOTIFICATION_TIMEOUT_MS / 1000.0f);
-            // Remove trailing .0
+
             if (wcslen(wbuffer) > 2 && wbuffer[wcslen(wbuffer)-2] == L'.' && wbuffer[wcslen(wbuffer)-1] == L'0') {
                 wbuffer[wcslen(wbuffer)-2] = L'\0';
             }
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, wbuffer);
             
-            // Opacity (percentage)
+
             StringCbPrintfW(wbuffer, sizeof(wbuffer), L"%d", NOTIFICATION_MAX_OPACITY);
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT, wbuffer);
             
-            // Localize label text
+
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_TIME_LABEL, 
                            GetLocalizedString(L"Notification display time (sec):", L"Notification display time (sec):"));
             
-            // Modify edit box style, remove ES_NUMBER to allow decimal point
+
             HWND hEditTime = GetDlgItem(hwndDlg, IDC_NOTIFICATION_TIME_EDIT);
             LONG style = GetWindowLong(hEditTime, GWL_STYLE);
             SetWindowLong(hEditTime, GWL_STYLE, style & ~ES_NUMBER);
             
-            // Subclass edit boxes to support Enter key submission and input restrictions
+
             wpOrigEditProc = (WNDPROC)SetWindowLongPtr(hEditTime, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
             
-            // Set focus to time edit box
+
             SetFocus(hEditTime);
             
             return FALSE;
@@ -1451,61 +1448,61 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
                 char timeStr[32] = {0};
                 char opacityStr[32] = {0};
                 
-                // Get user input values using Unicode API
+
                 wchar_t wtimeStr[32], wopacityStr[32];
                 GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, wtimeStr, sizeof(wtimeStr)/sizeof(wchar_t));
                 GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT, wopacityStr, sizeof(wopacityStr)/sizeof(wchar_t));
                 
-                // Convert to ANSI for processing
+
                 WideCharToMultiByte(CP_ACP, 0, wtimeStr, -1, timeStr, sizeof(timeStr), NULL, NULL);
                 WideCharToMultiByte(CP_ACP, 0, wopacityStr, -1, opacityStr, sizeof(opacityStr), NULL, NULL);
                 
-                // Use more robust method to replace Chinese period
-                // First get the text in Unicode format
+
+
                 wchar_t wTimeStr[32] = {0};
                 GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, wTimeStr, sizeof(wTimeStr)/sizeof(wchar_t));
                 
-                // Replace Chinese punctuation marks in Unicode text
+
                 for (int i = 0; wTimeStr[i] != L'\0'; i++) {
-                    // Recognize various punctuation marks as decimal point
-                    if (wTimeStr[i] == L'。' ||  // Chinese period
-                        wTimeStr[i] == L'，' ||  // Chinese comma
-                        wTimeStr[i] == L',' ||   // English comma
-                        wTimeStr[i] == L'·' ||   // Chinese middle dot
-                        wTimeStr[i] == L'`' ||   // Backtick
-                        wTimeStr[i] == L'：' ||  // Chinese colon
-                        wTimeStr[i] == L':' ||   // English colon
-                        wTimeStr[i] == L'；' ||  // Chinese semicolon
-                        wTimeStr[i] == L';' ||   // English semicolon
-                        wTimeStr[i] == L'/' ||   // Forward slash
-                        wTimeStr[i] == L'\\' ||  // Backslash
-                        wTimeStr[i] == L'~' ||   // Tilde
-                        wTimeStr[i] == L'～' ||  // Full-width tilde
-                        wTimeStr[i] == L'、' ||  // Chinese enumeration comma
-                        wTimeStr[i] == L'．') {  // Full-width period
-                        wTimeStr[i] = L'.';      // Replace with English decimal point
+
+                    if (wTimeStr[i] == L'。' ||
+                        wTimeStr[i] == L'，' ||
+                        wTimeStr[i] == L',' ||
+                        wTimeStr[i] == L'·' ||
+                        wTimeStr[i] == L'`' ||
+                        wTimeStr[i] == L'：' ||
+                        wTimeStr[i] == L':' ||
+                        wTimeStr[i] == L'；' ||
+                        wTimeStr[i] == L';' ||
+                        wTimeStr[i] == L'/' ||
+                        wTimeStr[i] == L'\\' ||
+                        wTimeStr[i] == L'~' ||
+                        wTimeStr[i] == L'～' ||
+                        wTimeStr[i] == L'、' ||
+                        wTimeStr[i] == L'．') {
+                        wTimeStr[i] = L'.';
                     }
                 }
                 
-                // Convert processed Unicode text back to ASCII
+
                 WideCharToMultiByte(CP_ACP, 0, wTimeStr, -1, 
                                     timeStr, sizeof(timeStr), NULL, NULL);
                 
-                // Parse time (seconds) and convert to milliseconds
+
                 float timeInSeconds = atof(timeStr);
                 int timeInMs = (int)(timeInSeconds * 1000.0f);
                 
-                // Allow time to be set to 0 (no notification) or at least 100 milliseconds
+
                 if (timeInMs > 0 && timeInMs < 100) timeInMs = 100;
                 
-                // Parse opacity
+
                 int opacity = atoi(opacityStr);
                 
-                // Ensure opacity is in range 1-100
+
                 if (opacity < 1) opacity = 1;
                 if (opacity > 100) opacity = 100;
                 
-                // Write to configuration
+
                 WriteConfigNotificationTimeout(timeInMs);
                 WriteConfigNotificationOpacity(opacity);
                 
@@ -1519,14 +1516,14 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
             }
             break;
             
-        // Add handling for WM_CLOSE message
+
         case WM_CLOSE:
             EndDialog(hwndDlg, IDCANCEL);
             g_hwndNotificationDisplayDialog = NULL;
             return TRUE;
             
         case WM_DESTROY:
-            // Restore original window procedure
+
             {
             HWND hEditTime = GetDlgItem(hwndDlg, IDC_NOTIFICATION_TIME_EDIT);
             HWND hEditOpacity = GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT);
@@ -1547,7 +1544,7 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
 
 void ShowNotificationDisplayDialog(HWND hwndParent) {
     if (!g_hwndNotificationDisplayDialog) {
-        // Ensure latest configuration values are read first
+
         ReadNotificationTimeoutConfig();
         ReadNotificationOpacityConfig();
         
@@ -1560,7 +1557,7 @@ void ShowNotificationDisplayDialog(HWND hwndParent) {
     }
 }
 
-// Add global variable to track the integrated notification settings dialog handle
+
 static HWND g_hwndNotificationSettingsDialog = NULL;
 
 static void OnAudioPlaybackComplete(HWND hwnd) {
@@ -1568,17 +1565,17 @@ static void OnAudioPlaybackComplete(HWND hwnd) {
         const wchar_t* testText = GetLocalizedString(L"Test", L"Test");
         SetDlgItemTextW(hwnd, IDC_TEST_SOUND_BUTTON, testText);
         
-        // Get dialog data
+
         HWND hwndTestButton = GetDlgItem(hwnd, IDC_TEST_SOUND_BUTTON);
         
-        // Send WM_SETTEXT message to update button text
+
         if (hwndTestButton && IsWindow(hwndTestButton)) {
             SendMessageW(hwndTestButton, WM_SETTEXT, 0, (LPARAM)testText);
         }
         
-        // Update global playback state
+
         if (g_hwndNotificationSettingsDialog == hwnd) {
-            // Send message to dialog to notify state change
+
             SendMessage(hwnd, WM_APP + 100, 0, 0);
         }
     }
@@ -1588,7 +1585,7 @@ static void PopulateSoundComboBox(HWND hwndDlg) {
     HWND hwndCombo = GetDlgItem(hwndDlg, IDC_NOTIFICATION_SOUND_COMBO);
     if (!hwndCombo) return;
 
-    // Clear dropdown list
+
     SendMessage(hwndCombo, CB_RESETCONTENT, 0, 0);
 
 
@@ -1597,40 +1594,40 @@ static void PopulateSoundComboBox(HWND hwndDlg) {
 
     SendMessageW(hwndCombo, CB_ADDSTRING, 0, (LPARAM)GetLocalizedString(L"System Beep", L"System Beep"));
 
-    // Get audio folder path
+
     char audio_path[MAX_PATH];
     GetAudioFolderPath(audio_path, MAX_PATH);
     
-    // Convert to wide character path
+
     wchar_t wAudioPath[MAX_PATH];
     MultiByteToWideChar(CP_UTF8, 0, audio_path, -1, wAudioPath, MAX_PATH);
 
-    // Build search path
+
     wchar_t wSearchPath[MAX_PATH];
     StringCbPrintfW(wSearchPath, sizeof(wSearchPath), L"%s\\*.*", wAudioPath);
 
-    // Find audio files - using Unicode version of API
+
     WIN32_FIND_DATAW find_data;
     HANDLE hFind = FindFirstFileW(wSearchPath, &find_data);
     if (hFind != INVALID_HANDLE_VALUE) {
         do {
-            // Check file extension
+
             wchar_t* ext = wcsrchr(find_data.cFileName, L'.');
             if (ext && (
                 _wcsicmp(ext, L".flac") == 0 ||
                 _wcsicmp(ext, L".mp3") == 0 ||
                 _wcsicmp(ext, L".wav") == 0
             )) {
-                // Add Unicode filename directly to dropdown
+
                 SendMessageW(hwndCombo, CB_ADDSTRING, 0, (LPARAM)find_data.cFileName);
             }
         } while (FindNextFileW(hFind, &find_data));
         FindClose(hFind);
     }
 
-    // Set currently selected audio file
+
     if (NOTIFICATION_SOUND_FILE[0] != '\0') {
-        // Check if it's the special system beep marker
+
         if (strcmp(NOTIFICATION_SOUND_FILE, "SYSTEM_BEEP") == 0) {
 
             SendMessage(hwndCombo, CB_SETCURSEL, 1, 0);
@@ -1638,12 +1635,12 @@ static void PopulateSoundComboBox(HWND hwndDlg) {
             wchar_t wSoundFile[MAX_PATH];
             MultiByteToWideChar(CP_UTF8, 0, NOTIFICATION_SOUND_FILE, -1, wSoundFile, MAX_PATH);
             
-            // Get filename part
+
             wchar_t* fileName = wcsrchr(wSoundFile, L'\\');
             if (fileName) fileName++;
             else fileName = wSoundFile;
             
-            // Find and select the file in dropdown
+
             int index = SendMessageW(hwndCombo, CB_FINDSTRINGEXACT, -1, (LPARAM)fileName);
             if (index != CB_ERR) {
                 SendMessage(hwndCombo, CB_SETCURSEL, index, 0);
@@ -1670,64 +1667,64 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             ReadNotificationSoundConfig();
             ReadNotificationVolumeConfig();
             
-            // Save original volume value for restoration when canceling
+
             originalVolume = NOTIFICATION_SOUND_VOLUME;
             
-            // Apply multilingual support
+
             ApplyDialogLanguage(hwndDlg, CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG);
             
-            // Set notification message text - using Unicode functions
+
             wchar_t wideText[256];
             
-            // First edit box - Countdown timeout message
+
             MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_MESSAGE_TEXT, -1, 
                                wideText, sizeof(wideText)/sizeof(wchar_t));
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, wideText);
             
-            // Second edit box - Pomodoro timeout message
+
             MultiByteToWideChar(CP_UTF8, 0, POMODORO_TIMEOUT_MESSAGE_TEXT, -1, 
                                wideText, sizeof(wideText)/sizeof(wchar_t));
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT2, wideText);
             
-            // Third edit box - Pomodoro cycle completion message
+
             MultiByteToWideChar(CP_UTF8, 0, POMODORO_CYCLE_COMPLETE_TEXT, -1, 
                                wideText, sizeof(wideText)/sizeof(wchar_t));
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT3, wideText);
             
-            // Set notification display time
+
             SYSTEMTIME st = {0};
             GetLocalTime(&st);
             
-            // Read notification disabled setting
+
             ReadNotificationDisabledConfig();
             
-            // Set checkbox based on disabled state
+
             CheckDlgButton(hwndDlg, IDC_DISABLE_NOTIFICATION_CHECK, NOTIFICATION_DISABLED ? BST_CHECKED : BST_UNCHECKED);
             
-            // Enable/disable time control based on state
+
             EnableWindow(GetDlgItem(hwndDlg, IDC_NOTIFICATION_TIME_EDIT), !NOTIFICATION_DISABLED);
             
-            // Set time control value - display actual configured time regardless of disabled state
+
             int totalSeconds = NOTIFICATION_TIMEOUT_MS / 1000;
             st.wHour = totalSeconds / 3600;
             st.wMinute = (totalSeconds % 3600) / 60;
             st.wSecond = totalSeconds % 60;
             
-            // Set time control's initial value
+
             SendDlgItemMessage(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, DTM_SETSYSTEMTIME, 
                               GDT_VALID, (LPARAM)&st);
 
-            // Set notification opacity slider
+
             HWND hwndOpacitySlider = GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT);
             SendMessage(hwndOpacitySlider, TBM_SETRANGE, TRUE, MAKELONG(1, 100));
             SendMessage(hwndOpacitySlider, TBM_SETPOS, TRUE, NOTIFICATION_MAX_OPACITY);
             
-            // Update opacity text
+
             wchar_t opacityText[16];
             StringCbPrintfW(opacityText, sizeof(opacityText), L"%d%%", NOTIFICATION_MAX_OPACITY);
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_OPACITY_TEXT, opacityText);
             
-            // Set notification type radio buttons
+
             switch (NOTIFICATION_TYPE) {
                 case NOTIFICATION_TYPE_CATIME:
                     CheckDlgButton(hwndDlg, IDC_NOTIFICATION_TYPE_CATIME, BST_CHECKED);
@@ -1740,52 +1737,52 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                     break;
             }
             
-            // Populate audio dropdown
+
             PopulateSoundComboBox(hwndDlg);
             
-            // Set volume slider
+
             HWND hwndSlider = GetDlgItem(hwndDlg, IDC_VOLUME_SLIDER);
             SendMessage(hwndSlider, TBM_SETRANGE, TRUE, MAKELONG(0, 100));
             SendMessage(hwndSlider, TBM_SETPOS, TRUE, NOTIFICATION_SOUND_VOLUME);
             
-            // Update volume text
+
             wchar_t volumeText[16];
             StringCbPrintfW(volumeText, sizeof(volumeText), L"%d%%", NOTIFICATION_SOUND_VOLUME);
             SetDlgItemTextW(hwndDlg, IDC_VOLUME_TEXT, volumeText);
             
-            // Reset playback state on initialization
+
             isPlaying = FALSE;
             
-            // Set audio playback completion callback
+
             SetAudioPlaybackCompleteCallback(hwndDlg, OnAudioPlaybackComplete);
             
-            // Save dialog handle
+
             g_hwndNotificationSettingsDialog = hwndDlg;
             
             return TRUE;
         }
         
         case WM_HSCROLL: {
-            // Handle slider drag events
+
             if (GetDlgItem(hwndDlg, IDC_VOLUME_SLIDER) == (HWND)lParam) {
-                // Get slider's current position
+
                 int volume = (int)SendMessage((HWND)lParam, TBM_GETPOS, 0, 0);
                 
-                // Update volume percentage text
+
                 wchar_t volumeText[16];
                 StringCbPrintfW(volumeText, sizeof(volumeText), L"%d%%", volume);
                 SetDlgItemTextW(hwndDlg, IDC_VOLUME_TEXT, volumeText);
                 
-                // Apply volume setting in real-time
+
                 SetAudioVolume(volume);
                 
                 return TRUE;
             }
             else if (GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT) == (HWND)lParam) {
-                // Get slider's current position
+
                 int opacity = (int)SendMessage((HWND)lParam, TBM_GETPOS, 0, 0);
                 
-                // Update opacity percentage text
+
                 wchar_t opacityText[16];
                 StringCbPrintfW(opacityText, sizeof(opacityText), L"%d%%", opacity);
                 SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_OPACITY_TEXT, opacityText);
@@ -1796,24 +1793,24 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
         }
         
         case WM_COMMAND:
-            // Handle notification disable checkbox state change
+
             if (LOWORD(wParam) == IDC_DISABLE_NOTIFICATION_CHECK && HIWORD(wParam) == BN_CLICKED) {
                 BOOL isChecked = (IsDlgButtonChecked(hwndDlg, IDC_DISABLE_NOTIFICATION_CHECK) == BST_CHECKED);
                 EnableWindow(GetDlgItem(hwndDlg, IDC_NOTIFICATION_TIME_EDIT), !isChecked);
                 return TRUE;
             }
             else if (LOWORD(wParam) == IDOK) {
-                // Get notification message text - using Unicode functions
+
                 wchar_t wTimeout[256] = {0};
                 wchar_t wPomodoro[256] = {0};
                 wchar_t wCycle[256] = {0};
                 
-                // Get Unicode text
+
                 GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, wTimeout, sizeof(wTimeout)/sizeof(wchar_t));
                 GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT2, wPomodoro, sizeof(wPomodoro)/sizeof(wchar_t));
                 GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT3, wCycle, sizeof(wCycle)/sizeof(wchar_t));
                 
-                // Convert to UTF-8
+
                 char timeout_msg[256] = {0};
                 char pomodoro_msg[256] = {0};
                 char cycle_complete_msg[256] = {0};
@@ -1825,43 +1822,43 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 WideCharToMultiByte(CP_UTF8, 0, wCycle, -1, 
                                     cycle_complete_msg, sizeof(cycle_complete_msg), NULL, NULL);
                 
-                // Get notification display time
+
                 SYSTEMTIME st = {0};
                 
-                // Check if notification disable checkbox is checked
+
                 BOOL isDisabled = (IsDlgButtonChecked(hwndDlg, IDC_DISABLE_NOTIFICATION_CHECK) == BST_CHECKED);
                 
-                // Save disabled state
+
                 NOTIFICATION_DISABLED = isDisabled;
                 WriteConfigNotificationDisabled(isDisabled);
                 
-                // Get notification time settings
-                // Get notification time settings
+
+
                 if (SendDlgItemMessage(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, DTM_GETSYSTEMTIME, 0, (LPARAM)&st) == GDT_VALID) {
-                    // Calculate total seconds: hours*3600 + minutes*60 + seconds
+
                     int totalSeconds = st.wHour * 3600 + st.wMinute * 60 + st.wSecond;
                     
                     if (totalSeconds == 0) {
-                        // If time is 00:00:00, set to 0 (meaning disable notifications)
+
                         NOTIFICATION_TIMEOUT_MS = 0;
                         WriteConfigNotificationTimeout(NOTIFICATION_TIMEOUT_MS);
                         
                     } else if (!isDisabled) {
-                        // Only update non-zero notification time if not disabled
+
                         NOTIFICATION_TIMEOUT_MS = totalSeconds * 1000;
                         WriteConfigNotificationTimeout(NOTIFICATION_TIMEOUT_MS);
                     }
                 }
-                // If notifications are disabled, don't modify notification time configuration
+
                 
-                // Get notification opacity (from slider)
+
                 HWND hwndOpacitySlider = GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT);
                 int opacity = (int)SendMessage(hwndOpacitySlider, TBM_GETPOS, 0, 0);
                 if (opacity >= 1 && opacity <= 100) {
                     NOTIFICATION_MAX_OPACITY = opacity;
                 }
                 
-                // Get notification type
+
                 if (IsDlgButtonChecked(hwndDlg, IDC_NOTIFICATION_TYPE_CATIME)) {
                     NOTIFICATION_TYPE = NOTIFICATION_TYPE_CATIME;
                 } else if (IsDlgButtonChecked(hwndDlg, IDC_NOTIFICATION_TYPE_OS)) {
@@ -1870,7 +1867,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                     NOTIFICATION_TYPE = NOTIFICATION_TYPE_SYSTEM_MODAL;
                 }
                 
-                // Get selected audio file
+
                 HWND hwndCombo = GetDlgItem(hwndDlg, IDC_NOTIFICATION_SOUND_COMBO);
                 int index = SendMessage(hwndCombo, CB_GETCURSEL, 0, 0);
                 if (index > 0) {
@@ -1880,18 +1877,17 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
 
                     const wchar_t* sysBeepText = GetLocalizedString(L"System Beep", L"System Beep");
                     if (wcscmp(wFileName, sysBeepText) == 0) {
-                        // Use special marker to represent system beep
+
                         StringCbCopyA(NOTIFICATION_SOUND_FILE, sizeof(NOTIFICATION_SOUND_FILE), "SYSTEM_BEEP");
                     } else {
-                        // Get audio folder path
+                    
                         char audio_path[MAX_PATH];
                         GetAudioFolderPath(audio_path, MAX_PATH);
                         
-                        // Convert to UTF-8 path
                         char fileName[MAX_PATH];
                         WideCharToMultiByte(CP_UTF8, 0, wFileName, -1, fileName, MAX_PATH, NULL, NULL);
                         
-                        // Build complete file path
+
                         memset(NOTIFICATION_SOUND_FILE, 0, MAX_PATH);
                         StringCbPrintfA(NOTIFICATION_SOUND_FILE, MAX_PATH, "%s\\%s", audio_path, fileName);
                     }
@@ -1899,12 +1895,12 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                     NOTIFICATION_SOUND_FILE[0] = '\0';
                 }
                 
-                // Get volume slider position
+
                 HWND hwndSlider = GetDlgItem(hwndDlg, IDC_VOLUME_SLIDER);
                 int volume = (int)SendMessage(hwndSlider, TBM_GETPOS, 0, 0);
                 NOTIFICATION_SOUND_VOLUME = volume;
                 
-                // Save all settings
+
                 WriteConfigNotificationMessages(
                     timeout_msg,
                     pomodoro_msg,
@@ -1916,32 +1912,32 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 WriteConfigNotificationSound(NOTIFICATION_SOUND_FILE);
                 WriteConfigNotificationVolume(NOTIFICATION_SOUND_VOLUME);
                 
-                // Ensure any playing audio is stopped
+
                 if (isPlaying) {
                     StopNotificationSound();
                     isPlaying = FALSE;
                 }
                 
-                // Clean up callback before closing dialog
+
                 SetAudioPlaybackCompleteCallback(NULL, NULL);
                 
                 EndDialog(hwndDlg, IDOK);
                 g_hwndNotificationSettingsDialog = NULL;
                 return TRUE;
             } else if (LOWORD(wParam) == IDCANCEL) {
-                // Ensure any playing audio is stopped
+
                 if (isPlaying) {
                     StopNotificationSound();
                     isPlaying = FALSE;
                 }
                 
-                // Restore original volume setting
+
                 NOTIFICATION_SOUND_VOLUME = originalVolume;
                 
-                // Reapply original volume
+
                 SetAudioVolume(originalVolume);
                 
-                // Clean up callback before closing dialog
+
                 SetAudioPlaybackCompleteCallback(NULL, NULL);
                 
                 EndDialog(hwndDlg, IDCANCEL);
@@ -1954,7 +1950,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                     int index = SendMessage(hwndCombo, CB_GETCURSEL, 0, 0);
                     
                     if (index > 0) {
-                        // Get current slider volume and apply it
+
                         HWND hwndSlider = GetDlgItem(hwndDlg, IDC_VOLUME_SLIDER);
                         int volume = (int)SendMessage(hwndSlider, TBM_GETPOS, 0, 0);
                         SetAudioVolume(volume);
@@ -1962,59 +1958,58 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                         wchar_t wFileName[MAX_PATH];
                         SendMessageW(hwndCombo, CB_GETLBTEXT, index, (LPARAM)wFileName);
                         
-                        // Temporarily save current audio settings
+
                         char tempSoundFile[MAX_PATH];
                         StringCbCopyA(tempSoundFile, sizeof(tempSoundFile), NOTIFICATION_SOUND_FILE);
                         
-                        // Temporarily set audio file
+
                         const wchar_t* sysBeepText = GetLocalizedString(L"System Beep", L"System Beep");
                         if (wcscmp(wFileName, sysBeepText) == 0) {
-                            // Use special marker
+
                             StringCbCopyA(NOTIFICATION_SOUND_FILE, sizeof(NOTIFICATION_SOUND_FILE), "SYSTEM_BEEP");
                         } else {
-                            // Get audio folder path
+                        
                             char audio_path[MAX_PATH];
                             GetAudioFolderPath(audio_path, MAX_PATH);
                             
-                            // Convert to UTF-8 path
                             char fileName[MAX_PATH];
                             WideCharToMultiByte(CP_UTF8, 0, wFileName, -1, fileName, MAX_PATH, NULL, NULL);
                             
-                            // Build complete file path
+    
                             memset(NOTIFICATION_SOUND_FILE, 0, MAX_PATH);
                             StringCbPrintfA(NOTIFICATION_SOUND_FILE, MAX_PATH, "%s\\%s", audio_path, fileName);
                         }
                         
-                        // Play audio
+
                         if (PlayNotificationSound(hwndDlg)) {
 
                             SetDlgItemTextW(hwndDlg, IDC_TEST_SOUND_BUTTON, GetLocalizedString(L"Stop", L"Stop"));
                             isPlaying = TRUE;
                         }
                         
-                        // Restore previous settings
+
                         StringCbCopyA(NOTIFICATION_SOUND_FILE, sizeof(NOTIFICATION_SOUND_FILE), tempSoundFile);
                     }
                 } else {
-                    // Currently playing, stop playback and restore button text
+
                     StopNotificationSound();
                     SetDlgItemTextW(hwndDlg, IDC_TEST_SOUND_BUTTON, GetLocalizedString(L"Test", L"Test"));
                     isPlaying = FALSE;
                 }
                 return TRUE;
             } else if (LOWORD(wParam) == IDC_OPEN_SOUND_DIR_BUTTON) {
-                // Get audio directory path
+
                 char audio_path[MAX_PATH];
                 GetAudioFolderPath(audio_path, MAX_PATH);
                 
-                // Ensure directory exists
+
                 wchar_t wAudioPath[MAX_PATH];
                 MultiByteToWideChar(CP_UTF8, 0, audio_path, -1, wAudioPath, MAX_PATH);
                 
-                // Open directory
+
                 ShellExecuteW(hwndDlg, L"open", wAudioPath, NULL, NULL, SW_SHOWNORMAL);
                 
-                // Record currently selected audio file
+
                 HWND hwndCombo = GetDlgItem(hwndDlg, IDC_NOTIFICATION_SOUND_COMBO);
                 int selectedIndex = SendMessage(hwndCombo, CB_GETCURSEL, 0, 0);
                 wchar_t selectedFile[MAX_PATH] = {0};
@@ -2022,10 +2017,10 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                     SendMessageW(hwndCombo, CB_GETLBTEXT, selectedIndex, (LPARAM)selectedFile);
                 }
                 
-                // Repopulate audio dropdown
+
                 PopulateSoundComboBox(hwndDlg);
                 
-                // Try to restore previous selection
+
                 if (selectedFile[0] != L'\0') {
                     int newIndex = SendMessageW(hwndCombo, CB_FINDSTRINGEXACT, -1, (LPARAM)selectedFile);
                     if (newIndex != CB_ERR) {
@@ -2038,20 +2033,20 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 
                 return TRUE;
             } else if (LOWORD(wParam) == IDC_NOTIFICATION_SOUND_COMBO && HIWORD(wParam) == CBN_DROPDOWN) {
-                // When dropdown is about to open, reload file list
+
                 HWND hwndCombo = GetDlgItem(hwndDlg, IDC_NOTIFICATION_SOUND_COMBO);
                 
-                // Record currently selected file
+
                 int selectedIndex = SendMessage(hwndCombo, CB_GETCURSEL, 0, 0);
                 wchar_t selectedFile[MAX_PATH] = {0};
                 if (selectedIndex > 0) {
                     SendMessageW(hwndCombo, CB_GETLBTEXT, selectedIndex, (LPARAM)selectedFile);
                 }
                 
-                // Repopulate dropdown
+
                 PopulateSoundComboBox(hwndDlg);
                 
-                // Restore previous selection
+
                 if (selectedFile[0] != L'\0') {
                     int newIndex = SendMessageW(hwndCombo, CB_FINDSTRINGEXACT, -1, (LPARAM)selectedFile);
                     if (newIndex != CB_ERR) {
@@ -2063,19 +2058,19 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             }
             break;
             
-        // Add custom message handling for audio playback completion notification
+
         case WM_APP + 100:
-            // Audio playback is complete, update button state
+
             isPlaying = FALSE;
             return TRUE;
             
         case WM_CLOSE:
-            // Make sure to stop playback when closing dialog
+
             if (isPlaying) {
                 StopNotificationSound();
             }
             
-            // Clean up callback
+
             SetAudioPlaybackCompleteCallback(NULL, NULL);
             
             EndDialog(hwndDlg, IDCANCEL);
@@ -2083,7 +2078,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             return TRUE;
             
         case WM_DESTROY:
-            // Clean up callback when dialog is destroyed
+            // Clean up callback
             SetAudioPlaybackCompleteCallback(NULL, NULL);
             g_hwndNotificationSettingsDialog = NULL;
             break;
