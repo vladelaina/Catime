@@ -465,7 +465,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         }
 
         case WM_SETCURSOR: {
-            // When in edit mode, always use default arrow cursor
+
             if (CLOCK_EDIT_MODE && LOWORD(lp) == HTCLIENT) {
                 SetCursor(LoadCursorW(NULL, IDC_ARROW));
                 return TRUE; // Indicates we've handled this message

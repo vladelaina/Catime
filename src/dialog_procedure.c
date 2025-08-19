@@ -664,7 +664,7 @@ void ShowAboutDialog(HWND hwndParent) {
     ShowWindow(g_hwndAboutDlg, SW_SHOW);
 }
 
-// Add global variable to track pomodoro loop count setting dialog handle
+
 static HWND g_hwndPomodoroLoopDialog = NULL;
 
 void ShowPomodoroLoopDialog(HWND hwndParent) {
@@ -683,17 +683,17 @@ void ShowPomodoroLoopDialog(HWND hwndParent) {
     }
 }
 
-// Add subclassing procedure for loop count edit box
+
 LRESULT APIENTRY LoopEditSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     switch (uMsg) {
     case WM_KEYDOWN: {
         if (wParam == VK_RETURN) {
-            // Send BM_CLICK message to the parent window (dialog)
+
             SendMessage(GetParent(hwnd), WM_COMMAND, MAKEWPARAM(CLOCK_IDC_BUTTON_OK, BN_CLICKED), (LPARAM)hwnd);
             return 0;
         }
-        // Handle Ctrl+A select all
+
         if (wParam == 'A' && GetKeyState(VK_CONTROL) < 0) {
             SendMessage(hwnd, EM_SETSEL, 0, -1);
             return 0;
@@ -701,11 +701,11 @@ LRESULT APIENTRY LoopEditSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARA
         break;
     }
     case WM_CHAR: {
-        // Handle Ctrl+A character message to prevent alert sound
+
         if (GetKeyState(VK_CONTROL) < 0 && (wParam == 1 || wParam == 'a' || wParam == 'A')) {
             return 0;
         }
-        // Prevent Enter key from generating character messages for further processing to avoid alert sound
+
         if (wParam == VK_RETURN) { // VK_RETURN (0x0D) is the char code for Enter
             return 0;
         }
@@ -715,45 +715,41 @@ LRESULT APIENTRY LoopEditSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARA
     return CallWindowProc(wpOrigLoopEditProc, hwnd, uMsg, wParam, lParam);
 }
 
-// Modify helper function to handle numeric input with spaces
+
 BOOL IsValidNumberInput(const wchar_t* str) {
-    // Check if empty
+
     if (!str || !*str) {
         return FALSE;
     }
     
-    BOOL hasDigit = FALSE;  // Used to track if at least one digit is found
-    wchar_t cleanStr[16] = {0};  // Used to store cleaned string
+    BOOL hasDigit = FALSE;
+    wchar_t cleanStr[16] = {0};
     int cleanIndex = 0;
     
-    // Traverse string, ignore spaces, only keep digits
+
     for (int i = 0; str[i]; i++) {
         if (iswdigit(str[i])) {
             cleanStr[cleanIndex++] = str[i];
             hasDigit = TRUE;
-        } else if (!iswspace(str[i])) {  // If not a space and not a digit, then invalid
+        } else if (!iswspace(str[i])) {
             return FALSE;
         }
     }
     
-    return hasDigit;  // Return TRUE as long as there is at least one digit
+    return hasDigit;
 }
 
-// Modify PomodoroLoopDlgProc function
+
 INT_PTR CALLBACK PomodoroLoopDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_INITDIALOG: {
-            // Apply multilingual support
             ApplyDialogLanguage(hwndDlg, CLOCK_IDD_POMODORO_LOOP_DIALOG);
             
-            // Set static text
             SetDlgItemTextW(hwndDlg, CLOCK_IDC_STATIC, GetLocalizedString(L"请输入循环次数（1-100）：", L"Please enter loop count (1-100):"));
             
-            // Set focus to edit box
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
             SetFocus(hwndEdit);
             
-            // Subclass edit control
             wpOrigLoopEditProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, 
                                                           (LONG_PTR)LoopEditSubclassProc);
             
