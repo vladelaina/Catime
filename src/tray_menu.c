@@ -99,7 +99,6 @@ static void FormatPomodoroTime(int seconds, wchar_t* buffer, size_t bufferSize) 
     if (hours > 0) {
         _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d:%02d", hours, minutes, secs);
     } else if (secs == 0) {
-
         _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d", minutes);
     } else {
         _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d", minutes, secs);
@@ -112,12 +111,10 @@ void TruncateFileName(const wchar_t* fileName, wchar_t* truncated, size_t maxLen
     
     size_t nameLen = wcslen(fileName);
     if (nameLen <= maxLen) {
-
         wcscpy(truncated, fileName);
         return;
     }
     
-
     const wchar_t* lastDot = wcsrchr(fileName, L'.');
     const wchar_t* fileNameNoExt = fileName;
     const wchar_t* ext = L"";
@@ -125,15 +122,12 @@ void TruncateFileName(const wchar_t* fileName, wchar_t* truncated, size_t maxLen
     size_t extLen = 0;
     
     if (lastDot && lastDot != fileName) {
-
         ext = lastDot;
         extLen = wcslen(ext);
         nameNoExtLen = lastDot - fileName;
     }
     
-
     if (nameNoExtLen <= 27) {
-
         wcsncpy(truncated, fileName, maxLen - extLen - 3);
         truncated[maxLen - extLen - 3] = L'\0';
         wcscat(truncated, L"...");
@@ -141,42 +135,32 @@ void TruncateFileName(const wchar_t* fileName, wchar_t* truncated, size_t maxLen
         return;
     }
     
-
     wchar_t buffer[MAX_PATH];
     
-
     wcsncpy(buffer, fileName, 12);
     buffer[12] = L'\0';
     
-
     wcscat(buffer, L"...");
     
-
     wcsncat(buffer, fileName + nameNoExtLen - 12, 12);
     
-
     wcscat(buffer, ext);
     
-
     wcscpy(truncated, buffer);
 }
 
 
 void ShowColorMenu(HWND hwnd) {
-
     ReadTimeoutActionFromConfig();
     
-
     SetCursor(LoadCursorW(NULL, MAKEINTRESOURCEW(IDC_ARROW)));
     
     HMENU hMenu = CreatePopupMenu();
     
-
     AppendMenuW(hMenu, MF_STRING | (CLOCK_EDIT_MODE ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDC_EDIT_MODE, 
                GetLocalizedString(L"编辑模式", L"Edit Mode"));
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
-
 
     HMENU hTimeoutMenu = CreatePopupMenu();
     
@@ -207,7 +191,6 @@ void ShowColorMenu(HWND hwnd) {
         wchar_t truncatedName[MAX_PATH];
         TruncateFileName(wFileName, truncatedName, 25);
         
-
         BOOL isCurrentFile = (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE && 
                              strlen(CLOCK_TIMEOUT_FILE_PATH) > 0 && 
                              strcmp(CLOCK_RECENT_FILES[i].path, CLOCK_TIMEOUT_FILE_PATH) == 0);
@@ -223,7 +206,6 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hFileMenu, MF_STRING, CLOCK_IDM_BROWSE_FILE,
                GetLocalizedString(L"浏览...", L"Browse..."));
 
-
     AppendMenuW(hTimeoutMenu, MF_POPUP | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE ? MF_CHECKED : MF_UNCHECKED), 
                (UINT_PTR)hFileMenu, 
                GetLocalizedString(L"打开文件/软件", L"Open File/Software"));
@@ -233,7 +215,6 @@ void ShowColorMenu(HWND hwnd) {
                GetLocalizedString(L"打开网站", L"Open Website"));
 
     AppendMenuW(hTimeoutMenu, MF_SEPARATOR, 0, NULL);
-
 
     AppendMenuW(hTimeoutMenu, MF_STRING | MF_GRAYED | MF_DISABLED, 
                0,
@@ -251,43 +232,33 @@ void ShowColorMenu(HWND hwnd) {
                CLOCK_IDM_SLEEP,
                GetLocalizedString(L"睡眠", L"Sleep"));
 
-
     AppendMenuW(hTimeoutMenu, MF_SEPARATOR, 0, NULL);
 
-
     HMENU hAdvancedMenu = CreatePopupMenu();
-
 
     AppendMenuW(hAdvancedMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_RUN_COMMAND ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_RUN_COMMAND,
                GetLocalizedString(L"运行命令", L"Run Command"));
 
-
     AppendMenuW(hAdvancedMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_HTTP_REQUEST ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_HTTP_REQUEST,
                GetLocalizedString(L"HTTP 请求", L"HTTP Request"));
 
-
     BOOL isAdvancedOptionSelected = (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_RUN_COMMAND ||
                                     CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_HTTP_REQUEST);
-
 
     AppendMenuW(hTimeoutMenu, MF_POPUP | (isAdvancedOptionSelected ? MF_CHECKED : MF_UNCHECKED),
                (UINT_PTR)hAdvancedMenu,
                GetLocalizedString(L"高级", L"Advanced"));
 
-
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeoutMenu, 
                 GetLocalizedString(L"超时动作", L"Timeout Action"));
-
 
     HMENU hTimeOptionsMenu = CreatePopupMenu();
     AppendMenuW(hTimeOptionsMenu, MF_STRING, CLOCK_IDC_MODIFY_TIME_OPTIONS,
                 GetLocalizedString(L"倒计时预设", L"Modify Quick Countdown Options"));
     
-
     HMENU hStartupSettingsMenu = CreatePopupMenu();
-
 
     char currentStartupMode[20] = "COUNTDOWN";
     char configPath[MAX_PATH];  
@@ -304,7 +275,6 @@ void ShowColorMenu(HWND hwnd) {
         fclose(configFile);
     }
     
-
     AppendMenuW(hStartupSettingsMenu, MF_STRING | 
                 (strcmp(currentStartupMode, "COUNTDOWN") == 0 ? MF_CHECKED : 0),
                 CLOCK_IDC_SET_COUNTDOWN_TIME,
@@ -327,20 +297,16 @@ void ShowColorMenu(HWND hwnd) {
     
     AppendMenuW(hStartupSettingsMenu, MF_SEPARATOR, 0, NULL);
 
-
     AppendMenuW(hStartupSettingsMenu, MF_STRING | 
             (IsAutoStartEnabled() ? MF_CHECKED : MF_UNCHECKED),
             CLOCK_IDC_AUTO_START,
             GetLocalizedString(L"开机自启动", L"Start with Windows"));
 
-
     AppendMenuW(hTimeOptionsMenu, MF_POPUP, (UINT_PTR)hStartupSettingsMenu,
                 GetLocalizedString(L"启动设置", L"Startup Settings"));
 
-
     AppendMenuW(hTimeOptionsMenu, MF_STRING, CLOCK_IDM_NOTIFICATION_SETTINGS,
                 GetLocalizedString(L"通知设置", L"Notification Settings"));
-
 
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeOptionsMenu,
                 GetLocalizedString(L"预设管理", L"Preset Management"));
@@ -349,19 +315,15 @@ void ShowColorMenu(HWND hwnd) {
                 CLOCK_IDM_TOPMOST,
                 GetLocalizedString(L"置顶", L"Always on Top"));
 
-
     AppendMenuW(hMenu, MF_STRING, CLOCK_IDM_HOTKEY_SETTINGS,
                 GetLocalizedString(L"热键设置", L"Hotkey Settings"));
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
-
     HMENU hMoreFontsMenu = CreatePopupMenu();
     HMENU hFontSubMenu = CreatePopupMenu();
     
-
     for (int i = 0; i < FONT_RESOURCES_COUNT; i++) {
-
         if (strcmp(fontResources[i].fontName, "Terminess Nerd Font Propo Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "DaddyTimeMono Nerd Font Propo Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Foldit SemiBold Essence.ttf") == 0 ||
@@ -390,9 +352,7 @@ void ShowColorMenu(HWND hwnd) {
 
     AppendMenuW(hFontSubMenu, MF_SEPARATOR, 0, NULL);
 
-
     for (int i = 0; i < FONT_RESOURCES_COUNT; i++) {
-
         if (strcmp(fontResources[i].fontName, "Terminess Nerd Font Propo Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "DaddyTimeMono Nerd Font Propo Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Foldit SemiBold Essence.ttf") == 0 ||
@@ -420,16 +380,13 @@ void ShowColorMenu(HWND hwnd) {
                   fontResources[i].menuId, wDisplayNameMore);
     }
 
-
     AppendMenuW(hFontSubMenu, MF_POPUP, (UINT_PTR)hMoreFontsMenu, GetLocalizedString(L"更多", L"More"));
-
 
     HMENU hColorSubMenu = CreatePopupMenu();
 
     for (int i = 0; i < COLOR_OPTIONS_COUNT; i++) {
         const char* hexColor = COLOR_OPTIONS[i].hexColor;
         
-
         wchar_t hexColorW[16];
         MultiByteToWideChar(CP_UTF8, 0, hexColor, -1, hexColorW, 16);
         
@@ -525,12 +482,11 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hMenu, MF_STRING, 109,
                 GetLocalizedString(L"退出", L"Exit"));
     
-    // Display menu
     POINT pt;
     GetCursorPos(&pt);
     SetForegroundWindow(hwnd);
     TrackPopupMenu(hMenu, TPM_LEFTALIGN | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt.x, pt.y, 0, hwnd, NULL);
-    PostMessage(hwnd, WM_NULL, 0, 0); // This will allow the menu to close automatically when clicking outside
+    PostMessage(hwnd, WM_NULL, 0, 0);
     DestroyMenu(hMenu);
 }
 
@@ -544,30 +500,24 @@ void ShowContextMenu(HWND hwnd) {
     
     HMENU hMenu = CreatePopupMenu();
     
-    // Timer management menu - added at the top
+
     HMENU hTimerManageMenu = CreatePopupMenu();
     
-    // Set conditions for whether submenu items should be enabled
-    // Timer options should be available when:
-    // 1. Not in show current time mode
-    // 2. And either countdown or count-up is in progress
-    // 3. If in countdown mode, the timer hasn't ended yet (countdown elapsed time is less than total time)
+
     BOOL timerRunning = (!CLOCK_SHOW_CURRENT_TIME && 
                          (CLOCK_COUNT_UP || 
                           (!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0 && countdown_elapsed_time < CLOCK_TOTAL_TIME)));
     
-    // Pause/Resume text changes based on current state
+
     const wchar_t* pauseResumeText = CLOCK_IS_PAUSED ? 
                                     GetLocalizedString(L"继续", L"Resume") : 
                                     GetLocalizedString(L"暂停", L"Pause");
     
-    // Submenu items are disabled based on conditions, but parent menu item remains selectable
+
     AppendMenuW(hTimerManageMenu, MF_STRING | (timerRunning ? MF_ENABLED : MF_GRAYED),
                CLOCK_IDM_TIMER_PAUSE_RESUME, pauseResumeText);
     
-    // Restart option should be available when:
-    // 1. Not in show current time mode
-    // 2. And either countdown or count-up is in progress (regardless of whether countdown has ended)
+
     BOOL canRestart = (!CLOCK_SHOW_CURRENT_TIME && (CLOCK_COUNT_UP || 
                       (!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0)));
     
@@ -575,13 +525,13 @@ void ShowContextMenu(HWND hwnd) {
                CLOCK_IDM_TIMER_RESTART, 
                GetLocalizedString(L"重新开始", L"Start Over"));
     
-    // Add timer management menu to main menu - parent menu item is always enabled
+
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimerManageMenu,
                GetLocalizedString(L"计时管理", L"Timer Control"));
     
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
     
-    // Time display menu
+
     HMENU hTimeMenu = CreatePopupMenu();
     AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_SHOW_CURRENT_TIME,
@@ -599,11 +549,11 @@ void ShowContextMenu(HWND hwnd) {
                (UINT_PTR)hTimeMenu,
                GetLocalizedString(L"时间显示", L"Time Display"));
 
-    // Before Pomodoro menu, first read the latest configuration values
+
     char configPath[MAX_PATH];
     GetConfigPath(configPath, MAX_PATH);
     FILE *configFile = fopen(configPath, "r");
-    POMODORO_TIMES_COUNT = 0;  // Initialize to 0
+    POMODORO_TIMES_COUNT = 0;
     
     if (configFile) {
         char line[256];
@@ -619,10 +569,10 @@ void ShowContextMenu(HWND hwnd) {
                     token = strtok(NULL, ",");
                 }
                 
-                // Set the actual number of time options
+
                 POMODORO_TIMES_COUNT = index;
                 
-                // Ensure at least one valid value
+
                 if (index > 0) {
                     POMODORO_WORK_TIME = POMODORO_TIMES[0];
                     if (index > 1) POMODORO_SHORT_BREAK = POMODORO_TIMES[1];
@@ -631,47 +581,46 @@ void ShowContextMenu(HWND hwnd) {
             }
             else if (strncmp(line, "POMODORO_LOOP_COUNT=", 20) == 0) {
                 sscanf(line, "POMODORO_LOOP_COUNT=%d", &POMODORO_LOOP_COUNT);
-                // Ensure loop count is at least 1
+
                 if (POMODORO_LOOP_COUNT < 1) POMODORO_LOOP_COUNT = 1;
             }
         }
         fclose(configFile);
     }
 
-    // Pomodoro menu
+
     HMENU hPomodoroMenu = CreatePopupMenu();
     
-    // Add timeBuffer declaration
-    wchar_t timeBuffer[64]; // For storing formatted time string
+    wchar_t timeBuffer[64];
     
     AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_START,
                 GetLocalizedString(L"开始", L"Start"));
     AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
 
-    // Create menu items for each Pomodoro time
+
     for (int i = 0; i < POMODORO_TIMES_COUNT; i++) {
         FormatPomodoroTime(POMODORO_TIMES[i], timeBuffer, sizeof(timeBuffer)/sizeof(wchar_t));
         
-        // Support both old and new ID systems
+
         UINT menuId;
         if (i == 0) menuId = CLOCK_IDM_POMODORO_WORK;
         else if (i == 1) menuId = CLOCK_IDM_POMODORO_BREAK;
         else if (i == 2) menuId = CLOCK_IDM_POMODORO_LBREAK;
         else menuId = CLOCK_IDM_POMODORO_TIME_BASE + i;
         
-        // Check if this is the active Pomodoro phase
+
         BOOL isCurrentPhase = (current_pomodoro_phase != POMODORO_PHASE_IDLE &&
                               current_pomodoro_time_index == i &&
                               !CLOCK_SHOW_CURRENT_TIME &&
-                              !CLOCK_COUNT_UP &&  // Add check for not being in count-up mode
+                              !CLOCK_COUNT_UP &&
                               CLOCK_TOTAL_TIME == POMODORO_TIMES[i]);
         
-        // Add check mark if it's the current phase
+
         AppendMenuW(hPomodoroMenu, MF_STRING | (isCurrentPhase ? MF_CHECKED : MF_UNCHECKED), 
                     menuId, timeBuffer);
     }
 
-    // Add loop count option
+
     wchar_t menuText[64];
     _snwprintf(menuText, sizeof(menuText)/sizeof(wchar_t),
               GetLocalizedString(L"循环次数: %d", L"Loop Count: %d"),
@@ -682,15 +631,15 @@ void ShowContextMenu(HWND hwnd) {
 
     AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
 
-    // Add combination option
+
     AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_COMBINATION,
               GetLocalizedString(L"组合", L"Combination"));
     
-    // Add Pomodoro menu to main menu
+
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hPomodoroMenu,
                 GetLocalizedString(L"番茄时钟", L"Pomodoro"));
 
-    // Count-up menu - changed to direct click to start
+
     AppendMenuW(hMenu, MF_STRING | (CLOCK_COUNT_UP ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_COUNT_UP_START,
                GetLocalizedString(L"正计时", L"Count Up"));
@@ -701,18 +650,17 @@ void ShowContextMenu(HWND hwnd) {
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
-    // Add quick time options (use high, conflict-free ID base)
+
     for (int i = 0; i < time_options_count; i++) {
         wchar_t menu_item[20];
         FormatPomodoroTime(time_options[i], menu_item, sizeof(menu_item)/sizeof(wchar_t));
         AppendMenuW(hMenu, MF_STRING, CLOCK_IDM_QUICK_TIME_BASE + i, menu_item);
     }
 
-    // Display menu
     POINT pt;
     GetCursorPos(&pt);
     SetForegroundWindow(hwnd);
     TrackPopupMenu(hMenu, TPM_BOTTOMALIGN | TPM_LEFTALIGN | TPM_NONOTIFY, pt.x, pt.y, 0, hwnd, NULL);
-    PostMessage(hwnd, WM_NULL, 0, 0); // This will allow the menu to close automatically when clicking outside
+    PostMessage(hwnd, WM_NULL, 0, 0);
     DestroyMenu(hMenu);
 }
