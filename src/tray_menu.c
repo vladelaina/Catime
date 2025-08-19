@@ -327,21 +327,21 @@ void ShowColorMenu(HWND hwnd) {
     
     AppendMenuW(hStartupSettingsMenu, MF_SEPARATOR, 0, NULL);
 
-    // Add auto-start option
+
     AppendMenuW(hStartupSettingsMenu, MF_STRING | 
             (IsAutoStartEnabled() ? MF_CHECKED : MF_UNCHECKED),
             CLOCK_IDC_AUTO_START,
             GetLocalizedString(L"开机自启动", L"Start with Windows"));
 
-    // Add startup settings menu to preset management menu
+
     AppendMenuW(hTimeOptionsMenu, MF_POPUP, (UINT_PTR)hStartupSettingsMenu,
                 GetLocalizedString(L"启动设置", L"Startup Settings"));
 
-    // Add notification settings menu - changed to direct menu item, no longer using submenu
+
     AppendMenuW(hTimeOptionsMenu, MF_STRING, CLOCK_IDM_NOTIFICATION_SETTINGS,
                 GetLocalizedString(L"通知设置", L"Notification Settings"));
 
-    // Add preset management menu to main menu
+
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeOptionsMenu,
                 GetLocalizedString(L"预设管理", L"Preset Management"));
     
@@ -355,13 +355,13 @@ void ShowColorMenu(HWND hwnd) {
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
-    // Font menu
+
     HMENU hMoreFontsMenu = CreatePopupMenu();
     HMENU hFontSubMenu = CreatePopupMenu();
     
-    // First add commonly used fonts to the main menu
+
     for (int i = 0; i < FONT_RESOURCES_COUNT; i++) {
-        // These fonts are kept in the main menu
+
         if (strcmp(fontResources[i].fontName, "Terminess Nerd Font Propo Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "DaddyTimeMono Nerd Font Propo Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Foldit SemiBold Essence.ttf") == 0 ||
@@ -392,7 +392,7 @@ void ShowColorMenu(HWND hwnd) {
 
 
     for (int i = 0; i < FONT_RESOURCES_COUNT; i++) {
-        // Exclude fonts already added to the main menu
+
         if (strcmp(fontResources[i].fontName, "Terminess Nerd Font Propo Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "DaddyTimeMono Nerd Font Propo Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Foldit SemiBold Essence.ttf") == 0 ||
@@ -423,13 +423,13 @@ void ShowColorMenu(HWND hwnd) {
 
     AppendMenuW(hFontSubMenu, MF_POPUP, (UINT_PTR)hMoreFontsMenu, GetLocalizedString(L"更多", L"More"));
 
-    // Color menu
+
     HMENU hColorSubMenu = CreatePopupMenu();
-    // Preset color option menu IDs start from 201 to 201+COLOR_OPTIONS_COUNT-1
+
     for (int i = 0; i < COLOR_OPTIONS_COUNT; i++) {
         const char* hexColor = COLOR_OPTIONS[i].hexColor;
         
-        // Convert hexColor to Unicode
+
         wchar_t hexColorW[16];
         MultiByteToWideChar(CP_UTF8, 0, hexColor, -1, hexColorW, 16);
         
@@ -437,14 +437,14 @@ void ShowColorMenu(HWND hwnd) {
         mii.fMask = MIIM_STRING | MIIM_ID | MIIM_STATE | MIIM_FTYPE;
         mii.fType = MFT_STRING | MFT_OWNERDRAW;
         mii.fState = strcmp(CLOCK_TEXT_COLOR, hexColor) == 0 ? MFS_CHECKED : MFS_UNCHECKED;
-        mii.wID = 201 + i;  // Preset color menu item IDs start from 201
+        mii.wID = 201 + i;
         mii.dwTypeData = hexColorW;
         
         InsertMenuItem(hColorSubMenu, i, TRUE, &mii);
     }
     AppendMenuW(hColorSubMenu, MF_SEPARATOR, 0, NULL);
 
-    // Custom color options
+
     HMENU hCustomizeMenu = CreatePopupMenu();
     AppendMenuW(hCustomizeMenu, MF_STRING, CLOCK_IDC_COLOR_VALUE, 
                 GetLocalizedString(L"颜色值", L"Color Value"));
@@ -454,7 +454,7 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hColorSubMenu, MF_POPUP, (UINT_PTR)hCustomizeMenu, 
                 GetLocalizedString(L"自定义", L"Customize"));
 
-    // Add font and color menus to main menu
+
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hFontSubMenu, 
                 GetLocalizedString(L"字体", L"Font"));
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hColorSubMenu, 
@@ -462,13 +462,13 @@ void ShowColorMenu(HWND hwnd) {
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
-    // About menu
+
     HMENU hAboutMenu = CreatePopupMenu();
 
 
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_ABOUT, GetLocalizedString(L"关于", L"About"));
 
-    // Add separator
+
     AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);
 
 
@@ -477,7 +477,7 @@ void ShowColorMenu(HWND hwnd) {
 
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_FEEDBACK, GetLocalizedString(L"反馈", L"Feedback"));
     
-    // Add separator
+
     AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);
     
 
@@ -487,7 +487,7 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_CHECK_UPDATE, 
                GetLocalizedString(L"检查更新", L"Check for Updates"));
 
-    // Language selection menu
+
     HMENU hLangMenu = CreatePopupMenu();
     AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_CHINESE_SIMP ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDM_LANG_CHINESE, L"简体中文");
@@ -512,16 +512,16 @@ void ShowColorMenu(HWND hwnd) {
 
     AppendMenuW(hAboutMenu, MF_POPUP, (UINT_PTR)hLangMenu, GetLocalizedString(L"语言", L"Language"));
 
-    // Add reset option to the end of the help menu
+
     AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);
     AppendMenuW(hAboutMenu, MF_STRING, 200,
                 GetLocalizedString(L"重置", L"Reset"));
 
-    // Add about menu to main menu
+
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hAboutMenu,
                 GetLocalizedString(L"帮助", L"Help"));
 
-    // Only keep exit option
+
     AppendMenuW(hMenu, MF_STRING, 109,
                 GetLocalizedString(L"退出", L"Exit"));
     
@@ -679,7 +679,7 @@ void ShowContextMenu(HWND hwnd) {
     AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_LOOP_COUNT, menuText);
 
 
-    // Add separator
+
     AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
 
     // Add combination option

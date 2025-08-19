@@ -18,9 +18,9 @@
 #include "../include/color.h"
 #include "../include/tray.h"
 #include "../include/tray_menu.h"
-#include "../include/timer.h"  
-#include "../include/window.h"  
-#include "../include/startup.h" 
+#include "../include/timer.h"
+#include "../include/window.h"
+#include "../include/startup.h"
 #include "../include/config.h"
 #include "../include/window_procedure.h"
 #include "../include/window_events.h"
@@ -468,10 +468,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
             if (CLOCK_EDIT_MODE && LOWORD(lp) == HTCLIENT) {
                 SetCursor(LoadCursorW(NULL, IDC_ARROW));
-                return TRUE; // Indicates we've handled this message
+                return TRUE;
             }
             
-            // Also use default arrow cursor when handling tray icon operations
+
             if (LOWORD(lp) == HTCLIENT || msg == CLOCK_WM_TRAYICON) {
                 SetCursor(LoadCursorW(NULL, IDC_ARROW));
                 return TRUE;
@@ -516,7 +516,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             break;
         }
         case WM_DESTROY: {
-            // Unregister global hotkeys when window is destroyed
+
             UnregisterGlobalHotkeys(hwnd);
             HandleWindowDestroy(hwnd);
             return 0;
@@ -526,34 +526,34 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             break;
         }
         case WM_COMMAND: {
-            // Handle preset color options (ID: 201 ~ 201+COLOR_OPTIONS_COUNT-1)
+
             if (LOWORD(wp) >= 201 && LOWORD(wp) < 201 + COLOR_OPTIONS_COUNT) {
                 int colorIndex = LOWORD(wp) - 201;
                 if (colorIndex >= 0 && colorIndex < COLOR_OPTIONS_COUNT) {
-                    // Update current color
+
                     strncpy(CLOCK_TEXT_COLOR, COLOR_OPTIONS[colorIndex].hexColor, 
                             sizeof(CLOCK_TEXT_COLOR) - 1);
                     CLOCK_TEXT_COLOR[sizeof(CLOCK_TEXT_COLOR) - 1] = '\0';
                     
-                    // Write to config file
+
                     char config_path[MAX_PATH];
                     GetConfigPath(config_path, MAX_PATH);
                     WriteConfig(config_path);
                     
-                    // Redraw window to show new color
+
                     InvalidateRect(hwnd, NULL, TRUE);
                     return 0;
                 }
             }
             WORD cmd = LOWORD(wp);
             switch (cmd) {
-                case 101: {   
+                case 101: {
                     if (CLOCK_SHOW_CURRENT_TIME) {
                         CLOCK_SHOW_CURRENT_TIME = FALSE;
                         CLOCK_LAST_TIME_UPDATE = 0;
                         KillTimer(hwnd, 1);
                     }
-                    while (1) {
+                                            while (1) {
                         memset(inputText, 0, sizeof(inputText));
                         DialogBoxParamW(GetModuleHandle(NULL), MAKEINTRESOURCEW(CLOCK_IDD_DIALOG1), hwnd, DlgProc, (LPARAM)CLOCK_IDD_DIALOG1);
 
@@ -561,7 +561,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             break;
                         }
 
-                        // Check if it's only spaces
                         BOOL isAllSpaces = TRUE;
                         for (int i = 0; inputText[i]; i++) {
                             if (!iswspace(inputText[i])) {
@@ -574,15 +573,15 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         }
 
                         int total_seconds = 0;
-                        // Convert Unicode to ANSI for ParseInput
+
                         char inputTextA[256];
                         WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
                         if (ParseInput(inputTextA, &total_seconds)) {
-                            // Stop any notification sound that may be playing
+
                             extern void StopNotificationSound(void);
                             StopNotificationSound();
                             
-                            // Close all notification windows
+
                             CloseAllNotifications();
                             
                             KillTimer(hwnd, 1);
@@ -597,7 +596,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             message_shown = FALSE;        
                             countup_message_shown = FALSE;
                             
-                            // If currently in Pomodoro mode, reset the Pomodoro state when switching to normal countdown
+
                             if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
                                 current_pomodoro_phase = POMODORO_PHASE_IDLE;
                                 current_pomodoro_time_index = 0;
@@ -614,14 +613,14 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     }
                     break;
                 }
-                // Handle quick time options (legacy IDs 102..)
+
                 case 102: case 103: case 104: case 105: case 106:
                 case 107: case 108: {
-                    // Stop any notification sound that may be playing
+
                     extern void StopNotificationSound(void);
                     StopNotificationSound();
                     
-                    // Close all notification windows
+
                     CloseAllNotifications();
                     
                     int index = cmd - 102;
@@ -629,7 +628,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         int seconds = time_options[index];
                         if (seconds > 0) {
                             KillTimer(hwnd, 1);
-                            CLOCK_TOTAL_TIME = seconds; // Already in seconds
+                            CLOCK_TOTAL_TIME = seconds;
                             countdown_elapsed_time = 0;
                             countdown_message_shown = FALSE;
                             CLOCK_COUNT_UP = FALSE;
@@ -640,7 +639,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             message_shown = FALSE;        
                             countup_message_shown = FALSE;
                             
-                            // If currently in Pomodoro mode, reset the Pomodoro state when switching to normal countdown
+
                             if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
                                 current_pomodoro_phase = POMODORO_PHASE_IDLE;
                                 current_pomodoro_time_index = 0;
@@ -654,13 +653,13 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     }
                     break;
                 }
-                // Handle quick time options (new ID base CLOCK_IDM_QUICK_TIME_BASE, support up to MAX_TIME_OPTIONS)
+
                 default: if (cmd >= CLOCK_IDM_QUICK_TIME_BASE && cmd < CLOCK_IDM_QUICK_TIME_BASE + MAX_TIME_OPTIONS) {
-                    // Stop any notification sound that may be playing
+
                     extern void StopNotificationSound(void);
                     StopNotificationSound();
 
-                    // Close all notification windows
+
                     CloseAllNotifications();
 
                     int index = cmd - CLOCK_IDM_QUICK_TIME_BASE;
@@ -668,7 +667,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         int seconds = time_options[index];
                         if (seconds > 0) {
                             KillTimer(hwnd, 1);
-                            CLOCK_TOTAL_TIME = seconds; // Already in seconds
+                            CLOCK_TOTAL_TIME = seconds;
                             countdown_elapsed_time = 0;
                             countdown_message_shown = FALSE;
                             CLOCK_COUNT_UP = FALSE;
@@ -679,7 +678,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             message_shown = FALSE;
                             countup_message_shown = FALSE;
 
-                            // If currently in Pomodoro mode, reset the Pomodoro state when switching to normal countdown
+
                             if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
                                 current_pomodoro_phase = POMODORO_PHASE_IDLE;
                                 current_pomodoro_time_index = 0;
@@ -692,8 +691,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         }
                     }
                     return 0;
-                } // end quick time base range
-                // Handle exit option
+                }
                 case 109: {
                     ExitProgram(hwnd);
                     break;
@@ -703,7 +701,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         memset(inputText, 0, sizeof(inputText));
                         DialogBoxParamW(GetModuleHandle(NULL), MAKEINTRESOURCEW(CLOCK_IDD_SHORTCUT_DIALOG), NULL, DlgProc, (LPARAM)CLOCK_IDD_SHORTCUT_DIALOG);
 
-                        // Check if input is empty or contains only spaces
+
                         BOOL isAllSpaces = TRUE;
                         for (int i = 0; inputText[i]; i++) {
                             if (!iswspace(inputText[i])) {
@@ -712,12 +710,12 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             }
                         }
                         
-                        // If input is empty or contains only spaces, exit the loop
+
                         if (inputText[0] == L'\0' || isAllSpaces) {
                             break;
                         }
 
-                        // Convert inputText to char for parsing
+
                         char inputTextA[256];
                         WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
                         
@@ -728,7 +726,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         
                         while (token && count < MAX_TIME_OPTIONS) {
                             int seconds = 0;
-                            // Use ParseTimeInput to support flexible time formats like 30s, 25m, 1h30m
+
                             extern BOOL ParseTimeInput(const char* input, int* seconds);
                             if (!ParseTimeInput(token, &seconds) || seconds <= 0) {
                                 valid = 0;
@@ -739,7 +737,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                                 strcat(options, ",");
                             }
                             
-                            // Store seconds directly (no conversion needed)
+
                             char secondsStr[32];
                             snprintf(secondsStr, sizeof(secondsStr), "%d", seconds);
                             strcat(options, secondsStr);
@@ -748,7 +746,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         }
 
                         if (valid && count > 0) {
-                            // Stop any notification sound that may be playing
+
                             extern void StopNotificationSound(void);
                             StopNotificationSound();
                             
@@ -770,7 +768,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             break;
                         }
 
-                        // Check if it's only spaces
+
                         BOOL isAllSpaces = TRUE;
                         for (int i = 0; inputText[i]; i++) {
                             if (!iswspace(inputText[i])) {
@@ -783,11 +781,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         }
 
                         int total_seconds = 0;
-                        // Convert Unicode to ANSI for ParseInput
+
                         char inputTextA[256];
                         WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
                         if (ParseInput(inputTextA, &total_seconds)) {
-                            // Stop any notification sound that may be playing
+
                             extern void StopNotificationSound(void);
                             StopNotificationSound();
                             
@@ -802,62 +800,57 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case 200: {   
-                    // Stop any notification sound that may be playing
+
                     extern void StopNotificationSound(void);
                     StopNotificationSound();
                     
-                    // First, stop all timers to ensure no timer events will be processed
+
                     KillTimer(hwnd, 1);
                     
-                    // Unregister all global hotkeys to ensure they don't remain active after reset
+
                     UnregisterGlobalHotkeys(hwnd);
                     
-                    // Fully reset timer state - critical part
-                    // Import all timer state variables that need to be reset
-                    extern int elapsed_time;            // from main.c
-                    extern int countdown_elapsed_time;  // from timer.c
-                    extern int countup_elapsed_time;    // from timer.c
-                    extern BOOL message_shown;          // from main.c 
-                    extern BOOL countdown_message_shown;// from timer.c
-                    extern BOOL countup_message_shown;  // from timer.c
+                    extern int elapsed_time;
+                    extern int countdown_elapsed_time;
+                    extern int countup_elapsed_time;
+                    extern BOOL message_shown;
+                    extern BOOL countdown_message_shown;
+                    extern BOOL countup_message_shown;
                     
-                    // Import high-precision timer initialization function from timer.c
                     extern BOOL InitializeHighPrecisionTimer(void);
-                    extern void ResetTimer(void);    // Use a dedicated reset function
-                    extern void ReadNotificationMessagesConfig(void); // Read notification message configuration
+                    extern void ResetTimer(void);
+                    extern void ReadNotificationMessagesConfig(void);
                     
-                    // Reset all timer state variables - order matters!
-                    CLOCK_TOTAL_TIME = 25 * 60;      // 1. First set total time to 25 minutes
-                    elapsed_time = 0;                // 2. Reset elapsed_time in main.c
-                    countdown_elapsed_time = 0;      // 3. Reset countdown_elapsed_time in timer.c
-                    countup_elapsed_time = 0;        // 4. Reset countup_elapsed_time in timer.c
-                    message_shown = FALSE;           // 5. Reset message status
+                    CLOCK_TOTAL_TIME = 25 * 60;
+                    elapsed_time = 0;
+                    countdown_elapsed_time = 0;
+                    countup_elapsed_time = 0;
+                    message_shown = FALSE;
                     countdown_message_shown = FALSE;
                     countup_message_shown = FALSE;
                     
-                    // Set timer state to countdown mode
+
                     CLOCK_COUNT_UP = FALSE;
                     CLOCK_SHOW_CURRENT_TIME = FALSE;
                     CLOCK_IS_PAUSED = FALSE;
                     
-                    // Reset Pomodoro state
+
                     current_pomodoro_phase = POMODORO_PHASE_IDLE;
                     current_pomodoro_time_index = 0;
                     complete_pomodoro_cycles = 0;
                     
-                    // Call the dedicated timer reset function - this is crucial!
-                    // This function reinitializes the high-precision timer and resets all timing states
+
                     ResetTimer();
                     
-                    // Reset UI state
+
                     CLOCK_EDIT_MODE = FALSE;
                     SetClickThrough(hwnd, TRUE);
                     SendMessage(hwnd, WM_SETREDRAW, FALSE, 0);
                     
-                    // Reset file path
+
                     memset(CLOCK_TIMEOUT_FILE_PATH, 0, sizeof(CLOCK_TIMEOUT_FILE_PATH));
                     
-                    // Default language initialization
+
                     AppLanguage defaultLanguage;
                     LANGID langId = GetUserDefaultUILanguage();
                     WORD primaryLangId = PRIMARYLANGID(langId);
@@ -898,27 +891,27 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         CURRENT_LANGUAGE = defaultLanguage;
                     }
                     
-                    // Delete and recreate the configuration file
+
                     char config_path[MAX_PATH];
                     GetConfigPath(config_path, MAX_PATH);
                     
-                    // Ensure the file is closed and deleted
+
                     FILE* test = fopen(config_path, "r");
                     if (test) {
                         fclose(test);
                         remove(config_path);
                     }
                     
-                    // Recreate default configuration
+
                     CreateDefaultConfig(config_path);
                     
-                    // Reread the configuration
+
                     ReadConfig();
                     
-                    // Ensure notification messages are reread
+
                     ReadNotificationMessagesConfig();
                     
-                    // Restore default font
+
                     HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
                     for (int i = 0; i < FONT_RESOURCES_COUNT; i++) {
                         if (strcmp(fontResources[i].fontName, "Wallpoet Essence.ttf") == 0) {  
@@ -927,14 +920,14 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         }
                     }
                     
-                    // Reset window scale
+
                     CLOCK_WINDOW_SCALE = 1.0f;
                     CLOCK_FONT_SCALE_FACTOR = 1.0f;
                     
-                    // Recalculate window size
+
                     HDC hdc = GetDC(hwnd);
                     
-                    // Convert font name to Unicode
+
                     wchar_t fontNameW[256];
                     MultiByteToWideChar(CP_UTF8, 0, FONT_INTERNAL_NAME, -1, fontNameW, 256);
                     
@@ -950,7 +943,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     char time_text[50];
                     FormatTime(CLOCK_TOTAL_TIME, time_text);
                     
-                    // Convert time text to Unicode
+
                     wchar_t time_textW[50];
                     MultiByteToWideChar(CP_UTF8, 0, time_text, -1, time_textW, 50);
                     
@@ -961,31 +954,31 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     DeleteObject(hFont);
                     ReleaseDC(hwnd, hdc);
                     
-                    // Set default scale based on screen height
+
                     int screenHeight = GetSystemMetrics(SM_CYSCREEN);
                     float defaultScale = (screenHeight * 0.03f) / 20.0f;
                     CLOCK_WINDOW_SCALE = defaultScale;
                     CLOCK_FONT_SCALE_FACTOR = defaultScale;
                     
-                    // Reset window position
+
                     SetWindowPos(hwnd, NULL, 
                         CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y,
                         textSize.cx * defaultScale, textSize.cy * defaultScale,
                         SWP_NOZORDER | SWP_NOACTIVATE
                     );
                     
-                    // Ensure window is visible
+
                     ShowWindow(hwnd, SW_SHOW);
                     
-                    // Restart the timer - ensure it's started after all states are reset
+
                     SetTimer(hwnd, 1, 1000, NULL);
                     
-                    // Refresh window display
+
                     SendMessage(hwnd, WM_SETREDRAW, TRUE, 0);
                     RedrawWindow(hwnd, NULL, NULL, 
                         RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
                     
-                    // Reregister default hotkeys
+
                     RegisterGlobalHotkeys(hwnd);
                     
                     break;
@@ -995,7 +988,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_TIMER_RESTART: {
-                    // Close all notification windows
+
                     CloseAllNotifications();
                     RestartTimer(hwnd);
                     break;
@@ -1003,9 +996,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDM_LANG_CHINESE: {
                     SetLanguage(APP_LANG_CHINESE_SIMP);
                     WriteConfigLanguage(APP_LANG_CHINESE_SIMP);
-                    // Refresh window
+
                     InvalidateRect(hwnd, NULL, TRUE);
-                    // Refresh tray menu
+
                     extern void UpdateTrayIcon(HWND hwnd);
                     UpdateTrayIcon(hwnd);
                     break;
@@ -1013,9 +1006,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDM_LANG_CHINESE_TRAD: {
                     SetLanguage(APP_LANG_CHINESE_TRAD);
                     WriteConfigLanguage(APP_LANG_CHINESE_TRAD);
-                    // Refresh window
+
                     InvalidateRect(hwnd, NULL, TRUE);
-                    // Refresh tray menu
+
                     extern void UpdateTrayIcon(HWND hwnd);
                     UpdateTrayIcon(hwnd);
                     break;
@@ -1023,9 +1016,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDM_LANG_ENGLISH: {
                     SetLanguage(APP_LANG_ENGLISH);
                     WriteConfigLanguage(APP_LANG_ENGLISH);
-                    // Refresh window
+
                     InvalidateRect(hwnd, NULL, TRUE);
-                    // Refresh tray menu
+
                     extern void UpdateTrayIcon(HWND hwnd);
                     UpdateTrayIcon(hwnd);
                     break;
@@ -1033,9 +1026,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDM_LANG_SPANISH: {
                     SetLanguage(APP_LANG_SPANISH);
                     WriteConfigLanguage(APP_LANG_SPANISH);
-                    // Refresh window
+
                     InvalidateRect(hwnd, NULL, TRUE);
-                    // Refresh tray menu
+
                     extern void UpdateTrayIcon(HWND hwnd);
                     UpdateTrayIcon(hwnd);
                     break;
@@ -1043,9 +1036,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDM_LANG_FRENCH: {
                     SetLanguage(APP_LANG_FRENCH);
                     WriteConfigLanguage(APP_LANG_FRENCH);
-                    // Refresh window
+
                     InvalidateRect(hwnd, NULL, TRUE);
-                    // Refresh tray menu
+
                     extern void UpdateTrayIcon(HWND hwnd);
                     UpdateTrayIcon(hwnd);
                     break;
@@ -1053,9 +1046,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDM_LANG_GERMAN: {
                     SetLanguage(APP_LANG_GERMAN);
                     WriteConfigLanguage(APP_LANG_GERMAN);
-                    // Refresh window
+
                     InvalidateRect(hwnd, NULL, TRUE);
-                    // Refresh tray menu
+
                     extern void UpdateTrayIcon(HWND hwnd);
                     UpdateTrayIcon(hwnd);
                     break;
@@ -1063,9 +1056,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDM_LANG_RUSSIAN: {
                     SetLanguage(APP_LANG_RUSSIAN);
                     WriteConfigLanguage(APP_LANG_RUSSIAN);
-                    // Refresh window
+
                     InvalidateRect(hwnd, NULL, TRUE);
-                    // Refresh tray menu
+
                     extern void UpdateTrayIcon(HWND hwnd);
                     UpdateTrayIcon(hwnd);
                     break;
@@ -1073,9 +1066,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDM_LANG_PORTUGUESE: {
                     SetLanguage(APP_LANG_PORTUGUESE);
                     WriteConfigLanguage(APP_LANG_PORTUGUESE);
-                    // Refresh window
+
                     InvalidateRect(hwnd, NULL, TRUE);
-                    // Refresh tray menu
+
                     extern void UpdateTrayIcon(HWND hwnd);
                     UpdateTrayIcon(hwnd);
                     break;
@@ -1083,9 +1076,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDM_LANG_JAPANESE: {
                     SetLanguage(APP_LANG_JAPANESE);
                     WriteConfigLanguage(APP_LANG_JAPANESE);
-                    // Refresh window
+
                     InvalidateRect(hwnd, NULL, TRUE);
-                    // Refresh tray menu
+
                     extern void UpdateTrayIcon(HWND hwnd);
                     UpdateTrayIcon(hwnd);
                     break;
@@ -1093,9 +1086,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDM_LANG_KOREAN: {
                     SetLanguage(APP_LANG_KOREAN);
                     WriteConfigLanguage(APP_LANG_KOREAN);
-                    // Refresh window
+
                     InvalidateRect(hwnd, NULL, TRUE);
-                    // Refresh tray menu
+
                     extern void UpdateTrayIcon(HWND hwnd);
                     UpdateTrayIcon(hwnd);
                     break;
@@ -1104,33 +1097,33 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     ShowAboutDialog(hwnd);
                     return 0;
                 case CLOCK_IDM_TOPMOST: {
-                    // Toggle the topmost state in configuration
+
                     BOOL newTopmost = !CLOCK_WINDOW_TOPMOST;
                     
-                    // If in edit mode, just update the stored state but don't apply it yet
+
                     if (CLOCK_EDIT_MODE) {
-                        // Update the configuration and saved state only
+
                         PREVIOUS_TOPMOST_STATE = newTopmost;
                         CLOCK_WINDOW_TOPMOST = newTopmost;
                         WriteConfigTopmost(newTopmost ? "TRUE" : "FALSE");
                     } else {
-                        // Not in edit mode, apply it immediately
+
                         SetWindowTopmost(hwnd, newTopmost);
                         WriteConfigTopmost(newTopmost ? "TRUE" : "FALSE");
-                        // Force ensure visibility after toggling
+
                         InvalidateRect(hwnd, NULL, TRUE);
                         if (newTopmost) {
                             ShowWindow(hwnd, SW_SHOWNOACTIVATE);
                             SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
                                          SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
                         } else {
-                            // Reattach to desktop for non-topmost mode and ensure visible
+
                             extern void ReattachToDesktop(HWND);
                             ReattachToDesktop(hwnd);
                             ShowWindow(hwnd, SW_SHOWNOACTIVATE);
                             SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0,
                                          SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
-                            // Force redraw and schedule a short delayed re-assertion for stability
+
                             InvalidateRect(hwnd, NULL, TRUE);
                             RedrawWindow(hwnd, NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW);
                             KillTimer(hwnd, 1002);
@@ -1140,29 +1133,29 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_COUNTDOWN_RESET: {
-                    // Stop any notification sound that may be playing
+
                     extern void StopNotificationSound(void);
                     StopNotificationSound();
                     
-                    // Close all notification windows
+
                     CloseAllNotifications();
 
                     if (CLOCK_COUNT_UP) {
-                        CLOCK_COUNT_UP = FALSE;  // Switch to countdown mode
+                        CLOCK_COUNT_UP = FALSE;
                     }
                     
-                    // Reset the countdown timer
+
                     extern void ResetTimer(void);
                     ResetTimer();
                     
-                    // Restart the timer
+
                     KillTimer(hwnd, 1);
                     SetTimer(hwnd, 1, 1000, NULL);
                     
-                    // Force redraw of the window
+
                     InvalidateRect(hwnd, NULL, TRUE);
                     
-                    // Ensure the window is on top and visible after reset
+
                     HandleWindowReset(hwnd);
                     break;
                 }
@@ -1372,11 +1365,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     goto refresh_window;
                 }
                 case CLOCK_IDM_SHOW_CURRENT_TIME: {  
-                    // Stop any notification sound that may be playing
+
                     extern void StopNotificationSound(void);
                     StopNotificationSound();
                     
-                    // Close all notification windows
+
                     CloseAllNotifications();
 
                     CLOCK_SHOW_CURRENT_TIME = !CLOCK_SHOW_CURRENT_TIME;
@@ -1387,17 +1380,17 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         KillTimer(hwnd, 1);   
                         elapsed_time = 0;
                         countdown_elapsed_time = 0;
-                        CLOCK_TOTAL_TIME = 0; // Ensure total time is reset
+                        CLOCK_TOTAL_TIME = 0;
                         CLOCK_LAST_TIME_UPDATE = time(NULL);
-                        SetTimer(hwnd, 1, 100, NULL); // Reduce interval to 100ms for higher refresh rate
+                        SetTimer(hwnd, 1, 100, NULL);
                     } else {
                         KillTimer(hwnd, 1);   
-                        // When canceling showing current time, fully reset state instead of restoring previous state
+
                         elapsed_time = 0;
                         countdown_elapsed_time = 0;
                         CLOCK_TOTAL_TIME = 0;
-                        message_shown = 0;   // Reset message shown state
-                        // Set timer with longer interval because second-level updates are no longer needed
+                        message_shown = 0;
+
                         SetTimer(hwnd, 1, 1000, NULL); 
                     }
                     InvalidateRect(hwnd, NULL, TRUE);
@@ -1470,10 +1463,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         MultiByteToWideChar(CP_UTF8, 0, CLOCK_RECENT_FILES[index].path, -1, wPath, MAX_PATH);
                         
                         if (GetFileAttributesW(wPath) != INVALID_FILE_ATTRIBUTES) {
-                            // Step 1: Set as the current file to open on timeout
+
                             WriteConfigTimeoutFile(CLOCK_RECENT_FILES[index].path);
                             
-                            // Step 2: Update the recent files list (move this file to the top)
+
                             SaveRecentFile(CLOCK_RECENT_FILES[index].path);
                         } else {
                             MessageBoxW(hwnd, 
@@ -1481,18 +1474,18 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                                 GetLocalizedString(L"错误", L"Error"),
                                 MB_ICONERROR);
                             
-                            // Clear invalid file path
+
                             memset(CLOCK_TIMEOUT_FILE_PATH, 0, sizeof(CLOCK_TIMEOUT_FILE_PATH));
                             CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
                             WriteConfigTimeoutAction("MESSAGE");
                             
-                            // Remove this file from the recent files list
+
                             for (int i = index; i < CLOCK_RECENT_FILES_COUNT - 1; i++) {
                                 CLOCK_RECENT_FILES[i] = CLOCK_RECENT_FILES[i + 1];
                             }
                             CLOCK_RECENT_FILES_COUNT--;
                             
-                            // Update recent files list in the configuration file
+
                             char config_path[MAX_PATH];
                             GetConfigPath(config_path, MAX_PATH);
                             WriteConfig(config_path);
@@ -1516,15 +1509,14 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
                     
                     if (GetOpenFileNameW(&ofn)) {
-                        // Convert wide character path to UTF-8 to save in the configuration file
-                        char utf8Path[MAX_PATH * 3] = {0}; // Larger buffer to accommodate UTF-8 encoding
+                        char utf8Path[MAX_PATH * 3] = {0};
                         WideCharToMultiByte(CP_UTF8, 0, szFile, -1, utf8Path, sizeof(utf8Path), NULL, NULL);
                         
                         if (GetFileAttributesW(szFile) != INVALID_FILE_ATTRIBUTES) {
-                            // Step 1: Set as the current file to open on timeout
+
                             WriteConfigTimeoutFile(utf8Path);
                             
-                            // Step 2: Update the recent files list
+
                             SaveRecentFile(utf8Path);
                         } else {
                             MessageBoxW(hwnd, 
@@ -1567,11 +1559,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_COUNT_UP: {
-                    // Stop any notification sound that may be playing
+
                     extern void StopNotificationSound(void);
                     StopNotificationSound();
                     
-                    // Close all notification windows
+
                     CloseAllNotifications();
 
                     CLOCK_COUNT_UP = !CLOCK_COUNT_UP;
@@ -1586,23 +1578,23 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_COUNT_UP_START: {
-                    // Stop any notification sound that may be playing
+
                     extern void StopNotificationSound(void);
                     StopNotificationSound();
                     
-                    // Close all notification windows
+
                     CloseAllNotifications();
 
                     if (!CLOCK_COUNT_UP) {
                         CLOCK_COUNT_UP = TRUE;
                         
-                        // Ensure the timer starts from 0 every time it switches to count-up mode
+
                         countup_elapsed_time = 0;
                         CLOCK_SHOW_CURRENT_TIME = FALSE;
                         KillTimer(hwnd, 1);
                         SetTimer(hwnd, 1, 1000, NULL);
                     } else {
-                        // Already in count-up mode, so toggle pause/run state
+
                         CLOCK_IS_PAUSED = !CLOCK_IS_PAUSED;
                     }
                     
@@ -1610,14 +1602,14 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_COUNT_UP_RESET: {
-                    // Stop any notification sound that may be playing
+
                     extern void StopNotificationSound(void);
                     StopNotificationSound();
                     
-                    // Close all notification windows
+
                     CloseAllNotifications();
 
-                    // Reset the count-up counter
+
                     extern void ResetTimer(void);
                     ResetTimer();
                     InvalidateRect(hwnd, NULL, TRUE);
@@ -1626,7 +1618,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDC_SET_COUNTDOWN_TIME: {
                     while (1) {
                         memset(inputText, 0, sizeof(inputText));
-                        // Use a special parameter to indicate this is startup settings dialog
+
                         DialogBoxParamW(GetModuleHandle(NULL), MAKEINTRESOURCEW(CLOCK_IDD_DIALOG1), hwnd, DlgProc, (LPARAM)CLOCK_IDD_STARTUP_DIALOG);
 
                         if (inputText[0] == L'\0') {
@@ -1646,7 +1638,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         }
 
                         int total_seconds = 0;
-                        // Convert Unicode to ANSI for ParseInput
+
                         char inputTextA[256];
                         WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
                         if (ParseInput(inputTextA, &total_seconds)) {
@@ -1747,41 +1739,41 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_POMODORO_START: {
-                    // Stop any notification sound that may be playing
+
                     extern void StopNotificationSound(void);
                     StopNotificationSound();
                     
-                    // Close all notification windows
+
                     CloseAllNotifications();
                     
                     if (!IsWindowVisible(hwnd)) {
                         ShowWindow(hwnd, SW_SHOW);
                     }
                     
-                    // Reset timer state
+
                     CLOCK_COUNT_UP = FALSE;
                     CLOCK_SHOW_CURRENT_TIME = FALSE;
                     countdown_elapsed_time = 0;
                     CLOCK_IS_PAUSED = FALSE;
                     
-                    // Set work time
+
                     CLOCK_TOTAL_TIME = POMODORO_WORK_TIME;
                     
-                    // Initialize Pomodoro phase
+
                     extern void InitializePomodoro(void);
                     InitializePomodoro();
                     
-                    // Save original timeout action
+
                     TimeoutActionType originalAction = CLOCK_TIMEOUT_ACTION;
                     
-                    // Force set to show message
+
                     CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
                     
-                    // Start the timer
+
                     KillTimer(hwnd, 1);
                     SetTimer(hwnd, 1, 1000, NULL);
                     
-                    // Reset message state
+
                     elapsed_time = 0;
                     message_shown = FALSE;
                     countdown_message_shown = FALSE;
@@ -1793,7 +1785,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDM_POMODORO_WORK:
                 case CLOCK_IDM_POMODORO_BREAK:
                 case CLOCK_IDM_POMODORO_LBREAK:
-                    // Keep original menu item ID handling
+
                     {
                         int selectedIndex = 0;
                         if (LOWORD(wp) == CLOCK_IDM_POMODORO_WORK) {
@@ -1804,27 +1796,26 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             selectedIndex = 2;
                         }
                         
-                        // Use a common dialog to modify Pomodoro time
+
                         memset(inputText, 0, sizeof(inputText));
                         DialogBoxParamW(GetModuleHandle(NULL), 
                                  MAKEINTRESOURCEW(CLOCK_IDD_POMODORO_TIME_DIALOG),
                                  hwnd, DlgProc, (LPARAM)CLOCK_IDD_POMODORO_TIME_DIALOG);
                         
-                        // Process input result
+
                         if (inputText[0] && !isAllSpacesOnly(inputText)) {
                             int total_seconds = 0;
-                            // Convert Unicode to ANSI for ParseInput
+    
                         char inputTextA[256];
                         WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
                         if (ParseInput(inputTextA, &total_seconds)) {
-                                // Update selected time
+
                                 POMODORO_TIMES[selectedIndex] = total_seconds;
                                 
-                                // Use existing function to update configuration
-                                // IMPORTANT: Add config write for dynamic IDs
+
                                 WriteConfigPomodoroTimeOptions(POMODORO_TIMES, POMODORO_TIMES_COUNT);
                                 
-                                // Update core variables
+
                                 if (selectedIndex == 0) POMODORO_WORK_TIME = total_seconds;
                                 else if (selectedIndex == 1) POMODORO_SHORT_BREAK = total_seconds;
                                 else if (selectedIndex == 2) POMODORO_LONG_BREAK = total_seconds;
@@ -1833,36 +1824,35 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     }
                     break;
 
-                // Also handle new dynamic ID range
+
                 case 600: case 601: case 602: case 603: case 604:
                 case 605: case 606: case 607: case 608: case 609:
-                    // Handle Pomodoro time setting options (dynamic ID range)
+
                     {
-                        // Calculate the selected option index
+
                         int selectedIndex = LOWORD(wp) - CLOCK_IDM_POMODORO_TIME_BASE;
                         
                         if (selectedIndex >= 0 && selectedIndex < POMODORO_TIMES_COUNT) {
-                            // Use a common dialog to modify Pomodoro time
+    
                             memset(inputText, 0, sizeof(inputText));
                             DialogBoxParamW(GetModuleHandle(NULL), 
                                      MAKEINTRESOURCEW(CLOCK_IDD_POMODORO_TIME_DIALOG),
                                      hwnd, DlgProc, (LPARAM)CLOCK_IDD_POMODORO_TIME_DIALOG);
                             
-                            // Process input result
+    
                             if (inputText[0] && !isAllSpacesOnly(inputText)) {
                                 int total_seconds = 0;
-                                // Convert Unicode to ANSI for ParseInput
+        
                         char inputTextA[256];
                         WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
                         if (ParseInput(inputTextA, &total_seconds)) {
-                                    // Update selected time
+    
                                     POMODORO_TIMES[selectedIndex] = total_seconds;
                                     
-                                    // Use existing function to update configuration
-                                    // IMPORTANT: Add config write for dynamic IDs
+
                                     WriteConfigPomodoroTimeOptions(POMODORO_TIMES, POMODORO_TIMES_COUNT);
                                     
-                                    // Update core variables
+    
                                     if (selectedIndex == 0) POMODORO_WORK_TIME = total_seconds;
                                     else if (selectedIndex == 1) POMODORO_SHORT_BREAK = total_seconds;
                                     else if (selectedIndex == 2) POMODORO_LONG_BREAK = total_seconds;
@@ -1875,27 +1865,27 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     ShowPomodoroLoopDialog(hwnd);
                     break;
                 case CLOCK_IDM_POMODORO_RESET: {
-                    // Stop any notification sound that may be playing
+
                     extern void StopNotificationSound(void);
                     StopNotificationSound();
                     
-                    // Call ResetTimer to reset the timer state
+
                     extern void ResetTimer(void);
                     ResetTimer();
                     
-                    // If currently in Pomodoro mode, reset related states
+
                     if (CLOCK_TOTAL_TIME == POMODORO_WORK_TIME || 
                         CLOCK_TOTAL_TIME == POMODORO_SHORT_BREAK || 
                         CLOCK_TOTAL_TIME == POMODORO_LONG_BREAK) {
-                        // Restart the timer
+    
                         KillTimer(hwnd, 1);
                         SetTimer(hwnd, 1, 1000, NULL);
                     }
                     
-                    // Force redraw of the window
+
                     InvalidateRect(hwnd, NULL, TRUE);
                     
-                    // Ensure the window is on top and visible after reset
+
                     HandleWindowReset(hwnd);
                     break;
                 }
@@ -1945,12 +1935,12 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_CHECK_UPDATE: {
-                    // Call async update check function - non-silent mode
+
                     CheckForUpdateAsync(hwnd, FALSE);
                     break;
                 }
                 case CLOCK_IDM_OPEN_WEBSITE:
-                    // Don't set action type immediately, wait for dialog result
+
                     ShowWebsiteDialog(hwnd);
                     break;
                 
@@ -1974,7 +1964,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDM_HOTKEY_SETTINGS: {
                     ShowHotkeySettingsDialog(hwnd);
-                    // Register/reregister global hotkeys
+
                     RegisterGlobalHotkeys(hwnd);
                     break;
                 }
@@ -2111,17 +2101,17 @@ refresh_window:
         }
         case WM_RBUTTONDOWN: {
             if (GetKeyState(VK_CONTROL) & 0x8000) {
-                // Toggle edit mode
+
                 CLOCK_EDIT_MODE = !CLOCK_EDIT_MODE;
                 
                 if (CLOCK_EDIT_MODE) {
-                    // Entering edit mode
+
                     SetClickThrough(hwnd, FALSE);
                 } else {
-                    // Exiting edit mode
+
                     SetClickThrough(hwnd, TRUE);
-                    SaveWindowSettings(hwnd);  // Save settings when exiting edit mode
-                    WriteConfigColor(CLOCK_TEXT_COLOR);  // Save the current color to config
+                    SaveWindowSettings(hwnd);
+                    WriteConfigColor(CLOCK_TEXT_COLOR);
                 }
                 
                 InvalidateRect(hwnd, NULL, TRUE);
@@ -2130,20 +2120,19 @@ refresh_window:
             break;
         }
         case WM_CLOSE: {
-            SaveWindowSettings(hwnd);  // Save window settings before closing
-            DestroyWindow(hwnd);  // Close the window
+            SaveWindowSettings(hwnd);
+            DestroyWindow(hwnd);
             break;
         }
         case WM_LBUTTONDBLCLK: {
             if (!CLOCK_EDIT_MODE) {
-                // Enter edit mode
                 StartEditMode(hwnd);
                 return 0;
             }
             break;
         }
         case WM_HOTKEY: {
-            // WM_HOTKEY message's lp contains key information
+
             if (wp == HOTKEY_ID_SHOW_TIME) {
                 ToggleShowTimeMode(hwnd);
                 return 0;
@@ -2154,87 +2143,87 @@ refresh_window:
                 StartDefaultCountDown(hwnd);
                 return 0;
             } else if (wp == HOTKEY_ID_CUSTOM_COUNTDOWN) {
-                // Check if the input dialog already exists
+
                 if (g_hwndInputDialog != NULL && IsWindow(g_hwndInputDialog)) {
-                    // The dialog already exists, close it
+
                     SendMessage(g_hwndInputDialog, WM_CLOSE, 0, 0);
                     return 0;
                 }
                 
-                // Reset notification flag to ensure notification can be shown when countdown ends
+
                 extern BOOL countdown_message_shown;
                 countdown_message_shown = FALSE;
                 
-                // Ensure latest notification configuration is read
+
                 extern void ReadNotificationTypeConfig(void);
                 ReadNotificationTypeConfig();
                 
-                // Show input dialog to set countdown
+
                 extern int elapsed_time;
                 extern BOOL message_shown;
                 
-                // Clear input text
+
                 memset(inputText, 0, sizeof(inputText));
                 
-                // Show input dialog
+
                 INT_PTR result = DialogBoxParamW(GetModuleHandle(NULL), 
                                          MAKEINTRESOURCEW(CLOCK_IDD_DIALOG1), 
                                          hwnd, DlgProc, (LPARAM)CLOCK_IDD_DIALOG1);
                 
-                // If the dialog has input and was confirmed
+
                 if (inputText[0] != L'\0') {
-                                        // Check if input is valid
+
                     int total_seconds = 0;
-                    // Convert Unicode to ANSI for ParseInput
+
                     char inputTextA[256];
                     WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
                     if (ParseInput(inputTextA, &total_seconds)) {
-                        // Stop any notification sound that may be playing
+    
                         extern void StopNotificationSound(void);
                         StopNotificationSound();
                         
-                        // Close all notification windows
+    
                         CloseAllNotifications();
                         
-                        // Set countdown state
+
                         CLOCK_TOTAL_TIME = total_seconds;
                         countdown_elapsed_time = 0;
                         elapsed_time = 0;
                         message_shown = FALSE;
                         countdown_message_shown = FALSE;
                         
-                        // Switch to countdown mode
+
                         CLOCK_COUNT_UP = FALSE;
                         CLOCK_SHOW_CURRENT_TIME = FALSE;
                         CLOCK_IS_PAUSED = FALSE;
                         
-                        // Stop and restart the timer
+
                         KillTimer(hwnd, 1);
                         SetTimer(hwnd, 1, 1000, NULL);
                         
-                        // Refresh window display
+    
                         InvalidateRect(hwnd, NULL, TRUE);
                     }
                 }
                 return 0;
             } else if (wp == HOTKEY_ID_QUICK_COUNTDOWN1) {
-                // Start quick countdown 1
+
                 StartQuickCountdown1(hwnd);
                 return 0;
             } else if (wp == HOTKEY_ID_QUICK_COUNTDOWN2) {
-                // Start quick countdown 2
+
                 StartQuickCountdown2(hwnd);
                 return 0;
             } else if (wp == HOTKEY_ID_QUICK_COUNTDOWN3) {
-                // Start quick countdown 3
+
                 StartQuickCountdown3(hwnd);
                 return 0;
             } else if (wp == HOTKEY_ID_POMODORO) {
-                // Start Pomodoro timer
+
                 StartPomodoroTimer(hwnd);
                 return 0;
             } else if (wp == HOTKEY_ID_TOGGLE_VISIBILITY) {
-                // Hide/show window
+
                 if (IsWindowVisible(hwnd)) {
                     ShowWindow(hwnd, SW_HIDE);
                 } else {
@@ -2243,25 +2232,25 @@ refresh_window:
                 }
                 return 0;
             } else if (wp == HOTKEY_ID_EDIT_MODE) {
-                // Enter edit mode
+
                 ToggleEditMode(hwnd);
                 return 0;
             } else if (wp == HOTKEY_ID_PAUSE_RESUME) {
-                // Pause/resume timer
+
                 TogglePauseResume(hwnd);
                 return 0;
             } else if (wp == HOTKEY_ID_RESTART_TIMER) {
-                // Close all notification windows
+
                 CloseAllNotifications();
-                // Restart current timer
+
                 RestartCurrentTimer(hwnd);
                 return 0;
             }
             break;
         }
-        // Handle reregistration message after hotkey settings change
+
         case WM_APP+1: {
-            // Only reregister hotkeys, do not open dialog
+
             RegisterGlobalHotkeys(hwnd);
             return 0;
         }
@@ -2271,7 +2260,7 @@ refresh_window:
     return 0;
 }
 
-// External variable declarations
+
 extern int CLOCK_DEFAULT_START_TIME;
 extern int countdown_elapsed_time;
 extern BOOL CLOCK_IS_PAUSED;
@@ -2279,10 +2268,10 @@ extern BOOL CLOCK_COUNT_UP;
 extern BOOL CLOCK_SHOW_CURRENT_TIME;
 extern int CLOCK_TOTAL_TIME;
 
-// Remove menu items
+
 void RemoveMenuItems(HMENU hMenu, int count);
 
-// Add menu item
+
 void AddMenuItem(HMENU hMenu, UINT id, const wchar_t* text, BOOL isEnabled);
 
 // Modify menu item text
