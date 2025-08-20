@@ -1,14 +1,23 @@
+/**
+ * @file language.c
+ * @brief Multi-language support and localization system
+ */
+
 #include <windows.h>
 #include <wchar.h>
 #include <stdio.h>
 #include "../include/language.h"
 #include "../resource/resource.h"
 
+/** @brief Current application language setting */
 AppLanguage CURRENT_LANGUAGE = APP_LANG_ENGLISH;
 
+/** @brief Maximum number of translation entries supported */
 #define MAX_TRANSLATIONS 200
+/** @brief Maximum length of a localized string */
 #define MAX_STRING_LENGTH 1024
 
+/** @brief Resource IDs for embedded language files */
 #define LANG_EN_INI       1001
 #define LANG_ZH_CN_INI    1002
 #define LANG_ZH_TW_INI    1003
@@ -20,14 +29,22 @@ AppLanguage CURRENT_LANGUAGE = APP_LANG_ENGLISH;
 #define LANG_JA_INI       1009
 #define LANG_KO_INI       1010
 
+/** @brief Structure to store English-to-localized string mapping */
 typedef struct {
-    wchar_t english[MAX_STRING_LENGTH];
-    wchar_t translation[MAX_STRING_LENGTH];
+    wchar_t english[MAX_STRING_LENGTH];      /**< Original English string */
+    wchar_t translation[MAX_STRING_LENGTH];  /**< Localized translation */
 } LocalizedString;
 
+/** @brief Array of loaded translation entries */
 static LocalizedString g_translations[MAX_TRANSLATIONS];
+/** @brief Number of currently loaded translations */
 static int g_translation_count = 0;
 
+/**
+ * @brief Get resource ID for language-specific INI file
+ * @param language Language enumeration value
+ * @return Resource ID of the corresponding language file
+ */
 static UINT GetLanguageResourceID(AppLanguage language) {
     switch (language) {
         case APP_LANG_CHINESE_SIMP:
@@ -54,15 +71,29 @@ static UINT GetLanguageResourceID(AppLanguage language) {
     }
 }
 
+/**
+ * @brief Convert UTF-8 string to wide character string
+ * @param utf8 Input UTF-8 string
+ * @param wstr Output wide character buffer
+ * @param wstr_size Size of output buffer
+ * @return Number of characters converted (excluding null terminator)
+ */
 static int UTF8ToWideChar(const char* utf8, wchar_t* wstr, int wstr_size) {
     return MultiByteToWideChar(CP_UTF8, 0, utf8, -1, wstr, wstr_size) - 1;
 }
 
+/**
+ * @brief Parse a single INI file line and extract key-value pair
+ * @param line Wide character line to parse
+ * @return 1 if successfully parsed, 0 if skipped or failed
+ */
 static int ParseIniLine(const wchar_t* line) {
+    /** Skip empty lines, comments, and section headers */
     if (line[0] == L'\0' || line[0] == L';' || line[0] == L'[') {
         return 0;
     }
 
+    /** Find English key enclosed in quotes */
     const wchar_t* key_start = wcschr(line, L'"');
     if (!key_start) return 0;
     key_start++;
@@ -70,6 +101,7 @@ static int ParseIniLine(const wchar_t* line) {
     const wchar_t* key_end = wcschr(key_start, L'"');
     if (!key_end) return 0;
 
+    /** Find equals sign and translation value */
     const wchar_t* value_start = wcschr(key_end + 1, L'=');
     if (!value_start) return 0;
     
@@ -80,11 +112,13 @@ static int ParseIniLine(const wchar_t* line) {
     const wchar_t* value_end = wcsrchr(value_start, L'"');
     if (!value_end) return 0;
 
+    /** Extract and store English key */
     size_t key_len = key_end - key_start;
     if (key_len >= MAX_STRING_LENGTH) key_len = MAX_STRING_LENGTH - 1;
     wcsncpy(g_translations[g_translation_count].english, key_start, key_len);
     g_translations[g_translation_count].english[key_len] = L'\0';
 
+    /** Extract and store translation value */
     size_t value_len = value_end - value_start;
     if (value_len >= MAX_STRING_LENGTH) value_len = MAX_STRING_LENGTH - 1;
     wcsncpy(g_translations[g_translation_count].translation, value_start, value_len);
@@ -94,17 +128,26 @@ static int ParseIniLine(const wchar_t* line) {
     return 1;
 }
 
+/**
+ * @brief Load language translations from embedded resource
+ * @param language Language to load
+ * @return 1 if successful, 0 if failed
+ */
 static int LoadLanguageResource(AppLanguage language) {
     UINT resourceID = GetLanguageResourceID(language);
     
+    /** Reset translation count for new language */
     g_translation_count = 0;
     
+    /** Find language resource in executable */
     HRSRC hResInfo = FindResourceW(NULL, MAKEINTRESOURCE(resourceID), RT_RCDATA);
     if (!hResInfo) {
+        /** Chinese languages don't fall back to English */
         if (language == APP_LANG_CHINESE_SIMP || language == APP_LANG_CHINESE_TRAD) {
             return 0;
         }
         
+        /** Other languages fall back to English if not found */
         if (language != APP_LANG_ENGLISH) {
             return LoadLanguageResource(APP_LANG_ENGLISH);
         }
@@ -112,21 +155,25 @@ static int LoadLanguageResource(AppLanguage language) {
         return 0;
     }
     
+    /** Get resource size */
     DWORD dwSize = SizeofResource(NULL, hResInfo);
     if (dwSize == 0) {
         return 0;
     }
     
+    /** Load resource into memory */
     HGLOBAL hResData = LoadResource(NULL, hResInfo);
     if (!hResData) {
         return 0;
     }
     
+    /** Lock resource data for access */
     const char* pData = (const char*)LockResource(hResData);
     if (!pData) {
         return 0;
     }
     
+    /** Create null-terminated buffer for parsing */
     char* buffer = (char*)malloc(dwSize + 1);
     if (!buffer) {
         return 0;
@@ -135,15 +182,18 @@ static int LoadLanguageResource(AppLanguage language) {
     memcpy(buffer, pData, dwSize);
     buffer[dwSize] = '\0';
     
+    /** Parse line by line */
     char* line = strtok(buffer, "\r\n");
     wchar_t wide_buffer[MAX_STRING_LENGTH];
     
     while (line && g_translation_count < MAX_TRANSLATIONS) {
+        /** Skip empty lines and UTF-8 BOM */
         if (line[0] == '\0' || (line[0] == (char)0xEF && line[1] == (char)0xBB && line[2] == (char)0xBF)) {
             line = strtok(NULL, "\r\n");
             continue;
         }
         
+        /** Convert UTF-8 to wide char and parse */
         if (UTF8ToWideChar(line, wide_buffer, MAX_STRING_LENGTH) > 0) {
             ParseIniLine(wide_buffer);
         }
@@ -155,6 +205,11 @@ static int LoadLanguageResource(AppLanguage language) {
     return 1;
 }
 
+/**
+ * @brief Find translation for an English string
+ * @param english English string to translate
+ * @return Pointer to translation if found, NULL otherwise
+ */
 static const wchar_t* FindTranslation(const wchar_t* english) {
     for (int i = 0; i < g_translation_count; i++) {
         if (wcscmp(english, g_translations[i].english) == 0) {
@@ -164,10 +219,14 @@ static const wchar_t* FindTranslation(const wchar_t* english) {
     return NULL;
 }
 
+/**
+ * @brief Detect system language and set as current language
+ */
 static void DetectSystemLanguage() {
     LANGID langID = GetUserDefaultUILanguage();
     switch (PRIMARYLANGID(langID)) {
         case LANG_CHINESE:
+            /** Distinguish between Simplified and Traditional Chinese */
             if (SUBLANGID(langID) == SUBLANG_CHINESE_SIMPLIFIED) {
                 CURRENT_LANGUAGE = APP_LANG_CHINESE_SIMP;
             } else {
@@ -200,7 +259,14 @@ static void DetectSystemLanguage() {
     }
 }
 
+/**
+ * @brief Get localized string for current language
+ * @param chinese Chinese text (used for Chinese languages)
+ * @param english English text (used as key and fallback)
+ * @return Pointer to appropriate localized string
+ */
 const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english) {
+    /** Initialize language resources on first call */
     static BOOL initialized = FALSE;
     if (!initialized) {
         LoadLanguageResource(CURRENT_LANGUAGE);
@@ -209,22 +275,31 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
 
     const wchar_t* translation = NULL;
 
+    /** Return Chinese text directly for Simplified Chinese */
     if (CURRENT_LANGUAGE == APP_LANG_CHINESE_SIMP && chinese) {
         return chinese;
     }
 
+    /** Look up translation for other languages */
     translation = FindTranslation(english);
     if (translation) {
         return translation;
     }
 
+    /** Return Chinese text for Traditional Chinese if no translation found */
     if (CURRENT_LANGUAGE == APP_LANG_CHINESE_TRAD && chinese) {
         return chinese;
     }
 
+    /** Fall back to English */
     return english;
 }
 
+/**
+ * @brief Set application language and reload translations
+ * @param language Language to set
+ * @return TRUE if successful, FALSE if invalid language
+ */
 BOOL SetLanguage(AppLanguage language) {
     if (language < 0 || language >= APP_LANG_COUNT) {
         return FALSE;
@@ -235,10 +310,20 @@ BOOL SetLanguage(AppLanguage language) {
     return LoadLanguageResource(language);
 }
 
+/**
+ * @brief Get current application language
+ * @return Current language enumeration value
+ */
 AppLanguage GetCurrentLanguage() {
     return CURRENT_LANGUAGE;
 }
 
+/**
+ * @brief Get current language name as locale code
+ * @param buffer Output buffer for language code
+ * @param bufferSize Size of output buffer
+ * @return TRUE if successful, FALSE if invalid parameters
+ */
 BOOL GetCurrentLanguageName(wchar_t* buffer, size_t bufferSize) {
     if (!buffer || bufferSize == 0) {
         return FALSE;
@@ -246,6 +331,7 @@ BOOL GetCurrentLanguageName(wchar_t* buffer, size_t bufferSize) {
     
     AppLanguage language = GetCurrentLanguage();
     
+    /** Convert language enum to standard locale codes */
     switch (language) {
         case APP_LANG_CHINESE_SIMP:
             wcscpy_s(buffer, bufferSize, L"zh_CN");
