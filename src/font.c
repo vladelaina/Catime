@@ -123,18 +123,109 @@ BOOL LoadFontFromResource(HINSTANCE hInstance, int resourceId) {
 }
 
 /**
- * @brief Load font by name from embedded resources
+ * @brief Load font from file on disk
+ * @param fontFilePath Full path to font file
+ * @return TRUE if font loaded successfully, FALSE otherwise
+ */
+BOOL LoadFontFromFile(const char* fontFilePath) {
+    if (!fontFilePath) return FALSE;
+    
+    /** Convert to wide character for Unicode support */
+    wchar_t wFontPath[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, fontFilePath, -1, wFontPath, MAX_PATH);
+    
+    /** Check if file exists */
+    if (GetFileAttributesW(wFontPath) == INVALID_FILE_ATTRIBUTES) {
+        return FALSE;
+    }
+    
+    /** Add font from file to system font table */
+    int result = AddFontResourceExW(wFontPath, FR_PRIVATE, NULL);
+    return (result > 0);
+}
+
+/**
+ * @brief Find font file in fonts folder and subfolders
+ * @param fontFileName Font filename to search for
+ * @param foundPath Buffer to store found font path
+ * @param foundPathSize Size of foundPath buffer
+ * @return TRUE if font file found, FALSE otherwise
+ */
+BOOL FindFontInFontsFolder(const char* fontFileName, char* foundPath, size_t foundPathSize) {
+    if (!fontFileName || !foundPath || foundPathSize == 0) return FALSE;
+    
+    /** Helper function to recursively search for font file */
+    BOOL SearchFontRecursive(const char* folderPath, const char* targetFile, char* resultPath, size_t resultSize) {
+        char searchPath[MAX_PATH];
+        snprintf(searchPath, MAX_PATH, "%s\\*", folderPath);
+        
+        WIN32_FIND_DATAA findData;
+        HANDLE hFind = FindFirstFileA(searchPath, &findData);
+        
+        if (hFind != INVALID_HANDLE_VALUE) {
+            do {
+                /** Skip . and .. entries */
+                if (strcmp(findData.cFileName, ".") == 0 || strcmp(findData.cFileName, "..") == 0) {
+                    continue;
+                }
+                
+                char fullItemPath[MAX_PATH];
+                snprintf(fullItemPath, MAX_PATH, "%s\\%s", folderPath, findData.cFileName);
+                
+                /** Check if this is the target font file */
+                if (!(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+                    if (stricmp(findData.cFileName, targetFile) == 0) {
+                        strncpy(resultPath, fullItemPath, resultSize - 1);
+                        resultPath[resultSize - 1] = '\0';
+                        FindClose(hFind);
+                        return TRUE;
+                    }
+                }
+                /** Recursively search subdirectories */
+                else if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+                    if (SearchFontRecursive(fullItemPath, targetFile, resultPath, resultSize)) {
+                        FindClose(hFind);
+                        return TRUE;
+                    }
+                }
+            } while (FindNextFileA(hFind, &findData));
+            FindClose(hFind);
+        }
+        
+        return FALSE;
+    }
+    
+    /** Get fonts folder path */
+    char fontsFolderPath[MAX_PATH];
+    char* appdata_path = getenv("LOCALAPPDATA");
+    if (!appdata_path) return FALSE;
+    
+    snprintf(fontsFolderPath, MAX_PATH, "%s\\Catime\\resources\\fonts", appdata_path);
+    
+    /** Search for font file recursively */
+    return SearchFontRecursive(fontsFolderPath, fontFileName, foundPath, foundPathSize);
+}
+
+/**
+ * @brief Load font by name from embedded resources or fonts folder
  * @param hInstance Application instance handle
  * @param fontName Font filename to search for
  * @return TRUE if font found and loaded, FALSE otherwise
  */
 BOOL LoadFontByName(HINSTANCE hInstance, const char* fontName) {
-    /** Search font resources array for matching name */
+    /** First try embedded resources */
     for (int i = 0; i < sizeof(fontResources) / sizeof(FontResource); i++) {
         if (strcmp(fontResources[i].fontName, fontName) == 0) {
             return LoadFontFromResource(hInstance, fontResources[i].resourceId);
         }
     }
+    
+    /** If not found in embedded resources, try fonts folder */
+    char fontPath[MAX_PATH];
+    if (FindFontInFontsFolder(fontName, fontPath, MAX_PATH)) {
+        return LoadFontFromFile(fontPath);
+    }
+    
     return FALSE;
 }
 

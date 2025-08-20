@@ -60,7 +60,23 @@ extern BOOL IS_PREVIEWING;
 BOOL LoadFontFromResource(HINSTANCE hInstance, int resourceId);
 
 /**
- * @brief Load font by file name
+ * @brief Load font from file on disk
+ * @param fontFilePath Full path to font file
+ * @return TRUE on success, FALSE on failure
+ */
+BOOL LoadFontFromFile(const char* fontFilePath);
+
+/**
+ * @brief Find font file in fonts folder and subfolders
+ * @param fontFileName Font filename to search for
+ * @param foundPath Buffer to store found font path
+ * @param foundPathSize Size of foundPath buffer
+ * @return TRUE if font file found, FALSE otherwise
+ */
+BOOL FindFontInFontsFolder(const char* fontFileName, char* foundPath, size_t foundPathSize);
+
+/**
+ * @brief Load font by file name from embedded resources or fonts folder
  * @param hInstance Application instance handle
  * @param fontName Font file name to load
  * @return TRUE on success, FALSE on failure

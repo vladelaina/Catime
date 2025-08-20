@@ -2258,6 +2258,81 @@ refresh_window:
                     }
                 }
                 
+                /** Handle fonts folder font preview on hover (IDs 2000+) */
+                if (menuItem >= 2000 && menuItem < 3000) {
+                    /** Helper function to find font by ID recursively */
+                    BOOL FindFontNameByIdRecursive(const char* folderPath, int targetId, int* currentId, char* foundFontName) {
+                        char searchPath[MAX_PATH];
+                        snprintf(searchPath, MAX_PATH, "%s\\*", folderPath);
+                        
+                        WIN32_FIND_DATAA findData;
+                        HANDLE hFind = FindFirstFileA(searchPath, &findData);
+                        
+                        if (hFind != INVALID_HANDLE_VALUE) {
+                            do {
+                                /** Skip . and .. entries */
+                                if (strcmp(findData.cFileName, ".") == 0 || strcmp(findData.cFileName, "..") == 0) {
+                                    continue;
+                                }
+                                
+                                char fullItemPath[MAX_PATH];
+                                snprintf(fullItemPath, MAX_PATH, "%s\\%s", folderPath, findData.cFileName);
+                                
+                                /** Handle regular font files */
+                                if (!(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+                                    char* ext = strrchr(findData.cFileName, '.');
+                                    if (ext && (stricmp(ext, ".ttf") == 0 || stricmp(ext, ".otf") == 0)) {
+                                        if (*currentId == targetId) {
+                                            strcpy(foundFontName, findData.cFileName);
+                                            FindClose(hFind);
+                                            return TRUE;
+                                        }
+                                        (*currentId)++;
+                                    }
+                                }
+                                /** Handle subdirectories recursively */
+                                else if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+                                    if (FindFontNameByIdRecursive(fullItemPath, targetId, currentId, foundFontName)) {
+                                        FindClose(hFind);
+                                        return TRUE;
+                                    }
+                                }
+                            } while (FindNextFileA(hFind, &findData));
+                            FindClose(hFind);
+                        }
+                        
+                        return FALSE;
+                    }
+                    
+                    /** Find font name for preview */
+                    char fontsFolderPath[MAX_PATH];
+                    char* appdata_path = getenv("LOCALAPPDATA");
+                    if (appdata_path) {
+                        snprintf(fontsFolderPath, MAX_PATH, "%s\\Catime\\resources\\fonts", appdata_path);
+                        
+                        int currentIndex = 2000;
+                        char foundFontName[MAX_PATH] = {0};
+                        
+                        if (FindFontNameByIdRecursive(fontsFolderPath, menuItem, &currentIndex, foundFontName)) {
+                            /** Set up preview */
+                            strncpy(PREVIEW_FONT_NAME, foundFontName, 99);
+                            PREVIEW_FONT_NAME[99] = '\0';
+                            
+                            strncpy(PREVIEW_INTERNAL_NAME, PREVIEW_FONT_NAME, 99);
+                            PREVIEW_INTERNAL_NAME[99] = '\0';
+                            char* dot = strrchr(PREVIEW_INTERNAL_NAME, '.');
+                            if (dot) *dot = '\0';
+                            
+                            /** Load font for preview */
+                            LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), foundFontName);
+                            
+                            IS_PREVIEWING = TRUE;
+                            InvalidateRect(hwnd, NULL, TRUE);
+                            return 0;
+                        }
+                    }
+                }
+                
                 /** Clear preview if no matching item found */
                 if (IS_PREVIEWING || IS_COLOR_PREVIEWING) {
                     IS_PREVIEWING = FALSE;
