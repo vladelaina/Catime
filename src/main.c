@@ -1,3 +1,7 @@
+/**
+ * @file main.c
+ * @brief Catime main entry point and instance management
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -51,11 +55,12 @@ EXTERN_C const IID IID_IShellLinkW;
 
 extern void CleanupLogSystem(void);
 
+/** @brief Global timer state and configuration */
 int default_countdown_time = 0;
 int CLOCK_DEFAULT_START_TIME = 300;
 int elapsed_time = 0;
 wchar_t inputText[256] = {0};
-int message_shown = 0;
+int message_shown = 0;                          /**< Prevents duplicate notifications */
 time_t last_config_time = 0;
 RecentFile CLOCK_RECENT_FILES[MAX_RECENT_FILES];
 int CLOCK_RECENT_FILES_COUNT = 0;
@@ -71,6 +76,10 @@ extern BOOL IS_PREVIEWING;
 INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 void ExitProgram(HWND hwnd);
 
+/**
+ * @brief Initialize timer mode based on startup configuration
+ * @param hwnd Main window handle
+ */
 static void HandleStartupMode(HWND hwnd) {
     LOG_INFO("Setting startup mode: %s", CLOCK_STARTUP_MODE);
     
@@ -84,6 +93,7 @@ static void HandleStartupMode(HWND hwnd) {
         KillTimer(hwnd, 1);
         elapsed_time = CLOCK_TOTAL_TIME;
         CLOCK_IS_PAUSED = TRUE;
+        /** Suppress all notification types in hidden mode */
         message_shown = TRUE;
         countdown_message_shown = TRUE;
         countup_message_shown = TRUE;
@@ -98,9 +108,16 @@ static void HandleStartupMode(HWND hwnd) {
     }
 }
 
+/**
+ * @brief Forward simple CLI commands to existing instance
+ * @param hwndExisting Handle to running instance
+ * @param lpCmdLine Command line to parse and forward
+ * @return TRUE if command was forwarded successfully
+ */
 static BOOL TryForwardSimpleCliToExisting(HWND hwndExisting, const wchar_t* lpCmdLine) {
     if (!lpCmdLine || lpCmdLine[0] == L'\0') return FALSE;
 
+    /** Normalize whitespace for consistent parsing */
     wchar_t buf[256];
     wcsncpy(buf, lpCmdLine, sizeof(buf)/sizeof(wchar_t) - 1);
     buf[sizeof(buf)/sizeof(wchar_t) - 1] = L'\0';
@@ -109,6 +126,7 @@ static BOOL TryForwardSimpleCliToExisting(HWND hwndExisting, const wchar_t* lpCm
     while (len > 0 && iswspace(p[len - 1])) { p[--len] = L'\0'; }
     if (len == 0) return FALSE;
 
+    /** Single character command shortcuts */
     if (len == 1) {
         wchar_t c = towlower(p[0]);
         if (c == L's') { PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_SHOW_TIME, 0); return TRUE; }
@@ -125,12 +143,14 @@ static BOOL TryForwardSimpleCliToExisting(HWND hwndExisting, const wchar_t* lpCm
         return TRUE;
     }
 
+    /** Quick countdown presets (q1-q3) */
     if (len == 2 && towlower(p[0]) == L'q' && (p[1] >= L'1' && p[1] <= L'3')) {
         if (p[1] == L'1') { PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_QUICK_COUNTDOWN1, 0); return TRUE; }
         if (p[1] == L'2') { PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_QUICK_COUNTDOWN2, 0); return TRUE; }
         if (p[1] == L'3') { PostMessage(hwndExisting, WM_HOTKEY, HOTKEY_ID_QUICK_COUNTDOWN3, 0); return TRUE; }
     }
 
+    /** Pomodoro with optional index (p1, p2, etc.) */
     if ((towlower(p[0]) == L'p') && iswdigit(p[1])) {
         wchar_t* endp = NULL;
         long idx = wcstol(p + 1, &endp, 10);
@@ -143,6 +163,7 @@ static BOOL TryForwardSimpleCliToExisting(HWND hwndExisting, const wchar_t* lpCm
         }
     }
 
+    /** Forward numeric timer input via WM_COPYDATA */
     int hasDigit = 0;
     for (size_t i = 0; i < len; ++i) { if (iswdigit(p[i])) { hasDigit = 1; break; } }
     if (hasDigit) {
@@ -164,10 +185,15 @@ static BOOL TryForwardSimpleCliToExisting(HWND hwndExisting, const wchar_t* lpCm
     return FALSE;
 }
 
+/**
+ * @brief Find existing Catime window, including desktop wallpaper mode
+ * @return Window handle or NULL if not found
+ */
 static HWND FindExistingInstanceWindow(void) {
     HWND hwnd = FindWindowW(L"CatimeWindow", L"Catime");
     if (hwnd) return hwnd;
 
+    /** Search in desktop wallpaper layer for desktop mode instances */
     HWND hProgman = FindWindowW(L"Progman", NULL);
     HWND hDesktop = NULL;
     if (hProgman != NULL) {
@@ -190,6 +216,10 @@ static HWND FindExistingInstanceWindow(void) {
     return NULL;
 }
 
+/**
+ * @brief Main application entry point
+ * Handles initialization, instance management, and message loop
+ */
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     InitCommonControls();
     
@@ -216,6 +246,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         }
         LOG_INFO("Application initialization successful");
 
+        /** Desktop shortcut management for package manager installs */
         LOG_INFO("Checking desktop shortcut...");
         wchar_t exe_path[MAX_PATH];
         GetModuleFileNameW(NULL, exe_path, MAX_PATH);
@@ -259,6 +290,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         }
         LOG_INFO("Dialog multi-language support initialization successful");
 
+        /** Single instance enforcement with CLI forwarding */
         LOG_INFO("Checking if another instance is running...");
         HANDLE hMutex = CreateMutex(NULL, TRUE, L"CatimeMutex");
         DWORD mutexError = GetLastError();
@@ -272,6 +304,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
                 while (*lpCmdLineExisting && *lpCmdLineExisting != L' ') lpCmdLineExisting++;
                 while (*lpCmdLineExisting == L' ') lpCmdLineExisting++;
                 
+                /** Try forwarding simple commands to avoid restart */
                 if (lpCmdLine && lpCmdLine[0] != '\0') {
                     LOG_INFO("Command line arguments: '%s'", lpCmdLine);
                     if (TryForwardSimpleCliToExisting(hwndExisting, lpCmdLineExisting)) {
@@ -285,6 +318,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
                         LOG_INFO("CLI command not suitable for forwarding, will restart instance");
                     }
                 }
+                /** Force restart for complex CLI commands */
                 LOG_INFO("Closing existing instance to apply CLI arguments");
                 SendMessage(hwndExisting, WM_CLOSE, 0, 0);
                 Sleep(200);
@@ -312,6 +346,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         }
         LOG_INFO("Main window creation successful, handle: 0x%p", hwnd);
 
+        /** Handle startup flag and CLI arguments */
         BOOL launchedFromStartup = FALSE;
         
         LPWSTR lpCmdLineW = GetCommandLineW();
@@ -322,6 +357,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         if (lpCmdLineW && lpCmdLineW[0] != L'\0') {
             wcsncpy(cmdBuf, lpCmdLineW, sizeof(cmdBuf)/sizeof(wchar_t) - 1);
             cmdBuf[sizeof(cmdBuf)/sizeof(wchar_t) - 1] = L'\0';
+            /** Extract --startup flag for special handling */
             wchar_t* pStartup = wcsstr(cmdBuf, L"--startup");
             if (pStartup) {
                 launchedFromStartup = TRUE;
@@ -354,6 +390,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         LOG_INFO("Handling startup mode: %s", CLOCK_STARTUP_MODE);
         HandleStartupMode(hwnd);
 
+        /** Delayed window positioning for startup launches */
         if (launchedFromStartup) {
             if (CLOCK_WINDOW_TOPMOST) {
                 SetTimer(hwnd, 999, 2000, NULL);
@@ -362,6 +399,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             }
         }
 
+        /** Main Windows message loop with CLI dialog handling */
         LOG_INFO("Entering main message loop");
         MSG msg;
         while (GetMessage(&msg, NULL, 0, 0) > 0) {
@@ -373,6 +411,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             DispatchMessage(&msg);
         }
 
+        /** Cleanup resources before exit */
         LOG_INFO("Program preparing to exit, starting resource cleanup");
         
         LOG_INFO("Preparing to clean up update check thread resources");
