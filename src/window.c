@@ -1,3 +1,8 @@
+/**
+ * @file window.c
+ * @brief Main window management with advanced visual effects and DPI awareness
+ * Handles window creation, positioning, transparency, blur effects, and user interactions
+ */
 #include "../include/window.h"
 #include "../include/timer.h"
 #include "../include/tray.h"
@@ -17,24 +22,29 @@ extern LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wParam, LPAR
 WINUSERAPI BOOL WINAPI SetProcessDPIAware(VOID);
 #endif
 
+/** @brief Base window dimensions and scaling */
 int CLOCK_BASE_WINDOW_WIDTH = 200;
 int CLOCK_BASE_WINDOW_HEIGHT = 100;
 float CLOCK_WINDOW_SCALE = 1.0f;
 int CLOCK_WINDOW_POS_X = 100;
 int CLOCK_WINDOW_POS_Y = 100;
 
-BOOL CLOCK_EDIT_MODE = FALSE;
-BOOL CLOCK_IS_DRAGGING = FALSE;
-POINT CLOCK_LAST_MOUSE_POS = {0, 0};
-BOOL CLOCK_WINDOW_TOPMOST = TRUE;
+/** @brief Window interaction state */
+BOOL CLOCK_EDIT_MODE = FALSE;           /**< Edit mode enables dragging and resizing */
+BOOL CLOCK_IS_DRAGGING = FALSE;         /**< Current drag operation state */
+POINT CLOCK_LAST_MOUSE_POS = {0, 0};    /**< Last recorded mouse position for dragging */
+BOOL CLOCK_WINDOW_TOPMOST = TRUE;       /**< Window always-on-top state */
 
-RECT CLOCK_TEXT_RECT = {0, 0, 0, 0};
-BOOL CLOCK_TEXT_RECT_VALID = FALSE;
+/** @brief Text rendering optimization */
+RECT CLOCK_TEXT_RECT = {0, 0, 0, 0};    /**< Cached text rectangle for repainting */
+BOOL CLOCK_TEXT_RECT_VALID = FALSE;     /**< Validity flag for cached text rectangle */
 
+/** @brief Dynamic loading of DWM functions for blur effects */
 typedef HRESULT (WINAPI *pfnDwmEnableBlurBehindWindow)(HWND hWnd, const DWM_BLURBEHIND* pBlurBehind);
 static pfnDwmEnableBlurBehindWindow _DwmEnableBlurBehindWindow = NULL;
 
 
+/** @brief Windows composition attributes for advanced visual effects */
 typedef enum _WINDOWCOMPOSITIONATTRIB {
     WCA_UNDEFINED = 0,
     WCA_NCRENDERING_ENABLED = 1,
@@ -55,7 +65,7 @@ typedef enum _WINDOWCOMPOSITIONATTRIB {
     WCA_DISALLOW_PEEK = 16,
     WCA_CLOAK = 17,
     WCA_CLOAKED = 18,
-    WCA_ACCENT_POLICY = 19,
+    WCA_ACCENT_POLICY = 19,             /**< Accent policy for blur/transparency effects */
     WCA_FREEZE_REPRESENTATION = 20,
     WCA_EVER_UNCLOAKED = 21,
     WCA_VISUAL_OWNER = 22,
@@ -66,59 +76,73 @@ typedef enum _WINDOWCOMPOSITIONATTRIB {
     WCA_LAST = 27
 } WINDOWCOMPOSITIONATTRIB;
 
+/** @brief Structure for setting window composition attributes */
 typedef struct _WINDOWCOMPOSITIONATTRIBDATA {
-    WINDOWCOMPOSITIONATTRIB Attrib;
-    PVOID pvData;
-    SIZE_T cbData;
+    WINDOWCOMPOSITIONATTRIB Attrib;    /**< Attribute type to set */
+    PVOID pvData;                      /**< Pointer to attribute data */
+    SIZE_T cbData;                     /**< Size of attribute data */
 } WINDOWCOMPOSITIONATTRIBDATA;
 
 WINUSERAPI BOOL WINAPI SetWindowCompositionAttribute(HWND hwnd, WINDOWCOMPOSITIONATTRIBDATA* pData);
 
+/** @brief Accent states for window transparency and blur effects */
 typedef enum _ACCENT_STATE {
-    ACCENT_DISABLED = 0,
+    ACCENT_DISABLED = 0,                        /**< No transparency effect */
     ACCENT_ENABLE_GRADIENT = 1,
     ACCENT_ENABLE_TRANSPARENTGRADIENT = 2,
-    ACCENT_ENABLE_BLURBEHIND = 3,
-    ACCENT_ENABLE_ACRYLICBLURBEHIND = 4,
+    ACCENT_ENABLE_BLURBEHIND = 3,              /**< Blur behind window effect */
+    ACCENT_ENABLE_ACRYLICBLURBEHIND = 4,       /**< Acrylic blur effect */
     ACCENT_INVALID_STATE = 5
 } ACCENT_STATE;
 
+/** @brief Accent policy configuration for window effects */
 typedef struct _ACCENT_POLICY {
-    ACCENT_STATE AccentState;
-    DWORD AccentFlags;
-    DWORD GradientColor;
-    DWORD AnimationId;
+    ACCENT_STATE AccentState;          /**< Type of accent effect */
+    DWORD AccentFlags;                 /**< Additional flags for effect */
+    DWORD GradientColor;               /**< Color for gradient effects */
+    DWORD AnimationId;                 /**< Animation identifier */
 } ACCENT_POLICY;
 
+/**
+ * @brief Configure window click-through behavior for edit mode
+ * @param hwnd Window handle to modify
+ * @param enable TRUE to enable click-through, FALSE to disable
+ * Toggles WS_EX_TRANSPARENT style and adjusts layered window attributes
+ */
 void SetClickThrough(HWND hwnd, BOOL enable) {
     LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
     
-
+    /** Clear existing transparent flag */
     exStyle &= ~WS_EX_TRANSPARENT;
     
     if (enable) {
-
+        /** Enable click-through for overlay behavior */
         exStyle |= WS_EX_TRANSPARENT;
         
-
+        /** Set color key for transparency */
         if (exStyle & WS_EX_LAYERED) {
             SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), 255, LWA_COLORKEY);
         }
     } else {
-
+        /** Disable click-through for normal interaction */
         if (exStyle & WS_EX_LAYERED) {
-
+            /** Use alpha transparency instead of color key */
             SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
         }
     }
     
     SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
     
-
+    /** Force window frame update to apply style changes */
     SetWindowPos(hwnd, NULL, 0, 0, 0, 0, 
                  SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
 }
 
+/**
+ * @brief Initialize DWM (Desktop Window Manager) functions for blur effects
+ * @return TRUE if DWM functions loaded successfully, FALSE otherwise
+ * Dynamically loads dwmapi.dll to access blur functionality
+ */
 BOOL InitDWMFunctions() {
     HMODULE hDwmapi = LoadLibraryW(L"dwmapi.dll");
     if (hDwmapi) {
@@ -457,8 +481,15 @@ BOOL HandleMouseMove(HWND hwnd) {
     return FALSE;
 }
 
+/**
+ * @brief Create and initialize the main application window
+ * @param hInstance Application instance handle
+ * @param nCmdShow Window show command
+ * @return Window handle on success, NULL on failure
+ * Sets up layered window with transparency, tray icon, and topmost behavior
+ */
 HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
-
+    /** Register window class */
     WNDCLASSW wc = {0};
     wc.lpfnWndProc = WindowProcedure;
     wc.hInstance = hInstance;
@@ -469,15 +500,15 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
         return NULL;
     }
 
-
+    /** Configure extended window styles for layered transparency */
     DWORD exStyle = WS_EX_LAYERED | WS_EX_TOOLWINDOW;
     
-
+    /** Add no-activate style for non-topmost windows */
     if (!CLOCK_WINDOW_TOPMOST) {
         exStyle |= WS_EX_NOACTIVATE;
     }
     
-
+    /** Create popup window with no frame */
     HWND hwnd = CreateWindowExW(
         exStyle,
         L"CatimeWindow",
@@ -499,25 +530,25 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
     EnableWindow(hwnd, TRUE);
     SetFocus(hwnd);
 
-
+    /** Set up color key transparency for black background */
     SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), 255, LWA_COLORKEY);
 
-
+    /** Disable blur effects initially */
     SetBlurBehind(hwnd, FALSE);
 
-
+    /** Initialize system tray icon */
     InitTrayIcon(hwnd, hInstance);
 
-
+    /** Show window and apply topmost behavior */
     ShowWindow(hwnd, nCmdShow);
     UpdateWindow(hwnd);
 
-
+    /** Apply topmost or desktop attachment based on settings */
     if (CLOCK_WINDOW_TOPMOST) {
         SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, 
                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
     } else {
-
+        /** Attach to desktop for wallpaper-like behavior */
         ReattachToDesktop(hwnd);
         ShowWindow(hwnd, SW_SHOWNOACTIVATE);
     }
@@ -525,22 +556,30 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
     return hwnd;
 }
 
+/** @brief Font scaling configuration */
 float CLOCK_FONT_SCALE_FACTOR = 1.0f;
 int CLOCK_BASE_FONT_SIZE = 24;
 
+/**
+ * @brief Initialize application with DPI awareness and load configurations
+ * @param hInstance Application instance handle
+ * @return TRUE if initialization succeeded, FALSE on error
+ * Sets up DPI awareness, loads config, fonts, and language settings
+ */
 BOOL InitializeApplication(HINSTANCE hInstance) {
     #ifndef DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
     DECLARE_HANDLE(DPI_AWARENESS_CONTEXT);
     #define DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 ((DPI_AWARENESS_CONTEXT)-4)
     #endif
     
-
+    /** DPI awareness levels for Windows compatibility */
     typedef enum {
         PROCESS_DPI_UNAWARE = 0,
         PROCESS_SYSTEM_DPI_AWARE = 1,
         PROCESS_PER_MONITOR_DPI_AWARE = 2
     } PROCESS_DPI_AWARENESS;
     
+    /** Set up DPI awareness with fallback to older APIs */
     HMODULE hUser32 = GetModuleHandleW(L"user32.dll");
     if (hUser32) {
         typedef BOOL(WINAPI* SetProcessDpiAwarenessContextFunc)(DPI_AWARENESS_CONTEXT);
@@ -548,11 +587,10 @@ BOOL InitializeApplication(HINSTANCE hInstance) {
             (SetProcessDpiAwarenessContextFunc)GetProcAddress(hUser32, "SetProcessDpiAwarenessContext");
         
         if (setProcessDpiAwarenessContextFunc) {
-
-
+            /** Windows 10 version 1703+ per-monitor DPI awareness */
             setProcessDpiAwarenessContextFunc(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
         } else {
-
+            /** Fallback to Windows 8.1+ DPI awareness */
             HMODULE hShcore = LoadLibraryW(L"shcore.dll");
             if (hShcore) {
                 typedef HRESULT(WINAPI* SetProcessDpiAwarenessFunc)(PROCESS_DPI_AWARENESS);
@@ -560,29 +598,31 @@ BOOL InitializeApplication(HINSTANCE hInstance) {
                     (SetProcessDpiAwarenessFunc)GetProcAddress(hShcore, "SetProcessDpiAwareness");
                 
                 if (setProcessDpiAwarenessFunc) {
-
+                    /** Windows 8.1+ per-monitor DPI awareness */
                     setProcessDpiAwarenessFunc(PROCESS_PER_MONITOR_DPI_AWARE);
                 } else {
-
+                    /** Fallback to basic DPI awareness */
                     SetProcessDPIAware();
                 }
                 
                 FreeLibrary(hShcore);
             } else {
-
+                /** Final fallback for older Windows versions */
                 SetProcessDPIAware();
             }
         }
     }
     
+    /** Set console code page for Chinese character support */
     SetConsoleOutputCP(936);
     SetConsoleCP(936);
 
-
+    /** Load application configuration and initialize components */
     ReadConfig();
     UpdateStartupShortcut();
     InitializeDefaultLanguage();
 
+    /** Load default font from resources */
     int defaultFontIndex = -1;
     for (int i = 0; i < FONT_RESOURCES_COUNT; i++) {
         if (strcmp(fontResources[i].fontName, FONT_FILE_NAME) == 0) {
@@ -595,11 +635,20 @@ BOOL InitializeApplication(HINSTANCE hInstance) {
         LoadFontFromResource(hInstance, fontResources[defaultFontIndex].resourceId);
     }
 
+    /** Set initial timer value from configuration */
     CLOCK_TOTAL_TIME = CLOCK_DEFAULT_START_TIME;
     
     return TRUE;
 }
 
+/**
+ * @brief Open standard Windows file selection dialog
+ * @param hwnd Parent window handle
+ * @param filePath Buffer to receive selected file path
+ * @param maxPath Maximum size of file path buffer
+ * @return TRUE if file selected, FALSE if cancelled
+ * Uses common dialog API for file browsing functionality
+ */
 BOOL OpenFileDialog(HWND hwnd, wchar_t* filePath, DWORD maxPath) {
     OPENFILENAMEW ofn = { 0 };
     ofn.lStructSize = sizeof(OPENFILENAMEW);
@@ -614,28 +663,29 @@ BOOL OpenFileDialog(HWND hwnd, wchar_t* filePath, DWORD maxPath) {
 }
 
 
+/**
+ * @brief Toggle window always-on-top behavior
+ * @param hwnd Window handle to modify
+ * @param topmost TRUE for topmost, FALSE for desktop attachment
+ * Switches between HWND_TOPMOST and desktop wallpaper level positioning
+ */
 void SetWindowTopmost(HWND hwnd, BOOL topmost) {
     CLOCK_WINDOW_TOPMOST = topmost;
     
-
+    /** Modify window extended styles based on topmost state */
     LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
     
     if (topmost) {
-
+        /** Enable activation for topmost windows */
         exStyle &= ~WS_EX_NOACTIVATE;
         
-
-
+        /** Detach from desktop parent and set topmost z-order */
         SetParent(hwnd, NULL);
-        
-
         SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, 0);
-        
-
         SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED);
     } else {
-
+        /** Disable activation and attach to desktop */
         exStyle |= WS_EX_NOACTIVATE;
         ReattachToDesktop(hwnd);
         ShowWindow(hwnd, SW_SHOWNOACTIVATE);
@@ -643,19 +693,24 @@ void SetWindowTopmost(HWND hwnd, BOOL topmost) {
                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_FRAMECHANGED);
     }
     
-
+    /** Apply extended style changes */
     SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
     
-
+    /** Force frame change update */
     SetWindowPos(hwnd, NULL, 0, 0, 0, 0,
                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
     
-
+    /** Persist topmost setting to configuration */
     WriteConfigTopmost(topmost ? "TRUE" : "FALSE");
 }
 
+/**
+ * @brief Attach window to desktop wallpaper level for non-intrusive display
+ * @param hwnd Window handle to attach to desktop
+ * Searches for WorkerW window hosting desktop and parents window to it
+ */
 void ReattachToDesktop(HWND hwnd) {
-
+    /** Find desktop window hierarchy (Progman -> WorkerW -> SHELLDLL_DefView) */
     HWND hProgman = FindWindowW(L"Progman", NULL);
     HWND hDesktop = NULL;
     
@@ -673,13 +728,13 @@ void ReattachToDesktop(HWND hwnd) {
     }
     
     if (hDesktop != NULL) {
+        /** Parent window to desktop worker for wallpaper-level display */
         SetParent(hwnd, hDesktop);
-
         ShowWindow(hwnd, SW_SHOW);
         SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0,
                      SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
     } else {
-
+        /** Fallback if desktop hierarchy not found */
         SetParent(hwnd, NULL);
         ShowWindow(hwnd, SW_SHOW);
         SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0,
