@@ -1,3 +1,7 @@
+/**
+ * @file cli.c
+ * @brief Command-line interface parsing and help dialog management
+ */
 #include <windows.h>
 #include <shellapi.h>
 #include <string.h>
@@ -15,11 +19,18 @@
 extern int elapsed_time;
 extern int message_shown;
 
+/** @brief Global handle for CLI help dialog window */
 static HWND g_cliHelpDialog = NULL;
+/**
+ * @brief Force dialog to foreground with aggressive focus stealing
+ * @param hwndDialog Dialog window to bring to front
+ * Handles Windows focus restrictions by thread attachment and topmost tricks
+ */
 static void ForceForegroundAndFocus(HWND hwndDialog) {
 	HWND hwndFore = GetForegroundWindow();
 	DWORD foreThread = hwndFore ? GetWindowThreadProcessId(hwndFore, NULL) : 0;
 	DWORD curThread = GetCurrentThreadId();
+	/** Attach to foreground thread to bypass focus restrictions */
 	if (foreThread && foreThread != curThread) {
 		AttachThreadInput(foreThread, curThread, TRUE);
 	}
@@ -27,6 +38,7 @@ static void ForceForegroundAndFocus(HWND hwndDialog) {
 	BringWindowToTop(hwndDialog);
 	SetForegroundWindow(hwndDialog);
 	SetActiveWindow(hwndDialog);
+	/** Topmost trick if normal focus failed */
 	if (GetForegroundWindow() != hwndDialog) {
 		SetWindowPos(hwndDialog, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
 		SetWindowPos(hwndDialog, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
@@ -38,6 +50,14 @@ static void ForceForegroundAndFocus(HWND hwndDialog) {
 	}
 }
 
+/**
+ * @brief Dialog procedure for CLI help window
+ * @param hwndDlg Dialog window handle
+ * @param msg Window message
+ * @param wParam Message parameter
+ * @param lParam Message parameter
+ * @return Message handling result
+ */
 static INT_PTR CALLBACK CliHelpDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 	switch (msg) {
 	case WM_INITDIALOG:
@@ -73,6 +93,7 @@ static INT_PTR CALLBACK CliHelpDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
 		DestroyWindow(hwndDlg);
 		return TRUE;
 	case WM_DESTROY:
+		/** Restore main window topmost state when help closes */
 		if (hwndDlg == g_cliHelpDialog) {
 			g_cliHelpDialog = NULL;
 			extern BOOL CLOCK_WINDOW_TOPMOST;
@@ -87,8 +108,13 @@ static INT_PTR CALLBACK CliHelpDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
 	return FALSE;
 }
 
+/**
+ * @brief Show or toggle CLI help dialog window
+ * @param hwnd Parent window handle
+ */
 void ShowCliHelpDialog(HWND hwnd) {
 	if (g_cliHelpDialog && IsWindow(g_cliHelpDialog)) {
+		/** Toggle: close if already open */
 		DestroyWindow(g_cliHelpDialog);
 		g_cliHelpDialog = NULL;
 	} else {
@@ -100,6 +126,10 @@ void ShowCliHelpDialog(HWND hwnd) {
 	}
 }
 
+/**
+ * @brief Remove leading and trailing whitespace from string
+ * @param s String to trim in-place
+ */
 static void trimSpaces(char* s) {
 	if (!s) return;
 	char* p = s;
@@ -111,6 +141,11 @@ static void trimSpaces(char* s) {
 	}
 }
 
+/**
+ * @brief Expand compact target time format (e.g., "130t" → "1 30T")
+ * @param s String to expand in-place
+ * Handles 3-digit (HMM) and 4-digit (HHMM) compact formats
+ */
 static void expandCompactTargetTime(char* s) {
 	if (!s) return;
 	size_t len = strlen(s);
@@ -122,6 +157,7 @@ static void expandCompactTargetTime(char* s) {
 		for (size_t i = 0; i < dlen; ++i) {
 			if (!isdigit((unsigned char)s[i])) { allDigits = 0; break; }
 		}
+		/** Convert compact formats: 130t → "1 30T", 1030t → "10 30T" */
 		if (allDigits && (dlen == 3 || dlen == 4)) {
 			char buf[64];
 			if (dlen == 3) {
@@ -142,11 +178,17 @@ static void expandCompactTargetTime(char* s) {
                 strncpy(s, out, 255); s[255] = '\0';
             }
 		} else {
+			/** Restore 't' if pattern didn't match */
 			s[len - 1] = 't';
 		}
 	}
 }
 
+/**
+ * @brief Expand compact hour-minute format (e.g., "130 45" → "1 30 45")
+ * @param s String to expand in-place
+ * Converts 3-digit hour-minute followed by seconds
+ */
 static void expandCompactHourMinutePlusSecond(char* s) {
 	if (!s) return;
 	char copy[256];
@@ -159,6 +201,7 @@ static void expandCompactHourMinutePlusSecond(char* s) {
 	char* tok3 = strtok(NULL, " ");
 	if (!tok2 || tok3) return;
 
+	/** Pattern: "HMM SS" → "H MM SS" */
 	if (strlen(tok1) == 3) {
 		if (isdigit((unsigned char)tok1[0]) && isdigit((unsigned char)tok1[1]) && isdigit((unsigned char)tok1[2])) {
 			int hour = tok1[0] - '0';
@@ -171,6 +214,12 @@ static void expandCompactHourMinutePlusSecond(char* s) {
 	}
 }
 
+/**
+ * @brief Parse and execute command-line timer arguments
+ * @param hwnd Main window handle
+ * @param cmdLine Command line string to parse
+ * @return TRUE if command was recognized and executed
+ */
 BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
 	if (!cmdLine || !*cmdLine) return FALSE;
 
@@ -180,6 +229,7 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
 	trimSpaces(input);
 	if (input[0] == '\0') return FALSE;
 
+    /** Handle predefined command shortcuts */
     {
         if (_stricmp(input, "q1") == 0) {
             StartQuickCountdown1(hwnd);
@@ -221,6 +271,7 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
             return TRUE;
         }
 
+        /** Handle pomodoro with optional index (p1, p2, etc.) */
         if ((input[0] == 'p' || input[0] == 'P') && isdigit((unsigned char)input[1])) {
             long val = 0;
             const char* num = input + 1;
@@ -237,6 +288,7 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
         }
     }
 
+    /** Handle single-character commands */
     if (input[1] == '\0') {
         char c = (char)tolower((unsigned char)input[0]);
         if (c == 's') {
@@ -254,6 +306,7 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
         }
     }
 
+	/** Normalize whitespace for consistent parsing */
 	{
 		char norm[256]; size_t j = 0; int inSpace = 0;
 		for (size_t i = 0; input[i] && j < sizeof(norm) - 1; ++i) {
@@ -265,9 +318,11 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
 		strncpy(input, norm, sizeof(input) - 1); input[sizeof(input) - 1] = '\0';
 	}
 
+	/** Apply input format expansions */
 	expandCompactTargetTime(input);
 	expandCompactHourMinutePlusSecond(input);
 
+	/** Parse as timer duration and start countdown */
 	int total_seconds = 0;
     if (!ParseInput(input, &total_seconds)) {
         StartDefaultCountDown(hwnd);
@@ -276,6 +331,7 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
 	StopNotificationSound();
 	CloseAllNotifications();
 
+	/** Initialize new countdown timer */
 	KillTimer(hwnd, 1);
 	CLOCK_TOTAL_TIME = total_seconds;
 	countdown_elapsed_time = 0;
@@ -291,10 +347,17 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
 	return TRUE;
 }
 
+/**
+ * @brief Get handle to CLI help dialog if open
+ * @return Dialog window handle or NULL
+ */
 HWND GetCliHelpDialog(void) {
     return g_cliHelpDialog;
 }
 
+/**
+ * @brief Close CLI help dialog if open
+ */
 void CloseCliHelpDialog(void) {
     if (g_cliHelpDialog && IsWindow(g_cliHelpDialog)) {
         DestroyWindow(g_cliHelpDialog);
