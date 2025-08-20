@@ -400,6 +400,10 @@ void ShowColorMenu(HWND hwnd) {
     }
 
     AppendMenuW(hFontSubMenu, MF_POPUP, (UINT_PTR)hMoreFontsMenu, GetLocalizedString(L"更多", L"More"));
+    
+    AppendMenuW(hFontSubMenu, MF_SEPARATOR, 0, NULL);
+    
+    AppendMenuW(hFontSubMenu, MF_STRING, CLOCK_IDC_FONT_ADVANCED, GetLocalizedString(L"高级", L"Advanced"));
 
     HMENU hColorSubMenu = CreatePopupMenu();
 

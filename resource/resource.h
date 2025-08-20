@@ -365,6 +365,7 @@ extern int NOTIFICATION_TIMEOUT_MS;      /**< Notification timeout in millisecon
 #define CLOCK_IDC_FONT_STICK 387                /**< Stick font menu item */
 #define CLOCK_IDC_FONT_UNDERDOG 388             /**< Underdog font menu item */
 #define CLOCK_IDC_FONT_WALLPOET 389             /**< Wallpoet font menu item */
+#define CLOCK_IDC_FONT_ADVANCED 395             /**< Font advanced options menu item */
 
 /** @brief Font resource identifiers - Special fonts */
 #define IDR_FONT_RECMONO 442            /**< RecMono font resource */
