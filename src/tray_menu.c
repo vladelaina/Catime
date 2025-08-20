@@ -403,24 +403,29 @@ void ShowColorMenu(HWND hwnd) {
     
     AppendMenuW(hFontSubMenu, MF_SEPARATOR, 0, NULL);
     
-    /** Create advanced fonts submenu */
-    HMENU hAdvancedFontsMenu = CreatePopupMenu();
+    /** Helper function to recursively build font submenus */
+    int g_advancedFontId = 2000; /** Global counter for font IDs */
     
-    /** Load fonts from user's fonts folder */
-    char fontsFolderPath[MAX_PATH];
-    char* appdata_path = getenv("LOCALAPPDATA");
-    if (appdata_path) {
-        snprintf(fontsFolderPath, MAX_PATH, "%s\\Catime\\resources\\fonts\\*", appdata_path);
+    /** Recursive function to scan folder and create submenus */
+    BOOL ScanFontFolder(const char* folderPath, HMENU parentMenu, int* fontId) {
+        char searchPath[MAX_PATH];
+        snprintf(searchPath, MAX_PATH, "%s\\*", folderPath);
         
         WIN32_FIND_DATAA findData;
-        HANDLE hFind = FindFirstFileA(fontsFolderPath, &findData);
-        
-        int advancedFontId = 2000; /** Start from 2000 for advanced font IDs */
-        BOOL hasAdvancedFonts = FALSE;
+        HANDLE hFind = FindFirstFileA(searchPath, &findData);
+        BOOL hasAnyContent = FALSE;
         
         if (hFind != INVALID_HANDLE_VALUE) {
             do {
-                /** Skip directories and non-font files */
+                /** Skip . and .. entries */
+                if (strcmp(findData.cFileName, ".") == 0 || strcmp(findData.cFileName, "..") == 0) {
+                    continue;
+                }
+                
+                char fullItemPath[MAX_PATH];
+                snprintf(fullItemPath, MAX_PATH, "%s\\%s", folderPath, findData.cFileName);
+                
+                /** Handle regular font files */
                 if (!(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
                     char* ext = strrchr(findData.cFileName, '.');
                     if (ext && (stricmp(ext, ".ttf") == 0 || stricmp(ext, ".otf") == 0)) {
@@ -438,16 +443,53 @@ void ShowColorMenu(HWND hwnd) {
                         /** Check if this is the current font */
                         BOOL isCurrentFont = strcmp(FONT_FILE_NAME, findData.cFileName) == 0;
                         
-                        AppendMenuW(hAdvancedFontsMenu, MF_STRING | (isCurrentFont ? MF_CHECKED : MF_UNCHECKED),
-                                  advancedFontId, wDisplayName);
+                        AppendMenuW(parentMenu, MF_STRING | (isCurrentFont ? MF_CHECKED : MF_UNCHECKED),
+                                  (*fontId)++, wDisplayName);
                         
-                        advancedFontId++;
-                        hasAdvancedFonts = TRUE;
+                        hasAnyContent = TRUE;
                     }
+                }
+                /** Handle subdirectories recursively */
+                else if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+                    /** Create submenu for this folder */
+                    HMENU hSubFolderMenu = CreatePopupMenu();
+                    
+                    /** Recursively scan this subdirectory */
+                    BOOL hasSubContent = ScanFontFolder(fullItemPath, hSubFolderMenu, fontId);
+                    
+                    /** Convert folder name to wide string for menu */
+                    wchar_t wFolderName[MAX_PATH];
+                    MultiByteToWideChar(CP_UTF8, 0, findData.cFileName, -1, wFolderName, MAX_PATH);
+                    
+                    /** Always add the submenu, even if empty */
+                    if (!hasSubContent) {
+                        /** Add "Empty folder" indicator */
+                        AppendMenuW(hSubFolderMenu, MF_STRING | MF_GRAYED, 0, L"(Empty folder)");
+                    }
+                    
+                    AppendMenuW(parentMenu, MF_POPUP, (UINT_PTR)hSubFolderMenu, wFolderName);
+                    hasAnyContent = TRUE;
                 }
             } while (FindNextFileA(hFind, &findData));
             FindClose(hFind);
         }
+        
+        return hasAnyContent;
+    }
+    
+    /** Create advanced fonts submenu */
+    HMENU hAdvancedFontsMenu = CreatePopupMenu();
+    
+    /** Load fonts from user's fonts folder using recursive scan */
+    char fontsFolderPath[MAX_PATH];
+    char* appdata_path = getenv("LOCALAPPDATA");
+    if (appdata_path) {
+        snprintf(fontsFolderPath, MAX_PATH, "%s\\Catime\\resources\\fonts", appdata_path);
+        
+        g_advancedFontId = 2000; /** Reset global font ID counter */
+        
+        /** Use recursive function to scan all folders and subfolders */
+        BOOL hasAdvancedFonts = ScanFontFolder(fontsFolderPath, hAdvancedFontsMenu, &g_advancedFontId);
         
         /** Add browse option if no fonts found or as additional option */
         if (!hasAdvancedFonts) {

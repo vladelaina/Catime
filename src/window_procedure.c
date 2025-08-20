@@ -788,37 +788,61 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     
                     /** Handle dynamic advanced font selection from fonts folder */
                     else if (cmd >= 2000 && cmd < 3000) {
-                        /** Get font filename from fonts folder by index */
-                        char fontsFolderPath[MAX_PATH];
-                        char* appdata_path = getenv("LOCALAPPDATA");
-                        if (appdata_path) {
-                            snprintf(fontsFolderPath, MAX_PATH, "%s\\Catime\\resources\\fonts\\*", appdata_path);
+                        /** Helper function to recursively find font by ID */
+                        BOOL FindFontByIdRecursive(const char* folderPath, int targetId, int* currentId, char* foundFontName) {
+                            char searchPath[MAX_PATH];
+                            snprintf(searchPath, MAX_PATH, "%s\\*", folderPath);
                             
                             WIN32_FIND_DATAA findData;
-                            HANDLE hFind = FindFirstFileA(fontsFolderPath, &findData);
-                            
-                            int currentIndex = 2000;
-                            BOOL found = FALSE;
+                            HANDLE hFind = FindFirstFileA(searchPath, &findData);
                             
                             if (hFind != INVALID_HANDLE_VALUE) {
                                 do {
+                                    /** Skip . and .. entries */
+                                    if (strcmp(findData.cFileName, ".") == 0 || strcmp(findData.cFileName, "..") == 0) {
+                                        continue;
+                                    }
+                                    
+                                    char fullItemPath[MAX_PATH];
+                                    snprintf(fullItemPath, MAX_PATH, "%s\\%s", folderPath, findData.cFileName);
+                                    
+                                    /** Handle regular font files */
                                     if (!(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
                                         char* ext = strrchr(findData.cFileName, '.');
                                         if (ext && (stricmp(ext, ".ttf") == 0 || stricmp(ext, ".otf") == 0)) {
-                                            if (currentIndex == cmd) {
-                                                /** Found the matching font file */
-                                                WriteConfigFont(findData.cFileName);
-                                                found = TRUE;
-                                                break;
+                                            if (*currentId == targetId) {
+                                                strcpy(foundFontName, findData.cFileName);
+                                                FindClose(hFind);
+                                                return TRUE;
                                             }
-                                            currentIndex++;
+                                            (*currentId)++;
+                                        }
+                                    }
+                                    /** Handle subdirectories recursively */
+                                    else if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+                                        if (FindFontByIdRecursive(fullItemPath, targetId, currentId, foundFontName)) {
+                                            FindClose(hFind);
+                                            return TRUE;
                                         }
                                     }
                                 } while (FindNextFileA(hFind, &findData));
                                 FindClose(hFind);
                             }
                             
-                            if (found) {
+                            return FALSE;
+                        }
+                        
+                        /** Get font filename from fonts folder by ID using recursive search */
+                        char fontsFolderPath[MAX_PATH];
+                        char* appdata_path = getenv("LOCALAPPDATA");
+                        if (appdata_path) {
+                            snprintf(fontsFolderPath, MAX_PATH, "%s\\Catime\\resources\\fonts", appdata_path);
+                            
+                            int currentIndex = 2000;
+                            char foundFontName[MAX_PATH] = {0};
+                            
+                            if (FindFontByIdRecursive(fontsFolderPath, cmd, &currentIndex, foundFontName)) {
+                                WriteConfigFont(foundFontName);
                                 goto refresh_window;
                             }
                         }
