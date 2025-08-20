@@ -1,3 +1,7 @@
+/**
+ * @file color.c
+ * @brief Color management with CSS colors, live preview, and custom color picker
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,10 +11,15 @@
 #include "../resource/resource.h"
 #include "../include/dialog_procedure.h"
 
+/** @brief Dynamic array of user-defined color options */
 PredefinedColor* COLOR_OPTIONS = NULL;
 size_t COLOR_OPTIONS_COUNT = 0;
+
+/** @brief Live preview color state */
 char PREVIEW_COLOR[10] = "";
 BOOL IS_COLOR_PREVIEWING = FALSE;
+
+/** @brief Current clock text color */
 char CLOCK_TEXT_COLOR[10] = "#FFFFFF";
 
 void GetConfigPath(char* path, size_t size);
@@ -19,6 +28,7 @@ void ReadConfig(void);
 void WriteConfig(const char* config_path);
 void replaceBlackColor(const char* color, char* output, size_t output_size);
 
+/** @brief CSS color name to hex mapping table */
 static const CSSColor CSS_COLORS[] = {
     {"white", "#FFFFFF"},
     {"black", "#000000"},
@@ -54,6 +64,7 @@ static const CSSColor CSS_COLORS[] = {
 
 #define CSS_COLORS_COUNT (sizeof(CSS_COLORS) / sizeof(CSS_COLORS[0]))
 
+/** @brief Default color palette for initial configuration */
 static const char* DEFAULT_COLOR_OPTIONS[] = {
     "#FFFFFF",
     "#F9DB91",
@@ -79,11 +90,17 @@ WNDPROC g_OldEditProc;
 
 #include <commdlg.h>
 
+/**
+ * @brief Show Windows color picker dialog with live preview support
+ * @param hwnd Parent window handle
+ * @return Selected color or -1 if cancelled
+ */
 COLORREF ShowColorDialog(HWND hwnd) {
     CHOOSECOLOR cc = {0};
     static COLORREF acrCustClr[16] = {0};
     static DWORD rgbCurrent;
 
+    /** Parse current color to RGB */
     int r, g, b;
     if (CLOCK_TEXT_COLOR[0] == '#') {
         sscanf(CLOCK_TEXT_COLOR + 1, "%02x%02x%02x", &r, &g, &b);
@@ -92,6 +109,7 @@ COLORREF ShowColorDialog(HWND hwnd) {
     }
     rgbCurrent = RGB(r, g, b);
 
+    /** Populate custom colors from user options */
     for (size_t i = 0; i < COLOR_OPTIONS_COUNT && i < 16; i++) {
         const char* hexColor = COLOR_OPTIONS[i].hexColor;
         if (hexColor[0] == '#') {
@@ -144,10 +162,18 @@ COLORREF ShowColorDialog(HWND hwnd) {
     return (COLORREF)-1;
 }
 
+/**
+ * @brief Color dialog hook procedure for live preview and mouse picking
+ * @param hdlg Color dialog handle
+ * @param msg Window message
+ * @param wParam Message parameter
+ * @param lParam Message parameter
+ * @return Hook processing result
+ */
 UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     static HWND hwndParent;
     static CHOOSECOLOR* pcc;
-    static BOOL isColorLocked = FALSE;
+    static BOOL isColorLocked = FALSE;        /**< Mouse color picking lock state */
     static DWORD rgbCurrent;
     static COLORREF lastCustomColors[16] = {0};
 
@@ -165,6 +191,7 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT msg, WPARAM wParam, LPARAM
 
         case WM_LBUTTONDOWN:
         case WM_RBUTTONDOWN:
+            /** Toggle color picking lock on mouse clicks */
             isColorLocked = !isColorLocked;
             
             if (!isColorLocked) {
@@ -172,10 +199,12 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT msg, WPARAM wParam, LPARAM
                 GetCursorPos(&pt);
                 ScreenToClient(hdlg, &pt);
                 
+                /** Sample pixel color at cursor position */
                 HDC hdc = GetDC(hdlg);
                 COLORREF color = GetPixel(hdc, pt.x, pt.y);
                 ReleaseDC(hdlg, hdc);
                 
+                /** Avoid invalid colors and dialog background */
                 if (color != CLR_INVALID && color != RGB(240, 240, 240)) {
                     if (pcc) {
                         pcc->rgbResult = color;
@@ -201,6 +230,7 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT msg, WPARAM wParam, LPARAM
             break;
 
         case WM_MOUSEMOVE:
+            /** Live color picking during mouse movement */
             if (!isColorLocked) {
                 POINT pt;
                 GetCursorPos(&pt);
@@ -260,6 +290,7 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT msg, WPARAM wParam, LPARAM
         case WM_CTLCOLORBTN:
         case WM_CTLCOLOREDIT:
         case WM_CTLCOLORSTATIC:
+            /** Auto-save custom colors when dialog changes them */
             if (pcc) {
                 BOOL colorsChanged = FALSE;
                 for (int i = 0; i < 16; i++) {
@@ -282,6 +313,7 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT msg, WPARAM wParam, LPARAM
                     
                     ClearColorOptions();
                     
+                    /** Rebuild color options from custom colors */
                     for (int i = 0; i < 16; i++) {
                         if (pcc->lpCustColors[i] != 0) {
                             char hexColor[10];
@@ -301,6 +333,9 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT msg, WPARAM wParam, LPARAM
     return 0;
 }
 
+/**
+ * @brief Initialize color options from config file or defaults
+ */
 void InitializeDefaultLanguage(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -320,6 +355,7 @@ void InitializeDefaultLanguage(void) {
         char line[1024];
         BOOL found_colors = FALSE;
 
+        /** Parse COLOR_OPTIONS line from config */
         while (fgets(line, sizeof(line), file)) {
             if (strncmp(line, "COLOR_OPTIONS=", 13) == 0) {
                 ClearColorOptions();
@@ -332,6 +368,7 @@ void InitializeDefaultLanguage(void) {
                 char* newline = strchr(colors, '\n');
                 if (newline) *newline = '\0';
 
+                /** Parse comma-separated color list */
                 char* token = strtok(colors, ",");
                 while (token) {
                     while (*token == ' ') token++;
@@ -358,6 +395,7 @@ void InitializeDefaultLanguage(void) {
         }
         fclose(file);
 
+        /** Use defaults if no colors found in config */
         if (!found_colors || COLOR_OPTIONS_COUNT == 0) {
             for (size_t i = 0; i < DEFAULT_COLOR_OPTIONS_COUNT; i++) {
                 AddColorOption(DEFAULT_COLOR_OPTIONS[i]);
@@ -366,6 +404,10 @@ void InitializeDefaultLanguage(void) {
     }
 }
 
+/**
+ * @brief Add color to user options list with validation and deduplication
+ * @param hexColor Hex color string to add
+ */
 void AddColorOption(const char* hexColor) {
     if (!hexColor || !*hexColor) {
         return;
@@ -374,6 +416,7 @@ void AddColorOption(const char* hexColor) {
     char normalizedColor[10];
     const char* hex = (hexColor[0] == '#') ? hexColor + 1 : hexColor;
 
+    /** Validate hex format */
     size_t len = strlen(hex);
     if (len != 6) {
         return;
@@ -392,12 +435,14 @@ void AddColorOption(const char* hexColor) {
 
     snprintf(normalizedColor, sizeof(normalizedColor), "#%06X", color);
 
+    /** Check for duplicates */
     for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
         if (strcasecmp(normalizedColor, COLOR_OPTIONS[i].hexColor) == 0) {
             return;
         }
     }
 
+    /** Expand array and add new color */
     PredefinedColor* newArray = realloc(COLOR_OPTIONS,
                                       (COLOR_OPTIONS_COUNT + 1) * sizeof(PredefinedColor));
     if (newArray) {
@@ -407,6 +452,9 @@ void AddColorOption(const char* hexColor) {
     }
 }
 
+/**
+ * @brief Free all color options memory
+ */
 void ClearColorOptions(void) {
     if (COLOR_OPTIONS) {
         for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
@@ -418,6 +466,10 @@ void ClearColorOptions(void) {
     }
 }
 
+/**
+ * @brief Update CLOCK_TEXT_COLOR in config file while preserving other settings
+ * @param color_input New color value to write
+ */
 void WriteConfigColor(const char* color_input) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -453,6 +505,7 @@ void WriteConfigColor(const char* color_input) {
     }
     new_config[0] = '\0';
 
+    /** Parse and update config line by line */
     char *line = strtok(config_content, "\n");
     while (line) {
         if (strncmp(line, "CLOCK_TEXT_COLOR=", 17) == 0) {
@@ -482,6 +535,13 @@ void WriteConfigColor(const char* color_input) {
     ReadConfig();
 }
 
+/**
+ * @brief Convert various color formats to normalized hex
+ * @param input Input color (CSS name, hex, RGB, etc.)
+ * @param output Buffer for normalized hex output
+ * @param output_size Size of output buffer
+ * Supports CSS colors, RGB values, 3/6-digit hex, and various separators
+ */
 void normalizeColor(const char* input, char* output, size_t output_size) {
     while (isspace(*input)) input++;
 
@@ -492,6 +552,7 @@ void normalizeColor(const char* input, char* output, size_t output_size) {
         *p = tolower(*p);
     }
 
+    /** Check CSS color names first */
     for (size_t i = 0; i < CSS_COLORS_COUNT; i++) {
         if (strcmp(color, CSS_COLORS[i].name) == 0) {
             strncpy(output, CSS_COLORS[i].hex, output_size);
@@ -499,6 +560,7 @@ void normalizeColor(const char* input, char* output, size_t output_size) {
         }
     }
 
+    /** Clean non-essential characters for hex parsing */
     char cleaned[32] = {0};
     int j = 0;
     for (int i = 0; color[i]; i++) {
@@ -512,17 +574,20 @@ void normalizeColor(const char* input, char* output, size_t output_size) {
         memmove(cleaned, cleaned + 1, strlen(cleaned));
     }
 
+    /** Handle 3-digit hex shorthand */
     if (strlen(cleaned) == 3) {
         snprintf(output, output_size, "#%c%c%c%c%c%c",
             cleaned[0], cleaned[0], cleaned[1], cleaned[1], cleaned[2], cleaned[2]);
         return;
     }
 
+    /** Handle 6-digit hex */
     if (strlen(cleaned) == 6 && strspn(cleaned, "0123456789abcdefABCDEF") == 6) {
         snprintf(output, output_size, "#%s", cleaned);
         return;
     }
 
+    /** Try RGB format parsing with multiple separators */
     int r = -1, g = -1, b = -1;
     char* rgb_str = color;
 
@@ -531,6 +596,7 @@ void normalizeColor(const char* input, char* output, size_t output_size) {
         while (*rgb_str && (*rgb_str == '(' || isspace(*rgb_str))) rgb_str++;
     }
 
+    /** Support various RGB separators for international users */
     if (sscanf(rgb_str, "%d,%d,%d", &r, &g, &b) == 3 ||
         sscanf(rgb_str, "%d，%d，%d", &r, &g, &b) == 3 ||
         sscanf(rgb_str, "%d;%d;%d", &r, &g, &b) == 3 ||
@@ -544,9 +610,15 @@ void normalizeColor(const char* input, char* output, size_t output_size) {
         }
     }
 
+    /** Fallback: return input unchanged */
     strncpy(output, input, output_size);
 }
 
+/**
+ * @brief Validate color string format after normalization
+ * @param input Color string to validate
+ * @return TRUE if color is valid hex format
+ */
 BOOL isValidColor(const char* input) {
     if (!input || !*input) return FALSE;
 
@@ -571,6 +643,15 @@ BOOL isValidColor(const char* input) {
     return FALSE;
 }
 
+/**
+ * @brief Subclass procedure for color input edit control
+ * @param hwnd Edit control handle
+ * @param msg Window message
+ * @param wParam Message parameter
+ * @param lParam Message parameter
+ * @return Message handling result
+ * Provides live preview, Ctrl+A support, and Enter key handling
+ */
 LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_KEYDOWN:
@@ -594,6 +675,7 @@ LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
             }
             LRESULT result = CallWindowProc(g_OldEditProc, hwnd, msg, wParam, lParam);
 
+            /** Live preview color as user types */
             char color[32];
             wchar_t wcolor[32];
             GetWindowTextW(hwnd, wcolor, sizeof(wcolor)/sizeof(wchar_t));
@@ -624,6 +706,7 @@ LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
 
         case WM_PASTE:
         case WM_CUT: {
+            /** Handle paste/cut operations with live preview */
             LRESULT result = CallWindowProc(g_OldEditProc, hwnd, msg, wParam, lParam);
 
             char color[32];
@@ -656,11 +739,20 @@ LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
     return CallWindowProc(g_OldEditProc, hwnd, msg, wParam, lParam);
 }
 
+/**
+ * @brief Dialog procedure for color input dialog
+ * @param hwndDlg Dialog window handle
+ * @param msg Window message
+ * @param wParam Message parameter
+ * @param lParam Message parameter
+ * @return Dialog message processing result
+ */
 INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_INITDIALOG: {
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
             if (hwndEdit) {
+                /** Subclass edit control for enhanced functionality */
                 g_OldEditProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC,
                                                          (LONG_PTR)ColorEditSubclassProc);
 
@@ -680,6 +772,7 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 GetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, wcolor, sizeof(wcolor)/sizeof(wchar_t));
                 WideCharToMultiByte(CP_ACP, 0, wcolor, -1, color, sizeof(color), NULL, NULL);
 
+                /** Handle empty/whitespace-only input */
                 BOOL isAllSpaces = TRUE;
                 for (int i = 0; color[i]; i++) {
                     if (!isspace((unsigned char)color[i])) {
@@ -702,6 +795,7 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                     EndDialog(hwndDlg, IDOK);
                     return TRUE;
                 } else {
+                    /** Show error and return focus to input */
                     ShowErrorDialog(hwndDlg);
                     HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
                     SetFocus(hwndEdit);
@@ -718,6 +812,13 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
     return FALSE;
 }
 
+/**
+ * @brief Replace pure black with near-black to avoid visibility issues
+ * @param color Input color string
+ * @param output Output buffer for adjusted color
+ * @param output_size Size of output buffer
+ * Pure black (#000000) is barely visible, so we use #000001 instead
+ */
 void replaceBlackColor(const char* color, char* output, size_t output_size) {
     if (color && (strcasecmp(color, "#000000") == 0)) {
         strncpy(output, "#000001", output_size);
