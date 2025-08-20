@@ -1,3 +1,8 @@
+/**
+ * @file font.c
+ * @brief Font management and embedded font resource handling
+ */
+
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -5,12 +10,18 @@
 #include "../include/font.h"
 #include "../resource/resource.h"
 
+/** @brief Current font file name */
 char FONT_FILE_NAME[100] = "Hack Nerd Font.ttf";
+/** @brief Internal font name for Windows GDI */
 char FONT_INTERNAL_NAME[100];
+/** @brief Preview font file name during font selection */
 char PREVIEW_FONT_NAME[100] = "";
+/** @brief Preview internal font name for Windows GDI */
 char PREVIEW_INTERNAL_NAME[100] = "";
+/** @brief Flag indicating if font preview mode is active */
 BOOL IS_PREVIEWING = FALSE;
 
+/** @brief Array of embedded font resources mapping control IDs to resource IDs and filenames */
 FontResource fontResources[] = {
     {CLOCK_IDC_FONT_RECMONO, IDR_FONT_RECMONO, "RecMonoCasual Nerd Font Mono Essence.ttf"},
     {CLOCK_IDC_FONT_DEPARTURE, IDR_FONT_DEPARTURE, "DepartureMono Nerd Font Propo Essence.ttf"},
@@ -61,30 +72,45 @@ FontResource fontResources[] = {
     {CLOCK_IDC_FONT_DADDYTIME, IDR_FONT_DADDYTIME, "DaddyTimeMono Nerd Font Propo Essence.ttf"},
 };
 
+/** @brief Total number of embedded font resources */
 const int FONT_RESOURCES_COUNT = sizeof(fontResources) / sizeof(FontResource);
 
+/** @brief External reference to clock text color configuration */
 extern char CLOCK_TEXT_COLOR[];
 
+/** @brief External function to get configuration file path */
 extern void GetConfigPath(char* path, size_t maxLen);
+/** @brief External function to reload configuration */
 extern void ReadConfig(void);
+/** @brief Font enumeration callback function */
 extern int CALLBACK EnumFontFamExProc(ENUMLOGFONTEXW *lpelfe, NEWTEXTMETRICEX *lpntme, DWORD FontType, LPARAM lParam);
 
+/**
+ * @brief Load font from embedded resource into memory
+ * @param hInstance Application instance handle
+ * @param resourceId Resource ID of the font to load
+ * @return TRUE if font loaded successfully, FALSE otherwise
+ */
 BOOL LoadFontFromResource(HINSTANCE hInstance, int resourceId) {
+    /** Find font resource in executable */
     HRSRC hResource = FindResourceW(hInstance, MAKEINTRESOURCE(resourceId), RT_FONT);
     if (hResource == NULL) {
         return FALSE;
     }
 
+    /** Load resource into memory */
     HGLOBAL hMemory = LoadResource(hInstance, hResource);
     if (hMemory == NULL) {
         return FALSE;
     }
 
+    /** Lock resource data for access */
     void* fontData = LockResource(hMemory);
     if (fontData == NULL) {
         return FALSE;
     }
 
+    /** Add font to system font table from memory */
     DWORD fontLength = SizeofResource(hInstance, hResource);
     DWORD nFonts = 0;
     HANDLE handle = AddFontMemResourceEx(fontData, fontLength, NULL, &nFonts);
@@ -96,7 +122,14 @@ BOOL LoadFontFromResource(HINSTANCE hInstance, int resourceId) {
     return TRUE;
 }
 
+/**
+ * @brief Load font by name from embedded resources
+ * @param hInstance Application instance handle
+ * @param fontName Font filename to search for
+ * @return TRUE if font found and loaded, FALSE otherwise
+ */
 BOOL LoadFontByName(HINSTANCE hInstance, const char* fontName) {
+    /** Search font resources array for matching name */
     for (int i = 0; i < sizeof(fontResources) / sizeof(FontResource); i++) {
         if (strcmp(fontResources[i].fontName, fontName) == 0) {
             return LoadFontFromResource(hInstance, fontResources[i].resourceId);
@@ -105,19 +138,26 @@ BOOL LoadFontByName(HINSTANCE hInstance, const char* fontName) {
     return FALSE;
 }
 
+/**
+ * @brief Write font configuration to config file
+ * @param font_file_name Font filename to save in configuration
+ */
 void WriteConfigFont(const char* font_file_name) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
+    /** Convert path to wide character for Unicode support */
     wchar_t wconfig_path[MAX_PATH];
     MultiByteToWideChar(CP_ACP, 0, config_path, -1, wconfig_path, MAX_PATH);
     
+    /** Read existing config file */
     FILE *file = _wfopen(wconfig_path, L"r");
     if (!file) {
         fprintf(stderr, "Failed to open config file for reading: %s\n", config_path);
         return;
     }
 
+    /** Get file size and allocate buffer */
     fseek(file, 0, SEEK_END);
     long file_size = ftell(file);
     fseek(file, 0, SEEK_SET);
@@ -132,6 +172,7 @@ void WriteConfigFont(const char* font_file_name) {
     config_content[file_size] = '\0';
     fclose(file);
 
+    /** Allocate buffer for modified config */
     char *new_config = (char *)malloc(file_size + 100);
     if (!new_config) {
         fprintf(stderr, "Memory allocation failed!\n");
@@ -140,13 +181,16 @@ void WriteConfigFont(const char* font_file_name) {
     }
     new_config[0] = '\0';
 
+    /** Process each line and update FONT_FILE_NAME */
     char *line = strtok(config_content, "\n");
     while (line) {
         if (strncmp(line, "FONT_FILE_NAME=", 15) == 0) {
+            /** Replace font file name line */
             strcat(new_config, "FONT_FILE_NAME=");
             strcat(new_config, font_file_name);
             strcat(new_config, "\n");
         } else {
+            /** Keep existing line */
             strcat(new_config, line);
             strcat(new_config, "\n");
         }
@@ -155,6 +199,7 @@ void WriteConfigFont(const char* font_file_name) {
 
     free(config_content);
 
+    /** Write updated config back to file */
     file = _wfopen(wconfig_path, L"w");
     if (!file) {
         fprintf(stderr, "Failed to open config file for writing: %s\n", config_path);
@@ -166,42 +211,67 @@ void WriteConfigFont(const char* font_file_name) {
 
     free(new_config);
 
+    /** Reload configuration to apply changes */
     ReadConfig();
 }
 
+/**
+ * @brief Enumerate all available system fonts
+ */
 void ListAvailableFonts(void) {
+    /** Get device context for font enumeration */
     HDC hdc = GetDC(NULL);
     LOGFONT lf;
     memset(&lf, 0, sizeof(LOGFONT));
     lf.lfCharSet = DEFAULT_CHARSET;
 
+    /** Create temporary font for enumeration context */
     HFONT hFont = CreateFontW(12, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
                               lf.lfCharSet, OUT_DEFAULT_PRECIS,
                               CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,
                               DEFAULT_PITCH | FF_DONTCARE, NULL);
     SelectObject(hdc, hFont);
 
+    /** Enumerate all font families */
     EnumFontFamiliesExW(hdc, &lf, (FONTENUMPROCW)EnumFontFamExProc, 0, 0);
 
+    /** Clean up resources */
     DeleteObject(hFont);
     ReleaseDC(NULL, hdc);
 }
 
+/**
+ * @brief Font enumeration callback procedure
+ * @param lpelfe Extended logical font information
+ * @param lpntme Font metrics information
+ * @param FontType Font type flags
+ * @param lParam User-defined parameter
+ * @return 1 to continue enumeration, 0 to stop
+ */
 int CALLBACK EnumFontFamExProc(
     ENUMLOGFONTEXW *lpelfe,
     NEWTEXTMETRICEX *lpntme,
     DWORD FontType,
     LPARAM lParam
 ) {
+    /** Continue enumeration (placeholder implementation) */
     return 1;
 }
 
+/**
+ * @brief Start font preview mode with specified font
+ * @param hInstance Application instance handle
+ * @param fontName Font filename to preview
+ * @return TRUE if preview started successfully, FALSE otherwise
+ */
 BOOL PreviewFont(HINSTANCE hInstance, const char* fontName) {
     if (!fontName) return FALSE;
     
+    /** Copy font name for preview */
     strncpy(PREVIEW_FONT_NAME, fontName, sizeof(PREVIEW_FONT_NAME) - 1);
     PREVIEW_FONT_NAME[sizeof(PREVIEW_FONT_NAME) - 1] = '\0';
     
+    /** Extract internal name by removing .ttf extension */
     size_t name_len = strlen(PREVIEW_FONT_NAME);
     if (name_len > 4 && strcmp(PREVIEW_FONT_NAME + name_len - 4, ".ttf") == 0) {
         size_t copy_len = name_len - 4;
@@ -211,47 +281,67 @@ BOOL PreviewFont(HINSTANCE hInstance, const char* fontName) {
         memcpy(PREVIEW_INTERNAL_NAME, PREVIEW_FONT_NAME, copy_len);
         PREVIEW_INTERNAL_NAME[copy_len] = '\0';
     } else {
+        /** Use full name if no .ttf extension */
         strncpy(PREVIEW_INTERNAL_NAME, PREVIEW_FONT_NAME, sizeof(PREVIEW_INTERNAL_NAME) - 1);
         PREVIEW_INTERNAL_NAME[sizeof(PREVIEW_INTERNAL_NAME) - 1] = '\0';
     }
     
+    /** Load font for preview */
     if (!LoadFontByName(hInstance, PREVIEW_FONT_NAME)) {
         return FALSE;
     }
     
+    /** Enable preview mode */
     IS_PREVIEWING = TRUE;
     return TRUE;
 }
 
+/**
+ * @brief Cancel font preview and return to current font
+ */
 void CancelFontPreview(void) {
     IS_PREVIEWING = FALSE;
     PREVIEW_FONT_NAME[0] = '\0';
     PREVIEW_INTERNAL_NAME[0] = '\0';
 }
 
+/**
+ * @brief Apply previewed font as the current font
+ */
 void ApplyFontPreview(void) {
     if (!IS_PREVIEWING || strlen(PREVIEW_FONT_NAME) == 0) return;
     
+    /** Copy preview font to current font variables */
     strncpy(FONT_FILE_NAME, PREVIEW_FONT_NAME, sizeof(FONT_FILE_NAME) - 1);
     FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
     
     strncpy(FONT_INTERNAL_NAME, PREVIEW_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME) - 1);
     FONT_INTERNAL_NAME[sizeof(FONT_INTERNAL_NAME) - 1] = '\0';
     
+    /** Save to configuration and exit preview mode */
     WriteConfigFont(FONT_FILE_NAME);
     CancelFontPreview();
 }
 
+/**
+ * @brief Switch to a different font permanently
+ * @param hInstance Application instance handle
+ * @param fontName Font filename to switch to
+ * @return TRUE if font switched successfully, FALSE otherwise
+ */
 BOOL SwitchFont(HINSTANCE hInstance, const char* fontName) {
     if (!fontName) return FALSE;
     
+    /** Load the new font */
     if (!LoadFontByName(hInstance, fontName)) {
         return FALSE;
     }
     
+    /** Update current font name */
     strncpy(FONT_FILE_NAME, fontName, sizeof(FONT_FILE_NAME) - 1);
     FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
     
+    /** Extract internal name by removing .ttf extension */
     size_t name_len = strlen(FONT_FILE_NAME);
     if (name_len > 4 && strcmp(FONT_FILE_NAME + name_len - 4, ".ttf") == 0) {
         size_t copy_len = name_len - 4;
@@ -261,10 +351,12 @@ BOOL SwitchFont(HINSTANCE hInstance, const char* fontName) {
         memcpy(FONT_INTERNAL_NAME, FONT_FILE_NAME, copy_len);
         FONT_INTERNAL_NAME[copy_len] = '\0';
     } else {
+        /** Use full name if no .ttf extension */
         strncpy(FONT_INTERNAL_NAME, FONT_FILE_NAME, sizeof(FONT_INTERNAL_NAME) - 1);
         FONT_INTERNAL_NAME[sizeof(FONT_INTERNAL_NAME) - 1] = '\0';
     }
     
+    /** Save new font to configuration */
     WriteConfigFont(FONT_FILE_NAME);
     return TRUE;
 }
