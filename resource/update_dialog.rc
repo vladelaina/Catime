@@ -1,15 +1,25 @@
+/**
+ * @file update_dialog.rc
+ * @brief Software update notification and confirmation dialog
+ */
 #include <windows.h>
 #include "resource.h"
 
 #pragma code_page(65001)
 
+/** @brief Update availability notification with user choice buttons */
 IDD_UPDATE_DIALOG DIALOGEX 0, 0, 160, 100
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 FONT 12, "Microsoft YaHei UI"
 BEGIN
+    /** Update information text populated at runtime */
     CTEXT           "", IDC_UPDATE_TEXT, 0, 10, 160, 40
+    /** Exit instruction text */
     CTEXT           "", IDC_UPDATE_EXIT_TEXT, 0, 50, 160, 20
+    /** Accept update button */
     PUSHBUTTON      "", IDYES, 30, 75, 40, 15
+    /** Decline update button */
     PUSHBUTTON      "", IDNO, 90, 75, 40, 15
+    /** Hidden OK button for single-button mode */
     DEFPUSHBUTTON   "", IDOK, 60, 75, 40, 15, NOT WS_VISIBLE
 END 

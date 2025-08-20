@@ -1,14 +1,20 @@
+/**
+ * @file notification_dialog.rc
+ * @brief Comprehensive notification system configuration dialog
+ */
 #include <windows.h>
 #include <commctrl.h>
 #include "resource.h"
 
 #pragma code_page(65001)
 
+/** @brief Complex notification configuration dialog with grouped controls */
 CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG DIALOGEX 0, 0, 350, 410
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Notification Settings"
 FONT 9, "Segoe UI"
 BEGIN
+    /** Message content customization group */
     GROUPBOX        "Notification Content", IDC_NOTIFICATION_CONTENT_GROUP, 10, 10, 330, 160
     
     LTEXT           "Countdown timeout message:", IDC_NOTIFICATION_LABEL1, 20, 30, 80, 15
@@ -21,6 +27,7 @@ BEGIN
     EDITTEXT        IDC_NOTIFICATION_EDIT3, 20, 135, 310, 20, ES_AUTOHSCROLL
     
 
+    /** Visual appearance and timing controls */
     GROUPBOX        "Notification Display", IDC_NOTIFICATION_DISPLAY_GROUP, 10, 180, 330, 70
     
     LTEXT           "Notification display time:", IDC_NOTIFICATION_TIME_LABEL, 20, 200, 110, 15
@@ -32,11 +39,16 @@ BEGIN
     LTEXT           "100%", IDC_NOTIFICATION_OPACITY_TEXT, 315, 225, 35, 15
     
 
+    /** Notification delivery method selection */
     GROUPBOX        "Notification Method", IDC_NOTIFICATION_METHOD_GROUP, 10, 260, 330, 110
+    /** Custom Catime notification with full control */
     AUTORADIOBUTTON "Catime notification window", IDC_NOTIFICATION_TYPE_CATIME, 20, 280, 90, 15
+    /** System-integrated toast notifications */
     AUTORADIOBUTTON "Operating system notification", IDC_NOTIFICATION_TYPE_OS, 120, 280, 90, 15
+    /** Blocking modal dialog requiring acknowledgment */
     AUTORADIOBUTTON "System modal window", IDC_NOTIFICATION_TYPE_SYSTEM_MODAL, 220, 280, 90, 15
     
+    /** Audio feedback configuration */
     LTEXT           "Sound (supports .mp3/.wav/.flac):", IDC_NOTIFICATION_SOUND_LABEL, 20, 305, 150, 15
     COMBOBOX        IDC_NOTIFICATION_SOUND_COMBO, 170, 303, 80, 100, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     PUSHBUTTON      "Test", IDC_TEST_SOUND_BUTTON, 255, 303, 35, 20

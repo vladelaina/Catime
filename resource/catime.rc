@@ -1,7 +1,11 @@
+/**
+ * @file catime.rc
+ * @brief Application version information resource
+ */
 #include <windows.h>
 #include "../resource/resource.h"
 
-
+/** @brief Windows version resource block with build metadata */
 VS_VERSION_INFO VERSIONINFO
 FILEVERSION     CATIME_VERSION_MAJOR,CATIME_VERSION_MINOR,CATIME_VERSION_PATCH,CATIME_VERSION_BUILD
 PRODUCTVERSION  CATIME_VERSION_MAJOR,CATIME_VERSION_MINOR,CATIME_VERSION_PATCH,CATIME_VERSION_BUILD
@@ -15,8 +19,10 @@ FILEOS          0x40004L
 FILETYPE        0x1L
 FILESUBTYPE     0x0L
 BEGIN
+    /** String metadata block for file properties dialog */
     BLOCK "StringFileInfo"
     BEGIN
+        /** Neutral language block (0000) with Unicode codepage (04b0) */
         BLOCK "000004b0"
         BEGIN
             VALUE "CompanyName",      "vladelaina"

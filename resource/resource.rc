@@ -1,15 +1,23 @@
+/**
+ * @file resource.rc
+ * @brief Main resource file aggregating fonts, icons, and dialogs
+ */
 #include <windows.h>
 #include "resource.h"
 
+/** @brief Application icon resource */
 IDI_CATIME ICON "../asset/icon/catime.ico"
 
+/** @brief MIT-licensed monospace font for terminal-style display */
 IDR_FONT_PROFONT         FONT "../asset/font/MIT/ProFont IIx Nerd Font Essence.ttf"
 
+/** @brief SIL-licensed developer fonts with Nerd Font icons */
 IDR_FONT_DEPARTURE         FONT "../asset/font/SIL/DepartureMono Nerd Font Propo Essence.ttf"
 IDR_FONT_DADDYTIME        FONT "../asset/font/SIL/DaddyTimeMono Nerd Font Propo Essence.ttf"
 IDR_FONT_RECMONO           FONT "../asset/font/SIL/RecMonoCasual Nerd Font Mono Essence.ttf"
 IDR_FONT_TERMINESS         FONT "../asset/font/SIL/Terminess Nerd Font Propo Essence.ttf"
 
+/** @brief OFL-licensed decorative fonts for aesthetic diversity */
 IDR_FONT_ARBUTUS           FONT "../asset/font/OFL/Arbutus Essence.ttf"
 IDR_FONT_BERKSHIRE         FONT "../asset/font/OFL/Berkshire Swash Essence.ttf"
 IDR_FONT_CAVEAT            FONT "../asset/font/OFL/Caveat Brush Essence.ttf"
@@ -56,6 +64,7 @@ IDR_FONT_WALLPOET          FONT "../asset/font/OFL/Wallpoet Essence.ttf"
 IDR_FONT_YESTERYEAR        FONT "../asset/font/OFL/Yesteryear Essence.ttf"
 IDR_FONT_ZCOOL_KUAILE      FONT "../asset/font/OFL/ZCOOL KuaiLe Essence.ttf"
 
+/** @brief Generic input dialog for user text entry */
 IDD_INPUTBOX DIALOGEX 0, 0, 240, 90
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Input"
@@ -83,4 +92,5 @@ END
 #include "hotkey_dialog.rc"
 #include "help_dialog.rc"
 
+/** @brief Application manifest for Windows UAC and DPI awareness */
 1 RT_MANIFEST "app.manifest"

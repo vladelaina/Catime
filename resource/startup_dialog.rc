@@ -1,14 +1,21 @@
+/**
+ * @file startup_dialog.rc
+ * @brief Application startup behavior configuration dialog
+ */
 #include <windows.h>
 #include "resource.h"
 
 #pragma code_page(65001)
 
+/** @brief Default countdown timer configuration for application startup */
 CLOCK_IDD_STARTUP_DIALOG DIALOGEX 0, 0, 200, 130
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Startup Settings - Countdown"
 FONT 9, "Segoe UI"
 BEGIN
+    /** Instructional text referencing countdown format compatibility */
     LTEXT           "Set default countdown time at startup\nFormat is the same as countdown time settings", CLOCK_IDC_STATIC, 10, 10, 180, 30
+    /** Time input using same parser as main countdown dialog */
     EDITTEXT        CLOCK_IDC_EDIT, 10, 55, 180, 20, ES_AUTOHSCROLL | ES_MULTILINE
     PUSHBUTTON      "OK", CLOCK_IDC_BUTTON_OK, 140, 105, 50, 14
 END 

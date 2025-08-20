@@ -1,14 +1,21 @@
+/**
+ * @file pomodoro_loop_dialog.rc
+ * @brief Pomodoro cycle count configuration dialog
+ */
 #include <windows.h>
 #include "resource.h"
 
 #pragma code_page(65001)
 
+/** @brief Dialog for setting Pomodoro technique loop iterations */
 CLOCK_IDD_POMODORO_LOOP_DIALOG DIALOGEX 0, 0, 200, 130
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION ""
 FONT 9, "Segoe UI"
 BEGIN
+    /** Dynamic text populated at runtime with loop instructions */
     LTEXT           "", CLOCK_IDC_STATIC, 10, 10, 180, 60
+    /** Numeric input for cycle count */
     EDITTEXT        CLOCK_IDC_EDIT, 10, 75, 180, 20, ES_AUTOHSCROLL
     PUSHBUTTON      "OK", CLOCK_IDC_BUTTON_OK, 140, 100, 50, 14
 END 

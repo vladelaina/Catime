@@ -1,19 +1,24 @@
+/**
+ * @file languages.rc
+ * @brief Internationalization resource definitions for multi-language support
+ */
 #include <windows.h>
 #include "resource.h"
 
+/** @brief Language resource identifiers for embedded INI files */
+#define LANG_EN_INI       1001   /**< English language pack */
+#define LANG_ZH_CN_INI    1002   /**< Simplified Chinese language pack */
+#define LANG_ZH_TW_INI    1003   /**< Traditional Chinese language pack */
+#define LANG_ES_INI       1004   /**< Spanish language pack */
+#define LANG_FR_INI       1005   /**< French language pack */
+#define LANG_DE_INI       1006   /**< German language pack */
+#define LANG_RU_INI       1007   /**< Russian language pack */
+#define LANG_PT_INI       1008   /**< Portuguese language pack */
+#define LANG_JA_INI       1009   /**< Japanese language pack */
+#define LANG_KO_INI       1010   /**< Korean language pack */
 
-#define LANG_EN_INI       1001
-#define LANG_ZH_CN_INI    1002
-#define LANG_ZH_TW_INI    1003
-#define LANG_ES_INI       1004
-#define LANG_FR_INI       1005
-#define LANG_DE_INI       1006
-#define LANG_RU_INI       1007
-#define LANG_PT_INI       1008
-#define LANG_JA_INI       1009
-#define LANG_KO_INI       1010
 
-
+/** @brief Embedded language pack resources for runtime loading */
 LANG_EN_INI RCDATA "languages/en.ini"
 LANG_ZH_CN_INI RCDATA "languages/zh_CN.ini"
 LANG_ZH_TW_INI RCDATA "languages/zh-Hant.ini"

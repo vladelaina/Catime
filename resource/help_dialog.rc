@@ -1,14 +1,17 @@
+/**
+ * @file help_dialog.rc
+ * @brief CLI command reference help dialog
+ */
 #include <windows.h>
 #include "resource.h"
 
-
-
-
+/** @brief Comprehensive CLI help dialog with embedded usage documentation */
 IDD_CLI_HELP_DIALOG DIALOGEX 0, 0, 360, 260
 STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Catime CLI Help"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
+    /** Comprehensive CLI documentation in scrollable read-only text control */
     CONTROL \
 "Usage: catime <argument>\r\n\r\n"
 "Countdown inputs (same rules as UI):\r\n"
