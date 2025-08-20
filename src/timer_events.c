@@ -1,3 +1,8 @@
+/**
+ * @file timer_events.c
+ * @brief Core timer event handling with Pomodoro technique support and timeout actions
+ * Manages timer state transitions, notifications, and various completion behaviors
+ */
 #include <windows.h>
 #include <stdlib.h>
 #include "../include/timer_events.h"
@@ -15,10 +20,13 @@
 extern int POMODORO_TIMES[MAX_POMODORO_TIMES];
 extern int POMODORO_TIMES_COUNT;
 
+/** @brief Current index in the Pomodoro time sequence */
 int current_pomodoro_time_index = 0;
 
+/** @brief Current phase of Pomodoro cycle (work/break/idle) */
 POMODORO_PHASE current_pomodoro_phase = POMODORO_PHASE_IDLE;
 
+/** @brief Number of completed Pomodoro cycles */
 int complete_pomodoro_cycles = 0;
 
 extern void ShowNotification(HWND hwnd, const wchar_t* message);
@@ -26,21 +34,24 @@ extern void ShowNotification(HWND hwnd, const wchar_t* message);
 extern int elapsed_time;
 extern BOOL message_shown;
 
+/** @brief Localized timeout message strings */
 extern char CLOCK_TIMEOUT_MESSAGE_TEXT[100];
 extern char POMODORO_TIMEOUT_MESSAGE_TEXT[100];
 extern char POMODORO_CYCLE_COMPLETE_TEXT[100];
 
+/** @brief Timer application states for different operating modes */
 typedef enum {
-    CLOCK_STATE_IDLE,
-    CLOCK_STATE_COUNTDOWN,
-    CLOCK_STATE_COUNTUP,
-    CLOCK_STATE_POMODORO
+    CLOCK_STATE_IDLE,       /**< Timer not running */
+    CLOCK_STATE_COUNTDOWN,  /**< Standard countdown timer */
+    CLOCK_STATE_COUNTUP,    /**< Stopwatch mode */
+    CLOCK_STATE_POMODORO    /**< Pomodoro technique mode */
 } ClockState;
 
+/** @brief State tracking for Pomodoro cycle progression */
 typedef struct {
-    BOOL isLastCycle;
-    int cycleIndex;
-    int totalCycles;
+    BOOL isLastCycle;   /**< True if this is the final cycle */
+    int cycleIndex;     /**< Current cycle number (0-based) */
+    int totalCycles;    /**< Total number of cycles to complete */
 } PomodoroState;
 
 extern HWND g_hwnd;
@@ -58,6 +69,12 @@ extern void ShowCountUp(HWND hwnd);
 
 extern void StopNotificationSound(void);
 
+/**
+ * @brief Convert UTF-8 string to Windows wide character string
+ * @param utf8String Input UTF-8 encoded string
+ * @return Allocated wide char string or NULL on failure
+ * Caller must free the returned string
+ */
 static wchar_t* Utf8ToWideChar(const char* utf8String) {
     if (!utf8String || utf8String[0] == '\0') {
         return NULL;
@@ -78,6 +95,12 @@ static wchar_t* Utf8ToWideChar(const char* utf8String) {
     return wideString;
 }
 
+/**
+ * @brief Show notification with optional sound based on timeout action
+ * @param hwnd Window handle for notification display
+ * @param message Wide character message to display
+ * Plays notification sound only for message-type timeout actions
+ */
 static void ShowLocalizedNotification(HWND hwnd, const wchar_t* message) {
     if (!message || message[0] == L'\0') {
         return;
@@ -85,6 +108,7 @@ static void ShowLocalizedNotification(HWND hwnd, const wchar_t* message) {
 
     ShowNotification(hwnd, message);
             
+    /** Play sound only for message notifications, not for actions */
     if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_MESSAGE) {
         ReadNotificationSoundConfig();
         
@@ -92,11 +116,16 @@ static void ShowLocalizedNotification(HWND hwnd, const wchar_t* message) {
     }
 }
 
+/**
+ * @brief Initialize Pomodoro technique timer with configured time sequence
+ * Sets up work phase with first configured time interval or 25-minute default
+ */
 void InitializePomodoro(void) {
     current_pomodoro_phase = POMODORO_PHASE_WORK;
     current_pomodoro_time_index = 0;
     complete_pomodoro_cycles = 0;
     
+    /** Use first configured time or fallback to 25 minutes (1500 seconds) */
     if (POMODORO_TIMES_COUNT > 0) {
         CLOCK_TOTAL_TIME = POMODORO_TIMES[0];
     } else {
@@ -107,7 +136,15 @@ void InitializePomodoro(void) {
     countdown_message_shown = FALSE;
 }
 
+/**
+ * @brief Main timer event dispatcher handling window positioning and timer updates
+ * @param hwnd Main window handle
+ * @param wp Timer ID identifying the event type
+ * @return TRUE if event was handled, FALSE otherwise
+ * Manages multiple timer types: positioning retries, main countdown, and special behaviors
+ */
 BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
+    /** Timer 999: Topmost window positioning retry mechanism */
     if (wp == 999) {
         static int s_topmost_retry_remaining = 0;
         if (s_topmost_retry_remaining == 0) {
@@ -123,6 +160,7 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
             ShowWindow(hwnd, SW_SHOWNOACTIVATE);
         }
 
+        /** Retry up to 3 times with 1.5 second intervals */
         s_topmost_retry_remaining--;
         if (s_topmost_retry_remaining > 0) {
             SetTimer(hwnd, 999, 1500, NULL);
@@ -132,6 +170,7 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
         return TRUE;
     }
 
+    /** Timer 1001: Desktop attachment retry for non-topmost windows */
     if (wp == 1001) {
         static int s_desktop_retry_remaining = 0;
         if (s_desktop_retry_remaining == 0) {
@@ -153,6 +192,7 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
         }
         return TRUE;
     }
+    /** Timer 1002: Force desktop reattachment with immediate redraw */
     if (wp == 1002) {
         KillTimer(hwnd, 1002);
         extern void ReattachToDesktop(HWND);
@@ -164,23 +204,28 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
         RedrawWindow(hwnd, NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW);
         return TRUE;
     }
+    /** Timer 1: Main application timer (1-second interval) */
     if (wp == 1) {
+        /** Clock mode: display current time */
         if (CLOCK_SHOW_CURRENT_TIME) {
             extern int last_displayed_second;
-            last_displayed_second = -1;
+            last_displayed_second = -1;  /**< Force time redraw */
             
             InvalidateRect(hwnd, NULL, TRUE);
             return TRUE;
         }
 
+        /** Skip timer updates when paused */
         if (CLOCK_IS_PAUSED) {
             return TRUE;
         }
 
+        /** Count-up mode: increment elapsed time */
         if (CLOCK_COUNT_UP) {
             countup_elapsed_time++;
             InvalidateRect(hwnd, NULL, TRUE);
         } else {
+            /** Countdown mode: process timer completion and Pomodoro logic */
             if (countdown_elapsed_time < CLOCK_TOTAL_TIME) {
                 countdown_elapsed_time++;
                 if (countdown_elapsed_time >= CLOCK_TOTAL_TIME && !countdown_message_shown) {
@@ -191,6 +236,7 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                     
                     wchar_t* timeoutMsgW = NULL;
 
+                    /** Active Pomodoro sequence: handle work/break transitions */
                     if (current_pomodoro_phase != POMODORO_PHASE_IDLE && 
                         POMODORO_TIMES_COUNT > 0 && 
                         current_pomodoro_time_index < POMODORO_TIMES_COUNT &&
@@ -204,13 +250,16 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                             ShowLocalizedNotification(hwnd, L"番茄钟时间到！");
                         }
                         
+                        /** Move to next time interval in sequence */
                         current_pomodoro_time_index++;
                         
+                        /** Check if sequence is complete */
                         if (current_pomodoro_time_index >= POMODORO_TIMES_COUNT) {
                             current_pomodoro_time_index = 0;
                             
                             complete_pomodoro_cycles++;
                             
+                            /** All cycles completed - end Pomodoro session */
                             if (complete_pomodoro_cycles >= POMODORO_LOOP_COUNT) {
                                 countdown_elapsed_time = 0;
                                 countdown_message_shown = FALSE;
@@ -237,10 +286,12 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                             }
                         }
                         
+                        /** Start next interval in sequence */
                         CLOCK_TOTAL_TIME = POMODORO_TIMES[current_pomodoro_time_index];
                         countdown_elapsed_time = 0;
                         countdown_message_shown = FALSE;
                         
+                        /** Show cycle progress message when starting new cycle */
                         if (current_pomodoro_time_index == 0 && complete_pomodoro_cycles > 0) {
                             wchar_t cycleMsg[100];
                             const wchar_t* formatStr = GetLocalizedString(L"开始第 %d 轮番茄钟", L"Starting Pomodoro cycle %d");
@@ -250,8 +301,10 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                         
                         InvalidateRect(hwnd, NULL, TRUE);
                     } else {
+                        /** Regular countdown timer: show message and execute timeout action */
                         timeoutMsgW = Utf8ToWideChar(CLOCK_TIMEOUT_MESSAGE_TEXT);
                         
+                        /** Show timeout message only for actions that don't have immediate effects */
                         if (CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_OPEN_FILE && 
                             CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_LOCK &&
                             CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_SHUTDOWN &&
@@ -264,6 +317,7 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                             }
                         }
                         
+                        /** Reset Pomodoro state if timer doesn't match current sequence */
                         if (current_pomodoro_phase != POMODORO_PHASE_IDLE &&
                             (current_pomodoro_time_index >= POMODORO_TIMES_COUNT ||
                              CLOCK_TOTAL_TIME != POMODORO_TIMES[current_pomodoro_time_index])) {
@@ -409,12 +463,18 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
     return FALSE;
 }
 
+/**
+ * @brief Handle timer timeout events with appropriate actions and notifications
+ * @param hwnd Main window handle
+ * Executes configured timeout action and shows context-appropriate messages
+ */
 void OnTimerTimeout(HWND hwnd) {
     switch (CLOCK_TIMEOUT_ACTION) {
         case TIMEOUT_ACTION_MESSAGE: {
             wchar_t unicodeMsg[256] = {0};
             const char* utf8Message = NULL;
             
+            /** Select appropriate message based on timer context */
             if (g_clockState == CLOCK_STATE_POMODORO) {
                 if (g_pomodoroState.isLastCycle && g_pomodoroState.cycleIndex >= g_pomodoroState.totalCycles - 1) {
                     utf8Message = POMODORO_CYCLE_COMPLETE_TEXT;
@@ -439,6 +499,7 @@ void OnTimerTimeout(HWND hwnd) {
             break;
         }
         case TIMEOUT_ACTION_RUN_COMMAND: {
+            /** Placeholder for future command execution feature */
             MessageBoxW(hwnd, 
                 GetLocalizedString(L"运行命令功能正在开发中", L"Run Command feature is under development"),
                 GetLocalizedString(L"提示", L"Notice"),
@@ -446,6 +507,7 @@ void OnTimerTimeout(HWND hwnd) {
             break;
         }
         case TIMEOUT_ACTION_HTTP_REQUEST: {
+            /** Placeholder for future HTTP request feature */
             MessageBoxW(hwnd, 
                 GetLocalizedString(L"HTTP请求功能正在开发中", L"HTTP Request feature is under development"),
                 GetLocalizedString(L"提示", L"Notice"),
@@ -456,6 +518,7 @@ void OnTimerTimeout(HWND hwnd) {
     }
 }
 
+/** @brief Global state variables for timer application (fallback definitions) */
 #ifndef STUB_VARIABLES_DEFINED
 #define STUB_VARIABLES_DEFINED
 HWND g_hwnd = NULL;
@@ -463,23 +526,45 @@ ClockState g_clockState = CLOCK_STATE_IDLE;
 PomodoroState g_pomodoroState = {FALSE, 0, 1};
 #endif
 
+/** @brief Weak function definitions for system control features */
 #ifndef STUB_FUNCTIONS_DEFINED
 #define STUB_FUNCTIONS_DEFINED
+/**
+ * @brief Put computer into sleep/suspend state
+ * Uses Windows power management APIs via rundll32
+ */
 __attribute__((weak)) void SleepComputer(void) {
     system("rundll32.exe powrprof.dll,SetSuspendState 0,1,0");
 }
 
+/**
+ * @brief Shutdown computer immediately
+ * Uses Windows shutdown command with immediate timeout
+ */
 __attribute__((weak)) void ShutdownComputer(void) {
     system("shutdown /s /t 0");
 }
 
+/**
+ * @brief Restart computer immediately
+ * Uses Windows shutdown command with restart flag
+ */
 __attribute__((weak)) void RestartComputer(void) {
     system("shutdown /r /t 0");
 }
 
+/**
+ * @brief Stub function for time display mode switching
+ * Implementation provided by other modules
+ */
 __attribute__((weak)) void SetTimeDisplay(void) {
 }
 
+/**
+ * @brief Stub function for count-up timer display
+ * @param hwnd Window handle (unused in stub)
+ * Implementation provided by other modules
+ */
 __attribute__((weak)) void ShowCountUp(HWND hwnd) {
 }
 #endif
