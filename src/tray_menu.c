@@ -1,3 +1,8 @@
+/**
+ * @file tray_menu.c
+ * @brief Complex popup menu system for system tray right-click and left-click menus
+ * Handles extensive configuration options, font/color selection, and multilingual support
+ */
 #include <windows.h>
 #include <shellapi.h>
 #include <stdio.h>
@@ -11,6 +16,7 @@
 #include "../include/timer.h"
 #include "../resource/resource.h"
 
+/** @brief Timer state and display configuration externals */
 extern BOOL CLOCK_SHOW_CURRENT_TIME;
 extern BOOL CLOCK_USE_24HOUR;
 extern BOOL CLOCK_SHOW_SECONDS;
@@ -31,6 +37,7 @@ extern char CLOCK_TIMEOUT_FILE_PATH[MAX_PATH];
 extern char CLOCK_TIMEOUT_TEXT[50];
 extern BOOL CLOCK_WINDOW_TOPMOST;
 
+/** @brief Pomodoro technique configuration externals */
 extern int POMODORO_WORK_TIME;
 extern int POMODORO_SHORT_BREAK;
 extern int POMODORO_LONG_BREAK;
@@ -50,6 +57,10 @@ extern void WriteConfigStartupMode(const char* mode);
 extern void ClearColorOptions(void);
 extern void AddColorOption(const char* color);
 
+/**
+ * @brief Read timeout action setting from configuration file
+ * Parses TIMEOUT_ACTION value and updates global timeout action type
+ */
 void ReadTimeoutActionFromConfig() {
     char configPath[MAX_PATH];
     GetConfigPath(configPath, MAX_PATH);
@@ -69,14 +80,22 @@ void ReadTimeoutActionFromConfig() {
     }
 }
 
+/** @brief Structure for recent file tracking in timeout actions */
 typedef struct {
-    char path[MAX_PATH];
-    char name[MAX_PATH];
+    char path[MAX_PATH];        /**< Full file path */
+    char name[MAX_PATH];        /**< Display name */
 } RecentFile;
 
 extern RecentFile CLOCK_RECENT_FILES[];
 extern int CLOCK_RECENT_FILES_COUNT;
 
+/**
+ * @brief Format time duration for menu display with intelligent precision
+ * @param seconds Time duration in seconds
+ * @param buffer Output buffer for formatted time string
+ * @param bufferSize Size of output buffer in wide characters
+ * Shows hours if > 1 hour, minutes only if whole minutes, or minutes:seconds
+ */
 static void FormatPomodoroTime(int seconds, wchar_t* buffer, size_t bufferSize) {
     int minutes = seconds / 60;
     int secs = seconds % 60;
@@ -92,6 +111,13 @@ static void FormatPomodoroTime(int seconds, wchar_t* buffer, size_t bufferSize) 
     }
 }
 
+/**
+ * @brief Intelligently truncate long filenames for menu display
+ * @param fileName Original filename to truncate
+ * @param truncated Output buffer for truncated filename
+ * @param maxLen Maximum length for display
+ * Preserves extension and uses middle truncation with ellipsis for readability
+ */
 void TruncateFileName(const wchar_t* fileName, wchar_t* truncated, size_t maxLen) {
     if (!fileName || !truncated || maxLen <= 7) return;
     
@@ -101,6 +127,7 @@ void TruncateFileName(const wchar_t* fileName, wchar_t* truncated, size_t maxLen
         return;
     }
     
+    /** Separate filename and extension for smart truncation */
     const wchar_t* lastDot = wcsrchr(fileName, L'.');
     const wchar_t* fileNameNoExt = fileName;
     const wchar_t* ext = L"";
@@ -113,6 +140,7 @@ void TruncateFileName(const wchar_t* fileName, wchar_t* truncated, size_t maxLen
         nameNoExtLen = lastDot - fileName;
     }
     
+    /** Simple truncation for shorter names */
     if (nameNoExtLen <= 27) {
         wcsncpy(truncated, fileName, maxLen - extLen - 3);
         truncated[maxLen - extLen - 3] = L'\0';
@@ -121,6 +149,7 @@ void TruncateFileName(const wchar_t* fileName, wchar_t* truncated, size_t maxLen
         return;
     }
     
+    /** Middle truncation: show beginning and end with ellipsis */
     wchar_t buffer[MAX_PATH];
     
     wcsncpy(buffer, fileName, 12);
@@ -135,6 +164,11 @@ void TruncateFileName(const wchar_t* fileName, wchar_t* truncated, size_t maxLen
     wcscpy(truncated, buffer);
 }
 
+/**
+ * @brief Build and display comprehensive configuration menu (right-click menu)
+ * @param hwnd Main window handle for menu operations
+ * Creates complex nested menu system with timeout actions, fonts, colors, and settings
+ */
 void ShowColorMenu(HWND hwnd) {
     ReadTimeoutActionFromConfig();
     
@@ -461,6 +495,11 @@ void ShowColorMenu(HWND hwnd) {
     DestroyMenu(hMenu);
 }
 
+/**
+ * @brief Build and display timer control context menu (left-click menu)
+ * @param hwnd Main window handle for menu operations
+ * Creates focused menu for timer operations, time display, and Pomodoro functions
+ */
 void ShowContextMenu(HWND hwnd) {
     ReadTimeoutActionFromConfig();
     
@@ -468,12 +507,15 @@ void ShowContextMenu(HWND hwnd) {
     
     HMENU hMenu = CreatePopupMenu();
     
+    /** Timer management submenu with dynamic state-based controls */
     HMENU hTimerManageMenu = CreatePopupMenu();
     
+    /** Check if timer is actively running (not system clock, and either counting up or countdown in progress) */
     BOOL timerRunning = (!CLOCK_SHOW_CURRENT_TIME && 
                          (CLOCK_COUNT_UP || 
                           (!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0 && countdown_elapsed_time < CLOCK_TOTAL_TIME)));
     
+    /** Dynamic pause/resume text based on current timer state */
     const wchar_t* pauseResumeText = CLOCK_IS_PAUSED ? 
                                     GetLocalizedString(L"继续", L"Resume") : 
                                     GetLocalizedString(L"暂停", L"Pause");
@@ -481,6 +523,7 @@ void ShowContextMenu(HWND hwnd) {
     AppendMenuW(hTimerManageMenu, MF_STRING | (timerRunning ? MF_ENABLED : MF_GRAYED),
                CLOCK_IDM_TIMER_PAUSE_RESUME, pauseResumeText);
     
+    /** Check if restart operation is valid for current timer mode */
     BOOL canRestart = (!CLOCK_SHOW_CURRENT_TIME && (CLOCK_COUNT_UP || 
                       (!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0)));
     
@@ -510,6 +553,7 @@ void ShowContextMenu(HWND hwnd) {
                (UINT_PTR)hTimeMenu,
                GetLocalizedString(L"时间显示", L"Time Display"));
 
+    /** Load Pomodoro configuration from file for dynamic menu generation */
     char configPath[MAX_PATH];
     GetConfigPath(configPath, MAX_PATH);
     FILE *configFile = fopen(configPath, "r");
@@ -518,6 +562,7 @@ void ShowContextMenu(HWND hwnd) {
     if (configFile) {
         char line[256];
         while (fgets(line, sizeof(line), configFile)) {
+            /** Parse comma-separated Pomodoro time options */
             if (strncmp(line, "POMODORO_TIME_OPTIONS=", 22) == 0) {
                 char* options = line + 22;
                 char* token;
@@ -531,6 +576,7 @@ void ShowContextMenu(HWND hwnd) {
                 
                 POMODORO_TIMES_COUNT = index;
                 
+                /** Update default Pomodoro intervals from parsed options */
                 if (index > 0) {
                     POMODORO_WORK_TIME = POMODORO_TIMES[0];
                     if (index > 1) POMODORO_SHORT_BREAK = POMODORO_TIMES[1];
@@ -553,15 +599,18 @@ void ShowContextMenu(HWND hwnd) {
                 GetLocalizedString(L"开始", L"Start"));
     AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
 
+    /** Generate dynamic Pomodoro time options with current phase indication */
     for (int i = 0; i < POMODORO_TIMES_COUNT; i++) {
         FormatPomodoroTime(POMODORO_TIMES[i], timeBuffer, sizeof(timeBuffer)/sizeof(wchar_t));
         
+        /** Map indices to specific menu IDs for standard Pomodoro phases */
         UINT menuId;
         if (i == 0) menuId = CLOCK_IDM_POMODORO_WORK;
         else if (i == 1) menuId = CLOCK_IDM_POMODORO_BREAK;
         else if (i == 2) menuId = CLOCK_IDM_POMODORO_LBREAK;
         else menuId = CLOCK_IDM_POMODORO_TIME_BASE + i;
         
+        /** Check if this time option represents the currently active Pomodoro phase */
         BOOL isCurrentPhase = (current_pomodoro_phase != POMODORO_PHASE_IDLE &&
                               current_pomodoro_time_index == i &&
                               !CLOCK_SHOW_CURRENT_TIME &&
