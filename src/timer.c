@@ -1,3 +1,8 @@
+/**
+ * @file timer.c
+ * @brief Core timer functionality with flexible input parsing and high-precision timing
+ * Handles time display formatting, countdown/countup modes, and system clock integration
+ */
 #include "../include/timer.h"
 #include "../include/config.h"
 #include <stdio.h>
@@ -7,6 +12,7 @@
 #include <windows.h>
 #include <shellapi.h>
 
+/** @brief Timer state control flags */
 BOOL CLOCK_IS_PAUSED = FALSE;
 BOOL CLOCK_SHOW_CURRENT_TIME = FALSE;
 BOOL CLOCK_USE_24HOUR = TRUE;
@@ -14,33 +20,45 @@ BOOL CLOCK_SHOW_SECONDS = TRUE;
 BOOL CLOCK_COUNT_UP = FALSE;
 char CLOCK_STARTUP_MODE[20] = "COUNTDOWN";
 
+/** @brief Timer duration and elapsed time tracking */
 int CLOCK_TOTAL_TIME = 0;
 int countdown_elapsed_time = 0;
 int countup_elapsed_time = 0;
 time_t CLOCK_LAST_TIME_UPDATE = 0;
 
+/** @brief High-precision timer state for smooth updates */
 LARGE_INTEGER timer_frequency;
 LARGE_INTEGER timer_last_count;
 BOOL high_precision_timer_initialized = FALSE;
 
+/** @brief Notification state tracking to prevent duplicates */
 BOOL countdown_message_shown = FALSE;
 BOOL countup_message_shown = FALSE;
 int pomodoro_work_cycles = 0;
 
+/** @brief Timeout action configuration */
 TimeoutActionType CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
 char CLOCK_TIMEOUT_TEXT[50] = "";
 char CLOCK_TIMEOUT_FILE_PATH[MAX_PATH] = "";
 
-int POMODORO_WORK_TIME = 25 * 60;
-int POMODORO_SHORT_BREAK = 5 * 60;
-int POMODORO_LONG_BREAK = 15 * 60;
+/** @brief Pomodoro technique default time intervals (in seconds) */
+int POMODORO_WORK_TIME = 25 * 60;      /**< 25 minutes work session */
+int POMODORO_SHORT_BREAK = 5 * 60;     /**< 5 minutes short break */
+int POMODORO_LONG_BREAK = 15 * 60;     /**< 15 minutes long break */
 int POMODORO_LOOP_COUNT = 1;
 
+/** @brief User-defined time preset options */
 int time_options[MAX_TIME_OPTIONS];
 int time_options_count = 0;
 
+/** @brief Cache for smooth second display updates */
 int last_displayed_second = -1;
 
+/**
+ * @brief Initialize Windows high-precision performance counter for smooth timing
+ * @return TRUE if initialization succeeded, FALSE on hardware failure
+ * Uses QueryPerformanceFrequency/Counter for sub-millisecond accuracy
+ */
 BOOL InitializeHighPrecisionTimer(void) {
     if (!QueryPerformanceFrequency(&timer_frequency)) {
         return FALSE;
@@ -54,6 +72,11 @@ BOOL InitializeHighPrecisionTimer(void) {
     return TRUE;
 }
 
+/**
+ * @brief Calculate elapsed milliseconds since last call using performance counter
+ * @return Elapsed time in milliseconds as floating-point value
+ * Automatically initializes timer on first call
+ */
 double GetElapsedMilliseconds(void) {
     if (!high_precision_timer_initialized) {
         if (!InitializeHighPrecisionTimer()) {
@@ -68,11 +91,16 @@ double GetElapsedMilliseconds(void) {
     
     double elapsed = (double)(current_count.QuadPart - timer_last_count.QuadPart) * 1000.0 / (double)timer_frequency.QuadPart;
     
+    /** Update baseline for next calculation */
     timer_last_count = current_count;
     
     return elapsed;
 }
 
+/**
+ * @brief Update elapsed time counters using high-precision timing
+ * Respects pause state and enforces countdown limits
+ */
 void UpdateElapsedTime(void) {
     if (CLOCK_IS_PAUSED) {
         return;
@@ -85,17 +113,26 @@ void UpdateElapsedTime(void) {
     } else {
         countdown_elapsed_time += (int)(elapsed_ms / 1000.0);
         
+        /** Clamp countdown to total time limit */
         if (countdown_elapsed_time > CLOCK_TOTAL_TIME) {
             countdown_elapsed_time = CLOCK_TOTAL_TIME;
         }
     }
 }
 
+/**
+ * @brief Format time for display based on current mode (clock/countdown/countup)
+ * @param remaining_time Unused parameter (kept for API compatibility)
+ * @param time_text Output buffer for formatted time string
+ * Handles system clock display, countdown, and countup modes with smart formatting
+ */
 void FormatTime(int remaining_time, char* time_text) {
+    /** System clock mode: display current time with smooth second updates */
     if (CLOCK_SHOW_CURRENT_TIME) {
         SYSTEMTIME st;
         GetLocalTime(&st);
         
+        /** Smooth second transition detection to prevent jittery updates */
         if (last_displayed_second != -1) {
             if (st.wSecond != (last_displayed_second + 1) % 60 && 
                 !(last_displayed_second == 59 && st.wSecond == 0)) {
@@ -111,11 +148,12 @@ void FormatTime(int remaining_time, char* time_text) {
         
         int hour = st.wHour;
         
+        /** Convert to 12-hour format if needed */
         if (!CLOCK_USE_24HOUR) {
             if (hour == 0) {
-                hour = 12;
+                hour = 12;          /**< Midnight becomes 12 AM */
             } else if (hour > 12) {
-                hour -= 12;
+                hour -= 12;         /**< PM hours */
             }
         }
 
@@ -129,6 +167,7 @@ void FormatTime(int remaining_time, char* time_text) {
         return;
     }
 
+    /** Count-up mode: stopwatch with adaptive formatting */
     if (CLOCK_COUNT_UP) {
         UpdateElapsedTime();
         
@@ -136,6 +175,7 @@ void FormatTime(int remaining_time, char* time_text) {
         int minutes = (countup_elapsed_time % 3600) / 60;
         int seconds = countup_elapsed_time % 60;
 
+        /** Progressive display complexity based on elapsed time */
         if (hours > 0) {
             sprintf(time_text, "%d:%02d:%02d", hours, minutes, seconds);
         } else if (minutes > 0) {
@@ -146,6 +186,7 @@ void FormatTime(int remaining_time, char* time_text) {
         return;
     }
 
+    /** Countdown mode: remaining time with visual alignment */
     UpdateElapsedTime();
     
     int remaining = CLOCK_TOTAL_TIME - countdown_elapsed_time;
@@ -158,6 +199,7 @@ void FormatTime(int remaining_time, char* time_text) {
     int minutes = (remaining % 3600) / 60;
     int seconds = remaining % 60;
 
+    /** Format with consistent visual alignment using spaces */
     if (hours > 0) {
         sprintf(time_text, "%d:%02d:%02d", hours, minutes, seconds);
     } else if (minutes > 0) {
@@ -167,6 +209,7 @@ void FormatTime(int remaining_time, char* time_text) {
             sprintf(time_text, "    %d:%02d", minutes, seconds);
         }
     } else {
+        /** Right-align single seconds for visual consistency */
         if (seconds < 10) {
             sprintf(time_text, "          %d", seconds);
         } else {
@@ -175,6 +218,13 @@ void FormatTime(int remaining_time, char* time_text) {
     }
 }
 
+/**
+ * @brief Parse flexible time input formats into seconds
+ * @param input Time input string (various formats supported)
+ * @param total_seconds Output parameter for parsed time in seconds
+ * @return 1 if parsing succeeded, 0 if invalid input
+ * Supports: duration (5m 30s), time-to (14:30t), and numeric formats
+ */
 int ParseInput(const char* input, int* total_seconds) {
     if (!isValidInput(input)) return 0;
 
@@ -184,6 +234,7 @@ int ParseInput(const char* input, int* total_seconds) {
     input_copy[sizeof(input_copy)-1] = '\0';
 
     int len = strlen(input_copy);
+    /** Time-to mode: countdown to specific time (suffix 't' or 'T') */
     if (len > 0 && (input_copy[len-1] == 't' || input_copy[len-1] == 'T')) {
         input_copy[len-1] = '\0';
         
@@ -192,6 +243,7 @@ int ParseInput(const char* input, int* total_seconds) {
         
         struct tm tm_target = *tm_now;
         
+        /** Parse target time components */
         int hour = -1, minute = -1, second = -1;
         int count = 0;
         char *token = strtok(input_copy, " ");
@@ -205,6 +257,7 @@ int ParseInput(const char* input, int* total_seconds) {
             token = strtok(NULL, " ");
         }
         
+        /** Build target time structure */
         if (hour >= 0) {
             tm_target.tm_hour = hour;
             
@@ -224,6 +277,7 @@ int ParseInput(const char* input, int* total_seconds) {
         
         time_t target_time = mktime(&tm_target);
         
+        /** If target time is in the past, assume next day */
         if (target_time <= now) {
             tm_target.tm_mday += 1;
             target_time = mktime(&tm_target);
@@ -231,6 +285,7 @@ int ParseInput(const char* input, int* total_seconds) {
         
         total = (int)difftime(target_time, now);
     } else {
+        /** Duration mode: parse explicit units (5h 30m 10s) or numeric formats */
         BOOL hasUnits = FALSE;
         for (int i = 0; input_copy[i]; i++) {
             char c = tolower((unsigned char)input_copy[i]);
@@ -240,6 +295,7 @@ int ParseInput(const char* input, int* total_seconds) {
             }
         }
         
+        /** Unit-based parsing (e.g., "5h 30m", "25m", "90s") */
         if (hasUnits) {
             char* parts[10] = {0};
             int part_count = 0;
@@ -314,6 +370,7 @@ int ParseInput(const char* input, int* total_seconds) {
         }
     }
 
+    /** Finalize and validate parsed result */
     *total_seconds = total;
     if (*total_seconds <= 0) return 0;
 
@@ -324,6 +381,12 @@ int ParseInput(const char* input, int* total_seconds) {
     return 1;
 }
 
+/**
+ * @brief Validate input string for timer parsing
+ * @param input Input string to validate
+ * @return 1 if input is valid for parsing, 0 otherwise
+ * Accepts digits, spaces, and trailing unit letters (h/m/s/t)
+ */
 int isValidInput(const char* input) {
     if (input == NULL || *input == '\0') {
         return 0;
@@ -336,14 +399,17 @@ int isValidInput(const char* input) {
         if (isdigit(input[i])) {
             digitCount++;
         } else if (input[i] == ' ') {
+            /** Spaces are allowed for separation */
         } else if (i == len - 1 && (input[i] == 'h' || input[i] == 'm' || input[i] == 's' || 
                                    input[i] == 't' || input[i] == 'T' || 
                                    input[i] == 'H' || input[i] == 'M' || input[i] == 'S')) {
+            /** Unit suffixes allowed only at end */
         } else {
             return 0;
         }
     }
 
+    /** Must contain at least one digit */
     if (digitCount == 0) {
         return 0;
     }
@@ -351,12 +417,17 @@ int isValidInput(const char* input) {
     return 1;
 }
 
+/**
+ * @brief Reset timer to initial state based on current mode
+ * Clears elapsed time, ensures valid total time, and reinitializes precision timer
+ */
 void ResetTimer(void) {
     if (CLOCK_COUNT_UP) {
         countup_elapsed_time = 0;
     } else {
         countdown_elapsed_time = 0;
         
+        /** Ensure valid countdown duration with 1-minute fallback */
         if (CLOCK_TOTAL_TIME <= 0) {
             CLOCK_TOTAL_TIME = 60;
         }
@@ -364,20 +435,31 @@ void ResetTimer(void) {
     
     CLOCK_IS_PAUSED = FALSE;
     
+    /** Clear notification flags to allow new alerts */
     countdown_message_shown = FALSE;
     countup_message_shown = FALSE;
     
     InitializeHighPrecisionTimer();
 }
 
+/**
+ * @brief Toggle timer pause state
+ * Reinitializes precision timer baseline when resuming for accurate timing
+ */
 void TogglePauseTimer(void) {
     CLOCK_IS_PAUSED = !CLOCK_IS_PAUSED;
     
+    /** Reset timing baseline to prevent time jumps when resuming */
     if (!CLOCK_IS_PAUSED) {
         InitializeHighPrecisionTimer();
     }
 }
 
+/**
+ * @brief Save default start time to configuration file
+ * @param seconds Default timer duration in seconds
+ * Updates persistent configuration for application startup
+ */
 void WriteConfigDefaultStartTime(int seconds) {
     char config_path[MAX_PATH];
     
