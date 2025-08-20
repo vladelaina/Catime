@@ -747,41 +747,84 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
 
-                /** Dynamic menu quick time options */
-                default: if (cmd >= CLOCK_IDM_QUICK_TIME_BASE && cmd < CLOCK_IDM_QUICK_TIME_BASE + MAX_TIME_OPTIONS) {
-                    extern void StopNotificationSound(void);
-                    StopNotificationSound();
+                /** Dynamic menu options */
+                default: {
+                    /** Handle dynamic quick time options */
+                    if (cmd >= CLOCK_IDM_QUICK_TIME_BASE && cmd < CLOCK_IDM_QUICK_TIME_BASE + MAX_TIME_OPTIONS) {
+                        extern void StopNotificationSound(void);
+                        StopNotificationSound();
 
-                    CloseAllNotifications();
+                        CloseAllNotifications();
 
-                    int index = cmd - CLOCK_IDM_QUICK_TIME_BASE;
-                    if (index >= 0 && index < time_options_count) {
-                        int seconds = time_options[index];
-                        if (seconds > 0) {
-                            KillTimer(hwnd, 1);
-                            CLOCK_TOTAL_TIME = seconds;
-                            countdown_elapsed_time = 0;
-                            countdown_message_shown = FALSE;
-                            CLOCK_COUNT_UP = FALSE;
-                            CLOCK_SHOW_CURRENT_TIME = FALSE;
+                        int index = cmd - CLOCK_IDM_QUICK_TIME_BASE;
+                        if (index >= 0 && index < time_options_count) {
+                            int seconds = time_options[index];
+                            if (seconds > 0) {
+                                KillTimer(hwnd, 1);
+                                CLOCK_TOTAL_TIME = seconds;
+                                countdown_elapsed_time = 0;
+                                countdown_message_shown = FALSE;
+                                CLOCK_COUNT_UP = FALSE;
+                                CLOCK_SHOW_CURRENT_TIME = FALSE;
 
-                            CLOCK_IS_PAUSED = FALSE;
-                            elapsed_time = 0;
-                            message_shown = FALSE;
-                            countup_message_shown = FALSE;
+                                CLOCK_IS_PAUSED = FALSE;
+                                elapsed_time = 0;
+                                message_shown = FALSE;
+                                countup_message_shown = FALSE;
 
-                            if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
-                                current_pomodoro_phase = POMODORO_PHASE_IDLE;
-                                current_pomodoro_time_index = 0;
-                                complete_pomodoro_cycles = 0;
+                                if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
+                                    current_pomodoro_phase = POMODORO_PHASE_IDLE;
+                                    current_pomodoro_time_index = 0;
+                                    complete_pomodoro_cycles = 0;
+                                }
+
+                                ShowWindow(hwnd, SW_SHOW);
+                                InvalidateRect(hwnd, NULL, TRUE);
+                                SetTimer(hwnd, 1, 1000, NULL);
                             }
-
-                            ShowWindow(hwnd, SW_SHOW);
-                            InvalidateRect(hwnd, NULL, TRUE);
-                            SetTimer(hwnd, 1, 1000, NULL);
                         }
+                        return 0;
                     }
-                    return 0;
+                    
+                    /** Handle dynamic advanced font selection from fonts folder */
+                    else if (cmd >= 2000 && cmd < 3000) {
+                        /** Get font filename from fonts folder by index */
+                        char fontsFolderPath[MAX_PATH];
+                        char* appdata_path = getenv("LOCALAPPDATA");
+                        if (appdata_path) {
+                            snprintf(fontsFolderPath, MAX_PATH, "%s\\Catime\\resources\\fonts\\*", appdata_path);
+                            
+                            WIN32_FIND_DATAA findData;
+                            HANDLE hFind = FindFirstFileA(fontsFolderPath, &findData);
+                            
+                            int currentIndex = 2000;
+                            BOOL found = FALSE;
+                            
+                            if (hFind != INVALID_HANDLE_VALUE) {
+                                do {
+                                    if (!(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+                                        char* ext = strrchr(findData.cFileName, '.');
+                                        if (ext && (stricmp(ext, ".ttf") == 0 || stricmp(ext, ".otf") == 0)) {
+                                            if (currentIndex == cmd) {
+                                                /** Found the matching font file */
+                                                WriteConfigFont(findData.cFileName);
+                                                found = TRUE;
+                                                break;
+                                            }
+                                            currentIndex++;
+                                        }
+                                    }
+                                } while (FindNextFileA(hFind, &findData));
+                                FindClose(hFind);
+                            }
+                            
+                            if (found) {
+                                goto refresh_window;
+                            }
+                        }
+                        return 0;
+                    }
+                    break;
                 }
                 
                 /** Application exit command */
@@ -1445,6 +1488,29 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDC_FONT_DADDYTIME: {
                     WriteConfigFont("DaddyTimeMono Nerd Font Propo Essence.ttf");
                     goto refresh_window;
+                }
+                
+                /** Advanced font selection - open fonts folder in explorer */
+                case CLOCK_IDC_FONT_ADVANCED: {
+                    char fontsFolderPath[MAX_PATH];
+                    char* appdata_path = getenv("LOCALAPPDATA");
+                    if (appdata_path) {
+                        snprintf(fontsFolderPath, MAX_PATH, "%s\\Catime\\resources\\fonts", appdata_path);
+                        
+                        /** Check if fonts folder exists, create if not */
+                        wchar_t wFontsFolderPath[MAX_PATH];
+                        MultiByteToWideChar(CP_ACP, 0, fontsFolderPath, -1, wFontsFolderPath, MAX_PATH);
+                        
+                        DWORD attrs = GetFileAttributesW(wFontsFolderPath);
+                        if (attrs == INVALID_FILE_ATTRIBUTES) {
+                            /** Create fonts folder if it doesn't exist */
+                            CreateDirectoryW(wFontsFolderPath, NULL);
+                        }
+                        
+                        /** Open fonts folder in Windows Explorer */
+                        ShellExecuteW(hwnd, L"open", wFontsFolderPath, NULL, NULL, SW_SHOWNORMAL);
+                    }
+                    break;
                 }
                 
                 /** Toggle between timer and current time display */

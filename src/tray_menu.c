@@ -403,7 +403,66 @@ void ShowColorMenu(HWND hwnd) {
     
     AppendMenuW(hFontSubMenu, MF_SEPARATOR, 0, NULL);
     
-    AppendMenuW(hFontSubMenu, MF_STRING, CLOCK_IDC_FONT_ADVANCED, GetLocalizedString(L"高级", L"Advanced"));
+    /** Create advanced fonts submenu */
+    HMENU hAdvancedFontsMenu = CreatePopupMenu();
+    
+    /** Load fonts from user's fonts folder */
+    char fontsFolderPath[MAX_PATH];
+    char* appdata_path = getenv("LOCALAPPDATA");
+    if (appdata_path) {
+        snprintf(fontsFolderPath, MAX_PATH, "%s\\Catime\\resources\\fonts\\*", appdata_path);
+        
+        WIN32_FIND_DATAA findData;
+        HANDLE hFind = FindFirstFileA(fontsFolderPath, &findData);
+        
+        int advancedFontId = 2000; /** Start from 2000 for advanced font IDs */
+        BOOL hasAdvancedFonts = FALSE;
+        
+        if (hFind != INVALID_HANDLE_VALUE) {
+            do {
+                /** Skip directories and non-font files */
+                if (!(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+                    char* ext = strrchr(findData.cFileName, '.');
+                    if (ext && (stricmp(ext, ".ttf") == 0 || stricmp(ext, ".otf") == 0)) {
+                        /** Remove extension for display */
+                        char displayName[MAX_PATH];
+                        strncpy(displayName, findData.cFileName, MAX_PATH - 1);
+                        displayName[MAX_PATH - 1] = '\0';
+                        char* dotPos = strrchr(displayName, '.');
+                        if (dotPos) *dotPos = '\0';
+                        
+                        /** Convert to wide string for menu */
+                        wchar_t wDisplayName[MAX_PATH];
+                        MultiByteToWideChar(CP_UTF8, 0, displayName, -1, wDisplayName, MAX_PATH);
+                        
+                        /** Check if this is the current font */
+                        BOOL isCurrentFont = strcmp(FONT_FILE_NAME, findData.cFileName) == 0;
+                        
+                        AppendMenuW(hAdvancedFontsMenu, MF_STRING | (isCurrentFont ? MF_CHECKED : MF_UNCHECKED),
+                                  advancedFontId, wDisplayName);
+                        
+                        advancedFontId++;
+                        hasAdvancedFonts = TRUE;
+                    }
+                }
+            } while (FindNextFileA(hFind, &findData));
+            FindClose(hFind);
+        }
+        
+        /** Add browse option if no fonts found or as additional option */
+        if (!hasAdvancedFonts) {
+            AppendMenuW(hAdvancedFontsMenu, MF_STRING | MF_GRAYED, 0, 
+                       L"No font files found");
+            AppendMenuW(hAdvancedFontsMenu, MF_SEPARATOR, 0, NULL);
+        } else {
+            AppendMenuW(hAdvancedFontsMenu, MF_SEPARATOR, 0, NULL);
+        }
+        
+        AppendMenuW(hAdvancedFontsMenu, MF_STRING, CLOCK_IDC_FONT_ADVANCED, 
+                   GetLocalizedString(L"打开字体文件夹", L"Open fonts folder"));
+    }
+    
+    AppendMenuW(hFontSubMenu, MF_POPUP, (UINT_PTR)hAdvancedFontsMenu, GetLocalizedString(L"高级", L"Advanced"));
 
     HMENU hColorSubMenu = CreatePopupMenu();
 
