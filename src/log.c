@@ -1,3 +1,7 @@
+/**
+ * @file log.c
+ * @brief Centralized logging system with system diagnostics and crash handling
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -14,10 +18,14 @@
 #define PROCESSOR_ARCHITECTURE_ARM64 12
 #endif
 
+/** @brief Log file path in the user's config directory */
 static wchar_t LOG_FILE_PATH[MAX_PATH] = {0};
+/** @brief File handle for log output, NULL when closed */
 static FILE* logFile = NULL;
+/** @brief Critical section for thread-safe logging */
 static CRITICAL_SECTION logCS;
 
+/** @brief String representations for log levels in output */
 static const char* LOG_LEVEL_STRINGS[] = {
     "DEBUG",
     "INFO",
@@ -26,10 +34,15 @@ static const char* LOG_LEVEL_STRINGS[] = {
     "FATAL"
 };
 
+/**
+ * @brief Log comprehensive system information for diagnostics
+ * Uses undocumented RtlGetVersion to bypass version lie compatibility
+ */
 static void LogSystemInformation(void) {
     SYSTEM_INFO si;
     GetNativeSystemInfo(&si);
     
+    /** Use RtlGetVersion to bypass version compatibility layer */
     typedef NTSTATUS(WINAPI* RtlGetVersionPtr)(PRTL_OSVERSIONINFOW);
     HMODULE hNtdll = GetModuleHandleW(L"ntdll.dll");
     
@@ -37,6 +50,7 @@ static void LogSystemInformation(void) {
     BOOL isWorkstation = TRUE;
     BOOL isServer = FALSE;
     
+    /** Primary method: RtlGetVersion from ntdll (most reliable) */
     if (hNtdll) {
         RtlGetVersionPtr pRtlGetVersion = (RtlGetVersionPtr)GetProcAddress(hNtdll, "RtlGetVersion");
         if (pRtlGetVersion) {
@@ -50,6 +64,7 @@ static void LogSystemInformation(void) {
         }
     }
     
+    /** Fallback methods for version detection */
     if (major == 0) {
         OSVERSIONINFOEXA osvi;
         ZeroMemory(&osvi, sizeof(OSVERSIONINFOEXA));
@@ -67,6 +82,7 @@ static void LogSystemInformation(void) {
             isWorkstation = (osvi.wProductType == VER_NT_WORKSTATION);
             isServer = !isWorkstation;
         } else {
+            /** Last resort: deprecated GetVersionEx */
             if (GetVersionEx((OSVERSIONINFO*)&osvi)) {
                 major = osvi.dwMajorVersion;
                 minor = osvi.dwMinorVersion;
@@ -79,9 +95,11 @@ static void LogSystemInformation(void) {
         }
     }
     
+    /** Map version numbers to Windows edition names */
     const char* windowsVersion = "Unknown version";
     
     if (major == 10) {
+        /** Windows 11 uses build 22000+ threshold */
         if (build >= 22000) {
             windowsVersion = "Windows 11";
         } else {
@@ -100,6 +118,7 @@ static void LogSystemInformation(void) {
     } else if (major == 5) {
         if (minor == 2) {
             windowsVersion = "Windows Server 2003";
+            /** Special case: XP Professional x64 Edition */
             if (isWorkstation && si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64) {
                 windowsVersion = "Windows XP Professional x64";
             }
@@ -116,6 +135,7 @@ static void LogSystemInformation(void) {
         build, 
         isWorkstation ? "Workstation" : "Server");
     
+    /** Log CPU architecture for compatibility diagnostics */
     const char* arch;
     switch (si.wProcessorArchitecture) {
         case PROCESSOR_ARCHITECTURE_AMD64:
@@ -136,6 +156,7 @@ static void LogSystemInformation(void) {
     }
     WriteLog(LOG_LEVEL_INFO, "CPU Architecture: %s", arch);
     
+    /** Log memory usage for performance troubleshooting */
     MEMORYSTATUSEX memInfo;
     memInfo.dwLength = sizeof(MEMORYSTATUSEX);
     if (GlobalMemoryStatusEx(&memInfo)) {
@@ -145,6 +166,7 @@ static void LogSystemInformation(void) {
             memInfo.dwMemoryLoad);
     }
     
+    /** Check UAC status for security context awareness */
     BOOL uacEnabled = FALSE;
     HANDLE hToken;
     if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
@@ -157,6 +179,7 @@ static void LogSystemInformation(void) {
     }
     WriteLog(LOG_LEVEL_INFO, "UAC Status: %s", uacEnabled ? "Enabled" : "Disabled");
     
+    /** Check administrator privileges for permission diagnostics */
     BOOL isAdmin = FALSE;
     SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
     PSID AdministratorsGroup;
@@ -168,6 +191,11 @@ static void LogSystemInformation(void) {
     }
 }
 
+/**
+ * @brief Construct log file path based on configuration directory
+ * @param logPath Output buffer for the log file path
+ * @param size Size of the output buffer
+ */
 static void GetLogFilePath(wchar_t* logPath, size_t size) {
     char configPath[MAX_PATH] = {0};
     
@@ -176,6 +204,7 @@ static void GetLogFilePath(wchar_t* logPath, size_t size) {
     wchar_t configPathW[MAX_PATH] = {0};
     MultiByteToWideChar(CP_UTF8, 0, configPath, -1, configPathW, MAX_PATH);
     
+    /** Extract directory from config file path */
     wchar_t* lastSeparator = wcsrchr(configPathW, L'\\');
     if (lastSeparator) {
         size_t dirLen = lastSeparator - configPathW + 1;
@@ -188,11 +217,16 @@ static void GetLogFilePath(wchar_t* logPath, size_t size) {
     }
 }
 
+/**
+ * @brief Initialize logging system and write startup diagnostics
+ * @return TRUE on success, FALSE if log file creation failed
+ */
 BOOL InitializeLogSystem(void) {
     InitializeCriticalSection(&logCS);
     
     GetLogFilePath(LOG_FILE_PATH, MAX_PATH);
     
+    /** Create new log file, truncating any existing content */
     logFile = _wfopen(LOG_FILE_PATH, L"w");
     if (!logFile) {
         return FALSE;
@@ -208,6 +242,12 @@ BOOL InitializeLogSystem(void) {
     return TRUE;
 }
 
+/**
+ * @brief Thread-safe logging with timestamp and level formatting
+ * @param level Log severity level
+ * @param format Printf-style format string
+ * @param ... Variable arguments for format string
+ */
 void WriteLog(LogLevel level, const char* format, ...) {
     if (!logFile) {
         return;
@@ -232,11 +272,18 @@ void WriteLog(LogLevel level, const char* format, ...) {
     
     fprintf(logFile, "\n");
     
+    /** Force immediate write for crash resilience */
     fflush(logFile);
     
     LeaveCriticalSection(&logCS);
 }
 
+/**
+ * @brief Convert Windows error code to human-readable UTF-8 description
+ * @param errorCode Windows API error code from GetLastError()
+ * @param buffer Output buffer for error description
+ * @param bufferSize Size of the output buffer
+ */
 void GetLastErrorDescription(DWORD errorCode, char* buffer, int bufferSize) {
     if (!buffer || bufferSize <= 0) {
         return;
@@ -254,6 +301,7 @@ void GetLastErrorDescription(DWORD errorCode, char* buffer, int bufferSize) {
         0, NULL);
     
     if (size > 0) {
+        /** Remove trailing CRLF from system messages */
         if (size >= 2 && messageBuffer[size-2] == L'\r' && messageBuffer[size-1] == L'\n') {
             messageBuffer[size-2] = L'\0';
         }
@@ -265,9 +313,15 @@ void GetLastErrorDescription(DWORD errorCode, char* buffer, int bufferSize) {
     }
 }
 
+/**
+ * @brief Handle fatal signals with emergency logging and user notification
+ * @param signal Signal number that triggered the handler
+ * Ensures log is flushed before termination for crash analysis
+ */
 void SignalHandler(int signal) {
     char errorMsg[256] = {0};
     
+    /** Map signal numbers to descriptive error messages */
     switch (signal) {
         case SIGFPE:
             strcpy_s(errorMsg, sizeof(errorMsg), "Floating point exception");
@@ -292,6 +346,7 @@ void SignalHandler(int signal) {
             break;
     }
     
+    /** Emergency log write without critical section to avoid deadlock */
     if (logFile) {
         fprintf(logFile, "[FATAL] Fatal signal occurred: %s (signal number: %d)\n", 
                 errorMsg, signal);
@@ -306,6 +361,10 @@ void SignalHandler(int signal) {
     exit(signal);
 }
 
+/**
+ * @brief Register signal handlers for crash detection and logging
+ * Covers arithmetic, memory, and termination signals
+ */
 void SetupExceptionHandler(void) {
     signal(SIGFPE, SignalHandler);
     signal(SIGILL, SignalHandler);
@@ -315,6 +374,10 @@ void SetupExceptionHandler(void) {
     signal(SIGINT, SignalHandler);
 }
 
+/**
+ * @brief Clean shutdown of logging system with final log entry
+ * Should be called during normal application termination
+ */
 void CleanupLogSystem(void) {
     if (logFile) {
         WriteLog(LOG_LEVEL_INFO, "Catime exited normally");
