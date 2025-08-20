@@ -1,5 +1,3 @@
-
-
 #include "../include/window.h"
 #include "../include/timer.h"
 #include "../include/tray.h"
@@ -13,13 +11,11 @@
 #include <stdlib.h>
 #include <windows.h>
 
-
 extern LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 #ifndef _INC_WINUSER
 WINUSERAPI BOOL WINAPI SetProcessDPIAware(VOID);
 #endif
-
 
 int CLOCK_BASE_WINDOW_WIDTH = 200;
 int CLOCK_BASE_WINDOW_HEIGHT = 100;
@@ -27,16 +23,13 @@ float CLOCK_WINDOW_SCALE = 1.0f;
 int CLOCK_WINDOW_POS_X = 100;
 int CLOCK_WINDOW_POS_Y = 100;
 
-
 BOOL CLOCK_EDIT_MODE = FALSE;
 BOOL CLOCK_IS_DRAGGING = FALSE;
 POINT CLOCK_LAST_MOUSE_POS = {0, 0};
 BOOL CLOCK_WINDOW_TOPMOST = TRUE;
 
-
 RECT CLOCK_TEXT_RECT = {0, 0, 0, 0};
 BOOL CLOCK_TEXT_RECT_VALID = FALSE;
-
 
 typedef HRESULT (WINAPI *pfnDwmEnableBlurBehindWindow)(HWND hWnd, const DWM_BLURBEHIND* pBlurBehind);
 static pfnDwmEnableBlurBehindWindow _DwmEnableBlurBehindWindow = NULL;
@@ -536,10 +529,6 @@ float CLOCK_FONT_SCALE_FACTOR = 1.0f;
 int CLOCK_BASE_FONT_SIZE = 24;
 
 BOOL InitializeApplication(HINSTANCE hInstance) {
-
-
-    
-
     #ifndef DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
     DECLARE_HANDLE(DPI_AWARENESS_CONTEXT);
     #define DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 ((DPI_AWARENESS_CONTEXT)-4)

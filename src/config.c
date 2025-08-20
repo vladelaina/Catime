@@ -487,8 +487,6 @@ void ReadConfig() {
 
     CLOCK_RECENT_FILES_COUNT = 0;
     
-
-
     char language[32] = {0};
     ReadIniString(INI_SECTION_GENERAL, "LANGUAGE", "English", language, sizeof(language), config_path);
     
@@ -650,8 +648,6 @@ void ReadConfig() {
         token = strtok(NULL, ",");
     }
     
-
-
     if (POMODORO_TIMES_COUNT > 0) {
         POMODORO_WORK_TIME = POMODORO_TIMES[0];
         if (POMODORO_TIMES_COUNT > 1) POMODORO_SHORT_BREAK = POMODORO_TIMES[1];

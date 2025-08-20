@@ -2,16 +2,13 @@
 #include <commctrl.h>
 #include "resource.h"
 
-
 #pragma code_page(65001)
-
 
 CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG DIALOGEX 0, 0, 350, 410
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Notification Settings"
 FONT 9, "Segoe UI"
 BEGIN
-
     GROUPBOX        "Notification Content", IDC_NOTIFICATION_CONTENT_GROUP, 10, 10, 330, 160
     
     LTEXT           "Countdown timeout message:", IDC_NOTIFICATION_LABEL1, 20, 30, 80, 15

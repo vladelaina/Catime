@@ -148,7 +148,6 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
             GetClientRect(hwnd, &rect);
         }
 
-        
         int x = (rect.right - textSize.cx) / 2;
         int y = (rect.bottom - textSize.cy) / 2;
 

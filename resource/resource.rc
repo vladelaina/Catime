@@ -1,36 +1,14 @@
 #include <windows.h>
 #include "resource.h"
 
-
-
-
- 
- 
-
 IDI_CATIME ICON "../asset/icon/catime.ico"
 
-
-
-
-
-
-
-
 IDR_FONT_PROFONT         FONT "../asset/font/MIT/ProFont IIx Nerd Font Essence.ttf"
-
-
 
 IDR_FONT_DEPARTURE         FONT "../asset/font/SIL/DepartureMono Nerd Font Propo Essence.ttf"
 IDR_FONT_DADDYTIME        FONT "../asset/font/SIL/DaddyTimeMono Nerd Font Propo Essence.ttf"
 IDR_FONT_RECMONO           FONT "../asset/font/SIL/RecMonoCasual Nerd Font Mono Essence.ttf"
 IDR_FONT_TERMINESS         FONT "../asset/font/SIL/Terminess Nerd Font Propo Essence.ttf"
-
-
-
-
-
-
-
 
 IDR_FONT_ARBUTUS           FONT "../asset/font/OFL/Arbutus Essence.ttf"
 IDR_FONT_BERKSHIRE         FONT "../asset/font/OFL/Berkshire Swash Essence.ttf"
@@ -77,10 +55,6 @@ IDR_FONT_UNDERDOG          FONT "../asset/font/OFL/Underdog Essence.ttf"
 IDR_FONT_WALLPOET          FONT "../asset/font/OFL/Wallpoet Essence.ttf"
 IDR_FONT_YESTERYEAR        FONT "../asset/font/OFL/Yesteryear Essence.ttf"
 IDR_FONT_ZCOOL_KUAILE      FONT "../asset/font/OFL/ZCOOL KuaiLe Essence.ttf"
-
-
-
-
 
 IDD_INPUTBOX DIALOGEX 0, 0, 240, 90
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU

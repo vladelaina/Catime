@@ -11,13 +11,10 @@ BOOL HandleWindowCreate(HWND hwnd) {
         EnableWindow(hwndParent, TRUE);
     }
     
-
     LoadWindowSettings(hwnd);
     
-
     SetClickThrough(hwnd, !CLOCK_EDIT_MODE);
     
-
     SetWindowTopmost(hwnd, CLOCK_WINDOW_TOPMOST);
     
     return TRUE;
@@ -28,7 +25,6 @@ void HandleWindowDestroy(HWND hwnd) {
     KillTimer(hwnd, 1);
     RemoveTrayIcon();
     
-
     extern void CleanupUpdateThread(void);
     CleanupUpdateThread();
     
@@ -36,21 +32,16 @@ void HandleWindowDestroy(HWND hwnd) {
 }
 
 void HandleWindowReset(HWND hwnd) {
-
-
     CLOCK_WINDOW_TOPMOST = TRUE;
     SetWindowTopmost(hwnd, TRUE);
     WriteConfigTopmost("TRUE");
     
-
     ShowWindow(hwnd, SW_SHOW);
 }
-
 
 BOOL HandleWindowResize(HWND hwnd, int delta) {
     return HandleScaleWindow(hwnd, delta);
 }
-
 
 BOOL HandleWindowMove(HWND hwnd) {
     return HandleDragWindow(hwnd);
