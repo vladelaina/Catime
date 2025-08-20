@@ -1,3 +1,8 @@
+/**
+ * @file update_checker.c
+ * @brief Automatic update checking system with GitHub API integration
+ * Handles version comparison, JSON parsing, and user update dialogs
+ */
 #include <windows.h>
 #include <wininet.h>
 #include <stdio.h>
@@ -12,20 +17,32 @@
 
 #pragma comment(lib, "wininet.lib")
 
+/** @brief GitHub API endpoint for retrieving latest release information */
 #define GITHUB_API_URL "https://api.github.com/repos/vladelaina/Catime/releases/latest"
+
+/** @brief User agent string for HTTP requests to GitHub API */
 #define USER_AGENT "Catime Update Checker"
 
+/** @brief Structure containing version information for update dialogs */
 typedef struct {
-    const char* currentVersion;
-    const char* latestVersion;
-    const char* downloadUrl;
+    const char* currentVersion;     /**< Current application version */
+    const char* latestVersion;      /**< Latest available version from GitHub */
+    const char* downloadUrl;        /**< Direct download URL for latest release */
 } UpdateVersionInfo;
 
+/** @brief Dialog procedure declarations for various update scenarios */
 INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 INT_PTR CALLBACK UpdateErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 INT_PTR CALLBACK NoUpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 INT_PTR CALLBACK ExitMsgDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 
+/**
+ * @brief Compare two semantic version strings using major.minor.patch format
+ * @param version1 First version string to compare
+ * @param version2 Second version string to compare  
+ * @return 1 if version1 > version2, -1 if version1 < version2, 0 if equal
+ * Uses semantic versioning comparison with hierarchical precedence
+ */
 int CompareVersions(const char* version1, const char* version2) {
     LOG_DEBUG("Comparing versions: '%s' vs '%s'", version1, version2);
     
@@ -37,22 +54,36 @@ int CompareVersions(const char* version1, const char* version2) {
     
     LOG_DEBUG("Parsed version1: %d.%d.%d, version2: %d.%d.%d", major1, minor1, patch1, major2, minor2, patch2);
     
+    /** Compare major version first (highest precedence) */
     if (major1 > major2) return 1;
     if (major1 < major2) return -1;
     
+    /** Compare minor version if major versions are equal */
     if (minor1 > minor2) return 1;
     if (minor1 < minor2) return -1;
     
+    /** Compare patch version if major and minor are equal */
     if (patch1 > patch2) return 1;
     if (patch1 < patch2) return -1;
     
     return 0;
 }
 
+/**
+ * @brief Parse GitHub API JSON response to extract version and download URL
+ * @param jsonResponse Raw JSON response from GitHub API
+ * @param latestVersion Output buffer for extracted version string
+ * @param maxLen Maximum length of version buffer
+ * @param downloadUrl Output buffer for download URL
+ * @param urlMaxLen Maximum length of URL buffer
+ * @return TRUE if parsing succeeded, FALSE on error
+ * Extracts tag_name and browser_download_url fields from GitHub releases API
+ */
 BOOL ParseLatestVersionFromJson(const char* jsonResponse, char* latestVersion, size_t maxLen, 
                                char* downloadUrl, size_t urlMaxLen) {
     LOG_DEBUG("Starting to parse JSON response, extracting version information");
     
+    /** Extract version from tag_name field */
     const char* tagNamePos = strstr(jsonResponse, "\"tag_name\":");
     if (!tagNamePos) {
         LOG_ERROR("JSON parsing failed: tag_name field not found");
@@ -71,10 +102,12 @@ BOOL ParseLatestVersionFromJson(const char* jsonResponse, char* latestVersion, s
     strncpy(latestVersion, firstQuote + 1, versionLen);
     latestVersion[versionLen] = '\0';
     
+    /** Remove 'v' or 'V' prefix from version string if present */
     if (latestVersion[0] == 'v' || latestVersion[0] == 'V') {
         memmove(latestVersion, latestVersion + 1, versionLen);
     }
     
+    /** Extract download URL from browser_download_url field */
     const char* downloadUrlPos = strstr(jsonResponse, "\"browser_download_url\":");
     if (!downloadUrlPos) {
         LOG_ERROR("JSON parsing failed: browser_download_url field not found");
@@ -96,6 +129,15 @@ BOOL ParseLatestVersionFromJson(const char* jsonResponse, char* latestVersion, s
     return TRUE;
 }
 
+/**
+ * @brief Dialog procedure for application exit notification
+ * @param hwndDlg Dialog window handle
+ * @param msg Window message
+ * @param wParam Message parameter
+ * @param lParam Message parameter
+ * @return Message processing result
+ * Shows confirmation dialog before application exits for update
+ */
 INT_PTR CALLBACK ExitMsgDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_INITDIALOG: {
@@ -133,6 +175,11 @@ INT_PTR CALLBACK ExitMsgDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lP
     return FALSE;
 }
 
+/**
+ * @brief Display exit notification dialog to user
+ * @param hwnd Parent window handle
+ * Shows modal dialog informing user that application will exit for update
+ */
 void ShowExitMessageDialog(HWND hwnd) {
     DialogBoxW(GetModuleHandle(NULL), 
               MAKEINTRESOURCEW(IDD_UPDATE_DIALOG), 
@@ -140,6 +187,15 @@ void ShowExitMessageDialog(HWND hwnd) {
               ExitMsgDlgProc);
 }
 
+/**
+ * @brief Dialog procedure for update available notification
+ * @param hwndDlg Dialog window handle
+ * @param msg Window message
+ * @param wParam Message parameter
+ * @param lParam Message parameter containing UpdateVersionInfo pointer
+ * @return Message processing result
+ * Displays current vs. new version and asks user whether to update
+ */
 INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     static UpdateVersionInfo* versionInfo = NULL;
     
@@ -201,6 +257,15 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
     return FALSE;
 }
 
+/**
+ * @brief Show update notification dialog with version comparison
+ * @param hwnd Parent window handle
+ * @param currentVersion Current application version string
+ * @param latestVersion Latest available version from GitHub
+ * @param downloadUrl Download URL for the latest version
+ * @return Dialog result (IDYES if user wants to update, IDNO otherwise)
+ * Creates modal dialog showing version information and update prompt
+ */
 int ShowUpdateNotification(HWND hwnd, const char* currentVersion, const char* latestVersion, const char* downloadUrl) {
     UpdateVersionInfo versionInfo;
     versionInfo.currentVersion = currentVersion;
@@ -291,6 +356,13 @@ void ShowNoUpdateDialog(HWND hwnd, const char* currentVersion) {
                    (LPARAM)currentVersion);
 }
 
+/**
+ * @brief Open browser to download update and initiate application exit
+ * @param url Download URL for the latest version
+ * @param hwnd Parent window handle for error dialogs
+ * @return TRUE if browser opened successfully, FALSE on error
+ * Launches default browser with download URL and posts exit message to application
+ */
 BOOL OpenBrowserForUpdateAndExit(const char* url, HWND hwnd) {
     wchar_t urlW[512];
     MultiByteToWideChar(CP_UTF8, 0, url, -1, urlW, sizeof(urlW)/sizeof(wchar_t));
@@ -315,9 +387,16 @@ BOOL OpenBrowserForUpdateAndExit(const char* url, HWND hwnd) {
     return TRUE;
 }
 
+/**
+ * @brief Main update checking implementation with GitHub API integration
+ * @param hwnd Parent window handle for dialogs
+ * @param silentCheck TRUE for background checks, FALSE for user-initiated checks
+ * Downloads latest release info from GitHub API, compares versions, and shows appropriate dialogs
+ */
 void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
     LOG_INFO("Starting update check process, silent mode: %s", silentCheck ? "yes" : "no");
     
+    /** Initialize WinINet session for HTTP requests to GitHub API */
     LOG_INFO("Attempting to create Internet session");
     wchar_t wUserAgent[256];
     MultiByteToWideChar(CP_ACP, 0, USER_AGENT, -1, wUserAgent, 256);
@@ -336,6 +415,7 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
     }
     LOG_INFO("Internet session created successfully");
     
+    /** Connect to GitHub API endpoint with cache-bypass flags */
     LOG_INFO("Attempting to connect to GitHub API: %s", GITHUB_API_URL);
     wchar_t wGitHubApiUrl[512];
     MultiByteToWideChar(CP_ACP, 0, GITHUB_API_URL, -1, wGitHubApiUrl, 512);
@@ -438,10 +518,21 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
     LOG_INFO("Update check process complete");
 }
 
+/**
+ * @brief Check for application updates with user interaction
+ * @param hwnd Parent window handle for dialogs
+ * Performs update check and shows dialogs regardless of result (update available or up-to-date)
+ */
 void CheckForUpdate(HWND hwnd) {
     CheckForUpdateInternal(hwnd, FALSE);
 }
 
+/**
+ * @brief Check for updates with optional silent mode
+ * @param hwnd Parent window handle for dialogs
+ * @param silentCheck TRUE to suppress "no update" dialogs, FALSE for full interaction
+ * Allows background update checking without disturbing user when already up-to-date
+ */
 void CheckForUpdateSilent(HWND hwnd, BOOL silentCheck) {
     CheckForUpdateInternal(hwnd, silentCheck);
 }
