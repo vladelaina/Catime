@@ -1,3 +1,8 @@
+/**
+ * @file dialog_language.c
+ * @brief Dialog localization and language support implementation
+ */
+
 #include <windows.h>
 #include <wchar.h>
 #include <stdio.h>
@@ -7,11 +12,13 @@
 #include "../include/language.h"
 #include "../resource/resource.h"
 
+/** @brief Maps dialog IDs to their localized title keys */
 typedef struct {
     int dialogID;
     wchar_t* titleKey;
 } DialogTitleEntry;
 
+/** @brief Maps dialog controls to their localized text with fallback */
 typedef struct {
     int dialogID;
     int controlID;
@@ -19,11 +26,13 @@ typedef struct {
     wchar_t* fallbackText;
 } SpecialControlEntry;
 
+/** @brief Data structure for EnumChildWindows callback */
 typedef struct {
     HWND hwndDlg;
     int dialogID;
 } EnumChildWindowsData;
 
+/** @brief Static mapping of dialog IDs to localization keys for titles */
 static DialogTitleEntry g_dialogTitles[] = {
     {IDD_ABOUT_DIALOG, L"About"},
     {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, L"Notification Settings"},
@@ -37,6 +46,7 @@ static DialogTitleEntry g_dialogTitles[] = {
     {IDD_UPDATE_DIALOG, L"Update Available"}
 };
 
+/** @brief Static mapping of special controls requiring custom localization handling */
 static SpecialControlEntry g_specialControls[] = {
     {IDD_ABOUT_DIALOG, IDC_ABOUT_TITLE, L"关于", L"About"},
     {IDD_ABOUT_DIALOG, IDC_VERSION_TEXT, L"Version: %hs", L"Version: %hs"},
@@ -87,6 +97,7 @@ static SpecialControlEntry g_specialControls[] = {
      L"25=25 minutes\n25h=25 hours\n25s=25 seconds\n25 30=25 minutes 30 seconds\n25 30m=25 hours 30 minutes\n1 30 20=1 hour 30 minutes 20 seconds\n17 20t=Countdown to 17:20\n9 9 9t=Countdown to 09:09:09"}
 };
 
+/** @brief Static mapping for button controls with localized text */
 static SpecialControlEntry g_specialButtons[] = {
     {IDD_UPDATE_DIALOG, IDYES, L"Yes", L"Yes"},
     {IDD_UPDATE_DIALOG, IDNO, L"No", L"No"},
@@ -109,6 +120,12 @@ static SpecialControlEntry g_specialButtons[] = {
 #define SPECIAL_CONTROLS_COUNT (sizeof(g_specialControls) / sizeof(g_specialControls[0]))
 #define SPECIAL_BUTTONS_COUNT (sizeof(g_specialButtons) / sizeof(g_specialButtons[0]))
 
+/**
+ * @brief Find localized text for special control with fallback support
+ * @param dialogID Dialog resource ID
+ * @param controlID Control resource ID
+ * @return Localized text or fallback text, NULL if not found
+ */
 static const wchar_t* FindSpecialControlText(int dialogID, int controlID) {
     for (int i = 0; i < SPECIAL_CONTROLS_COUNT; i++) {
         if (g_specialControls[i].dialogID == dialogID &&
@@ -124,6 +141,12 @@ static const wchar_t* FindSpecialControlText(int dialogID, int controlID) {
     return NULL;
 }
 
+/**
+ * @brief Find localized text for special button control
+ * @param dialogID Dialog resource ID
+ * @param controlID Button control resource ID
+ * @return Localized button text or NULL if not found
+ */
 static const wchar_t* FindSpecialButtonText(int dialogID, int controlID) {
     for (int i = 0; i < SPECIAL_BUTTONS_COUNT; i++) {
         if (g_specialButtons[i].dialogID == dialogID &&
@@ -134,6 +157,11 @@ static const wchar_t* FindSpecialButtonText(int dialogID, int controlID) {
     return NULL;
 }
 
+/**
+ * @brief Get localized title text for dialog
+ * @param dialogID Dialog resource ID
+ * @return Localized dialog title or NULL if not found
+ */
 static const wchar_t* GetDialogTitleText(int dialogID) {
     for (int i = 0; i < DIALOG_TITLES_COUNT; i++) {
         if (g_dialogTitles[i].dialogID == dialogID) {
@@ -143,10 +171,18 @@ static const wchar_t* GetDialogTitleText(int dialogID) {
     return NULL;
 }
 
+/**
+ * @brief Extract original text from supported control types
+ * @param hwndCtl Handle to control window
+ * @param buffer Buffer to store extracted text
+ * @param bufferSize Size of buffer in characters
+ * @return TRUE if text extracted successfully, FALSE otherwise
+ */
 static BOOL GetControlOriginalText(HWND hwndCtl, wchar_t* buffer, int bufferSize) {
     wchar_t className[256];
     GetClassNameW(hwndCtl, className, 256);
 
+    /** Only extract text from supported control types */
     if (wcscmp(className, L"Button") == 0 ||
         wcscmp(className, L"Static") == 0 ||
         wcscmp(className, L"ComboBox") == 0 ||
@@ -157,7 +193,16 @@ static BOOL GetControlOriginalText(HWND hwndCtl, wchar_t* buffer, int bufferSize
     return FALSE;
 }
 
+/**
+ * @brief Apply special processing to control text (newline conversion, version formatting)
+ * @param hwndCtl Handle to control window
+ * @param localizedText Localized text to process
+ * @param dialogID Dialog resource ID
+ * @param controlID Control resource ID
+ * @return TRUE if special processing was applied, FALSE otherwise
+ */
 static BOOL ProcessSpecialControlText(HWND hwndCtl, const wchar_t* localizedText, int dialogID, int controlID) {
+    /** Handle newline conversion for static text controls in specific dialogs */
     if ((dialogID == CLOCK_IDD_POMODORO_COMBO_DIALOG ||
          dialogID == CLOCK_IDD_POMODORO_TIME_DIALOG ||
          dialogID == CLOCK_IDD_WEBSITE_DIALOG ||
@@ -168,6 +213,7 @@ static BOOL ProcessSpecialControlText(HWND hwndCtl, const wchar_t* localizedText
         const wchar_t* src = localizedText;
         wchar_t* dst = processedText;
 
+        /** Convert escaped newlines and preserve actual newlines */
         while (*src) {
             if (src[0] == L'\\' && src[1] == L'n') {
                 *dst++ = L'\n';
@@ -187,6 +233,7 @@ static BOOL ProcessSpecialControlText(HWND hwndCtl, const wchar_t* localizedText
         return TRUE;
     }
 
+    /** Handle version text formatting with current version */
     if (controlID == IDC_VERSION_TEXT && dialogID == IDD_ABOUT_DIALOG) {
         wchar_t versionText[256];
         const wchar_t* localizedVersionFormat = GetLocalizedString(NULL, L"Version: %hs");
@@ -202,6 +249,12 @@ static BOOL ProcessSpecialControlText(HWND hwndCtl, const wchar_t* localizedText
     return FALSE;
 }
 
+/**
+ * @brief EnumChildWindows callback to localize individual dialog controls
+ * @param hwndCtl Handle to child control window
+ * @param lParam Pointer to EnumChildWindowsData structure
+ * @return TRUE to continue enumeration, FALSE to stop
+ */
 static BOOL CALLBACK EnumChildProc(HWND hwndCtl, LPARAM lParam) {
     EnumChildWindowsData* data = (EnumChildWindowsData*)lParam;
     HWND hwndDlg = data->hwndDlg;
@@ -212,6 +265,7 @@ static BOOL CALLBACK EnumChildProc(HWND hwndCtl, LPARAM lParam) {
         return TRUE;
     }
 
+    /** Check for special controls requiring custom handling */
     const wchar_t* specialText = FindSpecialControlText(dialogID, controlID);
     if (specialText) {
         if (ProcessSpecialControlText(hwndCtl, specialText, dialogID, controlID)) {
@@ -221,12 +275,14 @@ static BOOL CALLBACK EnumChildProc(HWND hwndCtl, LPARAM lParam) {
         return TRUE;
     }
 
+    /** Check for special button text */
     const wchar_t* buttonText = FindSpecialButtonText(dialogID, controlID);
     if (buttonText) {
         SetWindowTextW(hwndCtl, buttonText);
         return TRUE;
     }
 
+    /** Apply generic localization for standard controls */
     wchar_t originalText[512] = {0};
     if (GetControlOriginalText(hwndCtl, originalText, 512) && originalText[0] != L'\0') {
         const wchar_t* localizedText = GetLocalizedString(NULL, originalText);
@@ -238,18 +294,30 @@ static BOOL CALLBACK EnumChildProc(HWND hwndCtl, LPARAM lParam) {
     return TRUE;
 }
 
+/**
+ * @brief Initialize dialog language support system
+ * @return TRUE if initialization successful
+ */
 BOOL InitDialogLanguageSupport(void) {
     return TRUE;
 }
 
+/**
+ * @brief Apply localization to dialog and all its child controls
+ * @param hwndDlg Handle to dialog window
+ * @param dialogID Dialog resource ID for lookup
+ * @return TRUE if localization applied successfully, FALSE on error
+ */
 BOOL ApplyDialogLanguage(HWND hwndDlg, int dialogID) {
     if (!hwndDlg) return FALSE;
 
+    /** Set localized dialog title */
     const wchar_t* titleText = GetDialogTitleText(dialogID);
     if (titleText) {
         SetWindowTextW(hwndDlg, titleText);
     }
 
+    /** Enumerate and localize all child controls */
     EnumChildWindowsData data = {
         .hwndDlg = hwndDlg,
         .dialogID = dialogID
@@ -260,17 +328,26 @@ BOOL ApplyDialogLanguage(HWND hwndDlg, int dialogID) {
     return TRUE;
 }
 
+/**
+ * @brief Get localized string for specific dialog control
+ * @param dialogID Dialog resource ID
+ * @param controlID Control resource ID (-1 for dialog title)
+ * @return Localized string or NULL if not found
+ */
 const wchar_t* GetDialogLocalizedString(int dialogID, int controlID) {
+    /** Check for special control text first */
     const wchar_t* specialText = FindSpecialControlText(dialogID, controlID);
     if (specialText) {
         return specialText;
     }
 
+    /** Check for special button text */
     const wchar_t* buttonText = FindSpecialButtonText(dialogID, controlID);
     if (buttonText) {
         return buttonText;
     }
 
+    /** Handle dialog title request */
     if (controlID == -1) {
         return GetDialogTitleText(dialogID);
     }
