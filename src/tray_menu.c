@@ -339,9 +339,7 @@ void ShowColorMenu(HWND hwnd) {
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
-    HMENU hFontSubMenu = CreatePopupMenu();
-    
-
+        HMENU hFontSubMenu = CreatePopupMenu();
     
     /** Helper function to recursively build font submenus */
     int g_advancedFontId = 2000; /** Global counter for font IDs */
@@ -417,10 +415,7 @@ void ShowColorMenu(HWND hwnd) {
         return hasAnyContent;
     }
     
-    /** Create advanced fonts submenu */
-    HMENU hAdvancedFontsMenu = CreatePopupMenu();
-    
-    /** Load fonts from user's fonts folder using recursive scan */
+    /** Load fonts from user's fonts folder directly into main font menu */
     char fontsFolderPath[MAX_PATH];
     char* appdata_path = getenv("LOCALAPPDATA");
     if (appdata_path) {
@@ -428,23 +423,21 @@ void ShowColorMenu(HWND hwnd) {
         
         g_advancedFontId = 2000; /** Reset global font ID counter */
         
-        /** Use recursive function to scan all folders and subfolders */
-        BOOL hasAdvancedFonts = ScanFontFolder(fontsFolderPath, hAdvancedFontsMenu, &g_advancedFontId);
+        /** Use recursive function to scan all folders and subfolders directly in main font menu */
+        BOOL hasAdvancedFonts = ScanFontFolder(fontsFolderPath, hFontSubMenu, &g_advancedFontId);
         
         /** Add browse option if no fonts found or as additional option */
         if (!hasAdvancedFonts) {
-            AppendMenuW(hAdvancedFontsMenu, MF_STRING | MF_GRAYED, 0, 
+            AppendMenuW(hFontSubMenu, MF_STRING | MF_GRAYED, 0, 
                        L"No font files found");
-            AppendMenuW(hAdvancedFontsMenu, MF_SEPARATOR, 0, NULL);
+            AppendMenuW(hFontSubMenu, MF_SEPARATOR, 0, NULL);
         } else {
-            AppendMenuW(hAdvancedFontsMenu, MF_SEPARATOR, 0, NULL);
+            AppendMenuW(hFontSubMenu, MF_SEPARATOR, 0, NULL);
         }
         
-        AppendMenuW(hAdvancedFontsMenu, MF_STRING, CLOCK_IDC_FONT_ADVANCED, 
+        AppendMenuW(hFontSubMenu, MF_STRING, CLOCK_IDC_FONT_ADVANCED, 
                    GetLocalizedString(L"打开字体文件夹", L"Open fonts folder"));
     }
-    
-    AppendMenuW(hFontSubMenu, MF_POPUP, (UINT_PTR)hAdvancedFontsMenu, GetLocalizedString(L"更多", L"More"));
 
     HMENU hColorSubMenu = CreatePopupMenu();
 
