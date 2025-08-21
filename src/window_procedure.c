@@ -1067,7 +1067,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     
                     ReadNotificationMessagesConfig();
                     
-
+                    /** Extract embedded fonts to restore missing default fonts */
+                    extern BOOL ExtractEmbeddedFontsToFolder(HINSTANCE hInstance);
+                    ExtractEmbeddedFontsToFolder(GetModuleHandle(NULL));
                     
                     /** Reset window and font scaling to defaults */
                     CLOCK_WINDOW_SCALE = 1.0f;
