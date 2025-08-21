@@ -57,19 +57,19 @@ BOOL IS_PREVIEWING = FALSE;
 
 /** @brief Array of embedded font resources for extraction only */
 FontResource fontResources[] = {
-    {0, IDR_FONT_RECMONO, "RecMonoCasual Nerd Font Mono Essence.ttf"},
-    {0, IDR_FONT_DEPARTURE, "DepartureMono Nerd Font Propo Essence.ttf"},
-    {0, IDR_FONT_TERMINESS, "Terminess Nerd Font Propo Essence.ttf"},
-    {0, IDR_FONT_JACQUARD, "Jacquard 12 Essence.ttf"},
-    {0, IDR_FONT_JACQUARDA, "Jacquarda Bastarda 9 Essence.ttf"},
-    {0, IDR_FONT_PIXELIFY, "Pixelify Sans Medium Essence.ttf"},
-    {0, IDR_FONT_RUBIK_BURNED, "Rubik Burned Essence.ttf"},
-    {0, IDR_FONT_RUBIK_GLITCH, "Rubik Glitch Essence.ttf"},
-    {0, IDR_FONT_RUBIK_MARKER_HATCH, "Rubik Marker Hatch Essence.ttf"},
-    {0, IDR_FONT_RUBIK_PUDDLES, "Rubik Puddles Essence.ttf"},
-    {0, IDR_FONT_WALLPOET, "Wallpoet Essence.ttf"},
-    {0, IDR_FONT_PROFONT, "ProFont IIx Nerd Font Essence.ttf"},
-    {0, IDR_FONT_DADDYTIME, "DaddyTimeMono Nerd Font Propo Essence.ttf"},
+    {IDR_FONT_RECMONO, "RecMonoCasual Nerd Font Mono Essence.ttf"},
+    {IDR_FONT_DEPARTURE, "DepartureMono Nerd Font Propo Essence.ttf"},
+    {IDR_FONT_TERMINESS, "Terminess Nerd Font Propo Essence.ttf"},
+    {IDR_FONT_JACQUARD, "Jacquard 12 Essence.ttf"},
+    {IDR_FONT_JACQUARDA, "Jacquarda Bastarda 9 Essence.ttf"},
+    {IDR_FONT_PIXELIFY, "Pixelify Sans Medium Essence.ttf"},
+    {IDR_FONT_RUBIK_BURNED, "Rubik Burned Essence.ttf"},
+    {IDR_FONT_RUBIK_GLITCH, "Rubik Glitch Essence.ttf"},
+    {IDR_FONT_RUBIK_MARKER_HATCH, "Rubik Marker Hatch Essence.ttf"},
+    {IDR_FONT_RUBIK_PUDDLES, "Rubik Puddles Essence.ttf"},
+    {IDR_FONT_WALLPOET, "Wallpoet Essence.ttf"},
+    {IDR_FONT_PROFONT, "ProFont IIx Nerd Font Essence.ttf"},
+    {IDR_FONT_DADDYTIME, "DaddyTimeMono Nerd Font Propo Essence.ttf"},
 };
 
 /** @brief Total number of embedded font resources */
@@ -663,55 +663,19 @@ BOOL ExtractEmbeddedFontsToFolder(HINSTANCE hInstance) {
     
     snprintf(fontsFolderPath, MAX_PATH, "%s\\Catime\\resources\\fonts", appdata_path);
     
-    /** Create directory structure recursively */
-    char catimePath[MAX_PATH];
-    char resourcesPath[MAX_PATH];
-    snprintf(catimePath, MAX_PATH, "%s\\Catime", appdata_path);
-    snprintf(resourcesPath, MAX_PATH, "%s\\Catime\\resources", appdata_path);
-    
-    /** Create Catime directory */
-    wchar_t wCatimePath[MAX_PATH];
-    MultiByteToWideChar(CP_ACP, 0, catimePath, -1, wCatimePath, MAX_PATH);
-    if (GetFileAttributesW(wCatimePath) == INVALID_FILE_ATTRIBUTES) {
-        CreateDirectoryW(wCatimePath, NULL);
-    }
-    
-    /** Create resources directory */
-    wchar_t wResourcesPath[MAX_PATH];
-    MultiByteToWideChar(CP_ACP, 0, resourcesPath, -1, wResourcesPath, MAX_PATH);
-    if (GetFileAttributesW(wResourcesPath) == INVALID_FILE_ATTRIBUTES) {
-        CreateDirectoryW(wResourcesPath, NULL);
-    }
-    
-    /** Create fonts directory */
+    /** Create fonts directory recursively using SHCreateDirectory */
     wchar_t wFontsFolderPath[MAX_PATH];
     MultiByteToWideChar(CP_ACP, 0, fontsFolderPath, -1, wFontsFolderPath, MAX_PATH);
-    if (GetFileAttributesW(wFontsFolderPath) == INVALID_FILE_ATTRIBUTES) {
-        CreateDirectoryW(wFontsFolderPath, NULL);
-    }
+    SHCreateDirectoryExW(NULL, wFontsFolderPath, NULL);
     
-    /** Extract each embedded font resource */
-    int successCount = 0;
+    /** Extract all embedded font resources (overwrite if exists) */
     for (int i = 0; i < FONT_RESOURCES_COUNT; i++) {
         char outputPath[MAX_PATH];
         snprintf(outputPath, MAX_PATH, "%s\\%s", fontsFolderPath, fontResources[i].fontName);
-        
-        /** Check if font file already exists */
-        wchar_t wOutputPath[MAX_PATH];
-        MultiByteToWideChar(CP_ACP, 0, outputPath, -1, wOutputPath, MAX_PATH);
-        
-        if (GetFileAttributesW(wOutputPath) == INVALID_FILE_ATTRIBUTES) {
-            /** File doesn't exist, extract it */
-            if (ExtractFontResourceToFile(hInstance, fontResources[i].resourceId, outputPath)) {
-                successCount++;
-            }
-        } else {
-            /** File already exists, count as success */
-            successCount++;
-        }
+        ExtractFontResourceToFile(hInstance, fontResources[i].resourceId, outputPath);
     }
     
-    return (successCount == FONT_RESOURCES_COUNT);
+    return TRUE;
 }
 
 /**

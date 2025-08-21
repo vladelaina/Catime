@@ -22,10 +22,9 @@
 int CALLBACK EnumFontFamExProc(ENUMLOGFONTEXW *lpelfe, NEWTEXTMETRICEX *lpntme, DWORD FontType, LPARAM lParam);
 
 /**
- * @brief Font resource information structure for extraction
+ * @brief Font resource information for extraction
  */
 typedef struct {
-    int unused;            /**< Unused field (kept for compatibility) */
     int resourceId;        /**< Resource identifier */
     const char* fontName;  /**< Font file name */
 } FontResource;
