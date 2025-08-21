@@ -540,7 +540,7 @@ void WriteConfigFont(const char* font_file_name) {
         
         if (!isEmbedded) {
             /** Add path prefix for external fonts */
-            snprintf(configFontName, MAX_PATH, "resources\\fonts\\%s", font_file_name);
+            snprintf(configFontName, MAX_PATH, "%%LOCALAPPDATA%%\\Catime\\resources\\fonts\\%s", font_file_name);
             isExternalFont = TRUE;
         } else {
             /** Use original name for embedded fonts */

@@ -638,9 +638,10 @@ void ReadConfig() {
     BOOL isFontsFolderFont = FALSE;
     
     /** Check if FONT_FILE_NAME has path prefix */
-    if (strncmp(FONT_FILE_NAME, "resources\\fonts\\", 16) == 0) {
+    const char* localappdata_prefix = "%LOCALAPPDATA%\\Catime\\resources\\fonts\\";
+    if (_strnicmp(FONT_FILE_NAME, localappdata_prefix, strlen(localappdata_prefix)) == 0) {
         /** Extract just the filename */
-        strncpy(actualFontFileName, FONT_FILE_NAME + 16, sizeof(actualFontFileName) - 1);
+        strncpy(actualFontFileName, FONT_FILE_NAME + strlen(localappdata_prefix), sizeof(actualFontFileName) - 1);
         actualFontFileName[sizeof(actualFontFileName) - 1] = '\0';
         isFontsFolderFont = TRUE;
     } else {
@@ -672,20 +673,11 @@ void ReadConfig() {
             if (dot) *dot = '\0';
         }
     } else {
-        /** For embedded fonts, extract internal name by removing .ttf extension */
-        size_t font_name_len = strlen(actualFontFileName);
-        if (font_name_len > 4 && strcmp(actualFontFileName + font_name_len - 4, ".ttf") == 0) {
-            /** Strip .ttf extension for internal name */
-            size_t copy_len = font_name_len - 4;
-            if (copy_len >= sizeof(FONT_INTERNAL_NAME))
-                copy_len = sizeof(FONT_INTERNAL_NAME) - 1;
-            
-            memcpy(FONT_INTERNAL_NAME, actualFontFileName, copy_len);
-            FONT_INTERNAL_NAME[copy_len] = '\0';
-        } else {
-            strncpy(FONT_INTERNAL_NAME, actualFontFileName, sizeof(FONT_INTERNAL_NAME) - 1);
-            FONT_INTERNAL_NAME[sizeof(FONT_INTERNAL_NAME) - 1] = '\0';
-        }
+        /** For embedded fonts, extract internal name by removing file extension */
+        strncpy(FONT_INTERNAL_NAME, actualFontFileName, sizeof(FONT_INTERNAL_NAME) - 1);
+        FONT_INTERNAL_NAME[sizeof(FONT_INTERNAL_NAME) - 1] = '\0';
+        char* dot = strrchr(FONT_INTERNAL_NAME, '.');
+        if (dot) *dot = '\0';
     }
     
     CLOCK_WINDOW_POS_X = ReadIniInt(INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_X", 960, config_path);
