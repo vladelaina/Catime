@@ -1347,54 +1347,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     WriteConfigFont("Terminess Nerd Font Propo Essence.ttf");
                     goto refresh_window;
                 }
-                case CLOCK_IDC_FONT_PINYON_SCRIPT: {
-                    WriteConfigFont("Pinyon Script Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_ARBUTUS: {
-                    WriteConfigFont("Arbutus Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_BERKSHIRE: {
-                    WriteConfigFont("Berkshire Swash Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_CAVEAT: {
-                    WriteConfigFont("Caveat Brush Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_CREEPSTER: {
-                    WriteConfigFont("Creepster Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_DOTO: {  
-                    WriteConfigFont("Doto ExtraBold Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_FOLDIT: {
-                    WriteConfigFont("Foldit SemiBold Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_FREDERICKA: {
-                    WriteConfigFont("Fredericka the Great Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_FRIJOLE: {
-                    WriteConfigFont("Frijole Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_GWENDOLYN: {
-                    WriteConfigFont("Gwendolyn Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_HANDJET: {
-                    WriteConfigFont("Handjet Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_INKNUT: {
-                    WriteConfigFont("Inknut Antiqua Medium Essence.ttf");
-                    goto refresh_window;
-                }
+
+
+
+
                 case CLOCK_IDC_FONT_JACQUARD: {
                     WriteConfigFont("Jacquard 12 Essence.ttf");
                     goto refresh_window;
@@ -1403,58 +1359,15 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     WriteConfigFont("Jacquarda Bastarda 9 Essence.ttf");
                     goto refresh_window;
                 }
-                case CLOCK_IDC_FONT_KAVOON: {
-                    WriteConfigFont("Kavoon Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_KUMAR_ONE_OUTLINE: {
-                    WriteConfigFont("Kumar One Outline Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_KUMAR_ONE: {
-                    WriteConfigFont("Kumar One Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_LAKKI_REDDY: {
-                    WriteConfigFont("Lakki Reddy Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_LICORICE: {
-                    WriteConfigFont("Licorice Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_MA_SHAN_ZHENG: {
-                    WriteConfigFont("Ma Shan Zheng Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_MOIRAI_ONE: {
-                    WriteConfigFont("Moirai One Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_MYSTERY_QUEST: {
-                    WriteConfigFont("Mystery Quest Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_NOTO_NASTALIQ: {
-                    WriteConfigFont("Noto Nastaliq Urdu Medium Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_PIEDRA: {
-                    WriteConfigFont("Piedra Essence.ttf");
-                    goto refresh_window;
-                }
+
+
+
                 case CLOCK_IDC_FONT_PIXELIFY: {
                     WriteConfigFont("Pixelify Sans Medium Essence.ttf");
                     goto refresh_window;
                 }
-                case CLOCK_IDC_FONT_PRESS_START: {
-                    WriteConfigFont("Press Start 2P Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_RUBIK_BUBBLES: {
-                    WriteConfigFont("Rubik Bubbles Essence.ttf");
-                    goto refresh_window;
-                }
+
+
                 case CLOCK_IDC_FONT_RUBIK_BURNED: {
                     WriteConfigFont("Rubik Burned Essence.ttf");
                     goto refresh_window;
@@ -1471,46 +1384,13 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     WriteConfigFont("Rubik Puddles Essence.ttf");
                     goto refresh_window;
                 }
-                case CLOCK_IDC_FONT_RUBIK_VINYL: {
-                    WriteConfigFont("Rubik Vinyl Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_RUBIK_WET_PAINT: {
-                    WriteConfigFont("Rubik Wet Paint Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_RUGE_BOOGIE: {
-                    WriteConfigFont("Ruge Boogie Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_SEVILLANA: {
-                    WriteConfigFont("Sevillana Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_SILKSCREEN: {
-                    WriteConfigFont("Silkscreen Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_STICK: {
-                    WriteConfigFont("Stick Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_UNDERDOG: {
-                    WriteConfigFont("Underdog Essence.ttf");
-                    goto refresh_window;
-                }
+
+
                 case CLOCK_IDC_FONT_WALLPOET: {
                     WriteConfigFont("Wallpoet Essence.ttf");
                     goto refresh_window;
                 }
-                case CLOCK_IDC_FONT_YESTERYEAR: {
-                    WriteConfigFont("Yesteryear Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_ZCOOL_KUAILE: {
-                    WriteConfigFont("ZCOOL KuaiLe Essence.ttf");
-                    goto refresh_window;
-                }
+
                 case CLOCK_IDC_FONT_PROFONT: {
                     WriteConfigFont("ProFont IIx Nerd Font Essence.ttf");
                     goto refresh_window;

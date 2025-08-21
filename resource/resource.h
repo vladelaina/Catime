@@ -323,47 +323,15 @@ extern int NOTIFICATION_TIMEOUT_MS;      /**< Notification timeout in millisecon
 #define CLOCK_IDC_FONT_ZCOOL_KUAILE 391 /**< ZCOOL KuaiLe font menu item */
 #define CLOCK_IDC_FONT_PROFONT 392      /**< ProFont font menu item */
 #define CLOCK_IDC_FONT_DADDYTIME 393    /**< DaddyTime font menu item */
-#define CLOCK_IDC_FONT_PINYON_SCRIPT 394 /**< Pinyon Script font menu item */
 
 /** @brief Font menu item identifiers - Google Fonts collection */
-#define CLOCK_IDC_FONT_ARBUTUS 347              /**< Arbutus font menu item */
-#define CLOCK_IDC_FONT_BERKSHIRE 348            /**< Berkshire Swash font menu item */
-#define CLOCK_IDC_FONT_CAVEAT 349               /**< Caveat Brush font menu item */
-#define CLOCK_IDC_FONT_CREEPSTER 350            /**< Creepster font menu item */
-#define CLOCK_IDC_FONT_DOTGOTHIC 351            /**< DotGothic16 font menu item */
-#define CLOCK_IDC_FONT_DOTO 352                 /**< Doto ExtraBold font menu item */
-#define CLOCK_IDC_FONT_FOLDIT 354               /**< Foldit SemiBold font menu item */
-#define CLOCK_IDC_FONT_FREDERICKA 355           /**< Fredericka the Great font menu item */
-#define CLOCK_IDC_FONT_FRIJOLE 356              /**< Frijole font menu item */
-#define CLOCK_IDC_FONT_GWENDOLYN 358            /**< Gwendolyn font menu item */
-#define CLOCK_IDC_FONT_HANDJET 359              /**< Handjet font menu item */
-#define CLOCK_IDC_FONT_INKNUT 360               /**< Inknut Antiqua Medium font menu item */
 #define CLOCK_IDC_FONT_JACQUARD 361             /**< Jacquard 12 font menu item */
 #define CLOCK_IDC_FONT_JACQUARDA 362            /**< Jacquarda Bastarda 9 font menu item */
-#define CLOCK_IDC_FONT_KAVOON 363               /**< Kavoon font menu item */
-#define CLOCK_IDC_FONT_KUMAR_ONE_OUTLINE 364    /**< Kumar One Outline font menu item */
-#define CLOCK_IDC_FONT_KUMAR_ONE 365            /**< Kumar One font menu item */
-#define CLOCK_IDC_FONT_LAKKI_REDDY 366          /**< Lakki Reddy font menu item */
-#define CLOCK_IDC_FONT_LICORICE 367             /**< Licorice font menu item */
-#define CLOCK_IDC_FONT_MA_SHAN_ZHENG 368        /**< Ma Shan Zheng font menu item */
-#define CLOCK_IDC_FONT_MOIRAI_ONE 369           /**< Moirai One font menu item */
-#define CLOCK_IDC_FONT_MYSTERY_QUEST 370        /**< Mystery Quest font menu item */
-#define CLOCK_IDC_FONT_NOTO_NASTALIQ 371        /**< Noto Nastaliq Urdu Medium font menu item */
-#define CLOCK_IDC_FONT_PIEDRA 372               /**< Piedra font menu item */
 #define CLOCK_IDC_FONT_PIXELIFY 373             /**< Pixelify Sans Medium font menu item */
-#define CLOCK_IDC_FONT_PRESS_START 374          /**< Press Start 2P font menu item */
-#define CLOCK_IDC_FONT_RUBIK_BUBBLES 376        /**< Rubik Bubbles font menu item */
 #define CLOCK_IDC_FONT_RUBIK_BURNED 377         /**< Rubik Burned font menu item */
 #define CLOCK_IDC_FONT_RUBIK_GLITCH 379         /**< Rubik Glitch font menu item */
 #define CLOCK_IDC_FONT_RUBIK_MARKER_HATCH 380   /**< Rubik Marker Hatch font menu item */
 #define CLOCK_IDC_FONT_RUBIK_PUDDLES 381        /**< Rubik Puddles font menu item */
-#define CLOCK_IDC_FONT_RUBIK_VINYL 382          /**< Rubik Vinyl font menu item */
-#define CLOCK_IDC_FONT_RUBIK_WET_PAINT 383      /**< Rubik Wet Paint font menu item */
-#define CLOCK_IDC_FONT_RUGE_BOOGIE 384          /**< Ruge Boogie font menu item */
-#define CLOCK_IDC_FONT_SEVILLANA 385            /**< Sevillana font menu item */
-#define CLOCK_IDC_FONT_SILKSCREEN 386           /**< Silkscreen font menu item */
-#define CLOCK_IDC_FONT_STICK 387                /**< Stick font menu item */
-#define CLOCK_IDC_FONT_UNDERDOG 388             /**< Underdog font menu item */
 #define CLOCK_IDC_FONT_WALLPOET 389             /**< Wallpoet font menu item */
 #define CLOCK_IDC_FONT_ADVANCED 395             /**< Font advanced options menu item */
 
@@ -371,51 +339,17 @@ extern int NOTIFICATION_TIMEOUT_MS;      /**< Notification timeout in millisecon
 #define IDR_FONT_RECMONO 442            /**< RecMono font resource */
 #define IDR_FONT_DEPARTURE 420          /**< Departure font resource */
 #define IDR_FONT_TERMINESS 443          /**< Terminess font resource */
-#define IDR_FONT_YESTERYEAR 490         /**< Yesteryear font resource */
-#define IDR_FONT_ZCOOL_KUAILE 491       /**< ZCOOL KuaiLe font resource */
 #define IDR_FONT_PROFONT 492            /**< ProFont font resource */
 #define IDR_FONT_DADDYTIME 493          /**< DaddyTime font resource */
-#define IDR_FONT_PINYON_SCRIPT 494      /**< Pinyon Script font resource */
 
 /** @brief Font resource identifiers - Google Fonts collection */
-#define IDR_FONT_ARBUTUS 447                /**< Arbutus font resource */
-#define IDR_FONT_BERKSHIRE 448              /**< Berkshire Swash font resource */
-#define IDR_FONT_CAVEAT 449                 /**< Caveat Brush font resource */
-#define IDR_FONT_CREEPSTER 450              /**< Creepster font resource */
-#define IDR_FONT_DOTGOTHIC 451              /**< DotGothic16 font resource */
-#define IDR_FONT_DOTO 452                   /**< Doto ExtraBold font resource */
-#define IDR_FONT_FOLDIT 454                 /**< Foldit SemiBold font resource */
-#define IDR_FONT_FREDERICKA 455             /**< Fredericka the Great font resource */
-#define IDR_FONT_FRIJOLE 456                /**< Frijole font resource */
-#define IDR_FONT_GWENDOLYN 458              /**< Gwendolyn font resource */
-#define IDR_FONT_HANDJET 459                /**< Handjet font resource */
-#define IDR_FONT_INKNUT 460                 /**< Inknut Antiqua Medium font resource */
 #define IDR_FONT_JACQUARD 461               /**< Jacquard 12 font resource */
 #define IDR_FONT_JACQUARDA 462              /**< Jacquarda Bastarda 9 font resource */
-#define IDR_FONT_KAVOON 463                 /**< Kavoon font resource */
-#define IDR_FONT_KUMAR_ONE_OUTLINE 464      /**< Kumar One Outline font resource */
-#define IDR_FONT_KUMAR_ONE 465              /**< Kumar One font resource */
-#define IDR_FONT_LAKKI_REDDY 466            /**< Lakki Reddy font resource */
-#define IDR_FONT_LICORICE 467               /**< Licorice font resource */
-#define IDR_FONT_MA_SHAN_ZHENG 468          /**< Ma Shan Zheng font resource */
-#define IDR_FONT_MOIRAI_ONE 469             /**< Moirai One font resource */
-#define IDR_FONT_MYSTERY_QUEST 470          /**< Mystery Quest font resource */
-#define IDR_FONT_NOTO_NASTALIQ 471          /**< Noto Nastaliq Urdu Medium font resource */
-#define IDR_FONT_PIEDRA 472                 /**< Piedra font resource */
 #define IDR_FONT_PIXELIFY 473               /**< Pixelify Sans Medium font resource */
-#define IDR_FONT_PRESS_START 474            /**< Press Start 2P font resource */
-#define IDR_FONT_RUBIK_BUBBLES 476          /**< Rubik Bubbles font resource */
 #define IDR_FONT_RUBIK_BURNED 477           /**< Rubik Burned font resource */
 #define IDR_FONT_RUBIK_GLITCH 479           /**< Rubik Glitch font resource */
 #define IDR_FONT_RUBIK_MARKER_HATCH 480     /**< Rubik Marker Hatch font resource */
 #define IDR_FONT_RUBIK_PUDDLES 481          /**< Rubik Puddles font resource */
-#define IDR_FONT_RUBIK_VINYL 482            /**< Rubik Vinyl font resource */
-#define IDR_FONT_RUBIK_WET_PAINT 483        /**< Rubik Wet Paint font resource */
-#define IDR_FONT_RUGE_BOOGIE 484            /**< Ruge Boogie font resource */
-#define IDR_FONT_SEVILLANA 485              /**< Sevillana font resource */
-#define IDR_FONT_SILKSCREEN 486             /**< Silkscreen font resource */
-#define IDR_FONT_STICK 487                  /**< Stick font resource */
-#define IDR_FONT_UNDERDOG 488               /**< Underdog font resource */
 #define IDR_FONT_WALLPOET 489               /**< Wallpoet font resource */
 
 #endif

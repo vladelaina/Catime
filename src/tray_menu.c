@@ -345,18 +345,15 @@ void ShowColorMenu(HWND hwnd) {
     for (int i = 0; i < FONT_RESOURCES_COUNT; i++) {
         if (strcmp(fontResources[i].fontName, "Terminess Nerd Font Propo Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "DaddyTimeMono Nerd Font Propo Essence.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Foldit SemiBold Essence.ttf") == 0 ||
+
             strcmp(fontResources[i].fontName, "Jacquarda Bastarda 9 Essence.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Moirai One Essence.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Silkscreen Essence.ttf") == 0 ||
+
+
             strcmp(fontResources[i].fontName, "Pixelify Sans Medium Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Rubik Burned Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Rubik Glitch Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "ProFont IIx Nerd Font Essence.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Wallpoet Essence.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Yesteryear Essence.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Pinyon Script Essence.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "ZCOOL KuaiLe Essence.ttf") == 0) {
+            strcmp(fontResources[i].fontName, "Wallpoet Essence.ttf") == 0) {
             
             BOOL isCurrentFont = strcmp(FONT_FILE_NAME, fontResources[i].fontName) == 0;
             wchar_t wDisplayName[100];
@@ -374,18 +371,15 @@ void ShowColorMenu(HWND hwnd) {
     for (int i = 0; i < FONT_RESOURCES_COUNT; i++) {
         if (strcmp(fontResources[i].fontName, "Terminess Nerd Font Propo Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "DaddyTimeMono Nerd Font Propo Essence.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Foldit SemiBold Essence.ttf") == 0 ||
+
             strcmp(fontResources[i].fontName, "Jacquarda Bastarda 9 Essence.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Moirai One Essence.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Silkscreen Essence.ttf") == 0 ||
+
+
             strcmp(fontResources[i].fontName, "Pixelify Sans Medium Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Rubik Burned Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "Rubik Glitch Essence.ttf") == 0 ||
             strcmp(fontResources[i].fontName, "ProFont IIx Nerd Font Essence.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Wallpoet Essence.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Yesteryear Essence.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Pinyon Script Essence.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "ZCOOL KuaiLe Essence.ttf") == 0) {
+            strcmp(fontResources[i].fontName, "Wallpoet Essence.ttf") == 0) {
             continue;
         }
 
