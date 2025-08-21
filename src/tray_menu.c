@@ -341,19 +341,7 @@ void ShowColorMenu(HWND hwnd) {
 
     HMENU hFontSubMenu = CreatePopupMenu();
     
-    /** @brief Add all embedded font resources to main font menu */
-    for (int i = 0; i < FONT_RESOURCES_COUNT; i++) {
-        BOOL isCurrentFont = strcmp(FONT_FILE_NAME, fontResources[i].fontName) == 0;
-        wchar_t wDisplayName[100];
-        MultiByteToWideChar(CP_UTF8, 0, fontResources[i].fontName, -1, wDisplayName, 100);
-        wchar_t* dot = wcsstr(wDisplayName, L".ttf");
-        if (dot) *dot = L'\0';
-        
-        AppendMenuW(hFontSubMenu, MF_STRING | (isCurrentFont ? MF_CHECKED : MF_UNCHECKED),
-                  fontResources[i].menuId, wDisplayName);
-    }
-    
-    AppendMenuW(hFontSubMenu, MF_SEPARATOR, 0, NULL);
+
     
     /** Helper function to recursively build font submenus */
     int g_advancedFontId = 2000; /** Global counter for font IDs */

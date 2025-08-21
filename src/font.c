@@ -55,21 +55,21 @@ char PREVIEW_INTERNAL_NAME[100] = "";
 /** @brief Flag indicating if font preview mode is active */
 BOOL IS_PREVIEWING = FALSE;
 
-/** @brief Array of embedded font resources mapping control IDs to resource IDs and filenames */
+/** @brief Array of embedded font resources for extraction only */
 FontResource fontResources[] = {
-    {CLOCK_IDC_FONT_RECMONO, IDR_FONT_RECMONO, "RecMonoCasual Nerd Font Mono Essence.ttf"},
-    {CLOCK_IDC_FONT_DEPARTURE, IDR_FONT_DEPARTURE, "DepartureMono Nerd Font Propo Essence.ttf"},
-    {CLOCK_IDC_FONT_TERMINESS, IDR_FONT_TERMINESS, "Terminess Nerd Font Propo Essence.ttf"},
-    {CLOCK_IDC_FONT_JACQUARD, IDR_FONT_JACQUARD, "Jacquard 12 Essence.ttf"},
-    {CLOCK_IDC_FONT_JACQUARDA, IDR_FONT_JACQUARDA, "Jacquarda Bastarda 9 Essence.ttf"},
-    {CLOCK_IDC_FONT_PIXELIFY, IDR_FONT_PIXELIFY, "Pixelify Sans Medium Essence.ttf"},
-    {CLOCK_IDC_FONT_RUBIK_BURNED, IDR_FONT_RUBIK_BURNED, "Rubik Burned Essence.ttf"},
-    {CLOCK_IDC_FONT_RUBIK_GLITCH, IDR_FONT_RUBIK_GLITCH, "Rubik Glitch Essence.ttf"},
-    {CLOCK_IDC_FONT_RUBIK_MARKER_HATCH, IDR_FONT_RUBIK_MARKER_HATCH, "Rubik Marker Hatch Essence.ttf"},
-    {CLOCK_IDC_FONT_RUBIK_PUDDLES, IDR_FONT_RUBIK_PUDDLES, "Rubik Puddles Essence.ttf"},
-    {CLOCK_IDC_FONT_WALLPOET, IDR_FONT_WALLPOET, "Wallpoet Essence.ttf"},
-    {CLOCK_IDC_FONT_PROFONT, IDR_FONT_PROFONT, "ProFont IIx Nerd Font Essence.ttf"},
-    {CLOCK_IDC_FONT_DADDYTIME, IDR_FONT_DADDYTIME, "DaddyTimeMono Nerd Font Propo Essence.ttf"},
+    {0, IDR_FONT_RECMONO, "RecMonoCasual Nerd Font Mono Essence.ttf"},
+    {0, IDR_FONT_DEPARTURE, "DepartureMono Nerd Font Propo Essence.ttf"},
+    {0, IDR_FONT_TERMINESS, "Terminess Nerd Font Propo Essence.ttf"},
+    {0, IDR_FONT_JACQUARD, "Jacquard 12 Essence.ttf"},
+    {0, IDR_FONT_JACQUARDA, "Jacquarda Bastarda 9 Essence.ttf"},
+    {0, IDR_FONT_PIXELIFY, "Pixelify Sans Medium Essence.ttf"},
+    {0, IDR_FONT_RUBIK_BURNED, "Rubik Burned Essence.ttf"},
+    {0, IDR_FONT_RUBIK_GLITCH, "Rubik Glitch Essence.ttf"},
+    {0, IDR_FONT_RUBIK_MARKER_HATCH, "Rubik Marker Hatch Essence.ttf"},
+    {0, IDR_FONT_RUBIK_PUDDLES, "Rubik Puddles Essence.ttf"},
+    {0, IDR_FONT_WALLPOET, "Wallpoet Essence.ttf"},
+    {0, IDR_FONT_PROFONT, "ProFont IIx Nerd Font Essence.ttf"},
+    {0, IDR_FONT_DADDYTIME, "DaddyTimeMono Nerd Font Propo Essence.ttf"},
 };
 
 /** @brief Total number of embedded font resources */
@@ -289,42 +289,7 @@ BOOL GetFontNameFromFile(const char* fontFilePath, char* fontName, size_t fontNa
     return TRUE;
 }
 
-/**
- * @brief Load font from embedded resource into memory
- * @param hInstance Application instance handle
- * @param resourceId Resource ID of the font to load
- * @return TRUE if font loaded successfully, FALSE otherwise
- */
-BOOL LoadFontFromResource(HINSTANCE hInstance, int resourceId) {
-    /** Find font resource in executable */
-    HRSRC hResource = FindResourceW(hInstance, MAKEINTRESOURCE(resourceId), RT_FONT);
-    if (hResource == NULL) {
-        return FALSE;
-    }
 
-    /** Load resource into memory */
-    HGLOBAL hMemory = LoadResource(hInstance, hResource);
-    if (hMemory == NULL) {
-        return FALSE;
-    }
-
-    /** Lock resource data for access */
-    void* fontData = LockResource(hMemory);
-    if (fontData == NULL) {
-        return FALSE;
-    }
-
-    /** Add font to system font table from memory */
-    DWORD fontLength = SizeofResource(hInstance, hResource);
-    DWORD nFonts = 0;
-    HANDLE handle = AddFontMemResourceEx(fontData, fontLength, NULL, &nFonts);
-    
-    if (handle == NULL) {
-        return FALSE;
-    }
-    
-    return TRUE;
-}
 
 /**
  * @brief Load font from file on disk
@@ -411,20 +376,13 @@ BOOL FindFontInFontsFolder(const char* fontFileName, char* foundPath, size_t fou
 }
 
 /**
- * @brief Load font by name from embedded resources or fonts folder
+ * @brief Load font by name from fonts folder
  * @param hInstance Application instance handle
  * @param fontName Font filename to search for
  * @return TRUE if font found and loaded, FALSE otherwise
  */
 BOOL LoadFontByName(HINSTANCE hInstance, const char* fontName) {
-    /** First try embedded resources */
-    for (int i = 0; i < sizeof(fontResources) / sizeof(FontResource); i++) {
-        if (strcmp(fontResources[i].fontName, fontName) == 0) {
-            return LoadFontFromResource(hInstance, fontResources[i].resourceId);
-        }
-    }
-    
-    /** If not found in embedded resources, try fonts folder */
+    /** Load font from fonts folder */
     char fontPath[MAX_PATH];
     if (FindFontInFontsFolder(fontName, fontPath, MAX_PATH)) {
         return LoadFontFromFile(fontPath);
@@ -434,7 +392,7 @@ BOOL LoadFontByName(HINSTANCE hInstance, const char* fontName) {
 }
 
 /**
- * @brief Load font and get real font name for fonts folder fonts
+ * @brief Load font and get real font name from fonts folder
  * @param hInstance Application instance handle
  * @param fontFileName Font filename to search for
  * @param realFontName Buffer to store real font name
@@ -445,25 +403,7 @@ BOOL LoadFontByNameAndGetRealName(HINSTANCE hInstance, const char* fontFileName,
                                   char* realFontName, size_t realFontNameSize) {
     if (!fontFileName || !realFontName || realFontNameSize == 0) return FALSE;
     
-    /** First try embedded resources */
-    for (int i = 0; i < sizeof(fontResources) / sizeof(FontResource); i++) {
-        if (strcmp(fontResources[i].fontName, fontFileName) == 0) {
-            if (LoadFontFromResource(hInstance, fontResources[i].resourceId)) {
-                /** For embedded fonts, use the filename without extension as font name */
-                strncpy(realFontName, fontFileName, realFontNameSize - 1);
-                realFontName[realFontNameSize - 1] = '\0';
-                
-                /** Remove .ttf extension if present */
-                char* dot = strrchr(realFontName, '.');
-                if (dot) *dot = '\0';
-                
-                return TRUE;
-            }
-            return FALSE;
-        }
-    }
-    
-    /** If not found in embedded resources, try fonts folder */
+    /** Load font from fonts folder */
     char fontPath[MAX_PATH];
     if (FindFontInFontsFolder(fontFileName, fontPath, MAX_PATH)) {
         /** First extract the real font name from the file */
@@ -489,36 +429,9 @@ BOOL LoadFontByNameAndGetRealName(HINSTANCE hInstance, const char* fontFileName,
 void WriteConfigFont(const char* font_file_name) {
     if (!font_file_name) return;
     
-    /** Check if this is a fonts folder font and add path prefix */
+    /** All fonts are now treated as external fonts in fonts folder */
     char configFontName[MAX_PATH];
-    BOOL isExternalFont = FALSE;
-    
-    /** Check if this font is in the fonts folder */
-    char fontPath[MAX_PATH];
-    if (FindFontInFontsFolder(font_file_name, fontPath, MAX_PATH)) {
-        /** Check if it's not an embedded resource */
-        BOOL isEmbedded = FALSE;
-        for (int i = 0; i < FONT_RESOURCES_COUNT; i++) {
-            if (strcmp(fontResources[i].fontName, font_file_name) == 0) {
-                isEmbedded = TRUE;
-                break;
-            }
-        }
-        
-        if (!isEmbedded) {
-            /** Add path prefix for external fonts */
-            snprintf(configFontName, MAX_PATH, "%%LOCALAPPDATA%%\\Catime\\resources\\fonts\\%s", font_file_name);
-            isExternalFont = TRUE;
-        } else {
-            /** Use original name for embedded fonts */
-            strncpy(configFontName, font_file_name, MAX_PATH - 1);
-            configFontName[MAX_PATH - 1] = '\0';
-        }
-    } else {
-        /** Use original name if not found in fonts folder */
-        strncpy(configFontName, font_file_name, MAX_PATH - 1);
-        configFontName[MAX_PATH - 1] = '\0';
-    }
+    snprintf(configFontName, MAX_PATH, "%%LOCALAPPDATA%%\\Catime\\resources\\fonts\\%s", font_file_name);
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     

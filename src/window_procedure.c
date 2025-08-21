@@ -1067,14 +1067,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     
                     ReadNotificationMessagesConfig();
                     
-                    /** Load default Wallpoet font */
-                    HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
-                    for (int i = 0; i < FONT_RESOURCES_COUNT; i++) {
-                        if (strcmp(fontResources[i].fontName, "Wallpoet Essence.ttf") == 0) {  
-                            LoadFontFromResource(hInstance, fontResources[i].resourceId);
-                            break;
-                        }
-                    }
+
                     
                     /** Reset window and font scaling to defaults */
                     CLOCK_WINDOW_SCALE = 1.0f;
@@ -1334,71 +1327,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 
-                /** Font selection menu handlers - each sets a specific font and refreshes display */
-                case CLOCK_IDC_FONT_RECMONO: {
-                    WriteConfigFont("RecMonoCasual Nerd Font Mono Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_DEPARTURE: {
-                    WriteConfigFont("DepartureMono Nerd Font Propo Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_TERMINESS: {
-                    WriteConfigFont("Terminess Nerd Font Propo Essence.ttf");
-                    goto refresh_window;
-                }
 
-
-
-
-                case CLOCK_IDC_FONT_JACQUARD: {
-                    WriteConfigFont("Jacquard 12 Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_JACQUARDA: {
-                    WriteConfigFont("Jacquarda Bastarda 9 Essence.ttf");
-                    goto refresh_window;
-                }
-
-
-
-                case CLOCK_IDC_FONT_PIXELIFY: {
-                    WriteConfigFont("Pixelify Sans Medium Essence.ttf");
-                    goto refresh_window;
-                }
-
-
-                case CLOCK_IDC_FONT_RUBIK_BURNED: {
-                    WriteConfigFont("Rubik Burned Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_RUBIK_GLITCH: {
-                    WriteConfigFont("Rubik Glitch Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_RUBIK_MARKER_HATCH: {
-                    WriteConfigFont("Rubik Marker Hatch Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_RUBIK_PUDDLES: {
-                    WriteConfigFont("Rubik Puddles Essence.ttf");
-                    goto refresh_window;
-                }
-
-
-                case CLOCK_IDC_FONT_WALLPOET: {
-                    WriteConfigFont("Wallpoet Essence.ttf");
-                    goto refresh_window;
-                }
-
-                case CLOCK_IDC_FONT_PROFONT: {
-                    WriteConfigFont("ProFont IIx Nerd Font Essence.ttf");
-                    goto refresh_window;
-                }
-                case CLOCK_IDC_FONT_DADDYTIME: {
-                    WriteConfigFont("DaddyTimeMono Nerd Font Propo Essence.ttf");
-                    goto refresh_window;
-                }
                 
                 /** Advanced font selection - open fonts folder in explorer */
                 case CLOCK_IDC_FONT_ADVANCED: {
@@ -2124,25 +2053,7 @@ refresh_window:
                     return 0;
                 }
 
-                /** Handle font preview on hover */
-                for (int i = 0; i < FONT_RESOURCES_COUNT; i++) {
-                    if (fontResources[i].menuId == menuItem) {
-                        strncpy(PREVIEW_FONT_NAME, fontResources[i].fontName, 99);
-                        PREVIEW_FONT_NAME[99] = '\0';
-                        
-                        strncpy(PREVIEW_INTERNAL_NAME, PREVIEW_FONT_NAME, 99);
-                        PREVIEW_INTERNAL_NAME[99] = '\0';
-                        char* dot = strrchr(PREVIEW_INTERNAL_NAME, '.');
-                        if (dot) *dot = '\0';
-                        
-                        LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), 
-                                     fontResources[i].fontName);
-                        
-                        IS_PREVIEWING = TRUE;
-                        InvalidateRect(hwnd, NULL, TRUE);
-                        return 0;
-                    }
-                }
+
                 
                 /** Handle fonts folder font preview on hover (IDs 2000+) */
                 if (menuItem >= 2000 && menuItem < 3000) {

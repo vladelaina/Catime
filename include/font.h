@@ -22,10 +22,10 @@
 int CALLBACK EnumFontFamExProc(ENUMLOGFONTEXW *lpelfe, NEWTEXTMETRICEX *lpntme, DWORD FontType, LPARAM lParam);
 
 /**
- * @brief Font resource information structure
+ * @brief Font resource information structure for extraction
  */
 typedef struct {
-    int menuId;            /**< Menu item identifier */
+    int unused;            /**< Unused field (kept for compatibility) */
     int resourceId;        /**< Resource identifier */
     const char* fontName;  /**< Font file name */
 } FontResource;
@@ -51,13 +51,7 @@ extern char PREVIEW_INTERNAL_NAME[100];
 /** @brief Font preview active state */
 extern BOOL IS_PREVIEWING;
 
-/**
- * @brief Load font from application resources
- * @param hInstance Application instance handle
- * @param resourceId Font resource identifier
- * @return TRUE on success, FALSE on failure
- */
-BOOL LoadFontFromResource(HINSTANCE hInstance, int resourceId);
+
 
 /**
  * @brief Load font from file on disk

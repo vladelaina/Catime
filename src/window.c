@@ -632,40 +632,23 @@ BOOL InitializeApplication(HINSTANCE hInstance) {
     UpdateStartupShortcut();
     InitializeDefaultLanguage();
 
-    /** Load default font from resources or fonts folder */
+    /** Load default font from fonts folder */
     char actualFontFileName[MAX_PATH];
-    BOOL isFontsFolderFont = FALSE;
     
     /** Check if FONT_FILE_NAME has path prefix */
     if (strncmp(FONT_FILE_NAME, "resources\\fonts\\", 16) == 0) {
         /** Extract just the filename */
         strncpy(actualFontFileName, FONT_FILE_NAME + 16, sizeof(actualFontFileName) - 1);
         actualFontFileName[sizeof(actualFontFileName) - 1] = '\0';
-        isFontsFolderFont = TRUE;
     } else {
-        /** Use as-is for embedded fonts */
+        /** Use as-is */
         strncpy(actualFontFileName, FONT_FILE_NAME, sizeof(actualFontFileName) - 1);
         actualFontFileName[sizeof(actualFontFileName) - 1] = '\0';
     }
     
-    if (isFontsFolderFont) {
-        /** Load font from fonts folder */
-        extern BOOL LoadFontByName(HINSTANCE hInstance, const char* fontName);
-        LoadFontByName(hInstance, actualFontFileName);
-    } else {
-        /** Load embedded font from resources */
-        int defaultFontIndex = -1;
-        for (int i = 0; i < FONT_RESOURCES_COUNT; i++) {
-            if (strcmp(fontResources[i].fontName, actualFontFileName) == 0) {
-                defaultFontIndex = i;
-                break;
-            }
-        }
-
-        if (defaultFontIndex != -1) {
-            LoadFontFromResource(hInstance, fontResources[defaultFontIndex].resourceId);
-        }
-    }
+    /** Load font from fonts folder */
+    extern BOOL LoadFontByName(HINSTANCE hInstance, const char* fontName);
+    LoadFontByName(hInstance, actualFontFileName);
 
     /** Set initial timer value from configuration */
     CLOCK_TOTAL_TIME = CLOCK_DEFAULT_START_TIME;
