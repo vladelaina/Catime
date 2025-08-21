@@ -55,6 +55,11 @@ char PREVIEW_INTERNAL_NAME[100] = "";
 /** @brief Flag indicating if font preview mode is active */
 BOOL IS_PREVIEWING = FALSE;
 
+/** @brief Currently loaded font path for resource management */
+static wchar_t CURRENT_LOADED_FONT_PATH[MAX_PATH] = {0};
+/** @brief Flag indicating if a font resource is currently loaded */
+static BOOL FONT_RESOURCE_LOADED = FALSE;
+
 /** @brief Array of embedded font resources for extraction only */
 FontResource fontResources[] = {
     {IDR_FONT_RECMONO, "RecMonoCasual Nerd Font Mono Essence.ttf"},
@@ -292,7 +297,26 @@ BOOL GetFontNameFromFile(const char* fontFilePath, char* fontName, size_t fontNa
 
 
 /**
- * @brief Load font from file on disk
+ * @brief Unload currently loaded font resource
+ * @return TRUE if font unloaded successfully or no font was loaded, FALSE otherwise
+ */
+BOOL UnloadCurrentFontResource(void) {
+    if (!FONT_RESOURCE_LOADED || CURRENT_LOADED_FONT_PATH[0] == 0) {
+        return TRUE; // No font to unload
+    }
+    
+    /** Remove font from system font table */
+    BOOL result = RemoveFontResourceExW(CURRENT_LOADED_FONT_PATH, FR_PRIVATE, NULL);
+    
+    /** Reset tracking variables */
+    CURRENT_LOADED_FONT_PATH[0] = 0;
+    FONT_RESOURCE_LOADED = FALSE;
+    
+    return result;
+}
+
+/**
+ * @brief Load font from file on disk (with resource management)
  * @param fontFilePath Full path to font file
  * @return TRUE if font loaded successfully, FALSE otherwise
  */
@@ -308,9 +332,25 @@ BOOL LoadFontFromFile(const char* fontFilePath) {
         return FALSE;
     }
     
+    /** Check if this font is already loaded */
+    if (FONT_RESOURCE_LOADED && wcscmp(CURRENT_LOADED_FONT_PATH, wFontPath) == 0) {
+        return TRUE; // Already loaded
+    }
+    
+    /** Unload previous font first */
+    UnloadCurrentFontResource();
+    
     /** Add font from file to system font table */
     int result = AddFontResourceExW(wFontPath, FR_PRIVATE, NULL);
-    return (result > 0);
+    
+    if (result > 0) {
+        /** Track the loaded font for later cleanup */
+        wcscpy(CURRENT_LOADED_FONT_PATH, wFontPath);
+        FONT_RESOURCE_LOADED = TRUE;
+        return TRUE;
+    }
+    
+    return FALSE;
 }
 
 /**

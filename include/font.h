@@ -53,7 +53,13 @@ extern BOOL IS_PREVIEWING;
 
 
 /**
- * @brief Load font from file on disk
+ * @brief Unload currently loaded font resource
+ * @return TRUE if font unloaded successfully or no font was loaded, FALSE otherwise
+ */
+BOOL UnloadCurrentFontResource(void);
+
+/**
+ * @brief Load font from file on disk (with resource management)
  * @param fontFilePath Full path to font file
  * @return TRUE on success, FALSE on failure
  */

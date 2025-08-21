@@ -50,6 +50,10 @@ void HandleWindowDestroy(HWND hwnd) {
     /** Remove system tray icon */
     RemoveTrayIcon();
     
+    /** Clean up font resources */
+    extern BOOL UnloadCurrentFontResource(void);
+    UnloadCurrentFontResource();
+    
     /** Clean up background update checking thread */
     extern void CleanupUpdateThread(void);
     CleanupUpdateThread();
