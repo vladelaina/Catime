@@ -346,43 +346,42 @@ void ShowColorMenu(HWND hwnd) {
     
     /** Recursive function to scan folder and create submenus */
     BOOL ScanFontFolder(const char* folderPath, HMENU parentMenu, int* fontId) {
-        char searchPath[MAX_PATH];
-        snprintf(searchPath, MAX_PATH, "%s\\*", folderPath);
+        /** Convert folder path to wide character */
+        wchar_t wFolderPath[MAX_PATH];
+        MultiByteToWideChar(CP_UTF8, 0, folderPath, -1, wFolderPath, MAX_PATH);
         
-        WIN32_FIND_DATAA findData;
-        HANDLE hFind = FindFirstFileA(searchPath, &findData);
+        wchar_t wSearchPath[MAX_PATH];
+        swprintf(wSearchPath, MAX_PATH, L"%s\\*", wFolderPath);
+        
+        WIN32_FIND_DATAW findData;
+        HANDLE hFind = FindFirstFileW(wSearchPath, &findData);
         BOOL hasAnyContent = FALSE;
         
         if (hFind != INVALID_HANDLE_VALUE) {
             do {
                 /** Skip . and .. entries */
-                if (strcmp(findData.cFileName, ".") == 0 || strcmp(findData.cFileName, "..") == 0) {
+                if (wcscmp(findData.cFileName, L".") == 0 || wcscmp(findData.cFileName, L"..") == 0) {
                     continue;
                 }
                 
-                char fullItemPath[MAX_PATH];
-                snprintf(fullItemPath, MAX_PATH, "%s\\%s", folderPath, findData.cFileName);
+                wchar_t wFullItemPath[MAX_PATH];
+                swprintf(wFullItemPath, MAX_PATH, L"%s\\%s", wFolderPath, findData.cFileName);
                 
                 /** Handle regular font files */
                 if (!(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
-                    char* ext = strrchr(findData.cFileName, '.');
-                    if (ext && (stricmp(ext, ".ttf") == 0 || stricmp(ext, ".otf") == 0)) {
+                    wchar_t* ext = wcsrchr(findData.cFileName, L'.');
+                    if (ext && (_wcsicmp(ext, L".ttf") == 0 || _wcsicmp(ext, L".otf") == 0)) {
                         /** Remove extension for display */
-                        char displayName[MAX_PATH];
-                        strncpy(displayName, findData.cFileName, MAX_PATH - 1);
-                        displayName[MAX_PATH - 1] = '\0';
-                        char* dotPos = strrchr(displayName, '.');
-                        if (dotPos) *dotPos = '\0';
-                        
-                        /** Convert to wide string for menu */
                         wchar_t wDisplayName[MAX_PATH];
-                        MultiByteToWideChar(CP_UTF8, 0, displayName, -1, wDisplayName, MAX_PATH);
+                        wcsncpy(wDisplayName, findData.cFileName, MAX_PATH - 1);
+                        wDisplayName[MAX_PATH - 1] = L'\0';
+                        wchar_t* dotPos = wcsrchr(wDisplayName, L'.');
+                        if (dotPos) *dotPos = L'\0';
                         
                         /** Check if this is the current font */
                         BOOL isCurrentFont = FALSE;
                         
                         /** Extract filename from FONT_FILE_NAME for comparison */
-                        char currentFontFileName[MAX_PATH];
                         const char* lastSlash = strrchr(FONT_FILE_NAME, '\\');
                         const char* lastForwardSlash = strrchr(FONT_FILE_NAME, '/');
                         const char* fileName = FONT_FILE_NAME;
@@ -394,8 +393,12 @@ void ShowColorMenu(HWND hwnd) {
                             fileName = lastForwardSlash + 1;
                         }
                         
+                        /** Convert current font filename to wide character for comparison */
+                        wchar_t wCurrentFileName[MAX_PATH];
+                        MultiByteToWideChar(CP_UTF8, 0, fileName, -1, wCurrentFileName, MAX_PATH);
+                        
                         /** Compare just the filenames */
-                        isCurrentFont = strcmp(fileName, findData.cFileName) == 0;
+                        isCurrentFont = wcscmp(wCurrentFileName, findData.cFileName) == 0;
                         
                         AppendMenuW(parentMenu, MF_STRING | (isCurrentFont ? MF_CHECKED : MF_UNCHECKED),
                                   (*fontId)++, wDisplayName);
@@ -408,12 +411,17 @@ void ShowColorMenu(HWND hwnd) {
                     /** Create submenu for this folder */
                     HMENU hSubFolderMenu = CreatePopupMenu();
                     
-                    /** Recursively scan this subdirectory */
-                    BOOL hasSubContent = ScanFontFolder(fullItemPath, hSubFolderMenu, fontId);
+                    /** Convert wide path back to UTF-8 for recursive call */
+                    char fullItemPathUtf8[MAX_PATH];
+                    WideCharToMultiByte(CP_UTF8, 0, wFullItemPath, -1, fullItemPathUtf8, MAX_PATH, NULL, NULL);
                     
-                    /** Convert folder name to wide string for menu */
+                    /** Recursively scan this subdirectory */
+                    BOOL hasSubContent = ScanFontFolder(fullItemPathUtf8, hSubFolderMenu, fontId);
+                    
+                    /** Use wide character folder name directly (no conversion needed) */
                     wchar_t wFolderName[MAX_PATH];
-                    MultiByteToWideChar(CP_UTF8, 0, findData.cFileName, -1, wFolderName, MAX_PATH);
+                    wcsncpy(wFolderName, findData.cFileName, MAX_PATH - 1);
+                    wFolderName[MAX_PATH - 1] = L'\0';
                     
                     /** Always add the submenu, even if empty */
                     if (!hasSubContent) {
@@ -424,7 +432,7 @@ void ShowColorMenu(HWND hwnd) {
                     AppendMenuW(parentMenu, MF_POPUP, (UINT_PTR)hSubFolderMenu, wFolderName);
                     hasAnyContent = TRUE;
                 }
-            } while (FindNextFileA(hFind, &findData));
+            } while (FindNextFileW(hFind, &findData));
             FindClose(hFind);
         }
         
