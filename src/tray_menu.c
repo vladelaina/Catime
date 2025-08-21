@@ -339,61 +339,19 @@ void ShowColorMenu(HWND hwnd) {
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
-    HMENU hMoreFontsMenu = CreatePopupMenu();
     HMENU hFontSubMenu = CreatePopupMenu();
     
+    /** @brief Add all embedded font resources to main font menu */
     for (int i = 0; i < FONT_RESOURCES_COUNT; i++) {
-        if (strcmp(fontResources[i].fontName, "Terminess Nerd Font Propo Essence.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "DaddyTimeMono Nerd Font Propo Essence.ttf") == 0 ||
-
-            strcmp(fontResources[i].fontName, "Jacquarda Bastarda 9 Essence.ttf") == 0 ||
-
-
-            strcmp(fontResources[i].fontName, "Pixelify Sans Medium Essence.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Rubik Burned Essence.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Rubik Glitch Essence.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "ProFont IIx Nerd Font Essence.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Wallpoet Essence.ttf") == 0) {
-            
-            BOOL isCurrentFont = strcmp(FONT_FILE_NAME, fontResources[i].fontName) == 0;
-            wchar_t wDisplayName[100];
-            MultiByteToWideChar(CP_UTF8, 0, fontResources[i].fontName, -1, wDisplayName, 100);
-            wchar_t* dot = wcsstr(wDisplayName, L".ttf");
-            if (dot) *dot = L'\0';
-            
-            AppendMenuW(hFontSubMenu, MF_STRING | (isCurrentFont ? MF_CHECKED : MF_UNCHECKED),
-                      fontResources[i].menuId, wDisplayName);
-        }
-    }
-
-    AppendMenuW(hFontSubMenu, MF_SEPARATOR, 0, NULL);
-
-    for (int i = 0; i < FONT_RESOURCES_COUNT; i++) {
-        if (strcmp(fontResources[i].fontName, "Terminess Nerd Font Propo Essence.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "DaddyTimeMono Nerd Font Propo Essence.ttf") == 0 ||
-
-            strcmp(fontResources[i].fontName, "Jacquarda Bastarda 9 Essence.ttf") == 0 ||
-
-
-            strcmp(fontResources[i].fontName, "Pixelify Sans Medium Essence.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Rubik Burned Essence.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Rubik Glitch Essence.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "ProFont IIx Nerd Font Essence.ttf") == 0 ||
-            strcmp(fontResources[i].fontName, "Wallpoet Essence.ttf") == 0) {
-            continue;
-        }
-
         BOOL isCurrentFont = strcmp(FONT_FILE_NAME, fontResources[i].fontName) == 0;
-        wchar_t wDisplayNameMore[100];
-        MultiByteToWideChar(CP_UTF8, 0, fontResources[i].fontName, -1, wDisplayNameMore, 100);
-        wchar_t* dot = wcsstr(wDisplayNameMore, L".ttf");
+        wchar_t wDisplayName[100];
+        MultiByteToWideChar(CP_UTF8, 0, fontResources[i].fontName, -1, wDisplayName, 100);
+        wchar_t* dot = wcsstr(wDisplayName, L".ttf");
         if (dot) *dot = L'\0';
         
-        AppendMenuW(hMoreFontsMenu, MF_STRING | (isCurrentFont ? MF_CHECKED : MF_UNCHECKED),
-                  fontResources[i].menuId, wDisplayNameMore);
+        AppendMenuW(hFontSubMenu, MF_STRING | (isCurrentFont ? MF_CHECKED : MF_UNCHECKED),
+                  fontResources[i].menuId, wDisplayName);
     }
-
-    AppendMenuW(hFontSubMenu, MF_POPUP, (UINT_PTR)hMoreFontsMenu, GetLocalizedString(L"更多", L"More"));
     
     AppendMenuW(hFontSubMenu, MF_SEPARATOR, 0, NULL);
     
@@ -498,7 +456,7 @@ void ShowColorMenu(HWND hwnd) {
                    GetLocalizedString(L"打开字体文件夹", L"Open fonts folder"));
     }
     
-    AppendMenuW(hFontSubMenu, MF_POPUP, (UINT_PTR)hAdvancedFontsMenu, GetLocalizedString(L"高级", L"Advanced"));
+    AppendMenuW(hFontSubMenu, MF_POPUP, (UINT_PTR)hAdvancedFontsMenu, GetLocalizedString(L"更多", L"More"));
 
     HMENU hColorSubMenu = CreatePopupMenu();
 
