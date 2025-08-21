@@ -379,7 +379,23 @@ void ShowColorMenu(HWND hwnd) {
                         MultiByteToWideChar(CP_UTF8, 0, displayName, -1, wDisplayName, MAX_PATH);
                         
                         /** Check if this is the current font */
-                        BOOL isCurrentFont = strcmp(FONT_FILE_NAME, findData.cFileName) == 0;
+                        BOOL isCurrentFont = FALSE;
+                        
+                        /** Extract filename from FONT_FILE_NAME for comparison */
+                        char currentFontFileName[MAX_PATH];
+                        const char* lastSlash = strrchr(FONT_FILE_NAME, '\\');
+                        const char* lastForwardSlash = strrchr(FONT_FILE_NAME, '/');
+                        const char* fileName = FONT_FILE_NAME;
+                        
+                        /** Find the last path separator */
+                        if (lastSlash && (!lastForwardSlash || lastSlash > lastForwardSlash)) {
+                            fileName = lastSlash + 1;
+                        } else if (lastForwardSlash) {
+                            fileName = lastForwardSlash + 1;
+                        }
+                        
+                        /** Compare just the filenames */
+                        isCurrentFont = strcmp(fileName, findData.cFileName) == 0;
                         
                         AppendMenuW(parentMenu, MF_STRING | (isCurrentFont ? MF_CHECKED : MF_UNCHECKED),
                                   (*fontId)++, wDisplayName);
