@@ -84,6 +84,26 @@ BOOL FindFontInFontsFolder(const char* fontFileName, char* foundPath, size_t fou
 BOOL LoadFontByName(HINSTANCE hInstance, const char* fontName);
 
 /**
+ * @brief Read font family name from TTF/OTF font file
+ * @param fontFilePath Path to font file
+ * @param fontName Buffer to store extracted font name
+ * @param fontNameSize Size of fontName buffer
+ * @return TRUE if font name extracted successfully, FALSE otherwise
+ */
+BOOL GetFontNameFromFile(const char* fontFilePath, char* fontName, size_t fontNameSize);
+
+/**
+ * @brief Load font and get real font name for fonts folder fonts
+ * @param hInstance Application instance handle
+ * @param fontFileName Font filename to search for
+ * @param realFontName Buffer to store real font name
+ * @param realFontNameSize Size of realFontName buffer
+ * @return TRUE if font found, loaded, and real name extracted, FALSE otherwise
+ */
+BOOL LoadFontByNameAndGetRealName(HINSTANCE hInstance, const char* fontFileName, 
+                                  char* realFontName, size_t realFontNameSize);
+
+/**
  * @brief Write font configuration to settings
  * @param font_file_name Font file name to save
  */

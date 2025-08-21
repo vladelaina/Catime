@@ -10,6 +10,39 @@
 #include "../include/font.h"
 #include "../resource/resource.h"
 
+/** @brief Font name table structures for TTF font parsing */
+#pragma pack(push, 1)
+typedef struct {
+    WORD platformID;
+    WORD encodingID;
+    WORD languageID;
+    WORD nameID;
+    WORD length;
+    WORD offset;
+} NameRecord;
+
+typedef struct {
+    WORD format;
+    WORD count;
+    WORD stringOffset;
+} NameTableHeader;
+
+typedef struct {
+    DWORD tag;
+    DWORD checksum;
+    DWORD offset;
+    DWORD length;
+} TableRecord;
+
+typedef struct {
+    DWORD sfntVersion;
+    WORD numTables;
+    WORD searchRange;
+    WORD entrySelector;
+    WORD rangeShift;
+} FontDirectoryHeader;
+#pragma pack(pop)
+
 /** @brief Current font file name */
 char FONT_FILE_NAME[100] = "Hack Nerd Font.ttf";
 /** @brief Internal font name for Windows GDI */
@@ -84,6 +117,210 @@ extern void GetConfigPath(char* path, size_t maxLen);
 extern void ReadConfig(void);
 /** @brief Font enumeration callback function */
 extern int CALLBACK EnumFontFamExProc(ENUMLOGFONTEXW *lpelfe, NEWTEXTMETRICEX *lpntme, DWORD FontType, LPARAM lParam);
+
+/**
+ * @brief Convert big-endian WORD to little-endian
+ * @param value Big-endian WORD value
+ * @return Little-endian WORD value
+ */
+static WORD SwapWORD(WORD value) {
+    return ((value & 0xFF) << 8) | ((value & 0xFF00) >> 8);
+}
+
+/**
+ * @brief Convert big-endian DWORD to little-endian
+ * @param value Big-endian DWORD value
+ * @return Little-endian DWORD value
+ */
+static DWORD SwapDWORD(DWORD value) {
+    return ((value & 0xFF) << 24) | ((value & 0xFF00) << 8) | 
+           ((value & 0xFF0000) >> 8) | ((value & 0xFF000000) >> 24);
+}
+
+/**
+ * @brief Read font family name from TTF/OTF font file
+ * @param fontFilePath Path to font file
+ * @param fontName Buffer to store extracted font name
+ * @param fontNameSize Size of fontName buffer
+ * @return TRUE if font name extracted successfully, FALSE otherwise
+ */
+BOOL GetFontNameFromFile(const char* fontFilePath, char* fontName, size_t fontNameSize) {
+    if (!fontFilePath || !fontName || fontNameSize == 0) return FALSE;
+    
+    /** Convert to wide character path */
+    wchar_t wFontPath[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, fontFilePath, -1, wFontPath, MAX_PATH);
+    
+    /** Open font file */
+    HANDLE hFile = CreateFileW(wFontPath, GENERIC_READ, FILE_SHARE_READ, NULL, 
+                              OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile == INVALID_HANDLE_VALUE) {
+        return FALSE;
+    }
+    
+    /** Read font directory header */
+    FontDirectoryHeader fontHeader;
+    DWORD bytesRead;
+    if (!ReadFile(hFile, &fontHeader, sizeof(FontDirectoryHeader), &bytesRead, NULL) ||
+        bytesRead != sizeof(FontDirectoryHeader)) {
+        CloseHandle(hFile);
+        return FALSE;
+    }
+    
+    /** Convert endianness */
+    fontHeader.numTables = SwapWORD(fontHeader.numTables);
+    
+    /** Find 'name' table */
+    DWORD nameTableOffset = 0;
+    DWORD nameTableLength = 0;
+    for (WORD i = 0; i < fontHeader.numTables; i++) {
+        TableRecord tableRecord;
+        if (!ReadFile(hFile, &tableRecord, sizeof(TableRecord), &bytesRead, NULL) ||
+            bytesRead != sizeof(TableRecord)) {
+            CloseHandle(hFile);
+            return FALSE;
+        }
+        
+        /** Check if this is the 'name' table (0x6E616D65 = 'name') */
+        if (tableRecord.tag == 0x656D616E) {  // 'name' in little-endian
+            nameTableOffset = SwapDWORD(tableRecord.offset);
+            nameTableLength = SwapDWORD(tableRecord.length);
+            break;
+        }
+    }
+    
+    if (nameTableOffset == 0) {
+        CloseHandle(hFile);
+        return FALSE;
+    }
+    
+    /** Seek to name table */
+    if (SetFilePointer(hFile, nameTableOffset, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER) {
+        CloseHandle(hFile);
+        return FALSE;
+    }
+    
+    /** Read name table header */
+    NameTableHeader nameHeader;
+    if (!ReadFile(hFile, &nameHeader, sizeof(NameTableHeader), &bytesRead, NULL) ||
+        bytesRead != sizeof(NameTableHeader)) {
+        CloseHandle(hFile);
+        return FALSE;
+    }
+    
+    /** Convert endianness */
+    nameHeader.count = SwapWORD(nameHeader.count);
+    nameHeader.stringOffset = SwapWORD(nameHeader.stringOffset);
+    
+    /** Search for font family name record (nameID = 1) */
+    BOOL foundName = FALSE;
+    WORD bestPlatform = 0;
+    WORD bestEncoding = 0;
+    WORD bestLanguage = 0;
+    WORD nameLength = 0;
+    WORD nameOffset = 0;
+    
+    for (WORD i = 0; i < nameHeader.count; i++) {
+        NameRecord nameRecord;
+        if (!ReadFile(hFile, &nameRecord, sizeof(NameRecord), &bytesRead, NULL) ||
+            bytesRead != sizeof(NameRecord)) {
+            CloseHandle(hFile);
+            return FALSE;
+        }
+        
+        /** Convert endianness */
+        nameRecord.platformID = SwapWORD(nameRecord.platformID);
+        nameRecord.encodingID = SwapWORD(nameRecord.encodingID);
+        nameRecord.languageID = SwapWORD(nameRecord.languageID);
+        nameRecord.nameID = SwapWORD(nameRecord.nameID);
+        nameRecord.length = SwapWORD(nameRecord.length);
+        nameRecord.offset = SwapWORD(nameRecord.offset);
+        
+        /** Look for font family name (nameID = 1) */
+        if (nameRecord.nameID == 1) {
+            /** Prefer Windows platform (3) with Unicode encoding (1) */
+            if (nameRecord.platformID == 3 && nameRecord.encodingID == 1) {
+                bestPlatform = nameRecord.platformID;
+                bestEncoding = nameRecord.encodingID;
+                bestLanguage = nameRecord.languageID;
+                nameLength = nameRecord.length;
+                nameOffset = nameRecord.offset;
+                foundName = TRUE;
+                break;  // This is the best option
+            }
+            /** Fallback to any Unicode platform */
+            else if (!foundName && nameRecord.platformID == 0) {
+                bestPlatform = nameRecord.platformID;
+                bestEncoding = nameRecord.encodingID;
+                bestLanguage = nameRecord.languageID;
+                nameLength = nameRecord.length;
+                nameOffset = nameRecord.offset;
+                foundName = TRUE;
+            }
+            /** Last resort: any platform */
+            else if (!foundName) {
+                bestPlatform = nameRecord.platformID;
+                bestEncoding = nameRecord.encodingID;
+                bestLanguage = nameRecord.languageID;
+                nameLength = nameRecord.length;
+                nameOffset = nameRecord.offset;
+                foundName = TRUE;
+            }
+        }
+    }
+    
+    if (!foundName) {
+        CloseHandle(hFile);
+        return FALSE;
+    }
+    
+    /** Seek to string data */
+    DWORD stringDataOffset = nameTableOffset + sizeof(NameTableHeader) + 
+                           nameHeader.count * sizeof(NameRecord) + nameOffset;
+    if (SetFilePointer(hFile, stringDataOffset, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER) {
+        CloseHandle(hFile);
+        return FALSE;
+    }
+    
+    /** Read string data */
+    if (nameLength > 1024) nameLength = 1024;  // Safety limit
+    char* stringBuffer = (char*)malloc(nameLength + 2);
+    if (!stringBuffer) {
+        CloseHandle(hFile);
+        return FALSE;
+    }
+    
+    if (!ReadFile(hFile, stringBuffer, nameLength, &bytesRead, NULL) || bytesRead != nameLength) {
+        free(stringBuffer);
+        CloseHandle(hFile);
+        return FALSE;
+    }
+    
+    /** Convert string based on platform and encoding */
+    if (bestPlatform == 3 && bestEncoding == 1) {
+        /** Windows Unicode (UTF-16 BE) */
+        WCHAR* unicodeStr = (WCHAR*)stringBuffer;
+        int numChars = nameLength / 2;
+        
+        /** Convert from big-endian to little-endian */
+        for (int i = 0; i < numChars; i++) {
+            unicodeStr[i] = SwapWORD(unicodeStr[i]);
+        }
+        unicodeStr[numChars] = 0;
+        
+        /** Convert to UTF-8 */
+        WideCharToMultiByte(CP_UTF8, 0, unicodeStr, -1, fontName, (int)fontNameSize, NULL, NULL);
+    } else {
+        /** ASCII/other encoding - copy directly */
+        size_t copyLen = (nameLength < fontNameSize - 1) ? nameLength : fontNameSize - 1;
+        memcpy(fontName, stringBuffer, copyLen);
+        fontName[copyLen] = '\0';
+    }
+    
+    free(stringBuffer);
+    CloseHandle(hFile);
+    return TRUE;
+}
 
 /**
  * @brief Load font from embedded resource into memory
@@ -230,10 +467,91 @@ BOOL LoadFontByName(HINSTANCE hInstance, const char* fontName) {
 }
 
 /**
+ * @brief Load font and get real font name for fonts folder fonts
+ * @param hInstance Application instance handle
+ * @param fontFileName Font filename to search for
+ * @param realFontName Buffer to store real font name
+ * @param realFontNameSize Size of realFontName buffer
+ * @return TRUE if font found, loaded, and real name extracted, FALSE otherwise
+ */
+BOOL LoadFontByNameAndGetRealName(HINSTANCE hInstance, const char* fontFileName, 
+                                  char* realFontName, size_t realFontNameSize) {
+    if (!fontFileName || !realFontName || realFontNameSize == 0) return FALSE;
+    
+    /** First try embedded resources */
+    for (int i = 0; i < sizeof(fontResources) / sizeof(FontResource); i++) {
+        if (strcmp(fontResources[i].fontName, fontFileName) == 0) {
+            if (LoadFontFromResource(hInstance, fontResources[i].resourceId)) {
+                /** For embedded fonts, use the filename without extension as font name */
+                strncpy(realFontName, fontFileName, realFontNameSize - 1);
+                realFontName[realFontNameSize - 1] = '\0';
+                
+                /** Remove .ttf extension if present */
+                char* dot = strrchr(realFontName, '.');
+                if (dot) *dot = '\0';
+                
+                return TRUE;
+            }
+            return FALSE;
+        }
+    }
+    
+    /** If not found in embedded resources, try fonts folder */
+    char fontPath[MAX_PATH];
+    if (FindFontInFontsFolder(fontFileName, fontPath, MAX_PATH)) {
+        /** First extract the real font name from the file */
+        if (!GetFontNameFromFile(fontPath, realFontName, realFontNameSize)) {
+            /** Fallback to filename without extension */
+            strncpy(realFontName, fontFileName, realFontNameSize - 1);
+            realFontName[realFontNameSize - 1] = '\0';
+            char* dot = strrchr(realFontName, '.');
+            if (dot) *dot = '\0';
+        }
+        
+        /** Load the font file */
+        return LoadFontFromFile(fontPath);
+    }
+    
+    return FALSE;
+}
+
+/**
  * @brief Write font configuration to config file
  * @param font_file_name Font filename to save in configuration
  */
 void WriteConfigFont(const char* font_file_name) {
+    if (!font_file_name) return;
+    
+    /** Check if this is a fonts folder font and add path prefix */
+    char configFontName[MAX_PATH];
+    BOOL isExternalFont = FALSE;
+    
+    /** Check if this font is in the fonts folder */
+    char fontPath[MAX_PATH];
+    if (FindFontInFontsFolder(font_file_name, fontPath, MAX_PATH)) {
+        /** Check if it's not an embedded resource */
+        BOOL isEmbedded = FALSE;
+        for (int i = 0; i < FONT_RESOURCES_COUNT; i++) {
+            if (strcmp(fontResources[i].fontName, font_file_name) == 0) {
+                isEmbedded = TRUE;
+                break;
+            }
+        }
+        
+        if (!isEmbedded) {
+            /** Add path prefix for external fonts */
+            snprintf(configFontName, MAX_PATH, "resources\\fonts\\%s", font_file_name);
+            isExternalFont = TRUE;
+        } else {
+            /** Use original name for embedded fonts */
+            strncpy(configFontName, font_file_name, MAX_PATH - 1);
+            configFontName[MAX_PATH - 1] = '\0';
+        }
+    } else {
+        /** Use original name if not found in fonts folder */
+        strncpy(configFontName, font_file_name, MAX_PATH - 1);
+        configFontName[MAX_PATH - 1] = '\0';
+    }
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
@@ -278,7 +596,7 @@ void WriteConfigFont(const char* font_file_name) {
         if (strncmp(line, "FONT_FILE_NAME=", 15) == 0) {
             /** Replace font file name line */
             strcat(new_config, "FONT_FILE_NAME=");
-            strcat(new_config, font_file_name);
+            strcat(new_config, configFontName);
             strcat(new_config, "\n");
         } else {
             /** Keep existing line */
@@ -362,23 +680,8 @@ BOOL PreviewFont(HINSTANCE hInstance, const char* fontName) {
     strncpy(PREVIEW_FONT_NAME, fontName, sizeof(PREVIEW_FONT_NAME) - 1);
     PREVIEW_FONT_NAME[sizeof(PREVIEW_FONT_NAME) - 1] = '\0';
     
-    /** Extract internal name by removing .ttf extension */
-    size_t name_len = strlen(PREVIEW_FONT_NAME);
-    if (name_len > 4 && strcmp(PREVIEW_FONT_NAME + name_len - 4, ".ttf") == 0) {
-        size_t copy_len = name_len - 4;
-        if (copy_len >= sizeof(PREVIEW_INTERNAL_NAME))
-            copy_len = sizeof(PREVIEW_INTERNAL_NAME) - 1;
-        
-        memcpy(PREVIEW_INTERNAL_NAME, PREVIEW_FONT_NAME, copy_len);
-        PREVIEW_INTERNAL_NAME[copy_len] = '\0';
-    } else {
-        /** Use full name if no .ttf extension */
-        strncpy(PREVIEW_INTERNAL_NAME, PREVIEW_FONT_NAME, sizeof(PREVIEW_INTERNAL_NAME) - 1);
-        PREVIEW_INTERNAL_NAME[sizeof(PREVIEW_INTERNAL_NAME) - 1] = '\0';
-    }
-    
-    /** Load font for preview */
-    if (!LoadFontByName(hInstance, PREVIEW_FONT_NAME)) {
+    /** Load font and get real font name */
+    if (!LoadFontByNameAndGetRealName(hInstance, fontName, PREVIEW_INTERNAL_NAME, sizeof(PREVIEW_INTERNAL_NAME))) {
         return FALSE;
     }
     
@@ -423,28 +726,13 @@ void ApplyFontPreview(void) {
 BOOL SwitchFont(HINSTANCE hInstance, const char* fontName) {
     if (!fontName) return FALSE;
     
-    /** Load the new font */
-    if (!LoadFontByName(hInstance, fontName)) {
-        return FALSE;
-    }
-    
     /** Update current font name */
     strncpy(FONT_FILE_NAME, fontName, sizeof(FONT_FILE_NAME) - 1);
     FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
     
-    /** Extract internal name by removing .ttf extension */
-    size_t name_len = strlen(FONT_FILE_NAME);
-    if (name_len > 4 && strcmp(FONT_FILE_NAME + name_len - 4, ".ttf") == 0) {
-        size_t copy_len = name_len - 4;
-        if (copy_len >= sizeof(FONT_INTERNAL_NAME))
-            copy_len = sizeof(FONT_INTERNAL_NAME) - 1;
-            
-        memcpy(FONT_INTERNAL_NAME, FONT_FILE_NAME, copy_len);
-        FONT_INTERNAL_NAME[copy_len] = '\0';
-    } else {
-        /** Use full name if no .ttf extension */
-        strncpy(FONT_INTERNAL_NAME, FONT_FILE_NAME, sizeof(FONT_INTERNAL_NAME) - 1);
-        FONT_INTERNAL_NAME[sizeof(FONT_INTERNAL_NAME) - 1] = '\0';
+    /** Load font and get real font name */
+    if (!LoadFontByNameAndGetRealName(hInstance, fontName, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME))) {
+        return FALSE;
     }
     
     /** Save new font to configuration */

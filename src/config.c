@@ -633,19 +633,59 @@ void ReadConfig() {
     CLOCK_BASE_FONT_SIZE = ReadIniInt(INI_SECTION_DISPLAY, "CLOCK_BASE_FONT_SIZE", 20, config_path);
     ReadIniString(INI_SECTION_DISPLAY, "FONT_FILE_NAME", "Wallpoet Essence.ttf", FONT_FILE_NAME, sizeof(FONT_FILE_NAME), config_path);
     
-    /** Extract font internal name by removing .ttf extension */
-    size_t font_name_len = strlen(FONT_FILE_NAME);
-    if (font_name_len > 4 && strcmp(FONT_FILE_NAME + font_name_len - 4, ".ttf") == 0) {
-        /** Strip .ttf extension for internal name */
-        size_t copy_len = font_name_len - 4;
-        if (copy_len >= sizeof(FONT_INTERNAL_NAME))
-            copy_len = sizeof(FONT_INTERNAL_NAME) - 1;
-        
-        memcpy(FONT_INTERNAL_NAME, FONT_FILE_NAME, copy_len);
-        FONT_INTERNAL_NAME[copy_len] = '\0';
+    /** Process font file name and extract internal name */
+    char actualFontFileName[MAX_PATH];
+    BOOL isFontsFolderFont = FALSE;
+    
+    /** Check if FONT_FILE_NAME has path prefix */
+    if (strncmp(FONT_FILE_NAME, "resources\\fonts\\", 16) == 0) {
+        /** Extract just the filename */
+        strncpy(actualFontFileName, FONT_FILE_NAME + 16, sizeof(actualFontFileName) - 1);
+        actualFontFileName[sizeof(actualFontFileName) - 1] = '\0';
+        isFontsFolderFont = TRUE;
     } else {
-        strncpy(FONT_INTERNAL_NAME, FONT_FILE_NAME, sizeof(FONT_INTERNAL_NAME) - 1);
-        FONT_INTERNAL_NAME[sizeof(FONT_INTERNAL_NAME) - 1] = '\0';
+        /** Use as-is for embedded fonts */
+        strncpy(actualFontFileName, FONT_FILE_NAME, sizeof(actualFontFileName) - 1);
+        actualFontFileName[sizeof(actualFontFileName) - 1] = '\0';
+    }
+    
+    /** Set FONT_INTERNAL_NAME based on font type */
+    if (isFontsFolderFont) {
+        /** For fonts folder fonts, try to get real font name from file */
+        char fontPath[MAX_PATH];
+        extern BOOL FindFontInFontsFolder(const char* fontFileName, char* foundPath, size_t foundPathSize);
+        extern BOOL GetFontNameFromFile(const char* fontFilePath, char* fontName, size_t fontNameSize);
+        
+        if (FindFontInFontsFolder(actualFontFileName, fontPath, MAX_PATH)) {
+            if (!GetFontNameFromFile(fontPath, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME))) {
+                /** Fallback to filename without extension */
+                strncpy(FONT_INTERNAL_NAME, actualFontFileName, sizeof(FONT_INTERNAL_NAME) - 1);
+                FONT_INTERNAL_NAME[sizeof(FONT_INTERNAL_NAME) - 1] = '\0';
+                char* dot = strrchr(FONT_INTERNAL_NAME, '.');
+                if (dot) *dot = '\0';
+            }
+        } else {
+            /** Fallback to filename without extension */
+            strncpy(FONT_INTERNAL_NAME, actualFontFileName, sizeof(FONT_INTERNAL_NAME) - 1);
+            FONT_INTERNAL_NAME[sizeof(FONT_INTERNAL_NAME) - 1] = '\0';
+            char* dot = strrchr(FONT_INTERNAL_NAME, '.');
+            if (dot) *dot = '\0';
+        }
+    } else {
+        /** For embedded fonts, extract internal name by removing .ttf extension */
+        size_t font_name_len = strlen(actualFontFileName);
+        if (font_name_len > 4 && strcmp(actualFontFileName + font_name_len - 4, ".ttf") == 0) {
+            /** Strip .ttf extension for internal name */
+            size_t copy_len = font_name_len - 4;
+            if (copy_len >= sizeof(FONT_INTERNAL_NAME))
+                copy_len = sizeof(FONT_INTERNAL_NAME) - 1;
+            
+            memcpy(FONT_INTERNAL_NAME, actualFontFileName, copy_len);
+            FONT_INTERNAL_NAME[copy_len] = '\0';
+        } else {
+            strncpy(FONT_INTERNAL_NAME, actualFontFileName, sizeof(FONT_INTERNAL_NAME) - 1);
+            FONT_INTERNAL_NAME[sizeof(FONT_INTERNAL_NAME) - 1] = '\0';
+        }
     }
     
     CLOCK_WINDOW_POS_X = ReadIniInt(INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_X", 960, config_path);

@@ -842,8 +842,14 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             char foundFontName[MAX_PATH] = {0};
                             
                             if (FindFontByIdRecursive(fontsFolderPath, cmd, &currentIndex, foundFontName)) {
-                                WriteConfigFont(foundFontName);
-                                goto refresh_window;
+                                /** Use SwitchFont to properly load and get real font name */
+                                HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
+                                if (SwitchFont(hInstance, foundFontName)) {
+                                    /** Force complete window refresh */
+                                    InvalidateRect(hwnd, NULL, TRUE);
+                                    UpdateWindow(hwnd);
+                                    return 0;
+                                }
                             }
                         }
                         return 0;
@@ -2323,8 +2329,9 @@ refresh_window:
                             char* dot = strrchr(PREVIEW_INTERNAL_NAME, '.');
                             if (dot) *dot = '\0';
                             
-                            /** Load font for preview */
-                            LoadFontByName((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), foundFontName);
+                            /** Load font for preview and get real font name */
+                            HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
+                            LoadFontByNameAndGetRealName(hInstance, foundFontName, PREVIEW_INTERNAL_NAME, sizeof(PREVIEW_INTERNAL_NAME));
                             
                             IS_PREVIEWING = TRUE;
                             InvalidateRect(hwnd, NULL, TRUE);
