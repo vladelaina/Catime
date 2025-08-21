@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <shlobj.h>
 #include "../include/font.h"
 #include "../resource/resource.h"
 
@@ -59,23 +60,13 @@ FontResource fontResources[] = {
     {CLOCK_IDC_FONT_RECMONO, IDR_FONT_RECMONO, "RecMonoCasual Nerd Font Mono Essence.ttf"},
     {CLOCK_IDC_FONT_DEPARTURE, IDR_FONT_DEPARTURE, "DepartureMono Nerd Font Propo Essence.ttf"},
     {CLOCK_IDC_FONT_TERMINESS, IDR_FONT_TERMINESS, "Terminess Nerd Font Propo Essence.ttf"},
-
-
-
-
-
     {CLOCK_IDC_FONT_JACQUARD, IDR_FONT_JACQUARD, "Jacquard 12 Essence.ttf"},
     {CLOCK_IDC_FONT_JACQUARDA, IDR_FONT_JACQUARDA, "Jacquarda Bastarda 9 Essence.ttf"},
-
-
     {CLOCK_IDC_FONT_PIXELIFY, IDR_FONT_PIXELIFY, "Pixelify Sans Medium Essence.ttf"},
-
-
     {CLOCK_IDC_FONT_RUBIK_BURNED, IDR_FONT_RUBIK_BURNED, "Rubik Burned Essence.ttf"},
     {CLOCK_IDC_FONT_RUBIK_GLITCH, IDR_FONT_RUBIK_GLITCH, "Rubik Glitch Essence.ttf"},
     {CLOCK_IDC_FONT_RUBIK_MARKER_HATCH, IDR_FONT_RUBIK_MARKER_HATCH, "Rubik Marker Hatch Essence.ttf"},
     {CLOCK_IDC_FONT_RUBIK_PUDDLES, IDR_FONT_RUBIK_PUDDLES, "Rubik Puddles Essence.ttf"},
-
     {CLOCK_IDC_FONT_WALLPOET, IDR_FONT_WALLPOET, "Wallpoet Essence.ttf"},
     {CLOCK_IDC_FONT_PROFONT, IDR_FONT_PROFONT, "ProFont IIx Nerd Font Essence.ttf"},
     {CLOCK_IDC_FONT_DADDYTIME, IDR_FONT_DADDYTIME, "DaddyTimeMono Nerd Font Propo Essence.ttf"},
@@ -691,6 +682,123 @@ void ApplyFontPreview(void) {
     /** Save to configuration and exit preview mode */
     WriteConfigFont(FONT_FILE_NAME);
     CancelFontPreview();
+}
+
+/**
+ * @brief Extract embedded font resource to file
+ * @param hInstance Application instance handle
+ * @param resourceId Resource ID of the font to extract
+ * @param outputPath Full path where to save the font file
+ * @return TRUE if font extracted successfully, FALSE otherwise
+ */
+BOOL ExtractFontResourceToFile(HINSTANCE hInstance, int resourceId, const char* outputPath) {
+    if (!outputPath) return FALSE;
+    
+    /** Find font resource in executable */
+    HRSRC hResource = FindResourceW(hInstance, MAKEINTRESOURCE(resourceId), RT_FONT);
+    if (hResource == NULL) {
+        return FALSE;
+    }
+
+    /** Load resource into memory */
+    HGLOBAL hMemory = LoadResource(hInstance, hResource);
+    if (hMemory == NULL) {
+        return FALSE;
+    }
+
+    /** Lock resource data for access */
+    void* fontData = LockResource(hMemory);
+    if (fontData == NULL) {
+        return FALSE;
+    }
+
+    /** Get resource size */
+    DWORD fontLength = SizeofResource(hInstance, hResource);
+    if (fontLength == 0) {
+        return FALSE;
+    }
+    
+    /** Convert output path to wide character */
+    wchar_t wOutputPath[MAX_PATH];
+    MultiByteToWideChar(CP_ACP, 0, outputPath, -1, wOutputPath, MAX_PATH);
+    
+    /** Create output file */
+    HANDLE hFile = CreateFileW(wOutputPath, GENERIC_WRITE, 0, NULL, 
+                              CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile == INVALID_HANDLE_VALUE) {
+        return FALSE;
+    }
+    
+    /** Write font data to file */
+    DWORD bytesWritten;
+    BOOL result = WriteFile(hFile, fontData, fontLength, &bytesWritten, NULL);
+    CloseHandle(hFile);
+    
+    return (result && bytesWritten == fontLength);
+}
+
+/**
+ * @brief Extract all embedded fonts to the fonts directory
+ * @param hInstance Application instance handle
+ * @return TRUE if all fonts extracted successfully, FALSE otherwise
+ */
+BOOL ExtractEmbeddedFontsToFolder(HINSTANCE hInstance) {
+    /** Get fonts folder path */
+    char fontsFolderPath[MAX_PATH];
+    char* appdata_path = getenv("LOCALAPPDATA");
+    if (!appdata_path) return FALSE;
+    
+    snprintf(fontsFolderPath, MAX_PATH, "%s\\Catime\\resources\\fonts", appdata_path);
+    
+    /** Create directory structure recursively */
+    char catimePath[MAX_PATH];
+    char resourcesPath[MAX_PATH];
+    snprintf(catimePath, MAX_PATH, "%s\\Catime", appdata_path);
+    snprintf(resourcesPath, MAX_PATH, "%s\\Catime\\resources", appdata_path);
+    
+    /** Create Catime directory */
+    wchar_t wCatimePath[MAX_PATH];
+    MultiByteToWideChar(CP_ACP, 0, catimePath, -1, wCatimePath, MAX_PATH);
+    if (GetFileAttributesW(wCatimePath) == INVALID_FILE_ATTRIBUTES) {
+        CreateDirectoryW(wCatimePath, NULL);
+    }
+    
+    /** Create resources directory */
+    wchar_t wResourcesPath[MAX_PATH];
+    MultiByteToWideChar(CP_ACP, 0, resourcesPath, -1, wResourcesPath, MAX_PATH);
+    if (GetFileAttributesW(wResourcesPath) == INVALID_FILE_ATTRIBUTES) {
+        CreateDirectoryW(wResourcesPath, NULL);
+    }
+    
+    /** Create fonts directory */
+    wchar_t wFontsFolderPath[MAX_PATH];
+    MultiByteToWideChar(CP_ACP, 0, fontsFolderPath, -1, wFontsFolderPath, MAX_PATH);
+    if (GetFileAttributesW(wFontsFolderPath) == INVALID_FILE_ATTRIBUTES) {
+        CreateDirectoryW(wFontsFolderPath, NULL);
+    }
+    
+    /** Extract each embedded font resource */
+    int successCount = 0;
+    for (int i = 0; i < FONT_RESOURCES_COUNT; i++) {
+        char outputPath[MAX_PATH];
+        snprintf(outputPath, MAX_PATH, "%s\\%s", fontsFolderPath, fontResources[i].fontName);
+        
+        /** Check if font file already exists */
+        wchar_t wOutputPath[MAX_PATH];
+        MultiByteToWideChar(CP_ACP, 0, outputPath, -1, wOutputPath, MAX_PATH);
+        
+        if (GetFileAttributesW(wOutputPath) == INVALID_FILE_ATTRIBUTES) {
+            /** File doesn't exist, extract it */
+            if (ExtractFontResourceToFile(hInstance, fontResources[i].resourceId, outputPath)) {
+                successCount++;
+            }
+        } else {
+            /** File already exists, count as success */
+            successCount++;
+        }
+    }
+    
+    return (successCount == FONT_RESOURCES_COUNT);
 }
 
 /**

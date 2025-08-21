@@ -619,6 +619,16 @@ BOOL InitializeApplication(HINSTANCE hInstance) {
 
     /** Load application configuration and initialize components */
     ReadConfig();
+    
+    /** Check if this is the first run and extract embedded fonts if needed */
+    if (IsFirstRun()) {
+        extern BOOL ExtractEmbeddedFontsToFolder(HINSTANCE hInstance);
+        if (ExtractEmbeddedFontsToFolder(hInstance)) {
+            /** Successfully extracted fonts, mark first run as completed */
+            SetFirstRunCompleted();
+        }
+    }
+    
     UpdateStartupShortcut();
     InitializeDefaultLanguage();
 

@@ -419,4 +419,15 @@ int ReadIniInt(const char* section, const char* key, int defaultValue,
 BOOL WriteIniInt(const char* section, const char* key, int value,
                const char* filePath);
 
+/**
+ * @brief Check if this is the first run of the application
+ * @return TRUE if first run, FALSE otherwise
+ */
+BOOL IsFirstRun(void);
+
+/**
+ * @brief Set first run flag to FALSE
+ */
+void SetFirstRunCompleted(void);
+
 #endif

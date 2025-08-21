@@ -140,4 +140,20 @@ void ApplyFontPreview(void);
  */
 BOOL SwitchFont(HINSTANCE hInstance, const char* fontName);
 
+/**
+ * @brief Extract embedded font resource to file
+ * @param hInstance Application instance handle
+ * @param resourceId Resource ID of the font to extract
+ * @param outputPath Full path where to save the font file
+ * @return TRUE if font extracted successfully, FALSE otherwise
+ */
+BOOL ExtractFontResourceToFile(HINSTANCE hInstance, int resourceId, const char* outputPath);
+
+/**
+ * @brief Extract all embedded fonts to the fonts directory
+ * @param hInstance Application instance handle
+ * @return TRUE if all fonts extracted successfully, FALSE otherwise
+ */
+BOOL ExtractEmbeddedFontsToFolder(HINSTANCE hInstance);
+
 #endif

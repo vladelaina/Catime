@@ -328,6 +328,7 @@ void CreateDefaultConfig(const char* config_path) {
     WriteIniString(INI_SECTION_GENERAL, "CONFIG_VERSION", CATIME_VERSION, config_path);
     WriteIniString(INI_SECTION_GENERAL, "LANGUAGE", langName, config_path);
     WriteIniString(INI_SECTION_GENERAL, "SHORTCUT_CHECK_DONE", "FALSE", config_path);
+    WriteIniString(INI_SECTION_GENERAL, "FIRST_RUN", "TRUE", config_path);
     
 
     WriteIniString(INI_SECTION_DISPLAY, "CLOCK_TEXT_COLOR", "#FFB6C1", config_path);
@@ -550,6 +551,34 @@ void CheckAndCreateResourceFolders() {
     }
 }
 
+
+/**
+ * @brief Check if this is the first run of the application
+ * @return TRUE if first run, FALSE otherwise
+ */
+BOOL IsFirstRun(void) {
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    
+    if (!FileExists(config_path)) {
+        return TRUE;  /** No config file means first run */
+    }
+    
+    char firstRun[32] = {0};
+    ReadIniString(INI_SECTION_GENERAL, "FIRST_RUN", "TRUE", firstRun, sizeof(firstRun), config_path);
+    
+    return (strcmp(firstRun, "TRUE") == 0);
+}
+
+/**
+ * @brief Set first run flag to FALSE
+ */
+void SetFirstRunCompleted(void) {
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    
+    WriteIniString(INI_SECTION_GENERAL, "FIRST_RUN", "FALSE", config_path);
+}
 
 /**
  * @brief Read configuration from INI file with version checking and validation
@@ -1619,6 +1648,11 @@ void WriteConfig(const char* config_path) {
     WriteIniString(INI_SECTION_GENERAL, "CONFIG_VERSION", CATIME_VERSION, config_path);
     WriteIniString(INI_SECTION_GENERAL, "LANGUAGE", langName, config_path);
     WriteIniString(INI_SECTION_GENERAL, "SHORTCUT_CHECK_DONE", IsShortcutCheckDone() ? "TRUE" : "FALSE", config_path);
+    
+    /** Read current FIRST_RUN value to preserve it */
+    char currentFirstRun[32] = {0};
+    ReadIniString(INI_SECTION_GENERAL, "FIRST_RUN", "FALSE", currentFirstRun, sizeof(currentFirstRun), config_path);
+    WriteIniString(INI_SECTION_GENERAL, "FIRST_RUN", currentFirstRun, config_path);
     
 
     WriteIniString(INI_SECTION_DISPLAY, "CLOCK_TEXT_COLOR", CLOCK_TEXT_COLOR, config_path);
@@ -3332,7 +3366,8 @@ void WriteConfigKeyValue(const char* key, const char* value) {
     
     if (strcmp(key, "CONFIG_VERSION") == 0 ||
         strcmp(key, "LANGUAGE") == 0 ||
-        strcmp(key, "SHORTCUT_CHECK_DONE") == 0) {
+        strcmp(key, "SHORTCUT_CHECK_DONE") == 0 ||
+        strcmp(key, "FIRST_RUN") == 0) {
         section = INI_SECTION_GENERAL;
     }
     else if (strncmp(key, "CLOCK_TEXT_COLOR", 16) == 0 ||
