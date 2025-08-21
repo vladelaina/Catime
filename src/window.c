@@ -14,6 +14,7 @@
 #include "../resource/resource.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <windows.h>
 
 extern LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -632,23 +633,24 @@ BOOL InitializeApplication(HINSTANCE hInstance) {
     UpdateStartupShortcut();
     InitializeDefaultLanguage();
 
-    /** Load default font from fonts folder */
+    /** Load font from configuration */
     char actualFontFileName[MAX_PATH];
     
-    /** Check if FONT_FILE_NAME has path prefix */
-    if (strncmp(FONT_FILE_NAME, "resources\\fonts\\", 16) == 0) {
+    /** Check if FONT_FILE_NAME has LOCALAPPDATA path prefix */
+    const char* localappdata_prefix = "%LOCALAPPDATA%\\Catime\\resources\\fonts\\";
+    if (_strnicmp(FONT_FILE_NAME, localappdata_prefix, strlen(localappdata_prefix)) == 0) {
         /** Extract just the filename */
-        strncpy(actualFontFileName, FONT_FILE_NAME + 16, sizeof(actualFontFileName) - 1);
+        strncpy(actualFontFileName, FONT_FILE_NAME + strlen(localappdata_prefix), sizeof(actualFontFileName) - 1);
         actualFontFileName[sizeof(actualFontFileName) - 1] = '\0';
     } else {
-        /** Use as-is */
+        /** Use as-is for embedded fonts */
         strncpy(actualFontFileName, FONT_FILE_NAME, sizeof(actualFontFileName) - 1);
         actualFontFileName[sizeof(actualFontFileName) - 1] = '\0';
     }
     
-    /** Load font from fonts folder */
-    extern BOOL LoadFontByName(HINSTANCE hInstance, const char* fontName);
-    LoadFontByName(hInstance, actualFontFileName);
+    /** Load font from fonts folder and update FONT_INTERNAL_NAME */
+    extern BOOL LoadFontByNameAndGetRealName(HINSTANCE hInstance, const char* fontFileName, char* realFontName, size_t realFontNameSize);
+    LoadFontByNameAndGetRealName(hInstance, actualFontFileName, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
 
     /** Set initial timer value from configuration */
     CLOCK_TOTAL_TIME = CLOCK_DEFAULT_START_TIME;
