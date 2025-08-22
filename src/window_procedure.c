@@ -2160,13 +2160,17 @@ refresh_window:
                 
                 /** Clear preview if no matching item found */
                 if (IS_PREVIEWING || IS_COLOR_PREVIEWING) {
-                    IS_PREVIEWING = FALSE;
+                    if (IS_PREVIEWING) {
+                        CancelFontPreview();
+                    }
                     IS_COLOR_PREVIEWING = FALSE;
                     InvalidateRect(hwnd, NULL, TRUE);
                 }
             } else if (flags & MF_POPUP) {
                 if (IS_PREVIEWING || IS_COLOR_PREVIEWING) {
-                    IS_PREVIEWING = FALSE;
+                    if (IS_PREVIEWING) {
+                        CancelFontPreview();
+                    }
                     IS_COLOR_PREVIEWING = FALSE;
                     InvalidateRect(hwnd, NULL, TRUE);
                 }
@@ -2177,7 +2181,9 @@ refresh_window:
         /** Menu loop exit cleanup */
         case WM_EXITMENULOOP: {
             if (IS_PREVIEWING || IS_COLOR_PREVIEWING) {
-                IS_PREVIEWING = FALSE;
+                if (IS_PREVIEWING) {
+                    CancelFontPreview();
+                }
                 IS_COLOR_PREVIEWING = FALSE;
                 InvalidateRect(hwnd, NULL, TRUE);
             }

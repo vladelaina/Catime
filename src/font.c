@@ -617,6 +617,16 @@ void CancelFontPreview(void) {
     IS_PREVIEWING = FALSE;
     PREVIEW_FONT_NAME[0] = '\0';
     PREVIEW_INTERNAL_NAME[0] = '\0';
+    
+    /** Reload the original configured font */
+    const char* localappdata_prefix = "%LOCALAPPDATA%\\Catime\\resources\\fonts\\";
+    if (_strnicmp(FONT_FILE_NAME, localappdata_prefix, strlen(localappdata_prefix)) == 0) {
+        /** Extract just the filename for loading */
+        char actualFontFileName[MAX_PATH];
+        strncpy(actualFontFileName, FONT_FILE_NAME + strlen(localappdata_prefix), sizeof(actualFontFileName) - 1);
+        actualFontFileName[sizeof(actualFontFileName) - 1] = '\0';
+        LoadFontByNameAndGetRealName(GetModuleHandle(NULL), actualFontFileName, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
+    }
 }
 
 /**
