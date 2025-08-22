@@ -2643,12 +2643,12 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, L
 
 /**
  * @brief Show font license agreement dialog
- * @param hwndParent Parent window handle (ignored, dialog centers on screen)
+ * @param hwndParent Parent window handle for proper modal behavior
  * @return Dialog result (IDOK if agreed, IDCANCEL if declined)
  */
 INT_PTR ShowFontLicenseDialog(HWND hwndParent) {
     return DialogBoxW(GetModuleHandle(NULL), 
                      MAKEINTRESOURCE(IDD_FONT_LICENSE_DIALOG), 
-                     NULL,  // Use NULL to center on screen like countdown dialog
+                     hwndParent,  // Use parent window to prevent taskbar icon
                      FontLicenseDlgProc);
 }
