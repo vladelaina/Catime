@@ -8,17 +8,17 @@
 #pragma code_page(65001)
 
 /** @brief Font license agreement dialog with expanded layout */
-IDD_FONT_LICENSE_DIALOG DIALOGEX 0, 0, 320, 165
+IDD_FONT_LICENSE_DIALOG DIALOGEX 0, 0, 320, 180
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION ""
 FONT 9, "Segoe UI"
 BEGIN
     /** Main license agreement text area with markdown link support */
-    CONTROL         "", IDC_FONT_LICENSE_TEXT, "Static", SS_OWNERDRAW | SS_NOTIFY, 10, 10, 300, 160
+    CONTROL         "", IDC_FONT_LICENSE_TEXT, "Static", SS_OWNERDRAW | SS_NOTIFY, 10, 10, 300, 130
 
     /** Agreement confirmation button */
-    DEFPUSHBUTTON   "", IDC_FONT_LICENSE_AGREE_BTN, 210, 140, 50, 14
+    DEFPUSHBUTTON   "", IDC_FONT_LICENSE_AGREE_BTN, 210, 150, 50, 14
     
     /** Cancel/decline button */
-    PUSHBUTTON      "", IDC_FONT_LICENSE_CANCEL_BTN, 265, 140, 45, 14
+    PUSHBUTTON      "", IDC_FONT_LICENSE_CANCEL_BTN, 265, 150, 45, 14
 END
