@@ -2351,10 +2351,10 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, L
             /** Set dialog title and content based on current language */
             SetWindowTextW(hwndDlg, GetLocalizedString(L"自定义字体功能说明及版权提示", L"Custom Font Feature License Agreement"));
             
-            /** Set license agreement text - direct text approach */
+            /** Set license agreement text - using localized string from language files */
             const wchar_t* licenseText = GetLocalizedString(
                 L"自定义字体功能将加载您指定文件夹内的字体文件。\n\n请确保您拥有所有字体的合法使用权限。\n\n使用未授权字体可能导致版权问题，相关责任由您承担。\n\n本软件不承担任何版权责任。", 
-                L"Custom font feature will load font files from your specified folder.\n\nPlease ensure you have legal rights to use all fonts.\n\nUsing unauthorized fonts may cause copyright issues, and you bear full responsibility.\n\nThis software assumes no copyright liability.");
+                L"Font License Agreement Text");
             
             SetDlgItemTextW(hwndDlg, IDC_FONT_LICENSE_TEXT, licenseText);
             
