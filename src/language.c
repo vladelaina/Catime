@@ -124,6 +124,35 @@ static int ParseIniLine(const wchar_t* line) {
     wcsncpy(g_translations[g_translation_count].translation, value_start, value_len);
     g_translations[g_translation_count].translation[value_len] = L'\0';
 
+    /** Process escape sequences in translation value */
+    wchar_t* src = g_translations[g_translation_count].translation;
+    wchar_t* dst = g_translations[g_translation_count].translation;
+    
+    while (*src) {
+        if (*src == L'\\' && *(src + 1)) {
+            switch (*(src + 1)) {
+                case L'n':
+                    *dst++ = L'\n';
+                    src += 2;
+                    break;
+                case L't':
+                    *dst++ = L'\t';
+                    src += 2;
+                    break;
+                case L'\\':
+                    *dst++ = L'\\';
+                    src += 2;
+                    break;
+                default:
+                    *dst++ = *src++;
+                    break;
+            }
+        } else {
+            *dst++ = *src++;
+        }
+    }
+    *dst = L'\0';
+
     g_translation_count++;
     return 1;
 }
