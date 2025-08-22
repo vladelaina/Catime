@@ -2353,16 +2353,34 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, L
             
             /** Set license agreement text - using localized string from language files */
             const wchar_t* licenseText = GetLocalizedString(
-                L"本功能将加载以下文件夹中的所有字体文件（包括子文件夹）：\n\nC:\\Users\\[您的当前用户名]\\AppData\\Local\\Catime\\resources\\fonts\n\n请务必注意： 任何版权风险和法律责任都将由您个人承担，本软件不承担任何责任。", 
-                L"Font License Agreement Text");
-            
+                L"本功能将加载以下文件夹中的所有字体文件（包括子文件夹）：\n\nC:\\Users\\[您的当前用户名]\\AppData\\Local\\Catime\\resources\\fonts\n\n请务必注意： 任何版权风险和法律责任都将由您个人承担，本软件不承担任何责任。",
+                L"FontLicenseAgreementText");
             SetDlgItemTextW(hwndDlg, IDC_FONT_LICENSE_TEXT, licenseText);
+
+            /** Set Google Fonts section text */
+            const wchar_t* googleFontsInfo = GetLocalizedString(
+                L"────────────────────────────────────────\n为了避免版权风险：",
+                L"GoogleFontsInfo");
+            SetDlgItemTextW(hwndDlg, IDC_GOOGLE_FONTS_INFO, googleFontsInfo);
+
+            const wchar_t* googleFontsPrefix = GetLocalizedString(
+                L"您可以前往 ",
+                L"GoogleFontsPrefix");
+            SetDlgItemTextW(hwndDlg, IDC_GOOGLE_FONTS_PREFIX, googleFontsPrefix);
+
+            const wchar_t* googleFontsLink = GetLocalizedString(
+                L"Google Fonts",
+                L"GoogleFontsLinkText");
+            SetDlgItemTextW(hwndDlg, IDC_GOOGLE_FONTS_LINK, googleFontsLink);
+
+            const wchar_t* googleFontsSuffix = GetLocalizedString(
+                L" 下载大量可免费商用的字体。",
+                L"GoogleFontsSuffix");
+            SetDlgItemTextW(hwndDlg, IDC_GOOGLE_FONTS_SUFFIX, googleFontsSuffix);
             
             /** Set button text */
-            SetDlgItemTextW(hwndDlg, IDC_FONT_LICENSE_AGREE_BTN, 
-                           GetLocalizedString(L"同意", L"Agree"));
-            SetDlgItemTextW(hwndDlg, IDC_FONT_LICENSE_CANCEL_BTN, 
-                           GetLocalizedString(L"取消", L"Cancel"));
+            SetDlgItemTextW(hwndDlg, IDC_FONT_LICENSE_AGREE_BTN, GetLocalizedString(L"同意", L"Agree"));
+            SetDlgItemTextW(hwndDlg, IDC_FONT_LICENSE_CANCEL_BTN, GetLocalizedString(L"取消", L"Cancel"));
             
             return TRUE;
         }
@@ -2370,23 +2388,30 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, L
         case WM_COMMAND:
             switch (LOWORD(wParam)) {
                 case IDC_FONT_LICENSE_AGREE_BTN:
-                    /** User agreed to license terms */
-                    extern void SetFontLicenseAccepted(BOOL accepted);
-                    SetFontLicenseAccepted(TRUE);
                     EndDialog(hwndDlg, IDOK);
                     return TRUE;
-                    
                 case IDC_FONT_LICENSE_CANCEL_BTN:
-                case IDCANCEL:
-                    /** User declined license terms */
                     EndDialog(hwndDlg, IDCANCEL);
+                    return TRUE;
+                case IDC_GOOGLE_FONTS_LINK:
+                    ShellExecuteW(NULL, L"open", L"https://fonts.google.com/?preview.text=1234567890:", NULL, NULL, SW_SHOWNORMAL);
                     return TRUE;
             }
             break;
+
+        case WM_CTLCOLORSTATIC: {
+            /** Custom coloring for clickable link control */
+            HDC hdc = (HDC)wParam;
+            HWND hwndCtl = (HWND)lParam;
             
-        case WM_CLOSE:
-            EndDialog(hwndDlg, IDCANCEL);
-            return TRUE;
+            /** Apply blue color to Google Fonts link */
+            if (GetDlgCtrlID(hwndCtl) == IDC_GOOGLE_FONTS_LINK) {
+                SetTextColor(hdc, RGB(0, 100, 200)); // Blue color for link
+                SetBkMode(hdc, TRANSPARENT);
+                return (INT_PTR)GetStockObject(NULL_BRUSH);
+            }
+            break;
+        }
     }
     return FALSE;
 }
