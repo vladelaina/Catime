@@ -14,9 +14,9 @@ CAPTION ""
 FONT 9, "Segoe UI"
 BEGIN
     /** Runtime-populated instructions for combination settings */
-    LTEXT           "", CLOCK_IDC_STATIC, 10, 10, 180, 60
+    LTEXT           "", CLOCK_IDC_STATIC, 10, 10, 180, 70
     /** Multi-format input for preset combinations */
-    EDITTEXT        CLOCK_IDC_EDIT, 10, 75, 180, 20, ES_AUTOHSCROLL | ES_MULTILINE
+    EDITTEXT        CLOCK_IDC_EDIT, 10, 85, 180, 20, ES_AUTOHSCROLL | ES_MULTILINE
     /** Confirmation button with dynamic text */
-    PUSHBUTTON      "", CLOCK_IDC_BUTTON_OK, 140, 100, 50, 14
+    PUSHBUTTON      "", CLOCK_IDC_BUTTON_OK, 140, 110, 50, 14
 END 
