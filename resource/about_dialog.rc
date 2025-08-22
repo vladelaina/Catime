@@ -24,11 +24,11 @@ BEGIN
 
     /** Primary credit link positioned centrally */
     CONTROL     "",                          IDC_CREDIT_LINK,    "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                                                                          100,  45, 145, 12
+                                                                          100,  45, 250, 12
 
     /** Bottom row of clickable links for external resources */
     CONTROL     "",                          IDC_CREDITS,        "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                                                                          40,   65,  25, 12
+                                                                          40,   65,  35, 12
     CONTROL     "",                          IDC_BILIBILI_LINK,  "Static", SS_NOTIFY | SS_CENTERIMAGE,
                                                                           80,   65,  35, 12
     CONTROL     "",                          IDC_GITHUB_LINK,    "Static", SS_NOTIFY | SS_CENTERIMAGE,
@@ -36,5 +36,5 @@ BEGIN
     CONTROL     "",                          IDC_COPYRIGHT_LINK,  "Static", SS_NOTIFY | SS_CENTERIMAGE,
                                                                           165,  65,  36, 12
     CONTROL     "",                          IDC_SUPPORT,         "Static", SS_NOTIFY | SS_CENTERIMAGE,
-                                                                          215,  65,  25, 12
+                                                                          215,  65,  30, 12
 END 
