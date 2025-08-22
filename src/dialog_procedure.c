@@ -2637,6 +2637,18 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, L
             }
             break;
         }
+        
+        case WM_CLOSE:
+            /** Handle window close (X button) */
+            FreeMarkdownLinks(g_links, g_linkCount);
+            g_links = NULL;
+            g_linkCount = 0;
+            if (g_displayText) {
+                free(g_displayText);
+                g_displayText = NULL;
+            }
+            EndDialog(hwndDlg, IDCANCEL);
+            return TRUE;
     }
     return FALSE;
 }
