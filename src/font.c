@@ -45,7 +45,7 @@ typedef struct {
 #pragma pack(pop)
 
 /** @brief Current font file name */
-char FONT_FILE_NAME[100] = "Hack Nerd Font.ttf";
+char FONT_FILE_NAME[100] = "%LOCALAPPDATA%\\Catime\\resources\\fonts\\Wallpoet Essence.ttf";
 /** @brief Internal font name for Windows GDI */
 char FONT_INTERNAL_NAME[100];
 /** @brief Preview font file name during font selection */

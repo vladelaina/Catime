@@ -1071,6 +1071,20 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     extern BOOL ExtractEmbeddedFontsToFolder(HINSTANCE hInstance);
                     ExtractEmbeddedFontsToFolder(GetModuleHandle(NULL));
                     
+                    /** Reload font after config reset to ensure immediate effect */
+                    extern BOOL LoadFontByNameAndGetRealName(HINSTANCE hInstance, const char* fontFileName, char* realFontName, size_t realFontNameSize);
+                    char actualFontFileName[MAX_PATH];
+                    const char* localappdata_prefix = "%LOCALAPPDATA%\\Catime\\resources\\fonts\\";
+                    if (_strnicmp(FONT_FILE_NAME, localappdata_prefix, strlen(localappdata_prefix)) == 0) {
+                        /** Extract just the filename for loading */
+                        strncpy(actualFontFileName, FONT_FILE_NAME + strlen(localappdata_prefix), sizeof(actualFontFileName) - 1);
+                        actualFontFileName[sizeof(actualFontFileName) - 1] = '\0';
+                        LoadFontByNameAndGetRealName(GetModuleHandle(NULL), actualFontFileName, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
+                    }
+                    
+                    /** Force immediate window refresh with new font */
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    
                     /** Reset window and font scaling to defaults */
                     CLOCK_WINDOW_SCALE = 1.0f;
                     CLOCK_FONT_SCALE_FACTOR = 1.0f;

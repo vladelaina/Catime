@@ -337,7 +337,7 @@ void CreateDefaultConfig(const char* config_path) {
 
     WriteIniString(INI_SECTION_DISPLAY, "CLOCK_TEXT_COLOR", "#FFB6C1", config_path);
     WriteIniInt(INI_SECTION_DISPLAY, "CLOCK_BASE_FONT_SIZE", 20, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "FONT_FILE_NAME", "Wallpoet Essence.ttf", config_path);
+    WriteIniString(INI_SECTION_DISPLAY, "FONT_FILE_NAME", "%LOCALAPPDATA%\\Catime\\resources\\fonts\\Wallpoet Essence.ttf", config_path);
     WriteIniInt(INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_X", 960, config_path);
     WriteIniInt(INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_Y", -1, config_path);
     WriteIniString(INI_SECTION_DISPLAY, "WINDOW_SCALE", "1.62", config_path);
@@ -667,7 +667,7 @@ void ReadConfig() {
     /** Load display configuration */
     ReadIniString(INI_SECTION_DISPLAY, "CLOCK_TEXT_COLOR", "#FFB6C1", CLOCK_TEXT_COLOR, sizeof(CLOCK_TEXT_COLOR), config_path);
     CLOCK_BASE_FONT_SIZE = ReadIniInt(INI_SECTION_DISPLAY, "CLOCK_BASE_FONT_SIZE", 20, config_path);
-    ReadIniString(INI_SECTION_DISPLAY, "FONT_FILE_NAME", "Wallpoet Essence.ttf", FONT_FILE_NAME, sizeof(FONT_FILE_NAME), config_path);
+    ReadIniString(INI_SECTION_DISPLAY, "FONT_FILE_NAME", "%LOCALAPPDATA%\\Catime\\resources\\fonts\\Wallpoet Essence.ttf", FONT_FILE_NAME, sizeof(FONT_FILE_NAME), config_path);
     
     /** Process font file name and extract internal name */
     char actualFontFileName[MAX_PATH];
