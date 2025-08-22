@@ -2353,7 +2353,7 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, L
             
             /** Set license agreement text - using localized string from language files */
             const wchar_t* licenseText = GetLocalizedString(
-                L"自定义字体功能将加载您指定文件夹内的字体文件。\n\n请确保您拥有所有字体的合法使用权限。\n\n使用未授权字体可能导致版权问题，相关责任由您承担。\n\n本软件不承担任何版权责任。", 
+                L"本功能将加载以下文件夹中的字体：\n\nC:\\Users\\[您的当前用户名]\\AppData\\Local\\Catime\\resources\\fonts\n\n请务必注意： 任何版权风险和法律责任都将由您个人承担，本软件不承担任何责任。", 
                 L"Font License Agreement Text");
             
             SetDlgItemTextW(hwndDlg, IDC_FONT_LICENSE_TEXT, licenseText);
