@@ -1331,6 +1331,17 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 
 
                 
+                /** Font license agreement dialog */
+                case CLOCK_IDC_FONT_LICENSE_AGREE: {
+                    extern INT_PTR ShowFontLicenseDialog(HWND hwndParent);
+                    INT_PTR result = ShowFontLicenseDialog(hwnd);
+                    if (result == IDOK) {
+                        /** User agreed to license terms, refresh menu */
+                        InvalidateRect(hwnd, NULL, TRUE);
+                    }
+                    break;
+                }
+                
                 /** Advanced font selection - open fonts folder in explorer */
                 case CLOCK_IDC_FONT_ADVANCED: {
                     char fontsFolderPath[MAX_PATH];

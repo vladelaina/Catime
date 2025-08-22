@@ -2336,3 +2336,69 @@ void ShowNotificationSettingsDialog(HWND hwndParent) {
         SetForegroundWindow(g_hwndNotificationSettingsDialog);
     }
 }
+
+/**
+ * @brief Font license agreement dialog procedure
+ * @param hwndDlg Dialog window handle
+ * @param message Message identifier
+ * @param wParam Message parameter
+ * @param lParam Message parameter
+ * @return Message processing result
+ */
+INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, LPARAM lParam) {
+    switch (message) {
+        case WM_INITDIALOG: {
+            /** Set dialog title and content based on current language */
+            SetWindowTextW(hwndDlg, GetLocalizedString(L"自定义字体功能说明及版权提示", L"Custom Font Feature License Agreement"));
+            
+            /** Set license agreement text - direct text approach */
+            const wchar_t* licenseText = GetLocalizedString(
+                L"自定义字体功能将加载您指定文件夹内的字体文件。\n\n请确保您拥有所有字体的合法使用权限。\n\n使用未授权字体可能导致版权问题，相关责任由您承担。\n\n本软件不承担任何版权责任。", 
+                L"Custom font feature will load font files from your specified folder.\n\nPlease ensure you have legal rights to use all fonts.\n\nUsing unauthorized fonts may cause copyright issues, and you bear full responsibility.\n\nThis software assumes no copyright liability.");
+            
+            SetDlgItemTextW(hwndDlg, IDC_FONT_LICENSE_TEXT, licenseText);
+            
+            /** Set button text */
+            SetDlgItemTextW(hwndDlg, IDC_FONT_LICENSE_AGREE_BTN, 
+                           GetLocalizedString(L"同意", L"Agree"));
+            SetDlgItemTextW(hwndDlg, IDC_FONT_LICENSE_CANCEL_BTN, 
+                           GetLocalizedString(L"取消", L"Cancel"));
+            
+            return TRUE;
+        }
+        
+        case WM_COMMAND:
+            switch (LOWORD(wParam)) {
+                case IDC_FONT_LICENSE_AGREE_BTN:
+                    /** User agreed to license terms */
+                    extern void SetFontLicenseAccepted(BOOL accepted);
+                    SetFontLicenseAccepted(TRUE);
+                    EndDialog(hwndDlg, IDOK);
+                    return TRUE;
+                    
+                case IDC_FONT_LICENSE_CANCEL_BTN:
+                case IDCANCEL:
+                    /** User declined license terms */
+                    EndDialog(hwndDlg, IDCANCEL);
+                    return TRUE;
+            }
+            break;
+            
+        case WM_CLOSE:
+            EndDialog(hwndDlg, IDCANCEL);
+            return TRUE;
+    }
+    return FALSE;
+}
+
+/**
+ * @brief Show font license agreement dialog
+ * @param hwndParent Parent window handle (ignored, dialog centers on screen)
+ * @return Dialog result (IDOK if agreed, IDCANCEL if declined)
+ */
+INT_PTR ShowFontLicenseDialog(HWND hwndParent) {
+    return DialogBoxW(GetModuleHandle(NULL), 
+                     MAKEINTRESOURCE(IDD_FONT_LICENSE_DIALOG), 
+                     NULL,  // Use NULL to center on screen like countdown dialog
+                     FontLicenseDlgProc);
+}

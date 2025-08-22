@@ -96,6 +96,13 @@ void ShowNotificationDisplayDialog(HWND hwndParent);
  */
 void ShowNotificationSettingsDialog(HWND hwndParent);
 
+/**
+ * @brief Show font license agreement dialog
+ * @param hwndParent Parent window handle
+ * @return Dialog result (IDOK if agreed, IDCANCEL if declined)
+ */
+INT_PTR ShowFontLicenseDialog(HWND hwndParent);
+
 /** @brief Global handle to current input dialog */
 extern HWND g_hwndInputDialog;
 

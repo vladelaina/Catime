@@ -45,6 +45,7 @@ END
 #include "shortcut_dialog.rc"
 #include "about_dialog.rc"
 #include "error_dialog.rc"
+#include "font_license_dialog.rc"
 #include "pomodoro_time_dialog.rc"
 #include "pomodoro_loop_dialog.rc"
 #include "pomodoro_combo_dialog.rc"

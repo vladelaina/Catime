@@ -46,6 +46,9 @@ BOOL NOTIFICATION_DISABLED = FALSE;
 char NOTIFICATION_SOUND_FILE[MAX_PATH] = "";
 int NOTIFICATION_SOUND_VOLUME = 100;
 
+/** @brief Font license agreement acceptance status */
+BOOL FONT_LICENSE_ACCEPTED = FALSE;
+
 
 /**
  * @brief Read string value from INI file with Unicode support
@@ -329,6 +332,7 @@ void CreateDefaultConfig(const char* config_path) {
     WriteIniString(INI_SECTION_GENERAL, "LANGUAGE", langName, config_path);
     WriteIniString(INI_SECTION_GENERAL, "SHORTCUT_CHECK_DONE", "FALSE", config_path);
     WriteIniString(INI_SECTION_GENERAL, "FIRST_RUN", "TRUE", config_path);
+    WriteIniString(INI_SECTION_GENERAL, "FONT_LICENSE_ACCEPTED", "FALSE", config_path);
     
 
     WriteIniString(INI_SECTION_DISPLAY, "CLOCK_TEXT_COLOR", "#FFB6C1", config_path);
@@ -622,6 +626,9 @@ void ReadConfig() {
     
     char language[32] = {0};
     ReadIniString(INI_SECTION_GENERAL, "LANGUAGE", "English", language, sizeof(language), config_path);
+    
+    /** Load font license agreement status */
+    FONT_LICENSE_ACCEPTED = ReadIniBool(INI_SECTION_GENERAL, "FONT_LICENSE_ACCEPTED", FALSE, config_path);
     
     /** Parse language string to enum value */
     int languageSetting = APP_LANG_ENGLISH;
@@ -3367,7 +3374,8 @@ void WriteConfigKeyValue(const char* key, const char* value) {
     if (strcmp(key, "CONFIG_VERSION") == 0 ||
         strcmp(key, "LANGUAGE") == 0 ||
         strcmp(key, "SHORTCUT_CHECK_DONE") == 0 ||
-        strcmp(key, "FIRST_RUN") == 0) {
+        strcmp(key, "FIRST_RUN") == 0 ||
+        strcmp(key, "FONT_LICENSE_ACCEPTED") == 0) {
         section = INI_SECTION_GENERAL;
     }
     else if (strncmp(key, "CLOCK_TEXT_COLOR", 16) == 0 ||
@@ -3413,6 +3421,15 @@ void WriteConfigKeyValue(const char* key, const char* value) {
     
     /** Write to appropriate section */
     WriteIniString(section, key, value, config_path);
+}
+
+/**
+ * @brief Set font license agreement acceptance status
+ * @param accepted TRUE if user accepted the license agreement, FALSE otherwise
+ */
+void SetFontLicenseAccepted(BOOL accepted) {
+    FONT_LICENSE_ACCEPTED = accepted;
+    WriteConfigKeyValue("FONT_LICENSE_ACCEPTED", accepted ? "TRUE" : "FALSE");
 }
 
 

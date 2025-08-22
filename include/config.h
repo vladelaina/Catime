@@ -97,6 +97,9 @@ extern char NOTIFICATION_SOUND_FILE[MAX_PATH];
 /** @brief Notification sound volume (0-100) */
 extern int NOTIFICATION_SOUND_VOLUME;
 
+/** @brief Font license agreement accepted flag */
+extern BOOL FONT_LICENSE_ACCEPTED;
+
 /**
  * @brief Get configuration file path
  * @param path Buffer to store config file path
@@ -429,5 +432,11 @@ BOOL IsFirstRun(void);
  * @brief Set first run flag to FALSE
  */
 void SetFirstRunCompleted(void);
+
+/**
+ * @brief Set font license agreement acceptance status
+ * @param accepted TRUE if user accepted the license agreement, FALSE otherwise
+ */
+void SetFontLicenseAccepted(BOOL accepted);
 
 #endif

@@ -334,6 +334,13 @@ extern int NOTIFICATION_TIMEOUT_MS;      /**< Notification timeout in millisecon
 #define CLOCK_IDC_FONT_RUBIK_PUDDLES 381        /**< Rubik Puddles font menu item */
 #define CLOCK_IDC_FONT_WALLPOET 389             /**< Wallpoet font menu item */
 #define CLOCK_IDC_FONT_ADVANCED 395             /**< Font advanced options menu item */
+#define CLOCK_IDC_FONT_LICENSE_AGREE 396        /**< Font license agreement menu item */
+
+/** @brief Font license agreement dialog identifiers */
+#define IDD_FONT_LICENSE_DIALOG 740             /**< Font license agreement dialog */
+#define IDC_FONT_LICENSE_TEXT 741               /**< Font license agreement text control */
+#define IDC_FONT_LICENSE_AGREE_BTN 742          /**< Font license agreement button */
+#define IDC_FONT_LICENSE_CANCEL_BTN 743         /**< Font license cancel button */
 
 /** @brief Font resource identifiers - Special fonts */
 #define IDR_FONT_RECMONO 442            /**< RecMono font resource */
