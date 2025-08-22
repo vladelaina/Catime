@@ -13,8 +13,8 @@ STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION ""
 FONT 9, "Segoe UI"
 BEGIN
-    /** Compact license agreement text */
-    LTEXT           "", IDC_FONT_LICENSE_TEXT, 10, 10, 180, 70
+    /** Expanded license agreement text area */
+    LTEXT           "", IDC_FONT_LICENSE_TEXT, 10, 10, 180, 95
     
     /** Agreement confirmation button */
     DEFPUSHBUTTON   "", IDC_FONT_LICENSE_AGREE_BTN, 90, 108, 50, 14
