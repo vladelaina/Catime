@@ -13,16 +13,8 @@ STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION ""
 FONT 9, "Segoe UI"
 BEGIN
-    /** Main license agreement text area */
-    LTEXT           "", IDC_FONT_LICENSE_TEXT, 10, 10, 300, 120
-
-    /** Separator line and info text */
-    LTEXT           "", IDC_GOOGLE_FONTS_INFO, 10, 135, 300, 12
-    
-    /** Google Fonts recommendation text parts */
-    LTEXT           "", IDC_GOOGLE_FONTS_PREFIX, 10, 150, 80, 12
-    CONTROL         "", IDC_GOOGLE_FONTS_LINK, "Static", SS_NOTIFY, 90, 150, 80, 12
-    LTEXT           "", IDC_GOOGLE_FONTS_SUFFIX, 170, 150, 140, 12
+    /** Main license agreement text area with markdown link support */
+    CONTROL         "", IDC_FONT_LICENSE_TEXT, "Static", SS_OWNERDRAW | SS_NOTIFY, 10, 10, 300, 160
 
     /** Agreement confirmation button */
     DEFPUSHBUTTON   "", IDC_FONT_LICENSE_AGREE_BTN, 210, 178, 50, 14

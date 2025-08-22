@@ -341,10 +341,6 @@ extern int NOTIFICATION_TIMEOUT_MS;      /**< Notification timeout in millisecon
 #define IDC_FONT_LICENSE_TEXT 741               /**< Font license agreement text control */
 #define IDC_FONT_LICENSE_AGREE_BTN 742          /**< Font license agreement button */
 #define IDC_FONT_LICENSE_CANCEL_BTN 743         /**< Font license cancel button */
-#define IDC_GOOGLE_FONTS_INFO 744               /**< Google Fonts info control */
-#define IDC_GOOGLE_FONTS_PREFIX 745             /**< Google Fonts prefix text */
-#define IDC_GOOGLE_FONTS_LINK 746               /**< Google Fonts link control */
-#define IDC_GOOGLE_FONTS_SUFFIX 747             /**< Google Fonts suffix text */
 
 /** @brief Font resource identifiers - Special fonts */
 #define IDR_FONT_RECMONO 442            /**< RecMono font resource */

@@ -2338,6 +2338,122 @@ void ShowNotificationSettingsDialog(HWND hwndParent) {
 }
 
 /**
+ * @brief Structure to store parsed markdown links
+ */
+typedef struct {
+    wchar_t* linkText;
+    wchar_t* linkUrl;
+    RECT linkRect;
+    int startPos;  // Start position in display text
+    int endPos;    // End position in display text
+} MarkdownLink;
+
+/**
+ * @brief Global storage for parsed links and dialog data
+ */
+static MarkdownLink* g_links = NULL;
+static int g_linkCount = 0;
+static wchar_t* g_displayText = NULL;
+
+/**
+ * @brief Parse markdown-style links [text](url) from input text
+ * @param input Input text with markdown links
+ * @param displayText Output text with links removed
+ * @param links Output array of parsed links
+ * @param linkCount Output number of links found
+ */
+void ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText, MarkdownLink** links, int* linkCount) {
+    if (!input || !displayText || !links || !linkCount) return;
+    
+    int inputLen = wcslen(input);
+    *displayText = (wchar_t*)malloc((inputLen + 1) * sizeof(wchar_t));
+    *links = NULL;
+    *linkCount = 0;
+    
+    if (!*displayText) return;
+    
+    wchar_t* dest = *displayText;
+    const wchar_t* src = input;
+    int linkCapacity = 10;
+    *links = (MarkdownLink*)malloc(linkCapacity * sizeof(MarkdownLink));
+    
+    if (!*links) {
+        free(*displayText);
+        *displayText = NULL;
+        return;
+    }
+    
+    int currentPos = 0;  // Track position in display text for link rectangles
+    
+    while (*src) {
+        if (*src == L'[') {
+            // Found potential link start
+            const wchar_t* linkTextStart = src + 1;
+            const wchar_t* linkTextEnd = wcschr(linkTextStart, L']');
+            
+            if (linkTextEnd && linkTextEnd[1] == L'(' ) {
+                const wchar_t* urlStart = linkTextEnd + 2;
+                const wchar_t* urlEnd = wcschr(urlStart, L')');
+                
+                if (urlEnd) {
+                    // Valid markdown link found
+                    if (*linkCount >= linkCapacity) {
+                        linkCapacity *= 2;
+                        *links = (MarkdownLink*)realloc(*links, linkCapacity * sizeof(MarkdownLink));
+                        if (!*links) return;
+                    }
+                    
+                    MarkdownLink* link = &(*links)[*linkCount];
+                    
+                    // Extract link text
+                    int textLen = linkTextEnd - linkTextStart;
+                    link->linkText = (wchar_t*)malloc((textLen + 1) * sizeof(wchar_t));
+                    wcsncpy(link->linkText, linkTextStart, textLen);
+                    link->linkText[textLen] = L'\0';
+                    
+                    // Extract URL
+                    int urlLen = urlEnd - urlStart;
+                    link->linkUrl = (wchar_t*)malloc((urlLen + 1) * sizeof(wchar_t));
+                    wcsncpy(link->linkUrl, urlStart, urlLen);
+                    link->linkUrl[urlLen] = L'\0';
+                    
+                    // Store start and end position of link in display text
+                    link->startPos = currentPos;
+                    link->endPos = currentPos + textLen;
+                    
+                    // Copy link text to display text
+                    wcsncpy(dest, link->linkText, textLen);
+                    dest += textLen;
+                    currentPos += textLen;
+                    
+                    (*linkCount)++;
+                    src = urlEnd + 1;
+                    continue;
+                }
+            }
+        }
+        
+        *dest++ = *src++;
+        currentPos++;
+    }
+    
+    *dest = L'\0';
+}
+
+/**
+ * @brief Free parsed markdown links
+ */
+void FreeMarkdownLinks(MarkdownLink* links, int linkCount) {
+    if (!links) return;
+    
+    for (int i = 0; i < linkCount; i++) {
+        free(links[i].linkText);
+        free(links[i].linkUrl);
+    }
+    free(links);
+}
+
+/**
  * @brief Font license agreement dialog procedure
  * @param hwndDlg Dialog window handle
  * @param message Message identifier
@@ -2351,32 +2467,16 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, L
             /** Set dialog title and content based on current language */
             SetWindowTextW(hwndDlg, GetLocalizedString(L"自定义字体功能说明及版权提示", L"Custom Font Feature License Agreement"));
             
-            /** Set license agreement text - using localized string from language files */
+            /** Get license agreement text with markdown links */
             const wchar_t* licenseText = GetLocalizedString(
-                L"本功能将加载以下文件夹中的所有字体文件（包括子文件夹）：\n\nC:\\Users\\[您的当前用户名]\\AppData\\Local\\Catime\\resources\\fonts\n\n请务必注意： 任何版权风险和法律责任都将由您个人承担，本软件不承担任何责任。",
+                L"本功能将加载以下文件夹中的所有字体文件（包括子文件夹）：\n\nC:\\Users\\[您的当前用户名]\\AppData\\Local\\Catime\\resources\\fonts\n\n请务必注意： 任何版权风险和法律责任都将由您个人承担，本软件不承担任何责任。\n\n────────────────────────────────────────\n\n为了避免版权风险：\n您可以前往 [Google Fonts](https://fonts.google.com/?preview.text=1234567890:) 下载大量可免费商用的字体。",
                 L"FontLicenseAgreementText");
-            SetDlgItemTextW(hwndDlg, IDC_FONT_LICENSE_TEXT, licenseText);
-
-            /** Set Google Fonts section text */
-            const wchar_t* googleFontsInfo = GetLocalizedString(
-                L"────────────────────────────────────────\n为了避免版权风险：",
-                L"GoogleFontsInfo");
-            SetDlgItemTextW(hwndDlg, IDC_GOOGLE_FONTS_INFO, googleFontsInfo);
-
-            const wchar_t* googleFontsPrefix = GetLocalizedString(
-                L"您可以前往 ",
-                L"GoogleFontsPrefix");
-            SetDlgItemTextW(hwndDlg, IDC_GOOGLE_FONTS_PREFIX, googleFontsPrefix);
-
-            const wchar_t* googleFontsLink = GetLocalizedString(
-                L"Google Fonts",
-                L"GoogleFontsLinkText");
-            SetDlgItemTextW(hwndDlg, IDC_GOOGLE_FONTS_LINK, googleFontsLink);
-
-            const wchar_t* googleFontsSuffix = GetLocalizedString(
-                L" 下载大量可免费商用的字体。",
-                L"GoogleFontsSuffix");
-            SetDlgItemTextW(hwndDlg, IDC_GOOGLE_FONTS_SUFFIX, googleFontsSuffix);
+            
+            /** Parse markdown links and set display text */
+            ParseMarkdownLinks(licenseText, &g_displayText, &g_links, &g_linkCount);
+            
+            // Text will be drawn by WM_DRAWITEM handler
+            // No need to set text here since we're using SS_OWNERDRAW
             
             /** Set button text */
             SetDlgItemTextW(hwndDlg, IDC_FONT_LICENSE_AGREE_BTN, GetLocalizedString(L"同意", L"Agree"));
@@ -2388,27 +2488,152 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, L
         case WM_COMMAND:
             switch (LOWORD(wParam)) {
                 case IDC_FONT_LICENSE_AGREE_BTN:
+                    /** Clean up and close dialog */
+                    FreeMarkdownLinks(g_links, g_linkCount);
+                    g_links = NULL;
+                    g_linkCount = 0;
+                    if (g_displayText) {
+                        free(g_displayText);
+                        g_displayText = NULL;
+                    }
                     EndDialog(hwndDlg, IDOK);
                     return TRUE;
                 case IDC_FONT_LICENSE_CANCEL_BTN:
+                    /** Clean up and close dialog */
+                    FreeMarkdownLinks(g_links, g_linkCount);
+                    g_links = NULL;
+                    g_linkCount = 0;
+                    if (g_displayText) {
+                        free(g_displayText);
+                        g_displayText = NULL;
+                    }
                     EndDialog(hwndDlg, IDCANCEL);
                     return TRUE;
-                case IDC_GOOGLE_FONTS_LINK:
-                    ShellExecuteW(NULL, L"open", L"https://fonts.google.com/?preview.text=1234567890:", NULL, NULL, SW_SHOWNORMAL);
+                case IDC_FONT_LICENSE_TEXT:
+                    /** Handle clicks on the text control to detect link clicks */
+                    if (HIWORD(wParam) == STN_CLICKED) {
+                        // Get click position
+                        POINT pt;
+                        GetCursorPos(&pt);
+                        ScreenToClient(GetDlgItem(hwndDlg, IDC_FONT_LICENSE_TEXT), &pt);
+                        
+                        // Check if click is within any link rectangle
+                        for (int i = 0; i < g_linkCount; i++) {
+                            if (PtInRect(&g_links[i].linkRect, pt)) {
+                                ShellExecuteW(NULL, L"open", g_links[i].linkUrl, NULL, NULL, SW_SHOWNORMAL);
+                                return TRUE;
+                            }
+                        }
+                        // If click is not on a link, do nothing
+                    }
                     return TRUE;
             }
             break;
 
-        case WM_CTLCOLORSTATIC: {
-            /** Custom coloring for clickable link control */
-            HDC hdc = (HDC)wParam;
-            HWND hwndCtl = (HWND)lParam;
-            
-            /** Apply blue color to Google Fonts link */
-            if (GetDlgCtrlID(hwndCtl) == IDC_GOOGLE_FONTS_LINK) {
-                SetTextColor(hdc, RGB(0, 100, 200)); // Blue color for link
-                SetBkMode(hdc, TRANSPARENT);
-                return (INT_PTR)GetStockObject(NULL_BRUSH);
+        case WM_DRAWITEM: {
+            LPDRAWITEMSTRUCT lpDrawItem = (LPDRAWITEMSTRUCT)lParam;
+            if (lpDrawItem->CtlID == IDC_FONT_LICENSE_TEXT) {
+                /** Custom draw the text with blue links */
+                HDC hdc = lpDrawItem->hDC;
+                RECT rect = lpDrawItem->rcItem;
+                
+                // Fill background
+                HBRUSH hBrush = CreateSolidBrush(GetSysColor(COLOR_BTNFACE));
+                FillRect(hdc, &rect, hBrush);
+                DeleteObject(hBrush);
+                
+                if (g_displayText) {
+                    // Set text properties
+                    SetBkMode(hdc, TRANSPARENT);
+                    
+                    // Get font
+                    HFONT hFont = (HFONT)SendMessage(lpDrawItem->hwndItem, WM_GETFONT, 0, 0);
+                    if (!hFont) {
+                        hFont = GetStockObject(DEFAULT_GUI_FONT);
+                    }
+                    HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
+                    
+                    // Draw text character by character, coloring links blue
+                    RECT drawRect = rect;
+                    drawRect.left += 5; // Small margin
+                    drawRect.top += 5;
+                    
+                    int textLen = wcslen(g_displayText);
+                    int x = drawRect.left;
+                    int y = drawRect.top;
+                    
+                    // Get text metrics for line height
+                    TEXTMETRIC tm;
+                    GetTextMetrics(hdc, &tm);
+                    int lineHeight = tm.tmHeight;
+                    
+                    for (int i = 0; i < textLen; i++) {
+                        wchar_t ch = g_displayText[i];
+                        
+                        // Check if this character is part of a link
+                        BOOL isLink = FALSE;
+                        int linkIndex = -1;
+                        for (int j = 0; j < g_linkCount; j++) {
+                            if (i >= g_links[j].startPos && i < g_links[j].endPos) {
+                                isLink = TRUE;
+                                linkIndex = j;
+                                break;
+                            }
+                        }
+                        
+                        // Set color
+                        if (isLink) {
+                            SetTextColor(hdc, RGB(0, 100, 200)); // Blue for links
+                        } else {
+                            SetTextColor(hdc, GetSysColor(COLOR_WINDOWTEXT)); // Normal text
+                        }
+                        
+                        // Handle newlines
+                        if (ch == L'\n') {
+                            x = drawRect.left;
+                            y += lineHeight;
+                            continue;
+                        }
+                        
+                        // Draw character
+                        TextOutW(hdc, x, y, &ch, 1);
+                        
+                        // Update link rectangle for click detection
+                        if (isLink && linkIndex >= 0) {
+                            SIZE charSize;
+                            GetTextExtentPoint32W(hdc, &ch, 1, &charSize);
+                            
+                            // Initialize or expand link rectangle
+                            if (i == g_links[linkIndex].startPos) {
+                                g_links[linkIndex].linkRect.left = x;
+                                g_links[linkIndex].linkRect.top = y;
+                                g_links[linkIndex].linkRect.right = x + charSize.cx;
+                                g_links[linkIndex].linkRect.bottom = y + lineHeight;
+                            } else {
+                                g_links[linkIndex].linkRect.right = x + charSize.cx;
+                                // Update bottom if link spans multiple lines
+                                if (y + lineHeight > g_links[linkIndex].linkRect.bottom) {
+                                    g_links[linkIndex].linkRect.bottom = y + lineHeight;
+                                }
+                            }
+                        }
+                        
+                        // Move to next character position
+                        SIZE charSize;
+                        GetTextExtentPoint32W(hdc, &ch, 1, &charSize);
+                        x += charSize.cx;
+                        
+                        // Wrap text if needed
+                        if (x > rect.right - 10) {
+                            x = drawRect.left;
+                            y += lineHeight;
+                        }
+                    }
+                    
+                    SelectObject(hdc, hOldFont);
+                }
+                
+                return TRUE;
             }
             break;
         }
