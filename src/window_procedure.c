@@ -2202,21 +2202,47 @@ refresh_window:
                         }
                     }
                 }
+
+                /** Handle time format preview on hover */
+                if (menuItem == CLOCK_IDM_TIME_FORMAT_DEFAULT ||
+                    menuItem == CLOCK_IDM_TIME_FORMAT_ZERO_PADDED ||
+                    menuItem == CLOCK_IDM_TIME_FORMAT_FULL_PADDED) {
+                    
+                    TimeFormatType previewFormat = TIME_FORMAT_DEFAULT;
+                    switch (menuItem) {
+                        case CLOCK_IDM_TIME_FORMAT_DEFAULT:
+                            previewFormat = TIME_FORMAT_DEFAULT;
+                            break;
+                        case CLOCK_IDM_TIME_FORMAT_ZERO_PADDED:
+                            previewFormat = TIME_FORMAT_ZERO_PADDED;
+                            break;
+                        case CLOCK_IDM_TIME_FORMAT_FULL_PADDED:
+                            previewFormat = TIME_FORMAT_FULL_PADDED;
+                            break;
+                    }
+                    
+                    PREVIEW_TIME_FORMAT = previewFormat;
+                    IS_TIME_FORMAT_PREVIEWING = TRUE;
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    return 0;
+                }
                 
                 /** Clear preview if no matching item found */
-                if (IS_PREVIEWING || IS_COLOR_PREVIEWING) {
+                if (IS_PREVIEWING || IS_COLOR_PREVIEWING || IS_TIME_FORMAT_PREVIEWING) {
                     if (IS_PREVIEWING) {
                         CancelFontPreview();
                     }
                     IS_COLOR_PREVIEWING = FALSE;
+                    IS_TIME_FORMAT_PREVIEWING = FALSE;
                     InvalidateRect(hwnd, NULL, TRUE);
                 }
             } else if (flags & MF_POPUP) {
-                if (IS_PREVIEWING || IS_COLOR_PREVIEWING) {
+                if (IS_PREVIEWING || IS_COLOR_PREVIEWING || IS_TIME_FORMAT_PREVIEWING) {
                     if (IS_PREVIEWING) {
                         CancelFontPreview();
                     }
                     IS_COLOR_PREVIEWING = FALSE;
+                    IS_TIME_FORMAT_PREVIEWING = FALSE;
                     InvalidateRect(hwnd, NULL, TRUE);
                 }
             }
@@ -2225,11 +2251,12 @@ refresh_window:
         
         /** Menu loop exit cleanup */
         case WM_EXITMENULOOP: {
-            if (IS_PREVIEWING || IS_COLOR_PREVIEWING) {
+            if (IS_PREVIEWING || IS_COLOR_PREVIEWING || IS_TIME_FORMAT_PREVIEWING) {
                 if (IS_PREVIEWING) {
                     CancelFontPreview();
                 }
                 IS_COLOR_PREVIEWING = FALSE;
+                IS_TIME_FORMAT_PREVIEWING = FALSE;
                 InvalidateRect(hwnd, NULL, TRUE);
             }
             break;

@@ -57,9 +57,12 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
             }
         }
 
+        /** Determine which time format to use (preview or current) */
+        TimeFormatType formatToUse = IS_TIME_FORMAT_PREVIEWING ? PREVIEW_TIME_FORMAT : CLOCK_TIME_FORMAT;
+        
         /** Format with or without seconds */
         if (CLOCK_SHOW_SECONDS) {
-            switch (CLOCK_TIME_FORMAT) {
+            switch (formatToUse) {
                 case TIME_FORMAT_ZERO_PADDED:
                     swprintf(time_text, 50, L"%02d:%02d:%02d", 
                             hour, tm_info->tm_min, tm_info->tm_sec);
@@ -74,7 +77,7 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
                     break;
             }
         } else {
-            switch (CLOCK_TIME_FORMAT) {
+            switch (formatToUse) {
                 case TIME_FORMAT_ZERO_PADDED:
                     swprintf(time_text, 50, L"%02d:%02d", 
                             hour, tm_info->tm_min);
@@ -95,9 +98,12 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
         int minutes = (countup_elapsed_time % 3600) / 60;
         int seconds = countup_elapsed_time % 60;
 
+        /** Determine which time format to use (preview or current) */
+        TimeFormatType formatToUse = IS_TIME_FORMAT_PREVIEWING ? PREVIEW_TIME_FORMAT : CLOCK_TIME_FORMAT;
+        
         /** Format time with appropriate precision */
         if (hours > 0) {
-            switch (CLOCK_TIME_FORMAT) {
+            switch (formatToUse) {
                 case TIME_FORMAT_ZERO_PADDED:
                     swprintf(time_text, 50, L"%02d:%02d:%02d", hours, minutes, seconds);
                     break;
@@ -109,7 +115,7 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
                     break;
             }
         } else if (minutes > 0) {
-            switch (CLOCK_TIME_FORMAT) {
+            switch (formatToUse) {
                 case TIME_FORMAT_ZERO_PADDED:
                     swprintf(time_text, 50, L"%02d:%02d", minutes, seconds);
                     break;
@@ -121,7 +127,7 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
                     break;
             }
         } else {
-            switch (CLOCK_TIME_FORMAT) {
+            switch (formatToUse) {
                 case TIME_FORMAT_ZERO_PADDED:
                     swprintf(time_text, 50, L"00:%02d", seconds);
                     break;
@@ -154,9 +160,12 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
             int minutes = (remaining_time % 3600) / 60;
             int seconds = remaining_time % 60;
 
+            /** Determine which time format to use (preview or current) */
+            TimeFormatType formatToUse = IS_TIME_FORMAT_PREVIEWING ? PREVIEW_TIME_FORMAT : CLOCK_TIME_FORMAT;
+            
             /** Format with appropriate precision */
             if (hours > 0) {
-                switch (CLOCK_TIME_FORMAT) {
+                switch (formatToUse) {
                     case TIME_FORMAT_ZERO_PADDED:
                         swprintf(time_text, 50, L"%02d:%02d:%02d", hours, minutes, seconds);
                         break;
@@ -168,7 +177,7 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
                         break;
                 }
             } else if (minutes > 0) {
-                switch (CLOCK_TIME_FORMAT) {
+                switch (formatToUse) {
                     case TIME_FORMAT_ZERO_PADDED:
                         swprintf(time_text, 50, L"%02d:%02d", minutes, seconds);
                         break;
@@ -180,7 +189,7 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
                         break;
                 }
             } else {
-                switch (CLOCK_TIME_FORMAT) {
+                switch (formatToUse) {
                     case TIME_FORMAT_ZERO_PADDED:
                         swprintf(time_text, 50, L"00:%02d", seconds);
                         break;

@@ -52,6 +52,10 @@ BOOL FONT_LICENSE_ACCEPTED = FALSE;
 /** @brief Current time format setting */
 TimeFormatType CLOCK_TIME_FORMAT = TIME_FORMAT_DEFAULT;
 
+/** @brief Time format preview variables */
+BOOL IS_TIME_FORMAT_PREVIEWING = FALSE;
+TimeFormatType PREVIEW_TIME_FORMAT = TIME_FORMAT_DEFAULT;
+
 
 /**
  * @brief Read string value from INI file with Unicode support

@@ -110,6 +110,10 @@ typedef enum {
 /** @brief Current time format setting */
 extern TimeFormatType CLOCK_TIME_FORMAT;
 
+/** @brief Time format preview variables */
+extern BOOL IS_TIME_FORMAT_PREVIEWING;
+extern TimeFormatType PREVIEW_TIME_FORMAT;
+
 /**
  * @brief Get configuration file path
  * @param path Buffer to store config file path
