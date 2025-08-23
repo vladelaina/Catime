@@ -155,4 +155,10 @@ BOOL ExtractFontResourceToFile(HINSTANCE hInstance, int resourceId, const char* 
  */
 BOOL ExtractEmbeddedFontsToFolder(HINSTANCE hInstance);
 
+/**
+ * @brief Check current font path validity and auto-fix if needed
+ * @return TRUE if font path was fixed, FALSE if no fix was needed or fix failed
+ */
+BOOL CheckAndFixFontPath(void);
+
 #endif

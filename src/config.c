@@ -688,16 +688,65 @@ void ReadConfig() {
     
     /** Set FONT_INTERNAL_NAME based on font type */
     if (isFontsFolderFont) {
-        /** For fonts folder fonts, use the exact path from config */
+        /** For fonts folder fonts, try exact path first, then auto-fix if needed */
         char fontPath[MAX_PATH];
         char* appdata_path = getenv("LOCALAPPDATA");
+        BOOL fontFound = FALSE;
         
         if (appdata_path) {
             snprintf(fontPath, MAX_PATH, "%s\\Catime\\resources\\fonts\\%s", appdata_path, actualFontFileName);
             
-            /** Try to get real font name from file */
-            if (!GetFontNameFromFile(fontPath, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME))) {
-                /** Fallback to filename without extension */
+            /** Check if font exists at configured path */
+            if (GetFileAttributesA(fontPath) != INVALID_FILE_ATTRIBUTES) {
+                fontFound = TRUE;
+            } else {
+                /** Font not found at configured path, try to find and auto-fix */
+                char* lastSlash = strrchr(actualFontFileName, '\\');
+                const char* filenameOnly = lastSlash ? (lastSlash + 1) : actualFontFileName;
+                
+                /** Search for font in fonts folder recursively */
+                extern BOOL FindFontInFontsFolder(const char* fontFileName, char* foundPath, size_t foundPathSize);
+                if (FindFontInFontsFolder(filenameOnly, fontPath, MAX_PATH)) {
+                    /** Font found at different location, update config */
+                    char fontsFolderPath[MAX_PATH];
+                    snprintf(fontsFolderPath, MAX_PATH, "%s\\Catime\\resources\\fonts\\", appdata_path);
+                    
+                    if (_strnicmp(fontPath, fontsFolderPath, strlen(fontsFolderPath)) == 0) {
+                        /** Calculate new relative path */
+                        const char* newRelativePath = fontPath + strlen(fontsFolderPath);
+                        
+                        /** Update FONT_FILE_NAME with new path */
+                        char newConfigPath[MAX_PATH];
+                        snprintf(newConfigPath, MAX_PATH, "%%LOCALAPPDATA%%\\Catime\\resources\\fonts\\%s", newRelativePath);
+                        strncpy(FONT_FILE_NAME, newConfigPath, sizeof(FONT_FILE_NAME) - 1);
+                        FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
+                        
+                        /** Update actualFontFileName for consistency */
+                        strncpy(actualFontFileName, newRelativePath, sizeof(actualFontFileName) - 1);
+                        actualFontFileName[sizeof(actualFontFileName) - 1] = '\0';
+                        
+                        /** Save corrected path to config file */
+                        extern void WriteConfigFont(const char* font_file_name);
+                        WriteConfigFont(newRelativePath);
+                        
+                        fontFound = TRUE;
+                    }
+                }
+            }
+            
+            if (fontFound) {
+                /** Try to get real font name from file */
+                if (!GetFontNameFromFile(fontPath, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME))) {
+                    /** Fallback to filename without extension */
+                    char* lastSlash = strrchr(actualFontFileName, '\\');
+                    const char* filenameOnly = lastSlash ? (lastSlash + 1) : actualFontFileName;
+                    strncpy(FONT_INTERNAL_NAME, filenameOnly, sizeof(FONT_INTERNAL_NAME) - 1);
+                    FONT_INTERNAL_NAME[sizeof(FONT_INTERNAL_NAME) - 1] = '\0';
+                    char* dot = strrchr(FONT_INTERNAL_NAME, '.');
+                    if (dot) *dot = '\0';
+                }
+            } else {
+                /** Font not found anywhere, fallback to filename without extension */
                 char* lastSlash = strrchr(actualFontFileName, '\\');
                 const char* filenameOnly = lastSlash ? (lastSlash + 1) : actualFontFileName;
                 strncpy(FONT_INTERNAL_NAME, filenameOnly, sizeof(FONT_INTERNAL_NAME) - 1);
@@ -3584,4 +3633,25 @@ void WriteConfigNotificationDisabled(BOOL disabled) {
     
     /** Update global variable */
     NOTIFICATION_DISABLED = disabled;
+}
+
+/**
+ * @brief Force flush configuration changes to disk immediately
+ * Ensures all pending configuration writes are committed to the config file
+ */
+void FlushConfigToDisk(void) {
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    
+    /** Convert to wide character for Windows API */
+    wchar_t wconfig_path[MAX_PATH];
+    MultiByteToWideChar(CP_ACP, 0, config_path, -1, wconfig_path, MAX_PATH);
+    
+    /** Force flush file system buffers to ensure immediate disk write */
+    HANDLE hFile = CreateFileW(wconfig_path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 
+                              NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile != INVALID_HANDLE_VALUE) {
+        FlushFileBuffers(hFile);
+        CloseHandle(hFile);
+    }
 }

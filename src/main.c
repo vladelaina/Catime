@@ -387,6 +387,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         }
         LOG_INFO("Timer set successfully");
 
+        LOG_INFO("Setting font path check timer...");
+        if (SetTimer(hwnd, 1003, 2000, NULL) == 0) {
+            LOG_WARNING("Font path check timer creation failed, auto-fix will not work");
+        } else {
+            LOG_INFO("Font path check timer set successfully (2 second interval)");
+        }
+
         LOG_INFO("Handling startup mode: %s", CLOCK_STARTUP_MODE);
         HandleStartupMode(hwnd);
 

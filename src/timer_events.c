@@ -204,6 +204,22 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
         RedrawWindow(hwnd, NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW);
         return TRUE;
     }
+    
+    /** Timer 1003: Font path validation and auto-fix (every 2 seconds) */
+    if (wp == 1003) {
+        extern char FONT_FILE_NAME[100];
+        extern BOOL CheckAndFixFontPath(void);
+        
+        /** Check if current font path is valid, auto-fix if needed */
+        if (CheckAndFixFontPath()) {
+            /** Font path was fixed, force window redraw */
+            InvalidateRect(hwnd, NULL, TRUE);
+        }
+        
+        /** Continue periodic checking */
+        SetTimer(hwnd, 1003, 2000, NULL);
+        return TRUE;
+    }
     /** Timer 1: Main application timer (1-second interval) */
     if (wp == 1) {
         /** Clock mode: display current time */

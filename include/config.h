@@ -439,4 +439,9 @@ void SetFirstRunCompleted(void);
  */
 void SetFontLicenseAccepted(BOOL accepted);
 
+/**
+ * @brief Force flush configuration changes to disk immediately
+ */
+void FlushConfigToDisk(void);
+
 #endif
