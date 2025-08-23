@@ -26,6 +26,7 @@
 
 /** @brief Window interaction */
 #define CLOCK_IDC_EDIT_MODE 113             /**< Toggle edit mode */
+#define CLOCK_IDM_TOPMOST 195               /**< Toggle always on top */
 
 /** @brief Timeout action menu items */
 #define CLOCK_IDM_SHOW_MESSAGE 121       /**< Show message action */
@@ -40,6 +41,7 @@
 
 /** @brief Configuration options */
 #define CLOCK_IDC_MODIFY_TIME_OPTIONS 156  /**< Modify quick time options */
+#define CLOCK_IDM_ZERO_PADDED_FORMAT 194   /**< Toggle 09:59 format */
 
 /** @brief Startup configuration */
 #define CLOCK_IDC_SET_COUNTDOWN_TIME 173   /**< Set default countdown time */

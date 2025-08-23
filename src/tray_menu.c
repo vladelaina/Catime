@@ -36,6 +36,7 @@ extern int countdown_elapsed_time;
 extern char CLOCK_TIMEOUT_FILE_PATH[MAX_PATH];
 extern char CLOCK_TIMEOUT_TEXT[50];
 extern BOOL CLOCK_WINDOW_TOPMOST;
+extern BOOL CLOCK_ZERO_PADDED_FORMAT;
 
 /** @brief Pomodoro technique configuration externals */
 extern int POMODORO_WORK_TIME;
@@ -337,6 +338,15 @@ void ShowColorMenu(HWND hwnd) {
 
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeOptionsMenu,
                 GetLocalizedString(L"预设管理", L"Preset Management"));
+    
+    /** Add format submenu before topmost option */
+    HMENU hFormatMenu = CreatePopupMenu();
+    AppendMenuW(hFormatMenu, MF_STRING | (CLOCK_ZERO_PADDED_FORMAT ? MF_CHECKED : MF_UNCHECKED),
+                CLOCK_IDM_ZERO_PADDED_FORMAT,
+                GetLocalizedString(L"09:59格式", L"09:59 Format"));
+    
+    AppendMenuW(hTimeOptionsMenu, MF_POPUP, (UINT_PTR)hFormatMenu,
+                GetLocalizedString(L"格式", L"Format"));
     
     AppendMenuW(hTimeOptionsMenu, MF_STRING | (CLOCK_WINDOW_TOPMOST ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDM_TOPMOST,

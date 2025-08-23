@@ -45,6 +45,7 @@
 extern wchar_t inputText[256];
 extern int elapsed_time;
 extern int message_shown;
+extern BOOL CLOCK_ZERO_PADDED_FORMAT;
 
 extern void ShowNotification(HWND hwnd, const wchar_t* message);
 extern void PauseMediaPlayback(void);
@@ -1299,6 +1300,14 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             SetTimer(hwnd, 1002, 150, NULL);
                         }
                     }
+                    break;
+                }
+                
+                /** Toggle zero-padded time format */
+                case CLOCK_IDM_ZERO_PADDED_FORMAT: {
+                    BOOL newFormat = !CLOCK_ZERO_PADDED_FORMAT;
+                    WriteConfigZeroPaddedFormat(newFormat);
+                    InvalidateRect(hwnd, NULL, TRUE);
                     break;
                 }
                 

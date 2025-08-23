@@ -100,6 +100,9 @@ extern int NOTIFICATION_SOUND_VOLUME;
 /** @brief Font license agreement accepted flag */
 extern BOOL FONT_LICENSE_ACCEPTED;
 
+/** @brief Time format setting - TRUE for 09:59 format, FALSE for 9:59 format */
+extern BOOL CLOCK_ZERO_PADDED_FORMAT;
+
 /**
  * @brief Get configuration file path
  * @param path Buffer to store config file path
@@ -438,6 +441,12 @@ void SetFirstRunCompleted(void);
  * @param accepted TRUE if user accepted the license agreement, FALSE otherwise
  */
 void SetFontLicenseAccepted(BOOL accepted);
+
+/**
+ * @brief Write time format setting to config file
+ * @param zeroPadded TRUE for 09:59 format, FALSE for 9:59 format
+ */
+void WriteConfigZeroPaddedFormat(BOOL zeroPadded);
 
 /**
  * @brief Force flush configuration changes to disk immediately

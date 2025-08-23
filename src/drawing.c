@@ -16,6 +16,9 @@
 /** @brief External elapsed time variable from timer module */
 extern int elapsed_time;
 
+/** @brief External time format setting */
+extern BOOL CLOCK_ZERO_PADDED_FORMAT;
+
 /**
  * @brief Handle window painting with double buffering and text rendering
  * @param hwnd Window handle to paint
@@ -56,11 +59,21 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
 
         /** Format with or without seconds */
         if (CLOCK_SHOW_SECONDS) {
-            swprintf(time_text, 50, L"%d:%02d:%02d", 
-                    hour, tm_info->tm_min, tm_info->tm_sec);
+            if (CLOCK_ZERO_PADDED_FORMAT) {
+                swprintf(time_text, 50, L"%02d:%02d:%02d", 
+                        hour, tm_info->tm_min, tm_info->tm_sec);
+            } else {
+                swprintf(time_text, 50, L"%d:%02d:%02d", 
+                        hour, tm_info->tm_min, tm_info->tm_sec);
+            }
         } else {
-            swprintf(time_text, 50, L"%d:%02d", 
-                    hour, tm_info->tm_min);
+            if (CLOCK_ZERO_PADDED_FORMAT) {
+                swprintf(time_text, 50, L"%02d:%02d", 
+                        hour, tm_info->tm_min);
+            } else {
+                swprintf(time_text, 50, L"%d:%02d", 
+                        hour, tm_info->tm_min);
+            }
         }
     } else if (CLOCK_COUNT_UP) {
         /** Display count-up timer */
@@ -70,11 +83,23 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
 
         /** Format time with appropriate precision */
         if (hours > 0) {
-            swprintf(time_text, 50, L"%d:%02d:%02d", hours, minutes, seconds);
+            if (CLOCK_ZERO_PADDED_FORMAT) {
+                swprintf(time_text, 50, L"%02d:%02d:%02d", hours, minutes, seconds);
+            } else {
+                swprintf(time_text, 50, L"%d:%02d:%02d", hours, minutes, seconds);
+            }
         } else if (minutes > 0) {
-            swprintf(time_text, 50, L"%d:%02d", minutes, seconds);
+            if (CLOCK_ZERO_PADDED_FORMAT) {
+                swprintf(time_text, 50, L"%02d:%02d", minutes, seconds);
+            } else {
+                swprintf(time_text, 50, L"%d:%02d", minutes, seconds);
+            }
         } else {
-            swprintf(time_text, 50, L"%d", seconds);
+            if (CLOCK_ZERO_PADDED_FORMAT) {
+                swprintf(time_text, 50, L"00:%02d", seconds);
+            } else {
+                swprintf(time_text, 50, L"%d", seconds);
+            }
         }
     } else {
         /** Display countdown timer */
@@ -99,11 +124,23 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
 
             /** Format with appropriate precision */
             if (hours > 0) {
-                swprintf(time_text, 50, L"%d:%02d:%02d", hours, minutes, seconds);
+                if (CLOCK_ZERO_PADDED_FORMAT) {
+                    swprintf(time_text, 50, L"%02d:%02d:%02d", hours, minutes, seconds);
+                } else {
+                    swprintf(time_text, 50, L"%d:%02d:%02d", hours, minutes, seconds);
+                }
             } else if (minutes > 0) {
-                swprintf(time_text, 50, L"%d:%02d", minutes, seconds);
+                if (CLOCK_ZERO_PADDED_FORMAT) {
+                    swprintf(time_text, 50, L"%02d:%02d", minutes, seconds);
+                } else {
+                    swprintf(time_text, 50, L"%d:%02d", minutes, seconds);
+                }
             } else {
-                swprintf(time_text, 50, L"%d", seconds);
+                if (CLOCK_ZERO_PADDED_FORMAT) {
+                    swprintf(time_text, 50, L"00:%02d", seconds);
+                } else {
+                    swprintf(time_text, 50, L"%d", seconds);
+                }
             }
         }
     }
