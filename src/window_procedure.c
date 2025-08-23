@@ -1337,6 +1337,12 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     return 0;
                 }
                 
+                /** Toggle window visibility */
+                case CLOCK_IDC_TOGGLE_VISIBILITY: {
+                    PostMessage(hwnd, WM_HOTKEY, HOTKEY_ID_TOGGLE_VISIBILITY, 0);
+                    return 0;
+                }
+                
                 /** Custom color picker dialog */
                 case CLOCK_IDC_CUSTOMIZE_LEFT: {
                     COLORREF color = ShowColorDialog(hwnd);

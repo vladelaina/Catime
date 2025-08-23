@@ -69,7 +69,8 @@
 #define CLOCK_IDC_BUTTON_OK 109          /**< OK button */
 #define CLOCK_IDC_CUSTOMIZE_LEFT 112     /**< Left customization button */
 #define CLOCK_IDC_EDIT_MODE 113          /**< Edit mode toggle */
-#define CLOCK_IDC_MODIFY_OPTIONS 114     /**< Modify options button */
+#define CLOCK_IDC_TOGGLE_VISIBILITY 114  /**< Toggle window visibility */
+#define CLOCK_IDC_MODIFY_OPTIONS 115     /**< Modify options button */
 
 /** @brief File menu identifiers */
 #define CLOCK_IDM_OPEN_FILE 125          /**< Open file menu item */

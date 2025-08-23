@@ -179,6 +179,14 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hMenu, MF_STRING | (CLOCK_EDIT_MODE ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDC_EDIT_MODE, 
                GetLocalizedString(L"编辑模式", L"Edit Mode"));
+
+    /** Dynamic text based on window visibility */
+    const wchar_t* visibilityText = IsWindowVisible(hwnd) ?
+        GetLocalizedString(L"隐藏窗口", L"Hide Window") :
+        GetLocalizedString(L"显示窗口", L"Show Window");
+    
+    AppendMenuW(hMenu, MF_STRING, CLOCK_IDC_TOGGLE_VISIBILITY, visibilityText);
+
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
     HMENU hTimeoutMenu = CreatePopupMenu();
