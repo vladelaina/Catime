@@ -16,6 +16,9 @@
 #define CATIME_VERSION_PATCH 2           /**< Patch version number */
 #define CATIME_VERSION_BUILD 0           /**< Build number */
 
+/** @brief Font license version information */
+#define FONT_LICENSE_VERSION "1.0"       /**< Font license version string */
+
 /** @brief External links and URLs */
 #define CREDIT_LINK_URL L"https://space.bilibili.com/26087398"  /**< Credit link URL */
 

@@ -630,6 +630,13 @@ BOOL InitializeApplication(HINSTANCE hInstance) {
         }
     }
     
+    /** Check font license version acceptance - this will happen on first run and version updates */
+    extern BOOL NeedsFontLicenseVersionAcceptance(void);
+    if (NeedsFontLicenseVersionAcceptance()) {
+        /** Font license version needs acceptance, will be handled later in main window messages */
+        /** This is just a check during initialization - actual dialog will be shown when needed */
+    }
+    
     UpdateStartupShortcut();
     InitializeDefaultLanguage();
 

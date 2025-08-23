@@ -1382,10 +1382,14 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDC_FONT_LICENSE_AGREE: {
                     extern INT_PTR ShowFontLicenseDialog(HWND hwndParent);
                     extern void SetFontLicenseAccepted(BOOL accepted);
+                    extern void SetFontLicenseVersionAccepted(const char* version);
+                    extern const char* GetCurrentFontLicenseVersion(void);
+                    
                     INT_PTR result = ShowFontLicenseDialog(hwnd);
                     if (result == IDOK) {
-                        /** User agreed to license terms, save to config and refresh menu */
+                        /** User agreed to license terms, save to config with version and refresh menu */
                         SetFontLicenseAccepted(TRUE);
+                        SetFontLicenseVersionAccepted(GetCurrentFontLicenseVersion());
                         InvalidateRect(hwnd, NULL, TRUE);
                     }
                     break;

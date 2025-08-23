@@ -49,6 +49,9 @@ int NOTIFICATION_SOUND_VOLUME = 100;
 /** @brief Font license agreement acceptance status */
 BOOL FONT_LICENSE_ACCEPTED = FALSE;
 
+/** @brief Accepted font license version from config */
+char FONT_LICENSE_VERSION_ACCEPTED[16] = "";
+
 /** @brief Current time format setting */
 TimeFormatType CLOCK_TIME_FORMAT = TIME_FORMAT_DEFAULT;
 
@@ -340,6 +343,7 @@ void CreateDefaultConfig(const char* config_path) {
     WriteIniString(INI_SECTION_GENERAL, "SHORTCUT_CHECK_DONE", "FALSE", config_path);
     WriteIniString(INI_SECTION_GENERAL, "FIRST_RUN", "TRUE", config_path);
     WriteIniString(INI_SECTION_GENERAL, "FONT_LICENSE_ACCEPTED", "FALSE", config_path);
+    WriteIniString(INI_SECTION_GENERAL, "FONT_LICENSE_VERSION_ACCEPTED", "", config_path);
     
 
     WriteIniString(INI_SECTION_DISPLAY, "CLOCK_TEXT_COLOR", "#FFB6C1", config_path);
@@ -637,6 +641,10 @@ void ReadConfig() {
     
     /** Load font license agreement status */
     FONT_LICENSE_ACCEPTED = ReadIniBool(INI_SECTION_GENERAL, "FONT_LICENSE_ACCEPTED", FALSE, config_path);
+    
+    /** Load font license version acceptance status */
+    ReadIniString(INI_SECTION_GENERAL, "FONT_LICENSE_VERSION_ACCEPTED", "", 
+                  FONT_LICENSE_VERSION_ACCEPTED, sizeof(FONT_LICENSE_VERSION_ACCEPTED), config_path);
     
     /** Load time format setting */
     char timeFormat[32] = {0};
@@ -3464,7 +3472,8 @@ void WriteConfigKeyValue(const char* key, const char* value) {
         strcmp(key, "LANGUAGE") == 0 ||
         strcmp(key, "SHORTCUT_CHECK_DONE") == 0 ||
         strcmp(key, "FIRST_RUN") == 0 ||
-        strcmp(key, "FONT_LICENSE_ACCEPTED") == 0) {
+        strcmp(key, "FONT_LICENSE_ACCEPTED") == 0 ||
+        strcmp(key, "FONT_LICENSE_VERSION_ACCEPTED") == 0) {
         section = INI_SECTION_GENERAL;
     }
     else if (strncmp(key, "CLOCK_TEXT_COLOR", 16) == 0 ||
@@ -3520,6 +3529,50 @@ void WriteConfigKeyValue(const char* key, const char* value) {
 void SetFontLicenseAccepted(BOOL accepted) {
     FONT_LICENSE_ACCEPTED = accepted;
     WriteConfigKeyValue("FONT_LICENSE_ACCEPTED", accepted ? "TRUE" : "FALSE");
+}
+
+/**
+ * @brief Set font license version acceptance status
+ * @param version Version string that was accepted
+ */
+void SetFontLicenseVersionAccepted(const char* version) {
+    if (!version) return;
+    
+    strncpy(FONT_LICENSE_VERSION_ACCEPTED, version, sizeof(FONT_LICENSE_VERSION_ACCEPTED) - 1);
+    FONT_LICENSE_VERSION_ACCEPTED[sizeof(FONT_LICENSE_VERSION_ACCEPTED) - 1] = '\0';
+    
+    WriteConfigKeyValue("FONT_LICENSE_VERSION_ACCEPTED", version);
+}
+
+/**
+ * @brief Check if font license version needs acceptance
+ * @return TRUE if current version needs user acceptance, FALSE otherwise
+ */
+BOOL NeedsFontLicenseVersionAcceptance(void) {
+    /** If license was never accepted, need acceptance */
+    if (!FONT_LICENSE_ACCEPTED) {
+        return TRUE;
+    }
+    
+    /** If no version was previously accepted, need acceptance */
+    if (strlen(FONT_LICENSE_VERSION_ACCEPTED) == 0) {
+        return TRUE;
+    }
+    
+    /** If current version differs from accepted version, need acceptance */
+    if (strcmp(FONT_LICENSE_VERSION, FONT_LICENSE_VERSION_ACCEPTED) != 0) {
+        return TRUE;
+    }
+    
+    return FALSE;
+}
+
+/**
+ * @brief Get current font license version
+ * @return Current font license version string
+ */
+const char* GetCurrentFontLicenseVersion(void) {
+    return FONT_LICENSE_VERSION;
 }
 
 

@@ -488,14 +488,14 @@ void ShowColorMenu(HWND hwnd) {
     }
     
     /** Load fonts from user's fonts folder directly into main font menu */
-    extern BOOL FONT_LICENSE_ACCEPTED;
+    extern BOOL NeedsFontLicenseVersionAcceptance(void);
     
-    if (!FONT_LICENSE_ACCEPTED) {
-        /** Show license agreement option if not accepted */
+    if (NeedsFontLicenseVersionAcceptance()) {
+        /** Show license agreement option if version needs acceptance */
         AppendMenuW(hFontSubMenu, MF_STRING, CLOCK_IDC_FONT_LICENSE_AGREE, 
                    GetLocalizedString(L"点击同意许可协议后继续", L"Click to agree to license agreement"));
     } else {
-        /** Normal font menu when license is accepted */
+        /** Normal font menu when license version is accepted */
         char fontsFolderPath[MAX_PATH];
         char* appdata_path = getenv("LOCALAPPDATA");
         if (appdata_path) {

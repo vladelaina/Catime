@@ -100,6 +100,9 @@ extern int NOTIFICATION_SOUND_VOLUME;
 /** @brief Font license agreement accepted flag */
 extern BOOL FONT_LICENSE_ACCEPTED;
 
+/** @brief Accepted font license version from config */
+extern char FONT_LICENSE_VERSION_ACCEPTED[16];
+
 /** @brief Time format types */
 typedef enum {
     TIME_FORMAT_DEFAULT = 0,        /**< Default format: 9:59, 9 */
@@ -452,6 +455,24 @@ void SetFirstRunCompleted(void);
  * @param accepted TRUE if user accepted the license agreement, FALSE otherwise
  */
 void SetFontLicenseAccepted(BOOL accepted);
+
+/**
+ * @brief Set font license version acceptance status
+ * @param version Version string that was accepted
+ */
+void SetFontLicenseVersionAccepted(const char* version);
+
+/**
+ * @brief Check if font license version needs acceptance
+ * @return TRUE if current version needs user acceptance, FALSE otherwise
+ */
+BOOL NeedsFontLicenseVersionAcceptance(void);
+
+/**
+ * @brief Get current font license version
+ * @return Current font license version string
+ */
+const char* GetCurrentFontLicenseVersion(void);
 
 /**
  * @brief Write time format setting to config file
