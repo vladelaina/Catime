@@ -49,8 +49,8 @@ int NOTIFICATION_SOUND_VOLUME = 100;
 /** @brief Font license agreement acceptance status */
 BOOL FONT_LICENSE_ACCEPTED = FALSE;
 
-/** @brief Time format setting - TRUE for 09:59 format, FALSE for 9:59 format */
-BOOL CLOCK_ZERO_PADDED_FORMAT = FALSE;
+/** @brief Current time format setting */
+TimeFormatType CLOCK_TIME_FORMAT = TIME_FORMAT_DEFAULT;
 
 
 /**
@@ -350,7 +350,7 @@ void CreateDefaultConfig(const char* config_path) {
     WriteIniInt(INI_SECTION_TIMER, "CLOCK_DEFAULT_START_TIME", 1500, config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_USE_24HOUR", "FALSE", config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_SHOW_SECONDS", "FALSE", config_path);
-    WriteIniString(INI_SECTION_TIMER, "CLOCK_ZERO_PADDED_FORMAT", "FALSE", config_path);
+    WriteIniString(INI_SECTION_TIMER, "CLOCK_TIME_FORMAT", "DEFAULT", config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_TIME_OPTIONS", "1500,600,300", config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_TEXT", "0", config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_ACTION", "MESSAGE", config_path);
@@ -635,7 +635,16 @@ void ReadConfig() {
     FONT_LICENSE_ACCEPTED = ReadIniBool(INI_SECTION_GENERAL, "FONT_LICENSE_ACCEPTED", FALSE, config_path);
     
     /** Load time format setting */
-    CLOCK_ZERO_PADDED_FORMAT = ReadIniBool(INI_SECTION_TIMER, "CLOCK_ZERO_PADDED_FORMAT", FALSE, config_path);
+    char timeFormat[32] = {0};
+    ReadIniString(INI_SECTION_TIMER, "CLOCK_TIME_FORMAT", "DEFAULT", timeFormat, sizeof(timeFormat), config_path);
+    
+    if (strcmp(timeFormat, "ZERO_PADDED") == 0) {
+        CLOCK_TIME_FORMAT = TIME_FORMAT_ZERO_PADDED;
+    } else if (strcmp(timeFormat, "FULL_PADDED") == 0) {
+        CLOCK_TIME_FORMAT = TIME_FORMAT_FULL_PADDED;
+    } else {
+        CLOCK_TIME_FORMAT = TIME_FORMAT_DEFAULT;
+    }
     
     /** Parse language string to enum value */
     int languageSetting = APP_LANG_ENGLISH;
@@ -1740,7 +1749,20 @@ void WriteConfig(const char* config_path) {
     WriteIniInt(INI_SECTION_TIMER, "CLOCK_DEFAULT_START_TIME", CLOCK_DEFAULT_START_TIME, config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_USE_24HOUR", CLOCK_USE_24HOUR ? "TRUE" : "FALSE", config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_SHOW_SECONDS", CLOCK_SHOW_SECONDS ? "TRUE" : "FALSE", config_path);
-    WriteIniString(INI_SECTION_TIMER, "CLOCK_ZERO_PADDED_FORMAT", CLOCK_ZERO_PADDED_FORMAT ? "TRUE" : "FALSE", config_path);
+    
+    const char* timeFormatStr;
+    switch (CLOCK_TIME_FORMAT) {
+        case TIME_FORMAT_ZERO_PADDED:
+            timeFormatStr = "ZERO_PADDED";
+            break;
+        case TIME_FORMAT_FULL_PADDED:
+            timeFormatStr = "FULL_PADDED";
+            break;
+        default:
+            timeFormatStr = "DEFAULT";
+            break;
+    }
+    WriteIniString(INI_SECTION_TIMER, "CLOCK_TIME_FORMAT", timeFormatStr, config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_TEXT", CLOCK_TIMEOUT_TEXT, config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_ACTION", timeoutActionStr, config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_FILE", CLOCK_TIMEOUT_FILE_PATH, config_path);
@@ -3453,7 +3475,7 @@ void WriteConfigKeyValue(const char* key, const char* value) {
     else if (strncmp(key, "CLOCK_DEFAULT_START_TIME", 24) == 0 ||
            strncmp(key, "CLOCK_USE_24HOUR", 16) == 0 ||
            strncmp(key, "CLOCK_SHOW_SECONDS", 18) == 0 ||
-           strncmp(key, "CLOCK_ZERO_PADDED_FORMAT", 24) == 0 ||
+           strncmp(key, "CLOCK_TIME_FORMAT", 17) == 0 ||
            strncmp(key, "CLOCK_TIME_OPTIONS", 18) == 0 ||
            strncmp(key, "STARTUP_MODE", 12) == 0 ||
            strncmp(key, "CLOCK_TIMEOUT_TEXT", 18) == 0 ||
@@ -3646,11 +3668,24 @@ void WriteConfigNotificationDisabled(BOOL disabled) {
 
 /**
  * @brief Write time format setting to config file
- * @param zeroPadded TRUE for 09:59 format, FALSE for 9:59 format
+ * @param format Time format type to set
  */
-void WriteConfigZeroPaddedFormat(BOOL zeroPadded) {
-    CLOCK_ZERO_PADDED_FORMAT = zeroPadded;
-    WriteConfigKeyValue("CLOCK_ZERO_PADDED_FORMAT", zeroPadded ? "TRUE" : "FALSE");
+void WriteConfigTimeFormat(TimeFormatType format) {
+    CLOCK_TIME_FORMAT = format;
+    
+    const char* formatStr;
+    switch (format) {
+        case TIME_FORMAT_ZERO_PADDED:
+            formatStr = "ZERO_PADDED";
+            break;
+        case TIME_FORMAT_FULL_PADDED:
+            formatStr = "FULL_PADDED";
+            break;
+        default:
+            formatStr = "DEFAULT";
+            break;
+    }
+    WriteConfigKeyValue("CLOCK_TIME_FORMAT", formatStr);
 }
 
 /**

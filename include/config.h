@@ -100,8 +100,15 @@ extern int NOTIFICATION_SOUND_VOLUME;
 /** @brief Font license agreement accepted flag */
 extern BOOL FONT_LICENSE_ACCEPTED;
 
-/** @brief Time format setting - TRUE for 09:59 format, FALSE for 9:59 format */
-extern BOOL CLOCK_ZERO_PADDED_FORMAT;
+/** @brief Time format types */
+typedef enum {
+    TIME_FORMAT_DEFAULT = 0,        /**< Default format: 9:59, 9 */
+    TIME_FORMAT_ZERO_PADDED = 1,    /**< Zero-padded format: 09:59, 09 */
+    TIME_FORMAT_FULL_PADDED = 2     /**< Full zero-padded format: 00:09:59, 00:00:09 */
+} TimeFormatType;
+
+/** @brief Current time format setting */
+extern TimeFormatType CLOCK_TIME_FORMAT;
 
 /**
  * @brief Get configuration file path
@@ -444,9 +451,9 @@ void SetFontLicenseAccepted(BOOL accepted);
 
 /**
  * @brief Write time format setting to config file
- * @param zeroPadded TRUE for 09:59 format, FALSE for 9:59 format
+ * @param format Time format type to set
  */
-void WriteConfigZeroPaddedFormat(BOOL zeroPadded);
+void WriteConfigTimeFormat(TimeFormatType format);
 
 /**
  * @brief Force flush configuration changes to disk immediately

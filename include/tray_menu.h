@@ -41,7 +41,9 @@
 
 /** @brief Configuration options */
 #define CLOCK_IDC_MODIFY_TIME_OPTIONS 156  /**< Modify quick time options */
-#define CLOCK_IDM_ZERO_PADDED_FORMAT 194   /**< Toggle 09:59 format */
+#define CLOCK_IDM_TIME_FORMAT_DEFAULT 194   /**< Default time format 9:59 */
+#define CLOCK_IDM_TIME_FORMAT_ZERO_PADDED 196   /**< Zero-padded format 09:59 */
+#define CLOCK_IDM_TIME_FORMAT_FULL_PADDED 197   /**< Full zero-padded format 00:09:59 */
 
 /** @brief Startup configuration */
 #define CLOCK_IDC_SET_COUNTDOWN_TIME 173   /**< Set default countdown time */

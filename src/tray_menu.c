@@ -14,6 +14,7 @@
 #include "../include/drag_scale.h"
 #include "../include/pomodoro.h"
 #include "../include/timer.h"
+#include "../include/config.h"
 #include "../resource/resource.h"
 
 /** @brief Timer state and display configuration externals */
@@ -36,7 +37,7 @@ extern int countdown_elapsed_time;
 extern char CLOCK_TIMEOUT_FILE_PATH[MAX_PATH];
 extern char CLOCK_TIMEOUT_TEXT[50];
 extern BOOL CLOCK_WINDOW_TOPMOST;
-extern BOOL CLOCK_ZERO_PADDED_FORMAT;
+extern TimeFormatType CLOCK_TIME_FORMAT;
 
 /** @brief Pomodoro technique configuration externals */
 extern int POMODORO_WORK_TIME;
@@ -81,14 +82,7 @@ void ReadTimeoutActionFromConfig() {
     }
 }
 
-/** @brief Structure for recent file tracking in timeout actions */
-typedef struct {
-    char path[MAX_PATH];        /**< Full file path */
-    char name[MAX_PATH];        /**< Display name */
-} RecentFile;
-
-extern RecentFile CLOCK_RECENT_FILES[];
-extern int CLOCK_RECENT_FILES_COUNT;
+/** @brief Recent file tracking externals (defined in config.h) */
 
 /**
  * @brief Format time duration for menu display with intelligent precision
@@ -341,9 +335,18 @@ void ShowColorMenu(HWND hwnd) {
     
     /** Add format submenu before topmost option */
     HMENU hFormatMenu = CreatePopupMenu();
-    AppendMenuW(hFormatMenu, MF_STRING | (CLOCK_ZERO_PADDED_FORMAT ? MF_CHECKED : MF_UNCHECKED),
-                CLOCK_IDM_ZERO_PADDED_FORMAT,
+    
+    AppendMenuW(hFormatMenu, MF_STRING | (CLOCK_TIME_FORMAT == TIME_FORMAT_DEFAULT ? MF_CHECKED : MF_UNCHECKED),
+                CLOCK_IDM_TIME_FORMAT_DEFAULT,
+                GetLocalizedString(L"默认格式", L"Default Format"));
+    
+    AppendMenuW(hFormatMenu, MF_STRING | (CLOCK_TIME_FORMAT == TIME_FORMAT_ZERO_PADDED ? MF_CHECKED : MF_UNCHECKED),
+                CLOCK_IDM_TIME_FORMAT_ZERO_PADDED,
                 GetLocalizedString(L"09:59格式", L"09:59 Format"));
+    
+    AppendMenuW(hFormatMenu, MF_STRING | (CLOCK_TIME_FORMAT == TIME_FORMAT_FULL_PADDED ? MF_CHECKED : MF_UNCHECKED),
+                CLOCK_IDM_TIME_FORMAT_FULL_PADDED,
+                GetLocalizedString(L"00:09:59格式", L"00:09:59 Format"));
     
     AppendMenuW(hTimeOptionsMenu, MF_POPUP, (UINT_PTR)hFormatMenu,
                 GetLocalizedString(L"格式", L"Format"));
