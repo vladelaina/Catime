@@ -418,23 +418,25 @@ BOOL FindFontInFontsFolder(const char* fontFileName, char* foundPath, size_t fou
 /**
  * @brief Load font by name from fonts folder
  * @param hInstance Application instance handle
- * @param fontName Font filename to search for
+ * @param fontName Font filename or relative path from fonts folder
  * @return TRUE if font found and loaded, FALSE otherwise
  */
 BOOL LoadFontByName(HINSTANCE hInstance, const char* fontName) {
-    /** Load font from fonts folder */
+    /** Construct direct path to font file */
     char fontPath[MAX_PATH];
-    if (FindFontInFontsFolder(fontName, fontPath, MAX_PATH)) {
-        return LoadFontFromFile(fontPath);
-    }
+    char* appdata_path = getenv("LOCALAPPDATA");
+    if (!appdata_path) return FALSE;
     
-    return FALSE;
+    snprintf(fontPath, MAX_PATH, "%s\\Catime\\resources\\fonts\\%s", appdata_path, fontName);
+    
+    /** Load font from the exact path */
+    return LoadFontFromFile(fontPath);
 }
 
 /**
  * @brief Load font and get real font name from fonts folder
  * @param hInstance Application instance handle
- * @param fontFileName Font filename to search for
+ * @param fontFileName Font filename or relative path from fonts folder
  * @param realFontName Buffer to store real font name
  * @param realFontNameSize Size of realFontName buffer
  * @return TRUE if font found, loaded, and real name extracted, FALSE otherwise
@@ -443,23 +445,26 @@ BOOL LoadFontByNameAndGetRealName(HINSTANCE hInstance, const char* fontFileName,
                                   char* realFontName, size_t realFontNameSize) {
     if (!fontFileName || !realFontName || realFontNameSize == 0) return FALSE;
     
-    /** Load font from fonts folder */
+    /** Construct direct path to font file */
     char fontPath[MAX_PATH];
-    if (FindFontInFontsFolder(fontFileName, fontPath, MAX_PATH)) {
-        /** First extract the real font name from the file */
-        if (!GetFontNameFromFile(fontPath, realFontName, realFontNameSize)) {
-            /** Fallback to filename without extension */
-            strncpy(realFontName, fontFileName, realFontNameSize - 1);
-            realFontName[realFontNameSize - 1] = '\0';
-            char* dot = strrchr(realFontName, '.');
-            if (dot) *dot = '\0';
-        }
-        
-        /** Load the font file */
-        return LoadFontFromFile(fontPath);
+    char* appdata_path = getenv("LOCALAPPDATA");
+    if (!appdata_path) return FALSE;
+    
+    snprintf(fontPath, MAX_PATH, "%s\\Catime\\resources\\fonts\\%s", appdata_path, fontFileName);
+    
+    /** Extract the real font name from the file */
+    if (!GetFontNameFromFile(fontPath, realFontName, realFontNameSize)) {
+        /** Fallback to filename without extension */
+        char* lastSlash = strrchr(fontFileName, '\\');
+        const char* filenameOnly = lastSlash ? (lastSlash + 1) : fontFileName;
+        strncpy(realFontName, filenameOnly, realFontNameSize - 1);
+        realFontName[realFontNameSize - 1] = '\0';
+        char* dot = strrchr(realFontName, '.');
+        if (dot) *dot = '\0';
     }
     
-    return FALSE;
+    /** Load the font file */
+    return LoadFontFromFile(fontPath);
 }
 
 /**
@@ -469,9 +474,35 @@ BOOL LoadFontByNameAndGetRealName(HINSTANCE hInstance, const char* fontFileName,
 void WriteConfigFont(const char* font_file_name) {
     if (!font_file_name) return;
     
-    /** All fonts are now treated as external fonts in fonts folder */
+    /** Find the actual font path to save correct relative path */
+    char actualFontPath[MAX_PATH];
     char configFontName[MAX_PATH];
-    snprintf(configFontName, MAX_PATH, "%%LOCALAPPDATA%%\\Catime\\resources\\fonts\\%s", font_file_name);
+    
+    if (FindFontInFontsFolder(font_file_name, actualFontPath, MAX_PATH)) {
+        /** Extract relative path from the fonts folder */
+        char* appdata_path = getenv("LOCALAPPDATA");
+        if (appdata_path) {
+            char fontsFolderPath[MAX_PATH];
+            snprintf(fontsFolderPath, MAX_PATH, "%s\\Catime\\resources\\fonts\\", appdata_path);
+            
+            /** Check if actualFontPath starts with fontsFolderPath */
+            if (_strnicmp(actualFontPath, fontsFolderPath, strlen(fontsFolderPath)) == 0) {
+                /** Extract relative path after the fonts folder */
+                const char* relativePath = actualFontPath + strlen(fontsFolderPath);
+                snprintf(configFontName, MAX_PATH, "%%LOCALAPPDATA%%\\Catime\\resources\\fonts\\%s", relativePath);
+            } else {
+                /** Fallback to original behavior */
+                snprintf(configFontName, MAX_PATH, "%%LOCALAPPDATA%%\\Catime\\resources\\fonts\\%s", font_file_name);
+            }
+        } else {
+            /** Fallback to original behavior */
+            snprintf(configFontName, MAX_PATH, "%%LOCALAPPDATA%%\\Catime\\resources\\fonts\\%s", font_file_name);
+        }
+    } else {
+        /** Font not found, use original filename */
+        snprintf(configFontName, MAX_PATH, "%%LOCALAPPDATA%%\\Catime\\resources\\fonts\\%s", font_file_name);
+    }
+    
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
@@ -621,7 +652,7 @@ void CancelFontPreview(void) {
     /** Reload the original configured font */
     const char* localappdata_prefix = "%LOCALAPPDATA%\\Catime\\resources\\fonts\\";
     if (_strnicmp(FONT_FILE_NAME, localappdata_prefix, strlen(localappdata_prefix)) == 0) {
-        /** Extract just the filename for loading */
+        /** Extract the relative path (including subfolders) for loading */
         char actualFontFileName[MAX_PATH];
         strncpy(actualFontFileName, FONT_FILE_NAME + strlen(localappdata_prefix), sizeof(actualFontFileName) - 1);
         actualFontFileName[sizeof(actualFontFileName) - 1] = '\0';

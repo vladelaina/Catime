@@ -676,7 +676,7 @@ void ReadConfig() {
     /** Check if FONT_FILE_NAME has path prefix */
     const char* localappdata_prefix = "%LOCALAPPDATA%\\Catime\\resources\\fonts\\";
     if (_strnicmp(FONT_FILE_NAME, localappdata_prefix, strlen(localappdata_prefix)) == 0) {
-        /** Extract just the filename */
+        /** Extract the relative path from fonts folder (including subfolders) */
         strncpy(actualFontFileName, FONT_FILE_NAME + strlen(localappdata_prefix), sizeof(actualFontFileName) - 1);
         actualFontFileName[sizeof(actualFontFileName) - 1] = '\0';
         isFontsFolderFont = TRUE;
@@ -688,22 +688,28 @@ void ReadConfig() {
     
     /** Set FONT_INTERNAL_NAME based on font type */
     if (isFontsFolderFont) {
-        /** For fonts folder fonts, try to get real font name from file */
+        /** For fonts folder fonts, use the exact path from config */
         char fontPath[MAX_PATH];
-        extern BOOL FindFontInFontsFolder(const char* fontFileName, char* foundPath, size_t foundPathSize);
-        extern BOOL GetFontNameFromFile(const char* fontFilePath, char* fontName, size_t fontNameSize);
+        char* appdata_path = getenv("LOCALAPPDATA");
         
-        if (FindFontInFontsFolder(actualFontFileName, fontPath, MAX_PATH)) {
+        if (appdata_path) {
+            snprintf(fontPath, MAX_PATH, "%s\\Catime\\resources\\fonts\\%s", appdata_path, actualFontFileName);
+            
+            /** Try to get real font name from file */
             if (!GetFontNameFromFile(fontPath, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME))) {
                 /** Fallback to filename without extension */
-                strncpy(FONT_INTERNAL_NAME, actualFontFileName, sizeof(FONT_INTERNAL_NAME) - 1);
+                char* lastSlash = strrchr(actualFontFileName, '\\');
+                const char* filenameOnly = lastSlash ? (lastSlash + 1) : actualFontFileName;
+                strncpy(FONT_INTERNAL_NAME, filenameOnly, sizeof(FONT_INTERNAL_NAME) - 1);
                 FONT_INTERNAL_NAME[sizeof(FONT_INTERNAL_NAME) - 1] = '\0';
                 char* dot = strrchr(FONT_INTERNAL_NAME, '.');
                 if (dot) *dot = '\0';
             }
         } else {
-            /** Fallback to filename without extension */
-            strncpy(FONT_INTERNAL_NAME, actualFontFileName, sizeof(FONT_INTERNAL_NAME) - 1);
+            /** No LOCALAPPDATA, fallback to filename without extension */
+            char* lastSlash = strrchr(actualFontFileName, '\\');
+            const char* filenameOnly = lastSlash ? (lastSlash + 1) : actualFontFileName;
+            strncpy(FONT_INTERNAL_NAME, filenameOnly, sizeof(FONT_INTERNAL_NAME) - 1);
             FONT_INTERNAL_NAME[sizeof(FONT_INTERNAL_NAME) - 1] = '\0';
             char* dot = strrchr(FONT_INTERNAL_NAME, '.');
             if (dot) *dot = '\0';
