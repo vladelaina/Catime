@@ -348,6 +348,8 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hTimeOptionsMenu, MF_POPUP, (UINT_PTR)hFormatMenu,
                 GetLocalizedString(L"格式", L"Format"));
     
+    AppendMenuW(hTimeOptionsMenu, MF_SEPARATOR, 0, NULL);
+    
     AppendMenuW(hTimeOptionsMenu, MF_STRING | (CLOCK_WINDOW_TOPMOST ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDM_TOPMOST,
                 GetLocalizedString(L"置顶", L"Always on Top"));
