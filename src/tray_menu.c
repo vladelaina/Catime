@@ -345,7 +345,8 @@ void ShowColorMenu(HWND hwnd) {
     int g_advancedFontId = 2000; /** Global counter for font IDs */
     
     /** Recursive function to scan folder and create submenus */
-    BOOL ScanFontFolder(const char* folderPath, HMENU parentMenu, int* fontId) {
+    /** Returns: 0 = no content, 1 = has content but no current font, 2 = contains current font */
+    int ScanFontFolder(const char* folderPath, HMENU parentMenu, int* fontId) {
         /** Convert folder path to wide character */
         wchar_t wFolderPath[MAX_PATH];
         MultiByteToWideChar(CP_UTF8, 0, folderPath, -1, wFolderPath, MAX_PATH);
@@ -355,7 +356,7 @@ void ShowColorMenu(HWND hwnd) {
         
         WIN32_FIND_DATAW findData;
         HANDLE hFind = FindFirstFileW(wSearchPath, &findData);
-        BOOL hasAnyContent = FALSE;
+        int folderStatus = 0; /** 0 = no content, 1 = has content, 2 = contains current font */
         
         if (hFind != INVALID_HANDLE_VALUE) {
             do {
@@ -381,29 +382,41 @@ void ShowColorMenu(HWND hwnd) {
                         /** Check if this is the current font */
                         BOOL isCurrentFont = FALSE;
                         
-                        /** Extract filename from FONT_FILE_NAME for comparison */
-                        const char* lastSlash = strrchr(FONT_FILE_NAME, '\\');
-                        const char* lastForwardSlash = strrchr(FONT_FILE_NAME, '/');
-                        const char* fileName = FONT_FILE_NAME;
+                        /** Build current font file full path for comparison */
+                        char currentFontFullPath[MAX_PATH];
+                        char currentFileName[MAX_PATH];
+                        WideCharToMultiByte(CP_UTF8, 0, findData.cFileName, -1, currentFileName, MAX_PATH, NULL, NULL);
+                        snprintf(currentFontFullPath, MAX_PATH, "%s\\%s", folderPath, currentFileName);
                         
-                        /** Find the last path separator */
-                        if (lastSlash && (!lastForwardSlash || lastSlash > lastForwardSlash)) {
-                            fileName = lastSlash + 1;
-                        } else if (lastForwardSlash) {
-                            fileName = lastForwardSlash + 1;
+                        /** Convert FONT_FILE_NAME to actual path for comparison */
+                        char actualCurrentFontPath[MAX_PATH];
+                        if (strstr(FONT_FILE_NAME, "%LOCALAPPDATA%") == FONT_FILE_NAME) {
+                            /** Replace %LOCALAPPDATA% with actual path */
+                            const char* afterLocalAppData = FONT_FILE_NAME + strlen("%LOCALAPPDATA%");
+                            char* appdata_path = getenv("LOCALAPPDATA");
+                            if (appdata_path) {
+                                snprintf(actualCurrentFontPath, MAX_PATH, "%s%s", appdata_path, afterLocalAppData);
+                            } else {
+                                strncpy(actualCurrentFontPath, FONT_FILE_NAME, MAX_PATH - 1);
+                                actualCurrentFontPath[MAX_PATH - 1] = '\0';
+                            }
+                        } else {
+                            strncpy(actualCurrentFontPath, FONT_FILE_NAME, MAX_PATH - 1);
+                            actualCurrentFontPath[MAX_PATH - 1] = '\0';
                         }
                         
-                        /** Convert current font filename to wide character for comparison */
-                        wchar_t wCurrentFileName[MAX_PATH];
-                        MultiByteToWideChar(CP_UTF8, 0, fileName, -1, wCurrentFileName, MAX_PATH);
-                        
-                        /** Compare just the filenames */
-                        isCurrentFont = wcscmp(wCurrentFileName, findData.cFileName) == 0;
+                        /** Compare full paths (case insensitive) */
+                        isCurrentFont = (_stricmp(currentFontFullPath, actualCurrentFontPath) == 0);
                         
                         AppendMenuW(parentMenu, MF_STRING | (isCurrentFont ? MF_CHECKED : MF_UNCHECKED),
                                   (*fontId)++, wDisplayName);
                         
-                        hasAnyContent = TRUE;
+                        /** Update folder status */
+                        if (isCurrentFont) {
+                            folderStatus = 2; /** This folder contains the current font */
+                        } else if (folderStatus == 0) {
+                            folderStatus = 1; /** This folder has content but not the current font */
+                        }
                     }
                 }
                 /** Handle subdirectories recursively */
@@ -416,7 +429,7 @@ void ShowColorMenu(HWND hwnd) {
                     WideCharToMultiByte(CP_UTF8, 0, wFullItemPath, -1, fullItemPathUtf8, MAX_PATH, NULL, NULL);
                     
                     /** Recursively scan this subdirectory */
-                    BOOL hasSubContent = ScanFontFolder(fullItemPathUtf8, hSubFolderMenu, fontId);
+                    int subFolderStatus = ScanFontFolder(fullItemPathUtf8, hSubFolderMenu, fontId);
                     
                     /** Use wide character folder name directly (no conversion needed) */
                     wchar_t wFolderName[MAX_PATH];
@@ -424,19 +437,31 @@ void ShowColorMenu(HWND hwnd) {
                     wFolderName[MAX_PATH - 1] = L'\0';
                     
                     /** Always add the submenu, even if empty */
-                    if (!hasSubContent) {
+                    if (subFolderStatus == 0) {
                         /** Add "Empty folder" indicator */
                         AppendMenuW(hSubFolderMenu, MF_STRING | MF_GRAYED, 0, L"(Empty folder)");
+                        AppendMenuW(parentMenu, MF_POPUP, (UINT_PTR)hSubFolderMenu, wFolderName);
+                    } else {
+                        /** Add folder with check mark if it contains current font */
+                        UINT folderFlags = MF_POPUP;
+                        if (subFolderStatus == 2) {
+                            folderFlags |= MF_CHECKED; /** Folder contains current font */
+                        }
+                        AppendMenuW(parentMenu, folderFlags, (UINT_PTR)hSubFolderMenu, wFolderName);
                     }
                     
-                    AppendMenuW(parentMenu, MF_POPUP, (UINT_PTR)hSubFolderMenu, wFolderName);
-                    hasAnyContent = TRUE;
+                    /** Update current folder status based on subfolder status */
+                    if (subFolderStatus == 2) {
+                        folderStatus = 2; /** This folder contains the current font (in subfolder) */
+                    } else if (subFolderStatus == 1 && folderStatus == 0) {
+                        folderStatus = 1; /** This folder has content but not the current font */
+                    }
                 }
             } while (FindNextFileW(hFind, &findData));
             FindClose(hFind);
         }
         
-        return hasAnyContent;
+        return folderStatus;
     }
     
     /** Load fonts from user's fonts folder directly into main font menu */
@@ -456,10 +481,10 @@ void ShowColorMenu(HWND hwnd) {
             g_advancedFontId = 2000; /** Reset global font ID counter */
             
             /** Use recursive function to scan all folders and subfolders directly in main font menu */
-            BOOL hasAdvancedFonts = ScanFontFolder(fontsFolderPath, hFontSubMenu, &g_advancedFontId);
+            int fontFolderStatus = ScanFontFolder(fontsFolderPath, hFontSubMenu, &g_advancedFontId);
             
             /** Add browse option if no fonts found or as additional option */
-            if (!hasAdvancedFonts) {
+            if (fontFolderStatus == 0) {
                 AppendMenuW(hFontSubMenu, MF_STRING | MF_GRAYED, 0, 
                            L"No font files found");
                 AppendMenuW(hFontSubMenu, MF_SEPARATOR, 0, NULL);
