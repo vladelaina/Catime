@@ -498,6 +498,9 @@ function translateSupportElements() {
         if (td.textContent === '好喜欢catime，请你喝奶茶') {
             td.textContent = 'I really like catime, please have some milk tea';
         }
+        if (td.textContent === '时钟很不错，帮助页面也很漂亮 支持~*.。(๑･∀･๑)*.。') {
+            td.textContent = 'The timer is great, and the help page is beautiful. Support~*.。(๑･∀･๑)*.。';
+        }
         
         // 为所有留言单元格添加特殊样式，增强可读性
         if (td.parentElement && td.cellIndex === 3) { // 第四列是留言列
