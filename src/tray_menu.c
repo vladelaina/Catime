@@ -255,25 +255,6 @@ void ShowColorMenu(HWND hwnd) {
                CLOCK_IDM_SLEEP,
                GetLocalizedString(L"睡眠", L"Sleep"));
 
-    AppendMenuW(hTimeoutMenu, MF_SEPARATOR, 0, NULL);
-
-    HMENU hAdvancedMenu = CreatePopupMenu();
-
-    AppendMenuW(hAdvancedMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_RUN_COMMAND ? MF_CHECKED : MF_UNCHECKED),
-               CLOCK_IDM_RUN_COMMAND,
-               GetLocalizedString(L"运行命令", L"Run Command"));
-
-    AppendMenuW(hAdvancedMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_HTTP_REQUEST ? MF_CHECKED : MF_UNCHECKED),
-               CLOCK_IDM_HTTP_REQUEST,
-               GetLocalizedString(L"HTTP 请求", L"HTTP Request"));
-
-    BOOL isAdvancedOptionSelected = (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_RUN_COMMAND ||
-                                    CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_HTTP_REQUEST);
-
-    AppendMenuW(hTimeoutMenu, MF_POPUP | (isAdvancedOptionSelected ? MF_CHECKED : MF_UNCHECKED),
-               (UINT_PTR)hAdvancedMenu,
-               GetLocalizedString(L"高级", L"Advanced"));
-
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeoutMenu, 
                 GetLocalizedString(L"超时动作", L"Timeout Action"));
 

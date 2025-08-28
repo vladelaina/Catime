@@ -1967,16 +1967,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     WriteConfigTimeoutAction("SLEEP");
                     break;
                 }
-                case CLOCK_IDM_RUN_COMMAND: {
-                    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_RUN_COMMAND;
-                    WriteConfigTimeoutAction("RUN_COMMAND");
-                    break;
-                }
-                case CLOCK_IDM_HTTP_REQUEST: {
-                    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_HTTP_REQUEST;
-                    WriteConfigTimeoutAction("HTTP_REQUEST");
-                    break;
-                }
                 
                 /** Application updates and external links */
                 case CLOCK_IDM_CHECK_UPDATE: {

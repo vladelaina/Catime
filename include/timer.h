@@ -38,9 +38,7 @@ typedef enum {
     TIMEOUT_ACTION_SHOW_TIME = 5,    /**< Switch to current time display */
     TIMEOUT_ACTION_COUNT_UP = 6,     /**< Start count-up timer */
     TIMEOUT_ACTION_OPEN_WEBSITE = 7, /**< Open website URL */
-    TIMEOUT_ACTION_SLEEP = 8,        /**< Put system to sleep */
-    TIMEOUT_ACTION_RUN_COMMAND = 9,  /**< Execute system command */
-    TIMEOUT_ACTION_HTTP_REQUEST = 10 /**< Send HTTP request */
+    TIMEOUT_ACTION_SLEEP = 8         /**< Put system to sleep */
 } TimeoutActionType;
 
 /** @brief Timer paused state */

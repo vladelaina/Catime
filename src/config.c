@@ -843,10 +843,6 @@ void ReadConfig() {
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_WEBSITE;
     } else if (strcmp(timeoutAction, "SLEEP") == 0) {
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SLEEP;
-    } else if (strcmp(timeoutAction, "RUN_COMMAND") == 0) {
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_RUN_COMMAND;
-    } else if (strcmp(timeoutAction, "HTTP_REQUEST") == 0) {
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_HTTP_REQUEST;
     }
     
 
@@ -1723,12 +1719,6 @@ void WriteConfig(const char* config_path) {
             break;
         case TIMEOUT_ACTION_SLEEP:
             timeoutActionStr = "MESSAGE";
-            break;
-        case TIMEOUT_ACTION_RUN_COMMAND:
-            timeoutActionStr = "RUN_COMMAND";
-            break;
-        case TIMEOUT_ACTION_HTTP_REQUEST:
-            timeoutActionStr = "HTTP_REQUEST";
             break;
         default:
             timeoutActionStr = "MESSAGE";

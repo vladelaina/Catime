@@ -445,18 +445,6 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                                     ShellExecuteW(NULL, L"open", CLOCK_TIMEOUT_WEBSITE_URL, NULL, NULL, SW_NORMAL);
                                 }
                                 break;
-                            case TIMEOUT_ACTION_RUN_COMMAND:
-                                MessageBoxW(hwnd, 
-                                    GetLocalizedString(L"运行命令功能正在开发中", L"Run Command feature is under development"),
-                                    GetLocalizedString(L"提示", L"Notice"),
-                                    MB_ICONINFORMATION);
-                                break;
-                            case TIMEOUT_ACTION_HTTP_REQUEST:
-                                MessageBoxW(hwnd, 
-                                    GetLocalizedString(L"HTTP请求功能正在开发中", L"HTTP Request feature is under development"),
-                                    GetLocalizedString(L"提示", L"Notice"),
-                                    MB_ICONINFORMATION);
-                                break;
                         }
                     }
 
@@ -512,22 +500,6 @@ void OnTimerTimeout(HWND hwnd) {
             ReadNotificationSoundConfig();
             PlayNotificationSound(hwnd);
             
-            break;
-        }
-        case TIMEOUT_ACTION_RUN_COMMAND: {
-            /** Placeholder for future command execution feature */
-            MessageBoxW(hwnd, 
-                GetLocalizedString(L"运行命令功能正在开发中", L"Run Command feature is under development"),
-                GetLocalizedString(L"提示", L"Notice"),
-                MB_ICONINFORMATION);
-            break;
-        }
-        case TIMEOUT_ACTION_HTTP_REQUEST: {
-            /** Placeholder for future HTTP request feature */
-            MessageBoxW(hwnd, 
-                GetLocalizedString(L"HTTP请求功能正在开发中", L"HTTP Request feature is under development"),
-                GetLocalizedString(L"提示", L"Notice"),
-                MB_ICONINFORMATION);
             break;
         }
 
