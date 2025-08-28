@@ -176,13 +176,6 @@ void ShowColorMenu(HWND hwnd) {
                CLOCK_IDC_EDIT_MODE, 
                GetLocalizedString(L"编辑模式", L"Edit Mode"));
 
-    /** Dynamic text based on window visibility */
-    const wchar_t* visibilityText = IsWindowVisible(hwnd) ?
-        GetLocalizedString(L"隐藏窗口", L"Hide Window") :
-        GetLocalizedString(L"显示窗口", L"Show Window");
-    
-    AppendMenuW(hMenu, MF_STRING, CLOCK_IDC_TOGGLE_VISIBILITY, visibilityText);
-
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
     HMENU hTimeoutMenu = CreatePopupMenu();
@@ -329,9 +322,6 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hFormatMenu, MF_STRING | (CLOCK_TIME_FORMAT == TIME_FORMAT_FULL_PADDED ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDM_TIME_FORMAT_FULL_PADDED,
                 GetLocalizedString(L"00:09:59格式", L"00:09:59 Format"));
-    
-    AppendMenuW(hTimeOptionsMenu, MF_POPUP, (UINT_PTR)hFormatMenu,
-                GetLocalizedString(L"格式", L"Format"));
     
     AppendMenuW(hTimeOptionsMenu, MF_SEPARATOR, 0, NULL);
     
@@ -597,6 +587,8 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hColorSubMenu, MF_POPUP, (UINT_PTR)hCustomizeMenu, 
                 GetLocalizedString(L"自定义", L"Customize"));
 
+    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hFormatMenu,
+                GetLocalizedString(L"格式", L"Format"));
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hFontSubMenu, 
                 GetLocalizedString(L"字体", L"Font"));
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hColorSubMenu, 
@@ -698,6 +690,13 @@ void ShowContextMenu(HWND hwnd) {
     AppendMenuW(hTimerManageMenu, MF_STRING | (canRestart ? MF_ENABLED : MF_GRAYED),
                CLOCK_IDM_TIMER_RESTART, 
                GetLocalizedString(L"重新开始", L"Start Over"));
+    
+    /** Dynamic text based on window visibility */
+    const wchar_t* visibilityText = IsWindowVisible(hwnd) ?
+        GetLocalizedString(L"隐藏窗口", L"Hide Window") :
+        GetLocalizedString(L"显示窗口", L"Show Window");
+    
+    AppendMenuW(hTimerManageMenu, MF_STRING, CLOCK_IDC_TOGGLE_VISIBILITY, visibilityText);
     
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimerManageMenu,
                GetLocalizedString(L"计时管理", L"Timer Control"));
