@@ -7,6 +7,7 @@
 #include <shellapi.h>
 #include <stdio.h>
 #include <string.h>
+#include "../include/log.h"
 #include "../include/language.h"
 #include "../include/tray_menu.h"
 #include "../include/font.h"
@@ -367,6 +368,52 @@ void ShowColorMenu(HWND hwnd) {
     /** Helper function to recursively build font submenus */
     int g_advancedFontId = 2000; /** Global counter for font IDs */
     
+    /** Helper function to scan for font files using ANSI API as fallback */
+    int ScanFontFolderAnsi(const char* folderPath, HMENU parentMenu, int* fontId) {
+        WriteLog(LOG_LEVEL_DEBUG, "ScanFontFolderAnsi: Starting ANSI scan of folder '%s'", folderPath);
+
+        char searchPath[MAX_PATH];
+        snprintf(searchPath, MAX_PATH, "%s\\*.*", folderPath);
+
+        WIN32_FIND_DATAA findData;
+        HANDLE hFind = FindFirstFileA(searchPath, &findData);
+        int folderStatus = 0;
+        int fontCount = 0;
+
+        if (hFind != INVALID_HANDLE_VALUE) {
+            do {
+                if (strcmp(findData.cFileName, ".") == 0 || strcmp(findData.cFileName, "..") == 0) {
+                    continue;
+                }
+
+                if (!(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+                    char* ext = strrchr(findData.cFileName, '.');
+                    if (ext && (_stricmp(ext, ".ttf") == 0 || _stricmp(ext, ".otf") == 0)) {
+                        WriteLog(LOG_LEVEL_DEBUG, "ScanFontFolderAnsi: Found font file '%s'", findData.cFileName);
+
+                        /** Convert to wide char for menu display */
+                        wchar_t wDisplayName[MAX_PATH];
+                        MultiByteToWideChar(CP_ACP, 0, findData.cFileName, -1, wDisplayName, MAX_PATH);
+
+                        /** Remove extension */
+                        wchar_t* dotPos = wcsrchr(wDisplayName, L'.');
+                        if (dotPos) *dotPos = L'\0';
+
+                        AppendMenuW(parentMenu, MF_STRING, (*fontId)++, wDisplayName);
+                        folderStatus = 1;
+                        fontCount++;
+                    }
+                }
+            } while (FindNextFileA(hFind, &findData));
+            FindClose(hFind);
+        } else {
+             WriteLog(LOG_LEVEL_WARNING, "ScanFontFolderAnsi: FindFirstFileA failed for path '%s', error: %lu", searchPath, GetLastError());
+        }
+
+        WriteLog(LOG_LEVEL_DEBUG, "ScanFontFolderAnsi: Found %d font files, status: %d", fontCount, folderStatus);
+        return folderStatus;
+    }
+    
     /** Recursive function to scan folder and create submenus */
     /** Returns: 0 = no content, 1 = has content but no current font, 2 = contains current font */
     int ScanFontFolder(const char* folderPath, HMENU parentMenu, int* fontId) {
@@ -504,7 +551,28 @@ void ShowColorMenu(HWND hwnd) {
             g_advancedFontId = 2000; /** Reset global font ID counter */
             
             /** Use recursive function to scan all folders and subfolders directly in main font menu */
+            /** Try Unicode scan first, fallback to ANSI if needed */
             int fontFolderStatus = ScanFontFolder(fontsFolderPath, hFontSubMenu, &g_advancedFontId);
+
+            /** If Unicode scan failed, try ANSI scan as fallback */
+            if (fontFolderStatus == 0) {
+                WriteLog(LOG_LEVEL_INFO, "Unicode scan found no fonts, trying ANSI scan as fallback...");
+                fontFolderStatus = ScanFontFolderAnsi(fontsFolderPath, hFontSubMenu, &g_advancedFontId);
+            }
+
+            /** Additional debug: manually check some known font files */
+            if (fontFolderStatus == 0) {
+                WriteLog(LOG_LEVEL_INFO, "Both scans failed, manually checking known font files...");
+                char testFontPath[MAX_PATH];
+                snprintf(testFontPath, MAX_PATH, "%s\\Wallpoet Essence.ttf", fontsFolderPath);
+                DWORD attribs = GetFileAttributesA(testFontPath);
+                if (attribs != INVALID_FILE_ATTRIBUTES) {
+                    WriteLog(LOG_LEVEL_WARNING, "Manual check: Wallpoet Essence.ttf EXISTS but scan failed to find it!");
+                } else {
+                    WriteLog(LOG_LEVEL_INFO, "Manual check: Wallpoet Essence.ttf does not exist");
+                }
+            }
+            WriteLog(LOG_LEVEL_INFO, "Font folder scan result: %d (0=no content, 1=has content, 2=contains current font)", fontFolderStatus);
             
             /** Add browse option if no fonts found or as additional option */
             if (fontFolderStatus == 0) {
