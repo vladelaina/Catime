@@ -2007,70 +2007,12 @@ void WriteConfigPomodoroTimeOptions(int* times, int count) {
  */
 void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodoro_msg, const char* cycle_complete_msg) {
     char config_path[MAX_PATH];
-    char temp_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    snprintf(temp_path, MAX_PATH, "%s.tmp", config_path);
     
-    FILE *source_file, *temp_file;
-    
-    source_file = fopen(config_path, "r, ccs=UTF-8");
-    temp_file = fopen(temp_path, "w, ccs=UTF-8");
-    
-    if (!source_file || !temp_file) {
-        if (source_file) fclose(source_file);
-        if (temp_file) fclose(temp_file);
-        return;
-    }
-    
-    char line[1024];
-    BOOL timeoutFound = FALSE;
-    BOOL pomodoroFound = FALSE;
-    BOOL cycleFound = FALSE;
-    
-    /** Process each line, updating message entries */
-    while (fgets(line, sizeof(line), source_file)) {
-        /** Strip trailing newlines for proper processing */
-        size_t len = strlen(line);
-        if (len > 0 && (line[len-1] == '\n' || line[len-1] == '\r')) {
-            line[--len] = '\0';
-            if (len > 0 && line[len-1] == '\r')
-                line[--len] = '\0';
-        }
-        
-        if (strncmp(line, "CLOCK_TIMEOUT_MESSAGE_TEXT=", 27) == 0) {
-            fprintf(temp_file, "CLOCK_TIMEOUT_MESSAGE_TEXT=%s\n", timeout_msg);
-            timeoutFound = TRUE;
-        } else if (strncmp(line, "POMODORO_TIMEOUT_MESSAGE_TEXT=", 30) == 0) {
-            fprintf(temp_file, "POMODORO_TIMEOUT_MESSAGE_TEXT=%s\n", pomodoro_msg);
-            pomodoroFound = TRUE;
-        } else if (strncmp(line, "POMODORO_CYCLE_COMPLETE_TEXT=", 29) == 0) {
-            fprintf(temp_file, "POMODORO_CYCLE_COMPLETE_TEXT=%s\n", cycle_complete_msg);
-            cycleFound = TRUE;
-        } else {
-            /** Copy unchanged line */
-            fprintf(temp_file, "%s\n", line);
-        }
-    }
-    
-    /** Add missing message entries */
-    if (!timeoutFound) {
-        fprintf(temp_file, "CLOCK_TIMEOUT_MESSAGE_TEXT=%s\n", timeout_msg);
-    }
-    
-    if (!pomodoroFound) {
-        fprintf(temp_file, "POMODORO_TIMEOUT_MESSAGE_TEXT=%s\n", pomodoro_msg);
-    }
-    
-    if (!cycleFound) {
-        fprintf(temp_file, "POMODORO_CYCLE_COMPLETE_TEXT=%s\n", cycle_complete_msg);
-    }
-    
-    fclose(source_file);
-    fclose(temp_file);
-    
-    /** Replace original with updated config */
-    remove(config_path);
-    rename(temp_path, config_path);
+    /** Use standard WriteIniString for consistent encoding handling */
+    WriteIniString(INI_SECTION_NOTIFICATION, "CLOCK_TIMEOUT_MESSAGE_TEXT", timeout_msg, config_path);
+    WriteIniString(INI_SECTION_NOTIFICATION, "POMODORO_TIMEOUT_MESSAGE_TEXT", pomodoro_msg, config_path);
+    WriteIniString(INI_SECTION_NOTIFICATION, "POMODORO_CYCLE_COMPLETE_TEXT", cycle_complete_msg, config_path);
     
     /** Update global message variables immediately */
     strncpy(CLOCK_TIMEOUT_MESSAGE_TEXT, timeout_msg, sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT) - 1);
@@ -2085,119 +2027,22 @@ void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodo
 
 
 /**
- * @brief Read notification message texts from config using low-level file I/O
- * Uses Windows API for UTF-8 BOM handling and manual line parsing
+ * @brief Read notification message texts from config using standard Windows API
+ * This ensures consistent encoding handling with other configuration items
  */
 void ReadNotificationMessagesConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
 
-    /** Open config file using Unicode-aware Windows API */
-    wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+    /** Use standard ReadIniString for consistent encoding handling */
+    ReadIniString(INI_SECTION_NOTIFICATION, "CLOCK_TIMEOUT_MESSAGE_TEXT", "时间到啦！", 
+                 CLOCK_TIMEOUT_MESSAGE_TEXT, sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT), config_path);
     
-    HANDLE hFile = CreateFileW(
-        wconfig_path,
-        GENERIC_READ,
-        FILE_SHARE_READ,
-        NULL,
-        OPEN_EXISTING,
-        FILE_ATTRIBUTE_NORMAL,
-        NULL
-    );
+    ReadIniString(INI_SECTION_NOTIFICATION, "POMODORO_TIMEOUT_MESSAGE_TEXT", "番茄钟时间到！", 
+                 POMODORO_TIMEOUT_MESSAGE_TEXT, sizeof(POMODORO_TIMEOUT_MESSAGE_TEXT), config_path);
     
-    if (hFile == INVALID_HANDLE_VALUE) {
-        /** Config file not found, use defaults */
-        return;
-    }
-
-    /** Check for UTF-8 BOM and skip if present */
-    char bom[3];
-    DWORD bytesRead;
-    ReadFile(hFile, bom, 3, &bytesRead, NULL);
-    
-    if (bytesRead != 3 || bom[0] != 0xEF || bom[1] != 0xBB || bom[2] != 0xBF) {
-        /** No BOM found, reset to beginning */
-        SetFilePointer(hFile, 0, NULL, FILE_BEGIN);
-    }
-    
-    char line[1024];
-    BOOL timeoutMsgFound = FALSE;
-    BOOL pomodoroTimeoutMsgFound = FALSE;
-    BOOL cycleCompleteMsgFound = FALSE;
-    
-    /** Manual line-by-line parsing for UTF-8 support */
-    BOOL readingLine = TRUE;
-    int pos = 0;
-    
-    while (readingLine) {
-        /** Read one line character by character */
-        bytesRead = 0;
-        pos = 0;
-        memset(line, 0, sizeof(line));
-        
-        while (TRUE) {
-            char ch;
-            ReadFile(hFile, &ch, 1, &bytesRead, NULL);
-            
-            if (bytesRead == 0) {
-                readingLine = FALSE;
-                break;
-            }
-            
-            if (ch == '\n') {
-                break;
-            }
-            
-            /** Skip carriage returns, keep other characters */
-            if (ch != '\r') {
-                line[pos++] = ch;
-                if (pos >= sizeof(line) - 1) break;
-            }
-        }
-        
-        line[pos] = '\0';
-        
-        /** Skip empty lines at end of file */
-        if (pos == 0 && !readingLine) {
-            break;
-        }
-        
-        /** Parse notification message configuration lines */
-        if (strncmp(line, "CLOCK_TIMEOUT_MESSAGE_TEXT=", 27) == 0) {
-            strncpy(CLOCK_TIMEOUT_MESSAGE_TEXT, line + 27, sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT) - 1);
-            CLOCK_TIMEOUT_MESSAGE_TEXT[sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT) - 1] = '\0';
-            timeoutMsgFound = TRUE;
-        } 
-        else if (strncmp(line, "POMODORO_TIMEOUT_MESSAGE_TEXT=", 30) == 0) {
-            strncpy(POMODORO_TIMEOUT_MESSAGE_TEXT, line + 30, sizeof(POMODORO_TIMEOUT_MESSAGE_TEXT) - 1);
-            POMODORO_TIMEOUT_MESSAGE_TEXT[sizeof(POMODORO_TIMEOUT_MESSAGE_TEXT) - 1] = '\0';
-            pomodoroTimeoutMsgFound = TRUE;
-        }
-        else if (strncmp(line, "POMODORO_CYCLE_COMPLETE_TEXT=", 29) == 0) {
-            strncpy(POMODORO_CYCLE_COMPLETE_TEXT, line + 29, sizeof(POMODORO_CYCLE_COMPLETE_TEXT) - 1);
-            POMODORO_CYCLE_COMPLETE_TEXT[sizeof(POMODORO_CYCLE_COMPLETE_TEXT) - 1] = '\0';
-            cycleCompleteMsgFound = TRUE;
-        }
-        
-        /** Early exit once all messages are found */
-        if (timeoutMsgFound && pomodoroTimeoutMsgFound && cycleCompleteMsgFound) {
-            break;
-        }
-    }
-    
-    CloseHandle(hFile);
-    
-    /** Set default values for missing configuration entries */
-    if (!timeoutMsgFound) {
-        strcpy(CLOCK_TIMEOUT_MESSAGE_TEXT, "时间到啦！");
-    }
-    if (!pomodoroTimeoutMsgFound) {
-        strcpy(POMODORO_TIMEOUT_MESSAGE_TEXT, "番茄钟时间到！");
-    }
-    if (!cycleCompleteMsgFound) {
-        strcpy(POMODORO_CYCLE_COMPLETE_TEXT, "所有番茄钟循环完成！");
-    }
+    ReadIniString(INI_SECTION_NOTIFICATION, "POMODORO_CYCLE_COMPLETE_TEXT", "所有番茄钟循环完成！", 
+                 POMODORO_CYCLE_COMPLETE_TEXT, sizeof(POMODORO_CYCLE_COMPLETE_TEXT), config_path);
 }
 
 
