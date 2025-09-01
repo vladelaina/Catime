@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "../include/window.h"
+#include "../include/drawing.h"
 #include "audio_player.h"
 
 #define MAX_POMODORO_TIMES 10
@@ -37,6 +38,16 @@ extern BOOL message_shown;
 /** @brief Millisecond accumulator for precise timing */
 static DWORD last_timer_tick = 0;
 static int ms_accumulator = 0;
+
+/**
+ * @brief Reset millisecond accumulator and timer baseline for accurate timing
+ * Should be called when pausing/resuming or restarting timer to prevent time jumps
+ */
+void ResetMillisecondAccumulator(void) {
+    last_timer_tick = GetTickCount();
+    ms_accumulator = 0;
+    ResetTimerMilliseconds();  /** Also reset display milliseconds */
+}
 
 /** @brief Localized timeout message strings */
 extern char CLOCK_TIMEOUT_MESSAGE_TEXT[100];

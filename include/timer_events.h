@@ -18,4 +18,10 @@
  */
 BOOL HandleTimerEvent(HWND hwnd, WPARAM wp);
 
+/**
+ * @brief Reset millisecond accumulator and timer baseline for accurate timing
+ * Should be called when pausing/resuming or restarting timer to prevent time jumps
+ */
+void ResetMillisecondAccumulator(void);
+
 #endif

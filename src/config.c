@@ -3620,6 +3620,10 @@ UINT GetTimerInterval(void) {
 void ResetTimerWithInterval(HWND hwnd) {
     KillTimer(hwnd, 1);
     SetTimer(hwnd, 1, GetTimerInterval(), NULL);
+    
+    /** Initialize millisecond timing when timer restarts */
+    extern void ResetTimerMilliseconds(void);
+    ResetTimerMilliseconds();
 }
 
 /**

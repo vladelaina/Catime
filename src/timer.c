@@ -5,6 +5,8 @@
  */
 #include "../include/timer.h"
 #include "../include/config.h"
+#include "../include/timer_events.h"
+#include "../include/drawing.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -440,6 +442,7 @@ void ResetTimer(void) {
     countup_message_shown = FALSE;
     
     InitializeHighPrecisionTimer();
+    ResetMillisecondAccumulator();  /** Reset millisecond timing on reset */
 }
 
 /**
@@ -447,11 +450,16 @@ void ResetTimer(void) {
  * Reinitializes precision timer baseline when resuming for accurate timing
  */
 void TogglePauseTimer(void) {
+    BOOL was_paused = CLOCK_IS_PAUSED;
     CLOCK_IS_PAUSED = !CLOCK_IS_PAUSED;
     
-    /** Reset timing baseline to prevent time jumps when resuming */
-    if (!CLOCK_IS_PAUSED) {
+    if (CLOCK_IS_PAUSED && !was_paused) {
+        /** Just paused: save current milliseconds for frozen display */
+        PauseTimerMilliseconds();
+    } else if (!CLOCK_IS_PAUSED && was_paused) {
+        /** Just resumed: reset timing baseline to prevent time jumps */
         InitializeHighPrecisionTimer();
+        ResetMillisecondAccumulator();  /** Reset millisecond timing on resume */
     }
 }
 

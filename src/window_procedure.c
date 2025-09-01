@@ -2546,6 +2546,7 @@ void StartDefaultCountDown(HWND hwnd) {
         CLOCK_TOTAL_TIME = CLOCK_DEFAULT_START_TIME;
         countdown_elapsed_time = 0;
         CLOCK_IS_PAUSED = FALSE;
+        ResetMillisecondAccumulator();  /** Reset millisecond timing on new countdown */
         
         if (wasShowingTime) {
             KillTimer(hwnd, 1);
@@ -2637,8 +2638,30 @@ void TogglePauseResume(HWND hwnd) {
     extern void StopNotificationSound(void);
     StopNotificationSound();
     
-    if (!CLOCK_SHOW_CURRENT_TIME) {
+    if (!CLOCK_SHOW_CURRENT_TIME && (CLOCK_COUNT_UP || CLOCK_TOTAL_TIME > 0)) {
+        if (!CLOCK_IS_PAUSED) {
+            /** About to pause: save current milliseconds first */
+            PauseTimerMilliseconds();
+        }
+        
         CLOCK_IS_PAUSED = !CLOCK_IS_PAUSED;
+        
+        if (CLOCK_IS_PAUSED) {
+            /** Record pause timestamp and stop updates */
+            CLOCK_LAST_TIME_UPDATE = time(NULL);
+            KillTimer(hwnd, 1);
+            
+            extern BOOL PauseNotificationSound(void);
+            PauseNotificationSound();
+        } else {
+            /** Resume timer updates and notification sounds */
+            ResetMillisecondAccumulator();  /** Reset millisecond timing on resume */
+            SetTimer(hwnd, 1, GetTimerInterval(), NULL);
+            
+            extern BOOL ResumeNotificationSound(void);
+            ResumeNotificationSound();
+        }
+        
         InvalidateRect(hwnd, NULL, TRUE);
     }
 }
@@ -2669,6 +2692,7 @@ void RestartCurrentTimer(HWND hwnd) {
             elapsed_time = 0;
         }
         CLOCK_IS_PAUSED = FALSE;
+        ResetMillisecondAccumulator();  /** Reset millisecond timing on restart */
         InvalidateRect(hwnd, NULL, TRUE);
     }
 }
@@ -2703,6 +2727,7 @@ void StartQuickCountdown1(HWND hwnd) {
         CLOCK_TOTAL_TIME = time_options[0];
         countdown_elapsed_time = 0;
         CLOCK_IS_PAUSED = FALSE;
+        ResetMillisecondAccumulator();  /** Reset millisecond timing on new countdown */
         
         if (wasShowingTime) {
             KillTimer(hwnd, 1);
@@ -2745,6 +2770,7 @@ void StartQuickCountdown2(HWND hwnd) {
         CLOCK_TOTAL_TIME = time_options[1];
         countdown_elapsed_time = 0;
         CLOCK_IS_PAUSED = FALSE;
+        ResetMillisecondAccumulator();  /** Reset millisecond timing on new countdown */
         
         if (wasShowingTime) {
             KillTimer(hwnd, 1);
@@ -2787,6 +2813,7 @@ void StartQuickCountdown3(HWND hwnd) {
         CLOCK_TOTAL_TIME = time_options[2];
         countdown_elapsed_time = 0;
         CLOCK_IS_PAUSED = FALSE;
+        ResetMillisecondAccumulator();  /** Reset millisecond timing on new countdown */
         
         if (wasShowingTime) {
             KillTimer(hwnd, 1);
@@ -2834,6 +2861,7 @@ void StartQuickCountdownByIndex(HWND hwnd, int index) {
         CLOCK_TOTAL_TIME = time_options[zeroBased];
         countdown_elapsed_time = 0;
         CLOCK_IS_PAUSED = FALSE;
+        ResetMillisecondAccumulator();  /** Reset millisecond timing on new countdown */
 
         if (wasShowingTime) {
             KillTimer(hwnd, 1);

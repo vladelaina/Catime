@@ -386,6 +386,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             return 0;
         }
         LOG_INFO("Timer set successfully");
+        
+        /** Initialize millisecond timing for display */
+        extern void ResetTimerMilliseconds(void);
+        ResetTimerMilliseconds();
 
         LOG_INFO("Setting font path check timer...");
         if (SetTimer(hwnd, 1003, 2000, NULL) == 0) {

@@ -10,6 +10,7 @@
 #include <stdio.h>
 
 #include "../include/timer.h"
+#include "../include/timer_events.h"
 #include "../include/window.h"
 #include "../include/window_procedure.h"
 #include "../resource/resource.h"
@@ -340,6 +341,7 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
 	KillTimer(hwnd, 1);
 	CLOCK_TOTAL_TIME = total_seconds;
 	countdown_elapsed_time = 0;
+	ResetMillisecondAccumulator();  /** Reset millisecond timing on new countdown */
 	elapsed_time = 0;
 	message_shown = FALSE;
 	countdown_message_shown = FALSE;

@@ -36,15 +36,55 @@ int GetCurrentMilliseconds(void) {
     return st.wMilliseconds;
 }
 
+/** @brief Timer-based millisecond tracking */
+static DWORD timer_start_tick = 0;
+static BOOL timer_ms_initialized = FALSE;
+static int paused_milliseconds = 0;
+
+/**
+ * @brief Reset timer-based millisecond tracking
+ * Should be called when timer starts, resumes, or resets
+ */
+void ResetTimerMilliseconds(void) {
+    timer_start_tick = GetTickCount();
+    timer_ms_initialized = TRUE;
+    paused_milliseconds = 0;
+}
+
+/**
+ * @brief Save current milliseconds when pausing
+ * Should be called when timer is paused to freeze the display
+ */
+void PauseTimerMilliseconds(void) {
+    if (timer_ms_initialized) {
+        DWORD current_tick = GetTickCount();
+        DWORD elapsed_ms = current_tick - timer_start_tick;
+        paused_milliseconds = (int)(elapsed_ms % 1000);
+    }
+}
+
 /**
  * @brief Get elapsed milliseconds for timer modes
  * @return Current milliseconds component for timer display
  */
 int GetElapsedMillisecondsComponent(void) {
-    /** For timer modes, use current system milliseconds for smooth animation */
-    SYSTEMTIME st;
-    GetLocalTime(&st);
-    return st.wMilliseconds;
+    /** If timer is paused, return frozen milliseconds */
+    if (CLOCK_IS_PAUSED) {
+        return paused_milliseconds;
+    }
+    
+    /** Initialize timer milliseconds on first call */
+    if (!timer_ms_initialized) {
+        ResetTimerMilliseconds();
+        return 0;
+    }
+    
+    /** Calculate elapsed milliseconds since timer start/resume */
+    DWORD current_tick = GetTickCount();
+    DWORD elapsed_ms = current_tick - timer_start_tick;
+    
+    /** Return just the millisecond component (0-999) */
+    return (int)(elapsed_ms % 1000);
 }
 
 /**
