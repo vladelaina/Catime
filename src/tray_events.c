@@ -14,6 +14,7 @@
 #include "../resource/resource.h"
 
 extern void ReadTimeoutActionFromConfig(void);
+extern UINT GetTimerInterval(void);
 
 /**
  * @brief Handle mouse interactions with system tray icon
@@ -77,7 +78,7 @@ void RestartTimer(HWND hwnd) {
             countdown_message_shown = FALSE;
             CLOCK_IS_PAUSED = FALSE;
             KillTimer(hwnd, 1);
-            SetTimer(hwnd, 1, 1000, NULL);
+            SetTimer(hwnd, 1, GetTimerInterval(), NULL);
         }
     } else {
         /** Reset countup timer (always valid) */

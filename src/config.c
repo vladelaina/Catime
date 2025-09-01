@@ -62,6 +62,10 @@ TimeFormatType PREVIEW_TIME_FORMAT = TIME_FORMAT_DEFAULT;
 /** @brief Milliseconds display setting */
 BOOL CLOCK_SHOW_MILLISECONDS = FALSE;
 
+/** @brief Milliseconds preview variables */
+BOOL IS_MILLISECONDS_PREVIEWING = FALSE;
+BOOL PREVIEW_SHOW_MILLISECONDS = FALSE;
+
 
 /**
  * @brief Read string value from INI file with Unicode support
@@ -3593,6 +3597,23 @@ void WriteConfigTimeFormat(TimeFormatType format) {
 void WriteConfigShowMilliseconds(BOOL showMilliseconds) {
     CLOCK_SHOW_MILLISECONDS = showMilliseconds;
     WriteConfigKeyValue("CLOCK_SHOW_MILLISECONDS", showMilliseconds ? "TRUE" : "FALSE");
+}
+
+/**
+ * @brief Get appropriate timer interval based on milliseconds display setting
+ * @return Timer interval in milliseconds (1ms if showing milliseconds, 1000ms otherwise)
+ */
+UINT GetTimerInterval(void) {
+    return CLOCK_SHOW_MILLISECONDS ? 1 : 1000;
+}
+
+/**
+ * @brief Reset timer with appropriate interval based on milliseconds display setting
+ * @param hwnd Window handle
+ */
+void ResetTimerWithInterval(HWND hwnd) {
+    KillTimer(hwnd, 1);
+    SetTimer(hwnd, 1, GetTimerInterval(), NULL);
 }
 
 /**
