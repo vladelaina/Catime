@@ -13,6 +13,7 @@
 #include "../include/log.h"
 #include "../include/language.h"
 #include "../include/dialog_language.h"
+#include "../include/dialog_procedure.h"
 #include "../resource/resource.h"
 
 #pragma comment(lib, "wininet.lib")
@@ -158,6 +159,9 @@ INT_PTR CALLBACK ExitMsgDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lP
             const wchar_t* titleText = GetLocalizedString(L"Catime - 更新提示", L"Catime - Update Notice");
             SetWindowTextW(hwndDlg, titleText);
             
+            /** Move dialog to primary screen */
+            MoveDialogToPrimaryScreen(hwndDlg);
+            
             return TRUE;
         }
         
@@ -240,6 +244,10 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                 ShowWindow(GetDlgItem(hwndDlg, IDNO), SW_SHOW);
                 ShowWindow(GetDlgItem(hwndDlg, IDOK), SW_HIDE);
             }
+            
+            /** Move dialog to primary screen */
+            MoveDialogToPrimaryScreen(hwndDlg);
+            
             return TRUE;
         }
         
@@ -286,6 +294,10 @@ INT_PTR CALLBACK UpdateErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARA
             if (errorMsg) {
                 SetDlgItemTextW(hwndDlg, IDC_UPDATE_ERROR_TEXT, errorMsg);
             }
+            
+            /** Move dialog to primary screen */
+            MoveDialogToPrimaryScreen(hwndDlg);
+            
             return TRUE;
         }
         
@@ -331,6 +343,10 @@ INT_PTR CALLBACK NoUpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM l
                 
                 SetDlgItemTextW(hwndDlg, IDC_NO_UPDATE_TEXT, fullMessage);
             }
+            
+            /** Move dialog to primary screen */
+            MoveDialogToPrimaryScreen(hwndDlg);
+            
             return TRUE;
         }
         

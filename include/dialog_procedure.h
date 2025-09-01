@@ -103,6 +103,12 @@ void ShowNotificationSettingsDialog(HWND hwndParent);
  */
 INT_PTR ShowFontLicenseDialog(HWND hwndParent);
 
+/**
+ * @brief Move dialog to the center of the primary screen
+ * @param hwndDlg Dialog window handle
+ */
+void MoveDialogToPrimaryScreen(HWND hwndDlg);
+
 /** @brief Global handle to current input dialog */
 extern HWND g_hwndInputDialog;
 

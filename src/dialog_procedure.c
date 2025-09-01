@@ -97,6 +97,45 @@ LRESULT APIENTRY EditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
     return CallWindowProc(wpOrigEditProc, hwnd, msg, wParam, lParam);
 }
 
+/**
+ * @brief Move dialog to the center of the primary screen
+ * @param hwndDlg Dialog window handle
+ */
+void MoveDialogToPrimaryScreen(HWND hwndDlg) {
+    if (!hwndDlg || !IsWindow(hwndDlg)) {
+        return;
+    }
+    
+    // Get primary monitor info
+    HMONITOR hPrimaryMonitor = MonitorFromPoint((POINT){0, 0}, MONITOR_DEFAULTTOPRIMARY);
+    MONITORINFO mi = {0};
+    mi.cbSize = sizeof(MONITORINFO);
+    
+    if (!GetMonitorInfo(hPrimaryMonitor, &mi)) {
+        return;
+    }
+    
+    // Get dialog dimensions
+    RECT dialogRect;
+    if (!GetWindowRect(hwndDlg, &dialogRect)) {
+        return;
+    }
+    
+    int dialogWidth = dialogRect.right - dialogRect.left;
+    int dialogHeight = dialogRect.bottom - dialogRect.top;
+    
+    // Calculate center position on primary monitor
+    int primaryWidth = mi.rcMonitor.right - mi.rcMonitor.left;
+    int primaryHeight = mi.rcMonitor.bottom - mi.rcMonitor.top;
+    
+    int newX = mi.rcMonitor.left + (primaryWidth - dialogWidth) / 2;
+    int newY = mi.rcMonitor.top + (primaryHeight - dialogHeight) / 2;
+    
+    // Move dialog to center of primary screen
+    SetWindowPos(hwndDlg, HWND_TOPMOST, newX, newY, 0, 0, 
+                 SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+}
+
 INT_PTR CALLBACK ErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 
 /**
@@ -126,6 +165,10 @@ INT_PTR CALLBACK ErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 GetLocalizedString(L"输入格式无效，请重新输入。", L"Invalid input format, please try again."));
 
             SetWindowTextW(hwndDlg, GetLocalizedString(L"错误", L"Error"));
+            
+            /** Move dialog to primary screen */
+            MoveDialogToPrimaryScreen(hwndDlg);
+            
             return TRUE;
 
         case WM_COMMAND:
@@ -158,8 +201,9 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 
             g_hwndInputDialog = hwndDlg;
 
-            /** Set dialog as topmost and create custom brushes for styling */
+            /** Set dialog as topmost and move to primary screen */
             SetWindowPos(hwndDlg, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+            MoveDialogToPrimaryScreen(hwndDlg);
             hBackgroundBrush = CreateSolidBrush(RGB(0xF3, 0xF3, 0xF3));
             hEditBrush = CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF));
             hButtonBrush = CreateSolidBrush(RGB(0xFD, 0xFD, 0xFD));
@@ -626,6 +670,9 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
 
             SetDlgItemTextW(hwndDlg, IDC_BUILD_DATE, timeStr);
 
+            /** Move dialog to primary screen */
+            MoveDialogToPrimaryScreen(hwndDlg);
+
             return TRUE;
         }
 
@@ -886,6 +933,9 @@ INT_PTR CALLBACK PomodoroLoopDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPAR
             wpOrigLoopEditProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, 
                                                           (LONG_PTR)LoopEditSubclassProc);
             
+            /** Move dialog to primary screen */
+            MoveDialogToPrimaryScreen(hwndDlg);
+            
             return FALSE;
         }
 
@@ -1010,6 +1060,9 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
             /** Set focus and select all text for easy editing */
             SetFocus(hwndEdit);
             SendMessage(hwndEdit, EM_SETSEL, 0, -1);
+            
+            /** Move dialog to primary screen */
+            MoveDialogToPrimaryScreen(hwndDlg);
             
             return FALSE;
         }
@@ -1192,6 +1245,9 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
             /** Set focus and select all text for easy editing */
             SetFocus(hwndEdit);
             SendMessage(hwndEdit, EM_SETSEL, 0, -1);
+            
+            /** Move dialog to primary screen */
+            MoveDialogToPrimaryScreen(hwndDlg);
             
             return FALSE;
         }
@@ -1416,6 +1472,9 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
         case WM_INITDIALOG: {
             /** Make dialog topmost for visibility */
             SetWindowPos(hwndDlg, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+            
+            /** Move dialog to primary screen */
+            MoveDialogToPrimaryScreen(hwndDlg);
 
             /** Create custom brushes for dialog appearance */
             hBackgroundBrush = CreateSolidBrush(RGB(0xF3, 0xF3, 0xF3));
@@ -1587,6 +1646,9 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
         case WM_INITDIALOG: {
             /** Make dialog topmost for visibility */
             SetWindowPos(hwndDlg, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+            
+            /** Move dialog to primary screen */
+            MoveDialogToPrimaryScreen(hwndDlg);
             
             /** Create custom brushes for dialog appearance */
             hBackgroundBrush = CreateSolidBrush(RGB(0xF3, 0xF3, 0xF3));
@@ -1980,6 +2042,9 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             
             /** Store dialog handle for callback reference */
             g_hwndNotificationSettingsDialog = hwndDlg;
+            
+            /** Move dialog to primary screen */
+            MoveDialogToPrimaryScreen(hwndDlg);
             
             return TRUE;
         }
@@ -2481,6 +2546,9 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, L
             /** Set button text */
             SetDlgItemTextW(hwndDlg, IDC_FONT_LICENSE_AGREE_BTN, GetLocalizedString(L"同意", L"Agree"));
             SetDlgItemTextW(hwndDlg, IDC_FONT_LICENSE_CANCEL_BTN, GetLocalizedString(L"取消", L"Cancel"));
+            
+            /** Move dialog to primary screen */
+            MoveDialogToPrimaryScreen(hwndDlg);
             
             return TRUE;
         }

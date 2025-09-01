@@ -125,6 +125,10 @@ INT_PTR CALLBACK InputBoxProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
             SendDlgItemMessageW(hwndDlg, IDC_EDIT_INPUT, EM_SETSEL, 0, -1);
             
             SetFocus(GetDlgItem(hwndDlg, IDC_EDIT_INPUT));
+            
+            /** Move dialog to primary screen */
+            MoveDialogToPrimaryScreen(hwndDlg);
+            
             return FALSE;
         }
         

@@ -762,6 +762,10 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                     SetWindowTextW(hwndEdit, wcolor);
                 }
             }
+            
+            /** Move dialog to primary screen */
+            MoveDialogToPrimaryScreen(hwndDlg);
+            
             return TRUE;
         }
 

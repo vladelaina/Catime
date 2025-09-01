@@ -15,6 +15,7 @@
 #include "../resource/resource.h"
 #include "../include/notification.h"
 #include "../include/audio_player.h"
+#include "../include/dialog_procedure.h"
 
 extern int elapsed_time;
 extern int message_shown;
@@ -64,6 +65,10 @@ static INT_PTR CALLBACK CliHelpDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
 		SendMessage(hwndDlg, DM_SETDEFID, (WPARAM)IDOK, 0);
 		HWND hOk = GetDlgItem(hwndDlg, IDOK);
 		if (hOk) SetFocus(hOk);
+		
+		/** Move dialog to primary screen */
+		MoveDialogToPrimaryScreen(hwndDlg);
+		
 		return FALSE;
 	case WM_COMMAND:
 		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {

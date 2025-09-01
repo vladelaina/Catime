@@ -24,6 +24,7 @@
 #include "../include/language.h"
 #include "../include/config.h"
 #include "../include/window_procedure.h"
+#include "../include/dialog_procedure.h"
 #include "../resource/resource.h"
 
 /** @brief Hotkey modifier flag definitions for compatibility */
@@ -267,6 +268,9 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
         case WM_INITDIALOG: {
             /** Set dialog as topmost window */
             SetWindowPos(hwndDlg, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+            
+            /** Move dialog to primary screen */
+            MoveDialogToPrimaryScreen(hwndDlg);
 
             /** Set localized dialog title */
             SetWindowTextW(hwndDlg, GetLocalizedString(L"热键设置", L"Hotkey Settings"));
