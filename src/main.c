@@ -379,13 +379,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         }
 
         LOG_INFO("Setting main timer...");
-        if (SetTimer(hwnd, 1, 1000, NULL) == 0) {
+        /** Use appropriate timer interval based on milliseconds display setting from config */
+        extern UINT GetTimerInterval(void);
+        UINT interval = GetTimerInterval();
+        if (SetTimer(hwnd, 1, interval, NULL) == 0) {
             DWORD timerError = GetLastError();
             LOG_ERROR("Timer creation failed, error code: %lu", timerError);
             MessageBoxW(NULL, L"Timer Creation Failed!", L"Error", MB_ICONEXCLAMATION | MB_OK);
             return 0;
         }
-        LOG_INFO("Timer set successfully");
+        LOG_INFO("Timer set successfully with %ums interval", interval);
         
         /** Initialize millisecond timing for display */
         extern void ResetTimerMilliseconds(void);

@@ -366,6 +366,7 @@ void CreateDefaultConfig(const char* config_path) {
     WriteIniString(INI_SECTION_TIMER, "CLOCK_USE_24HOUR", "FALSE", config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_SHOW_SECONDS", "FALSE", config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_TIME_FORMAT", "DEFAULT", config_path);
+    WriteIniString(INI_SECTION_TIMER, "CLOCK_SHOW_MILLISECONDS", "FALSE", config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_TIME_OPTIONS", "1500,600,300", config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_TEXT", "0", config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_ACTION", "MESSAGE", config_path);
@@ -1775,6 +1776,7 @@ void WriteConfig(const char* config_path) {
             break;
     }
     WriteIniString(INI_SECTION_TIMER, "CLOCK_TIME_FORMAT", timeFormatStr, config_path);
+    WriteIniString(INI_SECTION_TIMER, "CLOCK_SHOW_MILLISECONDS", CLOCK_SHOW_MILLISECONDS ? "TRUE" : "FALSE", config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_TEXT", CLOCK_TIMEOUT_TEXT, config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_ACTION", timeoutActionStr, config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_FILE", CLOCK_TIMEOUT_FILE_PATH, config_path);
@@ -3334,6 +3336,7 @@ void WriteConfigKeyValue(const char* key, const char* value) {
            strncmp(key, "CLOCK_USE_24HOUR", 16) == 0 ||
            strncmp(key, "CLOCK_SHOW_SECONDS", 18) == 0 ||
            strncmp(key, "CLOCK_TIME_FORMAT", 17) == 0 ||
+           strncmp(key, "CLOCK_SHOW_MILLISECONDS", 23) == 0 ||
            strncmp(key, "CLOCK_TIME_OPTIONS", 18) == 0 ||
            strncmp(key, "STARTUP_MODE", 12) == 0 ||
            strncmp(key, "CLOCK_TIMEOUT_TEXT", 18) == 0 ||
