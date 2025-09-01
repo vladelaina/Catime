@@ -52,7 +52,7 @@ void PauseResumeTimer(HWND hwnd) {
             PauseNotificationSound();
         } else {
             /** Resume timer updates and notification sounds */
-            SetTimer(hwnd, 1, 1000, NULL);
+            SetTimer(hwnd, 1, GetTimerInterval(), NULL);
             
             extern BOOL ResumeNotificationSound(void);
             ResumeNotificationSound();
@@ -85,7 +85,7 @@ void RestartTimer(HWND hwnd) {
         countup_elapsed_time = 0;
         CLOCK_IS_PAUSED = FALSE;
         KillTimer(hwnd, 1);
-        SetTimer(hwnd, 1, 1000, NULL);
+        SetTimer(hwnd, 1, GetTimerInterval(), NULL);
     }
     
     InvalidateRect(hwnd, NULL, TRUE);

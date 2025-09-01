@@ -2221,6 +2221,10 @@ refresh_window:
                         /** Handle milliseconds preview */
                         PREVIEW_SHOW_MILLISECONDS = !CLOCK_SHOW_MILLISECONDS;
                         IS_MILLISECONDS_PREVIEWING = TRUE;
+                        
+                        /** Adjust timer frequency for smooth preview */
+                        ResetTimerWithInterval(hwnd);
+                        
                         InvalidateRect(hwnd, NULL, TRUE);
                         return 0;
                     } else {
@@ -2252,7 +2256,13 @@ refresh_window:
                     }
                     IS_COLOR_PREVIEWING = FALSE;
                     IS_TIME_FORMAT_PREVIEWING = FALSE;
-                    IS_MILLISECONDS_PREVIEWING = FALSE;
+                    
+                    /** Reset timer frequency when exiting milliseconds preview */
+                    if (IS_MILLISECONDS_PREVIEWING) {
+                        IS_MILLISECONDS_PREVIEWING = FALSE;
+                        ResetTimerWithInterval(hwnd);
+                    }
+                    
                     InvalidateRect(hwnd, NULL, TRUE);
                 }
             } else if (flags & MF_POPUP) {
@@ -2262,7 +2272,13 @@ refresh_window:
                     }
                     IS_COLOR_PREVIEWING = FALSE;
                     IS_TIME_FORMAT_PREVIEWING = FALSE;
-                    IS_MILLISECONDS_PREVIEWING = FALSE;
+                    
+                    /** Reset timer frequency when exiting milliseconds preview */
+                    if (IS_MILLISECONDS_PREVIEWING) {
+                        IS_MILLISECONDS_PREVIEWING = FALSE;
+                        ResetTimerWithInterval(hwnd);
+                    }
+                    
                     InvalidateRect(hwnd, NULL, TRUE);
                 }
             }
@@ -2277,7 +2293,12 @@ refresh_window:
                 }
                 IS_COLOR_PREVIEWING = FALSE;
                 IS_TIME_FORMAT_PREVIEWING = FALSE;
-                IS_MILLISECONDS_PREVIEWING = FALSE;
+                
+                /** Reset timer frequency when exiting milliseconds preview */
+                if (IS_MILLISECONDS_PREVIEWING) {
+                    IS_MILLISECONDS_PREVIEWING = FALSE;
+                    ResetTimerWithInterval(hwnd);
+                }
                 InvalidateRect(hwnd, NULL, TRUE);
             }
             break;

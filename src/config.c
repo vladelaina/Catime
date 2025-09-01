@@ -3604,6 +3604,12 @@ void WriteConfigShowMilliseconds(BOOL showMilliseconds) {
  * @return Timer interval in milliseconds (1ms if showing milliseconds, 1000ms otherwise)
  */
 UINT GetTimerInterval(void) {
+    /** Check if we're in milliseconds preview mode */
+    if (IS_MILLISECONDS_PREVIEWING && PREVIEW_SHOW_MILLISECONDS) {
+        return 1;  /** Use 1ms for smooth preview */
+    }
+    
+    /** Use actual setting */
     return CLOCK_SHOW_MILLISECONDS ? 1 : 1000;
 }
 
