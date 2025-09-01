@@ -111,10 +111,14 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
 
     /** Format time text based on clock mode */
     if (CLOCK_SHOW_CURRENT_TIME) {
-        /** Display current system time */
-        time_t now = time(NULL);
-        struct tm *tm_info = localtime(&now);
-        int hour = tm_info->tm_hour;
+        /** Display current system time - use GetLocalTime for accurate synchronization */
+        SYSTEMTIME st;
+        GetLocalTime(&st);
+        
+        int hour = st.wHour;
+        int minute = st.wMinute;
+        int second = st.wSecond;
+        int milliseconds = st.wMilliseconds;
         
         /** Convert to 12-hour format if needed */
         if (!CLOCK_USE_24HOUR) {
@@ -131,9 +135,6 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
         /** Determine whether to show milliseconds (preview or current) */
         BOOL showMilliseconds = IS_MILLISECONDS_PREVIEWING ? PREVIEW_SHOW_MILLISECONDS : CLOCK_SHOW_MILLISECONDS;
         
-        /** Get milliseconds for display */
-        int milliseconds = GetCurrentMilliseconds();
-        
         /** Format with or without seconds */
         if (CLOCK_SHOW_SECONDS) {
             if (showMilliseconds) {
@@ -141,15 +142,15 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
                 switch (formatToUse) {
                     case TIME_FORMAT_ZERO_PADDED:
                         swprintf(time_text, 50, L"%02d:%02d:%02d.%03d", 
-                                hour, tm_info->tm_min, tm_info->tm_sec, milliseconds);
+                                hour, minute, second, milliseconds);
                         break;
                     case TIME_FORMAT_FULL_PADDED:
                         swprintf(time_text, 50, L"%02d:%02d:%02d.%03d", 
-                                hour, tm_info->tm_min, tm_info->tm_sec, milliseconds);
+                                hour, minute, second, milliseconds);
                         break;
                     default: // TIME_FORMAT_DEFAULT
                         swprintf(time_text, 50, L"%d:%02d:%02d.%03d", 
-                                hour, tm_info->tm_min, tm_info->tm_sec, milliseconds);
+                                hour, minute, second, milliseconds);
                         break;
                 }
             } else {
@@ -157,33 +158,33 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
                 switch (formatToUse) {
                     case TIME_FORMAT_ZERO_PADDED:
                         swprintf(time_text, 50, L"%02d:%02d:%02d", 
-                                hour, tm_info->tm_min, tm_info->tm_sec);
+                                hour, minute, second);
                         break;
                     case TIME_FORMAT_FULL_PADDED:
                         swprintf(time_text, 50, L"%02d:%02d:%02d", 
-                                hour, tm_info->tm_min, tm_info->tm_sec);
+                                hour, minute, second);
                         break;
                     default: // TIME_FORMAT_DEFAULT
                         swprintf(time_text, 50, L"%d:%02d:%02d", 
-                                hour, tm_info->tm_min, tm_info->tm_sec);
+                                hour, minute, second);
                         break;
                 }
             }
         } else {
-            if (CLOCK_SHOW_MILLISECONDS) {
-                /** Format without seconds but with milliseconds (show as mm:ss.mmm) */
+            if (showMilliseconds) {
+                /** Format without seconds setting but with milliseconds - show seconds for context */
                 switch (formatToUse) {
                     case TIME_FORMAT_ZERO_PADDED:
-                        swprintf(time_text, 50, L"%02d:%02d.%03d", 
-                                hour, tm_info->tm_min, milliseconds);
+                        swprintf(time_text, 50, L"%02d:%02d:%02d.%03d", 
+                                hour, minute, second, milliseconds);
                         break;
                     case TIME_FORMAT_FULL_PADDED:
-                        swprintf(time_text, 50, L"%02d:%02d.%03d", 
-                                hour, tm_info->tm_min, milliseconds);
+                        swprintf(time_text, 50, L"%02d:%02d:%02d.%03d", 
+                                hour, minute, second, milliseconds);
                         break;
                     default: // TIME_FORMAT_DEFAULT
-                        swprintf(time_text, 50, L"%d:%02d.%03d", 
-                                hour, tm_info->tm_min, milliseconds);
+                        swprintf(time_text, 50, L"%d:%02d:%02d.%03d", 
+                                hour, minute, second, milliseconds);
                         break;
                 }
             } else {
@@ -191,15 +192,15 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
                 switch (formatToUse) {
                     case TIME_FORMAT_ZERO_PADDED:
                         swprintf(time_text, 50, L"%02d:%02d", 
-                                hour, tm_info->tm_min);
+                                hour, minute);
                         break;
                     case TIME_FORMAT_FULL_PADDED:
                         swprintf(time_text, 50, L"%02d:%02d", 
-                                hour, tm_info->tm_min);
+                                hour, minute);
                         break;
                     default: // TIME_FORMAT_DEFAULT
                         swprintf(time_text, 50, L"%d:%02d", 
-                                hour, tm_info->tm_min);
+                                hour, minute);
                         break;
                 }
             }
