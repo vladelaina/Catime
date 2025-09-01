@@ -76,15 +76,15 @@ DWORD ReadIniString(const char* section, const char* key, const char* defaultVal
     wchar_t wsection[256], wkey[256], wdefaultValue[1024], wfilePath[MAX_PATH];
     wchar_t wreturnValue[1024];
     
-    MultiByteToWideChar(CP_ACP, 0, section, -1, wsection, 256);
-    MultiByteToWideChar(CP_ACP, 0, key, -1, wkey, 256);
-    MultiByteToWideChar(CP_ACP, 0, defaultValue, -1, wdefaultValue, 1024);
-    MultiByteToWideChar(CP_ACP, 0, filePath, -1, wfilePath, MAX_PATH);
+    MultiByteToWideChar(CP_UTF8, 0, section, -1, wsection, 256);
+    MultiByteToWideChar(CP_UTF8, 0, key, -1, wkey, 256);
+    MultiByteToWideChar(CP_UTF8, 0, defaultValue, -1, wdefaultValue, 1024);
+    MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wfilePath, MAX_PATH);
     
     DWORD result = GetPrivateProfileStringW(wsection, wkey, wdefaultValue, wreturnValue, 1024, wfilePath);
     
-    /** Convert result back to ANSI */
-    WideCharToMultiByte(CP_ACP, 0, wreturnValue, -1, returnValue, returnSize, NULL, NULL);
+    /** Convert result back to UTF-8 */
+    WideCharToMultiByte(CP_UTF8, 0, wreturnValue, -1, returnValue, returnSize, NULL, NULL);
     
     return result;
 }
@@ -103,10 +103,10 @@ BOOL WriteIniString(const char* section, const char* key, const char* value,
 
     wchar_t wsection[256], wkey[256], wvalue[1024], wfilePath[MAX_PATH];
     
-    MultiByteToWideChar(CP_ACP, 0, section, -1, wsection, 256);
-    MultiByteToWideChar(CP_ACP, 0, key, -1, wkey, 256);
-    MultiByteToWideChar(CP_ACP, 0, value, -1, wvalue, 1024);
-    MultiByteToWideChar(CP_ACP, 0, filePath, -1, wfilePath, MAX_PATH);
+    MultiByteToWideChar(CP_UTF8, 0, section, -1, wsection, 256);
+    MultiByteToWideChar(CP_UTF8, 0, key, -1, wkey, 256);
+    MultiByteToWideChar(CP_UTF8, 0, value, -1, wvalue, 1024);
+    MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wfilePath, MAX_PATH);
     
     return WritePrivateProfileStringW(wsection, wkey, wvalue, wfilePath);
 }
@@ -125,9 +125,9 @@ int ReadIniInt(const char* section, const char* key, int defaultValue,
 
     wchar_t wsection[256], wkey[256], wfilePath[MAX_PATH];
     
-    MultiByteToWideChar(CP_ACP, 0, section, -1, wsection, 256);
-    MultiByteToWideChar(CP_ACP, 0, key, -1, wkey, 256);
-    MultiByteToWideChar(CP_ACP, 0, filePath, -1, wfilePath, MAX_PATH);
+    MultiByteToWideChar(CP_UTF8, 0, section, -1, wsection, 256);
+    MultiByteToWideChar(CP_UTF8, 0, key, -1, wkey, 256);
+    MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wfilePath, MAX_PATH);
     
     return GetPrivateProfileIntW(wsection, wkey, defaultValue, wfilePath);
 }
@@ -149,10 +149,10 @@ BOOL WriteIniInt(const char* section, const char* key, int value,
     /** Convert to Unicode for Windows API */
     wchar_t wsection[256], wkey[256], wvalue[32], wfilePath[MAX_PATH];
     
-    MultiByteToWideChar(CP_ACP, 0, section, -1, wsection, 256);
-    MultiByteToWideChar(CP_ACP, 0, key, -1, wkey, 256);
-    MultiByteToWideChar(CP_ACP, 0, valueStr, -1, wvalue, 32);
-    MultiByteToWideChar(CP_ACP, 0, filePath, -1, wfilePath, MAX_PATH);
+    MultiByteToWideChar(CP_UTF8, 0, section, -1, wsection, 256);
+    MultiByteToWideChar(CP_UTF8, 0, key, -1, wkey, 256);
+    MultiByteToWideChar(CP_UTF8, 0, valueStr, -1, wvalue, 32);
+    MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wfilePath, MAX_PATH);
     
     return WritePrivateProfileStringW(wsection, wkey, wvalue, wfilePath);
 }
@@ -173,10 +173,10 @@ BOOL WriteIniBool(const char* section, const char* key, BOOL value,
     /** Convert to Unicode for Windows API */
     wchar_t wsection[256], wkey[256], wvalue[8], wfilePath[MAX_PATH];
     
-    MultiByteToWideChar(CP_ACP, 0, section, -1, wsection, 256);
-    MultiByteToWideChar(CP_ACP, 0, key, -1, wkey, 256);
-    MultiByteToWideChar(CP_ACP, 0, valueStr, -1, wvalue, 8);
-    MultiByteToWideChar(CP_ACP, 0, filePath, -1, wfilePath, MAX_PATH);
+    MultiByteToWideChar(CP_UTF8, 0, section, -1, wsection, 256);
+    MultiByteToWideChar(CP_UTF8, 0, key, -1, wkey, 256);
+    MultiByteToWideChar(CP_UTF8, 0, valueStr, -1, wvalue, 8);
+    MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wfilePath, MAX_PATH);
     
     return WritePrivateProfileStringW(wsection, wkey, wvalue, wfilePath);
 }
@@ -199,15 +199,15 @@ BOOL ReadIniBool(const char* section, const char* key, BOOL defaultValue,
     wchar_t wsection[256], wkey[256], wdefaultValue[8], wfilePath[MAX_PATH];
     wchar_t wvalue[8];
     
-    MultiByteToWideChar(CP_ACP, 0, section, -1, wsection, 256);
-    MultiByteToWideChar(CP_ACP, 0, key, -1, wkey, 256);
-    MultiByteToWideChar(CP_ACP, 0, defaultStr, -1, wdefaultValue, 8);
-    MultiByteToWideChar(CP_ACP, 0, filePath, -1, wfilePath, MAX_PATH);
+    MultiByteToWideChar(CP_UTF8, 0, section, -1, wsection, 256);
+    MultiByteToWideChar(CP_UTF8, 0, key, -1, wkey, 256);
+    MultiByteToWideChar(CP_UTF8, 0, defaultStr, -1, wdefaultValue, 8);
+    MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wfilePath, MAX_PATH);
     
     GetPrivateProfileStringW(wsection, wkey, wdefaultValue, wvalue, 8, wfilePath);
     
-    /** Convert result back to ANSI and compare */
-    WideCharToMultiByte(CP_ACP, 0, wvalue, -1, value, sizeof(value), NULL, NULL);
+    /** Convert result back to UTF-8 and compare */
+    WideCharToMultiByte(CP_UTF8, 0, wvalue, -1, value, sizeof(value), NULL, NULL);
     
     return _stricmp(value, "TRUE") == 0;
 }
@@ -221,7 +221,7 @@ BOOL ReadIniBool(const char* section, const char* key, BOOL defaultValue,
 BOOL FileExists(const char* filePath) {
     /** Convert to Unicode for Windows API */
     wchar_t wfilePath[MAX_PATH];
-    MultiByteToWideChar(CP_ACP, 0, filePath, -1, wfilePath, MAX_PATH);
+    MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wfilePath, MAX_PATH);
     
     return GetFileAttributesW(wfilePath) != INVALID_FILE_ATTRIBUTES;
 }
@@ -2013,8 +2013,8 @@ void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodo
     
     FILE *source_file, *temp_file;
     
-    source_file = fopen(config_path, "r");
-    temp_file = fopen(temp_path, "w");
+    source_file = fopen(config_path, "r, ccs=UTF-8");
+    temp_file = fopen(temp_path, "w, ccs=UTF-8");
     
     if (!source_file || !temp_file) {
         if (source_file) fclose(source_file);
@@ -2094,7 +2094,7 @@ void ReadNotificationMessagesConfig(void) {
 
     /** Open config file using Unicode-aware Windows API */
     wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_ACP, 0, config_path, -1, wconfig_path, MAX_PATH);
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
     
     HANDLE hFile = CreateFileW(
         wconfig_path,
@@ -2211,7 +2211,7 @@ void ReadNotificationTimeoutConfig(void) {
     
 
     wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_ACP, 0, config_path, -1, wconfig_path, MAX_PATH);
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
     
     HANDLE hFile = CreateFileW(
         wconfig_path,
@@ -2366,7 +2366,7 @@ void ReadNotificationOpacityConfig(void) {
     
 
     wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_ACP, 0, config_path, -1, wconfig_path, MAX_PATH);
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
     
     HANDLE hFile = CreateFileW(
         wconfig_path,
@@ -3745,7 +3745,7 @@ void FlushConfigToDisk(void) {
     
     /** Convert to wide character for Windows API */
     wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_ACP, 0, config_path, -1, wconfig_path, MAX_PATH);
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
     
     /** Force flush file system buffers to ensure immediate disk write */
     HANDLE hFile = CreateFileW(wconfig_path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 
