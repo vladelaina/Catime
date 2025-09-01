@@ -117,6 +117,9 @@ extern TimeFormatType CLOCK_TIME_FORMAT;
 extern BOOL IS_TIME_FORMAT_PREVIEWING;
 extern TimeFormatType PREVIEW_TIME_FORMAT;
 
+/** @brief Milliseconds display setting */
+extern BOOL CLOCK_SHOW_MILLISECONDS;
+
 /**
  * @brief Get configuration file path
  * @param path Buffer to store config file path
@@ -479,6 +482,12 @@ const char* GetCurrentFontLicenseVersion(void);
  * @param format Time format type to set
  */
 void WriteConfigTimeFormat(TimeFormatType format);
+
+/**
+ * @brief Write milliseconds display setting to config file
+ * @param showMilliseconds TRUE to show milliseconds, FALSE to hide
+ */
+void WriteConfigShowMilliseconds(BOOL showMilliseconds);
 
 /**
  * @brief Force flush configuration changes to disk immediately

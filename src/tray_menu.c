@@ -39,6 +39,7 @@ extern char CLOCK_TIMEOUT_FILE_PATH[MAX_PATH];
 extern char CLOCK_TIMEOUT_TEXT[50];
 extern BOOL CLOCK_WINDOW_TOPMOST;
 extern TimeFormatType CLOCK_TIME_FORMAT;
+extern BOOL CLOCK_SHOW_MILLISECONDS;
 
 /** @brief Pomodoro technique configuration externals */
 extern int POMODORO_WORK_TIME;
@@ -322,6 +323,14 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hFormatMenu, MF_STRING | (CLOCK_TIME_FORMAT == TIME_FORMAT_FULL_PADDED ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDM_TIME_FORMAT_FULL_PADDED,
                 GetLocalizedString(L"00:09:59格式", L"00:09:59 Format"));
+    
+    /** Add separator line before milliseconds option */
+    AppendMenuW(hFormatMenu, MF_SEPARATOR, 0, NULL);
+    
+    /** Add milliseconds display option */
+    AppendMenuW(hFormatMenu, MF_STRING | (CLOCK_SHOW_MILLISECONDS ? MF_CHECKED : MF_UNCHECKED),
+                CLOCK_IDM_TIME_FORMAT_SHOW_MILLISECONDS,
+                GetLocalizedString(L"显示毫秒", L"Show Milliseconds"));
     
     AppendMenuW(hTimeOptionsMenu, MF_SEPARATOR, 0, NULL);
     

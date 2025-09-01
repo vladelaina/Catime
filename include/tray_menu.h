@@ -44,6 +44,7 @@
 #define CLOCK_IDM_TIME_FORMAT_DEFAULT 194   /**< Default time format 9:59 */
 #define CLOCK_IDM_TIME_FORMAT_ZERO_PADDED 196   /**< Zero-padded format 09:59 */
 #define CLOCK_IDM_TIME_FORMAT_FULL_PADDED 197   /**< Full zero-padded format 00:09:59 */
+#define CLOCK_IDM_TIME_FORMAT_SHOW_MILLISECONDS 198   /**< Show milliseconds in time format */
 
 /** @brief Startup configuration */
 #define CLOCK_IDC_SET_COUNTDOWN_TIME 173   /**< Set default countdown time */

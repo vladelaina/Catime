@@ -46,6 +46,7 @@ extern wchar_t inputText[256];
 extern int elapsed_time;
 extern int message_shown;
 extern TimeFormatType CLOCK_TIME_FORMAT;
+extern BOOL CLOCK_SHOW_MILLISECONDS;
 
 extern void ShowNotification(HWND hwnd, const wchar_t* message);
 extern void PauseMediaPlayback(void);
@@ -1326,6 +1327,12 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 
+                case CLOCK_IDM_TIME_FORMAT_SHOW_MILLISECONDS: {
+                    WriteConfigShowMilliseconds(!CLOCK_SHOW_MILLISECONDS);
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    break;
+                }
+                
                 /** Reset countdown timer to initial state */
                 case CLOCK_IDM_COUNTDOWN_RESET: {
                     extern void StopNotificationSound(void);
@@ -2204,7 +2211,8 @@ refresh_window:
                 /** Handle time format preview on hover */
                 if (menuItem == CLOCK_IDM_TIME_FORMAT_DEFAULT ||
                     menuItem == CLOCK_IDM_TIME_FORMAT_ZERO_PADDED ||
-                    menuItem == CLOCK_IDM_TIME_FORMAT_FULL_PADDED) {
+                    menuItem == CLOCK_IDM_TIME_FORMAT_FULL_PADDED ||
+                    menuItem == CLOCK_IDM_TIME_FORMAT_SHOW_MILLISECONDS) {
                     
                     TimeFormatType previewFormat = TIME_FORMAT_DEFAULT;
                     switch (menuItem) {

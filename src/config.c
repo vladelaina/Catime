@@ -59,6 +59,9 @@ TimeFormatType CLOCK_TIME_FORMAT = TIME_FORMAT_DEFAULT;
 BOOL IS_TIME_FORMAT_PREVIEWING = FALSE;
 TimeFormatType PREVIEW_TIME_FORMAT = TIME_FORMAT_DEFAULT;
 
+/** @brief Milliseconds display setting */
+BOOL CLOCK_SHOW_MILLISECONDS = FALSE;
+
 
 /**
  * @brief Read string value from INI file with Unicode support
@@ -657,6 +660,9 @@ void ReadConfig() {
     } else {
         CLOCK_TIME_FORMAT = TIME_FORMAT_DEFAULT;
     }
+    
+    /** Load milliseconds display setting */
+    CLOCK_SHOW_MILLISECONDS = ReadIniBool(INI_SECTION_TIMER, "CLOCK_SHOW_MILLISECONDS", FALSE, config_path);
     
     /** Parse language string to enum value */
     int languageSetting = APP_LANG_ENGLISH;
@@ -3578,6 +3584,15 @@ void WriteConfigTimeFormat(TimeFormatType format) {
             break;
     }
     WriteConfigKeyValue("CLOCK_TIME_FORMAT", formatStr);
+}
+
+/**
+ * @brief Write milliseconds display setting to config file
+ * @param showMilliseconds TRUE to show milliseconds, FALSE to hide
+ */
+void WriteConfigShowMilliseconds(BOOL showMilliseconds) {
+    CLOCK_SHOW_MILLISECONDS = showMilliseconds;
+    WriteConfigKeyValue("CLOCK_SHOW_MILLISECONDS", showMilliseconds ? "TRUE" : "FALSE");
 }
 
 /**
