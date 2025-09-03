@@ -22,6 +22,8 @@ const uploadArea = document.getElementById('uploadArea');
 const fileInput = document.getElementById('fileInput');
 const fileList = document.getElementById('fileList');
 const fileItems = document.getElementById('fileItems');
+const fileScrollProgress = document.getElementById('fileScrollProgress');
+const fileScrollFill = document.getElementById('fileScrollFill');
 const scanInfo = document.getElementById('scanInfo');
 const scanInfoText = document.getElementById('scanInfoText');
 const charactersInput = document.getElementById('charactersInput');
@@ -1961,6 +1963,43 @@ function showTemporaryMessage(message, type = 'info') {
         }, 300);
     }, 3000);
 }
+
+// 文件列表滚动进度条
+function updateFileScrollProgress() {
+    if (!fileItems || fileItems.children.length === 0) {
+        fileScrollFill.style.width = '0%';
+        return;
+    }
+    
+    const scrollTop = fileItems.scrollTop;
+    const scrollHeight = fileItems.scrollHeight;
+    const clientHeight = fileItems.clientHeight;
+    
+    // 如果内容高度小于等于容器高度，则不需要滚动条
+    if (scrollHeight <= clientHeight) {
+        fileScrollFill.style.width = '100%';
+        return;
+    }
+    
+    // 计算滚动百分比
+    const scrollPercentage = (scrollTop / (scrollHeight - clientHeight)) * 100;
+    fileScrollFill.style.width = Math.min(100, Math.max(0, scrollPercentage)) + '%';
+}
+
+// 初始化文件列表滚动监听器
+function initFileScrollProgress() {
+    if (fileItems) {
+        fileItems.addEventListener('scroll', updateFileScrollProgress);
+        // 内容变化时也更新进度条
+        const observer = new MutationObserver(updateFileScrollProgress);
+        observer.observe(fileItems, { childList: true, subtree: true });
+    }
+}
+
+// 在页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', function() {
+    initFileScrollProgress();
+});
 
 // 错误处理
 window.addEventListener('error', function(e) {
