@@ -1863,13 +1863,20 @@ async function downloadAllFonts() {
     console.log('folderMode:', folderMode);
     console.log('folderStructure:', folderStructure);
     console.log('processedFonts.length:', processedFonts.length);
+    console.log('fileSourceTracking:', fileSourceTracking);
     console.log('JSZip可用:', typeof JSZip !== 'undefined');
     console.log('================================');
     
-    console.log(`🔍 下载模式: ${folderMode ? '文件夹ZIP模式' : '单文件模式'}`);
+    // 分析文件来源
+    const standaloneCount = fileSourceTracking.standalone.length;
+    const folderCount = fileSourceTracking.fromFolders.length;
     
-    if (!folderMode) {
-        // 非文件夹模式：单独下载每个文件
+    console.log(`📊 文件来源分析: ${standaloneCount}个单独文件, ${folderCount}个文件夹文件`);
+    
+    if (standaloneCount > 0 && folderCount === 0) {
+        // 纯单独文件模式：逐个下载
+        console.log('🔍 下载模式: 纯单独文件模式');
+        
         if (processedFonts.length === 1) {
             downloadFont(0);
             return;
@@ -1883,11 +1890,16 @@ async function downloadAllFonts() {
         }
         
         console.log('所有文件下载完成！');
-    } else {
-        // 文件夹模式：创建ZIP文件，保持目录结构
-        console.log('🔄 切换到文件夹ZIP下载模式...');
+    } else if (standaloneCount === 0 && folderCount > 0) {
+        // 纯文件夹模式：ZIP下载
+        console.log('🔍 下载模式: 纯文件夹ZIP模式');
         showZipProgress();
         await downloadFolderAsZip();
+    } else {
+        // 混合模式：创建包含单独文件和文件夹结构的ZIP
+        console.log('🔍 下载模式: 混合模式ZIP (单独文件 + 文件夹结构)');
+        showZipProgress();
+        await downloadMixedModeAsZip();
     }
 }
 
@@ -2039,6 +2051,178 @@ async function downloadFolderAsZip() {
     } catch (error) {
         console.error(`❌创建ZIP文件失败: ${error.message}`);
         console.error('ZIP creation error:', error);
+        
+        // 出错时也要隐藏进度条
+        hideZipProgress();
+    }
+}
+
+// 混合模式：下载ZIP文件（单独文件放根目录 + 文件夹文件保持结构）
+async function downloadMixedModeAsZip() {
+    console.log('=== downloadMixedModeAsZip 调试信息 ===');
+    console.log('JSZip类型:', typeof JSZip);
+    console.log('fileSourceTracking:', fileSourceTracking);
+    console.log('folderStructure:', folderStructure);
+    console.log('processedFonts.length:', processedFonts.length);
+    console.log('================================');
+
+    if (typeof JSZip === 'undefined') {
+        console.error('❌ JSZip库未加载，无法创建ZIP文件');
+        showTemporaryMessage('请刷新页面重试，或检查网络连接', 'error');
+        return;
+    }
+
+    console.log('📦 正在创建混合模式ZIP文件...');
+    
+    try {
+        const zip = new JSZip();
+        const outputFolderName = folderStructure.name ? `simplified_${folderStructure.name}` : 'simplified_fonts';
+        console.log('输出文件夹名称:', outputFolderName);
+        
+        // 第1步：创建目录结构 (10%)
+        updateZipProgress(10, '正在创建目录结构...', `创建 ${folderStructure.directories.size} 个目录`);
+        console.log('开始创建目录，总数:', folderStructure.directories.size);
+        let dirCount = 0;
+        folderStructure.directories.forEach(dirPath => {
+            // 混合模式：直接使用相对路径，不额外包装
+            const fullPath = `${dirPath}/`;
+            zip.folder(fullPath);
+            dirCount++;
+            if (dirCount <= 5) { // 只显示前5个目录
+                console.log('创建目录:', fullPath);
+            }
+        });
+        console.log(`✅ 完成创建 ${dirCount} 个目录`);
+        
+        // 第2步：准备字体映射 (20%)
+        updateZipProgress(20, '正在准备字体文件...', `映射 ${processedFonts.length} 个处理后的字体`);
+        const processedFontMap = new Map();
+        processedFonts.forEach(font => {
+            const originalName = font.name.replace(/^simplified_/, '');
+            processedFontMap.set(originalName, font.data);
+            console.log(`映射字体: ${originalName} -> ${font.data ? font.data.byteLength + '字节' : 'null'}`);
+        });
+        console.log(`✅ 字体映射完成，共 ${processedFontMap.size} 个字体`);
+
+        // 第3步：添加单独文件到ZIP根目录 (20% -> 40%)
+        console.log('开始添加单独文件到ZIP根目录，总数:', fileSourceTracking.standalone.length);
+        let addedStandaloneFiles = 0;
+        
+        for (let i = 0; i < fileSourceTracking.standalone.length; i++) {
+            const file = fileSourceTracking.standalone[i];
+            
+            // 更新进度 (20% -> 40%)
+            const fileProgress = 20 + (i / fileSourceTracking.standalone.length) * 20;
+            updateZipProgress(fileProgress, '正在添加单独文件...', `处理 ${file.name} (${i + 1}/${fileSourceTracking.standalone.length})`);
+            
+            try {
+                // 单独文件：查找处理后的数据并放在根目录
+                const processedData = processedFontMap.get(file.name);
+                if (processedData) {
+                    zip.file(file.name, processedData);
+                    console.log(`✅ 添加单独文件到根目录: ${file.name} (${processedData.byteLength}字节)`);
+                    addedStandaloneFiles++;
+                } else {
+                    console.log(`❌ 未找到单独文件的处理后数据: ${file.name}`);
+                }
+            } catch (error) {
+                console.error(`❌ 处理单独文件失败 ${file.name}:`, error);
+            }
+        }
+        console.log(`✅ 单独文件添加完成: 成功${addedStandaloneFiles}个`);
+        
+        // 第4步：添加文件夹文件到ZIP (40% -> 80%)
+        console.log('开始添加文件夹文件到ZIP，总数:', folderStructure.files.length);
+        let addedFolderFiles = 0;
+        let skippedFiles = 0;
+        const totalFolderFiles = folderStructure.files.length;
+        
+        for (let i = 0; i < folderStructure.files.length; i++) {
+            const fileInfo = folderStructure.files[i];
+            const { file, relativePath, isFont } = fileInfo;
+            
+            // 更新进度 (40% -> 80%)
+            const fileProgress = 40 + (i / totalFolderFiles) * 40;
+            updateZipProgress(fileProgress, '正在添加文件夹文件...', `处理 ${relativePath} (${i + 1}/${totalFolderFiles})`);
+            
+            try {
+                if (isFont) {
+                    // 字体文件：使用处理后的数据，直接使用相对路径（不额外包装）
+                    const processedData = processedFontMap.get(file.name);
+                    if (processedData) {
+                        zip.file(relativePath, processedData);
+                        console.log(`✅ 添加文件夹字体: ${relativePath} (${processedData.byteLength}字节)`);
+                        addedFolderFiles++;
+                    } else {
+                        console.log(`❌ 未找到文件夹字体的处理后数据: ${file.name}`);
+                        skippedFiles++;
+                    }
+                } else {
+                    // 非字体文件：直接复制原文件，直接使用相对路径（不额外包装）
+                    const fileData = await readFileAsArrayBuffer(file);
+                    zip.file(relativePath, fileData);
+                    console.log(`✅ 复制原文件: ${relativePath} (${fileData.byteLength}字节)`);
+                    addedFolderFiles++;
+                }
+            } catch (error) {
+                console.error(`❌ 处理文件夹文件失败 ${relativePath}:`, error);
+                skippedFiles++;
+            }
+        }
+        
+        console.log(`✅ 文件夹文件添加完成: 成功${addedFolderFiles}个, 跳过${skippedFiles}个`);
+        console.log(`📦 混合模式ZIP: ${addedStandaloneFiles}个单独文件(根目录) + ${addedFolderFiles}个文件夹文件(目录结构)`);
+        
+        // 第5步：生成ZIP文件 (80% -> 95%)
+        updateZipProgress(80, '正在生成ZIP文件...', '压缩数据，请稍候...');
+        console.log('📦 正在生成混合模式ZIP文件...');
+        
+        // 生成ZIP文件
+        const zipBlob = await zip.generateAsync({
+            type: 'blob',
+            compression: 'DEFLATE',
+            compressionOptions: {
+                level: 6
+            }
+        });
+        
+        console.log(`✅ 混合模式ZIP文件生成完成，大小: ${(zipBlob.size / 1024 / 1024).toFixed(2)}MB`);
+        
+        // 第6步：准备下载 (95% -> 100%)
+        updateZipProgress(95, '正在准备下载...', `文件大小: ${(zipBlob.size / 1024 / 1024).toFixed(2)}MB`);
+        console.log('开始下载混合模式ZIP文件...');
+        const url = URL.createObjectURL(zipBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${outputFolderName}.zip`;
+        
+        console.log('下载链接:', url);
+        console.log('下载文件名:', `${outputFolderName}.zip`);
+        
+        // 完成
+        updateZipProgress(100, '下载完成！', `${outputFolderName}.zip 已开始下载`);
+        
+        document.body.appendChild(a);
+        console.log('触发下载...');
+        a.click();
+        console.log('下载已触发');
+        
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        const totalProcessedFiles = addedStandaloneFiles + addedFolderFiles;
+        
+        console.log(`🎉 混合模式ZIP文件下载完成！`);
+        console.log(`📊 包含: ${addedStandaloneFiles}个单独文件(根目录) + ${addedFolderFiles}个文件夹文件(目录结构)`);
+        console.log(`📁 混合模式处理完成`);
+        console.log('混合模式ZIP下载过程完成');
+        
+        // 隐藏进度条
+        hideZipProgress();
+        
+    } catch (error) {
+        console.error(`❌创建混合模式ZIP文件失败: ${error.message}`);
+        console.error('Mixed mode ZIP creation error:', error);
         
         // 出错时也要隐藏进度条
         hideZipProgress();
