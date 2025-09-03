@@ -381,61 +381,54 @@ section h2 i {
 
 /* ZIP生成进度条样式 */
 .zip-progress-container {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 12px;
-    padding: 16px;
-    margin: 0 0 16px 0;
-    color: white;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-    animation: slideIn 0.3s ease-out;
+    margin: 20px 0 16px 0;
+    width: 100%;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
-@keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
+
 
 .zip-progress-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 16px;
-    font-weight: 600;
-    margin-bottom: 15px;
-}
-
-.zip-progress-header i {
-    font-size: 18px;
-    color: #ffd700;
+    display: none;
 }
 
 .zip-progress-bar {
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 25px;
-    height: 8px;
+    width: 100%;
+    height: 12px;
+    background: #e2e8f0;
+    border-radius: 6px;
     overflow: hidden;
-    margin-bottom: 10px;
+    position: relative;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 8px;
 }
 
 .zip-progress-fill {
-    background: linear-gradient(90deg, #ffd700, #ffed4e);
     height: 100%;
-    border-radius: 25px;
-    transition: width 0.3s ease;
+    background: linear-gradient(90deg, #10b981, #059669);
     width: 0%;
-    box-shadow: 0 2px 5px rgba(255, 215, 0, 0.3);
+    transition: width 0.3s ease;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.zip-progress-fill::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    animation: progressShine 2s ease-in-out infinite;
 }
 
 .zip-progress-details {
-    font-size: 13px;
-    opacity: 0.9;
-    font-style: italic;
+    display: none;
 }
 
 /* 文件列表样式 */
