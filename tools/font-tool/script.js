@@ -62,6 +62,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const overlay = document.getElementById('dragOverlay');
     console.log('dragOverlay 元素:', overlay);
     
+    // 初始化国际化支持
+    initFontToolI18n();
+    
     initPyodide();
     initDragAndDrop();
     initFileInput();
@@ -441,7 +444,7 @@ function initDragAndDrop() {
     // 添加测试按钮（仅用于调试）
     if (window.location.search.includes('debug=true')) {
         const testBtn = document.createElement('button');
-        testBtn.textContent = '测试覆盖层';
+        testBtn.textContent = translateText('测试覆盖层');
         testBtn.style.position = 'fixed';
         testBtn.style.top = '10px';
         testBtn.style.right = '10px';
@@ -780,16 +783,16 @@ function initPasteSupport() {
                                     updateScanInfo(totalFiles, files.length, nonFontFiles, folderMode);
                                     
                                     // 显示成功消息
-                                    showTemporaryMessage(`通过粘贴添加了文件夹 "${entry.name}"，包含 ${files.length} 个字体文件`, 'success');
+                                    showTemporaryMessage(`${translateText('通过粘贴添加了文件夹')} "${entry.name}"${translateText('，包含')} ${files.length}${translateText('个字体文件')}`, 'success');
                                     
                                     // 处理文件
                                     handleFiles(files);
                                 } else {
-                                    showTemporaryMessage(`文件夹 "${entry.name}" 中没有找到字体文件`, 'warning');
+                                    showTemporaryMessage(`${translateText('文件夹')} "${entry.name}"${translateText('中没有找到字体文件')}`, 'warning');
                                 }
                             } catch (error) {
                                 console.error('文件夹扫描失败:', error);
-                                showTemporaryMessage('文件夹处理失败，请尝试拖拽文件夹', 'error');
+                                showTemporaryMessage(translateText('文件夹处理失败，请尝试拖拽文件夹'), 'error');
                             }
                             return; // 处理完文件夹后退出
                         } else if (entry.isFile) {
@@ -828,14 +831,14 @@ function initPasteSupport() {
                 e.preventDefault();
                 
                 // 显示临时消息提示用户
-                showTemporaryMessage(`通过粘贴添加了 ${fontFiles.length} 个字体文件`, 'success');
+                showTemporaryMessage(`${translateText('通过粘贴添加了')} ${fontFiles.length}${translateText('个字体文件')}`, 'success');
                 
                 // 使用现有的文件处理逻辑
                 handleFiles(fontFiles);
             } else {
                 console.log('剪贴板中没有字体文件');
                 if (clipboardFiles.length > 0) {
-                    showTemporaryMessage('剪贴板中的文件不是支持的字体格式', 'warning');
+                    showTemporaryMessage(translateText('剪贴板中的文件不是支持的字体格式'), 'warning');
                 }
             }
         }
@@ -1029,13 +1032,13 @@ function updateScanInfo(totalFiles, fontFiles, nonFontFiles, isFolder) {
     if (totalFiles > 0) {
         scanInfo.style.display = 'flex';
         
-        let infoText = `扫描完成，发现 ${totalFiles} 个文件`;
+        let infoText = `${translateText('扫描完成，发现')} ${totalFiles}${translateText('个文件')}`;
         if (totalFiles > fontFiles) {
-            infoText += ` (${fontFiles} 个字体文件, ${nonFontFiles} 个其他文件)`;
+            infoText += ` (${fontFiles}${translateText('个字体文件')}, ${nonFontFiles}${translateText('个其他文件')})`;
         }
         
         if (isFolder) {
-            infoText += ` 📁 文件夹模式`;
+            infoText += ` 📁 ${translateText('文件夹模式')}`;
         }
         
         scanInfoText.textContent = infoText;
@@ -1143,7 +1146,7 @@ function createTimingDisplay() {
     // 创建计时显示元素
     timingText = document.createElement('div');
     timingText.className = 'timing-text';
-    timingText.innerHTML = '<i class="fas fa-clock"></i> 已耗时: 0秒';
+    timingText.innerHTML = `<i class="fas fa-clock"></i> ${translateText('已耗时: ')}0${translateText('秒')}`;
     
     // 将计时元素添加到进度条容器中
     progressContainer.appendChild(timingText);
@@ -1181,14 +1184,14 @@ function updateTimingDisplay(elapsedTime) {
     
     let timeString;
     if (hours > 0) {
-        timeString = `${hours}小时${minutes % 60}分${seconds % 60}秒`;
+        timeString = `${hours}${translateText('小时')}${minutes % 60}${translateText('分钟')}${seconds % 60}${translateText('秒')}`;
     } else if (minutes > 0) {
-        timeString = `${minutes}分${seconds % 60}秒`;
+        timeString = `${minutes}${translateText('分钟')}${seconds % 60}${translateText('秒')}`;
     } else {
-        timeString = `${seconds}秒`;
+        timeString = `${seconds}${translateText('秒')}`;
     }
     
-    timingText.innerHTML = `<i class="fas fa-clock"></i> 已耗时: ${timeString}`;
+    timingText.innerHTML = `<i class="fas fa-clock"></i> ${translateText('已耗时: ')}${timeString}`;
 }
 
 // 停止计时并显示最终耗时
@@ -1206,14 +1209,14 @@ function stopTimingAndShowResult() {
         
         let timeString;
         if (hours > 0) {
-            timeString = `${hours}小时${minutes % 60}分${seconds % 60}秒`;
+            timeString = `${hours}${translateText('小时')}${minutes % 60}${translateText('分钟')}${seconds % 60}${translateText('秒')}`;
         } else if (minutes > 0) {
-            timeString = `${minutes}分${seconds % 60}秒`;
+            timeString = `${minutes}${translateText('分钟')}${seconds % 60}${translateText('秒')}`;
         } else {
-            timeString = `${seconds}秒`;
+            timeString = `${seconds}${translateText('秒')}`;
         }
         
-        timingText.innerHTML = `<i class="fas fa-check-circle"></i> 处理完成，总耗时: ${timeString}`;
+        timingText.innerHTML = `<i class="fas fa-check-circle"></i> ${translateText('处理完成，总耗时: ')}${timeString}`;
         timingText.classList.add('timing-completed');
     }
 }
@@ -1221,18 +1224,18 @@ function stopTimingAndShowResult() {
 // 开始处理字体
 async function startProcessing() {
     if (selectedFiles.length === 0) {
-        showTemporaryMessage('请先选择要处理的字体文件！', 'warning');
+        showTemporaryMessage(translateText('请先选择要处理的字体文件！'), 'warning');
         return;
     }
 
     const characters = charactersInput.value.trim();
     if (!characters) {
-        showTemporaryMessage('请输入要保留的字符！', 'warning');
+        showTemporaryMessage(translateText('请输入要保留的字符！'), 'warning');
         return;
     }
 
     if (!pythonReady && typeof opentype === 'undefined') {
-        showTemporaryMessage('字体处理引擎尚未就绪，请稍候再试', 'error');
+        showTemporaryMessage(translateText('字体处理引擎尚未就绪，请稍候再试'), 'error');
         return;
     }
 
@@ -1240,7 +1243,7 @@ async function startProcessing() {
     processingStartTime = Date.now();
     
     processBtn.disabled = true;
-    processBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 处理中...';
+    processBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${translateText('处理中...')}`;
     progressContainer.style.display = 'block';
     downloadSection.style.display = 'block'; // 立即显示下载区域
     downloadItems.innerHTML = ''; // 清空现有内容
@@ -1252,7 +1255,7 @@ async function startProcessing() {
     
     // 初始化下载区域标题
     const downloadTitle = downloadSection.querySelector('h2');
-    downloadTitle.innerHTML = `<i class="fas fa-download"></i> 处理后的字体 <span style="font-size: 14px; color: #666; font-weight: normal;">(处理中...)</span>`;
+    downloadTitle.innerHTML = `<i class="fas fa-download"></i> ${translateText('处理后的字体')} <span style="font-size: 14px; color: #666; font-weight: normal;">(${translateText('处理中...')})</span>`;
     
     const engineType = pythonReady ? 'Python FontTools' : 'JavaScript OpenType.js';
     console.log(`开始使用 ${engineType} 处理 ${selectedFiles.length} 个字体文件...`);
@@ -1301,12 +1304,12 @@ async function startProcessing() {
             const totalCount = selectedFiles.length;
             
             if (successCount === totalCount) {
-                showTemporaryMessage(`所有字体处理完成！成功处理 ${successCount} 个文件`, 'success');
+                showTemporaryMessage(`${translateText('所有字体处理完成！成功处理')} ${successCount}${translateText('个文件')}`, 'success');
             } else {
-                showTemporaryMessage(`字体处理完成！成功处理 ${successCount}/${totalCount} 个文件`, 'warning');
+                showTemporaryMessage(`${translateText('字体处理完成！成功处理')} ${successCount}/${totalCount}${translateText('个文件')}`, 'warning');
             }
         } else {
-            showTemporaryMessage('字体处理失败，没有成功处理任何文件', 'error');
+            showTemporaryMessage(translateText('字体处理失败，没有成功处理任何文件'), 'error');
         }
 
     } catch (error) {
@@ -1317,7 +1320,7 @@ async function startProcessing() {
         stopTimingAndShowResult();
         
         processBtn.disabled = false;
-        processBtn.innerHTML = '<i class="fas fa-rocket"></i> 开始处理字体';
+        processBtn.innerHTML = `<i class="fas fa-rocket"></i> ${translateText('开始处理字体')}`;
     }
 }
 
@@ -1699,7 +1702,7 @@ function updateDownloadSectionTitle() {
     
     if (processedFonts.length === 0) {
         // 没有处理后的字体时，重置标题为原始状态
-        downloadTitle.innerHTML = `<i class="fas fa-download"></i> 处理后的字体`;
+        downloadTitle.innerHTML = `<i class="fas fa-download"></i> ${translateText('处理后的字体')}`;
         return;
     }
     
@@ -1708,9 +1711,9 @@ function updateDownloadSectionTitle() {
     const totalCompressionRatio = ((totalOriginalSize - totalNewSize) / totalOriginalSize * 100).toFixed(1);
     
     downloadTitle.innerHTML = `
-        <i class="fas fa-download"></i> 处理后的字体 
+        <i class="fas fa-download"></i> ${translateText('处理后的字体')} 
         <span style="font-size: 14px; color: #666; font-weight: normal;">
-            ${formatFileSize(totalOriginalSize)} => ${formatFileSize(totalNewSize)} (压缩了 ${totalCompressionRatio}%)
+            ${formatFileSize(totalOriginalSize)} => ${formatFileSize(totalNewSize)} (${translateText('压缩了')} ${totalCompressionRatio}%)
         </span>
     `;
 }
@@ -1728,15 +1731,15 @@ function addSingleDownloadItem(font, index) {
             <div class="download-name">${font.name}</div>
             <div class="download-size">
                 ${formatFileSize(font.originalSize)} => ${formatFileSize(font.newSize)} 
-                (压缩了 ${compressionRatio}%)
+                (${translateText('压缩了')} ${compressionRatio}%)
             </div>
         </div>
         <div class="download-actions">
-            <button class="download-remove" onclick="removeProcessedFont(${index})" title="删除此处理后的字体">
+            <button class="download-remove" onclick="removeProcessedFont(${index})" title="${translateText('删除此处理后的字体')}">
                 <i class="fas fa-times"></i>
             </button>
             <button class="btn btn-success" onclick="downloadFont(${index})">
-                <i class="fas fa-download"></i> 下载
+                <i class="fas fa-download"></i> ${translateText('下载')}
             </button>
         </div>
     `;
@@ -1778,18 +1781,18 @@ function updateDownloadButtonText() {
     
     if (totalCount === 0) {
         // 没有文件，使用默认文案
-        downloadAllText = `<i class="fas fa-download"></i> 下载字体文件`;
+        downloadAllText = `<i class="fas fa-download"></i> ${translateText('下载字体文件')}`;
     } else if (standaloneCount > 0 && folderCount === 0) {
         // 纯单独文件
-        downloadAllText = `<i class="fas fa-download"></i> 下载所有字体文件`;
+        downloadAllText = `<i class="fas fa-download"></i> ${translateText('下载所有字体文件')}`;
     } else if (standaloneCount === 0 && folderCount > 0) {
         // 纯文件夹文件
-        downloadAllText = `<i class="fas fa-archive"></i> 下载完整文件夹 (ZIP)`;
-        downloadAllHint = `<small style="display: block; margin-top: 5px; color: #666;">包含目录结构和所有非字体文件</small>`;
+        downloadAllText = `<i class="fas fa-archive"></i> ${translateText('下载完整文件夹 (ZIP)')}`;
+        downloadAllHint = `<small style="display: block; margin-top: 5px; color: #666;">${translateText('包含目录结构和所有非字体文件')}</small>`;
     } else {
         // 混合模式（既有单独文件又有文件夹文件）
-        downloadAllText = `<i class="fas fa-download"></i> 下载所有字体文件`;
-        downloadAllHint = `<small style="display: block; margin-top: 5px; color: #666;">${standaloneCount}个单独文件 + ${folderCount}个文件夹文件 (ZIP)</small>`;
+        downloadAllText = `<i class="fas fa-download"></i> ${translateText('下载所有字体文件')}`;
+        downloadAllHint = `<small style="display: block; margin-top: 5px; color: #666;">${standaloneCount}${translateText('个单独文件')} + ${folderCount}${translateText('个文件夹文件')} (ZIP)</small>`;
     }
     
     downloadAllBtn.innerHTML = `${downloadAllText}${downloadAllHint}`;
@@ -1843,7 +1846,7 @@ function removeProcessedFont(index) {
     console.log(`已删除字体，剩余 ${processedFonts.length} 个字体`);
     
     // 显示删除成功提示
-    showTemporaryMessage(`已删除字体: ${font.name}`, 'success');
+    showTemporaryMessage(`${translateText('已删除字体: ')}${font.name}`, 'success');
 }
 
 // 更新下载项显示
@@ -1913,14 +1916,14 @@ async function downloadFolderAsZip() {
 
     if (typeof JSZip === 'undefined') {
         console.error('❌ JSZip库未加载，无法创建ZIP文件');
-        showTemporaryMessage('请刷新页面重试，或检查网络连接', 'error');
+        showTemporaryMessage(translateText('请刷新页面重试，或检查网络连接'), 'error');
         return;
     }
 
     if (!folderStructure.files || folderStructure.files.length === 0) {
         console.error('❌ 没有找到文件夹结构数据，无法创建ZIP');
         console.error(`🔍 调试: folderStructure.files=${folderStructure.files ? folderStructure.files.length : 'null'}, folderMode=${folderMode}`);
-        showTemporaryMessage('请重新拖拽文件夹后再试', 'warning');
+        showTemporaryMessage(translateText('请重新拖拽文件夹后再试'), 'warning');
         return;
     }
 
@@ -2068,7 +2071,7 @@ async function downloadMixedModeAsZip() {
 
     if (typeof JSZip === 'undefined') {
         console.error('❌ JSZip库未加载，无法创建ZIP文件');
-        showTemporaryMessage('请刷新页面重试，或检查网络连接', 'error');
+        showTemporaryMessage(translateText('请刷新页面重试，或检查网络连接'), 'error');
         return;
     }
 
@@ -2244,8 +2247,8 @@ function showZipProgress() {
     if (zipProgressContainer) {
         zipProgressContainer.style.display = 'block';
         zipProgressFill.style.width = '0%';
-        zipProgressText.textContent = '正在准备ZIP生成...';
-        zipProgressDetails.textContent = '初始化中...';
+        zipProgressText.textContent = translateText('正在准备ZIP生成...');
+        zipProgressDetails.textContent = translateText('初始化中...');
     }
 }
 
@@ -2313,7 +2316,7 @@ function clearAllProcessedFiles() {
     
     // 重置处理按钮状态
     processBtn.disabled = false;
-    processBtn.innerHTML = '<i class="fas fa-rocket"></i> 开始处理字体';
+    processBtn.innerHTML = `<i class="fas fa-rocket"></i> ${translateText('开始处理字体')}`;
     
     // 重置处理开始时间
     processingStartTime = null;
@@ -2326,7 +2329,7 @@ function clearAllProcessedFiles() {
     console.log('✅ 完全清理完成！已重置到初始状态');
     
     // 显示清理成功的提示
-    showTemporaryMessage('已清理全部文件和处理结果，界面已重置', 'success');
+    showTemporaryMessage(translateText('已清理全部文件和处理结果，界面已重置'), 'success');
 }
 
 // 重置进度条
@@ -2446,3 +2449,279 @@ window.addEventListener('unhandledrejection', function(e) {
     console.error(`Promise错误: ${e.reason}`);
     e.preventDefault();
 });
+
+// ===== 国际化支持 =====
+
+// 字体工具页面的国际化初始化
+function initFontToolI18n() {
+    // 首先定义翻译函数，确保其他函数可以使用
+    setupTranslateFunction();
+    
+    // 检查当前语言设置
+    const currentLang = localStorage.getItem('catime-language') || 'zh';
+    
+    // 设置html标签的lang属性
+    const htmlRoot = document.getElementById('html-root');
+    if (htmlRoot) {
+        htmlRoot.lang = currentLang === 'zh' ? 'zh-CN' : 'en';
+    }
+    
+    // 如果是英文，应用翻译
+    if (currentLang === 'en') {
+        applyFontToolTranslations();
+    }
+    
+    // 确保语言切换按钮正常工作
+    setTimeout(initLanguageToggleForFontTool, 100);
+}
+
+// 设置翻译函数
+function setupTranslateFunction() {
+    // 翻译映射表
+    const translations = {
+        // 页面标题和描述
+        'Catime - 字体简化工具': 'Catime - Font Simplifier',
+        'Catime 字体简化工具 - 批量处理字体文件，只保留指定字符的专业级 Web 版本': 'Catime Font Simplifier - Professional web tool for batch processing font files, keeping only specified characters',
+        
+        // 主标题
+        '字体简化工具': 'Font Simplifier',
+        
+        // 上传区域
+        '拖拽字体文件或文件夹到这里': 'Drag font files or folders here',
+        '或者通过 Ctrl+V 粘贴': 'Or paste with Ctrl+V',
+        '支持拖拽/粘贴文件夹，会自动扫描所有子文件夹中的字体文件': 'Support drag/paste folders, automatically scan all font files in subfolders',
+        '选择文件': 'Choose Files',
+        '拖拽字体文件到这里': 'Drag font files here',
+        '支持 .ttf, .otf, .woff, .woff2 格式': 'Support .ttf, .otf, .woff, .woff2 formats',
+        '可以拖拽/粘贴文件夹，自动扫描所有字体文件': 'Drag/paste folders to auto-scan all font files',
+        
+        // 文件列表
+        '清除所有文件': 'Clear All Files',
+        
+        // 字符设置
+        '要保留的字符': 'Characters to Keep',
+        '请输入要保留的字符，例如：0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz': 'Enter characters to keep, e.g.: 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
+        '数字+:.': 'Numbers+:.',
+        '数字 0-9': 'Numbers 0-9',
+        '英文字母': 'Letters',
+        '字母+数字': 'Letters+Numbers',
+        
+        // 处理按钮
+        '开始处理字体': 'Start Processing',
+        
+        // 下载区域
+        '处理后的字体': 'Processed Fonts',
+        '下载字体文件': 'Download Fonts',
+        '清理全部': 'Clear All',
+        
+        // 状态信息
+        '完全本地处理，所有计算在浏览器中完成，数据不会上传到任何服务器。': 'Fully local processing. All calculations are done in your browser. No data is uploaded to any server.',
+        
+        // ZIP进度
+        '正在生成ZIP文件...': 'Generating ZIP file...',
+        '准备中...': 'Preparing...',
+        
+        // 动态生成的文本
+        '处理中...': 'Processing...',
+        '处理完成': 'Processing Completed',
+        '下载': 'Download',
+        '下载字体文件': 'Download Fonts',
+        '下载所有字体文件': 'Download All Fonts',
+        '下载完整文件夹 (ZIP)': 'Download Complete Folder (ZIP)',
+        '扫描完成，发现': 'Scan completed, found',
+        '个文件': ' files',
+        '个字体文件': ' font files',
+        '个其他文件': ' other files',
+        '所有字体处理完成！成功处理': 'All fonts processed! Successfully processed',
+        '字体处理完成！成功处理': 'Font processing completed! Successfully processed',
+        '字体处理失败，没有成功处理任何文件': 'Font processing failed, no files were successfully processed',
+        '成功添加': 'Successfully added',
+        '个字体文件，总计': ' font files, total',
+        '个文件待处理。': ' files to process.',
+        '总耗时: ': 'Total time: ',
+        '秒': 's',
+        '分钟': 'm',
+        '小时': 'h',
+        '文件夹模式': 'Folder Mode',
+        '压缩了': 'compressed',
+        '处理完成，总耗时: ': 'Processing completed, total time: ',
+        '个文件': ' files',
+        '包含目录结构和所有非字体文件': 'Including directory structure and all non-font files',
+        '个单独文件': ' standalone files',
+        '个文件夹文件': ' folder files',
+        '已耗时: ': 'Elapsed: ',
+        '请先选择要处理的字体文件！': 'Please select font files to process first!',
+        '请输入要保留的字符！': 'Please enter characters to keep!',
+        '字体处理引擎尚未就绪，请稍候再试': 'Font processing engine not ready, please try again later',
+        '通过粘贴添加了文件夹': 'Added folder via paste',
+        '，包含': ', containing',
+        '中没有找到字体文件': ' contains no font files',
+        '文件夹处理失败，请尝试拖拽文件夹': 'Folder processing failed, please try dragging folder',
+        '通过粘贴添加了': 'Added via paste',
+        '剪贴板中的文件不是支持的字体格式': 'Files in clipboard are not supported font formats',
+        '已删除字体: ': 'Deleted font: ',
+        '请刷新页面重试，或检查网络连接': 'Please refresh the page or check network connection',
+        '请重新拖拽文件夹后再试': 'Please drag the folder again and try',
+        '已清理全部文件和处理结果，界面已重置': 'All files and processing results cleared, interface reset',
+        '文件夹': 'Folder',
+        '删除此处理后的字体': 'Delete this processed font',
+        '正在准备ZIP生成...': 'Preparing ZIP generation...',
+        '初始化中...': 'Initializing...',
+        '测试覆盖层': 'Test Overlay',
+    };
+    
+    // 创建全局翻译函数
+    window.translateText = function(text) {
+        if (localStorage.getItem('catime-language') !== 'en') return text;
+        return translations[text] || text;
+    };
+}
+
+// 应用字体工具页面的英文翻译
+function applyFontToolTranslations() {
+    
+    // 应用页面标题翻译
+    const pageTitle = document.querySelector('title');
+    if (pageTitle) {
+        const translatedTitle = translateText(pageTitle.textContent);
+        if (translatedTitle !== pageTitle.textContent) {
+            pageTitle.textContent = translatedTitle;
+        }
+    }
+    
+    // 应用meta描述翻译
+    const metaDescription = document.querySelector('meta[name="description"]');
+    if (metaDescription) {
+        const content = metaDescription.getAttribute('content');
+        const translatedContent = translateText(content);
+        if (translatedContent !== content) {
+            metaDescription.setAttribute('content', translatedContent);
+        }
+    }
+    
+    // 应用页面内容翻译 - 主要的静态文本
+    const staticTexts = [
+        '字体简化工具',
+        '拖拽字体文件或文件夹到这里',
+        '或者通过 Ctrl+V 粘贴',
+        '支持拖拽/粘贴文件夹，会自动扫描所有子文件夹中的字体文件',
+        '选择文件',
+        '拖拽字体文件到这里',
+        '支持 .ttf, .otf, .woff, .woff2 格式',
+        '可以拖拽/粘贴文件夹，自动扫描所有字体文件',
+        '清除所有文件',
+        '要保留的字符',
+        '请输入要保留的字符，例如：0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
+        '数字+:.',
+        '数字 0-9',
+        '英文字母',
+        '字母+数字',
+        '开始处理字体',
+        '处理后的字体',
+        '下载字体文件',
+        '清理全部',
+        '完全本地处理，所有计算在浏览器中完成，数据不会上传到任何服务器。'
+    ];
+    
+    staticTexts.forEach(chinese => {
+        const english = translateText(chinese);
+        if (english !== chinese) {
+            // 查找包含中文文本的元素
+            const elements = document.querySelectorAll('*:not(script):not(style)');
+            elements.forEach(element => {
+                // 只处理文本节点，避免影响HTML结构
+                if (element.childNodes.length > 0) {
+                    element.childNodes.forEach(node => {
+                        if (node.nodeType === Node.TEXT_NODE && node.textContent.trim() === chinese) {
+                            node.textContent = english;
+                        }
+                    });
+                }
+                
+                // 处理placeholder属性
+                if (element.placeholder === chinese) {
+                    element.placeholder = english;
+                }
+                
+                // 处理title属性
+                if (element.title === chinese) {
+                    element.title = english;
+                }
+            });
+        }
+    });
+    
+    // 特殊处理一些复杂的文本替换
+    handleSpecialTranslations();
+    
+    // 更新按钮文本
+    updateButtonTexts();
+}
+
+// 更新按钮文本（用于语言切换后）
+function updateButtonTexts() {
+    // 重置处理按钮文本
+    if (processBtn && !processBtn.disabled) {
+        processBtn.innerHTML = `<i class="fas fa-rocket"></i> ${translateText('开始处理字体')}`;
+    }
+    
+    // 如果有下载按钮，更新其文本
+    if (downloadAllBtn && typeof updateDownloadButtonText === 'function') {
+        updateDownloadButtonText();
+    }
+}
+
+// 处理特殊的翻译情况
+function handleSpecialTranslations() {
+    const lang = localStorage.getItem('catime-language') || 'zh';
+    if (lang !== 'en') return;
+    
+    // 处理主标题中的复合文本
+    const heroTitle = document.querySelector('.guide-hero-title');
+    if (heroTitle) {
+        const catimeSpan = heroTitle.querySelector('.catime-text');
+        const accentSpan = heroTitle.querySelector('.guide-accent');
+        if (catimeSpan && accentSpan) {
+            // 保持Catime不变，只翻译"字体简化工具"
+            accentSpan.textContent = 'Font Simplifier';
+        }
+    }
+}
+
+// 为字体工具页面初始化语言切换功能
+function initLanguageToggleForFontTool() {
+    const languageToggle = document.getElementById('language-toggle');
+    if (!languageToggle) return;
+    
+    const currentLang = localStorage.getItem('catime-language') || 'zh';
+    
+    // 设置按钮文本
+    updateToggleTextForFontTool(currentLang);
+    
+    // 添加点击事件监听器（如果还没有的话）
+    if (!languageToggle.dataset.fontToolListener) {
+        languageToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const newLang = currentLang === 'zh' ? 'en' : 'zh';
+            localStorage.setItem('catime-language', newLang);
+            
+            // 重新加载页面以应用新语言
+            window.location.reload();
+        });
+        
+        languageToggle.dataset.fontToolListener = 'true';
+    }
+}
+
+// 更新语言切换按钮文本（字体工具页面专用）
+function updateToggleTextForFontTool(lang) {
+    const languageToggle = document.getElementById('language-toggle');
+    if (!languageToggle) return;
+    
+    if (lang === 'zh') {
+        languageToggle.innerHTML = '<i class="fas fa-language"></i> English';
+    } else {
+        languageToggle.innerHTML = '<i class="fas fa-language"></i> 中文';
+    }
+}
