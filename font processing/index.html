@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>字体简化工具 - Web版</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- 顶部标题 -->
+        <header class="header">
+            <h1><i class="fas fa-font"></i> 字体简化工具</h1>
+            <p>批量处理字体文件，只保留指定字符 - Web版本</p>
+        </header>
+
+        <!-- 重要提示 -->
+        <div class="warning-section">
+            <div class="warning-card">
+                <div class="warning-header">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>重要说明</strong>
+                </div>
+                <div class="warning-content">
+                    <p><strong>🚀 专业级Web版本：</strong>使用Python FontTools专业库（Google字体服务同款技术），生成完全兼容的字体文件。</p>
+                    <p><strong>✅ 可靠性保证：</strong>基于WebAssembly的专业字体处理，确保输出字体完整性，支持商业使用。</p>
+                    <p><strong>💡 技术说明：</strong>完全本地处理，所有计算在浏览器中完成，数据不会上传到任何服务器。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <!-- 文件上传区域 -->
+            <section class="upload-section">
+                <h2><i class="fas fa-upload"></i> 上传字体文件</h2>
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-content">
+                        <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                        <p>拖拽字体文件或文件夹到这里</p>
+                        <p class="upload-subtitle">或者点击选择文件</p>
+                        <div class="folder-hint">
+                            <i class="fas fa-folder"></i> 
+                            支持拖拽文件夹，会自动扫描所有子文件夹中的字体文件
+                        </div>
+                        <input type="file" id="fileInput" multiple accept=".ttf,.otf,.woff,.woff2" style="display: none;">
+                        <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                            <i class="fas fa-file-upload"></i> 选择文件
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 文件列表 -->
+                <div class="file-list" id="fileList" style="display: none;">
+                    <h3><i class="fas fa-list"></i> 选中的文件</h3>
+                    <div class="file-items" id="fileItems"></div>
+                    <button class="btn btn-secondary" onclick="clearFiles()">
+                        <i class="fas fa-trash"></i> 清除所有文件
+                    </button>
+                </div>
+            </section>
+
+            <!-- 字符设置区域 -->
+            <section class="character-section">
+                <h2><i class="fas fa-keyboard"></i> 要保留的字符</h2>
+                <div class="character-input-area">
+                    <textarea 
+                        id="charactersInput" 
+                        placeholder="请输入要保留的字符，例如：0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+                        rows="3"
+                    ></textarea>
+                    
+                    <!-- 快捷按钮 -->
+                    <div class="quick-buttons">
+                        <button class="btn btn-outline" onclick="setCharacters('0123456789')">
+                            数字 0-9
+                        </button>
+                        <button class="btn btn-outline" onclick="setCharacters('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz')">
+                            英文字母
+                        </button>
+                        <button class="btn btn-outline" onclick="setCharacters('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz')">
+                            字母+数字
+                        </button>
+                        <button class="btn btn-outline" onclick="setCharacters('0123456789:.')">
+                            数字+:.
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 处理控制区域 -->
+            <section class="process-section">
+                <button class="btn btn-success btn-large" id="processBtn" onclick="startProcessing()">
+                    <i class="fas fa-rocket"></i> 开始处理字体
+                </button>
+                
+                <!-- 进度条 -->
+                <div class="progress-container" id="progressContainer" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">0%</div>
+                </div>
+            </section>
+
+            <!-- 状态日志区域 -->
+            <section class="log-section">
+                <h2><i class="fas fa-terminal"></i> 处理状态</h2>
+                <div class="log-container" id="logContainer">
+                    <div class="log-message">欢迎使用字体简化工具！</div>
+                    <div class="log-message">请上传要处理的字体文件，然后输入要保留的字符。</div>
+                </div>
+            </section>
+
+            <!-- 下载区域 -->
+            <section class="download-section" id="downloadSection" style="display: none;">
+                <h2><i class="fas fa-download"></i> 下载处理后的字体</h2>
+                <div class="download-items" id="downloadItems"></div>
+            </section>
+        </div>
+    </div>
+
+    <!-- 加载Pyodide (Python in Browser) 和 fontTools -->
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+    
+    <!-- JSZip for folder structure download -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    
+    <script src="script.js"></script>
+</body>
+</html>
