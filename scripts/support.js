@@ -531,10 +531,14 @@ function translateFooter() {
             }
         });
         
-        // 翻译问题反馈链接
-        const feedbackLink = footerContent.querySelector('.footer-links a');
-        if (feedbackLink && feedbackLink.textContent === '问题反馈') {
-            feedbackLink.textContent = 'Feedback';
-        }
+        // 翻译页脚链接
+        const footerLinks = footerContent.querySelectorAll('.footer-links a');
+        footerLinks.forEach(link => {
+            if (link.textContent === '问题反馈') {
+                link.textContent = 'Feedback';
+            } else if (link.textContent === '隐私政策') {
+                link.textContent = 'Privacy Policy';
+            }
+        });
     }
 } 

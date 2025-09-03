@@ -593,6 +593,21 @@ function initLanguageToggle() {
         if (footerArtist) {
             footerArtist.innerHTML = 'Icon Artist: <a href="https://space.bilibili.com/26087398" target="_blank" rel="noopener noreferrer">猫屋敷梨梨Official</a>';
         }
+        
+        // 处理页脚链接的翻译
+        const footerLinks = document.querySelector('.footer-links');
+        if (footerLinks) {
+            const feedbackLink = footerLinks.querySelector('a[href*="message.bilibili.com"]');
+            const privacyLink = footerLinks.querySelector('a[href*="PRIVACY.md"]');
+            
+            if (feedbackLink) {
+                feedbackLink.textContent = 'Feedback';
+            }
+            
+            if (privacyLink) {
+                privacyLink.textContent = 'Privacy Policy';
+            }
+        }
     }
 
     // 监听组件加载完成事件

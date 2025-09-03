@@ -96,6 +96,11 @@ class ComponentLoader {
                 console.log('✅ 滚动进度指示器初始化完成');
             }, 150);
         }
+        
+        // 组件加载完成后，触发翻译
+        setTimeout(() => {
+            this.triggerScrollProgressTranslation();
+        }, 200);
     }
 
     /**
@@ -122,6 +127,9 @@ class ComponentLoader {
         // 触发页脚翻译（如果有翻译功能）
         this.triggerFooterTranslation();
         
+        // 触发滚动进度翻译
+        this.triggerScrollProgressTranslation();
+        
         console.log('🎉 组件初始化完全完成');
     }
 
@@ -134,6 +142,22 @@ class ComponentLoader {
             translateFooter();
         } else if (typeof handleFooterTranslation === 'function') {
             handleFooterTranslation();
+        }
+    }
+
+    /**
+     * 触发滚动进度组件翻译功能
+     */
+    triggerScrollProgressTranslation() {
+        // 获取当前语言设置
+        const lang = localStorage.getItem('catime-language') || 'zh';
+        
+        // 如果是英文，翻译滚动进度提示
+        if (lang === 'en') {
+            const scrollTooltip = document.querySelector('.scroll-progress-tooltip');
+            if (scrollTooltip) {
+                scrollTooltip.textContent = 'Back to Top';
+            }
         }
     }
 }
