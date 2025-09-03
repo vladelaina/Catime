@@ -103,7 +103,14 @@
                 
                 <!-- 文件列表 -->
                 <div class="file-list" id="fileList" style="display: none;">
-                    <h3><i class="fas fa-list"></i> 选中的文件</h3>
+                    <div class="file-list-header">
+                        <h3><i class="fas fa-list"></i> 选中的文件</h3>
+                        <!-- 扫描结果信息 -->
+                        <div class="scan-info" id="scanInfo" style="display: none;">
+                            <i class="fas fa-search"></i>
+                            <span id="scanInfoText">扫描结果将在这里显示</span>
+                        </div>
+                    </div>
                     <div class="file-items" id="fileItems"></div>
                     <button class="btn btn-secondary" onclick="clearFiles()">
                         <i class="fas fa-trash"></i> 清除所有文件

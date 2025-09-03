@@ -443,6 +443,59 @@ section h2 i {
     margin-top: 20px;
 }
 
+.file-list-header {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.file-list-header h3 {
+    margin: 0;
+    color: var(--heading-color);
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+/* 扫描信息样式 */
+.scan-info {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #e8f5e8 0%, #f0f9ff 100%);
+    border: 1px solid #d1fae5;
+    border-radius: 8px;
+    color: #065f46;
+    font-size: 0.9rem;
+    font-weight: 500;
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.1);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.scan-info::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #10b981, #059669);
+}
+
+.scan-info i {
+    color: #059669;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.scan-info:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.15);
+}
+
 .file-items {
     margin: 16px 0;
     max-height: 200px;
@@ -796,6 +849,26 @@ section h2 i {
     .logo-img {
         height: 2rem !important;
     }
+    
+    /* 响应式扫描信息 */
+    .scan-info {
+        padding: 10px 12px;
+        font-size: 0.85rem;
+        gap: 6px;
+    }
+    
+    .scan-info i {
+        font-size: 0.9rem;
+    }
+    
+    .file-list-header {
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+    
+    .file-list-header h3 {
+        font-size: 1.1rem;
+    }
 }
 
 @media (max-width: 480px) {
@@ -823,6 +896,27 @@ section h2 i {
     
     section h2 {
         font-size: 1.3rem;
+    }
+    
+    /* 小屏幕扫描信息 */
+    .scan-info {
+        padding: 8px 10px;
+        font-size: 0.8rem;
+        gap: 5px;
+        border-radius: 6px;
+    }
+    
+    .scan-info i {
+        font-size: 0.85rem;
+    }
+    
+    .file-list-header h3 {
+        font-size: 1rem;
+    }
+    
+    .file-list-header {
+        gap: 8px;
+        margin-bottom: 10px;
     }
 }
 

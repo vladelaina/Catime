@@ -18,6 +18,8 @@ const uploadArea = document.getElementById('uploadArea');
 const fileInput = document.getElementById('fileInput');
 const fileList = document.getElementById('fileList');
 const fileItems = document.getElementById('fileItems');
+const scanInfo = document.getElementById('scanInfo');
+const scanInfoText = document.getElementById('scanInfoText');
 const charactersInput = document.getElementById('charactersInput');
 const processBtn = document.getElementById('processBtn');
 const progressContainer = document.getElementById('progressContainer');
@@ -630,6 +632,9 @@ async function handleDrop(e) {
             const totalFiles = folderStructure.files.length;
             const nonFontFiles = totalFiles - files.length;
             
+            // 更新扫描信息显示（显示在文件列表旁边）
+            updateScanInfo(totalFiles, files.length, nonFontFiles, folderMode);
+            
             logMessage(`📁 扫描完成，发现 ${totalFiles} 个文件 (${files.length} 个字体文件, ${nonFontFiles} 个其他文件)`, 'info');
             
             if (folderMode) {
@@ -747,6 +752,11 @@ function handleFiles(files) {
 
     updateFileList();
     
+    // 如果不是从文件夹扫描来的，也显示扫描信息
+    if (!folderMode && selectedFiles.length > 0) {
+        updateScanInfo(selectedFiles.length, selectedFiles.length, 0, false);
+    }
+    
     if (addedCount > 0) {
         logMessage(`✅ 成功添加 ${addedCount} 个字体文件，总计 ${selectedFiles.length} 个文件待处理。`, 'success');
         
@@ -759,10 +769,46 @@ function handleFiles(files) {
     }
 }
 
+// 更新扫描信息显示
+function updateScanInfo(totalFiles, fontFiles, nonFontFiles, isFolder) {
+    if (!scanInfo || !scanInfoText) return;
+    
+    if (totalFiles > 0) {
+        scanInfo.style.display = 'flex';
+        
+        let infoText = `扫描完成，发现 ${totalFiles} 个文件`;
+        if (totalFiles > fontFiles) {
+            infoText += ` (${fontFiles} 个字体文件, ${nonFontFiles} 个其他文件)`;
+        }
+        
+        if (isFolder) {
+            infoText += ` 📁 文件夹模式`;
+        }
+        
+        scanInfoText.textContent = infoText;
+        
+        // 添加淡入动画
+        scanInfo.style.opacity = '0';
+        setTimeout(() => {
+            scanInfo.style.opacity = '1';
+        }, 100);
+    } else {
+        scanInfo.style.display = 'none';
+    }
+}
+
+// 隐藏扫描信息
+function hideScanInfo() {
+    if (scanInfo) {
+        scanInfo.style.display = 'none';
+    }
+}
+
 // 更新文件列表显示
 function updateFileList() {
     if (selectedFiles.length === 0) {
         fileList.style.display = 'none';
+        hideScanInfo(); // 没有文件时隐藏扫描信息
         return;
     }
 
@@ -795,7 +841,16 @@ function removeFile(index) {
 
 function clearFiles() {
     selectedFiles = [];
+    // 重置文件夹模式和扫描信息
+    folderMode = false;
+    folderStructure = {
+        name: '',
+        files: [],
+        fontFiles: [],
+        directories: new Set()
+    };
     updateFileList();
+    hideScanInfo();
     logMessage('已清除所有文件。', 'warning');
 }
 
