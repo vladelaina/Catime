@@ -709,39 +709,7 @@ section h2 i {
     color: #2c3e50;
 }
 
-/* 日志样式 */
-.log-container {
-    max-height: 200px;
-    overflow-y: auto;
-    background: #1a202c;
-    color: #e2e8f0;
-    padding: 16px;
-    border-radius: 6px;
-    font-family: 'Consolas', 'Monaco', monospace;
-    font-size: 13px;
-    line-height: 1.5;
-}
 
-.log-message {
-    margin-bottom: 4px;
-    opacity: 0.9;
-}
-
-.log-message:last-child {
-    margin-bottom: 0;
-}
-
-.log-message.success {
-    color: #68d391;
-}
-
-.log-message.error {
-    color: #fc8181;
-}
-
-.log-message.warning {
-    color: #f6e05e;
-}
 
 /* 下载区域 */
 .download-items {
@@ -937,24 +905,20 @@ section {
 }
 
 /* 滚动条样式 */
-.log-container::-webkit-scrollbar,
 .file-items::-webkit-scrollbar {
     width: 6px;
 }
 
-.log-container::-webkit-scrollbar-track,
 .file-items::-webkit-scrollbar-track {
     background: rgba(255, 255, 255, 0.1);
     border-radius: 3px;
 }
 
-.log-container::-webkit-scrollbar-thumb,
 .file-items::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.3);
     border-radius: 3px;
 }
 
-.log-container::-webkit-scrollbar-thumb:hover,
 .file-items::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.5);
 }

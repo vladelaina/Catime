@@ -25,7 +25,7 @@ const processBtn = document.getElementById('processBtn');
 const progressContainer = document.getElementById('progressContainer');
 const progressFill = document.getElementById('progressFill');
 const progressText = document.getElementById('progressText');
-const logContainer = document.getElementById('logContainer');
+
 const downloadSection = document.getElementById('downloadSection');
 const downloadItems = document.getElementById('downloadItems');
 const dragOverlay = document.getElementById('dragOverlay');
@@ -48,14 +48,13 @@ document.addEventListener('DOMContentLoaded', function() {
     initPyodide();
     initDragAndDrop();
     initFileInput();
-    logMessage('正在初始化专业Python字体处理引擎...');
     
     // 检查JSZip库是否加载
     setTimeout(() => {
         if (typeof JSZip !== 'undefined') {
-            logMessage('✅ JSZip库加载成功，支持文件夹ZIP下载', 'success');
+            console.log('✅ JSZip库加载成功，支持文件夹ZIP下载');
         } else {
-            logMessage('❌ JSZip库加载失败，ZIP下载功能将不可用', 'error');
+            console.log('❌ JSZip库加载失败，ZIP下载功能将不可用');
         }
     }, 2000);
 });
@@ -63,12 +62,12 @@ document.addEventListener('DOMContentLoaded', function() {
 // 初始化Pyodide (Python in Browser)
 async function initPyodide() {
     try {
-        logMessage('📦 正在加载Python运行环境，请稍候...');
+        console.log('📦 正在加载Python运行环境，请稍候...');
         
         // 加载Pyodide
         pyodide = await loadPyodide();
         
-        logMessage('📚 正在安装fonttools库...');
+        console.log('📚 正在安装fonttools库...');
         
         // 安装必要的Python包
         await pyodide.loadPackage(['micropip']);
@@ -319,7 +318,7 @@ def test_fonttools():
         // 测试Python环境
         try {
             const test_result = pyodide.runPython('test_fonttools()');
-            logMessage(`✅ ${test_result}`, 'success');
+            console.log(`✅ ${test_result}`);
             
             // 额外测试：确保subset_font函数已定义
             const function_test = pyodide.runPython(`
@@ -330,20 +329,17 @@ if 'subset_font' in globals():
 else:
     "ERROR: subset_font函数未定义"
             `);
-            logMessage(`🔧 ${function_test}`, 'info');
+            console.log(`🔧 ${function_test}`);
             
         } catch (testError) {
-            logMessage(`❌ Python环境测试失败: ${testError.message}`, 'error');
-            console.error('Python测试错误:', testError);
+            console.error(`❌ Python环境测试失败: ${testError.message}`, testError);
         }
         
         pythonReady = true;
-        logMessage('🚀 专业Python字体处理引擎初始化完成！', 'success');
-        logMessage('系统已准备好处理字体文件，支持与桌面版相同的处理质量。');
+        console.log('🚀 专业Python字体处理引擎初始化完成！');
         
     } catch (error) {
-        logMessage('❌ Python引擎初始化失败，将尝试备用方案...', 'error');
-        console.error('Pyodide initialization error:', error);
+        console.error('❌ Python引擎初始化失败，将尝试备用方案...', error);
         await loadFallbackLibrary();
     }
 }
@@ -354,14 +350,14 @@ async function loadFallbackLibrary() {
         const script = document.createElement('script');
         script.src = 'https://cdnjs.cloudflare.com/ajax/libs/opentype.js/1.3.4/opentype.min.js';
         script.onload = () => {
-            logMessage('📋 备用字体处理库已加载，功能有限。', 'warning');
+            console.log('📋 备用字体处理库已加载，功能有限。');
         };
         script.onerror = () => {
-            logMessage('❌ 无法加载任何字体处理库。', 'error');
+            console.error('❌ 无法加载任何字体处理库。');
         };
         document.head.appendChild(script);
     } catch (error) {
-        logMessage('❌ 备用库加载失败。', 'error');
+        console.error('❌ 备用库加载失败。', error);
     }
 }
 
@@ -574,7 +570,7 @@ async function handleDrop(e) {
     
     // 检查是否支持文件夹拖拽
     if (dt.items && dt.items.length > 0) {
-        logMessage('正在扫描拖拽的内容...', 'info');
+        console.log('正在扫描拖拽的内容...');
         console.log('拖拽项目数量:', dt.items.length);
         
         // 使用DataTransferItemList处理文件夹
@@ -597,7 +593,7 @@ async function handleDrop(e) {
                         folderMode = true;
                         folderStructure.name = entry.name;
                         mainFolderEntry = entry;
-                        logMessage(`📁 检测到文件夹模式: ${entry.name}`, 'info');
+                        console.log(`📁 检测到文件夹模式: ${entry.name}`);
                         console.log('主文件夹条目:', entry.name);
                         break; // 找到主文件夹后停止，只处理这一个文件夹
                     }
@@ -635,16 +631,16 @@ async function handleDrop(e) {
             // 更新扫描信息显示（显示在文件列表旁边）
             updateScanInfo(totalFiles, files.length, nonFontFiles, folderMode);
             
-            logMessage(`📁 扫描完成，发现 ${totalFiles} 个文件 (${files.length} 个字体文件, ${nonFontFiles} 个其他文件)`, 'info');
+            console.log(`📁 扫描完成，发现 ${totalFiles} 个文件 (${files.length} 个字体文件, ${nonFontFiles} 个其他文件)`);
             
             if (folderMode) {
-                logMessage(`📁 文件夹模式启用: 将保持目录结构并复制所有文件`, 'success');
-                logMessage(`🔍 调试: 目录数=${folderStructure.directories.size}, 文件数=${folderStructure.files.length}`, 'info');
+                console.log(`📁 文件夹模式启用: 将保持目录结构并复制所有文件`);
+                console.log(`🔍 调试: 目录数=${folderStructure.directories.size}, 文件数=${folderStructure.files.length}`);
             }
             
             handleFiles(files);
         } else {
-            logMessage('未在拖拽的内容中找到任何文件', 'warning');
+            console.warn('未在拖拽的内容中找到任何文件');
         }
     } else {
         // 后备：使用传统的files方式
@@ -737,7 +733,7 @@ function handleFiles(files) {
     });
 
     if (fontFiles.length === 0) {
-        logMessage('未检测到有效的字体文件，请选择 .ttf、.otf、.woff 或 .woff2 格式的文件。\n💡 提示：可以直接拖拽包含字体文件的文件夹！', 'warning');
+        console.warn('未检测到有效的字体文件，请选择 .ttf、.otf、.woff 或 .woff2 格式的文件。💡 提示：可以直接拖拽包含字体文件的文件夹！');
         return;
     }
 
@@ -758,14 +754,14 @@ function handleFiles(files) {
     }
     
     if (addedCount > 0) {
-        logMessage(`✅ 成功添加 ${addedCount} 个字体文件，总计 ${selectedFiles.length} 个文件待处理。`, 'success');
+        console.log(`✅ 成功添加 ${addedCount} 个字体文件，总计 ${selectedFiles.length} 个文件待处理。`);
         
         // 如果添加的文件数量比总文件数少，说明有文件夹被扫描
         if (fontFiles.length > addedCount) {
-            logMessage(`📁 文件夹模式：已自动扫描并添加字体文件（与本地版本保持一致）`, 'info');
+            console.log(`📁 文件夹模式：已自动扫描并添加字体文件（与本地版本保持一致）`);
         }
     } else {
-        logMessage(`ℹ️ 所有字体文件都已存在，未添加新文件。`, 'info');
+        console.log(`ℹ️ 所有字体文件都已存在，未添加新文件。`);
     }
 }
 
@@ -836,7 +832,7 @@ function updateFileList() {
 function removeFile(index) {
     selectedFiles.splice(index, 1);
     updateFileList();
-    logMessage('文件已移除。', 'warning');
+    console.log('文件已移除。');
 }
 
 function clearFiles() {
@@ -851,12 +847,12 @@ function clearFiles() {
     };
     updateFileList();
     hideScanInfo();
-    logMessage('已清除所有文件。', 'warning');
+    console.log('已清除所有文件。');
 }
 
 function setCharacters(chars) {
     charactersInput.value = chars;
-    logMessage(`已设置要保留的字符: ${chars}`);
+    console.log(`已设置要保留的字符: ${chars}`);
 }
 
 function formatFileSize(bytes) {
@@ -867,16 +863,7 @@ function formatFileSize(bytes) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-function logMessage(message, type = 'info') {
-    const logDiv = document.createElement('div');
-    logDiv.className = `log-message ${type}`;
-    
-    const timestamp = new Date().toLocaleTimeString();
-    logDiv.textContent = `[${timestamp}] ${message}`;
-    
-    logContainer.appendChild(logDiv);
-    logContainer.scrollTop = logContainer.scrollHeight;
-}
+
 
 function updateProgress(current, total) {
     const percentage = (current / total) * 100;
@@ -887,18 +874,18 @@ function updateProgress(current, total) {
 // 开始处理字体
 async function startProcessing() {
     if (selectedFiles.length === 0) {
-        logMessage('请先选择要处理的字体文件！', 'error');
+        alert('请先选择要处理的字体文件！');
         return;
     }
 
     const characters = charactersInput.value.trim();
     if (!characters) {
-        logMessage('请输入要保留的字符！', 'error');
+        alert('请输入要保留的字符！');
         return;
     }
 
     if (!pythonReady && typeof opentype === 'undefined') {
-        logMessage('字体处理引擎尚未就绪，请稍候再试。', 'error');
+        alert('字体处理引擎尚未就绪，请稍候再试。');
         return;
     }
 
@@ -915,20 +902,20 @@ async function startProcessing() {
     downloadTitle.innerHTML = `<i class="fas fa-download"></i> 下载处理后的字体 <span style="font-size: 14px; color: #666; font-weight: normal;">(处理中...)</span>`;
     
     const engineType = pythonReady ? 'Python FontTools' : 'JavaScript OpenType.js';
-    logMessage(`开始使用 ${engineType} 处理 ${selectedFiles.length} 个字体文件...`, 'info');
-    logMessage(`保留字符: ${characters}`, 'info');
+    console.log(`开始使用 ${engineType} 处理 ${selectedFiles.length} 个字体文件...`);
+    console.log(`保留字符: ${characters}`);
 
     try {
         for (let i = 0; i < selectedFiles.length; i++) {
             const file = selectedFiles[i];
-            logMessage(`正在处理: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
+            console.log(`正在处理: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
             
             updateProgress(i, selectedFiles.length);
             
             try {
                 const processedFont = await processFont(file, characters);
                 processedFonts.push(processedFont);
-                logMessage(`✅ 完成: ${file.name}`, 'success');
+                console.log(`✅ 完成: ${file.name}`);
                 
                 // 立即添加这个处理完成的文件到下载区域
                 addSingleDownloadItem(processedFont, processedFonts.length - 1);
@@ -940,20 +927,20 @@ async function startProcessing() {
                 }
                 
             } catch (error) {
-                logMessage(`❌ 处理失败 ${file.name}: ${error.message}`, 'error');
+                console.error(`❌ 处理失败 ${file.name}: ${error.message}`);
                 console.error('Font processing error:', error);
             }
         }
 
         updateProgress(selectedFiles.length, selectedFiles.length);
-        logMessage(`🎉 所有字体处理完成！成功处理 ${processedFonts.length}/${selectedFiles.length} 个文件`, 'success');
+        console.log(`🎉 所有字体处理完成！成功处理 ${processedFonts.length}/${selectedFiles.length} 个文件`);
         
         if (processedFonts.length > 0) {
             showDownloadSection();
         }
 
     } catch (error) {
-        logMessage(`处理过程中发生错误: ${error.message}`, 'error');
+        console.error(`处理过程中发生错误: ${error.message}`);
         console.error('Processing error:', error);
     } finally {
         processBtn.disabled = false;
@@ -1155,7 +1142,7 @@ result
             debugLines.forEach(line => {
                 if (line.includes('[DEBUG]') || line.includes('[ERROR]') || line.includes('[WARNING]')) {
                     const cleanLine = line.replace(/^\[.*?\]\s*/, ''); // 移除时间戳
-                    logMessage(`🔍 ${cleanLine}`, 'info');
+                    console.log(`🔍 ${cleanLine}`);
                 }
             });
         } else {
@@ -1171,19 +1158,19 @@ result
                 
                 // 分析具体错误类型并提供解决建议
                 if (error_detail.includes('AssertionError')) {
-                    logMessage('❌ 字体文件数据损坏或格式不兼容', 'error');
+                    console.error('❌ 字体文件数据损坏或格式不兼容');
                     if (error_detail.includes('assert len(data) == self.length')) {
-                        logMessage('💡 建议：这可能是Base64编码问题，已自动修复，请重试', 'warning');
+                        console.warn('💡 建议：这可能是Base64编码问题，已自动修复，请重试');
                     }
                 } else if (error_detail.includes('cmap')) {
-                    logMessage('❌ 字体字符映射表(cmap)读取失败', 'error');
-                    logMessage('💡 建议：请检查字体文件是否完整或选择其他字体', 'warning');
+                    console.error('❌ 字体字符映射表(cmap)读取失败');
+                    console.warn('💡 建议：请检查字体文件是否完整或选择其他字体');
                 } else if (error_detail.includes('Memory')) {
-                    logMessage('❌ 内存不足，文件过大', 'error');
-                    logMessage('💡 建议：请处理较小的字体文件（<5MB）', 'warning');
+                    console.error('❌ 内存不足，文件过大');
+                    console.warn('💡 建议：请处理较小的字体文件（<5MB）');
                 } else if (error_detail.includes('base64')) {
-                    logMessage('❌ Base64编码解码失败', 'error');
-                    logMessage('💡 建议：文件可能损坏，请重新选择文件', 'warning');
+                    console.error('❌ Base64编码解码失败');
+                    console.warn('💡 建议：文件可能损坏，请重新选择文件');
                 }
             }
             
@@ -1223,12 +1210,12 @@ result
         
         // TTF文件应该以0x00010000或'OTTO'开头
         if (signature === 0x00010000) {
-            logMessage('  ✅ JavaScript验证：有效的TTF格式字体', 'success');
+            console.log('  ✅ JavaScript验证：有效的TTF格式字体');
         } else if (signature === 0x4F54544F) {
-            logMessage('  ✅ JavaScript验证：有效的OTF格式字体', 'success');
+            console.log('  ✅ JavaScript验证：有效的OTF格式字体');
         } else {
             const hex = signature.toString(16).padStart(8, '0');
-            logMessage(`  ⚠️ JavaScript验证：意外的文件签名: 0x${hex}`, 'warning');
+            console.warn(`  ⚠️ JavaScript验证：意外的文件签名: 0x${hex}`);
             console.error('文件头详情:', {
                 signature: `0x${hex}`,
                 expectedTTF: '0x00010000',
@@ -1243,18 +1230,18 @@ result
             console.log(`字体表数量: ${numTables}`);
             
             if (numTables === 0 || numTables > 50) {
-                logMessage(`  ⚠️ 字体表数量异常: ${numTables}`, 'warning');
+                console.warn(`  ⚠️ 字体表数量异常: ${numTables}`);
             } else {
-                logMessage(`  ✅ 字体表数量正常: ${numTables}`, 'success');
+                console.log(`  ✅ 字体表数量正常: ${numTables}`);
             }
         }
         
-        logMessage(`  ✅ Python处理成功: ${result.message}`, 'success');
+        console.log(`  ✅ Python处理成功: ${result.message}`);
         
         return { buffer: bytes.buffer };
         
     } catch (error) {
-        logMessage(`  ❌ Python处理失败: ${error.message}`, 'error');
+        console.error(`  ❌ Python处理失败: ${error.message}`);
         console.error('Python字体处理错误:', error);
         throw error;
     }
@@ -1323,12 +1310,12 @@ async function createOpenTypeSubset(fontBuffer, characters) {
             throw new Error('生成的字体文件为空');
         }
         
-        logMessage(`  📋 JavaScript备用处理完成，包含 ${foundChars} 个字符`);
+        console.log(`  📋 JavaScript备用处理完成，包含 ${foundChars} 个字符`);
         
         return { buffer };
         
     } catch (error) {
-        logMessage(`  ❌ JavaScript处理失败: ${error.message}`, 'error');
+        console.error(`  ❌ JavaScript处理失败: ${error.message}`);
         throw error;
     }
 }
@@ -1442,7 +1429,7 @@ function downloadFont(index) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    logMessage(`已下载: ${font.name}`, 'success');
+    console.log(`已下载: ${font.name}`);
 }
 
 async function downloadAllFonts() {
@@ -1454,7 +1441,7 @@ async function downloadAllFonts() {
     console.log('JSZip可用:', typeof JSZip !== 'undefined');
     console.log('================================');
     
-    logMessage(`🔍 下载模式: ${folderMode ? '文件夹ZIP模式' : '单文件模式'}`, 'info');
+    console.log(`🔍 下载模式: ${folderMode ? '文件夹ZIP模式' : '单文件模式'}`);
     
     if (!folderMode) {
         // 非文件夹模式：单独下载每个文件
@@ -1463,17 +1450,17 @@ async function downloadAllFonts() {
             return;
         }
 
-        logMessage('开始下载所有文件...', 'info');
+        console.log('开始下载所有文件...');
         
         for (let i = 0; i < processedFonts.length; i++) {
             await new Promise(resolve => setTimeout(resolve, 500));
             downloadFont(i);
         }
         
-        logMessage('所有文件下载完成！', 'success');
+        console.log('所有文件下载完成！');
     } else {
         // 文件夹模式：创建ZIP文件，保持目录结构
-        logMessage('🔄 切换到文件夹ZIP下载模式...', 'info');
+        console.log('🔄 切换到文件夹ZIP下载模式...');
         showZipProgress();
         await downloadFolderAsZip();
     }
@@ -1488,19 +1475,19 @@ async function downloadFolderAsZip() {
     console.log('================================');
 
     if (typeof JSZip === 'undefined') {
-        logMessage('❌ JSZip库未加载，无法创建ZIP文件', 'error');
-        logMessage('💡 请刷新页面重试，或检查网络连接', 'warning');
+        console.error('❌ JSZip库未加载，无法创建ZIP文件');
+        alert('请刷新页面重试，或检查网络连接');
         return;
     }
 
     if (!folderStructure.files || folderStructure.files.length === 0) {
-        logMessage('❌ 没有找到文件夹结构数据，无法创建ZIP', 'error');
-        logMessage(`🔍 调试: folderStructure.files=${folderStructure.files ? folderStructure.files.length : 'null'}, folderMode=${folderMode}`, 'error');
-        logMessage('💡 请重新拖拽文件夹后再试', 'warning');
+        console.error('❌ 没有找到文件夹结构数据，无法创建ZIP');
+        console.error(`🔍 调试: folderStructure.files=${folderStructure.files ? folderStructure.files.length : 'null'}, folderMode=${folderMode}`);
+        alert('请重新拖拽文件夹后再试');
         return;
     }
 
-    logMessage('📦 正在创建ZIP文件，保持目录结构...', 'info');
+    console.log('📦 正在创建ZIP文件，保持目录结构...');
     
     try {
         const zip = new JSZip();
@@ -1571,11 +1558,11 @@ async function downloadFolderAsZip() {
         }
         
         console.log(`✅ 文件添加完成: 成功${addedFiles}个, 跳过${skippedFiles}个`);
-        logMessage(`📦 已添加 ${addedFiles} 个文件到ZIP中`, 'info');
+        console.log(`📦 已添加 ${addedFiles} 个文件到ZIP中`);
         
         // 第4步：生成ZIP文件 (80% -> 95%)
         updateZipProgress(80, '正在生成ZIP文件...', '压缩数据，请稍候...');
-        logMessage('📦 正在生成ZIP文件...', 'info');
+        console.log('📦 正在生成ZIP文件...');
         console.log('开始生成ZIP文件...');
         
         // 生成ZIP文件
@@ -1588,7 +1575,7 @@ async function downloadFolderAsZip() {
         });
         
         console.log(`✅ ZIP文件生成完成，大小: ${(zipBlob.size / 1024 / 1024).toFixed(2)}MB`);
-        logMessage(`📦 ZIP文件大小: ${(zipBlob.size / 1024 / 1024).toFixed(2)}MB`, 'info');
+        console.log(`📦 ZIP文件大小: ${(zipBlob.size / 1024 / 1024).toFixed(2)}MB`);
         
         // 第5步：准备下载 (95% -> 100%)
         updateZipProgress(95, '正在准备下载...', `文件大小: ${(zipBlob.size / 1024 / 1024).toFixed(2)}MB`);
@@ -1616,16 +1603,16 @@ async function downloadFolderAsZip() {
         const fontFiles = folderStructure.fontFiles.length;
         const nonFontFiles = totalFiles - fontFiles;
         
-        logMessage(`🎉 ZIP文件下载完成！`, 'success');
-        logMessage(`📊 包含: ${fontFiles} 个处理后的字体文件, ${nonFontFiles} 个原始文件`, 'success');
-        logMessage(`📁 完整目录结构已保持，与本地版本处理结果一致`, 'success');
+        console.log(`🎉 ZIP文件下载完成！`);
+        console.log(`📊 包含: ${fontFiles} 个处理后的字体文件, ${nonFontFiles} 个原始文件`);
+        console.log(`📁 完整目录结构已保持，与本地版本处理结果一致`);
         console.log('ZIP下载过程完成');
         
         // 隐藏进度条
         hideZipProgress();
         
     } catch (error) {
-        logMessage(`❌创建ZIP文件失败: ${error.message}`, 'error');
+        console.error(`❌创建ZIP文件失败: ${error.message}`);
         console.error('ZIP creation error:', error);
         
         // 出错时也要隐藏进度条
@@ -1683,10 +1670,10 @@ function updateZipProgress(percentage, statusText, detailText) {
 
 // 错误处理
 window.addEventListener('error', function(e) {
-    logMessage(`发生错误: ${e.message}`, 'error');
+    console.error(`发生错误: ${e.message}`);
 });
 
 window.addEventListener('unhandledrejection', function(e) {
-    logMessage(`Promise错误: ${e.reason}`, 'error');
+    console.error(`Promise错误: ${e.reason}`);
     e.preventDefault();
 });
