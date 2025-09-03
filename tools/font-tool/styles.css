@@ -259,16 +259,7 @@ section {
     overflow: hidden;
 }
 
-section::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
-    opacity: 0.8;
-}
+
 
 section:hover {
     box-shadow: var(--card-hover-shadow);
@@ -445,16 +436,7 @@ section h2 i {
     overflow: hidden;
 }
 
-.file-list::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
-    opacity: 0.9;
-}
+
 
 .file-list:hover {
     box-shadow: var(--card-hover-shadow);
@@ -494,15 +476,7 @@ section h2 i {
     overflow: hidden;
 }
 
-.scan-info::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, #10b981, #059669);
-}
+
 
 .scan-info i {
     color: #059669;
@@ -560,7 +534,6 @@ section h2 i {
     background: #f8fafc;
     border-radius: 6px;
     margin-bottom: 8px;
-    border-left: 4px solid #667eea;
 }
 
 .file-item:last-child {
