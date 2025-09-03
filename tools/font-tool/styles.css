@@ -441,6 +441,32 @@ section h2 i {
 /* 文件列表样式 */
 .file-list {
     margin-top: 20px;
+    background: linear-gradient(135deg, var(--surface-color) 0%, rgba(122, 162, 247, 0.03) 100%);
+    border: 2px solid var(--primary-color);
+    border-radius: var(--border-radius-large);
+    padding: 1.5rem;
+    box-shadow: var(--card-shadow);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.file-list::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+    opacity: 0.9;
+}
+
+.file-list:hover {
+    box-shadow: var(--card-hover-shadow);
+    transform: translateY(-2px);
+    border-color: var(--accent-color);
 }
 
 .file-list-header {
@@ -498,7 +524,7 @@ section h2 i {
 
 .file-items {
     margin: 16px 0;
-    max-height: 200px;
+    max-height: 400px;
     overflow-y: auto;
 }
 
