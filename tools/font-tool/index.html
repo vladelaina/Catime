@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Catime 字体简化工具 - 批量处理字体文件，只保留指定字符的专业级 Web 版本">
-    <title>字体简化工具 - Catime</title>
+    <title>Catime - 字体简化工具</title>
 
     <!-- Google 字体 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -23,22 +23,8 @@
     <link rel="icon" type="image/png" href="../../assets/catime.webp">
 </head>
 <body>
-    <!-- 页头/导航 -->
-    <header class="main-header">
-        <nav class="container">
-            <a href="../../index.html" class="logo">
-                <img src="../../assets/catime.webp" class="logo-img" alt="Catime Logo" style="height: 2.5rem;"> 
-                Catime
-            </a>
-            <ul class="nav-links">
-                <li><a href="../../index.html">首页</a></li>
-                <li><a href="../../guide.html">指南</a></li>
-                <li><a href="../../about.html">关于</a></li>
-                <li><a href="#" class="active">字体工具</a></li>
-                <li><a href="https://github.com/vladelaina/Catime" target="_blank" rel="noopener noreferrer">GitHub</a></li>
-            </ul>
-        </nav>
-    </header>
+    <!-- 页头/导航 - 由 navigation.js 动态生成 -->
+    <header class="main-header"></header>
 
     <div class="container">
         <!-- 工具标题 -->
@@ -158,6 +144,9 @@
     
     <!-- JSZip for folder structure download -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    
+    <!-- 统一导航管理 -->
+    <script src="../../scripts/navigation.js"></script>
     
     <script src="script.js"></script>
 </body>

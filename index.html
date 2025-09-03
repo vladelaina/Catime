@@ -78,24 +78,8 @@
         <div class="scroll-progress-tooltip">返回顶部</div>
     </div>
 
-    <!-- 页头/导航 -->
-    <header class="main-header">
-        <nav class="container">
-            <a href="index.html" class="logo"><img src="assets/catime.webp" class="logo-img" alt="Catime Logo"> Catime</a>
-            <ul class="nav-links">
-                <li><a href="index.html" class="active">首页</a></li>
-                <li><a href="guide.html">指南</a></li>
-                <li><a href="about.html">关于</a></li>
-                <li><a href="https://vladelaina.com/" target="_blank" rel="noopener noreferrer">vladelaina</a></li>
-                <li><a href="https://github.com/vladelaina/Catime" target="_blank" rel="noopener noreferrer">GitHub</a></li>
-                <li><a href="#" id="language-toggle"><i class="fas fa-language"></i> English</a></li>
-                <li class="action-buttons">
-                    <a href="support.html" class="nav-button support-btn"><i class="fas fa-mug-hot"></i> <span>支持项目</span></a>
-                    <a href="https://apps.microsoft.com/detail/9n3mzdf1z34v?referrer=appbadge&launch=true&mode=full" class="nav-button download-btn" target="_blank" rel="noopener noreferrer"><i class="fas fa-download"></i> <span>下载</span></a>
-                </li>
-            </ul>
-        </nav>
-    </header>
+    <!-- 页头/导航 - 由 navigation.js 动态生成 -->
+    <header class="main-header"></header>
 
     <main>
         <!-- 英雄区域 -->
@@ -557,6 +541,7 @@
     <!-- JavaScript 库 -->
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+    <script src="scripts/navigation.js"></script>
     <script src="scripts/main.js"></script>
     <script src="scripts/index.js"></script>
 
