@@ -277,10 +277,7 @@ section h2 {
     letter-spacing: -0.02em;
 }
 
-section h2:hover {
-    color: var(--primary-color);
-    animation: jelly 0.6s ease;
-}
+
 
 section h2 i {
     color: var(--primary-color);

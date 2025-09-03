@@ -1019,7 +1019,7 @@ async function startProcessing() {
     
     // 初始化下载区域标题
     const downloadTitle = downloadSection.querySelector('h2');
-    downloadTitle.innerHTML = `<i class="fas fa-download"></i> 下载处理后的字体 <span style="font-size: 14px; color: #666; font-weight: normal;">(处理中...)</span>`;
+    downloadTitle.innerHTML = `<i class="fas fa-download"></i> 处理后的字体 <span style="font-size: 14px; color: #666; font-weight: normal;">(处理中...)</span>`;
     
     const engineType = pythonReady ? 'Python FontTools' : 'JavaScript OpenType.js';
     console.log(`开始使用 ${engineType} 处理 ${selectedFiles.length} 个字体文件...`);
@@ -1466,7 +1466,7 @@ function updateDownloadSectionTitle() {
     
     if (processedFonts.length === 0) {
         // 没有处理后的字体时，重置标题为原始状态
-        downloadTitle.innerHTML = `<i class="fas fa-download"></i> 下载处理后的字体`;
+        downloadTitle.innerHTML = `<i class="fas fa-download"></i> 处理后的字体`;
         return;
     }
     
@@ -1475,7 +1475,7 @@ function updateDownloadSectionTitle() {
     const totalCompressionRatio = ((totalOriginalSize - totalNewSize) / totalOriginalSize * 100).toFixed(1);
     
     downloadTitle.innerHTML = `
-        <i class="fas fa-download"></i> 下载处理后的字体 
+        <i class="fas fa-download"></i> 处理后的字体 
         <span style="font-size: 14px; color: #666; font-weight: normal;">
             ${formatFileSize(totalOriginalSize)} => ${formatFileSize(totalNewSize)} (压缩了 ${totalCompressionRatio}%)
         </span>
