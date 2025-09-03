@@ -109,7 +109,14 @@ img {
     border-bottom: 1px solid rgba(224, 224, 255, 0.15); /* 使用 --border-color 的 RGB 近似值 */
     box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
     padding: 1rem 0;
-    transition: box-shadow 0.3s ease, background-color 0.3s ease;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+}
+
+/* 移动端下滑时隐藏导航栏 */
+@media (max-width: 768px) {
+    .main-header.nav-hidden {
+        transform: translateY(-100%);
+    }
 }
 
 .main-header:hover {

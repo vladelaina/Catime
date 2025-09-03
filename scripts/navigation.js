@@ -4,6 +4,8 @@
 class CatimeNavigation {
     constructor() {
         this.currentPage = this.getCurrentPage();
+        this.lastScrollY = 0;
+        this.ticking = false;
         this.init();
     }
 
@@ -36,7 +38,7 @@ class CatimeNavigation {
         const isEnglish = lang === 'en';
         
         return `
-        <header class="main-header">
+        <header class="main-header" id="main-header">
             <nav class="container">
                 <a href="${prefix}index.html" class="logo">
                     <img src="${prefix}assets/catime.webp" class="logo-img" alt="Catime Logo"> Catime
@@ -142,6 +144,71 @@ class CatimeNavigation {
         }
 
         // 下拉菜单交互已经通过 CSS :hover 实现，无需额外 JavaScript
+        
+        // 初始化移动端滚动隐藏行为
+        this.initializeScrollBehavior();
+    }
+    
+    // 初始化移动端滚动隐藏导航栏
+    initializeScrollBehavior() {
+        // 检查是否为移动设备
+        const isMobile = () => window.innerWidth <= 768;
+        
+        // 处理滚动事件
+        const handleScroll = () => {
+            if (!isMobile()) return;
+            
+            if (!this.ticking) {
+                requestAnimationFrame(() => {
+                    this.updateNavVisibility();
+                    this.ticking = false;
+                });
+                this.ticking = true;
+            }
+        };
+        
+        // 处理窗口大小改变
+        const handleResize = () => {
+            const header = document.getElementById('main-header');
+            if (!header) return;
+            
+            if (!isMobile()) {
+                // 桌面端：始终显示导航栏
+                header.classList.remove('nav-hidden');
+            }
+        };
+        
+        // 添加事件监听器
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        window.addEventListener('resize', handleResize);
+        
+        // 初始化时检查一次
+        handleResize();
+    }
+    
+    // 更新导航栏可见性
+    updateNavVisibility() {
+        const header = document.getElementById('main-header');
+        if (!header) return;
+        
+        const currentScrollY = window.scrollY;
+        const scrollThreshold = 100; // 滚动100px后开始隐藏
+        
+        // 如果在顶部附近，始终显示
+        if (currentScrollY <= scrollThreshold) {
+            header.classList.remove('nav-hidden');
+        } else {
+            // 向下滚动时隐藏，向上滚动时显示
+            if (currentScrollY > this.lastScrollY) {
+                // 向下滚动
+                header.classList.add('nav-hidden');
+            } else {
+                // 向上滚动
+                header.classList.remove('nav-hidden');
+            }
+        }
+        
+        this.lastScrollY = currentScrollY;
     }
     
     // 更新语言切换按钮文本
