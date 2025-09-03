@@ -1066,12 +1066,12 @@ async function startProcessing() {
             const totalCount = selectedFiles.length;
             
             if (successCount === totalCount) {
-                showTemporaryMessage(`🎉 所有字体处理完成！成功处理 ${successCount} 个文件`, 'success');
+                showTemporaryMessage(`所有字体处理完成！成功处理 ${successCount} 个文件`, 'success');
             } else {
-                showTemporaryMessage(`⚠️ 字体处理完成！成功处理 ${successCount}/${totalCount} 个文件`, 'warning');
+                showTemporaryMessage(`字体处理完成！成功处理 ${successCount}/${totalCount} 个文件`, 'warning');
             }
         } else {
-            showTemporaryMessage('❌ 字体处理失败，没有成功处理任何文件', 'error');
+            showTemporaryMessage('字体处理失败，没有成功处理任何文件', 'error');
         }
 
     } catch (error) {
