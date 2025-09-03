@@ -134,31 +134,99 @@ class ComponentLoader {
     }
 
     /**
-     * 触发页脚翻译功能
+     * 统一处理页脚翻译功能
      */
-    triggerFooterTranslation() {
-        // 检查是否有翻译功能可用
-        if (typeof translateFooter === 'function') {
-            translateFooter();
-        } else if (typeof handleFooterTranslation === 'function') {
-            handleFooterTranslation();
+    translateFooterComponent() {
+        // 获取当前语言设置
+        const lang = localStorage.getItem('catime-language') || 'zh';
+        
+        const footerContent = document.querySelector('.main-footer .container');
+        if (!footerContent) return;
+        
+        if (lang === 'en') {
+            // 英文模式翻译
+            // 翻译页脚文本内容
+            footerContent.querySelectorAll('p').forEach(p => {
+                const text = p.innerHTML;
+                if (text.includes('基于') && text.includes('许可开源')) {
+                    p.innerHTML = 'Released under <a href="https://github.com/vladelaina/Catime/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Apache 2.0</a> license';
+                } else if (text.includes('图标画师')) {
+                    p.innerHTML = 'Icon Artist: <a href="https://space.bilibili.com/26087398" target="_blank" rel="noopener noreferrer">猫屋敷梨梨Official</a>';
+                }
+            });
+            
+            // 翻译页脚链接
+            const footerLinks = footerContent.querySelectorAll('.footer-links a');
+            footerLinks.forEach(link => {
+                if (link.textContent === '问题反馈') {
+                    link.textContent = 'Feedback';
+                    // 英文模式下跳转到GitHub Issues
+                    link.href = 'https://github.com/vladelaina/Catime/issues';
+                    link.target = '_blank';
+                    link.rel = 'noopener noreferrer';
+                } else if (link.textContent === '隐私政策') {
+                    link.textContent = 'Privacy Policy';
+                }
+            });
+        } else {
+            // 中文模式，恢复原文本和链接
+            // 恢复页脚文本内容
+            footerContent.querySelectorAll('p').forEach(p => {
+                const text = p.innerHTML;
+                if (text.includes('Released under') && text.includes('license')) {
+                    p.innerHTML = '基于 <a href="https://github.com/vladelaina/Catime/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Apache 2.0</a> 许可开源';
+                } else if (text.includes('Icon Artist:')) {
+                    p.innerHTML = '图标画师: <a href="https://space.bilibili.com/26087398" target="_blank" rel="noopener noreferrer">猫屋敷梨梨Official</a>';
+                }
+            });
+            
+            // 恢复页脚链接
+            const footerLinks = footerContent.querySelectorAll('.footer-links a');
+            footerLinks.forEach(link => {
+                if (link.textContent === 'Feedback') {
+                    link.textContent = '问题反馈';
+                    // 中文模式下跳转到B站私信
+                    link.href = 'https://message.bilibili.com/#/whisper/mid1862395225';
+                    link.target = '_blank';
+                    link.rel = 'noopener noreferrer';
+                } else if (link.textContent === 'Privacy Policy') {
+                    link.textContent = '隐私政策';
+                }
+            });
         }
     }
 
     /**
-     * 触发滚动进度组件翻译功能
+     * 统一处理滚动进度组件翻译功能
      */
-    triggerScrollProgressTranslation() {
+    translateScrollProgressComponent() {
         // 获取当前语言设置
         const lang = localStorage.getItem('catime-language') || 'zh';
         
-        // 如果是英文，翻译滚动进度提示
+        const scrollTooltip = document.querySelector('.scroll-progress-tooltip');
+        if (!scrollTooltip) return;
+        
         if (lang === 'en') {
-            const scrollTooltip = document.querySelector('.scroll-progress-tooltip');
-            if (scrollTooltip) {
-                scrollTooltip.textContent = 'Back to Top';
-            }
+            // 英文模式
+            scrollTooltip.textContent = 'Back to Top';
+        } else {
+            // 中文模式
+            scrollTooltip.textContent = '返回顶部';
         }
+    }
+
+    /**
+     * 触发页脚翻译功能 (保持兼容性)
+     */
+    triggerFooterTranslation() {
+        this.translateFooterComponent();
+    }
+
+    /**
+     * 触发滚动进度组件翻译功能 (保持兼容性)
+     */
+    triggerScrollProgressTranslation() {
+        this.translateScrollProgressComponent();
     }
 }
 
@@ -186,6 +254,28 @@ function loadScrollProgress() {
     return window.componentLoader.loadScrollProgress();
 }
 
+/**
+ * 便捷函数：翻译页脚组件
+ */
+function translateFooterComponent() {
+    return window.componentLoader.translateFooterComponent();
+}
+
+/**
+ * 便捷函数：翻译滚动进度组件
+ */
+function translateScrollProgressComponent() {
+    return window.componentLoader.translateScrollProgressComponent();
+}
+
+/**
+ * 便捷函数：翻译所有组件
+ */
+function translateAllComponents() {
+    translateFooterComponent();
+    translateScrollProgressComponent();
+}
+
 // 自动初始化（如果页面包含了这个脚本）
 document.addEventListener('DOMContentLoaded', function() {
     // 检查是否有data-auto-load属性
@@ -201,6 +291,9 @@ if (typeof module !== 'undefined' && module.exports) {
         ComponentLoader,
         loadCommonComponents,
         loadFooter,
-        loadScrollProgress
+        loadScrollProgress,
+        translateFooterComponent,
+        translateScrollProgressComponent,
+        translateAllComponents
     };
 }

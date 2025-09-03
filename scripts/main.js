@@ -289,30 +289,12 @@ function initLanguageToggle() {
             // 处理CTA区域的波浪字母
             handleWaveLetters();
             
-            // 处理滚动进度提示
-            const scrollTooltip = document.querySelector('.scroll-progress-tooltip');
-            if (scrollTooltip) {
-                scrollTooltip.textContent = 'Back to Top';
-            }
+
             
             // 处理hero描述区域
             handleHeroDescription();
 
-            // 处理问题反馈链接，在英文模式下指向GitHub issues页面
-            const feedbackLink = document.querySelector('.footer-links a');
-            if (feedbackLink) {
-                feedbackLink.href = 'https://github.com/vladelaina/Catime/issues';
-                feedbackLink.target = '_blank';
-                feedbackLink.rel = 'noopener noreferrer';
-            }
-        } else {
-            // 在中文模式下恢复原链接
-            const feedbackLink = document.querySelector('.footer-links a');
-            if (feedbackLink) {
-                feedbackLink.href = 'https://message.bilibili.com/#/whisper/mid1862395225';
-                feedbackLink.target = '_blank';
-                feedbackLink.rel = 'noopener noreferrer';
-            }
+
         }
         
         // 如果是中文，不需要翻译
@@ -381,15 +363,8 @@ function initLanguageToggle() {
             // 动态生成的文本
             '准备好和 Catime 一起管理时间了吗？': 'Ready to manage time with Catime?',
             
-            // 滚动指示器
-            '返回顶部': 'Back to Top',
-            
-            // 页脚区域
-            '基于': 'Released under',
-            '许可开源': 'license',
-            '图标画师:': 'Icon Artist:',
-            '问题反馈': 'Feedback',
-            '隐私政策': 'Privacy Policy'
+
+
         };
         
         // 遍历所有文本节点进行翻译
@@ -570,50 +545,11 @@ function initLanguageToggle() {
         }
     }
     
-    // 特殊处理页脚的翻译
-    function handleFooterTranslation() {
-        // 获取当前语言
-        const lang = localStorage.getItem('catime-language') || 'zh';
-        
-        // 如果不是英文，不进行替换
-        if (lang !== 'en') return;
-        
-        const footerCopyright = document.querySelector('.main-footer p:first-child');
-        const footerLicense = document.querySelector('.main-footer p:nth-child(2)');
-        const footerArtist = document.querySelector('.main-footer p:nth-child(3)');
-        
-        if (footerCopyright) {
-            footerCopyright.innerHTML = '&copy; 2025 Catime Project by <a href="https://vladelaina.com/" target="_blank" rel="noopener noreferrer">vladelaina</a>';
-        }
-        
-        if (footerLicense) {
-            footerLicense.innerHTML = 'Released under <a href="https://github.com/vladelaina/Catime/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Apache 2.0</a> license';
-        }
-        
-        if (footerArtist) {
-            footerArtist.innerHTML = 'Icon Artist: <a href="https://space.bilibili.com/26087398" target="_blank" rel="noopener noreferrer">猫屋敷梨梨Official</a>';
-        }
-        
-        // 处理页脚链接的翻译
-        const footerLinks = document.querySelector('.footer-links');
-        if (footerLinks) {
-            const feedbackLink = footerLinks.querySelector('a[href*="message.bilibili.com"]');
-            const privacyLink = footerLinks.querySelector('a[href*="PRIVACY.md"]');
-            
-            if (feedbackLink) {
-                feedbackLink.textContent = 'Feedback';
-            }
-            
-            if (privacyLink) {
-                privacyLink.textContent = 'Privacy Policy';
-            }
-        }
-    }
+
 
     // 监听组件加载完成事件
     document.addEventListener('allComponentsLoaded', function() {
-        console.log('📄 检测到组件加载完成，执行页脚翻译');
-        handleFooterTranslation();
+        console.log('📄 检测到组件加载完成');
     });
 
     // 处理CTA区域的波浪字母

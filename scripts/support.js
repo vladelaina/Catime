@@ -285,14 +285,7 @@ function addSupportTranslations() {
         // 确保所有按钮可见
         fixButtonVisibility();
         
-        // 翻译滚动进度提示
-        const scrollTooltip = document.querySelector('.scroll-progress-tooltip');
-        if (scrollTooltip) {
-            scrollTooltip.textContent = 'Back to Top';
-        }
-        
-        // 翻译页脚
-        translateFooter();
+
     }
 }
 
@@ -517,28 +510,4 @@ function translateSupportElements() {
     });
 }
 
-// 翻译页脚
-function translateFooter() {
-    const footerContent = document.querySelector('.main-footer .container');
-    if (footerContent) {
-        // 遍历所有段落
-        footerContent.querySelectorAll('p').forEach(p => {
-            const text = p.innerHTML;
-            if (text.includes('基于')) {
-                p.innerHTML = 'Open-sourced under <a href="https://github.com/vladelaina/Catime/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Apache 2.0</a> license';
-            } else if (text.includes('图标画师')) {
-                p.innerHTML = 'Icon artist: <a href="https://space.bilibili.com/26087398" target="_blank" rel="noopener noreferrer">猫屋敷梨梨Official</a>';
-            }
-        });
-        
-        // 翻译页脚链接
-        const footerLinks = footerContent.querySelectorAll('.footer-links a');
-        footerLinks.forEach(link => {
-            if (link.textContent === '问题反馈') {
-                link.textContent = 'Feedback';
-            } else if (link.textContent === '隐私政策') {
-                link.textContent = 'Privacy Policy';
-            }
-        });
-    }
-} 
+ 

@@ -129,6 +129,11 @@ class CatimeNavigation {
                     // 如果当前页面有特定的语言切换处理，则重新加载页面
                     if (this.currentPage === 'font-tool' || typeof applyLanguage === 'function') {
                         window.location.reload();
+                    } else {
+                        // 否则手动触发组件翻译
+                        if (typeof translateAllComponents === 'function') {
+                            translateAllComponents();
+                        }
                     }
                 });
                 
