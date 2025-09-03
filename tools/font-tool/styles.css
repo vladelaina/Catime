@@ -1389,20 +1389,30 @@ section h2 i {
         font-size: 0.9rem;
     }
     
-    /* 英文版本保持单行，不换行 */
-    .local-processing-notice p.english-notice {
-        flex-direction: row;
-        white-space: nowrap;
-        font-size: 0.8rem;
-        overflow-x: auto;
-        text-align: left;
-    }
+    /* 这个规则被移到上面的响应式样式中了 */
 }
 
-/* 英文版本的专用样式 */
+/* 英文版本的专用样式 - 优化小屏幕换行 */
 .local-processing-notice p.english-notice {
     white-space: nowrap;
     min-width: fit-content;
+}
+
+/* 在小屏幕上允许英文文本换行 */
+@media (max-width: 768px) {
+    .local-processing-notice p.english-notice {
+        white-space: normal;
+        line-height: 1.4;
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .local-processing-notice p.english-notice {
+        font-size: 0.8rem;
+        line-height: 1.5;
+        gap: 0.3rem;
+    }
 }
 
 /* 英文版本的文件夹提示样式 */
@@ -1412,25 +1422,21 @@ section h2 i {
     min-width: fit-content;
 }
 
-/* 在小屏幕上为英文文件夹提示添加水平滚动 */
+/* 在小屏幕上为英文文件夹提示允许换行 */
 @media (max-width: 768px) {
     .folder-hint.english-folder-hint {
-        overflow-x: auto;
-        scrollbar-width: thin;
-        scrollbar-color: #4caf50 transparent;
+        white-space: normal;
+        line-height: 1.4;
+        max-width: 100%;
+        text-align: center;
     }
-    
-    .folder-hint.english-folder-hint::-webkit-scrollbar {
-        height: 4px;
-    }
-    
-    .folder-hint.english-folder-hint::-webkit-scrollbar-track {
-        background: transparent;
-    }
-    
-    .folder-hint.english-folder-hint::-webkit-scrollbar-thumb {
-        background: #4caf50;
-        border-radius: 2px;
+}
+
+@media (max-width: 480px) {
+    .folder-hint.english-folder-hint {
+        font-size: 0.75rem;
+        line-height: 1.5;
+        padding: 6px 10px;
     }
 }
 
