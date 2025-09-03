@@ -13,6 +13,12 @@ let folderStructure = {
     directories: new Set() // 所有目录路径
 };
 
+// 文件来源跟踪（用于智能下载按钮）
+let fileSourceTracking = {
+    standalone: [], // 单独添加的文件
+    fromFolders: []  // 从文件夹扫描来的文件
+};
+
 // 计时相关变量
 let processingStartTime = null;
 let timingInterval = null;
@@ -576,9 +582,9 @@ function unhighlight(e) {
 async function handleDrop(e) {
     const dt = e.dataTransfer;
     
-    // 重置文件夹结构信息
-    folderMode = false;
-    folderStructure = {
+    // 当前拖拽的文件夹结构信息（不重置现有文件）
+    let currentDropFolderMode = false;
+    let currentDropFolderStructure = {
         name: '',
         files: [],
         fontFiles: [],
@@ -607,8 +613,8 @@ async function handleDrop(e) {
                     
                     // 检测是否为文件夹拖拽
                     if (entry.isDirectory) {
-                        folderMode = true;
-                        folderStructure.name = entry.name;
+                        currentDropFolderMode = true;
+                        currentDropFolderStructure.name = entry.name;
                         mainFolderEntry = entry;
                         console.log(`📁 检测到文件夹模式: ${entry.name}`);
                         console.log('主文件夹条目:', entry.name);
@@ -621,7 +627,7 @@ async function handleDrop(e) {
         // 只扫描主文件夹，避免扫描额外内容
         if (mainFolderEntry) {
             console.log('开始扫描主文件夹:', mainFolderEntry.name);
-            scanPromises.push(scanEntry(mainFolderEntry, files));
+            scanPromises.push(scanEntryForCurrentDrop(mainFolderEntry, files, currentDropFolderStructure));
         } else {
             // 没有文件夹，处理单个文件
             for (let i = 0; i < dt.items.length; i++) {
@@ -629,7 +635,7 @@ async function handleDrop(e) {
                 if (item.kind === 'file') {
                     const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : item.getAsEntry();
                     if (entry && entry.isFile) {
-                        scanPromises.push(scanEntry(entry, files));
+                        scanPromises.push(scanEntryForCurrentDrop(entry, files, currentDropFolderStructure));
                     } else {
                         // 后备：直接获取文件
                         const file = item.getAsFile();
@@ -642,17 +648,43 @@ async function handleDrop(e) {
         await Promise.all(scanPromises);
         
         if (files.length > 0) {
-            const totalFiles = folderStructure.files.length;
+            // 合并当前拖拽的文件夹结构到全局状态
+            if (currentDropFolderMode) {
+                // 如果当前是文件夹模式，合并到全局文件夹结构
+                folderMode = true;
+                if (!folderStructure.name) {
+                    folderStructure.name = currentDropFolderStructure.name;
+                }
+                folderStructure.files.push(...currentDropFolderStructure.files);
+                folderStructure.fontFiles.push(...currentDropFolderStructure.fontFiles);
+                currentDropFolderStructure.directories.forEach(dir => folderStructure.directories.add(dir));
+                
+                // 记录文件来源
+                files.forEach(file => {
+                    if (!fileSourceTracking.fromFolders.some(f => f.name === file.name && f.size === file.size)) {
+                        fileSourceTracking.fromFolders.push(file);
+                    }
+                });
+            } else {
+                // 单独文件模式，记录到standalone
+                files.forEach(file => {
+                    if (!fileSourceTracking.standalone.some(f => f.name === file.name && f.size === file.size)) {
+                        fileSourceTracking.standalone.push(file);
+                    }
+                });
+            }
+            
+            const totalFiles = currentDropFolderMode ? currentDropFolderStructure.files.length : files.length;
             const nonFontFiles = totalFiles - files.length;
             
             // 更新扫描信息显示（显示在文件列表旁边）
-            updateScanInfo(totalFiles, files.length, nonFontFiles, folderMode);
+            updateScanInfo(totalFiles, files.length, nonFontFiles, currentDropFolderMode);
             
             console.log(`📁 扫描完成，发现 ${totalFiles} 个文件 (${files.length} 个字体文件, ${nonFontFiles} 个其他文件)`);
             
-            if (folderMode) {
+            if (currentDropFolderMode) {
                 console.log(`📁 文件夹模式启用: 将保持目录结构并复制所有文件`);
-                console.log(`🔍 调试: 目录数=${folderStructure.directories.size}, 文件数=${folderStructure.files.length}`);
+                console.log(`🔍 调试: 目录数=${currentDropFolderStructure.directories.size}, 文件数=${currentDropFolderStructure.files.length}`);
             }
             
             handleFiles(files);
@@ -881,6 +913,75 @@ async function scanEntry(entry, files, basePath = '') {
     }
 }
 
+// 为当前拖拽扫描条目（使用传入的文件夹结构）
+async function scanEntryForCurrentDrop(entry, files, targetFolderStructure, basePath = '') {
+    console.log(`扫描条目: ${entry.name}, 类型: ${entry.isDirectory ? '目录' : '文件'}, 基础路径: ${basePath}`);
+    
+    if (entry.isFile) {
+        // 这是一个文件
+        return new Promise((resolve) => {
+            entry.file((file) => {
+                // 计算文件的相对路径
+                const relativePath = basePath ? `${basePath}/${file.name}` : file.name;
+                console.log(`处理文件: ${file.name}, 相对路径: ${relativePath}`);
+                
+                // 创建文件信息对象
+                const fileInfo = {
+                    file: file,
+                    relativePath: relativePath,
+                    isFont: false
+                };
+                
+                // 检查是否为字体文件
+                const extension = file.name.toLowerCase().split('.').pop();
+                if (['ttf', 'otf', 'woff', 'woff2'].includes(extension)) {
+                    fileInfo.isFont = true;
+                    files.push(file); // 保持原有逻辑，只把字体文件加入selectedFiles
+                    targetFolderStructure.fontFiles.push(fileInfo);
+                    console.log(`✅ 字体文件: ${relativePath}`);
+                } else {
+                    console.log(`📄 普通文件: ${relativePath}`);
+                }
+                
+                // 所有文件都记录到传入的文件夹结构中
+                targetFolderStructure.files.push(fileInfo);
+                
+                // 记录目录路径
+                if (basePath) {
+                    targetFolderStructure.directories.add(basePath);
+                }
+                
+                resolve();
+            }, () => resolve()); // 错误时继续
+        });
+    } else if (entry.isDirectory) {
+        // 这是一个文件夹，递归扫描（与本地版本的os.walk相同）
+        const currentPath = basePath ? `${basePath}/${entry.name}` : entry.name;
+        console.log(`进入目录: ${entry.name}, 完整路径: ${currentPath}`);
+        targetFolderStructure.directories.add(currentPath);
+        
+        return new Promise((resolve) => {
+            const reader = entry.createReader();
+            const readEntries = async () => {
+                reader.readEntries(async (entries) => {
+                    if (entries.length === 0) {
+                        resolve();
+                        return;
+                    }
+                    
+                    console.log(`目录 ${entry.name} 包含 ${entries.length} 个条目`);
+                    const subPromises = entries.map(subEntry => scanEntryForCurrentDrop(subEntry, files, targetFolderStructure, currentPath));
+                    await Promise.all(subPromises);
+                    
+                    // 继续读取（因为readEntries可能不会一次返回所有条目）
+                    await readEntries();
+                }, () => resolve()); // 错误时继续
+            };
+            readEntries();
+        });
+    }
+}
+
 // 处理选中的文件
 function handleFiles(files) {
     const fontFiles = Array.from(files).filter(file => {
@@ -1000,6 +1101,11 @@ function clearFiles() {
         files: [],
         fontFiles: [],
         directories: new Set()
+    };
+    // 重置文件来源跟踪
+    fileSourceTracking = {
+        standalone: [],
+        fromFolders: []
     };
     updateFileList();
     hideScanInfo();
@@ -1660,19 +1766,32 @@ function addBatchDownloadButton() {
     }
 }
 
-// 更新下载按钮文本
+// 更新下载按钮文本（智能按钮功能）
 function updateDownloadButtonText() {
-    const downloadAllText = folderMode ? 
-        `<i class="fas fa-archive"></i> 下载完整文件夹 (ZIP)` : 
-        (processedFonts.length > 1 ? 
-            `<i class="fas fa-download"></i> 下载所有字体文件` : 
-            `<i class="fas fa-download"></i> 下载字体文件`
-        );
-        
-    const downloadAllHint = folderMode ? 
-        `<small style="display: block; margin-top: 5px; color: #666;">包含目录结构和所有非字体文件</small>` : 
-        '';
-        
+    // 分析文件来源
+    const standaloneCount = fileSourceTracking.standalone.length;
+    const folderCount = fileSourceTracking.fromFolders.length;
+    const totalCount = standaloneCount + folderCount;
+    
+    let downloadAllText = '';
+    let downloadAllHint = '';
+    
+    if (totalCount === 0) {
+        // 没有文件，使用默认文案
+        downloadAllText = `<i class="fas fa-download"></i> 下载字体文件`;
+    } else if (standaloneCount > 0 && folderCount === 0) {
+        // 纯单独文件
+        downloadAllText = `<i class="fas fa-download"></i> 下载所有字体文件`;
+    } else if (standaloneCount === 0 && folderCount > 0) {
+        // 纯文件夹文件
+        downloadAllText = `<i class="fas fa-archive"></i> 下载完整文件夹 (ZIP)`;
+        downloadAllHint = `<small style="display: block; margin-top: 5px; color: #666;">包含目录结构和所有非字体文件</small>`;
+    } else {
+        // 混合模式（既有单独文件又有文件夹文件）
+        downloadAllText = `<i class="fas fa-download"></i> 下载所有字体文件`;
+        downloadAllHint = `<small style="display: block; margin-top: 5px; color: #666;">${standaloneCount}个单独文件 + ${folderCount}个文件夹文件 (ZIP)</small>`;
+    }
+    
     downloadAllBtn.innerHTML = `${downloadAllText}${downloadAllHint}`;
 }
 
@@ -1985,6 +2104,12 @@ function clearAllProcessedFiles() {
         files: [],
         fontFiles: [],
         directories: new Set()
+    };
+    
+    // 重置文件来源跟踪
+    fileSourceTracking = {
+        standalone: [],
+        fromFolders: []
     };
     
     // 隐藏和重置文件列表
