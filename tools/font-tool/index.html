@@ -1,18 +1,50 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" id="html-root">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>字体简化工具 - Web版</title>
+    <meta name="description" content="Catime 字体简化工具 - 批量处理字体文件，只保留指定字符的专业级 Web 版本">
+    <title>字体简化工具 - Catime</title>
+
+    <!-- Google 字体 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome 图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <!-- 主项目样式表 -->
+    <link rel="stylesheet" href="../../styles/style.css">
+    
+    <!-- 字体工具专用样式表 -->
     <link rel="stylesheet" href="styles.css">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <link rel="icon" type="image/png" href="../../assets/catime.webp">
 </head>
 <body>
+    <!-- 页头/导航 -->
+    <header class="main-header">
+        <nav class="container">
+            <a href="../../index.html" class="logo">
+                <img src="../../assets/catime.webp" class="logo-img" alt="Catime Logo" style="height: 2.5rem;"> 
+                Catime
+            </a>
+            <ul class="nav-links">
+                <li><a href="../../index.html">首页</a></li>
+                <li><a href="../../guide.html">指南</a></li>
+                <li><a href="../../about.html">关于</a></li>
+                <li><a href="#" class="active">字体工具</a></li>
+                <li><a href="https://github.com/vladelaina/Catime" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+            </ul>
+        </nav>
+    </header>
+
     <div class="container">
-        <!-- 顶部标题 -->
-        <header class="header">
+        <!-- 工具标题 -->
+        <header class="tool-header">
             <h1><i class="fas fa-font"></i> 字体简化工具</h1>
-            <p>批量处理字体文件，只保留指定字符 - Web版本</p>
+            <p>批量处理字体文件，只保留指定字符 - 专业级 Web 版本</p>
         </header>
 
         <!-- 重要提示 -->
