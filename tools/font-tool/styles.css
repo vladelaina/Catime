@@ -950,6 +950,40 @@ section h2 i {
     gap: 4px;
 }
 
+/* 下载操作区域 */
+.download-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+/* 下载项删除按钮 */
+.download-remove {
+    background: none;
+    border: none;
+    color: #e53e3e;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
+}
+
+.download-remove:hover {
+    background: #fed7d7;
+    color: #c53030;
+    transform: scale(1.1);
+}
+
+.download-remove:active {
+    transform: scale(0.95);
+}
+
 
 
 /* 危险按钮样式 */
@@ -1057,6 +1091,22 @@ section h2 i {
         font-size: 0.9rem;
     }
     
+    .download-actions {
+        flex-direction: column;
+        gap: 6px;
+        align-items: stretch;
+    }
+    
+    .download-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .download-remove {
+        align-self: center;
+        width: auto;
+    }
+    
     .temporary-message {
         min-width: 90%;
         max-width: 90%;
@@ -1088,6 +1138,17 @@ section h2 i {
     .btn-compact i {
         margin-right: 0.3rem;
         font-size: 0.75rem;
+    }
+    
+    .download-actions {
+        gap: 4px;
+    }
+    
+    .download-remove {
+        min-width: 24px;
+        height: 24px;
+        font-size: 0.8rem;
+        padding: 4px;
     }
     
     .temporary-message {

@@ -1460,13 +1460,18 @@ async function createOpenTypeSubset(fontBuffer, characters) {
 
 // 更新下载区域标题统计
 function updateDownloadSectionTitle() {
-    if (processedFonts.length === 0) return;
+    const downloadTitle = downloadSection.querySelector('h2');
+    
+    if (processedFonts.length === 0) {
+        // 没有处理后的字体时，重置标题为原始状态
+        downloadTitle.innerHTML = `<i class="fas fa-download"></i> 下载处理后的字体`;
+        return;
+    }
     
     const totalOriginalSize = processedFonts.reduce((sum, font) => sum + font.originalSize, 0);
     const totalNewSize = processedFonts.reduce((sum, font) => sum + font.newSize, 0);
     const totalCompressionRatio = ((totalOriginalSize - totalNewSize) / totalOriginalSize * 100).toFixed(1);
     
-    const downloadTitle = downloadSection.querySelector('h2');
     downloadTitle.innerHTML = `
         <i class="fas fa-download"></i> 下载处理后的字体 
         <span style="font-size: 14px; color: #666; font-weight: normal;">
@@ -1479,6 +1484,7 @@ function updateDownloadSectionTitle() {
 function addSingleDownloadItem(font, index) {
     const downloadItem = document.createElement('div');
     downloadItem.className = 'download-item';
+    downloadItem.setAttribute('data-index', index); // 用于删除时识别
     
     const compressionRatio = ((font.originalSize - font.newSize) / font.originalSize * 100).toFixed(1);
     
@@ -1490,9 +1496,14 @@ function addSingleDownloadItem(font, index) {
                 (压缩了 ${compressionRatio}%)
             </div>
         </div>
-        <button class="btn btn-success" onclick="downloadFont(${index})">
-            <i class="fas fa-download"></i> 下载
-        </button>
+        <div class="download-actions">
+            <button class="download-remove" onclick="removeProcessedFont(${index})" title="删除此处理后的字体">
+                <i class="fas fa-times"></i>
+            </button>
+            <button class="btn btn-success" onclick="downloadFont(${index})">
+                <i class="fas fa-download"></i> 下载
+            </button>
+        </div>
     `;
     
     downloadItems.appendChild(downloadItem);
@@ -1550,6 +1561,52 @@ function downloadFont(index) {
     URL.revokeObjectURL(url);
     
     console.log(`已下载: ${font.name}`);
+}
+
+// 删除处理后的字体
+function removeProcessedFont(index) {
+    if (index < 0 || index >= processedFonts.length) {
+        console.warn('无效的字体索引:', index);
+        return;
+    }
+    
+    const font = processedFonts[index];
+    console.log(`删除处理后的字体: ${font.name}`);
+    
+    // 从数组中移除
+    processedFonts.splice(index, 1);
+    
+    // 重新生成所有下载项（因为索引会改变）
+    updateDownloadItemsDisplay();
+    
+    // 更新标题统计
+    updateDownloadSectionTitle();
+    
+    // 更新下载按钮文本
+    if (downloadAllBtn && typeof updateDownloadButtonText === 'function') {
+        updateDownloadButtonText();
+    }
+    
+    // 如果没有处理后的字体了，隐藏下载控制区域
+    if (processedFonts.length === 0) {
+        downloadControls.style.display = 'none';
+    }
+    
+    console.log(`已删除字体，剩余 ${processedFonts.length} 个字体`);
+    
+    // 显示删除成功提示
+    showTemporaryMessage(`已删除字体: ${font.name}`, 'success');
+}
+
+// 更新下载项显示
+function updateDownloadItemsDisplay() {
+    // 清空现有显示
+    downloadItems.innerHTML = '';
+    
+    // 重新生成所有下载项（确保索引正确）
+    processedFonts.forEach((font, index) => {
+        addSingleDownloadItem(font, index);
+    });
 }
 
 async function downloadAllFonts() {
