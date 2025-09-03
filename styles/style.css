@@ -119,9 +119,10 @@ img {
 
 .main-header .container {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
     padding: 0 15px; /* 确保左右内边距一致 */
+    gap: 2rem; /* 添加logo和导航项之间的间距 */
 }
 
 .logo {

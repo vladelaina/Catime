@@ -50,7 +50,6 @@ class CatimeNavigation {
                             <!-- 未来可以在这里添加更多工具 -->
                         </ul>
                     </li>
-                    <li><a href="https://vladelaina.com/" target="_blank" rel="noopener noreferrer">vladelaina</a></li>
                     <li><a href="https://github.com/vladelaina/Catime" target="_blank" rel="noopener noreferrer">GitHub</a></li>
                     <li><a href="#" id="language-toggle"><i class="fas fa-language"></i> English</a></li>
                     ${this.generateActionButtons(prefix)}
