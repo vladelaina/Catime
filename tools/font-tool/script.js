@@ -1939,7 +1939,7 @@ async function downloadFolderAsZip() {
         console.log('开始创建目录，总数:', folderStructure.directories.size);
         let dirCount = 0;
         folderStructure.directories.forEach(dirPath => {
-            const fullPath = `${outputFolderName}/${dirPath}/`;
+            const fullPath = `${dirPath}/`;
             zip.folder(fullPath);
             dirCount++;
             if (dirCount <= 5) { // 只显示前5个目录
@@ -1977,7 +1977,7 @@ async function downloadFolderAsZip() {
                     // 字体文件：使用处理后的数据
                     const processedData = processedFontMap.get(file.name);
                     if (processedData) {
-                        zip.file(`${outputFolderName}/${relativePath}`, processedData);
+                        zip.file(relativePath, processedData);
                         console.log(`✅ 添加处理后的字体: ${relativePath} (${processedData.byteLength}字节)`);
                         addedFiles++;
                     } else {
@@ -1987,7 +1987,7 @@ async function downloadFolderAsZip() {
                 } else {
                     // 非字体文件：直接复制原文件
                     const fileData = await readFileAsArrayBuffer(file);
-                    zip.file(`${outputFolderName}/${relativePath}`, fileData);
+                    zip.file(relativePath, fileData);
                     console.log(`✅ 复制原文件: ${relativePath} (${fileData.byteLength}字节)`);
                     addedFiles++;
                 }
