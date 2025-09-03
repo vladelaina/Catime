@@ -59,6 +59,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initPyodide();
     initDragAndDrop();
     initFileInput();
+    initPasteSupport();
     
     // 加载通用组件
     if (typeof loadCommonComponents === 'function') {
@@ -683,6 +684,132 @@ function initFileInput() {
     } else {
         console.error('上传区域元素未找到！');
     }
+}
+
+// 初始化粘贴支持
+function initPasteSupport() {
+    document.addEventListener('paste', async function(e) {
+        console.log('检测到粘贴事件');
+        
+        // 检查剪贴板是否包含内容
+        const clipboardData = e.clipboardData || window.clipboardData;
+        if (!clipboardData) {
+            console.log('无法访问剪贴板数据');
+            return;
+        }
+        
+        // 重置文件夹状态
+        folderMode = false;
+        folderStructure = {
+            name: '',
+            files: [],
+            fontFiles: [],
+            directories: new Set()
+        };
+        
+        let files = [];
+        let foundFolderStructure = false;
+        
+        // 优先尝试处理文件夹（使用 items API）
+        if (clipboardData.items && clipboardData.items.length > 0) {
+            console.log(`剪贴板中发现 ${clipboardData.items.length} 个项目`);
+            
+            // 检查是否有文件夹条目
+            for (let i = 0; i < clipboardData.items.length; i++) {
+                const item = clipboardData.items[i];
+                console.log(`项目 ${i}:`, item.kind, item.type);
+                
+                if (item.kind === 'file') {
+                    // 尝试获取文件夹条目（如果支持）
+                    const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+                    if (entry) {
+                        console.log(`条目 ${i}:`, entry.name, entry.isDirectory ? '目录' : '文件');
+                        
+                        if (entry.isDirectory) {
+                            console.log(`📁 检测到文件夹: ${entry.name}`);
+                            folderMode = true;
+                            folderStructure.name = entry.name;
+                            foundFolderStructure = true;
+                            
+                            // 阻止默认粘贴行为
+                            e.preventDefault();
+                            
+                            try {
+                                // 扫描文件夹结构
+                                await scanEntry(entry, files);
+                                
+                                if (files.length > 0) {
+                                    const totalFiles = folderStructure.files.length;
+                                    const nonFontFiles = totalFiles - files.length;
+                                    
+                                    console.log(`📁 文件夹扫描完成: ${totalFiles} 个文件 (${files.length} 个字体文件)`);
+                                    
+                                    // 更新扫描信息显示
+                                    updateScanInfo(totalFiles, files.length, nonFontFiles, folderMode);
+                                    
+                                    // 显示成功消息
+                                    showTemporaryMessage(`通过粘贴添加了文件夹 "${entry.name}"，包含 ${files.length} 个字体文件`, 'success');
+                                    
+                                    // 处理文件
+                                    handleFiles(files);
+                                } else {
+                                    showTemporaryMessage(`文件夹 "${entry.name}" 中没有找到字体文件`, 'warning');
+                                }
+                            } catch (error) {
+                                console.error('文件夹扫描失败:', error);
+                                showTemporaryMessage('文件夹处理失败，请尝试拖拽文件夹', 'error');
+                            }
+                            return; // 处理完文件夹后退出
+                        } else if (entry.isFile) {
+                            // 单个文件，添加到文件列表
+                            try {
+                                await scanEntry(entry, files);
+                            } catch (error) {
+                                console.log('文件处理失败，将使用备用方法');
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 如果没有找到文件夹结构，使用传统的 files API
+        if (!foundFolderStructure) {
+            const clipboardFiles = clipboardData.files;
+            if (!clipboardFiles || clipboardFiles.length === 0) {
+                console.log('剪贴板中没有文件');
+                return;
+            }
+            
+            console.log(`剪贴板中发现 ${clipboardFiles.length} 个文件`);
+            
+            // 过滤字体文件
+            const fontFiles = Array.from(clipboardFiles).filter(file => {
+                const extension = file.name.toLowerCase().split('.').pop();
+                return ['ttf', 'otf', 'woff', 'woff2'].includes(extension);
+            });
+            
+            if (fontFiles.length > 0) {
+                console.log(`检测到 ${fontFiles.length} 个字体文件，开始处理`);
+                
+                // 阻止默认粘贴行为
+                e.preventDefault();
+                
+                // 显示临时消息提示用户
+                showTemporaryMessage(`通过粘贴添加了 ${fontFiles.length} 个字体文件`, 'success');
+                
+                // 使用现有的文件处理逻辑
+                handleFiles(fontFiles);
+            } else {
+                console.log('剪贴板中没有字体文件');
+                if (clipboardFiles.length > 0) {
+                    showTemporaryMessage('剪贴板中的文件不是支持的字体格式', 'warning');
+                }
+            }
+        }
+    });
+    
+    console.log('全局粘贴支持已初始化（包含文件夹支持）');
 }
 
 // 递归扫描文件夹条目（与本地版本逻辑一致，记录完整结构）
