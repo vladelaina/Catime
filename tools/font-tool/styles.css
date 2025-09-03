@@ -851,6 +851,7 @@ section h2 i {
 .download-actions .btn-large {
     flex: 1;
     white-space: nowrap;
+    min-width: 0; /* 允许按钮收缩 */
 }
 
 .btn-clear {

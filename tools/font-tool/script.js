@@ -1040,6 +1040,18 @@ async function startProcessing() {
         
         if (processedFonts.length > 0) {
             showDownloadSection();
+            
+            // 显示处理完成的成功消息
+            const successCount = processedFonts.length;
+            const totalCount = selectedFiles.length;
+            
+            if (successCount === totalCount) {
+                showTemporaryMessage(`🎉 所有字体处理完成！成功处理 ${successCount} 个文件`, 'success');
+            } else {
+                showTemporaryMessage(`⚠️ 字体处理完成！成功处理 ${successCount}/${totalCount} 个文件`, 'warning');
+            }
+        } else {
+            showTemporaryMessage('❌ 字体处理失败，没有成功处理任何文件', 'error');
         }
 
     } catch (error) {
@@ -1484,14 +1496,17 @@ function addBatchDownloadButton() {
         return; // 已存在，不重复添加
     }
     
-    if (processedFonts.length > 1) {
+    if (processedFonts.length > 0) {
         const batchDownloadDiv = document.createElement('div');
         batchDownloadDiv.className = 'batch-download-div';
         batchDownloadDiv.style.textAlign = 'center';
         batchDownloadDiv.style.marginTop = '16px';
         const downloadAllText = folderMode ? 
             `<i class="fas fa-archive"></i> 下载完整文件夹 (ZIP)` : 
-            `<i class="fas fa-download"></i> 下载所有字体文件`;
+            (processedFonts.length > 1 ? 
+                `<i class="fas fa-download"></i> 下载所有字体文件` : 
+                `<i class="fas fa-download"></i> 下载字体文件`
+            );
             
         const downloadAllHint = folderMode ? 
             `<small style="display: block; margin-top: 5px; color: #666;">包含目录结构和所有非字体文件</small>` : 
