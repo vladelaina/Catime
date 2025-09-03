@@ -14,8 +14,12 @@
     <!-- Font Awesome 图标 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
+    <!-- AOS 滚动动画库 -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
     <!-- 主项目样式表 -->
     <link rel="stylesheet" href="../../styles/style.css">
+    <link rel="stylesheet" href="../../styles/about.css">
     
     <!-- 字体工具专用样式表 -->
     <link rel="stylesheet" href="styles.css">
@@ -26,12 +30,21 @@
     <!-- 页头/导航 - 由 navigation.js 动态生成 -->
     <header class="main-header"></header>
 
+    <main>
+        <!-- 工具头部 -->
+        <section class="guide-hero">
+            <div class="container">
+                <h1 class="guide-hero-title" data-aos="fade-up"><span class="catime-text">Catime</span><span class="guide-accent">字体简化工具</span></h1>
+                <div class="guide-hero-decoration">
+                    <div class="floating-icon icon1"><i class="fas fa-font"></i></div>
+                    <div class="floating-icon icon2"><i class="fas fa-star"></i></div>  
+                    <div class="floating-icon icon3"><i class="fas fa-magic"></i></div>
+                    <div class="floating-icon icon4"><i class="fas fa-tools"></i></div>
+                </div>
+            </div>
+        </section>
+
     <div class="container">
-        <!-- 工具标题 -->
-        <header class="tool-header">
-            <h1><i class="fas fa-font"></i> 字体简化工具</h1>
-            <p>批量处理字体文件，只保留指定字符 - 专业级 Web 版本</p>
-        </header>
 
         <!-- 重要提示 -->
         <div class="warning-section">
@@ -137,8 +150,11 @@
                 <div class="download-items" id="downloadItems"></div>
             </section>
         </div>
-    </div>
+    </main>
 
+    <!-- JavaScript 库 -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    
     <!-- 加载Pyodide (Python in Browser) 和 fontTools -->
     <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
     
@@ -147,6 +163,17 @@
     
     <!-- 统一导航管理 -->
     <script src="../../scripts/navigation.js"></script>
+    
+    <script>
+        // 初始化 AOS 动画
+        if (typeof AOS !== 'undefined') {
+            AOS.init({
+                duration: 800,
+                easing: 'ease-out-quart',
+                once: true
+            });
+        }
+    </script>
     
     <script src="script.js"></script>
 </body>
