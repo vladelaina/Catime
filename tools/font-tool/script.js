@@ -35,13 +35,15 @@ let timingText = null;
 
 const downloadSection = document.getElementById('downloadSection');
 const downloadItems = document.getElementById('downloadItems');
+const downloadControls = document.getElementById('downloadControls');
+const downloadAllBtn = document.getElementById('downloadAllBtn');
 const dragOverlay = document.getElementById('dragOverlay');
 
-// ZIP进度条元素（动态获取，因为是在按钮创建后才有的）
-let zipProgressContainer = null;
-let zipProgressFill = null;
-let zipProgressText = null;
-let zipProgressDetails = null;
+// ZIP进度条元素
+const zipProgressContainer = document.getElementById('zipProgressContainer');
+const zipProgressFill = document.getElementById('zipProgressFill');
+const zipProgressText = document.getElementById('zipProgressText');
+const zipProgressDetails = document.getElementById('zipProgressDetails');
 
 // 初始化
 document.addEventListener('DOMContentLoaded', function() {
@@ -1024,6 +1026,11 @@ async function startProcessing() {
                 addSingleDownloadItem(processedFont, processedFonts.length - 1);
                 updateDownloadSectionTitle(); // 更新标题统计
                 
+                // 如果是第一个处理完成的文件，显示下载控制按钮
+                if (processedFonts.length === 1) {
+                    addBatchDownloadButton();
+                }
+                
                 // 在处理大文件后添加小延迟，让浏览器有时间清理内存
                 if (file.size > 1024 * 1024) { // 大于1MB的文件
                     await new Promise(resolve => setTimeout(resolve, 100));
@@ -1489,58 +1496,31 @@ function showDownloadSection() {
     }
 }
 
-// 添加批量下载按钮
+// 显示批量下载按钮
 function addBatchDownloadButton() {
-    // 检查是否已存在批量下载按钮
-    if (downloadItems.querySelector('.batch-download-div')) {
-        return; // 已存在，不重复添加
-    }
-    
     if (processedFonts.length > 0) {
-        const batchDownloadDiv = document.createElement('div');
-        batchDownloadDiv.className = 'batch-download-div';
-        batchDownloadDiv.style.textAlign = 'center';
-        batchDownloadDiv.style.marginTop = '16px';
-        const downloadAllText = folderMode ? 
-            `<i class="fas fa-archive"></i> 下载完整文件夹 (ZIP)` : 
-            (processedFonts.length > 1 ? 
-                `<i class="fas fa-download"></i> 下载所有字体文件` : 
-                `<i class="fas fa-download"></i> 下载字体文件`
-            );
-            
-        const downloadAllHint = folderMode ? 
-            `<small style="display: block; margin-top: 5px; color: #666;">包含目录结构和所有非字体文件</small>` : 
-            '';
-            
-        batchDownloadDiv.innerHTML = `
-            <div class="download-actions">
-                <button class="btn btn-primary btn-large" onclick="downloadAllFonts()">
-                    ${downloadAllText}
-                    ${downloadAllHint}
-                </button>
-                
-                <button class="btn btn-danger btn-clear" onclick="clearAllProcessedFiles()" title="清理全部处理结果，重新开始">
-                    <i class="fas fa-trash-alt"></i> 清理全部
-                </button>
-            </div>
-            
-            <!-- ZIP生成进度条 -->
-            <div class="zip-progress-container" id="zipProgressContainer" style="display: none;">
-                <div class="zip-progress-header">
-                    <i class="fas fa-archive"></i>
-                    <span id="zipProgressText">正在生成ZIP文件...</span>
-                </div>
-                <div class="zip-progress-bar">
-                    <div class="zip-progress-fill" id="zipProgressFill"></div>
-                </div>
-                <div class="zip-progress-details" id="zipProgressDetails">准备中...</div>
-            </div>
-        `;
-        downloadItems.appendChild(batchDownloadDiv);
+        // 显示下载控制区域
+        downloadControls.style.display = 'block';
+        
+        // 更新按钮文本
+        updateDownloadButtonText();
     }
+}
 
-
-
+// 更新下载按钮文本
+function updateDownloadButtonText() {
+    const downloadAllText = folderMode ? 
+        `<i class="fas fa-archive"></i> 下载完整文件夹 (ZIP)` : 
+        (processedFonts.length > 1 ? 
+            `<i class="fas fa-download"></i> 下载所有字体文件` : 
+            `<i class="fas fa-download"></i> 下载字体文件`
+        );
+        
+    const downloadAllHint = folderMode ? 
+        `<small style="display: block; margin-top: 5px; color: #666;">包含目录结构和所有非字体文件</small>` : 
+        '';
+        
+    downloadAllBtn.innerHTML = `${downloadAllText}${downloadAllHint}`;
 }
 
 function downloadFont(index) {
@@ -1759,12 +1739,6 @@ function readFileAsArrayBuffer(file) {
 
 // ZIP进度条显示和控制函数
 function showZipProgress() {
-    // 动态获取进度条元素
-    zipProgressContainer = document.getElementById('zipProgressContainer');
-    zipProgressFill = document.getElementById('zipProgressFill');
-    zipProgressText = document.getElementById('zipProgressText');
-    zipProgressDetails = document.getElementById('zipProgressDetails');
-    
     if (zipProgressContainer) {
         zipProgressContainer.style.display = 'block';
         zipProgressFill.style.width = '0%';
@@ -1821,6 +1795,7 @@ function clearAllProcessedFiles() {
     // 隐藏下载区域
     downloadSection.style.display = 'none';
     downloadItems.innerHTML = '';
+    downloadControls.style.display = 'none';
     
     // 重置进度条
     resetProgressBar();

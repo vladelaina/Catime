@@ -384,7 +384,7 @@ section h2 i {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border-radius: 12px;
     padding: 16px;
-    margin: 16px 0 0 0;
+    margin: 0 0 16px 0;
     color: white;
     box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
     animation: slideIn 0.3s ease-out;
@@ -872,6 +872,45 @@ section h2 i {
 
 
 
+/* 下载标题行 */
+.download-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.download-header h2 {
+    margin: 0;
+    flex: 1;
+    min-width: 0;
+}
+
+/* 下载控制区域 */
+.download-controls {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+/* 紧凑按钮样式 */
+.btn-compact {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    white-space: nowrap;
+    border-radius: var(--border-radius-base);
+    transition: all 0.3s ease;
+}
+
+.btn-compact i {
+    margin-right: 0.4rem;
+    font-size: 0.8rem;
+}
+
 /* 下载区域 */
 .download-items {
     display: grid;
@@ -911,27 +950,7 @@ section h2 i {
     gap: 4px;
 }
 
-/* 下载操作区域 */
-.download-actions {
-    display: flex;
-    gap: 12px;
-    align-items: stretch;
-    margin-bottom: 16px;
-}
 
-.download-actions .btn-large {
-    flex: 1;
-    white-space: nowrap;
-    min-width: 0; /* 允许按钮收缩 */
-}
-
-.btn-clear {
-    min-width: 120px;
-    padding: 1rem 1.5rem;
-    font-size: 0.9rem;
-    font-weight: 600;
-    flex-shrink: 0;
-}
 
 /* 危险按钮样式 */
 .btn-danger {
@@ -1019,18 +1038,23 @@ section h2 i {
 
 /* 响应式样式调整 */
 @media (max-width: 768px) {
-    .download-actions {
+    .download-header {
         flex-direction: column;
-        gap: 10px;
+        align-items: stretch;
+        gap: 0.75rem;
     }
     
-    .download-actions .btn-large {
+    .download-controls {
+        flex-direction: column;
+        gap: 0.5rem;
         width: 100%;
     }
     
-    .btn-clear {
-        min-width: unset;
+    .btn-compact {
         width: 100%;
+        justify-content: center;
+        padding: 0.6rem 1rem;
+        font-size: 0.9rem;
     }
     
     .temporary-message {
@@ -1048,13 +1072,22 @@ section h2 i {
 }
 
 @media (max-width: 480px) {
-    .download-actions {
-        gap: 8px;
+    .download-header {
+        gap: 0.5rem;
     }
     
-    .btn-clear {
-        font-size: 0.85rem;
-        padding: 0.8rem 1.2rem;
+    .download-controls {
+        gap: 0.4rem;
+    }
+    
+    .btn-compact {
+        padding: 0.5rem 0.8rem;
+        font-size: 0.8rem;
+    }
+    
+    .btn-compact i {
+        margin-right: 0.3rem;
+        font-size: 0.75rem;
     }
     
     .temporary-message {

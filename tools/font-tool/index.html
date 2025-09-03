@@ -154,7 +154,33 @@
 
             <!-- 下载区域 -->
             <section class="download-section" id="downloadSection" style="display: none;">
-                <h2><i class="fas fa-download"></i> 下载处理后的字体</h2>
+                <div class="download-header">
+                    <h2><i class="fas fa-download"></i> 下载处理后的字体</h2>
+                    
+                    <!-- 下载控制按钮区域 -->
+                    <div class="download-controls" id="downloadControls" style="display: none;">
+                        <button class="btn btn-primary btn-compact" id="downloadAllBtn" onclick="downloadAllFonts()">
+                            <i class="fas fa-download"></i> 下载字体文件
+                        </button>
+                        
+                        <button class="btn btn-danger btn-compact" onclick="clearAllProcessedFiles()" title="清理全部处理结果，重新开始">
+                            <i class="fas fa-trash-alt"></i> 清理全部
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- ZIP生成进度条 -->
+                <div class="zip-progress-container" id="zipProgressContainer" style="display: none;">
+                    <div class="zip-progress-header">
+                        <i class="fas fa-archive"></i>
+                        <span id="zipProgressText">正在生成ZIP文件...</span>
+                    </div>
+                    <div class="zip-progress-bar">
+                        <div class="zip-progress-fill" id="zipProgressFill"></div>
+                    </div>
+                    <div class="zip-progress-details" id="zipProgressDetails">准备中...</div>
+                </div>
+                
                 <div class="download-items" id="downloadItems"></div>
             </section>
         </div>
