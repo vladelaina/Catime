@@ -13,6 +13,10 @@ let folderStructure = {
     directories: new Set() // 所有目录路径
 };
 
+// 计时相关变量
+let processingStartTime = null;
+let timingInterval = null;
+
 // DOM 元素
 const uploadArea = document.getElementById('uploadArea');
 const fileInput = document.getElementById('fileInput');
@@ -25,6 +29,9 @@ const processBtn = document.getElementById('processBtn');
 const progressContainer = document.getElementById('progressContainer');
 const progressFill = document.getElementById('progressFill');
 const progressText = document.getElementById('progressText');
+
+// 计时显示元素（将在进度条显示时动态创建）
+let timingText = null;
 
 const downloadSection = document.getElementById('downloadSection');
 const downloadItems = document.getElementById('downloadItems');
@@ -876,6 +883,91 @@ function updateProgress(current, total) {
     progressText.textContent = `${Math.round(percentage)}% (${current}/${total})`;
 }
 
+// 创建并显示计时元素
+function createTimingDisplay() {
+    // 如果计时元素已存在，先移除
+    if (timingText) {
+        timingText.remove();
+    }
+    
+    // 创建计时显示元素
+    timingText = document.createElement('div');
+    timingText.className = 'timing-text';
+    timingText.innerHTML = '<i class="fas fa-clock"></i> 已耗时: 0秒';
+    
+    // 将计时元素添加到进度条容器中
+    progressContainer.appendChild(timingText);
+    
+    // 开始计时更新
+    startTimingUpdate();
+}
+
+// 开始计时更新
+function startTimingUpdate() {
+    // 清除之前的计时器
+    if (timingInterval) {
+        clearInterval(timingInterval);
+    }
+    
+    // 每秒更新一次耗时显示
+    timingInterval = setInterval(() => {
+        if (processingStartTime) {
+            const elapsedTime = Date.now() - processingStartTime;
+            updateTimingDisplay(elapsedTime);
+        }
+    }, 1000);
+    
+    // 立即更新一次
+    updateTimingDisplay(0);
+}
+
+// 更新计时显示
+function updateTimingDisplay(elapsedTime) {
+    if (!timingText) return;
+    
+    const seconds = Math.floor(elapsedTime / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    
+    let timeString;
+    if (hours > 0) {
+        timeString = `${hours}小时${minutes % 60}分${seconds % 60}秒`;
+    } else if (minutes > 0) {
+        timeString = `${minutes}分${seconds % 60}秒`;
+    } else {
+        timeString = `${seconds}秒`;
+    }
+    
+    timingText.innerHTML = `<i class="fas fa-clock"></i> 已耗时: ${timeString}`;
+}
+
+// 停止计时并显示最终耗时
+function stopTimingAndShowResult() {
+    if (timingInterval) {
+        clearInterval(timingInterval);
+        timingInterval = null;
+    }
+    
+    if (processingStartTime && timingText) {
+        const totalTime = Date.now() - processingStartTime;
+        const seconds = Math.floor(totalTime / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+        
+        let timeString;
+        if (hours > 0) {
+            timeString = `${hours}小时${minutes % 60}分${seconds % 60}秒`;
+        } else if (minutes > 0) {
+            timeString = `${minutes}分${seconds % 60}秒`;
+        } else {
+            timeString = `${seconds}秒`;
+        }
+        
+        timingText.innerHTML = `<i class="fas fa-check-circle"></i> 处理完成，总耗时: ${timeString}`;
+        timingText.classList.add('timing-completed');
+    }
+}
+
 // 开始处理字体
 async function startProcessing() {
     if (selectedFiles.length === 0) {
@@ -894,11 +986,17 @@ async function startProcessing() {
         return;
     }
 
+    // 记录开始时间
+    processingStartTime = Date.now();
+    
     processBtn.disabled = true;
     processBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 处理中...';
     progressContainer.style.display = 'block';
     downloadSection.style.display = 'block'; // 立即显示下载区域
     downloadItems.innerHTML = ''; // 清空现有内容
+    
+    // 创建并显示计时元素
+    createTimingDisplay();
     
     processedFonts = [];
     
@@ -948,6 +1046,9 @@ async function startProcessing() {
         console.error(`处理过程中发生错误: ${error.message}`);
         console.error('Processing error:', error);
     } finally {
+        // 停止计时并显示最终结果
+        stopTimingAndShowResult();
+        
         processBtn.disabled = false;
         processBtn.innerHTML = '<i class="fas fa-rocket"></i> 开始处理字体';
     }

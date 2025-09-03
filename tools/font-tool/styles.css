@@ -709,6 +709,96 @@ section h2 i {
     color: #2c3e50;
 }
 
+/* 计时显示样式 */
+.timing-text {
+    text-align: center;
+    margin-top: 12px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    border-radius: 8px;
+    color: #667eea;
+    font-size: 0.9rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(5px);
+}
+
+.timing-text i {
+    color: #667eea;
+    font-size: 1rem;
+    animation: clockTick 2s ease-in-out infinite;
+}
+
+.timing-text.timing-completed {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.15) 100%);
+    border-color: rgba(16, 185, 129, 0.3);
+    color: #10b981;
+    font-weight: 600;
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.timing-text.timing-completed i {
+    color: #10b981;
+    animation: completedPulse 1s ease-in-out;
+}
+
+/* 计时动画 */
+@keyframes clockTick {
+    0%, 50%, 100% {
+        transform: rotate(0deg);
+    }
+    25% {
+        transform: rotate(15deg);
+    }
+    75% {
+        transform: rotate(-15deg);
+    }
+}
+
+@keyframes completedPulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* 响应式样式 */
+@media (max-width: 768px) {
+    .timing-text {
+        font-size: 0.85rem;
+        padding: 6px 12px;
+        gap: 6px;
+    }
+    
+    .timing-text i {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .timing-text {
+        font-size: 0.8rem;
+        padding: 5px 10px;
+        gap: 5px;
+        margin-top: 10px;
+    }
+    
+    .timing-text i {
+        font-size: 0.85rem;
+    }
+}
+
 
 
 /* 下载区域 */
