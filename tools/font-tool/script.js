@@ -971,18 +971,18 @@ function stopTimingAndShowResult() {
 // 开始处理字体
 async function startProcessing() {
     if (selectedFiles.length === 0) {
-        alert('请先选择要处理的字体文件！');
+        showTemporaryMessage('请先选择要处理的字体文件！', 'warning');
         return;
     }
 
     const characters = charactersInput.value.trim();
     if (!characters) {
-        alert('请输入要保留的字符！');
+        showTemporaryMessage('请输入要保留的字符！', 'warning');
         return;
     }
 
     if (!pythonReady && typeof opentype === 'undefined') {
-        alert('字体处理引擎尚未就绪，请稍候再试。');
+        showTemporaryMessage('字体处理引擎尚未就绪，请稍候再试', 'error');
         return;
     }
 
@@ -1588,14 +1588,14 @@ async function downloadFolderAsZip() {
 
     if (typeof JSZip === 'undefined') {
         console.error('❌ JSZip库未加载，无法创建ZIP文件');
-        alert('请刷新页面重试，或检查网络连接');
+        showTemporaryMessage('请刷新页面重试，或检查网络连接', 'error');
         return;
     }
 
     if (!folderStructure.files || folderStructure.files.length === 0) {
         console.error('❌ 没有找到文件夹结构数据，无法创建ZIP');
         console.error(`🔍 调试: folderStructure.files=${folderStructure.files ? folderStructure.files.length : 'null'}, folderMode=${folderMode}`);
-        alert('请重新拖拽文件夹后再试');
+        showTemporaryMessage('请重新拖拽文件夹后再试', 'warning');
         return;
     }
 
@@ -1857,11 +1857,29 @@ function resetTimingDisplay() {
 
 // 显示临时消息提示
 function showTemporaryMessage(message, type = 'info') {
+    // 根据类型选择合适的图标
+    let iconClass = 'info-circle';
+    switch (type) {
+        case 'success':
+            iconClass = 'check-circle';
+            break;
+        case 'warning':
+            iconClass = 'exclamation-triangle';
+            break;
+        case 'error':
+            iconClass = 'times-circle';
+            break;
+        case 'info':
+        default:
+            iconClass = 'info-circle';
+            break;
+    }
+    
     // 创建消息元素
     const messageDiv = document.createElement('div');
     messageDiv.className = `temporary-message ${type}`;
     messageDiv.innerHTML = `
-        <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'}"></i>
+        <i class="fas fa-${iconClass}"></i>
         <span>${message}</span>
     `;
     

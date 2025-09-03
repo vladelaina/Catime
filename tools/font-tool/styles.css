@@ -927,6 +927,24 @@ section h2 i {
     color: #3b82f6;
 }
 
+.temporary-message.warning {
+    border-left-color: #f59e0b;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.05) 100%);
+}
+
+.temporary-message.warning i {
+    color: #f59e0b;
+}
+
+.temporary-message.error {
+    border-left-color: #ef4444;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%);
+}
+
+.temporary-message.error i {
+    color: #ef4444;
+}
+
 /* 响应式样式调整 */
 @media (max-width: 768px) {
     .download-actions {
