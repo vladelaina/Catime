@@ -10,8 +10,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // 设置所有下载按钮的URL
     setDownloadUrls();
 
-    // 初始化滚动进度指示器
-    initScrollProgressIndicator();
+    // 初始化滚动进度指示器（延后到组件加载完成）
+    // initScrollProgressIndicator(); // 现在由组件加载器处理
 
     // 为图片添加3D倾斜效果
     document.querySelectorAll('.animated-image img').forEach(img => {
@@ -594,6 +594,12 @@ function initLanguageToggle() {
             footerArtist.innerHTML = 'Icon Artist: <a href="https://space.bilibili.com/26087398" target="_blank" rel="noopener noreferrer">猫屋敷梨梨Official</a>';
         }
     }
+
+    // 监听组件加载完成事件
+    document.addEventListener('allComponentsLoaded', function() {
+        console.log('📄 检测到组件加载完成，执行页脚翻译');
+        handleFooterTranslation();
+    });
 
     // 处理CTA区域的波浪字母
     function handleWaveLetters() {

@@ -49,9 +49,9 @@ document.addEventListener('DOMContentLoaded', function() {
     initDragAndDrop();
     initFileInput();
     
-    // 初始化滚动进度指示器（如果main.js已加载）
-    if (typeof initScrollProgressIndicator === 'function') {
-        initScrollProgressIndicator();
+    // 加载通用组件
+    if (typeof loadCommonComponents === 'function') {
+        loadCommonComponents();
     }
     
     // 检查JSZip库是否加载
