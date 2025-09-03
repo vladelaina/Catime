@@ -668,6 +668,19 @@ function initFileInput() {
     fileInput.addEventListener('change', function(e) {
         handleFiles(e.target.files);
     });
+    
+    // 为上传区域添加点击事件
+    if (uploadArea) {
+        uploadArea.addEventListener('click', function(e) {
+            // 确保点击的不是按钮本身
+            if (!e.target.closest('button')) {
+                fileInput.click();
+            }
+        });
+        console.log('上传区域点击事件已绑定');
+    } else {
+        console.error('上传区域元素未找到！');
+    }
 }
 
 // 递归扫描文件夹条目（与本地版本逻辑一致，记录完整结构）
