@@ -27,6 +27,57 @@
     <link rel="icon" type="image/png" href="../../assets/catime.webp">
 </head>
 <body>
+    <!-- 滚动进度指示器 -->
+    <div class="scroll-progress-container" id="scrollProgressContainer">
+        <div class="scroll-progress-glow"></div>
+        <div class="scroll-progress-particles">
+            <span class="particle p1"></span>
+            <span class="particle p2"></span>
+            <span class="particle p3"></span>
+            <span class="particle p4"></span>
+            <span class="particle p5"></span>
+            <span class="particle p6"></span>
+            <span class="particle p7"></span>
+            <span class="particle p8"></span>
+        </div>
+        <svg class="scroll-progress-circle" viewBox="0 0 100 100">
+            <defs>
+                <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#7aa2f7" />
+                    <stop offset="50%" stop-color="#9aaee8" />
+                    <stop offset="100%" stop-color="#f77daa" />
+                </linearGradient>
+                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="3" result="blur" />
+                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                </filter>
+            </defs>
+            <circle class="scroll-progress-circle-bg" cx="50" cy="50" r="45"></circle>
+            <circle class="scroll-progress-circle-fill" cx="50" cy="50" r="45"></circle>
+            <circle class="scroll-progress-circle-inner" cx="50" cy="50" r="35"></circle>
+            <path class="scroll-progress-circle-deco" d="M50,15 A35,35 0 0,1 85,50 A35,35 0 0,1 50,85 A35,35 0 0,1 15,50 A35,35 0 0,1 50,15 Z" />
+        </svg>
+        <div class="scroll-progress-icon">
+            <i class="fas fa-arrow-up"></i>
+        </div>
+        <div class="scroll-progress-emoji-container">
+            <span class="emoji emoji-rocket">🚀</span>
+            <span class="emoji emoji-star">⭐</span>
+            <span class="emoji emoji-heart">💖</span>
+            <span class="emoji emoji-sparkles">✨</span>
+        </div>
+        <div class="scroll-progress-stars">
+            <span class="star star-1">✦</span>
+            <span class="star star-2">✧</span>
+            <span class="star star-3">✦</span>
+            <span class="star star-4">✧</span>
+            <span class="star star-5">✦</span>
+            <span class="star star-6">✧</span>
+        </div>
+        <div class="scroll-progress-percentage">0%</div>
+        <div class="scroll-progress-tooltip">返回顶部</div>
+    </div>
+
     <!-- 页头/导航 - 由 navigation.js 动态生成 -->
     <header class="main-header"></header>
 
@@ -171,6 +222,19 @@
         </div>
     </main>
 
+    <!-- 页脚 -->
+    <footer class="main-footer" id="footer">
+        <div class="container">
+            <p>&copy; 2025 Catime Project by <a href="https://vladelaina.com/" target="_blank" rel="noopener noreferrer">vladelaina</a></p>
+            <p>基于 <a href="https://github.com/vladelaina/Catime/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Apache 2.0</a> 许可开源</p>
+            <p>图标画师: <a href="https://space.bilibili.com/26087398" target="_blank" rel="noopener noreferrer">猫屋敷梨梨Official</a></p>
+            <div class="footer-links">
+                <a href="https://message.bilibili.com/#/whisper/mid1862395225" target="_blank" rel="noopener noreferrer">问题反馈</a>
+                <a href="https://github.com/vladelaina/Catime/blob/main/PRIVACY.md" target="_blank" rel="noopener noreferrer">隐私政策</a>
+            </div>
+        </div>
+    </footer>
+
     <!-- JavaScript 库 -->
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     
@@ -182,6 +246,9 @@
     
     <!-- 统一导航管理 -->
     <script src="../../scripts/navigation.js"></script>
+    
+    <!-- 主项目公共脚本 -->
+    <script src="../../scripts/main.js"></script>
     
     <script>
         // 初始化 AOS 动画
