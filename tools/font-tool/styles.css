@@ -840,6 +840,140 @@ section h2 i {
     gap: 4px;
 }
 
+/* 下载操作区域 */
+.download-actions {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+    margin-bottom: 16px;
+}
+
+.download-actions .btn-large {
+    flex: 1;
+    white-space: nowrap;
+}
+
+.btn-clear {
+    min-width: 120px;
+    padding: 1rem 1.5rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+/* 危险按钮样式 */
+.btn-danger {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    color: white;
+    box-shadow: var(--button-shadow);
+    transition: all 0.3s ease;
+}
+
+.btn-danger:hover {
+    background: linear-gradient(135deg, #b91c1c, #991b1b);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(220, 38, 38, 0.3);
+}
+
+.btn-danger:active {
+    transform: translateY(0);
+}
+
+.btn-danger i {
+    margin-right: 6px;
+}
+
+/* 临时消息提示样式 */
+.temporary-message {
+    position: fixed;
+    top: -60px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    color: #1f2937;
+    padding: 12px 20px;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 500;
+    border-left: 4px solid #10b981;
+    min-width: 300px;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.temporary-message.show {
+    top: 20px;
+}
+
+.temporary-message.success {
+    border-left-color: #10b981;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.05) 100%);
+}
+
+.temporary-message.success i {
+    color: #10b981;
+}
+
+.temporary-message.info {
+    border-left-color: #3b82f6;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%);
+}
+
+.temporary-message.info i {
+    color: #3b82f6;
+}
+
+/* 响应式样式调整 */
+@media (max-width: 768px) {
+    .download-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .download-actions .btn-large {
+        width: 100%;
+    }
+    
+    .btn-clear {
+        min-width: unset;
+        width: 100%;
+    }
+    
+    .temporary-message {
+        min-width: 90%;
+        max-width: 90%;
+        left: 5%;
+        transform: none;
+        padding: 10px 16px;
+        font-size: 0.9rem;
+    }
+    
+    .temporary-message.show {
+        top: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .download-actions {
+        gap: 8px;
+    }
+    
+    .btn-clear {
+        font-size: 0.85rem;
+        padding: 0.8rem 1.2rem;
+    }
+    
+    .temporary-message {
+        padding: 8px 12px;
+        font-size: 0.85rem;
+        gap: 8px;
+    }
+}
+
 /* 响应式设计 */
 @media (max-width: 1024px) {
     .nav-links {

@@ -1498,10 +1498,16 @@ function addBatchDownloadButton() {
             '';
             
         batchDownloadDiv.innerHTML = `
-            <button class="btn btn-primary btn-large" onclick="downloadAllFonts()">
-                ${downloadAllText}
-                ${downloadAllHint}
-            </button>
+            <div class="download-actions">
+                <button class="btn btn-primary btn-large" onclick="downloadAllFonts()">
+                    ${downloadAllText}
+                    ${downloadAllHint}
+                </button>
+                
+                <button class="btn btn-danger btn-clear" onclick="clearAllProcessedFiles()" title="清理全部处理结果，重新开始">
+                    <i class="fas fa-trash-alt"></i> 清理全部
+                </button>
+            </div>
             
             <!-- ZIP生成进度条 -->
             <div class="zip-progress-container" id="zipProgressContainer" style="display: none;">
@@ -1772,6 +1778,110 @@ function updateZipProgress(percentage, statusText, detailText) {
             zipProgressText.innerHTML = '<i class="fas fa-check"></i> ' + statusText;
         }
     }
+}
+
+// 清理全部已处理的文件
+function clearAllProcessedFiles() {
+    console.log('🧹 开始清理全部文件和处理结果...');
+    
+    // 清空已选择的文件数组
+    selectedFiles = [];
+    
+    // 清空已处理的字体数组
+    processedFonts = [];
+    
+    // 重置文件夹模式相关变量
+    folderMode = false;
+    folderStructure = {
+        name: '',
+        files: [],
+        fontFiles: [],
+        directories: new Set()
+    };
+    
+    // 隐藏和重置文件列表
+    updateFileList();
+    hideScanInfo();
+    
+    // 隐藏下载区域
+    downloadSection.style.display = 'none';
+    downloadItems.innerHTML = '';
+    
+    // 重置进度条
+    resetProgressBar();
+    
+    // 重置计时显示
+    resetTimingDisplay();
+    
+    // 重置处理按钮状态
+    processBtn.disabled = false;
+    processBtn.innerHTML = '<i class="fas fa-rocket"></i> 开始处理字体';
+    
+    // 重置处理开始时间
+    processingStartTime = null;
+    
+    // 清空文件输入框的值
+    if (fileInput) {
+        fileInput.value = '';
+    }
+    
+    console.log('✅ 完全清理完成！已重置到初始状态');
+    
+    // 显示清理成功的提示
+    showTemporaryMessage('已清理全部文件和处理结果，界面已重置', 'success');
+}
+
+// 重置进度条
+function resetProgressBar() {
+    if (progressContainer) {
+        progressContainer.style.display = 'none';
+        progressFill.style.width = '0%';
+        progressText.textContent = '0%';
+    }
+}
+
+// 重置计时显示
+function resetTimingDisplay() {
+    // 清除计时器
+    if (timingInterval) {
+        clearInterval(timingInterval);
+        timingInterval = null;
+    }
+    
+    // 移除计时显示元素
+    if (timingText) {
+        timingText.remove();
+        timingText = null;
+    }
+}
+
+// 显示临时消息提示
+function showTemporaryMessage(message, type = 'info') {
+    // 创建消息元素
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `temporary-message ${type}`;
+    messageDiv.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'}"></i>
+        <span>${message}</span>
+    `;
+    
+    // 添加到页面顶部
+    document.body.insertBefore(messageDiv, document.body.firstChild);
+    
+    // 添加动画效果
+    setTimeout(() => {
+        messageDiv.classList.add('show');
+    }, 100);
+    
+    // 3秒后自动移除
+    setTimeout(() => {
+        messageDiv.classList.remove('show');
+        setTimeout(() => {
+            if (messageDiv.parentNode) {
+                messageDiv.parentNode.removeChild(messageDiv);
+            }
+        }, 300);
+    }, 3000);
 }
 
 // 错误处理
