@@ -1388,6 +1388,50 @@ section h2 i {
     .local-processing-notice i {
         font-size: 0.9rem;
     }
+    
+    /* 英文版本保持单行，不换行 */
+    .local-processing-notice p.english-notice {
+        flex-direction: row;
+        white-space: nowrap;
+        font-size: 0.8rem;
+        overflow-x: auto;
+        text-align: left;
+    }
+}
+
+/* 英文版本的专用样式 */
+.local-processing-notice p.english-notice {
+    white-space: nowrap;
+    min-width: fit-content;
+}
+
+/* 英文版本的文件夹提示样式 */
+.folder-hint.english-folder-hint {
+    white-space: nowrap;
+    max-width: none;
+    min-width: fit-content;
+}
+
+/* 在小屏幕上为英文文件夹提示添加水平滚动 */
+@media (max-width: 768px) {
+    .folder-hint.english-folder-hint {
+        overflow-x: auto;
+        scrollbar-width: thin;
+        scrollbar-color: #4caf50 transparent;
+    }
+    
+    .folder-hint.english-folder-hint::-webkit-scrollbar {
+        height: 4px;
+    }
+    
+    .folder-hint.english-folder-hint::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    
+    .folder-hint.english-folder-hint::-webkit-scrollbar-thumb {
+        background: #4caf50;
+        border-radius: 2px;
+    }
 }
 
 /* 动画效果 */

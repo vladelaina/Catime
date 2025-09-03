@@ -2634,6 +2634,13 @@ function applyFontToolTranslations() {
                     element.childNodes.forEach(node => {
                         if (node.nodeType === Node.TEXT_NODE && node.textContent.trim() === chinese) {
                             node.textContent = english;
+                            
+                            // 为特定文本添加英文特殊样式
+                            if (chinese === '完全本地处理，所有计算在浏览器中完成，数据不会上传到任何服务器。') {
+                                element.classList.add('english-notice');
+                            } else if (chinese === '支持拖拽/粘贴文件夹，会自动扫描所有子文件夹中的字体文件') {
+                                element.classList.add('english-folder-hint');
+                            }
                         }
                     });
                 }
