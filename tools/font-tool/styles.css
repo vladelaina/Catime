@@ -1,5 +1,165 @@
 /* 字体简化工具 - 专用样式 (复用主项目的基础样式) */
 
+/* === 全页面拖拽覆盖层 === */
+.drag-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(122, 162, 247, 0.95) 0%, rgba(247, 125, 170, 0.95) 100%);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    pointer-events: none;
+}
+
+.drag-overlay.active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: all;
+}
+
+.drag-overlay-content {
+    text-align: center;
+    color: white;
+    max-width: 500px;
+    padding: 3rem;
+}
+
+.drag-overlay-icon {
+    font-size: 5rem;
+    margin-bottom: 1.5rem;
+    opacity: 0.9;
+    animation: dragIconBounce 2s ease-in-out infinite;
+}
+
+.drag-overlay-text h2 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    color: white;
+}
+
+.drag-overlay-text p {
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.9;
+    text-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
+}
+
+.drag-overlay-animation {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 2rem;
+}
+
+.bounce-dot {
+    width: 0.8rem;
+    height: 0.8rem;
+    background: white;
+    border-radius: 50%;
+    animation: bounceDots 1.4s ease-in-out infinite both;
+}
+
+.bounce-dot:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.bounce-dot:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+.bounce-dot:nth-child(3) {
+    animation-delay: 0s;
+}
+
+@keyframes dragIconBounce {
+    0%, 20%, 50%, 80%, 100% {
+        transform: translateY(0);
+    }
+    40% {
+        transform: translateY(-20px);
+    }
+    60% {
+        transform: translateY(-10px);
+    }
+}
+
+@keyframes bounceDots {
+    0%, 80%, 100% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+    40% {
+        transform: scale(1.2);
+        opacity: 1;
+    }
+}
+
+/* 拖拽覆盖层响应式设计 */
+@media (max-width: 768px) {
+    .drag-overlay-content {
+        padding: 2rem 1rem;
+        max-width: 90%;
+    }
+    
+    .drag-overlay-icon {
+        font-size: 3.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .drag-overlay-text h2 {
+        font-size: 1.8rem;
+        margin-bottom: 0.8rem;
+    }
+    
+    .drag-overlay-text p {
+        font-size: 1rem;
+        margin-bottom: 0.4rem;
+    }
+    
+    .drag-overlay-animation {
+        margin-top: 1.5rem;
+        gap: 0.4rem;
+    }
+    
+    .bounce-dot {
+        width: 0.6rem;
+        height: 0.6rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .drag-overlay-content {
+        padding: 1.5rem 0.8rem;
+    }
+    
+    .drag-overlay-icon {
+        font-size: 2.8rem;
+        margin-bottom: 0.8rem;
+    }
+    
+    .drag-overlay-text h2 {
+        font-size: 1.5rem;
+        margin-bottom: 0.6rem;
+    }
+    
+    .drag-overlay-text p {
+        font-size: 0.9rem;
+        margin-bottom: 0.3rem;
+        line-height: 1.4;
+    }
+}
+
 /* 工具标题区域 */
 .tool-header {
     text-align: center;

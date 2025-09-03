@@ -26,6 +26,7 @@ const progressText = document.getElementById('progressText');
 const logContainer = document.getElementById('logContainer');
 const downloadSection = document.getElementById('downloadSection');
 const downloadItems = document.getElementById('downloadItems');
+const dragOverlay = document.getElementById('dragOverlay');
 
 // ZIP进度条元素（动态获取，因为是在按钮创建后才有的）
 let zipProgressContainer = null;
@@ -35,6 +36,13 @@ let zipProgressDetails = null;
 
 // 初始化
 document.addEventListener('DOMContentLoaded', function() {
+    // 确保所有 DOM 元素都已加载
+    console.log('DOM 已加载，开始初始化');
+    
+    // 检查关键元素是否存在
+    const overlay = document.getElementById('dragOverlay');
+    console.log('dragOverlay 元素:', overlay);
+    
     initPyodide();
     initDragAndDrop();
     initFileInput();
@@ -356,26 +364,190 @@ async function loadFallbackLibrary() {
 }
 
 // 初始化拖拽功能
+// 全页面拖拽相关变量
+let dragCounter = 0;
+
 function initDragAndDrop() {
+    console.log('初始化拖拽功能');
+    console.log('dragOverlay:', dragOverlay);
+    console.log('uploadArea:', uploadArea);
+    
+    if (!dragOverlay) {
+        console.error('拖拽覆盖层元素未找到！');
+        return;
+    }
+    
+    // 防止默认行为
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        uploadArea.addEventListener(eventName, preventDefaults, false);
-        document.body.addEventListener(eventName, preventDefaults, false);
+        document.addEventListener(eventName, preventDefaults, false);
     });
 
-    ['dragenter', 'dragover'].forEach(eventName => {
-        uploadArea.addEventListener(eventName, highlight, false);
+    // 全页面拖拽进入/离开检测
+    document.addEventListener('dragenter', handleDragEnter, false);
+    document.addEventListener('dragleave', handleDragLeave, false);
+    document.addEventListener('dragover', handleDragOver, false);
+    document.addEventListener('drop', handlePageDrop, false);
+    
+    console.log('已添加全页面拖拽事件监听器');
+
+    // 原有上传区域的拖拽处理
+    if (uploadArea) {
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, unhighlight, false);
+        });
+    }
+
+    // 拖拽覆盖层的点击事件（点击覆盖层隐藏）
+    dragOverlay.addEventListener('click', function(e) {
+        if (e.target === dragOverlay) {
+            hideDragOverlay();
+        }
     });
 
-    ['dragleave', 'drop'].forEach(eventName => {
-        uploadArea.addEventListener(eventName, unhighlight, false);
+    // ESC 键支持
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && dragOverlay.classList.contains('active')) {
+            hideDragOverlay();
+        }
     });
-
-    uploadArea.addEventListener('drop', handleDrop, false);
+    
+    console.log('拖拽功能初始化完成');
+    
+    // 添加测试按钮（仅用于调试）
+    if (window.location.search.includes('debug=true')) {
+        const testBtn = document.createElement('button');
+        testBtn.textContent = '测试覆盖层';
+        testBtn.style.position = 'fixed';
+        testBtn.style.top = '10px';
+        testBtn.style.right = '10px';
+        testBtn.style.zIndex = '10000';
+        testBtn.onclick = () => {
+            if (dragOverlay.classList.contains('active')) {
+                hideDragOverlay();
+            } else {
+                showDragOverlay();
+            }
+        };
+        document.body.appendChild(testBtn);
+    }
 }
 
 function preventDefaults(e) {
     e.preventDefault();
     e.stopPropagation();
+}
+
+function handleDragEnter(e) {
+    dragCounter++;
+    console.log('拖拽进入事件，计数器:', dragCounter);
+    
+    // 简化检测逻辑：只要有拖拽类型就显示覆盖层
+    if (e.dataTransfer && e.dataTransfer.types) {
+        const hasFiles = e.dataTransfer.types.includes('Files');
+        console.log('拖拽类型:', e.dataTransfer.types, '包含文件:', hasFiles);
+        
+        if (hasFiles) {
+            showDragOverlay();
+            console.log('检测到文件拖拽，显示覆盖层');
+        }
+    }
+}
+
+function handleDragLeave(e) {
+    dragCounter--;
+    
+    if (dragCounter <= 0) {
+        dragCounter = 0;
+        hideDragOverlay();
+    }
+}
+
+function handleDragOver(e) {
+    // 简化检测逻辑：只要有拖拽文件类型就显示覆盖层
+    if (e.dataTransfer && e.dataTransfer.types && e.dataTransfer.types.includes('Files')) {
+        showDragOverlay();
+    }
+}
+
+function checkDraggedFiles(dataTransfer) {
+    // 支持的字体文件扩展名
+    const fontExtensions = ['.ttf', '.otf', '.woff', '.woff2'];
+    
+    for (let i = 0; i < dataTransfer.items.length; i++) {
+        const item = dataTransfer.items[i];
+        
+        // 如果是文件夹，总是显示覆盖层
+        if (item.kind === 'file') {
+            const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+            if (entry && entry.isDirectory) {
+                return true;
+            }
+        }
+        
+        // 检查文件类型
+        if (item.kind === 'file') {
+            const file = item.getAsFile();
+            if (file) {
+                const fileName = file.name.toLowerCase();
+                const hasValidExtension = fontExtensions.some(ext => fileName.endsWith(ext));
+                if (hasValidExtension) {
+                    return true;
+                }
+            }
+        }
+        
+        // 检查 MIME 类型
+        if (item.type) {
+            const validMimeTypes = [
+                'font/ttf',
+                'font/otf', 
+                'font/woff',
+                'font/woff2',
+                'application/font-woff',
+                'application/font-woff2',
+                'application/x-font-ttf',
+                'application/x-font-otf'
+            ];
+            
+            if (validMimeTypes.some(mime => item.type.includes(mime))) {
+                return true;
+            }
+        }
+    }
+    
+    return false;
+}
+
+function handlePageDrop(e) {
+    dragCounter = 0;
+    hideDragOverlay();
+    
+    // 处理文件拖拽
+    handleDrop(e);
+}
+
+function showDragOverlay() {
+    console.log('显示拖拽覆盖层');
+    if (dragOverlay) {
+        dragOverlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        console.log('覆盖层已激活');
+    } else {
+        console.error('dragOverlay 元素未找到');
+    }
+}
+
+function hideDragOverlay() {
+    console.log('隐藏拖拽覆盖层');
+    if (dragOverlay) {
+        dragOverlay.classList.remove('active');
+        document.body.style.overflow = '';
+        console.log('覆盖层已隐藏');
+    }
 }
 
 function highlight(e) {

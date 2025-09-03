@@ -30,6 +30,25 @@
     <!-- 页头/导航 - 由 navigation.js 动态生成 -->
     <header class="main-header"></header>
 
+    <!-- 全页面拖拽覆盖层 -->
+    <div class="drag-overlay" id="dragOverlay">
+        <div class="drag-overlay-content">
+            <div class="drag-overlay-icon">
+                <i class="fas fa-font"></i>
+            </div>
+            <div class="drag-overlay-text">
+                <h2>拖拽字体文件到这里</h2>
+                <p>支持 .ttf, .otf, .woff, .woff2 格式</p>
+                <p>可以拖拽文件夹，自动扫描所有字体文件</p>
+            </div>
+            <div class="drag-overlay-animation">
+                <div class="bounce-dot"></div>
+                <div class="bounce-dot"></div>
+                <div class="bounce-dot"></div>
+            </div>
+        </div>
+    </div>
+
     <main>
         <!-- 工具头部 -->
         <section class="guide-hero">
