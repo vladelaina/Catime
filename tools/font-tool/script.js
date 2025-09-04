@@ -2189,6 +2189,13 @@ async function downloadAllFonts() {
     console.log('JSZip可用:', typeof JSZip !== 'undefined');
     console.log('================================');
     
+    // 优先基于处理后字体数量判断：如果只有一个字体，直接下载
+    if (processedFonts.length === 1) {
+        console.log('🔍 检测到只有一个处理后的字体，直接下载');
+        downloadFont(0);
+        return;
+    }
+    
     // 分析文件来源
     const standaloneCount = fileSourceTracking.standalone.length;
     const folderCount = fileSourceTracking.fromFolders.length;
@@ -2196,14 +2203,8 @@ async function downloadAllFonts() {
     console.log(`📊 文件来源分析: ${standaloneCount}个单独文件, ${folderCount}个文件夹文件`);
     
     if (standaloneCount > 0 && folderCount === 0) {
-        // 纯单独文件模式：逐个下载
+        // 纯单独文件模式：逐个下载多个文件
         console.log('🔍 下载模式: 纯单独文件模式');
-        
-        if (processedFonts.length === 1) {
-            downloadFont(0);
-            return;
-        }
-
         console.log('开始下载所有文件...');
         
         for (let i = 0; i < processedFonts.length; i++) {
