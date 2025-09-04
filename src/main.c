@@ -401,6 +401,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             LOG_INFO("Font path check timer set successfully (2 second interval)");
         }
 
+        /** Start automatic update check at startup */
+        LOG_INFO("Starting automatic update check at startup...");
+        CheckForUpdateAsync(hwnd, TRUE);
+
         LOG_INFO("Handling startup mode: %s", CLOCK_STARTUP_MODE);
         HandleStartupMode(hwnd);
 
