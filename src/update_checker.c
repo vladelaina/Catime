@@ -29,6 +29,7 @@ typedef struct {
     const char* currentVersion;     /**< Current application version */
     const char* latestVersion;      /**< Latest available version from GitHub */
     const char* downloadUrl;        /**< Direct download URL for latest release */
+    const char* releaseNotes;       /**< Release notes/body from GitHub release */
 } UpdateVersionInfo;
 
 /** @brief Dialog procedure declarations for various update scenarios */
@@ -71,17 +72,19 @@ int CompareVersions(const char* version1, const char* version2) {
 }
 
 /**
- * @brief Parse GitHub API JSON response to extract version and download URL
+ * @brief Parse GitHub API JSON response to extract version, download URL, and release notes
  * @param jsonResponse Raw JSON response from GitHub API
  * @param latestVersion Output buffer for extracted version string
  * @param maxLen Maximum length of version buffer
  * @param downloadUrl Output buffer for download URL
  * @param urlMaxLen Maximum length of URL buffer
+ * @param releaseNotes Output buffer for release notes
+ * @param notesMaxLen Maximum length of release notes buffer
  * @return TRUE if parsing succeeded, FALSE on error
- * Extracts tag_name and browser_download_url fields from GitHub releases API
+ * Extracts tag_name, browser_download_url, and body fields from GitHub releases API
  */
 BOOL ParseLatestVersionFromJson(const char* jsonResponse, char* latestVersion, size_t maxLen, 
-                               char* downloadUrl, size_t urlMaxLen) {
+                               char* downloadUrl, size_t urlMaxLen, char* releaseNotes, size_t notesMaxLen) {
     LOG_DEBUG("Starting to parse JSON response, extracting version information");
     
     /** Extract version from tag_name field */
@@ -127,6 +130,72 @@ BOOL ParseLatestVersionFromJson(const char* jsonResponse, char* latestVersion, s
     strncpy(downloadUrl, firstQuote + 1, urlLen);
     downloadUrl[urlLen] = '\0';
     
+    /** Extract release notes from body field */
+    const char* bodyPos = strstr(jsonResponse, "\"body\":");
+    if (bodyPos) {
+        firstQuote = strchr(bodyPos + 7, '\"');
+        if (firstQuote) {
+            secondQuote = firstQuote + 1;
+            int escapeCount = 0;
+            
+            /** Find end of body field, handling escaped quotes */
+            while (*secondQuote) {
+                if (*secondQuote == '\\') {
+                    escapeCount++;
+                } else if (*secondQuote == '\"' && (escapeCount % 2 == 0)) {
+                    break;
+                } else if (*secondQuote != '\\') {
+                    escapeCount = 0;
+                }
+                secondQuote++;
+            }
+            
+            if (*secondQuote == '\"') {
+                size_t notesLen = secondQuote - (firstQuote + 1);
+                if (notesLen >= notesMaxLen) notesLen = notesMaxLen - 1;
+                
+                /** Copy and process release notes, converting common escape sequences */
+                size_t writePos = 0;
+                for (size_t i = 0; i < notesLen && writePos < notesMaxLen - 1; i++) {
+                    char c = firstQuote[1 + i];
+                    if (c == '\\' && i + 1 < notesLen) {
+                        char next = firstQuote[1 + i + 1];
+                        if (next == 'n') {
+                            releaseNotes[writePos++] = '\r';
+                            releaseNotes[writePos++] = '\n';
+                            i++; // Skip the 'n'
+                        } else if (next == 'r') {
+                            releaseNotes[writePos++] = '\r';
+                            i++; // Skip the 'r'
+                        } else if (next == '\"') {
+                            releaseNotes[writePos++] = '\"';
+                            i++; // Skip the quote
+                        } else if (next == '\\') {
+                            releaseNotes[writePos++] = '\\';
+                            i++; // Skip the second backslash
+                        } else {
+                            releaseNotes[writePos++] = c;
+                        }
+                    } else {
+                        releaseNotes[writePos++] = c;
+                    }
+                }
+                releaseNotes[writePos] = '\0';
+                
+                LOG_DEBUG("Extracted %zu bytes of release notes", writePos);
+            } else {
+                LOG_WARNING("Could not find closing quote for body field");
+                strcpy(releaseNotes, "No release notes available.");
+            }
+        } else {
+            LOG_WARNING("Could not find opening quote for body field");
+            strcpy(releaseNotes, "No release notes available.");
+        }
+    } else {
+        LOG_WARNING("body field not found in JSON response");
+        strcpy(releaseNotes, "No release notes available.");
+    }
+    
     return TRUE;
 }
 
@@ -152,6 +221,8 @@ INT_PTR CALLBACK ExitMsgDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lP
             const wchar_t* okText = GetLocalizedString(L"确定", L"OK");
             SetDlgItemTextW(hwndDlg, IDOK, okText);
             
+            /** Hide release notes text box for exit dialog */
+            ShowWindow(GetDlgItem(hwndDlg, IDC_UPDATE_NOTES), SW_HIDE);
             ShowWindow(GetDlgItem(hwndDlg, IDYES), SW_HIDE);
             ShowWindow(GetDlgItem(hwndDlg, IDNO), SW_HIDE);
             ShowWindow(GetDlgItem(hwndDlg, IDOK), SW_SHOW);
@@ -230,8 +301,24 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                 
                 SetDlgItemTextW(hwndDlg, IDC_UPDATE_TEXT, displayText);
                 
-                const wchar_t* yesText = GetLocalizedString(L"是", L"Yes");
-                const wchar_t* noText = GetLocalizedString(L"否", L"No");
+                /** Convert and display release notes */
+                if (versionInfo->releaseNotes && strlen(versionInfo->releaseNotes) > 0) {
+                    int releaseNotesLen = MultiByteToWideChar(CP_UTF8, 0, versionInfo->releaseNotes, -1, NULL, 0);
+                    if (releaseNotesLen > 0) {
+                        wchar_t* releaseNotesW = (wchar_t*)malloc(releaseNotesLen * sizeof(wchar_t));
+                        if (releaseNotesW) {
+                            MultiByteToWideChar(CP_UTF8, 0, versionInfo->releaseNotes, -1, releaseNotesW, releaseNotesLen);
+                            SetDlgItemTextW(hwndDlg, IDC_UPDATE_NOTES, releaseNotesW);
+                            free(releaseNotesW);
+                        }
+                    }
+                } else {
+                    const wchar_t* noNotesText = GetLocalizedString(L"暂无更新说明", L"No release notes available.");
+                    SetDlgItemTextW(hwndDlg, IDC_UPDATE_NOTES, noNotesText);
+                }
+                
+                const wchar_t* yesText = GetLocalizedString(L"立即更新", L"Update Now");
+                const wchar_t* noText = GetLocalizedString(L"稍后更新", L"Later");
                 
                 SetDlgItemTextW(hwndDlg, IDYES, yesText);
                 SetDlgItemTextW(hwndDlg, IDNO, noText);
@@ -239,7 +326,9 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                 const wchar_t* titleText = GetLocalizedString(L"发现新版本", L"Update Available");
                 SetWindowTextW(hwndDlg, titleText);
                 
-                SetDlgItemTextW(hwndDlg, IDC_UPDATE_EXIT_TEXT, L"");
+                const wchar_t* exitText = GetLocalizedString(L"点击\"立即更新\"将打开浏览器下载新版本", L"Click 'Update Now' to open browser and download the new version");
+                SetDlgItemTextW(hwndDlg, IDC_UPDATE_EXIT_TEXT, exitText);
+                
                 ShowWindow(GetDlgItem(hwndDlg, IDYES), SW_SHOW);
                 ShowWindow(GetDlgItem(hwndDlg, IDNO), SW_SHOW);
                 ShowWindow(GetDlgItem(hwndDlg, IDOK), SW_HIDE);
@@ -266,19 +355,21 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
 }
 
 /**
- * @brief Show update notification dialog with version comparison
+ * @brief Show update notification dialog with version comparison and release notes
  * @param hwnd Parent window handle
  * @param currentVersion Current application version string
  * @param latestVersion Latest available version from GitHub
  * @param downloadUrl Download URL for the latest version
+ * @param releaseNotes Release notes/changelog from GitHub
  * @return Dialog result (IDYES if user wants to update, IDNO otherwise)
- * Creates modal dialog showing version information and update prompt
+ * Creates modal dialog showing version information, release notes and update prompt
  */
-int ShowUpdateNotification(HWND hwnd, const char* currentVersion, const char* latestVersion, const char* downloadUrl) {
+int ShowUpdateNotification(HWND hwnd, const char* currentVersion, const char* latestVersion, const char* downloadUrl, const char* releaseNotes) {
     UpdateVersionInfo versionInfo;
     versionInfo.currentVersion = currentVersion;
     versionInfo.latestVersion = latestVersion;
     versionInfo.downloadUrl = downloadUrl;
+    versionInfo.releaseNotes = releaseNotes;
     
     return DialogBoxParamW(GetModuleHandle(NULL), 
                           MAKEINTRESOURCEW(IDD_UPDATE_DIALOG), 
@@ -493,11 +584,12 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
     InternetCloseHandle(hConnect);
     InternetCloseHandle(hInternet);
     
-    LOG_INFO("Starting to parse API response, extracting version info and download URL");
+    LOG_INFO("Starting to parse API response, extracting version info, download URL and release notes");
     char latestVersion[32] = {0};
     char downloadUrl[256] = {0};
+    char releaseNotes[4096] = {0};
     if (!ParseLatestVersionFromJson(buffer, latestVersion, sizeof(latestVersion), 
-                                  downloadUrl, sizeof(downloadUrl))) {
+                                  downloadUrl, sizeof(downloadUrl), releaseNotes, sizeof(releaseNotes))) {
         LOG_ERROR("Failed to parse version information, response may not be valid JSON format");
         free(buffer);
         if (!silentCheck) {
@@ -516,7 +608,7 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
     int versionCompare = CompareVersions(latestVersion, currentVersion);
     if (versionCompare > 0) {
         LOG_INFO("New version found! Current: %s, Available update: %s", currentVersion, latestVersion);
-        int response = ShowUpdateNotification(hwnd, currentVersion, latestVersion, downloadUrl);
+        int response = ShowUpdateNotification(hwnd, currentVersion, latestVersion, downloadUrl, releaseNotes);
         LOG_INFO("Update prompt dialog result: %s", response == IDYES ? "User agreed to update" : "User declined update");
         
         if (response == IDYES) {

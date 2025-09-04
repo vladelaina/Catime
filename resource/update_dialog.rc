@@ -7,19 +7,21 @@
 
 #pragma code_page(65001)
 
-/** @brief Update availability notification with user choice buttons */
-IDD_UPDATE_DIALOG DIALOGEX 0, 0, 160, 100
+/** @brief Update availability notification with release notes and user choice buttons */
+IDD_UPDATE_DIALOG DIALOGEX 0, 0, 420, 280
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 FONT 12, "Microsoft YaHei UI"
 BEGIN
     /** Update information text populated at runtime */
-    CTEXT           "", IDC_UPDATE_TEXT, 0, 10, 160, 40
+    CTEXT           "", IDC_UPDATE_TEXT, 10, 10, 400, 30
+    /** Release notes text box with scrollbar */
+    CONTROL         "", IDC_UPDATE_NOTES, "EDIT", WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL, 10, 45, 400, 180
     /** Exit instruction text */
-    CTEXT           "", IDC_UPDATE_EXIT_TEXT, 0, 50, 160, 20
+    CTEXT           "", IDC_UPDATE_EXIT_TEXT, 10, 235, 400, 15
     /** Accept update button */
-    PUSHBUTTON      "", IDYES, 30, 75, 40, 15
+    PUSHBUTTON      "", IDYES, 140, 255, 60, 18
     /** Decline update button */
-    PUSHBUTTON      "", IDNO, 90, 75, 40, 15
+    PUSHBUTTON      "", IDNO, 220, 255, 60, 18
     /** Hidden OK button for single-button mode */
-    DEFPUSHBUTTON   "", IDOK, 60, 75, 40, 15, NOT WS_VISIBLE
+    DEFPUSHBUTTON   "", IDOK, 180, 255, 60, 18, NOT WS_VISIBLE
 END 
