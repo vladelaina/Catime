@@ -138,11 +138,38 @@
                     </div>
                 </div>
                 
+                <!-- 字体处理引擎加载状态 -->
+                <div class="engine-loading-container" id="engineLoadingContainer">
+                    <div class="engine-loading-content">
+                        <div class="processing-loading-icon">
+                            <div class="gear-container">
+                                <i class="fas fa-cog gear-large"></i>
+                                <i class="fas fa-cog gear-small"></i>
+                            </div>
+                            <div class="loading-dots">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                        </div>
+                        <div class="engine-loading-text">
+                            <h3 class="engine-loading-title">正在准备字体处理引擎</h3>
+                            <p id="engineLoadingStatus">正在加载处理引擎...</p>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- 处理按钮区域 -->
                 <div class="process-control-area">
-                    <button class="btn btn-success btn-large" id="processBtn" onclick="startProcessing()">
+                    <button class="btn btn-success btn-large" id="processBtn" onclick="startProcessing()" disabled>
                         <i class="fas fa-rocket"></i> 开始处理字体
                     </button>
+                    
+                    <!-- 引擎未就绪提示 -->
+                    <div class="engine-not-ready-hint" id="engineNotReadyHint">
+                        <i class="fas fa-info-circle"></i>
+                        <span>字体处理引擎正在初始化，请稍候...</span>
+                    </div>
                     
                     <!-- 进度条 -->
                     <div class="progress-container" id="progressContainer" style="display: none;">
@@ -202,7 +229,7 @@
     <!-- JavaScript 库 -->
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     
-    <!-- 加载Pyodide (Python in Browser) 和 fontTools -->
+    <!-- 加载字体处理引擎核心库 -->
     <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
     
     <!-- JSZip for folder structure download -->

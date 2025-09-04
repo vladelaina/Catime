@@ -54,6 +54,11 @@ const zipProgressFill = document.getElementById('zipProgressFill');
 const zipProgressText = document.getElementById('zipProgressText');
 const zipProgressDetails = document.getElementById('zipProgressDetails');
 
+// 字体处理引擎加载相关元素
+const engineLoadingContainer = document.getElementById('engineLoadingContainer');
+const engineLoadingStatus = document.getElementById('engineLoadingStatus');
+const engineNotReadyHint = document.getElementById('engineNotReadyHint');
+
 // 初始化
 document.addEventListener('DOMContentLoaded', function() {
     // 确保所有 DOM 元素都已加载
@@ -66,10 +71,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // 初始化国际化支持
     initFontToolI18n();
     
-    initPyodide();
+    // 立即初始化基本功能（无需等待处理引擎）
     initDragAndDrop();
     initFileInput();
     initPasteSupport();
+    
+    // 显示字体处理引擎加载状态
+    showEngineLoadingStatus();
+    
+    // 异步初始化字体处理引擎（后台进行）
+    initPyodideAsync();
     
     // 加载通用组件
     if (typeof loadCommonComponents === 'function') {
@@ -86,18 +97,81 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 2000);
 });
 
-// 初始化Pyodide (Python in Browser)
-async function initPyodide() {
+// 显示字体处理引擎加载状态
+function showEngineLoadingStatus() {
+    // 确保加载容器可见
+    if (engineLoadingContainer) {
+        engineLoadingContainer.style.display = 'block';
+    }
+    
+    // 确保处理按钮被禁用并显示提示
+    if (processBtn) {
+        processBtn.disabled = true;
+        processBtn.style.opacity = '0.6';
+        processBtn.style.cursor = 'not-allowed';
+    }
+    
+    // 显示未就绪提示
+    if (engineNotReadyHint) {
+        engineNotReadyHint.style.display = 'flex';
+    }
+    
+    console.log('🎨 字体处理引擎加载状态已显示');
+}
+
+// 隐藏字体处理引擎加载状态
+function hideEngineLoadingStatus() {
+    // 添加淡出动画
+    if (engineLoadingContainer) {
+        engineLoadingContainer.classList.add('fade-out');
+        
+        // 动画完成后隐藏
+        setTimeout(() => {
+            engineLoadingContainer.style.display = 'none';
+        }, 300);
+    }
+    
+    // 启用处理按钮
+    if (processBtn) {
+        processBtn.disabled = false;
+        processBtn.style.opacity = '1';
+        processBtn.style.cursor = 'pointer';
+    }
+    
+    // 隐藏未就绪提示
+    if (engineNotReadyHint) {
+        engineNotReadyHint.classList.add('fade-out');
+        
+        setTimeout(() => {
+            engineNotReadyHint.style.display = 'none';
+        }, 300);
+    }
+    
+    console.log('🎨 字体处理引擎加载状态已隐藏');
+}
+
+// 更新字体处理引擎加载状态文本
+function updateEngineLoadingStatus(message) {
+    if (engineLoadingStatus) {
+        engineLoadingStatus.textContent = translateText(message);
+    }
+    console.log(`⚙️ ${message}`);
+}
+
+// 异步初始化字体处理引擎 - 不阻塞UI
+async function initPyodideAsync() {
     try {
-        console.log('📦 正在加载Python运行环境，请稍候...');
+        updateEngineLoadingStatus('正在加载处理引擎...');
         
         // 加载Pyodide
         pyodide = await loadPyodide();
         
-        console.log('📚 正在安装fonttools库...');
+        updateEngineLoadingStatus('正在安装核心库...');
         
-        // 安装必要的Python包
+        // 安装必要的包
         await pyodide.loadPackage(['micropip']);
+        
+        updateEngineLoadingStatus('正在配置字体处理组件...');
         
         // 修复：正确的异步安装方式
         await pyodide.runPythonAsync(`
@@ -105,7 +179,40 @@ async function initPyodide() {
             await micropip.install(['fonttools'])
         `);
         
-        // 加载字体处理Python代码
+        updateEngineLoadingStatus('正在初始化字体处理引擎...');
+        
+        // 加载字体处理代码 - 重用原有代码
+        await loadPythonFontProcessor();
+        
+        // 测试处理环境
+        await testPythonEnvironment();
+        
+        pythonReady = true;
+        updateEngineLoadingStatus('字体处理引擎已就绪！');
+        
+        // 延迟一下让用户看到成功状态
+        setTimeout(() => {
+            hideEngineLoadingStatus();
+        }, 1000);
+        
+        console.log('🚀 专业字体处理引擎初始化完成！');
+        
+    } catch (error) {
+        console.error('❌ 处理引擎初始化失败，将尝试备用方案...', error);
+        updateEngineLoadingStatus('引擎加载失败，启用备用方案...');
+        
+        await loadFallbackLibrary();
+        
+        // 即使备用方案也要隐藏加载状态
+        setTimeout(() => {
+            hideEngineLoadingStatus();
+        }, 2000);
+    }
+}
+
+// 加载字体处理器
+async function loadPythonFontProcessor() {
+        // 加载字体处理代码
         pyodide.runPython(`
 from fontTools.ttLib import TTFont
 from fontTools.subset import Subsetter, Options
@@ -379,34 +486,34 @@ def subset_font(font_data_base64, characters_to_keep):
 def test_fonttools():
     return "FontTools库已就绪"
         `);
+}
+
+// 测试处理环境
+async function testPythonEnvironment() {
+    try {
+        const test_result = pyodide.runPython('test_fonttools()');
+        console.log(`✅ ${test_result}`);
         
-        // 测试Python环境
-        try {
-            const test_result = pyodide.runPython('test_fonttools()');
-            console.log(`✅ ${test_result}`);
-            
-            // 额外测试：确保subset_font函数已定义
-            const function_test = pyodide.runPython(`
+        // 额外测试：确保subset_font函数已定义
+        const function_test = pyodide.runPython(`
 import inspect
 if 'subset_font' in globals():
     sig = inspect.signature(subset_font)
     f"subset_font函数已定义，参数: {list(sig.parameters.keys())}"
 else:
     "ERROR: subset_font函数未定义"
-            `);
-            console.log(`🔧 ${function_test}`);
-            
-        } catch (testError) {
-            console.error(`❌ Python环境测试失败: ${testError.message}`, testError);
-        }
+        `);
+        console.log(`🔧 ${function_test}`);
         
-        pythonReady = true;
-        console.log('🚀 专业Python字体处理引擎初始化完成！');
-        
-    } catch (error) {
-        console.error('❌ Python引擎初始化失败，将尝试备用方案...', error);
-        await loadFallbackLibrary();
+    } catch (testError) {
+        console.error(`❌ 处理环境测试失败: ${testError.message}`, testError);
+        throw testError;
     }
+}
+
+// 初始化字体处理引擎 - 保留原函数用于兼容性
+async function initPyodide() {
+    return await initPyodideAsync();
 }
 
 // 加载备用库
@@ -1458,7 +1565,7 @@ async function startProcessing() {
     const downloadTitle = downloadSection.querySelector('h2');
     downloadTitle.innerHTML = `<i class="fas fa-download"></i> ${translateText('处理后的字体')} <span style="font-size: 14px; color: #666; font-weight: normal;">(${translateText('处理中...')})</span>`;
     
-    const engineType = pythonReady ? 'Python FontTools' : 'JavaScript OpenType.js';
+    const engineType = pythonReady ? '专业处理引擎' : 'JavaScript OpenType.js';
     console.log(`开始使用 ${engineType} (严格清理模式) 处理 ${selectedFiles.length} 个字体文件...`);
     console.log(`保留字符: ${characters}`);
     console.log(`🔧 严格清理模式：将彻底移除复合字形和多余字符`);
@@ -1541,7 +1648,7 @@ async function processFont(file, characters) {
                 let subsetFont;
                 
                 if (pythonReady && pyodide) {
-                    // 使用Python fonttools专业处理
+                    // 使用专业处理引擎
                     subsetFont = await createPythonSubset(arrayBuffer, characters);
                 } else if (typeof opentype !== 'undefined') {
                     // 使用OpenType.js备用方案
@@ -1570,7 +1677,7 @@ async function processFont(file, characters) {
     });
 }
 
-// 使用Python fonttools创建字体子集
+// 使用专业处理引擎创建字体子集
 async function createPythonSubset(fontBuffer, characters) {
     try {
         // 正确的base64编码，保证数据完整性
@@ -1619,8 +1726,8 @@ async function createPythonSubset(fontBuffer, characters) {
             throw new Error(`Base64编码验证失败：${validationError.message}`);
         }
         
-        // 在Python中处理字体
-        console.log(`设置Python变量: font_data_b64(${base64Data.length}字符), chars_to_keep(${characters})`);
+        // 在处理引擎中处理字体
+        console.log(`设置处理变量: font_data_b64(${base64Data.length}字符), chars_to_keep(${characters})`);
         
         // 分批设置大型base64数据，避免内存问题
         try {
@@ -1635,11 +1742,11 @@ async function createPythonSubset(fontBuffer, characters) {
         
         // 验证变量是否正确设置
         const var_check = pyodide.runPython(`
-f"Python收到的变量: font_data_b64长度={len(font_data_b64)}, chars_to_keep='{chars_to_keep}'"
+f"处理引擎收到的变量: font_data_b64长度={len(font_data_b64)}, chars_to_keep='{chars_to_keep}'"
         `);
-        console.log('Python变量验证:', var_check);
+        console.log('处理引擎变量验证:', var_check);
         
-        // 捕获Python的print输出
+        // 捕获处理引擎的print输出
         const originalConsole = pyodide.runPython(`
 import sys
 from io import StringIO
@@ -1664,20 +1771,20 @@ capture_output.close()
 result['debug_output'] = captured_output
 result
             `);
-        } catch (pythonError) {
-            console.error('Python代码执行失败:', pythonError);
-            throw new Error(`Python代码执行失败: ${pythonError.message}`);
+        } catch (processingError) {
+            console.error('处理引擎代码执行失败:', processingError);
+            throw new Error(`处理引擎代码执行失败: ${processingError.message}`);
         }
         
         // 验证result对象
         if (!result) {
-            console.error('Python返回的结果无效:', result);
-            throw new Error('Python处理返回了无效的结果');
+            console.error('处理引擎返回的结果无效:', result);
+            throw new Error('处理引擎返回了无效的结果');
         }
         
-        // 显示Python调试输出 - 正确处理Pyodide Proxy对象
-        console.log('Python处理结果对象类型:', typeof result);
-        console.log('Python处理结果对象:', result);
+        // 显示处理引擎调试输出 - 正确处理Pyodide Proxy对象
+        console.log('处理引擎结果对象类型:', typeof result);
+        console.log('处理引擎结果对象:', result);
         
         // 从Pyodide Proxy获取属性的正确方式
         let success, debug_output, error_detail, error, message, data, size;
@@ -1709,12 +1816,12 @@ result
                 size = jsResult.size;
             } catch (convertError) {
                 console.error('转换Proxy失败:', convertError);
-                throw new Error('无法解析Python返回的结果');
+                throw new Error('无法解析处理引擎返回的结果');
             }
         }
         
         if (debug_output) {
-            console.log('=== Python调试输出 ===');
+            console.log('=== 处理引擎调试输出 ===');
             console.log(debug_output);
             console.log('=== 调试输出结束 ===');
             
@@ -1727,15 +1834,15 @@ result
                 }
             });
         } else {
-            console.warn('没有收到Python调试输出');
+            console.warn('没有收到处理引擎调试输出');
         }
         
         if (!success) {
             // 记录详细错误信息
-            console.error('Python处理失败，详细信息:', { success, message, error, error_detail });
+            console.error('处理引擎处理失败，详细信息:', { success, message, error, error_detail });
             
             if (error_detail) {
-                console.error('Python处理详细错误:', error_detail);
+                console.error('处理引擎详细错误:', error_detail);
                 
                 // 分析具体错误类型并提供解决建议
                 if (error_detail.includes('AssertionError')) {
@@ -1756,7 +1863,7 @@ result
             }
             
             if (error) {
-                console.error('Python错误:', error);
+                console.error('处理引擎错误:', error);
             }
             
             const errorMsg = message || error || '字体处理失败，请查看详细日志';
@@ -1817,13 +1924,13 @@ result
             }
         }
         
-        console.log(`  ✅ Python处理成功: ${result.message}`);
+        console.log(`  ✅ 专业引擎处理成功: ${result.message}`);
         
         return { buffer: bytes.buffer };
         
     } catch (error) {
-        console.error(`  ❌ Python处理失败: ${error.message}`);
-        console.error('Python字体处理错误:', error);
+        console.error(`  ❌ 专业引擎处理失败: ${error.message}`);
+        console.error('字体处理引擎错误:', error);
         throw error;
     }
 }
@@ -2723,6 +2830,16 @@ function setupTranslateFunction() {
         // 处理按钮
         '开始处理字体': 'Start Processing',
         
+        // 字体处理引擎加载
+        '正在准备字体处理引擎': 'Preparing Font Processing Engine',
+        '正在加载处理引擎...': 'Loading processing engine...',
+        '正在安装核心库...': 'Installing core libraries...',
+        '正在配置字体处理组件...': 'Configuring font processing components...',
+        '正在初始化字体处理引擎...': 'Initializing font processing engine...',
+        '字体处理引擎已就绪！': 'Font processing engine ready!',
+        '引擎加载失败，启用备用方案...': 'Engine loading failed, enabling fallback...',
+        '字体处理引擎正在初始化，请稍候...': 'Font processing engine is initializing, please wait...',
+        
         // 下载区域
         '处理后的字体': 'Processed Fonts',
         '下载字体文件': 'Download Fonts',
@@ -2834,7 +2951,9 @@ function applyFontToolTranslations() {
         '处理后的字体',
         '下载字体文件',
         '清理全部',
-        '完全本地处理，所有计算在浏览器中完成，数据不会上传到任何服务器。'
+        '完全本地处理，所有计算在浏览器中完成，数据不会上传到任何服务器。',
+        '正在准备字体处理引擎',
+        '字体处理引擎正在初始化，请稍候...'
     ];
     
     staticTexts.forEach(chinese => {
