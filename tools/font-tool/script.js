@@ -2152,9 +2152,14 @@ function removeProcessedFont(index) {
         updateDownloadButtonText();
     }
     
-    // 如果没有处理后的字体了，隐藏下载控制区域
+    // 如果没有处理后的字体了，隐藏整个下载区域
     if (processedFonts.length === 0) {
         downloadControls.style.display = 'none';
+        downloadSection.style.display = 'none';
+        console.log('📦 已隐藏处理后的字体卡片');
+        
+        // 自动滚动到上传区域，方便用户重新开始操作
+        scrollToUploadArea();
     }
     
     console.log(`已删除字体，剩余 ${processedFonts.length} 个字体`);
