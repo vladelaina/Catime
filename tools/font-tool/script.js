@@ -1973,19 +1973,21 @@ async function downloadFolderAsZip() {
         const outputFolderName = folderStructure.name; // 保持原始文件夹名称
         console.log('输出文件夹名称:', outputFolderName);
         
-        // 第1步：创建目录结构 (10%)
+        // 第1步：创建目录结构 (10%) - 单独文件夹模式：直接使用相对路径，不额外包装
         updateZipProgress(10, '正在创建目录结构...', `创建 ${folderStructure.directories.size} 个目录`);
         console.log('开始创建目录，总数:', folderStructure.directories.size);
         let dirCount = 0;
         folderStructure.directories.forEach(dirPath => {
-            const fullPath = `${dirPath}/`;
-            zip.folder(fullPath);
-            dirCount++;
-            if (dirCount <= 5) { // 只显示前5个目录
+            // 移除根文件夹名称，直接使用子路径
+            const relativePath = dirPath.replace(new RegExp(`^${folderStructure.name}/?`), '');
+            if (relativePath) { // 只创建非空的子目录
+                const fullPath = `${relativePath}/`;
+                zip.folder(fullPath);
                 console.log('创建目录:', fullPath);
             }
+            dirCount++;
         });
-        console.log(`✅ 完成创建 ${dirCount} 个目录`);
+        console.log(`✅ 完成创建 ${dirCount} 个目录（单独文件夹模式，扁平化结构）`);
         
         // 第2步：准备字体映射 (20%)
         updateZipProgress(20, '正在准备字体文件...', `映射 ${processedFonts.length} 个处理后的字体`);
@@ -2007,17 +2009,21 @@ async function downloadFolderAsZip() {
             const fileInfo = folderStructure.files[i];
             const { file, relativePath, isFont } = fileInfo;
             
+            // 单独文件夹模式：移除根文件夹名称，创建扁平化结构
+            const flattenedPath = relativePath.replace(new RegExp(`^${folderStructure.name}/?`), '');
+            const finalPath = flattenedPath || file.name; // 如果路径为空，直接使用文件名
+            
             // 更新进度 (20% -> 80%)
             const fileProgress = 20 + (i / totalFiles) * 60;
-            updateZipProgress(fileProgress, '正在添加文件...', `处理 ${relativePath} (${i + 1}/${totalFiles})`);
+            updateZipProgress(fileProgress, '正在添加文件...', `处理 ${finalPath} (${i + 1}/${totalFiles})`);
             
             try {
                 if (isFont) {
                     // 字体文件：使用处理后的数据
                     const processedData = processedFontMap.get(file.name);
                     if (processedData) {
-                        zip.file(relativePath, processedData);
-                        console.log(`✅ 添加处理后的字体: ${relativePath} (${processedData.byteLength}字节)`);
+                        zip.file(finalPath, processedData);
+                        console.log(`✅ 添加处理后的字体: ${finalPath} (${processedData.byteLength}字节)`);
                         addedFiles++;
                     } else {
                         console.log(`❌ 未找到处理后的字体数据: ${file.name}`);
@@ -2026,12 +2032,12 @@ async function downloadFolderAsZip() {
                 } else {
                     // 非字体文件：直接复制原文件
                     const fileData = await readFileAsArrayBuffer(file);
-                    zip.file(relativePath, fileData);
-                    console.log(`✅ 复制原文件: ${relativePath} (${fileData.byteLength}字节)`);
+                    zip.file(finalPath, fileData);
+                    console.log(`✅ 复制原文件: ${finalPath} (${fileData.byteLength}字节)`);
                     addedFiles++;
                 }
             } catch (error) {
-                console.error(`❌ 处理文件失败 ${relativePath}:`, error);
+                console.error(`❌ 处理文件失败 ${finalPath}:`, error);
                 skippedFiles++;
             }
         }
@@ -2084,7 +2090,7 @@ async function downloadFolderAsZip() {
         
         console.log(`🎉 ZIP文件下载完成！`);
         console.log(`📊 包含: ${fontFiles} 个处理后的字体文件, ${nonFontFiles} 个原始文件`);
-        console.log(`📁 完整目录结构已保持，与本地版本处理结果一致`);
+        console.log(`📁 单独文件夹模式：扁平化结构，解压后直接可用，无需额外操作`);
         console.log('ZIP下载过程完成');
         
         // 隐藏进度条
