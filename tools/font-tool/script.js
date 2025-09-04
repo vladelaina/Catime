@@ -107,21 +107,21 @@ async function initPyodide() {
         // 加载字体处理Python代码
         pyodide.runPython(`
 from fontTools.ttLib import TTFont
-from fontTools.subset import Subsetter
+from fontTools.subset import Subsetter, Options
 import base64
 import io
 
 def subset_font(font_data_base64, characters_to_keep):
     """
-    与本地版本完全一致的精简版本 + 诊断信息
+    更严格的字体子集化处理 - 彻底清理多余字符和复合字形
     """
     try:
         from fontTools.ttLib import TTFont
-        from fontTools.subset import Subsetter
+        from fontTools.subset import Subsetter, Options
         import base64
         import io
         
-        print(f"[DEBUG] 开始处理字体，要保留的字符: {characters_to_keep}")
+        print(f"[DEBUG] 开始严格字体处理，要保留的字符: {characters_to_keep}")
         print(f"[DEBUG] Base64数据长度: {len(font_data_base64)} 字符")
         
         # 解码字体数据
@@ -174,18 +174,56 @@ def subset_font(font_data_base64, characters_to_keep):
             if not found_chars:
                 raise Exception(f'在字体中未找到任何指定字符。字体包含字符范围: U+{min(cmap.keys()):04X} - U+{max(cmap.keys()):04X}')
         
-        # 创建子集化器
-        subsetter = Subsetter()
-        print(f"[DEBUG] 子集化器创建成功")
+        # 创建子集化器 - 使用严格清理选项
+        options = Options()
         
-        # 完全与本地版本一致 - 不添加任何额外字符
+        # 设置严格的清理参数 - 彻底移除多余内容
+        options.desubroutinize = True          # 将子程序内联化，简化字体
+        options.drop_tables = [               # 移除不必要的表
+            'DSIG',    # 数字签名表
+            'GSUB',    # 字形替换表（包含复合字形信息）
+            'GPOS',    # 字形定位表
+            'kern',    # 字距调整表
+            'hdmx',    # 水平设备度量表
+            'VDMX',    # 垂直设备度量表
+            'LTSH',    # 线性阈值表
+            'VORG',    # 垂直原点表
+        ]
+        options.passthrough_tables = False     # 不传递未知表
+        options.recalc_bounds = True          # 重新计算边界
+        options.recalc_timestamp = False      # 不重新计算时间戳
+        options.canonical_order = True       # 使用规范顺序
+        options.flavor = None                 # 输出标准TTF格式
+        options.with_zopfli = False          # 不使用zopfli压缩
+        
+        # 设置名称表保留选项 - 最小化保留
+        options.name_IDs = ['*']              # 保留所有名称ID（字体标识需要）
+        options.name_legacy = False           # 不保留旧式名称
+        options.name_languages = ['*']        # 保留所有语言
+        
+        # 字形清理选项
+        options.notdef_glyph = True           # 保留 .notdef 字形（必需）
+        options.notdef_outline = False        # 简化 .notdef 字形轮廓
+        options.recommended_glyphs = False    # 不自动添加推荐字形
+        options.glyph_names = False           # 不保留字形名称
+        
+        # 特征表清理
+        options.layout_features = []          # 不保留任何布局特征
+        options.layout_scripts = []           # 不保留任何脚本支持
+        
+        # 子集化器配置
+        subsetter = Subsetter(options=options)
+        print(f"[DEBUG] 严格子集化器创建成功，已配置彻底清理选项")
+        
+        # 严格字符设置 - 只保留用户指定的字符
+        print(f"[DEBUG] 严格模式：只保留指定字符 {repr(characters_to_keep)}")
         subsetter.populate(text=characters_to_keep)
-        print(f"[DEBUG] 字符设置完成: {repr(characters_to_keep)} (与本地版本完全一致)")
+        print(f"[DEBUG] 字符设置完成: {repr(characters_to_keep)} (严格清理模式)")
         
         # 应用子集化
-        print(f"[DEBUG] 开始子集化...")
+        print(f"[DEBUG] 开始严格子集化处理...")
         subsetter.subset(font)
-        print(f"[DEBUG] 子集化完成")
+        print(f"[DEBUG] 严格子集化完成")
         
         print(f"[DEBUG] 处理后表数量: {len(font.keys())}")
         print(f"[DEBUG] 处理后表列表: {sorted(list(font.keys()))}")
@@ -305,14 +343,14 @@ def subset_font(font_data_base64, characters_to_keep):
             import traceback
             print(f"[ERROR] 验证错误详情: {traceback.format_exc()}")
             
-        # 与本地版本的兼容性检查
-        print(f"[INFO] === 本地版本兼容性检查 ===")
-        print(f"[INFO] 本地版本步骤: TTFont() -> Subsetter() -> populate() -> subset() -> save()")
-        print(f"[INFO] Web版本步骤: 相同")
+        # 严格清理模式兼容性检查
+        print(f"[INFO] === 严格清理模式处理完成 ===")
+        print(f"[INFO] 处理模式: 严格子集化 + 彻底清理复合字形")
+        print(f"[INFO] 清理选项: 移除GSUB/GPOS表，去除复合字形信息")
         print(f"[INFO] 输入字符: {repr(characters_to_keep)}")
         print(f"[INFO] 输出大小: {len(output_data)} 字节")
-        print(f"[INFO] 应该与本地版本生成相同的结果")
-        print(f"[INFO] ================================")
+        print(f"[INFO] 已彻底清理多余字符和复合字形")
+        print(f"[INFO] =====================================")
         
         result_base64 = base64.b64encode(output_data).decode('utf-8')
         print(f"[DEBUG] Base64编码完成，长度: {len(result_base64)} 字符")
@@ -321,7 +359,7 @@ def subset_font(font_data_base64, characters_to_keep):
             'success': True,
             'data': result_base64,
             'size': len(output_data),
-            'message': f'成功处理，包含 {len(characters_to_keep)} 个字符'
+            'message': f'严格清理完成，只保留 {len(characters_to_keep)} 个指定字符'
         }
         
     except Exception as e:
@@ -1258,8 +1296,9 @@ async function startProcessing() {
     downloadTitle.innerHTML = `<i class="fas fa-download"></i> ${translateText('处理后的字体')} <span style="font-size: 14px; color: #666; font-weight: normal;">(${translateText('处理中...')})</span>`;
     
     const engineType = pythonReady ? 'Python FontTools' : 'JavaScript OpenType.js';
-    console.log(`开始使用 ${engineType} 处理 ${selectedFiles.length} 个字体文件...`);
+    console.log(`开始使用 ${engineType} (严格清理模式) 处理 ${selectedFiles.length} 个字体文件...`);
     console.log(`保留字符: ${characters}`);
+    console.log(`🔧 严格清理模式：将彻底移除复合字形和多余字符`);
 
     try {
         for (let i = 0; i < selectedFiles.length; i++) {
@@ -2568,6 +2607,7 @@ function setupTranslateFunction() {
         '正在准备ZIP生成...': 'Preparing ZIP generation...',
         '初始化中...': 'Initializing...',
         '测试覆盖层': 'Test Overlay',
+        '严格清理模式：彻底移除复合字形和多余字符，确保字体只包含指定内容': 'Strict Cleanup Mode: Thoroughly removes compound glyphs and extra characters, ensuring fonts contain only specified content',
     };
     
     // 创建全局翻译函数
@@ -2620,7 +2660,8 @@ function applyFontToolTranslations() {
         '处理后的字体',
         '下载字体文件',
         '清理全部',
-        '完全本地处理，所有计算在浏览器中完成，数据不会上传到任何服务器。'
+        '完全本地处理，所有计算在浏览器中完成，数据不会上传到任何服务器。',
+        '严格清理模式：彻底移除复合字形和多余字符，确保字体只包含指定内容'
     ];
     
     staticTexts.forEach(chinese => {
