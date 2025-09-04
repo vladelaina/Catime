@@ -1385,7 +1385,7 @@ async function processFont(file, characters) {
                 }
                 
                 resolve({
-                    name: `simplified_${file.name}`,
+                    name: file.name,  // 保持原始文件名
                     data: subsetFont.buffer,
                     originalSize: file.size,
                     newSize: subsetFont.buffer.byteLength
@@ -1970,7 +1970,7 @@ async function downloadFolderAsZip() {
     
     try {
         const zip = new JSZip();
-        const outputFolderName = `simplified_${folderStructure.name}`;
+        const outputFolderName = folderStructure.name; // 保持原始文件夹名称
         console.log('输出文件夹名称:', outputFolderName);
         
         // 第1步：创建目录结构 (10%)
@@ -1991,9 +1991,9 @@ async function downloadFolderAsZip() {
         updateZipProgress(20, '正在准备字体文件...', `映射 ${processedFonts.length} 个处理后的字体`);
         const processedFontMap = new Map();
         processedFonts.forEach(font => {
-            const originalName = font.name.replace(/^simplified_/, '');
-            processedFontMap.set(originalName, font.data);
-            console.log(`映射字体: ${originalName} -> ${font.data ? font.data.byteLength + '字节' : 'null'}`);
+            // 现在字体名称已经是原始名称，不需要移除前缀
+            processedFontMap.set(font.name, font.data);
+            console.log(`映射字体: ${font.name} -> ${font.data ? font.data.byteLength + '字节' : 'null'}`);
         });
         console.log(`✅ 字体映射完成，共 ${processedFontMap.size} 个字体`);
         
@@ -2118,7 +2118,7 @@ async function downloadMixedModeAsZip() {
     
     try {
         const zip = new JSZip();
-        const outputFolderName = folderStructure.name ? `simplified_${folderStructure.name}` : 'simplified_fonts';
+        const outputFolderName = folderStructure.name ? folderStructure.name : 'processed_fonts'; // 保持原始文件夹名称
         console.log('输出文件夹名称:', outputFolderName);
         
         // 第1步：创建目录结构 (10%)
@@ -2140,9 +2140,9 @@ async function downloadMixedModeAsZip() {
         updateZipProgress(20, '正在准备字体文件...', `映射 ${processedFonts.length} 个处理后的字体`);
         const processedFontMap = new Map();
         processedFonts.forEach(font => {
-            const originalName = font.name.replace(/^simplified_/, '');
-            processedFontMap.set(originalName, font.data);
-            console.log(`映射字体: ${originalName} -> ${font.data ? font.data.byteLength + '字节' : 'null'}`);
+            // 现在字体名称已经是原始名称，不需要移除前缀
+            processedFontMap.set(font.name, font.data);
+            console.log(`映射字体: ${font.name} -> ${font.data ? font.data.byteLength + '字节' : 'null'}`);
         });
         console.log(`✅ 字体映射完成，共 ${processedFontMap.size} 个字体`);
 
@@ -2607,7 +2607,6 @@ function setupTranslateFunction() {
         '正在准备ZIP生成...': 'Preparing ZIP generation...',
         '初始化中...': 'Initializing...',
         '测试覆盖层': 'Test Overlay',
-        '严格清理模式：彻底移除复合字形和多余字符，确保字体只包含指定内容': 'Strict Cleanup Mode: Thoroughly removes compound glyphs and extra characters, ensuring fonts contain only specified content',
     };
     
     // 创建全局翻译函数
@@ -2660,8 +2659,7 @@ function applyFontToolTranslations() {
         '处理后的字体',
         '下载字体文件',
         '清理全部',
-        '完全本地处理，所有计算在浏览器中完成，数据不会上传到任何服务器。',
-        '严格清理模式：彻底移除复合字形和多余字符，确保字体只包含指定内容'
+        '完全本地处理，所有计算在浏览器中完成，数据不会上传到任何服务器。'
     ];
     
     staticTexts.forEach(chinese => {
