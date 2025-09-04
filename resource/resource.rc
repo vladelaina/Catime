@@ -9,18 +9,18 @@
 IDI_CATIME ICON "../asset/icon/catime.ico"
 
 /** @brief MIT-licensed monospace font for terminal-style display */
-IDR_FONT_PROFONT         FONT "../asset/font/MIT/ProFont IIx Nerd Font Essence.ttf"
+IDR_FONT_PROFONT         FONT "../asset/font/MIT/ProFontWindows Essence.ttf"
 
 /** @brief SIL-licensed developer fonts with Nerd Font icons */
-IDR_FONT_DEPARTURE         FONT "../asset/font/SIL/DepartureMono Nerd Font Propo Essence.ttf"
-IDR_FONT_DADDYTIME        FONT "../asset/font/SIL/DaddyTimeMono Nerd Font Propo Essence.ttf"
-IDR_FONT_RECMONO           FONT "../asset/font/SIL/RecMonoCasual Nerd Font Mono Essence.ttf"
-IDR_FONT_TERMINESS         FONT "../asset/font/SIL/Terminess Nerd Font Propo Essence.ttf"
+IDR_FONT_DEPARTURE         FONT "../asset/font/SIL/DepartureMono Essence.otf"
+IDR_FONT_DADDYTIME        FONT "../asset/font/SIL/DaddyTimeMono Essence.otf"
+IDR_FONT_RECMONO           FONT "../asset/font/SIL/Rec Mono Casual Essence.ttf"
+IDR_FONT_TERMINESS         FONT "../asset/font/SIL/Terminess Nerd Font Essence.ttf"
 
 /** @brief OFL-licensed decorative fonts for aesthetic diversity */
 IDR_FONT_JACQUARD          FONT "../asset/font/OFL/Jacquard 12 Essence.ttf"
 IDR_FONT_JACQUARDA         FONT "../asset/font/OFL/Jacquarda Bastarda 9 Essence.ttf"
-IDR_FONT_PIXELIFY          FONT "../asset/font/OFL/Pixelify Sans Medium Essence.ttf"
+IDR_FONT_PIXELIFY          FONT "../asset/font/OFL/Pixelify Sans Essence.ttf"
 IDR_FONT_RUBIK_BURNED      FONT "../asset/font/OFL/Rubik Burned Essence.ttf"
 IDR_FONT_RUBIK_GLITCH      FONT "../asset/font/OFL/Rubik Glitch Essence.ttf"
 IDR_FONT_RUBIK_MARKER_HATCH FONT "../asset/font/OFL/Rubik Marker Hatch Essence.ttf"
