@@ -1624,11 +1624,24 @@ async function startProcessing() {
             }
         } else {
             showTemporaryMessage(translateText('字体处理失败，没有成功处理任何文件'), 'error');
+            // 隐藏处理后的字体卡片，因为没有成功处理任何文件
+            downloadSection.style.display = 'none';
+            downloadItems.innerHTML = '';
+            downloadControls.style.display = 'none';
+            console.log('📦 处理失败，已隐藏处理后的字体卡片');
         }
 
     } catch (error) {
         console.error(`处理过程中发生错误: ${error.message}`);
         console.error('Processing error:', error);
+        
+        // 处理过程中发生异常，隐藏处理后的字体卡片
+        downloadSection.style.display = 'none';
+        downloadItems.innerHTML = '';
+        downloadControls.style.display = 'none';
+        console.log('📦 处理异常，已隐藏处理后的字体卡片');
+        
+        showTemporaryMessage(translateText('字体处理过程中发生错误，请重试'), 'error');
     } finally {
         // 停止计时并显示最终结果
         stopTimingAndShowResult();
@@ -2874,6 +2887,7 @@ function setupTranslateFunction() {
         '所有字体处理完成！成功处理': 'All fonts processed! Successfully processed',
         '字体处理完成！成功处理': 'Font processing completed! Successfully processed',
         '字体处理失败，没有成功处理任何文件': 'Font processing failed, no files were successfully processed',
+        '字体处理过程中发生错误，请重试': 'An error occurred during font processing, please try again',
         '成功添加': 'Successfully added',
         '个字体文件，总计': ' font files, total',
         '个文件待处理。': ' files to process.',
