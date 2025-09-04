@@ -1533,6 +1533,8 @@ function stopTimingAndShowResult() {
 async function startProcessing() {
     if (selectedFiles.length === 0) {
         showTemporaryMessage(translateText('请先选择要处理的字体文件！'), 'warning');
+        // 自动滚动到上传区域，方便用户选择字体文件
+        scrollToUploadArea();
         return;
     }
 
