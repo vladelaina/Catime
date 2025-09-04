@@ -25,6 +25,7 @@ let timingInterval = null;
 
 // DOM 元素
 const uploadArea = document.getElementById('uploadArea');
+const uploadSection = document.querySelector('.upload-section'); // 外部的上传卡片section
 const fileInput = document.getElementById('fileInput');
 const fileList = document.getElementById('fileList');
 const fileItems = document.getElementById('fileItems');
@@ -1267,6 +1268,23 @@ function scrollToDownloadSection() {
             // 清除动画效果
             setTimeout(() => {
                 downloadSection.style.animation = '';
+            }, 1500);
+        }, 150);
+    }
+}
+
+// 自动滚动到上传区域（第一个卡片）
+function scrollToUploadArea() {
+    scrollToElement(uploadSection, '上传卡片区域');
+    
+    // 为整个上传卡片添加特有的高亮动画
+    if (uploadSection) {
+        setTimeout(() => {
+            uploadSection.style.animation = 'highlightFileList 1.5s ease-in-out';
+            
+            // 清除动画效果
+            setTimeout(() => {
+                uploadSection.style.animation = '';
             }, 1500);
         }, 150);
     }
@@ -2523,6 +2541,9 @@ function clearAllProcessedFiles() {
     
     // 显示清理成功的提示
     showTemporaryMessage(translateText('已清理全部文件和处理结果，界面已重置'), 'success');
+    
+    // 自动滚动到上传区域，方便用户重新开始操作
+    scrollToUploadArea();
 }
 
 // 重置进度条
