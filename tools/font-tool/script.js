@@ -1125,6 +1125,124 @@ function updateFileList() {
         
         fileItems.appendChild(fileItem);
     });
+
+    // 自动滚动到文件列表区域
+    scrollToFileList();
+}
+
+// 自动滚动到文件列表区域
+function scrollToFileList() {
+    // 添加短暂延迟，确保DOM更新完成
+    setTimeout(() => {
+        if (fileList && fileList.style.display === 'block') {
+            try {
+                // 获取导航栏高度
+                const header = document.querySelector('.main-header');
+                let headerHeight = 0;
+                
+                if (header) {
+                    const headerRect = header.getBoundingClientRect();
+                    headerHeight = headerRect.height;
+                    // 如果导航栏是fixed或sticky，需要考虑其实际占用的空间
+                    const headerStyle = window.getComputedStyle(header);
+                    if (headerStyle.position === 'fixed' || headerStyle.position === 'sticky') {
+                        headerHeight = headerRect.height;
+                    }
+                }
+                
+                console.log(`📏 导航栏高度: ${headerHeight}px`);
+                
+                // 获取文件列表的位置
+                const fileListRect = fileList.getBoundingClientRect();
+                const currentScrollY = window.scrollY;
+                
+                // 考虑高亮动画状态下的上升效果，并增加安全边距避免被导航栏覆盖
+                const highlightOffsetY = 3; // 文件列表高亮动画时向上移动3px
+                const safetyMargin = 8; // 额外的安全边距，确保不被导航栏覆盖
+                const totalOffsetY = highlightOffsetY + safetyMargin; // 总偏移量 = 动画偏移 + 安全边距
+                
+                // 计算需要滚动的距离，让文件列表有足够的安全距离不被导航栏覆盖
+                let targetScrollY = currentScrollY + fileListRect.top - headerHeight - totalOffsetY;
+                
+                // 安全检查：确保滚动位置不会是负数或超出页面范围
+                const maxScrollY = document.documentElement.scrollHeight - window.innerHeight;
+                targetScrollY = Math.max(0, Math.min(targetScrollY, maxScrollY));
+                
+                // 检查是否真的需要滚动（避免不必要的微小滚动）
+                const scrollDifference = Math.abs(targetScrollY - currentScrollY);
+                const minScrollThreshold = 5; // 小于5px的滚动就不执行
+                
+                console.log(`🎯 当前滚动位置: ${currentScrollY}px, 目标位置: ${targetScrollY}px, 需要滚动: ${targetScrollY - currentScrollY}px`);
+                console.log(`🔄 总偏移量: ${totalOffsetY}px (高亮动画${highlightOffsetY}px + 安全边距${safetyMargin}px), 确保不被导航栏覆盖`);
+                
+                if (scrollDifference > minScrollThreshold) {
+                    // 添加视觉反馈 - 让文件列表轻微闪烁以引起注意
+                    fileList.style.animation = 'highlightFileList 1.5s ease-in-out';
+                    
+                    // 平滑滚动到计算出的精确位置
+                    window.scrollTo({
+                        top: targetScrollY,
+                        behavior: 'smooth'
+                    });
+                    
+                    console.log('📍 已精确滚动到文件列表区域（含安全边距，避免被导航栏覆盖）');
+                } else {
+                    // 不需要滚动，只添加视觉反馈
+                    fileList.style.animation = 'highlightFileList 1.5s ease-in-out';
+                    console.log('📍 文件列表已在合适位置（含安全边距），无需滚动，仅添加视觉反馈');
+                }
+                
+                // 清除动画效果
+                setTimeout(() => {
+                    fileList.style.animation = '';
+                }, 1500);
+                
+            } catch (error) {
+                // 如果精确滚动失败，使用备用方案
+                console.warn('精确滚动失败，使用备用方案:', error);
+                
+                try {
+                    // 备用方案1：使用scrollIntoView并手动调整
+                    fileList.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start',
+                        inline: 'nearest'
+                    });
+                    
+                    // 延迟调整位置
+                    setTimeout(() => {
+                        const header = document.querySelector('.main-header');
+                        if (header) {
+                            const headerHeight = header.getBoundingClientRect().height;
+                            const fileListRect = fileList.getBoundingClientRect();
+                            const totalOffsetY = 11; // 保持与主逻辑一致的总偏移量（3+8）
+                            
+                            if (fileListRect.top < headerHeight + totalOffsetY) {
+                                window.scrollBy({
+                                    top: fileListRect.top - headerHeight - totalOffsetY,
+                                    behavior: 'smooth'
+                                });
+                            }
+                        }
+                    }, 300);
+                    
+                } catch (fallbackError) {
+                    // 最后的备用方案：手动计算滚动位置（包含完整偏移量）
+                    console.warn('所有滚动方案失败，使用基础滚动:', fallbackError);
+                    try {
+                        const rect = fileList.getBoundingClientRect();
+                        const header = document.querySelector('.main-header');
+                        const headerHeight = header ? header.getBoundingClientRect().height : 0;
+                        const totalOffsetY = 11; // 考虑高亮动画偏移 + 安全边距（3+8）
+                        window.scrollTo(0, window.scrollY + rect.top - headerHeight - totalOffsetY);
+                    } catch {
+                        // 最后的最后：基础滚动
+                        fileList.scrollIntoView();
+                    }
+                }
+            }
+        }
+    }, 150); // 150ms 延迟确保渲染完成
 }
 
 function removeFile(index) {

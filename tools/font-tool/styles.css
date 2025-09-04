@@ -1505,6 +1505,24 @@ section h2 i {
     }
 }
 
+/* 文件列表高亮动画 */
+@keyframes highlightFileList {
+    0% {
+        box-shadow: var(--card-shadow);
+        border-color: var(--primary-color);
+    }
+    50% {
+        box-shadow: 0 8px 30px rgba(122, 162, 247, 0.4);
+        border-color: var(--accent-color);
+        transform: translateY(-3px) scale(1.02);
+    }
+    100% {
+        box-shadow: var(--card-shadow);
+        border-color: var(--primary-color);
+        transform: translateY(0) scale(1);
+    }
+}
+
 section {
     animation: fadeInUp 0.6s ease forwards;
 }
