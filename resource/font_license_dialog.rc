@@ -16,9 +16,9 @@ BEGIN
     /** Main license agreement text area with markdown link support */
     CONTROL         "", IDC_FONT_LICENSE_TEXT, "Static", SS_OWNERDRAW | SS_NOTIFY, 10, 10, 300, 130
 
-    /** Agreement confirmation button */
-    DEFPUSHBUTTON   "", IDC_FONT_LICENSE_AGREE_BTN, 210, 150, 50, 14
-    
     /** Cancel/decline button */
-    PUSHBUTTON      "", IDC_FONT_LICENSE_CANCEL_BTN, 265, 150, 45, 14
+    PUSHBUTTON      "", IDC_FONT_LICENSE_CANCEL_BTN, 210, 150, 45, 14
+    
+    /** Agreement confirmation button */
+    DEFPUSHBUTTON   "", IDC_FONT_LICENSE_AGREE_BTN, 265, 150, 50, 14
 END

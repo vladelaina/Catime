@@ -19,9 +19,9 @@ BEGIN
     /** Exit instruction text */
     CTEXT           "", IDC_UPDATE_EXIT_TEXT, 8, 175, 284, 10
     /** Accept update button */
-    PUSHBUTTON      "", IDYES, 85, 195, 60, 14
+    PUSHBUTTON      "", IDYES, 155, 195, 60, 14
     /** Decline update button */
-    PUSHBUTTON      "", IDNO, 155, 195, 60, 14
+    PUSHBUTTON      "", IDNO, 85, 195, 60, 14
     /** Hidden OK button for single-button mode */
     DEFPUSHBUTTON   "", IDOK, 120, 195, 60, 14, NOT WS_VISIBLE
 END 
