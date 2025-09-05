@@ -1,0 +1,19 @@
+/**
+ * @file update_exit_dialog.rc
+ * @brief Program exit notification dialog for update process
+ */
+#include <windows.h>
+#include "resource.h"
+
+#pragma code_page(65001)
+
+/** @brief Simple exit notification dialog displayed before program termination */
+IDD_EXIT_DIALOG DIALOGEX 0, 0, 200, 85
+STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+FONT 10, "Microsoft YaHei UI"
+BEGIN
+    /** Exit notification text populated at runtime */
+    CTEXT           "", IDC_EXIT_TEXT, 8, 20, 184, 20
+    /** Confirmation button */
+    DEFPUSHBUTTON   "", IDOK, 70, 55, 60, 14
+END

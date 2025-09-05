@@ -211,21 +211,14 @@ BOOL ParseLatestVersionFromJson(const char* jsonResponse, char* latestVersion, s
 INT_PTR CALLBACK ExitMsgDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_INITDIALOG: {
-            ApplyDialogLanguage(hwndDlg, IDD_UPDATE_DIALOG);
+            ApplyDialogLanguage(hwndDlg, IDD_EXIT_DIALOG);
             
             const wchar_t* exitText = GetLocalizedString(L"程序即将退出", L"The application will exit now");
             
-            SetDlgItemTextW(hwndDlg, IDC_UPDATE_EXIT_TEXT, exitText);
-            SetDlgItemTextW(hwndDlg, IDC_UPDATE_TEXT, L"");
+            SetDlgItemTextW(hwndDlg, IDC_EXIT_TEXT, exitText);
             
             const wchar_t* okText = GetLocalizedString(L"确定", L"OK");
             SetDlgItemTextW(hwndDlg, IDOK, okText);
-            
-            /** Hide release notes text box for exit dialog */
-            ShowWindow(GetDlgItem(hwndDlg, IDC_UPDATE_NOTES), SW_HIDE);
-            ShowWindow(GetDlgItem(hwndDlg, IDYES), SW_HIDE);
-            ShowWindow(GetDlgItem(hwndDlg, IDNO), SW_HIDE);
-            ShowWindow(GetDlgItem(hwndDlg, IDOK), SW_SHOW);
             
             const wchar_t* titleText = GetLocalizedString(L"Catime - 更新提示", L"Catime - Update Notice");
             SetWindowTextW(hwndDlg, titleText);
@@ -257,7 +250,7 @@ INT_PTR CALLBACK ExitMsgDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lP
  */
 void ShowExitMessageDialog(HWND hwnd) {
     DialogBoxW(GetModuleHandle(NULL), 
-              MAKEINTRESOURCEW(IDD_UPDATE_DIALOG), 
+              MAKEINTRESOURCEW(IDD_EXIT_DIALOG), 
               hwnd, 
               ExitMsgDlgProc);
 }
