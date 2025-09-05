@@ -314,6 +314,10 @@ extern int NOTIFICATION_TIMEOUT_MS;      /**< Notification timeout in millisecon
 #define IDD_NO_UPDATE_DIALOG 730        /**< No update available dialog */
 #define IDC_NO_UPDATE_TEXT 731          /**< No update text control */
 
+/** @brief Exit dialog identifiers */
+#define IDD_EXIT_DIALOG 750             /**< Application exit dialog */
+#define IDC_EXIT_TEXT 751               /**< Exit message text control */
+
 /** @brief Font menu identifier */
 #define CLOCK_IDC_FONT_MENU 113         /**< Font selection submenu */
 
