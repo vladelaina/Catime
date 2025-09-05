@@ -27,13 +27,13 @@ extern BOOL IS_MILLISECONDS_PREVIEWING;
 extern BOOL PREVIEW_SHOW_MILLISECONDS;
 
 /**
- * @brief Get current milliseconds component
- * @return Current milliseconds (0-999)
+ * @brief Get current centiseconds component
+ * @return Current centiseconds (0-99)
  */
 int GetCurrentMilliseconds(void) {
     SYSTEMTIME st;
     GetLocalTime(&st);
-    return st.wMilliseconds;
+    return st.wMilliseconds / 10;  /** Convert to centiseconds */
 }
 
 /** @brief Timer-based millisecond tracking */
@@ -52,7 +52,7 @@ void ResetTimerMilliseconds(void) {
 }
 
 /**
- * @brief Save current milliseconds when pausing
+ * @brief Save current centiseconds when pausing
  * Should be called when timer is paused to freeze the display
  */
 void PauseTimerMilliseconds(void) {
@@ -64,13 +64,13 @@ void PauseTimerMilliseconds(void) {
 }
 
 /**
- * @brief Get elapsed milliseconds for timer modes
- * @return Current milliseconds component for timer display
+ * @brief Get elapsed centiseconds for timer modes
+ * @return Current centiseconds component for timer display (0-99)
  */
 int GetElapsedMillisecondsComponent(void) {
     /** If timer is paused, return frozen milliseconds */
     if (CLOCK_IS_PAUSED) {
-        return paused_milliseconds;
+        return paused_milliseconds / 10;  /** Convert to centiseconds (0-99) */
     }
     
     /** Initialize timer milliseconds on first call */
@@ -83,8 +83,8 @@ int GetElapsedMillisecondsComponent(void) {
     DWORD current_tick = GetTickCount();
     DWORD elapsed_ms = current_tick - timer_start_tick;
     
-    /** Return just the millisecond component (0-999) */
-    return (int)(elapsed_ms % 1000);
+    /** Return centiseconds component (0-99) by dividing by 10 */
+    return (int)((elapsed_ms % 1000) / 10);
 }
 
 /**
@@ -118,7 +118,7 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
         int hour = st.wHour;
         int minute = st.wMinute;
         int second = st.wSecond;
-        int milliseconds = st.wMilliseconds;
+        int milliseconds = st.wMilliseconds / 10;  /** Convert to centiseconds (0-99) */
         
         /** Convert to 12-hour format if needed */
         if (!CLOCK_USE_24HOUR) {
@@ -141,15 +141,15 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
                 /** Format with seconds and milliseconds */
                 switch (formatToUse) {
                     case TIME_FORMAT_ZERO_PADDED:
-                        swprintf(time_text, 50, L"%02d:%02d:%02d.%03d", 
+                        swprintf(time_text, 50, L"%02d:%02d:%02d.%02d", 
                                 hour, minute, second, milliseconds);
                         break;
                     case TIME_FORMAT_FULL_PADDED:
-                        swprintf(time_text, 50, L"%02d:%02d:%02d.%03d", 
+                        swprintf(time_text, 50, L"%02d:%02d:%02d.%02d", 
                                 hour, minute, second, milliseconds);
                         break;
                     default: // TIME_FORMAT_DEFAULT
-                        swprintf(time_text, 50, L"%d:%02d:%02d.%03d", 
+                        swprintf(time_text, 50, L"%d:%02d:%02d.%02d", 
                                 hour, minute, second, milliseconds);
                         break;
                 }
@@ -175,15 +175,15 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
                 /** Format without seconds setting but with milliseconds - show seconds for context */
                 switch (formatToUse) {
                     case TIME_FORMAT_ZERO_PADDED:
-                        swprintf(time_text, 50, L"%02d:%02d:%02d.%03d", 
+                        swprintf(time_text, 50, L"%02d:%02d:%02d.%02d", 
                                 hour, minute, second, milliseconds);
                         break;
                     case TIME_FORMAT_FULL_PADDED:
-                        swprintf(time_text, 50, L"%02d:%02d:%02d.%03d", 
+                        swprintf(time_text, 50, L"%02d:%02d:%02d.%02d", 
                                 hour, minute, second, milliseconds);
                         break;
                     default: // TIME_FORMAT_DEFAULT
-                        swprintf(time_text, 50, L"%d:%02d:%02d.%03d", 
+                        swprintf(time_text, 50, L"%d:%02d:%02d.%02d", 
                                 hour, minute, second, milliseconds);
                         break;
                 }
@@ -217,7 +217,7 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
         /** Determine whether to show milliseconds (preview or current) */
         BOOL showMilliseconds = IS_MILLISECONDS_PREVIEWING ? PREVIEW_SHOW_MILLISECONDS : CLOCK_SHOW_MILLISECONDS;
         
-        /** Get milliseconds for timer display */
+        /** Get centiseconds for timer display */
         int milliseconds = GetElapsedMillisecondsComponent();
         
         /** Format time with appropriate precision */
@@ -226,13 +226,13 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
                 /** Format with hours and milliseconds */
                 switch (formatToUse) {
                     case TIME_FORMAT_ZERO_PADDED:
-                        swprintf(time_text, 50, L"%02d:%02d:%02d.%03d", hours, minutes, seconds, milliseconds);
+                        swprintf(time_text, 50, L"%02d:%02d:%02d.%02d", hours, minutes, seconds, milliseconds);
                         break;
                     case TIME_FORMAT_FULL_PADDED:
-                        swprintf(time_text, 50, L"%02d:%02d:%02d.%03d", hours, minutes, seconds, milliseconds);
+                        swprintf(time_text, 50, L"%02d:%02d:%02d.%02d", hours, minutes, seconds, milliseconds);
                         break;
                     default: // TIME_FORMAT_DEFAULT
-                        swprintf(time_text, 50, L"%d:%02d:%02d.%03d", hours, minutes, seconds, milliseconds);
+                        swprintf(time_text, 50, L"%d:%02d:%02d.%02d", hours, minutes, seconds, milliseconds);
                         break;
                 }
             } else {
@@ -254,13 +254,13 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
                 /** Format with minutes and milliseconds */
                 switch (formatToUse) {
                     case TIME_FORMAT_ZERO_PADDED:
-                        swprintf(time_text, 50, L"%02d:%02d.%03d", minutes, seconds, milliseconds);
+                        swprintf(time_text, 50, L"%02d:%02d.%02d", minutes, seconds, milliseconds);
                         break;
                     case TIME_FORMAT_FULL_PADDED:
-                        swprintf(time_text, 50, L"00:%02d:%02d.%03d", minutes, seconds, milliseconds);
+                        swprintf(time_text, 50, L"00:%02d:%02d.%02d", minutes, seconds, milliseconds);
                         break;
                     default: // TIME_FORMAT_DEFAULT
-                        swprintf(time_text, 50, L"%d:%02d.%03d", minutes, seconds, milliseconds);
+                        swprintf(time_text, 50, L"%d:%02d.%02d", minutes, seconds, milliseconds);
                         break;
                 }
             } else {
@@ -282,13 +282,13 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
                 /** Format with seconds and milliseconds */
                 switch (formatToUse) {
                     case TIME_FORMAT_ZERO_PADDED:
-                        swprintf(time_text, 50, L"00:%02d.%03d", seconds, milliseconds);
+                        swprintf(time_text, 50, L"00:%02d.%02d", seconds, milliseconds);
                         break;
                     case TIME_FORMAT_FULL_PADDED:
-                        swprintf(time_text, 50, L"00:00:%02d.%03d", seconds, milliseconds);
+                        swprintf(time_text, 50, L"00:00:%02d.%02d", seconds, milliseconds);
                         break;
                     default: // TIME_FORMAT_DEFAULT
-                        swprintf(time_text, 50, L"%d.%03d", seconds, milliseconds);
+                        swprintf(time_text, 50, L"%d.%02d", seconds, milliseconds);
                         break;
                 }
             } else {
@@ -333,7 +333,7 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
             /** Determine whether to show milliseconds (preview or current) */
             BOOL showMilliseconds = IS_MILLISECONDS_PREVIEWING ? PREVIEW_SHOW_MILLISECONDS : CLOCK_SHOW_MILLISECONDS;
             
-            /** Get milliseconds for countdown timer display */
+            /** Get centiseconds for countdown timer display */
             int milliseconds = GetElapsedMillisecondsComponent();
             
             /** Format with appropriate precision */
@@ -342,13 +342,13 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
                     /** Format with hours and milliseconds */
                     switch (formatToUse) {
                         case TIME_FORMAT_ZERO_PADDED:
-                            swprintf(time_text, 50, L"%02d:%02d:%02d.%03d", hours, minutes, seconds, milliseconds);
+                            swprintf(time_text, 50, L"%02d:%02d:%02d.%02d", hours, minutes, seconds, milliseconds);
                             break;
                         case TIME_FORMAT_FULL_PADDED:
-                            swprintf(time_text, 50, L"%02d:%02d:%02d.%03d", hours, minutes, seconds, milliseconds);
+                            swprintf(time_text, 50, L"%02d:%02d:%02d.%02d", hours, minutes, seconds, milliseconds);
                             break;
                         default: // TIME_FORMAT_DEFAULT
-                            swprintf(time_text, 50, L"%d:%02d:%02d.%03d", hours, minutes, seconds, milliseconds);
+                            swprintf(time_text, 50, L"%d:%02d:%02d.%02d", hours, minutes, seconds, milliseconds);
                             break;
                     }
                 } else {
@@ -370,13 +370,13 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
                     /** Format with minutes and milliseconds */
                     switch (formatToUse) {
                         case TIME_FORMAT_ZERO_PADDED:
-                            swprintf(time_text, 50, L"%02d:%02d.%03d", minutes, seconds, milliseconds);
+                            swprintf(time_text, 50, L"%02d:%02d.%02d", minutes, seconds, milliseconds);
                             break;
                         case TIME_FORMAT_FULL_PADDED:
-                            swprintf(time_text, 50, L"00:%02d:%02d.%03d", minutes, seconds, milliseconds);
+                            swprintf(time_text, 50, L"00:%02d:%02d.%02d", minutes, seconds, milliseconds);
                             break;
                         default: // TIME_FORMAT_DEFAULT
-                            swprintf(time_text, 50, L"%d:%02d.%03d", minutes, seconds, milliseconds);
+                            swprintf(time_text, 50, L"%d:%02d.%02d", minutes, seconds, milliseconds);
                             break;
                     }
                 } else {
@@ -398,13 +398,13 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
                     /** Format with seconds and milliseconds */
                     switch (formatToUse) {
                         case TIME_FORMAT_ZERO_PADDED:
-                            swprintf(time_text, 50, L"00:%02d.%03d", seconds, milliseconds);
+                            swprintf(time_text, 50, L"00:%02d.%02d", seconds, milliseconds);
                             break;
                         case TIME_FORMAT_FULL_PADDED:
-                            swprintf(time_text, 50, L"00:00:%02d.%03d", seconds, milliseconds);
+                            swprintf(time_text, 50, L"00:00:%02d.%02d", seconds, milliseconds);
                             break;
                         default: // TIME_FORMAT_DEFAULT
-                            swprintf(time_text, 50, L"%d.%03d", seconds, milliseconds);
+                            swprintf(time_text, 50, L"%d.%02d", seconds, milliseconds);
                             break;
                     }
                 } else {
