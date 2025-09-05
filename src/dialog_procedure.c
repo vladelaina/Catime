@@ -28,6 +28,30 @@ static void DrawColorSelectButton(HDC hdc, HWND hwnd);
 /** @brief Global input text buffer for dialog operations */
 extern wchar_t inputText[256];
 
+/**
+ * @brief Structure for individual link control data
+ */
+typedef struct {
+    int controlId;
+    const wchar_t* textCN;
+    const wchar_t* textEN; 
+    const wchar_t* url;
+} AboutLinkInfo;
+
+/**
+ * @brief About dialog link information
+ */
+static AboutLinkInfo g_aboutLinkInfos[] = {
+    {IDC_CREDIT_LINK, L"特别感谢猫屋敷梨梨Official提供的图标", L"Special thanks to Neko House Lili Official for the icon", L"https://space.bilibili.com/26087398"},
+    {IDC_CREDITS, L"鸣谢", L"Credits", L"https://vladelaina.github.io/Catime/#thanks"},
+    {IDC_BILIBILI_LINK, L"BiliBili", L"BiliBili", L"https://space.bilibili.com/1862395225"},
+    {IDC_GITHUB_LINK, L"GitHub", L"GitHub", L"https://github.com/vladelaina/Catime"},
+    {IDC_COPYRIGHT_LINK, L"版权声明", L"Copyright Notice", L"https://github.com/vladelaina/Catime#️copyright-notice"},
+    {IDC_SUPPORT, L"支持", L"Support", L"https://vladelaina.github.io/Catime/support.html"}
+};
+
+static const int g_aboutLinkInfoCount = sizeof(g_aboutLinkInfos) / sizeof(g_aboutLinkInfos[0]);
+
 #define MAX_POMODORO_TIMES 10
 extern int POMODORO_TIMES[MAX_POMODORO_TIMES];
 extern int POMODORO_TIMES_COUNT;
@@ -640,14 +664,6 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 SetDlgItemTextW(hwndDlg, IDC_VERSION_TEXT, versionText);
             }
 
-            /** Set localized text for clickable links */
-            SetDlgItemTextW(hwndDlg, IDC_CREDIT_LINK, GetLocalizedString(L"特别感谢猫屋敷梨梨Official提供的图标", L"Special thanks to Neko House Lili Official for the icon"));
-            SetDlgItemTextW(hwndDlg, IDC_CREDITS, GetLocalizedString(L"鸣谢", L"Credits"));
-            SetDlgItemTextW(hwndDlg, IDC_BILIBILI_LINK, GetLocalizedString(L"BiliBili", L"BiliBili"));
-            SetDlgItemTextW(hwndDlg, IDC_GITHUB_LINK, GetLocalizedString(L"GitHub", L"GitHub"));
-            SetDlgItemTextW(hwndDlg, IDC_COPYRIGHT_LINK, GetLocalizedString(L"版权声明", L"Copyright Notice"));
-            SetDlgItemTextW(hwndDlg, IDC_SUPPORT, GetLocalizedString(L"支持", L"Support"));
-
             /** Parse compile-time build date and time for display */
             char month[4];
             int day, year, hour, min, sec;
@@ -671,6 +687,12 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
 
             SetDlgItemTextW(hwndDlg, IDC_BUILD_DATE, timeStr);
 
+            /** Set localized text for clickable links (using our link info structure) */
+            for (int i = 0; i < g_aboutLinkInfoCount; i++) {
+                const wchar_t* linkText = GetLocalizedString(g_aboutLinkInfos[i].textCN, g_aboutLinkInfos[i].textEN);
+                SetDlgItemTextW(hwndDlg, g_aboutLinkInfos[i].controlId, linkText);
+            }
+
             /** Move dialog to primary screen */
             MoveDialogToPrimaryScreen(hwndDlg);
 
@@ -692,63 +714,59 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 g_hwndAboutDlg = NULL;
                 return TRUE;
             }
-            /** Open icon credit link */
-            if (LOWORD(wParam) == IDC_CREDIT_LINK) {
-                ShellExecuteW(NULL, L"open", L"https://space.bilibili.com/26087398", NULL, NULL, SW_SHOWNORMAL);
-                return TRUE;
-            }
-            /** Open BiliBili profile */
-            if (LOWORD(wParam) == IDC_BILIBILI_LINK) {
-                ShellExecuteW(NULL, L"open", URL_BILIBILI_SPACE, NULL, NULL, SW_SHOWNORMAL);
-                return TRUE;
-            }
-            /** Open GitHub repository */
-            if (LOWORD(wParam) == IDC_GITHUB_LINK) {
-                ShellExecuteW(NULL, L"open", URL_GITHUB_REPO, NULL, NULL, SW_SHOWNORMAL);
-                return TRUE;
-            }
-            /** Open credits page */
-            if (LOWORD(wParam) == IDC_CREDITS) {
-                ShellExecuteW(NULL, L"open", L"https://vladelaina.github.io/Catime/#thanks", NULL, NULL, SW_SHOWNORMAL);
-                return TRUE;
-            }
-            /** Open support page */
-            if (LOWORD(wParam) == IDC_SUPPORT) {
-                ShellExecuteW(NULL, L"open", L"https://vladelaina.github.io/Catime/support.html", NULL, NULL, SW_SHOWNORMAL);
-                return TRUE;
-            }
-            /** Open copyright notice */
-            if (LOWORD(wParam) == IDC_COPYRIGHT_LINK) {
-                ShellExecuteW(NULL, L"open", L"https://github.com/vladelaina/Catime#️copyright-notice", NULL, NULL, SW_SHOWNORMAL);
-                return TRUE;
+            
+            /** Handle clicks on link controls */
+            for (int i = 0; i < g_aboutLinkInfoCount; i++) {
+                if (LOWORD(wParam) == g_aboutLinkInfos[i].controlId && HIWORD(wParam) == STN_CLICKED) {
+                    ShellExecuteW(NULL, L"open", g_aboutLinkInfos[i].url, NULL, NULL, SW_SHOWNORMAL);
+                    return TRUE;
+                }
             }
             break;
+
+        case WM_DRAWITEM: {
+            LPDRAWITEMSTRUCT lpDrawItem = (LPDRAWITEMSTRUCT)lParam;
+            
+            /** Check if this is one of our link controls */
+            for (int i = 0; i < g_aboutLinkInfoCount; i++) {
+                if (lpDrawItem->CtlID == g_aboutLinkInfos[i].controlId) {
+                    /** Render link control with orange color */
+                    RECT rect = lpDrawItem->rcItem;
+                    HDC hdc = lpDrawItem->hDC;
+                    
+                    // Set background
+                    FillRect(hdc, &rect, GetSysColorBrush(COLOR_3DFACE));
+                    
+                    // Get control text
+                    wchar_t text[256];
+                    GetDlgItemTextW(hwndDlg, g_aboutLinkInfos[i].controlId, text, sizeof(text)/sizeof(text[0]));
+                    
+                    // Set font
+                    HFONT hFont = (HFONT)SendMessage(hwndDlg, WM_GETFONT, 0, 0);
+                    if (!hFont) {
+                        hFont = GetStockObject(DEFAULT_GUI_FONT);
+                    }
+                    HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
+                    
+                    // Set orange color for links (same as original)
+                    SetTextColor(hdc, 0x00D26919);
+                    SetBkMode(hdc, TRANSPARENT);
+                    
+                    // Draw text
+                    DrawTextW(hdc, text, -1, &rect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+                    
+                    SelectObject(hdc, hOldFont);
+                    return TRUE;
+                }
+            }
+            break;
+        }
 
         case WM_CLOSE:
             /** Close dialog and clean up */
             EndDialog(hwndDlg, 0);
             g_hwndAboutDlg = NULL;
             return TRUE;
-
-        case WM_CTLCOLORSTATIC:
-        /** Custom coloring for clickable link controls */
-        {
-            HDC hdc = (HDC)wParam;
-            HWND hwndCtl = (HWND)lParam;
-            
-            /** Apply orange color to link controls */
-            if (GetDlgCtrlID(hwndCtl) == IDC_CREDIT_LINK || 
-                GetDlgCtrlID(hwndCtl) == IDC_BILIBILI_LINK ||
-                GetDlgCtrlID(hwndCtl) == IDC_GITHUB_LINK ||
-                GetDlgCtrlID(hwndCtl) == IDC_CREDITS ||
-                GetDlgCtrlID(hwndCtl) == IDC_COPYRIGHT_LINK ||
-                GetDlgCtrlID(hwndCtl) == IDC_SUPPORT) {
-                SetTextColor(hdc, 0x00D26919);
-                SetBkMode(hdc, TRANSPARENT);
-                return (INT_PTR)GetStockObject(NULL_BRUSH);
-            }
-            break;
-        }
     }
     return FALSE;
 }
@@ -2404,7 +2422,7 @@ void ShowNotificationSettingsDialog(HWND hwndParent) {
 }
 
 /**
- * @brief Global storage for parsed links and dialog data
+ * @brief Global storage for parsed links and dialog data (Font License)
  */
 static MarkdownLink* g_links = NULL;
 static int g_linkCount = 0;

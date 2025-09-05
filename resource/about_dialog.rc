@@ -23,18 +23,18 @@ BEGIN
     LTEXT       "",                          IDC_COPYRIGHT,             100,  35, 180, 12
 
     /** Primary credit link positioned centrally */
-    CONTROL     "",                          IDC_CREDIT_LINK,    "Static", SS_NOTIFY | SS_CENTERIMAGE,
+    CONTROL     "",                          IDC_CREDIT_LINK,    "Static", SS_OWNERDRAW | SS_NOTIFY,
                                                                           100,  45, 250, 12
 
     /** Bottom row of clickable links for external resources */
-    CONTROL     "",                          IDC_CREDITS,        "Static", SS_NOTIFY | SS_CENTERIMAGE,
+    CONTROL     "",                          IDC_CREDITS,        "Static", SS_OWNERDRAW | SS_NOTIFY,
                                                                           40,   65,  35, 12
-    CONTROL     "",                          IDC_BILIBILI_LINK,  "Static", SS_NOTIFY | SS_CENTERIMAGE,
+    CONTROL     "",                          IDC_BILIBILI_LINK,  "Static", SS_OWNERDRAW | SS_NOTIFY,
                                                                           80,   65,  35, 12
-    CONTROL     "",                          IDC_GITHUB_LINK,    "Static", SS_NOTIFY | SS_CENTERIMAGE,
+    CONTROL     "",                          IDC_GITHUB_LINK,    "Static", SS_OWNERDRAW | SS_NOTIFY,
                                                                           125,  65,  32, 12
-    CONTROL     "",                          IDC_COPYRIGHT_LINK,  "Static", SS_NOTIFY | SS_CENTERIMAGE,
+    CONTROL     "",                          IDC_COPYRIGHT_LINK,  "Static", SS_OWNERDRAW | SS_NOTIFY,
                                                                           165,  65,  36, 12
-    CONTROL     "",                          IDC_SUPPORT,         "Static", SS_NOTIFY | SS_CENTERIMAGE,
+    CONTROL     "",                          IDC_SUPPORT,         "Static", SS_OWNERDRAW | SS_NOTIFY,
                                                                           215,  65,  30, 12
 END 
