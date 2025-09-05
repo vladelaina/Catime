@@ -2444,12 +2444,33 @@ async function downloadMixedModeAsZip() {
     
     try {
         const zip = new JSZip();
-        // 生成ZIP文件名：如果有多个文件夹，使用组合名称
-        const outputFolderName = folderStructure.folderNames.length > 1 
-            ? folderStructure.folderNames.join('_')
-            : (folderStructure.name ? folderStructure.name : 'processed_fonts');
+        
+        // 生成ZIP文件名：结合单独文件名和文件夹名
+        let nameComponents = [];
+        
+        // 添加单独文件名（去掉扩展名）
+        if (fileSourceTracking.standalone.length > 0) {
+            const standaloneNames = fileSourceTracking.standalone.map(file => {
+                const nameWithoutExt = file.name.replace(/\.[^/.]+$/, ''); // 去掉扩展名
+                return nameWithoutExt;
+            });
+            nameComponents.push(...standaloneNames);
+        }
+        
+        // 添加文件夹名
+        if (folderStructure.folderNames.length > 0) {
+            nameComponents.push(...folderStructure.folderNames);
+        }
+        
+        // 如果没有任何组件，使用默认名称
+        const outputFolderName = nameComponents.length > 0 
+            ? nameComponents.join('_')
+            : 'processed_fonts';
+            
         console.log('输出文件夹名称:', outputFolderName);
+        console.log('单独文件:', fileSourceTracking.standalone.map(f => f.name));
         console.log('文件夹列表:', folderStructure.folderNames);
+        console.log('名称组件:', nameComponents);
         
         // 第1步：创建目录结构 (10%)
         updateZipProgress(10, '正在创建目录结构...', `创建 ${folderStructure.directories.size} 个目录`);
