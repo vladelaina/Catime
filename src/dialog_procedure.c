@@ -20,6 +20,7 @@
 #include "../include/window_procedure.h"
 #include "../include/hotkey.h"
 #include "../include/dialog_language.h"
+#include "../include/markdown_parser.h"
 
 /** @brief Draw color selection button with custom appearance */
 static void DrawColorSelectButton(HDC hdc, HWND hwnd);
@@ -2403,120 +2404,11 @@ void ShowNotificationSettingsDialog(HWND hwndParent) {
 }
 
 /**
- * @brief Structure to store parsed markdown links
- */
-typedef struct {
-    wchar_t* linkText;
-    wchar_t* linkUrl;
-    RECT linkRect;
-    int startPos;  // Start position in display text
-    int endPos;    // End position in display text
-} MarkdownLink;
-
-/**
  * @brief Global storage for parsed links and dialog data
  */
 static MarkdownLink* g_links = NULL;
 static int g_linkCount = 0;
 static wchar_t* g_displayText = NULL;
-
-/**
- * @brief Parse markdown-style links [text](url) from input text
- * @param input Input text with markdown links
- * @param displayText Output text with links removed
- * @param links Output array of parsed links
- * @param linkCount Output number of links found
- */
-void ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText, MarkdownLink** links, int* linkCount) {
-    if (!input || !displayText || !links || !linkCount) return;
-    
-    int inputLen = wcslen(input);
-    *displayText = (wchar_t*)malloc((inputLen + 1) * sizeof(wchar_t));
-    *links = NULL;
-    *linkCount = 0;
-    
-    if (!*displayText) return;
-    
-    wchar_t* dest = *displayText;
-    const wchar_t* src = input;
-    int linkCapacity = 10;
-    *links = (MarkdownLink*)malloc(linkCapacity * sizeof(MarkdownLink));
-    
-    if (!*links) {
-        free(*displayText);
-        *displayText = NULL;
-        return;
-    }
-    
-    int currentPos = 0;  // Track position in display text for link rectangles
-    
-    while (*src) {
-        if (*src == L'[') {
-            // Found potential link start
-            const wchar_t* linkTextStart = src + 1;
-            const wchar_t* linkTextEnd = wcschr(linkTextStart, L']');
-            
-            if (linkTextEnd && linkTextEnd[1] == L'(' ) {
-                const wchar_t* urlStart = linkTextEnd + 2;
-                const wchar_t* urlEnd = wcschr(urlStart, L')');
-                
-                if (urlEnd) {
-                    // Valid markdown link found
-                    if (*linkCount >= linkCapacity) {
-                        linkCapacity *= 2;
-                        *links = (MarkdownLink*)realloc(*links, linkCapacity * sizeof(MarkdownLink));
-                        if (!*links) return;
-                    }
-                    
-                    MarkdownLink* link = &(*links)[*linkCount];
-                    
-                    // Extract link text
-                    int textLen = linkTextEnd - linkTextStart;
-                    link->linkText = (wchar_t*)malloc((textLen + 1) * sizeof(wchar_t));
-                    wcsncpy(link->linkText, linkTextStart, textLen);
-                    link->linkText[textLen] = L'\0';
-                    
-                    // Extract URL
-                    int urlLen = urlEnd - urlStart;
-                    link->linkUrl = (wchar_t*)malloc((urlLen + 1) * sizeof(wchar_t));
-                    wcsncpy(link->linkUrl, urlStart, urlLen);
-                    link->linkUrl[urlLen] = L'\0';
-                    
-                    // Store start and end position of link in display text
-                    link->startPos = currentPos;
-                    link->endPos = currentPos + textLen;
-                    
-                    // Copy link text to display text
-                    wcsncpy(dest, link->linkText, textLen);
-                    dest += textLen;
-                    currentPos += textLen;
-                    
-                    (*linkCount)++;
-                    src = urlEnd + 1;
-                    continue;
-                }
-            }
-        }
-        
-        *dest++ = *src++;
-        currentPos++;
-    }
-    
-    *dest = L'\0';
-}
-
-/**
- * @brief Free parsed markdown links
- */
-void FreeMarkdownLinks(MarkdownLink* links, int linkCount) {
-    if (!links) return;
-    
-    for (int i = 0; i < linkCount; i++) {
-        free(links[i].linkText);
-        free(links[i].linkUrl);
-    }
-    free(links);
-}
 
 /**
  * @brief Font license agreement dialog procedure
@@ -2585,12 +2477,9 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, L
                         GetCursorPos(&pt);
                         ScreenToClient(GetDlgItem(hwndDlg, IDC_FONT_LICENSE_TEXT), &pt);
                         
-                        // Check if click is within any link rectangle
-                        for (int i = 0; i < g_linkCount; i++) {
-                            if (PtInRect(&g_links[i].linkRect, pt)) {
-                                ShellExecuteW(NULL, L"open", g_links[i].linkUrl, NULL, NULL, SW_SHOWNORMAL);
-                                return TRUE;
-                            }
+                        // Handle markdown link click
+                        if (HandleMarkdownClick(g_links, g_linkCount, pt)) {
+                            return TRUE;
                         }
                         // If click is not on a link, do nothing
                     }
@@ -2621,82 +2510,13 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, L
                     }
                     HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
                     
-                    // Draw text character by character, coloring links blue
+                    // Render markdown text with clickable links
                     RECT drawRect = rect;
                     drawRect.left += 5; // Small margin
                     drawRect.top += 5;
                     
-                    int textLen = wcslen(g_displayText);
-                    int x = drawRect.left;
-                    int y = drawRect.top;
-                    
-                    // Get text metrics for line height
-                    TEXTMETRIC tm;
-                    GetTextMetrics(hdc, &tm);
-                    int lineHeight = tm.tmHeight;
-                    
-                    for (int i = 0; i < textLen; i++) {
-                        wchar_t ch = g_displayText[i];
-                        
-                        // Check if this character is part of a link
-                        BOOL isLink = FALSE;
-                        int linkIndex = -1;
-                        for (int j = 0; j < g_linkCount; j++) {
-                            if (i >= g_links[j].startPos && i < g_links[j].endPos) {
-                                isLink = TRUE;
-                                linkIndex = j;
-                                break;
-                            }
-                        }
-                        
-                        // Set color
-                        if (isLink) {
-                            SetTextColor(hdc, RGB(0, 100, 200)); // Blue for links
-                        } else {
-                            SetTextColor(hdc, GetSysColor(COLOR_WINDOWTEXT)); // Normal text
-                        }
-                        
-                        // Handle newlines
-                        if (ch == L'\n') {
-                            x = drawRect.left;
-                            y += lineHeight;
-                            continue;
-                        }
-                        
-                        // Draw character
-                        TextOutW(hdc, x, y, &ch, 1);
-                        
-                        // Update link rectangle for click detection
-                        if (isLink && linkIndex >= 0) {
-                            SIZE charSize;
-                            GetTextExtentPoint32W(hdc, &ch, 1, &charSize);
-                            
-                            // Initialize or expand link rectangle
-                            if (i == g_links[linkIndex].startPos) {
-                                g_links[linkIndex].linkRect.left = x;
-                                g_links[linkIndex].linkRect.top = y;
-                                g_links[linkIndex].linkRect.right = x + charSize.cx;
-                                g_links[linkIndex].linkRect.bottom = y + lineHeight;
-                            } else {
-                                g_links[linkIndex].linkRect.right = x + charSize.cx;
-                                // Update bottom if link spans multiple lines
-                                if (y + lineHeight > g_links[linkIndex].linkRect.bottom) {
-                                    g_links[linkIndex].linkRect.bottom = y + lineHeight;
-                                }
-                            }
-                        }
-                        
-                        // Move to next character position
-                        SIZE charSize;
-                        GetTextExtentPoint32W(hdc, &ch, 1, &charSize);
-                        x += charSize.cx;
-                        
-                        // Wrap text if needed
-                        if (x > rect.right - 10) {
-                            x = drawRect.left;
-                            y += lineHeight;
-                        }
-                    }
+                    RenderMarkdownText(hdc, g_displayText, g_links, g_linkCount, 
+                                       drawRect, MARKDOWN_DEFAULT_LINK_COLOR, MARKDOWN_DEFAULT_TEXT_COLOR);
                     
                     SelectObject(hdc, hOldFont);
                 }
