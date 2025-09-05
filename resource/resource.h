@@ -304,6 +304,7 @@ extern int NOTIFICATION_TIMEOUT_MS;      /**< Notification timeout in millisecon
 #define IDD_UPDATE_DIALOG 710           /**< Update available dialog */
 #define IDC_UPDATE_TEXT 711             /**< Update message text control */
 #define IDC_UPDATE_EXIT_TEXT 712        /**< Update exit text control */
+#define IDC_UPDATE_NOTES 713            /**< Update release notes text control */
 
 /** @brief Update error dialog identifiers */
 #define IDD_UPDATE_ERROR_DIALOG 720     /**< Update error dialog */
