@@ -185,15 +185,15 @@ BOOL ParseLatestVersionFromJson(const char* jsonResponse, char* latestVersion, s
                 LOG_DEBUG("Extracted %zu bytes of release notes", writePos);
             } else {
                 LOG_WARNING("Could not find closing quote for body field");
-                strcpy(releaseNotes, "No release notes available.");
+                StringCbCopyA(releaseNotes, notesMaxLen, "No release notes available.");
             }
         } else {
             LOG_WARNING("Could not find opening quote for body field");
-            strcpy(releaseNotes, "No release notes available.");
+            StringCbCopyA(releaseNotes, notesMaxLen, "No release notes available.");
         }
     } else {
         LOG_WARNING("body field not found in JSON response");
-        strcpy(releaseNotes, "No release notes available.");
+        StringCbCopyA(releaseNotes, notesMaxLen, "No release notes available.");
     }
     
     return TRUE;
