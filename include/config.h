@@ -117,10 +117,10 @@ extern TimeFormatType CLOCK_TIME_FORMAT;
 extern BOOL IS_TIME_FORMAT_PREVIEWING;
 extern TimeFormatType PREVIEW_TIME_FORMAT;
 
-/** @brief Milliseconds display setting */
+/** @brief Centiseconds display setting (2-digit precision) */
 extern BOOL CLOCK_SHOW_MILLISECONDS;
 
-/** @brief Milliseconds preview variables */
+/** @brief Centiseconds preview variables */
 extern BOOL IS_MILLISECONDS_PREVIEWING;
 extern BOOL PREVIEW_SHOW_MILLISECONDS;
 
@@ -495,7 +495,7 @@ void WriteConfigShowMilliseconds(BOOL showMilliseconds);
 
 /**
  * @brief Get appropriate timer interval based on milliseconds display setting
- * @return Timer interval in milliseconds (1ms if showing milliseconds, 1000ms otherwise)
+ * @return Timer interval in milliseconds (10ms if showing milliseconds, 1000ms otherwise)
  */
 UINT GetTimerInterval(void);
 

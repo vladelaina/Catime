@@ -456,7 +456,7 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                                 CLOCK_SHOW_CURRENT_TIME = TRUE;
                                 CLOCK_COUNT_UP = FALSE;
                                 KillTimer(hwnd, 1);
-                                SetTimer(hwnd, 1, 1000, NULL);
+                                SetTimer(hwnd, 1, GetTimerInterval(), NULL);
                                 InvalidateRect(hwnd, NULL, TRUE);
                                 break;
                             case TIMEOUT_ACTION_COUNT_UP:
@@ -472,7 +472,7 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                                 
                                 CLOCK_IS_PAUSED = FALSE;
                                 KillTimer(hwnd, 1);
-                                SetTimer(hwnd, 1, 1000, NULL);
+                                SetTimer(hwnd, 1, GetTimerInterval(), NULL);
                                 InvalidateRect(hwnd, NULL, TRUE);
                                 break;
                             case TIMEOUT_ACTION_OPEN_WEBSITE:

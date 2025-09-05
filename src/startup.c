@@ -156,7 +156,7 @@ void ApplyStartupMode(HWND hwnd) {
             CLOCK_SHOW_CURRENT_TIME = FALSE;
             
             KillTimer(hwnd, 1);
-            SetTimer(hwnd, 1, 1000, NULL);
+            SetTimer(hwnd, 1, GetTimerInterval(), NULL);
             
             CLOCK_TOTAL_TIME = 0;
             countdown_elapsed_time = 0;
@@ -168,7 +168,7 @@ void ApplyStartupMode(HWND hwnd) {
             CLOCK_COUNT_UP = FALSE;
             
             KillTimer(hwnd, 1);
-            SetTimer(hwnd, 1, 1000, NULL);
+            SetTimer(hwnd, 1, GetTimerInterval(), NULL);
             
         } else if (strcmp(CLOCK_STARTUP_MODE, "NO_DISPLAY") == 0) {
             /** Hidden mode: disable timer and hide window */
@@ -189,7 +189,7 @@ void ApplyStartupMode(HWND hwnd) {
             
             if (CLOCK_TOTAL_TIME > 0) {
                 KillTimer(hwnd, 1);
-                SetTimer(hwnd, 1, 1000, NULL);
+                SetTimer(hwnd, 1, GetTimerInterval(), NULL);
             }
         }
         

@@ -1450,7 +1450,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         countdown_elapsed_time = 0;
                         CLOCK_TOTAL_TIME = 0;
                         CLOCK_LAST_TIME_UPDATE = time(NULL);
-                        SetTimer(hwnd, 1, 100, NULL);
+                        SetTimer(hwnd, 1, GetTimerInterval(), NULL);
                     } else {
                         /** Switch back to timer mode */
                         KillTimer(hwnd, 1);   

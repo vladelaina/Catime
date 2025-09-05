@@ -348,7 +348,7 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
 	CLOCK_COUNT_UP = FALSE;
 	CLOCK_SHOW_CURRENT_TIME = FALSE;
 	CLOCK_IS_PAUSED = FALSE;
-	SetTimer(hwnd, 1, 1000, NULL);
+	SetTimer(hwnd, 1, GetTimerInterval(), NULL);
 	InvalidateRect(hwnd, NULL, TRUE);
 
 	return TRUE;

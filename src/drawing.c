@@ -42,7 +42,7 @@ static BOOL timer_ms_initialized = FALSE;
 static int paused_milliseconds = 0;
 
 /**
- * @brief Reset timer-based millisecond tracking
+ * @brief Reset timer-based centisecond tracking
  * Should be called when timer starts, resumes, or resets
  */
 void ResetTimerMilliseconds(void) {
