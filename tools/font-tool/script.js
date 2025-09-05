@@ -8,6 +8,7 @@ let pythonReady = false;
 let folderMode = false;
 let folderStructure = {
     name: '',
+    folderNames: [], // 所有拖入的文件夹名称（用于组合ZIP文件名）
     files: [], // 所有文件（包括非字体文件）
     fontFiles: [], // 仅字体文件
     directories: new Set() // 所有目录路径
@@ -804,6 +805,10 @@ async function handleDrop(e) {
                 if (!folderStructure.name) {
                     folderStructure.name = currentDropFolderStructure.name;
                 }
+                // 添加文件夹名称到列表中（去重）
+                if (!folderStructure.folderNames.includes(currentDropFolderStructure.name)) {
+                    folderStructure.folderNames.push(currentDropFolderStructure.name);
+                }
                 folderStructure.files.push(...currentDropFolderStructure.files);
                 folderStructure.fontFiles.push(...currentDropFolderStructure.fontFiles);
                 currentDropFolderStructure.directories.forEach(dir => folderStructure.directories.add(dir));
@@ -883,6 +888,7 @@ function initPasteSupport() {
         folderMode = false;
         folderStructure = {
             name: '',
+            folderNames: [],
             files: [],
             fontFiles: [],
             directories: new Set()
@@ -1409,6 +1415,7 @@ function clearFiles() {
     folderMode = false;
     folderStructure = {
         name: '',
+        folderNames: [],
         files: [],
         fontFiles: [],
         directories: new Set()
@@ -2264,24 +2271,36 @@ async function downloadFolderAsZip() {
     
     try {
         const zip = new JSZip();
-        const outputFolderName = folderStructure.name; // 保持原始文件夹名称
+        // 生成ZIP文件名：如果有多个文件夹，使用组合名称
+        const outputFolderName = folderStructure.folderNames.length > 1 
+            ? folderStructure.folderNames.join('_') 
+            : folderStructure.name;
         console.log('输出文件夹名称:', outputFolderName);
+        console.log('文件夹列表:', folderStructure.folderNames);
         
-        // 第1步：创建目录结构 (10%) - 单独文件夹模式：直接使用相对路径，不额外包装
+        // 第1步：创建目录结构 (10%)
         updateZipProgress(10, '正在创建目录结构...', `创建 ${folderStructure.directories.size} 个目录`);
         console.log('开始创建目录，总数:', folderStructure.directories.size);
         let dirCount = 0;
         folderStructure.directories.forEach(dirPath => {
-            // 移除根文件夹名称，直接使用子路径
-            const relativePath = dirPath.replace(new RegExp(`^${folderStructure.name}/?`), '');
-            if (relativePath) { // 只创建非空的子目录
-                const fullPath = `${relativePath}/`;
-                zip.folder(fullPath);
-                console.log('创建目录:', fullPath);
+            let fullPath;
+            if (folderStructure.folderNames.length > 1) {
+                // 多文件夹模式：保持完整的目录结构
+                fullPath = `${dirPath}/`;
+            } else {
+                // 单文件夹模式：移除根文件夹名称，扁平化结构
+                const relativePath = dirPath.replace(new RegExp(`^${folderStructure.name}/?`), '');
+                if (relativePath) {
+                    fullPath = `${relativePath}/`;
+                } else {
+                    return; // 跳过空的相对路径
+                }
             }
+            zip.folder(fullPath);
+            console.log('创建目录:', fullPath);
             dirCount++;
         });
-        console.log(`✅ 完成创建 ${dirCount} 个目录（单独文件夹模式，扁平化结构）`);
+        console.log(`✅ 完成创建 ${dirCount} 个目录（${folderStructure.folderNames.length > 1 ? '多文件夹保持结构' : '单文件夹扁平化'}）`);
         
         // 第2步：准备字体映射 (20%)
         updateZipProgress(20, '正在准备字体文件...', `映射 ${processedFonts.length} 个处理后的字体`);
@@ -2303,9 +2322,16 @@ async function downloadFolderAsZip() {
             const fileInfo = folderStructure.files[i];
             const { file, relativePath, isFont } = fileInfo;
             
-            // 单独文件夹模式：移除根文件夹名称，创建扁平化结构
-            const flattenedPath = relativePath.replace(new RegExp(`^${folderStructure.name}/?`), '');
-            const finalPath = flattenedPath || file.name; // 如果路径为空，直接使用文件名
+            // 根据文件夹数量决定路径处理方式
+            let finalPath;
+            if (folderStructure.folderNames.length > 1) {
+                // 多文件夹模式：保持完整路径
+                finalPath = relativePath;
+            } else {
+                // 单文件夹模式：移除根文件夹名称，创建扁平化结构
+                const flattenedPath = relativePath.replace(new RegExp(`^${folderStructure.name}/?`), '');
+                finalPath = flattenedPath || file.name; // 如果路径为空，直接使用文件名
+            }
             
             // 更新进度 (20% -> 80%)
             const fileProgress = 20 + (i / totalFiles) * 60;
@@ -2418,8 +2444,12 @@ async function downloadMixedModeAsZip() {
     
     try {
         const zip = new JSZip();
-        const outputFolderName = folderStructure.name ? folderStructure.name : 'processed_fonts'; // 保持原始文件夹名称
+        // 生成ZIP文件名：如果有多个文件夹，使用组合名称
+        const outputFolderName = folderStructure.folderNames.length > 1 
+            ? folderStructure.folderNames.join('_')
+            : (folderStructure.name ? folderStructure.name : 'processed_fonts');
         console.log('输出文件夹名称:', outputFolderName);
+        console.log('文件夹列表:', folderStructure.folderNames);
         
         // 第1步：创建目录结构 (10%)
         updateZipProgress(10, '正在创建目录结构...', `创建 ${folderStructure.directories.size} 个目录`);
@@ -2627,6 +2657,7 @@ function clearAllProcessedFiles() {
     folderMode = false;
     folderStructure = {
         name: '',
+        folderNames: [],
         files: [],
         fontFiles: [],
         directories: new Set()
