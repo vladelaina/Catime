@@ -35,7 +35,7 @@
 /** @brief Window message and layout constants */
 #define CLOCK_WM_TRAYICON (WM_USER + 2)  /**< Custom tray icon message */
 #define WINDOW_HORIZONTAL_PADDING 190    /**< Window horizontal padding */
-#define WINDOW_VERTICAL_PADDING -5       /**< Window vertical padding */
+#define WINDOW_VERTICAL_PADDING 10       /**< Window vertical padding */
 
 /** @brief Media control virtual key codes */
 #define VK_MEDIA_PLAY_PAUSE 0xB3         /**< Media play/pause key */
