@@ -557,7 +557,7 @@ void ShowColorMenu(HWND hwnd) {
             /** Add browse option if no fonts found or as additional option */
             if (fontFolderStatus == 0) {
                 AppendMenuW(hFontSubMenu, MF_STRING | MF_GRAYED, 0, 
-                           L"No font files found");
+                           GetLocalizedString(L"未找到字体文件", L"No font files found"));
                 AppendMenuW(hFontSubMenu, MF_SEPARATOR, 0, NULL);
             } else {
                 AppendMenuW(hFontSubMenu, MF_SEPARATOR, 0, NULL);
