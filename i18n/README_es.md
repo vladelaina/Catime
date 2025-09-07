@@ -66,7 +66,7 @@
 - **Diseño minimalista**: interfaz transparente, clics a través de la ventana, arrastrar y redimensionar libremente, sin interfaces complejas de configuración gráfica, no se siente como una aplicación adicional en ejecución
 - **Temporización flexible**: presets rápidos, entrada de tiempo personalizada, visualización de la hora actual (formato 12/24 horas), cuenta regresiva, cronómetro, temporizador Pomodoro
 - **Acciones al terminar el tiempo**: mostrar mensaje, mostrar hora actual, cronómetro, bloqueo de pantalla, abrir archivos/aplicaciones, abrir sitios web, apagar, reiniciar
-- **Amplias opciones de personalización**: 47 tipos de fuente, 15 colores predefinidos, soporte para valores de color personalizados, selector de paleta de colores, vista previa en tiempo real
+- **Amplias opciones de personalización**: 13 tipos de fuente, 15 colores predefinidos, soporte para valores de color personalizados, selector de paleta de colores, vista previa en tiempo real
 
 ## 📥 Descargar
 
@@ -406,28 +406,16 @@ Declaración de derechos de autor de los iconos：
 - Los iconos del software fueron creados por [猫屋敷梨梨Official](https://space.bilibili.com/26087398),quien conserva todos los derechos. No pueden ser utilizados para ningún propósito comercial sin la autorización explícita del autor original.
 
 Licencia de fuente：
-- MIT:
-    - ProFont IIx Nerd Font Essence.ttf
-- SIL Open Font License (OFL):
-    - DaddyTimeMono Nerd Font Propo Essence.ttf, DepartureMono Nerd Font Propo Essence.ttf,
-      LiterationSerif Nerd Font Essence.ttf, RecMonoCasual Nerd Font Mono Essence.ttf,
-      Terminess Nerd Font Propo Essence.ttf, VictorMono NFP Medium Essence.ttf,
-      ZedMono NF Essence.ttf
-    - Arbutus Essence.ttf, Berkshire Swash Essence.ttf, Caveat Brush Essence.ttf,
-      Creepster Essence.ttf, DotGothic16 Essence.ttf, Doto ExtraBold Essence.ttf,
-      Foldit SemiBold Essence.ttf, Fredericka the Great Essence.ttf, Frijole Essence.ttf,
-      Gwendolyn Essence.ttf, Handjet Essence.ttf, Inknut Antiqua Medium Essence.ttf,
-      Jacquard 12 Essence.ttf, Jacquarda Bastarda 9 Essence.ttf, Kavoon Essence.ttf,
-      Kumar One Essence.ttf, Kumar One Outline Essence.ttf, Lakki Reddy Essence.ttf,
-      Licorice Essence.ttf, Ma Shan Zheng Essence.ttf, Moirai One Essence.ttf,
-      Mystery Quest Essence.ttf, Noto Nastaliq Urdu Medium Essence.ttf, Piedra Essence.ttf,
-      Pinyon Script Essence.ttf, Pixelify Sans Medium Essence.ttf, Press Start 2P Essence.ttf,
-      Rubik Bubbles Essence.ttf, Rubik Burned Essence.ttf, Rubik Glitch Essence.ttf,
-      Rubik Marker Hatch Essence.ttf,
-      Rubik Puddles Essence.ttf, Rubik Vinyl Essence.ttf, Rubik Wet Paint Essence.ttf,
-      Ruge Boogie Essence.ttf, Sevillana Essence.ttf, Silkscreen Essence.ttf,
-      Stick Essence.ttf, Underdog Essence.ttf, Wallpoet Essence.ttf,
-      Yesteryear Essence.ttf, ZCOOL KuaiLe Essence.ttf
+- MIT: 
+  - ProFontWindows Essence.ttf
+- SIL Open Font License: 
+  - DaddyTimeMono Essence.otf, DepartureMono Essence.otf,
+    Rec Mono Casual Essence.ttf, Terminess Nerd Font Essence.ttf
+- OFL (Open Font License):
+  - Jacquard 12 Essence.ttf, Jacquarda Bastarda 9 Essence.ttf,
+    Pixelify Sans Essence.ttf, Rubik Burned Essence.ttf,
+    Rubik Glitch Essence.ttf, Rubik Marker Hatch Essence.ttf,
+    Rubik Puddles Essence.ttf, Wallpoet Essence.ttf
 
 Papel tapiz：
 - Autor: [猫屋敷梨梨Official](https://space.bilibili.com/26087398)

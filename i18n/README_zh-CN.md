@@ -67,7 +67,7 @@
 - **极简设计**：透明界面，点击穿透，自由拖拽和调整大小，无复杂图形设置界面，使用时不会感觉是额外的应用程序在运行
 - **灵活计时**：快速预设，自定义时间输入，当前时间显示（12/24小时制），倒计时，正计时，番茄钟
 - **超时动作**：显示消息，显示当前时间，正计时，锁屏，打开文件/应用程序，打开网站，关机，重启
-- **丰富自定义**：47种字体，15种预设颜色，支持自定义颜色值，颜色调色板选择，实时预览
+- **丰富自定义**：13种字体，15种预设颜色，支持自定义颜色值，颜色调色板选择，实时预览
 
 ## 📥 下载
 
@@ -408,27 +408,15 @@ cmake --build . --target clean    # 清理构建文件
 
 字体许可：
 - MIT: 
-  - ProFont IIx Nerd Font Essence.ttf
-- SIL Open Font License (OFL): 
-  - DaddyTimeMono Nerd Font Propo Essence.ttf, DepartureMono Nerd Font Propo Essence.ttf,
-    LiterationSerif Nerd Font Essence.ttf, RecMonoCasual Nerd Font Mono Essence.ttf,
-    Terminess Nerd Font Propo Essence.ttf, VictorMono NFP Medium Essence.ttf,
-    ZedMono NF Essence.ttf
-  - Arbutus Essence.ttf, Berkshire Swash Essence.ttf, Caveat Brush Essence.ttf,
-    Creepster Essence.ttf, DotGothic16 Essence.ttf, Doto ExtraBold Essence.ttf,
-    Foldit SemiBold Essence.ttf, Fredericka the Great Essence.ttf, Frijole Essence.ttf,
-    Gwendolyn Essence.ttf, Handjet Essence.ttf, Inknut Antiqua Medium Essence.ttf,
-    Jacquard 12 Essence.ttf, Jacquarda Bastarda 9 Essence.ttf, Kavoon Essence.ttf,
-    Kumar One Essence.ttf, Kumar One Outline Essence.ttf, Lakki Reddy Essence.ttf,
-    Licorice Essence.ttf, Ma Shan Zheng Essence.ttf, Moirai One Essence.ttf,
-    Mystery Quest Essence.ttf, Noto Nastaliq Urdu Medium Essence.ttf, Piedra Essence.ttf,
-    Pinyon Script Essence.ttf, Pixelify Sans Medium Essence.ttf, Press Start 2P Essence.ttf,
-    Rubik Bubbles Essence.ttf, Rubik Burned Essence.ttf, Rubik Glitch Essence.ttf,
-    Rubik Marker Hatch Essence.ttf,
-    Rubik Puddles Essence.ttf, Rubik Vinyl Essence.ttf, Rubik Wet Paint Essence.ttf,
-    Ruge Boogie Essence.ttf, Sevillana Essence.ttf, Silkscreen Essence.ttf,
-    Stick Essence.ttf, Underdog Essence.ttf, Wallpoet Essence.ttf,
-    Yesteryear Essence.ttf, ZCOOL KuaiLe Essence.ttf
+  - ProFontWindows Essence.ttf
+- SIL Open Font License: 
+  - DaddyTimeMono Essence.otf, DepartureMono Essence.otf,
+    Rec Mono Casual Essence.ttf, Terminess Nerd Font Essence.ttf
+- OFL (Open Font License):
+  - Jacquard 12 Essence.ttf, Jacquarda Bastarda 9 Essence.ttf,
+    Pixelify Sans Essence.ttf, Rubik Burned Essence.ttf,
+    Rubik Glitch Essence.ttf, Rubik Marker Hatch Essence.ttf,
+    Rubik Puddles Essence.ttf, Wallpoet Essence.ttf
 
 壁纸：
 - 作者: [猫屋敷梨梨Official](https://space.bilibili.com/26087398)
