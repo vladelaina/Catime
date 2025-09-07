@@ -86,147 +86,63 @@ Download the latest release from [GitHub Releases](https://github.com/vladelaina
 > Configuration file saved at `%LOCALAPPDATA%\Catime\config.ini`
 
 
-## 🛠️ [Building from Source](https://www.bilibili.com/video/BV1H97LzVEee)
+## 🛠️ Development
 
-### 1. Clone:
+**Prerequisites**: MinGW and CMake are required to build Catime.
 
-```
-git clone git@github.com:vladelaina/Catime.git
+## Getting Started
+
+```bash
+git clone https://github.com/vladelaina/Catime.git
 cd Catime
+
+# INSTALL DEPENDENCIES
+# Ubuntu/Debian
+sudo apt update && sudo apt install -y mingw-w64 cmake
+
+# Arch Linux  
+sudo pacman -Syu --noconfirm mingw-w64 cmake
+
+# Windows - See setup instructions below
 ```
 
-### 2. Tools (MinGW, CMake)
+<details>
+<summary>📋 Windows Setup Instructions</summary>
 
+### 📦 Required Tools
 
-#### <img src="Images/linux.svg"  height="25" />Linux
+| Tool       | Description            | Recommended Version Format                                    | Download Link                                                                     |
+| ---------- | ---------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| **MinGW**  | GCC Compiler           | `x86_64-<version>-release-win32-seh-ucrt-rtv<num>-rev<num>.7z` | [MinGW Build](https://github.com/niXman/mingw-builds-binaries/releases/latest)  |
+| **CMake**  | Build Tool             | `cmake-<version>-windows-x86_64.msi`                         | [CMake](https://cmake.org/download/)                                            |
 
-- <img src="Images/ubuntu.svg"  height="25" />Ubuntu
-   ```bash
-   sudo apt update && sudo apt install -y mingw-w64 cmake
-   ```
-- <img src="Images/archlinux.svg"  height="25" />Arch
-  ```bash
-  sudo pacman -Syu --noconfirm mingw-w64 cmake
-  ```
+### 🔧 Installation Steps
 
-#### <img src="Images/windows.svg"  height="25" />Windows
-  
-  1. Prepare tools
+#### 1. Install MinGW
+1. Download `x86_64-<version>-release-win32-seh-ucrt-rtv<num>-rev<num>.7z` from [MinGW Build](https://github.com/niXman/mingw-builds-binaries/releases/latest)
+2. Extract to `C:\mingw64`
+3. Add `C:\mingw64\bin` to your PATH environment variable:
+   - Open: `Control Panel → System → Advanced System Settings → Environment Variables`
+   - Find `Path` in **System variables**, click "Edit"
+   - Add: `C:\mingw64\bin`
 
-  | Tool       | Description            | Recommended Version Format                                    | Download Link                                                                     |
-  | ---------- | ---------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-  | **MinGW**  | GCC Compiler           | `x86_64-<version>-release-win32-seh-ucrt-rtv<num>-rev<num>.7z` | [MinGW Build](https://github.com/niXman/mingw-builds-binaries/releases/latest)  |
-  | **CMake**  | Build Tool             | `cmake-<version>-windows-x86_64.msi`                         | [CMake](https://cmake.org/download/)                                            |
+#### 2. Install CMake
+1. Download and run `cmake-<version>-windows-x86_64.msi` from [CMake](https://cmake.org/download/)
+2. During installation, select "Add CMake to the system PATH"
 
-  <details>
-    <summary>2. Install tools</summary>
-
-  #### 📦 2.1 Install [MinGW Build](https://github.com/niXman/mingw-builds-binaries/releases/latest)
-
-  1. **Extract MinGW to a specific location**
-     Example: Extract `x86_64-<version>-release-win32-seh-ucrt-rtv<num>-rev<num>.7z` to:
-
-     ```
-     C:\mingw64
-     ```
-
-  2. **Configure system environment variable PATH**
-
-     * Open: `Control Panel → System → Advanced System Settings → Environment Variables`
-     * Find `Path` in **System variables**, click "Edit"
-     * Add the following path:
-
-       ```
-       C:\mingw64\bin
-       ```
-
-  3. **Verify installation**
-
-     Open command prompt (Win + R → type `cmd` → Enter), type:
-
-     ```bash
-     gcc --version
-     ```
-
-     If version number displays successfully, the MinGW installation is complete ✅
-
-  #### 📦 2.2 Install [CMake](https://cmake.org/download/)
-
-  1. Download and run `cmake-<version>-windows-x86_64.msi` to install
-  2. During installation, select "Add CMake to the system PATH for all users" or "current user"
-  3. Alternatively, manually add CMake installation directory to PATH
-
-  </details>
-
-
-### 3. Verify tools
-  <details>
-    <summary></summary>
-
-
-  #### ✅ 3.1 Verify gcc
-
-  ```bash
-  gcc --version
-  ```
-
-  #### ✅ 3.2 Verify CMake
-
-  ```bash
-  cmake --version
-  ```
-
-  If all display version numbers correctly, tool configuration is successful 🎉
-  </details>
-
-
-
-
-
-### 4. Build with CMake
-
-#### Windows
-
-Use the provided build script:
-
+#### 3. Verify Installation
 ```bash
-build.bat             # Release build
-build.bat Debug       # Debug build
+gcc --version
+cmake --version
 ```
 
-Or manually build with CMake:
+</details>
+
+## Building
 
 ```bash
-mkdir build
-cd build
-cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
-cmake --build .
-```
-
-#### Linux (Cross-compilation)
-
-Use the provided build script:
-
-```bash
-./build.sh            # Release build in 'build' directory
-./build.sh Debug      # Debug build in 'build' directory
-./build.sh Release ./dist  # Release build in 'dist' directory
-```
-
-Or manually build with CMake:
-
-```bash
-mkdir build
-cd build
-cmake .. -DCMAKE_TOOLCHAIN_FILE=../mingw-w64-toolchain.cmake -DCMAKE_BUILD_TYPE=Release
-cmake --build .
-```
-
-#### Common CMake Commands
-
-```bash
-cmake --build . --config Release  # Compile the project
-cmake --build . --target clean    # Clean build artifacts
+chmod +x build.sh && ./build.sh   # Linux
+build.bat                         # Windows
 ```
 
 ## ⭐Star History
