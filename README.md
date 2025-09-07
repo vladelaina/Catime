@@ -67,7 +67,7 @@
 - **Minimalist Design**: Transparent interface, click-through capability, free dragging and resizing, no complex graphical settings interface, won't feel like an additional application running
 - **Flexible Timing**: Quick presets, custom time input, current time display (12/24-hour format), countdown, count-up, Pomodoro clock
 - **Timeout Actions**: Display messages, show current time, count up, lock screen, open files/applications, open websites, shutdown, restart
-- **Rich Customization**: 47 fonts, 15 preset colors, support for custom color values, color palette selection, real-time preview
+- **Rich Customization**: 13 fonts, 15 preset colors, support for custom color values, color palette selection, real-time preview
 
 ## 📥 Download
 
@@ -414,27 +414,15 @@ Icon copyright notice:
 
 Font licenses:
 - MIT: 
-  - ProFont IIx Nerd Font Essence.ttf
-- SIL Open Font License (OFL): 
-  - DaddyTimeMono Nerd Font Propo Essence.ttf, DepartureMono Nerd Font Propo Essence.ttf,
-    LiterationSerif Nerd Font Essence.ttf, RecMonoCasual Nerd Font Mono Essence.ttf,
-    Terminess Nerd Font Propo Essence.ttf, VictorMono NFP Medium Essence.ttf,
-    ZedMono NF Essence.ttf
-  - Arbutus Essence.ttf, Berkshire Swash Essence.ttf, Caveat Brush Essence.ttf,
-    Creepster Essence.ttf, DotGothic16 Essence.ttf, Doto ExtraBold Essence.ttf,
-    Foldit SemiBold Essence.ttf, Fredericka the Great Essence.ttf, Frijole Essence.ttf,
-    Gwendolyn Essence.ttf, Handjet Essence.ttf, Inknut Antiqua Medium Essence.ttf,
-    Jacquard 12 Essence.ttf, Jacquarda Bastarda 9 Essence.ttf, Kavoon Essence.ttf,
-    Kumar One Essence.ttf, Kumar One Outline Essence.ttf, Lakki Reddy Essence.ttf,
-    Licorice Essence.ttf, Ma Shan Zheng Essence.ttf, Moirai One Essence.ttf,
-    Mystery Quest Essence.ttf, Noto Nastaliq Urdu Medium Essence.ttf, Piedra Essence.ttf,
-    Pinyon Script Essence.ttf, Pixelify Sans Medium Essence.ttf, Press Start 2P Essence.ttf,
-    Rubik Bubbles Essence.ttf, Rubik Burned Essence.ttf, Rubik Glitch Essence.ttf,
-    Rubik Marker Hatch Essence.ttf,
-    Rubik Puddles Essence.ttf, Rubik Vinyl Essence.ttf, Rubik Wet Paint Essence.ttf,
-    Ruge Boogie Essence.ttf, Sevillana Essence.ttf, Silkscreen Essence.ttf,
-    Stick Essence.ttf, Underdog Essence.ttf, Wallpoet Essence.ttf,
-    Yesteryear Essence.ttf, ZCOOL KuaiLe Essence.ttf
+  - ProFontWindows Essence.ttf
+- SIL Open Font License: 
+  - DaddyTimeMono Essence.otf, DepartureMono Essence.otf,
+    Rec Mono Casual Essence.ttf, Terminess Nerd Font Essence.ttf
+- OFL (Open Font License):
+  - Jacquard 12 Essence.ttf, Jacquarda Bastarda 9 Essence.ttf,
+    Pixelify Sans Essence.ttf, Rubik Burned Essence.ttf,
+    Rubik Glitch Essence.ttf, Rubik Marker Hatch Essence.ttf,
+    Rubik Puddles Essence.ttf, Wallpoet Essence.ttf
 
 Wallpaper:
 - Author: [猫屋敷梨梨Official](https://space.bilibili.com/26087398)
