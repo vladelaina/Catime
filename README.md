@@ -62,12 +62,6 @@
   <a href="https://qm.qq.com/q/LgscIMw9i0" target="_blank" style="text-decoration: none; font-weight: bold; color: #12B7F5;">QQ Group</a>
 </div>
 
-## [🌟Features](https://vladelaina.github.io/Catime/#core-features)
-
-- **Minimalist Design**: Transparent interface, click-through capability, free dragging and resizing, no complex graphical settings interface, won't feel like an additional application running
-- **Flexible Timing**: Quick presets, custom time input, current time display (12/24-hour format), countdown, count-up, Pomodoro clock
-- **Timeout Actions**: Display messages, show current time, count up, lock screen, open files/applications, open websites, shutdown, restart
-- **Rich Customization**: 13 fonts, 15 preset colors, support for custom color values, color palette selection, real-time preview
 
 ## 📥 Download
 
@@ -83,31 +77,13 @@ winget install --id VladElaina.Catime
 Download the latest release from [GitHub Releases](https://github.com/vladelaina/Catime/releases/latest).
 
 
-## [💡Use Cases](https://vladelaina.github.io/Catime/#use-cases)
-
-- 👔 Countdown to end of work
-- 🍅 Pomodoro technique
-- 🎮 Use while gaming to keep track of time
-- ⏰ Schedule opening of:
-  - 🌐 Websites
-  - 💻 Applications
-  - 📄 Files
-  - 📝 Batch scripts
-  - 🔄 Scheduled shutdown/restart
-- 📊 Presentation countdown timer
-- 🕰️ Desktop clock
-- ⏱️ Count-up/countdown timer
-
-
 ## [📑User Guide](https://vladelaina.github.io/Catime/guide)
 
 - **Left-click tray icon**: Set **time**
 - **Right-click tray icon**: Set **menu**
 - **Edit mode**: Drag to adjust position, scroll wheel to resize, 🖱️ right-click to exit edit mode
 
-> Configuration file saved at `C:\Users\<username>\AppData\Local\Catime\config.ini`
-
-
+> Configuration file saved at `%LOCALAPPDATA%\Catime\config.ini`
 
 
 ## 🛠️ [Building from Source](https://www.bilibili.com/video/BV1H97LzVEee)
