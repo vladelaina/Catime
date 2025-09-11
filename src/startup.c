@@ -138,7 +138,10 @@ void ApplyStartupMode(HWND hwnd) {
     GetConfigPath(configPath, MAX_PATH);
     
     /** Read startup mode from configuration file */
-    FILE *configFile = fopen(configPath, "r");
+    wchar_t wconfigPath[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, configPath, -1, wconfigPath, MAX_PATH);
+    
+    FILE *configFile = _wfopen(wconfigPath, L"r");
     if (configFile) {
         char line[256];
         while (fgets(line, sizeof(line), configFile)) {

@@ -343,7 +343,7 @@ void InitializeDefaultLanguage(void) {
     ClearColorOptions();
 
     wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_ACP, 0, config_path, -1, wconfig_path, MAX_PATH);
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
     
     FILE *file = _wfopen(wconfig_path, L"r");
     if (!file) {
@@ -475,7 +475,7 @@ void WriteConfigColor(const char* color_input) {
     GetConfigPath(config_path, MAX_PATH);
 
     wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_ACP, 0, config_path, -1, wconfig_path, MAX_PATH);
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
     
     FILE *file = _wfopen(wconfig_path, L"r");
     if (!file) {
@@ -679,7 +679,7 @@ LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
             char color[32];
             wchar_t wcolor[32];
             GetWindowTextW(hwnd, wcolor, sizeof(wcolor)/sizeof(wchar_t));
-            WideCharToMultiByte(CP_ACP, 0, wcolor, -1, color, sizeof(color), NULL, NULL);
+            WideCharToMultiByte(CP_UTF8, 0, wcolor, -1, color, sizeof(color), NULL, NULL);
 
             char normalized[32];
             normalizeColor(color, normalized, sizeof(normalized));
@@ -712,7 +712,7 @@ LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
             char color[32];
             wchar_t wcolor[32];
             GetWindowTextW(hwnd, wcolor, sizeof(wcolor)/sizeof(wchar_t));
-            WideCharToMultiByte(CP_ACP, 0, wcolor, -1, color, sizeof(color), NULL, NULL);
+            WideCharToMultiByte(CP_UTF8, 0, wcolor, -1, color, sizeof(color), NULL, NULL);
 
             char normalized[32];
             normalizeColor(color, normalized, sizeof(normalized));
@@ -758,7 +758,7 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
 
                 if (CLOCK_TEXT_COLOR[0] != '\0') {
                     wchar_t wcolor[32];
-                    MultiByteToWideChar(CP_ACP, 0, CLOCK_TEXT_COLOR, -1, wcolor, sizeof(wcolor)/sizeof(wchar_t));
+                    MultiByteToWideChar(CP_UTF8, 0, CLOCK_TEXT_COLOR, -1, wcolor, sizeof(wcolor)/sizeof(wchar_t));
                     SetWindowTextW(hwndEdit, wcolor);
                 }
             }
@@ -774,7 +774,7 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 char color[32];
                 wchar_t wcolor[32];
                 GetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, wcolor, sizeof(wcolor)/sizeof(wchar_t));
-                WideCharToMultiByte(CP_ACP, 0, wcolor, -1, color, sizeof(color), NULL, NULL);
+                WideCharToMultiByte(CP_UTF8, 0, wcolor, -1, color, sizeof(color), NULL, NULL);
 
                 /** Handle empty/whitespace-only input */
                 BOOL isAllSpaces = TRUE;

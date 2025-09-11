@@ -499,7 +499,7 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
     /** Initialize WinINet session for HTTP requests to GitHub API */
     LOG_INFO("Attempting to create Internet session");
     wchar_t wUserAgent[256];
-    MultiByteToWideChar(CP_ACP, 0, USER_AGENT, -1, wUserAgent, 256);
+    MultiByteToWideChar(CP_UTF8, 0, USER_AGENT, -1, wUserAgent, 256);
     
     HINTERNET hInternet = InternetOpenW(wUserAgent, INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
     if (!hInternet) {
@@ -518,7 +518,7 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
     /** Connect to GitHub API endpoint with cache-bypass flags */
     LOG_INFO("Attempting to connect to GitHub API: %s", GITHUB_API_URL);
     wchar_t wGitHubApiUrl[512];
-    MultiByteToWideChar(CP_ACP, 0, GITHUB_API_URL, -1, wGitHubApiUrl, 512);
+    MultiByteToWideChar(CP_UTF8, 0, GITHUB_API_URL, -1, wGitHubApiUrl, 512);
     
     HINTERNET hConnect = InternetOpenUrlW(hInternet, wGitHubApiUrl, NULL, 0, 
                                         INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_CACHE_WRITE, 0);

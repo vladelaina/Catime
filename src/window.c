@@ -254,7 +254,10 @@ void SaveWindowSettings(HWND hwnd) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    FILE *fp = fopen(config_path, "r");
+    wchar_t wconfig_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+    
+    FILE *fp = _wfopen(wconfig_path, L"r");
     if (!fp) return;
     
     size_t buffer_size = 8192;   
@@ -346,7 +349,7 @@ void SaveWindowSettings(HWND hwnd) {
         new_config[buffer_size - 1] = '\0';
     }
     
-    fp = fopen(config_path, "w");
+    fp = _wfopen(wconfig_path, L"w");
     if (fp) {
         fputs(new_config, fp);
         fclose(fp);
@@ -360,7 +363,10 @@ void LoadWindowSettings(HWND hwnd) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    FILE *fp = fopen(config_path, "r");
+    wchar_t wconfig_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+    
+    FILE *fp = _wfopen(wconfig_path, L"r");
     if (!fp) return;
     
     char line[256];

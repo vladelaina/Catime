@@ -1070,7 +1070,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     char config_path[MAX_PATH];
                     GetConfigPath(config_path, MAX_PATH);
                     
-                    FILE* test = fopen(config_path, "r");
+                    wchar_t wconfig_path[MAX_PATH];
+                    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+                    
+                    FILE* test = _wfopen(wconfig_path, L"r");
                     if (test) {
                         fclose(test);
                         remove(config_path);
@@ -1418,7 +1421,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         
                         /** Check if fonts folder exists, create if not */
                         wchar_t wFontsFolderPath[MAX_PATH];
-                        MultiByteToWideChar(CP_ACP, 0, fontsFolderPath, -1, wFontsFolderPath, MAX_PATH);
+                        MultiByteToWideChar(CP_UTF8, 0, fontsFolderPath, -1, wFontsFolderPath, MAX_PATH);
                         
                         DWORD attrs = GetFileAttributesW(wFontsFolderPath);
                         if (attrs == INVALID_FILE_ATTRIBUTES) {
@@ -1474,7 +1477,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         GetConfigPath(config_path, MAX_PATH);
                         
                         char currentStartupMode[20];
-                        FILE *fp = fopen(config_path, "r");
+                        wchar_t wconfig_path[MAX_PATH];
+                        MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+                        
+                        FILE *fp = _wfopen(wconfig_path, L"r");
                         if (fp) {
                             char line[256];
                             while (fgets(line, sizeof(line), fp)) {
@@ -1504,7 +1510,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         GetConfigPath(config_path, MAX_PATH);
                         
                         char currentStartupMode[20];
-                        FILE *fp = fopen(config_path, "r");
+                        wchar_t wconfig_path[MAX_PATH];
+                        MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+                        
+                        FILE *fp = _wfopen(wconfig_path, L"r");
                         if (fp) {
                             char line[256];
                             while (fgets(line, sizeof(line), fp)) {

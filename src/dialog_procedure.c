@@ -281,7 +281,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                 
                 /** Convert to wide char and set in edit control */
                 wchar_t wcurrentOptions[256];
-                MultiByteToWideChar(CP_ACP, 0, currentOptions, -1, wcurrentOptions, 256);
+                MultiByteToWideChar(CP_UTF8, 0, currentOptions, -1, wcurrentOptions, 256);
                 SetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, wcurrentOptions);
             } else if (dlgId == CLOCK_IDD_STARTUP_DIALOG) {
                 /** Populate startup dialog with default start time */
@@ -311,7 +311,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                     
                     /** Convert to wide char and set in edit control */
                     wchar_t wtimeStr[64];
-                    MultiByteToWideChar(CP_ACP, 0, timeStr, -1, wtimeStr, 64);
+                    MultiByteToWideChar(CP_UTF8, 0, timeStr, -1, wtimeStr, 64);
                     SetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, wtimeStr);
                 }
             }
@@ -1291,7 +1291,7 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
 
                 wchar_t winput[256];
                 GetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, winput, sizeof(winput)/sizeof(wchar_t));
-                WideCharToMultiByte(CP_ACP, 0, winput, -1, input, sizeof(input), NULL, NULL);
+                WideCharToMultiByte(CP_UTF8, 0, winput, -1, input, sizeof(input), NULL, NULL);
                 
 
                 BOOL isAllSpaces = TRUE;
@@ -1733,8 +1733,8 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
                 GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT, wopacityStr, sizeof(wopacityStr)/sizeof(wchar_t));
                 
                 /** Convert to multibyte for processing */
-                WideCharToMultiByte(CP_ACP, 0, wtimeStr, -1, timeStr, sizeof(timeStr), NULL, NULL);
-                WideCharToMultiByte(CP_ACP, 0, wopacityStr, -1, opacityStr, sizeof(opacityStr), NULL, NULL);
+                WideCharToMultiByte(CP_UTF8, 0, wtimeStr, -1, timeStr, sizeof(timeStr), NULL, NULL);
+                WideCharToMultiByte(CP_UTF8, 0, wopacityStr, -1, opacityStr, sizeof(opacityStr), NULL, NULL);
                 
                 /** Normalize decimal separators from various input methods */
                 wchar_t wTimeStr[32] = {0};
@@ -1763,7 +1763,7 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
                 }
                 
                 /** Convert normalized string to multibyte */
-                WideCharToMultiByte(CP_ACP, 0, wTimeStr, -1, 
+                WideCharToMultiByte(CP_UTF8, 0, wTimeStr, -1, 
                                     timeStr, sizeof(timeStr), NULL, NULL);
                 
                 /** Parse time value and convert to milliseconds */

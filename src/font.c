@@ -601,7 +601,7 @@ void WriteConfigFont(const char* font_file_name) {
     
     /** Convert path to wide character for Unicode support */
     wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_ACP, 0, config_path, -1, wconfig_path, MAX_PATH);
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
     
     /** Read existing config file */
     FILE *file = _wfopen(wconfig_path, L"r");
@@ -807,7 +807,7 @@ BOOL ExtractFontResourceToFile(HINSTANCE hInstance, int resourceId, const char* 
     
     /** Convert output path to wide character */
     wchar_t wOutputPath[MAX_PATH];
-    MultiByteToWideChar(CP_ACP, 0, outputPath, -1, wOutputPath, MAX_PATH);
+    MultiByteToWideChar(CP_UTF8, 0, outputPath, -1, wOutputPath, MAX_PATH);
     
     /** Create output file */
     HANDLE hFile = CreateFileW(wOutputPath, GENERIC_WRITE, 0, NULL, 
@@ -839,7 +839,7 @@ BOOL ExtractEmbeddedFontsToFolder(HINSTANCE hInstance) {
     
     /** Create fonts directory recursively using SHCreateDirectory */
     wchar_t wFontsFolderPath[MAX_PATH];
-    MultiByteToWideChar(CP_ACP, 0, fontsFolderPath, -1, wFontsFolderPath, MAX_PATH);
+    MultiByteToWideChar(CP_UTF8, 0, fontsFolderPath, -1, wFontsFolderPath, MAX_PATH);
     SHCreateDirectoryExW(NULL, wFontsFolderPath, NULL);
     
     /** Extract all embedded font resources (overwrite if exists) */

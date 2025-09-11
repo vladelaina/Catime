@@ -217,7 +217,7 @@ static BOOL PlayAudioWithMiniaudio(HWND hwnd, const char* filePath) {
 
     /** Convert short path to ASCII for miniaudio */
     char asciiPath[MAX_PATH] = {0};
-    if (WideCharToMultiByte(CP_ACP, 0, shortPath, -1, asciiPath, MAX_PATH, NULL, NULL) == 0) {
+    if (WideCharToMultiByte(CP_UTF8, 0, shortPath, -1, asciiPath, MAX_PATH, NULL, NULL) == 0) {
         DWORD error = GetLastError();
         wchar_t errorMsg[256];
         StringCbPrintfW(errorMsg, sizeof(errorMsg), L"Path conversion error (Short Path->ASCII): %lu", error);

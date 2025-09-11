@@ -256,7 +256,7 @@ void GetConfigPath(char* path, size_t size) {
         if (snprintf(dir_path, sizeof(dir_path), "%s\\Catime", appdata_path) < sizeof(dir_path)) {
         
             wchar_t wdir_path[MAX_PATH];
-            MultiByteToWideChar(CP_ACP, 0, dir_path, -1, wdir_path, MAX_PATH);
+            MultiByteToWideChar(CP_UTF8, 0, dir_path, -1, wdir_path, MAX_PATH);
             if (!CreateDirectoryW(wdir_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
                 strncpy(path, ".\\asset\\config.ini", size - 1);
                 path[size - 1] = '\0';
@@ -477,12 +477,12 @@ void CheckAndCreateResourceFolders() {
         snprintf(resource_path, MAX_PATH, "%sresources", base_path);
     
         wchar_t wresource_path_check[MAX_PATH];
-        MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path_check, MAX_PATH);
+        MultiByteToWideChar(CP_UTF8, 0, resource_path, -1, wresource_path_check, MAX_PATH);
         DWORD attrs = GetFileAttributesW(wresource_path_check);
         if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
         
             wchar_t wresource_path[MAX_PATH];
-            MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path, MAX_PATH);
+            MultiByteToWideChar(CP_UTF8, 0, resource_path, -1, wresource_path, MAX_PATH);
             if (!CreateDirectoryW(wresource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
                 fprintf(stderr, "Failed to create resources folder: %s (Error: %lu)\n", resource_path, GetLastError());
                 return;
@@ -492,12 +492,12 @@ void CheckAndCreateResourceFolders() {
 
         snprintf(resource_path, MAX_PATH, "%sresources\\audio", base_path);
     
-        MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path_check, MAX_PATH);
+        MultiByteToWideChar(CP_UTF8, 0, resource_path, -1, wresource_path_check, MAX_PATH);
         attrs = GetFileAttributesW(wresource_path_check);
         if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
         
             wchar_t wresource_path[MAX_PATH];
-            MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path, MAX_PATH);
+            MultiByteToWideChar(CP_UTF8, 0, resource_path, -1, wresource_path, MAX_PATH);
             if (!CreateDirectoryW(wresource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
                 fprintf(stderr, "Failed to create audio folder: %s (Error: %lu)\n", resource_path, GetLastError());
             }
@@ -506,12 +506,12 @@ void CheckAndCreateResourceFolders() {
 
         snprintf(resource_path, MAX_PATH, "%sresources\\images", base_path);
     
-        MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path_check, MAX_PATH);
+        MultiByteToWideChar(CP_UTF8, 0, resource_path, -1, wresource_path_check, MAX_PATH);
         attrs = GetFileAttributesW(wresource_path_check);
         if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
         
             wchar_t wresource_path[MAX_PATH];
-            MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path, MAX_PATH);
+            MultiByteToWideChar(CP_UTF8, 0, resource_path, -1, wresource_path, MAX_PATH);
             if (!CreateDirectoryW(wresource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
                 fprintf(stderr, "Failed to create images folder: %s (Error: %lu)\n", resource_path, GetLastError());
             }
@@ -520,12 +520,12 @@ void CheckAndCreateResourceFolders() {
 
         snprintf(resource_path, MAX_PATH, "%sresources\\animations", base_path);
     
-        MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path_check, MAX_PATH);
+        MultiByteToWideChar(CP_UTF8, 0, resource_path, -1, wresource_path_check, MAX_PATH);
         attrs = GetFileAttributesW(wresource_path_check);
         if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
         
             wchar_t wresource_path[MAX_PATH];
-            MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path, MAX_PATH);
+            MultiByteToWideChar(CP_UTF8, 0, resource_path, -1, wresource_path, MAX_PATH);
             if (!CreateDirectoryW(wresource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
                 fprintf(stderr, "Failed to create animations folder: %s (Error: %lu)\n", resource_path, GetLastError());
             }
@@ -534,12 +534,12 @@ void CheckAndCreateResourceFolders() {
 
         snprintf(resource_path, MAX_PATH, "%sresources\\themes", base_path);
     
-        MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path_check, MAX_PATH);
+        MultiByteToWideChar(CP_UTF8, 0, resource_path, -1, wresource_path_check, MAX_PATH);
         attrs = GetFileAttributesW(wresource_path_check);
         if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
         
             wchar_t wresource_path[MAX_PATH];
-            MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path, MAX_PATH);
+            MultiByteToWideChar(CP_UTF8, 0, resource_path, -1, wresource_path, MAX_PATH);
             if (!CreateDirectoryW(wresource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
                 fprintf(stderr, "Failed to create themes folder: %s (Error: %lu)\n", resource_path, GetLastError());
             }
@@ -548,12 +548,12 @@ void CheckAndCreateResourceFolders() {
 
         snprintf(resource_path, MAX_PATH, "%sresources\\plug-in", base_path);
     
-        MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path_check, MAX_PATH);
+        MultiByteToWideChar(CP_UTF8, 0, resource_path, -1, wresource_path_check, MAX_PATH);
         attrs = GetFileAttributesW(wresource_path_check);
         if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
         
             wchar_t wresource_path[MAX_PATH];
-            MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path, MAX_PATH);
+            MultiByteToWideChar(CP_UTF8, 0, resource_path, -1, wresource_path, MAX_PATH);
             if (!CreateDirectoryW(wresource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
                 fprintf(stderr, "Failed to create plug-in folder: %s (Error: %lu)\n", resource_path, GetLastError());
             }
@@ -562,12 +562,12 @@ void CheckAndCreateResourceFolders() {
         /** Create fonts folder */
         snprintf(resource_path, MAX_PATH, "%sresources\\fonts", base_path);
     
-        MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path_check, MAX_PATH);
+        MultiByteToWideChar(CP_UTF8, 0, resource_path, -1, wresource_path_check, MAX_PATH);
         attrs = GetFileAttributesW(wresource_path_check);
         if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
         
             wchar_t wresource_path[MAX_PATH];
-            MultiByteToWideChar(CP_ACP, 0, resource_path, -1, wresource_path, MAX_PATH);
+            MultiByteToWideChar(CP_UTF8, 0, resource_path, -1, wresource_path, MAX_PATH);
             if (!CreateDirectoryW(wresource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
                 fprintf(stderr, "Failed to create fonts folder: %s (Error: %lu)\n", resource_path, GetLastError());
             }
@@ -872,7 +872,7 @@ void ReadConfig() {
     if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
         /** Verify file exists before setting action */
         wchar_t wfile_path[MAX_PATH];
-        MultiByteToWideChar(CP_ACP, 0, CLOCK_TIMEOUT_FILE_PATH, -1, wfile_path, MAX_PATH);
+        MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_FILE_PATH, -1, wfile_path, MAX_PATH);
         if (GetFileAttributesW(wfile_path) != INVALID_FILE_ATTRIBUTES) {
             CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
         }
@@ -1094,14 +1094,21 @@ void WriteConfigTimeoutAction(const char* action) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    FILE* file = fopen(config_path, "r");
+    /** Convert paths to wide character for Unicode support */
+    wchar_t wconfig_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+    
+    FILE* file = _wfopen(wconfig_path, L"r");
     if (!file) return;
     
     char temp_path[MAX_PATH];
     strcpy(temp_path, config_path);
     strcat(temp_path, ".tmp");
     
-    FILE* temp = fopen(temp_path, "w");
+    wchar_t wtemp_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
+    
+    FILE* temp = _wfopen(wtemp_path, L"w");
     if (!temp) {
         fclose(file);
         return;
@@ -1146,8 +1153,14 @@ void WriteConfigTimeOptions(const char* options) {
     char line[256];
     int found = 0;
     
-    file = fopen(config_path, "r");
-    temp_file = fopen(temp_path, "w");
+    wchar_t wconfig_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+    
+    file = _wfopen(wconfig_path, L"r");
+    wchar_t wtemp_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
+    
+    temp_file = _wfopen(wtemp_path, L"w");
     
     if (!file || !temp_file) {
         if (file) fclose(file);
@@ -1184,7 +1197,11 @@ void LoadRecentFiles(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
 
-    FILE *file = fopen(config_path, "r");
+    /** Convert paths to wide character for Unicode support */
+    wchar_t wconfig_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+    
+    FILE *file = _wfopen(wconfig_path, L"r");
     if (!file) return;
 
     char line[MAX_PATH];
@@ -1407,8 +1424,14 @@ void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
         POMODORO_TIMES_COUNT = 3;
     }
     
-    file = fopen(config_path, "r");
-    temp_file = fopen(temp_path, "w");
+    wchar_t wconfig_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+    
+    file = _wfopen(wconfig_path, L"r");
+    wchar_t wtemp_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
+    
+    temp_file = _wfopen(wtemp_path, L"w");
     
     if (!file || !temp_file) {
         if (file) fclose(file);
@@ -1463,8 +1486,14 @@ void WriteConfigPomodoroLoopCount(int loop_count) {
     char line[256];
     int found = 0;
     
-    file = fopen(config_path, "r");
-    temp_file = fopen(temp_path, "w");
+    wchar_t wconfig_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+    
+    file = _wfopen(wconfig_path, L"r");
+    wchar_t wtemp_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
+    
+    temp_file = _wfopen(wtemp_path, L"w");
     
     if (!file || !temp_file) {
         if (file) fclose(file);
@@ -1507,14 +1536,21 @@ void WriteConfigTopmost(const char* topmost) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    FILE* file = fopen(config_path, "r");
+    /** Convert paths to wide character for Unicode support */
+    wchar_t wconfig_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+    
+    FILE* file = _wfopen(wconfig_path, L"r");
     if (!file) return;
     
     char temp_path[MAX_PATH];
     strcpy(temp_path, config_path);
     strcat(temp_path, ".tmp");
     
-    FILE* temp = fopen(temp_path, "w");
+    wchar_t wtemp_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
+    
+    FILE* temp = _wfopen(wtemp_path, L"w");
     if (!temp) {
         fclose(file);
         return;
@@ -1851,14 +1887,21 @@ void WriteConfigTimeoutWebsite(const char* url) {
         char config_path[MAX_PATH];
         GetConfigPath(config_path, MAX_PATH);
         
-        FILE* file = fopen(config_path, "r");
+        /** Convert paths to wide character for Unicode support */
+    wchar_t wconfig_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+    
+    FILE* file = _wfopen(wconfig_path, L"r");
         if (!file) return;
         
         char temp_path[MAX_PATH];
         strcpy(temp_path, config_path);
         strcat(temp_path, ".tmp");
         
-        FILE* temp = fopen(temp_path, "w");
+        wchar_t wtemp_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
+    
+    FILE* temp = _wfopen(wtemp_path, L"w");
         if (!temp) {
             fclose(file);
             return;
@@ -1913,8 +1956,14 @@ void WriteConfigStartupMode(const char* mode) {
     char line[256];
     int found = 0;
     
-    file = fopen(config_path, "r");
-    temp_file = fopen(temp_path, "w");
+    wchar_t wconfig_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+    
+    file = _wfopen(wconfig_path, L"r");
+    wchar_t wtemp_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
+    
+    temp_file = _wfopen(wtemp_path, L"w");
     
     if (!file || !temp_file) {
         if (file) fclose(file);
@@ -1961,14 +2010,21 @@ void WriteConfigPomodoroTimeOptions(int* times, int count) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    FILE* file = fopen(config_path, "r");
+    /** Convert paths to wide character for Unicode support */
+    wchar_t wconfig_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+    
+    FILE* file = _wfopen(wconfig_path, L"r");
     if (!file) return;
     
     char temp_path[MAX_PATH];
     strcpy(temp_path, config_path);
     strcat(temp_path, ".tmp");
     
-    FILE* temp = fopen(temp_path, "w");
+    wchar_t wtemp_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
+    
+    FILE* temp = _wfopen(wtemp_path, L"w");
     if (!temp) {
         fclose(file);
         return;
@@ -2165,8 +2221,14 @@ void WriteConfigNotificationTimeout(int timeout_ms) {
     
     FILE *source_file, *temp_file;
     
-    source_file = fopen(config_path, "r");
-    temp_file = fopen(temp_path, "w");
+    wchar_t wconfig_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+    
+    source_file = _wfopen(wconfig_path, L"r");
+    wchar_t wtemp_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
+    
+    temp_file = _wfopen(wtemp_path, L"w");
     
     if (!source_file || !temp_file) {
         if (source_file) fclose(source_file);
@@ -2321,8 +2383,14 @@ void WriteConfigNotificationOpacity(int opacity) {
     
     FILE *source_file, *temp_file;
     
-    source_file = fopen(config_path, "r");
-    temp_file = fopen(temp_path, "w");
+    wchar_t wconfig_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+    
+    source_file = _wfopen(wconfig_path, L"r");
+    wchar_t wtemp_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
+    
+    temp_file = _wfopen(wtemp_path, L"w");
     
     if (!source_file || !temp_file) {
         if (source_file) fclose(source_file);
@@ -2377,7 +2445,11 @@ void ReadNotificationTypeConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    FILE *file = fopen(config_path, "r");
+    /** Convert paths to wide character for Unicode support */
+    wchar_t wconfig_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+    
+    FILE *file = _wfopen(wconfig_path, L"r");
     if (file) {
         char line[256];
         while (fgets(line, sizeof(line), file)) {
@@ -2442,8 +2514,15 @@ void WriteConfigNotificationType(NotificationType type) {
     strncpy(temp_path, config_path, MAX_PATH - 5);
     strcat(temp_path, ".tmp");
     
-    FILE *source = fopen(config_path, "r");
-    FILE *target = fopen(temp_path, "w");
+    /** Convert paths to wide character for Unicode support */
+    wchar_t wconfig_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+    
+    FILE *source = _wfopen(wconfig_path, L"r");
+    wchar_t wtemp_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
+    
+    FILE *target = _wfopen(wtemp_path, L"w");
     
     if (source && target) {
         char line[256];
@@ -2500,7 +2579,7 @@ void GetAudioFolderPath(char* path, size_t size) {
         if (snprintf(dir_path, sizeof(dir_path), "%s\\Catime\\resources\\audio", appdata_path) < sizeof(dir_path)) {
         
             wchar_t wdir_path[MAX_PATH];
-            MultiByteToWideChar(CP_ACP, 0, dir_path, -1, wdir_path, MAX_PATH);
+            MultiByteToWideChar(CP_UTF8, 0, dir_path, -1, wdir_path, MAX_PATH);
             if (!CreateDirectoryW(wdir_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
                 strncpy(path, ".\\resources\\audio", size - 1);
                 path[size - 1] = '\0';
@@ -2522,7 +2601,11 @@ void ReadNotificationSoundConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    FILE* file = fopen(config_path, "r");
+    /** Convert paths to wide character for Unicode support */
+    wchar_t wconfig_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+    
+    FILE* file = _wfopen(wconfig_path, L"r");
     if (!file) return;
     
     char line[1024];
@@ -2578,10 +2661,17 @@ void WriteConfigNotificationSound(const char* sound_file) {
 
     snprintf(temp_path, MAX_PATH, "%s.tmp", config_path);
     
-    FILE* source = fopen(config_path, "r");
+    /** Convert paths to wide character for Unicode support */
+    wchar_t wconfig_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+    
+    FILE* source = _wfopen(wconfig_path, L"r");
     if (!source) return;
     
-    FILE* dest = fopen(temp_path, "w");
+    wchar_t wtemp_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
+    
+    FILE* dest = _wfopen(wtemp_path, L"w");
     if (!dest) {
         fclose(source);
         return;
@@ -2623,7 +2713,11 @@ void ReadNotificationVolumeConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    FILE* file = fopen(config_path, "r");
+    /** Convert paths to wide character for Unicode support */
+    wchar_t wconfig_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+    
+    FILE* file = _wfopen(wconfig_path, L"r");
     if (!file) return;
     
     char line[256];
@@ -2652,14 +2746,21 @@ void WriteConfigNotificationVolume(int volume) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    FILE* file = fopen(config_path, "r");
+    /** Convert paths to wide character for Unicode support */
+    wchar_t wconfig_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+    
+    FILE* file = _wfopen(wconfig_path, L"r");
     if (!file) return;
     
     char temp_path[MAX_PATH];
     strcpy(temp_path, config_path);
     strcat(temp_path, ".tmp");
     
-    FILE* temp = fopen(temp_path, "w");
+    wchar_t wtemp_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
+    
+    FILE* temp = _wfopen(wtemp_path, L"w");
     if (!temp) {
         fclose(file);
         return;
@@ -2731,7 +2832,11 @@ void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdow
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    FILE* file = fopen(config_path, "r");
+    /** Convert paths to wide character for Unicode support */
+    wchar_t wconfig_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+    
+    FILE* file = _wfopen(wconfig_path, L"r");
     if (!file) return;
     
     char line[256];
@@ -2848,10 +2953,17 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    FILE* file = fopen(config_path, "r");
+    /** Convert paths to wide character for Unicode support */
+    wchar_t wconfig_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+    
+    FILE* file = _wfopen(wconfig_path, L"r");
     if (!file) {
 
-        file = fopen(config_path, "w");
+        wchar_t wconfig_path[MAX_PATH];
+        MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+        
+        file = _wfopen(wconfig_path, L"w");
         if (!file) return;
         
 
@@ -2906,7 +3018,10 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
 
     char temp_path[MAX_PATH];
     sprintf(temp_path, "%s.tmp", config_path);
-    FILE* temp_file = fopen(temp_path, "w");
+    wchar_t wtemp_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
+    
+    FILE* temp_file = _wfopen(wtemp_path, L"w");
     
     if (!temp_file) {
         fclose(file);
@@ -3279,7 +3394,11 @@ void ReadCustomCountdownHotkey(WORD* hotkey) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    FILE* file = fopen(config_path, "r");
+    /** Convert paths to wide character for Unicode support */
+    wchar_t wconfig_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+    
+    FILE* file = _wfopen(wconfig_path, L"r");
     if (!file) return;
     
     char line[256];
@@ -3524,8 +3643,14 @@ void WriteConfigNotificationDisabled(BOOL disabled) {
     
     FILE *source_file, *temp_file;
     
-    source_file = fopen(config_path, "r");
-    temp_file = fopen(temp_path, "w");
+    wchar_t wconfig_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+    
+    source_file = _wfopen(wconfig_path, L"r");
+    wchar_t wtemp_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
+    
+    temp_file = _wfopen(wtemp_path, L"w");
     
     if (!source_file || !temp_file) {
         if (source_file) fclose(source_file);

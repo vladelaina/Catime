@@ -69,7 +69,10 @@ void ReadTimeoutActionFromConfig() {
     char configPath[MAX_PATH];
     GetConfigPath(configPath, MAX_PATH);
     
-    FILE *configFile = fopen(configPath, "r");
+    wchar_t wconfigPath[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, configPath, -1, wconfigPath, MAX_PATH);
+    
+    FILE *configFile = _wfopen(wconfigPath, L"r");
     if (configFile) {
         char line[256];
         while (fgets(line, sizeof(line), configFile)) {
@@ -261,7 +264,10 @@ void ShowColorMenu(HWND hwnd) {
     char currentStartupMode[20] = "COUNTDOWN";
     char configPath[MAX_PATH];  
     GetConfigPath(configPath, MAX_PATH);
-    FILE *configFile = fopen(configPath, "r");  
+    wchar_t wconfigPath[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, configPath, -1, wconfigPath, MAX_PATH);
+    
+    FILE *configFile = _wfopen(wconfigPath, L"r");  
     if (configFile) {
         char line[256];
         while (fgets(line, sizeof(line), configFile)) {
@@ -373,7 +379,7 @@ void ShowColorMenu(HWND hwnd) {
 
                         /** Convert to wide char for menu display */
                         wchar_t wDisplayName[MAX_PATH];
-                        MultiByteToWideChar(CP_ACP, 0, findData.cFileName, -1, wDisplayName, MAX_PATH);
+                        MultiByteToWideChar(CP_UTF8, 0, findData.cFileName, -1, wDisplayName, MAX_PATH);
 
                         /** Remove extension */
                         wchar_t* dotPos = wcsrchr(wDisplayName, L'.');
@@ -732,7 +738,10 @@ void ShowContextMenu(HWND hwnd) {
     /** Load Pomodoro configuration from file for dynamic menu generation */
     char configPath[MAX_PATH];
     GetConfigPath(configPath, MAX_PATH);
-    FILE *configFile = fopen(configPath, "r");
+    wchar_t wconfigPath[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, configPath, -1, wconfigPath, MAX_PATH);
+    
+    FILE *configFile = _wfopen(wconfigPath, L"r");
     POMODORO_TIMES_COUNT = 0;
     
     if (configFile) {
