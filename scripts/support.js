@@ -494,6 +494,9 @@ function translateSupportElements() {
         if (td.textContent === '时钟很不错，帮助页面也很漂亮 支持~*.。(๑･∀･๑)*.。') {
             td.textContent = 'The timer is great, and the help page is beautiful. Support~*.。(๑･∀･๑)*.。';
         }
+        if (td.textContent === 'bro好用狒狒防沉迷组件了已经是') {
+            td.textContent = 'Bro, it\'s so useful! Already has anti-addiction component';
+        }
         
         // 为所有留言单元格添加特殊样式，增强可读性
         if (td.parentElement && td.cellIndex === 3) { // 第四列是留言列
