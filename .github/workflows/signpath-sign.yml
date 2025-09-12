@@ -110,8 +110,8 @@ jobs:
           exit 1
         fi
         
-        # 创建 ZIP 文件
-        zip -r ../catime-unsigned.zip *.exe
+        # 创建 ZIP 文件，使用 -j 确保文件在 ZIP 根目录
+        zip -j ../catime-unsigned.zip *.exe
         cd ..
         
         echo "=== Created ZIP archive for signing ==="
