@@ -91,7 +91,7 @@ jobs:
         output-artifact-directory: './signed-output'
         parameters: |
           version: ${{ toJSON(inputs.version) }}
-          build_type: ${{ inputs.is-release && 'release' || 'development' }}
+          build_type: ${{ toJSON(inputs.is-release && 'release' || 'development') }}
           
     - name: Extract signed files
       run: |
