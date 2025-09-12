@@ -71,7 +71,7 @@ jobs:
           exit 1
         fi
         
-    - name: Create ZIP archive for signing
+    - name: Prepare file for signing
       run: |
         cd ./signing-input
         
@@ -85,19 +85,15 @@ jobs:
           exit 1
         fi
         
-        # 创建 ZIP 文件，使用 -j 确保文件在 ZIP 根目录
-        zip -j ../catime-unsigned.zip catime.exe
-        cd ..
-        
-        echo "Created ZIP archive for signing:"
-        ls -la catime-unsigned.zip
+        echo "File ready for signing:"
+        ls -la catime.exe
         
     - name: Upload signing package as artifact
       id: upload-signing-package
       uses: actions/upload-artifact@v4
       with:
         name: catime-signing-package
-        path: catime-unsigned.zip
+        path: ./signing-input/catime.exe
         retention-days: 1
         
     - name: Submit to SignPath for signing
