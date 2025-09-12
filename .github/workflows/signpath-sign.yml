@@ -1,0 +1,144 @@
+name: SignPath Code Signing
+
+on:
+  workflow_call:
+    inputs:
+      artifact-name:
+        description: 'GitHub artifact name to sign'
+        required: true
+        type: string
+      artifact-id:
+        description: 'GitHub artifact ID to sign'
+        required: true
+        type: string
+      version:
+        description: 'Version string for signing'
+        required: true
+        type: string
+      is-release:
+        description: 'Whether this is a release build'
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      SIGNPATH_API_TOKEN:
+        description: 'SignPath API Token'
+        required: true
+    outputs:
+      signed-artifact-id:
+        description: 'ID of the signed artifact'
+        value: ${{ jobs.sign.outputs.signed-artifact-id }}
+      signing-request-id:
+        description: 'SignPath signing request ID'
+        value: ${{ jobs.sign.outputs.signing-request-id }}
+
+jobs:
+  sign:
+    runs-on: ubuntu-latest
+    outputs:
+      signed-artifact-id: ${{ steps.upload-signed.outputs.artifact-id }}
+      signing-request-id: ${{ steps.signpath-submit.outputs.signing-request-id }}
+    
+    steps:
+    - name: Download unsigned artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ./unsigned-artifacts
+        
+    - name: Display artifact contents
+      run: |
+        echo "Contents of unsigned artifacts:"
+        find ./unsigned-artifacts -type f -name "*.exe" -exec ls -la {} \;
+        
+    - name: Create signing directory
+      run: |
+        mkdir -p ./signing-input
+        mkdir -p ./signed-output
+        
+        # 复制所有 .exe 文件到签名输入目录
+        find ./unsigned-artifacts -name "*.exe" -exec cp {} ./signing-input/ \;
+        
+        echo "Files to be signed:"
+        ls -la ./signing-input/
+        
+    - name: Create ZIP archive for signing
+      run: |
+        cd ./signing-input
+        zip -r ../catime-unsigned.zip *.exe
+        cd ..
+        echo "Created ZIP archive for signing:"
+        ls -la catime-unsigned.zip
+        
+    - name: Upload signing package as artifact
+      id: upload-signing-package
+      uses: actions/upload-artifact@v4
+      with:
+        name: catime-signing-package
+        path: catime-unsigned.zip
+        retention-days: 1
+        
+    - name: Submit to SignPath for signing
+      id: signpath-submit
+      uses: signpath/github-action-submit-signing-request@v1
+      with:
+        api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+        organization-id: '66aa6e96-a394-43f9-b3c3-65214fcd285d'
+        project-slug: 'Catime'
+        signing-policy-slug: ${{ inputs.is-release && 'release-signing' || 'test-signing' }}  # 根据是否是发布版本选择不同的签名策略
+        github-artifact-id: ${{ steps.upload-signing-package.outputs.artifact-id }}
+        wait-for-completion: true
+        output-artifact-directory: './signed-output'
+        parameters: |
+          version: ${{ toJSON(inputs.version) }}
+          build_type: ${{ inputs.is-release && 'release' || 'development' }}
+          
+    - name: Extract signed files
+      run: |
+        echo "Signed output directory contents:"
+        find ./signed-output -type f -exec ls -la {} \;
+        
+        # 如果签名输出是ZIP文件，需要解压
+        if find ./signed-output -name "*.zip" | grep -q .; then
+          echo "Found ZIP file, extracting..."
+          cd ./signed-output
+          find . -name "*.zip" -exec unzip -o {} \;
+          cd ..
+        fi
+        
+        echo "Final signed files:"
+        find ./signed-output -name "*.exe" -exec ls -la {} \;
+        
+    - name: Verify signed files exist
+      run: |
+        SIGNED_FILES=$(find ./signed-output -name "*.exe" | wc -l)
+        if [ "$SIGNED_FILES" -eq 0 ]; then
+          echo "Error: No signed .exe files found!"
+          exit 1
+        fi
+        echo "Found $SIGNED_FILES signed executable files"
+        
+    - name: Upload signed artifacts
+      id: upload-signed
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}-signed
+        path: ./signed-output/*.exe
+        retention-days: 90
+        
+    - name: Create signing summary
+      run: |
+        echo "## 🔐 Code Signing Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "- **Version:** ${{ inputs.version }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Build Type:** ${{ inputs.is-release && 'Release' || 'Development' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Signing Request ID:** ${{ steps.signpath-submit.outputs.signing-request-id }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Original Artifact:** ${{ inputs.artifact-name }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Signed Artifact:** ${{ inputs.artifact-name }}-signed" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Signed Files:" >> $GITHUB_STEP_SUMMARY
+        find ./signed-output -name "*.exe" -exec basename {} \; | while read file; do
+          echo "- ✅ $file" >> $GITHUB_STEP_SUMMARY
+        done
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "🔗 [View SignPath Request](${{ steps.signpath-submit.outputs.signing-request-web-url }})" >> $GITHUB_STEP_SUMMARY

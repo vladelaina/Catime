@@ -10,8 +10,12 @@ permissions:
   contents: write
 
 jobs:
-  build-and-release:
+  build:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+      tag_version: ${{ steps.get_version.outputs.tag_version }}
+      artifact-id: ${{ steps.upload-unsigned.outputs.artifact-id }}
     
     steps:
     - name: Checkout code
@@ -34,10 +38,12 @@ jobs:
       run: |
         VERSION=$(grep -oP '#define CATIME_VERSION "\K[^"]+' resource/resource.h)
         echo "VERSION=$VERSION" >> $GITHUB_ENV
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "Version: $VERSION"
         # Get tag name without 'v' prefix
         TAG_VERSION=${GITHUB_REF#refs/tags/v}
         echo "TAG_VERSION=$TAG_VERSION" >> $GITHUB_ENV
+        echo "tag_version=$TAG_VERSION" >> $GITHUB_OUTPUT
       
     - name: Build application
       run: |
@@ -48,17 +54,55 @@ jobs:
         ./build.sh Release
         
         # Copy and rename the executable from build directory
-        cp build/catime.exe ./catime_${{ env.TAG_VERSION }}.exe
+        mkdir -p output
+        cp build/catime.exe ./output/catime_${{ env.TAG_VERSION }}.exe
         echo "Build completed using build.sh script"
+        
+    - name: Upload unsigned release artifact
+      id: upload-unsigned
+      uses: actions/upload-artifact@v4
+      with:
+        name: catime-release-${{ env.TAG_VERSION }}
+        path: output/catime_${{ env.TAG_VERSION }}.exe
+        retention-days: 1
+
+  # 代码签名作业
+  sign:
+    needs: build
+    uses: ./.github/workflows/signpath-sign.yml
+    with:
+      artifact-name: catime-release-${{ needs.build.outputs.tag_version }}
+      artifact-id: ${{ needs.build.outputs.artifact-id }}
+      version: ${{ needs.build.outputs.tag_version }}
+      is-release: true
+    secrets:
+      SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+
+  # 发布作业
+  release:
+    needs: [build, sign]
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Download signed artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: catime-release-${{ needs.build.outputs.tag_version }}-signed
+        path: ./signed-release
         
     - name: Create GitHub Release
       id: create_release
       uses: softprops/action-gh-release@v1
       with:
-        files: catime_${{ env.TAG_VERSION }}.exe
+        files: ./signed-release/catime_${{ needs.build.outputs.tag_version }}.exe
         name: ${{ github.ref_name }}
         body: |
           # 📝 Changelog
+          
+          ## ✅ 代码签名信息
+          - 本版本已通过 SignPath 进行代码签名
+          - 签名请求 ID: ${{ needs.sign.outputs.signing-request-id }}
+          - 确保软件来源可信，安全无忧
 
           > [!TIP]
           > My friend, while downloading Catime, why not check out my friend's [Easy-Cat-Timer](https://github.com/xujiangjiang/Easy-Cat-Timer)— a super cute and practical countdown timer!
@@ -69,6 +113,6 @@ jobs:
       uses: vedantmgoyal2009/winget-releaser@v2
       with:
         identifier: VladElaina.Catime
-        version: ${{ env.TAG_VERSION }}
+        version: ${{ needs.build.outputs.tag_version }}
         installers-regex: '\.exe$'
         token: ${{ secrets.WINGET_TOKEN }}

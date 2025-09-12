@@ -15,6 +15,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+      artifact-id: ${{ steps.upload-unsigned.outputs.artifact-id }}
     
     steps:
     - name: Checkout code
@@ -37,6 +40,7 @@ jobs:
       run: |
         VERSION=$(grep -oP '#define CATIME_VERSION "\K[^"]+' resource/resource.h)
         echo "VERSION=$VERSION" >> $GITHUB_ENV
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "Version: $VERSION"
       
     - name: Build application
@@ -111,6 +115,7 @@ jobs:
         mv catime_${{ env.VERSION }}_${{ github.run_number }}.zip ../output/
         
     - name: Upload build artifacts
+      id: upload-unsigned
       uses: actions/upload-artifact@v4
       with:
         name: catime-windows-${{ env.VERSION }}-${{ github.run_number }}
@@ -118,3 +123,16 @@ jobs:
           output/catime_${{ env.VERSION }}_${{ github.run_number }}.exe
           output/catime_${{ env.VERSION }}_${{ github.run_number }}_upx.exe
           output/README.txt
+
+  # 代码签名作业 - 仅在主分支提交时执行
+  sign:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    uses: ./.github/workflows/signpath-sign.yml
+    with:
+      artifact-name: catime-windows-${{ needs.build.outputs.version }}-${{ github.run_number }}
+      artifact-id: ${{ needs.build.outputs.artifact-id }}
+      version: ${{ needs.build.outputs.version }}
+      is-release: false
+    secrets:
+      SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
