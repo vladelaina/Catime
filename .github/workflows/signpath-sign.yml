@@ -110,8 +110,15 @@ jobs:
           exit 1
         fi
         
+        # 重命名文件为固定名称，便于SignPath匹配
+        FIRST_EXE=$(ls *.exe | head -1)
+        if [ -n "$FIRST_EXE" ]; then
+          cp "$FIRST_EXE" catime.exe
+          echo "Renamed $FIRST_EXE to catime.exe for consistent SignPath matching"
+        fi
+        
         # 创建 ZIP 文件，使用 -j 确保文件在 ZIP 根目录
-        zip -j ../catime-unsigned.zip *.exe
+        zip -j ../catime-unsigned.zip catime.exe
         cd ..
         
         echo "=== Created ZIP archive for signing ==="
