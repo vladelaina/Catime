@@ -131,6 +131,7 @@ jobs:
         name: ${{ inputs.artifact-name }}
         path: ./signed-output/*.exe
         retention-days: 90
+        overwrite: true
         
     - name: Create signing summary
       run: |
