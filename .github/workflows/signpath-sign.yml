@@ -73,27 +73,15 @@ jobs:
         
     - name: Prepare file for signing
       run: |
-        cd ./signing-input
-        
-        # 重命名文件为固定名称，便于SignPath匹配
-        FIRST_EXE=$(ls *.exe | head -1)
-        if [ -n "$FIRST_EXE" ]; then
-          cp "$FIRST_EXE" catime.exe
-          echo "Renamed $FIRST_EXE to catime.exe for SignPath matching"
-        else
-          echo "Error: No .exe files found!"
-          exit 1
-        fi
-        
-        echo "File ready for signing:"
-        ls -la catime.exe
+        echo "Files ready for signing (keeping original names):"
+        ls -la ./signing-input/
         
     - name: Upload signing package as artifact
       id: upload-signing-package
       uses: actions/upload-artifact@v4
       with:
         name: catime-signing-package
-        path: ./signing-input/catime.exe
+        path: ./signing-input/*.exe
         retention-days: 1
         
     - name: Submit to SignPath for signing
