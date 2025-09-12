@@ -48,90 +48,40 @@ jobs:
         
     - name: Display artifact contents
       run: |
-        echo "=== All contents of unsigned artifacts ==="
-        find ./unsigned-artifacts -type f -exec ls -la {} \;
-        echo ""
-        echo "=== .exe files in unsigned artifacts ==="
+        echo "Contents of unsigned artifacts:"
         find ./unsigned-artifacts -name "*.exe" -exec ls -la {} \;
-        echo ""
-        echo "=== Non-UPX .exe files ==="
-        find ./unsigned-artifacts -name "*.exe" ! -name "*upx*" -exec ls -la {} \;
         
     - name: Create signing directory
       run: |
         mkdir -p ./signing-input
         mkdir -p ./signed-output
         
-        echo "=== Filtering files for signing ==="
+        # 只复制未压缩的 .exe 文件（排除 upx 压缩版本）
+        find ./unsigned-artifacts -name "*.exe" ! -name "*upx*" -exec cp {} ./signing-input/ \;
         
-        # 尝试不同的筛选策略
-        echo "Strategy 1: 排除包含 'upx' 的文件"
-        find ./unsigned-artifacts -name "*.exe" ! -name "*upx*" -exec cp {} ./signing-input/ \; || true
-        
-        FILE_COUNT=$(find ./signing-input -name "*.exe" | wc -l)
-        echo "Strategy 1 result: $FILE_COUNT files"
-        
-        if [ "$FILE_COUNT" -eq 0 ]; then
-          echo "Strategy 2: 排除包含 '_upx' 的文件"
-          find ./unsigned-artifacts -name "*.exe" ! -name "*_upx*" -exec cp {} ./signing-input/ \; || true
-          FILE_COUNT=$(find ./signing-input -name "*.exe" | wc -l)
-          echo "Strategy 2 result: $FILE_COUNT files"
-        fi
-        
-        if [ "$FILE_COUNT" -eq 0 ]; then
-          echo "Strategy 3: 复制所有 .exe 文件，稍后手动排除"
-          find ./unsigned-artifacts -name "*.exe" -exec cp {} ./signing-input/ \; || true
-          
-          # 手动删除 UPX 压缩的版本
-          rm -f ./signing-input/*upx*.exe ./signing-input/*_upx*.exe ./signing-input/*UPX*.exe || true
-          
-          FILE_COUNT=$(find ./signing-input -name "*.exe" | wc -l)
-          echo "Strategy 3 result: $FILE_COUNT files"
-        fi
-        
-        echo ""
-        echo "=== Final files to be signed ==="
+        echo "Files to be signed (excluding UPX compressed versions):"
         ls -la ./signing-input/
+        
+        # 检查是否有文件需要签名
+        FILE_COUNT=$(find ./signing-input -name "*.exe" | wc -l)
+        if [ "$FILE_COUNT" -eq 0 ]; then
+          echo "Warning: No .exe files found for signing!"
+          echo "Available files in unsigned-artifacts:"
+          find ./unsigned-artifacts -name "*.exe" -exec ls -la {} \;
+          exit 1
+        fi
         
     - name: Create ZIP archive for signing
       run: |
-        echo "=== Files in signing-input directory ==="
-        ls -la ./signing-input/
-        
         cd ./signing-input
         
-        # 检查是否有 .exe 文件
-        EXE_COUNT=$(find . -maxdepth 1 -name "*.exe" | wc -l)
-        echo "Found $EXE_COUNT .exe files to sign"
-        
-        if [ "$EXE_COUNT" -eq 0 ]; then
-          echo "Error: No .exe files found for signing!"
-          echo "This will cause SignPath to fail."
-          exit 1
-        fi
-        
         # 重命名文件为固定名称，便于SignPath匹配
-        echo "=== Before renaming ==="
-        ls -la *.exe
-        
         FIRST_EXE=$(ls *.exe | head -1)
         if [ -n "$FIRST_EXE" ]; then
           cp "$FIRST_EXE" catime.exe
-          echo "✅ Renamed $FIRST_EXE to catime.exe"
+          echo "Renamed $FIRST_EXE to catime.exe for SignPath matching"
         else
-          echo "❌ No .exe files found for renaming!"
-          exit 1
-        fi
-        
-        echo "=== After renaming ==="
-        ls -la catime.exe
-        
-        # 验证 catime.exe 文件存在且大小合理
-        if [ -f "catime.exe" ]; then
-          FILESIZE=$(stat -c%s catime.exe)
-          echo "✅ catime.exe exists, size: $FILESIZE bytes"
-        else
-          echo "❌ catime.exe does not exist!"
+          echo "Error: No .exe files found!"
           exit 1
         fi
         
@@ -139,11 +89,8 @@ jobs:
         zip -j ../catime-unsigned.zip catime.exe
         cd ..
         
-        echo "=== Created ZIP archive for signing ==="
+        echo "Created ZIP archive for signing:"
         ls -la catime-unsigned.zip
-        echo ""
-        echo "=== Contents of ZIP file ==="
-        unzip -l catime-unsigned.zip
         
     - name: Upload signing package as artifact
       id: upload-signing-package
@@ -175,13 +122,13 @@ jobs:
         
         # 如果签名输出是ZIP文件，需要解压
         if find ./signed-output -name "*.zip" | grep -q .; then
-          echo "Found ZIP file, extracting..."
+          echo "Extracting ZIP file..."
           cd ./signed-output
           find . -name "*.zip" -exec unzip -o {} \;
           cd ..
         fi
         
-        echo "Final signed files:"
+        echo "Signed .exe files:"
         find ./signed-output -name "*.exe" -exec ls -la {} \;
         
     - name: Verify signed files exist
