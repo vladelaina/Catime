@@ -56,11 +56,19 @@ jobs:
         mkdir -p ./signing-input
         mkdir -p ./signed-output
         
-        # 复制所有 .exe 文件到签名输入目录
-        find ./unsigned-artifacts -name "*.exe" -exec cp {} ./signing-input/ \;
+        # 只复制未压缩的 .exe 文件（排除 upx 压缩版本）
+        find ./unsigned-artifacts -name "*.exe" ! -name "*upx*" -exec cp {} ./signing-input/ \;
         
-        echo "Files to be signed:"
+        echo "Files to be signed (excluding UPX compressed versions):"
         ls -la ./signing-input/
+        
+        # 检查是否有文件需要签名
+        FILE_COUNT=$(find ./signing-input -name "*.exe" | wc -l)
+        if [ "$FILE_COUNT" -eq 0 ]; then
+          echo "Warning: No .exe files found for signing!"
+          echo "Available files in unsigned-artifacts:"
+          find ./unsigned-artifacts -name "*.exe" -exec ls -la {} \;
+        fi
         
     - name: Create ZIP archive for signing
       run: |
@@ -86,6 +94,7 @@ jobs:
         organization-id: '66aa6e96-a394-43f9-b3c3-65214fcd285d'
         project-slug: 'Catime'
         signing-policy-slug: ${{ inputs.is-release && 'release-signing' || 'test-signing' }}  # 根据是否是发布版本选择不同的签名策略
+        artifact-configuration-slug: 'zip-exe-config'  # 使用新建的配置
         github-artifact-id: ${{ steps.upload-signing-package.outputs.artifact-id }}
         wait-for-completion: true
         output-artifact-directory: './signed-output'
