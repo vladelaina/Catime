@@ -56,73 +56,17 @@ jobs:
         cp build/catime.exe output/
         echo "Build completed using CMake"
         
-    - name: Install UPX compression tool
+    - name: Rename output file
       run: |
-        sudo apt-get install -y upx
-        upx --version
-        
-    - name: Create compressed and uncompressed versions
-      run: |
-        # Copy original file as uncompressed version
-        cp output/catime.exe output/catime_original.exe
-        
-        # Save pre-compression size
-        BEFORE_SIZE=$(stat -c %s output/catime.exe)
-        BEFORE_SIZE_KB=$((BEFORE_SIZE / 1024))
-        
-        # Compress the original catime.exe
-        upx --ultra-brute --lzma output/catime.exe
-        
-        # Save post-compression size and display results
-        AFTER_SIZE=$(stat -c %s output/catime.exe)
-        AFTER_SIZE_KB=$((AFTER_SIZE / 1024))
-        
-        echo "UPX compression: ${BEFORE_SIZE_KB}KiB → ${AFTER_SIZE_KB}KiB"
-        
-    - name: Add version information file
-      run: |
-        echo "# catime_${{ env.VERSION }} Version Information" > output/README.txt
-        echo "Thank you for using Catime ${{ env.VERSION }} Beta version!" >> output/README.txt
-        echo "" >> output/README.txt
-        echo "## Version Information" >> output/README.txt
-        echo "- Version: ${{ env.VERSION }}" >> output/README.txt
-        echo "- Version Type: Beta" >> output/README.txt
-        echo "- Build Date: $(date '+%Y-%m-%d %H:%M:%S') (UTC+8)" >> output/README.txt
-        echo "- Build Number: ${GITHUB_RUN_NUMBER:-Unknown}" >> output/README.txt
-        echo "" >> output/README.txt
-        echo "## File Description" >> output/README.txt
-        echo "- catime_${{ env.VERSION }}_${{ github.run_number }}.exe: Original version" >> output/README.txt
-        echo "- catime_${{ env.VERSION }}_${{ github.run_number }}_upx.exe: UPX compressed version, smaller size" >> output/README.txt
-        echo "" >> output/README.txt
-        echo "## Important Notes" >> output/README.txt
-        echo "If you encounter any issues, please provide feedback through the Issues page. Your opinions will help us improve product quality." >> output/README.txt
-        
-    - name: Rename files
-      run: |
-        # Rename uncompressed version
-        mv output/catime_original.exe output/catime_${{ env.VERSION }}_${{ github.run_number }}.exe
-        # Rename compressed version
-        mv output/catime.exe output/catime_${{ env.VERSION }}_${{ github.run_number }}_upx.exe
-        
-    - name: Create release package
-      run: |
-        mkdir -p release
-        cp output/catime_${{ env.VERSION }}_${{ github.run_number }}.exe release/
-        cp output/catime_${{ env.VERSION }}_${{ github.run_number }}_upx.exe release/
-        cp output/README.txt release/
-        cd release
-        zip -r catime_${{ env.VERSION }}_${{ github.run_number }}.zip *
-        mv catime_${{ env.VERSION }}_${{ github.run_number }}.zip ../output/
+        # Rename to versioned filename
+        mv output/catime.exe output/catime_${{ env.VERSION }}_${{ github.run_number }}.exe
         
     - name: Upload build artifacts
       id: upload-unsigned
       uses: actions/upload-artifact@v4
       with:
         name: catime-windows-${{ env.VERSION }}-${{ github.run_number }}
-        path: |
-          output/catime_${{ env.VERSION }}_${{ github.run_number }}.exe
-          output/catime_${{ env.VERSION }}_${{ github.run_number }}_upx.exe
-          output/README.txt
+        path: output/catime_${{ env.VERSION }}_${{ github.run_number }}.exe
 
   # 代码签名作业 - 仅在主分支提交时执行
   sign:

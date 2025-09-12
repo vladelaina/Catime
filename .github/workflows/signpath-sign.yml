@@ -56,18 +56,16 @@ jobs:
         mkdir -p ./signing-input
         mkdir -p ./signed-output
         
-        # 只复制未压缩的 .exe 文件（排除 upx 压缩版本）
-        find ./unsigned-artifacts -name "*.exe" ! -name "*upx*" -exec cp {} ./signing-input/ \;
+        # 复制所有 .exe 文件到签名目录
+        find ./unsigned-artifacts -name "*.exe" -exec cp {} ./signing-input/ \;
         
-        echo "Files to be signed (excluding UPX compressed versions):"
+        echo "Files to be signed:"
         ls -la ./signing-input/
         
         # 检查是否有文件需要签名
         FILE_COUNT=$(find ./signing-input -name "*.exe" | wc -l)
         if [ "$FILE_COUNT" -eq 0 ]; then
           echo "Warning: No .exe files found for signing!"
-          echo "Available files in unsigned-artifacts:"
-          find ./unsigned-artifacts -name "*.exe" -exec ls -la {} \;
           exit 1
         fi
         
