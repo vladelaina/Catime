@@ -142,6 +142,8 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: sign
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
     steps:
     - name: Delete temporary signing package
       uses: geekyeggo/delete-artifact@v4

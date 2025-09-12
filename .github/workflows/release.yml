@@ -121,6 +121,8 @@ jobs:
   cleanup:
     needs: [sign, release]
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
     steps:
     - name: Delete temporary signing package
       uses: geekyeggo/delete-artifact@v4
