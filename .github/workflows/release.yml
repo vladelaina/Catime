@@ -98,11 +98,6 @@ jobs:
         name: ${{ github.ref_name }}
         body: |
           # 📝 Changelog
-          
-          ## ✅ 代码签名信息
-          - 本版本已通过 SignPath 进行代码签名
-          - 签名请求 ID: ${{ needs.sign.outputs.signing-request-id }}
-          - 确保软件来源可信，安全无忧
 
           > [!TIP]
           > My friend, while downloading Catime, why not check out my friend's [Easy-Cat-Timer](https://github.com/xujiangjiang/Easy-Cat-Timer)— a super cute and practical countdown timer!
