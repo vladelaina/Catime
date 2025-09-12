@@ -131,19 +131,3 @@ jobs:
         retention-days: 90
         overwrite: true
         
-    - name: Create signing summary
-      run: |
-        echo "## 🔐 Code Signing Summary" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "- **Version:** ${{ inputs.version }}" >> $GITHUB_STEP_SUMMARY
-        echo "- **Build Type:** ${{ inputs.is-release && 'Release' || 'Development' }}" >> $GITHUB_STEP_SUMMARY
-        echo "- **Signing Request ID:** ${{ steps.signpath-submit.outputs.signing-request-id }}" >> $GITHUB_STEP_SUMMARY
-        echo "- **Original Artifact:** ${{ inputs.artifact-name }}" >> $GITHUB_STEP_SUMMARY
-        echo "- **Signed Artifact:** ${{ inputs.artifact-name }}" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### Signed Files:" >> $GITHUB_STEP_SUMMARY
-        find ./signed-output -name "*.exe" -exec basename {} \; | while read file; do
-          echo "- ✅ $file" >> $GITHUB_STEP_SUMMARY
-        done
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "🔗 [View SignPath Request](${{ steps.signpath-submit.outputs.signing-request-web-url }})" >> $GITHUB_STEP_SUMMARY
