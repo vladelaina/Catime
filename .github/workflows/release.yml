@@ -87,7 +87,7 @@ jobs:
     - name: Download signed artifact
       uses: actions/download-artifact@v4
       with:
-        name: catime-release-${{ needs.build.outputs.tag_version }}-signed
+        name: catime-release-${{ needs.build.outputs.tag_version }}
         path: ./signed-release
         
     - name: Create GitHub Release
@@ -116,3 +116,14 @@ jobs:
         version: ${{ needs.build.outputs.tag_version }}
         installers-regex: '\.exe$'
         token: ${{ secrets.WINGET_TOKEN }}
+
+  # 清理临时工件
+  cleanup:
+    needs: [sign, release]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Delete temporary signing package
+      uses: geekyeggo/delete-artifact@v4
+      with:
+        name: catime-signing-package
+        failOnError: false

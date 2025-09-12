@@ -136,3 +136,15 @@ jobs:
       is-release: false
     secrets:
       SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+
+  # 清理临时工件
+  cleanup:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: sign
+    runs-on: ubuntu-latest
+    steps:
+    - name: Delete temporary signing package
+      uses: geekyeggo/delete-artifact@v4
+      with:
+        name: catime-signing-package
+        failOnError: false

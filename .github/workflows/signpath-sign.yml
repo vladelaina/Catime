@@ -76,13 +76,13 @@ jobs:
         echo "Files ready for signing (keeping original names):"
         ls -la ./signing-input/
         
-    - name: Upload signing package as artifact
+    - name: Upload signing package as artifact (temporary)
       id: upload-signing-package
       uses: actions/upload-artifact@v4
       with:
         name: catime-signing-package
         path: ./signing-input/*.exe
-        retention-days: 1
+        retention-days: 1  # 临时文件，签名完成后可以删除
         
     - name: Submit to SignPath for signing
       id: signpath-submit
@@ -128,7 +128,7 @@ jobs:
       id: upload-signed
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ inputs.artifact-name }}-signed
+        name: ${{ inputs.artifact-name }}
         path: ./signed-output/*.exe
         retention-days: 90
         
@@ -140,7 +140,7 @@ jobs:
         echo "- **Build Type:** ${{ inputs.is-release && 'Release' || 'Development' }}" >> $GITHUB_STEP_SUMMARY
         echo "- **Signing Request ID:** ${{ steps.signpath-submit.outputs.signing-request-id }}" >> $GITHUB_STEP_SUMMARY
         echo "- **Original Artifact:** ${{ inputs.artifact-name }}" >> $GITHUB_STEP_SUMMARY
-        echo "- **Signed Artifact:** ${{ inputs.artifact-name }}-signed" >> $GITHUB_STEP_SUMMARY
+        echo "- **Signed Artifact:** ${{ inputs.artifact-name }}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### Signed Files:" >> $GITHUB_STEP_SUMMARY
         find ./signed-output -name "*.exe" -exec basename {} \; | while read file; do
