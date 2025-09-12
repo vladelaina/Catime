@@ -111,10 +111,28 @@ jobs:
         fi
         
         # 重命名文件为固定名称，便于SignPath匹配
+        echo "=== Before renaming ==="
+        ls -la *.exe
+        
         FIRST_EXE=$(ls *.exe | head -1)
         if [ -n "$FIRST_EXE" ]; then
           cp "$FIRST_EXE" catime.exe
-          echo "Renamed $FIRST_EXE to catime.exe for consistent SignPath matching"
+          echo "✅ Renamed $FIRST_EXE to catime.exe"
+        else
+          echo "❌ No .exe files found for renaming!"
+          exit 1
+        fi
+        
+        echo "=== After renaming ==="
+        ls -la catime.exe
+        
+        # 验证 catime.exe 文件存在且大小合理
+        if [ -f "catime.exe" ]; then
+          FILESIZE=$(stat -c%s catime.exe)
+          echo "✅ catime.exe exists, size: $FILESIZE bytes"
+        else
+          echo "❌ catime.exe does not exist!"
+          exit 1
         fi
         
         # 创建 ZIP 文件，使用 -j 确保文件在 ZIP 根目录
