@@ -27,13 +27,13 @@ on:
     outputs:
       signed-artifact-id:
         description: 'ID of the signed artifact'
-        value: ${{ jobs.sign.outputs.signed-artifact-id }}
+        value: ${{ jobs.code-signing.outputs.signed-artifact-id }}
       signing-request-id:
         description: 'SignPath signing request ID'
-        value: ${{ jobs.sign.outputs.signing-request-id }}
+        value: ${{ jobs.code-signing.outputs.signing-request-id }}
 
 jobs:
-  sign:
+  code-signing:
     runs-on: ubuntu-latest
     outputs:
       signed-artifact-id: ${{ steps.upload-signed.outputs.artifact-id }}
