@@ -148,7 +148,11 @@ chmod +x build.sh && ./build.sh   # Linux
 build.bat                         # Windows
 ```
 
-## ⭐Star History
+## Project Status
+![Catime](https://repobeats.axiom.co/api/embed/f56dabe2c1b84ded2408ffb7d800f5c23bddb708.svg "Repobeats analytics image")
+
+
+## 🌟Star History
 
 <a href="https://www.star-history.com/#vladelaina/Catime&Date">
  <picture>
