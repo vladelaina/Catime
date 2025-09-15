@@ -1,4 +1,8 @@
+
 <div align="center">
+  
+# v1.2.0 is out! 🥳 [Download Now ⬇️](https://github.com/vladelaina/Catime/releases/latest)
+    
 <h3>Special thanks to our sponsors:</h3>
 </a>
   
@@ -6,6 +10,7 @@
   <img width="1960" height="240" alt="skywork" 
        src="https://github.com/user-attachments/assets/57506de0-128d-4653-9a14-ee2f416d6831" />
 </a>
+</div>
 
 # 
 
