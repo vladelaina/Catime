@@ -1,3 +1,9 @@
+
+<a href="https://skywork.ai/p/xfncS3" target="_blank">
+  <img width="1960" height="240" alt="skywork" 
+       src="https://github.com/user-attachments/assets/57506de0-128d-4653-9a14-ee2f416d6831" />
+</a>
+
 <!-- Project Title + Logo -->
 <div align="center">
   <a href="https://vladelaina.github.io/Catime" target="_blank">
