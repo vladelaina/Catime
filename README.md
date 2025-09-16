@@ -35,19 +35,6 @@
 </p>
 
 
-<div align="center">
-
-[![GitHub Release](https://img.shields.io/github/v/release/vladelaina/Catime?color=369eff&labelColor=black&logo=github&style=flat-square)](https://github.com/vladelaina/Catime/releases)
-![C](https://img.shields.io/badge/language-C-blue?logo=c&logoColor=white&labelColor=black&style=flat-square)
-[![EXE Size](https://img.shields.io/badge/EXE%20Size-744KB-blue?style=flat-square&labelColor=black)](https://github.com/vladelaina/Catime/releases)
-[![GitHub Release Date](https://img.shields.io/github/release-date/vladelaina/Catime?label=release%20date&labelColor=black&style=flat-square)](https://github.com/vladelaina/Catime/releases)<br/>
-[![Downloads](https://img.shields.io/github/downloads/vladelaina/Catime/total?color=blue&label=downloads&labelColor=black&style=flat-square)](https://github.com/vladelaina/Catime/releases)
-[![Forks](https://img.shields.io/github/forks/vladelaina/Catime?color=8ae8ff&labelColor=black&style=flat-square)](https://github.com/vladelaina/Catime/network/members)
-[![Stars](https://img.shields.io/github/stars/vladelaina/Catime?color=ffcb47&labelColor=black&style=flat-square)](https://github.com/vladelaina/Catime/stargazers)
-[![Issues](https://img.shields.io/github/issues/vladelaina/Catime?color=ff80eb&labelColor=black&style=flat-square)](https://github.com/vladelaina/Catime/issues)
-[![License](https://img.shields.io/badge/license-apache%202.0-white?labelColor=black&style=flat-square)](https://github.com/vladelaina/Catime/blob/main/LICENSE)<br>
-</div>
-
 <!-- GitHub Trending Area -->
 <div align="center">
   <a href="https://hellogithub.com/repository/00a7a32b7bc647e1a62747530bc16115" target="_blank">
