@@ -51,7 +51,6 @@
 [![Stars](https://img.shields.io/github/stars/vladelaina/Catime?color=ffcb47&labelColor=black&style=flat-square)](https://github.com/vladelaina/Catime/stargazers)
 [![Issues](https://img.shields.io/github/issues/vladelaina/Catime?color=ff80eb&labelColor=black&style=flat-square)](https://github.com/vladelaina/Catime/issues)
 [![License](https://img.shields.io/badge/license-apache%202.0-white?labelColor=black&style=flat-square)](https://github.com/vladelaina/Catime/blob/main/LICENSE)<br>
-[![Support Catime](https://img.shields.io/badge/Support%20Catime-EA4AAA?style=for-the-badge&logo=githubsponsors&logoColor=white)](https://vladelaina.github.io/Catime/support.html)
 </div>
 
 <!-- GitHub Trending Area -->
