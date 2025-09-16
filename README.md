@@ -160,12 +160,16 @@ cmake --version
 chmod +x build.sh && ./build.sh   # Linux
 build.bat                         # Windows
 ```
+
 # 🎁 [Support](https://vladelaina.github.io/Catime/support.html)
-
-<a href="https://vladelaina.github.io/Catime/support.html">
-  <img src="https://github.com/user-attachments/assets/920ce3ed-eda0-4965-a130-36b8760fe92b" />
-<a/>
-
+<div align="center" style="margin: 20px 0;">
+  <a href="https://vladelaina.github.io/Catime/support.html">
+    <img src="https://img.shields.io/badge/Support_Catime-EA4AAA?style=for-the-badge&logo=githubsponsors&logoColor=white" 
+         alt="Support Catime" 
+         width="2500" 
+         height="1250">
+  </a>
+</div>
 
 
 ## Project Status
