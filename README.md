@@ -36,8 +36,10 @@
   elegantly helping you manage time on Windows.
 </p>
 
-<p align="center"><a href="https://vladelaina.github.io/Catime/">Official Site</a> · <a href="https://vladelaina.github.io/Catime/guide.html">Guide</a> · <a href="https://vladelaina.github.io/Catime/about.html">About</a> · <a href="https://github.com/users/vladelaina/projects/2/views/1">Project Board</a> · <a href="https://github.com/vladelaina/Catime/issues">Feedback</a></p>
-<p align="center"><a href="https://github.com/vladelaina/Catime">English</a> · <a href="./i18n/README_zh-CN.md">简体中文</a> · <a href="./i18n/README_zh-Hant.md">繁體中文</a> · <a href="./i18n/README_ja.md">日本語</a> · <a href="./i18n/README_es.md">Español</a> · <a href="./i18n/README_fr.md">Français</a> · <a href="./i18n/README_de.md">Deutsch</a> · <a href="./i18n/README_ru.md">Русский</a> · <a href="./i18n/README_pt.md">Português</a> · <a href="./i18n/README_ko.md">한국어</a></p>
+<p align="center"
+  
+**https://vladelaina.github.io/Catime**
+</p>
 
 
 <div align="center">
