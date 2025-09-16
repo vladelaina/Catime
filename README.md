@@ -81,19 +81,16 @@
 
 ## 📥 Download
 
-- Microsoft Store
-  
-  [<img src="https://get.microsoft.com/images/en-us%20dark.svg" alt="Get it from Microsoft" height="104">](https://apps.microsoft.com/detail/9n3mzdf1z34v?referrer=appbadge&launch=true&mode=full)
+- GitHub Releases
+
+  Download the latest release from [GitHub Releases](https://github.com/vladelaina/Catime/releases/latest).
+
 
 -  Winget
 
     ```
     winget install --id VladElaina.Catime
     ```
-
-- GitHub Releases
-
-  Download the latest release from [GitHub Releases](https://github.com/vladelaina/Catime/releases/latest).
 
 
 ## [📑User Guide](https://vladelaina.github.io/Catime/guide)
