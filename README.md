@@ -160,7 +160,7 @@ cmake --version
 chmod +x build.sh && ./build.sh   # Linux
 build.bat                         # Windows
 ```
-# 🎁 Donate
+# 🎁 [Support](https://vladelaina.github.io/Catime/support.html)
 
 <a href="https://vladelaina.github.io/Catime/support.html">
   <img src="https://github.com/user-attachments/assets/920ce3ed-eda0-4965-a130-36b8760fe92b" />
