@@ -23,18 +23,11 @@
 </div>
 
 <!-- Project Description + Rocket Icon -->
-<p align="center" style="font-size: 18px; margin-bottom: 30px;">
-  🎉 No installation or setup required — just double-click to get started.<br/>
-  🌸 Clean, elegant interface with smooth operation.<br/>
-  🚀 Powerful keyboard shortcuts for lightning-fast productivity.
+<p align="center" style="font-size: 16px; color: #666; margin-bottom: 20px;">
+  An ultra-lightweight Windows countdown and Pomodoro tool written in pure C with a clean transparent interface,<br/>
+  rich customization, powerful shortcuts, and almost no resource usage.
 </p>
 
-<p align="center" style="font-size: 16px; color: #666; margin-bottom: 20px;">
-  An ultra-lightweight Windows countdown tool with Pomodoro functionality,<br/>
-  featuring a transparent interface and rich customization options,<br/>
-  using only a few MB of memory and almost no CPU resources,<br/>
-  elegantly helping you manage time on Windows.
-</p>
 
 <p align="center"
   
