@@ -56,7 +56,7 @@
   👋 Join us on 
   <a href="https://discord.com/invite/W3tW2gtp6g" target="_blank" style="text-decoration: none; font-weight: bold; color: #5865F2;">Discord</a> 
   and 
-  <a href="https://qm.qq.com/q/LgscIMw9i0" target="_blank" style="text-decoration: none; font-weight: bold; color: #12B7F5;">QQ Group</a>
+  <a href="https://qun.qq.com/universal-share/share?ac=1&authKey=jLajcI6fmsK8MYh9Sx8s0IArOuR5k7mnn8upVJK%2BgJkeXrEop9EBsAD8tP%2BLhPDs&busi_data=eyJncm91cENvZGUiOiIxMDI3MzI3OTEyIiwidG9rZW4iOiI0UlNlc1RzV0QyUlZKNzBMK3RWczRZOUt0K0xIRHRvVVZSQnR3OFo3bUxBMFAzcG9jUjRZa2dwUGZEaCs0ZEhuIiwidWluIjoiMjM3NzY0MDY5OSJ9&data=6Ce8O75Fxrd5GoBAByGHSoQNA3cK7t4WyU1WyoI9FB3LK0mmPbgtK3PlGKQrt4vQvQsrlV4QkdQ7lQKt8TDkEg&svctype=4&tempid=h5_group_info" target="_blank" style="text-decoration: none; font-weight: bold; color: #12B7F5;">QQ Group</a>
 </div>
 
 
