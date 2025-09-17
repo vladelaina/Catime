@@ -19,13 +19,14 @@
   <a href="https://vladelaina.github.io/Catime" target="_blank">
     <img src="Images/catime_resize.png" alt="Catime" width="240">
   </a>
-  <h1 style="margin-top: 10px; font-size: 42px; font-weight: 700;">Catime</h1>
+  <h1>Catime</h1>
 </div>
 
 <!-- Project Description + Rocket Icon -->
-<p align="center" style="font-size: 16px; color: #666; margin-bottom: 20px;">
-  An ultra-lightweight Windows countdown and Pomodoro tool written in pure C with a clean transparent interface,<br/>
+<p align="center"> 
+  An ultra-lightweight Windows countdown and Pomodoro tool written in <b>pure C</b> with a clean transparent interface,<br/>
   rich customization, powerful shortcuts, and almost no resource usage.
+  
 </p>
 
 
