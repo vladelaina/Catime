@@ -649,7 +649,6 @@ img {
     font-weight: 600;
     position: relative;
 }
-
 /* 添加闪光效果到重点词 */
 .hero-description:hover .emp-word::after {
     content: '';
@@ -689,36 +688,18 @@ img {
     z-index: 2;
     cursor: pointer; /* 添加指针样式表示可点击 */
     user-select: none; /* 防止拖拽选中 */
+    /* 为video元素添加尺寸约束 */
+    width: 100%;
+    max-width: 400px;
+    height: auto;
+    object-fit: cover; /* 保持视频宽高比同时填充容器 */
+    display: block; /* 确保视频以块级元素显示 */
 }
 
-.hero-screenshot::before,
-.hero-screenshot::after {
-    content: '';
-    position: absolute;
-    background: white;
-    z-index: 1;
-    opacity: 0.4;
-    transition: all 0.5s ease;
-}
-
-/* 水平丝带 */
-.hero-screenshot::before {
-    height: 6px;
-    width: 120%;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    box-shadow: 0 0 15px 5px rgba(255, 255, 255, 0.2);
-}
-
-/* 垂直丝带 */
-.hero-screenshot::after {
-    width: 6px;
-    height: 120%;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    box-shadow: 0 0 15px 5px rgba(255, 255, 255, 0.2);
+/* 视频专用样式 */
+video.hero-screenshot {
+    aspect-ratio: 16/9; /* 设置固定的宽高比 */
+    background-color: rgba(122, 162, 247, 0.1); /* 加载时的背景色 */
 }
 
 /* 添加呼吸动画效果 */
@@ -733,12 +714,6 @@ img {
     box-shadow: 20px 15px 30px rgba(122, 162, 247, 0.25);
     border-color: rgba(255, 255, 255, 1);
     animation: none;
-}
-
-.hero-screenshot:hover::before,
-.hero-screenshot:hover::after {
-    opacity: 0.8; /* 鼠标悬停时丝带变得更明显 */
-    box-shadow: 0 0 15px 6px rgba(255, 255, 255, 0.4);
 }
 
 /* 响应式调整悬停效果 */
@@ -784,11 +759,6 @@ img {
     .hero-visual {
         margin-right: 0; /* 在手机屏幕上取消负边距 */
     }
-    
-    .hero-screenshot::before,
-    .hero-screenshot::after {
-        box-shadow: 0 0 10px 3px rgba(255, 255, 255, 0.15);
-    }
 }
 
 @media (max-width: 480px) {
@@ -827,7 +797,6 @@ img {
     overflow: hidden;
     letter-spacing: 0.02em; /* 增加字间距 */
 }
-
 .cta-button i {
     margin-right: 0.7rem; /* 增加图标和文字的间距 */
     transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.3s ease;
@@ -1286,7 +1255,6 @@ img {
     -webkit-background-clip: initial;
     background-clip: initial;
 }
-
 /* 特殊悬停效果 - 波浪文本 改为跳跃效果 */
 @keyframes jump {
     0%, 100% { 
@@ -1625,7 +1593,6 @@ img {
         background-size: 150% 150%;
     }
 }
-
 @keyframes galaxyGlow {
     0% {
         transform: scale(0.8) rotate(0deg);
@@ -1919,7 +1886,6 @@ img {
         filter: drop-shadow(0 0 15px rgba(255, 50, 50, 0.7)) brightness(1.5); 
     }
 }
-
 /* 添加新的喷火效果动画 */
 @keyframes dragonFireBreath {
     0%, 100% {
@@ -2508,9 +2474,6 @@ img {
         /* 可选择在小屏幕上减少或隐藏形状 */
         opacity: 0.7;
     }
-    .shape {
-       /* opacity: 0.05; */ /* 使其更加微妙 */
-    }
 }
 
 @media (max-width: 768px) {
@@ -2569,7 +2532,6 @@ img {
     font-size: 2.8rem;
     margin-bottom: 1rem;
 }
-
 .page-header p {
     font-size: 1.2rem;
     color: var(--secondary-color);
@@ -3167,7 +3129,6 @@ p:hover {
         max-width: 960px;
     }
 }
-
 @media (max-width: 992px) {
     .container {
         max-width: 90%;
@@ -3806,7 +3767,6 @@ p:hover {
         font-size: 0.9rem;
     }
 }
-
 @media (max-width: 600px) {
     .main-header .container {
         flex-direction: column;
@@ -3966,7 +3926,6 @@ p:hover {
     from { opacity: 0; }
     to { opacity: 1; }
 }
-
 /* 突出词汇特殊动画 - 更强调重点 */
 @keyframes empPulse {
     0% { 
@@ -4029,36 +3988,18 @@ p:hover {
     z-index: 2;
     cursor: pointer; /* 添加指针样式表示可点击 */
     user-select: none; /* 防止拖拽选中 */
+    /* 为video元素添加尺寸约束 */
+    width: 100%;
+    max-width: 400px;
+    height: auto;
+    object-fit: cover; /* 保持视频宽高比同时填充容器 */
+    display: block; /* 确保视频以块级元素显示 */
 }
 
-.hero-screenshot::before,
-.hero-screenshot::after {
-    content: '';
-    position: absolute;
-    background: white;
-    z-index: 1;
-    opacity: 0.4;
-    transition: all 0.5s ease;
-}
-
-/* 水平丝带 */
-.hero-screenshot::before {
-    height: 6px;
-    width: 120%;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    box-shadow: 0 0 15px 5px rgba(255, 255, 255, 0.2);
-}
-
-/* 垂直丝带 */
-.hero-screenshot::after {
-    width: 6px;
-    height: 120%;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    box-shadow: 0 0 15px 5px rgba(255, 255, 255, 0.2);
+/* 视频专用样式 */
+video.hero-screenshot {
+    aspect-ratio: 16/9; /* 设置固定的宽高比 */
+    background-color: rgba(122, 162, 247, 0.1); /* 加载时的背景色 */
 }
 
 /* 添加呼吸动画效果 */
@@ -4073,12 +4014,6 @@ p:hover {
     box-shadow: 20px 15px 30px rgba(122, 162, 247, 0.25);
     border-color: rgba(255, 255, 255, 1);
     animation: none;
-}
-
-.hero-screenshot:hover::before,
-.hero-screenshot:hover::after {
-    opacity: 0.8; /* 鼠标悬停时丝带变得更明显 */
-    box-shadow: 0 0 15px 6px rgba(255, 255, 255, 0.4);
 }
 
 /* 响应式调整悬停效果 */
@@ -4123,11 +4058,6 @@ p:hover {
 
     .hero-visual {
         margin-right: 0; /* 在手机屏幕上取消负边距 */
-    }
-    
-    .hero-screenshot::before,
-    .hero-screenshot::after {
-        box-shadow: 0 0 10px 3px rgba(255, 255, 255, 0.15);
     }
 }
 
@@ -4445,7 +4375,6 @@ p:hover {
     0%, 100% { box-shadow: 0 0 0 0 rgba(247, 125, 170, 0); }
     50% { box-shadow: 0 0 30px 15px rgba(247, 125, 170, 0.2); }
 }
-
 @keyframes bellRing {
     0%, 100% { box-shadow: 0 0 0 0 rgba(255, 212, 59, 0); }
     50% { box-shadow: 0 0 30px 15px rgba(255, 212, 59, 0.2); }
@@ -4797,7 +4726,6 @@ p:hover {
 .github-chart-container:hover .star-particle {
     animation-name: floatingStar, twinkleStar;
 }
-
 /* 为不同类型的星星设置不同的动画 */
 .github-chart-container:hover .star-particle:nth-child(4n) {
     animation-name: floatingStarAlt, twinkleStar;
@@ -5088,7 +5016,6 @@ p:hover {
     box-shadow: var(--button-hover-shadow);
     color: white;
 }
-
 /* 响应式设计 */
 @media (max-width: 768px) {
     .github-chart-container {
@@ -5172,46 +5099,10 @@ p:hover {
     user-select: none;
 }
 
-.scenario-img::before,
-.scenario-img::after {
-    content: '';
-    position: absolute;
-    background: white;
-    z-index: 1;
-    opacity: 0.4;
-    transition: all 0.5s ease;
-}
-
-/* 水平丝带 */
-.scenario-img::before {
-    height: 6px;
-    width: 120%;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    box-shadow: 0 0 15px 5px rgba(255, 255, 255, 0.2);
-}
-
-/* 垂直丝带 */
-.scenario-img::after {
-    width: 6px;
-    height: 120%;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    box-shadow: 0 0 15px 5px rgba(255, 255, 255, 0.2);
-}
-
 .scenario-card:hover .scenario-img {
     transform: perspective(1000px);
     box-shadow: 30px 20px 40px rgba(122, 162, 247, 0.25);
     border-color: rgba(255, 255, 255, 1);
-}
-
-.scenario-card:hover .scenario-img::before,
-.scenario-card:hover .scenario-img::after {
-    opacity: 0.8;
-    box-shadow: 0 0 20px 8px rgba(255, 255, 255, 0.4);
 }
 
 /* 添加脚本控制悬停和点击效果 */
@@ -5634,7 +5525,6 @@ p:hover {
         1px 1px 2px rgba(0, 150, 255, 0.1),
         -1px -1px 2px rgba(255, 255, 255, 0.8);
 }
-
 /* 添加逐字动画效果 */
 @keyframes letterWave {
     0%, 100% {
@@ -5850,9 +5740,6 @@ p:hover {
     .background-shapes {
         /* 可选择在小屏幕上减少或隐藏形状 */
         opacity: 0.7;
-    }
-    .shape {
-       /* opacity: 0.05; */ /* 使其更加微妙 */
     }
 }
 
@@ -6384,7 +6271,6 @@ p:hover {
     70% { transform: translateY(0) scale(1.2); }
     80% { transform: translateY(-3px) scale(1.15); }
 }
-
 /* 添加更多二次元风格的装饰元素 */
 .hero-subtitle::before,
 .hero-subtitle::after {
@@ -6433,11 +6319,9 @@ p:hover {
     opacity: 0.8;
     transform-origin: center bottom;
 }
-
 .hero-description:hover .desc-word {
     opacity: 1;
 }
-
 /* 描述文字悬停效果 - 波浪动画 */
 @keyframes wordFloat {
     0%, 100% {
@@ -7016,7 +6900,6 @@ p:hover {
         filter: blur(3px);
     }
 }
-
 @keyframes lightningBolt2 {
     0%, 100% {
         transform: scale(0) rotate(25deg);
@@ -7076,7 +6959,7 @@ p:hover {
     clip-path: polygon(25% 0%, 45% 0%, 65% 30%, 50% 30%, 75% 60%, 65% 60%, 100% 100%, 40% 70%, 55% 70%, 25% 40%, 40% 40%, 25% 0%);
     transform-origin: center;
     z-index: -1;
-    filter: drop-shadow(0 0 15px rgba(0, 180, 255, 0.9)) drop-shadow(0 0 25px rgba(255, 255, 255, 0.7));
+    filter: drop-shadow(0 0 15px rgba(0, 180, 255, 0.9)) drop-shadow(0 0 25px rgba(255, 255, 255, 0.8));
     animation: lightningBolt3 0.65s ease-out 0.1s infinite;
 }
 
@@ -7214,7 +7097,6 @@ p:hover {
         background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(0, 210, 255, 0.9), rgba(120, 220, 255, 0.8));
     }
 }
-
 @keyframes lightningBolt5 {
     0%, 100% {
         transform: scale(0) rotate(-15deg);
@@ -7664,7 +7546,6 @@ p:hover {
     transform: translateX(5px);
     box-shadow: 0 2px 8px rgba(122, 162, 247, 0.15);
 }
-
 .wiki-list a.active {
     background: linear-gradient(to right, rgba(122, 162, 247, 0.2), rgba(122, 162, 247, 0.05));
     font-weight: 600;
@@ -8012,7 +7893,6 @@ p:hover {
     20% { opacity: 1; }
     100% { transform: scale(1) translate(var(--tx, 20px), var(--ty, 20px)); opacity: 0; }
 }
-
 .p1 { --tx: -30px; --ty: -20px; }
 .p2 { --tx: 25px; --ty: -30px; }
 .p3 { --tx: 25px; --ty: 20px; }
@@ -8315,7 +8195,6 @@ p:hover {
     0% { transform: translate(-50%, -50%) rotate(0deg); }
     100% { transform: translate(-50%, -50%) rotate(360deg); }
 }
-
 /* 媒体查询 - 移动设备优化 */
 @media (max-width: 768px) {
     .scroll-progress-container {
@@ -8813,11 +8692,9 @@ p:hover {
     transition: transform 0.3s ease;
     display: inline-block;
 }
-
 .text-warning:hover .icon-animate-pulse {
     animation: iconPulse 1.5s ease infinite;
 }
-
 @keyframes iconPulse {
     0% { transform: scale(1); opacity: 1; }
     50% { transform: scale(1.2); opacity: 0.8; }
@@ -8963,7 +8840,6 @@ p:hover {
     animation: starTwinkle 2s ease-in-out infinite;
     filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.6));
 }
-
 @keyframes starTwinkle {
     0%, 100% { transform: scale(1) rotate(5deg); filter: brightness(1); }
     30% { transform: scale(1.1) rotate(8deg); filter: brightness(1.2); }
@@ -9599,7 +9475,6 @@ p:hover {
     margin-bottom: 2rem;
     border-bottom: 1px solid rgba(122, 162, 247, 0.3);
 }
-
 .guide-hero::before {
     content: "";
     position: absolute;
@@ -9616,7 +9491,6 @@ p:hover {
     z-index: 0;
     animation: heroGlow 10s ease-in-out infinite alternate;
 }
-
 @keyframes heroGlow {
     0% {
         opacity: 0.5;
@@ -10237,7 +10111,6 @@ p:hover {
         margin: 0 auto;
     }
 }
-
 @media (max-width: 480px) {
     .support-project {
         padding: 4rem 0;
