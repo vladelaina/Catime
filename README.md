@@ -89,7 +89,7 @@
 
 > Configuration file saved at `%LOCALAPPDATA%\Catime\config.ini`
 
-### ⚡ Font Optimization
+## ⚡[Font Optimization](https://vladelaina.github.io/Catime/tools/font-tool/)
 
 Reduce custom font file size by **90%+** with the official [Font Simplification Tool](https://vladelaina.github.io/Catime/tools/font-tool).
 
