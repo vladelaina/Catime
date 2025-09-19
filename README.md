@@ -93,7 +93,7 @@
 
 Reduce custom font file size by **90%+** with the official [Font Simplification Tool](https://vladelaina.github.io/Catime/tools/font-tool).
 
-> Since Catime only displays numbers and symbols (0-9, :, .), most font characters are unnecessary.
+> Since Catime only displays numbers and symbols (`0-9`, `:`, `.`), most font characters are unnecessary.
 >
 > **Recommendation**: Keep your original font files as backups. Future software updates may require additional characters beyond the current set.
 
