@@ -63,9 +63,8 @@
 ## ❤️‍🔥Staying tuned with us
 >  **Star us** and witness how this pure C-crafted minimalist time tool continues to evolve - don't miss any exciting updates!
 <a href="https://github.com/vladelaina/Catime" target="_blank">
-    <img  src="https://github.com/user-attachments/assets/e8ab43fd-d716-43df-9fa8-73117d22fcbd" />
+    <img  src="https://github.com/user-attachments/assets/9a11f2da-858c-4e37-a4f8-43230181b458" />
 </a>
-
 
 
 ## 📥 Download
