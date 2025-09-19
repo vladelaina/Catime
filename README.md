@@ -89,6 +89,12 @@
 
 > Configuration file saved at `%LOCALAPPDATA%\Catime\config.ini`
 
+### ⚡ Font Optimization
+
+Reduce custom font file size by **90%+** with the official [Font Simplification Tool](https://vladelaina.github.io/Catime/tools/font-tool).
+
+> Since Catime only displays numbers and symbols (0-9, :, .), most font characters are unnecessary.
+
 
 ## 🛠️ Development
 
