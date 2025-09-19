@@ -67,9 +67,6 @@
     <img  src="https://github.com/user-attachments/assets/27cb5cf5-b12a-4ecf-9c8e-6ecb0adc0cb2" />
 </a>
 
-<img width="1631" height="443" alt="7" src="" />
-
-
 
 ## 📥 Download
 
