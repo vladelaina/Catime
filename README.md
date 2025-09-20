@@ -345,7 +345,7 @@ Font licenses:
 
 Wallpaper:
 - Author: [猫屋敷梨梨Official](https://space.bilibili.com/26087398)
-    - Dynamic wallpaper link: [Wallpaper Engine](https://steamcommunity.com/sharedfiles/filedetails/?id=3171487185)
+    - Dynamic wallpaper link: [猫屋敷梨梨「星之所在」曲绘夜晚版](https://steamcommunity.com/sharedfiles/filedetails/?id=3171487185)
 ---
 
 <div align="center">
