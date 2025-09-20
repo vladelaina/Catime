@@ -184,7 +184,9 @@ build.bat                         # Windows
 
 ## [✨Acknowledgements](https://vladelaina.github.io/Catime/#thanks) 
 
-Special thanks to the following contributors(chronological order):
+With special appreciation to [猫屋敷梨梨Official](https://space.bilibili.com/26087398) for the beautiful icon design.
+
+> Special thanks to the following contributors(chronological order):
 <table>
   <tbody>
     <tr>
