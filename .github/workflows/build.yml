@@ -6,11 +6,15 @@ on:
     paths-ignore:
       - 'README.md'
       - 'README_EN.md'
+      - 'SECURITY.md'
+      - 'PRIVACY.md'
   pull_request:
     branches: [ main ]
     paths-ignore:
       - 'README.md'
       - 'README_EN.md'
+      - 'SECURITY.md'
+      - 'PRIVACY.md'
 
 jobs:
   build:
