@@ -550,13 +550,16 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
     ShowWindow(hwnd, nCmdShow);
     UpdateWindow(hwnd);
 
-    /** Apply topmost or desktop attachment based on settings */
+    /** Apply topmost or normal z-order based on settings */
     if (CLOCK_WINDOW_TOPMOST) {
-        SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, 
+        SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
     } else {
-        /** Attach to desktop for wallpaper-like behavior */
-        ReattachToDesktop(hwnd);
+        /** Keep as normal top-level window (do not attach to desktop layer) */
+        SetParent(hwnd, NULL);
+        SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, 0);
+        SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
         ShowWindow(hwnd, SW_SHOWNOACTIVATE);
     }
 
@@ -715,12 +718,22 @@ void SetWindowTopmost(HWND hwnd, BOOL topmost) {
         SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED);
     } else {
-        /** Disable activation and attach to desktop */
-        exStyle |= WS_EX_NOACTIVATE;
-        ReattachToDesktop(hwnd);
+        /** Leave normal top-level window (not desktop-attached) and ensure visible */
+        exStyle &= ~WS_EX_NOACTIVATE;
+        
+        /** Ensure window is not parented to desktop layer */
+        SetParent(hwnd, NULL);
+        SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, 0);
+        
+        /** Drop TOPMOST, then raise to normal top to keep it visible */
+        SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+        SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+        
+        /** Show without stealing focus and keep on screen */
         ShowWindow(hwnd, SW_SHOWNOACTIVATE);
-        SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0,
-                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_FRAMECHANGED);
+        AdjustWindowPosition(hwnd, TRUE);
     }
     
     /** Apply extended style changes */

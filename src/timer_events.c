@@ -185,7 +185,7 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
         return TRUE;
     }
 
-    /** Timer 1001: Desktop attachment retry for non-topmost windows */
+    /** Timer 1001: (legacy) was desktop attachment; now ensure normal visibility only */
     if (wp == 1001) {
         static int s_desktop_retry_remaining = 0;
         if (s_desktop_retry_remaining == 0) {
@@ -193,10 +193,14 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
         }
 
         if (!CLOCK_WINDOW_TOPMOST) {
-            ReattachToDesktop(hwnd);
+            /** Keep as normal top-level window; ensure visible and near top */
+            SetParent(hwnd, NULL);
+            SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, 0);
             if (!IsWindowVisible(hwnd)) {
                 ShowWindow(hwnd, SW_SHOWNOACTIVATE);
             }
+            SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0,
+                         SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
         }
 
         s_desktop_retry_remaining--;
@@ -207,11 +211,9 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
         }
         return TRUE;
     }
-    /** Timer 1002: Force desktop reattachment with immediate redraw */
+    /** Timer 1002: (legacy) was desktop reattachment; now force redraw only */
     if (wp == 1002) {
         KillTimer(hwnd, 1002);
-        extern void ReattachToDesktop(HWND);
-        ReattachToDesktop(hwnd);
         ShowWindow(hwnd, SW_SHOWNOACTIVATE);
         SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0,
                      SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);

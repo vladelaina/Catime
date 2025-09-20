@@ -1298,16 +1298,14 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
                                          SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
                         } else {
-                            extern void ReattachToDesktop(HWND);
-                            ReattachToDesktop(hwnd);
+                            /** Keep window as normal top-level without desktop attachment */
+                            SetParent(hwnd, NULL);
+                            SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, 0);
                             ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+                            SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0,
+                                         SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED);
                             SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0,
                                          SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
-
-                            InvalidateRect(hwnd, NULL, TRUE);
-                            RedrawWindow(hwnd, NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW);
-                            KillTimer(hwnd, 1002);
-                            SetTimer(hwnd, 1002, 150, NULL);
                         }
                     }
                     break;
