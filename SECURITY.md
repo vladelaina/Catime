@@ -194,6 +194,6 @@ Catime's threat model considers:
 
 ---
 
-**This security policy is effective as of September 2025 and is reviewed quarterly.**
+**This security policy is effective as of September 20, 2025 and is reviewed quarterly.**
 
 *For questions about this security policy, please use the contact methods available on the [GitHub repository](https://github.com/vladelaina/Catime).*
