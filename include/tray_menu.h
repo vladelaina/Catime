@@ -26,7 +26,7 @@
 
 /** @brief Window interaction */
 #define CLOCK_IDC_EDIT_MODE 113             /**< Toggle edit mode */
-#define CLOCK_IDM_TOPMOST 195               /**< Toggle always on top */
+/** CLOCK_IDM_TOPMOST is defined in resource.h to avoid conflicts */
 
 /** @brief Timeout action menu items */
 #define CLOCK_IDM_SHOW_MESSAGE 121       /**< Show message action */

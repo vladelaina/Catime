@@ -1289,8 +1289,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         CLOCK_WINDOW_TOPMOST = newTopmost;
                         WriteConfigTopmost(newTopmost ? "TRUE" : "FALSE");
                     } else {
+                        /** SetWindowTopmost handles both variable update and config file writing */
                         SetWindowTopmost(hwnd, newTopmost);
-                        WriteConfigTopmost(newTopmost ? "TRUE" : "FALSE");
 
                         InvalidateRect(hwnd, NULL, TRUE);
                         if (newTopmost) {
