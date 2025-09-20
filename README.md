@@ -320,6 +320,9 @@ With special appreciation to [猫屋敷梨梨Official](https://space.bilibili.co
       <td align="center" valign="top" width="14.28%">
         <a href="https://meta.appinn.net/u/lxzrjyff/summary"><img src="https://vladelaina.github.io/Catime/assets/Contributors/lxzrjyff.webp" width="100px;" alt="lxzrjyff"/><br /><sub><b>lxzrjyff</b></sub></a><br />
       </td>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://github.com/darkmatter2048"><img src="https://vladelaina.github.io/Catime/assets/Contributors/DaYe.webp" width="100px;" alt="DaYe"/><br /><sub><b>DaYe</b></sub></a><br />
+      </td>
     </tr>
   </tbody>
 </table>
