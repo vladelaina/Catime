@@ -182,6 +182,18 @@ build.bat                         # Windows
  </picture>
 </a>
 
+## Sponsors
+<table>
+  <tr>
+    <td>
+      <img alt="SignPath" src="https://signpath.org/assets/favicon-50x50.png" />
+    </td>
+    <td>
+    Free code signing on Windows provided by <a href="https://signpath.io">SignPath.io</a>, certficate by <a href="https://signpath.org/">SignPath Foundation</a>
+    </td>
+  </tr> 
+</table>
+
 ## [✨Acknowledgements](https://vladelaina.github.io/Catime/#thanks) 
 
 With special appreciation to [猫屋敷梨梨Official](https://space.bilibili.com/26087398) for the beautiful icon design.
