@@ -193,9 +193,13 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
         }
 
         if (!CLOCK_WINDOW_TOPMOST) {
-            /** Keep as normal top-level window; ensure visible and near top */
-            SetParent(hwnd, NULL);
-            SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, 0);
+            /** Ensure Progman owner is maintained for non-topmost windows */
+            HWND hProgman = FindWindowW(L"Progman", NULL);
+            if (hProgman) {
+                SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, (LONG_PTR)hProgman);
+            }
+            
+            /** Ensure window is visible and positioned correctly */
             if (!IsWindowVisible(hwnd)) {
                 ShowWindow(hwnd, SW_SHOWNOACTIVATE);
             }

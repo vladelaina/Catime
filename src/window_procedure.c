@@ -1291,22 +1291,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     } else {
                         /** SetWindowTopmost handles both variable update and config file writing */
                         SetWindowTopmost(hwnd, newTopmost);
-
+                        
+                        /** Just refresh the display, SetWindowTopmost handles all window state management */
                         InvalidateRect(hwnd, NULL, TRUE);
-                        if (newTopmost) {
-                            ShowWindow(hwnd, SW_SHOWNOACTIVATE);
-                            SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
-                                         SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
-                        } else {
-                            /** Keep window as normal top-level without desktop attachment */
-                            SetParent(hwnd, NULL);
-                            SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, 0);
-                            ShowWindow(hwnd, SW_SHOWNOACTIVATE);
-                            SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0,
-                                         SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED);
-                            SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0,
-                                         SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
-                        }
                     }
                     break;
                 }
