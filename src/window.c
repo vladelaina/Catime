@@ -202,46 +202,34 @@ void AdjustWindowPosition(HWND hwnd, BOOL forceOnScreen) {
     RECT rect;
     GetWindowRect(hwnd, &rect);
     
-    /** Get the monitor that currently contains the window */
-    HMONITOR hMonitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
-    MONITORINFO mi = {0};
-    mi.cbSize = sizeof(MONITORINFO);
+    /** Check if window's current monitor is still valid */
+    HMONITOR hMonitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONULL);
     
-    if (!GetMonitorInfo(hMonitor, &mi)) {
-        /** Fallback to primary screen if monitor info fails */
-        mi.rcWork.left = 0;
-        mi.rcWork.top = 0;
-        mi.rcWork.right = GetSystemMetrics(SM_CXSCREEN);
-        mi.rcWork.bottom = GetSystemMetrics(SM_CYSCREEN);
+    /** Only adjust position if the monitor is invalid (disconnected) */
+    if (hMonitor == NULL) {
+        /** Monitor is invalid, move window to primary monitor */
+        HMONITOR hPrimaryMonitor = MonitorFromPoint((POINT){0, 0}, MONITOR_DEFAULTTOPRIMARY);
+        MONITORINFO mi = {0};
+        mi.cbSize = sizeof(MONITORINFO);
+        
+        if (GetMonitorInfo(hPrimaryMonitor, &mi)) {
+            /** Move window to center of primary monitor */
+            int width = rect.right - rect.left;
+            int height = rect.bottom - rect.top;
+            
+            int newX = mi.rcWork.left + (mi.rcWork.right - mi.rcWork.left - width) / 2;
+            int newY = mi.rcWork.top + (mi.rcWork.bottom - mi.rcWork.top - height) / 2;
+            
+            /** Ensure window fits within primary monitor */
+            if (newX < mi.rcWork.left) newX = mi.rcWork.left;
+            if (newY < mi.rcWork.top) newY = mi.rcWork.top;
+            if (newX + width > mi.rcWork.right) newX = mi.rcWork.right - width;
+            if (newY + height > mi.rcWork.bottom) newY = mi.rcWork.bottom - height;
+            
+            SetWindowPos(hwnd, NULL, newX, newY, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+        }
     }
-    
-    int width = rect.right - rect.left;
-    int height = rect.bottom - rect.top;
-    
-    int x = rect.left;
-    int y = rect.top;
-    
-    /** Adjust to current monitor's working area bounds */
-    if (x + width > mi.rcWork.right) {
-        x = mi.rcWork.right - width;
-    }
-    
-    if (y + height > mi.rcWork.bottom) {
-        y = mi.rcWork.bottom - height;
-    }
-    
-    if (x < mi.rcWork.left) {
-        x = mi.rcWork.left;
-    }
-    
-    if (y < mi.rcWork.top) {
-        y = mi.rcWork.top;
-    }
-    
-    /** Move window only if position changed */
-    if (x != rect.left || y != rect.top) {
-        SetWindowPos(hwnd, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
-    }
+    /** If monitor is valid, do nothing - let window stay where it is, even if partially off-screen */
 }
 
 extern void GetConfigPath(char* path, size_t size);
