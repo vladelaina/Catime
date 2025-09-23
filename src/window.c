@@ -196,16 +196,24 @@ void SetBlurBehind(HWND hwnd, BOOL enable) {
 
 void AdjustWindowPosition(HWND hwnd, BOOL forceOnScreen) {
     if (!forceOnScreen) {
-
         return;
     }
     
-
     RECT rect;
     GetWindowRect(hwnd, &rect);
     
-    int screenWidth = GetSystemMetrics(SM_CXSCREEN);
-    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+    /** Get the monitor that currently contains the window */
+    HMONITOR hMonitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+    MONITORINFO mi = {0};
+    mi.cbSize = sizeof(MONITORINFO);
+    
+    if (!GetMonitorInfo(hMonitor, &mi)) {
+        /** Fallback to primary screen if monitor info fails */
+        mi.rcWork.left = 0;
+        mi.rcWork.top = 0;
+        mi.rcWork.right = GetSystemMetrics(SM_CXSCREEN);
+        mi.rcWork.bottom = GetSystemMetrics(SM_CYSCREEN);
+    }
     
     int width = rect.right - rect.left;
     int height = rect.bottom - rect.top;
@@ -213,27 +221,24 @@ void AdjustWindowPosition(HWND hwnd, BOOL forceOnScreen) {
     int x = rect.left;
     int y = rect.top;
     
-
-    if (x + width > screenWidth) {
-        x = screenWidth - width;
+    /** Adjust to current monitor's working area bounds */
+    if (x + width > mi.rcWork.right) {
+        x = mi.rcWork.right - width;
     }
     
-
-    if (y + height > screenHeight) {
-        y = screenHeight - height;
+    if (y + height > mi.rcWork.bottom) {
+        y = mi.rcWork.bottom - height;
     }
     
-
-    if (x < 0) {
-        x = 0;
+    if (x < mi.rcWork.left) {
+        x = mi.rcWork.left;
     }
     
-
-    if (y < 0) {
-        y = 0;
+    if (y < mi.rcWork.top) {
+        y = mi.rcWork.top;
     }
     
-
+    /** Move window only if position changed */
     if (x != rect.left || y != rect.top) {
         SetWindowPos(hwnd, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
     }
