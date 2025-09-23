@@ -5,7 +5,7 @@ on:
     tags:
       - 'v*'
 
-# 添加权限配置
+# Add permissions configuration
 permissions:
   contents: write
 
@@ -66,7 +66,7 @@ jobs:
         path: output/catime_${{ env.TAG_VERSION }}.exe
         retention-days: 1
 
-  # 代码签名作业
+  # Code signing job
   sign:
     needs: build
     uses: ./.github/workflows/signpath-sign.yml
@@ -78,7 +78,7 @@ jobs:
     secrets:
       SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
 
-  # 发布作业
+  # Release job
   release:
     needs: [build, sign]
     runs-on: ubuntu-latest
@@ -112,7 +112,7 @@ jobs:
         installers-regex: '\.exe$'
         token: ${{ secrets.WINGET_TOKEN }}
 
-  # 清理临时工件
+  # Clean up temporary artifacts
   cleanup:
     needs: [sign, release]
     runs-on: ubuntu-latest

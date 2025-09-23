@@ -56,13 +56,13 @@ jobs:
         mkdir -p ./signing-input
         mkdir -p ./signed-output
         
-        # 复制所有 .exe 文件到签名目录
+        # Copy all .exe files to signing directory
         find ./unsigned-artifacts -name "*.exe" -exec cp {} ./signing-input/ \;
         
         echo "Files to be signed:"
         ls -la ./signing-input/
         
-        # 检查是否有文件需要签名
+        # Check if there are files to be signed
         FILE_COUNT=$(find ./signing-input -name "*.exe" | wc -l)
         if [ "$FILE_COUNT" -eq 0 ]; then
           echo "Warning: No .exe files found for signing!"
@@ -80,7 +80,7 @@ jobs:
       with:
         name: catime-signing-package
         path: ./signing-input/*.exe
-        retention-days: 1  # 临时文件，签名完成后可以删除
+        retention-days: 1  # Temporary file, can be deleted after signing
         
     - name: Submit to SignPath for signing
       id: signpath-submit
@@ -89,7 +89,7 @@ jobs:
         api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
         organization-id: '66aa6e96-a394-43f9-b3c3-65214fcd285d'
         project-slug: 'Catime'
-        signing-policy-slug: ${{ inputs.is-release && 'release-signing' || 'test-signing' }}  # 根据是否是发布版本选择不同的签名策略
+        signing-policy-slug: 'release-signing'  # Use unified release-signing policy
         github-artifact-id: ${{ steps.upload-signing-package.outputs.artifact-id }}
         wait-for-completion: true
         output-artifact-directory: './signed-output'
@@ -102,7 +102,7 @@ jobs:
         echo "Signed output directory contents:"
         find ./signed-output -type f -exec ls -la {} \;
         
-        # 如果签名输出是ZIP文件，需要解压
+        # If signed output is a ZIP file, extract it
         if find ./signed-output -name "*.zip" | grep -q .; then
           echo "Extracting ZIP file..."
           cd ./signed-output

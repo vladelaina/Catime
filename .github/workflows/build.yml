@@ -72,7 +72,7 @@ jobs:
         name: catime-windows-${{ env.VERSION }}-${{ github.run_number }}
         path: output/catime_${{ env.VERSION }}_${{ github.run_number }}.exe
 
-  # 代码签名作业 - 仅在主分支提交时执行
+  # Code signing job - only execute on main branch commits
   sign:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: build
@@ -85,7 +85,7 @@ jobs:
     secrets:
       SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
 
-  # 清理临时工件
+  # Clean up temporary artifacts
   cleanup:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: sign
