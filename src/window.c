@@ -555,9 +555,11 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
         SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
     } else {
-        /** Keep as normal top-level window (do not attach to desktop layer) */
-        SetParent(hwnd, NULL);
-        SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, 0);
+        /** Set Progman as owner to avoid being minimized by Win+D */
+        HWND hProgman = FindWindowW(L"Progman", NULL);
+        if (hProgman) {
+            SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, (LONG_PTR)hProgman);
+        }
         SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0,
                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
         ShowWindow(hwnd, SW_SHOWNOACTIVATE);
@@ -712,8 +714,7 @@ void SetWindowTopmost(HWND hwnd, BOOL topmost) {
         /** Enable activation for topmost windows */
         exStyle &= ~WS_EX_NOACTIVATE;
         
-        /** Detach from desktop parent and set topmost z-order */
-        SetParent(hwnd, NULL);
+        /** Detach from any owner (like Progman) and set topmost z-order */
         SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, 0);
         SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED);
@@ -721,9 +722,14 @@ void SetWindowTopmost(HWND hwnd, BOOL topmost) {
         /** Leave normal top-level window (not desktop-attached) and ensure visible */
         exStyle &= ~WS_EX_NOACTIVATE;
         
-        /** Ensure window is not parented to desktop layer */
-        SetParent(hwnd, NULL);
-        SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, 0);
+        /** Set Progman as owner to avoid being minimized by Win+D */
+        HWND hProgman = FindWindowW(L"Progman", NULL);
+        if (hProgman) {
+            SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, (LONG_PTR)hProgman);
+        } else {
+            // Fallback: clear owner if Progman not found
+            SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, 0);
+        }
         
         /** Drop TOPMOST, then raise to normal top to keep it visible */
         SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0,
