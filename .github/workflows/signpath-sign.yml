@@ -89,7 +89,7 @@ jobs:
         api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
         organization-id: '66aa6e96-a394-43f9-b3c3-65214fcd285d'
         project-slug: 'Catime'
-        signing-policy-slug: 'release-signing'  # Use unified release-signing policy
+        signing-policy-slug: ${{ inputs.is-release && 'release-signing' || 'test-signing' }}  # Use conditional signing policy
         github-artifact-id: ${{ steps.upload-signing-package.outputs.artifact-id }}
         wait-for-completion: true
         output-artifact-directory: './signed-output'
