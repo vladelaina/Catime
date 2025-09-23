@@ -2042,6 +2042,18 @@ refresh_window:
             }
             break;
         }
+
+        /** Handle display configuration changes (monitor enable/disable) */
+        case WM_DISPLAYCHANGE: {
+            /** Adjust window position if current monitor becomes inactive */
+            AdjustWindowPosition(hwnd, TRUE);
+            
+            /** Force window repaint after display change */
+            InvalidateRect(hwnd, NULL, FALSE);
+            UpdateWindow(hwnd);
+            
+            return 0;
+        }
         
         /** Right-click menu and edit mode handling */
         case WM_RBUTTONUP: {

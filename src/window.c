@@ -194,6 +194,75 @@ void SetBlurBehind(HWND hwnd, BOOL enable) {
     }
 }
 
+/**
+ * @brief Check if a monitor is currently active and usable
+ * @param hMonitor Monitor handle to check
+ * @return TRUE if monitor is active and has valid work area, FALSE otherwise
+ */
+static BOOL IsMonitorActive(HMONITOR hMonitor) {
+    if (hMonitor == NULL) {
+        return FALSE;
+    }
+    
+    MONITORINFO mi = {0};
+    mi.cbSize = sizeof(MONITORINFO);
+    
+    if (!GetMonitorInfo(hMonitor, &mi)) {
+        return FALSE;
+    }
+    
+    /** Check if monitor has valid work area */
+    return (mi.rcWork.right > mi.rcWork.left && mi.rcWork.bottom > mi.rcWork.top);
+}
+
+/**
+ * @brief Find the best active monitor for window placement
+ * @return Handle to an active monitor, prioritizing primary monitor
+ */
+static HMONITOR FindBestActiveMonitor(void) {
+    /** First try primary monitor */
+    HMONITOR hPrimary = MonitorFromPoint((POINT){0, 0}, MONITOR_DEFAULTTOPRIMARY);
+    if (IsMonitorActive(hPrimary)) {
+        return hPrimary;
+    }
+    
+    /** If primary is not active, enumerate all monitors to find an active one */
+    typedef struct {
+        HMONITOR hBestMonitor;
+        BOOL found;
+    } FindActiveMonitorData;
+    
+    FindActiveMonitorData data = {NULL, FALSE};
+    
+    /** Use a simpler approach: check each display device individually */
+    DISPLAY_DEVICEW dispDevice = {0};
+    dispDevice.cb = sizeof(DISPLAY_DEVICEW);
+    
+    for (DWORD iDevNum = 0; EnumDisplayDevicesW(NULL, iDevNum, &dispDevice, 0); iDevNum++) {
+        /** Skip if device is not active */
+        if (!(dispDevice.StateFlags & DISPLAY_DEVICE_ACTIVE)) {
+            continue;
+        }
+        
+        /** Get monitor from device name */
+        DEVMODEW devMode = {0};
+        devMode.dmSize = sizeof(DEVMODEW);
+        
+        if (EnumDisplaySettingsW(dispDevice.DeviceName, ENUM_CURRENT_SETTINGS, &devMode)) {
+            POINT pt = {devMode.dmPosition.x + 1, devMode.dmPosition.y + 1};
+            HMONITOR hMon = MonitorFromPoint(pt, MONITOR_DEFAULTTONULL);
+            
+            if (hMon && IsMonitorActive(hMon)) {
+                data.hBestMonitor = hMon;
+                data.found = TRUE;
+                break;
+            }
+        }
+    }
+    
+    return data.found ? data.hBestMonitor : hPrimary; /** Fallback to primary */
+}
+
 void AdjustWindowPosition(HWND hwnd, BOOL forceOnScreen) {
     if (!forceOnScreen) {
         return;
@@ -202,34 +271,59 @@ void AdjustWindowPosition(HWND hwnd, BOOL forceOnScreen) {
     RECT rect;
     GetWindowRect(hwnd, &rect);
     
-    /** Check if window's current monitor is still valid */
-    HMONITOR hMonitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONULL);
+    /** Get current monitor and check if it's active */
+    HMONITOR hCurrentMonitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONULL);
+    BOOL needsReposition = FALSE;
     
-    /** Only adjust position if the monitor is invalid (disconnected) */
-    if (hMonitor == NULL) {
-        /** Monitor is invalid, move window to primary monitor */
-        HMONITOR hPrimaryMonitor = MonitorFromPoint((POINT){0, 0}, MONITOR_DEFAULTTOPRIMARY);
+    if (hCurrentMonitor == NULL) {
+        /** Monitor completely invalid */
+        needsReposition = TRUE;
+    } else if (!IsMonitorActive(hCurrentMonitor)) {
+        /** Monitor exists but is disabled (e.g., "仅第二屏幕" mode disables primary) */
+        needsReposition = TRUE;
+    } else {
+        /** Check if window is still within the active work area */
         MONITORINFO mi = {0};
         mi.cbSize = sizeof(MONITORINFO);
         
-        if (GetMonitorInfo(hPrimaryMonitor, &mi)) {
-            /** Move window to center of primary monitor */
+        if (GetMonitorInfo(hCurrentMonitor, &mi)) {
+            RECT intersection;
+            if (!IntersectRect(&intersection, &rect, &mi.rcWork)) {
+                /** Window not visible on current monitor */
+                needsReposition = TRUE;
+            }
+        } else {
+            needsReposition = TRUE;
+        }
+    }
+    
+    if (needsReposition) {
+        /** Find best active monitor and move window there */
+        HMONITOR hTargetMonitor = FindBestActiveMonitor();
+        MONITORINFO mi = {0};
+        mi.cbSize = sizeof(MONITORINFO);
+        
+        if (GetMonitorInfo(hTargetMonitor, &mi)) {
+            /** Calculate new position centered on target monitor */
             int width = rect.right - rect.left;
             int height = rect.bottom - rect.top;
             
             int newX = mi.rcWork.left + (mi.rcWork.right - mi.rcWork.left - width) / 2;
             int newY = mi.rcWork.top + (mi.rcWork.bottom - mi.rcWork.top - height) / 2;
             
-            /** Ensure window fits within primary monitor */
+            /** Ensure window fits within target monitor */
             if (newX < mi.rcWork.left) newX = mi.rcWork.left;
             if (newY < mi.rcWork.top) newY = mi.rcWork.top;
             if (newX + width > mi.rcWork.right) newX = mi.rcWork.right - width;
             if (newY + height > mi.rcWork.bottom) newY = mi.rcWork.bottom - height;
             
+            /** Move window to new position */
             SetWindowPos(hwnd, NULL, newX, newY, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+            
+            /** Save new position to configuration */
+            SaveWindowSettings(hwnd);
         }
     }
-    /** If monitor is valid, do nothing - let window stay where it is, even if partially off-screen */
 }
 
 extern void GetConfigPath(char* path, size_t size);
