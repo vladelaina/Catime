@@ -226,6 +226,20 @@ BOOL InitializeLogSystem(void) {
     
     GetLogFilePath(LOG_FILE_PATH, MAX_PATH);
     
+    /** Ensure directory exists for the log file */
+    wchar_t dirPath[MAX_PATH] = {0};
+    wcsncpy(dirPath, LOG_FILE_PATH, MAX_PATH - 1);
+    wchar_t* lastSep = wcsrchr(dirPath, L'\\');
+    if (lastSep) {
+        *lastSep = L'\0';
+        if (!CreateDirectoryW(dirPath, NULL)) {
+            DWORD e = GetLastError();
+            if (e != ERROR_ALREADY_EXISTS) {
+                /** Still try to open the file; if it fails, caller will show warning */
+            }
+        }
+    }
+    
     /** Create new log file, truncating any existing content */
     logFile = _wfopen(LOG_FILE_PATH, L"w");
     if (!logFile) {

@@ -66,6 +66,31 @@ BOOL CLOCK_SHOW_MILLISECONDS = FALSE;
 BOOL IS_MILLISECONDS_PREVIEWING = FALSE;
 BOOL PREVIEW_SHOW_MILLISECONDS = FALSE;
 
+/**
+ * @brief Atomically replace destination file with source temp file (UTF-8 paths)
+ * @param dstUtf8 Destination file path (UTF-8)
+ * @param srcTempUtf8 Source temporary file path (UTF-8)
+ * @return TRUE on success, FALSE on failure
+ */
+static BOOL ReplaceFileUtf8(const char* dstUtf8, const char* srcTempUtf8) {
+    if (!dstUtf8 || !srcTempUtf8) return FALSE;
+
+    wchar_t wDst[MAX_PATH] = {0};
+    wchar_t wSrc[MAX_PATH] = {0};
+
+    MultiByteToWideChar(CP_UTF8, 0, dstUtf8, -1, wDst, MAX_PATH);
+    MultiByteToWideChar(CP_UTF8, 0, srcTempUtf8, -1, wSrc, MAX_PATH);
+
+    /* Ensure previous target is removed if exists (ignore errors) */
+    DeleteFileW(wDst);
+
+    /* Move with replace semantics and write-through */
+    if (MoveFileExW(wSrc, wDst, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED | MOVEFILE_WRITE_THROUGH)) {
+        return TRUE;
+    }
+    return FALSE;
+}
+
 
 /**
  * @brief Read string value from INI file with Unicode support
@@ -236,37 +261,83 @@ BOOL FileExists(const char* filePath) {
 
 /**
  * @brief Get configuration file path with automatic directory creation
- * @param path Buffer to store config file path
+ * @param path Buffer to store config file path (UTF-8)
  * @param size Size of path buffer
- * Tries LOCALAPPDATA\Catime first, falls back to .\asset\ if failed
+ * Always uses Unicode Windows APIs to resolve %LOCALAPPDATA% and create directory.
+ * Falls back to .\asset\config.ini on failure.
  */
 void GetConfigPath(char* path, size_t size) {
     if (!path || size == 0) return;
 
-    char* appdata_path = getenv("LOCALAPPDATA");
-    if (appdata_path) {
-        if (snprintf(path, size, "%s\\Catime\\config.ini", appdata_path) >= size) {
-            strncpy(path, ".\\asset\\config.ini", size - 1);
-            path[size - 1] = '\0';
-            return;
+    /* Prefer modern Known Folder API to obtain a wide-character LocalAppData path */
+    PWSTR wLocalAppData = NULL;
+    HRESULT hr = S_OK;
+
+    /* SHGetKnownFolderPath is available on Vista+, fallback to SHGetFolderPathW if needed */
+    HMODULE hShell = LoadLibraryW(L"shell32.dll");
+    if (hShell) {
+        typedef HRESULT (WINAPI *PFN_SHGetKnownFolderPath)(const GUID*, DWORD, HANDLE, PWSTR*);
+        PFN_SHGetKnownFolderPath pfn = (PFN_SHGetKnownFolderPath)GetProcAddress(hShell, "SHGetKnownFolderPath");
+        if (pfn) {
+            /* FOLDERID_LocalAppData */
+            static const GUID FOLDERID_LocalAppData = {0xF1B32785,0x6FBA,0x4FCF,{0x9D,0x55,0x7B,0x8E,0x7F,0x15,0x70,0x91}};
+            hr = pfn(&FOLDERID_LocalAppData, 0, NULL, &wLocalAppData);
+        } else {
+            hr = E_NOTIMPL;
         }
-        
-        /** Create Catime directory if needed */
-        char dir_path[MAX_PATH];
-        if (snprintf(dir_path, sizeof(dir_path), "%s\\Catime", appdata_path) < sizeof(dir_path)) {
-        
-            wchar_t wdir_path[MAX_PATH];
-            MultiByteToWideChar(CP_UTF8, 0, dir_path, -1, wdir_path, MAX_PATH);
-            if (!CreateDirectoryW(wdir_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
-                strncpy(path, ".\\asset\\config.ini", size - 1);
+        FreeLibrary(hShell);
+    } else {
+        hr = E_FAIL;
+    }
+
+    wchar_t wConfigPath[MAX_PATH] = {0};
+    if (SUCCEEDED(hr) && wLocalAppData && wcslen(wLocalAppData) > 0) {
+        /* Build %LOCALAPPDATA%\Catime and ensure directory exists */
+        wchar_t wDir[MAX_PATH] = {0};
+        _snwprintf_s(wDir, MAX_PATH, _TRUNCATE, L"%s\\Catime", wLocalAppData);
+
+        if (!CreateDirectoryW(wDir, NULL)) {
+            DWORD dwErr = GetLastError();
+            if (dwErr != ERROR_ALREADY_EXISTS) {
+                /* Fallback to portable asset path on failure */
+                const char* fallback = ".\\asset\\config.ini";
+                strncpy(path, fallback, size - 1);
                 path[size - 1] = '\0';
+                CoTaskMemFree(wLocalAppData);
+                return;
             }
         }
-    } else {
-        /** Fallback to local asset directory */
-        strncpy(path, ".\\asset\\config.ini", size - 1);
-        path[size - 1] = '\0';
+
+        _snwprintf_s(wConfigPath, MAX_PATH, _TRUNCATE, L"%s\\Catime\\config.ini", wLocalAppData);
+        CoTaskMemFree(wLocalAppData);
+
+        /* Convert wide path to UTF-8 for the rest of the app */
+        WideCharToMultiByte(CP_UTF8, 0, wConfigPath, -1, path, (int)size, NULL, NULL);
+        return;
     }
+
+    /* Fallback to legacy SHGetFolderPathW(CSIDL_LOCAL_APPDATA) */
+    wchar_t wLegacy[MAX_PATH] = {0};
+    if (SUCCEEDED(SHGetFolderPathW(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, wLegacy))) {
+        wchar_t wDir[MAX_PATH] = {0};
+        _snwprintf_s(wDir, MAX_PATH, _TRUNCATE, L"%s\\Catime", wLegacy);
+        if (!CreateDirectoryW(wDir, NULL)) {
+            DWORD dwErr = GetLastError();
+            if (dwErr != ERROR_ALREADY_EXISTS) {
+                const char* fallback = ".\\asset\\config.ini";
+                strncpy(path, fallback, size - 1);
+                path[size - 1] = '\0';
+                return;
+            }
+        }
+        _snwprintf_s(wConfigPath, MAX_PATH, _TRUNCATE, L"%s\\Catime\\config.ini", wLegacy);
+        WideCharToMultiByte(CP_UTF8, 0, wConfigPath, -1, path, (int)size, NULL, NULL);
+        return;
+    }
+
+    /* Final fallback: portable asset path */
+    strncpy(path, ".\\asset\\config.ini", size - 1);
+    path[size - 1] = '\0';
 }
 
 
@@ -1138,9 +1209,8 @@ void WriteConfigTimeoutAction(const char* action) {
     
     fclose(file);
     fclose(temp);
-    
-    remove(config_path);
-    rename(temp_path, config_path);
+
+    ReplaceFileUtf8(config_path, temp_path);
 }
 
 
@@ -1183,9 +1253,8 @@ void WriteConfigTimeOptions(const char* options) {
     
     fclose(file);
     fclose(temp_file);
-    
-    remove(config_path);
-    rename(temp_path, config_path);
+
+    ReplaceFileUtf8(config_path, temp_path);
 }
 
 
@@ -1466,10 +1535,9 @@ void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
     
     fclose(file);
     fclose(temp_file);
-    
+
     /** Replace original with updated config */
-    remove(config_path);
-    rename(temp_path, config_path);
+    ReplaceFileUtf8(config_path, temp_path);
 }
 
 
@@ -1520,8 +1588,7 @@ void WriteConfigPomodoroLoopCount(int loop_count) {
     fclose(temp_file);
     
     /** Replace original with updated config */
-    remove(config_path);
-    rename(temp_path, config_path);
+    ReplaceFileUtf8(config_path, temp_path);
     
     /** Update global variable immediately */
     POMODORO_LOOP_COUNT = loop_count;
@@ -1578,8 +1645,7 @@ void WriteConfigTopmost(const char* topmost) {
     fclose(temp);
     
     /** Replace original with updated config */
-    remove(config_path);
-    rename(temp_path, config_path);
+    ReplaceFileUtf8(config_path, temp_path);
 }
 
 
@@ -1936,8 +2002,7 @@ void WriteConfigTimeoutWebsite(const char* url) {
         fclose(temp);
         
         /** Replace original config with updated version */
-        remove(config_path);
-        rename(temp_path, config_path);
+        ReplaceFileUtf8(config_path, temp_path);
     }
 }
 
@@ -1994,8 +2059,7 @@ void WriteConfigStartupMode(const char* mode) {
     fclose(temp_file);
     
     /** Replace original with updated config */
-    remove(config_path);
-    rename(temp_path, config_path);
+    ReplaceFileUtf8(config_path, temp_path);
 }
 
 
@@ -2062,8 +2126,7 @@ void WriteConfigPomodoroTimeOptions(int* times, int count) {
     fclose(temp);
     
     /** Replace original with updated config */
-    remove(config_path);
-    rename(temp_path, config_path);
+    ReplaceFileUtf8(config_path, temp_path);
 }
 
 
@@ -2267,8 +2330,7 @@ void WriteConfigNotificationTimeout(int timeout_ms) {
     fclose(temp_file);
     
     /** Replace original with updated config */
-    remove(config_path);
-    rename(temp_path, config_path);
+    ReplaceFileUtf8(config_path, temp_path);
     
     /** Update global variable immediately */
     NOTIFICATION_TIMEOUT_MS = timeout_ms;
@@ -2429,8 +2491,7 @@ void WriteConfigNotificationOpacity(int opacity) {
     fclose(temp_file);
     
     /** Replace original with updated config */
-    remove(config_path);
-    rename(temp_path, config_path);
+    ReplaceFileUtf8(config_path, temp_path);
     
     /** Update global variable immediately */
     NOTIFICATION_MAX_OPACITY = opacity;
@@ -2547,8 +2608,7 @@ void WriteConfigNotificationType(NotificationType type) {
         fclose(target);
         
         /** Replace original with updated config */
-        remove(config_path);
-        rename(temp_path, config_path);
+        ReplaceFileUtf8(config_path, temp_path);
     } else {
         /** Cleanup on file operation failure */
         if (source) fclose(source);
@@ -2698,9 +2758,8 @@ void WriteConfigNotificationSound(const char* sound_file) {
     fclose(source);
     fclose(dest);
     
-
-    remove(config_path);
-    rename(temp_path, config_path);
+    
+    ReplaceFileUtf8(config_path, temp_path);
     
 
     memset(NOTIFICATION_SOUND_FILE, 0, MAX_PATH);
@@ -2784,9 +2843,8 @@ void WriteConfigNotificationVolume(int volume) {
     
     fclose(file);
     fclose(temp);
-    
-    remove(config_path);
-    rename(temp_path, config_path);
+
+    ReplaceFileUtf8(config_path, temp_path);
 }
 
 
@@ -3157,9 +3215,8 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
     fclose(file);
     fclose(temp_file);
     
-
-    remove(config_path);
-    rename(temp_path, config_path);
+    
+    ReplaceFileUtf8(config_path, temp_path);
 }
 
 
@@ -3689,8 +3746,7 @@ void WriteConfigNotificationDisabled(BOOL disabled) {
     fclose(temp_file);
     
     /** Replace original file */
-    remove(config_path);
-    rename(temp_path, config_path);
+    ReplaceFileUtf8(config_path, temp_path);
     
     /** Update global variable */
     NOTIFICATION_DISABLED = disabled;
@@ -3774,3 +3830,4 @@ void FlushConfigToDisk(void) {
         CloseHandle(hFile);
     }
 }
+
