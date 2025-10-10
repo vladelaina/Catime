@@ -91,6 +91,80 @@ extern void ReadConfig(void);
 extern int CALLBACK EnumFontFamExProc(ENUMLOGFONTEXW *lpelfe, NEWTEXTMETRICEX *lpntme, DWORD FontType, LPARAM lParam);
 
 /**
+ * @brief Build %LOCALAPPDATA%\Catime\resources\fonts as a wide-character path from config path
+ * @param out Wide-character buffer
+ * @param size Buffer length in wchar_t
+ * @param ensureCreate When TRUE, ensure the directory exists
+ * @return TRUE on success
+ */
+static BOOL GetFontsFolderWide(wchar_t* out, size_t size, BOOL ensureCreate) {
+    if (!out || size == 0) return FALSE;
+
+    char configPathUtf8[MAX_PATH] = {0};
+    GetConfigPath(configPathUtf8, MAX_PATH); /* UTF-8 path to %LOCALAPPDATA%\\Catime\\config.ini or fallback */
+
+    wchar_t configPathW[MAX_PATH] = {0};
+    MultiByteToWideChar(CP_UTF8, 0, configPathUtf8, -1, configPathW, MAX_PATH);
+
+    wchar_t* lastSep = wcsrchr(configPathW, L'\\');
+    if (!lastSep) return FALSE;
+
+    size_t dirLen = (size_t)(lastSep - configPathW); /* exclude trailing backslash */
+    if (dirLen + 1 >= size) return FALSE;
+    wcsncpy(out, configPathW, dirLen);
+    out[dirLen] = L'\0';
+
+    /* Append resources\fonts */
+    if (wcslen(out) + 1 + wcslen(L"resources\\fonts") + 1 >= size) return FALSE;
+    wcscat(out, L"\\resources\\fonts");
+
+    if (ensureCreate) {
+        SHCreateDirectoryExW(NULL, out, NULL);
+    }
+    return TRUE;
+}
+
+/**
+ * @brief Recursive font search using wide-character Win32 APIs
+ */
+static BOOL SearchFontRecursiveW(const wchar_t* folderPathW, const wchar_t* targetFileW, wchar_t* resultPathW, size_t resultCapacity) {
+    if (!folderPathW || !targetFileW || !resultPathW) return FALSE;
+
+    wchar_t searchPathW[MAX_PATH] = {0};
+    _snwprintf_s(searchPathW, MAX_PATH, _TRUNCATE, L"%s\\*", folderPathW);
+
+    WIN32_FIND_DATAW findDataW;
+    HANDLE hFind = FindFirstFileW(searchPathW, &findDataW);
+    if (hFind == INVALID_HANDLE_VALUE) return FALSE;
+
+    BOOL found = FALSE;
+    do {
+        if (wcscmp(findDataW.cFileName, L".") == 0 || wcscmp(findDataW.cFileName, L"..") == 0) {
+            continue;
+        }
+
+        wchar_t fullItemPathW[MAX_PATH] = {0};
+        _snwprintf_s(fullItemPathW, MAX_PATH, _TRUNCATE, L"%s\\%s", folderPathW, findDataW.cFileName);
+
+        if (!(findDataW.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+            if (_wcsicmp(findDataW.cFileName, targetFileW) == 0) {
+                wcsncpy(resultPathW, fullItemPathW, resultCapacity - 1);
+                resultPathW[resultCapacity - 1] = L'\0';
+                found = TRUE;
+                break;
+            }
+        } else {
+            if (SearchFontRecursiveW(fullItemPathW, targetFileW, resultPathW, resultCapacity)) {
+                found = TRUE;
+                break;
+            }
+        }
+    } while (FindNextFileW(hFind, &findDataW));
+    FindClose(hFind);
+    return found;
+}
+
+/**
  * @brief Convert big-endian WORD to little-endian
  * @param value Big-endian WORD value
  * @return Little-endian WORD value
@@ -362,57 +436,21 @@ BOOL LoadFontFromFile(const char* fontFilePath) {
  */
 BOOL FindFontInFontsFolder(const char* fontFileName, char* foundPath, size_t foundPathSize) {
     if (!fontFileName || !foundPath || foundPathSize == 0) return FALSE;
-    
-    /** Helper function to recursively search for font file */
-    BOOL SearchFontRecursive(const char* folderPath, const char* targetFile, char* resultPath, size_t resultSize) {
-        char searchPath[MAX_PATH];
-        snprintf(searchPath, MAX_PATH, "%s\\*", folderPath);
-        
-        WIN32_FIND_DATAA findData;
-        HANDLE hFind = FindFirstFileA(searchPath, &findData);
-        
-        if (hFind != INVALID_HANDLE_VALUE) {
-            do {
-                /** Skip . and .. entries */
-                if (strcmp(findData.cFileName, ".") == 0 || strcmp(findData.cFileName, "..") == 0) {
-                    continue;
-                }
-                
-                char fullItemPath[MAX_PATH];
-                snprintf(fullItemPath, MAX_PATH, "%s\\%s", folderPath, findData.cFileName);
-                
-                /** Check if this is the target font file */
-                if (!(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
-                    if (stricmp(findData.cFileName, targetFile) == 0) {
-                        strncpy(resultPath, fullItemPath, resultSize - 1);
-                        resultPath[resultSize - 1] = '\0';
-                        FindClose(hFind);
-                        return TRUE;
-                    }
-                }
-                /** Recursively search subdirectories */
-                else if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-                    if (SearchFontRecursive(fullItemPath, targetFile, resultPath, resultSize)) {
-                        FindClose(hFind);
-                        return TRUE;
-                    }
-                }
-            } while (FindNextFileA(hFind, &findData));
-            FindClose(hFind);
-        }
-        
-        return FALSE;
-    }
-    
-    /** Get fonts folder path */
-    char fontsFolderPath[MAX_PATH];
-    char* appdata_path = getenv("LOCALAPPDATA");
-    if (!appdata_path) return FALSE;
-    
-    snprintf(fontsFolderPath, MAX_PATH, "%s\\Catime\\resources\\fonts", appdata_path);
-    
-    /** Search for font file recursively */
-    return SearchFontRecursive(fontsFolderPath, fontFileName, foundPath, foundPathSize);
+
+    wchar_t fontsFolderW[MAX_PATH] = {0};
+    if (!GetFontsFolderWide(fontsFolderW, MAX_PATH, TRUE)) return FALSE;
+
+    /* Convert target file to wide */
+    wchar_t targetFileW[MAX_PATH] = {0};
+    MultiByteToWideChar(CP_UTF8, 0, fontFileName, -1, targetFileW, MAX_PATH);
+
+    wchar_t resultPathW[MAX_PATH] = {0};
+    BOOL ok = SearchFontRecursiveW(fontsFolderW, targetFileW, resultPathW, MAX_PATH);
+    if (!ok) return FALSE;
+
+    /* Convert back to UTF-8 */
+    WideCharToMultiByte(CP_UTF8, 0, resultPathW, -1, foundPath, (int)foundPathSize, NULL, NULL);
+    return TRUE;
 }
 
 /**
@@ -422,13 +460,17 @@ BOOL FindFontInFontsFolder(const char* fontFileName, char* foundPath, size_t fou
  * @return TRUE if font found and loaded, FALSE otherwise
  */
 BOOL LoadFontByName(HINSTANCE hInstance, const char* fontName) {
-    /** Construct direct path to font file */
+    /** Construct direct path to font file (Unicode-safe) */
+    wchar_t fontsFolderW[MAX_PATH] = {0};
+    if (!GetFontsFolderWide(fontsFolderW, MAX_PATH, TRUE)) return FALSE;
+    wchar_t fontNameW[MAX_PATH] = {0};
+    MultiByteToWideChar(CP_UTF8, 0, fontName, -1, fontNameW, MAX_PATH);
+    wchar_t fullPathW[MAX_PATH] = {0};
+    _snwprintf_s(fullPathW, MAX_PATH, _TRUNCATE, L"%s\\%s", fontsFolderW, fontNameW);
+
     char fontPath[MAX_PATH];
-    char* appdata_path = getenv("LOCALAPPDATA");
-    if (!appdata_path) return FALSE;
-    
-    snprintf(fontPath, MAX_PATH, "%s\\Catime\\resources\\fonts\\%s", appdata_path, fontName);
-    
+    WideCharToMultiByte(CP_UTF8, 0, fullPathW, -1, fontPath, MAX_PATH, NULL, NULL);
+
     /** Try to load font from the exact path first */
     if (LoadFontFromFile(fontPath)) {
         return TRUE;
@@ -441,9 +483,11 @@ BOOL LoadFontByName(HINSTANCE hInstance, const char* fontName) {
     /** Search for font in fonts folder recursively */
     if (FindFontInFontsFolder(filenameOnly, fontPath, MAX_PATH)) {
         /** Font found at different location, update current font config */
+        wchar_t fontsFolderW2[MAX_PATH] = {0};
+        GetFontsFolderWide(fontsFolderW2, MAX_PATH, TRUE);
         char fontsFolderPath[MAX_PATH];
-        snprintf(fontsFolderPath, MAX_PATH, "%s\\Catime\\resources\\fonts\\", appdata_path);
-        
+        WideCharToMultiByte(CP_UTF8, 0, fontsFolderW2, -1, fontsFolderPath, MAX_PATH, NULL, NULL);
+
         if (_strnicmp(fontPath, fontsFolderPath, strlen(fontsFolderPath)) == 0) {
             /** Calculate new relative path */
             const char* newRelativePath = fontPath + strlen(fontsFolderPath);
@@ -489,16 +533,19 @@ BOOL LoadFontByNameAndGetRealName(HINSTANCE hInstance, const char* fontFileName,
                                   char* realFontName, size_t realFontNameSize) {
     if (!fontFileName || !realFontName || realFontNameSize == 0) return FALSE;
     
-    /** Construct direct path to font file */
+    /** Construct direct path to font file (Unicode-safe) */
+    wchar_t fontsFolderW[MAX_PATH] = {0};
+    if (!GetFontsFolderWide(fontsFolderW, MAX_PATH, TRUE)) return FALSE;
+    wchar_t fontNameW[MAX_PATH] = {0};
+    MultiByteToWideChar(CP_UTF8, 0, fontFileName, -1, fontNameW, MAX_PATH);
+    wchar_t fullPathW[MAX_PATH] = {0};
+    _snwprintf_s(fullPathW, MAX_PATH, _TRUNCATE, L"%s\\%s", fontsFolderW, fontNameW);
     char fontPath[MAX_PATH];
-    char* appdata_path = getenv("LOCALAPPDATA");
-    if (!appdata_path) return FALSE;
-    
-    snprintf(fontPath, MAX_PATH, "%s\\Catime\\resources\\fonts\\%s", appdata_path, fontFileName);
+    WideCharToMultiByte(CP_UTF8, 0, fullPathW, -1, fontPath, MAX_PATH, NULL, NULL);
     
     /** Check if font exists at the specified path */
     BOOL fontFound = FALSE;
-    if (GetFileAttributesA(fontPath) != INVALID_FILE_ATTRIBUTES) {
+    if (GetFileAttributesW(fullPathW) != INVALID_FILE_ATTRIBUTES) {
         fontFound = TRUE;
     } else {
         /** Font not found at specified path, try auto-fix */
@@ -508,8 +555,10 @@ BOOL LoadFontByNameAndGetRealName(HINSTANCE hInstance, const char* fontFileName,
         /** Search for font in fonts folder recursively */
         if (FindFontInFontsFolder(filenameOnly, fontPath, MAX_PATH)) {
             /** Font found at different location, update current font config if needed */
+            wchar_t fontsFolderW2[MAX_PATH] = {0};
+            GetFontsFolderWide(fontsFolderW2, MAX_PATH, TRUE);
             char fontsFolderPath[MAX_PATH];
-            snprintf(fontsFolderPath, MAX_PATH, "%s\\Catime\\resources\\fonts\\", appdata_path);
+            WideCharToMultiByte(CP_UTF8, 0, fontsFolderW2, -1, fontsFolderPath, MAX_PATH, NULL, NULL);
             
             if (_strnicmp(fontPath, fontsFolderPath, strlen(fontsFolderPath)) == 0) {
                 /** Calculate new relative path */
@@ -831,16 +880,10 @@ BOOL ExtractFontResourceToFile(HINSTANCE hInstance, int resourceId, const char* 
  */
 BOOL ExtractEmbeddedFontsToFolder(HINSTANCE hInstance) {
     /** Get fonts folder path */
+    wchar_t wFontsFolderPath[MAX_PATH] = {0};
+    if (!GetFontsFolderWide(wFontsFolderPath, MAX_PATH, TRUE)) return FALSE;
     char fontsFolderPath[MAX_PATH];
-    char* appdata_path = getenv("LOCALAPPDATA");
-    if (!appdata_path) return FALSE;
-    
-    snprintf(fontsFolderPath, MAX_PATH, "%s\\Catime\\resources\\fonts", appdata_path);
-    
-    /** Create fonts directory recursively using SHCreateDirectory */
-    wchar_t wFontsFolderPath[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, fontsFolderPath, -1, wFontsFolderPath, MAX_PATH);
-    SHCreateDirectoryExW(NULL, wFontsFolderPath, NULL);
+    WideCharToMultiByte(CP_UTF8, 0, wFontsFolderPath, -1, fontsFolderPath, MAX_PATH, NULL, NULL);
     
     /** Extract all embedded font resources (overwrite if exists) */
     for (int i = 0; i < FONT_RESOURCES_COUNT; i++) {
@@ -867,11 +910,14 @@ BOOL CheckAndFixFontPath(void) {
     const char* relativePath = FONT_FILE_NAME + strlen(localappdata_prefix);
     
     /** Construct full path */
+    wchar_t fontsFolderW[MAX_PATH] = {0};
+    if (!GetFontsFolderWide(fontsFolderW, MAX_PATH, TRUE)) return FALSE;
+    wchar_t relW[MAX_PATH] = {0};
+    MultiByteToWideChar(CP_UTF8, 0, relativePath, -1, relW, MAX_PATH);
+    wchar_t fullW[MAX_PATH] = {0};
+    _snwprintf_s(fullW, MAX_PATH, _TRUNCATE, L"%s\\%s", fontsFolderW, relW);
     char fontPath[MAX_PATH];
-    char* appdata_path = getenv("LOCALAPPDATA");
-    if (!appdata_path) return FALSE;
-    
-    snprintf(fontPath, MAX_PATH, "%s\\Catime\\resources\\fonts\\%s", appdata_path, relativePath);
+    WideCharToMultiByte(CP_UTF8, 0, fullW, -1, fontPath, MAX_PATH, NULL, NULL);
     
     /** Check if font exists at configured path */
     if (GetFileAttributesA(fontPath) != INVALID_FILE_ATTRIBUTES) {
@@ -885,8 +931,10 @@ BOOL CheckAndFixFontPath(void) {
     /** Search for font in fonts folder recursively */
     if (FindFontInFontsFolder(filenameOnly, fontPath, MAX_PATH)) {
         /** Font found at different location */
+        wchar_t fontsFolderW2[MAX_PATH] = {0};
+        GetFontsFolderWide(fontsFolderW2, MAX_PATH, TRUE);
         char fontsFolderPath[MAX_PATH];
-        snprintf(fontsFolderPath, MAX_PATH, "%s\\Catime\\resources\\fonts\\", appdata_path);
+        WideCharToMultiByte(CP_UTF8, 0, fontsFolderW2, -1, fontsFolderPath, MAX_PATH, NULL, NULL);
         
         if (_strnicmp(fontPath, fontsFolderPath, strlen(fontsFolderPath)) == 0) {
             /** Calculate new relative path */
