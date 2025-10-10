@@ -796,71 +796,79 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     
                     /** Handle dynamic advanced font selection from fonts folder */
                     else if (cmd >= 2000 && cmd < 3000) {
-                        /** Helper function to recursively find font by ID */
-                        BOOL FindFontByIdRecursive(const char* folderPath, int targetId, int* currentId, char* foundFontName, const char* fontsFolderPath) {
-                            char searchPath[MAX_PATH];
-                            snprintf(searchPath, MAX_PATH, "%s\\*", folderPath);
-                            
-                            WIN32_FIND_DATAA findData;
-                            HANDLE hFind = FindFirstFileA(searchPath, &findData);
-                            
+                        /** Helper (wide-char): recursively find font by ID and output relative wide path */
+                        BOOL FindFontByIdRecursiveW(const wchar_t* folderPathW, int targetId, int* currentId,
+                                                    wchar_t* foundRelativePathW, const wchar_t* fontsFolderRootW) {
+                            wchar_t searchPathW[MAX_PATH];
+                            _snwprintf_s(searchPathW, MAX_PATH, _TRUNCATE, L"%s\\*", folderPathW);
+
+                            WIN32_FIND_DATAW findDataW;
+                            HANDLE hFind = FindFirstFileW(searchPathW, &findDataW);
+
                             if (hFind != INVALID_HANDLE_VALUE) {
                                 do {
                                     /** Skip . and .. entries */
-                                    if (strcmp(findData.cFileName, ".") == 0 || strcmp(findData.cFileName, "..") == 0) {
+                                    if (wcscmp(findDataW.cFileName, L".") == 0 || wcscmp(findDataW.cFileName, L"..") == 0) {
                                         continue;
                                     }
-                                    
-                                    char fullItemPath[MAX_PATH];
-                                    snprintf(fullItemPath, MAX_PATH, "%s\\%s", folderPath, findData.cFileName);
-                                    
+
+                                    wchar_t fullItemPathW[MAX_PATH];
+                                    _snwprintf_s(fullItemPathW, MAX_PATH, _TRUNCATE, L"%s\\%s", folderPathW, findDataW.cFileName);
+
                                     /** Handle regular font files */
-                                    if (!(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
-                                        char* ext = strrchr(findData.cFileName, '.');
-                                        if (ext && (stricmp(ext, ".ttf") == 0 || stricmp(ext, ".otf") == 0)) {
+                                    if (!(findDataW.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+                                        wchar_t* extW = wcsrchr(findDataW.cFileName, L'.');
+                                        if (extW && (_wcsicmp(extW, L".ttf") == 0 || _wcsicmp(extW, L".otf") == 0)) {
                                             if (*currentId == targetId) {
-                                                /** Calculate relative path from fonts folder */
-                                                if (_strnicmp(fullItemPath, fontsFolderPath, strlen(fontsFolderPath)) == 0) {
-                                                    const char* relativePath = fullItemPath + strlen(fontsFolderPath);
-                                                    if (relativePath[0] == '\\') relativePath++; // Skip leading backslash
-                                                    strcpy(foundFontName, relativePath);
+                                                /** Calculate relative path from fonts folder root */
+                                                size_t rootLen = wcslen(fontsFolderRootW);
+                                                if (_wcsnicmp(fullItemPathW, fontsFolderRootW, rootLen) == 0) {
+                                                    const wchar_t* relativeW = fullItemPathW + rootLen;
+                                                    if (*relativeW == L'\\') relativeW++;
+                                                    wcsncpy(foundRelativePathW, relativeW, MAX_PATH - 1);
+                                                    foundRelativePathW[MAX_PATH - 1] = L'\0';
                                                 } else {
-                                                    strcpy(foundFontName, findData.cFileName);
+                                                    /** Fallback to filename only */
+                                                    wcsncpy(foundRelativePathW, findDataW.cFileName, MAX_PATH - 1);
+                                                    foundRelativePathW[MAX_PATH - 1] = L'\0';
                                                 }
                                                 FindClose(hFind);
                                                 return TRUE;
                                             }
                                             (*currentId)++;
                                         }
-                                    }
-                                    /** Handle subdirectories recursively */
-                                    else if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-                                        if (FindFontByIdRecursive(fullItemPath, targetId, currentId, foundFontName, fontsFolderPath)) {
+                                    } else {
+                                        /** Handle subdirectories recursively */
+                                        if (FindFontByIdRecursiveW(fullItemPathW, targetId, currentId, foundRelativePathW, fontsFolderRootW)) {
                                             FindClose(hFind);
                                             return TRUE;
                                         }
                                     }
-                                } while (FindNextFileA(hFind, &findData));
+                                } while (FindNextFileW(hFind, &findDataW));
                                 FindClose(hFind);
                             }
-                            
                             return FALSE;
                         }
-                        
-                        /** Get font filename from fonts folder by ID using recursive search */
-                        char fontsFolderPath[MAX_PATH];
+
+                        /** Get font filename from fonts folder by ID using wide-char recursive search */
+                        char fontsFolderPathA[MAX_PATH];
                         char* appdata_path = getenv("LOCALAPPDATA");
                         if (appdata_path) {
-                            snprintf(fontsFolderPath, MAX_PATH, "%s\\Catime\\resources\\fonts", appdata_path);
-                            
+                            snprintf(fontsFolderPathA, MAX_PATH, "%s\\Catime\\resources\\fonts", appdata_path);
+
+                            wchar_t fontsFolderRootW[MAX_PATH];
+                            MultiByteToWideChar(CP_UTF8, 0, fontsFolderPathA, -1, fontsFolderRootW, MAX_PATH);
+
                             int currentIndex = 2000;
-                            char foundFontName[MAX_PATH] = {0};
-                            
-                            if (FindFontByIdRecursive(fontsFolderPath, cmd, &currentIndex, foundFontName, fontsFolderPath)) {
-                                /** Use SwitchFont to properly load and get real font name */
+                            wchar_t foundRelativePathW[MAX_PATH] = {0};
+
+                            if (FindFontByIdRecursiveW(fontsFolderRootW, cmd, &currentIndex, foundRelativePathW, fontsFolderRootW)) {
+                                /** Convert relative wide path to UTF-8 for SwitchFont */
+                                char foundFontNameUTF8[MAX_PATH];
+                                WideCharToMultiByte(CP_UTF8, 0, foundRelativePathW, -1, foundFontNameUTF8, MAX_PATH, NULL, NULL);
+
                                 HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
-                                if (SwitchFont(hInstance, foundFontName)) {
-                                    /** Force complete window refresh */
+                                if (SwitchFont(hInstance, foundFontNameUTF8)) {
                                     InvalidateRect(hwnd, NULL, TRUE);
                                     UpdateWindow(hwnd);
                                     return 0;
@@ -2134,83 +2142,78 @@ refresh_window:
                 
                 /** Handle fonts folder font preview on hover (IDs 2000+) */
                 if (menuItem >= 2000 && menuItem < 3000) {
-                    /** Helper function to find font by ID recursively */
-                    BOOL FindFontNameByIdRecursive(const char* folderPath, int targetId, int* currentId, char* foundFontName, const char* fontsFolderPath) {
-                        char searchPath[MAX_PATH];
-                        snprintf(searchPath, MAX_PATH, "%s\\*", folderPath);
-                        
-                        WIN32_FIND_DATAA findData;
-                        HANDLE hFind = FindFirstFileA(searchPath, &findData);
-                        
+                    /** Wide-char helper: find relative font path by ID (for Unicode filenames) */
+                    BOOL FindFontNameByIdRecursiveW(const wchar_t* folderPathW, int targetId, int* currentId,
+                                                    wchar_t* foundRelativePathW, const wchar_t* fontsFolderRootW) {
+                        wchar_t searchPathW[MAX_PATH];
+                        _snwprintf_s(searchPathW, MAX_PATH, _TRUNCATE, L"%s\\*", folderPathW);
+
+                        WIN32_FIND_DATAW findDataW;
+                        HANDLE hFind = FindFirstFileW(searchPathW, &findDataW);
+
                         if (hFind != INVALID_HANDLE_VALUE) {
                             do {
-                                /** Skip . and .. entries */
-                                if (strcmp(findData.cFileName, ".") == 0 || strcmp(findData.cFileName, "..") == 0) {
+                                if (wcscmp(findDataW.cFileName, L".") == 0 || wcscmp(findDataW.cFileName, L"..") == 0) {
                                     continue;
                                 }
-                                
-                                char fullItemPath[MAX_PATH];
-                                snprintf(fullItemPath, MAX_PATH, "%s\\%s", folderPath, findData.cFileName);
-                                
-                                /** Handle regular font files */
-                                if (!(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
-                                    char* ext = strrchr(findData.cFileName, '.');
-                                    if (ext && (stricmp(ext, ".ttf") == 0 || stricmp(ext, ".otf") == 0)) {
+
+                                wchar_t fullItemPathW[MAX_PATH];
+                                _snwprintf_s(fullItemPathW, MAX_PATH, _TRUNCATE, L"%s\\%s", folderPathW, findDataW.cFileName);
+
+                                if (!(findDataW.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+                                    wchar_t* extW = wcsrchr(findDataW.cFileName, L'.');
+                                    if (extW && (_wcsicmp(extW, L".ttf") == 0 || _wcsicmp(extW, L".otf") == 0)) {
                                         if (*currentId == targetId) {
-                                            /** Calculate relative path from fonts folder */
-                                            if (_strnicmp(fullItemPath, fontsFolderPath, strlen(fontsFolderPath)) == 0) {
-                                                const char* relativePath = fullItemPath + strlen(fontsFolderPath);
-                                                if (relativePath[0] == '\\') relativePath++; // Skip leading backslash
-                                                strcpy(foundFontName, relativePath);
+                                            size_t rootLen = wcslen(fontsFolderRootW);
+                                            if (_wcsnicmp(fullItemPathW, fontsFolderRootW, rootLen) == 0) {
+                                                const wchar_t* relativeW = fullItemPathW + rootLen;
+                                                if (*relativeW == L'\\') relativeW++;
+                                                wcsncpy(foundRelativePathW, relativeW, MAX_PATH - 1);
+                                                foundRelativePathW[MAX_PATH - 1] = L'\0';
                                             } else {
-                                                strcpy(foundFontName, findData.cFileName);
+                                                wcsncpy(foundRelativePathW, findDataW.cFileName, MAX_PATH - 1);
+                                                foundRelativePathW[MAX_PATH - 1] = L'\0';
                                             }
                                             FindClose(hFind);
                                             return TRUE;
                                         }
                                         (*currentId)++;
                                     }
-                                }
-                                /** Handle subdirectories recursively */
-                                else if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-                                    if (FindFontNameByIdRecursive(fullItemPath, targetId, currentId, foundFontName, fontsFolderPath)) {
+                                } else {
+                                    if (FindFontNameByIdRecursiveW(fullItemPathW, targetId, currentId, foundRelativePathW, fontsFolderRootW)) {
                                         FindClose(hFind);
                                         return TRUE;
                                     }
                                 }
-                            } while (FindNextFileA(hFind, &findData));
+                            } while (FindNextFileW(hFind, &findDataW));
                             FindClose(hFind);
                         }
-                        
                         return FALSE;
                     }
-                    
-                    /** Find font name for preview */
-                    char fontsFolderPath[MAX_PATH];
+
+                    /** Find font name for preview (wide-char), then convert to UTF-8 */
+                    char fontsFolderPathA[MAX_PATH];
                     char* appdata_path = getenv("LOCALAPPDATA");
                     if (appdata_path) {
-                        snprintf(fontsFolderPath, MAX_PATH, "%s\\Catime\\resources\\fonts", appdata_path);
-                        
+                        snprintf(fontsFolderPathA, MAX_PATH, "%s\\Catime\\resources\\fonts", appdata_path);
+
+                        wchar_t fontsFolderRootW[MAX_PATH];
+                        MultiByteToWideChar(CP_UTF8, 0, fontsFolderPathA, -1, fontsFolderRootW, MAX_PATH);
+
                         int currentIndex = 2000;
-                        char foundFontName[MAX_PATH] = {0};
-                        
-                        if (FindFontNameByIdRecursive(fontsFolderPath, menuItem, &currentIndex, foundFontName, fontsFolderPath)) {
-                            /** Set up preview */
-                            strncpy(PREVIEW_FONT_NAME, foundFontName, 99);
-                            PREVIEW_FONT_NAME[99] = '\0';
-                            
-                            /** Extract filename for internal name */
-                            char* lastSlash = strrchr(foundFontName, '\\');
-                            const char* filenameOnly = lastSlash ? (lastSlash + 1) : foundFontName;
-                            strncpy(PREVIEW_INTERNAL_NAME, filenameOnly, 99);
-                            PREVIEW_INTERNAL_NAME[99] = '\0';
-                            char* dot = strrchr(PREVIEW_INTERNAL_NAME, '.');
-                            if (dot) *dot = '\0';
-                            
-                            /** Load font for preview and get real font name */
+                        wchar_t foundRelativePathW[MAX_PATH] = {0};
+
+                        if (FindFontNameByIdRecursiveW(fontsFolderRootW, menuItem, &currentIndex, foundRelativePathW, fontsFolderRootW)) {
+                            char foundFontNameUTF8[MAX_PATH];
+                            WideCharToMultiByte(CP_UTF8, 0, foundRelativePathW, -1, foundFontNameUTF8, MAX_PATH, NULL, NULL);
+
+                            /** Set up preview variables */
+                            strncpy(PREVIEW_FONT_NAME, foundFontNameUTF8, sizeof(PREVIEW_FONT_NAME) - 1);
+                            PREVIEW_FONT_NAME[sizeof(PREVIEW_FONT_NAME) - 1] = '\0';
+
                             HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
-                            LoadFontByNameAndGetRealName(hInstance, foundFontName, PREVIEW_INTERNAL_NAME, sizeof(PREVIEW_INTERNAL_NAME));
-                            
+                            LoadFontByNameAndGetRealName(hInstance, foundFontNameUTF8, PREVIEW_INTERNAL_NAME, sizeof(PREVIEW_INTERNAL_NAME));
+
                             IS_PREVIEWING = TRUE;
                             InvalidateRect(hwnd, NULL, TRUE);
                             return 0;
