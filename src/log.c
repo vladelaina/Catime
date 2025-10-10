@@ -240,10 +240,16 @@ BOOL InitializeLogSystem(void) {
         }
     }
     
-    /** Create new log file, truncating any existing content */
-    logFile = _wfopen(LOG_FILE_PATH, L"w");
+    /** Create new log file as UTF-8 with BOM to ensure proper display in editors */
+    logFile = _wfopen(LOG_FILE_PATH, L"wb");
     if (!logFile) {
         return FALSE;
+    }
+    {
+        /** Write UTF-8 BOM */
+        const unsigned char bom[3] = {0xEF, 0xBB, 0xBF};
+        fwrite(bom, 1, 3, logFile);
+        fflush(logFile);
     }
     
     WriteLog(LOG_LEVEL_INFO, "==================================================");
