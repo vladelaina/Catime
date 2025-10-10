@@ -59,33 +59,33 @@ static bool IsStoreOrWingetInstall(char* exe_path, size_t path_size) {
     
     WideCharToMultiByte(CP_UTF8, 0, exe_path_w, -1, exe_path, path_size, NULL, NULL);
     
-    LOG_DEBUG("Checking program path: %s", exe_path);
+    
     
     /** Microsoft Store apps are installed under WindowsApps */
     if (StartsWith(exe_path, "C:\\Program Files\\WindowsApps")) {
-        LOG_DEBUG("Detected App Store installation path");
+        
         return true;
     }
     
     /** Standard WinGet installation directory */
     if (Contains(exe_path, "\\AppData\\Local\\Microsoft\\WinGet\\Packages")) {
-        LOG_DEBUG("Detected WinGet installation path (regular)");
+        
         return true;
     }
     
     /** Alternative WinGet installation patterns */
     if (Contains(exe_path, "\\AppData\\Local\\Microsoft\\") && Contains(exe_path, "WinGet")) {
-        LOG_DEBUG("Detected possible WinGet installation path (custom)");
+        
         return true;
     }
     
     /** Specific executable pattern for WinGet catime */
     if (Contains(exe_path, "\\WinGet\\catime.exe")) {
-        LOG_DEBUG("Detected specific WinGet installation path");
+        
         return true;
     }
     
-    LOG_DEBUG("Not a Store or WinGet installation path");
+    
     return false;
 }
 
@@ -119,7 +119,7 @@ static int CheckShortcutTarget(const char* exe_path, char* shortcut_path_out, si
         return 0;
     }
     WideCharToMultiByte(CP_UTF8, 0, desktop_path_w, -1, desktop_path, MAX_PATH, NULL, NULL);
-    LOG_DEBUG("User desktop path: %s", desktop_path);
+    
     
     /** Get public desktop directory (all users) */
     wchar_t public_desktop_path_w[MAX_PATH];
@@ -128,12 +128,12 @@ static int CheckShortcutTarget(const char* exe_path, char* shortcut_path_out, si
         LOG_WARNING("Failed to get public desktop path, hr=0x%08X", (unsigned int)hr);
     } else {
         WideCharToMultiByte(CP_UTF8, 0, public_desktop_path_w, -1, public_desktop_path, MAX_PATH, NULL, NULL);
-        LOG_DEBUG("Public desktop path: %s", public_desktop_path);
+        
     }
     
     /** Check user desktop first */
     snprintf(shortcut_path, sizeof(shortcut_path), "%s\\Catime.lnk", desktop_path);
-    LOG_DEBUG("Checking user desktop shortcut: %s", shortcut_path);
+    
     
     wchar_t shortcut_path_w[MAX_PATH];
     MultiByteToWideChar(CP_UTF8, 0, shortcut_path, -1, shortcut_path_w, MAX_PATH);
@@ -142,14 +142,14 @@ static int CheckShortcutTarget(const char* exe_path, char* shortcut_path_out, si
     /** Fallback to public desktop if user desktop shortcut not found */
     if (!file_exists && SUCCEEDED(hr)) {
         snprintf(shortcut_path, sizeof(shortcut_path), "%s\\Catime.lnk", public_desktop_path);
-        LOG_DEBUG("Checking public desktop shortcut: %s", shortcut_path);
+        
         
         MultiByteToWideChar(CP_UTF8, 0, shortcut_path, -1, shortcut_path_w, MAX_PATH);
         file_exists = (GetFileAttributesW(shortcut_path_w) != INVALID_FILE_ATTRIBUTES);
     }
     
     if (!file_exists) {
-        LOG_DEBUG("No shortcut files found");
+        
         return 0;
     }
     
@@ -193,8 +193,8 @@ static int CheckShortcutTarget(const char* exe_path, char* shortcut_path_out, si
     } else {
         WideCharToMultiByte(CP_UTF8, 0, link_target_w, -1, link_target, MAX_PATH, NULL, NULL);
         
-        LOG_DEBUG("Shortcut target path: %s", link_target);
-        LOG_DEBUG("Current program path: %s", exe_path);
+        
+        
         
         /** Return target path to caller */
         if (target_path_out && target_path_size > 0) {
@@ -204,10 +204,10 @@ static int CheckShortcutTarget(const char* exe_path, char* shortcut_path_out, si
         
         /** Compare paths case-insensitively */
         if (_stricmp(link_target, exe_path) == 0) {
-            LOG_DEBUG("Shortcut points to current program");
+            
             result = 1;
         } else {
-            LOG_DEBUG("Shortcut points to another path");
+            
             result = 2;
         }
     }
@@ -249,12 +249,12 @@ static bool CreateOrUpdateDesktopShortcut(const char* exe_path, const char* exis
             return false;
         }
         WideCharToMultiByte(CP_UTF8, 0, desktop_path_w, -1, desktop_path, MAX_PATH, NULL, NULL);
-        LOG_DEBUG("Desktop path: %s", desktop_path);
+        
         
         snprintf(shortcut_path, sizeof(shortcut_path), "%s\\Catime.lnk", desktop_path);
     }
     
-    LOG_DEBUG("Shortcut path: %s", shortcut_path);
+    
     
     /** Use executable itself as icon source */
     strcpy(icon_path, exe_path);
@@ -285,7 +285,7 @@ static bool CreateOrUpdateDesktopShortcut(const char* exe_path, const char* exis
     if (last_slash) {
         *last_slash = '\0';
     }
-    LOG_DEBUG("Working directory: %s", work_dir);
+    
     
     wchar_t work_dir_w[MAX_PATH];
     MultiByteToWideChar(CP_UTF8, 0, work_dir, -1, work_dir_w, MAX_PATH);
@@ -361,13 +361,13 @@ int CheckAndCreateShortcut(void) {
         return 1;
     }
     
-    LOG_DEBUG("Starting shortcut check");
+    
     
     /** Load configuration state to avoid redundant operations */
     GetConfigPath(config_path, MAX_PATH);
     shortcut_check_done = IsShortcutCheckDone();
     
-    LOG_DEBUG("Configuration path: %s, already checked: %d", config_path, shortcut_check_done);
+    
     
     /** Get current executable path for comparison */
     wchar_t exe_path_w[MAX_PATH];
@@ -377,11 +377,11 @@ int CheckAndCreateShortcut(void) {
         return 1;
     }
     WideCharToMultiByte(CP_UTF8, 0, exe_path_w, -1, exe_path, MAX_PATH, NULL, NULL);
-    LOG_DEBUG("Program path: %s", exe_path);
+    
     
     /** Determine if this is a managed installation (Store/WinGet) */
     isStoreInstall = IsStoreOrWingetInstall(exe_path, MAX_PATH);
-    LOG_DEBUG("Is Store/WinGet installation: %d", isStoreInstall);
+    
     
     /** Check existing shortcut status */
     int shortcut_status = CheckShortcutTarget(exe_path, shortcut_path, MAX_PATH, target_path, MAX_PATH);

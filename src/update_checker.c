@@ -46,7 +46,6 @@ INT_PTR CALLBACK ExitMsgDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lP
  * Uses semantic versioning comparison with hierarchical precedence
  */
 int CompareVersions(const char* version1, const char* version2) {
-    LOG_DEBUG("Comparing versions: '%s' vs '%s'", version1, version2);
     
     int major1, minor1, patch1;
     int major2, minor2, patch2;
@@ -54,7 +53,6 @@ int CompareVersions(const char* version1, const char* version2) {
     sscanf(version1, "%d.%d.%d", &major1, &minor1, &patch1);
     sscanf(version2, "%d.%d.%d", &major2, &minor2, &patch2);
     
-    LOG_DEBUG("Parsed version1: %d.%d.%d, version2: %d.%d.%d", major1, minor1, patch1, major2, minor2, patch2);
     
     /** Compare major version first (highest precedence) */
     if (major1 > major2) return 1;
@@ -85,7 +83,6 @@ int CompareVersions(const char* version1, const char* version2) {
  */
 BOOL ParseLatestVersionFromJson(const char* jsonResponse, char* latestVersion, size_t maxLen, 
                                char* downloadUrl, size_t urlMaxLen, char* releaseNotes, size_t notesMaxLen) {
-    LOG_DEBUG("Starting to parse JSON response, extracting version information");
     
     /** Extract version from tag_name field */
     const char* tagNamePos = strstr(jsonResponse, "\"tag_name\":");
@@ -182,7 +179,6 @@ BOOL ParseLatestVersionFromJson(const char* jsonResponse, char* latestVersion, s
                 }
                 releaseNotes[writePos] = '\0';
                 
-                LOG_DEBUG("Extracted %zu bytes of release notes", writePos);
             } else {
                 LOG_WARNING("Could not find closing quote for body field");
                 StringCbCopyA(releaseNotes, notesMaxLen, "No release notes available.");
@@ -552,7 +548,6 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
     
     while (InternetReadFile(hConnect, buffer + totalBytes, 
                           bufferSize - totalBytes - 1, &bytesRead) && bytesRead > 0) {
-        LOG_DEBUG("Read %lu bytes of data, accumulated %lu bytes", bytesRead, totalBytes + bytesRead);
         totalBytes += bytesRead;
         if (totalBytes >= bufferSize - 256) {
             size_t newSize = bufferSize * 2;
@@ -564,7 +559,6 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
                 InternetCloseHandle(hInternet);
                 return;
             }
-            LOG_DEBUG("Buffer expanded, new size: %zu bytes", newSize);
             buffer = newBuffer;
             bufferSize = newSize;
         }

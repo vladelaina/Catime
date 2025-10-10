@@ -356,7 +356,7 @@ void ShowColorMenu(HWND hwnd) {
     
     /** Helper function to scan for font files using ANSI API as fallback */
     int ScanFontFolderAnsi(const char* folderPath, HMENU parentMenu, int* fontId) {
-        WriteLog(LOG_LEVEL_DEBUG, "ScanFontFolderAnsi: Starting ANSI scan of folder '%s'", folderPath);
+        
 
         char searchPath[MAX_PATH];
         snprintf(searchPath, MAX_PATH, "%s\\*.*", folderPath);
@@ -375,7 +375,7 @@ void ShowColorMenu(HWND hwnd) {
                 if (!(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
                     char* ext = strrchr(findData.cFileName, '.');
                     if (ext && (_stricmp(ext, ".ttf") == 0 || _stricmp(ext, ".otf") == 0)) {
-                        WriteLog(LOG_LEVEL_DEBUG, "ScanFontFolderAnsi: Found font file '%s'", findData.cFileName);
+                        
 
                         /** Convert to wide char for menu display */
                         wchar_t wDisplayName[MAX_PATH];
@@ -396,7 +396,7 @@ void ShowColorMenu(HWND hwnd) {
              WriteLog(LOG_LEVEL_WARNING, "ScanFontFolderAnsi: FindFirstFileA failed for path '%s', error: %lu", searchPath, GetLastError());
         }
 
-        WriteLog(LOG_LEVEL_DEBUG, "ScanFontFolderAnsi: Found %d font files, status: %d", fontCount, folderStatus);
+        
         return folderStatus;
     }
     

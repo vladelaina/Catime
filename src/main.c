@@ -255,10 +255,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         WideCharToMultiByte(CP_UTF8, 0, exe_path, -1, exe_path_utf8, sizeof(exe_path_utf8), NULL, NULL);
         LOG_INFO("Current program path: %s", exe_path_utf8);
         
-        WriteLog(LOG_LEVEL_DEBUG, "Starting shortcut detection, checking path: %s", exe_path_utf8);
+        
         
         if (wcsstr(exe_path, L"WinGet") != NULL) {
-            WriteLog(LOG_LEVEL_DEBUG, "Path contains WinGet keyword");
+            
         }
         
         wchar_t desktop_path[MAX_PATH];
@@ -268,12 +268,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             
             char shortcut_path_utf8[MAX_PATH * 3];
             WideCharToMultiByte(CP_UTF8, 0, shortcut_path, -1, shortcut_path_utf8, sizeof(shortcut_path_utf8), NULL, NULL);
-            WriteLog(LOG_LEVEL_DEBUG, "Checking if desktop shortcut exists: %s", shortcut_path_utf8);
+            
             
             if (GetFileAttributesW(shortcut_path) == INVALID_FILE_ATTRIBUTES) {
-                WriteLog(LOG_LEVEL_DEBUG, "Desktop shortcut does not exist, need to create");
+                
             } else {
-                WriteLog(LOG_LEVEL_DEBUG, "Desktop shortcut already exists");
+                
             }
         }
         
