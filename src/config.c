@@ -2626,30 +2626,29 @@ void WriteConfigNotificationType(NotificationType type) {
 void GetAudioFolderPath(char* path, size_t size) {
     if (!path || size == 0) return;
 
-    char* appdata_path = getenv("LOCALAPPDATA");
-    if (appdata_path) {
-        if (snprintf(path, size, "%s\\Catime\\resources\\audio", appdata_path) >= size) {
-            strncpy(path, ".\\resources\\audio", size - 1);
-            path[size - 1] = '\0';
-            return;
-        }
-        
-        /** Create audio directory if needed */
-        char dir_path[MAX_PATH];
-        if (snprintf(dir_path, sizeof(dir_path), "%s\\Catime\\resources\\audio", appdata_path) < sizeof(dir_path)) {
-        
-            wchar_t wdir_path[MAX_PATH];
-            MultiByteToWideChar(CP_UTF8, 0, dir_path, -1, wdir_path, MAX_PATH);
-            if (!CreateDirectoryW(wdir_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
-                strncpy(path, ".\\resources\\audio", size - 1);
-                path[size - 1] = '\0';
-            }
-        }
-    } else {
-        /** Fallback to local resources directory */
+    /** Build folder based on config path (Unicode-safe) */
+    char configPathUtf8[MAX_PATH] = {0};
+    wchar_t wConfigPath[MAX_PATH] = {0};
+    GetConfigPath(configPathUtf8, MAX_PATH);
+    MultiByteToWideChar(CP_UTF8, 0, configPathUtf8, -1, wConfigPath, MAX_PATH);
+
+    /** Trim filename, append resources\audio */
+    wchar_t* lastSep = wcsrchr(wConfigPath, L'\\');
+    if (!lastSep) {
         strncpy(path, ".\\resources\\audio", size - 1);
         path[size - 1] = '\0';
+        return;
     }
+    *lastSep = L'\0';
+
+    wchar_t wAudioFolder[MAX_PATH] = {0};
+    _snwprintf_s(wAudioFolder, MAX_PATH, _TRUNCATE, L"%s\\resources\\audio", wConfigPath);
+
+    /** Ensure directory exists */
+    SHCreateDirectoryExW(NULL, wAudioFolder, NULL);
+
+    /** Convert back to UTF-8 for callers */
+    WideCharToMultiByte(CP_UTF8, 0, wAudioFolder, -1, path, (int)size, NULL, NULL);
 }
 
 

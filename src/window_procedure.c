@@ -1399,21 +1399,22 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 
                 /** Advanced font selection - open fonts folder in explorer */
                 case CLOCK_IDC_FONT_ADVANCED: {
-                    char fontsFolderPath[MAX_PATH];
-                    char* appdata_path = getenv("LOCALAPPDATA");
-                    if (appdata_path) {
-                        snprintf(fontsFolderPath, MAX_PATH, "%s\\Catime\\resources\\fonts", appdata_path);
-                        
-                        /** Check if fonts folder exists, create if not */
-                        wchar_t wFontsFolderPath[MAX_PATH];
-                        MultiByteToWideChar(CP_UTF8, 0, fontsFolderPath, -1, wFontsFolderPath, MAX_PATH);
-                        
-                        DWORD attrs = GetFileAttributesW(wFontsFolderPath);
-                        if (attrs == INVALID_FILE_ATTRIBUTES) {
-                            /** Create fonts folder if it doesn't exist */
-                            CreateDirectoryW(wFontsFolderPath, NULL);
-                        }
-                        
+                    /** Build fonts folder path via config path to be Unicode-safe */
+                    char configPathUtf8[MAX_PATH] = {0};
+                    wchar_t wConfigPath[MAX_PATH] = {0};
+                    GetConfigPath(configPathUtf8, MAX_PATH);
+                    MultiByteToWideChar(CP_UTF8, 0, configPathUtf8, -1, wConfigPath, MAX_PATH);
+
+                    /** Trim file name and append resources\fonts */
+                    wchar_t* lastSep = wcsrchr(wConfigPath, L'\\');
+                    if (lastSep) {
+                        *lastSep = L'\0';
+                        wchar_t wFontsFolderPath[MAX_PATH] = {0};
+                        _snwprintf_s(wFontsFolderPath, MAX_PATH, _TRUNCATE, L"%s\\resources\\fonts", wConfigPath);
+
+                        /** Ensure directory exists (Unicode-safe) */
+                        SHCreateDirectoryExW(NULL, wFontsFolderPath, NULL);
+
                         /** Open fonts folder in Windows Explorer */
                         ShellExecuteW(hwnd, L"open", wFontsFolderPath, NULL, NULL, SW_SHOWNORMAL);
                     }
