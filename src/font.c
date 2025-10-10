@@ -9,6 +9,7 @@
 #include <string.h>
 #include <shlobj.h>
 #include "../include/font.h"
+#include "../include/config.h"
 #include "../resource/resource.h"
 
 /** @brief Font name table structures for TTF font parsing */
@@ -657,70 +658,9 @@ void WriteConfigFont(const char* font_file_name) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    /** Convert path to wide character for Unicode support */
-    wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-    
-    /** Read existing config file */
-    FILE *file = _wfopen(wconfig_path, L"r");
-    if (!file) {
-        fprintf(stderr, "Failed to open config file for reading: %s\n", config_path);
-        return;
-    }
-
-    /** Get file size and allocate buffer */
-    fseek(file, 0, SEEK_END);
-    long file_size = ftell(file);
-    fseek(file, 0, SEEK_SET);
-
-    char *config_content = (char *)malloc(file_size + 1);
-    if (!config_content) {
-        fprintf(stderr, "Memory allocation failed!\n");
-        fclose(file);
-        return;
-    }
-    fread(config_content, sizeof(char), file_size, file);
-    config_content[file_size] = '\0';
-    fclose(file);
-
-    /** Allocate buffer for modified config */
-    char *new_config = (char *)malloc(file_size + 100);
-    if (!new_config) {
-        fprintf(stderr, "Memory allocation failed!\n");
-        free(config_content);
-        return;
-    }
-    new_config[0] = '\0';
-
-    /** Process each line and update FONT_FILE_NAME */
-    char *line = strtok(config_content, "\n");
-    while (line) {
-        if (strncmp(line, "FONT_FILE_NAME=", 15) == 0) {
-            /** Replace font file name line */
-            strcat(new_config, "FONT_FILE_NAME=");
-            strcat(new_config, configFontName);
-            strcat(new_config, "\n");
-        } else {
-            /** Keep existing line */
-            strcat(new_config, line);
-            strcat(new_config, "\n");
-        }
-        line = strtok(NULL, "\n");
-    }
-
-    free(config_content);
-
-    /** Write updated config back to file */
-    file = _wfopen(wconfig_path, L"w");
-    if (!file) {
-        fprintf(stderr, "Failed to open config file for writing: %s\n", config_path);
-        free(new_config);
-        return;
-    }
-    fwrite(new_config, sizeof(char), strlen(new_config), file);
-    fclose(file);
-
-    free(new_config);
+    /** Write using INI Unicode API to avoid mojibake for non-ASCII filenames */
+    extern BOOL WriteIniString(const char* section, const char* key, const char* value, const char* filePath);
+    WriteIniString(INI_SECTION_DISPLAY, "FONT_FILE_NAME", configFontName, config_path);
 }
 
 /**
@@ -763,44 +703,8 @@ void WriteConfigFontNoReload(const char* font_file_name) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-    
-    /** Read existing config file */
-    FILE *file = _wfopen(wconfig_path, L"r");
-    if (!file) return;
-    fseek(file, 0, SEEK_END);
-    long file_size = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    char *config_content = (char *)malloc(file_size + 1);
-    if (!config_content) { fclose(file); return; }
-    fread(config_content, sizeof(char), file_size, file);
-    config_content[file_size] = '\0';
-    fclose(file);
-    
-    char *new_config = (char *)malloc(file_size + 100);
-    if (!new_config) { free(config_content); return; }
-    new_config[0] = '\0';
-    
-    char *line = strtok(config_content, "\n");
-    while (line) {
-        if (strncmp(line, "FONT_FILE_NAME=", 15) == 0) {
-            strcat(new_config, "FONT_FILE_NAME=");
-            strcat(new_config, configFontName);
-            strcat(new_config, "\n");
-        } else {
-            strcat(new_config, line);
-            strcat(new_config, "\n");
-        }
-        line = strtok(NULL, "\n");
-    }
-    free(config_content);
-    
-    file = _wfopen(wconfig_path, L"w");
-    if (!file) { free(new_config); return; }
-    fwrite(new_config, sizeof(char), strlen(new_config), file);
-    fclose(file);
-    free(new_config);
+    extern BOOL WriteIniString(const char* section, const char* key, const char* value, const char* filePath);
+    WriteIniString(INI_SECTION_DISPLAY, "FONT_FILE_NAME", configFontName, config_path);
 }
 
 /**
