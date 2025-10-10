@@ -109,6 +109,12 @@ BOOL LoadFontByNameAndGetRealName(HINSTANCE hInstance, const char* fontFileName,
 void WriteConfigFont(const char* font_file_name);
 
 /**
+ * @brief Write font configuration without reloading settings
+ * @param font_file_name Font file name to save
+ */
+void WriteConfigFontNoReload(const char* font_file_name);
+
+/**
  * @brief List all available system fonts
  */
 void ListAvailableFonts(void);

@@ -411,20 +411,25 @@ BOOL LoadFontFromFile(const char* fontFilePath) {
         return TRUE; // Already loaded
     }
     
-    /** Unload previous font first */
-    UnloadCurrentFontResource();
-    
-    /** Add font from file to system font table */
-    int result = AddFontResourceExW(wFontPath, FR_PRIVATE, NULL);
-    
-    if (result > 0) {
-        /** Track the loaded font for later cleanup */
-        wcscpy(CURRENT_LOADED_FONT_PATH, wFontPath);
-        FONT_RESOURCE_LOADED = TRUE;
-        return TRUE;
+    /**
+     * Load-new-then-unload-old to avoid a visible gap where no font is available.
+     * Only remove the previous font after the new one has been successfully added.
+     */
+    int addResult = AddFontResourceExW(wFontPath, FR_PRIVATE, NULL);
+    if (addResult <= 0) {
+        /** Keep existing font loaded on failure */
+        return FALSE;
     }
     
-    return FALSE;
+    /** New font added successfully; now it's safe to remove the old one if different */
+    if (FONT_RESOURCE_LOADED && CURRENT_LOADED_FONT_PATH[0] != 0 && wcscmp(CURRENT_LOADED_FONT_PATH, wFontPath) != 0) {
+        RemoveFontResourceExW(CURRENT_LOADED_FONT_PATH, FR_PRIVATE, NULL);
+    }
+    
+    /** Track the loaded font for later cleanup */
+    wcscpy(CURRENT_LOADED_FONT_PATH, wFontPath);
+    FONT_RESOURCE_LOADED = TRUE;
+    return TRUE;
 }
 
 /**
@@ -622,22 +627,26 @@ void WriteConfigFont(const char* font_file_name) {
     
     if (FindFontInFontsFolder(font_file_name, actualFontPath, MAX_PATH)) {
         /** Extract relative path from the fonts folder */
-        char* appdata_path = getenv("LOCALAPPDATA");
-        if (appdata_path) {
+        wchar_t fontsFolderW[MAX_PATH] = {0};
+        if (GetFontsFolderWide(fontsFolderW, MAX_PATH, TRUE)) {
             char fontsFolderPath[MAX_PATH];
-            snprintf(fontsFolderPath, MAX_PATH, "%s\\Catime\\resources\\fonts\\", appdata_path);
-            
-            /** Check if actualFontPath starts with fontsFolderPath */
-            if (_strnicmp(actualFontPath, fontsFolderPath, strlen(fontsFolderPath)) == 0) {
-                /** Extract relative path after the fonts folder */
-                const char* relativePath = actualFontPath + strlen(fontsFolderPath);
+            WideCharToMultiByte(CP_UTF8, 0, fontsFolderW, -1, fontsFolderPath, MAX_PATH, NULL, NULL);
+            size_t prefixLen = strlen(fontsFolderPath);
+            if (prefixLen > 0 && fontsFolderPath[prefixLen - 1] != '\\') {
+                if (prefixLen + 1 < MAX_PATH) {
+                    fontsFolderPath[prefixLen] = '\\';
+                    fontsFolderPath[prefixLen + 1] = '\0';
+                    prefixLen += 1;
+                }
+            }
+            /** Check if actualFontPath starts with fontsFolderPath (both UTF-8) */
+            if (_strnicmp(actualFontPath, fontsFolderPath, (int)prefixLen) == 0) {
+                const char* relativePath = actualFontPath + prefixLen;
                 snprintf(configFontName, MAX_PATH, "%%LOCALAPPDATA%%\\Catime\\resources\\fonts\\%s", relativePath);
             } else {
-                /** Fallback to original behavior */
                 snprintf(configFontName, MAX_PATH, "%%LOCALAPPDATA%%\\Catime\\resources\\fonts\\%s", font_file_name);
             }
         } else {
-            /** Fallback to original behavior */
             snprintf(configFontName, MAX_PATH, "%%LOCALAPPDATA%%\\Catime\\resources\\fonts\\%s", font_file_name);
         }
     } else {
@@ -712,9 +721,86 @@ void WriteConfigFont(const char* font_file_name) {
     fclose(file);
 
     free(new_config);
+}
 
-    /** Reload configuration to apply changes */
-    ReadConfig();
+/**
+ * @brief Write font configuration without reloading config
+ */
+void WriteConfigFontNoReload(const char* font_file_name) {
+    if (!font_file_name) return;
+    
+    /** Find the actual font path to save correct relative path */
+    char actualFontPath[MAX_PATH];
+    char configFontName[MAX_PATH];
+    
+    if (FindFontInFontsFolder(font_file_name, actualFontPath, MAX_PATH)) {
+        /** Extract relative path from the fonts folder */
+        wchar_t fontsFolderW[MAX_PATH] = {0};
+        if (GetFontsFolderWide(fontsFolderW, MAX_PATH, TRUE)) {
+            char fontsFolderPath[MAX_PATH];
+            WideCharToMultiByte(CP_UTF8, 0, fontsFolderW, -1, fontsFolderPath, MAX_PATH, NULL, NULL);
+            size_t prefixLen = strlen(fontsFolderPath);
+            if (prefixLen > 0 && fontsFolderPath[prefixLen - 1] != '\\') {
+                if (prefixLen + 1 < MAX_PATH) {
+                    fontsFolderPath[prefixLen] = '\\';
+                    fontsFolderPath[prefixLen + 1] = '\0';
+                    prefixLen += 1;
+                }
+            }
+            if (_strnicmp(actualFontPath, fontsFolderPath, (int)prefixLen) == 0) {
+                const char* relativePath = actualFontPath + prefixLen;
+                snprintf(configFontName, MAX_PATH, "%%LOCALAPPDATA%%\\Catime\\resources\\fonts\\%s", relativePath);
+            } else {
+                snprintf(configFontName, MAX_PATH, "%%LOCALAPPDATA%%\\Catime\\resources\\fonts\\%s", font_file_name);
+            }
+        } else {
+            snprintf(configFontName, MAX_PATH, "%%LOCALAPPDATA%%\\Catime\\resources\\fonts\\%s", font_file_name);
+        }
+    } else {
+        snprintf(configFontName, MAX_PATH, "%%LOCALAPPDATA%%\\Catime\\resources\\fonts\\%s", font_file_name);
+    }
+    
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    
+    wchar_t wconfig_path[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+    
+    /** Read existing config file */
+    FILE *file = _wfopen(wconfig_path, L"r");
+    if (!file) return;
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    char *config_content = (char *)malloc(file_size + 1);
+    if (!config_content) { fclose(file); return; }
+    fread(config_content, sizeof(char), file_size, file);
+    config_content[file_size] = '\0';
+    fclose(file);
+    
+    char *new_config = (char *)malloc(file_size + 100);
+    if (!new_config) { free(config_content); return; }
+    new_config[0] = '\0';
+    
+    char *line = strtok(config_content, "\n");
+    while (line) {
+        if (strncmp(line, "FONT_FILE_NAME=", 15) == 0) {
+            strcat(new_config, "FONT_FILE_NAME=");
+            strcat(new_config, configFontName);
+            strcat(new_config, "\n");
+        } else {
+            strcat(new_config, line);
+            strcat(new_config, "\n");
+        }
+        line = strtok(NULL, "\n");
+    }
+    free(config_content);
+    
+    file = _wfopen(wconfig_path, L"w");
+    if (!file) { free(new_config); return; }
+    fwrite(new_config, sizeof(char), strlen(new_config), file);
+    fclose(file);
+    free(new_config);
 }
 
 /**
@@ -815,8 +901,8 @@ void ApplyFontPreview(void) {
     strncpy(FONT_INTERNAL_NAME, PREVIEW_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME) - 1);
     FONT_INTERNAL_NAME[sizeof(FONT_INTERNAL_NAME) - 1] = '\0';
     
-    /** Save to configuration and exit preview mode */
-    WriteConfigFont(FONT_FILE_NAME);
+    /** Save to configuration without reload and exit preview mode */
+    WriteConfigFontNoReload(FONT_FILE_NAME);
     CancelFontPreview();
 }
 
@@ -981,7 +1067,7 @@ BOOL SwitchFont(HINSTANCE hInstance, const char* fontName) {
         return FALSE;
     }
     
-    /** Save new font to configuration */
-    WriteConfigFont(FONT_FILE_NAME);
+    /** Save new font to configuration without triggering full reload */
+    WriteConfigFontNoReload(FONT_FILE_NAME);
     return TRUE;
 }
