@@ -519,7 +519,7 @@ void ExtractFileName(const char* path, char* name, size_t nameSize) {
 
 /**
  * @brief Create resource folder structure in config directory
- * Creates audio, images, animations, themes, plug-in, and fonts folders
+ * Creates only audio and fonts folders
  */
 void CheckAndCreateResourceFolders() {
     char config_path[MAX_PATH];
@@ -575,61 +575,6 @@ void CheckAndCreateResourceFolders() {
         }
         
 
-        snprintf(resource_path, MAX_PATH, "%sresources\\images", base_path);
-    
-        MultiByteToWideChar(CP_UTF8, 0, resource_path, -1, wresource_path_check, MAX_PATH);
-        attrs = GetFileAttributesW(wresource_path_check);
-        if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
-        
-            wchar_t wresource_path[MAX_PATH];
-            MultiByteToWideChar(CP_UTF8, 0, resource_path, -1, wresource_path, MAX_PATH);
-            if (!CreateDirectoryW(wresource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
-                fprintf(stderr, "Failed to create images folder: %s (Error: %lu)\n", resource_path, GetLastError());
-            }
-        }
-        
-
-        snprintf(resource_path, MAX_PATH, "%sresources\\animations", base_path);
-    
-        MultiByteToWideChar(CP_UTF8, 0, resource_path, -1, wresource_path_check, MAX_PATH);
-        attrs = GetFileAttributesW(wresource_path_check);
-        if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
-        
-            wchar_t wresource_path[MAX_PATH];
-            MultiByteToWideChar(CP_UTF8, 0, resource_path, -1, wresource_path, MAX_PATH);
-            if (!CreateDirectoryW(wresource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
-                fprintf(stderr, "Failed to create animations folder: %s (Error: %lu)\n", resource_path, GetLastError());
-            }
-        }
-        
-
-        snprintf(resource_path, MAX_PATH, "%sresources\\themes", base_path);
-    
-        MultiByteToWideChar(CP_UTF8, 0, resource_path, -1, wresource_path_check, MAX_PATH);
-        attrs = GetFileAttributesW(wresource_path_check);
-        if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
-        
-            wchar_t wresource_path[MAX_PATH];
-            MultiByteToWideChar(CP_UTF8, 0, resource_path, -1, wresource_path, MAX_PATH);
-            if (!CreateDirectoryW(wresource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
-                fprintf(stderr, "Failed to create themes folder: %s (Error: %lu)\n", resource_path, GetLastError());
-            }
-        }
-        
-
-        snprintf(resource_path, MAX_PATH, "%sresources\\plug-in", base_path);
-    
-        MultiByteToWideChar(CP_UTF8, 0, resource_path, -1, wresource_path_check, MAX_PATH);
-        attrs = GetFileAttributesW(wresource_path_check);
-        if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
-        
-            wchar_t wresource_path[MAX_PATH];
-            MultiByteToWideChar(CP_UTF8, 0, resource_path, -1, wresource_path, MAX_PATH);
-            if (!CreateDirectoryW(wresource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
-                fprintf(stderr, "Failed to create plug-in folder: %s (Error: %lu)\n", resource_path, GetLastError());
-            }
-        }
-        
         /** Create fonts folder */
         snprintf(resource_path, MAX_PATH, "%sresources\\fonts", base_path);
     
