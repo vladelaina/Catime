@@ -79,6 +79,26 @@ extern void ShowPomodoroLoopDialog(HWND hwndParent);
 
 extern void OpenUserGuide(void);
 
+/**
+ * @brief Get %LOCALAPPDATA%\Catime\resources\fonts in wide-char using config path (Unicode-safe)
+ */
+static BOOL GetFontsFolderWideFromConfig(wchar_t* out, size_t size) {
+    if (!out || size == 0) return FALSE;
+    char configPathUtf8[MAX_PATH] = {0};
+    GetConfigPath(configPathUtf8, MAX_PATH);
+    if (configPathUtf8[0] == '\0') return FALSE;
+    wchar_t wConfigPath[MAX_PATH] = {0};
+    MultiByteToWideChar(CP_UTF8, 0, configPathUtf8, -1, wConfigPath, MAX_PATH);
+    wchar_t* lastSep = wcsrchr(wConfigPath, L'\\');
+    if (!lastSep) return FALSE;
+    *lastSep = L'\0';
+    wchar_t wFonts[MAX_PATH] = {0};
+    _snwprintf_s(wFonts, MAX_PATH, _TRUNCATE, L"%s\\resources\\fonts", wConfigPath);
+    wcsncpy(out, wFonts, size - 1);
+    out[size - 1] = L'\0';
+    return TRUE;
+}
+
 extern void OpenSupportPage(void);
 
 extern void OpenFeedbackPage(void);
@@ -851,13 +871,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         }
 
                         /** Get font filename from fonts folder by ID using wide-char recursive search */
-                        char fontsFolderPathA[MAX_PATH];
-                        char* appdata_path = getenv("LOCALAPPDATA");
-                        if (appdata_path) {
-                            snprintf(fontsFolderPathA, MAX_PATH, "%s\\Catime\\resources\\fonts", appdata_path);
-
-                            wchar_t fontsFolderRootW[MAX_PATH];
-                            MultiByteToWideChar(CP_UTF8, 0, fontsFolderPathA, -1, fontsFolderRootW, MAX_PATH);
+                        wchar_t fontsFolderRootW[MAX_PATH] = {0};
+                        if (GetFontsFolderWideFromConfig(fontsFolderRootW, MAX_PATH)) {
 
                             int currentIndex = 2000;
                             wchar_t foundRelativePathW[MAX_PATH] = {0};
@@ -2192,13 +2207,8 @@ refresh_window:
                     }
 
                     /** Find font name for preview (wide-char), then convert to UTF-8 */
-                    char fontsFolderPathA[MAX_PATH];
-                    char* appdata_path = getenv("LOCALAPPDATA");
-                    if (appdata_path) {
-                        snprintf(fontsFolderPathA, MAX_PATH, "%s\\Catime\\resources\\fonts", appdata_path);
-
-                        wchar_t fontsFolderRootW[MAX_PATH];
-                        MultiByteToWideChar(CP_UTF8, 0, fontsFolderPathA, -1, fontsFolderRootW, MAX_PATH);
+                    wchar_t fontsFolderRootW[MAX_PATH] = {0};
+                    if (GetFontsFolderWideFromConfig(fontsFolderRootW, MAX_PATH)) {
 
                         int currentIndex = 2000;
                         wchar_t foundRelativePathW[MAX_PATH] = {0};

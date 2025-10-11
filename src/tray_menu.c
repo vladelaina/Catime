@@ -62,6 +62,30 @@ extern void ClearColorOptions(void);
 extern void AddColorOption(const char* color);
 
 /**
+ * @brief Get %LOCALAPPDATA%\Catime\resources\fonts in wide-char using config path
+ * @param out Wide-char buffer
+ * @param size Buffer size (wchar_t count)
+ */
+static BOOL GetFontsFolderWideFromConfig(wchar_t* out, size_t size) {
+    if (!out || size == 0) return FALSE;
+    char configPathUtf8[MAX_PATH] = {0};
+    GetConfigPath(configPathUtf8, MAX_PATH);
+    if (configPathUtf8[0] == '\0') return FALSE;
+    wchar_t wconfigPath[MAX_PATH] = {0};
+    MultiByteToWideChar(CP_UTF8, 0, configPathUtf8, -1, wconfigPath, MAX_PATH);
+    wchar_t* lastSep = wcsrchr(wconfigPath, L'\\');
+    if (!lastSep) return FALSE;
+    size_t dirLen = (size_t)(lastSep - wconfigPath);
+    if (dirLen + 1 >= size) return FALSE;
+    wcsncpy(out, wconfigPath, dirLen);
+    out[dirLen] = L'\0';
+    const wchar_t* tail = L"\\resources\\fonts";
+    if (wcslen(out) + wcslen(tail) + 1 >= size) return FALSE;
+    wcscat(out, tail);
+    return TRUE;
+}
+
+/**
  * @brief Read timeout action setting from configuration file
  * Parses TIMEOUT_ACTION value and updates global timeout action type
  */
@@ -438,31 +462,21 @@ void ShowColorMenu(HWND hwnd) {
                         /** Check if this is the current font */
                         BOOL isCurrentFont = FALSE;
                         
-                        /** Build current font file full path for comparison */
-                        char currentFontFullPath[MAX_PATH];
-                        char currentFileName[MAX_PATH];
-                        WideCharToMultiByte(CP_UTF8, 0, findData.cFileName, -1, currentFileName, MAX_PATH, NULL, NULL);
-                        snprintf(currentFontFullPath, MAX_PATH, "%s\\%s", folderPath, currentFileName);
-                        
-                        /** Convert FONT_FILE_NAME to actual path for comparison */
-                        char actualCurrentFontPath[MAX_PATH];
-                        if (strstr(FONT_FILE_NAME, "%LOCALAPPDATA%") == FONT_FILE_NAME) {
-                            /** Replace %LOCALAPPDATA% with actual path */
-                            const char* afterLocalAppData = FONT_FILE_NAME + strlen("%LOCALAPPDATA%");
-                            char* appdata_path = getenv("LOCALAPPDATA");
-                            if (appdata_path) {
-                                snprintf(actualCurrentFontPath, MAX_PATH, "%s%s", appdata_path, afterLocalAppData);
-                            } else {
-                                strncpy(actualCurrentFontPath, FONT_FILE_NAME, MAX_PATH - 1);
-                                actualCurrentFontPath[MAX_PATH - 1] = '\0';
+                        /** Build current absolute font path in wide-char from config */
+                        wchar_t wFontsFolderPath[MAX_PATH] = {0};
+                        if (GetFontsFolderWideFromConfig(wFontsFolderPath, MAX_PATH)) {
+                            const char* localPrefix = "%LOCALAPPDATA%\\Catime\\resources\\fonts\\";
+                            if (_strnicmp(FONT_FILE_NAME, localPrefix, (int)strlen(localPrefix)) == 0) {
+                                const char* relUtf8 = FONT_FILE_NAME + strlen(localPrefix);
+                                wchar_t wRel[MAX_PATH] = {0};
+                                MultiByteToWideChar(CP_UTF8, 0, relUtf8, -1, wRel, MAX_PATH);
+                                wchar_t wCurrentFull[MAX_PATH] = {0};
+                                _snwprintf_s(wCurrentFull, MAX_PATH, _TRUNCATE, L"%s\\%s", wFontsFolderPath, wRel);
+                                
+                                /** Compare with candidate file path */
+                                isCurrentFont = (_wcsicmp(wFullItemPath, wCurrentFull) == 0);
                             }
-                        } else {
-                            strncpy(actualCurrentFontPath, FONT_FILE_NAME, MAX_PATH - 1);
-                            actualCurrentFontPath[MAX_PATH - 1] = '\0';
                         }
-                        
-                        /** Compare full paths (case insensitive) */
-                        isCurrentFont = (_stricmp(currentFontFullPath, actualCurrentFontPath) == 0);
                         
                         AppendMenuW(parentMenu, MF_STRING | (isCurrentFont ? MF_CHECKED : MF_UNCHECKED),
                                   (*fontId)++, wDisplayName);
@@ -529,28 +543,28 @@ void ShowColorMenu(HWND hwnd) {
                    GetLocalizedString(L"点击同意许可协议后继续", L"Click to agree to license agreement"));
     } else {
         /** Normal font menu when license version is accepted */
-        char fontsFolderPath[MAX_PATH];
-        char* appdata_path = getenv("LOCALAPPDATA");
-        if (appdata_path) {
-            snprintf(fontsFolderPath, MAX_PATH, "%s\\Catime\\resources\\fonts", appdata_path);
+        wchar_t wFontsFolder[MAX_PATH] = {0};
+        if (GetFontsFolderWideFromConfig(wFontsFolder, MAX_PATH)) {
+            char fontsFolderPathUtf8[MAX_PATH];
+            WideCharToMultiByte(CP_UTF8, 0, wFontsFolder, -1, fontsFolderPathUtf8, MAX_PATH, NULL, NULL);
             
             g_advancedFontId = 2000; /** Reset global font ID counter */
             
             /** Use recursive function to scan all folders and subfolders directly in main font menu */
             /** Try Unicode scan first, fallback to ANSI if needed */
-            int fontFolderStatus = ScanFontFolder(fontsFolderPath, hFontSubMenu, &g_advancedFontId);
+            int fontFolderStatus = ScanFontFolder(fontsFolderPathUtf8, hFontSubMenu, &g_advancedFontId);
 
             /** If Unicode scan failed, try ANSI scan as fallback */
             if (fontFolderStatus == 0) {
                 WriteLog(LOG_LEVEL_INFO, "Unicode scan found no fonts, trying ANSI scan as fallback...");
-                fontFolderStatus = ScanFontFolderAnsi(fontsFolderPath, hFontSubMenu, &g_advancedFontId);
+                fontFolderStatus = ScanFontFolderAnsi(fontsFolderPathUtf8, hFontSubMenu, &g_advancedFontId);
             }
 
             /** Additional debug: manually check some known font files */
             if (fontFolderStatus == 0) {
                 WriteLog(LOG_LEVEL_INFO, "Both scans failed, manually checking known font files...");
                 char testFontPath[MAX_PATH];
-                snprintf(testFontPath, MAX_PATH, "%s\\Wallpoet Essence.ttf", fontsFolderPath);
+                snprintf(testFontPath, MAX_PATH, "%s\\Wallpoet Essence.ttf", fontsFolderPathUtf8);
                 DWORD attribs = GetFileAttributesA(testFontPath);
                 if (attribs != INVALID_FILE_ATTRIBUTES) {
                     WriteLog(LOG_LEVEL_WARNING, "Manual check: Wallpoet Essence.ttf EXISTS but scan failed to find it!");
@@ -560,6 +574,18 @@ void ShowColorMenu(HWND hwnd) {
             }
             WriteLog(LOG_LEVEL_INFO, "Font folder scan result: %d (0=no content, 1=has content, 2=contains current font)", fontFolderStatus);
             
+            /** If no fonts found, try extracting embedded fonts once and rescan */
+            if (fontFolderStatus == 0) {
+                extern BOOL ExtractEmbeddedFontsToFolder(HINSTANCE hInstance);
+                HINSTANCE hInst = GetModuleHandle(NULL);
+                if (ExtractEmbeddedFontsToFolder(hInst)) {
+                    fontFolderStatus = ScanFontFolder(fontsFolderPathUtf8, hFontSubMenu, &g_advancedFontId);
+                    if (fontFolderStatus == 0) {
+                        fontFolderStatus = ScanFontFolderAnsi(fontsFolderPathUtf8, hFontSubMenu, &g_advancedFontId);
+                    }
+                }
+            }
+
             /** Add browse option if no fonts found or as additional option */
             if (fontFolderStatus == 0) {
                 AppendMenuW(hFontSubMenu, MF_STRING | MF_GRAYED, 0, 
