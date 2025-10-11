@@ -403,6 +403,56 @@ void GetConfigPath(char* path, size_t size) {
 
 
 /**
+ * @brief Build full path to a resources subfolder and ensure it exists
+ * @param wSubFolder Wide-char subfolder relative to config dir (e.g., L"resources\\audio")
+ * @param outPathUtf8 Output buffer (UTF-8). May be NULL if caller only needs side-effect
+ * @param outSize Size of output buffer
+ */
+static void GetResourceSubfolderPathUtf8(const wchar_t* wSubFolder, char* outPathUtf8, size_t outSize) {
+    char configPathUtf8[MAX_PATH] = {0};
+    wchar_t wConfigPath[MAX_PATH] = {0};
+    GetConfigPath(configPathUtf8, MAX_PATH);
+    MultiByteToWideChar(CP_UTF8, 0, configPathUtf8, -1, wConfigPath, MAX_PATH);
+
+    /** Trim trailing file name */
+    wchar_t* lastSep = wcsrchr(wConfigPath, L'\\');
+    if (!lastSep) {
+        if (outPathUtf8 && outSize > 0) {
+            strncpy(outPathUtf8, ".\\", outSize - 1);
+            outPathUtf8[outSize - 1] = '\0';
+        }
+        return;
+    }
+    *lastSep = L'\0';
+
+    wchar_t wFolder[MAX_PATH] = {0};
+    _snwprintf_s(wFolder, MAX_PATH, _TRUNCATE, L"%s\\%s", wConfigPath, wSubFolder);
+
+    /** Ensure directory exists (creates intermediate directories) */
+    SHCreateDirectoryExW(NULL, wFolder, NULL);
+
+    if (outPathUtf8 && outSize > 0) {
+        WideCharToMultiByte(CP_UTF8, 0, wFolder, -1, outPathUtf8, (int)outSize, NULL, NULL);
+    }
+}
+
+/**
+ * @brief Ensure default resources subfolder structure exists
+ * Creates resources, resources\\audio, resources\\fonts, resources\\animations
+ */
+static void EnsureDefaultResourceSubfolders(void) {
+    const wchar_t* subfolders[] = {
+        L"resources",
+        L"resources\\audio",
+        L"resources\\fonts",
+        L"resources\\animations"
+    };
+    for (size_t i = 0; i < sizeof(subfolders)/sizeof(subfolders[0]); ++i) {
+        GetResourceSubfolderPathUtf8(subfolders[i], NULL, 0);
+    }
+}
+
+/**
  * @brief Create default configuration file with system language detection
  * @param config_path Path where to create the config file
  * Auto-detects system language and sets appropriate defaults
@@ -602,53 +652,10 @@ void CheckAndCreateResourceFolders() {
     }
     
     if (last_slash) {
-
         *(last_slash + 1) = '\0';
-        
 
-        snprintf(resource_path, MAX_PATH, "%sresources", base_path);
-    
-        wchar_t wresource_path_check[MAX_PATH];
-        MultiByteToWideChar(CP_UTF8, 0, resource_path, -1, wresource_path_check, MAX_PATH);
-        DWORD attrs = GetFileAttributesW(wresource_path_check);
-        if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
-        
-            wchar_t wresource_path[MAX_PATH];
-            MultiByteToWideChar(CP_UTF8, 0, resource_path, -1, wresource_path, MAX_PATH);
-            if (!CreateDirectoryW(wresource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
-                fprintf(stderr, "Failed to create resources folder: %s (Error: %lu)\n", resource_path, GetLastError());
-                return;
-            }
-        }
-        
-
-        snprintf(resource_path, MAX_PATH, "%sresources\\audio", base_path);
-    
-        MultiByteToWideChar(CP_UTF8, 0, resource_path, -1, wresource_path_check, MAX_PATH);
-        attrs = GetFileAttributesW(wresource_path_check);
-        if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
-        
-            wchar_t wresource_path[MAX_PATH];
-            MultiByteToWideChar(CP_UTF8, 0, resource_path, -1, wresource_path, MAX_PATH);
-            if (!CreateDirectoryW(wresource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
-                fprintf(stderr, "Failed to create audio folder: %s (Error: %lu)\n", resource_path, GetLastError());
-            }
-        }
-        
-
-        /** Create fonts folder */
-        snprintf(resource_path, MAX_PATH, "%sresources\\fonts", base_path);
-    
-        MultiByteToWideChar(CP_UTF8, 0, resource_path, -1, wresource_path_check, MAX_PATH);
-        attrs = GetFileAttributesW(wresource_path_check);
-        if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
-        
-            wchar_t wresource_path[MAX_PATH];
-            MultiByteToWideChar(CP_UTF8, 0, resource_path, -1, wresource_path, MAX_PATH);
-            if (!CreateDirectoryW(wresource_path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
-                fprintf(stderr, "Failed to create fonts folder: %s (Error: %lu)\n", resource_path, GetLastError());
-            }
-        }
+        /** Unified creation via helper */
+        EnsureDefaultResourceSubfolders();
     }
 }
 
@@ -2730,32 +2737,19 @@ void WriteConfigNotificationType(NotificationType type) {
  */
 void GetAudioFolderPath(char* path, size_t size) {
     if (!path || size == 0) return;
-
-    /** Build folder based on config path (Unicode-safe) */
-    char configPathUtf8[MAX_PATH] = {0};
-    wchar_t wConfigPath[MAX_PATH] = {0};
-    GetConfigPath(configPathUtf8, MAX_PATH);
-    MultiByteToWideChar(CP_UTF8, 0, configPathUtf8, -1, wConfigPath, MAX_PATH);
-
-    /** Trim filename, append resources\audio */
-    wchar_t* lastSep = wcsrchr(wConfigPath, L'\\');
-    if (!lastSep) {
-        strncpy(path, ".\\resources\\audio", size - 1);
-        path[size - 1] = '\0';
-        return;
-    }
-    *lastSep = L'\0';
-
-    wchar_t wAudioFolder[MAX_PATH] = {0};
-    _snwprintf_s(wAudioFolder, MAX_PATH, _TRUNCATE, L"%s\\resources\\audio", wConfigPath);
-
-    /** Ensure directory exists */
-    SHCreateDirectoryExW(NULL, wAudioFolder, NULL);
-
-    /** Convert back to UTF-8 for callers */
-    WideCharToMultiByte(CP_UTF8, 0, wAudioFolder, -1, path, (int)size, NULL, NULL);
+    GetResourceSubfolderPathUtf8(L"resources\\audio", path, size);
 }
 
+
+/**
+ * @brief Get animations resources folder path and ensure it exists
+ * @param path Buffer to store animations folder path
+ * @param size Size of path buffer
+ */
+void GetAnimationsFolderPath(char* path, size_t size) {
+    if (!path || size == 0) return;
+    GetResourceSubfolderPathUtf8(L"resources\\animations", path, size);
+}
 
 /**
  * @brief Read notification sound file path from config

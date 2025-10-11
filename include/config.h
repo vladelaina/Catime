@@ -137,9 +137,16 @@ void GetConfigPath(char* path, size_t size);
 void ReadConfig();
 
 /**
- * @brief Check and create audio folder if needed
+ * @brief Check and create audio/fonts/animations folders if needed
  */
 void CheckAndCreateAudioFolder();
+
+/**
+ * @brief Get animations folder path for tray animations
+ * @param path Buffer to store animations folder path
+ * @param size Size of path buffer
+ */
+void GetAnimationsFolderPath(char* path, size_t size);
 
 /**
  * @brief Write timeout action configuration
