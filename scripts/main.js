@@ -129,6 +129,11 @@ function setDownloadUrls() {
             btn.href = CATIME_CONFIG.DOWNLOAD_URL;
         }
     });
+
+    // 统一给标记了 data-download 或 download-link 类名的链接赋值（兜底）
+    document.querySelectorAll('a[data-download], a.download-link').forEach(a => {
+        a.setAttribute('href', CATIME_CONFIG.DOWNLOAD_URL);
+    });
 }
 
 // 初始化滚动进度指示器

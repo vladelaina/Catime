@@ -69,12 +69,13 @@ class CatimeNavigation {
         
         if (this.currentPage === 'support') {
             // 支持页面只显示下载按钮
-            return `<li><a href="https://apps.microsoft.com/detail/9n3mzdf1z34v?referrer=appbadge&launch=true&mode=full" class="nav-button" target="_blank" rel="noopener noreferrer"><i class="fas fa-download"></i> <span>${isEnglish ? 'Download' : '下载'}</span></a></li>`;
+            const url = (typeof CATIME_CONFIG !== 'undefined' && CATIME_CONFIG.DOWNLOAD_URL) ? CATIME_CONFIG.DOWNLOAD_URL : 'https://github.com/vladelaina/Catime/releases';
+            return `<li><a href="${url}" class="nav-button" target="_blank" rel="noopener noreferrer"><i class="fas fa-download"></i> <span>${isEnglish ? 'Download' : '下载'}</span></a></li>`;
         } else {
             // 其他页面显示完整按钮
             return `<li class="action-buttons">
                         <a href="${prefix}support.html" class="nav-button support-btn"><i class="fas fa-mug-hot"></i> <span>${isEnglish ? 'Support' : '支持项目'}</span></a>
-                        <a href="https://apps.microsoft.com/detail/9n3mzdf1z34v?referrer=appbadge&launch=true&mode=full" class="nav-button download-btn" target="_blank" rel="noopener noreferrer"><i class="fas fa-download"></i> <span>${isEnglish ? 'Download' : '下载'}</span></a>
+                        <a href="${(typeof CATIME_CONFIG !== 'undefined' && CATIME_CONFIG.DOWNLOAD_URL) ? CATIME_CONFIG.DOWNLOAD_URL : 'https://github.com/vladelaina/Catime/releases'}" class="nav-button download-btn" target="_blank" rel="noopener noreferrer"><i class="fas fa-download"></i> <span>${isEnglish ? 'Download' : '下载'}</span></a>
                     </li>`;
         }
     }
