@@ -2604,36 +2604,13 @@ void GetAudioFolderPath(char* path, size_t size) {
 void ReadNotificationSoundConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    
-    /** Convert paths to wide character for Unicode support */
-    wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-    
-    FILE* file = _wfopen(wconfig_path, L"r");
-    if (!file) return;
-    
-    char line[1024];
-    while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, "NOTIFICATION_SOUND_FILE=", 23) == 0) {
-            char* value = line + 23;
-            /** Remove newline */
-            char* newline = strchr(value, '\n');
-            if (newline) *newline = '\0';
-            
-            /** Skip extra equals sign if present */
-            if (value[0] == '=') {
-                value++;
-            }
-            
-            /** Clear and copy sound file path */
-            memset(NOTIFICATION_SOUND_FILE, 0, MAX_PATH);
-            strncpy(NOTIFICATION_SOUND_FILE, value, MAX_PATH - 1);
-            NOTIFICATION_SOUND_FILE[MAX_PATH - 1] = '\0';
-            break;
-        }
-    }
-    
-    fclose(file);
+    /** Use INI wide-char API to ensure proper Unicode path decoding */
+    ReadIniString(INI_SECTION_NOTIFICATION,
+                 "NOTIFICATION_SOUND_FILE",
+                 "",
+                 NOTIFICATION_SOUND_FILE,
+                 MAX_PATH,
+                 config_path);
 }
 
 
@@ -2657,55 +2634,16 @@ void WriteConfigNotificationSound(const char* sound_file) {
         src++;
     }
     *dst = '\0';
-    
+
+    /** Use INI wide-char API to avoid locale mis-decoding on non-BOM files */
     char config_path[MAX_PATH];
-    char temp_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    
+    WriteIniString(INI_SECTION_NOTIFICATION,
+                   "NOTIFICATION_SOUND_FILE",
+                   clean_path,
+                   config_path);
 
-    snprintf(temp_path, MAX_PATH, "%s.tmp", config_path);
-    
-    /** Convert paths to wide character for Unicode support */
-    wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-    
-    FILE* source = _wfopen(wconfig_path, L"r");
-    if (!source) return;
-    
-    wchar_t wtemp_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
-    
-    FILE* dest = _wfopen(wtemp_path, L"w");
-    if (!dest) {
-        fclose(source);
-        return;
-    }
-    
-    char line[1024];
-    int found = 0;
-    
-
-    while (fgets(line, sizeof(line), source)) {
-        if (strncmp(line, "NOTIFICATION_SOUND_FILE=", 23) == 0) {
-            fprintf(dest, "NOTIFICATION_SOUND_FILE=%s\n", clean_path);
-            found = 1;
-        } else {
-            fputs(line, dest);
-        }
-    }
-    
-
-    if (!found) {
-        fprintf(dest, "NOTIFICATION_SOUND_FILE=%s\n", clean_path);
-    }
-    
-    fclose(source);
-    fclose(dest);
-    
-    
-    ReplaceFileUtf8(config_path, temp_path);
-    
-
+    /** Sync global variable */
     memset(NOTIFICATION_SOUND_FILE, 0, MAX_PATH);
     strncpy(NOTIFICATION_SOUND_FILE, clean_path, MAX_PATH - 1);
     NOTIFICATION_SOUND_FILE[MAX_PATH - 1] = '\0';
