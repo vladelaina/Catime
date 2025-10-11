@@ -912,8 +912,8 @@ BOOL CheckAndFixFontPath(void) {
     char fontPath[MAX_PATH];
     WideCharToMultiByte(CP_UTF8, 0, fullW, -1, fontPath, MAX_PATH, NULL, NULL);
     
-    /** Check if font exists at configured path */
-    if (GetFileAttributesA(fontPath) != INVALID_FILE_ATTRIBUTES) {
+    /** Check if font exists at configured path (use wide-char API) */
+    if (GetFileAttributesW(fullW) != INVALID_FILE_ATTRIBUTES) {
         return FALSE; // Font exists, no fix needed
     }
     

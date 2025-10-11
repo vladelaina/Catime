@@ -378,51 +378,7 @@ void ShowColorMenu(HWND hwnd) {
     /** Helper function to recursively build font submenus */
     int g_advancedFontId = 2000; /** Global counter for font IDs */
     
-    /** Helper function to scan for font files using ANSI API as fallback */
-    int ScanFontFolderAnsi(const char* folderPath, HMENU parentMenu, int* fontId) {
-        
-
-        char searchPath[MAX_PATH];
-        snprintf(searchPath, MAX_PATH, "%s\\*.*", folderPath);
-
-        WIN32_FIND_DATAA findData;
-        HANDLE hFind = FindFirstFileA(searchPath, &findData);
-        int folderStatus = 0;
-        int fontCount = 0;
-
-        if (hFind != INVALID_HANDLE_VALUE) {
-            do {
-                if (strcmp(findData.cFileName, ".") == 0 || strcmp(findData.cFileName, "..") == 0) {
-                    continue;
-                }
-
-                if (!(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
-                    char* ext = strrchr(findData.cFileName, '.');
-                    if (ext && (_stricmp(ext, ".ttf") == 0 || _stricmp(ext, ".otf") == 0)) {
-                        
-
-                        /** Convert to wide char for menu display */
-                        wchar_t wDisplayName[MAX_PATH];
-                        MultiByteToWideChar(CP_UTF8, 0, findData.cFileName, -1, wDisplayName, MAX_PATH);
-
-                        /** Remove extension */
-                        wchar_t* dotPos = wcsrchr(wDisplayName, L'.');
-                        if (dotPos) *dotPos = L'\0';
-
-                        AppendMenuW(parentMenu, MF_STRING, (*fontId)++, wDisplayName);
-                        folderStatus = 1;
-                        fontCount++;
-                    }
-                }
-            } while (FindNextFileA(hFind, &findData));
-            FindClose(hFind);
-        } else {
-             WriteLog(LOG_LEVEL_WARNING, "ScanFontFolderAnsi: FindFirstFileA failed for path '%s', error: %lu", searchPath, GetLastError());
-        }
-
-        
-        return folderStatus;
-    }
+    /** ANSI fallback scanner removed to ensure consistent wide-char API usage */
     
     /** Recursive function to scan folder and create submenus */
     /** Returns: 0 = no content, 1 = has content but no current font, 2 = contains current font */
@@ -554,11 +510,7 @@ void ShowColorMenu(HWND hwnd) {
             /** Try Unicode scan first, fallback to ANSI if needed */
             int fontFolderStatus = ScanFontFolder(fontsFolderPathUtf8, hFontSubMenu, &g_advancedFontId);
 
-            /** If Unicode scan failed, try ANSI scan as fallback */
-            if (fontFolderStatus == 0) {
-                WriteLog(LOG_LEVEL_INFO, "Unicode scan found no fonts, trying ANSI scan as fallback...");
-                fontFolderStatus = ScanFontFolderAnsi(fontsFolderPathUtf8, hFontSubMenu, &g_advancedFontId);
-            }
+            /** No ANSI fallback: rely solely on wide-char scanning */
 
             /** Additional debug: manually check some known font files */
             if (fontFolderStatus == 0) {
@@ -580,9 +532,6 @@ void ShowColorMenu(HWND hwnd) {
                 HINSTANCE hInst = GetModuleHandle(NULL);
                 if (ExtractEmbeddedFontsToFolder(hInst)) {
                     fontFolderStatus = ScanFontFolder(fontsFolderPathUtf8, hFontSubMenu, &g_advancedFontId);
-                    if (fontFolderStatus == 0) {
-                        fontFolderStatus = ScanFontFolderAnsi(fontsFolderPathUtf8, hFontSubMenu, &g_advancedFontId);
-                    }
                 }
             }
 
