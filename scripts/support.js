@@ -1,4 +1,7 @@
 // 支持项目的3D交互效果
+// State for support metrics animation
+let SUPPORT_METRICS = { total: 0, count: 0, animated: false };
+
 document.addEventListener('DOMContentLoaded', function() {
     // AOS (滚动时动画) 库初始化
     AOS.init({
@@ -136,6 +139,12 @@ document.addEventListener('DOMContentLoaded', function() {
     updateSupportTotal();
     // 统计支持者人数
     updateSupportCount();
+    // 为胶囊添加亮片绽放交互
+    initCapsuleSparkles();
+    // 为胶囊添加点击彩带效果
+    initCapsuleConfetti();
+    // 在胶囊可见时再触发数字动画
+    initCapsuleNumberObserver();
 
     // 语言切换按钮功能
     const languageToggle = document.getElementById('language-toggle');
@@ -555,8 +564,12 @@ function updateSupportTotal() {
         }
     });
 
-    // 显示为人民币格式，保留两位小数
-    totalEl.textContent = `¥${sum.toFixed(2)}`;
+    // 只更新数值缓存，不立刻播放动画
+    SUPPORT_METRICS.total = sum;
+    // 如果已播放动画，则直接更新文本
+    if (SUPPORT_METRICS.animated) {
+        totalEl.textContent = `¥${sum.toFixed(2)}`;
+    }
 }
 
 // 统计支持者人数
@@ -574,7 +587,129 @@ function updateSupportCount() {
         if (!nameText) return;
         nameSet.add(normalize(nameText));
     });
-    countEl.textContent = String(nameSet.size);
+    const newCount = nameSet.size;
+    SUPPORT_METRICS.count = newCount;
+    if (SUPPORT_METRICS.animated) {
+        countEl.textContent = String(newCount);
+    }
+}
+
+// 胶囊悬停时的亮片粒子效果
+function initCapsuleSparkles() {
+    const capsule = document.querySelector('.support-total-top');
+    if (!capsule) return;
+
+    // 如果用户偏好减少动效，直接返回
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (media.matches) return;
+
+    capsule.addEventListener('mouseenter', spawnSparkles);
+    capsule.addEventListener('focus', spawnSparkles);
+
+    function spawnSparkles() {
+        for (let i = 0; i < 10; i++) {
+            const s = document.createElement('span');
+            s.className = 'sparkle';
+            // 随机起点在胶囊中部
+            s.style.left = `${50 + (Math.random() * 40 - 20)}%`;
+            s.style.top = `${45 + (Math.random() * 20 - 10)}%`;
+            // 随机延迟/大小
+            s.style.setProperty('--d', `${Math.random() * 0.2 + 0.05}s`);
+            s.style.setProperty('--tx', `${(Math.random() * 140 - 70)}%`);
+            s.style.setProperty('--ty', `${(Math.random() * -120 - 20)}%`);
+            capsule.appendChild(s);
+            // 清理
+            setTimeout(() => s.remove(), 700);
+        }
+    }
+}
+
+// 胶囊点击/触发的彩带效果
+function initCapsuleConfetti() {
+    const capsule = document.querySelector('.support-total-top');
+    if (!capsule) return;
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (media.matches) return;
+
+    capsule.addEventListener('click', () => {
+        for (let i = 0; i < 14; i++) {
+            const c = document.createElement('span');
+            c.className = 'confetti';
+            c.style.left = `${50 + (Math.random() * 40 - 20)}%`;
+            c.style.top = `${40 + (Math.random() * 20 - 10)}%`;
+            c.style.setProperty('--rot', `${Math.random() * 360}deg`);
+            c.style.setProperty('--dx', `${(Math.random() * 220 - 110)}%`);
+            c.style.setProperty('--dy', `${(Math.random() * -160 - 40)}%`);
+            c.style.background = randomConfettiColor();
+            capsule.appendChild(c);
+            setTimeout(() => c.remove(), 900);
+        }
+    });
+
+    function randomConfettiColor() {
+        const colors = ['#7aa2f7', '#f799b8', '#ffd45e', '#9ae6b4', '#fbd38d'];
+        return colors[Math.floor(Math.random() * colors.length)];
+    }
+}
+
+// 数字动画工具函数
+function animateNumber(element, from, to, duration, formatter) {
+    const start = performance.now();
+    const ease = (t) => 1 - Math.pow(1 - t, 3); // easeOutCubic
+    function frame(now) {
+        const progress = Math.min(1, (now - start) / duration);
+        const eased = ease(progress);
+        const value = from + (to - from) * eased;
+        element.textContent = formatter(value);
+        if (progress < 1) {
+            requestAnimationFrame(frame);
+        }
+    }
+    requestAnimationFrame(frame);
+}
+
+// 观察胶囊是否进入视口，进入后再播放数字动画（只播放一次）
+function initCapsuleNumberObserver() {
+    const capsule = document.querySelector('.support-total-top');
+    const totalEl = document.getElementById('support-total-value');
+    const countEl = document.getElementById('support-count-value');
+    if (!capsule || !totalEl || !countEl) return;
+
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const oncePlay = () => {
+        if (SUPPORT_METRICS.animated) return;
+        SUPPORT_METRICS.animated = true;
+        // 播放累计赞助
+        const currentTotal = parseFloat((totalEl.textContent || '0').replace(/[¥,\s]/g, '')) || 0;
+        const duration = media.matches ? 0 : 1800; // keep both in sync
+        animateNumber(totalEl, currentTotal, SUPPORT_METRICS.total || 0, duration, (v) => `¥${v.toFixed(2)}`);
+        // 播放支持者人数
+        const currentCount = parseFloat(countEl.textContent || '0') || 0;
+        animateNumber(countEl, currentCount, SUPPORT_METRICS.count || 0, duration, (v) => `${Math.round(v)}`);
+    };
+
+    if ('IntersectionObserver' in window) {
+        const io = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && entry.intersectionRatio > 0.25) {
+                    oncePlay();
+                    io.disconnect();
+                }
+            });
+        }, { threshold: [0, 0.25, 0.5, 1] });
+        io.observe(capsule);
+    } else {
+        // 回退：滚动时检测
+        const onScroll = () => {
+            const rect = capsule.getBoundingClientRect();
+            if (rect.top < window.innerHeight * 0.75 && rect.bottom > 0) {
+                oncePlay();
+                window.removeEventListener('scroll', onScroll);
+            }
+        };
+        window.addEventListener('scroll', onScroll);
+        onScroll();
+    }
 }
 
  

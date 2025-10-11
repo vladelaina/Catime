@@ -641,11 +641,60 @@
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.55rem 0.85rem;
+    padding: 0.6rem 0.95rem;
     margin: 0.5rem auto 0.25rem;
     border-radius: 999px;
     background: rgba(122, 162, 247, 0.08);
     border: 1px solid rgba(122, 162, 247, 0.18);
+    transition: transform 260ms cubic-bezier(.2,1,.2,1), box-shadow 260ms ease, background 260ms ease;
+    position: relative;
+    overflow: hidden;
+}
+
+/* sparkle particle */
+.support-total-top .sparkle {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background: radial-gradient(circle, #fff 0%, rgba(255,255,255,.2) 70%, rgba(255,255,255,0) 72%);
+    border-radius: 50%;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    animation: sparkleFloat var(--d, .12s) ease-out forwards;
+}
+
+@keyframes sparkleFloat {
+    to { transform: translate(calc(-50% + var(--tx, 0)), calc(-50% + var(--ty, -60%))); opacity: 0; }
+}
+
+/* confetti pieces */
+.support-total-top .confetti {
+    position: absolute;
+    width: 8px;
+    height: 10px;
+    border-radius: 2px;
+    transform: translate(-50%, -50%) rotate(var(--rot, 0));
+    animation: confettiFly .9s ease-out forwards;
+    pointer-events: none;
+}
+
+@keyframes confettiFly {
+    0% { opacity: 1; }
+    70% { transform: translate(calc(-50% + var(--dx, 0)), calc(-50% + var(--dy, -80%))) rotate(calc(var(--rot, 0) + 180deg)); opacity: .9; }
+    100% { transform: translate(calc(-50% + var(--dx, 0)), calc(-50% + var(--dy, -80%))) rotate(calc(var(--rot, 0) + 360deg)); opacity: 0; }
+}
+
+.support-total-top::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -120%;
+    height: 100%;
+    width: 120%;
+    background: linear-gradient(75deg, rgba(255,255,255,0) 30%, rgba(255,255,255,.5) 45%, rgba(255,255,255,0) 60%);
+    transform: skewX(-20deg);
+    opacity: 0;
+    transition: opacity 240ms ease, left 650ms cubic-bezier(.22,.61,.36,1);
 }
 
 .support-total-sep {
@@ -657,6 +706,7 @@
 .support-count-label i {
     color: var(--primary-color);
     margin-right: 6px;
+    transition: transform 200ms ease;
 }
 /* Total amount display */
 /* deprecated: top-right badge (moved to footer) */
@@ -682,6 +732,7 @@
 .support-total-label i {
     color: #f7bd2f;
     margin-right: 6px;
+    transition: transform 200ms ease;
 }
 
 .support-total-value {
@@ -689,6 +740,65 @@
     font-weight: 700;
     font-size: 1.05rem;
     letter-spacing: 0.2px;
+}
+
+.support-total-top:hover .support-total-value,
+.support-total-top:focus-visible .support-total-value,
+.support-total-top:hover .support-count-value,
+.support-total-top:focus-visible .support-count-value {
+    animation: bounceNum 520ms cubic-bezier(.2,.7,.2,1) both;
+}
+
+@keyframes bounceNum {
+    0% { transform: translateY(0) scale(1); }
+    30% { transform: translateY(-4px) scale(1.08); }
+    60% { transform: translateY(1px) scale(0.98); }
+    100% { transform: translateY(0) scale(1); }
+}
+
+.support-total-top:hover,
+.support-total-top:focus-visible {
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: 0 12px 28px rgba(122,162,247,.24);
+    background: rgba(122, 162, 247, 0.14);
+}
+
+.support-total-top:hover::after,
+.support-total-top:focus-visible::after {
+    opacity: 1;
+    left: 120%;
+}
+
+.support-total-top:hover .support-total-label i,
+.support-total-top:focus-visible .support-total-label i {
+    animation: coinSpin 650ms ease both;
+}
+
+/* animate supporters icon as well */
+.support-total-top:hover .support-count-label i,
+.support-total-top:focus-visible .support-count-label i {
+    animation: peopleWave 650ms ease both;
+}
+
+@keyframes coinSpin {
+    0% { transform: rotate(0) scale(1); }
+    40% { transform: rotate(-20deg) scale(1.15); }
+    100% { transform: rotate(0) scale(1.05); }
+}
+
+@keyframes peopleWave {
+    0% { transform: translateY(0) rotate(0) scale(1); }
+    35% { transform: translateY(-2px) rotate(10deg) scale(1.1); }
+    70% { transform: translateY(1px) rotate(-6deg) scale(1.02); }
+    100% { transform: translateY(0) rotate(0) scale(1.02); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .support-total-top,
+    .support-total-top::after,
+    .support-total-label i {
+        transition: none !important;
+    }
 }
 
 .heart-animation {
