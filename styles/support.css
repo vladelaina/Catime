@@ -636,6 +636,60 @@
     background-color: var(--background-color);
     text-align: center;
 }
+/* Top total capsule */
+.support-total-top {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 0.85rem;
+    margin: 0.5rem auto 0.25rem;
+    border-radius: 999px;
+    background: rgba(122, 162, 247, 0.08);
+    border: 1px solid rgba(122, 162, 247, 0.18);
+}
+
+.support-total-sep {
+    color: var(--text-secondary);
+    opacity: 0.6;
+    padding: 0 0.1rem;
+}
+
+.support-count-label i {
+    color: var(--primary-color);
+    margin-right: 6px;
+}
+/* Total amount display */
+/* deprecated: top-right badge (moved to footer) */
+.support-total {
+    display: none;
+}
+
+.support-total-bar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-top: 2px solid rgba(122, 162, 247, 0.12);
+    background: rgba(122, 162, 247, 0.04);
+}
+
+.support-total-label {
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.support-total-label i {
+    color: #f7bd2f;
+    margin-right: 6px;
+}
+
+.support-total-value {
+    color: var(--primary-color);
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: 0.2px;
+}
 
 .heart-animation {
     margin: 3rem auto;

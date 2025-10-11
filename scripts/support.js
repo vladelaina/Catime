@@ -132,6 +132,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // 添加支持页面的翻译
     addSupportTranslations();
 
+    // 计算并更新累计赞助
+    updateSupportTotal();
+    // 统计支持者人数
+    updateSupportCount();
+
     // 语言切换按钮功能
     const languageToggle = document.getElementById('language-toggle');
     if (languageToggle) {
@@ -396,11 +401,22 @@ function translateSupportElements() {
         }
     });
     
-    // 翻译感谢支持者部分
+        // 翻译感谢支持者部分
     const supportersDesc = document.querySelector('.supporters .section-subtitle');
     if (supportersDesc) {
         supportersDesc.textContent = 'Special thanks to those who have supported the Catime project! Your encouragement is our motivation to move forward.';
     }
+
+        // 翻译累计赞助标签
+        const totalLabel = document.querySelector('.support-total-label');
+        if (totalLabel) {
+            totalLabel.innerHTML = '<i class="fas fa-coins"></i> Total Donations';
+        }
+
+        const countLabel = document.querySelector('.support-count-label');
+        if (countLabel) {
+            countLabel.innerHTML = '<i class="fas fa-user-friends"></i> Supporters';
+        }
     
     // 翻译表格头部
     const tableHeaders = document.querySelectorAll('.supporters-table th');
@@ -514,6 +530,51 @@ function translateSupportElements() {
             }
         }
     });
+}
+
+// 汇总表格金额并更新到累计赞助展示
+function updateSupportTotal() {
+    const table = document.querySelector('.supporters-table');
+    const totalEl = document.getElementById('support-total-value');
+    if (!table || !totalEl) return;
+
+    let sum = 0;
+    // 遍历表体的每一行的“金额”列（第3列）
+    table.querySelectorAll('tbody tr').forEach(row => {
+        const amountCell = row.cells && row.cells[2];
+        if (!amountCell) return;
+        const text = amountCell.textContent.trim();
+        // 支持形如 ¥66.66、¥2.8、¥1、含空格等
+        const match = text.replace(/[,\s]/g, '').match(/([\-\+]?)¥?([0-9]+(?:\.[0-9]+)?)/);
+        if (match) {
+            const sign = match[1] === '-' ? -1 : 1;
+            const value = parseFloat(match[2]);
+            if (!isNaN(value)) {
+                sum += sign * value;
+            }
+        }
+    });
+
+    // 显示为人民币格式，保留两位小数
+    totalEl.textContent = `¥${sum.toFixed(2)}`;
+}
+
+// 统计支持者人数
+function updateSupportCount() {
+    const tbody = document.querySelector('.supporters-table tbody');
+    const countEl = document.getElementById('support-count-value');
+    if (!tbody || !countEl) return;
+
+    // 按用户名去重统计，忽略空白与大小写
+    const normalize = (s) => (s || '').replace(/\s+/g, '').toLowerCase();
+    const nameSet = new Set();
+    Array.from(tbody.querySelectorAll('tr')).forEach(tr => {
+        if (!tr.cells || tr.cells.length < 2) return;
+        const nameText = tr.cells[1].textContent.trim();
+        if (!nameText) return;
+        nameSet.add(normalize(nameText));
+    });
+    countEl.textContent = String(nameSet.size);
 }
 
  
