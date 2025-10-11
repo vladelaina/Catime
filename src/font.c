@@ -789,6 +789,9 @@ void CancelFontPreview(void) {
         strncpy(actualFontFileName, FONT_FILE_NAME + strlen(localappdata_prefix), sizeof(actualFontFileName) - 1);
         actualFontFileName[sizeof(actualFontFileName) - 1] = '\0';
         LoadFontByNameAndGetRealName(GetModuleHandle(NULL), actualFontFileName, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
+    } else if (FONT_FILE_NAME[0] != '\0') {
+        /** Fallback: treat FONT_FILE_NAME as relative name and attempt reload */
+        LoadFontByNameAndGetRealName(GetModuleHandle(NULL), FONT_FILE_NAME, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
     }
 }
 

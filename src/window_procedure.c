@@ -2142,6 +2142,23 @@ refresh_window:
             UINT flags = HIWORD(wp);
             HMENU hMenu = (HMENU)lp;
 
+            /** If mouse moved outside any menu item, cancel any active previews and restore state */
+            if (menuItem == 0xFFFF && hMenu == NULL) {
+                if (IS_PREVIEWING || IS_COLOR_PREVIEWING || IS_TIME_FORMAT_PREVIEWING || IS_MILLISECONDS_PREVIEWING) {
+                    if (IS_PREVIEWING) {
+                        CancelFontPreview();
+                    }
+                    IS_COLOR_PREVIEWING = FALSE;
+                    IS_TIME_FORMAT_PREVIEWING = FALSE;
+                    if (IS_MILLISECONDS_PREVIEWING) {
+                        IS_MILLISECONDS_PREVIEWING = FALSE;
+                        ResetTimerWithInterval(hwnd);
+                    }
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    return 0;
+                }
+            }
+
             if (!(flags & MF_POPUP) && hMenu != NULL) {
                 /** Handle color preview on hover */
                 int colorIndex = menuItem - 201;
