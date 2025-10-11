@@ -93,6 +93,67 @@ static BOOL ReplaceFileUtf8(const char* dstUtf8, const char* srcTempUtf8) {
 
 
 /**
+ * @brief Global mutex for serializing config writes across threads/processes
+ */
+static HANDLE GetConfigWriteMutex(void) {
+    static HANDLE hMutex = NULL;
+    if (hMutex == NULL) {
+        hMutex = CreateMutexW(NULL, FALSE, L"CatimeConfigWriteMutex");
+    }
+    return hMutex;
+}
+
+/**
+ * @brief Acquire global config write lock
+ */
+static void AcquireConfigWriteLock(void) {
+    HANDLE h = GetConfigWriteMutex();
+    if (h) {
+        WaitForSingleObject(h, INFINITE);
+    }
+}
+
+/**
+ * @brief Release global config write lock
+ */
+static void ReleaseConfigWriteLock(void) {
+    HANDLE h = GetConfigWriteMutex();
+    if (h) {
+        ReleaseMutex(h);
+    }
+}
+
+/**
+ * @brief Create a unique temporary file path in the same directory as config.ini
+ * @param configPathUtf8 Path to config.ini (UTF-8)
+ * @param outTempUtf8 Output buffer for unique temp path
+ * @param outSize Size of output buffer
+ * @return TRUE on success
+ */
+static BOOL CreateUniqueTempPathInConfigDir(const char* configPathUtf8, char* outTempUtf8, size_t outSize) {
+    if (!configPathUtf8 || !outTempUtf8 || outSize == 0) return FALSE;
+    size_t len = strlen(configPathUtf8);
+    if (len + 32 >= outSize) return FALSE;
+    /** find last separator */
+    const char* lastSlash = strrchr(configPathUtf8, '\\');
+    if (!lastSlash) lastSlash = strrchr(configPathUtf8, '/');
+    if (!lastSlash) return FALSE;
+    size_t dirLen = (size_t)(lastSlash - configPathUtf8);
+    if (dirLen + 1 >= outSize) return FALSE;
+    memcpy(outTempUtf8, configPathUtf8, dirLen + 1);
+    outTempUtf8[dirLen + 1] = '\0';
+    DWORD pid = GetCurrentProcessId();
+    DWORD tid = GetCurrentThreadId();
+    ULONGLONG tick = GetTickCount64();
+    char fileName[64];
+    snprintf(fileName, sizeof(fileName), "config.%lu.%lu.%llu.tmp", (unsigned long)pid, (unsigned long)tid, (unsigned long long)tick);
+    if (strlen(outTempUtf8) + strlen(fileName) >= outSize) return FALSE;
+    strcat(outTempUtf8, fileName);
+    return TRUE;
+}
+
+
+/**
  * @brief Read string value from INI file with Unicode support
  * @param section INI section name
  * @param key INI key name
@@ -1118,8 +1179,12 @@ void WriteConfigTimeoutAction(const char* action) {
     if (!file) return;
     
     char temp_path[MAX_PATH];
-    strcpy(temp_path, config_path);
-    strcat(temp_path, ".tmp");
+    AcquireConfigWriteLock();
+    if (!CreateUniqueTempPathInConfigDir(config_path, temp_path, MAX_PATH)) {
+        ReleaseConfigWriteLock();
+        fclose(file);
+        return;
+    }
     
     wchar_t wtemp_path[MAX_PATH];
     MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
@@ -1156,14 +1221,19 @@ void WriteConfigTimeoutAction(const char* action) {
     fclose(temp);
 
     ReplaceFileUtf8(config_path, temp_path);
+    ReleaseConfigWriteLock();
 }
 
 
 void WriteConfigTimeOptions(const char* options) {
     char config_path[MAX_PATH];
-    char temp_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    snprintf(temp_path, MAX_PATH, "%s.tmp", config_path);
+    char temp_path[MAX_PATH];
+    AcquireConfigWriteLock();
+    if (!CreateUniqueTempPathInConfigDir(config_path, temp_path, MAX_PATH)) {
+        ReleaseConfigWriteLock();
+        return;
+    }
     FILE *file, *temp_file;
     char line[256];
     int found = 0;
@@ -1180,6 +1250,7 @@ void WriteConfigTimeOptions(const char* options) {
     if (!file || !temp_file) {
         if (file) fclose(file);
         if (temp_file) fclose(temp_file);
+        ReleaseConfigWriteLock();
         return;
     }
     
@@ -1200,6 +1271,7 @@ void WriteConfigTimeOptions(const char* options) {
     fclose(temp_file);
 
     ReplaceFileUtf8(config_path, temp_path);
+    ReleaseConfigWriteLock();
 }
 
 
@@ -1408,9 +1480,13 @@ char* UTF8ToANSI(const char* utf8Str) {
  */
 void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
     char config_path[MAX_PATH];
-    char temp_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    snprintf(temp_path, MAX_PATH, "%s.tmp", config_path);
+    char temp_path[MAX_PATH];
+    AcquireConfigWriteLock();
+    if (!CreateUniqueTempPathInConfigDir(config_path, temp_path, MAX_PATH)) {
+        ReleaseConfigWriteLock();
+        return;
+    }
     FILE *file, *temp_file;
     char line[256];
     int found = 0;
@@ -1450,6 +1526,7 @@ void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
     if (!file || !temp_file) {
         if (file) fclose(file);
         if (temp_file) fclose(temp_file);
+        ReleaseConfigWriteLock();
         return;
     }
     
@@ -1483,6 +1560,7 @@ void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
 
     /** Replace original with updated config */
     ReplaceFileUtf8(config_path, temp_path);
+    ReleaseConfigWriteLock();
 }
 
 
@@ -1492,9 +1570,13 @@ void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
  */
 void WriteConfigPomodoroLoopCount(int loop_count) {
     char config_path[MAX_PATH];
-    char temp_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    snprintf(temp_path, MAX_PATH, "%s.tmp", config_path);
+    char temp_path[MAX_PATH];
+    AcquireConfigWriteLock();
+    if (!CreateUniqueTempPathInConfigDir(config_path, temp_path, MAX_PATH)) {
+        ReleaseConfigWriteLock();
+        return;
+    }
     FILE *file, *temp_file;
     char line[256];
     int found = 0;
@@ -1511,6 +1593,7 @@ void WriteConfigPomodoroLoopCount(int loop_count) {
     if (!file || !temp_file) {
         if (file) fclose(file);
         if (temp_file) fclose(temp_file);
+        ReleaseConfigWriteLock();
         return;
     }
     
@@ -1534,6 +1617,7 @@ void WriteConfigPomodoroLoopCount(int loop_count) {
     
     /** Replace original with updated config */
     ReplaceFileUtf8(config_path, temp_path);
+    ReleaseConfigWriteLock();
     
     /** Update global variable immediately */
     POMODORO_LOOP_COUNT = loop_count;
@@ -1556,8 +1640,12 @@ void WriteConfigTopmost(const char* topmost) {
     if (!file) return;
     
     char temp_path[MAX_PATH];
-    strcpy(temp_path, config_path);
-    strcat(temp_path, ".tmp");
+    AcquireConfigWriteLock();
+    if (!CreateUniqueTempPathInConfigDir(config_path, temp_path, MAX_PATH)) {
+        ReleaseConfigWriteLock();
+        fclose(file);
+        return;
+    }
     
     wchar_t wtemp_path[MAX_PATH];
     MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
@@ -1591,6 +1679,7 @@ void WriteConfigTopmost(const char* topmost) {
     
     /** Replace original with updated config */
     ReplaceFileUtf8(config_path, temp_path);
+    ReleaseConfigWriteLock();
 }
 
 
@@ -1617,6 +1706,43 @@ void WriteConfigTimeoutFile(const char* filePath) {
  * Writes all settings including language, display, timer, pomodoro, notifications, hotkeys, etc.
  */
 void WriteConfig(const char* config_path) {
+    /** Optional: basic INI tail validation and self-heal for previous corruptions */
+    {
+        wchar_t wconfig[MAX_PATH];
+        MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig, MAX_PATH);
+        FILE* rf = _wfopen(wconfig, L"r");
+        if (rf) {
+            /** scan lines and remember last valid INI line position */
+            long lastValidPos = 0;
+            long pos = 0;
+            char buf[2048];
+            while (fgets(buf, sizeof(buf), rf)) {
+                pos = ftell(rf);
+                /** very loose check: allow blank, section [..], or key=value without obvious JSON/url noise */
+                if (buf[0] == '\n' || buf[0] == '\r' || buf[0] == '\0') { lastValidPos = pos; continue; }
+                if (buf[0] == '[') { lastValidPos = pos; continue; }
+                char* eq = strchr(buf, '=');
+                if (eq && !(strstr(buf, "http://") || strstr(buf, "https://") || strchr(buf, '{'))) {
+                    lastValidPos = pos;
+                    continue;
+                }
+                /** on the first suspicious line, stop */
+                break;
+            }
+            if (!feof(rf)) {
+                /** truncate file to last valid line */
+                fclose(rf);
+                HANDLE h = CreateFileW(wconfig, GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+                if (h != INVALID_HANDLE_VALUE) {
+                    SetFilePointer(h, lastValidPos, NULL, FILE_BEGIN);
+                    SetEndOfFile(h);
+                    CloseHandle(h);
+                }
+            } else {
+                fclose(rf);
+            }
+        }
+    }
     /** Map current language enum to string representation */
     AppLanguage currentLang = GetCurrentLanguage();
     const char* langName;
@@ -1906,8 +2032,12 @@ void WriteConfigTimeoutWebsite(const char* url) {
         if (!file) return;
         
         char temp_path[MAX_PATH];
-        strcpy(temp_path, config_path);
-        strcat(temp_path, ".tmp");
+        AcquireConfigWriteLock();
+        if (!CreateUniqueTempPathInConfigDir(config_path, temp_path, MAX_PATH)) {
+            ReleaseConfigWriteLock();
+            fclose(file);
+            return;
+        }
         
         wchar_t wtemp_path[MAX_PATH];
     MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
@@ -1948,6 +2078,7 @@ void WriteConfigTimeoutWebsite(const char* url) {
         
         /** Replace original config with updated version */
         ReplaceFileUtf8(config_path, temp_path);
+        ReleaseConfigWriteLock();
     }
 }
 
@@ -1958,9 +2089,13 @@ void WriteConfigTimeoutWebsite(const char* url) {
  */
 void WriteConfigStartupMode(const char* mode) {
     char config_path[MAX_PATH];
-    char temp_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    snprintf(temp_path, MAX_PATH, "%s.tmp", config_path);
+    char temp_path[MAX_PATH];
+    AcquireConfigWriteLock();
+    if (!CreateUniqueTempPathInConfigDir(config_path, temp_path, MAX_PATH)) {
+        ReleaseConfigWriteLock();
+        return;
+    }
     
     FILE *file, *temp_file;
     char line[256];
@@ -1978,6 +2113,7 @@ void WriteConfigStartupMode(const char* mode) {
     if (!file || !temp_file) {
         if (file) fclose(file);
         if (temp_file) fclose(temp_file);
+        ReleaseConfigWriteLock();
         return;
     }
     
@@ -2005,6 +2141,7 @@ void WriteConfigStartupMode(const char* mode) {
     
     /** Replace original with updated config */
     ReplaceFileUtf8(config_path, temp_path);
+    ReleaseConfigWriteLock();
 }
 
 
@@ -2027,8 +2164,12 @@ void WriteConfigPomodoroTimeOptions(int* times, int count) {
     if (!file) return;
     
     char temp_path[MAX_PATH];
-    strcpy(temp_path, config_path);
-    strcat(temp_path, ".tmp");
+    AcquireConfigWriteLock();
+    if (!CreateUniqueTempPathInConfigDir(config_path, temp_path, MAX_PATH)) {
+        ReleaseConfigWriteLock();
+        fclose(file);
+        return;
+    }
     
     wchar_t wtemp_path[MAX_PATH];
     MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
@@ -2036,6 +2177,7 @@ void WriteConfigPomodoroTimeOptions(int* times, int count) {
     FILE* temp = _wfopen(wtemp_path, L"w");
     if (!temp) {
         fclose(file);
+        ReleaseConfigWriteLock();
         return;
     }
     
@@ -2072,6 +2214,7 @@ void WriteConfigPomodoroTimeOptions(int* times, int count) {
     
     /** Replace original with updated config */
     ReplaceFileUtf8(config_path, temp_path);
+    ReleaseConfigWriteLock();
 }
 
 
@@ -2223,9 +2366,13 @@ void ReadNotificationTimeoutConfig(void) {
  */
 void WriteConfigNotificationTimeout(int timeout_ms) {
     char config_path[MAX_PATH];
-    char temp_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    snprintf(temp_path, MAX_PATH, "%s.tmp", config_path);
+    char temp_path[MAX_PATH];
+    AcquireConfigWriteLock();
+    if (!CreateUniqueTempPathInConfigDir(config_path, temp_path, MAX_PATH)) {
+        ReleaseConfigWriteLock();
+        return;
+    }
     
     FILE *source_file, *temp_file;
     
@@ -2241,6 +2388,7 @@ void WriteConfigNotificationTimeout(int timeout_ms) {
     if (!source_file || !temp_file) {
         if (source_file) fclose(source_file);
         if (temp_file) fclose(temp_file);
+        ReleaseConfigWriteLock();
         return;
     }
     
@@ -2276,6 +2424,7 @@ void WriteConfigNotificationTimeout(int timeout_ms) {
     
     /** Replace original with updated config */
     ReplaceFileUtf8(config_path, temp_path);
+    ReleaseConfigWriteLock();
     
     /** Update global variable immediately */
     NOTIFICATION_TIMEOUT_MS = timeout_ms;
@@ -2384,9 +2533,13 @@ void ReadNotificationOpacityConfig(void) {
  */
 void WriteConfigNotificationOpacity(int opacity) {
     char config_path[MAX_PATH];
-    char temp_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    snprintf(temp_path, MAX_PATH, "%s.tmp", config_path);
+    char temp_path[MAX_PATH];
+    AcquireConfigWriteLock();
+    if (!CreateUniqueTempPathInConfigDir(config_path, temp_path, MAX_PATH)) {
+        ReleaseConfigWriteLock();
+        return;
+    }
     
     FILE *source_file, *temp_file;
     
@@ -2402,6 +2555,7 @@ void WriteConfigNotificationOpacity(int opacity) {
     if (!source_file || !temp_file) {
         if (source_file) fclose(source_file);
         if (temp_file) fclose(temp_file);
+        ReleaseConfigWriteLock();
         return;
     }
     
@@ -2437,6 +2591,7 @@ void WriteConfigNotificationOpacity(int opacity) {
     
     /** Replace original with updated config */
     ReplaceFileUtf8(config_path, temp_path);
+    ReleaseConfigWriteLock();
     
     /** Update global variable immediately */
     NOTIFICATION_MAX_OPACITY = opacity;
@@ -2517,8 +2672,11 @@ void WriteConfigNotificationType(NotificationType type) {
     
 
     char temp_path[MAX_PATH];
-    strncpy(temp_path, config_path, MAX_PATH - 5);
-    strcat(temp_path, ".tmp");
+    AcquireConfigWriteLock();
+    if (!CreateUniqueTempPathInConfigDir(config_path, temp_path, MAX_PATH)) {
+        ReleaseConfigWriteLock();
+        return;
+    }
     
     /** Convert paths to wide character for Unicode support */
     wchar_t wconfig_path[MAX_PATH];
@@ -2554,10 +2712,12 @@ void WriteConfigNotificationType(NotificationType type) {
         
         /** Replace original with updated config */
         ReplaceFileUtf8(config_path, temp_path);
+        ReleaseConfigWriteLock();
     } else {
         /** Cleanup on file operation failure */
         if (source) fclose(source);
         if (target) fclose(target);
+        ReleaseConfigWriteLock();
     }
 }
 
@@ -2695,8 +2855,12 @@ void WriteConfigNotificationVolume(int volume) {
     if (!file) return;
     
     char temp_path[MAX_PATH];
-    strcpy(temp_path, config_path);
-    strcat(temp_path, ".tmp");
+    AcquireConfigWriteLock();
+    if (!CreateUniqueTempPathInConfigDir(config_path, temp_path, MAX_PATH)) {
+        ReleaseConfigWriteLock();
+        fclose(file);
+        return;
+    }
     
     wchar_t wtemp_path[MAX_PATH];
     MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
@@ -2727,6 +2891,7 @@ void WriteConfigNotificationVolume(int volume) {
     fclose(temp);
 
     ReplaceFileUtf8(config_path, temp_path);
+    ReleaseConfigWriteLock();
 }
 
 
@@ -3576,9 +3741,13 @@ void ReadNotificationDisabledConfig(void) {
  */
 void WriteConfigNotificationDisabled(BOOL disabled) {
     char config_path[MAX_PATH];
-    char temp_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    snprintf(temp_path, MAX_PATH, "%s.tmp", config_path);
+    char temp_path[MAX_PATH];
+    AcquireConfigWriteLock();
+    if (!CreateUniqueTempPathInConfigDir(config_path, temp_path, MAX_PATH)) {
+        ReleaseConfigWriteLock();
+        return;
+    }
     
     FILE *source_file, *temp_file;
     
@@ -3594,6 +3763,7 @@ void WriteConfigNotificationDisabled(BOOL disabled) {
     if (!source_file || !temp_file) {
         if (source_file) fclose(source_file);
         if (temp_file) fclose(temp_file);
+        ReleaseConfigWriteLock();
         return;
     }
     
@@ -3629,6 +3799,7 @@ void WriteConfigNotificationDisabled(BOOL disabled) {
     
     /** Replace original file */
     ReplaceFileUtf8(config_path, temp_path);
+    ReleaseConfigWriteLock();
     
     /** Update global variable */
     NOTIFICATION_DISABLED = disabled;
