@@ -684,6 +684,50 @@
     100% { transform: translate(calc(-50% + var(--dx, 0)), calc(-50% + var(--dy, -80%))) rotate(calc(var(--rot, 0) + 360deg)); opacity: 0; }
 }
 
+/* Full-screen overlay confetti (bigger celebration) */
+.confetti-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.confetti-overlay .confetti {
+    position: absolute;
+    width: 8px;
+    height: 12px;
+    border-radius: var(--br, 2px);
+    background: var(--c, #f7bd2f);
+    transform: translate(-50%, -50%) rotate(var(--rot, 0));
+    box-shadow: 0 0 6px rgba(255,255,255,.35);
+    animation: confettiBurst var(--dur, 1.2s) ease-out forwards;
+}
+
+.confetti-overlay .streamer {
+    position: absolute;
+    width: 3px;
+    height: var(--h, 20px);
+    background: linear-gradient(to bottom, rgba(255,255,255,.8), var(--c, #7aa2f7));
+    border-radius: 2px;
+    transform: translate(-50%, -50%) rotate(var(--rot, 0));
+    animation: streamerFly var(--dur, 1.3s) cubic-bezier(.17,.67,.29,1) forwards;
+}
+
+@keyframes confettiBurst {
+    0% { opacity: 1; transform: translate(-50%, -50%) rotate(var(--rot, 0)) scale(1); }
+    80% { opacity: .95; transform: translate(calc(-50% + var(--dx, 0px)), calc(-50% + var(--dy, -200px))) rotate(calc(var(--rot, 0) + 220deg)) scale(1.05); }
+    100% { opacity: 0; transform: translate(calc(-50% + var(--dx, 0px)), calc(-50% + calc(var(--dy, -200px) + 80px))) rotate(calc(var(--rot, 0) + 360deg)) scale(.9); }
+}
+
+@keyframes streamerFly {
+    0% { opacity: 1; transform: translate(-50%, -50%) rotate(var(--rot, 0)) scale(1); }
+    70% { opacity: .95; transform: translate(calc(-50% + var(--dx, 0px)), calc(-50% + var(--dy, -220px))) rotate(calc(var(--rot, 0) + 90deg)) scale(1.05); }
+    100% { opacity: 0; transform: translate(calc(-50% + var(--dx, 0px)), calc(-50% + calc(var(--dy, -220px) + 120px))) rotate(calc(var(--rot, 0) + 180deg)) scale(.95); }
+}
+
 .support-total-top::after {
     content: '';
     position: absolute;

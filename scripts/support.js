@@ -624,27 +624,19 @@ function initCapsuleSparkles() {
     }
 }
 
-// 胶囊点击/触发的彩带效果
+// 胶囊悬停/触发的彩带效果（带冷却）
 function initCapsuleConfetti() {
     const capsule = document.querySelector('.support-total-top');
     if (!capsule) return;
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
     if (media.matches) return;
 
-    capsule.addEventListener('click', () => {
-        for (let i = 0; i < 14; i++) {
-            const c = document.createElement('span');
-            c.className = 'confetti';
-            c.style.left = `${50 + (Math.random() * 40 - 20)}%`;
-            c.style.top = `${40 + (Math.random() * 20 - 10)}%`;
-            c.style.setProperty('--rot', `${Math.random() * 360}deg`);
-            c.style.setProperty('--dx', `${(Math.random() * 220 - 110)}%`);
-            c.style.setProperty('--dy', `${(Math.random() * -160 - 40)}%`);
-            c.style.background = randomConfettiColor();
-            capsule.appendChild(c);
-            setTimeout(() => c.remove(), 900);
-        }
-    });
+    const trigger = () => {
+        launchOverlayConfetti(capsule);
+    };
+
+    capsule.addEventListener('mouseenter', trigger);
+    capsule.addEventListener('focus', trigger);
 
     function randomConfettiColor() {
         const colors = ['#7aa2f7', '#f799b8', '#ffd45e', '#9ae6b4', '#fbd38d'];
@@ -710,6 +702,41 @@ function initCapsuleNumberObserver() {
         window.addEventListener('scroll', onScroll);
         onScroll();
     }
+}
+
+// 更大面积的全屏彩带
+function launchOverlayConfetti(anchor) {
+    const overlay = document.createElement('div');
+    overlay.className = 'confetti-overlay';
+    document.body.appendChild(overlay);
+
+    const rect = anchor.getBoundingClientRect();
+    const originX = rect.left + rect.width / 2;
+    const originY = rect.top + rect.height / 2;
+
+    const colors = ['#7aa2f7', '#f799b8', '#ffd45e', '#9ae6b4', '#fbd38d'];
+    const totalPieces = 40; // 更有庆祝感
+    for (let i = 0; i < totalPieces; i++) {
+        const piece = document.createElement('span');
+        const isStreamer = Math.random() < 0.25;
+        piece.className = isStreamer ? 'streamer' : 'confetti';
+        piece.style.left = `${originX + (Math.random() * 80 - 40)}px`;
+        piece.style.top = `${originY + (Math.random() * 20 - 10)}px`;
+        piece.style.setProperty('--rot', `${Math.random() * 360}deg`);
+        piece.style.setProperty('--dx', `${(Math.random() * 800 - 400)}px`);
+        piece.style.setProperty('--dy', `${(Math.random() * 600 + 200)}px`);
+        piece.style.setProperty('--dur', `${1.1 + Math.random() * 0.5}s`);
+        piece.style.setProperty('--c', colors[Math.floor(Math.random() * colors.length)]);
+        if (isStreamer) {
+            piece.style.setProperty('--h', `${20 + Math.floor(Math.random() * 30)}px`);
+        } else {
+            piece.style.setProperty('--br', Math.random() < 0.5 ? '50%' : '2px');
+        }
+        overlay.appendChild(piece);
+    }
+
+    // 自动清理
+    setTimeout(() => overlay.remove(), 1800);
 }
 
  
