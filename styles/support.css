@@ -747,10 +747,11 @@
     padding: 0 0.1rem;
 }
 
+.support-count-label { color: var(--accent-color); font-weight: 600; }
 .support-count-label i {
-    color: var(--primary-color);
+    color: #ff9ac2;
     margin-right: 6px;
-    transition: transform 200ms ease;
+    transition: transform 200ms ease, color 200ms ease;
 }
 /* Total amount display */
 /* deprecated: top-right badge (moved to footer) */
@@ -769,7 +770,7 @@
 }
 
 .support-total-label {
-    color: var(--text-secondary);
+    color: var(--primary-color);
     font-weight: 600;
 }
 
@@ -784,6 +785,12 @@
     font-weight: 700;
     font-size: 1.05rem;
     letter-spacing: 0.2px;
+}
+
+/* Highlight supporters count with a distinct accent color */
+.support-count-value {
+    color: #ff73a6;
+    font-weight: 800;
 }
 
 .support-total-top:hover .support-total-value,
@@ -821,6 +828,7 @@
 /* animate supporters icon as well */
 .support-total-top:hover .support-count-label i,
 .support-total-top:focus-visible .support-count-label i {
+    color: #ff73a6;
     animation: peopleWave 650ms ease both;
 }
 
