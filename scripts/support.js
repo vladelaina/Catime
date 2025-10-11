@@ -1,6 +1,133 @@
 // 支持项目的3D交互效果
 // State for support metrics animation
-let SUPPORT_METRICS = { total: 0, count: 0, animated: false };
+let SUPPORT_METRICS = { total: 0, totalCNY: 0, count: 0, animated: false };
+
+// Currency state for dynamic conversion
+const CURRENCY_STATE = {
+    target: 'CNY', // 'CNY' | 'USD'
+    symbol: '¥',
+    rateCnyToUsd: 0, // exchange rate CNY -> USD
+    lastUpdated: 0
+};
+
+// Initialize currency based on current language and fetch rate if needed
+function initCurrency() {
+    const currentLang = localStorage.getItem('catime-language') || 'zh';
+    const isEnglish = currentLang === 'en';
+    CURRENCY_STATE.target = isEnglish ? 'USD' : 'CNY';
+    CURRENCY_STATE.symbol = isEnglish ? '$' : '¥';
+
+    if (isEnglish) {
+        // Load cached rate first (if fresh), then fetch latest in background
+        const cached = getCachedRateSync();
+        if (cached > 0) {
+            CURRENCY_STATE.rateCnyToUsd = cached;
+        }
+        loadExchangeRateCnyToUsd()
+            .then((rate) => {
+                if (rate > 0) {
+                    CURRENCY_STATE.rateCnyToUsd = rate;
+                    CURRENCY_STATE.lastUpdated = Date.now();
+                    // Update display only after animation played, otherwise keep 0->target animation intact
+                    if (SUPPORT_METRICS.animated) {
+                        renderSupportTotalImmediate();
+                    }
+                }
+            })
+            .catch(() => {
+                // Keep cached rate if available; otherwise do nothing
+            });
+    }
+}
+
+// Read cached rate from localStorage synchronously
+function getCachedRateSync() {
+    try {
+        const raw = localStorage.getItem('catime_rate_cny_usd');
+        if (!raw) return 0;
+        const obj = JSON.parse(raw);
+        // TTL: 1 hour
+        const ttl = 60 * 60 * 1000;
+        if (obj && obj.rate && obj.ts && (Date.now() - obj.ts) < ttl) {
+            return Number(obj.rate) || 0;
+        }
+    } catch (e) {
+        // ignore
+    }
+    return 0;
+}
+
+// Persist rate to localStorage
+function cacheRate(rate) {
+    try {
+        localStorage.setItem('catime_rate_cny_usd', JSON.stringify({ rate, ts: Date.now() }));
+    } catch (e) {
+        // ignore
+    }
+}
+
+// Fetch CNY->USD exchange rate with fallbacks
+function loadExchangeRateCnyToUsd() {
+    // Try cache freshness first; if fresh, still fetch latest in background
+    const endpoints = [
+        'https://api.exchangerate.host/latest?base=CNY&symbols=USD',
+        'https://open.er-api.com/v6/latest/CNY',
+        'https://api.frankfurter.app/latest?from=CNY&to=USD'
+    ];
+
+    function tryNext(index) {
+        if (index >= endpoints.length) {
+            return Promise.reject(new Error('No exchange endpoint available'));
+        }
+        const url = endpoints[index];
+        return fetch(url, { cache: 'no-store' })
+            .then(r => r.json())
+            .then(j => {
+                let rate = 0;
+                if (j && j.rates && typeof j.rates.USD === 'number') {
+                    rate = j.rates.USD;
+                } else if (j && j.result === 'success' && j.rates && typeof j.rates.USD === 'number') {
+                    rate = j.rates.USD;
+                }
+                // Frankfurter format also uses j.rates.USD
+                if (rate > 0) {
+                    cacheRate(rate);
+                    return rate;
+                }
+                return tryNext(index + 1);
+            })
+            .catch(() => tryNext(index + 1));
+    }
+
+    return tryNext(0);
+}
+
+// Compute display total based on current currency
+function getDisplayTotal(totalCNY) {
+    if (CURRENCY_STATE.target === 'USD') {
+        const rate = CURRENCY_STATE.rateCnyToUsd || getCachedRateSync();
+        if (rate > 0) return totalCNY * rate;
+        // Fallback approximate if no rate yet; will be corrected once fetched
+        return totalCNY * 0.14;
+    }
+    return totalCNY;
+}
+
+// Format currency string by current target
+function formatCurrency(value) {
+    const lang = CURRENCY_STATE.target === 'USD' ? 'en-US' : 'zh-CN';
+    const amount = Number(value || 0);
+    const formatted = amount.toLocaleString(lang, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return `${CURRENCY_STATE.symbol}${formatted}`;
+}
+
+// Re-render total immediately with current settings (no animation)
+function renderSupportTotalImmediate() {
+    const totalEl = document.getElementById('support-total-value');
+    if (!totalEl) return;
+    const cny = SUPPORT_METRICS.totalCNY || SUPPORT_METRICS.total || 0;
+    totalEl.textContent = formatCurrency(getDisplayTotal(cny));
+}
 
 document.addEventListener('DOMContentLoaded', function() {
     // AOS (滚动时动画) 库初始化
@@ -134,6 +261,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 添加支持页面的翻译
     addSupportTranslations();
+
+    // 初始化货币（根据语言设置）并预取汇率
+    initCurrency();
 
     // 计算并更新累计赞助
     updateSupportTotal();
@@ -564,11 +694,12 @@ function updateSupportTotal() {
         }
     });
 
-    // 只更新数值缓存，不立刻播放动画
-    SUPPORT_METRICS.total = sum;
-    // 如果已播放动画，则直接更新文本
+    // Cache in CNY and compute display total for current currency
+    SUPPORT_METRICS.totalCNY = sum;
+    SUPPORT_METRICS.total = getDisplayTotal(sum);
+    // If already animated once, update text immediately in current currency
     if (SUPPORT_METRICS.animated) {
-        totalEl.textContent = `¥${sum.toFixed(2)}`;
+        totalEl.textContent = formatCurrency(SUPPORT_METRICS.total);
     }
 }
 
@@ -671,10 +802,10 @@ function initCapsuleNumberObserver() {
     const oncePlay = () => {
         if (SUPPORT_METRICS.animated) return;
         SUPPORT_METRICS.animated = true;
-        // 播放累计赞助
-        const currentTotal = parseFloat((totalEl.textContent || '0').replace(/[¥,\s]/g, '')) || 0;
+        // 播放累计赞助（按当前货币），强制从0开始
+        const currentTotal = 0;
         const duration = media.matches ? 0 : 1800; // keep both in sync
-        animateNumber(totalEl, currentTotal, SUPPORT_METRICS.total || 0, duration, (v) => `¥${v.toFixed(2)}`);
+        animateNumber(totalEl, currentTotal, SUPPORT_METRICS.total || 0, duration, (v) => formatCurrency(v));
         // 播放支持者人数
         const currentCount = parseFloat(countEl.textContent || '0') || 0;
         animateNumber(countEl, currentCount, SUPPORT_METRICS.count || 0, duration, (v) => `${Math.round(v)}`);
