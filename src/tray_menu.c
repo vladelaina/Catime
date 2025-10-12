@@ -588,7 +588,7 @@ void ShowColorMenu(HWND hwnd) {
     /** Animations submenu (RunCat-like) */
     HMENU hAnimMenu = CreatePopupMenu();
     {
-        /** Enumerate subfolders under resources\animations and add as selectable items */
+        /** Enumerate subfolders and .gif files under resources\animations and add as selectable items */
         char animRootUtf8[MAX_PATH] = {0};
         GetAnimationsFolderPath(animRootUtf8, sizeof(animRootUtf8));
 
@@ -618,6 +618,29 @@ void ShowColorMenu(HWND hwnd) {
             } while (FindNextFileW(hFind, &ffd));
             FindClose(hFind);
         }
+
+        /** Enumerate .gif files and add them as selectable items */
+        WIN32_FIND_DATAW ffd2; HANDLE hFind2 = FindFirstFileW(wSearch, &ffd2);
+        if (hFind2 != INVALID_HANDLE_VALUE) {
+            do {
+                if (wcscmp(ffd2.cFileName, L".") == 0 || wcscmp(ffd2.cFileName, L"..") == 0) continue;
+                if (!(ffd2.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+                    wchar_t* ext = wcsrchr(ffd2.cFileName, L'.');
+                    if (ext && (_wcsicmp(ext, L".gif") == 0)) {
+                        char fileUtf8[MAX_PATH] = {0};
+                        WideCharToMultiByte(CP_UTF8, 0, ffd2.cFileName, -1, fileUtf8, MAX_PATH, NULL, NULL);
+                        UINT flags = MF_STRING;
+                        if (currentAnim && _stricmp(fileUtf8, currentAnim) == 0) {
+                            flags |= MF_CHECKED;
+                        }
+                        AppendMenuW(hAnimMenu, flags, nextId++, ffd2.cFileName);
+                        hasAny = TRUE;
+                    }
+                }
+            } while (FindNextFileW(hFind2, &ffd2));
+            FindClose(hFind2);
+        }
+
         if (!hasAny) {
             AppendMenuW(hAnimMenu, MF_STRING | MF_GRAYED, 0, GetLocalizedString(L"(无动画文件夹)", L"(No animation folders)"));
         }

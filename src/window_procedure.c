@@ -2287,6 +2287,29 @@ refresh_window:
                         } while (FindNextFileW(hFind, &ffd));
                         FindClose(hFind);
                     }
+
+                    /** Second pass: match .gif files for hover preview */
+                    WIN32_FIND_DATAW ffd2; HANDLE hFind2 = FindFirstFileW(wSearch, &ffd2);
+                    if (hFind2 != INVALID_HANDLE_VALUE) {
+                        do {
+                            if (wcscmp(ffd2.cFileName, L".") == 0 || wcscmp(ffd2.cFileName, L"..") == 0) continue;
+                            if (!(ffd2.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+                                wchar_t* ext = wcsrchr(ffd2.cFileName, L'.');
+                                if (ext && (_wcsicmp(ext, L".gif") == 0)) {
+                                    if (nextId == menuItem) {
+                                        char fileUtf8[MAX_PATH] = {0};
+                                        WideCharToMultiByte(CP_UTF8, 0, ffd2.cFileName, -1, fileUtf8, MAX_PATH, NULL, NULL);
+                                        extern void StartAnimationPreview(const char* name);
+                                        StartAnimationPreview(fileUtf8);
+                                        FindClose(hFind2);
+                                        return 0;
+                                    }
+                                    nextId++;
+                                }
+                            }
+                        } while (FindNextFileW(hFind2, &ffd2));
+                        FindClose(hFind2);
+                    }
                 }
 
                 /** Handle time format preview on hover */

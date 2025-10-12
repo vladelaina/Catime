@@ -12,11 +12,14 @@
 #include <wchar.h>
 #include <wctype.h>
 #include <wincodec.h>
+#include <propvarutil.h>
 #include <objbase.h>
 
 #include "../include/tray.h"
 #include "../include/config.h"
 #include "../include/tray_menu.h"
+/** Forward declaration for timer callback used by SetTimer */
+static void CALLBACK TrayAnimTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time);
 
 /**
  * @brief Timer ID for tray animation
@@ -37,6 +40,10 @@ static BOOL g_isPreviewActive = FALSE; /** preview mode flag */
 static HICON g_previewIcons[MAX_TRAY_FRAMES];
 static int g_previewCount = 0;
 static int g_previewIndex = 0;
+static BOOL g_isGifAnimation = FALSE; /** whether current animation source is a single GIF file */
+static UINT g_frameDelaysMs[MAX_TRAY_FRAMES]; /** per-frame delay in ms for GIF */
+static BOOL g_isPreviewGif = FALSE; /** whether current preview source is a single GIF file */
+static UINT g_previewFrameDelaysMs[MAX_TRAY_FRAMES]; /** per-frame delay for GIF preview */
 
 /** @brief Build cat animation folder path: %LOCALAPPDATA%\Catime\resources\animations\cat */
 static void BuildAnimationFolder(const char* name, char* path, size_t size) {
@@ -60,6 +67,7 @@ static void FreeTrayIcons(void) {
     }
     g_trayIconCount = 0;
     g_trayIconIndex = 0;
+    g_isGifAnimation = FALSE;
 }
 
 /** @brief Free preview icon frames */
@@ -72,6 +80,226 @@ static void FreePreviewIcons(void) {
     }
     g_previewCount = 0;
     g_previewIndex = 0;
+    g_isPreviewGif = FALSE;
+}
+
+/** @brief Case-insensitive string ends-with helper */
+static BOOL EndsWithIgnoreCase(const char* str, const char* suffix) {
+    if (!str || !suffix) return FALSE;
+    size_t ls = strlen(str), lsuf = strlen(suffix);
+    if (lsuf > ls) return FALSE;
+    return _stricmp(str + (ls - lsuf), suffix) == 0;
+}
+
+/** @brief Detect if current animation name is a single GIF file */
+static BOOL IsGifSelection(const char* name) {
+    return name && EndsWithIgnoreCase(name, ".gif");
+}
+
+/** @brief Decode an animated GIF into HICON frames with per-frame delays */
+static void LoadTrayIconsFromGifPath(const char* utf8Path) {
+    FreeTrayIcons();
+    if (!utf8Path || !*utf8Path) return;
+
+    wchar_t wPath[MAX_PATH] = {0};
+    MultiByteToWideChar(CP_UTF8, 0, utf8Path, -1, wPath, MAX_PATH);
+
+    int cx = GetSystemMetrics(SM_CXSMICON);
+    int cy = GetSystemMetrics(SM_CYSMICON);
+
+    HRESULT hrInit = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+    IWICImagingFactory* pFactory = NULL;
+    HRESULT hr = CoCreateInstance(&CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER, &IID_IWICImagingFactory, (void**)&pFactory);
+    if (FAILED(hr) || !pFactory) {
+        if (SUCCEEDED(hrInit)) CoUninitialize();
+        return;
+    }
+
+    IWICBitmapDecoder* pDecoder = NULL;
+    hr = pFactory->lpVtbl->CreateDecoderFromFilename(pFactory, wPath, NULL, GENERIC_READ, WICDecodeMetadataCacheOnLoad, &pDecoder);
+    if (SUCCEEDED(hr) && pDecoder) {
+        UINT frameCount = 0;
+        if (SUCCEEDED(pDecoder->lpVtbl->GetFrameCount(pDecoder, &frameCount))) {
+            for (UINT i = 0; i < frameCount && g_trayIconCount < MAX_TRAY_FRAMES; ++i) {
+                IWICBitmapFrameDecode* pFrame = NULL;
+                if (FAILED(pDecoder->lpVtbl->GetFrame(pDecoder, i, &pFrame)) || !pFrame) continue;
+
+                /** Read per-frame delay (in 1/100s) from /grctlext/Delay */
+                UINT delayMs = 100; /** default 100ms */
+                IWICMetadataQueryReader* pMeta = NULL;
+                if (SUCCEEDED(pFrame->lpVtbl->GetMetadataQueryReader(pFrame, &pMeta)) && pMeta) {
+                    PROPVARIANT var; PropVariantInit(&var);
+                    if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/grctlext/Delay", &var))) {
+                        if (var.vt == VT_UI2 || var.vt == VT_I2) {
+                            USHORT cs = (var.vt == VT_UI2) ? var.uiVal : (USHORT)var.iVal;
+                            /** 0 means no delay, treat as 10cs = 100ms */
+                            if (cs == 0) cs = 10;
+                            delayMs = (UINT)cs * 10U;
+                        } else if (var.vt == VT_UI1) {
+                            UCHAR cs = var.bVal; if (cs == 0) cs = 10; delayMs = (UINT)cs * 10U;
+                        }
+                    }
+                    PropVariantClear(&var);
+                    pMeta->lpVtbl->Release(pMeta);
+                }
+
+                IWICBitmapScaler* pScaler = NULL;
+                hr = pFactory->lpVtbl->CreateBitmapScaler(pFactory, &pScaler);
+                if (SUCCEEDED(hr) && pScaler) {
+                    hr = pScaler->lpVtbl->Initialize(pScaler, (IWICBitmapSource*)pFrame, cx, cy, WICBitmapInterpolationModeFant);
+                    if (SUCCEEDED(hr)) {
+                        IWICFormatConverter* pConverter = NULL;
+                        hr = pFactory->lpVtbl->CreateFormatConverter(pFactory, &pConverter);
+                        if (SUCCEEDED(hr) && pConverter) {
+                            hr = pConverter->lpVtbl->Initialize(pConverter, (IWICBitmapSource*)pScaler, &GUID_WICPixelFormat32bppPBGRA, WICBitmapDitherTypeNone, NULL, 0.0, WICBitmapPaletteTypeCustom);
+                            if (SUCCEEDED(hr)) {
+                                BITMAPINFO bi; ZeroMemory(&bi, sizeof(bi));
+                                bi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+                                bi.bmiHeader.biWidth = cx;
+                                bi.bmiHeader.biHeight = -cy;
+                                bi.bmiHeader.biPlanes = 1;
+                                bi.bmiHeader.biBitCount = 32;
+                                bi.bmiHeader.biCompression = BI_RGB;
+                                VOID* pvBits = NULL;
+                                HBITMAP hbmColor = CreateDIBSection(NULL, &bi, DIB_RGB_COLORS, &pvBits, NULL, 0);
+                                if (hbmColor && pvBits) {
+                                    UINT stride = (UINT)(cx * 4);
+                                    UINT bufSize = (UINT)(cy * stride);
+                                    if (SUCCEEDED(pConverter->lpVtbl->CopyPixels(pConverter, NULL, stride, bufSize, (BYTE*)pvBits))) {
+                                        ICONINFO ii; ZeroMemory(&ii, sizeof(ii));
+                                        ii.fIcon = TRUE;
+                                        ii.hbmColor = hbmColor;
+                                        ii.hbmMask = CreateBitmap(cx, cy, 1, 1, NULL);
+                                        HICON hIcon = CreateIconIndirect(&ii);
+                                        if (ii.hbmMask) DeleteObject(ii.hbmMask);
+                                        if (hIcon) {
+                                            g_trayIcons[g_trayIconCount] = hIcon;
+                                            g_frameDelaysMs[g_trayIconCount] = delayMs;
+                                            g_trayIconCount++;
+                                        }
+                                    }
+                                    DeleteObject(hbmColor);
+                                }
+                            }
+                            pConverter->lpVtbl->Release(pConverter);
+                        }
+                    }
+                    pScaler->lpVtbl->Release(pScaler);
+                }
+
+                pFrame->lpVtbl->Release(pFrame);
+            }
+        }
+        pDecoder->lpVtbl->Release(pDecoder);
+    }
+    if (pFactory) pFactory->lpVtbl->Release(pFactory);
+    if (SUCCEEDED(hrInit)) CoUninitialize();
+
+    if (g_trayIconCount > 0) {
+        g_isGifAnimation = TRUE;
+        g_trayIconIndex = 0;
+    }
+}
+
+/** @brief Decode an animated GIF into preview HICON frames with per-frame delays */
+static void LoadPreviewIconsFromGifPath(const char* utf8Path) {
+    FreePreviewIcons();
+    if (!utf8Path || !*utf8Path) return;
+
+    wchar_t wPath[MAX_PATH] = {0};
+    MultiByteToWideChar(CP_UTF8, 0, utf8Path, -1, wPath, MAX_PATH);
+
+    int cx = GetSystemMetrics(SM_CXSMICON);
+    int cy = GetSystemMetrics(SM_CYSMICON);
+
+    HRESULT hrInit = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+    IWICImagingFactory* pFactory = NULL;
+    HRESULT hr = CoCreateInstance(&CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER, &IID_IWICImagingFactory, (void**)&pFactory);
+    if (FAILED(hr) || !pFactory) {
+        if (SUCCEEDED(hrInit)) CoUninitialize();
+        return;
+    }
+
+    IWICBitmapDecoder* pDecoder = NULL;
+    hr = pFactory->lpVtbl->CreateDecoderFromFilename(pFactory, wPath, NULL, GENERIC_READ, WICDecodeMetadataCacheOnLoad, &pDecoder);
+    if (SUCCEEDED(hr) && pDecoder) {
+        UINT frameCount = 0;
+        if (SUCCEEDED(pDecoder->lpVtbl->GetFrameCount(pDecoder, &frameCount))) {
+            for (UINT i = 0; i < frameCount && g_previewCount < MAX_TRAY_FRAMES; ++i) {
+                IWICBitmapFrameDecode* pFrame = NULL;
+                if (FAILED(pDecoder->lpVtbl->GetFrame(pDecoder, i, &pFrame)) || !pFrame) continue;
+
+                UINT delayMs = 100; /** default */
+                IWICMetadataQueryReader* pMeta = NULL;
+                if (SUCCEEDED(pFrame->lpVtbl->GetMetadataQueryReader(pFrame, &pMeta)) && pMeta) {
+                    PROPVARIANT var; PropVariantInit(&var);
+                    if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/grctlext/Delay", &var))) {
+                        if (var.vt == VT_UI2 || var.vt == VT_I2) {
+                            USHORT cs = (var.vt == VT_UI2) ? var.uiVal : (USHORT)var.iVal;
+                            if (cs == 0) cs = 10; delayMs = (UINT)cs * 10U;
+                        } else if (var.vt == VT_UI1) {
+                            UCHAR cs = var.bVal; if (cs == 0) cs = 10; delayMs = (UINT)cs * 10U;
+                        }
+                    }
+                    PropVariantClear(&var);
+                    pMeta->lpVtbl->Release(pMeta);
+                }
+
+                IWICBitmapScaler* pScaler = NULL;
+                hr = pFactory->lpVtbl->CreateBitmapScaler(pFactory, &pScaler);
+                if (SUCCEEDED(hr) && pScaler) {
+                    hr = pScaler->lpVtbl->Initialize(pScaler, (IWICBitmapSource*)pFrame, cx, cy, WICBitmapInterpolationModeFant);
+                    if (SUCCEEDED(hr)) {
+                        IWICFormatConverter* pConverter = NULL;
+                        hr = pFactory->lpVtbl->CreateFormatConverter(pFactory, &pConverter);
+                        if (SUCCEEDED(hr) && pConverter) {
+                            hr = pConverter->lpVtbl->Initialize(pConverter, (IWICBitmapSource*)pScaler, &GUID_WICPixelFormat32bppPBGRA, WICBitmapDitherTypeNone, NULL, 0.0, WICBitmapPaletteTypeCustom);
+                            if (SUCCEEDED(hr)) {
+                                BITMAPINFO bi; ZeroMemory(&bi, sizeof(bi));
+                                bi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+                                bi.bmiHeader.biWidth = cx;
+                                bi.bmiHeader.biHeight = -cy;
+                                bi.bmiHeader.biPlanes = 1;
+                                bi.bmiHeader.biBitCount = 32;
+                                bi.bmiHeader.biCompression = BI_RGB;
+                                VOID* pvBits = NULL;
+                                HBITMAP hbmColor = CreateDIBSection(NULL, &bi, DIB_RGB_COLORS, &pvBits, NULL, 0);
+                                if (hbmColor && pvBits) {
+                                    UINT stride = (UINT)(cx * 4);
+                                    UINT bufSize = (UINT)(cy * stride);
+                                    if (SUCCEEDED(pConverter->lpVtbl->CopyPixels(pConverter, NULL, stride, bufSize, (BYTE*)pvBits))) {
+                                        ICONINFO ii; ZeroMemory(&ii, sizeof(ii));
+                                        ii.fIcon = TRUE;
+                                        ii.hbmColor = hbmColor;
+                                        ii.hbmMask = CreateBitmap(cx, cy, 1, 1, NULL);
+                                        HICON hIcon = CreateIconIndirect(&ii);
+                                        if (ii.hbmMask) DeleteObject(ii.hbmMask);
+                                        if (hIcon) {
+                                            g_previewIcons[g_previewCount] = hIcon;
+                                            g_previewFrameDelaysMs[g_previewCount] = delayMs;
+                                            g_previewCount++;
+                                        }
+                                    }
+                                    DeleteObject(hbmColor);
+                                }
+                            }
+                            pConverter->lpVtbl->Release(pConverter);
+                        }
+                    }
+                    pScaler->lpVtbl->Release(pScaler);
+                }
+                pFrame->lpVtbl->Release(pFrame);
+            }
+        }
+        pDecoder->lpVtbl->Release(pDecoder);
+    }
+    if (pFactory) pFactory->lpVtbl->Release(pFactory);
+    if (SUCCEEDED(hrInit)) CoUninitialize();
+
+    if (g_previewCount > 0) {
+        g_isPreviewGif = TRUE;
+        g_previewIndex = 0;
+    }
 }
 
 /** @brief Load sequential icon frames from .ico and .png files */
@@ -80,6 +308,12 @@ static void LoadTrayIcons(void) {
 
     char folder[MAX_PATH] = {0};
     BuildAnimationFolder(g_animationName, folder, sizeof(folder));
+
+    /** If selection is a single GIF file under animations root, decode frames from it */
+    if (IsGifSelection(g_animationName)) {
+        LoadTrayIconsFromGifPath(folder);
+        return;
+    }
 
     /** Enumerate all .ico and .png files, pick those with numeric in name, sort ascending */
     wchar_t wFolder[MAX_PATH] = {0};
@@ -268,8 +502,26 @@ static void AdvanceTrayFrame(void) {
 
     if (g_isPreviewActive) {
         g_previewIndex = (g_previewIndex + 1) % g_previewCount;
+
+        /** For GIF preview, honor per-frame delay */
+        if (g_isPreviewGif && g_trayHwnd) {
+            int nextPrev = g_previewIndex;
+            UINT delayPrev = g_previewFrameDelaysMs[nextPrev];
+            if (delayPrev == 0) delayPrev = g_trayInterval > 0 ? g_trayInterval : 150;
+            KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
+            SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, delayPrev, (TIMERPROC)TrayAnimTimerProc);
+        }
     } else {
         g_trayIconIndex = (g_trayIconIndex + 1) % g_trayIconCount;
+    }
+
+    /** If current animation is GIF, adjust timer to next frame delay */
+    if (!g_isPreviewActive && g_isGifAnimation && g_trayHwnd) {
+        int nextIndex = g_trayIconIndex;
+        UINT delay = g_frameDelaysMs[nextIndex];
+        if (delay == 0) delay = g_trayInterval > 0 ? g_trayInterval : 150;
+        KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
+        SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, delay, (TIMERPROC)TrayAnimTimerProc);
     }
 }
 
@@ -309,7 +561,9 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
 
     if (g_trayIconCount > 0) {
         AdvanceTrayFrame();
-        SetTimer(hwnd, TRAY_ANIM_TIMER_ID, g_trayInterval, (TIMERPROC)TrayAnimTimerProc);
+        /** For GIF, honor first frame delay if available */
+        UINT firstDelay = (g_isGifAnimation && g_frameDelaysMs[0] > 0) ? g_frameDelaysMs[0] : g_trayInterval;
+        SetTimer(hwnd, TRAY_ANIM_TIMER_ID, firstDelay, (TIMERPROC)TrayAnimTimerProc);
     }
 }
 
@@ -333,27 +587,34 @@ const char* GetCurrentAnimationName(void) {
 BOOL SetCurrentAnimationName(const char* name) {
     if (!name || !*name) return FALSE;
 
-    /** Validate the folder contains any .ico */
+    /** Validate selection: either a folder with images, or a single .gif file existing */
     char folder[MAX_PATH] = {0};
     BuildAnimationFolder(name, folder, sizeof(folder));
-    wchar_t wFolder[MAX_PATH] = {0};
-    MultiByteToWideChar(CP_UTF8, 0, folder, -1, wFolder, MAX_PATH);
-    wchar_t wSearch[MAX_PATH] = {0};
-    _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s\\*", wFolder);
-    BOOL hasAny = FALSE;
-    WIN32_FIND_DATAW ffd; HANDLE hFind = FindFirstFileW(wSearch, &ffd);
-    if (hFind != INVALID_HANDLE_VALUE) {
-        do {
-            if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
-            wchar_t* ext = wcsrchr(ffd.cFileName, L'.');
-            if (ext && (_wcsicmp(ext, L".ico") == 0 || _wcsicmp(ext, L".png") == 0 || _wcsicmp(ext, L".bmp") == 0 || _wcsicmp(ext, L".jpg") == 0 || _wcsicmp(ext, L".jpeg") == 0 || _wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".tif") == 0 || _wcsicmp(ext, L".tiff") == 0)) {
-                hasAny = TRUE;
-                break;
+    wchar_t wPath[MAX_PATH] = {0};
+    MultiByteToWideChar(CP_UTF8, 0, folder, -1, wPath, MAX_PATH);
+
+    DWORD attrs = GetFileAttributesW(wPath);
+    BOOL valid = FALSE;
+    if (attrs != INVALID_FILE_ATTRIBUTES) {
+        if (attrs & FILE_ATTRIBUTE_DIRECTORY) {
+            wchar_t wSearch[MAX_PATH] = {0};
+            _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s\\*", wPath);
+            WIN32_FIND_DATAW ffd; HANDLE hFind = FindFirstFileW(wSearch, &ffd);
+            if (hFind != INVALID_HANDLE_VALUE) {
+                do {
+                    if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
+                    wchar_t* ext = wcsrchr(ffd.cFileName, L'.');
+                    if (ext && (_wcsicmp(ext, L".ico") == 0 || _wcsicmp(ext, L".png") == 0 || _wcsicmp(ext, L".bmp") == 0 || _wcsicmp(ext, L".jpg") == 0 || _wcsicmp(ext, L".jpeg") == 0 || _wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".tif") == 0 || _wcsicmp(ext, L".tiff") == 0)) {
+                        valid = TRUE; break;
+                    }
+                } while (FindNextFileW(hFind, &ffd));
+                FindClose(hFind);
             }
-        } while (FindNextFileW(hFind, &ffd));
-        FindClose(hFind);
+        } else if (IsGifSelection(name)) {
+            valid = TRUE; /** a valid single GIF file */
+        }
     }
-    if (!hasAny) return FALSE;
+    if (!valid) return FALSE;
 
     strncpy(g_animationName, name, sizeof(g_animationName) - 1);
     g_animationName[sizeof(g_animationName) - 1] = '\0';
@@ -372,7 +633,8 @@ BOOL SetCurrentAnimationName(const char* name) {
         AdvanceTrayFrame();
         if (!IsWindow(g_trayHwnd)) return TRUE;
         KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
-        SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, g_trayInterval, (TIMERPROC)TrayAnimTimerProc);
+        UINT firstDelay = (g_isGifAnimation && g_frameDelaysMs[0] > 0) ? g_frameDelaysMs[0] : g_trayInterval;
+        SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, firstDelay, (TIMERPROC)TrayAnimTimerProc);
     }
     return TRUE;
 }
@@ -381,7 +643,27 @@ BOOL SetCurrentAnimationName(const char* name) {
 /** Load preview icons for folder and enable preview mode (no persistence) */
 void StartAnimationPreview(const char* name) {
     if (!name || !*name) return;
-    /** Build and enumerate preview icons */
+    /** If preview target is a .gif file, decode frames from the single file */
+    if (IsGifSelection(name)) {
+        char gifPath[MAX_PATH] = {0};
+        BuildAnimationFolder(name, gifPath, sizeof(gifPath));
+        LoadPreviewIconsFromGifPath(gifPath);
+        if (g_previewCount > 0) {
+            g_isPreviewActive = TRUE;
+            g_previewIndex = 0;
+            if (g_trayHwnd) {
+                AdvanceTrayFrame();
+                if (g_isPreviewGif) {
+                    UINT firstDelay = g_previewFrameDelaysMs[0] > 0 ? g_previewFrameDelaysMs[0] : (g_trayInterval ? g_trayInterval : 150);
+                    KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
+                    SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, firstDelay, (TIMERPROC)TrayAnimTimerProc);
+                }
+            }
+        }
+        return;
+    }
+
+    /** Build and enumerate preview icons from a folder */
     char folder[MAX_PATH] = {0};
     BuildAnimationFolder(name, folder, sizeof(folder));
 
@@ -552,6 +834,15 @@ void CancelAnimationPreview(void) {
     g_previewIndex = 0;
     if (g_trayHwnd) {
         AdvanceTrayFrame();
+        /** Restore timer for normal animation if needed */
+        if (g_isGifAnimation) {
+            UINT firstDelay = g_frameDelaysMs[g_trayIconIndex] > 0 ? g_frameDelaysMs[g_trayIconIndex] : (g_trayInterval ? g_trayInterval : 150);
+            KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
+            SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, firstDelay, (TIMERPROC)TrayAnimTimerProc);
+        } else {
+            KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
+            SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, g_trayInterval ? g_trayInterval : 150, (TIMERPROC)TrayAnimTimerProc);
+        }
     }
 }
 
@@ -595,6 +886,28 @@ BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id) {
                 }
             } while (FindNextFileW(hFind, &ffd));
             FindClose(hFind);
+        }
+
+        /** Second pass: match .gif files with IDs */
+        WIN32_FIND_DATAW ffd2; HANDLE hFind2 = FindFirstFileW(wSearch, &ffd2);
+        if (hFind2 != INVALID_HANDLE_VALUE) {
+            do {
+                if (wcscmp(ffd2.cFileName, L".") == 0 || wcscmp(ffd2.cFileName, L"..") == 0) continue;
+                if (!(ffd2.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+                    wchar_t* ext = wcsrchr(ffd2.cFileName, L'.');
+                    if (ext && (_wcsicmp(ext, L".gif") == 0)) {
+                        if (nextId == id) {
+                            char fileUtf8[MAX_PATH] = {0};
+                            WideCharToMultiByte(CP_UTF8, 0, ffd2.cFileName, -1, fileUtf8, MAX_PATH, NULL, NULL);
+                            changed = SetCurrentAnimationName(fileUtf8);
+                            FindClose(hFind2);
+                            return changed ? TRUE : FALSE;
+                        }
+                        nextId++;
+                    }
+                }
+            } while (FindNextFileW(hFind2, &ffd2));
+            FindClose(hFind2);
         }
         return changed ? TRUE : FALSE;
     }
