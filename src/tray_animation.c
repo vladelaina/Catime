@@ -192,99 +192,6 @@ static void ClearCanvasRect(BYTE* canvas, UINT canvasWidth, UINT canvasHeight,
     }
 }
 
-/** @brief Create an HICON from a 32bpp PBGRA memory canvas by scaling to (cx, cy) */
-static HICON CreateIconFromPBGRA(IWICImagingFactory* pFactory,
-                                const BYTE* canvasPixels,
-                                UINT canvasWidth,
-                                UINT canvasHeight,
-                                int cx,
-                                int cy) {
-    if (!pFactory || !canvasPixels || canvasWidth == 0 || canvasHeight == 0 || cx <= 0 || cy <= 0) return NULL;
-
-    HICON hIcon = NULL;
-
-    const UINT canvasStride = canvasWidth * 4; /** 32bpp PBGRA */
-    const UINT canvasSize = canvasHeight * canvasStride;
-
-    IWICBitmap* pCanvasBitmap = NULL;
-    HRESULT hr = pFactory->lpVtbl->CreateBitmapFromMemory(pFactory,
-                                                          canvasWidth,
-                                                          canvasHeight,
-                                                          &GUID_WICPixelFormat32bppPBGRA,
-                                                          canvasStride,
-                                                          canvasSize,
-                                                          (BYTE*)canvasPixels,
-                                                          &pCanvasBitmap);
-    if (SUCCEEDED(hr) && pCanvasBitmap) {
-        IWICBitmapScaler* pScaler = NULL;
-        hr = pFactory->lpVtbl->CreateBitmapScaler(pFactory, &pScaler);
-        if (SUCCEEDED(hr) && pScaler) {
-            hr = pScaler->lpVtbl->Initialize(pScaler, (IWICBitmapSource*)pCanvasBitmap, cx, cy, WICBitmapInterpolationModeFant);
-            if (SUCCEEDED(hr)) {
-                IWICFormatConverter* pFinalConverter = NULL;
-                hr = pFactory->lpVtbl->CreateFormatConverter(pFactory, &pFinalConverter);
-                if (SUCCEEDED(hr) && pFinalConverter) {
-                    hr = pFinalConverter->lpVtbl->Initialize(pFinalConverter,
-                                                             (IWICBitmapSource*)pScaler,
-                                                             &GUID_WICPixelFormat32bppPBGRA,
-                                                             WICBitmapDitherTypeNone,
-                                                             NULL,
-                                                             0.0,
-                                                             WICBitmapPaletteTypeCustom);
-                    if (SUCCEEDED(hr)) {
-                        BITMAPINFO bi; ZeroMemory(&bi, sizeof(bi));
-                        bi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-                        bi.bmiHeader.biWidth = cx;
-                        bi.bmiHeader.biHeight = -cy; /** top-down */
-                        bi.bmiHeader.biPlanes = 1;
-                        bi.bmiHeader.biBitCount = 32;
-                        bi.bmiHeader.biCompression = BI_RGB;
-                        VOID* pvBits = NULL;
-                        HBITMAP hbmColor = CreateDIBSection(NULL, &bi, DIB_RGB_COLORS, &pvBits, NULL, 0);
-                        if (hbmColor && pvBits) {
-                            UINT iconStride = (UINT)(cx * 4);
-                            UINT iconBufferSize = (UINT)(cy * iconStride);
-                            if (SUCCEEDED(pFinalConverter->lpVtbl->CopyPixels(pFinalConverter, NULL, iconStride, iconBufferSize, (BYTE*)pvBits))) {
-                                ICONINFO ii; ZeroMemory(&ii, sizeof(ii));
-                                ii.fIcon = TRUE;
-                                ii.hbmColor = hbmColor;
-
-                                /** Create mask bitmap following existing approach */
-                                ii.hbmMask = CreateBitmap(cx, cy, 1, 1, NULL);
-                                if (ii.hbmMask) {
-                                    HDC hdcMem = GetDC(NULL);
-                                    HDC hdcColor = CreateCompatibleDC(hdcMem);
-                                    HDC hdcMask = CreateCompatibleDC(hdcMem);
-                                    SelectObject(hdcColor, hbmColor);
-                                    SelectObject(hdcMask, ii.hbmMask);
-
-                                    BitBlt(hdcMask, 0, 0, cx, cy, NULL, 0, 0, BLACKNESS);
-                                    SetBkColor(hdcColor, RGB(0,0,0));
-                                    BitBlt(hdcMask, 0, 0, cx, cy, hdcColor, 0, 0, SRCCOPY);
-                                    BitBlt(hdcMask, 0, 0, cx, cy, NULL, 0, 0, DSTINVERT);
-
-                                    DeleteDC(hdcColor);
-                                    DeleteDC(hdcMask);
-                                    ReleaseDC(NULL, hdcMem);
-                                }
-
-                                hIcon = CreateIconIndirect(&ii);
-                                if (ii.hbmMask) DeleteObject(ii.hbmMask);
-                            }
-                            DeleteObject(hbmColor);
-                        }
-                    }
-                    pFinalConverter->lpVtbl->Release(pFinalConverter);
-                }
-            }
-            pScaler->lpVtbl->Release(pScaler);
-        }
-        pCanvasBitmap->lpVtbl->Release(pCanvasBitmap);
-    }
-
-    return hIcon;
-}
-
 /** @brief Create an HICON from any IWICBitmapSource by scaling to (cx, cy) */
 static HICON CreateIconFromWICSource(IWICImagingFactory* pFactory,
                                      IWICBitmapSource* source,
@@ -355,6 +262,30 @@ static HICON CreateIconFromWICSource(IWICImagingFactory* pFactory,
             }
         }
         pScaler->lpVtbl->Release(pScaler);
+    }
+
+    return hIcon;
+}
+
+/** @brief Create an HICON from a 32bpp PBGRA memory canvas by scaling to (cx, cy) */
+static HICON CreateIconFromPBGRA(IWICImagingFactory* pFactory,
+                                 const BYTE* canvasPixels,
+                                 UINT canvasWidth,
+                                 UINT canvasHeight,
+                                 int cx,
+                                 int cy) {
+    if (!pFactory || !canvasPixels || canvasWidth == 0 || canvasHeight == 0 || cx <= 0 || cy <= 0) return NULL;
+
+    HICON hIcon = NULL;
+    IWICBitmap* pBitmap = NULL;
+
+    const UINT stride = canvasWidth * 4;
+    const UINT size = canvasHeight * stride;
+
+    HRESULT hr = pFactory->lpVtbl->CreateBitmapFromMemory(pFactory, canvasWidth, canvasHeight, &GUID_WICPixelFormat32bppPBGRA, stride, size, (BYTE*)canvasPixels, &pBitmap);
+    if (SUCCEEDED(hr) && pBitmap) {
+        hIcon = CreateIconFromWICSource(pFactory, (IWICBitmapSource*)pBitmap, cx, cy);
+        pBitmap->lpVtbl->Release(pBitmap);
     }
 
     return hIcon;
