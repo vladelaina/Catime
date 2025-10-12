@@ -9,6 +9,7 @@
 #include "../include/config.h"
 #include "../include/drag_scale.h"
 #include "../include/window_events.h"
+#include "../include/tray_animation.h"
 
 /**
  * @brief Handle window creation and initial setup
@@ -49,6 +50,9 @@ void HandleWindowDestroy(HWND hwnd) {
     
     /** Remove system tray icon */
     RemoveTrayIcon();
+
+    /** Stop tray animation and free icons */
+    StopTrayAnimation(hwnd);
     
     /** Clean up font resources */
     extern BOOL UnloadCurrentFontResource(void);

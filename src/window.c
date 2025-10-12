@@ -12,6 +12,7 @@
 #include "../include/startup.h"
 #include "../include/config.h"
 #include "../resource/resource.h"
+#include "../include/tray_animation.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -632,6 +633,9 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
 
     /** Initialize system tray icon */
     InitTrayIcon(hwnd, hInstance);
+
+    /** Start tray animation with fixed speed */
+    StartTrayAnimation(hwnd, 150);
 
     /** Show window and apply topmost behavior */
     ShowWindow(hwnd, nCmdShow);
