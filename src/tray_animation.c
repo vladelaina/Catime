@@ -61,6 +61,28 @@ typedef struct {
     BYTE** canvas;
 } DecodeTarget;
 
+/** @brief Selects the appropriate icon set (tray or preview) for an operation */
+static DecodeTarget GetDecodeTarget(BOOL isPreview) {
+    if (isPreview) {
+        return (DecodeTarget){
+            .icons = g_previewIcons,
+            .count = &g_previewCount,
+            .index = &g_previewIndex,
+            .delays = g_previewFrameDelaysMs,
+            .isAnimatedFlag = &g_isPreviewAnimated,
+            .canvas = &g_previewAnimCanvas
+        };
+    }
+    return (DecodeTarget){
+        .icons = g_trayIcons,
+        .count = &g_trayIconCount,
+        .index = &g_trayIconIndex,
+        .delays = g_frameDelaysMs,
+        .isAnimatedFlag = &g_isAnimated,
+        .canvas = &g_animCanvas
+    };
+}
+
 /** @brief Build cat animation folder path: %LOCALAPPDATA%\Catime\resources\animations\cat */
 static void BuildAnimationFolder(const char* name, char* path, size_t size) {
     char base[MAX_PATH] = {0};
@@ -275,11 +297,6 @@ static HICON CreateIconFromPBGRA(IWICImagingFactory* pFactory,
 
 /** @brief Generic animated image decoding routine for GIF and WebP */
 static void LoadAnimatedImage(const char* utf8Path, DecodeTarget* target) {
-    if (target->icons == g_trayIcons) {
-        FreeIconSet(g_trayIcons, &g_trayIconCount, &g_trayIconIndex, &g_isAnimated, &g_animCanvas, TRUE);
-    } else {
-        FreeIconSet(g_previewIcons, &g_previewCount, &g_previewIndex, &g_isPreviewAnimated, &g_previewAnimCanvas, FALSE);
-    }
     if (!utf8Path || !*utf8Path) return;
 
     wchar_t wPath[MAX_PATH] = {0};
@@ -602,47 +619,27 @@ static void LoadIconsFromFolder(const char* utf8Folder, HICON* icons, int* count
 
 /** @brief Unified animation loading routine for tray and preview */
 static void LoadAnimationByName(const char* name, BOOL isPreview) {
-    HICON* icons;
-    int* count;
-    int* index;
-    BOOL* isAnimatedFlag;
-    UINT* delays;
-    BYTE** canvas;
-
-    if (isPreview) {
-        FreeIconSet(g_previewIcons, &g_previewCount, &g_previewIndex, &g_isPreviewAnimated, &g_previewAnimCanvas, FALSE);
-        icons = g_previewIcons;
-        count = &g_previewCount;
-        index = &g_previewIndex;
-        isAnimatedFlag = &g_isPreviewAnimated;
-        delays = g_previewFrameDelaysMs;
-        canvas = &g_previewAnimCanvas;
-    } else {
-        FreeIconSet(g_trayIcons, &g_trayIconCount, &g_trayIconIndex, &g_isAnimated, &g_animCanvas, TRUE);
-        icons = g_trayIcons;
-        count = &g_trayIconCount;
-        index = &g_trayIconIndex;
-        isAnimatedFlag = &g_isAnimated;
-        delays = g_frameDelaysMs;
-        canvas = &g_animCanvas;
-    }
+    DecodeTarget target = GetDecodeTarget(isPreview);
+    
+    // Free previous resources for the selected target.
+    // For the main tray target, also reset global canvas dimensions.
+    FreeIconSet(target.icons, target.count, target.index, target.isAnimatedFlag, target.canvas, !isPreview);
 
     if (!name || !*name) return;
 
     if (_stricmp(name, "__logo__") == 0) {
         HICON hIcon = LoadIconW(GetModuleHandle(NULL), MAKEINTRESOURCEW(IDI_CATIME));
         if (hIcon) {
-            icons[(*count)++] = hIcon;
+            target.icons[(*(target.count))++] = hIcon;
         }
     } else if (IsGifSelection(name) || IsWebPSelection(name)) {
         char filePath[MAX_PATH] = {0};
         BuildAnimationFolder(name, filePath, sizeof(filePath));
-        DecodeTarget target = { icons, count, index, delays, isAnimatedFlag, canvas };
         LoadAnimatedImage(filePath, &target);
     } else {
         char folder[MAX_PATH] = {0};
         BuildAnimationFolder(name, folder, sizeof(folder));
-        LoadIconsFromFolder(folder, icons, count);
+        LoadIconsFromFolder(folder, target.icons, target.count);
     }
 }
 
