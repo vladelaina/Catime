@@ -2,7 +2,7 @@
  * @file tray_animation.h
  * @brief System tray icon animation (RunCat-like) controller
  *
- * Loads sequential .ico files from %LOCALAPPDATA%\Catime\resources\animations\cat
+ * Loads frames from %LOCALAPPDATA%\Catime\resources\animations (folder or single GIF/WebP)
  * and animates the tray icon at a fixed interval.
  */
 
@@ -47,6 +47,17 @@ void StartAnimationPreview(const char* name);
  * @brief Cancel temporary animation preview and restore previous animation
  */
 void CancelAnimationPreview(void);
+
+/**
+ * @brief Preload animation frames based on config without starting timers.
+ * Used at startup to obtain the first frame before adding the tray icon.
+ */
+void PreloadAnimationFromConfig(void);
+
+/**
+ * @brief Get initial tray HICON for startup. Returns first animation frame if available, otherwise NULL.
+ */
+HICON GetInitialAnimationHicon(void);
 
 /**
  * @brief Handle menu commands related to animations.

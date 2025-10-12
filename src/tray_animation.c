@@ -51,7 +51,7 @@ static int g_trayIconCount = 0;
 static int g_trayIconIndex = 0;
 static UINT g_trayInterval = 0;
 static HWND g_trayHwnd = NULL;
-static char g_animationName[64] = "cat"; /** current folder under animations */
+static char g_animationName[64] = "__logo__"; /** current folder under animations */
 static BOOL g_isPreviewActive = FALSE; /** preview mode flag */
 static HICON g_previewIcons[MAX_TRAY_FRAMES];
 static int g_previewCount = 0;
@@ -99,7 +99,7 @@ static DecodeTarget GetDecodeTarget(BOOL isPreview) {
     };
 }
 
-/** @brief Build cat animation folder path: %LOCALAPPDATA%\Catime\resources\animations\cat */
+/** @brief Build animation folder path under %LOCALAPPDATA%\Catime\resources\animations */
 static void BuildAnimationFolder(const char* name, char* path, size_t size) {
     char base[MAX_PATH] = {0};
     GetAnimationsFolderPath(base, sizeof(base));
@@ -726,7 +726,7 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
     char config_path[MAX_PATH] = {0};
     GetConfigPath(config_path, sizeof(config_path));
     char nameBuf[64] = {0};
-    ReadIniString(INI_SECTION_OPTIONS, "ANIMATION_NAME", "%LOCALAPPDATA%\\Catime\\resources\\animations\\cat", nameBuf, sizeof(nameBuf), config_path);
+    ReadIniString(INI_SECTION_OPTIONS, "ANIMATION_NAME", "__logo__", nameBuf, sizeof(nameBuf), config_path);
     if (nameBuf[0] != '\0') {
         const char* prefix = "%LOCALAPPDATA%\\Catime\\resources\\animations\\";
         if (_stricmp(nameBuf, "__logo__") == 0) {
@@ -883,6 +883,40 @@ void CancelAnimationPreview(void) {
     }
 }
 
+void PreloadAnimationFromConfig(void) {
+    char config_path[MAX_PATH] = {0};
+    GetConfigPath(config_path, sizeof(config_path));
+    char nameBuf[64] = {0};
+    ReadIniString(INI_SECTION_OPTIONS, "ANIMATION_NAME", "__logo__", nameBuf, sizeof(nameBuf), config_path);
+    if (nameBuf[0] != '\0') {
+        const char* prefix = "%LOCALAPPDATA%\\Catime\\resources\\animations\\";
+        if (_stricmp(nameBuf, "__logo__") == 0) {
+            strncpy(g_animationName, "__logo__", sizeof(g_animationName) - 1);
+            g_animationName[sizeof(g_animationName) - 1] = '\0';
+        } else if (_strnicmp(nameBuf, prefix, (int)strlen(prefix)) == 0) {
+            const char* rel = nameBuf + strlen(prefix);
+            if (*rel) {
+                strncpy(g_animationName, rel, sizeof(g_animationName) - 1);
+                g_animationName[sizeof(g_animationName) - 1] = '\0';
+            }
+        } else {
+            strncpy(g_animationName, nameBuf, sizeof(g_animationName) - 1);
+            g_animationName[sizeof(g_animationName) - 1] = '\0';
+        }
+    }
+    // Load frames into g_trayIcons without touching timers/hwnd
+    LoadTrayIcons();
+}
+
+HICON GetInitialAnimationHicon(void) {
+    if (g_trayIconCount > 0) {
+        return g_trayIcons[0];
+    }
+    if (_stricmp(g_animationName, "__logo__") == 0) {
+        return LoadIconW(GetModuleHandle(NULL), MAKEINTRESOURCEW(IDI_CATIME));
+    }
+    return NULL;
+}
 
 static void OpenAnimationsFolder(void) {
     char base[MAX_PATH] = {0};

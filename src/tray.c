@@ -8,6 +8,7 @@
 #include "../include/language.h"
 #include "../resource/resource.h"
 #include "../include/tray.h"
+#include "../include/tray_animation.h"
 
 /** @brief Global tray icon data structure for Shell_NotifyIcon operations */
 NOTIFYICONDATAW nid;
@@ -30,11 +31,15 @@ void RegisterTaskbarCreatedMessage() {
  * Sets up icon, tooltip with version info, and callback message routing
  */
 void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
+    // Preload animation from config and get initial frame icon
+    PreloadAnimationFromConfig();
+    HICON hInitial = GetInitialAnimationHicon();
+
     memset(&nid, 0, sizeof(nid));
     nid.cbSize = sizeof(nid);
     nid.uID = CLOCK_ID_TRAY_APP_ICON;
     nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
-    nid.hIcon = LoadIconW(hInstance, MAKEINTRESOURCEW(IDI_CATIME));
+    nid.hIcon = hInitial ? hInitial : LoadIconW(hInstance, MAKEINTRESOURCEW(IDI_CATIME));
     nid.hWnd = hwnd;
     nid.uCallbackMessage = CLOCK_WM_TRAYICON;
     

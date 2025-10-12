@@ -573,7 +573,7 @@ void CreateDefaultConfig(const char* config_path) {
     WriteIniString(INI_SECTION_NOTIFICATION, "NOTIFICATION_DISABLED", "FALSE", config_path);
     
     /** Default animation settings (show full virtual path like fonts) */
-    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_NAME", "%LOCALAPPDATA%\\Catime\\resources\\animations\\cat", config_path);
+    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_NAME", "__logo__", config_path);
     
 
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_SHOW_TIME", "None", config_path);
