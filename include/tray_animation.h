@@ -11,6 +11,9 @@
 
 #include <windows.h>
 
+/** @brief Max frames supported for tray icon animations. */
+#define MAX_TRAY_FRAMES 64
+
 /**
  * @brief Start tray icon animation.
  * @param hwnd Main window handle owning the tray icon (CLOCK_ID_TRAY_APP_ICON)

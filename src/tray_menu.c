@@ -19,6 +19,51 @@
 #include "../resource/resource.h"
 #include "../include/tray_animation.h"
 
+/** @brief Represents a file or folder entry for sorting animation menus. */
+typedef struct {
+    wchar_t name[MAX_PATH];
+    char rel_path_utf8[MAX_PATH]; /** Relative path from animations root */
+    BOOL is_dir;
+} AnimationEntry;
+
+/** @brief qsort comparator for AnimationEntry, sorting directories first, then alphabetically. */
+static int CompareAnimationEntries(const void* a, const void* b) {
+    const AnimationEntry* entryA = (const AnimationEntry*)a;
+    const AnimationEntry* entryB = (const AnimationEntry*)b;
+    if (entryA->is_dir != entryB->is_dir) {
+        return entryB->is_dir - entryA->is_dir; // Directories first
+    }
+    return _wcsicmp(entryA->name, entryB->name);
+}
+
+/** @brief Checks if a folder contains no sub-folders or animated images, making it a leaf. */
+static BOOL IsAnimationLeafFolderW(const wchar_t* folderPathW) {
+    wchar_t wSearch[MAX_PATH] = {0};
+    _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s\\*", folderPathW);
+    
+    WIN32_FIND_DATAW ffd;
+    HANDLE hFind = FindFirstFileW(wSearch, &ffd);
+    if (hFind == INVALID_HANDLE_VALUE) return TRUE; // Empty is a leaf
+
+    BOOL hasSubItems = FALSE;
+    do {
+        if (wcscmp(ffd.cFileName, L".") == 0 || wcscmp(ffd.cFileName, L"..") == 0) continue;
+        
+        if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+            hasSubItems = TRUE;
+            break;
+        }
+        wchar_t* ext = wcsrchr(ffd.cFileName, L'.');
+        if (ext && (_wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0)) {
+            hasSubItems = TRUE;
+            break;
+        }
+    } while (FindNextFileW(hFind, &ffd));
+    FindClose(hFind);
+    
+    return !hasSubItems;
+}
+
 /** @brief Timer state and display configuration externals */
 extern BOOL CLOCK_SHOW_CURRENT_TIME;
 extern BOOL CLOCK_USE_24HOUR;
@@ -588,146 +633,91 @@ void ShowColorMenu(HWND hwnd) {
     /** Animations submenu (RunCat-like) */
     HMENU hAnimMenu = CreatePopupMenu();
     {
-        /** Enumerate subfolders and .gif files under resources\animations and add as selectable items */
+        /**
+         * NOTE: The menu is built by scanning the filesystem. To ensure the command handler
+         * maps the menu ID back to the correct file, both this logic and the handler
+         * MUST use an identical, deterministic sorting order.
+         */
         char animRootUtf8[MAX_PATH] = {0};
         GetAnimationsFolderPath(animRootUtf8, sizeof(animRootUtf8));
-
-        wchar_t wSearch[MAX_PATH] = {0};
         wchar_t wRoot[MAX_PATH] = {0};
         MultiByteToWideChar(CP_UTF8, 0, animRootUtf8, -1, wRoot, MAX_PATH);
-        _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s\\*", wRoot);
 
-        WIN32_FIND_DATAW ffd; HANDLE hFind = FindFirstFileW(wSearch, &ffd);
         UINT nextId = CLOCK_IDM_ANIMATIONS_BASE;
-        BOOL hasAny = FALSE;
         const char* currentAnim = GetCurrentAnimationName();
 
         /** Add a fixed entry to use the app logo as the tray icon */
-        {
-            UINT flags = MF_STRING;
-            if (currentAnim && _stricmp(currentAnim, "__logo__") == 0) {
-                flags |= MF_CHECKED;
-            }
-            AppendMenuW(hAnimMenu, flags, CLOCK_IDM_ANIMATIONS_USE_LOGO, GetLocalizedString(L"使用Logo", L"Use Logo"));
-            AppendMenuW(hAnimMenu, MF_SEPARATOR, 0, NULL);
-        }
+        AppendMenuW(hAnimMenu, MF_STRING | (currentAnim && _stricmp(currentAnim, "__logo__") == 0 ? MF_CHECKED : 0),
+                    CLOCK_IDM_ANIMATIONS_USE_LOGO, GetLocalizedString(L"使用Logo", L"Use Logo"));
+        AppendMenuW(hAnimMenu, MF_SEPARATOR, 0, NULL);
+
         /** Recursive helper function to build menu for a folder */
-        HMENU BuildFolderMenuRecursive(const wchar_t* folderPathW, const char* folderPathUtf8, UINT* nextIdPtr, const char* currentAnim) {
+        void BuildFolderMenuRecursive(HMENU parentMenu, const wchar_t* folderPathW, const char* folderPathUtf8, UINT* nextIdPtr, const char* currentAnim) {
+            AnimationEntry entries[MAX_TRAY_FRAMES];
+            int entryCount = 0;
+
             wchar_t wSearch[MAX_PATH] = {0};
             _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s\\*", folderPathW);
             
             WIN32_FIND_DATAW ffd;
             HANDLE hFind = FindFirstFileW(wSearch, &ffd);
-            if (hFind == INVALID_HANDLE_VALUE) return NULL;
-            
-            HMENU hSubMenu = CreatePopupMenu();
-            BOOL hasItems = FALSE;
-            
+            if (hFind == INVALID_HANDLE_VALUE) return;
+
             do {
                 if (wcscmp(ffd.cFileName, L".") == 0 || wcscmp(ffd.cFileName, L"..") == 0) continue;
+                if (entryCount >= MAX_TRAY_FRAMES) break;
+
+                AnimationEntry* e = &entries[entryCount];
+                e->is_dir = (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+                wcsncpy(e->name, ffd.cFileName, MAX_PATH - 1);
+                e->name[MAX_PATH - 1] = L'\0';
+
+                char itemUtf8[MAX_PATH] = {0};
+                WideCharToMultiByte(CP_UTF8, 0, ffd.cFileName, -1, itemUtf8, MAX_PATH, NULL, NULL);
+                _snprintf_s(e->rel_path_utf8, MAX_PATH, _TRUNCATE, "%s\\%s", folderPathUtf8, itemUtf8);
                 
-                if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-                    /** Recursively handle subdirectories */
-                    char subFolderUtf8[MAX_PATH] = {0};
-                    WideCharToMultiByte(CP_UTF8, 0, ffd.cFileName, -1, subFolderUtf8, MAX_PATH, NULL, NULL);
-                    
+                if (e->is_dir) {
+                    entryCount++;
+                } else {
+                    wchar_t* ext = wcsrchr(e->name, L'.');
+                    if (ext && (_wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0)) {
+                        entryCount++;
+                    }
+                }
+            } while (FindNextFileW(hFind, &ffd));
+            FindClose(hFind);
+
+            if (entryCount == 0) return;
+            qsort(entries, entryCount, sizeof(AnimationEntry), CompareAnimationEntries);
+
+            for (int i = 0; i < entryCount; ++i) {
+                AnimationEntry* e = &entries[i];
+                if (e->is_dir) {
                     wchar_t wSubFolderPath[MAX_PATH] = {0};
-                    _snwprintf_s(wSubFolderPath, MAX_PATH, _TRUNCATE, L"%s\\%s", folderPathW, ffd.cFileName);
+                    _snwprintf_s(wSubFolderPath, MAX_PATH, _TRUNCATE, L"%s\\%s", folderPathW, e->name);
                     
-                    char subFolderPathUtf8[MAX_PATH] = {0};
-                    _snprintf_s(subFolderPathUtf8, MAX_PATH, _TRUNCATE, "%s\\%s", folderPathUtf8, subFolderUtf8);
-                    
-                    HMENU hSubSubMenu = BuildFolderMenuRecursive(wSubFolderPath, subFolderPathUtf8, nextIdPtr, currentAnim);
-                    if (hSubSubMenu) {
-                        AppendMenuW(hSubMenu, MF_POPUP, (UINT_PTR)hSubSubMenu, ffd.cFileName);
-                        hasItems = TRUE;
+                    if (IsAnimationLeafFolderW(wSubFolderPath)) {
+                        // Leaf folder, add as a clickable item.
+                        UINT flags = MF_STRING | (currentAnim && _stricmp(e->rel_path_utf8, currentAnim) == 0 ? MF_CHECKED : 0);
+                        AppendMenuW(parentMenu, flags, (*nextIdPtr)++, e->name);
                     } else {
-                        /** No content in subfolder, add as simple folder option */
-                        UINT flags = MF_STRING;
-                        if (currentAnim && _stricmp(subFolderPathUtf8, currentAnim) == 0) {
-                            flags |= MF_CHECKED;
-                        }
-                        AppendMenuW(hSubMenu, flags, (*nextIdPtr)++, ffd.cFileName);
-                        hasItems = TRUE;
+                        // Branch folder, create a submenu.
+                        HMENU hSubMenu = CreatePopupMenu();
+                        BuildFolderMenuRecursive(hSubMenu, wSubFolderPath, e->rel_path_utf8, nextIdPtr, currentAnim);
+                        AppendMenuW(parentMenu, MF_POPUP, (UINT_PTR)hSubMenu, e->name);
                     }
                 } else {
-                    /** Handle GIF and WebP files */
-                    wchar_t* ext = wcsrchr(ffd.cFileName, L'.');
-                    if (ext && (_wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0)) {
-                        char gifUtf8[MAX_PATH] = {0};
-                        WideCharToMultiByte(CP_UTF8, 0, ffd.cFileName, -1, gifUtf8, MAX_PATH, NULL, NULL);
-                        
-                        char relPath[MAX_PATH] = {0};
-                        _snprintf_s(relPath, MAX_PATH, _TRUNCATE, "%s\\%s", folderPathUtf8, gifUtf8);
-                        UINT gifFlags = MF_STRING;
-                        if (currentAnim && _stricmp(relPath, currentAnim) == 0) {
-                            gifFlags |= MF_CHECKED;
-                        }
-                        AppendMenuW(hSubMenu, gifFlags, (*nextIdPtr)++, ffd.cFileName);
-                        hasItems = TRUE;
-                    }
+                    // File item.
+                    UINT flags = MF_STRING | (currentAnim && _stricmp(e->rel_path_utf8, currentAnim) == 0 ? MF_CHECKED : 0);
+                    AppendMenuW(parentMenu, flags, (*nextIdPtr)++, e->name);
                 }
-            } while (FindNextFileW(hFind, &ffd));
-            FindClose(hFind);
-            
-            if (!hasItems) {
-                DestroyMenu(hSubMenu);
-                return NULL;
             }
-            return hSubMenu;
         }
 
-        if (hFind != INVALID_HANDLE_VALUE) {
-            do {
-                if (wcscmp(ffd.cFileName, L".") == 0 || wcscmp(ffd.cFileName, L"..") == 0) continue;
-                if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-                    char folderUtf8[MAX_PATH] = {0};
-                    WideCharToMultiByte(CP_UTF8, 0, ffd.cFileName, -1, folderUtf8, MAX_PATH, NULL, NULL);
-
-                    wchar_t wFolderPath[MAX_PATH] = {0};
-                    _snwprintf_s(wFolderPath, MAX_PATH, _TRUNCATE, L"%s\\%s", wRoot, ffd.cFileName);
-                    
-                    HMENU hFolderMenu = BuildFolderMenuRecursive(wFolderPath, folderUtf8, &nextId, currentAnim);
-                    if (hFolderMenu) {
-                        AppendMenuW(hAnimMenu, MF_POPUP, (UINT_PTR)hFolderMenu, ffd.cFileName);
-                        hasAny = TRUE;
-                    } else {
-                        /** No GIFs or subfolders with content, add as simple folder option */
-                        UINT flags = MF_STRING;
-                        if (currentAnim && _stricmp(folderUtf8, currentAnim) == 0) {
-                            flags |= MF_CHECKED;
-                        }
-                        AppendMenuW(hAnimMenu, flags, nextId++, ffd.cFileName);
-                        hasAny = TRUE;
-                    }
-                }
-            } while (FindNextFileW(hFind, &ffd));
-            FindClose(hFind);
-        }
-
-        /** Enumerate .gif and .webp files and add them as selectable items */
-        WIN32_FIND_DATAW ffd2; HANDLE hFind2 = FindFirstFileW(wSearch, &ffd2);
-        if (hFind2 != INVALID_HANDLE_VALUE) {
-            do {
-                if (wcscmp(ffd2.cFileName, L".") == 0 || wcscmp(ffd2.cFileName, L"..") == 0) continue;
-                if (!(ffd2.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
-                    wchar_t* ext = wcsrchr(ffd2.cFileName, L'.');
-                    if (ext && (_wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0)) {
-                        char fileUtf8[MAX_PATH] = {0};
-                        WideCharToMultiByte(CP_UTF8, 0, ffd2.cFileName, -1, fileUtf8, MAX_PATH, NULL, NULL);
-                        UINT flags = MF_STRING;
-                        if (currentAnim && _stricmp(fileUtf8, currentAnim) == 0) {
-                            flags |= MF_CHECKED;
-                        }
-                        AppendMenuW(hAnimMenu, flags, nextId++, ffd2.cFileName);
-                        hasAny = TRUE;
-                    }
-                }
-            } while (FindNextFileW(hFind2, &ffd2));
-            FindClose(hFind2);
-        }
-
-        if (!hasAny) {
+        BuildFolderMenuRecursive(hAnimMenu, wRoot, "", &nextId, currentAnim);
+        
+        // Fallback message if no items were added at all.
+        if (GetMenuItemCount(hAnimMenu) <= 2) { // Logo and separator are always there
             AppendMenuW(hAnimMenu, MF_STRING | MF_GRAYED, 0, GetLocalizedString(L"(无动画文件夹)", L"(No animation folders)"));
         }
 
