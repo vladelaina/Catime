@@ -14,6 +14,7 @@
 #include "../include/timer_events.h"
 #include "../include/drawing.h"
 #include "../resource/resource.h"
+#include "../include/tray_menu.h"
 
 extern void ReadTimeoutActionFromConfig(void);
 extern UINT GetTimerInterval(void);

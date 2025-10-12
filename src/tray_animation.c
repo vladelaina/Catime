@@ -11,6 +11,7 @@
 
 #include "../include/tray.h"
 #include "../include/config.h"
+#include "../include/tray_menu.h"
 
 /**
  * @brief Timer ID for tray animation
@@ -113,6 +114,41 @@ void StopTrayAnimation(HWND hwnd) {
     KillTimer(hwnd, TRAY_ANIM_TIMER_ID);
     FreeTrayIcons();
     g_trayHwnd = NULL;
+}
+
+/**
+ * @brief Open animations folder in Explorer
+ */
+static void OpenAnimationsFolder(void) {
+    char base[MAX_PATH] = {0};
+    GetAnimationsFolderPath(base, sizeof(base));
+    wchar_t wPath[MAX_PATH] = {0};
+    MultiByteToWideChar(CP_UTF8, 0, base, -1, wPath, MAX_PATH);
+    ShellExecuteW(NULL, L"open", wPath, NULL, NULL, SW_SHOWNORMAL);
+}
+
+/**
+ * @brief Set selected animation directory (reload frames). For now only "cat" is supported.
+ * @param name Folder name under animations (UTF-8)
+ */
+static void SelectAnimationByName(const char* name) {
+    (void)name; /** currently only 'cat' supported; future: store current name */
+    LoadTrayIcons();
+    g_trayIconIndex = 0;
+}
+
+BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id) {
+    if (id == CLOCK_IDM_ANIMATIONS_OPEN_DIR) {
+        OpenAnimationsFolder();
+        return TRUE;
+    }
+    if (id >= CLOCK_IDM_ANIMATIONS_BASE && id < CLOCK_IDM_ANIMATIONS_BASE + 1000) {
+        /** Map id to folder index; currently treat any as 'cat' */
+        SelectAnimationByName("cat");
+        AdvanceTrayFrame();
+        return TRUE;
+    }
+    return FALSE;
 }
 
 

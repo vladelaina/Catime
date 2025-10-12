@@ -813,7 +813,12 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         }
                         return 0;
                     }
-                    
+
+                    /** Handle animation submenu commands */
+                    if (HandleAnimationMenuCommand(hwnd, cmd)) {
+                        return 0;
+                    }
+
                     /** Handle dynamic advanced font selection from fonts folder */
                     else if (cmd >= 2000 && cmd < 3000) {
                         /** Helper (wide-char): recursively find font by ID and output relative wide path */
@@ -2318,6 +2323,7 @@ refresh_window:
                     
                     InvalidateRect(hwnd, NULL, TRUE);
                 }
+                
             }
             break;
         }

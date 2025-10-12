@@ -17,6 +17,7 @@
 #include "../include/timer.h"
 #include "../include/config.h"
 #include "../resource/resource.h"
+#include "../include/tray_animation.h"
 
 /** @brief Timer state and display configuration externals */
 extern BOOL CLOCK_SHOW_CURRENT_TIME;
@@ -583,6 +584,40 @@ void ShowColorMenu(HWND hwnd) {
                 GetLocalizedString(L"字体", L"Font"));
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hColorSubMenu, 
                 GetLocalizedString(L"颜色", L"Color"));
+
+    /** Animations submenu (RunCat-like) */
+    HMENU hAnimMenu = CreatePopupMenu();
+    {
+        /** Enumerate subfolders under resources\animations and add as selectable items */
+        char animRootUtf8[MAX_PATH] = {0};
+        GetAnimationsFolderPath(animRootUtf8, sizeof(animRootUtf8));
+
+        wchar_t wSearch[MAX_PATH] = {0};
+        wchar_t wRoot[MAX_PATH] = {0};
+        MultiByteToWideChar(CP_UTF8, 0, animRootUtf8, -1, wRoot, MAX_PATH);
+        _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s\\*", wRoot);
+
+        WIN32_FIND_DATAW ffd; HANDLE hFind = FindFirstFileW(wSearch, &ffd);
+        UINT nextId = CLOCK_IDM_ANIMATIONS_BASE;
+        BOOL hasAny = FALSE;
+        if (hFind != INVALID_HANDLE_VALUE) {
+            do {
+                if (wcscmp(ffd.cFileName, L".") == 0 || wcscmp(ffd.cFileName, L"..") == 0) continue;
+                if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+                    AppendMenuW(hAnimMenu, MF_STRING, nextId++, ffd.cFileName);
+                    hasAny = TRUE;
+                }
+            } while (FindNextFileW(hFind, &ffd));
+            FindClose(hFind);
+        }
+        if (!hasAny) {
+            AppendMenuW(hAnimMenu, MF_STRING | MF_GRAYED, 0, GetLocalizedString(L"(无动画文件夹)", L"(No animation folders)"));
+        }
+
+        AppendMenuW(hAnimMenu, MF_SEPARATOR, 0, NULL);
+        AppendMenuW(hAnimMenu, MF_STRING, CLOCK_IDM_ANIMATIONS_OPEN_DIR, GetLocalizedString(L"打开动画文件夹", L"Open animations folder"));
+    }
+    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hAnimMenu, GetLocalizedString(L"动画", L"Animations"));
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
