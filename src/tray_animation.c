@@ -8,6 +8,9 @@
 #include <shellapi.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include <wchar.h>
+#include <wctype.h>
 
 #include "../include/tray.h"
 #include "../include/config.h"
@@ -60,19 +63,79 @@ static void LoadTrayIcons(void) {
     char folder[MAX_PATH] = {0};
     BuildAnimationFolder(g_animationName, folder, sizeof(folder));
 
-    for (int i = 1; i <= MAX_TRAY_FRAMES; ++i) {
-        char icoPath[MAX_PATH] = {0};
-        snprintf(icoPath, sizeof(icoPath), "%s\\%d.ico", folder, i);
+    /** Enumerate all .ico files, pick those whose base name is a positive integer, sort ascending */
+    wchar_t wFolder[MAX_PATH] = {0};
+    MultiByteToWideChar(CP_UTF8, 0, folder, -1, wFolder, MAX_PATH);
 
-        wchar_t wPath[MAX_PATH] = {0};
-        MultiByteToWideChar(CP_UTF8, 0, icoPath, -1, wPath, MAX_PATH);
+    wchar_t wSearch[MAX_PATH] = {0};
+    _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s\\*.ico", wFolder);
 
-        HICON hIcon = (HICON)LoadImageW(NULL, wPath, IMAGE_ICON, 0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE);
-        if (!hIcon) {
-            /** Stop at first missing index to allow 1..N contiguous frames */
-            break;
+    typedef struct { int hasNum; int num; wchar_t name[MAX_PATH]; wchar_t path[MAX_PATH]; } AnimFile;
+    AnimFile files[MAX_TRAY_FRAMES];
+    int fileCount = 0;
+
+    WIN32_FIND_DATAW ffd; HANDLE hFind = FindFirstFileW(wSearch, &ffd);
+    if (hFind != INVALID_HANDLE_VALUE) {
+        do {
+            if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
+
+            /** Extract filename without extension */
+            wchar_t* dot = wcsrchr(ffd.cFileName, L'.');
+            if (!dot) continue;
+            size_t nameLen = (size_t)(dot - ffd.cFileName);
+            if (nameLen == 0 || nameLen >= MAX_PATH) continue;
+
+            int hasNum = 0;
+            int numVal = 0;
+            /** Find first continuous digit run and parse as number */
+            for (size_t i = 0; i < nameLen; ++i) {
+                if (iswdigit(ffd.cFileName[i])) {
+                    hasNum = 1;
+                    numVal = 0;
+                    while (i < nameLen && iswdigit(ffd.cFileName[i])) {
+                        numVal = numVal * 10 + (ffd.cFileName[i] - L'0');
+                        i++;
+                    }
+                    break;
+                }
+            }
+
+            if (fileCount < MAX_TRAY_FRAMES) {
+                files[fileCount].hasNum = hasNum;
+                files[fileCount].num = numVal;
+                wcsncpy(files[fileCount].name, ffd.cFileName, nameLen);
+                files[fileCount].name[nameLen] = L'\0';
+                _snwprintf_s(files[fileCount].path, MAX_PATH, _TRUNCATE, L"%s\\%s", wFolder, ffd.cFileName);
+                fileCount++;
+            }
+        } while (FindNextFileW(hFind, &ffd));
+        FindClose(hFind);
+    }
+
+    if (fileCount == 0) {
+        return;
+    }
+
+    int cmpAnimFile(const void* a, const void* b) {
+        const AnimFile* fa = (const AnimFile*)a;
+        const AnimFile* fb = (const AnimFile*)b;
+        if (fa->hasNum && fb->hasNum) {
+            if (fa->num < fb->num) return -1;
+            if (fa->num > fb->num) return 1;
+            /** tie-breaker by name */
+            return _wcsicmp(fa->name, fb->name);
         }
-        g_trayIcons[g_trayIconCount++] = hIcon;
+        /** fallback: case-insensitive name compare */
+        return _wcsicmp(fa->name, fb->name);
+    }
+
+    qsort(files, (size_t)fileCount, sizeof(AnimFile), cmpAnimFile);
+
+    for (int i = 0; i < fileCount; ++i) {
+        HICON hIcon = (HICON)LoadImageW(NULL, files[i].path, IMAGE_ICON, 0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE);
+        if (hIcon) {
+            g_trayIcons[g_trayIconCount++] = hIcon;
+        }
     }
 }
 
@@ -149,16 +212,29 @@ const char* GetCurrentAnimationName(void) {
 BOOL SetCurrentAnimationName(const char* name) {
     if (!name || !*name) return FALSE;
 
-    /** Probe first icon existence to validate */
+    /** Validate the folder contains any numeric-named .ico */
     char folder[MAX_PATH] = {0};
     BuildAnimationFolder(name, folder, sizeof(folder));
-    char firstIcon[MAX_PATH] = {0};
-    snprintf(firstIcon, sizeof(firstIcon), "%s\\1.ico", folder);
-    wchar_t wFirst[MAX_PATH] = {0};
-    MultiByteToWideChar(CP_UTF8, 0, firstIcon, -1, wFirst, MAX_PATH);
-    if (GetFileAttributesW(wFirst) == INVALID_FILE_ATTRIBUTES) {
-        return FALSE;
+    wchar_t wFolder[MAX_PATH] = {0};
+    MultiByteToWideChar(CP_UTF8, 0, folder, -1, wFolder, MAX_PATH);
+    wchar_t wSearch[MAX_PATH] = {0};
+    _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s\\*.ico", wFolder);
+    BOOL hasAny = FALSE;
+    WIN32_FIND_DATAW ffd; HANDLE hFind = FindFirstFileW(wSearch, &ffd);
+    if (hFind != INVALID_HANDLE_VALUE) {
+        do {
+            if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
+            wchar_t* dot = wcsrchr(ffd.cFileName, L'.');
+            if (!dot) continue;
+            size_t nameLen = (size_t)(dot - ffd.cFileName);
+            if (nameLen == 0) continue;
+            BOOL allDigits = TRUE;
+            for (size_t i = 0; i < nameLen; ++i) { if (!iswdigit(ffd.cFileName[i])) { allDigits = FALSE; break; } }
+            if (allDigits) { hasAny = TRUE; break; }
+        } while (FindNextFileW(hFind, &ffd));
+        FindClose(hFind);
     }
+    if (!hasAny) return FALSE;
 
     strncpy(g_animationName, name, sizeof(g_animationName) - 1);
     g_animationName[sizeof(g_animationName) - 1] = '\0';
