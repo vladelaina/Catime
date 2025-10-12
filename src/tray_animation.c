@@ -360,8 +360,8 @@ static HICON CreateIconFromWICSource(IWICImagingFactory* pFactory,
     return hIcon;
 }
 
-/** @brief Core animated GIF decoding routine */
-static void LoadAnimatedGif(const char* utf8Path, DecodeTarget* target) {
+/** @brief Generic animated image decoding routine for GIF and WebP */
+static void LoadAnimatedImage(const char* utf8Path, DecodeTarget* target) {
     if (target->icons == g_trayIcons) {
         FreeTrayIcons();
     } else {
@@ -391,35 +391,39 @@ static void LoadAnimatedGif(const char* utf8Path, DecodeTarget* target) {
         return;
     }
 
-    /** Read global canvas size from logical screen descriptor */
-    UINT canvasWidth = 0, canvasHeight = 0;
-    BYTE bgColorIndex = 0;
-    IWICMetadataQueryReader* pGlobalMeta = NULL;
-    if (SUCCEEDED(pDecoder->lpVtbl->GetMetadataQueryReader(pDecoder, &pGlobalMeta)) && pGlobalMeta) {
-        PROPVARIANT var; PropVariantInit(&var);
-        if (SUCCEEDED(pGlobalMeta->lpVtbl->GetMetadataByName(pGlobalMeta, L"/logscrdesc/Width", &var))) {
-            if (var.vt == VT_UI2) canvasWidth = var.uiVal;
-            else if (var.vt == VT_I2) canvasWidth = (UINT)var.iVal;
+    GUID containerFormat;
+    BOOL isGif = FALSE;
+    if (SUCCEEDED(pDecoder->lpVtbl->GetContainerFormat(pDecoder, &containerFormat))) {
+        if (IsEqualGUID(&containerFormat, &GUID_ContainerFormatGif)) {
+            isGif = TRUE;
         }
-        PropVariantClear(&var);
-        
-        PropVariantInit(&var);
-        if (SUCCEEDED(pGlobalMeta->lpVtbl->GetMetadataByName(pGlobalMeta, L"/logscrdesc/Height", &var))) {
-            if (var.vt == VT_UI2) canvasHeight = var.uiVal;
-            else if (var.vt == VT_I2) canvasHeight = (UINT)var.iVal;
-        }
-        PropVariantClear(&var);
-        
-        PropVariantInit(&var);
-        if (SUCCEEDED(pGlobalMeta->lpVtbl->GetMetadataByName(pGlobalMeta, L"/logscrdesc/BackgroundColorIndex", &var))) {
-            if (var.vt == VT_UI1) bgColorIndex = var.bVal;
-        }
-        PropVariantClear(&var);
-        
-        pGlobalMeta->lpVtbl->Release(pGlobalMeta);
     }
-    
-    /** Fallback: use first frame size if global size not available */
+
+    UINT canvasWidth = 0, canvasHeight = 0;
+
+    /** Format-specific: Get canvas size */
+    if (isGif) {
+        IWICMetadataQueryReader* pGlobalMeta = NULL;
+        if (SUCCEEDED(pDecoder->lpVtbl->GetMetadataQueryReader(pDecoder, &pGlobalMeta)) && pGlobalMeta) {
+            PROPVARIANT var;
+            PropVariantInit(&var);
+            if (SUCCEEDED(pGlobalMeta->lpVtbl->GetMetadataByName(pGlobalMeta, L"/logscrdesc/Width", &var))) {
+                if (var.vt == VT_UI2) canvasWidth = var.uiVal;
+                else if (var.vt == VT_I2) canvasWidth = (UINT)var.iVal;
+            }
+            PropVariantClear(&var);
+
+            PropVariantInit(&var);
+            if (SUCCEEDED(pGlobalMeta->lpVtbl->GetMetadataByName(pGlobalMeta, L"/logscrdesc/Height", &var))) {
+                if (var.vt == VT_UI2) canvasHeight = var.uiVal;
+                else if (var.vt == VT_I2) canvasHeight = (UINT)var.iVal;
+            }
+            PropVariantClear(&var);
+            pGlobalMeta->lpVtbl->Release(pGlobalMeta);
+        }
+    }
+
+    /** Common fallback for canvas size */
     if (canvasWidth == 0 || canvasHeight == 0) {
         IWICBitmapFrameDecode* pFirstFrame = NULL;
         if (SUCCEEDED(pDecoder->lpVtbl->GetFrame(pDecoder, 0, &pFirstFrame)) && pFirstFrame) {
@@ -427,20 +431,18 @@ static void LoadAnimatedGif(const char* utf8Path, DecodeTarget* target) {
             pFirstFrame->lpVtbl->Release(pFirstFrame);
         }
     }
-    
+
     if (canvasWidth == 0 || canvasHeight == 0) {
         pDecoder->lpVtbl->Release(pDecoder);
         if (pFactory) pFactory->lpVtbl->Release(pFactory);
         if (SUCCEEDED(hrInit)) CoUninitialize();
         return;
     }
-    
-    /** Store global canvas dimensions */
+
     g_animCanvasWidth = canvasWidth;
     g_animCanvasHeight = canvasHeight;
-    
-    /** Allocate composition canvas */
-    UINT canvasStride = canvasWidth * 4; /** 32bpp PBGRA */
+
+    UINT canvasStride = canvasWidth * 4;
     UINT canvasSize = canvasHeight * canvasStride;
     *(target->canvas) = (BYTE*)malloc(canvasSize);
     if (!*(target->canvas)) {
@@ -449,132 +451,109 @@ static void LoadAnimatedGif(const char* utf8Path, DecodeTarget* target) {
         if (SUCCEEDED(hrInit)) CoUninitialize();
         return;
     }
-    
-    /** Initialize canvas with transparent background */
-    memset(*(target->canvas), 0, canvasSize); /** All zeros = transparent black (PBGRA: 0,0,0,0) */
-    
-    /** Process each frame */
+    memset(*(target->canvas), 0, canvasSize);
+
     UINT frameCount = 0;
     if (SUCCEEDED(pDecoder->lpVtbl->GetFrameCount(pDecoder, &frameCount))) {
-        /** Store previous frame disposal for cleanup */
         UINT prevDisposal = 0;
         UINT prevLeft = 0, prevTop = 0, prevWidth = 0, prevHeight = 0;
-        
+
         for (UINT i = 0; i < frameCount && *(target->count) < MAX_TRAY_FRAMES; ++i) {
             IWICBitmapFrameDecode* pFrame = NULL;
             if (FAILED(pDecoder->lpVtbl->GetFrame(pDecoder, i, &pFrame)) || !pFrame) continue;
 
-            /** Apply previous frame's disposal method */
-            if (i > 0) {
-                if (prevDisposal == 2) {
-                    /** Disposal 2: restore background color in previous frame area */
-                    ClearCanvasRect(*(target->canvas), canvasWidth, canvasHeight, 
-                                  prevLeft, prevTop, prevWidth, prevHeight, 0, 0, 0, 0);
+            /** GIF-specific disposal for previous frame */
+            if (isGif && i > 0) {
+                if (prevDisposal == 2) { /** Restore background */
+                    ClearCanvasRect(*(target->canvas), canvasWidth, canvasHeight, prevLeft, prevTop, prevWidth, prevHeight, 0, 0, 0, 0);
                 }
-                /** Disposal 0/1: do not dispose (keep canvas as-is) */
-                /** Disposal 3: restore to previous (not commonly used, skip for now) */
-            }
-            
-            /** Read frame metadata: delay, disposal method, position and size */
-            UINT delayMs = 100; /** default 100ms */
-            UINT disposal = 0; /** default: do not dispose */
-            UINT frameLeft = 0, frameTop = 0, frameWidth = 0, frameHeight = 0;
-            
-            IWICMetadataQueryReader* pMeta = NULL;
-            if (SUCCEEDED(pFrame->lpVtbl->GetMetadataQueryReader(pFrame, &pMeta)) && pMeta) {
-                PROPVARIANT var; PropVariantInit(&var);
-                
-                /** Read delay */
-                if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/grctlext/Delay", &var))) {
-                    if (var.vt == VT_UI2 || var.vt == VT_I2) {
-                        USHORT cs = (var.vt == VT_UI2) ? var.uiVal : (USHORT)var.iVal;
-                        if (cs == 0) cs = 10; /** 0 means no delay, treat as 10cs = 100ms */
-                        delayMs = (UINT)cs * 10U;
-                    } else if (var.vt == VT_UI1) {
-                        UCHAR cs = var.bVal; if (cs == 0) cs = 10; delayMs = (UINT)cs * 10U;
-                    }
-                }
-                PropVariantClear(&var);
-                
-                /** Read disposal method */
-                PropVariantInit(&var);
-                if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/grctlext/Disposal", &var))) {
-                    if (var.vt == VT_UI1) disposal = var.bVal;
-                    else if (var.vt == VT_UI2) disposal = var.uiVal;
-                    else if (var.vt == VT_I2) disposal = (UINT)var.iVal;
-                }
-                PropVariantClear(&var);
-                
-                /** Read frame position and size */
-                PropVariantInit(&var);
-                if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/imgdesc/Left", &var))) {
-                    if (var.vt == VT_UI2) frameLeft = var.uiVal;
-                    else if (var.vt == VT_I2) frameLeft = (UINT)var.iVal;
-                }
-                PropVariantClear(&var);
-                
-                PropVariantInit(&var);
-                if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/imgdesc/Top", &var))) {
-                    if (var.vt == VT_UI2) frameTop = var.uiVal;
-                    else if (var.vt == VT_I2) frameTop = (UINT)var.iVal;
-                }
-                PropVariantClear(&var);
-                
-                PropVariantInit(&var);
-                if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/imgdesc/Width", &var))) {
-                    if (var.vt == VT_UI2) frameWidth = var.uiVal;
-                    else if (var.vt == VT_I2) frameWidth = (UINT)var.iVal;
-                }
-                PropVariantClear(&var);
-                
-                PropVariantInit(&var);
-                if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/imgdesc/Height", &var))) {
-                    if (var.vt == VT_UI2) frameHeight = var.uiVal;
-                    else if (var.vt == VT_I2) frameHeight = (UINT)var.iVal;
-                }
-                PropVariantClear(&var);
-                
-                pMeta->lpVtbl->Release(pMeta);
-            }
-            
-            /** Fallback: use actual frame size if metadata not available */
-            if (frameWidth == 0 || frameHeight == 0) {
-                pFrame->lpVtbl->GetSize(pFrame, &frameWidth, &frameHeight);
+            } else if (!isGif) {
+                /** WebP simple implementation: clear canvas for each frame */
+                 memset(*(target->canvas), 0, canvasSize);
             }
 
-            /** Convert frame to 32bpp PBGRA and composite onto canvas */
+            UINT delayMs = 100;
+            UINT disposal = 0;
+            UINT frameLeft = 0, frameTop = 0, frameWidth = 0, frameHeight = 0;
+
+            IWICMetadataQueryReader* pMeta = NULL;
+            if (SUCCEEDED(pFrame->lpVtbl->GetMetadataQueryReader(pFrame, &pMeta)) && pMeta) {
+                PROPVARIANT var;
+                if (isGif) {
+                    PropVariantInit(&var);
+                    if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/grctlext/Delay", &var))) {
+                        if (var.vt == VT_UI2 || var.vt == VT_I2) {
+                            USHORT cs = (var.vt == VT_UI2) ? var.uiVal : (USHORT)var.iVal;
+                            if (cs == 0) cs = 10;
+                            delayMs = (UINT)cs * 10U;
+                        }
+                    }
+                    PropVariantClear(&var);
+
+                    PropVariantInit(&var);
+                    if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/grctlext/Disposal", &var))) {
+                        if (var.vt == VT_UI1) disposal = var.bVal;
+                    }
+                    PropVariantClear(&var);
+
+                    PropVariantInit(&var);
+                    if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/imgdesc/Left", &var))) {
+                        if (var.vt == VT_UI2) frameLeft = var.uiVal;
+                    }
+                    PropVariantClear(&var);
+                    PropVariantInit(&var);
+                    if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/imgdesc/Top", &var))) {
+                        if (var.vt == VT_UI2) frameTop = var.uiVal;
+                    }
+                    PropVariantClear(&var);
+                    PropVariantInit(&var);
+                    if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/imgdesc/Width", &var))) {
+                        if (var.vt == VT_UI2) frameWidth = var.uiVal;
+                    }
+                    PropVariantClear(&var);
+                    PropVariantInit(&var);
+                    if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/imgdesc/Height", &var))) {
+                        if (var.vt == VT_UI2) frameHeight = var.uiVal;
+                    }
+                    PropVariantClear(&var);
+                } else { /** Assume WebP */
+                    PropVariantInit(&var);
+                    if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/webp/delay", &var))) {
+                        if (var.vt == VT_UI4) delayMs = var.ulVal;
+                    }
+                    PropVariantClear(&var);
+                }
+                pMeta->lpVtbl->Release(pMeta);
+            }
+
+            pFrame->lpVtbl->GetSize(pFrame, &frameWidth, &frameHeight);
+
             IWICFormatConverter* pConverter = NULL;
-            hr = pFactory->lpVtbl->CreateFormatConverter(pFactory, &pConverter);
-            if (SUCCEEDED(hr) && pConverter) {
-                hr = pConverter->lpVtbl->Initialize(pConverter, (IWICBitmapSource*)pFrame, 
-                                                  &GUID_WICPixelFormat32bppPBGRA, 
-                                                  WICBitmapDitherTypeNone, NULL, 0.0, 
-                                                  WICBitmapPaletteTypeCustom);
-                if (SUCCEEDED(hr)) {
-                    /** Allocate frame buffer */
+            if (SUCCEEDED(pFactory->lpVtbl->CreateFormatConverter(pFactory, &pConverter)) && pConverter) {
+                if (SUCCEEDED(pConverter->lpVtbl->Initialize(pConverter, (IWICBitmapSource*)pFrame, &GUID_WICPixelFormat32bppPBGRA, WICBitmapDitherTypeNone, NULL, 0.0, WICBitmapPaletteTypeCustom))) {
                     UINT frameStride = frameWidth * 4;
                     UINT frameBufferSize = frameHeight * frameStride;
                     BYTE* frameBuffer = (BYTE*)malloc(frameBufferSize);
                     if (frameBuffer) {
-                        /** Copy frame pixels */
                         if (SUCCEEDED(pConverter->lpVtbl->CopyPixels(pConverter, NULL, frameStride, frameBufferSize, frameBuffer))) {
-                            /** Composite frame onto canvas at specified position */
-                            for (UINT y = 0; y < frameHeight; y++) {
-                                for (UINT x = 0; x < frameWidth; x++) {
-                                    UINT canvasX = frameLeft + x;
-                                    UINT canvasY = frameTop + y;
-                                    
-                                    /** Skip if outside canvas bounds */
-                                    if (canvasX >= canvasWidth || canvasY >= canvasHeight) continue;
-                                    
-                                    BYTE* srcPixel = frameBuffer + (y * frameStride) + (x * 4);
-                                    BYTE b = srcPixel[0];
-                                    BYTE g = srcPixel[1];
-                                    BYTE r = srcPixel[2];
-                                    BYTE a = srcPixel[3];
-                                    
-                                    /** Blend pixel onto canvas */
-                                    BlendPixel(*(target->canvas), canvasStride, canvasX, canvasY, r, g, b, a);
+                            if (isGif) {
+                                for (UINT y = 0; y < frameHeight; y++) {
+                                    for (UINT x = 0; x < frameWidth; x++) {
+                                        if (frameLeft + x < canvasWidth && frameTop + y < canvasHeight) {
+                                            BYTE* srcPixel = frameBuffer + (y * frameStride) + (x * 4);
+                                            BlendPixel(*(target->canvas), canvasStride, frameLeft + x, frameTop + y, srcPixel[2], srcPixel[1], srcPixel[0], srcPixel[3]);
+                                        }
+                                    }
+                                }
+                            } else { /** Assume WebP */
+                                if (frameWidth == canvasWidth && frameHeight == canvasHeight) {
+                                    memcpy(*(target->canvas), frameBuffer, canvasSize);
+                                } else {
+                                    UINT offsetX = (canvasWidth > frameWidth) ? (canvasWidth - frameWidth) / 2 : 0;
+                                    UINT offsetY = (canvasHeight > frameHeight) ? (canvasHeight - frameHeight) / 2 : 0;
+                                    for (UINT y = 0; y < frameHeight && (offsetY + y) < canvasHeight; y++) {
+                                        memcpy(*(target->canvas) + ((offsetY + y) * canvasStride) + (offsetX * 4), frameBuffer + (y * frameStride), frameStride);
+                                    }
                                 }
                             }
                         }
@@ -584,24 +563,24 @@ static void LoadAnimatedGif(const char* utf8Path, DecodeTarget* target) {
                 pConverter->lpVtbl->Release(pConverter);
             }
             
-            /** Create icon using shared helper */
             HICON hIcon = CreateIconFromPBGRA(pFactory, *(target->canvas), canvasWidth, canvasHeight, cx, cy);
             if (hIcon) {
                 target->icons[*(target->count)] = hIcon;
                 target->delays[*(target->count)] = delayMs;
                 (*(target->count))++;
             }
-            
-            /** Store current frame info for next iteration's disposal */
-            prevDisposal = disposal;
-            prevLeft = frameLeft;
-            prevTop = frameTop;
-            prevWidth = frameWidth;
-            prevHeight = frameHeight;
-            
+
+            if (isGif) {
+                prevDisposal = disposal;
+                prevLeft = frameLeft;
+                prevTop = frameTop;
+                prevWidth = frameWidth;
+                prevHeight = frameHeight;
+            }
             pFrame->lpVtbl->Release(pFrame);
         }
     }
+
     pDecoder->lpVtbl->Release(pDecoder);
     if (pFactory) pFactory->lpVtbl->Release(pFactory);
     if (SUCCEEDED(hrInit)) CoUninitialize();
@@ -612,194 +591,16 @@ static void LoadAnimatedGif(const char* utf8Path, DecodeTarget* target) {
     }
 }
 
-/** @brief Decode an animated GIF into HICON frames with per-frame delays */
-static void LoadTrayIconsFromGifPath(const char* utf8Path) {
+/** @brief Decode an animated image into HICON frames with per-frame delays */
+static void LoadTrayIconsFromAnimatedPath(const char* utf8Path) {
     DecodeTarget target = { g_trayIcons, &g_trayIconCount, &g_trayIconIndex, g_frameDelaysMs, &g_isAnimated, &g_animCanvas };
-    LoadAnimatedGif(utf8Path, &target);
+    LoadAnimatedImage(utf8Path, &target);
 }
 
-/** @brief Core animated WebP decoding routine */
-static void LoadAnimatedWebp(const char* utf8Path, DecodeTarget* target) {
-    if (target->icons == g_trayIcons) {
-        FreeTrayIcons();
-    } else {
-        FreePreviewIcons();
-    }
-    if (!utf8Path || !*utf8Path) return;
-
-    wchar_t wPath[MAX_PATH] = {0};
-    MultiByteToWideChar(CP_UTF8, 0, utf8Path, -1, wPath, MAX_PATH);
-
-    int cx = GetSystemMetrics(SM_CXSMICON);
-    int cy = GetSystemMetrics(SM_CYSMICON);
-
-    HRESULT hrInit = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
-    IWICImagingFactory* pFactory = NULL;
-    HRESULT hr = CoCreateInstance(&CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER, &IID_IWICImagingFactory, (void**)&pFactory);
-    if (FAILED(hr) || !pFactory) {
-        if (SUCCEEDED(hrInit)) CoUninitialize();
-        return;
-    }
-
-    /** Try to create WebP decoder - may fail on Windows 7 without codec pack */
-    IWICBitmapDecoder* pDecoder = NULL;
-    hr = pFactory->lpVtbl->CreateDecoderFromFilename(pFactory, wPath, NULL, GENERIC_READ, WICDecodeMetadataCacheOnLoad, &pDecoder);
-    if (FAILED(hr) || !pDecoder) {
-        /** WebP codec not available, fallback to treating as single frame */
-        if (pFactory) pFactory->lpVtbl->Release(pFactory);
-        if (SUCCEEDED(hrInit)) CoUninitialize();
-        return;
-    }
-
-    /** Check if this is an animated WebP by getting frame count */
-    UINT frameCount = 0;
-    if (FAILED(pDecoder->lpVtbl->GetFrameCount(pDecoder, &frameCount)) || frameCount == 0) {
-        pDecoder->lpVtbl->Release(pDecoder);
-        if (pFactory) pFactory->lpVtbl->Release(pFactory);
-        if (SUCCEEDED(hrInit)) CoUninitialize();
-        return;
-    }
-
-    /** Get canvas size from first frame */
-    UINT canvasWidth = 0, canvasHeight = 0;
-    IWICBitmapFrameDecode* pFirstFrame = NULL;
-    if (SUCCEEDED(pDecoder->lpVtbl->GetFrame(pDecoder, 0, &pFirstFrame)) && pFirstFrame) {
-        pFirstFrame->lpVtbl->GetSize(pFirstFrame, &canvasWidth, &canvasHeight);
-        pFirstFrame->lpVtbl->Release(pFirstFrame);
-    }
-    
-    if (canvasWidth == 0 || canvasHeight == 0) {
-        pDecoder->lpVtbl->Release(pDecoder);
-        if (pFactory) pFactory->lpVtbl->Release(pFactory);
-        if (SUCCEEDED(hrInit)) CoUninitialize();
-        return;
-    }
-    
-    /** Store global canvas dimensions */
-    g_animCanvasWidth = canvasWidth;
-    g_animCanvasHeight = canvasHeight;
-    
-    /** Allocate composition canvas */
-    UINT canvasStride = canvasWidth * 4; /** 32bpp PBGRA */
-    UINT canvasSize = canvasHeight * canvasStride;
-    *(target->canvas) = (BYTE*)malloc(canvasSize);
-    if (!*(target->canvas)) {
-        pDecoder->lpVtbl->Release(pDecoder);
-        if (pFactory) pFactory->lpVtbl->Release(pFactory);
-        if (SUCCEEDED(hrInit)) CoUninitialize();
-        return;
-    }
-    
-    /** Initialize canvas with transparent background */
-    memset(*(target->canvas), 0, canvasSize);
-    
-    /** Process each frame */
-    for (UINT i = 0; i < frameCount && *(target->count) < MAX_TRAY_FRAMES; ++i) {
-        IWICBitmapFrameDecode* pFrame = NULL;
-        if (FAILED(pDecoder->lpVtbl->GetFrame(pDecoder, i, &pFrame)) || !pFrame) continue;
-
-        /** Read frame metadata for delay */
-        UINT delayMs = 100; /** default 100ms */
-        IWICMetadataQueryReader* pMeta = NULL;
-        if (SUCCEEDED(pFrame->lpVtbl->GetMetadataQueryReader(pFrame, &pMeta)) && pMeta) {
-            PROPVARIANT var; PropVariantInit(&var);
-            
-            /** WebP animation delay is typically in milliseconds */
-            if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/webp/delay", &var))) {
-                if (var.vt == VT_UI4) delayMs = var.ulVal;
-                else if (var.vt == VT_UI2) delayMs = var.uiVal;
-                else if (var.vt == VT_I4) delayMs = (UINT)var.lVal;
-                else if (var.vt == VT_I2) delayMs = (UINT)var.iVal;
-            }
-            PropVariantClear(&var);
-            pMeta->lpVtbl->Release(pMeta);
-        }
-        
-        /** Clear canvas for this frame (WebP typically replaces entire frame) */
-        memset(*(target->canvas), 0, canvasSize);
-
-        /** Convert frame to 32bpp PBGRA */
-        IWICFormatConverter* pConverter = NULL;
-        hr = pFactory->lpVtbl->CreateFormatConverter(pFactory, &pConverter);
-        if (SUCCEEDED(hr) && pConverter) {
-            hr = pConverter->lpVtbl->Initialize(pConverter, (IWICBitmapSource*)pFrame, 
-                                              &GUID_WICPixelFormat32bppPBGRA, 
-                                              WICBitmapDitherTypeNone, NULL, 0.0, 
-                                              WICBitmapPaletteTypeCustom);
-            if (SUCCEEDED(hr)) {
-                UINT frameWidth, frameHeight;
-                pFrame->lpVtbl->GetSize(pFrame, &frameWidth, &frameHeight);
-                
-                /** Copy frame directly to canvas (WebP frames are typically full-size) */
-                UINT frameStride = frameWidth * 4;
-                UINT frameBufferSize = frameHeight * frameStride;
-                if (frameWidth == canvasWidth && frameHeight == canvasHeight) {
-                    /** Direct copy for full-size frames */
-                    pConverter->lpVtbl->CopyPixels(pConverter, NULL, canvasStride, canvasSize, *(target->canvas));
-                } else {
-                    /** Scale or position frame if needed */
-                    BYTE* frameBuffer = (BYTE*)malloc(frameBufferSize);
-                    if (frameBuffer) {
-                        if (SUCCEEDED(pConverter->lpVtbl->CopyPixels(pConverter, NULL, frameStride, frameBufferSize, frameBuffer))) {
-                            /** Center the frame on canvas */
-                            UINT offsetX = (canvasWidth > frameWidth) ? (canvasWidth - frameWidth) / 2 : 0;
-                            UINT offsetY = (canvasHeight > frameHeight) ? (canvasHeight - frameHeight) / 2 : 0;
-                            
-                            for (UINT y = 0; y < frameHeight && (offsetY + y) < canvasHeight; y++) {
-                                for (UINT x = 0; x < frameWidth && (offsetX + x) < canvasWidth; x++) {
-                                    BYTE* srcPixel = frameBuffer + (y * frameStride) + (x * 4);
-                                    BYTE* dstPixel = *(target->canvas) + ((offsetY + y) * canvasStride) + ((offsetX + x) * 4);
-                                    dstPixel[0] = srcPixel[0]; /** B */
-                                    dstPixel[1] = srcPixel[1]; /** G */
-                                    dstPixel[2] = srcPixel[2]; /** R */
-                                    dstPixel[3] = srcPixel[3]; /** A */
-                                }
-                            }
-                        }
-                        free(frameBuffer);
-                    }
-                }
-            }
-            pConverter->lpVtbl->Release(pConverter);
-        }
-        
-        /** Create icon using shared helper */
-        HICON hIcon = CreateIconFromPBGRA(pFactory, *(target->canvas), canvasWidth, canvasHeight, cx, cy);
-        if (hIcon) {
-            target->icons[*(target->count)] = hIcon;
-            target->delays[*(target->count)] = delayMs;
-            (*(target->count))++;
-        }
-            
-        pFrame->lpVtbl->Release(pFrame);
-    }
-    
-    pDecoder->lpVtbl->Release(pDecoder);
-    if (pFactory) pFactory->lpVtbl->Release(pFactory);
-    if (SUCCEEDED(hrInit)) CoUninitialize();
-
-    if (*(target->count) > 0) {
-        *(target->isAnimatedFlag) = TRUE; /** Reuse GIF animation flag for WebP */
-        *(target->index) = 0;
-    }
-}
-
-/** @brief Decode an animated WebP into HICON frames with per-frame delays */
-static void LoadTrayIconsFromWebPPath(const char* utf8Path) {
-    DecodeTarget target = { g_trayIcons, &g_trayIconCount, &g_trayIconIndex, g_frameDelaysMs, &g_isAnimated, &g_animCanvas };
-    LoadAnimatedWebp(utf8Path, &target);
-}
-
-/** @brief Decode an animated GIF into preview HICON frames with per-frame delays */
-static void LoadPreviewIconsFromGifPath(const char* utf8Path) {
+/** @brief Decode an animated image into preview HICON frames with per-frame delays */
+static void LoadPreviewIconsFromAnimatedPath(const char* utf8Path) {
     DecodeTarget target = { g_previewIcons, &g_previewCount, &g_previewIndex, g_previewFrameDelaysMs, &g_isPreviewAnimated, &g_previewAnimCanvas };
-    LoadAnimatedGif(utf8Path, &target);
-}
-
-/** @brief Decode an animated WebP into preview HICON frames with per-frame delays */
-static void LoadPreviewIconsFromWebPPath(const char* utf8Path) {
-    DecodeTarget target = { g_previewIcons, &g_previewCount, &g_previewIndex, g_previewFrameDelaysMs, &g_isPreviewAnimated, &g_previewAnimCanvas };
-    LoadAnimatedWebp(utf8Path, &target);
+    LoadAnimatedImage(utf8Path, &target);
 }
 
 /** @brief Load sequential icon frames from .ico and .png files */
@@ -819,14 +620,8 @@ static void LoadTrayIcons(void) {
     }
 
     /** If selection is a single GIF file under animations root, decode frames from it */
-    if (IsGifSelection(g_animationName)) {
-        LoadTrayIconsFromGifPath(folder);
-        return;
-    }
-
-    /** If selection is a single WebP file under animations root, decode frames from it */
-    if (IsWebPSelection(g_animationName)) {
-        LoadTrayIconsFromWebPPath(folder);
+    if (IsGifSelection(g_animationName) || IsWebPSelection(g_animationName)) {
+        LoadTrayIconsFromAnimatedPath(folder);
         return;
     }
 
@@ -1155,34 +950,16 @@ void StartAnimationPreview(const char* name) {
         }
         return;
     }
-    if (IsGifSelection(name)) {
-        char gifPath[MAX_PATH] = {0};
-        BuildAnimationFolder(name, gifPath, sizeof(gifPath));
-        LoadPreviewIconsFromGifPath(gifPath);
+    if (IsGifSelection(name) || IsWebPSelection(name)) {
+        char filePath[MAX_PATH] = {0};
+        BuildAnimationFolder(name, filePath, sizeof(filePath));
+        LoadPreviewIconsFromAnimatedPath(filePath);
         if (g_previewCount > 0) {
             g_isPreviewActive = TRUE;
             g_previewIndex = 0;
             if (g_trayHwnd) {
                 AdvanceTrayFrame();
                 if (g_isPreviewAnimated) {
-                    UINT firstDelay = g_previewFrameDelaysMs[0] > 0 ? g_previewFrameDelaysMs[0] : (g_trayInterval ? g_trayInterval : 150);
-                    KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
-                    SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, firstDelay, (TIMERPROC)TrayAnimTimerProc);
-                }
-            }
-        }
-        return;
-    }
-    if (IsWebPSelection(name)) {
-        char webpPath[MAX_PATH] = {0};
-        BuildAnimationFolder(name, webpPath, sizeof(webpPath));
-        LoadPreviewIconsFromWebPPath(webpPath);
-        if (g_previewCount > 0) {
-            g_isPreviewActive = TRUE;
-            g_previewIndex = 0;
-            if (g_trayHwnd) {
-                AdvanceTrayFrame();
-                if (g_isPreviewAnimated) { /** Reuse preview GIF flag for WebP */
                     UINT firstDelay = g_previewFrameDelaysMs[0] > 0 ? g_previewFrameDelaysMs[0] : (g_trayInterval ? g_trayInterval : 150);
                     KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
                     SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, firstDelay, (TIMERPROC)TrayAnimTimerProc);
