@@ -45,6 +45,12 @@ static UINT g_frameDelaysMs[MAX_TRAY_FRAMES]; /** per-frame delay in ms for GIF 
 static BOOL g_isPreviewGif = FALSE; /** whether current preview source is a single GIF file */
 static UINT g_previewFrameDelaysMs[MAX_TRAY_FRAMES]; /** per-frame delay for GIF preview */
 
+/** GIF composition canvas for proper frame blending */
+static UINT g_gifCanvasWidth = 0;
+static UINT g_gifCanvasHeight = 0;
+static BYTE* g_gifCanvas = NULL;  /** 32bpp PBGRA canvas for frame composition */
+static BYTE* g_previewGifCanvas = NULL;  /** 32bpp PBGRA canvas for preview composition */
+
 /** @brief Build cat animation folder path: %LOCALAPPDATA%\Catime\resources\animations\cat */
 static void BuildAnimationFolder(const char* name, char* path, size_t size) {
     char base[MAX_PATH] = {0};
@@ -68,6 +74,14 @@ static void FreeTrayIcons(void) {
     g_trayIconCount = 0;
     g_trayIconIndex = 0;
     g_isGifAnimation = FALSE;
+    
+    /** Free GIF composition canvas */
+    if (g_gifCanvas) {
+        free(g_gifCanvas);
+        g_gifCanvas = NULL;
+    }
+    g_gifCanvasWidth = 0;
+    g_gifCanvasHeight = 0;
 }
 
 /** @brief Free preview icon frames */
@@ -81,6 +95,12 @@ static void FreePreviewIcons(void) {
     g_previewCount = 0;
     g_previewIndex = 0;
     g_isPreviewGif = FALSE;
+    
+    /** Free preview GIF composition canvas */
+    if (g_previewGifCanvas) {
+        free(g_previewGifCanvas);
+        g_previewGifCanvas = NULL;
+    }
 }
 
 /** @brief Case-insensitive string ends-with helper */
@@ -94,6 +114,67 @@ static BOOL EndsWithIgnoreCase(const char* str, const char* suffix) {
 /** @brief Detect if current animation name is a single GIF file */
 static BOOL IsGifSelection(const char* name) {
     return name && EndsWithIgnoreCase(name, ".gif");
+}
+
+/** @brief Alpha blend pixel onto canvas with proper compositing */
+static void BlendPixel(BYTE* canvas, UINT canvasStride, UINT x, UINT y, BYTE r, BYTE g, BYTE b, BYTE a) {
+    if (a == 0) return; /** fully transparent, no change */
+    
+    BYTE* pixel = canvas + (y * canvasStride) + (x * 4);
+    if (a == 255) {
+        /** fully opaque, direct copy */
+        pixel[0] = b; /** B */
+        pixel[1] = g; /** G */
+        pixel[2] = r; /** R */
+        pixel[3] = a; /** A */
+    } else {
+        /** alpha blend with existing pixel */
+        UINT srcAlpha = a;
+        UINT dstAlpha = pixel[3];
+        
+        if (dstAlpha == 0) {
+            /** destination is transparent, just copy source */
+            pixel[0] = b;
+            pixel[1] = g;
+            pixel[2] = r;
+            pixel[3] = a;
+        } else {
+            /** proper alpha compositing: src over dst */
+            UINT invSrcAlpha = 255 - srcAlpha;
+            UINT newAlpha = srcAlpha + (dstAlpha * invSrcAlpha) / 255;
+            
+            if (newAlpha > 0) {
+                pixel[0] = (BYTE)((b * srcAlpha + pixel[0] * dstAlpha * invSrcAlpha / 255) / newAlpha);
+                pixel[1] = (BYTE)((g * srcAlpha + pixel[1] * dstAlpha * invSrcAlpha / 255) / newAlpha);
+                pixel[2] = (BYTE)((r * srcAlpha + pixel[2] * dstAlpha * invSrcAlpha / 255) / newAlpha);
+                pixel[3] = (BYTE)newAlpha;
+            }
+        }
+    }
+}
+
+/** @brief Clear rectangle on canvas with background color (supports transparency) */
+static void ClearCanvasRect(BYTE* canvas, UINT canvasWidth, UINT canvasHeight, 
+                           UINT left, UINT top, UINT width, UINT height, 
+                           BYTE bgR, BYTE bgG, BYTE bgB, BYTE bgA) {
+    UINT canvasStride = canvasWidth * 4;
+    UINT right = left + width;
+    UINT bottom = top + height;
+    
+    /** Clamp to canvas bounds */
+    if (left >= canvasWidth || top >= canvasHeight) return;
+    if (right > canvasWidth) right = canvasWidth;
+    if (bottom > canvasHeight) bottom = canvasHeight;
+    
+    for (UINT y = top; y < bottom; y++) {
+        for (UINT x = left; x < right; x++) {
+            BYTE* pixel = canvas + (y * canvasStride) + (x * 4);
+            pixel[0] = bgB; /** B */
+            pixel[1] = bgG; /** G */
+            pixel[2] = bgR; /** R */
+            pixel[3] = bgA; /** A */
+        }
+    }
 }
 
 /** @brief Decode an animated GIF into HICON frames with per-frame delays */
@@ -117,41 +198,224 @@ static void LoadTrayIconsFromGifPath(const char* utf8Path) {
 
     IWICBitmapDecoder* pDecoder = NULL;
     hr = pFactory->lpVtbl->CreateDecoderFromFilename(pFactory, wPath, NULL, GENERIC_READ, WICDecodeMetadataCacheOnLoad, &pDecoder);
-    if (SUCCEEDED(hr) && pDecoder) {
-        UINT frameCount = 0;
-        if (SUCCEEDED(pDecoder->lpVtbl->GetFrameCount(pDecoder, &frameCount))) {
-            for (UINT i = 0; i < frameCount && g_trayIconCount < MAX_TRAY_FRAMES; ++i) {
-                IWICBitmapFrameDecode* pFrame = NULL;
-                if (FAILED(pDecoder->lpVtbl->GetFrame(pDecoder, i, &pFrame)) || !pFrame) continue;
+    if (FAILED(hr) || !pDecoder) {
+        if (pFactory) pFactory->lpVtbl->Release(pFactory);
+        if (SUCCEEDED(hrInit)) CoUninitialize();
+        return;
+    }
 
-                /** Read per-frame delay (in 1/100s) from /grctlext/Delay */
-                UINT delayMs = 100; /** default 100ms */
-                IWICMetadataQueryReader* pMeta = NULL;
-                if (SUCCEEDED(pFrame->lpVtbl->GetMetadataQueryReader(pFrame, &pMeta)) && pMeta) {
-                    PROPVARIANT var; PropVariantInit(&var);
-                    if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/grctlext/Delay", &var))) {
-                        if (var.vt == VT_UI2 || var.vt == VT_I2) {
-                            USHORT cs = (var.vt == VT_UI2) ? var.uiVal : (USHORT)var.iVal;
-                            /** 0 means no delay, treat as 10cs = 100ms */
-                            if (cs == 0) cs = 10;
-                            delayMs = (UINT)cs * 10U;
-                        } else if (var.vt == VT_UI1) {
-                            UCHAR cs = var.bVal; if (cs == 0) cs = 10; delayMs = (UINT)cs * 10U;
-                        }
-                    }
-                    PropVariantClear(&var);
-                    pMeta->lpVtbl->Release(pMeta);
+    /** Read global canvas size from logical screen descriptor */
+    UINT canvasWidth = 0, canvasHeight = 0;
+    BYTE bgColorIndex = 0;
+    IWICMetadataQueryReader* pGlobalMeta = NULL;
+    if (SUCCEEDED(pDecoder->lpVtbl->GetMetadataQueryReader(pDecoder, &pGlobalMeta)) && pGlobalMeta) {
+        PROPVARIANT var; PropVariantInit(&var);
+        if (SUCCEEDED(pGlobalMeta->lpVtbl->GetMetadataByName(pGlobalMeta, L"/logscrdesc/Width", &var))) {
+            if (var.vt == VT_UI2) canvasWidth = var.uiVal;
+            else if (var.vt == VT_I2) canvasWidth = (UINT)var.iVal;
+        }
+        PropVariantClear(&var);
+        
+        PropVariantInit(&var);
+        if (SUCCEEDED(pGlobalMeta->lpVtbl->GetMetadataByName(pGlobalMeta, L"/logscrdesc/Height", &var))) {
+            if (var.vt == VT_UI2) canvasHeight = var.uiVal;
+            else if (var.vt == VT_I2) canvasHeight = (UINT)var.iVal;
+        }
+        PropVariantClear(&var);
+        
+        PropVariantInit(&var);
+        if (SUCCEEDED(pGlobalMeta->lpVtbl->GetMetadataByName(pGlobalMeta, L"/logscrdesc/BackgroundColorIndex", &var))) {
+            if (var.vt == VT_UI1) bgColorIndex = var.bVal;
+        }
+        PropVariantClear(&var);
+        
+        pGlobalMeta->lpVtbl->Release(pGlobalMeta);
+    }
+    
+    /** Fallback: use first frame size if global size not available */
+    if (canvasWidth == 0 || canvasHeight == 0) {
+        IWICBitmapFrameDecode* pFirstFrame = NULL;
+        if (SUCCEEDED(pDecoder->lpVtbl->GetFrame(pDecoder, 0, &pFirstFrame)) && pFirstFrame) {
+            pFirstFrame->lpVtbl->GetSize(pFirstFrame, &canvasWidth, &canvasHeight);
+            pFirstFrame->lpVtbl->Release(pFirstFrame);
+        }
+    }
+    
+    if (canvasWidth == 0 || canvasHeight == 0) {
+        pDecoder->lpVtbl->Release(pDecoder);
+        if (pFactory) pFactory->lpVtbl->Release(pFactory);
+        if (SUCCEEDED(hrInit)) CoUninitialize();
+        return;
+    }
+    
+    /** Store global canvas dimensions */
+    g_gifCanvasWidth = canvasWidth;
+    g_gifCanvasHeight = canvasHeight;
+    
+    /** Allocate composition canvas */
+    UINT canvasStride = canvasWidth * 4; /** 32bpp PBGRA */
+    UINT canvasSize = canvasHeight * canvasStride;
+    g_gifCanvas = (BYTE*)malloc(canvasSize);
+    if (!g_gifCanvas) {
+        pDecoder->lpVtbl->Release(pDecoder);
+        if (pFactory) pFactory->lpVtbl->Release(pFactory);
+        if (SUCCEEDED(hrInit)) CoUninitialize();
+        return;
+    }
+    
+    /** Initialize canvas with transparent background */
+    memset(g_gifCanvas, 0, canvasSize); /** All zeros = transparent black (PBGRA: 0,0,0,0) */
+    
+    /** Process each frame */
+    UINT frameCount = 0;
+    if (SUCCEEDED(pDecoder->lpVtbl->GetFrameCount(pDecoder, &frameCount))) {
+        /** Store previous frame disposal for cleanup */
+        UINT prevDisposal = 0;
+        UINT prevLeft = 0, prevTop = 0, prevWidth = 0, prevHeight = 0;
+        
+        for (UINT i = 0; i < frameCount && g_trayIconCount < MAX_TRAY_FRAMES; ++i) {
+            IWICBitmapFrameDecode* pFrame = NULL;
+            if (FAILED(pDecoder->lpVtbl->GetFrame(pDecoder, i, &pFrame)) || !pFrame) continue;
+
+            /** Apply previous frame's disposal method */
+            if (i > 0) {
+                if (prevDisposal == 2) {
+                    /** Disposal 2: restore background color in previous frame area */
+                    ClearCanvasRect(g_gifCanvas, canvasWidth, canvasHeight, 
+                                  prevLeft, prevTop, prevWidth, prevHeight, 0, 0, 0, 0);
                 }
+                /** Disposal 0/1: do not dispose (keep canvas as-is) */
+                /** Disposal 3: restore to previous (not commonly used, skip for now) */
+            }
+            
+            /** Read frame metadata: delay, disposal method, position and size */
+            UINT delayMs = 100; /** default 100ms */
+            UINT disposal = 0; /** default: do not dispose */
+            UINT frameLeft = 0, frameTop = 0, frameWidth = 0, frameHeight = 0;
+            
+            IWICMetadataQueryReader* pMeta = NULL;
+            if (SUCCEEDED(pFrame->lpVtbl->GetMetadataQueryReader(pFrame, &pMeta)) && pMeta) {
+                PROPVARIANT var; PropVariantInit(&var);
+                
+                /** Read delay */
+                if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/grctlext/Delay", &var))) {
+                    if (var.vt == VT_UI2 || var.vt == VT_I2) {
+                        USHORT cs = (var.vt == VT_UI2) ? var.uiVal : (USHORT)var.iVal;
+                        if (cs == 0) cs = 10; /** 0 means no delay, treat as 10cs = 100ms */
+                        delayMs = (UINT)cs * 10U;
+                    } else if (var.vt == VT_UI1) {
+                        UCHAR cs = var.bVal; if (cs == 0) cs = 10; delayMs = (UINT)cs * 10U;
+                    }
+                }
+                PropVariantClear(&var);
+                
+                /** Read disposal method */
+                PropVariantInit(&var);
+                if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/grctlext/Disposal", &var))) {
+                    if (var.vt == VT_UI1) disposal = var.bVal;
+                    else if (var.vt == VT_UI2) disposal = var.uiVal;
+                    else if (var.vt == VT_I2) disposal = (UINT)var.iVal;
+                }
+                PropVariantClear(&var);
+                
+                /** Read frame position and size */
+                PropVariantInit(&var);
+                if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/imgdesc/Left", &var))) {
+                    if (var.vt == VT_UI2) frameLeft = var.uiVal;
+                    else if (var.vt == VT_I2) frameLeft = (UINT)var.iVal;
+                }
+                PropVariantClear(&var);
+                
+                PropVariantInit(&var);
+                if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/imgdesc/Top", &var))) {
+                    if (var.vt == VT_UI2) frameTop = var.uiVal;
+                    else if (var.vt == VT_I2) frameTop = (UINT)var.iVal;
+                }
+                PropVariantClear(&var);
+                
+                PropVariantInit(&var);
+                if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/imgdesc/Width", &var))) {
+                    if (var.vt == VT_UI2) frameWidth = var.uiVal;
+                    else if (var.vt == VT_I2) frameWidth = (UINT)var.iVal;
+                }
+                PropVariantClear(&var);
+                
+                PropVariantInit(&var);
+                if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/imgdesc/Height", &var))) {
+                    if (var.vt == VT_UI2) frameHeight = var.uiVal;
+                    else if (var.vt == VT_I2) frameHeight = (UINT)var.iVal;
+                }
+                PropVariantClear(&var);
+                
+                pMeta->lpVtbl->Release(pMeta);
+            }
+            
+            /** Fallback: use actual frame size if metadata not available */
+            if (frameWidth == 0 || frameHeight == 0) {
+                pFrame->lpVtbl->GetSize(pFrame, &frameWidth, &frameHeight);
+            }
 
+            /** Convert frame to 32bpp PBGRA and composite onto canvas */
+            IWICFormatConverter* pConverter = NULL;
+            hr = pFactory->lpVtbl->CreateFormatConverter(pFactory, &pConverter);
+            if (SUCCEEDED(hr) && pConverter) {
+                hr = pConverter->lpVtbl->Initialize(pConverter, (IWICBitmapSource*)pFrame, 
+                                                  &GUID_WICPixelFormat32bppPBGRA, 
+                                                  WICBitmapDitherTypeNone, NULL, 0.0, 
+                                                  WICBitmapPaletteTypeCustom);
+                if (SUCCEEDED(hr)) {
+                    /** Allocate frame buffer */
+                    UINT frameStride = frameWidth * 4;
+                    UINT frameBufferSize = frameHeight * frameStride;
+                    BYTE* frameBuffer = (BYTE*)malloc(frameBufferSize);
+                    if (frameBuffer) {
+                        /** Copy frame pixels */
+                        if (SUCCEEDED(pConverter->lpVtbl->CopyPixels(pConverter, NULL, frameStride, frameBufferSize, frameBuffer))) {
+                            /** Composite frame onto canvas at specified position */
+                            for (UINT y = 0; y < frameHeight; y++) {
+                                for (UINT x = 0; x < frameWidth; x++) {
+                                    UINT canvasX = frameLeft + x;
+                                    UINT canvasY = frameTop + y;
+                                    
+                                    /** Skip if outside canvas bounds */
+                                    if (canvasX >= canvasWidth || canvasY >= canvasHeight) continue;
+                                    
+                                    BYTE* srcPixel = frameBuffer + (y * frameStride) + (x * 4);
+                                    BYTE b = srcPixel[0];
+                                    BYTE g = srcPixel[1];
+                                    BYTE r = srcPixel[2];
+                                    BYTE a = srcPixel[3];
+                                    
+                                    /** Blend pixel onto canvas */
+                                    BlendPixel(g_gifCanvas, canvasStride, canvasX, canvasY, r, g, b, a);
+                                }
+                            }
+                        }
+                        free(frameBuffer);
+                    }
+                }
+                pConverter->lpVtbl->Release(pConverter);
+            }
+            
+            /** Now scale the composed canvas to icon size and create HICON */
+            IWICBitmap* pCanvasBitmap = NULL;
+            hr = pFactory->lpVtbl->CreateBitmapFromMemory(pFactory, canvasWidth, canvasHeight, 
+                                                        &GUID_WICPixelFormat32bppPBGRA, 
+                                                        canvasStride, canvasSize, g_gifCanvas, &pCanvasBitmap);
+            if (SUCCEEDED(hr) && pCanvasBitmap) {
                 IWICBitmapScaler* pScaler = NULL;
                 hr = pFactory->lpVtbl->CreateBitmapScaler(pFactory, &pScaler);
                 if (SUCCEEDED(hr) && pScaler) {
-                    hr = pScaler->lpVtbl->Initialize(pScaler, (IWICBitmapSource*)pFrame, cx, cy, WICBitmapInterpolationModeFant);
+                    hr = pScaler->lpVtbl->Initialize(pScaler, (IWICBitmapSource*)pCanvasBitmap, 
+                                                   cx, cy, WICBitmapInterpolationModeFant);
                     if (SUCCEEDED(hr)) {
-                        IWICFormatConverter* pConverter = NULL;
-                        hr = pFactory->lpVtbl->CreateFormatConverter(pFactory, &pConverter);
-                        if (SUCCEEDED(hr) && pConverter) {
-                            hr = pConverter->lpVtbl->Initialize(pConverter, (IWICBitmapSource*)pScaler, &GUID_WICPixelFormat32bppPBGRA, WICBitmapDitherTypeNone, NULL, 0.0, WICBitmapPaletteTypeCustom);
+                        IWICFormatConverter* pFinalConverter = NULL;
+                        hr = pFactory->lpVtbl->CreateFormatConverter(pFactory, &pFinalConverter);
+                        if (SUCCEEDED(hr) && pFinalConverter) {
+                            hr = pFinalConverter->lpVtbl->Initialize(pFinalConverter, (IWICBitmapSource*)pScaler, 
+                                                                   &GUID_WICPixelFormat32bppPBGRA, 
+                                                                   WICBitmapDitherTypeNone, NULL, 0.0, 
+                                                                   WICBitmapPaletteTypeCustom);
                             if (SUCCEEDED(hr)) {
                                 BITMAPINFO bi; ZeroMemory(&bi, sizeof(bi));
                                 bi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
@@ -163,13 +427,39 @@ static void LoadTrayIconsFromGifPath(const char* utf8Path) {
                                 VOID* pvBits = NULL;
                                 HBITMAP hbmColor = CreateDIBSection(NULL, &bi, DIB_RGB_COLORS, &pvBits, NULL, 0);
                                 if (hbmColor && pvBits) {
-                                    UINT stride = (UINT)(cx * 4);
-                                    UINT bufSize = (UINT)(cy * stride);
-                                    if (SUCCEEDED(pConverter->lpVtbl->CopyPixels(pConverter, NULL, stride, bufSize, (BYTE*)pvBits))) {
+                                    UINT iconStride = (UINT)(cx * 4);
+                                    UINT iconBufferSize = (UINT)(cy * iconStride);
+                                    if (SUCCEEDED(pFinalConverter->lpVtbl->CopyPixels(pFinalConverter, NULL, iconStride, iconBufferSize, (BYTE*)pvBits))) {
                                         ICONINFO ii; ZeroMemory(&ii, sizeof(ii));
                                         ii.fIcon = TRUE;
                                         ii.hbmColor = hbmColor;
+                                        
+                                        /** Create a monochrome mask bitmap from alpha channel */
                                         ii.hbmMask = CreateBitmap(cx, cy, 1, 1, NULL);
+                                        if (ii.hbmMask) {
+                                            HDC hdcMem = GetDC(NULL);
+                                            HDC hdcColor = CreateCompatibleDC(hdcMem);
+                                            HDC hdcMask = CreateCompatibleDC(hdcMem);
+                                            SelectObject(hdcColor, hbmColor);
+                                            SelectObject(hdcMask, ii.hbmMask);
+                                            
+                                            /** Set mask to black (opaque) */
+                                            BitBlt(hdcMask, 0, 0, cx, cy, NULL, 0, 0, BLACKNESS);
+                                            
+                                            /** Find transparent color (assume transparent black for simplicity) */
+                                            SetBkColor(hdcColor, RGB(0,0,0));
+                                            
+                                            /** Copy transparent areas from color to mask */
+                                            BitBlt(hdcMask, 0, 0, cx, cy, hdcColor, 0, 0, SRCCOPY);
+                                            
+                                            /** Invert mask (transparent areas are now white) */
+                                            BitBlt(hdcMask, 0, 0, cx, cy, NULL, 0, 0, DSTINVERT);
+                                            
+                                            DeleteDC(hdcColor);
+                                            DeleteDC(hdcMask);
+                                            ReleaseDC(NULL, hdcMem);
+                                        }
+
                                         HICON hIcon = CreateIconIndirect(&ii);
                                         if (ii.hbmMask) DeleteObject(ii.hbmMask);
                                         if (hIcon) {
@@ -181,17 +471,25 @@ static void LoadTrayIconsFromGifPath(const char* utf8Path) {
                                     DeleteObject(hbmColor);
                                 }
                             }
-                            pConverter->lpVtbl->Release(pConverter);
+                            pFinalConverter->lpVtbl->Release(pFinalConverter);
                         }
                     }
                     pScaler->lpVtbl->Release(pScaler);
                 }
-
-                pFrame->lpVtbl->Release(pFrame);
+                pCanvasBitmap->lpVtbl->Release(pCanvasBitmap);
             }
+            
+            /** Store current frame info for next iteration's disposal */
+            prevDisposal = disposal;
+            prevLeft = frameLeft;
+            prevTop = frameTop;
+            prevWidth = frameWidth;
+            prevHeight = frameHeight;
+            
+            pFrame->lpVtbl->Release(pFrame);
         }
-        pDecoder->lpVtbl->Release(pDecoder);
     }
+    pDecoder->lpVtbl->Release(pDecoder);
     if (pFactory) pFactory->lpVtbl->Release(pFactory);
     if (SUCCEEDED(hrInit)) CoUninitialize();
 
@@ -222,38 +520,209 @@ static void LoadPreviewIconsFromGifPath(const char* utf8Path) {
 
     IWICBitmapDecoder* pDecoder = NULL;
     hr = pFactory->lpVtbl->CreateDecoderFromFilename(pFactory, wPath, NULL, GENERIC_READ, WICDecodeMetadataCacheOnLoad, &pDecoder);
-    if (SUCCEEDED(hr) && pDecoder) {
-        UINT frameCount = 0;
-        if (SUCCEEDED(pDecoder->lpVtbl->GetFrameCount(pDecoder, &frameCount))) {
-            for (UINT i = 0; i < frameCount && g_previewCount < MAX_TRAY_FRAMES; ++i) {
-                IWICBitmapFrameDecode* pFrame = NULL;
-                if (FAILED(pDecoder->lpVtbl->GetFrame(pDecoder, i, &pFrame)) || !pFrame) continue;
+    if (FAILED(hr) || !pDecoder) {
+        if (pFactory) pFactory->lpVtbl->Release(pFactory);
+        if (SUCCEEDED(hrInit)) CoUninitialize();
+        return;
+    }
 
-                UINT delayMs = 100; /** default */
-                IWICMetadataQueryReader* pMeta = NULL;
-                if (SUCCEEDED(pFrame->lpVtbl->GetMetadataQueryReader(pFrame, &pMeta)) && pMeta) {
-                    PROPVARIANT var; PropVariantInit(&var);
-                    if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/grctlext/Delay", &var))) {
-                        if (var.vt == VT_UI2 || var.vt == VT_I2) {
-                            USHORT cs = (var.vt == VT_UI2) ? var.uiVal : (USHORT)var.iVal;
-                            if (cs == 0) cs = 10; delayMs = (UINT)cs * 10U;
-                        } else if (var.vt == VT_UI1) {
-                            UCHAR cs = var.bVal; if (cs == 0) cs = 10; delayMs = (UINT)cs * 10U;
-                        }
-                    }
-                    PropVariantClear(&var);
-                    pMeta->lpVtbl->Release(pMeta);
+    /** Read global canvas size from logical screen descriptor */
+    UINT canvasWidth = 0, canvasHeight = 0;
+    IWICMetadataQueryReader* pGlobalMeta = NULL;
+    if (SUCCEEDED(pDecoder->lpVtbl->GetMetadataQueryReader(pDecoder, &pGlobalMeta)) && pGlobalMeta) {
+        PROPVARIANT var; PropVariantInit(&var);
+        if (SUCCEEDED(pGlobalMeta->lpVtbl->GetMetadataByName(pGlobalMeta, L"/logscrdesc/Width", &var))) {
+            if (var.vt == VT_UI2) canvasWidth = var.uiVal;
+            else if (var.vt == VT_I2) canvasWidth = (UINT)var.iVal;
+        }
+        PropVariantClear(&var);
+        
+        PropVariantInit(&var);
+        if (SUCCEEDED(pGlobalMeta->lpVtbl->GetMetadataByName(pGlobalMeta, L"/logscrdesc/Height", &var))) {
+            if (var.vt == VT_UI2) canvasHeight = var.uiVal;
+            else if (var.vt == VT_I2) canvasHeight = (UINT)var.iVal;
+        }
+        PropVariantClear(&var);
+        pGlobalMeta->lpVtbl->Release(pGlobalMeta);
+    }
+    
+    /** Fallback: use first frame size if global size not available */
+    if (canvasWidth == 0 || canvasHeight == 0) {
+        IWICBitmapFrameDecode* pFirstFrame = NULL;
+        if (SUCCEEDED(pDecoder->lpVtbl->GetFrame(pDecoder, 0, &pFirstFrame)) && pFirstFrame) {
+            pFirstFrame->lpVtbl->GetSize(pFirstFrame, &canvasWidth, &canvasHeight);
+            pFirstFrame->lpVtbl->Release(pFirstFrame);
+        }
+    }
+    
+    if (canvasWidth == 0 || canvasHeight == 0) {
+        pDecoder->lpVtbl->Release(pDecoder);
+        if (pFactory) pFactory->lpVtbl->Release(pFactory);
+        if (SUCCEEDED(hrInit)) CoUninitialize();
+        return;
+    }
+    
+    /** Allocate preview composition canvas */
+    UINT canvasStride = canvasWidth * 4; /** 32bpp PBGRA */
+    UINT canvasSize = canvasHeight * canvasStride;
+    g_previewGifCanvas = (BYTE*)malloc(canvasSize);
+    if (!g_previewGifCanvas) {
+        pDecoder->lpVtbl->Release(pDecoder);
+        if (pFactory) pFactory->lpVtbl->Release(pFactory);
+        if (SUCCEEDED(hrInit)) CoUninitialize();
+        return;
+    }
+    
+    /** Initialize canvas with transparent background */
+    memset(g_previewGifCanvas, 0, canvasSize); /** All zeros = transparent black (PBGRA: 0,0,0,0) */
+    
+    /** Process each frame for preview */
+    UINT frameCount = 0;
+    if (SUCCEEDED(pDecoder->lpVtbl->GetFrameCount(pDecoder, &frameCount))) {
+        /** Store previous frame disposal for cleanup */
+        UINT prevDisposal = 0;
+        UINT prevLeft = 0, prevTop = 0, prevWidth = 0, prevHeight = 0;
+        
+        for (UINT i = 0; i < frameCount && g_previewCount < MAX_TRAY_FRAMES; ++i) {
+            IWICBitmapFrameDecode* pFrame = NULL;
+            if (FAILED(pDecoder->lpVtbl->GetFrame(pDecoder, i, &pFrame)) || !pFrame) continue;
+
+            /** Apply previous frame's disposal method */
+            if (i > 0) {
+                if (prevDisposal == 2) {
+                    /** Disposal 2: restore background color in previous frame area */
+                    ClearCanvasRect(g_previewGifCanvas, canvasWidth, canvasHeight, 
+                                  prevLeft, prevTop, prevWidth, prevHeight, 0, 0, 0, 0);
                 }
+            }
+            
+            /** Read frame metadata */
+            UINT delayMs = 100;
+            UINT disposal = 0;
+            UINT frameLeft = 0, frameTop = 0, frameWidth = 0, frameHeight = 0;
+            
+            IWICMetadataQueryReader* pMeta = NULL;
+            if (SUCCEEDED(pFrame->lpVtbl->GetMetadataQueryReader(pFrame, &pMeta)) && pMeta) {
+                PROPVARIANT var; PropVariantInit(&var);
+                
+                /** Read delay */
+                if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/grctlext/Delay", &var))) {
+                    if (var.vt == VT_UI2 || var.vt == VT_I2) {
+                        USHORT cs = (var.vt == VT_UI2) ? var.uiVal : (USHORT)var.iVal;
+                        if (cs == 0) cs = 10; delayMs = (UINT)cs * 10U;
+                    } else if (var.vt == VT_UI1) {
+                        UCHAR cs = var.bVal; if (cs == 0) cs = 10; delayMs = (UINT)cs * 10U;
+                    }
+                }
+                PropVariantClear(&var);
+                
+                /** Read disposal method */
+                PropVariantInit(&var);
+                if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/grctlext/Disposal", &var))) {
+                    if (var.vt == VT_UI1) disposal = var.bVal;
+                    else if (var.vt == VT_UI2) disposal = var.uiVal;
+                    else if (var.vt == VT_I2) disposal = (UINT)var.iVal;
+                }
+                PropVariantClear(&var);
+                
+                /** Read frame position and size */
+                PropVariantInit(&var);
+                if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/imgdesc/Left", &var))) {
+                    if (var.vt == VT_UI2) frameLeft = var.uiVal;
+                    else if (var.vt == VT_I2) frameLeft = (UINT)var.iVal;
+                }
+                PropVariantClear(&var);
+                
+                PropVariantInit(&var);
+                if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/imgdesc/Top", &var))) {
+                    if (var.vt == VT_UI2) frameTop = var.uiVal;
+                    else if (var.vt == VT_I2) frameTop = (UINT)var.iVal;
+                }
+                PropVariantClear(&var);
+                
+                PropVariantInit(&var);
+                if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/imgdesc/Width", &var))) {
+                    if (var.vt == VT_UI2) frameWidth = var.uiVal;
+                    else if (var.vt == VT_I2) frameWidth = (UINT)var.iVal;
+                }
+                PropVariantClear(&var);
+                
+                PropVariantInit(&var);
+                if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/imgdesc/Height", &var))) {
+                    if (var.vt == VT_UI2) frameHeight = var.uiVal;
+                    else if (var.vt == VT_I2) frameHeight = (UINT)var.iVal;
+                }
+                PropVariantClear(&var);
+                
+                pMeta->lpVtbl->Release(pMeta);
+            }
+            
+            /** Fallback: use actual frame size if metadata not available */
+            if (frameWidth == 0 || frameHeight == 0) {
+                pFrame->lpVtbl->GetSize(pFrame, &frameWidth, &frameHeight);
+            }
 
+            /** Convert frame to 32bpp PBGRA and composite onto preview canvas */
+            IWICFormatConverter* pConverter = NULL;
+            hr = pFactory->lpVtbl->CreateFormatConverter(pFactory, &pConverter);
+            if (SUCCEEDED(hr) && pConverter) {
+                hr = pConverter->lpVtbl->Initialize(pConverter, (IWICBitmapSource*)pFrame, 
+                                                  &GUID_WICPixelFormat32bppPBGRA, 
+                                                  WICBitmapDitherTypeNone, NULL, 0.0, 
+                                                  WICBitmapPaletteTypeCustom);
+                if (SUCCEEDED(hr)) {
+                    /** Allocate frame buffer */
+                    UINT frameStride = frameWidth * 4;
+                    UINT frameBufferSize = frameHeight * frameStride;
+                    BYTE* frameBuffer = (BYTE*)malloc(frameBufferSize);
+                    if (frameBuffer) {
+                        /** Copy frame pixels */
+                        if (SUCCEEDED(pConverter->lpVtbl->CopyPixels(pConverter, NULL, frameStride, frameBufferSize, frameBuffer))) {
+                            /** Composite frame onto preview canvas at specified position */
+                            for (UINT y = 0; y < frameHeight; y++) {
+                                for (UINT x = 0; x < frameWidth; x++) {
+                                    UINT canvasX = frameLeft + x;
+                                    UINT canvasY = frameTop + y;
+                                    
+                                    /** Skip if outside canvas bounds */
+                                    if (canvasX >= canvasWidth || canvasY >= canvasHeight) continue;
+                                    
+                                    BYTE* srcPixel = frameBuffer + (y * frameStride) + (x * 4);
+                                    BYTE b = srcPixel[0];
+                                    BYTE g = srcPixel[1];
+                                    BYTE r = srcPixel[2];
+                                    BYTE a = srcPixel[3];
+                                    
+                                    /** Blend pixel onto preview canvas */
+                                    BlendPixel(g_previewGifCanvas, canvasStride, canvasX, canvasY, r, g, b, a);
+                                }
+                            }
+                        }
+                        free(frameBuffer);
+                    }
+                }
+                pConverter->lpVtbl->Release(pConverter);
+            }
+            
+            /** Now scale the composed preview canvas to icon size and create HICON */
+            IWICBitmap* pCanvasBitmap = NULL;
+            hr = pFactory->lpVtbl->CreateBitmapFromMemory(pFactory, canvasWidth, canvasHeight, 
+                                                        &GUID_WICPixelFormat32bppPBGRA, 
+                                                        canvasStride, canvasSize, g_previewGifCanvas, &pCanvasBitmap);
+            if (SUCCEEDED(hr) && pCanvasBitmap) {
                 IWICBitmapScaler* pScaler = NULL;
                 hr = pFactory->lpVtbl->CreateBitmapScaler(pFactory, &pScaler);
                 if (SUCCEEDED(hr) && pScaler) {
-                    hr = pScaler->lpVtbl->Initialize(pScaler, (IWICBitmapSource*)pFrame, cx, cy, WICBitmapInterpolationModeFant);
+                    hr = pScaler->lpVtbl->Initialize(pScaler, (IWICBitmapSource*)pCanvasBitmap, 
+                                                   cx, cy, WICBitmapInterpolationModeFant);
                     if (SUCCEEDED(hr)) {
-                        IWICFormatConverter* pConverter = NULL;
-                        hr = pFactory->lpVtbl->CreateFormatConverter(pFactory, &pConverter);
-                        if (SUCCEEDED(hr) && pConverter) {
-                            hr = pConverter->lpVtbl->Initialize(pConverter, (IWICBitmapSource*)pScaler, &GUID_WICPixelFormat32bppPBGRA, WICBitmapDitherTypeNone, NULL, 0.0, WICBitmapPaletteTypeCustom);
+                        IWICFormatConverter* pFinalConverter = NULL;
+                        hr = pFactory->lpVtbl->CreateFormatConverter(pFactory, &pFinalConverter);
+                        if (SUCCEEDED(hr) && pFinalConverter) {
+                            hr = pFinalConverter->lpVtbl->Initialize(pFinalConverter, (IWICBitmapSource*)pScaler, 
+                                                                   &GUID_WICPixelFormat32bppPBGRA, 
+                                                                   WICBitmapDitherTypeNone, NULL, 0.0, 
+                                                                   WICBitmapPaletteTypeCustom);
                             if (SUCCEEDED(hr)) {
                                 BITMAPINFO bi; ZeroMemory(&bi, sizeof(bi));
                                 bi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
@@ -265,13 +734,39 @@ static void LoadPreviewIconsFromGifPath(const char* utf8Path) {
                                 VOID* pvBits = NULL;
                                 HBITMAP hbmColor = CreateDIBSection(NULL, &bi, DIB_RGB_COLORS, &pvBits, NULL, 0);
                                 if (hbmColor && pvBits) {
-                                    UINT stride = (UINT)(cx * 4);
-                                    UINT bufSize = (UINT)(cy * stride);
-                                    if (SUCCEEDED(pConverter->lpVtbl->CopyPixels(pConverter, NULL, stride, bufSize, (BYTE*)pvBits))) {
+                                    UINT iconStride = (UINT)(cx * 4);
+                                    UINT iconBufferSize = (UINT)(cy * iconStride);
+                                    if (SUCCEEDED(pFinalConverter->lpVtbl->CopyPixels(pFinalConverter, NULL, iconStride, iconBufferSize, (BYTE*)pvBits))) {
                                         ICONINFO ii; ZeroMemory(&ii, sizeof(ii));
                                         ii.fIcon = TRUE;
                                         ii.hbmColor = hbmColor;
+
+                                        /** Create a monochrome mask bitmap from alpha channel */
                                         ii.hbmMask = CreateBitmap(cx, cy, 1, 1, NULL);
+                                        if (ii.hbmMask) {
+                                            HDC hdcMem = GetDC(NULL);
+                                            HDC hdcColor = CreateCompatibleDC(hdcMem);
+                                            HDC hdcMask = CreateCompatibleDC(hdcMem);
+                                            SelectObject(hdcColor, hbmColor);
+                                            SelectObject(hdcMask, ii.hbmMask);
+                                            
+                                            /** Set mask to black (opaque) */
+                                            BitBlt(hdcMask, 0, 0, cx, cy, NULL, 0, 0, BLACKNESS);
+                                            
+                                            /** Find transparent color (assume transparent black for simplicity) */
+                                            SetBkColor(hdcColor, RGB(0,0,0));
+                                            
+                                            /** Copy transparent areas from color to mask */
+                                            BitBlt(hdcMask, 0, 0, cx, cy, hdcColor, 0, 0, SRCCOPY);
+                                            
+                                            /** Invert mask (transparent areas are now white) */
+                                            BitBlt(hdcMask, 0, 0, cx, cy, NULL, 0, 0, DSTINVERT);
+                                            
+                                            DeleteDC(hdcColor);
+                                            DeleteDC(hdcMask);
+                                            ReleaseDC(NULL, hdcMem);
+                                        }
+
                                         HICON hIcon = CreateIconIndirect(&ii);
                                         if (ii.hbmMask) DeleteObject(ii.hbmMask);
                                         if (hIcon) {
@@ -283,16 +778,25 @@ static void LoadPreviewIconsFromGifPath(const char* utf8Path) {
                                     DeleteObject(hbmColor);
                                 }
                             }
-                            pConverter->lpVtbl->Release(pConverter);
+                            pFinalConverter->lpVtbl->Release(pFinalConverter);
                         }
                     }
                     pScaler->lpVtbl->Release(pScaler);
                 }
-                pFrame->lpVtbl->Release(pFrame);
+                pCanvasBitmap->lpVtbl->Release(pCanvasBitmap);
             }
+            
+            /** Store current frame info for next iteration's disposal */
+            prevDisposal = disposal;
+            prevLeft = frameLeft;
+            prevTop = frameTop;
+            prevWidth = frameWidth;
+            prevHeight = frameHeight;
+            
+            pFrame->lpVtbl->Release(pFrame);
         }
-        pDecoder->lpVtbl->Release(pDecoder);
     }
+    pDecoder->lpVtbl->Release(pDecoder);
     if (pFactory) pFactory->lpVtbl->Release(pFactory);
     if (SUCCEEDED(hrInit)) CoUninitialize();
 
