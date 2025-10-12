@@ -813,6 +813,15 @@ static void LoadTrayIcons(void) {
     char folder[MAX_PATH] = {0};
     BuildAnimationFolder(g_animationName, folder, sizeof(folder));
 
+    /** Special selection: use application logo (resource icon) */
+    if (_stricmp(g_animationName, "__logo__") == 0) {
+        HICON hIcon = LoadIconW(GetModuleHandle(NULL), MAKEINTRESOURCEW(IDI_CATIME));
+        if (hIcon) {
+            g_trayIcons[g_trayIconCount++] = hIcon;
+        }
+        return;
+    }
+
     /** If selection is a single GIF file under animations root, decode frames from it */
     if (IsGifSelection(g_animationName)) {
         LoadTrayIconsFromGifPath(folder);
@@ -1049,7 +1058,10 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
     ReadIniString(INI_SECTION_OPTIONS, "ANIMATION_NAME", "%LOCALAPPDATA%\\Catime\\resources\\animations\\cat", nameBuf, sizeof(nameBuf), config_path);
     if (nameBuf[0] != '\0') {
         const char* prefix = "%LOCALAPPDATA%\\Catime\\resources\\animations\\";
-        if (_strnicmp(nameBuf, prefix, (int)strlen(prefix)) == 0) {
+        if (_stricmp(nameBuf, "__logo__") == 0) {
+            strncpy(g_animationName, "__logo__", sizeof(g_animationName) - 1);
+            g_animationName[sizeof(g_animationName) - 1] = '\0';
+        } else if (_strnicmp(nameBuf, prefix, (int)strlen(prefix)) == 0) {
             const char* rel = nameBuf + strlen(prefix);
             if (*rel) {
                 strncpy(g_animationName, rel, sizeof(g_animationName) - 1);
@@ -1093,6 +1105,22 @@ BOOL SetCurrentAnimationName(const char* name) {
 
     /** Validate selection: either a folder with images, or a single .gif file existing */
     char folder[MAX_PATH] = {0};
+    if (_stricmp(name, "__logo__") == 0) {
+        strncpy(g_animationName, name, sizeof(g_animationName) - 1);
+        g_animationName[sizeof(g_animationName) - 1] = '\0';
+        char config_path[MAX_PATH] = {0};
+        GetConfigPath(config_path, sizeof(config_path));
+        WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_NAME", "__logo__", config_path);
+        LoadTrayIcons();
+        g_trayIconIndex = 0;
+        if (g_trayHwnd && g_trayIconCount > 0) {
+            AdvanceTrayFrame();
+            if (!IsWindow(g_trayHwnd)) return TRUE;
+            KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
+            SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, g_trayInterval ? g_trayInterval : 150, (TIMERPROC)TrayAnimTimerProc);
+        }
+        return TRUE;
+    }
     BuildAnimationFolder(name, folder, sizeof(folder));
     wchar_t wPath[MAX_PATH] = {0};
     MultiByteToWideChar(CP_UTF8, 0, folder, -1, wPath, MAX_PATH);
@@ -1148,6 +1176,19 @@ BOOL SetCurrentAnimationName(const char* name) {
 void StartAnimationPreview(const char* name) {
     if (!name || !*name) return;
     /** If preview target is a .gif file, decode frames from the single file */
+    if (_stricmp(name, "__logo__") == 0) {
+        FreePreviewIcons();
+        HICON hIcon = LoadIconW(GetModuleHandle(NULL), MAKEINTRESOURCEW(IDI_CATIME));
+        if (hIcon) {
+            g_previewIcons[g_previewCount++] = hIcon;
+            g_isPreviewActive = TRUE;
+            g_previewIndex = 0;
+            if (g_trayHwnd) {
+                AdvanceTrayFrame();
+            }
+        }
+        return;
+    }
     if (IsGifSelection(name)) {
         char gifPath[MAX_PATH] = {0};
         BuildAnimationFolder(name, gifPath, sizeof(gifPath));
@@ -1362,6 +1403,10 @@ static void OpenAnimationsFolder(void) {
 BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id) {
     if (id == CLOCK_IDM_ANIMATIONS_OPEN_DIR) {
         OpenAnimationsFolder();
+        return TRUE;
+    }
+    if (id == CLOCK_IDM_ANIMATIONS_USE_LOGO) {
+        SetCurrentAnimationName("__logo__");
         return TRUE;
     }
     if (id >= CLOCK_IDM_ANIMATIONS_BASE && id < CLOCK_IDM_ANIMATIONS_BASE + 1000) {

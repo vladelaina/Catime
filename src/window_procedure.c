@@ -2259,6 +2259,13 @@ refresh_window:
                     }
                 }
 
+                /** Handle animation preview on hover for fixed "Use Logo" item */
+                if (menuItem == CLOCK_IDM_ANIMATIONS_USE_LOGO) {
+                    extern void StartAnimationPreview(const char* name);
+                    StartAnimationPreview("__logo__");
+                    return 0;
+                }
+
                 /** Handle animation preview on hover (IDs CLOCK_IDM_ANIMATIONS_BASE..+999) */
                 if (menuItem >= CLOCK_IDM_ANIMATIONS_BASE && menuItem < CLOCK_IDM_ANIMATIONS_BASE + 1000) {
                     /** Resolve folder name by iterating animations root with a running index */

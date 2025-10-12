@@ -83,6 +83,7 @@
 /** @brief Tray animation (RunCat-like) menu identifiers */
 #define CLOCK_IDM_ANIMATIONS_MENU 2200           /**< Animations root submenu */
 #define CLOCK_IDM_ANIMATIONS_OPEN_DIR 2201       /**< Open animations folder */
+#define CLOCK_IDM_ANIMATIONS_USE_LOGO 2202       /**< Use app logo as tray icon */
 #define CLOCK_IDM_ANIMATIONS_BASE 3000           /**< Dynamic animation item base (folders) */
 
 /**

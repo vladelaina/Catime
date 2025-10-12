@@ -601,6 +601,16 @@ void ShowColorMenu(HWND hwnd) {
         UINT nextId = CLOCK_IDM_ANIMATIONS_BASE;
         BOOL hasAny = FALSE;
         const char* currentAnim = GetCurrentAnimationName();
+
+        /** Add a fixed entry to use the app logo as the tray icon */
+        {
+            UINT flags = MF_STRING;
+            if (currentAnim && _stricmp(currentAnim, "__logo__") == 0) {
+                flags |= MF_CHECKED;
+            }
+            AppendMenuW(hAnimMenu, flags, CLOCK_IDM_ANIMATIONS_USE_LOGO, GetLocalizedString(L"使用Logo", L"Use Logo"));
+            AppendMenuW(hAnimMenu, MF_SEPARATOR, 0, NULL);
+        }
         if (hFind != INVALID_HANDLE_VALUE) {
             do {
                 if (wcscmp(ffd.cFileName, L".") == 0 || wcscmp(ffd.cFileName, L"..") == 0) continue;
