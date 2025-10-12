@@ -534,6 +534,102 @@ static void LoadPreviewIconsFromAnimatedPath(const char* utf8Path) {
     LoadAnimatedImage(utf8Path, &target);
 }
 
+/** @brief Generic routine to load sequential icon frames from a folder */
+static void LoadIconsFromFolder(const char* utf8Folder, HICON* icons, int* count) {
+    wchar_t wFolder[MAX_PATH] = {0};
+    MultiByteToWideChar(CP_UTF8, 0, utf8Folder, -1, wFolder, MAX_PATH);
+
+    typedef struct { int hasNum; int num; wchar_t name[MAX_PATH]; wchar_t path[MAX_PATH]; } AnimFile;
+    AnimFile files[MAX_TRAY_FRAMES];
+    int fileCount = 0;
+
+    void AddFilesWithPattern(const wchar_t* pattern) {
+        WIN32_FIND_DATAW ffd;
+        HANDLE hFind = FindFirstFileW(pattern, &ffd);
+        if (hFind != INVALID_HANDLE_VALUE) {
+            do {
+                if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
+                wchar_t* dot = wcsrchr(ffd.cFileName, L'.');
+                if (!dot) continue;
+                size_t nameLen = (size_t)(dot - ffd.cFileName);
+                if (nameLen == 0 || nameLen >= MAX_PATH) continue;
+
+                int hasNum = 0, numVal = 0;
+                for (size_t i = 0; i < nameLen; ++i) {
+                    if (iswdigit(ffd.cFileName[i])) {
+                        hasNum = 1;
+                        numVal = 0;
+                        while (i < nameLen && iswdigit(ffd.cFileName[i])) {
+                            numVal = numVal * 10 + (ffd.cFileName[i] - L'0');
+                            i++;
+                        }
+                        break;
+                    }
+                }
+
+                if (fileCount < MAX_TRAY_FRAMES) {
+                    files[fileCount].hasNum = hasNum;
+                    files[fileCount].num = numVal;
+                    wcsncpy(files[fileCount].name, ffd.cFileName, nameLen);
+                    files[fileCount].name[nameLen] = L'\0';
+                    _snwprintf_s(files[fileCount].path, MAX_PATH, _TRUNCATE, L"%s\\%s", wFolder, ffd.cFileName);
+                    fileCount++;
+                }
+            } while (FindNextFileW(hFind, &ffd));
+            FindClose(hFind);
+        }
+    }
+
+    const wchar_t* patterns[] = { L"\\*.ico", L"\\*.png", L"\\*.bmp", L"\\*.jpg", L"\\*.jpeg", L"\\*.webp", L"\\*.tif", L"\\*.tiff" };
+    for (int i = 0; i < sizeof(patterns)/sizeof(patterns[0]); ++i) {
+        wchar_t wSearch[MAX_PATH] = {0};
+        _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s%s", wFolder, patterns[i]);
+        AddFilesWithPattern(wSearch);
+    }
+
+    if (fileCount == 0) return;
+
+    int cmpAnimFile(const void* a, const void* b) {
+        const AnimFile* fa = (const AnimFile*)a;
+        const AnimFile* fb = (const AnimFile*)b;
+        if (fa->hasNum && fb->hasNum) {
+            if (fa->num != fb->num) return fa->num < fb->num ? -1 : 1;
+        }
+        return _wcsicmp(fa->name, fb->name);
+    }
+    qsort(files, (size_t)fileCount, sizeof(AnimFile), cmpAnimFile);
+
+    for (int i = 0; i < fileCount; ++i) {
+        HICON hIcon = NULL;
+        const wchar_t* ext = wcsrchr(files[i].path, L'.');
+        if (ext && (_wcsicmp(ext, L".ico") == 0)) {
+            hIcon = (HICON)LoadImageW(NULL, files[i].path, IMAGE_ICON, 0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE);
+        } else {
+            int cx = GetSystemMetrics(SM_CXSMICON);
+            int cy = GetSystemMetrics(SM_CYSMICON);
+            
+            IWICImagingFactory* pFactory = NULL;
+            HRESULT hrInit = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+            if (SUCCEEDED(CoCreateInstance(&CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER, &IID_IWICImagingFactory, (void**)&pFactory)) && pFactory) {
+                IWICBitmapDecoder* pDecoder = NULL;
+                if (SUCCEEDED(pFactory->lpVtbl->CreateDecoderFromFilename(pFactory, files[i].path, NULL, GENERIC_READ, WICDecodeMetadataCacheOnLoad, &pDecoder)) && pDecoder) {
+                    IWICBitmapFrameDecode* pFrame = NULL;
+                    if (SUCCEEDED(pDecoder->lpVtbl->GetFrame(pDecoder, 0, &pFrame)) && pFrame) {
+                        hIcon = CreateIconFromWICSource(pFactory, (IWICBitmapSource*)pFrame, cx, cy);
+                        pFrame->lpVtbl->Release(pFrame);
+                    }
+                    pDecoder->lpVtbl->Release(pDecoder);
+                }
+                pFactory->lpVtbl->Release(pFactory);
+            }
+            if (SUCCEEDED(hrInit)) CoUninitialize();
+        }
+        if (hIcon) {
+            icons[(*count)++] = hIcon;
+        }
+    }
+}
+
 /** @brief Load sequential icon frames from .ico and .png files */
 static void LoadTrayIcons(void) {
     FreeTrayIcons();
@@ -556,131 +652,7 @@ static void LoadTrayIcons(void) {
         return;
     }
 
-    /** Enumerate all .ico and .png files, pick those with numeric in name, sort ascending */
-    wchar_t wFolder[MAX_PATH] = {0};
-    MultiByteToWideChar(CP_UTF8, 0, folder, -1, wFolder, MAX_PATH);
-
-    typedef struct { int hasNum; int num; wchar_t name[MAX_PATH]; wchar_t path[MAX_PATH]; } AnimFile;
-    AnimFile files[MAX_TRAY_FRAMES];
-    int fileCount = 0;
-    
-    void AddFilesWithPattern(const wchar_t* pattern) {
-        WIN32_FIND_DATAW ffd; HANDLE hFind = FindFirstFileW(pattern, &ffd);
-        if (hFind != INVALID_HANDLE_VALUE) {
-            do {
-                if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
-                wchar_t* dot = wcsrchr(ffd.cFileName, L'.');
-                if (!dot) continue;
-                size_t nameLen = (size_t)(dot - ffd.cFileName);
-                if (nameLen == 0 || nameLen >= MAX_PATH) continue;
-
-                int hasNum = 0; int numVal = 0;
-                for (size_t i = 0; i < nameLen; ++i) {
-                    if (iswdigit(ffd.cFileName[i])) {
-                        hasNum = 1; numVal = 0;
-                        while (i < nameLen && iswdigit(ffd.cFileName[i])) { numVal = numVal * 10 + (ffd.cFileName[i] - L'0'); i++; }
-                        break;
-                    }
-                }
-
-                if (fileCount < MAX_TRAY_FRAMES) {
-                    files[fileCount].hasNum = hasNum;
-                    files[fileCount].num = numVal;
-                    wcsncpy(files[fileCount].name, ffd.cFileName, nameLen);
-                    files[fileCount].name[nameLen] = L'\0';
-                    _snwprintf_s(files[fileCount].path, MAX_PATH, _TRUNCATE, L"%s\\%s", wFolder, ffd.cFileName);
-                    fileCount++;
-                }
-            } while (FindNextFileW(hFind, &ffd));
-            FindClose(hFind);
-        }
-    }
-
-    wchar_t wSearchIco[MAX_PATH] = {0};
-    _snwprintf_s(wSearchIco, MAX_PATH, _TRUNCATE, L"%s\\*.ico", wFolder);
-    AddFilesWithPattern(wSearchIco);
-
-    wchar_t wSearchPng[MAX_PATH] = {0};
-    _snwprintf_s(wSearchPng, MAX_PATH, _TRUNCATE, L"%s\\*.png", wFolder);
-    AddFilesWithPattern(wSearchPng);
-
-    wchar_t wSearchBmp[MAX_PATH] = {0};
-    _snwprintf_s(wSearchBmp, MAX_PATH, _TRUNCATE, L"%s\\*.bmp", wFolder);
-    AddFilesWithPattern(wSearchBmp);
-
-    wchar_t wSearchJpg[MAX_PATH] = {0};
-    _snwprintf_s(wSearchJpg, MAX_PATH, _TRUNCATE, L"%s\\*.jpg", wFolder);
-    AddFilesWithPattern(wSearchJpg);
-
-    wchar_t wSearchJpeg[MAX_PATH] = {0};
-    _snwprintf_s(wSearchJpeg, MAX_PATH, _TRUNCATE, L"%s\\*.jpeg", wFolder);
-    AddFilesWithPattern(wSearchJpeg);
-
-    wchar_t wSearchWebP[MAX_PATH] = {0};
-    _snwprintf_s(wSearchWebP, MAX_PATH, _TRUNCATE, L"%s\\*.webp", wFolder);
-    AddFilesWithPattern(wSearchWebP);
-
-    /** Skip GIF here; GIFs are selectable as sub-items and decoded via GIF pipeline */
-
-    wchar_t wSearchTif[MAX_PATH] = {0};
-    _snwprintf_s(wSearchTif, MAX_PATH, _TRUNCATE, L"%s\\*.tif", wFolder);
-    AddFilesWithPattern(wSearchTif);
-
-    wchar_t wSearchTiff[MAX_PATH] = {0};
-    _snwprintf_s(wSearchTiff, MAX_PATH, _TRUNCATE, L"%s\\*.tiff", wFolder);
-    AddFilesWithPattern(wSearchTiff);
-
-    if (fileCount == 0) {
-        return;
-    }
-
-    int cmpAnimFile(const void* a, const void* b) {
-        const AnimFile* fa = (const AnimFile*)a;
-        const AnimFile* fb = (const AnimFile*)b;
-        if (fa->hasNum && fb->hasNum) {
-            if (fa->num < fb->num) return -1;
-            if (fa->num > fb->num) return 1;
-            /** tie-breaker by name */
-            return _wcsicmp(fa->name, fb->name);
-        }
-        /** fallback: case-insensitive name compare */
-        return _wcsicmp(fa->name, fb->name);
-    }
-
-    qsort(files, (size_t)fileCount, sizeof(AnimFile), cmpAnimFile);
-
-    for (int i = 0; i < fileCount; ++i) {
-        HICON hIcon = NULL;
-        const wchar_t* ext = wcsrchr(files[i].path, L'.');
-        if (ext && (_wcsicmp(ext, L".ico") == 0)) {
-            hIcon = (HICON)LoadImageW(NULL, files[i].path, IMAGE_ICON, 0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE);
-        } else if (ext && (_wcsicmp(ext, L".png") == 0 || _wcsicmp(ext, L".bmp") == 0 || _wcsicmp(ext, L".jpg") == 0 || _wcsicmp(ext, L".jpeg") == 0 || _wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0 || _wcsicmp(ext, L".tif") == 0 || _wcsicmp(ext, L".tiff") == 0)) {
-            int cx = GetSystemMetrics(SM_CXSMICON);
-            int cy = GetSystemMetrics(SM_CYSMICON);
-            
-            IWICImagingFactory* pFactory = NULL;
-            HRESULT hrInit = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
-            HRESULT hr = CoCreateInstance(&CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER, &IID_IWICImagingFactory, (void**)&pFactory);
-            if (SUCCEEDED(hr) && pFactory) {
-                IWICBitmapDecoder* pDecoder = NULL;
-                hr = pFactory->lpVtbl->CreateDecoderFromFilename(pFactory, files[i].path, NULL, GENERIC_READ, WICDecodeMetadataCacheOnLoad, &pDecoder);
-                if (SUCCEEDED(hr) && pDecoder) {
-                    IWICBitmapFrameDecode* pFrame = NULL;
-                    hr = pDecoder->lpVtbl->GetFrame(pDecoder, 0, &pFrame);
-                    if (SUCCEEDED(hr) && pFrame) {
-                        hIcon = CreateIconFromWICSource(pFactory, (IWICBitmapSource*)pFrame, cx, cy);
-                        pFrame->lpVtbl->Release(pFrame);
-                    }
-                    pDecoder->lpVtbl->Release(pDecoder);
-                }
-                pFactory->lpVtbl->Release(pFactory);
-            }
-            if (SUCCEEDED(hrInit)) CoUninitialize();
-        }
-        if (hIcon) {
-            g_trayIcons[g_trayIconCount++] = hIcon;
-        }
-    }
+    LoadIconsFromFolder(folder, g_trayIcons, &g_trayIconCount);
 }
 
 /** @brief Advance to next icon frame and apply to tray */
@@ -867,156 +839,22 @@ BOOL SetCurrentAnimationName(const char* name) {
 /** Load preview icons for folder and enable preview mode (no persistence) */
 void StartAnimationPreview(const char* name) {
     if (!name || !*name) return;
-    /** If preview target is a .gif file, decode frames from the single file */
+
+    FreePreviewIcons();
+
     if (_stricmp(name, "__logo__") == 0) {
-        FreePreviewIcons();
         HICON hIcon = LoadIconW(GetModuleHandle(NULL), MAKEINTRESOURCEW(IDI_CATIME));
         if (hIcon) {
             g_previewIcons[g_previewCount++] = hIcon;
-            g_isPreviewActive = TRUE;
-            g_previewIndex = 0;
-            if (g_trayHwnd) {
-                AdvanceTrayFrame();
-            }
         }
-        return;
-    }
-    if (IsGifSelection(name) || IsWebPSelection(name)) {
+    } else if (IsGifSelection(name) || IsWebPSelection(name)) {
         char filePath[MAX_PATH] = {0};
         BuildAnimationFolder(name, filePath, sizeof(filePath));
         LoadPreviewIconsFromAnimatedPath(filePath);
-        if (g_previewCount > 0) {
-            g_isPreviewActive = TRUE;
-            g_previewIndex = 0;
-            if (g_trayHwnd) {
-                AdvanceTrayFrame();
-                if (g_isPreviewAnimated) {
-                    UINT firstDelay = g_previewFrameDelaysMs[0] > 0 ? g_previewFrameDelaysMs[0] : (g_trayInterval ? g_trayInterval : 150);
-                    KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
-                    SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, firstDelay, (TIMERPROC)TrayAnimTimerProc);
-                }
-            }
-        }
-        return;
-    }
-
-    /** Build and enumerate preview icons from a folder */
-    char folder[MAX_PATH] = {0};
-    BuildAnimationFolder(name, folder, sizeof(folder));
-
-    wchar_t wFolder[MAX_PATH] = {0};
-    MultiByteToWideChar(CP_UTF8, 0, folder, -1, wFolder, MAX_PATH);
-
-    /** Collect and sort like LoadTrayIcons */
-    typedef struct { int hasNum; int num; wchar_t name[MAX_PATH]; wchar_t path[MAX_PATH]; } AnimFile;
-    AnimFile files[MAX_TRAY_FRAMES];
-    int fileCount = 0;
-
-    void AddPreviewWithPattern(const wchar_t* pattern) {
-        WIN32_FIND_DATAW ffd; HANDLE hFind = FindFirstFileW(pattern, &ffd);
-        if (hFind != INVALID_HANDLE_VALUE) {
-            do {
-                if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
-                wchar_t* dot = wcsrchr(ffd.cFileName, L'.');
-                if (!dot) continue;
-                size_t nameLen = (size_t)(dot - ffd.cFileName);
-                if (nameLen == 0 || nameLen >= MAX_PATH) continue;
-
-                int hasNum = 0; int numVal = 0;
-                for (size_t i = 0; i < nameLen; ++i) {
-                    if (iswdigit(ffd.cFileName[i])) {
-                        hasNum = 1; numVal = 0;
-                        while (i < nameLen && iswdigit(ffd.cFileName[i])) { numVal = numVal * 10 + (ffd.cFileName[i]-L'0'); i++; }
-                        break;
-                    }
-                }
-                if (fileCount < MAX_TRAY_FRAMES) {
-                    files[fileCount].hasNum = hasNum;
-                    files[fileCount].num = numVal;
-                    wcsncpy(files[fileCount].name, ffd.cFileName, nameLen);
-                    files[fileCount].name[nameLen] = L'\0';
-                    _snwprintf_s(files[fileCount].path, MAX_PATH, _TRUNCATE, L"%s\\%s", wFolder, ffd.cFileName);
-                    fileCount++;
-                }
-            } while (FindNextFileW(hFind, &ffd));
-            FindClose(hFind);
-        }
-    }
-
-    wchar_t wSearchIco[MAX_PATH] = {0};
-    _snwprintf_s(wSearchIco, MAX_PATH, _TRUNCATE, L"%s\\*.ico", wFolder);
-    AddPreviewWithPattern(wSearchIco);
-    wchar_t wSearchPng[MAX_PATH] = {0};
-    _snwprintf_s(wSearchPng, MAX_PATH, _TRUNCATE, L"%s\\*.png", wFolder);
-    AddPreviewWithPattern(wSearchPng);
-    wchar_t wSearchBmp[MAX_PATH] = {0};
-    _snwprintf_s(wSearchBmp, MAX_PATH, _TRUNCATE, L"%s\\*.bmp", wFolder);
-    AddPreviewWithPattern(wSearchBmp);
-    wchar_t wSearchJpg[MAX_PATH] = {0};
-    _snwprintf_s(wSearchJpg, MAX_PATH, _TRUNCATE, L"%s\\*.jpg", wFolder);
-    AddPreviewWithPattern(wSearchJpg);
-    wchar_t wSearchJpeg[MAX_PATH] = {0};
-    _snwprintf_s(wSearchJpeg, MAX_PATH, _TRUNCATE, L"%s\\*.jpeg", wFolder);
-    AddPreviewWithPattern(wSearchJpeg);
-    wchar_t wSearchGif[MAX_PATH] = {0};
-    _snwprintf_s(wSearchGif, MAX_PATH, _TRUNCATE, L"%s\\*.gif", wFolder);
-    AddPreviewWithPattern(wSearchGif);
-    wchar_t wSearchWebP[MAX_PATH] = {0};
-    _snwprintf_s(wSearchWebP, MAX_PATH, _TRUNCATE, L"%s\\*.webp", wFolder);
-    AddPreviewWithPattern(wSearchWebP);
-    wchar_t wSearchTif[MAX_PATH] = {0};
-    _snwprintf_s(wSearchTif, MAX_PATH, _TRUNCATE, L"%s\\*.tif", wFolder);
-    AddPreviewWithPattern(wSearchTif);
-    wchar_t wSearchTiff[MAX_PATH] = {0};
-    _snwprintf_s(wSearchTiff, MAX_PATH, _TRUNCATE, L"%s\\*.tiff", wFolder);
-    AddPreviewWithPattern(wSearchTiff);
-
-    if (fileCount == 0) return;
-
-    int cmpAnimFile(const void* a, const void* b) {
-        const AnimFile* fa = (const AnimFile*)a;
-        const AnimFile* fb = (const AnimFile*)b;
-        if (fa->hasNum && fb->hasNum) {
-            if (fa->num < fb->num) return -1;
-            if (fa->num > fb->num) return 1;
-            return _wcsicmp(fa->name, fb->name);
-        }
-        return _wcsicmp(fa->name, fb->name);
-    }
-    qsort(files, (size_t)fileCount, sizeof(AnimFile), cmpAnimFile);
-
-    FreePreviewIcons();
-    for (int i = 0; i < fileCount; ++i) {
-        HICON hIcon = NULL;
-        const wchar_t* ext = wcsrchr(files[i].path, L'.');
-        if (ext && (_wcsicmp(ext, L".ico") == 0)) {
-            hIcon = (HICON)LoadImageW(NULL, files[i].path, IMAGE_ICON, 0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE);
-        } else if (ext && (_wcsicmp(ext, L".png") == 0 || _wcsicmp(ext, L".bmp") == 0 || _wcsicmp(ext, L".jpg") == 0 || _wcsicmp(ext, L".jpeg") == 0 || _wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0 || _wcsicmp(ext, L".tif") == 0 || _wcsicmp(ext, L".tiff") == 0)) {
-            int cx = GetSystemMetrics(SM_CXSMICON);
-            int cy = GetSystemMetrics(SM_CYSMICON);
-            
-            IWICImagingFactory* pFactory = NULL;
-            HRESULT hrInit = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
-            HRESULT hr = CoCreateInstance(&CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER, &IID_IWICImagingFactory, (void**)&pFactory);
-            if (SUCCEEDED(hr) && pFactory) {
-                IWICBitmapDecoder* pDecoder = NULL;
-                hr = pFactory->lpVtbl->CreateDecoderFromFilename(pFactory, files[i].path, NULL, GENERIC_READ, WICDecodeMetadataCacheOnLoad, &pDecoder);
-                if (SUCCEEDED(hr) && pDecoder) {
-                    IWICBitmapFrameDecode* pFrame = NULL;
-                    hr = pDecoder->lpVtbl->GetFrame(pDecoder, 0, &pFrame);
-                    if (SUCCEEDED(hr) && pFrame) {
-                        hIcon = CreateIconFromWICSource(pFactory, (IWICBitmapSource*)pFrame, cx, cy);
-                        pFrame->lpVtbl->Release(pFrame);
-                    }
-                    pDecoder->lpVtbl->Release(pDecoder);
-                }
-                pFactory->lpVtbl->Release(pFactory);
-            }
-            if (SUCCEEDED(hrInit)) CoUninitialize();
-        }
-        if (hIcon) {
-            g_previewIcons[g_previewCount++] = hIcon;
-        }
+    } else {
+        char folder[MAX_PATH] = {0};
+        BuildAnimationFolder(name, folder, sizeof(folder));
+        LoadIconsFromFolder(folder, g_previewIcons, &g_previewCount);
     }
 
     if (g_previewCount > 0) {
@@ -1024,6 +862,11 @@ void StartAnimationPreview(const char* name) {
         g_previewIndex = 0;
         if (g_trayHwnd) {
             AdvanceTrayFrame();
+            if (g_isPreviewAnimated) {
+                UINT firstDelay = g_previewFrameDelaysMs[0] > 0 ? g_previewFrameDelaysMs[0] : (g_trayInterval ? g_trayInterval : 150);
+                KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
+                SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, firstDelay, (TIMERPROC)TrayAnimTimerProc);
+            }
         }
     }
 }
