@@ -2313,15 +2313,15 @@ refresh_window:
                                 }
                                 (*nextIdPtr)++;
                             } else {
-                                /** Handle GIF files */
+                                /** Handle GIF and WebP files */
                                 wchar_t* ext = wcsrchr(ffd.cFileName, L'.');
-                                if (ext && _wcsicmp(ext, L".gif") == 0) {
+                                if (ext && (_wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0)) {
                                     if (*nextIdPtr == targetId) {
-                                        char gifUtf8[MAX_PATH] = {0};
-                                        WideCharToMultiByte(CP_UTF8, 0, ffd.cFileName, -1, gifUtf8, MAX_PATH, NULL, NULL);
+                                        char fileUtf8[MAX_PATH] = {0};
+                                        WideCharToMultiByte(CP_UTF8, 0, ffd.cFileName, -1, fileUtf8, MAX_PATH, NULL, NULL);
                                         
                                         char relPath[MAX_PATH] = {0};
-                                        _snprintf_s(relPath, MAX_PATH, _TRUNCATE, "%s\\%s", folderPathUtf8, gifUtf8);
+                                        _snprintf_s(relPath, MAX_PATH, _TRUNCATE, "%s\\%s", folderPathUtf8, fileUtf8);
                                         extern void StartAnimationPreview(const char* name);
                                         StartAnimationPreview(relPath);
                                         FindClose(hFind);
@@ -2367,14 +2367,14 @@ refresh_window:
                         FindClose(hFind);
                     }
 
-                    /** Process standalone .gif files for hover preview */
+                    /** Process standalone .gif and .webp files for hover preview */
                     WIN32_FIND_DATAW ffd2; HANDLE hFind2 = FindFirstFileW(wSearch, &ffd2);
                     if (hFind2 != INVALID_HANDLE_VALUE) {
                         do {
                             if (wcscmp(ffd2.cFileName, L".") == 0 || wcscmp(ffd2.cFileName, L"..") == 0) continue;
                             if (!(ffd2.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
                                 wchar_t* ext = wcsrchr(ffd2.cFileName, L'.');
-                                if (ext && (_wcsicmp(ext, L".gif") == 0)) {
+                                if (ext && (_wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0)) {
                                     if (nextId == menuItem) {
                                         char fileUtf8[MAX_PATH] = {0};
                                         WideCharToMultiByte(CP_UTF8, 0, ffd2.cFileName, -1, fileUtf8, MAX_PATH, NULL, NULL);

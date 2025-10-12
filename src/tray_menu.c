@@ -651,9 +651,9 @@ void ShowColorMenu(HWND hwnd) {
                         hasItems = TRUE;
                     }
                 } else {
-                    /** Handle GIF files */
+                    /** Handle GIF and WebP files */
                     wchar_t* ext = wcsrchr(ffd.cFileName, L'.');
-                    if (ext && _wcsicmp(ext, L".gif") == 0) {
+                    if (ext && (_wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0)) {
                         char gifUtf8[MAX_PATH] = {0};
                         WideCharToMultiByte(CP_UTF8, 0, ffd.cFileName, -1, gifUtf8, MAX_PATH, NULL, NULL);
                         
@@ -705,14 +705,14 @@ void ShowColorMenu(HWND hwnd) {
             FindClose(hFind);
         }
 
-        /** Enumerate .gif files and add them as selectable items */
+        /** Enumerate .gif and .webp files and add them as selectable items */
         WIN32_FIND_DATAW ffd2; HANDLE hFind2 = FindFirstFileW(wSearch, &ffd2);
         if (hFind2 != INVALID_HANDLE_VALUE) {
             do {
                 if (wcscmp(ffd2.cFileName, L".") == 0 || wcscmp(ffd2.cFileName, L"..") == 0) continue;
                 if (!(ffd2.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
                     wchar_t* ext = wcsrchr(ffd2.cFileName, L'.');
-                    if (ext && (_wcsicmp(ext, L".gif") == 0)) {
+                    if (ext && (_wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0)) {
                         char fileUtf8[MAX_PATH] = {0};
                         WideCharToMultiByte(CP_UTF8, 0, ffd2.cFileName, -1, fileUtf8, MAX_PATH, NULL, NULL);
                         UINT flags = MF_STRING;

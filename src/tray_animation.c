@@ -116,6 +116,11 @@ static BOOL IsGifSelection(const char* name) {
     return name && EndsWithIgnoreCase(name, ".gif");
 }
 
+/** @brief Detect if current animation name is a single WebP file */
+static BOOL IsWebPSelection(const char* name) {
+    return name && EndsWithIgnoreCase(name, ".webp");
+}
+
 /** @brief Alpha blend pixel onto canvas with proper compositing */
 static void BlendPixel(BYTE* canvas, UINT canvasStride, UINT x, UINT y, BYTE r, BYTE g, BYTE b, BYTE a) {
     if (a == 0) return; /** fully transparent, no change */
@@ -499,6 +504,235 @@ static void LoadTrayIconsFromGifPath(const char* utf8Path) {
     }
 }
 
+/** @brief Decode an animated WebP into HICON frames with per-frame delays */
+static void LoadTrayIconsFromWebPPath(const char* utf8Path) {
+    FreeTrayIcons();
+    if (!utf8Path || !*utf8Path) return;
+
+    wchar_t wPath[MAX_PATH] = {0};
+    MultiByteToWideChar(CP_UTF8, 0, utf8Path, -1, wPath, MAX_PATH);
+
+    int cx = GetSystemMetrics(SM_CXSMICON);
+    int cy = GetSystemMetrics(SM_CYSMICON);
+
+    HRESULT hrInit = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+    IWICImagingFactory* pFactory = NULL;
+    HRESULT hr = CoCreateInstance(&CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER, &IID_IWICImagingFactory, (void**)&pFactory);
+    if (FAILED(hr) || !pFactory) {
+        if (SUCCEEDED(hrInit)) CoUninitialize();
+        return;
+    }
+
+    /** Try to create WebP decoder - may fail on Windows 7 without codec pack */
+    IWICBitmapDecoder* pDecoder = NULL;
+    hr = pFactory->lpVtbl->CreateDecoderFromFilename(pFactory, wPath, NULL, GENERIC_READ, WICDecodeMetadataCacheOnLoad, &pDecoder);
+    if (FAILED(hr) || !pDecoder) {
+        /** WebP codec not available, fallback to treating as single frame */
+        if (pFactory) pFactory->lpVtbl->Release(pFactory);
+        if (SUCCEEDED(hrInit)) CoUninitialize();
+        return;
+    }
+
+    /** Check if this is an animated WebP by getting frame count */
+    UINT frameCount = 0;
+    if (FAILED(pDecoder->lpVtbl->GetFrameCount(pDecoder, &frameCount)) || frameCount == 0) {
+        pDecoder->lpVtbl->Release(pDecoder);
+        if (pFactory) pFactory->lpVtbl->Release(pFactory);
+        if (SUCCEEDED(hrInit)) CoUninitialize();
+        return;
+    }
+
+    /** Get canvas size from first frame */
+    UINT canvasWidth = 0, canvasHeight = 0;
+    IWICBitmapFrameDecode* pFirstFrame = NULL;
+    if (SUCCEEDED(pDecoder->lpVtbl->GetFrame(pDecoder, 0, &pFirstFrame)) && pFirstFrame) {
+        pFirstFrame->lpVtbl->GetSize(pFirstFrame, &canvasWidth, &canvasHeight);
+        pFirstFrame->lpVtbl->Release(pFirstFrame);
+    }
+    
+    if (canvasWidth == 0 || canvasHeight == 0) {
+        pDecoder->lpVtbl->Release(pDecoder);
+        if (pFactory) pFactory->lpVtbl->Release(pFactory);
+        if (SUCCEEDED(hrInit)) CoUninitialize();
+        return;
+    }
+    
+    /** Store global canvas dimensions */
+    g_gifCanvasWidth = canvasWidth;
+    g_gifCanvasHeight = canvasHeight;
+    
+    /** Allocate composition canvas */
+    UINT canvasStride = canvasWidth * 4; /** 32bpp PBGRA */
+    UINT canvasSize = canvasHeight * canvasStride;
+    g_gifCanvas = (BYTE*)malloc(canvasSize);
+    if (!g_gifCanvas) {
+        pDecoder->lpVtbl->Release(pDecoder);
+        if (pFactory) pFactory->lpVtbl->Release(pFactory);
+        if (SUCCEEDED(hrInit)) CoUninitialize();
+        return;
+    }
+    
+    /** Initialize canvas with transparent background */
+    memset(g_gifCanvas, 0, canvasSize);
+    
+    /** Process each frame */
+    for (UINT i = 0; i < frameCount && g_trayIconCount < MAX_TRAY_FRAMES; ++i) {
+        IWICBitmapFrameDecode* pFrame = NULL;
+        if (FAILED(pDecoder->lpVtbl->GetFrame(pDecoder, i, &pFrame)) || !pFrame) continue;
+
+        /** Read frame metadata for delay */
+        UINT delayMs = 100; /** default 100ms */
+        IWICMetadataQueryReader* pMeta = NULL;
+        if (SUCCEEDED(pFrame->lpVtbl->GetMetadataQueryReader(pFrame, &pMeta)) && pMeta) {
+            PROPVARIANT var; PropVariantInit(&var);
+            
+            /** WebP animation delay is typically in milliseconds */
+            if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/webp/delay", &var))) {
+                if (var.vt == VT_UI4) delayMs = var.ulVal;
+                else if (var.vt == VT_UI2) delayMs = var.uiVal;
+                else if (var.vt == VT_I4) delayMs = (UINT)var.lVal;
+                else if (var.vt == VT_I2) delayMs = (UINT)var.iVal;
+            }
+            PropVariantClear(&var);
+            pMeta->lpVtbl->Release(pMeta);
+        }
+        
+        /** Clear canvas for this frame (WebP typically replaces entire frame) */
+        memset(g_gifCanvas, 0, canvasSize);
+
+        /** Convert frame to 32bpp PBGRA */
+        IWICFormatConverter* pConverter = NULL;
+        hr = pFactory->lpVtbl->CreateFormatConverter(pFactory, &pConverter);
+        if (SUCCEEDED(hr) && pConverter) {
+            hr = pConverter->lpVtbl->Initialize(pConverter, (IWICBitmapSource*)pFrame, 
+                                              &GUID_WICPixelFormat32bppPBGRA, 
+                                              WICBitmapDitherTypeNone, NULL, 0.0, 
+                                              WICBitmapPaletteTypeCustom);
+            if (SUCCEEDED(hr)) {
+                UINT frameWidth, frameHeight;
+                pFrame->lpVtbl->GetSize(pFrame, &frameWidth, &frameHeight);
+                
+                /** Copy frame directly to canvas (WebP frames are typically full-size) */
+                UINT frameStride = frameWidth * 4;
+                UINT frameBufferSize = frameHeight * frameStride;
+                if (frameWidth == canvasWidth && frameHeight == canvasHeight) {
+                    /** Direct copy for full-size frames */
+                    pConverter->lpVtbl->CopyPixels(pConverter, NULL, canvasStride, canvasSize, g_gifCanvas);
+                } else {
+                    /** Scale or position frame if needed */
+                    BYTE* frameBuffer = (BYTE*)malloc(frameBufferSize);
+                    if (frameBuffer) {
+                        if (SUCCEEDED(pConverter->lpVtbl->CopyPixels(pConverter, NULL, frameStride, frameBufferSize, frameBuffer))) {
+                            /** Center the frame on canvas */
+                            UINT offsetX = (canvasWidth > frameWidth) ? (canvasWidth - frameWidth) / 2 : 0;
+                            UINT offsetY = (canvasHeight > frameHeight) ? (canvasHeight - frameHeight) / 2 : 0;
+                            
+                            for (UINT y = 0; y < frameHeight && (offsetY + y) < canvasHeight; y++) {
+                                for (UINT x = 0; x < frameWidth && (offsetX + x) < canvasWidth; x++) {
+                                    BYTE* srcPixel = frameBuffer + (y * frameStride) + (x * 4);
+                                    BYTE* dstPixel = g_gifCanvas + ((offsetY + y) * canvasStride) + ((offsetX + x) * 4);
+                                    dstPixel[0] = srcPixel[0]; /** B */
+                                    dstPixel[1] = srcPixel[1]; /** G */
+                                    dstPixel[2] = srcPixel[2]; /** R */
+                                    dstPixel[3] = srcPixel[3]; /** A */
+                                }
+                            }
+                        }
+                        free(frameBuffer);
+                    }
+                }
+            }
+            pConverter->lpVtbl->Release(pConverter);
+        }
+        
+        /** Scale canvas to icon size and create HICON */
+        IWICBitmap* pCanvasBitmap = NULL;
+        hr = pFactory->lpVtbl->CreateBitmapFromMemory(pFactory, canvasWidth, canvasHeight, 
+                                                    &GUID_WICPixelFormat32bppPBGRA, 
+                                                    canvasStride, canvasSize, g_gifCanvas, &pCanvasBitmap);
+        if (SUCCEEDED(hr) && pCanvasBitmap) {
+            IWICBitmapScaler* pScaler = NULL;
+            hr = pFactory->lpVtbl->CreateBitmapScaler(pFactory, &pScaler);
+            if (SUCCEEDED(hr) && pScaler) {
+                hr = pScaler->lpVtbl->Initialize(pScaler, (IWICBitmapSource*)pCanvasBitmap, 
+                                               cx, cy, WICBitmapInterpolationModeFant);
+                if (SUCCEEDED(hr)) {
+                    IWICFormatConverter* pFinalConverter = NULL;
+                    hr = pFactory->lpVtbl->CreateFormatConverter(pFactory, &pFinalConverter);
+                    if (SUCCEEDED(hr) && pFinalConverter) {
+                        hr = pFinalConverter->lpVtbl->Initialize(pFinalConverter, (IWICBitmapSource*)pScaler, 
+                                                               &GUID_WICPixelFormat32bppPBGRA, 
+                                                               WICBitmapDitherTypeNone, NULL, 0.0, 
+                                                               WICBitmapPaletteTypeCustom);
+                        if (SUCCEEDED(hr)) {
+                            BITMAPINFO bi; ZeroMemory(&bi, sizeof(bi));
+                            bi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+                            bi.bmiHeader.biWidth = cx;
+                            bi.bmiHeader.biHeight = -cy;
+                            bi.bmiHeader.biPlanes = 1;
+                            bi.bmiHeader.biBitCount = 32;
+                            bi.bmiHeader.biCompression = BI_RGB;
+                            VOID* pvBits = NULL;
+                            HBITMAP hbmColor = CreateDIBSection(NULL, &bi, DIB_RGB_COLORS, &pvBits, NULL, 0);
+                            if (hbmColor && pvBits) {
+                                UINT iconStride = (UINT)(cx * 4);
+                                UINT iconBufferSize = (UINT)(cy * iconStride);
+                                if (SUCCEEDED(pFinalConverter->lpVtbl->CopyPixels(pFinalConverter, NULL, iconStride, iconBufferSize, (BYTE*)pvBits))) {
+                                    ICONINFO ii; ZeroMemory(&ii, sizeof(ii));
+                                    ii.fIcon = TRUE;
+                                    ii.hbmColor = hbmColor;
+                                    
+                                    /** Create mask bitmap */
+                                    ii.hbmMask = CreateBitmap(cx, cy, 1, 1, NULL);
+                                    if (ii.hbmMask) {
+                                        HDC hdcMem = GetDC(NULL);
+                                        HDC hdcColor = CreateCompatibleDC(hdcMem);
+                                        HDC hdcMask = CreateCompatibleDC(hdcMem);
+                                        SelectObject(hdcColor, hbmColor);
+                                        SelectObject(hdcMask, ii.hbmMask);
+                                        
+                                        BitBlt(hdcMask, 0, 0, cx, cy, NULL, 0, 0, BLACKNESS);
+                                        SetBkColor(hdcColor, RGB(0,0,0));
+                                        BitBlt(hdcMask, 0, 0, cx, cy, hdcColor, 0, 0, SRCCOPY);
+                                        BitBlt(hdcMask, 0, 0, cx, cy, NULL, 0, 0, DSTINVERT);
+                                        
+                                        DeleteDC(hdcColor);
+                                        DeleteDC(hdcMask);
+                                        ReleaseDC(NULL, hdcMem);
+                                    }
+
+                                    HICON hIcon = CreateIconIndirect(&ii);
+                                    if (ii.hbmMask) DeleteObject(ii.hbmMask);
+                                    if (hIcon) {
+                                        g_trayIcons[g_trayIconCount] = hIcon;
+                                        g_frameDelaysMs[g_trayIconCount] = delayMs;
+                                        g_trayIconCount++;
+                                    }
+                                }
+                                DeleteObject(hbmColor);
+                            }
+                        }
+                        pFinalConverter->lpVtbl->Release(pFinalConverter);
+                    }
+                }
+                pScaler->lpVtbl->Release(pScaler);
+            }
+            pCanvasBitmap->lpVtbl->Release(pCanvasBitmap);
+        }
+        
+        pFrame->lpVtbl->Release(pFrame);
+    }
+    
+    pDecoder->lpVtbl->Release(pDecoder);
+    if (pFactory) pFactory->lpVtbl->Release(pFactory);
+    if (SUCCEEDED(hrInit)) CoUninitialize();
+
+    if (g_trayIconCount > 0) {
+        g_isGifAnimation = TRUE; /** Reuse GIF animation flag for WebP */
+        g_trayIconIndex = 0;
+    }
+}
+
 /** @brief Decode an animated GIF into preview HICON frames with per-frame delays */
 static void LoadPreviewIconsFromGifPath(const char* utf8Path) {
     FreePreviewIcons();
@@ -806,6 +1040,213 @@ static void LoadPreviewIconsFromGifPath(const char* utf8Path) {
     }
 }
 
+/** @brief Decode an animated WebP into preview HICON frames with per-frame delays */
+static void LoadPreviewIconsFromWebPPath(const char* utf8Path) {
+    FreePreviewIcons();
+    if (!utf8Path || !*utf8Path) return;
+
+    wchar_t wPath[MAX_PATH] = {0};
+    MultiByteToWideChar(CP_UTF8, 0, utf8Path, -1, wPath, MAX_PATH);
+
+    int cx = GetSystemMetrics(SM_CXSMICON);
+    int cy = GetSystemMetrics(SM_CYSMICON);
+
+    HRESULT hrInit = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+    IWICImagingFactory* pFactory = NULL;
+    HRESULT hr = CoCreateInstance(&CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER, &IID_IWICImagingFactory, (void**)&pFactory);
+    if (FAILED(hr) || !pFactory) {
+        if (SUCCEEDED(hrInit)) CoUninitialize();
+        return;
+    }
+
+    IWICBitmapDecoder* pDecoder = NULL;
+    hr = pFactory->lpVtbl->CreateDecoderFromFilename(pFactory, wPath, NULL, GENERIC_READ, WICDecodeMetadataCacheOnLoad, &pDecoder);
+    if (FAILED(hr) || !pDecoder) {
+        if (pFactory) pFactory->lpVtbl->Release(pFactory);
+        if (SUCCEEDED(hrInit)) CoUninitialize();
+        return;
+    }
+
+    UINT frameCount = 0;
+    if (FAILED(pDecoder->lpVtbl->GetFrameCount(pDecoder, &frameCount)) || frameCount == 0) {
+        pDecoder->lpVtbl->Release(pDecoder);
+        if (pFactory) pFactory->lpVtbl->Release(pFactory);
+        if (SUCCEEDED(hrInit)) CoUninitialize();
+        return;
+    }
+
+    UINT canvasWidth = 0, canvasHeight = 0;
+    IWICBitmapFrameDecode* pFirstFrame = NULL;
+    if (SUCCEEDED(pDecoder->lpVtbl->GetFrame(pDecoder, 0, &pFirstFrame)) && pFirstFrame) {
+        pFirstFrame->lpVtbl->GetSize(pFirstFrame, &canvasWidth, &canvasHeight);
+        pFirstFrame->lpVtbl->Release(pFirstFrame);
+    }
+    
+    if (canvasWidth == 0 || canvasHeight == 0) {
+        pDecoder->lpVtbl->Release(pDecoder);
+        if (pFactory) pFactory->lpVtbl->Release(pFactory);
+        if (SUCCEEDED(hrInit)) CoUninitialize();
+        return;
+    }
+    
+    UINT canvasStride = canvasWidth * 4;
+    UINT canvasSize = canvasHeight * canvasStride;
+    g_previewGifCanvas = (BYTE*)malloc(canvasSize);
+    if (!g_previewGifCanvas) {
+        pDecoder->lpVtbl->Release(pDecoder);
+        if (pFactory) pFactory->lpVtbl->Release(pFactory);
+        if (SUCCEEDED(hrInit)) CoUninitialize();
+        return;
+    }
+    
+    memset(g_previewGifCanvas, 0, canvasSize);
+    
+    for (UINT i = 0; i < frameCount && g_previewCount < MAX_TRAY_FRAMES; ++i) {
+        IWICBitmapFrameDecode* pFrame = NULL;
+        if (FAILED(pDecoder->lpVtbl->GetFrame(pDecoder, i, &pFrame)) || !pFrame) continue;
+
+        UINT delayMs = 100;
+        IWICMetadataQueryReader* pMeta = NULL;
+        if (SUCCEEDED(pFrame->lpVtbl->GetMetadataQueryReader(pFrame, &pMeta)) && pMeta) {
+            PROPVARIANT var; PropVariantInit(&var);
+            if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/webp/delay", &var))) {
+                if (var.vt == VT_UI4) delayMs = var.ulVal;
+                else if (var.vt == VT_UI2) delayMs = var.uiVal;
+                else if (var.vt == VT_I4) delayMs = (UINT)var.lVal;
+                else if (var.vt == VT_I2) delayMs = (UINT)var.iVal;
+            }
+            PropVariantClear(&var);
+            pMeta->lpVtbl->Release(pMeta);
+        }
+        
+        memset(g_previewGifCanvas, 0, canvasSize);
+
+        IWICFormatConverter* pConverter = NULL;
+        hr = pFactory->lpVtbl->CreateFormatConverter(pFactory, &pConverter);
+        if (SUCCEEDED(hr) && pConverter) {
+            hr = pConverter->lpVtbl->Initialize(pConverter, (IWICBitmapSource*)pFrame, 
+                                              &GUID_WICPixelFormat32bppPBGRA, 
+                                              WICBitmapDitherTypeNone, NULL, 0.0, 
+                                              WICBitmapPaletteTypeCustom);
+            if (SUCCEEDED(hr)) {
+                UINT frameWidth, frameHeight;
+                pFrame->lpVtbl->GetSize(pFrame, &frameWidth, &frameHeight);
+                
+                UINT frameStride = frameWidth * 4;
+                UINT frameBufferSize = frameHeight * frameStride;
+                if (frameWidth == canvasWidth && frameHeight == canvasHeight) {
+                    pConverter->lpVtbl->CopyPixels(pConverter, NULL, canvasStride, canvasSize, g_previewGifCanvas);
+                } else {
+                    BYTE* frameBuffer = (BYTE*)malloc(frameBufferSize);
+                    if (frameBuffer) {
+                        if (SUCCEEDED(pConverter->lpVtbl->CopyPixels(pConverter, NULL, frameStride, frameBufferSize, frameBuffer))) {
+                            UINT offsetX = (canvasWidth > frameWidth) ? (canvasWidth - frameWidth) / 2 : 0;
+                            UINT offsetY = (canvasHeight > frameHeight) ? (canvasHeight - frameHeight) / 2 : 0;
+                            
+                            for (UINT y = 0; y < frameHeight && (offsetY + y) < canvasHeight; y++) {
+                                for (UINT x = 0; x < frameWidth && (offsetX + x) < canvasWidth; x++) {
+                                    BYTE* srcPixel = frameBuffer + (y * frameStride) + (x * 4);
+                                    BYTE* dstPixel = g_previewGifCanvas + ((offsetY + y) * canvasStride) + ((offsetX + x) * 4);
+                                    dstPixel[0] = srcPixel[0];
+                                    dstPixel[1] = srcPixel[1];
+                                    dstPixel[2] = srcPixel[2];
+                                    dstPixel[3] = srcPixel[3];
+                                }
+                            }
+                        }
+                        free(frameBuffer);
+                    }
+                }
+            }
+            pConverter->lpVtbl->Release(pConverter);
+        }
+        
+        IWICBitmap* pCanvasBitmap = NULL;
+        hr = pFactory->lpVtbl->CreateBitmapFromMemory(pFactory, canvasWidth, canvasHeight, 
+                                                    &GUID_WICPixelFormat32bppPBGRA, 
+                                                    canvasStride, canvasSize, g_previewGifCanvas, &pCanvasBitmap);
+        if (SUCCEEDED(hr) && pCanvasBitmap) {
+            IWICBitmapScaler* pScaler = NULL;
+            hr = pFactory->lpVtbl->CreateBitmapScaler(pFactory, &pScaler);
+            if (SUCCEEDED(hr) && pScaler) {
+                hr = pScaler->lpVtbl->Initialize(pScaler, (IWICBitmapSource*)pCanvasBitmap, 
+                                               cx, cy, WICBitmapInterpolationModeFant);
+                if (SUCCEEDED(hr)) {
+                    IWICFormatConverter* pFinalConverter = NULL;
+                    hr = pFactory->lpVtbl->CreateFormatConverter(pFactory, &pFinalConverter);
+                    if (SUCCEEDED(hr) && pFinalConverter) {
+                        hr = pFinalConverter->lpVtbl->Initialize(pFinalConverter, (IWICBitmapSource*)pScaler, 
+                                                               &GUID_WICPixelFormat32bppPBGRA, 
+                                                               WICBitmapDitherTypeNone, NULL, 0.0, 
+                                                               WICBitmapPaletteTypeCustom);
+                        if (SUCCEEDED(hr)) {
+                            BITMAPINFO bi; ZeroMemory(&bi, sizeof(bi));
+                            bi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+                            bi.bmiHeader.biWidth = cx;
+                            bi.bmiHeader.biHeight = -cy;
+                            bi.bmiHeader.biPlanes = 1;
+                            bi.bmiHeader.biBitCount = 32;
+                            bi.bmiHeader.biCompression = BI_RGB;
+                            VOID* pvBits = NULL;
+                            HBITMAP hbmColor = CreateDIBSection(NULL, &bi, DIB_RGB_COLORS, &pvBits, NULL, 0);
+                            if (hbmColor && pvBits) {
+                                UINT iconStride = (UINT)(cx * 4);
+                                UINT iconBufferSize = (UINT)(cy * iconStride);
+                                if (SUCCEEDED(pFinalConverter->lpVtbl->CopyPixels(pFinalConverter, NULL, iconStride, iconBufferSize, (BYTE*)pvBits))) {
+                                    ICONINFO ii; ZeroMemory(&ii, sizeof(ii));
+                                    ii.fIcon = TRUE;
+                                    ii.hbmColor = hbmColor;
+
+                                    ii.hbmMask = CreateBitmap(cx, cy, 1, 1, NULL);
+                                    if (ii.hbmMask) {
+                                        HDC hdcMem = GetDC(NULL);
+                                        HDC hdcColor = CreateCompatibleDC(hdcMem);
+                                        HDC hdcMask = CreateCompatibleDC(hdcMem);
+                                        SelectObject(hdcColor, hbmColor);
+                                        SelectObject(hdcMask, ii.hbmMask);
+                                        
+                                        BitBlt(hdcMask, 0, 0, cx, cy, NULL, 0, 0, BLACKNESS);
+                                        SetBkColor(hdcColor, RGB(0,0,0));
+                                        BitBlt(hdcMask, 0, 0, cx, cy, hdcColor, 0, 0, SRCCOPY);
+                                        BitBlt(hdcMask, 0, 0, cx, cy, NULL, 0, 0, DSTINVERT);
+                                        
+                                        DeleteDC(hdcColor);
+                                        DeleteDC(hdcMask);
+                                        ReleaseDC(NULL, hdcMem);
+                                    }
+
+                                    HICON hIcon = CreateIconIndirect(&ii);
+                                    if (ii.hbmMask) DeleteObject(ii.hbmMask);
+                                    if (hIcon) {
+                                        g_previewIcons[g_previewCount] = hIcon;
+                                        g_previewFrameDelaysMs[g_previewCount] = delayMs;
+                                        g_previewCount++;
+                                    }
+                                }
+                                DeleteObject(hbmColor);
+                            }
+                        }
+                        pFinalConverter->lpVtbl->Release(pFinalConverter);
+                    }
+                }
+                pScaler->lpVtbl->Release(pScaler);
+            }
+            pCanvasBitmap->lpVtbl->Release(pCanvasBitmap);
+        }
+        
+        pFrame->lpVtbl->Release(pFrame);
+    }
+    
+    pDecoder->lpVtbl->Release(pDecoder);
+    if (pFactory) pFactory->lpVtbl->Release(pFactory);
+    if (SUCCEEDED(hrInit)) CoUninitialize();
+
+    if (g_previewCount > 0) {
+        g_isPreviewGif = TRUE; /** Reuse preview GIF flag for WebP */
+        g_previewIndex = 0;
+    }
+}
+
 /** @brief Load sequential icon frames from .ico and .png files */
 static void LoadTrayIcons(void) {
     FreeTrayIcons();
@@ -825,6 +1266,12 @@ static void LoadTrayIcons(void) {
     /** If selection is a single GIF file under animations root, decode frames from it */
     if (IsGifSelection(g_animationName)) {
         LoadTrayIconsFromGifPath(folder);
+        return;
+    }
+
+    /** If selection is a single WebP file under animations root, decode frames from it */
+    if (IsWebPSelection(g_animationName)) {
+        LoadTrayIconsFromWebPPath(folder);
         return;
     }
 
@@ -888,6 +1335,10 @@ static void LoadTrayIcons(void) {
     _snwprintf_s(wSearchJpeg, MAX_PATH, _TRUNCATE, L"%s\\*.jpeg", wFolder);
     AddFilesWithPattern(wSearchJpeg);
 
+    wchar_t wSearchWebP[MAX_PATH] = {0};
+    _snwprintf_s(wSearchWebP, MAX_PATH, _TRUNCATE, L"%s\\*.webp", wFolder);
+    AddFilesWithPattern(wSearchWebP);
+
     /** Skip GIF here; GIFs are selectable as sub-items and decoded via GIF pipeline */
 
     wchar_t wSearchTif[MAX_PATH] = {0};
@@ -922,7 +1373,7 @@ static void LoadTrayIcons(void) {
         const wchar_t* ext = wcsrchr(files[i].path, L'.');
         if (ext && (_wcsicmp(ext, L".ico") == 0)) {
             hIcon = (HICON)LoadImageW(NULL, files[i].path, IMAGE_ICON, 0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE);
-        } else if (ext && (_wcsicmp(ext, L".png") == 0 || _wcsicmp(ext, L".bmp") == 0 || _wcsicmp(ext, L".jpg") == 0 || _wcsicmp(ext, L".jpeg") == 0 || _wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".tif") == 0 || _wcsicmp(ext, L".tiff") == 0)) {
+        } else if (ext && (_wcsicmp(ext, L".png") == 0 || _wcsicmp(ext, L".bmp") == 0 || _wcsicmp(ext, L".jpg") == 0 || _wcsicmp(ext, L".jpeg") == 0 || _wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0 || _wcsicmp(ext, L".tif") == 0 || _wcsicmp(ext, L".tiff") == 0)) {
             int cx = GetSystemMetrics(SM_CXSMICON);
             int cy = GetSystemMetrics(SM_CYSMICON);
             /** WIC load png to HICON */
@@ -1134,7 +1585,7 @@ BOOL SetCurrentAnimationName(const char* name) {
                 do {
                     if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
                     wchar_t* ext = wcsrchr(ffd.cFileName, L'.');
-                    if (ext && (_wcsicmp(ext, L".ico") == 0 || _wcsicmp(ext, L".png") == 0 || _wcsicmp(ext, L".bmp") == 0 || _wcsicmp(ext, L".jpg") == 0 || _wcsicmp(ext, L".jpeg") == 0 || _wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".tif") == 0 || _wcsicmp(ext, L".tiff") == 0)) {
+                    if (ext && (_wcsicmp(ext, L".ico") == 0 || _wcsicmp(ext, L".png") == 0 || _wcsicmp(ext, L".bmp") == 0 || _wcsicmp(ext, L".jpg") == 0 || _wcsicmp(ext, L".jpeg") == 0 || _wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0 || _wcsicmp(ext, L".tif") == 0 || _wcsicmp(ext, L".tiff") == 0)) {
                         valid = TRUE; break;
                     }
                 } while (FindNextFileW(hFind, &ffd));
@@ -1142,6 +1593,8 @@ BOOL SetCurrentAnimationName(const char* name) {
             }
         } else if (IsGifSelection(name)) {
             valid = TRUE; /** a valid single GIF file */
+        } else if (IsWebPSelection(name)) {
+            valid = TRUE; /** a valid single WebP file */
         }
     }
     if (!valid) return FALSE;
@@ -1197,6 +1650,24 @@ void StartAnimationPreview(const char* name) {
             if (g_trayHwnd) {
                 AdvanceTrayFrame();
                 if (g_isPreviewGif) {
+                    UINT firstDelay = g_previewFrameDelaysMs[0] > 0 ? g_previewFrameDelaysMs[0] : (g_trayInterval ? g_trayInterval : 150);
+                    KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
+                    SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, firstDelay, (TIMERPROC)TrayAnimTimerProc);
+                }
+            }
+        }
+        return;
+    }
+    if (IsWebPSelection(name)) {
+        char webpPath[MAX_PATH] = {0};
+        BuildAnimationFolder(name, webpPath, sizeof(webpPath));
+        LoadPreviewIconsFromWebPPath(webpPath);
+        if (g_previewCount > 0) {
+            g_isPreviewActive = TRUE;
+            g_previewIndex = 0;
+            if (g_trayHwnd) {
+                AdvanceTrayFrame();
+                if (g_isPreviewGif) { /** Reuse preview GIF flag for WebP */
                     UINT firstDelay = g_previewFrameDelaysMs[0] > 0 ? g_previewFrameDelaysMs[0] : (g_trayInterval ? g_trayInterval : 150);
                     KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
                     SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, firstDelay, (TIMERPROC)TrayAnimTimerProc);
@@ -1267,6 +1738,9 @@ void StartAnimationPreview(const char* name) {
     wchar_t wSearchGif[MAX_PATH] = {0};
     _snwprintf_s(wSearchGif, MAX_PATH, _TRUNCATE, L"%s\\*.gif", wFolder);
     AddPreviewWithPattern(wSearchGif);
+    wchar_t wSearchWebP[MAX_PATH] = {0};
+    _snwprintf_s(wSearchWebP, MAX_PATH, _TRUNCATE, L"%s\\*.webp", wFolder);
+    AddPreviewWithPattern(wSearchWebP);
     wchar_t wSearchTif[MAX_PATH] = {0};
     _snwprintf_s(wSearchTif, MAX_PATH, _TRUNCATE, L"%s\\*.tif", wFolder);
     AddPreviewWithPattern(wSearchTif);
@@ -1294,7 +1768,7 @@ void StartAnimationPreview(const char* name) {
         const wchar_t* ext = wcsrchr(files[i].path, L'.');
         if (ext && (_wcsicmp(ext, L".ico") == 0)) {
             hIcon = (HICON)LoadImageW(NULL, files[i].path, IMAGE_ICON, 0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE);
-        } else if (ext && (_wcsicmp(ext, L".png") == 0 || _wcsicmp(ext, L".bmp") == 0 || _wcsicmp(ext, L".jpg") == 0 || _wcsicmp(ext, L".jpeg") == 0 || _wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".tif") == 0 || _wcsicmp(ext, L".tiff") == 0)) {
+        } else if (ext && (_wcsicmp(ext, L".png") == 0 || _wcsicmp(ext, L".bmp") == 0 || _wcsicmp(ext, L".jpg") == 0 || _wcsicmp(ext, L".jpeg") == 0 || _wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0 || _wcsicmp(ext, L".tif") == 0 || _wcsicmp(ext, L".tiff") == 0)) {
             int cx = GetSystemMetrics(SM_CXSMICON);
             int cy = GetSystemMetrics(SM_CYSMICON);
             IWICImagingFactory* pFactory = NULL;
@@ -1451,15 +1925,15 @@ BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id) {
                     }
                     (*nextIdPtr)++;
                 } else {
-                    /** Handle GIF files */
+                    /** Handle GIF and WebP files */
                     wchar_t* ext = wcsrchr(ffd.cFileName, L'.');
-                    if (ext && _wcsicmp(ext, L".gif") == 0) {
+                    if (ext && (_wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0)) {
                         if (*nextIdPtr == targetId) {
-                            char gifUtf8[MAX_PATH] = {0};
-                            WideCharToMultiByte(CP_UTF8, 0, ffd.cFileName, -1, gifUtf8, MAX_PATH, NULL, NULL);
+                            char fileUtf8[MAX_PATH] = {0};
+                            WideCharToMultiByte(CP_UTF8, 0, ffd.cFileName, -1, fileUtf8, MAX_PATH, NULL, NULL);
                             
                             char relPath[MAX_PATH] = {0};
-                            _snprintf_s(relPath, MAX_PATH, _TRUNCATE, "%s\\%s", folderPathUtf8, gifUtf8);
+                            _snprintf_s(relPath, MAX_PATH, _TRUNCATE, "%s\\%s", folderPathUtf8, fileUtf8);
                             BOOL result = SetCurrentAnimationName(relPath);
                             FindClose(hFind);
                             return result;
@@ -1504,14 +1978,14 @@ BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id) {
             FindClose(hFind);
         }
 
-        /** Process standalone .gif files for menu command handling */
+        /** Process standalone .gif and .webp files for menu command handling */
         WIN32_FIND_DATAW ffd2; HANDLE hFind2 = FindFirstFileW(wSearch, &ffd2);
         if (hFind2 != INVALID_HANDLE_VALUE) {
             do {
                 if (wcscmp(ffd2.cFileName, L".") == 0 || wcscmp(ffd2.cFileName, L"..") == 0) continue;
                 if (!(ffd2.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
                     wchar_t* ext = wcsrchr(ffd2.cFileName, L'.');
-                    if (ext && (_wcsicmp(ext, L".gif") == 0)) {
+                    if (ext && (_wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0)) {
                         if (nextId == id) {
                             char fileUtf8[MAX_PATH] = {0};
                             WideCharToMultiByte(CP_UTF8, 0, ffd2.cFileName, -1, fileUtf8, MAX_PATH, NULL, NULL);
