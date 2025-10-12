@@ -611,6 +611,72 @@ void ShowColorMenu(HWND hwnd) {
             AppendMenuW(hAnimMenu, flags, CLOCK_IDM_ANIMATIONS_USE_LOGO, GetLocalizedString(L"使用Logo", L"Use Logo"));
             AppendMenuW(hAnimMenu, MF_SEPARATOR, 0, NULL);
         }
+        /** Recursive helper function to build menu for a folder */
+        HMENU BuildFolderMenuRecursive(const wchar_t* folderPathW, const char* folderPathUtf8, UINT* nextIdPtr, const char* currentAnim) {
+            wchar_t wSearch[MAX_PATH] = {0};
+            _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s\\*", folderPathW);
+            
+            WIN32_FIND_DATAW ffd;
+            HANDLE hFind = FindFirstFileW(wSearch, &ffd);
+            if (hFind == INVALID_HANDLE_VALUE) return NULL;
+            
+            HMENU hSubMenu = CreatePopupMenu();
+            BOOL hasItems = FALSE;
+            
+            do {
+                if (wcscmp(ffd.cFileName, L".") == 0 || wcscmp(ffd.cFileName, L"..") == 0) continue;
+                
+                if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+                    /** Recursively handle subdirectories */
+                    char subFolderUtf8[MAX_PATH] = {0};
+                    WideCharToMultiByte(CP_UTF8, 0, ffd.cFileName, -1, subFolderUtf8, MAX_PATH, NULL, NULL);
+                    
+                    wchar_t wSubFolderPath[MAX_PATH] = {0};
+                    _snwprintf_s(wSubFolderPath, MAX_PATH, _TRUNCATE, L"%s\\%s", folderPathW, ffd.cFileName);
+                    
+                    char subFolderPathUtf8[MAX_PATH] = {0};
+                    _snprintf_s(subFolderPathUtf8, MAX_PATH, _TRUNCATE, "%s\\%s", folderPathUtf8, subFolderUtf8);
+                    
+                    HMENU hSubSubMenu = BuildFolderMenuRecursive(wSubFolderPath, subFolderPathUtf8, nextIdPtr, currentAnim);
+                    if (hSubSubMenu) {
+                        AppendMenuW(hSubMenu, MF_POPUP, (UINT_PTR)hSubSubMenu, ffd.cFileName);
+                        hasItems = TRUE;
+                    } else {
+                        /** No content in subfolder, add as simple folder option */
+                        UINT flags = MF_STRING;
+                        if (currentAnim && _stricmp(subFolderPathUtf8, currentAnim) == 0) {
+                            flags |= MF_CHECKED;
+                        }
+                        AppendMenuW(hSubMenu, flags, (*nextIdPtr)++, ffd.cFileName);
+                        hasItems = TRUE;
+                    }
+                } else {
+                    /** Handle GIF files */
+                    wchar_t* ext = wcsrchr(ffd.cFileName, L'.');
+                    if (ext && _wcsicmp(ext, L".gif") == 0) {
+                        char gifUtf8[MAX_PATH] = {0};
+                        WideCharToMultiByte(CP_UTF8, 0, ffd.cFileName, -1, gifUtf8, MAX_PATH, NULL, NULL);
+                        
+                        char relPath[MAX_PATH] = {0};
+                        _snprintf_s(relPath, MAX_PATH, _TRUNCATE, "%s\\%s", folderPathUtf8, gifUtf8);
+                        UINT gifFlags = MF_STRING;
+                        if (currentAnim && _stricmp(relPath, currentAnim) == 0) {
+                            gifFlags |= MF_CHECKED;
+                        }
+                        AppendMenuW(hSubMenu, gifFlags, (*nextIdPtr)++, ffd.cFileName);
+                        hasItems = TRUE;
+                    }
+                }
+            } while (FindNextFileW(hFind, &ffd));
+            FindClose(hFind);
+            
+            if (!hasItems) {
+                DestroyMenu(hSubMenu);
+                return NULL;
+            }
+            return hSubMenu;
+        }
+
         if (hFind != INVALID_HANDLE_VALUE) {
             do {
                 if (wcscmp(ffd.cFileName, L".") == 0 || wcscmp(ffd.cFileName, L"..") == 0) continue;
@@ -618,48 +684,15 @@ void ShowColorMenu(HWND hwnd) {
                     char folderUtf8[MAX_PATH] = {0};
                     WideCharToMultiByte(CP_UTF8, 0, ffd.cFileName, -1, folderUtf8, MAX_PATH, NULL, NULL);
 
-                    /** Check if this folder contains any GIF files */
-                    wchar_t wSubSearch[MAX_PATH] = {0};
-                    _snwprintf_s(wSubSearch, MAX_PATH, _TRUNCATE, L"%s\\%s\\*.gif", wRoot, ffd.cFileName);
-                    WIN32_FIND_DATAW ffdGif; 
-                    HANDLE hFindGif = FindFirstFileW(wSubSearch, &ffdGif);
-                    BOOL hasGifs = (hFindGif != INVALID_HANDLE_VALUE);
-                    if (hFindGif != INVALID_HANDLE_VALUE) {
-                        FindClose(hFindGif);
-                    }
-
-                    if (hasGifs) {
-                        /** Build a submenu for this folder: list *.gif files only */
-                        HMENU hFolderMenu = CreatePopupMenu();
-
-                        /** enumerate GIFs inside the folder and add each as an option */
-                        hFindGif = FindFirstFileW(wSubSearch, &ffdGif);
-                        if (hFindGif != INVALID_HANDLE_VALUE) {
-                            do {
-                                if (ffdGif.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
-                                wchar_t* ext = wcsrchr(ffdGif.cFileName, L'.');
-                                if (!ext || _wcsicmp(ext, L".gif") != 0) continue;
-                                
-                                char gifUtf8[MAX_PATH] = {0};
-                                WideCharToMultiByte(CP_UTF8, 0, ffdGif.cFileName, -1, gifUtf8, MAX_PATH, NULL, NULL);
-
-                                /** check current selection state: folder\\gif */
-                                char relPath[MAX_PATH] = {0};
-                                _snprintf_s(relPath, MAX_PATH, _TRUNCATE, "%s\\%s", folderUtf8, gifUtf8);
-                                UINT gifFlags = MF_STRING;
-                                if (currentAnim && _stricmp(relPath, currentAnim) == 0) {
-                                    gifFlags |= MF_CHECKED;
-                                }
-                                AppendMenuW(hFolderMenu, gifFlags, nextId++, ffdGif.cFileName);
-                            } while (FindNextFileW(hFindGif, &ffdGif));
-                            FindClose(hFindGif);
-                        }
-
-                        /** add the folder submenu to the animations menu */
+                    wchar_t wFolderPath[MAX_PATH] = {0};
+                    _snwprintf_s(wFolderPath, MAX_PATH, _TRUNCATE, L"%s\\%s", wRoot, ffd.cFileName);
+                    
+                    HMENU hFolderMenu = BuildFolderMenuRecursive(wFolderPath, folderUtf8, &nextId, currentAnim);
+                    if (hFolderMenu) {
                         AppendMenuW(hAnimMenu, MF_POPUP, (UINT_PTR)hFolderMenu, ffd.cFileName);
                         hasAny = TRUE;
                     } else {
-                        /** No GIFs in folder, add as simple folder option */
+                        /** No GIFs or subfolders with content, add as simple folder option */
                         UINT flags = MF_STRING;
                         if (currentAnim && _stricmp(folderUtf8, currentAnim) == 0) {
                             flags |= MF_CHECKED;

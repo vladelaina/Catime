@@ -2276,6 +2276,66 @@ refresh_window:
                     wchar_t wSearch[MAX_PATH] = {0};
                     _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s\\*", wRoot);
 
+                    /** Recursive helper function to match menu items for hover preview */
+                    BOOL FindAnimationByIdRecursive(const wchar_t* folderPathW, const char* folderPathUtf8, UINT* nextIdPtr, UINT targetId) {
+                        wchar_t wSearch[MAX_PATH] = {0};
+                        _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s\\*", folderPathW);
+                        
+                        WIN32_FIND_DATAW ffd;
+                        HANDLE hFind = FindFirstFileW(wSearch, &ffd);
+                        if (hFind == INVALID_HANDLE_VALUE) return FALSE;
+                        
+                        do {
+                            if (wcscmp(ffd.cFileName, L".") == 0 || wcscmp(ffd.cFileName, L"..") == 0) continue;
+                            
+                            if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+                                /** Recursively handle subdirectories */
+                                char subFolderUtf8[MAX_PATH] = {0};
+                                WideCharToMultiByte(CP_UTF8, 0, ffd.cFileName, -1, subFolderUtf8, MAX_PATH, NULL, NULL);
+                                
+                                wchar_t wSubFolderPath[MAX_PATH] = {0};
+                                _snwprintf_s(wSubFolderPath, MAX_PATH, _TRUNCATE, L"%s\\%s", folderPathW, ffd.cFileName);
+                                
+                                char subFolderPathUtf8[MAX_PATH] = {0};
+                                _snprintf_s(subFolderPathUtf8, MAX_PATH, _TRUNCATE, "%s\\%s", folderPathUtf8, subFolderUtf8);
+                                
+                                if (FindAnimationByIdRecursive(wSubFolderPath, subFolderPathUtf8, nextIdPtr, targetId)) {
+                                    FindClose(hFind);
+                                    return TRUE;
+                                }
+                                
+                                /** Check if this is a simple folder option (no content) */
+                                if (*nextIdPtr == targetId) {
+                                    extern void StartAnimationPreview(const char* name);
+                                    StartAnimationPreview(subFolderPathUtf8);
+                                    FindClose(hFind);
+                                    return TRUE;
+                                }
+                                (*nextIdPtr)++;
+                            } else {
+                                /** Handle GIF files */
+                                wchar_t* ext = wcsrchr(ffd.cFileName, L'.');
+                                if (ext && _wcsicmp(ext, L".gif") == 0) {
+                                    if (*nextIdPtr == targetId) {
+                                        char gifUtf8[MAX_PATH] = {0};
+                                        WideCharToMultiByte(CP_UTF8, 0, ffd.cFileName, -1, gifUtf8, MAX_PATH, NULL, NULL);
+                                        
+                                        char relPath[MAX_PATH] = {0};
+                                        _snprintf_s(relPath, MAX_PATH, _TRUNCATE, "%s\\%s", folderPathUtf8, gifUtf8);
+                                        extern void StartAnimationPreview(const char* name);
+                                        StartAnimationPreview(relPath);
+                                        FindClose(hFind);
+                                        return TRUE;
+                                    }
+                                    (*nextIdPtr)++;
+                                }
+                            }
+                        } while (FindNextFileW(hFind, &ffd));
+                        FindClose(hFind);
+                        
+                        return FALSE;
+                    }
+
                     /** Process folders and their contents for hover preview */
                     WIN32_FIND_DATAW ffd; HANDLE hFind = FindFirstFileW(wSearch, &ffd);
                     UINT nextId = CLOCK_IDM_ANIMATIONS_BASE;
@@ -2286,49 +2346,22 @@ refresh_window:
                                 char folderUtf8[MAX_PATH] = {0};
                                 WideCharToMultiByte(CP_UTF8, 0, ffd.cFileName, -1, folderUtf8, MAX_PATH, NULL, NULL);
 
-                                /** Check if this folder contains any GIF files */
-                                wchar_t wSubSearch[MAX_PATH] = {0};
-                                _snwprintf_s(wSubSearch, MAX_PATH, _TRUNCATE, L"%s\\%s\\*.gif", wRoot, ffd.cFileName);
-                                WIN32_FIND_DATAW ffdGif; 
-                                HANDLE hFindGif = FindFirstFileW(wSubSearch, &ffdGif);
-                                BOOL hasGifs = (hFindGif != INVALID_HANDLE_VALUE);
-                                if (hFindGif != INVALID_HANDLE_VALUE) {
-                                    FindClose(hFindGif);
+                                wchar_t wFolderPath[MAX_PATH] = {0};
+                                _snwprintf_s(wFolderPath, MAX_PATH, _TRUNCATE, L"%s\\%s", wRoot, ffd.cFileName);
+                                
+                                if (FindAnimationByIdRecursive(wFolderPath, folderUtf8, &nextId, menuItem)) {
+                                    FindClose(hFind);
+                                    return 0;
                                 }
-
-                                if (hasGifs) {
-                                    /** gif items inside this folder */
-                                    hFindGif = FindFirstFileW(wSubSearch, &ffdGif);
-                                    if (hFindGif != INVALID_HANDLE_VALUE) {
-                                        do {
-                                            if (ffdGif.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
-                                            wchar_t* ext = wcsrchr(ffdGif.cFileName, L'.');
-                                            if (!ext || _wcsicmp(ext, L".gif") != 0) continue;
-                                            if (nextId == menuItem) {
-                                                char gifUtf8[MAX_PATH] = {0};
-                                                WideCharToMultiByte(CP_UTF8, 0, ffdGif.cFileName, -1, gifUtf8, MAX_PATH, NULL, NULL);
-                                                char rel[MAX_PATH];
-                                                _snprintf_s(rel, MAX_PATH, _TRUNCATE, "%s\\%s", folderUtf8, gifUtf8);
-                                                extern void StartAnimationPreview(const char* name);
-                                                StartAnimationPreview(rel);
-                                                FindClose(hFindGif);
-                                                FindClose(hFind);
-                                                return 0;
-                                            }
-                                            nextId++;
-                                        } while (FindNextFileW(hFindGif, &ffdGif));
-                                        FindClose(hFindGif);
-                                    }
-                                } else {
-                                    /** No GIFs in folder, simple folder option */
-                                    if (nextId == menuItem) {
-                                        extern void StartAnimationPreview(const char* name);
-                                        StartAnimationPreview(folderUtf8);
-                                        FindClose(hFind);
-                                        return 0;
-                                    }
-                                    nextId++;
+                                
+                                /** Check if this is a simple folder option (no content) */
+                                if (nextId == menuItem) {
+                                    extern void StartAnimationPreview(const char* name);
+                                    StartAnimationPreview(folderUtf8);
+                                    FindClose(hFind);
+                                    return 0;
                                 }
+                                nextId++;
                             }
                         } while (FindNextFileW(hFind, &ffd));
                         FindClose(hFind);
