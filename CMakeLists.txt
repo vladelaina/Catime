@@ -101,6 +101,7 @@ target_link_libraries(catime PRIVATE
     gdi32
     shlwapi
     advapi32
+    iphlpapi
 )
 
 # Set output directory - use custom output dir if specified

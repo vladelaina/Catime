@@ -9,12 +9,57 @@
 #include "../resource/resource.h"
 #include "../include/tray.h"
 #include "../include/tray_animation.h"
+#include "../include/system_monitor.h"
 
 /** @brief Global tray icon data structure for Shell_NotifyIcon operations */
 NOTIFYICONDATAW nid;
 
 /** @brief Custom Windows message ID for taskbar recreation events */
 UINT WM_TASKBARCREATED = 0;
+
+/** @brief Timer ID for periodically updating tray tooltip with CPU/MEM */
+#define TRAY_TIP_TIMER_ID 42421
+
+/**
+ * @brief TimerProc to refresh tray tooltip text with version + CPU/MEM usage.
+ */
+static void CALLBACK TrayTipTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time) {
+    (void)msg; (void)id; (void)time;
+
+    float cpu = 0.0f, mem = 0.0f;
+    SystemMonitor_GetUsage(&cpu, &mem);
+
+    float upBps = 0.0f, downBps = 0.0f;
+    BOOL hasNet = SystemMonitor_GetNetSpeed(&upBps, &downBps);
+
+    wchar_t tip[256] = {0};
+    if (hasNet) {
+        double up = (double)upBps;
+        double down = (double)downBps;
+        const wchar_t* upUnit = L"B/s";
+        const wchar_t* downUnit = L"B/s";
+        double upVal = up;
+        double downVal = down;
+        if (upVal >= 1024.0) { upVal /= 1024.0; upUnit = L"KB/s"; }
+        if (upVal >= 1024.0) { upVal /= 1024.0; upUnit = L"MB/s"; }
+        if (upVal >= 1024.0) { upVal /= 1024.0; upUnit = L"GB/s"; }
+        if (downVal >= 1024.0) { downVal /= 1024.0; downUnit = L"KB/s"; }
+        if (downVal >= 1024.0) { downVal /= 1024.0; downUnit = L"MB/s"; }
+        if (downVal >= 1024.0) { downVal /= 1024.0; downUnit = L"GB/s"; }
+        swprintf_s(tip, _countof(tip), L"CPU %.1f%%\nMemory %.1f%%\nUpload %.1f %s\nDownload %.1f %s",
+                   cpu, mem, upVal, upUnit, downVal, downUnit);
+    } else {
+        swprintf_s(tip, _countof(tip), L"CPU %.1f%%\nMemory %.1f%%", cpu, mem);
+    }
+
+    NOTIFYICONDATAW n = {0};
+    n.cbSize = sizeof(n);
+    n.hWnd = nid.hWnd;
+    n.uID = nid.uID;
+    n.uFlags = NIF_TIP;
+    wcsncpy_s(n.szTip, _countof(n.szTip), tip, _TRUNCATE);
+    Shell_NotifyIconW(NIM_MODIFY, &n);
+}
 
 /**
  * @brief Register for taskbar recreation notification messages
@@ -43,12 +88,8 @@ void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
     nid.hWnd = hwnd;
     nid.uCallbackMessage = CLOCK_WM_TRAYICON;
     
-    /** Build version-aware tooltip text for tray icon hover */
-    wchar_t versionText[128] = {0};
-    wchar_t versionWide[64] = {0};
-    MultiByteToWideChar(CP_UTF8, 0, CATIME_VERSION, -1, versionWide, _countof(versionWide));
-    swprintf_s(versionText, _countof(versionText), L"Catime %s", versionWide);
-    wcscpy_s(nid.szTip, _countof(nid.szTip), versionText);
+    /** Default tooltip text before first monitor refresh */
+    wcscpy_s(nid.szTip, _countof(nid.szTip), L"CPU --.-%\nMemory --.-%\nUpload --.- ?/s\nDownload --.- ?/s");
     
     Shell_NotifyIconW(NIM_ADD, &nid);
     
@@ -56,6 +97,11 @@ void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
     if (WM_TASKBARCREATED == 0) {
         RegisterTaskbarCreatedMessage();
     }
+
+    /** Initialize system monitor and start periodic tooltip updates */
+    SystemMonitor_Init();
+    SystemMonitor_SetUpdateIntervalMs(1000);
+    SetTimer(hwnd, TRAY_TIP_TIMER_ID, 1000, (TIMERPROC)TrayTipTimerProc);
 }
 
 /**
@@ -63,6 +109,10 @@ void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
  * Cleanly removes icon when application exits or hides
  */
 void RemoveTrayIcon(void) {
+    if (nid.hWnd) {
+        KillTimer(nid.hWnd, TRAY_TIP_TIMER_ID);
+    }
+    SystemMonitor_Shutdown();
     Shell_NotifyIconW(NIM_DELETE, &nid);
 }
 
