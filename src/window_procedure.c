@@ -873,25 +873,31 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         /** Helper (wide-char): recursively find font by ID and output relative wide path */
                         BOOL FindFontByIdRecursiveW(const wchar_t* folderPathW, int targetId, int* currentId,
                                                     wchar_t* foundRelativePathW, const wchar_t* fontsFolderRootW) {
-                            wchar_t searchPathW[MAX_PATH];
+                            wchar_t* searchPathW = (wchar_t*)malloc(MAX_PATH * sizeof(wchar_t));
+                            WIN32_FIND_DATAW* findDataW = (WIN32_FIND_DATAW*)malloc(sizeof(WIN32_FIND_DATAW));
+                            if (!searchPathW || !findDataW) {
+                                if (searchPathW) free(searchPathW);
+                                if (findDataW) free(findDataW);
+                                return FALSE;
+                            }
+
                             _snwprintf_s(searchPathW, MAX_PATH, _TRUNCATE, L"%s\\*", folderPathW);
 
-                            WIN32_FIND_DATAW findDataW;
-                            HANDLE hFind = FindFirstFileW(searchPathW, &findDataW);
+                            HANDLE hFind = FindFirstFileW(searchPathW, findDataW);
 
                             if (hFind != INVALID_HANDLE_VALUE) {
                                 do {
                                     /** Skip . and .. entries */
-                                    if (wcscmp(findDataW.cFileName, L".") == 0 || wcscmp(findDataW.cFileName, L"..") == 0) {
+                                    if (wcscmp(findDataW->cFileName, L".") == 0 || wcscmp(findDataW->cFileName, L"..") == 0) {
                                         continue;
                                     }
 
                                     wchar_t fullItemPathW[MAX_PATH];
-                                    _snwprintf_s(fullItemPathW, MAX_PATH, _TRUNCATE, L"%s\\%s", folderPathW, findDataW.cFileName);
+                                    _snwprintf_s(fullItemPathW, MAX_PATH, _TRUNCATE, L"%s\\%s", folderPathW, findDataW->cFileName);
 
                                     /** Handle regular font files */
-                                    if (!(findDataW.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
-                                        wchar_t* extW = wcsrchr(findDataW.cFileName, L'.');
+                                    if (!(findDataW->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+                                        wchar_t* extW = wcsrchr(findDataW->cFileName, L'.');
                                         if (extW && (_wcsicmp(extW, L".ttf") == 0 || _wcsicmp(extW, L".otf") == 0)) {
                                             if (*currentId == targetId) {
                                                 /** Calculate relative path from fonts folder root */
@@ -903,10 +909,12 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                                                     foundRelativePathW[MAX_PATH - 1] = L'\0';
                                                 } else {
                                                     /** Fallback to filename only */
-                                                    wcsncpy(foundRelativePathW, findDataW.cFileName, MAX_PATH - 1);
+                                                    wcsncpy(foundRelativePathW, findDataW->cFileName, MAX_PATH - 1);
                                                     foundRelativePathW[MAX_PATH - 1] = L'\0';
                                                 }
                                                 FindClose(hFind);
+                                                free(searchPathW);
+                                                free(findDataW);
                                                 return TRUE;
                                             }
                                             (*currentId)++;
@@ -915,12 +923,16 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                                         /** Handle subdirectories recursively */
                                         if (FindFontByIdRecursiveW(fullItemPathW, targetId, currentId, foundRelativePathW, fontsFolderRootW)) {
                                             FindClose(hFind);
+                                            free(searchPathW);
+                                            free(findDataW);
                                             return TRUE;
                                         }
                                     }
-                                } while (FindNextFileW(hFind, &findDataW));
+                                } while (FindNextFileW(hFind, findDataW));
                                 FindClose(hFind);
                             }
+                            free(searchPathW);
+                            free(findDataW);
                             return FALSE;
                         }
 
@@ -1235,7 +1247,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     
                     RegisterGlobalHotkeys(hwnd);
                     
-                    break;
+                    return 0;
                 }
                 
                 /** Timer control commands */
@@ -2234,23 +2246,30 @@ refresh_window:
                     /** Wide-char helper: find relative font path by ID (for Unicode filenames) */
                     BOOL FindFontNameByIdRecursiveW(const wchar_t* folderPathW, int targetId, int* currentId,
                                                     wchar_t* foundRelativePathW, const wchar_t* fontsFolderRootW) {
-                        wchar_t searchPathW[MAX_PATH];
+                        wchar_t* searchPathW = (wchar_t*)malloc(MAX_PATH * sizeof(wchar_t));
+                        WIN32_FIND_DATAW* findDataW = (WIN32_FIND_DATAW*)malloc(sizeof(WIN32_FIND_DATAW));
+                        if (!searchPathW || !findDataW) {
+                            if (searchPathW) free(searchPathW);
+                            if (findDataW) free(findDataW);
+                            return FALSE;
+                        }
+
                         _snwprintf_s(searchPathW, MAX_PATH, _TRUNCATE, L"%s\\*", folderPathW);
 
-                        WIN32_FIND_DATAW findDataW;
-                        HANDLE hFind = FindFirstFileW(searchPathW, &findDataW);
+                        HANDLE hFind = FindFirstFileW(searchPathW, findDataW);
 
                         if (hFind != INVALID_HANDLE_VALUE) {
                             do {
-                                if (wcscmp(findDataW.cFileName, L".") == 0 || wcscmp(findDataW.cFileName, L"..") == 0) {
+                                /** Skip . and .. entries */
+                                if (wcscmp(findDataW->cFileName, L".") == 0 || wcscmp(findDataW->cFileName, L"..") == 0) {
                                     continue;
                                 }
 
                                 wchar_t fullItemPathW[MAX_PATH];
-                                _snwprintf_s(fullItemPathW, MAX_PATH, _TRUNCATE, L"%s\\%s", folderPathW, findDataW.cFileName);
+                                _snwprintf_s(fullItemPathW, MAX_PATH, _TRUNCATE, L"%s\\%s", folderPathW, findDataW->cFileName);
 
-                                if (!(findDataW.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
-                                    wchar_t* extW = wcsrchr(findDataW.cFileName, L'.');
+                                if (!(findDataW->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+                                    wchar_t* extW = wcsrchr(findDataW->cFileName, L'.');
                                     if (extW && (_wcsicmp(extW, L".ttf") == 0 || _wcsicmp(extW, L".otf") == 0)) {
                                         if (*currentId == targetId) {
                                             size_t rootLen = wcslen(fontsFolderRootW);
@@ -2261,10 +2280,12 @@ refresh_window:
                                                 foundRelativePathW[MAX_PATH - 1] = L'\0';
                                             } else {
                                                 /** Fallback to filename only */
-                                                wcsncpy(foundRelativePathW, findDataW.cFileName, MAX_PATH - 1);
+                                                wcsncpy(foundRelativePathW, findDataW->cFileName, MAX_PATH - 1);
                                                 foundRelativePathW[MAX_PATH - 1] = L'\0';
                                             }
                                             FindClose(hFind);
+                                            free(searchPathW);
+                                            free(findDataW);
                                             return TRUE;
                                         }
                                         (*currentId)++;
@@ -2272,12 +2293,16 @@ refresh_window:
                                 } else {
                                     if (FindFontNameByIdRecursiveW(fullItemPathW, targetId, currentId, foundRelativePathW, fontsFolderRootW)) {
                                         FindClose(hFind);
+                                        free(searchPathW);
+                                        free(findDataW);
                                         return TRUE;
                                     }
                                 }
-                            } while (FindNextFileW(hFind, &findDataW));
+                            } while (FindNextFileW(hFind, findDataW));
                             FindClose(hFind);
                         }
+                        free(searchPathW);
+                        free(findDataW);
                         return FALSE;
                     }
 
@@ -2304,6 +2329,7 @@ refresh_window:
                             return 0;
                         }
                     }
+                    return 0;
                 }
 
                 /** Handle animation preview on hover for fixed "Use Logo" item */

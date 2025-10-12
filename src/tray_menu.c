@@ -429,34 +429,41 @@ void ShowColorMenu(HWND hwnd) {
     /** Recursive function to scan folder and create submenus */
     /** Returns: 0 = no content, 1 = has content but no current font, 2 = contains current font */
     int ScanFontFolder(const char* folderPath, HMENU parentMenu, int* fontId) {
-        /** Convert folder path to wide character */
-        wchar_t wFolderPath[MAX_PATH];
+        /** Use heap allocation for buffers to prevent stack overflow in deep recursion */
+        wchar_t* wFolderPath = (wchar_t*)malloc(MAX_PATH * sizeof(wchar_t));
+        wchar_t* wSearchPath = (wchar_t*)malloc(MAX_PATH * sizeof(wchar_t));
+        WIN32_FIND_DATAW* findData = (WIN32_FIND_DATAW*)malloc(sizeof(WIN32_FIND_DATAW));
+
+        if (!wFolderPath || !wSearchPath || !findData) {
+            if (wFolderPath) free(wFolderPath);
+            if (wSearchPath) free(wSearchPath);
+            if (findData) free(findData);
+            return 0;
+        }
+
         MultiByteToWideChar(CP_UTF8, 0, folderPath, -1, wFolderPath, MAX_PATH);
-        
-        wchar_t wSearchPath[MAX_PATH];
         swprintf(wSearchPath, MAX_PATH, L"%s\\*", wFolderPath);
         
-        WIN32_FIND_DATAW findData;
-        HANDLE hFind = FindFirstFileW(wSearchPath, &findData);
+        HANDLE hFind = FindFirstFileW(wSearchPath, findData);
         int folderStatus = 0; /** 0 = no content, 1 = has content, 2 = contains current font */
         
         if (hFind != INVALID_HANDLE_VALUE) {
             do {
                 /** Skip . and .. entries */
-                if (wcscmp(findData.cFileName, L".") == 0 || wcscmp(findData.cFileName, L"..") == 0) {
+                if (wcscmp(findData->cFileName, L".") == 0 || wcscmp(findData->cFileName, L"..") == 0) {
                     continue;
                 }
                 
                 wchar_t wFullItemPath[MAX_PATH];
-                swprintf(wFullItemPath, MAX_PATH, L"%s\\%s", wFolderPath, findData.cFileName);
+                swprintf(wFullItemPath, MAX_PATH, L"%s\\%s", wFolderPath, findData->cFileName);
                 
                 /** Handle regular font files */
-                if (!(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
-                    wchar_t* ext = wcsrchr(findData.cFileName, L'.');
+                if (!(findData->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+                    wchar_t* ext = wcsrchr(findData->cFileName, L'.');
                     if (ext && (_wcsicmp(ext, L".ttf") == 0 || _wcsicmp(ext, L".otf") == 0)) {
                         /** Remove extension for display */
                         wchar_t wDisplayName[MAX_PATH];
-                        wcsncpy(wDisplayName, findData.cFileName, MAX_PATH - 1);
+                        wcsncpy(wDisplayName, findData->cFileName, MAX_PATH - 1);
                         wDisplayName[MAX_PATH - 1] = L'\0';
                         wchar_t* dotPos = wcsrchr(wDisplayName, L'.');
                         if (dotPos) *dotPos = L'\0';
@@ -492,7 +499,7 @@ void ShowColorMenu(HWND hwnd) {
                     }
                 }
                 /** Handle subdirectories recursively */
-                else if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+                else if (findData->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
                     /** Create submenu for this folder */
                     HMENU hSubFolderMenu = CreatePopupMenu();
                     
@@ -505,7 +512,7 @@ void ShowColorMenu(HWND hwnd) {
                     
                     /** Use wide character folder name directly (no conversion needed) */
                     wchar_t wFolderName[MAX_PATH];
-                    wcsncpy(wFolderName, findData.cFileName, MAX_PATH - 1);
+                    wcsncpy(wFolderName, findData->cFileName, MAX_PATH - 1);
                     wFolderName[MAX_PATH - 1] = L'\0';
                     
                     /** Always add the submenu, even if empty */
@@ -529,10 +536,14 @@ void ShowColorMenu(HWND hwnd) {
                         folderStatus = 1; /** This folder has content but not the current font */
                     }
                 }
-            } while (FindNextFileW(hFind, &findData));
+            } while (FindNextFileW(hFind, findData));
             FindClose(hFind);
         }
         
+        free(wFolderPath);
+        free(wSearchPath);
+        free(findData);
+
         return folderStatus;
     }
     
