@@ -600,11 +600,19 @@ void ShowColorMenu(HWND hwnd) {
         WIN32_FIND_DATAW ffd; HANDLE hFind = FindFirstFileW(wSearch, &ffd);
         UINT nextId = CLOCK_IDM_ANIMATIONS_BASE;
         BOOL hasAny = FALSE;
+        const char* currentAnim = GetCurrentAnimationName();
         if (hFind != INVALID_HANDLE_VALUE) {
             do {
                 if (wcscmp(ffd.cFileName, L".") == 0 || wcscmp(ffd.cFileName, L"..") == 0) continue;
                 if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-                    AppendMenuW(hAnimMenu, MF_STRING, nextId++, ffd.cFileName);
+                    /** Compare with current animation to set check mark */
+                    char folderUtf8[MAX_PATH] = {0};
+                    WideCharToMultiByte(CP_UTF8, 0, ffd.cFileName, -1, folderUtf8, MAX_PATH, NULL, NULL);
+                    UINT flags = MF_STRING;
+                    if (currentAnim && _stricmp(folderUtf8, currentAnim) == 0) {
+                        flags |= MF_CHECKED;
+                    }
+                    AppendMenuW(hAnimMenu, flags, nextId++, ffd.cFileName);
                     hasAny = TRUE;
                 }
             } while (FindNextFileW(hFind, &ffd));

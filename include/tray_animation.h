@@ -24,6 +24,17 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs);
  */
 void StopTrayAnimation(HWND hwnd);
 
+/**
+ * @brief Get current animation folder name
+ */
+const char* GetCurrentAnimationName(void);
+
+/**
+ * @brief Set current animation folder name and persist to config
+ * @return TRUE if changed and reloaded successfully
+ */
+BOOL SetCurrentAnimationName(const char* name);
+
 #endif
 
 

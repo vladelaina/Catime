@@ -5,6 +5,7 @@
 #include "../include/config.h"
 #include "../include/language.h"
 #include "../resource/resource.h"
+#include "../include/tray_animation.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -570,6 +571,9 @@ void CreateDefaultConfig(const char* config_path) {
     WriteIniString(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_FILE", "", config_path);
     WriteIniInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_VOLUME", 100, config_path);
     WriteIniString(INI_SECTION_NOTIFICATION, "NOTIFICATION_DISABLED", "FALSE", config_path);
+    
+    /** Default animation settings (show full virtual path like fonts) */
+    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_NAME", "%LOCALAPPDATA%\\Catime\\resources\\animations\\cat", config_path);
     
 
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_SHOW_TIME", "None", config_path);
@@ -2012,6 +2016,16 @@ void WriteConfig(const char* config_path) {
     
 
     WriteIniString(INI_SECTION_COLORS, "COLOR_OPTIONS", colorOptionsStr, config_path);
+    
+    /** Persist current tray animation name */
+    {
+        const char* anim = GetCurrentAnimationName();
+        if (anim && anim[0] != '\0') {
+            char animPath[MAX_PATH];
+            snprintf(animPath, sizeof(animPath), "%%LOCALAPPDATA%%\\Catime\\resources\\animations\\%s", anim);
+            WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_NAME", animPath, config_path);
+        }
+    }
 }
 
 
