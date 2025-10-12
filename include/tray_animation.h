@@ -45,6 +45,14 @@ void StartAnimationPreview(const char* name);
  */
 void CancelAnimationPreview(void);
 
+/**
+ * @brief Handle menu commands related to animations.
+ * @param hwnd Main window handle
+ * @param id The command identifier of the menu item.
+ * @return TRUE if the command was handled, FALSE otherwise.
+ */
+BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id);
+
 #endif
 
 

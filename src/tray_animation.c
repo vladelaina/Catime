@@ -73,43 +73,25 @@ static void BuildAnimationFolder(const char* name, char* path, size_t size) {
     }
 }
 
-/** @brief Free all loaded icon frames */
-static void FreeTrayIcons(void) {
-    for (int i = 0; i < g_trayIconCount; ++i) {
-        if (g_trayIcons[i]) {
-            DestroyIcon(g_trayIcons[i]);
-            g_trayIcons[i] = NULL;
+/** @brief Free a set of icon resources, including the composition canvas */
+static void FreeIconSet(HICON icons[], int* count, int* index, BOOL* isAnimated, BYTE** canvas, BOOL resetCanvasSize) {
+    for (int i = 0; i < *count; ++i) {
+        if (icons[i]) {
+            DestroyIcon(icons[i]);
+            icons[i] = NULL;
         }
     }
-    g_trayIconCount = 0;
-    g_trayIconIndex = 0;
-    g_isAnimated = FALSE;
+    *count = 0;
+    *index = 0;
+    *isAnimated = FALSE;
     
-    /** Free GIF composition canvas */
-    if (g_animCanvas) {
-        free(g_animCanvas);
-        g_animCanvas = NULL;
+    if (*canvas) {
+        free(*canvas);
+        *canvas = NULL;
     }
-    g_animCanvasWidth = 0;
-    g_animCanvasHeight = 0;
-}
-
-/** @brief Free preview icon frames */
-static void FreePreviewIcons(void) {
-    for (int i = 0; i < g_previewCount; ++i) {
-        if (g_previewIcons[i]) {
-            DestroyIcon(g_previewIcons[i]);
-            g_previewIcons[i] = NULL;
-        }
-    }
-    g_previewCount = 0;
-    g_previewIndex = 0;
-    g_isPreviewAnimated = FALSE;
-    
-    /** Free preview GIF composition canvas */
-    if (g_previewAnimCanvas) {
-        free(g_previewAnimCanvas);
-        g_previewAnimCanvas = NULL;
+    if (resetCanvasSize) {
+        g_animCanvasWidth = 0;
+        g_animCanvasHeight = 0;
     }
 }
 
@@ -294,9 +276,9 @@ static HICON CreateIconFromPBGRA(IWICImagingFactory* pFactory,
 /** @brief Generic animated image decoding routine for GIF and WebP */
 static void LoadAnimatedImage(const char* utf8Path, DecodeTarget* target) {
     if (target->icons == g_trayIcons) {
-        FreeTrayIcons();
+        FreeIconSet(g_trayIcons, &g_trayIconCount, &g_trayIconIndex, &g_isAnimated, &g_animCanvas, TRUE);
     } else {
-        FreePreviewIcons();
+        FreeIconSet(g_previewIcons, &g_previewCount, &g_previewIndex, &g_isPreviewAnimated, &g_previewAnimCanvas, FALSE);
     }
     if (!utf8Path || !*utf8Path) return;
 
@@ -628,7 +610,7 @@ static void LoadAnimationByName(const char* name, BOOL isPreview) {
     BYTE** canvas;
 
     if (isPreview) {
-        FreePreviewIcons();
+        FreeIconSet(g_previewIcons, &g_previewCount, &g_previewIndex, &g_isPreviewAnimated, &g_previewAnimCanvas, FALSE);
         icons = g_previewIcons;
         count = &g_previewCount;
         index = &g_previewIndex;
@@ -636,7 +618,7 @@ static void LoadAnimationByName(const char* name, BOOL isPreview) {
         delays = g_previewFrameDelaysMs;
         canvas = &g_previewAnimCanvas;
     } else {
-        FreeTrayIcons();
+        FreeIconSet(g_trayIcons, &g_trayIconCount, &g_trayIconIndex, &g_isAnimated, &g_animCanvas, TRUE);
         icons = g_trayIcons;
         count = &g_trayIconCount;
         index = &g_trayIconIndex;
@@ -761,8 +743,8 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
 
 void StopTrayAnimation(HWND hwnd) {
     KillTimer(hwnd, TRAY_ANIM_TIMER_ID);
-    FreeTrayIcons();
-    FreePreviewIcons();
+    FreeIconSet(g_trayIcons, &g_trayIconCount, &g_trayIconIndex, &g_isAnimated, &g_animCanvas, TRUE);
+    FreeIconSet(g_previewIcons, &g_previewCount, &g_previewIndex, &g_isPreviewAnimated, &g_previewAnimCanvas, FALSE);
     g_trayHwnd = NULL;
 }
 
@@ -873,8 +855,7 @@ void StartAnimationPreview(const char* name) {
 void CancelAnimationPreview(void) {
     if (!g_isPreviewActive) return;
     g_isPreviewActive = FALSE;
-    FreePreviewIcons();
-    g_previewIndex = 0;
+    FreeIconSet(g_previewIcons, &g_previewCount, &g_previewIndex, &g_isPreviewAnimated, &g_previewAnimCanvas, FALSE);
     if (g_trayHwnd) {
         AdvanceTrayFrame();
         /** Restore timer for normal animation if needed */
