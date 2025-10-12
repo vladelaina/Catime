@@ -212,7 +212,7 @@ const char* GetCurrentAnimationName(void) {
 BOOL SetCurrentAnimationName(const char* name) {
     if (!name || !*name) return FALSE;
 
-    /** Validate the folder contains any numeric-named .ico */
+    /** Validate the folder contains any .ico */
     char folder[MAX_PATH] = {0};
     BuildAnimationFolder(name, folder, sizeof(folder));
     wchar_t wFolder[MAX_PATH] = {0};
@@ -224,13 +224,8 @@ BOOL SetCurrentAnimationName(const char* name) {
     if (hFind != INVALID_HANDLE_VALUE) {
         do {
             if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
-            wchar_t* dot = wcsrchr(ffd.cFileName, L'.');
-            if (!dot) continue;
-            size_t nameLen = (size_t)(dot - ffd.cFileName);
-            if (nameLen == 0) continue;
-            BOOL allDigits = TRUE;
-            for (size_t i = 0; i < nameLen; ++i) { if (!iswdigit(ffd.cFileName[i])) { allDigits = FALSE; break; } }
-            if (allDigits) { hasAny = TRUE; break; }
+            hasAny = TRUE;
+            break;
         } while (FindNextFileW(hFind, &ffd));
         FindClose(hFind);
     }
