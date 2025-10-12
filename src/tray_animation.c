@@ -51,7 +51,7 @@ static int g_trayIconCount = 0;
 static int g_trayIconIndex = 0;
 static UINT g_trayInterval = 0;
 static HWND g_trayHwnd = NULL;
-static char g_animationName[64] = "__logo__"; /** current folder under animations */
+static char g_animationName[MAX_PATH] = "__logo__"; /** current folder under animations */
 static BOOL g_isPreviewActive = FALSE; /** preview mode flag */
 static HICON g_previewIcons[MAX_TRAY_FRAMES];
 static int g_previewCount = 0;
@@ -725,7 +725,7 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
     /** Read current animation name from config */
     char config_path[MAX_PATH] = {0};
     GetConfigPath(config_path, sizeof(config_path));
-    char nameBuf[64] = {0};
+    char nameBuf[MAX_PATH] = {0};
     ReadIniString(INI_SECTION_OPTIONS, "ANIMATION_NAME", "__logo__", nameBuf, sizeof(nameBuf), config_path);
     if (nameBuf[0] != '\0') {
         const char* prefix = "%LOCALAPPDATA%\\Catime\\resources\\animations\\";
@@ -886,7 +886,7 @@ void CancelAnimationPreview(void) {
 void PreloadAnimationFromConfig(void) {
     char config_path[MAX_PATH] = {0};
     GetConfigPath(config_path, sizeof(config_path));
-    char nameBuf[64] = {0};
+    char nameBuf[MAX_PATH] = {0};
     ReadIniString(INI_SECTION_OPTIONS, "ANIMATION_NAME", "__logo__", nameBuf, sizeof(nameBuf), config_path);
     if (nameBuf[0] != '\0') {
         const char* prefix = "%LOCALAPPDATA%\\Catime\\resources\\animations\\";
@@ -971,8 +971,9 @@ BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id) {
         UINT nextId = CLOCK_IDM_ANIMATIONS_BASE;
 
         /** Recursive helper to find animation by ID */
-        BOOL FindAnimationByIdRecursive(const wchar_t* folderPathW, const char* folderPathUtf8, UINT* nextIdPtr, UINT targetId) {
-            AnimationEntry entries[MAX_TRAY_FRAMES];
+        BOOL FindAnimationByIdRecursive(const wchar_t* folderPathW, const char* folderPathUtf8, UINT* nextIdPtr, UINT targetId, AnimationEntry* found_entry) {
+            AnimationEntry* entries = (AnimationEntry*)malloc(sizeof(AnimationEntry) * MAX_TRAY_FRAMES);
+            if (!entries) return FALSE;
             int entryCount = 0;
 
             wchar_t wSearch[MAX_PATH] = {0};
@@ -980,7 +981,10 @@ BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id) {
             
             WIN32_FIND_DATAW ffd;
             HANDLE hFind = FindFirstFileW(wSearch, &ffd);
-            if (hFind == INVALID_HANDLE_VALUE) return FALSE;
+            if (hFind == INVALID_HANDLE_VALUE) {
+                free(entries);
+                return FALSE;
+            }
 
             do {
                 if (wcscmp(ffd.cFileName, L".") == 0 || wcscmp(ffd.cFileName, L"..") == 0) continue;
@@ -991,9 +995,13 @@ BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id) {
                 wcsncpy(e->name, ffd.cFileName, MAX_PATH - 1);
                 e->name[MAX_PATH - 1] = L'\0';
 
-                char itemUtf8[MAX_PATH] = {0};
-                WideCharToMultiByte(CP_UTF8, 0, ffd.cFileName, -1, itemUtf8, MAX_PATH, NULL, NULL);
+            char itemUtf8[MAX_PATH] = {0};
+            WideCharToMultiByte(CP_UTF8, 0, ffd.cFileName, -1, itemUtf8, MAX_PATH, NULL, NULL);
+            if (folderPathUtf8 && folderPathUtf8[0] != '\0') {
                 _snprintf_s(e->rel_path_utf8, MAX_PATH, _TRUNCATE, "%s\\%s", folderPathUtf8, itemUtf8);
+            } else {
+                _snprintf_s(e->rel_path_utf8, MAX_PATH, _TRUNCATE, "%s", itemUtf8);
+            }
                 
                 if (e->is_dir) {
                     entryCount++;
@@ -1006,7 +1014,10 @@ BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id) {
             } while (FindNextFileW(hFind, &ffd));
             FindClose(hFind);
 
-            if (entryCount == 0) return FALSE;
+            if (entryCount == 0) {
+                free(entries);
+                return FALSE;
+            }
             qsort(entries, entryCount, sizeof(AnimationEntry), CompareAnimationEntries);
 
             for (int i = 0; i < entryCount; ++i) {
@@ -1018,23 +1029,29 @@ BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id) {
                     if (IsAnimationLeafFolderW(wSubFolderPath)) {
                         // This is a leaf folder, it's a single clickable item.
                         if (*nextIdPtr == targetId) {
-                            return SetCurrentAnimationName(e->rel_path_utf8);
+                            *found_entry = *e;
+                            free(entries);
+                            return TRUE;
                         }
                         (*nextIdPtr)++;
                     } else {
                         // This is a branch folder (submenu), recurse without incrementing ID for the folder itself.
-                        if (FindAnimationByIdRecursive(wSubFolderPath, e->rel_path_utf8, nextIdPtr, targetId)) {
+                        if (FindAnimationByIdRecursive(wSubFolderPath, e->rel_path_utf8, nextIdPtr, targetId, found_entry)) {
+                            free(entries);
                             return TRUE;
                         }
                     }
                 } else {
                     // This is a file (.gif/.webp), it's a single clickable item.
                     if (*nextIdPtr == targetId) {
-                        return SetCurrentAnimationName(e->rel_path_utf8);
+                        *found_entry = *e;
+                        free(entries);
+                        return TRUE;
                     }
                     (*nextIdPtr)++;
                 }
             }
+            free(entries);
             return FALSE;
         }
 
@@ -1082,8 +1099,9 @@ BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id) {
                         }
                         nextId++;
                     } else {
-                        if (FindAnimationByIdRecursive(wFolderPath, e->rel_path_utf8, &nextId, id)) {
-                            return TRUE;
+                        AnimationEntry found_entry;
+                        if (FindAnimationByIdRecursive(wFolderPath, e->rel_path_utf8, &nextId, id, &found_entry)) {
+                            return SetCurrentAnimationName(found_entry.rel_path_utf8);
                         }
                     }
                 } else {

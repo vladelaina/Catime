@@ -651,70 +651,88 @@ void ShowColorMenu(HWND hwnd) {
                     CLOCK_IDM_ANIMATIONS_USE_LOGO, GetLocalizedString(L"使用Logo", L"Use Logo"));
         AppendMenuW(hAnimMenu, MF_SEPARATOR, 0, NULL);
 
-        /** Recursive helper function to build menu for a folder */
-        void BuildFolderMenuRecursive(HMENU parentMenu, const wchar_t* folderPathW, const char* folderPathUtf8, UINT* nextIdPtr, const char* currentAnim) {
-            AnimationEntry entries[MAX_TRAY_FRAMES];
+        /** Recursive helper function to build menu for a folder; returns TRUE if subtree contains currentAnim */
+        BOOL BuildFolderMenuRecursive(HMENU parentMenu, const wchar_t* folderPathW, const char* folderPathUtf8, UINT* nextIdPtr, const char* currentAnim) {
+            AnimationEntry* entries = (AnimationEntry*)malloc(sizeof(AnimationEntry) * MAX_TRAY_FRAMES);
+            if (!entries) return FALSE;
             int entryCount = 0;
-
-            wchar_t wSearch[MAX_PATH] = {0};
-            _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s\\*", folderPathW);
-            
-            WIN32_FIND_DATAW ffd;
-            HANDLE hFind = FindFirstFileW(wSearch, &ffd);
-            if (hFind == INVALID_HANDLE_VALUE) return;
-
-            do {
-                if (wcscmp(ffd.cFileName, L".") == 0 || wcscmp(ffd.cFileName, L"..") == 0) continue;
-                if (entryCount >= MAX_TRAY_FRAMES) break;
-
-                AnimationEntry* e = &entries[entryCount];
-                e->is_dir = (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
-                wcsncpy(e->name, ffd.cFileName, MAX_PATH - 1);
-                e->name[MAX_PATH - 1] = L'\0';
-
-                char itemUtf8[MAX_PATH] = {0};
-                WideCharToMultiByte(CP_UTF8, 0, ffd.cFileName, -1, itemUtf8, MAX_PATH, NULL, NULL);
-                _snprintf_s(e->rel_path_utf8, MAX_PATH, _TRUNCATE, "%s\\%s", folderPathUtf8, itemUtf8);
-                
-                if (e->is_dir) {
-                    entryCount++;
-                } else {
-                    wchar_t* ext = wcsrchr(e->name, L'.');
-                    if (ext && (_wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0)) {
-                        entryCount++;
-                    }
-                }
-            } while (FindNextFileW(hFind, &ffd));
-            FindClose(hFind);
-
-            if (entryCount == 0) return;
-            qsort(entries, entryCount, sizeof(AnimationEntry), CompareAnimationEntries);
-
-            for (int i = 0; i < entryCount; ++i) {
-                AnimationEntry* e = &entries[i];
-                if (e->is_dir) {
-                    wchar_t wSubFolderPath[MAX_PATH] = {0};
-                    _snwprintf_s(wSubFolderPath, MAX_PATH, _TRUNCATE, L"%s\\%s", folderPathW, e->name);
-                    
-                    if (IsAnimationLeafFolderW(wSubFolderPath)) {
-                        // Leaf folder, add as a clickable item.
-                        UINT flags = MF_STRING | (currentAnim && _stricmp(e->rel_path_utf8, currentAnim) == 0 ? MF_CHECKED : 0);
-                        AppendMenuW(parentMenu, flags, (*nextIdPtr)++, e->name);
-                    } else {
-                        // Branch folder, create a submenu.
-                        HMENU hSubMenu = CreatePopupMenu();
-                        BuildFolderMenuRecursive(hSubMenu, wSubFolderPath, e->rel_path_utf8, nextIdPtr, currentAnim);
-                        AppendMenuW(parentMenu, MF_POPUP, (UINT_PTR)hSubMenu, e->name);
-                    }
-                } else {
-                    // File item.
-                    UINT flags = MF_STRING | (currentAnim && _stricmp(e->rel_path_utf8, currentAnim) == 0 ? MF_CHECKED : 0);
-                    AppendMenuW(parentMenu, flags, (*nextIdPtr)++, e->name);
-                }
+ 
+             wchar_t wSearch[MAX_PATH] = {0};
+             _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s\\*", folderPathW);
+             
+             WIN32_FIND_DATAW ffd;
+             HANDLE hFind = FindFirstFileW(wSearch, &ffd);
+            if (hFind == INVALID_HANDLE_VALUE) {
+                free(entries);
+                return FALSE;
             }
-        }
+ 
+             do {
+                 if (wcscmp(ffd.cFileName, L".") == 0 || wcscmp(ffd.cFileName, L"..") == 0) continue;
+                 if (entryCount >= MAX_TRAY_FRAMES) break;
+ 
+                 AnimationEntry* e = &entries[entryCount];
+                 e->is_dir = (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+                 wcsncpy(e->name, ffd.cFileName, MAX_PATH - 1);
+                 e->name[MAX_PATH - 1] = L'\0';
+ 
+                 char itemUtf8[MAX_PATH] = {0};
+                 WideCharToMultiByte(CP_UTF8, 0, ffd.cFileName, -1, itemUtf8, MAX_PATH, NULL, NULL);
+                 if (folderPathUtf8 && folderPathUtf8[0] != '\0') {
+                     _snprintf_s(e->rel_path_utf8, MAX_PATH, _TRUNCATE, "%s\\%s", folderPathUtf8, itemUtf8);
+                 } else {
+                     _snprintf_s(e->rel_path_utf8, MAX_PATH, _TRUNCATE, "%s", itemUtf8);
+                 }
+                 
+                 if (e->is_dir) {
+                     entryCount++;
+                 } else {
+                     wchar_t* ext = wcsrchr(e->name, L'.');
+                     if (ext && (_wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0)) {
+                         entryCount++;
+                     }
+                 }
+             } while (FindNextFileW(hFind, &ffd));
+             FindClose(hFind);
+ 
+             if (entryCount == 0) {
+                 free(entries);
+                 return FALSE;
+             }
+             qsort(entries, entryCount, sizeof(AnimationEntry), CompareAnimationEntries);
+ 
+             BOOL subtreeHasCurrent = FALSE;
+             for (int i = 0; i < entryCount; ++i) {
+                 AnimationEntry* e = &entries[i];
+                 if (e->is_dir) {
+                     wchar_t wSubFolderPath[MAX_PATH] = {0};
+                     _snwprintf_s(wSubFolderPath, MAX_PATH, _TRUNCATE, L"%s\\%s", folderPathW, e->name);
+                     
+                     if (IsAnimationLeafFolderW(wSubFolderPath)) {
+                         // Leaf folder, add as a clickable item.
+                         UINT flags = MF_STRING | (currentAnim && _stricmp(e->rel_path_utf8, currentAnim) == 0 ? MF_CHECKED : 0);
+                         AppendMenuW(parentMenu, flags, (*nextIdPtr)++, e->name);
+                         if (flags & MF_CHECKED) subtreeHasCurrent = TRUE;
+                     } else {
+                         // Branch folder, create a submenu.
+                         HMENU hSubMenu = CreatePopupMenu();
+                         BOOL childHas = BuildFolderMenuRecursive(hSubMenu, wSubFolderPath, e->rel_path_utf8, nextIdPtr, currentAnim);
+                         UINT folderFlags = MF_POPUP | (childHas ? MF_CHECKED : 0);
+                         if (childHas) subtreeHasCurrent = TRUE;
+                         AppendMenuW(parentMenu, folderFlags, (UINT_PTR)hSubMenu, e->name);
+                     }
+                 } else {
+                     // File item.
+                     UINT flags = MF_STRING | (currentAnim && _stricmp(e->rel_path_utf8, currentAnim) == 0 ? MF_CHECKED : 0);
+                     AppendMenuW(parentMenu, flags, (*nextIdPtr)++, e->name);
+                     if (flags & MF_CHECKED) subtreeHasCurrent = TRUE;
+                 }
+             }
+             free(entries);
+             return subtreeHasCurrent;
+         }
 
-        BuildFolderMenuRecursive(hAnimMenu, wRoot, "", &nextId, currentAnim);
+        (void)BuildFolderMenuRecursive(hAnimMenu, wRoot, "", &nextId, currentAnim);
         
         // Fallback message if no items were added at all.
         if (GetMenuItemCount(hAnimMenu) <= 2) { // Logo and separator are always there

@@ -2325,7 +2325,8 @@ refresh_window:
 
                     /** Recursive helper function to match menu items for hover preview */
                     BOOL FindAnimationByIdRecursive(const wchar_t* folderPathW, const char* folderPathUtf8, UINT* nextIdPtr, UINT targetId) {
-                        AnimationEntry entries[MAX_TRAY_FRAMES];
+                        AnimationEntry* entries = (AnimationEntry*)malloc(sizeof(AnimationEntry) * MAX_TRAY_FRAMES);
+                        if (!entries) return FALSE;
                         int entryCount = 0;
 
                         wchar_t wSearch[MAX_PATH] = {0};
@@ -2333,7 +2334,10 @@ refresh_window:
                         
                         WIN32_FIND_DATAW ffd;
                         HANDLE hFind = FindFirstFileW(wSearch, &ffd);
-                        if (hFind == INVALID_HANDLE_VALUE) return FALSE;
+                        if (hFind == INVALID_HANDLE_VALUE) {
+                            free(entries);
+                            return FALSE;
+                        }
 
                         do {
                             if (wcscmp(ffd.cFileName, L".") == 0 || wcscmp(ffd.cFileName, L"..") == 0) continue;
@@ -2346,7 +2350,11 @@ refresh_window:
 
                             char itemUtf8[MAX_PATH] = {0};
                             WideCharToMultiByte(CP_UTF8, 0, ffd.cFileName, -1, itemUtf8, MAX_PATH, NULL, NULL);
-                            _snprintf_s(e->rel_path_utf8, MAX_PATH, _TRUNCATE, "%s\\%s", folderPathUtf8, itemUtf8);
+                            if (folderPathUtf8 && folderPathUtf8[0] != '\0') {
+                                _snprintf_s(e->rel_path_utf8, MAX_PATH, _TRUNCATE, "%s\\%s", folderPathUtf8, itemUtf8);
+                            } else {
+                                _snprintf_s(e->rel_path_utf8, MAX_PATH, _TRUNCATE, "%s", itemUtf8);
+                            }
                             
                             if (e->is_dir) {
                                 entryCount++;
@@ -2359,7 +2367,10 @@ refresh_window:
                         } while (FindNextFileW(hFind, &ffd));
                         FindClose(hFind);
 
-                        if (entryCount == 0) return FALSE;
+                        if (entryCount == 0) {
+                            free(entries);
+                            return FALSE;
+                        }
                         qsort(entries, entryCount, sizeof(AnimationEntry), CompareAnimationEntries);
 
                         for (int i = 0; i < entryCount; ++i) {
@@ -2372,11 +2383,13 @@ refresh_window:
                                     if (*nextIdPtr == targetId) {
                                         extern void StartAnimationPreview(const char* name);
                                         StartAnimationPreview(e->rel_path_utf8);
+                                        free(entries);
                                         return TRUE;
                                     }
                                     (*nextIdPtr)++;
                                 } else {
                                     if (FindAnimationByIdRecursive(wSubFolderPath, e->rel_path_utf8, nextIdPtr, targetId)) {
+                                        free(entries);
                                         return TRUE;
                                     }
                                 }
@@ -2384,11 +2397,13 @@ refresh_window:
                                 if (*nextIdPtr == targetId) {
                                     extern void StartAnimationPreview(const char* name);
                                     StartAnimationPreview(e->rel_path_utf8);
+                                    free(entries);
                                     return TRUE;
                                 }
                                 (*nextIdPtr)++;
                             }
                         }
+                        free(entries);
                         return FALSE;
                     }
 
