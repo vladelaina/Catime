@@ -573,7 +573,7 @@ void CreateDefaultConfig(const char* config_path) {
     WriteIniString(INI_SECTION_NOTIFICATION, "NOTIFICATION_DISABLED", "FALSE", config_path);
     
     /** Default animation settings (show full virtual path like fonts) */
-    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_NAME", "__logo__", config_path);
+    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_PATH", "__logo__", config_path);
     
 
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_SHOW_TIME", "None", config_path);
@@ -2023,7 +2023,7 @@ void WriteConfig(const char* config_path) {
         if (anim && anim[0] != '\0') {
             char animPath[MAX_PATH];
             snprintf(animPath, sizeof(animPath), "%%LOCALAPPDATA%%\\Catime\\resources\\animations\\%s", anim);
-            WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_NAME", animPath, config_path);
+            WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_PATH", animPath, config_path);
         }
     }
 }

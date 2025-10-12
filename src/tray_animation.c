@@ -726,7 +726,7 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
     char config_path[MAX_PATH] = {0};
     GetConfigPath(config_path, sizeof(config_path));
     char nameBuf[MAX_PATH] = {0};
-    ReadIniString(INI_SECTION_OPTIONS, "ANIMATION_NAME", "__logo__", nameBuf, sizeof(nameBuf), config_path);
+    ReadIniString(INI_SECTION_OPTIONS, "ANIMATION_PATH", "__logo__", nameBuf, sizeof(nameBuf), config_path);
     if (nameBuf[0] != '\0') {
         const char* prefix = "%LOCALAPPDATA%\\Catime\\resources\\animations\\";
         if (_stricmp(nameBuf, "__logo__") == 0) {
@@ -781,7 +781,7 @@ BOOL SetCurrentAnimationName(const char* name) {
         g_animationName[sizeof(g_animationName) - 1] = '\0';
         char config_path[MAX_PATH] = {0};
         GetConfigPath(config_path, sizeof(config_path));
-        WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_NAME", "__logo__", config_path);
+        WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_PATH", "__logo__", config_path);
         LoadTrayIcons();
         g_trayIconIndex = 0;
         if (g_trayHwnd && g_trayIconCount > 0) {
@@ -829,7 +829,7 @@ BOOL SetCurrentAnimationName(const char* name) {
     GetConfigPath(config_path, sizeof(config_path));
     char animPath[MAX_PATH];
     snprintf(animPath, sizeof(animPath), "%%LOCALAPPDATA%%\\Catime\\resources\\animations\\%s", g_animationName);
-    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_NAME", animPath, config_path);
+    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_PATH", animPath, config_path);
 
     /** Reload frames and reset index; ensure timer is running */
     LoadTrayIcons();
@@ -887,7 +887,7 @@ void PreloadAnimationFromConfig(void) {
     char config_path[MAX_PATH] = {0};
     GetConfigPath(config_path, sizeof(config_path));
     char nameBuf[MAX_PATH] = {0};
-    ReadIniString(INI_SECTION_OPTIONS, "ANIMATION_NAME", "__logo__", nameBuf, sizeof(nameBuf), config_path);
+    ReadIniString(INI_SECTION_OPTIONS, "ANIMATION_PATH", "__logo__", nameBuf, sizeof(nameBuf), config_path);
     if (nameBuf[0] != '\0') {
         const char* prefix = "%LOCALAPPDATA%\\Catime\\resources\\animations\\";
         if (_stricmp(nameBuf, "__logo__") == 0) {
