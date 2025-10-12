@@ -683,7 +683,7 @@ void ShowColorMenu(HWND hwnd) {
     POINT pt;
     GetCursorPos(&pt);
     SetForegroundWindow(hwnd);
-    TrackPopupMenu(hMenu, TPM_LEFTALIGN | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt.x, pt.y, 0, hwnd, NULL);
+    TrackPopupMenu(hMenu, TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, 0, hwnd, NULL);
     PostMessage(hwnd, WM_NULL, 0, 0);
     DestroyMenu(hMenu);
 }
@@ -856,7 +856,7 @@ void ShowContextMenu(HWND hwnd) {
     POINT pt;
     GetCursorPos(&pt);
     SetForegroundWindow(hwnd);
-    TrackPopupMenu(hMenu, TPM_BOTTOMALIGN | TPM_LEFTALIGN | TPM_NONOTIFY, pt.x, pt.y, 0, hwnd, NULL);
+    TrackPopupMenu(hMenu, TPM_BOTTOMALIGN | TPM_LEFTALIGN, pt.x, pt.y, 0, hwnd, NULL);
     PostMessage(hwnd, WM_NULL, 0, 0);
     DestroyMenu(hMenu);
 }

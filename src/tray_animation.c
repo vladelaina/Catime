@@ -31,6 +31,10 @@ static int g_trayIconIndex = 0;
 static UINT g_trayInterval = 0;
 static HWND g_trayHwnd = NULL;
 static char g_animationName[64] = "cat"; /** current folder under animations */
+static BOOL g_isPreviewActive = FALSE; /** preview mode flag */
+static HICON g_previewIcons[MAX_TRAY_FRAMES];
+static int g_previewCount = 0;
+static int g_previewIndex = 0;
 
 /** @brief Build cat animation folder path: %LOCALAPPDATA%\Catime\resources\animations\cat */
 static void BuildAnimationFolder(const char* name, char* path, size_t size) {
@@ -54,6 +58,18 @@ static void FreeTrayIcons(void) {
     }
     g_trayIconCount = 0;
     g_trayIconIndex = 0;
+}
+
+/** @brief Free preview icon frames */
+static void FreePreviewIcons(void) {
+    for (int i = 0; i < g_previewCount; ++i) {
+        if (g_previewIcons[i]) {
+            DestroyIcon(g_previewIcons[i]);
+            g_previewIcons[i] = NULL;
+        }
+    }
+    g_previewCount = 0;
+    g_previewIndex = 0;
 }
 
 /** @brief Load sequential .ico files starting from 1.ico upward */
@@ -141,19 +157,29 @@ static void LoadTrayIcons(void) {
 
 /** @brief Advance to next icon frame and apply to tray */
 static void AdvanceTrayFrame(void) {
-    if (!g_trayHwnd || g_trayIconCount <= 0) return;
-    if (g_trayIconIndex >= g_trayIconCount) g_trayIconIndex = 0;
+    if (!g_trayHwnd) return;
+    int count = g_isPreviewActive ? g_previewCount : g_trayIconCount;
+    if (count <= 0) return;
+    if (g_isPreviewActive) {
+        if (g_previewIndex >= g_previewCount) g_previewIndex = 0;
+    } else {
+        if (g_trayIconIndex >= g_trayIconCount) g_trayIconIndex = 0;
+    }
 
     NOTIFYICONDATAW nid = {0};
     nid.cbSize = sizeof(nid);
     nid.hWnd = g_trayHwnd;
     nid.uID = CLOCK_ID_TRAY_APP_ICON;
     nid.uFlags = NIF_ICON;
-    nid.hIcon = g_trayIcons[g_trayIconIndex];
+    nid.hIcon = g_isPreviewActive ? g_previewIcons[g_previewIndex] : g_trayIcons[g_trayIconIndex];
 
     Shell_NotifyIconW(NIM_MODIFY, &nid);
 
-    g_trayIconIndex = (g_trayIconIndex + 1) % g_trayIconCount;
+    if (g_isPreviewActive) {
+        g_previewIndex = (g_previewIndex + 1) % g_previewCount;
+    } else {
+        g_trayIconIndex = (g_trayIconIndex + 1) % g_trayIconCount;
+    }
 }
 
 /** @brief Window-proc level timer callback shim */
@@ -165,6 +191,9 @@ static void CALLBACK TrayAnimTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD t
 void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
     g_trayHwnd = hwnd;
     g_trayInterval = intervalMs > 0 ? intervalMs : 150; /** default ~6-7 fps */
+    g_isPreviewActive = FALSE;
+    g_previewCount = 0;
+    g_previewIndex = 0;
 
     /** Read current animation name from config */
     char config_path[MAX_PATH] = {0};
@@ -196,6 +225,7 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
 void StopTrayAnimation(HWND hwnd) {
     KillTimer(hwnd, TRAY_ANIM_TIMER_ID);
     FreeTrayIcons();
+    FreePreviewIcons();
     g_trayHwnd = NULL;
 }
 
@@ -254,6 +284,94 @@ BOOL SetCurrentAnimationName(const char* name) {
 }
 
 
+/** Load preview icons for folder and enable preview mode (no persistence) */
+void StartAnimationPreview(const char* name) {
+    if (!name || !*name) return;
+    /** Build and enumerate preview icons */
+    char folder[MAX_PATH] = {0};
+    BuildAnimationFolder(name, folder, sizeof(folder));
+
+    wchar_t wFolder[MAX_PATH] = {0};
+    MultiByteToWideChar(CP_UTF8, 0, folder, -1, wFolder, MAX_PATH);
+    wchar_t wSearch[MAX_PATH] = {0};
+    _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s\\*.ico", wFolder);
+
+    /** Collect and sort like LoadTrayIcons */
+    typedef struct { int hasNum; int num; wchar_t name[MAX_PATH]; wchar_t path[MAX_PATH]; } AnimFile;
+    AnimFile files[MAX_TRAY_FRAMES];
+    int fileCount = 0;
+
+    WIN32_FIND_DATAW ffd; HANDLE hFind = FindFirstFileW(wSearch, &ffd);
+    if (hFind != INVALID_HANDLE_VALUE) {
+        do {
+            if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
+            wchar_t* dot = wcsrchr(ffd.cFileName, L'.');
+            if (!dot) continue;
+            size_t nameLen = (size_t)(dot - ffd.cFileName);
+            if (nameLen == 0 || nameLen >= MAX_PATH) continue;
+
+            int hasNum = 0; int numVal = 0;
+            for (size_t i = 0; i < nameLen; ++i) {
+                if (iswdigit(ffd.cFileName[i])) {
+                    hasNum = 1; numVal = 0;
+                    while (i < nameLen && iswdigit(ffd.cFileName[i])) { numVal = numVal * 10 + (ffd.cFileName[i]-L'0'); i++; }
+                    break;
+                }
+            }
+            if (fileCount < MAX_TRAY_FRAMES) {
+                files[fileCount].hasNum = hasNum;
+                files[fileCount].num = numVal;
+                wcsncpy(files[fileCount].name, ffd.cFileName, nameLen);
+                files[fileCount].name[nameLen] = L'\0';
+                _snwprintf_s(files[fileCount].path, MAX_PATH, _TRUNCATE, L"%s\\%s", wFolder, ffd.cFileName);
+                fileCount++;
+            }
+        } while (FindNextFileW(hFind, &ffd));
+        FindClose(hFind);
+    }
+
+    if (fileCount == 0) return;
+
+    int cmpAnimFile(const void* a, const void* b) {
+        const AnimFile* fa = (const AnimFile*)a;
+        const AnimFile* fb = (const AnimFile*)b;
+        if (fa->hasNum && fb->hasNum) {
+            if (fa->num < fb->num) return -1;
+            if (fa->num > fb->num) return 1;
+            return _wcsicmp(fa->name, fb->name);
+        }
+        return _wcsicmp(fa->name, fb->name);
+    }
+    qsort(files, (size_t)fileCount, sizeof(AnimFile), cmpAnimFile);
+
+    FreePreviewIcons();
+    for (int i = 0; i < fileCount; ++i) {
+        HICON hIcon = (HICON)LoadImageW(NULL, files[i].path, IMAGE_ICON, 0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE);
+        if (hIcon) {
+            g_previewIcons[g_previewCount++] = hIcon;
+        }
+    }
+
+    if (g_previewCount > 0) {
+        g_isPreviewActive = TRUE;
+        g_previewIndex = 0;
+        if (g_trayHwnd) {
+            AdvanceTrayFrame();
+        }
+    }
+}
+
+void CancelAnimationPreview(void) {
+    if (!g_isPreviewActive) return;
+    g_isPreviewActive = FALSE;
+    FreePreviewIcons();
+    g_previewIndex = 0;
+    if (g_trayHwnd) {
+        AdvanceTrayFrame();
+    }
+}
+
+
 static void OpenAnimationsFolder(void) {
     char base[MAX_PATH] = {0};
     GetAnimationsFolderPath(base, sizeof(base));
@@ -277,6 +395,7 @@ BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id) {
 
         WIN32_FIND_DATAW ffd; HANDLE hFind = FindFirstFileW(wSearch, &ffd);
         UINT nextId = CLOCK_IDM_ANIMATIONS_BASE;
+        BOOL changed = FALSE;
         if (hFind != INVALID_HANDLE_VALUE) {
             do {
                 if (wcscmp(ffd.cFileName, L".") == 0 || wcscmp(ffd.cFileName, L"..") == 0) continue;
@@ -284,17 +403,16 @@ BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id) {
                     if (nextId == id) {
                         char folderUtf8[MAX_PATH] = {0};
                         WideCharToMultiByte(CP_UTF8, 0, ffd.cFileName, -1, folderUtf8, MAX_PATH, NULL, NULL);
-                        if (SetCurrentAnimationName(folderUtf8)) {
-                            return TRUE;
-                        }
-                        break;
+                        changed = SetCurrentAnimationName(folderUtf8);
+                        FindClose(hFind);
+                        return changed ? TRUE : FALSE;
                     }
                     nextId++;
                 }
             } while (FindNextFileW(hFind, &ffd));
             FindClose(hFind);
         }
-        return TRUE;
+        return changed ? TRUE : FALSE;
     }
     return FALSE;
 }

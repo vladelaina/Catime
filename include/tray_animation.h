@@ -35,6 +35,16 @@ const char* GetCurrentAnimationName(void);
  */
 BOOL SetCurrentAnimationName(const char* name);
 
+/**
+ * @brief Start temporary animation preview (no persistence)
+ */
+void StartAnimationPreview(const char* name);
+
+/**
+ * @brief Cancel temporary animation preview and restore previous animation
+ */
+void CancelAnimationPreview(void);
+
 #endif
 
 

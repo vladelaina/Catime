@@ -642,6 +642,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         
         /** Menu and command message processing */
         case WM_COMMAND: {
+            /** Always cancel any transient previews when a command is about to execute */
+            extern void CancelAnimationPreview(void);
+            CancelAnimationPreview();
             /** Handle color selection from menu (IDs 201+) */
             if (LOWORD(wp) >= 201 && LOWORD(wp) < 201 + COLOR_OPTIONS_COUNT) {
                 int colorIndex = LOWORD(wp) - 201;
@@ -2147,8 +2150,11 @@ refresh_window:
             UINT flags = HIWORD(wp);
             HMENU hMenu = (HMENU)lp;
 
-            /** If mouse moved outside any menu item, cancel any active previews and restore state */
-            if (menuItem == 0xFFFF && hMenu == NULL) {
+            /** If mouse moved outside any menu item (including outside menu window), cancel previews */
+            if (menuItem == 0xFFFF) {
+                /** Always cancel animation preview regardless of other preview flags */
+                extern void CancelAnimationPreview(void);
+                CancelAnimationPreview();
                 if (IS_PREVIEWING || IS_COLOR_PREVIEWING || IS_TIME_FORMAT_PREVIEWING || IS_MILLISECONDS_PREVIEWING) {
                     if (IS_PREVIEWING) {
                         CancelFontPreview();
@@ -2253,6 +2259,36 @@ refresh_window:
                     }
                 }
 
+                /** Handle animation preview on hover (IDs CLOCK_IDM_ANIMATIONS_BASE..+999) */
+                if (menuItem >= CLOCK_IDM_ANIMATIONS_BASE && menuItem < CLOCK_IDM_ANIMATIONS_BASE + 1000) {
+                    /** Resolve folder name by iterating animations root with a running index */
+                    char animRootUtf8[MAX_PATH] = {0};
+                    GetAnimationsFolderPath(animRootUtf8, sizeof(animRootUtf8));
+                    wchar_t wRoot[MAX_PATH] = {0};
+                    MultiByteToWideChar(CP_UTF8, 0, animRootUtf8, -1, wRoot, MAX_PATH);
+                    wchar_t wSearch[MAX_PATH] = {0};
+                    _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s\\*", wRoot);
+
+                    WIN32_FIND_DATAW ffd; HANDLE hFind = FindFirstFileW(wSearch, &ffd);
+                    UINT nextId = CLOCK_IDM_ANIMATIONS_BASE;
+                    if (hFind != INVALID_HANDLE_VALUE) {
+                        do {
+                            if (wcscmp(ffd.cFileName, L".") == 0 || wcscmp(ffd.cFileName, L"..") == 0) continue;
+                            if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+                                if (nextId == menuItem) {
+                                    char folderUtf8[MAX_PATH] = {0};
+                                    WideCharToMultiByte(CP_UTF8, 0, ffd.cFileName, -1, folderUtf8, MAX_PATH, NULL, NULL);
+                                    extern void StartAnimationPreview(const char* name);
+                                    StartAnimationPreview(folderUtf8);
+                                    return 0;
+                                }
+                                nextId++;
+                            }
+                        } while (FindNextFileW(hFind, &ffd));
+                        FindClose(hFind);
+                    }
+                }
+
                 /** Handle time format preview on hover */
                 if (menuItem == CLOCK_IDM_TIME_FORMAT_DEFAULT ||
                     menuItem == CLOCK_IDM_TIME_FORMAT_ZERO_PADDED ||
@@ -2292,6 +2328,8 @@ refresh_window:
                 }
                 
                 /** Clear preview if no matching item found */
+                extern void CancelAnimationPreview(void);
+                CancelAnimationPreview();
                 if (IS_PREVIEWING || IS_COLOR_PREVIEWING || IS_TIME_FORMAT_PREVIEWING || IS_MILLISECONDS_PREVIEWING) {
                     if (IS_PREVIEWING) {
                         CancelFontPreview();
@@ -2308,6 +2346,8 @@ refresh_window:
                     InvalidateRect(hwnd, NULL, TRUE);
                 }
             } else if (flags & MF_POPUP) {
+                extern void CancelAnimationPreview(void);
+                CancelAnimationPreview();
                 if (IS_PREVIEWING || IS_COLOR_PREVIEWING || IS_TIME_FORMAT_PREVIEWING || IS_MILLISECONDS_PREVIEWING) {
                     if (IS_PREVIEWING) {
                         CancelFontPreview();
@@ -2330,6 +2370,8 @@ refresh_window:
         
         /** Menu loop exit cleanup */
         case WM_EXITMENULOOP: {
+            extern void CancelAnimationPreview(void);
+            CancelAnimationPreview();
             if (IS_PREVIEWING || IS_COLOR_PREVIEWING || IS_TIME_FORMAT_PREVIEWING || IS_MILLISECONDS_PREVIEWING) {
                 if (IS_PREVIEWING) {
                     CancelFontPreview();
