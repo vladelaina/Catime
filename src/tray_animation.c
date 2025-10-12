@@ -522,18 +522,6 @@ static void LoadAnimatedImage(const char* utf8Path, DecodeTarget* target) {
     }
 }
 
-/** @brief Decode an animated image into HICON frames with per-frame delays */
-static void LoadTrayIconsFromAnimatedPath(const char* utf8Path) {
-    DecodeTarget target = { g_trayIcons, &g_trayIconCount, &g_trayIconIndex, g_frameDelaysMs, &g_isAnimated, &g_animCanvas };
-    LoadAnimatedImage(utf8Path, &target);
-}
-
-/** @brief Decode an animated image into preview HICON frames with per-frame delays */
-static void LoadPreviewIconsFromAnimatedPath(const char* utf8Path) {
-    DecodeTarget target = { g_previewIcons, &g_previewCount, &g_previewIndex, g_previewFrameDelaysMs, &g_isPreviewAnimated, &g_previewAnimCanvas };
-    LoadAnimatedImage(utf8Path, &target);
-}
-
 /** @brief Generic routine to load sequential icon frames from a folder */
 static void LoadIconsFromFolder(const char* utf8Folder, HICON* icons, int* count) {
     wchar_t wFolder[MAX_PATH] = {0};
@@ -630,29 +618,55 @@ static void LoadIconsFromFolder(const char* utf8Folder, HICON* icons, int* count
     }
 }
 
-/** @brief Load sequential icon frames from .ico and .png files */
-static void LoadTrayIcons(void) {
-    FreeTrayIcons();
+/** @brief Unified animation loading routine for tray and preview */
+static void LoadAnimationByName(const char* name, BOOL isPreview) {
+    HICON* icons;
+    int* count;
+    int* index;
+    BOOL* isAnimatedFlag;
+    UINT* delays;
+    BYTE** canvas;
 
-    char folder[MAX_PATH] = {0};
-    BuildAnimationFolder(g_animationName, folder, sizeof(folder));
+    if (isPreview) {
+        FreePreviewIcons();
+        icons = g_previewIcons;
+        count = &g_previewCount;
+        index = &g_previewIndex;
+        isAnimatedFlag = &g_isPreviewAnimated;
+        delays = g_previewFrameDelaysMs;
+        canvas = &g_previewAnimCanvas;
+    } else {
+        FreeTrayIcons();
+        icons = g_trayIcons;
+        count = &g_trayIconCount;
+        index = &g_trayIconIndex;
+        isAnimatedFlag = &g_isAnimated;
+        delays = g_frameDelaysMs;
+        canvas = &g_animCanvas;
+    }
 
-    /** Special selection: use application logo (resource icon) */
-    if (_stricmp(g_animationName, "__logo__") == 0) {
+    if (!name || !*name) return;
+
+    if (_stricmp(name, "__logo__") == 0) {
         HICON hIcon = LoadIconW(GetModuleHandle(NULL), MAKEINTRESOURCEW(IDI_CATIME));
         if (hIcon) {
-            g_trayIcons[g_trayIconCount++] = hIcon;
+            icons[(*count)++] = hIcon;
         }
-        return;
+    } else if (IsGifSelection(name) || IsWebPSelection(name)) {
+        char filePath[MAX_PATH] = {0};
+        BuildAnimationFolder(name, filePath, sizeof(filePath));
+        DecodeTarget target = { icons, count, index, delays, isAnimatedFlag, canvas };
+        LoadAnimatedImage(filePath, &target);
+    } else {
+        char folder[MAX_PATH] = {0};
+        BuildAnimationFolder(name, folder, sizeof(folder));
+        LoadIconsFromFolder(folder, icons, count);
     }
+}
 
-    /** If selection is a single GIF file under animations root, decode frames from it */
-    if (IsGifSelection(g_animationName) || IsWebPSelection(g_animationName)) {
-        LoadTrayIconsFromAnimatedPath(folder);
-        return;
-    }
-
-    LoadIconsFromFolder(folder, g_trayIcons, &g_trayIconCount);
+/** @brief Load sequential icon frames from .ico and .png files */
+static void LoadTrayIcons(void) {
+    LoadAnimationByName(g_animationName, FALSE);
 }
 
 /** @brief Advance to next icon frame and apply to tray */
@@ -840,22 +854,7 @@ BOOL SetCurrentAnimationName(const char* name) {
 void StartAnimationPreview(const char* name) {
     if (!name || !*name) return;
 
-    FreePreviewIcons();
-
-    if (_stricmp(name, "__logo__") == 0) {
-        HICON hIcon = LoadIconW(GetModuleHandle(NULL), MAKEINTRESOURCEW(IDI_CATIME));
-        if (hIcon) {
-            g_previewIcons[g_previewCount++] = hIcon;
-        }
-    } else if (IsGifSelection(name) || IsWebPSelection(name)) {
-        char filePath[MAX_PATH] = {0};
-        BuildAnimationFolder(name, filePath, sizeof(filePath));
-        LoadPreviewIconsFromAnimatedPath(filePath);
-    } else {
-        char folder[MAX_PATH] = {0};
-        BuildAnimationFolder(name, folder, sizeof(folder));
-        LoadIconsFromFolder(folder, g_previewIcons, &g_previewCount);
-    }
+    LoadAnimationByName(name, TRUE);
 
     if (g_previewCount > 0) {
         g_isPreviewActive = TRUE;
