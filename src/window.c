@@ -470,13 +470,17 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
     }
     
     /** Create popup window with no frame */
+    /** Apply initial scale from configuration */
+    int initialWidth = (int)(CLOCK_BASE_WINDOW_WIDTH * CLOCK_WINDOW_SCALE);
+    int initialHeight = (int)(CLOCK_BASE_WINDOW_HEIGHT * CLOCK_WINDOW_SCALE);
+
     HWND hwnd = CreateWindowExW(
         exStyle,
         L"CatimeWindow",
         L"Catime",
         WS_POPUP,
         CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y,
-        CLOCK_BASE_WINDOW_WIDTH, CLOCK_BASE_WINDOW_HEIGHT,
+        initialWidth, initialHeight,
         NULL,
         NULL,
         hInstance,
@@ -588,6 +592,8 @@ BOOL InitializeApplication(HINSTANCE hInstance) {
 
     /** Load application configuration and initialize components */
     ReadConfig();
+    /** Sync font scale with window scale at startup (watcher not fired yet) */
+    CLOCK_FONT_SCALE_FACTOR = CLOCK_WINDOW_SCALE;
     
     /** Check if this is the first run and extract embedded fonts if needed */
     if (IsFirstRun()) {
