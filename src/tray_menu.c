@@ -856,6 +856,8 @@ void ShowColorMenu(HWND hwnd) {
                     CLOCK_IDM_ANIM_SPEED_MEMORY, GetLocalizedString(L"按内存占用", L"By Memory Usage"));
         AppendMenuW(hAnimSpeedMenu, MF_STRING | (currentMetric == ANIMATION_SPEED_CPU ? MF_CHECKED : MF_UNCHECKED),
                     CLOCK_IDM_ANIM_SPEED_CPU, GetLocalizedString(L"按CPU占用", L"By CPU Usage"));
+        AppendMenuW(hAnimSpeedMenu, MF_STRING | (currentMetric == ANIMATION_SPEED_TIMER ? MF_CHECKED : MF_UNCHECKED),
+                    CLOCK_IDM_ANIM_SPEED_TIMER, GetLocalizedString(L"按倒计时进度", L"By Countdown Progress"));
         AppendMenuW(hAnimMenu, MF_POPUP, (UINT_PTR)hAnimSpeedMenu,
                     GetLocalizedString(L"动画速度依据", L"Animation Speed Metric"));
 

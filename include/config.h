@@ -100,7 +100,8 @@ extern int NOTIFICATION_SOUND_VOLUME;
 /** Animation speed metric selector */
 typedef enum {
     ANIMATION_SPEED_MEMORY = 0,
-    ANIMATION_SPEED_CPU = 1
+    ANIMATION_SPEED_CPU = 1,
+    ANIMATION_SPEED_TIMER = 2 /** Based on timer progress (countdown/count-up) */
 } AnimationSpeedMetric;
 
 /**

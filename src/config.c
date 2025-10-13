@@ -1344,6 +1344,8 @@ void ReadConfig() {
         ReadIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_METRIC", "MEMORY", metric, sizeof(metric), config_path);
         if (_stricmp(metric, "CPU") == 0) {
             g_animSpeedMetric = ANIMATION_SPEED_CPU;
+        } else if (_stricmp(metric, "TIMER") == 0 || _stricmp(metric, "COUNTDOWN") == 0) {
+            g_animSpeedMetric = ANIMATION_SPEED_TIMER;
         } else {
             g_animSpeedMetric = ANIMATION_SPEED_MEMORY;
         }
@@ -2209,10 +2211,10 @@ void WriteConfig(const char* config_path) {
     }
 
     /** Persist animation speed settings */
-    WriteIniString(INI_SECTION_OPTIONS,
-                   "ANIMATION_SPEED_METRIC",
-                   (g_animSpeedMetric == ANIMATION_SPEED_CPU ? "CPU" : "MEMORY"),
-                   config_path);
+        const char* metricStr = "MEMORY";
+        if (g_animSpeedMetric == ANIMATION_SPEED_CPU) metricStr = "CPU";
+        else if (g_animSpeedMetric == ANIMATION_SPEED_TIMER) metricStr = "TIMER";
+        WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_METRIC", metricStr, config_path);
     {
         /** Write vertical lines for easier editing */
         /** 持久化为固定区间键（值仅为比例数值） */

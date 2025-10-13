@@ -89,6 +89,7 @@
 /** @brief Animation speed metric submenu identifiers */
 #define CLOCK_IDM_ANIM_SPEED_MEMORY 2210         /**< Use memory usage as speed metric */
 #define CLOCK_IDM_ANIM_SPEED_CPU 2211            /**< Use CPU usage as speed metric */
+#define CLOCK_IDM_ANIM_SPEED_TIMER 2212          /**< Use timer progress as speed metric */
 
 /**
  * @brief Display tray context menu

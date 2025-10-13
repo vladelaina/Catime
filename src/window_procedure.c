@@ -902,12 +902,15 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     }
 
                 /** Handle animation speed metric switching */
-                if (cmd == CLOCK_IDM_ANIM_SPEED_MEMORY || cmd == CLOCK_IDM_ANIM_SPEED_CPU) {
-                    AnimationSpeedMetric m = (cmd == CLOCK_IDM_ANIM_SPEED_CPU) ? ANIMATION_SPEED_CPU : ANIMATION_SPEED_MEMORY;
+                if (cmd == CLOCK_IDM_ANIM_SPEED_MEMORY || cmd == CLOCK_IDM_ANIM_SPEED_CPU || cmd == CLOCK_IDM_ANIM_SPEED_TIMER) {
+                    AnimationSpeedMetric m = ANIMATION_SPEED_MEMORY;
+                    if (cmd == CLOCK_IDM_ANIM_SPEED_CPU) m = ANIMATION_SPEED_CPU;
+                    else if (cmd == CLOCK_IDM_ANIM_SPEED_TIMER) m = ANIMATION_SPEED_TIMER;
                     /** Persist to config */
                     char config_path[MAX_PATH];
                     GetConfigPath(config_path, MAX_PATH);
-                    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_METRIC", (m == ANIMATION_SPEED_CPU ? "CPU" : "MEMORY"), config_path);
+                    const char* metricStr = (m == ANIMATION_SPEED_CPU ? "CPU" : (m == ANIMATION_SPEED_TIMER ? "TIMER" : "MEMORY"));
+                    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_METRIC", metricStr, config_path);
                     /** Immediate apply */
                     extern void ReadConfig();
                     ReadConfig();
