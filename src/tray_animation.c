@@ -870,7 +870,6 @@ void CancelAnimationPreview(void) {
     g_isPreviewActive = FALSE;
     FreeIconSet(g_previewIcons, &g_previewCount, &g_previewIndex, &g_isPreviewAnimated, &g_previewAnimCanvas, FALSE);
     if (g_trayHwnd) {
-        AdvanceTrayFrame();
         /** Restore timer for normal animation if needed */
         if (g_isAnimated) {
             UINT firstDelay = g_frameDelaysMs[g_trayIconIndex] > 0 ? g_frameDelaysMs[g_trayIconIndex] : (g_trayInterval ? g_trayInterval : 150);
