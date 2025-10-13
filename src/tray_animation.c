@@ -35,6 +35,10 @@ static int NaturalCompareW(const wchar_t* a, const wchar_t* b) {
         if (iswdigit(*pa) && iswdigit(*pb)) {
             const wchar_t* za = pa; while (*za == L'0') za++;
             const wchar_t* zb = pb; while (*zb == L'0') zb++;
+            /** Primary: more leading zeros first */
+            size_t leadA = (size_t)(za - pa);
+            size_t leadB = (size_t)(zb - pb);
+            if (leadA != leadB) return (leadA > leadB) ? -1 : 1;
             const wchar_t* ea = za; while (iswdigit(*ea)) ea++;
             const wchar_t* eb = zb; while (iswdigit(*eb)) eb++;
             size_t lena = (size_t)(ea - za);
@@ -42,10 +46,6 @@ static int NaturalCompareW(const wchar_t* a, const wchar_t* b) {
             if (lena != lenb) return (lena < lenb) ? -1 : 1;
             int dcmp = wcsncmp(za, zb, lena);
             if (dcmp != 0) return (dcmp < 0) ? -1 : 1;
-            /** Tie-breaker: fewer leading zeros comes first */
-            size_t leadA = (size_t)(za - pa);
-            size_t leadB = (size_t)(zb - pb);
-            if (leadA != leadB) return (leadA < leadB) ? -1 : 1;
             pa = ea;
             pb = eb;
             continue;

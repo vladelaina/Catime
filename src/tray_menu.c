@@ -27,6 +27,17 @@ typedef struct {
     BOOL is_dir;
 } AnimationEntry;
 
+/** @brief Font entry structure for natural sorting */
+typedef struct {
+    wchar_t name[MAX_PATH];
+    wchar_t fullPath[MAX_PATH];
+    wchar_t displayName[MAX_PATH];
+    BOOL is_dir;
+    BOOL isCurrentFont;
+    int subFolderStatus; /** For directories: 0=no content, 1=has content, 2=contains current font */
+    HMENU hSubMenu; /** For directories: submenu handle */
+} FontEntry;
+
 /** @brief Natural string compare that sorts numeric substrings by value (e.g., 2 < 10). */
 static int NaturalCompareW(const wchar_t* a, const wchar_t* b) {
     const wchar_t* pa = a;
@@ -35,6 +46,10 @@ static int NaturalCompareW(const wchar_t* a, const wchar_t* b) {
         if (iswdigit(*pa) && iswdigit(*pb)) {
             const wchar_t* za = pa; while (*za == L'0') za++;
             const wchar_t* zb = pb; while (*zb == L'0') zb++;
+            /** Primary rule: numbers with more leading zeros come first */
+            size_t leadA = (size_t)(za - pa);
+            size_t leadB = (size_t)(zb - pb);
+            if (leadA != leadB) return (leadA > leadB) ? -1 : 1;
             const wchar_t* ea = za; while (iswdigit(*ea)) ea++;
             const wchar_t* eb = zb; while (iswdigit(*eb)) eb++;
             size_t lena = (size_t)(ea - za);
@@ -42,10 +57,6 @@ static int NaturalCompareW(const wchar_t* a, const wchar_t* b) {
             if (lena != lenb) return (lena < lenb) ? -1 : 1;
             int dcmp = wcsncmp(za, zb, lena);
             if (dcmp != 0) return (dcmp < 0) ? -1 : 1;
-            /** Tie-breaker: fewer leading zeros comes first */
-            size_t leadA = (size_t)(za - pa);
-            size_t leadB = (size_t)(zb - pb);
-            if (leadA != leadB) return (leadA < leadB) ? -1 : 1;
             pa = ea;
             pb = eb;
             continue;
@@ -60,14 +71,29 @@ static int NaturalCompareW(const wchar_t* a, const wchar_t* b) {
     return 0;
 }
 
+/** @brief Shared comparator core: directories first, then natural string compare by name. */
+static int DirFirstThenNaturalName(const wchar_t* nameA, BOOL isDirA,
+                                   const wchar_t* nameB, BOOL isDirB) {
+    if (isDirA != isDirB) {
+        return isDirB - isDirA; /** Directories first */
+    }
+    return NaturalCompareW(nameA, nameB);
+}
+
 /** @brief qsort comparator for AnimationEntry, sorting directories first, then by natural order. */
 static int CompareAnimationEntries(const void* a, const void* b) {
     const AnimationEntry* entryA = (const AnimationEntry*)a;
     const AnimationEntry* entryB = (const AnimationEntry*)b;
-    if (entryA->is_dir != entryB->is_dir) {
-        return entryB->is_dir - entryA->is_dir; // Directories first
-    }
-    return NaturalCompareW(entryA->name, entryB->name);
+    return DirFirstThenNaturalName(entryA->name, entryA->is_dir,
+                                   entryB->name, entryB->is_dir);
+}
+
+/** @brief qsort comparator for FontEntry, using natural sorting with directories first */
+static int CompareFontEntries(const void* a, const void* b) {
+    const FontEntry* entryA = (const FontEntry*)a;
+    const FontEntry* entryB = (const FontEntry*)b;
+    return DirFirstThenNaturalName(entryA->name, entryA->is_dir,
+                                   entryB->name, entryB->is_dir);
 }
 
 /** @brief Checks if a folder contains no sub-folders or animated images, making it a leaf. */
@@ -460,6 +486,7 @@ void ShowColorMenu(HWND hwnd) {
     
     /** ANSI fallback scanner removed to ensure consistent wide-char API usage */
     
+
     /** Recursive function to scan folder and create submenus */
     /** Returns: 0 = no content, 1 = has content but no current font, 2 = contains current font */
     int ScanFontFolder(const char* folderPath, HMENU parentMenu, int* fontId) {
@@ -478,6 +505,11 @@ void ShowColorMenu(HWND hwnd) {
         MultiByteToWideChar(CP_UTF8, 0, folderPath, -1, wFolderPath, MAX_PATH);
         swprintf(wSearchPath, MAX_PATH, L"%s\\*", wFolderPath);
         
+        /** Collect all entries first */
+        FontEntry* entries = NULL;
+        int entryCount = 0;
+        int entryCapacity = 0;
+        
         HANDLE hFind = FindFirstFileW(wSearchPath, findData);
         int folderStatus = 0; /** 0 = no content, 1 = has content, 2 = contains current font */
         
@@ -488,24 +520,41 @@ void ShowColorMenu(HWND hwnd) {
                     continue;
                 }
                 
-                wchar_t wFullItemPath[MAX_PATH];
-                swprintf(wFullItemPath, MAX_PATH, L"%s\\%s", wFolderPath, findData->cFileName);
+                /** Expand entries array if needed */
+                if (entryCount >= entryCapacity) {
+                    entryCapacity = entryCapacity == 0 ? 16 : entryCapacity * 2;
+                    FontEntry* newEntries = (FontEntry*)realloc(entries, entryCapacity * sizeof(FontEntry));
+                    if (!newEntries) {
+                        free(entries);
+                        free(wFolderPath);
+                        free(wSearchPath);
+                        free(findData);
+                        FindClose(hFind);
+                        return 0;
+                    }
+                    entries = newEntries;
+                }
                 
-                /** Handle regular font files */
-                if (!(findData->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+                FontEntry* entry = &entries[entryCount];
+                wcsncpy(entry->name, findData->cFileName, MAX_PATH - 1);
+                entry->name[MAX_PATH - 1] = L'\0';
+                swprintf(entry->fullPath, MAX_PATH, L"%s\\%s", wFolderPath, findData->cFileName);
+                entry->is_dir = (findData->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+                entry->isCurrentFont = FALSE;
+                entry->subFolderStatus = 0;
+                entry->hSubMenu = NULL;
+                
+                if (!entry->is_dir) {
+                    /** Handle regular font files */
                     wchar_t* ext = wcsrchr(findData->cFileName, L'.');
                     if (ext && (_wcsicmp(ext, L".ttf") == 0 || _wcsicmp(ext, L".otf") == 0)) {
                         /** Remove extension for display */
-                        wchar_t wDisplayName[MAX_PATH];
-                        wcsncpy(wDisplayName, findData->cFileName, MAX_PATH - 1);
-                        wDisplayName[MAX_PATH - 1] = L'\0';
-                        wchar_t* dotPos = wcsrchr(wDisplayName, L'.');
+                        wcsncpy(entry->displayName, findData->cFileName, MAX_PATH - 1);
+                        entry->displayName[MAX_PATH - 1] = L'\0';
+                        wchar_t* dotPos = wcsrchr(entry->displayName, L'.');
                         if (dotPos) *dotPos = L'\0';
                         
                         /** Check if this is the current font */
-                        BOOL isCurrentFont = FALSE;
-                        
-                        /** Build current absolute font path in wide-char from config */
                         wchar_t wFontsFolderPath[MAX_PATH] = {0};
                         if (GetFontsFolderWideFromConfig(wFontsFolderPath, MAX_PATH)) {
                             const char* localPrefix = "%LOCALAPPDATA%\\Catime\\resources\\fonts\\";
@@ -517,56 +566,39 @@ void ShowColorMenu(HWND hwnd) {
                                 _snwprintf_s(wCurrentFull, MAX_PATH, _TRUNCATE, L"%s\\%s", wFontsFolderPath, wRel);
                                 
                                 /** Compare with candidate file path */
-                                isCurrentFont = (_wcsicmp(wFullItemPath, wCurrentFull) == 0);
+                                entry->isCurrentFont = (_wcsicmp(entry->fullPath, wCurrentFull) == 0);
                             }
                         }
                         
-                        AppendMenuW(parentMenu, MF_STRING | (isCurrentFont ? MF_CHECKED : MF_UNCHECKED),
-                                  (*fontId)++, wDisplayName);
+                        entryCount++;
                         
                         /** Update folder status */
-                        if (isCurrentFont) {
+                        if (entry->isCurrentFont) {
                             folderStatus = 2; /** This folder contains the current font */
                         } else if (folderStatus == 0) {
                             folderStatus = 1; /** This folder has content but not the current font */
                         }
+                    } else {
+                        /** Skip non-font files */
+                        continue;
                     }
-                }
-                /** Handle subdirectories recursively */
-                else if (findData->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-                    /** Create submenu for this folder */
-                    HMENU hSubFolderMenu = CreatePopupMenu();
+                } else {
+                    /** Handle subdirectories */
+                    entry->hSubMenu = CreatePopupMenu();
                     
                     /** Convert wide path back to UTF-8 for recursive call */
                     char fullItemPathUtf8[MAX_PATH];
-                    WideCharToMultiByte(CP_UTF8, 0, wFullItemPath, -1, fullItemPathUtf8, MAX_PATH, NULL, NULL);
+                    WideCharToMultiByte(CP_UTF8, 0, entry->fullPath, -1, fullItemPathUtf8, MAX_PATH, NULL, NULL);
                     
                     /** Recursively scan this subdirectory */
-                    int subFolderStatus = ScanFontFolder(fullItemPathUtf8, hSubFolderMenu, fontId);
+                    entry->subFolderStatus = ScanFontFolder(fullItemPathUtf8, entry->hSubMenu, fontId);
                     
-                    /** Use wide character folder name directly (no conversion needed) */
-                    wchar_t wFolderName[MAX_PATH];
-                    wcsncpy(wFolderName, findData->cFileName, MAX_PATH - 1);
-                    wFolderName[MAX_PATH - 1] = L'\0';
-                    
-                    /** Always add the submenu, even if empty */
-                    if (subFolderStatus == 0) {
-                        /** Add "Empty folder" indicator */
-                        AppendMenuW(hSubFolderMenu, MF_STRING | MF_GRAYED, 0, L"(Empty folder)");
-                        AppendMenuW(parentMenu, MF_POPUP, (UINT_PTR)hSubFolderMenu, wFolderName);
-                    } else {
-                        /** Add folder with check mark if it contains current font */
-                        UINT folderFlags = MF_POPUP;
-                        if (subFolderStatus == 2) {
-                            folderFlags |= MF_CHECKED; /** Folder contains current font */
-                        }
-                        AppendMenuW(parentMenu, folderFlags, (UINT_PTR)hSubFolderMenu, wFolderName);
-                    }
+                    entryCount++;
                     
                     /** Update current folder status based on subfolder status */
-                    if (subFolderStatus == 2) {
+                    if (entry->subFolderStatus == 2) {
                         folderStatus = 2; /** This folder contains the current font (in subfolder) */
-                    } else if (subFolderStatus == 1 && folderStatus == 0) {
+                    } else if (entry->subFolderStatus == 1 && folderStatus == 0) {
                         folderStatus = 1; /** This folder has content but not the current font */
                     }
                 }
@@ -574,6 +606,37 @@ void ShowColorMenu(HWND hwnd) {
             FindClose(hFind);
         }
         
+        /** Sort entries using natural sorting */
+        if (entryCount > 0) {
+            qsort(entries, entryCount, sizeof(FontEntry), CompareFontEntries);
+            
+            /** Add sorted entries to menu */
+            for (int i = 0; i < entryCount; i++) {
+                FontEntry* entry = &entries[i];
+                
+                if (!entry->is_dir) {
+                    /** Add font file */
+                    AppendMenuW(parentMenu, MF_STRING | (entry->isCurrentFont ? MF_CHECKED : MF_UNCHECKED),
+                              (*fontId)++, entry->displayName);
+                } else {
+                    /** Add directory submenu */
+                    if (entry->subFolderStatus == 0) {
+                        /** Add "Empty folder" indicator */
+                        AppendMenuW(entry->hSubMenu, MF_STRING | MF_GRAYED, 0, L"(Empty folder)");
+                        AppendMenuW(parentMenu, MF_POPUP, (UINT_PTR)entry->hSubMenu, entry->name);
+                    } else {
+                        /** Add folder with check mark if it contains current font */
+                        UINT folderFlags = MF_POPUP;
+                        if (entry->subFolderStatus == 2) {
+                            folderFlags |= MF_CHECKED; /** Folder contains current font */
+                        }
+                        AppendMenuW(parentMenu, folderFlags, (UINT_PTR)entry->hSubMenu, entry->name);
+                    }
+                }
+            }
+        }
+        
+        free(entries);
         free(wFolderPath);
         free(wSearchPath);
         free(findData);
