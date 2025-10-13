@@ -38,6 +38,31 @@
 #define WM_APP_TIMER_CHANGED (WM_APP + 53)
 #endif
 
+/** @brief Config watcher notification for [Pomodoro] hot-reload */
+#ifndef WM_APP_POMODORO_CHANGED
+#define WM_APP_POMODORO_CHANGED (WM_APP + 54)
+#endif
+
+/** @brief Config watcher notification for [Notification] hot-reload */
+#ifndef WM_APP_NOTIFICATION_CHANGED
+#define WM_APP_NOTIFICATION_CHANGED (WM_APP + 55)
+#endif
+
+/** @brief Config watcher notification for [Hotkeys] hot-reload */
+#ifndef WM_APP_HOTKEYS_CHANGED
+#define WM_APP_HOTKEYS_CHANGED (WM_APP + 56)
+#endif
+
+/** @brief Config watcher notification for [RecentFiles] hot-reload */
+#ifndef WM_APP_RECENTFILES_CHANGED
+#define WM_APP_RECENTFILES_CHANGED (WM_APP + 57)
+#endif
+
+/** @brief Config watcher notification for [Colors] hot-reload */
+#ifndef WM_APP_COLORS_CHANGED
+#define WM_APP_COLORS_CHANGED (WM_APP + 58)
+#endif
+
 /** @brief Copy data identifier for CLI text */
 #ifndef COPYDATA_ID_CLI_TEXT
 #define COPYDATA_ID_CLI_TEXT 0x10010001

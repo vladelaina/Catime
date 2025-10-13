@@ -794,6 +794,97 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             InvalidateRect(hwnd, NULL, TRUE);
             return 0;
         }
+        case WM_APP_POMODORO_CHANGED: {
+            char config_path[MAX_PATH] = {0};
+            GetConfigPath(config_path, MAX_PATH);
+
+            char pomodoroTimeOptions[256] = {0};
+            ReadIniString(INI_SECTION_POMODORO, "POMODORO_TIME_OPTIONS", "1500,300,1500,600", pomodoroTimeOptions, sizeof(pomodoroTimeOptions), config_path);
+
+            extern int POMODORO_WORK_TIME;
+            extern int POMODORO_SHORT_BREAK;
+            extern int POMODORO_LONG_BREAK;
+
+            int tmp[10] = {0};
+            int cnt = 0;
+            char* tok = strtok(pomodoroTimeOptions, ",");
+            while (tok && cnt < 10) {
+                while (*tok == ' ') tok++;
+                tmp[cnt++] = atoi(tok);
+                tok = strtok(NULL, ",");
+            }
+            if (cnt > 0) POMODORO_WORK_TIME = tmp[0];
+            if (cnt > 1) POMODORO_SHORT_BREAK = tmp[1];
+            if (cnt > 2) POMODORO_LONG_BREAK = tmp[2];
+
+            extern int POMODORO_LOOP_COUNT;
+            POMODORO_LOOP_COUNT = ReadIniInt(INI_SECTION_POMODORO, "POMODORO_LOOP_COUNT", 1, config_path);
+            if (POMODORO_LOOP_COUNT < 1) POMODORO_LOOP_COUNT = 1;
+            return 0;
+        }
+        case WM_APP_NOTIFICATION_CHANGED: {
+            char config_path[MAX_PATH] = {0};
+            GetConfigPath(config_path, MAX_PATH);
+
+            ReadNotificationMessagesConfig();
+            ReadNotificationTimeoutConfig();
+            ReadNotificationOpacityConfig();
+            ReadNotificationTypeConfig();
+            ReadNotificationSoundConfig();
+            ReadNotificationVolumeConfig();
+            ReadNotificationDisabledConfig();
+            return 0;
+        }
+        case WM_APP_HOTKEYS_CHANGED: {
+            WORD showTimeHotkey = 0, countUpHotkey = 0, countdownHotkey = 0;
+            WORD quick1 = 0, quick2 = 0, quick3 = 0, pomodoro = 0;
+            WORD toggle = 0, edit = 0, pauseResume = 0, restart = 0;
+            ReadConfigHotkeys(&showTimeHotkey, &countUpHotkey, &countdownHotkey,
+                              &quick1, &quick2, &quick3,
+                              &pomodoro, &toggle, &edit, &pauseResume, &restart);
+            RegisterGlobalHotkeys(hwnd);
+            return 0;
+        }
+        case WM_APP_RECENTFILES_CHANGED: {
+            LoadRecentFiles();
+            /** If current timeout action is OPEN_FILE but the selected file is invalid or not in recents,
+             *  auto-align to the first recent file and persist, so menu check and action stay consistent. */
+            if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE) {
+                BOOL match = FALSE;
+                for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; ++i) {
+                    if (strcmp(CLOCK_RECENT_FILES[i].path, CLOCK_TIMEOUT_FILE_PATH) == 0) {
+                        match = TRUE; break;
+                    }
+                }
+                wchar_t wSel[MAX_PATH] = {0};
+                MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_FILE_PATH, -1, wSel, MAX_PATH);
+                if (GetFileAttributesW(wSel) == INVALID_FILE_ATTRIBUTES) {
+                    match = FALSE;
+                }
+                if (!match && CLOCK_RECENT_FILES_COUNT > 0) {
+                    WriteConfigTimeoutFile(CLOCK_RECENT_FILES[0].path);
+                }
+            }
+            return 0;
+        }
+        case WM_APP_COLORS_CHANGED: {
+            char config_path[MAX_PATH] = {0};
+            GetConfigPath(config_path, MAX_PATH);
+            /** Reload color options list */
+            char colorOptions[1024] = {0};
+            ReadIniString(INI_SECTION_COLORS, "COLOR_OPTIONS",
+                          "#FFFFFF,#F9DB91,#F4CAE0,#FFB6C1,#A8E7DF,#A3CFB3,#92CBFC,#BDA5E7,#9370DB,#8C92CF,#72A9A5,#EB99A7,#EB96BD,#FFAE8B,#FF7F50,#CA6174",
+                          colorOptions, sizeof(colorOptions), config_path);
+            ClearColorOptions();
+            char* tok = strtok(colorOptions, ",");
+            while (tok) {
+                while (*tok == ' ') tok++;
+                AddColorOption(tok);
+                tok = strtok(NULL, ",");
+            }
+            InvalidateRect(hwnd, NULL, TRUE);
+            return 0;
+        }
         
         /** Inter-process communication for CLI arguments */
         case WM_COPYDATA: {
@@ -1833,9 +1924,12 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         WideCharToMultiByte(CP_UTF8, 0, szFile, -1, utf8Path, sizeof(utf8Path), NULL, NULL);
                         
                         if (GetFileAttributesW(szFile) != INVALID_FILE_ATTRIBUTES) {
+                            /** Persist which file to open on timeout first */
                             WriteConfigTimeoutFile(utf8Path);
-                            
+                            /** Update MRU list */
                             SaveRecentFile(utf8Path);
+                            /** Ensure selected file remains consistent after MRU reload */
+                            WriteConfigTimeoutFile(utf8Path);
                         } else {
                             MessageBoxW(hwnd, 
                                 GetLocalizedString(L"所选文件不存在", L"Selected file does not exist"),

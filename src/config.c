@@ -1572,66 +1572,53 @@ void LoadRecentFiles(void) {
 void SaveRecentFile(const char* filePath) {
     /** Validate input and file existence */
     if (!filePath || strlen(filePath) == 0) return;
-    
-    /** Check if file actually exists */
+
     wchar_t wPath[MAX_PATH] = {0};
     MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wPath, MAX_PATH);
-    
     if (GetFileAttributesW(wPath) == INVALID_FILE_ATTRIBUTES) {
-        /** Don't add non-existent files */
         return;
     }
-    
-    /** Search for existing entry */
-    int existingIndex = -1;
-    for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
-        if (strcmp(CLOCK_RECENT_FILES[i].path, filePath) == 0) {
-            existingIndex = i;
-            break;
-        }
-    }
-    
-    if (existingIndex == 0) {
-        /** Already at top, nothing to do */
-        return;
-    }
-    
-    if (existingIndex > 0) {
-        /** Move existing entry to top */
-        RecentFile temp = CLOCK_RECENT_FILES[existingIndex];
-        
-        /** Shift entries down */
-        for (int i = existingIndex; i > 0; i--) {
-            CLOCK_RECENT_FILES[i] = CLOCK_RECENT_FILES[i - 1];
-        }
-        
-        /** Place at top */
-        CLOCK_RECENT_FILES[0] = temp;
-    } else {
-        /** Add new entry */
 
-        /** Expand list if not at limit */
-        if (CLOCK_RECENT_FILES_COUNT < MAX_RECENT_FILES) {
-            CLOCK_RECENT_FILES_COUNT++;
-        }
-        
-        /** Shift all entries down */
-        for (int i = CLOCK_RECENT_FILES_COUNT - 1; i > 0; i--) {
-            CLOCK_RECENT_FILES[i] = CLOCK_RECENT_FILES[i - 1];
-        }
-        
-        /** Add new entry at top */
-        strncpy(CLOCK_RECENT_FILES[0].path, filePath, MAX_PATH - 1);
-        CLOCK_RECENT_FILES[0].path[MAX_PATH - 1] = '\0';
-        
-        /** Extract display name */
-        ExtractFileName(filePath, CLOCK_RECENT_FILES[0].name, MAX_PATH);
-    }
-    
+    /** Build MRU list from INI only (no in-memory updates here) */
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
 
-    char configPath[MAX_PATH];
-    GetConfigPath(configPath, MAX_PATH);
-    WriteConfig(configPath);
+    const int kMax = MAX_RECENT_FILES;
+    char items[MAX_RECENT_FILES][MAX_PATH];
+    int count = 0;
+    for (int i = 1; i <= kMax; ++i) {
+        char key[32];
+        snprintf(key, sizeof(key), "CLOCK_RECENT_FILE_%d", i);
+        ReadIniString(INI_SECTION_RECENTFILES, key, "", items[count], MAX_PATH, config_path);
+        if (items[count][0] != '\0') {
+            count++;
+        }
+    }
+
+    /** Remove if exists */
+    int writeIdx = 0;
+    char newList[MAX_RECENT_FILES][MAX_PATH];
+    memset(newList, 0, sizeof(newList));
+
+    /** Insert new at top */
+    strncpy(newList[writeIdx], filePath, MAX_PATH - 1);
+    newList[writeIdx][MAX_PATH - 1] = '\0';
+    writeIdx++;
+
+    for (int i = 0; i < count && writeIdx < kMax; ++i) {
+        if (strcmp(items[i], filePath) == 0) continue;
+        strncpy(newList[writeIdx], items[i], MAX_PATH - 1);
+        newList[writeIdx][MAX_PATH - 1] = '\0';
+        writeIdx++;
+    }
+
+    /** Write back to INI */
+    for (int i = 0; i < kMax; ++i) {
+        char key[32];
+        snprintf(key, sizeof(key), "CLOCK_RECENT_FILE_%d", i + 1);
+        const char* val = (i < writeIdx) ? newList[i] : "";
+        WriteIniString(INI_SECTION_RECENTFILES, key, val, config_path);
+    }
 }
 
 
@@ -1700,28 +1687,7 @@ void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
     char line[256];
     int found = 0;
     
-    /** Update global pomodoro timing variables immediately */
-    POMODORO_WORK_TIME = work;
-    POMODORO_SHORT_BREAK = short_break;
-    POMODORO_LONG_BREAK = long_break;
-    
-    /** Update POMODORO_TIMES array with new values */
-    POMODORO_TIMES[0] = work;
-    if (POMODORO_TIMES_COUNT < 1) POMODORO_TIMES_COUNT = 1;
-    
-    if (POMODORO_TIMES_COUNT > 1) {
-        POMODORO_TIMES[1] = short_break;
-    } else if (short_break > 0) {
-        POMODORO_TIMES[1] = short_break;
-        POMODORO_TIMES_COUNT = 2;
-    }
-    
-    if (POMODORO_TIMES_COUNT > 2) {
-        POMODORO_TIMES[2] = long_break;
-    } else if (long_break > 0) {
-        POMODORO_TIMES[2] = long_break;
-        POMODORO_TIMES_COUNT = 3;
-    }
+    /** Persist only; runtime will be updated by watcher */
     
     wchar_t wconfig_path[MAX_PATH];
     MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
@@ -1742,12 +1708,7 @@ void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
     /** Update existing pomodoro times entry or copy other lines */
     while (fgets(line, sizeof(line), file)) {
         if (strncmp(line, "POMODORO_TIME_OPTIONS=", 22) == 0) {
-            fprintf(temp_file, "POMODORO_TIME_OPTIONS=");
-            for (int i = 0; i < POMODORO_TIMES_COUNT; i++) {
-                if (i > 0) fprintf(temp_file, ",");
-                fprintf(temp_file, "%d", POMODORO_TIMES[i]);
-            }
-            fprintf(temp_file, "\n");
+            fprintf(temp_file, "POMODORO_TIME_OPTIONS=%d,%d,%d\n", work, short_break, long_break);
             found = 1;
         } else {
             fputs(line, temp_file);
@@ -1756,12 +1717,7 @@ void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
     
     /** Add pomodoro times if not found in config */
     if (!found) {
-        fprintf(temp_file, "POMODORO_TIME_OPTIONS=");
-        for (int i = 0; i < POMODORO_TIMES_COUNT; i++) {
-            if (i > 0) fprintf(temp_file, ",");
-            fprintf(temp_file, "%d", POMODORO_TIMES[i]);
-        }
-        fprintf(temp_file, "\n");
+        fprintf(temp_file, "POMODORO_TIME_OPTIONS=%d,%d,%d\n", work, short_break, long_break);
     }
     
     fclose(file);
@@ -1828,8 +1784,7 @@ void WriteConfigPomodoroLoopCount(int loop_count) {
     ReplaceFileUtf8(config_path, temp_path);
     ReleaseConfigWriteLock();
     
-    /** Update global variable immediately */
-    POMODORO_LOOP_COUNT = loop_count;
+    /** Persist only; runtime will be updated by watcher */
 }
 
 
