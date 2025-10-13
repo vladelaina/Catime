@@ -2357,15 +2357,7 @@ void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodo
     WriteIniString(INI_SECTION_NOTIFICATION, "POMODORO_TIMEOUT_MESSAGE_TEXT", pomodoro_msg, config_path);
     WriteIniString(INI_SECTION_NOTIFICATION, "POMODORO_CYCLE_COMPLETE_TEXT", cycle_complete_msg, config_path);
     
-    /** Update global message variables immediately */
-    strncpy(CLOCK_TIMEOUT_MESSAGE_TEXT, timeout_msg, sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT) - 1);
-    CLOCK_TIMEOUT_MESSAGE_TEXT[sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT) - 1] = '\0';
-    
-    strncpy(POMODORO_TIMEOUT_MESSAGE_TEXT, pomodoro_msg, sizeof(POMODORO_TIMEOUT_MESSAGE_TEXT) - 1);
-    POMODORO_TIMEOUT_MESSAGE_TEXT[sizeof(POMODORO_TIMEOUT_MESSAGE_TEXT) - 1] = '\0';
-    
-    strncpy(POMODORO_CYCLE_COMPLETE_TEXT, cycle_complete_msg, sizeof(POMODORO_CYCLE_COMPLETE_TEXT) - 1);
-    POMODORO_CYCLE_COMPLETE_TEXT[sizeof(POMODORO_CYCLE_COMPLETE_TEXT) - 1] = '\0';
+    /** Runtime will be updated by watcher */
 }
 
 
@@ -2549,9 +2541,6 @@ void WriteConfigNotificationTimeout(int timeout_ms) {
     /** Replace original with updated config */
     ReplaceFileUtf8(config_path, temp_path);
     ReleaseConfigWriteLock();
-    
-    /** Update global variable immediately */
-    NOTIFICATION_TIMEOUT_MS = timeout_ms;
 }
 
 
@@ -2716,9 +2705,6 @@ void WriteConfigNotificationOpacity(int opacity) {
     /** Replace original with updated config */
     ReplaceFileUtf8(config_path, temp_path);
     ReleaseConfigWriteLock();
-    
-    /** Update global variable immediately */
-    NOTIFICATION_MAX_OPACITY = opacity;
 }
 
 
@@ -2774,8 +2760,7 @@ void WriteConfigNotificationType(NotificationType type) {
         type = NOTIFICATION_TYPE_CATIME;
     }
     
-    /** Update global state immediately */
-    NOTIFICATION_TYPE = type;
+    /** Persist only; runtime will be updated by watcher */
     
     /** Convert enum to string representation */
     const char* typeStr;
@@ -2914,10 +2899,7 @@ void WriteConfigNotificationSound(const char* sound_file) {
                    clean_path,
                    config_path);
 
-    /** Sync global variable */
-    memset(NOTIFICATION_SOUND_FILE, 0, MAX_PATH);
-    strncpy(NOTIFICATION_SOUND_FILE, clean_path, MAX_PATH - 1);
-    NOTIFICATION_SOUND_FILE[MAX_PATH - 1] = '\0';
+    /** Runtime will be updated by watcher */
 }
 
 
@@ -2948,23 +2930,19 @@ void ReadNotificationVolumeConfig(void) {
 
 
 void WriteConfigNotificationVolume(int volume) {
-
     if (volume < 0) volume = 0;
     if (volume > 100) volume = 100;
-    
 
-    NOTIFICATION_SOUND_VOLUME = volume;
-    
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    
+
     /** Convert paths to wide character for Unicode support */
     wchar_t wconfig_path[MAX_PATH];
     MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-    
+
     FILE* file = _wfopen(wconfig_path, L"r");
     if (!file) return;
-    
+
     char temp_path[MAX_PATH];
     AcquireConfigWriteLock();
     if (!CreateUniqueTempPathInConfigDir(config_path, temp_path, MAX_PATH)) {
@@ -2972,19 +2950,19 @@ void WriteConfigNotificationVolume(int volume) {
         fclose(file);
         return;
     }
-    
+
     wchar_t wtemp_path[MAX_PATH];
     MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
-    
+
     FILE* temp = _wfopen(wtemp_path, L"w");
     if (!temp) {
         fclose(file);
         return;
     }
-    
+
     char line[256];
     BOOL found = FALSE;
-    
+
     while (fgets(line, sizeof(line), file)) {
         if (strncmp(line, "NOTIFICATION_SOUND_VOLUME=", 26) == 0) {
             fprintf(temp, "NOTIFICATION_SOUND_VOLUME=%d\n", volume);
@@ -2993,11 +2971,11 @@ void WriteConfigNotificationVolume(int volume) {
             fputs(line, temp);
         }
     }
-    
+
     if (!found) {
         fprintf(temp, "NOTIFICATION_SOUND_VOLUME=%d\n", volume);
     }
-    
+
     fclose(file);
     fclose(temp);
 
@@ -3911,9 +3889,6 @@ void WriteConfigNotificationDisabled(BOOL disabled) {
     /** Replace original file */
     ReplaceFileUtf8(config_path, temp_path);
     ReleaseConfigWriteLock();
-    
-    /** Update global variable */
-    NOTIFICATION_DISABLED = disabled;
 }
 
 /**
