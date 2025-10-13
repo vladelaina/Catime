@@ -2867,6 +2867,24 @@ void ReadNotificationSoundConfig(void) {
                  NOTIFICATION_SOUND_FILE,
                  MAX_PATH,
                  config_path);
+
+    /** Normalize %LOCALAPPDATA% placeholder to absolute path for runtime */
+    if (NOTIFICATION_SOUND_FILE[0] != '\0') {
+        const char* varToken = "%LOCALAPPDATA%";
+        size_t tokenLen = strlen(varToken); /* 14, includes both '%' */
+        if (_strnicmp(NOTIFICATION_SOUND_FILE, varToken, (int)tokenLen) == 0) {
+            const char* localAppData = getenv("LOCALAPPDATA");
+            if (localAppData && localAppData[0] != '\0') {
+                char resolved[MAX_PATH] = {0};
+                /** Replace %LOCALAPPDATA% with real path */
+                snprintf(resolved, sizeof(resolved), "%s%s",
+                         localAppData,
+                         NOTIFICATION_SOUND_FILE + tokenLen);
+                strncpy(NOTIFICATION_SOUND_FILE, resolved, MAX_PATH - 1);
+                NOTIFICATION_SOUND_FILE[MAX_PATH - 1] = '\0';
+            }
+        }
+    }
 }
 
 
@@ -2891,14 +2909,25 @@ void WriteConfigNotificationSound(const char* sound_file) {
     }
     *dst = '\0';
 
+    /** If path is under %LOCALAPPDATA%\Catime\resources\audio, store with placeholder */
+    char to_write[MAX_PATH] = {0};
+    const char* localAppData = getenv("LOCALAPPDATA");
+    if (localAppData && _strnicmp(clean_path, localAppData, strlen(localAppData)) == 0) {
+        const char* rest = clean_path + strlen(localAppData);
+        if (*rest == '\\') rest++;
+        snprintf(to_write, sizeof(to_write), "%%LOCALAPPDATA%%\\%s", rest);
+    } else {
+        strncpy(to_write, clean_path, sizeof(to_write) - 1);
+    }
+
     /** Use INI wide-char API to avoid locale mis-decoding on non-BOM files */
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     WriteIniString(INI_SECTION_NOTIFICATION,
                    "NOTIFICATION_SOUND_FILE",
-                   clean_path,
+                   to_write,
                    config_path);
-
+    
     /** Runtime will be updated by watcher */
 }
 
