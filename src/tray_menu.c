@@ -848,6 +848,18 @@ void ShowColorMenu(HWND hwnd) {
         }
 
         AppendMenuW(hAnimMenu, MF_SEPARATOR, 0, NULL);
+
+        /** Animation speed metric sub options */
+        HMENU hAnimSpeedMenu = CreatePopupMenu();
+        AnimationSpeedMetric currentMetric = GetAnimationSpeedMetric();
+        AppendMenuW(hAnimSpeedMenu, MF_STRING | (currentMetric == ANIMATION_SPEED_MEMORY ? MF_CHECKED : MF_UNCHECKED),
+                    CLOCK_IDM_ANIM_SPEED_MEMORY, GetLocalizedString(L"按内存占用", L"By Memory Usage"));
+        AppendMenuW(hAnimSpeedMenu, MF_STRING | (currentMetric == ANIMATION_SPEED_CPU ? MF_CHECKED : MF_UNCHECKED),
+                    CLOCK_IDM_ANIM_SPEED_CPU, GetLocalizedString(L"按CPU占用", L"By CPU Usage"));
+        AppendMenuW(hAnimMenu, MF_POPUP, (UINT_PTR)hAnimSpeedMenu,
+                    GetLocalizedString(L"动画速度依据", L"Animation Speed Metric"));
+
+        AppendMenuW(hAnimMenu, MF_SEPARATOR, 0, NULL);
         AppendMenuW(hAnimMenu, MF_STRING, CLOCK_IDM_ANIMATIONS_OPEN_DIR, GetLocalizedString(L"打开动画文件夹", L"Open animations folder"));
     }
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hAnimMenu, GetLocalizedString(L"动画", L"Animations"));

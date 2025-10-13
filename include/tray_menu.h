@@ -86,6 +86,10 @@
 #define CLOCK_IDM_ANIMATIONS_USE_LOGO 2202       /**< Use app logo as tray icon */
 #define CLOCK_IDM_ANIMATIONS_BASE 3000           /**< Dynamic animation item base (folders) */
 
+/** @brief Animation speed metric submenu identifiers */
+#define CLOCK_IDM_ANIM_SPEED_MEMORY 2210         /**< Use memory usage as speed metric */
+#define CLOCK_IDM_ANIM_SPEED_CPU 2211            /**< Use CPU usage as speed metric */
+
 /**
  * @brief Display tray context menu
  * @param hwnd Parent window handle
