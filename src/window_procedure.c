@@ -669,36 +669,38 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             }
 
             /** WINDOW_POS + SCALE + TOPMOST */
-            int posX = ReadIniInt(INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_X", CLOCK_WINDOW_POS_X, config_path);
-            int posY = ReadIniInt(INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_Y", CLOCK_WINDOW_POS_Y, config_path);
-            char scaleStr[16] = {0};
-            ReadIniString(INI_SECTION_DISPLAY, "WINDOW_SCALE", "1.62", scaleStr, sizeof(scaleStr), config_path);
-            float newScale = (float)atof(scaleStr);
-            BOOL newTopmost = ReadIniBool(INI_SECTION_DISPLAY, "WINDOW_TOPMOST", CLOCK_WINDOW_TOPMOST, config_path);
+            if (!CLOCK_EDIT_MODE) {
+                int posX = ReadIniInt(INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_X", CLOCK_WINDOW_POS_X, config_path);
+                int posY = ReadIniInt(INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_Y", CLOCK_WINDOW_POS_Y, config_path);
+                char scaleStr[16] = {0};
+                ReadIniString(INI_SECTION_DISPLAY, "WINDOW_SCALE", "1.62", scaleStr, sizeof(scaleStr), config_path);
+                float newScale = (float)atof(scaleStr);
+                BOOL newTopmost = ReadIniBool(INI_SECTION_DISPLAY, "WINDOW_TOPMOST", CLOCK_WINDOW_TOPMOST, config_path);
 
-            BOOL posChanged = (posX != CLOCK_WINDOW_POS_X) || (posY != CLOCK_WINDOW_POS_Y);
-            BOOL scaleChanged = (newScale > 0.0f && fabsf(newScale - CLOCK_WINDOW_SCALE) > 0.0001f);
-            BOOL topChanged = (newTopmost != CLOCK_WINDOW_TOPMOST);
+                BOOL posChanged = (posX != CLOCK_WINDOW_POS_X) || (posY != CLOCK_WINDOW_POS_Y);
+                BOOL scaleChanged = (newScale > 0.0f && fabsf(newScale - CLOCK_WINDOW_SCALE) > 0.0001f);
+                BOOL topChanged = (newTopmost != CLOCK_WINDOW_TOPMOST);
 
-            if (scaleChanged) {
-                extern float CLOCK_FONT_SCALE_FACTOR;
-                CLOCK_WINDOW_SCALE = newScale;
-                CLOCK_FONT_SCALE_FACTOR = newScale;
-            }
+                if (scaleChanged) {
+                    extern float CLOCK_FONT_SCALE_FACTOR;
+                    CLOCK_WINDOW_SCALE = newScale;
+                    CLOCK_FONT_SCALE_FACTOR = newScale;
+                }
 
-            if (posChanged || scaleChanged) {
-                SetWindowPos(hwnd, NULL,
-                    posX,
-                    posY,
-                    (int)(CLOCK_BASE_WINDOW_WIDTH * CLOCK_WINDOW_SCALE),
-                    (int)(CLOCK_BASE_WINDOW_HEIGHT * CLOCK_WINDOW_SCALE),
-                    SWP_NOZORDER | SWP_NOACTIVATE);
-                CLOCK_WINDOW_POS_X = posX;
-                CLOCK_WINDOW_POS_Y = posY;
-            }
+                if (posChanged || scaleChanged) {
+                    SetWindowPos(hwnd, NULL,
+                        posX,
+                        posY,
+                        (int)(CLOCK_BASE_WINDOW_WIDTH * CLOCK_WINDOW_SCALE),
+                        (int)(CLOCK_BASE_WINDOW_HEIGHT * CLOCK_WINDOW_SCALE),
+                        SWP_NOZORDER | SWP_NOACTIVATE);
+                    CLOCK_WINDOW_POS_X = posX;
+                    CLOCK_WINDOW_POS_Y = posY;
+                }
 
-            if (topChanged) {
-                SetWindowTopmost(hwnd, newTopmost);
+                if (topChanged) {
+                    SetWindowTopmost(hwnd, newTopmost);
+                }
             }
             return 0;
         }
