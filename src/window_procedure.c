@@ -49,14 +49,47 @@ typedef struct {
     BOOL is_dir;
 } AnimationEntry;
 
-/** @brief qsort comparator for AnimationEntry, sorting directories first, then alphabetically. */
+/** @brief Natural string compare for wide-char names: compare numeric substrings by value. */
+static int NaturalCompareW(const wchar_t* a, const wchar_t* b) {
+    const wchar_t* pa = a;
+    const wchar_t* pb = b;
+    while (*pa && *pb) {
+        if (iswdigit(*pa) && iswdigit(*pb)) {
+            const wchar_t* za = pa; while (*za == L'0') za++;
+            const wchar_t* zb = pb; while (*zb == L'0') zb++;
+            const wchar_t* ea = za; while (iswdigit(*ea)) ea++;
+            const wchar_t* eb = zb; while (iswdigit(*eb)) eb++;
+            size_t lena = (size_t)(ea - za);
+            size_t lenb = (size_t)(eb - zb);
+            if (lena != lenb) return (lena < lenb) ? -1 : 1;
+            int dcmp = wcsncmp(za, zb, lena);
+            if (dcmp != 0) return (dcmp < 0) ? -1 : 1;
+            /** Tie-breaker: fewer leading zeros comes first */
+            size_t leadA = (size_t)(za - pa);
+            size_t leadB = (size_t)(zb - pb);
+            if (leadA != leadB) return (leadA < leadB) ? -1 : 1;
+            pa = ea;
+            pb = eb;
+            continue;
+        }
+        wchar_t ca = towlower(*pa);
+        wchar_t cb = towlower(*pb);
+        if (ca != cb) return (ca < cb) ? -1 : 1;
+        pa++; pb++;
+    }
+    if (*pa) return 1;
+    if (*pb) return -1;
+    return 0;
+}
+
+/** @brief qsort comparator for AnimationEntry, directories first, then natural order. */
 static int CompareAnimationEntries(const void* a, const void* b) {
     const AnimationEntry* entryA = (const AnimationEntry*)a;
     const AnimationEntry* entryB = (const AnimationEntry*)b;
     if (entryA->is_dir != entryB->is_dir) {
         return entryB->is_dir - entryA->is_dir; // Directories first
     }
-    return _wcsicmp(entryA->name, entryB->name);
+    return NaturalCompareW(entryA->name, entryB->name);
 }
 
 /** @brief Checks if a folder contains no sub-folders or animated images, making it a leaf. */
