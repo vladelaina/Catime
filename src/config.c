@@ -1350,7 +1350,7 @@ void ReadConfig() {
             g_animSpeedMetric = ANIMATION_SPEED_MEMORY;
         }
 
-        /** 仅使用新格式：固定区间键（ANIMATION_SPEED_MAP_low-high=value） */
+        /** Use only the new format: fixed-range keys (ANIMATION_SPEED_MAP_low-high=value) */
         ParseAnimationSpeedFixedKeys(config_path);
     }
 }
@@ -2217,7 +2217,7 @@ void WriteConfig(const char* config_path) {
         WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_METRIC", metricStr, config_path);
     {
         /** Write vertical lines for easier editing */
-        /** 持久化为固定区间键（值仅为比例数值） */
+        /** Persist as fixed-range keys (value is scale percent only) */
         for (int i = 0; i < g_animSpeedEntryCount; ++i) {
             char key[64];
             snprintf(key, sizeof(key), "ANIMATION_SPEED_MAP_%d-%d",

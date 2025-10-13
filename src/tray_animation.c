@@ -768,8 +768,22 @@ static void AdvanceTrayFrame(void) {
             SystemMonitor_GetUsage(&cpu, &mem);
             percent = mem;
         }
-        double scalePercent = GetAnimationSpeedScaleForPercent(percent); /** e.g., 150 => 1.5x */
-        if (scalePercent <= 0.0) scalePercent = 100.0;
+        /** Determine whether to apply scaling under TIMER metric */
+        BOOL applyScaling = TRUE;
+        if (metric == ANIMATION_SPEED_TIMER) {
+            extern BOOL CLOCK_COUNT_UP;
+            extern BOOL CLOCK_SHOW_CURRENT_TIME;
+            extern int CLOCK_TOTAL_TIME;
+            if (CLOCK_SHOW_CURRENT_TIME || CLOCK_COUNT_UP || CLOCK_TOTAL_TIME <= 0) {
+                applyScaling = FALSE; /** outside countdown: keep 1x */
+            }
+        }
+
+        double scalePercent = 100.0;
+        if (applyScaling) {
+            scalePercent = GetAnimationSpeedScaleForPercent(percent); /** e.g., 150 => 1.5x */
+            if (scalePercent <= 0.0) scalePercent = 100.0;
+        }
         double scale = scalePercent / 100.0;
         if (scale < 0.1) scale = 0.1; /** avoid zero/too fast */
 
@@ -851,8 +865,21 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
             SystemMonitor_GetUsage(&cpu, &mem);
             percent = mem;
         }
-        double scalePercent = GetAnimationSpeedScaleForPercent(percent);
-        if (scalePercent <= 0.0) scalePercent = 100.0;
+        BOOL applyScaling = TRUE;
+        if (metric == ANIMATION_SPEED_TIMER) {
+            extern BOOL CLOCK_COUNT_UP;
+            extern BOOL CLOCK_SHOW_CURRENT_TIME;
+            extern int CLOCK_TOTAL_TIME;
+            if (CLOCK_SHOW_CURRENT_TIME || CLOCK_COUNT_UP || CLOCK_TOTAL_TIME <= 0) {
+                applyScaling = FALSE;
+            }
+        }
+
+        double scalePercent = 100.0;
+        if (applyScaling) {
+            scalePercent = GetAnimationSpeedScaleForPercent(percent);
+            if (scalePercent <= 0.0) scalePercent = 100.0;
+        }
         double scale = scalePercent / 100.0;
         if (scale < 0.1) scale = 0.1;
         UINT scaledDelay = (UINT)(baseDelay / scale);
