@@ -84,12 +84,6 @@ void AdjustWindowPosition(HWND hwnd, BOOL forceOnScreen);
 void SaveWindowSettings(HWND hwnd);
 
 /**
- * @brief Load window settings from configuration
- * @param hwnd Window handle
- */
-void LoadWindowSettings(HWND hwnd);
-
-/**
  * @brief Initialize Desktop Window Manager functions
  * @return TRUE on success, FALSE on failure
  */

@@ -24,11 +24,15 @@ BOOL HandleWindowCreate(HWND hwnd) {
         EnableWindow(hwndParent, TRUE);
     }
     
-    /** Load persisted window settings from configuration */
-    LoadWindowSettings(hwnd);
-    
+    /** Set initial window position and size */
+    AdjustWindowPosition(hwnd, TRUE);
+        
     /** Set click-through behavior based on edit mode */
-    SetClickThrough(hwnd, !CLOCK_EDIT_MODE);
+    if (CLOCK_EDIT_MODE) {
+        SetClickThrough(hwnd, FALSE);
+    } else {
+        SetClickThrough(hwnd, TRUE);
+    }
     
     /** Apply topmost window setting */
     SetWindowTopmost(hwnd, CLOCK_WINDOW_TOPMOST);

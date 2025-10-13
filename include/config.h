@@ -468,6 +468,17 @@ int ReadIniInt(const char* section, const char* key, int defaultValue,
              const char* filePath);
 
 /**
+ * @brief Read boolean value from INI file
+ * @param section INI section name
+ * @param key INI key name
+ * @param defaultValue Default boolean if key not found
+ * @param filePath Path to INI file
+ * @return TRUE or FALSE
+ */
+BOOL ReadIniBool(const char* section, const char* key, BOOL defaultValue, 
+               const char* filePath);
+
+/**
  * @brief Write integer value to INI file
  * @param section INI section name
  * @param key INI key name

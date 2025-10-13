@@ -321,8 +321,8 @@ void AdjustWindowPosition(HWND hwnd, BOOL forceOnScreen) {
             /** Move window to new position */
             SetWindowPos(hwnd, NULL, newX, newY, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
             
-            /** Save new position to configuration */
-            SaveWindowSettings(hwnd);
+    /** Save new position to configuration */
+    SaveWindowSettings(hwnd);
         }
     }
 }
@@ -341,147 +341,13 @@ void SaveWindowSettings(HWND hwnd) {
     
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    
-    wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-    
-    FILE *fp = _wfopen(wconfig_path, L"r");
-    if (!fp) return;
-    
-    size_t buffer_size = 8192;   
-    char *config = malloc(buffer_size);
-    char *new_config = malloc(buffer_size);
-    if (!config || !new_config) {
-        if (config) free(config);
-        if (new_config) free(new_config);
-        fclose(fp);
-        return;
-    }
-    
-    config[0] = new_config[0] = '\0';
-    char line[256];
-    size_t total_len = 0;
-    
-    while (fgets(line, sizeof(line), fp)) {
-        size_t line_len = strlen(line);
-        if (total_len + line_len >= buffer_size - 1) {
-            size_t new_size = buffer_size * 2;
-            char *temp_config = realloc(config, new_size);
-            char *temp_new_config = realloc(new_config, new_size);
-            
-            if (!temp_config || !temp_new_config) {
-                free(config);
-                free(new_config);
-                fclose(fp);
-                return;
-            }
-            
-            config = temp_config;
-            new_config = temp_new_config;
-            buffer_size = new_size;
-        }
-        strcat(config, line);
-        total_len += line_len;
-    }
-    fclose(fp);
-    
-    char *start = config;
-    char *end = config + strlen(config);
-    BOOL has_window_scale = FALSE;
-    size_t new_config_len = 0;
-    
-    while (start < end) {
-        char *newline = strchr(start, '\n');
-        if (!newline) newline = end;
-        
-        char temp[256] = {0};
-        size_t line_len = newline - start;
-        if (line_len >= sizeof(temp)) line_len = sizeof(temp) - 1;
-        strncpy(temp, start, line_len);
-        
-        if (strncmp(temp, "CLOCK_WINDOW_POS_X=", 19) == 0) {
-            new_config_len += snprintf(new_config + new_config_len, 
-                buffer_size - new_config_len, 
-                "CLOCK_WINDOW_POS_X=%d\n", CLOCK_WINDOW_POS_X);
-        } else if (strncmp(temp, "CLOCK_WINDOW_POS_Y=", 19) == 0) {
-            new_config_len += snprintf(new_config + new_config_len,
-                buffer_size - new_config_len,
-                "CLOCK_WINDOW_POS_Y=%d\n", CLOCK_WINDOW_POS_Y);
-        } else if (strncmp(temp, "WINDOW_SCALE=", 13) == 0) {
-            new_config_len += snprintf(new_config + new_config_len,
-                buffer_size - new_config_len,
-                "WINDOW_SCALE=%.2f\n", CLOCK_WINDOW_SCALE);
-            has_window_scale = TRUE;
-        } else {
-            size_t remaining = buffer_size - new_config_len;
-            if (remaining > line_len + 1) {
-                strncpy(new_config + new_config_len, start, line_len);
-                new_config_len += line_len;
-                new_config[new_config_len++] = '\n';
-            }
-        }
-        
-        start = newline + 1;
-        if (start > end) break;
-    }
-    
-    if (!has_window_scale && buffer_size - new_config_len > 50) {
-        new_config_len += snprintf(new_config + new_config_len,
-            buffer_size - new_config_len,
-            "WINDOW_SCALE=%.2f\n", CLOCK_WINDOW_SCALE);
-    }
-    
-    if (new_config_len < buffer_size) {
-        new_config[new_config_len] = '\0';
-    } else {
-        new_config[buffer_size - 1] = '\0';
-    }
-    
-    fp = _wfopen(wconfig_path, L"w");
-    if (fp) {
-        fputs(new_config, fp);
-        fclose(fp);
-    }
-    
-    free(config);
-    free(new_config);
-}
 
-void LoadWindowSettings(HWND hwnd) {
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    
-    wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-    
-    FILE *fp = _wfopen(wconfig_path, L"r");
-    if (!fp) return;
-    
-    char line[256];
-    while (fgets(line, sizeof(line), fp)) {
-        line[strcspn(line, "\n")] = 0;
-        
-        if (strncmp(line, "CLOCK_WINDOW_POS_X=", 19) == 0) {
-            CLOCK_WINDOW_POS_X = atoi(line + 19);
-        } else if (strncmp(line, "CLOCK_WINDOW_POS_Y=", 19) == 0) {
-            CLOCK_WINDOW_POS_Y = atoi(line + 19);
-        } else if (strncmp(line, "WINDOW_SCALE=", 13) == 0) {
-            CLOCK_WINDOW_SCALE = atof(line + 13);
-            CLOCK_FONT_SCALE_FACTOR = CLOCK_WINDOW_SCALE;
-        }
-    }
-    fclose(fp);
-    
+    WriteIniInt(INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_X", CLOCK_WINDOW_POS_X, config_path);
+    WriteIniInt(INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_Y", CLOCK_WINDOW_POS_Y, config_path);
 
-    SetWindowPos(hwnd, NULL, 
-        CLOCK_WINDOW_POS_X, 
-        CLOCK_WINDOW_POS_Y,
-        (int)(CLOCK_BASE_WINDOW_WIDTH * CLOCK_WINDOW_SCALE),
-        (int)(CLOCK_BASE_WINDOW_HEIGHT * CLOCK_WINDOW_SCALE),
-        SWP_NOZORDER
-    );
-    
-
+    char scaleStr[16];
+    snprintf(scaleStr, sizeof(scaleStr), "%.2f", CLOCK_WINDOW_SCALE);
+    WriteIniString(INI_SECTION_DISPLAY, "WINDOW_SCALE", scaleStr, config_path);
 }
 
 BOOL HandleMouseWheel(HWND hwnd, int delta) {

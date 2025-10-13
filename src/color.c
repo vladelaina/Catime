@@ -10,6 +10,7 @@
 #include "../include/language.h"
 #include "../resource/resource.h"
 #include "../include/dialog_procedure.h"
+#include "../include/config.h"
 
 /** @brief Dynamic array of user-defined color options */
 PredefinedColor* COLOR_OPTIONS = NULL;
@@ -26,7 +27,7 @@ void GetConfigPath(char* path, size_t size);
 void CreateDefaultConfig(const char* config_path);
 void ReadConfig(void);
 void WriteConfig(const char* config_path);
-void replaceBlackColor(const char* color, char* output, size_t output_size);
+static void replaceBlackColor(const char* color, char* output, size_t output_size);
 
 /** @brief CSS color name to hex mapping table */
 static const CSSColor CSS_COLORS[] = {
@@ -473,66 +474,7 @@ void ClearColorOptions(void) {
 void WriteConfigColor(const char* color_input) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-
-    wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-    
-    FILE *file = _wfopen(wconfig_path, L"r");
-    if (!file) {
-        fprintf(stderr, "Failed to open config file for reading: %s\n", config_path);
-        return;
-    }
-
-    fseek(file, 0, SEEK_END);
-    long file_size = ftell(file);
-    fseek(file, 0, SEEK_SET);
-
-    char *config_content = (char *)malloc(file_size + 1);
-    if (!config_content) {
-        fprintf(stderr, "Memory allocation failed!\n");
-        fclose(file);
-        return;
-    }
-    fread(config_content, sizeof(char), file_size, file);
-    config_content[file_size] = '\0';
-    fclose(file);
-
-    char *new_config = (char *)malloc(file_size + 100);
-    if (!new_config) {
-        fprintf(stderr, "Memory allocation failed!\n");
-        free(config_content);
-        return;
-    }
-    new_config[0] = '\0';
-
-    /** Parse and update config line by line */
-    char *line = strtok(config_content, "\n");
-    while (line) {
-        if (strncmp(line, "CLOCK_TEXT_COLOR=", 17) == 0) {
-            strcat(new_config, "CLOCK_TEXT_COLOR=");
-            strcat(new_config, color_input);
-            strcat(new_config, "\n");
-        } else {
-            strcat(new_config, line);
-            strcat(new_config, "\n");
-        }
-        line = strtok(NULL, "\n");
-    }
-
-    free(config_content);
-
-    file = _wfopen(wconfig_path, L"w");
-    if (!file) {
-        fprintf(stderr, "Failed to open config file for writing: %s\n", config_path);
-        free(new_config);
-        return;
-    }
-    fwrite(new_config, sizeof(char), strlen(new_config), file);
-    fclose(file);
-
-    free(new_config);
-
-    ReadConfig();
+    WriteIniString(INI_SECTION_DISPLAY, "CLOCK_TEXT_COLOR", color_input, config_path);
 }
 
 /**
@@ -823,7 +765,7 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
  * @param output_size Size of output buffer
  * Pure black (#000000) is barely visible, so we use #000001 instead
  */
-void replaceBlackColor(const char* color, char* output, size_t output_size) {
+static void replaceBlackColor(const char* color, char* output, size_t output_size) {
     if (color && (strcasecmp(color, "#000000") == 0)) {
         strncpy(output, "#000001", output_size);
         output[output_size - 1] = '\0';

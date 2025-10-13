@@ -28,6 +28,11 @@
 #define WM_APP_ANIM_SPEED_CHANGED (WM_APP + 51)
 #endif
 
+/** @brief Config watcher notification for display settings hot-reload */
+#ifndef WM_APP_DISPLAY_CHANGED
+#define WM_APP_DISPLAY_CHANGED (WM_APP + 52)
+#endif
+
 /** @brief Copy data identifier for CLI text */
 #ifndef COPYDATA_ID_CLI_TEXT
 #define COPYDATA_ID_CLI_TEXT 0x10010001

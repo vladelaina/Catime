@@ -8,6 +8,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <math.h>
 #include <time.h>
 #include <ctype.h>
 #include <dwmapi.h>
@@ -630,6 +631,77 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             ApplyAnimationPathValueNoPersist(value);
             return 0;
         }
+        case WM_APP_DISPLAY_CHANGED: {
+            char config_path[MAX_PATH] = {0};
+            GetConfigPath(config_path, MAX_PATH);
+
+            /** CLOCK_TEXT_COLOR */
+            ReadIniString(INI_SECTION_DISPLAY, "CLOCK_TEXT_COLOR", "#FFB6C1", CLOCK_TEXT_COLOR, sizeof(CLOCK_TEXT_COLOR), config_path);
+            InvalidateRect(hwnd, NULL, TRUE);
+
+            /** CLOCK_BASE_FONT_SIZE */
+            int newBaseSize = ReadIniInt(INI_SECTION_DISPLAY, "CLOCK_BASE_FONT_SIZE", CLOCK_BASE_FONT_SIZE, config_path);
+            if (newBaseSize != CLOCK_BASE_FONT_SIZE) {
+                CLOCK_BASE_FONT_SIZE = newBaseSize;
+                InvalidateRect(hwnd, NULL, TRUE);
+            }
+
+            /** FONT_FILE_NAME => load font resource and update FONT_INTERNAL_NAME */
+            char newFontName[MAX_PATH] = {0};
+            ReadIniString(INI_SECTION_DISPLAY, "FONT_FILE_NAME", FONT_FILE_NAME, newFontName, sizeof(newFontName), config_path);
+            if (strcmp(newFontName, FONT_FILE_NAME) != 0) {
+                strncpy(FONT_FILE_NAME, newFontName, sizeof(FONT_FILE_NAME) - 1);
+                FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
+                /** Resolve relative fonts folder and load, get internal name */
+                const char* localappdata_prefix = "%LOCALAPPDATA%\\Catime\\resources\\fonts\\";
+                char actualFontFileName[MAX_PATH];
+                if (_strnicmp(FONT_FILE_NAME, localappdata_prefix, (int)strlen(localappdata_prefix)) == 0) {
+                    strncpy(actualFontFileName, FONT_FILE_NAME + strlen(localappdata_prefix), sizeof(actualFontFileName) - 1);
+                    actualFontFileName[sizeof(actualFontFileName) - 1] = '\0';
+                } else {
+                    strncpy(actualFontFileName, FONT_FILE_NAME, sizeof(actualFontFileName) - 1);
+                    actualFontFileName[sizeof(actualFontFileName) - 1] = '\0';
+                }
+                extern BOOL LoadFontByNameAndGetRealName(HINSTANCE, const char*, char*, size_t);
+                if (LoadFontByNameAndGetRealName(GetModuleHandle(NULL), actualFontFileName, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME))) {
+                    InvalidateRect(hwnd, NULL, TRUE);
+                }
+            }
+
+            /** WINDOW_POS + SCALE + TOPMOST */
+            int posX = ReadIniInt(INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_X", CLOCK_WINDOW_POS_X, config_path);
+            int posY = ReadIniInt(INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_Y", CLOCK_WINDOW_POS_Y, config_path);
+            char scaleStr[16] = {0};
+            ReadIniString(INI_SECTION_DISPLAY, "WINDOW_SCALE", "1.62", scaleStr, sizeof(scaleStr), config_path);
+            float newScale = (float)atof(scaleStr);
+            BOOL newTopmost = ReadIniBool(INI_SECTION_DISPLAY, "WINDOW_TOPMOST", CLOCK_WINDOW_TOPMOST, config_path);
+
+            BOOL posChanged = (posX != CLOCK_WINDOW_POS_X) || (posY != CLOCK_WINDOW_POS_Y);
+            BOOL scaleChanged = (newScale > 0.0f && fabsf(newScale - CLOCK_WINDOW_SCALE) > 0.0001f);
+            BOOL topChanged = (newTopmost != CLOCK_WINDOW_TOPMOST);
+
+            if (scaleChanged) {
+                extern float CLOCK_FONT_SCALE_FACTOR;
+                CLOCK_WINDOW_SCALE = newScale;
+                CLOCK_FONT_SCALE_FACTOR = newScale;
+            }
+
+            if (posChanged || scaleChanged) {
+                SetWindowPos(hwnd, NULL,
+                    posX,
+                    posY,
+                    (int)(CLOCK_BASE_WINDOW_WIDTH * CLOCK_WINDOW_SCALE),
+                    (int)(CLOCK_BASE_WINDOW_HEIGHT * CLOCK_WINDOW_SCALE),
+                    SWP_NOZORDER | SWP_NOACTIVATE);
+                CLOCK_WINDOW_POS_X = posX;
+                CLOCK_WINDOW_POS_Y = posY;
+            }
+
+            if (topChanged) {
+                SetWindowTopmost(hwnd, newTopmost);
+            }
+            return 0;
+        }
         
         /** Inter-process communication for CLI arguments */
         case WM_COPYDATA: {
@@ -931,9 +1003,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     GetConfigPath(config_path, MAX_PATH);
                     const char* metricStr = (m == ANIMATION_SPEED_CPU ? "CPU" : (m == ANIMATION_SPEED_TIMER ? "TIMER" : "MEMORY"));
                     WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_METRIC", metricStr, config_path);
-                    /** Immediate apply */
-                    extern void ReadConfig();
-                    ReadConfig();
                     return 0;
                 }
 
@@ -1087,7 +1156,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             StopNotificationSound();
                             
                             WriteConfigTimeOptions(options);
-                            ReadConfig();
                             break;
                         } else {
                             ShowErrorDialog(hwnd);
@@ -1127,7 +1195,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             
                             WriteConfigDefaultStartTime(total_seconds);
                             WriteConfigStartupMode("COUNTDOWN");
-                            ReadConfig();
                             break;
                         } else {
                             ShowErrorDialog(hwnd);
@@ -1238,8 +1305,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     }
                     
                     CreateDefaultConfig(config_path);
-                    
-                    ReadConfig();
                     
                     ReadNotificationMessagesConfig();
                     
@@ -1440,19 +1505,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 /** Toggle window always-on-top state */
                 case CLOCK_IDM_TOPMOST: {
                     BOOL newTopmost = !CLOCK_WINDOW_TOPMOST;
-                    
-                    /** Handle topmost toggle differently in edit mode */
-                    if (CLOCK_EDIT_MODE) {
-                        PREVIOUS_TOPMOST_STATE = newTopmost;
-                        CLOCK_WINDOW_TOPMOST = newTopmost;
-                        WriteConfigTopmost(newTopmost ? "TRUE" : "FALSE");
-                    } else {
-                        /** SetWindowTopmost handles both variable update and config file writing */
-                        SetWindowTopmost(hwnd, newTopmost);
-                        
-                        /** Just refresh the display, SetWindowTopmost handles all window state management */
-                        InvalidateRect(hwnd, NULL, TRUE);
-                    }
+                    /** Unified path: write to INI and let watcher apply */
+                    WriteConfigTopmost(newTopmost ? "TRUE" : "FALSE");
                     break;
                 }
                 
@@ -1531,7 +1585,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         snprintf(hex_color, sizeof(hex_color), "#%02X%02X%02X", 
                                 GetRValue(color), GetGValue(color), GetBValue(color));
                         WriteConfigColor(hex_color);
-                        ReadConfig();
                     }
                     break;
                 }
