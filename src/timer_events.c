@@ -270,11 +270,40 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
         DWORD elapsed_ms = current_tick - last_timer_tick;
         last_timer_tick = current_tick;
         ms_accumulator += elapsed_ms;
+
+        /** Tail segment fast interval: improve visual smoothness near the end */
+        static BOOL s_tail_fast_interval = FALSE;
+        if (!CLOCK_SHOW_MILLISECONDS && !CLOCK_COUNT_UP && !CLOCK_SHOW_CURRENT_TIME && CLOCK_TOTAL_TIME > 0) {
+            int remaining_now = CLOCK_TOTAL_TIME - countdown_elapsed_time;
+            UINT normalInterval = GetTimerInterval();
+            UINT tailInterval = 250;  /** 4 fps near the end */
+            if (remaining_now <= 2 && remaining_now > 0) {
+                if (!s_tail_fast_interval) {
+                    SetTimer(hwnd, 1, tailInterval, NULL);
+                    s_tail_fast_interval = TRUE;
+                }
+            } else {
+                if (s_tail_fast_interval) {
+                    SetTimer(hwnd, 1, normalInterval, NULL);
+                    s_tail_fast_interval = FALSE;
+                }
+            }
+        } else {
+            /** Not in countdown tail region: ensure normal interval if we had sped up */
+            if (s_tail_fast_interval) {
+                SetTimer(hwnd, 1, GetTimerInterval(), NULL);
+                s_tail_fast_interval = FALSE;
+            }
+        }
         
         /** Only update seconds when we've accumulated at least 1 second */
         if (ms_accumulator >= 1000) {
             int seconds_to_add = ms_accumulator / 1000;
             ms_accumulator %= 1000;  /** Keep remainder for next time */
+            /** Visual anti-skip: when not showing milliseconds, cap to +1s per frame */
+            if (!CLOCK_SHOW_MILLISECONDS && seconds_to_add > 1) {
+                seconds_to_add = 1;
+            }
             
             /** Count-up mode: increment elapsed time by actual seconds */
             if (CLOCK_COUNT_UP) {
