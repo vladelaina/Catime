@@ -33,6 +33,11 @@
 #define WM_APP_DISPLAY_CHANGED (WM_APP + 52)
 #endif
 
+/** @brief Config watcher notification for [Timer] section hot-reload */
+#ifndef WM_APP_TIMER_CHANGED
+#define WM_APP_TIMER_CHANGED (WM_APP + 53)
+#endif
+
 /** @brief Copy data identifier for CLI text */
 #ifndef COPYDATA_ID_CLI_TEXT
 #define COPYDATA_ID_CLI_TEXT 0x10010001

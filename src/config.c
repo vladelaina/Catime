@@ -1897,15 +1897,10 @@ void WriteConfigTopmost(const char* topmost) {
  * @param filePath Path to file to open on timeout
  */
 void WriteConfigTimeoutFile(const char* filePath) {
-    /** Set timeout action and file path immediately */
-    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
-    strncpy(CLOCK_TIMEOUT_FILE_PATH, filePath, MAX_PATH - 1);
-    CLOCK_TIMEOUT_FILE_PATH[MAX_PATH - 1] = '\0';
-    
-    /** Write complete config to persist changes */
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    WriteConfig(config_path);
+    /** Persist to INI only; watcher will apply to runtime */
+    if (!filePath) filePath = "";
+    WriteConfigKeyValue("CLOCK_TIMEOUT_ACTION", "OPEN_FILE");
+    WriteConfigKeyValue("CLOCK_TIMEOUT_FILE", filePath);
 }
 
 
@@ -2252,73 +2247,10 @@ void WriteConfig(const char* config_path) {
  * @param url Website URL to open on timeout
  */
 void WriteConfigTimeoutWebsite(const char* url) {
-    /** Only process valid non-empty URLs */
-    if (url && url[0] != '\0') {
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_WEBSITE;
-        int len = MultiByteToWideChar(CP_UTF8, 0, url, -1, CLOCK_TIMEOUT_WEBSITE_URL, MAX_PATH);
-        if (len == 0) {
-            CLOCK_TIMEOUT_WEBSITE_URL[0] = L'\0';
-        }
-        
-        char config_path[MAX_PATH];
-        GetConfigPath(config_path, MAX_PATH);
-        
-        /** Convert paths to wide character for Unicode support */
-    wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-    
-    FILE* file = _wfopen(wconfig_path, L"r");
-        if (!file) return;
-        
-        char temp_path[MAX_PATH];
-        AcquireConfigWriteLock();
-        if (!CreateUniqueTempPathInConfigDir(config_path, temp_path, MAX_PATH)) {
-            ReleaseConfigWriteLock();
-            fclose(file);
-            return;
-        }
-        
-        wchar_t wtemp_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
-    
-    FILE* temp = _wfopen(wtemp_path, L"w");
-        if (!temp) {
-            fclose(file);
-            return;
-        }
-        
-        char line[MAX_PATH];
-        BOOL actionFound = FALSE;
-        BOOL urlFound = FALSE;
-        
-        /** Update existing config entries or copy unchanged lines */
-        while (fgets(line, sizeof(line), file)) {
-            if (strncmp(line, "CLOCK_TIMEOUT_ACTION=", 21) == 0) {
-                fprintf(temp, "CLOCK_TIMEOUT_ACTION=OPEN_WEBSITE\n");
-                actionFound = TRUE;
-            } else if (strncmp(line, "CLOCK_TIMEOUT_WEBSITE=", 22) == 0) {
-                fprintf(temp, "CLOCK_TIMEOUT_WEBSITE=%s\n", url);
-                urlFound = TRUE;
-            } else {
-                fputs(line, temp);
-            }
-        }
-        
-        /** Add missing config entries */
-        if (!actionFound) {
-            fprintf(temp, "CLOCK_TIMEOUT_ACTION=OPEN_WEBSITE\n");
-        }
-        if (!urlFound) {
-            fprintf(temp, "CLOCK_TIMEOUT_WEBSITE=%s\n", url);
-        }
-        
-        fclose(file);
-        fclose(temp);
-        
-        /** Replace original config with updated version */
-        ReplaceFileUtf8(config_path, temp_path);
-        ReleaseConfigWriteLock();
-    }
+    /** Persist to INI only; watcher will apply to runtime */
+    if (!url) url = "";
+    WriteConfigKeyValue("CLOCK_TIMEOUT_ACTION", "OPEN_WEBSITE");
+    WriteConfigKeyValue("CLOCK_TIMEOUT_WEBSITE", url);
 }
 
 
@@ -2356,9 +2288,7 @@ void WriteConfigStartupMode(const char* mode) {
         return;
     }
     
-    /** Update global startup mode immediately */
-    strncpy(CLOCK_STARTUP_MODE, mode, sizeof(CLOCK_STARTUP_MODE) - 1);
-    CLOCK_STARTUP_MODE[sizeof(CLOCK_STARTUP_MODE) - 1] = '\0';
+    /** Persist to INI only; watcher will update runtime */
     
     /** Update existing entry or copy unchanged lines */
     while (fgets(line, sizeof(line), file)) {
@@ -4036,8 +3966,6 @@ void WriteConfigNotificationDisabled(BOOL disabled) {
  * @param format Time format type to set
  */
 void WriteConfigTimeFormat(TimeFormatType format) {
-    CLOCK_TIME_FORMAT = format;
-    
     const char* formatStr;
     switch (format) {
         case TIME_FORMAT_ZERO_PADDED:
@@ -4058,7 +3986,6 @@ void WriteConfigTimeFormat(TimeFormatType format) {
  * @param showMilliseconds TRUE to show milliseconds, FALSE to hide
  */
 void WriteConfigShowMilliseconds(BOOL showMilliseconds) {
-    CLOCK_SHOW_MILLISECONDS = showMilliseconds;
     WriteConfigKeyValue("CLOCK_SHOW_MILLISECONDS", showMilliseconds ? "TRUE" : "FALSE");
 }
 

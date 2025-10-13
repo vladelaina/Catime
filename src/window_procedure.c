@@ -702,6 +702,96 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             }
             return 0;
         }
+        case WM_APP_TIMER_CHANGED: {
+            char config_path[MAX_PATH] = {0};
+            GetConfigPath(config_path, MAX_PATH);
+
+            /** Reload timer-related settings from [Timer] */
+            int newDefaultStart = ReadIniInt(INI_SECTION_TIMER, "CLOCK_DEFAULT_START_TIME", CLOCK_DEFAULT_START_TIME, config_path);
+
+            BOOL newUse24 = ReadIniBool(INI_SECTION_TIMER, "CLOCK_USE_24HOUR", CLOCK_USE_24HOUR, config_path);
+            BOOL newShowSeconds = ReadIniBool(INI_SECTION_TIMER, "CLOCK_SHOW_SECONDS", CLOCK_SHOW_SECONDS, config_path);
+
+            char timeFormat[32] = {0};
+            ReadIniString(INI_SECTION_TIMER, "CLOCK_TIME_FORMAT", "DEFAULT", timeFormat, sizeof(timeFormat), config_path);
+            TimeFormatType newFormat = TIME_FORMAT_DEFAULT;
+            if (strcmp(timeFormat, "ZERO_PADDED") == 0) newFormat = TIME_FORMAT_ZERO_PADDED;
+            else if (strcmp(timeFormat, "FULL_PADDED") == 0) newFormat = TIME_FORMAT_FULL_PADDED;
+
+            BOOL newShowMs = ReadIniBool(INI_SECTION_TIMER, "CLOCK_SHOW_MILLISECONDS", CLOCK_SHOW_MILLISECONDS, config_path);
+
+            char options[256] = {0};
+            ReadIniString(INI_SECTION_TIMER, "CLOCK_TIME_OPTIONS", "1500,600,300", options, sizeof(options), config_path);
+
+            char timeoutText[50] = {0};
+            ReadIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_TEXT", "0", timeoutText, sizeof(timeoutText), config_path);
+
+            char actionStr[32] = {0};
+            ReadIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_ACTION", "MESSAGE", actionStr, sizeof(actionStr), config_path);
+
+            char timeoutFile[MAX_PATH] = {0};
+            ReadIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_FILE", "", timeoutFile, sizeof(timeoutFile), config_path);
+
+            char websiteUtf8[MAX_PATH] = {0};
+            ReadIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_WEBSITE", "", websiteUtf8, sizeof(websiteUtf8), config_path);
+
+            char startupMode[20] = {0};
+            ReadIniString(INI_SECTION_TIMER, "STARTUP_MODE", CLOCK_STARTUP_MODE, startupMode, sizeof(startupMode), config_path);
+
+            /** Apply basic flags */
+            CLOCK_USE_24HOUR = newUse24;
+            CLOCK_SHOW_SECONDS = newShowSeconds;
+            CLOCK_TIME_FORMAT = newFormat;
+
+            /** Handle milliseconds interval change */
+            if (newShowMs != CLOCK_SHOW_MILLISECONDS) {
+                CLOCK_SHOW_MILLISECONDS = newShowMs;
+                ResetTimerWithInterval(hwnd);
+            }
+
+            /** Update default start time (runtime cache) */
+            CLOCK_DEFAULT_START_TIME = newDefaultStart;
+
+            /** Update timeout action fields (with same filtering policy as config.c) */
+            strncpy(CLOCK_TIMEOUT_TEXT, timeoutText, sizeof(CLOCK_TIMEOUT_TEXT) - 1);
+            CLOCK_TIMEOUT_TEXT[sizeof(CLOCK_TIMEOUT_TEXT) - 1] = '\0';
+
+            if (strcmp(actionStr, "MESSAGE") == 0) CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
+            else if (strcmp(actionStr, "LOCK") == 0) CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_LOCK;
+            else if (strcmp(actionStr, "OPEN_FILE") == 0) CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
+            else if (strcmp(actionStr, "SHOW_TIME") == 0) CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SHOW_TIME;
+            else if (strcmp(actionStr, "COUNT_UP") == 0) CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_COUNT_UP;
+            else if (strcmp(actionStr, "OPEN_WEBSITE") == 0) CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_WEBSITE;
+            else if (strcmp(actionStr, "SLEEP") == 0) CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SLEEP;
+            else CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
+
+            memset(CLOCK_TIMEOUT_FILE_PATH, 0, sizeof(CLOCK_TIMEOUT_FILE_PATH));
+            strncpy(CLOCK_TIMEOUT_FILE_PATH, timeoutFile, sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1);
+            CLOCK_TIMEOUT_FILE_PATH[sizeof(CLOCK_TIMEOUT_FILE_PATH) - 1] = '\0';
+
+            if (websiteUtf8[0] != '\0') {
+                MultiByteToWideChar(CP_UTF8, 0, websiteUtf8, -1, CLOCK_TIMEOUT_WEBSITE_URL, MAX_PATH);
+            } else {
+                CLOCK_TIMEOUT_WEBSITE_URL[0] = L'\0';
+            }
+
+            /** Re-parse time options */
+            time_options_count = 0;
+            memset(time_options, 0, sizeof(time_options));
+            char *tok = strtok(options, ",");
+            while (tok && time_options_count < MAX_TIME_OPTIONS) {
+                while (*tok == ' ') tok++;
+                time_options[time_options_count++] = atoi(tok);
+                tok = strtok(NULL, ",");
+            }
+
+            /** Update startup mode string in memory */
+            strncpy(CLOCK_STARTUP_MODE, startupMode, sizeof(CLOCK_STARTUP_MODE) - 1);
+            CLOCK_STARTUP_MODE[sizeof(CLOCK_STARTUP_MODE) - 1] = '\0';
+
+            InvalidateRect(hwnd, NULL, TRUE);
+            return 0;
+        }
         
         /** Inter-process communication for CLI arguments */
         case WM_COPYDATA: {
@@ -1531,8 +1621,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 
                 case CLOCK_IDM_TIME_FORMAT_SHOW_MILLISECONDS: {
                     WriteConfigShowMilliseconds(!CLOCK_SHOW_MILLISECONDS);
-                    /** Reset timer with new interval based on milliseconds display setting */
-                    ResetTimerWithInterval(hwnd);
+                    /** Interval will be updated by watcher (WM_APP_TIMER_CHANGED) */
                     InvalidateRect(hwnd, NULL, TRUE);
                     break;
                 }
@@ -1668,66 +1757,14 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 
                 /** Toggle 12/24 hour time format */
                 case CLOCK_IDM_24HOUR_FORMAT: {  
-                    CLOCK_USE_24HOUR = !CLOCK_USE_24HOUR;
-                    {
-                        char config_path[MAX_PATH];
-                        GetConfigPath(config_path, MAX_PATH);
-                        
-                        char currentStartupMode[20];
-                        wchar_t wconfig_path[MAX_PATH];
-                        MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-                        
-                        FILE *fp = _wfopen(wconfig_path, L"r");
-                        if (fp) {
-                            char line[256];
-                            while (fgets(line, sizeof(line), fp)) {
-                                if (strncmp(line, "STARTUP_MODE=", 13) == 0) {
-                                    sscanf(line, "STARTUP_MODE=%19s", currentStartupMode);
-                                    break;
-                                }
-                            }
-                            fclose(fp);
-                            
-                            WriteConfig(config_path);
-                            
-                            WriteConfigStartupMode(currentStartupMode);
-                        } else {
-                            WriteConfig(config_path);
-                        }
-                    }
+                    WriteConfigKeyValue("CLOCK_USE_24HOUR", (!CLOCK_USE_24HOUR) ? "TRUE" : "FALSE");
                     InvalidateRect(hwnd, NULL, TRUE);
                     break;
                 }
                 
                 /** Toggle seconds display in time format */
                 case CLOCK_IDM_SHOW_SECONDS: {  
-                    CLOCK_SHOW_SECONDS = !CLOCK_SHOW_SECONDS;
-                    {
-                        char config_path[MAX_PATH];
-                        GetConfigPath(config_path, MAX_PATH);
-                        
-                        char currentStartupMode[20];
-                        wchar_t wconfig_path[MAX_PATH];
-                        MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-                        
-                        FILE *fp = _wfopen(wconfig_path, L"r");
-                        if (fp) {
-                            char line[256];
-                            while (fgets(line, sizeof(line), fp)) {
-                                if (strncmp(line, "STARTUP_MODE=", 13) == 0) {
-                                    sscanf(line, "STARTUP_MODE=%19s", currentStartupMode);
-                                    break;
-                                }
-                            }
-                            fclose(fp);
-                            
-                            WriteConfig(config_path);
-                            
-                            WriteConfigStartupMode(currentStartupMode);
-                        } else {
-                            WriteConfig(config_path);
-                        }
-                    }
+                    WriteConfigKeyValue("CLOCK_SHOW_SECONDS", (!CLOCK_SHOW_SECONDS) ? "TRUE" : "FALSE");
                     InvalidateRect(hwnd, NULL, TRUE);
                     break;
                 }
@@ -1755,9 +1792,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                                 GetLocalizedString(L"错误", L"Error"),
                                 MB_ICONERROR);
                             
-                            /** Reset timeout action to default */
-                            memset(CLOCK_TIMEOUT_FILE_PATH, 0, sizeof(CLOCK_TIMEOUT_FILE_PATH));
-                            CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
+                            /** Reset timeout action to default via INI only; watcher will apply */
+                            WriteConfigKeyValue("CLOCK_TIMEOUT_FILE", "");
                             WriteConfigTimeoutAction("MESSAGE");
                             
                             /** Remove invalid file from recent list */
@@ -1920,8 +1956,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         if (ParseInput(inputTextA, &total_seconds)) {
                             WriteConfigDefaultStartTime(total_seconds);
                             WriteConfigStartupMode("COUNTDOWN");
-                            
-                            CLOCK_DEFAULT_START_TIME = total_seconds;
                             
                             HMENU hMenu = GetMenu(hwnd);
                             HMENU hTimeOptionsMenu = GetSubMenu(hMenu, GetMenuItemCount(hMenu) - 2);
@@ -2153,37 +2187,30 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 
                 /** Timer timeout action configurations */
                 case CLOCK_IDM_TIMEOUT_SHOW_TIME: {
-                    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SHOW_TIME;
                     WriteConfigTimeoutAction("SHOW_TIME");
                     break;
                 }
                 case CLOCK_IDM_TIMEOUT_COUNT_UP: {
-                    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_COUNT_UP;
                     WriteConfigTimeoutAction("COUNT_UP");
                     break;
                 }
                 case CLOCK_IDM_SHOW_MESSAGE: {
-                    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
                     WriteConfigTimeoutAction("MESSAGE");
                     break;
                 }
                 case CLOCK_IDM_LOCK_SCREEN: {
-                    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_LOCK;
                     WriteConfigTimeoutAction("LOCK");
                     break;
                 }
                 case CLOCK_IDM_SHUTDOWN: {
-                    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SHUTDOWN;
                     WriteConfigTimeoutAction("SHUTDOWN");
                     break;
                 }
                 case CLOCK_IDM_RESTART: {
-                    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_RESTART;
                     WriteConfigTimeoutAction("RESTART");
                     break;
                 }
                 case CLOCK_IDM_SLEEP: {
-                    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SLEEP;
                     WriteConfigTimeoutAction("SLEEP");
                     break;
                 }

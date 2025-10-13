@@ -300,7 +300,6 @@ void TruncateFileName(const wchar_t* fileName, wchar_t* truncated, size_t maxLen
  * Creates complex nested menu system with timeout actions, fonts, colors, and settings
  */
 void ShowColorMenu(HWND hwnd) {
-    ReadTimeoutActionFromConfig();
     
     SetCursor(LoadCursorW(NULL, MAKEINTRESOURCEW(IDC_ARROW)));
     

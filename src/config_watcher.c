@@ -111,6 +111,8 @@ static DWORD WINAPI WatcherThreadProc(LPVOID lpParam) {
                 PostMessage(g_targetHwnd, WM_APP_ANIM_SPEED_CHANGED, 0, 0);
                 PostMessage(g_targetHwnd, WM_APP_ANIM_PATH_CHANGED, 0, 0);
                 PostMessage(g_targetHwnd, WM_APP_DISPLAY_CHANGED, 0, 0);
+                /** Notify timer section change as well */
+                PostMessage(g_targetHwnd, WM_APP_TIMER_CHANGED, 0, 0);
             }
         }
     }
