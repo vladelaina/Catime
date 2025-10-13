@@ -614,6 +614,22 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             ShowCliHelpDialog(hwnd);
             return 0;
         }
+        case WM_APP_ANIM_SPEED_CHANGED: {
+            extern void ReloadAnimationSpeedFromConfig(void);
+            ReloadAnimationSpeedFromConfig();
+            extern void TrayAnimation_RecomputeTimerDelay(void);
+            TrayAnimation_RecomputeTimerDelay();
+            return 0;
+        }
+        case WM_APP_ANIM_PATH_CHANGED: {
+            char config_path[MAX_PATH] = {0};
+            GetConfigPath(config_path, MAX_PATH);
+            char value[MAX_PATH] = {0};
+            ReadIniString(INI_SECTION_OPTIONS, "ANIMATION_PATH", "__logo__", value, sizeof(value), config_path);
+            extern void ApplyAnimationPathValueNoPersist(const char* value);
+            ApplyAnimationPathValueNoPersist(value);
+            return 0;
+        }
         
         /** Inter-process communication for CLI arguments */
         case WM_COPYDATA: {
@@ -646,6 +662,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         case WM_CREATE: {
             RegisterGlobalHotkeys(hwnd);
             HandleWindowCreate(hwnd);
+            extern void ConfigWatcher_Start(HWND hwnd);
+            ConfigWatcher_Start(hwnd);
             break;
         }
 
@@ -710,6 +728,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         case WM_DESTROY: {
             UnregisterGlobalHotkeys(hwnd);
             HandleWindowDestroy(hwnd);
+            extern void ConfigWatcher_Stop(void);
+            ConfigWatcher_Stop();
             return 0;
         }
         

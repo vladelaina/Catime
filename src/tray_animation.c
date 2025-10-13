@@ -1051,6 +1051,92 @@ HICON GetInitialAnimationHicon(void) {
     return NULL;
 }
 
+void ApplyAnimationPathValueNoPersist(const char* value) {
+    if (!value || !*value) return;
+    const char* prefix = "%LOCALAPPDATA%\\Catime\\resources\\animations\\";
+    char name[MAX_PATH] = {0};
+    if (_stricmp(value, "__logo__") == 0) {
+        strncpy(name, "__logo__", sizeof(name) - 1);
+    } else if (_strnicmp(value, prefix, (int)strlen(prefix)) == 0) {
+        const char* rel = value + strlen(prefix);
+        strncpy(name, rel, sizeof(name) - 1);
+    } else {
+        strncpy(name, value, sizeof(name) - 1);
+    }
+    if (name[0] == '\0') return;
+
+    strncpy(g_animationName, name, sizeof(g_animationName) - 1);
+    g_animationName[sizeof(g_animationName) - 1] = '\0';
+
+    LoadTrayIcons();
+    g_trayIconIndex = 0;
+    if (g_trayHwnd && g_trayIconCount > 0) {
+        AdvanceTrayFrame();
+        if (!IsWindow(g_trayHwnd)) return;
+        UINT firstDelay = (g_isAnimated && g_frameDelaysMs[0] > 0) ? g_frameDelaysMs[0] : (g_trayInterval ? g_trayInterval : 150);
+        KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
+        SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, firstDelay, (TIMERPROC)TrayAnimTimerProc);
+    }
+}
+
+void TrayAnimation_RecomputeTimerDelay(void) {
+    if (!g_trayHwnd) return;
+    if (g_isPreviewActive) return; /** only adjust normal animation */
+    if (g_trayIconCount <= 0) return;
+
+    UINT baseDelay = g_isAnimated ? g_frameDelaysMs[g_trayIconIndex] : (g_trayInterval ? g_trayInterval : 150);
+    if (baseDelay == 0) baseDelay = (g_trayInterval ? g_trayInterval : 150);
+
+    double percent = 0.0;
+    AnimationSpeedMetric metric = GetAnimationSpeedMetric();
+    if (metric == ANIMATION_SPEED_CPU) {
+        float cpu = 0.0f, mem = 0.0f;
+        SystemMonitor_GetUsage(&cpu, &mem);
+        percent = cpu;
+    } else if (metric == ANIMATION_SPEED_TIMER) {
+        extern BOOL CLOCK_COUNT_UP;
+        extern BOOL CLOCK_SHOW_CURRENT_TIME;
+        extern int CLOCK_TOTAL_TIME;
+        extern int countdown_elapsed_time;
+        if (!CLOCK_SHOW_CURRENT_TIME) {
+            if (!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0) {
+                double p = (double)countdown_elapsed_time / (double)CLOCK_TOTAL_TIME;
+                if (p < 0.0) p = 0.0; if (p > 1.0) p = 1.0;
+                percent = p * 100.0;
+            } else {
+                percent = 0.0;
+            }
+        } else {
+            percent = 0.0;
+        }
+    } else {
+        float cpu = 0.0f, mem = 0.0f;
+        SystemMonitor_GetUsage(&cpu, &mem);
+        percent = mem;
+    }
+    BOOL applyScaling = TRUE;
+    if (metric == ANIMATION_SPEED_TIMER) {
+        extern BOOL CLOCK_COUNT_UP;
+        extern BOOL CLOCK_SHOW_CURRENT_TIME;
+        extern int CLOCK_TOTAL_TIME;
+        if (CLOCK_SHOW_CURRENT_TIME || CLOCK_COUNT_UP || CLOCK_TOTAL_TIME <= 0) {
+            applyScaling = FALSE;
+        }
+    }
+    double scalePercent = 100.0;
+    if (applyScaling) {
+        scalePercent = GetAnimationSpeedScaleForPercent(percent);
+        if (scalePercent <= 0.0) scalePercent = 100.0;
+    }
+    double scale = scalePercent / 100.0;
+    if (scale < 0.1) scale = 0.1;
+    UINT scaledDelay = (UINT)(baseDelay / scale);
+    if (scaledDelay < 10) scaledDelay = 10;
+
+    KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
+    SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, scaledDelay, (TIMERPROC)TrayAnimTimerProc);
+}
+
 static void OpenAnimationsFolder(void) {
     char base[MAX_PATH] = {0};
     GetAnimationsFolderPath(base, sizeof(base));

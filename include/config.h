@@ -116,6 +116,12 @@ AnimationSpeedMetric GetAnimationSpeedMetric(void);
  */
 double GetAnimationSpeedScaleForPercent(double percent);
 
+/**
+ * @brief Reload animation speed metric and fixed-range map from config.ini.
+ *        Updates internal tables used by GetAnimationSpeedScaleForPercent.
+ */
+void ReloadAnimationSpeedFromConfig(void);
+
 /** @brief Font license agreement accepted flag */
 extern BOOL FONT_LICENSE_ACCEPTED;
 

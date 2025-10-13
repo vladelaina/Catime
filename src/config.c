@@ -220,6 +220,21 @@ double GetAnimationSpeedScaleForPercent(double percent) {
     return 100.0;
 }
 
+void ReloadAnimationSpeedFromConfig(void) {
+    char config_path[MAX_PATH] = {0};
+    GetConfigPath(config_path, MAX_PATH);
+    char metric[32] = {0};
+    ReadIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_METRIC", "MEMORY", metric, sizeof(metric), config_path);
+    if (_stricmp(metric, "CPU") == 0) {
+        g_animSpeedMetric = ANIMATION_SPEED_CPU;
+    } else if (_stricmp(metric, "TIMER") == 0 || _stricmp(metric, "COUNTDOWN") == 0) {
+        g_animSpeedMetric = ANIMATION_SPEED_TIMER;
+    } else {
+        g_animSpeedMetric = ANIMATION_SPEED_MEMORY;
+    }
+    ParseAnimationSpeedFixedKeys(config_path);
+}
+
 /**
  * @brief Atomically replace destination file with source temp file (UTF-8 paths)
  * @param dstUtf8 Destination file path (UTF-8)

@@ -20,6 +20,14 @@
 #define WM_APP_QUICK_COUNTDOWN_INDEX (WM_APP + 3)
 #endif
 
+/** @brief Config watcher notifications for animation hot-reload */
+#ifndef WM_APP_ANIM_PATH_CHANGED
+#define WM_APP_ANIM_PATH_CHANGED (WM_APP + 50)
+#endif
+#ifndef WM_APP_ANIM_SPEED_CHANGED
+#define WM_APP_ANIM_SPEED_CHANGED (WM_APP + 51)
+#endif
+
 /** @brief Copy data identifier for CLI text */
 #ifndef COPYDATA_ID_CLI_TEXT
 #define COPYDATA_ID_CLI_TEXT 0x10010001

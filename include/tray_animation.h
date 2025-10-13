@@ -67,6 +67,19 @@ HICON GetInitialAnimationHicon(void);
  */
 BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id);
 
+/**
+ * @brief Apply a new ANIMATION_PATH value without persisting to config
+ * @param value The INI value; accepts "__logo__", absolute path with %LOCALAPPDATA% prefix,
+ *              or relative name under animations folder.
+ */
+void ApplyAnimationPathValueNoPersist(const char* value);
+
+/**
+ * @brief Recompute current tray animation timer delay based on latest speed mapping/metric
+ *        without advancing the frame.
+ */
+void TrayAnimation_RecomputeTimerDelay(void);
+
 #endif
 
 
