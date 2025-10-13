@@ -68,6 +68,159 @@ BOOL IS_MILLISECONDS_PREVIEWING = FALSE;
 BOOL PREVIEW_SHOW_MILLISECONDS = FALSE;
 
 /**
+ * Animation speed control mapping and metric
+ */
+typedef struct {
+    int lowInclusive;   /** percent low bound */
+    int highExclusive;  /** percent high bound */
+    double scalePercent;/** speed scale percent (100 = 1x) */
+} AnimSpeedEntry;
+
+static AnimSpeedEntry g_animSpeedEntries[32];
+static int g_animSpeedEntryCount = 0;
+static AnimationSpeedMetric g_animSpeedMetric = ANIMATION_SPEED_MEMORY;
+
+/** Trim leading/trailing spaces in-place */
+static void TrimSpaces(char* s) {
+    if (!s) return;
+    size_t len = strlen(s);
+    size_t i = 0; while (i < len && (s[i] == ' ' || s[i] == '\t')) i++;
+    if (i > 0) memmove(s, s + i, len - i + 1);
+    len = strlen(s);
+    while (len > 0 && (s[len - 1] == ' ' || s[len - 1] == '\t')) s[--len] = '\0';
+}
+
+/** Parse ANIMATION_SPEED_MAP like "0-10:100,10-20:110" or "0~10=100%" */
+static void ParseAnimationSpeedMap(const char* mapStr) {
+    g_animSpeedEntryCount = 0;
+    if (!mapStr || !*mapStr) return;
+    char buf[1024];
+    strncpy(buf, mapStr, sizeof(buf) - 1);
+    buf[sizeof(buf) - 1] = '\0';
+
+    char* token = strtok(buf, ",");
+    while (token && g_animSpeedEntryCount < (int)(sizeof(g_animSpeedEntries)/sizeof(g_animSpeedEntries[0]))) {
+        char item[128];
+        strncpy(item, token, sizeof(item) - 1);
+        item[sizeof(item) - 1] = '\0';
+        TrimSpaces(item);
+        /** Replace accepted separators for unified parsing */
+        for (char* p = item; *p; ++p) {
+            if (*p == '~') *p = '-';
+            if (*p == '=') *p = ':';
+            if (*p == '%') *p = '\0';
+        }
+        char* sep1 = strchr(item, '-');
+        char* sep2 = strchr(item, ':');
+        if (!sep1 || !sep2) { token = strtok(NULL, ","); continue; }
+        *sep1 = '\0';
+        *sep2 = '\0';
+        const char* lowStr = item;
+        const char* highStr = sep1 + 1;
+        const char* scaleStr = sep2 + 1;
+        TrimSpaces((char*)lowStr);
+        TrimSpaces((char*)highStr);
+        TrimSpaces((char*)scaleStr);
+        int low = atoi(lowStr);
+        int high = atoi(highStr);
+        double scale = atof(scaleStr);
+        if (low < 0) low = 0;
+        if (high <= low) { token = strtok(NULL, ","); continue; }
+        if (scale <= 0.0) scale = 100.0;
+        g_animSpeedEntries[g_animSpeedEntryCount].lowInclusive = low;
+        g_animSpeedEntries[g_animSpeedEntryCount].highExclusive = high;
+        g_animSpeedEntries[g_animSpeedEntryCount].scalePercent = scale;
+        g_animSpeedEntryCount++;
+        token = strtok(NULL, ",");
+    }
+}
+
+/**
+ * @brief Parse fixed-range animation speed keys from INI [OPTIONS] section
+ * Keys are of the form: ANIMATION_SPEED_MAP_LOW-HIGH = SCALE[%]
+ * Example: ANIMATION_SPEED_MAP_0-10=100
+ */
+static void ParseAnimationSpeedFixedKeys(const char* configPathUtf8) {
+    g_animSpeedEntryCount = 0;
+    if (!configPathUtf8 || !*configPathUtf8) return;
+
+    wchar_t wSection[64];
+    wchar_t wfilePath[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, INI_SECTION_OPTIONS, -1, wSection, 64);
+    MultiByteToWideChar(CP_UTF8, 0, configPathUtf8, -1, wfilePath, MAX_PATH);
+
+    const DWORD kBufChars = 64 * 1024; /** 64KB buffer for section */
+    wchar_t* wbuf = (wchar_t*)malloc(sizeof(wchar_t) * kBufChars);
+    if (!wbuf) return;
+    ZeroMemory(wbuf, sizeof(wchar_t) * kBufChars);
+
+    DWORD copied = GetPrivateProfileSectionW(wSection, wbuf, kBufChars, wfilePath);
+    if (copied == 0) {
+        free(wbuf);
+        return;
+    }
+
+    const wchar_t* prefix = L"ANIMATION_SPEED_MAP_";
+    size_t prefixLen = wcslen(prefix);
+
+    wchar_t* p = wbuf;
+    while (*p && g_animSpeedEntryCount < (int)(sizeof(g_animSpeedEntries)/sizeof(g_animSpeedEntries[0]))) {
+        /** Each entry is Key=Value\0 */
+        wchar_t* eq = wcschr(p, L'=');
+        if (eq) {
+            *eq = L'\0';
+            const wchar_t* key = p;
+            wchar_t* value = eq + 1;
+
+            if (wcsncmp(key, prefix, prefixLen) == 0) {
+                const wchar_t* range = key + prefixLen; /** expected LOW-HIGH */
+                const wchar_t* dash = wcschr(range, L'-');
+                if (dash) {
+                    int low = _wtoi(range);
+                    int high = _wtoi(dash + 1);
+
+                    /** Trim spaces around value and strip optional '%' */
+                    while (*value == L' ' || *value == L'\t') value++;
+                    wchar_t* end = value + wcslen(value);
+                    while (end > value && (end[-1] == L' ' || end[-1] == L'\t' || end[-1] == L'\r' || end[-1] == L'\n')) { *--end = L'\0'; }
+                    if (end > value && end[-1] == L'%') { end[-1] = L'\0'; }
+
+                    double scale = _wtof(value);
+                    if (scale <= 0.0) scale = 100.0;
+
+                    if (low < 0) low = 0;
+                    if (high > low) {
+                        g_animSpeedEntries[g_animSpeedEntryCount].lowInclusive = low;
+                        g_animSpeedEntries[g_animSpeedEntryCount].highExclusive = high;
+                        g_animSpeedEntries[g_animSpeedEntryCount].scalePercent = scale;
+                        g_animSpeedEntryCount++;
+                    }
+                }
+            }
+        }
+        p += wcslen(p) + 1;
+    }
+
+    free(wbuf);
+}
+
+AnimationSpeedMetric GetAnimationSpeedMetric(void) {
+    return g_animSpeedMetric;
+}
+
+double GetAnimationSpeedScaleForPercent(double percent) {
+    if (percent < 0.0) percent = 0.0;
+    if (percent > 100.0) percent = 100.0;
+    for (int i = 0; i < g_animSpeedEntryCount; ++i) {
+        if ((int)percent >= g_animSpeedEntries[i].lowInclusive &&
+            (int)percent < g_animSpeedEntries[i].highExclusive) {
+            return g_animSpeedEntries[i].scalePercent;
+        }
+    }
+    return 100.0;
+}
+
+/**
  * @brief Atomically replace destination file with source temp file (UTF-8 paths)
  * @param dstUtf8 Destination file path (UTF-8)
  * @param srcTempUtf8 Source temporary file path (UTF-8)
@@ -574,6 +727,20 @@ void CreateDefaultConfig(const char* config_path) {
     
     /** Default animation settings (show full virtual path like fonts) */
     WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_PATH", "__logo__", config_path);
+
+    /** Default animation speed settings */
+    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_METRIC", "MEMORY", config_path);
+    /** New fixed-range keys; value-only on the right side */
+    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_0-10",   "100", config_path);
+    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_10-20",  "110", config_path);
+    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_20-30",  "120", config_path);
+    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_30-40",  "130", config_path);
+    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_40-50",  "140", config_path);
+    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_50-60",  "150", config_path);
+    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_60-70",  "160", config_path);
+    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_70-80",  "170", config_path);
+    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_80-90",  "180", config_path);
+    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_90-100", "190", config_path);
     
 
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_SHOW_TIME", "None", config_path);
@@ -1170,6 +1337,20 @@ void ReadConfig() {
 
 
     SetLanguage((AppLanguage)languageSetting);
+
+    /** Load animation speed metric and map */
+    {
+        char metric[32] = {0};
+        ReadIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_METRIC", "MEMORY", metric, sizeof(metric), config_path);
+        if (_stricmp(metric, "CPU") == 0) {
+            g_animSpeedMetric = ANIMATION_SPEED_CPU;
+        } else {
+            g_animSpeedMetric = ANIMATION_SPEED_MEMORY;
+        }
+
+        /** 仅使用新格式：固定区间键（ANIMATION_SPEED_MAP_low-high=value） */
+        ParseAnimationSpeedFixedKeys(config_path);
+    }
 }
 
 
@@ -2024,6 +2205,26 @@ void WriteConfig(const char* config_path) {
             char animPath[MAX_PATH];
             snprintf(animPath, sizeof(animPath), "%%LOCALAPPDATA%%\\Catime\\resources\\animations\\%s", anim);
             WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_PATH", animPath, config_path);
+        }
+    }
+
+    /** Persist animation speed settings */
+    WriteIniString(INI_SECTION_OPTIONS,
+                   "ANIMATION_SPEED_METRIC",
+                   (g_animSpeedMetric == ANIMATION_SPEED_CPU ? "CPU" : "MEMORY"),
+                   config_path);
+    {
+        /** Write vertical lines for easier editing */
+        /** 持久化为固定区间键（值仅为比例数值） */
+        for (int i = 0; i < g_animSpeedEntryCount; ++i) {
+            char key[64];
+            snprintf(key, sizeof(key), "ANIMATION_SPEED_MAP_%d-%d",
+                     g_animSpeedEntries[i].lowInclusive,
+                     g_animSpeedEntries[i].highExclusive);
+            char val[32];
+            /** keep minimal trailing zeros; %g already used above, but here prefer no scientific */
+            snprintf(val, sizeof(val), "%g", g_animSpeedEntries[i].scalePercent);
+            WriteIniString(INI_SECTION_OPTIONS, key, val, config_path);
         }
     }
 }

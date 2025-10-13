@@ -19,6 +19,7 @@
 #include "../include/config.h"
 #include "../include/tray_menu.h"
 #include "../include/tray_animation.h"
+#include "../include/system_monitor.h"
 
 /** @brief Represents a file or folder entry for sorting animation menus. */
 typedef struct {
@@ -735,10 +736,32 @@ static void AdvanceTrayFrame(void) {
     /** If current animation is GIF, adjust timer to next frame delay */
     if (!g_isPreviewActive && g_isAnimated && g_trayHwnd) {
         int nextIndex = g_trayIconIndex;
-        UINT delay = g_frameDelaysMs[nextIndex];
-        if (delay == 0) delay = g_trayInterval > 0 ? g_trayInterval : 150;
+        UINT baseDelay = g_frameDelaysMs[nextIndex];
+        if (baseDelay == 0) baseDelay = g_trayInterval > 0 ? g_trayInterval : 150;
+
+        /** Query current metric percent */
+        double percent = 0.0;
+        AnimationSpeedMetric metric = GetAnimationSpeedMetric();
+        if (metric == ANIMATION_SPEED_CPU) {
+            float cpu = 0.0f, mem = 0.0f;
+            SystemMonitor_GetUsage(&cpu, &mem);
+            percent = cpu;
+        } else {
+            float cpu = 0.0f, mem = 0.0f;
+            SystemMonitor_GetUsage(&cpu, &mem);
+            percent = mem;
+        }
+        double scalePercent = GetAnimationSpeedScaleForPercent(percent); /** e.g., 150 => 1.5x */
+        if (scalePercent <= 0.0) scalePercent = 100.0;
+        double scale = scalePercent / 100.0;
+        if (scale < 0.1) scale = 0.1; /** avoid zero/too fast */
+
+        /** Faster speed => smaller delay */
+        UINT scaledDelay = (UINT)(baseDelay / scale);
+        if (scaledDelay < 10) scaledDelay = 10;
+
         KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
-        SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, delay, (TIMERPROC)TrayAnimTimerProc);
+        SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, scaledDelay, (TIMERPROC)TrayAnimTimerProc);
     }
 }
 
@@ -782,8 +805,26 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
     if (g_trayIconCount > 0) {
         AdvanceTrayFrame();
         /** For GIF, honor first frame delay if available */
-        UINT firstDelay = (g_isAnimated && g_frameDelaysMs[0] > 0) ? g_frameDelaysMs[0] : g_trayInterval;
-        SetTimer(hwnd, TRAY_ANIM_TIMER_ID, firstDelay, (TIMERPROC)TrayAnimTimerProc);
+        UINT baseDelay = (g_isAnimated && g_frameDelaysMs[0] > 0) ? g_frameDelaysMs[0] : g_trayInterval;
+        /** Apply initial scaling at start */
+        double percent = 0.0;
+        AnimationSpeedMetric metric = GetAnimationSpeedMetric();
+        if (metric == ANIMATION_SPEED_CPU) {
+            float cpu = 0.0f, mem = 0.0f;
+            SystemMonitor_GetUsage(&cpu, &mem);
+            percent = cpu;
+        } else {
+            float cpu = 0.0f, mem = 0.0f;
+            SystemMonitor_GetUsage(&cpu, &mem);
+            percent = mem;
+        }
+        double scalePercent = GetAnimationSpeedScaleForPercent(percent);
+        if (scalePercent <= 0.0) scalePercent = 100.0;
+        double scale = scalePercent / 100.0;
+        if (scale < 0.1) scale = 0.1;
+        UINT scaledDelay = (UINT)(baseDelay / scale);
+        if (scaledDelay < 10) scaledDelay = 10;
+        SetTimer(hwnd, TRAY_ANIM_TIMER_ID, scaledDelay, (TIMERPROC)TrayAnimTimerProc);
     }
 }
 

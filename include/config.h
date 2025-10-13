@@ -97,6 +97,24 @@ extern char NOTIFICATION_SOUND_FILE[MAX_PATH];
 /** @brief Notification sound volume (0-100) */
 extern int NOTIFICATION_SOUND_VOLUME;
 
+/** Animation speed metric selector */
+typedef enum {
+    ANIMATION_SPEED_MEMORY = 0,
+    ANIMATION_SPEED_CPU = 1
+} AnimationSpeedMetric;
+
+/**
+ * Get animation speed metric configured in INI.
+ * Returns ANIMATION_SPEED_MEMORY by default.
+ */
+AnimationSpeedMetric GetAnimationSpeedMetric(void);
+
+/**
+ * Map a utilization percent (0-100) to a speed scale percent.
+ * Returns 100.0 if no mapping matches.
+ */
+double GetAnimationSpeedScaleForPercent(double percent);
+
 /** @brief Font license agreement accepted flag */
 extern BOOL FONT_LICENSE_ACCEPTED;
 
