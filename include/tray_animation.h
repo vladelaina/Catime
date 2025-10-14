@@ -86,6 +86,13 @@ void TrayAnimation_RecomputeTimerDelay(void);
  */
 void TrayAnimation_UpdatePercentIconIfNeeded(void);
 
+/**
+ * @brief Create a small icon with percentage text for preview purposes
+ * @param percent The percentage value (0-100)
+ * @return HICON handle, or NULL if creation failed
+ */
+HICON CreatePercentIcon16(int percent);
+
 #endif
 
 

@@ -749,10 +749,25 @@ static void LoadAnimationByName(const char* name, BOOL isPreview) {
             target.icons[(*(target.count))++] = hIcon;
         }
     } else if (_stricmp(name, "__cpu__") == 0 || _stricmp(name, "__mem__") == 0) {
-        /** Percent modes are handled by periodic updater; keep no frames here */
-        *(target.count) = 0;
-        *(target.index) = 0;
-        *(target.isAnimatedFlag) = FALSE;
+        /** For preview mode, create a sample percent icon; for normal mode, handled by periodic updater */
+        if (isPreview) {
+            float cpu = 0.0f, mem = 0.0f;
+            SystemMonitor_GetUsage(&cpu, &mem);
+            int percent = (_stricmp(name, "__cpu__") == 0) ? (int)(cpu + 0.5f) : (int)(mem + 0.5f);
+            if (percent < 0) percent = 0;
+            if (percent > 100) percent = 100;
+            
+            /** Use the existing CreatePercentIcon16 function */
+            HICON hIcon = CreatePercentIcon16(percent);
+            if (hIcon) {
+                target.icons[(*(target.count))++] = hIcon;
+            }
+        } else {
+            /** Normal mode: handled by periodic updater; keep no frames here */
+            *(target.count) = 0;
+            *(target.index) = 0;
+            *(target.isAnimatedFlag) = FALSE;
+        }
     } else if (IsGifSelection(name) || IsWebPSelection(name)) {
         char filePath[MAX_PATH] = {0};
         BuildAnimationFolder(name, filePath, sizeof(filePath));
@@ -991,6 +1006,22 @@ void StartAnimationPreview(const char* name) {
                 KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
                 SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, firstDelay, (TIMERPROC)TrayAnimTimerProc);
             }
+        } else {
+            /** If tray not initialized yet, still try to show the preview icon immediately */
+            /** This handles the case where preview is triggered before tray animation starts */
+            if (g_previewCount > 0 && g_previewIcons[0]) {
+                /** Try to find and update any existing tray icon */
+                HWND hwnd = FindWindowW(L"CatimeWindow", NULL);
+                if (hwnd) {
+                    NOTIFYICONDATAW nid = {0};
+                    nid.cbSize = sizeof(nid);
+                    nid.hWnd = hwnd;
+                    nid.uID = CLOCK_ID_TRAY_APP_ICON;
+                    nid.uFlags = NIF_ICON;
+                    nid.hIcon = g_previewIcons[0];
+                    Shell_NotifyIconW(NIM_MODIFY, &nid);
+                }
+            }
         }
     }
 }
@@ -999,13 +1030,38 @@ void CancelAnimationPreview(void) {
     if (!g_isPreviewActive) return;
     g_isPreviewActive = FALSE;
     FreeIconSet(g_previewIcons, &g_previewCount, &g_previewIndex, &g_isPreviewAnimated, &g_previewAnimCanvas, FALSE);
+    
+    /** Restore original tray icon immediately */
     if (g_trayHwnd) {
+        /** Restore current normal animation frame */
+        if (g_trayIconCount > 0 && g_trayIcons[g_trayIconIndex]) {
+            NOTIFYICONDATAW nid = {0};
+            nid.cbSize = sizeof(nid);
+            nid.hWnd = g_trayHwnd;
+            nid.uID = CLOCK_ID_TRAY_APP_ICON;
+            nid.uFlags = NIF_ICON;
+            nid.hIcon = g_trayIcons[g_trayIconIndex];
+            Shell_NotifyIconW(NIM_MODIFY, &nid);
+        }
+        
         /** Restore timer for normal animation if needed */
         KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
         if (g_isAnimated || g_trayIconCount > 1) {
             UINT firstDelay = g_isAnimated ? (g_frameDelaysMs[g_trayIconIndex] > 0 ? g_frameDelaysMs[g_trayIconIndex] : (g_trayInterval ? g_trayInterval : 150))
                                            : (g_trayInterval ? g_trayInterval : 150);
             SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, firstDelay, (TIMERPROC)TrayAnimTimerProc);
+        }
+    } else {
+        /** If tray not initialized, try to restore via window handle */
+        HWND hwnd = FindWindowW(L"CatimeWindow", NULL);
+        if (hwnd && g_trayIconCount > 0 && g_trayIcons[g_trayIconIndex]) {
+            NOTIFYICONDATAW nid = {0};
+            nid.cbSize = sizeof(nid);
+            nid.hWnd = hwnd;
+            nid.uID = CLOCK_ID_TRAY_APP_ICON;
+            nid.uFlags = NIF_ICON;
+            nid.hIcon = g_trayIcons[g_trayIconIndex];
+            Shell_NotifyIconW(NIM_MODIFY, &nid);
         }
     }
 }
@@ -1082,7 +1138,7 @@ void ApplyAnimationPathValueNoPersist(const char* value) {
 }
 
 /** Create a small 16x16 icon with percentage text (no % sign) */
-static HICON CreatePercentIcon16(int percent) {
+HICON CreatePercentIcon16(int percent) {
     int cx = GetSystemMetrics(SM_CXSMICON);
     int cy = GetSystemMetrics(SM_CYSMICON);
     if (cx <= 0) cx = 16; if (cy <= 0) cy = 16;

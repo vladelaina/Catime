@@ -2478,7 +2478,24 @@ refresh_window:
                 }
             }
 
-            if (!(flags & MF_POPUP) && hMenu != NULL) {
+            if (hMenu != NULL) {
+                /** Handle animation preview on hover for fixed items (regardless of popup flag) */
+                if (menuItem == CLOCK_IDM_ANIMATIONS_USE_LOGO) {
+                    extern void StartAnimationPreview(const char* name);
+                    StartAnimationPreview("__logo__");
+                    return 0;
+                }
+                if (menuItem == CLOCK_IDM_ANIMATIONS_USE_CPU) {
+                    StartAnimationPreview("__cpu__");
+                    return 0;
+                }
+                if (menuItem == CLOCK_IDM_ANIMATIONS_USE_MEM) {
+                    StartAnimationPreview("__mem__");
+                    return 0;
+                }
+                
+                /** Only handle other previews for non-popup items */
+                if (!(flags & MF_POPUP)) {
                 /** Handle color preview on hover */
                 int colorIndex = menuItem - 201;
                 if (colorIndex >= 0 && colorIndex < COLOR_OPTIONS_COUNT) {
@@ -2582,12 +2599,6 @@ refresh_window:
                     return 0;
                 }
 
-                /** Handle animation preview on hover for fixed "Use Logo" item */
-                if (menuItem == CLOCK_IDM_ANIMATIONS_USE_LOGO) {
-                    extern void StartAnimationPreview(const char* name);
-                    StartAnimationPreview("__logo__");
-                    return 0;
-                }
 
                 /** Handle animation preview on hover (IDs CLOCK_IDM_ANIMATIONS_BASE..+999) */
                 if (menuItem >= CLOCK_IDM_ANIMATIONS_BASE && menuItem < CLOCK_IDM_ANIMATIONS_BASE + 1000) {
@@ -2657,7 +2668,6 @@ refresh_window:
 
                                 if (IsAnimationLeafFolderW(wSubFolderPath)) {
                                     if (*nextIdPtr == targetId) {
-                                        extern void StartAnimationPreview(const char* name);
                                         StartAnimationPreview(e->rel_path_utf8);
                                         free(entries);
                                         return TRUE;
@@ -2671,7 +2681,6 @@ refresh_window:
                                 }
                             } else {
                                 if (*nextIdPtr == targetId) {
-                                    extern void StartAnimationPreview(const char* name);
                                     StartAnimationPreview(e->rel_path_utf8);
                                     free(entries);
                                     return TRUE;
@@ -2763,6 +2772,7 @@ refresh_window:
                     InvalidateRect(hwnd, NULL, TRUE);
                 }
                 
+            }
             }
             break;
         }
