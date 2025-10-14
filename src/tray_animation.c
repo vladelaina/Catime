@@ -783,6 +783,10 @@ static void AdvanceTrayFrame(void) {
         if (applyScaling) {
             scalePercent = GetAnimationSpeedScaleForPercent(percent); /** e.g., 150 => 1.5x */
             if (scalePercent <= 0.0) scalePercent = 100.0;
+        } else {
+            /** Use configurable default scale when scaling is not applied */
+            scalePercent = GetAnimationSpeedScaleForPercent(0.0);
+            if (scalePercent <= 0.0) scalePercent = 100.0;
         }
         double scale = scalePercent / 100.0;
         if (scale < 0.1) scale = 0.1; /** avoid zero/too fast */
@@ -878,6 +882,9 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
         double scalePercent = 100.0;
         if (applyScaling) {
             scalePercent = GetAnimationSpeedScaleForPercent(percent);
+            if (scalePercent <= 0.0) scalePercent = 100.0;
+        } else {
+            scalePercent = GetAnimationSpeedScaleForPercent(0.0);
             if (scalePercent <= 0.0) scalePercent = 100.0;
         }
         double scale = scalePercent / 100.0;

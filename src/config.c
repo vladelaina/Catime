@@ -80,6 +80,29 @@ static AnimSpeedEntry g_animSpeedEntries[32];
 static int g_animSpeedEntryCount = 0;
 static AnimationSpeedMetric g_animSpeedMetric = ANIMATION_SPEED_MEMORY;
 
+/**
+ * New-style animation speed mapping via breakpoints and default.
+ * ANIMATION_SPEED_DEFAULT defines the scale at 0%.
+ * ANIMATION_SPEED_MAP_<P>=<S> defines a breakpoint at percent P with scale S.
+ * At runtime, scales are linearly interpolated between adjacent breakpoints.
+ */
+typedef struct {
+    int percent;         /** breakpoint percent (0-100) */
+    double scalePercent; /** scale percent at breakpoint */
+} AnimSpeedPoint;
+
+static AnimSpeedPoint g_animSpeedPoints[128];
+static int g_animSpeedPointCount = 0;
+static double g_animSpeedDefaultScalePercent = 100.0;
+
+static int CmpAnimSpeedPoint(const void* a, const void* b) {
+    const AnimSpeedPoint* pa = (const AnimSpeedPoint*)a;
+    const AnimSpeedPoint* pb = (const AnimSpeedPoint*)b;
+    if (pa->percent < pb->percent) return -1;
+    if (pa->percent > pb->percent) return 1;
+    return 0;
+}
+
 /** Trim leading/trailing spaces in-place */
 static void TrimSpaces(char* s) {
     if (!s) return;
@@ -141,8 +164,16 @@ static void ParseAnimationSpeedMap(const char* mapStr) {
  * Example: ANIMATION_SPEED_MAP_0-10=100
  */
 static void ParseAnimationSpeedFixedKeys(const char* configPathUtf8) {
-    g_animSpeedEntryCount = 0;
+    g_animSpeedEntryCount = 0; /** legacy removed */
+    g_animSpeedPointCount = 0;
     if (!configPathUtf8 || !*configPathUtf8) return;
+
+    /** Read default scale; fallback to 100 if missing/invalid */
+    {
+        int def = ReadIniInt(INI_SECTION_OPTIONS, "ANIMATION_SPEED_DEFAULT", 100, configPathUtf8);
+        if (def <= 0) def = 100;
+        g_animSpeedDefaultScalePercent = (double)def;
+    }
 
     wchar_t wSection[64];
     wchar_t wfilePath[MAX_PATH];
@@ -173,12 +204,11 @@ static void ParseAnimationSpeedFixedKeys(const char* configPathUtf8) {
             wchar_t* value = eq + 1;
 
             if (wcsncmp(key, prefix, prefixLen) == 0) {
-                const wchar_t* range = key + prefixLen; /** expected LOW-HIGH */
-                const wchar_t* dash = wcschr(range, L'-');
+                const wchar_t* token = key + prefixLen; /** expect PERCENT */
+                const wchar_t* dash = wcschr(token, L'-');
                 if (dash) {
-                    int low = _wtoi(range);
-                    int high = _wtoi(dash + 1);
-
+                    /** legacy entry, ignore completely */
+                } else {
                     /** Trim spaces around value and strip optional '%' */
                     while (*value == L' ' || *value == L'\t') value++;
                     wchar_t* end = value + wcslen(value);
@@ -188,17 +218,23 @@ static void ParseAnimationSpeedFixedKeys(const char* configPathUtf8) {
                     double scale = _wtof(value);
                     if (scale <= 0.0) scale = 100.0;
 
-                    if (low < 0) low = 0;
-                    if (high > low) {
-                        g_animSpeedEntries[g_animSpeedEntryCount].lowInclusive = low;
-                        g_animSpeedEntries[g_animSpeedEntryCount].highExclusive = high;
-                        g_animSpeedEntries[g_animSpeedEntryCount].scalePercent = scale;
-                        g_animSpeedEntryCount++;
+                    int percent = _wtoi(token);
+                    if (percent < 0) percent = 0;
+                    if (percent > 100) percent = 100;
+                    if (g_animSpeedPointCount < (int)(sizeof(g_animSpeedPoints)/sizeof(g_animSpeedPoints[0]))) {
+                        g_animSpeedPoints[g_animSpeedPointCount].percent = percent;
+                        g_animSpeedPoints[g_animSpeedPointCount].scalePercent = scale;
+                        g_animSpeedPointCount++;
                     }
                 }
             }
         }
         p += wcslen(p) + 1;
+    }
+
+    /** Sort new-style breakpoints by percent ascending */
+    if (g_animSpeedPointCount > 1) {
+        qsort(g_animSpeedPoints, g_animSpeedPointCount, sizeof(AnimSpeedPoint), CmpAnimSpeedPoint);
     }
 
     free(wbuf);
@@ -211,13 +247,37 @@ AnimationSpeedMetric GetAnimationSpeedMetric(void) {
 double GetAnimationSpeedScaleForPercent(double percent) {
     if (percent < 0.0) percent = 0.0;
     if (percent > 100.0) percent = 100.0;
-    for (int i = 0; i < g_animSpeedEntryCount; ++i) {
-        if ((int)percent >= g_animSpeedEntries[i].lowInclusive &&
-            (int)percent < g_animSpeedEntries[i].highExclusive) {
-            return g_animSpeedEntries[i].scalePercent;
+
+    /** New-style breakpoints with linear interpolation */
+    if (g_animSpeedPointCount > 0) {
+        /** If below first breakpoint, interpolate from default to first */
+        if (percent <= (double)g_animSpeedPoints[0].percent) {
+            double p0 = 0.0;
+            double s0 = g_animSpeedDefaultScalePercent;
+            double p1 = (double)g_animSpeedPoints[0].percent;
+            double s1 = g_animSpeedPoints[0].scalePercent;
+            if (p1 <= p0) return s1; /** guard divide-by-zero */
+            double t = (percent - p0) / (p1 - p0);
+            return s0 + (s1 - s0) * t;
         }
+        /** Find segment [i, i+1] that contains percent */
+        for (int i = 0; i < g_animSpeedPointCount - 1; ++i) {
+            double p0 = (double)g_animSpeedPoints[i].percent;
+            double p1 = (double)g_animSpeedPoints[i + 1].percent;
+            if (percent >= p0 && percent <= p1) {
+                double s0 = g_animSpeedPoints[i].scalePercent;
+                double s1 = g_animSpeedPoints[i + 1].scalePercent;
+                if (p1 <= p0) return s1;
+                double t = (percent - p0) / (p1 - p0);
+                return s0 + (s1 - s0) * t;
+            }
+        }
+        /** Above last breakpoint: clamp to last scale */
+        return g_animSpeedPoints[g_animSpeedPointCount - 1].scalePercent;
     }
-    return 100.0;
+
+    /** No breakpoints: return default */
+    return g_animSpeedDefaultScalePercent;
 }
 
 void ReloadAnimationSpeedFromConfig(void) {
@@ -743,19 +803,19 @@ void CreateDefaultConfig(const char* config_path) {
     /** Default animation settings (show full virtual path like fonts) */
     WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_PATH", "__logo__", config_path);
 
-    /** Default animation speed settings */
+    /** Default animation speed settings (new format: default + breakpoints) */
     WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_METRIC", "MEMORY", config_path);
-    /** New fixed-range keys; value-only on the right side */
-    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_0-10",   "100", config_path);
-    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_10-20",  "110", config_path);
-    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_20-30",  "120", config_path);
-    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_30-40",  "130", config_path);
-    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_40-50",  "140", config_path);
-    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_50-60",  "150", config_path);
-    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_60-70",  "160", config_path);
-    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_70-80",  "170", config_path);
-    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_80-90",  "180", config_path);
-    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_90-100", "190", config_path);
+    WriteIniInt(INI_SECTION_OPTIONS, "ANIMATION_SPEED_DEFAULT", 100, config_path);
+    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_10",  "110", config_path);
+    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_20",  "120", config_path);
+    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_30",  "130", config_path);
+    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_40",  "140", config_path);
+    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_50",  "150", config_path);
+    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_60",  "160", config_path);
+    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_70",  "170", config_path);
+    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_80",  "180", config_path);
+    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_90",  "190", config_path);
+    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_100", "200", config_path);
     
 
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_SHOW_TIME", "None", config_path);
@@ -2181,17 +2241,19 @@ void WriteConfig(const char* config_path) {
         else if (g_animSpeedMetric == ANIMATION_SPEED_TIMER) metricStr = "TIMER";
         WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_METRIC", metricStr, config_path);
     {
-        /** Write vertical lines for easier editing */
-        /** Persist as fixed-range keys (value is scale percent only) */
-        for (int i = 0; i < g_animSpeedEntryCount; ++i) {
-            char key[64];
-            snprintf(key, sizeof(key), "ANIMATION_SPEED_MAP_%d-%d",
-                     g_animSpeedEntries[i].lowInclusive,
-                     g_animSpeedEntries[i].highExclusive);
-            char val[32];
-            /** keep minimal trailing zeros; %g already used above, but here prefer no scientific */
-            snprintf(val, sizeof(val), "%g", g_animSpeedEntries[i].scalePercent);
-            WriteIniString(INI_SECTION_OPTIONS, key, val, config_path);
+        /** Prefer new-style points if available; otherwise, persist legacy ranges */
+        if (g_animSpeedPointCount > 0) {
+            WriteIniInt(INI_SECTION_OPTIONS, "ANIMATION_SPEED_DEFAULT", (int)(g_animSpeedDefaultScalePercent + 0.5), config_path);
+            for (int i = 0; i < g_animSpeedPointCount; ++i) {
+                char key[64];
+                snprintf(key, sizeof(key), "ANIMATION_SPEED_MAP_%d", g_animSpeedPoints[i].percent);
+                char val[32];
+                snprintf(val, sizeof(val), "%g", g_animSpeedPoints[i].scalePercent);
+                WriteIniString(INI_SECTION_OPTIONS, key, val, config_path);
+            }
+        } else {
+            /** No points available: ensure default is written at least */
+            WriteIniInt(INI_SECTION_OPTIONS, "ANIMATION_SPEED_DEFAULT", (int)(g_animSpeedDefaultScalePercent + 0.5), config_path);
         }
     }
 }
