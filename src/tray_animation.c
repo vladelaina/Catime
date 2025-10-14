@@ -779,6 +779,10 @@ static void AdvanceTrayFrame(void) {
             if (CLOCK_SHOW_CURRENT_TIME || CLOCK_COUNT_UP || CLOCK_TOTAL_TIME <= 0) {
                 applyScaling = FALSE; /** outside countdown: keep 1x */
             }
+            /** When countdown finished (>=100%), revert to default scale */
+            if (percent >= 100.0) {
+                applyScaling = FALSE;
+            }
         }
 
         double scalePercent = 100.0;
@@ -883,6 +887,9 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
             extern BOOL CLOCK_SHOW_CURRENT_TIME;
             extern int CLOCK_TOTAL_TIME;
             if (CLOCK_SHOW_CURRENT_TIME || CLOCK_COUNT_UP || CLOCK_TOTAL_TIME <= 0) {
+                applyScaling = FALSE;
+            }
+            if (percent >= 100.0) {
                 applyScaling = FALSE;
             }
         }
@@ -1141,6 +1148,9 @@ void TrayAnimation_RecomputeTimerDelay(void) {
         extern BOOL CLOCK_SHOW_CURRENT_TIME;
         extern int CLOCK_TOTAL_TIME;
         if (CLOCK_SHOW_CURRENT_TIME || CLOCK_COUNT_UP || CLOCK_TOTAL_TIME <= 0) {
+            applyScaling = FALSE;
+        }
+        if (percent >= 100.0) {
             applyScaling = FALSE;
         }
     }

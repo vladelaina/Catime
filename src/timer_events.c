@@ -317,6 +317,10 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                 if (countdown_elapsed_time >= CLOCK_TOTAL_TIME && !countdown_message_shown) {
                     countdown_message_shown = TRUE;
 
+                    /** Immediately restore tray animation speed to default at countdown completion */
+                    extern void TrayAnimation_RecomputeTimerDelay(void);
+                    TrayAnimation_RecomputeTimerDelay();
+
                     ReadNotificationMessagesConfig();
                     ReadNotificationTypeConfig();
                     
