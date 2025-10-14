@@ -133,6 +133,70 @@ static DecodeTarget GetDecodeTarget(BOOL isPreview) {
     };
 }
 
+/**
+ * @brief Compute scaled delay according to current animation speed metric and mapping
+ * @param baseDelay Base delay in milliseconds
+ * @return Scaled delay in milliseconds (lower bound 10ms)
+ */
+static UINT ComputeScaledDelay(UINT baseDelay) {
+    if (baseDelay == 0) baseDelay = g_trayInterval > 0 ? g_trayInterval : 150;
+
+    double percent = 0.0;
+    AnimationSpeedMetric metric = GetAnimationSpeedMetric();
+    if (metric == ANIMATION_SPEED_CPU) {
+        float cpu = 0.0f, mem = 0.0f;
+        SystemMonitor_GetUsage(&cpu, &mem);
+        percent = cpu;
+    } else if (metric == ANIMATION_SPEED_TIMER) {
+        extern BOOL CLOCK_COUNT_UP;
+        extern BOOL CLOCK_SHOW_CURRENT_TIME;
+        extern int CLOCK_TOTAL_TIME;
+        extern int countdown_elapsed_time;
+        if (!CLOCK_SHOW_CURRENT_TIME) {
+            if (!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0) {
+                double p = (double)countdown_elapsed_time / (double)CLOCK_TOTAL_TIME;
+                if (p < 0.0) p = 0.0; if (p > 1.0) p = 1.0;
+                percent = p * 100.0;
+            } else {
+                percent = 0.0;
+            }
+        } else {
+            percent = 0.0;
+        }
+    } else {
+        float cpu = 0.0f, mem = 0.0f;
+        SystemMonitor_GetUsage(&cpu, &mem);
+        percent = mem;
+    }
+
+    BOOL applyScaling = TRUE;
+    if (metric == ANIMATION_SPEED_TIMER) {
+        extern BOOL CLOCK_COUNT_UP;
+        extern BOOL CLOCK_SHOW_CURRENT_TIME;
+        extern int CLOCK_TOTAL_TIME;
+        if (CLOCK_SHOW_CURRENT_TIME || CLOCK_COUNT_UP || CLOCK_TOTAL_TIME <= 0) {
+            applyScaling = FALSE;
+        }
+        if (percent >= 100.0) {
+            applyScaling = FALSE;
+        }
+    }
+
+    double scalePercent = 100.0;
+    if (applyScaling) {
+        scalePercent = GetAnimationSpeedScaleForPercent(percent);
+        if (scalePercent <= 0.0) scalePercent = 100.0;
+    } else {
+        scalePercent = GetAnimationSpeedScaleForPercent(0.0);
+        if (scalePercent <= 0.0) scalePercent = 100.0;
+    }
+    double scale = scalePercent / 100.0;
+    if (scale < 0.1) scale = 0.1;
+    UINT scaledDelay = (UINT)(baseDelay / scale);
+    if (scaledDelay < 10) scaledDelay = 10;
+    return scaledDelay;
+}
+
 /** @brief Update tray icon tooltip with current playback speed info (English only) */
 
 /** @brief Build animation folder path under %LOCALAPPDATA%\Catime\resources\animations */
@@ -727,9 +791,8 @@ static void AdvanceTrayFrame(void) {
         if (g_isPreviewAnimated && g_trayHwnd) {
             int nextPrev = g_previewIndex;
             UINT delayPrev = g_previewFrameDelaysMs[nextPrev];
-            if (delayPrev == 0) delayPrev = g_trayInterval > 0 ? g_trayInterval : 150;
             KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
-            SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, delayPrev, (TIMERPROC)TrayAnimTimerProc);
+            SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, ComputeScaledDelay(delayPrev), (TIMERPROC)TrayAnimTimerProc);
         }
     } else {
         g_trayIconIndex = (g_trayIconIndex + 1) % g_trayIconCount;
@@ -739,70 +802,8 @@ static void AdvanceTrayFrame(void) {
     if (!g_isPreviewActive && g_isAnimated && g_trayHwnd) {
         int nextIndex = g_trayIconIndex;
         UINT baseDelay = g_frameDelaysMs[nextIndex];
-        if (baseDelay == 0) baseDelay = g_trayInterval > 0 ? g_trayInterval : 150;
-
-        /** Query current metric percent */
-        double percent = 0.0;
-        AnimationSpeedMetric metric = GetAnimationSpeedMetric();
-        if (metric == ANIMATION_SPEED_CPU) {
-            float cpu = 0.0f, mem = 0.0f;
-            SystemMonitor_GetUsage(&cpu, &mem);
-            percent = cpu;
-        } else if (metric == ANIMATION_SPEED_TIMER) {
-            /** Timer progress (per-session). For countdown: elapsed/total; for count-up: progress toward default start time if available; for show time: use 0. */
-            extern BOOL CLOCK_COUNT_UP;
-            extern BOOL CLOCK_SHOW_CURRENT_TIME;
-            extern int CLOCK_TOTAL_TIME;
-            extern int countdown_elapsed_time;
-            if (!CLOCK_SHOW_CURRENT_TIME) {
-                if (!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0) {
-                    double p = (double)countdown_elapsed_time / (double)CLOCK_TOTAL_TIME;
-                    if (p < 0.0) p = 0.0; if (p > 1.0) p = 1.0;
-                    percent = p * 100.0;
-                } else {
-                    percent = 0.0;
-                }
-            } else {
-                percent = 0.0;
-            }
-        } else {
-            float cpu = 0.0f, mem = 0.0f;
-            SystemMonitor_GetUsage(&cpu, &mem);
-            percent = mem;
-        }
-        /** Determine whether to apply scaling under TIMER metric */
-        BOOL applyScaling = TRUE;
-        if (metric == ANIMATION_SPEED_TIMER) {
-            extern BOOL CLOCK_COUNT_UP;
-            extern BOOL CLOCK_SHOW_CURRENT_TIME;
-            extern int CLOCK_TOTAL_TIME;
-            if (CLOCK_SHOW_CURRENT_TIME || CLOCK_COUNT_UP || CLOCK_TOTAL_TIME <= 0) {
-                applyScaling = FALSE; /** outside countdown: keep 1x */
-            }
-            /** When countdown finished (>=100%), revert to default scale */
-            if (percent >= 100.0) {
-                applyScaling = FALSE;
-            }
-        }
-
-        double scalePercent = 100.0;
-        if (applyScaling) {
-            scalePercent = GetAnimationSpeedScaleForPercent(percent); /** e.g., 150 => 1.5x */
-            if (scalePercent <= 0.0) scalePercent = 100.0;
-        } else {
-            /** Use configurable default scale when scaling is not applied */
-            scalePercent = GetAnimationSpeedScaleForPercent(0.0);
-            if (scalePercent <= 0.0) scalePercent = 100.0;
-        }
-        double scale = scalePercent / 100.0;
-        if (scale < 0.1) scale = 0.1; /** avoid zero/too fast */
-
-        /** Faster speed => smaller delay */
-        UINT scaledDelay = (UINT)(baseDelay / scale);
-        if (scaledDelay < 10) scaledDelay = 10;
-
         KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
-        SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, scaledDelay, (TIMERPROC)TrayAnimTimerProc);
+        SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, ComputeScaledDelay(baseDelay), (TIMERPROC)TrayAnimTimerProc);
     }
 
     /** Tooltip handled by tray.c periodic updater */
@@ -853,60 +854,7 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
         }
         /** For GIF, honor first frame delay if available */
         UINT baseDelay = (g_isAnimated && g_frameDelaysMs[0] > 0) ? g_frameDelaysMs[0] : g_trayInterval;
-        /** Apply initial scaling at start */
-        double percent = 0.0;
-        AnimationSpeedMetric metric = GetAnimationSpeedMetric();
-        if (metric == ANIMATION_SPEED_CPU) {
-            float cpu = 0.0f, mem = 0.0f;
-            SystemMonitor_GetUsage(&cpu, &mem);
-            percent = cpu;
-        } else if (metric == ANIMATION_SPEED_TIMER) {
-            extern BOOL CLOCK_COUNT_UP;
-            extern BOOL CLOCK_SHOW_CURRENT_TIME;
-            extern int CLOCK_TOTAL_TIME;
-            extern int countdown_elapsed_time;
-            if (!CLOCK_SHOW_CURRENT_TIME) {
-                if (!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0) {
-                    double p = (double)countdown_elapsed_time / (double)CLOCK_TOTAL_TIME;
-                    if (p < 0.0) p = 0.0; if (p > 1.0) p = 1.0;
-                    percent = p * 100.0;
-                } else {
-                    percent = 0.0;
-                }
-            } else {
-                percent = 0.0;
-            }
-        } else {
-            float cpu = 0.0f, mem = 0.0f;
-            SystemMonitor_GetUsage(&cpu, &mem);
-            percent = mem;
-        }
-        BOOL applyScaling = TRUE;
-        if (metric == ANIMATION_SPEED_TIMER) {
-            extern BOOL CLOCK_COUNT_UP;
-            extern BOOL CLOCK_SHOW_CURRENT_TIME;
-            extern int CLOCK_TOTAL_TIME;
-            if (CLOCK_SHOW_CURRENT_TIME || CLOCK_COUNT_UP || CLOCK_TOTAL_TIME <= 0) {
-                applyScaling = FALSE;
-            }
-            if (percent >= 100.0) {
-                applyScaling = FALSE;
-            }
-        }
-
-        double scalePercent = 100.0;
-        if (applyScaling) {
-            scalePercent = GetAnimationSpeedScaleForPercent(percent);
-            if (scalePercent <= 0.0) scalePercent = 100.0;
-        } else {
-            scalePercent = GetAnimationSpeedScaleForPercent(0.0);
-            if (scalePercent <= 0.0) scalePercent = 100.0;
-        }
-        double scale = scalePercent / 100.0;
-        if (scale < 0.1) scale = 0.1;
-        UINT scaledDelay = (UINT)(baseDelay / scale);
-        if (scaledDelay < 10) scaledDelay = 10;
-        SetTimer(hwnd, TRAY_ANIM_TIMER_ID, scaledDelay, (TIMERPROC)TrayAnimTimerProc);
+        SetTimer(hwnd, TRAY_ANIM_TIMER_ID, ComputeScaledDelay(baseDelay), (TIMERPROC)TrayAnimTimerProc);
     }
 
     /** Tooltip handled by tray.c periodic updater */
