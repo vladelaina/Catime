@@ -79,6 +79,8 @@ static void CALLBACK TrayAnimTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD t
  * @brief Timer ID for tray animation
  */
 #define TRAY_ANIM_TIMER_ID 42420
+/** @brief User-configurable minimum interval (0 = no floor) loaded from config */
+static UINT g_userMinIntervalMs = 0; /** 0 = disabled; otherwise exact floor in ms */
 
 /** @brief Loaded icon frames and state */
 static HICON g_trayIcons[MAX_TRAY_FRAMES];
@@ -208,7 +210,8 @@ static UINT ComputeScaledDelay(UINT baseDelay) {
     double scale = scalePercent / 100.0;
     if (scale < 0.1) scale = 0.1;
     UINT scaledDelay = (UINT)(baseDelay / scale);
-    if (scaledDelay < 10) scaledDelay = 10;
+    UINT floorMs = (g_userMinIntervalMs > 0) ? g_userMinIntervalMs : 0;
+    if (scaledDelay < floorMs) scaledDelay = floorMs;
     return scaledDelay;
 }
 
@@ -838,7 +841,8 @@ static void AdvanceTrayFrame(void) {
         int nextIndex = g_trayIconIndex;
         UINT baseDelay = g_frameDelaysMs[nextIndex];
         KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
-        SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, ComputeScaledDelay(baseDelay), (TIMERPROC)TrayAnimTimerProc);
+        UINT nextDelay = ComputeScaledDelay(baseDelay);
+        SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, nextDelay, (TIMERPROC)TrayAnimTimerProc);
     }
 
     /** Tooltip handled by tray.c periodic updater */
@@ -893,7 +897,8 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
             return;
         }
         UINT baseDelay = (g_isAnimated && g_frameDelaysMs[0] > 0) ? g_frameDelaysMs[0] : g_trayInterval;
-        SetTimer(hwnd, TRAY_ANIM_TIMER_ID, ComputeScaledDelay(baseDelay), (TIMERPROC)TrayAnimTimerProc);
+        UINT firstDelay = ComputeScaledDelay(baseDelay);
+        SetTimer(hwnd, TRAY_ANIM_TIMER_ID, firstDelay, (TIMERPROC)TrayAnimTimerProc);
     }
 
     /** Tooltip handled by tray.c periodic updater */
@@ -1317,12 +1322,18 @@ void TrayAnimation_RecomputeTimerDelay(void) {
     double scale = scalePercent / 100.0;
     if (scale < 0.1) scale = 0.1;
     UINT scaledDelay = (UINT)(baseDelay / scale);
-    if (scaledDelay < 10) scaledDelay = 10;
+    UINT floorMs = (g_userMinIntervalMs > 0) ? g_userMinIntervalMs : 0;
+    if (scaledDelay < floorMs) scaledDelay = floorMs;
 
     KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
     SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, scaledDelay, (TIMERPROC)TrayAnimTimerProc);
 
     /** Tooltip handled by tray.c periodic updater */
+}
+
+void TrayAnimation_SetMinIntervalMs(UINT ms) {
+    g_userMinIntervalMs = ms;
+    TrayAnimation_RecomputeTimerDelay();
 }
 
 static void OpenAnimationsFolder(void) {

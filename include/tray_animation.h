@@ -93,6 +93,12 @@ void TrayAnimation_UpdatePercentIconIfNeeded(void);
  */
 HICON CreatePercentIcon16(int percent);
 
+/**
+ * @brief Set user-configured minimum tray animation interval in milliseconds.
+ *        0 disables the floor (uses system minimum only).
+ */
+void TrayAnimation_SetMinIntervalMs(UINT ms);
+
 #endif
 
 

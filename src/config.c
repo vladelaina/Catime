@@ -94,6 +94,7 @@ typedef struct {
 static AnimSpeedPoint g_animSpeedPoints[128];
 static int g_animSpeedPointCount = 0;
 static double g_animSpeedDefaultScalePercent = 100.0;
+static int g_animMinIntervalMs = 0; /** 0 = disabled (use built-in default) */
 
 static int CmpAnimSpeedPoint(const void* a, const void* b) {
     const AnimSpeedPoint* pa = (const AnimSpeedPoint*)a;
@@ -294,6 +295,13 @@ void ReloadAnimationSpeedFromConfig(void) {
         g_animSpeedMetric = ANIMATION_SPEED_MEMORY;
     }
     ParseAnimationSpeedFixedKeys(config_path);
+
+    /** Optional advanced: minimum animation interval floor (ms), 0 disables */
+    int minInterval = ReadIniInt("Animation", "ANIMATION_MIN_INTERVAL_MS", 0, config_path);
+    if (minInterval < 0) minInterval = 0;
+    g_animMinIntervalMs = minInterval;
+    extern void TrayAnimation_SetMinIntervalMs(UINT ms);
+    TrayAnimation_SetMinIntervalMs((UINT)g_animMinIntervalMs);
 }
 
 /**
@@ -820,6 +828,43 @@ void CreateDefaultConfig(const char* config_path) {
     /** Default percent tray icon colors (hex format) */
     WriteIniString("Animation", "PERCENT_ICON_TEXT_COLOR", "#000000", config_path);
     WriteIniString("Animation", "PERCENT_ICON_BG_COLOR", "#FFFFFF", config_path);
+    /** Advanced: default minimum interval floor (0 = disabled) */
+    WriteIniInt("Animation", "ANIMATION_MIN_INTERVAL_MS", 0, config_path);
+
+    /** Append user-facing comments for advanced animation options */
+    {
+        wchar_t wconfig_path[MAX_PATH] = {0};
+        MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+        FILE* f = _wfopen(wconfig_path, L"a");
+        if (f) {
+            fputs(";========================================================\n", f);
+            fputs("; Animation options help (hot reload supported)\n", f);
+            fputs(";========================================================\n", f);
+
+            /* ANIMATION_SPEED_DEFAULT */
+            fputs("; ANIMATION_SPEED_DEFAULT: base speed scale at 0% (unit: percent).\n", f);
+            fputs(";   100 = 1x speed, 200 = 2x, 50 = 0.5x.\n", f);
+            fputs(";   Works with ANIMATION_SPEED_MAP_* breakpoints via linear interpolation.\n", f);
+            fputs(";\n", f);
+
+            /* PERCENT_ICON_TEXT_COLOR */
+            fputs("; PERCENT_ICON_TEXT_COLOR: CPU/MEM percent tray icon text color.\n", f);
+            fputs(";   Format: #RRGGBB or R,G,B (0-255).\n", f);
+            fputs(";\n", f);
+
+            /* PERCENT_ICON_BG_COLOR */
+            fputs("; PERCENT_ICON_BG_COLOR: CPU/MEM percent tray icon background color.\n", f);
+            fputs(";   Format: #RRGGBB or R,G,B (0-255).\n", f);
+            fputs(";\n", f);
+
+            /* ANIMATION_MIN_INTERVAL_MS */
+            fputs("; ANIMATION_MIN_INTERVAL_MS: minimum frame interval (unit: milliseconds).\n", f);
+            fputs(";   0  => no floor (use computed speed as-is).\n", f);
+            fputs(";   N>0 => at least N ms per frame (e.g., 100 = ~10 fps).\n", f);
+            fputs(";========================================================\n", f);
+            fclose(f);
+        }
+    }
     
 
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_SHOW_TIME", "None", config_path);
@@ -2259,6 +2304,12 @@ void WriteConfig(const char* config_path) {
             /** No points available: ensure default is written at least */
             WriteIniInt("Animation", "ANIMATION_SPEED_DEFAULT", (int)(g_animSpeedDefaultScalePercent + 0.5), config_path);
         }
+    }
+    /** Persist advanced min interval floor for animations */
+    {
+        extern void TrayAnimation_SetMinIntervalMs(UINT ms);
+        /* g_animMinIntervalMs already reflects last loaded value; keep it in config for visibility */
+        WriteIniInt("Animation", "ANIMATION_MIN_INTERVAL_MS", g_animMinIntervalMs, config_path);
     }
     /** Persist percent tray icon colors */
     {
