@@ -879,7 +879,41 @@ void CreateDefaultConfig(const char* config_path) {
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_PAUSE_RESUME", "None", config_path);
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_RESTART_TIMER", "None", config_path);
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_CUSTOM_COUNTDOWN", "None", config_path);
-    
+    /** Append Hotkeys help block (placed right after [Hotkeys] keys) */
+    {
+        wchar_t wconfig_path[MAX_PATH] = {0};
+        MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+        FILE* f = _wfopen(wconfig_path, L"a");
+        if (f) {
+            fputs(";========================================================\n", f);
+            fputs("; Hotkeys section help (hot reload supported)\n", f);
+            fputs(";========================================================\n", f);
+            fputs("; Format: KEY=Ctrl+Shift+Alt+Key  or  KEY=None  or  KEY=0xNN (hex VK)\n", f);
+            fputs(";  - Modifiers: Ctrl, Shift, Alt (combine with '+')\n", f);
+            fputs(";  - Keys: A-Z, 0-9, F1..F24, Backspace, Tab, Enter, Esc, Space,\n", f);
+            fputs(";           PageUp, PageDown, End, Home, Left, Up, Right, Down, Insert, Delete,\n", f);
+            fputs(";           Num0..Num9, Num*, Num+, Num-, Num., Num/\n", f);
+            fputs(";  - Examples: Ctrl+Shift+K  |  Alt+F12  |  None  |  0x5B\n", f);
+            fputs(";  - Note: Some combinations may be reserved by the system or other apps.\n", f);
+            fputs(";\n", f);
+            fputs("; Keys in [Hotkeys]:\n", f);
+            fputs(";   HOTKEY_SHOW_TIME           - Toggle show current time\n", f);
+            fputs(";   HOTKEY_COUNT_UP            - Start count-up timer\n", f);
+            fputs(";   HOTKEY_COUNTDOWN           - Start countdown timer\n", f);
+            fputs(";   HOTKEY_QUICK_COUNTDOWN1    - Quick countdown slot 1\n", f);
+            fputs(";   HOTKEY_QUICK_COUNTDOWN2    - Quick countdown slot 2\n", f);
+            fputs(";   HOTKEY_QUICK_COUNTDOWN3    - Quick countdown slot 3\n", f);
+            fputs(";   HOTKEY_POMODORO            - Start Pomodoro\n", f);
+            fputs(";   HOTKEY_TOGGLE_VISIBILITY   - Toggle window visibility\n", f);
+            fputs(";   HOTKEY_EDIT_MODE           - Toggle edit mode\n", f);
+            fputs(";   HOTKEY_PAUSE_RESUME        - Pause/Resume timer\n", f);
+            fputs(";   HOTKEY_RESTART_TIMER       - Restart current timer\n", f);
+            fputs(";   HOTKEY_CUSTOM_COUNTDOWN    - Custom countdown\n", f);
+            fputs(";========================================================\n", f);
+            fclose(f);
+        }
+    }
+
 
     for (int i = 1; i <= 5; i++) {
         char key[32];
@@ -891,6 +925,24 @@ void CreateDefaultConfig(const char* config_path) {
     WriteIniString(INI_SECTION_COLORS, "COLOR_OPTIONS", 
                  "#FFFFFF,#F9DB91,#F4CAE0,#FFB6C1,#A8E7DF,#A3CFB3,#92CBFC,#BDA5E7,#9370DB,#8C92CF,#72A9A5,#EB99A7,#EB96BD,#FFAE8B,#FF7F50,#CA6174", 
                  config_path);
+
+    /** Append Colors help block (placed near [Colors]) */
+    {
+        wchar_t wconfig_path[MAX_PATH] = {0};
+        MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+        FILE* f = _wfopen(wconfig_path, L"a");
+        if (f) {
+            fputs(";========================================================\n", f);
+            fputs("; Colors section help (hot reload supported)\n", f);
+            fputs(";========================================================\n", f);
+            fputs("; COLOR_OPTIONS: comma-separated quick color list used by dialogs/menus.\n", f);
+            fputs(";   Token format: #RRGGBB or RRGGBB (6 hex digits).\n", f);
+            fputs(";   Whitespace is allowed around commas; duplicates are ignored.\n", f);
+            fputs(";   Example: COLOR_OPTIONS=#FFFFFF,#FFB6C1,9370DB,72A9A5\n", f);
+            fputs(";========================================================\n", f);
+            fclose(f);
+        }
+    }
 }
 
 
