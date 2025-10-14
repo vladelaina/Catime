@@ -626,7 +626,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             char config_path[MAX_PATH] = {0};
             GetConfigPath(config_path, MAX_PATH);
             char value[MAX_PATH] = {0};
-            ReadIniString(INI_SECTION_OPTIONS, "ANIMATION_PATH", "__logo__", value, sizeof(value), config_path);
+            ReadIniString("Animation", "ANIMATION_PATH", "__logo__", value, sizeof(value), config_path);
             extern void ApplyAnimationPathValueNoPersist(const char* value);
             ApplyAnimationPathValueNoPersist(value);
             return 0;
@@ -882,6 +882,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 AddColorOption(tok);
                 tok = strtok(NULL, ",");
             }
+            /** Reload percent icon colors */
+            extern void ReadPercentIconColorsConfig(void);
+            extern void TrayAnimation_UpdatePercentIconIfNeeded(void);
+            ReadPercentIconColorsConfig();
+            TrayAnimation_UpdatePercentIconIfNeeded();
             InvalidateRect(hwnd, NULL, TRUE);
             return 0;
         }
@@ -1185,7 +1190,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     char config_path[MAX_PATH];
                     GetConfigPath(config_path, MAX_PATH);
                     const char* metricStr = (m == ANIMATION_SPEED_CPU ? "CPU" : (m == ANIMATION_SPEED_TIMER ? "TIMER" : "MEMORY"));
-                    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_METRIC", metricStr, config_path);
+                    WriteIniString("Animation", "ANIMATION_SPEED_METRIC", metricStr, config_path);
                     return 0;
                 }
 

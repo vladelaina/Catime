@@ -553,4 +553,17 @@ void ResetTimerWithInterval(HWND hwnd);
  */
 void FlushConfigToDisk(void);
 
+/**
+ * @brief Read percent tray icon colors from config. Keys:
+ *        [Animation]\PERCENT_ICON_TEXT_COLOR, [Animation]\PERCENT_ICON_BG_COLOR
+ *        Accepts "#RRGGBB" or "R,G,B"; defaults: text black, bg white.
+ */
+void ReadPercentIconColorsConfig(void);
+
+/** @brief Get percent tray icon text color as COLORREF */
+COLORREF GetPercentIconTextColor(void);
+
+/** @brief Get percent tray icon background color as COLORREF */
+COLORREF GetPercentIconBgColor(void);
+
 #endif

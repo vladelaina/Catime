@@ -159,7 +159,7 @@ static void ParseAnimationSpeedMap(const char* mapStr) {
 }
 
 /**
- * @brief Parse fixed-range animation speed keys from INI [OPTIONS] section
+ * @brief Parse fixed-range animation speed keys from INI [Animation] section
  * Keys are of the form: ANIMATION_SPEED_MAP_LOW-HIGH = SCALE[%]
  * Example: ANIMATION_SPEED_MAP_0-10=100
  */
@@ -170,14 +170,15 @@ static void ParseAnimationSpeedFixedKeys(const char* configPathUtf8) {
 
     /** Read default scale; fallback to 100 if missing/invalid */
     {
-        int def = ReadIniInt(INI_SECTION_OPTIONS, "ANIMATION_SPEED_DEFAULT", 100, configPathUtf8);
+        int def = ReadIniInt("Animation", "ANIMATION_SPEED_DEFAULT", 100, configPathUtf8);
         if (def <= 0) def = 100;
         g_animSpeedDefaultScalePercent = (double)def;
     }
 
     wchar_t wSection[64];
     wchar_t wfilePath[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, INI_SECTION_OPTIONS, -1, wSection, 64);
+    const char* sectionUtf8 = "Animation";
+    MultiByteToWideChar(CP_UTF8, 0, sectionUtf8, -1, wSection, 64);
     MultiByteToWideChar(CP_UTF8, 0, configPathUtf8, -1, wfilePath, MAX_PATH);
 
     const DWORD kBufChars = 64 * 1024; /** 64KB buffer for section */
@@ -284,7 +285,7 @@ void ReloadAnimationSpeedFromConfig(void) {
     char config_path[MAX_PATH] = {0};
     GetConfigPath(config_path, MAX_PATH);
     char metric[32] = {0};
-    ReadIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_METRIC", "MEMORY", metric, sizeof(metric), config_path);
+    ReadIniString("Animation", "ANIMATION_SPEED_METRIC", "MEMORY", metric, sizeof(metric), config_path);
     if (_stricmp(metric, "CPU") == 0) {
         g_animSpeedMetric = ANIMATION_SPEED_CPU;
     } else if (_stricmp(metric, "TIMER") == 0 || _stricmp(metric, "COUNTDOWN") == 0) {
@@ -801,21 +802,24 @@ void CreateDefaultConfig(const char* config_path) {
     WriteIniString(INI_SECTION_NOTIFICATION, "NOTIFICATION_DISABLED", "FALSE", config_path);
     
     /** Default animation settings (show full virtual path like fonts) */
-    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_PATH", "__logo__", config_path);
+    WriteIniString("Animation", "ANIMATION_PATH", "__logo__", config_path);
 
     /** Default animation speed settings (new format: default + breakpoints) */
-    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_METRIC", "MEMORY", config_path);
-    WriteIniInt(INI_SECTION_OPTIONS, "ANIMATION_SPEED_DEFAULT", 100, config_path);
-    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_10",  "120", config_path);
-    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_20",  "140", config_path);
-    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_30",  "160", config_path);
-    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_40",  "180", config_path);
-    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_50",  "200", config_path);
-    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_60",  "220", config_path);
-    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_70",  "240", config_path);
-    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_80",  "260", config_path);
-    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_90",  "280", config_path);
-    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_MAP_100", "300", config_path);
+    WriteIniString("Animation", "ANIMATION_SPEED_METRIC", "MEMORY", config_path);
+    WriteIniInt("Animation", "ANIMATION_SPEED_DEFAULT", 100, config_path);
+    WriteIniString("Animation", "ANIMATION_SPEED_MAP_10",  "120", config_path);
+    WriteIniString("Animation", "ANIMATION_SPEED_MAP_20",  "140", config_path);
+    WriteIniString("Animation", "ANIMATION_SPEED_MAP_30",  "160", config_path);
+    WriteIniString("Animation", "ANIMATION_SPEED_MAP_40",  "180", config_path);
+    WriteIniString("Animation", "ANIMATION_SPEED_MAP_50",  "200", config_path);
+    WriteIniString("Animation", "ANIMATION_SPEED_MAP_60",  "220", config_path);
+    WriteIniString("Animation", "ANIMATION_SPEED_MAP_70",  "240", config_path);
+    WriteIniString("Animation", "ANIMATION_SPEED_MAP_80",  "260", config_path);
+    WriteIniString("Animation", "ANIMATION_SPEED_MAP_90",  "280", config_path);
+    WriteIniString("Animation", "ANIMATION_SPEED_MAP_100", "300", config_path);
+    /** Default percent tray icon colors (hex format) */
+    WriteIniString("Animation", "PERCENT_ICON_TEXT_COLOR", "#000000", config_path);
+    WriteIniString("Animation", "PERCENT_ICON_BG_COLOR", "#FFFFFF", config_path);
     
 
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_SHOW_TIME", "None", config_path);
@@ -1416,7 +1420,7 @@ void ReadConfig() {
     /** Load animation speed metric and map */
     {
         char metric[32] = {0};
-        ReadIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_METRIC", "MEMORY", metric, sizeof(metric), config_path);
+        ReadIniString("Animation", "ANIMATION_SPEED_METRIC", "MEMORY", metric, sizeof(metric), config_path);
         if (_stricmp(metric, "CPU") == 0) {
             g_animSpeedMetric = ANIMATION_SPEED_CPU;
         } else if (_stricmp(metric, "TIMER") == 0 || _stricmp(metric, "COUNTDOWN") == 0) {
@@ -2231,7 +2235,7 @@ void WriteConfig(const char* config_path) {
         if (anim && anim[0] != '\0') {
             char animPath[MAX_PATH];
             snprintf(animPath, sizeof(animPath), "%%LOCALAPPDATA%%\\Catime\\resources\\animations\\%s", anim);
-            WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_PATH", animPath, config_path);
+            WriteIniString("Animation", "ANIMATION_PATH", animPath, config_path);
         }
     }
 
@@ -2239,22 +2243,32 @@ void WriteConfig(const char* config_path) {
         const char* metricStr = "MEMORY";
         if (g_animSpeedMetric == ANIMATION_SPEED_CPU) metricStr = "CPU";
         else if (g_animSpeedMetric == ANIMATION_SPEED_TIMER) metricStr = "TIMER";
-        WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_SPEED_METRIC", metricStr, config_path);
+        WriteIniString("Animation", "ANIMATION_SPEED_METRIC", metricStr, config_path);
     {
         /** Prefer new-style points if available; otherwise, persist legacy ranges */
         if (g_animSpeedPointCount > 0) {
-            WriteIniInt(INI_SECTION_OPTIONS, "ANIMATION_SPEED_DEFAULT", (int)(g_animSpeedDefaultScalePercent + 0.5), config_path);
+            WriteIniInt("Animation", "ANIMATION_SPEED_DEFAULT", (int)(g_animSpeedDefaultScalePercent + 0.5), config_path);
             for (int i = 0; i < g_animSpeedPointCount; ++i) {
                 char key[64];
                 snprintf(key, sizeof(key), "ANIMATION_SPEED_MAP_%d", g_animSpeedPoints[i].percent);
                 char val[32];
                 snprintf(val, sizeof(val), "%g", g_animSpeedPoints[i].scalePercent);
-                WriteIniString(INI_SECTION_OPTIONS, key, val, config_path);
+                WriteIniString("Animation", key, val, config_path);
             }
         } else {
             /** No points available: ensure default is written at least */
-            WriteIniInt(INI_SECTION_OPTIONS, "ANIMATION_SPEED_DEFAULT", (int)(g_animSpeedDefaultScalePercent + 0.5), config_path);
+            WriteIniInt("Animation", "ANIMATION_SPEED_DEFAULT", (int)(g_animSpeedDefaultScalePercent + 0.5), config_path);
         }
+    }
+    /** Persist percent tray icon colors */
+    {
+        COLORREF tc = GetPercentIconTextColor();
+        COLORREF bc = GetPercentIconBgColor();
+        char buf[16];
+        snprintf(buf, sizeof(buf), "#%02X%02X%02X", GetRValue(tc), GetGValue(tc), GetBValue(tc));
+        WriteIniString("Animation", "PERCENT_ICON_TEXT_COLOR", buf, config_path);
+        snprintf(buf, sizeof(buf), "#%02X%02X%02X", GetRValue(bc), GetGValue(bc), GetBValue(bc));
+        WriteIniString("Animation", "PERCENT_ICON_BG_COLOR", buf, config_path);
     }
 }
 
@@ -4057,4 +4071,50 @@ void FlushConfigToDisk(void) {
         CloseHandle(hFile);
     }
 }
+
+/** Percent tray icon colors (defaults: text black, bg white) */
+static COLORREF g_percentTextColor = RGB(0, 0, 0);
+static COLORREF g_percentBgColor = RGB(255, 255, 255);
+
+static int ParseHex2(const char* s) {
+    int v = 0; sscanf(s, "%2x", &v); return v & 0xFF;
+}
+
+static BOOL ParseColorString(const char* str, COLORREF* out) {
+    if (!str || !out) return FALSE;
+    if (str[0] == '#') {
+        if (strlen(str) == 7) {
+            int r = ParseHex2(str + 1);
+            int g = ParseHex2(str + 3);
+            int b = ParseHex2(str + 5);
+            *out = RGB(r, g, b);
+            return TRUE;
+        }
+        return FALSE;
+    }
+    int r=0,g=0,b=0;
+    if (sscanf(str, "%d,%d,%d", &r, &g, &b) == 3) {
+        if (r<0) r=0; if (r>255) r=255;
+        if (g<0) g=0; if (g>255) g=255;
+        if (b<0) b=0; if (b>255) b=255;
+        *out = RGB(r, g, b);
+        return TRUE;
+    }
+    return FALSE;
+}
+
+void ReadPercentIconColorsConfig(void) {
+    char config_path[MAX_PATH] = {0};
+    GetConfigPath(config_path, MAX_PATH);
+    char textBuf[32] = {0};
+    char bgBuf[32] = {0};
+    ReadIniString("Animation", "PERCENT_ICON_TEXT_COLOR", "#000000", textBuf, sizeof(textBuf), config_path);
+    ReadIniString("Animation", "PERCENT_ICON_BG_COLOR", "#FFFFFF", bgBuf, sizeof(bgBuf), config_path);
+    COLORREF val;
+    if (ParseColorString(textBuf, &val)) g_percentTextColor = val;
+    if (ParseColorString(bgBuf, &val)) g_percentBgColor = val;
+}
+
+COLORREF GetPercentIconTextColor(void) { return g_percentTextColor; }
+COLORREF GetPercentIconBgColor(void) { return g_percentBgColor; }
 

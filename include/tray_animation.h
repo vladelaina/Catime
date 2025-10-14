@@ -80,6 +80,12 @@ void ApplyAnimationPathValueNoPersist(const char* value);
  */
 void TrayAnimation_RecomputeTimerDelay(void);
 
+/**
+ * @brief If current animation is a percent mode ("__cpu__"/"__mem__"),
+ *        regenerate and apply a new tray HICON based on latest values.
+ */
+void TrayAnimation_UpdatePercentIconIfNeeded(void);
+
 #endif
 
 

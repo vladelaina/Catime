@@ -132,6 +132,10 @@ static void CALLBACK TrayTipTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD ti
     n.uFlags = NIF_TIP;
     wcsncpy_s(n.szTip, _countof(n.szTip), tip, _TRUNCATE);
     Shell_NotifyIconW(NIM_MODIFY, &n);
+
+    /** Update percent icon if current animation is __cpu__/__mem__ */
+    extern void TrayAnimation_UpdatePercentIconIfNeeded(void);
+    TrayAnimation_UpdatePercentIconIfNeeded();
 }
 
 /**
@@ -150,6 +154,8 @@ void RegisterTaskbarCreatedMessage() {
  */
 void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
     // Preload animation from config and get initial frame icon
+    extern void ReadPercentIconColorsConfig(void);
+    ReadPercentIconColorsConfig();
     PreloadAnimationFromConfig();
     HICON hInitial = GetInitialAnimationHicon();
 

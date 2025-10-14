@@ -84,6 +84,8 @@
 #define CLOCK_IDM_ANIMATIONS_MENU 2200           /**< Animations root submenu */
 #define CLOCK_IDM_ANIMATIONS_OPEN_DIR 2201       /**< Open animations folder */
 #define CLOCK_IDM_ANIMATIONS_USE_LOGO 2202       /**< Use app logo as tray icon */
+#define CLOCK_IDM_ANIMATIONS_USE_CPU 2203        /**< Use CPU percent as tray icon */
+#define CLOCK_IDM_ANIMATIONS_USE_MEM 2204        /**< Use Memory percent as tray icon */
 #define CLOCK_IDM_ANIMATIONS_BASE 3000           /**< Dynamic animation item base (folders) */
 
 /** @brief Animation speed metric submenu identifiers */

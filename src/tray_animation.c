@@ -748,6 +748,11 @@ static void LoadAnimationByName(const char* name, BOOL isPreview) {
         if (hIcon) {
             target.icons[(*(target.count))++] = hIcon;
         }
+    } else if (_stricmp(name, "__cpu__") == 0 || _stricmp(name, "__mem__") == 0) {
+        /** Percent modes are handled by periodic updater; keep no frames here */
+        *(target.count) = 0;
+        *(target.index) = 0;
+        *(target.isAnimatedFlag) = FALSE;
     } else if (IsGifSelection(name) || IsWebPSelection(name)) {
         char filePath[MAX_PATH] = {0};
         BuildAnimationFolder(name, filePath, sizeof(filePath));
@@ -826,7 +831,7 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
     char config_path[MAX_PATH] = {0};
     GetConfigPath(config_path, sizeof(config_path));
     char nameBuf[MAX_PATH] = {0};
-    ReadIniString(INI_SECTION_OPTIONS, "ANIMATION_PATH", "__logo__", nameBuf, sizeof(nameBuf), config_path);
+    ReadIniString("Animation", "ANIMATION_PATH", "__logo__", nameBuf, sizeof(nameBuf), config_path);
     if (nameBuf[0] != '\0') {
         const char* prefix = "%LOCALAPPDATA%\\Catime\\resources\\animations\\";
         if (_stricmp(nameBuf, "__logo__") == 0) {
@@ -846,13 +851,16 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
 
     LoadTrayIcons();
 
+    /** For percent modes, no animation timer; initial icon will be set by updater */
+    if (_stricmp(g_animationName, "__cpu__") == 0 || _stricmp(g_animationName, "__mem__") == 0) {
+        return;
+    }
+
     if (g_trayIconCount > 0) {
         AdvanceTrayFrame();
-        /** If static single-frame (e.g., logo), do not start timer to avoid flicker */
         if (!g_isAnimated && g_trayIconCount <= 1) {
             return;
         }
-        /** For GIF, honor first frame delay if available */
         UINT baseDelay = (g_isAnimated && g_frameDelaysMs[0] > 0) ? g_frameDelaysMs[0] : g_trayInterval;
         SetTimer(hwnd, TRAY_ANIM_TIMER_ID, ComputeScaledDelay(baseDelay), (TIMERPROC)TrayAnimTimerProc);
     }
@@ -887,7 +895,7 @@ BOOL SetCurrentAnimationName(const char* name) {
         g_animationName[sizeof(g_animationName) - 1] = '\0';
         char config_path[MAX_PATH] = {0};
         GetConfigPath(config_path, sizeof(config_path));
-        WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_PATH", "__logo__", config_path);
+        WriteIniString("Animation", "ANIMATION_PATH", "__logo__", config_path);
         LoadTrayIcons();
         g_trayIconIndex = 0;
         if (g_trayHwnd && g_trayIconCount > 0) {
@@ -895,6 +903,20 @@ BOOL SetCurrentAnimationName(const char* name) {
             if (!IsWindow(g_trayHwnd)) return TRUE;
             KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
             SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, g_trayInterval ? g_trayInterval : 150, (TIMERPROC)TrayAnimTimerProc);
+        }
+        return TRUE;
+    }
+    if (_stricmp(name, "__cpu__") == 0 || _stricmp(name, "__mem__") == 0) {
+        strncpy(g_animationName, name, sizeof(g_animationName) - 1);
+        g_animationName[sizeof(g_animationName) - 1] = '\0';
+        char config_path[MAX_PATH] = {0};
+        GetConfigPath(config_path, sizeof(config_path));
+        WriteIniString("Animation", "ANIMATION_PATH", name, config_path);
+
+        LoadTrayIcons();
+        g_trayIconIndex = 0;
+        if (g_trayHwnd) {
+            KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
         }
         return TRUE;
     }
@@ -935,7 +957,7 @@ BOOL SetCurrentAnimationName(const char* name) {
     GetConfigPath(config_path, sizeof(config_path));
     char animPath[MAX_PATH];
     snprintf(animPath, sizeof(animPath), "%%LOCALAPPDATA%%\\Catime\\resources\\animations\\%s", g_animationName);
-    WriteIniString(INI_SECTION_OPTIONS, "ANIMATION_PATH", animPath, config_path);
+    WriteIniString("Animation", "ANIMATION_PATH", animPath, config_path);
 
     /** Reload frames and reset index; ensure timer is running */
     LoadTrayIcons();
@@ -992,7 +1014,7 @@ void PreloadAnimationFromConfig(void) {
     char config_path[MAX_PATH] = {0};
     GetConfigPath(config_path, sizeof(config_path));
     char nameBuf[MAX_PATH] = {0};
-    ReadIniString(INI_SECTION_OPTIONS, "ANIMATION_PATH", "__logo__", nameBuf, sizeof(nameBuf), config_path);
+    ReadIniString("Animation", "ANIMATION_PATH", "__logo__", nameBuf, sizeof(nameBuf), config_path);
     if (nameBuf[0] != '\0') {
         const char* prefix = "%LOCALAPPDATA%\\Catime\\resources\\animations\\";
         if (_stricmp(nameBuf, "__logo__") == 0) {
@@ -1014,6 +1036,9 @@ void PreloadAnimationFromConfig(void) {
 }
 
 HICON GetInitialAnimationHicon(void) {
+    if (_stricmp(g_animationName, "__cpu__") == 0 || _stricmp(g_animationName, "__mem__") == 0) {
+        return NULL; /** updater will set first icon */
+    }
     if (g_trayIconCount > 0) {
         return g_trayIcons[0];
     }
@@ -1042,13 +1067,122 @@ void ApplyAnimationPathValueNoPersist(const char* value) {
 
     LoadTrayIcons();
     g_trayIconIndex = 0;
-    if (g_trayHwnd && g_trayIconCount > 0) {
+    if (!g_trayHwnd) return;
+    if (_stricmp(g_animationName, "__cpu__") == 0 || _stricmp(g_animationName, "__mem__") == 0) {
+        KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
+        return;
+    }
+    if (g_trayIconCount > 0) {
         AdvanceTrayFrame();
         if (!IsWindow(g_trayHwnd)) return;
         UINT firstDelay = (g_isAnimated && g_frameDelaysMs[0] > 0) ? g_frameDelaysMs[0] : (g_trayInterval ? g_trayInterval : 150);
         KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
         SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, firstDelay, (TIMERPROC)TrayAnimTimerProc);
     }
+}
+
+/** Create a small 16x16 icon with percentage text (no % sign) */
+static HICON CreatePercentIcon16(int percent) {
+    int cx = GetSystemMetrics(SM_CXSMICON);
+    int cy = GetSystemMetrics(SM_CYSMICON);
+    if (cx <= 0) cx = 16; if (cy <= 0) cy = 16;
+
+    BITMAPINFO bi; ZeroMemory(&bi, sizeof(bi));
+    bi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bi.bmiHeader.biWidth = cx;
+    bi.bmiHeader.biHeight = -cy; /* top-down */
+    bi.bmiHeader.biPlanes = 1;
+    bi.bmiHeader.biBitCount = 32;
+    bi.bmiHeader.biCompression = BI_RGB;
+
+    VOID* pvBits = NULL;
+    HBITMAP hbmColor = CreateDIBSection(NULL, &bi, DIB_RGB_COLORS, &pvBits, NULL, 0);
+    if (!hbmColor || !pvBits) {
+        if (hbmColor) DeleteObject(hbmColor);
+        return NULL;
+    }
+
+    HBITMAP hbmMask = CreateBitmap(cx, cy, 1, 1, NULL);
+    if (!hbmMask) {
+        DeleteObject(hbmColor);
+        return NULL;
+    }
+
+    HDC hdc = GetDC(NULL);
+    HDC mem = CreateCompatibleDC(hdc);
+    HGDIOBJ old = SelectObject(mem, hbmColor);
+
+    RECT rc = {0, 0, cx, cy};
+    extern COLORREF GetPercentIconBgColor(void);
+    HBRUSH bk = CreateSolidBrush(GetPercentIconBgColor());
+    FillRect(mem, &rc, bk);
+    DeleteObject(bk);
+
+    SetBkMode(mem, TRANSPARENT);
+    extern COLORREF GetPercentIconTextColor(void);
+    SetTextColor(mem, GetPercentIconTextColor());
+
+    HFONT hFont = CreateFontW(-12, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
+                              DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+                              ANTIALIASED_QUALITY, VARIABLE_PITCH | FF_SWISS, L"Segoe UI");
+    HFONT oldf = hFont ? (HFONT)SelectObject(mem, hFont) : NULL;
+
+    wchar_t txt[4];
+    if (percent > 999) percent = 999; if (percent < 0) percent = 0;
+    if (percent >= 100) {
+        wsprintfW(txt, L"%d", percent); /* 100..999 */
+    } else {
+        wsprintfW(txt, L"%d", percent); /* 0..99 */
+    }
+
+    SIZE sz = {0};
+    GetTextExtentPoint32W(mem, txt, lstrlenW(txt), &sz);
+    int x = (cx - sz.cx) / 2;
+    int y = (cy - sz.cy) / 2;
+
+    /* Draw black text on white background */
+    TextOutW(mem, x, y, txt, lstrlenW(txt));
+
+    if (oldf) SelectObject(mem, oldf);
+    if (hFont) DeleteObject(hFont);
+
+    SelectObject(mem, old);
+    ReleaseDC(NULL, hdc);
+    DeleteDC(mem);
+
+    ICONINFO ii; ZeroMemory(&ii, sizeof(ii));
+    ii.fIcon = TRUE;
+    ii.hbmColor = hbmColor;
+    ii.hbmMask = hbmMask;
+    HICON hIcon = CreateIconIndirect(&ii);
+    DeleteObject(hbmMask);
+    DeleteObject(hbmColor);
+    return hIcon;
+}
+
+void TrayAnimation_UpdatePercentIconIfNeeded(void) {
+    if (!g_trayHwnd) return;
+    if (!IsWindow(g_trayHwnd)) return;
+    if (!g_animationName[0]) return;
+    if (_stricmp(g_animationName, "__cpu__") != 0 && _stricmp(g_animationName, "__mem__") != 0) return;
+
+    float cpu = 0.0f, mem = 0.0f;
+    SystemMonitor_GetUsage(&cpu, &mem);
+    int p = (_stricmp(g_animationName, "__cpu__") == 0) ? (int)(cpu + 0.5f) : (int)(mem + 0.5f);
+    if (p < 0) p = 0; if (p > 100) p = 100;
+
+    HICON hIcon = CreatePercentIcon16(p);
+    if (!hIcon) return;
+
+    NOTIFYICONDATAW nid = {0};
+    nid.cbSize = sizeof(nid);
+    nid.hWnd = g_trayHwnd;
+    nid.uID = CLOCK_ID_TRAY_APP_ICON;
+    nid.uFlags = NIF_ICON;
+    nid.hIcon = hIcon;
+    Shell_NotifyIconW(NIM_MODIFY, &nid);
+
+    DestroyIcon(hIcon);
 }
 
 void TrayAnimation_RecomputeTimerDelay(void) {
@@ -1161,6 +1295,12 @@ BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id) {
     }
     if (id == CLOCK_IDM_ANIMATIONS_USE_LOGO) {
         return SetCurrentAnimationName("__logo__");
+    }
+    if (id == CLOCK_IDM_ANIMATIONS_USE_CPU) {
+        return SetCurrentAnimationName("__cpu__");
+    }
+    if (id == CLOCK_IDM_ANIMATIONS_USE_MEM) {
+        return SetCurrentAnimationName("__mem__");
     }
     if (id >= CLOCK_IDM_ANIMATIONS_BASE && id < CLOCK_IDM_ANIMATIONS_BASE + 1000) {
         char animRootUtf8[MAX_PATH] = {0};

@@ -110,6 +110,7 @@ static DWORD WINAPI WatcherThreadProc(LPVOID lpParam) {
             if (g_targetHwnd && IsWindow(g_targetHwnd)) {
                 PostMessage(g_targetHwnd, WM_APP_ANIM_SPEED_CHANGED, 0, 0);
                 PostMessage(g_targetHwnd, WM_APP_ANIM_PATH_CHANGED, 0, 0);
+                /** Colors changed (includes percent icon colors) */
                 PostMessage(g_targetHwnd, WM_APP_DISPLAY_CHANGED, 0, 0);
                 PostMessage(g_targetHwnd, WM_APP_TIMER_CHANGED, 0, 0);
                 PostMessage(g_targetHwnd, WM_APP_POMODORO_CHANGED, 0, 0);

@@ -753,9 +753,13 @@ void ShowColorMenu(HWND hwnd) {
         UINT nextId = CLOCK_IDM_ANIMATIONS_BASE;
         const char* currentAnim = GetCurrentAnimationName();
 
-        /** Add a fixed entry to use the app logo as the tray icon */
+        /** Add fixed entries: logo, CPU %, Memory % */
         AppendMenuW(hAnimMenu, MF_STRING | (currentAnim && _stricmp(currentAnim, "__logo__") == 0 ? MF_CHECKED : 0),
                     CLOCK_IDM_ANIMATIONS_USE_LOGO, GetLocalizedString(L"使用Logo", L"Use Logo"));
+        AppendMenuW(hAnimMenu, MF_STRING | (currentAnim && _stricmp(currentAnim, "__cpu__") == 0 ? MF_CHECKED : 0),
+                    CLOCK_IDM_ANIMATIONS_USE_CPU, GetLocalizedString(L"CPU 百分比", L"CPU Percent"));
+        AppendMenuW(hAnimMenu, MF_STRING | (currentAnim && _stricmp(currentAnim, "__mem__") == 0 ? MF_CHECKED : 0),
+                    CLOCK_IDM_ANIMATIONS_USE_MEM, GetLocalizedString(L"内存百分比", L"Memory Percent"));
         AppendMenuW(hAnimMenu, MF_SEPARATOR, 0, NULL);
 
         /** Recursive helper function to build menu for a folder; returns TRUE if subtree contains currentAnim */
