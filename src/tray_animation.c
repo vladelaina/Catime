@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <wchar.h>
 #include <wctype.h>
+#include <ctype.h>
 #include <wincodec.h>
 #include <propvarutil.h>
 #include <objbase.h>
@@ -110,6 +111,20 @@ typedef struct {
     BOOL*  isAnimatedFlag;
     BYTE** canvas;
 } DecodeTarget;
+/** @brief Trim whitespace and quotes from both ends of a mutable C string. */
+static void NormalizeAnimConfigValue(char* s) {
+    if (!s) return;
+    char* p = s;
+    while (*p && (isspace((unsigned char)*p) || *p == '"' || *p == '\'')) p++;
+    if (p != s) {
+        memmove(s, p, strlen(p) + 1);
+    }
+    size_t len = strlen(s);
+    while (len > 0 && (isspace((unsigned char)s[len - 1]) || s[len - 1] == '"' || s[len - 1] == '\'')) {
+        s[--len] = '\0';
+    }
+}
+
 
 /** @brief Selects the appropriate icon set (tray or preview) for an operation */
 static DecodeTarget GetDecodeTarget(BOOL isPreview) {
@@ -847,6 +862,7 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
     GetConfigPath(config_path, sizeof(config_path));
     char nameBuf[MAX_PATH] = {0};
     ReadIniString("Animation", "ANIMATION_PATH", "__logo__", nameBuf, sizeof(nameBuf), config_path);
+    NormalizeAnimConfigValue(nameBuf);
     if (nameBuf[0] != '\0') {
         const char* prefix = "%LOCALAPPDATA%\\Catime\\resources\\animations\\";
         if (_stricmp(nameBuf, "__logo__") == 0) {
@@ -1071,6 +1087,7 @@ void PreloadAnimationFromConfig(void) {
     GetConfigPath(config_path, sizeof(config_path));
     char nameBuf[MAX_PATH] = {0};
     ReadIniString("Animation", "ANIMATION_PATH", "__logo__", nameBuf, sizeof(nameBuf), config_path);
+    NormalizeAnimConfigValue(nameBuf);
     if (nameBuf[0] != '\0') {
         const char* prefix = "%LOCALAPPDATA%\\Catime\\resources\\animations\\";
         if (_stricmp(nameBuf, "__logo__") == 0) {

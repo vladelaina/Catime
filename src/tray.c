@@ -21,6 +21,7 @@ UINT WM_TASKBARCREATED = 0;
 
 /** @brief Timer ID for periodically updating tray tooltip with CPU/MEM */
 #define TRAY_TIP_TIMER_ID 42421
+/** @brief One-shot timer to quickly update CPU/MEM percent icon after startup (removed after sync sampling) */
 
 /**
  * @brief TimerProc to refresh tray tooltip text with version + CPU/MEM usage.
@@ -30,6 +31,17 @@ static void CALLBACK TrayTipTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD ti
 
     float cpu = 0.0f, mem = 0.0f;
     SystemMonitor_GetUsage(&cpu, &mem);
+    {
+        // If using percent icon mode and value is still zero at startup, force a refresh once
+        const char* animNow = GetCurrentAnimationName();
+        if (animNow && (_stricmp(animNow, "__cpu__") == 0 || _stricmp(animNow, "__mem__") == 0)) {
+            float chosen = (_stricmp(animNow, "__cpu__") == 0) ? cpu : mem;
+            if ((int)(chosen + 0.5f) == 0) {
+                SystemMonitor_ForceRefresh();
+                SystemMonitor_GetUsage(&cpu, &mem);
+            }
+        }
+    }
 
     float upBps = 0.0f, downBps = 0.0f;
     BOOL hasNet = SystemMonitor_GetNetSpeed(&upBps, &downBps);
@@ -69,6 +81,9 @@ static void CALLBACK TrayTipTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD ti
             n.uFlags = NIF_TIP;
             wcsncpy_s(n.szTip, _countof(n.szTip), tip, _TRUNCATE);
             Shell_NotifyIconW(NIM_MODIFY, &n);
+            /** Ensure percent icon updates in __cpu__/__mem__ modes even when skipping Speed line */
+            extern void TrayAnimation_UpdatePercentIconIfNeeded(void);
+            TrayAnimation_UpdatePercentIconIfNeeded();
             return;
         }
 
@@ -139,6 +154,11 @@ static void CALLBACK TrayTipTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD ti
 }
 
 /**
+ * @brief One-shot timer to obtain first non-zero CPU/MEM sample and update percent icon.
+ */
+/* removed: TrayFirstCpuTimerProc */
+
+/**
  * @brief Register for taskbar recreation notification messages
  * Enables automatic tray icon restoration when Windows Explorer restarts
  */
@@ -156,8 +176,29 @@ void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
     // Preload animation from config and get initial frame icon
     extern void ReadPercentIconColorsConfig(void);
     ReadPercentIconColorsConfig();
+    
+    // Initialize system monitor early so we can render CPU/MEM percent icon immediately
+    SystemMonitor_Init();
+
     PreloadAnimationFromConfig();
-    HICON hInitial = GetInitialAnimationHicon();
+
+    HICON hInitial = NULL;
+    {
+        const char* animName = GetCurrentAnimationName();
+        if (animName && (_stricmp(animName, "__cpu__") == 0 || _stricmp(animName, "__mem__") == 0)) {
+            float cpu = 0.0f, mem = 0.0f;
+            // Take two samples synchronously to avoid initial 0% (requires a small delta time)
+            SystemMonitor_ForceRefresh();
+            Sleep(120);
+            SystemMonitor_ForceRefresh();
+            SystemMonitor_GetUsage(&cpu, &mem);
+            int percent = (_stricmp(animName, "__cpu__") == 0) ? (int)(cpu + 0.5f) : (int)(mem + 0.5f);
+            if (percent < 0) percent = 0; if (percent > 100) percent = 100;
+            hInitial = CreatePercentIcon16(percent);
+        } else {
+            hInitial = GetInitialAnimationHicon();
+        }
+    }
 
     memset(&nid, 0, sizeof(nid));
     nid.cbSize = sizeof(nid);
@@ -177,9 +218,7 @@ void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
         RegisterTaskbarCreatedMessage();
     }
 
-    /** Initialize system monitor and start periodic tooltip updates */
-    SystemMonitor_Init();
-    SystemMonitor_SetUpdateIntervalMs(1000);
+    /** Start periodic tooltip updates */
     SetTimer(hwnd, TRAY_TIP_TIMER_ID, 1000, (TIMERPROC)TrayTipTimerProc);
 }
 
