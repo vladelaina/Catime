@@ -54,11 +54,11 @@ static void CALLBACK TrayTipTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD ti
         swprintf_s(tip, _countof(tip), L"CPU %.1f%%\nMemory %.1f%%", cpu, mem);
     }
 
-    /** Append animation speed line (English), unless current animation is logo */
+    /** Append animation speed line (English), unless current animation is logo/cpu/mem */
     {
         BOOL showSpeed = TRUE;
         const char* anim = GetCurrentAnimationName();
-        if (anim && _stricmp(anim, "__logo__") == 0) {
+        if (anim && (_stricmp(anim, "__logo__") == 0 || _stricmp(anim, "__cpu__") == 0 || _stricmp(anim, "__mem__") == 0)) {
             showSpeed = FALSE;
         }
         if (!showSpeed) {
