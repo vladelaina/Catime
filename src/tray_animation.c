@@ -133,6 +133,8 @@ static DecodeTarget GetDecodeTarget(BOOL isPreview) {
     };
 }
 
+/** @brief Update tray icon tooltip with current playback speed info (English only) */
+
 /** @brief Build animation folder path under %LOCALAPPDATA%\Catime\resources\animations */
 static void BuildAnimationFolder(const char* name, char* path, size_t size) {
     char base[MAX_PATH] = {0};
@@ -798,6 +800,8 @@ static void AdvanceTrayFrame(void) {
         KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
         SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, scaledDelay, (TIMERPROC)TrayAnimTimerProc);
     }
+
+    /** Tooltip handled by tray.c periodic updater */
 }
 
 /** @brief Window-proc level timer callback shim */
@@ -839,6 +843,10 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
 
     if (g_trayIconCount > 0) {
         AdvanceTrayFrame();
+        /** If static single-frame (e.g., logo), do not start timer to avoid flicker */
+        if (!g_isAnimated && g_trayIconCount <= 1) {
+            return;
+        }
         /** For GIF, honor first frame delay if available */
         UINT baseDelay = (g_isAnimated && g_frameDelaysMs[0] > 0) ? g_frameDelaysMs[0] : g_trayInterval;
         /** Apply initial scaling at start */
@@ -893,6 +901,8 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
         if (scaledDelay < 10) scaledDelay = 10;
         SetTimer(hwnd, TRAY_ANIM_TIMER_ID, scaledDelay, (TIMERPROC)TrayAnimTimerProc);
     }
+
+    /** Tooltip handled by tray.c periodic updater */
 }
 
 void StopTrayAnimation(HWND hwnd) {
@@ -979,8 +989,10 @@ BOOL SetCurrentAnimationName(const char* name) {
         AdvanceTrayFrame();
         if (!IsWindow(g_trayHwnd)) return TRUE;
         KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
-        UINT firstDelay = (g_isAnimated && g_frameDelaysMs[0] > 0) ? g_frameDelaysMs[0] : g_trayInterval;
-        SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, firstDelay, (TIMERPROC)TrayAnimTimerProc);
+        if (g_isAnimated || g_trayIconCount > 1) {
+            UINT firstDelay = (g_isAnimated && g_frameDelaysMs[0] > 0) ? g_frameDelaysMs[0] : g_trayInterval;
+            SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, firstDelay, (TIMERPROC)TrayAnimTimerProc);
+        }
     }
     return TRUE;
 }
@@ -1012,13 +1024,11 @@ void CancelAnimationPreview(void) {
     FreeIconSet(g_previewIcons, &g_previewCount, &g_previewIndex, &g_isPreviewAnimated, &g_previewAnimCanvas, FALSE);
     if (g_trayHwnd) {
         /** Restore timer for normal animation if needed */
-        if (g_isAnimated) {
-            UINT firstDelay = g_frameDelaysMs[g_trayIconIndex] > 0 ? g_frameDelaysMs[g_trayIconIndex] : (g_trayInterval ? g_trayInterval : 150);
-            KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
+        KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
+        if (g_isAnimated || g_trayIconCount > 1) {
+            UINT firstDelay = g_isAnimated ? (g_frameDelaysMs[g_trayIconIndex] > 0 ? g_frameDelaysMs[g_trayIconIndex] : (g_trayInterval ? g_trayInterval : 150))
+                                           : (g_trayInterval ? g_trayInterval : 150);
             SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, firstDelay, (TIMERPROC)TrayAnimTimerProc);
-        } else {
-            KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
-            SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, g_trayInterval ? g_trayInterval : 150, (TIMERPROC)TrayAnimTimerProc);
         }
     }
 }
@@ -1090,6 +1100,10 @@ void TrayAnimation_RecomputeTimerDelay(void) {
     if (!g_trayHwnd) return;
     if (g_isPreviewActive) return; /** only adjust normal animation */
     if (g_trayIconCount <= 0) return;
+    if (!g_isAnimated && g_trayIconCount <= 1) {
+        KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
+        return;
+    }
 
     UINT baseDelay = g_isAnimated ? g_frameDelaysMs[g_trayIconIndex] : (g_trayInterval ? g_trayInterval : 150);
     if (baseDelay == 0) baseDelay = (g_trayInterval ? g_trayInterval : 150);
@@ -1142,6 +1156,8 @@ void TrayAnimation_RecomputeTimerDelay(void) {
 
     KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
     SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, scaledDelay, (TIMERPROC)TrayAnimTimerProc);
+
+    /** Tooltip handled by tray.c periodic updater */
 }
 
 static void OpenAnimationsFolder(void) {
