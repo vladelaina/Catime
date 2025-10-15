@@ -1,6 +1,6 @@
 /**
  * @file tray_animation.h
- * @brief System tray icon animation (RunCat-like) controller
+ * @brief System tray icon animation controller
  *
  * Loads frames from %LOCALAPPDATA%\Catime\resources\animations (folder or single GIF/WebP)
  * and animates the tray icon at a fixed interval.

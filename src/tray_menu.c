@@ -737,7 +737,7 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hColorSubMenu, 
                 GetLocalizedString(L"颜色", L"Color"));
 
-    /** Animations submenu (RunCat-like) */
+    /** Animations submenu */
     HMENU hAnimMenu = CreatePopupMenu();
     {
         /**

@@ -80,7 +80,7 @@
 #define CLOCK_IDM_LANG_RUSSIAN 167        /**< Russian */
 #define CLOCK_IDM_LANG_KOREAN 170         /**< Korean */
 
-/** @brief Tray animation (RunCat-like) menu identifiers */
+/** @brief Tray animation menu identifiers */
 #define CLOCK_IDM_ANIMATIONS_MENU 2200           /**< Animations root submenu */
 #define CLOCK_IDM_ANIMATIONS_OPEN_DIR 2201       /**< Open animations folder */
 #define CLOCK_IDM_ANIMATIONS_USE_LOGO 2202       /**< Use app logo as tray icon */

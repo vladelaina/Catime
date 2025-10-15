@@ -1,6 +1,6 @@
 /**
  * @file tray_animation.c
- * @brief RunCat-like tray icon animation implementation
+ * @brief System tray icon animation implementation
  */
 
 #include <windows.h> 
