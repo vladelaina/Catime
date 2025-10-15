@@ -795,11 +795,15 @@ void ShowColorMenu(HWND hwnd) {
                      _snprintf_s(e->rel_path_utf8, MAX_PATH, _TRUNCATE, "%s", itemUtf8);
                  }
                  
-                 if (e->is_dir) {
+                if (e->is_dir) {
                      entryCount++;
                  } else {
-                     wchar_t* ext = wcsrchr(e->name, L'.');
-                     if (ext && (_wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0)) {
+                    wchar_t* ext = wcsrchr(e->name, L'.');
+                    if (ext && (_wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0 ||
+                                _wcsicmp(ext, L".ico") == 0 || _wcsicmp(ext, L".png") == 0 ||
+                                _wcsicmp(ext, L".bmp") == 0 || _wcsicmp(ext, L".jpg") == 0 ||
+                                _wcsicmp(ext, L".jpeg") == 0 || _wcsicmp(ext, L".tif") == 0 ||
+                                _wcsicmp(ext, L".tiff") == 0)) {
                          entryCount++;
                      }
                  }
@@ -832,7 +836,7 @@ void ShowColorMenu(HWND hwnd) {
                          if (childHas) subtreeHasCurrent = TRUE;
                          AppendMenuW(parentMenu, folderFlags, (UINT_PTR)hSubMenu, e->name);
                      }
-                 } else {
+                } else {
                      // File item.
                      UINT flags = MF_STRING | (currentAnim && _stricmp(e->rel_path_utf8, currentAnim) == 0 ? MF_CHECKED : 0);
                      AppendMenuW(parentMenu, flags, (*nextIdPtr)++, e->name);

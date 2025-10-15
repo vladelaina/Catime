@@ -2647,7 +2647,11 @@ refresh_window:
                                 entryCount++;
                             } else {
                                 wchar_t* ext = wcsrchr(e->name, L'.');
-                                if (ext && (_wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0)) {
+                                if (ext && (_wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0 ||
+                                            _wcsicmp(ext, L".ico") == 0 || _wcsicmp(ext, L".png") == 0 ||
+                                            _wcsicmp(ext, L".bmp") == 0 || _wcsicmp(ext, L".jpg") == 0 ||
+                                            _wcsicmp(ext, L".jpeg") == 0 || _wcsicmp(ext, L".tif") == 0 ||
+                                            _wcsicmp(ext, L".tiff") == 0)) {
                                     entryCount++;
                                 }
                             }

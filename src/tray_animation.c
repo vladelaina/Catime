@@ -269,6 +269,18 @@ static BOOL IsWebPSelection(const char* name) {
     return name && EndsWithIgnoreCase(name, ".webp");
 }
 
+/** @brief Detect if current animation name is a single static image file */
+static BOOL IsStaticImageSelection(const char* name) {
+    if (!name) return FALSE;
+    return EndsWithIgnoreCase(name, ".ico") ||
+           EndsWithIgnoreCase(name, ".png") ||
+           EndsWithIgnoreCase(name, ".bmp") ||
+           EndsWithIgnoreCase(name, ".jpg") ||
+           EndsWithIgnoreCase(name, ".jpeg") ||
+           EndsWithIgnoreCase(name, ".tif") ||
+           EndsWithIgnoreCase(name, ".tiff");
+}
+
 /** @brief Alpha blend pixel onto canvas with proper compositing */
 static void BlendPixel(BYTE* canvas, UINT canvasStride, UINT x, UINT y, BYTE r, BYTE g, BYTE b, BYTE a) {
     if (a == 0) return; /** fully transparent, no change */
@@ -825,6 +837,42 @@ static void LoadAnimationByName(const char* name, BOOL isPreview) {
         char filePath[MAX_PATH] = {0};
         BuildAnimationFolder(name, filePath, sizeof(filePath));
         LoadAnimatedImage(filePath, &target);
+    } else if (IsStaticImageSelection(name)) {
+        /** Load a single static image file as one icon frame */
+        char filePath[MAX_PATH] = {0};
+        BuildAnimationFolder(name, filePath, sizeof(filePath));
+
+        int cx = GetSystemMetrics(SM_CXSMICON);
+        int cy = GetSystemMetrics(SM_CYSMICON);
+        HICON hIcon = NULL;
+
+        wchar_t wPath[MAX_PATH] = {0};
+        MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wPath, MAX_PATH);
+        const wchar_t* ext = wcsrchr(wPath, L'.');
+        if (ext && _wcsicmp(ext, L".ico") == 0) {
+            hIcon = (HICON)LoadImageW(NULL, wPath, IMAGE_ICON, 0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE);
+        } else {
+            HRESULT hrInit = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+            IWICImagingFactory* pFactory = NULL;
+            if (SUCCEEDED(CoCreateInstance(&CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER, &IID_IWICImagingFactory, (void**)&pFactory)) && pFactory) {
+                IWICBitmapDecoder* pDecoder = NULL;
+                if (SUCCEEDED(pFactory->lpVtbl->CreateDecoderFromFilename(pFactory, wPath, NULL, GENERIC_READ, WICDecodeMetadataCacheOnLoad, &pDecoder)) && pDecoder) {
+                    IWICBitmapFrameDecode* pFrame = NULL;
+                    if (SUCCEEDED(pDecoder->lpVtbl->GetFrame(pDecoder, 0, &pFrame)) && pFrame) {
+                        hIcon = CreateIconFromWICSource(pFactory, (IWICBitmapSource*)pFrame, cx, cy);
+                        pFrame->lpVtbl->Release(pFrame);
+                    }
+                    pDecoder->lpVtbl->Release(pDecoder);
+                }
+                pFactory->lpVtbl->Release(pFactory);
+            }
+            if (SUCCEEDED(hrInit)) CoUninitialize();
+        }
+
+        if (hIcon) {
+            target.icons[(*(target.count))++] = hIcon;
+            *(target.isAnimatedFlag) = FALSE;
+        }
     } else {
         char folder[MAX_PATH] = {0};
         BuildAnimationFolder(name, folder, sizeof(folder));
@@ -959,7 +1007,7 @@ const char* GetCurrentAnimationName(void) {
 BOOL SetCurrentAnimationName(const char* name) {
     if (!name || !*name) return FALSE;
 
-    /** Validate selection: either a folder with images, or a single .gif file existing */
+    /** Validate selection: either a folder with images, or a single image/gif/webp file existing */
     char folder[MAX_PATH] = {0};
     if (_stricmp(name, "__logo__") == 0) {
         strncpy(g_animationName, name, sizeof(g_animationName) - 1);
@@ -1016,6 +1064,8 @@ BOOL SetCurrentAnimationName(const char* name) {
             valid = TRUE; /** a valid single GIF file */
         } else if (IsWebPSelection(name)) {
             valid = TRUE; /** a valid single WebP file */
+        } else if (IsStaticImageSelection(name)) {
+            valid = TRUE; /** a valid single static image file */
         }
     }
     if (!valid) return FALSE;
@@ -1466,7 +1516,11 @@ BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id) {
                     entryCount++;
                 } else {
                     wchar_t* ext = wcsrchr(e->name, L'.');
-                    if (ext && (_wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0)) {
+                    if (ext && (_wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0 ||
+                                _wcsicmp(ext, L".ico") == 0 || _wcsicmp(ext, L".png") == 0 ||
+                                _wcsicmp(ext, L".bmp") == 0 || _wcsicmp(ext, L".jpg") == 0 ||
+                                _wcsicmp(ext, L".jpeg") == 0 || _wcsicmp(ext, L".tif") == 0 ||
+                                _wcsicmp(ext, L".tiff") == 0)) {
                         entryCount++;
                     }
                 }
@@ -1535,8 +1589,12 @@ BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id) {
                 if (e->is_dir) {
                     rootEntryCount++;
                 } else {
-                     wchar_t* ext = wcsrchr(e->name, L'.');
-                    if (ext && (_wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0)) {
+                    wchar_t* ext = wcsrchr(e->name, L'.');
+                    if (ext && (_wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0 ||
+                                _wcsicmp(ext, L".ico") == 0 || _wcsicmp(ext, L".png") == 0 ||
+                                _wcsicmp(ext, L".bmp") == 0 || _wcsicmp(ext, L".jpg") == 0 ||
+                                _wcsicmp(ext, L".jpeg") == 0 || _wcsicmp(ext, L".tif") == 0 ||
+                                _wcsicmp(ext, L".tiff") == 0)) {
                         rootEntryCount++;
                     }
                 }
