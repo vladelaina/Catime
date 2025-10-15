@@ -919,13 +919,14 @@ static void AdvanceTrayFrame(void) {
         g_trayIconIndex = (g_trayIconIndex + 1) % g_trayIconCount;
     }
 
-    /** If current animation is GIF, adjust timer to next frame delay */
-    if (!g_isPreviewActive && g_isAnimated && g_trayHwnd) {
-        int nextIndex = g_trayIconIndex;
-        UINT baseDelay = g_frameDelaysMs[nextIndex];
-        KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
-        UINT nextDelay = ComputeScaledDelay(baseDelay);
-        SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, nextDelay, (TIMERPROC)TrayAnimTimerProc);
+    /** For normal playback (non-preview), always recompute next delay so speed map affects folders too */
+    if (!g_isPreviewActive && g_trayHwnd) {
+        if (g_isAnimated || g_trayIconCount > 1) {
+            UINT baseDelay = g_isAnimated ? g_frameDelaysMs[g_trayIconIndex] : g_trayInterval;
+            KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
+            UINT nextDelay = ComputeScaledDelay(baseDelay);
+            SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, nextDelay, (TIMERPROC)TrayAnimTimerProc);
+        }
     }
 
     /** Tooltip handled by tray.c periodic updater */
