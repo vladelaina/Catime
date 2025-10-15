@@ -342,7 +342,24 @@ static HICON CreateIconFromWICSource(IWICImagingFactory* pFactory,
     IWICBitmapScaler* pScaler = NULL;
     HRESULT hr = pFactory->lpVtbl->CreateBitmapScaler(pFactory, &pScaler);
     if (SUCCEEDED(hr) && pScaler) {
-        hr = pScaler->lpVtbl->Initialize(pScaler, source, cx, cy, WICBitmapInterpolationModeFant);
+        /** Compute aspect-preserving scaled size to fit within cx x cy */
+        UINT srcW = 0, srcH = 0;
+        if (FAILED(source->lpVtbl->GetSize(source, &srcW, &srcH)) || srcW == 0 || srcH == 0) {
+            srcW = (UINT)cx;
+            srcH = (UINT)cy;
+        }
+
+        double scaleX = (double)cx / (double)srcW;
+        double scaleY = (double)cy / (double)srcH;
+        double scale = scaleX < scaleY ? scaleX : scaleY;
+        if (scale <= 0.0) scale = 1.0;
+
+        UINT dstW = (UINT)((double)srcW * scale + 0.5);
+        UINT dstH = (UINT)((double)srcH * scale + 0.5);
+        if (dstW == 0) dstW = 1;
+        if (dstH == 0) dstH = 1;
+
+        hr = pScaler->lpVtbl->Initialize(pScaler, source, dstW, dstH, WICBitmapInterpolationModeFant);
         if (SUCCEEDED(hr)) {
             IWICFormatConverter* pConverter = NULL;
             hr = pFactory->lpVtbl->CreateFormatConverter(pFactory, &pConverter);
@@ -365,34 +382,52 @@ static HICON CreateIconFromWICSource(IWICImagingFactory* pFactory,
                     VOID* pvBits = NULL;
                     HBITMAP hbmColor = CreateDIBSection(NULL, &bi, DIB_RGB_COLORS, &pvBits, NULL, 0);
                     if (hbmColor && pvBits) {
-                        UINT stride = (UINT)(cx * 4);
-                        UINT bufSize = (UINT)(cy * stride);
-                        if (SUCCEEDED(pConverter->lpVtbl->CopyPixels(pConverter, NULL, stride, bufSize, (BYTE*)pvBits))) {
-                            ICONINFO ii; ZeroMemory(&ii, sizeof(ii));
-                            ii.fIcon = TRUE;
-                            ii.hbmColor = hbmColor;
+                        /** Clear background to transparent */
+                        ZeroMemory(pvBits, (SIZE_T)(cy * (cx * 4)));
 
-                            ii.hbmMask = CreateBitmap(cx, cy, 1, 1, NULL);
-                            if (ii.hbmMask) {
-                                HDC hdcMem = GetDC(NULL);
-                                HDC hdcColor = CreateCompatibleDC(hdcMem);
-                                HDC hdcMask = CreateCompatibleDC(hdcMem);
-                                SelectObject(hdcColor, hbmColor);
-                                SelectObject(hdcMask, ii.hbmMask);
-
-                                BitBlt(hdcMask, 0, 0, cx, cy, NULL, 0, 0, BLACKNESS);
-                                SetBkColor(hdcColor, RGB(0,0,0));
-                                BitBlt(hdcMask, 0, 0, cx, cy, hdcColor, 0, 0, SRCCOPY);
-                                BitBlt(hdcMask, 0, 0, cx, cy, NULL, 0, 0, DSTINVERT);
-
-                                DeleteDC(hdcColor);
-                                DeleteDC(hdcMask);
-                                ReleaseDC(NULL, hdcMem);
+                        /** Copy scaled pixels into centered position */
+                        UINT scaledStride = dstW * 4;
+                        UINT scaledSize = dstH * scaledStride;
+                        BYTE* tmp = (BYTE*)malloc(scaledSize);
+                        if (tmp) {
+                            if (SUCCEEDED(pConverter->lpVtbl->CopyPixels(pConverter, NULL, scaledStride, scaledSize, tmp))) {
+                                int xoff = (cx - (int)dstW) / 2;
+                                int yoff = (cy - (int)dstH) / 2;
+                                if (xoff < 0) xoff = 0;
+                                if (yoff < 0) yoff = 0;
+                                for (UINT y = 0; y < dstH; ++y) {
+                                    BYTE* dstRow = (BYTE*)pvBits + ((yoff + (int)y) * cx + xoff) * 4;
+                                    BYTE* srcRow = tmp + y * scaledStride;
+                                    memcpy(dstRow, srcRow, scaledStride);
+                                }
                             }
-
-                            hIcon = CreateIconIndirect(&ii);
-                            if (ii.hbmMask) DeleteObject(ii.hbmMask);
+                            free(tmp);
                         }
+
+                        ICONINFO ii; ZeroMemory(&ii, sizeof(ii));
+                        ii.fIcon = TRUE;
+                        ii.hbmColor = hbmColor;
+
+                        ii.hbmMask = CreateBitmap(cx, cy, 1, 1, NULL);
+                        if (ii.hbmMask) {
+                            HDC hdcMem = GetDC(NULL);
+                            HDC hdcColor = CreateCompatibleDC(hdcMem);
+                            HDC hdcMask = CreateCompatibleDC(hdcMem);
+                            SelectObject(hdcColor, hbmColor);
+                            SelectObject(hdcMask, ii.hbmMask);
+
+                            BitBlt(hdcMask, 0, 0, cx, cy, NULL, 0, 0, BLACKNESS);
+                            SetBkColor(hdcColor, RGB(0,0,0));
+                            BitBlt(hdcMask, 0, 0, cx, cy, hdcColor, 0, 0, SRCCOPY);
+                            BitBlt(hdcMask, 0, 0, cx, cy, NULL, 0, 0, DSTINVERT);
+
+                            DeleteDC(hdcColor);
+                            DeleteDC(hdcMask);
+                            ReleaseDC(NULL, hdcMem);
+                        }
+
+                        hIcon = CreateIconIndirect(&ii);
+                        if (ii.hbmMask) DeleteObject(ii.hbmMask);
                         DeleteObject(hbmColor);
                     }
                 }
