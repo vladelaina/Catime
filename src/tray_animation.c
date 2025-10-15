@@ -1030,7 +1030,9 @@ BOOL SetCurrentAnimationName(const char* name) {
             AdvanceTrayFrame();
             if (!IsWindow(g_trayHwnd)) return TRUE;
             KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
-            SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, g_trayInterval ? g_trayInterval : 150, (TIMERPROC)TrayAnimTimerProc);
+            if (g_isAnimated || g_trayIconCount > 1) {
+                SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, g_trayInterval ? g_trayInterval : 150, (TIMERPROC)TrayAnimTimerProc);
+            }
         }
         return TRUE;
     }
@@ -1115,10 +1117,11 @@ void StartAnimationPreview(const char* name) {
         g_isPreviewActive = TRUE;
         g_previewIndex = 0;
         if (g_trayHwnd) {
+            /** Pause normal animation timer to avoid icon flicker during preview */
+            KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
             AdvanceTrayFrame();
             if (g_isPreviewAnimated) {
                 UINT firstDelay = g_previewFrameDelaysMs[0] > 0 ? g_previewFrameDelaysMs[0] : (g_trayInterval ? g_trayInterval : 150);
-                KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
                 SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, firstDelay, (TIMERPROC)TrayAnimTimerProc);
             }
         } else {
@@ -1162,9 +1165,7 @@ void CancelAnimationPreview(void) {
         /** Restore timer for normal animation if needed */
         KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
         if (g_isAnimated || g_trayIconCount > 1) {
-            UINT firstDelay = g_isAnimated ? (g_frameDelaysMs[g_trayIconIndex] > 0 ? g_frameDelaysMs[g_trayIconIndex] : (g_trayInterval ? g_trayInterval : 150))
-                                           : (g_trayInterval ? g_trayInterval : 150);
-            SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, firstDelay, (TIMERPROC)TrayAnimTimerProc);
+            TrayAnimation_RecomputeTimerDelay();
         }
     } else {
         /** If tray not initialized, try to restore via window handle */
@@ -1249,7 +1250,9 @@ void ApplyAnimationPathValueNoPersist(const char* value) {
         if (!IsWindow(g_trayHwnd)) return;
         UINT firstDelay = (g_isAnimated && g_frameDelaysMs[0] > 0) ? g_frameDelaysMs[0] : (g_trayInterval ? g_trayInterval : 150);
         KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
-        SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, firstDelay, (TIMERPROC)TrayAnimTimerProc);
+        if (g_isAnimated || g_trayIconCount > 1) {
+            SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, firstDelay, (TIMERPROC)TrayAnimTimerProc);
+        }
     }
 }
 
