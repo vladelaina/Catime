@@ -75,6 +75,12 @@ BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id);
 void ApplyAnimationPathValueNoPersist(const char* value);
 
 /**
+ * @brief Set base interval (ms) for folder/static image sequences and recompute timer.
+ * @param ms Interval in milliseconds (<=0 to reset to default 150)
+ */
+void TrayAnimation_SetBaseIntervalMs(UINT ms);
+
+/**
  * @brief Recompute current tray animation timer delay based on latest speed mapping/metric
  *        without advancing the frame.
  */

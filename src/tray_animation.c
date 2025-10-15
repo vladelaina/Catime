@@ -940,6 +940,14 @@ static void CALLBACK TrayAnimTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD t
 void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
     g_trayHwnd = hwnd;
     g_trayInterval = intervalMs > 0 ? intervalMs : 150; /** default ~6-7 fps */
+    {
+        /** Optional override from config for folder/static sequences */
+        char config_path[MAX_PATH] = {0};
+        GetConfigPath(config_path, sizeof(config_path));
+        int folderMs = ReadIniInt("Animation", "ANIMATION_FOLDER_INTERVAL_MS", (int)g_trayInterval, config_path);
+        if (folderMs <= 0) folderMs = 150;
+        g_trayInterval = (UINT)folderMs;
+    }
     g_isPreviewActive = FALSE;
     g_previewCount = 0;
     g_previewIndex = 0;
@@ -1418,6 +1426,12 @@ void TrayAnimation_RecomputeTimerDelay(void) {
 
 void TrayAnimation_SetMinIntervalMs(UINT ms) {
     g_userMinIntervalMs = ms;
+    TrayAnimation_RecomputeTimerDelay();
+}
+
+void TrayAnimation_SetBaseIntervalMs(UINT ms) {
+    if (ms == 0) ms = 150;
+    g_trayInterval = ms;
     TrayAnimation_RecomputeTimerDelay();
 }
 

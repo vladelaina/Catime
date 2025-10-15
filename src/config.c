@@ -302,6 +302,12 @@ void ReloadAnimationSpeedFromConfig(void) {
     g_animMinIntervalMs = minInterval;
     extern void TrayAnimation_SetMinIntervalMs(UINT ms);
     TrayAnimation_SetMinIntervalMs((UINT)g_animMinIntervalMs);
+
+    /** Optional: base interval for folder/static sequences */
+    int folderInterval = ReadIniInt("Animation", "ANIMATION_FOLDER_INTERVAL_MS", 150, config_path);
+    if (folderInterval <= 0) folderInterval = 150;
+    extern void TrayAnimation_SetBaseIntervalMs(UINT ms);
+    TrayAnimation_SetBaseIntervalMs((UINT)folderInterval);
 }
 
 /**
@@ -830,6 +836,8 @@ void CreateDefaultConfig(const char* config_path) {
     WriteIniString("Animation", "PERCENT_ICON_BG_COLOR", "#FFFFFF", config_path);
     /** Advanced: default minimum interval floor (0 = disabled) */
     WriteIniInt("Animation", "ANIMATION_MIN_INTERVAL_MS", 0, config_path);
+    /** Default base interval for folder/static sequences (ms) */
+    WriteIniInt("Animation", "ANIMATION_FOLDER_INTERVAL_MS", 150, config_path);
 
     /** Append user-facing comments for advanced animation options */
     {
@@ -861,6 +869,12 @@ void CreateDefaultConfig(const char* config_path) {
             fputs("; ANIMATION_MIN_INTERVAL_MS: minimum frame interval (unit: milliseconds).\n", f);
             fputs(";   0  => no floor (use computed speed as-is).\n", f);
             fputs(";   N>0 => at least N ms per frame (e.g., 100 = ~10 fps).\n", f);
+            fputs(";\n", f);
+            
+            /* ANIMATION_FOLDER_INTERVAL_MS */
+            fputs("; ANIMATION_FOLDER_INTERVAL_MS: base frame interval for folder/static images (ms).\n", f);
+            fputs(";   Affects image sequences from folders and single static images (.ico/.png/.bmp/.jpg/.jpeg/.tif/.tiff).\n", f);
+            fputs(";   Does NOT affect GIF/WebP (they honor embedded per-frame delays).\n", f);
             fputs(";========================================================\n", f);
             fclose(f);
         }
