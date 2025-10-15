@@ -73,6 +73,23 @@ static void CALLBACK TrayTipTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD ti
         if (anim && (_stricmp(anim, "__logo__") == 0 || _stricmp(anim, "__cpu__") == 0 || _stricmp(anim, "__mem__") == 0)) {
             showSpeed = FALSE;
         }
+        if (anim && showSpeed) {
+            size_t alen = strlen(anim);
+            if (alen >= 4) {
+                const char* suf4 = anim + (alen - 4);
+                if (_stricmp(suf4, ".ico") == 0 || _stricmp(suf4, ".png") == 0 ||
+                    _stricmp(suf4, ".bmp") == 0 || _stricmp(suf4, ".jpg") == 0 ||
+                    _stricmp(suf4, ".tif") == 0) {
+                    showSpeed = FALSE; /** static single image selection */
+                }
+            }
+            if (alen >= 5 && showSpeed) {
+                const char* suf5 = anim + (alen - 5);
+                if (_stricmp(suf5, ".jpeg") == 0 || _stricmp(suf5, ".tiff") == 0) {
+                    showSpeed = FALSE; /** static single image selection */
+                }
+            }
+        }
         if (!showSpeed) {
             NOTIFYICONDATAW n = {0};
             n.cbSize = sizeof(n);
