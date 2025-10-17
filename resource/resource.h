@@ -10,7 +10,7 @@
 #define CATIME_RESOURCE_H
 
 /** @brief Application version information */
-#define CATIME_VERSION "1.3.0-alpha1"    /**< Version string */
+#define CATIME_VERSION "1.3.0-alpha2"    /**< Version string */
 #define CATIME_VERSION_MAJOR 1           /**< Major version number */
 #define CATIME_VERSION_MINOR 1           /**< Minor version number */
 #define CATIME_VERSION_PATCH 2           /**< Patch version number */
