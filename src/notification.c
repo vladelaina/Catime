@@ -404,12 +404,7 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             break;
             
         case WM_LBUTTONDOWN: {
-            /** Click-to-dismiss: start fade-out if notification is visible */
-            AnimationState currentState = (AnimationState)GetPropW(hwnd, L"AnimState");
-            if (currentState != ANIM_VISIBLE) {
-                return 0;
-            }
-            
+            /** Click-to-dismiss: always start fade-out on click (even during fade-in) */
             KillTimer(hwnd, NOTIFICATION_TIMER_ID);
             SetPropW(hwnd, L"AnimState", (HANDLE)ANIM_FADE_OUT);
             SetTimer(hwnd, ANIMATION_TIMER_ID, ANIMATION_INTERVAL, NULL);

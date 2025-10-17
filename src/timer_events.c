@@ -520,6 +520,18 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
                                 }
                                 break;
                         }
+
+                        /** Ensure animation speed falls back to default once countdown is over
+                         *  for non-transition actions (i.e., we are no longer in TIMER progress).
+                         *  This guarantees ANIMATION_SPEED_METRIC=TIMER reverts to default mapping. */
+                        if (CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_SHOW_TIME &&
+                            CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_COUNT_UP) {
+                            CLOCK_TOTAL_TIME = 0;
+                            countdown_elapsed_time = 0;
+                            /** Keep countdown_message_shown as TRUE to avoid re-showing notification */
+                            extern void TrayAnimation_RecomputeTimerDelay(void);
+                            TrayAnimation_RecomputeTimerDelay();
+                        }
                     }
 
                     if (timeoutMsgW) {

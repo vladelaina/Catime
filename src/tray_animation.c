@@ -1415,6 +1415,11 @@ void TrayAnimation_RecomputeTimerDelay(void) {
     if (applyScaling) {
         scalePercent = GetAnimationSpeedScaleForPercent(percent);
         if (scalePercent <= 0.0) scalePercent = 100.0;
+    } else {
+        /** When not applying scaling (e.g., countdown finished or invalid),
+         *  revert to the default mapping at 0% to restore default speed. */
+        scalePercent = GetAnimationSpeedScaleForPercent(0.0);
+        if (scalePercent <= 0.0) scalePercent = 100.0;
     }
     double scale = scalePercent / 100.0;
     if (scale < 0.1) scale = 0.1;
