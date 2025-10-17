@@ -737,6 +737,8 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hColorSubMenu, 
                 GetLocalizedString(L"颜色", L"Color"));
 
+    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
+
     /** Animations submenu */
     HMENU hAnimMenu = CreatePopupMenu();
     {
@@ -871,7 +873,7 @@ void ShowColorMenu(HWND hwnd) {
         AppendMenuW(hAnimMenu, MF_SEPARATOR, 0, NULL);
         AppendMenuW(hAnimMenu, MF_STRING, CLOCK_IDM_ANIMATIONS_OPEN_DIR, GetLocalizedString(L"打开动画文件夹", L"Open animations folder"));
     }
-    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hAnimMenu, GetLocalizedString(L"动画", L"Animations"));
+    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hAnimMenu, GetLocalizedString(L"托盘图标", L"Tray Icon"));
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
