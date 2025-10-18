@@ -854,8 +854,8 @@ void ShowColorMenu(HWND hwnd) {
         (void)BuildFolderMenuRecursive(hAnimMenu, wRoot, "", &nextId, currentAnim);
         
         // Fallback message if no items were added at all.
-        if (GetMenuItemCount(hAnimMenu) <= 2) { // Logo and separator are always there
-            AppendMenuW(hAnimMenu, MF_STRING | MF_GRAYED, 0, GetLocalizedString(L"(无动画文件夹)", L"(No animation folders)"));
+        if (GetMenuItemCount(hAnimMenu) <= 4) { // Logo, CPU%, MEM% and separator are always there
+            AppendMenuW(hAnimMenu, MF_STRING | MF_GRAYED, 0, GetLocalizedString(L"(支持 GIF、WebP、PNG 等)", L"(Supports GIF, WebP, PNG, etc.)"));
         }
 
         AppendMenuW(hAnimMenu, MF_SEPARATOR, 0, NULL);
@@ -918,7 +918,7 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_KOREAN ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDM_LANG_KOREAN, L"한국어");
 
-    AppendMenuW(hAboutMenu, MF_POPUP, (UINT_PTR)hLangMenu, GetLocalizedString(L"语言", L"Language"));
+    AppendMenuW(hAboutMenu, MF_POPUP, (UINT_PTR)hLangMenu, L"Language");
 
     AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);
     AppendMenuW(hAboutMenu, MF_STRING, 200,
