@@ -1174,15 +1174,32 @@ void ReadConfig() {
     if (isFontsFolderFont) {
         /** For fonts folder fonts, try exact path first, then auto-fix if needed */
         char fontPath[MAX_PATH];
-        char* appdata_path = getenv("LOCALAPPDATA");
         BOOL fontFound = FALSE;
         
-        if (appdata_path) {
-            snprintf(fontPath, MAX_PATH, "%s\\Catime\\resources\\fonts\\%s", appdata_path, actualFontFileName);
+        /** Use Unicode-safe path construction */
+        wchar_t wConfigPath[MAX_PATH] = {0};
+        char configPathUtf8[MAX_PATH] = {0};
+        GetConfigPath(configPathUtf8, MAX_PATH);
+        MultiByteToWideChar(CP_UTF8, 0, configPathUtf8, -1, wConfigPath, MAX_PATH);
+        
+        /** Extract directory portion */
+        wchar_t* lastSep = wcsrchr(wConfigPath, L'\\');
+        if (lastSep) {
+            *lastSep = L'\0';
             
-            /** Check if font exists at configured path */
-            if (GetFileAttributesA(fontPath) != INVALID_FILE_ATTRIBUTES) {
+            /** Convert font filename to wide char */
+            wchar_t wActualFontFileName[MAX_PATH] = {0};
+            MultiByteToWideChar(CP_UTF8, 0, actualFontFileName, -1, wActualFontFileName, MAX_PATH);
+            
+            /** Build full font path */
+            wchar_t wFontPath[MAX_PATH] = {0};
+            _snwprintf_s(wFontPath, MAX_PATH, _TRUNCATE, L"%s\\resources\\fonts\\%s", wConfigPath, wActualFontFileName);
+            
+            /** Check if font exists at configured path using Unicode API */
+            if (GetFileAttributesW(wFontPath) != INVALID_FILE_ATTRIBUTES) {
                 fontFound = TRUE;
+                /** Convert back to UTF-8 for subsequent use */
+                WideCharToMultiByte(CP_UTF8, 0, wFontPath, -1, fontPath, MAX_PATH, NULL, NULL);
             } else {
                 /** Font not found at configured path, try to find and auto-fix */
                 char* lastSlash = strrchr(actualFontFileName, '\\');
@@ -1193,7 +1210,9 @@ void ReadConfig() {
                 if (FindFontInFontsFolder(filenameOnly, fontPath, MAX_PATH)) {
                     /** Font found at different location, update config */
                     char fontsFolderPath[MAX_PATH];
-                    snprintf(fontsFolderPath, MAX_PATH, "%s\\Catime\\resources\\fonts\\", appdata_path);
+                    WideCharToMultiByte(CP_UTF8, 0, wConfigPath, -1, fontsFolderPath, MAX_PATH, NULL, NULL);
+                    size_t len = strlen(fontsFolderPath);
+                    snprintf(fontsFolderPath + len, MAX_PATH - len, "\\resources\\fonts\\");
                     
                     if (_strnicmp(fontPath, fontsFolderPath, strlen(fontsFolderPath)) == 0) {
                         /** Calculate new relative path */
@@ -1239,7 +1258,7 @@ void ReadConfig() {
                 if (dot) *dot = '\0';
             }
         } else {
-            /** No LOCALAPPDATA, fallback to filename without extension */
+            /** No valid config path, fallback to filename without extension */
             char* lastSlash = strrchr(actualFontFileName, '\\');
             const char* filenameOnly = lastSlash ? (lastSlash + 1) : actualFontFileName;
             strncpy(FONT_INTERNAL_NAME, filenameOnly, sizeof(FONT_INTERNAL_NAME) - 1);

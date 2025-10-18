@@ -668,9 +668,11 @@ void ShowColorMenu(HWND hwnd) {
             /** Additional debug: manually check some known font files */
             if (fontFolderStatus == 0) {
                 WriteLog(LOG_LEVEL_INFO, "Both scans failed, manually checking known font files...");
-                char testFontPath[MAX_PATH];
-                snprintf(testFontPath, MAX_PATH, "%s\\Wallpoet Essence.ttf", fontsFolderPathUtf8);
-                DWORD attribs = GetFileAttributesA(testFontPath);
+                /** Use Unicode API to avoid encoding issues with non-ASCII paths */
+                wchar_t wTestFontPath[MAX_PATH];
+                MultiByteToWideChar(CP_UTF8, 0, fontsFolderPathUtf8, -1, wTestFontPath, MAX_PATH - 32);
+                wcscat(wTestFontPath, L"\\Wallpoet Essence.ttf");
+                DWORD attribs = GetFileAttributesW(wTestFontPath);
                 if (attribs != INVALID_FILE_ATTRIBUTES) {
                     WriteLog(LOG_LEVEL_WARNING, "Manual check: Wallpoet Essence.ttf EXISTS but scan failed to find it!");
                 } else {
