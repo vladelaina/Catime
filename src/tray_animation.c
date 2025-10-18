@@ -1,6 +1,13 @@
 /**
  * @file tray_animation.c
- * @brief System tray icon animation implementation
+ * @brief System tray icon animation implementation with high-precision timing
+ * 
+ * This implementation uses a combination of:
+ * - Multimedia timer (timeSetEvent) for high precision (1ms resolution vs 15.6ms)
+ * - Fixed tray update frequency (50ms) to avoid Windows Explorer throttling
+ * - Adaptive frame rate to handle different system performance levels
+ * 
+ * This architecture eliminates flicker/stutter that occurs with fast animations.
  */
 
 #include <windows.h> 
@@ -15,6 +22,9 @@
 #include <wincodec.h>
 #include <propvarutil.h>
 #include <objbase.h>
+#include <mmsystem.h>
+
+#pragma comment(lib, "winmm.lib")
 
 #include "../include/tray.h"
 #include "../include/config.h"
@@ -72,15 +82,35 @@ static int CompareAnimationEntries(const void* a, const void* b) {
     return NaturalCompareW(entryA->name, entryB->name);
 }
 
-/** Forward declaration for timer callback used by SetTimer */
-static void CALLBACK TrayAnimTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time);
+/** Forward declarations */
+static void CALLBACK HighPrecisionTimerCallback(UINT uTimerID, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2);
+static void CALLBACK FallbackTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time);
 
 /**
- * @brief Timer ID for tray animation
+ * @brief High-precision animation timing configuration
  */
-#define TRAY_ANIM_TIMER_ID 42420
+#define INTERNAL_TICK_INTERVAL_MS 10        /** Internal animation logic runs at 100Hz */
+#define TRAY_UPDATE_INTERVAL_MS 50          /** Actual tray updates at 20Hz (optimal for Windows Explorer) */
+#define TRAY_ANIM_TIMER_ID 42420            /** Fallback timer ID if multimedia timer fails */
+
 /** @brief User-configurable minimum interval (0 = no floor) loaded from config */
-static UINT g_userMinIntervalMs = 0; /** 0 = disabled; otherwise exact floor in ms */
+static UINT g_userMinIntervalMs = 0;
+
+/**
+ * @brief High-precision timer state
+ */
+static MMRESULT g_mmTimerId = 0;                    /** Multimedia timer handle */
+static BOOL g_useHighPrecisionTimer = TRUE;         /** Whether high-precision timer is available */
+static UINT g_internalAccumulator = 0;              /** Accumulator for fixed tray update interval */
+static UINT g_currentEffectiveInterval = TRAY_UPDATE_INTERVAL_MS;  /** Current effective update interval */
+
+/**
+ * @brief Adaptive frame rate monitoring
+ */
+static DWORD g_lastTrayUpdateTime = 0;              /** Last time tray was actually updated */
+static UINT g_consecutiveLateUpdates = 0;           /** Count of updates that were too slow */
+static UINT g_targetInternalInterval = INTERNAL_TICK_INTERVAL_MS;  /** Target internal tick interval */
+static double g_internalFramePosition = 0.0;        /** Sub-frame position for smooth animation */
 
 /** @brief Loaded icon frames and state */
 static HICON g_trayIcons[MAX_TRAY_FRAMES];
@@ -213,6 +243,208 @@ static UINT ComputeScaledDelay(UINT baseDelay) {
     UINT floorMs = (g_userMinIntervalMs > 0) ? g_userMinIntervalMs : 0;
     if (scaledDelay < floorMs) scaledDelay = floorMs;
     return scaledDelay;
+}
+
+/**
+ * @brief Adaptive frame rate monitoring and adjustment
+ * Monitors actual update performance and adjusts internal timing if system is struggling
+ */
+static void AdaptiveFrameRateUpdate(void) {
+    DWORD currentTime = GetTickCount();
+    
+    if (g_lastTrayUpdateTime == 0) {
+        g_lastTrayUpdateTime = currentTime;
+        return;
+    }
+    
+    DWORD actualElapsed = currentTime - g_lastTrayUpdateTime;
+    g_lastTrayUpdateTime = currentTime;
+    
+    /** If actual interval is significantly longer than target, system is struggling */
+    if (actualElapsed > g_currentEffectiveInterval * 3 / 2) {  /** >150% of target */
+        g_consecutiveLateUpdates++;
+        
+        /** After 3 consecutive late updates, slow down to give system breathing room */
+        if (g_consecutiveLateUpdates >= 3) {
+            if (g_currentEffectiveInterval < 200) {  /** Don't slow down beyond 200ms */
+                g_currentEffectiveInterval += 10;
+            }
+            g_consecutiveLateUpdates = 0;
+        }
+    } else if (actualElapsed < g_currentEffectiveInterval * 4 / 5) {  /** <80% of target, performing well */
+        g_consecutiveLateUpdates = 0;
+        
+        /** Gradually speed back up to target rate if we slowed down */
+        if (g_currentEffectiveInterval > TRAY_UPDATE_INTERVAL_MS) {
+            g_currentEffectiveInterval -= 2;
+            if (g_currentEffectiveInterval < TRAY_UPDATE_INTERVAL_MS) {
+                g_currentEffectiveInterval = TRAY_UPDATE_INTERVAL_MS;
+            }
+        }
+    } else {
+        /** Normal timing, reset consecutive counter */
+        g_consecutiveLateUpdates = 0;
+    }
+}
+
+/**
+ * @brief Advance internal frame position based on animation speed
+ * @return TRUE if we should advance to next visual frame
+ */
+static BOOL AdvanceInternalFramePosition(void) {
+    if (g_trayIconCount <= 0) return FALSE;
+    
+    /** Calculate frame advancement speed */
+    UINT baseDelay = g_isAnimated ? g_frameDelaysMs[g_trayIconIndex] : g_trayInterval;
+    if (baseDelay == 0) baseDelay = g_trayInterval > 0 ? g_trayInterval : 150;
+    
+    /** Apply speed scaling */
+    UINT scaledDelay = ComputeScaledDelay(baseDelay);
+    if (scaledDelay == 0) scaledDelay = 50;
+    
+    /** Advance by the fraction of a frame that elapsed */
+    double frameAdvancement = (double)g_targetInternalInterval / (double)scaledDelay;
+    g_internalFramePosition += frameAdvancement;
+    
+    /** Check if we've accumulated enough to advance to next frame */
+    if (g_internalFramePosition >= 1.0) {
+        g_internalFramePosition -= 1.0;
+        return TRUE;
+    }
+    
+    return FALSE;
+}
+
+/**
+ * @brief Update tray icon to current frame (called at fixed interval)
+ */
+static void UpdateTrayIconToCurrentFrame(void) {
+    if (!g_trayHwnd || !IsWindow(g_trayHwnd)) return;
+    
+    int count = g_isPreviewActive ? g_previewCount : g_trayIconCount;
+    if (count <= 0) return;
+    
+    /** Ensure index is valid */
+    if (g_isPreviewActive) {
+        if (g_previewIndex >= g_previewCount) g_previewIndex = 0;
+    } else {
+        if (g_trayIconIndex >= g_trayIconCount) g_trayIconIndex = 0;
+    }
+    
+    /** Update tray icon */
+    NOTIFYICONDATAW nid = {0};
+    nid.cbSize = sizeof(nid);
+    nid.hWnd = g_trayHwnd;
+    nid.uID = CLOCK_ID_TRAY_APP_ICON;
+    nid.uFlags = NIF_ICON;
+    nid.hIcon = g_isPreviewActive ? g_previewIcons[g_previewIndex] : g_trayIcons[g_trayIconIndex];
+    
+    Shell_NotifyIconW(NIM_MODIFY, &nid);
+    
+    /** Update adaptive monitoring */
+    AdaptiveFrameRateUpdate();
+}
+
+/**
+ * @brief High-precision timer callback (runs at 100Hz internally)
+ * This is the core of the new timing system
+ */
+static void CALLBACK HighPrecisionTimerCallback(UINT uTimerID, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2) {
+    (void)uTimerID; (void)uMsg; (void)dwUser; (void)dw1; (void)dw2;
+    
+    /** For percent-based animations (__cpu__, __mem__), skip frame logic */
+    if (_stricmp(g_animationName, "__cpu__") == 0 || _stricmp(g_animationName, "__mem__") == 0) {
+        g_internalAccumulator += g_targetInternalInterval;
+        if (g_internalAccumulator >= g_currentEffectiveInterval) {
+            g_internalAccumulator = 0;
+            /** Percent icons are updated by the periodic updater, just reset accumulator */
+        }
+        return;
+    }
+    
+    /** Advance internal frame logic */
+    BOOL shouldAdvanceFrame = AdvanceInternalFramePosition();
+    
+    if (shouldAdvanceFrame) {
+        /** Move to next frame */
+        if (g_isPreviewActive) {
+            g_previewIndex = (g_previewIndex + 1) % g_previewCount;
+        } else {
+            if (g_trayIconCount > 0) {
+                g_trayIconIndex = (g_trayIconIndex + 1) % g_trayIconCount;
+            }
+        }
+    }
+    
+    /** Accumulate time for fixed tray update interval */
+    g_internalAccumulator += g_targetInternalInterval;
+    
+    /** Only actually update tray icon at fixed interval (e.g., every 50ms) */
+    if (g_internalAccumulator >= g_currentEffectiveInterval) {
+        g_internalAccumulator = 0;
+        UpdateTrayIconToCurrentFrame();
+    }
+}
+
+/**
+ * @brief Fallback timer callback for systems where multimedia timer fails
+ */
+static void CALLBACK FallbackTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time) {
+    (void)hwnd; (void)msg; (void)id; (void)time;
+    
+    /** Use same logic as high-precision callback */
+    HighPrecisionTimerCallback(0, 0, 0, 0, 0);
+}
+
+/**
+ * @brief Initialize high-precision timer system
+ * @return TRUE if successful, FALSE if need to fallback to SetTimer
+ */
+static BOOL InitializeHighPrecisionTimer(void) {
+    /** Request 1ms timer resolution */
+    MMRESULT mmRes = timeBeginPeriod(1);
+    if (mmRes != TIMERR_NOERROR) {
+        /** If we can't get 1ms, try 2ms */
+        mmRes = timeBeginPeriod(2);
+        if (mmRes != TIMERR_NOERROR) {
+            g_useHighPrecisionTimer = FALSE;
+            return FALSE;
+        }
+    }
+    
+    /** Create multimedia timer */
+    g_mmTimerId = timeSetEvent(
+        g_targetInternalInterval,           /** Interval */
+        1,                                   /** Resolution (1ms) */
+        HighPrecisionTimerCallback,          /** Callback */
+        0,                                   /** User data */
+        TIME_PERIODIC | TIME_KILL_SYNCHRONOUS  /** Periodic and synchronous cleanup */
+    );
+    
+    if (g_mmTimerId == 0) {
+        /** Failed to create multimedia timer */
+        timeEndPeriod(1);
+        g_useHighPrecisionTimer = FALSE;
+        return FALSE;
+    }
+    
+    g_useHighPrecisionTimer = TRUE;
+    return TRUE;
+}
+
+/**
+ * @brief Cleanup high-precision timer system
+ */
+static void CleanupHighPrecisionTimer(void) {
+    if (g_mmTimerId != 0) {
+        timeKillEvent(g_mmTimerId);
+        g_mmTimerId = 0;
+    }
+    
+    if (g_useHighPrecisionTimer) {
+        timeEndPeriod(1);
+        g_useHighPrecisionTimer = FALSE;
+    }
 }
 
 /** @brief Update tray icon tooltip with current playback speed info (English only) */
@@ -885,59 +1117,6 @@ static void LoadTrayIcons(void) {
     LoadAnimationByName(g_animationName, FALSE);
 }
 
-/** @brief Advance to next icon frame and apply to tray */
-static void AdvanceTrayFrame(void) {
-    if (!g_trayHwnd) return;
-    int count = g_isPreviewActive ? g_previewCount : g_trayIconCount;
-    if (count <= 0) return;
-    if (g_isPreviewActive) {
-        if (g_previewIndex >= g_previewCount) g_previewIndex = 0;
-    } else {
-        if (g_trayIconIndex >= g_trayIconCount) g_trayIconIndex = 0;
-    }
-
-    NOTIFYICONDATAW nid = {0};
-    nid.cbSize = sizeof(nid);
-    nid.hWnd = g_trayHwnd;
-    nid.uID = CLOCK_ID_TRAY_APP_ICON;
-    nid.uFlags = NIF_ICON;
-    nid.hIcon = g_isPreviewActive ? g_previewIcons[g_previewIndex] : g_trayIcons[g_trayIconIndex];
-
-    Shell_NotifyIconW(NIM_MODIFY, &nid);
-
-    if (g_isPreviewActive) {
-        g_previewIndex = (g_previewIndex + 1) % g_previewCount;
-
-        /** For GIF preview, honor per-frame delay */
-        if (g_isPreviewAnimated && g_trayHwnd) {
-            int nextPrev = g_previewIndex;
-            UINT delayPrev = g_previewFrameDelaysMs[nextPrev];
-            KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
-            SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, ComputeScaledDelay(delayPrev), (TIMERPROC)TrayAnimTimerProc);
-        }
-    } else {
-        g_trayIconIndex = (g_trayIconIndex + 1) % g_trayIconCount;
-    }
-
-    /** For normal playback (non-preview), always recompute next delay so speed map affects folders too */
-    if (!g_isPreviewActive && g_trayHwnd) {
-        if (g_isAnimated || g_trayIconCount > 1) {
-            UINT baseDelay = g_isAnimated ? g_frameDelaysMs[g_trayIconIndex] : g_trayInterval;
-            KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
-            UINT nextDelay = ComputeScaledDelay(baseDelay);
-            SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, nextDelay, (TIMERPROC)TrayAnimTimerProc);
-        }
-    }
-
-    /** Tooltip handled by tray.c periodic updater */
-}
-
-/** @brief Window-proc level timer callback shim */
-static void CALLBACK TrayAnimTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time) {
-    (void)msg; (void)id; (void)time;
-    AdvanceTrayFrame();
-}
-
 void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
     g_trayHwnd = hwnd;
     g_trayInterval = intervalMs > 0 ? intervalMs : 150; /** default ~6-7 fps */
@@ -952,6 +1131,14 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
     g_isPreviewActive = FALSE;
     g_previewCount = 0;
     g_previewIndex = 0;
+    
+    /** Initialize timing state */
+    g_internalAccumulator = 0;
+    g_internalFramePosition = 0.0;
+    g_currentEffectiveInterval = TRAY_UPDATE_INTERVAL_MS;
+    g_lastTrayUpdateTime = 0;
+    g_consecutiveLateUpdates = 0;
+    g_targetInternalInterval = INTERNAL_TICK_INTERVAL_MS;
 
     /** Read current animation name from config */
     char config_path[MAX_PATH] = {0};
@@ -978,28 +1165,36 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
 
     LoadTrayIcons();
 
-    /** For percent modes, no animation timer; initial icon will be set by updater */
-    if (_stricmp(g_animationName, "__cpu__") == 0 || _stricmp(g_animationName, "__mem__") == 0) {
-        return;
-    }
-
+    /** Display initial frame immediately */
     if (g_trayIconCount > 0) {
-        AdvanceTrayFrame();
-        if (!g_isAnimated && g_trayIconCount <= 1) {
-            return;
-        }
-        UINT baseDelay = (g_isAnimated && g_frameDelaysMs[0] > 0) ? g_frameDelaysMs[0] : g_trayInterval;
-        UINT firstDelay = ComputeScaledDelay(baseDelay);
-        SetTimer(hwnd, TRAY_ANIM_TIMER_ID, firstDelay, (TIMERPROC)TrayAnimTimerProc);
+        UpdateTrayIconToCurrentFrame();
+    }
+    
+    /** Start high-precision timer system */
+    if (!InitializeHighPrecisionTimer()) {
+        /** Fallback to standard SetTimer if multimedia timer fails */
+        SetTimer(hwnd, TRAY_ANIM_TIMER_ID, g_targetInternalInterval, FallbackTimerProc);
     }
 
     /** Tooltip handled by tray.c periodic updater */
 }
 
 void StopTrayAnimation(HWND hwnd) {
+    /** Cleanup high-precision timer or fallback timer */
+    CleanupHighPrecisionTimer();
     KillTimer(hwnd, TRAY_ANIM_TIMER_ID);
+    
+    /** Free icon resources */
     FreeIconSet(g_trayIcons, &g_trayIconCount, &g_trayIconIndex, &g_isAnimated, &g_animCanvas, TRUE);
     FreeIconSet(g_previewIcons, &g_previewCount, &g_previewIndex, &g_isPreviewAnimated, &g_previewAnimCanvas, FALSE);
+    
+    /** Reset timing state */
+    g_internalAccumulator = 0;
+    g_internalFramePosition = 0.0;
+    g_currentEffectiveInterval = TRAY_UPDATE_INTERVAL_MS;
+    g_lastTrayUpdateTime = 0;
+    g_consecutiveLateUpdates = 0;
+    
     g_trayHwnd = NULL;
 }
 
@@ -1026,13 +1221,9 @@ BOOL SetCurrentAnimationName(const char* name) {
         WriteIniString("Animation", "ANIMATION_PATH", "__logo__", config_path);
         LoadTrayIcons();
         g_trayIconIndex = 0;
+        g_internalFramePosition = 0.0;
         if (g_trayHwnd && g_trayIconCount > 0) {
-            AdvanceTrayFrame();
-            if (!IsWindow(g_trayHwnd)) return TRUE;
-            KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
-            if (g_isAnimated || g_trayIconCount > 1) {
-                SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, g_trayInterval ? g_trayInterval : 150, (TIMERPROC)TrayAnimTimerProc);
-            }
+            UpdateTrayIconToCurrentFrame();
         }
         return TRUE;
     }
@@ -1045,9 +1236,8 @@ BOOL SetCurrentAnimationName(const char* name) {
 
         LoadTrayIcons();
         g_trayIconIndex = 0;
-        if (g_trayHwnd) {
-            KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
-        }
+        g_internalFramePosition = 0.0;
+        /** Timer continues running, no need to restart for __cpu__/__mem__ */
         return TRUE;
     }
     BuildAnimationFolder(name, folder, sizeof(folder));
@@ -1091,18 +1281,14 @@ BOOL SetCurrentAnimationName(const char* name) {
     snprintf(animPath, sizeof(animPath), "%%LOCALAPPDATA%%\\Catime\\resources\\animations\\%s", g_animationName);
     WriteIniString("Animation", "ANIMATION_PATH", animPath, config_path);
 
-    /** Reload frames and reset index; ensure timer is running */
+    /** Reload frames and reset index */
     LoadTrayIcons();
     g_trayIconIndex = 0;
+    g_internalFramePosition = 0.0;
     if (g_trayHwnd && g_trayIconCount > 0) {
-        AdvanceTrayFrame();
-        if (!IsWindow(g_trayHwnd)) return TRUE;
-        KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
-        if (g_isAnimated || g_trayIconCount > 1) {
-            UINT firstDelay = (g_isAnimated && g_frameDelaysMs[0] > 0) ? g_frameDelaysMs[0] : g_trayInterval;
-            SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, firstDelay, (TIMERPROC)TrayAnimTimerProc);
-        }
+        UpdateTrayIconToCurrentFrame();
     }
+    /** Timer is already running, no need to restart */
     return TRUE;
 }
 
@@ -1116,31 +1302,12 @@ void StartAnimationPreview(const char* name) {
     if (g_previewCount > 0) {
         g_isPreviewActive = TRUE;
         g_previewIndex = 0;
-        if (g_trayHwnd) {
-            /** Pause normal animation timer to avoid icon flicker during preview */
-            KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
-            AdvanceTrayFrame();
-            if (g_isPreviewAnimated) {
-                UINT firstDelay = g_previewFrameDelaysMs[0] > 0 ? g_previewFrameDelaysMs[0] : (g_trayInterval ? g_trayInterval : 150);
-                SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, firstDelay, (TIMERPROC)TrayAnimTimerProc);
-            }
-        } else {
-            /** If tray not initialized yet, still try to show the preview icon immediately */
-            /** This handles the case where preview is triggered before tray animation starts */
-            if (g_previewCount > 0 && g_previewIcons[0]) {
-                /** Try to find and update any existing tray icon */
-                HWND hwnd = FindWindowW(L"CatimeWindow", NULL);
-                if (hwnd) {
-                    NOTIFYICONDATAW nid = {0};
-                    nid.cbSize = sizeof(nid);
-                    nid.hWnd = hwnd;
-                    nid.uID = CLOCK_ID_TRAY_APP_ICON;
-                    nid.uFlags = NIF_ICON;
-                    nid.hIcon = g_previewIcons[0];
-                    Shell_NotifyIconW(NIM_MODIFY, &nid);
-                }
-            }
-        }
+        g_internalFramePosition = 0.0;  /** Reset frame position for preview */
+        
+        /** Display first preview frame immediately */
+        UpdateTrayIconToCurrentFrame();
+        
+        /** Timer continues running in background, will handle preview frames */
     }
 }
 
@@ -1149,37 +1316,12 @@ void CancelAnimationPreview(void) {
     g_isPreviewActive = FALSE;
     FreeIconSet(g_previewIcons, &g_previewCount, &g_previewIndex, &g_isPreviewAnimated, &g_previewAnimCanvas, FALSE);
     
+    g_internalFramePosition = 0.0;  /** Reset frame position */
+    
     /** Restore original tray icon immediately */
-    if (g_trayHwnd) {
-        /** Restore current normal animation frame */
-        if (g_trayIconCount > 0 && g_trayIcons[g_trayIconIndex]) {
-            NOTIFYICONDATAW nid = {0};
-            nid.cbSize = sizeof(nid);
-            nid.hWnd = g_trayHwnd;
-            nid.uID = CLOCK_ID_TRAY_APP_ICON;
-            nid.uFlags = NIF_ICON;
-            nid.hIcon = g_trayIcons[g_trayIconIndex];
-            Shell_NotifyIconW(NIM_MODIFY, &nid);
-        }
-        
-        /** Restore timer for normal animation if needed */
-        KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
-        if (g_isAnimated || g_trayIconCount > 1) {
-            TrayAnimation_RecomputeTimerDelay();
-        }
-    } else {
-        /** If tray not initialized, try to restore via window handle */
-        HWND hwnd = FindWindowW(L"CatimeWindow", NULL);
-        if (hwnd && g_trayIconCount > 0 && g_trayIcons[g_trayIconIndex]) {
-            NOTIFYICONDATAW nid = {0};
-            nid.cbSize = sizeof(nid);
-            nid.hWnd = hwnd;
-            nid.uID = CLOCK_ID_TRAY_APP_ICON;
-            nid.uFlags = NIF_ICON;
-            nid.hIcon = g_trayIcons[g_trayIconIndex];
-            Shell_NotifyIconW(NIM_MODIFY, &nid);
-        }
-    }
+    UpdateTrayIconToCurrentFrame();
+    
+    /** Timer continues running in background, no need to restart */
 }
 
 void PreloadAnimationFromConfig(void) {
@@ -1240,20 +1382,14 @@ void ApplyAnimationPathValueNoPersist(const char* value) {
 
     LoadTrayIcons();
     g_trayIconIndex = 0;
+    g_internalFramePosition = 0.0;
+    
     if (!g_trayHwnd) return;
-    if (_stricmp(g_animationName, "__cpu__") == 0 || _stricmp(g_animationName, "__mem__") == 0) {
-        KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
-        return;
-    }
+    
     if (g_trayIconCount > 0) {
-        AdvanceTrayFrame();
-        if (!IsWindow(g_trayHwnd)) return;
-        UINT firstDelay = (g_isAnimated && g_frameDelaysMs[0] > 0) ? g_frameDelaysMs[0] : (g_trayInterval ? g_trayInterval : 150);
-        KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
-        if (g_isAnimated || g_trayIconCount > 1) {
-            SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, firstDelay, (TIMERPROC)TrayAnimTimerProc);
-        }
+        UpdateTrayIconToCurrentFrame();
     }
+    /** Timer continues running, no need to restart */
 }
 
 /** Create a small 16x16 icon with percentage text (no % sign) */
@@ -1361,76 +1497,16 @@ void TrayAnimation_UpdatePercentIconIfNeeded(void) {
 }
 
 void TrayAnimation_RecomputeTimerDelay(void) {
-    if (!g_trayHwnd) return;
-    if (g_isPreviewActive) return; /** only adjust normal animation */
-    if (g_trayIconCount <= 0) return;
-    if (!g_isAnimated && g_trayIconCount <= 1) {
-        KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
-        return;
-    }
-
-    UINT baseDelay = g_isAnimated ? g_frameDelaysMs[g_trayIconIndex] : (g_trayInterval ? g_trayInterval : 150);
-    if (baseDelay == 0) baseDelay = (g_trayInterval ? g_trayInterval : 150);
-
-    double percent = 0.0;
-    AnimationSpeedMetric metric = GetAnimationSpeedMetric();
-    if (metric == ANIMATION_SPEED_CPU) {
-        float cpu = 0.0f, mem = 0.0f;
-        SystemMonitor_GetUsage(&cpu, &mem);
-        percent = cpu;
-    } else if (metric == ANIMATION_SPEED_TIMER) {
-        extern BOOL CLOCK_COUNT_UP;
-        extern BOOL CLOCK_SHOW_CURRENT_TIME;
-        extern int CLOCK_TOTAL_TIME;
-        extern int countdown_elapsed_time;
-        if (!CLOCK_SHOW_CURRENT_TIME) {
-            if (!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0) {
-                double p = (double)countdown_elapsed_time / (double)CLOCK_TOTAL_TIME;
-                if (p < 0.0) p = 0.0; if (p > 1.0) p = 1.0;
-                percent = p * 100.0;
-            } else {
-                percent = 0.0;
-            }
-        } else {
-            percent = 0.0;
-        }
-    } else {
-        float cpu = 0.0f, mem = 0.0f;
-        SystemMonitor_GetUsage(&cpu, &mem);
-        percent = mem;
-    }
-    BOOL applyScaling = TRUE;
-    if (metric == ANIMATION_SPEED_TIMER) {
-        extern BOOL CLOCK_COUNT_UP;
-        extern BOOL CLOCK_SHOW_CURRENT_TIME;
-        extern int CLOCK_TOTAL_TIME;
-        if (CLOCK_SHOW_CURRENT_TIME || CLOCK_COUNT_UP || CLOCK_TOTAL_TIME <= 0) {
-            applyScaling = FALSE;
-        }
-        if (percent >= 100.0) {
-            applyScaling = FALSE;
-        }
-    }
-    double scalePercent = 100.0;
-    if (applyScaling) {
-        scalePercent = GetAnimationSpeedScaleForPercent(percent);
-        if (scalePercent <= 0.0) scalePercent = 100.0;
-    } else {
-        /** When not applying scaling (e.g., countdown finished or invalid),
-         *  revert to the default mapping at 0% to restore default speed. */
-        scalePercent = GetAnimationSpeedScaleForPercent(0.0);
-        if (scalePercent <= 0.0) scalePercent = 100.0;
-    }
-    double scale = scalePercent / 100.0;
-    if (scale < 0.1) scale = 0.1;
-    UINT scaledDelay = (UINT)(baseDelay / scale);
-    UINT floorMs = (g_userMinIntervalMs > 0) ? g_userMinIntervalMs : 0;
-    if (scaledDelay < floorMs) scaledDelay = floorMs;
-
-    KillTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID);
-    SetTimer(g_trayHwnd, TRAY_ANIM_TIMER_ID, scaledDelay, (TIMERPROC)TrayAnimTimerProc);
-
-    /** Tooltip handled by tray.c periodic updater */
+    /**
+     * With the new high-precision timer system, we don't need to constantly
+     * restart timers. The speed scaling is computed on-the-fly in 
+     * AdvanceInternalFramePosition() which is called by the timer callback.
+     * 
+     * This function is kept for API compatibility but does nothing now.
+     * The adaptive frame rate system automatically adjusts based on actual
+     * performance, which is better than manual timer resets.
+     */
+    (void)0;  /** No-op */
 }
 
 void TrayAnimation_SetMinIntervalMs(UINT ms) {
