@@ -296,18 +296,26 @@ void ReloadAnimationSpeedFromConfig(void) {
     }
     ParseAnimationSpeedFixedKeys(config_path);
 
-    /** Optional advanced: minimum animation interval floor (ms), 0 disables */
+    /** 
+     * Base animation playback speed (controls how fast animations play)
+     * Default: 150ms (~6.7 fps)
+     */
+    int folderInterval = ReadIniInt("Animation", "ANIMATION_FOLDER_INTERVAL_MS", 150, config_path);
+    if (folderInterval <= 0) folderInterval = 150;
+    extern void TrayAnimation_SetBaseIntervalMs(UINT ms);
+    TrayAnimation_SetBaseIntervalMs((UINT)folderInterval);
+
+    /** 
+     * Optional minimum speed limit (adds extra limiting on top of system default)
+     * 0 = use system default (50ms fixed tray update + high-precision timing)
+     * N > 0 = enforce minimum N ms per frame
+     * Most users should leave this at 0.
+     */
     int minInterval = ReadIniInt("Animation", "ANIMATION_MIN_INTERVAL_MS", 0, config_path);
     if (minInterval < 0) minInterval = 0;
     g_animMinIntervalMs = minInterval;
     extern void TrayAnimation_SetMinIntervalMs(UINT ms);
     TrayAnimation_SetMinIntervalMs((UINT)g_animMinIntervalMs);
-
-    /** Optional: base interval for folder/static sequences */
-    int folderInterval = ReadIniInt("Animation", "ANIMATION_FOLDER_INTERVAL_MS", 150, config_path);
-    if (folderInterval <= 0) folderInterval = 150;
-    extern void TrayAnimation_SetBaseIntervalMs(UINT ms);
-    TrayAnimation_SetBaseIntervalMs((UINT)folderInterval);
 }
 
 /**
@@ -834,10 +842,10 @@ void CreateDefaultConfig(const char* config_path) {
     /** Default percent tray icon colors (hex format) */
     WriteIniString("Animation", "PERCENT_ICON_TEXT_COLOR", "#000000", config_path);
     WriteIniString("Animation", "PERCENT_ICON_BG_COLOR", "#FFFFFF", config_path);
-    /** Advanced: default minimum interval floor (0 = disabled) */
-    WriteIniInt("Animation", "ANIMATION_MIN_INTERVAL_MS", 0, config_path);
-    /** Default base interval for folder/static sequences (ms) */
+    /** Base animation playback speed - controls how fast animations play */
     WriteIniInt("Animation", "ANIMATION_FOLDER_INTERVAL_MS", 150, config_path);
+    /** Optional minimum speed limit (0 = use system default, recommended) */
+    WriteIniInt("Animation", "ANIMATION_MIN_INTERVAL_MS", 0, config_path);
 
     /** Append user-facing comments for advanced animation options */
     {
@@ -865,16 +873,23 @@ void CreateDefaultConfig(const char* config_path) {
             fputs(";   Format: #RRGGBB or R,G,B (0-255).\n", f);
             fputs(";\n", f);
 
-            /* ANIMATION_MIN_INTERVAL_MS */
-            fputs("; ANIMATION_MIN_INTERVAL_MS: minimum frame interval (unit: milliseconds).\n", f);
-            fputs(";   0  => no floor (use computed speed as-is).\n", f);
-            fputs(";   N>0 => at least N ms per frame (e.g., 100 = ~10 fps).\n", f);
+            /* ANIMATION_FOLDER_INTERVAL_MS */
+            fputs("; ANIMATION_FOLDER_INTERVAL_MS: base animation playback speed (unit: milliseconds).\n", f);
+            fputs(";   Controls how fast the animation plays (higher = slower, lower = faster).\n", f);
+            fputs(";   Affects folder sequences and static images (.ico/.png/.bmp/.jpg/.jpeg/.tif/.tiff).\n", f);
+            fputs(";   Does NOT affect GIF/WebP (they honor embedded per-frame delays).\n", f);
+            fputs(";   Default: 150ms (~6.7 fps)\n", f);
+            fputs(";   Suggested range: 50-500ms\n", f);
             fputs(";\n", f);
             
-            /* ANIMATION_FOLDER_INTERVAL_MS */
-            fputs("; ANIMATION_FOLDER_INTERVAL_MS: base frame interval for folder/static images (ms).\n", f);
-            fputs(";   Affects image sequences from folders and single static images (.ico/.png/.bmp/.jpg/.jpeg/.tif/.tiff).\n", f);
-            fputs(";   Does NOT affect GIF/WebP (they honor embedded per-frame delays).\n", f);
+            /* ANIMATION_MIN_INTERVAL_MS */
+            fputs("; ANIMATION_MIN_INTERVAL_MS: optional minimum speed limit (unit: milliseconds).\n", f);
+            fputs(";   Adds an extra lower speed limit on top of system optimizations.\n", f);
+            fputs(";   0     => use system default (recommended for most users)\n", f);
+            fputs(";   N>0   => enforce minimum N ms per frame (e.g., 100 = max 10 fps)\n", f);
+            fputs(";   Note: System already uses high-precision timing with fixed 50ms tray updates\n", f);
+            fputs(";         to eliminate flicker/stutter. This setting is optional.\n", f);
+            fputs(";   Use case: Set to 100+ on very low-end devices to reduce CPU usage.\n", f);
             fputs(";========================================================\n", f);
             fclose(f);
         }
