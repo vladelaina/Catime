@@ -421,10 +421,17 @@ static void AdaptiveFrameRateUpdate(void) {
  * @return TRUE if we should advance to next visual frame
  */
 static BOOL AdvanceInternalFramePosition(void) {
-    if (g_trayIconCount <= 0) return FALSE;
+    /** Check if we have frames to animate (preview or normal) */
+    int frameCount = g_isPreviewActive ? g_previewCount : g_trayIconCount;
+    if (frameCount <= 0) return FALSE;
     
     /** Calculate frame advancement speed */
-    UINT baseDelay = g_isAnimated ? g_frameDelaysMs[g_trayIconIndex] : g_trayInterval;
+    UINT baseDelay;
+    if (g_isPreviewActive) {
+        baseDelay = g_isPreviewAnimated ? g_previewFrameDelaysMs[g_previewIndex] : g_trayInterval;
+    } else {
+        baseDelay = g_isAnimated ? g_frameDelaysMs[g_trayIconIndex] : g_trayInterval;
+    }
     if (baseDelay == 0) baseDelay = g_trayInterval > 0 ? g_trayInterval : 150;
     
     /** Apply speed scaling */
@@ -543,8 +550,8 @@ static void UpdateTrayIconToCurrentFrame(void) {
 static void CALLBACK HighPrecisionTimerCallback(UINT uTimerID, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2) {
     (void)uTimerID; (void)uMsg; (void)dwUser; (void)dw1; (void)dw2;
     
-    /** For percent-based animations (__cpu__, __mem__), skip frame logic */
-    if (_stricmp(g_animationName, "__cpu__") == 0 || _stricmp(g_animationName, "__mem__") == 0) {
+    /** For percent-based animations (__cpu__, __mem__), skip frame logic UNLESS previewing */
+    if ((_stricmp(g_animationName, "__cpu__") == 0 || _stricmp(g_animationName, "__mem__") == 0) && !g_isPreviewActive) {
         g_internalAccumulator += g_targetInternalInterval;
         if (g_internalAccumulator >= g_currentEffectiveInterval) {
             g_internalAccumulator = 0;
@@ -1724,6 +1731,9 @@ void TrayAnimation_UpdatePercentIconIfNeeded(void) {
     if (!IsWindow(g_trayHwnd)) return;
     if (!g_animationName[0]) return;
     if (_stricmp(g_animationName, "__cpu__") != 0 && _stricmp(g_animationName, "__mem__") != 0) return;
+    
+    /** Don't update percent icon if user is previewing another animation */
+    if (g_isPreviewActive) return;
 
     float cpu = 0.0f, mem = 0.0f;
     SystemMonitor_GetUsage(&cpu, &mem);
