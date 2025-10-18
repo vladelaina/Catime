@@ -829,16 +829,16 @@ void CreateDefaultConfig(const char* config_path) {
     /** Default animation speed settings (new format: default + breakpoints) */
     WriteIniString("Animation", "ANIMATION_SPEED_METRIC", "MEMORY", config_path);
     WriteIniInt("Animation", "ANIMATION_SPEED_DEFAULT", 100, config_path);
-    WriteIniString("Animation", "ANIMATION_SPEED_MAP_10",  "110", config_path);
-    WriteIniString("Animation", "ANIMATION_SPEED_MAP_20",  "120", config_path);
-    WriteIniString("Animation", "ANIMATION_SPEED_MAP_30",  "130", config_path);
-    WriteIniString("Animation", "ANIMATION_SPEED_MAP_40",  "140", config_path);
-    WriteIniString("Animation", "ANIMATION_SPEED_MAP_50",  "150", config_path);
-    WriteIniString("Animation", "ANIMATION_SPEED_MAP_60",  "160", config_path);
-    WriteIniString("Animation", "ANIMATION_SPEED_MAP_70",  "170", config_path);
-    WriteIniString("Animation", "ANIMATION_SPEED_MAP_80",  "180", config_path);
-    WriteIniString("Animation", "ANIMATION_SPEED_MAP_90",  "190", config_path);
-    WriteIniString("Animation", "ANIMATION_SPEED_MAP_100", "200", config_path);
+    WriteIniString("Animation", "ANIMATION_SPEED_MAP_10",  "140", config_path);
+    WriteIniString("Animation", "ANIMATION_SPEED_MAP_20",  "180", config_path);
+    WriteIniString("Animation", "ANIMATION_SPEED_MAP_30",  "220", config_path);
+    WriteIniString("Animation", "ANIMATION_SPEED_MAP_40",  "260", config_path);
+    WriteIniString("Animation", "ANIMATION_SPEED_MAP_50",  "300", config_path);
+    WriteIniString("Animation", "ANIMATION_SPEED_MAP_60",  "340", config_path);
+    WriteIniString("Animation", "ANIMATION_SPEED_MAP_70",  "380", config_path);
+    WriteIniString("Animation", "ANIMATION_SPEED_MAP_80",  "420", config_path);
+    WriteIniString("Animation", "ANIMATION_SPEED_MAP_90",  "460", config_path);
+    WriteIniString("Animation", "ANIMATION_SPEED_MAP_100", "500", config_path);
     /** Default percent tray icon colors (hex format) */
     WriteIniString("Animation", "PERCENT_ICON_TEXT_COLOR", "#000000", config_path);
     WriteIniString("Animation", "PERCENT_ICON_BG_COLOR", "#FFFFFF", config_path);
