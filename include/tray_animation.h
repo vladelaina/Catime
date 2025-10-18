@@ -105,6 +105,16 @@ HICON CreatePercentIcon16(int percent);
  */
 void TrayAnimation_SetMinIntervalMs(UINT ms);
 
+/**
+ * @brief Handle tray icon update message (WM_TRAY_UPDATE_ICON)
+ * This function should be called from the main window procedure when
+ * WM_USER+100 message is received. It performs the actual tray icon
+ * update in the main UI thread, which is thread-safe.
+ * 
+ * @return TRUE if message was handled
+ */
+BOOL TrayAnimation_HandleUpdateMessage(void);
+
 #endif
 
 

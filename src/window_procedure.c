@@ -631,6 +631,13 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             ApplyAnimationPathValueNoPersist(value);
             return 0;
         }
+        /** Thread-safe tray icon update from multimedia timer callback */
+        case WM_USER + 100: {  /** WM_TRAY_UPDATE_ICON */
+            if (TrayAnimation_HandleUpdateMessage()) {
+                return 0;
+            }
+            break;
+        }
         case WM_APP_DISPLAY_CHANGED: {
             char config_path[MAX_PATH] = {0};
             GetConfigPath(config_path, MAX_PATH);

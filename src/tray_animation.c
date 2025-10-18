@@ -92,6 +92,7 @@ static void CALLBACK FallbackTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD t
 #define INTERNAL_TICK_INTERVAL_MS 10        /** Internal animation logic runs at 100Hz */
 #define TRAY_UPDATE_INTERVAL_MS 50          /** Actual tray updates at 20Hz (optimal for Windows Explorer) */
 #define TRAY_ANIM_TIMER_ID 42420            /** Fallback timer ID if multimedia timer fails */
+#define WM_TRAY_UPDATE_ICON (WM_USER + 100) /** Custom message for thread-safe tray updates */
 
 /** @brief User-configurable minimum interval (0 = no floor) loaded from config */
 static UINT g_userMinIntervalMs = 0;
@@ -103,6 +104,9 @@ static MMRESULT g_mmTimerId = 0;                    /** Multimedia timer handle 
 static BOOL g_useHighPrecisionTimer = TRUE;         /** Whether high-precision timer is available */
 static UINT g_internalAccumulator = 0;              /** Accumulator for fixed tray update interval */
 static UINT g_currentEffectiveInterval = TRAY_UPDATE_INTERVAL_MS;  /** Current effective update interval */
+static BOOL g_pendingTrayUpdate = FALSE;            /** Flag indicating tray update is pending */
+static CRITICAL_SECTION g_animCriticalSection;      /** Critical section for thread-safe state access */
+static BOOL g_criticalSectionInitialized = FALSE;   /** Whether critical section is initialized */
 
 /**
  * @brief Adaptive frame rate monitoring
@@ -316,10 +320,40 @@ static BOOL AdvanceInternalFramePosition(void) {
 }
 
 /**
- * @brief Update tray icon to current frame (called at fixed interval)
+ * @brief Request tray icon update (thread-safe, called from timer callback)
+ * This only sets a flag, actual update happens in main UI thread
+ */
+static void RequestTrayIconUpdate(void) {
+    if (!g_trayHwnd || !IsWindow(g_trayHwnd)) return;
+    
+    /** Set pending flag and post message to main thread */
+    if (g_criticalSectionInitialized) {
+        EnterCriticalSection(&g_animCriticalSection);
+        g_pendingTrayUpdate = TRUE;
+        LeaveCriticalSection(&g_animCriticalSection);
+    } else {
+        g_pendingTrayUpdate = TRUE;
+    }
+    
+    /** Post message to main UI thread to do actual update */
+    PostMessage(g_trayHwnd, WM_TRAY_UPDATE_ICON, 0, 0);
+}
+
+/**
+ * @brief Update tray icon to current frame (called in main UI thread only)
+ * This function MUST be called from the main UI thread, not from timer callback
  */
 static void UpdateTrayIconToCurrentFrame(void) {
     if (!g_trayHwnd || !IsWindow(g_trayHwnd)) return;
+    
+    /** Clear pending flag */
+    if (g_criticalSectionInitialized) {
+        EnterCriticalSection(&g_animCriticalSection);
+        g_pendingTrayUpdate = FALSE;
+        LeaveCriticalSection(&g_animCriticalSection);
+    } else {
+        g_pendingTrayUpdate = FALSE;
+    }
     
     int count = g_isPreviewActive ? g_previewCount : g_trayIconCount;
     if (count <= 0) return;
@@ -331,7 +365,7 @@ static void UpdateTrayIconToCurrentFrame(void) {
         if (g_trayIconIndex >= g_trayIconCount) g_trayIconIndex = 0;
     }
     
-    /** Update tray icon */
+    /** Update tray icon (safe: we're in main UI thread) */
     NOTIFYICONDATAW nid = {0};
     nid.cbSize = sizeof(nid);
     nid.hWnd = g_trayHwnd;
@@ -348,6 +382,8 @@ static void UpdateTrayIconToCurrentFrame(void) {
 /**
  * @brief High-precision timer callback (runs at 100Hz internally)
  * This is the core of the new timing system
+ * IMPORTANT: This runs in a WORKER THREAD, not the main UI thread!
+ * DO NOT call Windows UI functions directly from here.
  */
 static void CALLBACK HighPrecisionTimerCallback(UINT uTimerID, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2) {
     (void)uTimerID; (void)uMsg; (void)dwUser; (void)dw1; (void)dw2;
@@ -362,13 +398,20 @@ static void CALLBACK HighPrecisionTimerCallback(UINT uTimerID, UINT uMsg, DWORD_
         return;
     }
     
+    /** Thread-safe access to animation state */
+    if (g_criticalSectionInitialized) {
+        EnterCriticalSection(&g_animCriticalSection);
+    }
+    
     /** Advance internal frame logic */
     BOOL shouldAdvanceFrame = AdvanceInternalFramePosition();
     
     if (shouldAdvanceFrame) {
         /** Move to next frame */
         if (g_isPreviewActive) {
-            g_previewIndex = (g_previewIndex + 1) % g_previewCount;
+            if (g_previewCount > 0) {
+                g_previewIndex = (g_previewIndex + 1) % g_previewCount;
+            }
         } else {
             if (g_trayIconCount > 0) {
                 g_trayIconIndex = (g_trayIconIndex + 1) % g_trayIconCount;
@@ -379,10 +422,21 @@ static void CALLBACK HighPrecisionTimerCallback(UINT uTimerID, UINT uMsg, DWORD_
     /** Accumulate time for fixed tray update interval */
     g_internalAccumulator += g_targetInternalInterval;
     
-    /** Only actually update tray icon at fixed interval (e.g., every 50ms) */
+    /** Only request tray icon update at fixed interval (e.g., every 50ms) */
     if (g_internalAccumulator >= g_currentEffectiveInterval) {
         g_internalAccumulator = 0;
-        UpdateTrayIconToCurrentFrame();
+        
+        if (g_criticalSectionInitialized) {
+            LeaveCriticalSection(&g_animCriticalSection);
+        }
+        
+        /** Request update via message (thread-safe) instead of calling Shell API directly */
+        RequestTrayIconUpdate();
+        return;
+    }
+    
+    if (g_criticalSectionInitialized) {
+        LeaveCriticalSection(&g_animCriticalSection);
     }
 }
 
@@ -401,6 +455,12 @@ static void CALLBACK FallbackTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD t
  * @return TRUE if successful, FALSE if need to fallback to SetTimer
  */
 static BOOL InitializeHighPrecisionTimer(void) {
+    /** Initialize critical section for thread-safe access */
+    if (!g_criticalSectionInitialized) {
+        InitializeCriticalSection(&g_animCriticalSection);
+        g_criticalSectionInitialized = TRUE;
+    }
+    
     /** Request 1ms timer resolution */
     MMRESULT mmRes = timeBeginPeriod(1);
     if (mmRes != TIMERR_NOERROR) {
@@ -444,6 +504,12 @@ static void CleanupHighPrecisionTimer(void) {
     if (g_useHighPrecisionTimer) {
         timeEndPeriod(1);
         g_useHighPrecisionTimer = FALSE;
+    }
+    
+    /** Cleanup critical section */
+    if (g_criticalSectionInitialized) {
+        DeleteCriticalSection(&g_animCriticalSection);
+        g_criticalSectionInitialized = FALSE;
     }
 }
 
@@ -1512,6 +1578,31 @@ void TrayAnimation_RecomputeTimerDelay(void) {
 void TrayAnimation_SetMinIntervalMs(UINT ms) {
     g_userMinIntervalMs = ms;
     TrayAnimation_RecomputeTimerDelay();
+}
+
+/**
+ * @brief Handle tray icon update message from timer callback
+ * This is called in the main UI thread when WM_TRAY_UPDATE_ICON is received
+ * @return TRUE if message was handled
+ */
+BOOL TrayAnimation_HandleUpdateMessage(void) {
+    /** Only update if there's a pending update */
+    BOOL hasPending = FALSE;
+    
+    if (g_criticalSectionInitialized) {
+        EnterCriticalSection(&g_animCriticalSection);
+        hasPending = g_pendingTrayUpdate;
+        LeaveCriticalSection(&g_animCriticalSection);
+    } else {
+        hasPending = g_pendingTrayUpdate;
+    }
+    
+    if (hasPending) {
+        UpdateTrayIconToCurrentFrame();
+        return TRUE;
+    }
+    
+    return FALSE;
 }
 
 void TrayAnimation_SetBaseIntervalMs(UINT ms) {
