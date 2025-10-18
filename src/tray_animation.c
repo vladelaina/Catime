@@ -31,6 +31,7 @@
 #include "../include/tray_menu.h"
 #include "../include/tray_animation.h"
 #include "../include/system_monitor.h"
+#include "../include/log.h"
 
 /** @brief Represents a file or folder entry for sorting animation menus. */
 typedef struct {
@@ -138,6 +139,23 @@ static UINT g_animCanvasHeight = 0;
 static BYTE* g_animCanvas = NULL;  /** 32bpp PBGRA canvas for frame composition */
 static BYTE* g_previewAnimCanvas = NULL;  /** 32bpp PBGRA canvas for preview composition */
 
+/**
+ * @brief Simple memory pool for reducing malloc/free overhead
+ * Pre-allocates common buffer sizes to avoid repeated allocations
+ */
+#define MEMORY_POOL_BUFFER_SIZE (256 * 1024)  /** 256KB default buffer */
+static BYTE* g_memoryPoolBuffer = NULL;
+static SIZE_T g_memoryPoolSize = 0;
+static BOOL g_memoryPoolInUse = FALSE;
+
+/**
+ * @brief Error recovery state tracking
+ */
+static UINT g_consecutiveUpdateFailures = 0;
+static DWORD g_lastSuccessfulUpdateTime = 0;
+#define MAX_CONSECUTIVE_FAILURES 5
+#define UPDATE_TIMEOUT_MS 5000  /** 5 seconds without update = fallback */
+
 /** @brief Context for directing decoded animation frames to tray or preview targets */
 typedef struct {
     HICON* icons;
@@ -147,6 +165,113 @@ typedef struct {
     BOOL*  isAnimatedFlag;
     BYTE** canvas;
 } DecodeTarget;
+
+/**
+ * @brief Allocate memory from pool or fallback to malloc
+ * @param size Size in bytes to allocate
+ * @return Pointer to allocated memory, or NULL on failure
+ */
+static void* MemoryPool_Alloc(SIZE_T size) {
+    /** Try to use memory pool for common sizes */
+    if (!g_memoryPoolInUse && size <= MEMORY_POOL_BUFFER_SIZE) {
+        if (!g_memoryPoolBuffer) {
+            g_memoryPoolBuffer = (BYTE*)malloc(MEMORY_POOL_BUFFER_SIZE);
+            if (g_memoryPoolBuffer) {
+                g_memoryPoolSize = MEMORY_POOL_BUFFER_SIZE;
+            }
+        }
+        
+        if (g_memoryPoolBuffer && size <= g_memoryPoolSize) {
+            g_memoryPoolInUse = TRUE;
+            return g_memoryPoolBuffer;
+        }
+    }
+    
+    /** Fallback to regular malloc for large allocations or when pool is in use */
+    return malloc(size);
+}
+
+/**
+ * @brief Free memory back to pool or call free
+ * @param ptr Pointer to memory to free
+ */
+static void MemoryPool_Free(void* ptr) {
+    if (!ptr) return;
+    
+    /** Check if this is from our pool */
+    if (ptr == g_memoryPoolBuffer) {
+        g_memoryPoolInUse = FALSE;
+        /** Don't actually free, keep for reuse */
+        return;
+    }
+    
+    /** Regular malloc'd memory */
+    free(ptr);
+}
+
+/**
+ * @brief Clean up memory pool (call on shutdown)
+ */
+static void MemoryPool_Cleanup(void) {
+    if (g_memoryPoolBuffer) {
+        free(g_memoryPoolBuffer);
+        g_memoryPoolBuffer = NULL;
+        g_memoryPoolSize = 0;
+        g_memoryPoolInUse = FALSE;
+    }
+}
+
+/**
+ * @brief Record successful tray update for error recovery
+ */
+static void RecordSuccessfulUpdate(void) {
+    g_consecutiveUpdateFailures = 0;
+    g_lastSuccessfulUpdateTime = GetTickCount();
+}
+
+/**
+ * @brief Record failed tray update and check if fallback needed
+ * @return TRUE if should enter fallback mode
+ */
+static BOOL RecordFailedUpdate(void) {
+    g_consecutiveUpdateFailures++;
+    
+    /** Check for too many consecutive failures */
+    if (g_consecutiveUpdateFailures >= MAX_CONSECUTIVE_FAILURES) {
+        WriteLog(LOG_LEVEL_WARNING, 
+                 "Animation update failed %d times consecutively, entering fallback mode",
+                 g_consecutiveUpdateFailures);
+        return TRUE;
+    }
+    
+    /** Check for timeout */
+    DWORD currentTime = GetTickCount();
+    if (g_lastSuccessfulUpdateTime > 0) {
+        DWORD elapsed = currentTime - g_lastSuccessfulUpdateTime;
+        if (elapsed > UPDATE_TIMEOUT_MS) {
+            WriteLog(LOG_LEVEL_WARNING, 
+                     "No successful update for %dms, entering fallback mode", elapsed);
+            return TRUE;
+        }
+    }
+    
+    return FALSE;
+}
+
+/**
+ * @brief Fallback to logo icon when animation fails
+ */
+static void FallbackToLogoIcon(void) {
+    WriteLog(LOG_LEVEL_INFO, "Falling back to logo icon due to animation errors");
+    
+    /** Reset counters */
+    g_consecutiveUpdateFailures = 0;
+    g_lastSuccessfulUpdateTime = GetTickCount();
+    
+    /** Switch to logo */
+    SetCurrentAnimationName("__logo__");
+}
+
 /** @brief Trim whitespace and quotes from both ends of a mutable C string. */
 static void NormalizeAnimConfigValue(char* s) {
     if (!s) return;
@@ -356,7 +481,13 @@ static void UpdateTrayIconToCurrentFrame(void) {
     }
     
     int count = g_isPreviewActive ? g_previewCount : g_trayIconCount;
-    if (count <= 0) return;
+    if (count <= 0) {
+        /** No frames available - check if we should fallback */
+        if (RecordFailedUpdate()) {
+            FallbackToLogoIcon();
+        }
+        return;
+    }
     
     /** Ensure index is valid */
     if (g_isPreviewActive) {
@@ -365,15 +496,39 @@ static void UpdateTrayIconToCurrentFrame(void) {
         if (g_trayIconIndex >= g_trayIconCount) g_trayIconIndex = 0;
     }
     
+    HICON hIcon = g_isPreviewActive ? g_previewIcons[g_previewIndex] : g_trayIcons[g_trayIconIndex];
+    
+    /** Check if icon is valid */
+    if (!hIcon) {
+        WriteLog(LOG_LEVEL_WARNING, "Attempting to update with NULL icon at index %d", 
+                 g_isPreviewActive ? g_previewIndex : g_trayIconIndex);
+        
+        if (RecordFailedUpdate()) {
+            FallbackToLogoIcon();
+        }
+        return;
+    }
+    
     /** Update tray icon (safe: we're in main UI thread) */
     NOTIFYICONDATAW nid = {0};
     nid.cbSize = sizeof(nid);
     nid.hWnd = g_trayHwnd;
     nid.uID = CLOCK_ID_TRAY_APP_ICON;
     nid.uFlags = NIF_ICON;
-    nid.hIcon = g_isPreviewActive ? g_previewIcons[g_previewIndex] : g_trayIcons[g_trayIconIndex];
+    nid.hIcon = hIcon;
     
-    Shell_NotifyIconW(NIM_MODIFY, &nid);
+    BOOL success = Shell_NotifyIconW(NIM_MODIFY, &nid);
+    
+    if (success) {
+        RecordSuccessfulUpdate();
+    } else {
+        WriteLog(LOG_LEVEL_WARNING, "Shell_NotifyIconW failed to update tray icon");
+        
+        if (RecordFailedUpdate()) {
+            FallbackToLogoIcon();
+        }
+        return;
+    }
     
     /** Update adaptive monitoring */
     AdaptiveFrameRateUpdate();
@@ -698,7 +853,8 @@ static HICON CreateIconFromWICSource(IWICImagingFactory* pFactory,
                         /** Copy scaled pixels into centered position */
                         UINT scaledStride = dstW * 4;
                         UINT scaledSize = dstH * scaledStride;
-                        BYTE* tmp = (BYTE*)malloc(scaledSize);
+                        /** Use memory pool for temporary buffer */
+                        BYTE* tmp = (BYTE*)MemoryPool_Alloc(scaledSize);
                         if (tmp) {
                             if (SUCCEEDED(pConverter->lpVtbl->CopyPixels(pConverter, NULL, scaledStride, scaledSize, tmp))) {
                                 int xoff = (cx - (int)dstW) / 2;
@@ -711,7 +867,7 @@ static HICON CreateIconFromWICSource(IWICImagingFactory* pFactory,
                                     memcpy(dstRow, srcRow, scaledStride);
                                 }
                             }
-                            free(tmp);
+                            MemoryPool_Free(tmp);
                         }
 
                         ICONINFO ii; ZeroMemory(&ii, sizeof(ii));
@@ -774,7 +930,25 @@ static HICON CreateIconFromPBGRA(IWICImagingFactory* pFactory,
     return hIcon;
 }
 
-/** @brief Generic animated image decoding routine for GIF and WebP */
+/**
+ * @brief Generic animated image decoding routine for GIF and WebP
+ * 
+ * PERFORMANCE OPTIMIZATION:
+ * This function pre-processes and pre-blends ALL animation frames at load time,
+ * creating fully composited HICON objects for each frame. This means:
+ * 
+ * 1. NO RUNTIME BLENDING: During playback, we simply switch between pre-rendered HICONs.
+ *    There is ZERO per-frame alpha blending or pixel manipulation at runtime.
+ * 
+ * 2. MEMORY POOL: Uses a reusable memory pool for temporary buffers, eliminating
+ *    malloc/free overhead during the frame processing loop.
+ * 
+ * 3. ONE-TIME COST: All expensive operations (WIC decoding, format conversion,
+ *    disposal handling, pixel compositing, icon creation) happen once at load time.
+ * 
+ * This approach trades memory (storing pre-rendered frames) for speed (no runtime work),
+ * which is ideal for tray icon animations where smooth, low-latency updates are critical.
+ */
 static void LoadAnimatedImage(const char* utf8Path, DecodeTarget* target) {
     if (!utf8Path || !*utf8Path) return;
 
@@ -942,7 +1116,8 @@ static void LoadAnimatedImage(const char* utf8Path, DecodeTarget* target) {
                 if (SUCCEEDED(pConverter->lpVtbl->Initialize(pConverter, (IWICBitmapSource*)pFrame, &GUID_WICPixelFormat32bppPBGRA, WICBitmapDitherTypeNone, NULL, 0.0, WICBitmapPaletteTypeCustom))) {
                     UINT frameStride = frameWidth * 4;
                     UINT frameBufferSize = frameHeight * frameStride;
-                    BYTE* frameBuffer = (BYTE*)malloc(frameBufferSize);
+                    /** Use memory pool to reduce malloc/free overhead in loop */
+                    BYTE* frameBuffer = (BYTE*)MemoryPool_Alloc(frameBufferSize);
                     if (frameBuffer) {
                         if (SUCCEEDED(pConverter->lpVtbl->CopyPixels(pConverter, NULL, frameStride, frameBufferSize, frameBuffer))) {
                             if (isGif) {
@@ -966,7 +1141,7 @@ static void LoadAnimatedImage(const char* utf8Path, DecodeTarget* target) {
                                 }
                             }
                         }
-                        free(frameBuffer);
+                        MemoryPool_Free(frameBuffer);
                     }
                 }
                 pConverter->lpVtbl->Release(pConverter);
@@ -1254,12 +1429,19 @@ void StopTrayAnimation(HWND hwnd) {
     FreeIconSet(g_trayIcons, &g_trayIconCount, &g_trayIconIndex, &g_isAnimated, &g_animCanvas, TRUE);
     FreeIconSet(g_previewIcons, &g_previewCount, &g_previewIndex, &g_isPreviewAnimated, &g_previewAnimCanvas, FALSE);
     
+    /** Clean up memory pool */
+    MemoryPool_Cleanup();
+    
     /** Reset timing state */
     g_internalAccumulator = 0;
     g_internalFramePosition = 0.0;
     g_currentEffectiveInterval = TRAY_UPDATE_INTERVAL_MS;
     g_lastTrayUpdateTime = 0;
     g_consecutiveLateUpdates = 0;
+    
+    /** Reset error recovery state */
+    g_consecutiveUpdateFailures = 0;
+    g_lastSuccessfulUpdateTime = 0;
     
     g_trayHwnd = NULL;
 }
