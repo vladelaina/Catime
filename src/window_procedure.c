@@ -309,6 +309,9 @@ void ExitProgram(HWND hwnd) {
 #define HOTKEY_ID_RESTART_TIMER   110    /**< Restart current timer */
 #define HOTKEY_ID_CUSTOM_COUNTDOWN 111   /**< Custom countdown input */
 
+/** @brief Timer ID for debouncing menu selection changes to avoid preview flicker. */
+#define IDT_MENU_DEBOUNCE 500
+
 /**
  * @brief Register all global hotkeys with the system
  * @param hwnd Window handle to receive hotkey messages
@@ -995,6 +998,24 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         
         /** Timer events for countdown/countup functionality */
         case WM_TIMER: {
+            if (wp == IDT_MENU_DEBOUNCE) {
+                KillTimer(hwnd, IDT_MENU_DEBOUNCE);
+                extern void CancelAnimationPreview(void);
+                CancelAnimationPreview();
+                if (IS_PREVIEWING || IS_COLOR_PREVIEWING || IS_TIME_FORMAT_PREVIEWING || IS_MILLISECONDS_PREVIEWING) {
+                    if (IS_PREVIEWING) {
+                        CancelFontPreview();
+                    }
+                    IS_COLOR_PREVIEWING = FALSE;
+                    IS_TIME_FORMAT_PREVIEWING = FALSE;
+                    if (IS_MILLISECONDS_PREVIEWING) {
+                        IS_MILLISECONDS_PREVIEWING = FALSE;
+                        ResetTimerWithInterval(hwnd);
+                    }
+                    InvalidateRect(hwnd, NULL, TRUE);
+                }
+                return 0;
+            }
             if (HandleTimerEvent(hwnd, wp)) {
                 break;
             }
@@ -1018,12 +1039,28 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         
         /** Menu and command message processing */
         case WM_COMMAND: {
+            WORD cmd = LOWORD(wp);
+
+            BOOL isAnimationSelectionCommand = 
+                (cmd >= CLOCK_IDM_ANIMATIONS_BASE && cmd < CLOCK_IDM_ANIMATIONS_BASE + 1000) ||
+                cmd == CLOCK_IDM_ANIMATIONS_USE_LOGO ||
+                cmd == CLOCK_IDM_ANIMATIONS_USE_CPU ||
+                cmd == CLOCK_IDM_ANIMATIONS_USE_MEM;
+            
+            if (isAnimationSelectionCommand) {
+                KillTimer(hwnd, IDT_MENU_DEBOUNCE);
+            }
+            
             /** Always cancel any transient previews when a command is about to execute */
-            extern void CancelAnimationPreview(void);
-            CancelAnimationPreview();
+            // Only cancel if it's not a direct animation selection, to prevent flicker.
+            if (!isAnimationSelectionCommand) {
+                extern void CancelAnimationPreview(void);
+                CancelAnimationPreview();
+            }
+
             /** Handle color selection from menu (IDs 201+) */
-            if (LOWORD(wp) >= 201 && LOWORD(wp) < 201 + COLOR_OPTIONS_COUNT) {
-                int colorIndex = LOWORD(wp) - 201;
+            if (cmd >= 201 && cmd < 201 + COLOR_OPTIONS_COUNT) {
+                int colorIndex = cmd - 201;
                 if (colorIndex >= 0 && colorIndex < COLOR_OPTIONS_COUNT) {
                     strncpy(CLOCK_TEXT_COLOR, COLOR_OPTIONS[colorIndex].hexColor, 
                             sizeof(CLOCK_TEXT_COLOR) - 1);
@@ -1037,7 +1074,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     return 0;
                 }
             }
-            WORD cmd = LOWORD(wp);
             switch (cmd) {
                 /** Custom countdown timer setup with user input */
                 case 101: {
@@ -2477,22 +2513,11 @@ refresh_window:
 
             /** If mouse moved outside any menu item (including outside menu window), cancel previews */
             if (menuItem == 0xFFFF) {
-                /** Always cancel animation preview regardless of other preview flags */
-                extern void CancelAnimationPreview(void);
-                CancelAnimationPreview();
-                if (IS_PREVIEWING || IS_COLOR_PREVIEWING || IS_TIME_FORMAT_PREVIEWING || IS_MILLISECONDS_PREVIEWING) {
-                    if (IS_PREVIEWING) {
-                        CancelFontPreview();
-                    }
-                    IS_COLOR_PREVIEWING = FALSE;
-                    IS_TIME_FORMAT_PREVIEWING = FALSE;
-                    if (IS_MILLISECONDS_PREVIEWING) {
-                        IS_MILLISECONDS_PREVIEWING = FALSE;
-                        ResetTimerWithInterval(hwnd);
-                    }
-                    InvalidateRect(hwnd, NULL, TRUE);
-                    return 0;
-                }
+                KillTimer(hwnd, IDT_MENU_DEBOUNCE);
+                SetTimer(hwnd, IDT_MENU_DEBOUNCE, 50, NULL);
+                return 0;
+            } else {
+                KillTimer(hwnd, IDT_MENU_DEBOUNCE);
             }
 
             if (hMenu != NULL) {
@@ -2552,10 +2577,12 @@ refresh_window:
                                 wchar_t fullItemPathW[MAX_PATH];
                                 _snwprintf_s(fullItemPathW, MAX_PATH, _TRUNCATE, L"%s\\%s", folderPathW, findDataW->cFileName);
 
+                                /** Handle regular font files */
                                 if (!(findDataW->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
                                     wchar_t* extW = wcsrchr(findDataW->cFileName, L'.');
                                     if (extW && (_wcsicmp(extW, L".ttf") == 0 || _wcsicmp(extW, L".otf") == 0)) {
                                         if (*currentId == targetId) {
+                                            /** Calculate relative path from fonts folder root */
                                             size_t rootLen = wcslen(fontsFolderRootW);
                                             if (_wcsnicmp(fullItemPathW, fontsFolderRootW, rootLen) == 0) {
                                                 const wchar_t* relativeW = fullItemPathW + rootLen;
@@ -2575,6 +2602,7 @@ refresh_window:
                                         (*currentId)++;
                                     }
                                 } else {
+                                    /** Handle subdirectories recursively */
                                     if (FindFontNameByIdRecursiveW(fullItemPathW, targetId, currentId, foundRelativePathW, fontsFolderRootW)) {
                                         FindClose(hFind);
                                         free(searchPathW);
@@ -2598,6 +2626,7 @@ refresh_window:
                         wchar_t foundRelativePathW[MAX_PATH] = {0};
 
                         if (FindFontNameByIdRecursiveW(fontsFolderRootW, menuItem, &currentIndex, foundRelativePathW, fontsFolderRootW)) {
+                            /** Convert relative wide path to UTF-8 for SwitchFont */
                             char foundFontNameUTF8[MAX_PATH];
                             WideCharToMultiByte(CP_UTF8, 0, foundRelativePathW, -1, foundFontNameUTF8, MAX_PATH, NULL, NULL);
 
@@ -2800,22 +2829,8 @@ refresh_window:
         
         /** Menu loop exit cleanup */
         case WM_EXITMENULOOP: {
-            extern void CancelAnimationPreview(void);
-            CancelAnimationPreview();
-            if (IS_PREVIEWING || IS_COLOR_PREVIEWING || IS_TIME_FORMAT_PREVIEWING || IS_MILLISECONDS_PREVIEWING) {
-                if (IS_PREVIEWING) {
-                    CancelFontPreview();
-                }
-                IS_COLOR_PREVIEWING = FALSE;
-                IS_TIME_FORMAT_PREVIEWING = FALSE;
-                
-                /** Reset timer frequency when exiting milliseconds preview */
-                if (IS_MILLISECONDS_PREVIEWING) {
-                    IS_MILLISECONDS_PREVIEWING = FALSE;
-                    ResetTimerWithInterval(hwnd);
-                }
-                InvalidateRect(hwnd, NULL, TRUE);
-            }
+            KillTimer(hwnd, IDT_MENU_DEBOUNCE);
+            SetTimer(hwnd, IDT_MENU_DEBOUNCE, 50, NULL);
             break;
         }
         

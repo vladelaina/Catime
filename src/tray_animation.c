@@ -1525,6 +1525,15 @@ BOOL SetCurrentAnimationName(const char* name) {
         LoadTrayIcons();
         g_trayIconIndex = 0;
         g_internalFramePosition = 0.0;
+        /** Ensure we are not in preview mode so periodic percent updates are not suppressed */
+        if (g_isPreviewActive) {
+            g_isPreviewActive = FALSE;
+            FreeIconSet(g_previewIcons, &g_previewCount, &g_previewIndex, &g_isPreviewAnimated, &g_previewAnimCanvas, FALSE);
+        }
+        /** Immediately update percent icon so user sees change without extra interaction */
+        if (g_trayHwnd) {
+            UpdateTrayIconToCurrentFrame();
+        }
         /** Timer continues running, no need to restart for __cpu__/__mem__ */
         return TRUE;
     }
@@ -1573,7 +1582,12 @@ BOOL SetCurrentAnimationName(const char* name) {
     LoadTrayIcons();
     g_trayIconIndex = 0;
     g_internalFramePosition = 0.0;
-    if (g_trayHwnd && g_trayIconCount > 0) {
+    /** If a preview was active, finalize it now so we switch to the real selection without delay */
+    if (g_isPreviewActive) {
+        g_isPreviewActive = FALSE;
+        FreeIconSet(g_previewIcons, &g_previewCount, &g_previewIndex, &g_isPreviewAnimated, &g_previewAnimCanvas, FALSE);
+    }
+    if (g_trayHwnd) {
         UpdateTrayIconToCurrentFrame();
     }
     /** Timer is already running, no need to restart */
