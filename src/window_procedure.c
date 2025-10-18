@@ -635,37 +635,31 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             char config_path[MAX_PATH] = {0};
             GetConfigPath(config_path, MAX_PATH);
 
+            /** Track if any display property changed */
+            BOOL displayChanged = FALSE;
+
             /** CLOCK_TEXT_COLOR */
-            ReadIniString(INI_SECTION_DISPLAY, "CLOCK_TEXT_COLOR", "#FFB6C1", CLOCK_TEXT_COLOR, sizeof(CLOCK_TEXT_COLOR), config_path);
-            InvalidateRect(hwnd, NULL, TRUE);
+            char newColor[32] = {0};
+            ReadIniString(INI_SECTION_DISPLAY, "CLOCK_TEXT_COLOR", CLOCK_TEXT_COLOR, newColor, sizeof(newColor), config_path);
+            if (strcmp(newColor, CLOCK_TEXT_COLOR) != 0) {
+                strncpy(CLOCK_TEXT_COLOR, newColor, sizeof(CLOCK_TEXT_COLOR) - 1);
+                CLOCK_TEXT_COLOR[sizeof(CLOCK_TEXT_COLOR) - 1] = '\0';
+                displayChanged = TRUE;
+            }
 
             /** CLOCK_BASE_FONT_SIZE */
             int newBaseSize = ReadIniInt(INI_SECTION_DISPLAY, "CLOCK_BASE_FONT_SIZE", CLOCK_BASE_FONT_SIZE, config_path);
-            if (newBaseSize != CLOCK_BASE_FONT_SIZE) {
+            if (newBaseSize != CLOCK_BASE_FONT_SIZE && newBaseSize > 0) {
                 CLOCK_BASE_FONT_SIZE = newBaseSize;
-                InvalidateRect(hwnd, NULL, TRUE);
+                displayChanged = TRUE;
             }
 
-            /** FONT_FILE_NAME => load font resource and update FONT_INTERNAL_NAME */
-            char newFontName[MAX_PATH] = {0};
-            ReadIniString(INI_SECTION_DISPLAY, "FONT_FILE_NAME", FONT_FILE_NAME, newFontName, sizeof(newFontName), config_path);
-            if (strcmp(newFontName, FONT_FILE_NAME) != 0) {
-                strncpy(FONT_FILE_NAME, newFontName, sizeof(FONT_FILE_NAME) - 1);
-                FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
-                /** Resolve relative fonts folder and load, get internal name */
-                const char* localappdata_prefix = "%LOCALAPPDATA%\\Catime\\resources\\fonts\\";
-                char actualFontFileName[MAX_PATH];
-                if (_strnicmp(FONT_FILE_NAME, localappdata_prefix, (int)strlen(localappdata_prefix)) == 0) {
-                    strncpy(actualFontFileName, FONT_FILE_NAME + strlen(localappdata_prefix), sizeof(actualFontFileName) - 1);
-                    actualFontFileName[sizeof(actualFontFileName) - 1] = '\0';
-                } else {
-                    strncpy(actualFontFileName, FONT_FILE_NAME, sizeof(actualFontFileName) - 1);
-                    actualFontFileName[sizeof(actualFontFileName) - 1] = '\0';
-                }
-                extern BOOL LoadFontByNameAndGetRealName(HINSTANCE, const char*, char*, size_t);
-                if (LoadFontByNameAndGetRealName(GetModuleHandle(NULL), actualFontFileName, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME))) {
-                    InvalidateRect(hwnd, NULL, TRUE);
-                }
+            /** FONT_FILE_NAME => skip entirely, font should remain loaded from startup/manual changes only */
+            /** This prevents unnecessary font reloads when unrelated config changes trigger WM_APP_DISPLAY_CHANGED */
+
+            /** Trigger repaint only if any display property actually changed */
+            if (displayChanged) {
+                InvalidateRect(hwnd, NULL, TRUE);
             }
 
             /** WINDOW_POS + SCALE + TOPMOST */
@@ -740,21 +734,34 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             char startupMode[20] = {0};
             ReadIniString(INI_SECTION_TIMER, "STARTUP_MODE", CLOCK_STARTUP_MODE, startupMode, sizeof(startupMode), config_path);
 
-            /** Apply basic flags */
-            CLOCK_USE_24HOUR = newUse24;
-            CLOCK_SHOW_SECONDS = newShowSeconds;
-            CLOCK_TIME_FORMAT = newFormat;
+            /** Track if any display-affecting settings changed */
+            BOOL timerDisplayChanged = FALSE;
+            
+            /** Apply basic flags that affect display */
+            if (newUse24 != CLOCK_USE_24HOUR) {
+                CLOCK_USE_24HOUR = newUse24;
+                timerDisplayChanged = TRUE;
+            }
+            if (newShowSeconds != CLOCK_SHOW_SECONDS) {
+                CLOCK_SHOW_SECONDS = newShowSeconds;
+                timerDisplayChanged = TRUE;
+            }
+            if (newFormat != CLOCK_TIME_FORMAT) {
+                CLOCK_TIME_FORMAT = newFormat;
+                timerDisplayChanged = TRUE;
+            }
 
             /** Handle milliseconds interval change */
             if (newShowMs != CLOCK_SHOW_MILLISECONDS) {
                 CLOCK_SHOW_MILLISECONDS = newShowMs;
                 ResetTimerWithInterval(hwnd);
+                timerDisplayChanged = TRUE;
             }
 
-            /** Update default start time (runtime cache) */
+            /** Update default start time (runtime cache, no display impact) */
             CLOCK_DEFAULT_START_TIME = newDefaultStart;
 
-            /** Update timeout action fields (with same filtering policy as config.c) */
+            /** Update timeout action fields (no display impact) */
             strncpy(CLOCK_TIMEOUT_TEXT, timeoutText, sizeof(CLOCK_TIMEOUT_TEXT) - 1);
             CLOCK_TIMEOUT_TEXT[sizeof(CLOCK_TIMEOUT_TEXT) - 1] = '\0';
 
@@ -777,7 +784,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 CLOCK_TIMEOUT_WEBSITE_URL[0] = L'\0';
             }
 
-            /** Re-parse time options */
+            /** Re-parse time options (no display impact - only affects menu) */
             time_options_count = 0;
             memset(time_options, 0, sizeof(time_options));
             char *tok = strtok(options, ",");
@@ -787,11 +794,14 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 tok = strtok(NULL, ",");
             }
 
-            /** Update startup mode string in memory */
+            /** Update startup mode string in memory (no display impact) */
             strncpy(CLOCK_STARTUP_MODE, startupMode, sizeof(CLOCK_STARTUP_MODE) - 1);
             CLOCK_STARTUP_MODE[sizeof(CLOCK_STARTUP_MODE) - 1] = '\0';
 
-            InvalidateRect(hwnd, NULL, TRUE);
+            /** Only repaint if timer display settings actually changed */
+            if (timerDisplayChanged) {
+                InvalidateRect(hwnd, NULL, TRUE);
+            }
             return 0;
         }
         case WM_APP_POMODORO_CHANGED: {

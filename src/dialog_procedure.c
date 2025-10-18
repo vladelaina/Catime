@@ -449,10 +449,21 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                     }
                     
                     if (valid && count > 0) {
-                        /** Save valid options and reload configuration */
+                        /** Save valid options - no need to reload entire config */
                         WriteConfigTimeOptions(options);
-                        extern void ReadConfig(void);
-                        ReadConfig();
+                        /** Update in-memory time_options array */
+                        extern int time_options[];
+                        extern int time_options_count;
+                        time_options_count = 0;
+                        char optionsCopy[256];
+                        strncpy(optionsCopy, options, sizeof(optionsCopy) - 1);
+                        optionsCopy[sizeof(optionsCopy) - 1] = '\0';
+                        char* tok = strtok(optionsCopy, ",");
+                        while (tok && time_options_count < 10) {
+                            while (*tok == ' ') tok++;
+                            time_options[time_options_count++] = atoi(tok);
+                            tok = strtok(NULL, ",");
+                        }
                         g_hwndInputDialog = NULL;
                         EndDialog(hwndDlg, IDOK);
                     } else {
