@@ -489,7 +489,34 @@ static void UpdateTrayIconToCurrentFrame(void) {
     
     int count = g_isPreviewActive ? g_previewCount : g_trayIconCount;
     if (count <= 0) {
-        /** No frames available - check if we should fallback */
+        /** No frames available - if previewing, just cancel preview; otherwise check fallback */
+        if (g_isPreviewActive) {
+            /** Preview failed to load, silently cancel preview without changing main animation */
+            g_isPreviewActive = FALSE;
+            return;
+        }
+        /** For main animation: if it's percent icon, update it directly; otherwise fallback */
+        if (_stricmp(g_animationName, "__cpu__") == 0 || _stricmp(g_animationName, "__mem__") == 0) {
+            /** Percent icons are handled by periodic updater, trigger an update */
+            float cpu = 0.0f, mem = 0.0f;
+            SystemMonitor_GetUsage(&cpu, &mem);
+            int p = (_stricmp(g_animationName, "__cpu__") == 0) ? (int)(cpu + 0.5f) : (int)(mem + 0.5f);
+            if (p < 0) p = 0; if (p > 100) p = 100;
+            HICON hIcon = CreatePercentIcon16(p);
+            if (hIcon) {
+                NOTIFYICONDATAW nid = {0};
+                nid.cbSize = sizeof(nid);
+                nid.hWnd = g_trayHwnd;
+                nid.uID = CLOCK_ID_TRAY_APP_ICON;
+                nid.uFlags = NIF_ICON;
+                nid.hIcon = hIcon;
+                Shell_NotifyIconW(NIM_MODIFY, &nid);
+                DestroyIcon(hIcon);
+                RecordSuccessfulUpdate();
+            }
+            return;
+        }
+        /** For other animations, check if we should fallback */
         if (RecordFailedUpdate()) {
             FallbackToLogoIcon();
         }
@@ -509,6 +536,12 @@ static void UpdateTrayIconToCurrentFrame(void) {
     if (!hIcon) {
         WriteLog(LOG_LEVEL_WARNING, "Attempting to update with NULL icon at index %d", 
                  g_isPreviewActive ? g_previewIndex : g_trayIconIndex);
+        
+        /** If previewing and icon is invalid, cancel preview; otherwise fallback */
+        if (g_isPreviewActive) {
+            g_isPreviewActive = FALSE;
+            return;
+        }
         
         if (RecordFailedUpdate()) {
             FallbackToLogoIcon();
