@@ -502,7 +502,7 @@ void ShowColorMenu(HWND hwnd) {
         }
 
         MultiByteToWideChar(CP_UTF8, 0, folderPath, -1, wFolderPath, MAX_PATH);
-        swprintf(wSearchPath, MAX_PATH, L"%s\\*", wFolderPath);
+        _snwprintf_s(wSearchPath, MAX_PATH, _TRUNCATE, L"%s\\*", wFolderPath);
         
         /** Collect all entries first */
         FontEntry* entries = NULL;
@@ -537,7 +537,7 @@ void ShowColorMenu(HWND hwnd) {
                 FontEntry* entry = &entries[entryCount];
                 wcsncpy(entry->name, findData->cFileName, MAX_PATH - 1);
                 entry->name[MAX_PATH - 1] = L'\0';
-                swprintf(entry->fullPath, MAX_PATH, L"%s\\%s", wFolderPath, findData->cFileName);
+                _snwprintf_s(entry->fullPath, MAX_PATH, _TRUNCATE, L"%s\\%s", wFolderPath, findData->cFileName);
                 entry->is_dir = (findData->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
                 entry->isCurrentFont = FALSE;
                 entry->subFolderStatus = 0;
