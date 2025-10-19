@@ -331,6 +331,23 @@ With special appreciation to [猫屋敷梨梨Official](https://space.bilibili.co
       <td align="center" valign="top" width="14.28%">
         <a href="https://github.com/darkmatter2048"><img src="https://vladelaina.github.io/Catime/assets/Contributors/DaYe.webp" width="100px;" alt="DaYe"/><br /><sub><b>DaYe</b></sub></a><br />
       </td>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://github.com/zct4257"><img src="https://vladelaina.github.io/Catime/assets/Contributors/zct4257.webp" width="100px;" alt="zct4257"/><br /><sub><b>zct4257</b></sub></a><br />
+      </td>
+    </tr>
+    <tr>
+      <td align="center" valign="top" width="14.28%">
+        <a href=""><img src="https://vladelaina.github.io/Catime/assets/Contributors/%E5%B0%8F%E8%B4%A5%E5%8F%B6.webp" width="100px;" alt="小败叶"/><br /><sub><b>小败叶</b></sub></a><br />
+      </td>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://space.bilibili.com/25249757"><img src="https://vladelaina.github.io/Catime/assets/Contributors/%E9%97%B2%E4%BA%BA%E4%B8%8D%E6%A2%A6%E5%90%9BQ.webp" width="100px;" alt="闲人不梦君Q"/><br /><sub><b>闲人不梦君Q</b></sub></a><br />
+      </td>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://space.bilibili.com/1191321078"><img src="https://vladelaina.github.io/Catime/assets/Contributors/%E6%9D%8E%E8%89%AF.webp" width="100px;" alt="李良"/><br /><sub><b>李良</b></sub></a><br />
+      </td>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://github.com/imxhe"><img src="https://vladelaina.github.io/Catime/assets/Contributors/iweek.webp" width="100px;" alt="imxhe"/><br /><sub><b>imxhe</b></sub></a><br />
+      </td>
     </tr>
   </tbody>
 </table>
