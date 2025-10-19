@@ -124,6 +124,7 @@ static int g_trayIconIndex = 0;
 static UINT g_trayInterval = 0;
 static HWND g_trayHwnd = NULL;
 static char g_animationName[MAX_PATH] = "__logo__"; /** current folder under animations */
+static char g_previewAnimationName[MAX_PATH] = ""; /** name of animation being previewed */
 static BOOL g_isPreviewActive = FALSE; /** preview mode flag */
 static HICON g_previewIcons[MAX_TRAY_FRAMES];
 static int g_previewCount = 0;
@@ -1568,6 +1569,70 @@ BOOL SetCurrentAnimationName(const char* name) {
     }
     if (!valid) return FALSE;
 
+    /**
+     * SEAMLESS PREVIEW PROMOTION:
+     * If user is confirming a preview of the same animation, transfer resources
+     * instead of reloading to maintain continuous playback without restart.
+     */
+    if (g_isPreviewActive && g_previewAnimationName[0] != '\0' && 
+        _stricmp(g_previewAnimationName, name) == 0 && g_previewCount > 0) {
+        
+        /** Thread-safe resource transfer */
+        if (g_criticalSectionInitialized) {
+            EnterCriticalSection(&g_animCriticalSection);
+        }
+        
+        /** Free old main animation resources */
+        FreeIconSet(g_trayIcons, &g_trayIconCount, &g_trayIconIndex, &g_isAnimated, &g_animCanvas, TRUE);
+        
+        /** Transfer preview resources to main (move ownership, no copy) */
+        for (int i = 0; i < g_previewCount; i++) {
+            g_trayIcons[i] = g_previewIcons[i];
+            g_previewIcons[i] = NULL;  /** Prevent double-free */
+            g_frameDelaysMs[i] = g_previewFrameDelaysMs[i];
+        }
+        g_trayIconCount = g_previewCount;
+        g_trayIconIndex = g_previewIndex;  /** Maintain current frame position */
+        g_isAnimated = g_isPreviewAnimated;
+        
+        /** Canvas not transferred (already used to create HICONs), just free preview canvas */
+        if (g_previewAnimCanvas) {
+            free(g_previewAnimCanvas);
+            g_previewAnimCanvas = NULL;
+        }
+        
+        /** Clear preview state without freeing transferred resources */
+        g_previewCount = 0;
+        g_previewIndex = 0;
+        g_isPreviewAnimated = FALSE;
+        g_isPreviewActive = FALSE;
+        g_previewAnimationName[0] = '\0';
+        
+        if (g_criticalSectionInitialized) {
+            LeaveCriticalSection(&g_animCriticalSection);
+        }
+        
+        /** Update animation name and persist to config */
+        strncpy(g_animationName, name, sizeof(g_animationName) - 1);
+        g_animationName[sizeof(g_animationName) - 1] = '\0';
+        
+        char config_path[MAX_PATH] = {0};
+        GetConfigPath(config_path, sizeof(config_path));
+        char animPath[MAX_PATH];
+        snprintf(animPath, sizeof(animPath), "%%LOCALAPPDATA%%\\Catime\\resources\\animations\\%s", g_animationName);
+        WriteIniString("Animation", "ANIMATION_PATH", animPath, config_path);
+        
+        /** DON'T reset g_internalFramePosition - maintain smooth continuation */
+        
+        /** Update tray icon to current frame (seamless, no restart) */
+        if (g_trayHwnd) {
+            UpdateTrayIconToCurrentFrame();
+        }
+        
+        return TRUE;
+    }
+
+    /** NORMAL PATH: Load animation from scratch */
     strncpy(g_animationName, name, sizeof(g_animationName) - 1);
     g_animationName[sizeof(g_animationName) - 1] = '\0';
 
@@ -1585,6 +1650,7 @@ BOOL SetCurrentAnimationName(const char* name) {
     /** If a preview was active, finalize it now so we switch to the real selection without delay */
     if (g_isPreviewActive) {
         g_isPreviewActive = FALSE;
+        g_previewAnimationName[0] = '\0';
         FreeIconSet(g_previewIcons, &g_previewCount, &g_previewIndex, &g_isPreviewAnimated, &g_previewAnimCanvas, FALSE);
     }
     if (g_trayHwnd) {
@@ -1599,6 +1665,10 @@ BOOL SetCurrentAnimationName(const char* name) {
 void StartAnimationPreview(const char* name) {
     if (!name || !*name) return;
 
+    /** Record preview animation name for seamless promotion */
+    strncpy(g_previewAnimationName, name, sizeof(g_previewAnimationName) - 1);
+    g_previewAnimationName[sizeof(g_previewAnimationName) - 1] = '\0';
+
     LoadAnimationByName(name, TRUE);
 
     if (g_previewCount > 0) {
@@ -1610,12 +1680,17 @@ void StartAnimationPreview(const char* name) {
         UpdateTrayIconToCurrentFrame();
         
         /** Timer continues running in background, will handle preview frames */
+    } else {
+        /** Preview failed, clear name */
+        WriteLog(LOG_LEVEL_WARNING, "Animation preview failed to load: '%s'", name);
+        g_previewAnimationName[0] = '\0';
     }
 }
 
 void CancelAnimationPreview(void) {
     if (!g_isPreviewActive) return;
     g_isPreviewActive = FALSE;
+    g_previewAnimationName[0] = '\0';  /** Clear preview name */
     FreeIconSet(g_previewIcons, &g_previewCount, &g_previewIndex, &g_isPreviewAnimated, &g_previewAnimCanvas, FALSE);
     
     g_internalFramePosition = 0.0;  /** Reset frame position */
@@ -1679,12 +1754,29 @@ void ApplyAnimationPathValueNoPersist(const char* value) {
     }
     if (name[0] == '\0') return;
 
+    /**
+     * OPTIMIZATION: If this is the same animation we're already displaying,
+     * and especially if we just promoted a preview of it, don't reload.
+     * This prevents config file watcher from undoing seamless preview promotion.
+     */
+    if (_stricmp(g_animationName, name) == 0) {
+        return;  /** Already displaying this animation, maintain current state */
+    }
+
+    /** Different animation, proceed with reload */
     strncpy(g_animationName, name, sizeof(g_animationName) - 1);
     g_animationName[sizeof(g_animationName) - 1] = '\0';
 
     LoadTrayIcons();
     g_trayIconIndex = 0;
     g_internalFramePosition = 0.0;
+    
+    /** Clear any active preview since we're loading new main animation */
+    if (g_isPreviewActive) {
+        g_isPreviewActive = FALSE;
+        g_previewAnimationName[0] = '\0';
+        FreeIconSet(g_previewIcons, &g_previewCount, &g_previewIndex, &g_isPreviewAnimated, &g_previewAnimCanvas, FALSE);
+    }
     
     if (!g_trayHwnd) return;
     
