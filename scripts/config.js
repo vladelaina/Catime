@@ -6,7 +6,7 @@
 // 全局配置对象
 window.CATIME_CONFIG = {
     // 下载链接配置
-    DOWNLOAD_URL: 'https://github.com/vladelaina/Catime/releases/download/v1.2.0/catime_1.2.0.exe',
+    DOWNLOAD_URL: 'https://github.com/vladelaina/Catime/releases/download/v1.3.0/catime_1.3.0.exe',
     
     // GitHub 仓库配置
     GITHUB_URL: 'https://github.com/vladelaina/Catime',
