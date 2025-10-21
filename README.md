@@ -67,7 +67,7 @@ Your tray icon can now come alive! Catime brings powerful custom animation featu
 - **Custom Animations**: Use **GIFs**, **WebPs**, and static images like **PNG** & **JPG** as your tray icon.
 - **System Status**: Set it to display real-time **CPU** or **Memory** usage percentages.
 
-> Looking for more fun animations? Check out our companion project, [MemeTray](https://memetray.github.io/MemeTray/)!
+> Looking for more fun animations? Check out our companion project, [MemeTray](https://github.com/MemeTray/MemeTray)!
 
 
 <div align="center">
