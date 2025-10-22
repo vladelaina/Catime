@@ -528,6 +528,72 @@ BOOL WriteIniBool(const char* section, const char* key, BOOL value,
 
 
 /**
+ * @brief Unified atomic configuration update function (thread-safe, single key-value)
+ * @param section INI section name (e.g., "Timer", "Display")
+ * @param key Configuration key name
+ * @param value String value to write
+ * @return TRUE on success, FALSE on failure
+ * 
+ * This function provides a thread-safe, atomic way to update a single configuration value.
+ * It uses the global config write mutex and Windows' WritePrivateProfileStringW API.
+ */
+static BOOL UpdateConfigKeyValueAtomic(const char* section, const char* key, const char* value) {
+    if (!section || !key || !value) return FALSE;
+    
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    
+    AcquireConfigWriteLock();
+    BOOL result = WriteIniString(section, key, value, config_path);
+    ReleaseConfigWriteLock();
+    
+    return result;
+}
+
+
+/**
+ * @brief Unified atomic configuration update function for integer values
+ * @param section INI section name
+ * @param key Configuration key name
+ * @param value Integer value to write
+ * @return TRUE on success, FALSE on failure
+ */
+static BOOL UpdateConfigIntAtomic(const char* section, const char* key, int value) {
+    if (!section || !key) return FALSE;
+    
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    
+    AcquireConfigWriteLock();
+    BOOL result = WriteIniInt(section, key, value, config_path);
+    ReleaseConfigWriteLock();
+    
+    return result;
+}
+
+
+/**
+ * @brief Unified atomic configuration update function for boolean values
+ * @param section INI section name
+ * @param key Configuration key name
+ * @param value Boolean value to write
+ * @return TRUE on success, FALSE on failure
+ */
+static BOOL UpdateConfigBoolAtomic(const char* section, const char* key, BOOL value) {
+    if (!section || !key) return FALSE;
+    
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    
+    AcquireConfigWriteLock();
+    BOOL result = WriteIniBool(section, key, value, config_path);
+    ReleaseConfigWriteLock();
+    
+    return result;
+}
+
+
+/**
  * @brief Read boolean value from INI file with Unicode support
  * @param section INI section name
  * @param key INI key name
@@ -1586,110 +1652,18 @@ void ReadConfig() {
  * Filters dangerous actions (RESTART/SHUTDOWN/SLEEP) to MESSAGE for security
  */
 void WriteConfigTimeoutAction(const char* action) {
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    
-    /** Convert paths to wide character for Unicode support */
-    wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-    
-    FILE* file = _wfopen(wconfig_path, L"r");
-    if (!file) return;
-    
-    char temp_path[MAX_PATH];
-    AcquireConfigWriteLock();
-    if (!CreateUniqueTempPathInConfigDir(config_path, temp_path, MAX_PATH)) {
-        ReleaseConfigWriteLock();
-        fclose(file);
-        return;
-    }
-    
-    wchar_t wtemp_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
-    
-    FILE* temp = _wfopen(wtemp_path, L"w");
-    if (!temp) {
-        fclose(file);
-        return;
-    }
-    
-    char line[256];
-    BOOL found = FALSE;
-    
     /** Filter dangerous system actions for security */
     const char* actual_action = action;
     if (strcmp(action, "RESTART") == 0 || strcmp(action, "SHUTDOWN") == 0 || strcmp(action, "SLEEP") == 0) {
         actual_action = "MESSAGE";
     }
     
-    while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, "CLOCK_TIMEOUT_ACTION=", 21) == 0) {
-            fprintf(temp, "CLOCK_TIMEOUT_ACTION=%s\n", actual_action);
-            found = TRUE;
-        } else {
-            fputs(line, temp);
-        }
-    }
-    
-    if (!found) {
-        fprintf(temp, "CLOCK_TIMEOUT_ACTION=%s\n", actual_action);
-    }
-    
-    fclose(file);
-    fclose(temp);
-
-    ReplaceFileUtf8(config_path, temp_path);
-    ReleaseConfigWriteLock();
+    UpdateConfigKeyValueAtomic(INI_SECTION_TIMER, "CLOCK_TIMEOUT_ACTION", actual_action);
 }
 
 
 void WriteConfigTimeOptions(const char* options) {
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    char temp_path[MAX_PATH];
-    AcquireConfigWriteLock();
-    if (!CreateUniqueTempPathInConfigDir(config_path, temp_path, MAX_PATH)) {
-        ReleaseConfigWriteLock();
-        return;
-    }
-    FILE *file, *temp_file;
-    char line[256];
-    int found = 0;
-    
-    wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-    
-    file = _wfopen(wconfig_path, L"r");
-    wchar_t wtemp_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
-    
-    temp_file = _wfopen(wtemp_path, L"w");
-    
-    if (!file || !temp_file) {
-        if (file) fclose(file);
-        if (temp_file) fclose(temp_file);
-        ReleaseConfigWriteLock();
-        return;
-    }
-    
-    while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, "CLOCK_TIME_OPTIONS=", 19) == 0) {
-            fprintf(temp_file, "CLOCK_TIME_OPTIONS=%s\n", options);
-            found = 1;
-        } else {
-            fputs(line, temp_file);
-        }
-    }
-    
-    if (!found) {
-        fprintf(temp_file, "CLOCK_TIME_OPTIONS=%s\n", options);
-    }
-    
-    fclose(file);
-    fclose(temp_file);
-
-    ReplaceFileUtf8(config_path, temp_path);
-    ReleaseConfigWriteLock();
+    UpdateConfigKeyValueAtomic(INI_SECTION_TIMER, "CLOCK_TIME_OPTIONS", options);
 }
 
 
@@ -1884,57 +1858,12 @@ char* UTF8ToANSI(const char* utf8Str) {
  * @param long_break Long break duration in seconds
  */
 void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    char temp_path[MAX_PATH];
-    AcquireConfigWriteLock();
-    if (!CreateUniqueTempPathInConfigDir(config_path, temp_path, MAX_PATH)) {
-        ReleaseConfigWriteLock();
-        return;
-    }
-    FILE *file, *temp_file;
-    char line[256];
-    int found = 0;
+    /** Format pomodoro times as comma-separated string */
+    char timesStr[128];
+    snprintf(timesStr, sizeof(timesStr), "%d,%d,%d", work, short_break, long_break);
     
     /** Persist only; runtime will be updated by watcher */
-    
-    wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-    
-    file = _wfopen(wconfig_path, L"r");
-    wchar_t wtemp_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
-    
-    temp_file = _wfopen(wtemp_path, L"w");
-    
-    if (!file || !temp_file) {
-        if (file) fclose(file);
-        if (temp_file) fclose(temp_file);
-        ReleaseConfigWriteLock();
-        return;
-    }
-    
-    /** Update existing pomodoro times entry or copy other lines */
-    while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, "POMODORO_TIME_OPTIONS=", 22) == 0) {
-            fprintf(temp_file, "POMODORO_TIME_OPTIONS=%d,%d,%d\n", work, short_break, long_break);
-            found = 1;
-        } else {
-            fputs(line, temp_file);
-        }
-    }
-    
-    /** Add pomodoro times if not found in config */
-    if (!found) {
-        fprintf(temp_file, "POMODORO_TIME_OPTIONS=%d,%d,%d\n", work, short_break, long_break);
-    }
-    
-    fclose(file);
-    fclose(temp_file);
-
-    /** Replace original with updated config */
-    ReplaceFileUtf8(config_path, temp_path);
-    ReleaseConfigWriteLock();
+    UpdateConfigKeyValueAtomic(INI_SECTION_POMODORO, "POMODORO_TIME_OPTIONS", timesStr);
 }
 
 
@@ -1943,57 +1872,8 @@ void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
  * @param loop_count Number of pomodoro cycles to repeat
  */
 void WriteConfigPomodoroLoopCount(int loop_count) {
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    char temp_path[MAX_PATH];
-    AcquireConfigWriteLock();
-    if (!CreateUniqueTempPathInConfigDir(config_path, temp_path, MAX_PATH)) {
-        ReleaseConfigWriteLock();
-        return;
-    }
-    FILE *file, *temp_file;
-    char line[256];
-    int found = 0;
-    
-    wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-    
-    file = _wfopen(wconfig_path, L"r");
-    wchar_t wtemp_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
-    
-    temp_file = _wfopen(wtemp_path, L"w");
-    
-    if (!file || !temp_file) {
-        if (file) fclose(file);
-        if (temp_file) fclose(temp_file);
-        ReleaseConfigWriteLock();
-        return;
-    }
-    
-    /** Update existing loop count entry or copy other lines */
-    while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, "POMODORO_LOOP_COUNT=", 20) == 0) {
-            fprintf(temp_file, "POMODORO_LOOP_COUNT=%d\n", loop_count);
-            found = 1;
-        } else {
-            fputs(line, temp_file);
-        }
-    }
-    
-    /** Add loop count if not found in config */
-    if (!found) {
-        fprintf(temp_file, "POMODORO_LOOP_COUNT=%d\n", loop_count);
-    }
-    
-    fclose(file);
-    fclose(temp_file);
-    
-    /** Replace original with updated config */
-    ReplaceFileUtf8(config_path, temp_path);
-    ReleaseConfigWriteLock();
-    
     /** Persist only; runtime will be updated by watcher */
+    UpdateConfigIntAtomic(INI_SECTION_POMODORO, "POMODORO_LOOP_COUNT", loop_count);
 }
 
 
@@ -2002,57 +1882,7 @@ void WriteConfigPomodoroLoopCount(int loop_count) {
  * @param topmost String value "TRUE" or "FALSE" for window always on top
  */
 void WriteConfigTopmost(const char* topmost) {
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    
-    /** Convert paths to wide character for Unicode support */
-    wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-    
-    FILE* file = _wfopen(wconfig_path, L"r");
-    if (!file) return;
-    
-    char temp_path[MAX_PATH];
-    AcquireConfigWriteLock();
-    if (!CreateUniqueTempPathInConfigDir(config_path, temp_path, MAX_PATH)) {
-        ReleaseConfigWriteLock();
-        fclose(file);
-        return;
-    }
-    
-    wchar_t wtemp_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
-    
-    FILE* temp = _wfopen(wtemp_path, L"w");
-    if (!temp) {
-        fclose(file);
-        return;
-    }
-    
-    char line[256];
-    BOOL found = FALSE;
-    
-    /** Update existing topmost entry or copy other lines */
-    while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, "WINDOW_TOPMOST=", 15) == 0) {
-            fprintf(temp, "WINDOW_TOPMOST=%s\n", topmost);
-            found = TRUE;
-        } else {
-            fputs(line, temp);
-        }
-    }
-    
-    /** Add topmost setting if not found in config */
-    if (!found) {
-        fprintf(temp, "WINDOW_TOPMOST=%s\n", topmost);
-    }
-    
-    fclose(file);
-    fclose(temp);
-    
-    /** Replace original with updated config */
-    ReplaceFileUtf8(config_path, temp_path);
-    ReleaseConfigWriteLock();
+    UpdateConfigKeyValueAtomic(INI_SECTION_DISPLAY, "WINDOW_TOPMOST", topmost);
 }
 
 
@@ -2441,58 +2271,8 @@ void WriteConfigTimeoutWebsite(const char* url) {
  * @param mode Startup mode string (COUNTDOWN, COUNT_UP, NO_DISPLAY, etc.)
  */
 void WriteConfigStartupMode(const char* mode) {
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    char temp_path[MAX_PATH];
-    AcquireConfigWriteLock();
-    if (!CreateUniqueTempPathInConfigDir(config_path, temp_path, MAX_PATH)) {
-        ReleaseConfigWriteLock();
-        return;
-    }
-    
-    FILE *file, *temp_file;
-    char line[256];
-    int found = 0;
-    
-    wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-    
-    file = _wfopen(wconfig_path, L"r");
-    wchar_t wtemp_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
-    
-    temp_file = _wfopen(wtemp_path, L"w");
-    
-    if (!file || !temp_file) {
-        if (file) fclose(file);
-        if (temp_file) fclose(temp_file);
-        ReleaseConfigWriteLock();
-        return;
-    }
-    
     /** Persist to INI only; watcher will update runtime */
-    
-    /** Update existing entry or copy unchanged lines */
-    while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, "STARTUP_MODE=", 13) == 0) {
-            fprintf(temp_file, "STARTUP_MODE=%s\n", mode);
-            found = 1;
-        } else {
-            fputs(line, temp_file);
-        }
-    }
-    
-    /** Add entry if not found in existing config */
-    if (!found) {
-        fprintf(temp_file, "STARTUP_MODE=%s\n", mode);
-    }
-    
-    fclose(file);
-    fclose(temp_file);
-    
-    /** Replace original with updated config */
-    ReplaceFileUtf8(config_path, temp_path);
-    ReleaseConfigWriteLock();
+    UpdateConfigKeyValueAtomic(INI_SECTION_TIMER, "STARTUP_MODE", mode);
 }
 
 
@@ -2504,68 +2284,17 @@ void WriteConfigStartupMode(const char* mode) {
 void WriteConfigPomodoroTimeOptions(int* times, int count) {
     if (!times || count <= 0) return;
     
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    
-    /** Convert paths to wide character for Unicode support */
-    wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-    
-    FILE* file = _wfopen(wconfig_path, L"r");
-    if (!file) return;
-    
-    char temp_path[MAX_PATH];
-    AcquireConfigWriteLock();
-    if (!CreateUniqueTempPathInConfigDir(config_path, temp_path, MAX_PATH)) {
-        ReleaseConfigWriteLock();
-        fclose(file);
-        return;
-    }
-    
-    wchar_t wtemp_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
-    
-    FILE* temp = _wfopen(wtemp_path, L"w");
-    if (!temp) {
-        fclose(file);
-        ReleaseConfigWriteLock();
-        return;
-    }
-    
-    char line[MAX_PATH];
-    BOOL optionsFound = FALSE;
-    
-    /** Update existing pomodoro time options or copy other lines */
-    while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, "POMODORO_TIME_OPTIONS=", 22) == 0) {
-            fprintf(temp, "POMODORO_TIME_OPTIONS=");
-            for (int i = 0; i < count; i++) {
-                fprintf(temp, "%d", times[i]);
-                if (i < count - 1) fprintf(temp, ",");
-            }
-            fprintf(temp, "\n");
-            optionsFound = TRUE;
-        } else {
-            fputs(line, temp);
+    /** Format times array as comma-separated string */
+    char timesStr[512] = {0};
+    size_t offset = 0;
+    for (int i = 0; i < count && offset < sizeof(timesStr) - 16; i++) {
+        if (i > 0) {
+            offset += snprintf(timesStr + offset, sizeof(timesStr) - offset, ",");
         }
+        offset += snprintf(timesStr + offset, sizeof(timesStr) - offset, "%d", times[i]);
     }
     
-    /** Add pomodoro options if not found in config */
-    if (!optionsFound) {
-        fprintf(temp, "POMODORO_TIME_OPTIONS=");
-        for (int i = 0; i < count; i++) {
-            fprintf(temp, "%d", times[i]);
-            if (i < count - 1) fprintf(temp, ",");
-        }
-        fprintf(temp, "\n");
-    }
-    
-    fclose(file);
-    fclose(temp);
-    
-    /** Replace original with updated config */
-    ReplaceFileUtf8(config_path, temp_path);
-    ReleaseConfigWriteLock();
+    UpdateConfigKeyValueAtomic(INI_SECTION_POMODORO, "POMODORO_TIME_OPTIONS", timesStr);
 }
 
 
@@ -2576,13 +2305,15 @@ void WriteConfigPomodoroTimeOptions(int* times, int count) {
  * @param cycle_complete_msg Pomodoro cycle completion text
  */
 void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodoro_msg, const char* cycle_complete_msg) {
+    /** Batch update with single lock for better performance and atomicity */
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    /** Use standard WriteIniString for consistent encoding handling */
+    AcquireConfigWriteLock();
     WriteIniString(INI_SECTION_NOTIFICATION, "CLOCK_TIMEOUT_MESSAGE_TEXT", timeout_msg, config_path);
     WriteIniString(INI_SECTION_NOTIFICATION, "POMODORO_TIMEOUT_MESSAGE_TEXT", pomodoro_msg, config_path);
     WriteIniString(INI_SECTION_NOTIFICATION, "POMODORO_CYCLE_COMPLETE_TEXT", cycle_complete_msg, config_path);
+    ReleaseConfigWriteLock();
     
     /** Runtime will be updated by watcher */
 }
@@ -2708,66 +2439,7 @@ void ReadNotificationTimeoutConfig(void) {
  * @param timeout_ms Notification display timeout in milliseconds
  */
 void WriteConfigNotificationTimeout(int timeout_ms) {
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    char temp_path[MAX_PATH];
-    AcquireConfigWriteLock();
-    if (!CreateUniqueTempPathInConfigDir(config_path, temp_path, MAX_PATH)) {
-        ReleaseConfigWriteLock();
-        return;
-    }
-    
-    FILE *source_file, *temp_file;
-    
-    wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-    
-    source_file = _wfopen(wconfig_path, L"r");
-    wchar_t wtemp_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
-    
-    temp_file = _wfopen(wtemp_path, L"w");
-    
-    if (!source_file || !temp_file) {
-        if (source_file) fclose(source_file);
-        if (temp_file) fclose(temp_file);
-        ReleaseConfigWriteLock();
-        return;
-    }
-    
-    char line[1024];
-    BOOL found = FALSE;
-    
-
-    while (fgets(line, sizeof(line), source_file)) {
-
-        size_t len = strlen(line);
-        if (len > 0 && (line[len-1] == '\n' || line[len-1] == '\r')) {
-            line[--len] = '\0';
-            if (len > 0 && line[len-1] == '\r')
-                line[--len] = '\0';
-        }
-        
-        if (strncmp(line, "NOTIFICATION_TIMEOUT_MS=", 24) == 0) {
-            fprintf(temp_file, "NOTIFICATION_TIMEOUT_MS=%d\n", timeout_ms);
-            found = TRUE;
-        } else {
-            /** Copy unchanged line */
-            fprintf(temp_file, "%s\n", line);
-        }
-    }
-    
-    /** Add timeout setting if not found */
-    if (!found) {
-        fprintf(temp_file, "NOTIFICATION_TIMEOUT_MS=%d\n", timeout_ms);
-    }
-    
-    fclose(source_file);
-    fclose(temp_file);
-    
-    /** Replace original with updated config */
-    ReplaceFileUtf8(config_path, temp_path);
-    ReleaseConfigWriteLock();
+    UpdateConfigIntAtomic(INI_SECTION_NOTIFICATION, "NOTIFICATION_TIMEOUT_MS", timeout_ms);
 }
 
 
@@ -2872,66 +2544,7 @@ void ReadNotificationOpacityConfig(void) {
  * @param opacity Opacity percentage (1-100)
  */
 void WriteConfigNotificationOpacity(int opacity) {
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    char temp_path[MAX_PATH];
-    AcquireConfigWriteLock();
-    if (!CreateUniqueTempPathInConfigDir(config_path, temp_path, MAX_PATH)) {
-        ReleaseConfigWriteLock();
-        return;
-    }
-    
-    FILE *source_file, *temp_file;
-    
-    wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-    
-    source_file = _wfopen(wconfig_path, L"r");
-    wchar_t wtemp_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
-    
-    temp_file = _wfopen(wtemp_path, L"w");
-    
-    if (!source_file || !temp_file) {
-        if (source_file) fclose(source_file);
-        if (temp_file) fclose(temp_file);
-        ReleaseConfigWriteLock();
-        return;
-    }
-    
-    char line[1024];
-    BOOL found = FALSE;
-    
-
-    while (fgets(line, sizeof(line), source_file)) {
-
-        size_t len = strlen(line);
-        if (len > 0 && (line[len-1] == '\n' || line[len-1] == '\r')) {
-            line[--len] = '\0';
-            if (len > 0 && line[len-1] == '\r')
-                line[--len] = '\0';
-        }
-        
-        if (strncmp(line, "NOTIFICATION_MAX_OPACITY=", 25) == 0) {
-            fprintf(temp_file, "NOTIFICATION_MAX_OPACITY=%d\n", opacity);
-            found = TRUE;
-        } else {
-            /** Copy unchanged line */
-            fprintf(temp_file, "%s\n", line);
-        }
-    }
-    
-    /** Add opacity setting if not found */
-    if (!found) {
-        fprintf(temp_file, "NOTIFICATION_MAX_OPACITY=%d\n", opacity);
-    }
-    
-    fclose(source_file);
-    fclose(temp_file);
-    
-    /** Replace original with updated config */
-    ReplaceFileUtf8(config_path, temp_path);
-    ReleaseConfigWriteLock();
+    UpdateConfigIntAtomic(INI_SECTION_NOTIFICATION, "NOTIFICATION_MAX_OPACITY", opacity);
 }
 
 
@@ -2979,15 +2592,10 @@ void ReadNotificationTypeConfig(void) {
  * @param type Notification type enum value
  */
 void WriteConfigNotificationType(NotificationType type) {
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    
     /** Validate notification type range */
     if (type < NOTIFICATION_TYPE_CATIME || type > NOTIFICATION_TYPE_OS) {
         type = NOTIFICATION_TYPE_CATIME;
     }
-    
-    /** Persist only; runtime will be updated by watcher */
     
     /** Convert enum to string representation */
     const char* typeStr;
@@ -3006,55 +2614,8 @@ void WriteConfigNotificationType(NotificationType type) {
             break;
     }
     
-
-    char temp_path[MAX_PATH];
-    AcquireConfigWriteLock();
-    if (!CreateUniqueTempPathInConfigDir(config_path, temp_path, MAX_PATH)) {
-        ReleaseConfigWriteLock();
-        return;
-    }
-    
-    /** Convert paths to wide character for Unicode support */
-    wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-    
-    FILE *source = _wfopen(wconfig_path, L"r");
-    wchar_t wtemp_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
-    
-    FILE *target = _wfopen(wtemp_path, L"w");
-    
-    if (source && target) {
-        char line[256];
-        BOOL found = FALSE;
-        
-        /** Update existing notification type or copy other lines */
-        while (fgets(line, sizeof(line), source)) {
-            if (strncmp(line, "NOTIFICATION_TYPE=", 18) == 0) {
-                fprintf(target, "NOTIFICATION_TYPE=%s\n", typeStr);
-                found = TRUE;
-            } else {
-                fputs(line, target);
-            }
-        }
-        
-        /** Add notification type if not found in config */
-        if (!found) {
-            fprintf(target, "NOTIFICATION_TYPE=%s\n", typeStr);
-        }
-        
-        fclose(source);
-        fclose(target);
-        
-        /** Replace original with updated config */
-        ReplaceFileUtf8(config_path, temp_path);
-        ReleaseConfigWriteLock();
-    } else {
-        /** Cleanup on file operation failure */
-        if (source) fclose(source);
-        if (target) fclose(target);
-        ReleaseConfigWriteLock();
-    }
+    /** Persist only; runtime will be updated by watcher */
+    UpdateConfigKeyValueAtomic(INI_SECTION_NOTIFICATION, "NOTIFICATION_TYPE", typeStr);
 }
 
 
@@ -3147,15 +2708,8 @@ void WriteConfigNotificationSound(const char* sound_file) {
         strncpy(to_write, clean_path, sizeof(to_write) - 1);
     }
 
-    /** Use INI wide-char API to avoid locale mis-decoding on non-BOM files */
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    WriteIniString(INI_SECTION_NOTIFICATION,
-                   "NOTIFICATION_SOUND_FILE",
-                   to_write,
-                   config_path);
-    
     /** Runtime will be updated by watcher */
+    UpdateConfigKeyValueAtomic(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_FILE", to_write);
 }
 
 
@@ -3188,55 +2742,8 @@ void ReadNotificationVolumeConfig(void) {
 void WriteConfigNotificationVolume(int volume) {
     if (volume < 0) volume = 0;
     if (volume > 100) volume = 100;
-
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-
-    /** Convert paths to wide character for Unicode support */
-    wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-
-    FILE* file = _wfopen(wconfig_path, L"r");
-    if (!file) return;
-
-    char temp_path[MAX_PATH];
-    AcquireConfigWriteLock();
-    if (!CreateUniqueTempPathInConfigDir(config_path, temp_path, MAX_PATH)) {
-        ReleaseConfigWriteLock();
-        fclose(file);
-        return;
-    }
-
-    wchar_t wtemp_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
-
-    FILE* temp = _wfopen(wtemp_path, L"w");
-    if (!temp) {
-        fclose(file);
-        return;
-    }
-
-    char line[256];
-    BOOL found = FALSE;
-
-    while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, "NOTIFICATION_SOUND_VOLUME=", 26) == 0) {
-            fprintf(temp, "NOTIFICATION_SOUND_VOLUME=%d\n", volume);
-            found = TRUE;
-        } else {
-            fputs(line, temp);
-        }
-    }
-
-    if (!found) {
-        fprintf(temp, "NOTIFICATION_SOUND_VOLUME=%d\n", volume);
-    }
-
-    fclose(file);
-    fclose(temp);
-
-    ReplaceFileUtf8(config_path, temp_path);
-    ReleaseConfigWriteLock();
+    
+    UpdateConfigIntAtomic(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_VOLUME", volume);
 }
 
 
@@ -4085,66 +3592,7 @@ void ReadNotificationDisabledConfig(void) {
  * Updates both config file and global NOTIFICATION_DISABLED variable
  */
 void WriteConfigNotificationDisabled(BOOL disabled) {
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    char temp_path[MAX_PATH];
-    AcquireConfigWriteLock();
-    if (!CreateUniqueTempPathInConfigDir(config_path, temp_path, MAX_PATH)) {
-        ReleaseConfigWriteLock();
-        return;
-    }
-    
-    FILE *source_file, *temp_file;
-    
-    wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-    
-    source_file = _wfopen(wconfig_path, L"r");
-    wchar_t wtemp_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
-    
-    temp_file = _wfopen(wtemp_path, L"w");
-    
-    if (!source_file || !temp_file) {
-        if (source_file) fclose(source_file);
-        if (temp_file) fclose(temp_file);
-        ReleaseConfigWriteLock();
-        return;
-    }
-    
-    char line[1024];
-    BOOL found = FALSE;
-    
-    /** Process each line, updating notification disabled setting */
-    while (fgets(line, sizeof(line), source_file)) {
-        /** Strip trailing newlines */
-        size_t len = strlen(line);
-        if (len > 0 && (line[len-1] == '\n' || line[len-1] == '\r')) {
-            line[--len] = '\0';
-            if (len > 0 && line[len-1] == '\r')
-                line[--len] = '\0';
-        }
-        
-        if (strncmp(line, "NOTIFICATION_DISABLED=", 22) == 0) {
-            fprintf(temp_file, "NOTIFICATION_DISABLED=%s\n", disabled ? "TRUE" : "FALSE");
-            found = TRUE;
-        } else {
-            /** Copy other lines unchanged */
-            fprintf(temp_file, "%s\n", line);
-        }
-    }
-    
-    /** Add setting if not found */
-    if (!found) {
-        fprintf(temp_file, "NOTIFICATION_DISABLED=%s\n", disabled ? "TRUE" : "FALSE");
-    }
-    
-    fclose(source_file);
-    fclose(temp_file);
-    
-    /** Replace original file */
-    ReplaceFileUtf8(config_path, temp_path);
-    ReleaseConfigWriteLock();
+    UpdateConfigBoolAtomic(INI_SECTION_NOTIFICATION, "NOTIFICATION_DISABLED", disabled);
 }
 
 /**
@@ -4164,7 +3612,7 @@ void WriteConfigTimeFormat(TimeFormatType format) {
             formatStr = "DEFAULT";
             break;
     }
-    WriteConfigKeyValue("CLOCK_TIME_FORMAT", formatStr);
+    UpdateConfigKeyValueAtomic(INI_SECTION_TIMER, "CLOCK_TIME_FORMAT", formatStr);
 }
 
 /**
@@ -4172,7 +3620,7 @@ void WriteConfigTimeFormat(TimeFormatType format) {
  * @param showMilliseconds TRUE to show milliseconds, FALSE to hide
  */
 void WriteConfigShowMilliseconds(BOOL showMilliseconds) {
-    WriteConfigKeyValue("CLOCK_SHOW_MILLISECONDS", showMilliseconds ? "TRUE" : "FALSE");
+    UpdateConfigBoolAtomic(INI_SECTION_TIMER, "CLOCK_SHOW_MILLISECONDS", showMilliseconds);
 }
 
 /**
