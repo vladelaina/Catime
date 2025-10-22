@@ -2346,91 +2346,7 @@ void ReadNotificationMessagesConfig(void) {
 void ReadNotificationTimeoutConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    
-
-    wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-    
-    HANDLE hFile = CreateFileW(
-        wconfig_path,
-        GENERIC_READ,
-        FILE_SHARE_READ,
-        NULL,
-        OPEN_EXISTING,
-        FILE_ATTRIBUTE_NORMAL,
-        NULL
-    );
-    
-    if (hFile == INVALID_HANDLE_VALUE) {
-
-        return;
-    }
-    
-
-    char bom[3];
-    DWORD bytesRead;
-    ReadFile(hFile, bom, 3, &bytesRead, NULL);
-    
-    if (bytesRead != 3 || bom[0] != 0xEF || bom[1] != 0xBB || bom[2] != 0xBF) {
-
-        SetFilePointer(hFile, 0, NULL, FILE_BEGIN);
-    }
-    
-    char line[256];
-    BOOL timeoutFound = FALSE;
-    
-
-    BOOL readingLine = TRUE;
-    int pos = 0;
-    
-    while (readingLine) {
-
-        bytesRead = 0;
-        pos = 0;
-        memset(line, 0, sizeof(line));
-        
-        while (TRUE) {
-            char ch;
-            ReadFile(hFile, &ch, 1, &bytesRead, NULL);
-            
-            if (bytesRead == 0) {
-                readingLine = FALSE;
-                break;
-            }
-            
-            if (ch == '\n') {
-                break;
-            }
-            
-            if (ch != '\r') {
-                line[pos++] = ch;
-                if (pos >= sizeof(line) - 1) break;
-            }
-        }
-        
-        line[pos] = '\0';
-        
-
-        if (pos == 0 && !readingLine) {
-            break;
-        }
-        
-        if (strncmp(line, "NOTIFICATION_TIMEOUT_MS=", 24) == 0) {
-            int timeout = atoi(line + 24);
-            if (timeout > 0) {
-                NOTIFICATION_TIMEOUT_MS = timeout;
-            }
-            timeoutFound = TRUE;
-            break;
-        }
-    }
-    
-    CloseHandle(hFile);
-    
-    /** Set default timeout if not found in config */
-    if (!timeoutFound) {
-        NOTIFICATION_TIMEOUT_MS = 3000;
-    }
+    NOTIFICATION_TIMEOUT_MS = ReadIniInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_TIMEOUT_MS", 3000, config_path);
 }
 
 
@@ -2450,90 +2366,11 @@ void WriteConfigNotificationTimeout(int timeout_ms) {
 void ReadNotificationOpacityConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    
-
-    wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-    
-    HANDLE hFile = CreateFileW(
-        wconfig_path,
-        GENERIC_READ,
-        FILE_SHARE_READ,
-        NULL,
-        OPEN_EXISTING,
-        FILE_ATTRIBUTE_NORMAL,
-        NULL
-    );
-    
-    if (hFile == INVALID_HANDLE_VALUE) {
-
-        return;
-    }
-    
-
-    char bom[3];
-    DWORD bytesRead;
-    ReadFile(hFile, bom, 3, &bytesRead, NULL);
-    
-    if (bytesRead != 3 || bom[0] != 0xEF || bom[1] != 0xBB || bom[2] != 0xBF) {
-
-        SetFilePointer(hFile, 0, NULL, FILE_BEGIN);
-    }
-    
-    char line[256];
-    BOOL opacityFound = FALSE;
-    
-
-    BOOL readingLine = TRUE;
-    int pos = 0;
-    
-    while (readingLine) {
-
-        bytesRead = 0;
-        pos = 0;
-        memset(line, 0, sizeof(line));
-        
-        while (TRUE) {
-            char ch;
-            ReadFile(hFile, &ch, 1, &bytesRead, NULL);
-            
-            if (bytesRead == 0) {
-                readingLine = FALSE;
-                break;
-            }
-            
-            if (ch == '\n') {
-                break;
-            }
-            
-            if (ch != '\r') {
-                line[pos++] = ch;
-                if (pos >= sizeof(line) - 1) break;
-            }
-        }
-        
-        line[pos] = '\0';
-        
-
-        if (pos == 0 && !readingLine) {
-            break;
-        }
-        
-        if (strncmp(line, "NOTIFICATION_MAX_OPACITY=", 25) == 0) {
-            int opacity = atoi(line + 25);
-            /** Validate opacity range before applying */
-            if (opacity >= 1 && opacity <= 100) {
-                NOTIFICATION_MAX_OPACITY = opacity;
-            }
-            opacityFound = TRUE;
-            break;
-        }
-    }
-    
-    CloseHandle(hFile);
-    
-    /** Set default opacity if not found in config */
-    if (!opacityFound) {
+    int opacity = ReadIniInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_MAX_OPACITY", 95, config_path);
+    /** Validate opacity range (1-100) */
+    if (opacity >= 1 && opacity <= 100) {
+        NOTIFICATION_MAX_OPACITY = opacity;
+    } else {
         NOTIFICATION_MAX_OPACITY = 95;
     }
 }
@@ -2556,33 +2393,19 @@ void ReadNotificationTypeConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    /** Convert paths to wide character for Unicode support */
-    wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+    char typeStr[32];
+    ReadIniString(INI_SECTION_NOTIFICATION, "NOTIFICATION_TYPE", "CATIME", 
+                 typeStr, sizeof(typeStr), config_path);
     
-    FILE *file = _wfopen(wconfig_path, L"r");
-    if (file) {
-        char line[256];
-        while (fgets(line, sizeof(line), file)) {
-            if (strncmp(line, "NOTIFICATION_TYPE=", 18) == 0) {
-                char typeStr[32] = {0};
-                sscanf(line + 18, "%31s", typeStr);
-                
-                /** Parse notification type string to enum value */
-                if (strcmp(typeStr, "CATIME") == 0) {
-                    NOTIFICATION_TYPE = NOTIFICATION_TYPE_CATIME;
-                } else if (strcmp(typeStr, "SYSTEM_MODAL") == 0) {
-                    NOTIFICATION_TYPE = NOTIFICATION_TYPE_SYSTEM_MODAL;
-                } else if (strcmp(typeStr, "OS") == 0) {
-                    NOTIFICATION_TYPE = NOTIFICATION_TYPE_OS;
-                } else {
-                    /** Unknown type, fallback to default */
-                    NOTIFICATION_TYPE = NOTIFICATION_TYPE_CATIME;
-                }
-                break;
-            }
-        }
-        fclose(file);
+    /** Parse notification type string to enum value */
+    if (strcmp(typeStr, "CATIME") == 0) {
+        NOTIFICATION_TYPE = NOTIFICATION_TYPE_CATIME;
+    } else if (strcmp(typeStr, "SYSTEM_MODAL") == 0) {
+        NOTIFICATION_TYPE = NOTIFICATION_TYPE_SYSTEM_MODAL;
+    } else if (strcmp(typeStr, "OS") == 0) {
+        NOTIFICATION_TYPE = NOTIFICATION_TYPE_OS;
+    } else {
+        NOTIFICATION_TYPE = NOTIFICATION_TYPE_CATIME;
     }
 }
 
@@ -2717,25 +2540,13 @@ void ReadNotificationVolumeConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    /** Convert paths to wide character for Unicode support */
-    wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-    
-    FILE* file = _wfopen(wconfig_path, L"r");
-    if (!file) return;
-    
-    char line[256];
-    while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, "NOTIFICATION_SOUND_VOLUME=", 26) == 0) {
-            int volume = atoi(line + 26);
-            if (volume >= 0 && volume <= 100) {
-                NOTIFICATION_SOUND_VOLUME = volume;
-            }
-            break;
-        }
+    int volume = ReadIniInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_VOLUME", 100, config_path);
+    /** Validate volume range (0-100) */
+    if (volume >= 0 && volume <= 100) {
+        NOTIFICATION_SOUND_VOLUME = volume;
+    } else {
+        NOTIFICATION_SOUND_VOLUME = 100;
     }
-    
-    fclose(file);
 }
 
 
