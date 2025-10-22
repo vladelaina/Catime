@@ -104,9 +104,94 @@ static void FormatSecondsToString(int totalSeconds, char* buffer, size_t bufferS
     }
 }
 
-// ============================================================================
-// End of Phase 1 Utility Functions
-// ============================================================================
+/**
+ * @brief Dialog context structure for managing dialog resources
+ */
+typedef struct {
+    HBRUSH hBackgroundBrush;  // Background brush (RGB 243, 243, 243)
+    HBRUSH hEditBrush;        // Edit control brush (RGB 255, 255, 255)
+    HBRUSH hButtonBrush;      // Button brush (RGB 253, 253, 253)
+    WNDPROC wpOrigEditProc;   // Original edit control window procedure
+    void* userData;           // Dialog-specific user data
+} DialogContext;
+
+/**
+ * @brief Create and initialize dialog context with standard brushes
+ * @return Pointer to new DialogContext, or NULL on failure
+ */
+static DialogContext* CreateDialogContext(void) {
+    DialogContext* ctx = (DialogContext*)calloc(1, sizeof(DialogContext));
+    if (ctx) {
+        ctx->hBackgroundBrush = CreateSolidBrush(RGB(0xF3, 0xF3, 0xF3));
+        ctx->hEditBrush = CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF));
+        ctx->hButtonBrush = CreateSolidBrush(RGB(0xFD, 0xFD, 0xFD));
+    }
+    return ctx;
+}
+
+/**
+ * @brief Free dialog context and all associated resources
+ * @param ctx Dialog context to free (can be NULL)
+ */
+static void FreeDialogContext(DialogContext* ctx) {
+    if (!ctx) return;
+    if (ctx->hBackgroundBrush) DeleteObject(ctx->hBackgroundBrush);
+    if (ctx->hEditBrush) DeleteObject(ctx->hEditBrush);
+    if (ctx->hButtonBrush) DeleteObject(ctx->hButtonBrush);
+    free(ctx);
+}
+
+/**
+ * @brief Get dialog context from window user data
+ * @param hwndDlg Dialog window handle
+ * @return Dialog context pointer, or NULL if not set
+ */
+static DialogContext* GetDialogContext(HWND hwndDlg) {
+    return (DialogContext*)GetWindowLongPtr(hwndDlg, GWLP_USERDATA);
+}
+
+/**
+ * @brief Set dialog context to window user data
+ * @param hwndDlg Dialog window handle
+ * @param ctx Dialog context to set
+ */
+static void SetDialogContext(HWND hwndDlg, DialogContext* ctx) {
+    SetWindowLongPtr(hwndDlg, GWLP_USERDATA, (LONG_PTR)ctx);
+}
+
+/**
+ * @brief Handle standard dialog color messages uniformly
+ * @param msg Message type (WM_CTLCOLORDLG, WM_CTLCOLORSTATIC, etc.)
+ * @param wParam Message wParam (HDC)
+ * @param ctx Dialog context containing brushes
+ * @param result Pointer to store return value
+ * @return TRUE if message handled, FALSE otherwise
+ */
+static BOOL HandleDialogColorMessage(UINT msg, WPARAM wParam, 
+                                     DialogContext* ctx, INT_PTR* result) {
+    if (!ctx) return FALSE;
+    
+    switch (msg) {
+        case WM_CTLCOLORDLG:
+        case WM_CTLCOLORSTATIC:
+            SetBkColor((HDC)wParam, RGB(0xF3, 0xF3, 0xF3));
+            *result = (INT_PTR)ctx->hBackgroundBrush;
+            return TRUE;
+            
+        case WM_CTLCOLOREDIT:
+            SetBkColor((HDC)wParam, RGB(0xFF, 0xFF, 0xFF));
+            *result = (INT_PTR)ctx->hEditBrush;
+            return TRUE;
+            
+        case WM_CTLCOLORBTN:
+            SetBkColor((HDC)wParam, RGB(0xFD, 0xFD, 0xFD));
+            *result = (INT_PTR)ctx->hButtonBrush;
+            return TRUE;
+    }
+    
+    return FALSE;
+}
+
 
 /**
  * @brief Structure for individual link control data
@@ -295,30 +380,31 @@ INT_PTR CALLBACK ErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
  * @return TRUE if message processed, FALSE otherwise
  */
 INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
-    static HBRUSH hBackgroundBrush = NULL;
-    static HBRUSH hEditBrush = NULL;
-    static HBRUSH hButtonBrush = NULL;
+    DialogContext* ctx = GetDialogContext(hwndDlg);
 
     switch (msg) {
         case WM_INITDIALOG: {
-            /** Store dialog ID for later reference */
-            SetWindowLongPtr(hwndDlg, GWLP_USERDATA, lParam);
+            /** Create and initialize dialog context */
+            ctx = CreateDialogContext();
+            if (!ctx) return FALSE;
+            
+            /** Store dialog ID in context user data */
+            ctx->userData = (void*)lParam;
+            SetDialogContext(hwndDlg, ctx);
 
             g_hwndInputDialog = hwndDlg;
 
             /** Set dialog as topmost and move to primary screen */
             SetWindowPos(hwndDlg, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
             MoveDialogToPrimaryScreen(hwndDlg);
-            hBackgroundBrush = CreateSolidBrush(RGB(0xF3, 0xF3, 0xF3));
-            hEditBrush = CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF));
-            hButtonBrush = CreateSolidBrush(RGB(0xFD, 0xFD, 0xFD));
 
-            DWORD dlgId = GetWindowLongPtr(hwndDlg, GWLP_USERDATA);
+            DWORD dlgId = (DWORD)(LONG_PTR)ctx->userData;
 
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
 
             /** Subclass edit control for enhanced keyboard handling */
-            wpOrigEditProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
+            ctx->wpOrigEditProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
+            if (!wpOrigEditProc) wpOrigEditProc = ctx->wpOrigEditProc;
 
             /** Initialize dialog content based on dialog type */
             if (dlgId == CLOCK_IDD_SHORTCUT_DIALOG) {
@@ -409,31 +495,14 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
         }
 
         case WM_CTLCOLORDLG:
-        case WM_CTLCOLORSTATIC: {
-            HDC hdcStatic = (HDC)wParam;
-            SetBkColor(hdcStatic, RGB(0xF3, 0xF3, 0xF3));
-            if (!hBackgroundBrush) {
-                hBackgroundBrush = CreateSolidBrush(RGB(0xF3, 0xF3, 0xF3));
-            }
-            return (INT_PTR)hBackgroundBrush;
-        }
-
-        case WM_CTLCOLOREDIT: {
-            HDC hdcEdit = (HDC)wParam;
-            SetBkColor(hdcEdit, RGB(0xFF, 0xFF, 0xFF));
-            if (!hEditBrush) {
-                hEditBrush = CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF));
-            }
-            return (INT_PTR)hEditBrush;
-        }
-
+        case WM_CTLCOLORSTATIC:
+        case WM_CTLCOLOREDIT:
         case WM_CTLCOLORBTN: {
-            HDC hdcBtn = (HDC)wParam;
-            SetBkColor(hdcBtn, RGB(0xFD, 0xFD, 0xFD));
-            if (!hButtonBrush) {
-                hButtonBrush = CreateSolidBrush(RGB(0xFD, 0xFD, 0xFD));
+            INT_PTR result;
+            if (HandleDialogColorMessage(msg, wParam, ctx, &result)) {
+                return result;
             }
-            return (INT_PTR)hButtonBrush;
+            break;
         }
 
         case WM_COMMAND:
@@ -448,7 +517,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                     return TRUE;
                 }
 
-                int dialogId = GetWindowLongPtr(hwndDlg, GWLP_USERDATA);
+                int dialogId = (int)(LONG_PTR)ctx->userData;
                 
                 /** Handle shortcut dialog input processing */
                 if (dialogId == CLOCK_IDD_SHORTCUT_DIALOG) {
@@ -640,26 +709,14 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 
         case WM_DESTROY:
             /** Clean up resources and restore original window procedures */
-            {
-            HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
-            SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
-
-            /** Delete custom brushes */
-            if (hBackgroundBrush) {
-                DeleteObject(hBackgroundBrush);
-                hBackgroundBrush = NULL;
+            if (ctx) {
+                HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
+                if (hwndEdit && ctx->wpOrigEditProc) {
+                    SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)ctx->wpOrigEditProc);
+                }
+                FreeDialogContext(ctx);
             }
-            if (hEditBrush) {
-                DeleteObject(hEditBrush);
-                hEditBrush = NULL;
-            }
-            if (hButtonBrush) {
-                DeleteObject(hButtonBrush);
-                hButtonBrush = NULL;
-            }
-
             g_hwndInputDialog = NULL;
-            }
             break;
     }
     return FALSE;
@@ -1070,23 +1127,22 @@ static HWND g_hwndWebsiteDialog = NULL;
  * @return TRUE if message processed, FALSE otherwise
  */
 INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
-    static HBRUSH hBackgroundBrush = NULL;
-    static HBRUSH hEditBrush = NULL;
-    static HBRUSH hButtonBrush = NULL;
+    DialogContext* ctx = GetDialogContext(hwndDlg);
 
     switch (msg) {
         case WM_INITDIALOG: {
-            /** Store dialog parameter for later use */
-            SetWindowLongPtr(hwndDlg, GWLP_USERDATA, lParam);
+            /** Create and initialize dialog context */
+            ctx = CreateDialogContext();
+            if (!ctx) return FALSE;
             
-            /** Create custom brushes for dialog appearance */
-            hBackgroundBrush = CreateSolidBrush(RGB(240, 240, 240));
-            hEditBrush = CreateSolidBrush(RGB(255, 255, 255));
-            hButtonBrush = CreateSolidBrush(RGB(240, 240, 240));
+            /** Store dialog parameter in context */
+            ctx->userData = (void*)lParam;
+            SetDialogContext(hwndDlg, ctx);
             
             /** Subclass edit control for enhanced functionality */
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
-            wpOrigEditProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
+            ctx->wpOrigEditProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
+            if (!wpOrigEditProc) wpOrigEditProc = ctx->wpOrigEditProc;
             
             /** Pre-populate with existing URL if available */
             if (wcslen(CLOCK_TIMEOUT_WEBSITE_URL) > 0) {
@@ -1107,18 +1163,15 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
         }
         
         case WM_CTLCOLORDLG:
-            return (INT_PTR)hBackgroundBrush;
-            
         case WM_CTLCOLORSTATIC:
-            SetBkColor((HDC)wParam, RGB(240, 240, 240));
-            return (INT_PTR)hBackgroundBrush;
-            
         case WM_CTLCOLOREDIT:
-            SetBkColor((HDC)wParam, RGB(255, 255, 255));
-            return (INT_PTR)hEditBrush;
-            
-        case WM_CTLCOLORBTN:
-            return (INT_PTR)hButtonBrush;
+        case WM_CTLCOLORBTN: {
+            INT_PTR result;
+            if (HandleDialogColorMessage(msg, wParam, ctx, &result)) {
+                return result;
+            }
+            break;
+        }
             
         case WM_COMMAND:
             /** Handle OK button click for URL input */
@@ -1158,23 +1211,12 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
             
         case WM_DESTROY:
             /** Clean up resources and restore window procedures */
-            {
-            HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
-            SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
-            
-            /** Delete custom brushes */
-            if (hBackgroundBrush) {
-                DeleteObject(hBackgroundBrush);
-                hBackgroundBrush = NULL;
-            }
-            if (hEditBrush) {
-                DeleteObject(hEditBrush);
-                hEditBrush = NULL;
-            }
-            if (hButtonBrush) {
-                DeleteObject(hButtonBrush);
-                hButtonBrush = NULL;
-            }
+            if (ctx) {
+                HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
+                if (hwndEdit && ctx->wpOrigEditProc) {
+                    SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)ctx->wpOrigEditProc);
+                }
+                FreeDialogContext(ctx);
             }
             break;
             
@@ -1215,20 +1257,19 @@ static HWND g_hwndPomodoroComboDialog = NULL;
  * @return TRUE if message processed, FALSE otherwise
  */
 INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
-    static HBRUSH hBackgroundBrush = NULL;
-    static HBRUSH hEditBrush = NULL;
-    static HBRUSH hButtonBrush = NULL;
+    DialogContext* ctx = GetDialogContext(hwndDlg);
     
     switch (msg) {
         case WM_INITDIALOG: {
-            /** Create custom brushes for dialog appearance */
-            hBackgroundBrush = CreateSolidBrush(RGB(240, 240, 240));
-            hEditBrush = CreateSolidBrush(RGB(255, 255, 255));
-            hButtonBrush = CreateSolidBrush(RGB(240, 240, 240));
+            /** Create and initialize dialog context */
+            ctx = CreateDialogContext();
+            if (!ctx) return FALSE;
+            SetDialogContext(hwndDlg, ctx);
             
             /** Subclass edit control for enhanced functionality */
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
-            wpOrigEditProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
+            ctx->wpOrigEditProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
+            if (!wpOrigEditProc) wpOrigEditProc = ctx->wpOrigEditProc;
             
             /** Format current Pomodoro time options for display */
             wchar_t currentOptions[256] = {0};
@@ -1263,18 +1304,15 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
         }
         
         case WM_CTLCOLORDLG:
-            return (INT_PTR)hBackgroundBrush;
-            
         case WM_CTLCOLORSTATIC:
-            SetBkColor((HDC)wParam, RGB(240, 240, 240));
-            return (INT_PTR)hBackgroundBrush;
-            
         case WM_CTLCOLOREDIT:
-            SetBkColor((HDC)wParam, RGB(255, 255, 255));
-            return (INT_PTR)hEditBrush;
-            
-        case WM_CTLCOLORBTN:
-            return (INT_PTR)hButtonBrush;
+        case WM_CTLCOLORBTN: {
+            INT_PTR result;
+            if (HandleDialogColorMessage(msg, wParam, ctx, &result)) {
+                return result;
+            }
+            break;
+        }
             
         case WM_COMMAND:
             if (LOWORD(wParam) == CLOCK_IDC_BUTTON_OK || LOWORD(wParam) == IDOK) {
@@ -1342,24 +1380,13 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
             break;
             
         case WM_DESTROY:
-
-            {
-            HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
-            SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
-            
-
-            if (hBackgroundBrush) {
-                DeleteObject(hBackgroundBrush);
-                hBackgroundBrush = NULL;
-            }
-            if (hEditBrush) {
-                DeleteObject(hEditBrush);
-                hEditBrush = NULL;
-            }
-            if (hButtonBrush) {
-                DeleteObject(hButtonBrush);
-                hButtonBrush = NULL;
-            }
+            /** Clean up resources and restore window procedures */
+            if (ctx) {
+                HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
+                if (hwndEdit && ctx->wpOrigEditProc) {
+                    SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)ctx->wpOrigEditProc);
+                }
+                FreeDialogContext(ctx);
             }
             break;
     }
@@ -1463,20 +1490,20 @@ static HWND g_hwndNotificationMessagesDialog = NULL;
  * @return TRUE if message processed, FALSE otherwise
  */
 INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
-    static HBRUSH hBackgroundBrush = NULL;
-    static HBRUSH hEditBrush = NULL;
+    DialogContext* ctx = GetDialogContext(hwndDlg);
 
     switch (msg) {
         case WM_INITDIALOG: {
+            /** Create and initialize dialog context */
+            ctx = CreateDialogContext();
+            if (!ctx) return FALSE;
+            SetDialogContext(hwndDlg, ctx);
+            
             /** Make dialog topmost for visibility */
             SetWindowPos(hwndDlg, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
             
             /** Move dialog to primary screen */
             MoveDialogToPrimaryScreen(hwndDlg);
-
-            /** Create custom brushes for dialog appearance */
-            hBackgroundBrush = CreateSolidBrush(RGB(0xF3, 0xF3, 0xF3));
-            hEditBrush = CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF));
 
             /** Load current notification messages from config */
             ReadNotificationMessagesConfig();
@@ -1517,7 +1544,8 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             HWND hEdit3 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT3);
             
             /** Subclass first edit control and store original procedure */
-            wpOrigEditProc = (WNDPROC)SetWindowLongPtr(hEdit1, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
+            ctx->wpOrigEditProc = (WNDPROC)SetWindowLongPtr(hEdit1, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
+            if (!wpOrigEditProc) wpOrigEditProc = ctx->wpOrigEditProc;
             
             /** Subclass remaining edit controls */
             SetWindowLongPtr(hEdit2, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
@@ -1533,15 +1561,14 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
         }
         
         case WM_CTLCOLORDLG:
-            return (INT_PTR)hBackgroundBrush;
-        
         case WM_CTLCOLORSTATIC:
-            SetBkColor((HDC)wParam, RGB(0xF3, 0xF3, 0xF3));
-            return (INT_PTR)hBackgroundBrush;
-            
-        case WM_CTLCOLOREDIT:
-            SetBkColor((HDC)wParam, RGB(0xFF, 0xFF, 0xFF));
-            return (INT_PTR)hEditBrush;
+        case WM_CTLCOLOREDIT: {
+            INT_PTR result;
+            if (HandleDialogColorMessage(msg, wParam, ctx, &result)) {
+                return result;
+            }
+            break;
+        }
         
         case WM_COMMAND:
             /** Handle OK button to save notification messages */
@@ -1583,21 +1610,18 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             
         case WM_DESTROY:
             /** Clean up resources and restore window procedures */
-            {
-            HWND hEdit1 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT1);
-            HWND hEdit2 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT2);
-            HWND hEdit3 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT3);
-            
-            /** Restore original window procedures for all edit controls */
-            if (wpOrigEditProc) {
-                SetWindowLongPtr(hEdit1, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
-                SetWindowLongPtr(hEdit2, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
-                SetWindowLongPtr(hEdit3, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
-            }
-            
-            /** Delete custom brushes */
-            if (hBackgroundBrush) DeleteObject(hBackgroundBrush);
-            if (hEditBrush) DeleteObject(hEditBrush);
+            if (ctx) {
+                if (ctx->wpOrigEditProc) {
+                    HWND hEdit1 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT1);
+                    HWND hEdit2 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT2);
+                    HWND hEdit3 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT3);
+                    
+                    /** Restore original window procedures for all edit controls */
+                    if (hEdit1) SetWindowLongPtr(hEdit1, GWLP_WNDPROC, (LONG_PTR)ctx->wpOrigEditProc);
+                    if (hEdit2) SetWindowLongPtr(hEdit2, GWLP_WNDPROC, (LONG_PTR)ctx->wpOrigEditProc);
+                    if (hEdit3) SetWindowLongPtr(hEdit3, GWLP_WNDPROC, (LONG_PTR)ctx->wpOrigEditProc);
+                }
+                FreeDialogContext(ctx);
             }
             break;
     }
@@ -1637,20 +1661,20 @@ static HWND g_hwndNotificationDisplayDialog = NULL;
  * @return TRUE if message processed, FALSE otherwise
  */
 INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
-    static HBRUSH hBackgroundBrush = NULL;
-    static HBRUSH hEditBrush = NULL;
+    DialogContext* ctx = GetDialogContext(hwndDlg);
     
     switch (msg) {
         case WM_INITDIALOG: {
+            /** Create and initialize dialog context */
+            ctx = CreateDialogContext();
+            if (!ctx) return FALSE;
+            SetDialogContext(hwndDlg, ctx);
+            
             /** Make dialog topmost for visibility */
             SetWindowPos(hwndDlg, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
             
             /** Move dialog to primary screen */
             MoveDialogToPrimaryScreen(hwndDlg);
-            
-            /** Create custom brushes for dialog appearance */
-            hBackgroundBrush = CreateSolidBrush(RGB(0xF3, 0xF3, 0xF3));
-            hEditBrush = CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF));
             
             /** Load current notification configuration */
             ReadNotificationTimeoutConfig();
@@ -1681,7 +1705,8 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
             SetWindowLong(hEditTime, GWL_STYLE, style & ~ES_NUMBER);
             
             /** Subclass edit control for enhanced functionality */
-            wpOrigEditProc = (WNDPROC)SetWindowLongPtr(hEditTime, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
+            ctx->wpOrigEditProc = (WNDPROC)SetWindowLongPtr(hEditTime, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
+            if (!wpOrigEditProc) wpOrigEditProc = ctx->wpOrigEditProc;
             
             /** Set focus to time edit control */
             SetFocus(hEditTime);
@@ -1690,15 +1715,14 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
         }
         
         case WM_CTLCOLORDLG:
-            return (INT_PTR)hBackgroundBrush;
-        
         case WM_CTLCOLORSTATIC:
-            SetBkColor((HDC)wParam, RGB(0xF3, 0xF3, 0xF3));
-            return (INT_PTR)hBackgroundBrush;
-            
-        case WM_CTLCOLOREDIT:
-            SetBkColor((HDC)wParam, RGB(0xFF, 0xFF, 0xFF));
-            return (INT_PTR)hEditBrush;
+        case WM_CTLCOLOREDIT: {
+            INT_PTR result;
+            if (HandleDialogColorMessage(msg, wParam, ctx, &result)) {
+                return result;
+            }
+            break;
+        }
         
         case WM_COMMAND:
             /** Handle OK button to save display settings */
@@ -1780,18 +1804,16 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
             return TRUE;
             
         case WM_DESTROY:
-
-            {
-            HWND hEditTime = GetDlgItem(hwndDlg, IDC_NOTIFICATION_TIME_EDIT);
-            HWND hEditOpacity = GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT);
-            
-            if (wpOrigEditProc) {
-                SetWindowLongPtr(hEditTime, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
-                SetWindowLongPtr(hEditOpacity, GWLP_WNDPROC, (LONG_PTR)wpOrigEditProc);
-            }
-            
-            if (hBackgroundBrush) DeleteObject(hBackgroundBrush);
-            if (hEditBrush) DeleteObject(hEditBrush);
+            /** Clean up resources and restore window procedures */
+            if (ctx) {
+                if (ctx->wpOrigEditProc) {
+                    HWND hEditTime = GetDlgItem(hwndDlg, IDC_NOTIFICATION_TIME_EDIT);
+                    HWND hEditOpacity = GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT);
+                    
+                    if (hEditTime) SetWindowLongPtr(hEditTime, GWLP_WNDPROC, (LONG_PTR)ctx->wpOrigEditProc);
+                    if (hEditOpacity) SetWindowLongPtr(hEditOpacity, GWLP_WNDPROC, (LONG_PTR)ctx->wpOrigEditProc);
+                }
+                FreeDialogContext(ctx);
             }
             break;
     }

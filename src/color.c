@@ -29,10 +29,6 @@ void ReadConfig(void);
 void WriteConfig(const char* config_path);
 static void replaceBlackColor(const char* color, char* output, size_t output_size);
 
-// ============================================================================
-// Phase 1: Common Utility Functions (Local to color.c)
-// ============================================================================
-
 /**
  * @brief Check if multibyte character string is empty or contains only whitespace
  * @param str String to check
