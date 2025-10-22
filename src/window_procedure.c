@@ -121,6 +121,99 @@ static BOOL IsAnimationLeafFolderW(const wchar_t* folderPathW) {
     return !hasSubItems;
 }
 
+/**
+ * @brief Recursively find animation by menu ID and trigger preview
+ * @param folderPathW Wide-char path to search folder
+ * @param folderPathUtf8 UTF-8 relative path for animation reference
+ * @param nextIdPtr Pointer to next available menu ID
+ * @param targetId Target menu ID to find
+ * @return TRUE if animation found and preview started, FALSE otherwise
+ */
+static BOOL FindAnimationByIdRecursive(const wchar_t* folderPathW, const char* folderPathUtf8, UINT* nextIdPtr, UINT targetId) {
+    AnimationEntry* entries = (AnimationEntry*)malloc(sizeof(AnimationEntry) * MAX_TRAY_FRAMES);
+    if (!entries) return FALSE;
+    int entryCount = 0;
+
+    wchar_t wSearch[MAX_PATH] = {0};
+    _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s\\*", folderPathW);
+    
+    WIN32_FIND_DATAW ffd;
+    HANDLE hFind = FindFirstFileW(wSearch, &ffd);
+    if (hFind == INVALID_HANDLE_VALUE) {
+        free(entries);
+        return FALSE;
+    }
+
+    do {
+        if (wcscmp(ffd.cFileName, L".") == 0 || wcscmp(ffd.cFileName, L"..") == 0) continue;
+        if (entryCount >= MAX_TRAY_FRAMES) break;
+
+        AnimationEntry* e = &entries[entryCount];
+        e->is_dir = (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+        wcsncpy(e->name, ffd.cFileName, MAX_PATH - 1);
+        e->name[MAX_PATH - 1] = L'\0';
+
+        char itemUtf8[MAX_PATH] = {0};
+        WideCharToMultiByte(CP_UTF8, 0, ffd.cFileName, -1, itemUtf8, MAX_PATH, NULL, NULL);
+        if (folderPathUtf8 && folderPathUtf8[0] != '\0') {
+            _snprintf_s(e->rel_path_utf8, MAX_PATH, _TRUNCATE, "%s\\%s", folderPathUtf8, itemUtf8);
+        } else {
+            _snprintf_s(e->rel_path_utf8, MAX_PATH, _TRUNCATE, "%s", itemUtf8);
+        }
+        
+        if (e->is_dir) {
+            entryCount++;
+        } else {
+            wchar_t* ext = wcsrchr(e->name, L'.');
+            if (ext && (_wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0 ||
+                        _wcsicmp(ext, L".ico") == 0 || _wcsicmp(ext, L".png") == 0 ||
+                        _wcsicmp(ext, L".bmp") == 0 || _wcsicmp(ext, L".jpg") == 0 ||
+                        _wcsicmp(ext, L".jpeg") == 0 || _wcsicmp(ext, L".tif") == 0 ||
+                        _wcsicmp(ext, L".tiff") == 0)) {
+                entryCount++;
+            }
+        }
+    } while (FindNextFileW(hFind, &ffd));
+    FindClose(hFind);
+
+    if (entryCount == 0) {
+        free(entries);
+        return FALSE;
+    }
+    qsort(entries, entryCount, sizeof(AnimationEntry), CompareAnimationEntries);
+
+    for (int i = 0; i < entryCount; ++i) {
+        AnimationEntry* e = &entries[i];
+        if (e->is_dir) {
+            wchar_t wSubFolderPath[MAX_PATH] = {0};
+            _snwprintf_s(wSubFolderPath, MAX_PATH, _TRUNCATE, L"%s\\%s", folderPathW, e->name);
+
+            if (IsAnimationLeafFolderW(wSubFolderPath)) {
+                if (*nextIdPtr == targetId) {
+                    StartAnimationPreview(e->rel_path_utf8);
+                    free(entries);
+                    return TRUE;
+                }
+                (*nextIdPtr)++;
+            } else {
+                if (FindAnimationByIdRecursive(wSubFolderPath, e->rel_path_utf8, nextIdPtr, targetId)) {
+                    free(entries);
+                    return TRUE;
+                }
+            }
+        } else {
+            if (*nextIdPtr == targetId) {
+                StartAnimationPreview(e->rel_path_utf8);
+                free(entries);
+                return TRUE;
+            }
+            (*nextIdPtr)++;
+        }
+    }
+    free(entries);
+    return FALSE;
+}
+
 /** @brief Global input text buffer for dialog operations */
 extern wchar_t inputText[256];
 extern int elapsed_time;
@@ -132,6 +225,80 @@ extern BOOL PREVIEW_SHOW_MILLISECONDS;
 
 extern void ShowNotification(HWND hwnd, const wchar_t* message);
 extern void PauseMediaPlayback(void);
+
+/**
+ * @brief Recursively find font file by ID in fonts folder (Unicode-safe)
+ * @param folderPathW Wide-char path to search folder
+ * @param targetId Target font menu ID
+ * @param currentId Pointer to current ID counter
+ * @param foundRelativePathW Output buffer for relative font path
+ * @param fontsFolderRootW Root fonts folder path for relative path calculation
+ * @return TRUE if font found, FALSE otherwise
+ */
+static BOOL FindFontByIdRecursiveW(const wchar_t* folderPathW, int targetId, int* currentId,
+                                   wchar_t* foundRelativePathW, const wchar_t* fontsFolderRootW) {
+    wchar_t* searchPathW = (wchar_t*)malloc(MAX_PATH * sizeof(wchar_t));
+    WIN32_FIND_DATAW* findDataW = (WIN32_FIND_DATAW*)malloc(sizeof(WIN32_FIND_DATAW));
+    if (!searchPathW || !findDataW) {
+        if (searchPathW) free(searchPathW);
+        if (findDataW) free(findDataW);
+        return FALSE;
+    }
+
+    _snwprintf_s(searchPathW, MAX_PATH, _TRUNCATE, L"%s\\*", folderPathW);
+
+    HANDLE hFind = FindFirstFileW(searchPathW, findDataW);
+
+    if (hFind != INVALID_HANDLE_VALUE) {
+        do {
+            /** Skip . and .. entries */
+            if (wcscmp(findDataW->cFileName, L".") == 0 || wcscmp(findDataW->cFileName, L"..") == 0) {
+                continue;
+            }
+
+            wchar_t fullItemPathW[MAX_PATH];
+            _snwprintf_s(fullItemPathW, MAX_PATH, _TRUNCATE, L"%s\\%s", folderPathW, findDataW->cFileName);
+
+            /** Handle regular font files */
+            if (!(findDataW->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+                wchar_t* extW = wcsrchr(findDataW->cFileName, L'.');
+                if (extW && (_wcsicmp(extW, L".ttf") == 0 || _wcsicmp(extW, L".otf") == 0)) {
+                    if (*currentId == targetId) {
+                        /** Calculate relative path from fonts folder root */
+                        size_t rootLen = wcslen(fontsFolderRootW);
+                        if (_wcsnicmp(fullItemPathW, fontsFolderRootW, rootLen) == 0) {
+                            const wchar_t* relativeW = fullItemPathW + rootLen;
+                            if (*relativeW == L'\\') relativeW++;
+                            wcsncpy(foundRelativePathW, relativeW, MAX_PATH - 1);
+                            foundRelativePathW[MAX_PATH - 1] = L'\0';
+                        } else {
+                            /** Fallback to filename only */
+                            wcsncpy(foundRelativePathW, findDataW->cFileName, MAX_PATH - 1);
+                            foundRelativePathW[MAX_PATH - 1] = L'\0';
+                        }
+                        FindClose(hFind);
+                        free(searchPathW);
+                        free(findDataW);
+                        return TRUE;
+                    }
+                    (*currentId)++;
+                }
+            } else {
+                /** Handle subdirectories recursively */
+                if (FindFontByIdRecursiveW(fullItemPathW, targetId, currentId, foundRelativePathW, fontsFolderRootW)) {
+                    FindClose(hFind);
+                    free(searchPathW);
+                    free(findDataW);
+                    return TRUE;
+                }
+            }
+        } while (FindNextFileW(hFind, findDataW));
+        FindClose(hFind);
+    }
+    free(searchPathW);
+    free(findDataW);
+    return FALSE;
+}
 
 /** @brief Pomodoro timer configuration */
 extern int POMODORO_TIMES[10];
@@ -316,6 +483,30 @@ void ExitProgram(HWND hwnd) {
 #define IDT_MENU_DEBOUNCE 500
 
 /**
+ * @brief Helper function to register a single hotkey
+ * @param hwnd Window handle to receive hotkey messages
+ * @param hotkeyId Hotkey identifier
+ * @param hotkeyValue Hotkey value (WORD containing VK and modifiers)
+ * @return TRUE if registration successful, FALSE otherwise
+ */
+static BOOL RegisterSingleHotkey(HWND hwnd, int hotkeyId, WORD hotkeyValue) {
+    if (hotkeyValue == 0) {
+        return FALSE;
+    }
+    
+    BYTE vk = LOBYTE(hotkeyValue);
+    BYTE mod = HIBYTE(hotkeyValue);
+    
+    /** Convert modifier flags to Windows API format */
+    UINT fsModifiers = 0;
+    if (mod & HOTKEYF_ALT) fsModifiers |= MOD_ALT;
+    if (mod & HOTKEYF_CONTROL) fsModifiers |= MOD_CONTROL;
+    if (mod & HOTKEYF_SHIFT) fsModifiers |= MOD_SHIFT;
+    
+    return RegisterHotKey(hwnd, hotkeyId, fsModifiers, vk);
+}
+
+/**
  * @brief Register all global hotkeys with the system
  * @param hwnd Window handle to receive hotkey messages
  * @return TRUE if any hotkeys were successfully registered, FALSE if none
@@ -348,193 +539,34 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
     BOOL success = FALSE;
     BOOL configChanged = FALSE;
     
-    /** Register show time hotkey with conflict detection */
-    if (showTimeHotkey != 0) {
-        BYTE vk = LOBYTE(showTimeHotkey);
-        BYTE mod = HIBYTE(showTimeHotkey);
-        
-        /** Convert modifier flags to Windows API format */
-        UINT fsModifiers = 0;
-        if (mod & HOTKEYF_ALT) fsModifiers |= MOD_ALT;
-        if (mod & HOTKEYF_CONTROL) fsModifiers |= MOD_CONTROL;
-        if (mod & HOTKEYF_SHIFT) fsModifiers |= MOD_SHIFT;
-        
-        if (RegisterHotKey(hwnd, HOTKEY_ID_SHOW_TIME, fsModifiers, vk)) {
-            success = TRUE;
-        } else {
-            /** Clear conflicting hotkey configuration */
-            showTimeHotkey = 0;
-            configChanged = TRUE;
-        }
-    }
+    /** Hotkey registration table */
+    struct {
+        int id;
+        WORD* value;
+    } hotkeys[] = {
+        {HOTKEY_ID_SHOW_TIME, &showTimeHotkey},
+        {HOTKEY_ID_COUNT_UP, &countUpHotkey},
+        {HOTKEY_ID_COUNTDOWN, &countdownHotkey},
+        {HOTKEY_ID_QUICK_COUNTDOWN1, &quickCountdown1Hotkey},
+        {HOTKEY_ID_QUICK_COUNTDOWN2, &quickCountdown2Hotkey},
+        {HOTKEY_ID_QUICK_COUNTDOWN3, &quickCountdown3Hotkey},
+        {HOTKEY_ID_POMODORO, &pomodoroHotkey},
+        {HOTKEY_ID_TOGGLE_VISIBILITY, &toggleVisibilityHotkey},
+        {HOTKEY_ID_EDIT_MODE, &editModeHotkey},
+        {HOTKEY_ID_PAUSE_RESUME, &pauseResumeHotkey},
+        {HOTKEY_ID_RESTART_TIMER, &restartTimerHotkey}
+    };
     
-    if (countUpHotkey != 0) {
-        BYTE vk = LOBYTE(countUpHotkey);
-        BYTE mod = HIBYTE(countUpHotkey);
-        
-        UINT fsModifiers = 0;
-        if (mod & HOTKEYF_ALT) fsModifiers |= MOD_ALT;
-        if (mod & HOTKEYF_CONTROL) fsModifiers |= MOD_CONTROL;
-        if (mod & HOTKEYF_SHIFT) fsModifiers |= MOD_SHIFT;
-        
-        if (RegisterHotKey(hwnd, HOTKEY_ID_COUNT_UP, fsModifiers, vk)) {
-            success = TRUE;
-        } else {
-            countUpHotkey = 0;
-            configChanged = TRUE;
-        }
-    }
-    
-    if (countdownHotkey != 0) {
-        BYTE vk = LOBYTE(countdownHotkey);
-        BYTE mod = HIBYTE(countdownHotkey);
-        
-        UINT fsModifiers = 0;
-        if (mod & HOTKEYF_ALT) fsModifiers |= MOD_ALT;
-        if (mod & HOTKEYF_CONTROL) fsModifiers |= MOD_CONTROL;
-        if (mod & HOTKEYF_SHIFT) fsModifiers |= MOD_SHIFT;
-        
-        if (RegisterHotKey(hwnd, HOTKEY_ID_COUNTDOWN, fsModifiers, vk)) {
-            success = TRUE;
-        } else {
-            countdownHotkey = 0;
-            configChanged = TRUE;
-        }
-    }
-    
-    if (quickCountdown1Hotkey != 0) {
-        BYTE vk = LOBYTE(quickCountdown1Hotkey);
-        BYTE mod = HIBYTE(quickCountdown1Hotkey);
-        
-        UINT fsModifiers = 0;
-        if (mod & HOTKEYF_ALT) fsModifiers |= MOD_ALT;
-        if (mod & HOTKEYF_CONTROL) fsModifiers |= MOD_CONTROL;
-        if (mod & HOTKEYF_SHIFT) fsModifiers |= MOD_SHIFT;
-        
-        if (RegisterHotKey(hwnd, HOTKEY_ID_QUICK_COUNTDOWN1, fsModifiers, vk)) {
-            success = TRUE;
-        } else {
-            quickCountdown1Hotkey = 0;
-            configChanged = TRUE;
-        }
-    }
-    
-    if (quickCountdown2Hotkey != 0) {
-        BYTE vk = LOBYTE(quickCountdown2Hotkey);
-        BYTE mod = HIBYTE(quickCountdown2Hotkey);
-        
-        UINT fsModifiers = 0;
-        if (mod & HOTKEYF_ALT) fsModifiers |= MOD_ALT;
-        if (mod & HOTKEYF_CONTROL) fsModifiers |= MOD_CONTROL;
-        if (mod & HOTKEYF_SHIFT) fsModifiers |= MOD_SHIFT;
-        
-        if (RegisterHotKey(hwnd, HOTKEY_ID_QUICK_COUNTDOWN2, fsModifiers, vk)) {
-            success = TRUE;
-        } else {
-            quickCountdown2Hotkey = 0;
-            configChanged = TRUE;
-        }
-    }
-    
-    if (quickCountdown3Hotkey != 0) {
-        BYTE vk = LOBYTE(quickCountdown3Hotkey);
-        BYTE mod = HIBYTE(quickCountdown3Hotkey);
-        
-        UINT fsModifiers = 0;
-        if (mod & HOTKEYF_ALT) fsModifiers |= MOD_ALT;
-        if (mod & HOTKEYF_CONTROL) fsModifiers |= MOD_CONTROL;
-        if (mod & HOTKEYF_SHIFT) fsModifiers |= MOD_SHIFT;
-        
-        if (RegisterHotKey(hwnd, HOTKEY_ID_QUICK_COUNTDOWN3, fsModifiers, vk)) {
-            success = TRUE;
-        } else {
-            quickCountdown3Hotkey = 0;
-            configChanged = TRUE;
-        }
-    }
-    
-    if (pomodoroHotkey != 0) {
-        BYTE vk = LOBYTE(pomodoroHotkey);
-        BYTE mod = HIBYTE(pomodoroHotkey);
-        
-        UINT fsModifiers = 0;
-        if (mod & HOTKEYF_ALT) fsModifiers |= MOD_ALT;
-        if (mod & HOTKEYF_CONTROL) fsModifiers |= MOD_CONTROL;
-        if (mod & HOTKEYF_SHIFT) fsModifiers |= MOD_SHIFT;
-        
-        if (RegisterHotKey(hwnd, HOTKEY_ID_POMODORO, fsModifiers, vk)) {
-            success = TRUE;
-        } else {
-            pomodoroHotkey = 0;
-            configChanged = TRUE;
-        }
-    }
-    
-    if (toggleVisibilityHotkey != 0) {
-        BYTE vk = LOBYTE(toggleVisibilityHotkey);
-        BYTE mod = HIBYTE(toggleVisibilityHotkey);
-        
-        UINT fsModifiers = 0;
-        if (mod & HOTKEYF_ALT) fsModifiers |= MOD_ALT;
-        if (mod & HOTKEYF_CONTROL) fsModifiers |= MOD_CONTROL;
-        if (mod & HOTKEYF_SHIFT) fsModifiers |= MOD_SHIFT;
-        
-        if (RegisterHotKey(hwnd, HOTKEY_ID_TOGGLE_VISIBILITY, fsModifiers, vk)) {
-            success = TRUE;
-        } else {
-            toggleVisibilityHotkey = 0;
-            configChanged = TRUE;
-        }
-    }
-    
-    if (editModeHotkey != 0) {
-        BYTE vk = LOBYTE(editModeHotkey);
-        BYTE mod = HIBYTE(editModeHotkey);
-        
-        UINT fsModifiers = 0;
-        if (mod & HOTKEYF_ALT) fsModifiers |= MOD_ALT;
-        if (mod & HOTKEYF_CONTROL) fsModifiers |= MOD_CONTROL;
-        if (mod & HOTKEYF_SHIFT) fsModifiers |= MOD_SHIFT;
-        
-        if (RegisterHotKey(hwnd, HOTKEY_ID_EDIT_MODE, fsModifiers, vk)) {
-            success = TRUE;
-        } else {
-            editModeHotkey = 0;
-            configChanged = TRUE;
-        }
-    }
-    
-    if (pauseResumeHotkey != 0) {
-        BYTE vk = LOBYTE(pauseResumeHotkey);
-        BYTE mod = HIBYTE(pauseResumeHotkey);
-        
-        UINT fsModifiers = 0;
-        if (mod & HOTKEYF_ALT) fsModifiers |= MOD_ALT;
-        if (mod & HOTKEYF_CONTROL) fsModifiers |= MOD_CONTROL;
-        if (mod & HOTKEYF_SHIFT) fsModifiers |= MOD_SHIFT;
-        
-        if (RegisterHotKey(hwnd, HOTKEY_ID_PAUSE_RESUME, fsModifiers, vk)) {
-            success = TRUE;
-        } else {
-            pauseResumeHotkey = 0;
-            configChanged = TRUE;
-        }
-    }
-    
-    if (restartTimerHotkey != 0) {
-        BYTE vk = LOBYTE(restartTimerHotkey);
-        BYTE mod = HIBYTE(restartTimerHotkey);
-        
-        UINT fsModifiers = 0;
-        if (mod & HOTKEYF_ALT) fsModifiers |= MOD_ALT;
-        if (mod & HOTKEYF_CONTROL) fsModifiers |= MOD_CONTROL;
-        if (mod & HOTKEYF_SHIFT) fsModifiers |= MOD_SHIFT;
-        
-        if (RegisterHotKey(hwnd, HOTKEY_ID_RESTART_TIMER, fsModifiers, vk)) {
-            success = TRUE;
-        } else {
-            restartTimerHotkey = 0;
-            configChanged = TRUE;
+    /** Register each hotkey with conflict detection */
+    for (int i = 0; i < sizeof(hotkeys) / sizeof(hotkeys[0]); i++) {
+        if (*hotkeys[i].value != 0) {
+            if (RegisterSingleHotkey(hwnd, hotkeys[i].id, *hotkeys[i].value)) {
+                success = TRUE;
+            } else {
+                /** Clear conflicting hotkey configuration */
+                *hotkeys[i].value = 0;
+                configChanged = TRUE;
+            }
         }
     }
     
@@ -549,18 +581,11 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         }
     }
     
+    /** Handle custom countdown hotkey separately */
     ReadCustomCountdownHotkey(&customCountdownHotkey);
     
     if (customCountdownHotkey != 0) {
-        BYTE vk = LOBYTE(customCountdownHotkey);
-        BYTE mod = HIBYTE(customCountdownHotkey);
-        
-        UINT fsModifiers = 0;
-        if (mod & HOTKEYF_ALT) fsModifiers |= MOD_ALT;
-        if (mod & HOTKEYF_CONTROL) fsModifiers |= MOD_CONTROL;
-        if (mod & HOTKEYF_SHIFT) fsModifiers |= MOD_SHIFT;
-        
-        if (RegisterHotKey(hwnd, HOTKEY_ID_CUSTOM_COUNTDOWN, fsModifiers, vk)) {
+        if (RegisterSingleHotkey(hwnd, HOTKEY_ID_CUSTOM_COUNTDOWN, customCountdownHotkey)) {
             success = TRUE;
         } else {
             customCountdownHotkey = 0;
@@ -1148,16 +1173,28 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
 
-                /** Quick countdown timer options (5min, 10min, etc.) */
+                /** Quick countdown timer options (5min, 10min, etc.) - Legacy and dynamic */
                 case 102: case 103: case 104: case 105: case 106:
-                case 107: case 108: {
-                    extern void StopNotificationSound(void);
-                    StopNotificationSound();
+                case 107: case 108:
+                default: {
+                    /** Determine index based on command ID */
+                    int index = -1;
+                    BOOL isQuickTimeOption = FALSE;
                     
-                    CloseAllNotifications();
+                    if (cmd >= 102 && cmd <= 108) {
+                        index = cmd - 102;
+                        isQuickTimeOption = TRUE;
+                    } else if (cmd >= CLOCK_IDM_QUICK_TIME_BASE && cmd < CLOCK_IDM_QUICK_TIME_BASE + MAX_TIME_OPTIONS) {
+                        index = cmd - CLOCK_IDM_QUICK_TIME_BASE;
+                        isQuickTimeOption = TRUE;
+                    }
                     
-                    int index = cmd - 102;
-                    if (index >= 0 && index < time_options_count) {
+                    if (isQuickTimeOption && index >= 0 && index < time_options_count) {
+                        extern void StopNotificationSound(void);
+                        StopNotificationSound();
+                        
+                        CloseAllNotifications();
+                        
                         int seconds = time_options[index];
                         if (seconds > 0) {
                             KillTimer(hwnd, 1);
@@ -1167,9 +1204,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             CLOCK_COUNT_UP = FALSE;
                             CLOCK_SHOW_CURRENT_TIME = FALSE;
                             
-                            CLOCK_IS_PAUSED = FALSE;      
-                            elapsed_time = 0;             
-                            message_shown = FALSE;        
+                            CLOCK_IS_PAUSED = FALSE;
+                            elapsed_time = 0;
+                            message_shown = FALSE;
                             countup_message_shown = FALSE;
                             
                             if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
@@ -1181,46 +1218,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             ShowWindow(hwnd, SW_SHOW);
                             InvalidateRect(hwnd, NULL, TRUE);
                             ResetTimerWithInterval(hwnd);
-                        }
-                    }
-                    break;
-                }
-
-                /** Dynamic menu options */
-                default: {
-                    /** Handle dynamic quick time options */
-                    if (cmd >= CLOCK_IDM_QUICK_TIME_BASE && cmd < CLOCK_IDM_QUICK_TIME_BASE + MAX_TIME_OPTIONS) {
-                        extern void StopNotificationSound(void);
-                        StopNotificationSound();
-
-                        CloseAllNotifications();
-
-                        int index = cmd - CLOCK_IDM_QUICK_TIME_BASE;
-                        if (index >= 0 && index < time_options_count) {
-                            int seconds = time_options[index];
-                            if (seconds > 0) {
-                                KillTimer(hwnd, 1);
-                                CLOCK_TOTAL_TIME = seconds;
-                                countdown_elapsed_time = 0;
-                                countdown_message_shown = FALSE;
-                                CLOCK_COUNT_UP = FALSE;
-                                CLOCK_SHOW_CURRENT_TIME = FALSE;
-
-                                CLOCK_IS_PAUSED = FALSE;
-                                elapsed_time = 0;
-                                message_shown = FALSE;
-                                countup_message_shown = FALSE;
-
-                                if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
-                                    current_pomodoro_phase = POMODORO_PHASE_IDLE;
-                                    current_pomodoro_time_index = 0;
-                                    complete_pomodoro_cycles = 0;
-                                }
-
-                                ShowWindow(hwnd, SW_SHOW);
-                                InvalidateRect(hwnd, NULL, TRUE);
-                                ResetTimerWithInterval(hwnd);
-                            }
                         }
                         return 0;
                     }
@@ -1245,72 +1242,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
                     /** Handle dynamic advanced font selection from fonts folder */
                     else if (cmd >= 2000 && cmd < 3000) {
-                        /** Helper (wide-char): recursively find font by ID and output relative wide path */
-                        BOOL FindFontByIdRecursiveW(const wchar_t* folderPathW, int targetId, int* currentId,
-                                                    wchar_t* foundRelativePathW, const wchar_t* fontsFolderRootW) {
-                            wchar_t* searchPathW = (wchar_t*)malloc(MAX_PATH * sizeof(wchar_t));
-                            WIN32_FIND_DATAW* findDataW = (WIN32_FIND_DATAW*)malloc(sizeof(WIN32_FIND_DATAW));
-                            if (!searchPathW || !findDataW) {
-                                if (searchPathW) free(searchPathW);
-                                if (findDataW) free(findDataW);
-                                return FALSE;
-                            }
-
-                            _snwprintf_s(searchPathW, MAX_PATH, _TRUNCATE, L"%s\\*", folderPathW);
-
-                            HANDLE hFind = FindFirstFileW(searchPathW, findDataW);
-
-                            if (hFind != INVALID_HANDLE_VALUE) {
-                                do {
-                                    /** Skip . and .. entries */
-                                    if (wcscmp(findDataW->cFileName, L".") == 0 || wcscmp(findDataW->cFileName, L"..") == 0) {
-                                        continue;
-                                    }
-
-                                    wchar_t fullItemPathW[MAX_PATH];
-                                    _snwprintf_s(fullItemPathW, MAX_PATH, _TRUNCATE, L"%s\\%s", folderPathW, findDataW->cFileName);
-
-                                    /** Handle regular font files */
-                                    if (!(findDataW->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
-                                        wchar_t* extW = wcsrchr(findDataW->cFileName, L'.');
-                                        if (extW && (_wcsicmp(extW, L".ttf") == 0 || _wcsicmp(extW, L".otf") == 0)) {
-                                            if (*currentId == targetId) {
-                                                /** Calculate relative path from fonts folder root */
-                                                size_t rootLen = wcslen(fontsFolderRootW);
-                                                if (_wcsnicmp(fullItemPathW, fontsFolderRootW, rootLen) == 0) {
-                                                    const wchar_t* relativeW = fullItemPathW + rootLen;
-                                                    if (*relativeW == L'\\') relativeW++;
-                                                    wcsncpy(foundRelativePathW, relativeW, MAX_PATH - 1);
-                                                    foundRelativePathW[MAX_PATH - 1] = L'\0';
-                                                } else {
-                                                    /** Fallback to filename only */
-                                                    wcsncpy(foundRelativePathW, findDataW->cFileName, MAX_PATH - 1);
-                                                    foundRelativePathW[MAX_PATH - 1] = L'\0';
-                                                }
-                                                FindClose(hFind);
-                                                free(searchPathW);
-                                                free(findDataW);
-                                                return TRUE;
-                                            }
-                                            (*currentId)++;
-                                        }
-                                    } else {
-                                        /** Handle subdirectories recursively */
-                                        if (FindFontByIdRecursiveW(fullItemPathW, targetId, currentId, foundRelativePathW, fontsFolderRootW)) {
-                                            FindClose(hFind);
-                                            free(searchPathW);
-                                            free(findDataW);
-                                            return TRUE;
-                                        }
-                                    }
-                                } while (FindNextFileW(hFind, findDataW));
-                                FindClose(hFind);
-                            }
-                            free(searchPathW);
-                            free(findDataW);
-                            return FALSE;
-                        }
-
                         /** Get font filename from fonts folder by ID using wide-char recursive search */
                         wchar_t fontsFolderRootW[MAX_PATH] = {0};
                         if (GetFontsFolderWideFromConfig(fontsFolderRootW, MAX_PATH)) {
@@ -1614,104 +1545,45 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 
                 /** Language selection menu handlers */
-                case CLOCK_IDM_LANG_CHINESE: {
-                    SetLanguage(APP_LANG_CHINESE_SIMP);
-                    WriteConfigLanguage(APP_LANG_CHINESE_SIMP);
-
-                    InvalidateRect(hwnd, NULL, TRUE);
-
-                    extern void UpdateTrayIcon(HWND hwnd);
-                    UpdateTrayIcon(hwnd);
-                    break;
-                }
-                case CLOCK_IDM_LANG_CHINESE_TRAD: {
-                    SetLanguage(APP_LANG_CHINESE_TRAD);
-                    WriteConfigLanguage(APP_LANG_CHINESE_TRAD);
-
-                    InvalidateRect(hwnd, NULL, TRUE);
-
-                    extern void UpdateTrayIcon(HWND hwnd);
-                    UpdateTrayIcon(hwnd);
-                    break;
-                }
-                case CLOCK_IDM_LANG_ENGLISH: {
-                    SetLanguage(APP_LANG_ENGLISH);
-                    WriteConfigLanguage(APP_LANG_ENGLISH);
-
-                    InvalidateRect(hwnd, NULL, TRUE);
-
-                    extern void UpdateTrayIcon(HWND hwnd);
-                    UpdateTrayIcon(hwnd);
-                    break;
-                }
-                case CLOCK_IDM_LANG_SPANISH: {
-                    SetLanguage(APP_LANG_SPANISH);
-                    WriteConfigLanguage(APP_LANG_SPANISH);
-
-                    InvalidateRect(hwnd, NULL, TRUE);
-
-                    extern void UpdateTrayIcon(HWND hwnd);
-                    UpdateTrayIcon(hwnd);
-                    break;
-                }
-                case CLOCK_IDM_LANG_FRENCH: {
-                    SetLanguage(APP_LANG_FRENCH);
-                    WriteConfigLanguage(APP_LANG_FRENCH);
-
-                    InvalidateRect(hwnd, NULL, TRUE);
-
-                    extern void UpdateTrayIcon(HWND hwnd);
-                    UpdateTrayIcon(hwnd);
-                    break;
-                }
-                case CLOCK_IDM_LANG_GERMAN: {
-                    SetLanguage(APP_LANG_GERMAN);
-                    WriteConfigLanguage(APP_LANG_GERMAN);
-
-                    InvalidateRect(hwnd, NULL, TRUE);
-
-                    extern void UpdateTrayIcon(HWND hwnd);
-                    UpdateTrayIcon(hwnd);
-                    break;
-                }
-                case CLOCK_IDM_LANG_RUSSIAN: {
-                    SetLanguage(APP_LANG_RUSSIAN);
-                    WriteConfigLanguage(APP_LANG_RUSSIAN);
-
-                    InvalidateRect(hwnd, NULL, TRUE);
-
-                    extern void UpdateTrayIcon(HWND hwnd);
-                    UpdateTrayIcon(hwnd);
-                    break;
-                }
-                case CLOCK_IDM_LANG_PORTUGUESE: {
-                    SetLanguage(APP_LANG_PORTUGUESE);
-                    WriteConfigLanguage(APP_LANG_PORTUGUESE);
-
-                    InvalidateRect(hwnd, NULL, TRUE);
-
-                    extern void UpdateTrayIcon(HWND hwnd);
-                    UpdateTrayIcon(hwnd);
-                    break;
-                }
-                case CLOCK_IDM_LANG_JAPANESE: {
-                    SetLanguage(APP_LANG_JAPANESE);
-                    WriteConfigLanguage(APP_LANG_JAPANESE);
-
-                    InvalidateRect(hwnd, NULL, TRUE);
-
-                    extern void UpdateTrayIcon(HWND hwnd);
-                    UpdateTrayIcon(hwnd);
-                    break;
-                }
+                case CLOCK_IDM_LANG_CHINESE:
+                case CLOCK_IDM_LANG_CHINESE_TRAD:
+                case CLOCK_IDM_LANG_ENGLISH:
+                case CLOCK_IDM_LANG_SPANISH:
+                case CLOCK_IDM_LANG_FRENCH:
+                case CLOCK_IDM_LANG_GERMAN:
+                case CLOCK_IDM_LANG_RUSSIAN:
+                case CLOCK_IDM_LANG_PORTUGUESE:
+                case CLOCK_IDM_LANG_JAPANESE:
                 case CLOCK_IDM_LANG_KOREAN: {
-                    SetLanguage(APP_LANG_KOREAN);
-                    WriteConfigLanguage(APP_LANG_KOREAN);
-
-                    InvalidateRect(hwnd, NULL, TRUE);
-
-                    extern void UpdateTrayIcon(HWND hwnd);
-                    UpdateTrayIcon(hwnd);
+                    /** Language mapping table */
+                    static const struct {
+                        WORD menuId;
+                        AppLanguage language;
+                    } languageMap[] = {
+                        {CLOCK_IDM_LANG_CHINESE, APP_LANG_CHINESE_SIMP},
+                        {CLOCK_IDM_LANG_CHINESE_TRAD, APP_LANG_CHINESE_TRAD},
+                        {CLOCK_IDM_LANG_ENGLISH, APP_LANG_ENGLISH},
+                        {CLOCK_IDM_LANG_SPANISH, APP_LANG_SPANISH},
+                        {CLOCK_IDM_LANG_FRENCH, APP_LANG_FRENCH},
+                        {CLOCK_IDM_LANG_GERMAN, APP_LANG_GERMAN},
+                        {CLOCK_IDM_LANG_RUSSIAN, APP_LANG_RUSSIAN},
+                        {CLOCK_IDM_LANG_PORTUGUESE, APP_LANG_PORTUGUESE},
+                        {CLOCK_IDM_LANG_JAPANESE, APP_LANG_JAPANESE},
+                        {CLOCK_IDM_LANG_KOREAN, APP_LANG_KOREAN}
+                    };
+                    
+                    /** Find and set the selected language */
+                    for (int i = 0; i < sizeof(languageMap) / sizeof(languageMap[0]); i++) {
+                        if (cmd == languageMap[i].menuId) {
+                            SetLanguage(languageMap[i].language);
+                            WriteConfigLanguage(languageMap[i].language);
+                            InvalidateRect(hwnd, NULL, TRUE);
+                            
+                            extern void UpdateTrayIcon(HWND hwnd);
+                            UpdateTrayIcon(hwnd);
+                            break;
+                        }
+                    }
                     break;
                 }
                 
@@ -2226,7 +2098,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDM_POMODORO_WORK:
                 case CLOCK_IDM_POMODORO_BREAK:
                 case CLOCK_IDM_POMODORO_LBREAK:
-
+                /** Dynamic Pomodoro time configuration by index */
+                case 600: case 601: case 602: case 603: case 604:
+                case 605: case 606: case 607: case 608: case 609:
                     {
                         /** Map menu selection to Pomodoro phase index */
                         int selectedIndex = 0;
@@ -2236,38 +2110,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             selectedIndex = 1;
                         } else if (LOWORD(wp) == CLOCK_IDM_POMODORO_LBREAK) {
                             selectedIndex = 2;
+                        } else {
+                            /** Dynamic index from menu ID */
+                            selectedIndex = LOWORD(wp) - CLOCK_IDM_POMODORO_TIME_BASE;
                         }
-                        
-
-                        memset(inputText, 0, sizeof(inputText));
-                        DialogBoxParamW(GetModuleHandle(NULL), 
-                                 MAKEINTRESOURCEW(CLOCK_IDD_POMODORO_TIME_DIALOG),
-                                 hwnd, DlgProc, (LPARAM)CLOCK_IDD_POMODORO_TIME_DIALOG);
-                        
-                        if (inputText[0] && !isAllSpacesOnly(inputText)) {
-                            int total_seconds = 0;
-    
-                        char inputTextA[256];
-                        WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
-                        if (ParseInput(inputTextA, &total_seconds)) {
-                                POMODORO_TIMES[selectedIndex] = total_seconds;
-                                
-                                WriteConfigPomodoroTimeOptions(POMODORO_TIMES, POMODORO_TIMES_COUNT);
-                                
-                                if (selectedIndex == 0) POMODORO_WORK_TIME = total_seconds;
-                                else if (selectedIndex == 1) POMODORO_SHORT_BREAK = total_seconds;
-                                else if (selectedIndex == 2) POMODORO_LONG_BREAK = total_seconds;
-                            }
-                        }
-                    }
-                    break;
-
-
-                /** Dynamic Pomodoro time configuration by index */
-                case 600: case 601: case 602: case 603: case 604:
-                case 605: case 606: case 607: case 608: case 609:
-                    {
-                        int selectedIndex = LOWORD(wp) - CLOCK_IDM_POMODORO_TIME_BASE;
                         
                         if (selectedIndex >= 0 && selectedIndex < POMODORO_TIMES_COUNT) {
                             memset(inputText, 0, sizeof(inputText));
@@ -2278,9 +2124,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             if (inputText[0] && !isAllSpacesOnly(inputText)) {
                                 int total_seconds = 0;
         
-                        char inputTextA[256];
-                        WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
-                        if (ParseInput(inputTextA, &total_seconds)) {
+                                char inputTextA[256];
+                                WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
+                                if (ParseInput(inputTextA, &total_seconds)) {
                                     POMODORO_TIMES[selectedIndex] = total_seconds;
                                     
                                     WriteConfigPomodoroTimeOptions(POMODORO_TIMES, POMODORO_TIMES_COUNT);
@@ -2529,72 +2375,6 @@ refresh_window:
                 
                 /** Handle fonts folder font preview on hover (IDs 2000+) */
                 if (menuItem >= 2000 && menuItem < 3000) {
-                    /** Wide-char helper: find relative font path by ID (for Unicode filenames) */
-                    BOOL FindFontNameByIdRecursiveW(const wchar_t* folderPathW, int targetId, int* currentId,
-                                                    wchar_t* foundRelativePathW, const wchar_t* fontsFolderRootW) {
-                        wchar_t* searchPathW = (wchar_t*)malloc(MAX_PATH * sizeof(wchar_t));
-                        WIN32_FIND_DATAW* findDataW = (WIN32_FIND_DATAW*)malloc(sizeof(WIN32_FIND_DATAW));
-                        if (!searchPathW || !findDataW) {
-                            if (searchPathW) free(searchPathW);
-                            if (findDataW) free(findDataW);
-                            return FALSE;
-                        }
-
-                        _snwprintf_s(searchPathW, MAX_PATH, _TRUNCATE, L"%s\\*", folderPathW);
-
-                        HANDLE hFind = FindFirstFileW(searchPathW, findDataW);
-
-                        if (hFind != INVALID_HANDLE_VALUE) {
-                            do {
-                                /** Skip . and .. entries */
-                                if (wcscmp(findDataW->cFileName, L".") == 0 || wcscmp(findDataW->cFileName, L"..") == 0) {
-                                    continue;
-                                }
-
-                                wchar_t fullItemPathW[MAX_PATH];
-                                _snwprintf_s(fullItemPathW, MAX_PATH, _TRUNCATE, L"%s\\%s", folderPathW, findDataW->cFileName);
-
-                                /** Handle regular font files */
-                                if (!(findDataW->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
-                                    wchar_t* extW = wcsrchr(findDataW->cFileName, L'.');
-                                    if (extW && (_wcsicmp(extW, L".ttf") == 0 || _wcsicmp(extW, L".otf") == 0)) {
-                                        if (*currentId == targetId) {
-                                            /** Calculate relative path from fonts folder root */
-                                            size_t rootLen = wcslen(fontsFolderRootW);
-                                            if (_wcsnicmp(fullItemPathW, fontsFolderRootW, rootLen) == 0) {
-                                                const wchar_t* relativeW = fullItemPathW + rootLen;
-                                                if (*relativeW == L'\\') relativeW++;
-                                                wcsncpy(foundRelativePathW, relativeW, MAX_PATH - 1);
-                                                foundRelativePathW[MAX_PATH - 1] = L'\0';
-                                            } else {
-                                                /** Fallback to filename only */
-                                                wcsncpy(foundRelativePathW, findDataW->cFileName, MAX_PATH - 1);
-                                                foundRelativePathW[MAX_PATH - 1] = L'\0';
-                                            }
-                                            FindClose(hFind);
-                                            free(searchPathW);
-                                            free(findDataW);
-                                            return TRUE;
-                                        }
-                                        (*currentId)++;
-                                    }
-                                } else {
-                                    /** Handle subdirectories recursively */
-                                    if (FindFontNameByIdRecursiveW(fullItemPathW, targetId, currentId, foundRelativePathW, fontsFolderRootW)) {
-                                        FindClose(hFind);
-                                        free(searchPathW);
-                                        free(findDataW);
-                                        return TRUE;
-                                    }
-                                }
-                            } while (FindNextFileW(hFind, findDataW));
-                            FindClose(hFind);
-                        }
-                        free(searchPathW);
-                        free(findDataW);
-                        return FALSE;
-                    }
-
                     /** Find font name for preview (wide-char), then convert to UTF-8 */
                     wchar_t fontsFolderRootW[MAX_PATH] = {0};
                     if (GetFontsFolderWideFromConfig(fontsFolderRootW, MAX_PATH)) {
@@ -2602,7 +2382,7 @@ refresh_window:
                         int currentIndex = 2000;
                         wchar_t foundRelativePathW[MAX_PATH] = {0};
 
-                        if (FindFontNameByIdRecursiveW(fontsFolderRootW, menuItem, &currentIndex, foundRelativePathW, fontsFolderRootW)) {
+                        if (FindFontByIdRecursiveW(fontsFolderRootW, menuItem, &currentIndex, foundRelativePathW, fontsFolderRootW)) {
                             /** Convert relative wide path to UTF-8 for SwitchFont */
                             char foundFontNameUTF8[MAX_PATH];
                             WideCharToMultiByte(CP_UTF8, 0, foundRelativePathW, -1, foundFontNameUTF8, MAX_PATH, NULL, NULL);
@@ -3205,12 +2985,13 @@ void RestartCurrentTimer(HWND hwnd) {
 }
 
 /**
- * @brief Start first configured quick countdown timer
+ * @brief Start configured quick countdown timer by index (0-based)
  * @param hwnd Main window handle
+ * @param index Zero-based index into time_options array
  *
- * Uses first time option or falls back to default countdown
+ * Uses specified time option or falls back to default countdown
  */
-void StartQuickCountdown1(HWND hwnd) {
+static void StartQuickCountdownByZeroBasedIndex(HWND hwnd, int index) {
     extern void StopNotificationSound(void);
     StopNotificationSound();
     
@@ -3230,8 +3011,8 @@ void StartQuickCountdown1(HWND hwnd) {
     CLOCK_COUNT_UP = FALSE;
     CLOCK_SHOW_CURRENT_TIME = FALSE;
     
-    if (time_options_count > 0) {
-        CLOCK_TOTAL_TIME = time_options[0];
+    if (index >= 0 && index < time_options_count) {
+        CLOCK_TOTAL_TIME = time_options[index];
         countdown_elapsed_time = 0;
         CLOCK_IS_PAUSED = FALSE;
         ResetMillisecondAccumulator();  /** Reset millisecond timing on new countdown */
@@ -3245,6 +3026,16 @@ void StartQuickCountdown1(HWND hwnd) {
     } else {
         StartDefaultCountDown(hwnd);
     }
+}
+
+/**
+ * @brief Start first configured quick countdown timer
+ * @param hwnd Main window handle
+ *
+ * Uses first time option or falls back to default countdown
+ */
+void StartQuickCountdown1(HWND hwnd) {
+    StartQuickCountdownByZeroBasedIndex(hwnd, 0);
 }
 
 /**
@@ -3254,40 +3045,7 @@ void StartQuickCountdown1(HWND hwnd) {
  * Uses second time option or falls back to default countdown
  */
 void StartQuickCountdown2(HWND hwnd) {
-    extern void StopNotificationSound(void);
-    StopNotificationSound();
-    
-    CloseAllNotifications();
-    
-    extern BOOL countdown_message_shown;
-    countdown_message_shown = FALSE;
-    
-    extern void ReadNotificationTypeConfig(void);
-    ReadNotificationTypeConfig();
-    
-    extern int time_options[];
-    extern int time_options_count;
-    
-    BOOL wasShowingTime = CLOCK_SHOW_CURRENT_TIME;
-    
-    CLOCK_COUNT_UP = FALSE;
-    CLOCK_SHOW_CURRENT_TIME = FALSE;
-    
-    if (time_options_count > 1) {
-        CLOCK_TOTAL_TIME = time_options[1];
-        countdown_elapsed_time = 0;
-        CLOCK_IS_PAUSED = FALSE;
-        ResetMillisecondAccumulator();  /** Reset millisecond timing on new countdown */
-        
-        if (wasShowingTime) {
-            KillTimer(hwnd, 1);
-            ResetTimerWithInterval(hwnd);
-        }
-        
-        InvalidateRect(hwnd, NULL, TRUE);
-    } else {
-        StartDefaultCountDown(hwnd);
-    }
+    StartQuickCountdownByZeroBasedIndex(hwnd, 1);
 }
 
 /**
@@ -3297,40 +3055,7 @@ void StartQuickCountdown2(HWND hwnd) {
  * Uses third time option or falls back to default countdown
  */
 void StartQuickCountdown3(HWND hwnd) {
-    extern void StopNotificationSound(void);
-    StopNotificationSound();
-    
-    CloseAllNotifications();
-    
-    extern BOOL countdown_message_shown;
-    countdown_message_shown = FALSE;
-    
-    extern void ReadNotificationTypeConfig(void);
-    ReadNotificationTypeConfig();
-    
-    extern int time_options[];
-    extern int time_options_count;
-    
-    BOOL wasShowingTime = CLOCK_SHOW_CURRENT_TIME;
-    
-    CLOCK_COUNT_UP = FALSE;
-    CLOCK_SHOW_CURRENT_TIME = FALSE;
-    
-    if (time_options_count > 2) {
-        CLOCK_TOTAL_TIME = time_options[2];
-        countdown_elapsed_time = 0;
-        CLOCK_IS_PAUSED = FALSE;
-        ResetMillisecondAccumulator();  /** Reset millisecond timing on new countdown */
-        
-        if (wasShowingTime) {
-            KillTimer(hwnd, 1);
-            ResetTimerWithInterval(hwnd);
-        }
-        
-        InvalidateRect(hwnd, NULL, TRUE);
-    } else {
-        StartDefaultCountDown(hwnd);
-    }
+    StartQuickCountdownByZeroBasedIndex(hwnd, 2);
 }
 
 /**
