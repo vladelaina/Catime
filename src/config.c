@@ -2762,6 +2762,14 @@ void WriteConfigNotificationVolume(int volume) {
  * @param restartTimerHotkey Pointer to store restart timer hotkey
  * Parses hotkey strings and converts them to Windows hotkey codes
  */
+/**
+ * @brief Hotkey configuration entry (for data-driven read/write)
+ */
+typedef struct {
+    const char* key;
+    WORD* value;
+} HotkeyConfigEntry;
+
 void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdownHotkey,
                        WORD* quickCountdown1Hotkey, WORD* quickCountdown2Hotkey, WORD* quickCountdown3Hotkey,
                        WORD* pomodoroHotkey, WORD* toggleVisibilityHotkey, WORD* editModeHotkey,
@@ -2773,133 +2781,31 @@ void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdow
         !pomodoroHotkey || !toggleVisibilityHotkey || !editModeHotkey || 
         !pauseResumeHotkey || !restartTimerHotkey) return;
     
-    /** Initialize all hotkeys to empty */
-    *showTimeHotkey = 0;
-    *countUpHotkey = 0;
-    *countdownHotkey = 0;
-    *quickCountdown1Hotkey = 0;
-    *quickCountdown2Hotkey = 0;
-    *quickCountdown3Hotkey = 0;
-    *pomodoroHotkey = 0;
-    *toggleVisibilityHotkey = 0;
-    *editModeHotkey = 0;
-    *pauseResumeHotkey = 0;
-    *restartTimerHotkey = 0;
+    /** Data-driven hotkey configuration table */
+    HotkeyConfigEntry entries[] = {
+        {"HOTKEY_SHOW_TIME",           showTimeHotkey},
+        {"HOTKEY_COUNT_UP",            countUpHotkey},
+        {"HOTKEY_COUNTDOWN",           countdownHotkey},
+        {"HOTKEY_QUICK_COUNTDOWN1",    quickCountdown1Hotkey},
+        {"HOTKEY_QUICK_COUNTDOWN2",    quickCountdown2Hotkey},
+        {"HOTKEY_QUICK_COUNTDOWN3",    quickCountdown3Hotkey},
+        {"HOTKEY_POMODORO",            pomodoroHotkey},
+        {"HOTKEY_TOGGLE_VISIBILITY",   toggleVisibilityHotkey},
+        {"HOTKEY_EDIT_MODE",           editModeHotkey},
+        {"HOTKEY_PAUSE_RESUME",        pauseResumeHotkey},
+        {"HOTKEY_RESTART_TIMER",       restartTimerHotkey},
+    };
     
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    /** Convert paths to wide character for Unicode support */
-    wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-    
-    FILE* file = _wfopen(wconfig_path, L"r");
-    if (!file) return;
-    
-    char line[256];
-    while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, "HOTKEY_SHOW_TIME=", 17) == 0) {
-            char* value = line + 17;
-
-            char* newline = strchr(value, '\n');
-            if (newline) *newline = '\0';
-            
-
-            *showTimeHotkey = StringToHotkey(value);
-        }
-        else if (strncmp(line, "HOTKEY_COUNT_UP=", 16) == 0) {
-            char* value = line + 16;
-
-            char* newline = strchr(value, '\n');
-            if (newline) *newline = '\0';
-            
-
-            *countUpHotkey = StringToHotkey(value);
-        }
-        else if (strncmp(line, "HOTKEY_COUNTDOWN=", 17) == 0) {
-            char* value = line + 17;
-
-            char* newline = strchr(value, '\n');
-            if (newline) *newline = '\0';
-            
-
-            *countdownHotkey = StringToHotkey(value);
-        }
-        else if (strncmp(line, "HOTKEY_QUICK_COUNTDOWN1=", 24) == 0) {
-            char* value = line + 24;
-
-            char* newline = strchr(value, '\n');
-            if (newline) *newline = '\0';
-            
-
-            *quickCountdown1Hotkey = StringToHotkey(value);
-        }
-        else if (strncmp(line, "HOTKEY_QUICK_COUNTDOWN2=", 24) == 0) {
-            char* value = line + 24;
-
-            char* newline = strchr(value, '\n');
-            if (newline) *newline = '\0';
-            
-
-            *quickCountdown2Hotkey = StringToHotkey(value);
-        }
-        else if (strncmp(line, "HOTKEY_QUICK_COUNTDOWN3=", 24) == 0) {
-            char* value = line + 24;
-
-            char* newline = strchr(value, '\n');
-            if (newline) *newline = '\0';
-            
-
-            *quickCountdown3Hotkey = StringToHotkey(value);
-        }
-        else if (strncmp(line, "HOTKEY_POMODORO=", 16) == 0) {
-            char* value = line + 16;
-
-            char* newline = strchr(value, '\n');
-            if (newline) *newline = '\0';
-            
-
-            *pomodoroHotkey = StringToHotkey(value);
-        }
-        else if (strncmp(line, "HOTKEY_TOGGLE_VISIBILITY=", 25) == 0) {
-            char* value = line + 25;
-
-            char* newline = strchr(value, '\n');
-            if (newline) *newline = '\0';
-            
-
-            *toggleVisibilityHotkey = StringToHotkey(value);
-        }
-        else if (strncmp(line, "HOTKEY_EDIT_MODE=", 17) == 0) {
-            char* value = line + 17;
-
-            char* newline = strchr(value, '\n');
-            if (newline) *newline = '\0';
-            
-
-            *editModeHotkey = StringToHotkey(value);
-        }
-        else if (strncmp(line, "HOTKEY_PAUSE_RESUME=", 20) == 0) {
-            char* value = line + 20;
-
-            char* newline = strchr(value, '\n');
-            if (newline) *newline = '\0';
-            
-
-            *pauseResumeHotkey = StringToHotkey(value);
-        }
-        else if (strncmp(line, "HOTKEY_RESTART_TIMER=", 21) == 0) {
-            char* value = line + 21;
-
-            char* newline = strchr(value, '\n');
-            if (newline) *newline = '\0';
-            
-
-            *restartTimerHotkey = StringToHotkey(value);
-        }
+    /** Read all hotkeys using data-driven approach */
+    for (int i = 0; i < sizeof(entries) / sizeof(entries[0]); i++) {
+        char hotkeyStr[64];
+        ReadIniString(INI_SECTION_HOTKEYS, entries[i].key, "None", 
+                     hotkeyStr, sizeof(hotkeyStr), config_path);
+        *(entries[i].value) = StringToHotkey(hotkeyStr);
     }
-    
-    fclose(file);
 }
 
 
@@ -2907,217 +2813,96 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
                         WORD quickCountdown1Hotkey, WORD quickCountdown2Hotkey, WORD quickCountdown3Hotkey,
                         WORD pomodoroHotkey, WORD toggleVisibilityHotkey, WORD editModeHotkey,
                         WORD pauseResumeHotkey, WORD restartTimerHotkey) {
+    /** Data-driven hotkey configuration table with values */
+    struct {
+        const char* key;
+        WORD value;
+    } entries[] = {
+        {"HOTKEY_SHOW_TIME",           showTimeHotkey},
+        {"HOTKEY_COUNT_UP",            countUpHotkey},
+        {"HOTKEY_COUNTDOWN",           countdownHotkey},
+        {"HOTKEY_QUICK_COUNTDOWN1",    quickCountdown1Hotkey},
+        {"HOTKEY_QUICK_COUNTDOWN2",    quickCountdown2Hotkey},
+        {"HOTKEY_QUICK_COUNTDOWN3",    quickCountdown3Hotkey},
+        {"HOTKEY_POMODORO",            pomodoroHotkey},
+        {"HOTKEY_TOGGLE_VISIBILITY",   toggleVisibilityHotkey},
+        {"HOTKEY_EDIT_MODE",           editModeHotkey},
+        {"HOTKEY_PAUSE_RESUME",        pauseResumeHotkey},
+        {"HOTKEY_RESTART_TIMER",       restartTimerHotkey},
+    };
+    
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    /** Convert paths to wide character for Unicode support */
-    wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-    
-    FILE* file = _wfopen(wconfig_path, L"r");
-    if (!file) {
-
-        wchar_t wconfig_path[MAX_PATH];
-        MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-        
-        file = _wfopen(wconfig_path, L"w");
-        if (!file) return;
-        
-
-        char showTimeStr[64] = {0};
-        char countUpStr[64] = {0};
-        char countdownStr[64] = {0};
-        char quickCountdown1Str[64] = {0};
-        char quickCountdown2Str[64] = {0};
-        char quickCountdown3Str[64] = {0};
-        char pomodoroStr[64] = {0};
-        char toggleVisibilityStr[64] = {0};
-        char editModeStr[64] = {0};
-        char pauseResumeStr[64] = {0};
-        char restartTimerStr[64] = {0};
-        char customCountdownStr[64] = {0};
-        
-
-        HotkeyToString(showTimeHotkey, showTimeStr, sizeof(showTimeStr));
-        HotkeyToString(countUpHotkey, countUpStr, sizeof(countUpStr));
-        HotkeyToString(countdownHotkey, countdownStr, sizeof(countdownStr));
-        HotkeyToString(quickCountdown1Hotkey, quickCountdown1Str, sizeof(quickCountdown1Str));
-        HotkeyToString(quickCountdown2Hotkey, quickCountdown2Str, sizeof(quickCountdown2Str));
-        HotkeyToString(quickCountdown3Hotkey, quickCountdown3Str, sizeof(quickCountdown3Str));
-        HotkeyToString(pomodoroHotkey, pomodoroStr, sizeof(pomodoroStr));
-        HotkeyToString(toggleVisibilityHotkey, toggleVisibilityStr, sizeof(toggleVisibilityStr));
-        HotkeyToString(editModeHotkey, editModeStr, sizeof(editModeStr));
-        HotkeyToString(pauseResumeHotkey, pauseResumeStr, sizeof(pauseResumeStr));
-        HotkeyToString(restartTimerHotkey, restartTimerStr, sizeof(restartTimerStr));
-
-        WORD customCountdownHotkey = 0;
-        ReadCustomCountdownHotkey(&customCountdownHotkey);
-        HotkeyToString(customCountdownHotkey, customCountdownStr, sizeof(customCountdownStr));
-        
-
-        fprintf(file, "HOTKEY_SHOW_TIME=%s\n", showTimeStr);
-        fprintf(file, "HOTKEY_COUNT_UP=%s\n", countUpStr);
-        fprintf(file, "HOTKEY_COUNTDOWN=%s\n", countdownStr);
-        fprintf(file, "HOTKEY_QUICK_COUNTDOWN1=%s\n", quickCountdown1Str);
-        fprintf(file, "HOTKEY_QUICK_COUNTDOWN2=%s\n", quickCountdown2Str);
-        fprintf(file, "HOTKEY_QUICK_COUNTDOWN3=%s\n", quickCountdown3Str);
-        fprintf(file, "HOTKEY_POMODORO=%s\n", pomodoroStr);
-        fprintf(file, "HOTKEY_TOGGLE_VISIBILITY=%s\n", toggleVisibilityStr);
-        fprintf(file, "HOTKEY_EDIT_MODE=%s\n", editModeStr);
-        fprintf(file, "HOTKEY_PAUSE_RESUME=%s\n", pauseResumeStr);
-        fprintf(file, "HOTKEY_RESTART_TIMER=%s\n", restartTimerStr);
-        fprintf(file, "HOTKEY_CUSTOM_COUNTDOWN=%s\n", customCountdownStr);
-        
-        fclose(file);
-        return;
+    /** Write all hotkeys using data-driven approach */
+    for (int i = 0; i < sizeof(entries) / sizeof(entries[0]); i++) {
+        char hotkeyStr[64];
+        HotkeyToString(entries[i].value, hotkeyStr, sizeof(hotkeyStr));
+        WriteIniString(INI_SECTION_HOTKEYS, entries[i].key, hotkeyStr, config_path);
     }
     
-
-    char temp_path[MAX_PATH];
-    sprintf(temp_path, "%s.tmp", config_path);
-    wchar_t wtemp_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, temp_path, -1, wtemp_path, MAX_PATH);
-    
-    FILE* temp_file = _wfopen(wtemp_path, L"w");
-    
-    if (!temp_file) {
-        fclose(file);
-        return;
-    }
-    
-    char line[256];
-    BOOL foundShowTime = FALSE;
-    BOOL foundCountUp = FALSE;
-    BOOL foundCountdown = FALSE;
-    BOOL foundQuickCountdown1 = FALSE;
-    BOOL foundQuickCountdown2 = FALSE;
-    BOOL foundQuickCountdown3 = FALSE;
-    BOOL foundPomodoro = FALSE;
-    BOOL foundToggleVisibility = FALSE;
-    BOOL foundEditMode = FALSE;
-    BOOL foundPauseResume = FALSE;
-    BOOL foundRestartTimer = FALSE;
-    
-
-    char showTimeStr[64] = {0};
-    char countUpStr[64] = {0};
-    char countdownStr[64] = {0};
-    char quickCountdown1Str[64] = {0};
-    char quickCountdown2Str[64] = {0};
-    char quickCountdown3Str[64] = {0};
-    char pomodoroStr[64] = {0};
-    char toggleVisibilityStr[64] = {0};
-    char editModeStr[64] = {0};
-    char pauseResumeStr[64] = {0};
-    char restartTimerStr[64] = {0};
-    
-
-    HotkeyToString(showTimeHotkey, showTimeStr, sizeof(showTimeStr));
-    HotkeyToString(countUpHotkey, countUpStr, sizeof(countUpStr));
-    HotkeyToString(countdownHotkey, countdownStr, sizeof(countdownStr));
-    HotkeyToString(quickCountdown1Hotkey, quickCountdown1Str, sizeof(quickCountdown1Str));
-    HotkeyToString(quickCountdown2Hotkey, quickCountdown2Str, sizeof(quickCountdown2Str));
-    HotkeyToString(quickCountdown3Hotkey, quickCountdown3Str, sizeof(quickCountdown3Str));
-    HotkeyToString(pomodoroHotkey, pomodoroStr, sizeof(pomodoroStr));
-    HotkeyToString(toggleVisibilityHotkey, toggleVisibilityStr, sizeof(toggleVisibilityStr));
-    HotkeyToString(editModeHotkey, editModeStr, sizeof(editModeStr));
-    HotkeyToString(pauseResumeHotkey, pauseResumeStr, sizeof(pauseResumeStr));
-    HotkeyToString(restartTimerHotkey, restartTimerStr, sizeof(restartTimerStr));
-    
-
-    while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, "HOTKEY_SHOW_TIME=", 17) == 0) {
-            fprintf(temp_file, "HOTKEY_SHOW_TIME=%s\n", showTimeStr);
-            foundShowTime = TRUE;
-        }
-        else if (strncmp(line, "HOTKEY_COUNT_UP=", 16) == 0) {
-            fprintf(temp_file, "HOTKEY_COUNT_UP=%s\n", countUpStr);
-            foundCountUp = TRUE;
-        }
-        else if (strncmp(line, "HOTKEY_COUNTDOWN=", 17) == 0) {
-            fprintf(temp_file, "HOTKEY_COUNTDOWN=%s\n", countdownStr);
-            foundCountdown = TRUE;
-        }
-        else if (strncmp(line, "HOTKEY_QUICK_COUNTDOWN1=", 24) == 0) {
-            fprintf(temp_file, "HOTKEY_QUICK_COUNTDOWN1=%s\n", quickCountdown1Str);
-            foundQuickCountdown1 = TRUE;
-        }
-        else if (strncmp(line, "HOTKEY_QUICK_COUNTDOWN2=", 24) == 0) {
-            fprintf(temp_file, "HOTKEY_QUICK_COUNTDOWN2=%s\n", quickCountdown2Str);
-            foundQuickCountdown2 = TRUE;
-        }
-        else if (strncmp(line, "HOTKEY_QUICK_COUNTDOWN3=", 24) == 0) {
-            fprintf(temp_file, "HOTKEY_QUICK_COUNTDOWN3=%s\n", quickCountdown3Str);
-            foundQuickCountdown3 = TRUE;
-        }
-        else if (strncmp(line, "HOTKEY_POMODORO=", 16) == 0) {
-            fprintf(temp_file, "HOTKEY_POMODORO=%s\n", pomodoroStr);
-            foundPomodoro = TRUE;
-        }
-        else if (strncmp(line, "HOTKEY_TOGGLE_VISIBILITY=", 25) == 0) {
-            fprintf(temp_file, "HOTKEY_TOGGLE_VISIBILITY=%s\n", toggleVisibilityStr);
-            foundToggleVisibility = TRUE;
-        }
-        else if (strncmp(line, "HOTKEY_EDIT_MODE=", 17) == 0) {
-            fprintf(temp_file, "HOTKEY_EDIT_MODE=%s\n", editModeStr);
-            foundEditMode = TRUE;
-        }
-        else if (strncmp(line, "HOTKEY_PAUSE_RESUME=", 20) == 0) {
-            fprintf(temp_file, "HOTKEY_PAUSE_RESUME=%s\n", pauseResumeStr);
-            foundPauseResume = TRUE;
-        }
-        else if (strncmp(line, "HOTKEY_RESTART_TIMER=", 21) == 0) {
-            fprintf(temp_file, "HOTKEY_RESTART_TIMER=%s\n", restartTimerStr);
-            foundRestartTimer = TRUE;
-        }
-        else {
-
-            fputs(line, temp_file);
-        }
-    }
-    
-
-    if (!foundShowTime) {
-        fprintf(temp_file, "HOTKEY_SHOW_TIME=%s\n", showTimeStr);
-    }
-    if (!foundCountUp) {
-        fprintf(temp_file, "HOTKEY_COUNT_UP=%s\n", countUpStr);
-    }
-    if (!foundCountdown) {
-        fprintf(temp_file, "HOTKEY_COUNTDOWN=%s\n", countdownStr);
-    }
-    if (!foundQuickCountdown1) {
-        fprintf(temp_file, "HOTKEY_QUICK_COUNTDOWN1=%s\n", quickCountdown1Str);
-    }
-    if (!foundQuickCountdown2) {
-        fprintf(temp_file, "HOTKEY_QUICK_COUNTDOWN2=%s\n", quickCountdown2Str);
-    }
-    if (!foundQuickCountdown3) {
-        fprintf(temp_file, "HOTKEY_QUICK_COUNTDOWN3=%s\n", quickCountdown3Str);
-    }
-    if (!foundPomodoro) {
-        fprintf(temp_file, "HOTKEY_POMODORO=%s\n", pomodoroStr);
-    }
-    if (!foundToggleVisibility) {
-        fprintf(temp_file, "HOTKEY_TOGGLE_VISIBILITY=%s\n", toggleVisibilityStr);
-    }
-    if (!foundEditMode) {
-        fprintf(temp_file, "HOTKEY_EDIT_MODE=%s\n", editModeStr);
-    }
-    if (!foundPauseResume) {
-        fprintf(temp_file, "HOTKEY_PAUSE_RESUME=%s\n", pauseResumeStr);
-    }
-    if (!foundRestartTimer) {
-        fprintf(temp_file, "HOTKEY_RESTART_TIMER=%s\n", restartTimerStr);
-    }
-    
-    fclose(file);
-    fclose(temp_file);
-    
-    
-    ReplaceFileUtf8(config_path, temp_path);
+    /** Also write HOTKEY_CUSTOM_COUNTDOWN for backward compatibility */
+    WORD customCountdownHotkey = 0;
+    ReadCustomCountdownHotkey(&customCountdownHotkey);
+    char customCountdownStr[64];
+    HotkeyToString(customCountdownHotkey, customCountdownStr, sizeof(customCountdownStr));
+    WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_CUSTOM_COUNTDOWN", customCountdownStr, config_path);
 }
 
+
+/**
+ * @brief Virtual Key Code to String mapping table
+ * Used for efficient hotkey string conversion
+ */
+typedef struct {
+    BYTE vk;
+    const char* name;
+} VKeyMapping;
+
+static const VKeyMapping g_vkeyMap[] = {
+    {VK_BACK,      "Backspace"},
+    {VK_TAB,       "Tab"},
+    {VK_RETURN,    "Enter"},
+    {VK_ESCAPE,    "Esc"},
+    {VK_SPACE,     "Space"},
+    {VK_PRIOR,     "PageUp"},
+    {VK_NEXT,      "PageDown"},
+    {VK_END,       "End"},
+    {VK_HOME,      "Home"},
+    {VK_LEFT,      "Left"},
+    {VK_UP,        "Up"},
+    {VK_RIGHT,     "Right"},
+    {VK_DOWN,      "Down"},
+    {VK_INSERT,    "Insert"},
+    {VK_DELETE,    "Delete"},
+    {VK_NUMPAD0,   "Num0"},
+    {VK_NUMPAD1,   "Num1"},
+    {VK_NUMPAD2,   "Num2"},
+    {VK_NUMPAD3,   "Num3"},
+    {VK_NUMPAD4,   "Num4"},
+    {VK_NUMPAD5,   "Num5"},
+    {VK_NUMPAD6,   "Num6"},
+    {VK_NUMPAD7,   "Num7"},
+    {VK_NUMPAD8,   "Num8"},
+    {VK_NUMPAD9,   "Num9"},
+    {VK_MULTIPLY,  "Num*"},
+    {VK_ADD,       "Num+"},
+    {VK_SUBTRACT,  "Num-"},
+    {VK_DECIMAL,   "Num."},
+    {VK_DIVIDE,    "Num/"},
+    {VK_OEM_1,     ";"},
+    {VK_OEM_PLUS,  "="},
+    {VK_OEM_COMMA, ","},
+    {VK_OEM_MINUS, "-"},
+    {VK_OEM_PERIOD, "."},
+    {VK_OEM_2,     "/"},
+    {VK_OEM_3,     "`"},
+    {VK_OEM_4,     "["},
+    {VK_OEM_5,     "\\"},
+    {VK_OEM_6,     "]"},
+    {VK_OEM_7,     "'"},
+    {0, NULL}  /** End marker */
+};
 
 /**
  * @brief Convert hotkey code to human-readable string
@@ -3172,72 +2957,35 @@ void HotkeyToString(WORD hotkey, char* buffer, size_t bufferSize) {
         buffer[len] = '\0';
     }
     
-
+    /** Handle alphanumeric keys */
     if (vk >= 'A' && vk <= 'Z') {
-
         char keyName[2] = {vk, '\0'};
         strncat(buffer, keyName, bufferSize - len - 1);
     } else if (vk >= '0' && vk <= '9') {
-
         char keyName[2] = {vk, '\0'};
         strncat(buffer, keyName, bufferSize - len - 1);
     } else if (vk >= VK_F1 && vk <= VK_F24) {
-
-        char keyName[4];
+        /** Handle function keys */
+        char keyName[8];
         sprintf(keyName, "F%d", vk - VK_F1 + 1);
         strncat(buffer, keyName, bufferSize - len - 1);
     } else {
-
-        switch (vk) {
-            case VK_BACK:       strncat(buffer, "Backspace", bufferSize - len - 1); break;
-            case VK_TAB:        strncat(buffer, "Tab", bufferSize - len - 1); break;
-            case VK_RETURN:     strncat(buffer, "Enter", bufferSize - len - 1); break;
-            case VK_ESCAPE:     strncat(buffer, "Esc", bufferSize - len - 1); break;
-            case VK_SPACE:      strncat(buffer, "Space", bufferSize - len - 1); break;
-            case VK_PRIOR:      strncat(buffer, "PageUp", bufferSize - len - 1); break;
-            case VK_NEXT:       strncat(buffer, "PageDown", bufferSize - len - 1); break;
-            case VK_END:        strncat(buffer, "End", bufferSize - len - 1); break;
-            case VK_HOME:       strncat(buffer, "Home", bufferSize - len - 1); break;
-            case VK_LEFT:       strncat(buffer, "Left", bufferSize - len - 1); break;
-            case VK_UP:         strncat(buffer, "Up", bufferSize - len - 1); break;
-            case VK_RIGHT:      strncat(buffer, "Right", bufferSize - len - 1); break;
-            case VK_DOWN:       strncat(buffer, "Down", bufferSize - len - 1); break;
-            case VK_INSERT:     strncat(buffer, "Insert", bufferSize - len - 1); break;
-            case VK_DELETE:     strncat(buffer, "Delete", bufferSize - len - 1); break;
-            case VK_NUMPAD0:    strncat(buffer, "Num0", bufferSize - len - 1); break;
-            case VK_NUMPAD1:    strncat(buffer, "Num1", bufferSize - len - 1); break;
-            case VK_NUMPAD2:    strncat(buffer, "Num2", bufferSize - len - 1); break;
-            case VK_NUMPAD3:    strncat(buffer, "Num3", bufferSize - len - 1); break;
-            case VK_NUMPAD4:    strncat(buffer, "Num4", bufferSize - len - 1); break;
-            case VK_NUMPAD5:    strncat(buffer, "Num5", bufferSize - len - 1); break;
-            case VK_NUMPAD6:    strncat(buffer, "Num6", bufferSize - len - 1); break;
-            case VK_NUMPAD7:    strncat(buffer, "Num7", bufferSize - len - 1); break;
-            case VK_NUMPAD8:    strncat(buffer, "Num8", bufferSize - len - 1); break;
-            case VK_NUMPAD9:    strncat(buffer, "Num9", bufferSize - len - 1); break;
-            case VK_MULTIPLY:   strncat(buffer, "Num*", bufferSize - len - 1); break;
-            case VK_ADD:        strncat(buffer, "Num+", bufferSize - len - 1); break;
-            case VK_SUBTRACT:   strncat(buffer, "Num-", bufferSize - len - 1); break;
-            case VK_DECIMAL:    strncat(buffer, "Num.", bufferSize - len - 1); break;
-            case VK_DIVIDE:     strncat(buffer, "Num/", bufferSize - len - 1); break;
-            case VK_OEM_1:      strncat(buffer, ";", bufferSize - len - 1); break;
-            case VK_OEM_PLUS:   strncat(buffer, "=", bufferSize - len - 1); break;
-            case VK_OEM_COMMA:  strncat(buffer, ",", bufferSize - len - 1); break;
-            case VK_OEM_MINUS:  strncat(buffer, "-", bufferSize - len - 1); break;
-            case VK_OEM_PERIOD: strncat(buffer, ".", bufferSize - len - 1); break;
-            case VK_OEM_2:      strncat(buffer, "/", bufferSize - len - 1); break;
-            case VK_OEM_3:      strncat(buffer, "`", bufferSize - len - 1); break;
-            case VK_OEM_4:      strncat(buffer, "[", bufferSize - len - 1); break;
-            case VK_OEM_5:      strncat(buffer, "\\", bufferSize - len - 1); break;
-            case VK_OEM_6:      strncat(buffer, "]", bufferSize - len - 1); break;
-            case VK_OEM_7:      strncat(buffer, "'", bufferSize - len - 1); break;
-            default:            
-
-                {
-                char keyName[8];
-                sprintf(keyName, "0x%02X", vk);
-                strncat(buffer, keyName, bufferSize - len - 1);
-                }
+        /** Look up in mapping table */
+        const char* keyName = NULL;
+        for (int i = 0; g_vkeyMap[i].name != NULL; i++) {
+            if (g_vkeyMap[i].vk == vk) {
+                keyName = g_vkeyMap[i].name;
                 break;
+            }
+        }
+        
+        if (keyName) {
+            strncat(buffer, keyName, bufferSize - len - 1);
+        } else {
+            /** Fallback to hex code for unknown keys */
+            char hexKey[8];
+            sprintf(hexKey, "0x%02X", vk);
+            strncat(buffer, hexKey, bufferSize - len - 1);
         }
     }
 }
@@ -3285,56 +3033,33 @@ WORD StringToHotkey(const char* str) {
         token = strtok(NULL, "+");
     }
     
-
     if (lastToken) {
-
+        /** Handle single character keys (A-Z, 0-9) */
         if (strlen(lastToken) == 1) {
             char ch = toupper(lastToken[0]);
             if ((ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9')) {
                 vk = ch;
             }
         } 
-
+        /** Handle function keys (F1-F24) */
         else if (lastToken[0] == 'F' && isdigit(lastToken[1])) {
             int fNum = atoi(lastToken + 1);
             if (fNum >= 1 && fNum <= 24) {
                 vk = VK_F1 + fNum - 1;
             }
         }
-
-        else if (stricmp(lastToken, "Backspace") == 0) vk = VK_BACK;
-        else if (stricmp(lastToken, "Tab") == 0) vk = VK_TAB;
-        else if (stricmp(lastToken, "Enter") == 0) vk = VK_RETURN;
-        else if (stricmp(lastToken, "Esc") == 0) vk = VK_ESCAPE;
-        else if (stricmp(lastToken, "Space") == 0) vk = VK_SPACE;
-        else if (stricmp(lastToken, "PageUp") == 0) vk = VK_PRIOR;
-        else if (stricmp(lastToken, "PageDown") == 0) vk = VK_NEXT;
-        else if (stricmp(lastToken, "End") == 0) vk = VK_END;
-        else if (stricmp(lastToken, "Home") == 0) vk = VK_HOME;
-        else if (stricmp(lastToken, "Left") == 0) vk = VK_LEFT;
-        else if (stricmp(lastToken, "Up") == 0) vk = VK_UP;
-        else if (stricmp(lastToken, "Right") == 0) vk = VK_RIGHT;
-        else if (stricmp(lastToken, "Down") == 0) vk = VK_DOWN;
-        else if (stricmp(lastToken, "Insert") == 0) vk = VK_INSERT;
-        else if (stricmp(lastToken, "Delete") == 0) vk = VK_DELETE;
-        else if (stricmp(lastToken, "Num0") == 0) vk = VK_NUMPAD0;
-        else if (stricmp(lastToken, "Num1") == 0) vk = VK_NUMPAD1;
-        else if (stricmp(lastToken, "Num2") == 0) vk = VK_NUMPAD2;
-        else if (stricmp(lastToken, "Num3") == 0) vk = VK_NUMPAD3;
-        else if (stricmp(lastToken, "Num4") == 0) vk = VK_NUMPAD4;
-        else if (stricmp(lastToken, "Num5") == 0) vk = VK_NUMPAD5;
-        else if (stricmp(lastToken, "Num6") == 0) vk = VK_NUMPAD6;
-        else if (stricmp(lastToken, "Num7") == 0) vk = VK_NUMPAD7;
-        else if (stricmp(lastToken, "Num8") == 0) vk = VK_NUMPAD8;
-        else if (stricmp(lastToken, "Num9") == 0) vk = VK_NUMPAD9;
-        else if (stricmp(lastToken, "Num*") == 0) vk = VK_MULTIPLY;
-        else if (stricmp(lastToken, "Num+") == 0) vk = VK_ADD;
-        else if (stricmp(lastToken, "Num-") == 0) vk = VK_SUBTRACT;
-        else if (stricmp(lastToken, "Num.") == 0) vk = VK_DECIMAL;
-        else if (stricmp(lastToken, "Num/") == 0) vk = VK_DIVIDE;
-
+        /** Handle hex format (0xNN) */
         else if (strncmp(lastToken, "0x", 2) == 0) {
             vk = (BYTE)strtol(lastToken, NULL, 16);
+        }
+        /** Look up in mapping table */
+        else {
+            for (int i = 0; g_vkeyMap[i].name != NULL; i++) {
+                if (stricmp(lastToken, g_vkeyMap[i].name) == 0) {
+                    vk = g_vkeyMap[i].vk;
+                    break;
+                }
+            }
         }
     }
     
