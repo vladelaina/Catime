@@ -285,7 +285,7 @@ void ReadNotificationOpacityConfig(void);
 
 /**
  * @brief Write notification opacity setting
- * @param opacity Opacity value (0-255)
+ * @param opacity Opacity value (1-100)
  */
 void WriteConfigNotificationOpacity(int opacity);
 
