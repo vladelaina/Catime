@@ -23,6 +23,185 @@
 
 #define MAX_POMODORO_TIMES 10
 
+/**
+ * ========================================================================
+ * Enum-String Mapping System
+ * ========================================================================
+ */
+
+/**
+ * @brief Generic enum-to-string mapping entry
+ */
+typedef struct {
+    int value;           /**< Enum integer value */
+    const char* str;     /**< String representation */
+} EnumStrMap;
+
+/**
+ * @brief Notification type mappings
+ */
+static const EnumStrMap NOTIFICATION_TYPE_MAP[] = {
+    {NOTIFICATION_TYPE_CATIME,       "CATIME"},
+    {NOTIFICATION_TYPE_SYSTEM_MODAL, "SYSTEM_MODAL"},
+    {NOTIFICATION_TYPE_OS,           "OS"},
+    {-1, NULL}  /**< End marker */
+};
+
+/**
+ * @brief Time format type mappings
+ */
+static const EnumStrMap TIME_FORMAT_MAP[] = {
+    {TIME_FORMAT_DEFAULT,      "DEFAULT"},
+    {TIME_FORMAT_ZERO_PADDED,  "ZERO_PADDED"},
+    {TIME_FORMAT_FULL_PADDED,  "FULL_PADDED"},
+    {-1, NULL}
+};
+
+/**
+ * @brief Language mappings
+ */
+static const EnumStrMap LANGUAGE_MAP[] = {
+    {APP_LANG_CHINESE_SIMP, "Chinese_Simplified"},
+    {APP_LANG_CHINESE_TRAD, "Chinese_Traditional"},
+    {APP_LANG_ENGLISH,      "English"},
+    {APP_LANG_SPANISH,      "Spanish"},
+    {APP_LANG_FRENCH,       "French"},
+    {APP_LANG_GERMAN,       "German"},
+    {APP_LANG_RUSSIAN,      "Russian"},
+    {APP_LANG_PORTUGUESE,   "Portuguese"},
+    {APP_LANG_JAPANESE,     "Japanese"},
+    {APP_LANG_KOREAN,       "Korean"},
+    {-1, NULL}
+};
+
+/**
+ * @brief Timeout action mappings
+ */
+static const EnumStrMap TIMEOUT_ACTION_MAP[] = {
+    {TIMEOUT_ACTION_MESSAGE,       "MESSAGE"},
+    {TIMEOUT_ACTION_LOCK,          "LOCK"},
+    {TIMEOUT_ACTION_SHUTDOWN,      "SHUTDOWN"},
+    {TIMEOUT_ACTION_RESTART,       "RESTART"},
+    {TIMEOUT_ACTION_OPEN_FILE,     "OPEN_FILE"},
+    {TIMEOUT_ACTION_SHOW_TIME,     "SHOW_TIME"},
+    {TIMEOUT_ACTION_COUNT_UP,      "COUNT_UP"},
+    {TIMEOUT_ACTION_OPEN_WEBSITE,  "OPEN_WEBSITE"},
+    {TIMEOUT_ACTION_SLEEP,         "SLEEP"},
+    {-1, NULL}
+};
+
+/**
+ * @brief Convert enum value to string representation
+ * @param map Mapping table to use
+ * @param value Enum value to convert
+ * @param defaultVal Default string if not found
+ * @return String representation of enum value
+ */
+static const char* EnumToString(const EnumStrMap* map, int value, const char* defaultVal) {
+    if (!map) return defaultVal;
+    for (int i = 0; map[i].str != NULL; i++) {
+        if (map[i].value == value) {
+            return map[i].str;
+        }
+    }
+    return defaultVal;
+}
+
+/**
+ * @brief Convert string to enum value
+ * @param map Mapping table to use
+ * @param str String to convert
+ * @param defaultVal Default enum value if not found
+ * @return Enum value corresponding to string
+ */
+static int StringToEnum(const EnumStrMap* map, const char* str, int defaultVal) {
+    if (!map || !str) return defaultVal;
+    for (int i = 0; map[i].str != NULL; i++) {
+        if (strcmp(map[i].str, str) == 0) {
+            return map[i].value;
+        }
+    }
+    return defaultVal;
+}
+
+/**
+ * ========================================================================
+ * End of Enum-String Mapping System
+ * ========================================================================
+ */
+
+/**
+ * ========================================================================
+ * UTF-8 / Wide Character Conversion Macros
+ * ========================================================================
+ */
+
+/**
+ * @brief Convert UTF-8 string to wide character string (stack allocation)
+ * @param utf8 UTF-8 source string
+ * @param wide Variable name for wide character output (will be declared)
+ * 
+ * Usage: UTF8_TO_WIDE(utf8Path, wPath);
+ * Creates: wchar_t wPath[MAX_PATH];
+ */
+#define UTF8_TO_WIDE(utf8, wide) \
+    wchar_t wide[MAX_PATH] = {0}; \
+    MultiByteToWideChar(CP_UTF8, 0, utf8, -1, wide, MAX_PATH)
+
+/**
+ * @brief Convert UTF-8 string to wide character string with custom size
+ * @param utf8 UTF-8 source string
+ * @param wide Variable name for wide character output (will be declared)
+ * @param size Buffer size
+ * 
+ * Usage: UTF8_TO_WIDE_N(utf8Str, wStr, 256);
+ * Creates: wchar_t wStr[256];
+ */
+#define UTF8_TO_WIDE_N(utf8, wide, size) \
+    wchar_t wide[size] = {0}; \
+    MultiByteToWideChar(CP_UTF8, 0, utf8, -1, wide, size)
+
+/**
+ * @brief Convert wide character string to UTF-8 (into existing buffer)
+ * @param wide Wide character source string
+ * @param utf8 UTF-8 output buffer
+ * @param size Size of UTF-8 buffer
+ * 
+ * Usage: WIDE_TO_UTF8(wPath, utf8Path, MAX_PATH);
+ */
+#define WIDE_TO_UTF8(wide, utf8, size) \
+    WideCharToMultiByte(CP_UTF8, 0, wide, -1, utf8, (int)(size), NULL, NULL)
+
+/**
+ * @brief Open file with UTF-8 path using wide character API
+ * @param utf8Path UTF-8 file path
+ * @param mode Wide character mode string (L"r", L"w", etc.)
+ * @param filePtr Variable name for FILE* output
+ * 
+ * Usage: FOPEN_UTF8(config_path, L"r", file);
+ */
+#define FOPEN_UTF8(utf8Path, mode, filePtr) \
+    wchar_t _w##filePtr[MAX_PATH] = {0}; \
+    MultiByteToWideChar(CP_UTF8, 0, utf8Path, -1, _w##filePtr, MAX_PATH); \
+    FILE* filePtr = _wfopen(_w##filePtr, mode)
+
+/**
+ * @brief Check if file exists using UTF-8 path (inline helper)
+ * @param utf8Path UTF-8 file path
+ * @return BOOL - TRUE if exists, FALSE otherwise
+ */
+static inline BOOL FileExistsUtf8(const char* utf8Path) {
+    if (!utf8Path) return FALSE;
+    UTF8_TO_WIDE(utf8Path, wPath);
+    return GetFileAttributesW(wPath) != INVALID_FILE_ATTRIBUTES;
+}
+
+/**
+ * ========================================================================
+ * End of UTF-8 Conversion Macros
+ * ========================================================================
+ */
+
 extern int POMODORO_WORK_TIME;
 extern int POMODORO_SHORT_BREAK;
 extern int POMODORO_LONG_BREAK;
@@ -418,18 +597,17 @@ static BOOL CreateUniqueTempPathInConfigDir(const char* configPathUtf8, char* ou
 DWORD ReadIniString(const char* section, const char* key, const char* defaultValue,
                   char* returnValue, DWORD returnSize, const char* filePath) {
 
-    wchar_t wsection[256], wkey[256], wdefaultValue[1024], wfilePath[MAX_PATH];
+    /** Convert all parameters to wide char */
+    UTF8_TO_WIDE_N(section, wsection, 256);
+    UTF8_TO_WIDE_N(key, wkey, 256);
+    UTF8_TO_WIDE_N(defaultValue, wdefaultValue, 1024);
+    UTF8_TO_WIDE(filePath, wfilePath);
+    
     wchar_t wreturnValue[1024];
-    
-    MultiByteToWideChar(CP_UTF8, 0, section, -1, wsection, 256);
-    MultiByteToWideChar(CP_UTF8, 0, key, -1, wkey, 256);
-    MultiByteToWideChar(CP_UTF8, 0, defaultValue, -1, wdefaultValue, 1024);
-    MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wfilePath, MAX_PATH);
-    
     DWORD result = GetPrivateProfileStringW(wsection, wkey, wdefaultValue, wreturnValue, 1024, wfilePath);
     
     /** Convert result back to UTF-8 */
-    WideCharToMultiByte(CP_UTF8, 0, wreturnValue, -1, returnValue, returnSize, NULL, NULL);
+    WIDE_TO_UTF8(wreturnValue, returnValue, returnSize);
     
     return result;
 }
@@ -446,12 +624,10 @@ DWORD ReadIniString(const char* section, const char* key, const char* defaultVal
 BOOL WriteIniString(const char* section, const char* key, const char* value,
                   const char* filePath) {
 
-    wchar_t wsection[256], wkey[256], wvalue[1024], wfilePath[MAX_PATH];
-    
-    MultiByteToWideChar(CP_UTF8, 0, section, -1, wsection, 256);
-    MultiByteToWideChar(CP_UTF8, 0, key, -1, wkey, 256);
-    MultiByteToWideChar(CP_UTF8, 0, value, -1, wvalue, 1024);
-    MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wfilePath, MAX_PATH);
+    UTF8_TO_WIDE_N(section, wsection, 256);
+    UTF8_TO_WIDE_N(key, wkey, 256);
+    UTF8_TO_WIDE_N(value, wvalue, 1024);
+    UTF8_TO_WIDE(filePath, wfilePath);
     
     return WritePrivateProfileStringW(wsection, wkey, wvalue, wfilePath);
 }
@@ -468,11 +644,9 @@ BOOL WriteIniString(const char* section, const char* key, const char* value,
 int ReadIniInt(const char* section, const char* key, int defaultValue, 
              const char* filePath) {
 
-    wchar_t wsection[256], wkey[256], wfilePath[MAX_PATH];
-    
-    MultiByteToWideChar(CP_UTF8, 0, section, -1, wsection, 256);
-    MultiByteToWideChar(CP_UTF8, 0, key, -1, wkey, 256);
-    MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wfilePath, MAX_PATH);
+    UTF8_TO_WIDE_N(section, wsection, 256);
+    UTF8_TO_WIDE_N(key, wkey, 256);
+    UTF8_TO_WIDE(filePath, wfilePath);
     
     return GetPrivateProfileIntW(wsection, wkey, defaultValue, wfilePath);
 }
@@ -491,13 +665,10 @@ BOOL WriteIniInt(const char* section, const char* key, int value,
     char valueStr[32];
     snprintf(valueStr, sizeof(valueStr), "%d", value);
     
-    /** Convert to Unicode for Windows API */
-    wchar_t wsection[256], wkey[256], wvalue[32], wfilePath[MAX_PATH];
-    
-    MultiByteToWideChar(CP_UTF8, 0, section, -1, wsection, 256);
-    MultiByteToWideChar(CP_UTF8, 0, key, -1, wkey, 256);
-    MultiByteToWideChar(CP_UTF8, 0, valueStr, -1, wvalue, 32);
-    MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wfilePath, MAX_PATH);
+    UTF8_TO_WIDE_N(section, wsection, 256);
+    UTF8_TO_WIDE_N(key, wkey, 256);
+    UTF8_TO_WIDE_N(valueStr, wvalue, 32);
+    UTF8_TO_WIDE(filePath, wfilePath);
     
     return WritePrivateProfileStringW(wsection, wkey, wvalue, wfilePath);
 }
@@ -515,13 +686,10 @@ BOOL WriteIniBool(const char* section, const char* key, BOOL value,
                const char* filePath) {
     const char* valueStr = value ? "TRUE" : "FALSE";
     
-    /** Convert to Unicode for Windows API */
-    wchar_t wsection[256], wkey[256], wvalue[8], wfilePath[MAX_PATH];
-    
-    MultiByteToWideChar(CP_UTF8, 0, section, -1, wsection, 256);
-    MultiByteToWideChar(CP_UTF8, 0, key, -1, wkey, 256);
-    MultiByteToWideChar(CP_UTF8, 0, valueStr, -1, wvalue, 8);
-    MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wfilePath, MAX_PATH);
+    UTF8_TO_WIDE_N(section, wsection, 256);
+    UTF8_TO_WIDE_N(key, wkey, 256);
+    UTF8_TO_WIDE_N(valueStr, wvalue, 8);
+    UTF8_TO_WIDE(filePath, wfilePath);
     
     return WritePrivateProfileStringW(wsection, wkey, wvalue, wfilePath);
 }
@@ -606,19 +774,16 @@ BOOL ReadIniBool(const char* section, const char* key, BOOL defaultValue,
     char value[8];
     const char* defaultStr = defaultValue ? "TRUE" : "FALSE";
     
-    /** Convert to Unicode for Windows API */
-    wchar_t wsection[256], wkey[256], wdefaultValue[8], wfilePath[MAX_PATH];
+    UTF8_TO_WIDE_N(section, wsection, 256);
+    UTF8_TO_WIDE_N(key, wkey, 256);
+    UTF8_TO_WIDE_N(defaultStr, wdefaultValue, 8);
+    UTF8_TO_WIDE(filePath, wfilePath);
+    
     wchar_t wvalue[8];
-    
-    MultiByteToWideChar(CP_UTF8, 0, section, -1, wsection, 256);
-    MultiByteToWideChar(CP_UTF8, 0, key, -1, wkey, 256);
-    MultiByteToWideChar(CP_UTF8, 0, defaultStr, -1, wdefaultValue, 8);
-    MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wfilePath, MAX_PATH);
-    
     GetPrivateProfileStringW(wsection, wkey, wdefaultValue, wvalue, 8, wfilePath);
     
     /** Convert result back to UTF-8 and compare */
-    WideCharToMultiByte(CP_UTF8, 0, wvalue, -1, value, sizeof(value), NULL, NULL);
+    WIDE_TO_UTF8(wvalue, value, sizeof(value));
     
     return _stricmp(value, "TRUE") == 0;
 }
@@ -630,11 +795,7 @@ BOOL ReadIniBool(const char* section, const char* key, BOOL defaultValue,
  * @return TRUE if file exists, FALSE otherwise
  */
 BOOL FileExists(const char* filePath) {
-    /** Convert to Unicode for Windows API */
-    wchar_t wfilePath[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wfilePath, MAX_PATH);
-    
-    return GetFileAttributesW(wfilePath) != INVALID_FILE_ATTRIBUTES;
+    return FileExistsUtf8(filePath);
 }
 
 
@@ -779,70 +940,34 @@ void CreateDefaultConfig(const char* config_path) {
     /** Detect system language for initial localization */
     LANGID systemLangID = GetUserDefaultUILanguage();
     int defaultLanguage = APP_LANG_ENGLISH;
-    const char* langName = "English";
     
     /** Map Windows language IDs to application languages */
     switch (PRIMARYLANGID(systemLangID)) {
         case LANG_CHINESE:
             if (SUBLANGID(systemLangID) == SUBLANG_CHINESE_SIMPLIFIED) {
                 defaultLanguage = APP_LANG_CHINESE_SIMP;
-                langName = "Chinese_Simplified";
             } else {
                 defaultLanguage = APP_LANG_CHINESE_TRAD;
-                langName = "Chinese_Traditional";
             }
             break;
-        case LANG_SPANISH:
-            defaultLanguage = APP_LANG_SPANISH;
-            langName = "Spanish";
-            break;
-        case LANG_FRENCH:
-            defaultLanguage = APP_LANG_FRENCH;
-            langName = "French";
-            break;
-        case LANG_GERMAN:
-            defaultLanguage = APP_LANG_GERMAN;
-            langName = "German";
-            break;
-        case LANG_RUSSIAN:
-            defaultLanguage = APP_LANG_RUSSIAN;
-            langName = "Russian";
-            break;
-        case LANG_PORTUGUESE:
-            defaultLanguage = APP_LANG_PORTUGUESE;
-            langName = "Portuguese";
-            break;
-        case LANG_JAPANESE:
-            defaultLanguage = APP_LANG_JAPANESE;
-            langName = "Japanese";
-            break;
-        case LANG_KOREAN:
-            defaultLanguage = APP_LANG_KOREAN;
-            langName = "Korean";
-            break;
+        case LANG_SPANISH:   defaultLanguage = APP_LANG_SPANISH;    break;
+        case LANG_FRENCH:    defaultLanguage = APP_LANG_FRENCH;     break;
+        case LANG_GERMAN:    defaultLanguage = APP_LANG_GERMAN;     break;
+        case LANG_RUSSIAN:   defaultLanguage = APP_LANG_RUSSIAN;    break;
+        case LANG_PORTUGUESE: defaultLanguage = APP_LANG_PORTUGUESE; break;
+        case LANG_JAPANESE:  defaultLanguage = APP_LANG_JAPANESE;   break;
+        case LANG_KOREAN:    defaultLanguage = APP_LANG_KOREAN;     break;
         case LANG_ENGLISH:
         default:
             defaultLanguage = APP_LANG_ENGLISH;
-            langName = "English";
             break;
     }
     
-
-    const char* typeStr;
-    switch (NOTIFICATION_TYPE) {
-        case NOTIFICATION_TYPE_CATIME:
-            typeStr = "CATIME";
-            break;
-        case NOTIFICATION_TYPE_SYSTEM_MODAL:
-            typeStr = "SYSTEM_MODAL";
-            break;
-        case NOTIFICATION_TYPE_OS:
-            typeStr = "OS";
-            break;
-        default:
-            typeStr = "CATIME";
-            break;
-    }
+    /** Use enum mapping table for language name */
+    const char* langName = EnumToString(LANGUAGE_MAP, defaultLanguage, "English");
+    
+    /** Use enum mapping table for notification type */
+    const char* typeStr = EnumToString(NOTIFICATION_TYPE_MAP, NOTIFICATION_TYPE, "CATIME");
     
 
     WriteIniString(INI_SECTION_GENERAL, "CONFIG_VERSION", CATIME_VERSION, config_path);
@@ -915,9 +1040,7 @@ void CreateDefaultConfig(const char* config_path) {
 
     /** Append user-facing comments for advanced animation options */
     {
-        wchar_t wconfig_path[MAX_PATH] = {0};
-        MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-        FILE* f = _wfopen(wconfig_path, L"a");
+        FOPEN_UTF8(config_path, L"a", f);
         if (f) {
             fputs(";========================================================\n", f);
             fputs("; Animation options help (hot reload supported)\n", f);
@@ -976,9 +1099,7 @@ void CreateDefaultConfig(const char* config_path) {
     WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_CUSTOM_COUNTDOWN", "None", config_path);
     /** Append Hotkeys help block (placed right after [Hotkeys] keys) */
     {
-        wchar_t wconfig_path[MAX_PATH] = {0};
-        MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-        FILE* f = _wfopen(wconfig_path, L"a");
+        FOPEN_UTF8(config_path, L"a", f);
         if (f) {
             fputs(";========================================================\n", f);
             fputs("; Hotkeys section help (hot reload supported)\n", f);
@@ -1023,9 +1144,7 @@ void CreateDefaultConfig(const char* config_path) {
 
     /** Append Colors help block (placed near [Colors]) */
     {
-        wchar_t wconfig_path[MAX_PATH] = {0};
-        MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-        FILE* f = _wfopen(wconfig_path, L"a");
+        FOPEN_UTF8(config_path, L"a", f);
         if (f) {
             fputs(";========================================================\n", f);
             fputs("; Colors section help (hot reload supported)\n", f);
@@ -1051,8 +1170,7 @@ void ExtractFileName(const char* path, char* name, size_t nameSize) {
     if (!path || !name || nameSize == 0) return;
     
     /** Convert UTF-8 path to Unicode for processing */
-    wchar_t wPath[MAX_PATH] = {0};
-    MultiByteToWideChar(CP_UTF8, 0, path, -1, wPath, MAX_PATH);
+    UTF8_TO_WIDE(path, wPath);
     
     /** Find last directory separator */
     wchar_t* lastSlash = wcsrchr(wPath, L'\\');
@@ -1066,7 +1184,7 @@ void ExtractFileName(const char* path, char* name, size_t nameSize) {
     }
     
     /** Convert back to UTF-8 for output */
-    WideCharToMultiByte(CP_UTF8, 0, wName, -1, name, nameSize, NULL, NULL);
+    WIDE_TO_UTF8(wName, name, nameSize);
 }
 
 
@@ -1183,48 +1301,19 @@ void ReadConfig() {
     /** Load time format setting */
     char timeFormat[32] = {0};
     ReadIniString(INI_SECTION_TIMER, "CLOCK_TIME_FORMAT", "DEFAULT", timeFormat, sizeof(timeFormat), config_path);
-    
-    if (strcmp(timeFormat, "ZERO_PADDED") == 0) {
-        CLOCK_TIME_FORMAT = TIME_FORMAT_ZERO_PADDED;
-    } else if (strcmp(timeFormat, "FULL_PADDED") == 0) {
-        CLOCK_TIME_FORMAT = TIME_FORMAT_FULL_PADDED;
-    } else {
-        CLOCK_TIME_FORMAT = TIME_FORMAT_DEFAULT;
-    }
+    CLOCK_TIME_FORMAT = StringToEnum(TIME_FORMAT_MAP, timeFormat, TIME_FORMAT_DEFAULT);
     
     /** Load milliseconds display setting */
     CLOCK_SHOW_MILLISECONDS = ReadIniBool(INI_SECTION_TIMER, "CLOCK_SHOW_MILLISECONDS", FALSE, config_path);
     
-    /** Parse language string to enum value */
-    int languageSetting = APP_LANG_ENGLISH;
+    /** Parse language string to enum value using mapping table */
+    int languageSetting = StringToEnum(LANGUAGE_MAP, language, APP_LANG_ENGLISH);
     
-    if (strcmp(language, "Chinese_Simplified") == 0) {
-        languageSetting = APP_LANG_CHINESE_SIMP;
-    } else if (strcmp(language, "Chinese_Traditional") == 0) {
-        languageSetting = APP_LANG_CHINESE_TRAD;
-    } else if (strcmp(language, "English") == 0) {
-        languageSetting = APP_LANG_ENGLISH;
-    } else if (strcmp(language, "Spanish") == 0) {
-        languageSetting = APP_LANG_SPANISH;
-    } else if (strcmp(language, "French") == 0) {
-        languageSetting = APP_LANG_FRENCH;
-    } else if (strcmp(language, "German") == 0) {
-        languageSetting = APP_LANG_GERMAN;
-    } else if (strcmp(language, "Russian") == 0) {
-        languageSetting = APP_LANG_RUSSIAN;
-    } else if (strcmp(language, "Portuguese") == 0) {
-        languageSetting = APP_LANG_PORTUGUESE;
-    } else if (strcmp(language, "Japanese") == 0) {
-        languageSetting = APP_LANG_JAPANESE;
-    } else if (strcmp(language, "Korean") == 0) {
-        languageSetting = APP_LANG_KOREAN;
-    } else {
-        /** Handle legacy numeric language format */
+    /** Handle legacy numeric language format */
+    if (languageSetting == APP_LANG_ENGLISH && isdigit(language[0])) {
         int langValue = atoi(language);
         if (langValue >= 0 && langValue < APP_LANG_COUNT) {
             languageSetting = langValue;
-        } else {
-            languageSetting = APP_LANG_ENGLISH;
         }
     }
     
@@ -1375,30 +1464,16 @@ void ReadConfig() {
     CLOCK_SHOW_SECONDS = ReadIniBool(INI_SECTION_TIMER, "CLOCK_SHOW_SECONDS", FALSE, config_path);
     ReadIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_TEXT", "0", CLOCK_TIMEOUT_TEXT, sizeof(CLOCK_TIMEOUT_TEXT), config_path);
     
-    /** Parse timeout action string to enum, filtering dangerous system actions */
+    /** Parse timeout action string to enum using mapping table */
     char timeoutAction[32] = {0};
     ReadIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_ACTION", "MESSAGE", timeoutAction, sizeof(timeoutAction), config_path);
+    CLOCK_TIMEOUT_ACTION = StringToEnum(TIMEOUT_ACTION_MAP, timeoutAction, TIMEOUT_ACTION_MESSAGE);
     
-    if (strcmp(timeoutAction, "MESSAGE") == 0) {
+    /** Security: filter dangerous system actions */
+    if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SHUTDOWN || 
+        CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_RESTART || 
+        CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SLEEP) {
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
-    } else if (strcmp(timeoutAction, "LOCK") == 0) {
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_LOCK;
-    } else if (strcmp(timeoutAction, "SHUTDOWN") == 0) {
-        /** Security: disable system shutdown */
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
-    } else if (strcmp(timeoutAction, "RESTART") == 0) {
-        /** Security: disable system restart */
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
-    } else if (strcmp(timeoutAction, "OPEN_FILE") == 0) {
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
-    } else if (strcmp(timeoutAction, "SHOW_TIME") == 0) {
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SHOW_TIME;
-    } else if (strcmp(timeoutAction, "COUNT_UP") == 0) {
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_COUNT_UP;
-    } else if (strcmp(timeoutAction, "OPEN_WEBSITE") == 0) {
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_WEBSITE;
-    } else if (strcmp(timeoutAction, "SLEEP") == 0) {
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SLEEP;
     }
     
 
@@ -1416,9 +1491,7 @@ void ReadConfig() {
     /** Override timeout action if valid file path exists */
     if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
         /** Verify file exists before setting action */
-        wchar_t wfile_path[MAX_PATH];
-        MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_FILE_PATH, -1, wfile_path, MAX_PATH);
-        if (GetFileAttributesW(wfile_path) != INVALID_FILE_ATTRIBUTES) {
+        if (FileExistsUtf8(CLOCK_TIMEOUT_FILE_PATH)) {
             CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
         }
     }
@@ -1486,20 +1559,10 @@ void ReadConfig() {
     if (NOTIFICATION_MAX_OPACITY < 1) NOTIFICATION_MAX_OPACITY = 1;
     if (NOTIFICATION_MAX_OPACITY > 100) NOTIFICATION_MAX_OPACITY = 100;
     
-    /** Parse notification type string to enum */
+    /** Parse notification type string to enum using mapping table */
     char notificationType[32] = {0};
     ReadIniString(INI_SECTION_NOTIFICATION, "NOTIFICATION_TYPE", "CATIME", notificationType, sizeof(notificationType), config_path);
-    
-    /** Map notification type string to enum value */
-    if (strcmp(notificationType, "CATIME") == 0) {
-        NOTIFICATION_TYPE = NOTIFICATION_TYPE_CATIME;
-    } else if (strcmp(notificationType, "SYSTEM_MODAL") == 0) {
-        NOTIFICATION_TYPE = NOTIFICATION_TYPE_SYSTEM_MODAL;
-    } else if (strcmp(notificationType, "OS") == 0) {
-        NOTIFICATION_TYPE = NOTIFICATION_TYPE_OS;
-    } else {
-        NOTIFICATION_TYPE = NOTIFICATION_TYPE_CATIME;
-    }
+    NOTIFICATION_TYPE = StringToEnum(NOTIFICATION_TYPE_MAP, notificationType, NOTIFICATION_TYPE_CATIME);
     
     /** Load notification sound configuration */
     ReadIniString(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_FILE", "", 
@@ -1545,12 +1608,8 @@ void ReadConfig() {
         ReadIniString(INI_SECTION_RECENTFILES, key, "", filePath, MAX_PATH, config_path);
         
         if (strlen(filePath) > 0) {
-            /** Convert UTF-8 path to Unicode for file validation */
-            wchar_t widePath[MAX_PATH] = {0};
-            MultiByteToWideChar(CP_UTF8, 0, filePath, -1, widePath, MAX_PATH);
-            
             /** Only add file to recent list if it still exists */
-            if (GetFileAttributesW(widePath) != INVALID_FILE_ATTRIBUTES) {
+            if (FileExistsUtf8(filePath)) {
                 strncpy(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path, filePath, MAX_PATH - 1);
                 CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path[MAX_PATH - 1] = '\0';
                 /** Extract filename for display purposes */
@@ -1675,11 +1734,8 @@ void LoadRecentFiles(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
 
-    /** Convert paths to wide character for Unicode support */
-    wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-    
-    FILE *file = _wfopen(wconfig_path, L"r");
+    /** Open config file with UTF-8 path support */
+    FOPEN_UTF8(config_path, L"r", file);
     if (!file) return;
 
     char line[MAX_PATH];
@@ -1696,10 +1752,7 @@ void LoadRecentFiles(void) {
 
                 if (CLOCK_RECENT_FILES_COUNT < MAX_RECENT_FILES) {
 
-                    wchar_t widePath[MAX_PATH] = {0};
-                    MultiByteToWideChar(CP_UTF8, 0, path, -1, widePath, MAX_PATH);
-                    
-                    if (GetFileAttributesW(widePath) != INVALID_FILE_ATTRIBUTES) {
+                    if (FileExistsUtf8(path)) {
                         strncpy(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path, path, MAX_PATH - 1);
                         CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path[MAX_PATH - 1] = '\0';
 
@@ -1723,10 +1776,7 @@ void LoadRecentFiles(void) {
 
             if (CLOCK_RECENT_FILES_COUNT < MAX_RECENT_FILES) {
 
-                wchar_t widePath[MAX_PATH] = {0};
-                MultiByteToWideChar(CP_UTF8, 0, path, -1, widePath, MAX_PATH);
-                
-                if (GetFileAttributesW(widePath) != INVALID_FILE_ATTRIBUTES) {
+                if (FileExistsUtf8(path)) {
                     strncpy(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path, path, MAX_PATH - 1);
                     CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path[MAX_PATH - 1] = '\0';
 
@@ -1756,9 +1806,7 @@ void SaveRecentFile(const char* filePath) {
     /** Validate input and file existence */
     if (!filePath || strlen(filePath) == 0) return;
 
-    wchar_t wPath[MAX_PATH] = {0};
-    MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wPath, MAX_PATH);
-    if (GetFileAttributesW(wPath) == INVALID_FILE_ATTRIBUTES) {
+    if (!FileExistsUtf8(filePath)) {
         return;
     }
 
@@ -1906,9 +1954,7 @@ void WriteConfigTimeoutFile(const char* filePath) {
 void WriteConfig(const char* config_path) {
     /** Optional: basic INI tail validation and self-heal for previous corruptions */
     {
-        wchar_t wconfig[MAX_PATH];
-        MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig, MAX_PATH);
-        FILE* rf = _wfopen(wconfig, L"r");
+        FOPEN_UTF8(config_path, L"r", rf);
         if (rf) {
             /** scan lines and remember last valid INI line position */
             long lastValidPos = 0;
@@ -1930,6 +1976,7 @@ void WriteConfig(const char* config_path) {
             if (!feof(rf)) {
                 /** truncate file to last valid line */
                 fclose(rf);
+                UTF8_TO_WIDE(config_path, wconfig);
                 HANDLE h = CreateFileW(wconfig, GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
                 if (h != INVALID_HANDLE_VALUE) {
                     SetFilePointer(h, lastValidPos, NULL, FILE_BEGIN);
@@ -1941,60 +1988,12 @@ void WriteConfig(const char* config_path) {
             }
         }
     }
-    /** Map current language enum to string representation */
+    /** Map current language enum to string using mapping table */
     AppLanguage currentLang = GetCurrentLanguage();
-    const char* langName;
+    const char* langName = EnumToString(LANGUAGE_MAP, currentLang, "English");
     
-    switch (currentLang) {
-        case APP_LANG_CHINESE_SIMP:
-            langName = "Chinese_Simplified";
-            break;
-        case APP_LANG_CHINESE_TRAD:
-            langName = "Chinese_Traditional";
-            break;
-        case APP_LANG_SPANISH:
-            langName = "Spanish";
-            break;
-        case APP_LANG_FRENCH:
-            langName = "French";
-            break;
-        case APP_LANG_GERMAN:
-            langName = "German";
-            break;
-        case APP_LANG_RUSSIAN:
-            langName = "Russian";
-            break;
-        case APP_LANG_PORTUGUESE:
-            langName = "Portuguese";
-            break;
-        case APP_LANG_JAPANESE:
-            langName = "Japanese";
-            break;
-        case APP_LANG_KOREAN:
-            langName = "Korean";
-            break;
-        case APP_LANG_ENGLISH:
-        default:
-            langName = "English";
-            break;
-    }
-    
-    /** Map notification type enum to string representation */
-    const char* typeStr;
-    switch (NOTIFICATION_TYPE) {
-        case NOTIFICATION_TYPE_CATIME:
-            typeStr = "CATIME";
-            break;
-        case NOTIFICATION_TYPE_SYSTEM_MODAL:
-            typeStr = "SYSTEM_MODAL";
-            break;
-        case NOTIFICATION_TYPE_OS:
-            typeStr = "OS";
-            break;
-        default:
-            typeStr = "CATIME";
-            break;
-    }
+    /** Map notification type enum to string using mapping table */
+    const char* typeStr = EnumToString(NOTIFICATION_TYPE_MAP, NOTIFICATION_TYPE, "CATIME");
     
     /** Read current hotkey settings for serialization */
     WORD showTimeHotkey = 0;
@@ -2073,38 +2072,15 @@ void WriteConfig(const char* config_path) {
         strcat(colorOptionsStr, COLOR_OPTIONS[i].hexColor);
     }
     
-    const char* timeoutActionStr;
-    switch (CLOCK_TIMEOUT_ACTION) {
-        case TIMEOUT_ACTION_MESSAGE:
-            timeoutActionStr = "MESSAGE";
-            break;
-        case TIMEOUT_ACTION_LOCK:
-            timeoutActionStr = "LOCK";
-            break;
-        case TIMEOUT_ACTION_SHUTDOWN:
-            timeoutActionStr = "MESSAGE";
-            break;
-        case TIMEOUT_ACTION_RESTART:
-            timeoutActionStr = "MESSAGE";
-            break;
-        case TIMEOUT_ACTION_OPEN_FILE:
-            timeoutActionStr = "OPEN_FILE";
-            break;
-        case TIMEOUT_ACTION_SHOW_TIME:
-            timeoutActionStr = "SHOW_TIME";
-            break;
-        case TIMEOUT_ACTION_COUNT_UP:
-            timeoutActionStr = "COUNT_UP";
-            break;
-        case TIMEOUT_ACTION_OPEN_WEBSITE:
-            timeoutActionStr = "OPEN_WEBSITE";
-            break;
-        case TIMEOUT_ACTION_SLEEP:
-            timeoutActionStr = "MESSAGE";
-            break;
-        default:
-            timeoutActionStr = "MESSAGE";
+    /** Map timeout action enum to string using mapping table */
+    int safeAction = CLOCK_TIMEOUT_ACTION;
+    /** Security filter: dangerous actions mapped to MESSAGE */
+    if (safeAction == TIMEOUT_ACTION_SHUTDOWN || 
+        safeAction == TIMEOUT_ACTION_RESTART || 
+        safeAction == TIMEOUT_ACTION_SLEEP) {
+        safeAction = TIMEOUT_ACTION_MESSAGE;
     }
+    const char* timeoutActionStr = EnumToString(TIMEOUT_ACTION_MAP, safeAction, "MESSAGE");
     
 
     WriteIniString(INI_SECTION_GENERAL, "CONFIG_VERSION", CATIME_VERSION, config_path);
@@ -2134,18 +2110,8 @@ void WriteConfig(const char* config_path) {
     WriteIniString(INI_SECTION_TIMER, "CLOCK_USE_24HOUR", CLOCK_USE_24HOUR ? "TRUE" : "FALSE", config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_SHOW_SECONDS", CLOCK_SHOW_SECONDS ? "TRUE" : "FALSE", config_path);
     
-    const char* timeFormatStr;
-    switch (CLOCK_TIME_FORMAT) {
-        case TIME_FORMAT_ZERO_PADDED:
-            timeFormatStr = "ZERO_PADDED";
-            break;
-        case TIME_FORMAT_FULL_PADDED:
-            timeFormatStr = "FULL_PADDED";
-            break;
-        default:
-            timeFormatStr = "DEFAULT";
-            break;
-    }
+    /** Map time format enum to string using mapping table */
+    const char* timeFormatStr = EnumToString(TIME_FORMAT_MAP, CLOCK_TIME_FORMAT, "DEFAULT");
     WriteIniString(INI_SECTION_TIMER, "CLOCK_TIME_FORMAT", timeFormatStr, config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_SHOW_MILLISECONDS", CLOCK_SHOW_MILLISECONDS ? "TRUE" : "FALSE", config_path);
     WriteIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_TEXT", CLOCK_TIMEOUT_TEXT, config_path);
@@ -2397,16 +2363,8 @@ void ReadNotificationTypeConfig(void) {
     ReadIniString(INI_SECTION_NOTIFICATION, "NOTIFICATION_TYPE", "CATIME", 
                  typeStr, sizeof(typeStr), config_path);
     
-    /** Parse notification type string to enum value */
-    if (strcmp(typeStr, "CATIME") == 0) {
-        NOTIFICATION_TYPE = NOTIFICATION_TYPE_CATIME;
-    } else if (strcmp(typeStr, "SYSTEM_MODAL") == 0) {
-        NOTIFICATION_TYPE = NOTIFICATION_TYPE_SYSTEM_MODAL;
-    } else if (strcmp(typeStr, "OS") == 0) {
-        NOTIFICATION_TYPE = NOTIFICATION_TYPE_OS;
-    } else {
-        NOTIFICATION_TYPE = NOTIFICATION_TYPE_CATIME;
-    }
+    /** Parse notification type string to enum using mapping table */
+    NOTIFICATION_TYPE = StringToEnum(NOTIFICATION_TYPE_MAP, typeStr, NOTIFICATION_TYPE_CATIME);
 }
 
 
@@ -2420,22 +2378,8 @@ void WriteConfigNotificationType(NotificationType type) {
         type = NOTIFICATION_TYPE_CATIME;
     }
     
-    /** Convert enum to string representation */
-    const char* typeStr;
-    switch (type) {
-        case NOTIFICATION_TYPE_CATIME:
-            typeStr = "CATIME";
-            break;
-        case NOTIFICATION_TYPE_SYSTEM_MODAL:
-            typeStr = "SYSTEM_MODAL";
-            break;
-        case NOTIFICATION_TYPE_OS:
-            typeStr = "OS";
-            break;
-        default:
-            typeStr = "CATIME";
-            break;
-    }
+    /** Map notification type enum to string using mapping table */
+    const char* typeStr = EnumToString(NOTIFICATION_TYPE_MAP, type, "CATIME");
     
     /** Persist only; runtime will be updated by watcher */
     UpdateConfigKeyValueAtomic(INI_SECTION_NOTIFICATION, "NOTIFICATION_TYPE", typeStr);
@@ -2886,11 +2830,8 @@ void ReadCustomCountdownHotkey(WORD* hotkey) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    /** Convert paths to wide character for Unicode support */
-    wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-    
-    FILE* file = _wfopen(wconfig_path, L"r");
+    /** Open config file with UTF-8 path support */
+    FOPEN_UTF8(config_path, L"r", file);
     if (!file) return;
     
     char line[256];
@@ -3041,45 +2982,8 @@ const char* GetCurrentFontLicenseVersion(void) {
  * Converts language ID to string name and saves to config
  */
 void WriteConfigLanguage(int language) {
-    const char* langName;
-    
-    /** Map language ID to string representation */
-    switch (language) {
-        case APP_LANG_CHINESE_SIMP:
-            langName = "Chinese_Simplified";
-            break;
-        case APP_LANG_CHINESE_TRAD:
-            langName = "Chinese_Traditional";
-            break;
-        case APP_LANG_ENGLISH:
-            langName = "English";
-            break;
-        case APP_LANG_SPANISH:
-            langName = "Spanish";
-            break;
-        case APP_LANG_FRENCH:
-            langName = "French";
-            break;
-        case APP_LANG_GERMAN:
-            langName = "German";
-            break;
-        case APP_LANG_RUSSIAN:
-            langName = "Russian";
-            break;
-        case APP_LANG_PORTUGUESE:
-            langName = "Portuguese";
-            break;
-        case APP_LANG_JAPANESE:
-            langName = "Japanese";
-            break;
-        case APP_LANG_KOREAN:
-            langName = "Korean";
-            break;
-        default:
-            langName = "English";
-            break;
-    }
-    
+    /** Map language ID to string using mapping table */
+    const char* langName = EnumToString(LANGUAGE_MAP, language, "English");
     WriteConfigKeyValue("LANGUAGE", langName);
 }
 
@@ -3136,18 +3040,8 @@ void WriteConfigNotificationDisabled(BOOL disabled) {
  * @param format Time format type to set
  */
 void WriteConfigTimeFormat(TimeFormatType format) {
-    const char* formatStr;
-    switch (format) {
-        case TIME_FORMAT_ZERO_PADDED:
-            formatStr = "ZERO_PADDED";
-            break;
-        case TIME_FORMAT_FULL_PADDED:
-            formatStr = "FULL_PADDED";
-            break;
-        default:
-            formatStr = "DEFAULT";
-            break;
-    }
+    /** Map time format enum to string using mapping table */
+    const char* formatStr = EnumToString(TIME_FORMAT_MAP, format, "DEFAULT");
     UpdateConfigKeyValueAtomic(INI_SECTION_TIMER, "CLOCK_TIME_FORMAT", formatStr);
 }
 
@@ -3195,8 +3089,7 @@ void FlushConfigToDisk(void) {
     GetConfigPath(config_path, MAX_PATH);
     
     /** Convert to wide character for Windows API */
-    wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+    UTF8_TO_WIDE(config_path, wconfig_path);
     
     /** Force flush file system buffers to ensure immediate disk write */
     HANDLE hFile = CreateFileW(wconfig_path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 
