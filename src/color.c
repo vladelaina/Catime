@@ -29,6 +29,42 @@ void ReadConfig(void);
 void WriteConfig(const char* config_path);
 static void replaceBlackColor(const char* color, char* output, size_t output_size);
 
+// ============================================================================
+// Phase 1: Common Utility Functions (Local to color.c)
+// ============================================================================
+
+/**
+ * @brief Check if multibyte character string is empty or contains only whitespace
+ * @param str String to check
+ * @return TRUE if empty or whitespace only, FALSE otherwise
+ */
+static BOOL IsEmptyOrWhitespaceA(const char* str) {
+    if (!str || str[0] == '\0') {
+        return TRUE;
+    }
+    for (int i = 0; str[i]; i++) {
+        if (!isspace((unsigned char)str[i])) {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+/**
+ * @brief Show error dialog and refocus to edit control
+ * @param hwndDlg Parent dialog handle
+ * @param editControlId Edit control ID to refocus
+ */
+static void ShowErrorAndRefocus(HWND hwndDlg, int editControlId) {
+    ShowErrorDialog(hwndDlg);
+    HWND hwndEdit = GetDlgItem(hwndDlg, editControlId);
+    if (hwndEdit) {
+        SetFocus(hwndEdit);
+        SendMessage(hwndEdit, EM_SETSEL, 0, -1);
+    }
+}
+
+
 /** @brief CSS color name to hex mapping table */
 static const CSSColor CSS_COLORS[] = {
     {"white", "#FFFFFF"},
@@ -719,14 +755,7 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 WideCharToMultiByte(CP_UTF8, 0, wcolor, -1, color, sizeof(color), NULL, NULL);
 
                 /** Handle empty/whitespace-only input */
-                BOOL isAllSpaces = TRUE;
-                for (int i = 0; color[i]; i++) {
-                    if (!isspace((unsigned char)color[i])) {
-                        isAllSpaces = FALSE;
-                        break;
-                    }
-                }
-                if (color[0] == '\0' || isAllSpaces) {
+                if (IsEmptyOrWhitespaceA(color)) {
                     EndDialog(hwndDlg, IDCANCEL);
                     return TRUE;
                 }
@@ -742,10 +771,7 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                     return TRUE;
                 } else {
                     /** Show error and return focus to input */
-                    ShowErrorDialog(hwndDlg);
-                    HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
-                    SetFocus(hwndEdit);
-                    SendMessage(hwndEdit, EM_SETSEL, 0, -1);
+                    ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
                     return TRUE;
                 }
             } else if (LOWORD(wParam) == IDCANCEL) {

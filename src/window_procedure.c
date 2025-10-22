@@ -184,11 +184,14 @@ extern void OpenSupportPage(void);
 extern void OpenFeedbackPage(void);
 
 /**
- * @brief Check if string contains only whitespace characters
- * @param str String to check
- * @return TRUE if string is empty or contains only spaces, FALSE otherwise
+ * @brief Check if string is NULL, empty or contains only whitespace characters
+ * @param str String to check (can be NULL)
+ * @return TRUE if string is NULL, empty or contains only whitespace, FALSE otherwise
  */
 static BOOL isAllSpacesOnly(const wchar_t* str) {
+    if (!str || str[0] == L'\0') {
+        return TRUE;
+    }
     for (int i = 0; str[i]; i++) {
         if (!iswspace(str[i])) {
             return FALSE;
@@ -1095,14 +1098,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         }
 
                         /** Check for whitespace-only input */
-                        BOOL isAllSpaces = TRUE;
-                        for (int i = 0; inputText[i]; i++) {
-                            if (!iswspace(inputText[i])) {
-                                isAllSpaces = FALSE;
-                                break;
-                            }
-                        }
-                        if (isAllSpaces) {
+                        if (isAllSpacesOnly(inputText)) {
                             break;
                         }
 
@@ -1352,15 +1348,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         memset(inputText, 0, sizeof(inputText));
                         DialogBoxParamW(GetModuleHandle(NULL), MAKEINTRESOURCEW(CLOCK_IDD_SHORTCUT_DIALOG), NULL, DlgProc, (LPARAM)CLOCK_IDD_SHORTCUT_DIALOG);
 
-                        BOOL isAllSpaces = TRUE;
-                        for (int i = 0; inputText[i]; i++) {
-                            if (!iswspace(inputText[i])) {
-                                isAllSpaces = FALSE;
-                                break;
-                            }
-                        }
-                        
-                        if (inputText[0] == L'\0' || isAllSpaces) {
+                        if (isAllSpacesOnly(inputText)) {
                             break;
                         }
 
@@ -1411,18 +1399,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         memset(inputText, 0, sizeof(inputText));
                         DialogBoxParamW(GetModuleHandle(NULL), MAKEINTRESOURCEW(CLOCK_IDD_STARTUP_DIALOG), NULL, DlgProc, (LPARAM)CLOCK_IDD_STARTUP_DIALOG);
 
-                        if (inputText[0] == L'\0') {
-                            break;
-                        }
-
-                        BOOL isAllSpaces = TRUE;
-                        for (int i = 0; inputText[i]; i++) {
-                            if (!iswspace(inputText[i])) {
-                                isAllSpaces = FALSE;
-                                break;
-                            }
-                        }
-                        if (isAllSpaces) {
+                        if (isAllSpacesOnly(inputText)) {
                             break;
                         }
 

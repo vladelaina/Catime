@@ -29,6 +29,86 @@ static void DrawColorSelectButton(HDC hdc, HWND hwnd);
 extern wchar_t inputText[256];
 
 /**
+ * @brief Check if wide character string is empty or contains only whitespace
+ * @param str String to check
+ * @return TRUE if empty or whitespace only, FALSE otherwise
+ */
+static BOOL IsEmptyOrWhitespace(const wchar_t* str) {
+    if (!str || str[0] == L'\0') {
+        return TRUE;
+    }
+    for (int i = 0; str[i]; i++) {
+        if (!iswspace(str[i])) {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+/**
+ * @brief Check if multibyte character string is empty or contains only whitespace
+ * @param str String to check
+ * @return TRUE if empty or whitespace only, FALSE otherwise
+ */
+static BOOL IsEmptyOrWhitespaceA(const char* str) {
+    if (!str || str[0] == '\0') {
+        return TRUE;
+    }
+    for (int i = 0; str[i]; i++) {
+        if (!isspace((unsigned char)str[i])) {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+/**
+ * @brief Show error dialog and refocus to edit control
+ * @param hwndDlg Parent dialog handle
+ * @param editControlId Edit control ID to refocus
+ */
+static void ShowErrorAndRefocus(HWND hwndDlg, int editControlId) {
+    ShowErrorDialog(hwndDlg);
+    HWND hwndEdit = GetDlgItem(hwndDlg, editControlId);
+    if (hwndEdit) {
+        SetFocus(hwndEdit);
+        SendMessage(hwndEdit, EM_SETSEL, 0, -1);
+    }
+}
+
+/**
+ * @brief Format seconds to human-readable time string
+ * @param totalSeconds Total seconds to format
+ * @param buffer Output buffer
+ * @param bufferSize Size of output buffer
+ */
+static void FormatSecondsToString(int totalSeconds, char* buffer, size_t bufferSize) {
+    int hours = totalSeconds / 3600;
+    int minutes = (totalSeconds % 3600) / 60;
+    int seconds = totalSeconds % 60;
+    
+    if (hours > 0 && minutes > 0 && seconds > 0) {
+        snprintf(buffer, bufferSize, "%dh%dm%ds", hours, minutes, seconds);
+    } else if (hours > 0 && minutes > 0) {
+        snprintf(buffer, bufferSize, "%dh%dm", hours, minutes);
+    } else if (hours > 0 && seconds > 0) {
+        snprintf(buffer, bufferSize, "%dh%ds", hours, seconds);
+    } else if (minutes > 0 && seconds > 0) {
+        snprintf(buffer, bufferSize, "%dm%ds", minutes, seconds);
+    } else if (hours > 0) {
+        snprintf(buffer, bufferSize, "%dh", hours);
+    } else if (minutes > 0) {
+        snprintf(buffer, bufferSize, "%dm", minutes);
+    } else {
+        snprintf(buffer, bufferSize, "%ds", seconds);
+    }
+}
+
+// ============================================================================
+// End of Phase 1 Utility Functions
+// ============================================================================
+
+/**
  * @brief Structure for individual link control data
  */
 typedef struct {
@@ -250,34 +330,13 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                 char currentOptions[256] = {0};
                 for (int i = 0; i < time_options_count; i++) {
                     char timeStr[32];
-                    int totalSeconds = time_options[i];
-                    
-                    /** Convert seconds to hours/minutes/seconds format */
-                    int hours = totalSeconds / 3600;
-                    int minutes = (totalSeconds % 3600) / 60;
-                    int seconds = totalSeconds % 60;
-                    
-                    if (hours > 0 && minutes > 0 && seconds > 0) {
-                        snprintf(timeStr, sizeof(timeStr), "%dh%dm%ds", hours, minutes, seconds);
-                    } else if (hours > 0 && minutes > 0) {
-                        snprintf(timeStr, sizeof(timeStr), "%dh%dm", hours, minutes);
-                    } else if (hours > 0 && seconds > 0) {
-                        snprintf(timeStr, sizeof(timeStr), "%dh%ds", hours, seconds);
-                    } else if (minutes > 0 && seconds > 0) {
-                        snprintf(timeStr, sizeof(timeStr), "%dm%ds", minutes, seconds);
-                    } else if (hours > 0) {
-                        snprintf(timeStr, sizeof(timeStr), "%dh", hours);
-                    } else if (minutes > 0) {
-                        snprintf(timeStr, sizeof(timeStr), "%dm", minutes);
-                    } else {
-                        snprintf(timeStr, sizeof(timeStr), "%ds", seconds);
-                    }
+                    FormatSecondsToString(time_options[i], timeStr, sizeof(timeStr));
                     
                     if (i > 0) {
                         StringCbCatA(currentOptions, sizeof(currentOptions), " ");
                     }
                     StringCbCatA(currentOptions, sizeof(currentOptions), timeStr);
-                                }
+                }
                 
                 /** Convert to wide char and set in edit control */
                 wchar_t wcurrentOptions[256];
@@ -289,25 +348,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                 if (CLOCK_DEFAULT_START_TIME > 0) {
                     /** Format default start time for display */
                     char timeStr[64];
-                    int hours = CLOCK_DEFAULT_START_TIME / 3600;
-                    int minutes = (CLOCK_DEFAULT_START_TIME % 3600) / 60;
-                    int seconds = CLOCK_DEFAULT_START_TIME % 60;
-                    
-                    if (hours > 0 && minutes > 0 && seconds > 0) {
-                        snprintf(timeStr, sizeof(timeStr), "%d %d %d", hours, minutes, seconds);
-                    } else if (hours > 0 && minutes > 0) {
-                        snprintf(timeStr, sizeof(timeStr), "%dh%dm", hours, minutes);
-                    } else if (hours > 0 && seconds > 0) {
-                        snprintf(timeStr, sizeof(timeStr), "%dh%ds", hours, seconds);
-                    } else if (minutes > 0 && seconds > 0) {
-                        snprintf(timeStr, sizeof(timeStr), "%d %d", minutes, seconds);
-                    } else if (hours > 0) {
-                        snprintf(timeStr, sizeof(timeStr), "%dh", hours);
-                    } else if (minutes > 0) {
-                        snprintf(timeStr, sizeof(timeStr), "%dm", minutes);
-                    } else {
-                        snprintf(timeStr, sizeof(timeStr), "%ds", seconds);
-                    }
+                    FormatSecondsToString(CLOCK_DEFAULT_START_TIME, timeStr, sizeof(timeStr));
                     
                     /** Convert to wide char and set in edit control */
                     wchar_t wtimeStr[64];
@@ -401,14 +442,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                 GetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, inputText, sizeof(inputText)/sizeof(wchar_t));
 
                 /** Check if input is empty or only whitespace */
-                BOOL isAllSpaces = TRUE;
-                for (int i = 0; inputText[i]; i++) {
-                    if (!iswspace(inputText[i])) {
-                        isAllSpaces = FALSE;
-                        break;
-                    }
-                }
-                if (inputText[0] == L'\0' || isAllSpaces) {
+                if (IsEmptyOrWhitespace(inputText)) {
                     g_hwndInputDialog = NULL;
                     EndDialog(hwndDlg, 0);
                     return TRUE;
@@ -468,11 +502,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                         EndDialog(hwndDlg, IDOK);
                     } else {
                         /** Show error and refocus on edit control */
-                        ShowErrorDialog(hwndDlg);
-
-                        HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
-                        SetFocus(hwndEdit);
-                        SendMessage(hwndEdit, EM_SETSEL, 0, -1);
+                        ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
                         return TRUE;
                     }
                 } else {
@@ -500,11 +530,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                         }
                     } else {
                         /** Show error and refocus on edit control */
-                        ShowErrorDialog(hwndDlg);
-
-                        HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
-                        SetFocus(hwndEdit);
-                        SendMessage(hwndEdit, EM_SETSEL, 0, -1);
+                        ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
                         return TRUE;
                     }
                 }
@@ -975,17 +1001,8 @@ INT_PTR CALLBACK PomodoroLoopDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPAR
                 wchar_t input_str[16];
                 GetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, input_str, sizeof(input_str)/sizeof(wchar_t));
                 
-                /** Check for empty or whitespace-only input */
-                BOOL isAllSpaces = TRUE;
-                for (int i = 0; input_str[i]; i++) {
-                    if (!iswspace(input_str[i])) {
-                        isAllSpaces = FALSE;
-                        break;
-                    }
-                }
-                
                 /** Cancel if empty input */
-                if (input_str[0] == L'\0' || isAllSpaces) {
+                if (IsEmptyOrWhitespace(input_str)) {
                     EndDialog(hwndDlg, IDCANCEL);
                     g_hwndPomodoroLoopDialog = NULL;
                     return TRUE;
@@ -993,11 +1010,7 @@ INT_PTR CALLBACK PomodoroLoopDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPAR
                 
                 /** Validate numeric input */
                 if (!IsValidNumberInput(input_str)) {
-                    ShowErrorDialog(hwndDlg);
-                    /** Reset focus and select all text for retry */
-                    HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
-                    SetFocus(hwndEdit);
-                    SendMessage(hwndEdit, EM_SETSEL, 0, -1);
+                    ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
                     return TRUE;
                 }
                 
@@ -1019,11 +1032,7 @@ INT_PTR CALLBACK PomodoroLoopDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPAR
                     g_hwndPomodoroLoopDialog = NULL;
                 } else {
                     /** Show error for out-of-range values */
-                    ShowErrorDialog(hwndDlg);
-                    /** Reset focus for retry */
-                    HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
-                    SetFocus(hwndEdit);
-                    SendMessage(hwndEdit, EM_SETSEL, 0, -1);
+                    ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
                 }
                 return TRUE;
             } else if (LOWORD(wParam) == IDCANCEL) {
@@ -1117,17 +1126,8 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
                 wchar_t url[MAX_PATH] = {0};
                 GetDlgItemText(hwndDlg, CLOCK_IDC_EDIT, url, sizeof(url)/sizeof(wchar_t));
                 
-                /** Check for empty or whitespace-only URL */
-                BOOL isAllSpaces = TRUE;
-                for (int i = 0; url[i]; i++) {
-                    if (!iswspace(url[i])) {
-                        isAllSpaces = FALSE;
-                        break;
-                    }
-                }
-                
                 /** Cancel if empty URL */
-                if (url[0] == L'\0' || isAllSpaces) {
+                if (IsEmptyOrWhitespace(url)) {
                     EndDialog(hwndDlg, IDCANCEL);
                     g_hwndWebsiteDialog = NULL;
                     return TRUE;
@@ -1233,32 +1233,12 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
             /** Format current Pomodoro time options for display */
             wchar_t currentOptions[256] = {0};
             for (int i = 0; i < POMODORO_TIMES_COUNT; i++) {
+                char timeStrA[32];
                 wchar_t timeStr[32];
-                int seconds = POMODORO_TIMES[i];
-                
-                /** Format time based on duration (hours, minutes, seconds) */
-                if (seconds >= 3600) {
-                    int hours = seconds / 3600;
-                    int mins = (seconds % 3600) / 60;
-                    int secs = seconds % 60;
-                    if (mins == 0 && secs == 0)
-                        StringCbPrintfW(timeStr, sizeof(timeStr), L"%dh ", hours);
-                    else if (secs == 0)
-                        StringCbPrintfW(timeStr, sizeof(timeStr), L"%dh%dm ", hours, mins);
-                    else
-                        StringCbPrintfW(timeStr, sizeof(timeStr), L"%dh%dm%ds ", hours, mins, secs);
-                } else if (seconds >= 60) {
-                    int mins = seconds / 60;
-                    int secs = seconds % 60;
-                    if (secs == 0)
-                        StringCbPrintfW(timeStr, sizeof(timeStr), L"%dm ", mins);
-                    else
-                        StringCbPrintfW(timeStr, sizeof(timeStr), L"%dm%ds ", mins, secs);
-                } else {
-                    StringCbPrintfW(timeStr, sizeof(timeStr), L"%ds ", seconds);
-                }
-                
+                FormatSecondsToString(POMODORO_TIMES[i], timeStrA, sizeof(timeStrA));
+                MultiByteToWideChar(CP_UTF8, 0, timeStrA, -1, timeStr, 32);
                 StringCbCatW(currentOptions, sizeof(currentOptions), timeStr);
+                StringCbCatW(currentOptions, sizeof(currentOptions), L" ");
             }
             
             /** Remove trailing space from formatted string */
@@ -1304,15 +1284,7 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
                 GetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, winput, sizeof(winput)/sizeof(wchar_t));
                 WideCharToMultiByte(CP_UTF8, 0, winput, -1, input, sizeof(input), NULL, NULL);
                 
-
-                BOOL isAllSpaces = TRUE;
-                for (int i = 0; input[i]; i++) {
-                    if (!isspace((unsigned char)input[i])) {
-                        isAllSpaces = FALSE;
-                        break;
-                    }
-                }
-                if (input[0] == '\0' || isAllSpaces) {
+                if (IsEmptyOrWhitespaceA(input)) {
                     EndDialog(hwndDlg, IDCANCEL);
                     g_hwndPomodoroComboDialog = NULL;
                     return TRUE;
@@ -1341,11 +1313,7 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
                 
 
                 if (hasInvalidInput || times_count == 0) {
-                    ShowErrorDialog(hwndDlg);
-
-                    HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
-                    SetFocus(hwndEdit);
-                    SendMessage(hwndEdit, EM_SETSEL, 0, -1);
+                    ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
                     return TRUE;
                 }
                 
