@@ -334,22 +334,13 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
         StartDefaultCountDown(hwnd);
         return TRUE;
     }
-	StopNotificationSound();
-	CloseAllNotifications();
-
-	/** Initialize new countdown timer */
-	KillTimer(hwnd, 1);
-	CLOCK_TOTAL_TIME = total_seconds;
-	countdown_elapsed_time = 0;
-	ResetMillisecondAccumulator();  /** Reset millisecond timing on new countdown */
-	elapsed_time = 0;
-	message_shown = FALSE;
-	countdown_message_shown = FALSE;
-	CLOCK_COUNT_UP = FALSE;
-	CLOCK_SHOW_CURRENT_TIME = FALSE;
-	CLOCK_IS_PAUSED = FALSE;
-	SetTimer(hwnd, 1, GetTimerInterval(), NULL);
-	InvalidateRect(hwnd, NULL, TRUE);
+	
+	/** Use unified countdown start function */
+	extern void CleanupBeforeTimerAction(void);
+	extern BOOL StartCountdownWithTime(HWND hwnd, int seconds);
+	
+	CleanupBeforeTimerAction();
+	StartCountdownWithTime(hwnd, total_seconds);
 
 	return TRUE;
 }

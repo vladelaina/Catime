@@ -1118,52 +1118,19 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         DialogBoxParamW(GetModuleHandle(NULL), MAKEINTRESOURCEW(CLOCK_IDD_DIALOG1), hwnd, DlgProc, (LPARAM)CLOCK_IDD_DIALOG1);
 
                         /** Exit if user cancelled or provided empty input */
-                        if (inputText[0] == L'\0') {
-                            break;
-                        }
-
-                        /** Check for whitespace-only input */
-                        if (isAllSpacesOnly(inputText)) {
+                        if (inputText[0] == L'\0' || isAllSpacesOnly(inputText)) {
                             break;
                         }
 
                         /** Parse and validate time input */
                         int total_seconds = 0;
-
                         char inputTextA[256];
                         WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
+                        
                         if (ParseInput(inputTextA, &total_seconds)) {
                             /** Valid input: setup countdown timer */
-                            extern void StopNotificationSound(void);
-                            StopNotificationSound();
-                            
-                            CloseAllNotifications();
-                            
-                            /** Initialize countdown state */
-                            KillTimer(hwnd, 1);
-                            CLOCK_TOTAL_TIME = total_seconds;
-                            countdown_elapsed_time = 0;
-                            countdown_message_shown = FALSE;
-                            CLOCK_COUNT_UP = FALSE;
-                            CLOCK_SHOW_CURRENT_TIME = FALSE;
-                            
-                            /** Reset timer flags and counters */
-                            CLOCK_IS_PAUSED = FALSE;      
-                            elapsed_time = 0;             
-                            message_shown = FALSE;        
-                            countup_message_shown = FALSE;
-                            
-                            /** Reset Pomodoro state if active */
-                            if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
-                                current_pomodoro_phase = POMODORO_PHASE_IDLE;
-                                current_pomodoro_time_index = 0;
-                                complete_pomodoro_cycles = 0;
-                            }
-                            
-                            /** Start countdown display and timer */
-                            ShowWindow(hwnd, SW_SHOW);
-                            InvalidateRect(hwnd, NULL, TRUE);
-                            ResetTimerWithInterval(hwnd);
+                            CleanupBeforeTimerAction();
+                            StartCountdownWithTime(hwnd, total_seconds);
                             break;
                         } else {
                             /** Invalid input: show error dialog */
@@ -1190,34 +1157,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     }
                     
                     if (isQuickTimeOption && index >= 0 && index < time_options_count) {
-                        extern void StopNotificationSound(void);
-                        StopNotificationSound();
-                        
-                        CloseAllNotifications();
-                        
+                        CleanupBeforeTimerAction();
                         int seconds = time_options[index];
                         if (seconds > 0) {
-                            KillTimer(hwnd, 1);
-                            CLOCK_TOTAL_TIME = seconds;
-                            countdown_elapsed_time = 0;
-                            countdown_message_shown = FALSE;
-                            CLOCK_COUNT_UP = FALSE;
-                            CLOCK_SHOW_CURRENT_TIME = FALSE;
-                            
-                            CLOCK_IS_PAUSED = FALSE;
-                            elapsed_time = 0;
-                            message_shown = FALSE;
-                            countup_message_shown = FALSE;
-                            
-                            if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
-                                current_pomodoro_phase = POMODORO_PHASE_IDLE;
-                                current_pomodoro_time_index = 0;
-                                complete_pomodoro_cycles = 0;
-                            }
-                            
-                            ShowWindow(hwnd, SW_SHOW);
-                            InvalidateRect(hwnd, NULL, TRUE);
-                            ResetTimerWithInterval(hwnd);
+                            StartCountdownWithTime(hwnd, seconds);
                         }
                         return 0;
                     }
@@ -1312,9 +1255,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         }
 
                         if (valid && count > 0) {
-                            extern void StopNotificationSound(void);
-                            StopNotificationSound();
-                            
+                            CleanupBeforeTimerAction();
                             WriteConfigTimeOptions(options);
                             break;
                         } else {
@@ -1339,9 +1280,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         char inputTextA[256];
                         WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
                         if (ParseInput(inputTextA, &total_seconds)) {
-                            extern void StopNotificationSound(void);
-                            StopNotificationSound();
-                            
+                            CleanupBeforeTimerAction();
                             WriteConfigDefaultStartTime(total_seconds);
                             WriteConfigStartupMode("COUNTDOWN");
                             break;
@@ -1354,8 +1293,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 
                 /** Reset application to default settings */
                 case 200: {   
-                    extern void StopNotificationSound(void);
-                    StopNotificationSound();
+                    CleanupBeforeTimerAction();
                     
                     /** Stop all timers and unregister hotkeys */
                     KillTimer(hwnd, 1);
@@ -1555,35 +1493,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDM_LANG_PORTUGUESE:
                 case CLOCK_IDM_LANG_JAPANESE:
                 case CLOCK_IDM_LANG_KOREAN: {
-                    /** Language mapping table */
-                    static const struct {
-                        WORD menuId;
-                        AppLanguage language;
-                    } languageMap[] = {
-                        {CLOCK_IDM_LANG_CHINESE, APP_LANG_CHINESE_SIMP},
-                        {CLOCK_IDM_LANG_CHINESE_TRAD, APP_LANG_CHINESE_TRAD},
-                        {CLOCK_IDM_LANG_ENGLISH, APP_LANG_ENGLISH},
-                        {CLOCK_IDM_LANG_SPANISH, APP_LANG_SPANISH},
-                        {CLOCK_IDM_LANG_FRENCH, APP_LANG_FRENCH},
-                        {CLOCK_IDM_LANG_GERMAN, APP_LANG_GERMAN},
-                        {CLOCK_IDM_LANG_RUSSIAN, APP_LANG_RUSSIAN},
-                        {CLOCK_IDM_LANG_PORTUGUESE, APP_LANG_PORTUGUESE},
-                        {CLOCK_IDM_LANG_JAPANESE, APP_LANG_JAPANESE},
-                        {CLOCK_IDM_LANG_KOREAN, APP_LANG_KOREAN}
-                    };
-                    
-                    /** Find and set the selected language */
-                    for (int i = 0; i < sizeof(languageMap) / sizeof(languageMap[0]); i++) {
-                        if (cmd == languageMap[i].menuId) {
-                            SetLanguage(languageMap[i].language);
-                            WriteConfigLanguage(languageMap[i].language);
-                            InvalidateRect(hwnd, NULL, TRUE);
-                            
-                            extern void UpdateTrayIcon(HWND hwnd);
-                            UpdateTrayIcon(hwnd);
-                            break;
-                        }
-                    }
+                    HandleLanguageSelection(hwnd, cmd);
                     break;
                 }
                 
@@ -1628,10 +1538,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 
                 /** Reset countdown timer to initial state */
                 case CLOCK_IDM_COUNTDOWN_RESET: {
-                    extern void StopNotificationSound(void);
-                    StopNotificationSound();
-                    
-                    CloseAllNotifications();
+                    CleanupBeforeTimerAction();
 
                     if (CLOCK_COUNT_UP) {
                         CLOCK_COUNT_UP = FALSE;
@@ -1723,10 +1630,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 
                 /** Toggle between timer and current time display */
                 case CLOCK_IDM_SHOW_CURRENT_TIME: {  
-                    extern void StopNotificationSound(void);
-                    StopNotificationSound();
-                    
-                    CloseAllNotifications();
+                    CleanupBeforeTimerAction();
 
                     CLOCK_SHOW_CURRENT_TIME = !CLOCK_SHOW_CURRENT_TIME;
                     if (CLOCK_SHOW_CURRENT_TIME) {
@@ -1880,10 +1784,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 
                 /** Count-up timer mode controls */
                 case CLOCK_IDM_COUNT_UP: {
-                    extern void StopNotificationSound(void);
-                    StopNotificationSound();
-                    
-                    CloseAllNotifications();
+                    CleanupBeforeTimerAction();
 
                     CLOCK_COUNT_UP = !CLOCK_COUNT_UP;
                     if (CLOCK_COUNT_UP) {
@@ -1898,10 +1799,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_COUNT_UP_START: {
-                    extern void StopNotificationSound(void);
-                    StopNotificationSound();
-                    
-                    CloseAllNotifications();
+                    CleanupBeforeTimerAction();
 
                     if (!CLOCK_COUNT_UP) {
                         /** Start count-up timer from zero */
@@ -1920,10 +1818,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     break;
                 }
                 case CLOCK_IDM_COUNT_UP_RESET: {
-                    extern void StopNotificationSound(void);
-                    StopNotificationSound();
-                    
-                    CloseAllNotifications();
+                    CleanupBeforeTimerAction();
 
                     extern void ResetTimer(void);
                     ResetTimer();
@@ -2056,10 +1951,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 
                 /** Pomodoro timer functionality */
                 case CLOCK_IDM_POMODORO_START: {
-                    extern void StopNotificationSound(void);
-                    StopNotificationSound();
-                    
-                    CloseAllNotifications();
+                    CleanupBeforeTimerAction();
                     
                     /** Ensure window is visible for Pomodoro session */
                     if (!IsWindowVisible(hwnd)) {
@@ -2115,36 +2007,14 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             selectedIndex = LOWORD(wp) - CLOCK_IDM_POMODORO_TIME_BASE;
                         }
                         
-                        if (selectedIndex >= 0 && selectedIndex < POMODORO_TIMES_COUNT) {
-                            memset(inputText, 0, sizeof(inputText));
-                            DialogBoxParamW(GetModuleHandle(NULL), 
-                                     MAKEINTRESOURCEW(CLOCK_IDD_POMODORO_TIME_DIALOG),
-                                     hwnd, DlgProc, (LPARAM)CLOCK_IDD_POMODORO_TIME_DIALOG);
-                            
-                            if (inputText[0] && !isAllSpacesOnly(inputText)) {
-                                int total_seconds = 0;
-        
-                                char inputTextA[256];
-                                WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
-                                if (ParseInput(inputTextA, &total_seconds)) {
-                                    POMODORO_TIMES[selectedIndex] = total_seconds;
-                                    
-                                    WriteConfigPomodoroTimeOptions(POMODORO_TIMES, POMODORO_TIMES_COUNT);
-                                    
-                                    if (selectedIndex == 0) POMODORO_WORK_TIME = total_seconds;
-                                    else if (selectedIndex == 1) POMODORO_SHORT_BREAK = total_seconds;
-                                    else if (selectedIndex == 2) POMODORO_LONG_BREAK = total_seconds;
-                                }
-                            }
-                        }
+                        HandlePomodoroTimeConfig(hwnd, selectedIndex);
                     }
                     break;
                 case CLOCK_IDM_POMODORO_LOOP_COUNT:
                     ShowPomodoroLoopDialog(hwnd);
                     break;
                 case CLOCK_IDM_POMODORO_RESET: {
-                    extern void StopNotificationSound(void);
-                    StopNotificationSound();
+                    CleanupBeforeTimerAction();
                     
                     extern void ResetTimer(void);
                     ResetTimer();
@@ -2651,9 +2521,6 @@ refresh_window:
                 extern void ReadNotificationTypeConfig(void);
                 ReadNotificationTypeConfig();
                 
-                extern int elapsed_time;
-                extern BOOL message_shown;
-                
                 memset(inputText, 0, sizeof(inputText));
                 
                 INT_PTR result = DialogBoxParamW(GetModuleHandle(NULL), 
@@ -2666,25 +2533,8 @@ refresh_window:
                     char inputTextA[256];
                     WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
                     if (ParseInput(inputTextA, &total_seconds)) {
-                        extern void StopNotificationSound(void);
-                        StopNotificationSound();
-                        
-                        CloseAllNotifications();
-                        
-                        CLOCK_TOTAL_TIME = total_seconds;
-                        countdown_elapsed_time = 0;
-                        elapsed_time = 0;
-                        message_shown = FALSE;
-                        countdown_message_shown = FALSE;
-                        
-                        CLOCK_COUNT_UP = FALSE;
-                        CLOCK_SHOW_CURRENT_TIME = FALSE;
-                        CLOCK_IS_PAUSED = FALSE;
-                        
-                        KillTimer(hwnd, 1);
-                        ResetTimerWithInterval(hwnd);
-                        
-                        InvalidateRect(hwnd, NULL, TRUE);
+                        CleanupBeforeTimerAction();
+                        StartCountdownWithTime(hwnd, total_seconds);
                     }
                 }
                 return 0;
@@ -2763,10 +2613,7 @@ void ModifyMenuItemText(HMENU hMenu, UINT id, const wchar_t* text);
  * Switches to current time mode with 100ms refresh rate
  */
 void ToggleShowTimeMode(HWND hwnd) {
-    extern void StopNotificationSound(void);
-    StopNotificationSound();
-    
-    CloseAllNotifications();
+    CleanupBeforeTimerAction();
     
     if (!CLOCK_SHOW_CURRENT_TIME) {
         CLOCK_SHOW_CURRENT_TIME = TRUE;
@@ -2784,10 +2631,7 @@ void ToggleShowTimeMode(HWND hwnd) {
  * Initializes count-up mode and adjusts timer refresh rate if needed
  */
 void StartCountUp(HWND hwnd) {
-    extern void StopNotificationSound(void);
-    StopNotificationSound();
-    
-    CloseAllNotifications();
+    CleanupBeforeTimerAction();
     
     extern int countup_elapsed_time;
     
@@ -2813,10 +2657,7 @@ void StartCountUp(HWND hwnd) {
  * Uses configured default time or prompts for input if not set
  */
 void StartDefaultCountDown(HWND hwnd) {
-    extern void StopNotificationSound(void);
-    StopNotificationSound();
-    
-    CloseAllNotifications();
+    CleanupBeforeTimerAction();
     
     extern BOOL countdown_message_shown;
     countdown_message_shown = FALSE;
@@ -2854,10 +2695,7 @@ void StartDefaultCountDown(HWND hwnd) {
  * Initializes Pomodoro mode with work phase timing
  */
 void StartPomodoroTimer(HWND hwnd) {
-    extern void StopNotificationSound(void);
-    StopNotificationSound();
-    
-    CloseAllNotifications();
+    CleanupBeforeTimerAction();
     
     BOOL wasShowingTime = CLOCK_SHOW_CURRENT_TIME;
     
@@ -2922,8 +2760,7 @@ void ToggleEditMode(HWND hwnd) {
  * Only affects countdown/count-up timers, not current time display
  */
 void TogglePauseResume(HWND hwnd) {
-    extern void StopNotificationSound(void);
-    StopNotificationSound();
+    CleanupBeforeTimerAction();
     
     if (!CLOCK_SHOW_CURRENT_TIME && (CLOCK_COUNT_UP || CLOCK_TOTAL_TIME > 0)) {
         if (!CLOCK_IS_PAUSED) {
@@ -2960,8 +2797,7 @@ void TogglePauseResume(HWND hwnd) {
  * Resets elapsed time and notification state for active timer
  */
 void RestartCurrentTimer(HWND hwnd) {
-    extern void StopNotificationSound(void);
-    StopNotificationSound();
+    CleanupBeforeTimerAction();
     
     if (!CLOCK_SHOW_CURRENT_TIME) {
         extern int elapsed_time;
@@ -2992,10 +2828,7 @@ void RestartCurrentTimer(HWND hwnd) {
  * Uses specified time option or falls back to default countdown
  */
 static void StartQuickCountdownByZeroBasedIndex(HWND hwnd, int index) {
-    extern void StopNotificationSound(void);
-    StopNotificationSound();
-    
-    CloseAllNotifications();
+    CleanupBeforeTimerAction();
     
     extern BOOL countdown_message_shown;
     countdown_message_shown = FALSE;
@@ -3006,23 +2839,8 @@ static void StartQuickCountdownByZeroBasedIndex(HWND hwnd, int index) {
     extern int time_options[];
     extern int time_options_count;
     
-    BOOL wasShowingTime = CLOCK_SHOW_CURRENT_TIME;
-    
-    CLOCK_COUNT_UP = FALSE;
-    CLOCK_SHOW_CURRENT_TIME = FALSE;
-    
     if (index >= 0 && index < time_options_count) {
-        CLOCK_TOTAL_TIME = time_options[index];
-        countdown_elapsed_time = 0;
-        CLOCK_IS_PAUSED = FALSE;
-        ResetMillisecondAccumulator();  /** Reset millisecond timing on new countdown */
-        
-        if (wasShowingTime) {
-            KillTimer(hwnd, 1);
-            ResetTimerWithInterval(hwnd);
-        }
-        
-        InvalidateRect(hwnd, NULL, TRUE);
+        StartCountdownWithTime(hwnd, time_options[index]);
     } else {
         StartDefaultCountDown(hwnd);
     }
@@ -3068,10 +2886,7 @@ void StartQuickCountdown3(HWND hwnd) {
 void StartQuickCountdownByIndex(HWND hwnd, int index) {
     if (index <= 0) return;
 
-    extern void StopNotificationSound(void);
-    StopNotificationSound();
-
-    CloseAllNotifications();
+    CleanupBeforeTimerAction();
 
     extern BOOL countdown_message_shown;
     countdown_message_shown = FALSE;
@@ -3082,26 +2897,148 @@ void StartQuickCountdownByIndex(HWND hwnd, int index) {
     extern int time_options[];
     extern int time_options_count;
 
+    /** Convert to zero-based index for array access */
+    int zeroBased = index - 1;
+    if (zeroBased >= 0 && zeroBased < time_options_count) {
+        StartCountdownWithTime(hwnd, time_options[zeroBased]);
+    } else {
+        StartDefaultCountDown(hwnd);
+    }
+}
+
+/**
+ * @brief Clean up notifications and sounds before timer actions
+ * Common cleanup routine used before starting/stopping timers
+ */
+void CleanupBeforeTimerAction(void) {
+    extern void StopNotificationSound(void);
+    StopNotificationSound();
+    CloseAllNotifications();
+}
+
+/**
+ * @brief Start countdown timer with specified duration
+ * @param hwnd Window handle
+ * @param seconds Duration in seconds
+ * @return TRUE if countdown started successfully
+ */
+BOOL StartCountdownWithTime(HWND hwnd, int seconds) {
+    if (seconds <= 0) return FALSE;
+
     BOOL wasShowingTime = CLOCK_SHOW_CURRENT_TIME;
 
     CLOCK_COUNT_UP = FALSE;
     CLOCK_SHOW_CURRENT_TIME = FALSE;
-
-    /** Convert to zero-based index for array access */
-    int zeroBased = index - 1;
-    if (zeroBased >= 0 && zeroBased < time_options_count) {
-        CLOCK_TOTAL_TIME = time_options[zeroBased];
-        countdown_elapsed_time = 0;
-        CLOCK_IS_PAUSED = FALSE;
-        ResetMillisecondAccumulator();  /** Reset millisecond timing on new countdown */
-
-        if (wasShowingTime) {
-            KillTimer(hwnd, 1);
-            ResetTimerWithInterval(hwnd);
-        }
-
-        InvalidateRect(hwnd, NULL, TRUE);
-    } else {
-        StartDefaultCountDown(hwnd);
+    CLOCK_TOTAL_TIME = seconds;
+    countdown_elapsed_time = 0;
+    countdown_message_shown = FALSE;
+    CLOCK_IS_PAUSED = FALSE;
+    
+    extern int elapsed_time;
+    extern BOOL message_shown;
+    extern BOOL countup_message_shown;
+    elapsed_time = 0;
+    message_shown = FALSE;
+    countup_message_shown = FALSE;
+    
+    /** Reset Pomodoro state if active */
+    if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
+        current_pomodoro_phase = POMODORO_PHASE_IDLE;
+        current_pomodoro_time_index = 0;
+        complete_pomodoro_cycles = 0;
     }
+    
+    ResetMillisecondAccumulator();
+    
+    ShowWindow(hwnd, SW_SHOW);
+    
+    if (wasShowingTime) {
+        KillTimer(hwnd, 1);
+    }
+    
+    ResetTimerWithInterval(hwnd);
+    InvalidateRect(hwnd, NULL, TRUE);
+    
+    return TRUE;
+}
+
+/**
+ * @brief Handle language selection from menu
+ * @param hwnd Window handle
+ * @param menuId Menu command ID for language selection
+ * @return TRUE if language was changed
+ */
+BOOL HandleLanguageSelection(HWND hwnd, UINT menuId) {
+    /** Language mapping table */
+    static const struct {
+        UINT menuId;
+        AppLanguage language;
+    } languageMap[] = {
+        {CLOCK_IDM_LANG_CHINESE, APP_LANG_CHINESE_SIMP},
+        {CLOCK_IDM_LANG_CHINESE_TRAD, APP_LANG_CHINESE_TRAD},
+        {CLOCK_IDM_LANG_ENGLISH, APP_LANG_ENGLISH},
+        {CLOCK_IDM_LANG_SPANISH, APP_LANG_SPANISH},
+        {CLOCK_IDM_LANG_FRENCH, APP_LANG_FRENCH},
+        {CLOCK_IDM_LANG_GERMAN, APP_LANG_GERMAN},
+        {CLOCK_IDM_LANG_RUSSIAN, APP_LANG_RUSSIAN},
+        {CLOCK_IDM_LANG_PORTUGUESE, APP_LANG_PORTUGUESE},
+        {CLOCK_IDM_LANG_JAPANESE, APP_LANG_JAPANESE},
+        {CLOCK_IDM_LANG_KOREAN, APP_LANG_KOREAN}
+    };
+    
+    /** Find and set the selected language */
+    for (int i = 0; i < sizeof(languageMap) / sizeof(languageMap[0]); i++) {
+        if (menuId == languageMap[i].menuId) {
+            SetLanguage(languageMap[i].language);
+            WriteConfigLanguage(languageMap[i].language);
+            InvalidateRect(hwnd, NULL, TRUE);
+            
+            extern void UpdateTrayIcon(HWND hwnd);
+            UpdateTrayIcon(hwnd);
+            return TRUE;
+        }
+    }
+    
+    return FALSE;
+}
+
+/**
+ * @brief Handle Pomodoro time configuration dialog
+ * @param hwnd Window handle
+ * @param selectedIndex Index of Pomodoro phase (0=work, 1=short break, 2=long break, etc.)
+ * @return TRUE if configuration was updated
+ */
+BOOL HandlePomodoroTimeConfig(HWND hwnd, int selectedIndex) {
+    extern wchar_t inputText[256];
+    extern int POMODORO_TIMES[10];
+    extern int POMODORO_TIMES_COUNT;
+    
+    if (selectedIndex < 0 || selectedIndex >= POMODORO_TIMES_COUNT) {
+        return FALSE;
+    }
+    
+    memset(inputText, 0, sizeof(inputText));
+    DialogBoxParamW(GetModuleHandle(NULL), 
+             MAKEINTRESOURCEW(CLOCK_IDD_POMODORO_TIME_DIALOG),
+             hwnd, DlgProc, (LPARAM)CLOCK_IDD_POMODORO_TIME_DIALOG);
+    
+    if (inputText[0] && !isAllSpacesOnly(inputText)) {
+        int total_seconds = 0;
+
+        char inputTextA[256];
+        WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
+        if (ParseInput(inputTextA, &total_seconds)) {
+            POMODORO_TIMES[selectedIndex] = total_seconds;
+            
+            WriteConfigPomodoroTimeOptions(POMODORO_TIMES, POMODORO_TIMES_COUNT);
+            
+            if (selectedIndex == 0) POMODORO_WORK_TIME = total_seconds;
+            else if (selectedIndex == 1) POMODORO_SHORT_BREAK = total_seconds;
+            else if (selectedIndex == 2) POMODORO_LONG_BREAK = total_seconds;
+            
+            return TRUE;
+        }
+    }
+    
+    return FALSE;
 }

@@ -171,4 +171,34 @@ void StartQuickCountdown3(HWND hwnd);
  */
 void StartQuickCountdownByIndex(HWND hwnd, int index);
 
+/**
+ * @brief Clean up notifications and sounds before timer actions
+ * Common cleanup routine used before starting/stopping timers
+ */
+void CleanupBeforeTimerAction(void);
+
+/**
+ * @brief Start countdown timer with specified duration
+ * @param hwnd Window handle
+ * @param seconds Duration in seconds
+ * @return TRUE if countdown started successfully
+ */
+BOOL StartCountdownWithTime(HWND hwnd, int seconds);
+
+/**
+ * @brief Handle language selection from menu
+ * @param hwnd Window handle
+ * @param menuId Menu command ID for language selection
+ * @return TRUE if language was changed
+ */
+BOOL HandleLanguageSelection(HWND hwnd, UINT menuId);
+
+/**
+ * @brief Handle Pomodoro time configuration dialog
+ * @param hwnd Window handle
+ * @param selectedIndex Index of Pomodoro phase (0=work, 1=short break, 2=long break, etc.)
+ * @return TRUE if configuration was updated
+ */
+BOOL HandlePomodoroTimeConfig(HWND hwnd, int selectedIndex);
+
 #endif
