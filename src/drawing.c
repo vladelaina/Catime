@@ -19,6 +19,7 @@
 #include "../include/color.h"
 #include "../include/timer.h"
 #include "../include/config.h"
+#include "../include/window_procedure.h"
 
 /* ============================================================================
  * External Dependencies
@@ -27,17 +28,8 @@
 extern int elapsed_time;
 extern TimeFormatType CLOCK_TIME_FORMAT;
 extern BOOL CLOCK_SHOW_MILLISECONDS;
-extern BOOL IS_MILLISECONDS_PREVIEWING;
-extern BOOL PREVIEW_SHOW_MILLISECONDS;
-extern BOOL IS_TIME_FORMAT_PREVIEWING;
-extern TimeFormatType PREVIEW_TIME_FORMAT;
-extern BOOL IS_PREVIEWING;
-extern char PREVIEW_FONT_NAME[100];
-extern char PREVIEW_INTERNAL_NAME[100];
 extern char FONT_FILE_NAME[100];
 extern char FONT_INTERNAL_NAME[100];
-extern BOOL IS_COLOR_PREVIEWING;
-extern char PREVIEW_COLOR[10];
 extern char CLOCK_TEXT_COLOR[10];
 extern BOOL CLOCK_EDIT_MODE;
 extern int CLOCK_BASE_FONT_SIZE;
@@ -282,8 +274,8 @@ static void FormatTimeComponents(
 static void GetTimeText(wchar_t* buffer, size_t bufferSize) {
     if (!buffer || bufferSize == 0) return;
     
-    TimeFormatType finalFormat = IS_TIME_FORMAT_PREVIEWING ? PREVIEW_TIME_FORMAT : CLOCK_TIME_FORMAT;
-    BOOL finalShowMs = IS_MILLISECONDS_PREVIEWING ? PREVIEW_SHOW_MILLISECONDS : CLOCK_SHOW_MILLISECONDS;
+    TimeFormatType finalFormat = GetActiveTimeFormat();
+    BOOL finalShowMs = GetActiveShowMilliseconds();
     
     if (CLOCK_SHOW_CURRENT_TIME) {
         TimeComponents tc = GetCurrentTimeComponents(CLOCK_USE_24HOUR);
@@ -356,15 +348,15 @@ static COLORREF ParseColorString(const char* colorStr) {
 static RenderContext CreateRenderContext(void) {
     RenderContext ctx;
     
-    if (IS_PREVIEWING) {
-        ctx.fontFileName = PREVIEW_FONT_NAME;
-        ctx.fontInternalName = PREVIEW_INTERNAL_NAME;
-    } else {
-        ctx.fontFileName = FONT_FILE_NAME;
-        ctx.fontInternalName = FONT_INTERNAL_NAME;
-    }
+    static char fontFileName[100];
+    static char fontInternalName[100];
+    static char colorStr[10];
     
-    const char* colorStr = IS_COLOR_PREVIEWING ? PREVIEW_COLOR : CLOCK_TEXT_COLOR;
+    GetActiveFont(fontFileName, fontInternalName, sizeof(fontFileName));
+    GetActiveColor(colorStr, sizeof(colorStr));
+    
+    ctx.fontFileName = fontFileName;
+    ctx.fontInternalName = fontInternalName;
     ctx.textColor = ParseColorString(colorStr);
     ctx.fontScaleFactor = CLOCK_FONT_SCALE_FACTOR;
     
