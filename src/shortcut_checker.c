@@ -52,9 +52,9 @@
  * Data-driven approach for identifying managed installations
  */
 typedef struct {
-    const char* pattern;           /**< Path pattern to match */
-    bool (*matcher)(const char*);  /**< Matching function (StartsWith or Contains) */
-    const char* description;       /**< Human-readable description */
+    const char* pattern;                        /**< Path pattern to match */
+    bool (*matcher)(const char*, const char*);  /**< Matching function (StartsWith or Contains) */
+    const char* description;                    /**< Human-readable description */
 } PackageDetectionRule;
 
 /**
@@ -288,7 +288,6 @@ static const PackageDetectionRule PACKAGE_RULES[] = {
     { STORE_PATH_PREFIX,      StartsWith,   "Microsoft Store (WindowsApps)" },
     { WINGET_PATH_PATTERN,    Contains,     "WinGet standard path" },
     { WINGET_EXE_PATTERN,     Contains,     "WinGet executable pattern" },
-    { NULL,                   ContainsBoth, "WinGet Microsoft directory" } // Special case
 };
 
 static const size_t PACKAGE_RULES_COUNT = sizeof(PACKAGE_RULES) / sizeof(PACKAGE_RULES[0]);
@@ -299,17 +298,16 @@ static const size_t PACKAGE_RULES_COUNT = sizeof(PACKAGE_RULES) / sizeof(PACKAGE
  * @return true if installed via Store or WinGet package managers
  */
 static bool IsPackageManagerInstall(const char* exe_path) {
+    // Check standard rules
     for (size_t i = 0; i < PACKAGE_RULES_COUNT; i++) {
-        if (PACKAGE_RULES[i].pattern == NULL) {
-            // Special case: check both patterns
-            if (ContainsBoth(exe_path, WINGET_MS_PATH_PATTERN, WINGET_KEYWORD)) {
-                return true;
-            }
-        } else {
-            if (PACKAGE_RULES[i].matcher(exe_path, PACKAGE_RULES[i].pattern)) {
-                return true;
-            }
+        if (PACKAGE_RULES[i].matcher(exe_path, PACKAGE_RULES[i].pattern)) {
+            return true;
         }
+    }
+    
+    // Special case: WinGet Microsoft directory pattern (requires two checks)
+    if (ContainsBoth(exe_path, WINGET_MS_PATH_PATTERN, WINGET_KEYWORD)) {
+        return true;
     }
     
     return false;
