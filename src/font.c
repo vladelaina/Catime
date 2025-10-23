@@ -1,6 +1,13 @@
 /**
  * @file font.c
- * @brief Font management and embedded font resource handling
+ * @brief Modular font management system with unified path resolution
+ * 
+ * Refactored architecture:
+ * - Eliminated ~300 lines of code duplication
+ * - Extracted 15+ helper functions for single-responsibility
+ * - Unified path resolution and auto-fix logic
+ * - Improved error handling and resource management
+ * - Enhanced code testability and maintainability
  */
 
 #include <windows.h>
@@ -12,7 +19,10 @@
 #include "../include/config.h"
 #include "../resource/resource.h"
 
-/** @brief Font name table structures for TTF font parsing */
+/* ============================================================================
+ * TTF/OTF Font File Structures
+ * ============================================================================ */
+
 #pragma pack(push, 1)
 typedef struct {
     WORD platformID;
@@ -45,23 +55,19 @@ typedef struct {
 } FontDirectoryHeader;
 #pragma pack(pop)
 
-/** @brief Current font file name */
+/* ============================================================================
+ * Global State
+ * ============================================================================ */
+
 char FONT_FILE_NAME[100] = "%LOCALAPPDATA%\\Catime\\resources\\fonts\\Wallpoet Essence.ttf";
-/** @brief Internal font name for Windows GDI */
 char FONT_INTERNAL_NAME[100];
-/** @brief Preview font file name during font selection */
 char PREVIEW_FONT_NAME[100] = "";
-/** @brief Preview internal font name for Windows GDI */
 char PREVIEW_INTERNAL_NAME[100] = "";
-/** @brief Flag indicating if font preview mode is active */
 BOOL IS_PREVIEWING = FALSE;
 
-/** @brief Currently loaded font path for resource management */
 static wchar_t CURRENT_LOADED_FONT_PATH[MAX_PATH] = {0};
-/** @brief Flag indicating if a font resource is currently loaded */
 static BOOL FONT_RESOURCE_LOADED = FALSE;
 
-/** @brief Array of embedded font resources for extraction only */
 FontResource fontResources[] = {
     {IDR_FONT_RECMONO, "RecMonoCasual Nerd Font Mono Essence.ttf"},
     {IDR_FONT_DEPARTURE, "DepartureMono Nerd Font Propo Essence.ttf"},
@@ -78,57 +84,247 @@ FontResource fontResources[] = {
     {IDR_FONT_DADDYTIME, "DaddyTimeMono Nerd Font Propo Essence.ttf"},
 };
 
-/** @brief Total number of embedded font resources */
 const int FONT_RESOURCES_COUNT = sizeof(fontResources) / sizeof(FontResource);
 
-/** @brief External reference to clock text color configuration */
-extern char CLOCK_TEXT_COLOR[];
+/* ============================================================================
+ * External Dependencies
+ * ============================================================================ */
 
-/** @brief External function to get configuration file path */
+extern char CLOCK_TEXT_COLOR[];
 extern void GetConfigPath(char* path, size_t maxLen);
-/** @brief External function to reload configuration */
 extern void ReadConfig(void);
-/** @brief Font enumeration callback function */
+extern void FlushConfigToDisk(void);
+extern BOOL WriteIniString(const char* section, const char* key, const char* value, const char* filePath);
 extern int CALLBACK EnumFontFamExProc(ENUMLOGFONTEXW *lpelfe, NEWTEXTMETRICEX *lpntme, DWORD FontType, LPARAM lParam);
 
+/* ============================================================================
+ * Utility Functions - Encoding Conversion
+ * ============================================================================ */
+
 /**
- * @brief Build %LOCALAPPDATA%\Catime\resources\fonts as a wide-character path from config path
- * @param out Wide-character buffer
+ * @brief Convert UTF-8 string to wide character (UTF-16)
+ * @param utf8Str Source UTF-8 string
+ * @param wideStr Destination wide string buffer
+ * @param wideSize Buffer size in wide characters
+ * @return TRUE on success
+ */
+static BOOL Utf8ToWide(const char* utf8Str, wchar_t* wideStr, size_t wideSize) {
+    if (!utf8Str || !wideStr || wideSize == 0) return FALSE;
+    int result = MultiByteToWideChar(CP_UTF8, 0, utf8Str, -1, wideStr, (int)wideSize);
+    return result > 0;
+}
+
+/**
+ * @brief Convert wide character (UTF-16) to UTF-8 string
+ * @param wideStr Source wide string
+ * @param utf8Str Destination UTF-8 string buffer
+ * @param utf8Size Buffer size in bytes
+ * @return TRUE on success
+ */
+static BOOL WideToUtf8(const wchar_t* wideStr, char* utf8Str, size_t utf8Size) {
+    if (!wideStr || !utf8Str || utf8Size == 0) return FALSE;
+    int result = WideCharToMultiByte(CP_UTF8, 0, wideStr, -1, utf8Str, (int)utf8Size, NULL, NULL);
+    return result > 0;
+}
+
+/* ============================================================================
+ * Utility Functions - Path Operations
+ * ============================================================================ */
+
+/**
+ * @brief Extract filename from path (handles both forward and backward slashes)
+ * @param path Full path string
+ * @return Pointer to filename part (or full path if no separator found)
+ */
+static const char* GetFilenameFromPath(const char* path) {
+    if (!path) return NULL;
+    const char* lastSlash = strrchr(path, '\\');
+    const char* lastForwardSlash = strrchr(path, '/');
+    const char* filename = (lastSlash > lastForwardSlash) ? lastSlash : lastForwardSlash;
+    return filename ? (filename + 1) : path;
+}
+
+/**
+ * @brief Build font configuration path from relative path
+ * @param relativePath Relative path from fonts folder
+ * @param outBuffer Output buffer
+ * @param bufferSize Buffer size
+ * @return TRUE on success
+ */
+static BOOL BuildFontConfigPath(const char* relativePath, char* outBuffer, size_t bufferSize) {
+    if (!relativePath || !outBuffer || bufferSize == 0) return FALSE;
+    int result = snprintf(outBuffer, bufferSize, "%s%s", FONT_FOLDER_PREFIX, relativePath);
+    return result > 0 && result < (int)bufferSize;
+}
+
+/**
+ * @brief Check if path starts with font folder prefix
+ * @param path Path to check
+ * @return TRUE if path starts with FONT_FOLDER_PREFIX
+ */
+static BOOL IsFontsFolderPath(const char* path) {
+    if (!path) return FALSE;
+    return _strnicmp(path, FONT_FOLDER_PREFIX, strlen(FONT_FOLDER_PREFIX)) == 0;
+}
+
+/**
+ * @brief Extract relative path from font folder prefix
+ * @param fullConfigPath Full config path starting with %LOCALAPPDATA%
+ * @return Pointer to relative path portion (or NULL if not a fonts folder path)
+ */
+static const char* ExtractRelativePath(const char* fullConfigPath) {
+    if (!IsFontsFolderPath(fullConfigPath)) return NULL;
+    return fullConfigPath + strlen(FONT_FOLDER_PREFIX);
+}
+
+/**
+ * @brief Get fonts folder path in wide character format
+ * @param outW Wide character buffer
  * @param size Buffer length in wchar_t
  * @param ensureCreate When TRUE, ensure the directory exists
  * @return TRUE on success
  */
-static BOOL GetFontsFolderWide(wchar_t* out, size_t size, BOOL ensureCreate) {
-    if (!out || size == 0) return FALSE;
+static BOOL GetFontsFolderWide(wchar_t* outW, size_t size, BOOL ensureCreate) {
+    if (!outW || size == 0) return FALSE;
 
     char configPathUtf8[MAX_PATH] = {0};
-    GetConfigPath(configPathUtf8, MAX_PATH); /* UTF-8 path to %LOCALAPPDATA%\\Catime\\config.ini or fallback */
+    GetConfigPath(configPathUtf8, MAX_PATH);
 
     wchar_t configPathW[MAX_PATH] = {0};
-    MultiByteToWideChar(CP_UTF8, 0, configPathUtf8, -1, configPathW, MAX_PATH);
+    if (!Utf8ToWide(configPathUtf8, configPathW, MAX_PATH)) return FALSE;
 
     wchar_t* lastSep = wcsrchr(configPathW, L'\\');
     if (!lastSep) return FALSE;
 
-    size_t dirLen = (size_t)(lastSep - configPathW); /* exclude trailing backslash */
+    size_t dirLen = (size_t)(lastSep - configPathW);
     if (dirLen + 1 >= size) return FALSE;
-    wcsncpy(out, configPathW, dirLen);
-    out[dirLen] = L'\0';
+    wcsncpy(outW, configPathW, dirLen);
+    outW[dirLen] = L'\0';
 
-    /* Append resources\fonts */
-    if (wcslen(out) + 1 + wcslen(L"resources\\fonts") + 1 >= size) return FALSE;
-    wcscat(out, L"\\resources\\fonts");
+    if (wcslen(outW) + 1 + wcslen(L"resources\\fonts") + 1 >= size) return FALSE;
+    wcscat(outW, L"\\resources\\fonts");
 
     if (ensureCreate) {
-        SHCreateDirectoryExW(NULL, out, NULL);
+        SHCreateDirectoryExW(NULL, outW, NULL);
     }
     return TRUE;
 }
 
 /**
+ * @brief Build full font path from relative path
+ * @param relativePath Relative path from fonts folder
+ * @param outAbsolutePathUtf8 Output buffer for UTF-8 absolute path
+ * @param bufferSize Buffer size
+ * @return TRUE on success
+ */
+static BOOL BuildFullFontPath(const char* relativePath, char* outAbsolutePathUtf8, size_t bufferSize) {
+    if (!relativePath || !outAbsolutePathUtf8 || bufferSize == 0) return FALSE;
+
+    wchar_t fontsFolderW[MAX_PATH] = {0};
+    if (!GetFontsFolderWide(fontsFolderW, MAX_PATH, TRUE)) return FALSE;
+
+    wchar_t relativeW[MAX_PATH] = {0};
+    if (!Utf8ToWide(relativePath, relativeW, MAX_PATH)) return FALSE;
+
+    wchar_t fullW[MAX_PATH] = {0};
+    _snwprintf_s(fullW, MAX_PATH, _TRUNCATE, L"%s\\%s", fontsFolderW, relativeW);
+
+    return WideToUtf8(fullW, outAbsolutePathUtf8, bufferSize);
+}
+
+/**
+ * @brief Calculate relative path from fonts folder to absolute path
+ * @param absolutePath Absolute path to font file
+ * @param outRelativePath Output buffer for relative path
+ * @param bufferSize Buffer size
+ * @return TRUE if successful (path is within fonts folder)
+ */
+static BOOL CalculateRelativePath(const char* absolutePath, char* outRelativePath, size_t bufferSize) {
+    if (!absolutePath || !outRelativePath || bufferSize == 0) return FALSE;
+
+    wchar_t fontsFolderW[MAX_PATH] = {0};
+    if (!GetFontsFolderWide(fontsFolderW, MAX_PATH, TRUE)) return FALSE;
+
+    char fontsFolderUtf8[MAX_PATH];
+    if (!WideToUtf8(fontsFolderW, fontsFolderUtf8, MAX_PATH)) return FALSE;
+
+    size_t prefixLen = strlen(fontsFolderUtf8);
+    if (prefixLen > 0 && fontsFolderUtf8[prefixLen - 1] != '\\') {
+        if (prefixLen + 1 < MAX_PATH) {
+            fontsFolderUtf8[prefixLen] = '\\';
+            fontsFolderUtf8[prefixLen + 1] = '\0';
+            prefixLen += 1;
+        }
+    }
+
+    if (_strnicmp(absolutePath, fontsFolderUtf8, prefixLen) != 0) {
+        return FALSE;
+    }
+
+    const char* relativePart = absolutePath + prefixLen;
+    strncpy(outRelativePath, relativePart, bufferSize - 1);
+    outRelativePath[bufferSize - 1] = '\0';
+    return TRUE;
+}
+
+/* ============================================================================
+ * Font Path Auto-Fix System
+ * ============================================================================ */
+
+/**
+ * @brief Unified font path auto-fix logic
+ * @param fontFileName Original font filename
+ * @param pathInfo Output structure with resolved paths
+ * @return TRUE if font found and paths resolved
+ */
+static BOOL AutoFixFontPath(const char* fontFileName, FontPathInfo* pathInfo) {
+    if (!fontFileName || !pathInfo) return FALSE;
+
+    memset(pathInfo, 0, sizeof(FontPathInfo));
+    strncpy(pathInfo->fileName, GetFilenameFromPath(fontFileName), sizeof(pathInfo->fileName) - 1);
+
+    if (!FindFontInFontsFolder(pathInfo->fileName, pathInfo->absolutePath, sizeof(pathInfo->absolutePath))) {
+        return FALSE;
+    }
+
+    if (!CalculateRelativePath(pathInfo->absolutePath, pathInfo->relativePath, sizeof(pathInfo->relativePath))) {
+        return FALSE;
+    }
+
+    if (!BuildFontConfigPath(pathInfo->relativePath, pathInfo->configPath, sizeof(pathInfo->configPath))) {
+        return FALSE;
+    }
+
+    pathInfo->isValid = TRUE;
+    return TRUE;
+}
+
+/**
+ * @brief Update font configuration with auto-fixed path
+ * @param pathInfo Font path information
+ * @param shouldSave TRUE to save configuration immediately
+ */
+static void UpdateFontConfig(const FontPathInfo* pathInfo, BOOL shouldSave) {
+    if (!pathInfo || !pathInfo->isValid) return;
+
+    strncpy(FONT_FILE_NAME, pathInfo->configPath, sizeof(FONT_FILE_NAME) - 1);
+    FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
+
+    if (shouldSave) {
+        WriteConfigFont(pathInfo->relativePath, FALSE);
+        FlushConfigToDisk();
+    }
+}
+
+/* ============================================================================
+ * Font File Search
+ * ============================================================================ */
+
+/**
  * @brief Recursive font search using wide-character Win32 APIs
  */
-static BOOL SearchFontRecursiveW(const wchar_t* folderPathW, const wchar_t* targetFileW, wchar_t* resultPathW, size_t resultCapacity) {
+static BOOL SearchFontRecursiveW(const wchar_t* folderPathW, const wchar_t* targetFileW, 
+                                 wchar_t* resultPathW, size_t resultCapacity) {
     if (!folderPathW || !targetFileW || !resultPathW) return FALSE;
 
     wchar_t searchPathW[MAX_PATH] = {0};
@@ -165,816 +361,524 @@ static BOOL SearchFontRecursiveW(const wchar_t* folderPathW, const wchar_t* targ
     return found;
 }
 
-/**
- * @brief Convert big-endian WORD to little-endian
- * @param value Big-endian WORD value
- * @return Little-endian WORD value
- */
-static WORD SwapWORD(WORD value) {
-    return ((value & 0xFF) << 8) | ((value & 0xFF00) >> 8);
-}
-
-/**
- * @brief Convert big-endian DWORD to little-endian
- * @param value Big-endian DWORD value
- * @return Little-endian DWORD value
- */
-static DWORD SwapDWORD(DWORD value) {
-    return ((value & 0xFF) << 24) | ((value & 0xFF00) << 8) | 
-           ((value & 0xFF0000) >> 8) | ((value & 0xFF000000) >> 24);
-}
-
-/**
- * @brief Read font family name from TTF/OTF font file
- * @param fontFilePath Path to font file
- * @param fontName Buffer to store extracted font name
- * @param fontNameSize Size of fontName buffer
- * @return TRUE if font name extracted successfully, FALSE otherwise
- */
-BOOL GetFontNameFromFile(const char* fontFilePath, char* fontName, size_t fontNameSize) {
-    if (!fontFilePath || !fontName || fontNameSize == 0) return FALSE;
-    
-    /** Convert to wide character path */
-    wchar_t wFontPath[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, fontFilePath, -1, wFontPath, MAX_PATH);
-    
-    /** Open font file */
-    HANDLE hFile = CreateFileW(wFontPath, GENERIC_READ, FILE_SHARE_READ, NULL, 
-                              OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (hFile == INVALID_HANDLE_VALUE) {
-        return FALSE;
-    }
-    
-    /** Read font directory header */
-    FontDirectoryHeader fontHeader;
-    DWORD bytesRead;
-    if (!ReadFile(hFile, &fontHeader, sizeof(FontDirectoryHeader), &bytesRead, NULL) ||
-        bytesRead != sizeof(FontDirectoryHeader)) {
-        CloseHandle(hFile);
-        return FALSE;
-    }
-    
-    /** Convert endianness */
-    fontHeader.numTables = SwapWORD(fontHeader.numTables);
-    
-    /** Find 'name' table */
-    DWORD nameTableOffset = 0;
-    DWORD nameTableLength = 0;
-    for (WORD i = 0; i < fontHeader.numTables; i++) {
-        TableRecord tableRecord;
-        if (!ReadFile(hFile, &tableRecord, sizeof(TableRecord), &bytesRead, NULL) ||
-            bytesRead != sizeof(TableRecord)) {
-            CloseHandle(hFile);
-            return FALSE;
-        }
-        
-        /** Check if this is the 'name' table (0x6E616D65 = 'name') */
-        if (tableRecord.tag == 0x656D616E) {  // 'name' in little-endian
-            nameTableOffset = SwapDWORD(tableRecord.offset);
-            nameTableLength = SwapDWORD(tableRecord.length);
-            break;
-        }
-    }
-    
-    if (nameTableOffset == 0) {
-        CloseHandle(hFile);
-        return FALSE;
-    }
-    
-    /** Seek to name table */
-    if (SetFilePointer(hFile, nameTableOffset, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER) {
-        CloseHandle(hFile);
-        return FALSE;
-    }
-    
-    /** Read name table header */
-    NameTableHeader nameHeader;
-    if (!ReadFile(hFile, &nameHeader, sizeof(NameTableHeader), &bytesRead, NULL) ||
-        bytesRead != sizeof(NameTableHeader)) {
-        CloseHandle(hFile);
-        return FALSE;
-    }
-    
-    /** Convert endianness */
-    nameHeader.count = SwapWORD(nameHeader.count);
-    nameHeader.stringOffset = SwapWORD(nameHeader.stringOffset);
-    
-    /** Search for font family name record (nameID = 1) */
-    BOOL foundName = FALSE;
-    WORD bestPlatform = 0;
-    WORD bestEncoding = 0;
-    WORD bestLanguage = 0;
-    WORD nameLength = 0;
-    WORD nameOffset = 0;
-    
-    for (WORD i = 0; i < nameHeader.count; i++) {
-        NameRecord nameRecord;
-        if (!ReadFile(hFile, &nameRecord, sizeof(NameRecord), &bytesRead, NULL) ||
-            bytesRead != sizeof(NameRecord)) {
-            CloseHandle(hFile);
-            return FALSE;
-        }
-        
-        /** Convert endianness */
-        nameRecord.platformID = SwapWORD(nameRecord.platformID);
-        nameRecord.encodingID = SwapWORD(nameRecord.encodingID);
-        nameRecord.languageID = SwapWORD(nameRecord.languageID);
-        nameRecord.nameID = SwapWORD(nameRecord.nameID);
-        nameRecord.length = SwapWORD(nameRecord.length);
-        nameRecord.offset = SwapWORD(nameRecord.offset);
-        
-        /** Look for font family name (nameID = 1) */
-        if (nameRecord.nameID == 1) {
-            /** Prefer Windows platform (3) with Unicode encoding (1) */
-            if (nameRecord.platformID == 3 && nameRecord.encodingID == 1) {
-                bestPlatform = nameRecord.platformID;
-                bestEncoding = nameRecord.encodingID;
-                bestLanguage = nameRecord.languageID;
-                nameLength = nameRecord.length;
-                nameOffset = nameRecord.offset;
-                foundName = TRUE;
-                break;  // This is the best option
-            }
-            /** Fallback to any Unicode platform */
-            else if (!foundName && nameRecord.platformID == 0) {
-                bestPlatform = nameRecord.platformID;
-                bestEncoding = nameRecord.encodingID;
-                bestLanguage = nameRecord.languageID;
-                nameLength = nameRecord.length;
-                nameOffset = nameRecord.offset;
-                foundName = TRUE;
-            }
-            /** Last resort: any platform */
-            else if (!foundName) {
-                bestPlatform = nameRecord.platformID;
-                bestEncoding = nameRecord.encodingID;
-                bestLanguage = nameRecord.languageID;
-                nameLength = nameRecord.length;
-                nameOffset = nameRecord.offset;
-                foundName = TRUE;
-            }
-        }
-    }
-    
-    if (!foundName) {
-        CloseHandle(hFile);
-        return FALSE;
-    }
-    
-    /** Seek to string data */
-    DWORD stringDataOffset = nameTableOffset + sizeof(NameTableHeader) + 
-                           nameHeader.count * sizeof(NameRecord) + nameOffset;
-    if (SetFilePointer(hFile, stringDataOffset, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER) {
-        CloseHandle(hFile);
-        return FALSE;
-    }
-    
-    /** Read string data */
-    if (nameLength > 1024) nameLength = 1024;  // Safety limit
-    char* stringBuffer = (char*)malloc(nameLength + 2);
-    if (!stringBuffer) {
-        CloseHandle(hFile);
-        return FALSE;
-    }
-    
-    if (!ReadFile(hFile, stringBuffer, nameLength, &bytesRead, NULL) || bytesRead != nameLength) {
-        free(stringBuffer);
-        CloseHandle(hFile);
-        return FALSE;
-    }
-    
-    /** Convert string based on platform and encoding */
-    if (bestPlatform == 3 && bestEncoding == 1) {
-        /** Windows Unicode (UTF-16 BE) */
-        WCHAR* unicodeStr = (WCHAR*)stringBuffer;
-        int numChars = nameLength / 2;
-        
-        /** Convert from big-endian to little-endian */
-        for (int i = 0; i < numChars; i++) {
-            unicodeStr[i] = SwapWORD(unicodeStr[i]);
-        }
-        unicodeStr[numChars] = 0;
-        
-        /** Convert to UTF-8 */
-        WideCharToMultiByte(CP_UTF8, 0, unicodeStr, -1, fontName, (int)fontNameSize, NULL, NULL);
-    } else {
-        /** ASCII/other encoding - copy directly */
-        size_t copyLen = (nameLength < fontNameSize - 1) ? nameLength : fontNameSize - 1;
-        memcpy(fontName, stringBuffer, copyLen);
-        fontName[copyLen] = '\0';
-    }
-    
-    free(stringBuffer);
-    CloseHandle(hFile);
-    return TRUE;
-}
-
-
-
-/**
- * @brief Unload currently loaded font resource
- * @return TRUE if font unloaded successfully or no font was loaded, FALSE otherwise
- */
-BOOL UnloadCurrentFontResource(void) {
-    if (!FONT_RESOURCE_LOADED || CURRENT_LOADED_FONT_PATH[0] == 0) {
-        return TRUE; // No font to unload
-    }
-    
-    /** Remove font from system font table */
-    BOOL result = RemoveFontResourceExW(CURRENT_LOADED_FONT_PATH, FR_PRIVATE, NULL);
-    
-    /** Reset tracking variables */
-    CURRENT_LOADED_FONT_PATH[0] = 0;
-    FONT_RESOURCE_LOADED = FALSE;
-    
-    return result;
-}
-
-/**
- * @brief Load font from file on disk (with resource management)
- * @param fontFilePath Full path to font file
- * @return TRUE if font loaded successfully, FALSE otherwise
- */
-BOOL LoadFontFromFile(const char* fontFilePath) {
-    if (!fontFilePath) return FALSE;
-    
-    /** Convert to wide character for Unicode support */
-    wchar_t wFontPath[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, fontFilePath, -1, wFontPath, MAX_PATH);
-    
-    /** Check if file exists */
-    if (GetFileAttributesW(wFontPath) == INVALID_FILE_ATTRIBUTES) {
-        return FALSE;
-    }
-    
-    /** Check if this font is already loaded */
-    if (FONT_RESOURCE_LOADED && wcscmp(CURRENT_LOADED_FONT_PATH, wFontPath) == 0) {
-        return TRUE; // Already loaded
-    }
-    
-    /**
-     * Load-new-then-unload-old to avoid a visible gap where no font is available.
-     * Only remove the previous font after the new one has been successfully added.
-     */
-    int addResult = AddFontResourceExW(wFontPath, FR_PRIVATE, NULL);
-    if (addResult <= 0) {
-        /** Keep existing font loaded on failure */
-        return FALSE;
-    }
-    
-    /** New font added successfully; now it's safe to remove the old one if different */
-    if (FONT_RESOURCE_LOADED && CURRENT_LOADED_FONT_PATH[0] != 0 && wcscmp(CURRENT_LOADED_FONT_PATH, wFontPath) != 0) {
-        RemoveFontResourceExW(CURRENT_LOADED_FONT_PATH, FR_PRIVATE, NULL);
-    }
-    
-    /** Track the loaded font for later cleanup */
-    wcscpy(CURRENT_LOADED_FONT_PATH, wFontPath);
-    FONT_RESOURCE_LOADED = TRUE;
-    return TRUE;
-}
-
-/**
- * @brief Find font file in fonts folder and subfolders
- * @param fontFileName Font filename to search for
- * @param foundPath Buffer to store found font path
- * @param foundPathSize Size of foundPath buffer
- * @return TRUE if font file found, FALSE otherwise
- */
 BOOL FindFontInFontsFolder(const char* fontFileName, char* foundPath, size_t foundPathSize) {
     if (!fontFileName || !foundPath || foundPathSize == 0) return FALSE;
 
     wchar_t fontsFolderW[MAX_PATH] = {0};
     if (!GetFontsFolderWide(fontsFolderW, MAX_PATH, TRUE)) return FALSE;
 
-    /* Convert target file to wide */
     wchar_t targetFileW[MAX_PATH] = {0};
-    MultiByteToWideChar(CP_UTF8, 0, fontFileName, -1, targetFileW, MAX_PATH);
+    if (!Utf8ToWide(fontFileName, targetFileW, MAX_PATH)) return FALSE;
 
     wchar_t resultPathW[MAX_PATH] = {0};
-    BOOL ok = SearchFontRecursiveW(fontsFolderW, targetFileW, resultPathW, MAX_PATH);
-    if (!ok) return FALSE;
+    if (!SearchFontRecursiveW(fontsFolderW, targetFileW, resultPathW, MAX_PATH)) return FALSE;
 
-    /* Convert back to UTF-8 */
-    WideCharToMultiByte(CP_UTF8, 0, resultPathW, -1, foundPath, (int)foundPathSize, NULL, NULL);
+    return WideToUtf8(resultPathW, foundPath, foundPathSize);
+}
+
+/* ============================================================================
+ * TTF/OTF Font Parsing - Byte Order Conversion
+ * ============================================================================ */
+
+static inline WORD SwapWORD(WORD value) {
+    return ((value & 0xFF) << 8) | ((value & 0xFF00) >> 8);
+}
+
+static inline DWORD SwapDWORD(DWORD value) {
+    return ((value & 0xFF) << 24) | ((value & 0xFF00) << 8) | 
+           ((value & 0xFF0000) >> 8) | ((value & 0xFF000000) >> 24);
+}
+
+/* ============================================================================
+ * TTF/OTF Font Parsing - Name Extraction
+ * ============================================================================ */
+
+/**
+ * @brief Find TTF table by tag
+ * @param hFile Font file handle
+ * @param numTables Number of tables in font
+ * @param targetTag Table tag to find
+ * @param outOffset Output: table offset
+ * @param outLength Output: table length
+ * @return TRUE if table found
+ */
+static BOOL FindTTFTable(HANDLE hFile, WORD numTables, DWORD targetTag, 
+                         DWORD* outOffset, DWORD* outLength) {
+    if (hFile == INVALID_HANDLE_VALUE || !outOffset || !outLength) return FALSE;
+
+    for (WORD i = 0; i < numTables; i++) {
+        TableRecord tableRecord;
+        DWORD bytesRead;
+        if (!ReadFile(hFile, &tableRecord, sizeof(TableRecord), &bytesRead, NULL) ||
+            bytesRead != sizeof(TableRecord)) {
+            return FALSE;
+        }
+
+        if (tableRecord.tag == targetTag) {
+            *outOffset = SwapDWORD(tableRecord.offset);
+            *outLength = SwapDWORD(tableRecord.length);
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+/**
+ * @brief Read and convert Unicode font name from TTF
+ * @param hFile Font file handle
+ * @param stringData Raw string data from name table
+ * @param dataLength Length of string data
+ * @param isUnicode TRUE if data is UTF-16 BE
+ * @param outName Output buffer for font name
+ * @param outNameSize Buffer size
+ */
+static void ParseFontName(const char* stringData, size_t dataLength, BOOL isUnicode,
+                          char* outName, size_t outNameSize) {
+    if (!stringData || !outName || outNameSize == 0) return;
+
+    if (isUnicode) {
+        WCHAR* unicodeStr = (WCHAR*)stringData;
+        int numChars = (int)(dataLength / 2);
+
+        for (int i = 0; i < numChars; i++) {
+            unicodeStr[i] = SwapWORD(unicodeStr[i]);
+        }
+        unicodeStr[numChars] = 0;
+
+        WideCharToMultiByte(CP_UTF8, 0, unicodeStr, -1, outName, (int)outNameSize, NULL, NULL);
+    } else {
+        size_t copyLen = (dataLength < outNameSize - 1) ? dataLength : outNameSize - 1;
+        memcpy(outName, stringData, copyLen);
+        outName[copyLen] = '\0';
+    }
+}
+
+/**
+ * @brief Extract font name from opened TTF file
+ * @param hFile Font file handle (must be open and positioned at start)
+ * @param fontName Output buffer for font name
+ * @param fontNameSize Buffer size
+ * @return TRUE if font name extracted successfully
+ */
+static BOOL ExtractFontNameFromHandle(HANDLE hFile, char* fontName, size_t fontNameSize) {
+    if (hFile == INVALID_HANDLE_VALUE || !fontName || fontNameSize == 0) return FALSE;
+
+    FontDirectoryHeader fontHeader;
+    DWORD bytesRead;
+    if (!ReadFile(hFile, &fontHeader, sizeof(FontDirectoryHeader), &bytesRead, NULL) ||
+        bytesRead != sizeof(FontDirectoryHeader)) {
+        return FALSE;
+    }
+
+    fontHeader.numTables = SwapWORD(fontHeader.numTables);
+
+    DWORD nameTableOffset = 0, nameTableLength = 0;
+    if (!FindTTFTable(hFile, fontHeader.numTables, TTF_NAME_TABLE_TAG, 
+                     &nameTableOffset, &nameTableLength)) {
+        return FALSE;
+    }
+
+    if (SetFilePointer(hFile, nameTableOffset, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER) {
+        return FALSE;
+    }
+
+    NameTableHeader nameHeader;
+    if (!ReadFile(hFile, &nameHeader, sizeof(NameTableHeader), &bytesRead, NULL) ||
+        bytesRead != sizeof(NameTableHeader)) {
+        return FALSE;
+    }
+
+    nameHeader.count = SwapWORD(nameHeader.count);
+    nameHeader.stringOffset = SwapWORD(nameHeader.stringOffset);
+
+    BOOL foundName = FALSE;
+    WORD nameLength = 0, nameOffset = 0;
+    BOOL isUnicode = FALSE;
+
+    for (WORD i = 0; i < nameHeader.count; i++) {
+        NameRecord nameRecord;
+        if (!ReadFile(hFile, &nameRecord, sizeof(NameRecord), &bytesRead, NULL) ||
+            bytesRead != sizeof(NameRecord)) {
+            return FALSE;
+        }
+
+        nameRecord.platformID = SwapWORD(nameRecord.platformID);
+        nameRecord.encodingID = SwapWORD(nameRecord.encodingID);
+        nameRecord.nameID = SwapWORD(nameRecord.nameID);
+        nameRecord.length = SwapWORD(nameRecord.length);
+        nameRecord.offset = SwapWORD(nameRecord.offset);
+
+        if (nameRecord.nameID == TTF_NAME_ID_FAMILY) {
+            if (nameRecord.platformID == 3 && nameRecord.encodingID == 1) {
+                nameLength = nameRecord.length;
+                nameOffset = nameRecord.offset;
+                isUnicode = TRUE;
+                foundName = TRUE;
+                break;
+            } else if (!foundName) {
+                nameLength = nameRecord.length;
+                nameOffset = nameRecord.offset;
+                isUnicode = (nameRecord.platformID == 0);
+                foundName = TRUE;
+            }
+        }
+    }
+
+    if (!foundName) return FALSE;
+
+    DWORD stringDataOffset = nameTableOffset + sizeof(NameTableHeader) + 
+                            nameHeader.count * sizeof(NameRecord) + nameOffset;
+    if (SetFilePointer(hFile, stringDataOffset, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER) {
+        return FALSE;
+    }
+
+    if (nameLength > TTF_STRING_SAFETY_LIMIT) nameLength = TTF_STRING_SAFETY_LIMIT;
+    char* stringBuffer = (char*)malloc(nameLength + 2);
+    if (!stringBuffer) return FALSE;
+
+    BOOL success = FALSE;
+    if (ReadFile(hFile, stringBuffer, nameLength, &bytesRead, NULL) && bytesRead == nameLength) {
+        ParseFontName(stringBuffer, nameLength, isUnicode, fontName, fontNameSize);
+        success = TRUE;
+    }
+
+    free(stringBuffer);
+    return success;
+}
+
+BOOL GetFontNameFromFile(const char* fontFilePath, char* fontName, size_t fontNameSize) {
+    if (!fontFilePath || !fontName || fontNameSize == 0) return FALSE;
+
+    wchar_t wFontPath[MAX_PATH];
+    if (!Utf8ToWide(fontFilePath, wFontPath, MAX_PATH)) return FALSE;
+
+    HANDLE hFile = CreateFileW(wFontPath, GENERIC_READ, FILE_SHARE_READ, NULL, 
+                              OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile == INVALID_HANDLE_VALUE) return FALSE;
+
+    BOOL result = ExtractFontNameFromHandle(hFile, fontName, fontNameSize);
+    CloseHandle(hFile);
+    return result;
+}
+
+/* ============================================================================
+ * Font Loading and Resource Management
+ * ============================================================================ */
+
+BOOL UnloadCurrentFontResource(void) {
+    if (!FONT_RESOURCE_LOADED || CURRENT_LOADED_FONT_PATH[0] == 0) {
+        return TRUE;
+    }
+
+    BOOL result = RemoveFontResourceExW(CURRENT_LOADED_FONT_PATH, FR_PRIVATE, NULL);
+    CURRENT_LOADED_FONT_PATH[0] = 0;
+    FONT_RESOURCE_LOADED = FALSE;
+    return result;
+}
+
+BOOL LoadFontFromFile(const char* fontFilePath) {
+    if (!fontFilePath) return FALSE;
+
+    wchar_t wFontPath[MAX_PATH];
+    if (!Utf8ToWide(fontFilePath, wFontPath, MAX_PATH)) return FALSE;
+
+    if (GetFileAttributesW(wFontPath) == INVALID_FILE_ATTRIBUTES) {
+        return FALSE;
+    }
+
+    if (FONT_RESOURCE_LOADED && wcscmp(CURRENT_LOADED_FONT_PATH, wFontPath) == 0) {
+        return TRUE;
+    }
+
+    int addResult = AddFontResourceExW(wFontPath, FR_PRIVATE, NULL);
+    if (addResult <= 0) {
+        return FALSE;
+    }
+
+    if (FONT_RESOURCE_LOADED && CURRENT_LOADED_FONT_PATH[0] != 0 && 
+        wcscmp(CURRENT_LOADED_FONT_PATH, wFontPath) != 0) {
+        RemoveFontResourceExW(CURRENT_LOADED_FONT_PATH, FR_PRIVATE, NULL);
+    }
+
+    wcscpy(CURRENT_LOADED_FONT_PATH, wFontPath);
+    FONT_RESOURCE_LOADED = TRUE;
     return TRUE;
 }
 
 /**
- * @brief Load font by name from fonts folder with auto-fix capability
- * @param hInstance Application instance handle
- * @param fontName Font filename or relative path from fonts folder
- * @return TRUE if font found and loaded, FALSE otherwise
+ * @brief Load font with optional config update
+ * @param fontFileName Font filename to load
+ * @param shouldUpdateConfig TRUE to update config if auto-fixed
+ * @return TRUE if loaded successfully
  */
-BOOL LoadFontByName(HINSTANCE hInstance, const char* fontName) {
-    /** Construct direct path to font file (Unicode-safe) */
-    wchar_t fontsFolderW[MAX_PATH] = {0};
-    if (!GetFontsFolderWide(fontsFolderW, MAX_PATH, TRUE)) return FALSE;
-    wchar_t fontNameW[MAX_PATH] = {0};
-    MultiByteToWideChar(CP_UTF8, 0, fontName, -1, fontNameW, MAX_PATH);
-    wchar_t fullPathW[MAX_PATH] = {0};
-    _snwprintf_s(fullPathW, MAX_PATH, _TRUNCATE, L"%s\\%s", fontsFolderW, fontNameW);
+static BOOL LoadFontInternal(const char* fontFileName, BOOL shouldUpdateConfig) {
+    if (!fontFileName) return FALSE;
 
     char fontPath[MAX_PATH];
-    WideCharToMultiByte(CP_UTF8, 0, fullPathW, -1, fontPath, MAX_PATH, NULL, NULL);
+    if (!BuildFullFontPath(fontFileName, fontPath, MAX_PATH)) return FALSE;
 
-    /** Try to load font from the exact path first */
     if (LoadFontFromFile(fontPath)) {
         return TRUE;
     }
-    
-    /** Font not found at specified path, try auto-fix */
-    char* lastSlash = strrchr(fontName, '\\');
-    const char* filenameOnly = lastSlash ? (lastSlash + 1) : fontName;
-    
-    /** Search for font in fonts folder recursively */
-    if (FindFontInFontsFolder(filenameOnly, fontPath, MAX_PATH)) {
-        /** Font found at different location, update current font config */
-        wchar_t fontsFolderW2[MAX_PATH] = {0};
-        GetFontsFolderWide(fontsFolderW2, MAX_PATH, TRUE);
-        char fontsFolderPath[MAX_PATH];
-        WideCharToMultiByte(CP_UTF8, 0, fontsFolderW2, -1, fontsFolderPath, MAX_PATH, NULL, NULL);
 
-        if (_strnicmp(fontPath, fontsFolderPath, strlen(fontsFolderPath)) == 0) {
-            /** Calculate new relative path */
-            const char* newRelativePath = fontPath + strlen(fontsFolderPath);
-            
-            /** Update global FONT_FILE_NAME if this matches current font */
-            extern char FONT_FILE_NAME[100];
-            const char* localappdata_prefix = "%LOCALAPPDATA%\\Catime\\resources\\fonts\\";
-            if (_strnicmp(FONT_FILE_NAME, localappdata_prefix, strlen(localappdata_prefix)) == 0) {
-                const char* currentRelativePath = FONT_FILE_NAME + strlen(localappdata_prefix);
-                if (strcmp(currentRelativePath, fontName) == 0) {
-                    /** This is the current font, update it */
-                    char newConfigPath[MAX_PATH];
-                    snprintf(newConfigPath, MAX_PATH, "%%LOCALAPPDATA%%\\Catime\\resources\\fonts\\%s", newRelativePath);
-                    strncpy(FONT_FILE_NAME, newConfigPath, sizeof(FONT_FILE_NAME) - 1);
-                    FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
-                    
-                    /** Save corrected path to config file immediately */
-                    WriteConfigFont(newRelativePath);
-                    
-                    /** Force flush config file to disk */
-                    extern void FlushConfigToDisk(void);
-                    FlushConfigToDisk();
-                }
-            }
-            
-            /** Load font from the found path */
-            return LoadFontFromFile(fontPath);
+    FontPathInfo pathInfo;
+    if (!AutoFixFontPath(fontFileName, &pathInfo)) {
+        return FALSE;
+    }
+
+    if (shouldUpdateConfig && IsFontsFolderPath(FONT_FILE_NAME)) {
+        const char* currentRelative = ExtractRelativePath(FONT_FILE_NAME);
+        if (currentRelative && strcmp(currentRelative, fontFileName) == 0) {
+            UpdateFontConfig(&pathInfo, TRUE);
         }
     }
-    
-    return FALSE;
+
+    return LoadFontFromFile(pathInfo.absolutePath);
 }
 
-/**
- * @brief Load font and get real font name from fonts folder with auto-fix capability
- * @param hInstance Application instance handle
- * @param fontFileName Font filename or relative path from fonts folder
- * @param realFontName Buffer to store real font name
- * @param realFontNameSize Size of realFontName buffer
- * @return TRUE if font found, loaded, and real name extracted, FALSE otherwise
- */
+BOOL LoadFontByName(HINSTANCE hInstance, const char* fontName) {
+    return LoadFontInternal(fontName, TRUE);
+}
+
 BOOL LoadFontByNameAndGetRealName(HINSTANCE hInstance, const char* fontFileName, 
                                   char* realFontName, size_t realFontNameSize) {
     if (!fontFileName || !realFontName || realFontNameSize == 0) return FALSE;
-    
-    /** Construct direct path to font file (Unicode-safe) */
-    wchar_t fontsFolderW[MAX_PATH] = {0};
-    if (!GetFontsFolderWide(fontsFolderW, MAX_PATH, TRUE)) return FALSE;
-    wchar_t fontNameW[MAX_PATH] = {0};
-    MultiByteToWideChar(CP_UTF8, 0, fontFileName, -1, fontNameW, MAX_PATH);
-    wchar_t fullPathW[MAX_PATH] = {0};
-    _snwprintf_s(fullPathW, MAX_PATH, _TRUNCATE, L"%s\\%s", fontsFolderW, fontNameW);
+
     char fontPath[MAX_PATH];
-    WideCharToMultiByte(CP_UTF8, 0, fullPathW, -1, fontPath, MAX_PATH, NULL, NULL);
-    
-    /** Check if font exists at the specified path */
-    BOOL fontFound = FALSE;
-    if (GetFileAttributesW(fullPathW) != INVALID_FILE_ATTRIBUTES) {
-        fontFound = TRUE;
-    } else {
-        /** Font not found at specified path, try auto-fix */
-        char* lastSlash = strrchr(fontFileName, '\\');
-        const char* filenameOnly = lastSlash ? (lastSlash + 1) : fontFileName;
-        
-        /** Search for font in fonts folder recursively */
-        if (FindFontInFontsFolder(filenameOnly, fontPath, MAX_PATH)) {
-            /** Font found at different location, update current font config if needed */
-            wchar_t fontsFolderW2[MAX_PATH] = {0};
-            GetFontsFolderWide(fontsFolderW2, MAX_PATH, TRUE);
-            char fontsFolderPath[MAX_PATH];
-            WideCharToMultiByte(CP_UTF8, 0, fontsFolderW2, -1, fontsFolderPath, MAX_PATH, NULL, NULL);
-            
-            if (_strnicmp(fontPath, fontsFolderPath, strlen(fontsFolderPath)) == 0) {
-                /** Calculate new relative path */
-                const char* newRelativePath = fontPath + strlen(fontsFolderPath);
-                
-                /** Update global FONT_FILE_NAME if this matches current font */
-                extern char FONT_FILE_NAME[100];
-                const char* localappdata_prefix = "%LOCALAPPDATA%\\Catime\\resources\\fonts\\";
-                if (_strnicmp(FONT_FILE_NAME, localappdata_prefix, strlen(localappdata_prefix)) == 0) {
-                    const char* currentRelativePath = FONT_FILE_NAME + strlen(localappdata_prefix);
-                    if (strcmp(currentRelativePath, fontFileName) == 0) {
-                        /** This is the current font, update it */
-                        char newConfigPath[MAX_PATH];
-                        snprintf(newConfigPath, MAX_PATH, "%%LOCALAPPDATA%%\\Catime\\resources\\fonts\\%s", newRelativePath);
-                        strncpy(FONT_FILE_NAME, newConfigPath, sizeof(FONT_FILE_NAME) - 1);
-                        FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
-                        
-                        /** Save corrected path to config file immediately */
-                        WriteConfigFont(newRelativePath);
-                        
-                        /** Force flush config file to disk */
-                        extern void FlushConfigToDisk(void);
-                        FlushConfigToDisk();
-                    }
-                }
-                
-                fontFound = TRUE;
-            }
-        }
-    }
-    
-    if (fontFound) {
-        /** Extract the real font name from the file */
-        if (!GetFontNameFromFile(fontPath, realFontName, realFontNameSize)) {
-            /** Fallback to filename without extension */
-            char* lastSlash = strrchr(fontFileName, '\\');
-            const char* filenameOnly = lastSlash ? (lastSlash + 1) : fontFileName;
-            strncpy(realFontName, filenameOnly, realFontNameSize - 1);
-            realFontName[realFontNameSize - 1] = '\0';
-            char* dot = strrchr(realFontName, '.');
-            if (dot) *dot = '\0';
-        }
-        
-        /** Load the font file */
-        return LoadFontFromFile(fontPath);
-    }
-    
-    return FALSE;
-}
+    if (!BuildFullFontPath(fontFileName, fontPath, MAX_PATH)) return FALSE;
 
-/**
- * @brief Write font configuration to config file
- * @param font_file_name Font filename to save in configuration
- */
-void WriteConfigFont(const char* font_file_name) {
-    if (!font_file_name) return;
-    
-    /** Find the actual font path to save correct relative path */
-    char actualFontPath[MAX_PATH];
-    char configFontName[MAX_PATH];
-    
-    if (FindFontInFontsFolder(font_file_name, actualFontPath, MAX_PATH)) {
-        /** Extract relative path from the fonts folder */
-        wchar_t fontsFolderW[MAX_PATH] = {0};
-        if (GetFontsFolderWide(fontsFolderW, MAX_PATH, TRUE)) {
-            char fontsFolderPath[MAX_PATH];
-            WideCharToMultiByte(CP_UTF8, 0, fontsFolderW, -1, fontsFolderPath, MAX_PATH, NULL, NULL);
-            size_t prefixLen = strlen(fontsFolderPath);
-            if (prefixLen > 0 && fontsFolderPath[prefixLen - 1] != '\\') {
-                if (prefixLen + 1 < MAX_PATH) {
-                    fontsFolderPath[prefixLen] = '\\';
-                    fontsFolderPath[prefixLen + 1] = '\0';
-                    prefixLen += 1;
+    BOOL fontExists = (GetFileAttributesW((wchar_t*)NULL) != INVALID_FILE_ATTRIBUTES);
+    wchar_t wFontPath[MAX_PATH];
+    if (Utf8ToWide(fontPath, wFontPath, MAX_PATH)) {
+        fontExists = (GetFileAttributesW(wFontPath) != INVALID_FILE_ATTRIBUTES);
+    }
+
+    if (!fontExists) {
+        FontPathInfo pathInfo;
+        if (AutoFixFontPath(fontFileName, &pathInfo)) {
+            strcpy(fontPath, pathInfo.absolutePath);
+
+            if (IsFontsFolderPath(FONT_FILE_NAME)) {
+                const char* currentRelative = ExtractRelativePath(FONT_FILE_NAME);
+                if (currentRelative && strcmp(currentRelative, fontFileName) == 0) {
+                    UpdateFontConfig(&pathInfo, TRUE);
                 }
-            }
-            /** Check if actualFontPath starts with fontsFolderPath (both UTF-8) */
-            if (_strnicmp(actualFontPath, fontsFolderPath, (int)prefixLen) == 0) {
-                const char* relativePath = actualFontPath + prefixLen;
-                snprintf(configFontName, MAX_PATH, "%%LOCALAPPDATA%%\\Catime\\resources\\fonts\\%s", relativePath);
-            } else {
-                snprintf(configFontName, MAX_PATH, "%%LOCALAPPDATA%%\\Catime\\resources\\fonts\\%s", font_file_name);
             }
         } else {
-            snprintf(configFontName, MAX_PATH, "%%LOCALAPPDATA%%\\Catime\\resources\\fonts\\%s", font_file_name);
+            return FALSE;
         }
-    } else {
-        /** Font not found, use original filename */
-        snprintf(configFontName, MAX_PATH, "%%LOCALAPPDATA%%\\Catime\\resources\\fonts\\%s", font_file_name);
     }
-    
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    
-    /** Write using INI Unicode API to avoid mojibake for non-ASCII filenames */
-    extern BOOL WriteIniString(const char* section, const char* key, const char* value, const char* filePath);
-    WriteIniString(INI_SECTION_DISPLAY, "FONT_FILE_NAME", configFontName, config_path);
+
+    if (!GetFontNameFromFile(fontPath, realFontName, realFontNameSize)) {
+        const char* filename = GetFilenameFromPath(fontFileName);
+        strncpy(realFontName, filename, realFontNameSize - 1);
+        realFontName[realFontNameSize - 1] = '\0';
+        char* dot = strrchr(realFontName, '.');
+        if (dot) *dot = '\0';
+    }
+
+    return LoadFontFromFile(fontPath);
 }
 
-/**
- * @brief Write font configuration without reloading config
- */
-void WriteConfigFontNoReload(const char* font_file_name) {
-    if (!font_file_name) return;
-    
-    /** Find the actual font path to save correct relative path */
+/* ============================================================================
+ * Configuration Management
+ * ============================================================================ */
+
+void WriteConfigFont(const char* fontFileName, BOOL shouldReload) {
+    if (!fontFileName) return;
+
     char actualFontPath[MAX_PATH];
     char configFontName[MAX_PATH];
-    
-    if (FindFontInFontsFolder(font_file_name, actualFontPath, MAX_PATH)) {
-        /** Extract relative path from the fonts folder */
-        wchar_t fontsFolderW[MAX_PATH] = {0};
-        if (GetFontsFolderWide(fontsFolderW, MAX_PATH, TRUE)) {
-            char fontsFolderPath[MAX_PATH];
-            WideCharToMultiByte(CP_UTF8, 0, fontsFolderW, -1, fontsFolderPath, MAX_PATH, NULL, NULL);
-            size_t prefixLen = strlen(fontsFolderPath);
-            if (prefixLen > 0 && fontsFolderPath[prefixLen - 1] != '\\') {
-                if (prefixLen + 1 < MAX_PATH) {
-                    fontsFolderPath[prefixLen] = '\\';
-                    fontsFolderPath[prefixLen + 1] = '\0';
-                    prefixLen += 1;
-                }
-            }
-            if (_strnicmp(actualFontPath, fontsFolderPath, (int)prefixLen) == 0) {
-                const char* relativePath = actualFontPath + prefixLen;
-                snprintf(configFontName, MAX_PATH, "%%LOCALAPPDATA%%\\Catime\\resources\\fonts\\%s", relativePath);
-            } else {
-                snprintf(configFontName, MAX_PATH, "%%LOCALAPPDATA%%\\Catime\\resources\\fonts\\%s", font_file_name);
-            }
+
+    if (FindFontInFontsFolder(fontFileName, actualFontPath, MAX_PATH)) {
+        char relativePath[MAX_PATH];
+        if (CalculateRelativePath(actualFontPath, relativePath, MAX_PATH)) {
+            BuildFontConfigPath(relativePath, configFontName, MAX_PATH);
         } else {
-            snprintf(configFontName, MAX_PATH, "%%LOCALAPPDATA%%\\Catime\\resources\\fonts\\%s", font_file_name);
+            BuildFontConfigPath(fontFileName, configFontName, MAX_PATH);
         }
     } else {
-        snprintf(configFontName, MAX_PATH, "%%LOCALAPPDATA%%\\Catime\\resources\\fonts\\%s", font_file_name);
+        BuildFontConfigPath(fontFileName, configFontName, MAX_PATH);
     }
-    
+
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    
-    extern BOOL WriteIniString(const char* section, const char* key, const char* value, const char* filePath);
     WriteIniString(INI_SECTION_DISPLAY, "FONT_FILE_NAME", configFontName, config_path);
+
+    if (shouldReload) {
+        ReadConfig();
+    }
 }
 
-/**
- * @brief Enumerate all available system fonts
- */
+/* ============================================================================
+ * Font Enumeration
+ * ============================================================================ */
+
 void ListAvailableFonts(void) {
-    /** Get device context for font enumeration */
     HDC hdc = GetDC(NULL);
     LOGFONT lf;
     memset(&lf, 0, sizeof(LOGFONT));
     lf.lfCharSet = DEFAULT_CHARSET;
 
-    /** Create temporary font for enumeration context */
     HFONT hFont = CreateFontW(12, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
                               lf.lfCharSet, OUT_DEFAULT_PRECIS,
                               CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,
                               DEFAULT_PITCH | FF_DONTCARE, NULL);
     SelectObject(hdc, hFont);
 
-    /** Enumerate all font families */
     EnumFontFamiliesExW(hdc, &lf, (FONTENUMPROCW)EnumFontFamExProc, 0, 0);
 
-    /** Clean up resources */
     DeleteObject(hFont);
     ReleaseDC(NULL, hdc);
 }
 
-/**
- * @brief Font enumeration callback procedure
- * @param lpelfe Extended logical font information
- * @param lpntme Font metrics information
- * @param FontType Font type flags
- * @param lParam User-defined parameter
- * @return 1 to continue enumeration, 0 to stop
- */
-int CALLBACK EnumFontFamExProc(
-    ENUMLOGFONTEXW *lpelfe,
-    NEWTEXTMETRICEX *lpntme,
-    DWORD FontType,
-    LPARAM lParam
-) {
-    /** Continue enumeration (placeholder implementation) */
+int CALLBACK EnumFontFamExProc(ENUMLOGFONTEXW *lpelfe, NEWTEXTMETRICEX *lpntme,
+                               DWORD FontType, LPARAM lParam) {
     return 1;
 }
 
-/**
- * @brief Start font preview mode with specified font
- * @param hInstance Application instance handle
- * @param fontName Font filename to preview
- * @return TRUE if preview started successfully, FALSE otherwise
- */
+/* ============================================================================
+ * Font Preview System
+ * ============================================================================ */
+
 BOOL PreviewFont(HINSTANCE hInstance, const char* fontName) {
     if (!fontName) return FALSE;
-    
-    /** Copy font name for preview */
+
     strncpy(PREVIEW_FONT_NAME, fontName, sizeof(PREVIEW_FONT_NAME) - 1);
     PREVIEW_FONT_NAME[sizeof(PREVIEW_FONT_NAME) - 1] = '\0';
-    
-    /** Load font and get real font name */
-    if (!LoadFontByNameAndGetRealName(hInstance, fontName, PREVIEW_INTERNAL_NAME, sizeof(PREVIEW_INTERNAL_NAME))) {
+
+    if (!LoadFontByNameAndGetRealName(hInstance, fontName, PREVIEW_INTERNAL_NAME, 
+                                      sizeof(PREVIEW_INTERNAL_NAME))) {
         return FALSE;
     }
-    
-    /** Enable preview mode */
+
     IS_PREVIEWING = TRUE;
     return TRUE;
 }
 
-/**
- * @brief Cancel font preview and return to current font
- */
 void CancelFontPreview(void) {
     IS_PREVIEWING = FALSE;
     PREVIEW_FONT_NAME[0] = '\0';
     PREVIEW_INTERNAL_NAME[0] = '\0';
-    
-    /** Reload the original configured font */
-    const char* localappdata_prefix = "%LOCALAPPDATA%\\Catime\\resources\\fonts\\";
-    if (_strnicmp(FONT_FILE_NAME, localappdata_prefix, strlen(localappdata_prefix)) == 0) {
-        /** Extract the relative path (including subfolders) for loading */
-        char actualFontFileName[MAX_PATH];
-        strncpy(actualFontFileName, FONT_FILE_NAME + strlen(localappdata_prefix), sizeof(actualFontFileName) - 1);
-        actualFontFileName[sizeof(actualFontFileName) - 1] = '\0';
-        LoadFontByNameAndGetRealName(GetModuleHandle(NULL), actualFontFileName, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
+
+    if (IsFontsFolderPath(FONT_FILE_NAME)) {
+        const char* relativePath = ExtractRelativePath(FONT_FILE_NAME);
+        if (relativePath) {
+            LoadFontByNameAndGetRealName(GetModuleHandle(NULL), relativePath, 
+                                        FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
+        }
     } else if (FONT_FILE_NAME[0] != '\0') {
-        /** Fallback: treat FONT_FILE_NAME as relative name and attempt reload */
-        LoadFontByNameAndGetRealName(GetModuleHandle(NULL), FONT_FILE_NAME, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
+        LoadFontByNameAndGetRealName(GetModuleHandle(NULL), FONT_FILE_NAME, 
+                                    FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
     }
 }
 
-/**
- * @brief Apply previewed font as the current font
- */
 void ApplyFontPreview(void) {
     if (!IS_PREVIEWING || strlen(PREVIEW_FONT_NAME) == 0) return;
-    
-    /** Copy preview font to current font variables */
+
     strncpy(FONT_FILE_NAME, PREVIEW_FONT_NAME, sizeof(FONT_FILE_NAME) - 1);
     FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
-    
+
     strncpy(FONT_INTERNAL_NAME, PREVIEW_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME) - 1);
     FONT_INTERNAL_NAME[sizeof(FONT_INTERNAL_NAME) - 1] = '\0';
-    
-    /** Save to configuration without reload and exit preview mode */
-    WriteConfigFontNoReload(FONT_FILE_NAME);
+
+    WriteConfigFont(FONT_FILE_NAME, FALSE);
     CancelFontPreview();
 }
 
-/**
- * @brief Extract embedded font resource to file
- * @param hInstance Application instance handle
- * @param resourceId Resource ID of the font to extract
- * @param outputPath Full path where to save the font file
- * @return TRUE if font extracted successfully, FALSE otherwise
- */
+BOOL SwitchFont(HINSTANCE hInstance, const char* fontName) {
+    if (!fontName) return FALSE;
+
+    strncpy(FONT_FILE_NAME, fontName, sizeof(FONT_FILE_NAME) - 1);
+    FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
+
+    if (!LoadFontByNameAndGetRealName(hInstance, fontName, FONT_INTERNAL_NAME, 
+                                      sizeof(FONT_INTERNAL_NAME))) {
+        return FALSE;
+    }
+
+    WriteConfigFont(FONT_FILE_NAME, FALSE);
+    return TRUE;
+}
+
+/* ============================================================================
+ * Embedded Font Resources
+ * ============================================================================ */
+
 BOOL ExtractFontResourceToFile(HINSTANCE hInstance, int resourceId, const char* outputPath) {
     if (!outputPath) return FALSE;
-    
-    /** Find font resource in executable */
+
     HRSRC hResource = FindResourceW(hInstance, MAKEINTRESOURCE(resourceId), RT_FONT);
-    if (hResource == NULL) {
-        return FALSE;
-    }
+    if (hResource == NULL) return FALSE;
 
-    /** Load resource into memory */
     HGLOBAL hMemory = LoadResource(hInstance, hResource);
-    if (hMemory == NULL) {
-        return FALSE;
-    }
+    if (hMemory == NULL) return FALSE;
 
-    /** Lock resource data for access */
     void* fontData = LockResource(hMemory);
-    if (fontData == NULL) {
-        return FALSE;
-    }
+    if (fontData == NULL) return FALSE;
 
-    /** Get resource size */
     DWORD fontLength = SizeofResource(hInstance, hResource);
-    if (fontLength == 0) {
-        return FALSE;
-    }
-    
-    /** Convert output path to wide character */
+    if (fontLength == 0) return FALSE;
+
     wchar_t wOutputPath[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, outputPath, -1, wOutputPath, MAX_PATH);
-    
-    /** Create output file */
+    if (!Utf8ToWide(outputPath, wOutputPath, MAX_PATH)) return FALSE;
+
     HANDLE hFile = CreateFileW(wOutputPath, GENERIC_WRITE, 0, NULL, 
                               CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (hFile == INVALID_HANDLE_VALUE) {
-        return FALSE;
-    }
-    
-    /** Write font data to file */
+    if (hFile == INVALID_HANDLE_VALUE) return FALSE;
+
     DWORD bytesWritten;
     BOOL result = WriteFile(hFile, fontData, fontLength, &bytesWritten, NULL);
     CloseHandle(hFile);
-    
+
     return (result && bytesWritten == fontLength);
 }
 
-/**
- * @brief Extract all embedded fonts to the fonts directory
- * @param hInstance Application instance handle
- * @return TRUE if all fonts extracted successfully, FALSE otherwise
- */
 BOOL ExtractEmbeddedFontsToFolder(HINSTANCE hInstance) {
-    /** Get fonts folder path */
     wchar_t wFontsFolderPath[MAX_PATH] = {0};
     if (!GetFontsFolderWide(wFontsFolderPath, MAX_PATH, TRUE)) return FALSE;
+
     char fontsFolderPath[MAX_PATH];
-    WideCharToMultiByte(CP_UTF8, 0, wFontsFolderPath, -1, fontsFolderPath, MAX_PATH, NULL, NULL);
-    
-    /** Extract all embedded font resources (overwrite if exists) */
+    if (!WideToUtf8(wFontsFolderPath, fontsFolderPath, MAX_PATH)) return FALSE;
+
     for (int i = 0; i < FONT_RESOURCES_COUNT; i++) {
         char outputPath[MAX_PATH];
         snprintf(outputPath, MAX_PATH, "%s\\%s", fontsFolderPath, fontResources[i].fontName);
         ExtractFontResourceToFile(hInstance, fontResources[i].resourceId, outputPath);
     }
-    
+
     return TRUE;
 }
 
-/**
- * @brief Check current font path validity and auto-fix if needed
- * @return TRUE if font path was fixed, FALSE if no fix was needed or fix failed
- */
-BOOL CheckAndFixFontPath(void) {
-    /** Only check fonts folder fonts */
-    const char* localappdata_prefix = "%LOCALAPPDATA%\\Catime\\resources\\fonts\\";
-    if (_strnicmp(FONT_FILE_NAME, localappdata_prefix, strlen(localappdata_prefix)) != 0) {
-        return FALSE; // Not a fonts folder font
-    }
-    
-    /** Extract relative path from config */
-    const char* relativePath = FONT_FILE_NAME + strlen(localappdata_prefix);
-    
-    /** Construct full path */
-    wchar_t fontsFolderW[MAX_PATH] = {0};
-    if (!GetFontsFolderWide(fontsFolderW, MAX_PATH, TRUE)) return FALSE;
-    wchar_t relW[MAX_PATH] = {0};
-    MultiByteToWideChar(CP_UTF8, 0, relativePath, -1, relW, MAX_PATH);
-    wchar_t fullW[MAX_PATH] = {0};
-    _snwprintf_s(fullW, MAX_PATH, _TRUNCATE, L"%s\\%s", fontsFolderW, relW);
-    char fontPath[MAX_PATH];
-    WideCharToMultiByte(CP_UTF8, 0, fullW, -1, fontPath, MAX_PATH, NULL, NULL);
-    
-    /** Check if font exists at configured path (use wide-char API) */
-    if (GetFileAttributesW(fullW) != INVALID_FILE_ATTRIBUTES) {
-        return FALSE; // Font exists, no fix needed
-    }
-    
-    /** Font not found, try to find and auto-fix */
-    char* lastSlash = strrchr(relativePath, '\\');
-    const char* filenameOnly = lastSlash ? (lastSlash + 1) : relativePath;
-    
-    /** Search for font in fonts folder recursively */
-    if (FindFontInFontsFolder(filenameOnly, fontPath, MAX_PATH)) {
-        /** Font found at different location */
-        wchar_t fontsFolderW2[MAX_PATH] = {0};
-        GetFontsFolderWide(fontsFolderW2, MAX_PATH, TRUE);
-        char fontsFolderPath[MAX_PATH];
-        WideCharToMultiByte(CP_UTF8, 0, fontsFolderW2, -1, fontsFolderPath, MAX_PATH, NULL, NULL);
-        
-        if (_strnicmp(fontPath, fontsFolderPath, strlen(fontsFolderPath)) == 0) {
-            /** Calculate new relative path */
-            const char* newRelativePath = fontPath + strlen(fontsFolderPath);
-            
-            /** Update FONT_FILE_NAME with new path */
-            char newConfigPath[MAX_PATH];
-            snprintf(newConfigPath, MAX_PATH, "%%LOCALAPPDATA%%\\Catime\\resources\\fonts\\%s", newRelativePath);
-            strncpy(FONT_FILE_NAME, newConfigPath, sizeof(FONT_FILE_NAME) - 1);
-            FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
-            
-            /** Save corrected path to config file immediately */
-            WriteConfigFont(newRelativePath);
-            
-            /** Force flush config file to disk */
-            extern void FlushConfigToDisk(void);
-            FlushConfigToDisk();
-            
-            /** Update font internal name */
-            GetFontNameFromFile(fontPath, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
-            
-            return TRUE; // Font path was fixed
-        }
-    }
-    
-    return FALSE; // Fix failed
-}
+/* ============================================================================
+ * Path Validation and Auto-Fix
+ * ============================================================================ */
 
-/**
- * @brief Switch to a different font permanently
- * @param hInstance Application instance handle
- * @param fontName Font filename to switch to
- * @return TRUE if font switched successfully, FALSE otherwise
- */
-BOOL SwitchFont(HINSTANCE hInstance, const char* fontName) {
-    if (!fontName) return FALSE;
-    
-    /** Update current font name */
-    strncpy(FONT_FILE_NAME, fontName, sizeof(FONT_FILE_NAME) - 1);
-    FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
-    
-    /** Load font and get real font name */
-    if (!LoadFontByNameAndGetRealName(hInstance, fontName, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME))) {
+BOOL CheckAndFixFontPath(void) {
+    if (!IsFontsFolderPath(FONT_FILE_NAME)) {
         return FALSE;
     }
-    
-    /** Save new font to configuration without triggering full reload */
-    WriteConfigFontNoReload(FONT_FILE_NAME);
+
+    const char* relativePath = ExtractRelativePath(FONT_FILE_NAME);
+    if (!relativePath) return FALSE;
+
+    char fontPath[MAX_PATH];
+    if (!BuildFullFontPath(relativePath, fontPath, MAX_PATH)) return FALSE;
+
+    wchar_t wFontPath[MAX_PATH];
+    if (!Utf8ToWide(fontPath, wFontPath, MAX_PATH)) return FALSE;
+
+    if (GetFileAttributesW(wFontPath) != INVALID_FILE_ATTRIBUTES) {
+        return FALSE;
+    }
+
+    FontPathInfo pathInfo;
+    if (!AutoFixFontPath(relativePath, &pathInfo)) {
+        return FALSE;
+    }
+
+    UpdateFontConfig(&pathInfo, TRUE);
+    GetFontNameFromFile(pathInfo.absolutePath, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
+
     return TRUE;
 }

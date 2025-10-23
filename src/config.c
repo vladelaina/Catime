@@ -1399,8 +1399,8 @@ void ReadConfig() {
                         actualFontFileName[sizeof(actualFontFileName) - 1] = '\0';
                         
                         /** Save corrected path to config file */
-                        extern void WriteConfigFont(const char* font_file_name);
-                        WriteConfigFont(newRelativePath);
+                        extern void WriteConfigFont(const char* fontFileName, BOOL shouldReload);
+                        WriteConfigFont(newRelativePath, FALSE);
                         
                         fontFound = TRUE;
                     }
