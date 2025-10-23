@@ -2743,8 +2743,8 @@ void ToggleEditMode(HWND hwnd) {
             
             InvalidateRect(hwnd, NULL, TRUE);
             RedrawWindow(hwnd, NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW);
-            KillTimer(hwnd, 1002);
-            SetTimer(hwnd, 1002, 150, NULL);
+            KillTimer(hwnd, TIMER_ID_FORCE_REDRAW);
+            SetTimer(hwnd, TIMER_ID_FORCE_REDRAW, 150, NULL);
             return;
         }
         

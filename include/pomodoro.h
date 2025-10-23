@@ -28,10 +28,8 @@ extern int current_pomodoro_time_index;
 extern int complete_pomodoro_cycles;
 
 /**
- * @brief Initialize Pomodoro timer system
- * 
- * Sets up initial state for new Pomodoro session
+ * @note InitializePomodoro() function is declared in timer_events.h
+ * @see timer_events.h for Pomodoro initialization
  */
-void InitializePomodoro(void);
 
 #endif

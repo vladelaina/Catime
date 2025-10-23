@@ -43,6 +43,7 @@
 #include "../include/log.h"
 #include "../include/dialog_language.h"
 #include "../include/shortcut_checker.h"
+#include "../include/timer_events.h"
 
 #pragma comment(lib, "dwmapi.lib")
 #pragma comment(lib, "user32.lib")
@@ -629,7 +630,7 @@ static BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
     
     /** Setup font path check timer */
     LOG_INFO("Setting font path check timer...");
-    if (SetTimer(hwnd, 1003, 2000, NULL) == 0) {
+    if (SetTimer(hwnd, TIMER_ID_FONT_VALIDATION, 2000, NULL) == 0) {
         LOG_WARNING("Font path check timer creation failed, auto-fix will not work");
     } else {
         LOG_INFO("Font path check timer set successfully (2 second interval)");
@@ -646,9 +647,9 @@ static BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
     /** Delayed window positioning for startup launches */
     if (launchedFromStartup) {
         if (CLOCK_WINDOW_TOPMOST) {
-            SetTimer(hwnd, 999, 2000, NULL);
+            SetTimer(hwnd, TIMER_ID_TOPMOST_RETRY, 2000, NULL);
         } else {
-            SetTimer(hwnd, 1001, 1500, NULL);
+            SetTimer(hwnd, TIMER_ID_VISIBILITY_RETRY, 2000, NULL);
         }
     }
     
