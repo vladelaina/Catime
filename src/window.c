@@ -1,9 +1,17 @@
 /**
  * @file window.c
- * @brief Main window management with advanced visual effects and DPI awareness
- * Handles window creation, positioning, transparency, blur effects, and user interactions
+ * @brief Main window management with DPI awareness and visual effects
+ * @version 2.0 - Refactored for modularity, eliminated code duplication, added comprehensive logging
+ * 
+ * Provides centralized window lifecycle management including:
+ * - DPI-aware window creation and initialization
+ * - Multi-monitor support with active display detection
+ * - Transparency and blur effects (Windows 10+)
+ * - Click-through and always-on-top behaviors
+ * - Desktop wallpaper-level attachment
  */
 #include "../include/window.h"
+#include "../include/window_procedure.h"
 #include "../include/timer.h"
 #include "../include/tray.h"
 #include "../include/language.h"
@@ -11,241 +19,226 @@
 #include "../include/color.h"
 #include "../include/startup.h"
 #include "../include/config.h"
-#include "../resource/resource.h"
+#include "../include/log.h"
 #include "../include/tray_animation.h"
+#include "../resource/resource.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <windows.h>
 
-extern LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+/* ============================================================================
+ * Constants
+ * ============================================================================ */
 
-#ifndef _INC_WINUSER
-WINUSERAPI BOOL WINAPI SetProcessDPIAware(VOID);
-#endif
+/** Window class and identification */
+#define WINDOW_CLASS_NAME L"CatimeWindow"
+#define WINDOW_TITLE L"Catime"
+#define PROGMAN_CLASS L"Progman"
+#define WORKERW_CLASS L"WorkerW"
+#define SHELLDLL_CLASS L"SHELLDLL_DefView"
 
-/** @brief Base window dimensions and scaling */
+/** Visual effect parameters */
+#define BLUR_ALPHA_VALUE 180
+#define BLUR_GRADIENT_COLOR 0x00202020
+#define COLOR_KEY_BLACK RGB(0, 0, 0)
+#define ALPHA_OPAQUE 255
+
+/** System configuration */
+#define CONSOLE_CODEPAGE_GBK 936
+#define DEFAULT_TRAY_ANIMATION_SPEED_MS 150
+
+/** DWM library */
+#define DWMAPI_DLL L"dwmapi.dll"
+#define SHCORE_DLL L"shcore.dll"
+#define USER32_DLL L"user32.dll"
+
+/* ============================================================================
+ * Global window state
+ * ============================================================================ */
+
+/** Window geometry */
 int CLOCK_BASE_WINDOW_WIDTH = 200;
 int CLOCK_BASE_WINDOW_HEIGHT = 100;
 float CLOCK_WINDOW_SCALE = 1.0f;
 int CLOCK_WINDOW_POS_X = 100;
 int CLOCK_WINDOW_POS_Y = 100;
 
-/** @brief Window interaction state */
-BOOL CLOCK_EDIT_MODE = FALSE;           /**< Edit mode enables dragging and resizing */
-BOOL CLOCK_IS_DRAGGING = FALSE;         /**< Current drag operation state */
-POINT CLOCK_LAST_MOUSE_POS = {0, 0};    /**< Last recorded mouse position for dragging */
-BOOL CLOCK_WINDOW_TOPMOST = TRUE;       /**< Window always-on-top state */
+/** Window interaction state */
+BOOL CLOCK_EDIT_MODE = FALSE;
+BOOL CLOCK_IS_DRAGGING = FALSE;
+POINT CLOCK_LAST_MOUSE_POS = {0, 0};
+BOOL CLOCK_WINDOW_TOPMOST = TRUE;
 
-/** @brief Text rendering optimization */
-RECT CLOCK_TEXT_RECT = {0, 0, 0, 0};    /**< Cached text rectangle for repainting */
-BOOL CLOCK_TEXT_RECT_VALID = FALSE;     /**< Validity flag for cached text rectangle */
+/** Text rendering optimization */
+RECT CLOCK_TEXT_RECT = {0, 0, 0, 0};
+BOOL CLOCK_TEXT_RECT_VALID = FALSE;
 
-/** @brief Dynamic loading of DWM functions for blur effects */
+/** Font configuration */
+float CLOCK_FONT_SCALE_FACTOR = 1.0f;
+int CLOCK_BASE_FONT_SIZE = 24;
+
+/* ============================================================================
+ * DWM function pointers
+ * ============================================================================ */
+
 typedef HRESULT (WINAPI *pfnDwmEnableBlurBehindWindow)(HWND hWnd, const DWM_BLURBEHIND* pBlurBehind);
 static pfnDwmEnableBlurBehindWindow _DwmEnableBlurBehindWindow = NULL;
 
+/* ============================================================================
+ * Windows composition structures (for blur effects)
+ * ============================================================================ */
 
-/** @brief Windows composition attributes for advanced visual effects */
 typedef enum _WINDOWCOMPOSITIONATTRIB {
     WCA_UNDEFINED = 0,
-    WCA_NCRENDERING_ENABLED = 1,
-    WCA_NCRENDERING_POLICY = 2,
-    WCA_TRANSITIONS_FORCEDISABLED = 3,
-    WCA_ALLOW_NCPAINT = 4,
-    WCA_CAPTION_BUTTON_BOUNDS = 5,
-    WCA_NONCLIENT_RTL_LAYOUT = 6,
-    WCA_FORCE_ICONIC_REPRESENTATION = 7,
-    WCA_EXTENDED_FRAME_BOUNDS = 8,
-    WCA_HAS_ICONIC_BITMAP = 9,
-    WCA_THEME_ATTRIBUTES = 10,
-    WCA_NCRENDERING_EXILED = 11,
-    WCA_NCADORNMENTINFO = 12,
-    WCA_EXCLUDED_FROM_LIVEPREVIEW = 13,
-    WCA_VIDEO_OVERLAY_ACTIVE = 14,
-    WCA_FORCE_ACTIVEWINDOW_APPEARANCE = 15,
-    WCA_DISALLOW_PEEK = 16,
-    WCA_CLOAK = 17,
-    WCA_CLOAKED = 18,
-    WCA_ACCENT_POLICY = 19,             /**< Accent policy for blur/transparency effects */
-    WCA_FREEZE_REPRESENTATION = 20,
-    WCA_EVER_UNCLOAKED = 21,
-    WCA_VISUAL_OWNER = 22,
-    WCA_HOLOGRAPHIC = 23,
-    WCA_EXCLUDED_FROM_DDA = 24,
-    WCA_PASSIVEUPDATEMODE = 25,
-    WCA_USEDARKMODECOLORS = 26,
+    WCA_ACCENT_POLICY = 19,
     WCA_LAST = 27
 } WINDOWCOMPOSITIONATTRIB;
 
-/** @brief Structure for setting window composition attributes */
 typedef struct _WINDOWCOMPOSITIONATTRIBDATA {
-    WINDOWCOMPOSITIONATTRIB Attrib;    /**< Attribute type to set */
-    PVOID pvData;                      /**< Pointer to attribute data */
-    SIZE_T cbData;                     /**< Size of attribute data */
+    WINDOWCOMPOSITIONATTRIB Attrib;
+    PVOID pvData;
+    SIZE_T cbData;
 } WINDOWCOMPOSITIONATTRIBDATA;
 
 WINUSERAPI BOOL WINAPI SetWindowCompositionAttribute(HWND hwnd, WINDOWCOMPOSITIONATTRIBDATA* pData);
 
-/** @brief Accent states for window transparency and blur effects */
 typedef enum _ACCENT_STATE {
-    ACCENT_DISABLED = 0,                        /**< No transparency effect */
-    ACCENT_ENABLE_GRADIENT = 1,
-    ACCENT_ENABLE_TRANSPARENTGRADIENT = 2,
-    ACCENT_ENABLE_BLURBEHIND = 3,              /**< Blur behind window effect */
-    ACCENT_ENABLE_ACRYLICBLURBEHIND = 4,       /**< Acrylic blur effect */
-    ACCENT_INVALID_STATE = 5
+    ACCENT_DISABLED = 0,
+    ACCENT_ENABLE_BLURBEHIND = 3,
+    ACCENT_ENABLE_ACRYLICBLURBEHIND = 4,
 } ACCENT_STATE;
 
-/** @brief Accent policy configuration for window effects */
 typedef struct _ACCENT_POLICY {
-    ACCENT_STATE AccentState;          /**< Type of accent effect */
-    DWORD AccentFlags;                 /**< Additional flags for effect */
-    DWORD GradientColor;               /**< Color for gradient effects */
-    DWORD AnimationId;                 /**< Animation identifier */
+    ACCENT_STATE AccentState;
+    DWORD AccentFlags;
+    DWORD GradientColor;
+    DWORD AnimationId;
 } ACCENT_POLICY;
 
+/* ============================================================================
+ * Visual effects: Click-through and blur
+ * ============================================================================ */
+
 /**
- * @brief Configure window click-through behavior for edit mode
- * @param hwnd Window handle to modify
- * @param enable TRUE to enable click-through, FALSE to disable
- * Toggles WS_EX_TRANSPARENT style and adjusts layered window attributes
+ * @brief Configure window click-through behavior
+ * @param hwnd Window handle
+ * @param enable TRUE to enable click-through (transparent to mouse), FALSE to disable
  */
 void SetClickThrough(HWND hwnd, BOOL enable) {
     LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
-    
-    /** Clear existing transparent flag */
     exStyle &= ~WS_EX_TRANSPARENT;
     
     if (enable) {
-        /** Enable click-through for overlay behavior */
         exStyle |= WS_EX_TRANSPARENT;
-        
-        /** Set color key for transparency */
         if (exStyle & WS_EX_LAYERED) {
-            SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), 255, LWA_COLORKEY);
+            SetLayeredWindowAttributes(hwnd, COLOR_KEY_BLACK, ALPHA_OPAQUE, LWA_COLORKEY);
         }
+        LOG_INFO("Click-through enabled");
     } else {
-        /** Disable click-through for normal interaction */
         if (exStyle & WS_EX_LAYERED) {
-            /** Use alpha transparency instead of color key */
-            SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
+            SetLayeredWindowAttributes(hwnd, 0, ALPHA_OPAQUE, LWA_ALPHA);
         }
+        LOG_INFO("Click-through disabled");
     }
     
     SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
-    
-    /** Force window frame update to apply style changes */
-    SetWindowPos(hwnd, NULL, 0, 0, 0, 0, 
-                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+    SetWindowPos(hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
 }
 
 /**
- * @brief Initialize DWM (Desktop Window Manager) functions for blur effects
- * @return TRUE if DWM functions loaded successfully, FALSE otherwise
- * Dynamically loads dwmapi.dll to access blur functionality
+ * @brief Initialize DWM functions for blur effects
+ * @return TRUE if loaded successfully, FALSE otherwise
  */
-BOOL InitDWMFunctions() {
-    HMODULE hDwmapi = LoadLibraryW(L"dwmapi.dll");
+BOOL InitDWMFunctions(void) {
+    HMODULE hDwmapi = LoadLibraryW(DWMAPI_DLL);
     if (hDwmapi) {
         _DwmEnableBlurBehindWindow = (pfnDwmEnableBlurBehindWindow)GetProcAddress(hDwmapi, "DwmEnableBlurBehindWindow");
-        return _DwmEnableBlurBehindWindow != NULL;
+        if (_DwmEnableBlurBehindWindow) {
+            LOG_INFO("DWM blur functions loaded successfully");
+            return TRUE;
+        }
     }
+    LOG_WARNING("Failed to load DWM blur functions");
     return FALSE;
 }
 
-void SetBlurBehind(HWND hwnd, BOOL enable) {
-    if (enable) {
-        ACCENT_POLICY policy = {0};
-        policy.AccentState = ACCENT_ENABLE_BLURBEHIND;
-        policy.AccentFlags = 0;
-        policy.GradientColor = (180 << 24) | 0x00202020;
-        
-        WINDOWCOMPOSITIONATTRIBDATA data = {0};
-        data.Attrib = WCA_ACCENT_POLICY;
-        data.pvData = &policy;
-        data.cbData = sizeof(policy);
-        
-        if (SetWindowCompositionAttribute) {
-            SetWindowCompositionAttribute(hwnd, &data);
-        } else if (_DwmEnableBlurBehindWindow) {
-            DWM_BLURBEHIND bb = {0};
-            bb.dwFlags = DWM_BB_ENABLE;
-            bb.fEnable = TRUE;
-            bb.hRgnBlur = NULL;
-            _DwmEnableBlurBehindWindow(hwnd, &bb);
-        }
-    } else {
-        ACCENT_POLICY policy = {0};
-        policy.AccentState = ACCENT_DISABLED;
-        
-        WINDOWCOMPOSITIONATTRIBDATA data = {0};
-        data.Attrib = WCA_ACCENT_POLICY;
-        data.pvData = &policy;
-        data.cbData = sizeof(policy);
-        
-        if (SetWindowCompositionAttribute) {
-            SetWindowCompositionAttribute(hwnd, &data);
-        } else if (_DwmEnableBlurBehindWindow) {
-            DWM_BLURBEHIND bb = {0};
-            bb.dwFlags = DWM_BB_ENABLE;
-            bb.fEnable = FALSE;
-            _DwmEnableBlurBehindWindow(hwnd, &bb);
-        }
+/**
+ * @brief Apply accent policy to window
+ * @param hwnd Window handle
+ * @param accentState Accent state to apply
+ */
+static void ApplyAccentPolicy(HWND hwnd, ACCENT_STATE accentState) {
+    ACCENT_POLICY policy = {0};
+    policy.AccentState = accentState;
+    policy.AccentFlags = 0;
+    policy.GradientColor = (accentState == ACCENT_ENABLE_BLURBEHIND) ? 
+                          ((BLUR_ALPHA_VALUE << 24) | BLUR_GRADIENT_COLOR) : 0;
+    
+    WINDOWCOMPOSITIONATTRIBDATA data = {0};
+    data.Attrib = WCA_ACCENT_POLICY;
+    data.pvData = &policy;
+    data.cbData = sizeof(policy);
+    
+    if (SetWindowCompositionAttribute) {
+        SetWindowCompositionAttribute(hwnd, &data);
+    } else if (_DwmEnableBlurBehindWindow) {
+        DWM_BLURBEHIND bb = {0};
+        bb.dwFlags = DWM_BB_ENABLE;
+        bb.fEnable = (accentState != ACCENT_DISABLED);
+        bb.hRgnBlur = NULL;
+        _DwmEnableBlurBehindWindow(hwnd, &bb);
     }
 }
 
 /**
- * @brief Check if a monitor is currently active and usable
- * @param hMonitor Monitor handle to check
- * @return TRUE if monitor is active and has valid work area, FALSE otherwise
+ * @brief Enable or disable blur-behind effect
+ * @param hwnd Window handle
+ * @param enable TRUE to enable blur, FALSE to disable
+ */
+void SetBlurBehind(HWND hwnd, BOOL enable) {
+    ApplyAccentPolicy(hwnd, enable ? ACCENT_ENABLE_BLURBEHIND : ACCENT_DISABLED);
+    LOG_INFO("Blur effect %s", enable ? "enabled" : "disabled");
+}
+
+/* ============================================================================
+ * Multi-monitor support
+ * ============================================================================ */
+
+/**
+ * @brief Check if monitor is active and usable
+ * @param hMonitor Monitor handle
+ * @return TRUE if active with valid work area, FALSE otherwise
  */
 static BOOL IsMonitorActive(HMONITOR hMonitor) {
-    if (hMonitor == NULL) {
-        return FALSE;
-    }
+    if (!hMonitor) return FALSE;
     
     MONITORINFO mi = {0};
     mi.cbSize = sizeof(MONITORINFO);
     
-    if (!GetMonitorInfo(hMonitor, &mi)) {
-        return FALSE;
-    }
+    if (!GetMonitorInfo(hMonitor, &mi)) return FALSE;
     
-    /** Check if monitor has valid work area */
     return (mi.rcWork.right > mi.rcWork.left && mi.rcWork.bottom > mi.rcWork.top);
 }
 
 /**
- * @brief Find the best active monitor for window placement
- * @return Handle to an active monitor, prioritizing primary monitor
+ * @brief Find best active monitor for window placement
+ * @return Handle to active monitor (prioritizes primary)
  */
 static HMONITOR FindBestActiveMonitor(void) {
-    /** First try primary monitor */
     HMONITOR hPrimary = MonitorFromPoint((POINT){0, 0}, MONITOR_DEFAULTTOPRIMARY);
     if (IsMonitorActive(hPrimary)) {
         return hPrimary;
     }
     
-    /** If primary is not active, enumerate all monitors to find an active one */
-    typedef struct {
-        HMONITOR hBestMonitor;
-        BOOL found;
-    } FindActiveMonitorData;
+    LOG_WARNING("Primary monitor inactive, searching for active display");
     
-    FindActiveMonitorData data = {NULL, FALSE};
-    
-    /** Use a simpler approach: check each display device individually */
     DISPLAY_DEVICEW dispDevice = {0};
     dispDevice.cb = sizeof(DISPLAY_DEVICEW);
     
     for (DWORD iDevNum = 0; EnumDisplayDevicesW(NULL, iDevNum, &dispDevice, 0); iDevNum++) {
-        /** Skip if device is not active */
-        if (!(dispDevice.StateFlags & DISPLAY_DEVICE_ACTIVE)) {
-            continue;
-        }
+        if (!(dispDevice.StateFlags & DISPLAY_DEVICE_ACTIVE)) continue;
         
-        /** Get monitor from device name */
         DEVMODEW devMode = {0};
         devMode.dmSize = sizeof(DEVMODEW);
         
@@ -254,87 +247,109 @@ static HMONITOR FindBestActiveMonitor(void) {
             HMONITOR hMon = MonitorFromPoint(pt, MONITOR_DEFAULTTONULL);
             
             if (hMon && IsMonitorActive(hMon)) {
-                data.hBestMonitor = hMon;
-                data.found = TRUE;
-                break;
+                LOG_INFO("Found active monitor: %d", iDevNum);
+                return hMon;
             }
         }
     }
     
-    return data.found ? data.hBestMonitor : hPrimary; /** Fallback to primary */
+    LOG_WARNING("No active monitor found, falling back to primary");
+    return hPrimary;
 }
 
-void AdjustWindowPosition(HWND hwnd, BOOL forceOnScreen) {
-    if (!forceOnScreen) {
-        return;
-    }
-    
+/**
+ * @brief Check if window is visible on current monitor
+ * @param hwnd Window handle
+ * @param hMonitor Monitor handle
+ * @return TRUE if window visible on monitor, FALSE otherwise
+ */
+static BOOL IsWindowVisibleOnMonitor(HWND hwnd, HMONITOR hMonitor) {
     RECT rect;
-    GetWindowRect(hwnd, &rect);
+    if (!GetWindowRect(hwnd, &rect)) return FALSE;
     
-    /** Get current monitor and check if it's active */
+    MONITORINFO mi = {0};
+    mi.cbSize = sizeof(MONITORINFO);
+    if (!GetMonitorInfo(hMonitor, &mi)) return FALSE;
+    
+    RECT intersection;
+    return IntersectRect(&intersection, &rect, &mi.rcWork);
+}
+
+/**
+ * @brief Center window on target monitor
+ * @param hwnd Window handle
+ * @param hMonitor Target monitor
+ */
+static void CenterWindowOnMonitor(HWND hwnd, HMONITOR hMonitor) {
+    RECT rect;
+    if (!GetWindowRect(hwnd, &rect)) return;
+    
+    MONITORINFO mi = {0};
+    mi.cbSize = sizeof(MONITORINFO);
+    if (!GetMonitorInfo(hMonitor, &mi)) return;
+    
+    int width = rect.right - rect.left;
+    int height = rect.bottom - rect.top;
+    
+    int newX = mi.rcWork.left + (mi.rcWork.right - mi.rcWork.left - width) / 2;
+    int newY = mi.rcWork.top + (mi.rcWork.bottom - mi.rcWork.top - height) / 2;
+    
+    // Ensure within bounds
+    if (newX < mi.rcWork.left) newX = mi.rcWork.left;
+    if (newY < mi.rcWork.top) newY = mi.rcWork.top;
+    if (newX + width > mi.rcWork.right) newX = mi.rcWork.right - width;
+    if (newY + height > mi.rcWork.bottom) newY = mi.rcWork.bottom - height;
+    
+    SetWindowPos(hwnd, NULL, newX, newY, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+    LOG_INFO("Window centered on monitor at (%d, %d)", newX, newY);
+    
+    SaveWindowSettings(hwnd);
+}
+
+/**
+ * @brief Adjust window position to ensure visibility on active monitor
+ * @param hwnd Window handle
+ * @param forceOnScreen TRUE to force repositioning if needed
+ */
+void AdjustWindowPosition(HWND hwnd, BOOL forceOnScreen) {
+    if (!forceOnScreen) return;
+    
     HMONITOR hCurrentMonitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONULL);
     BOOL needsReposition = FALSE;
     
-    if (hCurrentMonitor == NULL) {
-        /** Monitor completely invalid */
+    // Check if monitor is invalid or inactive
+    if (!hCurrentMonitor || !IsMonitorActive(hCurrentMonitor)) {
+        LOG_WARNING("Window on invalid/inactive monitor, repositioning needed");
         needsReposition = TRUE;
-    } else if (!IsMonitorActive(hCurrentMonitor)) {
-        /** Monitor exists but is disabled (e.g., "仅第二屏幕" mode disables primary) */
+    } 
+    // Check if window is visible on current monitor
+    else if (!IsWindowVisibleOnMonitor(hwnd, hCurrentMonitor)) {
+        LOG_WARNING("Window not visible on current monitor, repositioning needed");
         needsReposition = TRUE;
-    } else {
-        /** Check if window is still within the active work area */
-        MONITORINFO mi = {0};
-        mi.cbSize = sizeof(MONITORINFO);
-        
-        if (GetMonitorInfo(hCurrentMonitor, &mi)) {
-            RECT intersection;
-            if (!IntersectRect(&intersection, &rect, &mi.rcWork)) {
-                /** Window not visible on current monitor */
-                needsReposition = TRUE;
-            }
-        } else {
-            needsReposition = TRUE;
-        }
     }
     
     if (needsReposition) {
-        /** Find best active monitor and move window there */
         HMONITOR hTargetMonitor = FindBestActiveMonitor();
-        MONITORINFO mi = {0};
-        mi.cbSize = sizeof(MONITORINFO);
-        
-        if (GetMonitorInfo(hTargetMonitor, &mi)) {
-            /** Calculate new position centered on target monitor */
-            int width = rect.right - rect.left;
-            int height = rect.bottom - rect.top;
-            
-            int newX = mi.rcWork.left + (mi.rcWork.right - mi.rcWork.left - width) / 2;
-            int newY = mi.rcWork.top + (mi.rcWork.bottom - mi.rcWork.top - height) / 2;
-            
-            /** Ensure window fits within target monitor */
-            if (newX < mi.rcWork.left) newX = mi.rcWork.left;
-            if (newY < mi.rcWork.top) newY = mi.rcWork.top;
-            if (newX + width > mi.rcWork.right) newX = mi.rcWork.right - width;
-            if (newY + height > mi.rcWork.bottom) newY = mi.rcWork.bottom - height;
-            
-            /** Move window to new position */
-            SetWindowPos(hwnd, NULL, newX, newY, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
-            
-    /** Save new position to configuration */
-    SaveWindowSettings(hwnd);
-        }
+        CenterWindowOnMonitor(hwnd, hTargetMonitor);
     }
 }
 
-extern void GetConfigPath(char* path, size_t size);
-extern void WriteConfigEditMode(const char* mode);
+/* ============================================================================
+ * Window settings persistence
+ * ============================================================================ */
 
+/**
+ * @brief Save window position and scale to configuration
+ * @param hwnd Window handle
+ */
 void SaveWindowSettings(HWND hwnd) {
     if (!hwnd) return;
 
     RECT rect;
-    if (!GetWindowRect(hwnd, &rect)) return;
+    if (!GetWindowRect(hwnd, &rect)) {
+        LOG_WARNING("Failed to get window rect for saving");
+        return;
+    }
     
     CLOCK_WINDOW_POS_X = rect.left;
     CLOCK_WINDOW_POS_Y = rect.top;
@@ -348,239 +363,315 @@ void SaveWindowSettings(HWND hwnd) {
     char scaleStr[16];
     snprintf(scaleStr, sizeof(scaleStr), "%.2f", CLOCK_WINDOW_SCALE);
     WriteIniString(INI_SECTION_DISPLAY, "WINDOW_SCALE", scaleStr, config_path);
+    
+    LOG_INFO("Window settings saved: pos(%d, %d), scale(%.2f)", 
+             CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y, CLOCK_WINDOW_SCALE);
 }
 
+/* ============================================================================
+ * DPI awareness initialization
+ * ============================================================================ */
+
+#ifndef DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
+DECLARE_HANDLE(DPI_AWARENESS_CONTEXT);
+#define DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 ((DPI_AWARENESS_CONTEXT)-4)
+#endif
+
+typedef enum {
+    PROCESS_DPI_UNAWARE = 0,
+    PROCESS_SYSTEM_DPI_AWARE = 1,
+    PROCESS_PER_MONITOR_DPI_AWARE = 2
+} PROCESS_DPI_AWARENESS;
+
 /**
- * @brief Legacy function - now handled by drag_scale.c:HandleScaleWindow()
- * @deprecated This function has been superseded by HandleScaleWindow in drag_scale.c
- * which provides better debouncing, modularity, and code reuse. Kept for API
- * compatibility during transition period. Will be removed in future version.
+ * @brief Initialize DPI awareness with fallback support
+ * @return TRUE if any level of DPI awareness was set
  */
-BOOL HandleMouseWheel(HWND hwnd, int delta) {
-    /** Forward to the refactored implementation in drag_scale.c */
-    extern BOOL HandleScaleWindow(HWND hwnd, int delta);
-    return HandleScaleWindow(hwnd, delta);
+static BOOL InitializeDpiAwareness(void) {
+    LOG_INFO("Initializing DPI awareness");
+    
+    HMODULE hUser32 = GetModuleHandleW(USER32_DLL);
+    if (!hUser32) {
+        LOG_WARNING("Failed to get user32.dll handle");
+        return FALSE;
+    }
+    
+    // Try Windows 10 1703+ (best)
+    typedef BOOL(WINAPI* SetProcessDpiAwarenessContextFunc)(DPI_AWARENESS_CONTEXT);
+    SetProcessDpiAwarenessContextFunc setDpiCtx = 
+        (SetProcessDpiAwarenessContextFunc)GetProcAddress(hUser32, "SetProcessDpiAwarenessContext");
+    
+    if (setDpiCtx) {
+        if (setDpiCtx(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)) {
+            LOG_INFO("DPI awareness: Per-Monitor V2 (Windows 10 1703+)");
+            return TRUE;
+        }
+    }
+    
+    // Try Windows 8.1+ (fallback)
+    HMODULE hShcore = LoadLibraryW(SHCORE_DLL);
+    if (hShcore) {
+        typedef HRESULT(WINAPI* SetProcessDpiAwarenessFunc)(PROCESS_DPI_AWARENESS);
+        SetProcessDpiAwarenessFunc setDpiAwareness = 
+            (SetProcessDpiAwarenessFunc)GetProcAddress(hShcore, "SetProcessDpiAwareness");
+        
+        if (setDpiAwareness) {
+            if (SUCCEEDED(setDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE))) {
+                LOG_INFO("DPI awareness: Per-Monitor (Windows 8.1+)");
+                FreeLibrary(hShcore);
+                return TRUE;
+            }
+        }
+        FreeLibrary(hShcore);
+    }
+    
+    // Final fallback: basic DPI awareness
+    #ifndef _INC_WINUSER
+    WINUSERAPI BOOL WINAPI SetProcessDPIAware(VOID);
+    #endif
+    
+    if (SetProcessDPIAware()) {
+        LOG_INFO("DPI awareness: System (legacy)");
+        return TRUE;
+    }
+    
+    LOG_WARNING("Failed to set any DPI awareness level");
+    return FALSE;
 }
 
+/* ============================================================================
+ * Font initialization
+ * ============================================================================ */
+
 /**
- * @brief Legacy function - now handled by drag_scale.c:HandleDragWindow()
- * @deprecated This function has been superseded by HandleDragWindow in drag_scale.c
- * which provides debounced saves, cleaner code structure, and better maintainability.
- * Kept for API compatibility during transition period. Will be removed in future version.
+ * @brief Initialize fonts from configuration or embedded resources
+ * @param hInstance Application instance
+ * @return TRUE on success, FALSE on failure
  */
-BOOL HandleMouseMove(HWND hwnd) {
-    /** Forward to the refactored implementation in drag_scale.c */
-    extern BOOL HandleDragWindow(HWND hwnd);
-    return HandleDragWindow(hwnd);
+static BOOL InitializeFonts(HINSTANCE hInstance) {
+    LOG_INFO("Initializing fonts");
+    
+    // Extract embedded fonts on first run
+    if (IsFirstRun()) {
+        LOG_INFO("First run detected, extracting embedded fonts");
+        if (ExtractEmbeddedFontsToFolder(hInstance)) {
+            SetFirstRunCompleted();
+            LOG_INFO("Embedded fonts extracted successfully");
+        } else {
+            LOG_WARNING("Failed to extract embedded fonts");
+        }
+    }
+    
+    // Check font license acceptance
+    if (NeedsFontLicenseVersionAcceptance()) {
+        LOG_INFO("Font license acceptance required (will be handled in UI)");
+    }
+    
+    // Load font from configuration
+    CheckAndFixFontPath();
+    
+    // Extract font filename from FONT_FILE_NAME (may contain path prefix)
+    char actualFontFileName[MAX_PATH];
+    const char* localappdata_prefix = "%LOCALAPPDATA%\\Catime\\resources\\fonts\\";
+    if (_strnicmp(FONT_FILE_NAME, localappdata_prefix, strlen(localappdata_prefix)) == 0) {
+        strncpy(actualFontFileName, FONT_FILE_NAME + strlen(localappdata_prefix), sizeof(actualFontFileName) - 1);
+        actualFontFileName[sizeof(actualFontFileName) - 1] = '\0';
+    } else {
+        strncpy(actualFontFileName, FONT_FILE_NAME, sizeof(actualFontFileName) - 1);
+        actualFontFileName[sizeof(actualFontFileName) - 1] = '\0';
+    }
+    
+    if (!LoadFontByNameAndGetRealName(hInstance, actualFontFileName, 
+                                      FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME))) {
+        LOG_ERROR("Failed to load font: %s", actualFontFileName);
+        return FALSE;
+    }
+    
+    LOG_INFO("Font loaded successfully: %s", FONT_INTERNAL_NAME);
+    return TRUE;
+}
+
+/* ============================================================================
+ * Application initialization
+ * ============================================================================ */
+
+/**
+ * @brief Initialize default application settings
+ * @return TRUE on success
+ */
+static BOOL InitializeDefaultSettings(void) {
+    LOG_INFO("Initializing default settings");
+    
+    SetConsoleOutputCP(CONSOLE_CODEPAGE_GBK);
+    SetConsoleCP(CONSOLE_CODEPAGE_GBK);
+    
+    ReadConfig();
+    CLOCK_FONT_SCALE_FACTOR = CLOCK_WINDOW_SCALE;
+    
+    UpdateStartupShortcut();
+    InitializeDefaultLanguage();
+    
+    CLOCK_TOTAL_TIME = CLOCK_DEFAULT_START_TIME;
+    
+    LOG_INFO("Default settings initialized");
+    return TRUE;
 }
 
 /**
- * @brief Create and initialize the main application window
+ * @brief Initialize application components and subsystems
+ * @param hInstance Application instance handle
+ * @return TRUE if initialization succeeded, FALSE on error
+ */
+BOOL InitializeApplication(HINSTANCE hInstance) {
+    LOG_INFO("Application initialization started");
+    
+    if (!InitializeDpiAwareness()) {
+        LOG_WARNING("DPI awareness initialization failed, continuing anyway");
+    }
+    
+    if (!InitializeDefaultSettings()) {
+        LOG_ERROR("Default settings initialization failed");
+        return FALSE;
+    }
+    
+    if (!InitializeFonts(hInstance)) {
+        LOG_ERROR("Font initialization failed");
+        return FALSE;
+    }
+    
+    LOG_INFO("Application initialization completed successfully");
+    return TRUE;
+}
+
+/* ============================================================================
+ * Main window creation
+ * ============================================================================ */
+
+/**
+ * @brief Initialize tray icon and animation
+ * @param hwnd Window handle
+ * @param hInstance Application instance
+ */
+static void InitializeTrayAndAnimation(HWND hwnd, HINSTANCE hInstance) {
+    InitTrayIcon(hwnd, hInstance);
+    StartTrayAnimation(hwnd, DEFAULT_TRAY_ANIMATION_SPEED_MS);
+    LOG_INFO("Tray icon and animation initialized");
+}
+
+/**
+ * @brief Apply topmost mode to window
+ * @param hwnd Window handle
+ */
+static void ApplyTopmostMode(HWND hwnd) {
+    SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    LOG_INFO("Window set to topmost mode");
+}
+
+/**
+ * @brief Apply normal (non-topmost) mode to window
+ * @param hwnd Window handle
+ */
+static void ApplyNormalMode(HWND hwnd) {
+    HWND hProgman = FindWindowW(PROGMAN_CLASS, NULL);
+    if (hProgman) {
+        SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, (LONG_PTR)hProgman);
+        LOG_INFO("Window parented to Progman for Win+D protection");
+    }
+    SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, 
+                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+    ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+    LOG_INFO("Window set to normal mode");
+}
+
+/**
+ * @brief Apply initial window state and visibility
+ * @param hwnd Window handle
+ * @param nCmdShow Initial show command
+ */
+static void ApplyInitialWindowState(HWND hwnd, int nCmdShow) {
+    SetLayeredWindowAttributes(hwnd, COLOR_KEY_BLACK, ALPHA_OPAQUE, LWA_COLORKEY);
+    SetBlurBehind(hwnd, FALSE);
+    
+    ShowWindow(hwnd, nCmdShow);
+    UpdateWindow(hwnd);
+    
+    if (CLOCK_WINDOW_TOPMOST) {
+        ApplyTopmostMode(hwnd);
+    } else {
+        ApplyNormalMode(hwnd);
+    }
+}
+
+/**
+ * @brief Create and initialize main application window
  * @param hInstance Application instance handle
  * @param nCmdShow Window show command
  * @return Window handle on success, NULL on failure
- * Sets up layered window with transparency, tray icon, and topmost behavior
  */
 HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
-    /** Register window class */
+    LOG_INFO("Creating main window");
+    
+    // Register window class
     WNDCLASSW wc = {0};
     wc.lpfnWndProc = WindowProcedure;
     wc.hInstance = hInstance;
-    wc.lpszClassName = L"CatimeWindow";
+    wc.lpszClassName = WINDOW_CLASS_NAME;
     
     if (!RegisterClassW(&wc)) {
+        LOG_ERROR("Window class registration failed");
         MessageBoxW(NULL, L"Window Registration Failed!", L"Error", MB_ICONEXCLAMATION | MB_OK);
         return NULL;
     }
-
-    /** Configure extended window styles for layered transparency */
-    DWORD exStyle = WS_EX_LAYERED | WS_EX_TOOLWINDOW;
     
-    /** Add no-activate style for non-topmost windows */
+    // Configure extended styles
+    DWORD exStyle = WS_EX_LAYERED | WS_EX_TOOLWINDOW;
     if (!CLOCK_WINDOW_TOPMOST) {
         exStyle |= WS_EX_NOACTIVATE;
     }
     
-    /** Create popup window with no frame */
-    /** Apply initial scale from configuration */
+    // Calculate initial size
     int initialWidth = (int)(CLOCK_BASE_WINDOW_WIDTH * CLOCK_WINDOW_SCALE);
     int initialHeight = (int)(CLOCK_BASE_WINDOW_HEIGHT * CLOCK_WINDOW_SCALE);
 
     HWND hwnd = CreateWindowExW(
         exStyle,
-        L"CatimeWindow",
-        L"Catime",
+        WINDOW_CLASS_NAME,
+        WINDOW_TITLE,
         WS_POPUP,
         CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y,
         initialWidth, initialHeight,
-        NULL,
-        NULL,
-        hInstance,
-        NULL
+        NULL, NULL, hInstance, NULL
     );
 
     if (!hwnd) {
+        LOG_ERROR("Window creation failed");
         MessageBoxW(NULL, L"Window Creation Failed!", L"Error", MB_ICONEXCLAMATION | MB_OK);
         return NULL;
     }
 
     EnableWindow(hwnd, TRUE);
     SetFocus(hwnd);
-
-    /** Set up color key transparency for black background */
-    SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), 255, LWA_COLORKEY);
-
-    /** Disable blur effects initially */
-    SetBlurBehind(hwnd, FALSE);
-
-    /** Initialize system tray icon */
-    InitTrayIcon(hwnd, hInstance);
-
-    /** Start tray animation with fixed speed */
-    StartTrayAnimation(hwnd, 150);
-
-    /** Show window and apply topmost behavior */
-    ShowWindow(hwnd, nCmdShow);
-    UpdateWindow(hwnd);
-
-    /** Apply topmost or normal z-order based on settings */
-    if (CLOCK_WINDOW_TOPMOST) {
-        SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
-                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
-    } else {
-        /** Set Progman as owner to avoid being minimized by Win+D */
-        HWND hProgman = FindWindowW(L"Progman", NULL);
-        if (hProgman) {
-            SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, (LONG_PTR)hProgman);
-        }
-        SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0,
-                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
-        ShowWindow(hwnd, SW_SHOWNOACTIVATE);
-    }
-
+    
+    InitializeTrayAndAnimation(hwnd, hInstance);
+    ApplyInitialWindowState(hwnd, nCmdShow);
+    
+    LOG_INFO("Main window created successfully (handle: 0x%p)", hwnd);
     return hwnd;
 }
 
-/** @brief Font scaling configuration */
-float CLOCK_FONT_SCALE_FACTOR = 1.0f;
-int CLOCK_BASE_FONT_SIZE = 24;
+/* ============================================================================
+ * Dialog and utility functions
+ * ============================================================================ */
 
 /**
- * @brief Initialize application with DPI awareness and load configurations
- * @param hInstance Application instance handle
- * @return TRUE if initialization succeeded, FALSE on error
- * Sets up DPI awareness, loads config, fonts, and language settings
- */
-BOOL InitializeApplication(HINSTANCE hInstance) {
-    #ifndef DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
-    DECLARE_HANDLE(DPI_AWARENESS_CONTEXT);
-    #define DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 ((DPI_AWARENESS_CONTEXT)-4)
-    #endif
-    
-    /** DPI awareness levels for Windows compatibility */
-    typedef enum {
-        PROCESS_DPI_UNAWARE = 0,
-        PROCESS_SYSTEM_DPI_AWARE = 1,
-        PROCESS_PER_MONITOR_DPI_AWARE = 2
-    } PROCESS_DPI_AWARENESS;
-    
-    /** Set up DPI awareness with fallback to older APIs */
-    HMODULE hUser32 = GetModuleHandleW(L"user32.dll");
-    if (hUser32) {
-        typedef BOOL(WINAPI* SetProcessDpiAwarenessContextFunc)(DPI_AWARENESS_CONTEXT);
-        SetProcessDpiAwarenessContextFunc setProcessDpiAwarenessContextFunc =
-            (SetProcessDpiAwarenessContextFunc)GetProcAddress(hUser32, "SetProcessDpiAwarenessContext");
-        
-        if (setProcessDpiAwarenessContextFunc) {
-            /** Windows 10 version 1703+ per-monitor DPI awareness */
-            setProcessDpiAwarenessContextFunc(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
-        } else {
-            /** Fallback to Windows 8.1+ DPI awareness */
-            HMODULE hShcore = LoadLibraryW(L"shcore.dll");
-            if (hShcore) {
-                typedef HRESULT(WINAPI* SetProcessDpiAwarenessFunc)(PROCESS_DPI_AWARENESS);
-                SetProcessDpiAwarenessFunc setProcessDpiAwarenessFunc =
-                    (SetProcessDpiAwarenessFunc)GetProcAddress(hShcore, "SetProcessDpiAwareness");
-                
-                if (setProcessDpiAwarenessFunc) {
-                    /** Windows 8.1+ per-monitor DPI awareness */
-                    setProcessDpiAwarenessFunc(PROCESS_PER_MONITOR_DPI_AWARE);
-                } else {
-                    /** Fallback to basic DPI awareness */
-                    SetProcessDPIAware();
-                }
-                
-                FreeLibrary(hShcore);
-            } else {
-                /** Final fallback for older Windows versions */
-                SetProcessDPIAware();
-            }
-        }
-    }
-    
-    /** Set console code page for Chinese character support */
-    SetConsoleOutputCP(936);
-    SetConsoleCP(936);
-
-    /** Load application configuration and initialize components */
-    ReadConfig();
-    /** Sync font scale with window scale at startup (watcher not fired yet) */
-    CLOCK_FONT_SCALE_FACTOR = CLOCK_WINDOW_SCALE;
-    
-    /** Check if this is the first run and extract embedded fonts if needed */
-    if (IsFirstRun()) {
-        extern BOOL ExtractEmbeddedFontsToFolder(HINSTANCE hInstance);
-        if (ExtractEmbeddedFontsToFolder(hInstance)) {
-            /** Successfully extracted fonts, mark first run as completed */
-            SetFirstRunCompleted();
-        }
-    }
-    
-    /** Check font license version acceptance - this will happen on first run and version updates */
-    extern BOOL NeedsFontLicenseVersionAcceptance(void);
-    if (NeedsFontLicenseVersionAcceptance()) {
-        /** Font license version needs acceptance, will be handled later in main window messages */
-        /** This is just a check during initialization - actual dialog will be shown when needed */
-    }
-    
-    UpdateStartupShortcut();
-    InitializeDefaultLanguage();
-
-    /** Load font from configuration */
-    char actualFontFileName[MAX_PATH];
-    
-    /** Check if FONT_FILE_NAME has LOCALAPPDATA path prefix */
-    const char* localappdata_prefix = "%LOCALAPPDATA%\\Catime\\resources\\fonts\\";
-    if (_strnicmp(FONT_FILE_NAME, localappdata_prefix, strlen(localappdata_prefix)) == 0) {
-        /** Extract just the filename */
-        strncpy(actualFontFileName, FONT_FILE_NAME + strlen(localappdata_prefix), sizeof(actualFontFileName) - 1);
-        actualFontFileName[sizeof(actualFontFileName) - 1] = '\0';
-    } else {
-        /** Use as-is for embedded fonts */
-        strncpy(actualFontFileName, FONT_FILE_NAME, sizeof(actualFontFileName) - 1);
-        actualFontFileName[sizeof(actualFontFileName) - 1] = '\0';
-    }
-    
-    /** Load font from fonts folder and update FONT_INTERNAL_NAME */
-    extern BOOL LoadFontByNameAndGetRealName(HINSTANCE hInstance, const char* fontFileName, char* realFontName, size_t realFontNameSize);
-    LoadFontByNameAndGetRealName(hInstance, actualFontFileName, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
-
-    /** Set initial timer value from configuration */
-    CLOCK_TOTAL_TIME = CLOCK_DEFAULT_START_TIME;
-    
-    return TRUE;
-}
-
-/**
- * @brief Open standard Windows file selection dialog
+ * @brief Open file selection dialog
  * @param hwnd Parent window handle
  * @param filePath Buffer to receive selected file path
- * @param maxPath Maximum size of file path buffer
+ * @param maxPath Maximum buffer size
  * @return TRUE if file selected, FALSE if cancelled
- * Uses common dialog API for file browsing functionality
  */
 BOOL OpenFileDialog(HWND hwnd, wchar_t* filePath, DWORD maxPath) {
-    OPENFILENAMEW ofn = { 0 };
+    OPENFILENAMEW ofn = {0};
     ofn.lStructSize = sizeof(OPENFILENAMEW);
     ofn.hwndOwner = hwnd;
     ofn.lpstrFilter = L"All Files\0*.*\0";
@@ -589,99 +680,102 @@ BOOL OpenFileDialog(HWND hwnd, wchar_t* filePath, DWORD maxPath) {
     ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
     ofn.lpstrDefExt = L"";
     
-    return GetOpenFileNameW(&ofn);
+    BOOL result = GetOpenFileNameW(&ofn);
+    if (result) {
+        LOG_INFO("File selected: %S", filePath);
+    } else {
+        LOG_INFO("File dialog cancelled");
+    }
+    return result;
 }
 
+/* ============================================================================
+ * Window z-order management
+ * ============================================================================ */
 
 /**
- * @brief Toggle window always-on-top behavior
- * @param hwnd Window handle to modify
- * @param topmost TRUE for topmost, FALSE for desktop attachment
- * Switches between HWND_TOPMOST and desktop wallpaper level positioning
+ * @brief Set window always-on-top behavior
+ * @param hwnd Window handle
+ * @param topmost TRUE for topmost, FALSE for normal
  */
 void SetWindowTopmost(HWND hwnd, BOOL topmost) {
-    CLOCK_WINDOW_TOPMOST = topmost;
+    LOG_INFO("Setting window topmost: %s", topmost ? "true" : "false");
     
-    /** Modify window extended styles based on topmost state */
+    CLOCK_WINDOW_TOPMOST = topmost;
     LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
     
     if (topmost) {
-        /** Enable activation for topmost windows */
         exStyle &= ~WS_EX_NOACTIVATE;
-        
-        /** Detach from any owner (like Progman) and set topmost z-order */
         SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, 0);
         SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED);
     } else {
-        /** Leave normal top-level window (not desktop-attached) and ensure visible */
         exStyle &= ~WS_EX_NOACTIVATE;
         
-        /** Set Progman as owner to avoid being minimized by Win+D */
-        HWND hProgman = FindWindowW(L"Progman", NULL);
+        HWND hProgman = FindWindowW(PROGMAN_CLASS, NULL);
         if (hProgman) {
             SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, (LONG_PTR)hProgman);
         } else {
-            // Fallback: clear owner if Progman not found
+            LOG_WARNING("Progman window not found, clearing parent");
             SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, 0);
         }
         
-        /** Drop TOPMOST, then raise to normal top to keep it visible */
         SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0,
                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED);
         SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0,
                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
-        
-        /** Show without stealing focus and keep on screen */
         ShowWindow(hwnd, SW_SHOWNOACTIVATE);
         AdjustWindowPosition(hwnd, TRUE);
     }
     
-    /** Apply extended style changes */
     SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
+    SetWindowPos(hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
     
-    /** Force frame change update */
-    SetWindowPos(hwnd, NULL, 0, 0, 0, 0,
-                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
-    
-    /** Persist topmost setting to configuration */
     WriteConfigTopmost(topmost ? "TRUE" : "FALSE");
+    LOG_INFO("Window topmost setting applied and saved");
 }
 
 /**
- * @brief Attach window to desktop wallpaper level for non-intrusive display
- * @param hwnd Window handle to attach to desktop
- * Searches for WorkerW window hosting desktop and parents window to it
+ * @brief Find WorkerW window that hosts desktop wallpaper
+ * @return WorkerW window handle or NULL if not found
+ */
+static HWND FindDesktopWorkerWindow(void) {
+    HWND hProgman = FindWindowW(PROGMAN_CLASS, NULL);
+    if (!hProgman) return NULL;
+    
+    HWND hWorkerW = FindWindowExW(NULL, NULL, WORKERW_CLASS, NULL);
+    while (hWorkerW) {
+        HWND hView = FindWindowExW(hWorkerW, NULL, SHELLDLL_CLASS, NULL);
+        if (hView) {
+            LOG_INFO("Found desktop WorkerW window");
+            return hWorkerW;
+        }
+        hWorkerW = FindWindowExW(NULL, hWorkerW, WORKERW_CLASS, NULL);
+    }
+    
+    LOG_WARNING("Desktop WorkerW window not found");
+    return hProgman;
+}
+
+/**
+ * @brief Attach window to desktop wallpaper level
+ * @param hwnd Window handle
  */
 void ReattachToDesktop(HWND hwnd) {
-    /** Find desktop window hierarchy (Progman -> WorkerW -> SHELLDLL_DefView) */
-    HWND hProgman = FindWindowW(L"Progman", NULL);
-    HWND hDesktop = NULL;
+    LOG_INFO("Reattaching window to desktop level");
     
-    if (hProgman != NULL) {
-        hDesktop = hProgman;
-        HWND hWorkerW = FindWindowExW(NULL, NULL, L"WorkerW", NULL);
-        while (hWorkerW != NULL) {
-            HWND hView = FindWindowExW(hWorkerW, NULL, L"SHELLDLL_DefView", NULL);
-            if (hView != NULL) {
-                hDesktop = hWorkerW;
-                break;
-            }
-            hWorkerW = FindWindowExW(NULL, hWorkerW, L"WorkerW", NULL);
-        }
-    }
+    HWND hDesktop = FindDesktopWorkerWindow();
     
-    if (hDesktop != NULL) {
-        /** Parent window to desktop worker for wallpaper-level display */
+    if (hDesktop) {
         SetParent(hwnd, hDesktop);
-        ShowWindow(hwnd, SW_SHOW);
-        SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0,
-                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+        LOG_INFO("Window parented to desktop worker");
     } else {
-        /** Fallback if desktop hierarchy not found */
         SetParent(hwnd, NULL);
-        ShowWindow(hwnd, SW_SHOW);
-        SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0,
-                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+        LOG_WARNING("Desktop worker not found, clearing parent");
     }
+    
+    ShowWindow(hwnd, SW_SHOW);
+    SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0,
+                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
 }
+
