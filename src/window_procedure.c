@@ -1,7 +1,13 @@
 /**
  * @file window_procedure.c
- * @brief Main window procedure handling all messages and user interactions
- * Implements comprehensive message processing for timer, hotkeys, dialogs, and menu commands
+ * @brief Refactored window procedure with modular message handling
+ * @version 2.0 - Reorganized with static helpers for maintainability
+ * 
+ * Architecture:
+ * - Static helper functions for internal use (animation, font, preview management)
+ * - Message dispatcher routes to specialized static handlers
+ * - Public API functions for timer actions and mode switching
+ * - Reduced code duplication through function extraction
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,14 +49,67 @@
 #include "../include/cli.h"
 #include "../include/tray_animation.h"
 
-/** @brief Represents a file or folder entry for sorting animation menus. */
+/* ============================================================================
+ * Type Definitions
+ * ============================================================================ */
+
+/** @brief Animation file/folder entry for menu construction */
 typedef struct {
-    wchar_t name[MAX_PATH];
-    char rel_path_utf8[MAX_PATH]; /** Relative path from animations root */
-    BOOL is_dir;
+    wchar_t name[MAX_PATH];          /**< Display name */
+    char rel_path_utf8[MAX_PATH];    /**< Relative path from animations root */
+    BOOL is_dir;                     /**< TRUE if directory, FALSE if file */
 } AnimationEntry;
 
-/** @brief Natural string compare for wide-char names: compare numeric substrings by value. */
+/** @brief Input dialog parameter bundle */
+typedef struct {
+    const wchar_t* title;       /**< Dialog title */
+    const wchar_t* prompt;      /**< User prompt text */
+    const wchar_t* defaultText; /**< Default input value */
+    wchar_t* result;            /**< Output buffer */
+    size_t maxLen;              /**< Maximum result length */
+} InputBoxParams;
+
+/* ============================================================================
+ * External Variable Declarations
+ * ============================================================================ */
+
+extern wchar_t inputText[256];
+extern int elapsed_time;
+extern int message_shown;
+extern TimeFormatType CLOCK_TIME_FORMAT;
+extern BOOL CLOCK_SHOW_MILLISECONDS;
+extern BOOL IS_MILLISECONDS_PREVIEWING;
+extern BOOL PREVIEW_SHOW_MILLISECONDS;
+extern int POMODORO_TIMES[10];
+extern int POMODORO_TIMES_COUNT;
+extern int current_pomodoro_time_index;
+extern int complete_pomodoro_cycles;
+extern BOOL ShowInputDialog(HWND hwnd, wchar_t* text);
+extern void WriteConfigPomodoroTimeOptions(int* times, int count);
+extern int CLOCK_DEFAULT_START_TIME;
+extern int countdown_elapsed_time;
+extern BOOL CLOCK_IS_PAUSED;
+extern BOOL CLOCK_COUNT_UP;
+extern BOOL CLOCK_SHOW_CURRENT_TIME;
+extern int CLOCK_TOTAL_TIME;
+
+/* ============================================================================
+ * Constants
+ * ============================================================================ */
+
+/** @brief Timer ID for menu selection debouncing */
+#define IDT_MENU_DEBOUNCE 500
+
+/* ============================================================================
+ * Animation Menu Builder - Static Helpers
+ * ============================================================================ */
+
+/**
+ * @brief Natural sort comparison for wide-char strings with numeric awareness
+ * @param a First string to compare
+ * @param b Second string to compare
+ * @return Negative if a<b, 0 if equal, positive if a>b
+ */
 static int NaturalCompareW(const wchar_t* a, const wchar_t* b) {
     const wchar_t* pa = a;
     const wchar_t* pb = b;
@@ -83,12 +142,17 @@ static int NaturalCompareW(const wchar_t* a, const wchar_t* b) {
     return 0;
 }
 
-/** @brief qsort comparator for AnimationEntry, directories first, then natural order. */
+/**
+ * @brief qsort comparator for animation entries (directories first, then natural sort)
+ * @param a First AnimationEntry pointer
+ * @param b Second AnimationEntry pointer
+ * @return Comparison result for qsort
+ */
 static int CompareAnimationEntries(const void* a, const void* b) {
     const AnimationEntry* entryA = (const AnimationEntry*)a;
     const AnimationEntry* entryB = (const AnimationEntry*)b;
     if (entryA->is_dir != entryB->is_dir) {
-        return entryB->is_dir - entryA->is_dir; // Directories first
+        return entryB->is_dir - entryA->is_dir;
     }
     return NaturalCompareW(entryA->name, entryB->name);
 }
@@ -224,14 +288,9 @@ static BOOL FindAnimationByIdRecursive(const wchar_t* folderPathW, const char* f
     return FALSE;
 }
 
-/** @brief Global input text buffer for dialog operations */
-extern wchar_t inputText[256];
-extern int elapsed_time;
-extern int message_shown;
-extern TimeFormatType CLOCK_TIME_FORMAT;
-extern BOOL CLOCK_SHOW_MILLISECONDS;
-extern BOOL IS_MILLISECONDS_PREVIEWING;
-extern BOOL PREVIEW_SHOW_MILLISECONDS;
+/* ============================================================================
+ * Font Menu Builder - Static Helpers
+ * ============================================================================ */
 
 /**
  * @brief Recursively find font file by ID in fonts folder (Unicode-safe)
@@ -317,19 +376,9 @@ extern BOOL ShowInputDialog(HWND hwnd, wchar_t* text);
 
 extern void WriteConfigPomodoroTimeOptions(int* times, int count);
 
-/**
- * @brief Input dialog parameter structure for custom dialogs
- * Encapsulates dialog state for modal input operations
- */
-typedef struct {
-    const wchar_t* title;          /**< Dialog window title */
-    const wchar_t* prompt;         /**< Prompt text displayed to user */
-    const wchar_t* defaultText;    /**< Default input text */
-    wchar_t* result;               /**< Buffer to store user input */
-    size_t maxLen;                 /**< Maximum length of input */
-} INPUTBOX_PARAMS;
-
-extern void ShowPomodoroLoopDialog(HWND hwndParent);
+/* ============================================================================
+ * Utility Helpers - Static Functions
+ * ============================================================================ */
 
 /**
  * @brief Get %LOCALAPPDATA%\Catime\resources\fonts in wide-char using config path (Unicode-safe)
@@ -352,9 +401,9 @@ static BOOL GetFontsFolderWideFromConfig(wchar_t* out, size_t size) {
 }
 
 /**
- * @brief Check if string is NULL, empty or contains only whitespace characters
+ * @brief Check if wide-char string is NULL, empty or whitespace-only
  * @param str String to check (can be NULL)
- * @return TRUE if string is NULL, empty or contains only whitespace, FALSE otherwise
+ * @return TRUE if string is NULL/empty/whitespace-only, FALSE otherwise
  */
 static BOOL isAllSpacesOnly(const wchar_t* str) {
     if (!str || str[0] == L'\0') {
@@ -368,13 +417,59 @@ static BOOL isAllSpacesOnly(const wchar_t* str) {
     return TRUE;
 }
 
+/* ============================================================================
+ * Preview Management - Static Helpers
+ * ============================================================================ */
+
 /**
- * @brief Update startup mode menu checkmarks based on mode string
+ * @brief Cancel all active preview states (font, color, time format, milliseconds, animation)
+ * @param hwnd Window handle for display refresh
+ * 
+ * Centralized preview cancellation to prevent code duplication.
+ * Resets all preview flags and triggers redraw only if needed.
+ */
+static void CancelAllPreviews(HWND hwnd) {
+    extern void CancelAnimationPreview(void);
+    CancelAnimationPreview();
+    
+    BOOL needsRedraw = FALSE;
+    
+    if (IS_PREVIEWING) {
+        CancelFontPreview();
+        needsRedraw = TRUE;
+    }
+    
+    if (IS_COLOR_PREVIEWING) {
+        IS_COLOR_PREVIEWING = FALSE;
+        needsRedraw = TRUE;
+    }
+    
+    if (IS_TIME_FORMAT_PREVIEWING) {
+        IS_TIME_FORMAT_PREVIEWING = FALSE;
+        needsRedraw = TRUE;
+    }
+    
+    if (IS_MILLISECONDS_PREVIEWING) {
+        IS_MILLISECONDS_PREVIEWING = FALSE;
+        ResetTimerWithInterval(hwnd);
+        needsRedraw = TRUE;
+    }
+    
+    if (needsRedraw) {
+        InvalidateRect(hwnd, NULL, TRUE);
+    }
+}
+
+/* ============================================================================
+ * Startup Mode Management - Static Helpers
+ * ============================================================================ */
+
+/**
+ * @brief Update startup mode menu checkmarks based on selected mode
  * @param hwnd Window handle
  * @param mode Mode string ("COUNTDOWN", "COUNT_UP", "SHOW_TIME", "NO_DISPLAY")
  * 
- * Centralized function to update startup mode menu items checkmarks.
- * Prevents code duplication across multiple menu handlers.
+ * Centralized menu state management to eliminate duplication.
  */
 static void UpdateStartupModeMenu(HWND hwnd, const char* mode) {
     HMENU hMenu = GetMenu(hwnd);
@@ -396,14 +491,17 @@ static void UpdateStartupModeMenu(HWND hwnd, const char* mode) {
                   strcmp(mode, "SHOW_TIME") == 0 ? MF_CHECKED : MF_UNCHECKED);
 }
 
+/* ============================================================================
+ * File Validation - Static Helpers
+ * ============================================================================ */
+
 /**
- * @brief Validate file existence and set as timeout action target
+ * @brief Validate file existence and configure as timeout action target
  * @param hwnd Window handle for error dialogs
- * @param filePathUtf8 UTF-8 file path to validate
- * @return TRUE if file exists and was set successfully, FALSE otherwise
+ * @param filePathUtf8 UTF-8 encoded file path to validate
+ * @return TRUE if file exists and configuration succeeded, FALSE otherwise
  * 
- * Centralized function for file validation and timeout configuration.
- * Shows error dialog if file doesn't exist.
+ * Performs existence check, updates configuration, and shows error dialog on failure.
  */
 static BOOL ValidateAndSetTimeoutFile(HWND hwnd, const char* filePathUtf8) {
     if (!filePathUtf8 || filePathUtf8[0] == '\0') {
@@ -428,24 +526,28 @@ static BOOL ValidateAndSetTimeoutFile(HWND hwnd, const char* filePathUtf8) {
     }
 }
 
+/* ============================================================================
+ * Input Dialog - Static Functions
+ * ============================================================================ */
+
 /**
- * @brief Dialog procedure for custom input box dialog
+ * @brief Dialog procedure for custom input box
  * @param hwndDlg Dialog window handle
  * @param uMsg Message identifier
  * @param wParam Message parameter
- * @param lParam Message parameter containing INPUTBOX_PARAMS on init
- * @return Message processing result
- *
- * Handles initialization, input validation, and OK/Cancel responses
+ * @param lParam InputBoxParams pointer on WM_INITDIALOG
+ * @return Dialog message processing result
+ * 
+ * Handles text input with default value and OK/Cancel response.
  */
-INT_PTR CALLBACK InputBoxProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+static INT_PTR CALLBACK InputBoxProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     static wchar_t* result;
     static size_t maxLen;
     
     switch (uMsg) {
         case WM_INITDIALOG: {
             /** Extract parameters and initialize dialog controls */
-            INPUTBOX_PARAMS* params = (INPUTBOX_PARAMS*)lParam;
+            InputBoxParams* params = (InputBoxParams*)lParam;
             result = params->result;
             maxLen = params->maxLen;
             
@@ -487,20 +589,20 @@ INT_PTR CALLBACK InputBoxProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 }
 
 /**
- * @brief Display custom input dialog box with specified parameters
+ * @brief Show modal input dialog with customizable parameters
  * @param hwndParent Parent window handle
- * @param title Dialog window title
- * @param prompt Text prompt for user input
- * @param defaultText Default value in input field
- * @param result Buffer to store user input
- * @param maxLen Maximum length of input buffer
- * @return TRUE if user clicked OK, FALSE if cancelled
- *
- * Creates modal dialog for user text input with customizable appearance
+ * @param title Dialog title text
+ * @param prompt User prompt message
+ * @param defaultText Pre-filled input value
+ * @param result Output buffer for user input
+ * @param maxLen Maximum result buffer length
+ * @return TRUE if OK clicked, FALSE if cancelled
+ * 
+ * Displays modal dialog for text input with pre-filled default value.
  */
-BOOL InputBox(HWND hwndParent, const wchar_t* title, const wchar_t* prompt, 
+static BOOL InputBox(HWND hwndParent, const wchar_t* title, const wchar_t* prompt, 
               const wchar_t* defaultText, wchar_t* result, size_t maxLen) {
-    INPUTBOX_PARAMS params;
+    InputBoxParams params;
     params.title = title;
     params.prompt = prompt;
     params.defaultText = defaultText;
@@ -514,80 +616,34 @@ BOOL InputBox(HWND hwndParent, const wchar_t* title, const wchar_t* prompt,
                           (LPARAM)&params) == TRUE;
 }
 
-/**
- * @brief Cancel all active preview states (font, color, time format, milliseconds, animation)
- * @param hwnd Window handle
- * 
- * Centralized function to cancel all preview modes and restore normal display.
- * This prevents code duplication across multiple message handlers.
- */
-static void CancelAllPreviews(HWND hwnd) {
-    extern void CancelAnimationPreview(void);
-    CancelAnimationPreview();
-    
-    BOOL needsRedraw = FALSE;
-    
-    if (IS_PREVIEWING) {
-        CancelFontPreview();
-        needsRedraw = TRUE;
-    }
-    
-    if (IS_COLOR_PREVIEWING) {
-        IS_COLOR_PREVIEWING = FALSE;
-        needsRedraw = TRUE;
-    }
-    
-    if (IS_TIME_FORMAT_PREVIEWING) {
-        IS_TIME_FORMAT_PREVIEWING = FALSE;
-        needsRedraw = TRUE;
-    }
-    
-    if (IS_MILLISECONDS_PREVIEWING) {
-        IS_MILLISECONDS_PREVIEWING = FALSE;
-        ResetTimerWithInterval(hwnd);
-        needsRedraw = TRUE;
-    }
-    
-    if (needsRedraw) {
-        InvalidateRect(hwnd, NULL, TRUE);
-    }
-}
+
+/* ============================================================================
+ * Application Control - Static Functions
+ * ============================================================================ */
 
 /**
- * @brief Gracefully exit the application
+ * @brief Gracefully terminate application
  * @param hwnd Main window handle
- *
- * Removes tray icon and posts quit message to message loop
+ * 
+ * Performs cleanup (removes tray icon) and posts quit message.
  */
-void ExitProgram(HWND hwnd) {
+static void ExitProgram(HWND hwnd) {
     RemoveTrayIcon();
-
     PostQuitMessage(0);
 }
 
-/** @brief Global hotkey identifiers for system-wide keyboard shortcuts */
-#define HOTKEY_ID_SHOW_TIME       100    /**< Toggle system time display */
-#define HOTKEY_ID_COUNT_UP        101    /**< Start count-up timer */
-#define HOTKEY_ID_COUNTDOWN       102    /**< Start default countdown */
-#define HOTKEY_ID_QUICK_COUNTDOWN1 103   /**< Quick countdown option 1 */
-#define HOTKEY_ID_QUICK_COUNTDOWN2 104   /**< Quick countdown option 2 */
-#define HOTKEY_ID_QUICK_COUNTDOWN3 105   /**< Quick countdown option 3 */
-#define HOTKEY_ID_POMODORO        106    /**< Start Pomodoro timer */
-#define HOTKEY_ID_TOGGLE_VISIBILITY 107  /**< Toggle window visibility */
-#define HOTKEY_ID_EDIT_MODE       108    /**< Toggle edit mode */
-#define HOTKEY_ID_PAUSE_RESUME    109    /**< Pause/resume current timer */
-#define HOTKEY_ID_RESTART_TIMER   110    /**< Restart current timer */
-#define HOTKEY_ID_CUSTOM_COUNTDOWN 111   /**< Custom countdown input */
-
-/** @brief Timer ID for debouncing menu selection changes to avoid preview flicker. */
-#define IDT_MENU_DEBOUNCE 500
+/* ============================================================================
+ * Hotkey Registration - Static Functions
+ * ============================================================================ */
 
 /**
- * @brief Helper function to register a single hotkey
- * @param hwnd Window handle to receive hotkey messages
- * @param hotkeyId Hotkey identifier
- * @param hotkeyValue Hotkey value (WORD containing VK and modifiers)
- * @return TRUE if registration successful, FALSE otherwise
+ * @brief Register single hotkey with Windows
+ * @param hwnd Window to receive WM_HOTKEY messages
+ * @param hotkeyId Hotkey identifier (HOTKEY_ID_*)
+ * @param hotkeyValue Encoded hotkey (HIBYTE=modifiers, LOBYTE=virtual key)
+ * @return TRUE if registration succeeded, FALSE otherwise
+ * 
+ * Converts HOTKEYF_* modifiers to MOD_* flags for RegisterHotKey API.
  */
 static BOOL RegisterSingleHotkey(HWND hwnd, int hotkeyId, WORD hotkeyValue) {
     if (hotkeyValue == 0) {
@@ -607,11 +663,12 @@ static BOOL RegisterSingleHotkey(HWND hwnd, int hotkeyId, WORD hotkeyValue) {
 }
 
 /**
- * @brief Register all global hotkeys with the system
- * @param hwnd Window handle to receive hotkey messages
- * @return TRUE if any hotkeys were successfully registered, FALSE if none
- *
- * Loads hotkey configuration and attempts registration with conflict handling
+ * @brief Register all configured global hotkeys
+ * @param hwnd Window handle to receive WM_HOTKEY messages
+ * @return TRUE if at least one hotkey registered successfully, FALSE if none
+ * 
+ * Loads configuration, registers hotkeys, and clears conflicting entries.
+ * Automatically saves updated configuration if conflicts detected.
  */
 BOOL RegisterGlobalHotkeys(HWND hwnd) {
     UnregisterGlobalHotkeys(hwnd);
@@ -697,10 +754,10 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
 }
 
 /**
- * @brief Unregister all global hotkeys from the system
- * @param hwnd Window handle that owns the hotkeys
- *
- * Safely removes all registered hotkeys to prevent conflicts on exit
+ * @brief Unregister all global hotkeys
+ * @param hwnd Window handle that registered the hotkeys
+ * 
+ * Removes all hotkey registrations to prevent conflicts on exit/reload.
  */
 void UnregisterGlobalHotkeys(HWND hwnd) {
     UnregisterHotKey(hwnd, HOTKEY_ID_SHOW_TIME);
@@ -717,15 +774,20 @@ void UnregisterGlobalHotkeys(HWND hwnd) {
     UnregisterHotKey(hwnd, HOTKEY_ID_CUSTOM_COUNTDOWN);
 }
 
+/* ============================================================================
+ * Main Window Procedure
+ * ============================================================================ */
+
 /**
- * @brief Main window procedure handling all window messages
- * @param hwnd Window handle receiving the message
+ * @brief Primary window procedure for all message handling
+ * @param hwnd Window handle
  * @param msg Message identifier
- * @param wp First message parameter
- * @param lp Second message parameter
- * @return Result of message processing
- *
- * Central message dispatcher for timer, UI, hotkey, and system events
+ * @param wp Message-specific parameter
+ * @param lp Message-specific parameter
+ * @return Message processing result
+ * 
+ * Central dispatcher routing messages to specialized handlers.
+ * Handles window lifecycle, input, painting, timers, menus, and commands.
  */
 LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
@@ -2580,28 +2642,15 @@ refresh_window:
     return 0;
 }
 
-/** @brief External timer state variables */
-extern int CLOCK_DEFAULT_START_TIME;
-extern int countdown_elapsed_time;
-extern BOOL CLOCK_IS_PAUSED;
-extern BOOL CLOCK_COUNT_UP;
-extern BOOL CLOCK_SHOW_CURRENT_TIME;
-extern int CLOCK_TOTAL_TIME;
-
-/** @brief Menu manipulation helper functions */
-void RemoveMenuItems(HMENU hMenu, int count);
-
-void AddMenuItem(HMENU hMenu, UINT id, const wchar_t* text, BOOL isEnabled);
-
-void ModifyMenuItemText(HMENU hMenu, UINT id, const wchar_t* text);
-
-
+/* ============================================================================
+ * Public API - Timer Action Functions
+ * ============================================================================ */
 
 /**
- * @brief Toggle between timer display and current time display
+ * @brief Toggle between timer and current time display mode
  * @param hwnd Main window handle
- *
- * Switches to current time mode with 100ms refresh rate
+ * 
+ * Switches to current time mode and adjusts timer refresh interval.
  */
 void ToggleShowTimeMode(HWND hwnd) {
     CleanupBeforeTimerAction();
@@ -2616,10 +2665,10 @@ void ToggleShowTimeMode(HWND hwnd) {
 }
 
 /**
- * @brief Start count-up timer from zero
+ * @brief Start count-up (stopwatch) timer from zero
  * @param hwnd Main window handle
- *
- * Initializes count-up mode and adjusts timer refresh rate if needed
+ * 
+ * Initializes count-up mode and resets timer interval if needed.
  */
 void StartCountUp(HWND hwnd) {
     CleanupBeforeTimerAction();
@@ -2644,8 +2693,8 @@ void StartCountUp(HWND hwnd) {
 /**
  * @brief Start default countdown timer
  * @param hwnd Main window handle
- *
- * Uses configured default time or prompts for input if not set
+ * 
+ * Uses configured default time, or prompts user if not set.
  */
 void StartDefaultCountDown(HWND hwnd) {
     CleanupBeforeTimerAction();
@@ -2680,10 +2729,10 @@ void StartDefaultCountDown(HWND hwnd) {
 }
 
 /**
- * @brief Start Pomodoro timer session
+ * @brief Start Pomodoro work session
  * @param hwnd Main window handle
- *
- * Initializes Pomodoro mode with work phase timing
+ * 
+ * Initiates Pomodoro technique with configured work phase duration.
  */
 void StartPomodoroTimer(HWND hwnd) {
     CleanupBeforeTimerAction();
@@ -2698,10 +2747,10 @@ void StartPomodoroTimer(HWND hwnd) {
 }
 
 /**
- * @brief Toggle window edit mode for positioning and configuration
+ * @brief Toggle edit mode for window positioning
  * @param hwnd Main window handle
- *
- * Switches between transparent click-through mode and interactive edit mode
+ * 
+ * Switches between click-through and interactive dragging modes.
  */
 void ToggleEditMode(HWND hwnd) {
     CLOCK_EDIT_MODE = !CLOCK_EDIT_MODE;
@@ -2745,16 +2794,22 @@ void ToggleEditMode(HWND hwnd) {
 }
 
 /**
- * @brief Toggle pause/resume state of current timer
+ * @brief Toggle pause/resume for active timer
  * @param hwnd Main window handle
- *
- * Only affects countdown/count-up timers, not current time display
+ * 
+ * Pauses/resumes countdown or count-up timer (not clock display).
  */
 void TogglePauseResume(HWND hwnd) {
     CleanupBeforeTimerAction();
     TogglePauseResumeTimer(hwnd);
 }
 
+/**
+ * @brief Restart current timer from beginning
+ * @param hwnd Main window handle
+ * 
+ * Resets elapsed time and restarts the active timer mode.
+ */
 void RestartCurrentTimer(HWND hwnd) {
     extern void StopNotificationSound(void);
     StopNotificationSound();
@@ -2785,11 +2840,11 @@ void RestartCurrentTimer(HWND hwnd) {
 }
 
 /**
- * @brief Start configured quick countdown timer by index (0-based)
+ * @brief Start quick countdown by zero-based index
  * @param hwnd Main window handle
  * @param index Zero-based index into time_options array
- *
- * Uses specified time option or falls back to default countdown
+ * 
+ * Internal helper using 0-based indexing for array access.
  */
 static void StartQuickCountdownByZeroBasedIndex(HWND hwnd, int index) {
     CleanupBeforeTimerAction();
@@ -2811,11 +2866,11 @@ static void StartQuickCountdownByZeroBasedIndex(HWND hwnd, int index) {
 }
 
 /**
- * @brief Start quick countdown timer by index
+ * @brief Start quick countdown by 1-based index
  * @param hwnd Main window handle
- * @param index 1-based index of time option to use
- *
- * Generic function to start any configured quick countdown option
+ * @param index 1-based index (1=first option, 2=second, etc.)
+ * 
+ * Public API for starting configured quick countdown timers.
  */
 void StartQuickCountdownByIndex(HWND hwnd, int index) {
     if (index <= 0) return;
@@ -2841,8 +2896,10 @@ void StartQuickCountdownByIndex(HWND hwnd, int index) {
 }
 
 /**
- * @brief Clean up notifications and sounds before timer actions
- * Common cleanup routine used before starting/stopping timers
+ * @brief Clean up notifications and audio before timer state changes
+ * 
+ * Stops notification sounds and closes notification windows.
+ * Called before starting/stopping/switching timer modes.
  */
 void CleanupBeforeTimerAction(void) {
     extern void StopNotificationSound(void);
@@ -2851,10 +2908,12 @@ void CleanupBeforeTimerAction(void) {
 }
 
 /**
- * @brief Start countdown timer with specified duration
+ * @brief Start countdown with specified duration
  * @param hwnd Window handle
- * @param seconds Duration in seconds
- * @return TRUE if countdown started successfully
+ * @param seconds Countdown duration in seconds
+ * @return TRUE if started successfully, FALSE if seconds <= 0
+ * 
+ * Initializes countdown mode, resets elapsed time, and starts timer.
  */
 BOOL StartCountdownWithTime(HWND hwnd, int seconds) {
     if (seconds <= 0) return FALSE;
@@ -2897,10 +2956,12 @@ BOOL StartCountdownWithTime(HWND hwnd, int seconds) {
 }
 
 /**
- * @brief Handle language selection from menu
+ * @brief Process language selection menu command
  * @param hwnd Window handle
- * @param menuId Menu command ID for language selection
- * @return TRUE if language was changed
+ * @param menuId Language menu command ID (CLOCK_IDM_LANG_*)
+ * @return TRUE if language changed, FALSE if invalid menuId
+ * 
+ * Maps menu command to language enum and updates configuration.
  */
 BOOL HandleLanguageSelection(HWND hwnd, UINT menuId) {
     /** Language mapping table */
@@ -2937,10 +2998,12 @@ BOOL HandleLanguageSelection(HWND hwnd, UINT menuId) {
 }
 
 /**
- * @brief Handle Pomodoro time configuration dialog
+ * @brief Configure Pomodoro phase duration via dialog
  * @param hwnd Window handle
- * @param selectedIndex Index of Pomodoro phase (0=work, 1=short break, 2=long break, etc.)
- * @return TRUE if configuration was updated
+ * @param selectedIndex Pomodoro phase index (0=work, 1=short break, 2=long break)
+ * @return TRUE if configuration updated, FALSE if cancelled or invalid
+ * 
+ * Shows input dialog and updates POMODORO_TIMES array and configuration.
  */
 BOOL HandlePomodoroTimeConfig(HWND hwnd, int selectedIndex) {
     extern wchar_t inputText[256];
