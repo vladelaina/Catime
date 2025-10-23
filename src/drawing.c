@@ -1,6 +1,13 @@
 /**
  * @file drawing.c
- * @brief Window painting and text rendering functionality
+ * @brief Modular window painting and text rendering system
+ * 
+ * Refactored rendering pipeline with separated concerns:
+ * - Time component extraction
+ * - Time formatting logic
+ * - Font and color management
+ * - Double-buffered rendering
+ * - Text drawing with effects
  */
 
 #include <stdio.h>
@@ -13,531 +20,532 @@
 #include "../include/timer.h"
 #include "../include/config.h"
 
-/** @brief External elapsed time variable from timer module */
+/* ============================================================================
+ * External Dependencies
+ * ============================================================================ */
+
 extern int elapsed_time;
-
-/** @brief External time format setting */
 extern TimeFormatType CLOCK_TIME_FORMAT;
-
-/** @brief External milliseconds display setting */
 extern BOOL CLOCK_SHOW_MILLISECONDS;
-
-/** @brief External milliseconds preview variables */
 extern BOOL IS_MILLISECONDS_PREVIEWING;
 extern BOOL PREVIEW_SHOW_MILLISECONDS;
+extern BOOL IS_TIME_FORMAT_PREVIEWING;
+extern TimeFormatType PREVIEW_TIME_FORMAT;
+extern BOOL IS_PREVIEWING;
+extern char PREVIEW_FONT_NAME[100];
+extern char PREVIEW_INTERNAL_NAME[100];
+extern char FONT_FILE_NAME[100];
+extern char FONT_INTERNAL_NAME[100];
+extern BOOL IS_COLOR_PREVIEWING;
+extern char PREVIEW_COLOR[10];
+extern char CLOCK_TEXT_COLOR[10];
+extern BOOL CLOCK_EDIT_MODE;
+extern int CLOCK_BASE_FONT_SIZE;
+extern float CLOCK_FONT_SCALE_FACTOR;
+
+/* ============================================================================
+ * Module State - Millisecond Tracking
+ * ============================================================================ */
+
+static DWORD g_timer_start_tick = 0;
+static BOOL g_timer_ms_initialized = FALSE;
+static int g_paused_milliseconds = 0;
+
+/* ============================================================================
+ * Millisecond Tracking Functions
+ * ============================================================================ */
+
+void ResetTimerMilliseconds(void) {
+    g_timer_start_tick = GetTickCount();
+    g_timer_ms_initialized = TRUE;
+    g_paused_milliseconds = 0;
+}
+
+void PauseTimerMilliseconds(void) {
+    if (g_timer_ms_initialized) {
+        DWORD current_tick = GetTickCount();
+        DWORD elapsed_ms = current_tick - g_timer_start_tick;
+        g_paused_milliseconds = (int)(elapsed_ms % 1000);
+    }
+}
 
 /**
- * @brief Get current centiseconds component
- * @return Current centiseconds (0-99)
+ * @brief Get current centiseconds from system time
+ * @return Centiseconds (0-99)
  */
-int GetCurrentMilliseconds(void) {
+static int GetSystemCentiseconds(void) {
     SYSTEMTIME st;
     GetLocalTime(&st);
-    return st.wMilliseconds / 10;  /** Convert to centiseconds */
-}
-
-/** @brief Timer-based millisecond tracking */
-static DWORD timer_start_tick = 0;
-static BOOL timer_ms_initialized = FALSE;
-static int paused_milliseconds = 0;
-
-/**
- * @brief Reset timer-based centisecond tracking
- * Should be called when timer starts, resumes, or resets
- */
-void ResetTimerMilliseconds(void) {
-    timer_start_tick = GetTickCount();
-    timer_ms_initialized = TRUE;
-    paused_milliseconds = 0;
-}
-
-/**
- * @brief Save current centiseconds when pausing
- * Should be called when timer is paused to freeze the display
- */
-void PauseTimerMilliseconds(void) {
-    if (timer_ms_initialized) {
-        DWORD current_tick = GetTickCount();
-        DWORD elapsed_ms = current_tick - timer_start_tick;
-        paused_milliseconds = (int)(elapsed_ms % 1000);
-    }
+    return st.wMilliseconds / 10;
 }
 
 /**
  * @brief Get elapsed centiseconds for timer modes
- * @return Current centiseconds component for timer display (0-99)
+ * @return Current centiseconds component (0-99)
  */
-int GetElapsedMillisecondsComponent(void) {
-    /** If timer is paused, return frozen milliseconds */
+static int GetElapsedCentiseconds(void) {
     if (CLOCK_IS_PAUSED) {
-        return paused_milliseconds / 10;  /** Convert to centiseconds (0-99) */
+        return g_paused_milliseconds / 10;
     }
     
-    /** Initialize timer milliseconds on first call */
-    if (!timer_ms_initialized) {
+    if (!g_timer_ms_initialized) {
         ResetTimerMilliseconds();
         return 0;
     }
     
-    /** Calculate elapsed milliseconds since timer start/resume */
     DWORD current_tick = GetTickCount();
-    DWORD elapsed_ms = current_tick - timer_start_tick;
-    
-    /** Return centiseconds component (0-99) by dividing by 10 */
+    DWORD elapsed_ms = current_tick - g_timer_start_tick;
     return (int)((elapsed_ms % 1000) / 10);
 }
 
+/* ============================================================================
+ * Time Component Extraction
+ * ============================================================================ */
+
 /**
- * @brief Handle window painting with double buffering and text rendering
- * @param hwnd Window handle to paint
- * @param ps Paint structure containing device context and paint area
+ * @brief Get current system time components
+ * @param use24Hour TRUE for 24-hour format, FALSE for 12-hour
+ * @return Time components structure
  */
-void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps) {
-    static wchar_t time_text[50];
-    HDC hdc = ps->hdc;
-    RECT rect;
-    GetClientRect(hwnd, &rect);
-
-    /** Create double buffer for flicker-free rendering */
-    HDC memDC = CreateCompatibleDC(hdc);
-    HBITMAP memBitmap = CreateCompatibleBitmap(hdc, rect.right, rect.bottom);
-    HBITMAP oldBitmap = (HBITMAP)SelectObject(memDC, memBitmap);
-
-    /** Configure graphics mode for high-quality rendering */
-    SetGraphicsMode(memDC, GM_ADVANCED);
-    SetBkMode(memDC, TRANSPARENT);
-    SetStretchBltMode(memDC, HALFTONE);
-    SetBrushOrgEx(memDC, 0, 0, NULL);
-
-    /** Format time text based on clock mode */
-    if (CLOCK_SHOW_CURRENT_TIME) {
-        /** Display current system time - use GetLocalTime for accurate synchronization */
-        SYSTEMTIME st;
-        GetLocalTime(&st);
-        
-        int hour = st.wHour;
-        int minute = st.wMinute;
-        int second = st.wSecond;
-        int milliseconds = st.wMilliseconds / 10;  /** Convert to centiseconds (0-99) */
-        
-        /** Convert to 12-hour format if needed */
-        if (!CLOCK_USE_24HOUR) {
-            if (hour == 0) {
-                hour = 12;
-            } else if (hour > 12) {
-                hour -= 12;
-            }
+static TimeComponents GetCurrentTimeComponents(BOOL use24Hour) {
+    SYSTEMTIME st;
+    GetLocalTime(&st);
+    
+    TimeComponents tc;
+    tc.hours = st.wHour;
+    tc.minutes = st.wMinute;
+    tc.seconds = st.wSecond;
+    tc.centiseconds = st.wMilliseconds / 10;
+    
+    if (!use24Hour) {
+        if (tc.hours == 0) {
+            tc.hours = 12;
+        } else if (tc.hours > 12) {
+            tc.hours -= 12;
         }
+    }
+    
+    return tc;
+}
 
-        /** Determine which time format to use (preview or current) */
-        TimeFormatType formatToUse = IS_TIME_FORMAT_PREVIEWING ? PREVIEW_TIME_FORMAT : CLOCK_TIME_FORMAT;
-        
-        /** Determine whether to show milliseconds (preview or current) */
-        BOOL showMilliseconds = IS_MILLISECONDS_PREVIEWING ? PREVIEW_SHOW_MILLISECONDS : CLOCK_SHOW_MILLISECONDS;
-        
-        /** Format with or without seconds */
-        if (CLOCK_SHOW_SECONDS) {
-            if (showMilliseconds) {
-                /** Format with seconds and milliseconds */
-                switch (formatToUse) {
-                    case TIME_FORMAT_ZERO_PADDED:
-                        swprintf(time_text, 50, L"%02d:%02d:%02d.%02d", 
-                                hour, minute, second, milliseconds);
-                        break;
-                    case TIME_FORMAT_FULL_PADDED:
-                        swprintf(time_text, 50, L"%02d:%02d:%02d.%02d", 
-                                hour, minute, second, milliseconds);
-                        break;
-                    default: // TIME_FORMAT_DEFAULT
-                        swprintf(time_text, 50, L"%d:%02d:%02d.%02d", 
-                                hour, minute, second, milliseconds);
-                        break;
-                }
-            } else {
-                /** Format with seconds only */
-                switch (formatToUse) {
-                    case TIME_FORMAT_ZERO_PADDED:
-                        swprintf(time_text, 50, L"%02d:%02d:%02d", 
-                                hour, minute, second);
-                        break;
-                    case TIME_FORMAT_FULL_PADDED:
-                        swprintf(time_text, 50, L"%02d:%02d:%02d", 
-                                hour, minute, second);
-                        break;
-                    default: // TIME_FORMAT_DEFAULT
-                        swprintf(time_text, 50, L"%d:%02d:%02d", 
-                                hour, minute, second);
-                        break;
-                }
+/**
+ * @brief Get count-up timer components
+ * @return Time components structure
+ */
+static TimeComponents GetCountUpComponents(void) {
+    TimeComponents tc;
+    tc.hours = countup_elapsed_time / 3600;
+    tc.minutes = (countup_elapsed_time % 3600) / 60;
+    tc.seconds = countup_elapsed_time % 60;
+    tc.centiseconds = GetElapsedCentiseconds();
+    return tc;
+}
+
+/**
+ * @brief Get countdown timer components
+ * @return Time components structure
+ */
+static TimeComponents GetCountDownComponents(void) {
+    int remaining = CLOCK_TOTAL_TIME - countdown_elapsed_time;
+    if (remaining < 0) remaining = 0;
+    
+    TimeComponents tc;
+    tc.hours = remaining / 3600;
+    tc.minutes = (remaining % 3600) / 60;
+    tc.seconds = remaining % 60;
+    tc.centiseconds = GetElapsedCentiseconds();
+    return tc;
+}
+
+/* ============================================================================
+ * Time Formatting Logic
+ * ============================================================================ */
+
+/**
+ * @brief Format time components to display string
+ * @param tc Time components to format
+ * @param format Time format type
+ * @param showMilliseconds TRUE to show centiseconds
+ * @param buffer Output buffer
+ * @param bufferSize Buffer size in wide characters
+ */
+static void FormatTimeComponents(
+    const TimeComponents* tc,
+    TimeFormatType format,
+    BOOL showMilliseconds,
+    wchar_t* buffer,
+    size_t bufferSize
+) {
+    if (!tc || !buffer || bufferSize == 0) return;
+    
+    if (tc->hours > 0) {
+        if (showMilliseconds) {
+            switch (format) {
+                case TIME_FORMAT_ZERO_PADDED:
+                    swprintf(buffer, bufferSize, L"%02d:%02d:%02d.%02d", 
+                            tc->hours, tc->minutes, tc->seconds, tc->centiseconds);
+                    break;
+                case TIME_FORMAT_FULL_PADDED:
+                    swprintf(buffer, bufferSize, L"%02d:%02d:%02d.%02d", 
+                            tc->hours, tc->minutes, tc->seconds, tc->centiseconds);
+                    break;
+                default:
+                    swprintf(buffer, bufferSize, L"%d:%02d:%02d.%02d", 
+                            tc->hours, tc->minutes, tc->seconds, tc->centiseconds);
+                    break;
             }
         } else {
-            if (showMilliseconds) {
-                /** Format without seconds setting but with milliseconds - show seconds for context */
-                switch (formatToUse) {
-                    case TIME_FORMAT_ZERO_PADDED:
-                        swprintf(time_text, 50, L"%02d:%02d:%02d.%02d", 
-                                hour, minute, second, milliseconds);
-                        break;
-                    case TIME_FORMAT_FULL_PADDED:
-                        swprintf(time_text, 50, L"%02d:%02d:%02d.%02d", 
-                                hour, minute, second, milliseconds);
-                        break;
-                    default: // TIME_FORMAT_DEFAULT
-                        swprintf(time_text, 50, L"%d:%02d:%02d.%02d", 
-                                hour, minute, second, milliseconds);
-                        break;
-                }
+            switch (format) {
+                case TIME_FORMAT_ZERO_PADDED:
+                    swprintf(buffer, bufferSize, L"%02d:%02d:%02d", 
+                            tc->hours, tc->minutes, tc->seconds);
+                    break;
+                case TIME_FORMAT_FULL_PADDED:
+                    swprintf(buffer, bufferSize, L"%02d:%02d:%02d", 
+                            tc->hours, tc->minutes, tc->seconds);
+                    break;
+                default:
+                    swprintf(buffer, bufferSize, L"%d:%02d:%02d", 
+                            tc->hours, tc->minutes, tc->seconds);
+                    break;
+            }
+        }
+    } else if (tc->minutes > 0) {
+        if (showMilliseconds) {
+            switch (format) {
+                case TIME_FORMAT_ZERO_PADDED:
+                    swprintf(buffer, bufferSize, L"%02d:%02d.%02d", 
+                            tc->minutes, tc->seconds, tc->centiseconds);
+                    break;
+                case TIME_FORMAT_FULL_PADDED:
+                    swprintf(buffer, bufferSize, L"00:%02d:%02d.%02d", 
+                            tc->minutes, tc->seconds, tc->centiseconds);
+                    break;
+                default:
+                    swprintf(buffer, bufferSize, L"%d:%02d.%02d", 
+                            tc->minutes, tc->seconds, tc->centiseconds);
+                    break;
+            }
+        } else {
+            switch (format) {
+                case TIME_FORMAT_ZERO_PADDED:
+                    swprintf(buffer, bufferSize, L"%02d:%02d", 
+                            tc->minutes, tc->seconds);
+                    break;
+                case TIME_FORMAT_FULL_PADDED:
+                    swprintf(buffer, bufferSize, L"00:%02d:%02d", 
+                            tc->minutes, tc->seconds);
+                    break;
+                default:
+                    swprintf(buffer, bufferSize, L"%d:%02d", 
+                            tc->minutes, tc->seconds);
+                    break;
+            }
+        }
+    } else {
+        if (showMilliseconds) {
+            switch (format) {
+                case TIME_FORMAT_ZERO_PADDED:
+                    swprintf(buffer, bufferSize, L"00:%02d.%02d", 
+                            tc->seconds, tc->centiseconds);
+                    break;
+                case TIME_FORMAT_FULL_PADDED:
+                    swprintf(buffer, bufferSize, L"00:00:%02d.%02d", 
+                            tc->seconds, tc->centiseconds);
+                    break;
+                default:
+                    swprintf(buffer, bufferSize, L"%d.%02d", 
+                            tc->seconds, tc->centiseconds);
+                    break;
+            }
+        } else {
+            switch (format) {
+                case TIME_FORMAT_ZERO_PADDED:
+                    swprintf(buffer, bufferSize, L"00:%02d", tc->seconds);
+                    break;
+                case TIME_FORMAT_FULL_PADDED:
+                    swprintf(buffer, bufferSize, L"00:00:%02d", tc->seconds);
+                    break;
+                default:
+                    swprintf(buffer, bufferSize, L"%d", tc->seconds);
+                    break;
+            }
+        }
+    }
+}
+
+/**
+ * @brief Get final time text for display
+ * @param buffer Output buffer for formatted time
+ * @param bufferSize Buffer size in wide characters
+ */
+static void GetTimeText(wchar_t* buffer, size_t bufferSize) {
+    if (!buffer || bufferSize == 0) return;
+    
+    TimeFormatType finalFormat = IS_TIME_FORMAT_PREVIEWING ? PREVIEW_TIME_FORMAT : CLOCK_TIME_FORMAT;
+    BOOL finalShowMs = IS_MILLISECONDS_PREVIEWING ? PREVIEW_SHOW_MILLISECONDS : CLOCK_SHOW_MILLISECONDS;
+    
+    if (CLOCK_SHOW_CURRENT_TIME) {
+        TimeComponents tc = GetCurrentTimeComponents(CLOCK_USE_24HOUR);
+        
+        if (CLOCK_SHOW_SECONDS) {
+            FormatTimeComponents(&tc, finalFormat, finalShowMs, buffer, bufferSize);
+        } else {
+            if (finalShowMs) {
+                FormatTimeComponents(&tc, finalFormat, finalShowMs, buffer, bufferSize);
             } else {
-                /** Format without seconds and without milliseconds */
-                switch (formatToUse) {
-                    case TIME_FORMAT_ZERO_PADDED:
-                        swprintf(time_text, 50, L"%02d:%02d", 
-                                hour, minute);
-                        break;
-                    case TIME_FORMAT_FULL_PADDED:
-                        swprintf(time_text, 50, L"%02d:%02d", 
-                                hour, minute);
-                        break;
-                    default: // TIME_FORMAT_DEFAULT
-                        swprintf(time_text, 50, L"%d:%02d", 
-                                hour, minute);
-                        break;
+                if (finalFormat == TIME_FORMAT_ZERO_PADDED || finalFormat == TIME_FORMAT_FULL_PADDED) {
+                    swprintf(buffer, bufferSize, L"%02d:%02d", tc.hours, tc.minutes);
+                } else {
+                    swprintf(buffer, bufferSize, L"%d:%02d", tc.hours, tc.minutes);
                 }
             }
         }
     } else if (CLOCK_COUNT_UP) {
-        /** Display count-up timer */
-        int hours = countup_elapsed_time / 3600;
-        int minutes = (countup_elapsed_time % 3600) / 60;
-        int seconds = countup_elapsed_time % 60;
-
-        /** Determine which time format to use (preview or current) */
-        TimeFormatType formatToUse = IS_TIME_FORMAT_PREVIEWING ? PREVIEW_TIME_FORMAT : CLOCK_TIME_FORMAT;
-        
-        /** Determine whether to show milliseconds (preview or current) */
-        BOOL showMilliseconds = IS_MILLISECONDS_PREVIEWING ? PREVIEW_SHOW_MILLISECONDS : CLOCK_SHOW_MILLISECONDS;
-        
-        /** Get centiseconds for timer display */
-        int milliseconds = GetElapsedMillisecondsComponent();
-        
-        /** Format time with appropriate precision */
-        if (hours > 0) {
-            if (showMilliseconds) {
-                /** Format with hours and milliseconds */
-                switch (formatToUse) {
-                    case TIME_FORMAT_ZERO_PADDED:
-                        swprintf(time_text, 50, L"%02d:%02d:%02d.%02d", hours, minutes, seconds, milliseconds);
-                        break;
-                    case TIME_FORMAT_FULL_PADDED:
-                        swprintf(time_text, 50, L"%02d:%02d:%02d.%02d", hours, minutes, seconds, milliseconds);
-                        break;
-                    default: // TIME_FORMAT_DEFAULT
-                        swprintf(time_text, 50, L"%d:%02d:%02d.%02d", hours, minutes, seconds, milliseconds);
-                        break;
-                }
-            } else {
-                /** Format with hours only */
-                switch (formatToUse) {
-                    case TIME_FORMAT_ZERO_PADDED:
-                        swprintf(time_text, 50, L"%02d:%02d:%02d", hours, minutes, seconds);
-                        break;
-                    case TIME_FORMAT_FULL_PADDED:
-                        swprintf(time_text, 50, L"%02d:%02d:%02d", hours, minutes, seconds);
-                        break;
-                    default: // TIME_FORMAT_DEFAULT
-                        swprintf(time_text, 50, L"%d:%02d:%02d", hours, minutes, seconds);
-                        break;
-                }
-            }
-        } else if (minutes > 0) {
-            if (showMilliseconds) {
-                /** Format with minutes and milliseconds */
-                switch (formatToUse) {
-                    case TIME_FORMAT_ZERO_PADDED:
-                        swprintf(time_text, 50, L"%02d:%02d.%02d", minutes, seconds, milliseconds);
-                        break;
-                    case TIME_FORMAT_FULL_PADDED:
-                        swprintf(time_text, 50, L"00:%02d:%02d.%02d", minutes, seconds, milliseconds);
-                        break;
-                    default: // TIME_FORMAT_DEFAULT
-                        swprintf(time_text, 50, L"%d:%02d.%02d", minutes, seconds, milliseconds);
-                        break;
-                }
-            } else {
-                /** Format with minutes only */
-                switch (formatToUse) {
-                    case TIME_FORMAT_ZERO_PADDED:
-                        swprintf(time_text, 50, L"%02d:%02d", minutes, seconds);
-                        break;
-                    case TIME_FORMAT_FULL_PADDED:
-                        swprintf(time_text, 50, L"00:%02d:%02d", minutes, seconds);
-                        break;
-                    default: // TIME_FORMAT_DEFAULT
-                        swprintf(time_text, 50, L"%d:%02d", minutes, seconds);
-                        break;
-                }
-            }
-        } else {
-            if (showMilliseconds) {
-                /** Format with seconds and milliseconds */
-                switch (formatToUse) {
-                    case TIME_FORMAT_ZERO_PADDED:
-                        swprintf(time_text, 50, L"00:%02d.%02d", seconds, milliseconds);
-                        break;
-                    case TIME_FORMAT_FULL_PADDED:
-                        swprintf(time_text, 50, L"00:00:%02d.%02d", seconds, milliseconds);
-                        break;
-                    default: // TIME_FORMAT_DEFAULT
-                        swprintf(time_text, 50, L"%d.%02d", seconds, milliseconds);
-                        break;
-                }
-            } else {
-                /** Format with seconds only */
-                switch (formatToUse) {
-                    case TIME_FORMAT_ZERO_PADDED:
-                        swprintf(time_text, 50, L"00:%02d", seconds);
-                        break;
-                    case TIME_FORMAT_FULL_PADDED:
-                        swprintf(time_text, 50, L"00:00:%02d", seconds);
-                        break;
-                    default: // TIME_FORMAT_DEFAULT
-                        swprintf(time_text, 50, L"%d", seconds);
-                        break;
-                }
-            }
-        }
+        TimeComponents tc = GetCountUpComponents();
+        FormatTimeComponents(&tc, finalFormat, finalShowMs, buffer, bufferSize);
     } else {
-        /** Display countdown timer */
-        int remaining_time = CLOCK_TOTAL_TIME - countdown_elapsed_time;
-        if (remaining_time <= 0) {
-            /** Handle timeout state */
+        int remaining = CLOCK_TOTAL_TIME - countdown_elapsed_time;
+        
+        if (remaining <= 0) {
             if (CLOCK_TOTAL_TIME == 0 && countdown_elapsed_time == 0) {
-                time_text[0] = L'\0';
+                buffer[0] = L'\0';
             } else if (strcmp(CLOCK_TIMEOUT_TEXT, "0") == 0) {
-                time_text[0] = L'\0';
+                buffer[0] = L'\0';
             } else if (strlen(CLOCK_TIMEOUT_TEXT) > 0) {
-                /** Display custom timeout message */
-                MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_TEXT, -1, time_text, 50);
+                MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_TEXT, -1, buffer, (int)bufferSize);
             } else {
-                time_text[0] = L'\0';
+                buffer[0] = L'\0';
             }
         } else {
-            /** Format remaining time */
-            int hours = remaining_time / 3600;
-            int minutes = (remaining_time % 3600) / 60;
-            int seconds = remaining_time % 60;
-
-            /** Determine which time format to use (preview or current) */
-            TimeFormatType formatToUse = IS_TIME_FORMAT_PREVIEWING ? PREVIEW_TIME_FORMAT : CLOCK_TIME_FORMAT;
-            
-            /** Determine whether to show milliseconds (preview or current) */
-            BOOL showMilliseconds = IS_MILLISECONDS_PREVIEWING ? PREVIEW_SHOW_MILLISECONDS : CLOCK_SHOW_MILLISECONDS;
-            
-            /** Get centiseconds for countdown timer display */
-            int milliseconds = GetElapsedMillisecondsComponent();
-            
-            /** Format with appropriate precision */
-            if (hours > 0) {
-                if (showMilliseconds) {
-                    /** Format with hours and milliseconds */
-                    switch (formatToUse) {
-                        case TIME_FORMAT_ZERO_PADDED:
-                            swprintf(time_text, 50, L"%02d:%02d:%02d.%02d", hours, minutes, seconds, milliseconds);
-                            break;
-                        case TIME_FORMAT_FULL_PADDED:
-                            swprintf(time_text, 50, L"%02d:%02d:%02d.%02d", hours, minutes, seconds, milliseconds);
-                            break;
-                        default: // TIME_FORMAT_DEFAULT
-                            swprintf(time_text, 50, L"%d:%02d:%02d.%02d", hours, minutes, seconds, milliseconds);
-                            break;
-                    }
-                } else {
-                    /** Format with hours only */
-                    switch (formatToUse) {
-                        case TIME_FORMAT_ZERO_PADDED:
-                            swprintf(time_text, 50, L"%02d:%02d:%02d", hours, minutes, seconds);
-                            break;
-                        case TIME_FORMAT_FULL_PADDED:
-                            swprintf(time_text, 50, L"%02d:%02d:%02d", hours, minutes, seconds);
-                            break;
-                        default: // TIME_FORMAT_DEFAULT
-                            swprintf(time_text, 50, L"%d:%02d:%02d", hours, minutes, seconds);
-                            break;
-                    }
-                }
-            } else if (minutes > 0) {
-                if (showMilliseconds) {
-                    /** Format with minutes and milliseconds */
-                    switch (formatToUse) {
-                        case TIME_FORMAT_ZERO_PADDED:
-                            swprintf(time_text, 50, L"%02d:%02d.%02d", minutes, seconds, milliseconds);
-                            break;
-                        case TIME_FORMAT_FULL_PADDED:
-                            swprintf(time_text, 50, L"00:%02d:%02d.%02d", minutes, seconds, milliseconds);
-                            break;
-                        default: // TIME_FORMAT_DEFAULT
-                            swprintf(time_text, 50, L"%d:%02d.%02d", minutes, seconds, milliseconds);
-                            break;
-                    }
-                } else {
-                    /** Format with minutes only */
-                    switch (formatToUse) {
-                        case TIME_FORMAT_ZERO_PADDED:
-                            swprintf(time_text, 50, L"%02d:%02d", minutes, seconds);
-                            break;
-                        case TIME_FORMAT_FULL_PADDED:
-                            swprintf(time_text, 50, L"00:%02d:%02d", minutes, seconds);
-                            break;
-                        default: // TIME_FORMAT_DEFAULT
-                            swprintf(time_text, 50, L"%d:%02d", minutes, seconds);
-                            break;
-                    }
-                }
-            } else {
-                if (showMilliseconds) {
-                    /** Format with seconds and milliseconds */
-                    switch (formatToUse) {
-                        case TIME_FORMAT_ZERO_PADDED:
-                            swprintf(time_text, 50, L"00:%02d.%02d", seconds, milliseconds);
-                            break;
-                        case TIME_FORMAT_FULL_PADDED:
-                            swprintf(time_text, 50, L"00:00:%02d.%02d", seconds, milliseconds);
-                            break;
-                        default: // TIME_FORMAT_DEFAULT
-                            swprintf(time_text, 50, L"%d.%02d", seconds, milliseconds);
-                            break;
-                    }
-                } else {
-                    /** Format with seconds only */
-                    switch (formatToUse) {
-                        case TIME_FORMAT_ZERO_PADDED:
-                            swprintf(time_text, 50, L"00:%02d", seconds);
-                            break;
-                        case TIME_FORMAT_FULL_PADDED:
-                            swprintf(time_text, 50, L"00:00:%02d", seconds);
-                            break;
-                        default: // TIME_FORMAT_DEFAULT
-                            swprintf(time_text, 50, L"%d", seconds);
-                            break;
-                    }
-                }
-            }
+            TimeComponents tc = GetCountDownComponents();
+            FormatTimeComponents(&tc, finalFormat, finalShowMs, buffer, bufferSize);
         }
     }
+}
 
-    /** Select font based on preview mode */
-    const char* fontToUse = IS_PREVIEWING ? PREVIEW_FONT_NAME : FONT_FILE_NAME;
+/* ============================================================================
+ * Rendering Context Management
+ * ============================================================================ */
+
+/**
+ * @brief Parse color string to COLORREF
+ * @param colorStr Color string in "#RRGGBB" or "R,G,B" format
+ * @return COLORREF value
+ */
+static COLORREF ParseColorString(const char* colorStr) {
+    if (!colorStr || strlen(colorStr) == 0) {
+        return RGB(255, 255, 255);
+    }
     
-    /** Get internal font name and convert to wide char */
-    const char* fontInternalName = IS_PREVIEWING ? PREVIEW_INTERNAL_NAME : FONT_INTERNAL_NAME;
-    wchar_t fontInternalNameW[256];
-    MultiByteToWideChar(CP_UTF8, 0, fontInternalName, -1, fontInternalNameW, 256);
+    int r = 255, g = 255, b = 255;
     
-    /** Create font with scaling factor applied */
-    HFONT hFont = CreateFontW(
-        -CLOCK_BASE_FONT_SIZE * CLOCK_FONT_SCALE_FACTOR,
+    if (colorStr[0] == '#' && strlen(colorStr) == 7) {
+        sscanf(colorStr + 1, "%02x%02x%02x", &r, &g, &b);
+    } else {
+        sscanf(colorStr, "%d,%d,%d", &r, &g, &b);
+    }
+    
+    return RGB(r, g, b);
+}
+
+/**
+ * @brief Create rendering context based on preview mode
+ * @return Rendering context structure
+ */
+static RenderContext CreateRenderContext(void) {
+    RenderContext ctx;
+    
+    if (IS_PREVIEWING) {
+        ctx.fontFileName = PREVIEW_FONT_NAME;
+        ctx.fontInternalName = PREVIEW_INTERNAL_NAME;
+    } else {
+        ctx.fontFileName = FONT_FILE_NAME;
+        ctx.fontInternalName = FONT_INTERNAL_NAME;
+    }
+    
+    const char* colorStr = IS_COLOR_PREVIEWING ? PREVIEW_COLOR : CLOCK_TEXT_COLOR;
+    ctx.textColor = ParseColorString(colorStr);
+    ctx.fontScaleFactor = CLOCK_FONT_SCALE_FACTOR;
+    
+    return ctx;
+}
+
+/**
+ * @brief Create font for timer display
+ * @param ctx Rendering context
+ * @return Font handle (caller must delete)
+ */
+static HFONT CreateTimerFont(const RenderContext* ctx) {
+    wchar_t fontNameW[FONT_NAME_MAX_LEN];
+    MultiByteToWideChar(CP_UTF8, 0, ctx->fontInternalName, -1, fontNameW, FONT_NAME_MAX_LEN);
+    
+    return CreateFontW(
+        -(int)(CLOCK_BASE_FONT_SIZE * ctx->fontScaleFactor),
         0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_TT_PRECIS,
-        CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,   
+        CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,
         VARIABLE_PITCH | FF_SWISS,
-        fontInternalNameW
+        fontNameW
     );
-    HFONT oldFont = (HFONT)SelectObject(memDC, hFont);
+}
 
-    /** Configure text rendering parameters */
-    SetTextAlign(memDC, TA_LEFT | TA_TOP);
-    SetTextCharacterExtra(memDC, 0);
-    SetMapMode(memDC, MM_TEXT);
+/* ============================================================================
+ * Drawing Functions
+ * ============================================================================ */
 
-    /** Enable color management and reset layout */
-    DWORD quality = SetICMMode(memDC, ICM_ON);
-    SetLayout(memDC, 0);
+/**
+ * @brief Fill window background
+ * @param hdc Device context
+ * @param rect Rectangle to fill
+ * @param editMode TRUE if in edit mode
+ */
+static void FillBackground(HDC hdc, const RECT* rect, BOOL editMode) {
+    COLORREF bgColor = editMode ? RGB(20, 20, 20) : RGB(0, 0, 0);
+    HBRUSH hBrush = CreateSolidBrush(bgColor);
+    FillRect(hdc, rect, hBrush);
+    DeleteObject(hBrush);
+}
 
-    /** Parse text color from configuration */
-    int r = 255, g = 255, b = 255;
-    const char* colorToUse = IS_COLOR_PREVIEWING ? PREVIEW_COLOR : CLOCK_TEXT_COLOR;
+/**
+ * @brief Render text with outline effect
+ * @param hdc Device context
+ * @param text Text to render
+ * @param x X coordinate
+ * @param y Y coordinate
+ */
+static void RenderTextWithOutline(HDC hdc, const wchar_t* text, int x, int y) {
+    size_t textLen = wcslen(text);
     
-    if (strlen(colorToUse) > 0) {
-        if (colorToUse[0] == '#') {
-            /** Parse hex color format (#RRGGBB) */
-            if (strlen(colorToUse) == 7) {
-                sscanf(colorToUse + 1, "%02x%02x%02x", &r, &g, &b);
-            }
-        } else {
-            /** Parse RGB comma-separated format */
-            sscanf(colorToUse, "%d,%d,%d", &r, &g, &b);
-        }
-    }
-    SetTextColor(memDC, RGB(r, g, b));
+    SetTextColor(hdc, RGB(0, 0, 0));
+    TextOutW(hdc, x - 1, y, text, (int)textLen);
+    TextOutW(hdc, x + 1, y, text, (int)textLen);
+    TextOutW(hdc, x, y - 1, text, (int)textLen);
+    TextOutW(hdc, x, y + 1, text, (int)textLen);
+    
+    SetTextColor(hdc, RGB(255, 255, 255));
+    TextOutW(hdc, x, y, text, (int)textLen);
+}
 
-    /** Fill background based on edit mode */
-    if (CLOCK_EDIT_MODE) {
-        /** Dark gray background for edit mode visibility */
-        HBRUSH hBrush = CreateSolidBrush(RGB(20, 20, 20));
-        FillRect(memDC, &rect, hBrush);
-        DeleteObject(hBrush);
+/**
+ * @brief Render text with bold effect
+ * @param hdc Device context
+ * @param text Text to render
+ * @param x X coordinate
+ * @param y Y coordinate
+ * @param color Text color
+ */
+static void RenderTextBold(HDC hdc, const wchar_t* text, int x, int y, COLORREF color) {
+    size_t textLen = wcslen(text);
+    SetTextColor(hdc, color);
+    
+    for (int i = 0; i < TEXT_RENDER_PASSES; i++) {
+        TextOutW(hdc, x, y, text, (int)textLen);
+    }
+}
+
+/**
+ * @brief Render time text to device context
+ * @param hdc Device context
+ * @param rect Client rectangle
+ * @param text Text to render
+ * @param ctx Rendering context
+ * @param editMode TRUE if in edit mode
+ */
+static void RenderText(HDC hdc, const RECT* rect, const wchar_t* text, const RenderContext* ctx, BOOL editMode) {
+    SIZE textSize;
+    GetTextExtentPoint32W(hdc, text, (int)wcslen(text), &textSize);
+    
+    int x = (rect->right - textSize.cx) / 2;
+    int y = (rect->bottom - textSize.cy) / 2;
+    
+    if (editMode) {
+        RenderTextWithOutline(hdc, text, x, y);
     } else {
-        /** Black background for transparent effect */
-        HBRUSH hBrush = CreateSolidBrush(RGB(0, 0, 0));
-        FillRect(memDC, &rect, hBrush);
-        DeleteObject(hBrush);
+        RenderTextBold(hdc, text, x, y, ctx->textColor);
     }
+}
 
-    /** Render text if available */
-    if (wcslen(time_text) > 0) {
-        /** Calculate text dimensions */
+/**
+ * @brief Setup double buffering context
+ * @param hdc Target device context
+ * @param rect Client rectangle
+ * @param memDC Output memory DC
+ * @param memBitmap Output memory bitmap
+ * @param oldBitmap Output old bitmap
+ */
+static void SetupDoubleBuffer(HDC hdc, const RECT* rect, HDC* memDC, HBITMAP* memBitmap, HBITMAP* oldBitmap) {
+    *memDC = CreateCompatibleDC(hdc);
+    *memBitmap = CreateCompatibleBitmap(hdc, rect->right, rect->bottom);
+    *oldBitmap = (HBITMAP)SelectObject(*memDC, *memBitmap);
+    
+    SetGraphicsMode(*memDC, GM_ADVANCED);
+    SetBkMode(*memDC, TRANSPARENT);
+    SetStretchBltMode(*memDC, HALFTONE);
+    SetBrushOrgEx(*memDC, 0, 0, NULL);
+    SetTextAlign(*memDC, TA_LEFT | TA_TOP);
+    SetTextCharacterExtra(*memDC, 0);
+    SetMapMode(*memDC, MM_TEXT);
+    SetICMMode(*memDC, ICM_ON);
+    SetLayout(*memDC, 0);
+}
+
+/**
+ * @brief Adjust window size to fit text
+ * @param hwnd Window handle
+ * @param textSize Text dimensions
+ * @param rect Updated client rectangle
+ */
+static void AdjustWindowSize(HWND hwnd, const SIZE* textSize, RECT* rect) {
+    if (textSize->cx == (rect->right - rect->left) && 
+        textSize->cy == (rect->bottom - rect->top)) {
+        return;
+    }
+    
+    RECT windowRect;
+    GetWindowRect(hwnd, &windowRect);
+    
+    SetWindowPos(hwnd, NULL,
+        windowRect.left, windowRect.top,
+        textSize->cx + WINDOW_HORIZONTAL_PADDING,
+        textSize->cy + WINDOW_VERTICAL_PADDING,
+        SWP_NOZORDER | SWP_NOACTIVATE);
+    
+    GetClientRect(hwnd, rect);
+}
+
+/* ============================================================================
+ * Main Entry Point
+ * ============================================================================ */
+
+void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
+    wchar_t timeText[TIME_TEXT_MAX_LEN];
+    HDC hdc = ps->hdc;
+    RECT rect;
+    GetClientRect(hwnd, &rect);
+    
+    HDC memDC;
+    HBITMAP memBitmap, oldBitmap;
+    SetupDoubleBuffer(hdc, &rect, &memDC, &memBitmap, &oldBitmap);
+    
+    GetTimeText(timeText, TIME_TEXT_MAX_LEN);
+    
+    RenderContext ctx = CreateRenderContext();
+    HFONT hFont = CreateTimerFont(&ctx);
+    HFONT oldFont = (HFONT)SelectObject(memDC, hFont);
+    
+    FillBackground(memDC, &rect, CLOCK_EDIT_MODE);
+    
+    if (wcslen(timeText) > 0) {
         SIZE textSize;
-        GetTextExtentPoint32W(memDC, time_text, wcslen(time_text), &textSize);
-
-        /** Resize window to fit text if needed */
-        if (textSize.cx != (rect.right - rect.left) || 
-            textSize.cy != (rect.bottom - rect.top)) {
-            RECT windowRect;
-            GetWindowRect(hwnd, &windowRect);
-            
-            /** Adjust window size with padding */
-            SetWindowPos(hwnd, NULL,
-                windowRect.left, windowRect.top,
-                textSize.cx + WINDOW_HORIZONTAL_PADDING, 
-                textSize.cy + WINDOW_VERTICAL_PADDING, 
-                SWP_NOZORDER | SWP_NOACTIVATE);
-            GetClientRect(hwnd, &rect);
-        }
-
-        /** Center text in window */
-        int x = (rect.right - textSize.cx) / 2;
-        int y = (rect.bottom - textSize.cy) / 2;
-
-        /** Render text with different effects based on mode */
-        if (CLOCK_EDIT_MODE) {
-            /** Edit mode: white text with black outline */
-            SetTextColor(memDC, RGB(255, 255, 255));
-            
-            /** Draw black outline in four directions */
-            SetTextColor(memDC, RGB(0, 0, 0));
-            TextOutW(memDC, x-1, y, time_text, wcslen(time_text));
-            TextOutW(memDC, x+1, y, time_text, wcslen(time_text));
-            TextOutW(memDC, x, y-1, time_text, wcslen(time_text));
-            TextOutW(memDC, x, y+1, time_text, wcslen(time_text));
-            
-            /** Draw white text on top */
-            SetTextColor(memDC, RGB(255, 255, 255));
-            TextOutW(memDC, x, y, time_text, wcslen(time_text));
-        } else {
-            /** Normal mode: multiple passes for bold effect */
-            SetTextColor(memDC, RGB(r, g, b));
-            
-            /** Render text multiple times for thickness */
-            for (int i = 0; i < 8; i++) {
-                TextOutW(memDC, x, y, time_text, wcslen(time_text));
-            }
-        }
+        GetTextExtentPoint32W(memDC, timeText, (int)wcslen(timeText), &textSize);
+        
+        AdjustWindowSize(hwnd, &textSize, &rect);
+        RenderText(memDC, &rect, timeText, &ctx, CLOCK_EDIT_MODE);
     }
-
-    /** Copy double buffer to screen */
+    
     BitBlt(hdc, 0, 0, rect.right, rect.bottom, memDC, 0, 0, SRCCOPY);
-
-    /** Clean up GDI resources */
+    
     SelectObject(memDC, oldFont);
     DeleteObject(hFont);
     SelectObject(memDC, oldBitmap);
