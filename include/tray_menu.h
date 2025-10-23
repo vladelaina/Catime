@@ -1,8 +1,14 @@
 /**
  * @file tray_menu.h
- * @brief System tray context menu definitions
+ * @brief Refactored system tray context menu system
+ * @version 2.0 - Enhanced with improved modularity
  * 
- * Menu item identifiers and functions for tray menu management
+ * Provides menu item identifiers and core menu building functions.
+ * Internal implementation now features:
+ * - Unified configuration reading helpers
+ * - Path conversion utilities to eliminate duplication
+ * - Extracted animation menu building logic
+ * - Modular helper functions for better maintainability
  */
 
 #ifndef CLOCK_TRAY_MENU_H
@@ -94,14 +100,34 @@
 #define CLOCK_IDM_ANIM_SPEED_TIMER 2212          /**< Use timer progress as speed metric */
 
 /**
- * @brief Display tray context menu
+ * @brief Display tray context menu (left-click)
  * @param hwnd Parent window handle
+ * 
+ * @details Shows timer control menu with dynamic options:
+ * - Timer management (pause/resume, restart, visibility)
+ * - Time display settings (24h format, seconds)
+ * - Pomodoro timer presets loaded from configuration
+ * - Count-up timer and countdown timer options
+ * 
+ * Configuration is loaded dynamically for each display.
  */
 void ShowContextMenu(HWND hwnd);
 
 /**
- * @brief Display color selection submenu
+ * @brief Display comprehensive configuration menu (right-click)
  * @param hwnd Parent window handle
+ * 
+ * @details Shows extensive configuration options:
+ * - Edit mode toggle
+ * - Timeout actions (message, file, website, system actions)
+ * - Preset management (countdown, startup, notifications)
+ * - Time format options (default, zero-padded, milliseconds)
+ * - Font selection with recursive folder scanning
+ * - Color customization (predefined + custom)
+ * - Animation selection (GIF/WebP with speed metrics)
+ * - Help and language selection
+ * 
+ * Uses helper functions for modular menu construction.
  */
 void ShowColorMenu(HWND hwnd);
 

@@ -1,7 +1,13 @@
 /**
  * @file tray_menu.c
- * @brief Complex popup menu system for system tray right-click and left-click menus
- * Handles extensive configuration options, font/color selection, and multilingual support
+ * @brief Refactored system tray menu system with improved modularity
+ * @version 2.0 - Enhanced maintainability through function decomposition
+ * 
+ * Major improvements:
+ * - Extracted nested functions to top level for clarity
+ * - Unified configuration reading through helper functions
+ * - Separated menu building logic into focused modules
+ * - Reduced code duplication via path conversion helpers
  */
 #include <windows.h>
 #include <shellapi.h>
@@ -21,7 +27,11 @@
 #include "../include/tray_animation.h"
 #include "../include/startup.h"
 
-/** @brief Represents a file or folder entry for sorting animation menus. */
+/* ============================================================================
+ * Type Definitions
+ * ============================================================================ */
+
+/** @brief Represents a file or folder entry for sorting animation menus */
 typedef struct {
     wchar_t name[MAX_PATH];
     char rel_path_utf8[MAX_PATH]; /** Relative path from animations root */
@@ -35,9 +45,145 @@ typedef struct {
     wchar_t displayName[MAX_PATH];
     BOOL is_dir;
     BOOL isCurrentFont;
-    int subFolderStatus; /** For directories: 0=no content, 1=has content, 2=contains current font */
+    int subFolderStatus; /** 0=no content, 1=has content, 2=contains current font */
     HMENU hSubMenu; /** For directories: submenu handle */
 } FontEntry;
+
+/* ============================================================================
+ * Helper Functions - Path Conversion
+ * ============================================================================ */
+
+/**
+ * @brief Convert UTF-8 path to wide character path
+ * @param utf8 Source UTF-8 path
+ * @param wide Destination wide character buffer
+ * @param wideSize Size of wide buffer in wchar_t count
+ * @return TRUE on success
+ */
+static inline BOOL PathUtf8ToWide(const char* utf8, wchar_t* wide, size_t wideSize) {
+    if (!utf8 || !wide || wideSize == 0) return FALSE;
+    return MultiByteToWideChar(CP_UTF8, 0, utf8, -1, wide, (int)wideSize) > 0;
+}
+
+/**
+ * @brief Convert wide character path to UTF-8 path
+ * @param wide Source wide character path
+ * @param utf8 Destination UTF-8 buffer
+ * @param utf8Size Size of UTF-8 buffer in bytes
+ * @return TRUE on success
+ */
+static inline BOOL PathWideToUtf8(const wchar_t* wide, char* utf8, size_t utf8Size) {
+    if (!wide || !utf8 || utf8Size == 0) return FALSE;
+    return WideCharToMultiByte(CP_UTF8, 0, wide, -1, utf8, (int)utf8Size, NULL, NULL) > 0;
+}
+
+/* ============================================================================
+ * Helper Functions - Configuration Reading
+ * ============================================================================ */
+
+/**
+ * @brief Get wide-character path to config.ini file
+ * @param wPath Output buffer for wide path
+ * @param size Buffer size in wchar_t count
+ * @return TRUE on success
+ */
+static BOOL GetConfigPathWide(wchar_t* wPath, size_t size) {
+    if (!wPath || size == 0) return FALSE;
+    char configPath[MAX_PATH];
+    GetConfigPath(configPath, MAX_PATH);
+    return PathUtf8ToWide(configPath, wPath, size);
+}
+
+/**
+ * @brief Read single configuration value from config.ini
+ * @param key Configuration key to search for
+ * @param outBuffer Output buffer for value
+ * @param bufferSize Size of output buffer
+ * @return TRUE if key was found and read
+ */
+static BOOL ReadConfigValue(const char* key, char* outBuffer, size_t bufferSize) {
+    if (!key || !outBuffer || bufferSize == 0) return FALSE;
+    
+    wchar_t wConfigPath[MAX_PATH];
+    if (!GetConfigPathWide(wConfigPath, MAX_PATH)) return FALSE;
+    
+    FILE* file = _wfopen(wConfigPath, L"r");
+    if (!file) return FALSE;
+    
+    size_t keyLen = strlen(key);
+    char line[256];
+    BOOL found = FALSE;
+    
+    while (fgets(line, sizeof(line), file)) {
+        if (strncmp(line, key, keyLen) == 0 && line[keyLen] == '=') {
+            /* Remove trailing newline */
+            char* value = line + keyLen + 1;
+            size_t len = strlen(value);
+            while (len > 0 && (value[len-1] == '\n' || value[len-1] == '\r')) {
+                value[--len] = '\0';
+            }
+            strncpy(outBuffer, value, bufferSize - 1);
+            outBuffer[bufferSize - 1] = '\0';
+            found = TRUE;
+            break;
+        }
+    }
+    
+    fclose(file);
+    return found;
+}
+
+/**
+ * @brief Load Pomodoro configuration from config.ini
+ * Updates global POMODORO_TIMES array and related settings
+ */
+static void LoadPomodoroConfig(void) {
+    extern int POMODORO_TIMES[];
+    extern int POMODORO_TIMES_COUNT;
+    extern int POMODORO_WORK_TIME;
+    extern int POMODORO_SHORT_BREAK;
+    extern int POMODORO_LONG_BREAK;
+    extern int POMODORO_LOOP_COUNT;
+    
+    wchar_t wConfigPath[MAX_PATH];
+    if (!GetConfigPathWide(wConfigPath, MAX_PATH)) return;
+    
+    FILE* file = _wfopen(wConfigPath, L"r");
+    if (!file) return;
+    
+    POMODORO_TIMES_COUNT = 0;
+    char line[256];
+    
+    while (fgets(line, sizeof(line), file)) {
+        if (strncmp(line, "POMODORO_TIME_OPTIONS=", 22) == 0) {
+            char* options = line + 22;
+            char* token = strtok(options, ",");
+            int index = 0;
+            
+            while (token && index < MAX_POMODORO_TIMES) {
+                POMODORO_TIMES[index++] = atoi(token);
+                token = strtok(NULL, ",");
+            }
+            
+            POMODORO_TIMES_COUNT = index;
+            
+            /* Update default Pomodoro intervals */
+            if (index > 0) POMODORO_WORK_TIME = POMODORO_TIMES[0];
+            if (index > 1) POMODORO_SHORT_BREAK = POMODORO_TIMES[1];
+            if (index > 2) POMODORO_LONG_BREAK = POMODORO_TIMES[2];
+        }
+        else if (strncmp(line, "POMODORO_LOOP_COUNT=", 20) == 0) {
+            sscanf(line, "POMODORO_LOOP_COUNT=%d", &POMODORO_LOOP_COUNT);
+            if (POMODORO_LOOP_COUNT < 1) POMODORO_LOOP_COUNT = 1;
+        }
+    }
+    
+    fclose(file);
+}
+
+/* ============================================================================
+ * Helper Functions - Natural Sorting
+ * ============================================================================ */
 
 /** @brief Natural string compare that sorts numeric substrings by value (e.g., 2 < 10). */
 static int NaturalCompareW(const wchar_t* a, const wchar_t* b) {
@@ -125,7 +271,113 @@ static BOOL IsAnimationLeafFolderW(const wchar_t* folderPathW) {
     return !hasSubItems;
 }
 
-/** @brief Timer state and display configuration externals */
+/* ============================================================================
+ * Helper Functions - Animation Menu Building
+ * ============================================================================ */
+
+/**
+ * @brief Recursively build animation folder menu hierarchy
+ * @param parentMenu Parent menu to append items to
+ * @param folderPathW Wide-character folder path
+ * @param folderPathUtf8 UTF-8 folder path (relative)
+ * @param nextIdPtr Pointer to next available menu ID
+ * @param currentAnim Current animation name for checkmark
+ * @return TRUE if subtree contains the current animation
+ * 
+ * Scans folder for animations and subfolders, building nested menus.
+ * Leaf folders become menu items, branch folders become submenus.
+ */
+static BOOL BuildAnimationFolderMenu(HMENU parentMenu, const wchar_t* folderPathW, 
+                                     const char* folderPathUtf8, UINT* nextIdPtr, 
+                                     const char* currentAnim) {
+    AnimationEntry* entries = (AnimationEntry*)malloc(sizeof(AnimationEntry) * MAX_TRAY_FRAMES);
+    if (!entries) return FALSE;
+    int entryCount = 0;
+    
+    wchar_t wSearch[MAX_PATH] = {0};
+    _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s\\*", folderPathW);
+    
+    WIN32_FIND_DATAW ffd;
+    HANDLE hFind = FindFirstFileW(wSearch, &ffd);
+    if (hFind == INVALID_HANDLE_VALUE) {
+        free(entries);
+        return FALSE;
+    }
+    
+    do {
+        if (wcscmp(ffd.cFileName, L".") == 0 || wcscmp(ffd.cFileName, L"..") == 0) continue;
+        if (entryCount >= MAX_TRAY_FRAMES) break;
+        
+        AnimationEntry* e = &entries[entryCount];
+        e->is_dir = (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+        wcsncpy(e->name, ffd.cFileName, MAX_PATH - 1);
+        e->name[MAX_PATH - 1] = L'\0';
+        
+        char itemUtf8[MAX_PATH] = {0};
+        PathWideToUtf8(ffd.cFileName, itemUtf8, MAX_PATH);
+        if (folderPathUtf8 && folderPathUtf8[0] != '\0') {
+            _snprintf_s(e->rel_path_utf8, MAX_PATH, _TRUNCATE, "%s\\%s", folderPathUtf8, itemUtf8);
+        } else {
+            _snprintf_s(e->rel_path_utf8, MAX_PATH, _TRUNCATE, "%s", itemUtf8);
+        }
+        
+        if (e->is_dir) {
+            entryCount++;
+        } else {
+            wchar_t* ext = wcsrchr(e->name, L'.');
+            if (ext && (_wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0 ||
+                        _wcsicmp(ext, L".ico") == 0 || _wcsicmp(ext, L".png") == 0 ||
+                        _wcsicmp(ext, L".bmp") == 0 || _wcsicmp(ext, L".jpg") == 0 ||
+                        _wcsicmp(ext, L".jpeg") == 0 || _wcsicmp(ext, L".tif") == 0 ||
+                        _wcsicmp(ext, L".tiff") == 0)) {
+                entryCount++;
+            }
+        }
+    } while (FindNextFileW(hFind, &ffd));
+    FindClose(hFind);
+    
+    if (entryCount == 0) {
+        free(entries);
+        return FALSE;
+    }
+    qsort(entries, entryCount, sizeof(AnimationEntry), CompareAnimationEntries);
+    
+    BOOL subtreeHasCurrent = FALSE;
+    for (int i = 0; i < entryCount; ++i) {
+        AnimationEntry* e = &entries[i];
+        if (e->is_dir) {
+            wchar_t wSubFolderPath[MAX_PATH] = {0};
+            _snwprintf_s(wSubFolderPath, MAX_PATH, _TRUNCATE, L"%s\\%s", folderPathW, e->name);
+            
+            if (IsAnimationLeafFolderW(wSubFolderPath)) {
+                /* Leaf folder: add as clickable item */
+                UINT flags = MF_STRING | (currentAnim && _stricmp(e->rel_path_utf8, currentAnim) == 0 ? MF_CHECKED : 0);
+                AppendMenuW(parentMenu, flags, (*nextIdPtr)++, e->name);
+                if (flags & MF_CHECKED) subtreeHasCurrent = TRUE;
+            } else {
+                /* Branch folder: create submenu */
+                HMENU hSubMenu = CreatePopupMenu();
+                BOOL childHas = BuildAnimationFolderMenu(hSubMenu, wSubFolderPath, e->rel_path_utf8, nextIdPtr, currentAnim);
+                UINT folderFlags = MF_POPUP | (childHas ? MF_CHECKED : 0);
+                if (childHas) subtreeHasCurrent = TRUE;
+                AppendMenuW(parentMenu, folderFlags, (UINT_PTR)hSubMenu, e->name);
+            }
+        } else {
+            /* File item */
+            UINT flags = MF_STRING | (currentAnim && _stricmp(e->rel_path_utf8, currentAnim) == 0 ? MF_CHECKED : 0);
+            AppendMenuW(parentMenu, flags, (*nextIdPtr)++, e->name);
+            if (flags & MF_CHECKED) subtreeHasCurrent = TRUE;
+        }
+    }
+    free(entries);
+    return subtreeHasCurrent;
+}
+
+/* ============================================================================
+ * External Declarations - Timer State and Configuration
+ * ============================================================================ */
+
+/** @brief Timer state and display configuration */
 extern BOOL CLOCK_SHOW_CURRENT_TIME;
 extern BOOL CLOCK_USE_24HOUR;
 extern BOOL CLOCK_SHOW_SECONDS;
@@ -148,7 +400,7 @@ extern BOOL CLOCK_WINDOW_TOPMOST;
 extern TimeFormatType CLOCK_TIME_FORMAT;
 extern BOOL CLOCK_SHOW_MILLISECONDS;
 
-/** @brief Pomodoro technique configuration externals */
+/** @brief Pomodoro technique configuration */
 extern int POMODORO_WORK_TIME;
 extern int POMODORO_SHORT_BREAK;
 extern int POMODORO_LONG_BREAK;
@@ -162,6 +414,7 @@ extern wchar_t CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH];
 extern int current_pomodoro_time_index;
 extern POMODORO_PHASE current_pomodoro_phase;
 
+/** @brief External utility functions */
 extern void GetConfigPath(char* path, size_t size);
 extern void ClearColorOptions(void);
 extern void AddColorOption(const char* color);
@@ -192,27 +445,12 @@ static BOOL GetFontsFolderWideFromConfig(wchar_t* out, size_t size) {
 
 /**
  * @brief Read timeout action setting from configuration file
- * Parses TIMEOUT_ACTION value and updates global timeout action type
+ * Uses unified config reading helper for consistency
  */
 void ReadTimeoutActionFromConfig() {
-    char configPath[MAX_PATH];
-    GetConfigPath(configPath, MAX_PATH);
-    
-    wchar_t wconfigPath[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, configPath, -1, wconfigPath, MAX_PATH);
-    
-    FILE *configFile = _wfopen(wconfigPath, L"r");
-    if (configFile) {
-        char line[256];
-        while (fgets(line, sizeof(line), configFile)) {
-            if (strncmp(line, "TIMEOUT_ACTION=", 15) == 0) {
-                int action = 0;
-                sscanf(line, "TIMEOUT_ACTION=%d", &action);
-                CLOCK_TIMEOUT_ACTION = (TimeoutActionType)action;
-                break;
-            }
-        }
-        fclose(configFile);
+    char value[32] = {0};
+    if (ReadConfigValue("TIMEOUT_ACTION", value, sizeof(value))) {
+        CLOCK_TIMEOUT_ACTION = (TimeoutActionType)atoi(value);
     }
 }
 
@@ -390,22 +628,7 @@ void ShowColorMenu(HWND hwnd) {
     HMENU hStartupSettingsMenu = CreatePopupMenu();
 
     char currentStartupMode[20] = "COUNTDOWN";
-    char configPath[MAX_PATH];  
-    GetConfigPath(configPath, MAX_PATH);
-    wchar_t wconfigPath[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, configPath, -1, wconfigPath, MAX_PATH);
-    
-    FILE *configFile = _wfopen(wconfigPath, L"r");  
-    if (configFile) {
-        char line[256];
-        while (fgets(line, sizeof(line), configFile)) {
-            if (strncmp(line, "STARTUP_MODE=", 13) == 0) {
-                sscanf(line, "STARTUP_MODE=%19s", currentStartupMode);
-                break;
-            }
-        }
-        fclose(configFile);
-    }
+    ReadConfigValue("STARTUP_MODE", currentStartupMode, sizeof(currentStartupMode));
     
     AppendMenuW(hStartupSettingsMenu, MF_STRING | 
                 (strcmp(currentStartupMode, "COUNTDOWN") == 0 ? MF_CHECKED : 0),
@@ -765,92 +988,8 @@ void ShowColorMenu(HWND hwnd) {
                     CLOCK_IDM_ANIMATIONS_USE_MEM, GetLocalizedString(L"内存百分比", L"Memory Percent"));
         AppendMenuW(hAnimMenu, MF_SEPARATOR, 0, NULL);
 
-        /** Recursive helper function to build menu for a folder; returns TRUE if subtree contains currentAnim */
-        BOOL BuildFolderMenuRecursive(HMENU parentMenu, const wchar_t* folderPathW, const char* folderPathUtf8, UINT* nextIdPtr, const char* currentAnim) {
-            AnimationEntry* entries = (AnimationEntry*)malloc(sizeof(AnimationEntry) * MAX_TRAY_FRAMES);
-            if (!entries) return FALSE;
-            int entryCount = 0;
- 
-             wchar_t wSearch[MAX_PATH] = {0};
-             _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s\\*", folderPathW);
-             
-             WIN32_FIND_DATAW ffd;
-             HANDLE hFind = FindFirstFileW(wSearch, &ffd);
-            if (hFind == INVALID_HANDLE_VALUE) {
-                free(entries);
-                return FALSE;
-            }
- 
-             do {
-                 if (wcscmp(ffd.cFileName, L".") == 0 || wcscmp(ffd.cFileName, L"..") == 0) continue;
-                 if (entryCount >= MAX_TRAY_FRAMES) break;
- 
-                 AnimationEntry* e = &entries[entryCount];
-                 e->is_dir = (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
-                 wcsncpy(e->name, ffd.cFileName, MAX_PATH - 1);
-                 e->name[MAX_PATH - 1] = L'\0';
- 
-                 char itemUtf8[MAX_PATH] = {0};
-                 WideCharToMultiByte(CP_UTF8, 0, ffd.cFileName, -1, itemUtf8, MAX_PATH, NULL, NULL);
-                 if (folderPathUtf8 && folderPathUtf8[0] != '\0') {
-                     _snprintf_s(e->rel_path_utf8, MAX_PATH, _TRUNCATE, "%s\\%s", folderPathUtf8, itemUtf8);
-                 } else {
-                     _snprintf_s(e->rel_path_utf8, MAX_PATH, _TRUNCATE, "%s", itemUtf8);
-                 }
-                 
-                if (e->is_dir) {
-                     entryCount++;
-                 } else {
-                    wchar_t* ext = wcsrchr(e->name, L'.');
-                    if (ext && (_wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0 ||
-                                _wcsicmp(ext, L".ico") == 0 || _wcsicmp(ext, L".png") == 0 ||
-                                _wcsicmp(ext, L".bmp") == 0 || _wcsicmp(ext, L".jpg") == 0 ||
-                                _wcsicmp(ext, L".jpeg") == 0 || _wcsicmp(ext, L".tif") == 0 ||
-                                _wcsicmp(ext, L".tiff") == 0)) {
-                         entryCount++;
-                     }
-                 }
-             } while (FindNextFileW(hFind, &ffd));
-             FindClose(hFind);
- 
-             if (entryCount == 0) {
-                 free(entries);
-                 return FALSE;
-             }
-             qsort(entries, entryCount, sizeof(AnimationEntry), CompareAnimationEntries);
- 
-             BOOL subtreeHasCurrent = FALSE;
-             for (int i = 0; i < entryCount; ++i) {
-                 AnimationEntry* e = &entries[i];
-                 if (e->is_dir) {
-                     wchar_t wSubFolderPath[MAX_PATH] = {0};
-                     _snwprintf_s(wSubFolderPath, MAX_PATH, _TRUNCATE, L"%s\\%s", folderPathW, e->name);
-                     
-                     if (IsAnimationLeafFolderW(wSubFolderPath)) {
-                         // Leaf folder, add as a clickable item.
-                         UINT flags = MF_STRING | (currentAnim && _stricmp(e->rel_path_utf8, currentAnim) == 0 ? MF_CHECKED : 0);
-                         AppendMenuW(parentMenu, flags, (*nextIdPtr)++, e->name);
-                         if (flags & MF_CHECKED) subtreeHasCurrent = TRUE;
-                     } else {
-                         // Branch folder, create a submenu.
-                         HMENU hSubMenu = CreatePopupMenu();
-                         BOOL childHas = BuildFolderMenuRecursive(hSubMenu, wSubFolderPath, e->rel_path_utf8, nextIdPtr, currentAnim);
-                         UINT folderFlags = MF_POPUP | (childHas ? MF_CHECKED : 0);
-                         if (childHas) subtreeHasCurrent = TRUE;
-                         AppendMenuW(parentMenu, folderFlags, (UINT_PTR)hSubMenu, e->name);
-                     }
-                } else {
-                     // File item.
-                     UINT flags = MF_STRING | (currentAnim && _stricmp(e->rel_path_utf8, currentAnim) == 0 ? MF_CHECKED : 0);
-                     AppendMenuW(parentMenu, flags, (*nextIdPtr)++, e->name);
-                     if (flags & MF_CHECKED) subtreeHasCurrent = TRUE;
-                 }
-             }
-             free(entries);
-             return subtreeHasCurrent;
-         }
-
-        (void)BuildFolderMenuRecursive(hAnimMenu, wRoot, "", &nextId, currentAnim);
+        /* Build animation folder menu recursively */
+        (void)BuildAnimationFolderMenu(hAnimMenu, wRoot, "", &nextId, currentAnim);
         
         // Fallback message if no items were added at all.
         if (GetMenuItemCount(hAnimMenu) <= 4) { // Logo, CPU%, MEM% and separator are always there
@@ -1002,46 +1141,8 @@ void ShowContextMenu(HWND hwnd) {
                (UINT_PTR)hTimeMenu,
                GetLocalizedString(L"时间显示", L"Time Display"));
 
-    /** Load Pomodoro configuration from file for dynamic menu generation */
-    char configPath[MAX_PATH];
-    GetConfigPath(configPath, MAX_PATH);
-    wchar_t wconfigPath[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, configPath, -1, wconfigPath, MAX_PATH);
-    
-    FILE *configFile = _wfopen(wconfigPath, L"r");
-    POMODORO_TIMES_COUNT = 0;
-    
-    if (configFile) {
-        char line[256];
-        while (fgets(line, sizeof(line), configFile)) {
-            /** Parse comma-separated Pomodoro time options */
-            if (strncmp(line, "POMODORO_TIME_OPTIONS=", 22) == 0) {
-                char* options = line + 22;
-                char* token;
-                int index = 0;
-                
-                token = strtok(options, ",");
-                while (token && index < MAX_POMODORO_TIMES) {
-                    POMODORO_TIMES[index++] = atoi(token);
-                    token = strtok(NULL, ",");
-                }
-                
-                POMODORO_TIMES_COUNT = index;
-                
-                /** Update default Pomodoro intervals from parsed options */
-                if (index > 0) {
-                    POMODORO_WORK_TIME = POMODORO_TIMES[0];
-                    if (index > 1) POMODORO_SHORT_BREAK = POMODORO_TIMES[1];
-                    if (index > 2) POMODORO_LONG_BREAK = POMODORO_TIMES[2];
-                }
-            }
-            else if (strncmp(line, "POMODORO_LOOP_COUNT=", 20) == 0) {
-                sscanf(line, "POMODORO_LOOP_COUNT=%d", &POMODORO_LOOP_COUNT);
-                if (POMODORO_LOOP_COUNT < 1) POMODORO_LOOP_COUNT = 1;
-            }
-        }
-        fclose(configFile);
-    }
+    /* Load Pomodoro configuration for menu generation */
+    LoadPomodoroConfig();
 
     HMENU hPomodoroMenu = CreatePopupMenu();
     
