@@ -1,7 +1,10 @@
 /**
  * @file shortcut_checker.c
  * @brief Desktop shortcut management for package manager installations
+ * @version 2.0 - Refactored for better maintainability and reduced code duplication
+ * 
  * Handles auto-creation and maintenance of shortcuts for Store/WinGet installs
+ * with data-driven package detection and unified COM object management.
  */
 #include "../include/shortcut_checker.h"
 #include "../include/config.h"
@@ -11,10 +14,70 @@
 #include <objbase.h>
 #include <objidl.h>
 #include <shlguid.h>
+#include <shobjidl.h>
 #include <stdbool.h>
 #include <string.h>
 
-#include <shobjidl.h>
+/* ============================================================================
+ * Constants
+ * ============================================================================ */
+
+/** @brief Shortcut filename */
+#define SHORTCUT_FILENAME "Catime.lnk"
+
+/** @brief Shortcut description text */
+#define SHORTCUT_DESCRIPTION L"A very useful timer (Pomodoro Clock)"
+
+/** @brief Microsoft Store installation path prefix */
+#define STORE_PATH_PREFIX "C:\\Program Files\\WindowsApps"
+
+/** @brief WinGet standard installation path pattern */
+#define WINGET_PATH_PATTERN "\\AppData\\Local\\Microsoft\\WinGet\\Packages"
+
+/** @brief WinGet Microsoft subdirectory pattern */
+#define WINGET_MS_PATH_PATTERN "\\AppData\\Local\\Microsoft\\"
+
+/** @brief WinGet keyword for pattern matching */
+#define WINGET_KEYWORD "WinGet"
+
+/** @brief WinGet executable name pattern */
+#define WINGET_EXE_PATTERN "\\WinGet\\catime.exe"
+
+/* ============================================================================
+ * Data Structures
+ * ============================================================================ */
+
+/**
+ * @brief Package manager detection rule
+ * Data-driven approach for identifying managed installations
+ */
+typedef struct {
+    const char* pattern;           /**< Path pattern to match */
+    bool (*matcher)(const char*);  /**< Matching function (StartsWith or Contains) */
+    const char* description;       /**< Human-readable description */
+} PackageDetectionRule;
+
+/**
+ * @brief Shortcut check result codes
+ */
+typedef enum {
+    SHORTCUT_NOT_FOUND = 0,       /**< No shortcut exists */
+    SHORTCUT_POINTS_TO_CURRENT = 1, /**< Shortcut points to current executable */
+    SHORTCUT_POINTS_TO_OTHER = 2   /**< Shortcut points to different executable */
+} ShortcutStatus;
+
+/**
+ * @brief COM Shell Link wrapper for RAII-style resource management
+ */
+typedef struct {
+    IShellLinkW* shellLink;       /**< IShellLink interface pointer */
+    IPersistFile* persistFile;    /**< IPersistFile interface pointer */
+    bool initialized;             /**< Whether COM objects are valid */
+} ComShellLink;
+
+/* ============================================================================
+ * String Utility Functions
+ * ============================================================================ */
 
 /**
  * @brief Check if string starts with specified prefix
@@ -44,398 +107,543 @@ static bool Contains(const char* str, const char* substring) {
 }
 
 /**
- * @brief Detect if current executable is from Microsoft Store or WinGet
- * @param exe_path Output buffer for executable path
- * @param path_size Size of the output buffer
- * @return true if installed via Store or WinGet package managers
- * Uses path pattern matching to identify managed installations
+ * @brief Check if string contains both substrings
+ * @param str String to search in
+ * @param sub1 First substring
+ * @param sub2 Second substring
+ * @return true if both substrings are found
  */
-static bool IsStoreOrWingetInstall(char* exe_path, size_t path_size) {
-    wchar_t exe_path_w[MAX_PATH];
-    if (GetModuleFileNameW(NULL, exe_path_w, MAX_PATH) == 0) {
-        LOG_ERROR("Failed to get program path");
+static bool ContainsBoth(const char* str, const char* sub1, const char* sub2) {
+    return Contains(str, sub1) && Contains(str, sub2);
+}
+
+/* ============================================================================
+ * Character Encoding Conversion Functions
+ * ============================================================================ */
+
+/**
+ * @brief Convert wide string to UTF-8 multi-byte string
+ * @param wide_str Wide string to convert
+ * @param output Output buffer for UTF-8 string
+ * @param output_size Size of output buffer
+ * @return true on success
+ */
+static bool WideToUtf8(const wchar_t* wide_str, char* output, size_t output_size) {
+    int result = WideCharToMultiByte(CP_UTF8, 0, wide_str, -1, output, (int)output_size, NULL, NULL);
+    return result > 0;
+}
+
+/**
+ * @brief Convert UTF-8 multi-byte string to wide string
+ * @param utf8_str UTF-8 string to convert
+ * @param output Output buffer for wide string
+ * @param output_size Size of output buffer (in wchar_t count)
+ * @return true on success
+ */
+static bool Utf8ToWide(const char* utf8_str, wchar_t* output, size_t output_size) {
+    int result = MultiByteToWideChar(CP_UTF8, 0, utf8_str, -1, output, (int)output_size);
+    return result > 0;
+}
+
+/* ============================================================================
+ * HRESULT Error Handling Macros
+ * ============================================================================ */
+
+/**
+ * @brief Check HRESULT and log error if failed, then return from function
+ */
+#define CHECK_HR_RETURN(hr, msg, ret_val) \
+    do { \
+        if (FAILED(hr)) { \
+            LOG_ERROR(msg ", hr=0x%08X", (unsigned int)(hr)); \
+            return (ret_val); \
+        } \
+    } while(0)
+
+/**
+ * @brief Check HRESULT and log error if failed, then goto cleanup label
+ */
+#define CHECK_HR_GOTO(hr, msg, label) \
+    do { \
+        if (FAILED(hr)) { \
+            LOG_ERROR(msg ", hr=0x%08X", (unsigned int)(hr)); \
+            goto label; \
+        } \
+    } while(0)
+
+/**
+ * @brief Check HRESULT and log warning (non-fatal)
+ */
+#define CHECK_HR_WARN(hr, msg) \
+    do { \
+        if (FAILED(hr)) { \
+            LOG_WARNING(msg ", hr=0x%08X", (unsigned int)(hr)); \
+        } \
+    } while(0)
+
+/* ============================================================================
+ * COM Shell Link Management
+ * ============================================================================ */
+
+/**
+ * @brief Initialize COM Shell Link wrapper
+ * @param link Pointer to ComShellLink structure
+ * @return true on success
+ */
+static bool InitComShellLink(ComShellLink* link) {
+    HRESULT hr;
+    
+    link->shellLink = NULL;
+    link->persistFile = NULL;
+    link->initialized = false;
+    
+    hr = CoCreateInstance(&CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER,
+                          &IID_IShellLinkW, (void**)&link->shellLink);
+    CHECK_HR_RETURN(hr, "Failed to create IShellLink interface", false);
+    
+    hr = link->shellLink->lpVtbl->QueryInterface(link->shellLink, 
+                                                  &IID_IPersistFile, 
+                                                  (void**)&link->persistFile);
+    if (FAILED(hr)) {
+        LOG_ERROR("Failed to get IPersistFile interface, hr=0x%08X", (unsigned int)hr);
+        link->shellLink->lpVtbl->Release(link->shellLink);
+        link->shellLink = NULL;
         return false;
     }
     
-    WideCharToMultiByte(CP_UTF8, 0, exe_path_w, -1, exe_path, path_size, NULL, NULL);
+    link->initialized = true;
+    return true;
+}
+
+/**
+ * @brief Cleanup COM Shell Link wrapper
+ * @param link Pointer to ComShellLink structure
+ */
+static void CleanupComShellLink(ComShellLink* link) {
+    if (link->persistFile) {
+        link->persistFile->lpVtbl->Release(link->persistFile);
+        link->persistFile = NULL;
+    }
+    if (link->shellLink) {
+        link->shellLink->lpVtbl->Release(link->shellLink);
+        link->shellLink = NULL;
+    }
+    link->initialized = false;
+}
+
+/* ============================================================================
+ * Path Utility Functions
+ * ============================================================================ */
+
+/**
+ * @brief Get desktop directory path
+ * @param desktop_type CSIDL constant (CSIDL_DESKTOP or CSIDL_COMMON_DESKTOPDIRECTORY)
+ * @param output Output buffer for path
+ * @param output_size Size of output buffer
+ * @return true on success
+ */
+static bool GetDesktopPath(int desktop_type, char* output, size_t output_size) {
+    wchar_t path_w[MAX_PATH];
+    HRESULT hr = SHGetFolderPathW(NULL, desktop_type, NULL, 0, path_w);
     
-    
-    
-    /** Microsoft Store apps are installed under WindowsApps */
-    if (StartsWith(exe_path, "C:\\Program Files\\WindowsApps")) {
-        
-        return true;
+    if (FAILED(hr)) {
+        return false;
     }
     
-    /** Standard WinGet installation directory */
-    if (Contains(exe_path, "\\AppData\\Local\\Microsoft\\WinGet\\Packages")) {
-        
-        return true;
+    return WideToUtf8(path_w, output, output_size);
+}
+
+/**
+ * @brief Build shortcut path from desktop directory
+ * @param desktop_path Desktop directory path
+ * @param output Output buffer for shortcut path
+ * @param output_size Size of output buffer
+ */
+static void BuildShortcutPath(const char* desktop_path, char* output, size_t output_size) {
+    snprintf(output, output_size, "%s\\%s", desktop_path, SHORTCUT_FILENAME);
+}
+
+/**
+ * @brief Extract directory from full file path
+ * @param file_path Full file path
+ * @param output Output buffer for directory path
+ * @param output_size Size of output buffer
+ */
+static void ExtractDirectory(const char* file_path, char* output, size_t output_size) {
+    strncpy(output, file_path, output_size);
+    output[output_size - 1] = '\0';
+    
+    char* last_slash = strrchr(output, '\\');
+    if (last_slash) {
+        *last_slash = '\0';
+    }
+}
+
+/* ============================================================================
+ * Package Manager Detection
+ * ============================================================================ */
+
+/** @brief Package detection rules in priority order */
+static const PackageDetectionRule PACKAGE_RULES[] = {
+    { STORE_PATH_PREFIX,      StartsWith,   "Microsoft Store (WindowsApps)" },
+    { WINGET_PATH_PATTERN,    Contains,     "WinGet standard path" },
+    { WINGET_EXE_PATTERN,     Contains,     "WinGet executable pattern" },
+    { NULL,                   ContainsBoth, "WinGet Microsoft directory" } // Special case
+};
+
+static const size_t PACKAGE_RULES_COUNT = sizeof(PACKAGE_RULES) / sizeof(PACKAGE_RULES[0]);
+
+/**
+ * @brief Detect if current executable is from Microsoft Store or WinGet
+ * @param exe_path Current executable path
+ * @return true if installed via Store or WinGet package managers
+ */
+static bool IsPackageManagerInstall(const char* exe_path) {
+    for (size_t i = 0; i < PACKAGE_RULES_COUNT; i++) {
+        if (PACKAGE_RULES[i].pattern == NULL) {
+            // Special case: check both patterns
+            if (ContainsBoth(exe_path, WINGET_MS_PATH_PATTERN, WINGET_KEYWORD)) {
+                return true;
+            }
+        } else {
+            if (PACKAGE_RULES[i].matcher(exe_path, PACKAGE_RULES[i].pattern)) {
+                return true;
+            }
+        }
     }
     
-    /** Alternative WinGet installation patterns */
-    if (Contains(exe_path, "\\AppData\\Local\\Microsoft\\") && Contains(exe_path, "WinGet")) {
-        
-        return true;
+    return false;
+}
+
+/* ============================================================================
+ * Shortcut Operations
+ * ============================================================================ */
+
+/**
+ * @brief Check if file exists
+ * @param path_utf8 UTF-8 file path
+ * @return true if file exists
+ */
+static bool FileExists(const char* path_utf8) {
+    wchar_t path_w[MAX_PATH];
+    if (!Utf8ToWide(path_utf8, path_w, MAX_PATH)) {
+        return false;
+    }
+    return GetFileAttributesW(path_w) != INVALID_FILE_ATTRIBUTES;
+}
+
+/**
+ * @brief Read target path from existing shortcut
+ * @param shortcut_path Path to .lnk file
+ * @param target_output Output buffer for target path
+ * @param target_size Size of output buffer
+ * @return true on success
+ */
+static bool ReadShortcutTarget(const char* shortcut_path, char* target_output, size_t target_size) {
+    ComShellLink link;
+    wchar_t shortcut_path_w[MAX_PATH];
+    wchar_t target_w[MAX_PATH];
+    WIN32_FIND_DATAW find_data;
+    HRESULT hr;
+    bool success = false;
+    
+    if (!InitComShellLink(&link)) {
+        return false;
     }
     
-    /** Specific executable pattern for WinGet catime */
-    if (Contains(exe_path, "\\WinGet\\catime.exe")) {
-        
-        return true;
+    if (!Utf8ToWide(shortcut_path, shortcut_path_w, MAX_PATH)) {
+        CleanupComShellLink(&link);
+        return false;
     }
     
+    hr = link.persistFile->lpVtbl->Load(link.persistFile, shortcut_path_w, STGM_READ);
+    CHECK_HR_GOTO(hr, "Failed to load shortcut", cleanup);
+    
+    hr = link.shellLink->lpVtbl->GetPath(link.shellLink, target_w, MAX_PATH, &find_data, 0);
+    CHECK_HR_GOTO(hr, "Failed to get shortcut target path", cleanup);
+    
+    success = WideToUtf8(target_w, target_output, target_size);
+    
+cleanup:
+    CleanupComShellLink(&link);
+    return success;
+}
+
+/**
+ * @brief Find existing shortcut on user or public desktop
+ * @param shortcut_path_output Output buffer for found shortcut path
+ * @param path_size Size of output buffer
+ * @return true if shortcut found
+ */
+static bool FindExistingShortcut(char* shortcut_path_output, size_t path_size) {
+    char desktop_path[MAX_PATH];
+    char shortcut_path[MAX_PATH];
+    
+    // Check user desktop first
+    if (GetDesktopPath(CSIDL_DESKTOP, desktop_path, MAX_PATH)) {
+        BuildShortcutPath(desktop_path, shortcut_path, MAX_PATH);
+        if (FileExists(shortcut_path)) {
+            strncpy(shortcut_path_output, shortcut_path, path_size);
+            shortcut_path_output[path_size - 1] = '\0';
+            return true;
+        }
+    }
+    
+    // Check public desktop
+    if (GetDesktopPath(CSIDL_COMMON_DESKTOPDIRECTORY, desktop_path, MAX_PATH)) {
+        BuildShortcutPath(desktop_path, shortcut_path, MAX_PATH);
+        if (FileExists(shortcut_path)) {
+            strncpy(shortcut_path_output, shortcut_path, path_size);
+            shortcut_path_output[path_size - 1] = '\0';
+            return true;
+        }
+    }
     
     return false;
 }
 
 /**
- * @brief Check existing shortcut and compare its target with current executable
- * @param exe_path Current executable path to compare against
- * @param shortcut_path_out Output buffer for found shortcut path
+ * @brief Check existing shortcut and compare with current executable
+ * @param exe_path Current executable path
+ * @param shortcut_path_output Output buffer for found shortcut path
  * @param shortcut_path_size Size of shortcut path buffer
- * @param target_path_out Output buffer for shortcut target path
+ * @param target_path_output Output buffer for shortcut target
  * @param target_path_size Size of target path buffer
- * @return 0=no shortcut, 1=shortcut points to current exe, 2=shortcut points elsewhere
- * Searches both user and public desktop locations
+ * @return ShortcutStatus enum value
  */
-static int CheckShortcutTarget(const char* exe_path, char* shortcut_path_out, size_t shortcut_path_size, 
-                              char* target_path_out, size_t target_path_size) {
-    char desktop_path[MAX_PATH];
-    char public_desktop_path[MAX_PATH];
+static ShortcutStatus CheckShortcutStatus(const char* exe_path,
+                                         char* shortcut_path_output, size_t shortcut_path_size,
+                                         char* target_path_output, size_t target_path_size) {
     char shortcut_path[MAX_PATH];
-    char link_target[MAX_PATH];
-    HRESULT hr;
-    IShellLinkW* psl = NULL;
-    IPersistFile* ppf = NULL;
-    WIN32_FIND_DATAW find_data;
-    int result = 0;
+    char target_path[MAX_PATH];
     
-    /** Get user desktop directory */
-    wchar_t desktop_path_w[MAX_PATH];
-    hr = SHGetFolderPathW(NULL, CSIDL_DESKTOP, NULL, 0, desktop_path_w);
-    if (FAILED(hr)) {
-        LOG_ERROR("Failed to get desktop path, hr=0x%08X", (unsigned int)hr);
-        return 0;
-    }
-    WideCharToMultiByte(CP_UTF8, 0, desktop_path_w, -1, desktop_path, MAX_PATH, NULL, NULL);
-    
-    
-    /** Get public desktop directory (all users) */
-    wchar_t public_desktop_path_w[MAX_PATH];
-    hr = SHGetFolderPathW(NULL, CSIDL_COMMON_DESKTOPDIRECTORY, NULL, 0, public_desktop_path_w);
-    if (FAILED(hr)) {
-        LOG_WARNING("Failed to get public desktop path, hr=0x%08X", (unsigned int)hr);
-    } else {
-        WideCharToMultiByte(CP_UTF8, 0, public_desktop_path_w, -1, public_desktop_path, MAX_PATH, NULL, NULL);
-        
+    // Find shortcut
+    if (!FindExistingShortcut(shortcut_path, MAX_PATH)) {
+        return SHORTCUT_NOT_FOUND;
     }
     
-    /** Check user desktop first */
-    snprintf(shortcut_path, sizeof(shortcut_path), "%s\\Catime.lnk", desktop_path);
-    
-    
-    wchar_t shortcut_path_w[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, shortcut_path, -1, shortcut_path_w, MAX_PATH);
-    bool file_exists = (GetFileAttributesW(shortcut_path_w) != INVALID_FILE_ATTRIBUTES);
-    
-    /** Fallback to public desktop if user desktop shortcut not found */
-    if (!file_exists && SUCCEEDED(hr)) {
-        snprintf(shortcut_path, sizeof(shortcut_path), "%s\\Catime.lnk", public_desktop_path);
-        
-        
-        MultiByteToWideChar(CP_UTF8, 0, shortcut_path, -1, shortcut_path_w, MAX_PATH);
-        file_exists = (GetFileAttributesW(shortcut_path_w) != INVALID_FILE_ATTRIBUTES);
+    // Return shortcut path to caller
+    if (shortcut_path_output && shortcut_path_size > 0) {
+        strncpy(shortcut_path_output, shortcut_path, shortcut_path_size);
+        shortcut_path_output[shortcut_path_size - 1] = '\0';
     }
     
-    if (!file_exists) {
-        
-        return 0;
+    // Read target path
+    if (!ReadShortcutTarget(shortcut_path, target_path, MAX_PATH)) {
+        return SHORTCUT_NOT_FOUND;
     }
     
-    /** Return found shortcut path to caller */
-    if (shortcut_path_out && shortcut_path_size > 0) {
-        strncpy(shortcut_path_out, shortcut_path, shortcut_path_size);
-        shortcut_path_out[shortcut_path_size - 1] = '\0';
+    // Return target path to caller
+    if (target_path_output && target_path_size > 0) {
+        strncpy(target_path_output, target_path, target_path_size);
+        target_path_output[target_path_size - 1] = '\0';
     }
     
-    /** Create COM object to read shortcut properties */
-    hr = CoCreateInstance(&CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER,
-                          &IID_IShellLinkW, (void**)&psl);
-    if (FAILED(hr)) {
-        LOG_ERROR("Failed to create IShellLink interface, hr=0x%08X", (unsigned int)hr);
-        return 0;
+    // Compare paths
+    if (_stricmp(target_path, exe_path) == 0) {
+        return SHORTCUT_POINTS_TO_CURRENT;
     }
     
-    /** Get file persistence interface for loading shortcut */
-    hr = psl->lpVtbl->QueryInterface(psl, &IID_IPersistFile, (void**)&ppf);
-    if (FAILED(hr)) {
-        LOG_ERROR("Failed to get IPersistFile interface, hr=0x%08X", (unsigned int)hr);
-        psl->lpVtbl->Release(psl);
-        return 0;
-    }
-    
-    /** Load shortcut file from disk */
-    hr = ppf->lpVtbl->Load(ppf, shortcut_path_w, STGM_READ);
-    if (FAILED(hr)) {
-        LOG_ERROR("Failed to load shortcut, hr=0x%08X", (unsigned int)hr);
-        ppf->lpVtbl->Release(ppf);
-        psl->lpVtbl->Release(psl);
-        return 0;
-    }
-    
-    /** Extract target path from shortcut and compare with current executable */
-    wchar_t link_target_w[MAX_PATH];
-    hr = psl->lpVtbl->GetPath(psl, link_target_w, MAX_PATH, &find_data, 0);
-    if (FAILED(hr)) {
-        LOG_ERROR("Failed to get shortcut target path, hr=0x%08X", (unsigned int)hr);
-        result = 0;
-    } else {
-        WideCharToMultiByte(CP_UTF8, 0, link_target_w, -1, link_target, MAX_PATH, NULL, NULL);
-        
-        
-        
-        
-        /** Return target path to caller */
-        if (target_path_out && target_path_size > 0) {
-            strncpy(target_path_out, link_target, target_path_size);
-            target_path_out[target_path_size - 1] = '\0';
-        }
-        
-        /** Compare paths case-insensitively */
-        if (_stricmp(link_target, exe_path) == 0) {
-            
-            result = 1;
-        } else {
-            
-            result = 2;
-        }
-    }
-    
-    /** Cleanup COM objects */
-    ppf->lpVtbl->Release(ppf);
-    psl->lpVtbl->Release(psl);
-    
-    return result;
+    return SHORTCUT_POINTS_TO_OTHER;
 }
 
 /**
- * @brief Create new desktop shortcut or update existing one to point to current executable
- * @param exe_path Path to current executable to set as shortcut target
- * @param existing_shortcut_path Path to existing shortcut to update, or NULL to create new
- * @return true if shortcut creation/update succeeded
- * Sets working directory, icon, and description for the shortcut
+ * @brief Configure IShellLink with shortcut properties
+ * @param link COM Shell Link wrapper
+ * @param exe_path Target executable path
+ * @return true on success
  */
-static bool CreateOrUpdateDesktopShortcut(const char* exe_path, const char* existing_shortcut_path) {
-    char desktop_path[MAX_PATH];
-    char shortcut_path[MAX_PATH];
-    char icon_path[MAX_PATH];
+static bool ConfigureShellLink(ComShellLink* link, const char* exe_path) {
+    wchar_t exe_path_w[MAX_PATH];
+    wchar_t work_dir_w[MAX_PATH];
+    char work_dir[MAX_PATH];
     HRESULT hr;
-    IShellLinkW* psl = NULL;
-    IPersistFile* ppf = NULL;
+    
+    // Convert executable path
+    if (!Utf8ToWide(exe_path, exe_path_w, MAX_PATH)) {
+        return false;
+    }
+    
+    // Set target path
+    hr = link->shellLink->lpVtbl->SetPath(link->shellLink, exe_path_w);
+    CHECK_HR_RETURN(hr, "Failed to set shortcut target path", false);
+    
+    // Extract and set working directory
+    ExtractDirectory(exe_path, work_dir, MAX_PATH);
+    if (Utf8ToWide(work_dir, work_dir_w, MAX_PATH)) {
+        hr = link->shellLink->lpVtbl->SetWorkingDirectory(link->shellLink, work_dir_w);
+        CHECK_HR_WARN(hr, "Failed to set working directory");
+    }
+    
+    // Set icon (use executable's embedded icon)
+    hr = link->shellLink->lpVtbl->SetIconLocation(link->shellLink, exe_path_w, 0);
+    CHECK_HR_WARN(hr, "Failed to set icon");
+    
+    // Set description
+    hr = link->shellLink->lpVtbl->SetDescription(link->shellLink, SHORTCUT_DESCRIPTION);
+    CHECK_HR_WARN(hr, "Failed to set description");
+    
+    // Set show command
+    link->shellLink->lpVtbl->SetShowCmd(link->shellLink, SW_SHOWNORMAL);
+    
+    return true;
+}
+
+/**
+ * @brief Create or update desktop shortcut
+ * @param exe_path Target executable path
+ * @param existing_shortcut_path Path to existing shortcut (NULL to create new)
+ * @return true on success
+ */
+static bool CreateOrUpdateShortcut(const char* exe_path, const char* existing_shortcut_path) {
+    ComShellLink link;
+    char shortcut_path[MAX_PATH];
+    wchar_t shortcut_path_w[MAX_PATH];
+    HRESULT hr;
     bool success = false;
     
-    /** Determine shortcut path: update existing or create new */
+    // Determine shortcut path
     if (existing_shortcut_path && *existing_shortcut_path) {
-        LOG_INFO("Starting to update desktop shortcut: %s pointing to: %s", existing_shortcut_path, exe_path);
-        strcpy(shortcut_path, existing_shortcut_path);
+        LOG_INFO("Updating desktop shortcut: %s -> %s", existing_shortcut_path, exe_path);
+        strncpy(shortcut_path, existing_shortcut_path, MAX_PATH);
+        shortcut_path[MAX_PATH - 1] = '\0';
     } else {
-        LOG_INFO("Starting to create desktop shortcut, program path: %s", exe_path);
+        LOG_INFO("Creating desktop shortcut for: %s", exe_path);
         
-        wchar_t desktop_path_w[MAX_PATH];
-        hr = SHGetFolderPathW(NULL, CSIDL_DESKTOP, NULL, 0, desktop_path_w);
-        if (FAILED(hr)) {
-            LOG_ERROR("Failed to get desktop path, hr=0x%08X", (unsigned int)hr);
+        char desktop_path[MAX_PATH];
+        if (!GetDesktopPath(CSIDL_DESKTOP, desktop_path, MAX_PATH)) {
+            LOG_ERROR("Failed to get desktop path");
             return false;
         }
-        WideCharToMultiByte(CP_UTF8, 0, desktop_path_w, -1, desktop_path, MAX_PATH, NULL, NULL);
         
-        
-        snprintf(shortcut_path, sizeof(shortcut_path), "%s\\Catime.lnk", desktop_path);
+        BuildShortcutPath(desktop_path, shortcut_path, MAX_PATH);
     }
     
-    
-    
-    /** Use executable itself as icon source */
-    strcpy(icon_path, exe_path);
-    
-    /** Create COM object for shortcut creation */
-    hr = CoCreateInstance(&CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER,
-                          &IID_IShellLinkW, (void**)&psl);
-    if (FAILED(hr)) {
-        LOG_ERROR("Failed to create IShellLink interface, hr=0x%08X", (unsigned int)hr);
+    // Initialize COM Shell Link
+    if (!InitComShellLink(&link)) {
         return false;
     }
     
-    /** Set target executable path */
-    wchar_t exe_path_w[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, exe_path, -1, exe_path_w, MAX_PATH);
-    
-    hr = psl->lpVtbl->SetPath(psl, exe_path_w);
-    if (FAILED(hr)) {
-        LOG_ERROR("Failed to set shortcut target path, hr=0x%08X", (unsigned int)hr);
-        psl->lpVtbl->Release(psl);
+    // Configure shortcut properties
+    if (!ConfigureShellLink(&link, exe_path)) {
+        CleanupComShellLink(&link);
         return false;
     }
     
-    /** Set working directory to executable's directory */
-    char work_dir[MAX_PATH];
-    strcpy(work_dir, exe_path);
-    char* last_slash = strrchr(work_dir, '\\');
-    if (last_slash) {
-        *last_slash = '\0';
-    }
-    
-    
-    wchar_t work_dir_w[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, work_dir, -1, work_dir_w, MAX_PATH);
-    hr = psl->lpVtbl->SetWorkingDirectory(psl, work_dir_w);
-    if (FAILED(hr)) {
-        LOG_ERROR("Failed to set working directory, hr=0x%08X", (unsigned int)hr);
-    }
-    
-    /** Set icon to executable's embedded icon */
-    wchar_t icon_path_w[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, icon_path, -1, icon_path_w, MAX_PATH);
-    hr = psl->lpVtbl->SetIconLocation(psl, icon_path_w, 0);
-    if (FAILED(hr)) {
-        LOG_ERROR("Failed to set icon, hr=0x%08X", (unsigned int)hr);
-    }
-    
-    /** Set descriptive tooltip */
-    hr = psl->lpVtbl->SetDescription(psl, L"A very useful timer (Pomodoro Clock)");
-    if (FAILED(hr)) {
-        LOG_ERROR("Failed to set description, hr=0x%08X", (unsigned int)hr);
-    }
-    
-    /** Set window show state to normal */
-    psl->lpVtbl->SetShowCmd(psl, SW_SHOWNORMAL);
-    
-    /** Get file persistence interface for saving */
-    hr = psl->lpVtbl->QueryInterface(psl, &IID_IPersistFile, (void**)&ppf);
-    if (FAILED(hr)) {
-        LOG_ERROR("Failed to get IPersistFile interface, hr=0x%08X", (unsigned int)hr);
-        psl->lpVtbl->Release(psl);
+    // Save to disk
+    if (!Utf8ToWide(shortcut_path, shortcut_path_w, MAX_PATH)) {
+        CleanupComShellLink(&link);
         return false;
     }
     
-    /** Convert path to wide char and save shortcut to disk */
-    WCHAR wide_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, shortcut_path, -1, wide_path, MAX_PATH);
-    
-    hr = ppf->lpVtbl->Save(ppf, wide_path, TRUE);
+    hr = link.persistFile->lpVtbl->Save(link.persistFile, shortcut_path_w, TRUE);
     if (FAILED(hr)) {
         LOG_ERROR("Failed to save shortcut, hr=0x%08X", (unsigned int)hr);
     } else {
-        LOG_INFO("Desktop shortcut %s successful: %s", existing_shortcut_path ? "update" : "creation", shortcut_path);
+        LOG_INFO("Desktop shortcut %s successful: %s", 
+                existing_shortcut_path ? "update" : "creation", shortcut_path);
         success = true;
     }
     
-    /** Cleanup COM objects */
-    ppf->lpVtbl->Release(ppf);
-    psl->lpVtbl->Release(psl);
-    
+    CleanupComShellLink(&link);
     return success;
 }
 
+/* ============================================================================
+ * Public API Implementation
+ * ============================================================================ */
+
 /**
- * @brief Main function to check and manage desktop shortcuts for package installations
+ * @brief Main function to check and manage desktop shortcuts
  * @return 0 on success, 1 on error
- * Implements smart shortcut management:
- * - Creates shortcuts only for Store/WinGet installations  
- * - Updates existing shortcuts that point to wrong locations
- * - Avoids duplicate work using configuration state tracking
+ * 
+ * Decision logic:
+ * - No shortcut + already checked -> Don't create (respect user choice)
+ * - No shortcut + package install -> Create shortcut
+ * - No shortcut + manual install -> Don't create
+ * - Shortcut points to current -> OK
+ * - Shortcut points to other -> Update
  */
 int CheckAndCreateShortcut(void) {
     char exe_path[MAX_PATH];
-    char config_path[MAX_PATH];
     char shortcut_path[MAX_PATH];
     char target_path[MAX_PATH];
-    bool shortcut_check_done = false;
-    bool isStoreInstall = false;
-    
-    /** Initialize COM for Shell Link operations */
-    HRESULT hr = CoInitialize(NULL);
-    if (FAILED(hr)) {
-        LOG_ERROR("COM library initialization failed, hr=0x%08X", (unsigned int)hr);
-        return 1;
-    }
-    
-    
-    
-    /** Load configuration state to avoid redundant operations */
-    GetConfigPath(config_path, MAX_PATH);
-    shortcut_check_done = IsShortcutCheckDone();
-    
-    
-    
-    /** Get current executable path for comparison */
     wchar_t exe_path_w[MAX_PATH];
+    bool shortcut_check_done;
+    bool is_package_install;
+    ShortcutStatus status;
+    HRESULT hr;
+    int result = 0;
+    
+    // Initialize COM
+    hr = CoInitialize(NULL);
+    CHECK_HR_RETURN(hr, "COM library initialization failed", 1);
+    
+    // Get current executable path
     if (GetModuleFileNameW(NULL, exe_path_w, MAX_PATH) == 0) {
         LOG_ERROR("Failed to get program path");
         CoUninitialize();
         return 1;
     }
-    WideCharToMultiByte(CP_UTF8, 0, exe_path_w, -1, exe_path, MAX_PATH, NULL, NULL);
     
-    
-    /** Determine if this is a managed installation (Store/WinGet) */
-    isStoreInstall = IsStoreOrWingetInstall(exe_path, MAX_PATH);
-    
-    
-    /** Check existing shortcut status */
-    int shortcut_status = CheckShortcutTarget(exe_path, shortcut_path, MAX_PATH, target_path, MAX_PATH);
-    
-    /** Decision logic based on shortcut status and installation type */
-    if (shortcut_status == 0) {
-        /** No shortcut found */
-        if (shortcut_check_done) {
-            /** Already checked before, don't create to respect user choice */
-            LOG_INFO("No shortcut found on desktop, but configuration marked as checked, not creating");
-            CoUninitialize();
-            return 0;
-        } else if (isStoreInstall) {
-            /** First run of managed installation - auto-create shortcut */
-            LOG_INFO("No shortcut found on desktop, first run of Store/WinGet installation, starting to create");
-            bool success = CreateOrUpdateDesktopShortcut(exe_path, NULL);
-            
-            SetShortcutCheckDone(true);
-            
-            CoUninitialize();
-            return success ? 0 : 1;
-        } else {
-            /** Manual installation - don't auto-create shortcut */
-            LOG_INFO("No shortcut found on desktop, not a Store/WinGet installation, not creating shortcut");
-            
-            SetShortcutCheckDone(true);
-            
-            CoUninitialize();
-            return 0;
-        }
-    } else if (shortcut_status == 1) {
-        /** Shortcut exists and points to current executable - all good */
-        LOG_INFO("Desktop shortcut already exists and points to the current program");
-        
-        if (!shortcut_check_done) {
-            SetShortcutCheckDone(true);
-        }
-        
+    if (!WideToUtf8(exe_path_w, exe_path, MAX_PATH)) {
+        LOG_ERROR("Failed to convert executable path");
         CoUninitialize();
-        return 0;
-    } else if (shortcut_status == 2) {
-        /** Shortcut exists but points to wrong location - update it */
-        LOG_INFO("Desktop shortcut points to another path: %s, will update to: %s", target_path, exe_path);
-        bool success = CreateOrUpdateDesktopShortcut(exe_path, shortcut_path);
-        
-        if (!shortcut_check_done) {
-            SetShortcutCheckDone(true);
-        }
-        
-        CoUninitialize();
-        return success ? 0 : 1;
+        return 1;
     }
     
-    LOG_ERROR("Unknown shortcut check status");
+    // Load configuration state
+    shortcut_check_done = IsShortcutCheckDone();
+    
+    // Detect installation type
+    is_package_install = IsPackageManagerInstall(exe_path);
+    
+    // Check existing shortcut
+    status = CheckShortcutStatus(exe_path, shortcut_path, MAX_PATH, target_path, MAX_PATH);
+    
+    // Decision logic based on status
+    switch (status) {
+        case SHORTCUT_NOT_FOUND:
+            if (shortcut_check_done) {
+                // Already checked, don't create (user may have deleted it)
+                LOG_INFO("No shortcut found, but already checked - respecting user choice");
+            } else if (is_package_install) {
+                // First run of package install - auto-create
+                LOG_INFO("Package manager installation detected - creating shortcut");
+                result = CreateOrUpdateShortcut(exe_path, NULL) ? 0 : 1;
+                SetShortcutCheckDone(true);
+            } else {
+                // Manual installation - don't auto-create
+                LOG_INFO("Manual installation detected - not creating shortcut");
+                SetShortcutCheckDone(true);
+            }
+            break;
+            
+        case SHORTCUT_POINTS_TO_CURRENT:
+            // All good
+            LOG_INFO("Desktop shortcut exists and points to current program");
+            if (!shortcut_check_done) {
+                SetShortcutCheckDone(true);
+            }
+            break;
+            
+        case SHORTCUT_POINTS_TO_OTHER:
+            // Update to point to current executable
+            LOG_INFO("Shortcut points to different path - updating");
+            LOG_INFO("  Old: %s", target_path);
+            LOG_INFO("  New: %s", exe_path);
+            result = CreateOrUpdateShortcut(exe_path, shortcut_path) ? 0 : 1;
+            if (!shortcut_check_done) {
+                SetShortcutCheckDone(true);
+            }
+            break;
+            
+        default:
+            LOG_ERROR("Unknown shortcut check status");
+            result = 1;
+            break;
+    }
+    
     CoUninitialize();
-    return 1;
+    return result;
 }
