@@ -531,6 +531,114 @@ static BOOL ValidateAndSetTimeoutFile(HWND hwnd, const char* filePathUtf8) {
  * ============================================================================ */
 
 /**
+ * @brief Wide-char to UTF-8 conversion helper
+ * @param wideStr Wide-char source string
+ * @param utf8Buf UTF-8 output buffer
+ * @param bufSize Output buffer size
+ * @return TRUE if conversion succeeded, FALSE otherwise
+ */
+static BOOL WideToUtf8(const wchar_t* wideStr, char* utf8Buf, size_t bufSize) {
+    if (!wideStr || !utf8Buf || bufSize == 0) return FALSE;
+    return WideCharToMultiByte(CP_UTF8, 0, wideStr, -1, utf8Buf, (int)bufSize, NULL, NULL) > 0;
+}
+
+/**
+ * @brief UTF-8 to wide-char conversion helper
+ * @param utf8Str UTF-8 source string
+ * @param wideBuf Wide-char output buffer
+ * @param bufSize Output buffer size in wchar_t units
+ * @return TRUE if conversion succeeded, FALSE otherwise
+ */
+static BOOL Utf8ToWide(const char* utf8Str, wchar_t* wideBuf, size_t bufSize) {
+    if (!utf8Str || !wideBuf || bufSize == 0) return FALSE;
+    return MultiByteToWideChar(CP_UTF8, 0, utf8Str, -1, wideBuf, (int)bufSize) > 0;
+}
+
+/**
+ * @brief Get config path and read INI string in one call
+ * @param section INI section name
+ * @param key INI key name
+ * @param defaultValue Default value if key not found
+ * @param outBuf Output buffer
+ * @param bufSize Output buffer size
+ * @return TRUE if succeeded, FALSE otherwise
+ */
+static BOOL ReadConfigString(const char* section, const char* key, const char* defaultValue, char* outBuf, size_t bufSize) {
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    ReadIniString(section, key, defaultValue, outBuf, (int)bufSize, config_path);
+    return TRUE;
+}
+
+/**
+ * @brief Get config path and read INI int in one call
+ * @param section INI section name
+ * @param key INI key name
+ * @param defaultValue Default value if key not found
+ * @return Integer value from config
+ */
+static int ReadConfigInt(const char* section, const char* key, int defaultValue) {
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    return ReadIniInt(section, key, defaultValue, config_path);
+}
+
+/**
+ * @brief Get config path and read INI bool in one call
+ * @param section INI section name
+ * @param key INI key name
+ * @param defaultValue Default value if key not found
+ * @return Boolean value from config
+ */
+static BOOL ReadConfigBool(const char* section, const char* key, BOOL defaultValue) {
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    return ReadIniBool(section, key, defaultValue, config_path);
+}
+
+/**
+ * @brief Generic input validation loop for time input dialogs
+ * @param hwnd Parent window handle
+ * @param dialogId Dialog resource ID
+ * @param outSeconds Pointer to store validated seconds (can be NULL)
+ * @return TRUE if user provided valid input, FALSE if cancelled
+ * 
+ * Eliminates repetitive input validation patterns across multiple dialogs.
+ * Shows error dialog on invalid input and loops until valid or cancelled.
+ */
+static BOOL ValidatedTimeInputLoop(HWND hwnd, UINT dialogId, int* outSeconds) {
+    extern wchar_t inputText[256];
+    
+    while (1) {
+        memset(inputText, 0, sizeof(inputText));
+        DialogBoxParamW(GetModuleHandle(NULL), MAKEINTRESOURCEW(dialogId), 
+                       hwnd, DlgProc, (LPARAM)dialogId);
+        
+        if (inputText[0] == L'\0' || isAllSpacesOnly(inputText)) {
+            return FALSE;  /** User cancelled */
+        }
+        
+        char inputTextA[256];
+        if (!WideToUtf8(inputText, inputTextA, sizeof(inputTextA))) {
+            ShowErrorDialog(hwnd);
+            continue;
+        }
+        
+        int total_seconds = 0;
+        if (ParseInput(inputTextA, &total_seconds)) {
+            if (outSeconds) *outSeconds = total_seconds;
+            return TRUE;
+        } else {
+            ShowErrorDialog(hwnd);
+        }
+    }
+}
+
+/* ============================================================================
+ * Input Dialog - Static Functions
+ * ============================================================================ */
+
+/**
  * @brief Dialog procedure for custom input box
  * @param hwndDlg Dialog window handle
  * @param uMsg Message identifier
@@ -630,6 +738,138 @@ static BOOL InputBox(HWND hwndParent, const wchar_t* title, const wchar_t* promp
 static void ExitProgram(HWND hwnd) {
     RemoveTrayIcon();
     PostQuitMessage(0);
+}
+
+/* ============================================================================
+ * Hotkey Handler Dispatch Table
+ * ============================================================================ */
+
+/** @brief Hotkey handler function type */
+typedef void (*HotkeyHandler)(HWND hwnd);
+
+/**
+ * @brief Hotkey handler mapping entry
+ */
+typedef struct {
+    int hotkeyId;           /**< Hotkey identifier */
+    HotkeyHandler handler;  /**< Handler function pointer */
+} HotkeyMapping;
+
+/** @brief Hotkey handler functions */
+static void HandleHotkeyShowTime(HWND hwnd) {
+    ToggleShowTimeMode(hwnd);
+}
+
+static void HandleHotkeyCountUp(HWND hwnd) {
+    StartCountUp(hwnd);
+}
+
+static void HandleHotkeyCountdown(HWND hwnd) {
+    StartDefaultCountDown(hwnd);
+}
+
+static void HandleHotkeyQuickCountdown1(HWND hwnd) {
+    StartQuickCountdownByIndex(hwnd, 1);
+}
+
+static void HandleHotkeyQuickCountdown2(HWND hwnd) {
+    StartQuickCountdownByIndex(hwnd, 2);
+}
+
+static void HandleHotkeyQuickCountdown3(HWND hwnd) {
+    StartQuickCountdownByIndex(hwnd, 3);
+}
+
+static void HandleHotkeyPomodoro(HWND hwnd) {
+    StartPomodoroTimer(hwnd);
+}
+
+static void HandleHotkeyToggleVisibility(HWND hwnd) {
+    if (IsWindowVisible(hwnd)) {
+        ShowWindow(hwnd, SW_HIDE);
+    } else {
+        ShowWindow(hwnd, SW_SHOW);
+        SetForegroundWindow(hwnd);
+    }
+}
+
+static void HandleHotkeyEditMode(HWND hwnd) {
+    ToggleEditMode(hwnd);
+}
+
+static void HandleHotkeyPauseResume(HWND hwnd) {
+    TogglePauseResume(hwnd);
+}
+
+static void HandleHotkeyRestartTimer(HWND hwnd) {
+    CloseAllNotifications();
+    RestartCurrentTimer(hwnd);
+}
+
+static void HandleHotkeyCustomCountdown(HWND hwnd) {
+    extern wchar_t inputText[256];
+    extern HWND g_hwndInputDialog;
+    
+    /** Close existing input dialog if open */
+    if (g_hwndInputDialog != NULL && IsWindow(g_hwndInputDialog)) {
+        SendMessage(g_hwndInputDialog, WM_CLOSE, 0, 0);
+        return;
+    }
+    
+    extern BOOL countdown_message_shown;
+    countdown_message_shown = FALSE;
+    
+    extern void ReadNotificationTypeConfig(void);
+    ReadNotificationTypeConfig();
+    
+    memset(inputText, 0, sizeof(inputText));
+    
+    DialogBoxParamW(GetModuleHandle(NULL), 
+                   MAKEINTRESOURCEW(CLOCK_IDD_DIALOG1), 
+                   hwnd, DlgProc, (LPARAM)CLOCK_IDD_DIALOG1);
+    
+    if (inputText[0] != L'\0') {
+        int total_seconds = 0;
+        char inputTextA[256];
+        if (WideToUtf8(inputText, inputTextA, sizeof(inputTextA))) {
+            if (ParseInput(inputTextA, &total_seconds)) {
+                CleanupBeforeTimerAction();
+                StartCountdownWithTime(hwnd, total_seconds);
+            }
+        }
+    }
+}
+
+/** @brief Hotkey dispatch table (static const for efficiency) */
+static const HotkeyMapping HOTKEY_DISPATCH_TABLE[] = {
+    {HOTKEY_ID_SHOW_TIME, HandleHotkeyShowTime},
+    {HOTKEY_ID_COUNT_UP, HandleHotkeyCountUp},
+    {HOTKEY_ID_COUNTDOWN, HandleHotkeyCountdown},
+    {HOTKEY_ID_QUICK_COUNTDOWN1, HandleHotkeyQuickCountdown1},
+    {HOTKEY_ID_QUICK_COUNTDOWN2, HandleHotkeyQuickCountdown2},
+    {HOTKEY_ID_QUICK_COUNTDOWN3, HandleHotkeyQuickCountdown3},
+    {HOTKEY_ID_POMODORO, HandleHotkeyPomodoro},
+    {HOTKEY_ID_TOGGLE_VISIBILITY, HandleHotkeyToggleVisibility},
+    {HOTKEY_ID_EDIT_MODE, HandleHotkeyEditMode},
+    {HOTKEY_ID_PAUSE_RESUME, HandleHotkeyPauseResume},
+    {HOTKEY_ID_RESTART_TIMER, HandleHotkeyRestartTimer},
+    {HOTKEY_ID_CUSTOM_COUNTDOWN, HandleHotkeyCustomCountdown}
+};
+
+/**
+ * @brief Dispatch hotkey to appropriate handler
+ * @param hwnd Window handle
+ * @param hotkeyId Hotkey identifier
+ * @return TRUE if handled, FALSE if unknown hotkey
+ */
+static BOOL DispatchHotkey(HWND hwnd, int hotkeyId) {
+    for (int i = 0; i < sizeof(HOTKEY_DISPATCH_TABLE) / sizeof(HOTKEY_DISPATCH_TABLE[0]); i++) {
+        if (HOTKEY_DISPATCH_TABLE[i].hotkeyId == hotkeyId) {
+            HOTKEY_DISPATCH_TABLE[i].handler(hwnd);
+            return TRUE;
+        }
+    }
+    return FALSE;
 }
 
 /* ============================================================================
@@ -1257,37 +1497,16 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             switch (cmd) {
                 /** Custom countdown timer setup with user input */
                 case 101: {
-                    /** Stop current time display if active */
                     if (CLOCK_SHOW_CURRENT_TIME) {
                         CLOCK_SHOW_CURRENT_TIME = FALSE;
                         CLOCK_LAST_TIME_UPDATE = 0;
                         KillTimer(hwnd, 1);
                     }
                     
-                    /** Input validation loop until valid time or cancellation */
-                    while (1) {
-                        memset(inputText, 0, sizeof(inputText));
-                        DialogBoxParamW(GetModuleHandle(NULL), MAKEINTRESOURCEW(CLOCK_IDD_DIALOG1), hwnd, DlgProc, (LPARAM)CLOCK_IDD_DIALOG1);
-
-                        /** Exit if user cancelled or provided empty input */
-                        if (inputText[0] == L'\0' || isAllSpacesOnly(inputText)) {
-                            break;
-                        }
-
-                        /** Parse and validate time input */
-                        int total_seconds = 0;
-                        char inputTextA[256];
-                        WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
-                        
-                        if (ParseInput(inputTextA, &total_seconds)) {
-                            /** Valid input: setup countdown timer */
-                            CleanupBeforeTimerAction();
-                            StartCountdownWithTime(hwnd, total_seconds);
-                            break;
-                        } else {
-                            /** Invalid input: show error dialog */
-                            ShowErrorDialog(hwnd);
-                        }
+                    int total_seconds = 0;
+                    if (ValidatedTimeInputLoop(hwnd, CLOCK_IDD_DIALOG1, &total_seconds)) {
+                        CleanupBeforeTimerAction();
+                        StartCountdownWithTime(hwnd, total_seconds);
                     }
                     break;
                 }
@@ -1419,26 +1638,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 
                 /** Modify default startup countdown time */
                 case CLOCK_IDC_MODIFY_DEFAULT_TIME: {
-                    while (1) {
-                        memset(inputText, 0, sizeof(inputText));
-                        DialogBoxParamW(GetModuleHandle(NULL), MAKEINTRESOURCEW(CLOCK_IDD_STARTUP_DIALOG), NULL, DlgProc, (LPARAM)CLOCK_IDD_STARTUP_DIALOG);
-
-                        if (isAllSpacesOnly(inputText)) {
-                            break;
-                        }
-
-                        int total_seconds = 0;
-
-                        char inputTextA[256];
-                        WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
-                        if (ParseInput(inputTextA, &total_seconds)) {
-                            CleanupBeforeTimerAction();
-                            WriteConfigDefaultStartTime(total_seconds);
-                            WriteConfigStartupMode("COUNTDOWN");
-                            break;
-                        } else {
-                            ShowErrorDialog(hwnd);
-                        }
+                    int total_seconds = 0;
+                    if (ValidatedTimeInputLoop(hwnd, CLOCK_IDD_STARTUP_DIALOG, &total_seconds)) {
+                        CleanupBeforeTimerAction();
+                        WriteConfigDefaultStartTime(total_seconds);
+                        WriteConfigStartupMode("COUNTDOWN");
                     }
                     break;
                 }
@@ -1946,46 +2150,14 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 
                 /** Configure startup countdown time */
                 case CLOCK_IDC_SET_COUNTDOWN_TIME: {
-                    while (1) {
-                        memset(inputText, 0, sizeof(inputText));
-
-                        DialogBoxParamW(GetModuleHandle(NULL), MAKEINTRESOURCEW(CLOCK_IDD_DIALOG1), hwnd, DlgProc, (LPARAM)CLOCK_IDD_STARTUP_DIALOG);
-
-                        if (inputText[0] == L'\0') {
-                            WriteConfigStartupMode("COUNTDOWN");
-                            UpdateStartupModeMenu(hwnd, "COUNTDOWN");
-                            break;
-                        }
-
-                        int total_seconds = 0;
-
-                        char inputTextA[256];
-                        WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
-                        if (ParseInput(inputTextA, &total_seconds)) {
-                            WriteConfigDefaultStartTime(total_seconds);
-                            WriteConfigStartupMode("COUNTDOWN");
-                            UpdateStartupModeMenu(hwnd, "COUNTDOWN");
-                            break;
-                        } else {
-                            MessageBoxW(hwnd, 
-                                GetLocalizedString(
-                                    L"25    = 25分钟\n"
-                                    L"25h   = 25小时\n"
-                                    L"25s   = 25秒\n"
-                                    L"25 30 = 25分钟30秒\n"
-                                    L"25 30m = 25小时30分钟\n"
-                                    L"1 30 20 = 1小时30分钟20秒",
-                                    
-                                    L"25    = 25 minutes\n"
-                                    L"25h   = 25 hours\n"
-                                    L"25s   = 25 seconds\n"
-                                    L"25 30 = 25 minutes 30 seconds\n"
-                                    L"25 30m = 25 hours 30 minutes\n"
-                                    L"1 30 20 = 1 hour 30 minutes 20 seconds"),
-                                GetLocalizedString(L"输入格式", L"Input Format"),
-                                MB_OK);
-                        }
+                    int total_seconds = 0;
+                    BOOL hasInput = ValidatedTimeInputLoop(hwnd, CLOCK_IDD_STARTUP_DIALOG, &total_seconds);
+                    
+                    if (hasInput) {
+                        WriteConfigDefaultStartTime(total_seconds);
                     }
+                    WriteConfigStartupMode("COUNTDOWN");
+                    UpdateStartupModeMenu(hwnd, "COUNTDOWN");
                     break;
                 }
                 
@@ -2361,100 +2533,12 @@ refresh_window:
 
                 /** Handle animation preview on hover (IDs CLOCK_IDM_ANIMATIONS_BASE..+999) */
                 if (menuItem >= CLOCK_IDM_ANIMATIONS_BASE && menuItem < CLOCK_IDM_ANIMATIONS_BASE + 1000) {
-                    /** Resolve folder name by iterating animations root with a running index */
                     char animRootUtf8[MAX_PATH] = {0};
                     GetAnimationsFolderPath(animRootUtf8, sizeof(animRootUtf8));
                     wchar_t wRoot[MAX_PATH] = {0};
                     MultiByteToWideChar(CP_UTF8, 0, animRootUtf8, -1, wRoot, MAX_PATH);
-
+                    
                     UINT nextId = CLOCK_IDM_ANIMATIONS_BASE;
-
-                    /** Recursive helper function to match menu items for hover preview */
-                    BOOL FindAnimationByIdRecursive(const wchar_t* folderPathW, const char* folderPathUtf8, UINT* nextIdPtr, UINT targetId) {
-                        AnimationEntry* entries = (AnimationEntry*)malloc(sizeof(AnimationEntry) * MAX_TRAY_FRAMES);
-                        if (!entries) return FALSE;
-                        int entryCount = 0;
-
-                        wchar_t wSearch[MAX_PATH] = {0};
-                        _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s\\*", folderPathW);
-                        
-                        WIN32_FIND_DATAW ffd;
-                        HANDLE hFind = FindFirstFileW(wSearch, &ffd);
-                        if (hFind == INVALID_HANDLE_VALUE) {
-                            free(entries);
-                            return FALSE;
-                        }
-
-                        do {
-                            if (wcscmp(ffd.cFileName, L".") == 0 || wcscmp(ffd.cFileName, L"..") == 0) continue;
-                            if (entryCount >= MAX_TRAY_FRAMES) break;
-
-                            AnimationEntry* e = &entries[entryCount];
-                            e->is_dir = (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
-                             wcsncpy(e->name, ffd.cFileName, MAX_PATH - 1);
-                            e->name[MAX_PATH - 1] = L'\0';
-
-                            char itemUtf8[MAX_PATH] = {0};
-                            WideCharToMultiByte(CP_UTF8, 0, ffd.cFileName, -1, itemUtf8, MAX_PATH, NULL, NULL);
-                            if (folderPathUtf8 && folderPathUtf8[0] != '\0') {
-                                _snprintf_s(e->rel_path_utf8, MAX_PATH, _TRUNCATE, "%s\\%s", folderPathUtf8, itemUtf8);
-                            } else {
-                                _snprintf_s(e->rel_path_utf8, MAX_PATH, _TRUNCATE, "%s", itemUtf8);
-                            }
-                            
-                            if (e->is_dir) {
-                                entryCount++;
-                            } else {
-                                wchar_t* ext = wcsrchr(e->name, L'.');
-                                if (ext && (_wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0 ||
-                                            _wcsicmp(ext, L".ico") == 0 || _wcsicmp(ext, L".png") == 0 ||
-                                            _wcsicmp(ext, L".bmp") == 0 || _wcsicmp(ext, L".jpg") == 0 ||
-                                            _wcsicmp(ext, L".jpeg") == 0 || _wcsicmp(ext, L".tif") == 0 ||
-                                            _wcsicmp(ext, L".tiff") == 0)) {
-                                    entryCount++;
-                                }
-                            }
-                        } while (FindNextFileW(hFind, &ffd));
-                        FindClose(hFind);
-
-                        if (entryCount == 0) {
-                            free(entries);
-                            return FALSE;
-                        }
-                        qsort(entries, entryCount, sizeof(AnimationEntry), CompareAnimationEntries);
-
-                        for (int i = 0; i < entryCount; ++i) {
-                            AnimationEntry* e = &entries[i];
-                            if (e->is_dir) {
-                                wchar_t wSubFolderPath[MAX_PATH] = {0};
-                                _snwprintf_s(wSubFolderPath, MAX_PATH, _TRUNCATE, L"%s\\%s", folderPathW, e->name);
-
-                                if (IsAnimationLeafFolderW(wSubFolderPath)) {
-                                    if (*nextIdPtr == targetId) {
-                                        StartAnimationPreview(e->rel_path_utf8);
-                                        free(entries);
-                                        return TRUE;
-                                    }
-                                    (*nextIdPtr)++;
-                                } else {
-                                    if (FindAnimationByIdRecursive(wSubFolderPath, e->rel_path_utf8, nextIdPtr, targetId)) {
-                                        free(entries);
-                                        return TRUE;
-                                    }
-                                }
-                            } else {
-                                if (*nextIdPtr == targetId) {
-                                    StartAnimationPreview(e->rel_path_utf8);
-                                    free(entries);
-                                    return TRUE;
-                                }
-                                (*nextIdPtr)++;
-                            }
-                        }
-                        free(entries);
-                        return FALSE;
-                    }
-
                     if (FindAnimationByIdRecursive(wRoot, "", &nextId, menuItem)) {
                         return 0;
                     }
@@ -2551,81 +2635,7 @@ refresh_window:
         
         /** Global hotkey message processing */
         case WM_HOTKEY: {
-            if (wp == HOTKEY_ID_SHOW_TIME) {
-                ToggleShowTimeMode(hwnd);
-                return 0;
-            } else if (wp == HOTKEY_ID_COUNT_UP) {
-                StartCountUp(hwnd);
-                return 0;
-            } else if (wp == HOTKEY_ID_COUNTDOWN) {
-                StartDefaultCountDown(hwnd);
-                return 0;
-            } else if (wp == HOTKEY_ID_CUSTOM_COUNTDOWN) {
-                /** Close existing input dialog if open */
-                if (g_hwndInputDialog != NULL && IsWindow(g_hwndInputDialog)) {
-                    SendMessage(g_hwndInputDialog, WM_CLOSE, 0, 0);
-                    return 0;
-                }
-                
-                /** Reset notification state for new countdown */
-                extern BOOL countdown_message_shown;
-                countdown_message_shown = FALSE;
-                
-                extern void ReadNotificationTypeConfig(void);
-                ReadNotificationTypeConfig();
-                
-                memset(inputText, 0, sizeof(inputText));
-                
-                INT_PTR result = DialogBoxParamW(GetModuleHandle(NULL), 
-                                         MAKEINTRESOURCEW(CLOCK_IDD_DIALOG1), 
-                                         hwnd, DlgProc, (LPARAM)CLOCK_IDD_DIALOG1);
-                
-                if (inputText[0] != L'\0') {
-                    int total_seconds = 0;
-
-                    char inputTextA[256];
-                    WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
-                    if (ParseInput(inputTextA, &total_seconds)) {
-                        CleanupBeforeTimerAction();
-                        StartCountdownWithTime(hwnd, total_seconds);
-                    }
-                }
-                return 0;
-            } else if (wp == HOTKEY_ID_QUICK_COUNTDOWN1) {
-                StartQuickCountdownByIndex(hwnd, 1);
-                return 0;
-            } else if (wp == HOTKEY_ID_QUICK_COUNTDOWN2) {
-                StartQuickCountdownByIndex(hwnd, 2);
-                return 0;
-            } else if (wp == HOTKEY_ID_QUICK_COUNTDOWN3) {
-                StartQuickCountdownByIndex(hwnd, 3);
-                return 0;
-            } else if (wp == HOTKEY_ID_POMODORO) {
-
-                StartPomodoroTimer(hwnd);
-                return 0;
-            } else if (wp == HOTKEY_ID_TOGGLE_VISIBILITY) {
-                /** Toggle window visibility */
-                if (IsWindowVisible(hwnd)) {
-                    ShowWindow(hwnd, SW_HIDE);
-                } else {
-                    ShowWindow(hwnd, SW_SHOW);
-                    SetForegroundWindow(hwnd);
-                }
-                return 0;
-            } else if (wp == HOTKEY_ID_EDIT_MODE) {
-
-                ToggleEditMode(hwnd);
-                return 0;
-            } else if (wp == HOTKEY_ID_PAUSE_RESUME) {
-
-                TogglePauseResume(hwnd);
-                return 0;
-            } else if (wp == HOTKEY_ID_RESTART_TIMER) {
-                /** Restart current timer from beginning */
-                CloseAllNotifications();
-
-                RestartCurrentTimer(hwnd);
+            if (DispatchHotkey(hwnd, (int)wp)) {
                 return 0;
             }
             break;
