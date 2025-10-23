@@ -238,15 +238,15 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
     /** Handle predefined command shortcuts */
     {
         if (_stricmp(input, "q1") == 0) {
-            StartQuickCountdown1(hwnd);
+            StartQuickCountdownByIndex(hwnd, 1);
             return TRUE;
         }
         if (_stricmp(input, "q2") == 0) {
-            StartQuickCountdown2(hwnd);
+            StartQuickCountdownByIndex(hwnd, 2);
             return TRUE;
         }
         if (_stricmp(input, "q3") == 0) {
-            StartQuickCountdown3(hwnd);
+            StartQuickCountdownByIndex(hwnd, 3);
             return TRUE;
         }
 

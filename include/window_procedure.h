@@ -147,27 +147,12 @@ void TogglePauseResume(HWND hwnd);
 void RestartCurrentTimer(HWND hwnd);
 
 /**
- * @brief Start first quick countdown option
+ * @brief Start quick countdown by option index (1-based)
  * @param hwnd Window handle
- */
-void StartQuickCountdown1(HWND hwnd);
-
-/**
- * @brief Start second quick countdown option
- * @param hwnd Window handle
- */
-void StartQuickCountdown2(HWND hwnd);
-
-/**
- * @brief Start third quick countdown option
- * @param hwnd Window handle
- */
-void StartQuickCountdown3(HWND hwnd);
-
-/**
- * @brief Start quick countdown by option index
- * @param hwnd Window handle
- * @param index 1-based index of countdown option
+ * @param index 1-based index of countdown option (1=first, 2=second, 3=third, etc.)
+ * 
+ * This is the unified function for starting any configured quick countdown timer.
+ * Used by hotkeys and menu commands.
  */
 void StartQuickCountdownByIndex(HWND hwnd, int index);
 

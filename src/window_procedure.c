@@ -93,6 +93,20 @@ static int CompareAnimationEntries(const void* a, const void* b) {
     return NaturalCompareW(entryA->name, entryB->name);
 }
 
+/** 
+ * @brief Check if file extension is a supported animation/image format
+ * @param ext Wide-char file extension (including dot)
+ * @return TRUE if extension is supported
+ */
+static BOOL IsAnimationFileExtension(const wchar_t* ext) {
+    if (!ext) return FALSE;
+    return (_wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0 ||
+            _wcsicmp(ext, L".ico") == 0 || _wcsicmp(ext, L".png") == 0 ||
+            _wcsicmp(ext, L".bmp") == 0 || _wcsicmp(ext, L".jpg") == 0 ||
+            _wcsicmp(ext, L".jpeg") == 0 || _wcsicmp(ext, L".tif") == 0 ||
+            _wcsicmp(ext, L".tiff") == 0);
+}
+
 /** @brief Checks if a folder contains no sub-folders or animated images, making it a leaf. */
 static BOOL IsAnimationLeafFolderW(const wchar_t* folderPathW) {
     wchar_t wSearch[MAX_PATH] = {0};
@@ -165,11 +179,7 @@ static BOOL FindAnimationByIdRecursive(const wchar_t* folderPathW, const char* f
             entryCount++;
         } else {
             wchar_t* ext = wcsrchr(e->name, L'.');
-            if (ext && (_wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0 ||
-                        _wcsicmp(ext, L".ico") == 0 || _wcsicmp(ext, L".png") == 0 ||
-                        _wcsicmp(ext, L".bmp") == 0 || _wcsicmp(ext, L".jpg") == 0 ||
-                        _wcsicmp(ext, L".jpeg") == 0 || _wcsicmp(ext, L".tif") == 0 ||
-                        _wcsicmp(ext, L".tiff") == 0)) {
+            if (IsAnimationFileExtension(ext)) {
                 entryCount++;
             }
         }
@@ -368,6 +378,66 @@ static BOOL isAllSpacesOnly(const wchar_t* str) {
 }
 
 /**
+ * @brief Update startup mode menu checkmarks based on mode string
+ * @param hwnd Window handle
+ * @param mode Mode string ("COUNTDOWN", "COUNT_UP", "SHOW_TIME", "NO_DISPLAY")
+ * 
+ * Centralized function to update startup mode menu items checkmarks.
+ * Prevents code duplication across multiple menu handlers.
+ */
+static void UpdateStartupModeMenu(HWND hwnd, const char* mode) {
+    HMENU hMenu = GetMenu(hwnd);
+    if (!hMenu) return;
+    
+    HMENU hTimeOptionsMenu = GetSubMenu(hMenu, GetMenuItemCount(hMenu) - 2);
+    if (!hTimeOptionsMenu) return;
+    
+    HMENU hStartupSettingsMenu = GetSubMenu(hTimeOptionsMenu, 0);
+    if (!hStartupSettingsMenu) return;
+    
+    CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_SET_COUNTDOWN_TIME, 
+                  strcmp(mode, "COUNTDOWN") == 0 ? MF_CHECKED : MF_UNCHECKED);
+    CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_START_COUNT_UP, 
+                  strcmp(mode, "COUNT_UP") == 0 ? MF_CHECKED : MF_UNCHECKED);
+    CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_START_NO_DISPLAY, 
+                  strcmp(mode, "NO_DISPLAY") == 0 ? MF_CHECKED : MF_UNCHECKED);
+    CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_START_SHOW_TIME, 
+                  strcmp(mode, "SHOW_TIME") == 0 ? MF_CHECKED : MF_UNCHECKED);
+}
+
+/**
+ * @brief Validate file existence and set as timeout action target
+ * @param hwnd Window handle for error dialogs
+ * @param filePathUtf8 UTF-8 file path to validate
+ * @return TRUE if file exists and was set successfully, FALSE otherwise
+ * 
+ * Centralized function for file validation and timeout configuration.
+ * Shows error dialog if file doesn't exist.
+ */
+static BOOL ValidateAndSetTimeoutFile(HWND hwnd, const char* filePathUtf8) {
+    if (!filePathUtf8 || filePathUtf8[0] == '\0') {
+        return FALSE;
+    }
+    
+    wchar_t wPath[MAX_PATH] = {0};
+    MultiByteToWideChar(CP_UTF8, 0, filePathUtf8, -1, wPath, MAX_PATH);
+    
+    if (GetFileAttributesW(wPath) != INVALID_FILE_ATTRIBUTES) {
+        WriteConfigTimeoutFile(filePathUtf8);
+        SaveRecentFile(filePathUtf8);
+        return TRUE;
+    } else {
+        if (hwnd) {
+            MessageBoxW(hwnd, 
+                GetLocalizedString(L"所选文件不存在", L"Selected file does not exist"),
+                GetLocalizedString(L"错误", L"Error"),
+                MB_ICONERROR);
+        }
+        return FALSE;
+    }
+}
+
+/**
  * @brief Dialog procedure for custom input box dialog
  * @param hwndDlg Dialog window handle
  * @param uMsg Message identifier
@@ -451,6 +521,45 @@ BOOL InputBox(HWND hwndParent, const wchar_t* title, const wchar_t* prompt,
                           hwndParent, 
                           InputBoxProc, 
                           (LPARAM)&params) == TRUE;
+}
+
+/**
+ * @brief Cancel all active preview states (font, color, time format, milliseconds, animation)
+ * @param hwnd Window handle
+ * 
+ * Centralized function to cancel all preview modes and restore normal display.
+ * This prevents code duplication across multiple message handlers.
+ */
+static void CancelAllPreviews(HWND hwnd) {
+    extern void CancelAnimationPreview(void);
+    CancelAnimationPreview();
+    
+    BOOL needsRedraw = FALSE;
+    
+    if (IS_PREVIEWING) {
+        CancelFontPreview();
+        needsRedraw = TRUE;
+    }
+    
+    if (IS_COLOR_PREVIEWING) {
+        IS_COLOR_PREVIEWING = FALSE;
+        needsRedraw = TRUE;
+    }
+    
+    if (IS_TIME_FORMAT_PREVIEWING) {
+        IS_TIME_FORMAT_PREVIEWING = FALSE;
+        needsRedraw = TRUE;
+    }
+    
+    if (IS_MILLISECONDS_PREVIEWING) {
+        IS_MILLISECONDS_PREVIEWING = FALSE;
+        ResetTimerWithInterval(hwnd);
+        needsRedraw = TRUE;
+    }
+    
+    if (needsRedraw) {
+        InvalidateRect(hwnd, NULL, TRUE);
+    }
 }
 
 /**
@@ -904,10 +1013,13 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         match = TRUE; break;
                     }
                 }
-                wchar_t wSel[MAX_PATH] = {0};
-                MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_FILE_PATH, -1, wSel, MAX_PATH);
-                if (GetFileAttributesW(wSel) == INVALID_FILE_ATTRIBUTES) {
-                    match = FALSE;
+                /** Check if current selected file still exists */
+                if (match) {
+                    wchar_t wSel[MAX_PATH] = {0};
+                    MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_FILE_PATH, -1, wSel, MAX_PATH);
+                    if (GetFileAttributesW(wSel) == INVALID_FILE_ATTRIBUTES) {
+                        match = FALSE;
+                    }
                 }
                 if (!match && CLOCK_RECENT_FILES_COUNT > 0) {
                     WriteConfigTimeoutFile(CLOCK_RECENT_FILES[0].path);
@@ -1028,20 +1140,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         case WM_TIMER: {
             if (wp == IDT_MENU_DEBOUNCE) {
                 KillTimer(hwnd, IDT_MENU_DEBOUNCE);
-                extern void CancelAnimationPreview(void);
-                CancelAnimationPreview();
-                if (IS_PREVIEWING || IS_COLOR_PREVIEWING || IS_TIME_FORMAT_PREVIEWING || IS_MILLISECONDS_PREVIEWING) {
-                    if (IS_PREVIEWING) {
-                        CancelFontPreview();
-                    }
-                    IS_COLOR_PREVIEWING = FALSE;
-                    IS_TIME_FORMAT_PREVIEWING = FALSE;
-                    if (IS_MILLISECONDS_PREVIEWING) {
-                        IS_MILLISECONDS_PREVIEWING = FALSE;
-                        ResetTimerWithInterval(hwnd);
-                    }
-                    InvalidateRect(hwnd, NULL, TRUE);
-                }
+                CancelAllPreviews(hwnd);
                 return 0;
             }
             if (HandleTimerEvent(hwnd, wp)) {
@@ -1681,22 +1780,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDM_RECENT_FILE_5: {
                     int index = cmd - CLOCK_IDM_RECENT_FILE_1;
                     if (index < CLOCK_RECENT_FILES_COUNT) {
-                        /** Validate selected recent file exists */
-                        wchar_t wPath[MAX_PATH] = {0};
-                        MultiByteToWideChar(CP_UTF8, 0, CLOCK_RECENT_FILES[index].path, -1, wPath, MAX_PATH);
-                        
-                        if (GetFileAttributesW(wPath) != INVALID_FILE_ATTRIBUTES) {
-                            WriteConfigTimeoutFile(CLOCK_RECENT_FILES[index].path);
-                            
-                            SaveRecentFile(CLOCK_RECENT_FILES[index].path);
-                        } else {
-                            /** File no longer exists: show error and cleanup */
-                            MessageBoxW(hwnd, 
-                                GetLocalizedString(L"所选文件不存在", L"Selected file does not exist"),
-                                GetLocalizedString(L"错误", L"Error"),
-                                MB_ICONERROR);
-                            
-                            /** Reset timeout action to default via INI only; watcher will apply */
+                        if (!ValidateAndSetTimeoutFile(hwnd, CLOCK_RECENT_FILES[index].path)) {
+                            /** File no longer exists: cleanup recent list */
                             WriteConfigKeyValue("CLOCK_TIMEOUT_FILE", "");
                             WriteConfigTimeoutAction("MESSAGE");
                             
@@ -1733,20 +1818,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     if (GetOpenFileNameW(&ofn)) {
                         char utf8Path[MAX_PATH * 3] = {0};
                         WideCharToMultiByte(CP_UTF8, 0, szFile, -1, utf8Path, sizeof(utf8Path), NULL, NULL);
-                        
-                        if (GetFileAttributesW(szFile) != INVALID_FILE_ATTRIBUTES) {
-                            /** Persist which file to open on timeout first */
-                            WriteConfigTimeoutFile(utf8Path);
-                            /** Update MRU list */
-                            SaveRecentFile(utf8Path);
-                            /** Ensure selected file remains consistent after MRU reload */
-                            WriteConfigTimeoutFile(utf8Path);
-                        } else {
-                            MessageBoxW(hwnd, 
-                                GetLocalizedString(L"所选文件不存在", L"Selected file does not exist"),
-                                GetLocalizedString(L"错误", L"Error"),
-                                MB_ICONERROR);
-                        }
+                        ValidateAndSetTimeoutFile(hwnd, utf8Path);
                     }
                     break;
                 }
@@ -1774,10 +1846,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                                            utf8Path, 
                                            sizeof(utf8Path), 
                                            NULL, NULL);
-                        
-                        WriteConfigTimeoutFile(utf8Path);
-                        
-                        SaveRecentFile(utf8Path);
+                        ValidateAndSetTimeoutFile(hwnd, utf8Path);
                     }
                     break;
                 }
@@ -1835,15 +1904,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
                         if (inputText[0] == L'\0') {
                             WriteConfigStartupMode("COUNTDOWN");
-                            
-                            HMENU hMenu = GetMenu(hwnd);
-                            HMENU hTimeOptionsMenu = GetSubMenu(hMenu, GetMenuItemCount(hMenu) - 2);
-                            HMENU hStartupSettingsMenu = GetSubMenu(hTimeOptionsMenu, 0);
-                            
-                            CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_SET_COUNTDOWN_TIME, MF_CHECKED);
-                            CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_START_COUNT_UP, MF_UNCHECKED);
-                            CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_START_NO_DISPLAY, MF_UNCHECKED);
-                            CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_START_SHOW_TIME, MF_UNCHECKED);
+                            UpdateStartupModeMenu(hwnd, "COUNTDOWN");
                             break;
                         }
 
@@ -1854,15 +1915,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         if (ParseInput(inputTextA, &total_seconds)) {
                             WriteConfigDefaultStartTime(total_seconds);
                             WriteConfigStartupMode("COUNTDOWN");
-                            
-                            HMENU hMenu = GetMenu(hwnd);
-                            HMENU hTimeOptionsMenu = GetSubMenu(hMenu, GetMenuItemCount(hMenu) - 2);
-                            HMENU hStartupSettingsMenu = GetSubMenu(hTimeOptionsMenu, 0);
-                            
-                            CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_SET_COUNTDOWN_TIME, MF_CHECKED);
-                            CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_START_COUNT_UP, MF_UNCHECKED);
-                            CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_START_NO_DISPLAY, MF_UNCHECKED);
-                            CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_START_SHOW_TIME, MF_UNCHECKED);
+                            UpdateStartupModeMenu(hwnd, "COUNTDOWN");
                             break;
                         } else {
                             MessageBoxW(hwnd, 
@@ -1890,14 +1943,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 /** Startup mode configuration options */
                 case CLOCK_IDC_START_SHOW_TIME: {
                     WriteConfigStartupMode("SHOW_TIME");
-                    HMENU hMenu = GetMenu(hwnd);
-                    HMENU hTimeOptionsMenu = GetSubMenu(hMenu, GetMenuItemCount(hMenu) - 2);
-                    HMENU hStartupSettingsMenu = GetSubMenu(hTimeOptionsMenu, 0);
-                    
-                    CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_SET_COUNTDOWN_TIME, MF_UNCHECKED);
-                    CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_START_COUNT_UP, MF_UNCHECKED);
-                    CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_START_NO_DISPLAY, MF_UNCHECKED);
-                    CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_START_SHOW_TIME, MF_CHECKED);
+                    UpdateStartupModeMenu(hwnd, "SHOW_TIME");
                     break;
                 }
                 case CLOCK_IDC_START_COUNT_UP: {
@@ -1906,15 +1952,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case CLOCK_IDC_START_NO_DISPLAY: {
                     WriteConfigStartupMode("NO_DISPLAY");
-                    
-                    HMENU hMenu = GetMenu(hwnd);
-                    HMENU hTimeOptionsMenu = GetSubMenu(hMenu, GetMenuItemCount(hMenu) - 2);
-                    HMENU hStartupSettingsMenu = GetSubMenu(hTimeOptionsMenu, 0);
-                    
-                    CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_SET_COUNTDOWN_TIME, MF_UNCHECKED);
-                    CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_START_COUNT_UP, MF_UNCHECKED);
-                    CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_START_NO_DISPLAY, MF_CHECKED);
-                    CheckMenuItem(hStartupSettingsMenu, CLOCK_IDC_START_SHOW_TIME, MF_UNCHECKED);
+                    UpdateStartupModeMenu(hwnd, "NO_DISPLAY");
                     break;
                 }
                 
@@ -2413,42 +2451,9 @@ refresh_window:
                 }
                 
                 /** Clear preview if no matching item found */
-                extern void CancelAnimationPreview(void);
-                CancelAnimationPreview();
-                if (IS_PREVIEWING || IS_COLOR_PREVIEWING || IS_TIME_FORMAT_PREVIEWING || IS_MILLISECONDS_PREVIEWING) {
-                    if (IS_PREVIEWING) {
-                        CancelFontPreview();
-                    }
-                    IS_COLOR_PREVIEWING = FALSE;
-                    IS_TIME_FORMAT_PREVIEWING = FALSE;
-                    
-                    /** Reset timer frequency when exiting milliseconds preview */
-                    if (IS_MILLISECONDS_PREVIEWING) {
-                        IS_MILLISECONDS_PREVIEWING = FALSE;
-                        ResetTimerWithInterval(hwnd);
-                    }
-                    
-                    InvalidateRect(hwnd, NULL, TRUE);
-                }
+                CancelAllPreviews(hwnd);
             } else if (flags & MF_POPUP) {
-                extern void CancelAnimationPreview(void);
-                CancelAnimationPreview();
-                if (IS_PREVIEWING || IS_COLOR_PREVIEWING || IS_TIME_FORMAT_PREVIEWING || IS_MILLISECONDS_PREVIEWING) {
-                    if (IS_PREVIEWING) {
-                        CancelFontPreview();
-                    }
-                    IS_COLOR_PREVIEWING = FALSE;
-                    IS_TIME_FORMAT_PREVIEWING = FALSE;
-                    
-                    /** Reset timer frequency when exiting milliseconds preview */
-                    if (IS_MILLISECONDS_PREVIEWING) {
-                        IS_MILLISECONDS_PREVIEWING = FALSE;
-                        ResetTimerWithInterval(hwnd);
-                    }
-                    
-                    InvalidateRect(hwnd, NULL, TRUE);
-                }
-                
+                CancelAllPreviews(hwnd);
             }
             }
             break;
@@ -2539,13 +2544,13 @@ refresh_window:
                 }
                 return 0;
             } else if (wp == HOTKEY_ID_QUICK_COUNTDOWN1) {
-                StartQuickCountdown1(hwnd);
+                StartQuickCountdownByIndex(hwnd, 1);
                 return 0;
             } else if (wp == HOTKEY_ID_QUICK_COUNTDOWN2) {
-                StartQuickCountdown2(hwnd);
+                StartQuickCountdownByIndex(hwnd, 2);
                 return 0;
             } else if (wp == HOTKEY_ID_QUICK_COUNTDOWN3) {
-                StartQuickCountdown3(hwnd);
+                StartQuickCountdownByIndex(hwnd, 3);
                 return 0;
             } else if (wp == HOTKEY_ID_POMODORO) {
 
@@ -2844,36 +2849,6 @@ static void StartQuickCountdownByZeroBasedIndex(HWND hwnd, int index) {
     } else {
         StartDefaultCountDown(hwnd);
     }
-}
-
-/**
- * @brief Start first configured quick countdown timer
- * @param hwnd Main window handle
- *
- * Uses first time option or falls back to default countdown
- */
-void StartQuickCountdown1(HWND hwnd) {
-    StartQuickCountdownByZeroBasedIndex(hwnd, 0);
-}
-
-/**
- * @brief Start second configured quick countdown timer
- * @param hwnd Main window handle
- *
- * Uses second time option or falls back to default countdown
- */
-void StartQuickCountdown2(HWND hwnd) {
-    StartQuickCountdownByZeroBasedIndex(hwnd, 1);
-}
-
-/**
- * @brief Start third configured quick countdown timer
- * @param hwnd Main window handle
- *
- * Uses third time option or falls back to default countdown
- */
-void StartQuickCountdown3(HWND hwnd) {
-    StartQuickCountdownByZeroBasedIndex(hwnd, 2);
 }
 
 /**
