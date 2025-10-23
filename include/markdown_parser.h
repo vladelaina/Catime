@@ -1,7 +1,13 @@
 /**
  * @file markdown_parser.h
- * @brief Markdown link parser for text rendering with clickable links
+ * @brief Refactored markdown link parser with optimized single-pass rendering
  * @author Catime Team
+ * 
+ * Refactored improvements:
+ * - ParseMarkdownLinks now returns BOOL for error handling
+ * - RenderMarkdownText combines rendering and link rectangle calculation (O(n) instead of O(2n))
+ * - Pre-allocation strategy eliminates realloc overhead
+ * - Unified text layout engine for consistent positioning
  */
 
 #ifndef MARKDOWN_PARSER_H
@@ -18,7 +24,7 @@
 typedef struct {
     wchar_t* linkText;    /**< Display text for the link */
     wchar_t* linkUrl;     /**< URL to open when link is clicked */
-    RECT linkRect;        /**< Rectangle for click detection in UI */
+    RECT linkRect;        /**< Rectangle for click detection (auto-calculated during render) */
     int startPos;         /**< Start position in display text */
     int endPos;           /**< End position in display text */
 } MarkdownLink;
@@ -29,10 +35,14 @@ typedef struct {
  * This function scans input text for markdown link patterns and extracts them
  * into separate structures while creating clean display text without markup.
  * 
+ * Optimized with pre-allocation: scans input once to count links, then allocates
+ * exact memory needed, eliminating realloc overhead.
+ * 
  * @param input Input text containing markdown links
  * @param displayText Output text with markdown removed (caller must free)
  * @param links Output array of parsed links (caller must free with FreeMarkdownLinks)
  * @param linkCount Output number of links found
+ * @return TRUE on success, FALSE on allocation failure
  * 
  * @example
  * ```c
@@ -40,15 +50,16 @@ typedef struct {
  * wchar_t* display;
  * MarkdownLink* links;
  * int count;
- * ParseMarkdownLinks(text, &display, &links, &count);
- * // display will be: "Visit GitHub for more info."
- * // links[0].linkText will be: "GitHub"
- * // links[0].linkUrl will be: "https://github.com"
- * FreeMarkdownLinks(links, count);
- * free(display);
+ * if (ParseMarkdownLinks(text, &display, &links, &count)) {
+ *     // display will be: "Visit GitHub for more info."
+ *     // links[0].linkText will be: "GitHub"
+ *     // links[0].linkUrl will be: "https://github.com"
+ *     FreeMarkdownLinks(links, count);
+ *     free(display);
+ * }
  * ```
  */
-void ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText, MarkdownLink** links, int* linkCount);
+BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText, MarkdownLink** links, int* linkCount);
 
 /**
  * @brief Free memory allocated for parsed markdown links
@@ -75,20 +86,6 @@ void FreeMarkdownLinks(MarkdownLink* links, int linkCount);
 const wchar_t* GetClickedLinkUrl(MarkdownLink* links, int linkCount, POINT point);
 
 /**
- * @brief Update link rectangles based on text metrics and positions
- * 
- * This function calculates the actual screen rectangles for each link
- * based on font metrics and text positioning, enabling accurate click detection.
- * 
- * @param links Array of MarkdownLink structures to update
- * @param linkCount Number of links in the array
- * @param displayText The display text containing the links
- * @param hdc Device context for text measurement
- * @param drawRect Rectangle where text is drawn
- */
-void UpdateMarkdownLinkRects(MarkdownLink* links, int linkCount, const wchar_t* displayText, HDC hdc, RECT drawRect);
-
-/**
  * @brief Check if a character position is within a link
  * 
  * Helper function to determine if a character at a given position
@@ -103,18 +100,28 @@ void UpdateMarkdownLinkRects(MarkdownLink* links, int linkCount, const wchar_t* 
 BOOL IsCharacterInLink(MarkdownLink* links, int linkCount, int position, int* linkIndex);
 
 /**
- * @brief Render markdown text with clickable links
+ * @brief Render markdown text with clickable links (single-pass optimized)
  * 
- * This function renders text with markdown links, applying appropriate colors
- * and calculating link rectangles for click detection.
+ * This function renders text with markdown links while simultaneously calculating
+ * link rectangles for click detection. This eliminates the need for a separate
+ * UpdateMarkdownLinkRects call, reducing complexity from O(2n) to O(n).
+ * 
+ * The function automatically:
+ * - Sets text colors based on link membership
+ * - Handles newlines and text wrapping
+ * - Updates link rectangle boundaries during rendering
+ * - Uses unified text layout engine for consistent positioning
  * 
  * @param hdc Device context for drawing
  * @param displayText The display text to render
- * @param links Array of MarkdownLink structures
+ * @param links Array of MarkdownLink structures (rectangles updated in-place)
  * @param linkCount Number of links in the array
  * @param drawRect Rectangle to draw the text within
  * @param linkColor Color for link text (RGB value)
  * @param normalColor Color for normal text (RGB value)
+ * 
+ * @note After calling this function, link rectangles are automatically updated
+ *       and ready for click detection via GetClickedLinkUrl()
  */
 void RenderMarkdownText(HDC hdc, const wchar_t* displayText, MarkdownLink* links, int linkCount, 
                         RECT drawRect, COLORREF linkColor, COLORREF normalColor);

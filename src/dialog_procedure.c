@@ -2449,7 +2449,12 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, L
                 L"FontLicenseAgreementText");
             
             /** Parse markdown links and set display text */
-            ParseMarkdownLinks(licenseText, &g_displayText, &g_links, &g_linkCount);
+            if (!ParseMarkdownLinks(licenseText, &g_displayText, &g_links, &g_linkCount)) {
+                /** Fallback: use plain text if parsing fails */
+                g_displayText = _wcsdup(licenseText);
+                g_links = NULL;
+                g_linkCount = 0;
+            }
             
             // Text will be drawn by WM_DRAWITEM handler
             // No need to set text here since we're using SS_OWNERDRAW
