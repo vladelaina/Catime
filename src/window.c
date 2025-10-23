@@ -350,96 +350,28 @@ void SaveWindowSettings(HWND hwnd) {
     WriteIniString(INI_SECTION_DISPLAY, "WINDOW_SCALE", scaleStr, config_path);
 }
 
+/**
+ * @brief Legacy function - now handled by drag_scale.c:HandleScaleWindow()
+ * @deprecated This function has been superseded by HandleScaleWindow in drag_scale.c
+ * which provides better debouncing, modularity, and code reuse. Kept for API
+ * compatibility during transition period. Will be removed in future version.
+ */
 BOOL HandleMouseWheel(HWND hwnd, int delta) {
-    if (CLOCK_EDIT_MODE) {
-        float old_scale = CLOCK_FONT_SCALE_FACTOR;
-        
-
-        RECT windowRect;
-        GetWindowRect(hwnd, &windowRect);
-        int oldWidth = windowRect.right - windowRect.left;
-        int oldHeight = windowRect.bottom - windowRect.top;
-        
-
-        float relativeX = 0.5f;
-        float relativeY = 0.5f;
-        
-        float scaleFactor = 1.1f;
-        if (delta > 0) {
-            CLOCK_FONT_SCALE_FACTOR *= scaleFactor;
-            CLOCK_WINDOW_SCALE = CLOCK_FONT_SCALE_FACTOR;
-        } else {
-            CLOCK_FONT_SCALE_FACTOR /= scaleFactor;
-            CLOCK_WINDOW_SCALE = CLOCK_FONT_SCALE_FACTOR;
-        }
-        
-
-        if (CLOCK_FONT_SCALE_FACTOR < MIN_SCALE_FACTOR) {
-            CLOCK_FONT_SCALE_FACTOR = MIN_SCALE_FACTOR;
-            CLOCK_WINDOW_SCALE = MIN_SCALE_FACTOR;
-        }
-        if (CLOCK_FONT_SCALE_FACTOR > MAX_SCALE_FACTOR) {
-            CLOCK_FONT_SCALE_FACTOR = MAX_SCALE_FACTOR;
-            CLOCK_WINDOW_SCALE = MAX_SCALE_FACTOR;
-        }
-        
-        if (old_scale != CLOCK_FONT_SCALE_FACTOR) {
-
-            int newWidth = (int)(oldWidth * (CLOCK_FONT_SCALE_FACTOR / old_scale));
-            int newHeight = (int)(oldHeight * (CLOCK_FONT_SCALE_FACTOR / old_scale));
-            
-
-            int newX = windowRect.left + (oldWidth - newWidth)/2;
-            int newY = windowRect.top + (oldHeight - newHeight)/2;
-            
-            SetWindowPos(hwnd, NULL, 
-                newX, newY,
-                newWidth, newHeight,
-                SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOREDRAW);
-            
-
-            InvalidateRect(hwnd, NULL, FALSE);
-            UpdateWindow(hwnd);
-            
-
-            SaveWindowSettings(hwnd);
-        }
-        return TRUE;
-    }
-    return FALSE;
+    /** Forward to the refactored implementation in drag_scale.c */
+    extern BOOL HandleScaleWindow(HWND hwnd, int delta);
+    return HandleScaleWindow(hwnd, delta);
 }
 
+/**
+ * @brief Legacy function - now handled by drag_scale.c:HandleDragWindow()
+ * @deprecated This function has been superseded by HandleDragWindow in drag_scale.c
+ * which provides debounced saves, cleaner code structure, and better maintainability.
+ * Kept for API compatibility during transition period. Will be removed in future version.
+ */
 BOOL HandleMouseMove(HWND hwnd) {
-    if (CLOCK_EDIT_MODE && CLOCK_IS_DRAGGING) {
-        POINT currentPos;
-        GetCursorPos(&currentPos);
-        
-        int deltaX = currentPos.x - CLOCK_LAST_MOUSE_POS.x;
-        int deltaY = currentPos.y - CLOCK_LAST_MOUSE_POS.y;
-        
-        RECT windowRect;
-        GetWindowRect(hwnd, &windowRect);
-        
-        SetWindowPos(hwnd, NULL,
-            windowRect.left + deltaX,
-            windowRect.top + deltaY,
-            windowRect.right - windowRect.left,   
-            windowRect.bottom - windowRect.top,   
-            SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOREDRAW   
-        );
-        
-        CLOCK_LAST_MOUSE_POS = currentPos;
-        
-        UpdateWindow(hwnd);
-        
-
-        CLOCK_WINDOW_POS_X = windowRect.left + deltaX;
-        CLOCK_WINDOW_POS_Y = windowRect.top + deltaY;
-        SaveWindowSettings(hwnd);
-        
-        return TRUE;
-    }
-    return FALSE;
+    /** Forward to the refactored implementation in drag_scale.c */
+    extern BOOL HandleDragWindow(HWND hwnd);
+    return HandleDragWindow(hwnd);
 }
 
 /**

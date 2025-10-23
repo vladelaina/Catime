@@ -226,6 +226,17 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
         return TRUE;
     }
     
+    /** Timer 2001: Window refresh after exiting edit mode (from drag_scale.c) */
+    if (wp == 2001) {
+        KillTimer(hwnd, 2001);
+        ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+        SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0,
+                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+        InvalidateRect(hwnd, NULL, TRUE);
+        RedrawWindow(hwnd, NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW);
+        return TRUE;
+    }
+    
     /** Timer 1003: Font path validation and auto-fix (every 2 seconds) */
     if (wp == 1003) {
         extern char FONT_FILE_NAME[100];

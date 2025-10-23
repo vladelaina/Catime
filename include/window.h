@@ -94,6 +94,8 @@ BOOL InitDWMFunctions(void);
  * @param hwnd Window handle
  * @param delta Mouse wheel delta value
  * @return TRUE if handled, FALSE otherwise
+ * @deprecated Use HandleScaleWindow() from drag_scale.h instead.
+ *             This is a legacy wrapper that forwards to the new implementation.
  */
 BOOL HandleMouseWheel(HWND hwnd, int delta);
 
@@ -101,6 +103,8 @@ BOOL HandleMouseWheel(HWND hwnd, int delta);
  * @brief Handle mouse movement for window dragging
  * @param hwnd Window handle
  * @return TRUE if handled, FALSE otherwise
+ * @deprecated Use HandleDragWindow() from drag_scale.h instead.
+ *             This is a legacy wrapper that forwards to the new implementation.
  */
 BOOL HandleMouseMove(HWND hwnd);
 
