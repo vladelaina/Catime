@@ -331,8 +331,6 @@ typedef struct {
 
 extern void ShowPomodoroLoopDialog(HWND hwndParent);
 
-extern void OpenUserGuide(void);
-
 /**
  * @brief Get %LOCALAPPDATA%\Catime\resources\fonts in wide-char using config path (Unicode-safe)
  */
@@ -352,10 +350,6 @@ static BOOL GetFontsFolderWideFromConfig(wchar_t* out, size_t size) {
     out[size - 1] = L'\0';
     return TRUE;
 }
-
-extern void OpenSupportPage(void);
-
-extern void OpenFeedbackPage(void);
 
 /**
  * @brief Check if string is NULL, empty or contains only whitespace characters
@@ -1567,12 +1561,12 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 
                 /** Timer control commands */
                 case CLOCK_IDM_TIMER_PAUSE_RESUME: {
-                    PauseResumeTimer(hwnd);
+                    TogglePauseResumeTimer(hwnd);
                     break;
                 }
                 case CLOCK_IDM_TIMER_RESTART: {
                     CloseAllNotifications();
-                    RestartTimer(hwnd);
+                    RestartCurrentTimer(hwnd);
                     break;
                 }
                 
@@ -2758,42 +2752,13 @@ void ToggleEditMode(HWND hwnd) {
  */
 void TogglePauseResume(HWND hwnd) {
     CleanupBeforeTimerAction();
-    
-    if (!CLOCK_SHOW_CURRENT_TIME && (CLOCK_COUNT_UP || CLOCK_TOTAL_TIME > 0)) {
-        if (!CLOCK_IS_PAUSED) {
-            /** About to pause: save current milliseconds first */
-            PauseTimerMilliseconds();
-        }
-        
-        CLOCK_IS_PAUSED = !CLOCK_IS_PAUSED;
-        
-        if (CLOCK_IS_PAUSED) {
-            /** Record pause timestamp and stop updates */
-            CLOCK_LAST_TIME_UPDATE = time(NULL);
-            KillTimer(hwnd, 1);
-            
-            extern BOOL PauseNotificationSound(void);
-            PauseNotificationSound();
-        } else {
-            /** Resume timer updates and notification sounds */
-            ResetMillisecondAccumulator();  /** Reset millisecond timing on resume */
-            SetTimer(hwnd, 1, GetTimerInterval(), NULL);
-            
-            extern BOOL ResumeNotificationSound(void);
-            ResumeNotificationSound();
-        }
-        
-        InvalidateRect(hwnd, NULL, TRUE);
-    }
+    TogglePauseResumeTimer(hwnd);
 }
 
-/**
- * @brief Restart current timer from beginning
- * @param hwnd Main window handle
- *
- * Resets elapsed time and notification state for active timer
- */
 void RestartCurrentTimer(HWND hwnd) {
+    extern void StopNotificationSound(void);
+    StopNotificationSound();
+    
     CleanupBeforeTimerAction();
     
     if (!CLOCK_SHOW_CURRENT_TIME) {
@@ -2812,9 +2777,11 @@ void RestartCurrentTimer(HWND hwnd) {
             elapsed_time = 0;
         }
         CLOCK_IS_PAUSED = FALSE;
-        ResetMillisecondAccumulator();  /** Reset millisecond timing on restart */
+        ResetMillisecondAccumulator();
         InvalidateRect(hwnd, NULL, TRUE);
     }
+    
+    HandleWindowReset(hwnd);
 }
 
 /**
