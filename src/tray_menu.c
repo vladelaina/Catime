@@ -19,6 +19,7 @@
 #include "../include/config.h"
 #include "../resource/resource.h"
 #include "../include/tray_animation.h"
+#include "../include/startup.h"
 
 /** @brief Represents a file or folder entry for sorting animation menus. */
 typedef struct {
@@ -162,7 +163,6 @@ extern int current_pomodoro_time_index;
 extern POMODORO_PHASE current_pomodoro_phase;
 
 extern void GetConfigPath(char* path, size_t size);
-extern BOOL IsAutoStartEnabled(void);
 extern void WriteConfigStartupMode(const char* mode);
 extern void ClearColorOptions(void);
 extern void AddColorOption(const char* color);
