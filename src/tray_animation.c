@@ -647,10 +647,10 @@ static void CALLBACK FallbackTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD t
 }
 
 /**
- * @brief Initialize high-precision timer system
+ * @brief Initialize high-precision multimedia timer for animations
  * @return TRUE if successful, FALSE if need to fallback to SetTimer
  */
-static BOOL InitializeHighPrecisionTimer(void) {
+static BOOL InitializeAnimationTimer(void) {
     /** Initialize critical section for thread-safe access */
     if (!g_criticalSectionInitialized) {
         InitializeCriticalSection(&g_animCriticalSection);
@@ -1453,7 +1453,7 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
     }
     
     /** Start high-precision timer system */
-    if (!InitializeHighPrecisionTimer()) {
+    if (!InitializeAnimationTimer()) {
         /** Fallback to standard SetTimer if multimedia timer fails */
         SetTimer(hwnd, TRAY_ANIM_TIMER_ID, g_targetInternalInterval, FallbackTimerProc);
     }

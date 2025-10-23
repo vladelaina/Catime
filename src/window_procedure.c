@@ -1403,8 +1403,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     extern BOOL countdown_message_shown;
                     extern BOOL countup_message_shown;
                     
-                    extern BOOL InitializeHighPrecisionTimer(void);
-                    extern void ResetTimer(void);
                     extern void ReadNotificationMessagesConfig(void);
                     
                     /** Reset to default 25-minute Pomodoro timer */
@@ -1640,7 +1638,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         CLOCK_COUNT_UP = FALSE;
                     }
                     
-                    extern void ResetTimer(void);
                     ResetTimer();
                     
                     ResetTimerWithInterval(hwnd);
@@ -1886,7 +1883,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDM_COUNT_UP_RESET: {
                     CleanupBeforeTimerAction();
 
-                    extern void ResetTimer(void);
                     ResetTimer();
                     InvalidateRect(hwnd, NULL, TRUE);
                     break;
@@ -2051,7 +2047,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case CLOCK_IDM_POMODORO_RESET: {
                     CleanupBeforeTimerAction();
                     
-                    extern void ResetTimer(void);
                     ResetTimer();
                     
                     if (CLOCK_TOTAL_TIME == POMODORO_WORK_TIME || 

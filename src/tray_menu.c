@@ -163,7 +163,6 @@ extern int current_pomodoro_time_index;
 extern POMODORO_PHASE current_pomodoro_phase;
 
 extern void GetConfigPath(char* path, size_t size);
-extern void WriteConfigStartupMode(const char* mode);
 extern void ClearColorOptions(void);
 extern void AddColorOption(const char* color);
 

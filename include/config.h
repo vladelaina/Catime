@@ -549,6 +549,14 @@ UINT GetTimerInterval(void);
 void ResetTimerWithInterval(HWND hwnd);
 
 /**
+ * @brief Write startup mode to configuration
+ * @param mode Startup mode string ("COUNTDOWN", "COUNTUP", "SHOW_TIME", "NO_DISPLAY")
+ * 
+ * @details Persists to [Timer] section as CLOCK_STARTUP_MODE
+ */
+void WriteConfigStartupMode(const char* mode);
+
+/**
  * @brief Force flush configuration changes to disk immediately
  */
 void FlushConfigToDisk(void);
