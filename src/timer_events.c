@@ -30,8 +30,6 @@ POMODORO_PHASE current_pomodoro_phase = POMODORO_PHASE_IDLE;
 /** @brief Number of completed Pomodoro cycles */
 int complete_pomodoro_cycles = 0;
 
-extern void ShowNotification(HWND hwnd, const wchar_t* message);
-
 extern int elapsed_time;
 extern BOOL message_shown;
 

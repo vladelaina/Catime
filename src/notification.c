@@ -1,6 +1,7 @@
 /**
  * @file notification.c
  * @brief Multi-modal notification system with animations and fallback mechanisms
+ * @version 2.0 - Refactored for better maintainability and reduced code duplication
  */
 #include <windows.h>
 #include <stdlib.h>
@@ -13,16 +14,100 @@
 
 extern NotificationType NOTIFICATION_TYPE;
 
-/** @brief Animation states for toast notification fade effects */
-typedef enum {
-    ANIM_FADE_IN,    /**< Fading in from transparent */
-    ANIM_VISIBLE,    /**< Fully visible and stable */
-    ANIM_FADE_OUT,   /**< Fading out to transparent */
-} AnimationState;
+/* ============================================================================
+ * Custom Window Data Structure (replaces Window Properties)
+ * ============================================================================ */
+
+/**
+ * @brief Notification window instance data
+ * Type-safe replacement for SetPropW/GetPropW pattern
+ */
+typedef struct {
+    wchar_t* messageText;        /**< Dynamically allocated message text */
+    int windowWidth;             /**< Calculated window width */
+    AnimationState animState;    /**< Current animation state */
+    BYTE opacity;                /**< Current opacity value (0-255) */
+} NotificationData;
+
+/* ============================================================================
+ * Internal Helper Functions - Declarations
+ * ============================================================================ */
 
 LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 void RegisterNotificationClass(HINSTANCE hInstance);
-void DrawRoundedRectangle(HDC hdc, RECT rect, int radius);
+
+/** Helper functions for reducing code duplication */
+static void FallbackToTrayNotification(HWND hwnd, const wchar_t* message);
+static void LoadNotificationConfigs(void);
+static HFONT CreateNotificationFont(int size, int weight);
+static int CalculateTextWidth(HDC hdc, const wchar_t* text, HFONT font);
+static void CalculateNotificationPosition(int width, int height, int* x, int* y);
+static void DrawNotificationBorder(HDC hdc, RECT rect);
+static void DrawNotificationText(HDC memDC, const wchar_t* text, RECT rect, HFONT font, COLORREF color, DWORD flags);
+static BYTE UpdateAnimationOpacity(AnimationState state, BYTE currentOpacity, BYTE maxOpacity, BOOL* shouldDestroy);
+static NotificationData* GetNotificationData(HWND hwnd);
+static void SetNotificationData(HWND hwnd, NotificationData* data);
+
+/* ============================================================================
+ * Thread Parameters for Modal Dialogs
+ * ============================================================================ */
+
+/**
+ * @brief Thread parameters for non-blocking modal dialogs
+ * Uses dynamic allocation for flexible message length
+ */
+typedef struct {
+    HWND hwnd;
+    wchar_t* message;  /**< Dynamically allocated message */
+} DialogThreadParams;
+
+/* ============================================================================
+ * Helper Function Implementations
+ * ============================================================================ */
+
+/**
+ * @brief Fallback mechanism to show tray notification when other methods fail
+ * @param hwnd Parent window handle
+ * @param message Wide-char notification message
+ * 
+ * Converts message to UTF-8 and delegates to tray notification system.
+ * This is the universal fallback for all notification failures.
+ */
+static void FallbackToTrayNotification(HWND hwnd, const wchar_t* message) {
+    int len = WideCharToMultiByte(CP_UTF8, 0, message, -1, NULL, 0, NULL, NULL);
+    if (len > 0) {
+        char* ansiMessage = (char*)malloc(len);
+        if (ansiMessage) {
+            WideCharToMultiByte(CP_UTF8, 0, message, -1, ansiMessage, len, NULL, NULL);
+            ShowTrayNotification(hwnd, ansiMessage);
+            free(ansiMessage);
+        }
+    }
+}
+
+/**
+ * @brief Batch load all notification-related configuration values
+ * Centralizes configuration loading for consistency
+ */
+static void LoadNotificationConfigs(void) {
+    ReadNotificationTypeConfig();
+    ReadNotificationDisabledConfig();
+    ReadNotificationTimeoutConfig();
+    ReadNotificationOpacityConfig();
+}
+
+/**
+ * @brief Create notification font with standardized parameters
+ * @param size Font size in logical units
+ * @param weight Font weight (FW_NORMAL, FW_BOLD, etc.)
+ * @return Font handle (caller must DeleteObject)
+ */
+static HFONT CreateNotificationFont(int size, int weight) {
+    return CreateFontW(size, 0, 0, 0, weight, FALSE, FALSE, FALSE,
+                      DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+                      DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, 
+                      NOTIFICATION_FONT_NAME);
+}
 
 /**
  * @brief Calculate pixel width of text for dynamic notification sizing
@@ -31,7 +116,7 @@ void DrawRoundedRectangle(HDC hdc, RECT rect, int radius);
  * @param font Font to use for measurement
  * @return Text width in pixels
  */
-int CalculateTextWidth(HDC hdc, const wchar_t* text, HFONT font) {
+static int CalculateTextWidth(HDC hdc, const wchar_t* text, HFONT font) {
     HFONT oldFont = (HFONT)SelectObject(hdc, font);
     SIZE textSize;
     GetTextExtentPoint32W(hdc, text, wcslen(text), &textSize);
@@ -40,14 +125,117 @@ int CalculateTextWidth(HDC hdc, const wchar_t* text, HFONT font) {
 }
 
 /**
+ * @brief Calculate notification window position in bottom-right of work area
+ * @param width Notification window width
+ * @param height Notification window height
+ * @param x Output: X coordinate
+ * @param y Output: Y coordinate
+ */
+static void CalculateNotificationPosition(int width, int height, int* x, int* y) {
+    RECT workArea;
+    SystemParametersInfo(SPI_GETWORKAREA, 0, &workArea, 0);
+    
+    *x = workArea.right - width - NOTIFICATION_RIGHT_MARGIN;
+    *y = workArea.bottom - height - NOTIFICATION_BOTTOM_MARGIN;
+}
+
+/**
+ * @brief Draw notification border with consistent styling
+ * @param hdc Device context for drawing
+ * @param rect Rectangle bounds
+ */
+static void DrawNotificationBorder(HDC hdc, RECT rect) {
+    HPEN pen = CreatePen(PS_SOLID, 1, NOTIFICATION_BORDER_COLOR);
+    HPEN oldPen = (HPEN)SelectObject(hdc, pen);
+    
+    Rectangle(hdc, rect.left, rect.top, rect.right, rect.bottom);
+    
+    SelectObject(hdc, oldPen);
+    DeleteObject(pen);
+}
+
+/**
+ * @brief Draw text with automatic font selection and color management
+ * @param memDC Memory device context for drawing
+ * @param text Text to render
+ * @param rect Drawing rectangle
+ * @param font Font to use (will be selected and cleaned up)
+ * @param color Text color
+ * @param flags DrawText flags (DT_SINGLELINE, etc.)
+ */
+static void DrawNotificationText(HDC memDC, const wchar_t* text, RECT rect, 
+                                 HFONT font, COLORREF color, DWORD flags) {
+    HFONT oldFont = (HFONT)SelectObject(memDC, font);
+    SetTextColor(memDC, color);
+    DrawTextW(memDC, text, -1, &rect, flags);
+    SelectObject(memDC, oldFont);
+}
+
+/**
+ * @brief Update opacity value based on animation state
+ * @param state Current animation state
+ * @param currentOpacity Current opacity value
+ * @param maxOpacity Maximum opacity to reach
+ * @param shouldDestroy Output: whether window should be destroyed
+ * @return New opacity value
+ * 
+ * Centralizes opacity calculation logic for fade-in/fade-out animations
+ */
+static BYTE UpdateAnimationOpacity(AnimationState state, BYTE currentOpacity, 
+                                   BYTE maxOpacity, BOOL* shouldDestroy) {
+    *shouldDestroy = FALSE;
+    
+    switch (state) {
+        case ANIM_FADE_IN:
+            if (currentOpacity >= maxOpacity - ANIMATION_STEP) {
+                return maxOpacity;
+            }
+            return currentOpacity + ANIMATION_STEP;
+            
+        case ANIM_FADE_OUT:
+            if (currentOpacity <= ANIMATION_STEP) {
+                *shouldDestroy = TRUE;
+                return 0;
+            }
+            return currentOpacity - ANIMATION_STEP;
+            
+        case ANIM_VISIBLE:
+        default:
+            return currentOpacity;
+    }
+}
+
+/**
+ * @brief Get notification data from window
+ * @param hwnd Window handle
+ * @return Notification data pointer or NULL
+ */
+static NotificationData* GetNotificationData(HWND hwnd) {
+    return (NotificationData*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+}
+
+/**
+ * @brief Store notification data in window
+ * @param hwnd Window handle
+ * @param data Notification data pointer
+ */
+static void SetNotificationData(HWND hwnd, NotificationData* data) {
+    SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)data);
+}
+
+/* ============================================================================
+ * Public API Implementation
+ * ============================================================================ */
+
+/**
  * @brief Dispatch notifications to appropriate handler based on configuration
  * @param hwnd Parent window handle
  * @param message Notification message text
+ * 
  * Provides graceful fallback chain: toast -> modal -> tray
  */
 void ShowNotification(HWND hwnd, const wchar_t* message) {
-    ReadNotificationTypeConfig();
-    ReadNotificationDisabledConfig();
+    LoadNotificationConfigs();
     
     /** Early exit if notifications are disabled */
     if (NOTIFICATION_DISABLED || NOTIFICATION_TIMEOUT_MS == 0) {
@@ -62,16 +250,7 @@ void ShowNotification(HWND hwnd, const wchar_t* message) {
             ShowModalNotification(hwnd, message);
             break;
         case NOTIFICATION_TYPE_OS:
-            /** Convert to UTF-8 for tray notification API */
-            int len = WideCharToMultiByte(CP_UTF8, 0, message, -1, NULL, 0, NULL, NULL);
-            if (len > 0) {
-                char* ansiMessage = (char*)malloc(len);
-                if (ansiMessage) {
-                    WideCharToMultiByte(CP_UTF8, 0, message, -1, ansiMessage, len, NULL, NULL);
-                    ShowTrayNotification(hwnd, ansiMessage);
-                    free(ansiMessage);
-                }
-            }
+            FallbackToTrayNotification(hwnd, message);
             break;
         default:
             ShowToastNotification(hwnd, message);
@@ -79,23 +258,19 @@ void ShowNotification(HWND hwnd, const wchar_t* message) {
     }
 }
 
-/** @brief Thread parameters for non-blocking modal dialogs */
-typedef struct {
-    HWND hwnd;
-    wchar_t message[512];
-} DialogThreadParams;
-
 /**
  * @brief Thread entry point for modal notification dialog
  * @param lpParam DialogThreadParams containing message and parent window
  * @return Thread exit code (always 0)
+ * 
  * Cleans up allocated parameters after dialog closes
  */
-DWORD WINAPI ShowModalDialogThread(LPVOID lpParam) {
+static DWORD WINAPI ShowModalDialogThread(LPVOID lpParam) {
     DialogThreadParams* params = (DialogThreadParams*)lpParam;
     
     MessageBoxW(params->hwnd, params->message, L"Catime", MB_OK);
     
+    free(params->message);
     free(params);
     
     return 0;
@@ -105,38 +280,36 @@ DWORD WINAPI ShowModalDialogThread(LPVOID lpParam) {
  * @brief Show non-blocking modal notification with tray fallback
  * @param hwnd Parent window handle
  * @param message Notification message text
+ * 
  * Creates background thread to avoid blocking main UI thread
  */
 void ShowModalNotification(HWND hwnd, const wchar_t* message) {
     DialogThreadParams* params = (DialogThreadParams*)malloc(sizeof(DialogThreadParams));
-    if (!params) return;
+    if (!params) {
+        FallbackToTrayNotification(hwnd, message);
+        return;
+    }
+    
+    /** Allocate dynamic message buffer */
+    size_t messageLen = wcslen(message) + 1;
+    params->message = (wchar_t*)malloc(messageLen * sizeof(wchar_t));
+    if (!params->message) {
+        free(params);
+        FallbackToTrayNotification(hwnd, message);
+        return;
+    }
     
     params->hwnd = hwnd;
-    wcsncpy(params->message, message, sizeof(params->message)/sizeof(wchar_t) - 1);
-    params->message[sizeof(params->message)/sizeof(wchar_t) - 1] = L'\0';
+    wcscpy(params->message, message);
     
-    HANDLE hThread = CreateThread(
-        NULL,
-        0,
-        ShowModalDialogThread,
-        params,
-        0,
-        NULL
-    );
+    HANDLE hThread = CreateThread(NULL, 0, ShowModalDialogThread, params, 0, NULL);
     
     /** Fallback to tray notification if thread creation fails */
     if (hThread == NULL) {
+        free(params->message);
         free(params);
         MessageBeep(MB_OK);
-        int len = WideCharToMultiByte(CP_UTF8, 0, message, -1, NULL, 0, NULL, NULL);
-        if (len > 0) {
-            char* ansiMessage = (char*)malloc(len);
-            if (ansiMessage) {
-                WideCharToMultiByte(CP_UTF8, 0, message, -1, ansiMessage, len, NULL, NULL);
-                ShowTrayNotification(hwnd, ansiMessage);
-                free(ansiMessage);
-            }
-        }
+        FallbackToTrayNotification(hwnd, message);
         return;
     }
     
@@ -148,15 +321,14 @@ void ShowModalNotification(HWND hwnd, const wchar_t* message) {
  * @brief Create animated toast notification with auto-sizing and positioning
  * @param hwnd Parent window handle
  * @param message Notification message text
+ * 
  * Falls back to tray notification on any failure during creation
  */
 void ShowToastNotification(HWND hwnd, const wchar_t* message) {
     static BOOL isClassRegistered = FALSE;
     HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
     
-    ReadNotificationTimeoutConfig();
-    ReadNotificationOpacityConfig();
-    ReadNotificationDisabledConfig();
+    LoadNotificationConfigs();
     
     if (NOTIFICATION_DISABLED || NOTIFICATION_TIMEOUT_MS == 0) {
         return;
@@ -168,32 +340,29 @@ void ShowToastNotification(HWND hwnd, const wchar_t* message) {
         isClassRegistered = TRUE;
     }
     
-    /** Allocate persistent message copy for window property storage */
-    size_t messageLen = wcslen(message) + 1;
-    wchar_t* wmessage = (wchar_t*)malloc(messageLen * sizeof(wchar_t));
-    if (!wmessage) {
-        /** Fallback to tray on memory allocation failure */
-        int len = WideCharToMultiByte(CP_UTF8, 0, message, -1, NULL, 0, NULL, NULL);
-        if (len > 0) {
-            char* ansiMessage = (char*)malloc(len);
-            if (ansiMessage) {
-                WideCharToMultiByte(CP_UTF8, 0, message, -1, ansiMessage, len, NULL, NULL);
-                ShowTrayNotification(hwnd, ansiMessage);
-                free(ansiMessage);
-            }
-        }
+    /** Allocate notification data structure */
+    NotificationData* notifData = (NotificationData*)malloc(sizeof(NotificationData));
+    if (!notifData) {
+        FallbackToTrayNotification(hwnd, message);
         return;
     }
-    wcscpy(wmessage, message);
+    
+    /** Allocate persistent message copy */
+    size_t messageLen = wcslen(message) + 1;
+    notifData->messageText = (wchar_t*)malloc(messageLen * sizeof(wchar_t));
+    if (!notifData->messageText) {
+        free(notifData);
+        FallbackToTrayNotification(hwnd, message);
+        return;
+    }
+    wcscpy(notifData->messageText, message);
     
     /** Calculate dynamic notification width based on text content */
     HDC hdc = GetDC(hwnd);
-    HFONT contentFont = CreateFontW(20, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-                                 DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-                                 DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei");
+    HFONT contentFont = CreateNotificationFont(NOTIFICATION_CONTENT_FONT_SIZE, FW_NORMAL);
     
     int textWidth = CalculateTextWidth(hdc, message, contentFont);
-    int notificationWidth = textWidth + 40;  /**< Add padding */
+    int notificationWidth = textWidth + NOTIFICATION_TEXT_PADDING;
     
     /** Enforce minimum and maximum width constraints */
     if (notificationWidth < NOTIFICATION_MIN_WIDTH) 
@@ -204,12 +373,11 @@ void ShowToastNotification(HWND hwnd, const wchar_t* message) {
     DeleteObject(contentFont);
     ReleaseDC(hwnd, hdc);
     
-    /** Position notification in bottom-right corner of work area */
-    RECT workArea;
-    SystemParametersInfo(SPI_GETWORKAREA, 0, &workArea, 0);
+    notifData->windowWidth = notificationWidth;
     
-    int x = workArea.right - notificationWidth - 20;
-    int y = workArea.bottom - NOTIFICATION_HEIGHT - 20;
+    /** Position notification in bottom-right corner of work area */
+    int x, y;
+    CalculateNotificationPosition(notificationWidth, NOTIFICATION_HEIGHT, &x, &y);
     
     /** Create layered popup window for transparency support */
     HWND hNotification = CreateWindowExW(
@@ -224,26 +392,18 @@ void ShowToastNotification(HWND hwnd, const wchar_t* message) {
     
     /** Fallback to tray if window creation fails */
     if (!hNotification) {
-        free(wmessage);
-        int len = WideCharToMultiByte(CP_UTF8, 0, message, -1, NULL, 0, NULL, NULL);
-        if (len > 0) {
-            char* ansiMessage = (char*)malloc(len);
-            if (ansiMessage) {
-                WideCharToMultiByte(CP_UTF8, 0, message, -1, ansiMessage, len, NULL, NULL);
-                ShowTrayNotification(hwnd, ansiMessage);
-                free(ansiMessage);
-            }
-        }
+        free(notifData->messageText);
+        free(notifData);
+        FallbackToTrayNotification(hwnd, message);
         return;
     }
     
-    /** Store notification data as window properties */
-    SetPropW(hNotification, L"MessageText", (HANDLE)wmessage);
-    SetPropW(hNotification, L"WindowWidth", (HANDLE)(LONG_PTR)notificationWidth);
+    /** Initialize animation state */
+    notifData->animState = ANIM_FADE_IN;
+    notifData->opacity = 0;
     
-    /** Initialize animation state for fade-in effect */
-    SetPropW(hNotification, L"AnimState", (HANDLE)ANIM_FADE_IN);
-    SetPropW(hNotification, L"Opacity", (HANDLE)0);
+    /** Store notification data in window */
+    SetNotificationData(hNotification, notifData);
     
     /** Start completely transparent */
     SetLayeredWindowAttributes(hNotification, 0, 0, LWA_ALPHA);
@@ -261,6 +421,7 @@ void ShowToastNotification(HWND hwnd, const wchar_t* message) {
 /**
  * @brief Register window class for toast notifications
  * @param hInstance Application instance handle
+ * 
  * Sets up basic window class with standard cursor and background
  */
 void RegisterNotificationClass(HINSTANCE hInstance) {
@@ -282,6 +443,7 @@ void RegisterNotificationClass(HINSTANCE hInstance) {
  * @param wParam Message parameter
  * @param lParam Message parameter
  * @return Message processing result
+ * 
  * Handles painting, animation timers, click-to-dismiss, and cleanup
  */
 LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -299,36 +461,39 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             HBITMAP oldBitmap = (HBITMAP)SelectObject(memDC, memBitmap);
             
             /** Fill background with white */
-            HBRUSH whiteBrush = CreateSolidBrush(RGB(255, 255, 255));
+            HBRUSH whiteBrush = CreateSolidBrush(NOTIFICATION_BG_COLOR);
             FillRect(memDC, &clientRect, whiteBrush);
             DeleteObject(whiteBrush);
             
-            DrawRoundedRectangle(memDC, clientRect, 0);
+            DrawNotificationBorder(memDC, clientRect);
             
             SetBkMode(memDC, TRANSPARENT);
             
             /** Create fonts for title and content */
-            HFONT titleFont = CreateFontW(22, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
-                                       DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-                                       DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei");
-            
-            HFONT contentFont = CreateFontW(20, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-                                         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-                                         DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei");
+            HFONT titleFont = CreateNotificationFont(NOTIFICATION_TITLE_FONT_SIZE, FW_BOLD);
+            HFONT contentFont = CreateNotificationFont(NOTIFICATION_CONTENT_FONT_SIZE, FW_NORMAL);
             
             /** Draw title "Catime" */
-            SelectObject(memDC, titleFont);
-            SetTextColor(memDC, RGB(0, 0, 0));
-            RECT titleRect = {15, 10, clientRect.right - 15, 35};
-            DrawTextW(memDC, L"Catime", -1, &titleRect, DT_SINGLELINE);
+            RECT titleRect = {
+                NOTIFICATION_PADDING_H, 
+                NOTIFICATION_PADDING_V, 
+                clientRect.right - NOTIFICATION_PADDING_H, 
+                NOTIFICATION_TITLE_HEIGHT
+            };
+            DrawNotificationText(memDC, L"Catime", titleRect, titleFont, 
+                               NOTIFICATION_TITLE_COLOR, DT_SINGLELINE);
             
             /** Draw message content with ellipsis if too long */
-            SelectObject(memDC, contentFont);
-            SetTextColor(memDC, RGB(100, 100, 100));
-            const wchar_t* message = (const wchar_t*)GetPropW(hwnd, L"MessageText");
-            if (message) {
-                RECT textRect = {15, 35, clientRect.right - 15, clientRect.bottom - 10};
-                DrawTextW(memDC, message, -1, &textRect, DT_SINGLELINE|DT_END_ELLIPSIS);
+            NotificationData* data = GetNotificationData(hwnd);
+            if (data && data->messageText) {
+                RECT textRect = {
+                    NOTIFICATION_PADDING_H, 
+                    NOTIFICATION_CONTENT_SPACING, 
+                    clientRect.right - NOTIFICATION_PADDING_H, 
+                    clientRect.bottom - NOTIFICATION_PADDING_V
+                };
+                DrawNotificationText(memDC, data->messageText, textRect, contentFont,
+                                   NOTIFICATION_CONTENT_COLOR, DT_SINGLELINE | DT_END_ELLIPSIS);
             }
             
             /** Copy buffer to screen */
@@ -345,85 +510,72 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             return 0;
         }
         
-        case WM_TIMER:
+        case WM_TIMER: {
+            NotificationData* data = GetNotificationData(hwnd);
+            if (!data) break;
+            
             /** Auto-dismiss timer expired, start fade-out */
             if (wParam == NOTIFICATION_TIMER_ID) {
                 KillTimer(hwnd, NOTIFICATION_TIMER_ID);
                 
-                AnimationState currentState = (AnimationState)GetPropW(hwnd, L"AnimState");
-                if (currentState == ANIM_VISIBLE) {
-                    SetPropW(hwnd, L"AnimState", (HANDLE)ANIM_FADE_OUT);
+                if (data->animState == ANIM_VISIBLE) {
+                    data->animState = ANIM_FADE_OUT;
                     SetTimer(hwnd, ANIMATION_TIMER_ID, ANIMATION_INTERVAL, NULL);
                 }
                 return 0;
             }
             /** Animation frame timer for fade effects */
             else if (wParam == ANIMATION_TIMER_ID) {
-                AnimationState state = (AnimationState)GetPropW(hwnd, L"AnimState");
-                DWORD opacityVal = (DWORD)(DWORD_PTR)GetPropW(hwnd, L"Opacity");
-                BYTE opacity = (BYTE)opacityVal;
-                
                 BYTE maxOpacity = (BYTE)((NOTIFICATION_MAX_OPACITY * 255) / 100);
+                BOOL shouldDestroy = FALSE;
                 
-                switch (state) {
-                    case ANIM_FADE_IN:
-                        /** Gradually increase opacity until target reached */
-                        if (opacity >= maxOpacity - ANIMATION_STEP) {
-                            opacity = maxOpacity;
-                            SetPropW(hwnd, L"Opacity", (HANDLE)(DWORD_PTR)opacity);
-                            SetLayeredWindowAttributes(hwnd, 0, opacity, LWA_ALPHA);
-                            
-                            SetPropW(hwnd, L"AnimState", (HANDLE)ANIM_VISIBLE);
-                            KillTimer(hwnd, ANIMATION_TIMER_ID);
-                        } else {
-                            opacity += ANIMATION_STEP;
-                            SetPropW(hwnd, L"Opacity", (HANDLE)(DWORD_PTR)opacity);
-                            SetLayeredWindowAttributes(hwnd, 0, opacity, LWA_ALPHA);
-                        }
-                        break;
-                        
-                    case ANIM_FADE_OUT:
-                        /** Gradually decrease opacity, destroy when transparent */
-                        if (opacity <= ANIMATION_STEP) {
-                            KillTimer(hwnd, ANIMATION_TIMER_ID);
-                            DestroyWindow(hwnd);
-                        } else {
-                            opacity -= ANIMATION_STEP;
-                            SetPropW(hwnd, L"Opacity", (HANDLE)(DWORD_PTR)opacity);
-                            SetLayeredWindowAttributes(hwnd, 0, opacity, LWA_ALPHA);
-                        }
-                        break;
-                        
-                    case ANIM_VISIBLE:
-                        /** Animation complete, stop timer */
-                        KillTimer(hwnd, ANIMATION_TIMER_ID);
-                        break;
+                BYTE newOpacity = UpdateAnimationOpacity(data->animState, data->opacity, 
+                                                        maxOpacity, &shouldDestroy);
+                
+                if (shouldDestroy) {
+                    KillTimer(hwnd, ANIMATION_TIMER_ID);
+                    DestroyWindow(hwnd);
+                    return 0;
                 }
+                
+                data->opacity = newOpacity;
+                SetLayeredWindowAttributes(hwnd, 0, newOpacity, LWA_ALPHA);
+                
+                /** Stop animation when fade-in completes */
+                if (data->animState == ANIM_FADE_IN && newOpacity >= maxOpacity) {
+                    data->animState = ANIM_VISIBLE;
+                    KillTimer(hwnd, ANIMATION_TIMER_ID);
+                }
+                
                 return 0;
             }
             break;
-            
+        }
+        
         case WM_LBUTTONDOWN: {
-            /** Click-to-dismiss: always start fade-out on click (even during fade-in) */
-            KillTimer(hwnd, NOTIFICATION_TIMER_ID);
-            SetPropW(hwnd, L"AnimState", (HANDLE)ANIM_FADE_OUT);
-            SetTimer(hwnd, ANIMATION_TIMER_ID, ANIMATION_INTERVAL, NULL);
+            /** Click-to-dismiss: always start fade-out on click */
+            NotificationData* data = GetNotificationData(hwnd);
+            if (data) {
+                KillTimer(hwnd, NOTIFICATION_TIMER_ID);
+                data->animState = ANIM_FADE_OUT;
+                SetTimer(hwnd, ANIMATION_TIMER_ID, ANIMATION_INTERVAL, NULL);
+            }
             return 0;
         }
         
         case WM_DESTROY: {
-            /** Cleanup: stop timers and free allocated message text */
+            /** Cleanup: stop timers and free allocated data */
             KillTimer(hwnd, NOTIFICATION_TIMER_ID);
             KillTimer(hwnd, ANIMATION_TIMER_ID);
             
-            wchar_t* message = (wchar_t*)GetPropW(hwnd, L"MessageText");
-            if (message) {
-                free(message);
+            NotificationData* data = GetNotificationData(hwnd);
+            if (data) {
+                if (data->messageText) {
+                    free(data->messageText);
+                }
+                free(data);
             }
             
-            RemovePropW(hwnd, L"MessageText");
-            RemovePropW(hwnd, L"AnimState");
-            RemovePropW(hwnd, L"Opacity");
             return 0;
         }
     }
@@ -432,23 +584,8 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 }
 
 /**
- * @brief Draw notification border (currently just a simple rectangle)
- * @param hdc Device context for drawing
- * @param rect Rectangle bounds
- * @param radius Border radius (unused in current implementation)
- */
-void DrawRoundedRectangle(HDC hdc, RECT rect, int radius) {
-    HPEN pen = CreatePen(PS_SOLID, 1, RGB(200, 200, 200));
-    HPEN oldPen = (HPEN)SelectObject(hdc, pen);
-    
-    Rectangle(hdc, rect.left, rect.top, rect.right, rect.bottom);
-    
-    SelectObject(hdc, oldPen);
-    DeleteObject(pen);
-}
-
-/**
  * @brief Force close all active toast notifications
+ * 
  * Triggers fade-out animation for all visible notifications
  */
 void CloseAllNotifications(void) {
@@ -457,14 +594,16 @@ void CloseAllNotifications(void) {
     
     /** Enumerate all notification windows and start fade-out */
     while ((hwnd = FindWindowExW(NULL, hwndPrev, NOTIFICATION_CLASS_NAME, NULL)) != NULL) {
-        AnimationState currentState = (AnimationState)GetPropW(hwnd, L"AnimState");
+        NotificationData* data = GetNotificationData(hwnd);
         
-        KillTimer(hwnd, NOTIFICATION_TIMER_ID);
-        
-        /** Only start fade-out if not already fading out */
-        if (currentState != ANIM_FADE_OUT) {
-            SetPropW(hwnd, L"AnimState", (HANDLE)ANIM_FADE_OUT);
-            SetTimer(hwnd, ANIMATION_TIMER_ID, ANIMATION_INTERVAL, NULL);
+        if (data) {
+            KillTimer(hwnd, NOTIFICATION_TIMER_ID);
+            
+            /** Only start fade-out if not already fading out */
+            if (data->animState != ANIM_FADE_OUT) {
+                data->animState = ANIM_FADE_OUT;
+                SetTimer(hwnd, ANIMATION_TIMER_ID, ANIMATION_INTERVAL, NULL);
+            }
         }
         
         hwndPrev = hwnd;

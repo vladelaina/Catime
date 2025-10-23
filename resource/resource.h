@@ -217,6 +217,26 @@
 #define ANIMATION_STEP 5                         /**< Animation step size */
 #define ANIMATION_INTERVAL 15                    /**< Animation interval in ms */
 
+/** @brief Notification UI layout constants */
+#define NOTIFICATION_PADDING_H 15                /**< Horizontal padding */
+#define NOTIFICATION_PADDING_V 10                /**< Vertical padding */
+#define NOTIFICATION_TITLE_HEIGHT 25             /**< Title section height */
+#define NOTIFICATION_CONTENT_SPACING 35          /**< Content vertical spacing */
+#define NOTIFICATION_TEXT_PADDING 40             /**< Text width padding */
+#define NOTIFICATION_BOTTOM_MARGIN 20            /**< Bottom margin from screen edge */
+#define NOTIFICATION_RIGHT_MARGIN 20             /**< Right margin from screen edge */
+
+/** @brief Notification font constants */
+#define NOTIFICATION_FONT_NAME L"Microsoft YaHei"  /**< Notification font family */
+#define NOTIFICATION_TITLE_FONT_SIZE 22          /**< Title font size */
+#define NOTIFICATION_CONTENT_FONT_SIZE 20        /**< Content font size */
+
+/** @brief Notification color constants */
+#define NOTIFICATION_BG_COLOR RGB(255, 255, 255)     /**< Background color (white) */
+#define NOTIFICATION_TITLE_COLOR RGB(0, 0, 0)        /**< Title text color (black) */
+#define NOTIFICATION_CONTENT_COLOR RGB(100, 100, 100) /**< Content text color (gray) */
+#define NOTIFICATION_BORDER_COLOR RGB(200, 200, 200)  /**< Border color (light gray) */
+
 /** @brief Hotkey configuration dialog identifiers */
 #define CLOCK_IDD_HOTKEY_DIALOG 2100     /**< Hotkey configuration dialog */
 #define IDC_HOTKEY_LABEL1 2101           /**< Hotkey label 1 */
