@@ -25,8 +25,6 @@ extern int elapsed_time;
 extern int message_shown;
 extern BOOL CLOCK_WINDOW_TOPMOST;
 extern void SetWindowTopmost(HWND hwnd, BOOL topmost);
-extern void CleanupBeforeTimerAction(void);
-extern BOOL StartCountdownWithTime(HWND hwnd, int seconds);
 
 /* ============================================================================
  * Constants and type definitions
