@@ -234,7 +234,6 @@ extern BOOL IS_MILLISECONDS_PREVIEWING;
 extern BOOL PREVIEW_SHOW_MILLISECONDS;
 
 extern void ShowNotification(HWND hwnd, const wchar_t* message);
-extern void PauseMediaPlayback(void);
 
 /**
  * @brief Recursively find font file by ID in fonts folder (Unicode-safe)
