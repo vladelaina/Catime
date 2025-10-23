@@ -22,16 +22,14 @@
 #include "../include/window_procedure.h"
 
 /* ============================================================================
- * External Dependencies
+ * External Dependencies - Reduced (most moved to headers)
  * ============================================================================ */
 
-extern int elapsed_time;
-extern TimeFormatType CLOCK_TIME_FORMAT;
-extern BOOL CLOCK_SHOW_MILLISECONDS;
+/* Note: elapsed_time, CLOCK_TIME_FORMAT, CLOCK_SHOW_MILLISECONDS now in timer.h */
+/* Note: CLOCK_EDIT_MODE now in window.h */
 extern char FONT_FILE_NAME[100];
 extern char FONT_INTERNAL_NAME[100];
 extern char CLOCK_TEXT_COLOR[10];
-extern BOOL CLOCK_EDIT_MODE;
 extern int CLOCK_BASE_FONT_SIZE;
 extern float CLOCK_FONT_SCALE_FACTOR;
 

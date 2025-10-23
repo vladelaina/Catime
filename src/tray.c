@@ -15,6 +15,7 @@
 #include "../include/language.h"
 #include "../resource/resource.h"
 #include "../include/tray.h"
+#include "../include/timer.h"
 #include "../include/tray_animation.h"
 #include "../include/system_monitor.h"
 #include "../include/config.h"
@@ -43,13 +44,10 @@ NOTIFYICONDATAW nid;
 UINT WM_TASKBARCREATED = 0;
 
 /* ============================================================================
- * External Declarations
+ * External Declarations - Reduced (most in timer.h)
  * ============================================================================ */
 
-extern BOOL CLOCK_COUNT_UP;
-extern BOOL CLOCK_SHOW_CURRENT_TIME;
-extern int CLOCK_TOTAL_TIME;
-extern int countdown_elapsed_time;
+/* Note: CLOCK_COUNT_UP, CLOCK_SHOW_CURRENT_TIME, CLOCK_TOTAL_TIME, countdown_elapsed_time now in timer.h */
 extern void TrayAnimation_UpdatePercentIconIfNeeded(void);
 extern void ReadPercentIconColorsConfig(void);
 

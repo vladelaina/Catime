@@ -52,14 +52,10 @@
  * External Global Variables
  * ============================================================================ */
 
-extern BOOL CLOCK_SHOW_CURRENT_TIME;
-extern BOOL CLOCK_COUNT_UP;
-extern BOOL CLOCK_IS_PAUSED;
-extern int CLOCK_TOTAL_TIME;
-extern int countdown_elapsed_time;
-extern int countup_elapsed_time;
-extern int CLOCK_DEFAULT_START_TIME;
-extern char CLOCK_STARTUP_MODE[20];
+/**
+ * External declarations - Reduced (most in timer.h)
+ * Note: All timer state variables (CLOCK_*, countdown_elapsed_time, etc.) now in timer.h
+ */
 
 /* ============================================================================
  * Data Structures

@@ -27,6 +27,12 @@ extern int current_pomodoro_time_index;
 /** @brief Number of completed Pomodoro work cycles */
 extern int complete_pomodoro_cycles;
 
+/** @brief Pomodoro time configurations array (up to 10 entries) */
+extern int POMODORO_TIMES[10];
+
+/** @brief Number of active Pomodoro time configurations */
+extern int POMODORO_TIMES_COUNT;
+
 /**
  * @note InitializePomodoro() function is declared in timer_events.h
  * @see timer_events.h for Pomodoro initialization

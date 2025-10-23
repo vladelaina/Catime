@@ -16,6 +16,8 @@
 #include "../include/dialog_procedure.h"
 #include "../include/language.h"
 #include "../include/config.h"
+#include "../include/timer.h"
+#include "../include/pomodoro.h"
 #include "../include/audio_player.h"
 #include "../include/window_procedure.h"
 #include "../include/hotkey.h"
@@ -25,7 +27,7 @@
 /** @brief Draw color selection button with custom appearance */
 static void DrawColorSelectButton(HDC hdc, HWND hwnd);
 
-/** @brief Global input text buffer for dialog operations */
+/** @brief Global input text buffer for dialog operations - moved to timer.h */
 extern wchar_t inputText[256];
 
 /**
@@ -217,13 +219,11 @@ static AboutLinkInfo g_aboutLinkInfos[] = {
 
 static const int g_aboutLinkInfoCount = sizeof(g_aboutLinkInfos) / sizeof(g_aboutLinkInfos[0]);
 
+/**
+ * External declarations - Reduced
+ * Note: POMODORO_* variables now properly declared in pomodoro.h and timer.h
+ */
 #define MAX_POMODORO_TIMES 10
-extern int POMODORO_TIMES[MAX_POMODORO_TIMES];
-extern int POMODORO_TIMES_COUNT;
-extern int POMODORO_WORK_TIME;
-extern int POMODORO_SHORT_BREAK;
-extern int POMODORO_LONG_BREAK;
-extern int POMODORO_LOOP_COUNT;
 
 /** @brief Original edit control window procedure for subclassing */
 WNDPROC wpOrigEditProc;
@@ -409,8 +409,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
             /** Initialize dialog content based on dialog type */
             if (dlgId == CLOCK_IDD_SHORTCUT_DIALOG) {
                 /** Populate shortcut dialog with current time options */
-                extern int time_options[];
-                extern int time_options_count;
+                /* Note: time_options, time_options_count now declared in timer.h */
                 
                 /** Format current time options into human-readable string */
                 char currentOptions[256] = {0};
@@ -555,8 +554,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                         /** Save valid options - no need to reload entire config */
                         WriteConfigTimeOptions(options);
                         /** Update in-memory time_options array */
-                        extern int time_options[];
-                        extern int time_options_count;
+                        /* Note: time_options, time_options_count now declared in timer.h */
                         time_options_count = 0;
                         char optionsCopy[256];
                         strncpy(optionsCopy, options, sizeof(optionsCopy) - 1);

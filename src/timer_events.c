@@ -59,13 +59,11 @@
 #define MESSAGE_BUFFER_SIZE 256
 
 /* ============================================================================
- * External Dependencies
+ * External Dependencies - Reduced (most moved to headers)
  * ============================================================================ */
 
-extern int POMODORO_TIMES[MAX_POMODORO_TIMES];
-extern int POMODORO_TIMES_COUNT;
-extern int elapsed_time;
-extern BOOL message_shown;
+/* Note: POMODORO_TIMES, POMODORO_TIMES_COUNT now in pomodoro.h */
+/* Note: elapsed_time, message_shown now in timer.h */
 extern char CLOCK_TIMEOUT_MESSAGE_TEXT[100];
 extern char POMODORO_TIMEOUT_MESSAGE_TEXT[100];
 extern char POMODORO_CYCLE_COMPLETE_TEXT[100];

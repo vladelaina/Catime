@@ -20,9 +20,7 @@
 #include "../include/dialog_procedure.h"
 #include "../include/drag_scale.h"
 
-/* Forward declarations */
-extern int elapsed_time;
-extern int message_shown;
+/* Forward declarations - Most moved to proper headers (timer.h, window.h) */
 extern BOOL CLOCK_WINDOW_TOPMOST;
 extern void SetWindowTopmost(HWND hwnd, BOOL topmost);
 

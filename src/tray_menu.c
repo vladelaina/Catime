@@ -136,14 +136,10 @@ static BOOL ReadConfigValue(const char* key, char* outBuffer, size_t bufferSize)
 /**
  * @brief Load Pomodoro configuration from config.ini
  * Updates global POMODORO_TIMES array and related settings
+ * 
+ * Note: POMODORO_* variables now declared in pomodoro.h and timer.h
  */
 static void LoadPomodoroConfig(void) {
-    extern int POMODORO_TIMES[];
-    extern int POMODORO_TIMES_COUNT;
-    extern int POMODORO_WORK_TIME;
-    extern int POMODORO_SHORT_BREAK;
-    extern int POMODORO_LONG_BREAK;
-    extern int POMODORO_LOOP_COUNT;
     
     wchar_t wConfigPath[MAX_PATH];
     if (!GetConfigPathWide(wConfigPath, MAX_PATH)) return;
@@ -380,35 +376,19 @@ static BOOL BuildAnimationFolderMenu(HMENU parentMenu, const wchar_t* folderPath
 /** @brief Timer state and display configuration */
 extern BOOL CLOCK_SHOW_CURRENT_TIME;
 extern BOOL CLOCK_USE_24HOUR;
-extern BOOL CLOCK_SHOW_SECONDS;
-extern BOOL CLOCK_COUNT_UP;
-extern BOOL CLOCK_IS_PAUSED;
-extern BOOL CLOCK_EDIT_MODE;
-extern char CLOCK_STARTUP_MODE[20];
+/**
+ * External declarations - Reduced to minimum
+ * Note: Most variables now properly declared in headers:
+ * - timer.h: CLOCK_*, countdown_elapsed_time, time_options, CLOCK_TIMEOUT_*
+ * - pomodoro.h: POMODORO_*
+ * - window.h: CLOCK_EDIT_MODE, CLOCK_WINDOW_TOPMOST
+ * - config.h: Font and preview variables
+ */
 extern char CLOCK_TEXT_COLOR[10];
 extern char FONT_FILE_NAME[];
 extern char PREVIEW_FONT_NAME[];
 extern char PREVIEW_INTERNAL_NAME[];
 extern BOOL IS_PREVIEWING;
-extern int time_options[];
-extern int time_options_count;
-extern int CLOCK_TOTAL_TIME;
-extern int countdown_elapsed_time;
-extern char CLOCK_TIMEOUT_FILE_PATH[MAX_PATH];
-extern char CLOCK_TIMEOUT_TEXT[50];
-extern BOOL CLOCK_WINDOW_TOPMOST;
-extern TimeFormatType CLOCK_TIME_FORMAT;
-extern BOOL CLOCK_SHOW_MILLISECONDS;
-
-/** @brief Pomodoro technique configuration */
-extern int POMODORO_WORK_TIME;
-extern int POMODORO_SHORT_BREAK;
-extern int POMODORO_LONG_BREAK;
-extern int POMODORO_LOOP_COUNT;
-
-#define MAX_POMODORO_TIMES 10
-extern int POMODORO_TIMES[MAX_POMODORO_TIMES];
-extern int POMODORO_TIMES_COUNT;
 
 extern wchar_t CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH];
 extern int current_pomodoro_time_index;

@@ -79,6 +79,15 @@ extern int last_displayed_second;     /**< Cached second value to prevent jitter
 extern BOOL countdown_message_shown;  /**< Countdown completion alert already shown */
 extern BOOL countup_message_shown;    /**< Count-up milestone alert already shown */
 extern int pomodoro_work_cycles;      /**< Completed Pomodoro work sessions */
+extern int message_shown;             /**< Generic message shown flag */
+extern int elapsed_time;              /**< Generic elapsed time tracker */
+/** @} */
+
+/** @defgroup InputDialog Input Dialog State
+ * @brief Global state for custom input dialogs
+ * @{ */
+extern wchar_t inputText[256];        /**< User input text buffer */
+extern HWND g_hwndInputDialog;        /**< Active input dialog handle */
 /** @} */
 
 /** @defgroup TimeoutActions Timeout Action Configuration

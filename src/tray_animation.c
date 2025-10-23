@@ -28,6 +28,7 @@
 
 #include "../include/tray.h"
 #include "../include/config.h"
+#include "../include/timer.h"
 #include "../include/tray_menu.h"
 #include "../include/tray_animation.h"
 #include "../include/system_monitor.h"
@@ -325,10 +326,7 @@ static UINT ComputeScaledDelay(UINT baseDelay) {
         SystemMonitor_GetUsage(&cpu, &mem);
         percent = cpu;
     } else if (metric == ANIMATION_SPEED_TIMER) {
-        extern BOOL CLOCK_COUNT_UP;
-        extern BOOL CLOCK_SHOW_CURRENT_TIME;
-        extern int CLOCK_TOTAL_TIME;
-        extern int countdown_elapsed_time;
+        /* Note: Timer state variables now in timer.h */
         if (!CLOCK_SHOW_CURRENT_TIME) {
             if (!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0) {
                 double p = (double)countdown_elapsed_time / (double)CLOCK_TOTAL_TIME;
