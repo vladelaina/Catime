@@ -658,6 +658,9 @@ function translateSupportElements() {
         if (td.textContent === '功能简洁明了，谢谢你，cat') {
             td.textContent = 'Simple and clear features, thank you, cat';
         }
+        if (td.textContent === '好用，respect') {
+            td.textContent = 'Useful, respect';
+        }
         
         // 为所有留言单元格添加特殊样式，增强可读性
         if (td.parentElement && td.cellIndex === 3) { // 第四列是留言列

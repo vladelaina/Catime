@@ -24,3 +24,4 @@ build/*
 #jb idea
 .idea/
 
+.vscode
