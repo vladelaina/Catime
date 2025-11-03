@@ -18,6 +18,14 @@ add_definitions(-D_WINDOWS)
 # Collect all source files
 file(GLOB_RECURSE SOURCES "src/*.c")
 
+# Explicitly list config modules for clarity (optional, GLOB_RECURSE already includes them)
+# Configuration modules (refactored from config_core.c):
+#   src/config_core.c       - Coordinator (simplified)
+#   src/config_defaults.c   - Default values and metadata
+#   src/config_loader.c     - Reading and parsing
+#   src/config_applier.c    - Applying to global variables
+#   src/config_writer.c     - Collecting and writing
+
 # Collect all header files
 file(GLOB_RECURSE HEADERS "include/*.h")
 
