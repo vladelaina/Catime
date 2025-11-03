@@ -26,6 +26,15 @@ file(GLOB_RECURSE SOURCES "src/*.c")
 #   src/config_applier.c    - Applying to global variables
 #   src/config_writer.c     - Collecting and writing
 
+# Dialog modules (refactored from dialog_procedure.c - 2057 lines → 6 modules):
+#   src/dialog_common.c       - Common infrastructure (~400 lines)
+#   src/dialog_error.c        - Error dialogs (~50 lines)
+#   src/dialog_input.c        - Generic input dialogs (~400 lines)
+#   src/dialog_info.c         - About, website, etc. (~350 lines)
+#   src/dialog_pomodoro.c     - Pomodoro dialogs (~300 lines)
+#   src/dialog_notification.c - Notification settings (~400 lines)
+# Original dialog_procedure.c can be removed or kept as compatibility layer
+
 # Collect all header files
 file(GLOB_RECURSE HEADERS "include/*.h")
 

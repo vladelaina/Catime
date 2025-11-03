@@ -1,0 +1,296 @@
+/**
+ * @file dialog_pomodoro.c
+ * @brief Pomodoro-specific dialogs implementation
+ */
+
+#include "../include/dialog_pomodoro.h"
+#include "../include/dialog_common.h"
+#include "../include/dialog_error.h"
+#include "../include/dialog_input.h"
+#include "../include/language.h"
+#include "../include/config.h"
+#include "../include/dialog_language.h"
+#include "../resource/resource.h"
+#include <strsafe.h>
+#include <string.h>
+#include <stdio.h>
+
+/* ============================================================================
+ * Global State (defined in timer.c)
+ * ============================================================================ */
+
+/* Note: POMODORO_TIMES and POMODORO_TIMES_COUNT are defined in timer.c */
+extern int POMODORO_TIMES[MAX_POMODORO_TIMES];
+extern int POMODORO_TIMES_COUNT;
+
+extern int POMODORO_WORK_TIME;
+extern int POMODORO_SHORT_BREAK;
+extern int POMODORO_LONG_BREAK;
+
+/* ============================================================================
+ * Pomodoro Loop Dialog Implementation
+ * ============================================================================ */
+
+void ShowPomodoroLoopDialog(HWND hwndParent) {
+    if (Dialog_IsOpen(DIALOG_INSTANCE_POMODORO_LOOP)) {
+        HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_POMODORO_LOOP);
+        SetForegroundWindow(existing);
+        return;
+    }
+
+    HWND hwndDlg = CreateDialogW(
+        GetModuleHandle(NULL),
+        MAKEINTRESOURCE(CLOCK_IDD_POMODORO_LOOP_DIALOG),
+        hwndParent,
+        PomodoroLoopDialogProc
+    );
+
+    if (hwndDlg) {
+        ShowWindow(hwndDlg, SW_SHOW);
+    }
+}
+
+INT_PTR CALLBACK PomodoroLoopDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    DialogContext* ctx = Dialog_GetContext(hwndDlg);
+
+    switch (msg) {
+        case WM_INITDIALOG: {
+            Dialog_RegisterInstance(DIALOG_INSTANCE_POMODORO_LOOP, hwndDlg);
+
+            ctx = Dialog_CreateContext();
+            if (!ctx) return FALSE;
+            Dialog_SetContext(hwndDlg, ctx);
+
+            ApplyDialogLanguage(hwndDlg, CLOCK_IDD_POMODORO_LOOP_DIALOG);
+
+            SetDlgItemTextW(hwndDlg, CLOCK_IDC_STATIC,
+                GetLocalizedString(L"请输入循环次数（1-100）：", 
+                                 L"Please enter loop count (1-100):"));
+
+            HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
+            Dialog_SubclassEdit(hwndEdit, ctx);
+
+            Dialog_CenterOnPrimaryScreen(hwndDlg);
+            Dialog_ApplyTopmost(hwndDlg);
+
+            SetFocus(hwndEdit);
+
+            return FALSE;
+        }
+
+        case WM_CTLCOLORDLG:
+        case WM_CTLCOLORSTATIC:
+        case WM_CTLCOLOREDIT:
+        case WM_CTLCOLORBTN: {
+            INT_PTR result;
+            if (Dialog_HandleColorMessages(msg, wParam, ctx, &result)) {
+                return result;
+            }
+            break;
+        }
+
+        case WM_COMMAND:
+            if (LOWORD(wParam) == CLOCK_IDC_BUTTON_OK) {
+                wchar_t input_str[16];
+                GetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, input_str, sizeof(input_str)/sizeof(wchar_t));
+
+                if (Dialog_IsEmptyOrWhitespace(input_str)) {
+                    EndDialog(hwndDlg, IDCANCEL);
+                    return TRUE;
+                }
+
+                if (!Dialog_IsValidNumberInput(input_str)) {
+                    Dialog_ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
+                    return TRUE;
+                }
+
+                wchar_t cleanStr[16] = {0};
+                int cleanIndex = 0;
+                for (int i = 0; input_str[i]; i++) {
+                    if (iswdigit(input_str[i])) {
+                        cleanStr[cleanIndex++] = input_str[i];
+                    }
+                }
+
+                /* Range: 1-100 */
+                int new_loop_count = _wtoi(cleanStr);
+                if (new_loop_count >= 1 && new_loop_count <= 100) {
+                    extern void WriteConfigPomodoroLoopCount(int loop_count);
+                    WriteConfigPomodoroLoopCount(new_loop_count);
+                    EndDialog(hwndDlg, IDOK);
+                } else {
+                    Dialog_ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
+                }
+                return TRUE;
+            } else if (LOWORD(wParam) == IDCANCEL) {
+                EndDialog(hwndDlg, IDCANCEL);
+                return TRUE;
+            }
+            break;
+
+        case WM_DESTROY:
+            if (ctx) {
+                HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
+                if (hwndEdit) {
+                    Dialog_UnsubclassEdit(hwndEdit, ctx);
+                }
+                Dialog_FreeContext(ctx);
+            }
+            Dialog_UnregisterInstance(DIALOG_INSTANCE_POMODORO_LOOP);
+            break;
+
+        case WM_CLOSE:
+            EndDialog(hwndDlg, IDCANCEL);
+            return TRUE;
+    }
+    return FALSE;
+}
+
+/* ============================================================================
+ * Pomodoro Combo Dialog Implementation
+ * ============================================================================ */
+
+void ShowPomodoroComboDialog(HWND hwndParent) {
+    if (Dialog_IsOpen(DIALOG_INSTANCE_POMODORO_COMBO)) {
+        HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_POMODORO_COMBO);
+        SetForegroundWindow(existing);
+        return;
+    }
+
+    HWND hwndDlg = CreateDialogW(
+        GetModuleHandle(NULL),
+        MAKEINTRESOURCE(CLOCK_IDD_POMODORO_COMBO_DIALOG),
+        hwndParent,
+        PomodoroComboDialogProc
+    );
+
+    if (hwndDlg) {
+        ShowWindow(hwndDlg, SW_SHOW);
+    }
+}
+
+INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    DialogContext* ctx = Dialog_GetContext(hwndDlg);
+
+    switch (msg) {
+        case WM_INITDIALOG: {
+            Dialog_RegisterInstance(DIALOG_INSTANCE_POMODORO_COMBO, hwndDlg);
+
+            ctx = Dialog_CreateContext();
+            if (!ctx) return FALSE;
+            Dialog_SetContext(hwndDlg, ctx);
+
+            HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
+            Dialog_SubclassEdit(hwndEdit, ctx);
+
+            wchar_t currentOptions[256] = {0};
+            for (int i = 0; i < POMODORO_TIMES_COUNT; i++) {
+                char timeStrA[32];
+                wchar_t timeStr[32];
+                Dialog_FormatSecondsToString(POMODORO_TIMES[i], timeStrA, sizeof(timeStrA));
+                MultiByteToWideChar(CP_UTF8, 0, timeStrA, -1, timeStr, 32);
+                StringCbCatW(currentOptions, sizeof(currentOptions), timeStr);
+                StringCbCatW(currentOptions, sizeof(currentOptions), L" ");
+            }
+
+            if (wcslen(currentOptions) > 0 && currentOptions[wcslen(currentOptions) - 1] == L' ') {
+                currentOptions[wcslen(currentOptions) - 1] = L'\0';
+            }
+
+            SetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, currentOptions);
+
+            ApplyDialogLanguage(hwndDlg, CLOCK_IDD_POMODORO_COMBO_DIALOG);
+
+            Dialog_CenterOnPrimaryScreen(hwndDlg);
+            Dialog_ApplyTopmost(hwndDlg);
+
+            SetFocus(hwndEdit);
+            SendMessage(hwndEdit, EM_SETSEL, 0, -1);
+
+            return FALSE;
+        }
+
+        case WM_CTLCOLORDLG:
+        case WM_CTLCOLORSTATIC:
+        case WM_CTLCOLOREDIT:
+        case WM_CTLCOLORBTN: {
+            INT_PTR result;
+            if (Dialog_HandleColorMessages(msg, wParam, ctx, &result)) {
+                return result;
+            }
+            break;
+        }
+
+        case WM_COMMAND:
+            if (LOWORD(wParam) == CLOCK_IDC_BUTTON_OK || LOWORD(wParam) == IDOK) {
+                char input[256] = {0};
+
+                wchar_t winput[256];
+                GetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, winput, sizeof(winput)/sizeof(wchar_t));
+                WideCharToMultiByte(CP_UTF8, 0, winput, -1, input, sizeof(input), NULL, NULL);
+
+                if (Dialog_IsEmptyOrWhitespaceA(input)) {
+                    EndDialog(hwndDlg, IDCANCEL);
+                    return TRUE;
+                }
+
+                char *token;
+                char input_copy[256];
+                StringCbCopyA(input_copy, sizeof(input_copy), input);
+
+                int times[MAX_POMODORO_TIMES] = {0};
+                int times_count = 0;
+                BOOL hasInvalidInput = FALSE;
+
+                token = strtok(input_copy, " ");
+                while (token && times_count < MAX_POMODORO_TIMES) {
+                    int seconds = 0;
+                    if (ParseTimeInput(token, &seconds)) {
+                        times[times_count++] = seconds;
+                    } else {
+                        hasInvalidInput = TRUE;
+                        break;
+                    }
+                    token = strtok(NULL, " ");
+                }
+
+                if (hasInvalidInput || times_count == 0) {
+                    Dialog_ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
+                    return TRUE;
+                }
+
+                POMODORO_TIMES_COUNT = times_count;
+                for (int i = 0; i < times_count; i++) {
+                    POMODORO_TIMES[i] = times[i];
+                }
+
+                if (times_count > 0) POMODORO_WORK_TIME = times[0];
+                if (times_count > 1) POMODORO_SHORT_BREAK = times[1];
+                if (times_count > 2) POMODORO_LONG_BREAK = times[2];
+
+                extern void WriteConfigPomodoroTimeOptions(int* times, int count);
+                WriteConfigPomodoroTimeOptions(times, times_count);
+
+                EndDialog(hwndDlg, IDOK);
+                return TRUE;
+            } else if (LOWORD(wParam) == IDCANCEL) {
+                EndDialog(hwndDlg, IDCANCEL);
+                return TRUE;
+            }
+            break;
+
+        case WM_DESTROY:
+            if (ctx) {
+                HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
+                if (hwndEdit) {
+                    Dialog_UnsubclassEdit(hwndEdit, ctx);
+                }
+                Dialog_FreeContext(ctx);
+            }
+            Dialog_UnregisterInstance(DIALOG_INSTANCE_POMODORO_COMBO);
+            break;
+    }
+
+    return FALSE;
+}
+
