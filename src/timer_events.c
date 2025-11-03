@@ -15,6 +15,7 @@
 #include "../include/drawing.h"
 #include "../include/audio_player.h"
 #include "../include/drag_scale.h"
+#include "../include/utils/string_convert.h"
 
 #define DEFAULT_POMODORO_DURATION 1500
 #define MAX_RETRY_ATTEMPTS 3
@@ -45,12 +46,7 @@ static wchar_t* SafeUtf8ToWide(const char* utf8String, wchar_t* buffer, size_t b
         return NULL;
     }
     
-    int result = MultiByteToWideChar(CP_UTF8, 0, utf8String, -1, buffer, (int)bufferSize);
-    if (result == 0) {
-        return NULL;
-    }
-    
-    return buffer;
+    return Utf8ToWide(utf8String, buffer, bufferSize) ? buffer : NULL;
 }
 
 static void ShowTimeoutNotification(HWND hwnd, const char* messageUtf8, BOOL playSound) {

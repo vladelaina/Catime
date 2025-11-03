@@ -37,6 +37,7 @@
 #include "../include/dialog_language.h"
 #include "../include/shortcut_checker.h"
 #include "../include/timer_events.h"
+#include "../include/utils/string_convert.h"
 
 #pragma comment(lib, "dwmapi.lib")
 #pragma comment(lib, "user32.lib")
@@ -87,17 +88,8 @@ static const CliCommandMapping QUICK_COUNTDOWN_COMMANDS[] = {
 };
 
 /** @return Allocated UTF-8 string (caller must free) */
-static char* WideToUtf8(const wchar_t* wideStr) {
-    if (!wideStr) return NULL;
-    
-    int utf8Len = WideCharToMultiByte(CP_UTF8, 0, wideStr, -1, NULL, 0, NULL, NULL);
-    if (utf8Len <= 0) return NULL;
-    
-    char* utf8Str = (char*)malloc(utf8Len);
-    if (!utf8Str) return NULL;
-    
-    WideCharToMultiByte(CP_UTF8, 0, wideStr, -1, utf8Str, utf8Len, NULL, NULL);
-    return utf8Str;
+static char* LocalWideToUtf8Alloc(const wchar_t* wideStr) {
+    return WideToUtf8Alloc(wideStr);
 }
 
 /** @return Pointer to trimmed string (within original buffer) */
@@ -215,7 +207,7 @@ static BOOL RoutePomodoroCommand(HWND hwnd, const wchar_t* cmdStr) {
 }
 
 static BOOL ForwardTimerInput(HWND hwnd, const wchar_t* cmdStr) {
-    char* utf8Str = WideToUtf8(cmdStr);
+    char* utf8Str = LocalWideToUtf8Alloc(cmdStr);
     if (!utf8Str) return FALSE;
     
     COPYDATASTRUCT cds;
@@ -330,7 +322,7 @@ static void SetupDesktopShortcut(void) {
     wchar_t exe_path[MAX_PATH];
     GetModuleFileNameW(NULL, exe_path, MAX_PATH);
     
-    char* exe_path_utf8 = WideToUtf8(exe_path);
+    char* exe_path_utf8 = LocalWideToUtf8Alloc(exe_path);
     if (exe_path_utf8) {
         LOG_INFO("Current program path: %s", exe_path_utf8);
         free(exe_path_utf8);
@@ -389,7 +381,7 @@ static BOOL HandleSingleInstance(LPWSTR lpCmdLine, HANDLE* outMutex) {
     while (*lpCmdLineW == L' ') lpCmdLineW++;
     
     if (lpCmdLineW && lpCmdLineW[0] != L'\0') {
-        char* cmdUtf8 = WideToUtf8(lpCmdLineW);
+        char* cmdUtf8 = LocalWideToUtf8Alloc(lpCmdLineW);
         if (cmdUtf8) {
             LOG_INFO("Command line arguments: '%s'", cmdUtf8);
             free(cmdUtf8);
@@ -441,13 +433,13 @@ static BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
             wmemmove(pStartup, pStartup + len, wcslen(pStartup + len) + 1);
         }
         
-        char* cmdUtf8 = WideToUtf8(lpCmdLineW);
+        char* cmdUtf8 = LocalWideToUtf8Alloc(lpCmdLineW);
         if (cmdUtf8) {
             LOG_INFO("Command line detected: %s", cmdUtf8);
             free(cmdUtf8);
         }
         
-        char* cmdCliUtf8 = WideToUtf8(cmdBuf);
+        char* cmdCliUtf8 = LocalWideToUtf8Alloc(cmdBuf);
         if (cmdCliUtf8) {
             if (HandleCliArguments(hwnd, cmdCliUtf8)) {
                 LOG_INFO("CLI countdown started successfully");

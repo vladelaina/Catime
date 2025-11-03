@@ -536,13 +536,13 @@ void WriteConfigKeyValue(const char* key, const char* value);
  * @brief Check if shortcut prompt shown (one-time dialog)
  * @return TRUE if done
  */
-bool IsShortcutCheckDone(void);
+BOOL IsShortcutCheckDone(void);
 
 /**
  * @brief Mark shortcut prompt as done
  * @param done TRUE to prevent future prompts
  */
-void SetShortcutCheckDone(bool done);
+void SetShortcutCheckDone(BOOL done);
 
 /* ============================================================================
  * Low-level INI file I/O functions (UTF-8 support)

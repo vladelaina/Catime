@@ -19,6 +19,7 @@
 #include "../include/dialog_language.h"
 #include "../include/dialog_procedure.h"
 #include "../resource/resource.h"
+#include "../include/utils/string_convert.h"
 
 #pragma comment(lib, "wininet.lib")
 
@@ -60,30 +61,13 @@ static const PreReleaseType PRE_RELEASE_TYPES[] = {
 
 static const int PRE_RELEASE_TYPE_COUNT = sizeof(PRE_RELEASE_TYPES) / sizeof(PreReleaseType);
 
-/**
- * @brief Convert UTF-8 to wide string (allocated)
- * @return Allocated wide string (caller must free) or NULL
- */
-static wchar_t* Utf8ToWide(const char* utf8Str) {
-    if (!utf8Str) return NULL;
-    
-    int wideLen = MultiByteToWideChar(CP_UTF8, 0, utf8Str, -1, NULL, 0);
-    if (wideLen <= 0) return NULL;
-    
-    wchar_t* wideStr = (wchar_t*)malloc(wideLen * sizeof(wchar_t));
-    if (!wideStr) return NULL;
-    
-    MultiByteToWideChar(CP_UTF8, 0, utf8Str, -1, wideStr, wideLen);
-    return wideStr;
+/* Thin wrappers using utils/string_convert.h */
+static inline wchar_t* LocalUtf8ToWideAlloc(const char* utf8Str) {
+    return Utf8ToWideAlloc(utf8Str);
 }
 
-/**
- * @brief Convert UTF-8 to wide string (fixed buffer)
- * @return TRUE on success
- */
-static BOOL Utf8ToWideFixed(const char* utf8Str, wchar_t* wideBuf, int bufSize) {
-    if (!utf8Str || !wideBuf || bufSize <= 0) return FALSE;
-    return MultiByteToWideChar(CP_UTF8, 0, utf8Str, -1, wideBuf, bufSize) > 0;
+static inline BOOL LocalUtf8ToWideFixed(const char* utf8Str, wchar_t* wideBuf, int bufSize) {
+    return Utf8ToWide(utf8Str, wideBuf, (size_t)bufSize);
 }
 
 /**
@@ -333,8 +317,8 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
             
             if (versionInfo) {
                 // Convert version numbers to wide characters
-                wchar_t* currentVerW = Utf8ToWide(versionInfo->currentVersion);
-                wchar_t* latestVerW = Utf8ToWide(versionInfo->latestVersion);
+                wchar_t* currentVerW = LocalUtf8ToWideAlloc(versionInfo->currentVersion);
+                wchar_t* latestVerW = LocalUtf8ToWideAlloc(versionInfo->latestVersion);
                 
                 if (currentVerW && latestVerW) {
                     wchar_t displayText[256];
@@ -348,7 +332,7 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                 free(latestVerW);
                 
                 // Display release notes
-                wchar_t* notesW = Utf8ToWide(versionInfo->releaseNotes);
+                wchar_t* notesW = LocalUtf8ToWideAlloc(versionInfo->releaseNotes);
                 if (notesW && notesW[0]) {
                     SetDlgItemTextW(hwndDlg, IDC_UPDATE_NOTES, notesW);
                 } else {
@@ -471,7 +455,7 @@ static BOOL InitHttpResources(HttpResources* res) {
     memset(res, 0, sizeof(HttpResources));
     
     wchar_t wUserAgent[256];
-    Utf8ToWideFixed(USER_AGENT, wUserAgent, 256);
+    LocalUtf8ToWideFixed(USER_AGENT, wUserAgent, 256);
     
     res->hInternet = InternetOpenW(wUserAgent, INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
     if (!res->hInternet) {
@@ -486,7 +470,7 @@ static BOOL InitHttpResources(HttpResources* res) {
 /** @brief Connect to GitHub API */
 static BOOL ConnectToGitHub(HttpResources* res) {
     wchar_t wUrl[URL_BUFFER_SIZE];
-    Utf8ToWideFixed(GITHUB_API_URL, wUrl, URL_BUFFER_SIZE);
+    LocalUtf8ToWideFixed(GITHUB_API_URL, wUrl, URL_BUFFER_SIZE);
     
     res->hConnect = InternetOpenUrlW(res->hInternet, wUrl, NULL, 0,
                                      INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_CACHE_WRITE, 0);
@@ -553,7 +537,7 @@ static void CleanupHttpResources(HttpResources* res) {
  * @return TRUE if browser opened successfully
  */
 static BOOL OpenBrowserAndExit(const char* url, HWND hwnd) {
-    wchar_t* urlW = Utf8ToWide(url);
+    wchar_t* urlW = LocalUtf8ToWideAlloc(url);
     if (!urlW) return FALSE;
     
     HINSTANCE hInstance = ShellExecuteW(hwnd, L"open", urlW, NULL, NULL, SW_SHOWNORMAL);

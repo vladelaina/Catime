@@ -2,6 +2,7 @@
 #include "../include/shortcut_checker.h"
 #include "../include/config.h"
 #include "../include/log.h"
+#include "../include/utils/string_convert.h"
 #include <stdio.h>
 #include <shlobj.h>
 #include <objbase.h>
@@ -56,14 +57,13 @@ static bool ContainsBoth(const char* str, const char* sub1, const char* sub2) {
     return Contains(str, sub1) && Contains(str, sub2);
 }
 
-static bool WideToUtf8(const wchar_t* wide_str, char* output, size_t output_size) {
-    int result = WideCharToMultiByte(CP_UTF8, 0, wide_str, -1, output, (int)output_size, NULL, NULL);
-    return result > 0;
+/* Thin wrappers for utils/string_convert.h (bool return type for this file's convention) */
+static inline bool LocalWideToUtf8(const wchar_t* wide_str, char* output, size_t output_size) {
+    return WideToUtf8(wide_str, output, output_size) ? true : false;
 }
 
-static bool Utf8ToWide(const char* utf8_str, wchar_t* output, size_t output_size) {
-    int result = MultiByteToWideChar(CP_UTF8, 0, utf8_str, -1, output, (int)output_size);
-    return result > 0;
+static inline bool LocalUtf8ToWide(const char* utf8_str, wchar_t* output, size_t output_size) {
+    return Utf8ToWide(utf8_str, output, output_size) ? true : false;
 }
 
 #define CHECK_HR_RETURN(hr, msg, ret_val) \
@@ -134,7 +134,7 @@ static bool GetDesktopPath(int desktop_type, char* output, size_t output_size) {
         return false;
     }
     
-    return WideToUtf8(path_w, output, output_size);
+    return LocalWideToUtf8(path_w, output, output_size);
 }
 
 static void BuildShortcutPath(const char* desktop_path, char* output, size_t output_size) {
@@ -176,7 +176,7 @@ static bool IsPackageManagerInstall(const char* exe_path) {
 
 static bool ShortcutFileExists(const char* path_utf8) {
     wchar_t path_w[MAX_PATH];
-    if (!Utf8ToWide(path_utf8, path_w, MAX_PATH)) {
+    if (!LocalUtf8ToWide(path_utf8, path_w, MAX_PATH)) {
         return false;
     }
     return GetFileAttributesW(path_w) != INVALID_FILE_ATTRIBUTES;
@@ -194,7 +194,7 @@ static bool ReadShortcutTarget(const char* shortcut_path, char* target_output, s
         return false;
     }
     
-    if (!Utf8ToWide(shortcut_path, shortcut_path_w, MAX_PATH)) {
+    if (!LocalUtf8ToWide(shortcut_path, shortcut_path_w, MAX_PATH)) {
         CleanupComShellLink(&link);
         return false;
     }
@@ -275,7 +275,7 @@ static bool ConfigureShellLink(ComShellLink* link, const char* exe_path) {
     char work_dir[MAX_PATH];
     HRESULT hr;
     
-    if (!Utf8ToWide(exe_path, exe_path_w, MAX_PATH)) {
+    if (!LocalUtf8ToWide(exe_path, exe_path_w, MAX_PATH)) {
         return false;
     }
     
@@ -331,7 +331,7 @@ static bool CreateOrUpdateShortcut(const char* exe_path, const char* existing_sh
         return false;
     }
     
-    if (!Utf8ToWide(shortcut_path, shortcut_path_w, MAX_PATH)) {
+    if (!LocalUtf8ToWide(shortcut_path, shortcut_path_w, MAX_PATH)) {
         CleanupComShellLink(&link);
         return false;
     }

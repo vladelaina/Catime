@@ -5,6 +5,8 @@
  * Manages configuration file paths, resource folder creation, and first-run detection.
  */
 #include "../include/config.h"
+#include "../include/utils/string_convert.h"
+#include "../include/utils/path_utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -145,24 +147,7 @@ static void EnsureDefaultResourceSubfolders(void) {
  * @brief Extract filename from full path with UTF-8 support
  */
 void ExtractFileName(const char* path, char* name, size_t nameSize) {
-    if (!path || !name || nameSize == 0) return;
-    
-    /** Convert UTF-8 path to Unicode for processing */
-    UTF8_TO_WIDE(path, wPath);
-    
-    /** Find last directory separator */
-    wchar_t* lastSlash = wcsrchr(wPath, L'\\');
-    if (!lastSlash) lastSlash = wcsrchr(wPath, L'/');
-    
-    wchar_t wName[MAX_PATH] = {0};
-    if (lastSlash) {
-        wcscpy(wName, lastSlash + 1);
-    } else {
-        wcscpy(wName, wPath);
-    }
-    
-    /** Convert back to UTF-8 for output */
-    WideCharToMultiByte(CP_UTF8, 0, wName, -1, name, (int)nameSize, NULL, NULL);
+    ExtractFileNameU8(path, name, nameSize);
 }
 
 
@@ -245,7 +230,7 @@ void GetAnimationsFolderPath(char* path, size_t size) {
 /**
  * @brief Check if desktop shortcut verification has been completed
  */
-bool IsShortcutCheckDone(void) {
+BOOL IsShortcutCheckDone(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
@@ -256,7 +241,7 @@ bool IsShortcutCheckDone(void) {
 /**
  * @brief Mark desktop shortcut verification as completed
  */
-void SetShortcutCheckDone(bool done) {
+void SetShortcutCheckDone(BOOL done) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     

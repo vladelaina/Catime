@@ -18,7 +18,8 @@ add_definitions(-D_WINDOWS)
 # Collect all source files
 file(GLOB_RECURSE SOURCES "src/*.c")
 
-# Explicitly list config modules for clarity (optional, GLOB_RECURSE already includes them)
+# Explicitly list refactored modules for clarity (optional, GLOB_RECURSE already includes them)
+
 # Configuration modules (refactored from config_core.c):
 #   src/config_core.c       - Coordinator (simplified)
 #   src/config_defaults.c   - Default values and metadata
@@ -33,7 +34,16 @@ file(GLOB_RECURSE SOURCES "src/*.c")
 #   src/dialog_info.c         - About, website, etc. (~350 lines)
 #   src/dialog_pomodoro.c     - Pomodoro dialogs (~300 lines)
 #   src/dialog_notification.c - Notification settings (~400 lines)
-# Original dialog_procedure.c can be removed or kept as compatibility layer
+
+# Font modules (refactored from font.c - 767 lines → 4 specialized modules):
+#   src/font/font_ttf_parser.c    - Binary TTF/OTF parsing (~180 lines)
+#   src/font/font_path_manager.c  - Path resolution and auto-recovery (~240 lines)
+#   src/font/font_manager.c       - Loading, preview, GDI management (~330 lines)
+#   src/font/font_config.c        - Configuration persistence (~50 lines)
+
+# Utility modules (extracted from multiple files - eliminates duplication):
+#   src/utils/string_convert.c    - UTF-8 ↔ UTF-16 conversion (~80 lines)
+#   src/utils/path_utils.c        - Path manipulation (~260 lines)
 
 # Collect all header files
 file(GLOB_RECURSE HEADERS "include/*.h")

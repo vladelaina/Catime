@@ -24,6 +24,7 @@
 #include "../resource/resource.h"
 #include "../include/tray_animation.h"
 #include "../include/startup.h"
+#include "../include/utils/string_convert.h"
 
 /** @brief Animation menu entry for directory scanning */
 typedef struct {
@@ -44,21 +45,19 @@ typedef struct {
 } FontEntry;
 
 /**
- * @brief Convert UTF-8 path to wide character
+ * @brief Convert UTF-8 path to wide character (wrapper for consistency)
  * @return TRUE on success
  */
 static inline BOOL PathUtf8ToWide(const char* utf8, wchar_t* wide, size_t wideSize) {
-    if (!utf8 || !wide || wideSize == 0) return FALSE;
-    return MultiByteToWideChar(CP_UTF8, 0, utf8, -1, wide, (int)wideSize) > 0;
+    return Utf8ToWide(utf8, wide, wideSize);
 }
 
 /**
- * @brief Convert wide character path to UTF-8
+ * @brief Convert wide character path to UTF-8 (wrapper for consistency)
  * @return TRUE on success
  */
 static inline BOOL PathWideToUtf8(const wchar_t* wide, char* utf8, size_t utf8Size) {
-    if (!wide || !utf8 || utf8Size == 0) return FALSE;
-    return WideCharToMultiByte(CP_UTF8, 0, wide, -1, utf8, (int)utf8Size, NULL, NULL) > 0;
+    return WideToUtf8(wide, utf8, utf8Size);
 }
 
 /**
