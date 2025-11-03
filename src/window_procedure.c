@@ -41,6 +41,7 @@
 #include "../include/notification.h"
 #include "../include/cli.h"
 #include "../include/tray_animation.h"
+#include "../include/menu_preview.h"
 
 /* ============================================================================
  * String Constant Pool
@@ -517,95 +518,10 @@ static BOOL ReloadConfigItems(HWND hwnd, const ConfigItem* items, size_t count) 
     {CONFIG_TYPE_CUSTOM, sec, key, (void*)var, 0, (void*)def, loader, redraw}
 
 /* ============================================================================
- * Preview System - Live menu hover previews without applying
+ * Preview System - Now provided by menu_preview.h/menu_preview.c
  * ============================================================================ */
 
-/** Preview type discriminator */
-typedef enum {
-    PREVIEW_TYPE_NONE = 0,
-    PREVIEW_TYPE_COLOR,
-    PREVIEW_TYPE_FONT,
-    PREVIEW_TYPE_TIME_FORMAT,
-    PREVIEW_TYPE_MILLISECONDS,
-    PREVIEW_TYPE_ANIMATION
-} PreviewType;
-
-/**
- * @brief Global preview state with type-safe union
- * 
- * Why: Hovering menu items previews changes before selection. Clicking applies.
- */
-typedef struct {
-    PreviewType type;
-    union {
-        char colorHex[32];
-        struct {
-            char fontName[MAX_PATH];
-            char internalName[MAX_PATH];
-        } font;
-        TimeFormatType timeFormat;
-        BOOL showMilliseconds;
-        char animationPath[MAX_PATH];
-    } data;
-    BOOL needsTimerReset;
-} PreviewState;
-
-static PreviewState g_previewState = {PREVIEW_TYPE_NONE};
-
-static void StartPreview(PreviewType type, const void* data, HWND hwnd);
-static void CancelPreview(HWND hwnd);
-
-static inline BOOL IsPreviewActive(void) {
-    return g_previewState.type != PREVIEW_TYPE_NONE;
-}
-
-/**
- * @brief Get display color (preview takes precedence)
- * @param outColor Output buffer
- * @param bufferSize Buffer capacity
- * 
- * Why: Drawing code calls this instead of CLOCK_TEXT_COLOR directly.
- */
-void GetActiveColor(char* outColor, size_t bufferSize) {
-    if (!outColor || bufferSize == 0) return;
-    
-    const char* color = (g_previewState.type == PREVIEW_TYPE_COLOR) ?
-                        g_previewState.data.colorHex : CLOCK_TEXT_COLOR;
-    strncpy_s(outColor, bufferSize, color, _TRUNCATE);
-}
-
-/**
- * @brief Get display font (preview takes precedence)
- */
-void GetActiveFont(char* outFontName, char* outInternalName, size_t bufferSize) {
-    if (!outFontName || !outInternalName || bufferSize == 0) return;
-    
-    if (g_previewState.type == PREVIEW_TYPE_FONT) {
-        strncpy_s(outFontName, bufferSize, g_previewState.data.font.fontName, _TRUNCATE);
-        strncpy_s(outInternalName, bufferSize, g_previewState.data.font.internalName, _TRUNCATE);
-    } else {
-        strncpy_s(outFontName, bufferSize, FONT_FILE_NAME, _TRUNCATE);
-        strncpy_s(outInternalName, bufferSize, FONT_INTERNAL_NAME, _TRUNCATE);
-    }
-}
-
-/**
- * @brief Get display time format (preview takes precedence)
- */
-TimeFormatType GetActiveTimeFormat(void) {
-    return (g_previewState.type == PREVIEW_TYPE_TIME_FORMAT) ?
-           g_previewState.data.timeFormat : CLOCK_TIME_FORMAT;
-}
-
-/**
- * @brief Get milliseconds visibility (preview takes precedence)
- */
-BOOL GetActiveShowMilliseconds(void) {
-    return (g_previewState.type == PREVIEW_TYPE_MILLISECONDS) ?
-           g_previewState.data.showMilliseconds : CLOCK_SHOW_MILLISECONDS;
-}
-
-static BOOL ApplyPreview(HWND hwnd);
+/* All preview functions are now in preview.c */
 
 /* ============================================================================
  * External Function Declarations
@@ -1065,139 +981,7 @@ static inline BOOL isAllSpacesOnly(const wchar_t* str) {
  * Preview Management - Unified System Implementation (v5.0)
  * ============================================================================ */
 
-/**
- * @brief Start preview with type-safe data handling
- * @param type Preview type to activate
- * @param data Type-specific preview data
- * @param hwnd Window handle for UI updates
- */
-static void StartPreview(PreviewType type, const void* data, HWND hwnd) {
-    if (IsPreviewActive()) CancelPreview(hwnd);
-    
-    g_previewState.type = type;
-    g_previewState.needsTimerReset = FALSE;
-    
-    switch (type) {
-        case PREVIEW_TYPE_COLOR: {
-            const char* colorHex = (const char*)data;
-            strncpy_s(g_previewState.data.colorHex, sizeof(g_previewState.data.colorHex), 
-                     colorHex, _TRUNCATE);
-            break;
-        }
-        
-        case PREVIEW_TYPE_FONT: {
-            const char* fontName = (const char*)data;
-            strncpy_s(g_previewState.data.font.fontName, MAX_PATH, fontName, _TRUNCATE);
-            
-            HINSTANCE hInstance = GetModuleHandle(NULL);
-            LoadFontByNameAndGetRealName(hInstance, fontName, 
-                                        g_previewState.data.font.internalName,
-                                        sizeof(g_previewState.data.font.internalName));
-            break;
-        }
-        
-        case PREVIEW_TYPE_TIME_FORMAT:
-            g_previewState.data.timeFormat = *(TimeFormatType*)data;
-            break;
-        
-        case PREVIEW_TYPE_MILLISECONDS:
-            g_previewState.data.showMilliseconds = *(BOOL*)data;
-            g_previewState.needsTimerReset = TRUE;
-            if (hwnd) ResetTimerWithInterval(hwnd);
-            break;
-        
-        case PREVIEW_TYPE_ANIMATION: {
-            const char* animPath = (const char*)data;
-            strncpy_s(g_previewState.data.animationPath, MAX_PATH, animPath, _TRUNCATE);
-            extern void StartAnimationPreview(const char*);
-            StartAnimationPreview(animPath);
-            break;
-        }
-        
-        default:
-            g_previewState.type = PREVIEW_TYPE_NONE;
-            return;
-    }
-    
-    if (hwnd && type != PREVIEW_TYPE_ANIMATION) {
-        InvalidateRect(hwnd, NULL, TRUE);
-    }
-}
-
-/**
- * @brief Cancel active preview and restore original state
- * @param hwnd Window handle for UI refresh
- */
-static void CancelPreview(HWND hwnd) {
-    if (!IsPreviewActive()) return;
-    
-    BOOL needsRedraw = (g_previewState.type != PREVIEW_TYPE_ANIMATION && 
-                        g_previewState.type != PREVIEW_TYPE_NONE);
-    BOOL needsTimerReset = (g_previewState.type == PREVIEW_TYPE_MILLISECONDS);
-    
-    if (g_previewState.type == PREVIEW_TYPE_ANIMATION) {
-        extern void CancelAnimationPreview(void);
-        CancelAnimationPreview();
-    }
-    
-    g_previewState.type = PREVIEW_TYPE_NONE;
-    
-    if (needsTimerReset && hwnd) ResetTimerWithInterval(hwnd);
-    if (needsRedraw && hwnd) InvalidateRect(hwnd, NULL, TRUE);
-}
-
-/**
- * @brief Apply current preview as permanent configuration
- * @param hwnd Window handle
- * @return TRUE if preview applied successfully
- */
-static BOOL ApplyPreview(HWND hwnd) {
-    if (!IsPreviewActive()) return FALSE;
-    
-    PreviewType appliedType = g_previewState.type;
-    
-    switch (appliedType) {
-        case PREVIEW_TYPE_COLOR:
-            WriteConfigColor(g_previewState.data.colorHex);
-            break;
-            
-        case PREVIEW_TYPE_FONT:
-            strncpy_s(FONT_FILE_NAME, sizeof(FONT_FILE_NAME), 
-                     g_previewState.data.font.fontName, _TRUNCATE);
-            strncpy_s(FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME),
-                     g_previewState.data.font.internalName, _TRUNCATE);
-            WriteConfigFont(g_previewState.data.font.fontName, FALSE);
-            break;
-            
-        case PREVIEW_TYPE_TIME_FORMAT:
-            WriteConfigTimeFormat(g_previewState.data.timeFormat);
-            break;
-            
-        case PREVIEW_TYPE_MILLISECONDS:
-            WriteConfigShowMilliseconds(g_previewState.data.showMilliseconds);
-            break;
-            
-        case PREVIEW_TYPE_ANIMATION:
-            break;
-            
-        default:
-            return FALSE;
-    }
-    
-    g_previewState.type = PREVIEW_TYPE_NONE;
-    if (hwnd) InvalidateRect(hwnd, NULL, TRUE);
-    return TRUE;
-}
-
-/**
- * @brief Cancel all active previews (legacy compatibility wrapper)
- * @param hwnd Window handle for display refresh
- * 
- * Maintained for backward compatibility. New code should use CancelPreview().
- */
-static void CancelAllPreviews(HWND hwnd) {
-    CancelPreview(hwnd);
-}
+/* Preview functions now implemented in preview.c */
 
 /* ============================================================================
  * File Validation - Static Helpers
@@ -2870,7 +2654,7 @@ static LRESULT HandleTimer(HWND hwnd, WPARAM wp, LPARAM lp) {
     UNUSED(lp);
     if (wp == IDT_MENU_DEBOUNCE) {
         KillTimer(hwnd, IDT_MENU_DEBOUNCE);
-        CancelAllPreviews(hwnd);
+        CancelPreview(hwnd);
         return 0;
     }
     HandleTimerEvent(hwnd, wp);

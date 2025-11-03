@@ -73,11 +73,14 @@ typedef enum {
 /**
  * @brief Time display format
  */
+#ifndef TIME_FORMAT_TYPE_DEFINED
 typedef enum {
     TIME_FORMAT_DEFAULT = 0,        /**< 9:59, 9 */
     TIME_FORMAT_ZERO_PADDED = 1,    /**< 09:59, 09 */
     TIME_FORMAT_FULL_PADDED = 2     /**< 00:09:59, 00:00:09 */
 } TimeFormatType;
+#define TIME_FORMAT_TYPE_DEFINED
+#endif
 
 /* ============================================================================
  * Global state variables
