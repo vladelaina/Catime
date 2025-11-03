@@ -1,14 +1,9 @@
 /**
  * @file drag_scale.h
- * @brief Window dragging, scaling and edit mode functionality
+ * @brief Window dragging, scaling, and edit mode with config persistence
  * 
- * Provides interactive window manipulation features including:
- * - Drag-to-reposition with mouse capture
- * - Mouse wheel scaling with center-point preservation
- * - Edit mode state management with visual feedback
- * - Automatic configuration persistence with debouncing
- * 
- * @version 2.0 - Refactored for improved maintainability
+ * Mouse capture ensures smooth dragging even when cursor leaves window.
+ * Config save debouncing (500ms) prevents excessive disk I/O during continuous operations.
  */
 
 #ifndef DRAG_SCALE_H
@@ -20,29 +15,26 @@
  * Configuration Constants
  * ============================================================================ */
 
-/** @brief Scale factor multiplier per mouse wheel notch (10% increment) */
+/** @brief Scale per wheel notch (10% increment) */
 #define SCALE_FACTOR_STEP 1.1f
 
-/** @brief Delay in milliseconds before saving config to disk (debouncing) */
+/** @brief Config save debounce delay (prevents I/O spam) */
 #define CONFIG_SAVE_DELAY_MS 500
 
-/** @brief Timer ID for delayed configuration save (unique ID to avoid conflicts with system timers) */
+/** @brief Timer ID for config save (avoids conflicts with system timers) */
 #define TIMER_ID_CONFIG_SAVE 1005
 
-/** 
- * @brief Timer ID for window refresh after exiting edit mode
- * Uses ID 2001 to avoid conflicts with other timer IDs (1001-1009 range is heavily used)
- */
+/** @brief Timer ID for edit mode refresh (avoids 1001-1009 range) */
 #define TIMER_ID_EDIT_MODE_REFRESH 2001
 
-/** @brief Interval for refresh timer after exiting edit mode */
+/** @brief Edit mode refresh interval */
 #define TIMER_REFRESH_INTERVAL_MS 150
 
 /* ============================================================================
  * Global State Variables
  * ============================================================================ */
 
-/** @brief Previous topmost window state before entering edit mode */
+/** @brief Saved topmost state (for restoration after edit mode) */
 extern BOOL PREVIOUS_TOPMOST_STATE;
 
 /* ============================================================================
@@ -50,27 +42,20 @@ extern BOOL PREVIOUS_TOPMOST_STATE;
  * ============================================================================ */
 
 /**
- * @brief Enter edit mode for interactive window manipulation
- * @param hwnd Window handle to enable edit mode for
+ * @brief Enter edit mode
+ * @param hwnd Window handle
  * 
- * Actions performed:
- * - Saves current topmost state for restoration
- * - Ensures window is topmost during editing
- * - Enables blur-behind visual effect
- * - Disables click-through behavior
- * - Updates cursor and refreshes display
+ * @details
+ * Saves topmost state, forces topmost, enables blur, disables click-through.
  */
 void StartEditMode(HWND hwnd);
 
 /**
- * @brief Exit edit mode and restore normal window behavior
- * @param hwnd Window handle to disable edit mode for
+ * @brief Exit edit mode
+ * @param hwnd Window handle
  * 
- * Actions performed:
- * - Removes blur effect and restores transparency
- * - Re-enables click-through behavior
- * - Restores original topmost state
- * - Schedules configuration save
+ * @details
+ * Removes blur, re-enables click-through, restores topmost, schedules save.
  */
 void EndEditMode(HWND hwnd);
 
@@ -79,28 +64,27 @@ void EndEditMode(HWND hwnd);
  * ============================================================================ */
 
 /**
- * @brief Initialize window dragging operation with mouse capture
- * @param hwnd Window handle to start dragging
+ * @brief Start dragging with mouse capture
+ * @param hwnd Window handle
  * 
- * Sets dragging state and captures mouse input for smooth movement tracking.
+ * @details Captures mouse for smooth tracking even when cursor leaves window
  */
 void StartDragWindow(HWND hwnd);
 
 /**
- * @brief Finalize window dragging and ensure valid position
- * @param hwnd Window handle to stop dragging
+ * @brief End dragging and validate position
+ * @param hwnd Window handle
  * 
- * Releases mouse capture and validates window position within screen bounds.
+ * @details Releases capture, validates position within screen bounds
  */
 void EndDragWindow(HWND hwnd);
 
 /**
- * @brief Process window dragging based on mouse movement delta
- * @param hwnd Window handle being dragged
- * @return TRUE if window was repositioned, FALSE if not in drag mode
+ * @brief Handle drag movement
+ * @param hwnd Window handle
+ * @return TRUE if repositioned, FALSE if not dragging
  * 
- * Calculates movement delta from last mouse position and updates window
- * position accordingly. Schedules configuration save for persistence.
+ * @details Calculates delta from last position, schedules config save
  */
 BOOL HandleDragWindow(HWND hwnd);
 
@@ -109,14 +93,13 @@ BOOL HandleDragWindow(HWND hwnd);
  * ============================================================================ */
 
 /**
- * @brief Handle window scaling via mouse wheel input
- * @param hwnd Window handle to scale
- * @param delta Mouse wheel delta value (positive = zoom in, negative = zoom out)
- * @return TRUE if scaling was applied, FALSE if not in edit mode or limits reached
+ * @brief Handle mouse wheel scaling
+ * @param hwnd Window handle
+ * @param delta Wheel delta (positive=zoom in, negative=zoom out)
+ * @return TRUE if scaled, FALSE if not in edit mode or limits reached
  * 
- * Applies proportional scaling centered on current window position.
- * Scale factor is clamped between MIN_SCALE_FACTOR and MAX_SCALE_FACTOR.
- * Automatically schedules configuration save after scaling.
+ * @details
+ * Proportional scaling, clamped to MIN/MAX_SCALE_FACTOR, schedules save.
  */
 BOOL HandleScaleWindow(HWND hwnd, int delta);
 
@@ -125,11 +108,12 @@ BOOL HandleScaleWindow(HWND hwnd, int delta);
  * ============================================================================ */
 
 /**
- * @brief Schedule delayed configuration save to reduce I/O frequency
- * @param hwnd Window handle for timer context
+ * @brief Schedule debounced config save
+ * @param hwnd Window handle
  * 
- * Implements debouncing: cancels previous timer and sets new one.
- * Prevents excessive disk writes during continuous drag/scale operations.
+ * @details
+ * Cancels previous timer, sets new one. Prevents excessive I/O during
+ * continuous drag/scale operations.
  */
 void ScheduleConfigSave(HWND hwnd);
 

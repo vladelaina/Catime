@@ -1,18 +1,12 @@
 /**
  * @file audio_player.h
- * @brief Cross-platform audio notification system with fallback mechanisms
- * @version 2.0 - Refactored for better maintainability
+ * @brief Audio notification system with three-tier fallback for reliability
  * 
- * Provides audio playback for notifications with multiple fallback strategies:
- * 1. Primary: miniaudio library (high quality, all formats)
- * 2. Fallback: Windows PlaySound API
- * 3. Final fallback: System beep
+ * 1. miniaudio (MP3/FLAC/WAV support)
+ * 2. PlaySound (WAV fallback)
+ * 3. System beep (guaranteed notification)
  * 
- * Features:
- * - Automatic format detection and path conversion
- * - Volume control with real-time adjustment
- * - Playback completion callbacks
- * - Thread-safe operation
+ * Ensures users always receive audio feedback even when preferred methods fail.
  */
 
 #ifndef AUDIO_PLAYER_H
@@ -21,79 +15,70 @@
 #include <windows.h>
 
 /**
- * @brief Callback function type for audio playback completion
- * @param hwnd Window handle to notify when playback completes
+ * @brief Callback function type for audio playback completion events
+ * @param hwnd Window handle of notification source
  */
 typedef void (*AudioPlaybackCompleteCallback)(HWND hwnd);
 
 /**
- * @brief Set callback for audio playback completion
+ * @brief Registers callback for playback completion
  * @param hwnd Window handle to receive completion notification
- * @param callback Function to call when audio playback completes
+ * @param callback Function to invoke on completion
  * 
- * @note Callback is invoked when audio finishes naturally or on error
+ * @details
+ * Enables UI state transitions without polling or fixed delays.
+ * Fires on both success and error to ensure consistent UI behavior.
  */
 void SetAudioPlaybackCompleteCallback(HWND hwnd, AudioPlaybackCompleteCallback callback);
 
 /**
- * @brief Play notification sound with automatic fallback
- * @param hwnd Window handle for audio context
- * @return TRUE on success, FALSE on failure
+ * @brief Plays notification sound with automatic fallback
+ * @param hwnd Window handle for error dialogs
+ * @return TRUE on success (including beep fallback), FALSE on catastrophic failure
  * 
- * @details Playback strategy:
- * 1. Tries miniaudio for configured sound file
- * 2. Falls back to PlaySound if miniaudio fails
- * 3. Falls back to system beep if all else fails
- * 4. Returns TRUE even for system beep (always succeeds)
+ * @details
+ * Special cases:
+ * - Empty NOTIFICATION_SOUND_FILE: Silent success (user disabled audio)
+ * - "SYSTEM_BEEP": Direct beep (bypasses file playback)
+ * - Invalid path: Shows error once, then falls back to beep
  * 
- * Special behaviors:
- * - Empty NOTIFICATION_SOUND_FILE: returns TRUE silently
- * - "SYSTEM_BEEP": plays system beep directly
- * - Invalid paths: shows error dialog and falls back to beep
- * 
- * @note Supports .mp3, .wav, .flac, and other formats via miniaudio
- * @note Respects NOTIFICATION_SOUND_VOLUME global setting
+ * @note Always returns TRUE for beep fallback (notification delivered)
  */
 BOOL PlayNotificationSound(HWND hwnd);
 
 /**
- * @brief Pause currently playing notification sound
- * @return TRUE if sound was paused, FALSE if not playing or already paused
+ * @brief Pauses audio playback without losing position
+ * @return TRUE if paused, FALSE if not playing or backend unsupported
  * 
- * @note Only works with miniaudio playback (not PlaySound or system beep)
+ * @note Only miniaudio supports pause; PlaySound and beep cannot pause
  */
 BOOL PauseNotificationSound(void);
 
 /**
- * @brief Resume paused notification sound
- * @return TRUE if sound was resumed, FALSE if not paused
+ * @brief Resumes paused audio from last position
+ * @return TRUE if resumed, FALSE if not paused or backend unsupported
  * 
- * @note Only works with miniaudio playback (not PlaySound or system beep)
+ * @note Only miniaudio supports resume; PlaySound and beep cannot resume
  */
 BOOL ResumeNotificationSound(void);
 
 /**
- * @brief Stop currently playing notification sound immediately
+ * @brief Immediately stops all audio and releases resources
  * 
- * Stops all audio playback and releases resources:
- * - miniaudio: stops and uninitializes sound
- * - PlaySound: purges all instances
- * - Timers: kills completion timers
+ * @details
+ * Stops all backends (miniaudio, PlaySound, timers) to prevent leaks and artifacts.
+ * Must be called before application exit.
  * 
- * @note Safe to call even if nothing is playing
+ * @note Safe to call when nothing is playing
  */
 void StopNotificationSound(void);
 
 /**
- * @brief Set audio playback volume
- * @param volume Volume level (0-100), clamped automatically
+ * @brief Sets audio volume with immediate effect (clamped to 0-100)
+ * @param volume Volume level (0=mute, 100=max)
  * 
  * @details
- * - Applies immediately to currently playing audio
- * - Persists for future playback
- * - 0 = mute, 100 = maximum volume
- * 
- * @note Volume setting is global and affects all subsequent playback
+ * Applies to active and future playback. Clamping prevents distortion.
  */
 void SetAudioVolume(int volume);
 

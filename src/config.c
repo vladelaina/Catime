@@ -1,6 +1,10 @@
 /**
  * @file config.c
- * @brief Configuration management with INI file I/O, system detection, and language localization
+ * @brief INI-based config with atomic writes and UTF-8
+ * 
+ * Atomic writes (temp + rename) prevent corruption during concurrent access.
+ * UTF-8 throughout for international paths/text.
+ * Mutex synchronization prevents race conditions across processes.
  */
 #include "../include/config.h"
 #include "../include/language.h"
@@ -23,33 +27,18 @@
 
 #define MAX_POMODORO_TIMES 10
 
-/**
- * ========================================================================
- * Enum-String Mapping System
- * ========================================================================
- */
-
-/**
- * @brief Generic enum-to-string mapping entry
- */
 typedef struct {
-    int value;           /**< Enum integer value */
-    const char* str;     /**< String representation */
+    int value;
+    const char* str;
 } EnumStrMap;
 
-/**
- * @brief Notification type mappings
- */
 static const EnumStrMap NOTIFICATION_TYPE_MAP[] = {
     {NOTIFICATION_TYPE_CATIME,       "CATIME"},
     {NOTIFICATION_TYPE_SYSTEM_MODAL, "SYSTEM_MODAL"},
     {NOTIFICATION_TYPE_OS,           "OS"},
-    {-1, NULL}  /**< End marker */
+    {-1, NULL}
 };
 
-/**
- * @brief Time format type mappings
- */
 static const EnumStrMap TIME_FORMAT_MAP[] = {
     {TIME_FORMAT_DEFAULT,      "DEFAULT"},
     {TIME_FORMAT_ZERO_PADDED,  "ZERO_PADDED"},
@@ -57,9 +46,6 @@ static const EnumStrMap TIME_FORMAT_MAP[] = {
     {-1, NULL}
 };
 
-/**
- * @brief Language mappings
- */
 static const EnumStrMap LANGUAGE_MAP[] = {
     {APP_LANG_CHINESE_SIMP, "Chinese_Simplified"},
     {APP_LANG_CHINESE_TRAD, "Chinese_Traditional"},
@@ -74,9 +60,6 @@ static const EnumStrMap LANGUAGE_MAP[] = {
     {-1, NULL}
 };
 
-/**
- * @brief Timeout action mappings
- */
 static const EnumStrMap TIMEOUT_ACTION_MAP[] = {
     {TIMEOUT_ACTION_MESSAGE,       "MESSAGE"},
     {TIMEOUT_ACTION_LOCK,          "LOCK"},
@@ -90,13 +73,6 @@ static const EnumStrMap TIMEOUT_ACTION_MAP[] = {
     {-1, NULL}
 };
 
-/**
- * @brief Convert enum value to string representation
- * @param map Mapping table to use
- * @param value Enum value to convert
- * @param defaultVal Default string if not found
- * @return String representation of enum value
- */
 static const char* EnumToString(const EnumStrMap* map, int value, const char* defaultVal) {
     if (!map) return defaultVal;
     for (int i = 0; map[i].str != NULL; i++) {
@@ -107,13 +83,6 @@ static const char* EnumToString(const EnumStrMap* map, int value, const char* de
     return defaultVal;
 }
 
-/**
- * @brief Convert string to enum value
- * @param map Mapping table to use
- * @param str String to convert
- * @param defaultVal Default enum value if not found
- * @return Enum value corresponding to string
- */
 static int StringToEnum(const EnumStrMap* map, const char* str, int defaultVal) {
     if (!map || !str) return defaultVal;
     for (int i = 0; map[i].str != NULL; i++) {
@@ -124,156 +93,82 @@ static int StringToEnum(const EnumStrMap* map, const char* str, int defaultVal) 
     return defaultVal;
 }
 
-/**
- * ========================================================================
- * End of Enum-String Mapping System
- * ========================================================================
- */
-
-/**
- * ========================================================================
- * UTF-8 / Wide Character Conversion Macros
- * ========================================================================
- */
-
-/**
- * @brief Convert UTF-8 string to wide character string (stack allocation)
- * @param utf8 UTF-8 source string
- * @param wide Variable name for wide character output (will be declared)
- * 
- * Usage: UTF8_TO_WIDE(utf8Path, wPath);
- * Creates: wchar_t wPath[MAX_PATH];
- */
+/* UTF8_TO_WIDE(utf8Path, wPath) → wchar_t wPath[MAX_PATH]; */
 #define UTF8_TO_WIDE(utf8, wide) \
     wchar_t wide[MAX_PATH] = {0}; \
     MultiByteToWideChar(CP_UTF8, 0, utf8, -1, wide, MAX_PATH)
 
-/**
- * @brief Convert UTF-8 string to wide character string with custom size
- * @param utf8 UTF-8 source string
- * @param wide Variable name for wide character output (will be declared)
- * @param size Buffer size
- * 
- * Usage: UTF8_TO_WIDE_N(utf8Str, wStr, 256);
- * Creates: wchar_t wStr[256];
- */
 #define UTF8_TO_WIDE_N(utf8, wide, size) \
     wchar_t wide[size] = {0}; \
     MultiByteToWideChar(CP_UTF8, 0, utf8, -1, wide, size)
 
-/**
- * @brief Convert wide character string to UTF-8 (into existing buffer)
- * @param wide Wide character source string
- * @param utf8 UTF-8 output buffer
- * @param size Size of UTF-8 buffer
- * 
- * Usage: WIDE_TO_UTF8(wPath, utf8Path, MAX_PATH);
- */
 #define WIDE_TO_UTF8(wide, utf8, size) \
     WideCharToMultiByte(CP_UTF8, 0, wide, -1, utf8, (int)(size), NULL, NULL)
 
-/**
- * @brief Open file with UTF-8 path using wide character API
- * @param utf8Path UTF-8 file path
- * @param mode Wide character mode string (L"r", L"w", etc.)
- * @param filePtr Variable name for FILE* output
- * 
- * Usage: FOPEN_UTF8(config_path, L"r", file);
- */
 #define FOPEN_UTF8(utf8Path, mode, filePtr) \
     wchar_t _w##filePtr[MAX_PATH] = {0}; \
     MultiByteToWideChar(CP_UTF8, 0, utf8Path, -1, _w##filePtr, MAX_PATH); \
     FILE* filePtr = _wfopen(_w##filePtr, mode)
 
-/**
- * @brief Check if file exists using UTF-8 path (inline helper)
- * @param utf8Path UTF-8 file path
- * @return BOOL - TRUE if exists, FALSE otherwise
- */
 static inline BOOL FileExistsUtf8(const char* utf8Path) {
     if (!utf8Path) return FALSE;
     UTF8_TO_WIDE(utf8Path, wPath);
     return GetFileAttributesW(wPath) != INVALID_FILE_ATTRIBUTES;
 }
 
-/**
- * ========================================================================
- * End of UTF-8 Conversion Macros
- * ========================================================================
- */
-
 extern int POMODORO_WORK_TIME;
 extern int POMODORO_SHORT_BREAK;
 extern int POMODORO_LONG_BREAK;
 extern int POMODORO_LOOP_COUNT;
 
-/** @brief Pomodoro session time intervals in seconds */
 int POMODORO_TIMES[MAX_POMODORO_TIMES] = {1500, 300, 1500, 600};
 int POMODORO_TIMES_COUNT = 4;
 
-/** @brief Notification message texts */
 char CLOCK_TIMEOUT_MESSAGE_TEXT[100] = "时间到啦！";
 char POMODORO_TIMEOUT_MESSAGE_TEXT[100] = "番茄钟时间到！";
 char POMODORO_CYCLE_COMPLETE_TEXT[100] = "所有番茄钟循环完成！";
 
-/** @brief Notification display settings */
 int NOTIFICATION_TIMEOUT_MS = 3000;
 int NOTIFICATION_MAX_OPACITY = 95;
 NotificationType NOTIFICATION_TYPE = NOTIFICATION_TYPE_CATIME;
 BOOL NOTIFICATION_DISABLED = FALSE;
 
-/** @brief Notification sound configuration */
 char NOTIFICATION_SOUND_FILE[MAX_PATH] = "";
 int NOTIFICATION_SOUND_VOLUME = 100;
 
-/** @brief Font license agreement acceptance status */
 BOOL FONT_LICENSE_ACCEPTED = FALSE;
-
-/** @brief Accepted font license version from config */
 char FONT_LICENSE_VERSION_ACCEPTED[16] = "";
 
-/** @brief Current time format setting */
 TimeFormatType CLOCK_TIME_FORMAT = TIME_FORMAT_DEFAULT;
 
-/** @brief Time format preview variables */
 BOOL IS_TIME_FORMAT_PREVIEWING = FALSE;
 TimeFormatType PREVIEW_TIME_FORMAT = TIME_FORMAT_DEFAULT;
 
-/** @brief Milliseconds display setting */
 BOOL CLOCK_SHOW_MILLISECONDS = FALSE;
 
-/** @brief Milliseconds preview variables */
 BOOL IS_MILLISECONDS_PREVIEWING = FALSE;
 BOOL PREVIEW_SHOW_MILLISECONDS = FALSE;
 
-/**
- * Animation speed control mapping and metric
- */
 typedef struct {
-    int lowInclusive;   /** percent low bound */
-    int highExclusive;  /** percent high bound */
-    double scalePercent;/** speed scale percent (100 = 1x) */
+    int lowInclusive;
+    int highExclusive;
+    double scalePercent;  /* 100 = 1x */
 } AnimSpeedEntry;
 
 static AnimSpeedEntry g_animSpeedEntries[32];
 static int g_animSpeedEntryCount = 0;
 static AnimationSpeedMetric g_animSpeedMetric = ANIMATION_SPEED_MEMORY;
 
-/**
- * New-style animation speed mapping via breakpoints and default.
- * ANIMATION_SPEED_DEFAULT defines the scale at 0%.
- * ANIMATION_SPEED_MAP_<P>=<S> defines a breakpoint at percent P with scale S.
- * At runtime, scales are linearly interpolated between adjacent breakpoints.
- */
+/* Linear interpolation between breakpoints */
 typedef struct {
-    int percent;         /** breakpoint percent (0-100) */
-    double scalePercent; /** scale percent at breakpoint */
+    int percent;
+    double scalePercent;
 } AnimSpeedPoint;
 
 static AnimSpeedPoint g_animSpeedPoints[128];
 static int g_animSpeedPointCount = 0;
 static double g_animSpeedDefaultScalePercent = 100.0;
-static int g_animMinIntervalMs = 0; /** 0 = disabled (use built-in default) */
+static int g_animMinIntervalMs = 0;  /* 0 = use system default */
 
 static int CmpAnimSpeedPoint(const void* a, const void* b) {
     const AnimSpeedPoint* pa = (const AnimSpeedPoint*)a;
@@ -283,7 +178,6 @@ static int CmpAnimSpeedPoint(const void* a, const void* b) {
     return 0;
 }
 
-/** Trim leading/trailing spaces in-place */
 static void TrimSpaces(char* s) {
     if (!s) return;
     size_t len = strlen(s);
@@ -293,7 +187,6 @@ static void TrimSpaces(char* s) {
     while (len > 0 && (s[len - 1] == ' ' || s[len - 1] == '\t')) s[--len] = '\0';
 }
 
-/** Parse ANIMATION_SPEED_MAP like "0-10:100,10-20:110" or "0~10=100%" */
 static void ParseAnimationSpeedMap(const char* mapStr) {
     g_animSpeedEntryCount = 0;
     if (!mapStr || !*mapStr) return;
@@ -307,7 +200,6 @@ static void ParseAnimationSpeedMap(const char* mapStr) {
         strncpy(item, token, sizeof(item) - 1);
         item[sizeof(item) - 1] = '\0';
         TrimSpaces(item);
-        /** Replace accepted separators for unified parsing */
         for (char* p = item; *p; ++p) {
             if (*p == '~') *p = '-';
             if (*p == '=') *p = ':';
@@ -338,17 +230,11 @@ static void ParseAnimationSpeedMap(const char* mapStr) {
     }
 }
 
-/**
- * @brief Parse fixed-range animation speed keys from INI [Animation] section
- * Keys are of the form: ANIMATION_SPEED_MAP_LOW-HIGH = SCALE[%]
- * Example: ANIMATION_SPEED_MAP_0-10=100
- */
 static void ParseAnimationSpeedFixedKeys(const char* configPathUtf8) {
-    g_animSpeedEntryCount = 0; /** legacy removed */
+    g_animSpeedEntryCount = 0;
     g_animSpeedPointCount = 0;
     if (!configPathUtf8 || !*configPathUtf8) return;
 
-    /** Read default scale; fallback to 100 if missing/invalid */
     {
         int def = ReadIniInt("Animation", "ANIMATION_SPEED_DEFAULT", 100, configPathUtf8);
         if (def <= 0) def = 100;

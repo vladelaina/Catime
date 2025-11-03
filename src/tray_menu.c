@@ -1,13 +1,11 @@
 /**
  * @file tray_menu.c
- * @brief Refactored system tray menu system with improved modularity
- * @version 2.0 - Enhanced maintainability through function decomposition
+ * @brief System tray context menus (left/right-click)
  * 
- * Major improvements:
- * - Extracted nested functions to top level for clarity
- * - Unified configuration reading through helper functions
- * - Separated menu building logic into focused modules
- * - Reduced code duplication via path conversion helpers
+ * Key features:
+ * - Dynamic menu generation from filesystem (fonts, animations)
+ * - Natural sorting for numeric filenames
+ * - Recursive directory scanning with checkmarks
  */
 #include <windows.h>
 #include <shellapi.h>
@@ -27,37 +25,26 @@
 #include "../include/tray_animation.h"
 #include "../include/startup.h"
 
-/* ============================================================================
- * Type Definitions
- * ============================================================================ */
-
-/** @brief Represents a file or folder entry for sorting animation menus */
+/** @brief Animation menu entry for directory scanning */
 typedef struct {
     wchar_t name[MAX_PATH];
-    char rel_path_utf8[MAX_PATH]; /** Relative path from animations root */
+    char rel_path_utf8[MAX_PATH];
     BOOL is_dir;
 } AnimationEntry;
 
-/** @brief Font entry structure for natural sorting */
+/** @brief Font menu entry with submenu tracking */
 typedef struct {
     wchar_t name[MAX_PATH];
     wchar_t fullPath[MAX_PATH];
     wchar_t displayName[MAX_PATH];
     BOOL is_dir;
     BOOL isCurrentFont;
-    int subFolderStatus; /** 0=no content, 1=has content, 2=contains current font */
-    HMENU hSubMenu; /** For directories: submenu handle */
+    int subFolderStatus;
+    HMENU hSubMenu;
 } FontEntry;
 
-/* ============================================================================
- * Helper Functions - Path Conversion
- * ============================================================================ */
-
 /**
- * @brief Convert UTF-8 path to wide character path
- * @param utf8 Source UTF-8 path
- * @param wide Destination wide character buffer
- * @param wideSize Size of wide buffer in wchar_t count
+ * @brief Convert UTF-8 path to wide character
  * @return TRUE on success
  */
 static inline BOOL PathUtf8ToWide(const char* utf8, wchar_t* wide, size_t wideSize) {
@@ -66,10 +53,7 @@ static inline BOOL PathUtf8ToWide(const char* utf8, wchar_t* wide, size_t wideSi
 }
 
 /**
- * @brief Convert wide character path to UTF-8 path
- * @param wide Source wide character path
- * @param utf8 Destination UTF-8 buffer
- * @param utf8Size Size of UTF-8 buffer in bytes
+ * @brief Convert wide character path to UTF-8
  * @return TRUE on success
  */
 static inline BOOL PathWideToUtf8(const wchar_t* wide, char* utf8, size_t utf8Size) {
@@ -77,14 +61,8 @@ static inline BOOL PathWideToUtf8(const wchar_t* wide, char* utf8, size_t utf8Si
     return WideCharToMultiByte(CP_UTF8, 0, wide, -1, utf8, (int)utf8Size, NULL, NULL) > 0;
 }
 
-/* ============================================================================
- * Helper Functions - Configuration Reading
- * ============================================================================ */
-
 /**
- * @brief Get wide-character path to config.ini file
- * @param wPath Output buffer for wide path
- * @param size Buffer size in wchar_t count
+ * @brief Get wide-character path to config.ini
  * @return TRUE on success
  */
 static BOOL GetConfigPathWide(wchar_t* wPath, size_t size) {
@@ -95,11 +73,11 @@ static BOOL GetConfigPathWide(wchar_t* wPath, size_t size) {
 }
 
 /**
- * @brief Read single configuration value from config.ini
- * @param key Configuration key to search for
+ * @brief Read single key=value from config.ini
+ * @param key Configuration key
  * @param outBuffer Output buffer for value
- * @param bufferSize Size of output buffer
- * @return TRUE if key was found and read
+ * @param bufferSize Buffer size
+ * @return TRUE if key found
  */
 static BOOL ReadConfigValue(const char* key, char* outBuffer, size_t bufferSize) {
     if (!key || !outBuffer || bufferSize == 0) return FALSE;
@@ -116,7 +94,6 @@ static BOOL ReadConfigValue(const char* key, char* outBuffer, size_t bufferSize)
     
     while (fgets(line, sizeof(line), file)) {
         if (strncmp(line, key, keyLen) == 0 && line[keyLen] == '=') {
-            /* Remove trailing newline */
             char* value = line + keyLen + 1;
             size_t len = strlen(value);
             while (len > 0 && (value[len-1] == '\n' || value[len-1] == '\r')) {
@@ -134,10 +111,8 @@ static BOOL ReadConfigValue(const char* key, char* outBuffer, size_t bufferSize)
 }
 
 /**
- * @brief Load Pomodoro configuration from config.ini
- * Updates global POMODORO_TIMES array and related settings
- * 
- * Note: POMODORO_* variables now declared in pomodoro.h and timer.h
+ * @brief Load Pomodoro time options from config
+ * @note Updates global POMODORO_TIMES array
  */
 static void LoadPomodoroConfig(void) {
     
@@ -163,7 +138,6 @@ static void LoadPomodoroConfig(void) {
             
             POMODORO_TIMES_COUNT = index;
             
-            /* Update default Pomodoro intervals */
             if (index > 0) POMODORO_WORK_TIME = POMODORO_TIMES[0];
             if (index > 1) POMODORO_SHORT_BREAK = POMODORO_TIMES[1];
             if (index > 2) POMODORO_LONG_BREAK = POMODORO_TIMES[2];
@@ -177,11 +151,10 @@ static void LoadPomodoroConfig(void) {
     fclose(file);
 }
 
-/* ============================================================================
- * Helper Functions - Natural Sorting
- * ============================================================================ */
-
-/** @brief Natural string compare that sorts numeric substrings by value (e.g., 2 < 10). */
+/**
+ * @brief Natural string comparison with numeric ordering
+ * @note Handles multi-digit numbers correctly (e.g., "file2" < "file10")
+ */
 static int NaturalCompareW(const wchar_t* a, const wchar_t* b) {
     const wchar_t* pa = a;
     const wchar_t* pb = b;
@@ -189,7 +162,6 @@ static int NaturalCompareW(const wchar_t* a, const wchar_t* b) {
         if (iswdigit(*pa) && iswdigit(*pb)) {
             const wchar_t* za = pa; while (*za == L'0') za++;
             const wchar_t* zb = pb; while (*zb == L'0') zb++;
-            /** Primary rule: numbers with more leading zeros come first */
             size_t leadA = (size_t)(za - pa);
             size_t leadB = (size_t)(zb - pb);
             if (leadA != leadB) return (leadA > leadB) ? -1 : 1;
@@ -214,16 +186,16 @@ static int NaturalCompareW(const wchar_t* a, const wchar_t* b) {
     return 0;
 }
 
-/** @brief Shared comparator core: directories first, then natural string compare by name. */
+/** @brief Compare entries: directories first, then natural order */
 static int DirFirstThenNaturalName(const wchar_t* nameA, BOOL isDirA,
                                    const wchar_t* nameB, BOOL isDirB) {
     if (isDirA != isDirB) {
-        return isDirB - isDirA; /** Directories first */
+        return isDirB - isDirA;
     }
     return NaturalCompareW(nameA, nameB);
 }
 
-/** @brief qsort comparator for AnimationEntry, sorting directories first, then by natural order. */
+/** @brief qsort comparator for AnimationEntry */
 static int CompareAnimationEntries(const void* a, const void* b) {
     const AnimationEntry* entryA = (const AnimationEntry*)a;
     const AnimationEntry* entryB = (const AnimationEntry*)b;
@@ -231,7 +203,7 @@ static int CompareAnimationEntries(const void* a, const void* b) {
                                    entryB->name, entryB->is_dir);
 }
 
-/** @brief qsort comparator for FontEntry, using natural sorting with directories first */
+/** @brief qsort comparator for FontEntry */
 static int CompareFontEntries(const void* a, const void* b) {
     const FontEntry* entryA = (const FontEntry*)a;
     const FontEntry* entryB = (const FontEntry*)b;
@@ -239,14 +211,17 @@ static int CompareFontEntries(const void* a, const void* b) {
                                    entryB->name, entryB->is_dir);
 }
 
-/** @brief Checks if a folder contains no sub-folders or animated images, making it a leaf. */
+/**
+ * @brief Check if folder is a leaf (no subdirs or animated files)
+ * @return TRUE if folder contains only static image frames
+ */
 static BOOL IsAnimationLeafFolderW(const wchar_t* folderPathW) {
     wchar_t wSearch[MAX_PATH] = {0};
     _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s\\*", folderPathW);
     
     WIN32_FIND_DATAW ffd;
     HANDLE hFind = FindFirstFileW(wSearch, &ffd);
-    if (hFind == INVALID_HANDLE_VALUE) return TRUE; // Empty is a leaf
+    if (hFind == INVALID_HANDLE_VALUE) return TRUE;
 
     BOOL hasSubItems = FALSE;
     do {
@@ -267,21 +242,15 @@ static BOOL IsAnimationLeafFolderW(const wchar_t* folderPathW) {
     return !hasSubItems;
 }
 
-/* ============================================================================
- * Helper Functions - Animation Menu Building
- * ============================================================================ */
-
 /**
- * @brief Recursively build animation folder menu hierarchy
- * @param parentMenu Parent menu to append items to
+ * @brief Recursively build animation menu hierarchy
+ * @param parentMenu Parent menu handle
  * @param folderPathW Wide-character folder path
- * @param folderPathUtf8 UTF-8 folder path (relative)
- * @param nextIdPtr Pointer to next available menu ID
- * @param currentAnim Current animation name for checkmark
- * @return TRUE if subtree contains the current animation
- * 
- * Scans folder for animations and subfolders, building nested menus.
- * Leaf folders become menu items, branch folders become submenus.
+ * @param folderPathUtf8 UTF-8 relative path
+ * @param nextIdPtr Menu ID counter
+ * @param currentAnim Current animation for checkmark
+ * @return TRUE if subtree contains current animation
+ * @note Leaf folders → menu items; branch folders → submenus
  */
 static BOOL BuildAnimationFolderMenu(HMENU parentMenu, const wchar_t* folderPathW, 
                                      const char* folderPathUtf8, UINT* nextIdPtr, 
@@ -346,12 +315,10 @@ static BOOL BuildAnimationFolderMenu(HMENU parentMenu, const wchar_t* folderPath
             _snwprintf_s(wSubFolderPath, MAX_PATH, _TRUNCATE, L"%s\\%s", folderPathW, e->name);
             
             if (IsAnimationLeafFolderW(wSubFolderPath)) {
-                /* Leaf folder: add as clickable item */
                 UINT flags = MF_STRING | (currentAnim && _stricmp(e->rel_path_utf8, currentAnim) == 0 ? MF_CHECKED : 0);
                 AppendMenuW(parentMenu, flags, (*nextIdPtr)++, e->name);
                 if (flags & MF_CHECKED) subtreeHasCurrent = TRUE;
             } else {
-                /* Branch folder: create submenu */
                 HMENU hSubMenu = CreatePopupMenu();
                 BOOL childHas = BuildAnimationFolderMenu(hSubMenu, wSubFolderPath, e->rel_path_utf8, nextIdPtr, currentAnim);
                 UINT folderFlags = MF_POPUP | (childHas ? MF_CHECKED : 0);
@@ -359,7 +326,6 @@ static BOOL BuildAnimationFolderMenu(HMENU parentMenu, const wchar_t* folderPath
                 AppendMenuW(parentMenu, folderFlags, (UINT_PTR)hSubMenu, e->name);
             }
         } else {
-            /* File item */
             UINT flags = MF_STRING | (currentAnim && _stricmp(e->rel_path_utf8, currentAnim) == 0 ? MF_CHECKED : 0);
             AppendMenuW(parentMenu, flags, (*nextIdPtr)++, e->name);
             if (flags & MF_CHECKED) subtreeHasCurrent = TRUE;
@@ -369,21 +335,8 @@ static BOOL BuildAnimationFolderMenu(HMENU parentMenu, const wchar_t* folderPath
     return subtreeHasCurrent;
 }
 
-/* ============================================================================
- * External Declarations - Timer State and Configuration
- * ============================================================================ */
-
-/** @brief Timer state and display configuration */
 extern BOOL CLOCK_SHOW_CURRENT_TIME;
 extern BOOL CLOCK_USE_24HOUR;
-/**
- * External declarations - Reduced to minimum
- * Note: Most variables now properly declared in headers:
- * - timer.h: CLOCK_*, countdown_elapsed_time, time_options, CLOCK_TIMEOUT_*
- * - pomodoro.h: POMODORO_*
- * - window.h: CLOCK_EDIT_MODE, CLOCK_WINDOW_TOPMOST
- * - config.h: Font and preview variables
- */
 extern char CLOCK_TEXT_COLOR[10];
 extern char FONT_FILE_NAME[];
 extern char PREVIEW_FONT_NAME[];
@@ -394,15 +347,15 @@ extern wchar_t CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH];
 extern int current_pomodoro_time_index;
 extern POMODORO_PHASE current_pomodoro_phase;
 
-/** @brief External utility functions */
 extern void GetConfigPath(char* path, size_t size);
 extern void ClearColorOptions(void);
 extern void AddColorOption(const char* color);
 
 /**
- * @brief Get %LOCALAPPDATA%\Catime\resources\fonts in wide-char using config path
+ * @brief Get fonts folder path (%LOCALAPPDATA%\Catime\resources\fonts)
  * @param out Wide-char buffer
- * @param size Buffer size (wchar_t count)
+ * @param size Buffer size
+ * @return TRUE on success
  */
 static BOOL GetFontsFolderWideFromConfig(wchar_t* out, size_t size) {
     if (!out || size == 0) return FALSE;
@@ -423,10 +376,7 @@ static BOOL GetFontsFolderWideFromConfig(wchar_t* out, size_t size) {
     return TRUE;
 }
 
-/**
- * @brief Read timeout action setting from configuration file
- * Uses unified config reading helper for consistency
- */
+/** @brief Load timeout action from config */
 void ReadTimeoutActionFromConfig() {
     char value[32] = {0};
     if (ReadConfigValue("TIMEOUT_ACTION", value, sizeof(value))) {
@@ -434,14 +384,12 @@ void ReadTimeoutActionFromConfig() {
     }
 }
 
-/** @brief Recent file tracking externals (defined in config.h) */
-
 /**
- * @brief Format time duration for menu display with intelligent precision
- * @param seconds Time duration in seconds
- * @param buffer Output buffer for formatted time string
- * @param bufferSize Size of output buffer in wide characters
- * Shows hours if > 1 hour, minutes only if whole minutes, or minutes:seconds
+ * @brief Format time for Pomodoro menu display
+ * @param seconds Duration in seconds
+ * @param buffer Output buffer
+ * @param bufferSize Buffer size
+ * @note Shows h:mm:ss if >1hr, mm:ss if has seconds, or just minutes
  */
 static void FormatPomodoroTime(int seconds, wchar_t* buffer, size_t bufferSize) {
     int minutes = seconds / 60;
@@ -459,11 +407,11 @@ static void FormatPomodoroTime(int seconds, wchar_t* buffer, size_t bufferSize) 
 }
 
 /**
- * @brief Intelligently truncate long filenames for menu display
- * @param fileName Original filename to truncate
- * @param truncated Output buffer for truncated filename
- * @param maxLen Maximum length for display
- * Preserves extension and uses middle truncation with ellipsis for readability
+ * @brief Truncate long filenames for menu display
+ * @param fileName Original filename
+ * @param truncated Output buffer
+ * @param maxLen Maximum display length
+ * @note Uses middle truncation ("start...end.ext") for very long names
  */
 void TruncateFileName(const wchar_t* fileName, wchar_t* truncated, size_t maxLen) {
     if (!fileName || !truncated || maxLen <= 7) return;
@@ -474,7 +422,6 @@ void TruncateFileName(const wchar_t* fileName, wchar_t* truncated, size_t maxLen
         return;
     }
     
-    /** Separate filename and extension for smart truncation */
     const wchar_t* lastDot = wcsrchr(fileName, L'.');
     const wchar_t* fileNameNoExt = fileName;
     const wchar_t* ext = L"";
@@ -487,7 +434,6 @@ void TruncateFileName(const wchar_t* fileName, wchar_t* truncated, size_t maxLen
         nameNoExtLen = lastDot - fileName;
     }
     
-    /** Simple truncation for shorter names */
     if (nameNoExtLen <= 27) {
         wcsncpy(truncated, fileName, maxLen - extLen - 3);
         truncated[maxLen - extLen - 3] = L'\0';
@@ -496,7 +442,6 @@ void TruncateFileName(const wchar_t* fileName, wchar_t* truncated, size_t maxLen
         return;
     }
     
-    /** Middle truncation: show beginning and end with ellipsis */
     wchar_t buffer[MAX_PATH];
     
     wcsncpy(buffer, fileName, 12);
@@ -512,9 +457,9 @@ void TruncateFileName(const wchar_t* fileName, wchar_t* truncated, size_t maxLen
 }
 
 /**
- * @brief Build and display comprehensive configuration menu (right-click menu)
- * @param hwnd Main window handle for menu operations
- * Creates complex nested menu system with timeout actions, fonts, colors, and settings
+ * @brief Build and display right-click configuration menu
+ * @param hwnd Main window handle
+ * @note Creates nested menus for timeout actions, fonts, colors, animations, etc.
  */
 void ShowColorMenu(HWND hwnd) {
     
@@ -646,7 +591,6 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeOptionsMenu,
                 GetLocalizedString(L"预设管理", L"Preset Management"));
     
-    /** Add format submenu before topmost option */
     HMENU hFormatMenu = CreatePopupMenu();
     
     AppendMenuW(hFormatMenu, MF_STRING | (CLOCK_TIME_FORMAT == TIME_FORMAT_DEFAULT ? MF_CHECKED : MF_UNCHECKED),
@@ -661,10 +605,8 @@ void ShowColorMenu(HWND hwnd) {
                 CLOCK_IDM_TIME_FORMAT_FULL_PADDED,
                 GetLocalizedString(L"00:09:59格式", L"00:09:59 Format"));
     
-    /** Add separator line before milliseconds option */
     AppendMenuW(hFormatMenu, MF_SEPARATOR, 0, NULL);
     
-    /** Add milliseconds display option */
     AppendMenuW(hFormatMenu, MF_STRING | (CLOCK_SHOW_MILLISECONDS ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDM_TIME_FORMAT_SHOW_MILLISECONDS,
                 GetLocalizedString(L"显示毫秒", L"Show Milliseconds"));
@@ -682,16 +624,14 @@ void ShowColorMenu(HWND hwnd) {
 
         HMENU hFontSubMenu = CreatePopupMenu();
     
-    /** Helper function to recursively build font submenus */
-    int g_advancedFontId = 2000; /** Global counter for font IDs */
+    int g_advancedFontId = 2000;
     
-    /** ANSI fallback scanner removed to ensure consistent wide-char API usage */
-    
-
-    /** Recursive function to scan folder and create submenus */
-    /** Returns: 0 = no content, 1 = has content but no current font, 2 = contains current font */
+    /**
+     * @brief Recursively scan font folder and build submenu
+     * @return 0=no content, 1=has content, 2=contains current font
+     * @note Uses heap allocation to prevent stack overflow
+     */
     int ScanFontFolder(const char* folderPath, HMENU parentMenu, int* fontId) {
-        /** Use heap allocation for buffers to prevent stack overflow in deep recursion */
         wchar_t* wFolderPath = (wchar_t*)malloc(MAX_PATH * sizeof(wchar_t));
         wchar_t* wSearchPath = (wchar_t*)malloc(MAX_PATH * sizeof(wchar_t));
         WIN32_FIND_DATAW* findData = (WIN32_FIND_DATAW*)malloc(sizeof(WIN32_FIND_DATAW));
@@ -706,22 +646,19 @@ void ShowColorMenu(HWND hwnd) {
         MultiByteToWideChar(CP_UTF8, 0, folderPath, -1, wFolderPath, MAX_PATH);
         _snwprintf_s(wSearchPath, MAX_PATH, _TRUNCATE, L"%s\\*", wFolderPath);
         
-        /** Collect all entries first */
         FontEntry* entries = NULL;
         int entryCount = 0;
         int entryCapacity = 0;
         
         HANDLE hFind = FindFirstFileW(wSearchPath, findData);
-        int folderStatus = 0; /** 0 = no content, 1 = has content, 2 = contains current font */
+        int folderStatus = 0;
         
         if (hFind != INVALID_HANDLE_VALUE) {
             do {
-                /** Skip . and .. entries */
                 if (wcscmp(findData->cFileName, L".") == 0 || wcscmp(findData->cFileName, L"..") == 0) {
                     continue;
                 }
                 
-                /** Expand entries array if needed */
                 if (entryCount >= entryCapacity) {
                     entryCapacity = entryCapacity == 0 ? 16 : entryCapacity * 2;
                     FontEntry* newEntries = (FontEntry*)realloc(entries, entryCapacity * sizeof(FontEntry));
@@ -746,16 +683,13 @@ void ShowColorMenu(HWND hwnd) {
                 entry->hSubMenu = NULL;
                 
                 if (!entry->is_dir) {
-                    /** Handle regular font files */
                     wchar_t* ext = wcsrchr(findData->cFileName, L'.');
                     if (ext && (_wcsicmp(ext, L".ttf") == 0 || _wcsicmp(ext, L".otf") == 0)) {
-                        /** Remove extension for display */
                         wcsncpy(entry->displayName, findData->cFileName, MAX_PATH - 1);
                         entry->displayName[MAX_PATH - 1] = L'\0';
                         wchar_t* dotPos = wcsrchr(entry->displayName, L'.');
                         if (dotPos) *dotPos = L'\0';
                         
-                        /** Check if this is the current font */
                         wchar_t wFontsFolderPath[MAX_PATH] = {0};
                         if (GetFontsFolderWideFromConfig(wFontsFolderPath, MAX_PATH)) {
                             const char* localPrefix = "%LOCALAPPDATA%\\Catime\\resources\\fonts\\";
@@ -766,70 +700,57 @@ void ShowColorMenu(HWND hwnd) {
                                 wchar_t wCurrentFull[MAX_PATH] = {0};
                                 _snwprintf_s(wCurrentFull, MAX_PATH, _TRUNCATE, L"%s\\%s", wFontsFolderPath, wRel);
                                 
-                                /** Compare with candidate file path */
                                 entry->isCurrentFont = (_wcsicmp(entry->fullPath, wCurrentFull) == 0);
                             }
                         }
                         
                         entryCount++;
                         
-                        /** Update folder status */
                         if (entry->isCurrentFont) {
-                            folderStatus = 2; /** This folder contains the current font */
+                            folderStatus = 2;
                         } else if (folderStatus == 0) {
-                            folderStatus = 1; /** This folder has content but not the current font */
+                            folderStatus = 1;
                         }
                     } else {
-                        /** Skip non-font files */
                         continue;
                     }
                 } else {
-                    /** Handle subdirectories */
                     entry->hSubMenu = CreatePopupMenu();
                     
-                    /** Convert wide path back to UTF-8 for recursive call */
                     char fullItemPathUtf8[MAX_PATH];
                     WideCharToMultiByte(CP_UTF8, 0, entry->fullPath, -1, fullItemPathUtf8, MAX_PATH, NULL, NULL);
                     
-                    /** Recursively scan this subdirectory */
                     entry->subFolderStatus = ScanFontFolder(fullItemPathUtf8, entry->hSubMenu, fontId);
                     
                     entryCount++;
                     
-                    /** Update current folder status based on subfolder status */
                     if (entry->subFolderStatus == 2) {
-                        folderStatus = 2; /** This folder contains the current font (in subfolder) */
+                        folderStatus = 2;
                     } else if (entry->subFolderStatus == 1 && folderStatus == 0) {
-                        folderStatus = 1; /** This folder has content but not the current font */
+                        folderStatus = 1;
                     }
                 }
             } while (FindNextFileW(hFind, findData));
             FindClose(hFind);
         }
         
-        /** Sort entries using natural sorting */
         if (entryCount > 0) {
             qsort(entries, entryCount, sizeof(FontEntry), CompareFontEntries);
             
-            /** Add sorted entries to menu */
             for (int i = 0; i < entryCount; i++) {
                 FontEntry* entry = &entries[i];
                 
                 if (!entry->is_dir) {
-                    /** Add font file */
                     AppendMenuW(parentMenu, MF_STRING | (entry->isCurrentFont ? MF_CHECKED : MF_UNCHECKED),
                               (*fontId)++, entry->displayName);
                 } else {
-                    /** Add directory submenu */
                     if (entry->subFolderStatus == 0) {
-                        /** Add "Empty folder" indicator */
                         AppendMenuW(entry->hSubMenu, MF_STRING | MF_GRAYED, 0, L"(Empty folder)");
                         AppendMenuW(parentMenu, MF_POPUP, (UINT_PTR)entry->hSubMenu, entry->name);
                     } else {
-                        /** Add folder with check mark if it contains current font */
                         UINT folderFlags = MF_POPUP;
                         if (entry->subFolderStatus == 2) {
-                            folderFlags |= MF_CHECKED; /** Folder contains current font */
+                            folderFlags |= MF_CHECKED;
                         }
                         AppendMenuW(parentMenu, folderFlags, (UINT_PTR)entry->hSubMenu, entry->name);
                     }
@@ -845,45 +766,34 @@ void ShowColorMenu(HWND hwnd) {
         return folderStatus;
     }
     
-    /** Load fonts from user's fonts folder directly into main font menu */
     extern BOOL NeedsFontLicenseVersionAcceptance(void);
     
     if (NeedsFontLicenseVersionAcceptance()) {
-        /** Show license agreement option if version needs acceptance */
         AppendMenuW(hFontSubMenu, MF_STRING, CLOCK_IDC_FONT_LICENSE_AGREE, 
                    GetLocalizedString(L"点击同意许可协议后继续", L"Click to agree to license agreement"));
     } else {
-        /** Normal font menu when license version is accepted */
         wchar_t wFontsFolder[MAX_PATH] = {0};
         if (GetFontsFolderWideFromConfig(wFontsFolder, MAX_PATH)) {
             char fontsFolderPathUtf8[MAX_PATH];
             WideCharToMultiByte(CP_UTF8, 0, wFontsFolder, -1, fontsFolderPathUtf8, MAX_PATH, NULL, NULL);
             
-            g_advancedFontId = 2000; /** Reset global font ID counter */
+            g_advancedFontId = 2000;
             
-            /** Use recursive function to scan all folders and subfolders directly in main font menu */
-            /** Try Unicode scan first, fallback to ANSI if needed */
             int fontFolderStatus = ScanFontFolder(fontsFolderPathUtf8, hFontSubMenu, &g_advancedFontId);
-
-            /** No ANSI fallback: rely solely on wide-char scanning */
-
-            /** Additional debug: manually check some known font files */
             if (fontFolderStatus == 0) {
-                WriteLog(LOG_LEVEL_INFO, "Both scans failed, manually checking known font files...");
-                /** Use Unicode API to avoid encoding issues with non-ASCII paths */
+                WriteLog(LOG_LEVEL_INFO, "Font scan failed, checking known fonts...");
                 wchar_t wTestFontPath[MAX_PATH];
                 MultiByteToWideChar(CP_UTF8, 0, fontsFolderPathUtf8, -1, wTestFontPath, MAX_PATH - 32);
                 wcscat(wTestFontPath, L"\\Wallpoet Essence.ttf");
                 DWORD attribs = GetFileAttributesW(wTestFontPath);
                 if (attribs != INVALID_FILE_ATTRIBUTES) {
-                    WriteLog(LOG_LEVEL_WARNING, "Manual check: Wallpoet Essence.ttf EXISTS but scan failed to find it!");
+                    WriteLog(LOG_LEVEL_WARNING, "Wallpoet Essence.ttf exists but scan failed!");
                 } else {
-                    WriteLog(LOG_LEVEL_INFO, "Manual check: Wallpoet Essence.ttf does not exist");
+                    WriteLog(LOG_LEVEL_INFO, "Wallpoet Essence.ttf does not exist");
                 }
             }
-            WriteLog(LOG_LEVEL_INFO, "Font folder scan result: %d (0=no content, 1=has content, 2=contains current font)", fontFolderStatus);
+            WriteLog(LOG_LEVEL_INFO, "Font folder scan result: %d", fontFolderStatus);
             
-            /** If no fonts found, try extracting embedded fonts once and rescan */
             if (fontFolderStatus == 0) {
                 extern BOOL ExtractEmbeddedFontsToFolder(HINSTANCE hInstance);
                 HINSTANCE hInst = GetModuleHandle(NULL);
@@ -892,7 +802,6 @@ void ShowColorMenu(HWND hwnd) {
                 }
             }
 
-            /** Add browse option if no fonts found or as additional option */
             if (fontFolderStatus == 0) {
                 AppendMenuW(hFontSubMenu, MF_STRING | MF_GRAYED, 0, 
                            GetLocalizedString(L"未找到字体文件", L"No font files found"));
@@ -943,14 +852,8 @@ void ShowColorMenu(HWND hwnd) {
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
-    /** Animations submenu */
     HMENU hAnimMenu = CreatePopupMenu();
     {
-        /**
-         * NOTE: The menu is built by scanning the filesystem. To ensure the command handler
-         * maps the menu ID back to the correct file, both this logic and the handler
-         * MUST use an identical, deterministic sorting order.
-         */
         char animRootUtf8[MAX_PATH] = {0};
         GetAnimationsFolderPath(animRootUtf8, sizeof(animRootUtf8));
         wchar_t wRoot[MAX_PATH] = {0};
@@ -959,7 +862,6 @@ void ShowColorMenu(HWND hwnd) {
         UINT nextId = CLOCK_IDM_ANIMATIONS_BASE;
         const char* currentAnim = GetCurrentAnimationName();
 
-        /** Add fixed entries: logo, CPU %, Memory % */
         AppendMenuW(hAnimMenu, MF_STRING | (currentAnim && _stricmp(currentAnim, "__logo__") == 0 ? MF_CHECKED : 0),
                     CLOCK_IDM_ANIMATIONS_USE_LOGO, GetLocalizedString(L"使用Logo", L"Use Logo"));
         AppendMenuW(hAnimMenu, MF_STRING | (currentAnim && _stricmp(currentAnim, "__cpu__") == 0 ? MF_CHECKED : 0),
@@ -968,17 +870,14 @@ void ShowColorMenu(HWND hwnd) {
                     CLOCK_IDM_ANIMATIONS_USE_MEM, GetLocalizedString(L"内存百分比", L"Memory Percent"));
         AppendMenuW(hAnimMenu, MF_SEPARATOR, 0, NULL);
 
-        /* Build animation folder menu recursively */
         (void)BuildAnimationFolderMenu(hAnimMenu, wRoot, "", &nextId, currentAnim);
         
-        // Fallback message if no items were added at all.
-        if (GetMenuItemCount(hAnimMenu) <= 4) { // Logo, CPU%, MEM% and separator are always there
+        if (GetMenuItemCount(hAnimMenu) <= 4) {
             AppendMenuW(hAnimMenu, MF_STRING | MF_GRAYED, 0, GetLocalizedString(L"(支持 GIF、WebP、PNG 等)", L"(Supports GIF, WebP, PNG, etc.)"));
         }
 
         AppendMenuW(hAnimMenu, MF_SEPARATOR, 0, NULL);
 
-        /** Animation speed metric sub options */
         HMENU hAnimSpeedMenu = CreatePopupMenu();
         AnimationSpeedMetric currentMetric = GetAnimationSpeedMetric();
         AppendMenuW(hAnimSpeedMenu, MF_STRING | (currentMetric == ANIMATION_SPEED_MEMORY ? MF_CHECKED : MF_UNCHECKED),
@@ -1057,9 +956,9 @@ void ShowColorMenu(HWND hwnd) {
 }
 
 /**
- * @brief Build and display timer control context menu (left-click menu)
- * @param hwnd Main window handle for menu operations
- * Creates focused menu for timer operations, time display, and Pomodoro functions
+ * @brief Build and display left-click timer control menu
+ * @param hwnd Main window handle
+ * @note Includes timer management, Pomodoro, and quick countdown options
  */
 void ShowContextMenu(HWND hwnd) {
     ReadTimeoutActionFromConfig();
@@ -1068,15 +967,12 @@ void ShowContextMenu(HWND hwnd) {
     
     HMENU hMenu = CreatePopupMenu();
     
-    /** Timer management submenu with dynamic state-based controls */
     HMENU hTimerManageMenu = CreatePopupMenu();
     
-    /** Check if timer is actively running (not system clock, and either counting up or countdown in progress) */
     BOOL timerRunning = (!CLOCK_SHOW_CURRENT_TIME && 
                          (CLOCK_COUNT_UP || 
                           (!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0 && countdown_elapsed_time < CLOCK_TOTAL_TIME)));
     
-    /** Dynamic pause/resume text based on current timer state */
     const wchar_t* pauseResumeText = CLOCK_IS_PAUSED ? 
                                     GetLocalizedString(L"继续", L"Resume") : 
                                     GetLocalizedString(L"暂停", L"Pause");
@@ -1084,7 +980,6 @@ void ShowContextMenu(HWND hwnd) {
     AppendMenuW(hTimerManageMenu, MF_STRING | (timerRunning ? MF_ENABLED : MF_GRAYED),
                CLOCK_IDM_TIMER_PAUSE_RESUME, pauseResumeText);
     
-    /** Check if restart operation is valid for current timer mode */
     BOOL canRestart = (!CLOCK_SHOW_CURRENT_TIME && (CLOCK_COUNT_UP || 
                       (!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0)));
     
@@ -1092,7 +987,6 @@ void ShowContextMenu(HWND hwnd) {
                CLOCK_IDM_TIMER_RESTART, 
                GetLocalizedString(L"重新开始", L"Start Over"));
     
-    /** Dynamic text based on window visibility */
     const wchar_t* visibilityText = IsWindowVisible(hwnd) ?
         GetLocalizedString(L"隐藏窗口", L"Hide Window") :
         GetLocalizedString(L"显示窗口", L"Show Window");
@@ -1121,7 +1015,6 @@ void ShowContextMenu(HWND hwnd) {
                (UINT_PTR)hTimeMenu,
                GetLocalizedString(L"时间显示", L"Time Display"));
 
-    /* Load Pomodoro configuration for menu generation */
     LoadPomodoroConfig();
 
     HMENU hPomodoroMenu = CreatePopupMenu();
@@ -1132,18 +1025,15 @@ void ShowContextMenu(HWND hwnd) {
                 GetLocalizedString(L"开始", L"Start"));
     AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
 
-    /** Generate dynamic Pomodoro time options with current phase indication */
     for (int i = 0; i < POMODORO_TIMES_COUNT; i++) {
         FormatPomodoroTime(POMODORO_TIMES[i], timeBuffer, sizeof(timeBuffer)/sizeof(wchar_t));
         
-        /** Map indices to specific menu IDs for standard Pomodoro phases */
         UINT menuId;
         if (i == 0) menuId = CLOCK_IDM_POMODORO_WORK;
         else if (i == 1) menuId = CLOCK_IDM_POMODORO_BREAK;
         else if (i == 2) menuId = CLOCK_IDM_POMODORO_LBREAK;
         else menuId = CLOCK_IDM_POMODORO_TIME_BASE + i;
         
-        /** Check if this time option represents the currently active Pomodoro phase */
         BOOL isCurrentPhase = (current_pomodoro_phase != POMODORO_PHASE_IDLE &&
                               current_pomodoro_time_index == i &&
                               !CLOCK_SHOW_CURRENT_TIME &&

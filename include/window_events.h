@@ -1,16 +1,9 @@
 /**
  * @file window_events.h
- * @brief Window lifecycle and state management event handlers
- * @version 2.0 - Enhanced with comprehensive logging and error handling
+ * @brief Window lifecycle event handlers
  * 
- * Provides centralized event handling for window operations:
- * - Creation and initialization with parent window management
- * - Destruction with ordered resource cleanup
- * - State reset for recovery scenarios
- * - Resize operations via mouse wheel scaling
- * - Movement operations via drag functionality
- * 
- * All functions include detailed logging for debugging and diagnostics.
+ * Ordered cleanup prevents resource leaks and access violations.
+ * Reset operation recovers from inaccessible window states (off-screen, topmost conflicts).
  */
 
 #ifndef WINDOW_EVENTS_H
@@ -19,89 +12,56 @@
 #include <windows.h>
 
 /**
- * @brief Handle window creation and initialization
- * @param hwnd Window handle of the newly created window
- * @return TRUE if initialization succeeded, FALSE on error
+ * @brief Handle window creation
+ * @return TRUE (always)
  * 
- * Performs complete window setup including:
- * - Parent window enablement (for child windows)
- * - Position and size adjustment
- * - Click-through behavior configuration
- * - Topmost setting application
- * 
- * Logs all initialization steps for diagnostics.
- * 
- * @note Always returns TRUE in current implementation
- * @see AdjustWindowPosition, SetClickThrough, SetWindowTopmost
+ * @details
+ * Setup: parent enablement, position/size, click-through, topmost.
+ * Logs all steps for diagnostics.
  */
 BOOL HandleWindowCreate(HWND hwnd);
 
 /**
- * @brief Handle window destruction with comprehensive cleanup
- * @param hwnd Window handle being destroyed
+ * @brief Handle window destruction
  * 
- * Executes ordered cleanup sequence:
- * 1. Save window settings to configuration
- * 2. Stop all timers to prevent callbacks
- * 3. Remove UI elements (tray icon, animations)
- * 4. Release resources (fonts, update threads)
- * 5. Post quit message to exit application
+ * @details Ordered cleanup:
+ * 1. Save settings
+ * 2. Stop timers (prevent callbacks)
+ * 3. Remove UI (tray, animations)
+ * 4. Release resources (fonts, threads)
+ * 5. Post WM_QUIT
  * 
- * Cleanup order is critical to prevent:
- * - Resource leaks
- * - Access violations
- * - Unsaved configuration loss
+ * Order prevents leaks, access violations, unsaved config.
  * 
- * Validates each cleanup step and logs warnings on failure.
- * 
- * @warning This function posts WM_QUIT, terminating the application
- * @see SaveWindowSettings, KillTimer, RemoveTrayIcon, PostQuitMessage
+ * @warning Posts WM_QUIT (terminates application)
  */
 void HandleWindowDestroy(HWND hwnd);
 
 /**
- * @brief Reset window to default state and ensure visibility
- * @param hwnd Window handle to reset
+ * @brief Reset to default state (recovery operation)
  * 
- * Recovery operation that:
- * - Forces topmost behavior to enabled
- * - Persists setting to configuration file
- * - Ensures window is visible (not hidden/minimized)
+ * @details
+ * Forces topmost enabled, persists to config, ensures visible.
+ * Recovers from: multi-monitor changes, off-screen, topmost conflicts.
  * 
- * Useful for scenarios where window becomes inaccessible due to:
- * - Multi-monitor configuration changes
- * - Window positioned off-screen
- * - Topmost setting conflicts
- * 
- * @note This is a destructive operation (overwrites user preference)
- * @see SetWindowTopmost, WriteConfigTopmost, ShowWindow
+ * @warning Destructive (overwrites user preference)
  */
 void HandleWindowReset(HWND hwnd);
 
 /**
- * @brief Handle window resize events via mouse wheel
- * @param hwnd Window handle to resize
- * @param delta Mouse wheel delta value (positive=zoom in, negative=zoom out)
- * @return TRUE if resize was handled successfully, FALSE otherwise
+ * @brief Handle resize via mouse wheel
+ * @param delta Wheel delta (positive=zoom in)
+ * @return TRUE if handled
  * 
- * Delegates to scaling system for proportional size adjustment.
- * Delta magnitude determines scaling speed.
- * 
- * @note Actual scaling logic is in drag_scale module
- * @see HandleScaleWindow
+ * @details Delegates to drag_scale module
  */
 BOOL HandleWindowResize(HWND hwnd, int delta);
 
 /**
- * @brief Handle window movement via drag operations
- * @param hwnd Window handle being moved
- * @return TRUE if movement was handled successfully, FALSE otherwise
+ * @brief Handle movement via drag
+ * @return TRUE if handled
  * 
- * Delegates to drag system for smooth repositioning.
- * Typically called during WM_LBUTTONDOWN processing.
- * 
- * @note Actual drag logic is in drag_scale module
- * @see HandleDragWindow
+ * @details Delegates to drag_scale module
  */
 BOOL HandleWindowMove(HWND hwnd);
 

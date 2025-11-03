@@ -1,14 +1,10 @@
 /**
  * @file tray_menu.h
- * @brief Refactored system tray context menu system
- * @version 2.0 - Enhanced with improved modularity
+ * @brief Tray context menu system with dynamic content
  * 
- * Provides menu item identifiers and core menu building functions.
- * Internal implementation now features:
- * - Unified configuration reading helpers
- * - Path conversion utilities to eliminate duplication
- * - Extracted animation menu building logic
- * - Modular helper functions for better maintainability
+ * Modular helpers eliminate duplication (config reading, path conversion).
+ * Dynamic menu items loaded from config (Pomodoro presets, recent files, fonts, animations).
+ * Menu IDs organized by functional groups for maintainability.
  */
 
 #ifndef CLOCK_TRAY_MENU_H
@@ -16,125 +12,114 @@
 
 #include <windows.h>
 
-/** @brief Time display options */
-#define CLOCK_IDM_SHOW_CURRENT_TIME 150  /**< Toggle current time display */
-#define CLOCK_IDM_24HOUR_FORMAT 151      /**< Toggle 24-hour format */
-#define CLOCK_IDM_SHOW_SECONDS 152       /**< Toggle seconds display */
+/* Time display */
+#define CLOCK_IDM_SHOW_CURRENT_TIME 150
+#define CLOCK_IDM_24HOUR_FORMAT 151
+#define CLOCK_IDM_SHOW_SECONDS 152
 
-/** @brief Timer management commands */
-#define CLOCK_IDM_TIMER_MANAGEMENT 159      /**< Timer management submenu */
-#define CLOCK_IDM_TIMER_PAUSE_RESUME 158    /**< Pause/resume current timer */
-#define CLOCK_IDM_TIMER_RESTART 177         /**< Restart current timer */
-#define CLOCK_IDM_COUNT_UP_START 171        /**< Start count-up timer */
-#define CLOCK_IDM_COUNT_UP_RESET 172        /**< Reset count-up timer */
-#define CLOCK_IDM_COUNTDOWN_START_PAUSE 154  /**< Start/pause countdown */
-#define CLOCK_IDM_COUNTDOWN_RESET 155       /**< Reset countdown timer */
+/* Timer management */
+#define CLOCK_IDM_TIMER_MANAGEMENT 159
+#define CLOCK_IDM_TIMER_PAUSE_RESUME 158
+#define CLOCK_IDM_TIMER_RESTART 177
+#define CLOCK_IDM_COUNT_UP_START 171
+#define CLOCK_IDM_COUNT_UP_RESET 172
+#define CLOCK_IDM_COUNTDOWN_START_PAUSE 154
+#define CLOCK_IDM_COUNTDOWN_RESET 155
 
-/** @brief Window interaction */
-#define CLOCK_IDC_EDIT_MODE 113             /**< Toggle edit mode */
-/** CLOCK_IDM_TOPMOST is defined in resource.h to avoid conflicts */
+/* Window interaction */
+#define CLOCK_IDC_EDIT_MODE 113
+/* CLOCK_IDM_TOPMOST in resource.h */
 
-/** @brief Timeout action menu items */
-#define CLOCK_IDM_SHOW_MESSAGE 121       /**< Show message action */
-#define CLOCK_IDM_LOCK_SCREEN 122        /**< Lock screen action */
-#define CLOCK_IDM_SHUTDOWN 123           /**< Shutdown system action */
-#define CLOCK_IDM_RESTART 124            /**< Restart system action */
-#define CLOCK_IDM_SLEEP 125              /**< Sleep system action */
-#define CLOCK_IDM_BROWSE_FILE 131        /**< Browse for file action */
-#define CLOCK_IDM_RECENT_FILE_1 126      /**< Recent file 1 action */
-#define CLOCK_IDM_TIMEOUT_SHOW_TIME 135  /**< Show time timeout action */
-#define CLOCK_IDM_TIMEOUT_COUNT_UP 136   /**< Count-up timeout action */
+/* Timeout actions */
+#define CLOCK_IDM_SHOW_MESSAGE 121
+#define CLOCK_IDM_LOCK_SCREEN 122
+#define CLOCK_IDM_SHUTDOWN 123
+#define CLOCK_IDM_RESTART 124
+#define CLOCK_IDM_SLEEP 125
+#define CLOCK_IDM_BROWSE_FILE 131
+#define CLOCK_IDM_RECENT_FILE_1 126
+#define CLOCK_IDM_TIMEOUT_SHOW_TIME 135
+#define CLOCK_IDM_TIMEOUT_COUNT_UP 136
 
-/** @brief Configuration options */
-#define CLOCK_IDC_MODIFY_TIME_OPTIONS 156  /**< Modify quick time options */
-#define CLOCK_IDM_TIME_FORMAT_DEFAULT 194   /**< Default time format 9:59 */
-#define CLOCK_IDM_TIME_FORMAT_ZERO_PADDED 196   /**< Zero-padded format 09:59 */
-#define CLOCK_IDM_TIME_FORMAT_FULL_PADDED 197   /**< Full zero-padded format 00:09:59 */
-#define CLOCK_IDM_TIME_FORMAT_SHOW_MILLISECONDS 198   /**< Show milliseconds in time format */
+/* Configuration */
+#define CLOCK_IDC_MODIFY_TIME_OPTIONS 156
+#define CLOCK_IDM_TIME_FORMAT_DEFAULT 194
+#define CLOCK_IDM_TIME_FORMAT_ZERO_PADDED 196
+#define CLOCK_IDM_TIME_FORMAT_FULL_PADDED 197
+#define CLOCK_IDM_TIME_FORMAT_SHOW_MILLISECONDS 198
 
-/** @brief Startup configuration */
-#define CLOCK_IDC_SET_COUNTDOWN_TIME 173   /**< Set default countdown time */
-#define CLOCK_IDC_START_COUNT_UP 175       /**< Start in count-up mode */
-#define CLOCK_IDC_START_SHOW_TIME 176      /**< Start showing current time */
-#define CLOCK_IDC_START_NO_DISPLAY 174     /**< Start with no display */
-#define CLOCK_IDC_AUTO_START 160           /**< Windows auto-start option */
+/* Startup */
+#define CLOCK_IDC_SET_COUNTDOWN_TIME 173
+#define CLOCK_IDC_START_COUNT_UP 175
+#define CLOCK_IDC_START_SHOW_TIME 176
+#define CLOCK_IDC_START_NO_DISPLAY 174
+#define CLOCK_IDC_AUTO_START 160
 
-/** @brief Notification settings */
-#define CLOCK_IDM_NOTIFICATION_SETTINGS 193  /**< Notification settings dialog */
-#define CLOCK_IDM_NOTIFICATION_CONTENT 191   /**< Notification content config */
-#define CLOCK_IDM_NOTIFICATION_DISPLAY 192   /**< Notification display config */
+/* Notifications */
+#define CLOCK_IDM_NOTIFICATION_SETTINGS 193
+#define CLOCK_IDM_NOTIFICATION_CONTENT 191
+#define CLOCK_IDM_NOTIFICATION_DISPLAY 192
 
-/** @brief Pomodoro timer options */
-#define CLOCK_IDM_POMODORO_START 181      /**< Start Pomodoro session */
-#define CLOCK_IDM_POMODORO_WORK 182       /**< Configure work time */
-#define CLOCK_IDM_POMODORO_BREAK 183      /**< Configure short break */
-#define CLOCK_IDM_POMODORO_LBREAK 184     /**< Configure long break */
-#define CLOCK_IDM_POMODORO_LOOP_COUNT 185 /**< Configure cycle count */
-#define CLOCK_IDM_POMODORO_RESET 186      /**< Reset Pomodoro timer */
+/* Pomodoro */
+#define CLOCK_IDM_POMODORO_START 181
+#define CLOCK_IDM_POMODORO_WORK 182
+#define CLOCK_IDM_POMODORO_BREAK 183
+#define CLOCK_IDM_POMODORO_LBREAK 184
+#define CLOCK_IDM_POMODORO_LOOP_COUNT 185
+#define CLOCK_IDM_POMODORO_RESET 186
 
-/** @brief Color customization */
-#define CLOCK_IDC_COLOR_VALUE 1301        /**< Color value input */
-#define CLOCK_IDC_COLOR_PANEL 1302        /**< Color picker panel */
+/* Color */
+#define CLOCK_IDC_COLOR_VALUE 1301
+#define CLOCK_IDC_COLOR_PANEL 1302
 
-/** @brief Language selection */
-#define CLOCK_IDM_LANG_CHINESE 161        /**< Simplified Chinese */
-#define CLOCK_IDM_LANG_CHINESE_TRAD 163   /**< Traditional Chinese */
-#define CLOCK_IDM_LANG_ENGLISH 162        /**< English */
-#define CLOCK_IDM_LANG_SPANISH 164        /**< Spanish */
-#define CLOCK_IDM_LANG_FRENCH 165         /**< French */
-#define CLOCK_IDM_LANG_GERMAN 166         /**< German */
-#define CLOCK_IDM_LANG_RUSSIAN 167        /**< Russian */
-#define CLOCK_IDM_LANG_KOREAN 170         /**< Korean */
+/* Language */
+#define CLOCK_IDM_LANG_CHINESE 161
+#define CLOCK_IDM_LANG_CHINESE_TRAD 163
+#define CLOCK_IDM_LANG_ENGLISH 162
+#define CLOCK_IDM_LANG_SPANISH 164
+#define CLOCK_IDM_LANG_FRENCH 165
+#define CLOCK_IDM_LANG_GERMAN 166
+#define CLOCK_IDM_LANG_RUSSIAN 167
+#define CLOCK_IDM_LANG_KOREAN 170
 
-/** @brief Tray animation menu identifiers */
-#define CLOCK_IDM_ANIMATIONS_MENU 2200           /**< Animations root submenu */
-#define CLOCK_IDM_ANIMATIONS_OPEN_DIR 2201       /**< Open animations folder */
-#define CLOCK_IDM_ANIMATIONS_USE_LOGO 2202       /**< Use app logo as tray icon */
-#define CLOCK_IDM_ANIMATIONS_USE_CPU 2203        /**< Use CPU percent as tray icon */
-#define CLOCK_IDM_ANIMATIONS_USE_MEM 2204        /**< Use Memory percent as tray icon */
-#define CLOCK_IDM_ANIMATIONS_BASE 3000           /**< Dynamic animation item base (folders) */
+/* Animations */
+#define CLOCK_IDM_ANIMATIONS_MENU 2200
+#define CLOCK_IDM_ANIMATIONS_OPEN_DIR 2201
+#define CLOCK_IDM_ANIMATIONS_USE_LOGO 2202
+#define CLOCK_IDM_ANIMATIONS_USE_CPU 2203
+#define CLOCK_IDM_ANIMATIONS_USE_MEM 2204
+#define CLOCK_IDM_ANIMATIONS_BASE 3000  /**< Dynamic items start here */
 
-/** @brief Animation speed metric submenu identifiers */
-#define CLOCK_IDM_ANIM_SPEED_MEMORY 2210         /**< Use memory usage as speed metric */
-#define CLOCK_IDM_ANIM_SPEED_CPU 2211            /**< Use CPU usage as speed metric */
-#define CLOCK_IDM_ANIM_SPEED_TIMER 2212          /**< Use timer progress as speed metric */
+/* Animation speed metric */
+#define CLOCK_IDM_ANIM_SPEED_MEMORY 2210
+#define CLOCK_IDM_ANIM_SPEED_CPU 2211
+#define CLOCK_IDM_ANIM_SPEED_TIMER 2212
 
 /**
- * @brief Display tray context menu (left-click)
- * @param hwnd Parent window handle
+ * @brief Show context menu (left-click)
+ * @param hwnd Window handle
  * 
- * @details Shows timer control menu with dynamic options:
- * - Timer management (pause/resume, restart, visibility)
- * - Time display settings (24h format, seconds)
- * - Pomodoro timer presets loaded from configuration
- * - Count-up timer and countdown timer options
- * 
- * Configuration is loaded dynamically for each display.
+ * @details
+ * Timer controls, time display, Pomodoro presets (loaded from config).
+ * Dynamic content reloaded each display.
  */
 void ShowContextMenu(HWND hwnd);
 
 /**
- * @brief Display comprehensive configuration menu (right-click)
- * @param hwnd Parent window handle
+ * @brief Show config menu (right-click)
+ * @param hwnd Window handle
  * 
- * @details Shows extensive configuration options:
- * - Edit mode toggle
- * - Timeout actions (message, file, website, system actions)
- * - Preset management (countdown, startup, notifications)
- * - Time format options (default, zero-padded, milliseconds)
- * - Font selection with recursive folder scanning
- * - Color customization (predefined + custom)
- * - Animation selection (GIF/WebP with speed metrics)
- * - Help and language selection
+ * @details
+ * Comprehensive settings: edit mode, timeout actions, presets, time format,
+ * fonts (recursive scan), colors, animations (GIF/WebP + speed metrics),
+ * help, language.
  * 
- * Uses helper functions for modular menu construction.
+ * Modular helpers for maintainability.
  */
 void ShowColorMenu(HWND hwnd);
 
 /**
- * @brief Handle animation submenu command based on dynamic IDs
- * @param hwnd Main window handle
- * @param id Command ID
+ * @brief Handle animation menu command
  * @return TRUE if handled
  */
 BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id);

@@ -1,14 +1,6 @@
 /**
  * @file window.c
- * @brief Main window management with DPI awareness and visual effects
- * @version 2.0 - Refactored for modularity, eliminated code duplication, added comprehensive logging
- * 
- * Provides centralized window lifecycle management including:
- * - DPI-aware window creation and initialization
- * - Multi-monitor support with active display detection
- * - Transparency and blur effects (Windows 10+)
- * - Click-through and always-on-top behaviors
- * - Desktop wallpaper-level attachment
+ * @brief Window lifecycle management with DPI awareness and visual effects
  */
 #include "../include/window.h"
 #include "../include/window_procedure.h"
@@ -31,24 +23,20 @@
  * Constants
  * ============================================================================ */
 
-/** Window class and identification */
 #define WINDOW_CLASS_NAME L"CatimeWindow"
 #define WINDOW_TITLE L"Catime"
 #define PROGMAN_CLASS L"Progman"
 #define WORKERW_CLASS L"WorkerW"
 #define SHELLDLL_CLASS L"SHELLDLL_DefView"
 
-/** Visual effect parameters */
 #define BLUR_ALPHA_VALUE 180
 #define BLUR_GRADIENT_COLOR 0x00202020
 #define COLOR_KEY_BLACK RGB(0, 0, 0)
 #define ALPHA_OPAQUE 255
 
-/** System configuration */
 #define CONSOLE_CODEPAGE_GBK 936
 #define DEFAULT_TRAY_ANIMATION_SPEED_MS 150
 
-/** DWM library */
 #define DWMAPI_DLL L"dwmapi.dll"
 #define SHCORE_DLL L"shcore.dll"
 #define USER32_DLL L"user32.dll"
@@ -57,24 +45,20 @@
  * Global window state
  * ============================================================================ */
 
-/** Window geometry */
 int CLOCK_BASE_WINDOW_WIDTH = 200;
 int CLOCK_BASE_WINDOW_HEIGHT = 100;
 float CLOCK_WINDOW_SCALE = 1.0f;
 int CLOCK_WINDOW_POS_X = 100;
 int CLOCK_WINDOW_POS_Y = 100;
 
-/** Window interaction state */
 BOOL CLOCK_EDIT_MODE = FALSE;
 BOOL CLOCK_IS_DRAGGING = FALSE;
 POINT CLOCK_LAST_MOUSE_POS = {0, 0};
 BOOL CLOCK_WINDOW_TOPMOST = TRUE;
 
-/** Text rendering optimization */
 RECT CLOCK_TEXT_RECT = {0, 0, 0, 0};
 BOOL CLOCK_TEXT_RECT_VALID = FALSE;
 
-/** Font configuration */
 float CLOCK_FONT_SCALE_FACTOR = 1.0f;
 int CLOCK_BASE_FONT_SIZE = 24;
 
@@ -121,9 +105,11 @@ typedef struct _ACCENT_POLICY {
  * ============================================================================ */
 
 /**
- * @brief Configure window click-through behavior
+ * Configure window click-through behavior for overlay mode.
+ * Uses WS_EX_TRANSPARENT to allow clicks to pass through to windows below.
+ * 
  * @param hwnd Window handle
- * @param enable TRUE to enable click-through (transparent to mouse), FALSE to disable
+ * @param enable TRUE to enable click-through, FALSE to make window interactive
  */
 void SetClickThrough(HWND hwnd, BOOL enable) {
     LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
@@ -147,8 +133,10 @@ void SetClickThrough(HWND hwnd, BOOL enable) {
 }
 
 /**
- * @brief Initialize DWM functions for blur effects
- * @return TRUE if loaded successfully, FALSE otherwise
+ * Load DWM (Desktop Window Manager) functions dynamically.
+ * Required for blur effects which may not be available on older Windows versions.
+ * 
+ * @return TRUE if functions loaded, FALSE otherwise
  */
 BOOL InitDWMFunctions(void) {
     HMODULE hDwmapi = LoadLibraryW(DWMAPI_DLL);
@@ -164,9 +152,11 @@ BOOL InitDWMFunctions(void) {
 }
 
 /**
- * @brief Apply accent policy to window
+ * Apply Windows 10+ accent policy for modern blur effects.
+ * Falls back to legacy DWM blur if accent policy unavailable.
+ * 
  * @param hwnd Window handle
- * @param accentState Accent state to apply
+ * @param accentState Desired blur state
  */
 static void ApplyAccentPolicy(HWND hwnd, ACCENT_STATE accentState) {
     ACCENT_POLICY policy = {0};
@@ -192,9 +182,10 @@ static void ApplyAccentPolicy(HWND hwnd, ACCENT_STATE accentState) {
 }
 
 /**
- * @brief Enable or disable blur-behind effect
+ * Toggle blur-behind visual effect for edit mode visibility.
+ * 
  * @param hwnd Window handle
- * @param enable TRUE to enable blur, FALSE to disable
+ * @param enable TRUE to enable, FALSE to disable
  */
 void SetBlurBehind(HWND hwnd, BOOL enable) {
     ApplyAccentPolicy(hwnd, enable ? ACCENT_ENABLE_BLURBEHIND : ACCENT_DISABLED);
@@ -206,9 +197,11 @@ void SetBlurBehind(HWND hwnd, BOOL enable) {
  * ============================================================================ */
 
 /**
- * @brief Check if monitor is active and usable
- * @param hMonitor Monitor handle
- * @return TRUE if active with valid work area, FALSE otherwise
+ * Verify monitor is active with non-zero work area.
+ * Prevents placing window on disconnected or powered-off displays.
+ * 
+ * @param hMonitor Monitor handle to check
+ * @return TRUE if usable, FALSE otherwise
  */
 static BOOL IsMonitorActive(HMONITOR hMonitor) {
     if (!hMonitor) return FALSE;
@@ -222,8 +215,10 @@ static BOOL IsMonitorActive(HMONITOR hMonitor) {
 }
 
 /**
- * @brief Find best active monitor for window placement
- * @return Handle to active monitor (prioritizes primary)
+ * Find best available monitor, preferring primary display.
+ * Necessary when current monitor becomes unavailable (disconnect, sleep).
+ * 
+ * @return Handle to active monitor
  */
 static HMONITOR FindBestActiveMonitor(void) {
     HMONITOR hPrimary = MonitorFromPoint((POINT){0, 0}, MONITOR_DEFAULTTOPRIMARY);
@@ -258,10 +253,11 @@ static HMONITOR FindBestActiveMonitor(void) {
 }
 
 /**
- * @brief Check if window is visible on current monitor
+ * Check if any part of window overlaps with monitor work area.
+ * 
  * @param hwnd Window handle
  * @param hMonitor Monitor handle
- * @return TRUE if window visible on monitor, FALSE otherwise
+ * @return TRUE if window intersects monitor
  */
 static BOOL IsWindowVisibleOnMonitor(HWND hwnd, HMONITOR hMonitor) {
     RECT rect;
@@ -276,7 +272,9 @@ static BOOL IsWindowVisibleOnMonitor(HWND hwnd, HMONITOR hMonitor) {
 }
 
 /**
- * @brief Center window on target monitor
+ * Center window on specified monitor with boundary clamping.
+ * Automatically saves new position to configuration.
+ * 
  * @param hwnd Window handle
  * @param hMonitor Target monitor
  */
@@ -294,7 +292,7 @@ static void CenterWindowOnMonitor(HWND hwnd, HMONITOR hMonitor) {
     int newX = mi.rcWork.left + (mi.rcWork.right - mi.rcWork.left - width) / 2;
     int newY = mi.rcWork.top + (mi.rcWork.bottom - mi.rcWork.top - height) / 2;
     
-    // Ensure within bounds
+    /* Clamp to work area bounds */
     if (newX < mi.rcWork.left) newX = mi.rcWork.left;
     if (newY < mi.rcWork.top) newY = mi.rcWork.top;
     if (newX + width > mi.rcWork.right) newX = mi.rcWork.right - width;
@@ -307,9 +305,11 @@ static void CenterWindowOnMonitor(HWND hwnd, HMONITOR hMonitor) {
 }
 
 /**
- * @brief Adjust window position to ensure visibility on active monitor
+ * Reposition window if on inactive monitor or off-screen.
+ * Called on startup and display change events.
+ * 
  * @param hwnd Window handle
- * @param forceOnScreen TRUE to force repositioning if needed
+ * @param forceOnScreen TRUE to force check and reposition
  */
 void AdjustWindowPosition(HWND hwnd, BOOL forceOnScreen) {
     if (!forceOnScreen) return;
@@ -317,12 +317,10 @@ void AdjustWindowPosition(HWND hwnd, BOOL forceOnScreen) {
     HMONITOR hCurrentMonitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONULL);
     BOOL needsReposition = FALSE;
     
-    // Check if monitor is invalid or inactive
     if (!hCurrentMonitor || !IsMonitorActive(hCurrentMonitor)) {
         LOG_WARNING("Window on invalid/inactive monitor, repositioning needed");
         needsReposition = TRUE;
     } 
-    // Check if window is visible on current monitor
     else if (!IsWindowVisibleOnMonitor(hwnd, hCurrentMonitor)) {
         LOG_WARNING("Window not visible on current monitor, repositioning needed");
         needsReposition = TRUE;
@@ -339,7 +337,8 @@ void AdjustWindowPosition(HWND hwnd, BOOL forceOnScreen) {
  * ============================================================================ */
 
 /**
- * @brief Save window position and scale to configuration
+ * Persist current window position and scale to configuration file.
+ * 
  * @param hwnd Window handle
  */
 void SaveWindowSettings(HWND hwnd) {
@@ -384,8 +383,10 @@ typedef enum {
 } PROCESS_DPI_AWARENESS;
 
 /**
- * @brief Initialize DPI awareness with fallback support
- * @return TRUE if any level of DPI awareness was set
+ * Enable DPI awareness with multi-tier fallback for compatibility.
+ * Tries Windows 10 1703+ API first, then Windows 8.1+, then legacy.
+ * 
+ * @return TRUE if any DPI awareness level set
  */
 static BOOL InitializeDpiAwareness(void) {
     LOG_INFO("Initializing DPI awareness");
@@ -396,7 +397,7 @@ static BOOL InitializeDpiAwareness(void) {
         return FALSE;
     }
     
-    // Try Windows 10 1703+ (best)
+    /* Try Windows 10 1703+ per-monitor V2 (best quality) */
     typedef BOOL(WINAPI* SetProcessDpiAwarenessContextFunc)(DPI_AWARENESS_CONTEXT);
     SetProcessDpiAwarenessContextFunc setDpiCtx = 
         (SetProcessDpiAwarenessContextFunc)GetProcAddress(hUser32, "SetProcessDpiAwarenessContext");
@@ -408,7 +409,7 @@ static BOOL InitializeDpiAwareness(void) {
         }
     }
     
-    // Try Windows 8.1+ (fallback)
+    /* Try Windows 8.1+ per-monitor (acceptable) */
     HMODULE hShcore = LoadLibraryW(SHCORE_DLL);
     if (hShcore) {
         typedef HRESULT(WINAPI* SetProcessDpiAwarenessFunc)(PROCESS_DPI_AWARENESS);
@@ -425,7 +426,7 @@ static BOOL InitializeDpiAwareness(void) {
         FreeLibrary(hShcore);
     }
     
-    // Final fallback: basic DPI awareness
+    /* Final fallback: basic system DPI awareness (Windows Vista+) */
     #ifndef _INC_WINUSER
     WINUSERAPI BOOL WINAPI SetProcessDPIAware(VOID);
     #endif
@@ -444,14 +445,15 @@ static BOOL InitializeDpiAwareness(void) {
  * ============================================================================ */
 
 /**
- * @brief Initialize fonts from configuration or embedded resources
- * @param hInstance Application instance
- * @return TRUE on success, FALSE on failure
+ * Load fonts from configuration, extracting embedded fonts on first run.
+ * Strips %LOCALAPPDATA% prefix from font path if present.
+ * 
+ * @param hInstance Application instance for resource extraction
+ * @return TRUE on success, FALSE if font load fails
  */
 static BOOL InitializeFonts(HINSTANCE hInstance) {
     LOG_INFO("Initializing fonts");
     
-    // Extract embedded fonts on first run
     if (IsFirstRun()) {
         LOG_INFO("First run detected, extracting embedded fonts");
         if (ExtractEmbeddedFontsToFolder(hInstance)) {
@@ -462,15 +464,13 @@ static BOOL InitializeFonts(HINSTANCE hInstance) {
         }
     }
     
-    // Check font license acceptance
     if (NeedsFontLicenseVersionAcceptance()) {
         LOG_INFO("Font license acceptance required (will be handled in UI)");
     }
     
-    // Load font from configuration
     CheckAndFixFontPath();
     
-    // Extract font filename from FONT_FILE_NAME (may contain path prefix)
+    /* Strip %LOCALAPPDATA% prefix if present for relative path access */
     char actualFontFileName[MAX_PATH];
     const char* localappdata_prefix = "%LOCALAPPDATA%\\Catime\\resources\\fonts\\";
     if (_strnicmp(FONT_FILE_NAME, localappdata_prefix, strlen(localappdata_prefix)) == 0) {
@@ -496,7 +496,8 @@ static BOOL InitializeFonts(HINSTANCE hInstance) {
  * ============================================================================ */
 
 /**
- * @brief Initialize default application settings
+ * Load configuration and initialize console encoding for GBK support.
+ * 
  * @return TRUE on success
  */
 static BOOL InitializeDefaultSettings(void) {
@@ -518,9 +519,11 @@ static BOOL InitializeDefaultSettings(void) {
 }
 
 /**
- * @brief Initialize application components and subsystems
+ * Initialize application with DPI awareness, configuration, and fonts.
+ * Called once on application startup before window creation.
+ * 
  * @param hInstance Application instance handle
- * @return TRUE if initialization succeeded, FALSE on error
+ * @return TRUE if initialization succeeded, FALSE on critical error
  */
 BOOL InitializeApplication(HINSTANCE hInstance) {
     LOG_INFO("Application initialization started");
@@ -548,7 +551,8 @@ BOOL InitializeApplication(HINSTANCE hInstance) {
  * ============================================================================ */
 
 /**
- * @brief Initialize tray icon and animation
+ * Initialize system tray icon with animation.
+ * 
  * @param hwnd Window handle
  * @param hInstance Application instance
  */
@@ -559,7 +563,8 @@ static void InitializeTrayAndAnimation(HWND hwnd, HINSTANCE hInstance) {
 }
 
 /**
- * @brief Apply topmost mode to window
+ * Make window always-on-top for overlay mode.
+ * 
  * @param hwnd Window handle
  */
 static void ApplyTopmostMode(HWND hwnd) {
@@ -568,7 +573,9 @@ static void ApplyTopmostMode(HWND hwnd) {
 }
 
 /**
- * @brief Apply normal (non-topmost) mode to window
+ * Make window normal z-order, parented to Progman for Win+D persistence.
+ * Parenting to Progman prevents window from being hidden by Win+D (show desktop).
+ * 
  * @param hwnd Window handle
  */
 static void ApplyNormalMode(HWND hwnd) {
@@ -584,9 +591,10 @@ static void ApplyNormalMode(HWND hwnd) {
 }
 
 /**
- * @brief Apply initial window state and visibility
+ * Configure window layering, visibility, and z-order based on saved settings.
+ * 
  * @param hwnd Window handle
- * @param nCmdShow Initial show command
+ * @param nCmdShow Initial show command from WinMain
  */
 static void ApplyInitialWindowState(HWND hwnd, int nCmdShow) {
     SetLayeredWindowAttributes(hwnd, COLOR_KEY_BLACK, ALPHA_OPAQUE, LWA_COLORKEY);
@@ -603,15 +611,16 @@ static void ApplyInitialWindowState(HWND hwnd, int nCmdShow) {
 }
 
 /**
- * @brief Create and initialize main application window
+ * Create main application window with layered transparency and topmost behavior.
+ * Registers window class, creates popup window, and initializes tray icon.
+ * 
  * @param hInstance Application instance handle
- * @param nCmdShow Window show command
+ * @param nCmdShow Window show command from WinMain
  * @return Window handle on success, NULL on failure
  */
 HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
     LOG_INFO("Creating main window");
     
-    // Register window class
     WNDCLASSW wc = {0};
     wc.lpfnWndProc = WindowProcedure;
     wc.hInstance = hInstance;
@@ -623,13 +632,12 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
         return NULL;
     }
     
-    // Configure extended styles
+    /* WS_EX_TOOLWINDOW prevents taskbar button */
     DWORD exStyle = WS_EX_LAYERED | WS_EX_TOOLWINDOW;
     if (!CLOCK_WINDOW_TOPMOST) {
         exStyle |= WS_EX_NOACTIVATE;
     }
     
-    // Calculate initial size
     int initialWidth = (int)(CLOCK_BASE_WINDOW_WIDTH * CLOCK_WINDOW_SCALE);
     int initialHeight = (int)(CLOCK_BASE_WINDOW_HEIGHT * CLOCK_WINDOW_SCALE);
 
@@ -664,9 +672,10 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
  * ============================================================================ */
 
 /**
- * @brief Open file selection dialog
+ * Display file selection dialog for timeout action configuration.
+ * 
  * @param hwnd Parent window handle
- * @param filePath Buffer to receive selected file path
+ * @param filePath Buffer to receive selected file path (wide-char)
  * @param maxPath Maximum buffer size
  * @return TRUE if file selected, FALSE if cancelled
  */
@@ -694,9 +703,11 @@ BOOL OpenFileDialog(HWND hwnd, wchar_t* filePath, DWORD maxPath) {
  * ============================================================================ */
 
 /**
- * @brief Set window always-on-top behavior
+ * Toggle window always-on-top behavior, persisting to configuration.
+ * When disabling topmost, parents to Progman for Win+D persistence.
+ * 
  * @param hwnd Window handle
- * @param topmost TRUE for topmost, FALSE for normal
+ * @param topmost TRUE for always-on-top, FALSE for normal z-order
  */
 void SetWindowTopmost(HWND hwnd, BOOL topmost) {
     LOG_INFO("Setting window topmost: %s", topmost ? "true" : "false");
@@ -736,8 +747,10 @@ void SetWindowTopmost(HWND hwnd, BOOL topmost) {
 }
 
 /**
- * @brief Find WorkerW window that hosts desktop wallpaper
- * @return WorkerW window handle or NULL if not found
+ * Find WorkerW window containing SHELLDLL_DefView for desktop integration.
+ * WorkerW is a special window created by Windows Explorer for desktop wallpaper.
+ * 
+ * @return WorkerW window handle, or Progman if WorkerW not found
  */
 static HWND FindDesktopWorkerWindow(void) {
     HWND hProgman = FindWindowW(PROGMAN_CLASS, NULL);
@@ -758,7 +771,8 @@ static HWND FindDesktopWorkerWindow(void) {
 }
 
 /**
- * @brief Attach window to desktop wallpaper level
+ * Attach window to desktop wallpaper level for below-icons placement.
+ * 
  * @param hwnd Window handle
  */
 void ReattachToDesktop(HWND hwnd) {

@@ -1,22 +1,11 @@
 /**
  * @file color.h
- * @brief Color management with CSS colors, live preview, and custom color picker
- * @version 2.0 - Refactored for better maintainability and reduced code duplication
+ * @brief Flexible color input supporting CSS names, hex codes, and RGB values
  * 
- * Comprehensive color system supporting:
- * - CSS named colors (30+ standard web colors)
- * - Hex color formats (#RGB, #RRGGBB)
- * - RGB format with multiple separators (comma, space, etc.)
- * - Live color preview during input
- * - Windows color picker with mouse sampling
- * - Automatic black → near-black conversion for visibility
+ * Multiple formats accommodate different user backgrounds (web developers, designers, general users).
+ * Format normalization ensures consistent internal representation regardless of input method.
  * 
- * Features:
- * - Smart color normalization (CSS names, hex shorthand, RGB)
- * - Real-time preview as you type
- * - Mouse-based color picking in color dialog
- * - Persistent custom color palette
- * - International separator support (,，;；| space)
+ * Black (#000000) auto-converts to #000001 to prevent invisible text (visually indistinguishable).
  */
 
 #ifndef COLOR_H
@@ -29,37 +18,37 @@
  * ============================================================================ */
 
 /**
- * @brief Predefined color option structure for user color palette
+ * @brief User's saved color palette entry
  */
 typedef struct {
-    const char* hexColor;  /**< Hex color string (e.g., "#FF0000") */
+    const char* hexColor;  /**< Normalized hex format for consistent comparison */
 } PredefinedColor;
 
 /**
- * @brief CSS named color structure for color lookup
+ * @brief CSS color name to hex mapping
  */
 typedef struct {
-    const char* name;  /**< Color name (e.g., "red", "blue") */
-    const char* hex;   /**< Hex color value (e.g., "#FF0000") */
+    const char* name;  /**< Case-insensitive */
+    const char* hex;   /**< Pre-normalized */
 } CSSColor;
 
 /* ============================================================================
  * Global state variables
  * ============================================================================ */
 
-/** @brief Dynamic array of user-defined color options */
+/** @brief Dynamically allocated palette (supports unlimited colors) */
 extern PredefinedColor* COLOR_OPTIONS;
 
-/** @brief Count of available color options */
+/** @brief Palette size (tracked separately due to reallocation) */
 extern size_t COLOR_OPTIONS_COUNT;
 
-/** @brief Current preview color hex string (size 10 for "#RRGGBB\0") */
+/** @brief Temporary storage during live preview ("#RRGGBB\0" + safety) */
 extern char PREVIEW_COLOR[10];
 
-/** @brief Color preview active state (TRUE during live preview) */
+/** @brief Tracks whether preview is active (prevents unwanted restoration) */
 extern BOOL IS_COLOR_PREVIEWING;
 
-/** @brief Current clock text color in hex format */
+/** @brief Active clock color (separate from preview to enable cancellation) */
 extern char CLOCK_TEXT_COLOR[10];
 
 /* ============================================================================
@@ -67,159 +56,125 @@ extern char CLOCK_TEXT_COLOR[10];
  * ============================================================================ */
 
 /**
- * @brief Initialize default color palette from config file or defaults
+ * @brief Loads saved color palette or initializes defaults
  * 
  * @details
- * - Loads COLOR_OPTIONS from config file
- * - Falls back to 16 predefined colors if config missing
- * - Creates config file if it doesn't exist
- * - Handles colors with or without '#' prefix
+ * Handles missing '#' prefix for backward compatibility.
+ * Must be called before showing color UI.
  * 
- * @note Should be called during application startup
+ * @note Function name is historical artifact - actually initializes colors
  */
 void InitializeDefaultLanguage(void);
 
 /**
- * @brief Add color to user options list with validation and deduplication
- * @param hexColor Hex color string to add (with or without '#')
+ * @brief Adds validated color to palette (auto-normalized, deduplicated)
+ * @param hexColor Color to add
  * 
  * @details
- * - Validates hex format (#RRGGBB only, 6 digits)
- * - Normalizes to uppercase (#FFFFFF)
- * - Prevents duplicates (case-insensitive)
- * - Dynamically expands COLOR_OPTIONS array
- * - Skips invalid colors silently
+ * Deduplication prevents palette bloat. Silent failure on invalid colors
+ * avoids interrupting bulk loads from config.
+ * 
+ * @note Case-insensitive (#FF0000 = #ff0000)
  */
 void AddColorOption(const char* hexColor);
 
 /**
- * @brief Free all color options memory
+ * @brief Releases all palette memory (idempotent)
  * 
  * @details
- * - Frees all individual color strings
- * - Frees COLOR_OPTIONS array
- * - Resets COLOR_OPTIONS_COUNT to 0
- * - Safe to call multiple times
- * 
- * @note Call before reloading colors or during shutdown
+ * Required before reloading config and during shutdown.
  */
 void ClearColorOptions(void);
 
 /**
- * @brief Write CLOCK_TEXT_COLOR to config file
- * @param color_input Color string to save (hex format)
+ * @brief Persists color to config (auto-normalized)
+ * @param color_input Color string to save
  * 
- * @details
- * - Updates CLOCK_TEXT_COLOR field in INI file
- * - Uses DISPLAY section
- * - Saves immediately to disk
+ * @details Immediate write ensures persistence even on crash.
  */
 void WriteConfigColor(const char* color_input);
 
 /**
- * @brief Convert various color formats to normalized hex (#RRGGBB)
- * @param input Input color string (CSS name, hex, or RGB)
- * @param output Output buffer for normalized color
- * @param output_size Size of output buffer (recommend 10+ bytes)
+ * @brief Converts any supported format to canonical #RRGGBB hex
+ * @param input Color in any format (CSS name, hex, RGB)
+ * @param output Buffer for normalized hex (min 10 bytes)
+ * @param output_size Buffer size
  * 
- * @details Parsing priority:
- * 1. CSS color names (case-insensitive): "red" → "#FF0000"
- * 2. Hex shorthand: "#RGB" → "#RRGGBB", "#f00" → "#FF0000"
- * 3. Hex full: "#RRGGBB" or "RRGGBB"
- * 4. RGB format: "255,0,0" or "rgb(255,0,0)" → "#FF0000"
- * 5. Fallback: returns input unchanged
- * 
- * Supported RGB separators: , ， ; ； | space
- * 
- * @note Always outputs uppercase hex
+ * @details
+ * Supports multiple RGB separators (comma, Chinese comma, semicolon, pipe)
+ * for international keyboards and copy-paste scenarios.
+ * Returns input unchanged on failure to enable caller error handling.
  */
 void normalizeColor(const char* input, char* output, size_t output_size);
 
 /**
- * @brief Validate color string format
- * @param input Color string to validate
- * @return TRUE if valid hex color (#RRGGBB), FALSE otherwise
+ * @brief Validates color string (accepts any format)
+ * @param input Color string
+ * @return TRUE if normalizes to valid #RRGGBB, FALSE otherwise
  * 
- * @details
- * - Accepts CSS names, hex, RGB (auto-normalized)
- * - Validates format: must be #RRGGBB with valid hex digits
- * - Uses normalizeColor internally
- * 
- * @note Empty strings return FALSE
+ * @note Post-normalization validation ("red" returns TRUE)
  */
 BOOL isValidColor(const char* input);
 
 /**
- * @brief Subclass procedure for color input edit control (live preview)
- * @param hwnd Edit control window handle
- * @param msg Message identifier
- * @param wParam Message parameter
- * @param lParam Message parameter
- * @return Message processing result
- * 
- * @details Features:
- * - Ctrl+A for select all
- * - Enter key submits dialog
- * - Live preview on every keystroke
- * - Preview updates on paste/cut
- * - Validates color on the fly
- * 
- * @note Must be attached via SetWindowLongPtr(GWLP_WNDPROC)
- */
-LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
-/**
- * @brief Dialog procedure for color input text dialog
- * @param hwndDlg Dialog window handle
- * @param msg Message identifier
+ * @brief Subclassed edit control with live preview
+ * @param hwnd Edit control handle
+ * @param msg Windows message
  * @param wParam Message parameter
  * @param lParam Message parameter
  * @return Message processing result
  * 
  * @details
- * - Initializes edit control with current color
- * - Validates input on OK click
- * - Shows error dialog for invalid colors
- * - Empty input cancels dialog
- * - Saves valid color to config
- * - Supports live preview via ColorEditSubclassProc
+ * - Live preview on keystroke for immediate feedback
+ * - Ctrl+A for select all (standard behavior)
+ * - Enter for keyboard submission (accessibility)
+ * - Preview on paste/cut (handles clipboard path)
+ */
+LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+/**
+ * @brief Dialog procedure for text-based color input
+ * @param hwndDlg Dialog handle
+ * @param msg Windows message
+ * @param wParam Message parameter
+ * @param lParam Message parameter
+ * @return Message processing result
+ * 
+ * @details
+ * Empty input cancels (supports "changed my mind" workflow).
+ * Validation errors show guidance dialog. Immediate config save.
  */
 INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 
 /**
- * @brief Show Windows color picker dialog with live preview
+ * @brief Windows color picker with live preview
  * @param hwnd Parent window handle
- * @return Selected COLORREF or -1 if cancelled
+ * @return Selected COLORREF or -1 on cancel
  * 
- * @details Features:
- * - Initializes with current CLOCK_TEXT_COLOR
- * - Loads custom colors from COLOR_OPTIONS (up to 16)
- * - Live preview via mouse hover (see ColorDialogHookProc)
- * - Saves chosen color to config
- * - Auto-converts #000000 to #000001 for visibility
- * - Updates main window display immediately
+ * @details
+ * 16-color custom palette for quick access to frequent colors.
+ * Black auto-converts to near-black (#000001) to prevent invisible text.
+ * Returns -1 on cancel to distinguish from black (#000000 = 0).
  * 
- * @note Custom colors persist across dialog invocations
+ * @note Custom colors persist in session only (saved on explicit apply)
  */
 COLORREF ShowColorDialog(HWND hwnd);
 
 /**
- * @brief Hook procedure for Windows color dialog (mouse color picking)
- * @param hdlg Dialog handle
- * @param msg Message identifier
+ * @brief Hook procedure for mouse-based color sampling
+ * @param hdlg Color dialog handle
+ * @param msg Windows message
  * @param wParam Message parameter
  * @param lParam Message parameter
  * @return Hook processing result
  * 
- * @details Advanced features:
- * - Mouse hover: live color preview as cursor moves
- * - Click to lock: left/right click toggles color lock
- * - Custom color sync: saves custom colors to config in real-time
- * - Preview cancel: restores original color on Cancel
- * - Pixel sampling: GetPixel at cursor position
- * - Filters dialog background color (RGB(240,240,240))
+ * @details
+ * Enables "eyedropper" functionality for screen color sampling.
+ * Click-to-lock prevents jitter when user finds desired color.
+ * Filters dialog background (RGB(240,240,240)) to sample content only.
+ * Cancel restores original color for risk-free exploration.
  * 
- * @note Attached via CC_ENABLEHOOK flag in CHOOSECOLOR
+ * @note Uses GetPixel() with screen DC for cross-window sampling
  */
 UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT msg, WPARAM wParam, LPARAM lParam);
 

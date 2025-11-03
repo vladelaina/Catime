@@ -1,7 +1,11 @@
 /**
  * @file update_checker.c
- * @brief GitHub version checking system - Semantic versioning and automatic updates
- * @version 2.0 - Refactored: Modular JSON parsing, data-driven version comparison, unified dialog management
+ * @brief GitHub version checking and update management
+ * 
+ * Key features:
+ * - Semantic versioning comparison (supports pre-release tags)
+ * - GitHub API integration for release info
+ * - Multi-language update dialogs
  */
 #include <windows.h>
 #include <wininet.h>
@@ -18,28 +22,15 @@
 
 #pragma comment(lib, "wininet.lib")
 
-/* ============================================================================
- * Constants
- * ============================================================================ */
-
-/** GitHub API endpoint */
 #define GITHUB_API_URL "https://api.github.com/repos/vladelaina/Catime/releases/latest"
-
-/** HTTP user agent */
 #define USER_AGENT "Catime Update Checker"
-
-/** Buffer sizes */
 #define VERSION_BUFFER_SIZE 32
 #define URL_BUFFER_SIZE 512
 #define NOTES_BUFFER_SIZE 4096
 #define INITIAL_HTTP_BUFFER_SIZE 8192
 #define ERROR_MSG_BUFFER_SIZE 256
 
-/* ============================================================================
- * Data structures
- * ============================================================================ */
-
-/** Version information (for dialogs) */
+/** @brief Version info for dialog display */
 typedef struct {
     const char* currentVersion;
     const char* latestVersion;
@@ -47,23 +38,19 @@ typedef struct {
     const char* releaseNotes;
 } VersionInfo;
 
-/** Pre-release type priority mapping */
+/** @brief Pre-release type priority (alpha < beta < rc < stable) */
 typedef struct {
     const char* prefix;
     int prefixLen;
     int priority;
 } PreReleaseType;
 
-/** HTTP resource handles (for RAII-style cleanup) */
+/** @brief HTTP resource handles for cleanup */
 typedef struct {
     HINTERNET hInternet;
     HINTERNET hConnect;
     char* buffer;
 } HttpResources;
-
-/* ============================================================================
- * Pre-release version type priority table (data-driven)
- * ============================================================================ */
 
 static const PreReleaseType PRE_RELEASE_TYPES[] = {
     {"alpha", 5, 1},
@@ -73,14 +60,9 @@ static const PreReleaseType PRE_RELEASE_TYPES[] = {
 
 static const int PRE_RELEASE_TYPE_COUNT = sizeof(PRE_RELEASE_TYPES) / sizeof(PreReleaseType);
 
-/* ============================================================================
- * String conversion utilities
- * ============================================================================ */
-
 /**
- * @brief Convert UTF-8 to Wide character (auto-allocate memory)
- * @param utf8Str UTF-8 string
- * @return Allocated Wide string (must be freed) or NULL
+ * @brief Convert UTF-8 to wide string (allocated)
+ * @return Allocated wide string (caller must free) or NULL
  */
 static wchar_t* Utf8ToWide(const char* utf8Str) {
     if (!utf8Str) return NULL;
@@ -96,33 +78,22 @@ static wchar_t* Utf8ToWide(const char* utf8Str) {
 }
 
 /**
- * @brief Convert UTF-8 to Wide character (fixed buffer)
- * @param utf8Str UTF-8 string
- * @param wideBuf Output buffer
- * @param bufSize Buffer size (wide character count)
- * @return TRUE on success, FALSE on failure
+ * @brief Convert UTF-8 to wide string (fixed buffer)
+ * @return TRUE on success
  */
 static BOOL Utf8ToWideFixed(const char* utf8Str, wchar_t* wideBuf, int bufSize) {
     if (!utf8Str || !wideBuf || bufSize <= 0) return FALSE;
     return MultiByteToWideChar(CP_UTF8, 0, utf8Str, -1, wideBuf, bufSize) > 0;
 }
 
-/* ============================================================================
- * JSON parsing utilities (simplified, GitHub API response only)
- * ============================================================================ */
-
 /**
- * @brief Extract string field from JSON
- * @param json JSON string
- * @param fieldName Field name (e.g., "tag_name")
- * @param output Output buffer
- * @param maxLen Maximum buffer length
- * @return TRUE on success, FALSE on failure
+ * @brief Extract string field from GitHub JSON response
+ * @param fieldName Field to extract (e.g., "tag_name", "body")
+ * @return TRUE if field found and extracted
  */
 static BOOL ExtractJsonStringField(const char* json, const char* fieldName, char* output, size_t maxLen) {
     if (!json || !fieldName || !output || maxLen == 0) return FALSE;
     
-    // Construct search pattern: \"fieldName\":
     char pattern[128];
     snprintf(pattern, sizeof(pattern), "\"%s\":", fieldName);
     
@@ -132,19 +103,17 @@ static BOOL ExtractJsonStringField(const char* json, const char* fieldName, char
         return FALSE;
     }
     
-    // Find opening quote of field value
     const char* valueStart = strchr(fieldPos + strlen(pattern), '\"');
     if (!valueStart) return FALSE;
-    valueStart++; // Skip quote
+    valueStart++;
     
-    // Find closing quote of field value (handle escapes)
     const char* valueEnd = valueStart;
     int escapeCount = 0;
     while (*valueEnd) {
         if (*valueEnd == '\\') {
             escapeCount++;
         } else if (*valueEnd == '\"' && (escapeCount % 2 == 0)) {
-            break; // Found unescaped quote
+            break;
         } else if (*valueEnd != '\\') {
             escapeCount = 0;
         }
@@ -153,7 +122,6 @@ static BOOL ExtractJsonStringField(const char* json, const char* fieldName, char
     
     if (*valueEnd != '\"') return FALSE;
     
-    // Copy field value
     size_t valueLen = valueEnd - valueStart;
     if (valueLen >= maxLen) valueLen = maxLen - 1;
     strncpy(output, valueStart, valueLen);
@@ -162,12 +130,7 @@ static BOOL ExtractJsonStringField(const char* json, const char* fieldName, char
     return TRUE;
 }
 
-/**
- * @brief Process JSON escape sequences (\n, \r, \", \\)
- * @param input Input string
- * @param output Output buffer
- * @param maxLen Maximum output buffer length
- */
+/** @brief Process JSON escape sequences (\n, \r, \", \\) */
 static void ProcessJsonEscapes(const char* input, char* output, size_t maxLen) {
     if (!input || !output || maxLen == 0) return;
     
@@ -204,15 +167,11 @@ static void ProcessJsonEscapes(const char* input, char* output, size_t maxLen) {
     output[writePos] = '\0';
 }
 
-/* ============================================================================
- * Version comparison logic (Semantic Versioning 2.0.0)
- * ============================================================================ */
-
 /**
- * @brief Parse pre-release identifier type and number
- * @param preRelease Pre-release string (e.g., "alpha2", "beta1")
- * @param outType Output: type priority (1=alpha, 2=beta, 3=rc, 0=unknown)
- * @param outNum Output: version number
+ * @brief Parse pre-release type and number
+ * @param preRelease String like "alpha2", "beta1", "rc3"
+ * @param outType Priority: 1=alpha, 2=beta, 3=rc, 0=unknown
+ * @param outNum Version number after prefix
  */
 static void ParsePreReleaseInfo(const char* preRelease, int* outType, int* outNum) {
     *outType = 0;
@@ -220,7 +179,6 @@ static void ParsePreReleaseInfo(const char* preRelease, int* outType, int* outNu
     
     if (!preRelease || !preRelease[0]) return;
     
-    // Iterate through pre-release type table
     for (int i = 0; i < PRE_RELEASE_TYPE_COUNT; i++) {
         const PreReleaseType* type = &PRE_RELEASE_TYPES[i];
         if (strncmp(preRelease, type->prefix, type->prefixLen) == 0) {
@@ -232,11 +190,9 @@ static void ParsePreReleaseInfo(const char* preRelease, int* outType, int* outNu
 }
 
 /**
- * @brief Extract pre-release identifier (separate from version string)
- * @param version Full version (e.g., "1.3.0-alpha2")
- * @param preRelease Output buffer
- * @param maxLen Maximum buffer length
- * @return TRUE if has pre-release identifier, FALSE if stable release
+ * @brief Extract pre-release tag from version
+ * @param version Full version like "1.3.0-alpha2"
+ * @return TRUE if pre-release tag found
  */
 static BOOL ExtractPreRelease(const char* version, char* preRelease, size_t maxLen) {
     const char* dash = strchr(version, '-');
@@ -252,40 +208,33 @@ static BOOL ExtractPreRelease(const char* version, char* preRelease, size_t maxL
 }
 
 /**
- * @brief Compare pre-release identifiers
+ * @brief Compare pre-release tags
  * @return 1 if pre1 > pre2, -1 if pre1 < pre2, 0 if equal
+ * @note Stable > rc > beta > alpha
  */
 static int ComparePreRelease(const char* pre1, const char* pre2) {
-    // Both are stable releases
     if (!pre1[0] && !pre2[0]) return 0;
     
-    // Stable release > pre-release
     if (!pre1[0]) return 1;
     if (!pre2[0]) return -1;
     
-    // Parse pre-release info
     int type1, num1, type2, num2;
     ParsePreReleaseInfo(pre1, &type1, &num1);
     ParsePreReleaseInfo(pre2, &type2, &num2);
     
-    // Compare type priority
     if (type1 != type2) {
         return (type1 > type2) ? 1 : -1;
     }
     
-    // Same type: compare numbers
     if (num1 != num2) {
         return (num1 > num2) ? 1 : -1;
     }
     
-    // Fallback to string comparison
     return strcmp(pre1, pre2);
 }
 
 /**
- * @brief Compare two semantic version numbers
- * @param version1 Version 1 (e.g., "1.3.0-alpha2")
- * @param version2 Version 2 (e.g., "1.3.0")
+ * @brief Compare semantic versions (major.minor.patch-prerelease)
  * @return 1 if v1 > v2, -1 if v1 < v2, 0 if equal
  */
 int CompareVersions(const char* version1, const char* version2) {
@@ -296,14 +245,10 @@ int CompareVersions(const char* version1, const char* version2) {
     sscanf(version1, "%d.%d.%d", &major1, &minor1, &patch1);
     sscanf(version2, "%d.%d.%d", &major2, &minor2, &patch2);
     
-    // Compare major version
     if (major1 != major2) return (major1 > major2) ? 1 : -1;
-    // Compare minor version
     if (minor1 != minor2) return (minor1 > minor2) ? 1 : -1;
-    // Compare patch version
     if (patch1 != patch2) return (patch1 > patch2) ? 1 : -1;
     
-    // Same major.minor.patch: compare pre-release identifiers
     char preRelease1[64] = {0};
     char preRelease2[64] = {0};
     ExtractPreRelease(version1, preRelease1, sizeof(preRelease1));
@@ -312,34 +257,25 @@ int CompareVersions(const char* version1, const char* version2) {
     return ComparePreRelease(preRelease1, preRelease2);
 }
 
-/* ============================================================================
- * GitHub API response parsing
- * ============================================================================ */
-
 /**
- * @brief Parse GitHub API JSON response to extract version information
- * @param jsonResponse JSON returned by GitHub API
- * @param versionInfo Output: version information structure
- * @return TRUE on success, FALSE on failure
+ * @brief Parse GitHub release JSON
+ * @return TRUE if all required fields extracted
+ * @note Strips 'v' prefix from tag_name
  */
 static BOOL ParseGitHubRelease(const char* jsonResponse, char* latestVersion, size_t versionMaxLen,
                                char* downloadUrl, size_t urlMaxLen, char* releaseNotes, size_t notesMaxLen) {
-    // Extract tag_name
     if (!ExtractJsonStringField(jsonResponse, "tag_name", latestVersion, versionMaxLen)) {
         return FALSE;
     }
     
-    // Remove 'v' or 'V' prefix from version
     if (latestVersion[0] == 'v' || latestVersion[0] == 'V') {
         memmove(latestVersion, latestVersion + 1, strlen(latestVersion));
     }
     
-    // Extract browser_download_url
     if (!ExtractJsonStringField(jsonResponse, "browser_download_url", downloadUrl, urlMaxLen)) {
         return FALSE;
     }
     
-    // Extract body (optional)
     char rawNotes[NOTES_BUFFER_SIZE];
     if (ExtractJsonStringField(jsonResponse, "body", rawNotes, sizeof(rawNotes))) {
         ProcessJsonEscapes(rawNotes, releaseNotes, notesMaxLen);
@@ -351,19 +287,13 @@ static BOOL ParseGitHubRelease(const char* jsonResponse, char* latestVersion, si
     return TRUE;
 }
 
-/* ============================================================================
- * Dialog procedures (unified management)
- * ============================================================================ */
-
-/**
- * @brief Common dialog initialization (centering, localization)
- */
+/** @brief Initialize dialog (center, localize) */
 static void InitializeDialog(HWND hwndDlg, int dialogId) {
     ApplyDialogLanguage(hwndDlg, dialogId);
     MoveDialogToPrimaryScreen(hwndDlg);
 }
 
-/** Exit notification dialog */
+/** @brief Exit notification dialog */
 INT_PTR CALLBACK ExitMsgDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_INITDIALOG: {
@@ -392,7 +322,7 @@ INT_PTR CALLBACK ExitMsgDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lP
     return FALSE;
 }
 
-/** Update available dialog */
+/** @brief Update available dialog */
 INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     static VersionInfo* versionInfo = NULL;
     
@@ -456,7 +386,7 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
     return FALSE;
 }
 
-/** Update error dialog */
+/** @brief Update error dialog */
 INT_PTR CALLBACK UpdateErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_INITDIALOG:
@@ -480,7 +410,7 @@ INT_PTR CALLBACK UpdateErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARA
     return FALSE;
 }
 
-/** No update dialog */
+/** @brief No update dialog */
 INT_PTR CALLBACK NoUpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_INITDIALOG: {
@@ -515,10 +445,6 @@ INT_PTR CALLBACK NoUpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM l
     return FALSE;
 }
 
-/* ============================================================================
- * Dialog display functions
- * ============================================================================ */
-
 static void ShowExitMessageDialog(HWND hwnd) {
     DialogBoxW(GetModuleHandle(NULL), MAKEINTRESOURCEW(IDD_EXIT_DIALOG), hwnd, ExitMsgDlgProc);
 }
@@ -540,13 +466,7 @@ static void ShowNoUpdateDialog(HWND hwnd, const char* currentVersion) {
                    hwnd, NoUpdateDlgProc, (LPARAM)currentVersion);
 }
 
-/* ============================================================================
- * HTTP resource management (RAII style)
- * ============================================================================ */
-
-/**
- * @brief Initialize HTTP resources
- */
+/** @brief Initialize HTTP session */
 static BOOL InitHttpResources(HttpResources* res) {
     memset(res, 0, sizeof(HttpResources));
     
@@ -563,9 +483,7 @@ static BOOL InitHttpResources(HttpResources* res) {
     return TRUE;
 }
 
-/**
- * @brief Connect to GitHub API
- */
+/** @brief Connect to GitHub API */
 static BOOL ConnectToGitHub(HttpResources* res) {
     wchar_t wUrl[URL_BUFFER_SIZE];
     Utf8ToWideFixed(GITHUB_API_URL, wUrl, URL_BUFFER_SIZE);
@@ -581,9 +499,7 @@ static BOOL ConnectToGitHub(HttpResources* res) {
     return TRUE;
 }
 
-/**
- * @brief Read HTTP response into dynamic buffer
- */
+/** @brief Read HTTP response into dynamic buffer */
 static BOOL ReadHttpResponse(HttpResources* res) {
     size_t bufferSize = INITIAL_HTTP_BUFFER_SIZE;
     res->buffer = (char*)malloc(bufferSize);
@@ -599,7 +515,6 @@ static BOOL ReadHttpResponse(HttpResources* res) {
                            bufferSize - totalBytes - 1, &bytesRead) && bytesRead > 0) {
         totalBytes += bytesRead;
         
-        // Expand buffer if insufficient
         if (totalBytes >= bufferSize - 256) {
             size_t newSize = bufferSize * 2;
             char* newBuffer = (char*)realloc(res->buffer, newSize);
@@ -617,9 +532,7 @@ static BOOL ReadHttpResponse(HttpResources* res) {
     return TRUE;
 }
 
-/**
- * @brief Clean up HTTP resources
- */
+/** @brief Clean up HTTP resources */
 static void CleanupHttpResources(HttpResources* res) {
     if (res->buffer) {
         free(res->buffer);
@@ -635,12 +548,9 @@ static void CleanupHttpResources(HttpResources* res) {
     }
 }
 
-/* ============================================================================
- * Update check core logic
- * ============================================================================ */
-
 /**
- * @brief Open browser to download update and exit application
+ * @brief Open browser to download URL and exit app
+ * @return TRUE if browser opened successfully
  */
 static BOOL OpenBrowserAndExit(const char* url, HWND hwnd) {
     wchar_t* urlW = Utf8ToWide(url);
@@ -662,16 +572,14 @@ static BOOL OpenBrowserAndExit(const char* url, HWND hwnd) {
 }
 
 /**
- * @brief Perform update check (internal implementation)
- * @param hwnd Parent window handle
- * @param silentCheck TRUE=silent check, FALSE=show all dialogs
+ * @brief Perform update check
+ * @param silentCheck TRUE=only show if update found, FALSE=show all results
  */
 void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
     LOG_INFO("Starting update check (silent mode: %s)", silentCheck ? "yes" : "no");
     
     HttpResources res;
     
-    // Initialize HTTP session
     if (!InitHttpResources(&res)) {
         if (!silentCheck) {
             ShowUpdateErrorDialog(hwnd, 
@@ -680,7 +588,6 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
         return;
     }
     
-    // Connect to GitHub API
     if (!ConnectToGitHub(&res)) {
         CleanupHttpResources(&res);
         if (!silentCheck) {
@@ -690,7 +597,6 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
         return;
     }
     
-    // Read response
     if (!ReadHttpResponse(&res)) {
         CleanupHttpResources(&res);
         if (!silentCheck) {
@@ -700,7 +606,6 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
         return;
     }
     
-    // Parse version information
     char latestVersion[VERSION_BUFFER_SIZE] = {0};
     char downloadUrl[URL_BUFFER_SIZE] = {0};
     char releaseNotes[NOTES_BUFFER_SIZE] = {0};
@@ -719,7 +624,6 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
     
     LOG_INFO("GitHub latest version: %s, download URL: %s", latestVersion, downloadUrl);
     
-    // Version comparison
     const char* currentVersion = CATIME_VERSION;
     LOG_INFO("Current version: %s", currentVersion);
     
@@ -743,10 +647,6 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
     
     LOG_INFO("Update check completed");
 }
-
-/* ============================================================================
- * Public API
- * ============================================================================ */
 
 void CheckForUpdate(HWND hwnd) {
     CheckForUpdateInternal(hwnd, FALSE);

@@ -1,13 +1,6 @@
 /**
  * @file hotkey.c
- * @brief Modular hotkey management with data-driven configuration
- * 
- * Refactored architecture:
- * - Data-driven hotkey metadata (~185 lines reduction)
- * - Eliminated repetitive control checks (5x → 1x)
- * - Batch message processing (24 calls → 2 loops)
- * - Unified validation logic
- * - Improved maintainability and testability
+ * @brief Data-driven hotkey management system
  */
 
 #include <windows.h>
@@ -16,7 +9,7 @@
 #include <windowsx.h>
 #include <wchar.h>
 
-/** @brief Architecture-specific manifest dependencies for Common Controls v6 */
+/** Enable visual styles */
 #if defined _M_IX86
 #pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='x86' publicKeyToken='6595b64144ccf1df' language='*'\"")
 #elif defined _M_IA64
@@ -34,44 +27,26 @@
 #include "../include/dialog_procedure.h"
 #include "../resource/resource.h"
 
-/* ============================================================================
- * Constants
- * ============================================================================ */
-
 #ifndef HOTKEYF_SHIFT
 #define HOTKEYF_SHIFT   0x01
 #define HOTKEYF_CONTROL 0x02
 #define HOTKEYF_ALT     0x04
 #endif
 
-/** @brief Invalid IME virtual key code */
 #define VK_IME_SHIFT 0xE5
 
-/* ============================================================================
- * Type Definitions
- * ============================================================================ */
-
-/**
- * @brief Hotkey metadata structure for data-driven configuration
- */
 typedef struct {
-    int editCtrlId;           /**< Edit control ID */
-    int labelCtrlId;          /**< Label control ID */
-    const wchar_t* labelCN;   /**< Chinese label text */
-    const wchar_t* labelEN;   /**< English label text */
+    int editCtrlId;
+    int labelCtrlId;
+    const wchar_t* labelCN;
+    const wchar_t* labelEN;
 } HotkeyMetadata;
 
-/* ============================================================================
- * Global State
- * ============================================================================ */
-
-/** @brief Array of dialog-local hotkey values (replaces 12 individual variables) */
+/** Dialog-local hotkey storage (avoids 12 global variables) */
 static WORD g_dialogHotkeys[HOTKEY_COUNT] = {0};
 
-/** @brief Original window procedure for hotkey dialog subclassing */
 static WNDPROC g_OldHotkeyDlgProc = NULL;
 
-/** @brief Hotkey configuration metadata (data-driven approach) */
 static const HotkeyMetadata g_hotkeyMetadata[HOTKEY_COUNT] = {
     {IDC_HOTKEY_EDIT1,  IDC_HOTKEY_LABEL1,  L"显示当前时间:",     L"Show Current Time:"},
     {IDC_HOTKEY_EDIT2,  IDC_HOTKEY_LABEL2,  L"正计时:",          L"Count Up:"},
@@ -87,15 +62,6 @@ static const HotkeyMetadata g_hotkeyMetadata[HOTKEY_COUNT] = {
     {IDC_HOTKEY_EDIT8,  IDC_HOTKEY_LABEL8,  L"重新开始计时:",     L"Restart Timer:"},
 };
 
-/* ============================================================================
- * Helper Functions - Control Identification
- * ============================================================================ */
-
-/**
- * @brief Check if control ID is a hotkey edit control
- * @param ctrlId Control ID to check
- * @return TRUE if control is a hotkey edit control
- */
 static inline BOOL IsHotkeyEditControl(DWORD ctrlId) {
     for (int i = 0; i < HOTKEY_COUNT; i++) {
         if (g_hotkeyMetadata[i].editCtrlId == (int)ctrlId) {
@@ -105,34 +71,17 @@ static inline BOOL IsHotkeyEditControl(DWORD ctrlId) {
     return FALSE;
 }
 
-/**
- * @brief Check if virtual key is a modifier key
- * @param vk Virtual key code
- * @return TRUE if key is a modifier
- */
 static inline BOOL IsModifierKey(BYTE vk) {
     return (vk == VK_SHIFT || vk == VK_CONTROL || vk == VK_MENU || 
             vk == VK_LWIN || vk == VK_RWIN);
 }
 
-/* ============================================================================
- * Helper Functions - Hotkey Validation
- * ============================================================================ */
-
-/**
- * @brief Check if hotkey is invalid IME-related combination
- * @param hotkey Hotkey to validate
- * @return TRUE if invalid
- */
+/** IME Shift+Shift conflicts with system input switching */
 static inline BOOL IsInvalidIMEHotkey(WORD hotkey) {
     return (LOBYTE(hotkey) == VK_IME_SHIFT && HIBYTE(hotkey) == HOTKEYF_SHIFT);
 }
 
-/**
- * @brief Check if hotkey is a restricted single key
- * @param hotkey Hotkey to check
- * @return TRUE if restricted
- */
+/** Prevent single-key hotkeys that would block normal typing */
 static BOOL IsRestrictedSingleKey(WORD hotkey) {
     if (hotkey == 0) return FALSE;
 
@@ -158,11 +107,7 @@ static BOOL IsRestrictedSingleKey(WORD hotkey) {
     return FALSE;
 }
 
-/**
- * @brief Validate and sanitize hotkey value
- * @param hotkey Pointer to hotkey to validate
- * @return TRUE if hotkey was modified
- */
+/** @return TRUE if hotkey was cleared */
 static BOOL ValidateAndSanitizeHotkey(WORD* hotkey) {
     if (!hotkey) return FALSE;
 
@@ -174,14 +119,6 @@ static BOOL ValidateAndSanitizeHotkey(WORD* hotkey) {
     return FALSE;
 }
 
-/* ============================================================================
- * Helper Functions - Dialog Setup and Cleanup
- * ============================================================================ */
-
-/**
- * @brief Initialize dialog localized labels
- * @param hwndDlg Dialog handle
- */
 static void InitializeDialogLabels(HWND hwndDlg) {
     SetWindowTextW(hwndDlg, GetLocalizedString(L"热键设置", L"Hotkey Settings"));
 
@@ -197,9 +134,6 @@ static void InitializeDialogLabels(HWND hwndDlg) {
     SetDlgItemTextW(hwndDlg, IDCANCEL, GetLocalizedString(L"取消", L"Cancel"));
 }
 
-/**
- * @brief Load hotkey configuration from config file
- */
 static void LoadHotkeyConfiguration(void) {
     ReadConfigHotkeys(&g_dialogHotkeys[0], &g_dialogHotkeys[1], &g_dialogHotkeys[3],
                      &g_dialogHotkeys[4], &g_dialogHotkeys[5], &g_dialogHotkeys[6],
@@ -208,10 +142,6 @@ static void LoadHotkeyConfiguration(void) {
     ReadCustomCountdownHotkey(&g_dialogHotkeys[2]);
 }
 
-/**
- * @brief Set hotkey values to dialog controls (batch operation)
- * @param hwndDlg Dialog handle
- */
 static void SetHotkeyControlValues(HWND hwndDlg) {
     for (int i = 0; i < HOTKEY_COUNT; i++) {
         SendDlgItemMessage(hwndDlg, g_hotkeyMetadata[i].editCtrlId, 
@@ -219,10 +149,6 @@ static void SetHotkeyControlValues(HWND hwndDlg) {
     }
 }
 
-/**
- * @brief Get hotkey values from dialog controls (batch operation)
- * @param hwndDlg Dialog handle
- */
 static void GetHotkeyControlValues(HWND hwndDlg) {
     for (int i = 0; i < HOTKEY_COUNT; i++) {
         g_dialogHotkeys[i] = (WORD)SendDlgItemMessage(hwndDlg, 
@@ -231,18 +157,12 @@ static void GetHotkeyControlValues(HWND hwndDlg) {
     }
 }
 
-/**
- * @brief Validate and sanitize all hotkeys
- */
 static void ValidateAllHotkeys(void) {
     for (int i = 0; i < HOTKEY_COUNT; i++) {
         ValidateAndSanitizeHotkey(&g_dialogHotkeys[i]);
     }
 }
 
-/**
- * @brief Save hotkey configuration to config file
- */
 static void SaveHotkeyConfiguration(void) {
     WriteConfigHotkeys(g_dialogHotkeys[0], g_dialogHotkeys[1], g_dialogHotkeys[3],
                       g_dialogHotkeys[4], g_dialogHotkeys[5], g_dialogHotkeys[6],
@@ -254,10 +174,6 @@ static void SaveHotkeyConfiguration(void) {
     WriteConfigKeyValue("HOTKEY_CUSTOM_COUNTDOWN", customCountdownStr);
 }
 
-/**
- * @brief Setup subclassing for all hotkey edit controls
- * @param hwndDlg Dialog handle
- */
 static void SetupHotkeyControlSubclassing(HWND hwndDlg) {
     for (int i = 0; i < HOTKEY_COUNT; i++) {
         HWND hCtrl = GetDlgItem(hwndDlg, g_hotkeyMetadata[i].editCtrlId);
@@ -268,10 +184,6 @@ static void SetupHotkeyControlSubclassing(HWND hwndDlg) {
     }
 }
 
-/**
- * @brief Remove subclassing from all hotkey edit controls
- * @param hwndDlg Dialog handle
- */
 static void RemoveHotkeyControlSubclassing(HWND hwndDlg) {
     for (int i = 0; i < HOTKEY_COUNT; i++) {
         HWND hCtrl = GetDlgItem(hwndDlg, g_hotkeyMetadata[i].editCtrlId);
@@ -282,15 +194,7 @@ static void RemoveHotkeyControlSubclassing(HWND hwndDlg) {
     }
 }
 
-/* ============================================================================
- * Helper Functions - Hotkey Conflict Resolution
- * ============================================================================ */
-
-/**
- * @brief Check if current key event matches any existing hotkey
- * @param keyCombination Key combination to check
- * @return TRUE if matches existing hotkey
- */
+/** Prevents triggering hotkey while configuring it */
 static BOOL IsExistingHotkeyEvent(WORD keyCombination) {
     for (int i = 0; i < HOTKEY_COUNT; i++) {
         if (g_dialogHotkeys[i] != 0 && g_dialogHotkeys[i] == keyCombination) {
@@ -300,12 +204,7 @@ static BOOL IsExistingHotkeyEvent(WORD keyCombination) {
     return FALSE;
 }
 
-/**
- * @brief Clear duplicate hotkeys from other controls
- * @param hwndDlg Dialog handle
- * @param currentCtrlId Current control ID
- * @param newHotkey New hotkey value
- */
+/** Enforce uniqueness: clear conflicting hotkeys from other controls */
 static void ClearDuplicateHotkeys(HWND hwndDlg, int currentCtrlId, WORD newHotkey) {
     if (newHotkey == 0) return;
 
@@ -320,11 +219,7 @@ static void ClearDuplicateHotkeys(HWND hwndDlg, int currentCtrlId, WORD newHotke
     }
 }
 
-/**
- * @brief Build current modifier state from keyboard
- * @param msg Message type for Alt detection
- * @return Modifier flags
- */
+/** @param msg Needed for Alt detection (WM_SYSKEYDOWN) */
 static BYTE GetCurrentModifiers(UINT msg) {
     BYTE modifiers = 0;
     if (GetKeyState(VK_SHIFT) & 0x8000) modifiers |= HOTKEYF_SHIFT;
@@ -335,10 +230,7 @@ static BYTE GetCurrentModifiers(UINT msg) {
     return modifiers;
 }
 
-/* ============================================================================
- * Dialog Subclass Procedure
- * ============================================================================ */
-
+/** Intercepts hotkey events to prevent accidental trigger during configuration */
 LRESULT CALLBACK HotkeyDialogSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     if (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN || msg == WM_KEYUP || msg == WM_SYSKEYUP) {
         BYTE vk = (BYTE)wParam;
@@ -400,10 +292,6 @@ LRESULT CALLBACK HotkeyDialogSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LP
 
     return CallWindowProc(g_OldHotkeyDlgProc, hwnd, msg, wParam, lParam);
 }
-
-/* ============================================================================
- * Main Dialog Procedure
- * ============================================================================ */
 
 void ShowHotkeySettingsDialog(HWND hwndParent) {
     DialogBoxW(GetModuleHandle(NULL),
@@ -531,10 +419,7 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
     return FALSE;
 }
 
-/* ============================================================================
- * Hotkey Control Subclass Procedure
- * ============================================================================ */
-
+/** Allows Enter key to submit dialog from hotkey control */
 LRESULT CALLBACK HotkeyControlSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam,
                                          LPARAM lParam, UINT_PTR uIdSubclass,
                                          DWORD_PTR dwRefData) {

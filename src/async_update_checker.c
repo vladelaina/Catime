@@ -1,7 +1,9 @@
 /**
  * @file async_update_checker.c
- * @brief Asynchronous update checking to avoid blocking UI
- * @version 2.0 - Refactored for better maintainability
+ * @brief Non-blocking update checks via background thread
+ * 
+ * Thread detachment prevents concurrent checks (idempotent).
+ * 1s timeout balances clean exit vs shutdown responsiveness.
  */
 #include <windows.h>
 #include <process.h>
@@ -9,41 +11,21 @@
 #include "../include/update_checker.h"
 #include "../include/log.h"
 
-/* ============================================================================
- * Constants
- * ============================================================================ */
-
-/** @brief Thread wait timeout in milliseconds */
 #define THREAD_WAIT_TIMEOUT_MS 1000
-
-/** @brief Error message buffer size */
 #define ERROR_MSG_BUFFER_SIZE 256
 
-/* ============================================================================
- * Type definitions
- * ============================================================================ */
-
-/** @brief Parameters passed to update check thread */
 typedef struct {
     HWND hwnd;
     BOOL silentCheck;
 } UpdateThreadParams;
 
-/* ============================================================================
- * Global state
- * ============================================================================ */
-
-/** @brief Thread state management */
 static HANDLE g_hUpdateThread = NULL;
 static BOOL g_bUpdateThreadRunning = FALSE;
 
 /* ============================================================================
- * Internal helper functions
+ * Internal helpers
  * ============================================================================ */
 
-/**
- * @brief Reset thread state and clean up handle
- */
 static void ResetThreadState(void) {
     g_bUpdateThreadRunning = FALSE;
     if (g_hUpdateThread) {
@@ -52,10 +34,6 @@ static void ResetThreadState(void) {
     }
 }
 
-/**
- * @brief Allocate and initialize thread parameters
- * @return Allocated parameters or NULL on failure
- */
 static UpdateThreadParams* PrepareThreadParams(HWND hwnd, BOOL silentCheck) {
     UpdateThreadParams* params = (UpdateThreadParams*)malloc(sizeof(UpdateThreadParams));
     if (!params) {
@@ -68,9 +46,6 @@ static UpdateThreadParams* PrepareThreadParams(HWND hwnd, BOOL silentCheck) {
     return params;
 }
 
-/**
- * @brief Handle thread creation failure
- */
 static void HandleThreadCreationFailure(UpdateThreadParams* params) {
     DWORD errorCode = GetLastError();
     char errorMsg[ERROR_MSG_BUFFER_SIZE] = {0};
@@ -85,11 +60,6 @@ static void HandleThreadCreationFailure(UpdateThreadParams* params) {
  * Thread procedure
  * ============================================================================ */
 
-/**
- * @brief Update check thread procedure
- * @param param UpdateThreadParams structure containing window handle and mode
- * @return Thread exit code (0 on success)
- */
 unsigned __stdcall UpdateCheckThreadProc(void* param) {
     UpdateThreadParams* threadParams = (UpdateThreadParams*)param;
     if (!threadParams) {
@@ -116,9 +86,6 @@ unsigned __stdcall UpdateCheckThreadProc(void* param) {
  * Public API
  * ============================================================================ */
 
-/**
- * @brief Clean up update check thread resources with timeout
- */
 void CleanupUpdateThread(void) {
     if (!g_hUpdateThread) {
         return;
@@ -142,31 +109,22 @@ void CleanupUpdateThread(void) {
     LOG_INFO("Thread resources cleaned up");
 }
 
-/**
- * @brief Start asynchronous update check in background thread
- * @param hwnd Main window handle for UI callbacks
- * @param silentCheck TRUE for background check, FALSE for user-initiated
- */
 void CheckForUpdateAsync(HWND hwnd, BOOL silentCheck) {
-    // Prevent concurrent update checks
     if (g_bUpdateThreadRunning) {
         LOG_INFO("Update check already running, skipping request");
         return;
     }
     
-    // Clean up stale thread handle
     if (g_hUpdateThread) {
         CloseHandle(g_hUpdateThread);
         g_hUpdateThread = NULL;
     }
     
-    // Prepare thread parameters
     UpdateThreadParams* threadParams = PrepareThreadParams(hwnd, silentCheck);
     if (!threadParams) {
         return;
     }
     
-    // Create update check thread
     g_bUpdateThreadRunning = TRUE;
     HANDLE hThread = (HANDLE)_beginthreadex(
         NULL,

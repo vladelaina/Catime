@@ -1,13 +1,6 @@
 /**
  * @file log.c
- * @brief Modular logging system implementation with table-driven diagnostics
- * 
- * Key improvements:
- * - Eliminated 123 lines of duplicate code through table-driven design
- * - Separated system diagnostics into focused single-responsibility functions
- * - Added log rotation to prevent disk space exhaustion
- * - Implemented configurable log level filtering
- * - Fixed race conditions in crash handlers using atomic operations
+ * @brief Table-driven logging with rotation and crash handling
  */
 
 #include <stdio.h>
@@ -25,11 +18,7 @@
 #define PROCESSOR_ARCHITECTURE_ARM64 12
 #endif
 
-/* ============================================================================
- * Static Data Tables - Table-Driven Design
- * ============================================================================ */
-
-/** @brief OS version mapping table - extends easily for future Windows versions */
+/** Easy to extend for future Windows versions */
 static const OSVersionInfo OS_VERSION_TABLE[] = {
     {10, 0, 22000, "Windows 11"},
     {10, 0, 0,     "Windows 10"},
@@ -42,7 +31,6 @@ static const OSVersionInfo OS_VERSION_TABLE[] = {
     {5,  0, 0,     "Windows 2000"},
 };
 
-/** @brief CPU architecture mapping table */
 static const CPUArchInfo CPU_ARCH_TABLE[] = {
     {PROCESSOR_ARCHITECTURE_AMD64, "x64 (AMD64)"},
     {PROCESSOR_ARCHITECTURE_INTEL, "x86 (Intel)"},
@@ -50,7 +38,6 @@ static const CPUArchInfo CPU_ARCH_TABLE[] = {
     {PROCESSOR_ARCHITECTURE_ARM64, "ARM64"},
 };
 
-/** @brief Signal information mapping table */
 static const SignalInfo SIGNAL_TABLE[] = {
     {SIGFPE,   "Floating point exception"},
     {SIGILL,   "Illegal instruction"},
@@ -60,7 +47,6 @@ static const SignalInfo SIGNAL_TABLE[] = {
     {SIGINT,   "User interrupt"},
 };
 
-/** @brief Log level string representations */
 static const char* const LOG_LEVEL_STRINGS[] = {
     "DEBUG",
     "INFO",
@@ -69,39 +55,15 @@ static const char* const LOG_LEVEL_STRINGS[] = {
     "FATAL"
 };
 
-/* ============================================================================
- * Global State Variables
- * ============================================================================ */
-
-/** @brief Log file path in the user's config directory */
 static wchar_t LOG_FILE_PATH[MAX_PATH] = {0};
-
-/** @brief File handle for log output, NULL when closed */
 static FILE* logFile = NULL;
-
-/** @brief Critical section for thread-safe logging */
 static CRITICAL_SECTION logCS;
-
-/** @brief Critical section initialization flag */
 static volatile LONG csInitialized = 0;
-
-/** @brief Minimum log level filter (default: DEBUG = log everything) */
 static LogLevel minLogLevel = LOG_LEVEL_DEBUG;
 
-/** @brief Atomic flag for crash handler to prevent deadlock */
+/** Atomic flag prevents deadlock in crash handler */
 static volatile LONG inCrashHandler = 0;
 
-/* ============================================================================
- * Helper Functions - Table Lookups
- * ============================================================================ */
-
-/**
- * @brief Get OS version name from version numbers using table lookup
- * @param major Major version number
- * @param minor Minor version number
- * @param build Build number
- * @return Human-readable OS name
- */
 static const char* GetOSVersionName(DWORD major, DWORD minor, DWORD build) {
     const size_t tableSize = sizeof(OS_VERSION_TABLE) / sizeof(OS_VERSION_TABLE[0]);
     
@@ -117,11 +79,6 @@ static const char* GetOSVersionName(DWORD major, DWORD minor, DWORD build) {
     return "Unknown Windows version";
 }
 
-/**
- * @brief Get CPU architecture name from architecture ID using table lookup
- * @param archId PROCESSOR_ARCHITECTURE_* constant
- * @return Human-readable architecture name
- */
 static const char* GetCPUArchitectureName(WORD archId) {
     const size_t tableSize = sizeof(CPU_ARCH_TABLE) / sizeof(CPU_ARCH_TABLE[0]);
     
@@ -134,11 +91,6 @@ static const char* GetCPUArchitectureName(WORD archId) {
     return "Unknown architecture";
 }
 
-/**
- * @brief Get signal description from signal number using table lookup
- * @param signal Signal number (SIGFPE, SIGSEGV, etc.)
- * @return Human-readable signal description
- */
 static const char* GetSignalDescription(int signal) {
     const size_t tableSize = sizeof(SIGNAL_TABLE) / sizeof(SIGNAL_TABLE[0]);
     
@@ -151,17 +103,7 @@ static const char* GetSignalDescription(int signal) {
     return "Unknown signal";
 }
 
-/* ============================================================================
- * Helper Functions - OS Version Detection
- * ============================================================================ */
-
-/**
- * @brief Get accurate OS version using RtlGetVersion (bypasses compatibility layer)
- * @param major Output: major version number
- * @param minor Output: minor version number
- * @param build Output: build number
- * @return TRUE if version retrieved successfully
- */
+/** RtlGetVersion bypasses app manifest compatibility layer */
 static BOOL GetOSVersionInfo(DWORD* major, DWORD* minor, DWORD* build) {
     if (!major || !minor || !build) {
         return FALSE;
@@ -171,7 +113,6 @@ static BOOL GetOSVersionInfo(DWORD* major, DWORD* minor, DWORD* build) {
     *minor = 0;
     *build = 0;
     
-    /** Use RtlGetVersion from ntdll.dll for accurate version detection */
     typedef NTSTATUS(WINAPI* RtlGetVersionPtr)(PRTL_OSVERSIONINFOW);
     HMODULE hNtdll = GetModuleHandleW(L"ntdll.dll");
     
@@ -197,15 +138,6 @@ static BOOL GetOSVersionInfo(DWORD* major, DWORD* minor, DWORD* build) {
     return FALSE;
 }
 
-/* ============================================================================
- * Helper Functions - File Management
- * ============================================================================ */
-
-/**
- * @brief Construct log file path based on configuration directory
- * @param logPath Output buffer for the log file path
- * @param size Size of the output buffer
- */
 static void GetLogFilePath(wchar_t* logPath, size_t size) {
     char configPath[MAX_PATH] = {0};
     GetConfigPath(configPath, MAX_PATH);
@@ -213,7 +145,6 @@ static void GetLogFilePath(wchar_t* logPath, size_t size) {
     wchar_t configPathW[MAX_PATH] = {0};
     MultiByteToWideChar(CP_UTF8, 0, configPath, -1, configPathW, MAX_PATH);
     
-    /** Extract directory from config file path */
     wchar_t* lastSeparator = wcsrchr(configPathW, L'\\');
     if (lastSeparator) {
         size_t dirLen = lastSeparator - configPathW + 1;
@@ -224,10 +155,6 @@ static void GetLogFilePath(wchar_t* logPath, size_t size) {
     }
 }
 
-/**
- * @brief Get current log file size
- * @return File size in bytes, or 0 if file doesn't exist
- */
 static ULONGLONG GetLogFileSize(void) {
     if (!LOG_FILE_PATH[0]) {
         return 0;
@@ -244,52 +171,37 @@ static ULONGLONG GetLogFileSize(void) {
     return 0;
 }
 
-/**
- * @brief Rotate log files when size limit is reached
- * 
- * Rotation scheme: Catime_Logs.log -> Catime_Logs.log.1 -> ... -> Catime_Logs.log.3
- * Oldest log (*.log.3) is deleted when creating new rotation.
- */
+/** Rotation: .log → .log.1 → .log.2 → .log.3 (oldest deleted) */
 static void RotateLogFiles(void) {
     wchar_t oldPath[MAX_PATH];
     wchar_t newPath[MAX_PATH];
     
-    /** Delete oldest log file */
     _snwprintf_s(oldPath, MAX_PATH, _TRUNCATE, L"%s.%d", LOG_FILE_PATH, LOG_ROTATION_COUNT);
     DeleteFileW(oldPath);
     
-    /** Shift existing log files: .2 -> .3, .1 -> .2, etc. */
     for (int i = LOG_ROTATION_COUNT - 1; i >= 1; i--) {
         _snwprintf_s(oldPath, MAX_PATH, _TRUNCATE, L"%s.%d", LOG_FILE_PATH, i);
         _snwprintf_s(newPath, MAX_PATH, _TRUNCATE, L"%s.%d", LOG_FILE_PATH, i + 1);
         MoveFileExW(oldPath, newPath, MOVEFILE_REPLACE_EXISTING);
     }
     
-    /** Move current log to .1 */
     _snwprintf_s(newPath, MAX_PATH, _TRUNCATE, L"%s.1", LOG_FILE_PATH);
     MoveFileExW(LOG_FILE_PATH, newPath, MOVEFILE_REPLACE_EXISTING);
 }
 
-/**
- * @brief Check if log rotation is needed and perform it
- */
 static void CheckAndRotateLog(void) {
     ULONGLONG fileSize = GetLogFileSize();
     
     if (fileSize >= LOG_MAX_FILE_SIZE) {
-        /** Close current log file */
         if (logFile) {
             fclose(logFile);
             logFile = NULL;
         }
         
-        /** Rotate files */
         RotateLogFiles();
         
-        /** Reopen log file */
         logFile = _wfopen(LOG_FILE_PATH, L"wb");
         if (logFile) {
-            /** Write UTF-8 BOM */
             fwrite(UTF8_BOM, 1, 3, logFile);
             fflush(logFile);
             
@@ -298,10 +210,6 @@ static void CheckAndRotateLog(void) {
         }
     }
 }
-
-/* ============================================================================
- * Public API - System Diagnostics (Modular Functions)
- * ============================================================================ */
 
 void LogOSVersion(void) {
     DWORD major = 0, minor = 0, build = 0;
@@ -375,19 +283,13 @@ void LogAdminPrivileges(void) {
     WriteLog(LOG_LEVEL_INFO, "Administrator Privileges: %s", isAdmin ? "Yes" : "No");
 }
 
-/* ============================================================================
- * Public API - Core Log System
- * ============================================================================ */
-
 BOOL InitializeLogSystem(void) {
-    /** Initialize critical section with atomic flag check */
     if (InterlockedCompareExchange(&csInitialized, 1, 0) == 0) {
     InitializeCriticalSection(&logCS);
     }
     
     GetLogFilePath(LOG_FILE_PATH, MAX_PATH);
     
-    /** Ensure directory exists */
     wchar_t dirPath[MAX_PATH] = {0};
     wcsncpy(dirPath, LOG_FILE_PATH, MAX_PATH - 1);
     wchar_t* lastSep = wcsrchr(dirPath, L'\\');
@@ -399,17 +301,14 @@ BOOL InitializeLogSystem(void) {
         }
     }
     
-    /** Create new log file with UTF-8 BOM */
     logFile = _wfopen(LOG_FILE_PATH, L"wb");
     if (!logFile) {
         return FALSE;
     }
     
-    /** Write UTF-8 BOM for proper encoding */
     fwrite(UTF8_BOM, 1, 3, logFile);
         fflush(logFile);
     
-    /** Write startup header with system diagnostics */
     WriteLog(LOG_LEVEL_INFO, "==================================================");
     WriteLog(LOG_LEVEL_INFO, "Catime Version: %s", CATIME_VERSION);
     WriteLog(LOG_LEVEL_INFO, "----------------- System Information -----------------");
@@ -431,15 +330,13 @@ void WriteLog(LogLevel level, const char* format, ...) {
         return;
     }
     
-    /** Filter out messages below minimum log level */
     if (level < minLogLevel) {
         return;
     }
     
-    /** Thread-safe logging with critical section */
     EnterCriticalSection(&logCS);
     
-    /** Check if rotation is needed (every 100 log entries) */
+    /** Check rotation every 100 entries to reduce overhead */
     static int logCounter = 0;
     if (++logCounter >= 100) {
         logCounter = 0;
@@ -450,7 +347,6 @@ void WriteLog(LogLevel level, const char* format, ...) {
         }
     }
     
-    /** Get current timestamp */
     time_t now;
     struct tm local_time;
     char timeStr[32] = {0};
@@ -459,10 +355,8 @@ void WriteLog(LogLevel level, const char* format, ...) {
     localtime_s(&local_time, &now);
     strftime(timeStr, sizeof(timeStr), LOG_TIMESTAMP_FORMAT, &local_time);
     
-    /** Write log entry with level */
     fprintf(logFile, "[%s] [%s] ", timeStr, LOG_LEVEL_STRINGS[level]);
     
-    /** Write formatted message */
     va_list args;
     va_start(args, format);
     vfprintf(logFile, format, args);
@@ -470,7 +364,7 @@ void WriteLog(LogLevel level, const char* format, ...) {
     
     fprintf(logFile, "\n");
     
-    /** Force immediate write for crash resilience */
+    /** fflush ensures crashes don't lose recent logs */
     fflush(logFile);
     
     LeaveCriticalSection(&logCS);
@@ -497,10 +391,6 @@ LogLevel GetMinimumLogLevel(void) {
     return minLogLevel;
 }
 
-/* ============================================================================
- * Public API - Error Handling Utilities
- * ============================================================================ */
-
 void GetLastErrorDescription(DWORD errorCode, char* buffer, int bufferSize) {
     if (!buffer || bufferSize <= 0) {
         return;
@@ -518,7 +408,6 @@ void GetLastErrorDescription(DWORD errorCode, char* buffer, int bufferSize) {
         0, NULL);
     
     if (size > 0 && messageBuffer) {
-        /** Remove trailing CRLF from system messages */
         if (size >= 2 && messageBuffer[size-2] == L'\r' && messageBuffer[size-1] == L'\n') {
             messageBuffer[size-2] = L'\0';
         }
@@ -550,28 +439,18 @@ void FormatBytes(ULONGLONG bytes, char* buffer, size_t bufferSize) {
     }
 }
 
-/* ============================================================================
- * Public API - Exception Handling
- * ============================================================================ */
-
 /**
- * @brief Handle fatal signals with lock-free emergency logging
- * 
- * Uses atomic flag to prevent deadlock in crash handlers.
- * Does not acquire critical section to avoid deadlock if crash occurred while holding lock.
- * 
- * @param signal Signal number that triggered the handler
+ * Lock-free crash handler prevents deadlock
+ * @note Skips critical section since crash may occur while holding it
  */
 static void SignalHandler(int signal) {
-    /** Prevent reentrant calls and deadlock */
     if (InterlockedExchange(&inCrashHandler, 1) != 0) {
-        /** Already in crash handler, exit immediately */
         exit(signal);
     }
     
     const char* signalDesc = GetSignalDescription(signal);
     
-    /** Emergency log write WITHOUT critical section to avoid deadlock */
+    /** No critical section to avoid deadlock */
     if (logFile) {
         fprintf(logFile, "[FATAL] Fatal signal occurred: %s (signal number: %d)\n", 
                 signalDesc, signal);
@@ -580,7 +459,6 @@ static void SignalHandler(int signal) {
         logFile = NULL;
     }
     
-    /** Show user notification */
     MessageBoxW(NULL, 
                 L"The program encountered a serious error. Please check the log file for details.", 
                 L"Fatal Error", 

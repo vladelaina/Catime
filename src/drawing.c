@@ -1,13 +1,6 @@
 /**
  * @file drawing.c
- * @brief Modular window painting and text rendering system
- * 
- * Refactored rendering pipeline with separated concerns:
- * - Time component extraction
- * - Time formatting logic
- * - Font and color management
- * - Double-buffered rendering
- * - Text drawing with effects
+ * @brief Window painting with double-buffering and auto-resize
  */
 
 #include <stdio.h>
@@ -21,29 +14,16 @@
 #include "../include/config.h"
 #include "../include/window_procedure.h"
 
-/* ============================================================================
- * External Dependencies - Reduced (most moved to headers)
- * ============================================================================ */
-
-/* Note: elapsed_time, CLOCK_TIME_FORMAT, CLOCK_SHOW_MILLISECONDS now in timer.h */
-/* Note: CLOCK_EDIT_MODE now in window.h */
 extern char FONT_FILE_NAME[100];
 extern char FONT_INTERNAL_NAME[100];
 extern char CLOCK_TEXT_COLOR[10];
 extern int CLOCK_BASE_FONT_SIZE;
 extern float CLOCK_FONT_SCALE_FACTOR;
 
-/* ============================================================================
- * Module State - Millisecond Tracking
- * ============================================================================ */
-
+/** High-resolution timer state (sub-second precision) */
 static DWORD g_timer_start_tick = 0;
 static BOOL g_timer_ms_initialized = FALSE;
 static int g_paused_milliseconds = 0;
-
-/* ============================================================================
- * Millisecond Tracking Functions
- * ============================================================================ */
 
 void ResetTimerMilliseconds(void) {
     g_timer_start_tick = GetTickCount();
@@ -51,6 +31,7 @@ void ResetTimerMilliseconds(void) {
     g_paused_milliseconds = 0;
 }
 
+/** Capture milliseconds to prevent display jumps on resume */
 void PauseTimerMilliseconds(void) {
     if (g_timer_ms_initialized) {
         DWORD current_tick = GetTickCount();
@@ -59,20 +40,13 @@ void PauseTimerMilliseconds(void) {
     }
 }
 
-/**
- * @brief Get current centiseconds from system time
- * @return Centiseconds (0-99)
- */
 static int GetSystemCentiseconds(void) {
     SYSTEMTIME st;
     GetLocalTime(&st);
     return st.wMilliseconds / 10;
 }
 
-/**
- * @brief Get elapsed centiseconds for timer modes
- * @return Current centiseconds component (0-99)
- */
+/** @return Elapsed centiseconds, frozen during pause to prevent visual jumps */
 static int GetElapsedCentiseconds(void) {
     if (CLOCK_IS_PAUSED) {
         return g_paused_milliseconds / 10;
@@ -88,14 +62,9 @@ static int GetElapsedCentiseconds(void) {
     return (int)((elapsed_ms % 1000) / 10);
 }
 
-/* ============================================================================
- * Time Component Extraction
- * ============================================================================ */
-
 /**
- * @brief Get current system time components
- * @param use24Hour TRUE for 24-hour format, FALSE for 12-hour
- * @return Time components structure
+ * @param use24Hour FALSE converts to 12-hour format
+ * @return Current system time components
  */
 static TimeComponents GetCurrentTimeComponents(BOOL use24Hour) {
     SYSTEMTIME st;
@@ -118,10 +87,6 @@ static TimeComponents GetCurrentTimeComponents(BOOL use24Hour) {
     return tc;
 }
 
-/**
- * @brief Get count-up timer components
- * @return Time components structure
- */
 static TimeComponents GetCountUpComponents(void) {
     TimeComponents tc;
     tc.hours = countup_elapsed_time / 3600;
@@ -131,10 +96,7 @@ static TimeComponents GetCountUpComponents(void) {
     return tc;
 }
 
-/**
- * @brief Get countdown timer components
- * @return Time components structure
- */
+/** @return Remaining time, clamped to zero to avoid negative display */
 static TimeComponents GetCountDownComponents(void) {
     int remaining = CLOCK_TOTAL_TIME - countdown_elapsed_time;
     if (remaining < 0) remaining = 0;
@@ -147,17 +109,14 @@ static TimeComponents GetCountDownComponents(void) {
     return tc;
 }
 
-/* ============================================================================
- * Time Formatting Logic
- * ============================================================================ */
-
 /**
- * @brief Format time components to display string
+ * Format time components with adaptive zero-padding
  * @param tc Time components to format
- * @param format Time format type
- * @param showMilliseconds TRUE to show centiseconds
+ * @param format Zero-padding strategy
+ * @param showMilliseconds TRUE to append centiseconds
  * @param buffer Output buffer
- * @param bufferSize Buffer size in wide characters
+ * @param bufferSize Buffer size in characters
+ * @note Hides leading zeros for brevity (9:59 vs 00:09:59)
  */
 static void FormatTimeComponents(
     const TimeComponents* tc,
@@ -265,9 +224,10 @@ static void FormatTimeComponents(
 }
 
 /**
- * @brief Get final time text for display
- * @param buffer Output buffer for formatted time
- * @param bufferSize Buffer size in wide characters
+ * Generate display text for current timer mode
+ * @param buffer Output buffer
+ * @param bufferSize Buffer size
+ * @note Uses preview settings if active, otherwise config values
  */
 static void GetTimeText(wchar_t* buffer, size_t bufferSize) {
     if (!buffer || bufferSize == 0) return;
@@ -281,6 +241,7 @@ static void GetTimeText(wchar_t* buffer, size_t bufferSize) {
         if (CLOCK_SHOW_SECONDS) {
             FormatTimeComponents(&tc, finalFormat, finalShowMs, buffer, bufferSize);
         } else {
+            /** Milliseconds override seconds hiding */
             if (finalShowMs) {
                 FormatTimeComponents(&tc, finalFormat, finalShowMs, buffer, bufferSize);
             } else {
@@ -298,6 +259,7 @@ static void GetTimeText(wchar_t* buffer, size_t bufferSize) {
         int remaining = CLOCK_TOTAL_TIME - countdown_elapsed_time;
         
         if (remaining <= 0) {
+            /** Empty timeout text hides window */
             if (CLOCK_TOTAL_TIME == 0 && countdown_elapsed_time == 0) {
                 buffer[0] = L'\0';
             } else if (strcmp(CLOCK_TIMEOUT_TEXT, "0") == 0) {
@@ -314,14 +276,9 @@ static void GetTimeText(wchar_t* buffer, size_t bufferSize) {
     }
 }
 
-/* ============================================================================
- * Rendering Context Management
- * ============================================================================ */
-
 /**
- * @brief Parse color string to COLORREF
- * @param colorStr Color string in "#RRGGBB" or "R,G,B" format
- * @return COLORREF value
+ * @param colorStr "#RRGGBB" or "R,G,B" format
+ * @return COLORREF value, white on parse failure
  */
 static COLORREF ParseColorString(const char* colorStr) {
     if (!colorStr || strlen(colorStr) == 0) {
@@ -340,8 +297,8 @@ static COLORREF ParseColorString(const char* colorStr) {
 }
 
 /**
- * @brief Create rendering context based on preview mode
- * @return Rendering context structure
+ * @return Render context with preview or config settings
+ * @note Static buffers avoid per-frame allocation
  */
 static RenderContext CreateRenderContext(void) {
     RenderContext ctx;
@@ -362,9 +319,9 @@ static RenderContext CreateRenderContext(void) {
 }
 
 /**
- * @brief Create font for timer display
- * @param ctx Rendering context
- * @return Font handle (caller must delete)
+ * @param ctx Font configuration
+ * @return GDI font handle (must be deleted by caller)
+ * @note Negative height = character height (not pixel height)
  */
 static HFONT CreateTimerFont(const RenderContext* ctx) {
     wchar_t fontNameW[FONT_NAME_MAX_LEN];
@@ -380,16 +337,7 @@ static HFONT CreateTimerFont(const RenderContext* ctx) {
     );
 }
 
-/* ============================================================================
- * Drawing Functions
- * ============================================================================ */
-
-/**
- * @brief Fill window background
- * @param hdc Device context
- * @param rect Rectangle to fill
- * @param editMode TRUE if in edit mode
- */
+/** @param editMode TRUE for darker background to improve drag visibility */
 static void FillBackground(HDC hdc, const RECT* rect, BOOL editMode) {
     COLORREF bgColor = editMode ? RGB(20, 20, 20) : RGB(0, 0, 0);
     HBRUSH hBrush = CreateSolidBrush(bgColor);
@@ -397,13 +345,7 @@ static void FillBackground(HDC hdc, const RECT* rect, BOOL editMode) {
     DeleteObject(hBrush);
 }
 
-/**
- * @brief Render text with outline effect
- * @param hdc Device context
- * @param text Text to render
- * @param x X coordinate
- * @param y Y coordinate
- */
+/** @note 4-direction outline ensures visibility on any desktop background */
 static void RenderTextWithOutline(HDC hdc, const wchar_t* text, int x, int y) {
     size_t textLen = wcslen(text);
     
@@ -417,14 +359,7 @@ static void RenderTextWithOutline(HDC hdc, const wchar_t* text, int x, int y) {
     TextOutW(hdc, x, y, text, (int)textLen);
 }
 
-/**
- * @brief Render text with bold effect
- * @param hdc Device context
- * @param text Text to render
- * @param x X coordinate
- * @param y Y coordinate
- * @param color Text color
- */
+/** @note Multiple passes simulate bold when font lacks native bold variant */
 static void RenderTextBold(HDC hdc, const wchar_t* text, int x, int y, COLORREF color) {
     size_t textLen = wcslen(text);
     SetTextColor(hdc, color);
@@ -434,14 +369,6 @@ static void RenderTextBold(HDC hdc, const wchar_t* text, int x, int y, COLORREF 
     }
 }
 
-/**
- * @brief Render time text to device context
- * @param hdc Device context
- * @param rect Client rectangle
- * @param text Text to render
- * @param ctx Rendering context
- * @param editMode TRUE if in edit mode
- */
 static void RenderText(HDC hdc, const RECT* rect, const wchar_t* text, const RenderContext* ctx, BOOL editMode) {
     SIZE textSize;
     GetTextExtentPoint32W(hdc, text, (int)wcslen(text), &textSize);
@@ -456,14 +383,7 @@ static void RenderText(HDC hdc, const RECT* rect, const wchar_t* text, const Ren
     }
 }
 
-/**
- * @brief Setup double buffering context
- * @param hdc Target device context
- * @param rect Client rectangle
- * @param memDC Output memory DC
- * @param memBitmap Output memory bitmap
- * @param oldBitmap Output old bitmap
- */
+/** @note GM_ADVANCED + HALFTONE improve text quality on high-DPI displays */
 static void SetupDoubleBuffer(HDC hdc, const RECT* rect, HDC* memDC, HBITMAP* memBitmap, HBITMAP* oldBitmap) {
     *memDC = CreateCompatibleDC(hdc);
     *memBitmap = CreateCompatibleBitmap(hdc, rect->right, rect->bottom);
@@ -480,12 +400,7 @@ static void SetupDoubleBuffer(HDC hdc, const RECT* rect, HDC* memDC, HBITMAP* me
     SetLayout(*memDC, 0);
 }
 
-/**
- * @brief Adjust window size to fit text
- * @param hwnd Window handle
- * @param textSize Text dimensions
- * @param rect Updated client rectangle
- */
+/** @note Skips resize if size unchanged to reduce SetWindowPos overhead */
 static void AdjustWindowSize(HWND hwnd, const SIZE* textSize, RECT* rect) {
     if (textSize->cx == (rect->right - rect->left) && 
         textSize->cy == (rect->bottom - rect->top)) {
@@ -504,10 +419,13 @@ static void AdjustWindowSize(HWND hwnd, const SIZE* textSize, RECT* rect) {
     GetClientRect(hwnd, rect);
 }
 
-/* ============================================================================
- * Main Entry Point
- * ============================================================================ */
-
+/**
+ * Main paint handler for WM_PAINT
+ * @param hwnd Window handle
+ * @param ps Paint structure from BeginPaint
+ * @note Double-buffering eliminates flicker
+ * @note Window auto-resizes to fit text
+ */
 void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     wchar_t timeText[TIME_TEXT_MAX_LEN];
     HDC hdc = ps->hdc;

@@ -1,11 +1,4 @@
-/**
- * @file startup.c
- * @brief Windows startup integration and application launch mode management
- * @version 3.0 - Comprehensive refactoring for security, modularity and maintainability
- * 
- * Handles automatic startup shortcut creation and startup behavior configuration
- * with data-driven design, improved security, and unified resource management.
- */
+/** @file startup.c @brief Windows startup integration with table-driven mode configs */
 #include "../include/startup.h"
 #include "../include/config.h"
 #include "../include/timer.h"
@@ -20,72 +13,32 @@
 #include <stdio.h>
 #include <string.h>
 
-/* ============================================================================
- * Constants
- * ============================================================================ */
-
-/** @brief Startup shortcut filename */
 #define STARTUP_LINK_FILENAME L"Catime.lnk"
-
-/** @brief Command line argument for startup detection */
 #define STARTUP_CMD_ARG L"--startup"
-
-/** @brief Configuration file key for startup mode */
 #define CONFIG_KEY_STARTUP_MODE "STARTUP_MODE="
-
-/** @brief Maximum startup mode name length */
 #define STARTUP_MODE_MAX_LEN 20
-
-/** @brief Main timer ID */
 #define MAIN_TIMER_ID 1
-
-/** @brief Configuration file line buffer size */
 #define CONFIG_LINE_BUFFER_SIZE 256
-
-/* Startup mode identifiers */
 #define MODE_NAME_COUNT_UP "COUNT_UP"
 #define MODE_NAME_SHOW_TIME "SHOW_TIME"
 #define MODE_NAME_NO_DISPLAY "NO_DISPLAY"
 #define MODE_NAME_DEFAULT "DEFAULT"
 
-/* ============================================================================
- * External Global Variables
- * ============================================================================ */
-
-/**
- * External declarations - Reduced (most in timer.h)
- * Note: All timer state variables (CLOCK_*, countdown_elapsed_time, etc.) now in timer.h
- */
-
-/* ============================================================================
- * Data Structures
- * ============================================================================ */
-
-/**
- * @brief COM Shell Link wrapper for RAII-style resource management
- */
 typedef struct {
-    IShellLinkW* shellLink;       /**< IShellLink interface pointer */
-    IPersistFile* persistFile;    /**< IPersistFile interface pointer */
-    BOOL initialized;             /**< Whether COM objects are valid */
+    IShellLinkW* shellLink;
+    IPersistFile* persistFile;
+    BOOL initialized;
 } ComShellLink;
 
-/**
- * @brief Startup mode configuration
- * Data-driven approach to eliminate if-else chains
- */
+/** Table-driven design eliminates if-else chains */
 typedef struct {
-    const char* modeName;         /**< Mode identifier string */
-    BOOL showCurrentTime;         /**< Display current system time */
-    BOOL countUp;                 /**< Enable count-up timer */
-    BOOL enableTimer;             /**< Whether timer should run */
-    int totalTime;                /**< Initial timer value (-1 = use default) */
-    const char* description;      /**< Human-readable description */
+    const char* modeName;
+    BOOL showCurrentTime;
+    BOOL countUp;
+    BOOL enableTimer;
+    int totalTime;
+    const char* description;
 } StartupModeConfig;
-
-/* ============================================================================
- * Startup Mode Configuration Table (Data-Driven)
- * ============================================================================ */
 
 static const StartupModeConfig STARTUP_MODE_CONFIGS[] = {
     { 
@@ -112,18 +65,7 @@ static const StartupModeConfig STARTUP_MODE_CONFIGS[] = {
 
 static const size_t STARTUP_MODE_COUNT = sizeof(STARTUP_MODE_CONFIGS) / sizeof(STARTUP_MODE_CONFIGS[0]);
 
-/* ============================================================================
- * Helper Functions - Path Operations
- * ============================================================================ */
-
-/**
- * @brief Get startup folder path with shortcut filename appended (safe)
- * @param output Output buffer for complete path
- * @param outputSize Size of output buffer in wchar_t
- * @return TRUE on success
- * 
- * Uses PathCombineW for safe path concatenation
- */
+/** PathCombineW prevents buffer overflows vs sprintf */
 static BOOL GetStartupShortcutPath(wchar_t* output, size_t outputSize) {
     wchar_t startupFolder[MAX_PATH];
     HRESULT hr;
@@ -142,12 +84,6 @@ static BOOL GetStartupShortcutPath(wchar_t* output, size_t outputSize) {
     return TRUE;
 }
 
-/**
- * @brief Get current executable path
- * @param output Output buffer for executable path
- * @param outputSize Size of output buffer in wchar_t
- * @return TRUE on success
- */
 static BOOL GetExecutablePath(wchar_t* output, size_t outputSize) {
     DWORD result = GetModuleFileNameW(NULL, output, (DWORD)outputSize);
     if (result == 0 || result >= outputSize) {
@@ -157,15 +93,6 @@ static BOOL GetExecutablePath(wchar_t* output, size_t outputSize) {
     return TRUE;
 }
 
-/* ============================================================================
- * COM Shell Link Management
- * ============================================================================ */
-
-/**
- * @brief Initialize COM Shell Link wrapper
- * @param link Pointer to ComShellLink structure
- * @return TRUE on success
- */
 static BOOL InitComShellLink(ComShellLink* link) {
     HRESULT hr;
     
@@ -194,10 +121,6 @@ static BOOL InitComShellLink(ComShellLink* link) {
     return TRUE;
 }
 
-/**
- * @brief Cleanup COM Shell Link wrapper
- * @param link Pointer to ComShellLink structure
- */
 static void CleanupComShellLink(ComShellLink* link) {
     if (link->persistFile) {
         link->persistFile->lpVtbl->Release(link->persistFile);
@@ -210,40 +133,16 @@ static void CleanupComShellLink(ComShellLink* link) {
     link->initialized = FALSE;
 }
 
-/* ============================================================================
- * Timer Management Helper
- * ============================================================================ */
-
-/**
- * @brief Restart timer with specified interval
- * @param hwnd Window handle
- * @param interval Timer interval in milliseconds
- * 
- * Centralizes timer reset logic to avoid repetition
- */
+/** Centralizes timer reset to avoid repetition */
 static void RestartTimer(HWND hwnd, UINT interval) {
     KillTimer(hwnd, MAIN_TIMER_ID);
     SetTimer(hwnd, MAIN_TIMER_ID, interval, NULL);
 }
 
-/**
- * @brief Stop timer
- * @param hwnd Window handle
- */
 static void StopTimer(HWND hwnd) {
     KillTimer(hwnd, MAIN_TIMER_ID);
 }
 
-/* ============================================================================
- * Configuration File Operations
- * ============================================================================ */
-
-/**
- * @brief Read startup mode from configuration file
- * @param modeName Output buffer for mode name
- * @param modeNameSize Size of output buffer
- * @return TRUE if mode was read successfully
- */
 static BOOL ReadStartupModeConfig(char* modeName, size_t modeNameSize) {
     char configPath[MAX_PATH];
     wchar_t wconfigPath[MAX_PATH];
@@ -275,37 +174,16 @@ static BOOL ReadStartupModeConfig(char* modeName, size_t modeNameSize) {
     return found;
 }
 
-/* ============================================================================
- * Startup Mode Application (Data-Driven)
- * ============================================================================ */
-
-/**
- * @brief Apply startup mode configuration to application state
- * @param hwnd Window handle for timer operations
- * @param config Startup mode configuration to apply
- * 
- * Unified mode application logic using data-driven configuration
- */
+/** Unified mode application via data-driven config */
 static void ApplyModeConfig(HWND hwnd, const StartupModeConfig* config) {
     LOG_INFO("Applying startup mode: %s - %s", config->modeName, config->description);
     
-    // Set global state flags
     CLOCK_SHOW_CURRENT_TIME = config->showCurrentTime;
     CLOCK_COUNT_UP = config->countUp;
-    
-    // Set timer value
-    if (config->totalTime == -1) {
-        // Use default time
-        CLOCK_TOTAL_TIME = CLOCK_DEFAULT_START_TIME;
-    } else {
-        CLOCK_TOTAL_TIME = config->totalTime;
-    }
-    
-    // Reset elapsed time counters
+    CLOCK_TOTAL_TIME = (config->totalTime == -1) ? CLOCK_DEFAULT_START_TIME : config->totalTime;
     countdown_elapsed_time = 0;
     countup_elapsed_time = 0;
     
-    // Manage timer state
     if (config->enableTimer) {
         RestartTimer(hwnd, GetTimerInterval());
     } else {
@@ -313,11 +191,6 @@ static void ApplyModeConfig(HWND hwnd, const StartupModeConfig* config) {
     }
 }
 
-/**
- * @brief Find startup mode configuration by name
- * @param modeName Mode name to search for
- * @return Pointer to configuration or NULL if not found
- */
 static const StartupModeConfig* FindModeConfig(const char* modeName) {
     for (size_t i = 0; i < STARTUP_MODE_COUNT; i++) {
         if (strcmp(modeName, STARTUP_MODE_CONFIGS[i].modeName) == 0) {
@@ -327,29 +200,15 @@ static const StartupModeConfig* FindModeConfig(const char* modeName) {
     return NULL;
 }
 
-/**
- * @brief Get default startup mode configuration
- * @return Pointer to default configuration
- */
 static const StartupModeConfig* GetDefaultModeConfig(void) {
-    // Return the DEFAULT mode (should be last in array)
     for (size_t i = 0; i < STARTUP_MODE_COUNT; i++) {
         if (strcmp(STARTUP_MODE_CONFIGS[i].modeName, MODE_NAME_DEFAULT) == 0) {
             return &STARTUP_MODE_CONFIGS[i];
         }
     }
-    // Fallback to first config if DEFAULT not found
     return &STARTUP_MODE_CONFIGS[0];
 }
 
-/* ============================================================================
- * Public API Implementation
- * ============================================================================ */
-
-/**
- * @brief Check if application is configured to start automatically with Windows
- * @return TRUE if startup shortcut exists in user's Startup folder
- */
 BOOL IsAutoStartEnabled(void) {
     wchar_t startupPath[MAX_PATH];
     
@@ -363,12 +222,7 @@ BOOL IsAutoStartEnabled(void) {
     return exists;
 }
 
-/**
- * @brief Create startup shortcut in Windows Startup folder
- * @return TRUE if shortcut creation succeeded
- * 
- * Creates shortcut with --startup argument for startup behavior detection
- */
+/** --startup argument enables startup behavior detection */
 BOOL CreateShortcut(void) {
     ComShellLink link;
     wchar_t startupPath[MAX_PATH];
@@ -390,7 +244,6 @@ BOOL CreateShortcut(void) {
         return FALSE;
     }
     
-    // Set executable path
     hr = link.shellLink->lpVtbl->SetPath(link.shellLink, exePath);
     if (FAILED(hr)) {
         LOG_ERROR("Failed to set shortcut path, hr=0x%08X", (unsigned int)hr);
@@ -398,13 +251,11 @@ BOOL CreateShortcut(void) {
         return FALSE;
     }
     
-    // Add startup argument
     hr = link.shellLink->lpVtbl->SetArguments(link.shellLink, STARTUP_CMD_ARG);
     if (FAILED(hr)) {
         LOG_WARNING("Failed to set shortcut arguments, hr=0x%08X", (unsigned int)hr);
     }
     
-    // Save shortcut
     hr = link.persistFile->lpVtbl->Save(link.persistFile, startupPath, TRUE);
     if (SUCCEEDED(hr)) {
         LOG_INFO("Startup shortcut created successfully: %ls", startupPath);
@@ -417,10 +268,6 @@ BOOL CreateShortcut(void) {
     return success;
 }
 
-/**
- * @brief Remove startup shortcut from Windows Startup folder
- * @return TRUE if shortcut removal succeeded or shortcut didn't exist
- */
 BOOL RemoveShortcut(void) {
     wchar_t startupPath[MAX_PATH];
     
@@ -444,12 +291,7 @@ BOOL RemoveShortcut(void) {
     }
 }
 
-/**
- * @brief Update existing startup shortcut to current executable location
- * @return TRUE if update succeeded or no shortcut exists
- * 
- * Recreates shortcut if one exists to ensure it points to current executable
- */
+/** Recreates shortcut to handle app relocations */
 BOOL UpdateStartupShortcut(void) {
     LOG_INFO("Updating startup shortcut if exists");
     
@@ -472,13 +314,7 @@ BOOL UpdateStartupShortcut(void) {
     return TRUE;
 }
 
-/**
- * @brief Apply configured startup mode behavior to timer application
- * @param hwnd Main window handle for timer operations
- * 
- * Reads STARTUP_MODE from config and applies corresponding configuration
- * using data-driven mode handlers. Falls back to DEFAULT mode if not found.
- */
+/** Reads STARTUP_MODE from config, falls back to DEFAULT if not found */
 void ApplyStartupMode(HWND hwnd) {
     char modeName[STARTUP_MODE_MAX_LEN] = {0};
     const StartupModeConfig* config = NULL;
@@ -497,7 +333,5 @@ void ApplyStartupMode(HWND hwnd) {
     }
     
     ApplyModeConfig(hwnd, config);
-    
-    // Trigger window repaint to reflect mode changes
     InvalidateRect(hwnd, NULL, TRUE);
 }

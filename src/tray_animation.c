@@ -1,13 +1,12 @@
 /**
  * @file tray_animation.c
- * @brief System tray icon animation implementation with high-precision timing
+ * @brief High-precision system tray icon animation
  * 
- * This implementation uses a combination of:
- * - Multimedia timer (timeSetEvent) for high precision (1ms resolution vs 15.6ms)
- * - Fixed tray update frequency (50ms) to avoid Windows Explorer throttling
- * - Adaptive frame rate to handle different system performance levels
- * 
- * This architecture eliminates flicker/stutter that occurs with fast animations.
+ * Architecture:
+ * - Multimedia timer (timeSetEvent) at 10ms for smooth internal frame logic
+ * - Fixed 50ms tray update interval to prevent Windows Explorer throttling
+ * - Adaptive frame rate monitoring to handle system load variations
+ * - Pre-rendered HICON frames to eliminate runtime blending overhead
  */
 
 #include <windows.h> 
@@ -34,14 +33,17 @@
 #include "../include/system_monitor.h"
 #include "../include/log.h"
 
-/** @brief Represents a file or folder entry for sorting animation menus. */
+/** @brief Animation menu entry for natural sorting (folders first, then numeric) */
 typedef struct {
     wchar_t name[MAX_PATH];
-    char rel_path_utf8[MAX_PATH]; /** Relative path from animations root */
+    char rel_path_utf8[MAX_PATH];
     BOOL is_dir;
 } AnimationEntry;
 
-/** @brief Natural string compare for wide-char names: numbers compare by value. */
+/**
+ * @brief Natural string comparison with numeric ordering
+ * @details Handles leading zeros and multi-digit numbers correctly (e.g., "img2" < "img10")
+ */
 static int NaturalCompareW(const wchar_t* a, const wchar_t* b) {
     const wchar_t* pa = a;
     const wchar_t* pb = b;
@@ -49,7 +51,6 @@ static int NaturalCompareW(const wchar_t* a, const wchar_t* b) {
         if (iswdigit(*pa) && iswdigit(*pb)) {
             const wchar_t* za = pa; while (*za == L'0') za++;
             const wchar_t* zb = pb; while (*zb == L'0') zb++;
-            /** Primary: more leading zeros first */
             size_t leadA = (size_t)(za - pa);
             size_t leadB = (size_t)(zb - pb);
             if (leadA != leadB) return (leadA > leadB) ? -1 : 1;
@@ -74,91 +75,78 @@ static int NaturalCompareW(const wchar_t* a, const wchar_t* b) {
     return 0;
 }
 
-/** @brief qsort comparator for AnimationEntry, directories first, then natural order. */
+/** @brief qsort comparator: directories first, then natural numeric order */
 static int CompareAnimationEntries(const void* a, const void* b) {
     const AnimationEntry* entryA = (const AnimationEntry*)a;
     const AnimationEntry* entryB = (const AnimationEntry*)b;
     if (entryA->is_dir != entryB->is_dir) {
-        return entryB->is_dir - entryA->is_dir; // Directories first
+        return entryB->is_dir - entryA->is_dir;
     }
     return NaturalCompareW(entryA->name, entryB->name);
 }
 
-/** Forward declarations */
 static void CALLBACK HighPrecisionTimerCallback(UINT uTimerID, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2);
 static void CALLBACK FallbackTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time);
 
-/**
- * @brief High-precision animation timing configuration
- */
-#define INTERNAL_TICK_INTERVAL_MS 10        /** Internal animation logic runs at 100Hz */
-#define TRAY_UPDATE_INTERVAL_MS 50          /** Actual tray updates at 20Hz (optimal for Windows Explorer) */
-#define TRAY_ANIM_TIMER_ID 42420            /** Fallback timer ID if multimedia timer fails */
-#define WM_TRAY_UPDATE_ICON (WM_USER + 100) /** Custom message for thread-safe tray updates */
+/** @brief Timing configuration: decouples internal logic (10ms) from tray updates (50ms) */
+#define INTERNAL_TICK_INTERVAL_MS 10
+#define TRAY_UPDATE_INTERVAL_MS 50
+#define TRAY_ANIM_TIMER_ID 42420
+#define WM_TRAY_UPDATE_ICON (WM_USER + 100)
 
-/** @brief User-configurable minimum interval (0 = no floor) loaded from config */
 static UINT g_userMinIntervalMs = 0;
 
-/**
- * @brief High-precision timer state
- */
-static MMRESULT g_mmTimerId = 0;                    /** Multimedia timer handle */
-static BOOL g_useHighPrecisionTimer = TRUE;         /** Whether high-precision timer is available */
-static UINT g_internalAccumulator = 0;              /** Accumulator for fixed tray update interval */
-static UINT g_currentEffectiveInterval = TRAY_UPDATE_INTERVAL_MS;  /** Current effective update interval */
-static BOOL g_pendingTrayUpdate = FALSE;            /** Flag indicating tray update is pending */
-static CRITICAL_SECTION g_animCriticalSection;      /** Critical section for thread-safe state access */
-static BOOL g_criticalSectionInitialized = FALSE;   /** Whether critical section is initialized */
+/** @brief High-precision timer state */
+static MMRESULT g_mmTimerId = 0;
+static BOOL g_useHighPrecisionTimer = TRUE;
+static UINT g_internalAccumulator = 0;
+static UINT g_currentEffectiveInterval = TRAY_UPDATE_INTERVAL_MS;
+static BOOL g_pendingTrayUpdate = FALSE;
+static CRITICAL_SECTION g_animCriticalSection;
+static BOOL g_criticalSectionInitialized = FALSE;
 
-/**
- * @brief Adaptive frame rate monitoring
- */
-static DWORD g_lastTrayUpdateTime = 0;              /** Last time tray was actually updated */
-static UINT g_consecutiveLateUpdates = 0;           /** Count of updates that were too slow */
-static UINT g_targetInternalInterval = INTERNAL_TICK_INTERVAL_MS;  /** Target internal tick interval */
-static double g_internalFramePosition = 0.0;        /** Sub-frame position for smooth animation */
+/** @brief Adaptive frame rate tracking */
+static DWORD g_lastTrayUpdateTime = 0;
+static UINT g_consecutiveLateUpdates = 0;
+static UINT g_targetInternalInterval = INTERNAL_TICK_INTERVAL_MS;
+static double g_internalFramePosition = 0.0;
 
-/** @brief Loaded icon frames and state */
+/** @brief Animation resources: icons, indices, and timing */
 static HICON g_trayIcons[MAX_TRAY_FRAMES];
 static int g_trayIconCount = 0;
 static int g_trayIconIndex = 0;
 static UINT g_trayInterval = 0;
 static HWND g_trayHwnd = NULL;
-static char g_animationName[MAX_PATH] = "__logo__"; /** current folder under animations */
-static char g_previewAnimationName[MAX_PATH] = ""; /** name of animation being previewed */
-static BOOL g_isPreviewActive = FALSE; /** preview mode flag */
+static char g_animationName[MAX_PATH] = "__logo__";
+static char g_previewAnimationName[MAX_PATH] = "";
+static BOOL g_isPreviewActive = FALSE;
 static HICON g_previewIcons[MAX_TRAY_FRAMES];
 static int g_previewCount = 0;
 static int g_previewIndex = 0;
-static BOOL g_isAnimated = FALSE; /** whether current animation source is a single GIF/WebP file */
-static UINT g_frameDelaysMs[MAX_TRAY_FRAMES]; /** per-frame delay in ms for animated images */
-static BOOL g_isPreviewAnimated = FALSE; /** whether current preview source is a single GIF/WebP file */
-static UINT g_previewFrameDelaysMs[MAX_TRAY_FRAMES]; /** per-frame delay for animated image preview */
+static BOOL g_isAnimated = FALSE;
+static UINT g_frameDelaysMs[MAX_TRAY_FRAMES];
+static BOOL g_isPreviewAnimated = FALSE;
+static UINT g_previewFrameDelaysMs[MAX_TRAY_FRAMES];
 
-/** GIF composition canvas for proper frame blending */
+/** @brief Composition canvas for GIF/WebP frame blending (32bpp PBGRA) */
 static UINT g_animCanvasWidth = 0;
 static UINT g_animCanvasHeight = 0;
-static BYTE* g_animCanvas = NULL;  /** 32bpp PBGRA canvas for frame composition */
-static BYTE* g_previewAnimCanvas = NULL;  /** 32bpp PBGRA canvas for preview composition */
+static BYTE* g_animCanvas = NULL;
+static BYTE* g_previewAnimCanvas = NULL;
 
-/**
- * @brief Simple memory pool for reducing malloc/free overhead
- * Pre-allocates common buffer sizes to avoid repeated allocations
- */
-#define MEMORY_POOL_BUFFER_SIZE (256 * 1024)  /** 256KB default buffer */
+/** @brief Memory pool: reuses 256KB buffer to reduce malloc overhead in frame decoding loops */
+#define MEMORY_POOL_BUFFER_SIZE (256 * 1024)
 static BYTE* g_memoryPoolBuffer = NULL;
 static SIZE_T g_memoryPoolSize = 0;
 static BOOL g_memoryPoolInUse = FALSE;
 
-/**
- * @brief Error recovery state tracking
- */
+/** @brief Error recovery: fallback to logo after consecutive failures or timeout */
 static UINT g_consecutiveUpdateFailures = 0;
 static DWORD g_lastSuccessfulUpdateTime = 0;
 #define MAX_CONSECUTIVE_FAILURES 5
-#define UPDATE_TIMEOUT_MS 5000  /** 5 seconds without update = fallback */
+#define UPDATE_TIMEOUT_MS 5000
 
-/** @brief Context for directing decoded animation frames to tray or preview targets */
+/** @brief Routes decoded frames to either main tray or preview slot */
 typedef struct {
     HICON* icons;
     int*   count;
@@ -169,12 +157,12 @@ typedef struct {
 } DecodeTarget;
 
 /**
- * @brief Allocate memory from pool or fallback to malloc
- * @param size Size in bytes to allocate
- * @return Pointer to allocated memory, or NULL on failure
+ * @brief Allocate from pool or fallback to malloc
+ * @param size Requested size in bytes
+ * @return Memory pointer or NULL on failure
+ * @note Pool is single-use: only one allocation active at a time
  */
 static void* MemoryPool_Alloc(SIZE_T size) {
-    /** Try to use memory pool for common sizes */
     if (!g_memoryPoolInUse && size <= MEMORY_POOL_BUFFER_SIZE) {
         if (!g_memoryPoolBuffer) {
             g_memoryPoolBuffer = (BYTE*)malloc(MEMORY_POOL_BUFFER_SIZE);
@@ -189,30 +177,26 @@ static void* MemoryPool_Alloc(SIZE_T size) {
         }
     }
     
-    /** Fallback to regular malloc for large allocations or when pool is in use */
     return malloc(size);
 }
 
 /**
- * @brief Free memory back to pool or call free
- * @param ptr Pointer to memory to free
+ * @brief Release memory back to pool or free it
+ * @param ptr Pointer to memory (pool or heap)
  */
 static void MemoryPool_Free(void* ptr) {
     if (!ptr) return;
     
-    /** Check if this is from our pool */
     if (ptr == g_memoryPoolBuffer) {
         g_memoryPoolInUse = FALSE;
-        /** Don't actually free, keep for reuse */
         return;
     }
     
-    /** Regular malloc'd memory */
     free(ptr);
 }
 
 /**
- * @brief Clean up memory pool (call on shutdown)
+ * @brief Destroy memory pool on shutdown
  */
 static void MemoryPool_Cleanup(void) {
     if (g_memoryPoolBuffer) {
@@ -223,22 +207,19 @@ static void MemoryPool_Cleanup(void) {
     }
 }
 
-/**
- * @brief Record successful tray update for error recovery
- */
+/** @brief Reset error counters after successful update */
 static void RecordSuccessfulUpdate(void) {
     g_consecutiveUpdateFailures = 0;
     g_lastSuccessfulUpdateTime = GetTickCount();
 }
 
 /**
- * @brief Record failed tray update and check if fallback needed
- * @return TRUE if should enter fallback mode
+ * @brief Track update failure and determine if fallback needed
+ * @return TRUE if thresholds exceeded (5 failures or 5s timeout)
  */
 static BOOL RecordFailedUpdate(void) {
     g_consecutiveUpdateFailures++;
     
-    /** Check for too many consecutive failures */
     if (g_consecutiveUpdateFailures >= MAX_CONSECUTIVE_FAILURES) {
         WriteLog(LOG_LEVEL_WARNING, 
                  "Animation update failed %d times consecutively, entering fallback mode",
@@ -246,7 +227,6 @@ static BOOL RecordFailedUpdate(void) {
         return TRUE;
     }
     
-    /** Check for timeout */
     DWORD currentTime = GetTickCount();
     if (g_lastSuccessfulUpdateTime > 0) {
         DWORD elapsed = currentTime - g_lastSuccessfulUpdateTime;
@@ -260,21 +240,15 @@ static BOOL RecordFailedUpdate(void) {
     return FALSE;
 }
 
-/**
- * @brief Fallback to logo icon when animation fails
- */
+/** @brief Switch to logo icon as safe fallback */
 static void FallbackToLogoIcon(void) {
     WriteLog(LOG_LEVEL_INFO, "Falling back to logo icon due to animation errors");
-    
-    /** Reset counters */
     g_consecutiveUpdateFailures = 0;
     g_lastSuccessfulUpdateTime = GetTickCount();
-    
-    /** Switch to logo */
     SetCurrentAnimationName("__logo__");
 }
 
-/** @brief Trim whitespace and quotes from both ends of a mutable C string. */
+/** @brief Strip whitespace and quotes from config values */
 static void NormalizeAnimConfigValue(char* s) {
     if (!s) return;
     char* p = s;
@@ -288,8 +262,11 @@ static void NormalizeAnimConfigValue(char* s) {
     }
 }
 
-
-/** @brief Selects the appropriate icon set (tray or preview) for an operation */
+/**
+ * @brief Select target for decoded frames (main tray or preview)
+ * @param isPreview TRUE for preview slot, FALSE for main tray
+ * @return Pointers to target arrays and state variables
+ */
 static DecodeTarget GetDecodeTarget(BOOL isPreview) {
     if (isPreview) {
         return (DecodeTarget){
@@ -312,9 +289,10 @@ static DecodeTarget GetDecodeTarget(BOOL isPreview) {
 }
 
 /**
- * @brief Compute scaled delay according to current animation speed metric and mapping
+ * @brief Apply dynamic speed scaling to base frame delay
  * @param baseDelay Base delay in milliseconds
- * @return Scaled delay in milliseconds (lower bound 10ms)
+ * @return Scaled delay (respects user minimum if set)
+ * @note Scaling is based on CPU/mem usage or timer progress
  */
 static UINT ComputeScaledDelay(UINT baseDelay) {
     if (baseDelay == 0) baseDelay = g_trayInterval > 0 ? g_trayInterval : 150;
@@ -326,7 +304,6 @@ static UINT ComputeScaledDelay(UINT baseDelay) {
         SystemMonitor_GetUsage(&cpu, &mem);
         percent = cpu;
     } else if (metric == ANIMATION_SPEED_TIMER) {
-        /* Note: Timer state variables now in timer.h */
         if (!CLOCK_SHOW_CURRENT_TIME) {
             if (!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0) {
                 double p = (double)countdown_elapsed_time / (double)CLOCK_TOTAL_TIME;
@@ -374,8 +351,9 @@ static UINT ComputeScaledDelay(UINT baseDelay) {
 }
 
 /**
- * @brief Adaptive frame rate monitoring and adjustment
- * Monitors actual update performance and adjusts internal timing if system is struggling
+ * @brief Adapt update interval based on actual performance
+ * @note Slows down if system can't keep up (>150% target for 3 updates)
+ * @note Speeds back up gradually if performing well (<80% target)
  */
 static void AdaptiveFrameRateUpdate(void) {
     DWORD currentTime = GetTickCount();
@@ -388,21 +366,18 @@ static void AdaptiveFrameRateUpdate(void) {
     DWORD actualElapsed = currentTime - g_lastTrayUpdateTime;
     g_lastTrayUpdateTime = currentTime;
     
-    /** If actual interval is significantly longer than target, system is struggling */
-    if (actualElapsed > g_currentEffectiveInterval * 3 / 2) {  /** >150% of target */
+    if (actualElapsed > g_currentEffectiveInterval * 3 / 2) {
         g_consecutiveLateUpdates++;
         
-        /** After 3 consecutive late updates, slow down to give system breathing room */
         if (g_consecutiveLateUpdates >= 3) {
-            if (g_currentEffectiveInterval < 200) {  /** Don't slow down beyond 200ms */
+            if (g_currentEffectiveInterval < 200) {
                 g_currentEffectiveInterval += 10;
             }
             g_consecutiveLateUpdates = 0;
         }
-    } else if (actualElapsed < g_currentEffectiveInterval * 4 / 5) {  /** <80% of target, performing well */
+    } else if (actualElapsed < g_currentEffectiveInterval * 4 / 5) {
         g_consecutiveLateUpdates = 0;
         
-        /** Gradually speed back up to target rate if we slowed down */
         if (g_currentEffectiveInterval > TRAY_UPDATE_INTERVAL_MS) {
             g_currentEffectiveInterval -= 2;
             if (g_currentEffectiveInterval < TRAY_UPDATE_INTERVAL_MS) {
@@ -410,21 +385,19 @@ static void AdaptiveFrameRateUpdate(void) {
             }
         }
     } else {
-        /** Normal timing, reset consecutive counter */
         g_consecutiveLateUpdates = 0;
     }
 }
 
 /**
- * @brief Advance internal frame position based on animation speed
- * @return TRUE if we should advance to next visual frame
+ * @brief Accumulate fractional frame progress and check for frame advance
+ * @return TRUE if accumulated enough time to show next frame
+ * @note Uses sub-frame accumulation for smooth variable-speed animation
  */
 static BOOL AdvanceInternalFramePosition(void) {
-    /** Check if we have frames to animate (preview or normal) */
     int frameCount = g_isPreviewActive ? g_previewCount : g_trayIconCount;
     if (frameCount <= 0) return FALSE;
     
-    /** Calculate frame advancement speed */
     UINT baseDelay;
     if (g_isPreviewActive) {
         baseDelay = g_isPreviewAnimated ? g_previewFrameDelaysMs[g_previewIndex] : g_trayInterval;
@@ -433,15 +406,12 @@ static BOOL AdvanceInternalFramePosition(void) {
     }
     if (baseDelay == 0) baseDelay = g_trayInterval > 0 ? g_trayInterval : 150;
     
-    /** Apply speed scaling */
     UINT scaledDelay = ComputeScaledDelay(baseDelay);
     if (scaledDelay == 0) scaledDelay = 50;
     
-    /** Advance by the fraction of a frame that elapsed */
     double frameAdvancement = (double)g_targetInternalInterval / (double)scaledDelay;
     g_internalFramePosition += frameAdvancement;
     
-    /** Check if we've accumulated enough to advance to next frame */
     if (g_internalFramePosition >= 1.0) {
         g_internalFramePosition -= 1.0;
         return TRUE;
@@ -451,13 +421,12 @@ static BOOL AdvanceInternalFramePosition(void) {
 }
 
 /**
- * @brief Request tray icon update (thread-safe, called from timer callback)
- * This only sets a flag, actual update happens in main UI thread
+ * @brief Request tray update from timer thread (thread-safe)
+ * @note Sets flag and posts message; actual Shell API call in main thread
  */
 static void RequestTrayIconUpdate(void) {
     if (!g_trayHwnd || !IsWindow(g_trayHwnd)) return;
     
-    /** Set pending flag and post message to main thread */
     if (g_criticalSectionInitialized) {
         EnterCriticalSection(&g_animCriticalSection);
         g_pendingTrayUpdate = TRUE;
@@ -466,18 +435,16 @@ static void RequestTrayIconUpdate(void) {
         g_pendingTrayUpdate = TRUE;
     }
     
-    /** Post message to main UI thread to do actual update */
     PostMessage(g_trayHwnd, WM_TRAY_UPDATE_ICON, 0, 0);
 }
 
 /**
- * @brief Update tray icon to current frame (called in main UI thread only)
- * This function MUST be called from the main UI thread, not from timer callback
+ * @brief Apply current frame to tray icon (MUST run in main UI thread)
+ * @warning Calls Shell_NotifyIconW - not safe from worker threads
  */
 static void UpdateTrayIconToCurrentFrame(void) {
     if (!g_trayHwnd || !IsWindow(g_trayHwnd)) return;
     
-    /** Clear pending flag */
     if (g_criticalSectionInitialized) {
         EnterCriticalSection(&g_animCriticalSection);
         g_pendingTrayUpdate = FALSE;
@@ -488,15 +455,11 @@ static void UpdateTrayIconToCurrentFrame(void) {
     
     int count = g_isPreviewActive ? g_previewCount : g_trayIconCount;
     if (count <= 0) {
-        /** No frames available - if previewing, just cancel preview; otherwise check fallback */
         if (g_isPreviewActive) {
-            /** Preview failed to load, silently cancel preview without changing main animation */
             g_isPreviewActive = FALSE;
             return;
         }
-        /** For main animation: if it's percent icon, update it directly; otherwise fallback */
         if (_stricmp(g_animationName, "__cpu__") == 0 || _stricmp(g_animationName, "__mem__") == 0) {
-            /** Percent icons are handled by periodic updater, trigger an update */
             float cpu = 0.0f, mem = 0.0f;
             SystemMonitor_GetUsage(&cpu, &mem);
             int p = (_stricmp(g_animationName, "__cpu__") == 0) ? (int)(cpu + 0.5f) : (int)(mem + 0.5f);
@@ -515,14 +478,12 @@ static void UpdateTrayIconToCurrentFrame(void) {
             }
             return;
         }
-        /** For other animations, check if we should fallback */
         if (RecordFailedUpdate()) {
             FallbackToLogoIcon();
         }
         return;
     }
     
-    /** Ensure index is valid */
     if (g_isPreviewActive) {
         if (g_previewIndex >= g_previewCount) g_previewIndex = 0;
     } else {
@@ -531,12 +492,10 @@ static void UpdateTrayIconToCurrentFrame(void) {
     
     HICON hIcon = g_isPreviewActive ? g_previewIcons[g_previewIndex] : g_trayIcons[g_trayIconIndex];
     
-    /** Check if icon is valid */
     if (!hIcon) {
         WriteLog(LOG_LEVEL_WARNING, "Attempting to update with NULL icon at index %d", 
                  g_isPreviewActive ? g_previewIndex : g_trayIconIndex);
         
-        /** If previewing and icon is invalid, cancel preview; otherwise fallback */
         if (g_isPreviewActive) {
             g_isPreviewActive = FALSE;
             return;
@@ -548,7 +507,6 @@ static void UpdateTrayIconToCurrentFrame(void) {
         return;
     }
     
-    /** Update tray icon (safe: we're in main UI thread) */
     NOTIFYICONDATAW nid = {0};
     nid.cbSize = sizeof(nid);
     nid.hWnd = g_trayHwnd;
@@ -569,39 +527,32 @@ static void UpdateTrayIconToCurrentFrame(void) {
         return;
     }
     
-    /** Update adaptive monitoring */
     AdaptiveFrameRateUpdate();
 }
 
 /**
- * @brief High-precision timer callback (runs at 100Hz internally)
- * This is the core of the new timing system
- * IMPORTANT: This runs in a WORKER THREAD, not the main UI thread!
- * DO NOT call Windows UI functions directly from here.
+ * @brief Multimedia timer callback at 10ms intervals (100Hz)
+ * @warning Executes in worker thread - NO direct UI calls allowed
+ * @note Advances frame logic at high rate, posts updates to UI thread at 50ms
  */
 static void CALLBACK HighPrecisionTimerCallback(UINT uTimerID, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2) {
     (void)uTimerID; (void)uMsg; (void)dwUser; (void)dw1; (void)dw2;
     
-    /** For percent-based animations (__cpu__, __mem__), skip frame logic UNLESS previewing */
     if ((_stricmp(g_animationName, "__cpu__") == 0 || _stricmp(g_animationName, "__mem__") == 0) && !g_isPreviewActive) {
         g_internalAccumulator += g_targetInternalInterval;
         if (g_internalAccumulator >= g_currentEffectiveInterval) {
             g_internalAccumulator = 0;
-            /** Percent icons are updated by the periodic updater, just reset accumulator */
         }
         return;
     }
     
-    /** Thread-safe access to animation state */
     if (g_criticalSectionInitialized) {
         EnterCriticalSection(&g_animCriticalSection);
     }
     
-    /** Advance internal frame logic */
     BOOL shouldAdvanceFrame = AdvanceInternalFramePosition();
     
     if (shouldAdvanceFrame) {
-        /** Move to next frame */
         if (g_isPreviewActive) {
             if (g_previewCount > 0) {
                 g_previewIndex = (g_previewIndex + 1) % g_previewCount;
@@ -613,10 +564,8 @@ static void CALLBACK HighPrecisionTimerCallback(UINT uTimerID, UINT uMsg, DWORD_
         }
     }
     
-    /** Accumulate time for fixed tray update interval */
     g_internalAccumulator += g_targetInternalInterval;
     
-    /** Only request tray icon update at fixed interval (e.g., every 50ms) */
     if (g_internalAccumulator >= g_currentEffectiveInterval) {
         g_internalAccumulator = 0;
         
@@ -624,7 +573,6 @@ static void CALLBACK HighPrecisionTimerCallback(UINT uTimerID, UINT uMsg, DWORD_
             LeaveCriticalSection(&g_animCriticalSection);
         }
         
-        /** Request update via message (thread-safe) instead of calling Shell API directly */
         RequestTrayIconUpdate();
         return;
     }
@@ -634,31 +582,25 @@ static void CALLBACK HighPrecisionTimerCallback(UINT uTimerID, UINT uMsg, DWORD_
     }
 }
 
-/**
- * @brief Fallback timer callback for systems where multimedia timer fails
- */
+/** @brief SetTimer fallback if multimedia timer unavailable */
 static void CALLBACK FallbackTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time) {
     (void)hwnd; (void)msg; (void)id; (void)time;
-    
-    /** Use same logic as high-precision callback */
     HighPrecisionTimerCallback(0, 0, 0, 0, 0);
 }
 
 /**
- * @brief Initialize high-precision multimedia timer for animations
- * @return TRUE if successful, FALSE if need to fallback to SetTimer
+ * @brief Initialize multimedia timer (timeSetEvent) at 10ms
+ * @return TRUE on success, FALSE to use SetTimer fallback
+ * @note Requests 1ms system timer resolution for best accuracy
  */
 static BOOL InitializeAnimationTimer(void) {
-    /** Initialize critical section for thread-safe access */
     if (!g_criticalSectionInitialized) {
         InitializeCriticalSection(&g_animCriticalSection);
         g_criticalSectionInitialized = TRUE;
     }
     
-    /** Request 1ms timer resolution */
     MMRESULT mmRes = timeBeginPeriod(1);
     if (mmRes != TIMERR_NOERROR) {
-        /** If we can't get 1ms, try 2ms */
         mmRes = timeBeginPeriod(2);
         if (mmRes != TIMERR_NOERROR) {
             g_useHighPrecisionTimer = FALSE;
@@ -666,17 +608,15 @@ static BOOL InitializeAnimationTimer(void) {
         }
     }
     
-    /** Create multimedia timer */
     g_mmTimerId = timeSetEvent(
-        g_targetInternalInterval,           /** Interval */
-        1,                                   /** Resolution (1ms) */
-        HighPrecisionTimerCallback,          /** Callback */
-        0,                                   /** User data */
-        TIME_PERIODIC | TIME_KILL_SYNCHRONOUS  /** Periodic and synchronous cleanup */
+        g_targetInternalInterval,
+        1,
+        HighPrecisionTimerCallback,
+        0,
+        TIME_PERIODIC | TIME_KILL_SYNCHRONOUS
     );
     
     if (g_mmTimerId == 0) {
-        /** Failed to create multimedia timer */
         timeEndPeriod(1);
         g_useHighPrecisionTimer = FALSE;
         return FALSE;
@@ -686,9 +626,7 @@ static BOOL InitializeAnimationTimer(void) {
     return TRUE;
 }
 
-/**
- * @brief Cleanup high-precision timer system
- */
+/** @brief Destroy timer and restore system timer resolution */
 static void CleanupHighPrecisionTimer(void) {
     if (g_mmTimerId != 0) {
         timeKillEvent(g_mmTimerId);
@@ -700,16 +638,18 @@ static void CleanupHighPrecisionTimer(void) {
         g_useHighPrecisionTimer = FALSE;
     }
     
-    /** Cleanup critical section */
     if (g_criticalSectionInitialized) {
         DeleteCriticalSection(&g_animCriticalSection);
         g_criticalSectionInitialized = FALSE;
     }
 }
 
-/** @brief Update tray icon tooltip with current playback speed info (English only) */
-
-/** @brief Build animation folder path under %LOCALAPPDATA%\Catime\resources\animations */
+/**
+ * @brief Construct full path to animation resource
+ * @param name Animation folder or file name
+ * @param path Output buffer for full path
+ * @param size Output buffer size
+ */
 static void BuildAnimationFolder(const char* name, char* path, size_t size) {
     char base[MAX_PATH] = {0};
     GetAnimationsFolderPath(base, sizeof(base));
@@ -721,7 +661,10 @@ static void BuildAnimationFolder(const char* name, char* path, size_t size) {
     }
 }
 
-/** @brief Free a set of icon resources, including the composition canvas */
+/**
+ * @brief Destroy icon set and optionally reset canvas dimensions
+ * @param resetCanvasSize TRUE for main tray (affects global size), FALSE for preview
+ */
 static void FreeIconSet(HICON icons[], int* count, int* index, BOOL* isAnimated, BYTE** canvas, BOOL resetCanvasSize) {
     for (int i = 0; i < *count; ++i) {
         if (icons[i]) {
@@ -743,7 +686,6 @@ static void FreeIconSet(HICON icons[], int* count, int* index, BOOL* isAnimated,
     }
 }
 
-/** @brief Case-insensitive string ends-with helper */
 static BOOL EndsWithIgnoreCase(const char* str, const char* suffix) {
     if (!str || !suffix) return FALSE;
     size_t ls = strlen(str), lsuf = strlen(suffix);
@@ -751,17 +693,14 @@ static BOOL EndsWithIgnoreCase(const char* str, const char* suffix) {
     return _stricmp(str + (ls - lsuf), suffix) == 0;
 }
 
-/** @brief Detect if current animation name is a single GIF file */
 static BOOL IsGifSelection(const char* name) {
     return name && EndsWithIgnoreCase(name, ".gif");
 }
 
-/** @brief Detect if current animation name is a single WebP file */
 static BOOL IsWebPSelection(const char* name) {
     return name && EndsWithIgnoreCase(name, ".webp");
 }
 
-/** @brief Detect if current animation name is a single static image file */
 static BOOL IsStaticImageSelection(const char* name) {
     if (!name) return FALSE;
     return EndsWithIgnoreCase(name, ".ico") ||
@@ -773,30 +712,29 @@ static BOOL IsStaticImageSelection(const char* name) {
            EndsWithIgnoreCase(name, ".tiff");
 }
 
-/** @brief Alpha blend pixel onto canvas with proper compositing */
+/**
+ * @brief Composite pixel onto canvas using "source over" alpha blending
+ * @note PBGRA format: pixel[0]=B, pixel[1]=G, pixel[2]=R, pixel[3]=A
+ */
 static void BlendPixel(BYTE* canvas, UINT canvasStride, UINT x, UINT y, BYTE r, BYTE g, BYTE b, BYTE a) {
-    if (a == 0) return; /** fully transparent, no change */
+    if (a == 0) return;
     
     BYTE* pixel = canvas + (y * canvasStride) + (x * 4);
     if (a == 255) {
-        /** fully opaque, direct copy */
-        pixel[0] = b; /** B */
-        pixel[1] = g; /** G */
-        pixel[2] = r; /** R */
-        pixel[3] = a; /** A */
+        pixel[0] = b;
+        pixel[1] = g;
+        pixel[2] = r;
+        pixel[3] = a;
     } else {
-        /** alpha blend with existing pixel */
         UINT srcAlpha = a;
         UINT dstAlpha = pixel[3];
         
         if (dstAlpha == 0) {
-            /** destination is transparent, just copy source */
             pixel[0] = b;
             pixel[1] = g;
             pixel[2] = r;
             pixel[3] = a;
         } else {
-            /** proper alpha compositing: src over dst */
             UINT invSrcAlpha = 255 - srcAlpha;
             UINT newAlpha = srcAlpha + (dstAlpha * invSrcAlpha) / 255;
             
@@ -810,7 +748,10 @@ static void BlendPixel(BYTE* canvas, UINT canvasStride, UINT x, UINT y, BYTE r, 
     }
 }
 
-/** @brief Clear rectangle on canvas with background color (supports transparency) */
+/**
+ * @brief Fill canvas region with solid color
+ * @note Used for GIF disposal mode 2 (restore background)
+ */
 static void ClearCanvasRect(BYTE* canvas, UINT canvasWidth, UINT canvasHeight, 
                            UINT left, UINT top, UINT width, UINT height, 
                            BYTE bgR, BYTE bgG, BYTE bgB, BYTE bgA) {
@@ -818,7 +759,6 @@ static void ClearCanvasRect(BYTE* canvas, UINT canvasWidth, UINT canvasHeight,
     UINT right = left + width;
     UINT bottom = top + height;
     
-    /** Clamp to canvas bounds */
     if (left >= canvasWidth || top >= canvasHeight) return;
     if (right > canvasWidth) right = canvasWidth;
     if (bottom > canvasHeight) bottom = canvasHeight;
@@ -826,15 +766,23 @@ static void ClearCanvasRect(BYTE* canvas, UINT canvasWidth, UINT canvasHeight,
     for (UINT y = top; y < bottom; y++) {
         for (UINT x = left; x < right; x++) {
             BYTE* pixel = canvas + (y * canvasStride) + (x * 4);
-            pixel[0] = bgB; /** B */
-            pixel[1] = bgG; /** G */
-            pixel[2] = bgR; /** R */
-            pixel[3] = bgA; /** A */
+            pixel[0] = bgB;
+            pixel[1] = bgG;
+            pixel[2] = bgR;
+            pixel[3] = bgA;
         }
     }
 }
 
-/** @brief Create an HICON from any IWICBitmapSource by scaling to (cx, cy) */
+/**
+ * @brief Convert WIC bitmap to HICON with aspect-preserving scaling
+ * @param pFactory WIC factory instance
+ * @param source WIC bitmap source (any format)
+ * @param cx Target icon width (usually SM_CXSMICON)
+ * @param cy Target icon height (usually SM_CYSMICON)
+ * @return HICON or NULL on failure
+ * @note Centers image if aspect ratio doesn't match
+ */
 static HICON CreateIconFromWICSource(IWICImagingFactory* pFactory,
                                      IWICBitmapSource* source,
                                      int cx,
@@ -846,7 +794,6 @@ static HICON CreateIconFromWICSource(IWICImagingFactory* pFactory,
     IWICBitmapScaler* pScaler = NULL;
     HRESULT hr = pFactory->lpVtbl->CreateBitmapScaler(pFactory, &pScaler);
     if (SUCCEEDED(hr) && pScaler) {
-        /** Compute aspect-preserving scaled size to fit within cx x cy */
         UINT srcW = 0, srcH = 0;
         if (FAILED(source->lpVtbl->GetSize(source, &srcW, &srcH)) || srcW == 0 || srcH == 0) {
             srcW = (UINT)cx;
@@ -879,20 +826,17 @@ static HICON CreateIconFromWICSource(IWICImagingFactory* pFactory,
                     BITMAPINFO bi; ZeroMemory(&bi, sizeof(bi));
                     bi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
                     bi.bmiHeader.biWidth = cx;
-                    bi.bmiHeader.biHeight = -cy; /** top-down */
+                    bi.bmiHeader.biHeight = -cy;
                     bi.bmiHeader.biPlanes = 1;
                     bi.bmiHeader.biBitCount = 32;
                     bi.bmiHeader.biCompression = BI_RGB;
                     VOID* pvBits = NULL;
                     HBITMAP hbmColor = CreateDIBSection(NULL, &bi, DIB_RGB_COLORS, &pvBits, NULL, 0);
                     if (hbmColor && pvBits) {
-                        /** Clear background to transparent */
                         ZeroMemory(pvBits, (SIZE_T)(cy * (cx * 4)));
 
-                        /** Copy scaled pixels into centered position */
                         UINT scaledStride = dstW * 4;
                         UINT scaledSize = dstH * scaledStride;
-                        /** Use memory pool for temporary buffer */
                         BYTE* tmp = (BYTE*)MemoryPool_Alloc(scaledSize);
                         if (tmp) {
                             if (SUCCEEDED(pConverter->lpVtbl->CopyPixels(pConverter, NULL, scaledStride, scaledSize, tmp))) {
@@ -945,7 +889,11 @@ static HICON CreateIconFromWICSource(IWICImagingFactory* pFactory,
     return hIcon;
 }
 
-/** @brief Create an HICON from a 32bpp PBGRA memory canvas by scaling to (cx, cy) */
+/**
+ * @brief Convert PBGRA pixel buffer to scaled HICON
+ * @param canvasPixels 32bpp PBGRA pixel array
+ * @return HICON or NULL on failure
+ */
 static HICON CreateIconFromPBGRA(IWICImagingFactory* pFactory,
                                  const BYTE* canvasPixels,
                                  UINT canvasWidth,
@@ -970,23 +918,14 @@ static HICON CreateIconFromPBGRA(IWICImagingFactory* pFactory,
 }
 
 /**
- * @brief Generic animated image decoding routine for GIF and WebP
+ * @brief Decode GIF/WebP animation and pre-render all frames to HICON
+ * @param utf8Path Path to .gif or .webp file
+ * @param target Output arrays (tray or preview)
  * 
- * PERFORMANCE OPTIMIZATION:
- * This function pre-processes and pre-blends ALL animation frames at load time,
- * creating fully composited HICON objects for each frame. This means:
- * 
- * 1. NO RUNTIME BLENDING: During playback, we simply switch between pre-rendered HICONs.
- *    There is ZERO per-frame alpha blending or pixel manipulation at runtime.
- * 
- * 2. MEMORY POOL: Uses a reusable memory pool for temporary buffers, eliminating
- *    malloc/free overhead during the frame processing loop.
- * 
- * 3. ONE-TIME COST: All expensive operations (WIC decoding, format conversion,
- *    disposal handling, pixel compositing, icon creation) happen once at load time.
- * 
- * This approach trades memory (storing pre-rendered frames) for speed (no runtime work),
- * which is ideal for tray icon animations where smooth, low-latency updates are critical.
+ * @note Performance strategy: pre-composite ALL frames at load time
+ * - Trades memory for speed (no runtime blending/decoding)
+ * - Uses memory pool to reduce malloc overhead in frame loop
+ * - Ideal for tray icons where latency matters more than memory
  */
 static void LoadAnimatedImage(const char* utf8Path, DecodeTarget* target) {
     if (!utf8Path || !*utf8Path) return;
@@ -1023,7 +962,6 @@ static void LoadAnimatedImage(const char* utf8Path, DecodeTarget* target) {
 
     UINT canvasWidth = 0, canvasHeight = 0;
 
-    /** Format-specific: Get canvas size */
     if (isGif) {
         IWICMetadataQueryReader* pGlobalMeta = NULL;
         if (SUCCEEDED(pDecoder->lpVtbl->GetMetadataQueryReader(pDecoder, &pGlobalMeta)) && pGlobalMeta) {
@@ -1045,7 +983,7 @@ static void LoadAnimatedImage(const char* utf8Path, DecodeTarget* target) {
         }
     }
 
-    /** Common fallback for canvas size */
+
     if (canvasWidth == 0 || canvasHeight == 0) {
         IWICBitmapFrameDecode* pFirstFrame = NULL;
         if (SUCCEEDED(pDecoder->lpVtbl->GetFrame(pDecoder, 0, &pFirstFrame)) && pFirstFrame) {
@@ -1084,13 +1022,11 @@ static void LoadAnimatedImage(const char* utf8Path, DecodeTarget* target) {
             IWICBitmapFrameDecode* pFrame = NULL;
             if (FAILED(pDecoder->lpVtbl->GetFrame(pDecoder, i, &pFrame)) || !pFrame) continue;
 
-            /** GIF-specific disposal for previous frame */
             if (isGif && i > 0) {
-                if (prevDisposal == 2) { /** Restore background */
+                if (prevDisposal == 2) {
                     ClearCanvasRect(*(target->canvas), canvasWidth, canvasHeight, prevLeft, prevTop, prevWidth, prevHeight, 0, 0, 0, 0);
                 }
             } else if (!isGif) {
-                /** WebP simple implementation: clear canvas for each frame */
                  memset(*(target->canvas), 0, canvasSize);
             }
 
@@ -1132,13 +1068,13 @@ static void LoadAnimatedImage(const char* utf8Path, DecodeTarget* target) {
                     if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/imgdesc/Width", &var))) {
                         if (var.vt == VT_UI2) frameWidth = var.uiVal;
                     }
-                    PropVariantClear(&var);
+                        PropVariantClear(&var);
                     PropVariantInit(&var);
                     if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/imgdesc/Height", &var))) {
                         if (var.vt == VT_UI2) frameHeight = var.uiVal;
                     }
                     PropVariantClear(&var);
-                } else { /** Assume WebP */
+                } else {
                     PropVariantInit(&var);
                     if (SUCCEEDED(pMeta->lpVtbl->GetMetadataByName(pMeta, L"/webp/delay", &var))) {
                         if (var.vt == VT_UI4) delayMs = var.ulVal;
@@ -1155,7 +1091,6 @@ static void LoadAnimatedImage(const char* utf8Path, DecodeTarget* target) {
                 if (SUCCEEDED(pConverter->lpVtbl->Initialize(pConverter, (IWICBitmapSource*)pFrame, &GUID_WICPixelFormat32bppPBGRA, WICBitmapDitherTypeNone, NULL, 0.0, WICBitmapPaletteTypeCustom))) {
                     UINT frameStride = frameWidth * 4;
                     UINT frameBufferSize = frameHeight * frameStride;
-                    /** Use memory pool to reduce malloc/free overhead in loop */
                     BYTE* frameBuffer = (BYTE*)MemoryPool_Alloc(frameBufferSize);
                     if (frameBuffer) {
                         if (SUCCEEDED(pConverter->lpVtbl->CopyPixels(pConverter, NULL, frameStride, frameBufferSize, frameBuffer))) {
@@ -1168,7 +1103,7 @@ static void LoadAnimatedImage(const char* utf8Path, DecodeTarget* target) {
                                         }
                                     }
                                 }
-                            } else { /** Assume WebP */
+                            } else {
                                 if (frameWidth == canvasWidth && frameHeight == canvasHeight) {
                                     memcpy(*(target->canvas), frameBuffer, canvasSize);
                                 } else {
@@ -1214,7 +1149,12 @@ static void LoadAnimatedImage(const char* utf8Path, DecodeTarget* target) {
     }
 }
 
-/** @brief Generic routine to load sequential icon frames from a folder */
+/**
+ * @brief Load sequential icon frames from folder (sorted naturally by number)
+ * @param utf8Folder Full path to folder containing .ico/.png/.bmp/etc files
+ * @param icons Output array for HICONs
+ * @param count Output count of loaded icons
+ */
 static void LoadIconsFromFolder(const char* utf8Folder, HICON* icons, int* count) {
     wchar_t wFolder[MAX_PATH] = {0};
     MultiByteToWideChar(CP_UTF8, 0, utf8Folder, -1, wFolder, MAX_PATH);
@@ -1310,12 +1250,14 @@ static void LoadIconsFromFolder(const char* utf8Folder, HICON* icons, int* count
     }
 }
 
-/** @brief Unified animation loading routine for tray and preview */
+/**
+ * @brief Load animation resources by name (logo, percent, GIF, folder, etc.)
+ * @param name Animation identifier or path
+ * @param isPreview TRUE to load into preview slot, FALSE for main tray
+ */
 static void LoadAnimationByName(const char* name, BOOL isPreview) {
     DecodeTarget target = GetDecodeTarget(isPreview);
     
-    // Free previous resources for the selected target.
-    // For the main tray target, also reset global canvas dimensions.
     FreeIconSet(target.icons, target.count, target.index, target.isAnimatedFlag, target.canvas, !isPreview);
 
     if (!name || !*name) return;
@@ -1326,7 +1268,6 @@ static void LoadAnimationByName(const char* name, BOOL isPreview) {
             target.icons[(*(target.count))++] = hIcon;
         }
     } else if (_stricmp(name, "__cpu__") == 0 || _stricmp(name, "__mem__") == 0) {
-        /** For preview mode, create a sample percent icon; for normal mode, handled by periodic updater */
         if (isPreview) {
             float cpu = 0.0f, mem = 0.0f;
             SystemMonitor_GetUsage(&cpu, &mem);
@@ -1334,13 +1275,11 @@ static void LoadAnimationByName(const char* name, BOOL isPreview) {
             if (percent < 0) percent = 0;
             if (percent > 100) percent = 100;
             
-            /** Use the existing CreatePercentIcon16 function */
             HICON hIcon = CreatePercentIcon16(percent);
             if (hIcon) {
                 target.icons[(*(target.count))++] = hIcon;
             }
         } else {
-            /** Normal mode: handled by periodic updater; keep no frames here */
             *(target.count) = 0;
             *(target.index) = 0;
             *(target.isAnimatedFlag) = FALSE;
@@ -1350,7 +1289,6 @@ static void LoadAnimationByName(const char* name, BOOL isPreview) {
         BuildAnimationFolder(name, filePath, sizeof(filePath));
         LoadAnimatedImage(filePath, &target);
     } else if (IsStaticImageSelection(name)) {
-        /** Load a single static image file as one icon frame */
         char filePath[MAX_PATH] = {0};
         BuildAnimationFolder(name, filePath, sizeof(filePath));
 
@@ -1392,16 +1330,19 @@ static void LoadAnimationByName(const char* name, BOOL isPreview) {
     }
 }
 
-/** @brief Load sequential icon frames from .ico and .png files */
 static void LoadTrayIcons(void) {
     LoadAnimationByName(g_animationName, FALSE);
 }
 
+/**
+ * @brief Initialize animation system and start timer
+ * @param hwnd Main window handle for message posting
+ * @param intervalMs Base interval for folder animations (default 150ms)
+ */
 void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
     g_trayHwnd = hwnd;
-    g_trayInterval = intervalMs > 0 ? intervalMs : 150; /** default ~6-7 fps */
+    g_trayInterval = intervalMs > 0 ? intervalMs : 150;
     {
-        /** Optional override from config for folder/static sequences */
         char config_path[MAX_PATH] = {0};
         GetConfigPath(config_path, sizeof(config_path));
         int folderMs = ReadIniInt("Animation", "ANIMATION_FOLDER_INTERVAL_MS", (int)g_trayInterval, config_path);
@@ -1412,7 +1353,6 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
     g_previewCount = 0;
     g_previewIndex = 0;
     
-    /** Initialize timing state */
     g_internalAccumulator = 0;
     g_internalFramePosition = 0.0;
     g_currentEffectiveInterval = TRAY_UPDATE_INTERVAL_MS;
@@ -1420,7 +1360,7 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
     g_consecutiveLateUpdates = 0;
     g_targetInternalInterval = INTERNAL_TICK_INTERVAL_MS;
 
-    /** Read current animation name from config */
+
     char config_path[MAX_PATH] = {0};
     GetConfigPath(config_path, sizeof(config_path));
     char nameBuf[MAX_PATH] = {0};
@@ -1445,60 +1385,54 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
 
     LoadTrayIcons();
 
-    /** Display initial frame immediately */
     if (g_trayIconCount > 0) {
         UpdateTrayIconToCurrentFrame();
     }
     
-    /** Start high-precision timer system */
     if (!InitializeAnimationTimer()) {
-        /** Fallback to standard SetTimer if multimedia timer fails */
         SetTimer(hwnd, TRAY_ANIM_TIMER_ID, g_targetInternalInterval, FallbackTimerProc);
     }
-
-    /** Tooltip handled by tray.c periodic updater */
 }
 
+/**
+ * @brief Stop animation system and free all resources
+ * @param hwnd Window handle (for KillTimer)
+ */
 void StopTrayAnimation(HWND hwnd) {
-    /** Cleanup high-precision timer or fallback timer */
     CleanupHighPrecisionTimer();
     KillTimer(hwnd, TRAY_ANIM_TIMER_ID);
     
-    /** Free icon resources */
     FreeIconSet(g_trayIcons, &g_trayIconCount, &g_trayIconIndex, &g_isAnimated, &g_animCanvas, TRUE);
     FreeIconSet(g_previewIcons, &g_previewCount, &g_previewIndex, &g_isPreviewAnimated, &g_previewAnimCanvas, FALSE);
     
-    /** Clean up memory pool */
     MemoryPool_Cleanup();
     
-    /** Reset timing state */
     g_internalAccumulator = 0;
     g_internalFramePosition = 0.0;
     g_currentEffectiveInterval = TRAY_UPDATE_INTERVAL_MS;
     g_lastTrayUpdateTime = 0;
     g_consecutiveLateUpdates = 0;
     
-    /** Reset error recovery state */
     g_consecutiveUpdateFailures = 0;
     g_lastSuccessfulUpdateTime = 0;
     
     g_trayHwnd = NULL;
 }
 
-/**
- * @brief Get current animation folder name
- */
+/** @brief Get current animation name/path */
 const char* GetCurrentAnimationName(void) {
     return g_animationName;
 }
 
 /**
- * @brief Set and persist current animation folder; reload frames
+ * @brief Switch to new animation and persist to config
+ * @param name Animation name/path (e.g., "__logo__", "cat.gif", "spinner")
+ * @return TRUE on success, FALSE if invalid
+ * @note Performs seamless preview promotion if switching to current preview
  */
 BOOL SetCurrentAnimationName(const char* name) {
     if (!name || !*name) return FALSE;
 
-    /** Validate selection: either a folder with images, or a single image/gif/webp file existing */
     char folder[MAX_PATH] = {0};
     if (_stricmp(name, "__logo__") == 0) {
         strncpy(g_animationName, name, sizeof(g_animationName) - 1);
@@ -1524,16 +1458,13 @@ BOOL SetCurrentAnimationName(const char* name) {
         LoadTrayIcons();
         g_trayIconIndex = 0;
         g_internalFramePosition = 0.0;
-        /** Ensure we are not in preview mode so periodic percent updates are not suppressed */
         if (g_isPreviewActive) {
             g_isPreviewActive = FALSE;
             FreeIconSet(g_previewIcons, &g_previewCount, &g_previewIndex, &g_isPreviewAnimated, &g_previewAnimCanvas, FALSE);
         }
-        /** Immediately update percent icon so user sees change without extra interaction */
         if (g_trayHwnd) {
             UpdateTrayIconToCurrentFrame();
         }
-        /** Timer continues running, no need to restart for __cpu__/__mem__ */
         return TRUE;
     }
     BuildAnimationFolder(name, folder, sizeof(folder));
@@ -1567,39 +1498,30 @@ BOOL SetCurrentAnimationName(const char* name) {
     }
     if (!valid) return FALSE;
 
-    /**
-     * SEAMLESS PREVIEW PROMOTION:
-     * If user is confirming a preview of the same animation, transfer resources
-     * instead of reloading to maintain continuous playback without restart.
-     */
     if (g_isPreviewActive && g_previewAnimationName[0] != '\0' && 
         _stricmp(g_previewAnimationName, name) == 0 && g_previewCount > 0) {
         
-        /** Thread-safe resource transfer */
         if (g_criticalSectionInitialized) {
             EnterCriticalSection(&g_animCriticalSection);
         }
         
-        /** Free old main animation resources */
         FreeIconSet(g_trayIcons, &g_trayIconCount, &g_trayIconIndex, &g_isAnimated, &g_animCanvas, TRUE);
         
-        /** Transfer preview resources to main (move ownership, no copy) */
+
         for (int i = 0; i < g_previewCount; i++) {
             g_trayIcons[i] = g_previewIcons[i];
-            g_previewIcons[i] = NULL;  /** Prevent double-free */
+            g_previewIcons[i] = NULL;
             g_frameDelaysMs[i] = g_previewFrameDelaysMs[i];
         }
         g_trayIconCount = g_previewCount;
-        g_trayIconIndex = g_previewIndex;  /** Maintain current frame position */
+        g_trayIconIndex = g_previewIndex;
         g_isAnimated = g_isPreviewAnimated;
         
-        /** Canvas not transferred (already used to create HICONs), just free preview canvas */
         if (g_previewAnimCanvas) {
             free(g_previewAnimCanvas);
             g_previewAnimCanvas = NULL;
         }
         
-        /** Clear preview state without freeing transferred resources */
         g_previewCount = 0;
         g_previewIndex = 0;
         g_isPreviewAnimated = FALSE;
@@ -1610,7 +1532,6 @@ BOOL SetCurrentAnimationName(const char* name) {
             LeaveCriticalSection(&g_animCriticalSection);
         }
         
-        /** Update animation name and persist to config */
         strncpy(g_animationName, name, sizeof(g_animationName) - 1);
         g_animationName[sizeof(g_animationName) - 1] = '\0';
         
@@ -1620,9 +1541,6 @@ BOOL SetCurrentAnimationName(const char* name) {
         snprintf(animPath, sizeof(animPath), "%%LOCALAPPDATA%%\\Catime\\resources\\animations\\%s", g_animationName);
         WriteIniString("Animation", "ANIMATION_PATH", animPath, config_path);
         
-        /** DON'T reset g_internalFramePosition - maintain smooth continuation */
-        
-        /** Update tray icon to current frame (seamless, no restart) */
         if (g_trayHwnd) {
             UpdateTrayIconToCurrentFrame();
         }
@@ -1630,22 +1548,19 @@ BOOL SetCurrentAnimationName(const char* name) {
         return TRUE;
     }
 
-    /** NORMAL PATH: Load animation from scratch */
+
     strncpy(g_animationName, name, sizeof(g_animationName) - 1);
     g_animationName[sizeof(g_animationName) - 1] = '\0';
 
-    /** Persist to config */
     char config_path[MAX_PATH] = {0};
     GetConfigPath(config_path, sizeof(config_path));
     char animPath[MAX_PATH];
     snprintf(animPath, sizeof(animPath), "%%LOCALAPPDATA%%\\Catime\\resources\\animations\\%s", g_animationName);
     WriteIniString("Animation", "ANIMATION_PATH", animPath, config_path);
 
-    /** Reload frames and reset index */
     LoadTrayIcons();
     g_trayIconIndex = 0;
     g_internalFramePosition = 0.0;
-    /** If a preview was active, finalize it now so we switch to the real selection without delay */
     if (g_isPreviewActive) {
         g_isPreviewActive = FALSE;
         g_previewAnimationName[0] = '\0';
@@ -1654,16 +1569,17 @@ BOOL SetCurrentAnimationName(const char* name) {
     if (g_trayHwnd) {
         UpdateTrayIconToCurrentFrame();
     }
-    /** Timer is already running, no need to restart */
     return TRUE;
 }
 
-
-/** Load preview icons for folder and enable preview mode (no persistence) */
+/**
+ * @brief Load animation into preview slot without persisting
+ * @param name Animation name/path to preview
+ * @note Preview can be promoted to main via SetCurrentAnimationName (seamless)
+ */
 void StartAnimationPreview(const char* name) {
     if (!name || !*name) return;
 
-    /** Record preview animation name for seamless promotion */
     strncpy(g_previewAnimationName, name, sizeof(g_previewAnimationName) - 1);
     g_previewAnimationName[sizeof(g_previewAnimationName) - 1] = '\0';
 
@@ -1672,33 +1588,31 @@ void StartAnimationPreview(const char* name) {
     if (g_previewCount > 0) {
         g_isPreviewActive = TRUE;
         g_previewIndex = 0;
-        g_internalFramePosition = 0.0;  /** Reset frame position for preview */
+        g_internalFramePosition = 0.0;
         
-        /** Display first preview frame immediately */
         UpdateTrayIconToCurrentFrame();
-        
-        /** Timer continues running in background, will handle preview frames */
     } else {
-        /** Preview failed, clear name */
         WriteLog(LOG_LEVEL_WARNING, "Animation preview failed to load: '%s'", name);
         g_previewAnimationName[0] = '\0';
     }
 }
 
+/** @brief End preview and restore main animation */
 void CancelAnimationPreview(void) {
     if (!g_isPreviewActive) return;
     g_isPreviewActive = FALSE;
-    g_previewAnimationName[0] = '\0';  /** Clear preview name */
+    g_previewAnimationName[0] = '\0';
     FreeIconSet(g_previewIcons, &g_previewCount, &g_previewIndex, &g_isPreviewAnimated, &g_previewAnimCanvas, FALSE);
     
-    g_internalFramePosition = 0.0;  /** Reset frame position */
+    g_internalFramePosition = 0.0;
     
-    /** Restore original tray icon immediately */
     UpdateTrayIconToCurrentFrame();
-    
-    /** Timer continues running in background, no need to restart */
 }
 
+/**
+ * @brief Load animation from config before UI initialization
+ * @note Called early to have first frame ready for tray icon creation
+ */
 void PreloadAnimationFromConfig(void) {
     char config_path[MAX_PATH] = {0};
     GetConfigPath(config_path, sizeof(config_path));
@@ -1721,13 +1635,16 @@ void PreloadAnimationFromConfig(void) {
             g_animationName[sizeof(g_animationName) - 1] = '\0';
         }
     }
-    // Load frames into g_trayIcons without touching timers/hwnd
     LoadTrayIcons();
 }
 
+/**
+ * @brief Get first frame for initial tray icon setup
+ * @return First animation frame or NULL for percent icons
+ */
 HICON GetInitialAnimationHicon(void) {
     if (_stricmp(g_animationName, "__cpu__") == 0 || _stricmp(g_animationName, "__mem__") == 0) {
-        return NULL; /** updater will set first icon */
+        return NULL;
     }
     if (g_trayIconCount > 0) {
         return g_trayIcons[0];
@@ -1738,6 +1655,11 @@ HICON GetInitialAnimationHicon(void) {
     return NULL;
 }
 
+/**
+ * @brief Apply animation path from config watcher without writing back
+ * @param value Full animation path from config file
+ * @note Skips reload if already displaying requested animation
+ */
 void ApplyAnimationPathValueNoPersist(const char* value) {
     if (!value || !*value) return;
     const char* prefix = "%LOCALAPPDATA%\\Catime\\resources\\animations\\";
@@ -1752,16 +1674,10 @@ void ApplyAnimationPathValueNoPersist(const char* value) {
     }
     if (name[0] == '\0') return;
 
-    /**
-     * OPTIMIZATION: If this is the same animation we're already displaying,
-     * and especially if we just promoted a preview of it, don't reload.
-     * This prevents config file watcher from undoing seamless preview promotion.
-     */
     if (_stricmp(g_animationName, name) == 0) {
-        return;  /** Already displaying this animation, maintain current state */
+        return;
     }
 
-    /** Different animation, proceed with reload */
     strncpy(g_animationName, name, sizeof(g_animationName) - 1);
     g_animationName[sizeof(g_animationName) - 1] = '\0';
 
@@ -1769,7 +1685,6 @@ void ApplyAnimationPathValueNoPersist(const char* value) {
     g_trayIconIndex = 0;
     g_internalFramePosition = 0.0;
     
-    /** Clear any active preview since we're loading new main animation */
     if (g_isPreviewActive) {
         g_isPreviewActive = FALSE;
         g_previewAnimationName[0] = '\0';
@@ -1781,10 +1696,13 @@ void ApplyAnimationPathValueNoPersist(const char* value) {
     if (g_trayIconCount > 0) {
         UpdateTrayIconToCurrentFrame();
     }
-    /** Timer continues running, no need to restart */
 }
 
-/** Create a small 16x16 icon with percentage text (no % sign) */
+/**
+ * @brief Generate tray icon with numeric percentage text
+ * @param percent Value 0-100+ to display
+ * @return HICON or NULL on failure
+ */
 HICON CreatePercentIcon16(int percent) {
     int cx = GetSystemMetrics(SM_CXSMICON);
     int cy = GetSystemMetrics(SM_CYSMICON);
@@ -1793,7 +1711,7 @@ HICON CreatePercentIcon16(int percent) {
     BITMAPINFO bi; ZeroMemory(&bi, sizeof(bi));
     bi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
     bi.bmiHeader.biWidth = cx;
-    bi.bmiHeader.biHeight = -cy; /* top-down */
+    bi.bmiHeader.biHeight = -cy;
     bi.bmiHeader.biPlanes = 1;
     bi.bmiHeader.biBitCount = 32;
     bi.bmiHeader.biCompression = BI_RGB;
@@ -1833,9 +1751,9 @@ HICON CreatePercentIcon16(int percent) {
     wchar_t txt[4];
     if (percent > 999) percent = 999; if (percent < 0) percent = 0;
     if (percent >= 100) {
-        wsprintfW(txt, L"%d", percent); /* 100..999 */
+        wsprintfW(txt, L"%d", percent);
     } else {
-        wsprintfW(txt, L"%d", percent); /* 0..99 */
+        wsprintfW(txt, L"%d", percent);
     }
 
     SIZE sz = {0};
@@ -1843,7 +1761,6 @@ HICON CreatePercentIcon16(int percent) {
     int x = (cx - sz.cx) / 2;
     int y = (cy - sz.cy) / 2;
 
-    /* Draw black text on white background */
     TextOutW(mem, x, y, txt, lstrlenW(txt));
 
     if (oldf) SelectObject(mem, oldf);
@@ -1863,13 +1780,16 @@ HICON CreatePercentIcon16(int percent) {
     return hIcon;
 }
 
+/**
+ * @brief Update percent icon (CPU/mem) from periodic updater
+ * @note Only updates if current animation is __cpu__ or __mem__
+ */
 void TrayAnimation_UpdatePercentIconIfNeeded(void) {
     if (!g_trayHwnd) return;
     if (!IsWindow(g_trayHwnd)) return;
     if (!g_animationName[0]) return;
     if (_stricmp(g_animationName, "__cpu__") != 0 && _stricmp(g_animationName, "__mem__") != 0) return;
     
-    /** Don't update percent icon if user is previewing another animation */
     if (g_isPreviewActive) return;
 
     float cpu = 0.0f, mem = 0.0f;
@@ -1891,17 +1811,9 @@ void TrayAnimation_UpdatePercentIconIfNeeded(void) {
     DestroyIcon(hIcon);
 }
 
+/** @brief No-op: speed scaling now computed dynamically in frame callback */
 void TrayAnimation_RecomputeTimerDelay(void) {
-    /**
-     * With the new high-precision timer system, we don't need to constantly
-     * restart timers. The speed scaling is computed on-the-fly in 
-     * AdvanceInternalFramePosition() which is called by the timer callback.
-     * 
-     * This function is kept for API compatibility but does nothing now.
-     * The adaptive frame rate system automatically adjusts based on actual
-     * performance, which is better than manual timer resets.
-     */
-    (void)0;  /** No-op */
+    (void)0;
 }
 
 void TrayAnimation_SetMinIntervalMs(UINT ms) {
@@ -1910,12 +1822,10 @@ void TrayAnimation_SetMinIntervalMs(UINT ms) {
 }
 
 /**
- * @brief Handle tray icon update message from timer callback
- * This is called in the main UI thread when WM_TRAY_UPDATE_ICON is received
- * @return TRUE if message was handled
+ * @brief Handle WM_TRAY_UPDATE_ICON message in main thread
+ * @return TRUE if update was pending and handled
  */
 BOOL TrayAnimation_HandleUpdateMessage(void) {
-    /** Only update if there's a pending update */
     BOOL hasPending = FALSE;
     
     if (g_criticalSectionInitialized) {
@@ -1948,14 +1858,17 @@ static void OpenAnimationsFolder(void) {
     ShellExecuteW(NULL, L"open", wPath, NULL, NULL, SW_SHOWNORMAL);
 }
 
-/** @brief Checks if a folder contains no sub-folders or animated images, making it a leaf. */
+/**
+ * @brief Check if folder is a leaf (no subfolders or animated images)
+ * @return TRUE if folder contains only static image frames
+ */
 static BOOL IsAnimationLeafFolderW(const wchar_t* folderPathW) {
     wchar_t wSearch[MAX_PATH] = {0};
     _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s\\*", folderPathW);
     
     WIN32_FIND_DATAW ffd;
     HANDLE hFind = FindFirstFileW(wSearch, &ffd);
-    if (hFind == INVALID_HANDLE_VALUE) return TRUE; // Empty is a leaf
+    if (hFind == INVALID_HANDLE_VALUE) return TRUE;
 
     BOOL hasSubItems = FALSE;
     do {
@@ -1976,6 +1889,12 @@ static BOOL IsAnimationLeafFolderW(const wchar_t* folderPathW) {
     return !hasSubItems;
 }
 
+/**
+ * @brief Handle animation selection from context menu
+ * @param hwnd Window handle
+ * @param id Menu command ID
+ * @return TRUE if handled, FALSE otherwise
+ */
 BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id) {
     if (id == CLOCK_IDM_ANIMATIONS_OPEN_DIR) {
         OpenAnimationsFolder();
@@ -1998,7 +1917,6 @@ BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id) {
 
         UINT nextId = CLOCK_IDM_ANIMATIONS_BASE;
 
-        /** Recursive helper to find animation by ID */
         BOOL FindAnimationByIdRecursive(const wchar_t* folderPathW, const char* folderPathUtf8, UINT* nextIdPtr, UINT targetId, AnimationEntry* found_entry) {
             AnimationEntry* entries = (AnimationEntry*)malloc(sizeof(AnimationEntry) * MAX_TRAY_FRAMES);
             if (!entries) return FALSE;

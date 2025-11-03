@@ -1,150 +1,96 @@
 /**
  * @file window_procedure.h
- * @brief Window procedure and timer action API
- * @version 14.0 - Pattern consolidation and code density optimization
+ * @brief Window message dispatcher and timer control API
  * 
- * Public API for window message handling, hotkey registration,
- * and timer control operations (countdown, count-up, Pomodoro).
- * 
- * Optimizations in v14.0:
- * - Unified WRITE_CFG_REFRESH macro eliminates 60+ duplicated lines
- * - Timer parameter builders (TIMER_PARAMS_*) replace 40+ manual initializations
- * - Data-driven file extension matching (extensible via arrays)
- * - Removed 4 unused helper functions (cleanup dead code)
- * - Converted 8 command handlers to CMD macro (standardization)
- * - Generic MatchExtension eliminates redundant string comparisons
- * 
- * Key metrics v14.0 vs v13.0:
- * - Code reduction: ~120 lines (3% incremental improvement)
- * - Pattern unification: 100% (no more ad-hoc WriteConfig+Invalidate)
- * - Dead code: 0% (all unused functions removed)
- * - Extension matching: Data-driven (easy to add new formats)
- * - CMD macro usage: 35/53 handlers (66% coverage)
- * 
- * Key design principles:
- * - Zero duplication (DRY at statement level)
- * - Data-driven configuration (arrays over conditionals)
- * - Template-driven generation (code writes code)
- * - Aggressive dead code elimination
- * - Maximum code density with clarity
+ * Table-driven dispatch eliminates switch statement bloat (MESSAGE_DISPATCH_TABLE).
+ * Data-driven hotkey management scales via g_hotkeyConfigs array (no parameter explosion).
+ * Unified timer mode switching prevents code duplication across actions.
  */
 
 #ifndef WINDOW_PROCEDURE_H
 #define WINDOW_PROCEDURE_H
 
 #include <windows.h>
-#include "config.h"  /* For TimeFormatType and config structures */
+#include "config.h"
 
 /* ============================================================================
  * Custom Window Messages
  * ============================================================================ */
 
-/** @brief CLI help display request */
 #ifndef WM_APP_SHOW_CLI_HELP
 #define WM_APP_SHOW_CLI_HELP (WM_APP + 2)
 #endif
 
-/** @brief Quick countdown by index trigger */
 #ifndef WM_APP_QUICK_COUNTDOWN_INDEX
 #define WM_APP_QUICK_COUNTDOWN_INDEX (WM_APP + 3)
 #endif
 
-/** @brief Config file change notifications (animation) */
+/* Config reload notifications */
 #ifndef WM_APP_ANIM_PATH_CHANGED
 #define WM_APP_ANIM_PATH_CHANGED (WM_APP + 50)
 #endif
 #ifndef WM_APP_ANIM_SPEED_CHANGED
 #define WM_APP_ANIM_SPEED_CHANGED (WM_APP + 51)
 #endif
-
-/** @brief Config file change notification (display settings) */
 #ifndef WM_APP_DISPLAY_CHANGED
 #define WM_APP_DISPLAY_CHANGED (WM_APP + 52)
 #endif
-
-/** @brief Config file change notification (timer settings) */
 #ifndef WM_APP_TIMER_CHANGED
 #define WM_APP_TIMER_CHANGED (WM_APP + 53)
 #endif
-
-/** @brief Config file change notification (Pomodoro settings) */
 #ifndef WM_APP_POMODORO_CHANGED
 #define WM_APP_POMODORO_CHANGED (WM_APP + 54)
 #endif
-
-/** @brief Config file change notification (notification settings) */
 #ifndef WM_APP_NOTIFICATION_CHANGED
 #define WM_APP_NOTIFICATION_CHANGED (WM_APP + 55)
 #endif
-
-/** @brief Config file change notification (hotkey assignments) */
 #ifndef WM_APP_HOTKEYS_CHANGED
 #define WM_APP_HOTKEYS_CHANGED (WM_APP + 56)
 #endif
-
-/** @brief Config file change notification (recent files list) */
 #ifndef WM_APP_RECENTFILES_CHANGED
 #define WM_APP_RECENTFILES_CHANGED (WM_APP + 57)
 #endif
-
-/** @brief Config file change notification (color options) */
 #ifndef WM_APP_COLORS_CHANGED
 #define WM_APP_COLORS_CHANGED (WM_APP + 58)
 #endif
 
-/** @brief Inter-process communication identifier for CLI text */
 #ifndef COPYDATA_ID_CLI_TEXT
-#define COPYDATA_ID_CLI_TEXT 0x10010001
+#define COPYDATA_ID_CLI_TEXT 0x10010001  /**< IPC for CLI */
 #endif
 
 /* ============================================================================
  * Global Hotkey Identifiers
  * ============================================================================ */
 
-#define HOTKEY_ID_SHOW_TIME       100  /**< Toggle time display mode */
-#define HOTKEY_ID_COUNT_UP        101  /**< Start stopwatch timer */
-#define HOTKEY_ID_COUNTDOWN       102  /**< Start configured countdown */
-#define HOTKEY_ID_QUICK_COUNTDOWN1 103 /**< Quick countdown preset 1 */
-#define HOTKEY_ID_QUICK_COUNTDOWN2 104 /**< Quick countdown preset 2 */
-#define HOTKEY_ID_QUICK_COUNTDOWN3 105 /**< Quick countdown preset 3 */
-#define HOTKEY_ID_POMODORO        106  /**< Start Pomodoro session */
-#define HOTKEY_ID_TOGGLE_VISIBILITY 107 /**< Show/hide window */
-#define HOTKEY_ID_EDIT_MODE       108  /**< Enter/exit positioning mode */
-#define HOTKEY_ID_PAUSE_RESUME    109  /**< Toggle timer pause state */
-#define HOTKEY_ID_RESTART_TIMER   110  /**< Reset and restart timer */
-#define HOTKEY_ID_CUSTOM_COUNTDOWN 111 /**< Custom countdown input */
+#define HOTKEY_ID_SHOW_TIME       100
+#define HOTKEY_ID_COUNT_UP        101
+#define HOTKEY_ID_COUNTDOWN       102
+#define HOTKEY_ID_QUICK_COUNTDOWN1 103
+#define HOTKEY_ID_QUICK_COUNTDOWN2 104
+#define HOTKEY_ID_QUICK_COUNTDOWN3 105
+#define HOTKEY_ID_POMODORO        106
+#define HOTKEY_ID_TOGGLE_VISIBILITY 107
+#define HOTKEY_ID_EDIT_MODE       108
+#define HOTKEY_ID_PAUSE_RESUME    109
+#define HOTKEY_ID_RESTART_TIMER   110
+#define HOTKEY_ID_CUSTOM_COUNTDOWN 111
 
 /* ============================================================================
  * Core Window Procedure
  * ============================================================================ */
 
 /**
- * @brief Primary window procedure - fully table-driven dispatch
- * @param hwnd Window handle
- * @param msg Message identifier
- * @param wp Message-specific parameter
- * @param lp Message-specific parameter
- * @return Message processing result
+ * @brief Main window procedure (table-driven dispatch)
+ * @return Message result
  * 
- * v10.0 architecture - complete table-driven design:
- * - MESSAGE_DISPATCH_TABLE: All window messages (27 entries)
- * - APP_MESSAGE_DISPATCH_TABLE: Config reload messages (9 entries)
- * - COMMAND_DISPATCH_TABLE: Menu commands (80+ entries)
- * - All message handlers are standalone, testable functions
- * - WindowProcedure is only 22 lines (down from 340 in v9.0)
- * - O(n) linear table lookup (could optimize with hash for large tables)
+ * @details Table-driven architecture:
+ * - MESSAGE_DISPATCH_TABLE (27 entries)
+ * - APP_MESSAGE_DISPATCH_TABLE (9 config reload entries)
+ * - COMMAND_DISPATCH_TABLE (80+ menu entries)
  * 
- * Message flow:
- * 1. Check WM_TASKBARCREATED (special case)
- * 2. Try DispatchAppMessage() for WM_APP_* messages
- * 3. Iterate MESSAGE_DISPATCH_TABLE for standard messages
- * 4. Fall back to DefWindowProc() for unhandled messages
+ * Flow: WM_TASKBARCREATED → DispatchAppMessage → MESSAGE_DISPATCH_TABLE → DefWindowProc
  * 
- * Benefits:
- * - Easy to add/remove message handlers (just modify table)
- * - Each handler independently testable
- * - Clear message routing logic
- * - Minimal cyclomatic complexity
+ * Benefits: Easy handler addition, testable handlers, minimal complexity
  */
 LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
 
@@ -153,32 +99,18 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
  * ============================================================================ */
 
 /**
- * @brief Register all configured global hotkeys (fully loop-based)
- * @param hwnd Window to receive WM_HOTKEY messages
- * @return TRUE if at least one hotkey registered
+ * @brief Register configured hotkeys
+ * @return TRUE if at least one registered
  * 
- * v11.0: Completely loop-based implementation using configKey field.
- * Eliminates 11-parameter ReadConfigHotkeys/WriteConfigHotkeys entirely.
- * Each hotkey is loaded and saved individually using its configKey.
- * 
- * Implementation: Iterates g_hotkeyConfigs array, loads each hotkey
- * from INI using configKey, registers with Windows, detects failures,
- * writes back conflicts individually.
- * 
- * Benefits over v10.0:
- * - No 11-parameter functions (vs ReadConfigHotkeys with 11 params)
- * - Direct INI access per hotkey (configKey-driven)
- * - Scalable to any number of hotkeys (just add to array)
- * - Same external API (maintains compatibility)
+ * @details
+ * Loop-based via g_hotkeyConfigs array (configKey-driven).
+ * Loads from INI, registers with Windows, writes back conflicts.
+ * Scalable (just add to array).
  */
 BOOL RegisterGlobalHotkeys(HWND hwnd);
 
 /**
- * @brief Unregister all global hotkeys (loop-based)
- * @param hwnd Window that registered the hotkeys
- * 
- * v10.0: Iterates g_hotkeyConfigs array to unregister all.
- * Prevents conflicts when reloading or exiting application.
+ * @brief Unregister all hotkeys (prevents reload conflicts)
  */
 void UnregisterGlobalHotkeys(HWND hwnd);
 
@@ -187,110 +119,57 @@ void UnregisterGlobalHotkeys(HWND hwnd);
  * ============================================================================ */
 
 /**
- * @brief Toggle between timer and current time display mode
- * @param hwnd Window handle
- * 
- * Switches to current time display using unified timer mode switching.
- * Uses SwitchTimerMode internally for consistency.
- * 
- * @implementation Calls CleanupBeforeTimerAction() to stop sounds,
- * then delegates to SwitchTimerMode() with TIMER_MODE_SHOW_TIME.
+ * @brief Toggle to clock display mode
  */
 void ToggleShowTimeMode(HWND hwnd);
 
 /**
- * @brief Start count-up timer (stopwatch) from zero
- * @param hwnd Window handle
- * 
- * Initializes stopwatch mode using unified timer mode switching.
- * Automatically resets elapsed time and adjusts timer interval.
- * 
- * @implementation Calls CleanupBeforeTimerAction() then
- * SwitchTimerMode() with TIMER_MODE_COUNTUP parameters.
+ * @brief Start stopwatch from zero
  */
 void StartCountUp(HWND hwnd);
 
 /**
- * @brief Start default countdown timer
- * @param hwnd Window handle
- * 
- * Uses configured default duration or prompts if not set.
- * Leverages unified timer mode switching for consistency.
- * 
- * @implementation Checks CLOCK_DEFAULT_START_TIME and either
- * calls SwitchTimerMode() or posts WM_COMMAND for custom input.
+ * @brief Start default countdown (prompts if unset)
  */
 void StartDefaultCountDown(HWND hwnd);
 
 /**
  * @brief Start Pomodoro work session
- * @param hwnd Window handle
- * 
- * Initiates Pomodoro technique by posting command message.
- * Actual Pomodoro logic handled in command dispatcher.
  */
 void StartPomodoroTimer(HWND hwnd);
 
 /**
- * @brief Toggle edit mode for window positioning
- * @param hwnd Window handle
- * 
- * Switches between click-through and interactive dragging modes.
- * Manages window topmost state and visual feedback.
+ * @brief Toggle edit mode (click-through vs draggable)
  */
 void ToggleEditMode(HWND hwnd);
 
 /**
- * @brief Toggle pause/resume for active timer
- * @param hwnd Window handle
- * 
- * Pauses/resumes countdown or count-up timer (not clock display).
- * Preserves millisecond precision across pause cycles.
+ * @brief Pause/resume active timer (preserves millisecond precision)
  */
 void TogglePauseResume(HWND hwnd);
 
 /**
- * @brief Restart current timer from beginning
- * @param hwnd Window handle
- * 
- * Resets elapsed time and restarts active timer mode.
- * Stops notification sounds and closes notification windows.
+ * @brief Restart current timer (stops sounds/notifications)
  */
 void RestartCurrentTimer(HWND hwnd);
 
 /**
- * @brief Start quick countdown by 1-based index
- * @param hwnd Window handle
- * @param index Option index (1=first, 2=second, 3=third, etc.)
- * 
- * Unified API for starting configured quick countdown presets.
- * Used by hotkeys and menu commands.
+ * @brief Start quick countdown preset
+ * @param index 1-based preset index
  */
 void StartQuickCountdownByIndex(HWND hwnd, int index);
 
 /**
- * @brief Clean up before timer state changes
+ * @brief Stop sounds/notifications before mode changes
  * 
- * Stops notification sounds and closes notification windows.
- * Called internally before starting/stopping/switching timers.
- * 
- * @implementation v5.0: Centralized cleanup function called by all
- * timer action APIs to ensure consistent state management before
- * mode transitions. Prevents notification overlap and audio issues.
+ * @details Prevents overlap and audio issues during transitions
  */
 void CleanupBeforeTimerAction(void);
 
 /**
- * @brief Start countdown with specified duration
- * @param hwnd Window handle
- * @param seconds Duration in seconds
+ * @brief Start countdown programmatically
+ * @param seconds Duration
  * @return TRUE if started, FALSE if seconds <= 0
- * 
- * Programmatic API for starting custom countdown timers.
- * 
- * @implementation v5.0: Resets Pomodoro state if active, then
- * delegates to SwitchTimerMode() with TIMER_MODE_COUNTDOWN.
- * Uses unified timer mode switching for consistency.
  */
 BOOL StartCountdownWithTime(HWND hwnd, int seconds);
 
@@ -299,61 +178,40 @@ BOOL StartCountdownWithTime(HWND hwnd, int seconds);
  * ============================================================================ */
 
 /**
- * @brief Process language selection menu command
- * @param hwnd Window handle
- * @param menuId Language menu ID (CLOCK_IDM_LANG_*)
- * @return TRUE if language changed, FALSE if invalid
- * 
- * Maps menu command to language enum and updates config.
+ * @brief Process language selection
+ * @param menuId CLOCK_IDM_LANG_*
+ * @return TRUE if changed
  */
 BOOL HandleLanguageSelection(HWND hwnd, UINT menuId);
 
 /**
  * @brief Configure Pomodoro phase duration
- * @param hwnd Window handle
- * @param selectedIndex Phase index (0=work, 1=short break, 2=long break)
+ * @param selectedIndex Phase (0=work, 1=short break, 2=long break)
  * @return TRUE if updated, FALSE if cancelled
- * 
- * Shows input dialog and updates configuration.
  */
 BOOL HandlePomodoroTimeConfig(HWND hwnd, int selectedIndex);
 
 /* ============================================================================
- * Preview State Access API (v6.0)
+ * Preview State Access API
  * ============================================================================ */
 
 /**
- * @brief Get active color for rendering (preview or actual)
- * @param outColor Output buffer for color hex string
- * @param bufferSize Size of output buffer
- * 
- * Returns preview color if color preview active, otherwise actual color.
+ * @brief Get active color (preview or actual)
  */
 void GetActiveColor(char* outColor, size_t bufferSize);
 
 /**
- * @brief Get active font names for rendering (preview or actual)
- * @param outFontName Output buffer for font filename
- * @param outInternalName Output buffer for font internal name
- * @param bufferSize Size of output buffers
- * 
- * Returns preview font if font preview active, otherwise actual font.
+ * @brief Get active font (preview or actual)
  */
 void GetActiveFont(char* outFontName, char* outInternalName, size_t bufferSize);
 
 /**
  * @brief Get active time format (preview or actual)
- * @return Current active time format
- * 
- * Returns preview format if time format preview active, otherwise actual format.
  */
 TimeFormatType GetActiveTimeFormat(void);
 
 /**
- * @brief Get active milliseconds display setting (preview or actual)
- * @return TRUE if milliseconds should be shown
- * 
- * Returns preview setting if milliseconds preview active, otherwise actual setting.
+ * @brief Get active milliseconds setting (preview or actual)
  */
 BOOL GetActiveShowMilliseconds(void);
 

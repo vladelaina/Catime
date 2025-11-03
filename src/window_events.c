@@ -1,13 +1,6 @@
 /**
  * @file window_events.c
  * @brief Window lifecycle and state management event handlers
- * @version 2.0 - Refactored for improved error handling, logging, and code quality
- * 
- * Provides centralized window event handling with:
- * - Comprehensive logging for all lifecycle events
- * - Robust error handling and validation
- * - Proper resource cleanup sequencing
- * - Eliminated magic numbers and external declarations
  */
 #include <windows.h>
 #include "../include/window.h"
@@ -26,35 +19,26 @@
  * ============================================================================ */
 
 /**
- * @brief Handle window creation and initial setup
- * @param hwnd Window handle of the newly created window
- * @return TRUE if initialization succeeded, FALSE on error
+ * Handle WM_CREATE initialization: position, click-through, and topmost mode.
  * 
- * Initialization sequence:
- * 1. Enable parent window (if child window)
- * 2. Set initial position and size
- * 3. Configure click-through behavior
- * 4. Apply topmost setting
+ * @param hwnd Window handle of newly created window
+ * @return TRUE if initialization succeeded
  */
 BOOL HandleWindowCreate(HWND hwnd) {
     LOG_INFO("Window creation started");
     
-    // Enable parent window if this is a child window
     HWND hwndParent = GetParent(hwnd);
     if (hwndParent) {
         EnableWindow(hwndParent, TRUE);
         LOG_INFO("Parent window enabled");
     }
     
-    // Set initial window position and size
     AdjustWindowPosition(hwnd, TRUE);
     LOG_INFO("Window position adjusted");
     
-    // Set click-through behavior based on edit mode
     SetClickThrough(hwnd, !CLOCK_EDIT_MODE);
     LOG_INFO("Click-through mode set: %s", CLOCK_EDIT_MODE ? "disabled" : "enabled");
     
-    // Apply topmost window setting
     SetWindowTopmost(hwnd, CLOCK_WINDOW_TOPMOST);
     LOG_INFO("Window topmost setting applied: %s", CLOCK_WINDOW_TOPMOST ? "yes" : "no");
     
@@ -67,35 +51,26 @@ BOOL HandleWindowCreate(HWND hwnd) {
  * ============================================================================ */
 
 /**
- * @brief Handle window destruction with proper resource cleanup sequence
- * @param hwnd Window handle being destroyed
+ * Handle WM_DESTROY with ordered resource cleanup to prevent crashes.
+ * Critical order: save config → stop timers → remove UI → cleanup resources.
  * 
- * Cleanup sequence (order is critical to prevent crashes):
- * 1. Save configuration to disk
- * 2. Stop timers to prevent further callbacks
- * 3. Remove UI elements (tray icon, animations)
- * 4. Clean up resources (fonts, threads)
- * 5. Signal application exit
+ * @param hwnd Window handle being destroyed
  */
 void HandleWindowDestroy(HWND hwnd) {
     LOG_INFO("Window destruction started");
     
-    // 1. Save configuration
     SaveWindowSettings(hwnd);
     LOG_INFO("Window settings saved successfully");
     
-    // 2. Stop timers
     KillTimer(hwnd, TIMER_ID_MAIN);
     LOG_INFO("Main timer stopped");
     
-    // 3. Clean up UI elements
     RemoveTrayIcon();
     LOG_INFO("Tray icon removed");
     
     StopTrayAnimation(hwnd);
     LOG_INFO("Tray animation stopped");
     
-    // 4. Clean up resources
     if (!UnloadCurrentFontResource()) {
         LOG_WARNING("Failed to unload font resources");
     } else {
@@ -105,7 +80,6 @@ void HandleWindowDestroy(HWND hwnd) {
     CleanupUpdateThread();
     LOG_INFO("Update checker thread cleaned up");
     
-    // 5. Signal exit
     PostQuitMessage(0);
     LOG_INFO("Window destruction completed, application will exit");
 }
@@ -115,24 +89,19 @@ void HandleWindowDestroy(HWND hwnd) {
  * ============================================================================ */
 
 /**
- * @brief Reset window to default state and ensure visibility
- * @param hwnd Window handle to reset
+ * Reset window to default state: force topmost and ensure visibility.
+ * Called after timer restart to guarantee window is accessible.
  * 
- * Reset operations:
- * - Force enable topmost behavior
- * - Save setting to configuration
- * - Ensure window visibility
+ * @param hwnd Window handle to reset
  */
 void HandleWindowReset(HWND hwnd) {
     LOG_INFO("Window reset initiated");
     
-    // Force enable topmost behavior
     CLOCK_WINDOW_TOPMOST = TRUE;
     SetWindowTopmost(hwnd, TRUE);
     WriteConfigTopmost("TRUE");
     LOG_INFO("Window topmost forced to enabled and saved");
     
-    // Ensure window is visible
     ShowWindow(hwnd, SW_SHOW);
     LOG_INFO("Window visibility ensured");
     
@@ -144,12 +113,12 @@ void HandleWindowReset(HWND hwnd) {
  * ============================================================================ */
 
 /**
- * @brief Handle window resizing through mouse wheel scaling
- * @param hwnd Window handle to resize
- * @param delta Mouse wheel delta value for scaling direction and amount
- * @return TRUE if resize was handled successfully, FALSE otherwise
+ * Handle mouse wheel scaling for window size adjustment.
+ * Delegates to drag_scale module for proportional scaling.
  * 
- * Delegates to drag_scale module for proportional window size adjustment
+ * @param hwnd Window handle to resize
+ * @param delta Mouse wheel delta (positive=zoom in, negative=zoom out)
+ * @return TRUE if resize was handled successfully
  */
 BOOL HandleWindowResize(HWND hwnd, int delta) {
     BOOL result = HandleScaleWindow(hwnd, delta);
@@ -160,11 +129,11 @@ BOOL HandleWindowResize(HWND hwnd, int delta) {
 }
 
 /**
- * @brief Handle window movement through drag operations
- * @param hwnd Window handle being moved
- * @return TRUE if movement was handled successfully, FALSE otherwise
+ * Handle window drag movement in edit mode.
+ * Delegates to drag_scale module for smooth repositioning.
  * 
- * Delegates to drag_scale module for smooth window repositioning
+ * @param hwnd Window handle being moved
+ * @return TRUE if movement was handled successfully
  */
 BOOL HandleWindowMove(HWND hwnd) {
     BOOL result = HandleDragWindow(hwnd);

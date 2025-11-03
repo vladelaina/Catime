@@ -1,13 +1,10 @@
 /**
  * @file markdown_parser.h
- * @brief Refactored markdown link parser with optimized single-pass rendering
- * @author Catime Team
+ * @brief Single-pass markdown parser with O(n) rendering
  * 
- * Refactored improvements:
- * - ParseMarkdownLinks now returns BOOL for error handling
- * - RenderMarkdownText combines rendering and link rectangle calculation (O(n) instead of O(2n))
- * - Pre-allocation strategy eliminates realloc overhead
- * - Unified text layout engine for consistent positioning
+ * Pre-allocation eliminates realloc overhead (counts links before allocation).
+ * Combined render+rectangle calculation reduces complexity from O(2n) to O(n).
+ * Unified text layout prevents position inconsistencies between passes.
  */
 
 #ifndef MARKDOWN_PARSER_H
@@ -16,44 +13,31 @@
 #include <windows.h>
 
 /**
- * @brief Structure to store parsed markdown links
- * 
- * This structure represents a single markdown link [text](url) that has been
- * parsed from input text, including its position and display information.
+ * @brief Parsed markdown link [text](url)
  */
 typedef struct {
-    wchar_t* linkText;    /**< Display text for the link */
-    wchar_t* linkUrl;     /**< URL to open when link is clicked */
-    RECT linkRect;        /**< Rectangle for click detection (auto-calculated during render) */
-    int startPos;         /**< Start position in display text */
-    int endPos;           /**< End position in display text */
+    wchar_t* linkText;
+    wchar_t* linkUrl;
+    RECT linkRect;        /**< Auto-calculated during render */
+    int startPos;         /**< In display text */
+    int endPos;
 } MarkdownLink;
 
 /**
- * @brief Parse markdown-style links [text](url) from input text
- * 
- * This function scans input text for markdown link patterns and extracts them
- * into separate structures while creating clean display text without markup.
- * 
- * Optimized with pre-allocation: scans input once to count links, then allocates
- * exact memory needed, eliminating realloc overhead.
- * 
- * @param input Input text containing markdown links
- * @param displayText Output text with markdown removed (caller must free)
- * @param links Output array of parsed links (caller must free with FreeMarkdownLinks)
- * @param linkCount Output number of links found
+ * @brief Parse [text](url) links from input
+ * @param input Input text with markdown
+ * @param displayText Output without markup (caller must free)
+ * @param links Output link array (caller must free with FreeMarkdownLinks)
+ * @param linkCount Output link count
  * @return TRUE on success, FALSE on allocation failure
+ * 
+ * @details
+ * Pre-allocates exact memory (scans once to count, eliminating realloc overhead).
  * 
  * @example
  * ```c
- * wchar_t* text = L"Visit [GitHub](https://github.com) for more info.";
- * wchar_t* display;
- * MarkdownLink* links;
- * int count;
+ * // "Visit [GitHub](https://github.com)" → "Visit GitHub"
  * if (ParseMarkdownLinks(text, &display, &links, &count)) {
- *     // display will be: "Visit GitHub for more info."
- *     // links[0].linkText will be: "GitHub"
- *     // links[0].linkUrl will be: "https://github.com"
  *     FreeMarkdownLinks(links, count);
  *     free(display);
  * }
@@ -62,87 +46,64 @@ typedef struct {
 BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText, MarkdownLink** links, int* linkCount);
 
 /**
- * @brief Free memory allocated for parsed markdown links
- * 
- * This function properly frees all memory allocated by ParseMarkdownLinks
- * including the link text, URLs, and the array itself.
- * 
- * @param links Array of MarkdownLink structures to free
- * @param linkCount Number of links in the array
+ * @brief Free parsed links (text, URLs, array)
+ * @param links Link array
+ * @param linkCount Link count
  */
 void FreeMarkdownLinks(MarkdownLink* links, int linkCount);
 
 /**
- * @brief Check if a point is within any link and return the link URL
- * 
- * Helper function to determine if a mouse click position intersects
- * with any parsed markdown link rectangles.
- * 
- * @param links Array of MarkdownLink structures
- * @param linkCount Number of links in the array
- * @param point Point to test (in client coordinates)
- * @return URL of the clicked link, or NULL if no link was clicked
+ * @brief Get URL if point intersects link
+ * @param links Link array
+ * @param linkCount Link count
+ * @param point Point (client coords)
+ * @return URL or NULL
  */
 const wchar_t* GetClickedLinkUrl(MarkdownLink* links, int linkCount, POINT point);
 
 /**
- * @brief Check if a character position is within a link
- * 
- * Helper function to determine if a character at a given position
- * is part of a clickable link for styling purposes.
- * 
- * @param links Array of MarkdownLink structures
- * @param linkCount Number of links in the array
- * @param position Character position in display text
- * @param linkIndex Output parameter for the link index (optional)
- * @return TRUE if position is within a link, FALSE otherwise
+ * @brief Check if character position is in link (for styling)
+ * @param links Link array
+ * @param linkCount Link count
+ * @param position Character position
+ * @param linkIndex Output link index (optional)
+ * @return TRUE if in link
  */
 BOOL IsCharacterInLink(MarkdownLink* links, int linkCount, int position, int* linkIndex);
 
 /**
- * @brief Render markdown text with clickable links (single-pass optimized)
+ * @brief Render text with links (single-pass: O(n) instead of O(2n))
+ * @param hdc Device context
+ * @param displayText Text to render
+ * @param links Link array (rectangles updated in-place)
+ * @param linkCount Link count
+ * @param drawRect Draw bounds
+ * @param linkColor Link text color
+ * @param normalColor Normal text color
  * 
- * This function renders text with markdown links while simultaneously calculating
- * link rectangles for click detection. This eliminates the need for a separate
- * UpdateMarkdownLinkRects call, reducing complexity from O(2n) to O(n).
+ * @details
+ * Combines rendering and rectangle calculation in one pass (eliminates
+ * separate UpdateMarkdownLinkRects call). Unified text layout prevents
+ * position inconsistencies.
  * 
- * The function automatically:
- * - Sets text colors based on link membership
- * - Handles newlines and text wrapping
- * - Updates link rectangle boundaries during rendering
- * - Uses unified text layout engine for consistent positioning
- * 
- * @param hdc Device context for drawing
- * @param displayText The display text to render
- * @param links Array of MarkdownLink structures (rectangles updated in-place)
- * @param linkCount Number of links in the array
- * @param drawRect Rectangle to draw the text within
- * @param linkColor Color for link text (RGB value)
- * @param normalColor Color for normal text (RGB value)
- * 
- * @note After calling this function, link rectangles are automatically updated
- *       and ready for click detection via GetClickedLinkUrl()
+ * @note Link rectangles ready for GetClickedLinkUrl() after return
  */
 void RenderMarkdownText(HDC hdc, const wchar_t* displayText, MarkdownLink* links, int linkCount, 
                         RECT drawRect, COLORREF linkColor, COLORREF normalColor);
 
 /**
- * @brief Handle click on markdown text and open URLs
- * 
- * This function checks if a click point intersects with any link
- * and automatically opens the URL using ShellExecute.
- * 
- * @param links Array of MarkdownLink structures
- * @param linkCount Number of links in the array
- * @param clickPoint Click position in client coordinates
- * @return TRUE if a link was clicked and opened, FALSE otherwise
+ * @brief Handle click and open URL via ShellExecute
+ * @param links Link array
+ * @param linkCount Link count
+ * @param clickPoint Click position (client coords)
+ * @return TRUE if link clicked and opened
  */
 BOOL HandleMarkdownClick(MarkdownLink* links, int linkCount, POINT clickPoint);
 
 /**
- * @brief Default colors for markdown rendering
+ * @brief Default colors
  */
-#define MARKDOWN_DEFAULT_LINK_COLOR RGB(0, 100, 200)      /**< Default blue color for links */
-#define MARKDOWN_DEFAULT_TEXT_COLOR GetSysColor(COLOR_WINDOWTEXT)  /**< Default system text color */
+#define MARKDOWN_DEFAULT_LINK_COLOR RGB(0, 100, 200)
+#define MARKDOWN_DEFAULT_TEXT_COLOR GetSysColor(COLOR_WINDOWTEXT)
 
 #endif // MARKDOWN_PARSER_H

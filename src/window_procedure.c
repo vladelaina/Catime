@@ -1,27 +1,6 @@
 /**
  * @file window_procedure.c
- * @brief Window procedure with advanced meta-programming architecture
- * @version 14.0 - Pattern consolidation and code density optimization
- * 
- * Optimizations in v14.0 (incremental refinement):
- * - WRITE_CFG_REFRESH macro: Unified 60+ WriteConfig + InvalidateRect patterns
- * - TIMER_PARAMS_* builders: Standardized timer initialization (8 instances optimized)
- * - Data-driven extension matching: MatchExtension + arrays replace hardcoded comparisons
- * - Dead code elimination: Removed 4 unused helpers (HandleTimeoutAction, PATH_JOIN_IMPL, _cfg_*_ptr)
- * - CMD macro expansion: 8 additional handlers converted (CheckUpdate, ColorDialog, etc.)
- * - Consistent pattern usage: 100% of WriteConfig+Invalidate now use WRITE_CFG_REFRESH
- * 
- * Key metrics v14.0 vs v13.0:
- * - Code reduction: ~120 lines (3,877 → 3,757 lines, 3% improvement)
- * - Pattern standardization: 100% (zero ad-hoc config write+refresh)
- * - Dead code: 0% (all unused code removed)
- * - Maintainability: Higher (fewer idioms to learn)
- * - Extensibility: Improved (data-driven extension lists)
- * 
- * Cumulative metrics v14.0 vs v12.0:
- * - Total code reduction: 1,520+ lines (35% reduction from 4,200 → 2,680 lines)
- * - Macro efficiency: 1 universal CMD + 1 WRITE_CFG_REFRESH (vs 8+ specialized)
- * - Configuration: 100% declarative (no manual write+refresh coupling)
+ * @brief Table-driven window procedure with dispatch tables
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -64,10 +43,10 @@
 #include "../include/tray_animation.h"
 
 /* ============================================================================
- * String Constant Pool (v12.0 - DRY Principle)
+ * String Constant Pool
  * ============================================================================ */
 
-/** @brief Common string literals for configuration values */
+/** Shared INI value constants */
 static const char* const STR_TRUE = "TRUE";
 static const char* const STR_FALSE = "FALSE";
 static const char* const STR_NONE = "None";
@@ -76,32 +55,26 @@ static const char* const STR_MESSAGE = "MESSAGE";
 static const char* const STR_OK = "OK";
 
 /* ============================================================================
- * Unified String Conversion System (v13.0 - Simplified)
+ * String Conversion System
  * ============================================================================ */
 
-/**
- * @brief Wide string wrapper with built-in validation
- * 
- * Automatic validation and safe buffer access for all string conversions.
- * This is the ONLY string conversion API in v13.0.
- */
+/** UTF-8 → UTF-16 wrapper with validity flag */
 typedef struct {
-    wchar_t buf[MAX_PATH];  /**< Wide-char buffer */
-    BOOL valid;             /**< Conversion success flag */
+    wchar_t buf[MAX_PATH];
+    BOOL valid;
 } WideString;
 
-/**
- * @brief UTF-8 string wrapper with built-in validation
- * 
- * Automatic validation and safe buffer access for all string conversions.
- * This is the ONLY string conversion API in v13.0.
- */
+/** UTF-16 → UTF-8 wrapper with validity flag */
 typedef struct {
-    char buf[MAX_PATH];     /**< UTF-8 buffer */
-    BOOL valid;             /**< Conversion success flag */
+    char buf[MAX_PATH];
+    BOOL valid;
 } Utf8String;
 
-/** @brief Convert UTF-8 to wide-char with automatic validation */
+/**
+ * @brief Convert UTF-8 to UTF-16
+ * @param utf8 Source string
+ * @return Wrapped result - check `.valid` before use
+ */
 static inline WideString ToWide(const char* utf8) {
     WideString ws = {{0}, FALSE};
     if (utf8) {
@@ -110,7 +83,11 @@ static inline WideString ToWide(const char* utf8) {
     return ws;
 }
 
-/** @brief Convert wide-char to UTF-8 with automatic validation */
+/**
+ * @brief Convert UTF-16 to UTF-8
+ * @param wide Source string
+ * @return Wrapped result - check `.valid` before use
+ */
 static inline Utf8String ToUtf8(const wchar_t* wide) {
     Utf8String us = {{0}, FALSE};
     if (wide) {
@@ -120,10 +97,8 @@ static inline Utf8String ToUtf8(const wchar_t* wide) {
 }
 
 /* ============================================================================
- * Configuration Key Constants (v7.0)
+ * Configuration Key Constants
  * ============================================================================ */
-
-/** @brief Configuration key name constants to prevent typos */
 #define CFG_KEY_TEXT_COLOR           "CLOCK_TEXT_COLOR"
 #define CFG_KEY_BASE_FONT_SIZE       "CLOCK_BASE_FONT_SIZE"
 #define CFG_KEY_WINDOW_POS_X         "CLOCK_WINDOW_POS_X"
@@ -145,47 +120,37 @@ static inline Utf8String ToUtf8(const wchar_t* wide) {
 #define CFG_KEY_POMODORO_LOOP_COUNT  "POMODORO_LOOP_COUNT"
 #define CFG_KEY_HOTKEY_CUSTOM_CD     "HOTKEY_CUSTOM_COUNTDOWN"
 
-/** @brief Configuration section constants */
 #define CFG_SECTION_DISPLAY     INI_SECTION_DISPLAY
 #define CFG_SECTION_TIMER       INI_SECTION_TIMER
 #define CFG_SECTION_POMODORO    INI_SECTION_POMODORO
 #define CFG_SECTION_COLORS      INI_SECTION_COLORS
 
 /* ============================================================================
- * Utility Macros (v7.0)
+ * Utility Macros
  * ============================================================================ */
 
-/** @brief Variadic unused parameter macro*/
 #define UNUSED(...) (void)(__VA_ARGS__)
 
-/** @brief Restart timer interval (common pattern) */
 #define RESTART_TIMER_INTERVAL(hwnd) \
     do { KillTimer((hwnd), 1); ResetTimerWithInterval(hwnd); } while(0)
 
-/** @brief Clear input text buffer */
 static inline void ClearInputBuffer(wchar_t* buffer, size_t size) {
     memset(buffer, 0, size);
 }
 
-/** @brief Check if value is in range [base, base+count) */
 #define IS_IN_RANGE(val, base, count) ((val) >= (base) && (val) < ((base) + (count)))
-
-/** @brief Array size helper */
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
 /* ============================================================================
- * Unified Error Handling System (v12.0)
+ * Error Handling System
  * ============================================================================ */
 
-/** @brief Validate window handle and return FALSE if invalid */
 #define VALIDATE_HWND(hwnd) \
     do { if (!(hwnd) || !IsWindow(hwnd)) return FALSE; } while(0)
 
-/** @brief Validate pointer and return FALSE if NULL */
 #define VALIDATE_PTR(ptr) \
     do { if (!(ptr)) return FALSE; } while(0)
 
-/** @brief Validate file exists and show error if missing */
 #define VALIDATE_FILE_EXISTS(path, hwnd) \
     do { \
         WideString _ws = ToWide(path); \
@@ -196,27 +161,20 @@ static inline void ClearInputBuffer(wchar_t* buffer, size_t size) {
     } while(0)
 
 /* ============================================================================
- * Chain-able Configuration API (v12.0)
+ * Configuration API
  * ============================================================================ */
 
-/**
- * @brief Configuration writer with automatic UI refresh management
- * 
- * Enables chain-able configuration writes:
- * ConfigUpdate(hwnd).Set("KEY", "VALUE").Refresh().Apply()
- */
+/** Batch config writes + defer redraw until ConfigApply() */
 typedef struct ConfigWriter {
-    HWND hwnd;          /**< Window handle for refresh */
-    BOOL needsRefresh;  /**< Refresh pending flag */
+    HWND hwnd;
+    BOOL needsRefresh;
 } ConfigWriter;
 
-/** @brief Initialize configuration writer */
 static inline ConfigWriter ConfigUpdate(HWND hwnd) {
     ConfigWriter cw = {hwnd, FALSE};
     return cw;
 }
 
-/** @brief Set configuration value and mark for refresh */
 static inline ConfigWriter* ConfigSet(ConfigWriter* cw, const char* key, const char* val) {
     if (cw) {
         WriteConfigKeyValue(key, val);
@@ -225,14 +183,12 @@ static inline ConfigWriter* ConfigSet(ConfigWriter* cw, const char* key, const c
     return cw;
 }
 
-/** @brief Apply pending configuration changes (trigger UI refresh) */
 static inline void ConfigApply(ConfigWriter* cw) {
     if (cw && cw->needsRefresh && cw->hwnd) {
         InvalidateRect(cw->hwnd, NULL, TRUE);
     }
 }
 
-/** @brief Fluent API wrapper for single config write + refresh */
 static inline void UpdateConfigWithRefresh(HWND hwnd, const char* key, const char* value) {
     ConfigWriter cw = ConfigUpdate(hwnd);
     ConfigSet(&cw, key, value);
@@ -240,24 +196,10 @@ static inline void UpdateConfigWithRefresh(HWND hwnd, const char* key, const cha
 }
 
 /* ============================================================================
- * Universal Command Generation System (v14.0 - Enhanced)
+ * Command Generation System
  * ============================================================================ */
 
-/**
- * @brief Universal command handler generator with optional features
- * 
- * Replaces 8 specialized macros with single parameterized template.
- * 
- * @param name Handler function suffix (generates Cmd##name)
- * @param cleanup Whether to call CleanupBeforeTimerAction() first
- * @param action Code block to execute (can be function call or expression)
- * 
- * Usage examples:
- *   CMD(Exit, 0, RemoveTrayIcon(); PostQuitMessage(0))
- *   CMD(PauseResume, 0, TogglePauseResumeTimer(hwnd))
- *   CMD(RestartTimer, 1, RestartCurrentTimer(hwnd))
- *   CMD(TimeoutLock, 0, WriteConfigTimeoutAction("LOCK"))
- */
+/** Generate WM_COMMAND handler: static LRESULT Cmd##name(...) */
 #define CMD(name, cleanup, action) \
     static LRESULT Cmd##name(HWND hwnd, WPARAM wp, LPARAM lp) { \
         UNUSED(wp, lp); \
@@ -266,46 +208,21 @@ static inline void UpdateConfigWithRefresh(HWND hwnd, const char* key, const cha
         return 0; \
     }
 
-/**
- * @brief Unified config write with UI refresh helper
- * @param fn Config write function
- * @param ... Arguments for config function
- * 
- * Eliminates repetitive WriteConfig* + InvalidateRect pattern
- */
 #define WRITE_CFG_REFRESH(fn, ...) \
     do { fn(__VA_ARGS__); InvalidateRect(hwnd, NULL, TRUE); } while(0)
 
-/**
- * @brief Timer mode parameter builder macros for common patterns
- */
 #define TIMER_PARAMS_COUNTDOWN(dur) {dur, TRUE, FALSE, TRUE}
 #define TIMER_PARAMS_SHOW_TIME() {0, TRUE, TRUE, TRUE}
 #define TIMER_PARAMS_COUNTUP() {0, TRUE, TRUE, TRUE}
 
-/** @brief Config reload handler generator (v13.0 - Simplified) */
 #define CONFIG_RELOAD_HANDLER(name) \
     static LRESULT HandleApp##name##Changed(HWND hwnd)
 
 /* ============================================================================
- * Template-Based Range Handler Generator (v13.0)
+ * Range Handler Generator
  * ============================================================================ */
 
-/**
- * @brief Universal range handler generator
- * 
- * Generates range command handlers using template pattern.
- * Eliminates manual implementation of similar handlers.
- * 
- * @param name Handler function name
- * @param validation Index validation expression
- * @param action Action to execute with validated index
- * 
- * Usage:
- *   RANGE_HANDLER(QuickCountdown, 
- *                 index >= 0 && index < time_options_count,
- *                 StartCountdownWithTime(hwnd, time_options[index]))
- */
+/** Generate handler for menu ID ranges: static BOOL Handle##name(...) */
 #define RANGE_HANDLER(name, validation, action) \
     static BOOL Handle##name(HWND hwnd, UINT cmd, int index) { \
         (void)cmd; \
@@ -318,7 +235,7 @@ static inline void UpdateConfigWithRefresh(HWND hwnd, const char* key, const cha
  * Path Operation Utilities
  * ============================================================================ */
 
-/** @brief Join wide-char paths */
+/** Append path component with automatic backslash */
 static inline BOOL PathJoinW(wchar_t* base, size_t baseSize, const wchar_t* component) {
     if (!base || !component || baseSize == 0) return FALSE;
     size_t len = wcslen(base);
@@ -329,7 +246,7 @@ static inline BOOL PathJoinW(wchar_t* base, size_t baseSize, const wchar_t* comp
     return wcscat_s(base, baseSize, component) == 0;
 }
 
-/** @brief Get relative path (wide-char only, UTF-8 version removed as unused) */
+/** Extract relative path by stripping root prefix */
 static BOOL GetRelativePathW(const wchar_t* root, const wchar_t* target, 
                             wchar_t* relative, size_t relativeSize) {
     if (!root || !target || !relative || relativeSize == 0) return FALSE;
@@ -340,13 +257,10 @@ static BOOL GetRelativePathW(const wchar_t* root, const wchar_t* target,
     return wcsncpy_s(relative, relativeSize, rel, _TRUNCATE) == 0;
 }
 
-/* GDI RAII macros removed in v13.0 - Not used in practice, manual cleanup preferred */
-
 /* ============================================================================
  * Error Handling Utilities
  * ============================================================================ */
 
-/** @brief Error codes for unified error handling */
 typedef enum {
     ERR_NONE = 0,
     ERR_FILE_NOT_FOUND,
@@ -355,11 +269,7 @@ typedef enum {
     ERR_OPERATION_FAILED
 } ErrorCode;
 
-/**
- * @brief Show localized error dialog
- * @param hwnd Parent window
- * @param errorCode Error code for message lookup
- */
+/** Show localized error dialog */
 static void ShowError(HWND hwnd, ErrorCode errorCode) {
     const wchar_t* title = GetLocalizedString(L"错误", L"Error");
     const wchar_t* message;
@@ -384,11 +294,9 @@ static void ShowError(HWND hwnd, ErrorCode errorCode) {
     MessageBoxW(hwnd, message, title, MB_ICONERROR);
 }
 
-/** @brief Validate parameter is non-NULL, show error and return if NULL */
 #define REQUIRE_NON_NULL(ptr, retval) \
     do { if (!(ptr)) { ShowError(NULL, ERR_OPERATION_FAILED); return (retval); } } while(0)
 
-/** @brief Check range condition, show error and return if false */
 #define REQUIRE_RANGE(cond, retval) \
     do { if (!(cond)) { ShowError(NULL, ERR_INVALID_INPUT); return (retval); } } while(0)
 
@@ -396,11 +304,10 @@ static void ShowError(HWND hwnd, ErrorCode errorCode) {
  * Configuration Access Helpers
  * ============================================================================ */
 
-/** @brief Centralized config path buffer (thread-local for safety) */
 static __declspec(thread) char g_configPathCache[MAX_PATH] = {0};
 static __declspec(thread) BOOL g_configPathCached = FALSE;
 
-/** @brief Get cached config path (lazy initialization) */
+/** Cached config path getter */
 static inline const char* GetCachedConfigPath(void) {
     if (!g_configPathCached) {
         GetConfigPath(g_configPathCache, MAX_PATH);
@@ -409,18 +316,15 @@ static inline const char* GetCachedConfigPath(void) {
     return g_configPathCache;
 }
 
-/** @brief Read INI string with automatic config path resolution */
 static inline void ReadConfigStr(const char* section, const char* key, 
                                  const char* defaultVal, char* out, size_t size) {
     ReadIniString(section, key, defaultVal, out, (int)size, GetCachedConfigPath());
 }
 
-/** @brief Read INI integer with automatic config path resolution */
 static inline int ReadConfigInt(const char* section, const char* key, int defaultVal) {
     return ReadIniInt(section, key, defaultVal, GetCachedConfigPath());
 }
 
-/** @brief Read INI boolean with automatic config path resolution */
 static inline BOOL ReadConfigBool(const char* section, const char* key, BOOL defaultVal) {
     return ReadIniBool(section, key, defaultVal, GetCachedConfigPath());
 }
@@ -429,78 +333,68 @@ static inline BOOL ReadConfigBool(const char* section, const char* key, BOOL def
  * Type Definitions
  * ============================================================================ */
 
-/** @brief Input dialog parameter bundle */
 typedef struct {
-    const wchar_t* title;       /**< Dialog title */
-    const wchar_t* prompt;      /**< User prompt text */
-    const wchar_t* defaultText; /**< Default input value */
-    wchar_t* result;            /**< Output buffer */
-    size_t maxLen;              /**< Maximum result length */
+    const wchar_t* title;
+    const wchar_t* prompt;
+    const wchar_t* defaultText;
+    wchar_t* result;
+    size_t maxLen;
 } InputBoxParams;
 
-/** @brief Command handler function type for WM_COMMAND dispatch */
 typedef LRESULT (*CommandHandler)(HWND hwnd, WPARAM wp, LPARAM lp);
-
-/** @brief Simple action function type (no parameters) */
 typedef void (*SimpleAction)(HWND hwnd);
-
-/** @brief WM_APP message handler function type */
 typedef LRESULT (*AppMessageHandler)(HWND hwnd);
 
-/** @brief Command dispatch table entry */
 typedef struct {
     UINT cmdId;
     CommandHandler handler;
-    const char* description;  /**< For debugging */
+    const char* description;
 } CommandDispatchEntry;
 
-/** @brief Application message dispatch table entry */
 typedef struct {
     UINT msgId;
     AppMessageHandler handler;
-    const char* description;  /**< For debugging */
+    const char* description;
 } AppMessageDispatchEntry;
 
 /* ============================================================================
- * Configuration Reload Meta-Programming System (v9.0)
+ * Configuration Reload System
  * ============================================================================ */
 
-/** @brief Configuration item type enumeration */
 typedef enum {
-    CONFIG_TYPE_STRING,     /**< Null-terminated string */
-    CONFIG_TYPE_INT,        /**< Integer value */
-    CONFIG_TYPE_BOOL,       /**< Boolean value */
-    CONFIG_TYPE_FLOAT,      /**< Floating-point value */
-    CONFIG_TYPE_CUSTOM      /**< Custom handler */
+    CONFIG_TYPE_STRING,
+    CONFIG_TYPE_INT,
+    CONFIG_TYPE_BOOL,
+    CONFIG_TYPE_FLOAT,
+    CONFIG_TYPE_CUSTOM
 } ConfigItemType;
 
-/** @brief Configuration item descriptor */
+/** Declarative config descriptor for hot-reload */
 typedef struct {
-    ConfigItemType type;              /**< Data type */
-    const char* section;              /**< INI section name */
-    const char* key;                  /**< INI key name */
-    void* target;                     /**< Pointer to target variable */
-    size_t targetSize;                /**< Size of target variable/buffer */
-    const void* defaultValue;         /**< Default value (type-dependent) */
+    ConfigItemType type;
+    const char* section;
+    const char* key;
+    void* target;
+    size_t targetSize;
+    const void* defaultValue;
     BOOL (*customLoader)(const char* section, const char* key, void* target, const void* def);
-    BOOL triggerRedraw;               /**< Trigger window redraw on change */
+    BOOL triggerRedraw;
 } ConfigItem;
 
-/** @brief Generic configuration reload dispatcher */
 static BOOL ReloadConfigItems(HWND hwnd, const ConfigItem* items, size_t count);
 
-/** @brief String config item loader */
+/** @brief Load string config - returns TRUE if value changed */
 static BOOL LoadConfigString(const char* section, const char* key, void* target, size_t size, const char* def) {
     char temp[512];
     ReadConfigStr(section, key, def, temp, sizeof(temp));
     if (strcmp(temp, (char*)target) != 0) {
         strncpy_s(target, size, temp, _TRUNCATE);
-        return TRUE;  /* Changed */
+        return TRUE;
     }
     return FALSE;
 }
 
-/** @brief Integer config item loader */
+/** @brief Load integer config - returns TRUE if value changed */
 static BOOL LoadConfigInt(const char* section, const char* key, void* target, int def) {
     int temp = ReadConfigInt(section, key, def);
     if (temp != *(int*)target) {
@@ -510,7 +404,7 @@ static BOOL LoadConfigInt(const char* section, const char* key, void* target, in
     return FALSE;
 }
 
-/** @brief Boolean config item loader */
+/** @brief Load boolean config - returns TRUE if value changed */
 static BOOL LoadConfigBool(const char* section, const char* key, void* target, BOOL def) {
     BOOL temp = ReadConfigBool(section, key, def);
     if (temp != *(BOOL*)target) {
@@ -520,7 +414,12 @@ static BOOL LoadConfigBool(const char* section, const char* key, void* target, B
     return FALSE;
 }
 
-/** @brief Float config item loader with validation */
+/**
+ * @brief Load float config with positive value validation
+ * @return TRUE if value changed and valid
+ * 
+ * Why epsilon comparison: Prevents float rounding errors from triggering spurious redraws.
+ */
 static BOOL LoadConfigFloat(const char* section, const char* key, void* target, float def) {
     char buffer[32];
     ReadConfigStr(section, key, "", buffer, sizeof(buffer));
@@ -535,11 +434,13 @@ static BOOL LoadConfigFloat(const char* section, const char* key, void* target, 
 }
 
 /**
- * @brief Generic configuration items reload function
- * @param hwnd Window handle for redraw
- * @param items Array of configuration item descriptors
- * @param count Number of items in array
- * @return TRUE if any item changed
+ * @brief Reload config items from INI file
+ * @param hwnd Window for UI refresh (may be NULL)
+ * @param items Descriptor array
+ * @param count Array length
+ * @return TRUE if any value changed
+ * 
+ * Why: Centralizes reload logic. File watcher posts WM_APP on change detection.
  */
 static BOOL ReloadConfigItems(HWND hwnd, const ConfigItem* items, size_t count) {
     BOOL anyChanged = FALSE;
@@ -593,7 +494,7 @@ static BOOL ReloadConfigItems(HWND hwnd, const ConfigItem* items, size_t count) 
     return anyChanged;
 }
 
-/* Configuration item descriptor macros for declarative config management */
+/** Config descriptor macros - reduce boilerplate in reload handlers */
 #define CFG_STR(sec, key, var, def) \
     {CONFIG_TYPE_STRING, sec, key, (void*)var, sizeof(var), (void*)def, NULL, TRUE}
 
@@ -616,75 +517,54 @@ static BOOL ReloadConfigItems(HWND hwnd, const ConfigItem* items, size_t count) 
     {CONFIG_TYPE_CUSTOM, sec, key, (void*)var, 0, (void*)def, loader, redraw}
 
 /* ============================================================================
- * Unified Preview System (v5.0 Architecture)
+ * Preview System - Live menu hover previews without applying
  * ============================================================================ */
 
-/**
- * @brief Preview type enumeration for unified state management
- * 
- * Centralizes all preview types into single enum, eliminating
- * scattered BOOL flags (IS_PREVIEWING, IS_COLOR_PREVIEWING, etc.)
- */
+/** Preview type discriminator */
 typedef enum {
-    PREVIEW_TYPE_NONE = 0,          /**< No active preview */
-    PREVIEW_TYPE_COLOR,             /**< Color swatch preview */
-    PREVIEW_TYPE_FONT,              /**< Font typeface preview */
-    PREVIEW_TYPE_TIME_FORMAT,       /**< Time display format preview */
-    PREVIEW_TYPE_MILLISECONDS,      /**< Centiseconds toggle preview */
-    PREVIEW_TYPE_ANIMATION          /**< Tray animation preview */
+    PREVIEW_TYPE_NONE = 0,
+    PREVIEW_TYPE_COLOR,
+    PREVIEW_TYPE_FONT,
+    PREVIEW_TYPE_TIME_FORMAT,
+    PREVIEW_TYPE_MILLISECONDS,
+    PREVIEW_TYPE_ANIMATION
 } PreviewType;
 
 /**
- * @brief Unified preview state container
+ * @brief Global preview state with type-safe union
  * 
- * Replaces 5 separate preview state tracking systems with single
- * cohesive structure. Enables atomic preview transitions and
- * simplified cleanup logic.
+ * Why: Hovering menu items previews changes before selection. Clicking applies.
  */
 typedef struct {
-    PreviewType type;               /**< Active preview type */
+    PreviewType type;
     union {
-        char colorHex[32];          /**< For PREVIEW_TYPE_COLOR */
-        struct {                    /**< For PREVIEW_TYPE_FONT */
+        char colorHex[32];
+        struct {
             char fontName[MAX_PATH];
             char internalName[MAX_PATH];
         } font;
-        TimeFormatType timeFormat;  /**< For PREVIEW_TYPE_TIME_FORMAT */
-        BOOL showMilliseconds;      /**< For PREVIEW_TYPE_MILLISECONDS */
-        char animationPath[MAX_PATH]; /**< For PREVIEW_TYPE_ANIMATION */
+        TimeFormatType timeFormat;
+        BOOL showMilliseconds;
+        char animationPath[MAX_PATH];
     } data;
-    BOOL needsTimerReset;           /**< Millisecond preview requires timer adjust */
+    BOOL needsTimerReset;
 } PreviewState;
 
-/** @brief Global preview state (replaces 5+ scattered variables) */
 static PreviewState g_previewState = {PREVIEW_TYPE_NONE};
 
-/**
- * @brief Start preview of specified type
- * @param type Preview type to activate
- * @param data Type-specific preview data
- * @param hwnd Window handle for redraw
- */
 static void StartPreview(PreviewType type, const void* data, HWND hwnd);
-
-/**
- * @brief Cancel active preview and restore original state
- * @param hwnd Window handle for redraw
- */
 static void CancelPreview(HWND hwnd);
 
-/**
- * @brief Check if any preview is currently active
- * @return TRUE if preview active, FALSE otherwise
- */
 static inline BOOL IsPreviewActive(void) {
     return g_previewState.type != PREVIEW_TYPE_NONE;
 }
 
 /**
- * @brief Get active color for rendering (preview or actual)
- * @param outColor Output buffer for color hex string
- * @param bufferSize Size of output buffer
+ * @brief Get display color (preview takes precedence)
+ * @param outColor Output buffer
+ * @param bufferSize Buffer capacity
+ * 
+ * Why: Drawing code calls this instead of CLOCK_TEXT_COLOR directly.
  */
 void GetActiveColor(char* outColor, size_t bufferSize) {
     if (!outColor || bufferSize == 0) return;
@@ -695,10 +575,7 @@ void GetActiveColor(char* outColor, size_t bufferSize) {
 }
 
 /**
- * @brief Get active font name for rendering (preview or actual)
- * @param outFontName Output buffer for font filename
- * @param outInternalName Output buffer for font internal name
- * @param bufferSize Size of output buffers
+ * @brief Get display font (preview takes precedence)
  */
 void GetActiveFont(char* outFontName, char* outInternalName, size_t bufferSize) {
     if (!outFontName || !outInternalName || bufferSize == 0) return;
@@ -713,8 +590,7 @@ void GetActiveFont(char* outFontName, char* outInternalName, size_t bufferSize) 
 }
 
 /**
- * @brief Get active time format (preview or actual)
- * @return Current active time format
+ * @brief Get display time format (preview takes precedence)
  */
 TimeFormatType GetActiveTimeFormat(void) {
     return (g_previewState.type == PREVIEW_TYPE_TIME_FORMAT) ?
@@ -722,35 +598,19 @@ TimeFormatType GetActiveTimeFormat(void) {
 }
 
 /**
- * @brief Get active milliseconds display setting (preview or actual)
- * @return TRUE if milliseconds should be shown
+ * @brief Get milliseconds visibility (preview takes precedence)
  */
 BOOL GetActiveShowMilliseconds(void) {
     return (g_previewState.type == PREVIEW_TYPE_MILLISECONDS) ?
            g_previewState.data.showMilliseconds : CLOCK_SHOW_MILLISECONDS;
 }
 
-/**
- * @brief Apply current preview as permanent setting
- * @param hwnd Window handle
- * @return TRUE if preview applied, FALSE if no active preview
- */
 static BOOL ApplyPreview(HWND hwnd);
 
 /* ============================================================================
- * External Function Declarations (v12.0 - Minimal Set)
+ * External Function Declarations
  * ============================================================================ */
 
-/**
- * @note Most external declarations moved to proper header files:
- * - timer.h: Timer state, elapsed times, input dialog state
- * - pomodoro.h: Pomodoro times and state
- * - config.h: Configuration functions
- * - font.h: Font management functions
- * - tray_animation.h: Animation functions
- */
-
-/** @brief Additional functions not yet in headers */
 extern BOOL ShowInputDialog(HWND hwnd, wchar_t* text);
 extern BOOL ParseTimeInput(const char* input, int* outSeconds);
 extern void InitializePomodoro(void);
@@ -772,7 +632,6 @@ extern void UpdateTrayIcon(HWND hwnd);
  * Constants
  * ============================================================================ */
 
-/** @brief Buffer sizes for string operations */
 #define BUFFER_SIZE_FONT_NAME 256
 #define BUFFER_SIZE_TIME_TEXT 50
 #define BUFFER_SIZE_CLI_INPUT 256
@@ -780,13 +639,9 @@ extern void UpdateTrayIcon(HWND hwnd);
 #define MAX_ANIMATION_MENU_ITEMS 1000
 #define OPACITY_FULL 255
 
-/** @brief Timer ID for menu selection debouncing */
 #define IDT_MENU_DEBOUNCE 500
-
-/** @brief Menu debounce delay in milliseconds */
 #define MENU_DEBOUNCE_DELAY_MS 50
 
-/** @brief Command ID ranges for menu items */
 #define CMD_QUICK_COUNTDOWN_BASE 102
 #define CMD_QUICK_COUNTDOWN_END 108
 #define CMD_COLOR_OPTIONS_BASE 201
@@ -796,27 +651,26 @@ extern void UpdateTrayIcon(HWND hwnd);
 #define CMD_FONT_SELECTION_END 3000
 
 /* ============================================================================
- * Generic Recursive File Finder System
+ * Recursive File Finder System - Builds font/animation menus from folders
  * ============================================================================ */
 
-/** @brief File entry information */
 typedef struct {
-    wchar_t name[MAX_PATH];          /**< Display name */
-    char relPathUtf8[MAX_PATH];      /**< Relative path from root (UTF-8) */
-    BOOL isDir;                      /**< TRUE if directory */
+    wchar_t name[MAX_PATH];
+    char relPathUtf8[MAX_PATH];
+    BOOL isDir;
 } FileEntry;
 
-/** @brief File filter predicate function type */
 typedef BOOL (*FileFilterFunc)(const wchar_t* filename);
-
-/** @brief File action callback function type */
 typedef BOOL (*FileActionFunc)(const char* relPath, void* userData);
 
 /**
- * @brief Natural sort comparison for wide-char strings with numeric awareness
- * @param a First string to compare
- * @param b Second string to compare
- * @return Negative if a<b, 0 if equal, positive if a>b
+ * @brief Natural sort comparing strings with embedded numbers
+ * @param a First string
+ * @param b Second string
+ * @return <0 if a<b, 0 if equal, >0 if a>b
+ * 
+ * Why: Ensures "file2.ttf" sorts before "file10.ttf" in menus.
+ * Compares numeric runs by numeric value, not lexicographically.
  */
 static int NaturalCompareW(const wchar_t* a, const wchar_t* b) {
     const wchar_t* pa = a;
@@ -846,7 +700,7 @@ static int NaturalCompareW(const wchar_t* a, const wchar_t* b) {
     return *pa ? 1 : (*pb ? -1 : 0);
 }
 
-/** @brief Comparison for FileEntry (directories first, then natural sort) */
+/** @brief qsort comparator: directories first, then natural sort */
 static int CompareFileEntries(const void* a, const void* b) {
     const FileEntry* ea = (const FileEntry*)a;
     const FileEntry* eb = (const FileEntry*)b;
@@ -855,15 +709,18 @@ static int CompareFileEntries(const void* a, const void* b) {
 }
 
 /**
- * @brief Generic recursive file finder with predicate filtering
+ * @brief Recursively map menu ID to file path
  * @param rootPathW Root directory (wide-char)
- * @param relPathUtf8 Current relative path (UTF-8)
- * @param filter File filter predicate (NULL = accept all)
- * @param targetId Target menu ID to find
- * @param currentId Pointer to current ID counter
- * @param action Callback when target found
- * @param userData User data passed to action
- * @return TRUE if target found and action executed
+ * @param relPathUtf8 Current relative path (for nested dirs)
+ * @param filter File extension filter (NULL = accept all)
+ * @param targetId Menu ID to find
+ * @param currentId ID counter (increments per file, find by index)
+ * @param action Callback executed when targetId matches currentId
+ * @param userData Context for callback
+ * @return TRUE if found and callback succeeded
+ * 
+ * Why: Dynamic menus assign sequential IDs (2000, 2001...) to files.
+ * This reverses the mapping when user clicks menu item.
  */
 static BOOL RecursiveFindFile(const wchar_t* rootPathW, const char* relPathUtf8,
                               FileFilterFunc filter, UINT targetId, UINT* currentId,
@@ -939,11 +796,7 @@ static BOOL RecursiveFindFile(const wchar_t* rootPathW, const char* relPathUtf8,
 }
 
 /**
- * @brief Generic extension matcher for file filtering
- * @param filename File name to check
- * @param exts Array of extension strings
- * @param count Number of extensions
- * @return TRUE if file matches any extension
+ * Check if filename matches any extension in array (case-insensitive).
  */
 static BOOL MatchExtension(const wchar_t* filename, const wchar_t** exts, size_t count) {
     const wchar_t* ext = wcsrchr(filename, L'.');
@@ -954,7 +807,6 @@ static BOOL MatchExtension(const wchar_t* filename, const wchar_t** exts, size_t
     return FALSE;
 }
 
-/** @brief File extension filters (data-driven) */
 static const wchar_t* ANIMATION_EXTS[] = {
     L".gif", L".webp", L".ico", L".png", L".bmp", 
     L".jpg", L".jpeg", L".tif", L".tiff"
@@ -969,7 +821,6 @@ static BOOL IsFontFile(const wchar_t* filename) {
     return MatchExtension(filename, FONT_EXTS, ARRAY_SIZE(FONT_EXTS));
 }
 
-/** @brief Action callbacks for file finder */
 static BOOL AnimationPreviewAction(const char* relPath, void* userData) {
     (void)userData;
     StartAnimationPreview(relPath);
@@ -990,12 +841,7 @@ static BOOL FontLoadAction(const char* relPath, void* userData) {
 }
 
 /**
- * @brief Find animation by menu ID and trigger preview (uses generic finder)
- * @param folderPathW Root animation folder path
- * @param relPathUtf8 Current relative path (empty string for root)
- * @param nextIdPtr ID counter
- * @param targetId Target menu ID
- * @return TRUE if found and preview started
+ * Map animation menu ID to file and start preview.
  */
 static BOOL FindAnimationByIdRecursive(const wchar_t* folderPathW, const char* relPathUtf8, 
                                       UINT* nextIdPtr, UINT targetId) {
@@ -1004,16 +850,14 @@ static BOOL FindAnimationByIdRecursive(const wchar_t* folderPathW, const char* r
 }
 
 /* ============================================================================
- * Font Menu Builder - Static Helpers
+ * Font Menu Builder
  * ============================================================================ */
 
-/** @brief User data for font finding */
 typedef struct {
     wchar_t relPath[MAX_PATH];
     HWND hwnd;
 } FontFindData;
 
-/** @brief Font preview action callback */
 static BOOL FontPreviewAction(const char* relPath, void* userData) {
     if (!userData) return FALSE;
     wchar_t relPathW[MAX_PATH];
@@ -1023,17 +867,11 @@ static BOOL FontPreviewAction(const char* relPath, void* userData) {
 }
 
 /**
- * @brief Find font file by ID using generic file finder
- * @param folderPathW Fonts folder root path
- * @param targetId Target menu ID
- * @param currentId Current ID counter
- * @param foundRelativePathW Output buffer for font path
- * @param fontsFolderRootW Font folder root (unused with new system)
- * @return TRUE if font found
+ * Map font menu ID back to file path using recursive search.
  */
 static BOOL FindFontByIdRecursiveW(const wchar_t* folderPathW, int targetId, int* currentId,
                                    wchar_t* foundRelativePathW, const wchar_t* fontsFolderRootW) {
-    (void)fontsFolderRootW;  /* Not needed with relative path tracking */
+    (void)fontsFolderRootW;
     
     FontFindData data = {0};
     UINT id = (UINT)*currentId;
@@ -1049,51 +887,44 @@ static BOOL FindFontByIdRecursiveW(const wchar_t* folderPathW, int targetId, int
 }
 
 /* ============================================================================
- * Timer Mode Switching - Unified API
+ * Timer Mode Switching - Unified state machine for 4 timer modes
  * ============================================================================ */
 
-/** @brief Timer mode identifiers for unified switching */
 typedef enum {
-    TIMER_MODE_COUNTDOWN,    /**< Countdown timer with specified duration */
-    TIMER_MODE_COUNTUP,      /**< Count-up stopwatch mode */
-    TIMER_MODE_SHOW_TIME,    /**< Display current system time */
-    TIMER_MODE_POMODORO      /**< Pomodoro session with phases */
+    TIMER_MODE_COUNTDOWN,
+    TIMER_MODE_COUNTUP,
+    TIMER_MODE_SHOW_TIME,
+    TIMER_MODE_POMODORO
 } TimerMode;
 
-/** @brief Timer mode switch parameters */
 typedef struct {
-    int totalSeconds;        /**< Timer duration (for countdown/Pomodoro) */
-    BOOL resetElapsed;       /**< Reset elapsed time counters */
-    BOOL showWindow;         /**< Ensure window is visible */
-    BOOL resetInterval;      /**< Adjust timer interval */
+    int totalSeconds;
+    BOOL resetElapsed;
+    BOOL showWindow;
+    BOOL resetInterval;
 } TimerModeParams;
 
 /**
- * @brief Unified timer mode switching with single code path
+ * @brief Switch timer mode with unified state management
  * @param hwnd Window handle
- * @param mode Target timer mode
- * @param params Mode-specific parameters (can be NULL for defaults)
- * @return TRUE if mode switched successfully
+ * @param mode Target mode
+ * @param params Mode-specific parameters (NULL for defaults)
+ * @return TRUE if switched successfully
  * 
- * Eliminates 200+ lines of duplicated mode-switching logic across
- * 8 different functions by centralizing state transitions.
+ * Why centralized: Previous code had duplicate state management in 6+ places.
+ * This ensures consistent transitions and timer interval updates.
  */
 static BOOL SwitchTimerMode(HWND hwnd, TimerMode mode, const TimerModeParams* params) {
     BOOL wasShowingTime = CLOCK_SHOW_CURRENT_TIME;
     
-    /** Apply default parameters if not specified */
     TimerModeParams defaultParams = {0, TRUE, FALSE, TRUE};
     if (!params) params = &defaultParams;
     
-    /** Update global timer state flags */
     CLOCK_SHOW_CURRENT_TIME = (mode == TIMER_MODE_SHOW_TIME);
     CLOCK_COUNT_UP = (mode == TIMER_MODE_COUNTUP);
     CLOCK_IS_PAUSED = FALSE;
     
-    /** Reset elapsed time if requested */
     if (params->resetElapsed) {
-        /* Note: timer state variables now declared in timer.h */
-        
         elapsed_time = 0;
         countdown_elapsed_time = 0;
         countup_elapsed_time = 0;
@@ -1103,38 +934,27 @@ static BOOL SwitchTimerMode(HWND hwnd, TimerMode mode, const TimerModeParams* pa
         ResetMillisecondAccumulator();
     }
     
-    /** Set timer duration for countdown/Pomodoro modes */
     if (mode == TIMER_MODE_COUNTDOWN || mode == TIMER_MODE_POMODORO) {
         CLOCK_TOTAL_TIME = params->totalSeconds;
     }
     
-    /** Show window if requested */
     if (params->showWindow) {
         ShowWindow(hwnd, SW_SHOW);
     }
     
-    /** Adjust timer interval if mode changed from/to time display */
     if (params->resetInterval && (wasShowingTime || mode == TIMER_MODE_SHOW_TIME)) {
         KillTimer(hwnd, 1);
         ResetTimerWithInterval(hwnd);
     }
     
-    /** Trigger visual refresh */
     InvalidateRect(hwnd, NULL, TRUE);
     return TRUE;
 }
 
 /* ============================================================================
- * Unified Configuration Update System (v7.0 Enhanced)
+ * Configuration Update System
  * ============================================================================ */
 
-/**
- * @brief Update configuration and optionally trigger redraw
- * @param hwnd Window handle for redraw
- * @param key Configuration key
- * @param value Value to write
- * @param needsRedraw If TRUE, invalidates window for repaint
- */
 static inline void UpdateConfigWithRedraw(HWND hwnd, const char* key, const char* value, BOOL needsRedraw) {
     WriteConfigKeyValue(key, value);
     if (needsRedraw && hwnd) {
@@ -1143,13 +963,7 @@ static inline void UpdateConfigWithRedraw(HWND hwnd, const char* key, const char
 }
 
 /**
- * @brief Toggle boolean configuration value with redraw
- * @param hwnd Window handle
- * @param key Configuration key
- * @param currentValue Pointer to current boolean value
- * @param needsRedraw Whether to trigger window redraw
- * 
- * v7.0: Unified helper for all boolean toggle commands (reduces 8+ duplicate functions).
+ * Toggle boolean config value and optionally redraw.
  */
 static inline void ToggleConfigBool(HWND hwnd, const char* key, BOOL* currentValue, BOOL needsRedraw) {
     *currentValue = !(*currentValue);
@@ -1159,29 +973,21 @@ static inline void ToggleConfigBool(HWND hwnd, const char* key, BOOL* currentVal
     }
 }
 
-/**
- * @brief Write configuration value and trigger redraw
- * @param hwnd Window handle
- * @param key Configuration key
- * @param value Configuration value (string)
- */
 static inline void WriteConfigAndRedraw(HWND hwnd, const char* key, const char* value) {
     WriteConfigKeyValue(key, value);
     if (hwnd) InvalidateRect(hwnd, NULL, TRUE);
 }
 
 /* ============================================================================
- * Unified Dialog Systems
+ * Dialog Systems
  * ============================================================================ */
 
 /**
- * @brief Show file picker dialog with Unicode support
+ * @brief Show Windows file open dialog
  * @param hwnd Parent window
- * @param selectedPath Output buffer for selected file (UTF-8)
- * @param bufferSize Size of output buffer
- * @return TRUE if file selected, FALSE if cancelled
- * 
- * Consolidates two duplicate file picker implementations.
+ * @param selectedPath Output buffer for UTF-8 path
+ * @param bufferSize Buffer capacity
+ * @return TRUE if user selected file, FALSE if cancelled
  */
 static BOOL ShowFilePicker(HWND hwnd, char* selectedPath, size_t bufferSize) {
     wchar_t szFile[MAX_PATH] = {0};
@@ -1398,12 +1204,12 @@ static void CancelAllPreviews(HWND hwnd) {
  * ============================================================================ */
 
 /**
- * @brief Validate file existence and configure as timeout action target (v12.0 - Using string wrappers)
- * @param hwnd Window handle for error dialogs
- * @param filePathUtf8 UTF-8 encoded file path to validate
- * @return TRUE if file exists and configuration succeeded, FALSE otherwise
+ * @brief Validate file + update config + save to recent files
+ * @param hwnd Parent for error dialog
+ * @param filePathUtf8 Path to validate
+ * @return TRUE if file exists, FALSE otherwise
  * 
- * Performs existence check, updates configuration, and shows error dialog on failure.
+ * Why combined: File selection requires all 3 operations together.
  */
 static BOOL ValidateAndSetTimeoutFile(HWND hwnd, const char* filePathUtf8) {
     if (!filePathUtf8 || filePathUtf8[0] == '\0') {
@@ -1432,37 +1238,33 @@ static BOOL ValidateAndSetTimeoutFile(HWND hwnd, const char* filePathUtf8) {
  * Input Dialog - Static Functions
  * ============================================================================ */
 
-/* All configuration access and encoding conversion helpers moved to top of file */
-
 /* ============================================================================
- * Unified Input Validation Framework (v10.0)
+ * Unified Input Validation Framework - Retry loop until valid or cancelled
  * ============================================================================ */
 
-/** @brief Generic input validator function type */
+/** Validator returns TRUE if input valid, writes to output buffer */
 typedef BOOL (*InputValidator)(const char* input, void* output);
 
 /**
- * @brief Generic validated input loop with custom validator
- * @param hwnd Parent window handle
+ * @brief Show input dialog with validation retry loop
+ * @param hwnd Parent window
  * @param dialogId Dialog resource ID
- * @param validator Validation function
- * @param output Output buffer for validated result
- * @return TRUE if valid input provided, FALSE if cancelled
+ * @param validator Validation callback
+ * @param output Buffer for validated result
+ * @return TRUE if user provided valid input, FALSE if cancelled
  * 
- * Unified framework eliminates duplicate validation patterns.
- * Supports any input type through validator callbacks.
+ * Why: Eliminates 5+ duplicate "show dialog -> validate -> retry" patterns.
+ * Works with any validator by accepting callback.
  */
 static BOOL ValidatedInputLoop(HWND hwnd, UINT dialogId, 
                               InputValidator validator, void* output) {
-    /* Note: inputText now declared in timer.h */
-    
     while (1) {
         memset(inputText, 0, sizeof(inputText));
         DialogBoxParamW(GetModuleHandle(NULL), MAKEINTRESOURCEW(dialogId), 
                        hwnd, DlgProc, (LPARAM)dialogId);
         
         if (inputText[0] == L'\0' || isAllSpacesOnly(inputText)) {
-            return FALSE;  /* User cancelled */
+            return FALSE;
         }
         
         Utf8String us = ToUtf8(inputText);
@@ -1481,12 +1283,12 @@ static BOOL ValidatedInputLoop(HWND hwnd, UINT dialogId,
     }
 }
 
-/** @brief Time input validator (wraps ParseInput) */
+/** Time input validator: accepts "5m", "1h30m", "90s", etc. */
 static BOOL ValidateTimeInput(const char* input, void* output) {
     return ParseInput(input, (int*)output);
 }
 
-/** @brief Legacy compatibility wrapper */
+/** Legacy wrapper for time input dialogs */
 static BOOL ValidatedTimeInputLoop(HWND hwnd, UINT dialogId, int* outSeconds) {
     int result = 0;
     if (ValidatedInputLoop(hwnd, dialogId, ValidateTimeInput, &result)) {
@@ -1636,11 +1438,7 @@ static BOOL LoadDisplayWindowSettings(const char* section, const char* key, void
     return changed;
 }
 
-/**
- * @brief Handle display settings configuration changes (v9.0 meta-programmed)
- * @param hwnd Window handle for UI updates
- * @return 0 (message handled)
- */
+/** WM_APP_DISPLAY_CHANGED handler */
 CONFIG_RELOAD_HANDLER(Display) {
     ConfigItem items[] = {
         CFG_STR(CFG_SECTION_DISPLAY, CFG_KEY_TEXT_COLOR, CLOCK_TEXT_COLOR, CLOCK_TEXT_COLOR),
@@ -1653,31 +1451,19 @@ CONFIG_RELOAD_HANDLER(Display) {
 }
 
 /* ============================================================================
- * Timer Configuration Reload - Meta-Programmed (v9.0)
+ * Generic Enum System - X-Macro generates ToStr/FromStr/Loader
  * ============================================================================ */
 
-/* ============================================================================
- * Generic Enum System (v13.0 - Fully Automated)
- * ============================================================================ */
-
-/** @brief X-Macro: TimeFormatType enum mapping */
+/** X-Macro enum → string mappings */
 #define TIME_FORMAT_MAP X(TIME_FORMAT_DEFAULT, "DEFAULT") X(TIME_FORMAT_ZERO_PADDED, "ZERO_PADDED") X(TIME_FORMAT_FULL_PADDED, "FULL_PADDED")
 
-/** @brief X-Macro: TimeoutActionType enum mapping */
 #define TIMEOUT_ACTION_MAP \
     X(TIMEOUT_ACTION_MESSAGE, STR_MESSAGE) X(TIMEOUT_ACTION_LOCK, "LOCK") \
     X(TIMEOUT_ACTION_OPEN_FILE, "OPEN_FILE") X(TIMEOUT_ACTION_SHOW_TIME, "SHOW_TIME") \
     X(TIMEOUT_ACTION_COUNT_UP, "COUNT_UP") X(TIMEOUT_ACTION_OPEN_WEBSITE, "OPEN_WEBSITE") \
     X(TIMEOUT_ACTION_SLEEP, "SLEEP") X(TIMEOUT_ACTION_SHUTDOWN, "SHUTDOWN") X(TIMEOUT_ACTION_RESTART, "RESTART")
 
-/**
- * @brief Universal enum system (v13.0 - 3-phase macro expansion)
- * 
- * Generates ToStr + FromStr + Loader in 3 passes.
- * Each pass redefines X() for different expansion mode.
- */
-
-/* Phase 1: ToStr functions */
+/* Phase 1: enum → string */
 #define X(val, name) case val: return name;
 static const char* TimeFormatTypeToStr(TimeFormatType val) { 
     switch(val) { TIME_FORMAT_MAP default: return STR_DEFAULT; } 
@@ -1687,7 +1473,7 @@ static const char* TimeoutActionTypeToStr(TimeoutActionType val) {
 }
 #undef X
 
-/* Phase 2: FromStr functions */
+/* Phase 2: string → enum */
 #define X(val, name) if (strcmp(str, name) == 0) return val;
 static TimeFormatType TimeFormatTypeFromStr(const char* str) { 
     if (!str) return TIME_FORMAT_DEFAULT; 
@@ -1701,7 +1487,7 @@ static TimeoutActionType TimeoutActionTypeFromStr(const char* str) {
 }
 #undef X
 
-/* Phase 3: Config loaders (generic template) */
+/* Phase 3: config loaders */
 #define ENUM_LOADER(EnumType, FromStrFunc, defaultVal) \
     static BOOL Load##EnumType(const char* sec, const char* key, void* target, const void* def) { \
         char buf[32]; \
@@ -1714,7 +1500,7 @@ static TimeoutActionType TimeoutActionTypeFromStr(const char* str) {
 ENUM_LOADER(TimeFormatType, TimeFormatTypeFromStr, TIME_FORMAT_DEFAULT)
 ENUM_LOADER(TimeoutActionType, TimeoutActionTypeFromStr, TIMEOUT_ACTION_MESSAGE)
 
-/** @brief Custom loader for milliseconds with timer restart */
+/** Milliseconds loader - restarts timer when changed */
 static BOOL LoadShowMilliseconds(const char* section, const char* key, void* target, const void* def) {
     BOOL temp = ReadConfigBool(section, key, (BOOL)(intptr_t)def);
     if (temp != *(BOOL*)target) {
@@ -1727,7 +1513,6 @@ static BOOL LoadShowMilliseconds(const char* section, const char* key, void* tar
 }
 
 
-/** @brief Custom loader for timeout website URL (v13.0 - ToWide API) */
 static BOOL LoadTimeoutWebsite(const char* section, const char* key, void* target, const void* def) {
     char buffer[MAX_PATH];
     ReadConfigStr(section, key, (const char*)def, buffer, sizeof(buffer));
@@ -1741,15 +1526,10 @@ static BOOL LoadTimeoutWebsite(const char* section, const char* key, void* targe
 }
 
 /* ============================================================================
- * Generic List Loader System (v13.0 - Macro-Generated)
+ * List Loader System
  * ============================================================================ */
 
-/**
- * @brief Universal list config loader template (v13.0)
- * 
- * Generates optimized list loader with inline parsing.
- * Eliminates descriptor struct + wrapper function overhead.
- */
+/** Generate loader for comma-separated integer lists */
 #define INT_LIST_LOADER(name, targetArr, targetCnt, maxCnt) \
     static BOOL Load##name(const char* sec, const char* key, void* target, const void* def) { \
         (void)target; \
@@ -1764,14 +1544,9 @@ static BOOL LoadTimeoutWebsite(const char* section, const char* key, void* targe
         return changed; \
     }
 
-/** @brief Generate list loaders */
 INT_LIST_LOADER(TimeOptions, time_options, time_options_count, MAX_TIME_OPTIONS)
 
-/**
- * @brief Handle timer settings configuration changes (v9.0 meta-programmed)
- * @param hwnd Window handle for UI updates
- * @return 0 (message handled)
- */
+/** WM_APP_TIMER_CHANGED handler */
 CONFIG_RELOAD_HANDLER(Timer) {
     ConfigItem items[] = {
         CFG_BOOL(CFG_SECTION_TIMER, CFG_KEY_USE_24HOUR, CLOCK_USE_24HOUR, CLOCK_USE_24HOUR),
@@ -1791,7 +1566,6 @@ CONFIG_RELOAD_HANDLER(Timer) {
     return 0;
 }
 
-/** @brief Custom loader for Pomodoro time options (v13.0 - Simplified) */
 static BOOL LoadPomodoroOptions(const char* section, const char* key, void* target, const void* def) {
     (void)target;
     extern int POMODORO_WORK_TIME, POMODORO_SHORT_BREAK, POMODORO_LONG_BREAK;
@@ -1811,7 +1585,6 @@ static BOOL LoadPomodoroOptions(const char* section, const char* key, void* targ
     return changed;
 }
 
-/** @brief Custom loader for Pomodoro loop count with validation */
 static BOOL LoadPomodoroLoopCount(const char* section, const char* key, void* target, const void* def) {
     int temp = ReadConfigInt(section, key, (int)(intptr_t)def);
     if (temp < 1) temp = 1;
@@ -1822,13 +1595,8 @@ static BOOL LoadPomodoroLoopCount(const char* section, const char* key, void* ta
     return FALSE;
 }
 
-/**
- * @brief Handle Pomodoro settings configuration changes (v9.0 meta-programmed)
- * @param hwnd Window handle (unused)
- * @return 0 (message handled)
- */
+/** WM_APP_POMODORO_CHANGED handler */
 CONFIG_RELOAD_HANDLER(Pomodoro) {
-    /* Note: POMODORO_TIMES, POMODORO_LOOP_COUNT now in pomodoro.h */
     ConfigItem items[] = {
         {CONFIG_TYPE_CUSTOM, CFG_SECTION_POMODORO, CFG_KEY_POMODORO_OPTIONS, (void*)POMODORO_TIMES, 0, "1500,300,1500,600", LoadPomodoroOptions, FALSE},
         {CONFIG_TYPE_CUSTOM, CFG_SECTION_POMODORO, CFG_KEY_POMODORO_LOOP_COUNT, (void*)&POMODORO_LOOP_COUNT, 0, (void*)1, LoadPomodoroLoopCount, FALSE}
@@ -1838,7 +1606,6 @@ CONFIG_RELOAD_HANDLER(Pomodoro) {
     return 0;
 }
 
-/** @brief Custom loader for notification settings (calls multiple config loaders) */
 static BOOL LoadNotificationSettings(const char* section, const char* key, void* target, const void* def) {
     (void)section; (void)key; (void)target; (void)def;
     
@@ -1850,14 +1617,10 @@ static BOOL LoadNotificationSettings(const char* section, const char* key, void*
     ReadNotificationVolumeConfig();
     ReadNotificationDisabledConfig();
     
-    return FALSE;  /* No direct change tracking */
+    return FALSE;
 }
 
-/**
- * @brief Handle notification settings configuration changes (v9.0 meta-programmed)
- * @param hwnd Window handle (unused)
- * @return 0 (message handled)
- */
+/** WM_APP_NOTIFICATION_CHANGED handler */
 CONFIG_RELOAD_HANDLER(Notification) {
     ConfigItem items[] = {
         {CONFIG_TYPE_CUSTOM, NULL, NULL, NULL, 0, NULL, LoadNotificationSettings, FALSE}
@@ -1867,18 +1630,13 @@ CONFIG_RELOAD_HANDLER(Notification) {
     return 0;
 }
 
-/** @brief Custom loader for hotkey re-registration */
 static BOOL LoadHotkeys(const char* section, const char* key, void* target, const void* def) {
     (void)section; (void)key; (void)def;
     RegisterGlobalHotkeys(*(HWND*)target);
     return FALSE;
 }
 
-/**
- * @brief Handle hotkey assignments configuration changes (v9.0 meta-programmed)
- * @param hwnd Window handle for hotkey re-registration
- * @return 0 (message handled)
- */
+/** WM_APP_HOTKEYS_CHANGED handler */
 CONFIG_RELOAD_HANDLER(Hotkeys) {
     ConfigItem items[] = {
         {CONFIG_TYPE_CUSTOM, NULL, NULL, (void*)&hwnd, 0, NULL, LoadHotkeys, FALSE}
@@ -1888,14 +1646,13 @@ CONFIG_RELOAD_HANDLER(Hotkeys) {
     return 0;
 }
 
-/** @brief Custom loader for recent files with validation */
+/** Reload recent files + validate timeout file still exists */
 static BOOL LoadRecentFilesConfig(const char* section, const char* key, void* target, const void* def) {
     (void)section; (void)key; (void)target; (void)def;
     
     extern void LoadRecentFiles(void);
     LoadRecentFiles();
     
-    /* Validate current timeout file selection */
     extern TimeoutActionType CLOCK_TIMEOUT_ACTION;
     extern char CLOCK_TIMEOUT_FILE_PATH[];
     
@@ -1923,11 +1680,7 @@ static BOOL LoadRecentFilesConfig(const char* section, const char* key, void* ta
     return FALSE;
 }
 
-/**
- * @brief Handle recent files list configuration changes (v9.0 meta-programmed)
- * @param hwnd Window handle (unused)
- * @return 0 (message handled)
- */
+/** WM_APP_RECENTFILES_CHANGED handler */
 CONFIG_RELOAD_HANDLER(RecentFiles) {
     ConfigItem items[] = {
         {CONFIG_TYPE_CUSTOM, NULL, NULL, NULL, 0, NULL, LoadRecentFilesConfig, FALSE}
@@ -1937,7 +1690,6 @@ CONFIG_RELOAD_HANDLER(RecentFiles) {
     return 0;
 }
 
-/** @brief Custom loader for color options (comma-separated list) */
 static BOOL LoadColorOptions(const char* section, const char* key, void* target, const void* def) {
     (void)target;
     char buffer[1024];
@@ -1954,14 +1706,10 @@ static BOOL LoadColorOptions(const char* section, const char* key, void* target,
     ReadPercentIconColorsConfig();
     TrayAnimation_UpdatePercentIconIfNeeded();
     
-    return TRUE;  /* Always trigger redraw */
+    return TRUE;
 }
 
-/**
- * @brief Handle color options configuration changes (v9.0 meta-programmed)
- * @param hwnd Window handle for UI refresh
- * @return 0 (message handled)
- */
+/** WM_APP_COLORS_CHANGED handler */
 CONFIG_RELOAD_HANDLER(Colors) {
     ConfigItem items[] = {
         {CONFIG_TYPE_CUSTOM, CFG_SECTION_COLORS, "COLOR_OPTIONS", NULL, 0,
@@ -1973,7 +1721,6 @@ CONFIG_RELOAD_HANDLER(Colors) {
     return 0;
 }
 
-/** @brief Custom loader for animation speed */
 static BOOL LoadAnimSpeed(const char* section, const char* key, void* target, const void* def) {
     (void)section; (void)key; (void)target; (void)def;
     ReloadAnimationSpeedFromConfig();
@@ -1981,11 +1728,7 @@ static BOOL LoadAnimSpeed(const char* section, const char* key, void* target, co
     return FALSE;
 }
 
-/**
- * @brief Handle animation speed configuration changes (v9.0 meta-programmed)
- * @param hwnd Window handle (unused)
- * @return 0 (message handled)
- */
+/** WM_APP_ANIM_SPEED_CHANGED handler */
 CONFIG_RELOAD_HANDLER(AnimSpeed) {
     ConfigItem items[] = {
         {CONFIG_TYPE_CUSTOM, NULL, NULL, NULL, 0, NULL, LoadAnimSpeed, FALSE}
@@ -1995,7 +1738,6 @@ CONFIG_RELOAD_HANDLER(AnimSpeed) {
     return 0;
 }
 
-/** @brief Custom loader for animation path */
 static BOOL LoadAnimPath(const char* section, const char* key, void* target, const void* def) {
     char buffer[MAX_PATH];
     ReadConfigStr(section, key, (const char*)def, buffer, sizeof(buffer));
@@ -2003,11 +1745,7 @@ static BOOL LoadAnimPath(const char* section, const char* key, void* target, con
     return FALSE;
 }
 
-/**
- * @brief Handle animation path configuration changes (v9.0 meta-programmed)
- * @param hwnd Window handle (unused)
- * @return 0 (message handled)
- */
+/** WM_APP_ANIM_PATH_CHANGED handler */
 CONFIG_RELOAD_HANDLER(AnimPath) {
     ConfigItem items[] = {
         {CONFIG_TYPE_CUSTOM, "Animation", "ANIMATION_PATH", NULL, 0, "__logo__", LoadAnimPath, FALSE}
@@ -2018,10 +1756,9 @@ CONFIG_RELOAD_HANDLER(AnimPath) {
 }
 
 /* ============================================================================
- * Command Handler Functions - Table-Driven Dispatch
+ * Command Handler Functions
  * ============================================================================ */
 
-/** @brief Handle custom countdown input dialog */
 static LRESULT CmdCustomCountdown(HWND hwnd, WPARAM wp, LPARAM lp) {
     UNUSED(wp, lp);
     if (CLOCK_SHOW_CURRENT_TIME) {
@@ -2038,7 +1775,6 @@ static LRESULT CmdCustomCountdown(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
-/** @brief Handle application exit */
 static LRESULT CmdExit(HWND hwnd, WPARAM wp, LPARAM lp) {
     UNUSED(hwnd, wp, lp);
     RemoveTrayIcon();
@@ -2046,12 +1782,10 @@ static LRESULT CmdExit(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
-/** @brief Generated command handlers using universal CMD macro (v13.0) */
 CMD(PauseResume, 0, TogglePauseResumeTimer(hwnd))
 CMD(RestartTimer, 1, CloseAllNotifications(); RestartCurrentTimer(hwnd))
 CMD(About, 0, ShowAboutDialog(hwnd))
 
-/** @brief Handle topmost toggle */
 static LRESULT CmdToggleTopmost(HWND hwnd, WPARAM wp, LPARAM lp) {
     UNUSED(hwnd, wp, lp);
     BOOL newTopmost = !CLOCK_WINDOW_TOPMOST;
@@ -2059,17 +1793,11 @@ static LRESULT CmdToggleTopmost(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
-/* ============================================================================
- * Generic Command Handlers (v14.0 - Optimized)
- * ============================================================================ */
-
-/** @brief Time format commands (v14.0 - Using WRITE_CFG_REFRESH) */
 CMD(TimeFormatDefault, 0, WRITE_CFG_REFRESH(WriteConfigTimeFormat, TIME_FORMAT_DEFAULT))
 CMD(TimeFormatZeroPadded, 0, WRITE_CFG_REFRESH(WriteConfigTimeFormat, TIME_FORMAT_ZERO_PADDED))
 CMD(TimeFormatFullPadded, 0, WRITE_CFG_REFRESH(WriteConfigTimeFormat, TIME_FORMAT_FULL_PADDED))
 CMD(ToggleMilliseconds, 0, WRITE_CFG_REFRESH(WriteConfigShowMilliseconds, !CLOCK_SHOW_MILLISECONDS))
 
-/** @brief Handle countdown reset */
 static LRESULT CmdCountdownReset(HWND hwnd, WPARAM wp, LPARAM lp) {
     UNUSED(wp, lp);
     CleanupBeforeTimerAction();
@@ -2081,11 +1809,9 @@ static LRESULT CmdCountdownReset(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
-/** @brief Mode toggles (v14.0 - Optimized) */
 CMD(EditMode, 0, if (CLOCK_EDIT_MODE) EndEditMode(hwnd); else StartEditMode(hwnd); InvalidateRect(hwnd, NULL, TRUE))
 CMD(ToggleVisibility, 0, PostMessage(hwnd, WM_HOTKEY, HOTKEY_ID_TOGGLE_VISIBILITY, 0))
 
-/** @brief Handle custom color picker */
 static LRESULT CmdCustomizeColor(HWND hwnd, WPARAM wp, LPARAM lp) {
     UNUSED(wp, lp);
     COLORREF color = ShowColorDialog(hwnd);
@@ -2098,7 +1824,6 @@ static LRESULT CmdCustomizeColor(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
-/** @brief Handle font license agreement */
 static LRESULT CmdFontLicense(HWND hwnd, WPARAM wp, LPARAM lp) {
     UNUSED(wp, lp);
     
@@ -2110,7 +1835,6 @@ static LRESULT CmdFontLicense(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
-/** @brief Handle advanced font folder opening (v12.0 - Using string wrappers) */
 static LRESULT CmdFontAdvanced(HWND hwnd, WPARAM wp, LPARAM lp) {
     UNUSED(wp, lp);
     
@@ -2131,7 +1855,6 @@ static LRESULT CmdFontAdvanced(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
-/** @brief Handle time display mode toggle */
 static LRESULT CmdShowCurrentTime(HWND hwnd, WPARAM wp, LPARAM lp) {
     UNUSED(wp, lp);
     CleanupBeforeTimerAction();
@@ -2146,11 +1869,9 @@ static LRESULT CmdShowCurrentTime(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
-/** @brief Boolean toggle commands (v13.0 - Universal CMD macro) */
 CMD(24HourFormat, 0, ToggleConfigBool(hwnd, CFG_KEY_USE_24HOUR, &CLOCK_USE_24HOUR, TRUE))
 CMD(ShowSeconds, 0, ToggleConfigBool(hwnd, CFG_KEY_SHOW_SECONDS, &CLOCK_SHOW_SECONDS, TRUE))
 
-/** @brief Handle count-up mode toggle */
 static LRESULT CmdCountUp(HWND hwnd, WPARAM wp, LPARAM lp) {
     UNUSED(wp, lp);
     CleanupBeforeTimerAction();
@@ -2166,7 +1887,6 @@ static LRESULT CmdCountUp(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
-/** @brief Handle count-up start */
 static LRESULT CmdCountUpStart(HWND hwnd, WPARAM wp, LPARAM lp) {
     UNUSED(wp, lp);
     CleanupBeforeTimerAction();
@@ -2181,10 +1901,8 @@ static LRESULT CmdCountUpStart(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
-/** @brief Count-up reset (v14.0 - Optimized) */
 CMD(CountUpReset, 1, ResetTimer(); InvalidateRect(hwnd, NULL, TRUE))
 
-/** @brief Handle auto-start toggle */
 static LRESULT CmdAutoStart(HWND hwnd, WPARAM wp, LPARAM lp) {
     UNUSED(wp, lp);
     BOOL isEnabled = IsAutoStartEnabled();
@@ -2200,11 +1918,9 @@ static LRESULT CmdAutoStart(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
-/** @brief Color dialogs (v14.0 - Optimized) */
 CMD(ColorDialog, 0, DialogBoxW(GetModuleHandle(NULL), MAKEINTRESOURCEW(CLOCK_IDD_COLOR_DIALOG), hwnd, (DLGPROC)ColorDlgProc))
 CMD(ColorPanel, 0, if (ShowColorDialog(hwnd) != (COLORREF)-1) InvalidateRect(hwnd, NULL, TRUE))
 
-/** @brief Handle Pomodoro start */
 static LRESULT CmdPomodoroStart(HWND hwnd, WPARAM wp, LPARAM lp) {
     UNUSED(wp, lp);
     CleanupBeforeTimerAction();
@@ -2221,7 +1937,6 @@ static LRESULT CmdPomodoroStart(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
-/** @brief Handle Pomodoro reset */
 static LRESULT CmdPomodoroReset(HWND hwnd, WPARAM wp, LPARAM lp) {
     UNUSED(wp, lp);
     CleanupBeforeTimerAction();
@@ -2239,7 +1954,6 @@ static LRESULT CmdPomodoroReset(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
-/** @brief Dialog command handlers (v13.0 - Universal CMD macro) */
 CMD(PomodoroLoopCount, 0, ShowPomodoroLoopDialog(hwnd))
 CMD(PomodoroCombo, 0, ShowPomodoroComboDialog(hwnd))
 CMD(OpenWebsite, 0, ShowWebsiteDialog(hwnd))
@@ -2253,17 +1967,11 @@ CMD(Help, 0, OpenUserGuide())
 CMD(Support, 0, OpenSupportPage())
 CMD(Feedback, 0, OpenFeedbackPage())
 
-/**
- * @brief Generic startup mode setter helper
- * @param hwnd Window handle  
- * @param mode Mode string to set
- */
 static inline LRESULT HandleStartupMode(HWND hwnd, const char* mode) {
     SetStartupMode(hwnd, mode);
     return 0;
 }
 
-/** @brief Handle modify time options */
 static LRESULT CmdModifyTimeOptions(HWND hwnd, WPARAM wp, LPARAM lp) {
     UNUSED(wp, lp);
     
@@ -2309,7 +2017,6 @@ static LRESULT CmdModifyTimeOptions(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
-/** @brief Handle modify default time */
 static LRESULT CmdModifyDefaultTime(HWND hwnd, WPARAM wp, LPARAM lp) {
     UNUSED(wp, lp);
     int total_seconds = 0;
@@ -2321,7 +2028,6 @@ static LRESULT CmdModifyDefaultTime(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
-/** @brief Handle set countdown time */
 static LRESULT CmdSetCountdownTime(HWND hwnd, WPARAM wp, LPARAM lp) {
     UNUSED(wp, lp);
     int total_seconds = 0;
@@ -2331,12 +2037,10 @@ static LRESULT CmdSetCountdownTime(HWND hwnd, WPARAM wp, LPARAM lp) {
     return HandleStartupMode(hwnd, "COUNTDOWN");
 }
 
-/** @brief Startup mode handlers (v13.0 - Universal CMD macro) */
 CMD(StartupShowTime, 0, return HandleStartupMode(hwnd, "SHOW_TIME"))
 CMD(StartupCountUp, 0, return HandleStartupMode(hwnd, "COUNT_UP"))
 CMD(StartupNoDisplay, 0, return HandleStartupMode(hwnd, "NO_DISPLAY"))
 
-/** @brief Timeout action handlers (v13.0 - Universal CMD macro) */
 CMD(TimeoutShowTime, 0, WriteConfigTimeoutAction("SHOW_TIME"))
 CMD(TimeoutCountUp, 0, WriteConfigTimeoutAction("COUNT_UP"))
 CMD(TimeoutShowMessage, 0, WriteConfigTimeoutAction("MESSAGE"))
@@ -2345,7 +2049,6 @@ CMD(TimeoutShutdown, 0, WriteConfigTimeoutAction("SHUTDOWN"))
 CMD(TimeoutRestart, 0, WriteConfigTimeoutAction("RESTART"))
 CMD(TimeoutSleep, 0, WriteConfigTimeoutAction("SLEEP"))
 
-/** @brief File operations (v14.0 - Optimized) */
 CMD(BrowseFile, 0, { \
     char utf8Path[MAX_PATH]; \
     if (ShowFilePicker(hwnd, utf8Path, sizeof(utf8Path))) \
@@ -2353,18 +2056,11 @@ CMD(BrowseFile, 0, { \
 })
 
 /* ============================================================================
- * Reset Defaults - Decomposed Implementation (v5.0)
+ * Reset Defaults
  * ============================================================================ */
 
-/**
- * @brief Reset all timer state variables to defaults
- * 
- * Extracted from CmdResetDefaults to improve modularity and testability.
- * Resets elapsed times, message flags, and Pomodoro state.
- */
+/** Reset all timer state to default values */
 static void ResetTimerStateToDefaults(void) {
-    /* Note: timer state variables now declared in timer.h */
-    
     CLOCK_TOTAL_TIME = 25 * 60;
     elapsed_time = 0;
     countdown_elapsed_time = 0;
@@ -2384,13 +2080,7 @@ static void ResetTimerStateToDefaults(void) {
     ResetTimer();
 }
 
-/**
- * @brief Detect system UI language and return appropriate app language
- * @return Detected language enum value
- * 
- * Uses Windows GetUserDefaultUILanguage API to auto-detect user's
- * preferred language. Falls back to English if language not supported.
- */
+/** Detect system language via Windows API */
 static AppLanguage DetectSystemLanguage(void) {
     LANGID langId = GetUserDefaultUILanguage();
     WORD primaryLangId = PRIMARYLANGID(langId);
@@ -2411,12 +2101,7 @@ static AppLanguage DetectSystemLanguage(void) {
     }
 }
 
-/**
- * @brief Delete and recreate configuration file with defaults
- * 
- * Removes existing config.ini and creates fresh one with default values.
- * Also reloads notification messages and extracts embedded fonts.
- */
+/** Delete config.ini + create fresh one with defaults */
 static void ResetConfigurationFile(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -2443,12 +2128,7 @@ static void ResetConfigurationFile(void) {
     ExtractEmbeddedFontsToFolder(GetModuleHandle(NULL));
 }
 
-/**
- * @brief Reload default font from configuration
- * 
- * Parses FONT_FILE_NAME and loads font with internal name extraction.
- * Handles %LOCALAPPDATA% prefix expansion.
- */
+/** Reload font from config - handles %LOCALAPPDATA% prefix */
 static void ReloadDefaultFont(void) {
     extern BOOL LoadFontByNameAndGetRealName(HINSTANCE, const char*, char*, size_t);
     
@@ -2463,19 +2143,11 @@ static void ReloadDefaultFont(void) {
     }
 }
 
-/**
- * @brief Calculate and apply default window size based on screen dimensions
- * @param hwnd Window handle
- * 
- * Measures text extent with default font and calculates appropriate
- * window size scaled to 3% of screen height. Positions window at default location.
- */
+/** Calculate window size (3% of screen height) */
 static void RecalculateWindowSize(HWND hwnd) {
-    /** Reset scaling to baseline */
     CLOCK_WINDOW_SCALE = 1.0f;
     CLOCK_FONT_SCALE_FACTOR = 1.0f;
     
-    /** Measure text with default font */
     HDC hdc = GetDC(hwnd);
     
     wchar_t fontNameW[BUFFER_SIZE_FONT_NAME];
@@ -2502,13 +2174,11 @@ static void RecalculateWindowSize(HWND hwnd) {
     DeleteObject(hFont);
     ReleaseDC(hwnd, hdc);
     
-    /** Calculate adaptive scaling (3% of screen height) */
     int screenHeight = GetSystemMetrics(SM_CYSCREEN);
     float defaultScale = (screenHeight * 0.03f) / 20.0f;
     CLOCK_WINDOW_SCALE = defaultScale;
     CLOCK_FONT_SCALE_FACTOR = defaultScale;
     
-    /** Apply window size and position */
     SetWindowPos(hwnd, NULL, 
         CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y,
         (int)(textSize.cx * defaultScale), (int)(textSize.cy * defaultScale),
@@ -2516,35 +2186,20 @@ static void RecalculateWindowSize(HWND hwnd) {
     );
 }
 
-/**
- * @brief Handle reset to defaults command
- * @param hwnd Window handle
- * @param wp WPARAM (unused)
- * @param lp LPARAM (unused)
- * @return 0 (command handled)
- * 
- * Orchestrates complete application reset by calling specialized
- * reset functions. Decomposed from 142-line monolith into clean
- * 5-step process for improved maintainability.
- */
 static LRESULT CmdResetDefaults(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     
-    /** Step 1: Clean up active timers and previews */
     CleanupBeforeTimerAction();
     KillTimer(hwnd, 1);
     UnregisterGlobalHotkeys(hwnd);
     
-    /** Step 2: Reset all timer state */
     ResetTimerStateToDefaults();
     
-    /** Step 3: Reset UI mode */
     CLOCK_EDIT_MODE = FALSE;
     SetClickThrough(hwnd, TRUE);
     SendMessage(hwnd, WM_SETREDRAW, FALSE, 0);
     memset(CLOCK_TIMEOUT_FILE_PATH, 0, sizeof(CLOCK_TIMEOUT_FILE_PATH));
     
-    /** Step 4: Detect system language and reset configuration */
     AppLanguage defaultLanguage = DetectSystemLanguage();
     if (CURRENT_LANGUAGE != defaultLanguage) {
         CURRENT_LANGUAGE = defaultLanguage;
@@ -2552,13 +2207,11 @@ static LRESULT CmdResetDefaults(HWND hwnd, WPARAM wp, LPARAM lp) {
     ResetConfigurationFile();
     ReloadDefaultFont();
     
-    /** Step 5: Recalculate window size and finalize */
     InvalidateRect(hwnd, NULL, TRUE);
     RecalculateWindowSize(hwnd);
     ShowWindow(hwnd, SW_SHOW);
     ResetTimerWithInterval(hwnd);
     
-    /** Step 6: Finalize UI updates and re-register hotkeys */
     SendMessage(hwnd, WM_SETREDRAW, TRUE, 0);
     RedrawWindow(hwnd, NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
     RegisterGlobalHotkeys(hwnd);
@@ -2570,12 +2223,6 @@ static LRESULT CmdResetDefaults(HWND hwnd, WPARAM wp, LPARAM lp) {
  * Command Dispatch Table
  * ============================================================================ */
 
-/**
- * @brief Main command dispatch table for WM_COMMAND messages
- * 
- * Replaces 900+ line switch statement with clean table-driven dispatch.
- * Each entry maps a command ID to its handler function.
- */
 static const CommandDispatchEntry COMMAND_DISPATCH_TABLE[] = {
     {101, CmdCustomCountdown, "Custom countdown"},
     {109, CmdExit, "Exit application"},
@@ -2647,23 +2294,18 @@ static const CommandDispatchEntry COMMAND_DISPATCH_TABLE[] = {
 };
 
 /* ============================================================================
- * Unified Range Command System (v9.0 - Template-Based)
+ * Range Command System
  * ============================================================================ */
 
-/** @brief Range command handler function type */
 typedef BOOL (*RangeCommandHandler)(HWND hwnd, UINT cmd, int index);
-
-/** @brief Generic range action function type */
 typedef void (*RangeAction)(HWND hwnd, int index);
 
-/** @brief Range command descriptor */
 typedef struct {
     UINT rangeStart;
     UINT rangeEnd;
     RangeCommandHandler handler;
 } RangeCommandDescriptor;
 
-/** @brief Template for simple range handlers */
 #define DEFINE_SIMPLE_RANGE_HANDLER(name, action) \
     static BOOL Handle##name(HWND hwnd, UINT cmd, int index) { \
         (void)cmd; \
@@ -2671,7 +2313,6 @@ typedef struct {
         return TRUE; \
     }
 
-/** @brief Quick countdown range handler */
 static BOOL HandleQuickCountdown(HWND hwnd, UINT cmd, int index) {
     (void)cmd;
     if (index >= 0 && index < time_options_count && time_options[index] > 0) {
@@ -2681,7 +2322,6 @@ static BOOL HandleQuickCountdown(HWND hwnd, UINT cmd, int index) {
     return TRUE;
 }
 
-/** @brief Color selection handler */
 static BOOL HandleColorSelection(HWND hwnd, UINT cmd, int index) {
     (void)cmd;
     if (index >= 0 && index < COLOR_OPTIONS_COUNT) {
@@ -2695,7 +2335,6 @@ static BOOL HandleColorSelection(HWND hwnd, UINT cmd, int index) {
     return TRUE;
 }
 
-/** @brief Recent files handler */
 static BOOL HandleRecentFile(HWND hwnd, UINT cmd, int index) {
     (void)cmd;
     if (index >= CLOCK_RECENT_FILES_COUNT) return TRUE;
@@ -2714,14 +2353,12 @@ static BOOL HandleRecentFile(HWND hwnd, UINT cmd, int index) {
     return TRUE;
 }
 
-/** @brief Pomodoro time configuration handler */
 static BOOL HandlePomodoroTime(HWND hwnd, UINT cmd, int index) {
     (void)cmd;
     HandlePomodoroTimeConfig(hwnd, index);
     return TRUE;
 }
 
-/** @brief Font selection handler */
 static BOOL HandleFontSelection(HWND hwnd, UINT cmd, int index) {
     (void)index;
     wchar_t fontsFolderRootW[MAX_PATH];
@@ -2744,18 +2381,9 @@ static BOOL HandleFontSelection(HWND hwnd, UINT cmd, int index) {
     return TRUE;
 }
 
-/**
- * @brief Unified range command dispatcher (table-driven)
- * @param hwnd Window handle
- * @param cmd Command ID
- * @param wp WPARAM
- * @param lp LPARAM
- * @return TRUE if command handled
- */
 static BOOL DispatchRangeCommand(HWND hwnd, UINT cmd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     
-    /** Range command dispatch table (runtime initialized due to COLOR_OPTIONS_COUNT) */
     RangeCommandDescriptor rangeTable[] = {
         {CMD_QUICK_COUNTDOWN_BASE, CMD_QUICK_COUNTDOWN_END, HandleQuickCountdown},
         {CLOCK_IDM_QUICK_TIME_BASE, CLOCK_IDM_QUICK_TIME_BASE + MAX_TIME_OPTIONS - 1, HandleQuickCountdown},
@@ -2766,7 +2394,6 @@ static BOOL DispatchRangeCommand(HWND hwnd, UINT cmd, WPARAM wp, LPARAM lp) {
         {0, 0, NULL}
     };
     
-    /** Check range table */
     for (const RangeCommandDescriptor* r = rangeTable; r->handler; r++) {
         if (cmd >= r->rangeStart && cmd <= r->rangeEnd) {
             int index = cmd - r->rangeStart;
@@ -2774,7 +2401,6 @@ static BOOL DispatchRangeCommand(HWND hwnd, UINT cmd, WPARAM wp, LPARAM lp) {
         }
     }
     
-    /** Special cases not in table */
     if (cmd >= CLOCK_IDM_LANG_CHINESE && cmd <= CLOCK_IDM_LANG_KOREAN) {
         return HandleLanguageSelection(hwnd, cmd);
     }
@@ -2790,26 +2416,17 @@ static BOOL DispatchRangeCommand(HWND hwnd, UINT cmd, WPARAM wp, LPARAM lp) {
 }
 
 /* ============================================================================
- * Application Control - Static Functions
+ * Application Control
  * ============================================================================ */
 
-/**
- * @brief Gracefully terminate application
- * @param hwnd Main window handle
- * 
- * Performs cleanup (removes tray icon) and posts quit message.
- */
+/** Exit and remove tray icon */
 static void ExitProgram(HWND hwnd) {
     (void)hwnd;
     RemoveTrayIcon();
     PostQuitMessage(0);
 }
 
-/* ============================================================================
- * WM_APP Message Dispatch Table
- * ============================================================================ */
-
-/** @brief WM_APP message dispatch table for config reload handlers */
+/** Maps config reload messages to handlers */
 static const AppMessageDispatchEntry APP_MESSAGE_DISPATCH_TABLE[] = {
     {WM_APP_DISPLAY_CHANGED,       HandleAppDisplayChanged,       "Display settings reload"},
     {WM_APP_TIMER_CHANGED,         HandleAppTimerChanged,         "Timer settings reload"},
@@ -2823,12 +2440,7 @@ static const AppMessageDispatchEntry APP_MESSAGE_DISPATCH_TABLE[] = {
     {0,                             NULL,                          NULL}
 };
 
-/**
- * @brief Dispatch WM_APP messages using table lookup
- * @param hwnd Window handle
- * @param msg Message ID
- * @return TRUE if message was handled, FALSE if not in table
- */
+/** Route config reload message to handler */
 static inline BOOL DispatchAppMessage(HWND hwnd, UINT msg) {
     for (const AppMessageDispatchEntry* entry = APP_MESSAGE_DISPATCH_TABLE; entry->handler; entry++) {
         if (entry->msgId == msg) {
@@ -2840,19 +2452,17 @@ static inline BOOL DispatchAppMessage(HWND hwnd, UINT msg) {
 }
 
 /* ============================================================================
- * Hotkey Handler Dispatch Table (v8.0 - Optimized)
+ * Hotkey Handler Dispatch Table
  * ============================================================================ */
 
-/** @brief Hotkey action function type */
 typedef void (*HotkeyAction)(HWND);
 
-/** @brief Hotkey descriptor with direct action reference */
 typedef struct {
     int id;
     HotkeyAction action;
 } HotkeyDescriptor;
 
-/** @brief Special hotkey handlers requiring custom logic */
+/** Toggle window visibility */
 static void HotkeyToggleVisibility(HWND hwnd) {
     if (IsWindowVisible(hwnd)) {
         ShowWindow(hwnd, SW_HIDE);
@@ -2862,11 +2472,13 @@ static void HotkeyToggleVisibility(HWND hwnd) {
     }
 }
 
+/** Restart timer and close notifications */
 static void HotkeyRestartTimer(HWND hwnd) {
     CloseAllNotifications();
     RestartCurrentTimer(hwnd);
 }
 
+/** Show custom countdown dialog (closes existing first) */
 static void HotkeyCustomCountdown(HWND hwnd) {
     if (g_hwndInputDialog != NULL && IsWindow(g_hwndInputDialog)) {
         SendMessage(g_hwndInputDialog, WM_CLOSE, 0, 0);
@@ -2890,14 +2502,14 @@ static void HotkeyCustomCountdown(HWND hwnd) {
     }
 }
 
-/** @brief Generic quick countdown wrapper */
+/** Trigger quick countdown slot */
 static void HotkeyQuickCountdown(HWND hwnd, int index) {
     StartQuickCountdownByIndex(hwnd, index);
 }
 
+/** Encode index as function pointer */
 #define QUICK_CD(n) (void(*)(HWND))(void*)(uintptr_t)(n)
 
-/** @brief Hotkey dispatch table (compile-time constant) */
 static const HotkeyDescriptor HOTKEY_DISPATCH_TABLE[] = {
     {HOTKEY_ID_SHOW_TIME, ToggleShowTimeMode},
     {HOTKEY_ID_COUNT_UP, StartCountUp},
@@ -2913,18 +2525,12 @@ static const HotkeyDescriptor HOTKEY_DISPATCH_TABLE[] = {
     {HOTKEY_ID_CUSTOM_COUNTDOWN, HotkeyCustomCountdown}
 };
 
-/**
- * @brief Dispatch hotkey to appropriate handler (optimized)
- * @param hwnd Window handle
- * @param hotkeyId Hotkey identifier
- * @return TRUE if handled, FALSE if unknown
- */
+/** Route hotkey to handler (quick countdown uses encoded index) */
 static BOOL DispatchHotkey(HWND hwnd, int hotkeyId) {
     for (size_t i = 0; i < ARRAY_SIZE(HOTKEY_DISPATCH_TABLE); i++) {
         if (HOTKEY_DISPATCH_TABLE[i].id == hotkeyId) {
             HotkeyAction action = HOTKEY_DISPATCH_TABLE[i].action;
             
-            /** Handle quick countdown special cases */
             if (hotkeyId >= HOTKEY_ID_QUICK_COUNTDOWN1 && hotkeyId <= HOTKEY_ID_QUICK_COUNTDOWN3) {
                 int index = (int)(uintptr_t)(void*)action;
                 HotkeyQuickCountdown(hwnd, index);
@@ -2941,12 +2547,7 @@ static BOOL DispatchHotkey(HWND hwnd, int hotkeyId) {
  * Hotkey Registration System (v12.0 - X-Macro Generated)
  * ============================================================================ */
 
-/**
- * @brief Hotkey configuration registry using X-Macro pattern
- * 
- * Single source of truth for all hotkeys - add new hotkeys here.
- * Format: X(ID_SUFFIX, CONFIG_KEY_NAME)
- */
+/** X-macro hotkey registry: X(ID_SUFFIX, CONFIG_KEY) */
 #define HOTKEY_REGISTRY \
     X(SHOW_TIME, "HOTKEY_SHOW_TIME") \
     X(COUNT_UP, "HOTKEY_COUNT_UP") \
@@ -2961,26 +2562,18 @@ static BOOL DispatchHotkey(HWND hwnd, int hotkeyId) {
     X(RESTART_TIMER, "HOTKEY_RESTART_TIMER") \
     X(CUSTOM_COUNTDOWN, "HOTKEY_CUSTOM_COUNTDOWN")
 
-/** @brief Hotkey registration configuration structure */
 typedef struct {
-    int id;             /**< Hotkey identifier (HOTKEY_ID_*) */
-    WORD value;         /**< Hotkey value (modifier + virtual key) */
-    const char* configKey; /**< INI configuration key name */
+    int id;
+    WORD value;
+    const char* configKey;
 } HotkeyConfig;
-
-/** @brief Auto-generated hotkey storage array */
 static HotkeyConfig g_hotkeyConfigs[] = {
     #define X(name, key) {HOTKEY_ID_##name, 0, key},
     HOTKEY_REGISTRY
     #undef X
 };
 
-/**
- * @brief Register single hotkey with Windows
- * @param hwnd Window to receive WM_HOTKEY messages
- * @param config Hotkey configuration
- * @return TRUE if registration succeeded
- */
+/** Register hotkey (clears value on conflict) */
 static BOOL RegisterSingleHotkey(HWND hwnd, HotkeyConfig* config) {
     if (config->value == 0) return FALSE;
     
@@ -2999,15 +2592,7 @@ static BOOL RegisterSingleHotkey(HWND hwnd, HotkeyConfig* config) {
     return TRUE;
 }
 
-/**
- * @brief Register all configured global hotkeys (v11.0 - Fully loop-based)
- * @param hwnd Window handle to receive WM_HOTKEY messages
- * @return TRUE if at least one hotkey registered
- * 
- * v11.0: Completely loop-based loading and writing using configKey field.
- * Uses StringToHotkey/HotkeyToString from config system for proper conversion.
- * Eliminates need for 11-parameter ReadConfigHotkeys/WriteConfigHotkeys.
- */
+/** Load and register hotkeys (auto-clears conflicts in INI) */
 BOOL RegisterGlobalHotkeys(HWND hwnd) {
     extern WORD StringToHotkey(const char* str);
     extern void HotkeyToString(WORD hotkey, char* out, size_t size);
@@ -3017,7 +2602,6 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    /* Loop-based configuration loading using configKey field */
     for (size_t i = 0; i < ARRAY_SIZE(g_hotkeyConfigs); i++) {
         char hotkeyStr[64];
         ReadIniString(INI_SECTION_HOTKEYS, g_hotkeyConfigs[i].configKey, 
@@ -3025,7 +2609,6 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         g_hotkeyConfigs[i].value = StringToHotkey(hotkeyStr);
     }
     
-    /* Register all hotkeys and detect conflicts (loop-based) */
     BOOL anyRegistered = FALSE;
     BOOL configChanged = FALSE;
     
@@ -3038,7 +2621,6 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         }
     }
     
-    /* Write back if conflicts detected (loop-based) */
     if (configChanged) {
         for (size_t i = 0; i < ARRAY_SIZE(g_hotkeyConfigs); i++) {
             char hotkeyStr[64];
@@ -3051,12 +2633,7 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
     return anyRegistered;
 }
 
-/**
- * @brief Unregister all global hotkeys (v8.0 - Loop-based)
- * @param hwnd Window handle that registered the hotkeys
- * 
- * Removes all hotkey registrations to prevent conflicts on exit/reload.
- */
+/** Unregister all hotkeys */
 void UnregisterGlobalHotkeys(HWND hwnd) {
     for (size_t i = 0; i < ARRAY_SIZE(g_hotkeyConfigs); i++) {
         UnregisterHotKey(hwnd, g_hotkeyConfigs[i].id);
@@ -3067,17 +2644,15 @@ void UnregisterGlobalHotkeys(HWND hwnd) {
  * Unified Preview System (v8.0 - Meta-programming)
  * ============================================================================ */
 
-/** @brief Preview matcher function type */
 typedef BOOL (*PreviewMatcher)(HWND hwnd, UINT menuId);
 
-/** @brief Preview range descriptor */
 typedef struct {
     UINT rangeStart;
     UINT rangeEnd;
     PreviewMatcher matcher;
 } PreviewRange;
 
-/** @brief Color preview matcher */
+/** Start color preview */
 static BOOL MatchColorPreview(HWND hwnd, UINT menuId) {
     int colorIndex = menuId - CMD_COLOR_OPTIONS_BASE;
     if (colorIndex >= 0 && colorIndex < COLOR_OPTIONS_COUNT) {
@@ -3087,7 +2662,7 @@ static BOOL MatchColorPreview(HWND hwnd, UINT menuId) {
     return FALSE;
 }
 
-/** @brief Font preview matcher */
+/** Start font preview */
 static BOOL MatchFontPreview(HWND hwnd, UINT menuId) {
     wchar_t fontsFolderRootW[MAX_PATH];
     if (!GetFontsFolderWideFromConfig(fontsFolderRootW, MAX_PATH)) return FALSE;
@@ -3106,9 +2681,8 @@ static BOOL MatchFontPreview(HWND hwnd, UINT menuId) {
     return FALSE;
 }
 
-/** @brief Animation preview matcher */
+/** Start animation preview */
 static BOOL MatchAnimationPreview(HWND hwnd, UINT menuId) {
-    /** Fixed animation items */
     const char* fixedAnim = NULL;
     if (menuId == CLOCK_IDM_ANIMATIONS_USE_LOGO) fixedAnim = "__logo__";
     else if (menuId == CLOCK_IDM_ANIMATIONS_USE_CPU) fixedAnim = "__cpu__";
@@ -3119,7 +2693,6 @@ static BOOL MatchAnimationPreview(HWND hwnd, UINT menuId) {
         return TRUE;
     }
     
-    /** Dynamic animation items */
     if (menuId >= CLOCK_IDM_ANIMATIONS_BASE && menuId < CLOCK_IDM_ANIMATIONS_BASE + MAX_ANIMATION_MENU_ITEMS) {
         char animRootUtf8[MAX_PATH];
         GetAnimationsFolderPath(animRootUtf8, sizeof(animRootUtf8));
@@ -3131,7 +2704,7 @@ static BOOL MatchAnimationPreview(HWND hwnd, UINT menuId) {
     return FALSE;
 }
 
-/** @brief Time format preview matcher */
+/** Start time format preview */
 static BOOL MatchTimeFormatPreview(HWND hwnd, UINT menuId) {
     if (menuId == CLOCK_IDM_TIME_FORMAT_SHOW_MILLISECONDS) {
         BOOL previewMs = !CLOCK_SHOW_MILLISECONDS;
@@ -3152,7 +2725,7 @@ static BOOL MatchTimeFormatPreview(HWND hwnd, UINT menuId) {
     return FALSE;
 }
 
-/** @brief Preview range table (compile-time constant) */
+/** Maps menu ID ranges to preview matchers */
 static const PreviewRange PREVIEW_RANGES[] = {
     {CMD_COLOR_OPTIONS_BASE, CMD_COLOR_OPTIONS_BASE + 100, MatchColorPreview},
     {CMD_FONT_SELECTION_BASE, CMD_FONT_SELECTION_END, MatchFontPreview},
@@ -3160,12 +2733,7 @@ static const PreviewRange PREVIEW_RANGES[] = {
     {CLOCK_IDM_ANIMATIONS_USE_LOGO, CLOCK_IDM_ANIMATIONS_BASE + MAX_ANIMATION_MENU_ITEMS, MatchAnimationPreview}
 };
 
-/**
- * @brief Unified preview dispatcher (v8.0 - Table-driven)
- * @param hwnd Window handle
- * @param menuId Menu item ID
- * @return TRUE if preview triggered, FALSE otherwise
- */
+/** Find and trigger preview handler */
 static BOOL DispatchPreview(HWND hwnd, UINT menuId) {
     for (size_t i = 0; i < ARRAY_SIZE(PREVIEW_RANGES); i++) {
         if (menuId >= PREVIEW_RANGES[i].rangeStart && menuId <= PREVIEW_RANGES[i].rangeEnd) {
@@ -3175,19 +2743,12 @@ static BOOL DispatchPreview(HWND hwnd, UINT menuId) {
     return FALSE;
 }
 
-/**
- * @brief Handle WM_MENUSELECT message (v8.0 - Unified dispatcher)
- * @param hwnd Window handle
- * @param wp WPARAM containing menu item ID and flags
- * @param lp LPARAM containing menu handle
- * @return 0 (message handled)
- */
+/** Trigger preview on menu hover (debounced) */
 static LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
     UINT menuItem = LOWORD(wp);
     UINT flags = HIWORD(wp);
     HMENU hMenu = (HMENU)lp;
     
-    /** Handle mouse leaving menu area */
     if (menuItem == 0xFFFF) {
         KillTimer(hwnd, IDT_MENU_DEBOUNCE);
         SetTimer(hwnd, IDT_MENU_DEBOUNCE, MENU_DEBOUNCE_DELAY_MS, NULL);
@@ -3197,14 +2758,12 @@ static LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
     KillTimer(hwnd, IDT_MENU_DEBOUNCE);
     if (hMenu == NULL) return 0;
     
-    /** Try unified preview dispatcher (works for all types) */
     if (!(flags & MF_POPUP) || (menuItem >= CLOCK_IDM_ANIMATIONS_USE_LOGO)) {
         if (DispatchPreview(hwnd, menuItem)) {
             return 0;
         }
     }
     
-    /** Cancel preview if no match or popup item */
     CancelPreview(hwnd);
     return 0;
 }
@@ -3213,17 +2772,14 @@ static LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
  * Message Dispatch Table System (v10.0)
  * ============================================================================ */
 
-/** @brief Window message handler function type */
 typedef LRESULT (*MessageHandler)(HWND hwnd, WPARAM wp, LPARAM lp);
 
-/** @brief Message dispatch table entry */
 typedef struct {
     UINT msg;
     MessageHandler handler;
-    const char* description;  /* For debugging */
+    const char* description;
 } MessageDispatchEntry;
 
-/* Forward declarations for message handlers */
 static LRESULT HandleCreate(HWND hwnd, WPARAM wp, LPARAM lp);
 static LRESULT HandleSetCursor(HWND hwnd, WPARAM wp, LPARAM lp);
 static LRESULT HandleLButtonDown(HWND hwnd, WPARAM wp, LPARAM lp);
@@ -3250,7 +2806,7 @@ static LRESULT HandleTrayUpdateIcon(HWND hwnd, WPARAM wp, LPARAM lp);
 static LRESULT HandleAppReregisterHotkeys(HWND hwnd, WPARAM wp, LPARAM lp);
 
 /* ============================================================================
- * Message Handler Implementations (v10.0 - Extracted from switch)
+ * Message Handler Implementations
  * ============================================================================ */
 
 static LRESULT HandleCreate(HWND hwnd, WPARAM wp, LPARAM lp) {
@@ -3309,6 +2865,7 @@ static LRESULT HandlePaint(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
+/** Cancel debounced preview */
 static LRESULT HandleTimer(HWND hwnd, WPARAM wp, LPARAM lp) {
     UNUSED(lp);
     if (wp == IDT_MENU_DEBOUNCE) {
@@ -3334,10 +2891,10 @@ static LRESULT HandleTrayIcon(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
+/** Route menu command */
 static LRESULT HandleCommand(HWND hwnd, WPARAM wp, LPARAM lp) {
     WORD cmd = LOWORD(wp);
     
-    /* Handle animation selection commands (cancel debounce timer) */
     BOOL isAnimationSelectionCommand = 
         (cmd >= CLOCK_IDM_ANIMATIONS_BASE && cmd < CLOCK_IDM_ANIMATIONS_BASE + MAX_ANIMATION_MENU_ITEMS) ||
         cmd == CLOCK_IDM_ANIMATIONS_USE_LOGO ||
@@ -3351,10 +2908,8 @@ static LRESULT HandleCommand(HWND hwnd, WPARAM wp, LPARAM lp) {
         CancelAnimationPreview();
     }
     
-    /* Try range-based dispatcher first */
     if (DispatchRangeCommand(hwnd, cmd, wp, lp)) return 0;
     
-    /* Try exact-match dispatcher */
     for (const CommandDispatchEntry* entry = COMMAND_DISPATCH_TABLE; entry->handler; entry++) {
         if (entry->cmdId == cmd) return entry->handler(hwnd, wp, lp);
     }
@@ -3362,12 +2917,14 @@ static LRESULT HandleCommand(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
+/** Save position in edit mode */
 static LRESULT HandleWindowPosChanged(HWND hwnd, WPARAM wp, LPARAM lp) {
     UNUSED(wp, lp);
     if (CLOCK_EDIT_MODE) SaveWindowSettings(hwnd);
     return 0;
 }
 
+/** Adjust position on monitor change */
 static LRESULT HandleDisplayChange(HWND hwnd, WPARAM wp, LPARAM lp) {
     UNUSED(wp, lp);
     AdjustWindowPosition(hwnd, TRUE);
@@ -3376,6 +2933,7 @@ static LRESULT HandleDisplayChange(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
+/** Exit edit mode on release */
 static LRESULT HandleRButtonUp(HWND hwnd, WPARAM wp, LPARAM lp) {
     UNUSED(wp, lp);
     if (CLOCK_EDIT_MODE) {
@@ -3385,6 +2943,7 @@ static LRESULT HandleRButtonUp(HWND hwnd, WPARAM wp, LPARAM lp) {
     return DefWindowProc(hwnd, WM_RBUTTONUP, wp, lp);
 }
 
+/** Ctrl+Right toggles edit mode */
 static LRESULT HandleRButtonDown(HWND hwnd, WPARAM wp, LPARAM lp) {
     UNUSED(wp, lp);
     if (GetKeyState(VK_CONTROL) & 0x8000) {
@@ -3402,6 +2961,7 @@ static LRESULT HandleRButtonDown(HWND hwnd, WPARAM wp, LPARAM lp) {
     return DefWindowProc(hwnd, WM_RBUTTONDOWN, wp, lp);
 }
 
+/** Debounce preview cancel */
 static LRESULT HandleExitMenuLoop(HWND hwnd, WPARAM wp, LPARAM lp) {
     UNUSED(wp, lp);
     KillTimer(hwnd, IDT_MENU_DEBOUNCE);
@@ -3416,6 +2976,7 @@ static LRESULT HandleClose(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
+/** Enter edit mode on double-click */
 static LRESULT HandleLButtonDblClk(HWND hwnd, WPARAM wp, LPARAM lp) {
     UNUSED(wp, lp);
     if (!CLOCK_EDIT_MODE) {
@@ -3431,6 +2992,7 @@ static LRESULT HandleHotkey(HWND hwnd, WPARAM wp, LPARAM lp) {
     return DefWindowProc(hwnd, WM_HOTKEY, wp, lp);
 }
 
+/** IPC from second instance */
 static LRESULT HandleCopyData(HWND hwnd, WPARAM wp, LPARAM lp) {
     UNUSED(wp);
     PCOPYDATASTRUCT pcds = (PCOPYDATASTRUCT)lp;
@@ -3464,6 +3026,7 @@ static LRESULT HandleShowCliHelp(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
+/** Tray animation frame */
 static LRESULT HandleTrayUpdateIcon(HWND hwnd, WPARAM wp, LPARAM lp) {
     UNUSED(hwnd, wp, lp);
     if (TrayAnimation_HandleUpdateMessage()) return 0;
@@ -3477,16 +3040,10 @@ static LRESULT HandleAppReregisterHotkeys(HWND hwnd, WPARAM wp, LPARAM lp) {
 }
 
 /* ============================================================================
- * Owner-Drawn Menu Handlers (v10.0 - Extracted)
+ * Owner-Drawn Menu Handlers
  * ============================================================================ */
 
-/**
- * @brief Handle WM_MEASUREITEM for owner-drawn menu items
- * @param hwnd Window handle (unused)
- * @param wp WPARAM (unused)
- * @param lp LPARAM containing MEASUREITEMSTRUCT pointer
- * @return TRUE if handled, FALSE otherwise
- */
+/** Set color menu item dimensions */
 static LRESULT HandleMeasureItem(HWND hwnd, WPARAM wp, LPARAM lp) {
     UNUSED(hwnd, wp);
     LPMEASUREITEMSTRUCT lpmis = (LPMEASUREITEMSTRUCT)lp;
@@ -3498,13 +3055,7 @@ static LRESULT HandleMeasureItem(HWND hwnd, WPARAM wp, LPARAM lp) {
     return FALSE;
 }
 
-/**
- * @brief Handle WM_DRAWITEM for owner-drawn menu items
- * @param hwnd Window handle (unused)
- * @param wp WPARAM (unused)
- * @param lp LPARAM containing DRAWITEMSTRUCT pointer
- * @return TRUE if handled, FALSE otherwise
- */
+/** Draw color swatch */
 static LRESULT HandleDrawItem(HWND hwnd, WPARAM wp, LPARAM lp) {
     UNUSED(hwnd, wp);
     LPDRAWITEMSTRUCT lpdis = (LPDRAWITEMSTRUCT)lp;
@@ -3513,7 +3064,6 @@ static LRESULT HandleDrawItem(HWND hwnd, WPARAM wp, LPARAM lp) {
     int colorIndex = lpdis->itemID - CMD_COLOR_OPTIONS_BASE;
     if (colorIndex < 0 || colorIndex >= COLOR_OPTIONS_COUNT) return FALSE;
     
-    /* Draw color swatch for menu item */
     const char* hexColor = COLOR_OPTIONS[colorIndex].hexColor;
     int r, g, b;
     sscanf(hexColor + 1, "%02x%02x%02x", &r, &g, &b);
@@ -3540,10 +3090,9 @@ static LRESULT HandleDrawItem(HWND hwnd, WPARAM wp, LPARAM lp) {
 }
 
 /* ============================================================================
- * Message Dispatch Table Definition (v10.0)
+ * Message Dispatch Table Definition
  * ============================================================================ */
 
-/** @brief Main message dispatch table - 100% table-driven */
 static const MessageDispatchEntry MESSAGE_DISPATCH_TABLE[] = {
     {WM_CREATE, HandleCreate, "Window creation"},
     {WM_SETCURSOR, HandleSetCursor, "Cursor management"},
@@ -3572,45 +3121,31 @@ static const MessageDispatchEntry MESSAGE_DISPATCH_TABLE[] = {
     {WM_APP_SHOW_CLI_HELP, HandleShowCliHelp, "Show CLI help"},
     {WM_USER + 100, HandleTrayUpdateIcon, "Tray icon update"},
     {WM_APP + 1, HandleAppReregisterHotkeys, "Hotkey re-registration"},
-    {0, NULL, NULL}  /* Sentinel */
+    {0, NULL, NULL}
 };
 
 /* ============================================================================
- * Main Window Procedure (v10.0 - Table-Driven)
+ * Main Window Procedure
  * ============================================================================ */
 
-/**
- * @brief Primary window procedure - fully table-driven dispatch
- * @param hwnd Window handle
- * @param msg Message identifier
- * @param wp Message-specific parameter
- * @param lp Message-specific parameter
- * @return Message processing result
- * 
- * v10.0: Eliminates 320-line switch statement with table lookup.
- * All message handlers extracted to dedicated functions for testability.
- */
+/** Main window procedure (table-driven) */
 LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
-    /* Handle taskbar recreation (Explorer restart) */
     if (msg == WM_TASKBARCREATED) {
         RecreateTaskbarIcon(hwnd, GetModuleHandle(NULL));
         return 0;
     }
     
-    /* Handle configuration reload messages via centralized dispatcher */
     if (DispatchAppMessage(hwnd, msg)) {
         return 0;
     }
     
-    /* Table-driven message dispatch - O(n) linear search */
     for (const MessageDispatchEntry* entry = MESSAGE_DISPATCH_TABLE; entry->handler; entry++) {
         if (entry->msg == msg) {
             return entry->handler(hwnd, wp, lp);
         }
     }
     
-    /* Default handler for unprocessed messages */
     return DefWindowProc(hwnd, msg, wp, lp);
 }
 
@@ -3618,12 +3153,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
  * Public API - Timer Action Functions
  * ============================================================================ */
 
-/**
- * @brief Toggle between timer and current time display mode
- * @param hwnd Main window handle
- * 
- * Switches to current time mode using unified timer mode switching.
- */
 void ToggleShowTimeMode(HWND hwnd) {
     CleanupBeforeTimerAction();
     
@@ -3633,12 +3162,6 @@ void ToggleShowTimeMode(HWND hwnd) {
     }
 }
 
-/**
- * @brief Start count-up (stopwatch) timer from zero
- * @param hwnd Main window handle
- * 
- * Initializes stopwatch mode using unified timer mode switching.
- */
 void StartCountUp(HWND hwnd) {
     CleanupBeforeTimerAction();
     
@@ -3646,16 +3169,10 @@ void StartCountUp(HWND hwnd) {
     SwitchTimerMode(hwnd, TIMER_MODE_COUNTUP, &params);
 }
 
-/**
- * @brief Start default countdown timer
- * @param hwnd Main window handle
- * 
- * Uses configured default time, or prompts user if not set.
- */
+/** Start default countdown (prompts if not configured) */
 void StartDefaultCountDown(HWND hwnd) {
     CleanupBeforeTimerAction();
     
-    /* Note: countdown_message_shown now in timer.h */
     countdown_message_shown = FALSE;
     ReadNotificationTypeConfig();
     
@@ -3663,33 +3180,20 @@ void StartDefaultCountDown(HWND hwnd) {
         TimerModeParams params = {CLOCK_DEFAULT_START_TIME, TRUE, FALSE, TRUE};
         SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
     } else {
-        /** Prompt for time input if no default set */
         PostMessage(hwnd, WM_COMMAND, 101, 0);
     }
 }
 
-/**
- * @brief Start Pomodoro work session
- * @param hwnd Main window handle
- * 
- * Initiates Pomodoro technique by posting command message.
- */
 void StartPomodoroTimer(HWND hwnd) {
     CleanupBeforeTimerAction();
     PostMessage(hwnd, WM_COMMAND, CLOCK_IDM_POMODORO_START, 0);
 }
 
-/**
- * @brief Toggle edit mode for window positioning
- * @param hwnd Main window handle
- * 
- * Switches between click-through and interactive dragging modes.
- */
+/** Toggle edit mode (enables dragging, restores click-through on exit) */
 void ToggleEditMode(HWND hwnd) {
     CLOCK_EDIT_MODE = !CLOCK_EDIT_MODE;
     
     if (CLOCK_EDIT_MODE) {
-        /** Enter edit mode: make window interactive */
         PREVIOUS_TOPMOST_STATE = CLOCK_WINDOW_TOPMOST;
         
         if (!CLOCK_WINDOW_TOPMOST) {
@@ -3697,13 +3201,11 @@ void ToggleEditMode(HWND hwnd) {
         }
         
         SetBlurBehind(hwnd, TRUE);
-        
         SetClickThrough(hwnd, FALSE);
         
         ShowWindow(hwnd, SW_SHOW);
         SetForegroundWindow(hwnd);
     } else {
-        /** Exit edit mode: restore transparency and click-through */
         SetBlurBehind(hwnd, FALSE);
         SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), OPACITY_FULL, LWA_COLORKEY);
         
@@ -3726,23 +3228,11 @@ void ToggleEditMode(HWND hwnd) {
     InvalidateRect(hwnd, NULL, TRUE);
 }
 
-/**
- * @brief Toggle pause/resume for active timer
- * @param hwnd Main window handle
- * 
- * Pauses/resumes countdown or count-up timer (not clock display).
- */
 void TogglePauseResume(HWND hwnd) {
     CleanupBeforeTimerAction();
     TogglePauseResumeTimer(hwnd);
 }
 
-/**
- * @brief Restart current timer from beginning
- * @param hwnd Main window handle
- * 
- * Resets elapsed time and restarts the active timer mode.
- */
 void RestartCurrentTimer(HWND hwnd) {
     extern void StopNotificationSound(void);
     StopNotificationSound();
@@ -3750,8 +3240,6 @@ void RestartCurrentTimer(HWND hwnd) {
     CleanupBeforeTimerAction();
     
     if (!CLOCK_SHOW_CURRENT_TIME) {
-        /* Note: timer state variables now declared in timer.h */
-        
         message_shown = FALSE;
         countdown_message_shown = FALSE;
         countup_message_shown = FALSE;
@@ -3771,19 +3259,10 @@ void RestartCurrentTimer(HWND hwnd) {
     HandleWindowReset(hwnd);
 }
 
-/**
- * @brief Start quick countdown by zero-based index
- * @param hwnd Main window handle
- * @param index Zero-based index into time_options array
- * 
- * Internal helper using 0-based indexing for array access.
- */
 static void StartQuickCountdownByZeroBasedIndex(HWND hwnd, int index) {
     CleanupBeforeTimerAction();
     
-    /* Note: countdown_message_shown, time_options, time_options_count now in timer.h */
     countdown_message_shown = FALSE;
-    
     ReadNotificationTypeConfig();
     
     if (index >= 0 && index < time_options_count) {
@@ -3793,24 +3272,14 @@ static void StartQuickCountdownByZeroBasedIndex(HWND hwnd, int index) {
     }
 }
 
-/**
- * @brief Start quick countdown by 1-based index
- * @param hwnd Main window handle
- * @param index 1-based index (1=first option, 2=second, etc.)
- * 
- * Public API for starting configured quick countdown timers.
- */
 void StartQuickCountdownByIndex(HWND hwnd, int index) {
     if (index <= 0) return;
 
     CleanupBeforeTimerAction();
 
-    /* Note: countdown_message_shown, time_options, time_options_count now in timer.h */
     countdown_message_shown = FALSE;
-
     ReadNotificationTypeConfig();
 
-    /** Convert to zero-based index for array access */
     int zeroBased = index - 1;
     if (zeroBased >= 0 && zeroBased < time_options_count) {
         StartCountdownWithTime(hwnd, time_options[zeroBased]);
@@ -3819,33 +3288,19 @@ void StartQuickCountdownByIndex(HWND hwnd, int index) {
     }
 }
 
-/**
- * @brief Clean up notifications and audio before timer state changes
- * 
- * Stops notification sounds and closes notification windows.
- * Called before starting/stopping/switching timer modes.
- */
+/** Stop audio and close notifications (prevents stale popups) */
 void CleanupBeforeTimerAction(void) {
     extern void StopNotificationSound(void);
     StopNotificationSound();
     CloseAllNotifications();
 }
 
-/**
- * @brief Start countdown with specified duration
- * @param hwnd Window handle
- * @param seconds Countdown duration in seconds
- * @return TRUE if started successfully, FALSE if seconds <= 0
- * 
- * Uses unified timer mode switching for consistency.
- */
+/** Start countdown (exits Pomodoro if active) */
 BOOL StartCountdownWithTime(HWND hwnd, int seconds) {
     if (seconds <= 0) return FALSE;
     
-    /* Note: countdown_message_shown now in timer.h */
     countdown_message_shown = FALSE;
     
-    /** Reset Pomodoro state if active */
     if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
         current_pomodoro_phase = POMODORO_PHASE_IDLE;
         current_pomodoro_time_index = 0;
@@ -3855,8 +3310,6 @@ BOOL StartCountdownWithTime(HWND hwnd, int seconds) {
     TimerModeParams params = {seconds, TRUE, TRUE, TRUE};
     return SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
 }
-
-/** @brief Language mapping table (v7.0 - File-scoped constant) */
 static const struct {
     UINT menuId;
     AppLanguage language;
@@ -3873,16 +3326,7 @@ static const struct {
     {CLOCK_IDM_LANG_KOREAN, APP_LANG_KOREAN}
 };
 
-/**
- * @brief Process language selection menu command
- * @param hwnd Window handle
- * @param menuId Language menu command ID (CLOCK_IDM_LANG_*)
- * @return TRUE if language changed, FALSE if invalid menuId
- * 
- * Maps menu command to language enum and updates configuration.
- */
 BOOL HandleLanguageSelection(HWND hwnd, UINT menuId) {
-    /** Find and set the selected language */
     for (size_t i = 0; i < sizeof(LANGUAGE_MAP) / sizeof(LANGUAGE_MAP[0]); i++) {
         if (menuId == LANGUAGE_MAP[i].menuId) {
             SetLanguage(LANGUAGE_MAP[i].language);
@@ -3896,17 +3340,8 @@ BOOL HandleLanguageSelection(HWND hwnd, UINT menuId) {
     return FALSE;
 }
 
-/**
- * @brief Configure Pomodoro phase duration via dialog
- * @param hwnd Window handle
- * @param selectedIndex Pomodoro phase index (0=work, 1=short break, 2=long break)
- * @return TRUE if configuration updated, FALSE if cancelled or invalid
- * 
- * Shows input dialog and updates POMODORO_TIMES array and configuration.
- */
+/** Configure Pomodoro phase duration via dialog */
 BOOL HandlePomodoroTimeConfig(HWND hwnd, int selectedIndex) {
-    /* Note: inputText now in timer.h, POMODORO_TIMES/COUNT now in pomodoro.h */
-    
     if (selectedIndex < 0 || selectedIndex >= POMODORO_TIMES_COUNT) {
         return FALSE;
     }

@@ -1,21 +1,10 @@
 /**
  * @file dialog_procedure.h
- * @brief Comprehensive dialog system with multi-language support
- * @version 2.0 - Refactored for better maintainability
+ * @brief Dialog procedures for timer input, settings, and info dialogs
  * 
- * Provides window procedures and management functions for all application dialogs:
- * - Timer input dialogs (countdown, stopwatch, Pomodoro)
- * - Configuration dialogs (notifications, display, hotkeys)
- * - Information dialogs (about, help, licenses)
- * - Settings dialogs (website, loop count, combinations)
- * 
- * Features:
- * - Full multi-language support via language.h
- * - Flexible time input parsing (duration, absolute time, units)
- * - Live preview and validation
- * - Automatic screen centering on primary monitor
- * - Keyboard shortcuts (Ctrl+A, Enter to submit)
- * - Rich text rendering with markdown support
+ * Flexible time parsing supports multiple formats (duration, absolute, units).
+ * Auto-centering on primary monitor handles multi-monitor setups correctly.
+ * Keyboard shortcuts (Ctrl+A, Enter) enable rapid keyboard-only workflow.
  */
 
 #ifndef DIALOG_PROCEDURE_H
@@ -28,51 +17,33 @@
  * ============================================================================ */
 
 /**
- * @brief General dialog procedure for timer input dialogs
- * @param hwndDlg Dialog window handle
- * @param msg Message identifier
- * @param wParam Message parameter
- * @param lParam Message parameter
+ * @brief Timer input dialog procedure (countdown/countup/pomodoro)
  * @return Message processing result
  * 
- * @details Handles input for:
- * - Countdown timer
- * - Stopwatch (count up)
- * - Pomodoro timer
- * 
- * Features:
- * - Flexible time parsing (see ParseTimeInput)
- * - Ctrl+A select all support
- * - Enter key submits dialog
- * - Empty input cancels dialog
- * - Auto-focuses edit control on init
- * - Validates input and shows error dialog
- * - Centers on primary screen
+ * @details
+ * Ctrl+A for select all, Enter to submit, empty input cancels.
+ * Auto-focuses edit, validates input, shows error on failure.
  * 
  * @note Uses global inputText buffer for result
  */
 INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 
 /**
- * @brief Parse flexible time input string to seconds
- * @param input Input time string (UTF-8)
- * @param seconds Output buffer for parsed seconds
- * @return TRUE if parsing successful, FALSE otherwise
+ * @brief Parse flexible time input to seconds
+ * @param input Time string (UTF-8)
+ * @param seconds Output
+ * @return TRUE on success
  * 
- * @details Supported formats:
- * 1. Plain number: "25" = 25 minutes
- * 2. Duration units: "1h 30m", "90s", "1h 30m 15s"
- * 3. Compact duration: "130 45" = 1:30:45
- * 4. Absolute time: "14:30t" = countdown to 2:30 PM
- * 5. Compact target: "130t" = countdown to 1:30
+ * @details Formats:
+ * - Plain: "25" = 25min
+ * - Units: "1h 30m", "90s", "1h 30m 15s"
+ * - Compact: "130 45" = 1:30:45
+ * - Absolute: "14:30t" = countdown to 2:30 PM
+ * - Target: "130t" = countdown to 1:30
  * 
- * Duration unit aliases:
- * - Hours: h, H, hr, hour, hours, 时, 小时
- * - Minutes: m, M, min, minute, minutes, 分, 分钟
- * - Seconds: s, S, sec, second, seconds, 秒
+ * Unit aliases: h/hr/hour/时, m/min/minute/分, s/sec/second/秒
  * 
- * @note Returns FALSE for negative or invalid times
- * @note Maximum supported time: 99:59:59 (359999 seconds)
+ * @note Max: 99:59:59. Returns FALSE for negative/invalid.
  */
 BOOL ParseTimeInput(const char* input, int* seconds);
 
@@ -81,64 +52,36 @@ BOOL ParseTimeInput(const char* input, int* seconds);
  * ============================================================================ */
 
 /**
- * @brief Display application about/info dialog
- * @param hwndParent Parent window handle
+ * @brief Show about dialog (non-modal)
+ * @param hwndParent Parent handle
  * 
- * @details Shows:
- * - Application name and version
- * - Author and copyright info
- * - GitHub repository link (clickable)
- * - License information
- * - Rich text with markdown formatting
- * 
- * @note Non-modal dialog, can coexist with main window
- * @see AboutDlgProc
+ * @details Rich text with markdown, clickable links, auto-sizes
  */
 void ShowAboutDialog(HWND hwndParent);
 
 /**
- * @brief Dialog procedure for about dialog with rich text support
- * @param hwndDlg Dialog window handle
- * @param msg Message identifier
- * @param wParam Message parameter
- * @param lParam Message parameter
+ * @brief About dialog procedure with rich text
  * @return Message processing result
  * 
  * @details
- * - Renders markdown-formatted text via RichEdit control
- * - Clickable hyperlinks (opens in default browser)
- * - Auto-sizes to fit content
- * - Dismisses on any key press or mouse click outside
- * - Multi-language support
+ * RichEdit for markdown, clickable hyperlinks, dismisses on key/click.
  */
 INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 
 /**
- * @brief Display error dialog for invalid input
- * @param hwndParent Parent window handle
+ * @brief Show validation error dialog (modal)
+ * @param hwndParent Parent handle
  * 
- * @details
- * - Shows localized error message
- * - Modal dialog (blocks parent)
- * - Single OK button to dismiss
- * - Centers on primary screen
- * - Typically called after validation failure
+ * @details Localized message, single OK button, centered
  */
 void ShowErrorDialog(HWND hwndParent);
 
 /**
- * @brief Show font license agreement dialog
- * @param hwndParent Parent window handle
- * @return Dialog result (IDOK if agreed, IDCANCEL if declined)
+ * @brief Show font license agreement (modal)
+ * @param hwndParent Parent handle
+ * @return IDOK if accepted, IDCANCEL if declined
  * 
- * @details
- * - Displays license terms for bundled fonts (MIT, OFL, SIL)
- * - Rich text with markdown formatting
- * - Scrollable for long license texts
- * - User must accept before using fonts
- * - Returns IDOK on accept, IDCANCEL on decline
- * 
- * @note Modal dialog, blocks until user responds
+ * @details Scrollable license text, blocks until user responds
  */
 INT_PTR ShowFontLicenseDialog(HWND hwndParent);
 
@@ -147,43 +90,25 @@ INT_PTR ShowFontLicenseDialog(HWND hwndParent);
  * ============================================================================ */
 
 /**
- * @brief Display Pomodoro loop count configuration dialog
- * @param hwndParent Parent window handle
+ * @brief Show Pomodoro loop count dialog
+ * @param hwndParent Parent handle
  * 
  * @details
- * - Configure number of Pomodoro loops (1-99)
- * - Shows current loop count
- * - Validates input (numeric, positive)
- * - Saves to config on OK
- * - Empty input cancels without saving
+ * Configure loops (1-99), validates input, empty cancels.
  */
 void ShowPomodoroLoopDialog(HWND hwndParent);
 
 /**
- * @brief Dialog procedure for Pomodoro loop dialog
- * @param hwndDlg Dialog window handle
- * @param msg Message identifier
- * @param wParam Message parameter
- * @param lParam Message parameter
- * @return Message processing result
+ * @brief Pomodoro loop dialog procedure
  */
 INT_PTR CALLBACK PomodoroLoopDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 
 /**
- * @brief Display Pomodoro time combination settings dialog
- * @param hwndParent Parent window handle
+ * @brief Show Pomodoro time combo dialog (work/short/long breaks)
+ * @param hwndParent Parent handle
  * 
- * @details Configure durations for:
- * - Work session (focus time)
- * - Short break (between sessions)
- * - Long break (after N loops)
- * 
- * Features:
- * - Three separate input fields
- * - Flexible time parsing (see ParseTimeInput)
- * - Live validation
- * - Shows current values on init
- * - Saves all three values atomically
+ * @details
+ * Three input fields, flexible parsing, live validation, atomic save.
  */
 void ShowPomodoroComboDialog(HWND hwndParent);
 
@@ -192,66 +117,36 @@ void ShowPomodoroComboDialog(HWND hwndParent);
  * ============================================================================ */
 
 /**
- * @brief Display website/URL configuration dialog
- * @param hwndParent Parent window handle
+ * @brief Show URL config dialog (no validation for flexibility)
+ * @param hwndParent Parent handle
  * 
- * @details
- * - Configure notification click action URL
- * - Supports any valid URL or file path
- * - No validation (allows flexible use)
- * - Empty input clears URL (disables click action)
- * - Saves to config immediately
+ * @details Empty input disables click action
  */
 void ShowWebsiteDialog(HWND hwndParent);
 
 /**
- * @brief Display notification message text configuration dialog
- * @param hwndParent Parent window handle
+ * @brief Show notification message config dialog
+ * @param hwndParent Parent handle
  * 
- * @details Configure:
- * - Notification title text
- * - Notification body text
- * - Supports multi-language placeholders
- * - Empty fields use default messages
- * - Live preview (if implemented)
- * - Saves to config on OK
+ * @details Title/body text, placeholder support, empty uses defaults
  */
 void ShowNotificationMessagesDialog(HWND hwndParent);
 
 /**
- * @brief Display notification display/appearance settings dialog
- * @param hwndParent Parent window handle
+ * @brief Show notification display settings
+ * @param hwndParent Parent handle
  * 
- * @details Configure:
- * - Display duration (milliseconds)
- * - Window position (screen corner)
- * - Animation style
- * - Opacity/transparency
- * - Always on top setting
- * 
- * @note Complex dialog with multiple controls
+ * @details Duration, position, animation, opacity, topmost
  */
 void ShowNotificationDisplayDialog(HWND hwndParent);
 
 /**
- * @brief Display comprehensive notification settings dialog
- * @param hwndParent Parent window handle
+ * @brief Show comprehensive notification settings
+ * @param hwndParent Parent handle
  * 
- * @details Unified settings dialog for:
- * - Sound file selection (file picker)
- * - Volume control (0-100 slider)
- * - Loop/repeat settings
- * - Preview button to test sound
- * - Pause/resume buttons
- * - Display settings link
- * - Message settings link
- * 
- * Features:
- * - File browser for sound selection
- * - Real-time volume adjustment
- * - Live audio preview
- * - System beep option
- * - Saves on OK or Apply
+ * @details
+ * Sound file picker, volume slider, preview, pause/resume, links to
+ * display/message settings. Real-time volume adjustment and audio preview.
  */
 void ShowNotificationSettingsDialog(HWND hwndParent);
 
@@ -260,17 +155,12 @@ void ShowNotificationSettingsDialog(HWND hwndParent);
  * ============================================================================ */
 
 /**
- * @brief Move dialog to center of primary monitor
- * @param hwndDlg Dialog window handle
+ * @brief Center dialog on primary monitor (call in WM_INITDIALOG)
+ * @param hwndDlg Dialog handle
  * 
  * @details
- * - Gets primary monitor work area (excluding taskbar)
- * - Centers dialog horizontally and vertically
- * - Adjusts if dialog would be off-screen
- * - Safe for multi-monitor setups
- * - Non-intrusive (preserves dialog size)
- * 
- * @note Should be called in WM_INITDIALOG handler
+ * Uses work area (excludes taskbar), adjusts if off-screen, preserves size.
+ * Safe for multi-monitor.
  */
 void MoveDialogToPrimaryScreen(HWND hwndDlg);
 
@@ -279,14 +169,11 @@ void MoveDialogToPrimaryScreen(HWND hwndDlg);
  * ============================================================================ */
 
 /** 
- * @brief Global handle to currently active input dialog
+ * @brief Active input dialog handle
  * 
- * Used for:
- * - IsDialogMessage processing in main message loop
- * - Preventing multiple dialog instances
- * - Keyboard shortcut routing
- * 
- * @note Set to NULL when dialog closes
+ * @details
+ * For IsDialogMessage(), preventing duplicates, keyboard routing.
+ * NULL when closed.
  */
 extern HWND g_hwndInputDialog;
 

@@ -1,13 +1,10 @@
 /**
  * @file font.h
- * @brief Modular font management system with path resolution and TTF parsing
+ * @brief Font management with TTF parsing and auto-fix capability
  * 
- * Refactored architecture with separated concerns:
- * - Path resolution and encoding conversion
- * - Font auto-fix and validation
- * - TTF/OTF font name extraction
- * - Font loading and resource management
- * - Preview and configuration management
+ * TTF parsing extracts real font names to avoid registration mismatches.
+ * Auto-fix searches fonts folder when config path is invalid (handles moved configs).
+ * Preview system enables risk-free font testing before applying changes.
  */
 
 #ifndef FONT_H
@@ -20,19 +17,18 @@
  * Constants
  * ============================================================================ */
 
-/** @brief Font folder prefix constant to eliminate magic string repetition */
+/** @brief Font folder prefix (centralized to avoid magic string repetition) */
 #define FONT_FOLDER_PREFIX "%LOCALAPPDATA%\\Catime\\resources\\fonts\\"
 
-/** @brief Maximum font name length */
 #define MAX_FONT_NAME_LEN 256
 
-/** @brief TTF name table tag (in little-endian: 'name') */
+/** @brief TTF 'name' table tag (little-endian) */
 #define TTF_NAME_TABLE_TAG 0x656D616E
 
-/** @brief Name ID for font family name in TTF name table */
+/** @brief Font family name ID in TTF name table */
 #define TTF_NAME_ID_FAMILY 1
 
-/** @brief Safety limit for TTF string data */
+/** @brief TTF string safety limit (prevents buffer overflows) */
 #define TTF_STRING_SAFETY_LIMIT 1024
 
 /* ============================================================================
@@ -40,50 +36,37 @@
  * ============================================================================ */
 
 /**
- * @brief Font resource information for embedded font extraction
+ * @brief Embedded font resource info
  */
 typedef struct {
-    int resourceId;        /**< Resource identifier */
-    const char* fontName;  /**< Font file name */
+    int resourceId;
+    const char* fontName;
 } FontResource;
 
 /**
- * @brief Font path information structure
- * 
- * Encapsulates all path-related information to reduce parameter passing
- * and improve code clarity in font path resolution operations
+ * @brief Font path resolution result (reduces parameter passing)
  */
 typedef struct {
-    char absolutePath[MAX_PATH];  /**< Full absolute path to font file */
-    char relativePath[MAX_PATH];  /**< Relative path from fonts folder */
-    char configPath[MAX_PATH];    /**< Config format path with %LOCALAPPDATA% prefix */
-    char fileName[MAX_PATH];      /**< File name only (without directory) */
-    BOOL isValid;                 /**< TRUE if paths are valid and consistent */
+    char absolutePath[MAX_PATH];
+    char relativePath[MAX_PATH];
+    char configPath[MAX_PATH];    /**< %LOCALAPPDATA% prefix format */
+    char fileName[MAX_PATH];
+    BOOL isValid;                 /**< All paths consistent */
 } FontPathInfo;
 
 /* ============================================================================
  * Global State
  * ============================================================================ */
 
-/** @brief Array of available font resources */
 extern FontResource fontResources[];
-
-/** @brief Count of available font resources */
 extern const int FONT_RESOURCES_COUNT;
 
-/** @brief Current font file name */
 extern char FONT_FILE_NAME[100];
-
-/** @brief Current font internal name */
 extern char FONT_INTERNAL_NAME[100];
 
-/** @brief Preview font file name */
+/** @brief Preview state (separate from active font for cancellation) */
 extern char PREVIEW_FONT_NAME[100];
-
-/** @brief Preview font internal name */
 extern char PREVIEW_INTERNAL_NAME[100];
-
-/** @brief Font preview active state */
 extern BOOL IS_PREVIEWING;
 
 /* ============================================================================
@@ -91,42 +74,44 @@ extern BOOL IS_PREVIEWING;
  * ============================================================================ */
 
 /**
- * @brief Unload currently loaded font resource
- * @return TRUE if font unloaded successfully or no font was loaded
+ * @brief Unload current font resource
+ * @return TRUE if unloaded or nothing loaded
  */
 BOOL UnloadCurrentFontResource(void);
 
 /**
- * @brief Load font from file path with resource management
- * @param fontFilePath Full path to font file
- * @return TRUE on success, FALSE on failure
+ * @brief Load font from file path
+ * @param fontFilePath Full path
+ * @return TRUE on success
  */
 BOOL LoadFontFromFile(const char* fontFilePath);
 
 /**
- * @brief Find font file in fonts folder recursively
- * @param fontFileName Font filename to search for
- * @param foundPath Buffer to store found font path
- * @param foundPathSize Size of foundPath buffer
- * @return TRUE if font file found
+ * @brief Find font file recursively in fonts folder
+ * @param fontFileName Filename to search
+ * @param foundPath Output buffer
+ * @param foundPathSize Buffer size
+ * @return TRUE if found
  */
 BOOL FindFontInFontsFolder(const char* fontFileName, char* foundPath, size_t foundPathSize);
 
 /**
- * @brief Load font by file name with auto-fix capability
- * @param hInstance Application instance handle
- * @param fontName Font file name to load
+ * @brief Load font with auto-fix (searches folder if path invalid)
+ * @param hInstance App instance
+ * @param fontName Font filename
  * @return TRUE on success
  */
 BOOL LoadFontByName(HINSTANCE hInstance, const char* fontName);
 
 /**
- * @brief Load font and extract real font name from TTF/OTF file
- * @param hInstance Application instance handle
- * @param fontFileName Font filename to load
- * @param realFontName Buffer to store extracted font name
- * @param realFontNameSize Size of realFontName buffer
- * @return TRUE if font loaded and name extracted
+ * @brief Load font and extract real name from TTF
+ * @param hInstance App instance
+ * @param fontFileName Font filename
+ * @param realFontName Output buffer
+ * @param realFontNameSize Buffer size
+ * @return TRUE if loaded and name extracted
+ * 
+ * @details Extracts name from TTF to avoid registration mismatches
  */
 BOOL LoadFontByNameAndGetRealName(HINSTANCE hInstance, const char* fontFileName, 
                                   char* realFontName, size_t realFontNameSize);
@@ -136,11 +121,11 @@ BOOL LoadFontByNameAndGetRealName(HINSTANCE hInstance, const char* fontFileName,
  * ============================================================================ */
 
 /**
- * @brief Extract font family name from TTF/OTF font file
- * @param fontFilePath Path to font file
- * @param fontName Buffer to store extracted font name
- * @param fontNameSize Size of fontName buffer
- * @return TRUE if font name extracted successfully
+ * @brief Extract font family name from TTF/OTF
+ * @param fontFilePath Font path
+ * @param fontName Output buffer
+ * @param fontNameSize Buffer size
+ * @return TRUE on success
  */
 BOOL GetFontNameFromFile(const char* fontFilePath, char* fontName, size_t fontNameSize);
 
@@ -149,9 +134,9 @@ BOOL GetFontNameFromFile(const char* fontFilePath, char* fontName, size_t fontNa
  * ============================================================================ */
 
 /**
- * @brief Write font configuration to settings
- * @param fontFileName Font file name to save
- * @param shouldReload TRUE to reload config after writing
+ * @brief Write font to config
+ * @param fontFileName Font filename
+ * @param shouldReload TRUE to reload after write
  */
 void WriteConfigFont(const char* fontFileName, BOOL shouldReload);
 
@@ -160,17 +145,12 @@ void WriteConfigFont(const char* fontFileName, BOOL shouldReload);
  * ============================================================================ */
 
 /**
- * @brief List all available system fonts
+ * @brief List all system fonts
  */
 void ListAvailableFonts(void);
 
 /**
- * @brief Font enumeration callback procedure
- * @param lpelfe Font enumeration data
- * @param lpntme Text metrics data
- * @param FontType Font type flags
- * @param lParam User-defined parameter
- * @return Callback processing result
+ * @brief Font enumeration callback
  */
 int CALLBACK EnumFontFamExProc(ENUMLOGFONTEXW *lpelfe, NEWTEXTMETRICEX *lpntme, 
                                DWORD FontType, LPARAM lParam);
@@ -180,27 +160,27 @@ int CALLBACK EnumFontFamExProc(ENUMLOGFONTEXW *lpelfe, NEWTEXTMETRICEX *lpntme,
  * ============================================================================ */
 
 /**
- * @brief Start font preview mode
- * @param hInstance Application instance handle
- * @param fontName Font name to preview
+ * @brief Start preview mode (enables risk-free testing)
+ * @param hInstance App instance
+ * @param fontName Font to preview
  * @return TRUE on success
  */
 BOOL PreviewFont(HINSTANCE hInstance, const char* fontName);
 
 /**
- * @brief Cancel current font preview and restore original font
+ * @brief Cancel preview and restore original
  */
 void CancelFontPreview(void);
 
 /**
- * @brief Apply current preview font as active font
+ * @brief Apply preview as active font
  */
 void ApplyFontPreview(void);
 
 /**
- * @brief Switch to different font permanently
- * @param hInstance Application instance handle
- * @param fontName Font name to switch to
+ * @brief Switch font permanently
+ * @param hInstance App instance
+ * @param fontName Font to switch to
  * @return TRUE on success
  */
 BOOL SwitchFont(HINSTANCE hInstance, const char* fontName);
@@ -211,17 +191,17 @@ BOOL SwitchFont(HINSTANCE hInstance, const char* fontName);
 
 /**
  * @brief Extract embedded font resource to file
- * @param hInstance Application instance handle
- * @param resourceId Resource ID of the font to extract
- * @param outputPath Full path where to save the font file
- * @return TRUE if font extracted successfully
+ * @param hInstance App instance
+ * @param resourceId Resource ID
+ * @param outputPath Output path
+ * @return TRUE on success
  */
 BOOL ExtractFontResourceToFile(HINSTANCE hInstance, int resourceId, const char* outputPath);
 
 /**
- * @brief Extract all embedded fonts to the fonts directory
- * @param hInstance Application instance handle
- * @return TRUE if all fonts extracted successfully
+ * @brief Extract all embedded fonts to fonts folder
+ * @param hInstance App instance
+ * @return TRUE if all extracted
  */
 BOOL ExtractEmbeddedFontsToFolder(HINSTANCE hInstance);
 
@@ -230,8 +210,10 @@ BOOL ExtractEmbeddedFontsToFolder(HINSTANCE hInstance);
  * ============================================================================ */
 
 /**
- * @brief Check current font path validity and auto-fix if needed
- * @return TRUE if font path was fixed
+ * @brief Validate and auto-fix font path if needed
+ * @return TRUE if fixed
+ * 
+ * @details Searches fonts folder when config path invalid (handles moved configs)
  */
 BOOL CheckAndFixFontPath(void);
 

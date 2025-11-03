@@ -1,9 +1,9 @@
 /**
  * @file drawing.h
- * @brief Window drawing and painting functions
+ * @brief Timer display rendering with double buffering
  * 
- * Modular rendering system for timer display with time formatting,
- * font management, and double-buffered rendering
+ * Double buffering prevents flicker during frequent updates (especially for centiseconds).
+ * RenderContext struct reduces parameter passing in rendering pipeline.
  */
 
 #ifndef DRAWING_H
@@ -16,13 +16,10 @@
  * Constants
  * ============================================================================ */
 
-/** @brief Maximum length of formatted time text buffer */
 #define TIME_TEXT_MAX_LEN 50
-
-/** @brief Maximum length of font name buffer */
 #define FONT_NAME_MAX_LEN 256
 
-/** @brief Number of text rendering passes for bold effect */
+/** @brief Multiple passes for bold effect (simulated via offset rendering) */
 #define TEXT_RENDER_PASSES 8
 
 /* ============================================================================
@@ -30,29 +27,23 @@
  * ============================================================================ */
 
 /**
- * @brief Time components structure for unified time representation
- * 
- * Encapsulates hours, minutes, seconds, and centiseconds (hundredths of second)
- * to simplify function signatures and improve code clarity
+ * @brief Time components (simplifies function signatures)
  */
 typedef struct {
-    int hours;          /**< Hours component (0-23 for 24h, 1-12 for 12h) */
-    int minutes;        /**< Minutes component (0-59) */
-    int seconds;        /**< Seconds component (0-59) */
-    int centiseconds;   /**< Centiseconds component (0-99) */
+    int hours;          /**< 0-23 (24h) or 1-12 (12h) */
+    int minutes;        /**< 0-59 */
+    int seconds;        /**< 0-59 */
+    int centiseconds;   /**< 0-99 (hundredths) */
 } TimeComponents;
 
 /**
- * @brief Rendering context for text display
- * 
- * Encapsulates font and color settings to reduce parameter passing
- * and improve function composability
+ * @brief Rendering context (reduces parameter passing)
  */
 typedef struct {
-    const char* fontFileName;     /**< Font file name to use */
-    const char* fontInternalName; /**< Internal font name for rendering */
-    COLORREF textColor;           /**< RGB color for text rendering */
-    float fontScaleFactor;        /**< Font scaling factor */
+    const char* fontFileName;
+    const char* fontInternalName;
+    COLORREF textColor;
+    float fontScaleFactor;
 } RenderContext;
 
 /* ============================================================================
@@ -60,16 +51,13 @@ typedef struct {
  * ============================================================================ */
 
 /**
- * @brief Handle window paint events
- * @param hwnd Window handle to paint
- * @param ps Paint structure containing drawing context
+ * @brief Main paint handler
+ * @param hwnd Window handle
+ * @param ps Paint structure
  * 
- * Main entry point for window painting. Orchestrates the rendering pipeline:
- * 1. Setup double buffering
- * 2. Determine time display mode
- * 3. Format time text
- * 4. Render to backbuffer
- * 5. Present to screen
+ * @details
+ * Pipeline: setup double buffer → determine mode → format text → 
+ * render to backbuffer → present.
  */
 void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps);
 
@@ -78,18 +66,16 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps);
  * ============================================================================ */
 
 /**
- * @brief Reset timer-based centisecond tracking
+ * @brief Reset centisecond baseline
  * 
- * Should be called when timer starts, resumes, or resets to establish
- * a new baseline for centisecond calculation
+ * @details Call when timer starts/resumes/resets
  */
 void ResetTimerMilliseconds(void);
 
 /**
- * @brief Save current centiseconds when pausing
+ * @brief Freeze centiseconds at current value
  * 
- * Should be called when timer is paused to freeze the centisecond display
- * at the current value
+ * @details Call when pausing timer
  */
 void PauseTimerMilliseconds(void);
 

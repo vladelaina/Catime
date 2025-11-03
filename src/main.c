@@ -1,13 +1,6 @@
 /**
  * @file main.c
- * @brief Catime main entry point with modular initialization and CLI routing
- * 
- * Refactored architecture:
- * - Table-driven CLI command routing (70 lines → 25 lines)
- * - Modular initialization stages for testability
- * - Enum-based startup mode handling
- * - Extracted helper functions for common operations
- * - Eliminated 298 lines of duplicate code (67% reduction)
+ * @brief Main entry with table-driven CLI routing
  */
 
 #include <stdio.h>
@@ -52,11 +45,6 @@
 #pragma comment(lib, "dbghelp.lib")
 #pragma comment(lib, "comctl32.lib")
 
-/* ============================================================================
- * Global State Variables
- * ============================================================================ */
-
-/** @brief Global timer state and configuration */
 int default_countdown_time = 0;
 int CLOCK_DEFAULT_START_TIME = 300;
 int elapsed_time = 0;
@@ -67,38 +55,21 @@ RecentFile CLOCK_RECENT_FILES[MAX_RECENT_FILES];
 int CLOCK_RECENT_FILES_COUNT = 0;
 wchar_t CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH] = L"";
 
-/* ============================================================================
- * Type Definitions
- * ============================================================================ */
-
-/**
- * @brief Startup mode enumeration for type-safe mode handling
- */
 typedef enum {
-    STARTUP_MODE_DEFAULT,      /**< Default countdown mode */
-    STARTUP_MODE_COUNT_UP,     /**< Count-up stopwatch mode */
-    STARTUP_MODE_NO_DISPLAY,   /**< Hidden/background mode */
-    STARTUP_MODE_SHOW_TIME     /**< Current time display mode */
+    STARTUP_MODE_DEFAULT,
+    STARTUP_MODE_COUNT_UP,
+    STARTUP_MODE_NO_DISPLAY,
+    STARTUP_MODE_SHOW_TIME
 } StartupMode;
 
-/**
- * @brief CLI command mapping structure for table-driven routing
- */
 typedef struct {
-    const wchar_t* command;    /**< Command string (e.g., "s", "u", "p") */
-    UINT message;              /**< Windows message to send */
-    WPARAM wParam;             /**< Message wParam (usually hotkey ID) */
-    LPARAM lParam;             /**< Message lParam (usually 0) */
+    const wchar_t* command;
+    UINT message;
+    WPARAM wParam;
+    LPARAM lParam;
 } CliCommandMapping;
 
-/* ============================================================================
- * CLI Command Routing Table
- * ============================================================================ */
-
-/**
- * @brief Single-character command mappings
- * Table-driven design: adding new commands requires only adding table entries
- */
+/** Adding new commands only requires table entries */
 static const CliCommandMapping SINGLE_CHAR_COMMANDS[] = {
     {L"s", WM_HOTKEY, HOTKEY_ID_SHOW_TIME, 0},
     {L"u", WM_HOTKEY, HOTKEY_ID_COUNT_UP, 0},
@@ -109,24 +80,13 @@ static const CliCommandMapping SINGLE_CHAR_COMMANDS[] = {
     {L"h", WM_APP_SHOW_CLI_HELP, 0, 0},
 };
 
-/**
- * @brief Quick countdown preset mappings (q1, q2, q3)
- */
 static const CliCommandMapping QUICK_COUNTDOWN_COMMANDS[] = {
     {L"q1", WM_HOTKEY, HOTKEY_ID_QUICK_COUNTDOWN1, 0},
     {L"q2", WM_HOTKEY, HOTKEY_ID_QUICK_COUNTDOWN2, 0},
     {L"q3", WM_HOTKEY, HOTKEY_ID_QUICK_COUNTDOWN3, 0},
 };
 
-/* ============================================================================
- * Helper Functions - String Conversion
- * ============================================================================ */
-
-/**
- * @brief Convert wide string to UTF-8 with automatic allocation
- * @param wideStr Wide character string to convert
- * @return Allocated UTF-8 string (caller must free) or NULL on failure
- */
+/** @return Allocated UTF-8 string (caller must free) */
 static char* WideToUtf8(const wchar_t* wideStr) {
     if (!wideStr) return NULL;
     
@@ -140,19 +100,12 @@ static char* WideToUtf8(const wchar_t* wideStr) {
     return utf8Str;
 }
 
-/**
- * @brief Normalize whitespace in wide string (in-place)
- * Trims leading/trailing whitespace and returns pointer to first non-space char
- * @param str String to normalize
- * @return Pointer to trimmed string (within original buffer)
- */
+/** @return Pointer to trimmed string (within original buffer) */
 static wchar_t* NormalizeWhitespace(wchar_t* str) {
     if (!str) return NULL;
     
-    /** Skip leading whitespace */
     while (*str && iswspace(*str)) str++;
     
-    /** Trim trailing whitespace */
     size_t len = wcslen(str);
     while (len > 0 && iswspace(str[len - 1])) {
         str[--len] = L'\0';
@@ -161,15 +114,6 @@ static wchar_t* NormalizeWhitespace(wchar_t* str) {
     return str;
 }
 
-/* ============================================================================
- * Helper Functions - Startup Mode
- * ============================================================================ */
-
-/**
- * @brief Parse startup mode string to enum value
- * @param modeStr Mode string from configuration
- * @return Corresponding StartupMode enum value
- */
 static StartupMode ParseStartupMode(const char* modeStr) {
     if (!modeStr) return STARTUP_MODE_DEFAULT;
     
@@ -180,10 +124,6 @@ static StartupMode ParseStartupMode(const char* modeStr) {
     return STARTUP_MODE_DEFAULT;
 }
 
-/**
- * @brief Initialize timer mode based on startup configuration
- * @param hwnd Main window handle
- */
 static void HandleStartupMode(HWND hwnd) {
     StartupMode mode = ParseStartupMode(CLOCK_STARTUP_MODE);
     
@@ -203,7 +143,7 @@ static void HandleStartupMode(HWND hwnd) {
             elapsed_time = CLOCK_TOTAL_TIME;
             CLOCK_IS_PAUSED = TRUE;
             
-            /** Suppress all notification types in hidden mode */
+            /** Prevent notifications when hidden */
             message_shown = TRUE;
             countdown_message_shown = TRUE;
             countup_message_shown = TRUE;
@@ -224,16 +164,6 @@ static void HandleStartupMode(HWND hwnd) {
     }
 }
 
-/* ============================================================================
- * Helper Functions - CLI Command Routing
- * ============================================================================ */
-
-/**
- * @brief Route single-character CLI command using lookup table
- * @param hwnd Target window handle
- * @param cmd Single character command
- * @return TRUE if command was recognized and forwarded
- */
 static BOOL RouteSingleCharCommand(HWND hwnd, wchar_t cmd) {
     wchar_t cmdStr[2] = {cmd, L'\0'};
     
@@ -249,20 +179,12 @@ static BOOL RouteSingleCharCommand(HWND hwnd, wchar_t cmd) {
     return FALSE;
 }
 
-/**
- * @brief Route two-character CLI command (pr, q1-q3)
- * @param hwnd Target window handle
- * @param cmdStr Command string (must be 2 chars)
- * @return TRUE if command was recognized and forwarded
- */
 static BOOL RouteTwoCharCommand(HWND hwnd, const wchar_t* cmdStr) {
-    /** Handle "pr" (pause/resume) specially */
     if (towlower(cmdStr[0]) == L'p' && towlower(cmdStr[1]) == L'r') {
         PostMessage(hwnd, WM_HOTKEY, HOTKEY_ID_PAUSE_RESUME, 0);
         return TRUE;
     }
     
-    /** Handle quick countdown presets (q1-q3) */
     for (size_t i = 0; i < sizeof(QUICK_COUNTDOWN_COMMANDS) / sizeof(QUICK_COUNTDOWN_COMMANDS[0]); i++) {
         if (_wcsicmp(cmdStr, QUICK_COUNTDOWN_COMMANDS[i].command) == 0) {
             PostMessage(hwnd, QUICK_COUNTDOWN_COMMANDS[i].message,
@@ -275,12 +197,6 @@ static BOOL RouteTwoCharCommand(HWND hwnd, const wchar_t* cmdStr) {
     return FALSE;
 }
 
-/**
- * @brief Route Pomodoro index command (p1, p2, etc.)
- * @param hwnd Target window handle
- * @param cmdStr Command string starting with 'p'
- * @return TRUE if command was valid and forwarded
- */
 static BOOL RoutePomodoroCommand(HWND hwnd, const wchar_t* cmdStr) {
     if (towlower(cmdStr[0]) != L'p' || !iswdigit(cmdStr[1])) {
         return FALSE;
@@ -298,12 +214,6 @@ static BOOL RoutePomodoroCommand(HWND hwnd, const wchar_t* cmdStr) {
     return TRUE;
 }
 
-/**
- * @brief Forward numeric timer input via WM_COPYDATA
- * @param hwnd Target window handle
- * @param cmdStr Command string containing digits
- * @return TRUE if data was sent successfully
- */
 static BOOL ForwardTimerInput(HWND hwnd, const wchar_t* cmdStr) {
     char* utf8Str = WideToUtf8(cmdStr);
     if (!utf8Str) return FALSE;
@@ -319,16 +229,9 @@ static BOOL ForwardTimerInput(HWND hwnd, const wchar_t* cmdStr) {
     return TRUE;
 }
 
-/**
- * @brief Forward CLI commands to existing instance (table-driven routing)
- * @param hwndExisting Handle to running instance
- * @param lpCmdLine Command line to parse and forward
- * @return TRUE if command was forwarded successfully
- */
 static BOOL TryForwardSimpleCliToExisting(HWND hwndExisting, const wchar_t* lpCmdLine) {
     if (!lpCmdLine || lpCmdLine[0] == L'\0') return FALSE;
     
-    /** Normalize command string */
     wchar_t buf[256];
     wcsncpy(buf, lpCmdLine, sizeof(buf)/sizeof(wchar_t) - 1);
     buf[sizeof(buf)/sizeof(wchar_t) - 1] = L'\0';
@@ -338,7 +241,6 @@ static BOOL TryForwardSimpleCliToExisting(HWND hwndExisting, const wchar_t* lpCm
     
     size_t len = wcslen(cmd);
     
-    /** Route by command length */
     if (len == 1) {
         return RouteSingleCharCommand(hwndExisting, towlower(cmd[0]));
     }
@@ -347,12 +249,10 @@ static BOOL TryForwardSimpleCliToExisting(HWND hwndExisting, const wchar_t* lpCm
         return RouteTwoCharCommand(hwndExisting, cmd);
     }
     
-    /** Handle Pomodoro index commands (p1, p2, etc.) */
     if (RoutePomodoroCommand(hwndExisting, cmd)) {
         return TRUE;
     }
     
-    /** Check if command contains digits (timer input) */
     for (size_t i = 0; i < len; i++) {
         if (iswdigit(cmd[i])) {
             return ForwardTimerInput(hwndExisting, cmd);
@@ -362,54 +262,30 @@ static BOOL TryForwardSimpleCliToExisting(HWND hwndExisting, const wchar_t* lpCm
     return FALSE;
 }
 
-/* ============================================================================
- * Helper Functions - Window Finding
- * ============================================================================ */
-
-/**
- * @brief Find window in desktop wallpaper layer (WorkerW)
- * @return Window handle or NULL if not found
- */
+/** Search desktop wallpaper layer for timer window */
 static HWND FindInDesktopLayer(void) {
     HWND hProgman = FindWindowW(L"Progman", NULL);
     if (!hProgman) return NULL;
     
-    /** Search for WorkerW containing SHELLDLL_DefView */
     HWND hWorkerW = FindWindowExW(NULL, NULL, L"WorkerW", NULL);
     while (hWorkerW != NULL) {
         HWND hView = FindWindowExW(hWorkerW, NULL, L"SHELLDLL_DefView", NULL);
         if (hView != NULL) {
-            /** Found the desktop WorkerW, search for our window */
             return FindWindowExW(hWorkerW, NULL, L"CatimeWindow", NULL);
         }
         hWorkerW = FindWindowExW(NULL, hWorkerW, L"WorkerW", NULL);
     }
     
-    /** Try Progman as fallback */
     return FindWindowExW(hProgman, NULL, L"CatimeWindow", NULL);
 }
 
-/**
- * @brief Find existing Catime window (including desktop mode)
- * @return Window handle or NULL if not found
- */
 static HWND FindExistingInstanceWindow(void) {
-    /** Try standard window first */
     HWND hwnd = FindWindowW(L"CatimeWindow", L"Catime");
     if (hwnd) return hwnd;
     
-    /** Search in desktop layer for desktop mode instances */
     return FindInDesktopLayer();
 }
 
-/* ============================================================================
- * Initialization Stage Functions
- * ============================================================================ */
-
-/**
- * @brief Initialize core subsystems (COM, logging, exception handling)
- * @return TRUE on success, FALSE on fatal error
- */
 static BOOL InitializeSubsystems(void) {
     InitCommonControls();
     
@@ -422,7 +298,6 @@ static BOOL InitializeSubsystems(void) {
     SetupExceptionHandler();
     LOG_INFO("Catime is starting...");
     
-    /** Initialize COM */
     HRESULT hr = CoInitialize(NULL);
     if (FAILED(hr)) {
         LOG_ERROR("COM initialization failed, error code: 0x%08X", hr);
@@ -434,11 +309,6 @@ static BOOL InitializeSubsystems(void) {
     return TRUE;
 }
 
-/**
- * @brief Initialize application subsystem
- * @param hInstance Application instance handle
- * @return TRUE on success, FALSE on error
- */
 static BOOL InitializeApplicationSubsystem(HINSTANCE hInstance) {
     LOG_INFO("Starting application initialization...");
     
@@ -453,10 +323,7 @@ static BOOL InitializeApplicationSubsystem(HINSTANCE hInstance) {
     return TRUE;
 }
 
-/**
- * @brief Setup desktop shortcut if needed
- * Handles package manager installs (WinGet, etc.)
- */
+/** For package manager installs (WinGet, etc.) */
 static void SetupDesktopShortcut(void) {
     LOG_INFO("Checking desktop shortcut...");
     
@@ -477,9 +344,6 @@ static void SetupDesktopShortcut(void) {
     }
 }
 
-/**
- * @brief Initialize dialog language support system
- */
 static void InitializeDialogLanguages(void) {
     LOG_INFO("Starting dialog multi-language support initialization...");
     if (!InitDialogLanguageSupport()) {
@@ -489,12 +353,7 @@ static void InitializeDialogLanguages(void) {
     }
 }
 
-/**
- * @brief Handle single instance enforcement and CLI forwarding
- * @param lpCmdLine Command line arguments
- * @param outMutex Output: mutex handle for cleanup
- * @return TRUE to continue with new instance, FALSE to exit
- */
+/** @return TRUE to continue, FALSE to exit (command forwarded) */
 static BOOL HandleSingleInstance(LPWSTR lpCmdLine, HANDLE* outMutex) {
     LOG_INFO("Checking if another instance is running...");
     
@@ -502,12 +361,10 @@ static BOOL HandleSingleInstance(LPWSTR lpCmdLine, HANDLE* outMutex) {
     *outMutex = hMutex;
     
     if (GetLastError() != ERROR_ALREADY_EXISTS) {
-        /** No existing instance, continue normally */
         Sleep(50);
         return TRUE;
     }
     
-    /** Existing instance detected */
     LOG_INFO("Detected another instance is running");
     HWND hwndExisting = FindExistingInstanceWindow();
     
@@ -527,7 +384,6 @@ static BOOL HandleSingleInstance(LPWSTR lpCmdLine, HANDLE* outMutex) {
     
     LOG_INFO("Found existing instance window handle: 0x%p", hwndExisting);
     
-    /** Try forwarding simple commands */
     LPWSTR lpCmdLineW = GetCommandLineW();
     while (*lpCmdLineW && *lpCmdLineW != L' ') lpCmdLineW++;
     while (*lpCmdLineW == L' ') lpCmdLineW++;
@@ -549,7 +405,6 @@ static BOOL HandleSingleInstance(LPWSTR lpCmdLine, HANDLE* outMutex) {
         }
     }
     
-    /** Force restart for complex commands */
     LOG_INFO("Closing existing instance to apply CLI arguments");
     SendMessage(hwndExisting, WM_CLOSE, 0, 0);
     Sleep(200);
@@ -567,15 +422,7 @@ static BOOL HandleSingleInstance(LPWSTR lpCmdLine, HANDLE* outMutex) {
     return TRUE;
 }
 
-/**
- * @brief Setup main window with timers and CLI processing
- * @param hInstance Application instance
- * @param hwnd Main window handle
- * @param nCmdShow Window show command
- * @return TRUE on success, FALSE on error
- */
 static BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
-    /** Process CLI arguments */
     LPWSTR lpCmdLineW = GetCommandLineW();
     while (*lpCmdLineW && *lpCmdLineW != L' ') lpCmdLineW++;
     while (*lpCmdLineW == L' ') lpCmdLineW++;
@@ -587,7 +434,6 @@ static BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
         wcsncpy(cmdBuf, lpCmdLineW, sizeof(cmdBuf)/sizeof(wchar_t) - 1);
         cmdBuf[sizeof(cmdBuf)/sizeof(wchar_t) - 1] = L'\0';
         
-        /** Extract --startup flag */
         wchar_t* pStartup = wcsstr(cmdBuf, L"--startup");
         if (pStartup) {
             launchedFromStartup = TRUE;
@@ -612,7 +458,6 @@ static BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
         }
     }
     
-    /** Setup main timer */
     LOG_INFO("Setting main timer...");
     extern UINT GetTimerInterval(void);
     UINT interval = GetTimerInterval();
@@ -624,11 +469,9 @@ static BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
     }
     LOG_INFO("Timer set successfully with %ums interval", interval);
     
-    /** Initialize millisecond timing */
     extern void ResetTimerMilliseconds(void);
     ResetTimerMilliseconds();
     
-    /** Setup font path check timer */
     LOG_INFO("Setting font path check timer...");
     if (SetTimer(hwnd, TIMER_ID_FONT_VALIDATION, 2000, NULL) == 0) {
         LOG_WARNING("Font path check timer creation failed, auto-fix will not work");
@@ -636,15 +479,12 @@ static BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
         LOG_INFO("Font path check timer set successfully (2 second interval)");
     }
     
-    /** Start automatic update check */
     LOG_INFO("Starting automatic update check at startup...");
     CheckForUpdateAsync(hwnd, TRUE);
     
-    /** Handle startup mode */
     LOG_INFO("Handling startup mode: %s", CLOCK_STARTUP_MODE);
     HandleStartupMode(hwnd);
     
-    /** Delayed window positioning for startup launches */
     if (launchedFromStartup) {
         if (CLOCK_WINDOW_TOPMOST) {
             SetTimer(hwnd, TIMER_ID_TOPMOST_RETRY, 2000, NULL);
@@ -656,11 +496,6 @@ static BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
     return TRUE;
 }
 
-/**
- * @brief Run main Windows message loop
- * @param hwnd Main window handle
- * @return Exit code from message loop
- */
 static int RunMessageLoop(HWND hwnd) {
     LOG_INFO("Entering main message loop");
     
@@ -677,10 +512,6 @@ static int RunMessageLoop(HWND hwnd) {
     return (int)msg.wParam;
 }
 
-/**
- * @brief Cleanup all resources before exit
- * @param hMutex Mutex handle to release
- */
 static void CleanupResources(HANDLE hMutex) {
     LOG_INFO("Program preparing to exit, starting resource cleanup");
     
@@ -695,42 +526,23 @@ static void CleanupResources(HANDLE hMutex) {
     CleanupLogSystem();
 }
 
-/* ============================================================================
- * Main Entry Point
- * ============================================================================ */
-
-/**
- * @brief Main application entry point
- * 
- * Refactored into clear initialization stages:
- * 1. Initialize subsystems (COM, logging, exception handling)
- * 2. Setup desktop shortcut and language support
- * 3. Handle single instance enforcement
- * 4. Create and setup main window
- * 5. Run message loop
- * 6. Cleanup resources
- */
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     (void)hPrevInstance;
     (void)lpCmdLine;
     
-    /** Stage 1: Initialize core subsystems */
     if (!InitializeSubsystems()) {
         return 1;
     }
     
-    /** Stage 1.5: Initialize application subsystem */
     if (!InitializeApplicationSubsystem(hInstance)) {
         CoUninitialize();
         CleanupLogSystem();
         return 1;
     }
     
-    /** Stage 2: Setup desktop integration */
     SetupDesktopShortcut();
     InitializeDialogLanguages();
     
-    /** Stage 3: Handle single instance */
     HANDLE hMutex = NULL;
     if (!HandleSingleInstance(GetCommandLineW(), &hMutex)) {
         CoUninitialize();
@@ -738,7 +550,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 0;
     }
     
-    /** Stage 4: Create main window */
     LOG_INFO("Starting main window creation...");
     HWND hwnd = CreateMainWindow(hInstance, nCmdShow);
     if (!hwnd) {
@@ -749,16 +560,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     }
     LOG_INFO("Main window creation successful, handle: 0x%p", hwnd);
     
-    /** Stage 5: Setup window with timers and CLI processing */
     if (!SetupMainWindow(hInstance, hwnd, nCmdShow)) {
         CleanupResources(hMutex);
         return 0;
     }
     
-    /** Stage 6: Run message loop */
     int exitCode = RunMessageLoop(hwnd);
     
-    /** Stage 7: Cleanup and exit */
     CleanupResources(hMutex);
     
     return exitCode;

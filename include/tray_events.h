@@ -1,18 +1,10 @@
 /**
  * @file tray_events.h
- * @brief Refactored system tray event handling with improved modularity
+ * @brief Tray event dispatcher and external navigation
  * 
- * Version 2.0 - Enhanced API design:
- * - Clearer function naming (TogglePauseResumeTimer)
- * - Comprehensive documentation with usage context
- * - Reduced coupling through proper header organization
- * - Better semantic clarity in function responsibilities
- * 
- * Provides centralized handling for:
- * - Tray icon mouse interactions (left/right click)
- * - Timer control operations (pause/resume)
- * - Configuration management (startup mode)
- * - External navigation (documentation, support, feedback)
+ * Right-click opens color menu for quick theming (faster than nested navigation).
+ * Left-click opens main context menu with all controls.
+ * Language-aware feedback routing (Chinese → local form, others → GitHub Issues).
  */
 
 #ifndef CLOCK_TRAY_EVENTS_H
@@ -25,16 +17,14 @@
  * ============================================================================ */
 
 /**
- * @brief Handle mouse interactions with system tray icon
- * @param hwnd Main window handle
- * @param uID Tray icon identifier (reserved for future multi-icon support)
- * @param uMouseMsg Mouse message type (WM_LBUTTONUP, WM_RBUTTONUP, etc.)
+ * @brief Handle tray icon mouse events
+ * @param hwnd Window handle
+ * @param uID Icon ID (reserved for future multi-icon)
+ * @param uMouseMsg Message type
  * 
- * @details Dispatches tray icon clicks to appropriate menu handlers:
- * - WM_RBUTTONUP: Opens color selection menu for quick theme changes
- * - WM_LBUTTONUP: Opens main context menu with timer controls and settings
- * 
- * @note Currently uses single icon; uID reserved for future expansion
+ * @details
+ * - WM_RBUTTONUP: Color menu (quick theme changes)
+ * - WM_LBUTTONUP: Main context menu
  */
 void HandleTrayIconMessage(HWND hwnd, UINT uID, UINT uMouseMsg);
 
@@ -43,16 +33,12 @@ void HandleTrayIconMessage(HWND hwnd, UINT uID, UINT uMouseMsg);
  * ============================================================================ */
 
 /**
- * @brief Toggle timer between paused and running states
- * @param hwnd Main window handle
+ * @brief Toggle pause state
+ * @param hwnd Window handle
  * 
- * @details Only affects active timers (countdown/count-up modes):
- * - Preserves millisecond precision across pause/resume cycles
- * - Synchronizes notification sound state with timer state
- * - Maintains visual consistency with automatic window redraw
- * - No-op when in clock display mode
- * 
- * @note Function renamed from PauseResumeTimer for clarity
+ * @details
+ * Preserves millisecond precision across cycles. Syncs sound state.
+ * No-op in clock mode.
  */
 void TogglePauseResumeTimer(HWND hwnd);
 
@@ -62,13 +48,11 @@ void TogglePauseResumeTimer(HWND hwnd);
  * ============================================================================ */
 
 /**
- * @brief Update application startup mode configuration
- * @param hwnd Main window handle (for UI refresh)
- * @param mode Startup mode string (e.g., "COUNTDOWN", "COUNTUP", "SHOW_TIME", "NO_DISPLAY")
+ * @brief Set startup mode and update UI
+ * @param hwnd Window handle
+ * @param mode "COUNTDOWN", "COUNTUP", "SHOW_TIME", "NO_DISPLAY"
  * 
- * @details Persists startup behavior to configuration file and triggers
- * UI refresh to update menu checkmarks. Mode determines initial timer
- * state when application launches.
+ * @details Persists to config, updates menu checkmarks
  */
 void SetStartupMode(HWND hwnd, const char* mode);
 
@@ -77,35 +61,19 @@ void SetStartupMode(HWND hwnd, const char* mode);
  * ============================================================================ */
 
 /**
- * @brief Open user guide documentation in default browser
- * 
- * @details Navigates to comprehensive online documentation including:
- * - Feature usage instructions
- * - Configuration tutorials
- * - Keyboard shortcuts reference
- * - Tips and best practices
+ * @brief Open user guide in browser
  */
 void OpenUserGuide(void);
 
 /**
- * @brief Open support and help resources page
- * 
- * @details Provides access to:
- * - Troubleshooting guides
- * - Frequently asked questions (FAQ)
- * - Community support channels
- * - Known issues and workarounds
+ * @brief Open support page in browser
  */
 void OpenSupportPage(void);
 
 /**
- * @brief Open feedback/issue reporting page
+ * @brief Open feedback page (language-aware)
  * 
- * @details Language-aware navigation:
- * - Chinese users: Directed to localized feedback form
- * - Other users: Directed to GitHub Issues for international community
- * 
- * Enables users to report bugs, request features, and provide suggestions.
+ * @details Chinese → local form, others → GitHub Issues
  */
 void OpenFeedbackPage(void);
 

@@ -1,13 +1,11 @@
 /**
  * @file tray.c
- * @brief Refactored system tray icon management with improved modularity
- * @version 2.0 - Enhanced maintainability through function decomposition
+ * @brief System tray icon management and tooltip updates
  * 
- * Major improvements:
- * - Extracted helper functions for byte formatting and animation type checking
- * - Decomposed 142-line timer function into focused modules
- * - Centralized external declarations for clarity
- * - Simplified static image detection logic
+ * Key features:
+ * - Periodic tooltip updates (CPU, memory, network speed)
+ * - Animation type detection (logo, percent icons, custom)
+ * - Taskbar recreation handling
  */
 #include <windows.h>
 #include <shellapi.h>
@@ -20,63 +18,36 @@
 #include "../include/system_monitor.h"
 #include "../include/config.h"
 
-/* ============================================================================
- * Constants
- * ============================================================================ */
-
-/** @brief Timer ID for periodically updating tray tooltip with CPU/MEM */
 #define TRAY_TIP_TIMER_ID 42421
-
-/** @brief Tooltip update interval in milliseconds */
 #define TOOLTIP_UPDATE_INTERVAL_MS 1000
-
-/** @brief Percent icon warm-up delay for accurate initial reading */
 #define PERCENT_ICON_WARMUP_MS 120
 
-/* ============================================================================
- * Global Variables
- * ============================================================================ */
-
-/** @brief Global tray icon data structure for Shell_NotifyIcon operations */
+/** @brief Global tray icon data for Shell_NotifyIcon */
 NOTIFYICONDATAW nid;
 
-/** @brief Custom Windows message ID for taskbar recreation events */
+/** @brief Taskbar recreation message ID */
 UINT WM_TASKBARCREATED = 0;
 
-/* ============================================================================
- * External Declarations - Reduced (most in timer.h)
- * ============================================================================ */
-
-/* Note: CLOCK_COUNT_UP, CLOCK_SHOW_CURRENT_TIME, CLOCK_TOTAL_TIME, countdown_elapsed_time now in timer.h */
 extern void TrayAnimation_UpdatePercentIconIfNeeded(void);
 extern void ReadPercentIconColorsConfig(void);
 
-/* ============================================================================
- * Type Definitions
- * ============================================================================ */
-
-/** @brief Animation icon type categories */
+/** @brief Animation type categories */
 typedef enum {
-    ANIM_TYPE_CUSTOM,      /**< User-defined animation (GIF/WebP/folder) */
-    ANIM_TYPE_LOGO,        /**< Built-in application logo */
-    ANIM_TYPE_CPU,         /**< CPU usage percentage icon */
-    ANIM_TYPE_MEMORY       /**< Memory usage percentage icon */
+    ANIM_TYPE_CUSTOM,
+    ANIM_TYPE_LOGO,
+    ANIM_TYPE_CPU,
+    ANIM_TYPE_MEMORY
 } AnimationType;
 
-/** @brief Formatted byte value with appropriate unit */
+/** @brief Formatted bytes with unit */
 typedef struct {
-    double value;          /**< Scaled numeric value */
-    const wchar_t* unit;   /**< Display unit (B/s, KB/s, MB/s, GB/s) */
+    double value;
+    const wchar_t* unit;
 } FormattedBytes;
 
-/* ============================================================================
- * Helper Functions - Formatting
- * ============================================================================ */
-
 /**
- * @brief Format bytes per second with appropriate unit scaling
- * @param bytes Raw bytes per second value
- * @return Formatted value with unit (e.g., 1536 -> {1.5, "KB/s"})
+ * @brief Format bytes/sec with unit scaling
+ * @return Formatted value (e.g., 1536 → {1.5, "KB/s"})
  */
 static FormattedBytes FormatBytesPerSecond(double bytes) {
     FormattedBytes result = { bytes, L"B/s" };
@@ -88,14 +59,9 @@ static FormattedBytes FormatBytesPerSecond(double bytes) {
     return result;
 }
 
-/* ============================================================================
- * Helper Functions - Animation Type Detection
- * ============================================================================ */
-
 /**
  * @brief Determine animation type from name
- * @param animName Animation name string (can be NULL)
- * @return Animation type category
+ * @return Type category (CUSTOM, LOGO, CPU, MEMORY)
  */
 static AnimationType GetAnimationType(const char* animName) {
     if (!animName) return ANIM_TYPE_CUSTOM;
@@ -105,28 +71,19 @@ static AnimationType GetAnimationType(const char* animName) {
     return ANIM_TYPE_CUSTOM;
 }
 
-/**
- * @brief Check if animation is a percentage-based icon
- * @param type Animation type
- * @return TRUE for CPU or Memory percentage icons
- */
+/** @brief Check if type is percent-based (CPU/Memory) */
 static inline BOOL IsPercentIcon(AnimationType type) {
     return type == ANIM_TYPE_CPU || type == ANIM_TYPE_MEMORY;
 }
 
-/**
- * @brief Check if animation is a built-in icon type
- * @param type Animation type
- * @return TRUE for logo, CPU, or memory icons
- */
+/** @brief Check if type is builtin (not custom) */
 static inline BOOL IsBuiltinIcon(AnimationType type) {
     return type != ANIM_TYPE_CUSTOM;
 }
 
 /**
- * @brief Check if filename is a static image format
- * @param filename File name to check
- * @return TRUE if file extension matches static image formats
+ * @brief Check if filename is static image
+ * @return TRUE for .ico, .png, .bmp, .jpg, .tif extensions
  */
 static BOOL IsStaticImageFile(const char* filename) {
     if (!filename) return FALSE;
@@ -148,19 +105,13 @@ static BOOL IsStaticImageFile(const char* filename) {
     return FALSE;
 }
 
-/* ============================================================================
- * Helper Functions - System Metrics
- * ============================================================================ */
-
 /**
- * @brief Get system metrics with zero-value warm-up for percent icons
- * @param cpu Output CPU usage percentage
- * @param mem Output memory usage percentage
+ * @brief Get system metrics with zero-value warm-up
+ * @note Forces refresh if percent icon initially shows 0%
  */
 static void GetSystemMetricsWithWarmup(float* cpu, float* mem) {
     SystemMonitor_GetUsage(cpu, mem);
     
-    /* Force refresh if percent icon shows zero at startup */
     AnimationType type = GetAnimationType(GetCurrentAnimationName());
     if (IsPercentIcon(type)) {
         float chosen = (type == ANIM_TYPE_CPU) ? *cpu : *mem;
@@ -172,14 +123,8 @@ static void GetSystemMetricsWithWarmup(float* cpu, float* mem) {
 }
 
 /**
- * @brief Build basic tooltip with CPU, memory, and optional network info
- * @param tip Output buffer for tooltip text
- * @param tipSize Size of tip buffer in wide characters
- * @param cpu CPU usage percentage
- * @param mem Memory usage percentage
- * @param upBps Upload speed in bytes per second
- * @param downBps Download speed in bytes per second
- * @param hasNet Whether network speed is available
+ * @brief Build basic tooltip with CPU, memory, optional network
+ * @param hasNet Whether to include network speed lines
  */
 static void BuildBasicTooltip(wchar_t* tip, size_t tipSize, float cpu, float mem,
                               float upBps, float downBps, BOOL hasNet) {
@@ -194,9 +139,8 @@ static void BuildBasicTooltip(wchar_t* tip, size_t tipSize, float cpu, float mem
 }
 
 /**
- * @brief Check if animation speed should be displayed
- * @param animName Current animation name
- * @return TRUE if speed line should be shown
+ * @brief Check if animation speed should be displayed in tooltip
+ * @return FALSE for builtin icons and static images
  */
 static BOOL ShouldShowAnimationSpeed(const char* animName) {
     if (!animName) return FALSE;
@@ -209,11 +153,8 @@ static BOOL ShouldShowAnimationSpeed(const char* animName) {
 }
 
 /**
- * @brief Calculate animation speed percentage based on metric
- * @param metric Speed metric type (CPU, Memory, or Timer)
- * @param cpu Current CPU usage
- * @param mem Current memory usage
- * @return Percentage value for speed calculation
+ * @brief Calculate speed percentage from metric
+ * @return Percentage for CPU/Memory, or countdown progress for Timer
  */
 static double CalculateSpeedMetricPercent(AnimationSpeedMetric metric, float cpu, float mem) {
     if (metric == ANIMATION_SPEED_CPU) {
@@ -230,17 +171,10 @@ static double CalculateSpeedMetricPercent(AnimationSpeedMetric metric, float cpu
         return 0.0;
     }
     
-    return (double)mem;  /* ANIMATION_SPEED_MEMORY */
+    return (double)mem;
 }
 
-/**
- * @brief Append animation speed line to tooltip
- * @param tip Tooltip buffer to append to
- * @param tipSize Size of tooltip buffer
- * @param metric Speed metric type
- * @param cpu Current CPU usage
- * @param mem Current memory usage
- */
+/** @brief Append "Speed · [Metric] X%" line to tooltip */
 static void AppendSpeedLine(wchar_t* tip, size_t tipSize, AnimationSpeedMetric metric,
                            float cpu, float mem) {
     double percent = CalculateSpeedMetricPercent(metric, cpu, mem);
@@ -264,10 +198,7 @@ static void AppendSpeedLine(wchar_t* tip, size_t tipSize, AnimationSpeedMetric m
     wcsncat_s(tip, tipSize, extra, _TRUNCATE);
 }
 
-/**
- * @brief Update tray icon tooltip text
- * @param tip Tooltip text to display
- */
+/** @brief Update tray icon tooltip */
 static void UpdateTrayTooltip(const wchar_t* tip) {
     NOTIFYICONDATAW n = {0};
     n.cbSize = sizeof(n);
@@ -278,74 +209,48 @@ static void UpdateTrayTooltip(const wchar_t* tip) {
     Shell_NotifyIconW(NIM_MODIFY, &n);
 }
 
-/* ============================================================================
- * Timer Callback
- * ============================================================================ */
-
 /**
- * @brief Periodic timer callback to update tray tooltip with system metrics
- * @param hwnd Window handle (unused)
- * @param msg Message (unused)
- * @param id Timer ID (unused)
- * @param time System time (unused)
- * 
- * Updates tooltip every second with CPU, memory, network speed, and
- * optionally animation speed based on current metric settings.
+ * @brief Periodic timer callback (1s interval)
+ * @note Updates tooltip with CPU, memory, network, and animation speed
  */
 static void CALLBACK TrayTipTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time) {
     (void)hwnd; (void)msg; (void)id; (void)time;
     
-    /* Gather system metrics */
     float cpu, mem, upBps, downBps;
     GetSystemMetricsWithWarmup(&cpu, &mem);
     BOOL hasNet = SystemMonitor_GetNetSpeed(&upBps, &downBps);
     
-    /* Build basic tooltip */
     wchar_t tip[256] = {0};
     BuildBasicTooltip(tip, _countof(tip), cpu, mem, upBps, downBps, hasNet);
     
-    /* Append animation speed if applicable */
     const char* animName = GetCurrentAnimationName();
     if (ShouldShowAnimationSpeed(animName)) {
         AnimationSpeedMetric metric = GetAnimationSpeedMetric();
         AppendSpeedLine(tip, _countof(tip), metric, cpu, mem);
     }
     
-    /* Update tray icon */
     UpdateTrayTooltip(tip);
     TrayAnimation_UpdatePercentIconIfNeeded();
 }
 
 /**
- * @brief One-shot timer to obtain first non-zero CPU/MEM sample and update percent icon.
- */
-/* removed: TrayFirstCpuTimerProc */
-
-/**
- * @brief Register for taskbar recreation notification messages
- * Enables automatic tray icon restoration when Windows Explorer restarts
+ * @brief Register for taskbar recreation events
+ * @note Enables auto-restore when Explorer restarts
  */
 void RegisterTaskbarCreatedMessage() {
     WM_TASKBARCREATED = RegisterWindowMessageW(L"TaskbarCreated");
 }
 
-/* ============================================================================
- * Helper Functions - Initialization
- * ============================================================================ */
-
 /**
- * @brief Get initial icon for percent-based animations with warm-up sampling
- * @param type Animation type
- * @return HICON for percent icon, or NULL for non-percent types
- * 
- * Takes two samples with delay to ensure accurate initial percentage reading.
+ * @brief Get initial icon for percent animations
+ * @return HICON with warm-up sampling, or NULL for non-percent types
+ * @note Takes two samples to avoid initial 0% reading
  */
 static HICON GetInitialPercentIcon(AnimationType type) {
     if (!IsPercentIcon(type)) return NULL;
     
     float cpu = 0.0f, mem = 0.0f;
     
-    /* Take two samples with delay to avoid initial 0% */
     SystemMonitor_ForceRefresh();
     Sleep(PERCENT_ICON_WARMUP_MS);
     SystemMonitor_ForceRefresh();
@@ -358,25 +263,16 @@ static HICON GetInitialPercentIcon(AnimationType type) {
     return CreatePercentIcon16(percent);
 }
 
-/* ============================================================================
- * Public Functions - Tray Icon Management
- * ============================================================================ */
-
 /**
- * @brief Initialize and add tray icon to system notification area
- * @param hwnd Main window handle for tray icon callbacks
- * @param hInstance Application instance for icon resource loading
- * 
- * Sets up icon with appropriate initial state (logo, percent icon, or animation),
- * configures tooltip, and starts periodic updates.
+ * @brief Initialize and add tray icon
+ * @param hwnd Window handle for callbacks
+ * @param hInstance App instance for icon resources
  */
 void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
-    /* Initialize configuration and system monitoring */
     ReadPercentIconColorsConfig();
     SystemMonitor_Init();
     PreloadAnimationFromConfig();
     
-    /* Get initial icon based on animation type */
     const char* animName = GetCurrentAnimationName();
     AnimationType type = GetAnimationType(animName);
     HICON hInitial = GetInitialPercentIcon(type);
@@ -384,7 +280,6 @@ void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
         hInitial = GetInitialAnimationHicon();
     }
     
-    /* Configure tray icon data */
     memset(&nid, 0, sizeof(nid));
     nid.cbSize = sizeof(nid);
     nid.uID = CLOCK_ID_TRAY_APP_ICON;
@@ -394,22 +289,16 @@ void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
     nid.uCallbackMessage = CLOCK_WM_TRAYICON;
     wcscpy_s(nid.szTip, _countof(nid.szTip), L"CPU --.-%\nMemory --.-%\nUpload --.- ?/s\nDownload --.- ?/s");
     
-    /* Add icon to system tray */
     Shell_NotifyIconW(NIM_ADD, &nid);
     
-    /* Register for taskbar recreation events */
     if (WM_TASKBARCREATED == 0) {
         RegisterTaskbarCreatedMessage();
     }
     
-    /* Start periodic tooltip updates */
     SetTimer(hwnd, TRAY_TIP_TIMER_ID, TOOLTIP_UPDATE_INTERVAL_MS, (TIMERPROC)TrayTipTimerProc);
 }
 
-/**
- * @brief Remove tray icon from system notification area
- * Cleanly removes icon when application exits or hides
- */
+/** @brief Remove tray icon and cleanup */
 void RemoveTrayIcon(void) {
     if (nid.hWnd) {
         KillTimer(nid.hWnd, TRAY_TIP_TIMER_ID);
@@ -419,10 +308,9 @@ void RemoveTrayIcon(void) {
 }
 
 /**
- * @brief Display balloon notification from system tray icon
- * @param hwnd Window handle associated with the tray icon
- * @param message UTF-8 encoded message text to display
- * Shows 3-second notification balloon without title or special icons
+ * @brief Show balloon notification
+ * @param message UTF-8 message text
+ * @note Displays for 3 seconds without title
  */
 void ShowTrayNotification(HWND hwnd, const char* message) {
     NOTIFYICONDATAW nid_notify = {0};
@@ -430,32 +318,22 @@ void ShowTrayNotification(HWND hwnd, const char* message) {
     nid_notify.hWnd = hwnd;
     nid_notify.uID = CLOCK_ID_TRAY_APP_ICON;
     nid_notify.uFlags = NIF_INFO;
-    nid_notify.dwInfoFlags = NIIF_NONE;        /**< No special icon in notification */
-    nid_notify.uTimeout = 3000;                /**< 3-second display duration */
+    nid_notify.dwInfoFlags = NIIF_NONE;
+    nid_notify.uTimeout = 3000;
     
-    /** Convert UTF-8 message to wide character format for Windows API */
     MultiByteToWideChar(CP_UTF8, 0, message, -1, nid_notify.szInfo, sizeof(nid_notify.szInfo)/sizeof(WCHAR));
-    nid_notify.szInfoTitle[0] = L'\0';         /**< No title, message only */
+    nid_notify.szInfoTitle[0] = L'\0';
     
     Shell_NotifyIconW(NIM_MODIFY, &nid_notify);
 }
 
-/**
- * @brief Recreate tray icon after taskbar restart or system changes
- * @param hwnd Main window handle
- * @param hInstance Application instance handle
- * Performs clean removal and re-initialization to restore tray icon
- */
+/** @brief Recreate tray icon after taskbar restart */
 void RecreateTaskbarIcon(HWND hwnd, HINSTANCE hInstance) {
     RemoveTrayIcon();
     InitTrayIcon(hwnd, hInstance);
 }
 
-/**
- * @brief Update tray icon by recreation with current window state
- * @param hwnd Main window handle to extract instance from
- * Convenience function that retrieves instance and recreates icon
- */
+/** @brief Update tray icon by recreation */
 void UpdateTrayIcon(HWND hwnd) {
     HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
     RecreateTaskbarIcon(hwnd, hInstance);

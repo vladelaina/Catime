@@ -1,17 +1,10 @@
 /**
  * @file tray.h
- * @brief Refactored system tray icon management
- * @version 2.0 - Enhanced with modular helper functions
+ * @brief Tray icon management with smart tooltip generation
  * 
- * Provides functions for creating, updating, and managing the system tray icon
- * with intelligent tooltip generation and automatic icon refresh.
- * 
- * Internal implementation features:
- * - Modular tooltip building with CPU, memory, and network metrics
- * - Smart animation type detection (logo, CPU%, memory%, custom)
- * - Automatic byte formatting with appropriate units (B/s, KB/s, MB/s, GB/s)
- * - Simplified static image detection for various formats
- * - Centralized external declarations for better organization
+ * Modular tooltip builder includes CPU/memory/network metrics with auto-formatted units.
+ * Animation type detection enables warm-up sampling for CPU/Memory percent modes.
+ * Periodic tooltip updates (1Hz) keep system metrics fresh.
  */
 
 #ifndef TRAY_H
@@ -19,71 +12,58 @@
 
 #include <windows.h>
 
-/** @brief Custom tray icon message identifier */
 #define CLOCK_WM_TRAYICON (WM_USER + 2)
-
-/** @brief Tray icon resource identifier */
 #define CLOCK_ID_TRAY_APP_ICON 1001
 
-/** @brief Taskbar recreation message identifier */
 extern UINT WM_TASKBARCREATED;
 
 /**
- * @brief Register taskbar created message for Explorer restart detection
+ * @brief Register taskbar created message
  * 
- * @details Registers a Windows message that is broadcast when the taskbar
- * is recreated (typically after Explorer.exe crashes or restarts).
+ * @details For Explorer restart detection (crash recovery)
  */
 void RegisterTaskbarCreatedMessage(void);
 
 /**
- * @brief Initialize system tray icon with smart type detection
- * @param hwnd Main window handle for callbacks
- * @param hInstance Application instance handle for resources
+ * @brief Initialize tray icon with smart type detection
+ * @param hwnd Window handle
+ * @param hInstance App instance
  * 
- * @details Initializes the tray icon with appropriate initial state:
- * - For CPU/memory percent icons: warm-up sampling for accurate initial value
- * - For custom animations: first frame of animation
- * - For logo: application icon resource
+ * @details
+ * - CPU/Memory percent: Warm-up sampling for accurate initial value
+ * - Custom animations: First frame
+ * - Logo: App icon resource
  * 
- * Starts periodic tooltip updates (1Hz) with system metrics.
+ * Starts 1Hz tooltip updates with system metrics.
  */
 void InitTrayIcon(HWND hwnd, HINSTANCE hInstance);
 
 /**
- * @brief Remove tray icon from system notification area
+ * @brief Remove tray icon and stop timers
  * 
- * @details Cleanly removes the icon and stops all timers when application
- * exits or hides. Also shuts down system monitoring.
+ * @details Also shuts down system monitoring
  */
 void RemoveTrayIcon(void);
 
 /**
- * @brief Display balloon notification from system tray
- * @param hwnd Window handle for notification context
- * @param message Notification message text (UTF-8 encoded)
- * 
- * @details Shows a 3-second notification balloon without title or icons.
- * Message is automatically converted from UTF-8 to wide characters.
+ * @brief Show balloon notification (3 seconds, no title/icons)
+ * @param hwnd Window handle
+ * @param message Message text (UTF-8)
  */
 void ShowTrayNotification(HWND hwnd, const char* message);
 
 /**
- * @brief Recreate tray icon after taskbar restart
- * @param hwnd Main window handle
- * @param hInstance Application instance handle
+ * @brief Recreate icon after Explorer restart
+ * @param hwnd Window handle
+ * @param hInstance App instance
  * 
- * @details Performs clean removal and re-initialization to restore the
- * tray icon when Windows Explorer restarts or recovers from crashes.
+ * @details Clean remove + re-init for crash recovery
  */
 void RecreateTaskbarIcon(HWND hwnd, HINSTANCE hInstance);
 
 /**
- * @brief Update tray icon by full recreation
- * @param hwnd Main window handle
- * 
- * @details Convenience function that extracts the instance handle from
- * the window and performs a full icon recreation cycle.
+ * @brief Update icon via full recreation
+ * @param hwnd Window handle
  */
 void UpdateTrayIcon(HWND hwnd);
 
