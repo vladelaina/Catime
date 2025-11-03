@@ -1497,7 +1497,7 @@ static BOOL LoadColorOptions(const char* section, const char* key, void* target,
 CONFIG_RELOAD_HANDLER(Colors) {
     ConfigItem items[] = {
         {CONFIG_TYPE_CUSTOM, CFG_SECTION_COLORS, "COLOR_OPTIONS", NULL, 0,
-         "#FFFFFF,#F9DB91,#F4CAE0,#FFB6C1,#A8E7DF,#A3CFB3,#92CBFC,#BDA5E7,#9370DB,#8C92CF,#72A9A5,#EB99A7,#EB96BD,#FFAE8B,#FF7F50,#CA6174",
+         DEFAULT_COLOR_OPTIONS_INI,
          LoadColorOptions, TRUE}
     };
     
@@ -1917,7 +1917,7 @@ static void ReloadDefaultFont(void) {
     extern BOOL LoadFontByNameAndGetRealName(HINSTANCE, const char*, char*, size_t);
     
     char actualFontFileName[MAX_PATH];
-    const char* localappdata_prefix = "%LOCALAPPDATA%\\Catime\\resources\\fonts\\";
+    const char* localappdata_prefix = FONTS_PATH_PREFIX;
     
     if (_strnicmp(FONT_FILE_NAME, localappdata_prefix, strlen(localappdata_prefix)) == 0) {
         strncpy(actualFontFileName, FONT_FILE_NAME + strlen(localappdata_prefix), sizeof(actualFontFileName) - 1);

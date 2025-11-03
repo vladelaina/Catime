@@ -174,7 +174,7 @@ static bool IsPackageManagerInstall(const char* exe_path) {
     return false;
 }
 
-static bool FileExists(const char* path_utf8) {
+static bool ShortcutFileExists(const char* path_utf8) {
     wchar_t path_w[MAX_PATH];
     if (!Utf8ToWide(path_utf8, path_w, MAX_PATH)) {
         return false;
@@ -219,7 +219,7 @@ static bool FindExistingShortcut(char* shortcut_path_output, size_t path_size) {
     
     if (GetDesktopPath(CSIDL_DESKTOP, desktop_path, MAX_PATH)) {
         BuildShortcutPath(desktop_path, shortcut_path, MAX_PATH);
-        if (FileExists(shortcut_path)) {
+        if (ShortcutFileExists(shortcut_path)) {
             strncpy(shortcut_path_output, shortcut_path, path_size);
             shortcut_path_output[path_size - 1] = '\0';
             return true;
@@ -228,7 +228,7 @@ static bool FindExistingShortcut(char* shortcut_path_output, size_t path_size) {
     
     if (GetDesktopPath(CSIDL_COMMON_DESKTOPDIRECTORY, desktop_path, MAX_PATH)) {
         BuildShortcutPath(desktop_path, shortcut_path, MAX_PATH);
-        if (FileExists(shortcut_path)) {
+        if (ShortcutFileExists(shortcut_path)) {
             strncpy(shortcut_path_output, shortcut_path, path_size);
             shortcut_path_output[path_size - 1] = '\0';
             return true;

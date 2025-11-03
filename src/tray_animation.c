@@ -1367,7 +1367,7 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
     ReadIniString("Animation", "ANIMATION_PATH", "__logo__", nameBuf, sizeof(nameBuf), config_path);
     NormalizeAnimConfigValue(nameBuf);
     if (nameBuf[0] != '\0') {
-        const char* prefix = "%LOCALAPPDATA%\\Catime\\resources\\animations\\";
+        const char* prefix = ANIMATIONS_PATH_PREFIX;
         if (_stricmp(nameBuf, "__logo__") == 0) {
             strncpy(g_animationName, "__logo__", sizeof(g_animationName) - 1);
             g_animationName[sizeof(g_animationName) - 1] = '\0';
@@ -1620,7 +1620,7 @@ void PreloadAnimationFromConfig(void) {
     ReadIniString("Animation", "ANIMATION_PATH", "__logo__", nameBuf, sizeof(nameBuf), config_path);
     NormalizeAnimConfigValue(nameBuf);
     if (nameBuf[0] != '\0') {
-        const char* prefix = "%LOCALAPPDATA%\\Catime\\resources\\animations\\";
+        const char* prefix = ANIMATIONS_PATH_PREFIX;
         if (_stricmp(nameBuf, "__logo__") == 0) {
             strncpy(g_animationName, "__logo__", sizeof(g_animationName) - 1);
             g_animationName[sizeof(g_animationName) - 1] = '\0';

@@ -29,6 +29,38 @@
 /** @brief MRU list capacity */
 #define MAX_RECENT_FILES 5
 
+/* ============================================================================
+ * Default configuration values
+ * ============================================================================ */
+
+/** @brief Default notification messages */
+#define DEFAULT_TIMEOUT_MESSAGE        "时间到啦！"
+#define DEFAULT_POMODORO_MESSAGE       "番茄钟时间到！"
+#define DEFAULT_POMODORO_COMPLETE_MSG  "所有番茄钟循环完成！"
+
+/** @brief Resource path prefixes */
+#define LOCALAPPDATA_PREFIX            "%LOCALAPPDATA%\\Catime"
+#define FONTS_PATH_PREFIX              "%LOCALAPPDATA%\\Catime\\resources\\fonts\\"
+#define AUDIO_PATH_PREFIX              "%LOCALAPPDATA%\\Catime\\resources\\audio\\"
+#define ANIMATIONS_PATH_PREFIX         "%LOCALAPPDATA%\\Catime\\resources\\animations\\"
+
+/** @brief Default color values */
+#define DEFAULT_TEXT_COLOR             "#FFB6C1"
+#define DEFAULT_WHITE_COLOR            "#FFFFFF"
+#define DEFAULT_BLACK_COLOR            "#000000"
+
+/** @brief Default font settings */
+#define DEFAULT_FONT_NAME              "Wallpoet Essence.ttf"
+#define DEFAULT_FONT_SIZE              20
+
+/** @brief Default window settings */
+#define DEFAULT_WINDOW_SCALE           "1.62"
+#define DEFAULT_WINDOW_POS_X           960
+#define DEFAULT_WINDOW_POS_Y           -1
+
+/** @brief Default color palette (INI format) */
+#define DEFAULT_COLOR_OPTIONS_INI      "#FFFFFF,#F9DB91,#F4CAE0,#FFB6C1,#A8E7DF,#A3CFB3,#92CBFC,#BDA5E7,#9370DB,#8C92CF,#72A9A5,#EB99A7,#EB96BD,#FFAE8B,#FF7F50,#CA6174"
+
 /** @brief INI section names for logical grouping */
 #define INI_SECTION_GENERAL       "General"
 #define INI_SECTION_DISPLAY       "Display"
@@ -95,6 +127,8 @@ extern time_t last_config_time;  /**< For live reload detection */
 extern int POMODORO_WORK_TIME;        /**< Default: 1500s (25min) */
 extern int POMODORO_SHORT_BREAK;      /**< Default: 300s (5min) */
 extern int POMODORO_LONG_BREAK;       /**< Default: 900s (15min) */
+extern int POMODORO_TIMES[10];        /**< Pomodoro time intervals array */
+extern int POMODORO_TIMES_COUNT;      /**< Number of intervals in array */
 
 /* Notification messages (placeholder support) */
 extern char CLOCK_TIMEOUT_MESSAGE_TEXT[100];
@@ -153,6 +187,12 @@ double GetAnimationSpeedScaleForPercent(double percent);
  */
 void ReloadAnimationSpeedFromConfig(void);
 
+/**
+ * @brief Write animation speed settings to config
+ * @param config_path Path to config file
+ */
+void WriteAnimationSpeedToConfig(const char* config_path);
+
 /* ============================================================================
  * Core configuration functions
  * ============================================================================ */
@@ -165,6 +205,42 @@ void ReloadAnimationSpeedFromConfig(void);
  * @details Returns %APPDATA%\Catime\config.ini
  */
 void GetConfigPath(char* path, size_t size);
+
+/**
+ * @brief Check if file exists with UTF-8 path support
+ * @param filePath File path (UTF-8)
+ * @return TRUE if exists, FALSE otherwise
+ */
+BOOL FileExists(const char* filePath);
+
+/**
+ * @brief Extract filename from full path
+ * @param path Full path (UTF-8)
+ * @param name Output buffer for filename
+ * @param nameSize Size of output buffer
+ */
+void ExtractFileName(const char* path, char* name, size_t nameSize);
+
+/**
+ * @brief Create resource folder structure
+ * @details Creates resources, audio, fonts, animations folders
+ */
+void CheckAndCreateResourceFolders(void);
+
+/**
+ * @brief Update config key-value atomically (internal helper)
+ */
+BOOL UpdateConfigKeyValueAtomic(const char* section, const char* key, const char* value);
+
+/**
+ * @brief Update config integer value atomically (internal helper)
+ */
+BOOL UpdateConfigIntAtomic(const char* section, const char* key, int value);
+
+/**
+ * @brief Update config boolean value atomically (internal helper)
+ */
+BOOL UpdateConfigBoolAtomic(const char* section, const char* key, BOOL value);
 
 /**
  * @brief Load all configuration with validation
@@ -266,9 +342,9 @@ void WriteConfig(const char* config_path);
 void WriteConfigPomodoroTimes(int work, int short_break, int long_break);
 
 /**
- * @brief Alias for WriteConfigPomodoroTimes
+ * @brief Write Pomodoro settings (4-parameter version)
  */
-void WriteConfigPomodoroSettings(int work_time, int short_break, int long_break);
+void WriteConfigPomodoroSettings(int work, int short_break, int long_break, int long_break2);
 
 /**
  * @brief Write Pomodoro loop count (1-99)

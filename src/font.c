@@ -45,7 +45,7 @@ typedef struct {
 } FontDirectoryHeader;
 #pragma pack(pop)
 
-char FONT_FILE_NAME[100] = "%LOCALAPPDATA%\\Catime\\resources\\fonts\\Wallpoet Essence.ttf";
+char FONT_FILE_NAME[100] = FONTS_PATH_PREFIX DEFAULT_FONT_NAME;
 char FONT_INTERNAL_NAME[100];
 char PREVIEW_FONT_NAME[100] = "";
 char PREVIEW_INTERNAL_NAME[100] = "";

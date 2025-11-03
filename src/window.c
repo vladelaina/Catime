@@ -472,7 +472,7 @@ static BOOL InitializeFonts(HINSTANCE hInstance) {
     
     /* Strip %LOCALAPPDATA% prefix if present for relative path access */
     char actualFontFileName[MAX_PATH];
-    const char* localappdata_prefix = "%LOCALAPPDATA%\\Catime\\resources\\fonts\\";
+    const char* localappdata_prefix = FONTS_PATH_PREFIX;
     if (_strnicmp(FONT_FILE_NAME, localappdata_prefix, strlen(localappdata_prefix)) == 0) {
         strncpy(actualFontFileName, FONT_FILE_NAME + strlen(localappdata_prefix), sizeof(actualFontFileName) - 1);
         actualFontFileName[sizeof(actualFontFileName) - 1] = '\0';

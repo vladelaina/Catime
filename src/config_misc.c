@@ -1,0 +1,436 @@
+/**
+ * @file config_misc.c
+ * @brief Miscellaneous configuration management
+ * 
+ * Manages pomodoro settings, recent files, font license, language, time format, and other settings.
+ */
+#include "../include/config.h"
+#include "../include/language.h"
+#include "../resource/resource.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <windows.h>
+
+#define MAX_POMODORO_TIMES 10
+
+#define UTF8_TO_WIDE(utf8, wide) \
+    wchar_t wide[MAX_PATH] = {0}; \
+    MultiByteToWideChar(CP_UTF8, 0, utf8, -1, wide, MAX_PATH)
+
+#define FOPEN_UTF8(utf8Path, mode, filePtr) \
+    wchar_t _w##filePtr[MAX_PATH] = {0}; \
+    MultiByteToWideChar(CP_UTF8, 0, utf8Path, -1, _w##filePtr, MAX_PATH); \
+    FILE* filePtr = _wfopen(_w##filePtr, mode)
+
+static inline BOOL FileExistsUtf8(const char* utf8Path) {
+    if (!utf8Path) return FALSE;
+    UTF8_TO_WIDE(utf8Path, wPath);
+    return GetFileAttributesW(wPath) != INVALID_FILE_ATTRIBUTES;
+}
+
+/** Note: All external variables are declared in their respective headers */
+
+/** Enum-string mapping */
+typedef struct {
+    int value;
+    const char* str;
+} EnumStrMap;
+
+static const EnumStrMap TIME_FORMAT_MAP[] = {
+    {TIME_FORMAT_DEFAULT,      "DEFAULT"},
+    {TIME_FORMAT_ZERO_PADDED,  "ZERO_PADDED"},
+    {TIME_FORMAT_FULL_PADDED,  "FULL_PADDED"},
+    {-1, NULL}
+};
+
+static const EnumStrMap LANGUAGE_MAP[] = {
+    {APP_LANG_CHINESE_SIMP, "Chinese_Simplified"},
+    {APP_LANG_CHINESE_TRAD, "Chinese_Traditional"},
+    {APP_LANG_ENGLISH,      "English"},
+    {APP_LANG_SPANISH,      "Spanish"},
+    {APP_LANG_FRENCH,       "French"},
+    {APP_LANG_GERMAN,       "German"},
+    {APP_LANG_RUSSIAN,      "Russian"},
+    {APP_LANG_PORTUGUESE,   "Portuguese"},
+    {APP_LANG_JAPANESE,     "Japanese"},
+    {APP_LANG_KOREAN,       "Korean"},
+    {-1, NULL}
+};
+
+static const char* EnumToString(const EnumStrMap* map, int value, const char* defaultVal) {
+    if (!map) return defaultVal;
+    for (int i = 0; map[i].str != NULL; i++) {
+        if (map[i].value == value) {
+            return map[i].str;
+        }
+    }
+    return defaultVal;
+}
+
+static int StringToEnum(const EnumStrMap* map, const char* str, int defaultVal) {
+    if (!map || !str) return defaultVal;
+    for (int i = 0; map[i].str != NULL; i++) {
+        if (strcmp(map[i].str, str) == 0) {
+            return map[i].value;
+        }
+    }
+    return defaultVal;
+}
+
+/**
+ * @brief Write pomodoro timing configuration to config file
+ */
+void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
+    char timesStr[128];
+    snprintf(timesStr, sizeof(timesStr), "%d,%d,%d", work, short_break, long_break);
+    UpdateConfigKeyValueAtomic(INI_SECTION_POMODORO, "POMODORO_TIME_OPTIONS", timesStr);
+}
+
+
+/**
+ * @brief Write pomodoro settings (combined times array)
+ */
+void WriteConfigPomodoroSettings(int work, int short_break, int long_break, int long_break2) {
+    char timesStr[128];
+    snprintf(timesStr, sizeof(timesStr), "%d,%d,%d,%d", work, short_break, long_break, long_break2);
+    UpdateConfigKeyValueAtomic(INI_SECTION_POMODORO, "POMODORO_TIME_OPTIONS", timesStr);
+}
+
+
+/**
+ * @brief Write pomodoro loop count to config file
+ */
+void WriteConfigPomodoroLoopCount(int loop_count) {
+    UpdateConfigIntAtomic(INI_SECTION_POMODORO, "POMODORO_LOOP_COUNT", loop_count);
+}
+
+
+/**
+ * @brief Write custom pomodoro time intervals to config
+ */
+void WriteConfigPomodoroTimeOptions(int* times, int count) {
+    if (!times || count <= 0) return;
+    
+    char timesStr[512] = {0};
+    size_t offset = 0;
+    for (int i = 0; i < count && offset < sizeof(timesStr) - 16; i++) {
+        if (i > 0) {
+            offset += snprintf(timesStr + offset, sizeof(timesStr) - offset, ",");
+        }
+        offset += snprintf(timesStr + offset, sizeof(timesStr) - offset, "%d", times[i]);
+    }
+    
+    UpdateConfigKeyValueAtomic(INI_SECTION_POMODORO, "POMODORO_TIME_OPTIONS", timesStr);
+}
+
+
+/**
+ * @brief Load recent files list from config with file existence validation
+ */
+void LoadRecentFiles(void) {
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+
+    FOPEN_UTF8(config_path, L"r", file);
+    if (!file) return;
+
+    char line[MAX_PATH];
+    extern int CLOCK_RECENT_FILES_COUNT;
+    extern RecentFile CLOCK_RECENT_FILES[];
+    CLOCK_RECENT_FILES_COUNT = 0;
+
+    while (fgets(line, sizeof(line), file)) {
+
+        if (strncmp(line, "CLOCK_RECENT_FILE_", 18) == 0) {
+            char *path = strchr(line + 18, '=');
+            if (path) {
+                path++;
+                char *newline = strchr(path, '\n');
+                if (newline) *newline = '\0';
+
+                if (CLOCK_RECENT_FILES_COUNT < MAX_RECENT_FILES) {
+
+                    if (FileExistsUtf8(path)) {
+                        strncpy(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path, path, MAX_PATH - 1);
+                        CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path[MAX_PATH - 1] = '\0';
+
+                        char *filename = strrchr(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path, '\\');
+                        if (filename) filename++;
+                        else filename = CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path;
+                        
+                        strncpy(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].name, filename, MAX_PATH - 1);
+                        CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].name[MAX_PATH - 1] = '\0';
+
+                        CLOCK_RECENT_FILES_COUNT++;
+                    }
+                }
+            }
+        }
+    }
+
+    fclose(file);
+}
+
+
+/**
+ * @brief Add file to recent files list with MRU ordering
+ */
+void SaveRecentFile(const char* filePath) {
+    if (!filePath || strlen(filePath) == 0) return;
+
+    if (!FileExistsUtf8(filePath)) {
+        return;
+    }
+
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+
+    const int kMax = MAX_RECENT_FILES;
+    char items[MAX_RECENT_FILES][MAX_PATH];
+    int count = 0;
+    for (int i = 1; i <= kMax; ++i) {
+        char key[32];
+        snprintf(key, sizeof(key), "CLOCK_RECENT_FILE_%d", i);
+        ReadIniString(INI_SECTION_RECENTFILES, key, "", items[count], MAX_PATH, config_path);
+        if (items[count][0] != '\0') {
+            count++;
+        }
+    }
+
+    /** Remove if exists */
+    int writeIdx = 0;
+    char newList[MAX_RECENT_FILES][MAX_PATH];
+    memset(newList, 0, sizeof(newList));
+
+    /** Insert new at top */
+    strncpy(newList[writeIdx], filePath, MAX_PATH - 1);
+    newList[writeIdx][MAX_PATH - 1] = '\0';
+    writeIdx++;
+
+    for (int i = 0; i < count && writeIdx < kMax; ++i) {
+        if (strcmp(items[i], filePath) == 0) continue;
+        strncpy(newList[writeIdx], items[i], MAX_PATH - 1);
+        newList[writeIdx][MAX_PATH - 1] = '\0';
+        writeIdx++;
+    }
+
+    /** Write back to INI */
+    for (int i = 0; i < kMax; ++i) {
+        char key[32];
+        snprintf(key, sizeof(key), "CLOCK_RECENT_FILE_%d", i + 1);
+        const char* val = (i < writeIdx) ? newList[i] : "";
+        WriteIniString(INI_SECTION_RECENTFILES, key, val, config_path);
+    }
+}
+
+
+/**
+ * @brief Convert UTF-8 string to ANSI (GB2312)
+ */
+char* UTF8ToANSI(const char* utf8Str) {
+    int wlen = MultiByteToWideChar(CP_UTF8, 0, utf8Str, -1, NULL, 0);
+    if (wlen == 0) {
+        return _strdup(utf8Str);
+    }
+
+    wchar_t* wstr = (wchar_t*)malloc(sizeof(wchar_t) * wlen);
+    if (!wstr) {
+        return _strdup(utf8Str);
+    }
+
+    if (MultiByteToWideChar(CP_UTF8, 0, utf8Str, -1, wstr, wlen) == 0) {
+        free(wstr);
+        return _strdup(utf8Str);
+    }
+
+    int len = WideCharToMultiByte(936, 0, wstr, -1, NULL, 0, NULL, NULL);
+    if (len == 0) {
+        free(wstr);
+        return _strdup(utf8Str);
+    }
+
+    char* str = (char*)malloc(len);
+    if (!str) {
+        free(wstr);
+        return _strdup(utf8Str);
+    }
+
+    if (WideCharToMultiByte(936, 0, wstr, -1, str, len, NULL, NULL) == 0) {
+        free(wstr);
+        free(str);
+        return _strdup(utf8Str);
+    }
+
+    free(wstr);
+    return str;
+}
+
+
+/**
+ * @brief Set font license agreement acceptance status
+ */
+void SetFontLicenseAccepted(BOOL accepted) {
+    FONT_LICENSE_ACCEPTED = accepted;
+    WriteConfigKeyValue("FONT_LICENSE_ACCEPTED", accepted ? "TRUE" : "FALSE");
+}
+
+/**
+ * @brief Set font license version acceptance status
+ */
+void SetFontLicenseVersionAccepted(const char* version) {
+    if (!version) return;
+    
+    strncpy(FONT_LICENSE_VERSION_ACCEPTED, version, sizeof(FONT_LICENSE_VERSION_ACCEPTED) - 1);
+    FONT_LICENSE_VERSION_ACCEPTED[sizeof(FONT_LICENSE_VERSION_ACCEPTED) - 1] = '\0';
+    
+    WriteConfigKeyValue("FONT_LICENSE_VERSION_ACCEPTED", version);
+}
+
+/**
+ * @brief Check if font license version needs acceptance
+ */
+BOOL NeedsFontLicenseVersionAcceptance(void) {
+    if (!FONT_LICENSE_ACCEPTED) {
+        return TRUE;
+    }
+    
+    if (strlen(FONT_LICENSE_VERSION_ACCEPTED) == 0) {
+        return TRUE;
+    }
+    
+    if (strcmp(FONT_LICENSE_VERSION, FONT_LICENSE_VERSION_ACCEPTED) != 0) {
+        return TRUE;
+    }
+    
+    return FALSE;
+}
+
+/**
+ * @brief Get current font license version
+ */
+const char* GetCurrentFontLicenseVersion(void) {
+    return FONT_LICENSE_VERSION;
+}
+
+
+/**
+ * @brief Write language setting to config file
+ */
+void WriteConfigLanguage(int language) {
+    const char* langName = EnumToString(LANGUAGE_MAP, language, "English");
+    WriteConfigKeyValue("LANGUAGE", langName);
+}
+
+
+/**
+ * @brief Write time format setting to config file
+ */
+void WriteConfigTimeFormat(TimeFormatType format) {
+    const char* formatStr = EnumToString(TIME_FORMAT_MAP, format, "DEFAULT");
+    UpdateConfigKeyValueAtomic(INI_SECTION_TIMER, "CLOCK_TIME_FORMAT", formatStr);
+}
+
+/**
+ * @brief Write milliseconds display setting to config file
+ */
+void WriteConfigShowMilliseconds(BOOL showMilliseconds) {
+    UpdateConfigBoolAtomic(INI_SECTION_TIMER, "CLOCK_SHOW_MILLISECONDS", showMilliseconds);
+}
+
+/**
+ * @brief Get appropriate timer interval based on milliseconds display setting
+ */
+UINT GetTimerInterval(void) {
+    if (IS_MILLISECONDS_PREVIEWING && PREVIEW_SHOW_MILLISECONDS) {
+        return 10;
+    }
+    
+    return CLOCK_SHOW_MILLISECONDS ? 10 : 1000;
+}
+
+/**
+ * @brief Reset timer with appropriate interval
+ */
+void ResetTimerWithInterval(HWND hwnd) {
+    KillTimer(hwnd, 1);
+    SetTimer(hwnd, 1, GetTimerInterval(), NULL);
+    
+    extern void ResetTimerMilliseconds(void);
+    ResetTimerMilliseconds();
+}
+
+
+/**
+ * @brief Update startup mode configuration
+ */
+void WriteConfigStartupMode(const char* mode) {
+    UpdateConfigKeyValueAtomic(INI_SECTION_TIMER, "STARTUP_MODE", mode);
+}
+
+
+/**
+ * @brief Write arbitrary key-value pair to appropriate config section
+ */
+void WriteConfigKeyValue(const char* key, const char* value) {
+    if (!key || !value) return;
+    
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    
+    /** Determine appropriate section based on key prefix */
+    const char* section;
+    
+    if (strcmp(key, "CONFIG_VERSION") == 0 ||
+        strcmp(key, "LANGUAGE") == 0 ||
+        strcmp(key, "SHORTCUT_CHECK_DONE") == 0 ||
+        strcmp(key, "FIRST_RUN") == 0 ||
+        strcmp(key, "FONT_LICENSE_ACCEPTED") == 0 ||
+        strcmp(key, "FONT_LICENSE_VERSION_ACCEPTED") == 0) {
+        section = INI_SECTION_GENERAL;
+    }
+    else if (strncmp(key, "CLOCK_TEXT_COLOR", 16) == 0 ||
+           strncmp(key, "FONT_FILE_NAME", 14) == 0 ||
+           strncmp(key, "CLOCK_BASE_FONT_SIZE", 20) == 0 ||
+           strncmp(key, "WINDOW_SCALE", 12) == 0 ||
+           strncmp(key, "CLOCK_WINDOW_POS_X", 18) == 0 ||
+           strncmp(key, "CLOCK_WINDOW_POS_Y", 18) == 0 ||
+           strncmp(key, "WINDOW_TOPMOST", 14) == 0) {
+        section = INI_SECTION_DISPLAY;
+    }
+    else if (strncmp(key, "CLOCK_DEFAULT_START_TIME", 24) == 0 ||
+           strncmp(key, "CLOCK_USE_24HOUR", 16) == 0 ||
+           strncmp(key, "CLOCK_SHOW_SECONDS", 18) == 0 ||
+           strncmp(key, "CLOCK_TIME_FORMAT", 17) == 0 ||
+           strncmp(key, "CLOCK_SHOW_MILLISECONDS", 23) == 0 ||
+           strncmp(key, "CLOCK_TIME_OPTIONS", 18) == 0 ||
+           strncmp(key, "STARTUP_MODE", 12) == 0 ||
+           strncmp(key, "CLOCK_TIMEOUT_TEXT", 18) == 0 ||
+           strncmp(key, "CLOCK_TIMEOUT_ACTION", 20) == 0 ||
+           strncmp(key, "CLOCK_TIMEOUT_FILE", 18) == 0 ||
+           strncmp(key, "CLOCK_TIMEOUT_WEBSITE", 21) == 0) {
+        section = INI_SECTION_TIMER;
+    }
+    else if (strncmp(key, "POMODORO_", 9) == 0) {
+        section = INI_SECTION_POMODORO;
+    }
+    else if (strncmp(key, "NOTIFICATION_", 13) == 0 ||
+           strncmp(key, "CLOCK_TIMEOUT_MESSAGE_TEXT", 26) == 0) {
+        section = INI_SECTION_NOTIFICATION;
+    }
+    else if (strncmp(key, "HOTKEY_", 7) == 0) {
+        section = INI_SECTION_HOTKEYS;
+    }
+    else if (strncmp(key, "CLOCK_RECENT_FILE", 17) == 0) {
+        section = INI_SECTION_RECENTFILES;
+    }
+    else if (strncmp(key, "COLOR_OPTIONS", 13) == 0) {
+        section = INI_SECTION_COLORS;
+    }
+    else {
+        section = INI_SECTION_OPTIONS;
+    }
+    
+    WriteIniString(section, key, value, config_path);
+}
+

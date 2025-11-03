@@ -692,7 +692,7 @@ void ShowColorMenu(HWND hwnd) {
                         
                         wchar_t wFontsFolderPath[MAX_PATH] = {0};
                         if (GetFontsFolderWideFromConfig(wFontsFolderPath, MAX_PATH)) {
-                            const char* localPrefix = "%LOCALAPPDATA%\\Catime\\resources\\fonts\\";
+                            const char* localPrefix = FONTS_PATH_PREFIX;
                             if (_strnicmp(FONT_FILE_NAME, localPrefix, (int)strlen(localPrefix)) == 0) {
                                 const char* relUtf8 = FONT_FILE_NAME + strlen(localPrefix);
                                 wchar_t wRel[MAX_PATH] = {0};

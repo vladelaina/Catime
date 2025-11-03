@@ -47,7 +47,7 @@ static void StartPlaybackTimer(HWND hwnd, UINT timerId, UINT interval);
  * ============================================================================ */
 
 /** GetFileAttributes cheaper than CreateFile, rejects directories */
-static BOOL FileExists(const char* filePath) {
+static BOOL AudioFileExists(const char* filePath) {
     if (!filePath || filePath[0] == '\0') return FALSE;
 
     wchar_t wFilePath[MAX_PATH * 2] = {0};
@@ -334,7 +334,7 @@ BOOL PlayNotificationSound(HWND hwnd) {
         return FallbackToSystemBeep(hwnd);
     }
 
-    if (!FileExists(NOTIFICATION_SOUND_FILE)) {
+    if (!AudioFileExists(NOTIFICATION_SOUND_FILE)) {
         wchar_t errorMsg[MAX_PATH + 64];
         StringCbPrintfW(errorMsg, sizeof(errorMsg), 
                        L"Cannot find the configured audio file:\n%hs", NOTIFICATION_SOUND_FILE);
