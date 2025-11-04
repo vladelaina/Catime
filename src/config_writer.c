@@ -10,6 +10,7 @@
 #include "../include/window.h"
 #include "../include/font.h"
 #include "../include/color.h"
+#include "../include/tray_animation_core.h"
 #include "../resource/resource.h"
 #include <stdio.h>
 #include <string.h>
@@ -336,7 +337,6 @@ void WriteConfig(const char* config_path) {
     WriteIniString(INI_SECTION_GENERAL, "FIRST_RUN", currentFirstRun, config_path);
     
     /* Write animation settings */
-    extern const char* GetCurrentAnimationName(void);
     const char* anim = GetCurrentAnimationName();
     if (anim && anim[0] != '\0') {
         char animPath[MAX_PATH];
@@ -344,7 +344,6 @@ void WriteConfig(const char* config_path) {
         WriteIniString("Animation", "ANIMATION_PATH", animPath, config_path);
     }
     
-    extern void WriteAnimationSpeedToConfig(const char* config_path);
     WriteAnimationSpeedToConfig(config_path);
 }
 

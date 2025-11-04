@@ -118,10 +118,4 @@ void ShowContextMenu(HWND hwnd);
  */
 void ShowColorMenu(HWND hwnd);
 
-/**
- * @brief Handle animation menu command
- * @return TRUE if handled
- */
-BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id);
-
 #endif

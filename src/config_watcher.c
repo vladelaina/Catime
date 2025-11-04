@@ -14,7 +14,7 @@
 #include "../include/config_watcher.h"
 #include "../include/config.h"
 #include "../include/window_procedure.h"
-#include "../include/tray_animation.h"
+#include "../include/tray_animation_core.h"
 
 #define WATCH_BUFFER_SIZE 8192
 #define DEBOUNCE_DELAY_MS 200  /* Batches editor's temp-rename-metadata burst */

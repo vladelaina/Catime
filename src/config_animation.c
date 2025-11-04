@@ -5,6 +5,8 @@
  * Manages animation speed settings, percent icon colors, and animation-related configuration.
  */
 #include "../include/config.h"
+#include "../include/tray_animation_core.h"
+#include "../include/tray_animation_percent.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,9 +22,6 @@ static int g_animSpeedPointCount = 0;
 static double g_animSpeedDefaultScalePercent = 100.0;
 static AnimationSpeedMetric g_animSpeedMetric = ANIMATION_SPEED_MEMORY;
 static int g_animMinIntervalMs = 0;
-
-static COLORREF g_percentTextColor = RGB(0, 0, 0);
-static COLORREF g_percentBgColor = RGB(255, 255, 255);
 
 static int CmpAnimSpeedPoint(const void* a, const void* b) {
     const AnimSpeedPoint* pa = (const AnimSpeedPoint*)a;
@@ -171,14 +170,12 @@ void ReloadAnimationSpeedFromConfig(void) {
     /** Base animation playback speed */
     int folderInterval = ReadIniInt("Animation", "ANIMATION_FOLDER_INTERVAL_MS", 150, config_path);
     if (folderInterval <= 0) folderInterval = 150;
-    extern void TrayAnimation_SetBaseIntervalMs(UINT ms);
     TrayAnimation_SetBaseIntervalMs((UINT)folderInterval);
 
     /** Optional minimum speed limit */
     int minInterval = ReadIniInt("Animation", "ANIMATION_MIN_INTERVAL_MS", 0, config_path);
     if (minInterval < 0) minInterval = 0;
     g_animMinIntervalMs = minInterval;
-    extern void TrayAnimation_SetMinIntervalMs(UINT ms);
     TrayAnimation_SetMinIntervalMs((UINT)g_animMinIntervalMs);
 }
 
@@ -216,13 +213,13 @@ void ReadPercentIconColorsConfig(void) {
     char bgBuf[32] = {0};
     ReadIniString("Animation", "PERCENT_ICON_TEXT_COLOR", DEFAULT_BLACK_COLOR, textBuf, sizeof(textBuf), config_path);
     ReadIniString("Animation", "PERCENT_ICON_BG_COLOR", DEFAULT_WHITE_COLOR, bgBuf, sizeof(bgBuf), config_path);
-    COLORREF val;
-    if (ParseColorString(textBuf, &val)) g_percentTextColor = val;
-    if (ParseColorString(bgBuf, &val)) g_percentBgColor = val;
+    
+    COLORREF textColor = RGB(0, 0, 0);
+    COLORREF bgColor = RGB(255, 255, 255);
+    if (ParseColorString(textBuf, &textColor) && ParseColorString(bgBuf, &bgColor)) {
+        SetPercentIconColors(textColor, bgColor);
+    }
 }
-
-COLORREF GetPercentIconTextColor(void) { return g_percentTextColor; }
-COLORREF GetPercentIconBgColor(void) { return g_percentBgColor; }
 
 /** Animation speed persistence (called from WriteConfig) */
 void WriteAnimationSpeedToConfig(const char* config_path) {
@@ -250,10 +247,13 @@ void WriteAnimationSpeedToConfig(const char* config_path) {
     WriteIniInt("Animation", "ANIMATION_MIN_INTERVAL_MS", g_animMinIntervalMs, config_path);
     
     /** Persist percent icon colors */
+    COLORREF textColor = GetPercentIconTextColor();
+    COLORREF bgColor = GetPercentIconBgColor();
+    
     char buf[16];
-    snprintf(buf, sizeof(buf), "#%02X%02X%02X", GetRValue(g_percentTextColor), GetGValue(g_percentTextColor), GetBValue(g_percentTextColor));
+    snprintf(buf, sizeof(buf), "#%02X%02X%02X", GetRValue(textColor), GetGValue(textColor), GetBValue(textColor));
     WriteIniString("Animation", "PERCENT_ICON_TEXT_COLOR", buf, config_path);
-    snprintf(buf, sizeof(buf), "#%02X%02X%02X", GetRValue(g_percentBgColor), GetGValue(g_percentBgColor), GetBValue(g_percentBgColor));
+    snprintf(buf, sizeof(buf), "#%02X%02X%02X", GetRValue(bgColor), GetGValue(bgColor), GetBValue(bgColor));
     WriteIniString("Animation", "PERCENT_ICON_BG_COLOR", buf, config_path);
 }
 

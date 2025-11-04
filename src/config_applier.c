@@ -237,7 +237,6 @@ void ApplyConfigSnapshot(const ConfigSnapshot* snapshot) {
     SetLanguage((AppLanguage)languageEnum);
     
     /* Load animation speed settings */
-    extern void ReloadAnimationSpeedFromConfig(void);
     ReloadAnimationSpeedFromConfig();
     
     /* Update timestamp for config reload detection */

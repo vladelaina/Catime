@@ -40,7 +40,9 @@
 #include "../include/hotkey.h"
 #include "../include/notification.h"
 #include "../include/cli.h"
-#include "../include/tray_animation.h"
+#include "../include/tray_animation_core.h"
+#include "../include/tray_animation_loader.h"
+#include "../include/tray_animation_menu.h"
 #include "../include/menu_preview.h"
 
 /* ============================================================================
@@ -536,12 +538,7 @@ extern INT_PTR ShowFontLicenseDialog(HWND hwnd);
 extern BOOL LoadFontByNameAndGetRealName(HINSTANCE hInst, const char* name, char* out, size_t size);
 extern BOOL ExtractEmbeddedFontsToFolder(HINSTANCE hInst);
 extern void ReadPercentIconColorsConfig(void);
-extern void TrayAnimation_UpdatePercentIconIfNeeded(void);
 extern void ReloadAnimationSpeedFromConfig(void);
-extern void TrayAnimation_RecomputeTimerDelay(void);
-extern void ApplyAnimationPathValueNoPersist(const char* value);
-extern void StartAnimationPreview(const char* path);
-extern void CancelAnimationPreview(void);
 extern void UpdateTrayIcon(HWND hwnd);
 
 /* ============================================================================
@@ -641,7 +638,7 @@ static int CompareFileEntries(const void* a, const void* b) {
 static BOOL RecursiveFindFile(const wchar_t* rootPathW, const char* relPathUtf8,
                               FileFilterFunc filter, UINT targetId, UINT* currentId,
                               FileActionFunc action, void* userData) {
-    FileEntry* entries = (FileEntry*)malloc(sizeof(FileEntry) * MAX_TRAY_FRAMES);
+    FileEntry* entries = (FileEntry*)malloc(sizeof(FileEntry) * MAX_ANIMATION_FRAMES);
     if (!entries) return FALSE;
     
     int count = 0;
@@ -658,7 +655,7 @@ static BOOL RecursiveFindFile(const wchar_t* rootPathW, const char* relPathUtf8,
     
     do {
         if (wcscmp(ffd.cFileName, L".") == 0 || wcscmp(ffd.cFileName, L"..") == 0) continue;
-        if (count >= MAX_TRAY_FRAMES) break;
+        if (count >= MAX_ANIMATION_FRAMES) break;
         
         FileEntry* e = &entries[count];
         e->isDir = (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
@@ -2467,24 +2464,13 @@ static BOOL MatchFontPreview(HWND hwnd, UINT menuId) {
 
 /** Start animation preview */
 static BOOL MatchAnimationPreview(HWND hwnd, UINT menuId) {
-    const char* fixedAnim = NULL;
-    if (menuId == CLOCK_IDM_ANIMATIONS_USE_LOGO) fixedAnim = "__logo__";
-    else if (menuId == CLOCK_IDM_ANIMATIONS_USE_CPU) fixedAnim = "__cpu__";
-    else if (menuId == CLOCK_IDM_ANIMATIONS_USE_MEM) fixedAnim = "__mem__";
+    char animPath[MAX_PATH] = {0};
     
-    if (fixedAnim) {
-        StartPreview(PREVIEW_TYPE_ANIMATION, fixedAnim, hwnd);
+    if (GetAnimationNameFromMenuId(menuId, animPath, sizeof(animPath))) {
+        StartPreview(PREVIEW_TYPE_ANIMATION, animPath, hwnd);
         return TRUE;
     }
     
-    if (menuId >= CLOCK_IDM_ANIMATIONS_BASE && menuId < CLOCK_IDM_ANIMATIONS_BASE + MAX_ANIMATION_MENU_ITEMS) {
-        char animRootUtf8[MAX_PATH];
-        GetAnimationsFolderPath(animRootUtf8, sizeof(animRootUtf8));
-        wchar_t wRoot[MAX_PATH];
-        MultiByteToWideChar(CP_UTF8, 0, animRootUtf8, -1, wRoot, MAX_PATH);
-        UINT nextId = CLOCK_IDM_ANIMATIONS_BASE;
-        return FindAnimationByIdRecursive(wRoot, "", &nextId, menuId);
-    }
     return FALSE;
 }
 
@@ -2688,7 +2674,6 @@ static LRESULT HandleCommand(HWND hwnd, WPARAM wp, LPARAM lp) {
     if (isAnimationSelectionCommand) {
         KillTimer(hwnd, IDT_MENU_DEBOUNCE);
     } else {
-        extern void CancelAnimationPreview(void);
         CancelAnimationPreview();
     }
     

@@ -15,6 +15,7 @@
 #include "../include/drawing.h"
 #include "../include/audio_player.h"
 #include "../include/drag_scale.h"
+#include "../include/tray_animation_core.h"
 #include "../include/utils/string_convert.h"
 
 #define DEFAULT_POMODORO_DURATION 1500
@@ -376,7 +377,6 @@ static BOOL HandleMainTimer(HWND hwnd) {
             if (countdown_elapsed_time >= CLOCK_TOTAL_TIME && !countdown_message_shown) {
                 countdown_message_shown = TRUE;
                 
-                extern void TrayAnimation_RecomputeTimerDelay(void);
                 TrayAnimation_RecomputeTimerDelay();
                 
                 ReadNotificationMessagesConfig();

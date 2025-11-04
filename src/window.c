@@ -12,7 +12,7 @@
 #include "../include/startup.h"
 #include "../include/config.h"
 #include "../include/log.h"
-#include "../include/tray_animation.h"
+#include "../include/tray_animation_core.h"
 #include "../resource/resource.h"
 #include <stdio.h>
 #include <stdlib.h>

@@ -331,24 +331,64 @@ if [ "$BUILD_RESULT" -eq 0 ]; then
     echo ""
 fi
 
-# Function to show build errors
+# Function to show build errors with full context
 show_build_errors() {
-    # Show build log content directly
+    echo -e "${YELLOW}Build error details:${NC}"
+    echo -e "${CYAN}─────────────────────────────────────────────────────────────${NC}"
+    
     if [ -f "build.log" ]; then
-        # First try to show error lines, if none found, show last 30 lines
-        ERROR_LINES=$(grep -E "(error|Error|ERROR|failed|Failed|FAILED|undefined|Undefined|Error:|错误)" build.log 2>/dev/null)
+        # Check for linking errors (usually at the end)
+        LINK_ERRORS=$(grep -A 50 -B 5 "collect2: error:" build.log 2>/dev/null)
+        UNDEFINED_REF=$(grep -B 10 "undefined reference" build.log 2>/dev/null)
+        MULTIPLE_DEF=$(grep -B 5 "multiple definition" build.log 2>/dev/null)
         
-        if [ -n "$ERROR_LINES" ]; then
-            echo "$ERROR_LINES" | tail -n 20
-        else
-            tail -n 30 build.log
+        # Show linking errors with full context
+        if [ -n "$LINK_ERRORS" ]; then
+            echo -e "${RED}Linking errors detected:${NC}"
+            echo "$LINK_ERRORS"
+            echo ""
+        fi
+        
+        # Show undefined references
+        if [ -n "$UNDEFINED_REF" ]; then
+            echo -e "${RED}Undefined references:${NC}"
+            echo "$UNDEFINED_REF"
+            echo ""
+        fi
+        
+        # Show multiple definitions
+        if [ -n "$MULTIPLE_DEF" ]; then
+            echo -e "${RED}Multiple definitions:${NC}"
+            echo "$MULTIPLE_DEF"
+            echo ""
+        fi
+        
+        # Show all compilation errors
+        COMPILE_ERRORS=$(grep -E "(error:|Error:|ERROR:)" build.log 2>/dev/null)
+        if [ -n "$COMPILE_ERRORS" ]; then
+            echo -e "${RED}Compilation errors:${NC}"
+            echo "$COMPILE_ERRORS"
+            echo ""
+        fi
+        
+        # If no specific errors found, show entire log
+        if [ -z "$LINK_ERRORS" ] && [ -z "$UNDEFINED_REF" ] && [ -z "$MULTIPLE_DEF" ] && [ -z "$COMPILE_ERRORS" ]; then
+            echo -e "${YELLOW}No specific error pattern found, showing full build log:${NC}"
+            echo ""
+            cat build.log
         fi
     else
         # If no build log, show cmake config errors
         if [ -f "cmake_config.log" ]; then
+            echo -e "${RED}CMake configuration errors:${NC}"
             cat cmake_config.log
         fi
     fi
+    
+    echo -e "${CYAN}─────────────────────────────────────────────────────────────${NC}"
+    echo ""
+    echo -e "${YELLOW}Full build log saved to: ${BUILD_DIR}/build.log${NC}"
+    echo -e "${YELLOW}To view complete log: cat ${BUILD_DIR}/build.log${NC}"
 }
 
 # Check build result
@@ -390,9 +430,8 @@ if [ -f "catime.exe" ]; then
         echo -e "${CYAN}Output: $(pwd)/catime.exe${NC}"
     fi
     
-    # Only clean up log files on successful build
-    echo -e "${YELLOW}Cleaning up temporary files...${NC}"
-    rm -f cmake_config.log build.log
+    # Keep log files for debugging
+    echo -e "${CYAN}Build logs saved to: ${BUILD_DIR}/${NC}"
     
     # Return to original directory
     cd ..

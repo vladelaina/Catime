@@ -11,6 +11,7 @@
 #include "../include/font.h"
 #include "../include/color.h"
 #include "../include/timer.h"
+#include "../include/tray_animation_core.h"
 
 /* ============================================================================
  * External Dependencies
@@ -27,10 +28,6 @@ extern void WriteConfigColor(const char* color);
 extern void WriteConfigFont(const char* fontName, BOOL isCustom);
 extern void WriteConfigTimeFormat(TimeFormatType format);
 extern void WriteConfigShowMilliseconds(BOOL showMilliseconds);
-
-/* Forward declarations from tray_animation */
-extern void StartAnimationPreview(const char*);
-extern void CancelAnimationPreview(void);
 
 /* ============================================================================
  * Preview State

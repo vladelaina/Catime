@@ -14,7 +14,8 @@
 #include "../resource/resource.h"
 #include "../include/tray.h"
 #include "../include/timer.h"
-#include "../include/tray_animation.h"
+#include "../include/tray_animation_core.h"
+#include "../include/tray_animation_percent.h"
 #include "../include/system_monitor.h"
 #include "../include/config.h"
 
@@ -28,7 +29,6 @@ NOTIFYICONDATAW nid;
 /** @brief Taskbar recreation message ID */
 UINT WM_TASKBARCREATED = 0;
 
-extern void TrayAnimation_UpdatePercentIconIfNeeded(void);
 extern void ReadPercentIconColorsConfig(void);
 
 /** @brief Animation type categories */

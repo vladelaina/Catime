@@ -20,6 +20,16 @@ file(GLOB_RECURSE SOURCES "src/*.c")
 
 # Explicitly list refactored modules for clarity (optional, GLOB_RECURSE already includes them)
 
+# Tray Animation modules (refactored from tray_animation.c - 2074 lines → 8 specialized modules):
+#   src/tray_animation_core.c       - Lifecycle coordination (~650 lines)
+#   src/tray_animation_decoder.c    - WIC image decoding (~450 lines)
+#   src/tray_animation_loader.c     - Resource loading (~380 lines)
+#   src/tray_animation_timer.c      - High-precision timing (~280 lines)
+#   src/tray_animation_menu.c       - Menu building (~350 lines)
+#   src/tray_animation_percent.c    - Percent icon generation (~120 lines)
+#   src/utils/memory_pool.c         - Memory pool utilities (~80 lines)
+#   src/utils/natural_sort.c        - Natural string sorting (~120 lines)
+
 # Configuration modules (refactored from config_core.c):
 #   src/config_core.c       - Coordinator (simplified)
 #   src/config_defaults.c   - Default values and metadata
@@ -129,6 +139,8 @@ target_link_libraries(catime PRIVATE
     shlwapi
     advapi32
     iphlpapi
+    windowscodecs
+    propsys
 )
 
 # Set output directory - use custom output dir if specified

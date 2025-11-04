@@ -8,7 +8,7 @@
 #include "../include/config.h"
 #include "../include/drag_scale.h"
 #include "../include/window_events.h"
-#include "../include/tray_animation.h"
+#include "../include/tray_animation_core.h"
 #include "../include/timer_events.h"
 #include "../include/font.h"
 #include "../include/async_update_checker.h"
