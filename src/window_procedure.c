@@ -44,6 +44,7 @@
 #include "../include/tray_animation_loader.h"
 #include "../include/tray_animation_menu.h"
 #include "../include/menu_preview.h"
+#include "../include/utils/natural_sort.h"
 
 /* ============================================================================
  * String Constant Pool
@@ -577,43 +578,9 @@ typedef BOOL (*FileFilterFunc)(const wchar_t* filename);
 typedef BOOL (*FileActionFunc)(const char* relPath, void* userData);
 
 /**
- * @brief Natural sort comparing strings with embedded numbers
- * @param a First string
- * @param b Second string
- * @return <0 if a<b, 0 if equal, >0 if a>b
- * 
- * Why: Ensures "file2.ttf" sorts before "file10.ttf" in menus.
- * Compares numeric runs by numeric value, not lexicographically.
+ * @brief qsort comparator: directories first, then natural sort
+ * @note Uses NaturalCompareW from utils/natural_sort.h
  */
-static int NaturalCompareW(const wchar_t* a, const wchar_t* b) {
-    const wchar_t* pa = a;
-    const wchar_t* pb = b;
-    while (*pa && *pb) {
-        if (iswdigit(*pa) && iswdigit(*pb)) {
-            const wchar_t* za = pa; while (*za == L'0') za++;
-            const wchar_t* zb = pb; while (*zb == L'0') zb++;
-            size_t leadA = (size_t)(za - pa);
-            size_t leadB = (size_t)(zb - pb);
-            if (leadA != leadB) return (leadA > leadB) ? -1 : 1;
-            const wchar_t* ea = za; while (iswdigit(*ea)) ea++;
-            const wchar_t* eb = zb; while (iswdigit(*eb)) eb++;
-            size_t lena = (size_t)(ea - za);
-            size_t lenb = (size_t)(eb - zb);
-            if (lena != lenb) return (lena < lenb) ? -1 : 1;
-            int dcmp = wcsncmp(za, zb, lena);
-            if (dcmp != 0) return (dcmp < 0) ? -1 : 1;
-            pa = ea; pb = eb;
-            continue;
-        }
-        wchar_t ca = towlower(*pa);
-        wchar_t cb = towlower(*pb);
-        if (ca != cb) return (ca < cb) ? -1 : 1;
-        pa++; pb++;
-    }
-    return *pa ? 1 : (*pb ? -1 : 0);
-}
-
-/** @brief qsort comparator: directories first, then natural sort */
 static int CompareFileEntries(const void* a, const void* b) {
     const FileEntry* ea = (const FileEntry*)a;
     const FileEntry* eb = (const FileEntry*)b;

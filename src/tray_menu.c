@@ -17,6 +17,7 @@
 #include "../include/tray_menu.h"
 #include "../include/font.h"
 #include "../include/color.h"
+#include "../include/window.h"
 #include "../include/drag_scale.h"
 #include "../include/pomodoro.h"
 #include "../include/timer.h"
@@ -27,6 +28,9 @@
 #include "../include/tray_animation_menu.h"
 #include "../include/startup.h"
 #include "../include/utils/string_convert.h"
+#include "../include/utils/natural_sort.h"
+#include "../include/utils/string_format.h"
+#include "../include/tray_menu_pomodoro.h"
 
 /** @brief Animation menu entry for directory scanning */
 typedef struct {
@@ -62,146 +66,18 @@ static inline BOOL PathWideToUtf8(const wchar_t* wide, char* utf8, size_t utf8Si
     return WideToUtf8(wide, utf8, utf8Size);
 }
 
-/**
- * @brief Get wide-character path to config.ini
- * @return TRUE on success
- */
-static BOOL GetConfigPathWide(wchar_t* wPath, size_t size) {
-    if (!wPath || size == 0) return FALSE;
-    char configPath[MAX_PATH];
-    GetConfigPath(configPath, MAX_PATH);
-    return PathUtf8ToWide(configPath, wPath, size);
-}
-
-/**
- * @brief Read single key=value from config.ini
- * @param key Configuration key
- * @param outBuffer Output buffer for value
- * @param bufferSize Buffer size
- * @return TRUE if key found
- */
-static BOOL ReadConfigValue(const char* key, char* outBuffer, size_t bufferSize) {
-    if (!key || !outBuffer || bufferSize == 0) return FALSE;
-    
-    wchar_t wConfigPath[MAX_PATH];
-    if (!GetConfigPathWide(wConfigPath, MAX_PATH)) return FALSE;
-    
-    FILE* file = _wfopen(wConfigPath, L"r");
-    if (!file) return FALSE;
-    
-    size_t keyLen = strlen(key);
-    char line[256];
-    BOOL found = FALSE;
-    
-    while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, key, keyLen) == 0 && line[keyLen] == '=') {
-            char* value = line + keyLen + 1;
-            size_t len = strlen(value);
-            while (len > 0 && (value[len-1] == '\n' || value[len-1] == '\r')) {
-                value[--len] = '\0';
-            }
-            strncpy(outBuffer, value, bufferSize - 1);
-            outBuffer[bufferSize - 1] = '\0';
-            found = TRUE;
-            break;
-        }
-    }
-    
-    fclose(file);
-    return found;
-}
-
-/**
- * @brief Load Pomodoro time options from config
- * @note Updates global POMODORO_TIMES array
- */
-static void LoadPomodoroConfig(void) {
-    
-    wchar_t wConfigPath[MAX_PATH];
-    if (!GetConfigPathWide(wConfigPath, MAX_PATH)) return;
-    
-    FILE* file = _wfopen(wConfigPath, L"r");
-    if (!file) return;
-    
-    POMODORO_TIMES_COUNT = 0;
-    char line[256];
-    
-    while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, "POMODORO_TIME_OPTIONS=", 22) == 0) {
-            char* options = line + 22;
-            char* token = strtok(options, ",");
-            int index = 0;
-            
-            while (token && index < MAX_POMODORO_TIMES) {
-                POMODORO_TIMES[index++] = atoi(token);
-                token = strtok(NULL, ",");
-            }
-            
-            POMODORO_TIMES_COUNT = index;
-            
-            if (index > 0) POMODORO_WORK_TIME = POMODORO_TIMES[0];
-            if (index > 1) POMODORO_SHORT_BREAK = POMODORO_TIMES[1];
-            if (index > 2) POMODORO_LONG_BREAK = POMODORO_TIMES[2];
-        }
-        else if (strncmp(line, "POMODORO_LOOP_COUNT=", 20) == 0) {
-            sscanf(line, "POMODORO_LOOP_COUNT=%d", &POMODORO_LOOP_COUNT);
-            if (POMODORO_LOOP_COUNT < 1) POMODORO_LOOP_COUNT = 1;
-        }
-    }
-    
-    fclose(file);
-}
-
-/**
- * @brief Natural string comparison with numeric ordering
- * @note Handles multi-digit numbers correctly (e.g., "file2" < "file10")
- */
-static int NaturalCompareW(const wchar_t* a, const wchar_t* b) {
-    const wchar_t* pa = a;
-    const wchar_t* pb = b;
-    while (*pa && *pb) {
-        if (iswdigit(*pa) && iswdigit(*pb)) {
-            const wchar_t* za = pa; while (*za == L'0') za++;
-            const wchar_t* zb = pb; while (*zb == L'0') zb++;
-            size_t leadA = (size_t)(za - pa);
-            size_t leadB = (size_t)(zb - pb);
-            if (leadA != leadB) return (leadA > leadB) ? -1 : 1;
-            const wchar_t* ea = za; while (iswdigit(*ea)) ea++;
-            const wchar_t* eb = zb; while (iswdigit(*eb)) eb++;
-            size_t lena = (size_t)(ea - za);
-            size_t lenb = (size_t)(eb - zb);
-            if (lena != lenb) return (lena < lenb) ? -1 : 1;
-            int dcmp = wcsncmp(za, zb, lena);
-            if (dcmp != 0) return (dcmp < 0) ? -1 : 1;
-            pa = ea;
-            pb = eb;
-            continue;
-        }
-        wchar_t ca = towlower(*pa);
-        wchar_t cb = towlower(*pb);
-        if (ca != cb) return (ca < cb) ? -1 : 1;
-        pa++; pb++;
-    }
-    if (*pa) return 1;
-    if (*pb) return -1;
-    return 0;
-}
-
-/** @brief Compare entries: directories first, then natural order */
-static int DirFirstThenNaturalName(const wchar_t* nameA, BOOL isDirA,
-                                   const wchar_t* nameB, BOOL isDirB) {
-    if (isDirA != isDirB) {
-        return isDirB - isDirA;
-    }
-    return NaturalCompareW(nameA, nameB);
-}
-
-/** @brief qsort comparator for FontEntry */
+/** @brief qsort comparator for FontEntry - directories first, then natural sort */
 static int CompareFontEntries(const void* a, const void* b) {
     const FontEntry* entryA = (const FontEntry*)a;
     const FontEntry* entryB = (const FontEntry*)b;
-    return DirFirstThenNaturalName(entryA->name, entryA->is_dir,
-                                   entryB->name, entryB->is_dir);
+    
+    /* Directories first */
+    if (entryA->is_dir != entryB->is_dir) {
+        return entryB->is_dir - entryA->is_dir;
+    }
+    
+    /* Then natural sort by name */
+    return NaturalCompareW(entryA->name, entryB->name);
 }
 
 extern BOOL CLOCK_SHOW_CURRENT_TIME;
@@ -245,103 +121,23 @@ static BOOL GetFontsFolderWideFromConfig(wchar_t* out, size_t size) {
     return TRUE;
 }
 
-/** @brief Load timeout action from config */
+/** @brief Load timeout action from config using standard API */
 void ReadTimeoutActionFromConfig() {
+    char configPath[MAX_PATH];
+    GetConfigPath(configPath, MAX_PATH);
+    
     char value[32] = {0};
-    if (ReadConfigValue("TIMEOUT_ACTION", value, sizeof(value))) {
-        CLOCK_TIMEOUT_ACTION = (TimeoutActionType)atoi(value);
-    }
+    ReadIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_ACTION", "MESSAGE", 
+                  value, sizeof(value), configPath);
+    
+    CLOCK_TIMEOUT_ACTION = (TimeoutActionType)atoi(value);
 }
 
 /**
- * @brief Format time for Pomodoro menu display
- * @param seconds Duration in seconds
- * @param buffer Output buffer
- * @param bufferSize Buffer size
- * @note Shows h:mm:ss if >1hr, mm:ss if has seconds, or just minutes
+ * @brief Build timeout action submenu
+ * @param hMenu Parent menu handle
  */
-static void FormatPomodoroTime(int seconds, wchar_t* buffer, size_t bufferSize) {
-    int minutes = seconds / 60;
-    int secs = seconds % 60;
-    int hours = minutes / 60;
-    minutes %= 60;
-    
-    if (hours > 0) {
-        _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d:%02d", hours, minutes, secs);
-    } else if (secs == 0) {
-        _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d", minutes);
-    } else {
-        _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d", minutes, secs);
-    }
-}
-
-/**
- * @brief Truncate long filenames for menu display
- * @param fileName Original filename
- * @param truncated Output buffer
- * @param maxLen Maximum display length
- * @note Uses middle truncation ("start...end.ext") for very long names
- */
-void TruncateFileName(const wchar_t* fileName, wchar_t* truncated, size_t maxLen) {
-    if (!fileName || !truncated || maxLen <= 7) return;
-    
-    size_t nameLen = wcslen(fileName);
-    if (nameLen <= maxLen) {
-        wcscpy(truncated, fileName);
-        return;
-    }
-    
-    const wchar_t* lastDot = wcsrchr(fileName, L'.');
-    const wchar_t* fileNameNoExt = fileName;
-    const wchar_t* ext = L"";
-    size_t nameNoExtLen = nameLen;
-    size_t extLen = 0;
-    
-    if (lastDot && lastDot != fileName) {
-        ext = lastDot;
-        extLen = wcslen(ext);
-        nameNoExtLen = lastDot - fileName;
-    }
-    
-    if (nameNoExtLen <= 27) {
-        wcsncpy(truncated, fileName, maxLen - extLen - 3);
-        truncated[maxLen - extLen - 3] = L'\0';
-        wcscat(truncated, L"...");
-        wcscat(truncated, ext);
-        return;
-    }
-    
-    wchar_t buffer[MAX_PATH];
-    
-    wcsncpy(buffer, fileName, 12);
-    buffer[12] = L'\0';
-    
-    wcscat(buffer, L"...");
-    
-    wcsncat(buffer, fileName + nameNoExtLen - 12, 12);
-    
-    wcscat(buffer, ext);
-    
-    wcscpy(truncated, buffer);
-}
-
-/**
- * @brief Build and display right-click configuration menu
- * @param hwnd Main window handle
- * @note Creates nested menus for timeout actions, fonts, colors, animations, etc.
- */
-void ShowColorMenu(HWND hwnd) {
-    
-    SetCursor(LoadCursorW(NULL, MAKEINTRESOURCEW(IDC_ARROW)));
-    
-    HMENU hMenu = CreatePopupMenu();
-    
-    AppendMenuW(hMenu, MF_STRING | (CLOCK_EDIT_MODE ? MF_CHECKED : MF_UNCHECKED),
-               CLOCK_IDC_EDIT_MODE, 
-               GetLocalizedString(L"编辑模式", L"Edit Mode"));
-
-    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
-
+static void BuildTimeoutActionSubmenu(HMENU hMenu) {
     HMENU hTimeoutMenu = CreatePopupMenu();
     
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_MESSAGE ? MF_CHECKED : MF_UNCHECKED), 
@@ -414,15 +210,25 @@ void ShowColorMenu(HWND hwnd) {
 
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeoutMenu, 
                 GetLocalizedString(L"超时动作", L"Timeout Action"));
+}
 
+/**
+ * @brief Build preset management submenu (time options, startup settings, notifications)
+ * @param hMenu Parent menu handle
+ */
+static void BuildPresetManagementSubmenu(HMENU hMenu) {
     HMENU hTimeOptionsMenu = CreatePopupMenu();
     AppendMenuW(hTimeOptionsMenu, MF_STRING, CLOCK_IDC_MODIFY_TIME_OPTIONS,
                 GetLocalizedString(L"倒计时预设", L"Modify Quick Countdown Options"));
     
     HMENU hStartupSettingsMenu = CreatePopupMenu();
 
+    char configPath[MAX_PATH];
+    GetConfigPath(configPath, MAX_PATH);
+    
     char currentStartupMode[20] = "COUNTDOWN";
-    ReadConfigValue("STARTUP_MODE", currentStartupMode, sizeof(currentStartupMode));
+    ReadIniString(INI_SECTION_TIMER, "STARTUP_MODE", "COUNTDOWN",
+                  currentStartupMode, sizeof(currentStartupMode), configPath);
     
     AppendMenuW(hStartupSettingsMenu, MF_STRING | 
                 (strcmp(currentStartupMode, "COUNTDOWN") == 0 ? MF_CHECKED : 0),
@@ -457,9 +263,21 @@ void ShowColorMenu(HWND hwnd) {
     AppendMenuW(hTimeOptionsMenu, MF_STRING, CLOCK_IDM_NOTIFICATION_SETTINGS,
                 GetLocalizedString(L"通知设置", L"Notification Settings"));
 
+    AppendMenuW(hTimeOptionsMenu, MF_SEPARATOR, 0, NULL);
+    
+    AppendMenuW(hTimeOptionsMenu, MF_STRING | (CLOCK_WINDOW_TOPMOST ? MF_CHECKED : MF_UNCHECKED),
+                CLOCK_IDM_TOPMOST,
+                GetLocalizedString(L"置顶", L"Always on Top"));
+
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeOptionsMenu,
                 GetLocalizedString(L"预设管理", L"Preset Management"));
-    
+}
+
+/**
+ * @brief Build format submenu (time format options)
+ * @param hMenu Parent menu handle
+ */
+static void BuildFormatSubmenu(HMENU hMenu) {
     HMENU hFormatMenu = CreatePopupMenu();
     
     AppendMenuW(hFormatMenu, MF_STRING | (CLOCK_TIME_FORMAT == TIME_FORMAT_DEFAULT ? MF_CHECKED : MF_UNCHECKED),
@@ -480,18 +298,16 @@ void ShowColorMenu(HWND hwnd) {
                 CLOCK_IDM_TIME_FORMAT_SHOW_MILLISECONDS,
                 GetLocalizedString(L"显示毫秒", L"Show Milliseconds"));
     
-    AppendMenuW(hTimeOptionsMenu, MF_SEPARATOR, 0, NULL);
-    
-    AppendMenuW(hTimeOptionsMenu, MF_STRING | (CLOCK_WINDOW_TOPMOST ? MF_CHECKED : MF_UNCHECKED),
-                CLOCK_IDM_TOPMOST,
-                GetLocalizedString(L"置顶", L"Always on Top"));
+    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hFormatMenu,
+                GetLocalizedString(L"格式", L"Format"));
+}
 
-    AppendMenuW(hMenu, MF_STRING, CLOCK_IDM_HOTKEY_SETTINGS,
-                GetLocalizedString(L"热键设置", L"Hotkey Settings"));
-
-    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
-
-        HMENU hFontSubMenu = CreatePopupMenu();
+/**
+ * @brief Build font submenu with recursive folder scanning
+ * @param hMenu Parent menu handle
+ */
+static void BuildFontSubmenu(HMENU hMenu) {
+    HMENU hFontSubMenu = CreatePopupMenu();
     
     int g_advancedFontId = 2000;
     
@@ -683,7 +499,16 @@ void ShowColorMenu(HWND hwnd) {
                        GetLocalizedString(L"打开字体文件夹", L"Open fonts folder"));
         }
     }
+    
+    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hFontSubMenu, 
+                GetLocalizedString(L"字体", L"Font"));
+}
 
+/**
+ * @brief Build color submenu
+ * @param hMenu Parent menu handle
+ */
+static void BuildColorSubmenu(HMENU hMenu) {
     HMENU hColorSubMenu = CreatePopupMenu();
 
     for (int i = 0; i < COLOR_OPTIONS_COUNT; i++) {
@@ -711,16 +536,16 @@ void ShowColorMenu(HWND hwnd) {
 
     AppendMenuW(hColorSubMenu, MF_POPUP, (UINT_PTR)hCustomizeMenu, 
                 GetLocalizedString(L"自定义", L"Customize"));
-
-    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hFormatMenu,
-                GetLocalizedString(L"格式", L"Format"));
-    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hFontSubMenu, 
-                GetLocalizedString(L"字体", L"Font"));
+    
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hColorSubMenu, 
                 GetLocalizedString(L"颜色", L"Color"));
+}
 
-    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
-
+/**
+ * @brief Build animation/tray icon submenu
+ * @param hMenu Parent menu handle
+ */
+static void BuildAnimationSubmenu(HMENU hMenu) {
     HMENU hAnimMenu = CreatePopupMenu();
     {
         const char* currentAnim = GetCurrentAnimationName();
@@ -747,9 +572,13 @@ void ShowColorMenu(HWND hwnd) {
         AppendMenuW(hAnimMenu, MF_STRING, CLOCK_IDM_ANIMATIONS_OPEN_DIR, GetLocalizedString(L"打开动画文件夹", L"Open animations folder"));
     }
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hAnimMenu, GetLocalizedString(L"托盘图标", L"Tray Icon"));
+}
 
-    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
-
+/**
+ * @brief Build help/about submenu
+ * @param hMenu Parent menu handle
+ */
+static void BuildHelpSubmenu(HMENU hMenu) {
     HMENU hAboutMenu = CreatePopupMenu();
 
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_ABOUT, GetLocalizedString(L"关于", L"About"));
@@ -797,10 +626,52 @@ void ShowColorMenu(HWND hwnd) {
 
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hAboutMenu,
                 GetLocalizedString(L"帮助", L"Help"));
+}
 
+/**
+ * @brief Build and display right-click configuration menu (Coordinator)
+ * @param hwnd Main window handle
+ * @note Delegates to specialized submenu builders for maintainability
+ */
+void ShowColorMenu(HWND hwnd) {
+    SetCursor(LoadCursorW(NULL, MAKEINTRESOURCEW(IDC_ARROW)));
+    
+    HMENU hMenu = CreatePopupMenu();
+    
+    /* Edit mode toggle */
+    AppendMenuW(hMenu, MF_STRING | (CLOCK_EDIT_MODE ? MF_CHECKED : MF_UNCHECKED),
+               CLOCK_IDC_EDIT_MODE, 
+               GetLocalizedString(L"编辑模式", L"Edit Mode"));
+
+    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
+
+    /* Build submenus using modular functions */
+    BuildTimeoutActionSubmenu(hMenu);
+    BuildPresetManagementSubmenu(hMenu);
+    
+    /* Hotkey settings */
+    AppendMenuW(hMenu, MF_STRING, CLOCK_IDM_HOTKEY_SETTINGS,
+                GetLocalizedString(L"热键设置", L"Hotkey Settings"));
+
+    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
+
+    BuildFormatSubmenu(hMenu);
+    BuildFontSubmenu(hMenu);
+    BuildColorSubmenu(hMenu);
+
+    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
+
+    BuildAnimationSubmenu(hMenu);
+
+    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
+
+    BuildHelpSubmenu(hMenu);
+
+    /* Exit */
     AppendMenuW(hMenu, MF_STRING, 109,
                 GetLocalizedString(L"退出", L"Exit"));
     
+    /* Display menu */
     POINT pt;
     GetCursorPos(&pt);
     SetForegroundWindow(hwnd);
@@ -869,48 +740,8 @@ void ShowContextMenu(HWND hwnd) {
                (UINT_PTR)hTimeMenu,
                GetLocalizedString(L"时间显示", L"Time Display"));
 
-    LoadPomodoroConfig();
-
-    HMENU hPomodoroMenu = CreatePopupMenu();
-    
-    wchar_t timeBuffer[64];
-    
-    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_START,
-                GetLocalizedString(L"开始", L"Start"));
-    AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
-
-    for (int i = 0; i < POMODORO_TIMES_COUNT; i++) {
-        FormatPomodoroTime(POMODORO_TIMES[i], timeBuffer, sizeof(timeBuffer)/sizeof(wchar_t));
-        
-        UINT menuId;
-        if (i == 0) menuId = CLOCK_IDM_POMODORO_WORK;
-        else if (i == 1) menuId = CLOCK_IDM_POMODORO_BREAK;
-        else if (i == 2) menuId = CLOCK_IDM_POMODORO_LBREAK;
-        else menuId = CLOCK_IDM_POMODORO_TIME_BASE + i;
-        
-        BOOL isCurrentPhase = (current_pomodoro_phase != POMODORO_PHASE_IDLE &&
-                              current_pomodoro_time_index == i &&
-                              !CLOCK_SHOW_CURRENT_TIME &&
-                              !CLOCK_COUNT_UP &&
-                              CLOCK_TOTAL_TIME == POMODORO_TIMES[i]);
-        
-        AppendMenuW(hPomodoroMenu, MF_STRING | (isCurrentPhase ? MF_CHECKED : MF_UNCHECKED), 
-                    menuId, timeBuffer);
-    }
-
-    wchar_t menuText[64];
-    _snwprintf(menuText, sizeof(menuText)/sizeof(wchar_t),
-              GetLocalizedString(L"循环次数: %d", L"Loop Count: %d"),
-              POMODORO_LOOP_COUNT);
-    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_LOOP_COUNT, menuText);
-
-    AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
-
-    AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_COMBINATION,
-              GetLocalizedString(L"组合", L"Combination"));
-    
-    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hPomodoroMenu,
-                GetLocalizedString(L"番茄时钟", L"Pomodoro"));
+    /* Build Pomodoro submenu using dedicated module */
+    BuildPomodoroMenu(hMenu);
 
     AppendMenuW(hMenu, MF_STRING | (CLOCK_COUNT_UP ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_COUNT_UP_START,
