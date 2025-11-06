@@ -1,9 +1,14 @@
 /**
  * @file drawing.h
- * @brief Timer display rendering with double buffering
+ * @brief Timer display rendering with double buffering (unified header)
  * 
  * Double buffering prevents flicker during frequent updates (especially for centiseconds).
  * RenderContext struct reduces parameter passing in rendering pipeline.
+ * 
+ * Refactored architecture (463 lines → 3 specialized modules):
+ * - drawing_timer_precision.c - High-precision sub-second tracking
+ * - drawing_time_format.c     - Time component retrieval and formatting
+ * - drawing_render.c          - GDI rendering pipeline
  */
 
 #ifndef DRAWING_H
@@ -11,6 +16,9 @@
 
 #include <windows.h>
 #include "../include/config.h"
+#include "../include/drawing/drawing_timer_precision.h"
+#include "../include/drawing/drawing_time_format.h"
+#include "../include/drawing/drawing_render.h"
 
 /* ============================================================================
  * Constants
@@ -26,15 +34,7 @@
  * Type Definitions
  * ============================================================================ */
 
-/**
- * @brief Time components (simplifies function signatures)
- */
-typedef struct {
-    int hours;          /**< 0-23 (24h) or 1-12 (12h) */
-    int minutes;        /**< 0-59 */
-    int seconds;        /**< 0-59 */
-    int centiseconds;   /**< 0-99 (hundredths) */
-} TimeComponents;
+/** TimeComponents is now defined in drawing_time_format.h to avoid circular dependency */
 
 /**
  * @brief Rendering context (reduces parameter passing)

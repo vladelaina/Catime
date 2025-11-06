@@ -20,6 +20,22 @@ file(GLOB_RECURSE SOURCES "src/*.c")
 
 # Explicitly list refactored modules for clarity (optional, GLOB_RECURSE already includes them)
 
+# Main Entry modules (refactored from main.c - 566 lines → 4 specialized modules):
+#   src/main/main_cli_routing.c        - CLI command routing and forwarding (~170 lines)
+#   src/main/main_single_instance.c    - Single instance detection (~110 lines)
+#   src/main/main_initialization.c     - Subsystem initialization and window setup (~230 lines)
+#   src/main/main_entry.c              - WinMain entry point (~70 lines)
+
+# Log modules (refactored from log.c - 478 lines → 3 specialized modules):
+#   src/log/log_core.c         - Logging core with rotation (~230 lines)
+#   src/log/log_system_info.c  - System information collection (~200 lines)
+#   src/log/log_exception.c    - Exception handling (~110 lines)
+
+# Drawing modules (refactored from drawing.c - 463 lines → 3 specialized modules):
+#   src/drawing/drawing_timer_precision.c - High-precision sub-second tracking (~50 lines)
+#   src/drawing/drawing_time_format.c     - Time component formatting (~220 lines)
+#   src/drawing/drawing_render.c          - GDI rendering pipeline (~200 lines)
+
 # Window Core modules (refactored from window.c - 796 lines → 5 specialized modules):
 #   src/window/window_core.c                - Core window creation (~180 lines)
 #   src/window/window_visual_effects.c      - Visual effects (blur, click-through) (~120 lines)
