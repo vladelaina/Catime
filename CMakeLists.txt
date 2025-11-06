@@ -20,6 +20,13 @@ file(GLOB_RECURSE SOURCES "src/*.c")
 
 # Explicitly list refactored modules for clarity (optional, GLOB_RECURSE already includes them)
 
+# Window Core modules (refactored from window.c - 796 lines → 5 specialized modules):
+#   src/window/window_core.c                - Core window creation (~180 lines)
+#   src/window/window_visual_effects.c      - Visual effects (blur, click-through) (~120 lines)
+#   src/window/window_multimonitor.c        - Multi-monitor detection (~180 lines)
+#   src/window/window_initialization.c      - Application initialization (~200 lines)
+#   src/window/window_desktop_integration.c - Desktop integration and Z-order (~120 lines)
+
 # Window Procedure modules (refactored from window_procedure.c - 3110 lines → 8 specialized modules):
 #   src/window_procedure.c          - Main procedure and dispatch (~300 lines)
 #   src/window_message_handlers.c   - Windows message handlers (~500 lines)
