@@ -20,6 +20,16 @@ file(GLOB_RECURSE SOURCES "src/*.c")
 
 # Explicitly list refactored modules for clarity (optional, GLOB_RECURSE already includes them)
 
+# Window Procedure modules (refactored from window_procedure.c - 3110 lines → 8 specialized modules):
+#   src/window_procedure.c          - Main procedure and dispatch (~300 lines)
+#   src/window_message_handlers.c   - Windows message handlers (~500 lines)
+#   src/window_commands.c            - Menu command handlers (~550 lines)
+#   src/window_config_handlers.c     - Configuration reload handlers (~500 lines)
+#   src/window_hotkeys.c             - Global hotkey management (~300 lines)
+#   src/window_menus.c               - Menu construction and preview (~450 lines)
+#   src/window_helpers.c             - Business logic helpers (~400 lines)
+#   src/window_utils.c               - Low-level utilities (~150 lines)
+
 # Tray Animation modules (refactored from tray_animation.c - 2074 lines → 8 specialized modules):
 #   src/tray_animation_core.c       - Lifecycle coordination (~650 lines)
 #   src/tray_animation_decoder.c    - WIC image decoding (~450 lines)

@@ -1,0 +1,228 @@
+/**
+ * @file window_menus.c
+ * @brief Menu construction and preview dispatch implementation
+ */
+
+#include "../include/window_menus.h"
+#include "../include/window_utils.h"
+#include "../include/window_helpers.h"
+#include "../include/menu_preview.h"
+#include "../include/font.h"
+#include "../include/tray_animation_loader.h"
+#include "../include/tray_animation_core.h"
+#include "../include/utils/natural_sort.h"
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+
+#define MAX_ANIMATION_FRAMES 1000
+
+/* ============================================================================
+ * File Extension Matching
+ * ============================================================================ */
+
+static BOOL MatchExtension(const wchar_t* filename, const wchar_t** exts, size_t count) {
+    const wchar_t* ext = wcsrchr(filename, L'.');
+    if (!ext) return FALSE;
+    for (size_t i = 0; i < count; i++) {
+        if (_wcsicmp(ext, exts[i]) == 0) return TRUE;
+    }
+    return FALSE;
+}
+
+static const wchar_t* ANIMATION_EXTS[] = {
+    L".gif", L".webp", L".ico", L".png", L".bmp", 
+    L".jpg", L".jpeg", L".tif", L".tiff"
+};
+static const wchar_t* FONT_EXTS[] = {L".ttf", L".otf"};
+
+BOOL IsAnimationFile(const wchar_t* filename) {
+    return MatchExtension(filename, ANIMATION_EXTS, sizeof(ANIMATION_EXTS) / sizeof(ANIMATION_EXTS[0]));
+}
+
+BOOL IsFontFile(const wchar_t* filename) {
+    return MatchExtension(filename, FONT_EXTS, sizeof(FONT_EXTS) / sizeof(FONT_EXTS[0]));
+}
+
+/* ============================================================================
+ * File Entry System
+ * ============================================================================ */
+
+typedef struct {
+    wchar_t name[MAX_PATH];
+    char relPathUtf8[MAX_PATH];
+    BOOL isDir;
+} FileEntry;
+
+static int CompareFileEntries(const void* a, const void* b) {
+    const FileEntry* ea = (const FileEntry*)a;
+    const FileEntry* eb = (const FileEntry*)b;
+    if (ea->isDir != eb->isDir) return eb->isDir - ea->isDir;
+    return NaturalCompareW(ea->name, eb->name);
+}
+
+/* ============================================================================
+ * Recursive File Finder
+ * ============================================================================ */
+
+BOOL RecursiveFindFile(const wchar_t* rootPathW, const char* relPathUtf8,
+                       FileFilterFunc filter, UINT targetId, UINT* currentId,
+                       FileActionFunc action, void* userData) {
+    FileEntry* entries = (FileEntry*)malloc(sizeof(FileEntry) * MAX_ANIMATION_FRAMES);
+    if (!entries) return FALSE;
+    
+    int count = 0;
+    wchar_t searchPath[MAX_PATH];
+    wcscpy_s(searchPath, MAX_PATH, rootPathW);
+    PathJoinW(searchPath, MAX_PATH, L"*");
+    
+    WIN32_FIND_DATAW ffd;
+    HANDLE hFind = FindFirstFileW(searchPath, &ffd);
+    if (hFind == INVALID_HANDLE_VALUE) {
+        free(entries);
+        return FALSE;
+    }
+    
+    do {
+        if (wcscmp(ffd.cFileName, L".") == 0 || wcscmp(ffd.cFileName, L"..") == 0) continue;
+        if (count >= MAX_ANIMATION_FRAMES) break;
+        
+        FileEntry* e = &entries[count];
+        e->isDir = (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+        wcsncpy_s(e->name, MAX_PATH, ffd.cFileName, _TRUNCATE);
+        
+        char nameUtf8[MAX_PATH];
+        WideCharToMultiByte(CP_UTF8, 0, ffd.cFileName, -1, nameUtf8, MAX_PATH, NULL, NULL);
+        
+        if (relPathUtf8 && relPathUtf8[0]) {
+            snprintf(e->relPathUtf8, MAX_PATH, "%s\\%s", relPathUtf8, nameUtf8);
+        } else {
+            strncpy_s(e->relPathUtf8, MAX_PATH, nameUtf8, _TRUNCATE);
+        }
+        
+        if (!e->isDir && filter && !filter(ffd.cFileName)) continue;
+        count++;
+    } while (FindNextFileW(hFind, &ffd));
+    FindClose(hFind);
+    
+    if (count == 0) {
+        free(entries);
+        return FALSE;
+    }
+    
+    qsort(entries, count, sizeof(FileEntry), CompareFileEntries);
+    
+    for (int i = 0; i < count; i++) {
+        FileEntry* e = &entries[i];
+        
+        if (e->isDir) {
+            wchar_t subPath[MAX_PATH];
+            wcscpy_s(subPath, MAX_PATH, rootPathW);
+            PathJoinW(subPath, MAX_PATH, e->name);
+            
+            if (RecursiveFindFile(subPath, e->relPathUtf8, filter, targetId, currentId, action, userData)) {
+                free(entries);
+                return TRUE;
+            }
+        } else {
+            if (*currentId == targetId) {
+                BOOL result = action(e->relPathUtf8, userData);
+                free(entries);
+                return result;
+            }
+            (*currentId)++;
+        }
+    }
+    
+    free(entries);
+    return FALSE;
+}
+
+/* ============================================================================
+ * Animation Preview Action
+ * ============================================================================ */
+
+static BOOL AnimationPreviewAction(const char* relPath, void* userData) {
+    (void)userData;
+    StartAnimationPreview(relPath);
+    return TRUE;
+}
+
+BOOL FindAnimationByIdRecursive(const wchar_t* folderPathW, const char* relPathUtf8, 
+                                UINT* nextIdPtr, UINT targetId) {
+    return RecursiveFindFile(folderPathW, relPathUtf8, IsAnimationFile, 
+                           targetId, nextIdPtr, AnimationPreviewAction, NULL);
+}
+
+/* ============================================================================
+ * Font Preview Action
+ * ============================================================================ */
+
+typedef struct {
+    wchar_t relPath[MAX_PATH];
+    HWND hwnd;
+} FontFindData;
+
+static BOOL FontPreviewAction(const char* relPath, void* userData) {
+    if (!userData) return FALSE;
+    wchar_t relPathW[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, relPath, -1, relPathW, MAX_PATH);
+    wcsncpy_s(((FontFindData*)userData)->relPath, MAX_PATH, relPathW, _TRUNCATE);
+    return TRUE;
+}
+
+BOOL FindFontByIdRecursiveW(const wchar_t* folderPathW, int targetId, int* currentId,
+                            wchar_t* foundRelativePathW, const wchar_t* fontsFolderRootW) {
+    (void)fontsFolderRootW;
+    
+    FontFindData data = {0};
+    UINT id = (UINT)*currentId;
+    
+    if (RecursiveFindFile(folderPathW, "", IsFontFile, (UINT)targetId, &id, FontPreviewAction, &data)) {
+        wcsncpy_s(foundRelativePathW, MAX_PATH, data.relPath, _TRUNCATE);
+        *currentId = (int)id;
+        return TRUE;
+    }
+    
+    *currentId = (int)id;
+    return FALSE;
+}
+
+/* ============================================================================
+ * Preview Dispatch
+ * ============================================================================ */
+
+BOOL DispatchMenuPreview(HWND hwnd, UINT menuId) {
+    if (menuId >= 2000 && menuId < 3000) {
+        wchar_t animFolderW[MAX_PATH];
+        WideString ws = ToWide(GetCachedConfigPath());
+        if (!ws.valid) return FALSE;
+        wchar_t wConfigPath[MAX_PATH];
+        wcscpy_s(wConfigPath, MAX_PATH, ws.buf);
+        
+        wchar_t* lastSep = wcsrchr(wConfigPath, L'\\');
+        if (lastSep) {
+            *lastSep = L'\0';
+            _snwprintf_s(animFolderW, MAX_PATH, _TRUNCATE, L"%s\\resources\\animations", wConfigPath);
+            UINT nextId = 2000;
+            return FindAnimationByIdRecursive(animFolderW, "", &nextId, menuId);
+        }
+    }
+    
+    if (menuId >= 4000 && menuId < 5000) {
+        wchar_t fontsFolderW[MAX_PATH];
+        if (!GetFontsFolderWideFromConfig(fontsFolderW, MAX_PATH)) return FALSE;
+        
+        int currentIndex = 4000;
+        wchar_t foundRelPath[MAX_PATH];
+        if (FindFontByIdRecursiveW(fontsFolderW, menuId, &currentIndex, foundRelPath, fontsFolderW)) {
+            char fontPathUtf8[MAX_PATH];
+            WideCharToMultiByte(CP_UTF8, 0, foundRelPath, -1, fontPathUtf8, MAX_PATH, NULL, NULL);
+            StartPreview(PREVIEW_TYPE_FONT, fontPathUtf8, hwnd);
+            return TRUE;
+        }
+    }
+    
+    return FALSE;
+}
+
