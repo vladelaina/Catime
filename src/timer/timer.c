@@ -332,11 +332,19 @@ static int ParseAbsoluteTime(char* input) {
         token = strtok(NULL, " ");
     }
     
-    if (hour >= 0) {
-        tm_target.tm_hour = hour;
-        tm_target.tm_min = (minute >= 0) ? minute : 0;
-        tm_target.tm_sec = (second >= 0) ? second : 0;
+    if (hour < 0 || hour > 23) {
+        return 0;
     }
+    if (minute < -1 || minute > 59) {
+        return 0;
+    }
+    if (second < -1 || second > 59) {
+        return 0;
+    }
+    
+    tm_target.tm_hour = hour;
+    tm_target.tm_min = (minute >= 0) ? minute : 0;
+    tm_target.tm_sec = (second >= 0) ? second : 0;
     
     time_t target_time = mktime(&tm_target);
     if (target_time <= now) {
