@@ -125,7 +125,27 @@ void ReadTimeoutActionFromConfig() {
     ReadIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_ACTION", "MESSAGE", 
                   value, sizeof(value), configPath);
     
-    CLOCK_TIMEOUT_ACTION = (TimeoutActionType)atoi(value);
+    if (strcmp(value, "MESSAGE") == 0) {
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
+    } else if (strcmp(value, "LOCK") == 0) {
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_LOCK;
+    } else if (strcmp(value, "SHUTDOWN") == 0) {
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SHUTDOWN;
+    } else if (strcmp(value, "RESTART") == 0) {
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_RESTART;
+    } else if (strcmp(value, "OPEN_FILE") == 0) {
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
+    } else if (strcmp(value, "SHOW_TIME") == 0) {
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SHOW_TIME;
+    } else if (strcmp(value, "COUNT_UP") == 0) {
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_COUNT_UP;
+    } else if (strcmp(value, "OPEN_WEBSITE") == 0) {
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_WEBSITE;
+    } else if (strcmp(value, "SLEEP") == 0) {
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SLEEP;
+    } else {
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
+    }
 }
 
 /**

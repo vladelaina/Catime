@@ -316,7 +316,10 @@ static void HandleCountdownCompletion(HWND hwnd) {
                         CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_LOCK &&
                         CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_SHUTDOWN &&
                         CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_RESTART &&
-                        CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_SLEEP);
+                        CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_SLEEP &&
+                        CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_SHOW_TIME &&
+                        CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_COUNT_UP &&
+                        CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_OPEN_WEBSITE);
     
     if (shouldNotify) {
         ShowTimeoutNotification(hwnd, g_AppConfig.notification.messages.timeout_message, TRUE);

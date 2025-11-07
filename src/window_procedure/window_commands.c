@@ -504,42 +504,49 @@ static LRESULT CmdStartupNoDisplay(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 static LRESULT CmdTimeoutShowTime(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp; (void)hwnd;
+    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SHOW_TIME;
     WriteConfigTimeoutAction("SHOW_TIME");
     return 0;
 }
 
 static LRESULT CmdTimeoutCountUp(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp; (void)hwnd;
+    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_COUNT_UP;
     WriteConfigTimeoutAction("COUNT_UP");
     return 0;
 }
 
 static LRESULT CmdTimeoutShowMessage(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp; (void)hwnd;
+    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
     WriteConfigTimeoutAction("MESSAGE");
     return 0;
 }
 
 static LRESULT CmdTimeoutLockScreen(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp; (void)hwnd;
+    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_LOCK;
     WriteConfigTimeoutAction("LOCK");
     return 0;
 }
 
 static LRESULT CmdTimeoutShutdown(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp; (void)hwnd;
+    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SHUTDOWN;
     WriteConfigTimeoutAction("SHUTDOWN");
     return 0;
 }
 
 static LRESULT CmdTimeoutRestart(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp; (void)hwnd;
+    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_RESTART;
     WriteConfigTimeoutAction("RESTART");
     return 0;
 }
 
 static LRESULT CmdTimeoutSleep(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp; (void)hwnd;
+    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SLEEP;
     WriteConfigTimeoutAction("SLEEP");
     return 0;
 }
@@ -701,6 +708,7 @@ static BOOL HandleRecentFile(HWND hwnd, UINT cmd, int index) {
     if (index >= g_AppConfig.recent_files.count) return TRUE;
     
     if (!ValidateAndSetTimeoutFile(hwnd, g_AppConfig.recent_files.files[index].path)) {
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
         WriteConfigKeyValue("CLOCK_TIMEOUT_FILE", "");
         WriteConfigTimeoutAction("MESSAGE");
         for (int i = index; i < g_AppConfig.recent_files.count - 1; i++) {

@@ -341,6 +341,25 @@ void RecalculateWindowSize(HWND hwnd) {
  * ============================================================================ */
 
 void SetTimeoutAction(const char* action) {
+    if (strcmp(action, "MESSAGE") == 0) {
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
+    } else if (strcmp(action, "LOCK") == 0) {
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_LOCK;
+    } else if (strcmp(action, "SHUTDOWN") == 0) {
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SHUTDOWN;
+    } else if (strcmp(action, "RESTART") == 0) {
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_RESTART;
+    } else if (strcmp(action, "OPEN_FILE") == 0) {
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
+    } else if (strcmp(action, "SHOW_TIME") == 0) {
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SHOW_TIME;
+    } else if (strcmp(action, "COUNT_UP") == 0) {
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_COUNT_UP;
+    } else if (strcmp(action, "OPEN_WEBSITE") == 0) {
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_WEBSITE;
+    } else if (strcmp(action, "SLEEP") == 0) {
+        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SLEEP;
+    }
     WriteConfigTimeoutAction(action);
 }
 

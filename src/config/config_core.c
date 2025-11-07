@@ -177,6 +177,7 @@ void WriteConfigTopmost(const char* topmost) {
  */
 void WriteConfigTimeoutFile(const char* filePath) {
     if (!filePath) filePath = "";
+    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
     WriteConfigKeyValue("CLOCK_TIMEOUT_ACTION", "OPEN_FILE");
     WriteConfigKeyValue("CLOCK_TIMEOUT_FILE", filePath);
 }
@@ -186,6 +187,7 @@ void WriteConfigTimeoutFile(const char* filePath) {
  */
 void WriteConfigTimeoutWebsite(const char* url) {
     if (!url) url = "";
+    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_WEBSITE;
     WriteConfigKeyValue("CLOCK_TIMEOUT_ACTION", "OPEN_WEBSITE");
     WriteConfigKeyValue("CLOCK_TIMEOUT_WEBSITE", url);
 }
