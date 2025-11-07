@@ -12,17 +12,6 @@
 #define MAX_TRANSLATIONS 200
 #define MAX_STRING_LENGTH 1024
 
-#define LANG_EN_INI       1001
-#define LANG_ZH_CN_INI    1002
-#define LANG_ZH_TW_INI    1003
-#define LANG_ES_INI       1004
-#define LANG_FR_INI       1005
-#define LANG_DE_INI       1006
-#define LANG_RU_INI       1007
-#define LANG_PT_INI       1008
-#define LANG_JA_INI       1009
-#define LANG_KO_INI       1010
-
 typedef struct {
     wchar_t english[MAX_STRING_LENGTH];
     wchar_t translation[MAX_STRING_LENGTH];

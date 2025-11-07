@@ -11,9 +11,7 @@
 #define TRAY_H
 
 #include <windows.h>
-
-#define CLOCK_WM_TRAYICON (WM_USER + 2)
-#define CLOCK_ID_TRAY_APP_ICON 1001
+#include "../../resource/resource.h"
 
 extern UINT WM_TASKBARCREATED;
 

@@ -11,6 +11,7 @@
 #define WINDOW_PROCEDURE_H
 
 #include <windows.h>
+#include "../resource/resource.h"
 #include "config.h"
 
 /* ============================================================================
@@ -57,23 +58,6 @@
 #ifndef COPYDATA_ID_CLI_TEXT
 #define COPYDATA_ID_CLI_TEXT 0x10010001  /**< IPC for CLI */
 #endif
-
-/* ============================================================================
- * Global Hotkey Identifiers
- * ============================================================================ */
-
-#define HOTKEY_ID_SHOW_TIME       100
-#define HOTKEY_ID_COUNT_UP        101
-#define HOTKEY_ID_COUNTDOWN       102
-#define HOTKEY_ID_QUICK_COUNTDOWN1 103
-#define HOTKEY_ID_QUICK_COUNTDOWN2 104
-#define HOTKEY_ID_QUICK_COUNTDOWN3 105
-#define HOTKEY_ID_POMODORO        106
-#define HOTKEY_ID_TOGGLE_VISIBILITY 107
-#define HOTKEY_ID_EDIT_MODE       108
-#define HOTKEY_ID_PAUSE_RESUME    109
-#define HOTKEY_ID_RESTART_TIMER   110
-#define HOTKEY_ID_CUSTOM_COUNTDOWN 111
 
 /* ============================================================================
  * Core Window Procedure

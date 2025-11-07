@@ -11,23 +11,7 @@
 #define TIMER_EVENTS_H
 
 #include <windows.h>
-
-/* ============================================================================
- * Timer ID Constants
- * ============================================================================ */
-
-/**
- * @brief Timer IDs (named constants prevent magic numbers)
- * 
- * @note 1001-1003: audio_player.c
- * @note 1005: drag_scale.h (TIMER_ID_CONFIG_SAVE)
- * @note 2001: drag_scale.h (TIMER_ID_EDIT_MODE_REFRESH)
- */
-#define TIMER_ID_MAIN 1
-#define TIMER_ID_TOPMOST_RETRY 999         /**< 3 retries for z-order */
-#define TIMER_ID_VISIBILITY_RETRY 1000     /**< 3 retries for visibility */
-#define TIMER_ID_FORCE_REDRAW 1004
-#define TIMER_ID_FONT_VALIDATION 1006      /**< Every 2s */
+#include "../../resource/resource.h"
 
 /* ============================================================================
  * Public API

@@ -10,6 +10,7 @@
 #define DRAG_SCALE_H
 
 #include <windows.h>
+#include "../resource/resource.h"
 
 /* ============================================================================
  * Configuration Constants
@@ -17,18 +18,6 @@
 
 /** @brief Scale per wheel notch (10% increment) */
 #define SCALE_FACTOR_STEP 1.1f
-
-/** @brief Config save debounce delay (prevents I/O spam) */
-#define CONFIG_SAVE_DELAY_MS 500
-
-/** @brief Timer ID for config save (avoids conflicts with system timers) */
-#define TIMER_ID_CONFIG_SAVE 1005
-
-/** @brief Timer ID for edit mode refresh (avoids 1001-1009 range) */
-#define TIMER_ID_EDIT_MODE_REFRESH 2001
-
-/** @brief Edit mode refresh interval */
-#define TIMER_REFRESH_INTERVAL_MS 150
 
 /* ============================================================================
  * Global State Variables

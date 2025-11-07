@@ -28,7 +28,6 @@ extern BOOL CLOCK_COUNT_UP;
 extern int CLOCK_TOTAL_TIME;
 
 #define MAX_POMODORO_TIMES 10
-#define CLOCK_IDM_POMODORO_TIME_BASE 1187
 
 /**
  * @brief Load Pomodoro time options from config using standard API

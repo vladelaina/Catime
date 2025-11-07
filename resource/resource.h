@@ -37,6 +37,24 @@
 #define WINDOW_HORIZONTAL_PADDING 190    /**< Window horizontal padding */
 #define WINDOW_VERTICAL_PADDING 5       /**< Window vertical padding */
 
+/** @brief Timer ID constants */
+#define TIMER_ID_MAIN 1                      /**< Main application timer */
+#define IDT_MENU_DEBOUNCE 500                /**< Menu debounce timer */
+#define TIMER_ID_TOPMOST_RETRY 999           /**< Topmost retry timer (3 attempts) */
+#define TIMER_ID_VISIBILITY_RETRY 1000       /**< Visibility retry timer (3 attempts) */
+#define TIMER_ID_MINIAUDIO_CHECK 1001        /**< Miniaudio playback check timer */
+#define TIMER_ID_PLAYSOUND_DONE 1002         /**< PlaySound completion check timer */
+#define TIMER_ID_SYSTEM_BEEP_DONE 1003       /**< System beep completion timer */
+#define TIMER_ID_FORCE_REDRAW 1004           /**< Force redraw timer */
+#define TIMER_ID_CONFIG_SAVE 1005            /**< Config save debounce timer */
+#define TIMER_ID_FONT_VALIDATION 1006        /**< Font validation timer (every 2s) */
+#define TIMER_ID_EDIT_MODE_REFRESH 2001      /**< Edit mode refresh timer */
+#define TRAY_TIP_TIMER_ID 42421              /**< Tray tooltip update timer */
+
+/** @brief Timer interval constants */
+#define TIMER_REFRESH_INTERVAL_MS 150        /**< Edit mode refresh interval */
+#define CONFIG_SAVE_DELAY_MS 500             /**< Config save debounce delay */
+
 /** @brief Media control virtual key codes */
 #define VK_MEDIA_PLAY_PAUSE 0xB3         /**< Media play/pause key */
 #define VK_MEDIA_STOP 0xB2               /**< Media stop key */
@@ -53,6 +71,18 @@
 
 /** @brief Application icon resource */
 #define IDI_CATIME 101                   /**< Main application icon */
+
+/** @brief Language resource identifiers */
+#define LANG_EN_INI       1001           /**< English language pack */
+#define LANG_ZH_CN_INI    1002           /**< Simplified Chinese language pack */
+#define LANG_ZH_TW_INI    1003           /**< Traditional Chinese language pack */
+#define LANG_ES_INI       1004           /**< Spanish language pack */
+#define LANG_FR_INI       1005           /**< French language pack */
+#define LANG_DE_INI       1006           /**< German language pack */
+#define LANG_RU_INI       1007           /**< Russian language pack */
+#define LANG_PT_INI       1008           /**< Portuguese language pack */
+#define LANG_JA_INI       1009           /**< Japanese language pack */
+#define LANG_KO_INI       1010           /**< Korean language pack */
 
 /** @brief Dialog resource identifiers */
 #define CLOCK_ID_TRAY_APP_ICON 1001      /**< Tray icon identifier */
@@ -137,6 +167,27 @@
 
 /** @brief Quick time menu base identifier */
 #define CLOCK_IDM_QUICK_TIME_BASE 800    /**< Base ID for dynamic quick time menus */
+
+/** @brief Command range base identifiers */
+#define CMD_QUICK_COUNTDOWN_BASE 102         /**< Quick countdown command range start */
+#define CMD_QUICK_COUNTDOWN_END 108          /**< Quick countdown command range end */
+#define CMD_COLOR_OPTIONS_BASE 201           /**< Color options command range start */
+#define CMD_POMODORO_TIME_BASE 600           /**< Pomodoro time command range start */
+#define CMD_POMODORO_TIME_END 609            /**< Pomodoro time command range end */
+#define CMD_FONT_SELECTION_BASE 2000         /**< Font selection command range start */
+#define CMD_FONT_SELECTION_END 3000          /**< Font selection command range end */
+
+/** @brief Timer management menu identifiers */
+#define CLOCK_IDM_TIMER_MANAGEMENT 159       /**< Timer management submenu */
+#define CLOCK_IDM_TIMER_PAUSE_RESUME 158     /**< Pause/resume timer menu item */
+#define CLOCK_IDM_TIMER_RESTART 177          /**< Restart timer menu item */
+#define CLOCK_IDM_SLEEP 125                  /**< Sleep timeout action */
+
+/** @brief Time format menu identifiers */
+#define CLOCK_IDM_TIME_FORMAT_DEFAULT 194             /**< Default time format */
+#define CLOCK_IDM_TIME_FORMAT_ZERO_PADDED 196         /**< Zero-padded time format */
+#define CLOCK_IDM_TIME_FORMAT_FULL_PADDED 197         /**< Full-padded time format */
+#define CLOCK_IDM_TIME_FORMAT_SHOW_MILLISECONDS 198   /**< Show milliseconds toggle */
 
 /** @brief Time configuration control identifiers */
 #define CLOCK_IDC_MODIFY_TIME_OPTIONS 156  /**< Modify time options control */
@@ -237,6 +288,20 @@
 #define NOTIFICATION_CONTENT_COLOR RGB(100, 100, 100) /**< Content text color (gray) */
 #define NOTIFICATION_BORDER_COLOR RGB(200, 200, 200)  /**< Border color (light gray) */
 
+/** @brief Global hotkey identifiers for RegisterHotKey */
+#define HOTKEY_ID_SHOW_TIME       100            /**< Show time hotkey ID */
+#define HOTKEY_ID_COUNT_UP        101            /**< Count-up hotkey ID */
+#define HOTKEY_ID_COUNTDOWN       102            /**< Countdown hotkey ID */
+#define HOTKEY_ID_QUICK_COUNTDOWN1 103           /**< Quick countdown 1 hotkey ID */
+#define HOTKEY_ID_QUICK_COUNTDOWN2 104           /**< Quick countdown 2 hotkey ID */
+#define HOTKEY_ID_QUICK_COUNTDOWN3 105           /**< Quick countdown 3 hotkey ID */
+#define HOTKEY_ID_POMODORO        106            /**< Pomodoro hotkey ID */
+#define HOTKEY_ID_TOGGLE_VISIBILITY 107          /**< Toggle visibility hotkey ID */
+#define HOTKEY_ID_EDIT_MODE       108            /**< Edit mode hotkey ID */
+#define HOTKEY_ID_PAUSE_RESUME    109            /**< Pause/resume hotkey ID */
+#define HOTKEY_ID_RESTART_TIMER   110            /**< Restart timer hotkey ID */
+#define HOTKEY_ID_CUSTOM_COUNTDOWN 111           /**< Custom countdown hotkey ID */
+
 /** @brief Hotkey configuration dialog identifiers */
 #define CLOCK_IDD_HOTKEY_DIALOG 2100     /**< Hotkey configuration dialog */
 #define IDC_HOTKEY_LABEL1 2101           /**< Hotkey label 1 */
@@ -269,6 +334,19 @@
 #define IDC_HOTKEY_EDIT11 2124           /**< Hotkey edit control 11 */
 #define IDC_HOTKEY_LABEL12 2125          /**< Hotkey label 12 */
 #define IDC_HOTKEY_EDIT12 2126           /**< Hotkey edit control 12 */
+
+/** @brief Animation menu identifiers */
+#define CLOCK_IDM_ANIMATIONS_MENU 2200       /**< Animations submenu */
+#define CLOCK_IDM_ANIMATIONS_OPEN_DIR 2201   /**< Open animations folder */
+#define CLOCK_IDM_ANIMATIONS_USE_LOGO 2202   /**< Use logo animation */
+#define CLOCK_IDM_ANIMATIONS_USE_CPU 2203    /**< Use CPU animation */
+#define CLOCK_IDM_ANIMATIONS_USE_MEM 2204    /**< Use memory animation */
+#define CLOCK_IDM_ANIM_SPEED_MEMORY 2210     /**< Memory-based animation speed */
+#define CLOCK_IDM_ANIM_SPEED_CPU 2211        /**< CPU-based animation speed */
+#define CLOCK_IDM_ANIM_SPEED_TIMER 2212      /**< Timer-based animation speed */
+
+/** @brief Animation menu base identifier */
+#define CLOCK_IDM_ANIMATIONS_BASE 3000       /**< Base ID for dynamic animation menus */
 
 /** @brief External notification configuration variables */
 extern int NOTIFICATION_MAX_OPACITY;     /**< Maximum notification opacity */
@@ -312,6 +390,8 @@ extern int NOTIFICATION_TIMEOUT_MS;      /**< Notification timeout in millisecon
 #define IDD_COLOR_DIALOG 1003            /**< Color selection dialog */
 #define IDC_COLOR_VALUE 1301             /**< Color value control */
 #define IDC_COLOR_PANEL 1302             /**< Color panel control */
+#define CLOCK_IDC_COLOR_VALUE 1301       /**< Color value control (alias) */
+#define CLOCK_IDC_COLOR_PANEL 1302       /**< Color panel control (alias) */
 
 /** @brief Startup configuration control */
 #define IDC_STARTUP_TIME 1401            /**< Startup time control */

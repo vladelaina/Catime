@@ -29,7 +29,6 @@ extern int time_options_count;
 extern BOOL PREVIOUS_TOPMOST_STATE;
 
 #define OPACITY_FULL 255
-#define TIMER_ID_FORCE_REDRAW 999
 
 /* ============================================================================
  * Application Message Dispatch Table

@@ -19,7 +19,6 @@
 #include "system_monitor.h"
 #include "config.h"
 
-#define TRAY_TIP_TIMER_ID 42421
 #define TOOLTIP_UPDATE_INTERVAL_MS 1000
 #define PERCENT_ICON_WARMUP_MS 120
 

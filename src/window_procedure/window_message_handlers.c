@@ -21,11 +21,9 @@
 #include "../resource/resource.h"
 #include <stdio.h>
 
-#define IDT_MENU_DEBOUNCE 500
 #define MENU_DEBOUNCE_DELAY_MS 50
 #define BUFFER_SIZE_CLI_INPUT 256
 #define BUFFER_SIZE_MENU_ITEM 100
-#define CMD_COLOR_OPTIONS_BASE 201
 
 extern UINT WM_TASKBARCREATED;
 extern BOOL CLOCK_EDIT_MODE;

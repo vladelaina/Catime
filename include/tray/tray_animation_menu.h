@@ -10,14 +10,7 @@
 #define TRAY_ANIMATION_MENU_H
 
 #include <windows.h>
-
-/* Menu ID ranges from tray_menu.h */
-#define CLOCK_IDM_ANIMATIONS_MENU 2200
-#define CLOCK_IDM_ANIMATIONS_OPEN_DIR 2201
-#define CLOCK_IDM_ANIMATIONS_USE_LOGO 2202
-#define CLOCK_IDM_ANIMATIONS_USE_CPU 2203
-#define CLOCK_IDM_ANIMATIONS_USE_MEM 2204
-#define CLOCK_IDM_ANIMATIONS_BASE 3000
+#include "../../resource/resource.h"
 
 /**
  * @brief Build animation submenu

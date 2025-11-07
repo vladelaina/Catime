@@ -43,13 +43,6 @@ extern size_t COLOR_OPTIONS_COUNT;
 extern PredefinedColor* COLOR_OPTIONS;
 extern char CLOCK_TEXT_COLOR[10];
 
-#define CMD_QUICK_COUNTDOWN_BASE 102
-#define CMD_QUICK_COUNTDOWN_END 108
-#define CMD_COLOR_OPTIONS_BASE 201
-#define CMD_POMODORO_TIME_BASE 600
-#define CMD_POMODORO_TIME_END 609
-#define CMD_FONT_SELECTION_BASE 2000
-#define CMD_FONT_SELECTION_END 3000
 
 /* ============================================================================
  * Command Handlers

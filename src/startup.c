@@ -17,7 +17,6 @@
 #define STARTUP_CMD_ARG L"--startup"
 #define CONFIG_KEY_STARTUP_MODE "STARTUP_MODE="
 #define STARTUP_MODE_MAX_LEN 20
-#define MAIN_TIMER_ID 1
 #define CONFIG_LINE_BUFFER_SIZE 256
 #define MODE_NAME_COUNT_UP "COUNT_UP"
 #define MODE_NAME_SHOW_TIME "SHOW_TIME"
@@ -135,12 +134,12 @@ static void CleanupComShellLink(ComShellLink* link) {
 
 /** Centralizes timer reset to avoid repetition */
 static void RestartTimer(HWND hwnd, UINT interval) {
-    KillTimer(hwnd, MAIN_TIMER_ID);
-    SetTimer(hwnd, MAIN_TIMER_ID, interval, NULL);
+    KillTimer(hwnd, TIMER_ID_MAIN);
+    SetTimer(hwnd, TIMER_ID_MAIN, interval, NULL);
 }
 
 static void StopTimer(HWND hwnd) {
-    KillTimer(hwnd, MAIN_TIMER_ID);
+    KillTimer(hwnd, TIMER_ID_MAIN);
 }
 
 static BOOL ReadStartupModeConfig(char* modeName, size_t modeNameSize) {
