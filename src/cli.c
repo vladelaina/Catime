@@ -12,15 +12,15 @@
 #include <ctype.h>
 #include <stdio.h>
 
-#include "../include/timer.h"
-#include "../include/timer_events.h"
-#include "../include/window.h"
-#include "../include/window_procedure.h"
+#include "timer/timer.h"
+#include "timer/timer_events.h"
+#include "window.h"
+#include "window_procedure/window_procedure.h"
 #include "../resource/resource.h"
-#include "../include/notification.h"
-#include "../include/audio_player.h"
-#include "../include/dialog_procedure.h"
-#include "../include/drag_scale.h"
+#include "notification.h"
+#include "audio_player.h"
+#include "dialog/dialog_procedure.h"
+#include "drag_scale.h"
 
 extern BOOL CLOCK_WINDOW_TOPMOST;
 extern void SetWindowTopmost(HWND hwnd, BOOL topmost);

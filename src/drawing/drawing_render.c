@@ -5,14 +5,14 @@
 
 #include <stdio.h>
 #include <windows.h>
-#include "../../include/drawing/drawing_render.h"
-#include "../../include/drawing/drawing_time_format.h"
-#include "../../include/drawing.h"
-#include "../../include/font.h"
-#include "../../include/color.h"
-#include "../../include/timer.h"
-#include "../../include/config.h"
-#include "../../include/window_procedure.h"
+#include "drawing/drawing_render.h"
+#include "drawing/drawing_time_format.h"
+#include "drawing.h"
+#include "font.h"
+#include "color/color.h"
+#include "timer/timer.h"
+#include "config.h"
+#include "window_procedure/window_procedure.h"
 
 extern char FONT_FILE_NAME[100];
 extern char FONT_INTERNAL_NAME[100];

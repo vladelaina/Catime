@@ -3,13 +3,13 @@
  * @brief Generic input dialog and time parsing implementation
  */
 
-#include "../include/dialog_input.h"
-#include "../include/dialog_common.h"
-#include "../include/dialog_error.h"
-#include "../include/language.h"
-#include "../include/timer.h"
-#include "../include/config.h"
-#include "../include/dialog_language.h"
+#include "dialog/dialog_input.h"
+#include "dialog/dialog_common.h"
+#include "dialog/dialog_error.h"
+#include "language.h"
+#include "timer/timer.h"
+#include "config.h"
+#include "dialog/dialog_language.h"
 #include "../resource/resource.h"
 #include <stdio.h>
 #include <stdlib.h>

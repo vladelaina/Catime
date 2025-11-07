@@ -3,11 +3,11 @@
  * @brief Desktop integration and Z-order management
  */
 
-#include "../../include/window/window_desktop_integration.h"
-#include "../../include/window/window_core.h"
-#include "../../include/window/window_multimonitor.h"
-#include "../../include/config.h"
-#include "../../include/log.h"
+#include "window/window_desktop_integration.h"
+#include "window/window_core.h"
+#include "window/window_multimonitor.h"
+#include "config.h"
+#include "log.h"
 
 /* ============================================================================
  * Constants

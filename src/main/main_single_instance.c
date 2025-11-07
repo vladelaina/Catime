@@ -4,10 +4,10 @@
  */
 
 #include <windows.h>
-#include "../../include/main/main_single_instance.h"
-#include "../../include/main/main_cli_routing.h"
-#include "../../include/log.h"
-#include "../../include/utils/string_convert.h"
+#include "main/main_single_instance.h"
+#include "main/main_cli_routing.h"
+#include "log.h"
+#include "utils/string_convert.h"
 
 /** Search desktop wallpaper layer for timer window */
 static HWND FindInDesktopLayer(void) {

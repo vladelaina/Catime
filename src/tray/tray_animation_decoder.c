@@ -3,7 +3,7 @@
  * @brief Image decoding implementation using WIC
  */
 
-#include "../include/tray_animation_decoder.h"
+#include "tray/tray_animation_decoder.h"
 #include <propvarutil.h>
 #include <objbase.h>
 #include <string.h>

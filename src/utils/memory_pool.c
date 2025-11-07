@@ -3,7 +3,7 @@
  * @brief Memory pool implementation
  */
 
-#include "../../include/utils/memory_pool.h"
+#include "utils/memory_pool.h"
 #include <stdlib.h>
 
 /**

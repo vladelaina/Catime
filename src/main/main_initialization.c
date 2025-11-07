@@ -8,17 +8,17 @@
 #include <string.h>
 #include <windows.h>
 #include <commctrl.h>
-#include "../../include/main/main_initialization.h"
-#include "../../include/log.h"
-#include "../../include/config.h"
-#include "../../include/timer.h"
-#include "../../include/timer_events.h"
-#include "../../include/window.h"
-#include "../../include/cli.h"
-#include "../../include/async_update_checker.h"
-#include "../../include/dialog_language.h"
-#include "../../include/shortcut_checker.h"
-#include "../../include/utils/string_convert.h"
+#include "main/main_initialization.h"
+#include "log.h"
+#include "config.h"
+#include "timer/timer.h"
+#include "timer/timer_events.h"
+#include "window.h"
+#include "cli.h"
+#include "async_update_checker.h"
+#include "dialog/dialog_language.h"
+#include "shortcut_checker.h"
+#include "utils/string_convert.h"
 
 extern int elapsed_time;
 extern int message_shown;

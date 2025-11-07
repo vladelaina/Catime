@@ -3,7 +3,7 @@
  * @brief Natural/numeric-aware string comparison implementation
  */
 
-#include "../../include/utils/natural_sort.h"
+#include "utils/natural_sort.h"
 #include <wctype.h>
 #include <ctype.h>
 #include <string.h>

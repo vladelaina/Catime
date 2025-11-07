@@ -6,7 +6,7 @@
 #include <windows.h>
 #include <wchar.h>
 #include <stdio.h>
-#include "../include/language.h"
+#include "language.h"
 #include "../resource/resource.h"
 
 #define MAX_TRANSLATIONS 200

@@ -3,14 +3,14 @@
  * @brief Core window creation and lifecycle management
  */
 
-#include "../../include/window/window_core.h"
-#include "../../include/window/window_visual_effects.h"
-#include "../../include/window/window_desktop_integration.h"
-#include "../../include/window_procedure.h"
-#include "../../include/tray.h"
-#include "../../include/tray_animation_core.h"
-#include "../../include/config.h"
-#include "../../include/log.h"
+#include "window/window_core.h"
+#include "window/window_visual_effects.h"
+#include "window/window_desktop_integration.h"
+#include "window_procedure/window_procedure.h"
+#include "tray/tray.h"
+#include "tray/tray_animation_core.h"
+#include "config.h"
+#include "log.h"
 #include "../../resource/resource.h"
 #include <stdio.h>
 #include <string.h>

@@ -3,9 +3,9 @@
  * @brief Simple error dialog implementation
  */
 
-#include "../include/dialog_error.h"
-#include "../include/dialog_common.h"
-#include "../include/language.h"
+#include "dialog/dialog_error.h"
+#include "dialog/dialog_common.h"
+#include "language.h"
 #include "../resource/resource.h"
 
 void ShowErrorDialog(HWND hwndParent) {

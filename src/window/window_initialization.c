@@ -3,14 +3,14 @@
  * @brief Application initialization (DPI, fonts, configuration)
  */
 
-#include "../../include/window/window_initialization.h"
-#include "../../include/window/window_core.h"
-#include "../../include/timer.h"
-#include "../../include/language.h"
-#include "../../include/font.h"
-#include "../../include/startup.h"
-#include "../../include/config.h"
-#include "../../include/log.h"
+#include "window/window_initialization.h"
+#include "window/window_core.h"
+#include "timer/timer.h"
+#include "language.h"
+#include "font.h"
+#include "startup.h"
+#include "config.h"
+#include "log.h"
 #include <stdio.h>
 #include <string.h>
 

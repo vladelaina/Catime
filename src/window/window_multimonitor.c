@@ -3,9 +3,9 @@
  * @brief Multi-monitor detection and window positioning
  */
 
-#include "../../include/window/window_multimonitor.h"
-#include "../../include/window/window_core.h"
-#include "../../include/log.h"
+#include "window/window_multimonitor.h"
+#include "window/window_core.h"
+#include "log.h"
 
 /* ============================================================================
  * Internal helpers

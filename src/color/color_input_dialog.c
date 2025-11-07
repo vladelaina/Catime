@@ -5,10 +5,10 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <windows.h>
-#include "../include/color_input_dialog.h"
-#include "../include/color_parser.h"
-#include "../include/color_state.h"
-#include "../include/menu_preview.h"
+#include "color/color_input_dialog.h"
+#include "color/color_parser.h"
+#include "color/color_state.h"
+#include "menu_preview.h"
 #include "../resource/resource.h"
 
 /* ============================================================================

@@ -4,9 +4,9 @@
  * 
  * Manages animation speed settings, percent icon colors, and animation-related configuration.
  */
-#include "../include/config.h"
-#include "../include/tray_animation_core.h"
-#include "../include/tray_animation_percent.h"
+#include "config.h"
+#include "tray/tray_animation_core.h"
+#include "tray/tray_animation_percent.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

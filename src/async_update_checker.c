@@ -7,9 +7,9 @@
  */
 #include <windows.h>
 #include <process.h>
-#include "../include/async_update_checker.h"
-#include "../include/update_checker.h"
-#include "../include/log.h"
+#include "async_update_checker.h"
+#include "update_checker.h"
+#include "log.h"
 
 #define THREAD_WAIT_TIMEOUT_MS 1000
 #define ERROR_MSG_BUFFER_SIZE 256

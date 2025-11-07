@@ -7,13 +7,13 @@
  *       Refactored implementation: Focused on essential functionality
  */
 
-#include "../include/dialog_notification.h"
-#include "../include/dialog_common.h"
-#include "../include/language.h"
-#include "../include/dialog_language.h"
-#include "../include/config.h"
-#include "../include/notification.h"
-#include "../include/audio_player.h"
+#include "dialog/dialog_notification.h"
+#include "dialog/dialog_common.h"
+#include "language.h"
+#include "dialog/dialog_language.h"
+#include "config.h"
+#include "notification.h"
+#include "audio_player.h"
 #include "../resource/resource.h"
 #include <strsafe.h>
 #include <string.h>

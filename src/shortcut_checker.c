@@ -1,8 +1,8 @@
 /** @file shortcut_checker.c @brief Desktop shortcut auto-management for Store/WinGet installs */
-#include "../include/shortcut_checker.h"
-#include "../include/config.h"
-#include "../include/log.h"
-#include "../include/utils/string_convert.h"
+#include "shortcut_checker.h"
+#include "config.h"
+#include "log.h"
+#include "utils/string_convert.h"
 #include <stdio.h>
 #include <shlobj.h>
 #include <objbase.h>

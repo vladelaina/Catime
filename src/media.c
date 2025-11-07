@@ -3,7 +3,7 @@
  * @brief System-wide media control via virtual keys
  */
 #include <windows.h>
-#include "../include/media.h"
+#include "media.h"
 
 #define MEDIA_KEY_DELAY_MS 50
 #define MEDIA_FINAL_DELAY_MS 100

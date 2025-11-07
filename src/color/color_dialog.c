@@ -5,11 +5,11 @@
 #include <stdio.h>
 #include <windows.h>
 #include <commdlg.h>
-#include "../include/color_dialog.h"
-#include "../include/color_parser.h"
-#include "../include/color_state.h"
-#include "../include/menu_preview.h"
-#include "../include/config.h"
+#include "color/color_dialog.h"
+#include "color/color_parser.h"
+#include "color/color_state.h"
+#include "menu_preview.h"
+#include "config.h"
 
 /* ============================================================================
  * Constants

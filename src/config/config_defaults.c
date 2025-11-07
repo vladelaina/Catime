@@ -5,8 +5,8 @@
  * Centralized storage of default configuration values.
  */
 
-#include "../include/config_defaults.h"
-#include "../include/language.h"
+#include "config/config_defaults.h"
+#include "language.h"
 #include "../resource/resource.h"
 #include <stdio.h>
 #include <string.h>

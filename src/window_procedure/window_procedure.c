@@ -3,19 +3,19 @@
  * @brief Main window procedure and public API (refactored from 3110 lines → 250 lines)
  */
 
-#include "../include/window_procedure.h"
-#include "../include/window_message_handlers.h"
-#include "../include/window_commands.h"
-#include "../include/window_config_handlers.h"
-#include "../include/window_utils.h"
-#include "../include/window_helpers.h"
-#include "../include/tray_events.h"
-#include "../include/config.h"
-#include "../include/timer.h"
-#include "../include/window.h"
-#include "../include/pomodoro.h"
-#include "../include/notification.h"
-#include "../include/drawing.h"
+#include "window_procedure/window_procedure.h"
+#include "window_procedure/window_message_handlers.h"
+#include "window_procedure/window_commands.h"
+#include "window_procedure/window_config_handlers.h"
+#include "window_procedure/window_utils.h"
+#include "window_procedure/window_helpers.h"
+#include "tray/tray_events.h"
+#include "config.h"
+#include "timer/timer.h"
+#include "window.h"
+#include "pomodoro.h"
+#include "notification.h"
+#include "drawing.h"
 #include "../resource/resource.h"
 #include <string.h>
 

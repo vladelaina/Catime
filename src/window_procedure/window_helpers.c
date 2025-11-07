@@ -3,17 +3,17 @@
  * @brief Window procedure helper functions implementation
  */
 
-#include "../include/window_helpers.h"
-#include "../include/window_utils.h"
-#include "../include/config.h"
-#include "../include/font.h"
-#include "../include/timer.h"
-#include "../include/timer_events.h"
-#include "../include/window.h"
-#include "../include/pomodoro.h"
-#include "../include/dialog_procedure.h"
-#include "../include/drawing.h"
-#include "../include/notification.h"
+#include "window_procedure/window_helpers.h"
+#include "window_procedure/window_utils.h"
+#include "config.h"
+#include "font.h"
+#include "timer/timer.h"
+#include "timer/timer_events.h"
+#include "window.h"
+#include "pomodoro.h"
+#include "dialog/dialog_procedure.h"
+#include "drawing.h"
+#include "notification.h"
 #include "../resource/resource.h"
 #include <stdio.h>
 #include <string.h>

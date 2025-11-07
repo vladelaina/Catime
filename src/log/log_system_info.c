@@ -5,8 +5,8 @@
 
 #include <stdio.h>
 #include <windows.h>
-#include "../../include/log/log_system_info.h"
-#include "../../include/log.h"
+#include "log/log_system_info.h"
+#include "log.h"
 
 #ifndef PROCESSOR_ARCHITECTURE_ARM64
 #define PROCESSOR_ARCHITECTURE_ARM64 12

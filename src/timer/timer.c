@@ -6,10 +6,10 @@
  * Adaptive display formatting reduces visual jitter during transitions.
  */
 
-#include "../include/timer.h"
-#include "../include/config.h"
-#include "../include/timer_events.h"
-#include "../include/drawing.h"
+#include "timer/timer.h"
+#include "config.h"
+#include "timer/timer_events.h"
+#include "drawing.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

@@ -5,11 +5,11 @@
 
 #include <time.h>
 #include <windows.h>
-#include "../../include/main/main_initialization.h"
-#include "../../include/main/main_single_instance.h"
-#include "../../include/window.h"
-#include "../../include/log.h"
-#include "../../include/config.h"
+#include "main/main_initialization.h"
+#include "main/main_single_instance.h"
+#include "window.h"
+#include "log.h"
+#include "config.h"
 
 #pragma comment(lib, "dwmapi.lib")
 #pragma comment(lib, "user32.lib")

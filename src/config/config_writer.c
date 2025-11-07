@@ -3,14 +3,14 @@
  * @brief Configuration writer implementation
  */
 
-#include "../include/config_writer.h"
-#include "../include/config.h"
-#include "../include/language.h"
-#include "../include/timer.h"
-#include "../include/window.h"
-#include "../include/font.h"
-#include "../include/color.h"
-#include "../include/tray_animation_core.h"
+#include "config/config_writer.h"
+#include "config.h"
+#include "language.h"
+#include "timer/timer.h"
+#include "window.h"
+#include "font.h"
+#include "color/color.h"
+#include "tray/tray_animation_core.h"
 #include "../resource/resource.h"
 #include <stdio.h>
 #include <string.h>

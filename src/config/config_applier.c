@@ -3,13 +3,13 @@
  * @brief Configuration applier implementation
  */
 
-#include "../include/config_applier.h"
-#include "../include/config.h"
-#include "../include/language.h"
-#include "../include/timer.h"
-#include "../include/window.h"
-#include "../include/font.h"
-#include "../include/color.h"
+#include "config/config_applier.h"
+#include "config.h"
+#include "language.h"
+#include "timer/timer.h"
+#include "window.h"
+#include "font.h"
+#include "color/color.h"
 #include "../resource/resource.h"
 #include <stdio.h>
 #include <stdlib.h>

@@ -3,16 +3,16 @@
  * @brief Window lifecycle and state management event handlers
  */
 #include <windows.h>
-#include "../include/window.h"
-#include "../include/tray.h"
-#include "../include/config.h"
-#include "../include/drag_scale.h"
-#include "../include/window_events.h"
-#include "../include/tray_animation_core.h"
-#include "../include/timer_events.h"
-#include "../include/font.h"
-#include "../include/async_update_checker.h"
-#include "../include/log.h"
+#include "window.h"
+#include "tray/tray.h"
+#include "config.h"
+#include "drag_scale.h"
+#include "window_procedure/window_events.h"
+#include "tray/tray_animation_core.h"
+#include "timer/timer_events.h"
+#include "font.h"
+#include "async_update_checker.h"
+#include "log.h"
 
 /* ============================================================================
  * Window creation and initialization

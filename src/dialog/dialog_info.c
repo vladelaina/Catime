@@ -3,11 +3,11 @@
  * @brief Informational dialogs implementation
  */
 
-#include "../include/dialog_info.h"
-#include "../include/dialog_common.h"
-#include "../include/language.h"
-#include "../include/dialog_language.h"
-#include "../include/config.h"
+#include "dialog/dialog_info.h"
+#include "dialog/dialog_common.h"
+#include "language.h"
+#include "dialog/dialog_language.h"
+#include "config.h"
 #include "../resource/resource.h"
 #include <shellapi.h>
 #include <strsafe.h>

@@ -3,13 +3,13 @@
  * @brief Pomodoro menu implementation
  */
 
-#include "../include/tray_menu_pomodoro.h"
-#include "../include/tray_menu.h"
-#include "../include/config.h"
-#include "../include/language.h"
-#include "../include/timer.h"
-#include "../include/pomodoro.h"
-#include "../include/utils/string_format.h"
+#include "tray/tray_menu_pomodoro.h"
+#include "tray/tray_menu.h"
+#include "config.h"
+#include "language.h"
+#include "timer/timer.h"
+#include "pomodoro.h"
+#include "utils/string_format.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

@@ -5,7 +5,7 @@
 #include <iphlpapi.h>
 #include <stdio.h>
 
-#include "../include/system_monitor.h"
+#include "system_monitor.h"
 
 #define DEFAULT_UPDATE_INTERVAL_MS 1000
 #define IF_TYPE_SOFTWARE_LOOPBACK 24

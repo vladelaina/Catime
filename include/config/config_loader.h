@@ -11,9 +11,9 @@
 
 #include <windows.h>
 #include "config.h"
-#include "timer.h"
+#include "timer/timer.h"
 #include "font.h"
-#include "color.h"
+#include "color/color.h"
 
 /* ============================================================================
  * Configuration snapshot structure

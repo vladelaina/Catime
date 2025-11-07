@@ -7,9 +7,9 @@
 #define WINDOW_HELPERS_H
 
 #include <windows.h>
-#include "timer.h"
+#include "timer/timer.h"
 #include "language.h"
-#include "config_defaults.h"
+#include "config/config_defaults.h"
 
 /* ============================================================================
  * Timer Mode System

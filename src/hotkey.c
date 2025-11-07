@@ -20,11 +20,11 @@
 #pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 #endif
 
-#include "../include/hotkey.h"
-#include "../include/language.h"
-#include "../include/config.h"
-#include "../include/window_procedure.h"
-#include "../include/dialog_procedure.h"
+#include "hotkey.h"
+#include "language.h"
+#include "config.h"
+#include "window_procedure/window_procedure.h"
+#include "dialog/dialog_procedure.h"
 #include "../resource/resource.h"
 
 #ifndef HOTKEYF_SHIFT

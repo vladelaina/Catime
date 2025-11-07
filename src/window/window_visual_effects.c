@@ -3,8 +3,8 @@
  * @brief Window visual effects implementation
  */
 
-#include "../../include/window/window_visual_effects.h"
-#include "../../include/log.h"
+#include "window/window_visual_effects.h"
+#include "log.h"
 #include <dwmapi.h>
 
 /* ============================================================================

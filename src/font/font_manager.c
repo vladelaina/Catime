@@ -3,13 +3,13 @@
  * @brief Font loading and management implementation
  */
 
-#include "../../include/font/font_manager.h"
-#include "../../include/font/font_ttf_parser.h"
-#include "../../include/font/font_path_manager.h"
-#include "../../include/font/font_config.h"
-#include "../../include/utils/string_convert.h"
-#include "../../include/utils/path_utils.h"
-#include "../../include/config.h"
+#include "font/font_manager.h"
+#include "font/font_ttf_parser.h"
+#include "font/font_path_manager.h"
+#include "font/font_config.h"
+#include "utils/string_convert.h"
+#include "utils/path_utils.h"
+#include "config.h"
 #include "../../resource/resource.h"
 #include <stdio.h>
 #include <string.h>

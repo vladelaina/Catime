@@ -3,8 +3,8 @@
  * @brief TTF/OTF binary parsing implementation
  */
 
-#include "../../include/font/font_ttf_parser.h"
-#include "../../include/utils/string_convert.h"
+#include "font/font_ttf_parser.h"
+#include "utils/string_convert.h"
 #include <stdlib.h>
 #include <string.h>
 

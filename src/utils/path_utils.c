@@ -3,7 +3,7 @@
  * @brief Path manipulation implementation
  */
 
-#include "../../include/utils/path_utils.h"
+#include "utils/path_utils.h"
 #include <string.h>
 #include <wchar.h>
 

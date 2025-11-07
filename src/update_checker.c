@@ -13,13 +13,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strsafe.h>
-#include "../include/update_checker.h"
-#include "../include/log.h"
-#include "../include/language.h"
-#include "../include/dialog_language.h"
-#include "../include/dialog_procedure.h"
+#include "update_checker.h"
+#include "log.h"
+#include "language.h"
+#include "dialog/dialog_language.h"
+#include "dialog/dialog_procedure.h"
 #include "../resource/resource.h"
-#include "../include/utils/string_convert.h"
+#include "utils/string_convert.h"
 
 #pragma comment(lib, "wininet.lib")
 

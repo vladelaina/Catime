@@ -3,9 +3,9 @@
  * @brief Animation resource loading implementation
  */
 
-#include "../include/tray_animation_loader.h"
-#include "../include/utils/natural_sort.h"
-#include "../include/config.h"
+#include "tray/tray_animation_loader.h"
+#include "utils/natural_sort.h"
+#include "config.h"
 #include "../resource/resource.h"
 #include <string.h>
 #include <ctype.h>

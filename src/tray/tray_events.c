@@ -9,16 +9,16 @@
  */
 #include <windows.h>
 #include <shellapi.h>
-#include "../include/tray_events.h"
-#include "../include/tray_menu.h"
-#include "../include/color.h"
-#include "../include/timer.h"
-#include "../include/language.h"
-#include "../include/window_events.h"
-#include "../include/timer_events.h"
-#include "../include/drawing.h"
-#include "../include/audio_player.h"
-#include "../include/config.h"
+#include "tray/tray_events.h"
+#include "tray/tray_menu.h"
+#include "color/color.h"
+#include "timer/timer.h"
+#include "language.h"
+#include "window_procedure/window_events.h"
+#include "timer/timer_events.h"
+#include "drawing.h"
+#include "audio_player.h"
+#include "config.h"
 #include "../resource/resource.h"
 
 /**

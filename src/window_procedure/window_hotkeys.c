@@ -3,15 +3,15 @@
  * @brief Global hotkey registration and dispatch implementation
  */
 
-#include "../include/window_hotkeys.h"
-#include "../include/window_utils.h"
-#include "../include/config.h"
-#include "../include/hotkey.h"
-#include "../include/timer_events.h"
-#include "../include/window.h"
-#include "../include/dialog_procedure.h"
-#include "../include/notification.h"
-#include "../include/window_procedure.h"
+#include "window_procedure/window_hotkeys.h"
+#include "window_procedure/window_utils.h"
+#include "config.h"
+#include "hotkey.h"
+#include "timer/timer_events.h"
+#include "window.h"
+#include "dialog/dialog_procedure.h"
+#include "notification.h"
+#include "window_procedure/window_procedure.h"
 #include "../resource/resource.h"
 #include <stdio.h>
 #include <string.h>

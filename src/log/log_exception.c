@@ -7,9 +7,9 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <windows.h>
-#include "../../include/log/log_exception.h"
-#include "../../include/log/log_core.h"
-#include "../../include/log.h"
+#include "log/log_exception.h"
+#include "log/log_core.h"
+#include "log.h"
 
 static const SignalInfo SIGNAL_TABLE[] = {
     {SIGFPE,   "Floating point exception"},

@@ -3,13 +3,13 @@
  * @brief Pomodoro-specific dialogs implementation
  */
 
-#include "../include/dialog_pomodoro.h"
-#include "../include/dialog_common.h"
-#include "../include/dialog_error.h"
-#include "../include/dialog_input.h"
-#include "../include/language.h"
-#include "../include/config.h"
-#include "../include/dialog_language.h"
+#include "dialog/dialog_pomodoro.h"
+#include "dialog/dialog_common.h"
+#include "dialog/dialog_error.h"
+#include "dialog/dialog_input.h"
+#include "language.h"
+#include "config.h"
+#include "dialog/dialog_language.h"
 #include "../resource/resource.h"
 #include <strsafe.h>
 #include <string.h>

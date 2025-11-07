@@ -3,7 +3,7 @@
  * @brief Common dialog infrastructure implementation
  */
 
-#include "../include/dialog_common.h"
+#include "dialog/dialog_common.h"
 #include "../resource/resource.h"
 #include <stdlib.h>
 #include <string.h>

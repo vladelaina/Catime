@@ -3,7 +3,7 @@
  * @brief UTF-8 ↔ UTF-16 conversion implementation
  */
 
-#include "../../include/utils/string_convert.h"
+#include "utils/string_convert.h"
 #include <stdlib.h>
 
 /* ============================================================================

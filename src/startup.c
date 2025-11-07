@@ -1,8 +1,8 @@
 /** @file startup.c @brief Windows startup integration with table-driven mode configs */
-#include "../include/startup.h"
-#include "../include/config.h"
-#include "../include/timer.h"
-#include "../include/log.h"
+#include "startup.h"
+#include "config.h"
+#include "timer/timer.h"
+#include "log.h"
 #include <windows.h>
 #include <shlobj.h>
 #include <objbase.h>

@@ -3,11 +3,11 @@
  * @brief Font path resolution and search implementation
  */
 
-#include "../../include/font/font_path_manager.h"
-#include "../../include/font/font_ttf_parser.h"
-#include "../../include/utils/string_convert.h"
-#include "../../include/utils/path_utils.h"
-#include "../../include/config.h"
+#include "font/font_path_manager.h"
+#include "font/font_ttf_parser.h"
+#include "utils/string_convert.h"
+#include "utils/path_utils.h"
+#include "config.h"
 #include <stdio.h>
 #include <string.h>
 #include <shlobj.h>

@@ -3,7 +3,7 @@
  * @brief String formatting utilities implementation
  */
 
-#include "../../include/utils/string_format.h"
+#include "utils/string_format.h"
 #include <string.h>
 #include <stdio.h>
 

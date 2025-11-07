@@ -3,18 +3,18 @@
  * @brief Animation lifecycle coordination
  */
 
-#include "../include/tray_animation_core.h"
-#include "../include/tray_animation_decoder.h"
-#include "../include/tray_animation_loader.h"
-#include "../include/tray_animation_timer.h"
-#include "../include/tray_animation_percent.h"
-#include "../include/tray_animation_menu.h"
-#include "../include/utils/memory_pool.h"
-#include "../include/config.h"
-#include "../include/system_monitor.h"
-#include "../include/timer.h"
-#include "../include/tray.h"
-#include "../include/log.h"
+#include "tray/tray_animation_core.h"
+#include "tray/tray_animation_decoder.h"
+#include "tray/tray_animation_loader.h"
+#include "tray/tray_animation_timer.h"
+#include "tray/tray_animation_percent.h"
+#include "tray/tray_animation_menu.h"
+#include "utils/memory_pool.h"
+#include "config.h"
+#include "system_monitor.h"
+#include "timer/timer.h"
+#include "tray/tray.h"
+#include "log.h"
 #include "../resource/resource.h"
 #include <shellapi.h>
 #include <string.h>

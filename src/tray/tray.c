@@ -10,14 +10,14 @@
 #include <windows.h>
 #include <shellapi.h>
 #include <string.h>
-#include "../include/language.h"
+#include "language.h"
 #include "../resource/resource.h"
-#include "../include/tray.h"
-#include "../include/timer.h"
-#include "../include/tray_animation_core.h"
-#include "../include/tray_animation_percent.h"
-#include "../include/system_monitor.h"
-#include "../include/config.h"
+#include "tray/tray.h"
+#include "timer/timer.h"
+#include "tray/tray_animation_core.h"
+#include "tray/tray_animation_percent.h"
+#include "system_monitor.h"
+#include "config.h"
 
 #define TRAY_TIP_TIMER_ID 42421
 #define TOOLTIP_UPDATE_INTERVAL_MS 1000

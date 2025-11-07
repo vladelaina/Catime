@@ -5,18 +5,18 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "../include/timer_events.h"
-#include "../include/timer.h"
-#include "../include/language.h"
-#include "../include/notification.h"
-#include "../include/pomodoro.h"
-#include "../include/config.h"
-#include "../include/window.h"
-#include "../include/drawing.h"
-#include "../include/audio_player.h"
-#include "../include/drag_scale.h"
-#include "../include/tray_animation_core.h"
-#include "../include/utils/string_convert.h"
+#include "timer/timer_events.h"
+#include "timer/timer.h"
+#include "language.h"
+#include "notification.h"
+#include "pomodoro.h"
+#include "config.h"
+#include "window.h"
+#include "drawing.h"
+#include "audio_player.h"
+#include "drag_scale.h"
+#include "tray/tray_animation_core.h"
+#include "utils/string_convert.h"
 
 #define DEFAULT_POMODORO_DURATION 1500
 #define MAX_RETRY_ATTEMPTS 3

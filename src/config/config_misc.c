@@ -4,8 +4,8 @@
  * 
  * Manages pomodoro settings, recent files, font license, language, time format, and other settings.
  */
-#include "../include/config.h"
-#include "../include/language.h"
+#include "config.h"
+#include "language.h"
 #include "../resource/resource.h"
 #include <stdio.h>
 #include <stdlib.h>

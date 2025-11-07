@@ -3,10 +3,10 @@
  * @brief Window procedure utility functions implementation
  */
 
-#include "../include/window_utils.h"
-#include "../include/config.h"
-#include "../include/language.h"
-#include "../include/utils/string_convert.h"
+#include "window_procedure/window_utils.h"
+#include "config.h"
+#include "language.h"
+#include "utils/string_convert.h"
 #include <string.h>
 #include <ctype.h>
 

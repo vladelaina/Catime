@@ -12,8 +12,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <strsafe.h>
-#include "../include/dialog_language.h"
-#include "../include/language.h"
+#include "dialog/dialog_language.h"
+#include "language.h"
 #include "../resource/resource.h"
 
 #define CLASS_NAME_MAX 256

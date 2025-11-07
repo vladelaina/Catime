@@ -4,10 +4,10 @@
  */
 #include <windows.h>
 #include <stdlib.h>
-#include "../include/tray.h"
-#include "../include/language.h"
-#include "../include/notification.h"
-#include "../include/config.h"
+#include "tray/tray.h"
+#include "language.h"
+#include "notification.h"
+#include "config.h"
 #include "../resource/resource.h"
 #include <windowsx.h>
 

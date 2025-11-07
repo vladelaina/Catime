@@ -15,10 +15,10 @@
 #define DRAWING_H
 
 #include <windows.h>
-#include "../include/config.h"
-#include "../include/drawing/drawing_timer_precision.h"
-#include "../include/drawing/drawing_time_format.h"
-#include "../include/drawing/drawing_render.h"
+#include "config.h"
+#include "drawing/drawing_timer_precision.h"
+#include "drawing/drawing_time_format.h"
+#include "drawing/drawing_render.h"
 
 /* ============================================================================
  * Constants

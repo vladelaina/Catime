@@ -6,9 +6,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <windows.h>
-#include "../../include/drawing/drawing_time_format.h"
-#include "../../include/timer.h"
-#include "../../include/config.h"
+#include "drawing/drawing_time_format.h"
+#include "timer/timer.h"
+#include "config.h"
 
 extern int countdown_elapsed_time;
 extern int countup_elapsed_time;

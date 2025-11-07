@@ -12,11 +12,11 @@
  * 
  * @note After refactoring, this file is now ~150 lines vs original 816 lines
  */
-#include "../include/config.h"
-#include "../include/config_defaults.h"
-#include "../include/config_loader.h"
-#include "../include/config_applier.h"
-#include "../include/config_writer.h"
+#include "config.h"
+#include "config/config_defaults.h"
+#include "config/config_loader.h"
+#include "config/config_applier.h"
+#include "config/config_writer.h"
 #include <stdio.h>
 #include <string.h>
 

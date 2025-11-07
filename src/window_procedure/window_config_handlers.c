@@ -3,14 +3,14 @@
  * @brief Configuration reload handlers implementation
  */
 
-#include "../include/window_config_handlers.h"
-#include "../include/window_utils.h"
-#include "../include/window_hotkeys.h"
-#include "../include/config.h"
-#include "../include/timer.h"
-#include "../include/window.h"
-#include "../include/color.h"
-#include "../include/tray_animation_core.h"
+#include "window_procedure/window_config_handlers.h"
+#include "window_procedure/window_utils.h"
+#include "window_procedure/window_hotkeys.h"
+#include "config.h"
+#include "timer/timer.h"
+#include "window.h"
+#include "color/color.h"
+#include "tray/tray_animation_core.h"
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>

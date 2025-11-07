@@ -3,14 +3,14 @@
  * @brief Menu construction and preview dispatch implementation
  */
 
-#include "../include/window_menus.h"
-#include "../include/window_utils.h"
-#include "../include/window_helpers.h"
-#include "../include/menu_preview.h"
-#include "../include/font.h"
-#include "../include/tray_animation_loader.h"
-#include "../include/tray_animation_core.h"
-#include "../include/utils/natural_sort.h"
+#include "window_procedure/window_menus.h"
+#include "window_procedure/window_utils.h"
+#include "window_procedure/window_helpers.h"
+#include "menu_preview.h"
+#include "font.h"
+#include "tray/tray_animation_loader.h"
+#include "tray/tray_animation_core.h"
+#include "utils/natural_sort.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>

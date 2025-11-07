@@ -8,11 +8,11 @@
 #include <string.h>
 #include <ctype.h>
 #include <windows.h>
-#include "../../include/main/main_cli_routing.h"
-#include "../../include/config.h"
-#include "../../include/timer.h"
-#include "../../include/window_procedure.h"
-#include "../../include/utils/string_convert.h"
+#include "main/main_cli_routing.h"
+#include "config.h"
+#include "timer/timer.h"
+#include "window_procedure/window_procedure.h"
+#include "utils/string_convert.h"
 
 typedef struct {
     const wchar_t* command;

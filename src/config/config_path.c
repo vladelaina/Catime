@@ -4,9 +4,9 @@
  * 
  * Manages configuration file paths, resource folder creation, and first-run detection.
  */
-#include "../include/config.h"
-#include "../include/utils/string_convert.h"
-#include "../include/utils/path_utils.h"
+#include "config.h"
+#include "utils/string_convert.h"
+#include "utils/path_utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

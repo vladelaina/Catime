@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include "../include/color_parser.h"
+#include "color/color_parser.h"
 
 /* ============================================================================
  * Constants

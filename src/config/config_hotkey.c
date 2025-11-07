@@ -4,7 +4,7 @@
  * 
  * Manages hotkey configuration including string conversion, reading/writing, and validation.
  */
-#include "../include/config.h"
+#include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

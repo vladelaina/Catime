@@ -6,8 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include "../include/color_state.h"
-#include "../include/config.h"
+#include "color/color_state.h"
+#include "config.h"
 
 /* ============================================================================
  * Default Color Palette

@@ -6,12 +6,12 @@
  */
 #include <windows.h>
 #include <string.h>
-#include "../include/menu_preview.h"
-#include "../include/config.h"
-#include "../include/font.h"
-#include "../include/color.h"
-#include "../include/timer.h"
-#include "../include/tray_animation_core.h"
+#include "menu_preview.h"
+#include "config.h"
+#include "font.h"
+#include "color/color.h"
+#include "timer/timer.h"
+#include "tray/tray_animation_core.h"
 
 /* ============================================================================
  * External Dependencies

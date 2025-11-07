@@ -5,7 +5,7 @@
  * Provides low-level INI file access functions with UTF-8 encoding support,
  * atomic write operations, and mutex synchronization for thread safety.
  */
-#include "../include/config.h"
+#include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

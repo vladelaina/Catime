@@ -3,7 +3,7 @@
  * @brief High-precision timer implementation
  */
 
-#include "../include/tray_animation_timer.h"
+#include "tray/tray_animation_timer.h"
 #include <mmsystem.h>
 
 #pragma comment(lib, "winmm.lib")

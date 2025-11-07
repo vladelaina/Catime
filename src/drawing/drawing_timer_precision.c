@@ -4,7 +4,7 @@
  */
 
 #include <windows.h>
-#include "../../include/drawing/drawing_timer_precision.h"
+#include "drawing/drawing_timer_precision.h"
 
 /** High-resolution timer state (sub-second precision) */
 static DWORD g_timer_start_tick = 0;

@@ -3,10 +3,10 @@
  * @brief Animation menu implementation
  */
 
-#include "../include/tray_animation_menu.h"
-#include "../include/tray_animation_loader.h"
-#include "../include/utils/natural_sort.h"
-#include "../include/config.h"
+#include "tray/tray_animation_menu.h"
+#include "tray/tray_animation_loader.h"
+#include "utils/natural_sort.h"
+#include "config.h"
 #include <shlobj.h>
 #include <stdlib.h>
 #include <string.h>

@@ -9,9 +9,9 @@
 #include <string.h>
 #include <time.h>
 #include <windows.h>
-#include "../../include/log/log_core.h"
-#include "../../include/log/log_system_info.h"
-#include "../../include/config.h"
+#include "log/log_core.h"
+#include "log/log_system_info.h"
+#include "config.h"
 #include "../../resource/resource.h"
 
 static const char* const LOG_LEVEL_STRINGS[] = {

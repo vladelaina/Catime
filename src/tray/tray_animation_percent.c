@@ -3,7 +3,7 @@
  * @brief Percent icon generation implementation
  */
 
-#include "../include/tray_animation_percent.h"
+#include "tray/tray_animation_percent.h"
 
 /* Default colors */
 static COLORREF g_percentTextColor = RGB(255, 255, 255); /* White */

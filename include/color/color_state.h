@@ -10,7 +10,7 @@
 #define COLOR_STATE_H
 
 #include <windows.h>
-#include "../include/color_parser.h"
+#include "color_parser.h"
 
 /* ============================================================================
  * Type definitions

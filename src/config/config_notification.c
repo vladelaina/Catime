@@ -4,7 +4,7 @@
  * 
  * Manages notification settings including messages, type, timeout, opacity, sound, and volume.
  */
-#include "../include/config.h"
+#include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

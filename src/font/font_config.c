@@ -3,8 +3,8 @@
  * @brief Font configuration implementation
  */
 
-#include "../../include/font/font_config.h"
-#include "../../include/font/font_path_manager.h"
+#include "font/font_config.h"
+#include "font/font_path_manager.h"
 #include <stdio.h>
 #include <windows.h>
 

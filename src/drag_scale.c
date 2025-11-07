@@ -7,9 +7,9 @@
  */
 
 #include <windows.h>
-#include "../include/window.h"
-#include "../include/config.h"
-#include "../include/drag_scale.h"
+#include "window.h"
+#include "config.h"
+#include "drag_scale.h"
 
 BOOL PREVIOUS_TOPMOST_STATE = FALSE;
 

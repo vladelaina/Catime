@@ -3,9 +3,9 @@
  * @brief Configuration loading implementation
  */
 
-#include "../include/config_loader.h"
-#include "../include/config_defaults.h"
-#include "../include/config.h"
+#include "config/config_loader.h"
+#include "config/config_defaults.h"
+#include "config.h"
 #include "../resource/resource.h"
 #include <stdio.h>
 #include <stdlib.h>
