@@ -39,7 +39,7 @@ static const char* TimeFormatTypeToString(TimeFormatType format) {
 }
 
 static const char* TimeoutActionTypeToString(TimeoutActionType action) {
-    /* Security: Filter dangerous actions */
+    /* One-time actions: never persist to config file */
     if (action == TIMEOUT_ACTION_SHUTDOWN ||
         action == TIMEOUT_ACTION_RESTART ||
         action == TIMEOUT_ACTION_SLEEP) {

@@ -145,14 +145,17 @@ void ReadConfig() {
 
 /**
  * @brief Write timeout action configuration
+ * 
+ * @note One-time actions (SHUTDOWN/RESTART/SLEEP) are not persisted to config.
+ * They only affect the current session and will reset on next launch.
  */
 void WriteConfigTimeoutAction(const char* action) {
     const char* actual_action = action;
-    /* Security: Filter dangerous actions */
+    
     if (strcmp(action, "RESTART") == 0 || 
         strcmp(action, "SHUTDOWN") == 0 || 
         strcmp(action, "SLEEP") == 0) {
-        actual_action = "MESSAGE";
+        return;
     }
     
     UpdateConfigKeyValueAtomic(INI_SECTION_TIMER, "CLOCK_TIMEOUT_ACTION", actual_action);

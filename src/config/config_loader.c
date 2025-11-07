@@ -413,22 +413,25 @@ BOOL LoadConfigFromFile(const char* config_path, ConfigSnapshot* snapshot) {
 BOOL ValidateConfigSnapshot(ConfigSnapshot* snapshot) {
     if (!snapshot) return FALSE;
     
-    /* Security: Filter dangerous timeout actions */
+    /* One-time actions: prevent these from being persisted in config */
     if (snapshot->timeoutAction == TIMEOUT_ACTION_SHUTDOWN ||
         snapshot->timeoutAction == TIMEOUT_ACTION_RESTART ||
         snapshot->timeoutAction == TIMEOUT_ACTION_SLEEP) {
         snapshot->timeoutAction = TIMEOUT_ACTION_MESSAGE;
     }
     
-    /* Validate file paths */
-    if (strlen(snapshot->timeoutFilePath) > 0) {
-        if (FileExistsUtf8(snapshot->timeoutFilePath)) {
-            snapshot->timeoutAction = TIMEOUT_ACTION_OPEN_FILE;
+    /* Validate file paths only for OPEN_FILE action */
+    if (snapshot->timeoutAction == TIMEOUT_ACTION_OPEN_FILE) {
+        if (strlen(snapshot->timeoutFilePath) == 0 || !FileExistsUtf8(snapshot->timeoutFilePath)) {
+            snapshot->timeoutAction = TIMEOUT_ACTION_MESSAGE;
         }
     }
     
-    if (wcslen(snapshot->timeoutWebsiteUrl) > 0) {
-        snapshot->timeoutAction = TIMEOUT_ACTION_OPEN_WEBSITE;
+    /* Validate website URL only for OPEN_WEBSITE action */
+    if (snapshot->timeoutAction == TIMEOUT_ACTION_OPEN_WEBSITE) {
+        if (wcslen(snapshot->timeoutWebsiteUrl) == 0) {
+            snapshot->timeoutAction = TIMEOUT_ACTION_MESSAGE;
+        }
     }
     
     /* Validate ranges */

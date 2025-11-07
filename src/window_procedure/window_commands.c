@@ -569,6 +569,9 @@ static LRESULT CmdResetDefaults(HWND hwnd, WPARAM wp, LPARAM lp) {
     
     ResetTimerStateToDefaults();
     
+    extern TimeoutActionType CLOCK_TIMEOUT_ACTION;
+    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
+    
     CLOCK_EDIT_MODE = FALSE;
     SetClickThrough(hwnd, TRUE);
     SendMessage(hwnd, WM_SETREDRAW, FALSE, 0);

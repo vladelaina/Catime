@@ -96,7 +96,19 @@ static BOOL ExecuteSystemAction(HWND hwnd, TimeoutActionType action) {
             ResetTimerState(0);
             KillTimer(hwnd, TIMER_ID_MAIN);
             ForceWindowRedraw(hwnd);
-            system(SYSTEM_ACTIONS[i].command);
+            
+            int result = system(SYSTEM_ACTIONS[i].command);
+            if (result != 0) {
+                char errorMsg[256];
+                snprintf(errorMsg, sizeof(errorMsg), 
+                        "System action failed (code: %d). You may need administrator privileges.", 
+                        result);
+                wchar_t wErrorMsg[256];
+                MultiByteToWideChar(CP_UTF8, 0, errorMsg, -1, wErrorMsg, 256);
+                MessageBoxW(hwnd, wErrorMsg, GetLocalizedString(NULL, L"Error"), MB_ICONWARNING);
+            }
+            
+            CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
             return TRUE;
         }
     }
@@ -275,7 +287,13 @@ static void HandleTimeoutActions(HWND hwnd) {
             
                             case TIMEOUT_ACTION_OPEN_WEBSITE:
                                 if (wcslen(CLOCK_TIMEOUT_WEBSITE_URL) > 0) {
-                                    ShellExecuteW(NULL, L"open", CLOCK_TIMEOUT_WEBSITE_URL, NULL, NULL, SW_NORMAL);
+                                    HINSTANCE result = ShellExecuteW(NULL, L"open", CLOCK_TIMEOUT_WEBSITE_URL, NULL, NULL, SW_NORMAL);
+                                    if ((INT_PTR)result <= 32) {
+                                        MessageBoxW(hwnd, 
+                                            GetLocalizedString(NULL, L"Failed to open website"),
+                                            GetLocalizedString(NULL, L"Error"),
+                                            MB_ICONERROR);
+                                    }
                                 }
                                 break;
                         }

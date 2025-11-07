@@ -99,8 +99,12 @@ void ApplyTimerSettings(const ConfigSnapshot* snapshot) {
     g_AppConfig.display.time_format.format = snapshot->timeFormat;
     g_AppConfig.display.time_format.show_milliseconds = snapshot->showMilliseconds;
     
-    /* Timeout action */
-    CLOCK_TIMEOUT_ACTION = snapshot->timeoutAction;
+    /* Timeout action - preserve one-time actions in memory */
+    if (CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_SHUTDOWN &&
+        CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_RESTART &&
+        CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_SLEEP) {
+        CLOCK_TIMEOUT_ACTION = snapshot->timeoutAction;
+    }
     strncpy(CLOCK_TIMEOUT_TEXT, snapshot->timeoutText, sizeof(CLOCK_TIMEOUT_TEXT) - 1);
     CLOCK_TIMEOUT_TEXT[sizeof(CLOCK_TIMEOUT_TEXT) - 1] = '\0';
     

@@ -259,11 +259,20 @@ static BOOL LoadTimeFormatType(const char* sec, const char* key, void* target, c
 }
 
 static BOOL LoadTimeoutActionType(const char* sec, const char* key, void* target, const void* def) {
+    TimeoutActionType* currentAction = (TimeoutActionType*)target;
+    
+    /* Preserve one-time actions: don't override them from config reload */
+    if (*currentAction == TIMEOUT_ACTION_SHUTDOWN ||
+        *currentAction == TIMEOUT_ACTION_RESTART ||
+        *currentAction == TIMEOUT_ACTION_SLEEP) {
+        return FALSE;
+    }
+    
     char buf[32];
     ReadConfigStr(sec, key, (const char*)def, buf, sizeof(buf));
     TimeoutActionType newVal = TimeoutActionTypeFromStr(buf);
-    if (newVal != *(TimeoutActionType*)target) {
-        *(TimeoutActionType*)target = newVal;
+    if (newVal != *currentAction) {
+        *currentAction = newVal;
         return TRUE;
     }
     return FALSE;

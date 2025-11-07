@@ -116,8 +116,21 @@ static BOOL GetFontsFolderWideFromConfig(wchar_t* out, size_t size) {
     return TRUE;
 }
 
-/** @brief Load timeout action from config using standard API */
+/** 
+ * @brief Load timeout action from config using standard API 
+ * 
+ * @note Preserves one-time actions (SHUTDOWN/RESTART/SLEEP) in memory.
+ * These actions are intentionally not persisted to config, so we should
+ * not override them when reading from config file.
+ */
 void ReadTimeoutActionFromConfig() {
+    /* Preserve one-time actions: don't override them from config */
+    if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SHUTDOWN ||
+        CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_RESTART ||
+        CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SLEEP) {
+        return;
+    }
+    
     char configPath[MAX_PATH];
     GetConfigPath(configPath, MAX_PATH);
     
@@ -129,10 +142,6 @@ void ReadTimeoutActionFromConfig() {
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
     } else if (strcmp(value, "LOCK") == 0) {
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_LOCK;
-    } else if (strcmp(value, "SHUTDOWN") == 0) {
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SHUTDOWN;
-    } else if (strcmp(value, "RESTART") == 0) {
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_RESTART;
     } else if (strcmp(value, "OPEN_FILE") == 0) {
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
     } else if (strcmp(value, "SHOW_TIME") == 0) {
@@ -141,8 +150,6 @@ void ReadTimeoutActionFromConfig() {
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_COUNT_UP;
     } else if (strcmp(value, "OPEN_WEBSITE") == 0) {
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_WEBSITE;
-    } else if (strcmp(value, "SLEEP") == 0) {
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SLEEP;
     } else {
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
     }
