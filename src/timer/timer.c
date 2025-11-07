@@ -244,6 +244,17 @@ static int ParseDurationWithUnits(char* input) {
         token = strtok(NULL, " ");
     }
     
+    BOOL has_any_unit = FALSE;
+    for (int i = 0; i < part_count; i++) {
+        int part_len = strlen(parts[i]);
+        char unit = tolower((unsigned char)parts[i][part_len - 1]);
+        if (unit == 'h' || unit == 'm' || unit == 's') {
+            has_any_unit = TRUE;
+            break;
+        }
+    }
+    
+    int unitless_index = 0;
     for (int i = 0; i < part_count; i++) {
         char* part = parts[i];
         int part_len = strlen(part);
@@ -261,13 +272,19 @@ static int ParseDurationWithUnits(char* input) {
             }
         } else {
             int value = atoi(part);
-            if (part_count == 2) {
-                total += (i == 0) ? value * SECONDS_PER_MINUTE : value;
-            } else if (part_count == 3) {
+            if (has_any_unit) {
                 int multipliers[] = {SECONDS_PER_HOUR, SECONDS_PER_MINUTE, 1};
-                total += value * multipliers[i];
+                total += value * multipliers[unitless_index];
+                unitless_index++;
             } else {
-                total += value * SECONDS_PER_MINUTE;
+                if (part_count == 2) {
+                    total += (i == 0) ? value * SECONDS_PER_MINUTE : value;
+                } else if (part_count == 3) {
+                    int multipliers[] = {SECONDS_PER_HOUR, SECONDS_PER_MINUTE, 1};
+                    total += value * multipliers[i];
+                } else {
+                    total += value * SECONDS_PER_MINUTE;
+                }
             }
         }
     }
