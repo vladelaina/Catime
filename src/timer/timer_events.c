@@ -71,7 +71,6 @@ static void ShowTimeoutNotification(HWND hwnd, const char* messageUtf8, BOOL pla
 static inline void ResetTimerState(int newTotalTime) {
     CLOCK_TOTAL_TIME = newTotalTime;
     countdown_elapsed_time = 0;
-    countdown_message_shown = FALSE;
 }
 
 typedef struct {
@@ -374,19 +373,22 @@ static BOOL HandleMainTimer(HWND hwnd) {
                 countdown_elapsed_time += seconds_to_add;
             }
             
-            if (countdown_elapsed_time >= CLOCK_TOTAL_TIME && !countdown_message_shown) {
-                countdown_message_shown = TRUE;
-                
-                TrayAnimation_RecomputeTimerDelay();
-                
-                ReadNotificationMessagesConfig();
-                ReadNotificationTypeConfig();
-                
-                if (IsActivePomodoroTimer()) {
-                    HandlePomodoroCompletion(hwnd);
-                } else {
-                    HandleCountdownCompletion(hwnd);
+            if (countdown_elapsed_time >= CLOCK_TOTAL_TIME) {
+                if (!countdown_message_shown) {
+                    countdown_message_shown = TRUE;
+                    
+                    TrayAnimation_RecomputeTimerDelay();
+                    
+                    ReadNotificationMessagesConfig();
+                    ReadNotificationTypeConfig();
+                    
+                    if (IsActivePomodoroTimer()) {
+                        HandlePomodoroCompletion(hwnd);
+                    } else {
+                        HandleCountdownCompletion(hwnd);
+                    }
                 }
+                countdown_elapsed_time = CLOCK_TOTAL_TIME;
             }
         }
         

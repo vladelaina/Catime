@@ -34,6 +34,7 @@ static void DrawNotificationText(HDC memDC, const wchar_t* text, RECT rect, HFON
 static BYTE UpdateAnimationOpacity(AnimationState state, BYTE currentOpacity, BYTE maxOpacity, BOOL* shouldDestroy);
 static NotificationData* GetNotificationData(HWND hwnd);
 static void SetNotificationData(HWND hwnd, NotificationData* data);
+static void DestroyAllNotifications(void);
 
 typedef struct {
     HWND hwnd;
@@ -212,6 +213,8 @@ void ShowToastNotification(HWND hwnd, const wchar_t* message) {
     if (NOTIFICATION_DISABLED || NOTIFICATION_TIMEOUT_MS == 0) {
         return;
     }
+    
+    DestroyAllNotifications();
     
     if (!isClassRegistered) {
         RegisterNotificationClass(hInstance);
@@ -392,6 +395,10 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             break;
         }
         
+        case WM_NCHITTEST: {
+            return HTCLIENT;
+        }
+        
         case WM_LBUTTONDOWN: {
             NotificationData* data = GetNotificationData(hwnd);
             if (data) {
@@ -419,6 +426,15 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
     }
     
     return DefWindowProc(hwnd, msg, wParam, lParam);
+}
+
+/** Immediately destroy all notification windows */
+static void DestroyAllNotifications(void) {
+    HWND hwnd = NULL;
+    
+    while ((hwnd = FindWindowExW(NULL, NULL, NOTIFICATION_CLASS_NAME, NULL)) != NULL) {
+        DestroyWindow(hwnd);
+    }
 }
 
 /** Trigger fade-out for all visible notifications */
