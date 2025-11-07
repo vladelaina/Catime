@@ -70,7 +70,8 @@ BOOL ExtractDirectoryU8(const char* path, char* dir, size_t dirSize) {
     if (separator) {
         *separator = '\0';
     } else {
-        strcpy(dir, ".");
+        dir[0] = '.';
+        dir[1] = '\0';
     }
     
     return TRUE;

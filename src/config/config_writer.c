@@ -11,6 +11,7 @@
 #include "font.h"
 #include "color/color.h"
 #include "tray/tray_animation_core.h"
+#include "utils/string_safe.h"
 #include "../resource/resource.h"
 #include <stdio.h>
 #include <string.h>
@@ -82,182 +83,182 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int* count) {
     int idx = 0;
     
     /* General section */
-    strcpy(items[idx].section, INI_SECTION_GENERAL);
-    strcpy(items[idx].key, "CONFIG_VERSION");
-    strcpy(items[idx].value, CATIME_VERSION);
+    safe_strncpy(items[idx].section, INI_SECTION_GENERAL, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "CONFIG_VERSION", sizeof(items[idx].key));
+    safe_strncpy(items[idx].value, CATIME_VERSION, sizeof(items[idx].value));
     idx++;
     
-    strcpy(items[idx].section, INI_SECTION_GENERAL);
-    strcpy(items[idx].key, "LANGUAGE");
-    strcpy(items[idx].value, LanguageToString(GetCurrentLanguage()));
+    safe_strncpy(items[idx].section, INI_SECTION_GENERAL, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "LANGUAGE", sizeof(items[idx].key));
+    safe_strncpy(items[idx].value, LanguageToString(GetCurrentLanguage()), sizeof(items[idx].value));
     idx++;
     
-    strcpy(items[idx].section, INI_SECTION_GENERAL);
-    strcpy(items[idx].key, "SHORTCUT_CHECK_DONE");
-    strcpy(items[idx].value, IsShortcutCheckDone() ? "TRUE" : "FALSE");
+    safe_strncpy(items[idx].section, INI_SECTION_GENERAL, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "SHORTCUT_CHECK_DONE", sizeof(items[idx].key));
+    safe_strncpy(items[idx].value, IsShortcutCheckDone() ? "TRUE" : "FALSE", sizeof(items[idx].value));
     idx++;
     
     /* Display section */
-    strcpy(items[idx].section, INI_SECTION_DISPLAY);
-    strcpy(items[idx].key, "CLOCK_TEXT_COLOR");
-    strcpy(items[idx].value, CLOCK_TEXT_COLOR);
+    safe_strncpy(items[idx].section, INI_SECTION_DISPLAY, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "CLOCK_TEXT_COLOR", sizeof(items[idx].key));
+    safe_strncpy(items[idx].value, CLOCK_TEXT_COLOR, sizeof(items[idx].value));
     idx++;
     
-    strcpy(items[idx].section, INI_SECTION_DISPLAY);
-    strcpy(items[idx].key, "CLOCK_BASE_FONT_SIZE");
-    sprintf(items[idx].value, "%d", CLOCK_BASE_FONT_SIZE);
+    safe_strncpy(items[idx].section, INI_SECTION_DISPLAY, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "CLOCK_BASE_FONT_SIZE", sizeof(items[idx].key));
+    snprintf(items[idx].value, sizeof(items[idx].value), "%d", CLOCK_BASE_FONT_SIZE);
     idx++;
     
-    strcpy(items[idx].section, INI_SECTION_DISPLAY);
-    strcpy(items[idx].key, "FONT_FILE_NAME");
-    strcpy(items[idx].value, FONT_FILE_NAME);
+    safe_strncpy(items[idx].section, INI_SECTION_DISPLAY, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "FONT_FILE_NAME", sizeof(items[idx].key));
+    safe_strncpy(items[idx].value, FONT_FILE_NAME, sizeof(items[idx].value));
     idx++;
     
-    strcpy(items[idx].section, INI_SECTION_DISPLAY);
-    strcpy(items[idx].key, "CLOCK_WINDOW_POS_X");
-    sprintf(items[idx].value, "%d", CLOCK_WINDOW_POS_X);
+    safe_strncpy(items[idx].section, INI_SECTION_DISPLAY, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "CLOCK_WINDOW_POS_X", sizeof(items[idx].key));
+    snprintf(items[idx].value, sizeof(items[idx].value), "%d", CLOCK_WINDOW_POS_X);
     idx++;
     
-    strcpy(items[idx].section, INI_SECTION_DISPLAY);
-    strcpy(items[idx].key, "CLOCK_WINDOW_POS_Y");
-    sprintf(items[idx].value, "%d", CLOCK_WINDOW_POS_Y);
+    safe_strncpy(items[idx].section, INI_SECTION_DISPLAY, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "CLOCK_WINDOW_POS_Y", sizeof(items[idx].key));
+    snprintf(items[idx].value, sizeof(items[idx].value), "%d", CLOCK_WINDOW_POS_Y);
     idx++;
     
-    strcpy(items[idx].section, INI_SECTION_DISPLAY);
-    strcpy(items[idx].key, "WINDOW_SCALE");
-    sprintf(items[idx].value, "%.2f", CLOCK_WINDOW_SCALE);
+    safe_strncpy(items[idx].section, INI_SECTION_DISPLAY, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "WINDOW_SCALE", sizeof(items[idx].key));
+    snprintf(items[idx].value, sizeof(items[idx].value), "%.2f", CLOCK_WINDOW_SCALE);
     idx++;
     
-    strcpy(items[idx].section, INI_SECTION_DISPLAY);
-    strcpy(items[idx].key, "WINDOW_TOPMOST");
-    strcpy(items[idx].value, CLOCK_WINDOW_TOPMOST ? "TRUE" : "FALSE");
+    safe_strncpy(items[idx].section, INI_SECTION_DISPLAY, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "WINDOW_TOPMOST", sizeof(items[idx].key));
+    safe_strncpy(items[idx].value, CLOCK_WINDOW_TOPMOST ? "TRUE" : "FALSE", sizeof(items[idx].value));
     idx++;
     
     /* Timer section */
-    strcpy(items[idx].section, INI_SECTION_TIMER);
-    strcpy(items[idx].key, "CLOCK_DEFAULT_START_TIME");
-    sprintf(items[idx].value, "%d", g_AppConfig.timer.default_start_time);
+    safe_strncpy(items[idx].section, INI_SECTION_TIMER, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "CLOCK_DEFAULT_START_TIME", sizeof(items[idx].key));
+    snprintf(items[idx].value, sizeof(items[idx].value), "%d", g_AppConfig.timer.default_start_time);
     idx++;
     
-    strcpy(items[idx].section, INI_SECTION_TIMER);
-    strcpy(items[idx].key, "CLOCK_USE_24HOUR");
-    strcpy(items[idx].value, CLOCK_USE_24HOUR ? "TRUE" : "FALSE");
+    safe_strncpy(items[idx].section, INI_SECTION_TIMER, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "CLOCK_USE_24HOUR", sizeof(items[idx].key));
+    safe_strncpy(items[idx].value, CLOCK_USE_24HOUR ? "TRUE" : "FALSE", sizeof(items[idx].value));
     idx++;
     
-    strcpy(items[idx].section, INI_SECTION_TIMER);
-    strcpy(items[idx].key, "CLOCK_SHOW_SECONDS");
-    strcpy(items[idx].value, CLOCK_SHOW_SECONDS ? "TRUE" : "FALSE");
+    safe_strncpy(items[idx].section, INI_SECTION_TIMER, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "CLOCK_SHOW_SECONDS", sizeof(items[idx].key));
+    safe_strncpy(items[idx].value, CLOCK_SHOW_SECONDS ? "TRUE" : "FALSE", sizeof(items[idx].value));
     idx++;
     
-    strcpy(items[idx].section, INI_SECTION_TIMER);
-    strcpy(items[idx].key, "CLOCK_TIME_FORMAT");
-    strcpy(items[idx].value, TimeFormatTypeToString(g_AppConfig.display.time_format.format));
+    safe_strncpy(items[idx].section, INI_SECTION_TIMER, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "CLOCK_TIME_FORMAT", sizeof(items[idx].key));
+    safe_strncpy(items[idx].value, TimeFormatTypeToString(g_AppConfig.display.time_format.format), sizeof(items[idx].value));
     idx++;
     
-    strcpy(items[idx].section, INI_SECTION_TIMER);
-    strcpy(items[idx].key, "CLOCK_SHOW_MILLISECONDS");
-    strcpy(items[idx].value, g_AppConfig.display.time_format.show_milliseconds ? "TRUE" : "FALSE");
+    safe_strncpy(items[idx].section, INI_SECTION_TIMER, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "CLOCK_SHOW_MILLISECONDS", sizeof(items[idx].key));
+    safe_strncpy(items[idx].value, g_AppConfig.display.time_format.show_milliseconds ? "TRUE" : "FALSE", sizeof(items[idx].value));
     idx++;
     
-    strcpy(items[idx].section, INI_SECTION_TIMER);
-    strcpy(items[idx].key, "CLOCK_TIMEOUT_TEXT");
-    strcpy(items[idx].value, CLOCK_TIMEOUT_TEXT);
+    safe_strncpy(items[idx].section, INI_SECTION_TIMER, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "CLOCK_TIMEOUT_TEXT", sizeof(items[idx].key));
+    safe_strncpy(items[idx].value, CLOCK_TIMEOUT_TEXT, sizeof(items[idx].value));
     idx++;
     
-    strcpy(items[idx].section, INI_SECTION_TIMER);
-    strcpy(items[idx].key, "CLOCK_TIMEOUT_ACTION");
-    strcpy(items[idx].value, TimeoutActionTypeToString(CLOCK_TIMEOUT_ACTION));
+    safe_strncpy(items[idx].section, INI_SECTION_TIMER, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "CLOCK_TIMEOUT_ACTION", sizeof(items[idx].key));
+    safe_strncpy(items[idx].value, TimeoutActionTypeToString(CLOCK_TIMEOUT_ACTION), sizeof(items[idx].value));
     idx++;
     
-    strcpy(items[idx].section, INI_SECTION_TIMER);
-    strcpy(items[idx].key, "CLOCK_TIMEOUT_FILE");
-    strcpy(items[idx].value, CLOCK_TIMEOUT_FILE_PATH);
+    safe_strncpy(items[idx].section, INI_SECTION_TIMER, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "CLOCK_TIMEOUT_FILE", sizeof(items[idx].key));
+    safe_strncpy(items[idx].value, CLOCK_TIMEOUT_FILE_PATH, sizeof(items[idx].value));
     idx++;
     
-    strcpy(items[idx].section, INI_SECTION_TIMER);
-    strcpy(items[idx].key, "CLOCK_TIMEOUT_WEBSITE");
+    safe_strncpy(items[idx].section, INI_SECTION_TIMER, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "CLOCK_TIMEOUT_WEBSITE", sizeof(items[idx].key));
     WideCharToMultiByte(CP_UTF8, 0, CLOCK_TIMEOUT_WEBSITE_URL, -1, 
                        items[idx].value, sizeof(items[idx].value), NULL, NULL);
     idx++;
     
     /* Time options */
-    strcpy(items[idx].section, INI_SECTION_TIMER);
-    strcpy(items[idx].key, "CLOCK_TIME_OPTIONS");
+    safe_strncpy(items[idx].section, INI_SECTION_TIMER, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "CLOCK_TIME_OPTIONS", sizeof(items[idx].key));
     items[idx].value[0] = '\0';
     for (int i = 0; i < time_options_count; i++) {
         char buffer[16];
-        sprintf(buffer, "%d", time_options[i]);
-        if (i > 0) strcat(items[idx].value, ",");
-        strcat(items[idx].value, buffer);
+        snprintf(buffer, sizeof(buffer), "%d", time_options[i]);
+        if (i > 0) safe_strncat(items[idx].value, ",", sizeof(items[idx].value));
+        safe_strncat(items[idx].value, buffer, sizeof(items[idx].value));
     }
     idx++;
     
-    strcpy(items[idx].section, INI_SECTION_TIMER);
-    strcpy(items[idx].key, "STARTUP_MODE");
-    strcpy(items[idx].value, CLOCK_STARTUP_MODE);
+    safe_strncpy(items[idx].section, INI_SECTION_TIMER, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "STARTUP_MODE", sizeof(items[idx].key));
+    safe_strncpy(items[idx].value, CLOCK_STARTUP_MODE, sizeof(items[idx].value));
     idx++;
     
     /* Pomodoro section */
-    strcpy(items[idx].section, INI_SECTION_POMODORO);
-    strcpy(items[idx].key, "POMODORO_TIME_OPTIONS");
+    safe_strncpy(items[idx].section, INI_SECTION_POMODORO, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "POMODORO_TIME_OPTIONS", sizeof(items[idx].key));
     items[idx].value[0] = '\0';
     for (int i = 0; i < g_AppConfig.pomodoro.times_count; i++) {
         char buffer[16];
-        sprintf(buffer, "%d", g_AppConfig.pomodoro.times[i]);
-        if (i > 0) strcat(items[idx].value, ",");
-        strcat(items[idx].value, buffer);
+        snprintf(buffer, sizeof(buffer), "%d", g_AppConfig.pomodoro.times[i]);
+        if (i > 0) safe_strncat(items[idx].value, ",", sizeof(items[idx].value));
+        safe_strncat(items[idx].value, buffer, sizeof(items[idx].value));
     }
     idx++;
     
-    strcpy(items[idx].section, INI_SECTION_POMODORO);
-    strcpy(items[idx].key, "POMODORO_LOOP_COUNT");
-    sprintf(items[idx].value, "%d", g_AppConfig.pomodoro.loop_count);
+    safe_strncpy(items[idx].section, INI_SECTION_POMODORO, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "POMODORO_LOOP_COUNT", sizeof(items[idx].key));
+    snprintf(items[idx].value, sizeof(items[idx].value), "%d", g_AppConfig.pomodoro.loop_count);
     idx++;
     
     /* Notification section */
-    strcpy(items[idx].section, INI_SECTION_NOTIFICATION);
-    strcpy(items[idx].key, "CLOCK_TIMEOUT_MESSAGE_TEXT");
-    strcpy(items[idx].value, g_AppConfig.notification.messages.timeout_message);
+    safe_strncpy(items[idx].section, INI_SECTION_NOTIFICATION, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "CLOCK_TIMEOUT_MESSAGE_TEXT", sizeof(items[idx].key));
+    safe_strncpy(items[idx].value, g_AppConfig.notification.messages.timeout_message, sizeof(items[idx].value));
     idx++;
     
-    strcpy(items[idx].section, INI_SECTION_NOTIFICATION);
-    strcpy(items[idx].key, "POMODORO_TIMEOUT_MESSAGE_TEXT");
-    strcpy(items[idx].value, g_AppConfig.notification.messages.pomodoro_message);
+    safe_strncpy(items[idx].section, INI_SECTION_NOTIFICATION, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "POMODORO_TIMEOUT_MESSAGE_TEXT", sizeof(items[idx].key));
+    safe_strncpy(items[idx].value, g_AppConfig.notification.messages.pomodoro_message, sizeof(items[idx].value));
     idx++;
     
-    strcpy(items[idx].section, INI_SECTION_NOTIFICATION);
-    strcpy(items[idx].key, "POMODORO_CYCLE_COMPLETE_TEXT");
-    strcpy(items[idx].value, g_AppConfig.notification.messages.cycle_complete_message);
+    safe_strncpy(items[idx].section, INI_SECTION_NOTIFICATION, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "POMODORO_CYCLE_COMPLETE_TEXT", sizeof(items[idx].key));
+    safe_strncpy(items[idx].value, g_AppConfig.notification.messages.cycle_complete_message, sizeof(items[idx].value));
     idx++;
     
-    strcpy(items[idx].section, INI_SECTION_NOTIFICATION);
-    strcpy(items[idx].key, "NOTIFICATION_TIMEOUT_MS");
-    sprintf(items[idx].value, "%d", g_AppConfig.notification.display.timeout_ms);
+    safe_strncpy(items[idx].section, INI_SECTION_NOTIFICATION, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "NOTIFICATION_TIMEOUT_MS", sizeof(items[idx].key));
+    snprintf(items[idx].value, sizeof(items[idx].value), "%d", g_AppConfig.notification.display.timeout_ms);
     idx++;
     
-    strcpy(items[idx].section, INI_SECTION_NOTIFICATION);
-    strcpy(items[idx].key, "NOTIFICATION_MAX_OPACITY");
-    sprintf(items[idx].value, "%d", g_AppConfig.notification.display.max_opacity);
+    safe_strncpy(items[idx].section, INI_SECTION_NOTIFICATION, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "NOTIFICATION_MAX_OPACITY", sizeof(items[idx].key));
+    snprintf(items[idx].value, sizeof(items[idx].value), "%d", g_AppConfig.notification.display.max_opacity);
     idx++;
     
-    strcpy(items[idx].section, INI_SECTION_NOTIFICATION);
-    strcpy(items[idx].key, "NOTIFICATION_TYPE");
-    strcpy(items[idx].value, NotificationTypeToString(g_AppConfig.notification.display.type));
+    safe_strncpy(items[idx].section, INI_SECTION_NOTIFICATION, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "NOTIFICATION_TYPE", sizeof(items[idx].key));
+    safe_strncpy(items[idx].value, NotificationTypeToString(g_AppConfig.notification.display.type), sizeof(items[idx].value));
     idx++;
     
-    strcpy(items[idx].section, INI_SECTION_NOTIFICATION);
-    strcpy(items[idx].key, "NOTIFICATION_SOUND_FILE");
-    strcpy(items[idx].value, g_AppConfig.notification.sound.sound_file);
+    safe_strncpy(items[idx].section, INI_SECTION_NOTIFICATION, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "NOTIFICATION_SOUND_FILE", sizeof(items[idx].key));
+    safe_strncpy(items[idx].value, g_AppConfig.notification.sound.sound_file, sizeof(items[idx].value));
     idx++;
     
-    strcpy(items[idx].section, INI_SECTION_NOTIFICATION);
-    strcpy(items[idx].key, "NOTIFICATION_SOUND_VOLUME");
-    sprintf(items[idx].value, "%d", g_AppConfig.notification.sound.volume);
+    safe_strncpy(items[idx].section, INI_SECTION_NOTIFICATION, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "NOTIFICATION_SOUND_VOLUME", sizeof(items[idx].key));
+    snprintf(items[idx].value, sizeof(items[idx].value), "%d", g_AppConfig.notification.sound.volume);
     idx++;
     
-    strcpy(items[idx].section, INI_SECTION_NOTIFICATION);
-    strcpy(items[idx].key, "NOTIFICATION_DISABLED");
-    strcpy(items[idx].value, g_AppConfig.notification.display.disabled ? "TRUE" : "FALSE");
+    safe_strncpy(items[idx].section, INI_SECTION_NOTIFICATION, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "NOTIFICATION_DISABLED", sizeof(items[idx].key));
+    safe_strncpy(items[idx].value, g_AppConfig.notification.display.disabled ? "TRUE" : "FALSE", sizeof(items[idx].value));
     idx++;
     
     /* Hotkeys */
@@ -275,31 +276,31 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int* count) {
     };
     
     for (int i = 0; i < 12; i++) {
-        strcpy(items[idx].section, INI_SECTION_HOTKEYS);
-        strcpy(items[idx].key, hotkeyNames[i]);
+        safe_strncpy(items[idx].section, INI_SECTION_HOTKEYS, sizeof(items[idx].section));
+        safe_strncpy(items[idx].key, hotkeyNames[i], sizeof(items[idx].key));
         HotkeyToString(hotkeys[i], items[idx].value, sizeof(items[idx].value));
         idx++;
     }
     
     /* Recent files */
     for (int i = 0; i < MAX_RECENT_FILES; i++) {
-        strcpy(items[idx].section, INI_SECTION_RECENTFILES);
-        sprintf(items[idx].key, "CLOCK_RECENT_FILE_%d", i + 1);
+        safe_strncpy(items[idx].section, INI_SECTION_RECENTFILES, sizeof(items[idx].section));
+        snprintf(items[idx].key, sizeof(items[idx].key), "CLOCK_RECENT_FILE_%d", i + 1);
         if (i < g_AppConfig.recent_files.count) {
-            strcpy(items[idx].value, g_AppConfig.recent_files.files[i].path);
+            safe_strncpy(items[idx].value, g_AppConfig.recent_files.files[i].path, sizeof(items[idx].value));
         } else {
-            strcpy(items[idx].value, "");
+            safe_strncpy(items[idx].value, "", sizeof(items[idx].value));
         }
         idx++;
     }
     
     /* Colors */
-    strcpy(items[idx].section, INI_SECTION_COLORS);
-    strcpy(items[idx].key, "COLOR_OPTIONS");
+    safe_strncpy(items[idx].section, INI_SECTION_COLORS, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "COLOR_OPTIONS", sizeof(items[idx].key));
     items[idx].value[0] = '\0';
     for (int i = 0; i < COLOR_OPTIONS_COUNT; i++) {
-        if (i > 0) strcat(items[idx].value, ",");
-        strcat(items[idx].value, COLOR_OPTIONS[i].hexColor);
+        if (i > 0) safe_strncat(items[idx].value, ",", sizeof(items[idx].value));
+        safe_strncat(items[idx].value, COLOR_OPTIONS[i].hexColor, sizeof(items[idx].value));
     }
     idx++;
     
