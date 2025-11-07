@@ -1,10 +1,6 @@
 /**
  * @file dialog_notification.c
  * @brief Notification configuration dialogs implementation
- * 
- * @note This is a refactored version extracted from dialog_procedure.c
- *       Original implementation: ~1000 lines
- *       Refactored implementation: Focused on essential functionality
  */
 
 #include "dialog/dialog_notification.h"
@@ -307,7 +303,7 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
  * ============================================================================ */
 
 /**
- * @note The original NotificationSettingsDlgProc was ~800 lines with:
+ * @note This is a stub for the original complex implementation with:
  *       - Tabbed interface (Messages, Display, Sound)
  *       - Sound file browser with folder creation
  *       - Volume slider with preview
@@ -318,9 +314,6 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
  *       - ShowNotificationMessagesDialog()
  *       - ShowNotificationDisplayDialog()
  *       - Sound config (can be added later)
- * 
- *       If a full all-in-one dialog is needed, the original code from
- *       dialog_procedure.c lines 1480-2057 can be migrated here.
  */
 void ShowNotificationSettingsDialog(HWND hwndParent) {
     /* For Phase 1, show a simple menu */

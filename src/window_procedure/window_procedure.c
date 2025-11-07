@@ -1,6 +1,6 @@
 /**
  * @file window_procedure.c
- * @brief Main window procedure and public API (refactored from 3110 lines → 250 lines)
+ * @brief Main window procedure and public API
  */
 
 #include "window_procedure/window_procedure.h"

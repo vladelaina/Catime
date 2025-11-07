@@ -321,8 +321,7 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
  * ============================================================================ */
 
 /**
- * @note Full implementation was in original dialog_procedure.c (lines 1938-2057)
- *       This is a minimal stub for compilation.
+ * @note This is a minimal stub for compilation.
  *       TODO: Migrate full implementation with markdown parsing if needed.
  */
 INT_PTR ShowFontLicenseDialog(HWND hwndParent) {

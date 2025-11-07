@@ -20,48 +20,48 @@ file(GLOB_RECURSE SOURCES "src/*.c")
 
 # Explicitly list refactored modules for clarity (optional, GLOB_RECURSE already includes them)
 
-# Main Entry modules (refactored from main.c - 566 lines → 4 specialized modules):
-#   src/main/main_cli_routing.c        - CLI command routing and forwarding (~170 lines)
-#   src/main/main_single_instance.c    - Single instance detection (~110 lines)
-#   src/main/main_initialization.c     - Subsystem initialization and window setup (~230 lines)
-#   src/main/main_entry.c              - WinMain entry point (~70 lines)
+# Main Entry modules (refactored from main.c into 4 specialized modules):
+#   src/main/main_cli_routing.c        - CLI command routing and forwarding
+#   src/main/main_single_instance.c    - Single instance detection
+#   src/main/main_initialization.c     - Subsystem initialization and window setup
+#   src/main/main_entry.c              - WinMain entry point
 
-# Log modules (refactored from log.c - 478 lines → 3 specialized modules):
-#   src/log/log_core.c         - Logging core with rotation (~230 lines)
-#   src/log/log_system_info.c  - System information collection (~200 lines)
-#   src/log/log_exception.c    - Exception handling (~110 lines)
+# Log modules (refactored from log.c into 3 specialized modules):
+#   src/log/log_core.c         - Logging core with rotation
+#   src/log/log_system_info.c  - System information collection
+#   src/log/log_exception.c    - Exception handling
 
-# Drawing modules (refactored from drawing.c - 463 lines → 3 specialized modules):
-#   src/drawing/drawing_timer_precision.c - High-precision sub-second tracking (~50 lines)
-#   src/drawing/drawing_time_format.c     - Time component formatting (~220 lines)
-#   src/drawing/drawing_render.c          - GDI rendering pipeline (~200 lines)
+# Drawing modules (refactored from drawing.c into 3 specialized modules):
+#   src/drawing/drawing_timer_precision.c - High-precision sub-second tracking
+#   src/drawing/drawing_time_format.c     - Time component formatting
+#   src/drawing/drawing_render.c          - GDI rendering pipeline
 
-# Window Core modules (refactored from window.c - 796 lines → 5 specialized modules):
-#   src/window/window_core.c                - Core window creation (~180 lines)
-#   src/window/window_visual_effects.c      - Visual effects (blur, click-through) (~120 lines)
-#   src/window/window_multimonitor.c        - Multi-monitor detection (~180 lines)
-#   src/window/window_initialization.c      - Application initialization (~200 lines)
-#   src/window/window_desktop_integration.c - Desktop integration and Z-order (~120 lines)
+# Window Core modules (refactored from window.c into 5 specialized modules):
+#   src/window/window_core.c                - Core window creation
+#   src/window/window_visual_effects.c      - Visual effects (blur, click-through)
+#   src/window/window_multimonitor.c        - Multi-monitor detection
+#   src/window/window_initialization.c      - Application initialization
+#   src/window/window_desktop_integration.c - Desktop integration and Z-order
 
-# Window Procedure modules (refactored from window_procedure.c - 3110 lines → 8 specialized modules):
-#   src/window_procedure.c          - Main procedure and dispatch (~300 lines)
-#   src/window_message_handlers.c   - Windows message handlers (~500 lines)
-#   src/window_commands.c            - Menu command handlers (~550 lines)
-#   src/window_config_handlers.c     - Configuration reload handlers (~500 lines)
-#   src/window_hotkeys.c             - Global hotkey management (~300 lines)
-#   src/window_menus.c               - Menu construction and preview (~450 lines)
-#   src/window_helpers.c             - Business logic helpers (~400 lines)
-#   src/window_utils.c               - Low-level utilities (~150 lines)
+# Window Procedure modules (refactored from window_procedure.c into 8 specialized modules):
+#   src/window_procedure.c          - Main procedure and dispatch
+#   src/window_message_handlers.c   - Windows message handlers
+#   src/window_commands.c            - Menu command handlers
+#   src/window_config_handlers.c     - Configuration reload handlers
+#   src/window_hotkeys.c             - Global hotkey management
+#   src/window_menus.c               - Menu construction and preview
+#   src/window_helpers.c             - Business logic helpers
+#   src/window_utils.c               - Low-level utilities
 
-# Tray Animation modules (refactored from tray_animation.c - 2074 lines → 8 specialized modules):
-#   src/tray_animation_core.c       - Lifecycle coordination (~650 lines)
-#   src/tray_animation_decoder.c    - WIC image decoding (~450 lines)
-#   src/tray_animation_loader.c     - Resource loading (~380 lines)
-#   src/tray_animation_timer.c      - High-precision timing (~280 lines)
-#   src/tray_animation_menu.c       - Menu building (~350 lines)
-#   src/tray_animation_percent.c    - Percent icon generation (~120 lines)
-#   src/utils/memory_pool.c         - Memory pool utilities (~80 lines)
-#   src/utils/natural_sort.c        - Natural string sorting (~120 lines)
+# Tray Animation modules (refactored from tray_animation.c into 8 specialized modules):
+#   src/tray_animation_core.c       - Lifecycle coordination
+#   src/tray_animation_decoder.c    - WIC image decoding
+#   src/tray_animation_loader.c     - Resource loading
+#   src/tray_animation_timer.c      - High-precision timing
+#   src/tray_animation_menu.c       - Menu building
+#   src/tray_animation_percent.c    - Percent icon generation
+#   src/utils/memory_pool.c         - Memory pool utilities
+#   src/utils/natural_sort.c        - Natural string sorting
 
 # Configuration modules (refactored from config_core.c):
 #   src/config_core.c       - Coordinator (simplified)
@@ -70,23 +70,23 @@ file(GLOB_RECURSE SOURCES "src/*.c")
 #   src/config_applier.c    - Applying to global variables
 #   src/config_writer.c     - Collecting and writing
 
-# Dialog modules (refactored from dialog_procedure.c - 2057 lines → 6 modules):
-#   src/dialog_common.c       - Common infrastructure (~400 lines)
-#   src/dialog_error.c        - Error dialogs (~50 lines)
-#   src/dialog_input.c        - Generic input dialogs (~400 lines)
-#   src/dialog_info.c         - About, website, etc. (~350 lines)
-#   src/dialog_pomodoro.c     - Pomodoro dialogs (~300 lines)
-#   src/dialog_notification.c - Notification settings (~400 lines)
+# Dialog modules (refactored from dialog_procedure.c into 6 modules):
+#   src/dialog_common.c       - Common infrastructure
+#   src/dialog_error.c        - Error dialogs
+#   src/dialog_input.c        - Generic input dialogs
+#   src/dialog_info.c         - About, website, etc.
+#   src/dialog_pomodoro.c     - Pomodoro dialogs
+#   src/dialog_notification.c - Notification settings
 
-# Font modules (refactored from font.c - 767 lines → 4 specialized modules):
-#   src/font/font_ttf_parser.c    - Binary TTF/OTF parsing (~180 lines)
-#   src/font/font_path_manager.c  - Path resolution and auto-recovery (~240 lines)
-#   src/font/font_manager.c       - Loading, preview, GDI management (~330 lines)
-#   src/font/font_config.c        - Configuration persistence (~50 lines)
+# Font modules (refactored from font.c into 4 specialized modules):
+#   src/font/font_ttf_parser.c    - Binary TTF/OTF parsing
+#   src/font/font_path_manager.c  - Path resolution and auto-recovery
+#   src/font/font_manager.c       - Loading, preview, GDI management
+#   src/font/font_config.c        - Configuration persistence
 
 # Utility modules (extracted from multiple files - eliminates duplication):
-#   src/utils/string_convert.c    - UTF-8 ↔ UTF-16 conversion (~80 lines)
-#   src/utils/path_utils.c        - Path manipulation (~260 lines)
+#   src/utils/string_convert.c    - UTF-8 ↔ UTF-16 conversion
+#   src/utils/path_utils.c        - Path manipulation
 
 # Collect all header files
 file(GLOB_RECURSE HEADERS "include/*.h")

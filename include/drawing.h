@@ -5,7 +5,7 @@
  * Double buffering prevents flicker during frequent updates (especially for centiseconds).
  * RenderContext struct reduces parameter passing in rendering pipeline.
  * 
- * Refactored architecture (463 lines → 3 specialized modules):
+ * Refactored architecture:
  * - drawing_timer_precision.c - High-precision sub-second tracking
  * - drawing_time_format.c     - Time component retrieval and formatting
  * - drawing_render.c          - GDI rendering pipeline

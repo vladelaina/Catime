@@ -9,8 +9,6 @@
  * - config_writer: Collecting and writing config
  * 
  * This file maintains backward compatibility with the original API.
- * 
- * @note After refactoring, this file is now ~150 lines vs original 816 lines
  */
 #include "config.h"
 #include "config/config_defaults.h"
@@ -58,8 +56,6 @@ BOOL PREVIEW_SHOW_MILLISECONDS = FALSE;
  * 1. Load from file (config_loader)
  * 2. Validate snapshot (config_loader)
  * 3. Apply to globals (config_applier)
- * 
- * Significantly simpler than original 338-line implementation.
  */
 void ReadConfig() {
     CheckAndCreateResourceFolders();
@@ -100,7 +96,6 @@ void ReadConfig() {
  * 
  * @details
  * Delegates to config_writer module.
- * Significantly simpler than original 174-line implementation.
  */
 /* WriteConfig is now in config_writer module */
 /* Re-exported here for backward compatibility */

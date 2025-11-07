@@ -12,16 +12,6 @@
  * - dialog_info.h      : About, font license, website, CLI help
  * - dialog_pomodoro.h  : Pomodoro-specific dialogs
  * - dialog_notification.h : Notification configuration
- * 
- * Original dialog_procedure.c (2057 lines) has been split into:
- * - dialog_common.c    (~400 lines)
- * - dialog_error.c     (~50 lines)
- * - dialog_input.c     (~400 lines)
- * - dialog_info.c      (~350 lines)
- * - dialog_pomodoro.c  (~300 lines)
- * - dialog_notification.c (~400 lines)
- * 
- * Total: ~1900 lines across 6 files (avg ~300 lines/file)
  */
 
 #ifndef DIALOG_PROCEDURE_H
