@@ -217,6 +217,11 @@ static LRESULT CmdShowCurrentTime(HWND hwnd, WPARAM wp, LPARAM lp) {
         TimerModeParams params = {0, TRUE, FALSE, TRUE};
         SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
     }
+    
+    // Ensure timer is running after mode switch
+    KillTimer(hwnd, 1);
+    ResetTimerWithInterval(hwnd);
+    
     return 0;
 }
 
@@ -239,6 +244,10 @@ static LRESULT CmdCountUp(HWND hwnd, WPARAM wp, LPARAM lp) {
     if (!CLOCK_COUNT_UP) {
         TimerModeParams params = {0, TRUE, FALSE, TRUE};
         SwitchTimerMode(hwnd, TIMER_MODE_COUNTUP, &params);
+        
+        // Ensure timer is running
+        KillTimer(hwnd, 1);
+        ResetTimerWithInterval(hwnd);
     } else {
         CLOCK_COUNT_UP = FALSE;
         KillTimer(hwnd, 1);
@@ -255,6 +264,10 @@ static LRESULT CmdCountUpStart(HWND hwnd, WPARAM wp, LPARAM lp) {
     if (!CLOCK_COUNT_UP) {
         TimerModeParams params = {0, TRUE, FALSE, TRUE};
         SwitchTimerMode(hwnd, TIMER_MODE_COUNTUP, &params);
+        
+        // Ensure timer is running
+        KillTimer(hwnd, 1);
+        ResetTimerWithInterval(hwnd);
     } else {
         CLOCK_IS_PAUSED = !CLOCK_IS_PAUSED;
     }
@@ -313,6 +326,10 @@ static LRESULT CmdPomodoroStart(HWND hwnd, WPARAM wp, LPARAM lp) {
     InitializePomodoro();
     extern TimeoutActionType CLOCK_TIMEOUT_ACTION;
     CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
+    
+    // Ensure timer is running after starting Pomodoro
+    KillTimer(hwnd, 1);
+    ResetTimerWithInterval(hwnd);
     
     InvalidateRect(hwnd, NULL, TRUE);
     return 0;

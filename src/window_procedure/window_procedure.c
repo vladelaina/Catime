@@ -144,6 +144,10 @@ void ToggleShowTimeMode(HWND hwnd) {
     if (!CLOCK_SHOW_CURRENT_TIME) {
         TimerModeParams params = {0, TRUE, FALSE, TRUE};
         SwitchTimerMode(hwnd, TIMER_MODE_SHOW_TIME, &params);
+        
+        // Ensure timer is running
+        KillTimer(hwnd, 1);
+        ResetTimerWithInterval(hwnd);
     }
 }
 
@@ -152,6 +156,10 @@ void StartCountUp(HWND hwnd) {
     
     TimerModeParams params = {0, TRUE, FALSE, TRUE};
     SwitchTimerMode(hwnd, TIMER_MODE_COUNTUP, &params);
+    
+    // Ensure timer is running
+    KillTimer(hwnd, 1);
+    ResetTimerWithInterval(hwnd);
 }
 
 void StartDefaultCountDown(HWND hwnd) {
@@ -165,6 +173,10 @@ void StartDefaultCountDown(HWND hwnd) {
     if (CLOCK_DEFAULT_START_TIME > 0) {
         TimerModeParams params = {CLOCK_DEFAULT_START_TIME, TRUE, FALSE, TRUE};
         SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
+        
+        // Ensure timer is running
+        KillTimer(hwnd, 1);
+        ResetTimerWithInterval(hwnd);
     } else {
         PostMessage(hwnd, WM_COMMAND, 101, 0);
     }
@@ -293,6 +305,12 @@ BOOL StartCountdownWithTime(HWND hwnd, int seconds) {
     }
     
     TimerModeParams params = {seconds, TRUE, TRUE, TRUE};
-    return SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
+    BOOL result = SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
+    
+    // Ensure timer is running
+    KillTimer(hwnd, 1);
+    ResetTimerWithInterval(hwnd);
+    
+    return result;
 }
 
