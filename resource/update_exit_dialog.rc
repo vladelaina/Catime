@@ -6,8 +6,9 @@
 /** @brief Simple exit notification dialog displayed before program termination */
 IDD_EXIT_DIALOG DIALOGEX 0, 0, 200, 85
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Catime - Update Notice"
 FONT 10, "Microsoft YaHei UI"
 BEGIN
-    CTEXT           "", IDC_EXIT_TEXT, 8, 20, 184, 20
-    DEFPUSHBUTTON   "", IDOK, 70, 55, 60, 14
+    CTEXT           "The application will exit now", IDC_EXIT_TEXT, 8, 20, 184, 20
+    DEFPUSHBUTTON   "OK", IDOK, 70, 55, 60, 14
 END

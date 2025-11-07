@@ -15,9 +15,9 @@ CAPTION "Open Website"
 FONT 9, "Segoe UI"
 BEGIN
     /** Instructions for URL format and usage */
-    LTEXT           "", CLOCK_IDC_STATIC, 10, 10, 260, 30
+    LTEXT           "Enter the website URL to open when the countdown ends:\nExample: https://github.com/vladelaina/Catime", CLOCK_IDC_STATIC, 10, 10, 260, 30
     /** URL input field with multiline support for long URLs */
     EDITTEXT        CLOCK_IDC_EDIT, 10, 45, 260, 20, ES_AUTOHSCROLL | ES_MULTILINE
     /** Confirmation button with runtime-populated text */
-    PUSHBUTTON      "", CLOCK_IDC_BUTTON_OK, 220, 75, 50, 14
+    PUSHBUTTON      "OK", CLOCK_IDC_BUTTON_OK, 220, 75, 50, 14
 END 

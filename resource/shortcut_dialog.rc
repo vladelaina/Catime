@@ -15,9 +15,9 @@ CAPTION "Countdown Presets"
 FONT 9, "Segoe UI"
 BEGIN
     /** Instructions for preset configuration format */
-    LTEXT           "", CLOCK_IDC_STATIC, 10, 10, 180, 70
+    LTEXT           "Enter time formats, separated by spaces\n\n30s = 30 seconds\n25m = 25 minutes\n1h30m = 1 hour 30 minutes\n\nExample: 25m 30s 1h30m", CLOCK_IDC_STATIC, 10, 10, 180, 70
     /** Timer duration input using standard countdown format */
     EDITTEXT        CLOCK_IDC_EDIT, 10, 85, 180, 20, ES_AUTOHSCROLL | ES_MULTILINE
     /** Save preset button */
-    PUSHBUTTON      "", CLOCK_IDC_BUTTON_OK, 140, 108, 50, 14
+    PUSHBUTTON      "OK", CLOCK_IDC_BUTTON_OK, 140, 108, 50, 14
 END 

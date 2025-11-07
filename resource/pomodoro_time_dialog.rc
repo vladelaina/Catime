@@ -10,13 +10,13 @@
 /** @brief Dialog for configuring individual Pomodoro timer durations */
 CLOCK_IDD_POMODORO_TIME_DIALOG DIALOGEX 0, 0, 200, 130
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION ""
+CAPTION "Set Pomodoro Time"
 FONT 9, "Segoe UI"
 BEGIN
     /** Runtime-populated instructions for specific timer type */
-    LTEXT           "", CLOCK_IDC_STATIC, 10, 10, 180, 60
+    LTEXT           "25=25 minutes\n25h=25 hours\n25s=25 seconds\n25 30=25 minutes 30 seconds\n25 30m=25 hours 30 minutes\n1 30 20=1 hour 30 minutes 20 seconds", CLOCK_IDC_STATIC, 10, 10, 180, 60
     /** Time duration input supporting countdown format */
     EDITTEXT        CLOCK_IDC_EDIT, 10, 75, 180, 20, ES_AUTOHSCROLL | ES_MULTILINE
     /** Save configuration button */
-    PUSHBUTTON      "", CLOCK_IDC_BUTTON_OK, 140, 100, 50, 14
+    PUSHBUTTON      "OK", CLOCK_IDC_BUTTON_OK, 140, 100, 50, 14
 END 

@@ -11,6 +11,7 @@
 /** @brief Compact dialog informing user no updates are available */
 IDD_NO_UPDATE_DIALOG DIALOGEX 0, 0, 160, 60
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Update Check"
 FONT 12, "Microsoft YaHei UI"
 BEGIN
     /** Centered status message */
