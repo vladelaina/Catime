@@ -155,22 +155,22 @@ static void BuildTimeoutActionSubmenu(HMENU hMenu) {
 
     HMENU hFileMenu = CreatePopupMenu();
 
-    for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; i++) {
+    for (int i = 0; i < g_AppConfig.recent_files.count; i++) {
         wchar_t wFileName[MAX_PATH];
-        MultiByteToWideChar(CP_UTF8, 0, CLOCK_RECENT_FILES[i].name, -1, wFileName, MAX_PATH);
+        MultiByteToWideChar(CP_UTF8, 0, g_AppConfig.recent_files.files[i].name, -1, wFileName, MAX_PATH);
         
         wchar_t truncatedName[MAX_PATH];
         TruncateFileName(wFileName, truncatedName, 25);
         
         BOOL isCurrentFile = (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE && 
                              strlen(CLOCK_TIMEOUT_FILE_PATH) > 0 && 
-                             strcmp(CLOCK_RECENT_FILES[i].path, CLOCK_TIMEOUT_FILE_PATH) == 0);
+                             strcmp(g_AppConfig.recent_files.files[i].path, CLOCK_TIMEOUT_FILE_PATH) == 0);
         
         AppendMenuW(hFileMenu, MF_STRING | (isCurrentFile ? MF_CHECKED : 0), 
                    CLOCK_IDM_RECENT_FILE_1 + i, truncatedName);
     }
                
-    if (CLOCK_RECENT_FILES_COUNT > 0) {
+    if (g_AppConfig.recent_files.count > 0) {
         AppendMenuW(hFileMenu, MF_SEPARATOR, 0, NULL);
     }
 
@@ -275,21 +275,21 @@ static void BuildPresetManagementSubmenu(HMENU hMenu) {
 static void BuildFormatSubmenu(HMENU hMenu) {
     HMENU hFormatMenu = CreatePopupMenu();
     
-    AppendMenuW(hFormatMenu, MF_STRING | (CLOCK_TIME_FORMAT == TIME_FORMAT_DEFAULT ? MF_CHECKED : MF_UNCHECKED),
+    AppendMenuW(hFormatMenu, MF_STRING | (g_AppConfig.display.time_format.format == TIME_FORMAT_DEFAULT ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDM_TIME_FORMAT_DEFAULT,
                 GetLocalizedString(NULL, L"Default Format"));
     
-    AppendMenuW(hFormatMenu, MF_STRING | (CLOCK_TIME_FORMAT == TIME_FORMAT_ZERO_PADDED ? MF_CHECKED : MF_UNCHECKED),
+    AppendMenuW(hFormatMenu, MF_STRING | (g_AppConfig.display.time_format.format == TIME_FORMAT_ZERO_PADDED ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDM_TIME_FORMAT_ZERO_PADDED,
                 GetLocalizedString(NULL, L"09:59 Format"));
     
-    AppendMenuW(hFormatMenu, MF_STRING | (CLOCK_TIME_FORMAT == TIME_FORMAT_FULL_PADDED ? MF_CHECKED : MF_UNCHECKED),
+    AppendMenuW(hFormatMenu, MF_STRING | (g_AppConfig.display.time_format.format == TIME_FORMAT_FULL_PADDED ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDM_TIME_FORMAT_FULL_PADDED,
                 GetLocalizedString(NULL, L"00:09:59 Format"));
     
     AppendMenuW(hFormatMenu, MF_SEPARATOR, 0, NULL);
     
-    AppendMenuW(hFormatMenu, MF_STRING | (CLOCK_SHOW_MILLISECONDS ? MF_CHECKED : MF_UNCHECKED),
+    AppendMenuW(hFormatMenu, MF_STRING | (g_AppConfig.display.time_format.show_milliseconds ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDM_TIME_FORMAT_SHOW_MILLISECONDS,
                 GetLocalizedString(NULL, L"Show Milliseconds"));
     

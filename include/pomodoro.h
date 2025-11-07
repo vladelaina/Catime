@@ -23,11 +23,9 @@ extern POMODORO_PHASE current_pomodoro_phase;
 extern int current_pomodoro_time_index;
 extern int complete_pomodoro_cycles;
 
-extern int POMODORO_TIMES[10];
-extern int POMODORO_TIMES_COUNT;
-
 /**
  * @note InitializePomodoro() declared in timer_events.h
+ * @note POMODORO_TIMES and related config now in g_AppConfig.pomodoro
  */
 
 #endif

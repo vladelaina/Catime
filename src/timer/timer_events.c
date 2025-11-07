@@ -29,9 +29,6 @@
 #define TAIL_FAST_INTERVAL_MS 250
 #define MAX_POMODORO_TIMES 10
 #define MESSAGE_BUFFER_SIZE 256
-extern char CLOCK_TIMEOUT_MESSAGE_TEXT[100];
-extern char POMODORO_TIMEOUT_MESSAGE_TEXT[100];
-extern char POMODORO_CYCLE_COMPLETE_TEXT[100];
 
 int current_pomodoro_time_index = 0;
 POMODORO_PHASE current_pomodoro_phase = POMODORO_PHASE_IDLE;
@@ -151,11 +148,11 @@ static void SetupVisibilityWindow(HWND hwnd) {
 static BOOL AdvancePomodoroState(void) {
     current_pomodoro_time_index++;
     
-    if (current_pomodoro_time_index >= POMODORO_TIMES_COUNT) {
+    if (current_pomodoro_time_index >= g_AppConfig.pomodoro.times_count) {
         current_pomodoro_time_index = 0;
         complete_pomodoro_cycles++;
         
-        if (complete_pomodoro_cycles >= POMODORO_LOOP_COUNT) {
+        if (complete_pomodoro_cycles >= g_AppConfig.pomodoro.loop_count) {
             return FALSE;
         }
     }
@@ -171,9 +168,9 @@ static void ResetPomodoroState(void) {
 
 static BOOL IsActivePomodoroTimer(void) {
     return current_pomodoro_phase != POMODORO_PHASE_IDLE &&
-           current_pomodoro_time_index < POMODORO_TIMES_COUNT &&
-           POMODORO_TIMES_COUNT > 0 &&
-           CLOCK_TOTAL_TIME == POMODORO_TIMES[current_pomodoro_time_index];
+           current_pomodoro_time_index < g_AppConfig.pomodoro.times_count &&
+           g_AppConfig.pomodoro.times_count > 0 &&
+           CLOCK_TOTAL_TIME == g_AppConfig.pomodoro.times[current_pomodoro_time_index];
 }
 
 static BOOL HandleFontValidation(HWND hwnd) {
@@ -199,7 +196,7 @@ static BOOL HandleForceRedraw(HWND hwnd) {
     
 /** Faster updates in last 2 seconds for smoother UX */
 static void AdjustTimerIntervalForTail(HWND hwnd) {
-    if (CLOCK_SHOW_MILLISECONDS || CLOCK_COUNT_UP || CLOCK_SHOW_CURRENT_TIME || CLOCK_TOTAL_TIME == 0) {
+    if (g_AppConfig.display.time_format.show_milliseconds || CLOCK_COUNT_UP || CLOCK_SHOW_CURRENT_TIME || CLOCK_TOTAL_TIME == 0) {
         if (tail_fast_mode_active) {
             SetTimer(hwnd, TIMER_ID_MAIN, GetTimerInterval(), NULL);
             tail_fast_mode_active = FALSE;
@@ -279,13 +276,13 @@ static void HandleTimeoutActions(HWND hwnd) {
 }
 
 static void HandlePomodoroCompletion(HWND hwnd) {
-    ShowTimeoutNotification(hwnd, POMODORO_TIMEOUT_MESSAGE_TEXT, TRUE);
+    ShowTimeoutNotification(hwnd, g_AppConfig.notification.messages.pomodoro_message, TRUE);
     
     if (!AdvancePomodoroState()) {
         ResetTimerState(0);
         ResetPomodoroState();
         
-        ShowTimeoutNotification(hwnd, POMODORO_CYCLE_COMPLETE_TEXT, TRUE);
+        ShowTimeoutNotification(hwnd, g_AppConfig.notification.messages.cycle_complete_message, TRUE);
         
         CLOCK_COUNT_UP = FALSE;
         CLOCK_SHOW_CURRENT_TIME = FALSE;
@@ -295,7 +292,7 @@ static void HandlePomodoroCompletion(HWND hwnd) {
         return;
     }
     
-    ResetTimerState(POMODORO_TIMES[current_pomodoro_time_index]);
+    ResetTimerState(g_AppConfig.pomodoro.times[current_pomodoro_time_index]);
     
     if (current_pomodoro_time_index == 0 && complete_pomodoro_cycles > 0) {
         wchar_t cycleMsg[100];
@@ -316,7 +313,7 @@ static void HandleCountdownCompletion(HWND hwnd) {
                         CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_SLEEP);
     
     if (shouldNotify) {
-        ShowTimeoutNotification(hwnd, CLOCK_TIMEOUT_MESSAGE_TEXT, TRUE);
+        ShowTimeoutNotification(hwnd, g_AppConfig.notification.messages.timeout_message, TRUE);
     }
     
     if (!IsActivePomodoroTimer()) {
@@ -365,7 +362,7 @@ static BOOL HandleMainTimer(HWND hwnd) {
         int seconds_to_add = ms_accumulator / 1000;
         ms_accumulator %= 1000;
         
-        if (!CLOCK_SHOW_MILLISECONDS && seconds_to_add > 1) {
+        if (!g_AppConfig.display.time_format.show_milliseconds && seconds_to_add > 1) {
             seconds_to_add = 1;
         }
         
@@ -412,8 +409,8 @@ void InitializePomodoro(void) {
     current_pomodoro_time_index = 0;
     complete_pomodoro_cycles = 0;
     
-    if (POMODORO_TIMES_COUNT > 0) {
-        CLOCK_TOTAL_TIME = POMODORO_TIMES[0];
+    if (g_AppConfig.pomodoro.times_count > 0) {
+        CLOCK_TOTAL_TIME = g_AppConfig.pomodoro.times[0];
     } else {
         CLOCK_TOTAL_TIME = DEFAULT_POMODORO_DURATION;
     }

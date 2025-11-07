@@ -74,11 +74,7 @@ extern char CLOCK_TIMEOUT_TEXT[50];
 extern char CLOCK_TIMEOUT_FILE_PATH[MAX_PATH];
 extern wchar_t CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH];
 
-/* Pomodoro settings */
-extern int POMODORO_WORK_TIME;
-extern int POMODORO_SHORT_BREAK;
-extern int POMODORO_LONG_BREAK;
-extern int POMODORO_LOOP_COUNT;
+/* Pomodoro settings - now in g_AppConfig.pomodoro */
 
 /* Quick presets */
 extern int time_options[MAX_TIME_OPTIONS];

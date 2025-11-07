@@ -19,30 +19,60 @@
 #include <string.h>
 
 /* ============================================================================
- * Global configuration variables - definitions
+ * Global configuration - single source of truth
  * ============================================================================ */
 
-char CLOCK_TIMEOUT_MESSAGE_TEXT[100] = DEFAULT_TIMEOUT_MESSAGE;
-char POMODORO_TIMEOUT_MESSAGE_TEXT[100] = DEFAULT_POMODORO_MESSAGE;
-char POMODORO_CYCLE_COMPLETE_TEXT[100] = DEFAULT_POMODORO_COMPLETE_MSG;
-
-int NOTIFICATION_TIMEOUT_MS = 3000;
-int NOTIFICATION_MAX_OPACITY = 95;
-NotificationType NOTIFICATION_TYPE = NOTIFICATION_TYPE_CATIME;
-BOOL NOTIFICATION_DISABLED = FALSE;
-
-char NOTIFICATION_SOUND_FILE[MAX_PATH] = "";
-int NOTIFICATION_SOUND_VOLUME = 100;
-
-BOOL FONT_LICENSE_ACCEPTED = FALSE;
-char FONT_LICENSE_VERSION_ACCEPTED[16] = "";
-
-TimeFormatType CLOCK_TIME_FORMAT = TIME_FORMAT_DEFAULT;
-BOOL IS_TIME_FORMAT_PREVIEWING = FALSE;
-TimeFormatType PREVIEW_TIME_FORMAT = TIME_FORMAT_DEFAULT;
-BOOL CLOCK_SHOW_MILLISECONDS = FALSE;
-BOOL IS_MILLISECONDS_PREVIEWING = FALSE;
-BOOL PREVIEW_SHOW_MILLISECONDS = FALSE;
+AppConfig g_AppConfig = {
+    .recent_files = {
+        .files = {{0}},
+        .count = 0
+    },
+    .pomodoro = {
+        .work_time = 0,
+        .short_break = 0,
+        .long_break = 0,
+        .times = {0},
+        .times_count = 0,
+        .loop_count = 1
+    },
+    .notification = {
+        .messages = {
+            .timeout_message = DEFAULT_TIMEOUT_MESSAGE,
+            .pomodoro_message = DEFAULT_POMODORO_MESSAGE,
+            .cycle_complete_message = DEFAULT_POMODORO_COMPLETE_MSG
+        },
+        .display = {
+            .timeout_ms = 3000,
+            .max_opacity = 95,
+            .type = NOTIFICATION_TYPE_CATIME,
+            .disabled = FALSE
+        },
+        .sound = {
+            .sound_file = "",
+            .volume = 100
+        }
+    },
+    .font_license = {
+        .accepted = FALSE,
+        .version_accepted = ""
+    },
+    .display = {
+        .time_format = {
+            .format = TIME_FORMAT_DEFAULT,
+            .show_milliseconds = FALSE
+        },
+        .preview = {
+            .is_format_previewing = FALSE,
+            .preview_format = TIME_FORMAT_DEFAULT,
+            .is_milliseconds_previewing = FALSE,
+            .preview_show_milliseconds = FALSE
+        }
+    },
+    .timer = {
+        .default_start_time = 300
+    },
+    .last_config_time = 0
+};
 
 /* ============================================================================
  * Public API Implementation - delegates to specialized modules

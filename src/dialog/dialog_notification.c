@@ -56,17 +56,17 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
 
             ReadNotificationMessagesConfig();
 
-            wchar_t wideText[sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT)];
+            wchar_t wideText[100];
 
-            MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_MESSAGE_TEXT, -1,
+            MultiByteToWideChar(CP_UTF8, 0, g_AppConfig.notification.messages.timeout_message, -1,
                                wideText, sizeof(wideText)/sizeof(wchar_t));
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, wideText);
 
-            MultiByteToWideChar(CP_UTF8, 0, POMODORO_TIMEOUT_MESSAGE_TEXT, -1,
+            MultiByteToWideChar(CP_UTF8, 0, g_AppConfig.notification.messages.pomodoro_message, -1,
                                wideText, sizeof(wideText)/sizeof(wchar_t));
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT2, wideText);
 
-            MultiByteToWideChar(CP_UTF8, 0, POMODORO_CYCLE_COMPLETE_TEXT, -1,
+            MultiByteToWideChar(CP_UTF8, 0, g_AppConfig.notification.messages.cycle_complete_message, -1,
                                wideText, sizeof(wideText)/sizeof(wchar_t));
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT3, wideText);
 
@@ -197,14 +197,14 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
 
             wchar_t wbuffer[32];
 
-            StringCbPrintfW(wbuffer, sizeof(wbuffer), L"%.1f", (float)NOTIFICATION_TIMEOUT_MS / 1000.0f);
+            StringCbPrintfW(wbuffer, sizeof(wbuffer), L"%.1f", (float)g_AppConfig.notification.display.timeout_ms / 1000.0f);
             /* Remove trailing .0 */
             if (wcslen(wbuffer) > 2 && wbuffer[wcslen(wbuffer)-2] == L'.' && wbuffer[wcslen(wbuffer)-1] == L'0') {
                 wbuffer[wcslen(wbuffer)-2] = L'\0';
             }
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, wbuffer);
 
-            StringCbPrintfW(wbuffer, sizeof(wbuffer), L"%d", NOTIFICATION_MAX_OPACITY);
+            StringCbPrintfW(wbuffer, sizeof(wbuffer), L"%d", g_AppConfig.notification.display.max_opacity);
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT, wbuffer);
 
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_TIME_LABEL,

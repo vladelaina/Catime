@@ -348,9 +348,9 @@
 /** @brief Animation menu base identifier */
 #define CLOCK_IDM_ANIMATIONS_BASE 3000       /**< Base ID for dynamic animation menus */
 
-/** @brief External notification configuration variables */
-extern int NOTIFICATION_MAX_OPACITY;     /**< Maximum notification opacity */
-extern int NOTIFICATION_TIMEOUT_MS;      /**< Notification timeout in milliseconds */
+/** @brief External notification configuration variables
+ * @note NOTIFICATION_MAX_OPACITY and NOTIFICATION_TIMEOUT_MS now in g_AppConfig.notification.display
+ */
 
 /** @brief About dialog identifiers */
 #define IDD_ABOUT_DIALOG 1050            /**< About dialog */

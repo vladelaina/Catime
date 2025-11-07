@@ -15,12 +15,6 @@
 #include <string.h>
 
 /* External variables */
-extern int POMODORO_WORK_TIME;
-extern int POMODORO_SHORT_BREAK;
-extern int POMODORO_LONG_BREAK;
-extern int POMODORO_TIMES[10];
-extern int POMODORO_TIMES_COUNT;
-extern int POMODORO_LOOP_COUNT;
 extern int current_pomodoro_time_index;
 extern POMODORO_PHASE current_pomodoro_phase;
 extern BOOL CLOCK_SHOW_CURRENT_TIME;
@@ -43,26 +37,26 @@ void LoadPomodoroConfig(void) {
                   "1500,300,1500,600", options, sizeof(options), configPath);
     
     /* Parse comma-separated time values */
-    POMODORO_TIMES_COUNT = 0;
+    g_AppConfig.pomodoro.times_count = 0;
     char* token = strtok(options, ",");
     int index = 0;
     
     while (token && index < MAX_POMODORO_TIMES) {
-        POMODORO_TIMES[index++] = atoi(token);
+        g_AppConfig.pomodoro.times[index++] = atoi(token);
         token = strtok(NULL, ",");
     }
     
-    POMODORO_TIMES_COUNT = index;
+    g_AppConfig.pomodoro.times_count = index;
     
     /* Update default Pomodoro times */
-    if (index > 0) POMODORO_WORK_TIME = POMODORO_TIMES[0];
-    if (index > 1) POMODORO_SHORT_BREAK = POMODORO_TIMES[1];
-    if (index > 2) POMODORO_LONG_BREAK = POMODORO_TIMES[2];
+    if (index > 0) g_AppConfig.pomodoro.work_time = g_AppConfig.pomodoro.times[0];
+    if (index > 1) g_AppConfig.pomodoro.short_break = g_AppConfig.pomodoro.times[1];
+    if (index > 2) g_AppConfig.pomodoro.long_break = g_AppConfig.pomodoro.times[2];
     
     /* Read loop count */
-    POMODORO_LOOP_COUNT = ReadIniInt(INI_SECTION_POMODORO, "POMODORO_LOOP_COUNT", 
+    g_AppConfig.pomodoro.loop_count = ReadIniInt(INI_SECTION_POMODORO, "POMODORO_LOOP_COUNT", 
                                      1, configPath);
-    if (POMODORO_LOOP_COUNT < 1) POMODORO_LOOP_COUNT = 1;
+    if (g_AppConfig.pomodoro.loop_count < 1) g_AppConfig.pomodoro.loop_count = 1;
 }
 
 /**
@@ -82,8 +76,8 @@ void BuildPomodoroMenu(HMENU hMenu) {
                 GetLocalizedString(NULL, L"Start"));
     AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
 
-    for (int i = 0; i < POMODORO_TIMES_COUNT; i++) {
-        FormatPomodoroTime(POMODORO_TIMES[i], timeBuffer, sizeof(timeBuffer)/sizeof(wchar_t));
+    for (int i = 0; i < g_AppConfig.pomodoro.times_count; i++) {
+        FormatPomodoroTime(g_AppConfig.pomodoro.times[i], timeBuffer, sizeof(timeBuffer)/sizeof(wchar_t));
         
         UINT menuId;
         if (i == 0) menuId = CLOCK_IDM_POMODORO_WORK;
@@ -95,7 +89,7 @@ void BuildPomodoroMenu(HMENU hMenu) {
                               current_pomodoro_time_index == i &&
                               !CLOCK_SHOW_CURRENT_TIME &&
                               !CLOCK_COUNT_UP &&
-                              CLOCK_TOTAL_TIME == POMODORO_TIMES[i]);
+                              CLOCK_TOTAL_TIME == g_AppConfig.pomodoro.times[i]);
         
         AppendMenuW(hPomodoroMenu, MF_STRING | (isCurrentPhase ? MF_CHECKED : MF_UNCHECKED), 
                     menuId, timeBuffer);
@@ -104,7 +98,7 @@ void BuildPomodoroMenu(HMENU hMenu) {
     wchar_t menuText[64];
     _snwprintf(menuText, sizeof(menuText)/sizeof(wchar_t),
               GetLocalizedString(NULL, L"Loop Count: %d"),
-              POMODORO_LOOP_COUNT);
+              g_AppConfig.pomodoro.loop_count);
     AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_LOOP_COUNT, menuText);
 
     AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);

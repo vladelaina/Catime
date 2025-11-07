@@ -122,7 +122,7 @@ static LRESULT CmdTimeFormatFullPadded(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 static LRESULT CmdToggleMilliseconds(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    WriteConfigShowMilliseconds(!CLOCK_SHOW_MILLISECONDS);
+    WriteConfigShowMilliseconds(!g_AppConfig.display.time_format.show_milliseconds);
     InvalidateRect(hwnd, NULL, TRUE);
     return 0;
 }
@@ -312,7 +312,7 @@ static LRESULT CmdPomodoroStart(HWND hwnd, WPARAM wp, LPARAM lp) {
     
     if (!IsWindowVisible(hwnd)) ShowWindow(hwnd, SW_SHOW);
     
-    TimerModeParams params = {POMODORO_WORK_TIME, TRUE, FALSE, TRUE};
+    TimerModeParams params = {g_AppConfig.pomodoro.work_time, TRUE, FALSE, TRUE};
     SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
     
     extern void InitializePomodoro(void);
@@ -334,9 +334,9 @@ static LRESULT CmdPomodoroReset(HWND hwnd, WPARAM wp, LPARAM lp) {
     
     ResetTimer();
     
-    if (CLOCK_TOTAL_TIME == POMODORO_WORK_TIME || 
-        CLOCK_TOTAL_TIME == POMODORO_SHORT_BREAK || 
-        CLOCK_TOTAL_TIME == POMODORO_LONG_BREAK) {
+    if (CLOCK_TOTAL_TIME == g_AppConfig.pomodoro.work_time || 
+        CLOCK_TOTAL_TIME == g_AppConfig.pomodoro.short_break || 
+        CLOCK_TOTAL_TIME == g_AppConfig.pomodoro.long_break) {
         KillTimer(hwnd, 1);
         ResetTimerWithInterval(hwnd);
     }
@@ -698,15 +698,15 @@ static BOOL HandleColorSelection(HWND hwnd, UINT cmd, int index) {
 
 static BOOL HandleRecentFile(HWND hwnd, UINT cmd, int index) {
     (void)cmd;
-    if (index >= CLOCK_RECENT_FILES_COUNT) return TRUE;
+    if (index >= g_AppConfig.recent_files.count) return TRUE;
     
-    if (!ValidateAndSetTimeoutFile(hwnd, CLOCK_RECENT_FILES[index].path)) {
+    if (!ValidateAndSetTimeoutFile(hwnd, g_AppConfig.recent_files.files[index].path)) {
         WriteConfigKeyValue("CLOCK_TIMEOUT_FILE", "");
         WriteConfigTimeoutAction("MESSAGE");
-        for (int i = index; i < CLOCK_RECENT_FILES_COUNT - 1; i++) {
-            CLOCK_RECENT_FILES[i] = CLOCK_RECENT_FILES[i + 1];
+        for (int i = index; i < g_AppConfig.recent_files.count - 1; i++) {
+            g_AppConfig.recent_files.files[i] = g_AppConfig.recent_files.files[i + 1];
         }
-        CLOCK_RECENT_FILES_COUNT--;
+        g_AppConfig.recent_files.count--;
         char config_path[MAX_PATH];
         GetConfigPath(config_path, MAX_PATH);
         WriteConfig(config_path);
@@ -853,7 +853,7 @@ BOOL HandleLanguageSelection(HWND hwnd, UINT menuId) {
  * ============================================================================ */
 
 BOOL HandlePomodoroTimeConfig(HWND hwnd, int selectedIndex) {
-    if (selectedIndex < 0 || selectedIndex >= POMODORO_TIMES_COUNT) {
+    if (selectedIndex < 0 || selectedIndex >= g_AppConfig.pomodoro.times_count) {
         return FALSE;
     }
     
@@ -869,13 +869,13 @@ BOOL HandlePomodoroTimeConfig(HWND hwnd, int selectedIndex) {
         WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
         extern int ParseInput(const char*, int*);
         if (ParseInput(inputTextA, &total_seconds)) {
-            POMODORO_TIMES[selectedIndex] = total_seconds;
+            g_AppConfig.pomodoro.times[selectedIndex] = total_seconds;
             
-            WriteConfigPomodoroTimeOptions(POMODORO_TIMES, POMODORO_TIMES_COUNT);
+            WriteConfigPomodoroTimeOptions(g_AppConfig.pomodoro.times, g_AppConfig.pomodoro.times_count);
             
-            if (selectedIndex == 0) POMODORO_WORK_TIME = total_seconds;
-            else if (selectedIndex == 1) POMODORO_SHORT_BREAK = total_seconds;
-            else if (selectedIndex == 2) POMODORO_LONG_BREAK = total_seconds;
+            if (selectedIndex == 0) g_AppConfig.pomodoro.work_time = total_seconds;
+            else if (selectedIndex == 1) g_AppConfig.pomodoro.short_break = total_seconds;
+            else if (selectedIndex == 2) g_AppConfig.pomodoro.long_break = total_seconds;
             
             return TRUE;
         }

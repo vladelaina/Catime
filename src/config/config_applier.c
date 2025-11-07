@@ -52,10 +52,10 @@ static int LanguageNameToEnum(const char* langName) {
 void ApplyGeneralSettings(const ConfigSnapshot* snapshot) {
     if (!snapshot) return;
     
-    FONT_LICENSE_ACCEPTED = snapshot->fontLicenseAccepted;
-    strncpy(FONT_LICENSE_VERSION_ACCEPTED, snapshot->fontLicenseVersion,
-           sizeof(FONT_LICENSE_VERSION_ACCEPTED) - 1);
-    FONT_LICENSE_VERSION_ACCEPTED[sizeof(FONT_LICENSE_VERSION_ACCEPTED) - 1] = '\0';
+    g_AppConfig.font_license.accepted = snapshot->fontLicenseAccepted;
+    strncpy(g_AppConfig.font_license.version_accepted, snapshot->fontLicenseVersion,
+           sizeof(g_AppConfig.font_license.version_accepted) - 1);
+    g_AppConfig.font_license.version_accepted[sizeof(g_AppConfig.font_license.version_accepted) - 1] = '\0';
 }
 
 void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {
@@ -92,12 +92,12 @@ void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {
 void ApplyTimerSettings(const ConfigSnapshot* snapshot) {
     if (!snapshot) return;
     
-    CLOCK_DEFAULT_START_TIME = snapshot->defaultStartTime;
+    g_AppConfig.timer.default_start_time = snapshot->defaultStartTime;
     CLOCK_TOTAL_TIME = snapshot->defaultStartTime;
     CLOCK_USE_24HOUR = snapshot->use24Hour;
     CLOCK_SHOW_SECONDS = snapshot->showSeconds;
-    CLOCK_TIME_FORMAT = snapshot->timeFormat;
-    CLOCK_SHOW_MILLISECONDS = snapshot->showMilliseconds;
+    g_AppConfig.display.time_format.format = snapshot->timeFormat;
+    g_AppConfig.display.time_format.show_milliseconds = snapshot->showMilliseconds;
     
     /* Timeout action */
     CLOCK_TIMEOUT_ACTION = snapshot->timeoutAction;
@@ -124,44 +124,44 @@ void ApplyTimerSettings(const ConfigSnapshot* snapshot) {
 void ApplyPomodoroSettings(const ConfigSnapshot* snapshot) {
     if (!snapshot) return;
     
-    POMODORO_TIMES_COUNT = snapshot->pomodoroTimesCount;
+    g_AppConfig.pomodoro.times_count = snapshot->pomodoroTimesCount;
     for (int i = 0; i < snapshot->pomodoroTimesCount && i < 10; i++) {
-        POMODORO_TIMES[i] = snapshot->pomodoroTimes[i];
+        g_AppConfig.pomodoro.times[i] = snapshot->pomodoroTimes[i];
     }
     
-    if (POMODORO_TIMES_COUNT > 0) {
-        POMODORO_WORK_TIME = POMODORO_TIMES[0];
-        if (POMODORO_TIMES_COUNT > 1) POMODORO_SHORT_BREAK = POMODORO_TIMES[1];
-        if (POMODORO_TIMES_COUNT > 2) POMODORO_LONG_BREAK = POMODORO_TIMES[3];
+    if (g_AppConfig.pomodoro.times_count > 0) {
+        g_AppConfig.pomodoro.work_time = g_AppConfig.pomodoro.times[0];
+        if (g_AppConfig.pomodoro.times_count > 1) g_AppConfig.pomodoro.short_break = g_AppConfig.pomodoro.times[1];
+        if (g_AppConfig.pomodoro.times_count > 2) g_AppConfig.pomodoro.long_break = g_AppConfig.pomodoro.times[2];
     }
     
-    POMODORO_LOOP_COUNT = snapshot->pomodoroLoopCount;
+    g_AppConfig.pomodoro.loop_count = snapshot->pomodoroLoopCount;
 }
 
 void ApplyNotificationSettings(const ConfigSnapshot* snapshot) {
     if (!snapshot) return;
     
-    strncpy(CLOCK_TIMEOUT_MESSAGE_TEXT, snapshot->timeoutMessage,
-           sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT) - 1);
-    CLOCK_TIMEOUT_MESSAGE_TEXT[sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT) - 1] = '\0';
+    strncpy(g_AppConfig.notification.messages.timeout_message, snapshot->timeoutMessage,
+           sizeof(g_AppConfig.notification.messages.timeout_message) - 1);
+    g_AppConfig.notification.messages.timeout_message[sizeof(g_AppConfig.notification.messages.timeout_message) - 1] = '\0';
     
-    strncpy(POMODORO_TIMEOUT_MESSAGE_TEXT, snapshot->pomodoroMessage,
-           sizeof(POMODORO_TIMEOUT_MESSAGE_TEXT) - 1);
-    POMODORO_TIMEOUT_MESSAGE_TEXT[sizeof(POMODORO_TIMEOUT_MESSAGE_TEXT) - 1] = '\0';
+    strncpy(g_AppConfig.notification.messages.pomodoro_message, snapshot->pomodoroMessage,
+           sizeof(g_AppConfig.notification.messages.pomodoro_message) - 1);
+    g_AppConfig.notification.messages.pomodoro_message[sizeof(g_AppConfig.notification.messages.pomodoro_message) - 1] = '\0';
     
-    strncpy(POMODORO_CYCLE_COMPLETE_TEXT, snapshot->cycleCompleteMessage,
-           sizeof(POMODORO_CYCLE_COMPLETE_TEXT) - 1);
-    POMODORO_CYCLE_COMPLETE_TEXT[sizeof(POMODORO_CYCLE_COMPLETE_TEXT) - 1] = '\0';
+    strncpy(g_AppConfig.notification.messages.cycle_complete_message, snapshot->cycleCompleteMessage,
+           sizeof(g_AppConfig.notification.messages.cycle_complete_message) - 1);
+    g_AppConfig.notification.messages.cycle_complete_message[sizeof(g_AppConfig.notification.messages.cycle_complete_message) - 1] = '\0';
     
-    NOTIFICATION_TIMEOUT_MS = snapshot->notificationTimeoutMs;
-    NOTIFICATION_MAX_OPACITY = snapshot->notificationMaxOpacity;
-    NOTIFICATION_TYPE = snapshot->notificationType;
-    NOTIFICATION_DISABLED = snapshot->notificationDisabled;
+    g_AppConfig.notification.display.timeout_ms = snapshot->notificationTimeoutMs;
+    g_AppConfig.notification.display.max_opacity = snapshot->notificationMaxOpacity;
+    g_AppConfig.notification.display.type = snapshot->notificationType;
+    g_AppConfig.notification.display.disabled = snapshot->notificationDisabled;
     
-    strncpy(NOTIFICATION_SOUND_FILE, snapshot->notificationSoundFile, MAX_PATH - 1);
-    NOTIFICATION_SOUND_FILE[MAX_PATH - 1] = '\0';
+    strncpy(g_AppConfig.notification.sound.sound_file, snapshot->notificationSoundFile, MAX_PATH - 1);
+    g_AppConfig.notification.sound.sound_file[MAX_PATH - 1] = '\0';
     
-    NOTIFICATION_SOUND_VOLUME = snapshot->notificationSoundVolume;
+    g_AppConfig.notification.sound.volume = snapshot->notificationSoundVolume;
 }
 
 void ApplyColorSettings(const ConfigSnapshot* snapshot) {
@@ -210,9 +210,9 @@ void ApplyHotkeySettings(const ConfigSnapshot* snapshot) {
 void ApplyRecentFilesSettings(const ConfigSnapshot* snapshot) {
     if (!snapshot) return;
     
-    CLOCK_RECENT_FILES_COUNT = snapshot->recentFilesCount;
+    g_AppConfig.recent_files.count = snapshot->recentFilesCount;
     for (int i = 0; i < snapshot->recentFilesCount && i < MAX_RECENT_FILES; i++) {
-        memcpy(&CLOCK_RECENT_FILES[i], &snapshot->recentFiles[i], sizeof(RecentFile));
+        memcpy(&g_AppConfig.recent_files.files[i], &snapshot->recentFiles[i], sizeof(RecentFile));
     }
     
     /* Note: Recent files menu is dynamically built when tray menu is shown,
@@ -240,6 +240,6 @@ void ApplyConfigSnapshot(const ConfigSnapshot* snapshot) {
     ReloadAnimationSpeedFromConfig();
     
     /* Update timestamp for config reload detection */
-    last_config_time = time(NULL);
+    g_AppConfig.last_config_time = time(NULL);
 }
 

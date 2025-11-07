@@ -10,16 +10,7 @@
 #include <string.h>
 #include <windows.h>
 
-/** External references to notification globals */
-extern char CLOCK_TIMEOUT_MESSAGE_TEXT[100];
-extern char POMODORO_TIMEOUT_MESSAGE_TEXT[100];
-extern char POMODORO_CYCLE_COMPLETE_TEXT[100];
-extern int NOTIFICATION_TIMEOUT_MS;
-extern int NOTIFICATION_MAX_OPACITY;
-extern NotificationType NOTIFICATION_TYPE;
-extern BOOL NOTIFICATION_DISABLED;
-extern char NOTIFICATION_SOUND_FILE[MAX_PATH];
-extern int NOTIFICATION_SOUND_VOLUME;
+/** All notification config now in g_AppConfig.notification */
 
 /** Enum-string mapping for notification types */
 typedef struct {
@@ -62,13 +53,13 @@ void ReadNotificationMessagesConfig(void) {
     GetConfigPath(config_path, MAX_PATH);
 
     ReadIniString(INI_SECTION_NOTIFICATION, "CLOCK_TIMEOUT_MESSAGE_TEXT", DEFAULT_TIMEOUT_MESSAGE, 
-                 CLOCK_TIMEOUT_MESSAGE_TEXT, sizeof(CLOCK_TIMEOUT_MESSAGE_TEXT), config_path);
+                 g_AppConfig.notification.messages.timeout_message, sizeof(g_AppConfig.notification.messages.timeout_message), config_path);
                  
     ReadIniString(INI_SECTION_NOTIFICATION, "POMODORO_TIMEOUT_MESSAGE_TEXT", DEFAULT_POMODORO_MESSAGE, 
-                 POMODORO_TIMEOUT_MESSAGE_TEXT, sizeof(POMODORO_TIMEOUT_MESSAGE_TEXT), config_path);
+                 g_AppConfig.notification.messages.pomodoro_message, sizeof(g_AppConfig.notification.messages.pomodoro_message), config_path);
                  
     ReadIniString(INI_SECTION_NOTIFICATION, "POMODORO_CYCLE_COMPLETE_TEXT", DEFAULT_POMODORO_COMPLETE_MSG,
-                 POMODORO_CYCLE_COMPLETE_TEXT, sizeof(POMODORO_CYCLE_COMPLETE_TEXT), config_path);
+                 g_AppConfig.notification.messages.cycle_complete_message, sizeof(g_AppConfig.notification.messages.cycle_complete_message), config_path);
 }
 
 
@@ -76,6 +67,15 @@ void ReadNotificationMessagesConfig(void) {
  * @brief Update notification message texts in config
  */
 void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodoro_msg, const char* cycle_complete_msg) {
+    strncpy(g_AppConfig.notification.messages.timeout_message, timeout_msg, sizeof(g_AppConfig.notification.messages.timeout_message) - 1);
+    g_AppConfig.notification.messages.timeout_message[sizeof(g_AppConfig.notification.messages.timeout_message) - 1] = '\0';
+    
+    strncpy(g_AppConfig.notification.messages.pomodoro_message, pomodoro_msg, sizeof(g_AppConfig.notification.messages.pomodoro_message) - 1);
+    g_AppConfig.notification.messages.pomodoro_message[sizeof(g_AppConfig.notification.messages.pomodoro_message) - 1] = '\0';
+    
+    strncpy(g_AppConfig.notification.messages.cycle_complete_message, cycle_complete_msg, sizeof(g_AppConfig.notification.messages.cycle_complete_message) - 1);
+    g_AppConfig.notification.messages.cycle_complete_message[sizeof(g_AppConfig.notification.messages.cycle_complete_message) - 1] = '\0';
+    
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
@@ -92,7 +92,7 @@ void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodo
 void ReadNotificationTimeoutConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    NOTIFICATION_TIMEOUT_MS = ReadIniInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_TIMEOUT_MS", 3000, config_path);
+    g_AppConfig.notification.display.timeout_ms = ReadIniInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_TIMEOUT_MS", 3000, config_path);
 }
 
 
@@ -100,6 +100,7 @@ void ReadNotificationTimeoutConfig(void) {
  * @brief Write notification timeout setting to config file
  */
 void WriteConfigNotificationTimeout(int timeout_ms) {
+    g_AppConfig.notification.display.timeout_ms = timeout_ms;
     UpdateConfigIntAtomic(INI_SECTION_NOTIFICATION, "NOTIFICATION_TIMEOUT_MS", timeout_ms);
 }
 
@@ -113,9 +114,9 @@ void ReadNotificationOpacityConfig(void) {
     int opacity = ReadIniInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_MAX_OPACITY", 95, config_path);
     /** Validate opacity range (1-100) */
     if (opacity >= 1 && opacity <= 100) {
-        NOTIFICATION_MAX_OPACITY = opacity;
+        g_AppConfig.notification.display.max_opacity = opacity;
     } else {
-        NOTIFICATION_MAX_OPACITY = 95;
+        g_AppConfig.notification.display.max_opacity = 95;
     }
 }
 
@@ -124,6 +125,7 @@ void ReadNotificationOpacityConfig(void) {
  * @brief Write notification opacity setting to config file
  */
 void WriteConfigNotificationOpacity(int opacity) {
+    g_AppConfig.notification.display.max_opacity = opacity;
     UpdateConfigIntAtomic(INI_SECTION_NOTIFICATION, "NOTIFICATION_MAX_OPACITY", opacity);
 }
 
@@ -139,7 +141,7 @@ void ReadNotificationTypeConfig(void) {
     ReadIniString(INI_SECTION_NOTIFICATION, "NOTIFICATION_TYPE", "CATIME", 
                  typeStr, sizeof(typeStr), config_path);
     
-    NOTIFICATION_TYPE = StringToEnum(NOTIFICATION_TYPE_MAP, typeStr, NOTIFICATION_TYPE_CATIME);
+    g_AppConfig.notification.display.type = StringToEnum(NOTIFICATION_TYPE_MAP, typeStr, NOTIFICATION_TYPE_CATIME);
 }
 
 
@@ -152,6 +154,7 @@ void WriteConfigNotificationType(NotificationType type) {
         type = NOTIFICATION_TYPE_CATIME;
     }
     
+    g_AppConfig.notification.display.type = type;
     const char* typeStr = EnumToString(NOTIFICATION_TYPE_MAP, type, "CATIME");
     UpdateConfigKeyValueAtomic(INI_SECTION_NOTIFICATION, "NOTIFICATION_TYPE", typeStr);
 }
@@ -164,7 +167,7 @@ void ReadNotificationDisabledConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    NOTIFICATION_DISABLED = ReadIniBool(INI_SECTION_NOTIFICATION, "NOTIFICATION_DISABLED", FALSE, config_path);
+    g_AppConfig.notification.display.disabled = ReadIniBool(INI_SECTION_NOTIFICATION, "NOTIFICATION_DISABLED", FALSE, config_path);
 }
 
 
@@ -172,6 +175,7 @@ void ReadNotificationDisabledConfig(void) {
  * @brief Write notification disabled setting to config file
  */
 void WriteConfigNotificationDisabled(BOOL disabled) {
+    g_AppConfig.notification.display.disabled = disabled;
     UpdateConfigBoolAtomic(INI_SECTION_NOTIFICATION, "NOTIFICATION_DISABLED", disabled);
 }
 
@@ -185,23 +189,23 @@ void ReadNotificationSoundConfig(void) {
     ReadIniString(INI_SECTION_NOTIFICATION,
                  "NOTIFICATION_SOUND_FILE",
                  "",
-                 NOTIFICATION_SOUND_FILE,
+                 g_AppConfig.notification.sound.sound_file,
                  MAX_PATH,
                  config_path);
 
     /** Normalize %LOCALAPPDATA% placeholder to absolute path */
-    if (NOTIFICATION_SOUND_FILE[0] != '\0') {
+    if (g_AppConfig.notification.sound.sound_file[0] != '\0') {
         const char* varToken = "%LOCALAPPDATA%";
         size_t tokenLen = strlen(varToken);
-        if (_strnicmp(NOTIFICATION_SOUND_FILE, varToken, (int)tokenLen) == 0) {
+        if (_strnicmp(g_AppConfig.notification.sound.sound_file, varToken, (int)tokenLen) == 0) {
             const char* localAppData = getenv("LOCALAPPDATA");
             if (localAppData && localAppData[0] != '\0') {
                 char resolved[MAX_PATH] = {0};
                 snprintf(resolved, sizeof(resolved), "%s%s",
                          localAppData,
-                         NOTIFICATION_SOUND_FILE + tokenLen);
-                strncpy(NOTIFICATION_SOUND_FILE, resolved, MAX_PATH - 1);
-                NOTIFICATION_SOUND_FILE[MAX_PATH - 1] = '\0';
+                         g_AppConfig.notification.sound.sound_file + tokenLen);
+                strncpy(g_AppConfig.notification.sound.sound_file, resolved, MAX_PATH - 1);
+                g_AppConfig.notification.sound.sound_file[MAX_PATH - 1] = '\0';
             }
         }
     }
@@ -238,6 +242,9 @@ void WriteConfigNotificationSound(const char* sound_file) {
         strncpy(to_write, clean_path, sizeof(to_write) - 1);
     }
 
+    strncpy(g_AppConfig.notification.sound.sound_file, clean_path, sizeof(g_AppConfig.notification.sound.sound_file) - 1);
+    g_AppConfig.notification.sound.sound_file[sizeof(g_AppConfig.notification.sound.sound_file) - 1] = '\0';
+    
     UpdateConfigKeyValueAtomic(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_FILE", to_write);
 }
 
@@ -249,9 +256,9 @@ void ReadNotificationVolumeConfig(void) {
     int volume = ReadIniInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_VOLUME", 100, config_path);
     /** Validate volume range (0-100) */
     if (volume >= 0 && volume <= 100) {
-        NOTIFICATION_SOUND_VOLUME = volume;
+        g_AppConfig.notification.sound.volume = volume;
     } else {
-        NOTIFICATION_SOUND_VOLUME = 100;
+        g_AppConfig.notification.sound.volume = 100;
     }
 }
 
@@ -260,6 +267,7 @@ void WriteConfigNotificationVolume(int volume) {
     if (volume < 0) volume = 0;
     if (volume > 100) volume = 100;
     
+    g_AppConfig.notification.sound.volume = volume;
     UpdateConfigIntAtomic(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_VOLUME", volume);
 }
 

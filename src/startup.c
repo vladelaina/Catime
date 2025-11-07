@@ -182,7 +182,7 @@ static void ApplyModeConfig(HWND hwnd, const StartupModeConfig* config) {
     
     CLOCK_SHOW_CURRENT_TIME = config->showCurrentTime;
     CLOCK_COUNT_UP = config->countUp;
-    CLOCK_TOTAL_TIME = (config->totalTime == -1) ? CLOCK_DEFAULT_START_TIME : config->totalTime;
+    CLOCK_TOTAL_TIME = (config->totalTime == -1) ? g_AppConfig.timer.default_start_time : config->totalTime;
     countdown_elapsed_time = 0;
     countup_elapsed_time = 0;
     

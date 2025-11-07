@@ -327,11 +327,10 @@ static BOOL LoadTimeOptions(const char* sec, const char* key, void* target, cons
 
 static BOOL LoadPomodoroOptions(const char* section, const char* key, void* target, const void* def) {
     (void)target;
-    extern int POMODORO_WORK_TIME, POMODORO_SHORT_BREAK, POMODORO_LONG_BREAK;
     
     char buf[128];
     ReadConfigStr(section, key, (const char*)def, buf, sizeof(buf));
-    int tmp[3] = {POMODORO_WORK_TIME, POMODORO_SHORT_BREAK, POMODORO_LONG_BREAK}, cnt = 0;
+    int tmp[3] = {g_AppConfig.pomodoro.work_time, g_AppConfig.pomodoro.short_break, g_AppConfig.pomodoro.long_break}, cnt = 0;
     char* tok = strtok(buf, ",");
     while (tok && cnt < 3) {
         while (*tok == ' ') tok++;
@@ -340,9 +339,9 @@ static BOOL LoadPomodoroOptions(const char* section, const char* key, void* targ
     }
     
     BOOL changed = FALSE;
-    if (cnt > 0 && tmp[0] != POMODORO_WORK_TIME) { POMODORO_WORK_TIME = tmp[0]; changed = TRUE; }
-    if (cnt > 1 && tmp[1] != POMODORO_SHORT_BREAK) { POMODORO_SHORT_BREAK = tmp[1]; changed = TRUE; }
-    if (cnt > 2 && tmp[2] != POMODORO_LONG_BREAK) { POMODORO_LONG_BREAK = tmp[2]; changed = TRUE; }
+    if (cnt > 0 && tmp[0] != g_AppConfig.pomodoro.work_time) { g_AppConfig.pomodoro.work_time = tmp[0]; changed = TRUE; }
+    if (cnt > 1 && tmp[1] != g_AppConfig.pomodoro.short_break) { g_AppConfig.pomodoro.short_break = tmp[1]; changed = TRUE; }
+    if (cnt > 2 && tmp[2] != g_AppConfig.pomodoro.long_break) { g_AppConfig.pomodoro.long_break = tmp[2]; changed = TRUE; }
     
     return changed;
 }
@@ -388,8 +387,8 @@ static BOOL LoadRecentFilesConfig(const char* section, const char* key, void* ta
     
     if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE) {
         BOOL match = FALSE;
-        for (int i = 0; i < CLOCK_RECENT_FILES_COUNT; ++i) {
-            if (strcmp(CLOCK_RECENT_FILES[i].path, CLOCK_TIMEOUT_FILE_PATH) == 0) {
+        for (int i = 0; i < g_AppConfig.recent_files.count; ++i) {
+            if (strcmp(g_AppConfig.recent_files.files[i].path, CLOCK_TIMEOUT_FILE_PATH) == 0) {
                 match = TRUE;
                 break;
             }
@@ -402,8 +401,8 @@ static BOOL LoadRecentFilesConfig(const char* section, const char* key, void* ta
             }
         }
         
-        if (!match && CLOCK_RECENT_FILES_COUNT > 0) {
-            WriteConfigTimeoutFile(CLOCK_RECENT_FILES[0].path);
+        if (!match && g_AppConfig.recent_files.count > 0) {
+            WriteConfigTimeoutFile(g_AppConfig.recent_files.files[0].path);
         }
     }
     
@@ -462,13 +461,13 @@ LRESULT HandleAppTimerChanged(HWND hwnd) {
     ConfigItem items[] = {
         CFG_BOOL(CFG_SECTION_TIMER, CFG_KEY_USE_24HOUR, CLOCK_USE_24HOUR, CLOCK_USE_24HOUR),
         CFG_BOOL(CFG_SECTION_TIMER, CFG_KEY_SHOW_SECONDS, CLOCK_SHOW_SECONDS, CLOCK_SHOW_SECONDS),
-        {CONFIG_TYPE_CUSTOM, CFG_SECTION_TIMER, CFG_KEY_TIME_FORMAT, (void*)&CLOCK_TIME_FORMAT, 0, "DEFAULT", LoadTimeFormatType, TRUE},
-        {CONFIG_TYPE_CUSTOM, CFG_SECTION_TIMER, CFG_KEY_SHOW_MILLISECONDS, (void*)&CLOCK_SHOW_MILLISECONDS, 0, (void*)FALSE, LoadShowMilliseconds, TRUE},
+        {CONFIG_TYPE_CUSTOM, CFG_SECTION_TIMER, CFG_KEY_TIME_FORMAT, (void*)&g_AppConfig.display.time_format.format, 0, "DEFAULT", LoadTimeFormatType, TRUE},
+        {CONFIG_TYPE_CUSTOM, CFG_SECTION_TIMER, CFG_KEY_SHOW_MILLISECONDS, (void*)&g_AppConfig.display.time_format.show_milliseconds, 0, (void*)FALSE, LoadShowMilliseconds, TRUE},
         CFG_STR_NOREDRAW(CFG_SECTION_TIMER, CFG_KEY_TIMEOUT_TEXT, CLOCK_TIMEOUT_TEXT, "0"),
         {CONFIG_TYPE_CUSTOM, CFG_SECTION_TIMER, CFG_KEY_TIMEOUT_ACTION, (void*)&CLOCK_TIMEOUT_ACTION, 0, "MESSAGE", LoadTimeoutActionType, FALSE},
         CFG_STR_NOREDRAW(CFG_SECTION_TIMER, CFG_KEY_TIMEOUT_FILE, CLOCK_TIMEOUT_FILE_PATH, ""),
         {CONFIG_TYPE_CUSTOM, CFG_SECTION_TIMER, CFG_KEY_TIMEOUT_WEBSITE, (void*)CLOCK_TIMEOUT_WEBSITE_URL, 0, "", LoadTimeoutWebsite, FALSE},
-        CFG_INT_NOREDRAW(CFG_SECTION_TIMER, CFG_KEY_DEFAULT_START_TIME, CLOCK_DEFAULT_START_TIME, CLOCK_DEFAULT_START_TIME),
+        CFG_INT_NOREDRAW(CFG_SECTION_TIMER, CFG_KEY_DEFAULT_START_TIME, g_AppConfig.timer.default_start_time, g_AppConfig.timer.default_start_time),
         {CONFIG_TYPE_CUSTOM, CFG_SECTION_TIMER, CFG_KEY_TIME_OPTIONS, (void*)time_options, 0, "1500,600,300", LoadTimeOptions, FALSE},
         CFG_STR_NOREDRAW(CFG_SECTION_TIMER, CFG_KEY_STARTUP_MODE, CLOCK_STARTUP_MODE, CLOCK_STARTUP_MODE)
     };
@@ -479,8 +478,8 @@ LRESULT HandleAppTimerChanged(HWND hwnd) {
 
 LRESULT HandleAppPomodoroChanged(HWND hwnd) {
     ConfigItem items[] = {
-        {CONFIG_TYPE_CUSTOM, CFG_SECTION_POMODORO, CFG_KEY_POMODORO_OPTIONS, (void*)POMODORO_TIMES, 0, "1500,300,1500,600", LoadPomodoroOptions, FALSE},
-        {CONFIG_TYPE_CUSTOM, CFG_SECTION_POMODORO, CFG_KEY_POMODORO_LOOP_COUNT, (void*)&POMODORO_LOOP_COUNT, 0, (void*)1, LoadPomodoroLoopCount, FALSE}
+        {CONFIG_TYPE_CUSTOM, CFG_SECTION_POMODORO, CFG_KEY_POMODORO_OPTIONS, (void*)g_AppConfig.pomodoro.times, 0, "1500,300,1500,600", LoadPomodoroOptions, FALSE},
+        {CONFIG_TYPE_CUSTOM, CFG_SECTION_POMODORO, CFG_KEY_POMODORO_LOOP_COUNT, (void*)&g_AppConfig.pomodoro.loop_count, 0, (void*)1, LoadPomodoroLoopCount, FALSE}
     };
     
     ReloadConfigItems(hwnd, items, sizeof(items) / sizeof(items[0]));

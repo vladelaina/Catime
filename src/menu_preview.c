@@ -20,8 +20,7 @@
 extern char FONT_FILE_NAME[100];
 extern char FONT_INTERNAL_NAME[100];
 extern char CLOCK_TEXT_COLOR[10];
-extern TimeFormatType CLOCK_TIME_FORMAT;
-extern BOOL CLOCK_SHOW_MILLISECONDS;
+/** Time format now in g_AppConfig.display.time_format */
 
 extern void ResetTimerWithInterval(HWND hwnd);
 extern void WriteConfigColor(const char* color);
@@ -201,11 +200,11 @@ void GetActiveFont(char* outFontName, char* outInternalName, size_t bufferSize) 
 
 TimeFormatType GetActiveTimeFormat(void) {
     return (g_previewState.type == PREVIEW_TYPE_TIME_FORMAT) ?
-           g_previewState.data.timeFormat : CLOCK_TIME_FORMAT;
+           g_previewState.data.timeFormat : g_AppConfig.display.time_format.format;
 }
 
 BOOL GetActiveShowMilliseconds(void) {
     return (g_previewState.type == PREVIEW_TYPE_MILLISECONDS) ?
-           g_previewState.data.showMilliseconds : CLOCK_SHOW_MILLISECONDS;
+           g_previewState.data.showMilliseconds : g_AppConfig.display.time_format.show_milliseconds;
 }
 

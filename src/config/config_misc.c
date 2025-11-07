@@ -102,6 +102,7 @@ void WriteConfigPomodoroSettings(int work, int short_break, int long_break, int 
  * @brief Write pomodoro loop count to config file
  */
 void WriteConfigPomodoroLoopCount(int loop_count) {
+    g_AppConfig.pomodoro.loop_count = loop_count;
     UpdateConfigIntAtomic(INI_SECTION_POMODORO, "POMODORO_LOOP_COUNT", loop_count);
 }
 
@@ -136,9 +137,7 @@ void LoadRecentFiles(void) {
     if (!file) return;
 
     char line[MAX_PATH];
-    extern int CLOCK_RECENT_FILES_COUNT;
-    extern RecentFile CLOCK_RECENT_FILES[];
-    CLOCK_RECENT_FILES_COUNT = 0;
+    g_AppConfig.recent_files.count = 0;
 
     while (fgets(line, sizeof(line), file)) {
 
@@ -149,20 +148,20 @@ void LoadRecentFiles(void) {
                 char *newline = strchr(path, '\n');
                 if (newline) *newline = '\0';
 
-                if (CLOCK_RECENT_FILES_COUNT < MAX_RECENT_FILES) {
+                if (g_AppConfig.recent_files.count < MAX_RECENT_FILES) {
 
                     if (FileExistsUtf8(path)) {
-                        strncpy(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path, path, MAX_PATH - 1);
-                        CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path[MAX_PATH - 1] = '\0';
+                        strncpy(g_AppConfig.recent_files.files[g_AppConfig.recent_files.count].path, path, MAX_PATH - 1);
+                        g_AppConfig.recent_files.files[g_AppConfig.recent_files.count].path[MAX_PATH - 1] = '\0';
 
-                        char *filename = strrchr(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path, '\\');
+                        char *filename = strrchr(g_AppConfig.recent_files.files[g_AppConfig.recent_files.count].path, '\\');
                         if (filename) filename++;
-                        else filename = CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].path;
+                        else filename = g_AppConfig.recent_files.files[g_AppConfig.recent_files.count].path;
                         
-                        strncpy(CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].name, filename, MAX_PATH - 1);
-                        CLOCK_RECENT_FILES[CLOCK_RECENT_FILES_COUNT].name[MAX_PATH - 1] = '\0';
+                        strncpy(g_AppConfig.recent_files.files[g_AppConfig.recent_files.count].name, filename, MAX_PATH - 1);
+                        g_AppConfig.recent_files.files[g_AppConfig.recent_files.count].name[MAX_PATH - 1] = '\0';
 
-                        CLOCK_RECENT_FILES_COUNT++;
+                        g_AppConfig.recent_files.count++;
                     }
                 }
             }
@@ -271,7 +270,7 @@ char* UTF8ToANSI(const char* utf8Str) {
  * @brief Set font license agreement acceptance status
  */
 void SetFontLicenseAccepted(BOOL accepted) {
-    FONT_LICENSE_ACCEPTED = accepted;
+    g_AppConfig.font_license.accepted = accepted;
     WriteConfigKeyValue("FONT_LICENSE_ACCEPTED", accepted ? "TRUE" : "FALSE");
 }
 
@@ -281,8 +280,8 @@ void SetFontLicenseAccepted(BOOL accepted) {
 void SetFontLicenseVersionAccepted(const char* version) {
     if (!version) return;
     
-    strncpy(FONT_LICENSE_VERSION_ACCEPTED, version, sizeof(FONT_LICENSE_VERSION_ACCEPTED) - 1);
-    FONT_LICENSE_VERSION_ACCEPTED[sizeof(FONT_LICENSE_VERSION_ACCEPTED) - 1] = '\0';
+    strncpy(g_AppConfig.font_license.version_accepted, version, sizeof(g_AppConfig.font_license.version_accepted) - 1);
+    g_AppConfig.font_license.version_accepted[sizeof(g_AppConfig.font_license.version_accepted) - 1] = '\0';
     
     WriteConfigKeyValue("FONT_LICENSE_VERSION_ACCEPTED", version);
 }
@@ -291,15 +290,15 @@ void SetFontLicenseVersionAccepted(const char* version) {
  * @brief Check if font license version needs acceptance
  */
 BOOL NeedsFontLicenseVersionAcceptance(void) {
-    if (!FONT_LICENSE_ACCEPTED) {
+    if (!g_AppConfig.font_license.accepted) {
         return TRUE;
     }
     
-    if (strlen(FONT_LICENSE_VERSION_ACCEPTED) == 0) {
+    if (strlen(g_AppConfig.font_license.version_accepted) == 0) {
         return TRUE;
     }
     
-    if (strcmp(FONT_LICENSE_VERSION, FONT_LICENSE_VERSION_ACCEPTED) != 0) {
+    if (strcmp(FONT_LICENSE_VERSION, g_AppConfig.font_license.version_accepted) != 0) {
         return TRUE;
     }
     
@@ -327,6 +326,7 @@ void WriteConfigLanguage(int language) {
  * @brief Write time format setting to config file
  */
 void WriteConfigTimeFormat(TimeFormatType format) {
+    g_AppConfig.display.time_format.format = format;
     const char* formatStr = EnumToString(TIME_FORMAT_MAP, format, "DEFAULT");
     UpdateConfigKeyValueAtomic(INI_SECTION_TIMER, "CLOCK_TIME_FORMAT", formatStr);
 }
@@ -335,6 +335,7 @@ void WriteConfigTimeFormat(TimeFormatType format) {
  * @brief Write milliseconds display setting to config file
  */
 void WriteConfigShowMilliseconds(BOOL showMilliseconds) {
+    g_AppConfig.display.time_format.show_milliseconds = showMilliseconds;
     UpdateConfigBoolAtomic(INI_SECTION_TIMER, "CLOCK_SHOW_MILLISECONDS", showMilliseconds);
 }
 
@@ -342,11 +343,11 @@ void WriteConfigShowMilliseconds(BOOL showMilliseconds) {
  * @brief Get appropriate timer interval based on milliseconds display setting
  */
 UINT GetTimerInterval(void) {
-    if (IS_MILLISECONDS_PREVIEWING && PREVIEW_SHOW_MILLISECONDS) {
+    if (g_AppConfig.display.preview.is_milliseconds_previewing && g_AppConfig.display.preview.preview_show_milliseconds) {
         return 10;
     }
     
-    return CLOCK_SHOW_MILLISECONDS ? 10 : 1000;
+    return g_AppConfig.display.time_format.show_milliseconds ? 10 : 1000;
 }
 
 /**

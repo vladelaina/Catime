@@ -126,10 +126,9 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                 MultiByteToWideChar(CP_UTF8, 0, currentOptions, -1, wcurrentOptions, 256);
                 SetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, wcurrentOptions);
             } else if (dlgId == CLOCK_IDD_STARTUP_DIALOG) {
-                extern int CLOCK_DEFAULT_START_TIME;
-                if (CLOCK_DEFAULT_START_TIME > 0) {
+                if (g_AppConfig.timer.default_start_time > 0) {
                     char timeStr[64];
-                    Dialog_FormatSecondsToString(CLOCK_DEFAULT_START_TIME, timeStr, sizeof(timeStr));
+                    Dialog_FormatSecondsToString(g_AppConfig.timer.default_start_time, timeStr, sizeof(timeStr));
                     
                     wchar_t wtimeStr[64];
                     MultiByteToWideChar(CP_UTF8, 0, timeStr, -1, wtimeStr, 64);

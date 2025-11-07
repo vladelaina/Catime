@@ -19,13 +19,7 @@
  * Global State (defined in timer.c)
  * ============================================================================ */
 
-/* Note: POMODORO_TIMES and POMODORO_TIMES_COUNT are defined in timer.c */
-extern int POMODORO_TIMES[MAX_POMODORO_TIMES];
-extern int POMODORO_TIMES_COUNT;
-
-extern int POMODORO_WORK_TIME;
-extern int POMODORO_SHORT_BREAK;
-extern int POMODORO_LONG_BREAK;
+/* Pomodoro configuration is now in g_AppConfig */
 
 /* ============================================================================
  * Pomodoro Loop Dialog Implementation
@@ -184,10 +178,10 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
             Dialog_SubclassEdit(hwndEdit, ctx);
 
             wchar_t currentOptions[256] = {0};
-            for (int i = 0; i < POMODORO_TIMES_COUNT; i++) {
+            for (int i = 0; i < g_AppConfig.pomodoro.times_count; i++) {
                 char timeStrA[32];
                 wchar_t timeStr[32];
-                Dialog_FormatSecondsToString(POMODORO_TIMES[i], timeStrA, sizeof(timeStrA));
+                Dialog_FormatSecondsToString(g_AppConfig.pomodoro.times[i], timeStrA, sizeof(timeStrA));
                 MultiByteToWideChar(CP_UTF8, 0, timeStrA, -1, timeStr, 32);
                 StringCbCatW(currentOptions, sizeof(currentOptions), timeStr);
                 StringCbCatW(currentOptions, sizeof(currentOptions), L" ");
@@ -259,14 +253,14 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
                     return TRUE;
                 }
 
-                POMODORO_TIMES_COUNT = times_count;
+                g_AppConfig.pomodoro.times_count = times_count;
                 for (int i = 0; i < times_count; i++) {
-                    POMODORO_TIMES[i] = times[i];
+                    g_AppConfig.pomodoro.times[i] = times[i];
                 }
 
-                if (times_count > 0) POMODORO_WORK_TIME = times[0];
-                if (times_count > 1) POMODORO_SHORT_BREAK = times[1];
-                if (times_count > 2) POMODORO_LONG_BREAK = times[2];
+                if (times_count > 0) g_AppConfig.pomodoro.work_time = times[0];
+                if (times_count > 1) g_AppConfig.pomodoro.short_break = times[1];
+                if (times_count > 2) g_AppConfig.pomodoro.long_break = times[2];
 
                 extern void WriteConfigPomodoroTimeOptions(int* times, int count);
                 WriteConfigPomodoroTimeOptions(times, times_count);

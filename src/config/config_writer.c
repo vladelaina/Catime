@@ -136,7 +136,7 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int* count) {
     /* Timer section */
     strcpy(items[idx].section, INI_SECTION_TIMER);
     strcpy(items[idx].key, "CLOCK_DEFAULT_START_TIME");
-    sprintf(items[idx].value, "%d", CLOCK_DEFAULT_START_TIME);
+    sprintf(items[idx].value, "%d", g_AppConfig.timer.default_start_time);
     idx++;
     
     strcpy(items[idx].section, INI_SECTION_TIMER);
@@ -151,12 +151,12 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int* count) {
     
     strcpy(items[idx].section, INI_SECTION_TIMER);
     strcpy(items[idx].key, "CLOCK_TIME_FORMAT");
-    strcpy(items[idx].value, TimeFormatTypeToString(CLOCK_TIME_FORMAT));
+    strcpy(items[idx].value, TimeFormatTypeToString(g_AppConfig.display.time_format.format));
     idx++;
     
     strcpy(items[idx].section, INI_SECTION_TIMER);
     strcpy(items[idx].key, "CLOCK_SHOW_MILLISECONDS");
-    strcpy(items[idx].value, CLOCK_SHOW_MILLISECONDS ? "TRUE" : "FALSE");
+    strcpy(items[idx].value, g_AppConfig.display.time_format.show_milliseconds ? "TRUE" : "FALSE");
     idx++;
     
     strcpy(items[idx].section, INI_SECTION_TIMER);
@@ -201,9 +201,9 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int* count) {
     strcpy(items[idx].section, INI_SECTION_POMODORO);
     strcpy(items[idx].key, "POMODORO_TIME_OPTIONS");
     items[idx].value[0] = '\0';
-    for (int i = 0; i < POMODORO_TIMES_COUNT; i++) {
+    for (int i = 0; i < g_AppConfig.pomodoro.times_count; i++) {
         char buffer[16];
-        sprintf(buffer, "%d", POMODORO_TIMES[i]);
+        sprintf(buffer, "%d", g_AppConfig.pomodoro.times[i]);
         if (i > 0) strcat(items[idx].value, ",");
         strcat(items[idx].value, buffer);
     }
@@ -211,53 +211,53 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int* count) {
     
     strcpy(items[idx].section, INI_SECTION_POMODORO);
     strcpy(items[idx].key, "POMODORO_LOOP_COUNT");
-    sprintf(items[idx].value, "%d", POMODORO_LOOP_COUNT);
+    sprintf(items[idx].value, "%d", g_AppConfig.pomodoro.loop_count);
     idx++;
     
     /* Notification section */
     strcpy(items[idx].section, INI_SECTION_NOTIFICATION);
     strcpy(items[idx].key, "CLOCK_TIMEOUT_MESSAGE_TEXT");
-    strcpy(items[idx].value, CLOCK_TIMEOUT_MESSAGE_TEXT);
+    strcpy(items[idx].value, g_AppConfig.notification.messages.timeout_message);
     idx++;
     
     strcpy(items[idx].section, INI_SECTION_NOTIFICATION);
     strcpy(items[idx].key, "POMODORO_TIMEOUT_MESSAGE_TEXT");
-    strcpy(items[idx].value, POMODORO_TIMEOUT_MESSAGE_TEXT);
+    strcpy(items[idx].value, g_AppConfig.notification.messages.pomodoro_message);
     idx++;
     
     strcpy(items[idx].section, INI_SECTION_NOTIFICATION);
     strcpy(items[idx].key, "POMODORO_CYCLE_COMPLETE_TEXT");
-    strcpy(items[idx].value, POMODORO_CYCLE_COMPLETE_TEXT);
+    strcpy(items[idx].value, g_AppConfig.notification.messages.cycle_complete_message);
     idx++;
     
     strcpy(items[idx].section, INI_SECTION_NOTIFICATION);
     strcpy(items[idx].key, "NOTIFICATION_TIMEOUT_MS");
-    sprintf(items[idx].value, "%d", NOTIFICATION_TIMEOUT_MS);
+    sprintf(items[idx].value, "%d", g_AppConfig.notification.display.timeout_ms);
     idx++;
     
     strcpy(items[idx].section, INI_SECTION_NOTIFICATION);
     strcpy(items[idx].key, "NOTIFICATION_MAX_OPACITY");
-    sprintf(items[idx].value, "%d", NOTIFICATION_MAX_OPACITY);
+    sprintf(items[idx].value, "%d", g_AppConfig.notification.display.max_opacity);
     idx++;
     
     strcpy(items[idx].section, INI_SECTION_NOTIFICATION);
     strcpy(items[idx].key, "NOTIFICATION_TYPE");
-    strcpy(items[idx].value, NotificationTypeToString(NOTIFICATION_TYPE));
+    strcpy(items[idx].value, NotificationTypeToString(g_AppConfig.notification.display.type));
     idx++;
     
     strcpy(items[idx].section, INI_SECTION_NOTIFICATION);
     strcpy(items[idx].key, "NOTIFICATION_SOUND_FILE");
-    strcpy(items[idx].value, NOTIFICATION_SOUND_FILE);
+    strcpy(items[idx].value, g_AppConfig.notification.sound.sound_file);
     idx++;
     
     strcpy(items[idx].section, INI_SECTION_NOTIFICATION);
     strcpy(items[idx].key, "NOTIFICATION_SOUND_VOLUME");
-    sprintf(items[idx].value, "%d", NOTIFICATION_SOUND_VOLUME);
+    sprintf(items[idx].value, "%d", g_AppConfig.notification.sound.volume);
     idx++;
     
     strcpy(items[idx].section, INI_SECTION_NOTIFICATION);
     strcpy(items[idx].key, "NOTIFICATION_DISABLED");
-    strcpy(items[idx].value, NOTIFICATION_DISABLED ? "TRUE" : "FALSE");
+    strcpy(items[idx].value, g_AppConfig.notification.display.disabled ? "TRUE" : "FALSE");
     idx++;
     
     /* Hotkeys */
@@ -285,8 +285,8 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int* count) {
     for (int i = 0; i < MAX_RECENT_FILES; i++) {
         strcpy(items[idx].section, INI_SECTION_RECENTFILES);
         sprintf(items[idx].key, "CLOCK_RECENT_FILE_%d", i + 1);
-        if (i < CLOCK_RECENT_FILES_COUNT) {
-            strcpy(items[idx].value, CLOCK_RECENT_FILES[i].path);
+        if (i < g_AppConfig.recent_files.count) {
+            strcpy(items[idx].value, g_AppConfig.recent_files.files[i].path);
         } else {
             strcpy(items[idx].value, "");
         }

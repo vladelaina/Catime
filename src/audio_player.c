@@ -12,9 +12,6 @@
 #include "../libs/miniaudio/miniaudio.h"
 #include "config.h"
 
-extern char NOTIFICATION_SOUND_FILE[MAX_PATH];
-extern int NOTIFICATION_SOUND_VOLUME;
-
 #define TIMER_INTERVAL_AUDIO_CHECK 500
 #define TIMER_INTERVAL_FALLBACK    3000
 #define TIMER_INTERVAL_BEEP        500
@@ -202,7 +199,7 @@ static BOOL PlayAudioWithMiniaudio(HWND hwnd, const char* filePath) {
         return FALSE;
     }
     
-    float volume = (float)NOTIFICATION_SOUND_VOLUME / 100.0f;
+    float volume = (float)g_AppConfig.notification.sound.volume / 100.0f;
     ma_engine_set_volume(&g_audioEngine, volume);
     
     wchar_t wFilePath[MAX_PATH * 2] = {0};
@@ -314,31 +311,31 @@ BOOL PlayNotificationSound(HWND hwnd) {
     CleanupAudioResources();
     g_audioCallbackHwnd = hwnd;
 
-    if (NOTIFICATION_SOUND_FILE[0] == '\0') {
+    if (g_AppConfig.notification.sound.sound_file[0] == '\0') {
         return TRUE;
     }
 
-    if (strcmp(NOTIFICATION_SOUND_FILE, "SYSTEM_BEEP") == 0) {
+    if (strcmp(g_AppConfig.notification.sound.sound_file, "SYSTEM_BEEP") == 0) {
         return FallbackToSystemBeep(hwnd);
     }
 
-    if (!IsValidFilePath(NOTIFICATION_SOUND_FILE)) {
+    if (!IsValidFilePath(g_AppConfig.notification.sound.sound_file)) {
         wchar_t errorMsg[MAX_PATH + 64];
         StringCbPrintfW(errorMsg, sizeof(errorMsg), 
-                       L"Invalid audio file path:\n%hs", NOTIFICATION_SOUND_FILE);
+                       L"Invalid audio file path:\n%hs", g_AppConfig.notification.sound.sound_file);
         ShowErrorMessage(hwnd, errorMsg);
         return FallbackToSystemBeep(hwnd);
     }
 
-    if (!AudioFileExists(NOTIFICATION_SOUND_FILE)) {
+    if (!AudioFileExists(g_AppConfig.notification.sound.sound_file)) {
         wchar_t errorMsg[MAX_PATH + 64];
         StringCbPrintfW(errorMsg, sizeof(errorMsg), 
-                       L"Cannot find the configured audio file:\n%hs", NOTIFICATION_SOUND_FILE);
+                       L"Cannot find the configured audio file:\n%hs", g_AppConfig.notification.sound.sound_file);
         ShowErrorMessage(hwnd, errorMsg);
         return FallbackToSystemBeep(hwnd);
     }
 
-    if (PlayAudioWithMiniaudio(hwnd, NOTIFICATION_SOUND_FILE)) {
+    if (PlayAudioWithMiniaudio(hwnd, g_AppConfig.notification.sound.sound_file)) {
         return TRUE;
     }
 

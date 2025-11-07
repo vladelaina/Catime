@@ -11,7 +11,7 @@
 #include "../resource/resource.h"
 #include <windowsx.h>
 
-extern NotificationType NOTIFICATION_TYPE;
+/** Notification config now in g_AppConfig.notification */
 
 /** Type-safe replacement for SetPropW/GetPropW */
 typedef struct {
@@ -140,11 +140,11 @@ static void SetNotificationData(HWND hwnd, NotificationData* data) {
 void ShowNotification(HWND hwnd, const wchar_t* message) {
     LoadNotificationConfigs();
     
-    if (NOTIFICATION_DISABLED || NOTIFICATION_TIMEOUT_MS == 0) {
+    if (g_AppConfig.notification.display.disabled || g_AppConfig.notification.display.timeout_ms == 0) {
         return;
     }
     
-    switch (NOTIFICATION_TYPE) {
+    switch (g_AppConfig.notification.display.type) {
         case NOTIFICATION_TYPE_CATIME:
             ShowToastNotification(hwnd, message);
             break;
@@ -210,7 +210,7 @@ void ShowToastNotification(HWND hwnd, const wchar_t* message) {
     
     LoadNotificationConfigs();
     
-    if (NOTIFICATION_DISABLED || NOTIFICATION_TIMEOUT_MS == 0) {
+    if (g_AppConfig.notification.display.disabled || g_AppConfig.notification.display.timeout_ms == 0) {
         return;
     }
     
@@ -284,7 +284,7 @@ void ShowToastNotification(HWND hwnd, const wchar_t* message) {
     
     SetTimer(hNotification, ANIMATION_TIMER_ID, ANIMATION_INTERVAL, NULL);
     
-    SetTimer(hNotification, NOTIFICATION_TIMER_ID, NOTIFICATION_TIMEOUT_MS, NULL);
+    SetTimer(hNotification, NOTIFICATION_TIMER_ID, g_AppConfig.notification.display.timeout_ms, NULL);
 }
 
 void RegisterNotificationClass(HINSTANCE hInstance) {
@@ -370,7 +370,7 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
                 return 0;
             }
             else if (wParam == ANIMATION_TIMER_ID) {
-                BYTE maxOpacity = (BYTE)((NOTIFICATION_MAX_OPACITY * 255) / 100);
+                BYTE maxOpacity = (BYTE)((g_AppConfig.notification.display.max_opacity * 255) / 100);
                 BOOL shouldDestroy = FALSE;
                 
                 BYTE newOpacity = UpdateAnimationOpacity(data->animState, data->opacity, 

@@ -158,7 +158,7 @@ static BOOL InitializeDefaultSettings(void) {
     UpdateStartupShortcut();
     InitializeDefaultLanguage();
     
-    CLOCK_TOTAL_TIME = CLOCK_DEFAULT_START_TIME;
+    CLOCK_TOTAL_TIME = g_AppConfig.timer.default_start_time;
     
     LOG_INFO("Default settings initialized");
     return TRUE;

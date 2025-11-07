@@ -55,21 +55,9 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
  * ============================================================================ */
 
 /**
- * @brief Pomodoro time intervals (in seconds)
- * 
- * @details
- * Default: [25m, 5m, 15m] (work, short break, long break)
- * Max count: MAX_POMODORO_TIMES (10)
- */
-extern int POMODORO_TIMES[10];
-
-/**
- * @brief Number of valid time intervals
- */
-extern int POMODORO_TIMES_COUNT;
-
-/**
  * @brief Max Pomodoro time intervals
+ * @note POMODORO_TIMES and POMODORO_TIMES_COUNT now in g_AppConfig.pomodoro
+ * @details Default: [25m, 5m, 15m] (work, short break, long break)
  */
 #define MAX_POMODORO_TIMES 10
 

@@ -33,7 +33,7 @@ typedef enum {
  * External Configuration Variables
  * ============================================================================ */
 
-extern int NOTIFICATION_TIMEOUT_MS;
+/* NOTIFICATION_TIMEOUT_MS now in g_AppConfig.notification.display.timeout_ms */
 
 /* ============================================================================
  * Public API Functions

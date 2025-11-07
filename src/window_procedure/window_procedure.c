@@ -169,8 +169,8 @@ void StartDefaultCountDown(HWND hwnd) {
     countdown_message_shown = FALSE;
     ReadNotificationTypeConfig();
     
-    if (CLOCK_DEFAULT_START_TIME > 0) {
-        TimerModeParams params = {CLOCK_DEFAULT_START_TIME, TRUE, FALSE, TRUE};
+    if (g_AppConfig.timer.default_start_time > 0) {
+        TimerModeParams params = {g_AppConfig.timer.default_start_time, TRUE, FALSE, TRUE};
         SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
         
         // Ensure timer is running

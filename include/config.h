@@ -115,46 +115,129 @@ typedef enum {
 #endif
 
 /* ============================================================================
+ * Refactored configuration structures
+ * ============================================================================ */
+
+/**
+ * @brief Recent files state
+ */
+typedef struct {
+    RecentFile files[MAX_RECENT_FILES];
+    int count;
+} RecentFilesState;
+
+/**
+ * @brief Pomodoro configuration
+ */
+typedef struct {
+    int work_time;
+    int short_break;
+    int long_break;
+    int times[10];
+    int times_count;
+    int loop_count;
+} PomodoroConfig;
+
+/**
+ * @brief Notification messages
+ */
+typedef struct {
+    char timeout_message[100];
+    char pomodoro_message[100];
+    char cycle_complete_message[100];
+} NotificationMessages;
+
+/**
+ * @brief Notification display settings
+ */
+typedef struct {
+    int timeout_ms;
+    int max_opacity;
+    NotificationType type;
+    BOOL disabled;
+} NotificationDisplay;
+
+/**
+ * @brief Notification sound settings
+ */
+typedef struct {
+    char sound_file[MAX_PATH];
+    int volume;
+} NotificationSound;
+
+/**
+ * @brief Complete notification configuration
+ */
+typedef struct {
+    NotificationMessages messages;
+    NotificationDisplay display;
+    NotificationSound sound;
+} NotificationConfig;
+
+/**
+ * @brief Font license state
+ */
+typedef struct {
+    BOOL accepted;
+    char version_accepted[16];
+} FontLicenseState;
+
+/**
+ * @brief Time display format settings
+ */
+typedef struct {
+    TimeFormatType format;
+    BOOL show_milliseconds;
+} TimeFormatConfig;
+
+/**
+ * @brief Preview state for time format
+ */
+typedef struct {
+    BOOL is_format_previewing;
+    TimeFormatType preview_format;
+    BOOL is_milliseconds_previewing;
+    BOOL preview_show_milliseconds;
+} TimeFormatPreviewState;
+
+/**
+ * @brief Display configuration
+ */
+typedef struct {
+    TimeFormatConfig time_format;
+    TimeFormatPreviewState preview;
+} DisplayConfig;
+
+/**
+ * @brief Timer state
+ */
+typedef struct {
+    int default_start_time;
+} TimerState;
+
+/**
+ * @brief Main application configuration
+ * 
+ * @details
+ * Single source of truth for all configuration state.
+ * Thread-safe when accessed through config functions.
+ */
+typedef struct {
+    RecentFilesState recent_files;
+    PomodoroConfig pomodoro;
+    NotificationConfig notification;
+    FontLicenseState font_license;
+    DisplayConfig display;
+    TimerState timer;
+    time_t last_config_time;
+} AppConfig;
+
+/* ============================================================================
  * Global state variables
  * ============================================================================ */
 
-extern RecentFile CLOCK_RECENT_FILES[MAX_RECENT_FILES];
-extern int CLOCK_RECENT_FILES_COUNT;
-extern int CLOCK_DEFAULT_START_TIME;
-extern time_t last_config_time;
-
-/* Pomodoro settings */
-extern int POMODORO_WORK_TIME;
-extern int POMODORO_SHORT_BREAK;
-extern int POMODORO_LONG_BREAK;
-extern int POMODORO_TIMES[10];
-extern int POMODORO_TIMES_COUNT;
-
-/* Notification messages (placeholder support) */
-extern char CLOCK_TIMEOUT_MESSAGE_TEXT[100];
-extern char POMODORO_TIMEOUT_MESSAGE_TEXT[100];
-extern char POMODORO_CYCLE_COMPLETE_TEXT[100];
-
-/* Notification display */
-extern int NOTIFICATION_TIMEOUT_MS;
-extern NotificationType NOTIFICATION_TYPE;
-extern BOOL NOTIFICATION_DISABLED;
-
-/* Notification sound */
-extern char NOTIFICATION_SOUND_FILE[MAX_PATH];
-extern int NOTIFICATION_SOUND_VOLUME;
-
-/* Font license tracking (for version upgrades) */
-extern BOOL FONT_LICENSE_ACCEPTED;
-extern char FONT_LICENSE_VERSION_ACCEPTED[16];
-
-/* Time display format */
-extern TimeFormatType CLOCK_TIME_FORMAT;
-extern BOOL IS_TIME_FORMAT_PREVIEWING;
-extern TimeFormatType PREVIEW_TIME_FORMAT;
-extern BOOL CLOCK_SHOW_MILLISECONDS;
-extern BOOL IS_MILLISECONDS_PREVIEWING;
-extern BOOL PREVIEW_SHOW_MILLISECONDS;
+/** @brief Global application configuration instance */
+extern AppConfig g_AppConfig;
 
 /* ============================================================================
  * Animation speed functions
