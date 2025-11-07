@@ -1,4 +1,7 @@
-/** @file shortcut_checker.c @brief Desktop shortcut auto-management for Store/WinGet installs */
+/**
+ * @file shortcut_checker.c
+ * @brief Desktop shortcut auto-management for Store/WinGet installs
+ */
 #include "shortcut_checker.h"
 #include "config.h"
 #include "log.h"

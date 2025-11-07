@@ -1,11 +1,6 @@
 /**
  * @file tray_menu.c
  * @brief System tray context menus (left/right-click)
- * 
- * Key features:
- * - Dynamic menu generation from filesystem (fonts, animations)
- * - Natural sorting for numeric filenames
- * - Recursive directory scanning with checkmarks
  */
 #include <windows.h>
 #include <shellapi.h>

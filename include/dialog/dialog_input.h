@@ -42,12 +42,6 @@ BOOL ParseTimeInput(const char* input, int* seconds);
  * - CLOCK_IDD_POMODORO_TIME_DIALOG: Pomodoro time
  * - CLOCK_IDD_POMODORO_LOOP_DIALOG: Loop count
  * 
- * Features:
- * - Auto-select on focus
- * - Ctrl+A support
- * - Enter to submit
- * - Empty input cancels
- * 
  * @note Uses global inputText buffer for result
  */
 INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);

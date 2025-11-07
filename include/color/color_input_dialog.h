@@ -22,12 +22,6 @@
  * @details
  * Empty input cancels (supports "changed my mind" workflow).
  * Validation errors show guidance dialog. Immediate config save.
- * 
- * Features:
- * - Real-time preview as you type
- * - Supports CSS names, hex, and RGB formats
- * - Ctrl+A for select all
- * - Enter to submit
  */
 INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 

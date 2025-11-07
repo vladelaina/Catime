@@ -1,4 +1,7 @@
-/** @file system_monitor.c @brief System performance monitoring with macro-driven validation */
+/**
+ * @file system_monitor.c
+ * @brief System performance monitoring with macro-driven validation
+ */
 
 #include <windows.h>
 #include <psapi.h>

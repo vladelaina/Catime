@@ -23,11 +23,6 @@
  * Black auto-converts to near-black (#000001) to prevent invisible text.
  * Returns -1 on cancel to distinguish from black (#000000 = 0).
  * 
- * Features:
- * - Live preview on parent window
- * - Eyedropper tool (click to lock color)
- * - Custom colors auto-saved to palette
- * 
  * @note Custom colors persist in session only (saved on explicit apply)
  */
 COLORREF ShowColorDialog(HWND hwnd);

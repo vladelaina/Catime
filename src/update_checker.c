@@ -1,11 +1,6 @@
 /**
  * @file update_checker.c
  * @brief GitHub version checking and update management
- * 
- * Key features:
- * - Semantic versioning comparison (supports pre-release tags)
- * - GitHub API integration for release info
- * - Multi-language update dialogs
  */
 #include <windows.h>
 #include <wininet.h>

@@ -1,14 +1,6 @@
 /**
  * @file log.h
  * @brief Modular logging system with comprehensive diagnostics and crash handling
- * 
- * Refactored architecture features:
- * - Table-driven OS/CPU/signal mapping for maintainability
- * - Modular system information logging functions
- * - Log rotation support for long-running applications
- * - Configurable log level filtering
- * - Thread-safe atomic operations in crash handlers
- * - Zero-allocation error formatting utilities
  */
 
 #ifndef LOG_H

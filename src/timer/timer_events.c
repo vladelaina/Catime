@@ -1,4 +1,7 @@
-/** @file timer_events.c @brief Timer event dispatch with callback-based retry */
+/**
+ * @file timer_events.c
+ * @brief Timer event dispatch with callback-based retry
+ */
 
 #include <windows.h>
 #include <stdlib.h>

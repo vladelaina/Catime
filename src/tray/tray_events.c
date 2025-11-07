@@ -1,11 +1,6 @@
 /**
  * @file tray_events.c
  * @brief System tray event handlers and timer control
- * 
- * Key abstractions:
- * - OpenUrlInBrowser: unified external navigation
- * - RestartTimerWithInterval: simplified timer management
- * - IsTimerActive: semantic timer state checking
  */
 #include <windows.h>
 #include <shellapi.h>

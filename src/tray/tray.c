@@ -1,11 +1,6 @@
 /**
  * @file tray.c
  * @brief System tray icon management and tooltip updates
- * 
- * Key features:
- * - Periodic tooltip updates (CPU, memory, network speed)
- * - Animation type detection (logo, percent icons, custom)
- * - Taskbar recreation handling
  */
 #include <windows.h>
 #include <shellapi.h>

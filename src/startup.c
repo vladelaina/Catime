@@ -1,4 +1,7 @@
-/** @file startup.c @brief Windows startup integration with table-driven mode configs */
+/**
+ * @file startup.c
+ * @brief Windows startup integration with table-driven mode configs
+ */
 #include "startup.h"
 #include "config.h"
 #include "timer/timer.h"

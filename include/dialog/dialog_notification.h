@@ -62,12 +62,6 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
  * - Display settings (timeout, opacity)
  * - Notification type (toast/modal/disabled)
  * - Sound configuration (file selection, volume, test playback)
- * 
- * Features:
- * - Live preview
- * - Sound file browser with validation
- * - Volume slider with test button
- * - Tab-based organization
  */
 void ShowNotificationSettingsDialog(HWND hwndParent);
 
