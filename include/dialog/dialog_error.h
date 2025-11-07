@@ -13,7 +13,7 @@
  * @param hwndParent Parent window handle
  * 
  * @details
- * Displays: "输入格式无效，请重新输入。" / "Invalid input format, please try again."
+ * Displays: "Invalid input format, please try again."
  * Single OK button, auto-centers on primary screen.
  */
 void ShowErrorDialog(HWND hwndParent);
