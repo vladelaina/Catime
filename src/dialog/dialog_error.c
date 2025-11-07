@@ -19,10 +19,10 @@ INT_PTR CALLBACK ErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
     switch (msg) {
         case WM_INITDIALOG:
             SetDlgItemTextW(hwndDlg, IDC_ERROR_TEXT,
-                GetLocalizedString(L"输入格式无效，请重新输入。", 
+                GetLocalizedString(NULL, 
                                  L"Invalid input format, please try again."));
 
-            SetWindowTextW(hwndDlg, GetLocalizedString(L"错误", L"Error"));
+            SetWindowTextW(hwndDlg, GetLocalizedString(NULL, L"Error"));
             
             Dialog_CenterOnPrimaryScreen(hwndDlg);
             

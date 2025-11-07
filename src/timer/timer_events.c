@@ -236,8 +236,8 @@ static void HandleTimeoutActions(HWND hwnd) {
                                     HINSTANCE result = ShellExecuteW(NULL, L"open", wPath, NULL, NULL, SW_SHOWNORMAL);
                                     if ((INT_PTR)result <= 32) {
                                         MessageBoxW(hwnd, 
-                                            GetLocalizedString(L"无法打开文件", L"Failed to open file"),
-                                            GetLocalizedString(L"错误", L"Error"),
+                                            GetLocalizedString(NULL, L"Failed to open file"),
+                                            GetLocalizedString(NULL, L"Error"),
                                             MB_ICONERROR);
                                     }
                                 }
@@ -297,7 +297,7 @@ static void HandlePomodoroCompletion(HWND hwnd) {
     if (current_pomodoro_time_index == 0 && complete_pomodoro_cycles > 0) {
         wchar_t cycleMsg[100];
         swprintf(cycleMsg, 100, 
-                GetLocalizedString(L"开始第 %d 轮番茄钟", L"Starting Pomodoro cycle %d"),
+                GetLocalizedString(NULL, L"Starting Pomodoro cycle %d"),
                 complete_pomodoro_cycles + 1);
         ShowNotification(hwnd, cycleMsg);
     }

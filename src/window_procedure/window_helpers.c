@@ -206,8 +206,8 @@ BOOL ValidateAndSetTimeoutFile(HWND hwnd, const char* filePathUtf8) {
     } else {
         if (hwnd) {
             MessageBoxW(hwnd, 
-                GetLocalizedString(L"所选文件不存在", L"Selected file does not exist"),
-                GetLocalizedString(L"错误", L"Error"),
+                GetLocalizedString(NULL, L"Selected file does not exist"),
+                GetLocalizedString(NULL, L"Error"),
                 MB_ICONERROR);
         }
         return FALSE;

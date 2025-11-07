@@ -38,12 +38,12 @@ typedef struct {
 } AboutLinkInfo;
 
 static AboutLinkInfo g_aboutLinkInfos[] = {
-    {IDC_CREDIT_LINK, L"特别感谢猫屋敷梨梨Official提供的图标", L"Special thanks to Neko House Lili Official for the icon", L"https://space.bilibili.com/26087398"},
-    {IDC_CREDITS, L"鸣谢", L"Credits", L"https://vladelaina.github.io/Catime/#thanks"},
-    {IDC_BILIBILI_LINK, L"BiliBili", L"BiliBili", L"https://space.bilibili.com/1862395225"},
-    {IDC_GITHUB_LINK, L"GitHub", L"GitHub", L"https://github.com/vladelaina/Catime"},
-    {IDC_COPYRIGHT_LINK, L"版权声明", L"Copyright Notice", L"https://github.com/vladelaina/Catime#️copyright-notice"},
-    {IDC_SUPPORT, L"支持", L"Support", L"https://vladelaina.github.io/Catime/support.html"}
+    {IDC_CREDIT_LINK, NULL, L"Special thanks to Neko House Lili Official for the icon", L"https://space.bilibili.com/26087398"},
+    {IDC_CREDITS, NULL, L"Credits", L"https://vladelaina.github.io/Catime/#thanks"},
+    {IDC_BILIBILI_LINK, NULL, L"BiliBili", L"https://space.bilibili.com/1862395225"},
+    {IDC_GITHUB_LINK, NULL, L"GitHub", L"https://github.com/vladelaina/Catime"},
+    {IDC_COPYRIGHT_LINK, NULL, L"Copyright Notice", L"https://github.com/vladelaina/Catime#️copyright-notice"},
+    {IDC_SUPPORT, NULL, L"Support", L"https://vladelaina.github.io/Catime/support.html"}
 };
 
 static const int g_aboutLinkInfoCount = sizeof(g_aboutLinkInfos) / sizeof(g_aboutLinkInfos[0]);

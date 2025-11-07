@@ -64,7 +64,7 @@ INT_PTR CALLBACK PomodoroLoopDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, L
             ApplyDialogLanguage(hwndDlg, CLOCK_IDD_POMODORO_LOOP_DIALOG);
 
             SetDlgItemTextW(hwndDlg, CLOCK_IDC_STATIC,
-                GetLocalizedString(L"请输入循环次数（1-100）：", 
+                GetLocalizedString(NULL, 
                                  L"Please enter loop count (1-100):"));
 
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);

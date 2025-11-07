@@ -34,9 +34,9 @@
  * ============================================================================ */
 
 /** @brief Default notification messages */
-#define DEFAULT_TIMEOUT_MESSAGE        "时间到啦！"
-#define DEFAULT_POMODORO_MESSAGE       "番茄钟时间到！"
-#define DEFAULT_POMODORO_COMPLETE_MSG  "所有番茄钟循环完成！"
+#define DEFAULT_TIMEOUT_MESSAGE        "Time's up!"
+#define DEFAULT_POMODORO_MESSAGE       "Pomodoro complete!"
+#define DEFAULT_POMODORO_COMPLETE_MSG  "All Pomodoro cycles completed!"
 
 /** @brief Resource path prefixes */
 #define LOCALAPPDATA_PREFIX            "%LOCALAPPDATA%\\Catime"

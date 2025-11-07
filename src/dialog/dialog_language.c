@@ -56,11 +56,11 @@ static DialogTitleEntry g_dialogTitles[] = {
 };
 
 static SpecialControlEntry g_specialControls[] = {
-    {IDD_ABOUT_DIALOG, IDC_ABOUT_TITLE, L"关于", L"About"},
+    {IDD_ABOUT_DIALOG, IDC_ABOUT_TITLE, L"About", L"About"},
     {IDD_ABOUT_DIALOG, IDC_VERSION_TEXT, L"Version: %hs", L"Version: %hs"},
-    {IDD_ABOUT_DIALOG, IDC_BUILD_DATE, L"构建日期:", L"Build Date:"},
+    {IDD_ABOUT_DIALOG, IDC_BUILD_DATE, L"Build Date:", L"Build Date:"},
     {IDD_ABOUT_DIALOG, IDC_COPYRIGHT, L"COPYRIGHT_TEXT", L"COPYRIGHT_TEXT"},
-    {IDD_ABOUT_DIALOG, IDC_CREDITS, L"鸣谢", L"Credits"},
+    {IDD_ABOUT_DIALOG, IDC_CREDITS, L"Credits", L"Credits"},
 
     {IDD_NO_UPDATE_DIALOG, IDC_NO_UPDATE_TEXT, L"NoUpdateRequired", L"You are already using the latest version!"},
 

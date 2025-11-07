@@ -79,7 +79,7 @@ void BuildPomodoroMenu(HMENU hMenu) {
     wchar_t timeBuffer[64];
     
     AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_START,
-                GetLocalizedString(L"开始", L"Start"));
+                GetLocalizedString(NULL, L"Start"));
     AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
 
     for (int i = 0; i < POMODORO_TIMES_COUNT; i++) {
@@ -103,16 +103,16 @@ void BuildPomodoroMenu(HMENU hMenu) {
 
     wchar_t menuText[64];
     _snwprintf(menuText, sizeof(menuText)/sizeof(wchar_t),
-              GetLocalizedString(L"循环次数: %d", L"Loop Count: %d"),
+              GetLocalizedString(NULL, L"Loop Count: %d"),
               POMODORO_LOOP_COUNT);
     AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_LOOP_COUNT, menuText);
 
     AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
 
     AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_COMBINATION,
-              GetLocalizedString(L"组合", L"Combination"));
+              GetLocalizedString(NULL, L"Combination"));
     
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hPomodoroMenu,
-                GetLocalizedString(L"番茄时钟", L"Pomodoro"));
+                GetLocalizedString(NULL, L"Pomodoro"));
 }
 

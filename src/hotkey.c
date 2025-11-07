@@ -48,18 +48,18 @@ static WORD g_dialogHotkeys[HOTKEY_COUNT] = {0};
 static WNDPROC g_OldHotkeyDlgProc = NULL;
 
 static const HotkeyMetadata g_hotkeyMetadata[HOTKEY_COUNT] = {
-    {IDC_HOTKEY_EDIT1,  IDC_HOTKEY_LABEL1,  L"显示当前时间:",     L"Show Current Time:"},
-    {IDC_HOTKEY_EDIT2,  IDC_HOTKEY_LABEL2,  L"正计时:",          L"Count Up:"},
-    {IDC_HOTKEY_EDIT12, IDC_HOTKEY_LABEL12, L"倒计时:",          L"Countdown:"},
-    {IDC_HOTKEY_EDIT3,  IDC_HOTKEY_LABEL3,  L"默认倒计时:",       L"Default Countdown:"},
-    {IDC_HOTKEY_EDIT9,  IDC_HOTKEY_LABEL9,  L"快捷倒计时1:",      L"Quick Countdown 1:"},
-    {IDC_HOTKEY_EDIT10, IDC_HOTKEY_LABEL10, L"快捷倒计时2:",      L"Quick Countdown 2:"},
-    {IDC_HOTKEY_EDIT11, IDC_HOTKEY_LABEL11, L"快捷倒计时3:",      L"Quick Countdown 3:"},
-    {IDC_HOTKEY_EDIT4,  IDC_HOTKEY_LABEL4,  L"开始番茄钟:",       L"Start Pomodoro:"},
-    {IDC_HOTKEY_EDIT5,  IDC_HOTKEY_LABEL5,  L"隐藏/显示窗口:",    L"Hide/Show Window:"},
-    {IDC_HOTKEY_EDIT6,  IDC_HOTKEY_LABEL6,  L"进入编辑模式:",     L"Enter Edit Mode:"},
-    {IDC_HOTKEY_EDIT7,  IDC_HOTKEY_LABEL7,  L"暂停/继续计时:",    L"Pause/Resume Timer:"},
-    {IDC_HOTKEY_EDIT8,  IDC_HOTKEY_LABEL8,  L"重新开始计时:",     L"Restart Timer:"},
+    {IDC_HOTKEY_EDIT1,  IDC_HOTKEY_LABEL1,  NULL, L"Show Current Time:"},
+    {IDC_HOTKEY_EDIT2,  IDC_HOTKEY_LABEL2,  NULL, L"Count Up:"},
+    {IDC_HOTKEY_EDIT12, IDC_HOTKEY_LABEL12, NULL, L"Countdown:"},
+    {IDC_HOTKEY_EDIT3,  IDC_HOTKEY_LABEL3,  NULL, L"Default Countdown:"},
+    {IDC_HOTKEY_EDIT9,  IDC_HOTKEY_LABEL9,  NULL, L"Quick Countdown 1:"},
+    {IDC_HOTKEY_EDIT10, IDC_HOTKEY_LABEL10, NULL, L"Quick Countdown 2:"},
+    {IDC_HOTKEY_EDIT11, IDC_HOTKEY_LABEL11, NULL, L"Quick Countdown 3:"},
+    {IDC_HOTKEY_EDIT4,  IDC_HOTKEY_LABEL4,  NULL, L"Start Pomodoro:"},
+    {IDC_HOTKEY_EDIT5,  IDC_HOTKEY_LABEL5,  NULL, L"Hide/Show Window:"},
+    {IDC_HOTKEY_EDIT6,  IDC_HOTKEY_LABEL6,  NULL, L"Enter Edit Mode:"},
+    {IDC_HOTKEY_EDIT7,  IDC_HOTKEY_LABEL7,  NULL, L"Pause/Resume Timer:"},
+    {IDC_HOTKEY_EDIT8,  IDC_HOTKEY_LABEL8,  NULL, L"Restart Timer:"},
 };
 
 static inline BOOL IsHotkeyEditControl(DWORD ctrlId) {
@@ -120,7 +120,7 @@ static BOOL ValidateAndSanitizeHotkey(WORD* hotkey) {
 }
 
 static void InitializeDialogLabels(HWND hwndDlg) {
-    SetWindowTextW(hwndDlg, GetLocalizedString(L"热键设置", L"Hotkey Settings"));
+    SetWindowTextW(hwndDlg, GetLocalizedString(NULL, L"Hotkey Settings"));
 
     for (int i = 0; i < HOTKEY_COUNT; i++) {
         SetDlgItemTextW(hwndDlg, g_hotkeyMetadata[i].labelCtrlId,
@@ -129,9 +129,9 @@ static void InitializeDialogLabels(HWND hwndDlg) {
     }
 
     SetDlgItemTextW(hwndDlg, IDC_HOTKEY_NOTE,
-                   GetLocalizedString(L"* 热键将全局生效", L"* Hotkeys will work globally"));
-    SetDlgItemTextW(hwndDlg, IDOK, GetLocalizedString(L"确定", L"OK"));
-    SetDlgItemTextW(hwndDlg, IDCANCEL, GetLocalizedString(L"取消", L"Cancel"));
+                   GetLocalizedString(NULL, L"* Hotkeys will work globally"));
+    SetDlgItemTextW(hwndDlg, IDOK, GetLocalizedString(NULL, L"OK"));
+    SetDlgItemTextW(hwndDlg, IDCANCEL, GetLocalizedString(NULL, L"Cancel"));
 }
 
 static void LoadHotkeyConfiguration(void) {

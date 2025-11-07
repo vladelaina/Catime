@@ -52,24 +52,24 @@ Utf8String ToUtf8(const wchar_t* wide) {
  * ============================================================================ */
 
 void ShowError(HWND hwnd, ErrorCode errorCode) {
-    const wchar_t* title = GetLocalizedString(L"错误", L"Error");
+    const wchar_t* title = GetLocalizedString(NULL, L"Error");
     const wchar_t* message;
     
     switch (errorCode) {
         case ERR_FILE_NOT_FOUND:
-            message = GetLocalizedString(L"所选文件不存在", L"Selected file does not exist");
+            message = GetLocalizedString(NULL, L"Selected file does not exist");
             break;
         case ERR_INVALID_INPUT:
-            message = GetLocalizedString(L"输入格式不正确", L"Invalid input format");
+            message = GetLocalizedString(NULL, L"Invalid input format");
             break;
         case ERR_BUFFER_TOO_SMALL:
-            message = GetLocalizedString(L"缓冲区太小", L"Buffer too small");
+            message = GetLocalizedString(NULL, L"Buffer too small");
             break;
         case ERR_OPERATION_FAILED:
-            message = GetLocalizedString(L"操作失败", L"Operation failed");
+            message = GetLocalizedString(NULL, L"Operation failed");
             break;
         default:
-            message = GetLocalizedString(L"未知错误", L"Unknown error");
+            message = GetLocalizedString(NULL, L"Unknown error");
     }
     
     MessageBoxW(hwnd, message, title, MB_ICONERROR);

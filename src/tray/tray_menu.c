@@ -142,19 +142,19 @@ static void BuildTimeoutActionSubmenu(HMENU hMenu) {
     
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_MESSAGE ? MF_CHECKED : MF_UNCHECKED), 
                CLOCK_IDM_SHOW_MESSAGE, 
-               GetLocalizedString(L"显示消息", L"Show Message"));
+               GetLocalizedString(NULL, L"Show Message"));
 
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SHOW_TIME ? MF_CHECKED : MF_UNCHECKED), 
                CLOCK_IDM_TIMEOUT_SHOW_TIME, 
-               GetLocalizedString(L"显示当前时间", L"Show Current Time"));
+               GetLocalizedString(NULL, L"Show Current Time"));
 
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_COUNT_UP ? MF_CHECKED : MF_UNCHECKED), 
                CLOCK_IDM_TIMEOUT_COUNT_UP, 
-               GetLocalizedString(L"正计时", L"Count Up"));
+               GetLocalizedString(NULL, L"Count Up"));
 
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_LOCK ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_LOCK_SCREEN,
-               GetLocalizedString(L"锁定屏幕", L"Lock Screen"));
+               GetLocalizedString(NULL, L"Lock Screen"));
 
     AppendMenuW(hTimeoutMenu, MF_SEPARATOR, 0, NULL);
 
@@ -180,36 +180,36 @@ static void BuildTimeoutActionSubmenu(HMENU hMenu) {
     }
 
     AppendMenuW(hFileMenu, MF_STRING, CLOCK_IDM_BROWSE_FILE,
-               GetLocalizedString(L"浏览...", L"Browse..."));
+               GetLocalizedString(NULL, L"Browse..."));
 
     AppendMenuW(hTimeoutMenu, MF_POPUP | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE ? MF_CHECKED : MF_UNCHECKED), 
                (UINT_PTR)hFileMenu, 
-               GetLocalizedString(L"打开文件/软件", L"Open File/Software"));
+               GetLocalizedString(NULL, L"Open File/Software"));
 
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_WEBSITE ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_OPEN_WEBSITE,
-               GetLocalizedString(L"打开网站", L"Open Website"));
+               GetLocalizedString(NULL, L"Open Website"));
 
     AppendMenuW(hTimeoutMenu, MF_SEPARATOR, 0, NULL);
 
     AppendMenuW(hTimeoutMenu, MF_STRING | MF_GRAYED | MF_DISABLED, 
                0,
-               GetLocalizedString(L"以下超时动作为一次性", L"Following actions are one-time only"));
+               GetLocalizedString(NULL, L"Following actions are one-time only"));
 
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SHUTDOWN ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_SHUTDOWN,
-               GetLocalizedString(L"关机", L"Shutdown"));
+               GetLocalizedString(NULL, L"Shutdown"));
 
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_RESTART ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_RESTART,
-               GetLocalizedString(L"重启", L"Restart"));
+               GetLocalizedString(NULL, L"Restart"));
 
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_SLEEP ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_SLEEP,
-               GetLocalizedString(L"睡眠", L"Sleep"));
+               GetLocalizedString(NULL, L"Sleep"));
 
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeoutMenu, 
-                GetLocalizedString(L"超时动作", L"Timeout Action"));
+                GetLocalizedString(NULL, L"Timeout Action"));
 }
 
 /**
@@ -219,7 +219,7 @@ static void BuildTimeoutActionSubmenu(HMENU hMenu) {
 static void BuildPresetManagementSubmenu(HMENU hMenu) {
     HMENU hTimeOptionsMenu = CreatePopupMenu();
     AppendMenuW(hTimeOptionsMenu, MF_STRING, CLOCK_IDC_MODIFY_TIME_OPTIONS,
-                GetLocalizedString(L"倒计时预设", L"Modify Quick Countdown Options"));
+                GetLocalizedString(NULL, L"Modify Quick Countdown Options"));
     
     HMENU hStartupSettingsMenu = CreatePopupMenu();
 
@@ -233,44 +233,44 @@ static void BuildPresetManagementSubmenu(HMENU hMenu) {
     AppendMenuW(hStartupSettingsMenu, MF_STRING | 
                 (strcmp(currentStartupMode, "COUNTDOWN") == 0 ? MF_CHECKED : 0),
                 CLOCK_IDC_SET_COUNTDOWN_TIME,
-                GetLocalizedString(L"倒计时", L"Countdown"));
+                GetLocalizedString(NULL, L"Countdown"));
     
     AppendMenuW(hStartupSettingsMenu, MF_STRING | 
                 (strcmp(currentStartupMode, "COUNT_UP") == 0 ? MF_CHECKED : 0),
                 CLOCK_IDC_START_COUNT_UP,
-                GetLocalizedString(L"正计时", L"Stopwatch"));
+                GetLocalizedString(NULL, L"Stopwatch"));
     
     AppendMenuW(hStartupSettingsMenu, MF_STRING | 
                 (strcmp(currentStartupMode, "SHOW_TIME") == 0 ? MF_CHECKED : 0),
                 CLOCK_IDC_START_SHOW_TIME,
-                GetLocalizedString(L"显示当前时间", L"Show Current Time"));
+                GetLocalizedString(NULL, L"Show Current Time"));
     
     AppendMenuW(hStartupSettingsMenu, MF_STRING | 
                 (strcmp(currentStartupMode, "NO_DISPLAY") == 0 ? MF_CHECKED : 0),
                 CLOCK_IDC_START_NO_DISPLAY,
-                GetLocalizedString(L"不显示", L"No Display"));
+                GetLocalizedString(NULL, L"No Display"));
     
     AppendMenuW(hStartupSettingsMenu, MF_SEPARATOR, 0, NULL);
 
     AppendMenuW(hStartupSettingsMenu, MF_STRING | 
             (IsAutoStartEnabled() ? MF_CHECKED : MF_UNCHECKED),
             CLOCK_IDC_AUTO_START,
-            GetLocalizedString(L"开机自启动", L"Start with Windows"));
+            GetLocalizedString(NULL, L"Start with Windows"));
 
     AppendMenuW(hTimeOptionsMenu, MF_POPUP, (UINT_PTR)hStartupSettingsMenu,
-                GetLocalizedString(L"启动设置", L"Startup Settings"));
+                GetLocalizedString(NULL, L"Startup Settings"));
 
     AppendMenuW(hTimeOptionsMenu, MF_STRING, CLOCK_IDM_NOTIFICATION_SETTINGS,
-                GetLocalizedString(L"通知设置", L"Notification Settings"));
+                GetLocalizedString(NULL, L"Notification Settings"));
 
     AppendMenuW(hTimeOptionsMenu, MF_SEPARATOR, 0, NULL);
     
     AppendMenuW(hTimeOptionsMenu, MF_STRING | (CLOCK_WINDOW_TOPMOST ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDM_TOPMOST,
-                GetLocalizedString(L"置顶", L"Always on Top"));
+                GetLocalizedString(NULL, L"Always on Top"));
 
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeOptionsMenu,
-                GetLocalizedString(L"预设管理", L"Preset Management"));
+                GetLocalizedString(NULL, L"Preset Management"));
 }
 
 /**
@@ -282,24 +282,24 @@ static void BuildFormatSubmenu(HMENU hMenu) {
     
     AppendMenuW(hFormatMenu, MF_STRING | (CLOCK_TIME_FORMAT == TIME_FORMAT_DEFAULT ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDM_TIME_FORMAT_DEFAULT,
-                GetLocalizedString(L"默认格式", L"Default Format"));
+                GetLocalizedString(NULL, L"Default Format"));
     
     AppendMenuW(hFormatMenu, MF_STRING | (CLOCK_TIME_FORMAT == TIME_FORMAT_ZERO_PADDED ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDM_TIME_FORMAT_ZERO_PADDED,
-                GetLocalizedString(L"09:59格式", L"09:59 Format"));
+                GetLocalizedString(NULL, L"09:59 Format"));
     
     AppendMenuW(hFormatMenu, MF_STRING | (CLOCK_TIME_FORMAT == TIME_FORMAT_FULL_PADDED ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDM_TIME_FORMAT_FULL_PADDED,
-                GetLocalizedString(L"00:09:59格式", L"00:09:59 Format"));
+                GetLocalizedString(NULL, L"00:09:59 Format"));
     
     AppendMenuW(hFormatMenu, MF_SEPARATOR, 0, NULL);
     
     AppendMenuW(hFormatMenu, MF_STRING | (CLOCK_SHOW_MILLISECONDS ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDM_TIME_FORMAT_SHOW_MILLISECONDS,
-                GetLocalizedString(L"显示毫秒", L"Show Milliseconds"));
+                GetLocalizedString(NULL, L"Show Milliseconds"));
     
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hFormatMenu,
-                GetLocalizedString(L"格式", L"Format"));
+                GetLocalizedString(NULL, L"Format"));
 }
 
 /**
@@ -455,7 +455,7 @@ static void BuildFontSubmenu(HMENU hMenu) {
     
     if (NeedsFontLicenseVersionAcceptance()) {
         AppendMenuW(hFontSubMenu, MF_STRING, CLOCK_IDC_FONT_LICENSE_AGREE, 
-                   GetLocalizedString(L"点击同意许可协议后继续", L"Click to agree to license agreement"));
+                   GetLocalizedString(NULL, L"Click to agree to license agreement"));
     } else {
         wchar_t wFontsFolder[MAX_PATH] = {0};
         if (GetFontsFolderWideFromConfig(wFontsFolder, MAX_PATH)) {
@@ -489,19 +489,19 @@ static void BuildFontSubmenu(HMENU hMenu) {
 
             if (fontFolderStatus == 0) {
                 AppendMenuW(hFontSubMenu, MF_STRING | MF_GRAYED, 0, 
-                           GetLocalizedString(L"未找到字体文件", L"No font files found"));
+                           GetLocalizedString(NULL, L"No font files found"));
                 AppendMenuW(hFontSubMenu, MF_SEPARATOR, 0, NULL);
             } else {
                 AppendMenuW(hFontSubMenu, MF_SEPARATOR, 0, NULL);
             }
             
             AppendMenuW(hFontSubMenu, MF_STRING, CLOCK_IDC_FONT_ADVANCED, 
-                       GetLocalizedString(L"打开字体文件夹", L"Open fonts folder"));
+                       GetLocalizedString(NULL, L"Open fonts folder"));
         }
     }
     
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hFontSubMenu, 
-                GetLocalizedString(L"字体", L"Font"));
+                GetLocalizedString(NULL, L"Font"));
 }
 
 /**
@@ -530,15 +530,15 @@ static void BuildColorSubmenu(HMENU hMenu) {
 
     HMENU hCustomizeMenu = CreatePopupMenu();
     AppendMenuW(hCustomizeMenu, MF_STRING, CLOCK_IDC_COLOR_VALUE, 
-                GetLocalizedString(L"颜色值", L"Color Value"));
+                GetLocalizedString(NULL, L"Color Value"));
     AppendMenuW(hCustomizeMenu, MF_STRING, CLOCK_IDC_COLOR_PANEL, 
-                GetLocalizedString(L"颜色面板", L"Color Panel"));
+                GetLocalizedString(NULL, L"Color Panel"));
 
     AppendMenuW(hColorSubMenu, MF_POPUP, (UINT_PTR)hCustomizeMenu, 
-                GetLocalizedString(L"自定义", L"Customize"));
+                GetLocalizedString(NULL, L"Customize"));
     
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hColorSubMenu, 
-                GetLocalizedString(L"颜色", L"Color"));
+                GetLocalizedString(NULL, L"Color"));
 }
 
 /**
@@ -552,7 +552,7 @@ static void BuildAnimationSubmenu(HMENU hMenu) {
         BuildAnimationMenu(hAnimMenu, currentAnim);
         
         if (GetMenuItemCount(hAnimMenu) <= 4) {
-            AppendMenuW(hAnimMenu, MF_STRING | MF_GRAYED, 0, GetLocalizedString(L"(支持 GIF、WebP、PNG 等)", L"(Supports GIF, WebP, PNG, etc.)"));
+            AppendMenuW(hAnimMenu, MF_STRING | MF_GRAYED, 0, GetLocalizedString(NULL, L"(Supports GIF, WebP, PNG, etc.)"));
         }
 
         AppendMenuW(hAnimMenu, MF_SEPARATOR, 0, NULL);
@@ -560,18 +560,18 @@ static void BuildAnimationSubmenu(HMENU hMenu) {
         HMENU hAnimSpeedMenu = CreatePopupMenu();
         AnimationSpeedMetric currentMetric = GetAnimationSpeedMetric();
         AppendMenuW(hAnimSpeedMenu, MF_STRING | (currentMetric == ANIMATION_SPEED_MEMORY ? MF_CHECKED : MF_UNCHECKED),
-                    CLOCK_IDM_ANIM_SPEED_MEMORY, GetLocalizedString(L"按内存占用", L"By Memory Usage"));
+                    CLOCK_IDM_ANIM_SPEED_MEMORY, GetLocalizedString(NULL, L"By Memory Usage"));
         AppendMenuW(hAnimSpeedMenu, MF_STRING | (currentMetric == ANIMATION_SPEED_CPU ? MF_CHECKED : MF_UNCHECKED),
-                    CLOCK_IDM_ANIM_SPEED_CPU, GetLocalizedString(L"按CPU占用", L"By CPU Usage"));
+                    CLOCK_IDM_ANIM_SPEED_CPU, GetLocalizedString(NULL, L"By CPU Usage"));
         AppendMenuW(hAnimSpeedMenu, MF_STRING | (currentMetric == ANIMATION_SPEED_TIMER ? MF_CHECKED : MF_UNCHECKED),
-                    CLOCK_IDM_ANIM_SPEED_TIMER, GetLocalizedString(L"按倒计时进度", L"By Countdown Progress"));
+                    CLOCK_IDM_ANIM_SPEED_TIMER, GetLocalizedString(NULL, L"By Countdown Progress"));
         AppendMenuW(hAnimMenu, MF_POPUP, (UINT_PTR)hAnimSpeedMenu,
-                    GetLocalizedString(L"动画速度依据", L"Animation Speed Metric"));
+                    GetLocalizedString(NULL, L"Animation Speed Metric"));
 
         AppendMenuW(hAnimMenu, MF_SEPARATOR, 0, NULL);
-        AppendMenuW(hAnimMenu, MF_STRING, CLOCK_IDM_ANIMATIONS_OPEN_DIR, GetLocalizedString(L"打开动画文件夹", L"Open animations folder"));
+        AppendMenuW(hAnimMenu, MF_STRING, CLOCK_IDM_ANIMATIONS_OPEN_DIR, GetLocalizedString(NULL, L"Open animations folder"));
     }
-    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hAnimMenu, GetLocalizedString(L"托盘图标", L"Tray Icon"));
+    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hAnimMenu, GetLocalizedString(NULL, L"Tray Icon"));
 }
 
 /**
@@ -581,20 +581,20 @@ static void BuildAnimationSubmenu(HMENU hMenu) {
 static void BuildHelpSubmenu(HMENU hMenu) {
     HMENU hAboutMenu = CreatePopupMenu();
 
-    AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_ABOUT, GetLocalizedString(L"关于", L"About"));
+    AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_ABOUT, GetLocalizedString(NULL, L"About"));
 
     AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);
 
-    AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_SUPPORT, GetLocalizedString(L"支持", L"Support"));
+    AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_SUPPORT, GetLocalizedString(NULL, L"Support"));
     
-    AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_FEEDBACK, GetLocalizedString(L"反馈", L"Feedback"));
+    AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_FEEDBACK, GetLocalizedString(NULL, L"Feedback"));
     
     AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);
     
-    AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_HELP, GetLocalizedString(L"使用指南", L"User Guide"));
+    AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_HELP, GetLocalizedString(NULL, L"User Guide"));
 
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_CHECK_UPDATE, 
-               GetLocalizedString(L"检查更新", L"Check for Updates"));
+               GetLocalizedString(NULL, L"Check for Updates"));
 
     HMENU hLangMenu = CreatePopupMenu();
     AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_CHINESE_SIMP ? MF_CHECKED : MF_UNCHECKED),
@@ -622,10 +622,10 @@ static void BuildHelpSubmenu(HMENU hMenu) {
 
     AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);
     AppendMenuW(hAboutMenu, MF_STRING, 200,
-                GetLocalizedString(L"重置", L"Reset"));
+                GetLocalizedString(NULL, L"Reset"));
 
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hAboutMenu,
-                GetLocalizedString(L"帮助", L"Help"));
+                GetLocalizedString(NULL, L"Help"));
 }
 
 /**
@@ -641,7 +641,7 @@ void ShowColorMenu(HWND hwnd) {
     /* Edit mode toggle */
     AppendMenuW(hMenu, MF_STRING | (CLOCK_EDIT_MODE ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDC_EDIT_MODE, 
-               GetLocalizedString(L"编辑模式", L"Edit Mode"));
+               GetLocalizedString(NULL, L"Edit Mode"));
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
@@ -651,7 +651,7 @@ void ShowColorMenu(HWND hwnd) {
     
     /* Hotkey settings */
     AppendMenuW(hMenu, MF_STRING, CLOCK_IDM_HOTKEY_SETTINGS,
-                GetLocalizedString(L"热键设置", L"Hotkey Settings"));
+                GetLocalizedString(NULL, L"Hotkey Settings"));
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
@@ -669,7 +669,7 @@ void ShowColorMenu(HWND hwnd) {
 
     /* Exit */
     AppendMenuW(hMenu, MF_STRING, 109,
-                GetLocalizedString(L"退出", L"Exit"));
+                GetLocalizedString(NULL, L"Exit"));
     
     /* Display menu */
     POINT pt;
@@ -699,8 +699,8 @@ void ShowContextMenu(HWND hwnd) {
                           (!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0 && countdown_elapsed_time < CLOCK_TOTAL_TIME)));
     
     const wchar_t* pauseResumeText = CLOCK_IS_PAUSED ? 
-                                    GetLocalizedString(L"继续", L"Resume") : 
-                                    GetLocalizedString(L"暂停", L"Pause");
+                                    GetLocalizedString(NULL, L"Resume") : 
+                                    GetLocalizedString(NULL, L"Pause");
     
     AppendMenuW(hTimerManageMenu, MF_STRING | (timerRunning ? MF_ENABLED : MF_GRAYED),
                CLOCK_IDM_TIMER_PAUSE_RESUME, pauseResumeText);
@@ -710,45 +710,45 @@ void ShowContextMenu(HWND hwnd) {
     
     AppendMenuW(hTimerManageMenu, MF_STRING | (canRestart ? MF_ENABLED : MF_GRAYED),
                CLOCK_IDM_TIMER_RESTART, 
-               GetLocalizedString(L"重新开始", L"Start Over"));
+               GetLocalizedString(NULL, L"Start Over"));
     
     const wchar_t* visibilityText = IsWindowVisible(hwnd) ?
-        GetLocalizedString(L"隐藏窗口", L"Hide Window") :
-        GetLocalizedString(L"显示窗口", L"Show Window");
+        GetLocalizedString(NULL, L"Hide Window") :
+        GetLocalizedString(NULL, L"Show Window");
     
     AppendMenuW(hTimerManageMenu, MF_STRING, CLOCK_IDC_TOGGLE_VISIBILITY, visibilityText);
     
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimerManageMenu,
-               GetLocalizedString(L"计时管理", L"Timer Control"));
+               GetLocalizedString(NULL, L"Timer Control"));
     
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
     
     HMENU hTimeMenu = CreatePopupMenu();
     AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_SHOW_CURRENT_TIME,
-               GetLocalizedString(L"显示当前时间", L"Show Current Time"));
+               GetLocalizedString(NULL, L"Show Current Time"));
     
     AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_USE_24HOUR ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_24HOUR_FORMAT,
-               GetLocalizedString(L"24小时制", L"24-Hour Format"));
+               GetLocalizedString(NULL, L"24-Hour Format"));
     
     AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_SHOW_SECONDS ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_SHOW_SECONDS,
-               GetLocalizedString(L"显示秒数", L"Show Seconds"));
+               GetLocalizedString(NULL, L"Show Seconds"));
     
     AppendMenuW(hMenu, MF_POPUP,
                (UINT_PTR)hTimeMenu,
-               GetLocalizedString(L"时间显示", L"Time Display"));
+               GetLocalizedString(NULL, L"Time Display"));
 
     /* Build Pomodoro submenu using dedicated module */
     BuildPomodoroMenu(hMenu);
 
     AppendMenuW(hMenu, MF_STRING | (CLOCK_COUNT_UP ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_COUNT_UP_START,
-               GetLocalizedString(L"正计时", L"Count Up"));
+               GetLocalizedString(NULL, L"Count Up"));
 
     AppendMenuW(hMenu, MF_STRING, 101, 
-                GetLocalizedString(L"倒计时", L"Countdown"));
+                GetLocalizedString(NULL, L"Countdown"));
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 

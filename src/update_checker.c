@@ -284,11 +284,11 @@ INT_PTR CALLBACK ExitMsgDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lP
             InitializeDialog(hwndDlg, IDD_EXIT_DIALOG);
             
             SetDlgItemTextW(hwndDlg, IDC_EXIT_TEXT, 
-                GetLocalizedString(L"程序即将退出", L"The application will exit now"));
+                GetLocalizedString(NULL, L"The application will exit now"));
             SetDlgItemTextW(hwndDlg, IDOK, 
-                GetLocalizedString(L"确定", L"OK"));
+                GetLocalizedString(NULL, L"OK"));
             SetWindowTextW(hwndDlg, 
-                GetLocalizedString(L"Catime - 更新提示", L"Catime - Update Notice"));
+                GetLocalizedString(NULL, L"Catime - Update Notice"));
             return TRUE;
         }
         
@@ -323,8 +323,8 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                 if (currentVerW && latestVerW) {
                     wchar_t displayText[256];
                     StringCbPrintfW(displayText, sizeof(displayText), L"%s %s\n%s %s",
-                        GetLocalizedString(L"当前版本:", L"Current version:"), currentVerW,
-                        GetLocalizedString(L"新版本:", L"New version:"), latestVerW);
+                        GetLocalizedString(NULL, L"Current version:"), currentVerW,
+                        GetLocalizedString(NULL, L"New version:"), latestVerW);
                     SetDlgItemTextW(hwndDlg, IDC_UPDATE_TEXT, displayText);
                 }
                 
@@ -337,17 +337,17 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                     SetDlgItemTextW(hwndDlg, IDC_UPDATE_NOTES, notesW);
                 } else {
                     SetDlgItemTextW(hwndDlg, IDC_UPDATE_NOTES,
-                        GetLocalizedString(L"暂无更新说明", L"No release notes available."));
+                        GetLocalizedString(NULL, L"No release notes available."));
                 }
                 free(notesW);
                 
                 // Set button texts
-                SetDlgItemTextW(hwndDlg, IDYES, GetLocalizedString(L"立即更新", L"Update Now"));
-                SetDlgItemTextW(hwndDlg, IDNO, GetLocalizedString(L"稍后更新", L"Later"));
+                SetDlgItemTextW(hwndDlg, IDYES, GetLocalizedString(NULL, L"Update Now"));
+                SetDlgItemTextW(hwndDlg, IDNO, GetLocalizedString(NULL, L"Later"));
                 SetDlgItemTextW(hwndDlg, IDC_UPDATE_EXIT_TEXT,
-                    GetLocalizedString(L"点击\"立即更新\"将打开浏览器下载新版本", 
+                    GetLocalizedString(NULL, 
                                       L"Click 'Update Now' to open browser and download the new version"));
-                SetWindowTextW(hwndDlg, GetLocalizedString(L"发现新版本", L"Update Available"));
+                SetWindowTextW(hwndDlg, GetLocalizedString(NULL, L"Update Available"));
                 
                 ShowWindow(GetDlgItem(hwndDlg, IDYES), SW_SHOW);
                 ShowWindow(GetDlgItem(hwndDlg, IDNO), SW_SHOW);
@@ -408,7 +408,7 @@ INT_PTR CALLBACK NoUpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM l
                 wchar_t fullMessage[256];
                 StringCbPrintfW(fullMessage, sizeof(fullMessage), L"%s\n%s %hs",
                     baseText,
-                    GetLocalizedString(L"当前版本:", L"Current version:"),
+                    GetLocalizedString(NULL, L"Current version:"),
                     currentVersion);
                 SetDlgItemTextW(hwndDlg, IDC_NO_UPDATE_TEXT, fullMessage);
             }
@@ -545,7 +545,7 @@ static BOOL OpenBrowserAndExit(const char* url, HWND hwnd) {
     
     if ((INT_PTR)hInstance <= 32) {
         ShowUpdateErrorDialog(hwnd, 
-            GetLocalizedString(L"无法打开浏览器下载更新", L"Could not open browser to download update"));
+            GetLocalizedString(NULL, L"Could not open browser to download update"));
         return FALSE;
     }
     
@@ -567,7 +567,7 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
     if (!InitHttpResources(&res)) {
         if (!silentCheck) {
             ShowUpdateErrorDialog(hwnd, 
-                GetLocalizedString(L"无法创建Internet连接", L"Could not create Internet connection"));
+                GetLocalizedString(NULL, L"Could not create Internet connection"));
         }
         return;
     }
@@ -576,7 +576,7 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
         CleanupHttpResources(&res);
         if (!silentCheck) {
             ShowUpdateErrorDialog(hwnd, 
-                GetLocalizedString(L"无法连接到更新服务器", L"Could not connect to update server"));
+                GetLocalizedString(NULL, L"Could not connect to update server"));
         }
         return;
     }
@@ -585,7 +585,7 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
         CleanupHttpResources(&res);
         if (!silentCheck) {
             ShowUpdateErrorDialog(hwnd, 
-                GetLocalizedString(L"读取服务器响应失败", L"Failed to read server response"));
+                GetLocalizedString(NULL, L"Failed to read server response"));
         }
         return;
     }
@@ -599,7 +599,7 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
         CleanupHttpResources(&res);
         if (!silentCheck) {
             ShowUpdateErrorDialog(hwnd, 
-                GetLocalizedString(L"无法解析版本信息", L"Could not parse version information"));
+                GetLocalizedString(NULL, L"Could not parse version information"));
         }
         return;
     }
