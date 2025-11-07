@@ -70,7 +70,7 @@ static const VKeyMapping g_vkeyMap[] = {
     {VK_OEM_5,     "\\"},
     {VK_OEM_6,     "]"},
     {VK_OEM_7,     "'"},
-    {0, NULL}  /** End marker */
+    {0, NULL}
 };
 
 /**

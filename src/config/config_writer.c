@@ -320,7 +320,7 @@ BOOL WriteConfigItems(const char* config_path, const ConfigWriteItem* items, int
 void WriteConfig(const char* config_path) {
     if (!config_path) return;
     
-    ConfigWriteItem items[150];  /* Sufficient for all config items */
+    ConfigWriteItem items[150];
     int count = 0;
     
     if (!CollectCurrentConfig(items, &count)) {

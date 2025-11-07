@@ -120,7 +120,7 @@ LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
  * ============================================================================ */
 
 INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
-    (void)lParam;  /* Unused */
+    (void)lParam;
     
     switch (msg) {
         case WM_INITDIALOG: {

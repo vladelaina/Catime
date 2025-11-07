@@ -63,7 +63,6 @@ static void HandleStartupMode(HWND hwnd) {
             elapsed_time = CLOCK_TOTAL_TIME;
             CLOCK_IS_PAUSED = TRUE;
             
-            /** Prevent notifications when hidden */
             message_shown = TRUE;
             countdown_message_shown = TRUE;
             countup_message_shown = TRUE;

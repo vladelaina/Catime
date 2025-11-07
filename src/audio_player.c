@@ -16,7 +16,7 @@ extern char NOTIFICATION_SOUND_FILE[MAX_PATH];
 extern int NOTIFICATION_SOUND_VOLUME;
 
 #define TIMER_INTERVAL_AUDIO_CHECK 500
-#define TIMER_INTERVAL_FALLBACK    3000  /**< PlaySound has no completion API */
+#define TIMER_INTERVAL_FALLBACK    3000
 #define TIMER_INTERVAL_BEEP        500
 
 typedef void (*AudioPlaybackCompleteCallback)(HWND hwnd);
@@ -57,7 +57,7 @@ static BOOL AudioFileExists(const char* filePath) {
 /** Basic validation (prevents misconfig crashes, not full security) */
 static BOOL IsValidFilePath(const char* filePath) {
     if (!filePath || filePath[0] == '\0') return FALSE;
-    if (strchr(filePath, '=') != NULL) return FALSE;  /* Reject injection */
+    if (strchr(filePath, '=') != NULL) return FALSE;
     if (strlen(filePath) >= MAX_PATH) return FALSE;
     return TRUE;
 }
@@ -295,7 +295,7 @@ void SetAudioPlaybackCompleteCallback(HWND hwnd, AudioPlaybackCompleteCallback c
 }
 
 void CleanupAudioResources(void) {
-    PlaySoundW(NULL, NULL, SND_PURGE);  /* Stop all PlaySound instances */
+    PlaySoundW(NULL, NULL, SND_PURGE);
 
     if (g_engineInitialized && g_soundInitialized) {
         ma_sound_stop(&g_sound);

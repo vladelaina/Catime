@@ -22,7 +22,7 @@
 
 #define COLOR_BUFFER_SIZE 32
 #define COLOR_HEX_BUFFER 10
-#define HEX_COLOR_LENGTH 7      /* "#RRGGBB" */
+#define HEX_COLOR_LENGTH 7
 
 /* ============================================================================
  * Core Parsing Functions

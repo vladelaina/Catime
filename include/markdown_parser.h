@@ -18,8 +18,8 @@
 typedef struct {
     wchar_t* linkText;
     wchar_t* linkUrl;
-    RECT linkRect;        /**< Auto-calculated during render */
-    int startPos;         /**< In display text */
+    RECT linkRect;
+    int startPos;
     int endPos;
 } MarkdownLink;
 

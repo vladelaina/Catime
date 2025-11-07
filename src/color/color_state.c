@@ -67,7 +67,7 @@ void AddColorOption(const char* hexColor) {
     const char* hex = (hexColor[0] == '#') ? hexColor + 1 : hexColor;
 
     size_t len = strlen(hex);
-    if (len != 6) return;  /* Must be exactly RRGGBB */
+    if (len != 6) return;
     
     for (int i = 0; i < 6; i++) {
         if (!isxdigit((unsigned char)hex[i])) return;

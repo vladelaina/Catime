@@ -80,17 +80,17 @@
  * @brief MRU list entry
  */
 typedef struct {
-    char path[MAX_PATH];  /**< Full path (UTF-8) */
-    char name[MAX_PATH];  /**< Display name (filename only) */
+    char path[MAX_PATH];
+    char name[MAX_PATH];
 } RecentFile;
 
 /**
  * @brief Notification display types
  */
 typedef enum {
-    NOTIFICATION_TYPE_CATIME = 0,     /**< Custom window */
-    NOTIFICATION_TYPE_SYSTEM_MODAL,   /**< Modal MessageBox */
-    NOTIFICATION_TYPE_OS              /**< OS native (Win10+ toast) */
+    NOTIFICATION_TYPE_CATIME = 0,
+    NOTIFICATION_TYPE_SYSTEM_MODAL,
+    NOTIFICATION_TYPE_OS
 } NotificationType;
 
 /**
@@ -107,9 +107,9 @@ typedef enum {
  */
 #ifndef TIME_FORMAT_TYPE_DEFINED
 typedef enum {
-    TIME_FORMAT_DEFAULT = 0,        /**< 9:59, 9 */
-    TIME_FORMAT_ZERO_PADDED = 1,    /**< 09:59, 09 */
-    TIME_FORMAT_FULL_PADDED = 2     /**< 00:09:59, 00:00:09 */
+    TIME_FORMAT_DEFAULT = 0,
+    TIME_FORMAT_ZERO_PADDED = 1,
+    TIME_FORMAT_FULL_PADDED = 2
 } TimeFormatType;
 #define TIME_FORMAT_TYPE_DEFINED
 #endif
@@ -121,14 +121,14 @@ typedef enum {
 extern RecentFile CLOCK_RECENT_FILES[MAX_RECENT_FILES];
 extern int CLOCK_RECENT_FILES_COUNT;
 extern int CLOCK_DEFAULT_START_TIME;
-extern time_t last_config_time;  /**< For live reload detection */
+extern time_t last_config_time;
 
 /* Pomodoro settings */
-extern int POMODORO_WORK_TIME;        /**< Default: 1500s (25min) */
-extern int POMODORO_SHORT_BREAK;      /**< Default: 300s (5min) */
-extern int POMODORO_LONG_BREAK;       /**< Default: 900s (15min) */
-extern int POMODORO_TIMES[10];        /**< Pomodoro time intervals array */
-extern int POMODORO_TIMES_COUNT;      /**< Number of intervals in array */
+extern int POMODORO_WORK_TIME;
+extern int POMODORO_SHORT_BREAK;
+extern int POMODORO_LONG_BREAK;
+extern int POMODORO_TIMES[10];
+extern int POMODORO_TIMES_COUNT;
 
 /* Notification messages (placeholder support) */
 extern char CLOCK_TIMEOUT_MESSAGE_TEXT[100];
@@ -141,8 +141,8 @@ extern NotificationType NOTIFICATION_TYPE;
 extern BOOL NOTIFICATION_DISABLED;
 
 /* Notification sound */
-extern char NOTIFICATION_SOUND_FILE[MAX_PATH];  /**< UTF-8, relative or absolute */
-extern int NOTIFICATION_SOUND_VOLUME;           /**< 0-100 */
+extern char NOTIFICATION_SOUND_FILE[MAX_PATH];
+extern int NOTIFICATION_SOUND_VOLUME;
 
 /* Font license tracking (for version upgrades) */
 extern BOOL FONT_LICENSE_ACCEPTED;
@@ -150,9 +150,9 @@ extern char FONT_LICENSE_VERSION_ACCEPTED[16];
 
 /* Time display format */
 extern TimeFormatType CLOCK_TIME_FORMAT;
-extern BOOL IS_TIME_FORMAT_PREVIEWING;          /**< Live preview active */
+extern BOOL IS_TIME_FORMAT_PREVIEWING;
 extern TimeFormatType PREVIEW_TIME_FORMAT;
-extern BOOL CLOCK_SHOW_MILLISECONDS;            /**< 2-digit centiseconds */
+extern BOOL CLOCK_SHOW_MILLISECONDS;
 extern BOOL IS_MILLISECONDS_PREVIEWING;
 extern BOOL PREVIEW_SHOW_MILLISECONDS;
 

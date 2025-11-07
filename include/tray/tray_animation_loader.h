@@ -20,12 +20,12 @@
  */
 typedef enum {
     ANIM_SOURCE_UNKNOWN = 0,
-    ANIM_SOURCE_LOGO,       /**< Builtin resource */
-    ANIM_SOURCE_PERCENT,    /**< Dynamic CPU/Memory percent */
-    ANIM_SOURCE_GIF,        /**< Single GIF file */
-    ANIM_SOURCE_WEBP,       /**< Single WebP file */
-    ANIM_SOURCE_STATIC,     /**< Static image (ICO/PNG/BMP/JPG) */
-    ANIM_SOURCE_FOLDER      /**< Folder with sequenced icons */
+    ANIM_SOURCE_LOGO,
+    ANIM_SOURCE_PERCENT,
+    ANIM_SOURCE_GIF,
+    ANIM_SOURCE_WEBP,
+    ANIM_SOURCE_STATIC,
+    ANIM_SOURCE_FOLDER
 } AnimationSourceType;
 
 /**

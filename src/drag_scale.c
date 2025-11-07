@@ -161,7 +161,7 @@ BOOL HandleScaleWindow(HWND hwnd, int delta) {
     
     newScale = ClampScaleFactor(newScale);
     
-    if (newScale == oldScale) return FALSE;  /* At limits */
+    if (newScale == oldScale) return FALSE;
     
     CLOCK_FONT_SCALE_FACTOR = newScale;
     CLOCK_WINDOW_SCALE = newScale;

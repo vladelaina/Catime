@@ -14,7 +14,7 @@
  * Constants
  * ============================================================================ */
 
-#define HEX_SHORT_LENGTH 4      /* "#RGB" */
+#define HEX_SHORT_LENGTH 4
 #define HEX_DIGITS_LENGTH 6
 #define NEAR_BLACK_COLOR "#000001"
 #define HEX_DIGITS "0123456789abcdefABCDEF"

@@ -189,7 +189,7 @@ BOOL IsFirstRun(void) {
     GetConfigPath(config_path, MAX_PATH);
     
     if (!FileExists(config_path)) {
-        return TRUE;  /** No config file means first run */
+        return TRUE;
     }
     
     char firstRun[32] = {0};

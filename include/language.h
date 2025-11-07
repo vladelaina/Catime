@@ -20,17 +20,17 @@
  * @brief Supported application languages
  */
 typedef enum {
-    APP_LANG_CHINESE_SIMP,  /**< Simplified Chinese (zh_CN) */
-    APP_LANG_CHINESE_TRAD,  /**< Traditional Chinese (zh-Hant) */
-    APP_LANG_ENGLISH,       /**< English (en) */
-    APP_LANG_SPANISH,       /**< Spanish (es) */
-    APP_LANG_FRENCH,        /**< French (fr) */
-    APP_LANG_GERMAN,        /**< German (de) */
-    APP_LANG_RUSSIAN,       /**< Russian (ru) */
-    APP_LANG_PORTUGUESE,    /**< Portuguese (pt) */
-    APP_LANG_JAPANESE,      /**< Japanese (ja) */
-    APP_LANG_KOREAN,        /**< Korean (ko) */
-    APP_LANG_COUNT          /**< Total language count */
+    APP_LANG_CHINESE_SIMP,
+    APP_LANG_CHINESE_TRAD,
+    APP_LANG_ENGLISH,
+    APP_LANG_SPANISH,
+    APP_LANG_FRENCH,
+    APP_LANG_GERMAN,
+    APP_LANG_RUSSIAN,
+    APP_LANG_PORTUGUESE,
+    APP_LANG_JAPANESE,
+    APP_LANG_KOREAN,
+    APP_LANG_COUNT
 } AppLanguage;
 
 /* ============================================================================

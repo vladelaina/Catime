@@ -13,10 +13,10 @@
  * @brief Time components (simplifies function signatures)
  */
 typedef struct {
-    int hours;          /**< 0-23 (24h) or 1-12 (12h) */
-    int minutes;        /**< 0-59 */
-    int seconds;        /**< 0-59 */
-    int centiseconds;   /**< 0-99 (hundredths) */
+    int hours;
+    int minutes;
+    int seconds;
+    int centiseconds;
 } TimeComponents;
 
 /**

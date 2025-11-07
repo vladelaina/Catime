@@ -309,7 +309,7 @@ BOOL LoadAnimationByName(const char* name, LoadedAnimation* anim,
             for (int i = 0; i < copyCount; i++) {
                 anim->icons[i] = decoded.icons[i];
                 anim->delays[i] = decoded.delays[i];
-                decoded.icons[i] = NULL; /* Transfer ownership */
+                decoded.icons[i] = NULL;
             }
             anim->count = copyCount;
             anim->isAnimated = (copyCount > 1);

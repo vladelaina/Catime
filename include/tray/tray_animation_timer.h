@@ -16,12 +16,12 @@
  * @brief Frame rate controller for smooth animation
  */
 typedef struct {
-    UINT targetInterval;        /**< Target interval in ms */
-    UINT effectiveInterval;     /**< Actual interval (adaptive) */
-    double framePosition;       /**< Sub-frame position (0.0-1.0) */
-    UINT internalAccumulator;   /**< Accumulated time for updates */
-    DWORD lastUpdateTime;       /**< Last tray update timestamp */
-    UINT consecutiveLateUpdates;/**< Late update counter */
+    UINT targetInterval;
+    UINT effectiveInterval;
+    double framePosition;
+    UINT internalAccumulator;
+    DWORD lastUpdateTime;
+    UINT consecutiveLateUpdates;
 } FrameRateController;
 
 /**

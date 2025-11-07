@@ -28,11 +28,11 @@ typedef enum {
  * ============================================================================ */
 
 typedef struct {
-    const char* section;          /**< INI section name */
-    const char* key;              /**< INI key name */
-    const char* defaultValue;     /**< Default value as string */
-    ConfigValueType type;         /**< Value type for validation */
-    const char* description;      /**< Human-readable description */
+    const char* section;
+    const char* key;
+    const char* defaultValue;
+    ConfigValueType type;
+    const char* description;
 } ConfigItemMeta;
 
 /* ============================================================================

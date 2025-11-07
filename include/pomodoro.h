@@ -14,16 +14,16 @@
  */
 typedef enum {
     POMODORO_PHASE_IDLE = 0,
-    POMODORO_PHASE_WORK,           /**< Typically 25min */
-    POMODORO_PHASE_BREAK,          /**< Short break, typically 5min */
-    POMODORO_PHASE_LONG_BREAK      /**< Long break, typically 15-30min */
+    POMODORO_PHASE_WORK,
+    POMODORO_PHASE_BREAK,
+    POMODORO_PHASE_LONG_BREAK
 } POMODORO_PHASE;
 
 extern POMODORO_PHASE current_pomodoro_phase;
 extern int current_pomodoro_time_index;
-extern int complete_pomodoro_cycles;     /**< For long break calculation */
+extern int complete_pomodoro_cycles;
 
-extern int POMODORO_TIMES[10];           /**< Up to 10 custom intervals */
+extern int POMODORO_TIMES[10];
 extern int POMODORO_TIMES_COUNT;
 
 /**

@@ -17,9 +17,9 @@
  * ============================================================================ */
 
 typedef struct {
-    char section[64];      /**< INI section name */
-    char key[64];          /**< INI key name */
-    char value[256];       /**< Value as string */
+    char section[64];
+    char key[64];
+    char value[256];
 } ConfigWriteItem;
 
 /* ============================================================================

@@ -193,16 +193,16 @@ void CreateDefaultConfig(const char* config_path) {
     
     /* Language enum to string mapping */
     const char* langNames[] = {
-        "Chinese_Simplified",  /* APP_LANG_CHINESE_SIMP */
-        "Chinese_Traditional", /* APP_LANG_CHINESE_TRAD */
-        "English",             /* APP_LANG_ENGLISH */
-        "Spanish",             /* APP_LANG_SPANISH */
-        "French",              /* APP_LANG_FRENCH */
-        "German",              /* APP_LANG_GERMAN */
-        "Russian",             /* APP_LANG_RUSSIAN */
-        "Portuguese",          /* APP_LANG_PORTUGUESE */
-        "Japanese",            /* APP_LANG_JAPANESE */
-        "Korean"               /* APP_LANG_KOREAN */
+        "Chinese_Simplified",
+        "Chinese_Traditional",
+        "English",
+        "Spanish",
+        "French",
+        "German",
+        "Russian",
+        "Portuguese",
+        "Japanese",
+        "Korean"
     };
     
     const char* detectedLangName = (detectedLang >= 0 && detectedLang < APP_LANG_COUNT) 

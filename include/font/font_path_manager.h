@@ -27,11 +27,11 @@
  * @note Provides all path variants for validation and recovery
  */
 typedef struct {
-    char absolutePath[MAX_PATH];    /**< Full filesystem path */
-    char relativePath[MAX_PATH];    /**< Relative to fonts folder */
-    char configPath[MAX_PATH];      /**< With %LOCALAPPDATA% prefix */
-    char fileName[MAX_PATH];        /**< Just the filename */
-    BOOL isValid;                   /**< All paths consistent */
+    char absolutePath[MAX_PATH];
+    char relativePath[MAX_PATH];
+    char configPath[MAX_PATH];
+    char fileName[MAX_PATH];
+    BOOL isValid;
 } FontPathInfo;
 
 /* ============================================================================

@@ -42,37 +42,37 @@
  * @brief Logging severity levels with standard syslog-like hierarchy
  */
 typedef enum {
-    LOG_LEVEL_DEBUG = 0,   /**< Detailed debugging information */
-    LOG_LEVEL_INFO,        /**< General informational messages */
-    LOG_LEVEL_WARNING,     /**< Warning conditions that should be reviewed */
-    LOG_LEVEL_ERROR,       /**< Error conditions requiring attention */
-    LOG_LEVEL_FATAL        /**< Fatal errors causing program termination */
+    LOG_LEVEL_DEBUG = 0,
+    LOG_LEVEL_INFO,
+    LOG_LEVEL_WARNING,
+    LOG_LEVEL_ERROR,
+    LOG_LEVEL_FATAL
 } LogLevel;
 
 /**
  * @brief OS version information structure for table-driven version detection
  */
 typedef struct {
-    DWORD major;       /**< Major version number */
-    DWORD minor;       /**< Minor version number */
-    DWORD minBuild;    /**< Minimum build number for this version */
-    const char* name;  /**< Human-readable OS name */
+    DWORD major;
+    DWORD minor;
+    DWORD minBuild;
+    const char* name;
 } OSVersionInfo;
 
 /**
  * @brief CPU architecture mapping structure
  */
 typedef struct {
-    WORD archId;       /**< PROCESSOR_ARCHITECTURE_* constant */
-    const char* name;  /**< Human-readable architecture name */
+    WORD archId;
+    const char* name;
 } CPUArchInfo;
 
 /**
  * @brief Signal information mapping structure
  */
 typedef struct {
-    int signal;            /**< Signal number (SIGFPE, SIGSEGV, etc.) */
-    const char* description;  /**< Human-readable signal description */
+    int signal;
+    const char* description;
 } SignalInfo;
 
 /* ============================================================================

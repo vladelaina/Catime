@@ -17,13 +17,13 @@
  * @brief Decoded animation frames
  */
 typedef struct {
-    HICON* icons;           /**< Array of pre-rendered icons */
-    int count;              /**< Number of frames */
-    UINT* delays;           /**< Frame delays in milliseconds */
-    BOOL isAnimated;        /**< TRUE if multi-frame */
-    UINT canvasWidth;       /**< Logical canvas width */
-    UINT canvasHeight;      /**< Logical canvas height */
-    BYTE* canvas;           /**< Composition canvas (PBGRA) */
+    HICON* icons;
+    int count;
+    UINT* delays;
+    BOOL isAnimated;
+    UINT canvasWidth;
+    UINT canvasHeight;
+    BYTE* canvas;
 } DecodedAnimation;
 
 /**

@@ -136,8 +136,8 @@ void ApplyFontPreview(void);
  * @brief Font resource metadata
  */
 typedef struct {
-    int resourceId;         /**< Resource ID in .rc file */
-    const char* fontName;   /**< Filename to extract to */
+    int resourceId;
+    const char* fontName;
 } FontResource;
 
 /** @brief Embedded font resources list */

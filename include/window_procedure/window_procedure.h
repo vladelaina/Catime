@@ -56,7 +56,7 @@
 #endif
 
 #ifndef COPYDATA_ID_CLI_TEXT
-#define COPYDATA_ID_CLI_TEXT 0x10010001  /**< IPC for CLI */
+#define COPYDATA_ID_CLI_TEXT 0x10010001
 #endif
 
 /* ============================================================================

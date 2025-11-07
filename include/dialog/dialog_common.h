@@ -28,11 +28,11 @@
  * window procedures for subclassed controls.
  */
 typedef struct {
-    HBRUSH hBackgroundBrush;  /**< Dialog background (light gray) */
-    HBRUSH hEditBrush;        /**< Edit control background (white) */
-    HBRUSH hButtonBrush;      /**< Button background (near white) */
-    WNDPROC wpOrigEditProc;   /**< Original edit proc for restoration */
-    void* userData;           /**< Dialog-specific data */
+    HBRUSH hBackgroundBrush;
+    HBRUSH hEditBrush;
+    HBRUSH hButtonBrush;
+    WNDPROC wpOrigEditProc;
+    void* userData;
 } DialogContext;
 
 /**

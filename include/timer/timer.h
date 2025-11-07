@@ -28,14 +28,14 @@
  */
 typedef enum {
     TIMEOUT_ACTION_MESSAGE = 0,
-    TIMEOUT_ACTION_LOCK = 1,         /**< LockWorkStation */
-    TIMEOUT_ACTION_SHUTDOWN = 2,     /**< ExitWindowsEx */
-    TIMEOUT_ACTION_RESTART = 3,      /**< ExitWindowsEx */
-    TIMEOUT_ACTION_OPEN_FILE = 4,    /**< ShellExecute */
-    TIMEOUT_ACTION_SHOW_TIME = 5,    /**< Mode transition */
-    TIMEOUT_ACTION_COUNT_UP = 6,     /**< Mode transition */
-    TIMEOUT_ACTION_OPEN_WEBSITE = 7, /**< ShellExecute URL */
-    TIMEOUT_ACTION_SLEEP = 8         /**< SetSuspendState */
+    TIMEOUT_ACTION_LOCK = 1,
+    TIMEOUT_ACTION_SHUTDOWN = 2,
+    TIMEOUT_ACTION_RESTART = 3,
+    TIMEOUT_ACTION_OPEN_FILE = 4,
+    TIMEOUT_ACTION_SHOW_TIME = 5,
+    TIMEOUT_ACTION_COUNT_UP = 6,
+    TIMEOUT_ACTION_OPEN_WEBSITE = 7,
+    TIMEOUT_ACTION_SLEEP = 8
 } TimeoutActionType;
 
 /* ============================================================================
@@ -47,7 +47,7 @@ extern BOOL CLOCK_IS_PAUSED;
 extern BOOL CLOCK_SHOW_CURRENT_TIME;
 extern BOOL CLOCK_USE_24HOUR;
 extern BOOL CLOCK_SHOW_SECONDS;
-extern BOOL CLOCK_COUNT_UP;              /**< Count-up vs countdown */
+extern BOOL CLOCK_COUNT_UP;
 extern char CLOCK_STARTUP_MODE[20];
 
 /* Timer data */
@@ -55,7 +55,7 @@ extern int CLOCK_TOTAL_TIME;
 extern int countdown_elapsed_time;
 extern int countup_elapsed_time;
 extern time_t CLOCK_LAST_TIME_UPDATE;
-extern int last_displayed_second;        /**< Cached to prevent jitter */
+extern int last_displayed_second;
 
 /* Notification state (prevent duplicates) */
 extern BOOL countdown_message_shown;
@@ -75,9 +75,9 @@ extern char CLOCK_TIMEOUT_FILE_PATH[MAX_PATH];
 extern wchar_t CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH];
 
 /* Pomodoro settings */
-extern int POMODORO_WORK_TIME;           /**< Default: 25min */
-extern int POMODORO_SHORT_BREAK;         /**< Default: 5min */
-extern int POMODORO_LONG_BREAK;          /**< Default: 15min */
+extern int POMODORO_WORK_TIME;
+extern int POMODORO_SHORT_BREAK;
+extern int POMODORO_LONG_BREAK;
 extern int POMODORO_LOOP_COUNT;
 
 /* Quick presets */

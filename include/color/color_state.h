@@ -20,7 +20,7 @@
  * @brief User's saved color palette entry
  */
 typedef struct {
-    const char* hexColor;  /**< Normalized hex format for consistent comparison */
+    const char* hexColor;
 } PredefinedColor;
 
 /* ============================================================================

@@ -15,9 +15,9 @@
  * @brief Memory pool structure
  */
 typedef struct {
-    BYTE* buffer;       /**< Pre-allocated buffer */
-    SIZE_T size;        /**< Buffer size in bytes */
-    BOOL inUse;         /**< Single-use flag */
+    BYTE* buffer;
+    SIZE_T size;
+    BOOL inUse;
 } MemoryPool;
 
 /**
