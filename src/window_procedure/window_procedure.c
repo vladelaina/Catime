@@ -244,6 +244,11 @@ void RestartCurrentTimer(HWND hwnd) {
         }
         CLOCK_IS_PAUSED = FALSE;
         ResetMillisecondAccumulator();
+        
+        // Restart the timer after resetting pause state
+        KillTimer(hwnd, 1);
+        ResetTimerWithInterval(hwnd);
+        
         InvalidateRect(hwnd, NULL, TRUE);
     }
     
