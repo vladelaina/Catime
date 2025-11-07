@@ -12,6 +12,11 @@
 #include "../libs/miniaudio/miniaudio.h"
 #include "config.h"
 
+/* Audio polling intervals:
+ * - 500ms for miniaudio: Frequent checks detect completion quickly while minimizing overhead
+ * - 3000ms for PlaySound: API lacks completion callback, timeout based on typical notification length
+ * - 500ms for beep: Fixed duration matching typical system beep length
+ */
 #define TIMER_INTERVAL_AUDIO_CHECK 500
 #define TIMER_INTERVAL_FALLBACK    3000
 #define TIMER_INTERVAL_BEEP        500

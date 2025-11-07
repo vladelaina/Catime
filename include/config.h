@@ -53,7 +53,10 @@
 #define DEFAULT_FONT_NAME              "Wallpoet Essence.ttf"
 #define DEFAULT_FONT_SIZE              20
 
-/** @brief Default window settings */
+/** @brief Default window settings
+ * - Position 960: Horizontal center on common 1920px wide displays
+ * - Position -1: Sentinel value for automatic vertical centering
+ */
 #define DEFAULT_WINDOW_SCALE           "1.62"
 #define DEFAULT_WINDOW_POS_X           960
 #define DEFAULT_WINDOW_POS_Y           -1

@@ -15,6 +15,7 @@
 #include <string.h>
 #include <stdio.h>
 
+/* Large limit for menu display to accommodate folder-based animations with many frames */
 #define MAX_ANIMATION_FRAMES 1000
 
 /* ============================================================================

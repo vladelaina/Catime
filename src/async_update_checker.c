@@ -11,6 +11,7 @@
 #include "update_checker.h"
 #include "log.h"
 
+/* 1s timeout balances clean shutdown with responsiveness (mentioned in file header) */
 #define THREAD_WAIT_TIMEOUT_MS 1000
 #define ERROR_MSG_BUFFER_SIZE 256
 

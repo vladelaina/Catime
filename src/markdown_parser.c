@@ -8,6 +8,7 @@
 #include <string.h>
 #include <shellapi.h>
 
+/* Initial link array capacity grows dynamically if needed */
 #define INITIAL_LINK_CAPACITY 10
 #define TEXT_WRAP_MARGIN 10
 

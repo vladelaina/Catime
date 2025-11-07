@@ -83,7 +83,7 @@ HICON CreatePercentIcon16(int percent) {
     SetBkMode(mem, TRANSPARENT);
     SetTextColor(mem, g_percentTextColor);
 
-    /* Create font */
+    /* Create font: -12 size fits percentage text (0-100) within 16x16 tray icon */
     HFONT hFont = CreateFontW(-12, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
                               DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
                               ANTIALIASED_QUALITY, VARIABLE_PITCH | FF_SWISS, L"Segoe UI");

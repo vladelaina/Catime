@@ -84,7 +84,9 @@ static HFONT CreateTimerFont(const RenderContext* ctx) {
     );
 }
 
-/** @param editMode TRUE for darker background to improve drag visibility */
+/** @param editMode TRUE for darker background to improve drag visibility
+ * @note RGB(20,20,20): Dark gray makes edit mode visually distinct from black RGB(0,0,0) normal mode
+ */
 static void FillBackground(HDC hdc, const RECT* rect, BOOL editMode) {
     COLORREF bgColor = editMode ? RGB(20, 20, 20) : RGB(0, 0, 0);
     HBRUSH hBrush = CreateSolidBrush(bgColor);

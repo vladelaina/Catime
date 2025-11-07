@@ -15,7 +15,7 @@
 #include "config.h"
 
 #define TOOLTIP_UPDATE_INTERVAL_MS 1000
-#define PERCENT_ICON_WARMUP_MS 120
+#define PERCENT_ICON_WARMUP_MS 120  /* Allow CPU/memory sampling to stabilize (first read often returns 0%) */
 
 /** @brief Global tray icon data for Shell_NotifyIcon */
 NOTIFYICONDATAW nid;

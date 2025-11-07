@@ -24,12 +24,13 @@
 #define PROGMAN_CLASS L"Progman"
 #define COLOR_KEY_BLACK RGB(0, 0, 0)
 #define ALPHA_OPAQUE 255
-#define DEFAULT_TRAY_ANIMATION_SPEED_MS 150
+#define DEFAULT_TRAY_ANIMATION_SPEED_MS 150  /* 150ms balances smoothness with CPU usage (6.7 FPS) */
 
 /* ============================================================================
  * Global window state (definitions)
  * ============================================================================ */
 
+/* Initial dimensions chosen to fit typical time formats (e.g., "12:34:56") at default font size */
 int CLOCK_BASE_WINDOW_WIDTH = 200;
 int CLOCK_BASE_WINDOW_HEIGHT = 100;
 float CLOCK_WINDOW_SCALE = 1.0f;

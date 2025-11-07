@@ -18,6 +18,7 @@
  * Constants
  * ============================================================================ */
 
+/* GBK (Code Page 936) is the standard Chinese character encoding used in Windows console */
 #define CONSOLE_CODEPAGE_GBK 936
 #define SHCORE_DLL L"shcore.dll"
 #define USER32_DLL L"user32.dll"

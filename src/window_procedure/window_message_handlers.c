@@ -21,6 +21,7 @@
 #include "../resource/resource.h"
 #include <stdio.h>
 
+/* 50ms menu debounce prevents accidental double-clicks during menu interaction */
 #define MENU_DEBOUNCE_DELAY_MS 50
 #define BUFFER_SIZE_CLI_INPUT 256
 #define BUFFER_SIZE_MENU_ITEM 100

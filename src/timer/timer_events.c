@@ -21,6 +21,12 @@
 #include "tray/tray_animation_core.h"
 #include "utils/string_convert.h"
 
+/* Pomodoro and timer constants:
+ * - 1500s = 25 min (standard Pomodoro work duration)
+ * - 1500ms retry: Balance between responsiveness and avoiding spam on persistent failures
+ * - 2000ms font check: Periodic validation without excessive overhead
+ * - 250ms tail mode: Fast updates for final 2 seconds of countdown (visual precision)
+ */
 #define DEFAULT_POMODORO_DURATION 1500
 #define MAX_RETRY_ATTEMPTS 3
 #define RETRY_INTERVAL_MS 1500

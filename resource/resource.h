@@ -34,8 +34,8 @@
 
 /** @brief Window message and layout constants */
 #define CLOCK_WM_TRAYICON (WM_USER + 2)  /**< Custom tray icon message */
-#define WINDOW_HORIZONTAL_PADDING 190    /**< Window horizontal padding */
-#define WINDOW_VERTICAL_PADDING 5       /**< Window vertical padding */
+#define WINDOW_HORIZONTAL_PADDING 190    /**< Accounts for window borders, shadow, and visual breathing room */
+#define WINDOW_VERTICAL_PADDING 5        /**< Minimal vertical spacing for compact display */
 
 /** @brief Timer ID constants */
 #define TIMER_ID_MAIN 1                      /**< Main application timer */
@@ -52,8 +52,8 @@
 #define TRAY_TIP_TIMER_ID 42421              /**< Tray tooltip update timer */
 
 /** @brief Timer interval constants */
-#define TIMER_REFRESH_INTERVAL_MS 150        /**< Edit mode refresh interval */
-#define CONFIG_SAVE_DELAY_MS 500             /**< Config save debounce delay */
+#define TIMER_REFRESH_INTERVAL_MS 150        /**< Edit mode: ~7 FPS provides responsive feedback without excessive redraws */
+#define CONFIG_SAVE_DELAY_MS 500             /**< Debounce: Batches rapid setting changes to reduce disk writes */
 
 /** @brief Media control virtual key codes */
 #define VK_MEDIA_PLAY_PAUSE 0xB3         /**< Media play/pause key */
@@ -61,8 +61,8 @@
 #define KEYEVENTF_KEYUP 0x0002           /**< Key up event flag */
 
 /** @brief Visual effects constants */
-#define BLUR_OPACITY 192                 /**< Window blur opacity level */
-#define BLUR_TRANSITION_MS 200           /**< Blur transition duration */
+#define BLUR_OPACITY 192                 /**< 75% opacity (192/255) balances blur effect visibility with transparency */
+#define BLUR_TRANSITION_MS 200           /**< Smooth transition without feeling sluggish */
 
 /** @brief Application URLs */
 #define URL_GITHUB_REPO L"https://github.com/vladelaina/Catime"                      /**< GitHub repository URL */
@@ -257,16 +257,16 @@
 #define IDC_VOLUME_TEXT 2020                   /**< Volume text display */
 
 /** @brief Notification window constants */
-#define NOTIFICATION_MIN_WIDTH 350               /**< Minimum notification window width */
-#define NOTIFICATION_MAX_WIDTH 800               /**< Maximum notification window width */
-#define NOTIFICATION_HEIGHT 80                   /**< Notification window height */
+#define NOTIFICATION_MIN_WIDTH 350               /**< Ensures readability of typical notification messages */
+#define NOTIFICATION_MAX_WIDTH 800               /**< Prevents excessively wide notifications on large displays */
+#define NOTIFICATION_HEIGHT 80                   /**< Fixed height accommodates title + single-line content */
 #define NOTIFICATION_TIMER_ID 1001               /**< Notification timer identifier */
 #define NOTIFICATION_CLASS_NAME L"CatimeNotificationClass"  /**< Notification window class */
-#define CLOSE_BTN_SIZE 16                        /**< Close button size */
+#define CLOSE_BTN_SIZE 16                        /**< Standard close button size for easy clicking */
 #define CLOSE_BTN_MARGIN 10                      /**< Close button margin */
 #define ANIMATION_TIMER_ID 1002                  /**< Animation timer identifier */
-#define ANIMATION_STEP 5                         /**< Animation step size */
-#define ANIMATION_INTERVAL 15                    /**< Animation interval in ms */
+#define ANIMATION_STEP 5                         /**< Step size: 51 steps for 0-255 opacity range (~765ms total at 15ms interval) */
+#define ANIMATION_INTERVAL 15                    /**< ~67 FPS provides smooth fade without excessive CPU usage */
 
 /** @brief Notification UI layout constants */
 #define NOTIFICATION_PADDING_H 15                /**< Horizontal padding */

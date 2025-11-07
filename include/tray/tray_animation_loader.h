@@ -13,6 +13,7 @@
 #include "tray_animation_decoder.h"
 #include "utils/memory_pool.h"
 
+/* Maximum frames per animation (64 provides smooth motion at 150ms interval = 9.6s loop) */
 #define MAX_ANIMATION_FRAMES 64
 
 /**

@@ -13,8 +13,8 @@
 
 #define COLOR_KEY_BLACK RGB(0, 0, 0)
 #define ALPHA_OPAQUE 255
-#define BLUR_ALPHA_VALUE 180
-#define BLUR_GRADIENT_COLOR 0x00202020
+#define BLUR_ALPHA_VALUE 180           /* 180/255 = 70% opacity balances blur visibility with background transparency */
+#define BLUR_GRADIENT_COLOR 0x00202020  /* Dark gray (RGB 32,32,32) provides subtle background tint for blur effect */
 #define DWMAPI_DLL L"dwmapi.dll"
 
 /* ============================================================================

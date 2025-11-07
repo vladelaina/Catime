@@ -5,6 +5,10 @@
 #include <windows.h>
 #include "media.h"
 
+/* Media key timing for reliable hardware/driver recognition:
+ * - 50ms: Minimum duration for key press to register across different media players
+ * - 100ms: Final delay ensures command completion before returning
+ */
 #define MEDIA_KEY_DELAY_MS 50
 #define MEDIA_FINAL_DELAY_MS 100
 

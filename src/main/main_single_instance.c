@@ -40,7 +40,7 @@ BOOL HandleSingleInstance(LPWSTR lpCmdLine, HANDLE* outMutex) {
     *outMutex = hMutex;
     
     if (GetLastError() != ERROR_ALREADY_EXISTS) {
-        Sleep(50);
+        Sleep(50);  /* Brief delay for mutex acquisition to stabilize */
         return TRUE;
     }
     
@@ -57,7 +57,7 @@ BOOL HandleSingleInstance(LPWSTR lpCmdLine, HANDLE* outMutex) {
         if (GetLastError() == ERROR_ALREADY_EXISTS) {
             LOG_WARNING("Still have conflict after creating new mutex, possible race condition");
         }
-        Sleep(50);
+        Sleep(50);  /* Brief delay for mutex acquisition to stabilize */
         return TRUE;
     }
     
@@ -86,7 +86,7 @@ BOOL HandleSingleInstance(LPWSTR lpCmdLine, HANDLE* outMutex) {
     
     LOG_INFO("Closing existing instance to apply CLI arguments");
     SendMessage(hwndExisting, WM_CLOSE, 0, 0);
-    Sleep(200);
+    Sleep(200);  /* Allow time for window cleanup and mutex release */
     
     ReleaseMutex(hMutex);
     CloseHandle(hMutex);
@@ -96,7 +96,7 @@ BOOL HandleSingleInstance(LPWSTR lpCmdLine, HANDLE* outMutex) {
     if (GetLastError() == ERROR_ALREADY_EXISTS) {
         LOG_WARNING("Still have conflict after creating new mutex, possible race condition");
     }
-    Sleep(50);
+    Sleep(50);  /* Brief delay for mutex acquisition to stabilize */
     
     return TRUE;
 }

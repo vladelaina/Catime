@@ -19,6 +19,10 @@
  * Constants
  * ============================================================================ */
 
+/* Buffer sizes chosen to accommodate:
+ * - TIME_TEXT_MAX_LEN: Longest format "123:45:67.89" (14 chars) + alignment spaces + null terminator
+ * - FONT_NAME_MAX_LEN: Maximum font name length per Windows API (LF_FACESIZE = 32, extended for full paths)
+ */
 #define TIME_TEXT_MAX_LEN 50
 #define FONT_NAME_MAX_LEN 256
 

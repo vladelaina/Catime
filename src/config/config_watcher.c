@@ -16,6 +16,7 @@
 #include "window_procedure/window_procedure.h"
 #include "tray/tray_animation_core.h"
 
+/* 200ms debounce batches rapid editor writes (mentioned in file header) */
 #define WATCH_BUFFER_SIZE 8192
 #define DEBOUNCE_DELAY_MS 200
 #define WATCH_EVENT_COUNT 2

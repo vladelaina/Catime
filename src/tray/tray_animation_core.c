@@ -20,7 +20,10 @@
 #include <string.h>
 #include <ctype.h>
 
-/* Constants */
+/* Constants:
+ * - 10ms internal tick: High-frequency updates for smooth animations
+ * - 50ms tray update: 20 FPS balances smoothness with system tray refresh limitations
+ */
 #define INTERNAL_TICK_INTERVAL_MS 10
 #define TRAY_UPDATE_INTERVAL_MS 50
 #define WM_TRAY_UPDATE_ICON (WM_USER + 100)
@@ -51,7 +54,9 @@ static CRITICAL_SECTION g_animCriticalSection;
 static BOOL g_criticalSectionInitialized = FALSE;
 static BOOL g_pendingTrayUpdate = FALSE;
 
-/* Error recovery */
+/* Error recovery:
+ * - 5000ms timeout: Reasonable duration before declaring icon update as failed
+ */
 static UINT g_consecutiveUpdateFailures = 0;
 static DWORD g_lastSuccessfulUpdateTime = 0;
 #define MAX_CONSECUTIVE_FAILURES 5

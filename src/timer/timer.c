@@ -20,7 +20,7 @@
 #define SECONDS_PER_HOUR 3600
 #define MINUTES_PER_HOUR 60
 #define MILLISECONDS_PER_SECOND 1000.0
-#define DEFAULT_FALLBACK_TIME 60
+#define DEFAULT_FALLBACK_TIME 60  /* 1 minute provides reasonable default when configuration is invalid */
 
 BOOL CLOCK_IS_PAUSED = FALSE;
 BOOL CLOCK_SHOW_CURRENT_TIME = FALSE;

@@ -42,8 +42,8 @@ AppConfig g_AppConfig = {
             .cycle_complete_message = DEFAULT_POMODORO_COMPLETE_MSG
         },
         .display = {
-            .timeout_ms = 3000,
-            .max_opacity = 95,
+            .timeout_ms = 3000,  /* 3s provides sufficient time to read without being intrusive */
+            .max_opacity = 95,   /* 95% prevents complete occlusion while maintaining visibility */
             .type = NOTIFICATION_TYPE_CATIME,
             .disabled = FALSE
         },
@@ -69,7 +69,7 @@ AppConfig g_AppConfig = {
         }
     },
     .timer = {
-        .default_start_time = 300
+        .default_start_time = 300  /* 5 minutes is a common Pomodoro short timer duration */
     },
     .last_config_time = 0
 };

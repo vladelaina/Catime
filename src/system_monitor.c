@@ -10,6 +10,7 @@
 
 #include "system_monitor.h"
 
+/* 1000ms update interval balances accuracy with minimal CPU overhead for metrics */
 #define DEFAULT_UPDATE_INTERVAL_MS 1000
 #define IF_TYPE_SOFTWARE_LOOPBACK 24
 #define COUNTER_MAX_32BIT 0x100000000ULL
