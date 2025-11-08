@@ -313,11 +313,13 @@ static LRESULT CmdPomodoroStart(HWND hwnd, WPARAM wp, LPARAM lp) {
     
     if (!IsWindowVisible(hwnd)) ShowWindow(hwnd, SW_SHOW);
     
-    TimerModeParams params = {g_AppConfig.pomodoro.work_time, TRUE, FALSE, TRUE};
-    SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
-    
     extern void InitializePomodoro(void);
     InitializePomodoro();
+    
+    CLOCK_SHOW_CURRENT_TIME = FALSE;
+    CLOCK_COUNT_UP = FALSE;
+    CLOCK_IS_PAUSED = FALSE;
+    
     extern TimeoutActionType CLOCK_TIMEOUT_ACTION;
     CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
     
@@ -332,6 +334,13 @@ static LRESULT CmdPomodoroStart(HWND hwnd, WPARAM wp, LPARAM lp) {
 static LRESULT CmdPomodoroReset(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     CleanupBeforeTimerAction();
+    
+    extern POMODORO_PHASE current_pomodoro_phase;
+    extern int current_pomodoro_time_index, complete_pomodoro_cycles;
+    
+    current_pomodoro_phase = POMODORO_PHASE_IDLE;
+    current_pomodoro_time_index = 0;
+    complete_pomodoro_cycles = 0;
     
     ResetTimer();
     

@@ -164,6 +164,10 @@ static void SetupVisibilityWindow(HWND hwnd) {
 }
 
 static BOOL AdvancePomodoroState(void) {
+    if (g_AppConfig.pomodoro.times_count == 0) {
+        return FALSE;
+    }
+    
     current_pomodoro_time_index++;
     
     if (current_pomodoro_time_index >= g_AppConfig.pomodoro.times_count) {
@@ -185,10 +189,23 @@ static void ResetPomodoroState(void) {
 }
 
 static BOOL IsActivePomodoroTimer(void) {
-    return current_pomodoro_phase != POMODORO_PHASE_IDLE &&
-           current_pomodoro_time_index < g_AppConfig.pomodoro.times_count &&
-           g_AppConfig.pomodoro.times_count > 0 &&
-           CLOCK_TOTAL_TIME == g_AppConfig.pomodoro.times[current_pomodoro_time_index];
+    if (current_pomodoro_phase == POMODORO_PHASE_IDLE) {
+        return FALSE;
+    }
+    
+    if (g_AppConfig.pomodoro.times_count == 0) {
+        return FALSE;
+    }
+    
+    if (current_pomodoro_time_index >= g_AppConfig.pomodoro.times_count) {
+        return FALSE;
+    }
+    
+    if (CLOCK_TOTAL_TIME != g_AppConfig.pomodoro.times[current_pomodoro_time_index]) {
+        return FALSE;
+    }
+    
+    return TRUE;
 }
 
 static BOOL HandleFontValidation(HWND hwnd) {
@@ -299,7 +316,7 @@ static void HandleTimeoutActions(HWND hwnd) {
                         }
 }
 
-static void HandlePomodoroCompletion(HWND hwnd) {
+static BOOL HandlePomodoroCompletion(HWND hwnd) {
     ShowTimeoutNotification(hwnd, g_AppConfig.notification.messages.pomodoro_message, TRUE);
     
     if (!AdvancePomodoroState()) {
@@ -313,10 +330,20 @@ static void HandlePomodoroCompletion(HWND hwnd) {
         message_shown = TRUE;
         InvalidateRect(hwnd, NULL, TRUE);
         KillTimer(hwnd, TIMER_ID_MAIN);
-        return;
+        return FALSE;
+    }
+    
+    if (current_pomodoro_time_index >= g_AppConfig.pomodoro.times_count) {
+        ResetPomodoroState();
+        return FALSE;
     }
     
     ResetTimerState(g_AppConfig.pomodoro.times[current_pomodoro_time_index]);
+    countdown_message_shown = FALSE;
+    
+    extern BOOL InitializeHighPrecisionTimer(void);
+    InitializeHighPrecisionTimer();
+    ResetMillisecondAccumulator();
     
     if (current_pomodoro_time_index == 0 && complete_pomodoro_cycles > 0) {
         wchar_t cycleMsg[100];
@@ -327,6 +354,7 @@ static void HandlePomodoroCompletion(HWND hwnd) {
     }
     
     InvalidateRect(hwnd, NULL, TRUE);
+    return TRUE;
 }
 
 static void HandleCountdownCompletion(HWND hwnd) {
@@ -409,10 +437,15 @@ static BOOL HandleMainTimer(HWND hwnd) {
                     ReadNotificationMessagesConfig();
                     ReadNotificationTypeConfig();
                     
+                    BOOL pomodoro_advanced = FALSE;
                     if (IsActivePomodoroTimer()) {
-                        HandlePomodoroCompletion(hwnd);
+                        pomodoro_advanced = HandlePomodoroCompletion(hwnd);
                     } else {
                         HandleCountdownCompletion(hwnd);
+                    }
+                    
+                    if (pomodoro_advanced) {
+                        return TRUE;
                     }
                 }
                 countdown_elapsed_time = CLOCK_TOTAL_TIME;

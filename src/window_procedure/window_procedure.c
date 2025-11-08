@@ -141,6 +141,15 @@ void ToggleShowTimeMode(HWND hwnd) {
     CleanupBeforeTimerAction();
     
     if (!CLOCK_SHOW_CURRENT_TIME) {
+        extern POMODORO_PHASE current_pomodoro_phase;
+        extern int current_pomodoro_time_index, complete_pomodoro_cycles;
+        
+        if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
+            current_pomodoro_phase = POMODORO_PHASE_IDLE;
+            current_pomodoro_time_index = 0;
+            complete_pomodoro_cycles = 0;
+        }
+        
         TimerModeParams params = {0, TRUE, FALSE, TRUE};
         SwitchTimerMode(hwnd, TIMER_MODE_SHOW_TIME, &params);
         
@@ -152,6 +161,15 @@ void ToggleShowTimeMode(HWND hwnd) {
 
 void StartCountUp(HWND hwnd) {
     CleanupBeforeTimerAction();
+    
+    extern POMODORO_PHASE current_pomodoro_phase;
+    extern int current_pomodoro_time_index, complete_pomodoro_cycles;
+    
+    if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
+        current_pomodoro_phase = POMODORO_PHASE_IDLE;
+        current_pomodoro_time_index = 0;
+        complete_pomodoro_cycles = 0;
+    }
     
     TimerModeParams params = {0, TRUE, FALSE, TRUE};
     SwitchTimerMode(hwnd, TIMER_MODE_COUNTUP, &params);
@@ -166,8 +184,17 @@ void StartDefaultCountDown(HWND hwnd) {
     
     extern BOOL countdown_message_shown;
     extern void ReadNotificationTypeConfig(void);
+    extern POMODORO_PHASE current_pomodoro_phase;
+    extern int current_pomodoro_time_index, complete_pomodoro_cycles;
+    
     countdown_message_shown = FALSE;
     ReadNotificationTypeConfig();
+    
+    if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
+        current_pomodoro_phase = POMODORO_PHASE_IDLE;
+        current_pomodoro_time_index = 0;
+        complete_pomodoro_cycles = 0;
+    }
     
     if (g_AppConfig.timer.default_start_time > 0) {
         TimerModeParams params = {g_AppConfig.timer.default_start_time, TRUE, FALSE, TRUE};
