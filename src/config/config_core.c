@@ -43,7 +43,11 @@ AppConfig g_AppConfig = {
             .timeout_ms = 3000,  /* 3s provides sufficient time to read without being intrusive */
             .max_opacity = 95,   /* 95% prevents complete occlusion while maintaining visibility */
             .type = NOTIFICATION_TYPE_CATIME,
-            .disabled = FALSE
+            .disabled = FALSE,
+            .window_x = -1,      /* -1 means auto-calculate position */
+            .window_y = -1,
+            .window_width = 0,   /* 0 means auto-calculate based on text */
+            .window_height = 0
         },
         .sound = {
             .sound_file = "",

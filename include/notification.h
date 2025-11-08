@@ -66,6 +66,18 @@ void ShowNotification(HWND hwnd, const wchar_t* message);
 void ShowToastNotification(HWND hwnd, const wchar_t* message);
 
 /**
+ * @brief Show toast notification with preview/normal mode control
+ * @param hwnd Parent handle
+ * @param message Message text
+ * @param isPreview TRUE for interactive preview, FALSE for normal notification
+ * 
+ * @details
+ * - Normal mode (isPreview=FALSE): Auto-dismiss, click-to-close, non-draggable
+ * - Preview mode (isPreview=TRUE): Draggable, resizable, saves position
+ */
+void ShowToastNotificationEx(HWND hwnd, const wchar_t* message, BOOL isPreview);
+
+/**
  * @brief Show modal in background thread (non-blocking)
  * @param hwnd Parent handle
  * @param message Message text

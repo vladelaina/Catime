@@ -154,6 +154,10 @@ typedef struct {
     int max_opacity;
     NotificationType type;
     BOOL disabled;
+    int window_x;
+    int window_y;
+    int window_width;
+    int window_height;
 } NotificationDisplay;
 
 /**
@@ -555,6 +559,20 @@ void ReadNotificationVolumeConfig(void);
  * @param volume Volume (0=mute, 100=max)
  */
 void WriteConfigNotificationVolume(int volume);
+
+/**
+ * @brief Read notification window position and size
+ */
+void ReadNotificationWindowConfig(void);
+
+/**
+ * @brief Write notification window position and size
+ * @param x X position (-1 for auto)
+ * @param y Y position (-1 for auto)
+ * @param width Width (0 for auto)
+ * @param height Height (0 for auto)
+ */
+void WriteConfigNotificationWindow(int x, int y, int width, int height);
 
 /* ============================================================================
  * Hotkey configuration functions

@@ -19,6 +19,7 @@ typedef struct {
     int windowWidth;
     AnimationState animState;
     BYTE opacity;
+    BOOL isPreview;
 } NotificationData;
 
 LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -204,7 +205,7 @@ void ShowModalNotification(HWND hwnd, const wchar_t* message) {
 }
 
 /** Auto-sizes based on text, positioned in bottom-right */
-void ShowToastNotification(HWND hwnd, const wchar_t* message) {
+void ShowToastNotificationEx(HWND hwnd, const wchar_t* message, BOOL isPreview) {
     static BOOL isClassRegistered = FALSE;
     HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
     
@@ -252,16 +253,36 @@ void ShowToastNotification(HWND hwnd, const wchar_t* message) {
     
     notifData->windowWidth = notificationWidth;
     
-    int x, y;
-    CalculateNotificationPosition(notificationWidth, NOTIFICATION_HEIGHT, &x, &y);
+    int x, y, width, height;
+    
+    ReadNotificationWindowConfig();
+    
+    /* Use saved position if valid (>= 0), otherwise auto-calculate */
+    if (g_AppConfig.notification.display.window_x >= 0 && 
+        g_AppConfig.notification.display.window_y >= 0) {
+        x = g_AppConfig.notification.display.window_x;
+        y = g_AppConfig.notification.display.window_y;
+    } else {
+        CalculateNotificationPosition(notificationWidth, NOTIFICATION_HEIGHT, &x, &y);
+    }
+    
+    /* Use saved size if valid (> 0), otherwise auto-calculate */
+    if (g_AppConfig.notification.display.window_width > 0 && 
+        g_AppConfig.notification.display.window_height > 0) {
+        width = g_AppConfig.notification.display.window_width;
+        height = g_AppConfig.notification.display.window_height;
+    } else {
+        width = notificationWidth;
+        height = NOTIFICATION_HEIGHT;
+    }
     
     HWND hNotification = CreateWindowExW(
-        WS_EX_TOPMOST | WS_EX_LAYERED | WS_EX_TOOLWINDOW,
+        WS_EX_TOPMOST | WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_COMPOSITED,
         NOTIFICATION_CLASS_NAME,
         L"Catime Notification",
         WS_POPUP,
         x, y,
-        notificationWidth, NOTIFICATION_HEIGHT,
+        width, height,
         NULL, NULL, hInstance, NULL
     );
     
@@ -274,6 +295,7 @@ void ShowToastNotification(HWND hwnd, const wchar_t* message) {
     
     notifData->animState = ANIM_FADE_IN;
     notifData->opacity = 0;
+    notifData->isPreview = isPreview;  /* Controls interactivity and position saving */
     
     SetNotificationData(hNotification, notifData);
     
@@ -287,6 +309,10 @@ void ShowToastNotification(HWND hwnd, const wchar_t* message) {
     SetTimer(hNotification, NOTIFICATION_TIMER_ID, g_AppConfig.notification.display.timeout_ms, NULL);
 }
 
+void ShowToastNotification(HWND hwnd, const wchar_t* message) {
+    ShowToastNotificationEx(hwnd, message, FALSE);
+}
+
 void RegisterNotificationClass(HINSTANCE hInstance) {
     WNDCLASSEXW wc = {0};
     wc.cbSize = sizeof(WNDCLASSEXW);
@@ -295,6 +321,7 @@ void RegisterNotificationClass(HINSTANCE hInstance) {
     wc.hCursor = LoadCursorW(NULL, IDC_ARROW);
     wc.hbrBackground = (HBRUSH)(COLOR_WINDOW+1);
     wc.lpszClassName = NOTIFICATION_CLASS_NAME;
+    wc.style = CS_DBLCLKS;
     
     RegisterClassExW(&wc);
 }
@@ -396,12 +423,112 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
         }
         
         case WM_NCHITTEST: {
-            return HTCLIENT;
+            NotificationData* data = GetNotificationData(hwnd);
+            /* Normal notifications are non-interactive */
+            if (!data || !data->isPreview) {
+                return HTCLIENT;
+            }
+            
+            POINT pt;
+            pt.x = GET_X_LPARAM(lParam);
+            pt.y = GET_Y_LPARAM(lParam);
+            
+            RECT rect;
+            GetWindowRect(hwnd, &rect);
+            
+            int borderSize = 8;
+            int cornerSize = 16;
+            
+            int relX = pt.x - rect.left;
+            int relY = pt.y - rect.top;
+            int width = rect.right - rect.left;
+            int height = rect.bottom - rect.top;
+            
+            BOOL atLeft = (relX < borderSize);
+            BOOL atRight = (relX >= width - borderSize);
+            BOOL atTop = (relY < borderSize);
+            BOOL atBottom = (relY >= height - borderSize);
+            
+            BOOL atTopLeft = (relX < cornerSize && relY < cornerSize);
+            BOOL atTopRight = (relX >= width - cornerSize && relY < cornerSize);
+            BOOL atBottomLeft = (relX < cornerSize && relY >= height - cornerSize);
+            BOOL atBottomRight = (relX >= width - cornerSize && relY >= height - cornerSize);
+            
+            if (atTopLeft) return HTTOPLEFT;
+            if (atTopRight) return HTTOPRIGHT;
+            if (atBottomLeft) return HTBOTTOMLEFT;
+            if (atBottomRight) return HTBOTTOMRIGHT;
+            if (atTop) return HTTOP;
+            if (atBottom) return HTBOTTOM;
+            if (atLeft) return HTLEFT;
+            if (atRight) return HTRIGHT;
+            
+            return HTCAPTION;
+        }
+        
+        case WM_SETCURSOR: {
+            NotificationData* data = GetNotificationData(hwnd);
+            /* Preview windows show crosshair cursor for dragging */
+            if (data && data->isPreview) {
+                WORD hitTest = LOWORD(lParam);
+                if (hitTest == HTCAPTION) {
+                    SetCursor(LoadCursorW(NULL, IDC_SIZEALL));
+                    return TRUE;
+                }
+            }
+            return DefWindowProc(hwnd, msg, wParam, lParam);
         }
         
         case WM_LBUTTONDOWN: {
             NotificationData* data = GetNotificationData(hwnd);
-            if (data) {
+            /* Normal notifications: left-click to dismiss */
+            if (data && !data->isPreview) {
+                KillTimer(hwnd, NOTIFICATION_TIMER_ID);
+                data->animState = ANIM_FADE_OUT;
+                SetTimer(hwnd, ANIMATION_TIMER_ID, ANIMATION_INTERVAL, NULL);
+            }
+            return 0;
+        }
+        
+        case WM_NCLBUTTONDBLCLK: {
+            /* Preview windows: double-click title to dismiss */
+            if (wParam == HTCAPTION) {
+                NotificationData* data = GetNotificationData(hwnd);
+                if (data && data->isPreview) {
+                    KillTimer(hwnd, NOTIFICATION_TIMER_ID);
+                    data->animState = ANIM_FADE_OUT;
+                    SetTimer(hwnd, ANIMATION_TIMER_ID, ANIMATION_INTERVAL, NULL);
+                }
+            }
+            return 0;
+        }
+        
+        case WM_SIZING: {
+            InvalidateRect(hwnd, NULL, TRUE);
+            UpdateWindow(hwnd);
+            return TRUE;
+        }
+        
+        case WM_EXITSIZEMOVE: {
+            NotificationData* data = GetNotificationData(hwnd);
+            /* Save position/size only for preview windows */
+            if (data && data->isPreview) {
+                RECT rect;
+                if (GetWindowRect(hwnd, &rect)) {
+                    WriteConfigNotificationWindow(rect.left, rect.top, 
+                                                 rect.right - rect.left, 
+                                                 rect.bottom - rect.top);
+                }
+            }
+            InvalidateRect(hwnd, NULL, TRUE);
+            UpdateWindow(hwnd);
+            return 0;
+        }
+        
+        case WM_RBUTTONDOWN: {
+            NotificationData* data = GetNotificationData(hwnd);
+            /* Preview windows: right-click to dismiss */
+            if (data && data->isPreview) {
                 KillTimer(hwnd, NOTIFICATION_TIMER_ID);
                 data->animState = ANIM_FADE_OUT;
                 SetTimer(hwnd, ANIMATION_TIMER_ID, ANIMATION_INTERVAL, NULL);

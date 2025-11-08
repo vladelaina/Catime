@@ -256,3 +256,29 @@ void WriteConfigNotificationVolume(int volume) {
     UpdateConfigIntAtomic(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_VOLUME", volume);
 }
 
+void ReadNotificationWindowConfig(void) {
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    
+    g_AppConfig.notification.display.window_x = ReadIniInt(
+        INI_SECTION_NOTIFICATION, "NOTIFICATION_WINDOW_X", -1, config_path);
+    g_AppConfig.notification.display.window_y = ReadIniInt(
+        INI_SECTION_NOTIFICATION, "NOTIFICATION_WINDOW_Y", -1, config_path);
+    g_AppConfig.notification.display.window_width = ReadIniInt(
+        INI_SECTION_NOTIFICATION, "NOTIFICATION_WINDOW_WIDTH", 0, config_path);
+    g_AppConfig.notification.display.window_height = ReadIniInt(
+        INI_SECTION_NOTIFICATION, "NOTIFICATION_WINDOW_HEIGHT", 0, config_path);
+}
+
+void WriteConfigNotificationWindow(int x, int y, int width, int height) {
+    g_AppConfig.notification.display.window_x = x;
+    g_AppConfig.notification.display.window_y = y;
+    g_AppConfig.notification.display.window_width = width;
+    g_AppConfig.notification.display.window_height = height;
+    
+    UpdateConfigIntAtomic(INI_SECTION_NOTIFICATION, "NOTIFICATION_WINDOW_X", x);
+    UpdateConfigIntAtomic(INI_SECTION_NOTIFICATION, "NOTIFICATION_WINDOW_Y", y);
+    UpdateConfigIntAtomic(INI_SECTION_NOTIFICATION, "NOTIFICATION_WINDOW_WIDTH", width);
+    UpdateConfigIntAtomic(INI_SECTION_NOTIFICATION, "NOTIFICATION_WINDOW_HEIGHT", height);
+}
+

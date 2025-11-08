@@ -375,6 +375,7 @@ static BOOL LoadNotificationSettings(const char* section, const char* key, void*
     ReadNotificationSoundConfig();
     ReadNotificationVolumeConfig();
     ReadNotificationDisabledConfig();
+    ReadNotificationWindowConfig();
     
     return FALSE;
 }

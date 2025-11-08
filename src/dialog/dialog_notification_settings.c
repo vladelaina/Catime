@@ -41,7 +41,7 @@ static void UpdatePreviewOpacity(int opacity) {
 }
 
 static void ShowOpacityPreviewNotification(HWND hwndParent, int initialOpacity, const wchar_t* message) {
-    extern void ShowToastNotification(HWND hwnd, const wchar_t* message);
+    extern void ShowToastNotificationEx(HWND hwnd, const wchar_t* message, BOOL isPreview);
     
     if (g_hwndPreviewNotification && IsWindow(g_hwndPreviewNotification)) {
         return;
@@ -62,7 +62,7 @@ static void ShowOpacityPreviewNotification(HWND hwndParent, int initialOpacity, 
                            previewMessage, sizeof(previewMessage)/sizeof(wchar_t));
     }
     
-    ShowToastNotification(hwndParent, previewMessage);
+    ShowToastNotificationEx(hwndParent, previewMessage, TRUE);
     
     g_hwndPreviewNotification = FindPreviewNotificationWindow();
     
@@ -219,6 +219,13 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             
             isInitializing = FALSE;
             
+            wchar_t previewMessage[256];
+            GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, previewMessage, sizeof(previewMessage)/sizeof(wchar_t));
+            
+            int currentOpacity = g_AppConfig.notification.display.max_opacity;
+            ShowOpacityPreviewNotification(GetParent(hwndDlg), currentOpacity, 
+                                         previewMessage[0] != L'\0' ? previewMessage : NULL);
+            
             return TRUE;
         }
         
@@ -271,6 +278,15 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 return TRUE;
             }
             else if (LOWORD(wParam) == IDOK) {
+                if (g_hwndPreviewNotification && IsWindow(g_hwndPreviewNotification)) {
+                    RECT rect;
+                    if (GetWindowRect(g_hwndPreviewNotification, &rect)) {
+                        WriteConfigNotificationWindow(rect.left, rect.top,
+                                                     rect.right - rect.left,
+                                                     rect.bottom - rect.top);
+                    }
+                }
+                
                 ClosePreviewNotification();
                 
                 wchar_t wTimeout[256] = {0};

@@ -305,7 +305,7 @@ BOOL LoadConfigFromFile(const char* config_path, ConfigSnapshot* snapshot) {
     snapshot->notificationTimeoutMs = ReadIniInt(INI_SECTION_NOTIFICATION, 
                                                 "NOTIFICATION_TIMEOUT_MS", 3000, config_path);
     
-    snapshot->notificationMaxOpacity = ReadIniInt(INI_SECTION_NOTIFICATION,
+    snapshot->notificationMaxOpacity = ReadIniInt(INI_SECTION_NOTIFICATION, 
                                                  "NOTIFICATION_MAX_OPACITY", 95, config_path);
     
     char notificationTypeStr[32] = {0};
@@ -313,6 +313,15 @@ BOOL LoadConfigFromFile(const char* config_path, ConfigSnapshot* snapshot) {
                  notificationTypeStr, sizeof(notificationTypeStr), config_path);
     snapshot->notificationType = StringToEnum(NOTIFICATION_TYPE_MAP, notificationTypeStr,
                                              NOTIFICATION_TYPE_CATIME);
+    
+    snapshot->notificationWindowX = ReadIniInt(INI_SECTION_NOTIFICATION,
+                                              "NOTIFICATION_WINDOW_X", -1, config_path);
+    snapshot->notificationWindowY = ReadIniInt(INI_SECTION_NOTIFICATION,
+                                              "NOTIFICATION_WINDOW_Y", -1, config_path);
+    snapshot->notificationWindowWidth = ReadIniInt(INI_SECTION_NOTIFICATION,
+                                                  "NOTIFICATION_WINDOW_WIDTH", 0, config_path);
+    snapshot->notificationWindowHeight = ReadIniInt(INI_SECTION_NOTIFICATION,
+                                                   "NOTIFICATION_WINDOW_HEIGHT", 0, config_path);
     
     ReadIniString(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_FILE", "",
                  snapshot->notificationSoundFile, MAX_PATH, config_path);

@@ -251,6 +251,26 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int* count) {
     safe_strncpy(items[idx].value, g_AppConfig.notification.display.disabled ? "TRUE" : "FALSE", sizeof(items[idx].value));
     idx++;
     
+    safe_strncpy(items[idx].section, INI_SECTION_NOTIFICATION, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "NOTIFICATION_WINDOW_X", sizeof(items[idx].key));
+    snprintf(items[idx].value, sizeof(items[idx].value), "%d", g_AppConfig.notification.display.window_x);
+    idx++;
+    
+    safe_strncpy(items[idx].section, INI_SECTION_NOTIFICATION, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "NOTIFICATION_WINDOW_Y", sizeof(items[idx].key));
+    snprintf(items[idx].value, sizeof(items[idx].value), "%d", g_AppConfig.notification.display.window_y);
+    idx++;
+    
+    safe_strncpy(items[idx].section, INI_SECTION_NOTIFICATION, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "NOTIFICATION_WINDOW_WIDTH", sizeof(items[idx].key));
+    snprintf(items[idx].value, sizeof(items[idx].value), "%d", g_AppConfig.notification.display.window_width);
+    idx++;
+    
+    safe_strncpy(items[idx].section, INI_SECTION_NOTIFICATION, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "NOTIFICATION_WINDOW_HEIGHT", sizeof(items[idx].key));
+    snprintf(items[idx].value, sizeof(items[idx].value), "%d", g_AppConfig.notification.display.window_height);
+    idx++;
+    
     /* Hotkeys */
     WORD hotkeys[12];
     ReadConfigHotkeys(&hotkeys[0], &hotkeys[1], &hotkeys[2], &hotkeys[3],

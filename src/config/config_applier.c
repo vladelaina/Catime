@@ -153,6 +153,10 @@ void ApplyNotificationSettings(const ConfigSnapshot* snapshot) {
     g_AppConfig.notification.display.max_opacity = snapshot->notificationMaxOpacity;
     g_AppConfig.notification.display.type = snapshot->notificationType;
     g_AppConfig.notification.display.disabled = snapshot->notificationDisabled;
+    g_AppConfig.notification.display.window_x = snapshot->notificationWindowX;
+    g_AppConfig.notification.display.window_y = snapshot->notificationWindowY;
+    g_AppConfig.notification.display.window_width = snapshot->notificationWindowWidth;
+    g_AppConfig.notification.display.window_height = snapshot->notificationWindowHeight;
     
     strncpy(g_AppConfig.notification.sound.sound_file, snapshot->notificationSoundFile, MAX_PATH - 1);
     g_AppConfig.notification.sound.sound_file[MAX_PATH - 1] = '\0';

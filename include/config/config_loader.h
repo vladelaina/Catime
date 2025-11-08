@@ -73,6 +73,10 @@ typedef struct {
     char notificationSoundFile[MAX_PATH];
     int notificationSoundVolume;
     BOOL notificationDisabled;
+    int notificationWindowX;
+    int notificationWindowY;
+    int notificationWindowWidth;
+    int notificationWindowHeight;
     
     /* Colors */
     char colorOptions[1024];
