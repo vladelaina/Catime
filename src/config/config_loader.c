@@ -302,15 +302,6 @@ BOOL LoadConfigFromFile(const char* config_path, ConfigSnapshot* snapshot) {
                  DEFAULT_TIMEOUT_MESSAGE,
                  snapshot->timeoutMessage, sizeof(snapshot->timeoutMessage), config_path);
     
-    ReadIniString(INI_SECTION_NOTIFICATION, "POMODORO_TIMEOUT_MESSAGE_TEXT",
-                 DEFAULT_POMODORO_MESSAGE,
-                 snapshot->pomodoroMessage, sizeof(snapshot->pomodoroMessage), config_path);
-    
-    ReadIniString(INI_SECTION_NOTIFICATION, "POMODORO_CYCLE_COMPLETE_TEXT",
-                 DEFAULT_POMODORO_COMPLETE_MSG,
-                 snapshot->cycleCompleteMessage, sizeof(snapshot->cycleCompleteMessage), 
-                 config_path);
-    
     snapshot->notificationTimeoutMs = ReadIniInt(INI_SECTION_NOTIFICATION, 
                                                 "NOTIFICATION_TIMEOUT_MS", 3000, config_path);
     

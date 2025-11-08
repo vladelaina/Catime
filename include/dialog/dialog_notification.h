@@ -87,7 +87,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
  *       - ReadNotificationVolumeConfig()
  *       
  *       Write functions:
- *       - WriteConfigNotificationMessages(timeout_msg, pomodoro_msg, cycle_msg)
+ *       - WriteConfigNotificationMessages(timeout_msg)
  *       - WriteConfigNotificationTimeout(timeout_ms)
  *       - WriteConfigNotificationOpacity(opacity)
  *       - WriteConfigNotificationType(NotificationType type)

@@ -9,56 +9,50 @@
 #pragma code_page(65001)
 
 /** @brief Complex notification configuration dialog with grouped controls */
-CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG DIALOGEX 0, 0, 350, 410
+CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG DIALOGEX 0, 0, 350, 330
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Notification Settings"
 FONT 9, "Segoe UI"
 BEGIN
     /** Message content customization group */
-    GROUPBOX        "Notification Content", IDC_NOTIFICATION_CONTENT_GROUP, 10, 10, 330, 160
+    GROUPBOX        "Notification Content", IDC_NOTIFICATION_CONTENT_GROUP, 10, 10, 330, 70
     
-    LTEXT           "Countdown timeout message:", IDC_NOTIFICATION_LABEL1, 20, 30, 80, 15
+    LTEXT           "Countdown timeout message:", IDC_NOTIFICATION_LABEL1, 20, 30, 110, 15
     EDITTEXT        IDC_NOTIFICATION_EDIT1, 20, 45, 310, 20, ES_AUTOHSCROLL
-    
-    LTEXT           "Pomodoro timeout message:", IDC_NOTIFICATION_LABEL2, 20, 75, 80, 15
-    EDITTEXT        IDC_NOTIFICATION_EDIT2, 20, 90, 310, 20, ES_AUTOHSCROLL
-    
-    LTEXT           "Pomodoro cycle completion message:", IDC_NOTIFICATION_LABEL3, 20, 120, 100, 15
-    EDITTEXT        IDC_NOTIFICATION_EDIT3, 20, 135, 310, 20, ES_AUTOHSCROLL
     
 
     /** Visual appearance and timing controls */
-    GROUPBOX        "Notification Display", IDC_NOTIFICATION_DISPLAY_GROUP, 10, 180, 330, 70
+    GROUPBOX        "Notification Display", IDC_NOTIFICATION_DISPLAY_GROUP, 10, 90, 330, 70
     
-    LTEXT           "Notification display time:", IDC_NOTIFICATION_TIME_LABEL, 20, 200, 110, 15
-    CONTROL         "", IDC_NOTIFICATION_TIME_EDIT, "SysDateTimePick32", DTS_TIMEFORMAT | DTS_UPDOWN | WS_TABSTOP, 130, 198, 100, 20
-    AUTOCHECKBOX    "Disable notification window", IDC_DISABLE_NOTIFICATION_CHECK, 240, 200, 80, 15
+    LTEXT           "Notification display time:", IDC_NOTIFICATION_TIME_LABEL, 20, 110, 110, 15
+    CONTROL         "", IDC_NOTIFICATION_TIME_EDIT, "SysDateTimePick32", DTS_TIMEFORMAT | DTS_UPDOWN | WS_TABSTOP, 130, 108, 100, 20
+    AUTOCHECKBOX    "Disable notification window", IDC_DISABLE_NOTIFICATION_CHECK, 240, 110, 80, 15
     
-    LTEXT           "Maximum opacity (1-100%):", IDC_NOTIFICATION_OPACITY_LABEL, 20, 225, 110, 15
-    CONTROL         "", IDC_NOTIFICATION_OPACITY_EDIT, "msctls_trackbar32", TBS_BOTH | TBS_NOTICKS | WS_TABSTOP, 130, 223, 180, 15
-    LTEXT           "100%", IDC_NOTIFICATION_OPACITY_TEXT, 315, 225, 35, 15
-    
+    LTEXT           "Maximum opacity (1-100%):", IDC_NOTIFICATION_OPACITY_LABEL, 20, 135, 110, 15
+    CONTROL         "", IDC_NOTIFICATION_OPACITY_EDIT, "msctls_trackbar32", TBS_BOTH | TBS_NOTICKS | WS_TABSTOP, 130, 133, 180, 15
+    LTEXT           "100%", IDC_NOTIFICATION_OPACITY_TEXT, 315, 135, 35, 15
+
 
     /** Notification delivery method selection */
-    GROUPBOX        "Notification Method", IDC_NOTIFICATION_METHOD_GROUP, 10, 260, 330, 110
+    GROUPBOX        "Notification Method", IDC_NOTIFICATION_METHOD_GROUP, 10, 170, 330, 110
     /** Custom Catime notification with full control */
-    AUTORADIOBUTTON "Catime notification window", IDC_NOTIFICATION_TYPE_CATIME, 20, 280, 90, 15
+    AUTORADIOBUTTON "Catime notification window", IDC_NOTIFICATION_TYPE_CATIME, 20, 190, 90, 15
     /** System-integrated toast notifications */
-    AUTORADIOBUTTON "Operating system notification", IDC_NOTIFICATION_TYPE_OS, 120, 280, 90, 15
+    AUTORADIOBUTTON "Operating system notification", IDC_NOTIFICATION_TYPE_OS, 120, 190, 90, 15
     /** Blocking modal dialog requiring acknowledgment */
-    AUTORADIOBUTTON "System modal window", IDC_NOTIFICATION_TYPE_SYSTEM_MODAL, 220, 280, 90, 15
+    AUTORADIOBUTTON "System modal window", IDC_NOTIFICATION_TYPE_SYSTEM_MODAL, 220, 190, 90, 15
     
     /** Audio feedback configuration */
-    LTEXT           "Sound (supports .mp3/.wav/.flac):", IDC_NOTIFICATION_SOUND_LABEL, 20, 305, 150, 15
-    COMBOBOX        IDC_NOTIFICATION_SOUND_COMBO, 170, 303, 80, 100, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
-    PUSHBUTTON      "Test", IDC_TEST_SOUND_BUTTON, 255, 303, 35, 20
-    PUSHBUTTON      "Audio Dir", IDC_OPEN_SOUND_DIR_BUTTON, 295, 303, 45, 20
+    LTEXT           "Sound (supports .mp3/.wav/.flac):", IDC_NOTIFICATION_SOUND_LABEL, 20, 215, 150, 15
+    COMBOBOX        IDC_NOTIFICATION_SOUND_COMBO, 170, 213, 80, 100, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "Test", IDC_TEST_SOUND_BUTTON, 255, 213, 35, 20
+    PUSHBUTTON      "Audio Dir", IDC_OPEN_SOUND_DIR_BUTTON, 295, 213, 45, 20
     
-    LTEXT           "Volume (0-100%):", IDC_VOLUME_LABEL, 20, 335, 70, 15
-    CONTROL         "", IDC_VOLUME_SLIDER, "msctls_trackbar32", TBS_BOTH | TBS_NOTICKS | WS_TABSTOP, 90, 335, 180, 15
-    LTEXT           "100%", IDC_VOLUME_TEXT, 275, 335, 35, 15
+    LTEXT           "Volume (0-100%):", IDC_VOLUME_LABEL, 20, 245, 70, 15
+    CONTROL         "", IDC_VOLUME_SLIDER, "msctls_trackbar32", TBS_BOTH | TBS_NOTICKS | WS_TABSTOP, 90, 245, 180, 15
+    LTEXT           "100%", IDC_VOLUME_TEXT, 275, 245, 35, 15
     
 
-    PUSHBUTTON      "Cancel", IDCANCEL, 235, 380, 50, 15
-    PUSHBUTTON      "OK", IDOK, 290, 380, 50, 15
+    PUSHBUTTON      "Cancel", IDCANCEL, 235, 290, 50, 15
+    PUSHBUTTON      "OK", IDOK, 290, 290, 50, 15
 END 

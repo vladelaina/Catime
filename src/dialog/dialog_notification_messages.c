@@ -51,31 +51,15 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                                wideText, sizeof(wideText)/sizeof(wchar_t));
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, wideText);
 
-            MultiByteToWideChar(CP_UTF8, 0, g_AppConfig.notification.messages.pomodoro_message, -1,
-                               wideText, sizeof(wideText)/sizeof(wchar_t));
-            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT2, wideText);
-
-            MultiByteToWideChar(CP_UTF8, 0, g_AppConfig.notification.messages.cycle_complete_message, -1,
-                               wideText, sizeof(wideText)/sizeof(wchar_t));
-            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT3, wideText);
-
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_LABEL1,
                            GetLocalizedString(L"Countdown timeout message:", L"Countdown timeout message:"));
-            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_LABEL2,
-                           GetLocalizedString(L"Pomodoro timeout message:", L"Pomodoro timeout message:"));
-            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_LABEL3,
-                           GetLocalizedString(L"Pomodoro cycle complete message:", L"Pomodoro cycle complete message:"));
 
             SetDlgItemTextW(hwndDlg, IDOK, GetLocalizedString(L"OK", L"OK"));
             SetDlgItemTextW(hwndDlg, IDCANCEL, GetLocalizedString(L"Cancel", L"Cancel"));
 
             HWND hEdit1 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT1);
-            HWND hEdit2 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT2);
-            HWND hEdit3 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT3);
 
             Dialog_SubclassEdit(hEdit1, ctx);
-            Dialog_SubclassEdit(hEdit2, ctx);
-            Dialog_SubclassEdit(hEdit3, ctx);
 
             SendDlgItemMessage(hwndDlg, IDC_NOTIFICATION_EDIT1, EM_SETSEL, 0, -1);
             SetFocus(hEdit1);
@@ -97,26 +81,16 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
         case WM_COMMAND:
             if (LOWORD(wParam) == IDOK) {
                 wchar_t wTimeout[256] = {0};
-                wchar_t wPomodoro[256] = {0};
-                wchar_t wCycle[256] = {0};
 
                 GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, wTimeout, sizeof(wTimeout)/sizeof(wchar_t));
-                GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT2, wPomodoro, sizeof(wPomodoro)/sizeof(wchar_t));
-                GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT3, wCycle, sizeof(wCycle)/sizeof(wchar_t));
 
                 char timeout_msg[256] = {0};
-                char pomodoro_msg[256] = {0};
-                char cycle_complete_msg[256] = {0};
 
                 WideCharToMultiByte(CP_UTF8, 0, wTimeout, -1,
                                     timeout_msg, sizeof(timeout_msg), NULL, NULL);
-                WideCharToMultiByte(CP_UTF8, 0, wPomodoro, -1,
-                                    pomodoro_msg, sizeof(pomodoro_msg), NULL, NULL);
-                WideCharToMultiByte(CP_UTF8, 0, wCycle, -1,
-                                    cycle_complete_msg, sizeof(cycle_complete_msg), NULL, NULL);
 
-                extern void WriteConfigNotificationMessages(const char* timeout, const char* pomodoro, const char* cycle);
-                WriteConfigNotificationMessages(timeout_msg, pomodoro_msg, cycle_complete_msg);
+                extern void WriteConfigNotificationMessages(const char* timeout);
+                WriteConfigNotificationMessages(timeout_msg);
 
                 EndDialog(hwndDlg, IDOK);
                 return TRUE;
@@ -129,12 +103,8 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
         case WM_DESTROY:
             if (ctx) {
                 HWND hEdit1 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT1);
-                HWND hEdit2 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT2);
-                HWND hEdit3 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT3);
 
                 if (hEdit1) Dialog_UnsubclassEdit(hEdit1, ctx);
-                if (hEdit2) Dialog_UnsubclassEdit(hEdit2, ctx);
-                if (hEdit3) Dialog_UnsubclassEdit(hEdit3, ctx);
 
                 Dialog_FreeContext(ctx);
             }

@@ -54,35 +54,20 @@ void ReadNotificationMessagesConfig(void) {
 
     ReadIniString(INI_SECTION_NOTIFICATION, "CLOCK_TIMEOUT_MESSAGE_TEXT", DEFAULT_TIMEOUT_MESSAGE, 
                  g_AppConfig.notification.messages.timeout_message, sizeof(g_AppConfig.notification.messages.timeout_message), config_path);
-                 
-    ReadIniString(INI_SECTION_NOTIFICATION, "POMODORO_TIMEOUT_MESSAGE_TEXT", DEFAULT_POMODORO_MESSAGE, 
-                 g_AppConfig.notification.messages.pomodoro_message, sizeof(g_AppConfig.notification.messages.pomodoro_message), config_path);
-                 
-    ReadIniString(INI_SECTION_NOTIFICATION, "POMODORO_CYCLE_COMPLETE_TEXT", DEFAULT_POMODORO_COMPLETE_MSG,
-                 g_AppConfig.notification.messages.cycle_complete_message, sizeof(g_AppConfig.notification.messages.cycle_complete_message), config_path);
 }
 
 
 /**
  * @brief Update notification message texts in config
  */
-void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodoro_msg, const char* cycle_complete_msg) {
+void WriteConfigNotificationMessages(const char* timeout_msg) {
     strncpy(g_AppConfig.notification.messages.timeout_message, timeout_msg, sizeof(g_AppConfig.notification.messages.timeout_message) - 1);
     g_AppConfig.notification.messages.timeout_message[sizeof(g_AppConfig.notification.messages.timeout_message) - 1] = '\0';
-    
-    strncpy(g_AppConfig.notification.messages.pomodoro_message, pomodoro_msg, sizeof(g_AppConfig.notification.messages.pomodoro_message) - 1);
-    g_AppConfig.notification.messages.pomodoro_message[sizeof(g_AppConfig.notification.messages.pomodoro_message) - 1] = '\0';
-    
-    strncpy(g_AppConfig.notification.messages.cycle_complete_message, cycle_complete_msg, sizeof(g_AppConfig.notification.messages.cycle_complete_message) - 1);
-    g_AppConfig.notification.messages.cycle_complete_message[sizeof(g_AppConfig.notification.messages.cycle_complete_message) - 1] = '\0';
     
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    /** Batch update for better performance */
     WriteIniString(INI_SECTION_NOTIFICATION, "CLOCK_TIMEOUT_MESSAGE_TEXT", timeout_msg, config_path);
-    WriteIniString(INI_SECTION_NOTIFICATION, "POMODORO_TIMEOUT_MESSAGE_TEXT", pomodoro_msg, config_path);
-    WriteIniString(INI_SECTION_NOTIFICATION, "POMODORO_CYCLE_COMPLETE_TEXT", cycle_complete_msg, config_path);
 }
 
 

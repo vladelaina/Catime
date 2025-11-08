@@ -222,16 +222,6 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int* count) {
     idx++;
     
     safe_strncpy(items[idx].section, INI_SECTION_NOTIFICATION, sizeof(items[idx].section));
-    safe_strncpy(items[idx].key, "POMODORO_TIMEOUT_MESSAGE_TEXT", sizeof(items[idx].key));
-    safe_strncpy(items[idx].value, g_AppConfig.notification.messages.pomodoro_message, sizeof(items[idx].value));
-    idx++;
-    
-    safe_strncpy(items[idx].section, INI_SECTION_NOTIFICATION, sizeof(items[idx].section));
-    safe_strncpy(items[idx].key, "POMODORO_CYCLE_COMPLETE_TEXT", sizeof(items[idx].key));
-    safe_strncpy(items[idx].value, g_AppConfig.notification.messages.cycle_complete_message, sizeof(items[idx].value));
-    idx++;
-    
-    safe_strncpy(items[idx].section, INI_SECTION_NOTIFICATION, sizeof(items[idx].section));
     safe_strncpy(items[idx].key, "NOTIFICATION_TIMEOUT_MS", sizeof(items[idx].key));
     snprintf(items[idx].value, sizeof(items[idx].value), "%d", g_AppConfig.notification.display.timeout_ms);
     idx++;

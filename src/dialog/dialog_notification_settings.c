@@ -64,14 +64,6 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                                wideText, sizeof(wideText)/sizeof(wchar_t));
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, wideText);
             
-            MultiByteToWideChar(CP_UTF8, 0, g_AppConfig.notification.messages.pomodoro_message, -1, 
-                               wideText, sizeof(wideText)/sizeof(wchar_t));
-            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT2, wideText);
-            
-            MultiByteToWideChar(CP_UTF8, 0, g_AppConfig.notification.messages.cycle_complete_message, -1, 
-                               wideText, sizeof(wideText)/sizeof(wchar_t));
-            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT3, wideText);
-            
             SYSTEMTIME st = {0};
             GetLocalTime(&st);
             
@@ -165,23 +157,13 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             }
             else if (LOWORD(wParam) == IDOK) {
                 wchar_t wTimeout[256] = {0};
-                wchar_t wPomodoro[256] = {0};
-                wchar_t wCycle[256] = {0};
                 
                 GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, wTimeout, sizeof(wTimeout)/sizeof(wchar_t));
-                GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT2, wPomodoro, sizeof(wPomodoro)/sizeof(wchar_t));
-                GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT3, wCycle, sizeof(wCycle)/sizeof(wchar_t));
                 
                 char timeout_msg[256] = {0};
-                char pomodoro_msg[256] = {0};
-                char cycle_complete_msg[256] = {0};
                 
                 WideCharToMultiByte(CP_UTF8, 0, wTimeout, -1, 
-                                    timeout_msg, sizeof(timeout_msg), NULL, NULL);
-                WideCharToMultiByte(CP_UTF8, 0, wPomodoro, -1, 
-                                    pomodoro_msg, sizeof(pomodoro_msg), NULL, NULL);
-                WideCharToMultiByte(CP_UTF8, 0, wCycle, -1, 
-                                    cycle_complete_msg, sizeof(cycle_complete_msg), NULL, NULL);
+                                   timeout_msg, sizeof(timeout_msg), NULL, NULL);
                 
                 SYSTEMTIME st = {0};
                 
@@ -241,7 +223,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 HWND hwndSlider = GetDlgItem(hwndDlg, IDC_VOLUME_SLIDER);
                 int volume = (int)SendMessage(hwndSlider, TBM_GETPOS, 0, 0);
                 
-                WriteConfigNotificationMessages(timeout_msg, pomodoro_msg, cycle_complete_msg);
+                WriteConfigNotificationMessages(timeout_msg);
                 WriteConfigNotificationSound(soundFile);
                 WriteConfigNotificationVolume(volume);
                 

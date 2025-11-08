@@ -378,7 +378,13 @@ static BOOL HandlePomodoroCompletion(HWND hwnd) {
         ResetPomodoroState();
         
         const wchar_t* cycle_complete_text = GetLocalizedString(NULL, L"All Pomodoro cycles completed!");
-        ShowNotification(hwnd, cycle_complete_text);
+        wchar_t finalMsg[MESSAGE_BUFFER_SIZE];
+        _snwprintf_s(finalMsg, sizeof(finalMsg)/sizeof(wchar_t), _TRUNCATE,
+                    L"%ls (%d/%d)",
+                    cycle_complete_text,
+                    totalSteps,
+                    totalSteps);
+        ShowNotification(hwnd, finalMsg);
         if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_MESSAGE) {
             ReadNotificationSoundConfig();
             PlayNotificationSound(hwnd);

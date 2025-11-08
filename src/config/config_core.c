@@ -37,9 +37,7 @@ AppConfig g_AppConfig = {
     },
     .notification = {
         .messages = {
-            .timeout_message = DEFAULT_TIMEOUT_MESSAGE,
-            .pomodoro_message = DEFAULT_POMODORO_MESSAGE,
-            .cycle_complete_message = DEFAULT_POMODORO_COMPLETE_MSG
+            .timeout_message = DEFAULT_TIMEOUT_MESSAGE
         },
         .display = {
             .timeout_ms = 3000,  /* 3s provides sufficient time to read without being intrusive */

@@ -226,10 +226,6 @@
 /** @brief Notification dialog control identifiers */
 #define IDC_NOTIFICATION_LABEL1 2001     /**< Notification message label 1 */
 #define IDC_NOTIFICATION_EDIT1 2002      /**< Notification message edit 1 */
-#define IDC_NOTIFICATION_LABEL2 2003     /**< Notification message label 2 */
-#define IDC_NOTIFICATION_EDIT2 2004      /**< Notification message edit 2 */
-#define IDC_NOTIFICATION_LABEL3 2005     /**< Notification message label 3 */
-#define IDC_NOTIFICATION_EDIT3 2006      /**< Notification message edit 3 */
 
 /** @brief Notification display control identifiers */
 #define IDC_NOTIFICATION_TIME_LABEL 2007     /**< Notification timeout label */

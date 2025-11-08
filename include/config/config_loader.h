@@ -67,8 +67,6 @@ typedef struct {
     
     /* Notifications */
     char timeoutMessage[100];
-    char pomodoroMessage[100];
-    char cycleCompleteMessage[100];
     int notificationTimeoutMs;
     int notificationMaxOpacity;
     NotificationType notificationType;

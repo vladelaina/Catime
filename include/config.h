@@ -34,9 +34,7 @@
  * ============================================================================ */
 
 /** @brief Default notification messages */
-#define DEFAULT_TIMEOUT_MESSAGE        "Time's up!"
-#define DEFAULT_POMODORO_MESSAGE       "Pomodoro complete!"
-#define DEFAULT_POMODORO_COMPLETE_MSG  "All Pomodoro cycles completed!"
+#define DEFAULT_TIMEOUT_MESSAGE        "Time's up! Ciallo～(∠・ω< )⌒★"
 
 /** @brief Resource path prefixes */
 #define LOCALAPPDATA_PREFIX            "%LOCALAPPDATA%\\Catime"
@@ -146,8 +144,6 @@ typedef struct {
  */
 typedef struct {
     char timeout_message[100];
-    char pomodoro_message[100];
-    char cycle_complete_message[100];
 } NotificationMessages;
 
 /**
@@ -497,10 +493,8 @@ void WriteConfigNotificationOpacity(int opacity);
 /**
  * @brief Write notification messages atomically (placeholder support)
  * @param timeout_msg Timeout message (UTF-8)
- * @param pomodoro_msg Pomodoro message (UTF-8)
- * @param cycle_complete_msg Cycle complete message (UTF-8)
  */
-void WriteConfigNotificationMessages(const char* timeout_msg, const char* pomodoro_msg, const char* cycle_complete_msg);
+void WriteConfigNotificationMessages(const char* timeout_msg);
 
 /**
  * @brief Read notification type (default: CATIME)
