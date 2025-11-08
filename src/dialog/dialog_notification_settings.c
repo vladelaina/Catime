@@ -40,7 +40,7 @@ static void UpdatePreviewOpacity(int opacity) {
     }
 }
 
-static void ShowOpacityPreviewNotification(HWND hwndParent, int initialOpacity) {
+static void ShowOpacityPreviewNotification(HWND hwndParent, int initialOpacity, const wchar_t* message) {
     extern void ShowToastNotification(HWND hwnd, const wchar_t* message);
     
     if (g_hwndPreviewNotification && IsWindow(g_hwndPreviewNotification)) {
@@ -54,8 +54,13 @@ static void ShowOpacityPreviewNotification(HWND hwndParent, int initialOpacity) 
     g_AppConfig.notification.display.timeout_ms = 999999;
     
     wchar_t previewMessage[256];
-    MultiByteToWideChar(CP_UTF8, 0, g_AppConfig.notification.messages.timeout_message, -1, 
-                       previewMessage, sizeof(previewMessage)/sizeof(wchar_t));
+    if (message && message[0] != L'\0') {
+        wcsncpy(previewMessage, message, sizeof(previewMessage)/sizeof(wchar_t) - 1);
+        previewMessage[sizeof(previewMessage)/sizeof(wchar_t) - 1] = L'\0';
+    } else {
+        MultiByteToWideChar(CP_UTF8, 0, g_AppConfig.notification.messages.timeout_message, -1, 
+                           previewMessage, sizeof(previewMessage)/sizeof(wchar_t));
+    }
     
     ShowToastNotification(hwndParent, previewMessage);
     
@@ -71,6 +76,34 @@ static void ShowOpacityPreviewNotification(HWND hwndParent, int initialOpacity) 
     
     g_AppConfig.notification.display.max_opacity = originalOpacity;
     g_AppConfig.notification.display.timeout_ms = originalTimeout;
+}
+
+typedef struct {
+    wchar_t* messageText;
+    int windowWidth;
+    BYTE opacity;
+} PreviewNotificationData;
+
+static void UpdatePreviewNotificationText(HWND hwndDlg, const wchar_t* newText) {
+    if (!g_hwndPreviewNotification || !IsWindow(g_hwndPreviewNotification)) {
+        HWND hwndOpacitySlider = GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT);
+        int currentOpacity = (int)SendMessage(hwndOpacitySlider, TBM_GETPOS, 0, 0);
+        
+        ShowOpacityPreviewNotification(GetParent(hwndDlg), currentOpacity, newText);
+        return;
+    }
+    
+    PreviewNotificationData* data = (PreviewNotificationData*)GetWindowLongPtr(g_hwndPreviewNotification, GWLP_USERDATA);
+    if (data && data->messageText) {
+        size_t newLen = wcslen(newText) + 1;
+        wchar_t* newBuffer = (wchar_t*)realloc(data->messageText, newLen * sizeof(wchar_t));
+        if (newBuffer) {
+            data->messageText = newBuffer;
+            wcscpy(data->messageText, newText);
+            InvalidateRect(g_hwndPreviewNotification, NULL, TRUE);
+            UpdateWindow(g_hwndPreviewNotification);
+        }
+    }
 }
 
 static void ClosePreviewNotification(void) {
@@ -105,6 +138,7 @@ void ShowNotificationSettingsDialog(HWND hwndParent) {
 INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     static BOOL isPlaying = FALSE;
     static int originalVolume = 0;
+    static BOOL isInitializing = TRUE;
     
     switch (msg) {
         case WM_INITDIALOG: {
@@ -183,6 +217,8 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             
             MoveDialogToPrimaryScreen(hwndDlg);
             
+            isInitializing = FALSE;
+            
             return TRUE;
         }
         
@@ -205,7 +241,10 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 _snwprintf_s(opacityText, 16, _TRUNCATE, L"%d%%", opacity);
                 SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_OPACITY_TEXT, opacityText);
                 
-                ShowOpacityPreviewNotification(GetParent(hwndDlg), opacity);
+                wchar_t currentMessage[256];
+                GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, currentMessage, sizeof(currentMessage)/sizeof(wchar_t));
+                
+                ShowOpacityPreviewNotification(GetParent(hwndDlg), opacity, currentMessage[0] != L'\0' ? currentMessage : NULL);
                 UpdatePreviewOpacity(opacity);
                 
                 return TRUE;
@@ -214,7 +253,19 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
         }
         
         case WM_COMMAND:
-            if (LOWORD(wParam) == IDC_DISABLE_NOTIFICATION_CHECK && HIWORD(wParam) == BN_CLICKED) {
+            if (LOWORD(wParam) == IDC_NOTIFICATION_EDIT1 && HIWORD(wParam) == EN_CHANGE) {
+                if (!isInitializing) {
+                    wchar_t newText[256];
+                    GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, newText, sizeof(newText)/sizeof(wchar_t));
+                    
+                    if (newText[0] == L'\0') {
+                        wcscpy(newText, L" ");
+                    }
+                    UpdatePreviewNotificationText(hwndDlg, newText);
+                }
+                return TRUE;
+            }
+            else if (LOWORD(wParam) == IDC_DISABLE_NOTIFICATION_CHECK && HIWORD(wParam) == BN_CLICKED) {
                 BOOL isChecked = (IsDlgButtonChecked(hwndDlg, IDC_DISABLE_NOTIFICATION_CHECK) == BST_CHECKED);
                 EnableWindow(GetDlgItem(hwndDlg, IDC_NOTIFICATION_TIME_EDIT), !isChecked);
                 return TRUE;
@@ -296,6 +347,8 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 CleanupAudioPlayback(isPlaying);
                 isPlaying = FALSE;
                 
+                isInitializing = TRUE;
+                
                 EndDialog(hwndDlg, IDOK);
                 g_hwndNotificationSettingsDialog = NULL;
                 return TRUE;
@@ -306,6 +359,8 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 
                 CleanupAudioPlayback(isPlaying);
                 isPlaying = FALSE;
+                
+                isInitializing = TRUE;
                 
                 EndDialog(hwndDlg, IDCANCEL);
                 g_hwndNotificationSettingsDialog = NULL;
@@ -334,6 +389,8 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             ClosePreviewNotification();
             CleanupAudioPlayback(isPlaying);
             
+            isInitializing = TRUE;
+            
             EndDialog(hwndDlg, IDCANCEL);
             g_hwndNotificationSettingsDialog = NULL;
             return TRUE;
@@ -342,6 +399,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             ClosePreviewNotification();
             SetAudioPlaybackCompleteCallback(NULL, NULL);
             g_hwndNotificationSettingsDialog = NULL;
+            isInitializing = TRUE;
             break;
     }
     return FALSE;
