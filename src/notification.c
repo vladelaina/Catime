@@ -327,7 +327,7 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
                 NOTIFICATION_PADDING_H, 
                 NOTIFICATION_PADDING_V, 
                 clientRect.right - NOTIFICATION_PADDING_H, 
-                NOTIFICATION_TITLE_HEIGHT
+                NOTIFICATION_PADDING_V + NOTIFICATION_TITLE_HEIGHT
             };
             DrawNotificationText(memDC, L"Catime", titleRect, titleFont, 
                                NOTIFICATION_TITLE_COLOR, DT_SINGLELINE);
