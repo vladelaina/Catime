@@ -377,7 +377,12 @@ static BOOL HandlePomodoroCompletion(HWND hwnd) {
         ResetTimerState(0);
         ResetPomodoroState();
         
-        ShowTimeoutNotification(hwnd, g_AppConfig.notification.messages.cycle_complete_message, TRUE);
+        const wchar_t* cycle_complete_text = GetLocalizedString(NULL, L"All Pomodoro cycles completed!");
+        ShowNotification(hwnd, cycle_complete_text);
+        if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_MESSAGE) {
+            ReadNotificationSoundConfig();
+            PlayNotificationSound(hwnd);
+        }
         
         CLOCK_COUNT_UP = FALSE;
         CLOCK_SHOW_CURRENT_TIME = FALSE;
