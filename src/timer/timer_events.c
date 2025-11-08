@@ -358,16 +358,19 @@ static BOOL HandlePomodoroCompletion(HWND hwnd) {
     }
     
     if (!AdvancePomodoroState()) {
+        const wchar_t* completed_text = GetLocalizedString(NULL, L"Pomodoro completed");
         if (totalSteps > 1) {
             swprintf(completionMsg, sizeof(completionMsg)/sizeof(wchar_t),
-                    L"%ls Pomodoro completed (%d/%d)",
+                    L"%ls %ls (%d/%d)",
                     timeStr,
+                    completed_text,
                     currentStep,
                     totalSteps);
         } else {
             swprintf(completionMsg, sizeof(completionMsg)/sizeof(wchar_t),
-                    L"%ls Pomodoro completed",
-                    timeStr);
+                    L"%ls %ls",
+                    timeStr,
+                    completed_text);
         }
         ShowNotification(hwnd, completionMsg);
         
@@ -384,16 +387,19 @@ static BOOL HandlePomodoroCompletion(HWND hwnd) {
         return FALSE;
     }
     
+    const wchar_t* completed_text = GetLocalizedString(NULL, L"Pomodoro completed");
     if (totalSteps > 1) {
         swprintf(completionMsg, sizeof(completionMsg)/sizeof(wchar_t),
-                L"%ls Pomodoro completed (%d/%d)",
+                L"%ls %ls (%d/%d)",
                 timeStr,
+                completed_text,
                 currentStep,
                 totalSteps);
     } else {
         swprintf(completionMsg, sizeof(completionMsg)/sizeof(wchar_t),
-                L"%ls Pomodoro completed",
-                timeStr);
+                L"%ls %ls",
+                timeStr,
+                completed_text);
     }
     ShowNotification(hwnd, completionMsg);
     
