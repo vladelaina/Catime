@@ -5,7 +5,8 @@ REM Helper function for colored output using PowerShell
 set "ps_color=powershell -Command"
 
 REM Catime CMake Build Script for Windows
-REM This script builds the Catime project using CMake and MinGW-64
+REM This script builds the Catime project using CMake and MinGW
+REM Note: Output architecture (32-bit/64-bit) depends on your installed MinGW version
 
 REM Configuration
 set BUILD_TYPE=%1
@@ -30,13 +31,39 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM Check if MinGW is available
+REM Check if MinGW is available and detect architecture
 gcc --version >nul 2>&1
 if errorlevel 1 (
-    echo Error: MinGW GCC not found! Please install MinGW-64 and add it to PATH.
+    echo Error: MinGW GCC not found! Please install MinGW and add it to PATH.
+    echo.
+    echo For 32-bit builds (recommended for maximum compatibility):
+    echo   Download MinGW-w64 i686 version from:
+    echo   https://github.com/niXman/mingw-builds-binaries/releases
+    echo   Look for: i686-*-release-win32-*.7z
     pause
     exit /b 1
 )
+
+REM Detect compiler architecture
+gcc -dumpmachine > arch_detect.tmp 2>&1
+set /p COMPILER_ARCH=<arch_detect.tmp
+del arch_detect.tmp
+
+REM Determine if it's 32-bit or 64-bit
+echo %COMPILER_ARCH% | findstr /i "i686 i386" >nul
+if not errorlevel 1 (
+    set ARCH_TYPE=32-bit
+    set ARCH_COLOR=Green
+) else (
+    set ARCH_TYPE=64-bit
+    set ARCH_COLOR=Yellow
+)
+
+echo Build configuration:
+%ps_color% "Write-Host '  Compiler: %COMPILER_ARCH%' -ForegroundColor Cyan"
+%ps_color% "Write-Host '  Target: %ARCH_TYPE%' -ForegroundColor %ARCH_COLOR%"
+%ps_color% "Write-Host '  Build type: %BUILD_TYPE%' -ForegroundColor Cyan"
+echo.
 
 REM Create build directory
 if not exist "%BUILD_DIR%" mkdir "%BUILD_DIR%"
@@ -73,6 +100,7 @@ REM Check if build was successful
 if exist "catime.exe" (
     echo.
     %ps_color% "Write-Host '[OK] Build completed successfully!' -ForegroundColor Green"
+    %ps_color% "Write-Host 'Target: %ARCH_TYPE% Windows executable' -ForegroundColor %ARCH_COLOR%"
     %ps_color% "Write-Host 'Output: %CD%\catime.exe' -ForegroundColor Cyan"
     
     REM Display file size with nice formatting

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Catime CMake Build Script for WSL with MinGW-64
-# This script builds the Catime project using CMake and MinGW-64 cross-compiler
+# Catime CMake Build Script for WSL with MinGW-32
+# This script builds the Catime project using CMake and MinGW-32 cross-compiler
 #
 # Usage:
 #   ./build.sh [BUILD_TYPE] [OUTPUT_DIR]
@@ -158,33 +158,33 @@ echo ""
 
 
 # Verify MinGW toolchain is available
-if ! command -v x86_64-w64-mingw32-gcc &> /dev/null; then
-    echo -e "${RED}✗ MinGW-64 toolchain not found!${NC}"
+if ! command -v i686-w64-mingw32-gcc &> /dev/null; then
+    echo -e "${RED}✗ MinGW-32 toolchain not found!${NC}"
     echo -e "${YELLOW}Please install mingw-w64 toolchain:${NC}"
     echo -e "${CYAN}  Ubuntu/Debian: sudo apt install mingw-w64${NC}"
     echo -e "${CYAN}  Arch Linux: sudo pacman -S mingw-w64-gcc${NC}"
-    echo -e "${CYAN}  Fedora: sudo dnf install mingw64-gcc${NC}"
+    echo -e "${CYAN}  Fedora: sudo dnf install mingw32-gcc${NC}"
     exit 1
 fi
 
 # Always ensure we have the latest toolchain file with correct paths
-echo -e "${YELLOW}Updating MinGW-64 toolchain file...${NC}"
+echo -e "${YELLOW}Updating MinGW-32 toolchain file...${NC}"
 cat > "$TOOLCHAIN_FILE" << 'EOF'
-# MinGW-64 Cross-compilation toolchain file
+# MinGW-32 Cross-compilation toolchain file
 set(CMAKE_SYSTEM_NAME Windows)
-set(CMAKE_SYSTEM_PROCESSOR x86_64)
+set(CMAKE_SYSTEM_PROCESSOR i686)
 
 # Specify the cross compiler (let CMake find them in PATH)
-set(CMAKE_C_COMPILER x86_64-w64-mingw32-gcc)
-set(CMAKE_CXX_COMPILER x86_64-w64-mingw32-g++)
-set(CMAKE_RC_COMPILER x86_64-w64-mingw32-windres)
+set(CMAKE_C_COMPILER i686-w64-mingw32-gcc)
+set(CMAKE_CXX_COMPILER i686-w64-mingw32-g++)
+set(CMAKE_RC_COMPILER i686-w64-mingw32-windres)
 
 # Try to find the MinGW installation automatically
 # Common paths on different systems
 set(MINGW_PATHS 
-    /usr/x86_64-w64-mingw32
-    /usr/local/x86_64-w64-mingw32
-    /opt/mingw64/x86_64-w64-mingw32
+    /usr/i686-w64-mingw32
+    /usr/local/i686-w64-mingw32
+    /opt/mingw32/i686-w64-mingw32
 )
 
 # Find the actual installation path
@@ -197,7 +197,7 @@ endforeach()
 
 # Fallback if not found
 if(NOT CMAKE_FIND_ROOT_PATH)
-    set(CMAKE_FIND_ROOT_PATH /usr/x86_64-w64-mingw32)
+    set(CMAKE_FIND_ROOT_PATH /usr/i686-w64-mingw32)
 endif()
 
 # Search for programs in the build host directories
