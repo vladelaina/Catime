@@ -9,6 +9,7 @@
 #include "dialog/dialog_language.h"
 #include "config.h"
 #include "audio_player.h"
+#include "notification.h"
 #include "../resource/resource.h"
 #include <string.h>
 #include <stdio.h>
@@ -18,6 +19,66 @@
  * ============================================================================ */
 
 static HWND g_hwndNotificationSettingsDialog = NULL;
+static HWND g_hwndPreviewNotification = NULL;
+
+/* ============================================================================
+ * Preview Notification Helper
+ * ============================================================================ */
+
+static HWND FindPreviewNotificationWindow(void) {
+    return FindWindowW(NOTIFICATION_CLASS_NAME, L"Catime Notification");
+}
+
+static void UpdatePreviewOpacity(int opacity) {
+    if (!g_hwndPreviewNotification || !IsWindow(g_hwndPreviewNotification)) {
+        g_hwndPreviewNotification = FindPreviewNotificationWindow();
+    }
+    
+    if (g_hwndPreviewNotification && IsWindow(g_hwndPreviewNotification)) {
+        BYTE alphaValue = (BYTE)((opacity * 255) / 100);
+        SetLayeredWindowAttributes(g_hwndPreviewNotification, 0, alphaValue, LWA_ALPHA);
+    }
+}
+
+static void ShowOpacityPreviewNotification(HWND hwndParent, int initialOpacity) {
+    extern void ShowToastNotification(HWND hwnd, const wchar_t* message);
+    
+    if (g_hwndPreviewNotification && IsWindow(g_hwndPreviewNotification)) {
+        return;
+    }
+    
+    int originalOpacity = g_AppConfig.notification.display.max_opacity;
+    int originalTimeout = g_AppConfig.notification.display.timeout_ms;
+    
+    g_AppConfig.notification.display.max_opacity = initialOpacity;
+    g_AppConfig.notification.display.timeout_ms = 999999;
+    
+    wchar_t previewMessage[256];
+    MultiByteToWideChar(CP_UTF8, 0, g_AppConfig.notification.messages.timeout_message, -1, 
+                       previewMessage, sizeof(previewMessage)/sizeof(wchar_t));
+    
+    ShowToastNotification(hwndParent, previewMessage);
+    
+    g_hwndPreviewNotification = FindPreviewNotificationWindow();
+    
+    if (g_hwndPreviewNotification && IsWindow(g_hwndPreviewNotification)) {
+        KillTimer(g_hwndPreviewNotification, NOTIFICATION_TIMER_ID);
+        KillTimer(g_hwndPreviewNotification, ANIMATION_TIMER_ID);
+        
+        BYTE alphaValue = (BYTE)((initialOpacity * 255) / 100);
+        SetLayeredWindowAttributes(g_hwndPreviewNotification, 0, alphaValue, LWA_ALPHA);
+    }
+    
+    g_AppConfig.notification.display.max_opacity = originalOpacity;
+    g_AppConfig.notification.display.timeout_ms = originalTimeout;
+}
+
+static void ClosePreviewNotification(void) {
+    if (g_hwndPreviewNotification && IsWindow(g_hwndPreviewNotification)) {
+        DestroyWindow(g_hwndPreviewNotification);
+        g_hwndPreviewNotification = NULL;
+    }
+}
 
 /* ============================================================================
  * Full Notification Settings Dialog
@@ -144,6 +205,9 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 _snwprintf_s(opacityText, 16, _TRUNCATE, L"%d%%", opacity);
                 SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_OPACITY_TEXT, opacityText);
                 
+                ShowOpacityPreviewNotification(GetParent(hwndDlg), opacity);
+                UpdatePreviewOpacity(opacity);
+                
                 return TRUE;
             }
             break;
@@ -156,6 +220,8 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 return TRUE;
             }
             else if (LOWORD(wParam) == IDOK) {
+                ClosePreviewNotification();
+                
                 wchar_t wTimeout[256] = {0};
                 
                 GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, wTimeout, sizeof(wTimeout)/sizeof(wchar_t));
@@ -234,6 +300,8 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 g_hwndNotificationSettingsDialog = NULL;
                 return TRUE;
             } else if (LOWORD(wParam) == IDCANCEL) {
+                ClosePreviewNotification();
+                
                 SetAudioVolume(originalVolume);
                 
                 CleanupAudioPlayback(isPlaying);
@@ -263,6 +331,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             return TRUE;
             
         case WM_CLOSE:
+            ClosePreviewNotification();
             CleanupAudioPlayback(isPlaying);
             
             EndDialog(hwndDlg, IDCANCEL);
@@ -270,6 +339,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             return TRUE;
             
         case WM_DESTROY:
+            ClosePreviewNotification();
             SetAudioPlaybackCompleteCallback(NULL, NULL);
             g_hwndNotificationSettingsDialog = NULL;
             break;
