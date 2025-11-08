@@ -132,7 +132,7 @@ void HotkeyToString(WORD hotkey, char* buffer, size_t bufferSize) {
     } else if (vk >= VK_F1 && vk <= VK_F24) {
         /** Handle function keys */
         char keyName[8];
-        sprintf(keyName, "F%d", vk - VK_F1 + 1);
+        snprintf(keyName, sizeof(keyName), "F%d", vk - VK_F1 + 1);
         strncat(buffer, keyName, bufferSize - len - 1);
     } else {
         /** Look up in mapping table */
@@ -149,7 +149,7 @@ void HotkeyToString(WORD hotkey, char* buffer, size_t bufferSize) {
         } else {
             /** Fallback to hex code for unknown keys */
             char hexKey[8];
-            sprintf(hexKey, "0x%02X", vk);
+            snprintf(hexKey, sizeof(hexKey), "0x%02X", vk);
             strncat(buffer, hexKey, bufferSize - len - 1);
         }
     }

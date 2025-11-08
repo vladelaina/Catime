@@ -313,7 +313,7 @@ void ShowHotkeySettingsDialog(HWND hwndParent) {
         LOG_ERROR("Failed to create hotkey dialog. Error code: %lu", error);
         
         wchar_t errorMsg[512];
-        swprintf(errorMsg, 512, L"Failed to open hotkey settings dialog.\n\n"
+        _snwprintf_s(errorMsg, 512, _TRUNCATE, L"Failed to open hotkey settings dialog.\n\n"
                               L"Error code: %lu\n\n"
                               L"Possible causes:\n"
                               L"1. Resource loading issue\n"

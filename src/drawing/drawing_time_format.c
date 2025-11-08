@@ -72,30 +72,30 @@ void FormatTimeComponentsForDisplay(
         if (showMilliseconds) {
             switch (format) {
                 case TIME_FORMAT_ZERO_PADDED:
-                    swprintf(buffer, bufferSize, L"%02d:%02d:%02d.%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%02d:%02d:%02d.%02d", 
                             tc->hours, tc->minutes, tc->seconds, tc->centiseconds);
                     break;
                 case TIME_FORMAT_FULL_PADDED:
-                    swprintf(buffer, bufferSize, L"%02d:%02d:%02d.%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%02d:%02d:%02d.%02d", 
                             tc->hours, tc->minutes, tc->seconds, tc->centiseconds);
                     break;
                 default:
-                    swprintf(buffer, bufferSize, L"%d:%02d:%02d.%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d:%02d.%02d", 
                             tc->hours, tc->minutes, tc->seconds, tc->centiseconds);
                     break;
             }
         } else {
             switch (format) {
                 case TIME_FORMAT_ZERO_PADDED:
-                    swprintf(buffer, bufferSize, L"%02d:%02d:%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%02d:%02d:%02d", 
                             tc->hours, tc->minutes, tc->seconds);
                     break;
                 case TIME_FORMAT_FULL_PADDED:
-                    swprintf(buffer, bufferSize, L"%02d:%02d:%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%02d:%02d:%02d", 
                             tc->hours, tc->minutes, tc->seconds);
                     break;
                 default:
-                    swprintf(buffer, bufferSize, L"%d:%02d:%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d:%02d", 
                             tc->hours, tc->minutes, tc->seconds);
                     break;
             }
@@ -104,30 +104,30 @@ void FormatTimeComponentsForDisplay(
         if (showMilliseconds) {
             switch (format) {
                 case TIME_FORMAT_ZERO_PADDED:
-                    swprintf(buffer, bufferSize, L"%02d:%02d.%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%02d:%02d.%02d", 
                             tc->minutes, tc->seconds, tc->centiseconds);
                     break;
                 case TIME_FORMAT_FULL_PADDED:
-                    swprintf(buffer, bufferSize, L"00:%02d:%02d.%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"00:%02d:%02d.%02d", 
                             tc->minutes, tc->seconds, tc->centiseconds);
                     break;
                 default:
-                    swprintf(buffer, bufferSize, L"%d:%02d.%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d.%02d", 
                             tc->minutes, tc->seconds, tc->centiseconds);
                     break;
             }
         } else {
             switch (format) {
                 case TIME_FORMAT_ZERO_PADDED:
-                    swprintf(buffer, bufferSize, L"%02d:%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%02d:%02d", 
                             tc->minutes, tc->seconds);
                     break;
                 case TIME_FORMAT_FULL_PADDED:
-                    swprintf(buffer, bufferSize, L"00:%02d:%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"00:%02d:%02d", 
                             tc->minutes, tc->seconds);
                     break;
                 default:
-                    swprintf(buffer, bufferSize, L"%d:%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d", 
                             tc->minutes, tc->seconds);
                     break;
             }
@@ -136,28 +136,28 @@ void FormatTimeComponentsForDisplay(
         if (showMilliseconds) {
             switch (format) {
                 case TIME_FORMAT_ZERO_PADDED:
-                    swprintf(buffer, bufferSize, L"00:%02d.%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"00:%02d.%02d", 
                             tc->seconds, tc->centiseconds);
                     break;
                 case TIME_FORMAT_FULL_PADDED:
-                    swprintf(buffer, bufferSize, L"00:00:%02d.%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"00:00:%02d.%02d", 
                             tc->seconds, tc->centiseconds);
                     break;
                 default:
-                    swprintf(buffer, bufferSize, L"%d.%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d.%02d", 
                             tc->seconds, tc->centiseconds);
                     break;
             }
         } else {
             switch (format) {
                 case TIME_FORMAT_ZERO_PADDED:
-                    swprintf(buffer, bufferSize, L"00:%02d", tc->seconds);
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"00:%02d", tc->seconds);
                     break;
                 case TIME_FORMAT_FULL_PADDED:
-                    swprintf(buffer, bufferSize, L"00:00:%02d", tc->seconds);
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"00:00:%02d", tc->seconds);
                     break;
                 default:
-                    swprintf(buffer, bufferSize, L"%d", tc->seconds);
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d", tc->seconds);
                     break;
             }
         }
@@ -184,9 +184,9 @@ void GetTimeText(wchar_t* buffer, size_t bufferSize) {
                 FormatTimeComponentsForDisplay(&tc, finalFormat, finalShowMs, buffer, bufferSize);
             } else {
                 if (finalFormat == TIME_FORMAT_ZERO_PADDED || finalFormat == TIME_FORMAT_FULL_PADDED) {
-                    swprintf(buffer, bufferSize, L"%02d:%02d", tc.hours, tc.minutes);
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%02d:%02d", tc.hours, tc.minutes);
                 } else {
-                    swprintf(buffer, bufferSize, L"%d:%02d", tc.hours, tc.minutes);
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d", tc.hours, tc.minutes);
                 }
             }
         }

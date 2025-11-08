@@ -325,12 +325,12 @@ static void FormatPomodoroTime(int seconds, wchar_t* buffer, size_t bufferSize) 
         int minutes = seconds / 60;
         int remaining_seconds = seconds % 60;
         if (remaining_seconds > 0) {
-            swprintf(buffer, bufferSize, L"%dm%ds", minutes, remaining_seconds);
+            _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%dm%ds", minutes, remaining_seconds);
         } else {
-            swprintf(buffer, bufferSize, L"%dm", minutes);
+            _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%dm", minutes);
         }
     } else {
-        swprintf(buffer, bufferSize, L"%ds", seconds);
+        _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%ds", seconds);
     }
 }
 
@@ -360,14 +360,14 @@ static BOOL HandlePomodoroCompletion(HWND hwnd) {
     if (!AdvancePomodoroState()) {
         const wchar_t* completed_text = GetLocalizedString(NULL, L"Pomodoro completed");
         if (totalSteps > 1) {
-            swprintf(completionMsg, sizeof(completionMsg)/sizeof(wchar_t),
+            _snwprintf_s(completionMsg, sizeof(completionMsg)/sizeof(wchar_t), _TRUNCATE,
                     L"%ls %ls (%d/%d)",
                     timeStr,
                     completed_text,
                     currentStep,
                     totalSteps);
         } else {
-            swprintf(completionMsg, sizeof(completionMsg)/sizeof(wchar_t),
+            _snwprintf_s(completionMsg, sizeof(completionMsg)/sizeof(wchar_t), _TRUNCATE,
                     L"%ls %ls",
                     timeStr,
                     completed_text);
@@ -394,14 +394,14 @@ static BOOL HandlePomodoroCompletion(HWND hwnd) {
     
     const wchar_t* completed_text = GetLocalizedString(NULL, L"Pomodoro completed");
     if (totalSteps > 1) {
-        swprintf(completionMsg, sizeof(completionMsg)/sizeof(wchar_t),
+        _snwprintf_s(completionMsg, sizeof(completionMsg)/sizeof(wchar_t), _TRUNCATE,
                 L"%ls %ls (%d/%d)",
                 timeStr,
                 completed_text,
                 currentStep,
                 totalSteps);
     } else {
-        swprintf(completionMsg, sizeof(completionMsg)/sizeof(wchar_t),
+        _snwprintf_s(completionMsg, sizeof(completionMsg)/sizeof(wchar_t), _TRUNCATE,
                 L"%ls %ls",
                 timeStr,
                 completed_text);
