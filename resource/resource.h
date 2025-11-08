@@ -239,6 +239,7 @@
 #define IDC_NOTIFICATION_CONTENT_GROUP 2022  /**< Notification content group */
 #define IDC_NOTIFICATION_DISPLAY_GROUP 2023  /**< Notification display group */
 #define IDC_NOTIFICATION_METHOD_GROUP 2024   /**< Notification method group */
+#define IDC_NOTIFICATION_AUDIO_GROUP 2025    /**< Notification audio settings group */
 
 /** @brief Notification type and audio control identifiers */
 #define IDC_NOTIFICATION_TYPE_CATIME 2011      /**< Catime notification type radio */
