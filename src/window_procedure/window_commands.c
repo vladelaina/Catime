@@ -14,6 +14,7 @@
 #include "timer/timer.h"
 #include "window.h"
 #include "config.h"
+#include "log.h"
 #include "language.h"
 #include "startup.h"
 #include "notification.h"
