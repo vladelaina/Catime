@@ -39,6 +39,8 @@
 int current_pomodoro_time_index = 0;
 POMODORO_PHASE current_pomodoro_phase = POMODORO_PHASE_IDLE;
 int complete_pomodoro_cycles = 0;
+static int pomodoro_initial_times_count = 0;
+static int pomodoro_initial_loop_count = 0;
 static DWORD last_timer_tick = 0;
 static int ms_accumulator = 0;
 static BOOL tail_fast_mode_active = FALSE;
@@ -186,6 +188,8 @@ static void ResetPomodoroState(void) {
     current_pomodoro_phase = POMODORO_PHASE_IDLE;
     current_pomodoro_time_index = 0;
     complete_pomodoro_cycles = 0;
+    pomodoro_initial_times_count = 0;
+    pomodoro_initial_loop_count = 0;
 }
 
 static BOOL IsActivePomodoroTimer(void) {
@@ -316,10 +320,57 @@ static void HandleTimeoutActions(HWND hwnd) {
                         }
 }
 
+static void FormatPomodoroTime(int seconds, wchar_t* buffer, size_t bufferSize) {
+    if (seconds >= 60) {
+        int minutes = seconds / 60;
+        int remaining_seconds = seconds % 60;
+        if (remaining_seconds > 0) {
+            swprintf(buffer, bufferSize, L"%dm%ds", minutes, remaining_seconds);
+        } else {
+            swprintf(buffer, bufferSize, L"%dm", minutes);
+        }
+    } else {
+        swprintf(buffer, bufferSize, L"%ds", seconds);
+    }
+}
+
 static BOOL HandlePomodoroCompletion(HWND hwnd) {
-    ShowTimeoutNotification(hwnd, g_AppConfig.notification.messages.pomodoro_message, TRUE);
+    wchar_t completionMsg[256];
+    wchar_t timeStr[32];
+    
+    int completedIndex = current_pomodoro_time_index;
+    
+    int times_count = (pomodoro_initial_times_count > 0) 
+        ? pomodoro_initial_times_count : g_AppConfig.pomodoro.times_count;
+    int loop_count = (pomodoro_initial_loop_count > 0) 
+        ? pomodoro_initial_loop_count : g_AppConfig.pomodoro.loop_count;
+    
+    if (times_count <= 0) times_count = 1;
+    if (loop_count <= 0) loop_count = 1;
+    
+    int currentStep = complete_pomodoro_cycles * times_count + completedIndex + 1;
+    int totalSteps = times_count * loop_count;
+    
+    if (completedIndex < g_AppConfig.pomodoro.times_count) {
+        FormatPomodoroTime(g_AppConfig.pomodoro.times[completedIndex], timeStr, sizeof(timeStr)/sizeof(wchar_t));
+    } else {
+        wcscpy(timeStr, L"?");
+    }
     
     if (!AdvancePomodoroState()) {
+        if (totalSteps > 1) {
+            swprintf(completionMsg, sizeof(completionMsg)/sizeof(wchar_t),
+                    L"%ls Pomodoro completed (%d/%d)",
+                    timeStr,
+                    currentStep,
+                    totalSteps);
+        } else {
+            swprintf(completionMsg, sizeof(completionMsg)/sizeof(wchar_t),
+                    L"%ls Pomodoro completed",
+                    timeStr);
+        }
+        ShowNotification(hwnd, completionMsg);
+        
         ResetTimerState(0);
         ResetPomodoroState();
         
@@ -333,6 +384,19 @@ static BOOL HandlePomodoroCompletion(HWND hwnd) {
         return FALSE;
     }
     
+    if (totalSteps > 1) {
+        swprintf(completionMsg, sizeof(completionMsg)/sizeof(wchar_t),
+                L"%ls Pomodoro completed (%d/%d)",
+                timeStr,
+                currentStep,
+                totalSteps);
+    } else {
+        swprintf(completionMsg, sizeof(completionMsg)/sizeof(wchar_t),
+                L"%ls Pomodoro completed",
+                timeStr);
+    }
+    ShowNotification(hwnd, completionMsg);
+    
     if (current_pomodoro_time_index >= g_AppConfig.pomodoro.times_count) {
         ResetPomodoroState();
         return FALSE;
@@ -344,14 +408,6 @@ static BOOL HandlePomodoroCompletion(HWND hwnd) {
     extern BOOL InitializeHighPrecisionTimer(void);
     InitializeHighPrecisionTimer();
     ResetMillisecondAccumulator();
-    
-    if (current_pomodoro_time_index == 0 && complete_pomodoro_cycles > 0) {
-        wchar_t cycleMsg[100];
-        swprintf(cycleMsg, 100, 
-                GetLocalizedString(NULL, L"Starting Pomodoro cycle %d"),
-                complete_pomodoro_cycles + 1);
-        ShowNotification(hwnd, cycleMsg);
-    }
     
     InvalidateRect(hwnd, NULL, TRUE);
     return TRUE;
@@ -468,6 +524,10 @@ void InitializePomodoro(void) {
     current_pomodoro_phase = POMODORO_PHASE_WORK;
     current_pomodoro_time_index = 0;
     complete_pomodoro_cycles = 0;
+    
+    pomodoro_initial_times_count = g_AppConfig.pomodoro.times_count;
+    pomodoro_initial_loop_count = (g_AppConfig.pomodoro.loop_count > 0) 
+        ? g_AppConfig.pomodoro.loop_count : 1;
     
     if (g_AppConfig.pomodoro.times_count > 0) {
         CLOCK_TOTAL_TIME = g_AppConfig.pomodoro.times[0];
