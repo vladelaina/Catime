@@ -21,8 +21,8 @@ BEGIN
     EDITTEXT        IDC_NOTIFICATION_EDIT1, 20, 45, 310, 20, ES_AUTOHSCROLL
     
 
-    /** Visual appearance and timing controls */
-    GROUPBOX        "Notification Display", IDC_NOTIFICATION_DISPLAY_GROUP, 10, 90, 330, 70
+    /** Catime notification window appearance and timing controls */
+    GROUPBOX        "Catime Window Settings", IDC_NOTIFICATION_DISPLAY_GROUP, 10, 90, 330, 70
     
     LTEXT           "Notification display time:", IDC_NOTIFICATION_TIME_LABEL, 20, 110, 110, 15
     CONTROL         "", IDC_NOTIFICATION_TIME_EDIT, "SysDateTimePick32", DTS_TIMEFORMAT | DTS_UPDOWN | WS_TABSTOP, 130, 108, 100, 20
