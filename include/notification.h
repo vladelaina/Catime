@@ -73,7 +73,7 @@ void ShowToastNotification(HWND hwnd, const wchar_t* message);
  * 
  * @details
  * - Normal mode (isPreview=FALSE): Auto-dismiss, click-to-close, non-draggable
- * - Preview mode (isPreview=TRUE): Draggable, resizable, saves position
+ * - Preview mode (isPreview=TRUE): Draggable, resizable, saves position, scroll to adjust opacity
  */
 void ShowToastNotificationEx(HWND hwnd, const wchar_t* message, BOOL isPreview);
 

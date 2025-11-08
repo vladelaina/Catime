@@ -8,6 +8,7 @@
 #include "language.h"
 #include "notification.h"
 #include "config.h"
+#include "dialog/dialog_notification.h"
 #include "../resource/resource.h"
 #include <windowsx.h>
 
@@ -532,6 +533,40 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
                 KillTimer(hwnd, NOTIFICATION_TIMER_ID);
                 data->animState = ANIM_FADE_OUT;
                 SetTimer(hwnd, ANIMATION_TIMER_ID, ANIMATION_INTERVAL, NULL);
+            }
+            return 0;
+        }
+        
+        case WM_MOUSEWHEEL: {
+            NotificationData* data = GetNotificationData(hwnd);
+            /* Only preview windows support opacity adjustment via scroll wheel */
+            if (data && data->isPreview) {
+                int delta = GET_WHEEL_DELTA_WPARAM(wParam);
+                int currentOpacity = g_AppConfig.notification.display.max_opacity;
+                int step = 5;
+                
+                /* Scroll up increases opacity, scroll down decreases */
+                if (delta > 0) {
+                    currentOpacity += step;
+                } else {
+                    currentOpacity -= step;
+                }
+                
+                /* Clamp to valid range [1, 100] */
+                if (currentOpacity < 1) currentOpacity = 1;
+                if (currentOpacity > 100) currentOpacity = 100;
+                
+                /* Update configuration and window */
+                WriteConfigNotificationOpacity(currentOpacity);
+                
+                BYTE alphaValue = (BYTE)((currentOpacity * 255) / 100);
+                SetLayeredWindowAttributes(hwnd, 0, alphaValue, LWA_ALPHA);
+                
+                /* Update internal state for animation consistency */
+                data->opacity = alphaValue;
+                
+                /* Sync settings dialog controls if dialog is open */
+                UpdateNotificationOpacityControls(currentOpacity);
             }
             return 0;
         }

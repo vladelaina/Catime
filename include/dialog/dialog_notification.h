@@ -66,6 +66,12 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
 void ShowNotificationSettingsDialog(HWND hwndParent);
 
 /**
+ * @brief Update opacity slider and text in settings dialog
+ * @param opacity New opacity value (1-100)
+ */
+void UpdateNotificationOpacityControls(int opacity);
+
+/**
  * @brief Full notification settings dialog procedure
  */
 INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);

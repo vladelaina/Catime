@@ -113,6 +113,27 @@ static void ClosePreviewNotification(void) {
     }
 }
 
+/**
+ * @brief Update opacity slider and text in settings dialog
+ * @param opacity New opacity value (1-100)
+ * 
+ * @details Called from preview window when opacity changes via mouse wheel
+ */
+void UpdateNotificationOpacityControls(int opacity) {
+    if (!g_hwndNotificationSettingsDialog || !IsWindow(g_hwndNotificationSettingsDialog)) {
+        return;
+    }
+    
+    HWND hwndOpacitySlider = GetDlgItem(g_hwndNotificationSettingsDialog, IDC_NOTIFICATION_OPACITY_EDIT);
+    if (hwndOpacitySlider) {
+        SendMessage(hwndOpacitySlider, TBM_SETPOS, TRUE, opacity);
+        
+        wchar_t opacityText[16];
+        _snwprintf_s(opacityText, 16, _TRUNCATE, L"%d%%", opacity);
+        SetDlgItemTextW(g_hwndNotificationSettingsDialog, IDC_NOTIFICATION_OPACITY_TEXT, opacityText);
+    }
+}
+
 /* ============================================================================
  * Full Notification Settings Dialog
  * ============================================================================ */
@@ -142,6 +163,8 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
     
     switch (msg) {
         case WM_INITDIALOG: {
+            g_hwndNotificationSettingsDialog = hwndDlg;
+            
             ReadNotificationMessagesConfig();
             ReadNotificationTimeoutConfig();
             ReadNotificationOpacityConfig();
