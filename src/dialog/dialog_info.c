@@ -8,6 +8,7 @@
 #include "language.h"
 #include "dialog/dialog_language.h"
 #include "config.h"
+#include "markdown_parser.h"
 #include "../resource/resource.h"
 #include <shellapi.h>
 #include <strsafe.h>
@@ -317,39 +318,129 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
 }
 
 /* ============================================================================
- * Font License Dialog Implementation (Stub)
+ * Font License Dialog Implementation
  * ============================================================================ */
 
-/**
- * @note This is a minimal stub for compilation.
- *       TODO: Migrate full implementation with markdown parsing if needed.
- */
-INT_PTR ShowFontLicenseDialog(HWND hwndParent) {
-    /* Temporary stub - always return IDOK */
-    /* Full implementation should be migrated from original dialog_procedure.c */
-    MessageBoxW(hwndParent, 
-               L"Font License Dialog\n\nThis is a placeholder implementation.\nPlease migrate the full dialog from original code if needed.",
-               L"Font License",
-               MB_OK | MB_ICONINFORMATION);
-    return IDOK;
-}
+static wchar_t* g_displayText = NULL;
+static MarkdownLink* g_links = NULL;
+static int g_linkCount = 0;
 
-INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
-    /* Stub implementation */
-    (void)wParam;
-    (void)lParam;
-    
-    switch (msg) {
-        case WM_INITDIALOG:
+INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, LPARAM lParam) {
+    switch (message) {
+        case WM_INITDIALOG: {
+            const wchar_t* title = GetLocalizedString(
+                NULL,
+                L"Custom Font Feature License Agreement"
+            );
+            SetWindowTextW(hwndDlg, title);
+
+            const wchar_t* licenseText = GetLocalizedString(
+                NULL,
+                L"FontLicenseAgreementText"
+            );
+
+            ParseMarkdownLinks(licenseText, &g_displayText, &g_links, &g_linkCount);
+
+            const wchar_t* agreeText = GetLocalizedString(NULL, L"Agree");
+            const wchar_t* cancelText = GetLocalizedString(NULL, L"Cancel");
+
+            SetDlgItemTextW(hwndDlg, IDC_FONT_LICENSE_AGREE_BTN, agreeText);
+            SetDlgItemTextW(hwndDlg, IDC_FONT_LICENSE_CANCEL_BTN, cancelText);
+
+            Dialog_CenterOnPrimaryScreen(hwndDlg);
+
             return TRUE;
+        }
+
         case WM_COMMAND:
-            if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
-                EndDialog(hwndDlg, LOWORD(wParam));
+            switch (LOWORD(wParam)) {
+                case IDC_FONT_LICENSE_AGREE_BTN:
+                    FreeMarkdownLinks(g_links, g_linkCount);
+                    g_links = NULL;
+                    g_linkCount = 0;
+                    if (g_displayText) {
+                        free(g_displayText);
+                        g_displayText = NULL;
+                    }
+                    EndDialog(hwndDlg, IDOK);
+                    return TRUE;
+                case IDC_FONT_LICENSE_CANCEL_BTN:
+                    FreeMarkdownLinks(g_links, g_linkCount);
+                    g_links = NULL;
+                    g_linkCount = 0;
+                    if (g_displayText) {
+                        free(g_displayText);
+                        g_displayText = NULL;
+                    }
+                    EndDialog(hwndDlg, IDCANCEL);
+                    return TRUE;
+                case IDC_FONT_LICENSE_TEXT:
+                    if (HIWORD(wParam) == STN_CLICKED) {
+                        POINT pt;
+                        GetCursorPos(&pt);
+                        ScreenToClient(GetDlgItem(hwndDlg, IDC_FONT_LICENSE_TEXT), &pt);
+
+                        if (HandleMarkdownClick(g_links, g_linkCount, pt)) {
+                            return TRUE;
+                        }
+                    }
+                    return TRUE;
+            }
+            break;
+
+        case WM_DRAWITEM: {
+            LPDRAWITEMSTRUCT lpDrawItem = (LPDRAWITEMSTRUCT)lParam;
+            if (lpDrawItem->CtlID == IDC_FONT_LICENSE_TEXT) {
+                HDC hdc = lpDrawItem->hDC;
+                RECT rect = lpDrawItem->rcItem;
+
+                HBRUSH hBrush = CreateSolidBrush(GetSysColor(COLOR_BTNFACE));
+                FillRect(hdc, &rect, hBrush);
+                DeleteObject(hBrush);
+
+                if (g_displayText) {
+                    SetBkMode(hdc, TRANSPARENT);
+
+                    HFONT hFont = (HFONT)SendMessage(lpDrawItem->hwndItem, WM_GETFONT, 0, 0);
+                    if (!hFont) {
+                        hFont = GetStockObject(DEFAULT_GUI_FONT);
+                    }
+                    HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
+
+                    RECT drawRect = rect;
+                    drawRect.left += 5;
+                    drawRect.top += 5;
+
+                    RenderMarkdownText(hdc, g_displayText, g_links, g_linkCount,
+                                       drawRect, MARKDOWN_DEFAULT_LINK_COLOR, MARKDOWN_DEFAULT_TEXT_COLOR);
+
+                    SelectObject(hdc, hOldFont);
+                }
+
                 return TRUE;
             }
             break;
+        }
+
+        case WM_CLOSE:
+            FreeMarkdownLinks(g_links, g_linkCount);
+            g_links = NULL;
+            g_linkCount = 0;
+            if (g_displayText) {
+                free(g_displayText);
+                g_displayText = NULL;
+            }
+            EndDialog(hwndDlg, IDCANCEL);
+            return TRUE;
     }
     return FALSE;
+}
+
+INT_PTR ShowFontLicenseDialog(HWND hwndParent) {
+    return DialogBoxW(GetModuleHandle(NULL),
+                     MAKEINTRESOURCE(IDD_FONT_LICENSE_DIALOG),
+                     hwndParent,
+                     FontLicenseDlgProc);
 }
 
 /* ============================================================================

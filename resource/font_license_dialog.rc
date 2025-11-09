@@ -7,18 +7,14 @@
 
 #pragma code_page(65001)
 
-/** @brief Font license agreement dialog with expanded layout */
 IDD_FONT_LICENSE_DIALOG DIALOGEX 0, 0, 320, 180
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "Custom Font Feature License Agreement"
+CAPTION "Font License Agreement"
 FONT 9, "Segoe UI"
 BEGIN
-    /** Main license agreement text area with markdown link support */
-    CONTROL         "This feature will load all font files from the following folder (including subfolders):\n\nC:\\Users\\[Your Current Username]\\AppData\\Local\\Catime\\resources\\fonts\n\nPlease note: Any copyright risks and legal liabilities will be borne by you personally. This software assumes no responsibility.\n\nTo avoid copyright risks:\nYou can visit [Google Fonts](https://fonts.google.com/?preview.text=1234567890:) to download many free commercial fonts.", IDC_FONT_LICENSE_TEXT, "Static", SS_OWNERDRAW | SS_NOTIFY, 10, 10, 300, 130
+    CONTROL         "", IDC_FONT_LICENSE_TEXT, "Static", SS_OWNERDRAW | SS_NOTIFY, 10, 10, 300, 130
 
-    /** Cancel/decline button */
     PUSHBUTTON      "Cancel", IDC_FONT_LICENSE_CANCEL_BTN, 210, 150, 45, 14
-    
-    /** Agreement confirmation button */
+
     DEFPUSHBUTTON   "Agree", IDC_FONT_LICENSE_AGREE_BTN, 265, 150, 50, 14
 END
