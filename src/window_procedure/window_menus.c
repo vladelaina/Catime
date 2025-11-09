@@ -211,7 +211,7 @@ BOOL DispatchMenuPreview(HWND hwnd, UINT menuId) {
         return TRUE;
     }
 
-    if (menuId >= 2000 && menuId < 3000) {
+    if (menuId >= CLOCK_IDM_ANIMATIONS_BASE && menuId < CLOCK_IDM_ANIMATIONS_BASE + 1000) {
         wchar_t animFolderW[MAX_PATH];
         WideString ws = ToWide(GetCachedConfigPath());
         if (!ws.valid) return FALSE;
@@ -222,16 +222,16 @@ BOOL DispatchMenuPreview(HWND hwnd, UINT menuId) {
         if (lastSep) {
             *lastSep = L'\0';
             _snwprintf_s(animFolderW, MAX_PATH, _TRUNCATE, L"%s\\resources\\animations", wConfigPath);
-            UINT nextId = 2000;
+            UINT nextId = CLOCK_IDM_ANIMATIONS_BASE;
             return FindAnimationByIdRecursive(animFolderW, "", &nextId, menuId);
         }
     }
 
-    if (menuId >= 4000 && menuId < 5000) {
+    if (menuId >= 2000 && menuId < 3000) {
         wchar_t fontsFolderW[MAX_PATH];
         if (!GetFontsFolderWideFromConfig(fontsFolderW, MAX_PATH)) return FALSE;
 
-        int currentIndex = 4000;
+        int currentIndex = 2000;
         wchar_t foundRelPath[MAX_PATH];
         if (FindFontByIdRecursiveW(fontsFolderW, menuId, &currentIndex, foundRelPath, fontsFolderW)) {
             char fontPathUtf8[MAX_PATH];
