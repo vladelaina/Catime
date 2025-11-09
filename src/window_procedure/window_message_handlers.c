@@ -279,22 +279,28 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
     UINT menuItem = LOWORD(wp);
     UINT flags = HIWORD(wp);
     HMENU hMenu = (HMENU)lp;
-    
+
     if (menuItem == 0xFFFF) {
         KillTimer(hwnd, IDT_MENU_DEBOUNCE);
         SetTimer(hwnd, IDT_MENU_DEBOUNCE, MENU_DEBOUNCE_DELAY_MS, NULL);
         return 0;
     }
-    
+
     KillTimer(hwnd, IDT_MENU_DEBOUNCE);
     if (hMenu == NULL) return 0;
-    
-    if (!(flags & MF_POPUP) || (menuItem >= CLOCK_IDM_ANIMATIONS_USE_LOGO)) {
+
+    if (menuItem >= CLOCK_IDM_ANIMATIONS_USE_LOGO && menuItem <= CLOCK_IDM_ANIMATIONS_USE_MEM) {
         if (DispatchMenuPreview(hwnd, menuItem)) {
             return 0;
         }
     }
-    
+
+    if (!(flags & MF_POPUP)) {
+        if (DispatchMenuPreview(hwnd, menuItem)) {
+            return 0;
+        }
+    }
+
     CancelPreview(hwnd);
     return 0;
 }

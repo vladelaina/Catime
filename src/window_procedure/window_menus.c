@@ -11,6 +11,8 @@
 #include "tray/tray_animation_loader.h"
 #include "tray/tray_animation_core.h"
 #include "utils/natural_sort.h"
+#include "color/color_state.h"
+#include "config.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -194,13 +196,28 @@ BOOL FindFontByIdRecursiveW(const wchar_t* folderPathW, int targetId, int* curre
  * ============================================================================ */
 
 BOOL DispatchMenuPreview(HWND hwnd, UINT menuId) {
+    if (menuId == CLOCK_IDM_ANIMATIONS_USE_LOGO) {
+        StartAnimationPreview("__logo__");
+        return TRUE;
+    }
+
+    if (menuId == CLOCK_IDM_ANIMATIONS_USE_CPU) {
+        StartAnimationPreview("__cpu__");
+        return TRUE;
+    }
+
+    if (menuId == CLOCK_IDM_ANIMATIONS_USE_MEM) {
+        StartAnimationPreview("__mem__");
+        return TRUE;
+    }
+
     if (menuId >= 2000 && menuId < 3000) {
         wchar_t animFolderW[MAX_PATH];
         WideString ws = ToWide(GetCachedConfigPath());
         if (!ws.valid) return FALSE;
         wchar_t wConfigPath[MAX_PATH];
         wcscpy_s(wConfigPath, MAX_PATH, ws.buf);
-        
+
         wchar_t* lastSep = wcsrchr(wConfigPath, L'\\');
         if (lastSep) {
             *lastSep = L'\0';
@@ -209,11 +226,11 @@ BOOL DispatchMenuPreview(HWND hwnd, UINT menuId) {
             return FindAnimationByIdRecursive(animFolderW, "", &nextId, menuId);
         }
     }
-    
+
     if (menuId >= 4000 && menuId < 5000) {
         wchar_t fontsFolderW[MAX_PATH];
         if (!GetFontsFolderWideFromConfig(fontsFolderW, MAX_PATH)) return FALSE;
-        
+
         int currentIndex = 4000;
         wchar_t foundRelPath[MAX_PATH];
         if (FindFontByIdRecursiveW(fontsFolderW, menuId, &currentIndex, foundRelPath, fontsFolderW)) {
@@ -223,7 +240,37 @@ BOOL DispatchMenuPreview(HWND hwnd, UINT menuId) {
             return TRUE;
         }
     }
-    
+
+    int colorIndex = menuId - 201;
+    if (colorIndex >= 0 && colorIndex < (int)COLOR_OPTIONS_COUNT) {
+        StartPreview(PREVIEW_TYPE_COLOR, COLOR_OPTIONS[colorIndex].hexColor, hwnd);
+        return TRUE;
+    }
+
+    if (menuId == CLOCK_IDM_TIME_FORMAT_DEFAULT) {
+        TimeFormatType format = TIME_FORMAT_DEFAULT;
+        StartPreview(PREVIEW_TYPE_TIME_FORMAT, &format, hwnd);
+        return TRUE;
+    }
+
+    if (menuId == CLOCK_IDM_TIME_FORMAT_ZERO_PADDED) {
+        TimeFormatType format = TIME_FORMAT_ZERO_PADDED;
+        StartPreview(PREVIEW_TYPE_TIME_FORMAT, &format, hwnd);
+        return TRUE;
+    }
+
+    if (menuId == CLOCK_IDM_TIME_FORMAT_FULL_PADDED) {
+        TimeFormatType format = TIME_FORMAT_FULL_PADDED;
+        StartPreview(PREVIEW_TYPE_TIME_FORMAT, &format, hwnd);
+        return TRUE;
+    }
+
+    if (menuId == CLOCK_IDM_TIME_FORMAT_SHOW_MILLISECONDS) {
+        BOOL showMilliseconds = !g_AppConfig.display.time_format.show_milliseconds;
+        StartPreview(PREVIEW_TYPE_MILLISECONDS, &showMilliseconds, hwnd);
+        return TRUE;
+    }
+
     return FALSE;
 }
 
