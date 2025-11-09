@@ -98,6 +98,16 @@ LRESULT HandleTimer(HWND hwnd, WPARAM wp, LPARAM lp) {
         CancelPreview(hwnd);
         return 0;
     }
+    if (wp == IDT_ANIMATION_PREVIEW_DELAY) {
+        KillTimer(hwnd, IDT_ANIMATION_PREVIEW_DELAY);
+        extern UINT GetPendingAnimationPreviewItem(void);
+        UINT menuItem = GetPendingAnimationPreviewItem();
+        if (menuItem != 0) {
+            extern BOOL DispatchMenuPreview(HWND hwnd, UINT menuId);
+            DispatchMenuPreview(hwnd, menuItem);
+        }
+        return 0;
+    }
     HandleTimerEvent(hwnd, wp);
     return 0;
 }
@@ -232,6 +242,11 @@ LRESULT HandleAppReregisterHotkeys(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
+LRESULT HandleAnimationPreviewLoaded(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)hwnd; (void)wp; (void)lp;
+    return 0;
+}
+
 LRESULT HandleMeasureItem(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)hwnd; (void)wp;
     LPMEASUREITEMSTRUCT lpmis = (LPMEASUREITEMSTRUCT)lp;
@@ -247,33 +262,39 @@ LRESULT HandleDrawItem(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)hwnd; (void)wp;
     LPDRAWITEMSTRUCT lpdis = (LPDRAWITEMSTRUCT)lp;
     if (lpdis->CtlType != ODT_MENU) return FALSE;
-    
+
     int colorIndex = lpdis->itemID - CMD_COLOR_OPTIONS_BASE;
     if (colorIndex < 0 || colorIndex >= (int)COLOR_OPTIONS_COUNT) return FALSE;
-    
+
     const char* hexColor = COLOR_OPTIONS[colorIndex].hexColor;
     int r, g, b;
     sscanf(hexColor + 1, "%02x%02x%02x", &r, &g, &b);
-    
+
     HBRUSH hBrush = CreateSolidBrush(RGB(r, g, b));
     HPEN hPen = CreatePen(PS_SOLID, 1, RGB(200, 200, 200));
-    
+
     HGDIOBJ oldBrush = SelectObject(lpdis->hDC, hBrush);
     HGDIOBJ oldPen = SelectObject(lpdis->hDC, hPen);
-    
+
     Rectangle(lpdis->hDC, lpdis->rcItem.left, lpdis->rcItem.top,
              lpdis->rcItem.right, lpdis->rcItem.bottom);
-    
+
     SelectObject(lpdis->hDC, oldPen);
     SelectObject(lpdis->hDC, oldBrush);
     DeleteObject(hPen);
     DeleteObject(hBrush);
-    
+
     if (lpdis->itemState & ODS_SELECTED) {
         DrawFocusRect(lpdis->hDC, &lpdis->rcItem);
     }
-    
+
     return TRUE;
+}
+
+static UINT g_pendingAnimationPreviewItem = 0;
+
+UINT GetPendingAnimationPreviewItem(void) {
+    return g_pendingAnimationPreviewItem;
 }
 
 LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
@@ -285,6 +306,8 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
     static BOOL lastWasColorOrFont = FALSE;
 
     if (menuItem == 0xFFFF) {
+        KillTimer(hwnd, IDT_ANIMATION_PREVIEW_DELAY);
+        g_pendingAnimationPreviewItem = 0;
         if (lastWasColorOrFont) {
             CancelPreview(hwnd);
             RestoreWindowVisibility(hwnd);
@@ -292,20 +315,16 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
         }
         KillTimer(hwnd, IDT_MENU_DEBOUNCE);
         SetTimer(hwnd, IDT_MENU_DEBOUNCE, MENU_DEBOUNCE_DELAY_MS, NULL);
+        lastMenuItem = 0;
         return 0;
     }
 
     KillTimer(hwnd, IDT_MENU_DEBOUNCE);
     if (hMenu == NULL) return 0;
 
-    if (menuItem >= CLOCK_IDM_ANIMATIONS_USE_LOGO && menuItem <= CLOCK_IDM_ANIMATIONS_USE_MEM) {
-        if (DispatchMenuPreview(hwnd, menuItem)) {
-            return 0;
-        }
-    }
-
     if (!(flags & MF_POPUP)) {
         BOOL isColorOrFontPreview = FALSE;
+        BOOL isAnimationPreview = FALSE;
 
         int colorIndex = menuItem - 201;
         if (colorIndex >= 0 && colorIndex < 100) {
@@ -314,6 +333,14 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
 
         if (menuItem >= 2000 && menuItem < 3000) {
             isColorOrFontPreview = TRUE;
+        }
+
+        if (menuItem >= CLOCK_IDM_ANIMATIONS_USE_LOGO && menuItem <= CLOCK_IDM_ANIMATIONS_USE_MEM) {
+            isAnimationPreview = TRUE;
+        }
+
+        if (menuItem >= CLOCK_IDM_ANIMATIONS_BASE && menuItem < CLOCK_IDM_ANIMATIONS_BASE + 1000) {
+            isAnimationPreview = TRUE;
         }
 
         if (isColorOrFontPreview != lastWasColorOrFont) {
@@ -332,12 +359,17 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
         }
 
         lastWasColorOrFont = isColorOrFontPreview;
-        lastMenuItem = menuItem;
 
-        if (DispatchMenuPreview(hwnd, menuItem)) {
-            return 0;
+        if (menuItem != lastMenuItem) {
+            lastMenuItem = menuItem;
+
+            KillTimer(hwnd, IDT_ANIMATION_PREVIEW_DELAY);
+            g_pendingAnimationPreviewItem = menuItem;
+            SetTimer(hwnd, IDT_ANIMATION_PREVIEW_DELAY, 150, NULL);
         }
     } else {
+        KillTimer(hwnd, IDT_ANIMATION_PREVIEW_DELAY);
+        g_pendingAnimationPreviewItem = 0;
         if (lastWasColorOrFont) {
             extern void WriteLog(int level, const char* fmt, ...);
             WriteLog(1, "Moving to popup menu, canceling preview and restoring visibility");
@@ -345,6 +377,7 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
             RestoreWindowVisibility(hwnd);
             lastWasColorOrFont = FALSE;
         }
+        lastMenuItem = 0;
     }
 
     if (!lastWasColorOrFont) {

@@ -34,12 +34,14 @@
 
 /** @brief Window message and layout constants */
 #define CLOCK_WM_TRAYICON (WM_USER + 2)  /**< Custom tray icon message */
+#define CLOCK_WM_ANIMATION_PREVIEW_LOADED (WM_USER + 3)  /**< Animation preview loaded message */
 #define WINDOW_HORIZONTAL_PADDING 190    /**< Accounts for window borders, shadow, and visual breathing room */
 #define WINDOW_VERTICAL_PADDING 5        /**< Minimal vertical spacing for compact display */
 
 /** @brief Timer ID constants */
 #define TIMER_ID_MAIN 1                      /**< Main application timer */
 #define IDT_MENU_DEBOUNCE 500                /**< Menu debounce timer */
+#define IDT_ANIMATION_PREVIEW_DELAY 501      /**< Animation preview delay timer */
 #define TIMER_ID_TOPMOST_RETRY 999           /**< Topmost retry timer (3 attempts) */
 #define TIMER_ID_VISIBILITY_RETRY 1000       /**< Visibility retry timer (3 attempts) */
 #define TIMER_ID_MINIAUDIO_CHECK 1001        /**< Miniaudio playback check timer */

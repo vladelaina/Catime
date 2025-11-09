@@ -105,6 +105,7 @@ static const MessageDispatchEntry MESSAGE_DISPATCH_TABLE[] = {
     {WM_APP_SHOW_CLI_HELP, HandleShowCliHelp, "Show CLI help"},
     {WM_USER + 100, HandleTrayUpdateIcon, "Tray icon update"},
     {WM_APP + 1, HandleAppReregisterHotkeys, "Hotkey re-registration"},
+    {CLOCK_WM_ANIMATION_PREVIEW_LOADED, HandleAnimationPreviewLoaded, "Animation preview loaded"},
     {0, NULL, NULL}
 };
 
