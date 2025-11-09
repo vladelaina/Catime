@@ -160,6 +160,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
     static BOOL isPlaying = FALSE;
     static int originalVolume = 0;
     static BOOL isInitializing = TRUE;
+    static BOOL isVolumePreviewPlaying = FALSE;
     
     switch (msg) {
         case WM_INITDIALOG: {
@@ -255,13 +256,64 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
         case WM_HSCROLL: {
             if (GetDlgItem(hwndDlg, IDC_VOLUME_SLIDER) == (HWND)lParam) {
                 int volume = (int)SendMessage((HWND)lParam, TBM_GETPOS, 0, 0);
-                
+
                 wchar_t volumeText[16];
                 _snwprintf_s(volumeText, 16, _TRUNCATE, L"%d%%", volume);
                 SetDlgItemTextW(hwndDlg, IDC_VOLUME_TEXT, volumeText);
-                
-                SetAudioVolume(volume);
-                
+
+                WORD scrollEvent = LOWORD(wParam);
+                if (scrollEvent == TB_ENDTRACK || scrollEvent == SB_ENDSCROLL) {
+                    if (isVolumePreviewPlaying) {
+                        StopNotificationSound();
+                    }
+
+                    if (isPlaying) {
+                        isPlaying = FALSE;
+                        SetDlgItemTextW(hwndDlg, IDC_TEST_SOUND_BUTTON, GetLocalizedString(NULL, L"Test"));
+                    }
+
+                    SetAudioVolume(volume);
+
+                    HWND hwndCombo = GetDlgItem(hwndDlg, IDC_NOTIFICATION_SOUND_COMBO);
+                    int index = SendMessage(hwndCombo, CB_GETCURSEL, 0, 0);
+
+                    if (index > 0) {
+                        char tempSoundFile[MAX_PATH];
+                        strncpy(tempSoundFile, g_AppConfig.notification.sound.sound_file, sizeof(tempSoundFile) - 1);
+                        tempSoundFile[sizeof(tempSoundFile) - 1] = '\0';
+
+                        wchar_t wFileName[MAX_PATH];
+                        SendMessageW(hwndCombo, CB_GETLBTEXT, index, (LPARAM)wFileName);
+
+                        const wchar_t* sysBeepText = GetLocalizedString(NULL, L"System Beep");
+                        if (wcscmp(wFileName, sysBeepText) == 0) {
+                            strncpy(g_AppConfig.notification.sound.sound_file, "SYSTEM_BEEP",
+                                   sizeof(g_AppConfig.notification.sound.sound_file) - 1);
+                            g_AppConfig.notification.sound.sound_file[sizeof(g_AppConfig.notification.sound.sound_file) - 1] = '\0';
+                        } else {
+                            char audio_path[MAX_PATH];
+                            GetAudioFolderPath(audio_path, MAX_PATH);
+
+                            char fileName[MAX_PATH];
+                            WideCharToMultiByte(CP_UTF8, 0, wFileName, -1, fileName, MAX_PATH, NULL, NULL);
+
+                            snprintf(g_AppConfig.notification.sound.sound_file,
+                                    sizeof(g_AppConfig.notification.sound.sound_file),
+                                    "%s\\%s", audio_path, fileName);
+                        }
+
+                        if (PlayNotificationSound(hwndDlg)) {
+                            SetAudioVolume(volume);
+                            isVolumePreviewPlaying = TRUE;
+                            SetTimer(hwndDlg, TIMER_ID_VOLUME_PREVIEW, 3000, NULL);
+                        }
+
+                        strncpy(g_AppConfig.notification.sound.sound_file, tempSoundFile,
+                               sizeof(g_AppConfig.notification.sound.sound_file) - 1);
+                        g_AppConfig.notification.sound.sound_file[sizeof(g_AppConfig.notification.sound.sound_file) - 1] = '\0';
+                    }
+                }
+
                 return TRUE;
             }
             else if (GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT) == (HWND)lParam) {
@@ -382,20 +434,32 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 WriteConfigNotificationMessages(timeout_msg);
                 WriteConfigNotificationSound(soundFile);
                 WriteConfigNotificationVolume(volume);
-                
+
+                KillTimer(hwndDlg, TIMER_ID_VOLUME_PREVIEW);
+                if (isVolumePreviewPlaying) {
+                    StopNotificationSound();
+                    isVolumePreviewPlaying = FALSE;
+                }
+
                 CleanupAudioPlayback(isPlaying);
                 isPlaying = FALSE;
-                
+
                 isInitializing = TRUE;
-                
+
                 EndDialog(hwndDlg, IDOK);
                 g_hwndNotificationSettingsDialog = NULL;
                 return TRUE;
             } else if (LOWORD(wParam) == IDCANCEL) {
                 ClosePreviewNotification();
-                
+
                 SetAudioVolume(originalVolume);
-                
+
+                KillTimer(hwndDlg, TIMER_ID_VOLUME_PREVIEW);
+                if (isVolumePreviewPlaying) {
+                    StopNotificationSound();
+                    isVolumePreviewPlaying = FALSE;
+                }
+
                 CleanupAudioPlayback(isPlaying);
                 isPlaying = FALSE;
                 
@@ -419,22 +483,43 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 return TRUE;
             }
             break;
-            
+
+        case WM_TIMER:
+            if (wParam == TIMER_ID_VOLUME_PREVIEW) {
+                KillTimer(hwndDlg, TIMER_ID_VOLUME_PREVIEW);
+                if (isVolumePreviewPlaying) {
+                    StopNotificationSound();
+                    isVolumePreviewPlaying = FALSE;
+                }
+                return TRUE;
+            }
+            break;
+
         case WM_APP + 100:
             isPlaying = FALSE;
             return TRUE;
             
         case WM_CLOSE:
+            KillTimer(hwndDlg, TIMER_ID_VOLUME_PREVIEW);
+            if (isVolumePreviewPlaying) {
+                StopNotificationSound();
+                isVolumePreviewPlaying = FALSE;
+            }
             ClosePreviewNotification();
             CleanupAudioPlayback(isPlaying);
-            
+
             isInitializing = TRUE;
-            
+
             EndDialog(hwndDlg, IDCANCEL);
             g_hwndNotificationSettingsDialog = NULL;
             return TRUE;
-            
+
         case WM_DESTROY:
+            KillTimer(hwndDlg, TIMER_ID_VOLUME_PREVIEW);
+            if (isVolumePreviewPlaying) {
+                StopNotificationSound();
+                isVolumePreviewPlaying = FALSE;
+            }
             ClosePreviewNotification();
             SetAudioPlaybackCompleteCallback(NULL, NULL);
             g_hwndNotificationSettingsDialog = NULL;
