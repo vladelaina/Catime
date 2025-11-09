@@ -7,6 +7,7 @@
 #include "tray/tray_animation_loader.h"
 #include "utils/natural_sort.h"
 #include "config.h"
+#include "log.h"
 #include <shlobj.h>
 #include <stdlib.h>
 #include <string.h>
@@ -178,20 +179,20 @@ static UINT BuildAnimationMenuRecursive(HMENU hMenu, const wchar_t* folderPathW,
  */
 void BuildAnimationMenu(HMENU hMenu, const char* currentAnimationName) {
     if (!hMenu) return;
-    
+
     /* Builtin options */
     UINT flags = MF_STRING;
     if (currentAnimationName && _stricmp(currentAnimationName, "__logo__") == 0) {
         flags |= MF_CHECKED;
     }
     AppendMenuW(hMenu, flags, CLOCK_IDM_ANIMATIONS_USE_LOGO, L"Logo");
-    
+
     flags = MF_STRING;
     if (currentAnimationName && _stricmp(currentAnimationName, "__cpu__") == 0) {
         flags |= MF_CHECKED;
     }
     AppendMenuW(hMenu, flags, CLOCK_IDM_ANIMATIONS_USE_CPU, L"CPU %");
-    
+
     flags = MF_STRING;
     if (currentAnimationName && _stricmp(currentAnimationName, "__mem__") == 0) {
         flags |= MF_CHECKED;
@@ -315,20 +316,20 @@ static BOOL FindAnimationByIdRecursive(const wchar_t* folderPathW, const char* f
  */
 BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id) {
     (void)hwnd;
-    
+
     if (id == CLOCK_IDM_ANIMATIONS_OPEN_DIR) {
         OpenAnimationsFolder();
         return TRUE;
     }
-    
+
     if (id == CLOCK_IDM_ANIMATIONS_USE_LOGO) {
         return SetCurrentAnimationName("__logo__");
     }
-    
+
     if (id == CLOCK_IDM_ANIMATIONS_USE_CPU) {
         return SetCurrentAnimationName("__cpu__");
     }
-    
+
     if (id == CLOCK_IDM_ANIMATIONS_USE_MEM) {
         return SetCurrentAnimationName("__mem__");
     }

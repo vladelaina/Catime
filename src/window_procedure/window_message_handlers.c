@@ -304,6 +304,7 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
 
     static UINT lastMenuItem = 0;
     static BOOL lastWasColorOrFont = FALSE;
+    static BOOL lastWasAnimationPreview = FALSE;
 
     if (menuItem == 0xFFFF) {
         KillTimer(hwnd, IDT_ANIMATION_PREVIEW_DELAY);
@@ -312,6 +313,10 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
             CancelPreview(hwnd);
             RestoreWindowVisibility(hwnd);
             lastWasColorOrFont = FALSE;
+        }
+        if (lastWasAnimationPreview) {
+            CancelPreview(hwnd);
+            lastWasAnimationPreview = FALSE;
         }
         KillTimer(hwnd, IDT_MENU_DEBOUNCE);
         SetTimer(hwnd, IDT_MENU_DEBOUNCE, MENU_DEBOUNCE_DELAY_MS, NULL);
@@ -332,10 +337,22 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
         }
 
         if (menuItem >= 2000 && menuItem < 3000) {
-            isColorOrFontPreview = TRUE;
+            if (menuItem != CLOCK_IDM_ANIMATIONS_USE_LOGO &&
+                menuItem != CLOCK_IDM_ANIMATIONS_USE_CPU &&
+                menuItem != CLOCK_IDM_ANIMATIONS_USE_MEM) {
+                isColorOrFontPreview = TRUE;
+            }
         }
 
-        if (menuItem >= CLOCK_IDM_ANIMATIONS_USE_LOGO && menuItem <= CLOCK_IDM_ANIMATIONS_USE_MEM) {
+        if (menuItem == CLOCK_IDM_ANIMATIONS_USE_LOGO) {
+            isAnimationPreview = TRUE;
+        }
+
+        if (menuItem == CLOCK_IDM_ANIMATIONS_USE_CPU) {
+            isAnimationPreview = TRUE;
+        }
+
+        if (menuItem == CLOCK_IDM_ANIMATIONS_USE_MEM) {
             isAnimationPreview = TRUE;
         }
 
@@ -343,22 +360,25 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
             isAnimationPreview = TRUE;
         }
 
+        if (isAnimationPreview != lastWasAnimationPreview) {
+            if (lastWasAnimationPreview && !isAnimationPreview) {
+                CancelPreview(hwnd);
+            }
+        }
+
         if (isColorOrFontPreview != lastWasColorOrFont) {
             if (lastWasColorOrFont && !isColorOrFontPreview) {
-                extern void WriteLog(int level, const char* fmt, ...);
-                WriteLog(1, "Moving away from color/font item, canceling preview and restoring visibility");
                 CancelPreview(hwnd);
                 RestoreWindowVisibility(hwnd);
             }
         }
 
         if (isColorOrFontPreview) {
-            extern void WriteLog(int level, const char* fmt, ...);
-            WriteLog(1, "Detected color/font menu item: %u, showing window", menuItem);
             ShowWindowForPreview(hwnd);
         }
 
         lastWasColorOrFont = isColorOrFontPreview;
+        lastWasAnimationPreview = isAnimationPreview;
 
         if (menuItem != lastMenuItem) {
             lastMenuItem = menuItem;
@@ -371,18 +391,17 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
         KillTimer(hwnd, IDT_ANIMATION_PREVIEW_DELAY);
         g_pendingAnimationPreviewItem = 0;
         if (lastWasColorOrFont) {
-            extern void WriteLog(int level, const char* fmt, ...);
-            WriteLog(1, "Moving to popup menu, canceling preview and restoring visibility");
             CancelPreview(hwnd);
             RestoreWindowVisibility(hwnd);
             lastWasColorOrFont = FALSE;
         }
+        if (lastWasAnimationPreview) {
+            CancelPreview(hwnd);
+            lastWasAnimationPreview = FALSE;
+        }
         lastMenuItem = 0;
     }
 
-    if (!lastWasColorOrFont) {
-        CancelPreview(hwnd);
-    }
     return 0;
 }
 

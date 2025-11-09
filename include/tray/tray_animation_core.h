@@ -115,5 +115,11 @@ void TrayAnimation_UpdatePercentIconIfNeeded(void);
  */
 BOOL TrayAnimation_HandleUpdateMessage(void);
 
+/**
+ * @brief Check if animation preview is currently active
+ * @return TRUE if animation preview is active
+ */
+extern BOOL g_isPreviewActive;
+
 #endif /* TRAY_ANIMATION_CORE_H */
 

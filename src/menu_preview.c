@@ -121,16 +121,17 @@ void StartPreview(PreviewType type, const void* data, HWND hwnd) {
 }
 
 void CancelPreview(HWND hwnd) {
+    /* Always cancel animation preview if active */
+    if (g_isPreviewActive) {
+        CancelAnimationPreview();
+    }
+
     if (!IsPreviewActive()) return;
 
     BOOL needsRedraw = (g_previewState.type != PREVIEW_TYPE_ANIMATION &&
                         g_previewState.type != PREVIEW_TYPE_NONE);
     BOOL needsTimerReset = (g_previewState.type == PREVIEW_TYPE_MILLISECONDS);
     BOOL needsFontReload = (g_previewState.type == PREVIEW_TYPE_FONT);
-
-    if (g_previewState.type == PREVIEW_TYPE_ANIMATION) {
-        CancelAnimationPreview();
-    }
 
     g_previewState.type = PREVIEW_TYPE_NONE;
 

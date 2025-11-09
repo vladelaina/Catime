@@ -773,7 +773,10 @@ typedef struct {
 
 BOOL DispatchRangeCommand(HWND hwnd, UINT cmd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    
+
+    /* Handle animation commands first (before range check) */
+    if (HandleAnimationMenuCommand(hwnd, cmd)) return TRUE;
+
     RangeCommandDescriptor rangeTable[] = {
         {CMD_QUICK_COUNTDOWN_BASE, CMD_QUICK_COUNTDOWN_END, HandleQuickCountdown},
         {CLOCK_IDM_QUICK_TIME_BASE, CLOCK_IDM_QUICK_TIME_BASE + MAX_TIME_OPTIONS - 1, HandleQuickCountdown},
@@ -783,25 +786,24 @@ BOOL DispatchRangeCommand(HWND hwnd, UINT cmd, WPARAM wp, LPARAM lp) {
         {CMD_FONT_SELECTION_BASE, CMD_FONT_SELECTION_END - 1, HandleFontSelection},
         {0, 0, NULL}
     };
-    
+
     for (const RangeCommandDescriptor* r = rangeTable; r->handler; r++) {
         if (cmd >= r->rangeStart && cmd <= r->rangeEnd) {
             int index = cmd - r->rangeStart;
             return r->handler(hwnd, cmd, index);
         }
     }
-    
+
     if (cmd >= CLOCK_IDM_LANG_CHINESE && cmd <= CLOCK_IDM_LANG_KOREAN) {
         return HandleLanguageSelection(hwnd, cmd);
     }
-    if (cmd == CLOCK_IDM_POMODORO_WORK || cmd == CLOCK_IDM_POMODORO_BREAK || 
+    if (cmd == CLOCK_IDM_POMODORO_WORK || cmd == CLOCK_IDM_POMODORO_BREAK ||
         cmd == CLOCK_IDM_POMODORO_LBREAK) {
-        int idx = (cmd == CLOCK_IDM_POMODORO_WORK) ? 0 : 
+        int idx = (cmd == CLOCK_IDM_POMODORO_WORK) ? 0 :
                  (cmd == CLOCK_IDM_POMODORO_BREAK) ? 1 : 2;
         return HandlePomodoroTime(hwnd, cmd, idx);
     }
-    if (HandleAnimationMenuCommand(hwnd, cmd)) return TRUE;
-    
+
     return FALSE;
 }
 
@@ -811,26 +813,26 @@ BOOL DispatchRangeCommand(HWND hwnd, UINT cmd, WPARAM wp, LPARAM lp) {
 
 LRESULT HandleCommand(HWND hwnd, WPARAM wp, LPARAM lp) {
     WORD cmd = LOWORD(wp);
-    
+
     #define IDT_MENU_DEBOUNCE 500
-    BOOL isAnimationSelectionCommand = 
+    BOOL isAnimationSelectionCommand =
         (cmd >= CLOCK_IDM_ANIMATIONS_BASE && cmd < CLOCK_IDM_ANIMATIONS_BASE + 1000) ||
         cmd == CLOCK_IDM_ANIMATIONS_USE_LOGO ||
         cmd == CLOCK_IDM_ANIMATIONS_USE_CPU ||
         cmd == CLOCK_IDM_ANIMATIONS_USE_MEM;
-    
+
     if (isAnimationSelectionCommand) {
         KillTimer(hwnd, IDT_MENU_DEBOUNCE);
     } else {
         CancelAnimationPreview();
     }
-    
+
     if (DispatchRangeCommand(hwnd, cmd, wp, lp)) return 0;
-    
+
     for (const CommandDispatchEntry* entry = COMMAND_DISPATCH_TABLE; entry->handler; entry++) {
         if (entry->cmdId == cmd) return entry->handler(hwnd, wp, lp);
     }
-    
+
     return 0;
 }
 

@@ -32,7 +32,7 @@
 /* Global state */
 static char g_animationName[MAX_PATH] = "__logo__";
 static char g_previewAnimationName[MAX_PATH] = "";
-static BOOL g_isPreviewActive = FALSE;
+BOOL g_isPreviewActive = FALSE;
 static HWND g_trayHwnd = NULL;
 static UINT g_baseFolderInterval = 150;
 static UINT g_userMinIntervalMs = 0;
@@ -191,14 +191,18 @@ static void UpdateTrayIconToCurrentFrame(void) {
     LoadedAnimation* currentAnim = g_isPreviewActive ? &g_previewAnimation : &g_mainAnimation;
     int* currentIndex = g_isPreviewActive ? &g_previewIndex : &g_mainIndex;
     
-    /* Handle percent icons */
-    if (currentAnim->sourceType == ANIM_SOURCE_PERCENT && !g_isPreviewActive) {
+    /* Handle percent icons - both normal and preview mode */
+    if (currentAnim->sourceType == ANIM_SOURCE_PERCENT) {
         float cpu = 0.0f, mem = 0.0f;
         SystemMonitor_GetUsage(&cpu, &mem);
-        int p = (_stricmp(g_animationName, "__cpu__") == 0) ? (int)(cpu + 0.5f) : (int)(mem + 0.5f);
+        const char* targetName = g_isPreviewActive ? g_previewAnimationName : g_animationName;
+        int p = (_stricmp(targetName, "__cpu__") == 0) ? (int)(cpu + 0.5f) : (int)(mem + 0.5f);
         if (p < 0) p = 0;
         if (p > 100) p = 100;
-        
+
+        WriteLog(LOG_LEVEL_DEBUG, "Percent icon update: type=%s target=%s cpu=%.1f%% mem=%.1f%% p=%d preview=%d",
+                 g_animationName, targetName, cpu, mem, p, g_isPreviewActive);
+
         HICON hIcon = CreatePercentIcon16(p);
         if (hIcon) {
             NOTIFYICONDATAW nid = {0};
@@ -210,6 +214,8 @@ static void UpdateTrayIconToCurrentFrame(void) {
             Shell_NotifyIconW(NIM_MODIFY, &nid);
             DestroyIcon(hIcon);
             RecordSuccessfulUpdate();
+        } else {
+            WriteLog(LOG_LEVEL_ERROR, "Failed to create percent icon for %d%%", p);
         }
         return;
     }
@@ -430,9 +436,11 @@ const char* GetCurrentAnimationName(void) {
  */
 BOOL SetCurrentAnimationName(const char* name) {
     if (!name || !*name) return FALSE;
-    
+
     /* Validate animation exists */
-    if (!IsValidAnimationSource(name)) return FALSE;
+    if (!IsValidAnimationSource(name)) {
+        return FALSE;
+    }
     
     /* Seamless preview promotion */
     if (g_isPreviewActive && g_previewAnimationName[0] != '\0' &&
@@ -483,13 +491,18 @@ BOOL SetCurrentAnimationName(const char* name) {
     /* Load new animation */
     strncpy(g_animationName, name, sizeof(g_animationName) - 1);
     g_animationName[sizeof(g_animationName) - 1] = '\0';
-    
+
+    WriteLog(LOG_LEVEL_DEBUG, "SetCurrentAnimationName: loading '%s'", g_animationName);
+
     LoadedAnimation_Free(&g_mainAnimation);
     LoadedAnimation_Init(&g_mainAnimation);
-    
+
     int cx = GetSystemMetrics(SM_CXSMICON);
     int cy = GetSystemMetrics(SM_CYSMICON);
     LoadAnimationByName(g_animationName, &g_mainAnimation, g_memoryPool, cx, cy);
+
+    WriteLog(LOG_LEVEL_DEBUG, "LoadedAnimation: count=%d sourceType=%d",
+             g_mainAnimation.count, g_mainAnimation.sourceType);
     
     g_mainIndex = 0;
     g_frameRateCtrl.framePosition = 0.0;
@@ -530,6 +543,8 @@ static DWORD WINAPI AsyncLoadPreviewThread(LPVOID param) {
         return 0;
     }
 
+    WriteLog(LOG_LEVEL_INFO, "AsyncLoadPreviewThread: loading '%s'", name);
+
     LoadedAnimation tempAnim;
     LoadedAnimation_Init(&tempAnim);
 
@@ -538,7 +553,11 @@ static DWORD WINAPI AsyncLoadPreviewThread(LPVOID param) {
 
     LoadAnimationByName(name, &tempAnim, g_memoryPool, cx, cy);
 
+    WriteLog(LOG_LEVEL_INFO, "AsyncLoadPreviewThread: loaded count=%d sourceType=%d",
+             tempAnim.count, tempAnim.sourceType);
+
     if (g_cancelLoad) {
+        WriteLog(LOG_LEVEL_INFO, "AsyncLoadPreviewThread: cancelled");
         LoadedAnimation_Free(&tempAnim);
         free(name);
         return 0;
@@ -556,10 +575,12 @@ static DWORD WINAPI AsyncLoadPreviewThread(LPVOID param) {
         g_previewIndex = 0;
         g_frameRateCtrl.framePosition = 0.0;
 
-        if (tempAnim.count > 0) {
+        /* For percent icons (count=0) or regular animations (count>0), activate preview */
+        if (tempAnim.count > 0 || tempAnim.sourceType == ANIM_SOURCE_PERCENT) {
             strncpy(g_previewAnimationName, name, sizeof(g_previewAnimationName) - 1);
             g_previewAnimationName[sizeof(g_previewAnimationName) - 1] = '\0';
             g_isPreviewActive = TRUE;
+            WriteLog(LOG_LEVEL_INFO, "AsyncLoadPreviewThread: preview activated for '%s'", name);
         } else {
             WriteLog(LOG_LEVEL_WARNING, "Animation preview failed to load: '%s'", name);
             g_previewAnimationName[0] = '\0';
@@ -567,6 +588,7 @@ static DWORD WINAPI AsyncLoadPreviewThread(LPVOID param) {
 
         g_pendingPreviewName[0] = '\0';
     } else {
+        WriteLog(LOG_LEVEL_INFO, "AsyncLoadPreviewThread: conditions not met, freeing");
         LoadedAnimation_Free(&tempAnim);
     }
 
@@ -588,8 +610,11 @@ static DWORD WINAPI AsyncLoadPreviewThread(LPVOID param) {
 void StartAnimationPreview(const char* name) {
     if (!name || !*name) return;
 
+    WriteLog(LOG_LEVEL_INFO, "StartAnimationPreview: called with '%s'", name);
+
     if (g_isPreviewActive && g_previewAnimationName[0] != '\0' &&
         _stricmp(g_previewAnimationName, name) == 0) {
+        WriteLog(LOG_LEVEL_INFO, "StartAnimationPreview: already previewing '%s'", name);
         return;
     }
 
@@ -605,6 +630,8 @@ void StartAnimationPreview(const char* name) {
 
     strncpy(g_pendingPreviewName, name, sizeof(g_pendingPreviewName) - 1);
     g_pendingPreviewName[sizeof(g_pendingPreviewName) - 1] = '\0';
+
+    WriteLog(LOG_LEVEL_INFO, "StartAnimationPreview: creating thread for '%s'", name);
 
     char* nameCopy = _strdup(name);
     if (!nameCopy) {
@@ -623,11 +650,13 @@ void StartAnimationPreview(const char* name) {
  * @brief Cancel animation preview
  */
 void CancelAnimationPreview(void) {
+    WriteLog(LOG_LEVEL_INFO, "CancelAnimationPreview: called, g_isPreviewActive=%d", g_isPreviewActive);
     if (!g_isPreviewActive) return;
 
     g_cancelLoad = TRUE;
 
     if (g_loadThread) {
+        WriteLog(LOG_LEVEL_INFO, "CancelAnimationPreview: waiting for load thread");
         WaitForSingleObject(g_loadThread, 500);
         CloseHandle(g_loadThread);
         g_loadThread = NULL;
@@ -637,6 +666,7 @@ void CancelAnimationPreview(void) {
         EnterCriticalSection(&g_animCriticalSection);
     }
 
+    WriteLog(LOG_LEVEL_INFO, "CancelAnimationPreview: clearing preview state");
     g_isPreviewActive = FALSE;
     g_previewAnimationName[0] = '\0';
     g_pendingPreviewName[0] = '\0';
@@ -647,6 +677,7 @@ void CancelAnimationPreview(void) {
         LeaveCriticalSection(&g_animCriticalSection);
     }
 
+    WriteLog(LOG_LEVEL_INFO, "CancelAnimationPreview: updating tray icon to current frame");
     UpdateTrayIconToCurrentFrame();
 }
 
