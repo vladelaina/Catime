@@ -127,5 +127,26 @@ TimeFormatType GetActiveTimeFormat(void);
  */
 BOOL GetActiveShowMilliseconds(void);
 
+/**
+ * @brief Temporarily show hidden window for menu preview
+ * @param hwnd Window handle
+ *
+ * @details If window is currently hidden (No Display mode), this will:
+ *          - Show the window temporarily
+ *          - Set a default countdown time for preview
+ *          - Pause the timer
+ *          Should be called when user hovers over font/color menu items
+ */
+void ShowWindowForPreview(HWND hwnd);
+
+/**
+ * @brief Restore window visibility to pre-preview state
+ * @param hwnd Window handle
+ *
+ * @details If window was shown by ShowWindowForPreview(), this will hide it again.
+ *          Should be called when menu closes (WM_EXITMENULOOP).
+ */
+void RestoreWindowVisibility(HWND hwnd);
+
 #endif /* MENU_PREVIEW_H */
 

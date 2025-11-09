@@ -1,7 +1,7 @@
 /**
  * @file menu_preview.c
  * @brief Menu option live preview system implementation
- * 
+ *
  * Extracted from window_procedure.c for better modularity and reusability.
  */
 #include <windows.h>
@@ -12,6 +12,7 @@
 #include "color/color.h"
 #include "timer/timer.h"
 #include "tray/tray_animation_core.h"
+#include "log.h"
 
 /* ============================================================================
  * External Dependencies
@@ -48,6 +49,9 @@ typedef struct {
         char animationPath[MAX_PATH];
     } data;
     BOOL needsTimerReset;
+    BOOL wasWindowVisible;
+    BOOL didShowForPreview;
+    BOOL createdPreviewTimer;
 } PreviewState;
 
 static PreviewState g_previewState = {PREVIEW_TYPE_NONE};
@@ -206,5 +210,102 @@ TimeFormatType GetActiveTimeFormat(void) {
 BOOL GetActiveShowMilliseconds(void) {
     return (g_previewState.type == PREVIEW_TYPE_MILLISECONDS) ?
            g_previewState.data.showMilliseconds : g_AppConfig.display.time_format.show_milliseconds;
+}
+
+/* ============================================================================
+ * Window Visibility Management for Preview
+ * ============================================================================ */
+
+void ShowWindowForPreview(HWND hwnd) {
+    if (!hwnd) return;
+
+    BOOL isVisible = IsWindowVisible(hwnd);
+
+    extern BOOL CLOCK_SHOW_CURRENT_TIME;
+    extern BOOL CLOCK_COUNT_UP;
+    extern int CLOCK_TOTAL_TIME;
+    extern int countdown_elapsed_time;
+
+    BOOL hasActiveContent = CLOCK_SHOW_CURRENT_TIME || CLOCK_COUNT_UP ||
+                           (CLOCK_TOTAL_TIME > 0 && countdown_elapsed_time < CLOCK_TOTAL_TIME);
+
+    WriteLog(LOG_LEVEL_INFO, "ShowWindowForPreview: visible=%d, showTime=%d, countUp=%d, total=%d, elapsed=%d, hasContent=%d, didShow=%d",
+             isVisible, CLOCK_SHOW_CURRENT_TIME, CLOCK_COUNT_UP, CLOCK_TOTAL_TIME, countdown_elapsed_time, hasActiveContent,
+             g_previewState.didShowForPreview);
+
+    if (g_previewState.didShowForPreview) {
+        WriteLog(LOG_LEVEL_INFO, "Already in preview mode, refreshing display");
+        InvalidateRect(hwnd, NULL, TRUE);
+        return;
+    }
+
+    if (!isVisible || !hasActiveContent) {
+        extern BOOL CLOCK_IS_PAUSED;
+
+        g_previewState.wasWindowVisible = isVisible;
+        g_previewState.didShowForPreview = TRUE;
+
+        if (!hasActiveContent) {
+            WriteLog(LOG_LEVEL_INFO, "No active content, creating preview timer: %d",
+                     g_AppConfig.timer.default_start_time > 0 ? g_AppConfig.timer.default_start_time : 300);
+
+            g_previewState.createdPreviewTimer = TRUE;
+
+            CLOCK_SHOW_CURRENT_TIME = FALSE;
+            CLOCK_COUNT_UP = FALSE;
+            CLOCK_IS_PAUSED = TRUE;
+
+            if (g_AppConfig.timer.default_start_time > 0) {
+                CLOCK_TOTAL_TIME = g_AppConfig.timer.default_start_time;
+                countdown_elapsed_time = 0;
+            } else {
+                CLOCK_TOTAL_TIME = 300;
+                countdown_elapsed_time = 0;
+            }
+        } else {
+            WriteLog(LOG_LEVEL_INFO, "Window hidden but has active timer, just showing it");
+            g_previewState.createdPreviewTimer = FALSE;
+        }
+
+        if (!isVisible) {
+            ShowWindow(hwnd, SW_SHOW);
+        }
+        InvalidateRect(hwnd, NULL, TRUE);
+    } else {
+        g_previewState.wasWindowVisible = TRUE;
+        g_previewState.didShowForPreview = FALSE;
+        g_previewState.createdPreviewTimer = FALSE;
+    }
+}
+
+void RestoreWindowVisibility(HWND hwnd) {
+    if (!hwnd || !g_previewState.didShowForPreview) return;
+
+    WriteLog(LOG_LEVEL_INFO, "RestoreWindowVisibility: was visible=%d, created preview timer=%d",
+             g_previewState.wasWindowVisible, g_previewState.createdPreviewTimer);
+
+    extern BOOL CLOCK_SHOW_CURRENT_TIME;
+    extern BOOL CLOCK_COUNT_UP;
+    extern int CLOCK_TOTAL_TIME;
+    extern int countdown_elapsed_time;
+
+    if (g_previewState.createdPreviewTimer) {
+        WriteLog(LOG_LEVEL_INFO, "Clearing preview timer that we created");
+        CLOCK_TOTAL_TIME = 0;
+        countdown_elapsed_time = 0;
+        CLOCK_SHOW_CURRENT_TIME = FALSE;
+        CLOCK_COUNT_UP = FALSE;
+    } else {
+        WriteLog(LOG_LEVEL_INFO, "Not clearing timer - was showing existing active timer");
+    }
+
+    if (!g_previewState.wasWindowVisible) {
+        ShowWindow(hwnd, SW_HIDE);
+    } else {
+        InvalidateRect(hwnd, NULL, TRUE);
+    }
+
+    g_previewState.didShowForPreview = FALSE;
+    g_previewState.createdPreviewTimer = FALSE;
 }
 

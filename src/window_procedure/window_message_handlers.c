@@ -159,6 +159,7 @@ LRESULT HandleRButtonDown(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT HandleExitMenuLoop(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
+    RestoreWindowVisibility(hwnd);
     KillTimer(hwnd, IDT_MENU_DEBOUNCE);
     SetTimer(hwnd, IDT_MENU_DEBOUNCE, MENU_DEBOUNCE_DELAY_MS, NULL);
     return 0;
@@ -280,7 +281,14 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
     UINT flags = HIWORD(wp);
     HMENU hMenu = (HMENU)lp;
 
+    static UINT lastMenuItem = 0;
+    static BOOL lastWasColorOrFont = FALSE;
+
     if (menuItem == 0xFFFF) {
+        if (lastWasColorOrFont) {
+            RestoreWindowVisibility(hwnd);
+            lastWasColorOrFont = FALSE;
+        }
         KillTimer(hwnd, IDT_MENU_DEBOUNCE);
         SetTimer(hwnd, IDT_MENU_DEBOUNCE, MENU_DEBOUNCE_DELAY_MS, NULL);
         return 0;
@@ -296,8 +304,43 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
     }
 
     if (!(flags & MF_POPUP)) {
+        BOOL isColorOrFontPreview = FALSE;
+
+        int colorIndex = menuItem - 201;
+        if (colorIndex >= 0 && colorIndex < 100) {
+            isColorOrFontPreview = TRUE;
+        }
+
+        if (menuItem >= 2000 && menuItem < 3000) {
+            isColorOrFontPreview = TRUE;
+        }
+
+        if (isColorOrFontPreview != lastWasColorOrFont) {
+            if (lastWasColorOrFont && !isColorOrFontPreview) {
+                extern void WriteLog(int level, const char* fmt, ...);
+                WriteLog(1, "Moving away from color/font item, restoring visibility");
+                RestoreWindowVisibility(hwnd);
+            }
+        }
+
+        if (isColorOrFontPreview) {
+            extern void WriteLog(int level, const char* fmt, ...);
+            WriteLog(1, "Detected color/font menu item: %u, showing window", menuItem);
+            ShowWindowForPreview(hwnd);
+        }
+
+        lastWasColorOrFont = isColorOrFontPreview;
+        lastMenuItem = menuItem;
+
         if (DispatchMenuPreview(hwnd, menuItem)) {
             return 0;
+        }
+    } else {
+        if (lastWasColorOrFont) {
+            extern void WriteLog(int level, const char* fmt, ...);
+            WriteLog(1, "Moving to popup menu, restoring visibility");
+            RestoreWindowVisibility(hwnd);
+            lastWasColorOrFont = FALSE;
         }
     }
 
