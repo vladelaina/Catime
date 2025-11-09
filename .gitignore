@@ -13,7 +13,10 @@ build/*
 *.aps 
 
 # Build system temps
-.xmake/ 
+.xmake/
 .idea/
 .vscode/
 .cursorrules
+
+# Project documentation
+CLAUDE.md
