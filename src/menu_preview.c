@@ -122,17 +122,26 @@ void StartPreview(PreviewType type, const void* data, HWND hwnd) {
 
 void CancelPreview(HWND hwnd) {
     if (!IsPreviewActive()) return;
-    
-    BOOL needsRedraw = (g_previewState.type != PREVIEW_TYPE_ANIMATION && 
+
+    BOOL needsRedraw = (g_previewState.type != PREVIEW_TYPE_ANIMATION &&
                         g_previewState.type != PREVIEW_TYPE_NONE);
     BOOL needsTimerReset = (g_previewState.type == PREVIEW_TYPE_MILLISECONDS);
-    
+    BOOL needsFontReload = (g_previewState.type == PREVIEW_TYPE_FONT);
+
     if (g_previewState.type == PREVIEW_TYPE_ANIMATION) {
         CancelAnimationPreview();
     }
-    
+
     g_previewState.type = PREVIEW_TYPE_NONE;
-    
+
+    if (needsFontReload) {
+        HINSTANCE hInstance = GetModuleHandle(NULL);
+        if (FONT_FILE_NAME[0] != '\0') {
+            LoadFontByNameAndGetRealName(hInstance, FONT_FILE_NAME,
+                                        FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
+        }
+    }
+
     if (needsTimerReset && hwnd) ResetTimerWithInterval(hwnd);
     if (needsRedraw && hwnd) InvalidateRect(hwnd, NULL, TRUE);
 }

@@ -286,6 +286,7 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
 
     if (menuItem == 0xFFFF) {
         if (lastWasColorOrFont) {
+            CancelPreview(hwnd);
             RestoreWindowVisibility(hwnd);
             lastWasColorOrFont = FALSE;
         }
@@ -318,7 +319,8 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
         if (isColorOrFontPreview != lastWasColorOrFont) {
             if (lastWasColorOrFont && !isColorOrFontPreview) {
                 extern void WriteLog(int level, const char* fmt, ...);
-                WriteLog(1, "Moving away from color/font item, restoring visibility");
+                WriteLog(1, "Moving away from color/font item, canceling preview and restoring visibility");
+                CancelPreview(hwnd);
                 RestoreWindowVisibility(hwnd);
             }
         }
@@ -338,13 +340,16 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
     } else {
         if (lastWasColorOrFont) {
             extern void WriteLog(int level, const char* fmt, ...);
-            WriteLog(1, "Moving to popup menu, restoring visibility");
+            WriteLog(1, "Moving to popup menu, canceling preview and restoring visibility");
+            CancelPreview(hwnd);
             RestoreWindowVisibility(hwnd);
             lastWasColorOrFont = FALSE;
         }
     }
 
-    CancelPreview(hwnd);
+    if (!lastWasColorOrFont) {
+        CancelPreview(hwnd);
+    }
     return 0;
 }
 
