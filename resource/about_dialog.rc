@@ -8,23 +8,24 @@
 #pragma code_page(65001)
 
 /** @brief About dialog with links laid out horizontally */
-IDD_ABOUT_DIALOG DIALOGEX 0, 0, 255, 80
+IDD_ABOUT_DIALOG DIALOGEX 0, 0, 280, 80
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION IDC_ABOUT_TITLE_TEXT
 FONT 12, "Microsoft YaHei UI"
 BEGIN
     /** Application icon positioned at top-left */
     CONTROL     "",                          IDC_ABOUT_ICON,    "Static", SS_ICON,                   
-                                                                          5,  -10, ABOUT_ICON_SIZE, ABOUT_ICON_SIZE
+                                                                          10,  -2, ABOUT_ICON_SIZE, ABOUT_ICON_SIZE
 
     /** Version and build information */
     LTEXT       "",                          IDC_VERSION_TEXT,          130,  15, 160, 12
     LTEXT       "",                          IDC_BUILD_DATE,            100,  25, 180, 12
-    LTEXT       "",                          IDC_COPYRIGHT,             100,  35, 180, 12
+    CONTROL     "",                          IDC_COPYRIGHT,   "Static", SS_OWNERDRAW | SS_NOTIFY,
+                                                                          100,  35, 180, 12
 
     /** Primary credit link positioned centrally */
     CONTROL     "Special thanks to 猫屋敷梨梨Official for the icon", IDC_CREDIT_LINK, "Static", SS_OWNERDRAW | SS_NOTIFY,
-                                                                          100,  45, 250, 12
+                                                                          100,  45, 350, 12
 
     /** Bottom row of clickable links for external resources */
     CONTROL     "Credits",                   IDC_CREDITS,        "Static", SS_OWNERDRAW | SS_NOTIFY,
@@ -34,7 +35,7 @@ BEGIN
     CONTROL     "GitHub",                    IDC_GITHUB_LINK,    "Static", SS_OWNERDRAW | SS_NOTIFY,
                                                                           125,  65,  32, 12
     CONTROL     "Copyright Notice",          IDC_COPYRIGHT_LINK,  "Static", SS_OWNERDRAW | SS_NOTIFY,
-                                                                          165,  65,  36, 12
+                                                                          165,  65,  50, 12
     CONTROL     "Support",                   IDC_SUPPORT,         "Static", SS_OWNERDRAW | SS_NOTIFY,
-                                                                          215,  65,  30, 12
+                                                                          215,  65,  50, 12
 END 
