@@ -909,9 +909,13 @@ BOOL HandlePomodoroTimeConfig(HWND hwnd, int selectedIndex) {
     if (selectedIndex < 0 || selectedIndex >= g_AppConfig.pomodoro.times_count) {
         return FALSE;
     }
-    
+
+    /* Set global variable for dialog to read */
+    extern int g_pomodoroSelectedIndex;
+    g_pomodoroSelectedIndex = selectedIndex;
+
     memset(inputText, 0, sizeof(inputText));
-    DialogBoxParamW(GetModuleHandle(NULL), 
+    DialogBoxParamW(GetModuleHandle(NULL),
              MAKEINTRESOURCEW(CLOCK_IDD_POMODORO_TIME_DIALOG),
              hwnd, DlgProc, (LPARAM)CLOCK_IDD_POMODORO_TIME_DIALOG);
     
@@ -929,11 +933,13 @@ BOOL HandlePomodoroTimeConfig(HWND hwnd, int selectedIndex) {
             if (selectedIndex == 0) g_AppConfig.pomodoro.work_time = total_seconds;
             else if (selectedIndex == 1) g_AppConfig.pomodoro.short_break = total_seconds;
             else if (selectedIndex == 2) g_AppConfig.pomodoro.long_break = total_seconds;
-            
+
+            g_pomodoroSelectedIndex = -1;
             return TRUE;
         }
     }
-    
+
+    g_pomodoroSelectedIndex = -1;
     return FALSE;
 }
 

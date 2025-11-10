@@ -57,12 +57,21 @@ extern wchar_t inputText[256];
 
 /**
  * @brief Active input dialog handle
- * 
+ *
  * @details
  * For IsDialogMessage(), preventing duplicates.
  * NULL when closed.
  */
 extern HWND g_hwndInputDialog;
+
+/**
+ * @brief Selected pomodoro time index for editing
+ *
+ * @details
+ * Used to display current value when opening pomodoro time dialog.
+ * Set to -1 when not in use.
+ */
+extern int g_pomodoroSelectedIndex;
 
 #endif /* DIALOG_INPUT_H */
 

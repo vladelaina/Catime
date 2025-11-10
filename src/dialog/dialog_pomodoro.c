@@ -64,10 +64,18 @@ INT_PTR CALLBACK PomodoroLoopDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, L
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
             Dialog_SubclassEdit(hwndEdit, ctx);
 
+            /* Display current loop count value */
+            if (g_AppConfig.pomodoro.loop_count > 0) {
+                wchar_t loopCountStr[16];
+                _snwprintf_s(loopCountStr, 16, _TRUNCATE, L"%d", g_AppConfig.pomodoro.loop_count);
+                SetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, loopCountStr);
+            }
+
             Dialog_CenterOnPrimaryScreen(hwndDlg);
             Dialog_ApplyTopmost(hwndDlg);
 
             SetFocus(hwndEdit);
+            SendMessage(hwndEdit, EM_SETSEL, 0, -1);
 
             return FALSE;
         }

@@ -27,6 +27,9 @@ extern wchar_t inputText[256];
 /* g_hwndInputDialog is defined here for dialog management */
 HWND g_hwndInputDialog = NULL;
 
+/* Global variable to pass the selected pomodoro time index */
+int g_pomodoroSelectedIndex = -1;
+
 /* ============================================================================
  * Time Parsing Implementation
  * ============================================================================ */
@@ -110,18 +113,18 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
             if (dlgId == CLOCK_IDD_SHORTCUT_DIALOG) {
                 extern int time_options[];
                 extern int time_options_count;
-                
+
                 char currentOptions[256] = {0};
                 for (int i = 0; i < time_options_count; i++) {
                     char timeStr[32];
                     Dialog_FormatSecondsToString(time_options[i], timeStr, sizeof(timeStr));
-                    
+
                     if (i > 0) {
                         StringCbCatA(currentOptions, sizeof(currentOptions), " ");
                     }
                     StringCbCatA(currentOptions, sizeof(currentOptions), timeStr);
                 }
-                
+
                 wchar_t wcurrentOptions[256];
                 MultiByteToWideChar(CP_UTF8, 0, currentOptions, -1, wcurrentOptions, 256);
                 SetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, wcurrentOptions);
@@ -129,7 +132,18 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                 if (g_AppConfig.timer.default_start_time > 0) {
                     char timeStr[64];
                     Dialog_FormatSecondsToString(g_AppConfig.timer.default_start_time, timeStr, sizeof(timeStr));
-                    
+
+                    wchar_t wtimeStr[64];
+                    MultiByteToWideChar(CP_UTF8, 0, timeStr, -1, wtimeStr, 64);
+                    SetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, wtimeStr);
+                }
+            } else if (dlgId == CLOCK_IDD_POMODORO_TIME_DIALOG) {
+                /* Display current pomodoro time value */
+                if (g_pomodoroSelectedIndex >= 0 && g_pomodoroSelectedIndex < g_AppConfig.pomodoro.times_count) {
+                    char timeStr[64];
+                    Dialog_FormatSecondsToString(g_AppConfig.pomodoro.times[g_pomodoroSelectedIndex],
+                                                 timeStr, sizeof(timeStr));
+
                     wchar_t wtimeStr[64];
                     MultiByteToWideChar(CP_UTF8, 0, timeStr, -1, wtimeStr, 64);
                     SetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, wtimeStr);

@@ -193,25 +193,25 @@ void FormatTime(int remaining_time, char* time_text) {
 /** Reject empty or pure non-numeric input to prevent parser errors */
 int isValidInput(const char* input) {
     if (!input || !*input) return 0;
-    
+
     int len = strlen(input);
     int digit_count = 0;
-    
+
     for (int i = 0; i < len; i++) {
+        char c = tolower((unsigned char)input[i]);
         if (isdigit(input[i])) {
             digit_count++;
-        } else if (input[i] == ' ') {
+        } else if (c == ' ' || c == '\t') {
             continue;
-        } else if (i == len - 1) {
-            char c = tolower((unsigned char)input[i]);
-            if (c != 'h' && c != 'm' && c != 's' && c != 't') {
-                return 0;
-            }
+        } else if (c == 'h' || c == 'm' || c == 's' || c == 't') {
+            /* Time units are allowed anywhere in the string */
+            continue;
         } else {
+            /* Invalid character */
             return 0;
         }
     }
-    
+
     return digit_count > 0;
 }
 
@@ -229,59 +229,44 @@ static const TimeUnit TIME_UNITS[] = {
 /** Parse "1h 30m 15s" or unitless "1 30 15" (infer by position if no suffix) */
 static int ParseDurationWithUnits(char* input) {
     int total = 0;
-    char* parts[10];
-    int part_count = 0;
-    char* token = strtok(input, " ");
-    while (token && part_count < 10) {
-        parts[part_count++] = token;
-        token = strtok(NULL, " ");
-    }
-    
-    BOOL has_any_unit = FALSE;
-    for (int i = 0; i < part_count; i++) {
-        int part_len = strlen(parts[i]);
-        char unit = tolower((unsigned char)parts[i][part_len - 1]);
-        if (unit == 'h' || unit == 'm' || unit == 's') {
-            has_any_unit = TRUE;
+    char* pos = input;
+
+    while (*pos) {
+        /* Skip whitespace */
+        while (*pos == ' ' || *pos == '\t') pos++;
+        if (*pos == '\0') break;
+
+        /* Parse number */
+        if (isdigit((unsigned char)*pos)) {
+            int value = 0;
+            while (isdigit((unsigned char)*pos)) {
+                value = value * 10 + (*pos - '0');
+                pos++;
+            }
+
+            /* Skip whitespace after number */
+            while (*pos == ' ' || *pos == '\t') pos++;
+
+            /* Parse unit */
+            char unit = tolower((unsigned char)*pos);
+            if (unit == 'h' || unit == 'm' || unit == 's') {
+                pos++;
+                for (size_t j = 0; j < sizeof(TIME_UNITS) / sizeof(TIME_UNITS[0]); j++) {
+                    if (TIME_UNITS[j].unit == unit) {
+                        total += value * TIME_UNITS[j].multiplier;
+                        break;
+                    }
+                }
+            } else {
+                /* No unit specified, default to minutes */
+                total += value * SECONDS_PER_MINUTE;
+            }
+        } else {
+            /* Invalid character */
             break;
         }
     }
-    
-    int unitless_index = 0;
-    for (int i = 0; i < part_count; i++) {
-        char* part = parts[i];
-        int part_len = strlen(part);
-        char unit = tolower((unsigned char)part[part_len - 1]);
-        BOOL has_unit = (unit == 'h' || unit == 'm' || unit == 's');
-        
-        if (has_unit) {
-            part[part_len - 1] = '\0';
-            int value = atoi(part);
-            for (size_t j = 0; j < sizeof(TIME_UNITS) / sizeof(TIME_UNITS[0]); j++) {
-                if (TIME_UNITS[j].unit == unit) {
-                    total += value * TIME_UNITS[j].multiplier;
-                    break;
-                }
-            }
-        } else {
-            int value = atoi(part);
-            if (has_any_unit) {
-                int multipliers[] = {SECONDS_PER_HOUR, SECONDS_PER_MINUTE, 1};
-                total += value * multipliers[unitless_index];
-                unitless_index++;
-            } else {
-                if (part_count == 2) {
-                    total += (i == 0) ? value * SECONDS_PER_MINUTE : value;
-                } else if (part_count == 3) {
-                    int multipliers[] = {SECONDS_PER_HOUR, SECONDS_PER_MINUTE, 1};
-                    total += value * multipliers[i];
-                } else {
-                    total += value * SECONDS_PER_MINUTE;
-                }
-            }
-        }
-    }
-    
+
     return total;
 }
 
