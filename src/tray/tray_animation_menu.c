@@ -210,12 +210,6 @@ void BuildAnimationMenu(HMENU hMenu, const char* currentAnimationName) {
     
     UINT nextId = CLOCK_IDM_ANIMATIONS_BASE;
     UINT customItems = BuildAnimationMenuRecursive(hMenu, wRoot, "", &nextId, currentAnimationName);
-    
-    if (customItems > 0) {
-        AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
-    }
-    
-    AppendMenuW(hMenu, MF_STRING, CLOCK_IDM_ANIMATIONS_OPEN_DIR, L"Open Folder...");
 }
 
 /**
