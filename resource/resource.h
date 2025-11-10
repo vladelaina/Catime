@@ -10,10 +10,10 @@
 #define CATIME_RESOURCE_H
 
 /** @brief Application version information */
-#define CATIME_VERSION "1.3.1"    /**< Version string */
+#define CATIME_VERSION "1.4.0-alpha1"    /**< Version string */
 #define CATIME_VERSION_MAJOR 1           /**< Major version number */
-#define CATIME_VERSION_MINOR 1           /**< Minor version number */
-#define CATIME_VERSION_PATCH 2           /**< Patch version number */
+#define CATIME_VERSION_MINOR 4           /**< Minor version number */
+#define CATIME_VERSION_PATCH 0           /**< Patch version number */
 #define CATIME_VERSION_BUILD 0           /**< Build number */
 
 /** @brief Font license version information */

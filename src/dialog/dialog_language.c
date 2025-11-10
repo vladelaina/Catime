@@ -148,7 +148,7 @@ static BOOL NeedsNewlineConversion(int dialogID, int controlID) {
 static BOOL ProcessVersionText(HWND hwndCtl, const wchar_t* localizedText) {
     wchar_t versionText[VERSION_TEXT_MAX];
     const wchar_t* format = GetLocalizedString(NULL, L"Version: %hs");
-    StringCbPrintfW(versionText, sizeof(versionText), 
+    StringCbPrintfW(versionText, sizeof(versionText),
                     format ? format : localizedText, CATIME_VERSION);
     SetWindowTextW(hwndCtl, versionText);
     return TRUE;

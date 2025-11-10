@@ -19,9 +19,6 @@
  * Constants
  * ============================================================================ */
 
-#define CATIME_VERSION L"v2.2.0"
-#define ABOUT_ICON_SIZE 96
-
 #ifndef DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
 typedef HANDLE DPI_AWARENESS_CONTEXT;
 #define DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 ((DPI_AWARENESS_CONTEXT)-4)
@@ -39,7 +36,7 @@ typedef struct {
 } AboutLinkInfo;
 
 static AboutLinkInfo g_aboutLinkInfos[] = {
-    {IDC_CREDIT_LINK, NULL, L"Special thanks to Neko House Lili Official for the icon", L"https://space.bilibili.com/26087398"},
+    {IDC_CREDIT_LINK, NULL, L"Special thanks to 猫屋敷梨梨Official for the icon", L"https://space.bilibili.com/26087398"},
     {IDC_CREDITS, NULL, L"Credits", L"https://vladelaina.github.io/Catime/#thanks"},
     {IDC_BILIBILI_LINK, NULL, L"BiliBili", L"https://space.bilibili.com/1862395225"},
     {IDC_GITHUB_LINK, NULL, L"GitHub", L"https://github.com/vladelaina/Catime"},
@@ -136,12 +133,40 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             int month_num = 0;
             while (++month_num <= 12 && strcmp(month, months[month_num-1]));
 
-            const wchar_t* dateFormat = GetLocalizedString(L"Build Date: %04d/%02d/%02d %02d:%02d:%02d (UTC+8)",
-                                                         L"Build Date: %04d/%02d/%02d %02d:%02d:%02d (UTC+8)");
+            /* Convert build time from UTC+8 to local time */
+            SYSTEMTIME buildTimeUTC8 = {0};
+            buildTimeUTC8.wYear = year;
+            buildTimeUTC8.wMonth = month_num;
+            buildTimeUTC8.wDay = day;
+            buildTimeUTC8.wHour = hour;
+            buildTimeUTC8.wMinute = min;
+            buildTimeUTC8.wSecond = sec;
+
+            /* Convert to FILETIME (UTC+8 is 8 hours ahead of UTC) */
+            FILETIME fileTime;
+            SystemTimeToFileTime(&buildTimeUTC8, &fileTime);
+
+            /* Subtract 8 hours to get UTC time */
+            ULARGE_INTEGER uli;
+            uli.LowPart = fileTime.dwLowDateTime;
+            uli.HighPart = fileTime.dwHighDateTime;
+            uli.QuadPart -= (ULONGLONG)8 * 60 * 60 * 10000000;  /* 8 hours in 100-nanosecond intervals */
+            fileTime.dwLowDateTime = uli.LowPart;
+            fileTime.dwHighDateTime = uli.HighPart;
+
+            /* Convert to local time */
+            FILETIME localFileTime;
+            FileTimeToLocalFileTime(&fileTime, &localFileTime);
+
+            SYSTEMTIME localTime;
+            FileTimeToSystemTime(&localFileTime, &localTime);
+
+            const wchar_t* buildDateLabel = GetLocalizedString(NULL, L"Build Date:");
 
             wchar_t timeStr[60];
-            StringCbPrintfW(timeStr, sizeof(timeStr), dateFormat,
-                    year, month_num, day, hour, min, sec);
+            StringCbPrintfW(timeStr, sizeof(timeStr), L"%s %04d/%02d/%02d %02d:%02d:%02d",
+                    buildDateLabel, localTime.wYear, localTime.wMonth, localTime.wDay,
+                    localTime.wHour, localTime.wMinute, localTime.wSecond);
 
             SetDlgItemTextW(hwndDlg, IDC_BUILD_DATE, timeStr);
 

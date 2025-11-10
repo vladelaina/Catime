@@ -23,7 +23,7 @@ BEGIN
     LTEXT       "",                          IDC_COPYRIGHT,             100,  35, 180, 12
 
     /** Primary credit link positioned centrally */
-    CONTROL     "Special thanks to Neko House Lili Official for the icon", IDC_CREDIT_LINK, "Static", SS_OWNERDRAW | SS_NOTIFY,
+    CONTROL     "Special thanks to 猫屋敷梨梨Official for the icon", IDC_CREDIT_LINK, "Static", SS_OWNERDRAW | SS_NOTIFY,
                                                                           100,  45, 250, 12
 
     /** Bottom row of clickable links for external resources */
