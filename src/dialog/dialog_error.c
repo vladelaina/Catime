@@ -34,6 +34,10 @@ INT_PTR CALLBACK ErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 return TRUE;
             }
             break;
+
+        case WM_CLOSE:
+            EndDialog(hwndDlg, IDCANCEL);
+            return TRUE;
     }
     return FALSE;
 }

@@ -89,7 +89,7 @@ INT_PTR CALLBACK PomodoroLoopDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, L
                 GetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, input_str, sizeof(input_str)/sizeof(wchar_t));
 
                 if (Dialog_IsEmptyOrWhitespace(input_str)) {
-                    EndDialog(hwndDlg, IDCANCEL);
+                    DestroyWindow(hwndDlg);
                     return TRUE;
                 }
 
@@ -111,13 +111,13 @@ INT_PTR CALLBACK PomodoroLoopDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, L
                 if (new_loop_count >= 1 && new_loop_count <= 100) {
                     extern void WriteConfigPomodoroLoopCount(int loop_count);
                     WriteConfigPomodoroLoopCount(new_loop_count);
-                    EndDialog(hwndDlg, IDOK);
+                    DestroyWindow(hwndDlg);
                 } else {
                     Dialog_ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
                 }
                 return TRUE;
             } else if (LOWORD(wParam) == IDCANCEL) {
-                EndDialog(hwndDlg, IDCANCEL);
+                DestroyWindow(hwndDlg);
                 return TRUE;
             }
             break;
@@ -134,7 +134,7 @@ INT_PTR CALLBACK PomodoroLoopDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, L
             break;
 
         case WM_CLOSE:
-            EndDialog(hwndDlg, IDCANCEL);
+            DestroyWindow(hwndDlg);
             return TRUE;
     }
     return FALSE;
@@ -265,13 +265,17 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
                 extern void WriteConfigPomodoroTimeOptions(int* times, int count);
                 WriteConfigPomodoroTimeOptions(times, times_count);
 
-                EndDialog(hwndDlg, IDOK);
+                DestroyWindow(hwndDlg);
                 return TRUE;
             } else if (LOWORD(wParam) == IDCANCEL) {
-                EndDialog(hwndDlg, IDCANCEL);
+                DestroyWindow(hwndDlg);
                 return TRUE;
             }
             break;
+
+        case WM_CLOSE:
+            DestroyWindow(hwndDlg);
+            return TRUE;
 
         case WM_DESTROY:
             if (ctx) {
