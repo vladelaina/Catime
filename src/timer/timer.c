@@ -193,42 +193,46 @@ void FormatTime(int remaining_time, char* time_text) {
 
 /** Parse "14 30t" → countdown to target time (assumes next day if in past) */
 static int ParseAbsoluteTime(char* input) {
+    _tzset();
     time_t now = time(NULL);
     struct tm* tm_now = localtime(&now);
     struct tm tm_target = *tm_now;
     int hour = -1, minute = -1, second = -1;
     int count = 0;
     char* token = strtok(input, " ");
-    
+
     while (token && count < 3) {
-        int value = atoi(token);
-        if (count == 0) hour = value;
-        else if (count == 1) minute = value;
-        else if (count == 2) second = value;
+        char* endptr;
+        long value = strtol(token, &endptr, 10);
+        if (*endptr != '\0' || value < 0 || value > 59) {
+            return 0;
+        }
+        if (count == 0) {
+            if (value > 23) return 0;
+            hour = (int)value;
+        } else if (count == 1) {
+            minute = (int)value;
+        } else if (count == 2) {
+            second = (int)value;
+        }
         count++;
         token = strtok(NULL, " ");
     }
-    
-    if (hour < 0 || hour > 23) {
+
+    if (hour < 0) {
         return 0;
     }
-    if (minute < -1 || minute > 59) {
-        return 0;
-    }
-    if (second < -1 || second > 59) {
-        return 0;
-    }
-    
+
     tm_target.tm_hour = hour;
     tm_target.tm_min = (minute >= 0) ? minute : 0;
     tm_target.tm_sec = (second >= 0) ? second : 0;
-    
+
     time_t target_time = mktime(&tm_target);
     if (target_time <= now) {
         tm_target.tm_mday += 1;
         target_time = mktime(&tm_target);
     }
-    
+
     return (int)difftime(target_time, now);
 }
 
