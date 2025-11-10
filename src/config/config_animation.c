@@ -117,6 +117,15 @@ AnimationSpeedMetric GetAnimationSpeedMetric(void) {
     return g_animSpeedMetric;
 }
 
+void WriteConfigAnimationSpeedMetric(AnimationSpeedMetric metric) {
+    g_animSpeedMetric = metric;
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    const char* metricStr = (metric == ANIMATION_SPEED_CPU ? "CPU" :
+                          (metric == ANIMATION_SPEED_TIMER ? "TIMER" : "MEMORY"));
+    WriteIniString("Animation", "ANIMATION_SPEED_METRIC", metricStr, config_path);
+}
+
 double GetAnimationSpeedScaleForPercent(double percent) {
     if (percent < 0.0) percent = 0.0;
     if (percent > 100.0) percent = 100.0;

@@ -334,18 +334,18 @@ static LRESULT CmdPomodoroStart(HWND hwnd, WPARAM wp, LPARAM lp) {
 static LRESULT CmdPomodoroReset(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     CleanupBeforeTimerAction();
-    
+
     extern POMODORO_PHASE current_pomodoro_phase;
     extern int current_pomodoro_time_index, complete_pomodoro_cycles;
-    
+
     current_pomodoro_phase = POMODORO_PHASE_IDLE;
     current_pomodoro_time_index = 0;
     complete_pomodoro_cycles = 0;
-    
+
     ResetTimer();
-    
-    if (CLOCK_TOTAL_TIME == g_AppConfig.pomodoro.work_time || 
-        CLOCK_TOTAL_TIME == g_AppConfig.pomodoro.short_break || 
+
+    if (CLOCK_TOTAL_TIME == g_AppConfig.pomodoro.work_time ||
+        CLOCK_TOTAL_TIME == g_AppConfig.pomodoro.short_break ||
         CLOCK_TOTAL_TIME == g_AppConfig.pomodoro.long_break) {
         KillTimer(hwnd, 1);
         ResetTimerWithInterval(hwnd);
@@ -365,6 +365,27 @@ static LRESULT CmdPomodoroLoopCount(HWND hwnd, WPARAM wp, LPARAM lp) {
 static LRESULT CmdPomodoroCombo(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     ShowPomodoroComboDialog(hwnd);
+    return 0;
+}
+
+static LRESULT CmdAnimationSpeedMemory(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)wp; (void)lp;
+    WriteConfigAnimationSpeedMetric(ANIMATION_SPEED_MEMORY);
+    InvalidateRect(hwnd, NULL, TRUE);
+    return 0;
+}
+
+static LRESULT CmdAnimationSpeedCpu(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)wp; (void)lp;
+    WriteConfigAnimationSpeedMetric(ANIMATION_SPEED_CPU);
+    InvalidateRect(hwnd, NULL, TRUE);
+    return 0;
+}
+
+static LRESULT CmdAnimationSpeedTimer(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)wp; (void)lp;
+    WriteConfigAnimationSpeedMetric(ANIMATION_SPEED_TIMER);
+    InvalidateRect(hwnd, NULL, TRUE);
     return 0;
 }
 
@@ -681,7 +702,11 @@ static const CommandDispatchEntry COMMAND_DISPATCH_TABLE[] = {
     {CLOCK_IDM_NOTIFICATION_CONTENT, CmdNotificationContent, "Notification content"},
     {CLOCK_IDM_NOTIFICATION_DISPLAY, CmdNotificationDisplay, "Notification display"},
     {CLOCK_IDM_NOTIFICATION_SETTINGS, CmdNotificationSettings, "Notification settings"},
-    
+
+    {CLOCK_IDM_ANIM_SPEED_MEMORY, CmdAnimationSpeedMemory, "Animation speed by memory"},
+    {CLOCK_IDM_ANIM_SPEED_CPU, CmdAnimationSpeedCpu, "Animation speed by CPU"},
+    {CLOCK_IDM_ANIM_SPEED_TIMER, CmdAnimationSpeedTimer, "Animation speed by timer"},
+
     {CLOCK_IDM_HOTKEY_SETTINGS, CmdHotkeySettings, "Hotkey settings"},
     {CLOCK_IDM_HELP, CmdHelp, "Help"},
     {CLOCK_IDM_SUPPORT, CmdSupport, "Support"},
@@ -776,6 +801,11 @@ BOOL DispatchRangeCommand(HWND hwnd, UINT cmd, WPARAM wp, LPARAM lp) {
 
     /* Handle animation commands first (before range check) */
     if (HandleAnimationMenuCommand(hwnd, cmd)) return TRUE;
+
+    /* Animation speed commands should not be handled by range dispatchers */
+    if (cmd == CLOCK_IDM_ANIM_SPEED_MEMORY || cmd == CLOCK_IDM_ANIM_SPEED_CPU || cmd == CLOCK_IDM_ANIM_SPEED_TIMER) {
+        return FALSE;
+    }
 
     RangeCommandDescriptor rangeTable[] = {
         {CMD_QUICK_COUNTDOWN_BASE, CMD_QUICK_COUNTDOWN_END, HandleQuickCountdown},

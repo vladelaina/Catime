@@ -317,6 +317,10 @@ static BOOL FindAnimationByIdRecursive(const wchar_t* folderPathW, const char* f
 BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id) {
     (void)hwnd;
 
+    if (id == CLOCK_IDM_ANIM_SPEED_MEMORY || id == CLOCK_IDM_ANIM_SPEED_CPU || id == CLOCK_IDM_ANIM_SPEED_TIMER) {
+        return FALSE;
+    }
+
     if (id == CLOCK_IDM_ANIMATIONS_OPEN_DIR) {
         OpenAnimationsFolder();
         return TRUE;
@@ -333,24 +337,24 @@ BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id) {
     if (id == CLOCK_IDM_ANIMATIONS_USE_MEM) {
         return SetCurrentAnimationName("__mem__");
     }
-    
+
     if (id >= CLOCK_IDM_ANIMATIONS_BASE && id < CLOCK_IDM_ANIMATIONS_BASE + 1000) {
         char animRootUtf8[MAX_PATH] = {0};
         GetAnimationsFolderPath(animRootUtf8, sizeof(animRootUtf8));
-        
+
         wchar_t wRoot[MAX_PATH] = {0};
         MultiByteToWideChar(CP_UTF8, 0, animRootUtf8, -1, wRoot, MAX_PATH);
-        
+
         UINT nextId = CLOCK_IDM_ANIMATIONS_BASE;
         char foundPath[MAX_PATH] = {0};
-        
+
         if (FindAnimationByIdRecursive(wRoot, "", &nextId, id, foundPath, sizeof(foundPath))) {
             return SetCurrentAnimationName(foundPath);
         }
-        
+
         return FALSE;
     }
-    
+
     return FALSE;
 }
 

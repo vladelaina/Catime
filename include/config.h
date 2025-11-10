@@ -249,10 +249,18 @@ extern AppConfig g_AppConfig;
 /**
  * @brief Get animation speed metric from config
  * @return Metric type (default: ANIMATION_SPEED_MEMORY)
- * 
+ *
  * @details Reads [Animation] ANIMATION_SPEED_METRIC
  */
 AnimationSpeedMetric GetAnimationSpeedMetric(void);
+
+/**
+ * @brief Set animation speed metric and persist to config
+ * @param metric Metric type to set
+ *
+ * @details Updates [Animation] ANIMATION_SPEED_METRIC in config file
+ */
+void WriteConfigAnimationSpeedMetric(AnimationSpeedMetric metric);
 
 /**
  * @brief Map utilization percent to animation speed scale
