@@ -1,12 +1,12 @@
 /**
  * @file cli.h
  * @brief Command-line interface for rapid timer control
- * 
+ *
  * Supports multiple input formats for different user preferences:
  * - Shortcuts (s, p, pr): Fast common operations
  * - Natural (1h 30m): Intuitive duration input
- * - Compact (130 45): Fast typing for precise times (1:30:45)
- * - Absolute (14:30t): Deadline-based tasks
+ * - Numeric shorthand (25): Minutes, (1 30): Minutes:seconds, (1 30 15): Hours:minutes:seconds
+ * - Absolute (14 30t): Deadline-based tasks
  */
 
 #ifndef CLI_H

@@ -104,24 +104,15 @@ void FormatTime(int remaining_time, char* time_text);
  * @param input Input string
  * @param total_seconds Output
  * @return 1 on success, 0 on invalid
- * 
+ *
  * @details Formats:
- * - Units: "25m", "1h 30m", "90s"
- * - Shorthand: "25" (min), "1 30" (1:30), "1 30 15" (1:30:15)
- * - Absolute: "14:30t" (countdown to 2:30 PM today/tomorrow)
- * 
- * @note Validates via isValidInput() first
+ * - Units: "25m", "1h 30m", "90s", "2h3m"
+ * - Shorthand: "25" (min), "130 20" (130m 20s), "1 30 15" (1h 30m 15s)
+ * - Absolute: "14 30t" (countdown to 14:30 today/tomorrow)
+ *
+ * @note Uses time_parser module for validation and parsing
  */
 int ParseInput(const char* input, int* total_seconds);
-
-/**
- * @brief Validate input format
- * @param input String
- * @return 1 if valid
- * 
- * @details Accepts digits, spaces, trailing h/m/s/t (case-insensitive)
- */
-int isValidInput(const char* input);
 
 /**
  * @brief Write default start time to config

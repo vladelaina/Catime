@@ -9,25 +9,6 @@
 #include <windows.h>
 
 /* ============================================================================
- * Time Input Parsing
- * ============================================================================ */
-
-/**
- * @brief Parse flexible time input to seconds
- * @param input Time string (UTF-8)
- * @param seconds Output
- * @return TRUE on success
- * 
- * @details Formats:
- * - Plain: "25" = 25min
- * - Units: "1h 30m", "90s", "1h 30m 15s"
- * - Compact: "130 45" = 1:30:45
- * 
- * @note Max: 99:59:59. Returns FALSE for negative/invalid.
- */
-BOOL ParseTimeInput(const char* input, int* seconds);
-
-/* ============================================================================
  * Generic Input Dialog
  * ============================================================================ */
 

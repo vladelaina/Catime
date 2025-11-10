@@ -10,6 +10,7 @@
 #include "timer/timer.h"
 #include "config.h"
 #include "dialog/dialog_language.h"
+#include "utils/time_parser.h"
 #include "../resource/resource.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,60 +30,6 @@ HWND g_hwndInputDialog = NULL;
 
 /* Global variable to pass the selected pomodoro time index */
 int g_pomodoroSelectedIndex = -1;
-
-/* ============================================================================
- * Time Parsing Implementation
- * ============================================================================ */
-
-BOOL ParseTimeInput(const char* input, int* seconds) {
-    if (!input || !seconds) return FALSE;
-
-    *seconds = 0;
-    
-    char buffer[256];
-    strncpy(buffer, input, sizeof(buffer) - 1);
-    buffer[sizeof(buffer) - 1] = '\0';
-
-    char* pos = buffer;
-    int tempSeconds = 0;
-
-    while (*pos) {
-        while (*pos == ' ' || *pos == '\t') pos++;
-        if (*pos == '\0') break;
-        
-        if (isdigit((unsigned char)*pos)) {
-            int value = 0;
-            while (isdigit((unsigned char)*pos)) {
-                value = value * 10 + (*pos - '0');
-                pos++;
-            }
-
-            while (*pos == ' ' || *pos == '\t') pos++;
-
-            if (*pos == 'h' || *pos == 'H') {
-                tempSeconds += value * 3600;
-                pos++;
-            } else if (*pos == 'm' || *pos == 'M') {
-                tempSeconds += value * 60;
-                pos++;
-            } else if (*pos == 's' || *pos == 'S') {
-                tempSeconds += value;
-                pos++;
-            } else if (*pos == '\0') {
-                /* Default to minutes */
-                tempSeconds += value * 60;
-                break;
-            } else {
-                return FALSE;
-            }
-        } else {
-            return FALSE;
-        }
-    }
-
-    *seconds = tempSeconds;
-    return TRUE;
-}
 
 /* ============================================================================
  * Dialog Procedure
@@ -232,7 +179,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                     
                     while (token && count < MAX_TIME_OPTIONS) {
                         int seconds = 0;
-                        if (!ParseTimeInput(token, &seconds) || seconds <= 0) {
+                        if (!TimeParser_ParseBasic(token, &seconds) || seconds <= 0) {
                             valid = 0;
                             break;
                         }

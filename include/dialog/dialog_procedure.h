@@ -34,14 +34,15 @@
 /**
  * @note All functions are now declared in their respective module headers.
  *       This file only provides documentation and includes.
- *       
+ *
  *       For implementation details, see:
- *       - dialog_input.h for DlgProc, ParseTimeInput, g_hwndInputDialog
+ *       - dialog_input.h for DlgProc, g_hwndInputDialog, g_pomodoroSelectedIndex
  *       - dialog_info.h for ShowAboutDialog, AboutDlgProc, ShowFontLicenseDialog
  *       - dialog_error.h for ShowErrorDialog
  *       - dialog_pomodoro.h for ShowPomodoroLoopDialog, ShowPomodoroComboDialog
  *       - dialog_notification.h for notification dialogs
  *       - dialog_common.h for utility functions like dialog centering
+ *       - utils/time_parser.h for time parsing functions
  */
 
 /* ============================================================================

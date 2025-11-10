@@ -4,6 +4,7 @@
  */
 
 #include "dialog/dialog_common.h"
+#include "utils/time_parser.h"
 #include "../resource/resource.h"
 #include <stdlib.h>
 #include <string.h>
@@ -242,25 +243,7 @@ void Dialog_ShowErrorAndRefocus(HWND hwndDlg, int editControlId) {
 }
 
 void Dialog_FormatSecondsToString(int totalSeconds, char* buffer, size_t bufferSize) {
-    int hours = totalSeconds / 3600;
-    int minutes = (totalSeconds % 3600) / 60;
-    int seconds = totalSeconds % 60;
-    
-    if (hours > 0 && minutes > 0 && seconds > 0) {
-        snprintf(buffer, bufferSize, "%dh%dm%ds", hours, minutes, seconds);
-    } else if (hours > 0 && minutes > 0) {
-        snprintf(buffer, bufferSize, "%dh%dm", hours, minutes);
-    } else if (hours > 0 && seconds > 0) {
-        snprintf(buffer, bufferSize, "%dh%ds", hours, seconds);
-    } else if (minutes > 0 && seconds > 0) {
-        snprintf(buffer, bufferSize, "%dm%ds", minutes, seconds);
-    } else if (hours > 0) {
-        snprintf(buffer, bufferSize, "%dh", hours);
-    } else if (minutes > 0) {
-        snprintf(buffer, bufferSize, "%dm", minutes);
-    } else {
-        snprintf(buffer, bufferSize, "%ds", seconds);
-    }
+    TimeParser_FormatToString(totalSeconds, buffer, bufferSize);
 }
 
 BOOL Dialog_IsValidNumberInput(const wchar_t* str) {

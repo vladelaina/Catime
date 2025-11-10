@@ -10,6 +10,7 @@
 #include "config.h"
 #include "timer/timer_events.h"
 #include "drawing.h"
+#include "utils/time_parser.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -190,108 +191,6 @@ void FormatTime(int remaining_time, char* time_text) {
     }
 }
 
-/** Reject empty or pure non-numeric input to prevent parser errors */
-int isValidInput(const char* input) {
-    if (!input || !*input) return 0;
-
-    int len = strlen(input);
-    int digit_count = 0;
-
-    for (int i = 0; i < len; i++) {
-        char c = tolower((unsigned char)input[i]);
-        if (isdigit(input[i])) {
-            digit_count++;
-        } else if (c == ' ' || c == '\t') {
-            continue;
-        } else if (c == 'h' || c == 'm' || c == 's' || c == 't') {
-            /* Time units are allowed anywhere in the string */
-            continue;
-        } else {
-            /* Invalid character */
-            return 0;
-        }
-    }
-
-    return digit_count > 0;
-}
-
-typedef struct {
-    char unit;
-    int multiplier;
-} TimeUnit;
-
-static const TimeUnit TIME_UNITS[] = {
-    {'h', SECONDS_PER_HOUR},
-    {'m', SECONDS_PER_MINUTE},
-    {'s', 1}
-};
-
-/** Parse "1h 30m 15s" or unitless "1 30 15" (infer by position if no suffix) */
-static int ParseDurationWithUnits(char* input) {
-    int total = 0;
-    char* pos = input;
-
-    while (*pos) {
-        /* Skip whitespace */
-        while (*pos == ' ' || *pos == '\t') pos++;
-        if (*pos == '\0') break;
-
-        /* Parse number */
-        if (isdigit((unsigned char)*pos)) {
-            int value = 0;
-            while (isdigit((unsigned char)*pos)) {
-                value = value * 10 + (*pos - '0');
-                pos++;
-            }
-
-            /* Skip whitespace after number */
-            while (*pos == ' ' || *pos == '\t') pos++;
-
-            /* Parse unit */
-            char unit = tolower((unsigned char)*pos);
-            if (unit == 'h' || unit == 'm' || unit == 's') {
-                pos++;
-                for (size_t j = 0; j < sizeof(TIME_UNITS) / sizeof(TIME_UNITS[0]); j++) {
-                    if (TIME_UNITS[j].unit == unit) {
-                        total += value * TIME_UNITS[j].multiplier;
-                        break;
-                    }
-                }
-            } else {
-                /* No unit specified, default to minutes */
-                total += value * SECONDS_PER_MINUTE;
-            }
-        } else {
-            /* Invalid character */
-            break;
-        }
-    }
-
-    return total;
-}
-
-/** Infer units from part count: 1→minutes, 2→MM:SS, 3→HH:MM:SS */
-static int ParseNumericShorthand(char* input) {
-    char* parts[3];
-    int part_count = 0;
-    
-    char* token = strtok(input, " ");
-    while (token && part_count < 3) {
-        parts[part_count++] = token;
-        token = strtok(NULL, " ");
-    }
-    
-    if (part_count == 1) {
-        return atoi(parts[0]) * SECONDS_PER_MINUTE;
-    } else if (part_count == 2) {
-        return atoi(parts[0]) * SECONDS_PER_MINUTE + atoi(parts[1]);
-    } else if (part_count == 3) {
-        return atoi(parts[0]) * SECONDS_PER_HOUR + atoi(parts[1]) * SECONDS_PER_MINUTE + atoi(parts[2]);
-    }
-    
-    return 0;
-}
-
 /** Parse "14 30t" → countdown to target time (assumes next day if in past) */
 static int ParseAbsoluteTime(char* input) {
     time_t now = time(NULL);
@@ -333,40 +232,30 @@ static int ParseAbsoluteTime(char* input) {
     return (int)difftime(target_time, now);
 }
 
-static BOOL HasTimeUnits(const char* input) {
-    for (const char* p = input; *p; p++) {
-        char c = tolower((unsigned char)*p);
-        if (c == 'h' || c == 'm' || c == 's') {
-            return TRUE;
-        }
-    }
-    return FALSE;
-}
-
 /** Parse: "14 30t" (absolute), "1h 30m" (units), "25" or "1 30" (shorthand) */
 int ParseInput(const char* input, int* total_seconds) {
-    if (!isValidInput(input)) return 0;
-    
+    if (!TimeParser_Validate(input)) return 0;
+
     char input_copy[256];
     strncpy(input_copy, input, sizeof(input_copy) - 1);
     input_copy[sizeof(input_copy) - 1] = '\0';
-    
+
     int len = strlen(input_copy);
     int result = 0;
-    
+
     if (len > 0 && (input_copy[len - 1] == 't' || input_copy[len - 1] == 'T')) {
         input_copy[len - 1] = '\0';
         result = ParseAbsoluteTime(input_copy);
-    } else if (HasTimeUnits(input_copy)) {
-        result = ParseDurationWithUnits(input_copy);
     } else {
-        result = ParseNumericShorthand(input_copy);
+        if (!TimeParser_ParseAdvanced(input, &result)) {
+            return 0;
+        }
     }
-    
+
     if (result <= 0 || result > INT_MAX) {
         return 0;
     }
-    
+
     *total_seconds = result;
     return 1;
 }

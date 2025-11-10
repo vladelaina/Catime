@@ -1,8 +1,8 @@
 /**
  * @file cli.c
  * @brief CLI parser with multiple input formats
- * 
- * Input expansion: "130t" → "1 30T", "130 45" → "1 30 45" (compact formats).
+ *
+ * Supports natural time input: "25m", "1h30m", "1 30" (minutes:seconds), "14 30t" (absolute time).
  * Aggressive focus stealing for help dialog (Windows fails topmost focus).
  */
 #include <windows.h>
@@ -197,82 +197,6 @@ static void NormalizeWhitespace(char* input) {
     input[INPUT_BUFFER_SIZE - 1] = '\0';
 }
 
-/** Expand compact target time: "130t" → "1 30T" */
-static void ExpandCompactTargetTime(char* s) {
-    if (!s) return;
-    
-    size_t len = strlen(s);
-    if (len < 2 || (s[len - 1] != 't' && s[len - 1] != 'T')) {
-        return;
-    }
-    
-    s[len - 1] = '\0';
-    TrimSpaces(s);
-    size_t digitLen = strlen(s);
-    
-    for (size_t i = 0; i < digitLen; ++i) {
-        if (!isdigit((unsigned char)s[i])) {
-            s[len - 1] = 't';
-            return;
-        }
-    }
-    
-    if (digitLen == 3 || digitLen == 4) {
-        char expanded[EXPAND_BUFFER_SIZE];
-        if (digitLen == 3) {
-            int hour = s[0] - '0';
-            int minute = atoi(s + 1);
-            snprintf(expanded, sizeof(expanded), "%d %dT", hour, minute);
-        } else {
-            char hourStr[8];
-            strncpy(hourStr, s, 2);
-            hourStr[2] = '\0';
-            snprintf(expanded, sizeof(expanded), "%s %sT", hourStr, s + 2);
-        }
-        strncpy(s, expanded, INPUT_BUFFER_SIZE - 1);
-        s[INPUT_BUFFER_SIZE - 1] = '\0';
-    } else {
-        s[len - 1] = 't';
-    }
-}
-
-/** Expand compact hour-minute: "130 45" → "1 30 45" */
-static void ExpandCompactHourMinute(char* s) {
-    if (!s) return;
-    
-    char copy[INPUT_BUFFER_SIZE];
-    strncpy(copy, s, sizeof(copy) - 1);
-    copy[sizeof(copy) - 1] = '\0';
-    
-    char* tok1 = strtok(copy, " ");
-    if (!tok1) return;
-    
-    char* tok2 = strtok(NULL, " ");
-    if (!tok2) return;
-    
-    char* tok3 = strtok(NULL, " ");
-    if (tok3) return;
-    
-    if (strlen(tok1) == 3) {
-        if (isdigit((unsigned char)tok1[0]) && 
-            isdigit((unsigned char)tok1[1]) && 
-            isdigit((unsigned char)tok1[2])) {
-            
-            for (const char* p = tok2; *p; ++p) {
-                if (!isdigit((unsigned char)*p)) return;
-            }
-            
-            int hour = tok1[0] - '0';
-            int minute = (tok1[1] - '0') * 10 + (tok1[2] - '0');
-            
-            char expanded[INPUT_BUFFER_SIZE];
-            snprintf(expanded, sizeof(expanded), "%d %d %s", hour, minute, tok2);
-            strncpy(s, expanded, INPUT_BUFFER_SIZE - 1);
-            s[INPUT_BUFFER_SIZE - 1] = '\0';
-        }
-    }
-}
-
 static BOOL HandleQuickCountdown(HWND hwnd, const char* input) {
     int index = atoi(input + 1);
     if (index > 0 && index <= 3) {
@@ -384,15 +308,12 @@ static BOOL ProcessSingleCharCommands(HWND hwnd, const char* input) {
 }
 
 static BOOL ParseAndStartTimer(HWND hwnd, char* input) {
-    ExpandCompactTargetTime(input);
-    ExpandCompactHourMinute(input);
-    
     int totalSeconds = 0;
     if (!ParseInput(input, &totalSeconds)) {
         StartDefaultCountDown(hwnd);
         return TRUE;
     }
-    
+
     CleanupBeforeTimerAction();
     StartCountdownWithTime(hwnd, totalSeconds);
     return TRUE;

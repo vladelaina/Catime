@@ -31,6 +31,7 @@
 #include "tray/tray_animation_menu.h"
 #include "tray/tray_animation_core.h"
 #include "menu_preview.h"
+#include "utils/time_parser.h"
 #include "../resource/resource.h"
 #include <shlobj.h>
 #include <shellapi.h>
@@ -467,8 +468,7 @@ static LRESULT CmdModifyTimeOptions(HWND hwnd, WPARAM wp, LPARAM lp) {
         
         while (token && count < MAX_TIME_OPTIONS) {
             int seconds = 0;
-            extern BOOL ParseTimeInput(const char*, int*);
-            if (!ParseTimeInput(token, &seconds) || seconds <= 0) {
+            if (!TimeParser_ParseBasic(token, &seconds) || seconds <= 0) {
                 valid = 0;
                 break;
             }

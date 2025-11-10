@@ -10,6 +10,7 @@
 #include "language.h"
 #include "config.h"
 #include "dialog/dialog_language.h"
+#include "utils/time_parser.h"
 #include "../resource/resource.h"
 #include <strsafe.h>
 #include <string.h>
@@ -247,7 +248,7 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
                 token = strtok(input_copy, " ");
                 while (token && times_count < MAX_POMODORO_TIMES) {
                     int seconds = 0;
-                    if (ParseTimeInput(token, &seconds)) {
+                    if (TimeParser_ParseBasic(token, &seconds)) {
                         times[times_count++] = seconds;
                     } else {
                         hasInvalidInput = TRUE;
