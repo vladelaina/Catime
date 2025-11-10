@@ -42,6 +42,14 @@ target_compile_definitions(catime PRIVATE
     MINIAUDIO_IMPLEMENTATION
     UNICODE
     _UNICODE
+
+    # miniaudio optimization: disable unused features
+    MA_NO_GENERATION
+    MA_NO_ENCODING
+
+    # Disable unsupported audio formats
+    MA_NO_VORBIS
+    MA_NO_OPUS
 )
 
 # Set compiler flags based on build type
@@ -63,6 +71,11 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
         -fno-trapping-math
         -ffast-math
         -Os
+        -finline-small-functions
+        -finline-functions-called-once
+        -fno-unwind-tables
+        -fno-asynchronous-unwind-tables
+        -fno-ident
         -Wno-unknown-warning-option
     )
     
