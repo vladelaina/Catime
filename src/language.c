@@ -9,8 +9,8 @@
 #include "language.h"
 #include "../resource/resource.h"
 
-#define MAX_TRANSLATIONS 200
-#define MAX_STRING_LENGTH 1024
+#define MAX_TRANSLATIONS 300
+#define MAX_STRING_LENGTH 1536
 
 typedef struct {
     wchar_t english[MAX_STRING_LENGTH];
