@@ -1,12 +1,13 @@
 /**
  * @file config_path.c
  * @brief Configuration path and resource folder management
- * 
+ *
  * Manages configuration file paths, resource folder creation, and first-run detection.
  */
 #include "config.h"
 #include "utils/string_convert.h"
 #include "utils/path_utils.h"
+#include "log.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -50,18 +51,7 @@ void GetConfigPath(char* path, size_t size) {
         /* Build %LOCALAPPDATA%\Catime and ensure directory exists */
         wchar_t wDir[MAX_PATH] = {0};
         _snwprintf_s(wDir, MAX_PATH, _TRUNCATE, L"%s\\Catime", wLocalAppData);
-
-        if (!CreateDirectoryW(wDir, NULL)) {
-            DWORD dwErr = GetLastError();
-            if (dwErr != ERROR_ALREADY_EXISTS) {
-                /* Fallback to portable asset path on failure */
-                const char* fallback = ".\\asset\\config.ini";
-                strncpy(path, fallback, size - 1);
-                path[size - 1] = '\0';
-                CoTaskMemFree(wLocalAppData);
-                return;
-            }
-        }
+        CreateDirectoryW(wDir, NULL);  /* Ignore errors if directory exists */
 
         _snwprintf_s(wConfigPath, MAX_PATH, _TRUNCATE, L"%s\\Catime\\config.ini", wLocalAppData);
         CoTaskMemFree(wLocalAppData);
@@ -76,22 +66,28 @@ void GetConfigPath(char* path, size_t size) {
     if (SUCCEEDED(SHGetFolderPathW(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, wLegacy))) {
         wchar_t wDir[MAX_PATH] = {0};
         _snwprintf_s(wDir, MAX_PATH, _TRUNCATE, L"%s\\Catime", wLegacy);
-        if (!CreateDirectoryW(wDir, NULL)) {
-            DWORD dwErr = GetLastError();
-            if (dwErr != ERROR_ALREADY_EXISTS) {
-                const char* fallback = ".\\asset\\config.ini";
-                strncpy(path, fallback, size - 1);
-                path[size - 1] = '\0';
-                return;
-            }
-        }
+        CreateDirectoryW(wDir, NULL);  /* Ignore errors if directory exists */
+
         _snwprintf_s(wConfigPath, MAX_PATH, _TRUNCATE, L"%s\\Catime\\config.ini", wLegacy);
         WideCharToMultiByte(CP_UTF8, 0, wConfigPath, -1, path, (int)size, NULL, NULL);
         return;
     }
 
-    /* Final fallback: portable asset path */
-    strncpy(path, ".\\asset\\config.ini", size - 1);
+    /* Final fallback: manual path construction using %USERPROFILE% */
+    wchar_t wUserProfile[MAX_PATH] = {0};
+    if (GetEnvironmentVariableW(L"USERPROFILE", wUserProfile, MAX_PATH) > 0) {
+        wchar_t wDir[MAX_PATH] = {0};
+        _snwprintf_s(wDir, MAX_PATH, _TRUNCATE, L"%s\\AppData\\Local\\Catime", wUserProfile);
+        CreateDirectoryW(wDir, NULL);  /* Ignore errors if directory exists */
+
+        _snwprintf_s(wConfigPath, MAX_PATH, _TRUNCATE, L"%s\\AppData\\Local\\Catime\\config.ini", wUserProfile);
+        WideCharToMultiByte(CP_UTF8, 0, wConfigPath, -1, path, (int)size, NULL, NULL);
+        return;
+    }
+
+    /* Critical failure: cannot determine config path */
+    LOG_ERROR("Failed to determine configuration path - all methods failed (SHGetKnownFolderPath, SHGetFolderPathW, USERPROFILE)");
+    strncpy(path, "", size - 1);
     path[size - 1] = '\0';
 }
 
