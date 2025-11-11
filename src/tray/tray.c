@@ -125,10 +125,10 @@ static void BuildBasicTooltip(wchar_t* tip, size_t tipSize, float cpu, float mem
     if (hasNet) {
         FormattedBytes upload = FormatBytesPerSecond((double)upBps);
         FormattedBytes download = FormatBytesPerSecond((double)downBps);
-        swprintf_s(tip, tipSize, L"CPU %.1f%%\nMemory %.1f%%\nUpload %.1f %s\nDownload %.1f %s",
-                   cpu, mem, upload.value, upload.unit, download.value, download.unit);
+        _snwprintf_s(tip, tipSize, _TRUNCATE, L"CPU %.1f%%\nMemory %.1f%%\nUpload %.1f %s\nDownload %.1f %s",
+                     cpu, mem, upload.value, upload.unit, download.value, download.unit);
     } else {
-        swprintf_s(tip, tipSize, L"CPU %.1f%%\nMemory %.1f%%", cpu, mem);
+        _snwprintf_s(tip, tipSize, _TRUNCATE, L"CPU %.1f%%\nMemory %.1f%%", cpu, mem);
     }
 }
 
@@ -188,7 +188,7 @@ static void AppendSpeedLine(wchar_t* tip, size_t tipSize, AnimationSpeedMetric m
     else if (metric == ANIMATION_SPEED_TIMER) metricLabel = L"Timer";
     
     wchar_t extra[128];
-    swprintf_s(extra, _countof(extra), L"\nSpeed · %s %.1f%%", metricLabel, scalePercent);
+    _snwprintf_s(extra, _countof(extra), _TRUNCATE, L"\nSpeed · %s %.1f%%", metricLabel, scalePercent);
     wcsncat_s(tip, tipSize, extra, _TRUNCATE);
 }
 
