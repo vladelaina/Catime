@@ -20,28 +20,32 @@
 
 /**
  * Handle WM_CREATE initialization: position, click-through, and topmost mode.
- * 
+ *
  * @param hwnd Window handle of newly created window
  * @return TRUE if initialization succeeded
+ *
+ * @note Position validation is skipped during startup to avoid false positives
+ *       when display information may not be fully initialized yet.
  */
 BOOL HandleWindowCreate(HWND hwnd) {
     LOG_INFO("Window creation started");
-    
+
     HWND hwndParent = GetParent(hwnd);
     if (hwndParent) {
         EnableWindow(hwndParent, TRUE);
         LOG_INFO("Parent window enabled");
     }
-    
-    AdjustWindowPosition(hwnd, TRUE);
-    LOG_INFO("Window position adjusted");
-    
+
+    /* Skip position validation during window creation - configuration file position is trusted.
+     * Position will be validated on display changes (WM_DISPLAYCHANGE) if needed. */
+    LOG_INFO("Window position validation skipped during creation (trusting config)");
+
     SetClickThrough(hwnd, !CLOCK_EDIT_MODE);
     LOG_INFO("Click-through mode set: %s", CLOCK_EDIT_MODE ? "disabled" : "enabled");
-    
+
     SetWindowTopmost(hwnd, CLOCK_WINDOW_TOPMOST);
     LOG_INFO("Window topmost setting applied: %s", CLOCK_WINDOW_TOPMOST ? "yes" : "no");
-    
+
     LOG_INFO("Window creation completed successfully");
     return TRUE;
 }
