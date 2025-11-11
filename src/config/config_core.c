@@ -91,36 +91,46 @@ AppConfig g_AppConfig = {
  */
 void ReadConfig() {
     CheckAndCreateResourceFolders();
-    
+
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    
+
     /* Create default config if missing */
     if (!FileExists(config_path)) {
         CreateDefaultConfig(config_path);
     }
-    
-    /* Version check - recreate if version mismatch */
+
+    BOOL needsWriteBack = FALSE;
+
+    /* Version check - migrate if version mismatch */
     char version[32] = {0};
-    ReadIniString(INI_SECTION_GENERAL, "CONFIG_VERSION", "", 
+    ReadIniString(INI_SECTION_GENERAL, "CONFIG_VERSION", "",
                  version, sizeof(version), config_path);
-    
+
     if (strcmp(version, CATIME_VERSION) != 0) {
-        CreateDefaultConfig(config_path);
+        MigrateConfig(config_path);
+        needsWriteBack = TRUE;
     }
-    
+
     /* Load configuration into snapshot */
     ConfigSnapshot snapshot;
     if (!LoadConfigFromFile(config_path, &snapshot)) {
         /* Fallback to defaults on load failure */
         InitializeDefaultSnapshot(&snapshot);
     }
-    
-    /* Validate and sanitize */
-    ValidateConfigSnapshot(&snapshot);
-    
+
+    /* Validate and sanitize - returns TRUE if any values were modified */
+    if (ValidateConfigSnapshot(&snapshot)) {
+        needsWriteBack = TRUE;
+    }
+
     /* Apply to global variables */
     ApplyConfigSnapshot(&snapshot);
+
+    /* Write back if migration occurred or validation modified values */
+    if (needsWriteBack) {
+        WriteConfig(config_path);
+    }
 }
 
 /**

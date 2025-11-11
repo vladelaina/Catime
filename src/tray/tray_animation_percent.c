@@ -5,9 +5,9 @@
 
 #include "tray/tray_animation_percent.h"
 
-/* Default colors */
-static COLORREF g_percentTextColor = RGB(255, 255, 255);
-static COLORREF g_percentBgColor = RGB(0, 0, 0);
+/* Default colors: black text on white background */
+static COLORREF g_percentTextColor = RGB(0, 0, 0);
+static COLORREF g_percentBgColor = RGB(255, 255, 255);
 
 /**
  * @brief Set percent icon colors

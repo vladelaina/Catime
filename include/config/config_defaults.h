@@ -84,5 +84,16 @@ const ConfigItemMeta* GetConfigMetadata(int* count);
  */
 int DetectSystemLanguage(void);
 
+/**
+ * @brief Migrate existing config to new version while preserving user settings
+ * @param config_path Path to config file (UTF-8)
+ *
+ * @details
+ * Reads all existing config values, creates a fresh config with defaults,
+ * then restores all user-configured values. New config items get default values.
+ * CONFIG_VERSION is always updated to current version.
+ */
+void MigrateConfig(const char* config_path);
+
 #endif /* CONFIG_DEFAULTS_H */
 

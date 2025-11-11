@@ -412,48 +412,67 @@ BOOL LoadConfigFromFile(const char* config_path, ConfigSnapshot* snapshot) {
 
 BOOL ValidateConfigSnapshot(ConfigSnapshot* snapshot) {
     if (!snapshot) return FALSE;
-    
+
+    BOOL modified = FALSE;
+
     /* One-time actions: prevent these from being persisted in config */
     if (snapshot->timeoutAction == TIMEOUT_ACTION_SHUTDOWN ||
         snapshot->timeoutAction == TIMEOUT_ACTION_RESTART ||
         snapshot->timeoutAction == TIMEOUT_ACTION_SLEEP) {
         snapshot->timeoutAction = TIMEOUT_ACTION_MESSAGE;
+        modified = TRUE;
     }
-    
+
     /* Validate file paths only for OPEN_FILE action */
     if (snapshot->timeoutAction == TIMEOUT_ACTION_OPEN_FILE) {
         if (strlen(snapshot->timeoutFilePath) == 0 || !FileExistsUtf8(snapshot->timeoutFilePath)) {
             snapshot->timeoutAction = TIMEOUT_ACTION_MESSAGE;
+            modified = TRUE;
         }
     }
-    
+
     /* Validate website URL only for OPEN_WEBSITE action */
     if (snapshot->timeoutAction == TIMEOUT_ACTION_OPEN_WEBSITE) {
         if (wcslen(snapshot->timeoutWebsiteUrl) == 0) {
             snapshot->timeoutAction = TIMEOUT_ACTION_MESSAGE;
+            modified = TRUE;
         }
     }
-    
+
     /* Validate ranges */
-    if (snapshot->notificationMaxOpacity < 1) 
+    if (snapshot->notificationMaxOpacity < 1) {
         snapshot->notificationMaxOpacity = 1;
-    if (snapshot->notificationMaxOpacity > 100) 
+        modified = TRUE;
+    }
+    if (snapshot->notificationMaxOpacity > 100) {
         snapshot->notificationMaxOpacity = 100;
-    
-    if (snapshot->notificationSoundVolume < 0) 
+        modified = TRUE;
+    }
+
+    if (snapshot->notificationSoundVolume < 0) {
         snapshot->notificationSoundVolume = 0;
-    if (snapshot->notificationSoundVolume > 100) 
+        modified = TRUE;
+    }
+    if (snapshot->notificationSoundVolume > 100) {
         snapshot->notificationSoundVolume = 100;
-    
-    if (snapshot->pomodoroLoopCount < 1) 
+        modified = TRUE;
+    }
+
+    if (snapshot->pomodoroLoopCount < 1) {
         snapshot->pomodoroLoopCount = 1;
-    
+        modified = TRUE;
+    }
+
     /* Validate scale */
-    if (snapshot->windowScale < MIN_SCALE_FACTOR) 
+    if (snapshot->windowScale < MIN_SCALE_FACTOR) {
         snapshot->windowScale = MIN_SCALE_FACTOR;
-    if (snapshot->windowScale > MAX_SCALE_FACTOR) 
+        modified = TRUE;
+    }
+    if (snapshot->windowScale > MAX_SCALE_FACTOR) {
         snapshot->windowScale = MAX_SCALE_FACTOR;
-    
-    return TRUE;
+        modified = TRUE;
+    }
+
+    return modified;
 }
 

@@ -10,6 +10,7 @@
 #include "../resource/resource.h"
 #include <stdio.h>
 #include <string.h>
+#include <strings.h>
 #include <windows.h>
 #include <winnls.h>
 
@@ -60,6 +61,10 @@ static const ConfigItemMeta CONFIG_METADATA[] = {
     {INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_FILE", "", CONFIG_TYPE_STRING, "Notification sound file"},
     {INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_VOLUME", "100", CONFIG_TYPE_INT, "Sound volume (0-100)"},
     {INI_SECTION_NOTIFICATION, "NOTIFICATION_DISABLED", "FALSE", CONFIG_TYPE_BOOL, "Disable all notifications"},
+    {INI_SECTION_NOTIFICATION, "NOTIFICATION_WINDOW_X", "-1", CONFIG_TYPE_INT, "Notification window X position"},
+    {INI_SECTION_NOTIFICATION, "NOTIFICATION_WINDOW_Y", "-1", CONFIG_TYPE_INT, "Notification window Y position"},
+    {INI_SECTION_NOTIFICATION, "NOTIFICATION_WINDOW_WIDTH", "0", CONFIG_TYPE_INT, "Notification window width"},
+    {INI_SECTION_NOTIFICATION, "NOTIFICATION_WINDOW_HEIGHT", "0", CONFIG_TYPE_INT, "Notification window height"},
     
     /* Animation settings */
     {"Animation", "ANIMATION_PATH", "__logo__", CONFIG_TYPE_STRING, "Tray icon animation path"},
@@ -209,8 +214,170 @@ void CreateDefaultConfig(const char* config_path) {
     
     /* Write all defaults */
     WriteDefaultsToConfig(config_path);
-    
+
     /* Override language with detected value */
     WriteIniString(INI_SECTION_GENERAL, "LANGUAGE", detectedLangName, config_path);
+}
+
+typedef struct ConfigEntry {
+    char section[64];
+    char key[64];
+    char value[512];
+    struct ConfigEntry* next;
+} ConfigEntry;
+
+static void FreeConfigEntryList(ConfigEntry* head) {
+    while (head) {
+        ConfigEntry* next = head->next;
+        free(head);
+        head = next;
+    }
+}
+
+static ConfigEntry* ReadAllConfigEntries(const char* config_path) {
+    wchar_t wConfigPath[MAX_PATH] = {0};
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wConfigPath, MAX_PATH);
+
+    ConfigEntry* head = NULL;
+    ConfigEntry* tail = NULL;
+
+    /* Buffer for section names (32KB should be enough) */
+    wchar_t* sectionNames = (wchar_t*)malloc(32768 * sizeof(wchar_t));
+    if (!sectionNames) return NULL;
+
+    /* Get all section names */
+    DWORD sectionsLen = GetPrivateProfileSectionNamesW(sectionNames, 32768, wConfigPath);
+    if (sectionsLen == 0) {
+        free(sectionNames);
+        return NULL;
+    }
+
+    /* Iterate through each section */
+    wchar_t* currentSection = sectionNames;
+    while (*currentSection) {
+        /* Buffer for section content */
+        wchar_t* sectionData = (wchar_t*)malloc(32768 * sizeof(wchar_t));
+        if (!sectionData) {
+            free(sectionNames);
+            FreeConfigEntryList(head);
+            return NULL;
+        }
+
+        /* Get all key=value pairs in this section */
+        DWORD dataLen = GetPrivateProfileSectionW(currentSection, sectionData, 32768, wConfigPath);
+
+        if (dataLen > 0) {
+            /* Parse key=value pairs */
+            wchar_t* currentPair = sectionData;
+            while (*currentPair) {
+                /* Find the '=' separator */
+                wchar_t* equalSign = wcschr(currentPair, L'=');
+                if (equalSign) {
+                    /* Create new entry */
+                    ConfigEntry* entry = (ConfigEntry*)calloc(1, sizeof(ConfigEntry));
+                    if (!entry) {
+                        free(sectionData);
+                        free(sectionNames);
+                        FreeConfigEntryList(head);
+                        return NULL;
+                    }
+
+                    /* Extract section name */
+                    WideCharToMultiByte(CP_UTF8, 0, currentSection, -1,
+                                       entry->section, sizeof(entry->section), NULL, NULL);
+
+                    /* Extract key (before '=') */
+                    size_t keyLen = equalSign - currentPair;
+                    if (keyLen >= sizeof(entry->key)) keyLen = sizeof(entry->key) - 1;
+                    wchar_t keyBuf[64];
+                    wcsncpy(keyBuf, currentPair, keyLen);
+                    keyBuf[keyLen] = L'\0';
+                    WideCharToMultiByte(CP_UTF8, 0, keyBuf, -1,
+                                       entry->key, sizeof(entry->key), NULL, NULL);
+
+                    /* Extract value (after '=') */
+                    WideCharToMultiByte(CP_UTF8, 0, equalSign + 1, -1,
+                                       entry->value, sizeof(entry->value), NULL, NULL);
+
+                    /* Add to linked list */
+                    if (!head) {
+                        head = tail = entry;
+                    } else {
+                        tail->next = entry;
+                        tail = entry;
+                    }
+                }
+
+                /* Move to next key=value pair */
+                currentPair += wcslen(currentPair) + 1;
+            }
+        }
+
+        free(sectionData);
+
+        /* Move to next section */
+        currentSection += wcslen(currentSection) + 1;
+    }
+
+    free(sectionNames);
+    return head;
+}
+
+void MigrateConfig(const char* config_path) {
+    if (!config_path) return;
+
+    /* Step 1: Read ALL config entries from old file (automatic discovery) */
+    ConfigEntry* oldConfig = ReadAllConfigEntries(config_path);
+    if (!oldConfig) {
+        /* If reading fails, just create default config */
+        CreateDefaultConfig(config_path);
+        return;
+    }
+
+    /* Step 2: Fix legacy color swap bug in PERCENT_ICON colors */
+    ConfigEntry* textColorEntry = NULL;
+    ConfigEntry* bgColorEntry = NULL;
+    ConfigEntry* current = oldConfig;
+    while (current) {
+        if (strcmp(current->section, "Animation") == 0) {
+            if (strcmp(current->key, "PERCENT_ICON_TEXT_COLOR") == 0) {
+                textColorEntry = current;
+            } else if (strcmp(current->key, "PERCENT_ICON_BG_COLOR") == 0) {
+                bgColorEntry = current;
+            }
+        }
+        current = current->next;
+    }
+
+    /* Swap colors if they match the old buggy default (white text, black bg) */
+    if (textColorEntry && bgColorEntry &&
+        (strcasecmp(textColorEntry->value, "#FFFFFF") == 0 || strcasecmp(textColorEntry->value, "#ffffff") == 0) &&
+        (strcasecmp(bgColorEntry->value, "#000000") == 0 || strcasecmp(bgColorEntry->value, "#000") == 0)) {
+        /* Swap: TEXT=#FFFFFF -> #000000, BG=#000000 -> #FFFFFF */
+        strncpy(textColorEntry->value, "#000000", sizeof(textColorEntry->value) - 1);
+        strncpy(bgColorEntry->value, "#FFFFFF", sizeof(bgColorEntry->value) - 1);
+    }
+
+    /* Step 3: Delete old config file to remove deprecated items */
+    wchar_t wConfigPath[MAX_PATH] = {0};
+    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wConfigPath, MAX_PATH);
+    DeleteFileW(wConfigPath);
+
+    /* Step 4: Create fresh default config */
+    CreateDefaultConfig(config_path);
+
+    /* Step 5: Restore ALL user values (except CONFIG_VERSION) */
+    current = oldConfig;
+    while (current) {
+        /* Skip CONFIG_VERSION - must be updated to current version */
+        if (strcmp(current->key, "CONFIG_VERSION") != 0) {
+            /* Restore value (WriteIniString handles all types) */
+            WriteIniString(current->section, current->key, current->value, config_path);
+        }
+        current = current->next;
+    }
+
+    /* Clean up */
+    FreeConfigEntryList(oldConfig);
 }
 
