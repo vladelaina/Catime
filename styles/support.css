@@ -222,6 +222,37 @@
     color: #07c160;
 }
 
+/* Ko-fi 按钮区域 */
+.kofi-button-wrapper {
+    margin-top: 3rem;
+    text-align: center;
+}
+
+.kofi-official-button {
+    height: 80px;
+    width: auto;
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.12);
+    transition: all 0.3s ease;
+    display: inline-block;
+}
+
+.kofi-official-button:hover {
+    transform: translateY(-5px) scale(1.05);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.kofi-button-wrapper a {
+    display: inline-block;
+    text-decoration: none;
+}
+
+/* 确保 Ko-fi 链接保持块级显示 */
+a.support-method {
+    text-decoration: none;
+    display: block;
+}
+
 .support-project .section-title i.fa-mug-hot {
     color: #ffac33;
     font-size: 1.2em;
@@ -267,6 +298,14 @@
     .support-label {
         font-size: 1.3rem;
     }
+
+    .kofi-button-wrapper {
+        margin-top: 2.5rem;
+    }
+
+    .kofi-official-button {
+        height: 70px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -288,6 +327,14 @@
     
     .support-label {
         font-size: 1.2rem;
+    }
+
+    .kofi-button-wrapper {
+        margin-top: 2rem;
+    }
+
+    .kofi-official-button {
+        height: 60px;
     }
 }
 

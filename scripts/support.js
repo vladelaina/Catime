@@ -198,8 +198,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // 使用setTimeout添加过渡回原位的动画
             setTimeout(() => {
                 card.style.transition = 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-                qrCode.style.transition = 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-                label.style.transition = 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                if (qrCode) qrCode.style.transition = 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                if (label) label.style.transition = 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
             }, 50);
         });
         
