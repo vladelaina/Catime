@@ -337,6 +337,19 @@ static void FreeConfigEntryList(ConfigEntry* head) {
     }
 }
 
+static BOOL IsConfigItemInMetadata(const char* section, const char* key) {
+    if (!section || !key) return FALSE;
+
+    for (int i = 0; i < CONFIG_METADATA_COUNT; i++) {
+        if (strcmp(CONFIG_METADATA[i].section, section) == 0 &&
+            strcmp(CONFIG_METADATA[i].key, key) == 0) {
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
 static ConfigEntry* ReadAllConfigEntries(const char* config_path) {
     wchar_t wConfigPath[MAX_PATH] = {0};
     MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wConfigPath, MAX_PATH);
@@ -482,7 +495,7 @@ void MigrateConfig(const char* config_path) {
     /* Step 4: Create fresh default config */
     CreateDefaultConfig(config_path);
 
-    /* Step 5: Restore ALL user values (except CONFIG_VERSION) */
+    /* Step 5: Restore user values that exist in CONFIG_METADATA */
     current = oldConfig;
     while (current) {
         /* Skip CONFIG_VERSION - must be updated to current version */
@@ -491,8 +504,11 @@ void MigrateConfig(const char* config_path) {
             continue;
         }
 
-        /* Restore value (WriteIniString handles all types) */
-        WriteIniString(current->section, current->key, current->value, config_path);
+        /* Only restore if config item exists in current metadata (filters deprecated items) */
+        if (IsConfigItemInMetadata(current->section, current->key)) {
+            WriteIniString(current->section, current->key, current->value, config_path);
+        }
+
         current = current->next;
     }
 
