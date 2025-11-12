@@ -80,8 +80,8 @@ static const ConfigItemMeta CONFIG_METADATA[] = {
     {"Animation", "ANIMATION_SPEED_MAP_80", "420", CONFIG_TYPE_STRING, "Speed at 80% metric"},
     {"Animation", "ANIMATION_SPEED_MAP_90", "460", CONFIG_TYPE_STRING, "Speed at 90% metric"},
     {"Animation", "ANIMATION_SPEED_MAP_100", "500", CONFIG_TYPE_STRING, "Speed at 100% metric"},
-    {"Animation", "PERCENT_ICON_TEXT_COLOR", DEFAULT_BLACK_COLOR, CONFIG_TYPE_STRING, "Percent icon text color"},
-    {"Animation", "PERCENT_ICON_BG_COLOR", DEFAULT_WHITE_COLOR, CONFIG_TYPE_STRING, "Percent icon background color"},
+    {"Animation", "PERCENT_ICON_TEXT_COLOR", "auto", CONFIG_TYPE_STRING, "Percent icon text color (auto = theme-based, or hex color like #000000)"},
+    {"Animation", "PERCENT_ICON_BG_COLOR", "transparent", CONFIG_TYPE_STRING, "Percent icon background color (transparent = no background, or hex color like #FFFFFF)"},
     {"Animation", "ANIMATION_FOLDER_INTERVAL_MS", "150", CONFIG_TYPE_INT, "Folder animation interval"},
     {"Animation", "ANIMATION_MIN_INTERVAL_MS", "0", CONFIG_TYPE_INT, "Minimum animation interval"},
     
@@ -161,16 +161,16 @@ int DetectSystemLanguage(void) {
 
 void WriteDefaultsToConfig(const char* config_path) {
     if (!config_path) return;
-    
+
     /* Write all metadata-defined defaults */
     for (int i = 0; i < CONFIG_METADATA_COUNT; i++) {
         const ConfigItemMeta* item = &CONFIG_METADATA[i];
-        
+
         switch (item->type) {
             case CONFIG_TYPE_INT:
                 WriteIniInt(item->section, item->key, atoi(item->defaultValue), config_path);
                 break;
-                
+
             case CONFIG_TYPE_BOOL:
             case CONFIG_TYPE_STRING:
             case CONFIG_TYPE_ENUM:
@@ -334,7 +334,7 @@ void MigrateConfig(const char* config_path) {
         return;
     }
 
-    /* Step 2: Fix legacy color swap bug in PERCENT_ICON colors */
+    /* Step 2: Detect and convert legacy default PERCENT_ICON colors */
     ConfigEntry* textColorEntry = NULL;
     ConfigEntry* bgColorEntry = NULL;
     ConfigEntry* current = oldConfig;
@@ -349,13 +349,26 @@ void MigrateConfig(const char* config_path) {
         current = current->next;
     }
 
-    /* Swap colors if they match the old buggy default (white text, black bg) */
-    if (textColorEntry && bgColorEntry &&
-        (strcasecmp(textColorEntry->value, "#FFFFFF") == 0 || strcasecmp(textColorEntry->value, "#ffffff") == 0) &&
-        (strcasecmp(bgColorEntry->value, "#000000") == 0 || strcasecmp(bgColorEntry->value, "#000") == 0)) {
-        /* Swap: TEXT=#FFFFFF -> #000000, BG=#000000 -> #FFFFFF */
-        strncpy(textColorEntry->value, "#000000", sizeof(textColorEntry->value) - 1);
-        strncpy(bgColorEntry->value, "#FFFFFF", sizeof(bgColorEntry->value) - 1);
+    /* Convert old hardcoded defaults to new "auto"/"transparent" keywords */
+    BOOL isOldHardcodedDefault = FALSE;
+    if (textColorEntry && bgColorEntry) {
+        /* Old buggy default: white text (#FFFFFF), black bg (#000000) */
+        BOOL isOldBuggyDefault =
+            (strcasecmp(textColorEntry->value, "#FFFFFF") == 0 || strcasecmp(textColorEntry->value, "#ffffff") == 0) &&
+            (strcasecmp(bgColorEntry->value, "#000000") == 0 || strcasecmp(bgColorEntry->value, "#000") == 0);
+
+        /* Old fixed default: black text (#000000), white bg (#FFFFFF) */
+        BOOL isOldFixedDefault =
+            (strcasecmp(textColorEntry->value, "#000000") == 0 || strcasecmp(textColorEntry->value, "#000") == 0) &&
+            (strcasecmp(bgColorEntry->value, "#FFFFFF") == 0 || strcasecmp(bgColorEntry->value, "#ffffff") == 0);
+
+        isOldHardcodedDefault = isOldBuggyDefault || isOldFixedDefault;
+
+        /* Convert to new defaults */
+        if (isOldHardcodedDefault) {
+            strncpy(textColorEntry->value, "auto", sizeof(textColorEntry->value) - 1);
+            strncpy(bgColorEntry->value, "transparent", sizeof(bgColorEntry->value) - 1);
+        }
     }
 
     /* Step 3: Delete old config file to remove deprecated items */
@@ -370,10 +383,13 @@ void MigrateConfig(const char* config_path) {
     current = oldConfig;
     while (current) {
         /* Skip CONFIG_VERSION - must be updated to current version */
-        if (strcmp(current->key, "CONFIG_VERSION") != 0) {
-            /* Restore value (WriteIniString handles all types) */
-            WriteIniString(current->section, current->key, current->value, config_path);
+        if (strcmp(current->key, "CONFIG_VERSION") == 0) {
+            current = current->next;
+            continue;
         }
+
+        /* Restore value (WriteIniString handles all types) */
+        WriteIniString(current->section, current->key, current->value, config_path);
         current = current->next;
     }
 

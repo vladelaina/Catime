@@ -12,9 +12,17 @@
 #include <windows.h>
 
 /**
+ * @brief Transparent background marker value
+ *
+ * When bgColor is set to this value, the icon background becomes transparent
+ * and text color automatically adapts based on Windows theme (dark/light).
+ */
+#define TRANSPARENT_BG_AUTO 0xFFFFFFFF
+
+/**
  * @brief Set percent icon colors
  * @param textColor Foreground color (RGB)
- * @param bgColor Background color (RGB)
+ * @param bgColor Background color (RGB or TRANSPARENT_BG_AUTO)
  */
 void SetPercentIconColors(COLORREF textColor, COLORREF bgColor);
 

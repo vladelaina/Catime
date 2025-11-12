@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <windows.h>
 
 typedef struct {
@@ -220,14 +221,27 @@ void ReadPercentIconColorsConfig(void) {
     GetConfigPath(config_path, MAX_PATH);
     char textBuf[32] = {0};
     char bgBuf[32] = {0};
-    ReadIniString("Animation", "PERCENT_ICON_TEXT_COLOR", DEFAULT_BLACK_COLOR, textBuf, sizeof(textBuf), config_path);
-    ReadIniString("Animation", "PERCENT_ICON_BG_COLOR", DEFAULT_WHITE_COLOR, bgBuf, sizeof(bgBuf), config_path);
-    
+    ReadIniString("Animation", "PERCENT_ICON_TEXT_COLOR", "auto", textBuf, sizeof(textBuf), config_path);
+    ReadIniString("Animation", "PERCENT_ICON_BG_COLOR", "transparent", bgBuf, sizeof(bgBuf), config_path);
+
     COLORREF textColor = RGB(0, 0, 0);
-    COLORREF bgColor = RGB(255, 255, 255);
-    if (ParseColorString(textBuf, &textColor) && ParseColorString(bgBuf, &bgColor)) {
-        SetPercentIconColors(textColor, bgColor);
+    COLORREF bgColor = TRANSPARENT_BG_AUTO;
+
+    /* Parse text color: empty or "auto" means theme-based (handled in CreatePercentIcon16) */
+    if (textBuf[0] == '\0' || strcasecmp(textBuf, "auto") == 0) {
+        textColor = RGB(0, 0, 0);  /* Placeholder, will be overridden by theme detection */
+    } else if (!ParseColorString(textBuf, &textColor)) {
+        textColor = RGB(0, 0, 0);  /* Fallback to black */
     }
+
+    /* Parse background color: empty or "transparent" means transparent with theme-aware text */
+    if (bgBuf[0] == '\0' || strcasecmp(bgBuf, "transparent") == 0) {
+        bgColor = TRANSPARENT_BG_AUTO;
+    } else if (!ParseColorString(bgBuf, &bgColor)) {
+        bgColor = TRANSPARENT_BG_AUTO;  /* Fallback to transparent */
+    }
+
+    SetPercentIconColors(textColor, bgColor);
 }
 
 /** Animation speed persistence (called from WriteConfig) */
@@ -254,15 +268,27 @@ void WriteAnimationSpeedToConfig(const char* config_path) {
     }
     
     WriteIniInt("Animation", "ANIMATION_MIN_INTERVAL_MS", g_animMinIntervalMs, config_path);
-    
+
     /** Persist percent icon colors */
     COLORREF textColor = GetPercentIconTextColor();
     COLORREF bgColor = GetPercentIconBgColor();
-    
-    char buf[16];
-    snprintf(buf, sizeof(buf), "#%02X%02X%02X", GetRValue(textColor), GetGValue(textColor), GetBValue(textColor));
-    WriteIniString("Animation", "PERCENT_ICON_TEXT_COLOR", buf, config_path);
-    snprintf(buf, sizeof(buf), "#%02X%02X%02X", GetRValue(bgColor), GetGValue(bgColor), GetBValue(bgColor));
-    WriteIniString("Animation", "PERCENT_ICON_BG_COLOR", buf, config_path);
+
+    /* Write text color: "auto" if using transparent background (theme-aware) */
+    if (bgColor == TRANSPARENT_BG_AUTO) {
+        WriteIniString("Animation", "PERCENT_ICON_TEXT_COLOR", "auto", config_path);
+    } else {
+        char buf[16];
+        snprintf(buf, sizeof(buf), "#%02X%02X%02X", GetRValue(textColor), GetGValue(textColor), GetBValue(textColor));
+        WriteIniString("Animation", "PERCENT_ICON_TEXT_COLOR", buf, config_path);
+    }
+
+    /* Write background color: "transparent" if using auto-transparent mode */
+    if (bgColor == TRANSPARENT_BG_AUTO) {
+        WriteIniString("Animation", "PERCENT_ICON_BG_COLOR", "transparent", config_path);
+    } else {
+        char buf[16];
+        snprintf(buf, sizeof(buf), "#%02X%02X%02X", GetRValue(bgColor), GetGValue(bgColor), GetBValue(bgColor));
+        WriteIniString("Animation", "PERCENT_ICON_BG_COLOR", buf, config_path);
+    }
 }
 
