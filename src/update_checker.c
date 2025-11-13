@@ -15,7 +15,7 @@
 #include "language.h"
 #include "dialog/dialog_language.h"
 #include "dialog/dialog_procedure.h"
-#include "markdown_parser.h"
+#include "markdown/markdown_parser.h"
 #include "../resource/resource.h"
 #include "utils/string_convert.h"
 

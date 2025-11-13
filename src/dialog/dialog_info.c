@@ -8,7 +8,7 @@
 #include "language.h"
 #include "dialog/dialog_language.h"
 #include "config.h"
-#include "markdown_parser.h"
+#include "markdown/markdown_parser.h"
 #include "../resource/resource.h"
 #include <shellapi.h>
 #include <strsafe.h>

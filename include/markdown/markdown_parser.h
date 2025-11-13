@@ -83,6 +83,29 @@ typedef struct {
 } MarkdownBlockquote;
 
 /**
+ * @brief Internal parser state (used by parsing logic)
+ */
+typedef struct {
+    wchar_t* displayText;
+    MarkdownLink* links;
+    int linkCount;
+    int linkCapacity;
+    MarkdownHeading* headings;
+    int headingCount;
+    int headingCapacity;
+    MarkdownStyle* styles;
+    int styleCount;
+    int styleCapacity;
+    MarkdownListItem* listItems;
+    int listItemCount;
+    int listItemCapacity;
+    MarkdownBlockquote* blockquotes;
+    int blockquoteCount;
+    int blockquoteCapacity;
+    int currentPos;
+} ParseState;
+
+/**
  * @brief Parse [text](url) links, # headings, inline styles, list items, and blockquotes from input
  * @param input Input text with markdown
  * @param displayText Output without markup (caller must free)
@@ -267,5 +290,19 @@ BOOL HandleMarkdownClick(MarkdownLink* links, int linkCount, POINT clickPoint);
  */
 #define MARKDOWN_DEFAULT_LINK_COLOR RGB(0, 100, 200)
 #define MARKDOWN_DEFAULT_TEXT_COLOR GetSysColor(COLOR_WINDOWTEXT)
+
+/* Internal API (state management functions) */
+
+BOOL EnsureLinkCapacity(ParseState* state);
+BOOL EnsureHeadingCapacity(ParseState* state);
+BOOL EnsureStyleCapacity(ParseState* state);
+BOOL EnsureListItemCapacity(ParseState* state);
+BOOL EnsureBlockquoteCapacity(ParseState* state);
+void CleanupParseState(ParseState* state);
+int GetInitialLinkCapacity(int estimatedCount);
+int GetInitialHeadingCapacity(int estimatedCount);
+int GetInitialStyleCapacity(int estimatedCount);
+int GetInitialListItemCapacity(int estimatedCount);
+int GetInitialBlockquoteCapacity(int estimatedCount);
 
 #endif // MARKDOWN_PARSER_H
