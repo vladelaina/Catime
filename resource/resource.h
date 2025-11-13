@@ -10,7 +10,7 @@
 #define CATIME_RESOURCE_H
 
 /** @brief Application version information */
-#define CATIME_VERSION "1.4.0-alpha1"    /**< Version string */
+#define CATIME_VERSION "1.2.0-alpha1"    /**< Version string */
 #define CATIME_VERSION_MAJOR 1           /**< Major version number */
 #define CATIME_VERSION_MINOR 4           /**< Minor version number */
 #define CATIME_VERSION_PATCH 0           /**< Patch version number */
@@ -404,7 +404,7 @@
 #define IDD_UPDATE_DIALOG 710           /**< Update available dialog */
 #define IDC_UPDATE_TEXT 711             /**< Update message text control */
 #define IDC_UPDATE_EXIT_TEXT 712        /**< Update exit text control */
-#define IDC_UPDATE_NOTES 713            /**< Update release notes text control */
+#define IDC_UPDATE_NOTES 713            /**< Update release notes text control with modern scrollbar */
 
 /** @brief Update error dialog identifiers */
 #define IDD_UPDATE_ERROR_DIALOG 720     /**< Update error dialog */

@@ -4,6 +4,8 @@
  */
 #include <windows.h>
 #include <wininet.h>
+#include <commctrl.h>
+#include <windowsx.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,10 +15,12 @@
 #include "language.h"
 #include "dialog/dialog_language.h"
 #include "dialog/dialog_procedure.h"
+#include "markdown_parser.h"
 #include "../resource/resource.h"
 #include "utils/string_convert.h"
 
 #pragma comment(lib, "wininet.lib")
+#pragma comment(lib, "comctl32.lib")
 
 #define GITHUB_API_URL "https://api.github.com/repos/vladelaina/Catime/releases/latest"
 #define USER_AGENT "Catime Update Checker"
@@ -25,6 +29,13 @@
 #define NOTES_BUFFER_SIZE 4096
 #define INITIAL_HTTP_BUFFER_SIZE 8192
 #define ERROR_MSG_BUFFER_SIZE 256
+
+#define MODERN_SCROLLBAR_WIDTH 8
+#define MODERN_SCROLLBAR_MARGIN 2
+#define MODERN_SCROLLBAR_MIN_THUMB 30
+#define MODERN_SCROLLBAR_THUMB_COLOR RGB(150, 150, 150)
+#define MODERN_SCROLLBAR_THUMB_HOVER_COLOR RGB(120, 120, 120)
+#define MODERN_SCROLLBAR_THUMB_DRAG_COLOR RGB(100, 100, 100)
 
 /** @brief Version info for dialog display */
 typedef struct {
@@ -63,6 +74,46 @@ static inline wchar_t* LocalUtf8ToWideAlloc(const char* utf8Str) {
 
 static inline BOOL LocalUtf8ToWideFixed(const char* utf8Str, wchar_t* wideBuf, int bufSize) {
     return Utf8ToWide(utf8Str, wideBuf, (size_t)bufSize);
+}
+
+/** @brief Calculate modern scrollbar thumb rectangle */
+static void CalculateScrollbarThumbRect(RECT clientRect, int scrollPos, int scrollMax,
+                                         int scrollPage, RECT* outThumbRect) {
+    int trackHeight = clientRect.bottom - clientRect.top;
+    int contentHeight = scrollMax;
+
+    if (contentHeight <= scrollPage || scrollPage == 0) {
+        SetRectEmpty(outThumbRect);
+        return;
+    }
+
+    int thumbHeight = (int)((float)scrollPage / contentHeight * trackHeight);
+    if (thumbHeight < MODERN_SCROLLBAR_MIN_THUMB) {
+        thumbHeight = MODERN_SCROLLBAR_MIN_THUMB;
+    }
+
+    int maxThumbTop = trackHeight - thumbHeight;
+    int thumbTop = (int)((float)scrollPos / (contentHeight - scrollPage) * maxThumbTop);
+
+    outThumbRect->left = clientRect.right - MODERN_SCROLLBAR_WIDTH - MODERN_SCROLLBAR_MARGIN;
+    outThumbRect->top = clientRect.top + thumbTop;
+    outThumbRect->right = clientRect.right - MODERN_SCROLLBAR_MARGIN;
+    outThumbRect->bottom = outThumbRect->top + thumbHeight;
+}
+
+/** @brief Draw rounded rectangle */
+static void DrawRoundedRect(HDC hdc, RECT rect, int radius, COLORREF color) {
+    HBRUSH hBrush = CreateSolidBrush(color);
+    HPEN hPen = CreatePen(PS_SOLID, 1, color);
+    HGDIOBJ hOldBrush = SelectObject(hdc, hBrush);
+    HGDIOBJ hOldPen = SelectObject(hdc, hPen);
+
+    RoundRect(hdc, rect.left, rect.top, rect.right, rect.bottom, radius, radius);
+
+    SelectObject(hdc, hOldPen);
+    SelectObject(hdc, hOldBrush);
+    DeleteObject(hPen);
+    DeleteObject(hBrush);
 }
 
 /**
@@ -301,20 +352,218 @@ INT_PTR CALLBACK ExitMsgDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lP
     return FALSE;
 }
 
+/** @brief Subclassed window procedure for scrollable notes control */
+static LRESULT CALLBACK NotesControlProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam,
+                                         UINT_PTR uIdSubclass, DWORD_PTR dwRefData) {
+    switch (msg) {
+        case WM_LBUTTONDOWN: {
+            int scrollPos = (int)(INT_PTR)GetProp(hwnd, L"ScrollPos");
+            int scrollMax = (int)(INT_PTR)GetProp(hwnd, L"ScrollMax");
+            int scrollPage = (int)(INT_PTR)GetProp(hwnd, L"ScrollPage");
+
+            if (scrollMax > scrollPage) {
+                RECT clientRect;
+                GetClientRect(hwnd, &clientRect);
+
+                RECT thumbRect;
+                CalculateScrollbarThumbRect(clientRect, scrollPos, scrollMax, scrollPage, &thumbRect);
+
+                POINT pt = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+
+                if (PtInRect(&thumbRect, pt)) {
+                    SetProp(hwnd, L"ThumbDragging", (HANDLE)1);
+                    SetProp(hwnd, L"DragStartY", (HANDLE)(INT_PTR)pt.y);
+                    SetProp(hwnd, L"DragStartScrollPos", (HANDLE)(INT_PTR)scrollPos);
+                    SetCapture(hwnd);
+                    return 0;
+                } else if (pt.x >= clientRect.right - MODERN_SCROLLBAR_WIDTH - MODERN_SCROLLBAR_MARGIN) {
+                    int trackHeight = clientRect.bottom - clientRect.top;
+                    int thumbHeight = (int)((float)scrollPage / scrollMax * trackHeight);
+                    if (thumbHeight < MODERN_SCROLLBAR_MIN_THUMB) thumbHeight = MODERN_SCROLLBAR_MIN_THUMB;
+
+                    if (pt.y < thumbRect.top) {
+                        scrollPos -= scrollPage;
+                    } else if (pt.y > thumbRect.bottom) {
+                        scrollPos += scrollPage;
+                    }
+
+                    if (scrollPos < 0) scrollPos = 0;
+                    if (scrollPos > scrollMax - scrollPage) scrollPos = scrollMax - scrollPage;
+
+                    SetProp(hwnd, L"ScrollPos", (HANDLE)(INT_PTR)scrollPos);
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    return 0;
+                }
+            }
+
+            MarkdownLink* links = (MarkdownLink*)GetProp(hwnd, L"MarkdownLinks");
+            int linkCount = (int)(INT_PTR)GetProp(hwnd, L"LinkCount");
+            scrollPos = (int)(INT_PTR)GetProp(hwnd, L"ScrollPos");
+
+            if (links && linkCount > 0) {
+                POINT pt;
+                pt.x = GET_X_LPARAM(lParam);
+                pt.y = GET_Y_LPARAM(lParam) + scrollPos;
+
+                if (HandleMarkdownClick(links, linkCount, pt)) {
+                    return 0;
+                }
+            }
+            return DefSubclassProc(hwnd, msg, wParam, lParam);
+        }
+
+        case WM_LBUTTONUP: {
+            if ((INT_PTR)GetProp(hwnd, L"ThumbDragging")) {
+                SetProp(hwnd, L"ThumbDragging", (HANDLE)0);
+                ReleaseCapture();
+                InvalidateRect(hwnd, NULL, TRUE);
+            }
+            return 0;
+        }
+
+        case WM_MOUSEMOVE: {
+            POINT pt = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+
+            if ((INT_PTR)GetProp(hwnd, L"ThumbDragging")) {
+                int dragStartY = (int)(INT_PTR)GetProp(hwnd, L"DragStartY");
+                int dragStartScrollPos = (int)(INT_PTR)GetProp(hwnd, L"DragStartScrollPos");
+                int scrollMax = (int)(INT_PTR)GetProp(hwnd, L"ScrollMax");
+                int scrollPage = (int)(INT_PTR)GetProp(hwnd, L"ScrollPage");
+
+                RECT clientRect;
+                GetClientRect(hwnd, &clientRect);
+                int trackHeight = clientRect.bottom - clientRect.top;
+
+                int thumbHeight = (int)((float)scrollPage / scrollMax * trackHeight);
+                if (thumbHeight < MODERN_SCROLLBAR_MIN_THUMB) thumbHeight = MODERN_SCROLLBAR_MIN_THUMB;
+
+                int maxThumbTop = trackHeight - thumbHeight;
+                int deltaY = pt.y - dragStartY;
+                int deltaScroll = (int)((float)deltaY / maxThumbTop * (scrollMax - scrollPage));
+
+                int newScrollPos = dragStartScrollPos + deltaScroll;
+                if (newScrollPos < 0) newScrollPos = 0;
+                if (newScrollPos > scrollMax - scrollPage) newScrollPos = scrollMax - scrollPage;
+
+                SetProp(hwnd, L"ScrollPos", (HANDLE)(INT_PTR)newScrollPos);
+                InvalidateRect(hwnd, NULL, TRUE);
+                return 0;
+            }
+
+            int scrollPos = (int)(INT_PTR)GetProp(hwnd, L"ScrollPos");
+            int scrollMax = (int)(INT_PTR)GetProp(hwnd, L"ScrollMax");
+            int scrollPage = (int)(INT_PTR)GetProp(hwnd, L"ScrollPage");
+
+            if (scrollMax > scrollPage) {
+                RECT clientRect;
+                GetClientRect(hwnd, &clientRect);
+
+                RECT thumbRect;
+                CalculateScrollbarThumbRect(clientRect, scrollPos, scrollMax, scrollPage, &thumbRect);
+
+                BOOL wasHovered = (BOOL)(INT_PTR)GetProp(hwnd, L"ThumbHovered");
+                BOOL isHovered = PtInRect(&thumbRect, pt);
+
+                if (wasHovered != isHovered) {
+                    SetProp(hwnd, L"ThumbHovered", (HANDLE)(INT_PTR)isHovered);
+                    InvalidateRect(hwnd, NULL, TRUE);
+
+                    if (isHovered) {
+                        TRACKMOUSEEVENT tme = {0};
+                        tme.cbSize = sizeof(TRACKMOUSEEVENT);
+                        tme.dwFlags = TME_LEAVE;
+                        tme.hwndTrack = hwnd;
+                        TrackMouseEvent(&tme);
+                    }
+                }
+            }
+            return DefSubclassProc(hwnd, msg, wParam, lParam);
+        }
+
+        case WM_MOUSELEAVE: {
+            if ((INT_PTR)GetProp(hwnd, L"ThumbHovered")) {
+                SetProp(hwnd, L"ThumbHovered", (HANDLE)0);
+                InvalidateRect(hwnd, NULL, TRUE);
+            }
+            return 0;
+        }
+
+        case WM_MOUSEWHEEL: {
+            int delta = GET_WHEEL_DELTA_WPARAM(wParam);
+            int wheelScrollLines = 3;
+            SystemParametersInfo(SPI_GETWHEELSCROLLLINES, 0, &wheelScrollLines, 0);
+
+            int scrollAmount = wheelScrollLines * 20;
+
+            int scrollPos = (int)(INT_PTR)GetProp(hwnd, L"ScrollPos");
+            int scrollMax = (int)(INT_PTR)GetProp(hwnd, L"ScrollMax");
+            int scrollPage = (int)(INT_PTR)GetProp(hwnd, L"ScrollPage");
+
+            scrollPos -= (delta > 0 ? scrollAmount : -scrollAmount);
+
+            if (scrollPos < 0) scrollPos = 0;
+            if (scrollPos > scrollMax - scrollPage) scrollPos = scrollMax - scrollPage;
+
+            SetProp(hwnd, L"ScrollPos", (HANDLE)(INT_PTR)scrollPos);
+            InvalidateRect(hwnd, NULL, TRUE);
+            return 0;
+        }
+
+        case WM_SETCURSOR: {
+            MarkdownLink* links = (MarkdownLink*)GetProp(hwnd, L"MarkdownLinks");
+            int linkCount = (int)(INT_PTR)GetProp(hwnd, L"LinkCount");
+            int scrollPos = (int)(INT_PTR)GetProp(hwnd, L"ScrollPos");
+
+            if (links && linkCount > 0) {
+                POINT pt;
+                GetCursorPos(&pt);
+                ScreenToClient(hwnd, &pt);
+                pt.y += scrollPos;
+
+                const wchar_t* url = GetClickedLinkUrl(links, linkCount, pt);
+                if (url) {
+                    SetCursor(LoadCursor(NULL, IDC_HAND));
+                    return TRUE;
+                }
+            }
+            break;
+        }
+
+        case WM_NCDESTROY:
+            RemoveProp(hwnd, L"ScrollPos");
+            RemoveProp(hwnd, L"ScrollMax");
+            RemoveProp(hwnd, L"ScrollPage");
+            RemoveProp(hwnd, L"ThumbDragging");
+            RemoveProp(hwnd, L"DragStartY");
+            RemoveProp(hwnd, L"DragStartScrollPos");
+            RemoveProp(hwnd, L"ThumbHovered");
+            RemoveProp(hwnd, L"MarkdownLinks");
+            RemoveProp(hwnd, L"LinkCount");
+            RemoveWindowSubclass(hwnd, NotesControlProc, uIdSubclass);
+            break;
+    }
+
+    return DefSubclassProc(hwnd, msg, wParam, lParam);
+}
+
 /** @brief Update available dialog */
 INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     static VersionInfo* versionInfo = NULL;
-    
+    static wchar_t* g_notesDisplayText = NULL;
+    static MarkdownLink* g_notesLinks = NULL;
+    static int g_notesLinkCount = 0;
+    static int g_textHeight = 0;
+
     switch (msg) {
         case WM_INITDIALOG: {
             InitializeDialog(hwndDlg, IDD_UPDATE_DIALOG);
             versionInfo = (VersionInfo*)lParam;
-            
+            g_textHeight = 0;
+
             if (versionInfo) {
-                // Convert version numbers to wide characters
                 wchar_t* currentVerW = LocalUtf8ToWideAlloc(versionInfo->currentVersion);
                 wchar_t* latestVerW = LocalUtf8ToWideAlloc(versionInfo->latestVersion);
-                
+
                 if (currentVerW && latestVerW) {
                     wchar_t displayText[256];
                     StringCbPrintfW(displayText, sizeof(displayText), L"%s %s\n%s %s",
@@ -322,43 +571,157 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                         GetLocalizedString(NULL, L"New version:"), latestVerW);
                     SetDlgItemTextW(hwndDlg, IDC_UPDATE_TEXT, displayText);
                 }
-                
+
                 free(currentVerW);
                 free(latestVerW);
-                
-                // Display release notes
+
                 wchar_t* notesW = LocalUtf8ToWideAlloc(versionInfo->releaseNotes);
                 if (notesW && notesW[0]) {
-                    SetDlgItemTextW(hwndDlg, IDC_UPDATE_NOTES, notesW);
+                    ParseMarkdownLinks(notesW, &g_notesDisplayText, &g_notesLinks, &g_notesLinkCount);
+                    free(notesW);
                 } else {
-                    SetDlgItemTextW(hwndDlg, IDC_UPDATE_NOTES,
-                        GetLocalizedString(NULL, L"No release notes available."));
+                    free(notesW);
+                    const wchar_t* noNotes = GetLocalizedString(NULL, L"No release notes available.");
+                    ParseMarkdownLinks(noNotes, &g_notesDisplayText, &g_notesLinks, &g_notesLinkCount);
                 }
-                free(notesW);
-                
-                // Set button texts
+
+                HWND hwndNotes = GetDlgItem(hwndDlg, IDC_UPDATE_NOTES);
+
+                if (hwndNotes && g_notesDisplayText) {
+                    SetWindowSubclass(hwndNotes, NotesControlProc, 0, 0);
+                    SetProp(hwndNotes, L"ScrollPos", (HANDLE)0);
+                    SetProp(hwndNotes, L"MarkdownLinks", (HANDLE)g_notesLinks);
+                    SetProp(hwndNotes, L"LinkCount", (HANDLE)(INT_PTR)g_notesLinkCount);
+
+                    HDC hdc = GetDC(hwndNotes);
+                    HFONT hFont = (HFONT)SendMessage(hwndNotes, WM_GETFONT, 0, 0);
+                    if (!hFont) hFont = GetStockObject(DEFAULT_GUI_FONT);
+                    HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
+
+                    RECT rect;
+                    GetClientRect(hwndNotes, &rect);
+                    rect.left += 5;
+                    rect.top += 5;
+                    rect.right -= MODERN_SCROLLBAR_WIDTH + MODERN_SCROLLBAR_MARGIN + 5;
+
+                    RECT calcRect = rect;
+                    DrawTextW(hdc, g_notesDisplayText, -1, &calcRect, DT_CALCRECT | DT_WORDBREAK | DT_NOPREFIX);
+                    g_textHeight = calcRect.bottom - calcRect.top;
+
+                    SelectObject(hdc, hOldFont);
+                    ReleaseDC(hwndNotes, hdc);
+
+                    int clientHeight = rect.bottom - rect.top;
+                    SetProp(hwndNotes, L"ScrollMax", (HANDLE)(INT_PTR)g_textHeight);
+                    SetProp(hwndNotes, L"ScrollPage", (HANDLE)(INT_PTR)clientHeight);
+                }
+
                 SetDlgItemTextW(hwndDlg, IDYES, GetLocalizedString(NULL, L"Update Now"));
                 SetDlgItemTextW(hwndDlg, IDNO, GetLocalizedString(NULL, L"Later"));
                 SetDlgItemTextW(hwndDlg, IDC_UPDATE_EXIT_TEXT,
-                    GetLocalizedString(NULL, 
+                    GetLocalizedString(NULL,
                                       L"Click 'Update Now' to open browser and download the new version"));
                 SetWindowTextW(hwndDlg, GetLocalizedString(NULL, L"Update Available"));
-                
+
                 ShowWindow(GetDlgItem(hwndDlg, IDYES), SW_SHOW);
                 ShowWindow(GetDlgItem(hwndDlg, IDNO), SW_SHOW);
                 ShowWindow(GetDlgItem(hwndDlg, IDOK), SW_HIDE);
             }
             return TRUE;
         }
-        
+
         case WM_COMMAND:
             if (LOWORD(wParam) == IDYES || LOWORD(wParam) == IDNO) {
+                FreeMarkdownLinks(g_notesLinks, g_notesLinkCount);
+                g_notesLinks = NULL;
+                g_notesLinkCount = 0;
+                if (g_notesDisplayText) {
+                    free(g_notesDisplayText);
+                    g_notesDisplayText = NULL;
+                }
+                g_textHeight = 0;
                 EndDialog(hwndDlg, LOWORD(wParam));
                 return TRUE;
             }
             break;
-            
+
+        case WM_DRAWITEM: {
+            LPDRAWITEMSTRUCT lpDrawItem = (LPDRAWITEMSTRUCT)lParam;
+            if (lpDrawItem->CtlID == IDC_UPDATE_NOTES) {
+                HDC hdc = lpDrawItem->hDC;
+                RECT rect = lpDrawItem->rcItem;
+
+                HDC hdcMem = CreateCompatibleDC(hdc);
+                HBITMAP hbmMem = CreateCompatibleBitmap(hdc, rect.right - rect.left, rect.bottom - rect.top);
+                HBITMAP hbmOld = (HBITMAP)SelectObject(hdcMem, hbmMem);
+
+                HBRUSH hBrush = CreateSolidBrush(GetSysColor(COLOR_BTNFACE));
+                FillRect(hdcMem, &rect, hBrush);
+                DeleteObject(hBrush);
+
+                if (g_notesDisplayText) {
+                    int scrollPos = (int)(INT_PTR)GetProp(lpDrawItem->hwndItem, L"ScrollPos");
+                    int scrollMax = (int)(INT_PTR)GetProp(lpDrawItem->hwndItem, L"ScrollMax");
+                    int scrollPage = (int)(INT_PTR)GetProp(lpDrawItem->hwndItem, L"ScrollPage");
+                    BOOL thumbDragging = (BOOL)(INT_PTR)GetProp(lpDrawItem->hwndItem, L"ThumbDragging");
+                    BOOL thumbHovered = (BOOL)(INT_PTR)GetProp(lpDrawItem->hwndItem, L"ThumbHovered");
+
+                    SetBkMode(hdcMem, TRANSPARENT);
+
+                    HFONT hFont = (HFONT)SendMessage(lpDrawItem->hwndItem, WM_GETFONT, 0, 0);
+                    if (!hFont) {
+                        hFont = GetStockObject(DEFAULT_GUI_FONT);
+                    }
+                    HFONT hOldFont = (HFONT)SelectObject(hdcMem, hFont);
+
+                    RECT drawRect = rect;
+                    drawRect.left += 5;
+                    drawRect.top += 5;
+                    drawRect.right -= MODERN_SCROLLBAR_WIDTH + MODERN_SCROLLBAR_MARGIN + 5;
+
+                    POINT oldOrg;
+                    SetViewportOrgEx(hdcMem, 0, -scrollPos, &oldOrg);
+
+                    RenderMarkdownText(hdcMem, g_notesDisplayText, g_notesLinks, g_notesLinkCount,
+                                       drawRect, MARKDOWN_DEFAULT_LINK_COLOR, MARKDOWN_DEFAULT_TEXT_COLOR);
+
+                    SetViewportOrgEx(hdcMem, oldOrg.x, oldOrg.y, NULL);
+
+                    SelectObject(hdcMem, hOldFont);
+
+                    if (scrollMax > scrollPage) {
+                        RECT thumbRect;
+                        CalculateScrollbarThumbRect(rect, scrollPos, scrollMax, scrollPage, &thumbRect);
+
+                        if (!IsRectEmpty(&thumbRect)) {
+                            COLORREF thumbColor = thumbDragging ? MODERN_SCROLLBAR_THUMB_DRAG_COLOR :
+                                                  (thumbHovered ? MODERN_SCROLLBAR_THUMB_HOVER_COLOR :
+                                                   MODERN_SCROLLBAR_THUMB_COLOR);
+                            DrawRoundedRect(hdcMem, thumbRect, 4, thumbColor);
+                        }
+                    }
+                }
+
+                BitBlt(hdc, 0, 0, rect.right - rect.left, rect.bottom - rect.top, hdcMem, 0, 0, SRCCOPY);
+
+                SelectObject(hdcMem, hbmOld);
+                DeleteObject(hbmMem);
+                DeleteDC(hdcMem);
+
+                return TRUE;
+            }
+            break;
+        }
+
         case WM_CLOSE:
+            FreeMarkdownLinks(g_notesLinks, g_notesLinkCount);
+            g_notesLinks = NULL;
+            g_notesLinkCount = 0;
+            if (g_notesDisplayText) {
+                free(g_notesDisplayText);
+                g_notesDisplayText = NULL;
+            }
+            g_textHeight = 0;
             EndDialog(hwndDlg, IDNO);
             return TRUE;
     }
