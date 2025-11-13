@@ -62,7 +62,28 @@ typedef struct {
 } MarkdownListItem;
 
 /**
- * @brief Parse [text](url) links, # headings, inline styles, and list items from input
+ * @brief Blockquote alert types (GitHub Flavored Markdown)
+ */
+typedef enum {
+    BLOCKQUOTE_NORMAL = 0,
+    BLOCKQUOTE_NOTE = 1,
+    BLOCKQUOTE_TIP = 2,
+    BLOCKQUOTE_IMPORTANT = 3,
+    BLOCKQUOTE_WARNING = 4,
+    BLOCKQUOTE_CAUTION = 5
+} BlockquoteAlertType;
+
+/**
+ * @brief Parsed blockquote (> text or > [!TYPE])
+ */
+typedef struct {
+    int startPos;
+    int endPos;
+    BlockquoteAlertType alertType;
+} MarkdownBlockquote;
+
+/**
+ * @brief Parse [text](url) links, # headings, inline styles, list items, and blockquotes from input
  * @param input Input text with markdown
  * @param displayText Output without markup (caller must free)
  * @param links Output link array (caller must free with FreeMarkdownLinks)
@@ -73,6 +94,8 @@ typedef struct {
  * @param styleCount Output style count
  * @param listItems Output list item array (caller must free)
  * @param listItemCount Output list item count
+ * @param blockquotes Output blockquote array (caller must free)
+ * @param blockquoteCount Output blockquote count
  * @return TRUE on success, FALSE on allocation failure
  *
  * @details
@@ -82,16 +105,18 @@ typedef struct {
  * - Inline styles: *italic*, **bold**, ***bold+italic***, `code`
  * - List items: - item or * item at line start (supports nested lists with indentation)
  * - Links: [text](url) or [text]() (empty URL displays as plain text)
+ * - Blockquotes: > text at line start
  *
  * @example
  * ```c
- * // "# Title\n- **Bold** item\n    - `code`" → "Title\n• Bold item\n    • code"
+ * // "# Title\n> Quote\n- **Bold** item\n    - `code`" → "Title\nQuote\n• Bold item\n    • code"
  * if (ParseMarkdownLinks(text, &display, &links, &lcount, &headings, &hcount,
- *                        &styles, &scount, &items, &icount)) {
+ *                        &styles, &scount, &items, &icount, &quotes, &qcount)) {
  *     FreeMarkdownLinks(links, lcount);
  *     free(headings);
  *     free(styles);
  *     free(items);
+ *     free(quotes);
  *     free(display);
  * }
  * ```
@@ -100,7 +125,8 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
                         MarkdownLink** links, int* linkCount,
                         MarkdownHeading** headings, int* headingCount,
                         MarkdownStyle** styles, int* styleCount,
-                        MarkdownListItem** listItems, int* listItemCount);
+                        MarkdownListItem** listItems, int* listItemCount,
+                        MarkdownBlockquote** blockquotes, int* blockquoteCount);
 
 /**
  * @brief Free parsed links (text, URLs, array)
@@ -159,7 +185,17 @@ BOOL IsCharacterInStyle(MarkdownStyle* styles, int styleCount, int position, int
 BOOL IsCharacterInListItem(MarkdownListItem* listItems, int listItemCount, int position, int* listItemIndex);
 
 /**
- * @brief Render text with links, headings, inline styles, and list items (single-pass: O(n))
+ * @brief Check if character position is in blockquote (for rendering)
+ * @param blockquotes Blockquote array
+ * @param blockquoteCount Blockquote count
+ * @param position Character position
+ * @param blockquoteIndex Output blockquote index (optional)
+ * @return TRUE if in blockquote
+ */
+BOOL IsCharacterInBlockquote(MarkdownBlockquote* blockquotes, int blockquoteCount, int position, int* blockquoteIndex);
+
+/**
+ * @brief Render text with links, headings, inline styles, list items, and blockquotes (single-pass: O(n))
  * @param hdc Device context
  * @param displayText Text to render
  * @param links Link array (rectangles updated in-place)
@@ -170,6 +206,8 @@ BOOL IsCharacterInListItem(MarkdownListItem* listItems, int listItemCount, int p
  * @param styleCount Style count
  * @param listItems List item array
  * @param listItemCount List item count
+ * @param blockquotes Blockquote array
+ * @param blockquoteCount Blockquote count
  * @param drawRect Draw bounds
  * @param linkColor Link text color
  * @param normalColor Normal text color
@@ -181,6 +219,7 @@ BOOL IsCharacterInListItem(MarkdownListItem* listItems, int listItemCount, int p
  * - Headings: bold and larger font sizes
  * - Inline styles: italic, bold, or both
  * - List items: indented with bullet points
+ * - Blockquotes: indented with italic style
  *
  * @note Link rectangles ready for GetClickedLinkUrl() after return
  */
@@ -189,6 +228,7 @@ void RenderMarkdownText(HDC hdc, const wchar_t* displayText,
                         MarkdownHeading* headings, int headingCount,
                         MarkdownStyle* styles, int styleCount,
                         MarkdownListItem* listItems, int listItemCount,
+                        MarkdownBlockquote* blockquotes, int blockquoteCount,
                         RECT drawRect, COLORREF linkColor, COLORREF normalColor);
 
 /**
@@ -201,6 +241,8 @@ void RenderMarkdownText(HDC hdc, const wchar_t* displayText,
  * @param styleCount Style count
  * @param listItems List item array
  * @param listItemCount List item count
+ * @param blockquotes Blockquote array
+ * @param blockquoteCount Blockquote count
  * @param drawRect Available drawing area
  * @return Actual rendered height in pixels
  */
@@ -208,6 +250,7 @@ int CalculateMarkdownTextHeight(HDC hdc, const wchar_t* displayText,
                                   MarkdownHeading* headings, int headingCount,
                                   MarkdownStyle* styles, int styleCount,
                                   MarkdownListItem* listItems, int listItemCount,
+                                  MarkdownBlockquote* blockquotes, int blockquoteCount,
                                   RECT drawRect);
 
 /**

@@ -13,8 +13,10 @@
 #define INITIAL_HEADING_CAPACITY 5
 #define INITIAL_STYLE_CAPACITY 20
 #define INITIAL_LIST_ITEM_CAPACITY 10
+#define INITIAL_BLOCKQUOTE_CAPACITY 5
 #define TEXT_WRAP_MARGIN 10
 #define LIST_ITEM_INDENT 20
+#define BLOCKQUOTE_INDENT 20
 #define BULLET_POINT L"• "
 
 /** Unified position tracking eliminates duplicate calculations */
@@ -39,6 +41,9 @@ typedef struct {
     MarkdownListItem* listItems;
     int listItemCount;
     int listItemCapacity;
+    MarkdownBlockquote* blockquotes;
+    int blockquoteCount;
+    int blockquoteCapacity;
     int currentPos;
 } ParseState;
 
@@ -78,6 +83,11 @@ static void CleanupParseState(ParseState* state) {
         state->listItems = NULL;
     }
 
+    if (state->blockquotes) {
+        free(state->blockquotes);
+        state->blockquotes = NULL;
+    }
+
     if (state->displayText) {
         free(state->displayText);
         state->displayText = NULL;
@@ -91,6 +101,8 @@ static void CleanupParseState(ParseState* state) {
     state->styleCapacity = 0;
     state->listItemCount = 0;
     state->listItemCapacity = 0;
+    state->blockquoteCount = 0;
+    state->blockquoteCapacity = 0;
     state->currentPos = 0;
 }
 
@@ -150,6 +162,20 @@ static BOOL EnsureListItemCapacity(ParseState* state) {
     return TRUE;
 }
 
+static BOOL EnsureBlockquoteCapacity(ParseState* state) {
+    if (!state) return FALSE;
+    if (state->blockquoteCount < state->blockquoteCapacity) return TRUE;
+
+    int newCapacity = state->blockquoteCapacity * 2;
+    MarkdownBlockquote* newBlockquotes = (MarkdownBlockquote*)realloc(state->blockquotes,
+                                                                        newCapacity * sizeof(MarkdownBlockquote));
+    if (!newBlockquotes) return FALSE;
+
+    state->blockquotes = newBlockquotes;
+    state->blockquoteCapacity = newCapacity;
+    return TRUE;
+}
+
 static void InitTextLayout(TextLayoutContext* ctx, HDC hdc, RECT drawRect) {
     if (!ctx) return;
     
@@ -175,10 +201,22 @@ static void AdvanceNewline(TextLayoutContext* ctx) {
 static void AdvanceCharacter(TextLayoutContext* ctx, int charWidth) {
     if (!ctx) return;
     ctx->x += charWidth;
-    
+
     if (ctx->x > ctx->bounds.right - TEXT_WRAP_MARGIN) {
         AdvanceNewline(ctx);
     }
+}
+
+/** Check if character can be rendered by current font */
+static BOOL IsCharacterSupported(HDC hdc, wchar_t ch) {
+    WORD glyphIndex;
+    DWORD result = GetGlyphIndicesW(hdc, &ch, 1, &glyphIndex, GGI_MARK_NONEXISTING_GLYPHS);
+
+    if (result == GDI_ERROR) {
+        return TRUE;
+    }
+
+    return (glyphIndex != 0xFFFF);
 }
 
 /** Pre-count links for efficient allocation */
@@ -293,6 +331,25 @@ static int CountMarkdownListItems(const wchar_t* input) {
 
     while (*p) {
         if (atLineStart && (*p == L'-' || *p == L'*') && *(p + 1) == L' ') {
+            count++;
+        }
+        atLineStart = (*p == L'\n' || *p == L'\r');
+        p++;
+    }
+
+    return count;
+}
+
+/** Pre-count blockquotes for efficient allocation */
+static int CountMarkdownBlockquotes(const wchar_t* input) {
+    if (!input) return 0;
+
+    int count = 0;
+    const wchar_t* p = input;
+    BOOL atLineStart = TRUE;
+
+    while (*p) {
+        if (atLineStart && *p == L'>' && *(p + 1) == L' ') {
             count++;
         }
         atLineStart = (*p == L'\n' || *p == L'\r');
@@ -449,14 +506,15 @@ static BOOL ExtractMarkdownCode(const wchar_t** src, ParseState* state) {
     return TRUE;
 }
 
-/** Parse [text](url) format, # headings, inline styles, and list items with pre-allocation optimization */
+/** Parse [text](url) format, # headings, inline styles, list items, and blockquotes with pre-allocation optimization */
 BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
                         MarkdownLink** links, int* linkCount,
                         MarkdownHeading** headings, int* headingCount,
                         MarkdownStyle** styles, int* styleCount,
-                        MarkdownListItem** listItems, int* listItemCount) {
+                        MarkdownListItem** listItems, int* listItemCount,
+                        MarkdownBlockquote** blockquotes, int* blockquoteCount) {
     if (!input || !displayText || !links || !linkCount || !headings || !headingCount ||
-        !styles || !styleCount || !listItems || !listItemCount) return FALSE;
+        !styles || !styleCount || !listItems || !listItemCount || !blockquotes || !blockquoteCount) return FALSE;
 
     *displayText = NULL;
     *links = NULL;
@@ -467,6 +525,8 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
     *styleCount = 0;
     *listItems = NULL;
     *listItemCount = 0;
+    *blockquotes = NULL;
+    *blockquoteCount = 0;
 
     size_t inputLen = wcslen(input);
     ParseState state = {0};
@@ -506,6 +566,15 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
     state.listItems = (MarkdownListItem*)malloc(state.listItemCapacity * sizeof(MarkdownListItem));
 
     if (!state.listItems) {
+        CleanupParseState(&state);
+        return FALSE;
+    }
+
+    int estimatedBlockquotes = CountMarkdownBlockquotes(input);
+    state.blockquoteCapacity = estimatedBlockquotes > 0 ? estimatedBlockquotes + 2 : INITIAL_BLOCKQUOTE_CAPACITY;
+    state.blockquotes = (MarkdownBlockquote*)malloc(state.blockquoteCapacity * sizeof(MarkdownBlockquote));
+
+    if (!state.blockquotes) {
         CleanupParseState(&state);
         return FALSE;
     }
@@ -590,6 +659,108 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
             }
         }
 
+        if (atLineStart && *src == L'>' && *(src + 1) == L' ') {
+            if (!EnsureBlockquoteCapacity(&state)) {
+                CleanupParseState(&state);
+                return FALSE;
+            }
+
+            MarkdownBlockquote* blockquote = &state.blockquotes[state.blockquoteCount];
+            blockquote->startPos = state.currentPos;
+            blockquote->alertType = BLOCKQUOTE_NORMAL;
+
+            src += 2;
+
+            if (*src == L'[' && *(src + 1) == L'!') {
+                const wchar_t* alertStart = src + 2;
+                const wchar_t* alertEnd = alertStart;
+                while (*alertEnd && *alertEnd != L']') {
+                    alertEnd++;
+                }
+
+                if (*alertEnd == L']') {
+                    int alertLen = alertEnd - alertStart;
+
+                    if (alertLen == 4 && wcsncmp(alertStart, L"NOTE", 4) == 0) {
+                        blockquote->alertType = BLOCKQUOTE_NOTE;
+                        const wchar_t* prefix = L"NOTE: ";
+                        size_t prefixLen = wcslen(prefix);
+                        wcsncpy(dest, prefix, prefixLen);
+                        dest += prefixLen;
+                        state.currentPos += prefixLen;
+                    } else if (alertLen == 3 && wcsncmp(alertStart, L"TIP", 3) == 0) {
+                        blockquote->alertType = BLOCKQUOTE_TIP;
+                        const wchar_t* prefix = L"TIP: ";
+                        size_t prefixLen = wcslen(prefix);
+                        wcsncpy(dest, prefix, prefixLen);
+                        dest += prefixLen;
+                        state.currentPos += prefixLen;
+                    } else if (alertLen == 9 && wcsncmp(alertStart, L"IMPORTANT", 9) == 0) {
+                        blockquote->alertType = BLOCKQUOTE_IMPORTANT;
+                        const wchar_t* prefix = L"IMPORTANT: ";
+                        size_t prefixLen = wcslen(prefix);
+                        wcsncpy(dest, prefix, prefixLen);
+                        dest += prefixLen;
+                        state.currentPos += prefixLen;
+                    } else if (alertLen == 7 && wcsncmp(alertStart, L"WARNING", 7) == 0) {
+                        blockquote->alertType = BLOCKQUOTE_WARNING;
+                        const wchar_t* prefix = L"WARNING: ";
+                        size_t prefixLen = wcslen(prefix);
+                        wcsncpy(dest, prefix, prefixLen);
+                        dest += prefixLen;
+                        state.currentPos += prefixLen;
+                    } else if (alertLen == 7 && wcsncmp(alertStart, L"CAUTION", 7) == 0) {
+                        blockquote->alertType = BLOCKQUOTE_CAUTION;
+                        const wchar_t* prefix = L"CAUTION: ";
+                        size_t prefixLen = wcslen(prefix);
+                        wcsncpy(dest, prefix, prefixLen);
+                        dest += prefixLen;
+                        state.currentPos += prefixLen;
+                    }
+
+                    src = alertEnd + 1;
+                    if (*src == L'\n' || *src == L'\r') {
+                        src++;
+                        if (*src == L'\n' || *src == L'\r') src++;
+                        if (*src == L'>' && *(src + 1) == L' ') {
+                            src += 2;
+                        }
+                    }
+                }
+            }
+
+            BOOL inBlockquote = TRUE;
+            int currentBlockquoteIndex = state.blockquoteCount;
+            state.blockquoteCount++;
+
+            while (*src && *src != L'\n' && *src != L'\r') {
+                if (*src == L'[' && ExtractMarkdownLink(&src, &state)) {
+                    dest = state.displayText + state.currentPos;
+                    continue;
+                }
+
+                if (*src == L'`' && ExtractMarkdownCode(&src, &state)) {
+                    dest = state.displayText + state.currentPos;
+                    continue;
+                }
+
+                if ((*src == L'*' || *src == L'_') && ExtractMarkdownStyle(&src, &state)) {
+                    dest = state.displayText + state.currentPos;
+                    continue;
+                }
+
+                *dest++ = *src++;
+                state.currentPos++;
+            }
+
+            if (inBlockquote && currentBlockquoteIndex >= 0) {
+                state.blockquotes[currentBlockquoteIndex].endPos = state.currentPos;
+            }
+
+            atLineStart = FALSE;
+            continue;
+        }
+
         if (*src == L'[' && ExtractMarkdownLink(&src, &state)) {
             dest = state.displayText + state.currentPos;
             atLineStart = FALSE;
@@ -648,6 +819,8 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
     *styleCount = state.styleCount;
     *listItems = state.listItems;
     *listItemCount = state.listItemCount;
+    *blockquotes = state.blockquotes;
+    *blockquoteCount = state.blockquoteCount;
 
     return TRUE;
 }
@@ -727,12 +900,25 @@ BOOL IsCharacterInListItem(MarkdownListItem* listItems, int listItemCount, int p
     return FALSE;
 }
 
-/** Single-pass rendering with styles and list items (O(n)) */
+BOOL IsCharacterInBlockquote(MarkdownBlockquote* blockquotes, int blockquoteCount, int position, int* blockquoteIndex) {
+    if (!blockquotes) return FALSE;
+
+    for (int i = 0; i < blockquoteCount; i++) {
+        if (position >= blockquotes[i].startPos && position < blockquotes[i].endPos) {
+            if (blockquoteIndex) *blockquoteIndex = i;
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+/** Single-pass rendering with styles, list items, and blockquotes (O(n)) */
 void RenderMarkdownText(HDC hdc, const wchar_t* displayText,
                         MarkdownLink* links, int linkCount,
                         MarkdownHeading* headings, int headingCount,
                         MarkdownStyle* styles, int styleCount,
                         MarkdownListItem* listItems, int listItemCount,
+                        MarkdownBlockquote* blockquotes, int blockquoteCount,
                         RECT drawRect, COLORREF linkColor, COLORREF normalColor) {
     if (!hdc || !displayText) return;
 
@@ -750,6 +936,7 @@ void RenderMarkdownText(HDC hdc, const wchar_t* displayText,
     int lastHeadingLevel = 0;
     int lastStyleType = STYLE_NONE;
     int lastListItemIndex = -1;
+    int lastBlockquoteIndex = -1;
 
     for (int i = 0; i < textLen; i++) {
         wchar_t ch = displayText[i];
@@ -763,6 +950,7 @@ void RenderMarkdownText(HDC hdc, const wchar_t* displayText,
             lastHeadingLevel = 0;
             lastStyleType = STYLE_NONE;
             lastListItemIndex = -1;
+            lastBlockquoteIndex = -1;
             AdvanceNewline(&ctx);
             continue;
         }
@@ -779,11 +967,21 @@ void RenderMarkdownText(HDC hdc, const wchar_t* displayText,
         int listItemIndex = -1;
         BOOL isListItem = IsCharacterInListItem(listItems, listItemCount, i, &listItemIndex);
 
+        int blockquoteIndex = -1;
+        BOOL isBlockquote = IsCharacterInBlockquote(blockquotes, blockquoteCount, i, &blockquoteIndex);
+
         if (isListItem && listItemIndex != lastListItemIndex) {
             if (i == listItems[listItemIndex].startPos) {
                 ctx.x += LIST_ITEM_INDENT * (1 + listItems[listItemIndex].indentLevel);
             }
             lastListItemIndex = listItemIndex;
+        }
+
+        if (isBlockquote && blockquoteIndex != lastBlockquoteIndex) {
+            if (i == blockquotes[blockquoteIndex].startPos) {
+                ctx.x += BLOCKQUOTE_INDENT;
+            }
+            lastBlockquoteIndex = blockquoteIndex;
         }
 
         int currentFontHeight = baseFontHeight;
@@ -801,6 +999,10 @@ void RenderMarkdownText(HDC hdc, const wchar_t* displayText,
                 case 3: currentFontHeight = (int)(baseFontHeight * 1.2); break;
                 case 4: currentFontHeight = (int)(baseFontHeight * 1.1); break;
             }
+        }
+
+        if (isBlockquote) {
+            currentItalic = TRUE;
         }
 
         int currentStyleType = STYLE_NONE;
@@ -865,8 +1067,33 @@ void RenderMarkdownText(HDC hdc, const wchar_t* displayText,
             textColor = linkColor;
         } else if (currentStyleType == STYLE_CODE) {
             textColor = RGB(200, 0, 0);
+        } else if (isBlockquote && blockquoteIndex != -1) {
+            switch (blockquotes[blockquoteIndex].alertType) {
+                case BLOCKQUOTE_NOTE:
+                    textColor = RGB(31, 111, 235);
+                    break;
+                case BLOCKQUOTE_TIP:
+                    textColor = RGB(26, 127, 55);
+                    break;
+                case BLOCKQUOTE_IMPORTANT:
+                    textColor = RGB(130, 80, 223);
+                    break;
+                case BLOCKQUOTE_WARNING:
+                    textColor = RGB(154, 103, 0);
+                    break;
+                case BLOCKQUOTE_CAUTION:
+                    textColor = RGB(207, 34, 46);
+                    break;
+                default:
+                    textColor = RGB(100, 100, 100);
+                    break;
+            }
         }
         SetTextColor(hdc, textColor);
+
+        if (!IsCharacterSupported(hdc, ch)) {
+            continue;
+        }
 
         SIZE charSize;
         GetTextExtentPoint32W(hdc, &ch, 1, &charSize);
@@ -877,12 +1104,14 @@ void RenderMarkdownText(HDC hdc, const wchar_t* displayText,
             if (i == link->startPos) {
                 link->linkRect.left = ctx.x;
                 link->linkRect.top = ctx.y;
-                link->linkRect.bottom = ctx.y + ctx.lineHeight;
+                link->linkRect.right = ctx.x;
+                link->linkRect.bottom = ctx.y;
             }
 
-            if (i == link->endPos - 1) {
-                link->linkRect.right = ctx.x + charSize.cx;
-            }
+            if (ctx.x < link->linkRect.left) link->linkRect.left = ctx.x;
+            if (ctx.x + charSize.cx > link->linkRect.right) link->linkRect.right = ctx.x + charSize.cx;
+            if (ctx.y < link->linkRect.top) link->linkRect.top = ctx.y;
+            if (ctx.y + ctx.lineHeight > link->linkRect.bottom) link->linkRect.bottom = ctx.y + ctx.lineHeight;
         }
 
         TextOutW(hdc, ctx.x, ctx.y, &ch, 1);
@@ -900,6 +1129,7 @@ int CalculateMarkdownTextHeight(HDC hdc, const wchar_t* displayText,
                                   MarkdownHeading* headings, int headingCount,
                                   MarkdownStyle* styles, int styleCount,
                                   MarkdownListItem* listItems, int listItemCount,
+                                  MarkdownBlockquote* blockquotes, int blockquoteCount,
                                   RECT drawRect) {
     if (!hdc || !displayText) return 0;
 
@@ -917,6 +1147,7 @@ int CalculateMarkdownTextHeight(HDC hdc, const wchar_t* displayText,
     int lastHeadingLevel = 0;
     int lastStyleType = STYLE_NONE;
     int lastListItemIndex = -1;
+    int lastBlockquoteIndex = -1;
 
     for (int i = 0; i < textLen; i++) {
         wchar_t ch = displayText[i];
@@ -930,6 +1161,7 @@ int CalculateMarkdownTextHeight(HDC hdc, const wchar_t* displayText,
             lastHeadingLevel = 0;
             lastStyleType = STYLE_NONE;
             lastListItemIndex = -1;
+            lastBlockquoteIndex = -1;
             AdvanceNewline(&ctx);
             continue;
         }
@@ -943,11 +1175,21 @@ int CalculateMarkdownTextHeight(HDC hdc, const wchar_t* displayText,
         int listItemIndex = -1;
         BOOL isListItem = IsCharacterInListItem(listItems, listItemCount, i, &listItemIndex);
 
+        int blockquoteIndex = -1;
+        BOOL isBlockquote = IsCharacterInBlockquote(blockquotes, blockquoteCount, i, &blockquoteIndex);
+
         if (isListItem && listItemIndex != lastListItemIndex) {
             if (i == listItems[listItemIndex].startPos) {
                 ctx.x += LIST_ITEM_INDENT * (1 + listItems[listItemIndex].indentLevel);
             }
             lastListItemIndex = listItemIndex;
+        }
+
+        if (isBlockquote && blockquoteIndex != lastBlockquoteIndex) {
+            if (i == blockquotes[blockquoteIndex].startPos) {
+                ctx.x += BLOCKQUOTE_INDENT;
+            }
+            lastBlockquoteIndex = blockquoteIndex;
         }
 
         int currentFontHeight = baseFontHeight;
@@ -965,6 +1207,10 @@ int CalculateMarkdownTextHeight(HDC hdc, const wchar_t* displayText,
                 case 3: currentFontHeight = (int)(baseFontHeight * 1.2); break;
                 case 4: currentFontHeight = (int)(baseFontHeight * 1.1); break;
             }
+        }
+
+        if (isBlockquote) {
+            currentItalic = TRUE;
         }
 
         int currentStyleType = STYLE_NONE;
@@ -1022,6 +1268,10 @@ int CalculateMarkdownTextHeight(HDC hdc, const wchar_t* displayText,
 
             lastHeadingLevel = isHeading ? headings[headingIndex].level : 0;
             lastStyleType = currentStyleType;
+        }
+
+        if (!IsCharacterSupported(hdc, ch)) {
+            continue;
         }
 
         SIZE charSize;

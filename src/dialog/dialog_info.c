@@ -356,6 +356,8 @@ static MarkdownStyle* g_styles = NULL;
 static int g_styleCount = 0;
 static MarkdownListItem* g_listItems = NULL;
 static int g_listItemCount = 0;
+static MarkdownBlockquote* g_blockquotes = NULL;
+static int g_blockquoteCount = 0;
 
 INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, LPARAM lParam) {
     switch (message) {
@@ -374,7 +376,8 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, L
             ParseMarkdownLinks(licenseText, &g_displayText, &g_links, &g_linkCount,
                                &g_headings, &g_headingCount,
                                &g_styles, &g_styleCount,
-                               &g_listItems, &g_listItemCount);
+                               &g_listItems, &g_listItemCount,
+                               &g_blockquotes, &g_blockquoteCount);
 
             const wchar_t* agreeText = GetLocalizedString(NULL, L"Agree");
             const wchar_t* cancelText = GetLocalizedString(NULL, L"Cancel");
@@ -408,6 +411,11 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, L
                         g_listItems = NULL;
                     }
                     g_listItemCount = 0;
+                    if (g_blockquotes) {
+                        free(g_blockquotes);
+                        g_blockquotes = NULL;
+                    }
+                    g_blockquoteCount = 0;
                     if (g_displayText) {
                         free(g_displayText);
                         g_displayText = NULL;
@@ -433,6 +441,11 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, L
                         g_listItems = NULL;
                     }
                     g_listItemCount = 0;
+                    if (g_blockquotes) {
+                        free(g_blockquotes);
+                        g_blockquotes = NULL;
+                    }
+                    g_blockquoteCount = 0;
                     if (g_displayText) {
                         free(g_displayText);
                         g_displayText = NULL;
@@ -480,6 +493,7 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, L
                                        g_headings, g_headingCount,
                                        g_styles, g_styleCount,
                                        g_listItems, g_listItemCount,
+                                       g_blockquotes, g_blockquoteCount,
                                        drawRect, MARKDOWN_DEFAULT_LINK_COLOR, MARKDOWN_DEFAULT_TEXT_COLOR);
 
                     SelectObject(hdc, hOldFont);
@@ -509,6 +523,11 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, L
                 g_listItems = NULL;
             }
             g_listItemCount = 0;
+            if (g_blockquotes) {
+                free(g_blockquotes);
+                g_blockquotes = NULL;
+            }
+            g_blockquoteCount = 0;
             if (g_displayText) {
                 free(g_displayText);
                 g_displayText = NULL;

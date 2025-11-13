@@ -402,8 +402,8 @@ static LRESULT CALLBACK NotesControlProc(HWND hwnd, UINT msg, WPARAM wParam, LPA
 
             if (links && linkCount > 0) {
                 POINT pt;
-                pt.x = GET_X_LPARAM(lParam);
-                pt.y = GET_Y_LPARAM(lParam) + scrollPos;
+                pt.x = GET_X_LPARAM(lParam) + 5;
+                pt.y = GET_Y_LPARAM(lParam) + scrollPos + 5;
 
                 if (HandleMarkdownClick(links, linkCount, pt)) {
                     return 0;
@@ -518,7 +518,8 @@ static LRESULT CALLBACK NotesControlProc(HWND hwnd, UINT msg, WPARAM wParam, LPA
                 POINT pt;
                 GetCursorPos(&pt);
                 ScreenToClient(hwnd, &pt);
-                pt.y += scrollPos;
+                pt.x += 5;
+                pt.y += scrollPos + 5;
 
                 const wchar_t* url = GetClickedLinkUrl(links, linkCount, pt);
                 if (url) {
@@ -558,6 +559,8 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
     static int g_notesStyleCount = 0;
     static MarkdownListItem* g_notesListItems = NULL;
     static int g_notesListItemCount = 0;
+    static MarkdownBlockquote* g_notesBlockquotes = NULL;
+    static int g_notesBlockquoteCount = 0;
     static int g_textHeight = 0;
 
     switch (msg) {
@@ -586,7 +589,8 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                     ParseMarkdownLinks(notesW, &g_notesDisplayText, &g_notesLinks, &g_notesLinkCount,
                                        &g_notesHeadings, &g_notesHeadingCount,
                                        &g_notesStyles, &g_notesStyleCount,
-                                       &g_notesListItems, &g_notesListItemCount);
+                                       &g_notesListItems, &g_notesListItemCount,
+                                       &g_notesBlockquotes, &g_notesBlockquoteCount);
                     free(notesW);
                 } else {
                     free(notesW);
@@ -594,7 +598,8 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                     ParseMarkdownLinks(noNotes, &g_notesDisplayText, &g_notesLinks, &g_notesLinkCount,
                                        &g_notesHeadings, &g_notesHeadingCount,
                                        &g_notesStyles, &g_notesStyleCount,
-                                       &g_notesListItems, &g_notesListItemCount);
+                                       &g_notesListItems, &g_notesListItemCount,
+                                       &g_notesBlockquotes, &g_notesBlockquoteCount);
                 }
 
                 HWND hwndNotes = GetDlgItem(hwndDlg, IDC_UPDATE_NOTES);
@@ -621,6 +626,7 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                                                                 g_notesHeadings, g_notesHeadingCount,
                                                                 g_notesStyles, g_notesStyleCount,
                                                                 g_notesListItems, g_notesListItemCount,
+                                                                g_notesBlockquotes, g_notesBlockquoteCount,
                                                                 drawRect);
 
                     SelectObject(hdc, hOldFont);
@@ -665,6 +671,11 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                     g_notesListItems = NULL;
                 }
                 g_notesListItemCount = 0;
+                if (g_notesBlockquotes) {
+                    free(g_notesBlockquotes);
+                    g_notesBlockquotes = NULL;
+                }
+                g_notesBlockquoteCount = 0;
                 if (g_notesDisplayText) {
                     free(g_notesDisplayText);
                     g_notesDisplayText = NULL;
@@ -716,6 +727,7 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                                        g_notesHeadings, g_notesHeadingCount,
                                        g_notesStyles, g_notesStyleCount,
                                        g_notesListItems, g_notesListItemCount,
+                                       g_notesBlockquotes, g_notesBlockquoteCount,
                                        drawRect, MARKDOWN_DEFAULT_LINK_COLOR, MARKDOWN_DEFAULT_TEXT_COLOR);
 
                     SetViewportOrgEx(hdcMem, oldOrg.x, oldOrg.y, NULL);
@@ -765,6 +777,11 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                 g_notesListItems = NULL;
             }
             g_notesListItemCount = 0;
+            if (g_notesBlockquotes) {
+                free(g_notesBlockquotes);
+                g_notesBlockquotes = NULL;
+            }
+            g_notesBlockquoteCount = 0;
             if (g_notesDisplayText) {
                 free(g_notesDisplayText);
                 g_notesDisplayText = NULL;
