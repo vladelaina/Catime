@@ -552,6 +552,12 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
     static wchar_t* g_notesDisplayText = NULL;
     static MarkdownLink* g_notesLinks = NULL;
     static int g_notesLinkCount = 0;
+    static MarkdownHeading* g_notesHeadings = NULL;
+    static int g_notesHeadingCount = 0;
+    static MarkdownStyle* g_notesStyles = NULL;
+    static int g_notesStyleCount = 0;
+    static MarkdownListItem* g_notesListItems = NULL;
+    static int g_notesListItemCount = 0;
     static int g_textHeight = 0;
 
     switch (msg) {
@@ -577,12 +583,18 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
 
                 wchar_t* notesW = LocalUtf8ToWideAlloc(versionInfo->releaseNotes);
                 if (notesW && notesW[0]) {
-                    ParseMarkdownLinks(notesW, &g_notesDisplayText, &g_notesLinks, &g_notesLinkCount);
+                    ParseMarkdownLinks(notesW, &g_notesDisplayText, &g_notesLinks, &g_notesLinkCount,
+                                       &g_notesHeadings, &g_notesHeadingCount,
+                                       &g_notesStyles, &g_notesStyleCount,
+                                       &g_notesListItems, &g_notesListItemCount);
                     free(notesW);
                 } else {
                     free(notesW);
                     const wchar_t* noNotes = GetLocalizedString(NULL, L"No release notes available.");
-                    ParseMarkdownLinks(noNotes, &g_notesDisplayText, &g_notesLinks, &g_notesLinkCount);
+                    ParseMarkdownLinks(noNotes, &g_notesDisplayText, &g_notesLinks, &g_notesLinkCount,
+                                       &g_notesHeadings, &g_notesHeadingCount,
+                                       &g_notesStyles, &g_notesStyleCount,
+                                       &g_notesListItems, &g_notesListItemCount);
                 }
 
                 HWND hwndNotes = GetDlgItem(hwndDlg, IDC_UPDATE_NOTES);
@@ -635,6 +647,21 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                 FreeMarkdownLinks(g_notesLinks, g_notesLinkCount);
                 g_notesLinks = NULL;
                 g_notesLinkCount = 0;
+                if (g_notesHeadings) {
+                    free(g_notesHeadings);
+                    g_notesHeadings = NULL;
+                }
+                g_notesHeadingCount = 0;
+                if (g_notesStyles) {
+                    free(g_notesStyles);
+                    g_notesStyles = NULL;
+                }
+                g_notesStyleCount = 0;
+                if (g_notesListItems) {
+                    free(g_notesListItems);
+                    g_notesListItems = NULL;
+                }
+                g_notesListItemCount = 0;
                 if (g_notesDisplayText) {
                     free(g_notesDisplayText);
                     g_notesDisplayText = NULL;
@@ -683,6 +710,9 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                     SetViewportOrgEx(hdcMem, 0, -scrollPos, &oldOrg);
 
                     RenderMarkdownText(hdcMem, g_notesDisplayText, g_notesLinks, g_notesLinkCount,
+                                       g_notesHeadings, g_notesHeadingCount,
+                                       g_notesStyles, g_notesStyleCount,
+                                       g_notesListItems, g_notesListItemCount,
                                        drawRect, MARKDOWN_DEFAULT_LINK_COLOR, MARKDOWN_DEFAULT_TEXT_COLOR);
 
                     SetViewportOrgEx(hdcMem, oldOrg.x, oldOrg.y, NULL);
@@ -717,6 +747,21 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
             FreeMarkdownLinks(g_notesLinks, g_notesLinkCount);
             g_notesLinks = NULL;
             g_notesLinkCount = 0;
+            if (g_notesHeadings) {
+                free(g_notesHeadings);
+                g_notesHeadings = NULL;
+            }
+            g_notesHeadingCount = 0;
+            if (g_notesStyles) {
+                free(g_notesStyles);
+                g_notesStyles = NULL;
+            }
+            g_notesStyleCount = 0;
+            if (g_notesListItems) {
+                free(g_notesListItems);
+                g_notesListItems = NULL;
+            }
+            g_notesListItemCount = 0;
             if (g_notesDisplayText) {
                 free(g_notesDisplayText);
                 g_notesDisplayText = NULL;

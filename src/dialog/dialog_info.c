@@ -350,6 +350,12 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
 static wchar_t* g_displayText = NULL;
 static MarkdownLink* g_links = NULL;
 static int g_linkCount = 0;
+static MarkdownHeading* g_headings = NULL;
+static int g_headingCount = 0;
+static MarkdownStyle* g_styles = NULL;
+static int g_styleCount = 0;
+static MarkdownListItem* g_listItems = NULL;
+static int g_listItemCount = 0;
 
 INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, LPARAM lParam) {
     switch (message) {
@@ -365,7 +371,10 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, L
                 L"FontLicenseAgreementText"
             );
 
-            ParseMarkdownLinks(licenseText, &g_displayText, &g_links, &g_linkCount);
+            ParseMarkdownLinks(licenseText, &g_displayText, &g_links, &g_linkCount,
+                               &g_headings, &g_headingCount,
+                               &g_styles, &g_styleCount,
+                               &g_listItems, &g_listItemCount);
 
             const wchar_t* agreeText = GetLocalizedString(NULL, L"Agree");
             const wchar_t* cancelText = GetLocalizedString(NULL, L"Cancel");
@@ -384,6 +393,21 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, L
                     FreeMarkdownLinks(g_links, g_linkCount);
                     g_links = NULL;
                     g_linkCount = 0;
+                    if (g_headings) {
+                        free(g_headings);
+                        g_headings = NULL;
+                    }
+                    g_headingCount = 0;
+                    if (g_styles) {
+                        free(g_styles);
+                        g_styles = NULL;
+                    }
+                    g_styleCount = 0;
+                    if (g_listItems) {
+                        free(g_listItems);
+                        g_listItems = NULL;
+                    }
+                    g_listItemCount = 0;
                     if (g_displayText) {
                         free(g_displayText);
                         g_displayText = NULL;
@@ -394,6 +418,21 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, L
                     FreeMarkdownLinks(g_links, g_linkCount);
                     g_links = NULL;
                     g_linkCount = 0;
+                    if (g_headings) {
+                        free(g_headings);
+                        g_headings = NULL;
+                    }
+                    g_headingCount = 0;
+                    if (g_styles) {
+                        free(g_styles);
+                        g_styles = NULL;
+                    }
+                    g_styleCount = 0;
+                    if (g_listItems) {
+                        free(g_listItems);
+                        g_listItems = NULL;
+                    }
+                    g_listItemCount = 0;
                     if (g_displayText) {
                         free(g_displayText);
                         g_displayText = NULL;
@@ -438,6 +477,9 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, L
                     drawRect.top += 5;
 
                     RenderMarkdownText(hdc, g_displayText, g_links, g_linkCount,
+                                       g_headings, g_headingCount,
+                                       g_styles, g_styleCount,
+                                       g_listItems, g_listItemCount,
                                        drawRect, MARKDOWN_DEFAULT_LINK_COLOR, MARKDOWN_DEFAULT_TEXT_COLOR);
 
                     SelectObject(hdc, hOldFont);
@@ -452,6 +494,21 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, L
             FreeMarkdownLinks(g_links, g_linkCount);
             g_links = NULL;
             g_linkCount = 0;
+            if (g_headings) {
+                free(g_headings);
+                g_headings = NULL;
+            }
+            g_headingCount = 0;
+            if (g_styles) {
+                free(g_styles);
+                g_styles = NULL;
+            }
+            g_styleCount = 0;
+            if (g_listItems) {
+                free(g_listItems);
+                g_listItems = NULL;
+            }
+            g_listItemCount = 0;
             if (g_displayText) {
                 free(g_displayText);
                 g_displayText = NULL;
