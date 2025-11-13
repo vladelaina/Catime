@@ -413,7 +413,12 @@ static BOOL HandlePomodoroCompletion(HWND hwnd) {
                 completed_text);
     }
     ShowNotification(hwnd, completionMsg);
-    
+
+    if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_MESSAGE) {
+        ReadNotificationSoundConfig();
+        PlayNotificationSound(hwnd);
+    }
+
     if (current_pomodoro_time_index >= g_AppConfig.pomodoro.times_count) {
         ResetPomodoroState();
         return FALSE;
