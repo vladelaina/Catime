@@ -12,6 +12,7 @@
 #include "window.h"
 #include "pomodoro.h"
 #include "dialog/dialog_procedure.h"
+#include "dialog/dialog_common.h"
 #include "drawing.h"
 #include "notification.h"
 #include "../resource/resource.h"
@@ -128,10 +129,12 @@ INT_PTR CALLBACK InputBoxProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
             SetWindowTextW(hwndDlg, params->title);
             SetDlgItemTextW(hwndDlg, IDC_STATIC_PROMPT, params->prompt);
             SetDlgItemTextW(hwndDlg, IDC_EDIT_INPUT, params->defaultText);
-            SendDlgItemMessageW(hwndDlg, IDC_EDIT_INPUT, EM_SETSEL, 0, -1);
-            SetFocus(GetDlgItem(hwndDlg, IDC_EDIT_INPUT));
-            
-            MoveDialogToPrimaryScreen(hwndDlg);
+
+            HWND hwndEdit = GetDlgItem(hwndDlg, IDC_EDIT_INPUT);
+            Dialog_SelectAllText(hwndEdit);
+            SetFocus(hwndEdit);
+
+            Dialog_CenterOnPrimaryScreen(hwndDlg);
             return FALSE;
         }
         

@@ -61,7 +61,7 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
 
             Dialog_SubclassEdit(hEdit1, ctx);
 
-            SendDlgItemMessage(hwndDlg, IDC_NOTIFICATION_EDIT1, EM_SETSEL, 0, -1);
+            Dialog_SelectAllText(hEdit1);
             SetFocus(hEdit1);
 
             return FALSE;

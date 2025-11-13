@@ -106,7 +106,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
             PostMessage(hwndDlg, WM_APP+101, 0, (LPARAM)hwndEdit);
             PostMessage(hwndDlg, WM_APP+102, 0, (LPARAM)hwndEdit);
 
-            SendDlgItemMessage(hwndDlg, CLOCK_IDC_EDIT, EM_SETSEL, 0, -1);
+            Dialog_SelectAllText(hwndEdit);
             SendMessage(hwndDlg, DM_SETDEFID, CLOCK_IDC_BUTTON_OK, 0);
             SetTimer(hwndDlg, 9999, 50, NULL);
 
@@ -252,7 +252,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                 if (hwndEdit && IsWindow(hwndEdit)) {
                     SetForegroundWindow(hwndDlg);
                     SetFocus(hwndEdit);
-                    SendMessage(hwndEdit, EM_SETSEL, 0, -1);
+                    Dialog_SelectAllText(hwndEdit);
                 }
                 return TRUE;
             }
@@ -273,7 +273,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                 if (IsWindow(hwndEdit) && IsWindowVisible(hwndEdit)) {
                     SetForegroundWindow(hwndDlg);
                     SetFocus(hwndEdit);
-                    SendMessage(hwndEdit, EM_SETSEL, 0, -1);
+                    Dialog_SelectAllText(hwndEdit);
                 }
             }
             return TRUE;

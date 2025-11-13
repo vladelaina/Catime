@@ -279,7 +279,7 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
             Dialog_CenterOnPrimaryScreen(hwndDlg);
 
             SetFocus(hwndEdit);
-            SendMessage(hwndEdit, EM_SETSEL, 0, -1);
+            Dialog_SelectAllText(hwndEdit);
 
             return FALSE;
         }

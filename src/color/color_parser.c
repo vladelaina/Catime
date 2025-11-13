@@ -47,21 +47,13 @@ static const CSSColor CSS_COLORS[] = {
  * String Utilities (Internal use only)
  * ============================================================================ */
 
-static BOOL IsEmptyOrWhitespaceA(const char* str) {
-    if (!str || str[0] == '\0') return TRUE;
-    for (int i = 0; str[i]; i++) {
-        if (!isspace((unsigned char)str[i])) return FALSE;
-    }
-    return TRUE;
-}
-
 static void TrimString(char* str) {
     if (!str) return;
-    
+
     char* start = str;
     while (*start && isspace((unsigned char)*start)) start++;
     if (start != str) memmove(str, start, strlen(start) + 1);
-    
+
     size_t len = strlen(str);
     while (len > 0 && isspace((unsigned char)str[len - 1])) {
         str[--len] = '\0';

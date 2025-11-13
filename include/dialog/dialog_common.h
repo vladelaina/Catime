@@ -98,6 +98,55 @@ BOOL Dialog_SubclassEdit(HWND hwndEdit, DialogContext* ctx);
  */
 void Dialog_UnsubclassEdit(HWND hwndEdit, DialogContext* ctx);
 
+/**
+ * @brief Custom callback for extended edit subclass procedure
+ * @param hwnd Edit control handle
+ * @param msg Message
+ * @param wParam WPARAM
+ * @param lParam LPARAM
+ * @param pProcessed Output: set to TRUE if message was fully handled
+ * @return Message result (only used if *pProcessed is TRUE)
+ */
+typedef LRESULT (*Dialog_EditCustomCallback)(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, BOOL* pProcessed);
+
+/**
+ * @brief Extended edit subclass with custom callback support
+ * @param hwnd Edit control handle
+ * @param msg Message
+ * @param wParam WPARAM
+ * @param lParam LPARAM
+ * @param callback Custom callback (called before standard processing)
+ * @param origProc Original window procedure
+ * @return Message result
+ *
+ * @details
+ * Same as Dialog_EditSubclassProc but allows custom pre-processing.
+ * Callback can handle custom messages while inheriting standard behavior.
+ */
+LRESULT Dialog_EditSubclassProc_Ex(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam,
+                                    Dialog_EditCustomCallback callback, WNDPROC origProc);
+
+/* ============================================================================
+ * Edit Control Helper Functions
+ * ============================================================================ */
+
+/**
+ * @brief Select all text in edit control
+ * @param hwndEdit Edit control handle
+ *
+ * @details Wrapper for SendMessage(hwndEdit, EM_SETSEL, 0, -1)
+ */
+void Dialog_SelectAllText(HWND hwndEdit);
+
+/**
+ * @brief Initialize edit control with value and select all
+ * @param hwndEdit Edit control handle
+ * @param initialValue Initial text (NULL to clear)
+ *
+ * @details Sets text and selects all for immediate editing
+ */
+void Dialog_InitEditWithValue(HWND hwndEdit, const wchar_t* initialValue);
+
 /* ============================================================================
  * Color Message Handling
  * ============================================================================ */

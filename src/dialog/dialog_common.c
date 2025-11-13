@@ -127,9 +127,88 @@ BOOL Dialog_SubclassEdit(HWND hwndEdit, DialogContext* ctx) {
 
 void Dialog_UnsubclassEdit(HWND hwndEdit, DialogContext* ctx) {
     if (!hwndEdit || !ctx || !ctx->wpOrigEditProc) return;
-    
+
     SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)ctx->wpOrigEditProc);
     ctx->wpOrigEditProc = NULL;
+}
+
+/* ============================================================================
+ * Extended Edit Control Subclassing
+ * ============================================================================ */
+
+LRESULT Dialog_EditSubclassProc_Ex(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam,
+                                    Dialog_EditCustomCallback callback, WNDPROC origProc) {
+    if (!origProc) return 0;
+
+    BOOL processed = FALSE;
+    LRESULT customResult = 0;
+
+    if (callback) {
+        customResult = callback(hwnd, msg, wParam, lParam, &processed);
+        if (processed) {
+            return customResult;
+        }
+    }
+
+    static BOOL firstKeyProcessed = FALSE;
+
+    switch (msg) {
+        case WM_SETFOCUS:
+            PostMessage(hwnd, EM_SETSEL, 0, -1);
+            firstKeyProcessed = FALSE;
+            break;
+
+        case WM_KEYDOWN:
+            if (!firstKeyProcessed) {
+                firstKeyProcessed = TRUE;
+            }
+
+            if (wParam == VK_RETURN) {
+                HWND hwndOkButton = GetDlgItem(GetParent(hwnd), CLOCK_IDC_BUTTON_OK);
+                SendMessage(GetParent(hwnd), WM_COMMAND,
+                           MAKEWPARAM(CLOCK_IDC_BUTTON_OK, BN_CLICKED),
+                           (LPARAM)hwndOkButton);
+                return 0;
+            }
+
+            if (wParam == 'A' && GetKeyState(VK_CONTROL) < 0) {
+                SendMessage(hwnd, EM_SETSEL, 0, -1);
+                return 0;
+            }
+            break;
+
+        case WM_CHAR:
+            if (wParam == 1 || ((wParam == 'a' || wParam == 'A') && GetKeyState(VK_CONTROL) < 0)) {
+                return 0;
+            }
+            if (wParam == VK_RETURN) {
+                return 0;
+            }
+            break;
+    }
+
+    return CallWindowProc(origProc, hwnd, msg, wParam, lParam);
+}
+
+/* ============================================================================
+ * Edit Control Helper Functions
+ * ============================================================================ */
+
+void Dialog_SelectAllText(HWND hwndEdit) {
+    if (!hwndEdit || !IsWindow(hwndEdit)) return;
+    SendMessage(hwndEdit, EM_SETSEL, 0, -1);
+}
+
+void Dialog_InitEditWithValue(HWND hwndEdit, const wchar_t* initialValue) {
+    if (!hwndEdit || !IsWindow(hwndEdit)) return;
+
+    if (initialValue) {
+        SetWindowTextW(hwndEdit, initialValue);
+    } else {
+        SetWindowTextW(hwndEdit, L"");
+    }
+
+    Dialog_SelectAllText(hwndEdit);
 }
 
 /* ============================================================================
