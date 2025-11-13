@@ -471,7 +471,7 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
     size_t inputLen = wcslen(input);
     ParseState state = {0};
 
-    state.displayText = (wchar_t*)malloc((inputLen + wcslen(BULLET_POINT) * 100 + 1) * sizeof(wchar_t));
+    state.displayText = (wchar_t*)malloc((inputLen + wcslen(BULLET_POINT) * 200 + 1) * sizeof(wchar_t));
     if (!state.displayText) return FALSE;
 
     int estimatedLinks = CountMarkdownLinks(input);
@@ -894,6 +894,148 @@ void RenderMarkdownText(HDC hdc, const wchar_t* displayText,
         SelectObject(hdc, hOriginalFont);
         DeleteObject(hCurrentFont);
     }
+}
+
+int CalculateMarkdownTextHeight(HDC hdc, const wchar_t* displayText,
+                                  MarkdownHeading* headings, int headingCount,
+                                  MarkdownStyle* styles, int styleCount,
+                                  MarkdownListItem* listItems, int listItemCount,
+                                  RECT drawRect) {
+    if (!hdc || !displayText) return 0;
+
+    TextLayoutContext ctx;
+    InitTextLayout(&ctx, hdc, drawRect);
+
+    HFONT hOriginalFont = (HFONT)GetCurrentObject(hdc, OBJ_FONT);
+    LOGFONT lf, baseLf;
+    GetObject(hOriginalFont, sizeof(LOGFONT), &lf);
+    memcpy(&baseLf, &lf, sizeof(LOGFONT));
+    int baseFontHeight = lf.lfHeight;
+
+    int textLen = wcslen(displayText);
+    HFONT hCurrentFont = NULL;
+    int lastHeadingLevel = 0;
+    int lastStyleType = STYLE_NONE;
+    int lastListItemIndex = -1;
+
+    for (int i = 0; i < textLen; i++) {
+        wchar_t ch = displayText[i];
+
+        if (ch == L'\n') {
+            if (hCurrentFont) {
+                SelectObject(hdc, hOriginalFont);
+                DeleteObject(hCurrentFont);
+                hCurrentFont = NULL;
+            }
+            lastHeadingLevel = 0;
+            lastStyleType = STYLE_NONE;
+            lastListItemIndex = -1;
+            AdvanceNewline(&ctx);
+            continue;
+        }
+
+        int headingIndex = -1;
+        BOOL isHeading = IsCharacterInHeading(headings, headingCount, i, &headingIndex);
+
+        int styleIndex = -1;
+        BOOL isStyled = IsCharacterInStyle(styles, styleCount, i, &styleIndex);
+
+        int listItemIndex = -1;
+        BOOL isListItem = IsCharacterInListItem(listItems, listItemCount, i, &listItemIndex);
+
+        if (isListItem && listItemIndex != lastListItemIndex) {
+            if (i == listItems[listItemIndex].startPos) {
+                ctx.x += LIST_ITEM_INDENT * (1 + listItems[listItemIndex].indentLevel);
+            }
+            lastListItemIndex = listItemIndex;
+        }
+
+        int currentFontHeight = baseFontHeight;
+        int currentFontWeight = FW_NORMAL;
+        BOOL currentItalic = FALSE;
+        BOOL currentMonospace = FALSE;
+
+        if (isHeading && headingIndex != -1) {
+            int level = headings[headingIndex].level;
+            currentFontWeight = FW_BOLD;
+
+            switch (level) {
+                case 1: currentFontHeight = (int)(baseFontHeight * 1.6); break;
+                case 2: currentFontHeight = (int)(baseFontHeight * 1.4); break;
+                case 3: currentFontHeight = (int)(baseFontHeight * 1.2); break;
+                case 4: currentFontHeight = (int)(baseFontHeight * 1.1); break;
+            }
+        }
+
+        int currentStyleType = STYLE_NONE;
+        if (isStyled && styleIndex != -1) {
+            currentStyleType = styles[styleIndex].type;
+
+            switch (currentStyleType) {
+                case STYLE_ITALIC:
+                    currentItalic = TRUE;
+                    break;
+                case STYLE_BOLD:
+                    currentFontWeight = FW_BOLD;
+                    break;
+                case STYLE_BOLD_ITALIC:
+                    currentFontWeight = FW_BOLD;
+                    currentItalic = TRUE;
+                    break;
+                case STYLE_CODE:
+                    currentMonospace = TRUE;
+                    break;
+            }
+        }
+
+        if (lastHeadingLevel != (isHeading ? headings[headingIndex].level : 0) ||
+            lastStyleType != currentStyleType) {
+
+            if (hCurrentFont) {
+                SelectObject(hdc, hOriginalFont);
+                DeleteObject(hCurrentFont);
+                hCurrentFont = NULL;
+            }
+
+            if (isHeading || isStyled) {
+                memcpy(&lf, &baseLf, sizeof(LOGFONT));
+                lf.lfHeight = currentFontHeight;
+                lf.lfWeight = currentFontWeight;
+                lf.lfItalic = currentItalic;
+
+                if (currentMonospace) {
+                    wcscpy(lf.lfFaceName, L"Consolas");
+                }
+
+                hCurrentFont = CreateFontIndirect(&lf);
+                SelectObject(hdc, hCurrentFont);
+
+                TEXTMETRIC tm;
+                GetTextMetrics(hdc, &tm);
+                ctx.lineHeight = tm.tmHeight;
+            } else {
+                SelectObject(hdc, hOriginalFont);
+                TEXTMETRIC tm;
+                GetTextMetrics(hdc, &tm);
+                ctx.lineHeight = tm.tmHeight;
+            }
+
+            lastHeadingLevel = isHeading ? headings[headingIndex].level : 0;
+            lastStyleType = currentStyleType;
+        }
+
+        SIZE charSize;
+        GetTextExtentPoint32W(hdc, &ch, 1, &charSize);
+
+        AdvanceCharacter(&ctx, charSize.cx);
+    }
+
+    if (hCurrentFont) {
+        SelectObject(hdc, hOriginalFont);
+        DeleteObject(hCurrentFont);
+    }
+
+    return ctx.y + ctx.lineHeight - drawRect.top;
 }
 
 BOOL HandleMarkdownClick(MarkdownLink* links, int linkCount, POINT clickPoint) {

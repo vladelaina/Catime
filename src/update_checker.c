@@ -26,7 +26,7 @@
 #define USER_AGENT "Catime Update Checker"
 #define VERSION_BUFFER_SIZE 32
 #define URL_BUFFER_SIZE 512
-#define NOTES_BUFFER_SIZE 4096
+#define NOTES_BUFFER_SIZE 16384
 #define INITIAL_HTTP_BUFFER_SIZE 8192
 #define ERROR_MSG_BUFFER_SIZE 256
 
@@ -616,9 +616,12 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                     rect.top += 5;
                     rect.right -= MODERN_SCROLLBAR_WIDTH + MODERN_SCROLLBAR_MARGIN + 5;
 
-                    RECT calcRect = rect;
-                    DrawTextW(hdc, g_notesDisplayText, -1, &calcRect, DT_CALCRECT | DT_WORDBREAK | DT_NOPREFIX);
-                    g_textHeight = calcRect.bottom - calcRect.top;
+                    RECT drawRect = rect;
+                    g_textHeight = CalculateMarkdownTextHeight(hdc, g_notesDisplayText,
+                                                                g_notesHeadings, g_notesHeadingCount,
+                                                                g_notesStyles, g_notesStyleCount,
+                                                                g_notesListItems, g_notesListItemCount,
+                                                                drawRect);
 
                     SelectObject(hdc, hOldFont);
                     ReleaseDC(hwndNotes, hdc);

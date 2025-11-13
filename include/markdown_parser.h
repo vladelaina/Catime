@@ -192,6 +192,25 @@ void RenderMarkdownText(HDC hdc, const wchar_t* displayText,
                         RECT drawRect, COLORREF linkColor, COLORREF normalColor);
 
 /**
+ * @brief Calculate actual rendered height of markdown text
+ * @param hdc Device context
+ * @param displayText Text to measure
+ * @param headings Heading array
+ * @param headingCount Heading count
+ * @param styles Style array
+ * @param styleCount Style count
+ * @param listItems List item array
+ * @param listItemCount List item count
+ * @param drawRect Available drawing area
+ * @return Actual rendered height in pixels
+ */
+int CalculateMarkdownTextHeight(HDC hdc, const wchar_t* displayText,
+                                  MarkdownHeading* headings, int headingCount,
+                                  MarkdownStyle* styles, int styleCount,
+                                  MarkdownListItem* listItems, int listItemCount,
+                                  RECT drawRect);
+
+/**
  * @brief Handle click and open URL via ShellExecute
  * @param links Link array
  * @param linkCount Link count
