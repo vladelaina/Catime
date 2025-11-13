@@ -639,9 +639,6 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
 
                 SetDlgItemTextW(hwndDlg, IDYES, GetLocalizedString(NULL, L"Update Now"));
                 SetDlgItemTextW(hwndDlg, IDNO, GetLocalizedString(NULL, L"Later"));
-                SetDlgItemTextW(hwndDlg, IDC_UPDATE_EXIT_TEXT,
-                    GetLocalizedString(NULL,
-                                      L"Click 'Update Now' to open browser and download the new version"));
                 SetWindowTextW(hwndDlg, GetLocalizedString(NULL, L"Update Available"));
 
                 ShowWindow(GetDlgItem(hwndDlg, IDYES), SW_SHOW);

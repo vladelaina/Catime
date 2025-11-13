@@ -8,7 +8,7 @@
 #pragma code_page(65001)
 
 /** @brief Update availability notification with release notes and user choice buttons */
-IDD_UPDATE_DIALOG DIALOGEX 0, 0, 300, 220
+IDD_UPDATE_DIALOG DIALOGEX 0, 0, 300, 200
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Catime - Update Notice"
 FONT 10, "Microsoft YaHei UI"
@@ -17,12 +17,10 @@ BEGIN
     CTEXT           "Update Available", IDC_UPDATE_TEXT, 8, 8, 284, 18
     /** Release notes with clickable markdown links and modern scrollbar */
     CONTROL         "", IDC_UPDATE_NOTES, "Static", SS_OWNERDRAW | SS_NOTIFY, 8, 30, 284, 140
-    /** Exit instruction text */
-    CTEXT           "Click 'Update Now' to open browser and download the new version", IDC_UPDATE_EXIT_TEXT, 8, 175, 284, 10
     /** Accept update button */
-    PUSHBUTTON      "Update Now", IDYES, 155, 195, 60, 14
+    PUSHBUTTON      "Update Now", IDYES, 155, 175, 60, 14
     /** Decline update button */
-    PUSHBUTTON      "Later", IDNO, 85, 195, 60, 14
+    PUSHBUTTON      "Later", IDNO, 85, 175, 60, 14
     /** Hidden OK button for single-button mode */
-    DEFPUSHBUTTON   "OK", IDOK, 120, 195, 60, 14, NOT WS_VISIBLE
+    DEFPUSHBUTTON   "OK", IDOK, 120, 175, 60, 14, NOT WS_VISIBLE
 END 
