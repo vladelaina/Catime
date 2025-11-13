@@ -450,11 +450,11 @@ static LRESULT CmdFeedback(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 static LRESULT CmdModifyTimeOptions(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    
+
     while (1) {
         ClearInputBuffer(inputText, sizeof(inputText));
-        DialogBoxParamW(GetModuleHandle(NULL), MAKEINTRESOURCEW(CLOCK_IDD_SHORTCUT_DIALOG), 
-                       NULL, DlgProc, (LPARAM)CLOCK_IDD_SHORTCUT_DIALOG);
+        DialogBoxParamW(GetModuleHandle(NULL), MAKEINTRESOURCEW(CLOCK_IDD_SHORTCUT_DIALOG),
+                       hwnd, DlgProc, (LPARAM)CLOCK_IDD_SHORTCUT_DIALOG);
         
         if (isAllSpacesOnly(inputText)) break;
         
