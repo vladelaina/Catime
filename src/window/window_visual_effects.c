@@ -60,22 +60,25 @@ typedef struct _ACCENT_POLICY {
  * ============================================================================ */
 
 void SetClickThrough(HWND hwnd, BOOL enable) {
+    extern int CLOCK_WINDOW_OPACITY;
+    BYTE alphaValue = (BYTE)((CLOCK_WINDOW_OPACITY * 255) / 100);
+
     LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
     exStyle &= ~WS_EX_TRANSPARENT;
-    
+
     if (enable) {
         exStyle |= WS_EX_TRANSPARENT;
         if (exStyle & WS_EX_LAYERED) {
-            SetLayeredWindowAttributes(hwnd, COLOR_KEY_BLACK, ALPHA_OPAQUE, LWA_COLORKEY);
+            SetLayeredWindowAttributes(hwnd, COLOR_KEY_BLACK, alphaValue, LWA_COLORKEY | LWA_ALPHA);
         }
         LOG_INFO("Click-through enabled");
     } else {
         if (exStyle & WS_EX_LAYERED) {
-            SetLayeredWindowAttributes(hwnd, 0, ALPHA_OPAQUE, LWA_ALPHA);
+            SetLayeredWindowAttributes(hwnd, 0, alphaValue, LWA_ALPHA);
         }
         LOG_INFO("Click-through disabled");
     }
-    
+
     SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
     SetWindowPos(hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
 }

@@ -79,12 +79,17 @@ void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {
     CLOCK_WINDOW_SCALE = snapshot->windowScale;
     CLOCK_FONT_SCALE_FACTOR = snapshot->windowScale;
     CLOCK_WINDOW_TOPMOST = snapshot->windowTopmost;
-    
-    /* Update window position if window exists */
+    CLOCK_WINDOW_OPACITY = snapshot->windowOpacity;
+
+    /* Update window position and opacity if window exists */
     HWND hwnd = FindWindowW(L"CatimeWindow", L"Catime");
     if (hwnd) {
-        SetWindowPos(hwnd, NULL, CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y, 
+        SetWindowPos(hwnd, NULL, CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y,
                     0, 0, SWP_NOSIZE | SWP_NOZORDER);
+
+        BYTE alphaValue = (BYTE)((CLOCK_WINDOW_OPACITY * 255) / 100);
+        SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), alphaValue, LWA_COLORKEY | LWA_ALPHA);
+
         InvalidateRect(hwnd, NULL, TRUE);
     }
 }

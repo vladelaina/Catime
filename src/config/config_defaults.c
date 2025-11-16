@@ -35,7 +35,8 @@ static const ConfigItemMeta CONFIG_METADATA[] = {
     {INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_Y", "-1", CONFIG_TYPE_INT, "Window Y position"},
     {INI_SECTION_DISPLAY, "WINDOW_SCALE", DEFAULT_WINDOW_SCALE, CONFIG_TYPE_STRING, "Window scale factor"},
     {INI_SECTION_DISPLAY, "WINDOW_TOPMOST", "TRUE", CONFIG_TYPE_BOOL, "Always on top"},
-    
+    {INI_SECTION_DISPLAY, "WINDOW_OPACITY", "100", CONFIG_TYPE_INT, "Window opacity (1-100)"},
+
     /* Timer settings */
     {INI_SECTION_TIMER, "CLOCK_DEFAULT_START_TIME", "1500", CONFIG_TYPE_INT, "Default timer duration (seconds)"},
     {INI_SECTION_TIMER, "CLOCK_USE_24HOUR", "FALSE", CONFIG_TYPE_BOOL, "Use 24-hour format"},

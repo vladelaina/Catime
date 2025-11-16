@@ -218,9 +218,12 @@ BOOL LoadConfigFromFile(const char* config_path, ConfigSnapshot* snapshot) {
                  scaleStr, sizeof(scaleStr), config_path);
     snapshot->windowScale = (float)atof(scaleStr);
     
-    snapshot->windowTopmost = ReadIniBool(INI_SECTION_DISPLAY, "WINDOW_TOPMOST", 
+    snapshot->windowTopmost = ReadIniBool(INI_SECTION_DISPLAY, "WINDOW_TOPMOST",
                                          TRUE, config_path);
-    
+
+    snapshot->windowOpacity = ReadIniInt(INI_SECTION_DISPLAY, "WINDOW_OPACITY",
+                                        100, config_path);
+
     /* Avoid pure black color */
     if (strcasecmp(snapshot->textColor, "#000000") == 0) {
         strncpy(snapshot->textColor, "#000001", sizeof(snapshot->textColor) - 1);
@@ -440,6 +443,15 @@ BOOL ValidateConfigSnapshot(ConfigSnapshot* snapshot) {
     }
 
     /* Validate ranges */
+    if (snapshot->windowOpacity < 1) {
+        snapshot->windowOpacity = 1;
+        modified = TRUE;
+    }
+    if (snapshot->windowOpacity > 100) {
+        snapshot->windowOpacity = 100;
+        modified = TRUE;
+    }
+
     if (snapshot->notificationMaxOpacity < 1) {
         snapshot->notificationMaxOpacity = 1;
         modified = TRUE;

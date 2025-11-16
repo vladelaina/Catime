@@ -72,14 +72,14 @@ static void ResetTimerState(BOOL isCountUp) {
  * @brief Handle tray icon mouse events
  * @param hwnd Main window handle
  * @param uID Tray icon identifier
- * @param uMouseMsg Mouse message (WM_LBUTTONUP, WM_RBUTTONUP, etc.)
- * @note Right-click: color menu; Left-click: main context menu
+ * @param uMouseMsg Mouse message (WM_LBUTTONUP, WM_RBUTTONUP, WM_MOUSEWHEEL, etc.)
+ * @note Right-click: color menu; Left-click: main context menu; Mouse wheel: adjust window opacity
  */
 void HandleTrayIconMessage(HWND hwnd, UINT uID, UINT uMouseMsg) {
     (void)uID;
-    
+
     SetCursor(LoadCursorW(NULL, MAKEINTRESOURCEW(IDC_ARROW)));
-    
+
     if (uMouseMsg == WM_RBUTTONUP) {
         ShowColorMenu(hwnd);
     }

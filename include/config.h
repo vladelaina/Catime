@@ -766,8 +766,14 @@ void ResetTimerWithInterval(HWND hwnd);
 void WriteConfigStartupMode(const char* mode);
 
 /**
+ * @brief Write window opacity setting
+ * @param opacity Opacity value (1-100)
+ */
+void WriteConfigWindowOpacity(int opacity);
+
+/**
  * @brief Force flush pending writes (use sparingly)
- * 
+ *
  * @details Performance impact. Use before shutdown or critical operations.
  */
 void FlushConfigToDisk(void);

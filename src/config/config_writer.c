@@ -133,7 +133,12 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int* count) {
     safe_strncpy(items[idx].key, "WINDOW_TOPMOST", sizeof(items[idx].key));
     safe_strncpy(items[idx].value, CLOCK_WINDOW_TOPMOST ? "TRUE" : "FALSE", sizeof(items[idx].value));
     idx++;
-    
+
+    safe_strncpy(items[idx].section, INI_SECTION_DISPLAY, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "WINDOW_OPACITY", sizeof(items[idx].key));
+    snprintf(items[idx].value, sizeof(items[idx].value), "%d", CLOCK_WINDOW_OPACITY);
+    idx++;
+
     /* Timer section */
     safe_strncpy(items[idx].section, INI_SECTION_TIMER, sizeof(items[idx].section));
     safe_strncpy(items[idx].key, "CLOCK_DEFAULT_START_TIME", sizeof(items[idx].key));

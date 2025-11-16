@@ -81,11 +81,14 @@ void StartEditMode(HWND hwnd) {
 
 void EndEditMode(HWND hwnd) {
     if (!CLOCK_EDIT_MODE) return;
-    
+
     CLOCK_EDIT_MODE = FALSE;
-    
+
     SetBlurBehind(hwnd, FALSE);
-    SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), 255, LWA_COLORKEY);
+
+    extern int CLOCK_WINDOW_OPACITY;
+    BYTE alphaValue = (BYTE)((CLOCK_WINDOW_OPACITY * 255) / 100);
+    SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), alphaValue, LWA_COLORKEY | LWA_ALPHA);
     
     SetClickThrough(hwnd, TRUE);
     

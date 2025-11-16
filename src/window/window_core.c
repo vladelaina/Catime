@@ -41,6 +41,7 @@ BOOL CLOCK_EDIT_MODE = FALSE;
 BOOL CLOCK_IS_DRAGGING = FALSE;
 POINT CLOCK_LAST_MOUSE_POS = {0, 0};
 BOOL CLOCK_WINDOW_TOPMOST = TRUE;
+int CLOCK_WINDOW_OPACITY = 100;
 
 RECT CLOCK_TEXT_RECT = {0, 0, 0, 0};
 BOOL CLOCK_TEXT_RECT_VALID = FALSE;
@@ -94,12 +95,13 @@ static void ApplyNormalMode(HWND hwnd) {
  * @param nCmdShow Initial show command from WinMain
  */
 static void ApplyInitialWindowState(HWND hwnd, int nCmdShow) {
-    SetLayeredWindowAttributes(hwnd, COLOR_KEY_BLACK, ALPHA_OPAQUE, LWA_COLORKEY);
+    BYTE alphaValue = (BYTE)((CLOCK_WINDOW_OPACITY * 255) / 100);
+    SetLayeredWindowAttributes(hwnd, COLOR_KEY_BLACK, alphaValue, LWA_COLORKEY | LWA_ALPHA);
     SetBlurBehind(hwnd, FALSE);
-    
+
     ShowWindow(hwnd, nCmdShow);
     UpdateWindow(hwnd);
-    
+
     if (CLOCK_WINDOW_TOPMOST) {
         ApplyTopmostMode(hwnd);
     } else {

@@ -23,7 +23,70 @@ NOTIFYICONDATAW nid;
 /** @brief Taskbar recreation message ID */
 UINT WM_TASKBARCREATED = 0;
 
+/** @brief Mouse hook for tray icon wheel events */
+static HHOOK g_mouseHook = NULL;
+static HWND g_mainHwnd = NULL;
+
 extern void ReadPercentIconColorsConfig(void);
+
+/**
+ * @brief Mouse hook callback for tray icon wheel events
+ */
+static LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
+    if (nCode >= 0 && wParam == WM_MOUSEWHEEL) {
+        MSLLHOOKSTRUCT* pMouseStruct = (MSLLHOOKSTRUCT*)lParam;
+
+        /* Get tray icon rectangle */
+        NOTIFYICONIDENTIFIER iconId = {0};
+        iconId.cbSize = sizeof(iconId);
+        iconId.hWnd = nid.hWnd;
+        iconId.uID = nid.uID;
+
+        RECT iconRect = {0};
+        HRESULT hr = Shell_NotifyIconGetRect(&iconId, &iconRect);
+
+        /* Check if mouse is over our tray icon */
+        if (SUCCEEDED(hr)) {
+            if (PtInRect(&iconRect, pMouseStruct->pt)) {
+                extern int CLOCK_WINDOW_OPACITY;
+                extern void WriteConfigWindowOpacity(int opacity);
+
+                int delta = GET_WHEEL_DELTA_WPARAM(pMouseStruct->mouseData);
+                int step = 5;
+
+                if (delta > 0) {
+                    CLOCK_WINDOW_OPACITY += step;
+                } else {
+                    CLOCK_WINDOW_OPACITY -= step;
+                }
+
+                if (CLOCK_WINDOW_OPACITY < 1) CLOCK_WINDOW_OPACITY = 1;
+                if (CLOCK_WINDOW_OPACITY > 100) CLOCK_WINDOW_OPACITY = 100;
+
+                if (g_mainHwnd) {
+                    extern BOOL CLOCK_EDIT_MODE;
+                    BYTE alphaValue = (BYTE)((CLOCK_WINDOW_OPACITY * 255) / 100);
+
+                    /* Use appropriate flags based on edit mode */
+                    if (CLOCK_EDIT_MODE) {
+                        /* Edit mode uses pure alpha blending */
+                        SetLayeredWindowAttributes(g_mainHwnd, 0, alphaValue, LWA_ALPHA);
+                    } else {
+                        /* Normal mode uses color key + alpha */
+                        SetLayeredWindowAttributes(g_mainHwnd, RGB(0, 0, 0), alphaValue, LWA_COLORKEY | LWA_ALPHA);
+                    }
+                }
+
+                WriteConfigWindowOpacity(CLOCK_WINDOW_OPACITY);
+
+                /* Consume the event */
+                return 1;
+            }
+        }
+    }
+
+    return CallNextHookEx(g_mouseHook, nCode, wParam, lParam);
+}
 
 /** @brief Animation type categories */
 typedef enum {
@@ -263,6 +326,8 @@ static HICON GetInitialPercentIcon(AnimationType type) {
  * @param hInstance App instance for icon resources
  */
 void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
+    g_mainHwnd = hwnd;
+
     ReadPercentIconColorsConfig();
     SystemMonitor_Init();
     PreloadAnimationFromConfig();
@@ -282,14 +347,19 @@ void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
     nid.hWnd = hwnd;
     nid.uCallbackMessage = CLOCK_WM_TRAYICON;
     wcscpy_s(nid.szTip, _countof(nid.szTip), L"CPU --.-%\nMemory --.-%\nUpload --.- ?/s\nDownload --.- ?/s");
-    
+
     Shell_NotifyIconW(NIM_ADD, &nid);
-    
+
     if (WM_TASKBARCREATED == 0) {
         RegisterTaskbarCreatedMessage();
     }
     
     SetTimer(hwnd, TRAY_TIP_TIMER_ID, TOOLTIP_UPDATE_INTERVAL_MS, (TIMERPROC)TrayTipTimerProc);
+
+    /* Install mouse hook for tray wheel events */
+    if (!g_mouseHook) {
+        g_mouseHook = SetWindowsHookExW(WH_MOUSE_LL, MouseHookProc, hInstance, 0);
+    }
 }
 
 /** @brief Remove tray icon and cleanup */
@@ -297,8 +367,16 @@ void RemoveTrayIcon(void) {
     if (nid.hWnd) {
         KillTimer(nid.hWnd, TRAY_TIP_TIMER_ID);
     }
+
+    /* Uninstall mouse hook */
+    if (g_mouseHook) {
+        UnhookWindowsHookEx(g_mouseHook);
+        g_mouseHook = NULL;
+    }
+
     SystemMonitor_Shutdown();
     Shell_NotifyIconW(NIM_DELETE, &nid);
+    g_mainHwnd = NULL;
 }
 
 /**

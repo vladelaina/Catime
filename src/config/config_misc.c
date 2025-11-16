@@ -396,7 +396,8 @@ void WriteConfigKeyValue(const char* key, const char* value) {
            strncmp(key, "WINDOW_SCALE", 12) == 0 ||
            strncmp(key, "CLOCK_WINDOW_POS_X", 18) == 0 ||
            strncmp(key, "CLOCK_WINDOW_POS_Y", 18) == 0 ||
-           strncmp(key, "WINDOW_TOPMOST", 14) == 0) {
+           strncmp(key, "WINDOW_TOPMOST", 14) == 0 ||
+           strncmp(key, "WINDOW_OPACITY", 14) == 0) {
         section = INI_SECTION_DISPLAY;
     }
     else if (strncmp(key, "CLOCK_DEFAULT_START_TIME", 24) == 0 ||
@@ -433,5 +434,15 @@ void WriteConfigKeyValue(const char* key, const char* value) {
     }
     
     WriteIniString(section, key, value, config_path);
+}
+
+/**
+ * @brief Write window opacity setting to config file
+ * @param opacity Opacity value (1-100)
+ */
+void WriteConfigWindowOpacity(int opacity) {
+    extern int CLOCK_WINDOW_OPACITY;
+    CLOCK_WINDOW_OPACITY = opacity;
+    UpdateConfigIntAtomic(INI_SECTION_DISPLAY, "WINDOW_OPACITY", opacity);
 }
 

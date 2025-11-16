@@ -170,10 +170,12 @@ static BOOL LoadDisplayWindowSettings(const char* section, const char* key, void
     ReadConfigStr(CFG_SECTION_DISPLAY, CFG_KEY_WINDOW_SCALE, "1.62", scaleStr, sizeof(scaleStr));
     float newScale = (float)atof(scaleStr);
     BOOL newTopmost = ReadConfigBool(CFG_SECTION_DISPLAY, CFG_KEY_WINDOW_TOPMOST, CLOCK_WINDOW_TOPMOST);
-    
+    int newOpacity = ReadConfigInt(CFG_SECTION_DISPLAY, "WINDOW_OPACITY", CLOCK_WINDOW_OPACITY);
+
     BOOL changed = FALSE;
     BOOL posChanged = (posX != CLOCK_WINDOW_POS_X) || (posY != CLOCK_WINDOW_POS_Y);
     BOOL scaleChanged = (newScale > 0.0f && fabsf(newScale - CLOCK_WINDOW_SCALE) > 0.0001f);
+    BOOL opacityChanged = (newOpacity != CLOCK_WINDOW_OPACITY);
     
     if (scaleChanged) {
         extern float CLOCK_FONT_SCALE_FACTOR;
@@ -197,7 +199,25 @@ static BOOL LoadDisplayWindowSettings(const char* section, const char* key, void
         SetWindowTopmost(*(HWND*)target, newTopmost);
         changed = TRUE;
     }
-    
+
+    if (opacityChanged) {
+        if (newOpacity < 1) newOpacity = 1;
+        if (newOpacity > 100) newOpacity = 100;
+        CLOCK_WINDOW_OPACITY = newOpacity;
+
+        HWND hwnd = *(HWND*)target;
+        BYTE alphaValue = (BYTE)((CLOCK_WINDOW_OPACITY * 255) / 100);
+
+        /* Use appropriate flags based on edit mode */
+        if (CLOCK_EDIT_MODE) {
+            SetLayeredWindowAttributes(hwnd, 0, alphaValue, LWA_ALPHA);
+        } else {
+            SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), alphaValue, LWA_COLORKEY | LWA_ALPHA);
+        }
+
+        changed = TRUE;
+    }
+
     return changed;
 }
 

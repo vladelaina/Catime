@@ -231,9 +231,12 @@ void ToggleEditMode(HWND hwnd) {
         SetForegroundWindow(hwnd);
     } else {
         extern char CLOCK_TEXT_COLOR[10];
+        extern int CLOCK_WINDOW_OPACITY;
         SetBlurBehind(hwnd, FALSE);
-        SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), OPACITY_FULL, LWA_COLORKEY);
-        
+
+        BYTE alphaValue = (BYTE)((CLOCK_WINDOW_OPACITY * 255) / 100);
+        SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), alphaValue, LWA_COLORKEY | LWA_ALPHA);
+
         SetClickThrough(hwnd, TRUE);
         
         if (!PREVIOUS_TOPMOST_STATE) {
