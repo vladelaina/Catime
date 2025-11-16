@@ -27,61 +27,93 @@ UINT WM_TASKBARCREATED = 0;
 static HHOOK g_mouseHook = NULL;
 static HWND g_mainHwnd = NULL;
 
+/** @brief Opacity tooltip mode flag */
+BOOL g_showingOpacityTip = FALSE;
+static BOOL g_mouseWasOverIcon = FALSE;
+
 extern void ReadPercentIconColorsConfig(void);
 
 /**
- * @brief Mouse hook callback for tray icon wheel events
+ * @brief Check if mouse is over tray icon
+ */
+static BOOL IsMouseOverTrayIcon(POINT pt) {
+    NOTIFYICONIDENTIFIER iconId = {0};
+    iconId.cbSize = sizeof(iconId);
+    iconId.hWnd = nid.hWnd;
+    iconId.uID = nid.uID;
+
+    RECT iconRect = {0};
+    HRESULT hr = Shell_NotifyIconGetRect(&iconId, &iconRect);
+
+    if (SUCCEEDED(hr)) {
+        return PtInRect(&iconRect, pt);
+    }
+    return FALSE;
+}
+
+/**
+ * @brief Mouse hook callback for tray icon wheel events and hover detection
  */
 static LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
-    if (nCode >= 0 && wParam == WM_MOUSEWHEEL) {
+    if (nCode >= 0) {
         MSLLHOOKSTRUCT* pMouseStruct = (MSLLHOOKSTRUCT*)lParam;
+        BOOL isOverIcon = IsMouseOverTrayIcon(pMouseStruct->pt);
 
-        /* Get tray icon rectangle */
-        NOTIFYICONIDENTIFIER iconId = {0};
-        iconId.cbSize = sizeof(iconId);
-        iconId.hWnd = nid.hWnd;
-        iconId.uID = nid.uID;
-
-        RECT iconRect = {0};
-        HRESULT hr = Shell_NotifyIconGetRect(&iconId, &iconRect);
-
-        /* Check if mouse is over our tray icon */
-        if (SUCCEEDED(hr)) {
-            if (PtInRect(&iconRect, pMouseStruct->pt)) {
-                extern int CLOCK_WINDOW_OPACITY;
-                extern void WriteConfigWindowOpacity(int opacity);
-
-                int delta = GET_WHEEL_DELTA_WPARAM(pMouseStruct->mouseData);
-                int step = 5;
-
-                if (delta > 0) {
-                    CLOCK_WINDOW_OPACITY += step;
-                } else {
-                    CLOCK_WINDOW_OPACITY -= step;
-                }
-
-                if (CLOCK_WINDOW_OPACITY < 1) CLOCK_WINDOW_OPACITY = 1;
-                if (CLOCK_WINDOW_OPACITY > 100) CLOCK_WINDOW_OPACITY = 100;
-
-                if (g_mainHwnd) {
-                    extern BOOL CLOCK_EDIT_MODE;
-                    BYTE alphaValue = (BYTE)((CLOCK_WINDOW_OPACITY * 255) / 100);
-
-                    /* Use appropriate flags based on edit mode */
-                    if (CLOCK_EDIT_MODE) {
-                        /* Edit mode uses pure alpha blending */
-                        SetLayeredWindowAttributes(g_mainHwnd, 0, alphaValue, LWA_ALPHA);
-                    } else {
-                        /* Normal mode uses color key + alpha */
-                        SetLayeredWindowAttributes(g_mainHwnd, RGB(0, 0, 0), alphaValue, LWA_COLORKEY | LWA_ALPHA);
+        /* Detect mouse leave and re-enter to reset opacity tip mode */
+        if (wParam == WM_MOUSEMOVE) {
+            if (!isOverIcon && g_mouseWasOverIcon) {
+                /* Mouse left icon */
+                g_mouseWasOverIcon = FALSE;
+            } else if (isOverIcon && !g_mouseWasOverIcon) {
+                /* Mouse entered icon - reset to normal tooltip */
+                g_mouseWasOverIcon = TRUE;
+                if (g_showingOpacityTip) {
+                    g_showingOpacityTip = FALSE;
+                    /* Trigger normal tooltip update */
+                    if (g_mainHwnd) {
+                        TrayTipTimerProc(g_mainHwnd, WM_TIMER, TRAY_TIP_TIMER_ID, 0);
                     }
                 }
-
-                WriteConfigWindowOpacity(CLOCK_WINDOW_OPACITY);
-
-                /* Consume the event */
-                return 1;
             }
+        }
+
+        /* Handle wheel events */
+        if (wParam == WM_MOUSEWHEEL && isOverIcon) {
+            extern int CLOCK_WINDOW_OPACITY;
+            extern void WriteConfigWindowOpacity(int opacity);
+
+            int delta = GET_WHEEL_DELTA_WPARAM(pMouseStruct->mouseData);
+            int step = 5;
+
+            if (delta > 0) {
+                CLOCK_WINDOW_OPACITY += step;
+            } else {
+                CLOCK_WINDOW_OPACITY -= step;
+            }
+
+            if (CLOCK_WINDOW_OPACITY < 1) CLOCK_WINDOW_OPACITY = 1;
+            if (CLOCK_WINDOW_OPACITY > 100) CLOCK_WINDOW_OPACITY = 100;
+
+            if (g_mainHwnd) {
+                extern BOOL CLOCK_EDIT_MODE;
+                BYTE alphaValue = (BYTE)((CLOCK_WINDOW_OPACITY * 255) / 100);
+
+                /* Use appropriate flags based on edit mode */
+                if (CLOCK_EDIT_MODE) {
+                    SetLayeredWindowAttributes(g_mainHwnd, 0, alphaValue, LWA_ALPHA);
+                } else {
+                    SetLayeredWindowAttributes(g_mainHwnd, RGB(0, 0, 0), alphaValue, LWA_COLORKEY | LWA_ALPHA);
+                }
+
+                /* Enter opacity tip mode and show opacity */
+                g_showingOpacityTip = TRUE;
+                wchar_t opacityTip[64];
+                _snwprintf_s(opacityTip, _countof(opacityTip), _TRUNCATE, L"Opacity: %d%%", CLOCK_WINDOW_OPACITY);
+                UpdateTrayTooltip(opacityTip);
+            }
+
+            WriteConfigWindowOpacity(CLOCK_WINDOW_OPACITY);
+            return 1;
         }
     }
 
@@ -256,7 +288,7 @@ static void AppendSpeedLine(wchar_t* tip, size_t tipSize, AnimationSpeedMetric m
 }
 
 /** @brief Update tray icon tooltip */
-static void UpdateTrayTooltip(const wchar_t* tip) {
+void UpdateTrayTooltip(const wchar_t* tip) {
     NOTIFYICONDATAW n = {0};
     n.cbSize = sizeof(n);
     n.hWnd = nid.hWnd;
@@ -270,22 +302,28 @@ static void UpdateTrayTooltip(const wchar_t* tip) {
  * @brief Periodic timer callback (1s interval)
  * @note Updates tooltip with CPU, memory, network, and animation speed
  */
-static void CALLBACK TrayTipTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time) {
+void CALLBACK TrayTipTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time) {
     (void)hwnd; (void)msg; (void)id; (void)time;
-    
+
+    /* Skip update if showing opacity tip */
+    extern BOOL g_showingOpacityTip;
+    if (g_showingOpacityTip) {
+        return;
+    }
+
     float cpu, mem, upBps, downBps;
     GetSystemMetricsWithWarmup(&cpu, &mem);
     BOOL hasNet = SystemMonitor_GetNetSpeed(&upBps, &downBps);
-    
+
     wchar_t tip[256] = {0};
     BuildBasicTooltip(tip, _countof(tip), cpu, mem, upBps, downBps, hasNet);
-    
+
     const char* animName = GetCurrentAnimationName();
     if (ShouldShowAnimationSpeed(animName)) {
         AnimationSpeedMetric metric = GetAnimationSpeedMetric();
         AppendSpeedLine(tip, _countof(tip), metric, cpu, mem);
     }
-    
+
     UpdateTrayTooltip(tip);
     TrayAnimation_UpdatePercentIconIfNeeded();
 }

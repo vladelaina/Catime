@@ -564,24 +564,24 @@ void InitializePomodoro(void) {
 BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
     static int topmost_retry = 0;
     static int visibility_retry = 0;
-    
+
     switch (wp) {
         case TIMER_ID_TOPMOST_RETRY:
             return HandleRetryTimer(hwnd, TIMER_ID_TOPMOST_RETRY, &topmost_retry, SetupTopmostWindow);
-            
+
         case TIMER_ID_VISIBILITY_RETRY:
             return HandleRetryTimer(hwnd, TIMER_ID_VISIBILITY_RETRY, &visibility_retry, SetupVisibilityWindow);
-            
+
         case TIMER_ID_FORCE_REDRAW:
         case TIMER_ID_EDIT_MODE_REFRESH:
             return HandleForceRedraw(hwnd);
-            
+
         case TIMER_ID_FONT_VALIDATION:
             return HandleFontValidation(hwnd);
-            
+
         case TIMER_ID_MAIN:
             return HandleMainTimer(hwnd);
-            
+
         default:
             return FALSE;
     }

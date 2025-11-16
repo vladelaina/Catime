@@ -65,4 +65,21 @@ void RecreateTaskbarIcon(HWND hwnd, HINSTANCE hInstance);
  */
 void UpdateTrayIcon(HWND hwnd);
 
+/**
+ * @brief Tray tooltip timer callback
+ * @param hwnd Window handle
+ * @param msg Timer message
+ * @param id Timer ID
+ * @param time System time
+ *
+ * @details Updates tooltip with system metrics (CPU, memory, network)
+ */
+void CALLBACK TrayTipTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time);
+
+/**
+ * @brief Update tray icon tooltip
+ * @param tip Tooltip text to display
+ */
+void UpdateTrayTooltip(const wchar_t* tip);
+
 #endif
