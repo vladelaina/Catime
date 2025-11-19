@@ -207,11 +207,18 @@ static BOOL LoadDisplayWindowSettings(const char* section, const char* key, void
 
         HWND hwnd = *(HWND*)target;
         BYTE alphaValue = (BYTE)((CLOCK_WINDOW_OPACITY * 255) / 100);
-
-        /* Use appropriate flags based on edit mode */
+        
+        // Re-apply acrylic effect with new opacity
+        SetBlurBehind(hwnd, TRUE);
+        
+        // Update window layer alpha to match opacity setting
+        // Background remains transparent via ColorKey (Normal) or Glass (Edit)
+        // But we need to know which mode we are in to set the correct flags/key
         if (CLOCK_EDIT_MODE) {
+            // Edit Mode: No ColorKey (Glass handles transparency), Alpha applies to text
             SetLayeredWindowAttributes(hwnd, 0, alphaValue, LWA_ALPHA);
         } else {
+            // Normal Mode: ColorKey handles background, Alpha applies to text
             SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), alphaValue, LWA_COLORKEY | LWA_ALPHA);
         }
 

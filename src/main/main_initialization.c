@@ -95,6 +95,11 @@ BOOL InitializeSubsystems(void) {
     SetupExceptionHandler();
     LOG_INFO("Catime is starting...");
     
+    // Initialize DWM functions for visual effects (Blur/Glass)
+    if (!InitDWMFunctions()) {
+        LOG_WARNING("DWM functions failed to load, visual effects may be limited");
+    }
+    
     HRESULT hr = CoInitialize(NULL);
     if (FAILED(hr)) {
         LOG_ERROR("COM initialization failed, error code: 0x%08X", hr);

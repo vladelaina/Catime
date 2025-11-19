@@ -22,7 +22,9 @@
  * ============================================================================ */
 
 typedef HRESULT (WINAPI *pfnDwmEnableBlurBehindWindow)(HWND hWnd, const DWM_BLURBEHIND* pBlurBehind);
+typedef HRESULT (WINAPI *pfnDwmExtendFrameIntoClientArea)(HWND hWnd, const MARGINS* pMarInset);
 static pfnDwmEnableBlurBehindWindow _DwmEnableBlurBehindWindow = NULL;
+static pfnDwmExtendFrameIntoClientArea _DwmExtendFrameIntoClientArea = NULL;
 
 /* ============================================================================
  * Windows composition structures (for blur effects)
@@ -59,8 +61,44 @@ typedef struct _ACCENT_POLICY {
  * Implementation
  * ============================================================================ */
 
+BOOL InitDWMFunctions(void) {
+    HMODULE hDwmapi = LoadLibraryW(DWMAPI_DLL);
+    if (hDwmapi) {
+        _DwmEnableBlurBehindWindow = (pfnDwmEnableBlurBehindWindow)GetProcAddress(hDwmapi, "DwmEnableBlurBehindWindow");
+        _DwmExtendFrameIntoClientArea = (pfnDwmExtendFrameIntoClientArea)GetProcAddress(hDwmapi, "DwmExtendFrameIntoClientArea");
+        
+        if (_DwmEnableBlurBehindWindow && _DwmExtendFrameIntoClientArea) {
+            LOG_INFO("DWM functions loaded successfully");
+            return TRUE;
+        }
+    }
+    LOG_WARNING("Failed to load DWM functions");
+    return FALSE;
+}
+
+static void SetGlassEffect(HWND hwnd, BOOL enable) {
+    if (_DwmExtendFrameIntoClientArea) {
+        MARGINS margins = {0};
+        if (enable) {
+            // Extend frame into entire client area (-1)
+            margins.cxLeftWidth = -1;
+            margins.cxRightWidth = -1;
+            margins.cyTopHeight = -1;
+            margins.cyBottomHeight = -1;
+        } else {
+            // Reset margins
+            margins.cxLeftWidth = 0;
+            margins.cxRightWidth = 0;
+            margins.cyTopHeight = 0;
+            margins.cyBottomHeight = 0;
+        }
+        _DwmExtendFrameIntoClientArea(hwnd, &margins);
+    }
+}
+
 void SetClickThrough(HWND hwnd, BOOL enable) {
     extern int CLOCK_WINDOW_OPACITY;
+    // Allow text transparency to be controlled by the opacity setting
     BYTE alphaValue = (BYTE)((CLOCK_WINDOW_OPACITY * 255) / 100);
 
     LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
@@ -69,11 +107,17 @@ void SetClickThrough(HWND hwnd, BOOL enable) {
     if (enable) {
         exStyle |= WS_EX_TRANSPARENT;
         if (exStyle & WS_EX_LAYERED) {
+            // Normal mode: Use ColorKey for click-through transparency
+            // Disable Glass to avoid double-transparency issues
+            SetGlassEffect(hwnd, FALSE);
             SetLayeredWindowAttributes(hwnd, COLOR_KEY_BLACK, alphaValue, LWA_COLORKEY | LWA_ALPHA);
         }
         LOG_INFO("Click-through enabled");
     } else {
         if (exStyle & WS_EX_LAYERED) {
+            // Edit mode: Use Glass for clickable transparency
+            // Remove ColorKey so pixels are clickable
+            SetGlassEffect(hwnd, TRUE);
             SetLayeredWindowAttributes(hwnd, 0, alphaValue, LWA_ALPHA);
         }
         LOG_INFO("Click-through disabled");
@@ -83,25 +127,17 @@ void SetClickThrough(HWND hwnd, BOOL enable) {
     SetWindowPos(hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
 }
 
-BOOL InitDWMFunctions(void) {
-    HMODULE hDwmapi = LoadLibraryW(DWMAPI_DLL);
-    if (hDwmapi) {
-        _DwmEnableBlurBehindWindow = (pfnDwmEnableBlurBehindWindow)GetProcAddress(hDwmapi, "DwmEnableBlurBehindWindow");
-        if (_DwmEnableBlurBehindWindow) {
-            LOG_INFO("DWM blur functions loaded successfully");
-            return TRUE;
-        }
-    }
-    LOG_WARNING("Failed to load DWM blur functions");
-    return FALSE;
-}
-
 static void ApplyAccentPolicy(HWND hwnd, ACCENT_STATE accentState) {
+    extern int CLOCK_WINDOW_OPACITY;
+    // Map 1-100 opacity to 0-255 alpha for the acrylic background
+    // We cap it at 240 to ensure it never becomes fully opaque solid block which would look bad
+    DWORD alpha = (DWORD)((CLOCK_WINDOW_OPACITY * 240) / 100);
+    
     ACCENT_POLICY policy = {0};
     policy.AccentState = accentState;
     policy.AccentFlags = 0;
     policy.GradientColor = (accentState == ACCENT_ENABLE_BLURBEHIND) ? 
-                          ((BLUR_ALPHA_VALUE << 24) | BLUR_GRADIENT_COLOR) : 0;
+                          ((alpha << 24) | BLUR_GRADIENT_COLOR) : 0;
     
     WINDOWCOMPOSITIONATTRIBDATA data = {0};
     data.Attrib = WCA_ACCENT_POLICY;
