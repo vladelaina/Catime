@@ -28,6 +28,7 @@ LRESULT HandleRButtonUp(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleRButtonDown(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleExitMenuLoop(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleClose(HWND hwnd, WPARAM wp, LPARAM lp);
+LRESULT HandleKeyDown(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleLButtonDblClk(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleHotkey(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleCopyData(HWND hwnd, WPARAM wp, LPARAM lp);

@@ -139,6 +139,16 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int* count) {
     snprintf(items[idx].value, sizeof(items[idx].value), "%d", CLOCK_WINDOW_OPACITY);
     idx++;
 
+    safe_strncpy(items[idx].section, INI_SECTION_DISPLAY, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "MOVE_STEP_SMALL", sizeof(items[idx].key));
+    snprintf(items[idx].value, sizeof(items[idx].value), "%d", g_AppConfig.display.move_step_small);
+    idx++;
+
+    safe_strncpy(items[idx].section, INI_SECTION_DISPLAY, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "MOVE_STEP_LARGE", sizeof(items[idx].key));
+    snprintf(items[idx].value, sizeof(items[idx].value), "%d", g_AppConfig.display.move_step_large);
+    idx++;
+
     /* Timer section */
     safe_strncpy(items[idx].section, INI_SECTION_TIMER, sizeof(items[idx].section));
     safe_strncpy(items[idx].key, "CLOCK_DEFAULT_START_TIME", sizeof(items[idx].key));
@@ -382,6 +392,42 @@ void WriteConfigSection(const char* config_path, const char* section) {
             WriteIniString(allItems[i].section, allItems[i].key, 
                           allItems[i].value, config_path);
         }
+    }
+}
+
+void WriteConfigWindowOpacity(int opacity) {
+    if (opacity < 1) opacity = 1;
+    if (opacity > 100) opacity = 100;
+    
+    CLOCK_WINDOW_OPACITY = opacity;
+    
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    WriteIniInt(INI_SECTION_DISPLAY, "WINDOW_OPACITY", opacity, config_path);
+}
+
+void WriteConfigMoveSteps(int small_step, int large_step) {
+    if (small_step < 1) small_step = 1;
+    if (large_step < 1) large_step = 1;
+
+    g_AppConfig.display.move_step_small = small_step;
+    g_AppConfig.display.move_step_large = large_step;
+
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    WriteIniInt(INI_SECTION_DISPLAY, "MOVE_STEP_SMALL", small_step, config_path);
+    WriteIniInt(INI_SECTION_DISPLAY, "MOVE_STEP_LARGE", large_step, config_path);
+}
+
+void FlushConfigToDisk(void) {
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    
+    /* Write all config items to disk */
+    ConfigWriteItem items[150];
+    int count = 0;
+    if (CollectCurrentConfig(items, &count)) {
+        WriteConfigItems(config_path, items, count);
     }
 }
 

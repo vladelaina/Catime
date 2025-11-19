@@ -226,27 +226,11 @@ BOOL ReadIniBool(const char* section, const char* key, BOOL defaultValue,
 /**
  * @brief Check if file exists with Unicode support
  */
+// ...existing code...
 BOOL FileExists(const char* filePath) {
     return FileExistsUtf8(filePath);
 }
 
 
-/**
- * @brief Force flush configuration changes to disk immediately
- */
-void FlushConfigToDisk(void) {
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    
-    /** Convert to wide character for Windows API */
-    UTF8_TO_WIDE(config_path, wconfig_path);
-    
-    /** Force flush file system buffers to ensure immediate disk write */
-    HANDLE hFile = CreateFileW(wconfig_path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 
-                              NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (hFile != INVALID_HANDLE_VALUE) {
-        FlushFileBuffers(hFile);
-        CloseHandle(hFile);
-    }
-}
+
 
