@@ -95,8 +95,7 @@ static void ApplyNormalMode(HWND hwnd) {
  * @param nCmdShow Initial show command from WinMain
  */
 static void ApplyInitialWindowState(HWND hwnd, int nCmdShow) {
-    BYTE alphaValue = (BYTE)((CLOCK_WINDOW_OPACITY * 255) / 100);
-    SetLayeredWindowAttributes(hwnd, COLOR_KEY_BLACK, alphaValue, LWA_COLORKEY | LWA_ALPHA);
+    // Note: SetLayeredWindowAttributes is called by HandleWindowCreate via SetClickThrough
     SetBlurBehind(hwnd, FALSE);
 
     ShowWindow(hwnd, nCmdShow);

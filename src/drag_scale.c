@@ -69,14 +69,19 @@ void StartEditMode(HWND hwnd) {
     
     CLOCK_EDIT_MODE = TRUE;
     
+    /* Trigger repaint first with edit mode flag set so FixAlphaChannel runs */
+    RefreshWindow(hwnd, TRUE);
+    
     /* Blur effect provides visual feedback */
     SetBlurBehind(hwnd, TRUE);
     
-    /* Disable click-through to capture mouse events */
+    /* Disable click-through to capture mouse events (activates Glass effect) */
     SetClickThrough(hwnd, FALSE);
     
-    SetCursor(LoadCursorW(NULL, IDC_ARROW));
+    /* Repaint again after Glass effect is activated to ensure proper rendering */
     RefreshWindow(hwnd, TRUE);
+    
+    SetCursor(LoadCursorW(NULL, IDC_ARROW));
 }
 
 void EndEditMode(HWND hwnd) {
@@ -85,10 +90,6 @@ void EndEditMode(HWND hwnd) {
     CLOCK_EDIT_MODE = FALSE;
 
     SetBlurBehind(hwnd, FALSE);
-
-    extern int CLOCK_WINDOW_OPACITY;
-    BYTE alphaValue = (BYTE)((CLOCK_WINDOW_OPACITY * 255) / 100);
-    SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), alphaValue, LWA_COLORKEY | LWA_ALPHA);
     
     SetClickThrough(hwnd, TRUE);
     
