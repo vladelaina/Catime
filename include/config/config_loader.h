@@ -42,6 +42,8 @@ typedef struct {
     float windowScale;
     BOOL windowTopmost;
     int windowOpacity;
+    int moveStepSmall;
+    int moveStepLarge;
 
     /* Timer */
     int defaultStartTime;

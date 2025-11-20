@@ -15,6 +15,7 @@
 #include "window_procedure/window_procedure.h"
 #include "cli.h"
 #include "window.h"
+#include "config.h"
 #include "color/color.h"
 #include "drawing.h"
 #include "menu_preview.h"
@@ -189,6 +190,35 @@ LRESULT HandleLButtonDblClk(HWND hwnd, WPARAM wp, LPARAM lp) {
         return 0;
     }
     return DefWindowProc(hwnd, WM_LBUTTONDBLCLK, wp, lp);
+}
+
+LRESULT HandleKeyDown(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)lp;
+    if (CLOCK_EDIT_MODE) {
+        int step = g_AppConfig.display.move_step_small;
+        if (GetKeyState(VK_CONTROL) & 0x8000) {
+            step = g_AppConfig.display.move_step_large;
+        }
+
+        int dx = 0;
+        int dy = 0;
+
+        switch (wp) {
+            case VK_UP:    dy = -step; break;
+            case VK_DOWN:  dy = step;  break;
+            case VK_LEFT:  dx = -step; break;
+            case VK_RIGHT: dx = step;  break;
+            default: return DefWindowProc(hwnd, WM_KEYDOWN, wp, lp);
+        }
+
+        if (dx != 0 || dy != 0) {
+            RECT rect;
+            GetWindowRect(hwnd, &rect);
+            SetWindowPos(hwnd, NULL, rect.left + dx, rect.top + dy, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+            return 0;
+        }
+    }
+    return DefWindowProc(hwnd, WM_KEYDOWN, wp, lp);
 }
 
 LRESULT HandleHotkey(HWND hwnd, WPARAM wp, LPARAM lp) {

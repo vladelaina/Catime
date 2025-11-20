@@ -436,13 +436,5 @@ void WriteConfigKeyValue(const char* key, const char* value) {
     WriteIniString(section, key, value, config_path);
 }
 
-/**
- * @brief Write window opacity setting to config file
- * @param opacity Opacity value (1-100)
- */
-void WriteConfigWindowOpacity(int opacity) {
-    extern int CLOCK_WINDOW_OPACITY;
-    CLOCK_WINDOW_OPACITY = opacity;
-    UpdateConfigIntAtomic(INI_SECTION_DISPLAY, "WINDOW_OPACITY", opacity);
-}
+
 

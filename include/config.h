@@ -58,6 +58,8 @@
 #define DEFAULT_WINDOW_SCALE           "1.62"
 #define DEFAULT_WINDOW_POS_X           960
 #define DEFAULT_WINDOW_POS_Y           -1
+#define DEFAULT_MOVE_STEP_SMALL        10
+#define DEFAULT_MOVE_STEP_LARGE        50
 
 /** @brief Default color palette (INI format) */
 #define DEFAULT_COLOR_OPTIONS_INI      "#FFFFFF,#F9DB91,#F4CAE0,#FFB6C1,#A8E7DF,#A3CFB3,#92CBFC,#BDA5E7,#9370DB,#8C92CF,#72A9A5,#EB99A7,#EB96BD,#FFAE8B,#FF7F50,#CA6174"
@@ -209,6 +211,8 @@ typedef struct {
 typedef struct {
     TimeFormatConfig time_format;
     TimeFormatPreviewState preview;
+    int move_step_small;
+    int move_step_large;
 } DisplayConfig;
 
 /**
@@ -770,6 +774,13 @@ void WriteConfigStartupMode(const char* mode);
  * @param opacity Opacity value (1-100)
  */
 void WriteConfigWindowOpacity(int opacity);
+
+/**
+ * @brief Write move step settings
+ * @param small_step Small step size (pixels)
+ * @param large_step Large step size (pixels)
+ */
+void WriteConfigMoveSteps(int small_step, int large_step);
 
 /**
  * @brief Force flush pending writes (use sparingly)

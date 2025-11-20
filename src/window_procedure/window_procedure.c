@@ -99,6 +99,7 @@ static const MessageDispatchEntry MESSAGE_DISPATCH_TABLE[] = {
     {WM_DRAWITEM, HandleDrawItem, "Owner-drawn menu rendering"},
     {WM_EXITMENULOOP, HandleExitMenuLoop, "Menu loop exit"},
     {WM_CLOSE, HandleClose, "Window close"},
+    {WM_KEYDOWN, HandleKeyDown, "Key down"},
     {WM_HOTKEY, HandleHotkey, "Global hotkey"},
     {WM_COPYDATA, HandleCopyData, "Inter-process communication"},
     {WM_APP_QUICK_COUNTDOWN_INDEX, HandleQuickCountdownIndex, "Quick countdown by index"},
