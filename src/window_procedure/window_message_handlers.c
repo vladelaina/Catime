@@ -19,6 +19,7 @@
 #include "color/color.h"
 #include "drawing.h"
 #include "menu_preview.h"
+#include "window/window_visual_effects.h"
 #include "../resource/resource.h"
 #include <stdio.h>
 
@@ -128,8 +129,13 @@ LRESULT HandleTrayIcon(HWND hwnd, WPARAM wp, LPARAM lp) {
 }
 
 LRESULT HandleWindowPosChanged(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    (void)hwnd;
+    (void)wp;
+    WINDOWPOS* pwp = (WINDOWPOS*)lp;
+    if (!(pwp->flags & SWP_NOSIZE)) {
+        if (CLOCK_EDIT_MODE) {
+            UpdateRoundedCornerRegion(hwnd, TRUE);
+        }
+    }
     return 0;
 }
 

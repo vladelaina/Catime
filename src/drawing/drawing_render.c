@@ -91,7 +91,11 @@ static void FillBackground(HDC hdc, const RECT* rect, BOOL editMode) {
     HBRUSH hBlackBrush = CreateSolidBrush(RGB(0, 0, 0));
     FillRect(hdc, rect, hBlackBrush);
     DeleteObject(hBlackBrush);
+
+
 }
+
+
 
 /** @note Multiple passes simulate bold when font lacks native bold variant */
 static void RenderTextBold(HDC hdc, const wchar_t* text, int x, int y, COLORREF color) {
@@ -161,8 +165,10 @@ static void FixAlphaChannel(void* bits, int width, int height) {
     for (int i = 0; i < count; i++) {
         // Check if RGB is not black (0x00RRGGBB)
         if ((pixels[i] & 0x00FFFFFF) != 0) {
-            // Set Alpha to 255 (0xFF......)
-            pixels[i] |= 0xFF000000;
+            // Only set Alpha to 255 if it's currently 0 (meaning it was drawn by GDI without alpha)
+            if ((pixels[i] & 0xFF000000) == 0) {
+                pixels[i] |= 0xFF000000;
+            }
         } else {
             // Ensure black background is transparent
             pixels[i] &= 0x00FFFFFF;

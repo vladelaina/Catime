@@ -13,9 +13,10 @@
 
 #define COLOR_KEY_BLACK RGB(0, 0, 0)
 #define ALPHA_OPAQUE 255
-#define BLUR_ALPHA_VALUE 180           /* 180/255 = 70% opacity balances blur visibility with background transparency */
-#define BLUR_GRADIENT_COLOR 0x00202020  /* Dark gray (RGB 32,32,32) provides subtle background tint for blur effect */
+#define BLUR_ALPHA_VALUE 180
+#define BLUR_GRADIENT_COLOR 0x00FFFFFF
 #define DWMAPI_DLL L"dwmapi.dll"
+#define CORNER_RADIUS 12                /* Radius for rounded corners */
 
 /* ============================================================================
  * DWM function pointers
@@ -96,6 +97,20 @@ static void SetGlassEffect(HWND hwnd, BOOL enable) {
     }
 }
 
+void UpdateRoundedCornerRegion(HWND hwnd, BOOL enable) {
+    if (enable) {
+        RECT rc;
+        GetWindowRect(hwnd, &rc);
+        int width = rc.right - rc.left;
+        int height = rc.bottom - rc.top;
+        HRGN hRgn = CreateRoundRectRgn(0, 0, width + 1, height + 1, CORNER_RADIUS, CORNER_RADIUS);
+        SetWindowRgn(hwnd, hRgn, TRUE);
+        DeleteObject(hRgn);
+    } else {
+        SetWindowRgn(hwnd, NULL, TRUE);
+    }
+}
+
 void SetClickThrough(HWND hwnd, BOOL enable) {
     extern int CLOCK_WINDOW_OPACITY;
     // Allow text transparency to be controlled by the opacity setting
@@ -110,6 +125,7 @@ void SetClickThrough(HWND hwnd, BOOL enable) {
             // Normal mode: Use ColorKey for click-through transparency
             // Disable Glass to avoid double-transparency issues
             SetGlassEffect(hwnd, FALSE);
+            UpdateRoundedCornerRegion(hwnd, FALSE);
             SetLayeredWindowAttributes(hwnd, COLOR_KEY_BLACK, alphaValue, LWA_COLORKEY | LWA_ALPHA);
         }
         LOG_INFO("Click-through enabled");
@@ -118,6 +134,7 @@ void SetClickThrough(HWND hwnd, BOOL enable) {
             // Edit mode: Use Glass for clickable transparency
             // Remove ColorKey so pixels are clickable
             SetGlassEffect(hwnd, TRUE);
+            UpdateRoundedCornerRegion(hwnd, TRUE);
             SetLayeredWindowAttributes(hwnd, 0, alphaValue, LWA_ALPHA);
         }
         LOG_INFO("Click-through disabled");
@@ -130,14 +147,15 @@ void SetClickThrough(HWND hwnd, BOOL enable) {
 static void ApplyAccentPolicy(HWND hwnd, ACCENT_STATE accentState) {
     extern int CLOCK_WINDOW_OPACITY;
     // Map 1-100 opacity to 0-255 alpha for the acrylic background
-    // We cap it at 240 to ensure it never becomes fully opaque solid block which would look bad
-    DWORD alpha = (DWORD)((CLOCK_WINDOW_OPACITY * 240) / 100);
+    DWORD alpha = (DWORD)((CLOCK_WINDOW_OPACITY * 60) / 100);
     
     ACCENT_POLICY policy = {0};
     policy.AccentState = accentState;
     policy.AccentFlags = 0;
-    policy.GradientColor = (accentState == ACCENT_ENABLE_BLURBEHIND) ? 
-                          ((alpha << 24) | BLUR_GRADIENT_COLOR) : 0;
+    
+    // Acrylic requires the color format AABBGGRR
+    policy.GradientColor = (accentState != ACCENT_DISABLED) ? 
+                          ((alpha << 24) | 0x00FFFFFF) : 0;
     
     WINDOWCOMPOSITIONATTRIBDATA data = {0};
     data.Attrib = WCA_ACCENT_POLICY;
@@ -147,6 +165,7 @@ static void ApplyAccentPolicy(HWND hwnd, ACCENT_STATE accentState) {
     if (SetWindowCompositionAttribute) {
         SetWindowCompositionAttribute(hwnd, &data);
     } else if (_DwmEnableBlurBehindWindow) {
+        // Fallback for older Windows versions
         DWM_BLURBEHIND bb = {0};
         bb.dwFlags = DWM_BB_ENABLE;
         bb.fEnable = (accentState != ACCENT_DISABLED);
@@ -156,7 +175,7 @@ static void ApplyAccentPolicy(HWND hwnd, ACCENT_STATE accentState) {
 }
 
 void SetBlurBehind(HWND hwnd, BOOL enable) {
-    ApplyAccentPolicy(hwnd, enable ? ACCENT_ENABLE_BLURBEHIND : ACCENT_DISABLED);
-    LOG_INFO("Blur effect %s", enable ? "enabled" : "disabled");
+    ApplyAccentPolicy(hwnd, enable ? ACCENT_ENABLE_ACRYLICBLURBEHIND : ACCENT_DISABLED);
+    LOG_INFO("Acrylic blur effect %s", enable ? "enabled" : "disabled");
 }
 
