@@ -21,6 +21,7 @@
 #include "audio_player.h"
 #include "dialog/dialog_procedure.h"
 #include "drag_scale.h"
+#include "log.h"
 
 extern BOOL CLOCK_WINDOW_TOPMOST;
 extern void SetWindowTopmost(HWND hwnd, BOOL topmost);
@@ -219,15 +220,7 @@ static BOOL HandleVisibility(HWND hwnd, const char* input) {
 
 static BOOL HandleEditMode(HWND hwnd, const char* input) {
     (void)input;
-    extern BOOL CLOCK_EDIT_MODE;
-    
-    if (CLOCK_EDIT_MODE) {
-        EndEditMode(hwnd);
-    } else {
-        StartEditMode(hwnd);
-    }
-    
-    InvalidateRect(hwnd, NULL, TRUE);
+    ToggleEditMode(hwnd);
     return TRUE;
 }
 

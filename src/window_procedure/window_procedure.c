@@ -17,6 +17,7 @@
 #include "notification.h"
 #include "drawing.h"
 #include "../resource/resource.h"
+#include "log.h"
 #include <string.h>
 
 /* ============================================================================
@@ -233,6 +234,7 @@ void ToggleEditMode(HWND hwnd) {
     } else {
         extern char CLOCK_TEXT_COLOR[10];
         extern int CLOCK_WINDOW_OPACITY;
+        
         SetBlurBehind(hwnd, FALSE);
 
         BYTE alphaValue = (BYTE)((CLOCK_WINDOW_OPACITY * 255) / 100);

@@ -10,11 +10,13 @@
 #include "window.h"
 #include "font.h"
 #include "color/color.h"
+#include "log.h"
 #include "../resource/resource.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <math.h>
 
 /* ============================================================================
  * Helper: Language enum mapping
@@ -73,9 +75,7 @@ void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {
     strncpy(FONT_INTERNAL_NAME, snapshot->fontInternalName, sizeof(FONT_INTERNAL_NAME) - 1);
     FONT_INTERNAL_NAME[sizeof(FONT_INTERNAL_NAME) - 1] = '\0';
     
-    /* Window position and scale */
-    CLOCK_WINDOW_POS_X = snapshot->windowPosX;
-    CLOCK_WINDOW_POS_Y = snapshot->windowPosY;
+    /* Apply non-position settings first */
     CLOCK_WINDOW_SCALE = snapshot->windowScale;
     CLOCK_FONT_SCALE_FACTOR = snapshot->windowScale;
     CLOCK_WINDOW_TOPMOST = snapshot->windowTopmost;
@@ -84,16 +84,36 @@ void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {
     g_AppConfig.display.move_step_small = snapshot->moveStepSmall;
     g_AppConfig.display.move_step_large = snapshot->moveStepLarge;
 
-    /* Update window position and opacity if window exists */
     HWND hwnd = FindWindowW(L"CatimeWindow", L"Catime");
     if (hwnd) {
-        SetWindowPos(hwnd, NULL, CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y,
-                    0, 0, SWP_NOSIZE | SWP_NOZORDER);
+        /* Get current window position before updating globals */
+        RECT currentRect;
+        GetWindowRect(hwnd, &currentRect);
+        
+        /* Compare current position with config snapshot */
+        int deltaX = abs(currentRect.left - snapshot->windowPosX);
+        int deltaY = abs(currentRect.top - snapshot->windowPosY);
+        
+        if (deltaX > 10 || deltaY > 10) {
+            /* Significant difference: preserve current position (likely just saved) */
+            CLOCK_WINDOW_POS_X = currentRect.left;
+            CLOCK_WINDOW_POS_Y = currentRect.top;
+        } else {
+            /* Minor difference: apply config position */
+            CLOCK_WINDOW_POS_X = snapshot->windowPosX;
+            CLOCK_WINDOW_POS_Y = snapshot->windowPosY;
+            SetWindowPos(hwnd, NULL, CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y,
+                        0, 0, SWP_NOSIZE | SWP_NOZORDER);
+        }
 
         BYTE alphaValue = (BYTE)((CLOCK_WINDOW_OPACITY * 255) / 100);
         SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), alphaValue, LWA_COLORKEY | LWA_ALPHA);
 
         InvalidateRect(hwnd, NULL, TRUE);
+    } else {
+        /* No window: just update global variables */
+        CLOCK_WINDOW_POS_X = snapshot->windowPosX;
+        CLOCK_WINDOW_POS_Y = snapshot->windowPosY;
     }
 }
 

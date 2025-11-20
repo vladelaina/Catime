@@ -10,6 +10,7 @@
 #include "window.h"
 #include "config.h"
 #include "drag_scale.h"
+#include "log.h"
 
 BOOL PREVIOUS_TOPMOST_STATE = FALSE;
 
@@ -69,16 +70,9 @@ void StartEditMode(HWND hwnd) {
     
     CLOCK_EDIT_MODE = TRUE;
     
-    /* Trigger repaint first with edit mode flag set so FixAlphaChannel runs */
     RefreshWindow(hwnd, TRUE);
-    
-    /* Blur effect provides visual feedback */
     SetBlurBehind(hwnd, TRUE);
-    
-    /* Disable click-through to capture mouse events (activates Glass effect) */
     SetClickThrough(hwnd, FALSE);
-    
-    /* Repaint again after Glass effect is activated to ensure proper rendering */
     RefreshWindow(hwnd, TRUE);
     
     SetCursor(LoadCursorW(NULL, IDC_ARROW));
@@ -90,9 +84,7 @@ void EndEditMode(HWND hwnd) {
     CLOCK_EDIT_MODE = FALSE;
 
     SetBlurBehind(hwnd, FALSE);
-    
     SetClickThrough(hwnd, TRUE);
-    
     SaveWindowSettings(hwnd);
     
     extern char CLOCK_TEXT_COLOR[10];
@@ -102,7 +94,6 @@ void EndEditMode(HWND hwnd) {
     if (!PREVIOUS_TOPMOST_STATE) {
         SetWindowTopmost(hwnd, FALSE);
         
-        /* Non-topmost requires full redraw */
         InvalidateRect(hwnd, NULL, TRUE);
         RedrawWindow(hwnd, NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW);
         
@@ -137,15 +128,15 @@ BOOL HandleDragWindow(HWND hwnd) {
     int width = windowRect.right - windowRect.left;
     int height = windowRect.bottom - windowRect.top;
     
-    SetWindowPos(hwnd, NULL,
-        windowRect.left + deltaX,
-        windowRect.top + deltaY,
-        width, height,
-        SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOREDRAW);
+    int newX = windowRect.left + deltaX;
+    int newY = windowRect.top + deltaY;
+    
+    SetWindowPos(hwnd, NULL, newX, newY, width, height,
+                SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOREDRAW);
     
     CLOCK_LAST_MOUSE_POS = currentPos;
-    CLOCK_WINDOW_POS_X = windowRect.left + deltaX;
-    CLOCK_WINDOW_POS_Y = windowRect.top + deltaY;
+    CLOCK_WINDOW_POS_X = newX;
+    CLOCK_WINDOW_POS_Y = newY;
     
     UpdateWindow(hwnd);
     return TRUE;
