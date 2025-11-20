@@ -226,11 +226,80 @@ BOOL ReadIniBool(const char* section, const char* key, BOOL defaultValue,
 /**
  * @brief Check if file exists with Unicode support
  */
-// ...existing code...
 BOOL FileExists(const char* filePath) {
     return FileExistsUtf8(filePath);
 }
 
-
-
+/**
+ * @brief Batch write multiple INI values atomically
+ * 
+ * @param filePath INI file path
+ * @param updates Array of key-value pairs to update
+ * @param count Number of updates
+ * @return TRUE on success, FALSE on failure
+ * 
+ * @details
+ * Uses temporary file + atomic rename to ensure data consistency.
+ * All updates are written in a single file operation, dramatically
+ * reducing disk I/O compared to individual WriteIni* calls.
+ * Mutex-protected for thread safety.
+ */
+BOOL WriteIniMultipleAtomic(const char* filePath, const IniKeyValue* updates, size_t count) {
+    if (!filePath || !updates || count == 0) return FALSE;
+    
+    AcquireConfigWriteLock();
+    
+    BOOL success = FALSE;
+    char tempPath[MAX_PATH];
+    snprintf(tempPath, sizeof(tempPath), "%s.tmp", filePath);
+    
+    /** Convert paths to wide char */
+    UTF8_TO_WIDE(filePath, wFilePath);
+    UTF8_TO_WIDE(tempPath, wTempPath);
+    
+    /** Copy existing file to temp if it exists */
+    if (FileExistsUtf8(filePath)) {
+        if (!CopyFileW(wFilePath, wTempPath, FALSE)) {
+            goto cleanup;
+        }
+    }
+    
+    /** Apply all updates to temp file */
+    for (size_t i = 0; i < count; i++) {
+        if (!updates[i].section || !updates[i].key || !updates[i].value) {
+            continue;
+        }
+        
+        UTF8_TO_WIDE_N(updates[i].section, wSection, 256);
+        UTF8_TO_WIDE_N(updates[i].key, wKey, 256);
+        UTF8_TO_WIDE_N(updates[i].value, wValue, 1024);
+        
+        if (!WritePrivateProfileStringW(wSection, wKey, wValue, wTempPath)) {
+            goto cleanup;
+        }
+    }
+    
+    /** Flush to disk before rename */
+    FOPEN_UTF8(tempPath, L"ab", fp);
+    if (fp) {
+        fflush(fp);
+        fclose(fp);
+    }
+    
+    /** Atomic rename: temp → actual */
+    if (!MoveFileExW(wTempPath, wFilePath, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+        goto cleanup;
+    }
+    
+    success = TRUE;
+    
+cleanup:
+    /** Clean up temp file on failure */
+    if (!success && FileExistsUtf8(tempPath)) {
+        DeleteFileW(wTempPath);
+    }
+    
+    ReleaseConfigWriteLock();
+    return success;
+}
 

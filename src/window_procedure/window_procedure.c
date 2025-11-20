@@ -240,6 +240,9 @@ void ToggleEditMode(HWND hwnd) {
 
         SetClickThrough(hwnd, TRUE);
         
+        SaveWindowSettings(hwnd);
+        WriteConfigColor(CLOCK_TEXT_COLOR);
+        
         if (!PREVIOUS_TOPMOST_STATE) {
             SetWindowTopmost(hwnd, FALSE);
             
@@ -249,9 +252,6 @@ void ToggleEditMode(HWND hwnd) {
             SetTimer(hwnd, TIMER_ID_FORCE_REDRAW, 150, NULL);
             return;
         }
-        
-        SaveWindowSettings(hwnd);
-        WriteConfigColor(CLOCK_TEXT_COLOR);
     }
     
     InvalidateRect(hwnd, NULL, TRUE);

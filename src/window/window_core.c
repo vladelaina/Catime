@@ -176,15 +176,23 @@ void SaveWindowSettings(HWND hwnd) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
 
-    WriteIniInt(INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_X", CLOCK_WINDOW_POS_X, config_path);
-    WriteIniInt(INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_Y", CLOCK_WINDOW_POS_Y, config_path);
-
-    char scaleStr[16];
+    char posXStr[16], posYStr[16], scaleStr[16];
+    snprintf(posXStr, sizeof(posXStr), "%d", CLOCK_WINDOW_POS_X);
+    snprintf(posYStr, sizeof(posYStr), "%d", CLOCK_WINDOW_POS_Y);
     snprintf(scaleStr, sizeof(scaleStr), "%.2f", CLOCK_WINDOW_SCALE);
-    WriteIniString(INI_SECTION_DISPLAY, "WINDOW_SCALE", scaleStr, config_path);
     
-    LOG_INFO("Window settings saved: pos(%d, %d), scale(%.2f)", 
-             CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y, CLOCK_WINDOW_SCALE);
+    IniKeyValue updates[] = {
+        {INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_X", posXStr},
+        {INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_Y", posYStr},
+        {INI_SECTION_DISPLAY, "WINDOW_SCALE", scaleStr}
+    };
+    
+    if (WriteIniMultipleAtomic(config_path, updates, 3)) {
+        LOG_INFO("Window settings saved (batch): pos(%d, %d), scale(%.2f)", 
+                 CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y, CLOCK_WINDOW_SCALE);
+    } else {
+        LOG_WARNING("Failed to save window settings");
+    }
 }
 
 BOOL OpenFileDialog(HWND hwnd, wchar_t* filePath, DWORD maxPath) {

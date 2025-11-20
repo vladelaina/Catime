@@ -219,7 +219,15 @@ static BOOL HandleVisibility(HWND hwnd, const char* input) {
 
 static BOOL HandleEditMode(HWND hwnd, const char* input) {
     (void)input;
-    StartEditMode(hwnd);
+    extern BOOL CLOCK_EDIT_MODE;
+    
+    if (CLOCK_EDIT_MODE) {
+        EndEditMode(hwnd);
+    } else {
+        StartEditMode(hwnd);
+    }
+    
+    InvalidateRect(hwnd, NULL, TRUE);
     return TRUE;
 }
 

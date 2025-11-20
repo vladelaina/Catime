@@ -129,7 +129,7 @@ LRESULT HandleTrayIcon(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT HandleWindowPosChanged(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    if (CLOCK_EDIT_MODE) SaveWindowSettings(hwnd);
+    (void)hwnd;
     return 0;
 }
 
@@ -153,14 +153,10 @@ LRESULT HandleRButtonUp(HWND hwnd, WPARAM wp, LPARAM lp) {
 LRESULT HandleRButtonDown(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     if (GetKeyState(VK_CONTROL) & 0x8000) {
-        CLOCK_EDIT_MODE = !CLOCK_EDIT_MODE;
         if (CLOCK_EDIT_MODE) {
-            SetClickThrough(hwnd, FALSE);
+            EndEditMode(hwnd);
         } else {
-            extern char CLOCK_TEXT_COLOR[10];
-            SetClickThrough(hwnd, TRUE);
-            SaveWindowSettings(hwnd);
-            WriteConfigColor(CLOCK_TEXT_COLOR);
+            StartEditMode(hwnd);
         }
         InvalidateRect(hwnd, NULL, TRUE);
         return 0;

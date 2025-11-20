@@ -93,6 +93,12 @@ void EndEditMode(HWND hwnd) {
     
     SetClickThrough(hwnd, TRUE);
     
+    SaveWindowSettings(hwnd);
+    
+    extern char CLOCK_TEXT_COLOR[10];
+    extern void WriteConfigColor(const char* color);
+    WriteConfigColor(CLOCK_TEXT_COLOR);
+    
     if (!PREVIOUS_TOPMOST_STATE) {
         SetWindowTopmost(hwnd, FALSE);
         
@@ -115,7 +121,6 @@ void EndDragWindow(HWND hwnd) {
     
     AdjustWindowPosition(hwnd, FALSE);
     RefreshWindow(hwnd, TRUE);
-    ScheduleConfigSave(hwnd);
 }
 
 /* SWP_NOREDRAW + UpdateWindow maintains smooth dragging */
@@ -143,8 +148,6 @@ BOOL HandleDragWindow(HWND hwnd) {
     CLOCK_WINDOW_POS_Y = windowRect.top + deltaY;
     
     UpdateWindow(hwnd);
-    ScheduleConfigSave(hwnd);
-    
     return TRUE;
 }
 
@@ -183,7 +186,5 @@ BOOL HandleScaleWindow(HWND hwnd, int delta) {
         SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOREDRAW);
     
     RefreshWindow(hwnd, FALSE);
-    ScheduleConfigSave(hwnd);
-    
     return TRUE;
 }
