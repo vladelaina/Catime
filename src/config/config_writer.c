@@ -418,7 +418,9 @@ void WriteConfigWindowOpacity(int opacity) {
 
 void WriteConfigMoveSteps(int small_step, int large_step) {
     if (small_step < 1) small_step = 1;
+    if (small_step > 500) small_step = 500;
     if (large_step < 1) large_step = 1;
+    if (large_step > 500) large_step = 500;
 
     g_AppConfig.display.move_step_small = small_step;
     g_AppConfig.display.move_step_large = large_step;

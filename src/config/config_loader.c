@@ -470,8 +470,16 @@ BOOL ValidateConfigSnapshot(ConfigSnapshot* snapshot) {
         snapshot->moveStepSmall = 1;
         modified = TRUE;
     }
+    if (snapshot->moveStepSmall > 500) {
+        snapshot->moveStepSmall = 500;
+        modified = TRUE;
+    }
     if (snapshot->moveStepLarge < 1) {
         snapshot->moveStepLarge = 1;
+        modified = TRUE;
+    }
+    if (snapshot->moveStepLarge > 500) {
+        snapshot->moveStepLarge = 500;
         modified = TRUE;
     }
 

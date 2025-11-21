@@ -42,6 +42,8 @@ static const ConfigItemMeta CONFIG_METADATA[] = {
     {INI_SECTION_DISPLAY, "WINDOW_SCALE", DEFAULT_WINDOW_SCALE, CONFIG_TYPE_STRING, "Window scale factor"},
     {INI_SECTION_DISPLAY, "WINDOW_TOPMOST", "TRUE", CONFIG_TYPE_BOOL, "Always on top"},
     {INI_SECTION_DISPLAY, "WINDOW_OPACITY", "100", CONFIG_TYPE_INT, "Window opacity (0-100)"},
+    {INI_SECTION_DISPLAY, "MOVE_STEP_SMALL", "10", CONFIG_TYPE_INT, "Arrow key move step (1-500 pixels)"},
+    {INI_SECTION_DISPLAY, "MOVE_STEP_LARGE", "50", CONFIG_TYPE_INT, "Ctrl+arrow key move step (1-500 pixels)"},
     {INI_SECTION_DISPLAY, "OPACITY_STEP_NORMAL", "1", CONFIG_TYPE_INT, "Opacity scroll step (1-100)"},
     {INI_SECTION_DISPLAY, "OPACITY_STEP_FAST", "5", CONFIG_TYPE_INT, "Opacity Ctrl+scroll step (1-100)"},
 
@@ -204,6 +206,35 @@ void WriteDefaultsToConfig(const char* config_path) {
             default:
                 fprintf(f, "%s=%s\n", item->key, item->defaultValue);
                 break;
+        }
+
+        /* Check if we just finished writing Display section */
+        BOOL isLastDisplayItem = (i + 1 >= CONFIG_METADATA_COUNT ||
+                                   strcmp(CONFIG_METADATA[i + 1].section, INI_SECTION_DISPLAY) != 0);
+        if (strcmp(item->section, INI_SECTION_DISPLAY) == 0 && isLastDisplayItem) {
+            fputs(";========================================================\n", f);
+            fputs("; Display section help (hot reload supported)\n", f);
+            fputs(";========================================================\n", f);
+            fputs("; MOVE_STEP_SMALL: arrow key move step in edit mode (unit: pixels).\n", f);
+            fputs(";   Controls how far the window moves with each arrow key press.\n", f);
+            fputs(";   Range: 1-500 pixels\n", f);
+            fputs(";   Default: 10 pixels\n", f);
+            fputs(";\n", f);
+            fputs("; MOVE_STEP_LARGE: Ctrl+arrow key move step in edit mode (unit: pixels).\n", f);
+            fputs(";   Controls how far the window moves with Ctrl+arrow key.\n", f);
+            fputs(";   Range: 1-500 pixels\n", f);
+            fputs(";   Default: 50 pixels\n", f);
+            fputs(";\n", f);
+            fputs("; OPACITY_STEP_NORMAL: mouse wheel opacity adjustment step (unit: percent).\n", f);
+            fputs(";   Controls opacity change when scrolling over tray icon.\n", f);
+            fputs(";   Range: 1-100%\n", f);
+            fputs(";   Default: 1%\n", f);
+            fputs(";\n", f);
+            fputs("; OPACITY_STEP_FAST: Ctrl+mouse wheel opacity adjustment step (unit: percent).\n", f);
+            fputs(";   Controls opacity change when scrolling with Ctrl held.\n", f);
+            fputs(";   Range: 1-100%\n", f);
+            fputs(";   Default: 5%\n", f);
+            fputs(";========================================================\n", f);
         }
 
         /* Check if we just finished writing Animation section */
