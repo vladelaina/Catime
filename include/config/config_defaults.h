@@ -4,6 +4,9 @@
  * 
  * Centralized definition of all configuration items with their default values.
  * This eliminates duplication across CreateDefaultConfig, ReadConfig, and WriteConfig.
+ * 
+ * IMPORTANT: All default values are defined here as constants.
+ *            Use these constants instead of hardcoding values to avoid duplication.
  */
 
 #ifndef CONFIG_DEFAULTS_H
@@ -11,6 +14,32 @@
 
 #include <windows.h>
 #include "config.h"
+
+/* Centralized Default Value Constants */
+
+#define DEFAULT_START_TIME_SECONDS      1500
+#define DEFAULT_QUICK_COUNTDOWN_1       1500
+#define DEFAULT_QUICK_COUNTDOWN_2       600
+#define DEFAULT_QUICK_COUNTDOWN_3       300
+#define DEFAULT_QUICK_COUNTDOWN_COUNT   3
+
+#define DEFAULT_POMODORO_WORK           1500
+#define DEFAULT_POMODORO_SHORT_BREAK    300
+#define DEFAULT_POMODORO_LONG_BREAK     600
+#define DEFAULT_POMODORO_TIMES_COUNT    4
+#define DEFAULT_POMODORO_LOOP_COUNT     1
+
+#define DEFAULT_NOTIFICATION_TIMEOUT_MS 3000
+#define DEFAULT_NOTIFICATION_MAX_OPACITY 95
+#define DEFAULT_NOTIFICATION_VOLUME     100
+
+/* Validation Ranges */
+#define MIN_OPACITY                     1
+#define MAX_OPACITY                     100
+#define MIN_MOVE_STEP                   1
+#define MAX_MOVE_STEP                   500
+#define MIN_VOLUME                      0
+#define MAX_VOLUME                      100
 
 /* ============================================================================
  * Configuration value types

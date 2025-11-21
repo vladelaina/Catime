@@ -1,10 +1,9 @@
 /**
  * @file config_notification.c
  * @brief Notification configuration management
- * 
- * Manages notification settings including messages, type, timeout, opacity, sound, and volume.
  */
 #include "config.h"
+#include "config/config_defaults.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -96,12 +95,13 @@ void WriteConfigNotificationTimeout(int timeout_ms) {
 void ReadNotificationOpacityConfig(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    int opacity = ReadIniInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_MAX_OPACITY", 95, config_path);
+    int opacity = ReadIniInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_MAX_OPACITY", 
+                            DEFAULT_NOTIFICATION_MAX_OPACITY, config_path);
     /** Validate opacity range (1-100) */
-    if (opacity >= 1 && opacity <= 100) {
+    if (opacity >= MIN_OPACITY && opacity <= MAX_OPACITY) {
         g_AppConfig.notification.display.max_opacity = opacity;
     } else {
-        g_AppConfig.notification.display.max_opacity = 95;
+        g_AppConfig.notification.display.max_opacity = DEFAULT_NOTIFICATION_MAX_OPACITY;
     }
 }
 

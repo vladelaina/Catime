@@ -4,8 +4,10 @@
  */
 
 #include "config/config_loader.h"
+#include "config/config_recovery.h"
 #include "config/config_defaults.h"
 #include "config.h"
+#include "log.h"
 #include "../resource/resource.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -175,12 +177,12 @@ void InitializeDefaultSnapshot(ConfigSnapshot* snapshot) {
     snapshot->windowTopmost = TRUE;
     snapshot->moveStepSmall = DEFAULT_MOVE_STEP_SMALL;
     snapshot->moveStepLarge = DEFAULT_MOVE_STEP_LARGE;
-    snapshot->opacityStepNormal = 1;
+    snapshot->opacityStepNormal = MIN_OPACITY;
     snapshot->opacityStepFast = 5;
-    snapshot->defaultStartTime = 1500;
-    snapshot->notificationTimeoutMs = 3000;
-    snapshot->notificationMaxOpacity = 95;
-    snapshot->notificationSoundVolume = 100;
+    snapshot->defaultStartTime = DEFAULT_START_TIME_SECONDS;
+    snapshot->notificationTimeoutMs = DEFAULT_NOTIFICATION_TIMEOUT_MS;
+    snapshot->notificationMaxOpacity = DEFAULT_NOTIFICATION_MAX_OPACITY;
+    snapshot->notificationSoundVolume = DEFAULT_NOTIFICATION_VOLUME;
 }
 
 BOOL LoadConfigFromFile(const char* config_path, ConfigSnapshot* snapshot) {
@@ -237,11 +239,6 @@ BOOL LoadConfigFromFile(const char* config_path, ConfigSnapshot* snapshot) {
                                             1, config_path);
     snapshot->opacityStepFast = ReadIniInt(INI_SECTION_DISPLAY, "OPACITY_STEP_FAST",
                                           5, config_path);
-
-    /* Avoid pure black color */
-    if (strcasecmp(snapshot->textColor, "#000000") == 0) {
-        strncpy(snapshot->textColor, "#000001", sizeof(snapshot->textColor) - 1);
-    }
     
     /* Read Timer section */
     snapshot->defaultStartTime = ReadIniInt(INI_SECTION_TIMER, "CLOCK_DEFAULT_START_TIME", 
@@ -427,113 +424,15 @@ BOOL LoadConfigFromFile(const char* config_path, ConfigSnapshot* snapshot) {
     return TRUE;
 }
 
+/**
+ * @brief Backward compatibility wrapper for configuration validation
+ * @param snapshot Configuration snapshot to validate
+ * @return TRUE if any corrections were made
+ * 
+ * @note This function now delegates to the modular config_recovery system
+ * @see config_recovery.h for the full validation implementation
+ */
 BOOL ValidateConfigSnapshot(ConfigSnapshot* snapshot) {
-    if (!snapshot) return FALSE;
-
-    BOOL modified = FALSE;
-
-    /* One-time actions: prevent these from being persisted in config */
-    if (snapshot->timeoutAction == TIMEOUT_ACTION_SHUTDOWN ||
-        snapshot->timeoutAction == TIMEOUT_ACTION_RESTART ||
-        snapshot->timeoutAction == TIMEOUT_ACTION_SLEEP) {
-        snapshot->timeoutAction = TIMEOUT_ACTION_MESSAGE;
-        modified = TRUE;
-    }
-
-    /* Validate file paths only for OPEN_FILE action */
-    if (snapshot->timeoutAction == TIMEOUT_ACTION_OPEN_FILE) {
-        if (strlen(snapshot->timeoutFilePath) == 0 || !FileExistsUtf8(snapshot->timeoutFilePath)) {
-            snapshot->timeoutAction = TIMEOUT_ACTION_MESSAGE;
-            modified = TRUE;
-        }
-    }
-
-    /* Validate website URL only for OPEN_WEBSITE action */
-    if (snapshot->timeoutAction == TIMEOUT_ACTION_OPEN_WEBSITE) {
-        if (wcslen(snapshot->timeoutWebsiteUrl) == 0) {
-            snapshot->timeoutAction = TIMEOUT_ACTION_MESSAGE;
-            modified = TRUE;
-        }
-    }
-
-    /* Validate ranges */
-    if (snapshot->windowOpacity < 0) {
-        snapshot->windowOpacity = 0;
-        modified = TRUE;
-    }
-    if (snapshot->windowOpacity > 100) {
-        snapshot->windowOpacity = 100;
-        modified = TRUE;
-    }
-
-    if (snapshot->moveStepSmall < 1) {
-        snapshot->moveStepSmall = 1;
-        modified = TRUE;
-    }
-    if (snapshot->moveStepSmall > 500) {
-        snapshot->moveStepSmall = 500;
-        modified = TRUE;
-    }
-    if (snapshot->moveStepLarge < 1) {
-        snapshot->moveStepLarge = 1;
-        modified = TRUE;
-    }
-    if (snapshot->moveStepLarge > 500) {
-        snapshot->moveStepLarge = 500;
-        modified = TRUE;
-    }
-
-    if (snapshot->opacityStepNormal < 1) {
-        snapshot->opacityStepNormal = 1;
-        modified = TRUE;
-    }
-    if (snapshot->opacityStepNormal > 100) {
-        snapshot->opacityStepNormal = 100;
-        modified = TRUE;
-    }
-
-    if (snapshot->opacityStepFast < 1) {
-        snapshot->opacityStepFast = 1;
-        modified = TRUE;
-    }
-    if (snapshot->opacityStepFast > 100) {
-        snapshot->opacityStepFast = 100;
-        modified = TRUE;
-    }
-
-    if (snapshot->notificationMaxOpacity < 1) {
-        snapshot->notificationMaxOpacity = 1;
-        modified = TRUE;
-    }
-    if (snapshot->notificationMaxOpacity > 100) {
-        snapshot->notificationMaxOpacity = 100;
-        modified = TRUE;
-    }
-
-    if (snapshot->notificationSoundVolume < 0) {
-        snapshot->notificationSoundVolume = 0;
-        modified = TRUE;
-    }
-    if (snapshot->notificationSoundVolume > 100) {
-        snapshot->notificationSoundVolume = 100;
-        modified = TRUE;
-    }
-
-    if (snapshot->pomodoroLoopCount < 1) {
-        snapshot->pomodoroLoopCount = 1;
-        modified = TRUE;
-    }
-
-    /* Validate scale */
-    if (snapshot->windowScale < MIN_SCALE_FACTOR) {
-        snapshot->windowScale = MIN_SCALE_FACTOR;
-        modified = TRUE;
-    }
-    if (snapshot->windowScale > MAX_SCALE_FACTOR) {
-        snapshot->windowScale = MAX_SCALE_FACTOR;
-        modified = TRUE;
-    }
-
-    return modified;
+    /* Delegate to the dedicated recovery module */
+    return ValidateAndRecoverConfig(snapshot);
 }
-

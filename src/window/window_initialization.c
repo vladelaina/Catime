@@ -8,6 +8,7 @@
 #include "timer/timer.h"
 #include "language.h"
 #include "font.h"
+#include "font/font_config.h"
 #include "startup.h"
 #include "config.h"
 #include "log.h"
@@ -99,9 +100,9 @@ static BOOL InitializeDpiAwareness(void) {
 }
 
 /**
- * @brief Load fonts from configuration
+ * @brief Load fonts from configuration with automatic fallback
  * @param hInstance Application instance for resource extraction
- * @return TRUE on success
+ * @return TRUE on success (always succeeds with fallback)
  */
 static BOOL InitializeFonts(HINSTANCE hInstance) {
     LOG_INFO("Initializing fonts");
@@ -133,10 +134,71 @@ static BOOL InitializeFonts(HINSTANCE hInstance) {
         actualFontFileName[sizeof(actualFontFileName) - 1] = '\0';
     }
     
+    /* Try to load configured font */
     if (!LoadFontByNameAndGetRealName(hInstance, actualFontFileName, 
                                       FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME))) {
-        LOG_ERROR("Failed to load font: %s", actualFontFileName);
-        return FALSE;
+        LOG_WARNING("Failed to load font: %s, attempting fallback to default font", actualFontFileName);
+        
+        /* Fallback 1: Try default font */
+        const char* defaultFont = DEFAULT_FONT_NAME;
+        if (LoadFontByNameAndGetRealName(hInstance, defaultFont,
+                                        FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME))) {
+            LOG_INFO("Successfully loaded default font: %s", FONT_INTERNAL_NAME);
+            
+            /* Update config to default font */
+            snprintf(FONT_FILE_NAME, sizeof(FONT_FILE_NAME), "%s%s", 
+                    FONTS_PATH_PREFIX, defaultFont);
+            
+            WriteConfigFont(FONT_FILE_NAME, FALSE);
+            FlushConfigToDisk();
+            
+            LOG_INFO("Font configuration auto-corrected to default font");
+            return TRUE;
+        }
+        
+        /* Fallback 2: Re-extract embedded fonts and retry */
+        LOG_WARNING("Default font not found, re-extracting embedded fonts");
+        if (ExtractEmbeddedFontsToFolder(hInstance)) {
+            if (LoadFontByNameAndGetRealName(hInstance, defaultFont,
+                                            FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME))) {
+                LOG_INFO("Successfully loaded default font after extraction: %s", FONT_INTERNAL_NAME);
+                
+                snprintf(FONT_FILE_NAME, sizeof(FONT_FILE_NAME), "%s%s", 
+                        FONTS_PATH_PREFIX, defaultFont);
+                
+                WriteConfigFont(FONT_FILE_NAME, FALSE);
+                FlushConfigToDisk();
+                
+                LOG_INFO("Font configuration auto-corrected after re-extraction");
+                return TRUE;
+            }
+        }
+        
+        /* Fallback 3: Try any available embedded font */
+        LOG_WARNING("Attempting to load any available embedded font");
+        
+        for (int i = 0; i < FONT_RESOURCES_COUNT; i++) {
+            if (LoadFontByNameAndGetRealName(hInstance, fontResources[i].fontName,
+                                            FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME))) {
+                LOG_INFO("Successfully loaded fallback font: %s", FONT_INTERNAL_NAME);
+                
+                snprintf(FONT_FILE_NAME, sizeof(FONT_FILE_NAME), "%s%s", 
+                        FONTS_PATH_PREFIX, fontResources[i].fontName);
+                
+                WriteConfigFont(FONT_FILE_NAME, FALSE);
+                FlushConfigToDisk();
+                
+                LOG_INFO("Font configuration auto-corrected to: %s", fontResources[i].fontName);
+                return TRUE;
+            }
+        }
+        
+        /* Last resort: Use system default font name */
+        LOG_ERROR("All font loading attempts failed, using system default font name");
+        strncpy(FONT_INTERNAL_NAME, "Arial", sizeof(FONT_INTERNAL_NAME) - 1);
+        FONT_INTERNAL_NAME[sizeof(FONT_INTERNAL_NAME) - 1] = '\0';
+        
+        return TRUE;  /* Continue even with system font */
     }
     
     LOG_INFO("Font loaded successfully: %s", FONT_INTERNAL_NAME);
@@ -172,21 +234,23 @@ static BOOL InitializeDefaultSettings(void) {
 BOOL InitializeApplication(HINSTANCE hInstance) {
     LOG_INFO("Application initialization started");
     
+    /* DPI awareness is optional */
     if (!InitializeDpiAwareness()) {
         LOG_WARNING("DPI awareness initialization failed, continuing anyway");
     }
     
+    /* Settings initialization with fallback */
     if (!InitializeDefaultSettings()) {
-        LOG_ERROR("Default settings initialization failed");
-        return FALSE;
+        LOG_WARNING("Default settings initialization failed, using built-in defaults");
+        /* Continue with built-in defaults instead of failing */
     }
     
+    /* Font initialization with automatic fallback (always succeeds) */
     if (!InitializeFonts(hInstance)) {
-        LOG_ERROR("Font initialization failed");
-        return FALSE;
+        LOG_WARNING("Font initialization encountered issues, but fallback succeeded");
     }
     
-    LOG_INFO("Application initialization completed successfully");
-    return TRUE;
+    LOG_INFO("Application initialization completed (with auto-correction if needed)");
+    return TRUE;  /* Always succeed to prevent application crash */
 }
 

@@ -40,18 +40,18 @@ AppConfig g_AppConfig = {
             .timeout_message = DEFAULT_TIMEOUT_MESSAGE
         },
         .display = {
-            .timeout_ms = 3000,  /* 3s provides sufficient time to read without being intrusive */
-            .max_opacity = 95,   /* 95% prevents complete occlusion while maintaining visibility */
+            .timeout_ms = DEFAULT_NOTIFICATION_TIMEOUT_MS,
+            .max_opacity = DEFAULT_NOTIFICATION_MAX_OPACITY,
             .type = NOTIFICATION_TYPE_CATIME,
             .disabled = FALSE,
-            .window_x = -1,      /* -1 means auto-calculate position */
+            .window_x = -1,
             .window_y = -1,
-            .window_width = 0,   /* 0 means auto-calculate based on text */
+            .window_width = 0,
             .window_height = 0
         },
         .sound = {
             .sound_file = "",
-            .volume = 100
+            .volume = DEFAULT_NOTIFICATION_VOLUME
         }
     },
     .font_license = {
@@ -65,11 +65,11 @@ AppConfig g_AppConfig = {
         },
         .move_step_small = DEFAULT_MOVE_STEP_SMALL,
         .move_step_large = DEFAULT_MOVE_STEP_LARGE,
-        .opacity_step_normal = 1,
+        .opacity_step_normal = MIN_OPACITY,
         .opacity_step_fast = 5
     },
     .timer = {
-        .default_start_time = 300  /* 5 minutes is a common Pomodoro short timer duration */
+        .default_start_time = DEFAULT_QUICK_COUNTDOWN_3
     },
     .last_config_time = 0
 };

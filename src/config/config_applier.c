@@ -250,9 +250,14 @@ void ApplyRecentFilesSettings(const ConfigSnapshot* snapshot) {
 }
 
 void ApplyConfigSnapshot(const ConfigSnapshot* snapshot) {
-    if (!snapshot) return;
+    if (!snapshot) {
+        LOG_WARNING("ApplyConfigSnapshot called with NULL snapshot");
+        return;
+    }
     
-    /* Apply in logical order */
+    LOG_INFO("Applying configuration snapshot");
+    
+    /* Apply in logical order - validation has already been done */
     ApplyGeneralSettings(snapshot);
     ApplyDisplaySettings(snapshot);
     ApplyTimerSettings(snapshot);
@@ -264,6 +269,10 @@ void ApplyConfigSnapshot(const ConfigSnapshot* snapshot) {
     
     /* Apply language (triggers UI update) */
     int languageEnum = LanguageNameToEnum(snapshot->language);
+    if (languageEnum < 0 || languageEnum >= APP_LANG_COUNT) {
+        LOG_WARNING("Invalid language enum %d, using English", languageEnum);
+        languageEnum = APP_LANG_ENGLISH;
+    }
     SetLanguage((AppLanguage)languageEnum);
     
     /* Load animation speed settings */
@@ -271,5 +280,7 @@ void ApplyConfigSnapshot(const ConfigSnapshot* snapshot) {
     
     /* Update timestamp for config reload detection */
     g_AppConfig.last_config_time = time(NULL);
+    
+    LOG_INFO("Configuration snapshot applied successfully");
 }
 
