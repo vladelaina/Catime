@@ -483,9 +483,9 @@ static void BuildFontSubmenu(HMENU hMenu) {
         // Try to use cached font list (FAST PATH - 5-10ms)
         const FontCacheEntry* cachedFonts = NULL;
         int cachedCount = 0;
-        CacheStatus cacheStatus = FontCache_GetEntries(&cachedFonts, &cachedCount);
+        FontCacheStatus cacheStatus = FontCache_GetEntries(&cachedFonts, &cachedCount);
         
-        if (cacheStatus == CACHE_OK || cacheStatus == CACHE_EXPIRED) {
+        if (cacheStatus == FONT_CACHE_OK || cacheStatus == FONT_CACHE_EXPIRED) {
             // Use cached data to build menu quickly
             WriteLog(LOG_LEVEL_INFO, "Using cached font list (%d fonts, status=%d)", cachedCount, cacheStatus);
             
@@ -503,8 +503,8 @@ static void BuildFontSubmenu(HMENU hMenu) {
             }
             
             // Trigger async refresh if cache expired
-            if (cacheStatus == CACHE_EXPIRED) {
-                FontCache_RequestRefresh();
+            if (cacheStatus == FONT_CACHE_EXPIRED) {
+                ResourceCache_RequestRefresh();
             }
         } else {
             // Fallback: use original synchronous scan (SLOW PATH - 100-300ms)
