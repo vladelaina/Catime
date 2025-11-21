@@ -213,6 +213,8 @@ typedef struct {
     TimeFormatPreviewState preview;
     int move_step_small;
     int move_step_large;
+    int opacity_step_normal;
+    int opacity_step_fast;
 } DisplayConfig;
 
 /**
@@ -805,6 +807,25 @@ void WriteConfigWindowOpacity(int opacity);
  * @param large_step Large step size (pixels)
  */
 void WriteConfigMoveSteps(int small_step, int large_step);
+
+/**
+ * @brief Read opacity adjustment step for normal scroll (default: 1)
+ * @return Step size (1-100)
+ */
+int ReadConfigOpacityStepNormal(void);
+
+/**
+ * @brief Read opacity adjustment step for Ctrl+scroll (default: 5)
+ * @return Step size (1-100)
+ */
+int ReadConfigOpacityStepFast(void);
+
+/**
+ * @brief Write opacity adjustment steps
+ * @param normal_step Normal scroll step (1-100)
+ * @param fast_step Ctrl+scroll step (1-100)
+ */
+void WriteConfigOpacitySteps(int normal_step, int fast_step);
 
 /**
  * @brief Force flush pending writes (use sparingly)

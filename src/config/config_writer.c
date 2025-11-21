@@ -149,6 +149,16 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int* count) {
     snprintf(items[idx].value, sizeof(items[idx].value), "%d", g_AppConfig.display.move_step_large);
     idx++;
 
+    safe_strncpy(items[idx].section, INI_SECTION_DISPLAY, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "OPACITY_STEP_NORMAL", sizeof(items[idx].key));
+    snprintf(items[idx].value, sizeof(items[idx].value), "%d", g_AppConfig.display.opacity_step_normal);
+    idx++;
+
+    safe_strncpy(items[idx].section, INI_SECTION_DISPLAY, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "OPACITY_STEP_FAST", sizeof(items[idx].key));
+    snprintf(items[idx].value, sizeof(items[idx].value), "%d", g_AppConfig.display.opacity_step_fast);
+    idx++;
+
     /* Timer section */
     safe_strncpy(items[idx].section, INI_SECTION_TIMER, sizeof(items[idx].section));
     safe_strncpy(items[idx].key, "CLOCK_DEFAULT_START_TIME", sizeof(items[idx].key));

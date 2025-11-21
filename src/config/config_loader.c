@@ -175,6 +175,8 @@ void InitializeDefaultSnapshot(ConfigSnapshot* snapshot) {
     snapshot->windowTopmost = TRUE;
     snapshot->moveStepSmall = DEFAULT_MOVE_STEP_SMALL;
     snapshot->moveStepLarge = DEFAULT_MOVE_STEP_LARGE;
+    snapshot->opacityStepNormal = 1;
+    snapshot->opacityStepFast = 5;
     snapshot->defaultStartTime = 1500;
     snapshot->notificationTimeoutMs = 3000;
     snapshot->notificationMaxOpacity = 95;
@@ -230,6 +232,11 @@ BOOL LoadConfigFromFile(const char* config_path, ConfigSnapshot* snapshot) {
                                         DEFAULT_MOVE_STEP_SMALL, config_path);
     snapshot->moveStepLarge = ReadIniInt(INI_SECTION_DISPLAY, "MOVE_STEP_LARGE",
                                         DEFAULT_MOVE_STEP_LARGE, config_path);
+
+    snapshot->opacityStepNormal = ReadIniInt(INI_SECTION_DISPLAY, "OPACITY_STEP_NORMAL",
+                                            1, config_path);
+    snapshot->opacityStepFast = ReadIniInt(INI_SECTION_DISPLAY, "OPACITY_STEP_FAST",
+                                          5, config_path);
 
     /* Avoid pure black color */
     if (strcasecmp(snapshot->textColor, "#000000") == 0) {
@@ -465,6 +472,24 @@ BOOL ValidateConfigSnapshot(ConfigSnapshot* snapshot) {
     }
     if (snapshot->moveStepLarge < 1) {
         snapshot->moveStepLarge = 1;
+        modified = TRUE;
+    }
+
+    if (snapshot->opacityStepNormal < 1) {
+        snapshot->opacityStepNormal = 1;
+        modified = TRUE;
+    }
+    if (snapshot->opacityStepNormal > 100) {
+        snapshot->opacityStepNormal = 100;
+        modified = TRUE;
+    }
+
+    if (snapshot->opacityStepFast < 1) {
+        snapshot->opacityStepFast = 1;
+        modified = TRUE;
+    }
+    if (snapshot->opacityStepFast > 100) {
+        snapshot->opacityStepFast = 100;
         modified = TRUE;
     }
 

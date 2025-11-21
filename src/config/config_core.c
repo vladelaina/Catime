@@ -68,7 +68,11 @@ AppConfig g_AppConfig = {
             .preview_format = TIME_FORMAT_DEFAULT,
             .is_milliseconds_previewing = FALSE,
             .preview_show_milliseconds = FALSE
-        }
+        },
+        .move_step_small = DEFAULT_MOVE_STEP_SMALL,
+        .move_step_large = DEFAULT_MOVE_STEP_LARGE,
+        .opacity_step_normal = 1,
+        .opacity_step_fast = 5
     },
     .timer = {
         .default_start_time = 300  /* 5 minutes is a common Pomodoro short timer duration */

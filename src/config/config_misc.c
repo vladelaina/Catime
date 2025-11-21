@@ -436,5 +436,42 @@ void WriteConfigKeyValue(const char* key, const char* value) {
     WriteIniString(section, key, value, config_path);
 }
 
+/**
+ * @brief Read opacity adjustment step for normal scroll
+ * @return Step size (1-100), default 1
+ */
+int ReadConfigOpacityStepNormal(void) {
+    return g_AppConfig.display.opacity_step_normal;
+}
+
+/**
+ * @brief Read opacity adjustment step for Ctrl+scroll
+ * @return Step size (1-100), default 5
+ */
+int ReadConfigOpacityStepFast(void) {
+    return g_AppConfig.display.opacity_step_fast;
+}
+
+/**
+ * @brief Write opacity adjustment steps to config
+ * @param normal_step Normal scroll step (1-100)
+ * @param fast_step Ctrl+scroll step (1-100)
+ */
+void WriteConfigOpacitySteps(int normal_step, int fast_step) {
+    if (normal_step < 1) normal_step = 1;
+    if (normal_step > 100) normal_step = 100;
+    if (fast_step < 1) fast_step = 1;
+    if (fast_step > 100) fast_step = 100;
+
+    g_AppConfig.display.opacity_step_normal = normal_step;
+    g_AppConfig.display.opacity_step_fast = fast_step;
+
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+
+    WriteIniInt(INI_SECTION_DISPLAY, "OPACITY_STEP_NORMAL", normal_step, config_path);
+    WriteIniInt(INI_SECTION_DISPLAY, "OPACITY_STEP_FAST", fast_step, config_path);
+}
+
 
 

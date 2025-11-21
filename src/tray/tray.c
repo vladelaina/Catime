@@ -81,9 +81,14 @@ static LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
         if (wParam == WM_MOUSEWHEEL && isOverIcon) {
             extern int CLOCK_WINDOW_OPACITY;
             extern void WriteConfigWindowOpacity(int opacity);
+            extern int ReadConfigOpacityStepNormal(void);
+            extern int ReadConfigOpacityStepFast(void);
 
             int delta = GET_WHEEL_DELTA_WPARAM(pMouseStruct->mouseData);
-            int step = 5;
+
+            /* Check if Ctrl key is pressed for fast adjustment */
+            BOOL ctrlPressed = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
+            int step = ctrlPressed ? ReadConfigOpacityStepFast() : ReadConfigOpacityStepNormal();
 
             if (delta > 0) {
                 CLOCK_WINDOW_OPACITY += step;

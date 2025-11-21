@@ -1,8 +1,14 @@
 /**
  * @file config_defaults.c
  * @brief Configuration defaults implementation
- * 
+ *
  * Centralized storage of default configuration values.
+ *
+ * Opacity Adjustment Configuration:
+ * - OPACITY_STEP_NORMAL: Step size for normal mouse wheel scroll (default: 1)
+ * - OPACITY_STEP_FAST: Step size when Ctrl key is held (default: 5)
+ * - Both values are in percentage units (1-100)
+ * - Supports hot-reload: changes take effect immediately without restart
  */
 
 #include "config/config_defaults.h"
@@ -36,6 +42,8 @@ static const ConfigItemMeta CONFIG_METADATA[] = {
     {INI_SECTION_DISPLAY, "WINDOW_SCALE", DEFAULT_WINDOW_SCALE, CONFIG_TYPE_STRING, "Window scale factor"},
     {INI_SECTION_DISPLAY, "WINDOW_TOPMOST", "TRUE", CONFIG_TYPE_BOOL, "Always on top"},
     {INI_SECTION_DISPLAY, "WINDOW_OPACITY", "100", CONFIG_TYPE_INT, "Window opacity (0-100)"},
+    {INI_SECTION_DISPLAY, "OPACITY_STEP_NORMAL", "1", CONFIG_TYPE_INT, "Opacity scroll step (1-100)"},
+    {INI_SECTION_DISPLAY, "OPACITY_STEP_FAST", "5", CONFIG_TYPE_INT, "Opacity Ctrl+scroll step (1-100)"},
 
     /* Timer settings */
     {INI_SECTION_TIMER, "CLOCK_DEFAULT_START_TIME", "1500", CONFIG_TYPE_INT, "Default timer duration (seconds)"},
