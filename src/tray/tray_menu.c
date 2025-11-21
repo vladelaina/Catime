@@ -26,6 +26,7 @@
 #include "utils/natural_sort.h"
 #include "utils/string_format.h"
 #include "tray/tray_menu_pomodoro.h"
+#include "cache/resource_cache.h"
 
 /** @brief Animation menu entry for directory scanning */
 typedef struct {
@@ -479,47 +480,78 @@ static void BuildFontSubmenu(HMENU hMenu) {
         AppendMenuW(hFontSubMenu, MF_STRING, CLOCK_IDC_FONT_LICENSE_AGREE, 
                    GetLocalizedString(NULL, L"Click to agree to license agreement"));
     } else {
-        wchar_t wFontsFolder[MAX_PATH] = {0};
-        if (GetFontsFolderWideFromConfig(wFontsFolder, MAX_PATH)) {
-            char fontsFolderPathUtf8[MAX_PATH];
-            WideCharToMultiByte(CP_UTF8, 0, wFontsFolder, -1, fontsFolderPathUtf8, MAX_PATH, NULL, NULL);
+        // Try to use cached font list (FAST PATH - 5-10ms)
+        const FontCacheEntry* cachedFonts = NULL;
+        int cachedCount = 0;
+        CacheStatus cacheStatus = FontCache_GetEntries(&cachedFonts, &cachedCount);
+        
+        if (cacheStatus == CACHE_OK || cacheStatus == CACHE_EXPIRED) {
+            // Use cached data to build menu quickly
+            WriteLog(LOG_LEVEL_INFO, "Using cached font list (%d fonts, status=%d)", cachedCount, cacheStatus);
             
             g_advancedFontId = 2000;
-            
-            int fontFolderStatus = ScanFontFolder(fontsFolderPathUtf8, hFontSubMenu, &g_advancedFontId);
-            if (fontFolderStatus == 0) {
-                WriteLog(LOG_LEVEL_INFO, "Font scan failed, checking known fonts...");
-                wchar_t wTestFontPath[MAX_PATH];
-                MultiByteToWideChar(CP_UTF8, 0, fontsFolderPathUtf8, -1, wTestFontPath, MAX_PATH - 32);
-                wcscat(wTestFontPath, L"\\Wallpoet Essence.ttf");
-                DWORD attribs = GetFileAttributesW(wTestFontPath);
-                if (attribs != INVALID_FILE_ATTRIBUTES) {
-                    WriteLog(LOG_LEVEL_WARNING, "Wallpoet Essence.ttf exists but scan failed!");
-                } else {
-                    WriteLog(LOG_LEVEL_INFO, "Wallpoet Essence.ttf does not exist");
+            for (int i = 0; i < cachedCount; i++) {
+                UINT flags = MF_STRING;
+                if (cachedFonts[i].isCurrentFont) {
+                    flags |= MF_CHECKED;
                 }
+                AppendMenuW(hFontSubMenu, flags, g_advancedFontId++, cachedFonts[i].displayName);
             }
-            WriteLog(LOG_LEVEL_INFO, "Font folder scan result: %d", fontFolderStatus);
             
-            if (fontFolderStatus == 0) {
-                extern BOOL ExtractEmbeddedFontsToFolder(HINSTANCE hInstance);
-                HINSTANCE hInst = GetModuleHandle(NULL);
-                if (ExtractEmbeddedFontsToFolder(hInst)) {
-                    fontFolderStatus = ScanFontFolder(fontsFolderPathUtf8, hFontSubMenu, &g_advancedFontId);
-                }
+            if (cachedCount > 0) {
+                AppendMenuW(hFontSubMenu, MF_SEPARATOR, 0, NULL);
             }
+            
+            // Trigger async refresh if cache expired
+            if (cacheStatus == CACHE_EXPIRED) {
+                FontCache_RequestRefresh();
+            }
+        } else {
+            // Fallback: use original synchronous scan (SLOW PATH - 100-300ms)
+            WriteLog(LOG_LEVEL_INFO, "Font cache not ready (status=%d), using fallback sync scan", cacheStatus);
+            
+            wchar_t wFontsFolder[MAX_PATH] = {0};
+            if (GetFontsFolderWideFromConfig(wFontsFolder, MAX_PATH)) {
+                char fontsFolderPathUtf8[MAX_PATH];
+                WideCharToMultiByte(CP_UTF8, 0, wFontsFolder, -1, fontsFolderPathUtf8, MAX_PATH, NULL, NULL);
+                
+                g_advancedFontId = 2000;
+                
+                int fontFolderStatus = ScanFontFolder(fontsFolderPathUtf8, hFontSubMenu, &g_advancedFontId);
+                if (fontFolderStatus == 0) {
+                    WriteLog(LOG_LEVEL_INFO, "Font scan failed, checking known fonts...");
+                    wchar_t wTestFontPath[MAX_PATH];
+                    MultiByteToWideChar(CP_UTF8, 0, fontsFolderPathUtf8, -1, wTestFontPath, MAX_PATH - 32);
+                    wcscat(wTestFontPath, L"\\Wallpoet Essence.ttf");
+                    DWORD attribs = GetFileAttributesW(wTestFontPath);
+                    if (attribs != INVALID_FILE_ATTRIBUTES) {
+                        WriteLog(LOG_LEVEL_WARNING, "Wallpoet Essence.ttf exists but scan failed!");
+                    } else {
+                        WriteLog(LOG_LEVEL_INFO, "Wallpoet Essence.ttf does not exist");
+                    }
+                }
+                WriteLog(LOG_LEVEL_INFO, "Font folder scan result: %d", fontFolderStatus);
+                
+                if (fontFolderStatus == 0) {
+                    extern BOOL ExtractEmbeddedFontsToFolder(HINSTANCE hInstance);
+                    HINSTANCE hInst = GetModuleHandle(NULL);
+                    if (ExtractEmbeddedFontsToFolder(hInst)) {
+                        fontFolderStatus = ScanFontFolder(fontsFolderPathUtf8, hFontSubMenu, &g_advancedFontId);
+                    }
+                }
 
-            if (fontFolderStatus == 0) {
-                AppendMenuW(hFontSubMenu, MF_STRING | MF_GRAYED, 0, 
-                           GetLocalizedString(NULL, L"No font files found"));
-                AppendMenuW(hFontSubMenu, MF_SEPARATOR, 0, NULL);
-            } else {
-                AppendMenuW(hFontSubMenu, MF_SEPARATOR, 0, NULL);
+                if (fontFolderStatus == 0) {
+                    AppendMenuW(hFontSubMenu, MF_STRING | MF_GRAYED, 0, 
+                               GetLocalizedString(NULL, L"No font files found"));
+                    AppendMenuW(hFontSubMenu, MF_SEPARATOR, 0, NULL);
+                } else {
+                    AppendMenuW(hFontSubMenu, MF_SEPARATOR, 0, NULL);
+                }
             }
-            
-            AppendMenuW(hFontSubMenu, MF_STRING, CLOCK_IDC_FONT_ADVANCED, 
-                       GetLocalizedString(NULL, L"Open fonts folder"));
         }
+        
+        AppendMenuW(hFontSubMenu, MF_STRING, CLOCK_IDC_FONT_ADVANCED, 
+                   GetLocalizedString(NULL, L"Open fonts folder"));
     }
     
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hFontSubMenu, 

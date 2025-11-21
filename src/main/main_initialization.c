@@ -19,6 +19,7 @@
 #include "dialog/dialog_language.h"
 #include "shortcut_checker.h"
 #include "utils/string_convert.h"
+#include "cache/resource_cache.h"
 
 extern int elapsed_time;
 extern int message_shown;
@@ -107,6 +108,13 @@ BOOL InitializeSubsystems(void) {
         return FALSE;
     }
     LOG_INFO("COM initialization successful");
+    
+    // Initialize resource cache system with background scanning
+    if (!ResourceCache_Initialize(TRUE)) {
+        LOG_WARNING("Resource cache initialization failed, menu building will use fallback mode");
+    } else {
+        LOG_INFO("Resource cache initialized with background scanning");
+    }
     
     return TRUE;
 }
