@@ -197,20 +197,31 @@ LRESULT HandleLButtonDblClk(HWND hwnd, WPARAM wp, LPARAM lp) {
 LRESULT HandleKeyDown(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)lp;
     if (CLOCK_EDIT_MODE) {
+        /* Only process arrow keys in edit mode */
+        if (wp != VK_UP && wp != VK_DOWN && wp != VK_LEFT && wp != VK_RIGHT) {
+            return DefWindowProc(hwnd, WM_KEYDOWN, wp, lp);
+        }
+
         int step = g_AppConfig.display.move_step_small;
         if (GetKeyState(VK_CONTROL) & 0x8000) {
             step = g_AppConfig.display.move_step_large;
         }
 
+        /* Check all arrow keys to support diagonal movement */
         int dx = 0;
         int dy = 0;
 
-        switch (wp) {
-            case VK_UP:    dy = -step; break;
-            case VK_DOWN:  dy = step;  break;
-            case VK_LEFT:  dx = -step; break;
-            case VK_RIGHT: dx = step;  break;
-            default: return DefWindowProc(hwnd, WM_KEYDOWN, wp, lp);
+        if (GetKeyState(VK_UP) & 0x8000) {
+            dy -= step;
+        }
+        if (GetKeyState(VK_DOWN) & 0x8000) {
+            dy += step;
+        }
+        if (GetKeyState(VK_LEFT) & 0x8000) {
+            dx -= step;
+        }
+        if (GetKeyState(VK_RIGHT) & 0x8000) {
+            dx += step;
         }
 
         if (dx != 0 || dy != 0) {
