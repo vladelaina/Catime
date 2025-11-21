@@ -78,9 +78,9 @@ static int CompareFontEntries(const void* a, const void* b) {
 extern BOOL CLOCK_SHOW_CURRENT_TIME;
 extern BOOL CLOCK_USE_24HOUR;
 extern char CLOCK_TEXT_COLOR[10];
-extern char FONT_FILE_NAME[];
-extern char PREVIEW_FONT_NAME[];
-extern char PREVIEW_INTERNAL_NAME[];
+extern char FONT_FILE_NAME[MAX_PATH];
+extern char PREVIEW_FONT_NAME[MAX_PATH];
+extern char PREVIEW_INTERNAL_NAME[MAX_PATH];
 extern BOOL IS_PREVIEWING;
 
 extern wchar_t CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH];

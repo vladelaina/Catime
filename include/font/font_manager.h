@@ -12,20 +12,20 @@
 #include <windows.h>
 
 /* ============================================================================
- * Global State (exposed for drawing system)
+ * Global Font State
  * ============================================================================ */
 
 /** @brief Current active font filename (config-style path) */
-extern char FONT_FILE_NAME[100];
+extern char FONT_FILE_NAME[MAX_PATH];
 
 /** @brief Current active font internal name (from TTF) */
-extern char FONT_INTERNAL_NAME[100];
+extern char FONT_INTERNAL_NAME[MAX_PATH];
 
 /** @brief Preview font filename */
-extern char PREVIEW_FONT_NAME[100];
+extern char PREVIEW_FONT_NAME[MAX_PATH];
 
 /** @brief Preview font internal name */
-extern char PREVIEW_INTERNAL_NAME[100];
+extern char PREVIEW_INTERNAL_NAME[MAX_PATH];
 
 /** @brief Preview mode active flag */
 extern BOOL IS_PREVIEWING;

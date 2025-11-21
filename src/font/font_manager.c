@@ -18,10 +18,10 @@
  * Global State
  * ============================================================================ */
 
-char FONT_FILE_NAME[100] = FONT_FOLDER_PREFIX "Wallpoet Essence.ttf";
-char FONT_INTERNAL_NAME[100];
-char PREVIEW_FONT_NAME[100] = "";
-char PREVIEW_INTERNAL_NAME[100] = "";
+char FONT_FILE_NAME[MAX_PATH] = FONT_FOLDER_PREFIX "Wallpoet Essence.ttf";
+char FONT_INTERNAL_NAME[MAX_PATH];
+char PREVIEW_FONT_NAME[MAX_PATH] = "";
+char PREVIEW_INTERNAL_NAME[MAX_PATH] = "";
 BOOL IS_PREVIEWING = FALSE;
 
 static wchar_t CURRENT_LOADED_FONT_PATH[MAX_PATH] = {0};

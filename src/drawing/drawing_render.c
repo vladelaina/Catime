@@ -15,8 +15,8 @@
 #include "window_procedure/window_procedure.h"
 #include "menu_preview.h"
 
-extern char FONT_FILE_NAME[100];
-extern char FONT_INTERNAL_NAME[100];
+extern char FONT_FILE_NAME[MAX_PATH];
+extern char FONT_INTERNAL_NAME[MAX_PATH];
 extern char CLOCK_TEXT_COLOR[10];
 extern int CLOCK_BASE_FONT_SIZE;
 extern float CLOCK_FONT_SCALE_FACTOR;

@@ -13,8 +13,8 @@
 #include <shlobj.h>
 
 /* External references (from font_manager.c) */
-extern char FONT_FILE_NAME[100];
-extern char FONT_INTERNAL_NAME[100];
+extern char FONT_FILE_NAME[MAX_PATH];
+extern char FONT_INTERNAL_NAME[MAX_PATH];
 
 /* ============================================================================
  * Fonts Folder Resolution
