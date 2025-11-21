@@ -387,6 +387,13 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
             }
         }
 
+        if (menuItem == CLOCK_IDM_TIME_FORMAT_DEFAULT ||
+            menuItem == CLOCK_IDM_TIME_FORMAT_ZERO_PADDED ||
+            menuItem == CLOCK_IDM_TIME_FORMAT_FULL_PADDED ||
+            menuItem == CLOCK_IDM_TIME_FORMAT_SHOW_MILLISECONDS) {
+            isColorOrFontPreview = TRUE;
+        }
+
         if (menuItem == CLOCK_IDM_ANIMATIONS_USE_LOGO) {
             isAnimationPreview = TRUE;
         }

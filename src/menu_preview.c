@@ -339,12 +339,45 @@ BOOL GetPreviewTimeText(wchar_t* outText, size_t bufferSize) {
     int minutes = (previewTime % 3600) / 60;
     int seconds = previewTime % 60;
 
-    if (hours > 0) {
-        _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%d:%02d:%02d", hours, minutes, seconds);
-    } else if (minutes > 0) {
-        _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%d:%02d", minutes, seconds);
+    TimeFormatType format = GetActiveTimeFormat();
+    BOOL showMs = GetActiveShowMilliseconds();
+
+    if (showMs) {
+        if (format == TIME_FORMAT_FULL_PADDED) {
+            _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%02d:%02d:%02d.00", hours, minutes, seconds);
+        } else if (format == TIME_FORMAT_ZERO_PADDED) {
+            if (hours > 0) {
+                _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%02d:%02d:%02d.00", hours, minutes, seconds);
+            } else {
+                _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%02d:%02d.00", minutes, seconds);
+            }
+        } else {
+            if (hours > 0) {
+                _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%d:%02d:%02d.00", hours, minutes, seconds);
+            } else if (minutes > 0) {
+                _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%d:%02d.00", minutes, seconds);
+            } else {
+                _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%d.00", seconds);
+            }
+        }
     } else {
-        _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%d", seconds);
+        if (format == TIME_FORMAT_FULL_PADDED) {
+            _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%02d:%02d:%02d", hours, minutes, seconds);
+        } else if (format == TIME_FORMAT_ZERO_PADDED) {
+            if (hours > 0) {
+                _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%02d:%02d:%02d", hours, minutes, seconds);
+            } else {
+                _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%02d:%02d", minutes, seconds);
+            }
+        } else {
+            if (hours > 0) {
+                _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%d:%02d:%02d", hours, minutes, seconds);
+            } else if (minutes > 0) {
+                _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%d:%02d", minutes, seconds);
+            } else {
+                _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%d", seconds);
+            }
+        }
     }
 
     return TRUE;
