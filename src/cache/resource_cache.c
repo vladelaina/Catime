@@ -6,6 +6,7 @@
 #include "cache/font_cache.h"
 #include "cache/animation_cache.h"
 #include "cache/resource_cache.h"
+#include "cache/resource_watcher.h"
 #include "log.h"
 #include <stdio.h>
 
@@ -17,7 +18,7 @@ static HANDLE g_backgroundThread = NULL;
 static volatile BOOL g_shutdownRequested = FALSE;
 static volatile BOOL g_backgroundScanComplete = FALSE;
 static volatile LONG g_refreshInProgress = 0;
-static BOOL g_initialized = FALSE;
+static volatile BOOL g_initialized = FALSE;
 
 /* ============================================================================
  * Background Thread
@@ -103,6 +104,12 @@ BOOL ResourceCache_Initialize(BOOL startBackgroundScan) {
         }
         
         SetThreadPriority(g_backgroundThread, THREAD_PRIORITY_BELOW_NORMAL);
+        
+        // Start file system watcher (will delay internally to let initial scan complete)
+        if (!ResourceWatcher_Start()) {
+            WriteLog(LOG_LEVEL_WARNING, "File system watcher failed to start, auto-refresh disabled");
+            // Continue anyway, this is not critical
+        }
     }
     
     WriteLog(LOG_LEVEL_INFO, "Resource cache initialized (background=%d)", startBackgroundScan);
@@ -117,6 +124,9 @@ void ResourceCache_Shutdown(void) {
     WriteLog(LOG_LEVEL_INFO, "Shutting down resource cache system");
     
     g_shutdownRequested = TRUE;
+    
+    // Stop file system watcher first
+    ResourceWatcher_Stop();
     
     // Wait for background thread
     if (g_backgroundThread != NULL) {
@@ -196,4 +206,8 @@ void ResourceCache_GetStatistics(int* outFontCount, int* outAnimCount,
     if (outAnimCount || outAnimScanTime) {
         AnimationCache_GetStatistics(outAnimCount, outAnimScanTime);
     }
+}
+
+BOOL ResourceCache_IsWatcherActive(void) {
+    return ResourceWatcher_IsRunning();
 }

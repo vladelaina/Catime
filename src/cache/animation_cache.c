@@ -72,7 +72,18 @@ static BOOL AddAnimationEntry(AnimationCacheInternal* cache, const char* fileNam
                                const wchar_t* fullPath, const char* relativePath,
                                BOOL isSpecial) {
     if (cache->count >= cache->capacity) {
-        int newCapacity = cache->capacity == 0 ? 32 : cache->capacity * 2;
+        int newCapacity;
+        if (cache->capacity == 0) {
+            newCapacity = 32;
+        } else {
+            // Check for overflow before doubling
+            if (cache->capacity > MAX_ANIM_CACHE_ENTRIES / 2) {
+                newCapacity = MAX_ANIM_CACHE_ENTRIES;
+            } else {
+                newCapacity = cache->capacity * 2;
+            }
+        }
+        
         if (newCapacity > MAX_ANIM_CACHE_ENTRIES) {
             WriteLog(LOG_LEVEL_WARNING, "Animation cache capacity limit reached (%d animations), skipping: %s",
                      MAX_ANIM_CACHE_ENTRIES, fileName);

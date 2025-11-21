@@ -59,4 +59,9 @@ void ResourceCache_InvalidateAll(void);
 void ResourceCache_GetStatistics(int* outFontCount, int* outAnimCount,
                                   time_t* outFontScanTime, time_t* outAnimScanTime);
 
+/**
+ * @brief Check if file system watcher is active
+ */
+BOOL ResourceCache_IsWatcherActive(void);
+
 #endif /* RESOURCE_CACHE_H */

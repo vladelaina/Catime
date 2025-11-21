@@ -78,7 +78,18 @@ static BOOL AddFontEntry(FontCacheInternal* cache, const wchar_t* fileName,
                          const wchar_t* fullPath, const wchar_t* relativePath,
                          int depth) {
     if (cache->count >= cache->capacity) {
-        int newCapacity = cache->capacity == 0 ? 32 : cache->capacity * 2;
+        int newCapacity;
+        if (cache->capacity == 0) {
+            newCapacity = 32;
+        } else {
+            // Check for overflow before doubling
+            if (cache->capacity > MAX_FONT_CACHE_ENTRIES / 2) {
+                newCapacity = MAX_FONT_CACHE_ENTRIES;
+            } else {
+                newCapacity = cache->capacity * 2;
+            }
+        }
+        
         if (newCapacity > MAX_FONT_CACHE_ENTRIES) {
             WriteLog(LOG_LEVEL_WARNING, "Font cache capacity limit reached (%d fonts), skipping: %ls",
                      MAX_FONT_CACHE_ENTRIES, fileName);
