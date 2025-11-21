@@ -50,17 +50,6 @@ static void AdvanceCharacter(TextLayoutContext* ctx, int charWidth) {
     }
 }
 
-/** Check if character can be rendered by current font */
-static BOOL IsCharacterSupported(HDC hdc, wchar_t ch) {
-    WORD glyphIndex;
-    DWORD result = GetGlyphIndicesW(hdc, &ch, 1, &glyphIndex, GGI_MARK_NONEXISTING_GLYPHS);
-
-    if (result == GDI_ERROR) {
-        return TRUE;
-    }
-
-    return (glyphIndex != 0xFFFF);
-}
 
 /**
  * @brief Process single character with unified font/style logic
@@ -244,10 +233,6 @@ static void ProcessMarkdownCharacter(
             }
         }
         SetTextColor(hdc, textColor);
-    }
-
-    if (!IsCharacterSupported(hdc, ch)) {
-        return;
     }
 
     SIZE charSize;
