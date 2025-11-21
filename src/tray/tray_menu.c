@@ -708,8 +708,6 @@ void ShowColorMenu(HWND hwnd) {
  * @note Includes timer management, Pomodoro, and quick countdown options
  */
 void ShowContextMenu(HWND hwnd) {
-    ReadTimeoutActionFromConfig();
-    
     SetCursor(LoadCursorW(NULL, MAKEINTRESOURCEW(IDC_ARROW)));
     
     HMENU hMenu = CreatePopupMenu();

@@ -65,8 +65,6 @@ void LoadPomodoroConfig(void) {
  */
 void BuildPomodoroMenu(HMENU hMenu) {
     if (!hMenu) return;
-    
-    LoadPomodoroConfig();
 
     HMENU hPomodoroMenu = CreatePopupMenu();
     
