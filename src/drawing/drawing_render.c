@@ -302,12 +302,28 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     HDC hdc = ps->hdc;
     RECT rect;
     GetClientRect(hwnd, &rect);
-    
+
     GetTimeText(timeText, TIME_TEXT_MAX_LEN);
-    
+
+    /* Show preview text in edit mode when no content is displayed */
+    if (CLOCK_EDIT_MODE && wcslen(timeText) == 0) {
+        int previewTime = (g_AppConfig.timer.default_start_time > 0) ? g_AppConfig.timer.default_start_time : 1500;
+        int hours = previewTime / 3600;
+        int minutes = (previewTime % 3600) / 60;
+        int seconds = previewTime % 60;
+
+        if (hours > 0) {
+            _snwprintf_s(timeText, TIME_TEXT_MAX_LEN, _TRUNCATE, L"%d:%02d:%02d", hours, minutes, seconds);
+        } else if (minutes > 0) {
+            _snwprintf_s(timeText, TIME_TEXT_MAX_LEN, _TRUNCATE, L"%d:%02d", minutes, seconds);
+        } else {
+            _snwprintf_s(timeText, TIME_TEXT_MAX_LEN, _TRUNCATE, L"%d", seconds);
+        }
+    }
+
     RenderContext ctx = CreateRenderContext();
     HFONT hFont = CreateTimerFont(&ctx);
-    
+
     // Measure text and resize window BEFORE creating the buffer
     // This prevents buffer overflow if the window grows
     if (wcslen(timeText) > 0) {
@@ -315,7 +331,7 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
         SIZE textSize;
         GetTextExtentPoint32W(hdc, timeText, (int)wcslen(timeText), &textSize);
         SelectObject(hdc, oldFontHdc);
-        
+
         AdjustWindowSize(hwnd, &textSize, &rect);
     }
     
