@@ -34,7 +34,7 @@
  * ============================================================================ */
 
 /** @brief Default notification messages */
-#define DEFAULT_TIMEOUT_MESSAGE        "Ding! Time's up~ Ciallo～(∠·ω< )⌒★"
+#define DEFAULT_TIMEOUT_MESSAGE        "Ding! Time's up~"
 
 /** @brief Resource path prefixes */
 #define LOCALAPPDATA_PREFIX            "%LOCALAPPDATA%\\Catime"
