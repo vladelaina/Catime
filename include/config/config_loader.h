@@ -132,7 +132,7 @@ BOOL LoadConfigFromFile(const char* config_path, ConfigSnapshot* snapshot);
  * 
  * Security checks:
  * - Filters dangerous timeout actions (SHUTDOWN/RESTART/SLEEP)
- * - Validates opacity range (1-100)
+ * - Validates opacity range (0-100)
  * - Validates volume range (0-100)
  * - Checks file existence for file paths
  */

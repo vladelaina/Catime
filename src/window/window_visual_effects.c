@@ -146,7 +146,7 @@ void SetClickThrough(HWND hwnd, BOOL enable) {
 
 static void ApplyAccentPolicy(HWND hwnd, ACCENT_STATE accentState) {
     extern int CLOCK_WINDOW_OPACITY;
-    // Map 1-100 opacity to 0-255 alpha for the acrylic background
+    // Map 0-100 opacity to 0-255 alpha for the acrylic background
     // For "Liquid Glass", we want it very clear/transparent.
     // Lower the base alpha significantly (e.g., max 30 out of 255) to avoid "milky" look.
     DWORD alpha = (DWORD)((CLOCK_WINDOW_OPACITY * 30) / 100);

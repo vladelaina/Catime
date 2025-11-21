@@ -201,7 +201,7 @@ static BOOL LoadDisplayWindowSettings(const char* section, const char* key, void
     }
 
     if (opacityChanged) {
-        if (newOpacity < 1) newOpacity = 1;
+        if (newOpacity < 0) newOpacity = 0;
         if (newOpacity > 100) newOpacity = 100;
         CLOCK_WINDOW_OPACITY = newOpacity;
 

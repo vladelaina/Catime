@@ -91,7 +91,7 @@ static LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
                 CLOCK_WINDOW_OPACITY -= step;
             }
 
-            if (CLOCK_WINDOW_OPACITY < 1) CLOCK_WINDOW_OPACITY = 1;
+            if (CLOCK_WINDOW_OPACITY < 0) CLOCK_WINDOW_OPACITY = 0;
             if (CLOCK_WINDOW_OPACITY > 100) CLOCK_WINDOW_OPACITY = 100;
 
             if (g_mainHwnd) {

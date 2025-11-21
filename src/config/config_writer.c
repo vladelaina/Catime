@@ -396,9 +396,9 @@ void WriteConfigSection(const char* config_path, const char* section) {
 }
 
 void WriteConfigWindowOpacity(int opacity) {
-    if (opacity < 1) opacity = 1;
+    if (opacity < 0) opacity = 0;
     if (opacity > 100) opacity = 100;
-    
+
     CLOCK_WINDOW_OPACITY = opacity;
     
     char config_path[MAX_PATH];

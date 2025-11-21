@@ -450,8 +450,8 @@ BOOL ValidateConfigSnapshot(ConfigSnapshot* snapshot) {
     }
 
     /* Validate ranges */
-    if (snapshot->windowOpacity < 1) {
-        snapshot->windowOpacity = 1;
+    if (snapshot->windowOpacity < 0) {
+        snapshot->windowOpacity = 0;
         modified = TRUE;
     }
     if (snapshot->windowOpacity > 100) {

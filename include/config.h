@@ -496,7 +496,7 @@ void WriteConfigNotificationTimeout(int timeout_ms);
 void ReadNotificationTimeoutConfig(void);
 
 /**
- * @brief Read notification opacity (default: 100, range: 1-100)
+ * @brief Read notification opacity (default: 100, range: 0-100)
  */
 void ReadNotificationOpacityConfig(void);
 
@@ -795,7 +795,7 @@ void WriteConfigStartupMode(const char* mode);
 
 /**
  * @brief Write window opacity setting
- * @param opacity Opacity value (1-100)
+ * @param opacity Opacity value (0-100)
  */
 void WriteConfigWindowOpacity(int opacity);
 
