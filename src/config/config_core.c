@@ -63,12 +63,6 @@ AppConfig g_AppConfig = {
             .format = TIME_FORMAT_DEFAULT,
             .show_milliseconds = FALSE
         },
-        .preview = {
-            .is_format_previewing = FALSE,
-            .preview_format = TIME_FORMAT_DEFAULT,
-            .is_milliseconds_previewing = FALSE,
-            .preview_show_milliseconds = FALSE
-        },
         .move_step_small = DEFAULT_MOVE_STEP_SMALL,
         .move_step_large = DEFAULT_MOVE_STEP_LARGE,
         .opacity_step_normal = 1,

@@ -148,5 +148,17 @@ void ShowWindowForPreview(HWND hwnd);
  */
 void RestoreWindowVisibility(HWND hwnd);
 
+/**
+ * @brief Get preview time text when no active timer content
+ * @param outText Output buffer for preview text
+ * @param bufferSize Buffer size in wide characters
+ * @return TRUE if preview text was generated, FALSE if no preview needed
+ *
+ * @details Generates preview text based on default_start_time from config.
+ *          Used in edit mode and menu preview to show what the timer would look like.
+ *          Returns FALSE if there's already active content to display.
+ */
+BOOL GetPreviewTimeText(wchar_t* outText, size_t bufferSize);
+
 #endif /* MENU_PREVIEW_H */
 

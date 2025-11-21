@@ -175,28 +175,4 @@ BOOL HandleLanguageSelection(HWND hwnd, UINT menuId);
  */
 BOOL HandlePomodoroTimeConfig(HWND hwnd, int selectedIndex);
 
-/* ============================================================================
- * Preview State Access API
- * ============================================================================ */
-
-/**
- * @brief Get active color (preview or actual)
- */
-void GetActiveColor(char* outColor, size_t bufferSize);
-
-/**
- * @brief Get active font (preview or actual)
- */
-void GetActiveFont(char* outFontName, char* outInternalName, size_t bufferSize);
-
-/**
- * @brief Get active time format (preview or actual)
- */
-TimeFormatType GetActiveTimeFormat(void);
-
-/**
- * @brief Get active milliseconds setting (preview or actual)
- */
-BOOL GetActiveShowMilliseconds(void);
-
 #endif

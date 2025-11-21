@@ -196,21 +196,10 @@ typedef struct {
 } TimeFormatConfig;
 
 /**
- * @brief Preview state for time format
- */
-typedef struct {
-    BOOL is_format_previewing;
-    TimeFormatType preview_format;
-    BOOL is_milliseconds_previewing;
-    BOOL preview_show_milliseconds;
-} TimeFormatPreviewState;
-
-/**
  * @brief Display configuration
  */
 typedef struct {
     TimeFormatConfig time_format;
-    TimeFormatPreviewState preview;
     int move_step_small;
     int move_step_large;
     int opacity_step_normal;

@@ -343,11 +343,8 @@ void WriteConfigShowMilliseconds(BOOL showMilliseconds) {
  * @brief Get appropriate timer interval based on milliseconds display setting
  */
 UINT GetTimerInterval(void) {
-    if (g_AppConfig.display.preview.is_milliseconds_previewing && g_AppConfig.display.preview.preview_show_milliseconds) {
-        return 10;
-    }
-    
-    return g_AppConfig.display.time_format.show_milliseconds ? 10 : 1000;
+    extern BOOL GetActiveShowMilliseconds(void);
+    return GetActiveShowMilliseconds() ? 10 : 1000;
 }
 
 /**

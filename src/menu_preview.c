@@ -319,3 +319,34 @@ void RestoreWindowVisibility(HWND hwnd) {
     g_previewState.createdPreviewTimer = FALSE;
 }
 
+/* ============================================================================
+ * Preview Time Text Generation
+ * ============================================================================ */
+
+BOOL GetPreviewTimeText(wchar_t* outText, size_t bufferSize) {
+    if (!outText || bufferSize == 0) return FALSE;
+
+    extern BOOL CLOCK_EDIT_MODE;
+
+    if (!CLOCK_EDIT_MODE) {
+        return FALSE;
+    }
+
+    int previewTime = (g_AppConfig.timer.default_start_time > 0) ?
+                      g_AppConfig.timer.default_start_time : 1500;
+
+    int hours = previewTime / 3600;
+    int minutes = (previewTime % 3600) / 60;
+    int seconds = previewTime % 60;
+
+    if (hours > 0) {
+        _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%d:%02d:%02d", hours, minutes, seconds);
+    } else if (minutes > 0) {
+        _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%d:%02d", minutes, seconds);
+    } else {
+        _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%d", seconds);
+    }
+
+    return TRUE;
+}
+
