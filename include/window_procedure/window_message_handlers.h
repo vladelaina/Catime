@@ -37,9 +37,11 @@ LRESULT HandleShowCliHelp(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleTrayUpdateIcon(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleAppReregisterHotkeys(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleAnimationPreviewLoaded(HWND hwnd, WPARAM wp, LPARAM lp);
+LRESULT HandleDrop(HWND hwnd, WPARAM wp, LPARAM lp);
+
+// Owner-drawn menu handlers
 LRESULT HandleMeasureItem(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleDrawItem(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp);
 
 #endif /* WINDOW_MESSAGE_HANDLERS_H */
-

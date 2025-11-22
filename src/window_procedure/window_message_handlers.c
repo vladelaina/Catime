@@ -22,6 +22,7 @@
 #include "window/window_visual_effects.h"
 #include "cache/resource_cache.h"
 #include "../resource/resource.h"
+#include "window_procedure/window_drop_target.h"
 #include <stdio.h>
 
 /* 50ms menu debounce prevents accidental double-clicks during menu interaction */
@@ -302,6 +303,13 @@ LRESULT HandleAppReregisterHotkeys(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT HandleAnimationPreviewLoaded(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)hwnd; (void)wp; (void)lp;
+    return 0;
+}
+
+LRESULT HandleDrop(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)lp;
+    HDROP hDrop = (HDROP)wp;
+    HandleDropFiles(hwnd, hDrop);
     return 0;
 }
 

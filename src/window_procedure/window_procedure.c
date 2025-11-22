@@ -20,6 +20,8 @@
 #include "log.h"
 #include <string.h>
 
+#include "window_procedure/window_drop_target.h"
+
 /* ============================================================================
  * External Declarations
  * ============================================================================ */
@@ -108,6 +110,7 @@ static const MessageDispatchEntry MESSAGE_DISPATCH_TABLE[] = {
     {WM_USER + 100, HandleTrayUpdateIcon, "Tray icon update"},
     {WM_APP + 1, HandleAppReregisterHotkeys, "Hotkey re-registration"},
     {CLOCK_WM_ANIMATION_PREVIEW_LOADED, HandleAnimationPreviewLoaded, "Animation preview loaded"},
+    {WM_DROPFILES, HandleDrop, "File drag and drop"},
     {0, NULL, NULL}
 };
 

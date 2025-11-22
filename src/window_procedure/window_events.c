@@ -46,6 +46,10 @@ BOOL HandleWindowCreate(HWND hwnd) {
     SetWindowTopmost(hwnd, CLOCK_WINDOW_TOPMOST);
     LOG_INFO("Window topmost setting applied: %s", CLOCK_WINDOW_TOPMOST ? "yes" : "no");
 
+    /* Enable drag and drop for resource import */
+    DragAcceptFiles(hwnd, TRUE);
+    LOG_INFO("Drag and drop enabled (requires Edit Mode if Click-Through is active)");
+
     LOG_INFO("Window creation completed successfully");
     return TRUE;
 }
