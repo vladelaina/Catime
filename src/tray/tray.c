@@ -100,15 +100,9 @@ static LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
             if (CLOCK_WINDOW_OPACITY > 100) CLOCK_WINDOW_OPACITY = 100;
 
             if (g_mainHwnd) {
-                extern BOOL CLOCK_EDIT_MODE;
-                BYTE alphaValue = (BYTE)((CLOCK_WINDOW_OPACITY * 255) / 100);
-
-                /* Use appropriate flags based on edit mode */
-                if (CLOCK_EDIT_MODE) {
-                    SetLayeredWindowAttributes(g_mainHwnd, 0, alphaValue, LWA_ALPHA);
-                } else {
-                    SetLayeredWindowAttributes(g_mainHwnd, RGB(0, 0, 0), alphaValue, LWA_COLORKEY | LWA_ALPHA);
-                }
+                /* Force window update to reflect new opacity via UpdateLayeredWindow */
+                InvalidateRect(g_mainHwnd, NULL, TRUE);
+                UpdateWindow(g_mainHwnd);
 
                 /* Enter opacity tip mode and show opacity */
                 g_showingOpacityTip = TRUE;
