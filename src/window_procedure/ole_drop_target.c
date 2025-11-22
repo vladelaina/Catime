@@ -74,20 +74,39 @@ static BOOL IsAnimationFile(const wchar_t* filename) {
             _wcsicmp(ext, L".ico") == 0);
 }
 
-static void RestoreOriginalState(OleDropTarget* target) {
+static void RestoreOriginalState(OleDropTarget* target, BOOL reloadOriginal) {
     if (target->isPreviewingFont) {
-        CancelFontPreview();
+        if (reloadOriginal) {
+            CancelFontPreview();
+            LOG_INFO("Restored original font");
+        } else {
+            /* Unload preview font but skip reloading original 
+             * (because we expect HandleDropFiles to load a new one immediately)
+             */
+            UnloadCurrentFontResource();
+            IS_PREVIEWING = FALSE;
+            PREVIEW_FONT_NAME[0] = '\0';
+            PREVIEW_INTERNAL_NAME[0] = '\0';
+            LOG_INFO("Unloaded preview font (skipping reload for drop)");
+        }
         target->isPreviewingFont = FALSE;
-        LOG_INFO("Restored original font");
     }
     
     if (target->isPreviewingAnim) {
+        /* Animations are always managed by tray_animation_core, 
+         * which handles path switching gracefully. 
+         * If we are applying, SetCurrentAnimationName will be called.
+         * So we should probably cancel preview to restore original state 
+         * ONLY if we are NOT applying?
+         * But SetCurrentAnimationName overwrites anyway.
+         * Let's just cancel to be safe/clean.
+         */
         CancelAnimationPreview();
         target->isPreviewingAnim = FALSE;
         LOG_INFO("Restored original animation");
     }
     
-    if (target->isPreviewingFont || target->isPreviewingAnim) {
+    if ((target->isPreviewingFont || target->isPreviewingAnim) && reloadOriginal) {
         /* Force repaint if we restored anything */
         InvalidateRect(target->hwnd, NULL, TRUE);
     }
@@ -205,7 +224,7 @@ STDMETHODIMP DragOver(IDropTarget* this, DWORD grfKeyState, POINTL pt, DWORD* pd
 
 STDMETHODIMP DragLeave(IDropTarget* this) {
     OleDropTarget* target = (OleDropTarget*)this;
-    RestoreOriginalState(target);
+    RestoreOriginalState(target, TRUE);
     return S_OK;
 }
 
@@ -213,18 +232,33 @@ STDMETHODIMP Drop(IDropTarget* this, IDataObject* pDataObj, DWORD grfKeyState, P
     (void)grfKeyState; (void)pt;
     OleDropTarget* target = (OleDropTarget*)this;
     
-    /* Restore state before processing drop to ensure clean apply */
-    RestoreOriginalState(target);
-    
+    /* Determine if we will likely apply a font (skip reload) */
+    BOOL willApplyFont = FALSE;
     FORMATETC fmt = {CF_HDROP, NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
     STGMEDIUM stg;
-
+    
+    /* Peek at data to count fonts */
     if (pDataObj->lpVtbl->GetData(pDataObj, &fmt, &stg) == S_OK) {
         HDROP hDrop = (HDROP)stg.hGlobal;
-        
-        /* Process files (import and auto-apply logic) */
+        UINT count = DragQueryFileW(hDrop, 0xFFFFFFFF, NULL, 0);
+        int fontCount = 0;
+        for (UINT i = 0; i < count; i++) {
+            wchar_t filePath[MAX_PATH];
+            if (DragQueryFileW(hDrop, i, filePath, MAX_PATH)) {
+                if (IsFontFile(filePath)) fontCount++;
+            }
+        }
+        if (fontCount == 1) willApplyFont = TRUE;
+        ReleaseStgMedium(&stg);
+    }
+
+    /* Restore state (skip reload if we are about to apply new font) */
+    RestoreOriginalState(target, !willApplyFont);
+    
+    /* Process Drop */
+    if (pDataObj->lpVtbl->GetData(pDataObj, &fmt, &stg) == S_OK) {
+        HDROP hDrop = (HDROP)stg.hGlobal;
         HandleDropFiles(target->hwnd, hDrop);
-        
         ReleaseStgMedium(&stg);
         *pdwEffect = DROPEFFECT_COPY;
     } else {

@@ -163,7 +163,10 @@ void HandleDropFiles(HWND hwnd, HDROP hDrop) {
         char configValue[MAX_PATH];
         snprintf(configValue, sizeof(configValue), "%s%s", FONTS_PATH_PREFIX, fileNameA);
         
-        WriteConfigFont(configValue, TRUE);
+        /* Use SwitchFont to apply without reloading other config (preserves edit mode state) */
+        SwitchFont(GetModuleHandle(NULL), configValue);
+        InvalidateRect(hwnd, NULL, TRUE);
+        
         LOG_INFO("Auto-applied font: %s", fileNameA);
     }
     
