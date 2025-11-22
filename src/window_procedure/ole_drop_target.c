@@ -30,11 +30,9 @@ typedef struct {
     IDropTargetVtbl* lpVtbl;
     LONG refCount;
     HWND hwnd;
-    BOOL isPreviewing;
-    char originalFontName[MAX_PATH];
-    char originalAnimationName[MAX_PATH];
-    char currentPreviewPath[MAX_PATH];
-    int resourceType; /* 1=Font, 2=Animation */
+    BOOL isPreviewingFont;
+    BOOL isPreviewingAnim;
+    BOOL isValidDrop;
 } OleDropTarget;
 
 /* Forward declarations */
@@ -77,40 +75,41 @@ static BOOL IsAnimationFile(const wchar_t* filename) {
 }
 
 static void RestoreOriginalState(OleDropTarget* target) {
-    if (!target->isPreviewing) return;
-
-    if (target->resourceType == 1) { /* Font */
+    if (target->isPreviewingFont) {
         CancelFontPreview();
+        target->isPreviewingFont = FALSE;
         LOG_INFO("Restored original font");
-    } else if (target->resourceType == 2) { /* Animation */
+    }
+    
+    if (target->isPreviewingAnim) {
         CancelAnimationPreview();
+        target->isPreviewingAnim = FALSE;
         LOG_INFO("Restored original animation");
     }
-
-    target->isPreviewing = FALSE;
-    target->resourceType = 0;
+    
+    if (target->isPreviewingFont || target->isPreviewingAnim) {
+        /* Force repaint if we restored anything */
+        InvalidateRect(target->hwnd, NULL, TRUE);
+    }
 }
 
 static void StartPreview(OleDropTarget* target, const wchar_t* filePath) {
-    if (target->isPreviewing) return;
-
     char pathUtf8[MAX_PATH];
     WideCharToMultiByte(CP_UTF8, 0, filePath, -1, pathUtf8, MAX_PATH, NULL, NULL);
 
-    if (IsFontFile(filePath)) {
-        target->resourceType = 1;
+    if (!target->isPreviewingFont && IsFontFile(filePath)) {
         /* Preview font */
         if (PreviewFont(GetModuleHandle(NULL), pathUtf8)) {
-            target->isPreviewing = TRUE;
+            target->isPreviewingFont = TRUE;
             InvalidateRect(target->hwnd, NULL, TRUE);
             LOG_INFO("Previewing font: %s", pathUtf8);
         }
-    } else if (IsAnimationFile(filePath)) {
-        target->resourceType = 2;
+    } 
+    else if (!target->isPreviewingAnim && IsAnimationFile(filePath)) {
         /* Preview animation */
         extern void PreviewAnimationFromFile(HWND hwnd, const char* filePath);
         PreviewAnimationFromFile(target->hwnd, pathUtf8);
-        target->isPreviewing = TRUE;
+        target->isPreviewingAnim = TRUE;
         LOG_INFO("Previewing animation: %s", pathUtf8);
     }
 }
@@ -153,20 +152,46 @@ STDMETHODIMP DragEnter(IDropTarget* this, IDataObject* pDataObj, DWORD grfKeySta
         HDROP hDrop = (HDROP)stg.hGlobal;
         UINT count = DragQueryFileW(hDrop, 0xFFFFFFFF, NULL, 0);
         
-        if (count == 1) {
+        int fontCount = 0;
+        int animCount = 0;
+        wchar_t fontPath[MAX_PATH] = {0};
+        wchar_t animPath[MAX_PATH] = {0};
+        
+        /* First pass: Count resources and store potential candidates */
+        for (UINT i = 0; i < count; i++) {
             wchar_t filePath[MAX_PATH];
-            if (DragQueryFileW(hDrop, 0, filePath, MAX_PATH)) {
-                *pdwEffect = DROPEFFECT_COPY;
-                
-                /* Start preview if single file */
-                StartPreview(target, filePath);
+            if (DragQueryFileW(hDrop, i, filePath, MAX_PATH)) {
+                if (IsFontFile(filePath)) {
+                    if (fontCount == 0) wcscpy_s(fontPath, MAX_PATH, filePath);
+                    fontCount++;
+                } else if (IsAnimationFile(filePath)) {
+                    if (animCount == 0) wcscpy_s(animPath, MAX_PATH, filePath);
+                    animCount++;
+                }
             }
-        } else {
-            *pdwEffect = DROPEFFECT_COPY; /* Allow multi-drop without preview */
         }
         
+        /* Second pass: Apply previews only if unambiguous (count == 1) */
+        if (fontCount == 1) {
+            StartPreview(target, fontPath);
+        }
+        
+        if (animCount == 1) {
+            StartPreview(target, animPath);
+        }
+        
+        /* Update validity flag for DragOver */
+        target->isValidDrop = (fontCount > 0 || animCount > 0);
+        
         ReleaseStgMedium(&stg);
+        
+        /* User requested to avoid "forbidden" cursor even for invalid drops.
+         * We return DROPEFFECT_COPY so it looks like a valid drop target,
+         * but Drop() will silently do nothing if files are invalid.
+         */
+        *pdwEffect = DROPEFFECT_COPY;
     } else {
+        target->isValidDrop = FALSE;
         *pdwEffect = DROPEFFECT_NONE;
     }
     return S_OK;
@@ -188,30 +213,8 @@ STDMETHODIMP Drop(IDropTarget* this, IDataObject* pDataObj, DWORD grfKeyState, P
     (void)grfKeyState; (void)pt;
     OleDropTarget* target = (OleDropTarget*)this;
     
-    /* If we were previewing, we want to apply. 
-     * The previewed state is technically already "active" visually,
-     * but we need to finalize it (move file, save config).
-     * 
-     * However, HandleDropFiles logic does the move and apply.
-     * If we call HandleDropFiles now, it might flicker or reload.
-     * 
-     * Strategy:
-     * 1. If previewing, ApplyFontPreview() or equivalent is needed.
-     * 2. Move the file to resources.
-     * 3. Update config.
-     * 
-     * OR simply call HandleDropFiles and let it handle everything,
-     * but we must ensure HandleDropFiles knows to "keep" the current look 
-     * or just re-apply it cleanly.
-     */
-    
-    /* Restore first to clear "preview" flags, so HandleDropFiles can do a clean apply */
-    /* Actually, for font preview, ApplyFontPreview in font_manager.c logic 
-     * assumes we want to commit the previewed font.
-     * But HandleDropFiles moves the file first.
-     */
-    
-    RestoreOriginalState(target); /* Revert to clean state first to avoid conflicts */
+    /* Restore state before processing drop to ensure clean apply */
+    RestoreOriginalState(target);
     
     FORMATETC fmt = {CF_HDROP, NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
     STGMEDIUM stg;
@@ -219,7 +222,7 @@ STDMETHODIMP Drop(IDropTarget* this, IDataObject* pDataObj, DWORD grfKeyState, P
     if (pDataObj->lpVtbl->GetData(pDataObj, &fmt, &stg) == S_OK) {
         HDROP hDrop = (HDROP)stg.hGlobal;
         
-        /* Reuse existing logic to move files and configure */
+        /* Process files (import and auto-apply logic) */
         HandleDropFiles(target->hwnd, hDrop);
         
         ReleaseStgMedium(&stg);
@@ -244,8 +247,9 @@ void InitializeOleDropTarget(HWND hwnd) {
     g_dropTarget.lpVtbl = &vtbl;
     g_dropTarget.refCount = 1;
     g_dropTarget.hwnd = hwnd;
-    g_dropTarget.isPreviewing = FALSE;
-    g_dropTarget.resourceType = 0;
+    g_dropTarget.isPreviewingFont = FALSE;
+    g_dropTarget.isPreviewingAnim = FALSE;
+    g_dropTarget.isValidDrop = FALSE;
 
     if (RegisterDragDrop(hwnd, (IDropTarget*)&g_dropTarget) != S_OK) {
         LOG_ERROR("RegisterDragDrop failed");

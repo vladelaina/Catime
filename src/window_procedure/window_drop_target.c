@@ -115,8 +115,10 @@ static BOOL MoveResourceFile(const wchar_t* srcPath, ResourceType type, wchar_t*
 void HandleDropFiles(HWND hwnd, HDROP hDrop) {
     UINT fileCount = DragQueryFileW(hDrop, 0xFFFFFFFF, NULL, 0);
     
-    ResourceType lastType = RESOURCE_TYPE_UNKNOWN;
-    wchar_t lastMovedFile[MAX_PATH] = {0};
+    wchar_t lastFontPath[MAX_PATH] = {0};
+    wchar_t lastAnimPath[MAX_PATH] = {0};
+    int fontCount = 0;
+    int animCount = 0;
     int movedCount = 0;
     
     for (UINT i = 0; i < fileCount; i++) {
@@ -127,9 +129,15 @@ void HandleDropFiles(HWND hwnd, HDROP hDrop) {
             if (type != RESOURCE_TYPE_UNKNOWN) {
                 wchar_t newPath[MAX_PATH];
                 if (MoveResourceFile(filePath, type, newPath, MAX_PATH)) {
-                    lastType = type;
-                    wcscpy_s(lastMovedFile, MAX_PATH, newPath);
                     movedCount++;
+                    
+                    if (type == RESOURCE_TYPE_FONT) {
+                        wcscpy_s(lastFontPath, MAX_PATH, newPath);
+                        fontCount++;
+                    } else if (type == RESOURCE_TYPE_ANIMATION) {
+                        wcscpy_s(lastAnimPath, MAX_PATH, newPath);
+                        animCount++;
+                    }
                 }
             }
         }
@@ -137,42 +145,41 @@ void HandleDropFiles(HWND hwnd, HDROP hDrop) {
     
     DragFinish(hDrop);
     
-    /* Auto-apply if single file dropped */
-    if (fileCount == 1 && movedCount == 1 && lastType != RESOURCE_TYPE_UNKNOWN) {
-        if (lastType == RESOURCE_TYPE_FONT) {
-            char utf8Path[MAX_PATH];
-            WideCharToMultiByte(CP_UTF8, 0, lastMovedFile, -1, utf8Path, MAX_PATH, NULL, NULL);
-            
-            /* Convert absolute path to relative if possible (starts with %LOCALAPPDATA%) */
-            /* But for simplicity, we can just store the path relative to fonts folder prefix */
-            
-            /* Extract filename */
-            wchar_t* fileNameW = wcsrchr(lastMovedFile, L'\\');
-            if (fileNameW) fileNameW++;
-            else fileNameW = lastMovedFile;
-            
-            char fileNameA[MAX_PATH];
-            WideCharToMultiByte(CP_UTF8, 0, fileNameW, -1, fileNameA, MAX_PATH, NULL, NULL);
-            
-            char configValue[MAX_PATH];
-            snprintf(configValue, sizeof(configValue), "%s%s", FONTS_PATH_PREFIX, fileNameA);
-            
-            WriteConfigFont(configValue, TRUE);
-            LOG_INFO("Auto-applied font: %s", fileNameA);
-            
-        } else if (lastType == RESOURCE_TYPE_ANIMATION) {
-            /* Extract filename or dir name */
-            wchar_t* fileNameW = wcsrchr(lastMovedFile, L'\\');
-            if (fileNameW) fileNameW++;
-            else fileNameW = lastMovedFile;
-            
-            char fileNameA[MAX_PATH];
-            WideCharToMultiByte(CP_UTF8, 0, fileNameW, -1, fileNameA, MAX_PATH, NULL, NULL);
-            
-            SetCurrentAnimationName(fileNameA);
-            LOG_INFO("Auto-applied animation: %s", fileNameA);
-        }
-    } else if (movedCount > 0) {
-        LOG_INFO("Imported %d resources", movedCount);
+    /* Smart Auto-Apply Logic:
+     * - If exactly 1 font was moved, apply it.
+     * - If exactly 1 animation was moved, apply it.
+     * - This allows dropping "1 Font + 1 Anim" to apply BOTH.
+     * - Dropping 2 Fonts will apply NEITHER (ambiguous).
+     */
+     
+    if (fontCount == 1) {
+        wchar_t* fileNameW = wcsrchr(lastFontPath, L'\\');
+        if (fileNameW) fileNameW++;
+        else fileNameW = lastFontPath;
+        
+        char fileNameA[MAX_PATH];
+        WideCharToMultiByte(CP_UTF8, 0, fileNameW, -1, fileNameA, MAX_PATH, NULL, NULL);
+        
+        char configValue[MAX_PATH];
+        snprintf(configValue, sizeof(configValue), "%s%s", FONTS_PATH_PREFIX, fileNameA);
+        
+        WriteConfigFont(configValue, TRUE);
+        LOG_INFO("Auto-applied font: %s", fileNameA);
+    }
+    
+    if (animCount == 1) {
+        wchar_t* fileNameW = wcsrchr(lastAnimPath, L'\\');
+        if (fileNameW) fileNameW++;
+        else fileNameW = lastAnimPath;
+        
+        char fileNameA[MAX_PATH];
+        WideCharToMultiByte(CP_UTF8, 0, fileNameW, -1, fileNameA, MAX_PATH, NULL, NULL);
+        
+        SetCurrentAnimationName(fileNameA);
+        LOG_INFO("Auto-applied animation: %s", fileNameA);
+    }
+    
+    if (movedCount > 0) {
+        LOG_INFO("Imported %d resources (Font: %d, Anim: %d)", movedCount, fontCount, animCount);
     }
 }
