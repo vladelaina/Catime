@@ -7,7 +7,7 @@
 #include <windows.h>
 #include "drawing/drawing_render.h"
 #include "drawing/drawing_time_format.h"
-#include "drawing/drawing_text_stb.h" // Added STB header
+#include "drawing/drawing_text_stb.h"
 #include "drawing.h"
 #include "font.h"
 #include "color/color.h"
@@ -15,8 +15,8 @@
 #include "config.h"
 #include "window_procedure/window_procedure.h"
 #include "menu_preview.h"
-#include "font/font_path_manager.h" // Added for path resolution
-#include "log.h" // Added logging
+#include "font/font_path_manager.h"
+#include "log.h"
 
 extern char FONT_FILE_NAME[MAX_PATH];
 extern char FONT_INTERNAL_NAME[MAX_PATH];
@@ -110,8 +110,6 @@ static void DrawGlassLighting(void* bits, int width, int height, int radius) {
     
     DWORD* pixels = (DWORD*)bits;
     
-    // Helper macro to blend pixel with color
-    // We use a simple alpha blend: New = (Source * Alpha + Dest * (255 - Alpha)) / 255
     #define BLEND_PIXEL(x, y, r, g, b, a) \
         do { \
             int _px = (x); int _py = (y); \
@@ -122,35 +120,27 @@ static void DrawGlassLighting(void* bits, int width, int height, int radius) {
                 BYTE _dg = (_dest >> 8) & 0xFF; \
                 BYTE _db = (_dest) & 0xFF; \
                 \
-                /* If dest alpha is 0, just overwrite (it's transparent background) */ \
-                /* Otherwise blend. For glass border, we usually want to add to it. */ \
-                \
                 DWORD _newR = ((r) * (a) + _dr * (255 - (a))) / 255; \
                 DWORD _newG = ((g) * (a) + _dg * (255 - (a))) / 255; \
                 DWORD _newB = ((b) * (a) + _db * (255 - (a))) / 255; \
-                DWORD _newA = (_da > (a)) ? _da : (a); /* Keep max alpha or blend? Let's just set it for border */ \
-                _newA = (a) + _da - ((a) * _da) / 255; /* Standard alpha composite */ \
+                DWORD _newA = (a) + _da - ((a) * _da) / 255; \
                  \
-                /* Force high alpha for the border itself to be visible against blur */ \
                 if (_newA < (a)) _newA = (a); \
                 \
                 pixels[_py * width + _px] = (_newA << 24) | (_newR << 16) | (_newG << 8) | _newB; \
             } \
         } while(0)
 
-    // 1. Top-Left Highlight (White, fading)
-    // Simulates light coming from top-left
+    // Top-Left Highlight
     for (int i = 0; i < width; i++) {
-        // Top edge gradient (fades out towards right)
         int alpha = 150 - (i * 150 / width); 
         if (alpha < 0) alpha = 0;
-        if (i < radius || i > width - radius) continue; // Skip corners for now
+        if (i < radius || i > width - radius) continue;
         BLEND_PIXEL(i, 0, 255, 255, 255, alpha);
-        BLEND_PIXEL(i, 1, 255, 255, 255, alpha / 2); // Softer inner edge
+        BLEND_PIXEL(i, 1, 255, 255, 255, alpha / 2);
     }
     
     for (int i = 0; i < height; i++) {
-        // Left edge gradient (fades out towards bottom)
         int alpha = 150 - (i * 150 / height);
         if (alpha < 0) alpha = 0;
         if (i < radius || i > height - radius) continue;
@@ -158,12 +148,11 @@ static void DrawGlassLighting(void* bits, int width, int height, int radius) {
         BLEND_PIXEL(1, i, 255, 255, 255, alpha / 2);
     }
 
-    // 2. Bottom-Right Shadow/Refraction (Darker/Subtle)
-    // Simulates thickness/occlusion
+    // Bottom-Right Shadow
     for (int i = radius; i < width - radius; i++) {
-        int alpha = (i * 100 / width); // Fades in towards right
+        int alpha = (i * 100 / width);
         if (alpha > 100) alpha = 100;
-        BLEND_PIXEL(i, height - 1, 200, 200, 200, alpha); // Light gray reflection
+        BLEND_PIXEL(i, height - 1, 200, 200, 200, alpha);
     }
     
     for (int i = radius; i < height - radius; i++) {
@@ -172,20 +161,17 @@ static void DrawGlassLighting(void* bits, int width, int height, int radius) {
         BLEND_PIXEL(width - 1, i, 200, 200, 200, alpha);
     }
     
-    // 3. Corner Highlights (Simplified)
-    // Top-Left Corner (Brightest)
+    // Corner Highlights
     for (int y = 0; y < radius; y++) {
         for (int x = 0; x < radius; x++) {
             int dx = radius - x;
             int dy = radius - y;
-            // Outer rim
             if (dx*dx + dy*dy <= radius*radius && dx*dx + dy*dy >= (radius-1.5)*(radius-1.5)) {
                  BLEND_PIXEL(x, y, 255, 255, 255, 180);
             }
         }
     }
     
-    // Bottom-Right Corner (Reflective)
     int cx = width - radius;
     int cy = height - radius;
     for (int y = 0; y < radius; y++) {
