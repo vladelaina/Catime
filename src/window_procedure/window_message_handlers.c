@@ -148,7 +148,7 @@ LRESULT HandleWindowPosChanged(HWND hwnd, WPARAM wp, LPARAM lp) {
     WINDOWPOS* pwp = (WINDOWPOS*)lp;
     if (!(pwp->flags & SWP_NOSIZE)) {
         if (CLOCK_EDIT_MODE) {
-            UpdateRoundedCornerRegion(hwnd, TRUE);
+            // Region update logic removed - relying on UpdateLayeredWindow alpha channel
         }
     }
     return 0;

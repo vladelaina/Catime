@@ -31,13 +31,6 @@ void SetClickThrough(HWND hwnd, BOOL enable);
 void SetBlurBehind(HWND hwnd, BOOL enable);
 
 /**
- * @brief Update window region for rounded corners
- * @param hwnd Window handle
- * @param enable TRUE to apply rounded region, FALSE to reset
- */
-void UpdateRoundedCornerRegion(HWND hwnd, BOOL enable);
-
-/**
  * @brief Initialize DWM functions for blur effects
  * @return TRUE if loaded successfully
  * 
