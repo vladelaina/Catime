@@ -95,11 +95,12 @@ static void BlendCharBitmap(void* destBits, int destWidth, int destHeight,
                 DWORD finalR = (r * alpha) / 255;
                 DWORD finalG = (g * alpha) / 255;
                 DWORD finalB = (b * alpha) / 255;
-                DWORD finalA = alpha;
+                DWORD finalA = (DWORD)alpha;
 
                 DWORD currentPixel = pixels[screen_y * destWidth + screen_x];
                 DWORD currentA = (currentPixel >> 24) & 0xFF;
                 
+                /* If new pixel is more opaque, overwrite */
                 if (alpha > currentA) {
                     pixels[screen_y * destWidth + screen_x] = 
                         (finalA << 24) | (finalR << 16) | (finalG << 8) | finalB;

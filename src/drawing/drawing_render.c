@@ -260,11 +260,11 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     HFONT oldFontMem = (HFONT)SelectObject(memDC, hFont);
     
     // Manually clear background
-    // Edit Mode: Alpha=1 to capture mouse click on background
+    // Edit Mode: Alpha=5 to capture mouse click on background (1 might be too low for some hit-tests)
     // Normal Mode: Alpha=0 for full transparency
     int numPixels = rect.right * rect.bottom;
     DWORD* pixels = (DWORD*)pBits;
-    DWORD clearColor = CLOCK_EDIT_MODE ? 0x01000000 : 0x00000000;
+    DWORD clearColor = CLOCK_EDIT_MODE ? 0x05000000 : 0x00000000;
     
     // Simple loop is fast enough for small window
     for (int i = 0; i < numPixels; i++) {
