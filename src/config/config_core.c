@@ -66,7 +66,9 @@ AppConfig g_AppConfig = {
         .move_step_small = DEFAULT_MOVE_STEP_SMALL,
         .move_step_large = DEFAULT_MOVE_STEP_LARGE,
         .opacity_step_normal = MIN_OPACITY,
-        .opacity_step_fast = 5
+        .opacity_step_fast = 5,
+        .scale_step_normal = DEFAULT_SCALE_STEP_NORMAL,
+        .scale_step_fast = DEFAULT_SCALE_STEP_FAST
     },
     .timer = {
         .default_start_time = DEFAULT_QUICK_COUNTDOWN_3

@@ -142,7 +142,7 @@ BOOL HandleDragWindow(HWND hwnd) {
     return TRUE;
 }
 
-/* Mouse wheel scaling: ±10% per notch, centered to maintain stability */
+/* Mouse wheel scaling: configurable step per notch, centered to maintain stability */
 BOOL HandleScaleWindow(HWND hwnd, int delta) {
     if (!CLOCK_EDIT_MODE) return FALSE;
     
@@ -153,9 +153,15 @@ BOOL HandleScaleWindow(HWND hwnd, int delta) {
     int oldWidth = windowRect.right - windowRect.left;
     int oldHeight = windowRect.bottom - windowRect.top;
     
+    BOOL isCtrlDown = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
+    int stepPercent = isCtrlDown ? g_AppConfig.display.scale_step_fast 
+                                 : g_AppConfig.display.scale_step_normal;
+    
+    float scaleFactor = 1.0f + (stepPercent / 100.0f);
+    
     float newScale = (delta > 0) 
-        ? oldScale * SCALE_FACTOR_STEP
-        : oldScale / SCALE_FACTOR_STEP;
+        ? oldScale * scaleFactor
+        : oldScale / scaleFactor;
     
     newScale = ClampScaleFactor(newScale);
     

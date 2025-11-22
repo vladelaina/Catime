@@ -85,6 +85,8 @@ void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {
     g_AppConfig.display.move_step_large = snapshot->moveStepLarge;
     g_AppConfig.display.opacity_step_normal = snapshot->opacityStepNormal;
     g_AppConfig.display.opacity_step_fast = snapshot->opacityStepFast;
+    g_AppConfig.display.scale_step_normal = snapshot->scaleStepNormal;
+    g_AppConfig.display.scale_step_fast = snapshot->scaleStepFast;
 
     HWND hwnd = FindWindowW(L"CatimeWindow", L"Catime");
     if (hwnd) {

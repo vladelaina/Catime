@@ -46,6 +46,8 @@ static const ConfigItemMeta CONFIG_METADATA[] = {
     {INI_SECTION_DISPLAY, "MOVE_STEP_LARGE", "50", CONFIG_TYPE_INT, "Ctrl+arrow key move step (1-500 pixels)"},
     {INI_SECTION_DISPLAY, "OPACITY_STEP_NORMAL", "1", CONFIG_TYPE_INT, "Opacity scroll step (1-100)"},
     {INI_SECTION_DISPLAY, "OPACITY_STEP_FAST", "5", CONFIG_TYPE_INT, "Opacity Ctrl+scroll step (1-100)"},
+    {INI_SECTION_DISPLAY, "SCALE_STEP_NORMAL", "10", CONFIG_TYPE_INT, "Scale scroll step (1-100)"},
+    {INI_SECTION_DISPLAY, "SCALE_STEP_FAST", "15", CONFIG_TYPE_INT, "Scale Ctrl+scroll step (1-100)"},
 
     /* Timer settings */
     {INI_SECTION_TIMER, "CLOCK_DEFAULT_START_TIME", "1500", CONFIG_TYPE_INT, "Default timer duration (seconds)"},
@@ -234,6 +236,16 @@ void WriteDefaultsToConfig(const char* config_path) {
             fputs(";   Controls opacity change when scrolling with Ctrl held.\n", f);
             fputs(";   Range: 1-100%\n", f);
             fputs(";   Default: 5%\n", f);
+            fputs(";\n", f);
+            fputs("; SCALE_STEP_NORMAL: mouse wheel scale adjustment step (unit: percent).\n", f);
+            fputs(";   Controls window scale change when scrolling over window.\n", f);
+            fputs(";   Range: 1-100%\n", f);
+            fputs(";   Default: 10%\n", f);
+            fputs(";\n", f);
+            fputs("; SCALE_STEP_FAST: Ctrl+mouse wheel scale adjustment step (unit: percent).\n", f);
+            fputs(";   Controls window scale change when scrolling with Ctrl held.\n", f);
+            fputs(";   Range: 1-100%\n", f);
+            fputs(";   Default: 15%\n", f);
             fputs(";========================================================\n", f);
         }
 

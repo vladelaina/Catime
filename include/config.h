@@ -60,6 +60,8 @@
 #define DEFAULT_WINDOW_POS_Y           -1
 #define DEFAULT_MOVE_STEP_SMALL        10
 #define DEFAULT_MOVE_STEP_LARGE        50
+#define DEFAULT_SCALE_STEP_NORMAL      10
+#define DEFAULT_SCALE_STEP_FAST        15
 
 /** @brief Default color palette (INI format) */
 #define DEFAULT_COLOR_OPTIONS_INI      "#FFFFFF,#F9DB91,#F4CAE0,#FFB6C1,#A8E7DF,#A3CFB3,#92CBFC,#BDA5E7,#9370DB,#8C92CF,#72A9A5,#EB99A7,#EB96BD,#FFAE8B,#FF7F50,#CA6174"
@@ -204,6 +206,8 @@ typedef struct {
     int move_step_large;
     int opacity_step_normal;
     int opacity_step_fast;
+    int scale_step_normal;
+    int scale_step_fast;
 } DisplayConfig;
 
 /**
@@ -815,6 +819,25 @@ int ReadConfigOpacityStepFast(void);
  * @param fast_step Ctrl+scroll step (1-100)
  */
 void WriteConfigOpacitySteps(int normal_step, int fast_step);
+
+/**
+ * @brief Read scale adjustment step for normal scroll (default: 10)
+ * @return Step percentage (1-100)
+ */
+int ReadConfigScaleStepNormal(void);
+
+/**
+ * @brief Read scale adjustment step for Ctrl+scroll (default: 15)
+ * @return Step percentage (1-100)
+ */
+int ReadConfigScaleStepFast(void);
+
+/**
+ * @brief Write scale adjustment steps
+ * @param normal_step Normal scroll step percentage (1-100)
+ * @param fast_step Ctrl+scroll step percentage (1-100)
+ */
+void WriteConfigScaleSteps(int normal_step, int fast_step);
 
 /**
  * @brief Force flush pending writes (use sparingly)

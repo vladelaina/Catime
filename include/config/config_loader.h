@@ -46,6 +46,8 @@ typedef struct {
     int moveStepLarge;
     int opacityStepNormal;
     int opacityStepFast;
+    int scaleStepNormal;
+    int scaleStepFast;
 
     /* Timer */
     int defaultStartTime;

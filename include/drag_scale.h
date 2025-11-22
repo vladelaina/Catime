@@ -16,8 +16,7 @@
  * Configuration Constants
  * ============================================================================ */
 
-/** @brief Scale per wheel notch (10% increment) */
-#define SCALE_FACTOR_STEP 1.1f
+/* Scale steps are now dynamic via config */
 
 /* ============================================================================
  * Global State Variables

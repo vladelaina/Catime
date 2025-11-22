@@ -159,6 +159,16 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int* count) {
     snprintf(items[idx].value, sizeof(items[idx].value), "%d", g_AppConfig.display.opacity_step_fast);
     idx++;
 
+    safe_strncpy(items[idx].section, INI_SECTION_DISPLAY, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "SCALE_STEP_NORMAL", sizeof(items[idx].key));
+    snprintf(items[idx].value, sizeof(items[idx].value), "%d", g_AppConfig.display.scale_step_normal);
+    idx++;
+
+    safe_strncpy(items[idx].section, INI_SECTION_DISPLAY, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "SCALE_STEP_FAST", sizeof(items[idx].key));
+    snprintf(items[idx].value, sizeof(items[idx].value), "%d", g_AppConfig.display.scale_step_fast);
+    idx++;
+
     /* Timer section */
     safe_strncpy(items[idx].section, INI_SECTION_TIMER, sizeof(items[idx].section));
     safe_strncpy(items[idx].key, "CLOCK_DEFAULT_START_TIME", sizeof(items[idx].key));
@@ -429,6 +439,21 @@ void WriteConfigMoveSteps(int small_step, int large_step) {
     GetConfigPath(config_path, MAX_PATH);
     WriteIniInt(INI_SECTION_DISPLAY, "MOVE_STEP_SMALL", small_step, config_path);
     WriteIniInt(INI_SECTION_DISPLAY, "MOVE_STEP_LARGE", large_step, config_path);
+}
+
+void WriteConfigScaleSteps(int normal_step, int fast_step) {
+    if (normal_step < 1) normal_step = 1;
+    if (normal_step > 100) normal_step = 100;
+    if (fast_step < 1) fast_step = 1;
+    if (fast_step > 100) fast_step = 100;
+
+    g_AppConfig.display.scale_step_normal = normal_step;
+    g_AppConfig.display.scale_step_fast = fast_step;
+
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    WriteIniInt(INI_SECTION_DISPLAY, "SCALE_STEP_NORMAL", normal_step, config_path);
+    WriteIniInt(INI_SECTION_DISPLAY, "SCALE_STEP_FAST", fast_step, config_path);
 }
 
 void FlushConfigToDisk(void) {
