@@ -216,18 +216,29 @@ void StartPomodoroTimer(HWND hwnd) {
     PostMessage(hwnd, WM_COMMAND, CLOCK_IDM_POMODORO_START, 0);
 }
 
+#define TIMER_ID_TRANSITION_END 100
+extern BOOL g_IsTransitioning;
+
 void ToggleEditMode(HWND hwnd) {
     CLOCK_EDIT_MODE = !CLOCK_EDIT_MODE;
+    
+    // Start transition period to hide rendering artifacts
+    g_IsTransitioning = TRUE;
+    SetTimer(hwnd, TIMER_ID_TRANSITION_END, 50, NULL);
     
     if (CLOCK_EDIT_MODE) {
         PREVIOUS_TOPMOST_STATE = CLOCK_WINDOW_TOPMOST;
         
+        // 1. Enable interaction first (modifies WS_EX_TRANSPARENT)
+        SetClickThrough(hwnd, FALSE);
+        
+        // 2. Enable visual effect (Acrylic Blur)
+        SetBlurBehind(hwnd, TRUE);
+        
+        // 3. Change Z-order last (triggers heavy window pos changes)
         if (!CLOCK_WINDOW_TOPMOST) {
             SetWindowTopmost(hwnd, TRUE);
         }
-        
-        SetBlurBehind(hwnd, TRUE);
-        SetClickThrough(hwnd, FALSE);
         
         ShowWindow(hwnd, SW_SHOW);
         SetForegroundWindow(hwnd);
@@ -235,11 +246,10 @@ void ToggleEditMode(HWND hwnd) {
         extern char CLOCK_TEXT_COLOR[10];
         extern int CLOCK_WINDOW_OPACITY;
         
+        // 1. Disable visual effect
         SetBlurBehind(hwnd, FALSE);
 
-        BYTE alphaValue = (BYTE)((CLOCK_WINDOW_OPACITY * 255) / 100);
-        SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), alphaValue, LWA_COLORKEY | LWA_ALPHA);
-
+        // 2. Disable interaction
         SetClickThrough(hwnd, TRUE);
         
         SaveWindowSettings(hwnd);
@@ -248,15 +258,15 @@ void ToggleEditMode(HWND hwnd) {
         if (!PREVIOUS_TOPMOST_STATE) {
             SetWindowTopmost(hwnd, FALSE);
             
-            InvalidateRect(hwnd, NULL, TRUE);
-            RedrawWindow(hwnd, NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW);
+            // Force a delayed redraw to clean up any artifacts
             KillTimer(hwnd, TIMER_ID_FORCE_REDRAW);
             SetTimer(hwnd, TIMER_ID_FORCE_REDRAW, 150, NULL);
-            return;
         }
     }
     
+    // Force immediate update
     InvalidateRect(hwnd, NULL, TRUE);
+    UpdateWindow(hwnd);
 }
 
 void TogglePauseResume(HWND hwnd) {

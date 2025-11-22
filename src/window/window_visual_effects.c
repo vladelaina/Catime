@@ -126,7 +126,6 @@ void SetClickThrough(HWND hwnd, BOOL enable) {
             // Disable Glass to avoid double-transparency issues
             SetGlassEffect(hwnd, FALSE);
             UpdateRoundedCornerRegion(hwnd, FALSE);
-            SetLayeredWindowAttributes(hwnd, COLOR_KEY_BLACK, alphaValue, LWA_COLORKEY | LWA_ALPHA);
         }
         LOG_INFO("Click-through enabled");
     } else {
@@ -135,7 +134,6 @@ void SetClickThrough(HWND hwnd, BOOL enable) {
             // Remove ColorKey so pixels are clickable
             SetGlassEffect(hwnd, TRUE);
             UpdateRoundedCornerRegion(hwnd, TRUE);
-            SetLayeredWindowAttributes(hwnd, 0, alphaValue, LWA_ALPHA);
         }
         LOG_INFO("Click-through disabled");
     }

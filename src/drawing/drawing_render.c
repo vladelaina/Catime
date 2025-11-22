@@ -7,6 +7,7 @@
 #include <windows.h>
 #include "drawing/drawing_render.h"
 #include "drawing/drawing_time_format.h"
+#include "drawing/drawing_text_stb.h" // Added STB header
 #include "drawing.h"
 #include "font.h"
 #include "color/color.h"
@@ -14,6 +15,8 @@
 #include "config.h"
 #include "window_procedure/window_procedure.h"
 #include "menu_preview.h"
+#include "font/font_path_manager.h" // Added for path resolution
+#include "log.h" // Added logging
 
 extern char FONT_FILE_NAME[MAX_PATH];
 extern char FONT_INTERNAL_NAME[MAX_PATH];
@@ -216,33 +219,79 @@ static void RenderTextBold(HDC hdc, const wchar_t* text, int x, int y, COLORREF 
     }
 }
 
-static void RenderText(HDC hdc, const RECT* rect, const wchar_t* text, const RenderContext* ctx, BOOL editMode) {
-    SIZE textSize;
-    GetTextExtentPoint32W(hdc, text, (int)wcslen(text), &textSize);
+static BOOL RenderText(HDC hdc, const RECT* rect, const wchar_t* text, const RenderContext* ctx, BOOL editMode, void* bits) {
+    // Use STB Truetype for high-quality rendering
+    char absoluteFontPath[MAX_PATH];
+    BOOL pathResolved = FALSE;
     
-    int x = (rect->right - textSize.cx) / 2;
-    int y = (rect->bottom - textSize.cy) / 2;
+    // Check if the configured path is a managed font path (starts with %LOCALAPPDATA% prefix)
+    const char* relPath = ExtractRelativePath(ctx->fontFileName);
+    if (relPath) {
+        // It has the prefix, so extract the filename part and build full path
+        pathResolved = BuildFullFontPath(relPath, absoluteFontPath, MAX_PATH);
+    } else {
+        // It might be a direct absolute path or a simple filename
+        // First try to expand environment strings
+        if (ExpandEnvironmentStringsA(ctx->fontFileName, absoluteFontPath, MAX_PATH) > 0) {
+            // If it doesn't contain a drive separator, assume it's a filename in fonts folder
+            if (!strchr(absoluteFontPath, ':')) {
+                char simpleName[MAX_PATH];
+                strcpy(simpleName, absoluteFontPath);
+                pathResolved = BuildFullFontPath(simpleName, absoluteFontPath, MAX_PATH);
+            } else {
+                pathResolved = TRUE;
+            }
+        }
+    }
     
-    // Always use bold rendering to match normal mode appearance
-    // The outline was causing artifacts (black dots/lines)
-    RenderTextBold(hdc, text, x, y, ctx->textColor);
+    // Resolve font path to absolute path for STB
+    if (pathResolved) {
+        if (InitFontSTB(absoluteFontPath)) {
+            // Clear the area where text will be drawn if needed, 
+            // but FillBackground already did that.
+            
+            RenderTextSTB(bits, rect->right, rect->bottom, text, 
+                         ctx->textColor, 
+                         (int)(CLOCK_BASE_FONT_SIZE * ctx->fontScaleFactor), 
+                         1.0f, // Internal scale is handled by font size
+                         editMode);
+            return TRUE;
+        } else {
+            WriteLog(LOG_LEVEL_ERROR, "InitFontSTB failed for path: %s", absoluteFontPath);
+        }
+    } else {
+        WriteLog(LOG_LEVEL_ERROR, "Failed to resolve font path: %s", ctx->fontFileName);
+    }
+
+    // Force STB only - return FALSE if STB fails
+    // This allows testing the pure STB implementation
+    return FALSE;
 }
 
 /** @note GM_ADVANCED + HALFTONE improve text quality on high-DPI displays */
-static void SetupDoubleBufferDIB(HDC hdc, const RECT* rect, HDC* memDC, HBITMAP* memBitmap, HBITMAP* oldBitmap, void** ppvBits) {
+static BOOL SetupDoubleBufferDIB(HDC hdc, const RECT* rect, HDC* memDC, HBITMAP* memBitmap, HBITMAP* oldBitmap, void** ppvBits) {
     *memDC = CreateCompatibleDC(hdc);
-    
+    if (!*memDC) {
+        return FALSE;
+    }
+
     BITMAPINFO bmi = {0};
     bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
     bmi.bmiHeader.biWidth = rect->right;
-    bmi.bmiHeader.biHeight = rect->bottom;
+    // Negative height creates a top-down DIB, matching STB's coordinate system
+    bmi.bmiHeader.biHeight = -rect->bottom;
     bmi.bmiHeader.biPlanes = 1;
     bmi.bmiHeader.biBitCount = 32;
     bmi.bmiHeader.biCompression = BI_RGB;
-    
+
     *memBitmap = CreateDIBSection(hdc, &bmi, DIB_RGB_COLORS, ppvBits, NULL, 0);
+    if (!*memBitmap) {
+        DeleteDC(*memDC);
+        return FALSE;
+    }
+
     *oldBitmap = (HBITMAP)SelectObject(*memDC, *memBitmap);
-    
+
     SetGraphicsMode(*memDC, GM_ADVANCED);
     SetBkMode(*memDC, TRANSPARENT);
     SetStretchBltMode(*memDC, HALFTONE);
@@ -252,6 +301,8 @@ static void SetupDoubleBufferDIB(HDC hdc, const RECT* rect, HDC* memDC, HBITMAP*
     SetMapMode(*memDC, MM_TEXT);
     SetICMMode(*memDC, ICM_ON);
     SetLayout(*memDC, 0);
+
+    return TRUE;
 }
 
 /** 
@@ -298,12 +349,19 @@ static void AdjustWindowSize(HWND hwnd, const SIZE* textSize, RECT* rect) {
     GetClientRect(hwnd, rect);
 }
 
+// Global flag to suppress rendering during mode transitions
+BOOL g_IsTransitioning = FALSE;
+
 void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     wchar_t timeText[TIME_TEXT_MAX_LEN];
     HDC hdc = ps->hdc;
     RECT rect;
     GetClientRect(hwnd, &rect);
 
+    // If transitioning, skip text generation to avoid artifacts
+    // We still need to clear the window to transparent, so we proceed to SetupDoubleBufferDIB
+    // but we will skip RenderText later.
+    
     GetTimeText(timeText, TIME_TEXT_MAX_LEN);
 
     if (wcslen(timeText) == 0) {
@@ -329,24 +387,78 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     void* pBits = NULL;
     
     // Create buffer with the final correct size
-    SetupDoubleBufferDIB(hdc, &rect, &memDC, &memBitmap, &oldBitmap, &pBits);
+    if (!SetupDoubleBufferDIB(hdc, &rect, &memDC, &memBitmap, &oldBitmap, &pBits)) {
+        DeleteObject(hFont);
+        return;
+    }
     
     // Select font into memDC for drawing
     HFONT oldFontMem = (HFONT)SelectObject(memDC, hFont);
     
-    FillBackground(memDC, &rect, CLOCK_EDIT_MODE);
+    // Manually clear background
+    // Edit Mode: Alpha=1 to capture mouse click on background
+    // Normal Mode: Alpha=0 for full transparency
+    int numPixels = rect.right * rect.bottom;
+    DWORD* pixels = (DWORD*)pBits;
+    DWORD clearColor = CLOCK_EDIT_MODE ? 0x01000000 : 0x00000000;
     
-    if (wcslen(timeText) > 0) {
-        // We already have textSize and rect is updated
-        RenderText(memDC, &rect, timeText, &ctx, CLOCK_EDIT_MODE);
+    // Simple loop is fast enough for small window
+    for (int i = 0; i < numPixels; i++) {
+        pixels[i] = clearColor;
     }
     
-    // Fix alpha channel for DWM Glass compatibility
-    if (CLOCK_EDIT_MODE) {
+    // Skip text rendering during transition to avoid black artifacts
+    if (!g_IsTransitioning && wcslen(timeText) > 0) {
+        // We already have textSize and rect is updated
+        BOOL usedSTB = RenderText(memDC, &rect, timeText, &ctx, CLOCK_EDIT_MODE, pBits);
+        
+        // If STB was not used (e.g. font load failure), we might need to fix alpha for GDI text
+        if (!usedSTB && CLOCK_EDIT_MODE) {
+             FixAlphaChannel(pBits, rect.right, rect.bottom);
+        }
+    } else if (CLOCK_EDIT_MODE) {
         FixAlphaChannel(pBits, rect.right, rect.bottom);
     }
     
-    BitBlt(hdc, 0, 0, rect.right, rect.bottom, memDC, 0, 0, SRCCOPY);
+    HDC hdcScreen = GetDC(NULL);
+    POINT ptSrc = {0, 0};
+    SIZE sizeWnd = {rect.right, rect.bottom};
+    POINT ptDst = {0, 0};
+    
+    RECT rcWindow;
+    GetWindowRect(hwnd, &rcWindow);
+    ptDst.x = rcWindow.left;
+    ptDst.y = rcWindow.top;
+    
+    extern int CLOCK_WINDOW_OPACITY;
+    BYTE alpha = (BYTE)((CLOCK_WINDOW_OPACITY * 255) / 100);
+    
+    BLENDFUNCTION blend = {0};
+    blend.BlendOp = AC_SRC_OVER;
+    blend.BlendFlags = 0;
+    blend.SourceConstantAlpha = alpha;
+    blend.AlphaFormat = AC_SRC_ALPHA;
+
+    if (!UpdateLayeredWindow(hwnd, hdcScreen, &ptDst, &sizeWnd, memDC, &ptSrc, 0, &blend, ULW_ALPHA)) {
+        DWORD err = GetLastError();
+        if (err == ERROR_INVALID_PARAMETER) {
+            // Error 87 often implies conflict between SetLayeredWindowAttributes and UpdateLayeredWindow
+            // Reset WS_EX_LAYERED style to clear the internal state
+            LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+            SetWindowLong(hwnd, GWL_EXSTYLE, exStyle & ~WS_EX_LAYERED);
+            SetWindowLong(hwnd, GWL_EXSTYLE, exStyle | WS_EX_LAYERED);
+            
+            // Retry update
+            if (!UpdateLayeredWindow(hwnd, hdcScreen, &ptDst, &sizeWnd, memDC, &ptSrc, 0, &blend, ULW_ALPHA)) {
+                err = GetLastError();
+                WriteLog(LOG_LEVEL_ERROR, "UpdateLayeredWindow failed retry! Error code: %lu", err);
+            }
+        } else {
+            WriteLog(LOG_LEVEL_ERROR, "UpdateLayeredWindow failed! Error code: %lu", err);
+        }
+    }
+    
+    ReleaseDC(NULL, hdcScreen);
     
     SelectObject(memDC, oldFontMem);
     DeleteObject(hFont);

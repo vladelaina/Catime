@@ -94,8 +94,18 @@ LRESULT HandlePaint(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
+#define TIMER_ID_TRANSITION_END 100
+extern BOOL g_IsTransitioning;
+
 LRESULT HandleTimer(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)lp;
+    if (wp == TIMER_ID_TRANSITION_END) {
+        KillTimer(hwnd, TIMER_ID_TRANSITION_END);
+        g_IsTransitioning = FALSE;
+        // Force full update now that transition is done
+        InvalidateRect(hwnd, NULL, TRUE);
+        return 0;
+    }
     if (wp == IDT_MENU_DEBOUNCE) {
         KillTimer(hwnd, IDT_MENU_DEBOUNCE);
         CancelPreview(hwnd);
