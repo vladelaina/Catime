@@ -534,6 +534,45 @@ BOOL SetCurrentAnimationName(const char* name) {
 }
 
 /**
+ * @brief Preview animation from file path
+ */
+void PreviewAnimationFromFile(HWND hwnd, const char* filePath) {
+    (void)hwnd;
+    if (!filePath || !*filePath) return;
+
+    if (g_criticalSectionInitialized) {
+        EnterCriticalSection(&g_animCriticalSection);
+    }
+
+    /* Prepare preview */
+    LoadedAnimation_Free(&g_previewAnimation);
+    LoadedAnimation_Init(&g_previewAnimation);
+    
+    /* Save preview name (use full path) */
+    strncpy(g_previewAnimationName, filePath, sizeof(g_previewAnimationName) - 1);
+    g_previewAnimationName[sizeof(g_previewAnimationName) - 1] = '\0';
+    
+    /* Load animation */
+    int cx = GetSystemMetrics(SM_CXSMICON);
+    int cy = GetSystemMetrics(SM_CYSMICON);
+    
+    /* Declare external helper */
+    extern BOOL LoadAnimationFromPath(const char* path, LoadedAnimation* anim, void* pool, int cx, int cy);
+    
+    LoadAnimationFromPath(filePath, &g_previewAnimation, g_memoryPool, cx, cy);
+    
+    g_previewIndex = 0;
+    g_isPreviewActive = TRUE;
+    
+    if (g_criticalSectionInitialized) {
+        LeaveCriticalSection(&g_animCriticalSection);
+    }
+    
+    /* Force update */
+    UpdateTrayIconToCurrentFrame();
+}
+
+/**
  * @brief Async loading thread
  */
 static DWORD WINAPI AsyncLoadPreviewThread(LPVOID param) {

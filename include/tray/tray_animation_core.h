@@ -55,7 +55,7 @@ BOOL SetCurrentAnimationName(const char* name);
 void StartAnimationPreview(const char* name);
 
 /**
- * @brief Cancel preview and restore main animation
+ * @brief Cancel preview and restore original animation
  */
 void CancelAnimationPreview(void);
 

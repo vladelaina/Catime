@@ -344,3 +344,77 @@ BOOL LoadAnimationByName(const char* name, LoadedAnimation* anim,
     return FALSE;
 }
 
+/**
+ * @brief Load animation from absolute path
+ */
+BOOL LoadAnimationFromPath(const char* path, LoadedAnimation* anim,
+                          MemoryPool* pool, int iconWidth, int iconHeight) {
+    if (!path || !anim) return FALSE;
+    
+    LoadedAnimation_Init(anim);
+    
+    AnimationSourceType type = DetectAnimationSourceType(path);
+    anim->sourceType = type;
+    
+    /* Handle special types if path happens to be one of them (unlikely but safe) */
+    if (type == ANIM_SOURCE_LOGO) {
+        HICON hIcon = LoadIconW(GetModuleHandle(NULL), MAKEINTRESOURCEW(IDI_CATIME));
+        if (hIcon) {
+            anim->icons[0] = hIcon;
+            anim->count = 1;
+            anim->isAnimated = FALSE;
+            return TRUE;
+        }
+        return FALSE;
+    }
+    
+    if (type == ANIM_SOURCE_PERCENT) {
+        anim->count = 0;
+        anim->isAnimated = FALSE;
+        return TRUE;
+    }
+    
+    if (type == ANIM_SOURCE_GIF || type == ANIM_SOURCE_WEBP) {
+        DecodedAnimation decoded;
+        DecodedAnimation_Init(&decoded);
+        
+        if (DecodeAnimatedImage(path, &decoded, pool, iconWidth, iconHeight)) {
+            int copyCount = decoded.count < MAX_ANIMATION_FRAMES ? decoded.count : MAX_ANIMATION_FRAMES;
+            for (int i = 0; i < copyCount; i++) {
+                anim->icons[i] = decoded.icons[i];
+                anim->delays[i] = decoded.delays[i];
+                decoded.icons[i] = NULL;
+            }
+            anim->count = copyCount;
+            anim->isAnimated = (copyCount > 1);
+            
+            DecodedAnimation_Free(&decoded);
+            return TRUE;
+        }
+        
+        DecodedAnimation_Free(&decoded);
+        return FALSE;
+    }
+    
+    if (type == ANIM_SOURCE_STATIC) {
+        HICON hIcon = DecodeStaticImage(path, iconWidth, iconHeight);
+        if (hIcon) {
+            anim->icons[0] = hIcon;
+            anim->count = 1;
+            anim->isAnimated = FALSE;
+            return TRUE;
+        }
+        return FALSE;
+    }
+    
+    if (type == ANIM_SOURCE_FOLDER) {
+        if (LoadIconsFromFolder(path, anim->icons, &anim->count, MAX_ANIMATION_FRAMES)) {
+            anim->isAnimated = (anim->count > 1);
+            return TRUE;
+        }
+        return FALSE;
+    }
+    
+    return FALSE;
+}
+

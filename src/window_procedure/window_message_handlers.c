@@ -306,13 +306,6 @@ LRESULT HandleAnimationPreviewLoaded(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
-LRESULT HandleDrop(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)lp;
-    HDROP hDrop = (HDROP)wp;
-    HandleDropFiles(hwnd, hDrop);
-    return 0;
-}
-
 LRESULT HandleMeasureItem(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)hwnd; (void)wp;
     LPMEASUREITEMSTRUCT lpmis = (LPMEASUREITEMSTRUCT)lp;

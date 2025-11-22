@@ -66,6 +66,13 @@ BOOL BuildFontConfigPath(const char* relativePath, char* outBuffer, size_t buffe
 BOOL BuildFullFontPath(const char* relativePath, char* outAbsolutePath, size_t bufferSize) {
     if (!relativePath || !outAbsolutePath || bufferSize == 0) return FALSE;
     
+    /* Check if path is already absolute (contains drive letter or starts with UNC) */
+    if (strchr(relativePath, ':') || (strlen(relativePath) > 2 && relativePath[0] == '\\' && relativePath[1] == '\\')) {
+        strncpy(outAbsolutePath, relativePath, bufferSize - 1);
+        outAbsolutePath[bufferSize - 1] = '\0';
+        return TRUE;
+    }
+
     wchar_t fontsFolderW[MAX_PATH] = {0};
     if (!GetFontsFolderW(fontsFolderW, MAX_PATH, TRUE)) return FALSE;
     

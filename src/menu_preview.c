@@ -23,6 +23,11 @@ extern char FONT_INTERNAL_NAME[MAX_PATH];
 extern char CLOCK_TEXT_COLOR[10];
 /** Time format now in g_AppConfig.display.time_format */
 
+/* External Preview State from font_manager.c (used by Drag & Drop) */
+extern BOOL IS_PREVIEWING;
+extern char PREVIEW_FONT_NAME[MAX_PATH];
+extern char PREVIEW_INTERNAL_NAME[MAX_PATH];
+
 extern void ResetTimerWithInterval(HWND hwnd);
 extern void WriteConfigColor(const char* color);
 extern void WriteConfigFont(const char* fontName, BOOL isCustom);
@@ -206,6 +211,10 @@ void GetActiveFont(char* outFontName, char* outInternalName, size_t bufferSize) 
     if (g_previewState.type == PREVIEW_TYPE_FONT) {
         strncpy_s(outFontName, bufferSize, g_previewState.data.font.fontName, _TRUNCATE);
         strncpy_s(outInternalName, bufferSize, g_previewState.data.font.internalName, _TRUNCATE);
+    } else if (IS_PREVIEWING) {
+        /* Support for Drag & Drop live preview */
+        strncpy_s(outFontName, bufferSize, PREVIEW_FONT_NAME, _TRUNCATE);
+        strncpy_s(outInternalName, bufferSize, PREVIEW_INTERNAL_NAME, _TRUNCATE);
     } else {
         strncpy_s(outFontName, bufferSize, FONT_FILE_NAME, _TRUNCATE);
         strncpy_s(outInternalName, bufferSize, FONT_INTERNAL_NAME, _TRUNCATE);

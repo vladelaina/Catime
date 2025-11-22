@@ -174,6 +174,5 @@ void HandleDropFiles(HWND hwnd, HDROP hDrop) {
         }
     } else if (movedCount > 0) {
         LOG_INFO("Imported %d resources", movedCount);
-        MessageBoxW(hwnd, L"Resources imported successfully!", L"Import", MB_ICONINFORMATION | MB_OK);
     }
 }
