@@ -1,12 +1,35 @@
 #include "dialog/dialog_monitor.h"
-#include "../monitor/monitor_types.h"
-#include "../monitor/monitor_core.h"
+#include "monitor/monitor_types.h"
+#include "monitor/monitor_core.h"
 #include "../resource/resource.h"
 #include <commctrl.h>
 #include <windowsx.h>
 #include <stdio.h>
+#include <wchar.h>
+#include <ctype.h>
+#include <wctype.h>
 
 static int s_currentSel = -1;
+
+static void TrimW(wchar_t* str) {
+    if (!str) return;
+    
+    // Trim trailing spaces
+    size_t len = wcslen(str);
+    while (len > 0 && iswspace(str[len - 1])) {
+        str[--len] = L'\0';
+    }
+    
+    // Trim leading spaces
+    wchar_t* start = str;
+    while (*start && iswspace(*start)) {
+        start++;
+    }
+    
+    if (start > str) {
+        wmemmove(str, start, (wcslen(start) + 1) * sizeof(wchar_t));
+    }
+}
 
 static void RefreshList(HWND hDlg) {
     HWND hList = GetDlgItem(hDlg, IDC_MONITOR_LIST);
@@ -62,11 +85,33 @@ static void UpdateEditFields(HWND hDlg, int index) {
 
 static INT_PTR CALLBACK MonitorDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
-        case WM_INITDIALOG:
+        case WM_INITDIALOG: {
+            // Center the dialog
+            RECT rc, rcOwner;
+            GetWindowRect(hDlg, &rc);
+            
+            // Get the monitor that contains the owner window or primary monitor
+            HMONITOR hMonitor = MonitorFromWindow(GetParent(hDlg), MONITOR_DEFAULTTOPRIMARY);
+            MONITORINFO mi = {sizeof(MONITORINFO)};
+            GetMonitorInfo(hMonitor, &mi);
+            
+            rcOwner = mi.rcWork;
+            
+            int dlgWidth = rc.right - rc.left;
+            int dlgHeight = rc.bottom - rc.top;
+            int ownerWidth = rcOwner.right - rcOwner.left;
+            int ownerHeight = rcOwner.bottom - rcOwner.top;
+            
+            int x = rcOwner.left + (ownerWidth - dlgWidth) / 2;
+            int y = rcOwner.top + (ownerHeight - dlgHeight) / 2;
+            
+            SetWindowPos(hDlg, NULL, x, y, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
+
             s_currentSel = Monitor_GetActiveIndex();
             RefreshList(hDlg);
             UpdateEditFields(hDlg, s_currentSel);
             return TRUE;
+        }
             
         case WM_COMMAND:
             switch (LOWORD(wParam)) {
@@ -101,25 +146,39 @@ static INT_PTR CALLBACK MonitorDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, L
                 case IDC_MONITOR_SAVE_BTN: {
                     MonitorConfig cfg = {0};
                     
-                    wchar_t wLabel[32];
-                    GetDlgItemTextW(hDlg, IDC_MONITOR_LABEL_EDIT, wLabel, 32);
-                    wcscpy(cfg.label, wLabel);
-                    
+                    // 1. Get and trim Source String first (needed for Label fallback)
                     wchar_t wSource[256];
                     GetDlgItemTextW(hDlg, IDC_MONITOR_SOURCE_EDIT, wSource, 256);
+                    TrimW(wSource);
                     WideCharToMultiByte(CP_UTF8, 0, wSource, -1, cfg.sourceString, 256, NULL, NULL);
                     
+                    // 2. Get and trim Token
                     wchar_t wToken[128];
                     GetDlgItemTextW(hDlg, IDC_MONITOR_TOKEN_EDIT, wToken, 128);
+                    TrimW(wToken);
                     WideCharToMultiByte(CP_UTF8, 0, wToken, -1, cfg.token, 128, NULL, NULL);
+
+                    // 3. Get and trim Label
+                    wchar_t wLabel[32];
+                    GetDlgItemTextW(hDlg, IDC_MONITOR_LABEL_EDIT, wLabel, 32);
+                    TrimW(wLabel);
+                    
+                    // 4. Handle empty Label: fallback to Source String (truncated to 31 chars)
+                    if (wcslen(wLabel) == 0) {
+                        wcsncpy(cfg.label, wSource, 31);
+                        cfg.label[31] = L'\0';
+                    } else {
+                        wcscpy(cfg.label, wLabel);
+                    }
+                    
+                    // Check if we have at least a source string
+                    if (strlen(cfg.sourceString) == 0) {
+                        MessageBoxW(hDlg, L"Please enter a Source String.", L"Error", MB_OK | MB_ICONERROR);
+                        break;
+                    }
                     
                     cfg.refreshInterval = 300; // Default 5 mins
                     cfg.enabled = TRUE;
-                    
-                    if (wcslen(wLabel) == 0) {
-                        MessageBoxW(hDlg, L"Please enter a label.", L"Error", MB_OK | MB_ICONERROR);
-                        break;
-                    }
                     
                     if (s_currentSel >= 0) {
                         Monitor_UpdateConfigAt(s_currentSel, &cfg);

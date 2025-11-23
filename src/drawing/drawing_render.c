@@ -17,7 +17,7 @@
 #include "menu_preview.h"
 #include "font/font_path_manager.h"
 #include "log.h"
-#include "../monitor/monitor_core.h"
+#include "monitor/monitor_core.h"
 
 extern char FONT_FILE_NAME[MAX_PATH];
 extern char FONT_INTERNAL_NAME[MAX_PATH];
@@ -228,6 +228,11 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     // Try to get monitor text (highest priority for now, testing phase)
     wchar_t monitorText[64];
     if (Monitor_GetDisplayText(monitorText, 64)) {
+        wcscpy(timeText, monitorText);
+    }
+    
+    // Monitor preview (highest priority)
+    if (Monitor_GetPreviewText(monitorText, 64)) {
         wcscpy(timeText, monitorText);
     }
 

@@ -41,7 +41,8 @@ typedef enum {
     PREVIEW_TYPE_FONT,
     PREVIEW_TYPE_TIME_FORMAT,
     PREVIEW_TYPE_MILLISECONDS,
-    PREVIEW_TYPE_ANIMATION
+    PREVIEW_TYPE_ANIMATION,
+    PREVIEW_TYPE_MONITOR
 } PreviewType;
 
 /* ============================================================================

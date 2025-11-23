@@ -395,6 +395,10 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
             isColorOrFontPreview = TRUE;
         }
 
+        if (menuItem >= CLOCK_IDM_MONITOR_BASE && menuItem < CLOCK_IDM_MONITOR_BASE + 100) {
+            isColorOrFontPreview = TRUE;
+        }
+
         if (menuItem >= 2000 && menuItem < 3000) {
             if (menuItem != CLOCK_IDM_ANIMATIONS_USE_LOGO &&
                 menuItem != CLOCK_IDM_ANIMATIONS_USE_CPU &&

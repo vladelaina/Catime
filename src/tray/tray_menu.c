@@ -104,15 +104,8 @@ void ShowColorMenu(HWND hwnd) {
 static void BuildMonitorMenu(HMENU hMenu) {
     HMENU hMonitorMenu = CreatePopupMenu();
     
-    AppendMenuW(hMonitorMenu, MF_STRING, CLOCK_IDM_MONITOR_CONFIG, GetLocalizedString(NULL, L"Configure..."));
-    AppendMenuW(hMonitorMenu, MF_SEPARATOR, 0, NULL);
-    
-    // Disable option
-    int activeIndex = Monitor_GetActiveIndex();
-    AppendMenuW(hMonitorMenu, MF_STRING | (activeIndex == -1 ? MF_CHECKED : MF_UNCHECKED),
-               CLOCK_IDM_MONITOR_DISABLE, GetLocalizedString(NULL, L"Disable (None)"));
-    
     // List items
+    int activeIndex = Monitor_GetActiveIndex();
     int count = Monitor_GetConfigCount();
     for (int i = 0; i < count; i++) {
         MonitorConfig cfg;
@@ -121,6 +114,9 @@ static void BuildMonitorMenu(HMENU hMenu) {
                        CLOCK_IDM_MONITOR_BASE + i, cfg.label);
         }
     }
+    
+    AppendMenuW(hMonitorMenu, MF_SEPARATOR, 0, NULL);
+    AppendMenuW(hMonitorMenu, MF_STRING, CLOCK_IDM_MONITOR_CONFIG, GetLocalizedString(NULL, L"Configure..."));
     
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hMonitorMenu, GetLocalizedString(NULL, L"Data Monitor"));
 }

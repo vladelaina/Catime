@@ -22,6 +22,8 @@
 /* Large limit for menu display to accommodate folder-based animations with many frames */
 #define MAX_SCAN_ENTRIES 4096
 
+#include "../resource/resource.h" // Ensure resource constants are available
+
 /* ============================================================================
  * Preview Dispatch
  * ============================================================================ */
@@ -39,6 +41,12 @@ BOOL DispatchMenuPreview(HWND hwnd, UINT menuId) {
 
     if (menuId == CLOCK_IDM_ANIMATIONS_USE_MEM) {
         StartAnimationPreview("__mem__");
+        return TRUE;
+    }
+
+    if (menuId >= CLOCK_IDM_MONITOR_BASE && menuId < CLOCK_IDM_MONITOR_BASE + 100) {
+        int index = menuId - CLOCK_IDM_MONITOR_BASE;
+        StartPreview(PREVIEW_TYPE_MONITOR, &index, hwnd);
         return TRUE;
     }
 

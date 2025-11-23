@@ -77,38 +77,37 @@ BOOL HttpClient_Get(const wchar_t* server, const wchar_t* path, const wchar_t* u
         }
 
         // Read Data
-        do {
-            dwSize = 0;
-            if (!WinHttpQueryDataAvailable(hRequest, &dwSize)) {
+        char tempBuffer[8192]; // Use stack buffer to avoid frequent malloc/free
+        while (TRUE) {
+            DWORD dataSize = 0;
+            if (!WinHttpQueryDataAvailable(hRequest, &dataSize)) {
                 LOG_ERROR("WinHttpQueryDataAvailable failed: %lu", GetLastError());
                 break;
             }
 
-            if (dwSize == 0) break;
+            if (dataSize == 0) break;
 
-            // Ensure we don't overflow
-            if (totalRead + dwSize >= outBufferSize - 1) {
-                dwSize = outBufferSize - 1 - totalRead;
-                if (dwSize == 0) break; // Buffer full
+            // Ensure we don't overflow output buffer
+            if (totalRead + dataSize >= outBufferSize - 1) {
+                LOG_WARNING("HttpClient response buffer overflow (max: %lu), truncating.", outBufferSize);
+                dataSize = outBufferSize - 1 - totalRead;
+                if (dataSize == 0) break; // Buffer full
+            }
+            
+            // Cap reading to temp buffer size
+            if (dataSize > sizeof(tempBuffer)) {
+                dataSize = sizeof(tempBuffer);
             }
 
-            char* tempBuffer = (char*)malloc(dwSize + 1);
-            if (!tempBuffer) break;
-            
-            ZeroMemory(tempBuffer, dwSize + 1);
-
-            if (WinHttpReadData(hRequest, (LPVOID)tempBuffer, dwSize, &dwDownloaded)) {
+            if (WinHttpReadData(hRequest, (LPVOID)tempBuffer, dataSize, &dwDownloaded)) {
                 memcpy(outBuffer + totalRead, tempBuffer, dwDownloaded);
                 totalRead += dwDownloaded;
                 outBuffer[totalRead] = '\0';
             } else {
-                free(tempBuffer);
                 break;
             }
-            
-            free(tempBuffer);
-        } while (dwSize > 0);
-        
+        }
+                              
         success = (totalRead > 0);
     } else {
         LOG_ERROR("WinHttpReceiveResponse failed: %lu", GetLastError());

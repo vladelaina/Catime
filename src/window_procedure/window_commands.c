@@ -803,7 +803,15 @@ static BOOL HandleFontSelection(HWND hwnd, UINT cmd, int index) {
 
 static BOOL HandleMonitorSelection(HWND hwnd, UINT cmd, int index) {
     (void)cmd;
-    Monitor_SetActiveIndex(index);
+    
+    int currentActive = Monitor_GetActiveIndex();
+    if (currentActive == index) {
+        Monitor_ForceRefresh();
+    } else {
+        if (!Monitor_ApplyPreviewIfMatching(index)) {
+            Monitor_SetActiveIndex(index);
+        }
+    }
     
     // Ensure timer is running to refresh display
     KillTimer(hwnd, 1);
