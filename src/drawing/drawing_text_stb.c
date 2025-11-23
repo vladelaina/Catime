@@ -6,6 +6,7 @@
 #include "drawing/drawing_text_stb.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <windows.h>
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "../../libs/stb/stb_truetype.h"
@@ -18,7 +19,21 @@ static BOOL g_fontLoaded = FALSE;
 
 /* Helper to load file into memory */
 static unsigned char* LoadFileToMemory(const char* path) {
-    FILE* f = fopen(path, "rb");
+    FILE* f = NULL;
+    
+#ifdef _WIN32
+    /* Convert UTF-8 path to Wide Char for Windows Unicode support */
+    wchar_t wPath[MAX_PATH];
+    if (MultiByteToWideChar(CP_UTF8, 0, path, -1, wPath, MAX_PATH) > 0) {
+        f = _wfopen(wPath, L"rb");
+    } else {
+        /* Fallback to ANSI if conversion fails (unlikely) */
+        f = fopen(path, "rb");
+    }
+#else
+    f = fopen(path, "rb");
+#endif
+
     if (!f) return NULL;
 
     fseek(f, 0, SEEK_END);

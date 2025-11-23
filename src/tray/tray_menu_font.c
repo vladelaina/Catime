@@ -17,6 +17,7 @@
 #include "utils/natural_sort.h"
 #include "utils/string_format.h"
 #include "cache/resource_cache.h"
+#include "font/font_path_manager.h"
 
 /* External dependencies */
 extern char FONT_FILE_NAME[MAX_PATH];
@@ -82,7 +83,7 @@ static BOOL GetFontsFolderWideFromConfig(wchar_t* out, size_t size) {
  * @return 0=no content, 1=has content, 2=contains current font
  * @note Uses heap allocation to prevent stack overflow
  */
-static int ScanFontFolder(const char* folderPath, HMENU parentMenu, int* fontId) {
+static int ScanFontFolder(const char* folderPath, HMENU parentMenu, int* fontId, const wchar_t* targetFontPath) {
     wchar_t* wFolderPath = (wchar_t*)malloc(MAX_PATH * sizeof(wchar_t));
     wchar_t* wSearchPath = (wchar_t*)malloc(MAX_PATH * sizeof(wchar_t));
     WIN32_FIND_DATAW* findData = (WIN32_FIND_DATAW*)malloc(sizeof(WIN32_FIND_DATAW));
@@ -141,18 +142,9 @@ static int ScanFontFolder(const char* folderPath, HMENU parentMenu, int* fontId)
                     wchar_t* dotPos = wcsrchr(entry->displayName, L'.');
                     if (dotPos) *dotPos = L'\0';
                     
-                    wchar_t wFontsFolderPath[MAX_PATH] = {0};
-                    if (GetFontsFolderWideFromConfig(wFontsFolderPath, MAX_PATH)) {
-                        const char* localPrefix = FONTS_PATH_PREFIX;
-                        if (_strnicmp(FONT_FILE_NAME, localPrefix, (int)strlen(localPrefix)) == 0) {
-                            const char* relUtf8 = FONT_FILE_NAME + strlen(localPrefix);
-                            wchar_t wRel[MAX_PATH] = {0};
-                            Utf8ToWide(relUtf8, wRel, MAX_PATH);
-                            wchar_t wCurrentFull[MAX_PATH] = {0};
-                            _snwprintf_s(wCurrentFull, MAX_PATH, _TRUNCATE, L"%s\\%s", wFontsFolderPath, wRel);
-                            
-                            entry->isCurrentFont = (_wcsicmp(entry->fullPath, wCurrentFull) == 0);
-                        }
+                    /* Compare absolute paths using passed target path */
+                    if (targetFontPath && targetFontPath[0] != L'\0') {
+                        entry->isCurrentFont = (_wcsicmp(entry->fullPath, targetFontPath) == 0);
                     }
                     
                     entryCount++;
@@ -171,7 +163,7 @@ static int ScanFontFolder(const char* folderPath, HMENU parentMenu, int* fontId)
                 char fullItemPathUtf8[MAX_PATH];
                 WideToUtf8(entry->fullPath, fullItemPathUtf8, MAX_PATH);
                 
-                entry->subFolderStatus = ScanFontFolder(fullItemPathUtf8, entry->hSubMenu, fontId);
+                entry->subFolderStatus = ScanFontFolder(fullItemPathUtf8, entry->hSubMenu, fontId, targetFontPath);
                 
                 entryCount++;
                 
@@ -287,7 +279,24 @@ void BuildFontSubmenu(HMENU hMenu) {
             
             g_advancedFontId = 2000;
             
-            int fontFolderStatus = ScanFontFolder(fontsFolderPathUtf8, hFontSubMenu, &g_advancedFontId);
+            /* Resolve current font path ONCE */
+            wchar_t wCurrentFontAbsPath[MAX_PATH] = {0};
+            char currentFontAbsPathUtf8[MAX_PATH] = {0};
+            const char* relPath = ExtractRelativePath(FONT_FILE_NAME);
+            if (relPath) {
+                BuildFullFontPath(relPath, currentFontAbsPathUtf8, MAX_PATH);
+            } else {
+                ExpandEnvironmentStringsA(FONT_FILE_NAME, currentFontAbsPathUtf8, MAX_PATH);
+                /* If result is not absolute path (no drive separator), assume it is in fonts folder */
+                if (!strchr(currentFontAbsPathUtf8, ':')) {
+                    char tempPath[MAX_PATH];
+                    strncpy(tempPath, currentFontAbsPathUtf8, MAX_PATH - 1);
+                    BuildFullFontPath(tempPath, currentFontAbsPathUtf8, MAX_PATH);
+                }
+            }
+            Utf8ToWide(currentFontAbsPathUtf8, wCurrentFontAbsPath, MAX_PATH);
+            
+            int fontFolderStatus = ScanFontFolder(fontsFolderPathUtf8, hFontSubMenu, &g_advancedFontId, wCurrentFontAbsPath);
             if (fontFolderStatus == 0) {
                 WriteLog(LOG_LEVEL_INFO, "Font scan failed, checking known fonts...");
                 wchar_t wTestFontPath[MAX_PATH];
@@ -305,7 +314,7 @@ void BuildFontSubmenu(HMENU hMenu) {
             if (fontFolderStatus == 0) {
                 HINSTANCE hInst = GetModuleHandle(NULL);
                 if (ExtractEmbeddedFontsToFolder(hInst)) {
-                    fontFolderStatus = ScanFontFolder(fontsFolderPathUtf8, hFontSubMenu, &g_advancedFontId);
+                    fontFolderStatus = ScanFontFolder(fontsFolderPathUtf8, hFontSubMenu, &g_advancedFontId, wCurrentFontAbsPath);
                 }
             }
 

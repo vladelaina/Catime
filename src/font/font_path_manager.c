@@ -8,6 +8,7 @@
 #include "utils/string_convert.h"
 #include "utils/path_utils.h"
 #include "config.h"
+#include "log.h"
 #include <stdio.h>
 #include <string.h>
 #include <shlobj.h>

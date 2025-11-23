@@ -51,8 +51,8 @@ static COLORREF ParseColorString(const char* colorStr) {
 static RenderContext CreateRenderContext(void) {
     RenderContext ctx;
     
-    static char fontFileName[100];
-    static char fontInternalName[100];
+    static char fontFileName[MAX_PATH];
+    static char fontInternalName[MAX_PATH];
     static char colorStr[10];
     
     extern void GetActiveFont(char*, char*, size_t);
@@ -122,11 +122,7 @@ static BOOL RenderText(HDC hdc, const RECT* rect, const wchar_t* text, const Ren
                          1.0f, // Internal scale is handled by font size
                          editMode);
             return TRUE;
-        } else {
-            WriteLog(LOG_LEVEL_ERROR, "InitFontSTB failed for path: %s", absoluteFontPath);
         }
-    } else {
-        WriteLog(LOG_LEVEL_ERROR, "Failed to resolve font path: %s", ctx->fontFileName);
     }
 
     return FALSE;
