@@ -76,7 +76,9 @@ static BOOL IsAnimationLeafFolderW(const wchar_t* folderPathW) {
 static UINT BuildAnimationMenuRecursive(HMENU hMenu, const wchar_t* folderPathW,
                                        const char* folderPathUtf8, UINT* nextId,
                                        const char* currentAnimationName) {
-    AnimationEntry* entries = (AnimationEntry*)malloc(sizeof(AnimationEntry) * 64);
+    /* Use larger limit to match window_menus.c and avoid ID mismatch */
+    const int MAX_ENTRIES = 1000;
+    AnimationEntry* entries = (AnimationEntry*)malloc(sizeof(AnimationEntry) * MAX_ENTRIES);
     if (!entries) return 0;
     
     int entryCount = 0;
@@ -89,7 +91,7 @@ static UINT BuildAnimationMenuRecursive(HMENU hMenu, const wchar_t* folderPathW,
     if (hFind != INVALID_HANDLE_VALUE) {
         do {
             if (wcscmp(ffd.cFileName, L".") == 0 || wcscmp(ffd.cFileName, L"..") == 0) continue;
-            if (entryCount >= 64) break;
+            if (entryCount >= MAX_ENTRIES) break;
             
             AnimationEntry* e = &entries[entryCount];
             e->is_dir = (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
@@ -217,7 +219,9 @@ void BuildAnimationMenu(HMENU hMenu, const char* currentAnimationName) {
  */
 static BOOL FindAnimationByIdRecursive(const wchar_t* folderPathW, const char* folderPathUtf8,
                                        UINT* nextIdPtr, UINT targetId, char* foundPath, size_t foundPathSize) {
-    AnimationEntry* entries = (AnimationEntry*)malloc(sizeof(AnimationEntry) * 64);
+    /* Use larger limit to match window_menus.c and avoid ID mismatch */
+    const int MAX_ENTRIES = 1000;
+    AnimationEntry* entries = (AnimationEntry*)malloc(sizeof(AnimationEntry) * MAX_ENTRIES);
     if (!entries) return FALSE;
     
     int entryCount = 0;
@@ -230,7 +234,7 @@ static BOOL FindAnimationByIdRecursive(const wchar_t* folderPathW, const char* f
     if (hFind != INVALID_HANDLE_VALUE) {
         do {
             if (wcscmp(ffd.cFileName, L".") == 0 || wcscmp(ffd.cFileName, L"..") == 0) continue;
-            if (entryCount >= 64) break;
+            if (entryCount >= MAX_ENTRIES) break;
             
             AnimationEntry* e = &entries[entryCount];
             e->is_dir = (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;

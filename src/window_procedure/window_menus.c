@@ -68,8 +68,43 @@ static int CompareFileEntries(const void* a, const void* b) {
  * Recursive File Finder
  * ============================================================================ */
 
+/**
+ * @brief Check if folder is a leaf (no subfolders or animated images)
+ * @note Copied from tray_animation_menu.c to ensure consistent ID mapping
+ */
+static BOOL IsAnimationLeafFolderW(const wchar_t* folderPathW) {
+    wchar_t wSearch[MAX_PATH] = {0};
+    _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s\\*", folderPathW);
+    
+    WIN32_FIND_DATAW ffd;
+    HANDLE hFind = FindFirstFileW(wSearch, &ffd);
+    if (hFind == INVALID_HANDLE_VALUE) return TRUE;
+
+    BOOL hasSubItems = FALSE;
+    do {
+        if (wcscmp(ffd.cFileName, L".") == 0 || wcscmp(ffd.cFileName, L"..") == 0) continue;
+        
+        if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+            hasSubItems = TRUE;
+            break;
+        }
+        
+        wchar_t* ext = wcsrchr(ffd.cFileName, L'.');
+        if (ext && (_wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0)) {
+            hasSubItems = TRUE;
+            break;
+        }
+    } while (FindNextFileW(hFind, &ffd));
+    FindClose(hFind);
+    
+    return !hasSubItems;
+}
+
+typedef BOOL (*IsLeafFolderFunc)(const wchar_t* path);
+
 BOOL RecursiveFindFile(const wchar_t* rootPathW, const char* relPathUtf8,
-                       FileFilterFunc filter, UINT targetId, UINT* currentId,
+                       FileFilterFunc filter, IsLeafFolderFunc leafFolderFunc,
+                       UINT targetId, UINT* currentId,
                        FileActionFunc action, void* userData) {
     FileEntry* entries = (FileEntry*)malloc(sizeof(FileEntry) * MAX_ANIMATION_FRAMES);
     if (!entries) return FALSE;
@@ -123,9 +158,24 @@ BOOL RecursiveFindFile(const wchar_t* rootPathW, const char* relPathUtf8,
             wcscpy_s(subPath, MAX_PATH, rootPathW);
             PathJoinW(subPath, MAX_PATH, e->name);
             
-            if (RecursiveFindFile(subPath, e->relPathUtf8, filter, targetId, currentId, action, userData)) {
-                free(entries);
-                return TRUE;
+            // Check if this directory is a "Leaf Folder" (item) or a "Branch Folder" (container)
+            BOOL isLeaf = leafFolderFunc ? leafFolderFunc(subPath) : FALSE;
+            
+            if (isLeaf) {
+                // Treat folder as an item
+                if (*currentId == targetId) {
+                    BOOL result = action(e->relPathUtf8, userData);
+                    free(entries);
+                    return result;
+                }
+                (*currentId)++;
+            } else {
+                // Treat as container and recurse
+                if (RecursiveFindFile(subPath, e->relPathUtf8, filter, leafFolderFunc, 
+                                    targetId, currentId, action, userData)) {
+                    free(entries);
+                    return TRUE;
+                }
             }
         } else {
             if (*currentId == targetId) {
@@ -153,7 +203,7 @@ static BOOL AnimationPreviewAction(const char* relPath, void* userData) {
 
 BOOL FindAnimationByIdRecursive(const wchar_t* folderPathW, const char* relPathUtf8, 
                                 UINT* nextIdPtr, UINT targetId) {
-    return RecursiveFindFile(folderPathW, relPathUtf8, IsAnimationFile, 
+    return RecursiveFindFile(folderPathW, relPathUtf8, IsAnimationFile, IsAnimationLeafFolderW,
                            targetId, nextIdPtr, AnimationPreviewAction, NULL);
 }
 
@@ -181,7 +231,9 @@ BOOL FindFontByIdRecursiveW(const wchar_t* folderPathW, int targetId, int* curre
     FontFindData data = {0};
     UINT id = (UINT)*currentId;
     
-    if (RecursiveFindFile(folderPathW, "", IsFontFile, (UINT)targetId, &id, FontPreviewAction, &data)) {
+    // Fonts generally don't use leaf-folder logic, passing NULL
+    if (RecursiveFindFile(folderPathW, "", IsFontFile, NULL, 
+                        (UINT)targetId, &id, FontPreviewAction, &data)) {
         wcsncpy_s(foundRelativePathW, MAX_PATH, data.relPath, _TRUNCATE);
         *currentId = (int)id;
         return TRUE;

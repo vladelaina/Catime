@@ -14,6 +14,7 @@
 
 typedef BOOL (*FileFilterFunc)(const wchar_t* filename);
 typedef BOOL (*FileActionFunc)(const char* relPath, void* userData);
+typedef BOOL (*IsLeafFolderFunc)(const wchar_t* path);
 
 /**
  * @brief Check if filename is animation file
@@ -29,7 +30,8 @@ BOOL IsFontFile(const wchar_t* filename);
  * @brief Recursively map menu ID to file path
  */
 BOOL RecursiveFindFile(const wchar_t* rootPathW, const char* relPathUtf8,
-                       FileFilterFunc filter, UINT targetId, UINT* currentId,
+                       FileFilterFunc filter, IsLeafFolderFunc leafFolderFunc,
+                       UINT targetId, UINT* currentId,
                        FileActionFunc action, void* userData);
 
 /**
