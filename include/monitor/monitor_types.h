@@ -26,6 +26,12 @@ typedef struct {
     int refreshInterval;        // Refresh interval in seconds
 } MonitorConfig;
 
+// Option for dropdown selection
+typedef struct {
+    wchar_t label[32];          // Display name (e.g. "Stars")
+    char value[32];             // Internal value (e.g. "star")
+} MonitorOption;
+
 // Monitor data state
 typedef struct {
     wchar_t displayText[64];    // Final display text (e.g. "Star: 1.2k")

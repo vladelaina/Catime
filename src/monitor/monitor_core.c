@@ -16,6 +16,11 @@ static int g_monitorCount = 0;
 static int g_activeIndex = -1;
 static int g_previewIndex = -1;
 
+// Temporary preview config support
+static MonitorConfig g_previewConfig;
+static MonitorConfig g_lastPreviewConfig; // Track what was actually fetched
+static BOOL g_previewConfigSet = FALSE;
+
 static MonitorConfig g_activeConfig; 
 static MonitorState g_state;
 static MonitorState g_previewStateData;
@@ -170,6 +175,12 @@ BOOL Monitor_GetConfigAt(int index, MonitorConfig* outConfig) {
 void Monitor_AddConfig(const MonitorConfig* config) {
     if (g_monitorCount >= MAX_MONITORS) return;
     g_monitors[g_monitorCount] = *config;
+    
+    // Encrypt token immediately upon adding
+    if (IsTokenSet(g_monitors[g_monitorCount].token, sizeof(g_monitors[g_monitorCount].token))) {
+        CryptProtectMemory(g_monitors[g_monitorCount].token, sizeof(g_monitors[g_monitorCount].token), CRYPTPROTECTMEMORY_SAME_PROCESS);
+    }
+    
     ParseSourceString(&g_monitors[g_monitorCount]);
     g_monitorCount++;
     Monitor_SaveConfig();
@@ -178,6 +189,12 @@ void Monitor_AddConfig(const MonitorConfig* config) {
 void Monitor_UpdateConfigAt(int index, const MonitorConfig* config) {
     if (index < 0 || index >= g_monitorCount) return;
     g_monitors[index] = *config;
+    
+    // Encrypt token immediately upon updating
+    if (IsTokenSet(g_monitors[index].token, sizeof(g_monitors[index].token))) {
+        CryptProtectMemory(g_monitors[index].token, sizeof(g_monitors[index].token), CRYPTPROTECTMEMORY_SAME_PROCESS);
+    }
+    
     ParseSourceString(&g_monitors[index]);
     Monitor_SaveConfig();
     if (index == g_activeIndex) Monitor_SetActiveIndex(index);
@@ -208,18 +225,36 @@ void Monitor_DeleteConfigAt(int index) {
 void Monitor_SetActiveIndex(int index) {
     g_activeIndex = index;
     
+    BOOL reusePreview = FALSE;
+    
     EnterCriticalSection(&g_cs);
     if (index >= 0 && index < g_monitorCount) {
         g_activeConfig = g_monitors[index];
         g_activeConfig.enabled = TRUE;
-        g_state.isLoading = TRUE;
-        wcscpy(g_state.displayText, L"...");
+        
+        // Check if we can reuse the preview data
+        // Compare g_activeConfig with g_lastPreviewConfig
+        if (!g_previewStateData.isLoading && 
+            strcmp(g_activeConfig.sourceString, g_lastPreviewConfig.sourceString) == 0 &&
+            memcmp(g_activeConfig.token, g_lastPreviewConfig.token, sizeof(g_activeConfig.token)) == 0) {
+            
+            g_state = g_previewStateData;
+            reusePreview = TRUE;
+        } else {
+            g_state.isLoading = TRUE;
+            wcscpy(g_state.displayText, L"...");
+        }
     } else {
         g_activeConfig.enabled = FALSE;
     }
     LeaveCriticalSection(&g_cs);
     
     Monitor_SaveConfig();
+    
+    // Force immediate refresh only if we didn't reuse preview
+    if (!reusePreview) {
+        Monitor_ForceRefresh();
+    }
 }
 
 void Monitor_ForceRefresh(void) {
@@ -241,7 +276,52 @@ static DWORD WINAPI MonitorThreadProc(LPVOID lpParam) {
     static int lastFetchedPreviewIndex = -1;
     
     while (g_running) {
-        // Check preview first
+        // 1. Check for temporary preview config (Highest Priority)
+        BOOL hasTempPreview = FALSE;
+        MonitorConfig tempCfg;
+        
+        EnterCriticalSection(&g_cs);
+        if (g_previewConfigSet) {
+            tempCfg = g_previewConfig;
+            hasTempPreview = TRUE;
+            g_previewConfigSet = FALSE; // Consume the request
+            
+            // Set loading state immediately
+            wcscpy(g_previewStateData.displayText, L"...");
+            g_previewStateData.isLoading = TRUE;
+        }
+        LeaveCriticalSection(&g_cs);
+        
+        if (hasTempPreview) {
+            long long value = -1;
+            switch (tempCfg.type) {
+                case MONITOR_PLATFORM_GITHUB:
+                    value = GitHub_FetchValue(&tempCfg);
+                    break;
+                default:
+                    value = -1;
+                    break;
+            }
+            
+            EnterCriticalSection(&g_cs);
+            if (value >= 0) {
+                swprintf(g_previewStateData.displayText, 64, L"%lld", value);
+            } else {
+                swprintf(g_previewStateData.displayText, 64, L"Error");
+            }
+            g_previewStateData.isLoading = FALSE;
+            // Save this config as the "last successfully previewed" one
+            g_lastPreviewConfig = tempCfg;
+            LeaveCriticalSection(&g_cs);
+            
+            // Reset force refresh if it was just to wake us up
+            if (g_forceRefresh) g_forceRefresh = FALSE;
+            
+            Sleep(100);
+            continue;
+        }
+
+        // 2. Check preview index
         int currentPreviewIdx = -1;
         EnterCriticalSection(&g_cs);
         currentPreviewIdx = g_previewIndex;
@@ -434,6 +514,7 @@ BOOL Monitor_GetDisplayText(wchar_t* buffer, size_t maxLen) {
 void Monitor_SetPreviewIndex(int index) {
     EnterCriticalSection(&g_cs);
     g_previewIndex = index;
+    g_previewConfigSet = FALSE; // Clear temp config if index is set
     if (index >= 0) {
         if (index == g_activeIndex && g_activeConfig.enabled) {
             // If hovering over active item, show current value immediately without reloading
@@ -445,6 +526,31 @@ void Monitor_SetPreviewIndex(int index) {
             g_forceRefresh = TRUE; // Signal thread to wake up
         }
     }
+    LeaveCriticalSection(&g_cs);
+}
+
+void Monitor_SetPreviewConfig(const MonitorConfig* config) {
+    if (!config) return;
+    
+    EnterCriticalSection(&g_cs);
+    g_previewConfig = *config;
+    
+    // Encrypt token if it exists and is not already encrypted (how do we know?)
+    // We assume caller (UI) passes PLAINTEXT token here for simplicity, 
+    // because GetConfigFromUI returns plaintext.
+    // So we encrypt it.
+    if (IsTokenSet(g_previewConfig.token, sizeof(g_previewConfig.token))) {
+        CryptProtectMemory(g_previewConfig.token, sizeof(g_previewConfig.token), CRYPTPROTECTMEMORY_SAME_PROCESS);
+    }
+    
+    g_previewConfigSet = TRUE;
+    g_previewIndex = -1; // Disable index-based preview
+    
+    // Reset state
+    wcscpy(g_previewStateData.displayText, L"...");
+    g_previewStateData.isLoading = TRUE;
+    g_forceRefresh = TRUE; // Wake up thread
+    
     LeaveCriticalSection(&g_cs);
 }
 
@@ -489,4 +595,18 @@ BOOL Monitor_IsActive(void) {
     active = g_activeConfig.enabled;
     LeaveCriticalSection(&g_cs);
     return active;
+}
+
+int Monitor_GetPlatformOptions(MonitorPlatformType type, MonitorOption* outOptions, int maxCount) {
+    switch (type) {
+        case MONITOR_PLATFORM_GITHUB:
+            return GitHub_GetOptions(outOptions, maxCount);
+            
+        case MONITOR_PLATFORM_BILIBILI:
+            // Placeholder for future implementation
+            return 0;
+            
+        default:
+            return 0;
+    }
 }

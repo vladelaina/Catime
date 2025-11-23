@@ -71,8 +71,6 @@ BOOL HttpClient_Get(const wchar_t* server, const wchar_t* path, const wchar_t* u
         
         if (dwStatusCode != 200) {
             LOG_WARNING("HTTP Request returned status code: %lu", dwStatusCode);
-            // We still try to read the body as it might contain error info, but mark as failure
-            // Actually, let's just return false for non-200 to keep it simple
             goto cleanup;
         }
 

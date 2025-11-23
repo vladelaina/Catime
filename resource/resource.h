@@ -471,14 +471,21 @@
 #define IDC_MONITOR_ADD_BTN 5002        /**< Add new monitor button */
 #define IDC_MONITOR_DEL_BTN 5003        /**< Delete monitor button */
 #define IDC_MONITOR_LABEL_EDIT 5004     /**< Monitor label edit control */
-#define IDC_MONITOR_SOURCE_EDIT 5005    /**< Monitor source string edit control */
+// IDC_MONITOR_SOURCE_EDIT deprecated
 #define IDC_MONITOR_TOKEN_EDIT 5006     /**< Monitor token edit control */
 #define IDC_MONITOR_SAVE_BTN 5007       /**< Save changes button */
 #define IDC_MONITOR_APPLY_BTN 5008      /**< Apply and use button */
 #define IDC_MONITOR_LABEL_STATIC 5009   /**< Label static text */
-#define IDC_MONITOR_SOURCE_STATIC 5010  /**< Source static text */
+// IDC_MONITOR_SOURCE_STATIC deprecated
 #define IDC_MONITOR_TOKEN_STATIC 5011   /**< Token static text */
 #define IDC_MONITOR_HELP_LINK 5012      /**< Help link for source format */
+
+// New controls for "Simple Mode"
+#define IDC_MONITOR_PLATFORM_COMBO 5020 /**< Platform selection combo */
+#define IDC_MONITOR_PARAM1_EDIT 5021    /**< Parameter 1 (e.g. user/repo) */
+#define IDC_MONITOR_PARAM2_COMBO 5022   /**< Parameter 2 (e.g. item type) */
+#define IDC_MONITOR_TEST_BTN 5023       /**< Test fetch button */
+#define IDC_MONITOR_TEST_RESULT 5024    /**< Test result label */
 
 /** @brief Monitor menu identifiers */
 #define CLOCK_IDM_MONITOR_CONFIG 6100   /**< Open monitor configuration */

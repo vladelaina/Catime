@@ -37,7 +37,12 @@ void Monitor_ForceRefresh(void);
 
 // Preview support
 void Monitor_SetPreviewIndex(int index); // -1 to disable
+// Set a temporary config for preview (for edit dialog)
+void Monitor_SetPreviewConfig(const MonitorConfig* config);
 BOOL Monitor_GetPreviewText(wchar_t* buffer, size_t maxLen);
 BOOL Monitor_ApplyPreviewIfMatching(int index);
+
+// Metadata
+int Monitor_GetPlatformOptions(MonitorPlatformType type, MonitorOption* outOptions, int maxCount);
 
 #endif

@@ -10,4 +10,12 @@
  */
 long long GitHub_FetchValue(const MonitorConfig* config);
 
+/**
+ * @brief Get available monitoring options for GitHub
+ * @param outOptions Buffer to store options
+ * @param maxCount Maximum number of options to write
+ * @return Number of options available
+ */
+int GitHub_GetOptions(MonitorOption* outOptions, int maxCount);
+
 #endif
