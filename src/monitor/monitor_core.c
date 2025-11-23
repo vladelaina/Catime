@@ -75,6 +75,8 @@ void Monitor_LoadConfig(void) {
                 char secureToken[128];
                 if (Cred_LoadToken(targetName, secureToken, sizeof(secureToken))) {
                     strncpy(g_monitors[i].token, secureToken, sizeof(g_monitors[i].token) - 1);
+                    // Securely wipe the temporary stack buffer
+                    SecureZeroMemory(secureToken, sizeof(secureToken));
                 }
             }
         }
@@ -152,7 +154,14 @@ void Monitor_DeleteConfigAt(int index) {
     snprintf(targetName, sizeof(targetName), "Catime:Monitor:%s", g_monitors[index].sourceString);
     Cred_DeleteToken(targetName);
     
+    // Securely wipe the configuration before deletion to remove token from memory
+    SecureZeroMemory(&g_monitors[index], sizeof(MonitorConfig));
+
     for (int i = index; i < g_monitorCount - 1; i++) g_monitors[i] = g_monitors[i+1];
+    
+    // Wipe the last element after shifting to ensure no stale data remains at the end
+    SecureZeroMemory(&g_monitors[g_monitorCount - 1], sizeof(MonitorConfig));
+    
     g_monitorCount--;
     if (g_activeIndex == index) Monitor_SetActiveIndex(-1);
     else if (g_activeIndex > index) { g_activeIndex--; Monitor_SaveConfig(); }

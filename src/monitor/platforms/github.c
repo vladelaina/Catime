@@ -1,5 +1,6 @@
 #include "monitor/platforms/github.h"
 #include "monitor/utils/http_client.h"
+#include "monitor/utils/json_parser.h"
 #include "log.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,15 +28,23 @@ long long GitHub_FetchValue(const MonitorConfig* config) {
         MultiByteToWideChar(CP_UTF8, 0, config->token, -1, wToken, 128);
         swprintf(authHeader, 256, L"Authorization: token %ls", wToken);
         headers = authHeader;
+        
+        // Immediate cleanup of the raw token buffer
+        SecureZeroMemory(wToken, sizeof(wToken));
     }
 
     // Buffer for JSON response (8KB is usually enough for repo info)
     char response[8192]; 
     
-    if (HttpClient_Get(L"api.github.com", path, userAgent, headers, response, sizeof(response))) {
-        // Simple JSON parsing
-        // We look for "stargazers_count": 123,
-        
+    BOOL success = HttpClient_Get(L"api.github.com", path, userAgent, headers, response, sizeof(response));
+    
+    // Cleanup auth header immediately after use
+    if (headers) {
+        SecureZeroMemory(authHeader, sizeof(authHeader));
+    }
+
+    if (success) {
+        // Simple JSON parsing using helper
         const char* key = NULL;
         if (strcmp(config->param2, "star") == 0) {
             key = "\"stargazers_count\":";
@@ -48,16 +57,9 @@ long long GitHub_FetchValue(const MonitorConfig* config) {
              key = "\"stargazers_count\":";
         }
         
-        char* pos = strstr(response, key);
-        if (pos) {
-            // Move past the key
-            pos += strlen(key);
-            
-            // Skip whitespace and colon if present (standard JSON format)
-            while (*pos == ' ' || *pos == ':') pos++;
-            
-            // Parse number
-            return atoll(pos);
+        long long value = 0;
+        if (Json_ExtractInt64(response, key, &value)) {
+            return value;
         } else {
             LOG_WARNING("GitHub response did not contain key: %s", key);
         }
