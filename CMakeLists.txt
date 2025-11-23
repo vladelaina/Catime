@@ -119,6 +119,7 @@ target_link_libraries(catime PRIVATE
     iphlpapi
     windowscodecs
     propsys
+    crypt32
 )
 
 # Set output directory - use custom output dir if specified

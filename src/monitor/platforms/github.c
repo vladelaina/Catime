@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wincrypt.h>
 
 long long GitHub_FetchValue(const MonitorConfig* config) {
     if (!config) return -1;
@@ -23,13 +24,32 @@ long long GitHub_FetchValue(const MonitorConfig* config) {
     wchar_t authHeader[256] = {0};
     const wchar_t* headers = NULL;
     
-    if (config->token[0] != '\0') {
+    // Check if we have an encrypted token (scan for any non-zero byte)
+    // We can't use string functions because the encrypted blob might contain null bytes
+    BOOL hasToken = FALSE;
+    for (size_t i = 0; i < sizeof(config->token); i++) {
+        if (config->token[i] != 0) {
+            hasToken = TRUE;
+            break;
+        }
+    }
+    
+    if (hasToken) {
+        // Copy encrypted token to stack buffer
+        char tempToken[128];
+        memcpy(tempToken, config->token, sizeof(tempToken));
+        
+        // Decrypt in-place on stack
+        // Note: This matches the encryption done in Monitor_LoadConfig
+        CryptUnprotectMemory(tempToken, sizeof(tempToken), CRYPTPROTECTMEMORY_SAME_PROCESS);
+        
         wchar_t wToken[128];
-        MultiByteToWideChar(CP_UTF8, 0, config->token, -1, wToken, 128);
+        MultiByteToWideChar(CP_UTF8, 0, tempToken, -1, wToken, 128);
         swprintf(authHeader, 256, L"Authorization: token %ls", wToken);
         headers = authHeader;
         
-        // Immediate cleanup of the raw token buffer
+        // Immediate cleanup of the raw token buffers
+        SecureZeroMemory(tempToken, sizeof(tempToken));
         SecureZeroMemory(wToken, sizeof(wToken));
     }
 

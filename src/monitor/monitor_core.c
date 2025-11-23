@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <wincrypt.h>
 
 #define MAX_MONITORS 10
 
@@ -24,6 +25,16 @@ static volatile BOOL g_forceRefresh = FALSE;
 static CRITICAL_SECTION g_cs;
 
 extern void GetConfigPath(char* path, size_t size);
+
+// Helper to check if token is populated (not all zeros)
+// Safe for both encrypted and plaintext tokens
+static BOOL IsTokenSet(const char* token, size_t size) {
+    const unsigned char* p = (const unsigned char*)token;
+    for (size_t i = 0; i < size; i++) {
+        if (p[i] != 0) return TRUE;
+    }
+    return FALSE;
+}
 
 static void ParseSourceString(MonitorConfig* config) {
     char* str = config->sourceString;
@@ -50,6 +61,9 @@ static void ParseSourceString(MonitorConfig* config) {
 void Monitor_LoadConfig(void) {
     char configPath[MAX_PATH];
     GetConfigPath(configPath, MAX_PATH);
+    
+    // Wipe existing monitors to ensure clean state
+    SecureZeroMemory(g_monitors, sizeof(g_monitors));
     
     g_monitorCount = GetPrivateProfileIntA("Monitor", "Count", 0, configPath);
     if (g_monitorCount > MAX_MONITORS) g_monitorCount = MAX_MONITORS;
@@ -79,6 +93,13 @@ void Monitor_LoadConfig(void) {
                     SecureZeroMemory(secureToken, sizeof(secureToken));
                 }
             }
+        }
+        
+        // Encrypt the token in memory immediately
+        // We use CRYPTPROTECTMEMORY_SAME_PROCESS so only this process can decrypt it
+        // This protects against memory dumps and external scanners
+        if (IsTokenSet(g_monitors[i].token, sizeof(g_monitors[i].token))) {
+            CryptProtectMemory(g_monitors[i].token, sizeof(g_monitors[i].token), CRYPTPROTECTMEMORY_SAME_PROCESS);
         }
         
         g_monitors[i].refreshInterval = GetPrivateProfileIntA(section, "Refresh", 300, configPath);
@@ -111,10 +132,26 @@ void Monitor_SaveConfig(void) {
         WritePrivateProfileStringA(section, "Label", labelUtf8, configPath);
         WritePrivateProfileStringA(section, "Source", g_monitors[i].sourceString, configPath);
         
-        if (strlen(g_monitors[i].token) > 0) {
+        // Decrypt momentarily to save credential
+        // improved: copy to stack, decrypt copy, save, wipe copy
+        // This ensures global memory is NEVER plaintext
+        if (IsTokenSet(g_monitors[i].token, sizeof(g_monitors[i].token))) {
+            char tempToken[128];
+            memcpy(tempToken, g_monitors[i].token, sizeof(tempToken));
+            
+            CryptUnprotectMemory(tempToken, sizeof(tempToken), CRYPTPROTECTMEMORY_SAME_PROCESS);
+            
             char targetName[512];
             snprintf(targetName, sizeof(targetName), "Catime:Monitor:%s", g_monitors[i].sourceString);
-            Cred_SaveToken(targetName, g_monitors[i].token);
+            Cred_SaveToken(targetName, tempToken);
+            
+            SecureZeroMemory(tempToken, sizeof(tempToken));
+            
+            // Mark in INI that token is stored securely
+            WritePrivateProfileStringA(section, "Token", "[SECURE_CREDENTIAL]", configPath);
+        } else {
+            // If no token, clear the entry in INI
+            WritePrivateProfileStringA(section, "Token", "", configPath);
         }
         
         sprintf(buf, "%d", g_monitors[i].refreshInterval);
@@ -297,7 +334,7 @@ static DWORD WINAPI MonitorThreadProc(LPVOID lpParam) {
             // We check sourceString and token to ensure consistency
             if (g_activeConfig.enabled && 
                 strcmp(g_activeConfig.sourceString, currentConfig.sourceString) == 0 &&
-                strcmp(g_activeConfig.token, currentConfig.token) == 0) {
+                memcmp(g_activeConfig.token, currentConfig.token, sizeof(g_activeConfig.token)) == 0) {
                 
                 g_state.isLoading = FALSE;
                 g_state.lastUpdateTick = GetTickCount();
@@ -332,7 +369,7 @@ static DWORD WINAPI MonitorThreadProc(LPVOID lpParam) {
                 // Check if config changed mid-sleep to react faster
                 EnterCriticalSection(&g_cs);
                 BOOL changed = (strcmp(g_activeConfig.sourceString, currentConfig.sourceString) != 0) || 
-                               (strcmp(g_activeConfig.token, currentConfig.token) != 0) ||
+                               (memcmp(g_activeConfig.token, currentConfig.token, sizeof(g_activeConfig.token)) != 0) ||
                                !g_activeConfig.enabled;
                 LeaveCriticalSection(&g_cs);
                 if (changed) break;
