@@ -152,7 +152,7 @@ static void PopulateItemCombo(HWND hDlg, MonitorPlatformType type, const char* s
     }
 }
 
-static void UpdateEditFields(HWND hDlg, int index);
+static void UpdateEditFields(HWND hDlg, int index, BOOL skipLabel);
 static BOOL GetConfigFromUI(HWND hDlg, MonitorConfig* outCfg);
 
 static void AutoSaveConfig(HWND hDlg) {
@@ -190,12 +190,14 @@ static void TriggerPreview(HWND hDlg) {
     }
 }
 
-static void UpdateEditFields(HWND hDlg, int index) {
+static void UpdateEditFields(HWND hDlg, int index, BOOL skipLabel) {
     SetDlgItemTextW(hDlg, IDC_MONITOR_TEST_RESULT, L""); // Clear test result
     
     MonitorConfig cfg = {0};
     if (index >= 0 && Monitor_GetConfigAt(index, &cfg)) {
-        SetDlgItemTextW(hDlg, IDC_MONITOR_LABEL_EDIT, cfg.label);
+        if (!skipLabel) {
+            SetDlgItemTextW(hDlg, IDC_MONITOR_LABEL_EDIT, cfg.label);
+        }
         SetDlgItemTextW(hDlg, IDC_MONITOR_PARAM1_EDIT, L"");
         SetDlgItemTextW(hDlg, IDC_MONITOR_TOKEN_EDIT, L"");
         
@@ -275,7 +277,9 @@ static void UpdateEditFields(HWND hDlg, int index) {
         }
     } else {
         // Defaults for new item
-        SetDlgItemTextW(hDlg, IDC_MONITOR_LABEL_EDIT, L"");
+        if (!skipLabel) {
+            SetDlgItemTextW(hDlg, IDC_MONITOR_LABEL_EDIT, L"");
+        }
         SetDlgItemTextW(hDlg, IDC_MONITOR_PARAM1_EDIT, L"");
         SetDlgItemTextW(hDlg, IDC_MONITOR_TOKEN_EDIT, L"");
         
@@ -368,6 +372,12 @@ static BOOL GetConfigFromUI(HWND hDlg, MonitorConfig* outCfg) {
     
     // 6. Label
     wchar_t wLabel[32];
+    GetDlgItemTextW(hDlg, IDC_MONITOR_LABEL_EDIT, wLabel, 32);
+    TrimW(wLabel);
+    wcsncpy(outCfg->label, wLabel, 32);
+    outCfg->label[31] = L'\0';
+    
+    return TRUE;
 }
 
 static INT_PTR CALLBACK MonitorDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -386,7 +396,7 @@ static INT_PTR CALLBACK MonitorDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, L
             PopulatePlatformCombo(hDlg);
             s_currentSel = Monitor_GetActiveIndex();
             RefreshList(hDlg);
-            UpdateEditFields(hDlg, s_currentSel);
+            UpdateEditFields(hDlg, s_currentSel, FALSE);
             
             // Start timer for preview updates
             SetTimer(hDlg, 1, 500, NULL);
@@ -429,7 +439,7 @@ static INT_PTR CALLBACK MonitorDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, L
                         int lbIdx = (int)SendDlgItemMessage(hDlg, IDC_MONITOR_LIST, LB_GETCURSEL, 0, 0);
                         if (lbIdx != LB_ERR) {
                             s_currentSel = (int)SendDlgItemMessage(hDlg, IDC_MONITOR_LIST, LB_GETITEMDATA, lbIdx, 0);
-                            UpdateEditFields(hDlg, s_currentSel);
+                            UpdateEditFields(hDlg, s_currentSel, FALSE);
                             TriggerPreview(hDlg);
                         }
                     }
@@ -449,6 +459,36 @@ static INT_PTR CALLBACK MonitorDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, L
                 case IDC_MONITOR_PARAM2_COMBO:
                     if (HIWORD(wParam) == CBN_SELCHANGE) {
                         TriggerPreview(hDlg);
+                    }
+                    break;
+
+                case IDC_MONITOR_LABEL_EDIT:
+                    if (HIWORD(wParam) == EN_CHANGE) {
+                        if (s_currentSel < 0) {
+                            int len = GetWindowTextLength(GetDlgItem(hDlg, IDC_MONITOR_LABEL_EDIT));
+                            if (len > 0) {
+                                // Auto-create new item
+                                MonitorConfig newCfg = {0};
+                                GetDlgItemTextW(hDlg, IDC_MONITOR_LABEL_EDIT, newCfg.label, 32);
+                                
+                                strcpy(newCfg.sourceString, "GitHub-user/repo-star"); 
+                                newCfg.type = MONITOR_PLATFORM_GITHUB;
+                                strcpy(newCfg.param1, "");
+                                strcpy(newCfg.param2, "star");
+                                newCfg.refreshInterval = 300;
+                                newCfg.enabled = TRUE;
+                                
+                                Monitor_AddConfig(&newCfg);
+                                s_currentSel = Monitor_GetConfigCount() - 1;
+                                
+                                RefreshList(hDlg);
+                                UpdateEditFields(hDlg, s_currentSel, TRUE); // Update others, skip label
+                            }
+                        } else {
+                            // Real-time update for existing item
+                            AutoSaveConfig(hDlg);
+                            RefreshList(hDlg);
+                        }
                     }
                     break;
 
@@ -496,7 +536,7 @@ static INT_PTR CALLBACK MonitorDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, L
                     Monitor_AddConfig(&newCfg);
                     s_currentSel = Monitor_GetConfigCount() - 1;
                     RefreshList(hDlg);
-                    UpdateEditFields(hDlg, s_currentSel);
+                    UpdateEditFields(hDlg, s_currentSel, FALSE);
                     SetFocus(GetDlgItem(hDlg, IDC_MONITOR_PARAM1_EDIT));
                     break;
                 }
@@ -506,7 +546,7 @@ static INT_PTR CALLBACK MonitorDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, L
                         Monitor_DeleteConfigAt(s_currentSel);
                         s_currentSel = -1;
                         RefreshList(hDlg);
-                        UpdateEditFields(hDlg, -1);
+                        UpdateEditFields(hDlg, -1, FALSE);
                         SetDlgItemTextW(hDlg, IDC_MONITOR_TEST_RESULT, L"");
                     }
                     break;
