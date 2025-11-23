@@ -74,6 +74,40 @@ static BOOL IsAnimationFile(const wchar_t* filename) {
             _wcsicmp(ext, L".ico") == 0);
 }
 
+static void ScanDirectoryForResources(const wchar_t* dirPath, int* fontCount, int* animCount, 
+                                    wchar_t* lastFontPath, wchar_t* lastAnimPath) {
+    WIN32_FIND_DATAW findData;
+    wchar_t searchPath[MAX_PATH];
+    
+    swprintf_s(searchPath, MAX_PATH, L"%s\\*", dirPath);
+    
+    HANDLE hFind = FindFirstFileW(searchPath, &findData);
+    if (hFind == INVALID_HANDLE_VALUE) return;
+    
+    do {
+        if (wcscmp(findData.cFileName, L".") == 0 || wcscmp(findData.cFileName, L"..") == 0) {
+            continue;
+        }
+        
+        wchar_t fullPath[MAX_PATH];
+        swprintf_s(fullPath, MAX_PATH, L"%s\\%s", dirPath, findData.cFileName);
+        
+        if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+            ScanDirectoryForResources(fullPath, fontCount, animCount, lastFontPath, lastAnimPath);
+        } else {
+            if (IsFontFile(fullPath)) {
+                if (*fontCount == 0 && lastFontPath) wcscpy_s(lastFontPath, MAX_PATH, fullPath);
+                (*fontCount)++;
+            } else if (IsAnimationFile(fullPath)) {
+                if (*animCount == 0 && lastAnimPath) wcscpy_s(lastAnimPath, MAX_PATH, fullPath);
+                (*animCount)++;
+            }
+        }
+    } while (FindNextFileW(hFind, &findData));
+    
+    FindClose(hFind);
+}
+
 static void RestoreOriginalState(OleDropTarget* target, BOOL reloadOriginal) {
     if (target->isPreviewingFont) {
         if (reloadOriginal) {
@@ -176,16 +210,21 @@ STDMETHODIMP DragEnter(IDropTarget* this, IDataObject* pDataObj, DWORD grfKeySta
         wchar_t fontPath[MAX_PATH] = {0};
         wchar_t animPath[MAX_PATH] = {0};
         
-        /* First pass: Count resources and store potential candidates */
+        /* Count resources including those in subdirectories */
         for (UINT i = 0; i < count; i++) {
             wchar_t filePath[MAX_PATH];
             if (DragQueryFileW(hDrop, i, filePath, MAX_PATH)) {
-                if (IsFontFile(filePath)) {
-                    if (fontCount == 0) wcscpy_s(fontPath, MAX_PATH, filePath);
-                    fontCount++;
-                } else if (IsAnimationFile(filePath)) {
-                    if (animCount == 0) wcscpy_s(animPath, MAX_PATH, filePath);
-                    animCount++;
+                DWORD attrs = GetFileAttributesW(filePath);
+                if (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY)) {
+                    ScanDirectoryForResources(filePath, &fontCount, &animCount, fontPath, animPath);
+                } else {
+                    if (IsFontFile(filePath)) {
+                        if (fontCount == 0) wcscpy_s(fontPath, MAX_PATH, filePath);
+                        fontCount++;
+                    } else if (IsAnimationFile(filePath)) {
+                        if (animCount == 0) wcscpy_s(animPath, MAX_PATH, filePath);
+                        animCount++;
+                    }
                 }
             }
         }
@@ -204,11 +243,11 @@ STDMETHODIMP DragEnter(IDropTarget* this, IDataObject* pDataObj, DWORD grfKeySta
         
         ReleaseStgMedium(&stg);
         
-        /* User requested to avoid "forbidden" cursor even for invalid drops.
-         * We return DROPEFFECT_COPY so it looks like a valid drop target,
-         * but Drop() will silently do nothing if files are invalid.
-         */
-        *pdwEffect = DROPEFFECT_COPY;
+        if (target->isValidDrop) {
+             *pdwEffect = DROPEFFECT_COPY;
+        } else {
+             *pdwEffect = DROPEFFECT_MOVE;
+        }
     } else {
         target->isValidDrop = FALSE;
         *pdwEffect = DROPEFFECT_NONE;
@@ -249,10 +288,18 @@ STDMETHODIMP Drop(IDropTarget* this, IDataObject* pDataObj, DWORD grfKeyState, P
         HDROP hDrop = (HDROP)stg.hGlobal;
         UINT count = DragQueryFileW(hDrop, 0xFFFFFFFF, NULL, 0);
         int fontCount = 0;
+        int animCount = 0; /* Unused here but required for helper */
+        
         for (UINT i = 0; i < count; i++) {
             wchar_t filePath[MAX_PATH];
             if (DragQueryFileW(hDrop, i, filePath, MAX_PATH)) {
-                if (IsFontFile(filePath)) fontCount++;
+                DWORD attrs = GetFileAttributesW(filePath);
+                if (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY)) {
+                    /* Pass NULL for paths as we only care about counts here */
+                    ScanDirectoryForResources(filePath, &fontCount, &animCount, NULL, NULL);
+                } else {
+                    if (IsFontFile(filePath)) fontCount++;
+                }
             }
         }
         if (fontCount == 1) willApplyFont = TRUE;
