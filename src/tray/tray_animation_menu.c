@@ -77,7 +77,7 @@ static UINT BuildAnimationMenuRecursive(HMENU hMenu, const wchar_t* folderPathW,
                                        const char* folderPathUtf8, UINT* nextId,
                                        const char* currentAnimationName) {
     /* Use larger limit to match window_menus.c and avoid ID mismatch */
-    const int MAX_ENTRIES = 1000;
+    const int MAX_ENTRIES = 4096;
     AnimationEntry* entries = (AnimationEntry*)malloc(sizeof(AnimationEntry) * MAX_ENTRIES);
     if (!entries) return 0;
     
@@ -220,7 +220,7 @@ void BuildAnimationMenu(HMENU hMenu, const char* currentAnimationName) {
 static BOOL FindAnimationByIdRecursive(const wchar_t* folderPathW, const char* folderPathUtf8,
                                        UINT* nextIdPtr, UINT targetId, char* foundPath, size_t foundPathSize) {
     /* Use larger limit to match window_menus.c and avoid ID mismatch */
-    const int MAX_ENTRIES = 1000;
+    const int MAX_ENTRIES = 4096;
     AnimationEntry* entries = (AnimationEntry*)malloc(sizeof(AnimationEntry) * MAX_ENTRIES);
     if (!entries) return FALSE;
     

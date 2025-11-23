@@ -18,7 +18,7 @@
 #include <stdio.h>
 
 /* Large limit for menu display to accommodate folder-based animations with many frames */
-#define MAX_ANIMATION_FRAMES 1000
+#define MAX_SCAN_ENTRIES 4096
 
 /* ============================================================================
  * File Extension Matching
@@ -106,7 +106,7 @@ BOOL RecursiveFindFile(const wchar_t* rootPathW, const char* relPathUtf8,
                        FileFilterFunc filter, IsLeafFolderFunc leafFolderFunc,
                        UINT targetId, UINT* currentId,
                        FileActionFunc action, void* userData) {
-    FileEntry* entries = (FileEntry*)malloc(sizeof(FileEntry) * MAX_ANIMATION_FRAMES);
+    FileEntry* entries = (FileEntry*)malloc(sizeof(FileEntry) * MAX_SCAN_ENTRIES);
     if (!entries) return FALSE;
     
     int count = 0;
@@ -123,7 +123,7 @@ BOOL RecursiveFindFile(const wchar_t* rootPathW, const char* relPathUtf8,
     
     do {
         if (wcscmp(ffd.cFileName, L".") == 0 || wcscmp(ffd.cFileName, L"..") == 0) continue;
-        if (count >= MAX_ANIMATION_FRAMES) break;
+        if (count >= MAX_SCAN_ENTRIES) break;
         
         FileEntry* e = &entries[count];
         e->isDir = (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
