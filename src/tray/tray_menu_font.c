@@ -177,3 +177,56 @@ void BuildFontSubmenu(HMENU hMenu) {
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hFontSubMenu, 
                 GetLocalizedString(NULL, L"Font"));
 }
+
+/**
+ * @brief Get font path from menu ID
+ */
+BOOL GetFontPathFromMenuId(UINT id, char* outPath, size_t outPathSize) {
+    if (!outPath || outPathSize == 0) return FALSE;
+    
+    // Base ID check
+    if (id < 2000) return FALSE;
+    
+    FontCacheEntry* cachedFonts = NULL;
+    int cachedCount = 0;
+    FontCacheStatus cacheStatus = FontCache_GetEntries(&cachedFonts, &cachedCount);
+    
+    if (cacheStatus != FONT_CACHE_OK && cacheStatus != FONT_CACHE_EXPIRED) {
+        return FALSE;
+    }
+    
+    if (!cachedFonts || cachedCount == 0) {
+        if (cachedFonts) free(cachedFonts);
+        return FALSE;
+    }
+    
+    // Sort to match menu order
+    const FontCacheEntry** sortedEntries = (const FontCacheEntry**)malloc(cachedCount * sizeof(FontCacheEntry*));
+    if (!sortedEntries) {
+        free(cachedFonts);
+        return FALSE;
+    }
+    
+    for (int i = 0; i < cachedCount; i++) {
+        sortedEntries[i] = &cachedFonts[i];
+    }
+    
+    qsort(sortedEntries, cachedCount, sizeof(FontCacheEntry*), CompareFontCacheEntries);
+    
+    BOOL found = FALSE;
+    int currentId = 2000;
+    
+    for (int i = 0; i < cachedCount; i++) {
+        if (currentId == (int)id) {
+            WideCharToMultiByte(CP_UTF8, 0, sortedEntries[i]->relativePath, -1, outPath, (int)outPathSize, NULL, NULL);
+            found = TRUE;
+            break;
+        }
+        currentId++;
+    }
+    
+    free(sortedEntries);
+    free(cachedFonts);
+    
+    return found;
+}

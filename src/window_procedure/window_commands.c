@@ -30,6 +30,7 @@
 #include "window_procedure/window_menus.h"
 #include "tray/tray_animation_menu.h"
 #include "tray/tray_animation_core.h"
+#include "tray/tray_menu_font.h"
 #include "menu_preview.h"
 #include "utils/time_parser.h"
 #include "../resource/resource.h"
@@ -768,19 +769,11 @@ static BOOL HandlePomodoroTime(HWND hwnd, UINT cmd, int index) {
 
 static BOOL HandleFontSelection(HWND hwnd, UINT cmd, int index) {
     (void)index;
-    wchar_t fontsFolderRootW[MAX_PATH];
-    if (!GetFontsFolderWideFromConfig(fontsFolderRootW, MAX_PATH)) return TRUE;
     
-    int currentIndex = CMD_FONT_SELECTION_BASE;
-    wchar_t foundRelativePathW[MAX_PATH];
-    
-    if (FindFontByIdRecursiveW(fontsFolderRootW, cmd, &currentIndex, 
-                              foundRelativePathW, fontsFolderRootW)) {
-        char foundFontNameUTF8[MAX_PATH];
-        WideCharToMultiByte(CP_UTF8, 0, foundRelativePathW, -1, 
-                          foundFontNameUTF8, MAX_PATH, NULL, NULL);
+    char foundFontPath[MAX_PATH];
+    if (GetFontPathFromMenuId(cmd, foundFontPath, sizeof(foundFontPath))) {
         HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
-        if (SwitchFont(hInstance, foundFontNameUTF8)) {
+        if (SwitchFont(hInstance, foundFontPath)) {
             InvalidateRect(hwnd, NULL, TRUE);
             UpdateWindow(hwnd);
         }
