@@ -10,13 +10,10 @@
 #include "window_procedure/window_events.h"
 #include "window_procedure/window_utils.h"
 #include "window_procedure/ole_drop_target.h"
-#include "config.h"
 #include "log.h"
 #include "timer/timer.h"
-#include "tray/tray.h"
 #include "tray/tray_animation_core.h"
 #include "async_update_checker.h"
-#include "log.h"
 
 /* ============================================================================
  * Window creation and initialization

@@ -20,6 +20,105 @@
 #include "shortcut_checker.h"
 #include "utils/string_convert.h"
 #include "cache/resource_cache.h"
+#include <tlhelp32.h>
+
+/* Helper to check if process is elevated */
+static BOOL IsElevated(void) {
+    BOOL fRet = FALSE;
+    HANDLE hToken = NULL;
+    if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
+        TOKEN_ELEVATION Elevation;
+        DWORD cbSize = sizeof(TOKEN_ELEVATION);
+        if (GetTokenInformation(hToken, TokenElevation, &Elevation, sizeof(Elevation), &cbSize)) {
+            fRet = Elevation.TokenIsElevated;
+        }
+        CloseHandle(hToken);
+    }
+    return fRet;
+}
+
+/* Attempt to relaunch self as standard user using Explorer's token */
+static BOOL RelaunchAsStandardUser(void) {
+    HWND hShellWnd = GetShellWindow();
+    if (!hShellWnd) return FALSE;
+
+    DWORD dwShellPID;
+    GetWindowThreadProcessId(hShellWnd, &dwShellPID);
+
+    HANDLE hShellProcess = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, dwShellPID);
+    if (!hShellProcess) return FALSE;
+
+    HANDLE hShellToken = NULL;
+    if (!OpenProcessToken(hShellProcess, TOKEN_DUPLICATE, &hShellToken)) {
+        CloseHandle(hShellProcess);
+        return FALSE;
+    }
+
+    HANDLE hNewToken = NULL;
+    /* Duplicate the shell's token (which is medium integrity/standard user) */
+    if (!DuplicateTokenEx(hShellToken, MAXIMUM_ALLOWED, NULL, SecurityImpersonation, TokenPrimary, &hNewToken)) {
+        CloseHandle(hShellToken);
+        CloseHandle(hShellProcess);
+        return FALSE;
+    }
+
+    wchar_t szPath[MAX_PATH];
+    GetModuleFileNameW(NULL, szPath, MAX_PATH);
+    
+    /* Reconstruct command line safely - CreateProcess might modify the buffer */
+    wchar_t* pszOriginalCmdLine = GetCommandLineW();
+    size_t cmdLen = wcslen(pszOriginalCmdLine) + 1;
+    wchar_t* pszCmdLineCopy = (wchar_t*)malloc(cmdLen * sizeof(wchar_t));
+    
+    if (!pszCmdLineCopy) {
+        CloseHandle(hNewToken);
+        CloseHandle(hShellToken);
+        CloseHandle(hShellProcess);
+        return FALSE;
+    }
+    
+    wcscpy_s(pszCmdLineCopy, cmdLen, pszOriginalCmdLine);
+    
+    STARTUPINFOW si = {sizeof(STARTUPINFOW)};
+    PROCESS_INFORMATION pi = {0};
+    
+    BOOL bResult = CreateProcessWithTokenW(hNewToken, LOGON_WITH_PROFILE, NULL, pszCmdLineCopy, 0, NULL, NULL, &si, &pi);
+
+    free(pszCmdLineCopy);
+
+    if (bResult) {
+        LOG_INFO("Relaunched self as standard user (PID: %lu)", pi.dwProcessId);
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+    } else {
+        LOG_ERROR("Failed to relaunch as standard user, error: %lu", GetLastError());
+    }
+
+    CloseHandle(hNewToken);
+    CloseHandle(hShellToken);
+    CloseHandle(hShellProcess);
+    
+    return bResult;
+}
+
+/* Drop Administrator privileges if present to ensure Drag & Drop works from Explorer */
+static void DropPrivileges(void) {
+    if (IsElevated()) {
+        LOG_INFO("Elevated privileges detected. Attempting to switch to standard user...");
+        
+        /* Prevent infinite loop if relaunch fails or we are genuinely the admin user (e.g. built-in Admin) */
+        /* But here we just try once. If it succeeds, we exit. */
+        
+        if (RelaunchAsStandardUser()) {
+            /* Exit this elevated instance */
+            ExitProcess(0);
+        } else {
+            LOG_WARNING("Failed to switch to standard user. Drag & Drop may be restricted.");
+        }
+    } else {
+        LOG_INFO("Running as standard user (optimal for Drag & Drop).");
+    }
+}
 
 extern int elapsed_time;
 extern int message_shown;
@@ -95,6 +194,8 @@ BOOL InitializeSubsystems(void) {
     
     SetupExceptionHandler();
     LOG_INFO("Catime is starting...");
+    
+    DropPrivileges();
     
     // Initialize DWM functions for visual effects (Blur/Glass)
     if (!InitDWMFunctions()) {
