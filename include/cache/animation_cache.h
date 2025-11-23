@@ -30,6 +30,7 @@ typedef struct {
     wchar_t fullPath[MAX_PATH];
     BOOL isSpecial;
     BOOL isCurrent;
+    int depth;
 } AnimationCacheEntry;
 
 /**
@@ -64,11 +65,11 @@ BOOL AnimationCache_Scan(void);
 
 /**
  * @brief Get animation entries from cache
- * @param outEntries Pointer to receive array
+ * @param outEntries Pointer to receive array (Caller must free this memory using free())
  * @param outCount Pointer to receive entry count
  * @return Cache status
  */
-AnimationCacheStatus AnimationCache_GetEntries(const AnimationCacheEntry** outEntries, int* outCount);
+AnimationCacheStatus AnimationCache_GetEntries(AnimationCacheEntry** outEntries, int* outCount);
 
 /**
  * @brief Invalidate animation cache

@@ -65,11 +65,11 @@ BOOL FontCache_Scan(void);
 
 /**
  * @brief Get font entries from cache
- * @param outEntries Pointer to receive array
+ * @param outEntries Pointer to receive array (Caller must free this memory using free())
  * @param outCount Pointer to receive entry count
  * @return Cache status
  */
-FontCacheStatus FontCache_GetEntries(const FontCacheEntry** outEntries, int* outCount);
+FontCacheStatus FontCache_GetEntries(FontCacheEntry** outEntries, int* outCount);
 
 /**
  * @brief Invalidate font cache

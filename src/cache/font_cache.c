@@ -278,7 +278,7 @@ BOOL FontCache_Scan(void) {
     return result;
 }
 
-FontCacheStatus FontCache_GetEntries(const FontCacheEntry** outEntries, int* outCount) {
+FontCacheStatus FontCache_GetEntries(FontCacheEntry** outEntries, int* outCount) {
     if (!outEntries || !outCount) {
         return FONT_CACHE_ERROR;
     }
@@ -300,8 +300,19 @@ FontCacheStatus FontCache_GetEntries(const FontCacheEntry** outEntries, int* out
     }
     
     if (status == FONT_CACHE_OK || status == FONT_CACHE_EXPIRED) {
-        *outEntries = g_cache.entries;
         *outCount = g_cache.count;
+        if (g_cache.count > 0) {
+            *outEntries = (FontCacheEntry*)malloc(g_cache.count * sizeof(FontCacheEntry));
+            if (*outEntries) {
+                memcpy(*outEntries, g_cache.entries, g_cache.count * sizeof(FontCacheEntry));
+            } else {
+                // Allocation failure
+                *outCount = 0;
+                status = FONT_CACHE_ERROR;
+            }
+        } else {
+            *outEntries = NULL;
+        }
     } else {
         *outEntries = NULL;
         *outCount = 0;

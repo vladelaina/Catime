@@ -8,6 +8,8 @@
 #include "utils/natural_sort.h"
 #include "config.h"
 #include "log.h"
+#include "cache/animation_cache.h"
+#include "cache/resource_cache.h"
 #include <shlobj.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,163 +19,102 @@
 BOOL SetCurrentAnimationName(const char* name);
 
 /**
- * @brief Animation menu entry
+ * @brief Find or create a submenu with the given name
  */
-typedef struct {
-    wchar_t name[MAX_PATH];
-    char rel_path_utf8[MAX_PATH];
-    BOOL is_dir;
-} AnimationEntry;
-
-/**
- * @brief Comparator for animation entries (folders first, then natural sort)
- */
-static int CompareAnimationEntries(const void* a, const void* b) {
-    const AnimationEntry* entryA = (const AnimationEntry*)a;
-    const AnimationEntry* entryB = (const AnimationEntry*)b;
+static HMENU EnsureSubMenu(HMENU hParent, const wchar_t* name) {
+    int count = GetMenuItemCount(hParent);
+    MENUITEMINFOW mii = { sizeof(MENUITEMINFOW) };
+    mii.fMask = MIIM_STRING | MIIM_SUBMENU;
+    wchar_t buffer[MAX_PATH];
     
-    if (entryA->is_dir != entryB->is_dir) {
-        return entryB->is_dir - entryA->is_dir;
+    for (int i = 0; i < count; i++) {
+        mii.dwTypeData = buffer;
+        mii.cch = MAX_PATH;
+        if (GetMenuItemInfoW(hParent, i, TRUE, &mii)) {
+            if (mii.hSubMenu && wcscmp(buffer, name) == 0) {
+                return mii.hSubMenu;
+            }
+        }
     }
     
-    return NaturalCompareW(entryA->name, entryB->name);
+    // Not found, create new
+    HMENU hSub = CreatePopupMenu();
+    AppendMenuW(hParent, MF_POPUP, (UINT_PTR)hSub, name);
+    return hSub;
 }
 
 /**
- * @brief Check if folder is a leaf (no subfolders or animated images)
+ * @brief Comparator for animation cache entries (by relative path)
  */
-static BOOL IsAnimationLeafFolderW(const wchar_t* folderPathW) {
-    wchar_t wSearch[MAX_PATH] = {0};
-    _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s\\*", folderPathW);
-    
-    WIN32_FIND_DATAW ffd;
-    HANDLE hFind = FindFirstFileW(wSearch, &ffd);
-    if (hFind == INVALID_HANDLE_VALUE) return TRUE;
-
-    BOOL hasSubItems = FALSE;
-    do {
-        if (wcscmp(ffd.cFileName, L".") == 0 || wcscmp(ffd.cFileName, L"..") == 0) continue;
-        
-        if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-            hasSubItems = TRUE;
-            break;
-        }
-        
-        wchar_t* ext = wcsrchr(ffd.cFileName, L'.');
-        if (ext && (_wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0)) {
-            hasSubItems = TRUE;
-            break;
-        }
-    } while (FindNextFileW(hFind, &ffd));
-    FindClose(hFind);
-    
-    return !hasSubItems;
+static int CompareAnimationCacheEntries(const void* a, const void* b) {
+    const AnimationCacheEntry* ea = *(const AnimationCacheEntry**)a;
+    const AnimationCacheEntry* eb = *(const AnimationCacheEntry**)b;
+    return NaturalCompareA(ea->relativePath, eb->relativePath);
 }
 
 /**
- * @brief Build menu recursively
+ * @brief Build menu from cached entries
  */
-static UINT BuildAnimationMenuRecursive(HMENU hMenu, const wchar_t* folderPathW,
-                                       const char* folderPathUtf8, UINT* nextId,
-                                       const char* currentAnimationName) {
-    /* Use larger limit to match window_menus.c and avoid ID mismatch */
-    const int MAX_ENTRIES = 4096;
-    AnimationEntry* entries = (AnimationEntry*)malloc(sizeof(AnimationEntry) * MAX_ENTRIES);
-    if (!entries) return 0;
+static void BuildAnimationMenuFromCache(HMENU hRootMenu, const AnimationCacheEntry* entries, int count, const char* currentAnim) {
+    // We need to process entries in a way that respects hierarchy.
+    // Since cache is flat, we parse relative paths.
     
-    int entryCount = 0;
+    // First, we create a temporary array of pointers to sort them
+    const AnimationCacheEntry** sortedEntries = (const AnimationCacheEntry**)malloc(count * sizeof(AnimationCacheEntry*));
+    if (!sortedEntries) return;
     
-    wchar_t wSearch[MAX_PATH] = {0};
-    _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s\\*", folderPathW);
-    
-    WIN32_FIND_DATAW ffd;
-    HANDLE hFind = FindFirstFileW(wSearch, &ffd);
-    if (hFind != INVALID_HANDLE_VALUE) {
-        do {
-            if (wcscmp(ffd.cFileName, L".") == 0 || wcscmp(ffd.cFileName, L"..") == 0) continue;
-            if (entryCount >= MAX_ENTRIES) break;
-            
-            AnimationEntry* e = &entries[entryCount];
-            e->is_dir = (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
-            wcsncpy(e->name, ffd.cFileName, MAX_PATH - 1);
-            e->name[MAX_PATH - 1] = L'\0';
-            
-            char itemUtf8[MAX_PATH] = {0};
-            WideCharToMultiByte(CP_UTF8, 0, ffd.cFileName, -1, itemUtf8, MAX_PATH, NULL, NULL);
-            
-            if (folderPathUtf8 && folderPathUtf8[0] != '\0') {
-                _snprintf_s(e->rel_path_utf8, MAX_PATH, _TRUNCATE, "%s\\%s", folderPathUtf8, itemUtf8);
-            } else {
-                _snprintf_s(e->rel_path_utf8, MAX_PATH, _TRUNCATE, "%s", itemUtf8);
-            }
-            
-            if (e->is_dir) {
-                entryCount++;
-            } else {
-                wchar_t* ext = wcsrchr(e->name, L'.');
-                if (ext && (_wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0 ||
-                           _wcsicmp(ext, L".ico") == 0 || _wcsicmp(ext, L".png") == 0 ||
-                           _wcsicmp(ext, L".bmp") == 0 || _wcsicmp(ext, L".jpg") == 0 ||
-                           _wcsicmp(ext, L".jpeg") == 0 || _wcsicmp(ext, L".tif") == 0 ||
-                           _wcsicmp(ext, L".tiff") == 0)) {
-                    entryCount++;
-                }
-            }
-        } while (FindNextFileW(hFind, &ffd));
-        FindClose(hFind);
+    for (int i = 0; i < count; i++) {
+        sortedEntries[i] = &entries[i];
     }
     
-    if (entryCount == 0) {
-        free(entries);
-        return 0;
-    }
-    
-    qsort(entries, entryCount, sizeof(AnimationEntry), CompareAnimationEntries);
-    
-    UINT itemsAdded = 0;
-    for (int i = 0; i < entryCount; ++i) {
-        AnimationEntry* e = &entries[i];
+    qsort(sortedEntries, count, sizeof(AnimationCacheEntry*), CompareAnimationCacheEntries);
+
+    UINT nextId = CLOCK_IDM_ANIMATIONS_BASE;
+
+    for (int i = 0; i < count; i++) {
+        const AnimationCacheEntry* entry = sortedEntries[i];
         
-        if (e->is_dir) {
-            wchar_t wSubFolderPath[MAX_PATH] = {0};
-            _snwprintf_s(wSubFolderPath, MAX_PATH, _TRUNCATE, L"%s\\%s", folderPathW, e->name);
+        if (entry->isSpecial) continue; // Skip special entries (handled manually)
+        
+        // Parse relative path to find parent menu
+        // Example: "Folder/Sub/Image.gif"
+        
+        char pathCopy[MAX_PATH];
+        strncpy(pathCopy, entry->relativePath, MAX_PATH - 1);
+        pathCopy[MAX_PATH - 1] = '\0';
+        
+        char* context = NULL;
+        char* token = strtok_s(pathCopy, "\\/", &context);
+        
+        HMENU hCurrent = hRootMenu;
+        
+        while (token) {
+            char* nextToken = strtok_s(NULL, "\\/", &context);
             
-            if (IsAnimationLeafFolderW(wSubFolderPath)) {
-                /* Leaf folder - clickable item */
+            wchar_t wName[MAX_PATH];
+            MultiByteToWideChar(CP_UTF8, 0, token, -1, wName, MAX_PATH);
+            
+            if (nextToken) {
+                // This is a directory component
+                hCurrent = EnsureSubMenu(hCurrent, wName);
+            } else {
+                // This is the file component
                 UINT flags = MF_STRING;
-                if (currentAnimationName && _stricmp(currentAnimationName, e->rel_path_utf8) == 0) {
+                if (currentAnim && strcmp(currentAnim, entry->relativePath) == 0) {
                     flags |= MF_CHECKED;
                 }
-                AppendMenuW(hMenu, flags, *nextId, e->name);
-                (*nextId)++;
-                itemsAdded++;
-            } else {
-                /* Branch folder - submenu */
-                HMENU hSubMenu = CreatePopupMenu();
-                UINT subItems = BuildAnimationMenuRecursive(hSubMenu, wSubFolderPath, 
-                                                           e->rel_path_utf8, nextId,
-                                                           currentAnimationName);
-                if (subItems > 0) {
-                    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hSubMenu, e->name);
-                    itemsAdded++;
-                } else {
-                    DestroyMenu(hSubMenu);
+                
+                // Only add if we haven't exceeded ID range
+                if (nextId < CLOCK_IDM_ANIMATIONS_BASE + 1000) {
+                    AppendMenuW(hCurrent, flags, nextId++, wName);
                 }
             }
-        } else {
-            /* File - clickable item */
-            UINT flags = MF_STRING;
-            if (currentAnimationName && _stricmp(currentAnimationName, e->rel_path_utf8) == 0) {
-                flags |= MF_CHECKED;
-            }
-            AppendMenuW(hMenu, flags, *nextId, e->name);
-            (*nextId)++;
-            itemsAdded++;
+            
+            token = nextToken;
         }
     }
     
-    free(entries);
-    return itemsAdded;
+    free(sortedEntries);
 }
 
 /**
@@ -203,110 +144,34 @@ void BuildAnimationMenu(HMENU hMenu, const char* currentAnimationName) {
     
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
     
-    /* Custom animations */
-    char animRootUtf8[MAX_PATH] = {0};
-    GetAnimationsFolderPath(animRootUtf8, sizeof(animRootUtf8));
+    /* Custom animations from Cache */
+    AnimationCacheEntry* cachedEntries = NULL;
+    int cachedCount = 0;
+    AnimationCacheStatus status = AnimationCache_GetEntries(&cachedEntries, &cachedCount);
     
-    wchar_t wRoot[MAX_PATH] = {0};
-    MultiByteToWideChar(CP_UTF8, 0, animRootUtf8, -1, wRoot, MAX_PATH);
-    
-    UINT nextId = CLOCK_IDM_ANIMATIONS_BASE;
-    UINT customItems = BuildAnimationMenuRecursive(hMenu, wRoot, "", &nextId, currentAnimationName);
-}
-
-/**
- * @brief Find animation by ID (recursive)
- */
-static BOOL FindAnimationByIdRecursive(const wchar_t* folderPathW, const char* folderPathUtf8,
-                                       UINT* nextIdPtr, UINT targetId, char* foundPath, size_t foundPathSize) {
-    /* Use larger limit to match window_menus.c and avoid ID mismatch */
-    const int MAX_ENTRIES = 4096;
-    AnimationEntry* entries = (AnimationEntry*)malloc(sizeof(AnimationEntry) * MAX_ENTRIES);
-    if (!entries) return FALSE;
-    
-    int entryCount = 0;
-    
-    wchar_t wSearch[MAX_PATH] = {0};
-    _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s\\*", folderPathW);
-    
-    WIN32_FIND_DATAW ffd;
-    HANDLE hFind = FindFirstFileW(wSearch, &ffd);
-    if (hFind != INVALID_HANDLE_VALUE) {
-        do {
-            if (wcscmp(ffd.cFileName, L".") == 0 || wcscmp(ffd.cFileName, L"..") == 0) continue;
-            if (entryCount >= MAX_ENTRIES) break;
-            
-            AnimationEntry* e = &entries[entryCount];
-            e->is_dir = (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
-            wcsncpy(e->name, ffd.cFileName, MAX_PATH - 1);
-            e->name[MAX_PATH - 1] = L'\0';
-            
-            char itemUtf8[MAX_PATH] = {0};
-            WideCharToMultiByte(CP_UTF8, 0, ffd.cFileName, -1, itemUtf8, MAX_PATH, NULL, NULL);
-            
-            if (folderPathUtf8 && folderPathUtf8[0] != '\0') {
-                _snprintf_s(e->rel_path_utf8, MAX_PATH, _TRUNCATE, "%s\\%s", folderPathUtf8, itemUtf8);
-            } else {
-                _snprintf_s(e->rel_path_utf8, MAX_PATH, _TRUNCATE, "%s", itemUtf8);
-            }
-            
-            if (e->is_dir) {
-                entryCount++;
-            } else {
-                wchar_t* ext = wcsrchr(e->name, L'.');
-                if (ext && (_wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0 ||
-                           _wcsicmp(ext, L".ico") == 0 || _wcsicmp(ext, L".png") == 0 ||
-                           _wcsicmp(ext, L".bmp") == 0 || _wcsicmp(ext, L".jpg") == 0 ||
-                           _wcsicmp(ext, L".jpeg") == 0 || _wcsicmp(ext, L".tif") == 0 ||
-                           _wcsicmp(ext, L".tiff") == 0)) {
-                    entryCount++;
-                }
-            }
-        } while (FindNextFileW(hFind, &ffd));
-        FindClose(hFind);
-    }
-    
-    if (entryCount == 0) {
-        free(entries);
-        return FALSE;
-    }
-    
-    qsort(entries, entryCount, sizeof(AnimationEntry), CompareAnimationEntries);
-    
-    for (int i = 0; i < entryCount; ++i) {
-        AnimationEntry* e = &entries[i];
-        
-        if (e->is_dir) {
-            wchar_t wSubFolderPath[MAX_PATH] = {0};
-            _snwprintf_s(wSubFolderPath, MAX_PATH, _TRUNCATE, L"%s\\%s", folderPathW, e->name);
-            
-            if (IsAnimationLeafFolderW(wSubFolderPath)) {
-                if (*nextIdPtr == targetId) {
-                    strncpy(foundPath, e->rel_path_utf8, foundPathSize - 1);
-                    foundPath[foundPathSize - 1] = '\0';
-                    free(entries);
-                    return TRUE;
-                }
-                (*nextIdPtr)++;
-            } else {
-                if (FindAnimationByIdRecursive(wSubFolderPath, e->rel_path_utf8, nextIdPtr, targetId, foundPath, foundPathSize)) {
-                    free(entries);
-                    return TRUE;
-                }
-            }
-        } else {
-            if (*nextIdPtr == targetId) {
-                strncpy(foundPath, e->rel_path_utf8, foundPathSize - 1);
-                foundPath[foundPathSize - 1] = '\0';
-                free(entries);
-                return TRUE;
-            }
-            (*nextIdPtr)++;
+    // If cache is invalid or empty, try to scan immediately (synchronously)
+    // This ensures the menu isn't empty on first open
+    if (status != ANIM_CACHE_OK && status != ANIM_CACHE_EXPIRED) {
+        if (AnimationCache_Scan()) {
+            status = AnimationCache_GetEntries(&cachedEntries, &cachedCount);
         }
     }
     
-    free(entries);
-    return FALSE;
+    if (status == ANIM_CACHE_OK || status == ANIM_CACHE_EXPIRED) {
+        BuildAnimationMenuFromCache(hMenu, cachedEntries, cachedCount, currentAnimationName);
+        
+        // If expired, trigger async refresh for next time
+        if (status == ANIM_CACHE_EXPIRED) {
+            ResourceCache_RequestRefresh();
+        }
+        
+        if (cachedEntries) {
+            free(cachedEntries);
+        }
+    } else {
+        AppendMenuW(hMenu, MF_STRING | MF_GRAYED, 0, L"(Loading...)");
+        ResourceCache_RequestRefresh();
+    }
 }
 
 /**
@@ -337,20 +202,50 @@ BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id) {
     }
 
     if (id >= CLOCK_IDM_ANIMATIONS_BASE && id < CLOCK_IDM_ANIMATIONS_BASE + 1000) {
-        char animRootUtf8[MAX_PATH] = {0};
-        GetAnimationsFolderPath(animRootUtf8, sizeof(animRootUtf8));
-
-        wchar_t wRoot[MAX_PATH] = {0};
-        MultiByteToWideChar(CP_UTF8, 0, animRootUtf8, -1, wRoot, MAX_PATH);
-
-        UINT nextId = CLOCK_IDM_ANIMATIONS_BASE;
-        char foundPath[MAX_PATH] = {0};
-
-        if (FindAnimationByIdRecursive(wRoot, "", &nextId, id, foundPath, sizeof(foundPath))) {
-            return SetCurrentAnimationName(foundPath);
+        // Find entry by index logic
+        // Since we sorted entries in BuildAnimationMenu, we need to reproduce the order
+        // or simpler: Re-sort is fast enough for a click handler (microseconds)
+        
+        AnimationCacheEntry* cachedEntries = NULL;
+        int cachedCount = 0;
+        AnimationCacheStatus status = AnimationCache_GetEntries(&cachedEntries, &cachedCount);
+        
+        if (status != ANIM_CACHE_OK && status != ANIM_CACHE_EXPIRED) {
+            if (cachedEntries) free(cachedEntries);
+            return FALSE;
         }
-
-        return FALSE;
+        
+        // Reconstruct sorted list to match IDs
+        const AnimationCacheEntry** sortedEntries = (const AnimationCacheEntry**)malloc(cachedCount * sizeof(AnimationCacheEntry*));
+        if (!sortedEntries) {
+            free(cachedEntries);
+            return FALSE;
+        }
+        
+        for (int i = 0; i < cachedCount; i++) {
+            sortedEntries[i] = &cachedEntries[i];
+        }
+        
+        qsort(sortedEntries, cachedCount, sizeof(AnimationCacheEntry*), CompareAnimationCacheEntries);
+        
+        // Map ID to entry
+        UINT currentId = CLOCK_IDM_ANIMATIONS_BASE;
+        BOOL found = FALSE;
+        
+        for (int i = 0; i < cachedCount; i++) {
+            if (sortedEntries[i]->isSpecial) continue;
+            
+            if (currentId == id) {
+                SetCurrentAnimationName(sortedEntries[i]->relativePath);
+                found = TRUE;
+                break;
+            }
+            currentId++;
+        }
+        
+        free(sortedEntries);
+        free(cachedEntries);
+        return found;
     }
 
     return FALSE;
@@ -394,22 +289,46 @@ BOOL GetAnimationNameFromMenuId(UINT id, char* outPath, size_t outPathSize) {
     }
     
     if (id >= CLOCK_IDM_ANIMATIONS_BASE && id < CLOCK_IDM_ANIMATIONS_BASE + 1000) {
-        char animRootUtf8[MAX_PATH] = {0};
-        GetAnimationsFolderPath(animRootUtf8, sizeof(animRootUtf8));
+         AnimationCacheEntry* cachedEntries = NULL;
+        int cachedCount = 0;
+        AnimationCacheStatus status = AnimationCache_GetEntries(&cachedEntries, &cachedCount);
         
-        wchar_t wRoot[MAX_PATH] = {0};
-        MultiByteToWideChar(CP_UTF8, 0, animRootUtf8, -1, wRoot, MAX_PATH);
-        
-        UINT nextId = CLOCK_IDM_ANIMATIONS_BASE;
-        char foundPath[MAX_PATH] = {0};
-        
-        if (FindAnimationByIdRecursive(wRoot, "", &nextId, id, foundPath, sizeof(foundPath))) {
-            strncpy(outPath, foundPath, outPathSize - 1);
-            outPath[outPathSize - 1] = '\0';
-            return TRUE;
+        if (status != ANIM_CACHE_OK && status != ANIM_CACHE_EXPIRED) {
+            if (cachedEntries) free(cachedEntries);
+            return FALSE;
         }
+        
+        AnimationCacheEntry** sortedEntries = (AnimationCacheEntry**)malloc(cachedCount * sizeof(AnimationCacheEntry*));
+        if (!sortedEntries) {
+            free(cachedEntries);
+            return FALSE;
+        }
+        
+        for (int i = 0; i < cachedCount; i++) {
+            sortedEntries[i] = &cachedEntries[i];
+        }
+        
+        qsort(sortedEntries, cachedCount, sizeof(AnimationCacheEntry*), CompareAnimationCacheEntries);
+        
+        UINT currentId = CLOCK_IDM_ANIMATIONS_BASE;
+        BOOL found = FALSE;
+        
+        for (int i = 0; i < cachedCount; i++) {
+            if (sortedEntries[i]->isSpecial) continue;
+            
+            if (currentId == id) {
+                strncpy(outPath, sortedEntries[i]->relativePath, outPathSize - 1);
+                outPath[outPathSize - 1] = '\0';
+                found = TRUE;
+                break;
+            }
+            currentId++;
+        }
+        
+        free(sortedEntries);
+        free(cachedEntries);
+        return found;
     }
     
     return FALSE;
 }
-

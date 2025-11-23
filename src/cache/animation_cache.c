@@ -70,7 +70,7 @@ static void GetCurrentAnimationNameInternal(char* outName, size_t size) {
 
 static BOOL AddAnimationEntry(AnimationCacheInternal* cache, const char* fileName,
                                const wchar_t* fullPath, const char* relativePath,
-                               BOOL isSpecial) {
+                               int depth, BOOL isSpecial) {
     if (cache->count >= cache->capacity) {
         int newCapacity;
         if (cache->capacity == 0) {
@@ -110,6 +110,7 @@ static BOOL AddAnimationEntry(AnimationCacheInternal* cache, const char* fileNam
     
     entry->isSpecial = isSpecial;
     entry->isCurrent = FALSE;
+    entry->depth = depth;
     
     cache->count++;
     return TRUE;
@@ -129,6 +130,62 @@ static BOOL IsAnimationFile(const wchar_t* fileName) {
            _wcsicmp(ext, L".jpg") == 0 ||
            _wcsicmp(ext, L".jpeg") == 0 ||
            _wcsicmp(ext, L".bmp") == 0;
+}
+
+static void ScanAnimationsRecursive(const wchar_t* folderPath,
+                                  const wchar_t* basePath,
+                                  const char* relativePathUtf8,
+                                  AnimationCacheInternal* cache,
+                                  int depth) {
+    if (depth >= 10) { // Max recursion depth
+        WriteLog(LOG_LEVEL_WARNING, "Max recursion depth reached at: %ls", folderPath);
+        return;
+    }
+
+    wchar_t searchPath[MAX_PATH];
+    int written = _snwprintf(searchPath, MAX_PATH, L"%s\\*", folderPath);
+    if (written < 0 || written >= MAX_PATH) return;
+
+    WIN32_FIND_DATAW findData;
+    HANDLE hFind = FindFirstFileW(searchPath, &findData);
+
+    if (hFind == INVALID_HANDLE_VALUE) return;
+
+    do {
+        if (wcscmp(findData.cFileName, L".") == 0 ||
+            wcscmp(findData.cFileName, L"..") == 0) {
+            continue;
+        }
+
+        wchar_t fullPath[MAX_PATH];
+        int len1 = _snwprintf(fullPath, MAX_PATH, L"%s\\%s", folderPath, findData.cFileName);
+        if (len1 < 0 || len1 >= MAX_PATH) continue;
+
+        char fileNameUtf8[MAX_ANIM_NAME_LENGTH];
+        WideCharToMultiByte(CP_UTF8, 0, findData.cFileName, -1,
+                           fileNameUtf8, MAX_ANIM_NAME_LENGTH, NULL, NULL);
+
+        char newRelativePath[MAX_PATH];
+        if (relativePathUtf8[0] == '\0') {
+            strncpy(newRelativePath, fileNameUtf8, MAX_PATH - 1);
+        } else {
+            _snprintf(newRelativePath, MAX_PATH, "%s\\%s", relativePathUtf8, fileNameUtf8);
+        }
+        newRelativePath[MAX_PATH - 1] = '\0';
+
+        if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+            ScanAnimationsRecursive(fullPath, basePath, newRelativePath, cache, depth + 1);
+        } else {
+            if (IsAnimationFile(findData.cFileName)) {
+                if (!AddAnimationEntry(cache, fileNameUtf8, fullPath, newRelativePath, depth, FALSE)) {
+                    FindClose(hFind);
+                    return;
+                }
+            }
+        }
+    } while (FindNextFileW(hFind, &findData));
+
+    FindClose(hFind);
 }
 
 static BOOL ScanAnimationsInternal(AnimationCacheInternal* cache) {
@@ -161,51 +218,12 @@ static BOOL ScanAnimationsInternal(AnimationCacheInternal* cache) {
     cache->count = 0;
     
     // Add special entries
-    AddAnimationEntry(cache, "__logo__", L"", "__logo__", TRUE);
-    AddAnimationEntry(cache, "__cpu__", L"", "__cpu__", TRUE);
-    AddAnimationEntry(cache, "__mem__", L"", "__mem__", TRUE);
+    AddAnimationEntry(cache, "__logo__", L"", "__logo__", 0, TRUE);
+    AddAnimationEntry(cache, "__cpu__", L"", "__cpu__", 0, TRUE);
+    AddAnimationEntry(cache, "__mem__", L"", "__mem__", 0, TRUE);
     
-    // Scan folder
-    wchar_t searchPath[MAX_PATH];
-    int pathLen = _snwprintf(searchPath, MAX_PATH, L"%s\\*", animPath);
-    if (pathLen < 0 || pathLen >= MAX_PATH) {
-        WriteLog(LOG_LEVEL_ERROR, "Animation search path too long");
-        return FALSE;
-    }
-    
-    WIN32_FIND_DATAW findData;
-    HANDLE hFind = FindFirstFileW(searchPath, &findData);
-    
-    if (hFind != INVALID_HANDLE_VALUE) {
-        do {
-            if (wcscmp(findData.cFileName, L".") == 0 ||
-                wcscmp(findData.cFileName, L"..") == 0) {
-                continue;
-            }
-            
-            if (!(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
-                if (IsAnimationFile(findData.cFileName)) {
-                    wchar_t fullPath[MAX_PATH];
-                    int fullPathLen = _snwprintf(fullPath, MAX_PATH, L"%s\\%s", animPath, findData.cFileName);
-                    if (fullPathLen < 0 || fullPathLen >= MAX_PATH) {
-                        WriteLog(LOG_LEVEL_WARNING, "Animation path too long, skipping: %ls", findData.cFileName);
-                        continue;
-                    }
-                    
-                    char fileNameUtf8[MAX_ANIM_NAME_LENGTH];
-                    WideCharToMultiByte(CP_UTF8, 0, findData.cFileName, -1,
-                                       fileNameUtf8, MAX_ANIM_NAME_LENGTH, NULL, NULL);
-                    
-                    if (!AddAnimationEntry(cache, fileNameUtf8, fullPath, fileNameUtf8, FALSE)) {
-                        FindClose(hFind);
-                        return FALSE;
-                    }
-                }
-            }
-        } while (FindNextFileW(hFind, &findData));
-        
-        FindClose(hFind);
-    }
+    // Scan folder recursively
+    ScanAnimationsRecursive(animPath, animPath, "", cache, 0);
     
     // Mark current animation
     char currentAnim[MAX_ANIM_NAME_LENGTH];
@@ -213,7 +231,7 @@ static BOOL ScanAnimationsInternal(AnimationCacheInternal* cache) {
     
     if (currentAnim[0] != '\0') {
         for (int i = 0; i < cache->count; i++) {
-            if (strcmp(cache->entries[i].fileName, currentAnim) == 0) {
+            if (strcmp(cache->entries[i].relativePath, currentAnim) == 0) {
                 cache->entries[i].isCurrent = TRUE;
                 break;
             }
@@ -261,7 +279,7 @@ BOOL AnimationCache_Scan(void) {
     return result;
 }
 
-AnimationCacheStatus AnimationCache_GetEntries(const AnimationCacheEntry** outEntries, int* outCount) {
+AnimationCacheStatus AnimationCache_GetEntries(AnimationCacheEntry** outEntries, int* outCount) {
     if (!outEntries || !outCount) {
         return ANIM_CACHE_ERROR;
     }
@@ -283,8 +301,19 @@ AnimationCacheStatus AnimationCache_GetEntries(const AnimationCacheEntry** outEn
     }
     
     if (status == ANIM_CACHE_OK || status == ANIM_CACHE_EXPIRED) {
-        *outEntries = g_cache.entries;
         *outCount = g_cache.count;
+        if (g_cache.count > 0) {
+            *outEntries = (AnimationCacheEntry*)malloc(g_cache.count * sizeof(AnimationCacheEntry));
+            if (*outEntries) {
+                memcpy(*outEntries, g_cache.entries, g_cache.count * sizeof(AnimationCacheEntry));
+            } else {
+                // Allocation failure
+                *outCount = 0;
+                status = ANIM_CACHE_ERROR;
+            }
+        } else {
+            *outEntries = NULL;
+        }
     } else {
         *outEntries = NULL;
         *outCount = 0;
