@@ -34,6 +34,9 @@ Catime only saves the following information locally:
 3. **Recent Files List**
    Stores paths of recently opened files for quick access.
 
+4. **Secure Credentials**
+   If you use the Data Monitor feature and provide access tokens (e.g., GitHub Token), these are stored securely using the **Windows Credential Manager**. They are encrypted by the operating system and are **never** saved in plain text configuration files.
+
 ### Network Access Information
 
 Catime only accesses the internet in the following circumstances:
@@ -42,6 +45,12 @@ Catime only accesses the internet in the following circumstances:
   When you manually check for updates or enable the automatic update feature, the program connects to the GitHub API:
   `https://api.github.com/repos/vladelaina/Catime/releases/latest`
   It only sends basic HTTP requests and the user agent string `"Catime Update Checker"`, **without any personal data**.
+
+* **Data Monitor**
+  If you configure a monitor (e.g., GitHub Stars), the application connects directly to the respective service API (e.g., `api.github.com`) to fetch data.
+  * Requests are made directly from your computer to the service provider.
+  * **All network communications are encrypted using HTTPS (TLS/SSL).**
+  * Authentication tokens are used solely for these requests and are never sent to any other third-party servers.
 
 ## Data Protection and Deletion
 
@@ -65,7 +74,7 @@ If there are significant changes, we will post notifications within the applicat
 
 If you have questions or suggestions about this privacy policy, please contact us through the GitHub project page.
 
-> Last Updated: May 28, 2025
+> Last Updated: November 23, 2025
 
 
 

@@ -63,6 +63,25 @@ static void RefreshList(HWND hDlg) {
     }
 }
 
+static void MaskToken(const char* token, wchar_t* outBuffer, size_t outSize) {
+    size_t len = strlen(token);
+    if (len <= 12) {
+        wcscpy(outBuffer, L"********");
+    } else {
+        wchar_t wToken[128];
+        MultiByteToWideChar(CP_UTF8, 0, token, -1, wToken, 128);
+        
+        wchar_t prefix[9] = {0}; // Show 8 chars prefix
+        wcsncpy(prefix, wToken, 8);
+        prefix[8] = L'\0';
+        
+        wchar_t suffix[5] = {0}; // Show 4 chars suffix
+        wcscpy(suffix, wToken + (len - 4));
+        
+        _snwprintf_s(outBuffer, outSize, _TRUNCATE, L"%s**********%s", prefix, suffix);
+    }
+}
+
 static void UpdateEditFields(HWND hDlg, int index) {
     MonitorConfig cfg;
     if (index >= 0 && Monitor_GetConfigAt(index, &cfg)) {
@@ -72,9 +91,13 @@ static void UpdateEditFields(HWND hDlg, int index) {
         MultiByteToWideChar(CP_UTF8, 0, cfg.sourceString, -1, wSource, 256);
         SetDlgItemTextW(hDlg, IDC_MONITOR_SOURCE_EDIT, wSource);
         
-        wchar_t wToken[128];
-        MultiByteToWideChar(CP_UTF8, 0, cfg.token, -1, wToken, 128);
-        SetDlgItemTextW(hDlg, IDC_MONITOR_TOKEN_EDIT, wToken);
+        if (strlen(cfg.token) > 0) {
+            wchar_t wMasked[128];
+            MaskToken(cfg.token, wMasked, 128);
+            SetDlgItemTextW(hDlg, IDC_MONITOR_TOKEN_EDIT, wMasked);
+        } else {
+            SetDlgItemTextW(hDlg, IDC_MONITOR_TOKEN_EDIT, L"");
+        }
     } else {
         // Clear fields
         SetDlgItemTextW(hDlg, IDC_MONITOR_LABEL_EDIT, L"");
@@ -156,7 +179,23 @@ static INT_PTR CALLBACK MonitorDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, L
                     wchar_t wToken[128];
                     GetDlgItemTextW(hDlg, IDC_MONITOR_TOKEN_EDIT, wToken, 128);
                     TrimW(wToken);
-                    WideCharToMultiByte(CP_UTF8, 0, wToken, -1, cfg.token, 128, NULL, NULL);
+                    
+                    BOOL tokenKept = FALSE;
+                    if (s_currentSel >= 0) {
+                        MonitorConfig oldCfg;
+                        if (Monitor_GetConfigAt(s_currentSel, &oldCfg)) {
+                            wchar_t wMasked[128];
+                            MaskToken(oldCfg.token, wMasked, 128);
+                            if (wcscmp(wToken, wMasked) == 0) {
+                                strcpy(cfg.token, oldCfg.token);
+                                tokenKept = TRUE;
+                            }
+                        }
+                    }
+                    
+                    if (!tokenKept) {
+                        WideCharToMultiByte(CP_UTF8, 0, wToken, -1, cfg.token, 128, NULL, NULL);
+                    }
 
                     // 3. Get and trim Label
                     wchar_t wLabel[32];

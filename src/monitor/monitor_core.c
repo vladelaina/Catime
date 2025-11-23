@@ -1,6 +1,7 @@
 #include "monitor/monitor_core.h"
 #include "monitor/monitor_types.h"
 #include "monitor/platforms/github.h"
+#include "monitor/utils/credential_manager.h"
 #include "log.h"
 #include "config.h"
 #include <stdio.h>
@@ -66,6 +67,18 @@ void Monitor_LoadConfig(void) {
         GetPrivateProfileStringA(section, "Source", "", g_monitors[i].sourceString, 256, configPath);
         GetPrivateProfileStringA(section, "Token", "", g_monitors[i].token, 128, configPath);
         
+        // Try load secure credential
+        if (strlen(g_monitors[i].sourceString) > 0) {
+            if (strcmp(g_monitors[i].token, "[SECURE_CREDENTIAL]") == 0 || strlen(g_monitors[i].token) == 0) {
+                char targetName[512];
+                snprintf(targetName, sizeof(targetName), "Catime:Monitor:%s", g_monitors[i].sourceString);
+                char secureToken[128];
+                if (Cred_LoadToken(targetName, secureToken, sizeof(secureToken))) {
+                    strncpy(g_monitors[i].token, secureToken, sizeof(g_monitors[i].token) - 1);
+                }
+            }
+        }
+        
         g_monitors[i].refreshInterval = GetPrivateProfileIntA(section, "Refresh", 300, configPath);
         g_monitors[i].enabled = TRUE; 
         
@@ -95,7 +108,12 @@ void Monitor_SaveConfig(void) {
         
         WritePrivateProfileStringA(section, "Label", labelUtf8, configPath);
         WritePrivateProfileStringA(section, "Source", g_monitors[i].sourceString, configPath);
-        WritePrivateProfileStringA(section, "Token", g_monitors[i].token, configPath);
+        
+        if (strlen(g_monitors[i].token) > 0) {
+            char targetName[512];
+            snprintf(targetName, sizeof(targetName), "Catime:Monitor:%s", g_monitors[i].sourceString);
+            Cred_SaveToken(targetName, g_monitors[i].token);
+        }
         
         sprintf(buf, "%d", g_monitors[i].refreshInterval);
         WritePrivateProfileStringA(section, "Refresh", buf, configPath);
@@ -128,6 +146,12 @@ void Monitor_UpdateConfigAt(int index, const MonitorConfig* config) {
 
 void Monitor_DeleteConfigAt(int index) {
     if (index < 0 || index >= g_monitorCount) return;
+    
+    // Delete credential
+    char targetName[512];
+    snprintf(targetName, sizeof(targetName), "Catime:Monitor:%s", g_monitors[index].sourceString);
+    Cred_DeleteToken(targetName);
+    
     for (int i = index; i < g_monitorCount - 1; i++) g_monitors[i] = g_monitors[i+1];
     g_monitorCount--;
     if (g_activeIndex == index) Monitor_SetActiveIndex(-1);
