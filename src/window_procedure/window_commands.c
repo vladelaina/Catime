@@ -33,6 +33,8 @@
 #include "tray/tray_menu_font.h"
 #include "menu_preview.h"
 #include "utils/time_parser.h"
+#include "monitor/monitor_core.h"
+#include "dialog/dialog_monitor.h"
 #include "../resource/resource.h"
 #include <shlobj.h>
 #include <shellapi.h>
@@ -50,6 +52,21 @@ extern char CLOCK_TEXT_COLOR[10];
 /* ============================================================================
  * Command Handlers
  * ============================================================================ */
+
+static LRESULT CmdMonitorConfig(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)wp; (void)lp;
+    ShowMonitorConfigDialog(hwnd);
+    // Force update to reflect changes
+    InvalidateRect(hwnd, NULL, TRUE);
+    return 0;
+}
+
+static LRESULT CmdMonitorDisable(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)wp; (void)lp;
+    Monitor_SetActiveIndex(-1);
+    InvalidateRect(hwnd, NULL, TRUE);
+    return 0;
+}
 
 static LRESULT CmdCustomCountdown(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
@@ -663,6 +680,9 @@ static const CommandDispatchEntry COMMAND_DISPATCH_TABLE[] = {
     {CLOCK_IDC_COLOR_PANEL, CmdColorPanel, "Color panel"},
     {CLOCK_IDC_TIMEOUT_BROWSE, CmdBrowseFile, "Browse timeout file"},
     
+    {CLOCK_IDM_MONITOR_CONFIG, CmdMonitorConfig, "Monitor config"},
+    {CLOCK_IDM_MONITOR_DISABLE, CmdMonitorDisable, "Monitor disable"},
+
     {CLOCK_IDM_TIMER_PAUSE_RESUME, CmdPauseResume, "Pause/Resume"},
     {CLOCK_IDM_TIMER_RESTART, CmdRestartTimer, "Restart timer"},
     {CLOCK_IDM_ABOUT, CmdAbout, "About dialog"},
@@ -781,6 +801,18 @@ static BOOL HandleFontSelection(HWND hwnd, UINT cmd, int index) {
     return TRUE;
 }
 
+static BOOL HandleMonitorSelection(HWND hwnd, UINT cmd, int index) {
+    (void)cmd;
+    Monitor_SetActiveIndex(index);
+    
+    // Ensure timer is running to refresh display
+    KillTimer(hwnd, 1);
+    ResetTimerWithInterval(hwnd);
+    InvalidateRect(hwnd, NULL, TRUE);
+    
+    return TRUE;
+}
+
 typedef BOOL (*RangeCommandHandler)(HWND hwnd, UINT cmd, int index);
 
 typedef struct {
@@ -807,6 +839,7 @@ BOOL DispatchRangeCommand(HWND hwnd, UINT cmd, WPARAM wp, LPARAM lp) {
         {CLOCK_IDM_RECENT_FILE_1, CLOCK_IDM_RECENT_FILE_5, HandleRecentFile},
         {CMD_POMODORO_TIME_BASE, CMD_POMODORO_TIME_END, HandlePomodoroTime},
         {CMD_FONT_SELECTION_BASE, CMD_FONT_SELECTION_END - 1, HandleFontSelection},
+        {CLOCK_IDM_MONITOR_BASE, CLOCK_IDM_MONITOR_BASE + 100, HandleMonitorSelection},
         {0, 0, NULL}
     };
 

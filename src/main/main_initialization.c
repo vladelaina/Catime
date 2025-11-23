@@ -20,6 +20,7 @@
 #include "shortcut_checker.h"
 #include "utils/string_convert.h"
 #include "cache/resource_cache.h"
+#include "monitor/monitor_core.h"
 #include <tlhelp32.h>
 
 /* Helper to check if process is elevated */
@@ -229,6 +230,9 @@ BOOL InitializeApplicationSubsystem(HINSTANCE hInstance) {
         MessageBoxW(NULL, L"Application initialization failed!", L"Error", MB_ICONERROR);
         return FALSE;
     }
+
+    // Initialize Data Monitor Subsystem
+    Monitor_Init();
     
     LOG_INFO("Application initialization successful");
     return TRUE;
@@ -360,6 +364,8 @@ int RunMessageLoop(HWND hwnd) {
 
 void CleanupResources(HANDLE hMutex) {
     LOG_INFO("Program preparing to exit, starting resource cleanup");
+    
+    Monitor_Shutdown();
     
     LOG_INFO("Preparing to clean up update check thread resources");
     CleanupUpdateThread();

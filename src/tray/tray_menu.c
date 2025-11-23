@@ -29,6 +29,7 @@
 #include "cache/resource_cache.h"
 #include "tray/tray_menu_font.h"
 #include "tray/tray_menu_submenus.h"
+#include "monitor/monitor_core.h"
 
 /* External dependencies needed for menu display logic */
 extern BOOL CLOCK_SHOW_CURRENT_TIME;
@@ -100,6 +101,30 @@ void ShowColorMenu(HWND hwnd) {
     DestroyMenu(hMenu);
 }
 
+static void BuildMonitorMenu(HMENU hMenu) {
+    HMENU hMonitorMenu = CreatePopupMenu();
+    
+    AppendMenuW(hMonitorMenu, MF_STRING, CLOCK_IDM_MONITOR_CONFIG, GetLocalizedString(NULL, L"Configure..."));
+    AppendMenuW(hMonitorMenu, MF_SEPARATOR, 0, NULL);
+    
+    // Disable option
+    int activeIndex = Monitor_GetActiveIndex();
+    AppendMenuW(hMonitorMenu, MF_STRING | (activeIndex == -1 ? MF_CHECKED : MF_UNCHECKED),
+               CLOCK_IDM_MONITOR_DISABLE, GetLocalizedString(NULL, L"Disable (None)"));
+    
+    // List items
+    int count = Monitor_GetConfigCount();
+    for (int i = 0; i < count; i++) {
+        MonitorConfig cfg;
+        if (Monitor_GetConfigAt(i, &cfg)) {
+            AppendMenuW(hMonitorMenu, MF_STRING | (i == activeIndex ? MF_CHECKED : MF_UNCHECKED),
+                       CLOCK_IDM_MONITOR_BASE + i, cfg.label);
+        }
+    }
+    
+    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hMonitorMenu, GetLocalizedString(NULL, L"Data Monitor"));
+}
+
 /**
  * @brief Build and display left-click timer control menu
  * @param hwnd Main window handle
@@ -160,6 +185,9 @@ void ShowContextMenu(HWND hwnd) {
 
     /* Build Pomodoro submenu using dedicated module */
     BuildPomodoroMenu(hMenu);
+    
+    /* Build Monitor Menu */
+    BuildMonitorMenu(hMenu);
 
     AppendMenuW(hMenu, MF_STRING | (CLOCK_COUNT_UP ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_COUNT_UP_START,

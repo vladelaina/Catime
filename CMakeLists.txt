@@ -34,6 +34,7 @@ add_executable(catime ${SOURCES} ${HEADERS} ${RESOURCE_FILES})
 # Add include directories
 target_include_directories(catime PRIVATE
     include
+    src
     libs/miniaudio
 )
 
@@ -107,6 +108,7 @@ target_link_libraries(catime PRIVATE
     comdlg32
     uuid
     wininet
+    winhttp
     winmm
     comctl32
     dwmapi
