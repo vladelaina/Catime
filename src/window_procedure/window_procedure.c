@@ -19,7 +19,6 @@
 #include "../resource/resource.h"
 #include "log.h"
 #include <string.h>
-#include "monitor/monitor_core.h"
 
 #include "window_procedure/window_drop_target.h"
 
@@ -336,7 +335,6 @@ void CleanupBeforeTimerAction(void) {
     extern void StopNotificationSound(void);
     StopNotificationSound();
     CloseAllNotifications();
-    Monitor_SetActiveIndex(-1);
 }
 
 BOOL StartCountdownWithTime(HWND hwnd, int seconds) {

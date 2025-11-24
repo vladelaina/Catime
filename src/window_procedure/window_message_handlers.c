@@ -23,6 +23,7 @@
 #include "cache/resource_cache.h"
 #include "../resource/resource.h"
 #include "window_procedure/window_drop_target.h"
+#include "plugin_ipc.h"
 #include <stdio.h>
 
 /* 50ms menu debounce prevents accidental double-clicks during menu interaction */
@@ -259,7 +260,13 @@ LRESULT HandleHotkey(HWND hwnd, WPARAM wp, LPARAM lp) {
 LRESULT HandleCopyData(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp;
     PCOPYDATASTRUCT pcds = (PCOPYDATASTRUCT)lp;
-    if (pcds && pcds->dwData == COPYDATA_ID_CLI_TEXT && pcds->lpData && pcds->cbData > 0) {
+
+    if (!pcds || !pcds->lpData || pcds->cbData == 0) {
+        return DefWindowProc(hwnd, WM_COPYDATA, wp, lp);
+    }
+
+    // Handle CLI text
+    if (pcds->dwData == COPYDATA_ID_CLI_TEXT) {
         const size_t maxLen = BUFFER_SIZE_CLI_INPUT - 1;
         char buf[BUFFER_SIZE_CLI_INPUT];
         size_t n = (pcds->cbData > maxLen) ? maxLen : pcds->cbData;
@@ -267,8 +274,14 @@ LRESULT HandleCopyData(HWND hwnd, WPARAM wp, LPARAM lp) {
         buf[maxLen] = '\0';
         buf[n] = '\0';
         HandleCliArguments(hwnd, buf);
-        return 0;
+        return TRUE;
     }
+
+    // Handle plugin messages
+    if (PluginIPC_HandleMessage(hwnd, pcds)) {
+        return TRUE;
+    }
+
     return DefWindowProc(hwnd, WM_COPYDATA, wp, lp);
 }
 
@@ -395,9 +408,6 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
             isColorOrFontPreview = TRUE;
         }
 
-        if (menuItem >= CLOCK_IDM_MONITOR_BASE && menuItem < CLOCK_IDM_MONITOR_BASE + 100) {
-            isColorOrFontPreview = TRUE;
-        }
 
         if (menuItem >= 2000 && menuItem < 3000) {
             if (menuItem != CLOCK_IDM_ANIMATIONS_USE_LOGO &&

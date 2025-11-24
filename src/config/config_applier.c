@@ -88,7 +88,7 @@ void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {
     g_AppConfig.display.scale_step_normal = snapshot->scaleStepNormal;
     g_AppConfig.display.scale_step_fast = snapshot->scaleStepFast;
 
-    HWND hwnd = FindWindowW(L"CatimeWindow", L"Catime");
+    HWND hwnd = FindWindowW(L"CatimeWindowClass", L"Catime");
     if (hwnd) {
         /* Get current window position before updating globals */
         RECT currentRect;

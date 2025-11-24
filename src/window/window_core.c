@@ -19,7 +19,7 @@
  * Constants
  * ============================================================================ */
 
-#define WINDOW_CLASS_NAME L"CatimeWindow"
+#define WINDOW_CLASS_NAME L"CatimeWindowClass"
 #define WINDOW_TITLE L"Catime"
 #define PROGMAN_CLASS L"Progman"
 #define COLOR_KEY_BLACK RGB(0, 0, 0)

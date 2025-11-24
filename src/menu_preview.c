@@ -13,7 +13,6 @@
 #include "timer/timer.h"
 #include "tray/tray_animation_core.h"
 #include "log.h"
-#include "monitor/monitor_core.h"
 
 /* ============================================================================
  * External Dependencies
@@ -117,10 +116,6 @@ void StartPreview(PreviewType type, const void* data, HWND hwnd) {
             break;
         }
         
-        case PREVIEW_TYPE_MONITOR:
-            g_previewState.data.monitorIndex = *(int*)data;
-            Monitor_SetPreviewIndex(g_previewState.data.monitorIndex);
-            break;
         
         default:
             g_previewState.type = PREVIEW_TYPE_NONE;
@@ -144,13 +139,6 @@ void CancelPreview(HWND hwnd) {
                         g_previewState.type != PREVIEW_TYPE_NONE);
     BOOL needsTimerReset = (g_previewState.type == PREVIEW_TYPE_MILLISECONDS);
     BOOL needsFontReload = (g_previewState.type == PREVIEW_TYPE_FONT);
-    BOOL wasMonitorPreview = (g_previewState.type == PREVIEW_TYPE_MONITOR);
-
-    g_previewState.type = PREVIEW_TYPE_NONE;
-
-    if (wasMonitorPreview) {
-        Monitor_SetPreviewIndex(-1);
-    }
 
     if (needsFontReload) {
         HINSTANCE hInstance = GetModuleHandle(NULL);

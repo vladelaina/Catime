@@ -13,23 +13,23 @@
 static HWND FindInDesktopLayer(void) {
     HWND hProgman = FindWindowW(L"Progman", NULL);
     if (!hProgman) return NULL;
-    
+
     HWND hWorkerW = FindWindowExW(NULL, NULL, L"WorkerW", NULL);
     while (hWorkerW != NULL) {
         HWND hView = FindWindowExW(hWorkerW, NULL, L"SHELLDLL_DefView", NULL);
         if (hView != NULL) {
-            return FindWindowExW(hWorkerW, NULL, L"CatimeWindow", NULL);
+            return FindWindowExW(hWorkerW, NULL, L"CatimeWindowClass", NULL);
         }
         hWorkerW = FindWindowExW(NULL, hWorkerW, L"WorkerW", NULL);
     }
-    
-    return FindWindowExW(hProgman, NULL, L"CatimeWindow", NULL);
+
+    return FindWindowExW(hProgman, NULL, L"CatimeWindowClass", NULL);
 }
 
 HWND FindExistingInstanceWindow(void) {
-    HWND hwnd = FindWindowW(L"CatimeWindow", L"Catime");
+    HWND hwnd = FindWindowW(L"CatimeWindowClass", L"Catime");
     if (hwnd) return hwnd;
-    
+
     return FindInDesktopLayer();
 }
 

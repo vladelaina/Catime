@@ -56,7 +56,6 @@ END
 #include "no_update_dialog.rc"
 #include "hotkey_dialog.rc"
 #include "help_dialog.rc"
-#include "monitor_dialog.rc"
 
 /** @brief Application manifest for Windows UAC and DPI awareness */
 1 RT_MANIFEST "app.manifest"

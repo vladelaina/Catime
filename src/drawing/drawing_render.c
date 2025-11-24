@@ -17,7 +17,7 @@
 #include "menu_preview.h"
 #include "font/font_path_manager.h"
 #include "log.h"
-#include "monitor/monitor_core.h"
+#include "plugin_ipc.h"
 
 extern char FONT_FILE_NAME[MAX_PATH];
 extern char FONT_INTERNAL_NAME[MAX_PATH];
@@ -225,15 +225,9 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     
     GetTimeText(timeText, TIME_TEXT_MAX_LEN);
 
-    // Try to get monitor text (highest priority for now, testing phase)
-    wchar_t monitorText[64];
-    if (Monitor_GetDisplayText(monitorText, 64)) {
-        wcscpy(timeText, monitorText);
-    }
-    
-    // Monitor preview (highest priority)
-    if (Monitor_GetPreviewText(monitorText, 64)) {
-        wcscpy(timeText, monitorText);
+    // Check for plugin data
+    if (!PluginIPC_GetDisplayText(timeText, TIME_TEXT_MAX_LEN)) {
+        // No plugin data, use normal time text (already set above)
     }
 
     if (wcslen(timeText) == 0) {

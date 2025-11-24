@@ -44,12 +44,6 @@ BOOL DispatchMenuPreview(HWND hwnd, UINT menuId) {
         return TRUE;
     }
 
-    if (menuId >= CLOCK_IDM_MONITOR_BASE && menuId < CLOCK_IDM_MONITOR_BASE + 100) {
-        int index = menuId - CLOCK_IDM_MONITOR_BASE;
-        StartPreview(PREVIEW_TYPE_MONITOR, &index, hwnd);
-        return TRUE;
-    }
-
     if (menuId >= CLOCK_IDM_ANIMATIONS_BASE && menuId < CLOCK_IDM_ANIMATIONS_BASE + 1000) {
         char animName[MAX_PATH];
         if (GetAnimationNameFromMenuId(menuId, animName, sizeof(animName))) {
