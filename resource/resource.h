@@ -489,6 +489,7 @@
 
 #define IDC_MONITOR_PARAM1_LABEL 5025   /**< Param1 label (Target ID) */
 #define IDC_MONITOR_TOKEN_LABEL 5026    /**< Token label */
+#define IDC_MONITOR_ITEM_LABEL 5027     /**< Item label (dynamic) */
 
 /** @brief Monitor menu identifiers */
 #define CLOCK_IDM_MONITOR_CONFIG 6100   /**< Open monitor configuration */
