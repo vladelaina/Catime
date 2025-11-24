@@ -1,6 +1,7 @@
 #include "monitor/monitor_core.h"
 #include "monitor/monitor_types.h"
 #include "monitor/platforms/github.h"
+#include "monitor/platforms/bilibili.h"
 #include "monitor/utils/credential_manager.h"
 #include "log.h"
 #include "config.h"
@@ -56,8 +57,32 @@ static void ParseSourceString(MonitorConfig* config) {
             strncpy(config->param2, p2 + 1, sizeof(config->param2) - 1);
             config->param2[sizeof(config->param2) - 1] = '\0';
         }
-    } else if (strncmp(str, "Bilibili-", 9) == 0) {
-        config->type = MONITOR_PLATFORM_BILIBILI;
+    } else if (strncmp(str, "BilibiliUser-", 13) == 0) {
+        config->type = MONITOR_PLATFORM_BILIBILI_USER;
+        char* p1 = str + 13;
+        char* p2 = strrchr(p1, '-');
+        if (p2) {
+            size_t len1 = (size_t)(p2 - p1);
+            if (len1 < sizeof(config->param1)) {
+                strncpy(config->param1, p1, len1);
+                config->param1[len1] = '\0';
+            }
+            strncpy(config->param2, p2 + 1, sizeof(config->param2) - 1);
+            config->param2[sizeof(config->param2) - 1] = '\0';
+        }
+    } else if (strncmp(str, "BilibiliVideo-", 14) == 0) {
+        config->type = MONITOR_PLATFORM_BILIBILI_VIDEO;
+        char* p1 = str + 14;
+        char* p2 = strrchr(p1, '-');
+        if (p2) {
+            size_t len1 = (size_t)(p2 - p1);
+            if (len1 < sizeof(config->param1)) {
+                strncpy(config->param1, p1, len1);
+                config->param1[len1] = '\0';
+            }
+            strncpy(config->param2, p2 + 1, sizeof(config->param2) - 1);
+            config->param2[sizeof(config->param2) - 1] = '\0';
+        }
     } else {
         config->type = MONITOR_PLATFORM_UNKNOWN;
     }
@@ -298,6 +323,12 @@ static DWORD WINAPI MonitorThreadProc(LPVOID lpParam) {
                 case MONITOR_PLATFORM_GITHUB:
                     value = GitHub_FetchValue(&tempCfg);
                     break;
+                case MONITOR_PLATFORM_BILIBILI_USER:
+                    value = Bilibili_FetchUserValue(&tempCfg);
+                    break;
+                case MONITOR_PLATFORM_BILIBILI_VIDEO:
+                    value = Bilibili_FetchVideoValue(&tempCfg);
+                    break;
                 default:
                     value = -1;
                     break;
@@ -306,6 +337,11 @@ static DWORD WINAPI MonitorThreadProc(LPVOID lpParam) {
             EnterCriticalSection(&g_cs);
             if (value >= 0) {
                 swprintf(g_previewStateData.displayText, 64, L"%lld", value);
+            } else if (value == -401) {
+                swprintf(g_previewStateData.displayText, 64, L"Need Token");
+            } else if (value < -1) {
+                // Special error code (e.g. -404)
+                swprintf(g_previewStateData.displayText, 64, L"Error %lld", -value);
             } else {
                 swprintf(g_previewStateData.displayText, 64, L"Error");
             }
@@ -368,6 +404,10 @@ static DWORD WINAPI MonitorThreadProc(LPVOID lpParam) {
                 if (g_previewIndex == currentPreviewIdx) {
                     if (value >= 0) {
                         swprintf(g_previewStateData.displayText, 64, L"%lld", value);
+                    } else if (value == -401) {
+                        swprintf(g_previewStateData.displayText, 64, L"Need Token");
+                    } else if (value < -1) {
+                        swprintf(g_previewStateData.displayText, 64, L"Error %lld", -value);
                     } else {
                         swprintf(g_previewStateData.displayText, 64, L"Error");
                     }
@@ -432,7 +472,13 @@ static DWORD WINAPI MonitorThreadProc(LPVOID lpParam) {
                     LOG_INFO("Monitor updated [%ls]: %s", currentConfig.label, logText);
                 } else {
                     g_state.isError = TRUE;
-                    swprintf(g_state.displayText, 64, L"Error");
+                    if (value == -401) {
+                        swprintf(g_state.displayText, 64, L"Need Token");
+                    } else if (value < -1) {
+                        swprintf(g_state.displayText, 64, L"Error %lld", -value);
+                    } else {
+                        swprintf(g_state.displayText, 64, L"Error");
+                    }
                 }
             }
             LeaveCriticalSection(&g_cs);
@@ -557,7 +603,9 @@ void Monitor_SetPreviewConfig(const MonitorConfig* config) {
 BOOL Monitor_GetPreviewText(wchar_t* buffer, size_t maxLen) {
     BOOL hasText = FALSE;
     EnterCriticalSection(&g_cs);
-    if (g_previewIndex >= 0 && g_previewIndex < g_monitorCount) {
+    // Allow getting text regardless of index, as long as we have content.
+    // This supports both list-based preview (g_previewIndex >= 0) and custom preview (g_previewIndex == -1)
+    if (wcslen(g_previewStateData.displayText) > 0) {
         wcsncpy(buffer, g_previewStateData.displayText, maxLen - 1);
         buffer[maxLen - 1] = L'\0';
         hasText = TRUE;
@@ -602,9 +650,9 @@ int Monitor_GetPlatformOptions(MonitorPlatformType type, MonitorOption* outOptio
         case MONITOR_PLATFORM_GITHUB:
             return GitHub_GetOptions(outOptions, maxCount);
             
-        case MONITOR_PLATFORM_BILIBILI:
-            // Placeholder for future implementation
-            return 0;
+        case MONITOR_PLATFORM_BILIBILI_USER:
+        case MONITOR_PLATFORM_BILIBILI_VIDEO:
+            return Bilibili_GetOptions(type, outOptions, maxCount);
             
         default:
             return 0;

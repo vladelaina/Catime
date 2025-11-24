@@ -78,7 +78,7 @@ long long GitHub_FetchValue(const MonitorConfig* config) {
     // Buffer for JSON response (8KB is usually enough for repo info)
     char response[8192]; 
     
-    BOOL success = HttpClient_Get(L"api.github.com", path, userAgent, headers, response, sizeof(response));
+    BOOL success = HttpClient_Get(L"api.github.com", path, userAgent, headers, response, sizeof(response), NULL);
     
     // Cleanup auth header immediately after use
     if (headers) {

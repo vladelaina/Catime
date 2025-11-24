@@ -3,13 +3,16 @@
 #include <stdio.h>
 #include "log.h"
 
-BOOL HttpClient_Get(const wchar_t* server, const wchar_t* path, const wchar_t* userAgent, const wchar_t* additionalHeaders, char* outBuffer, DWORD outBufferSize) {
+BOOL HttpClient_Get(const wchar_t* server, const wchar_t* path, const wchar_t* userAgent, const wchar_t* additionalHeaders, char* outBuffer, DWORD outBufferSize, DWORD* outStatusCode) {
     HINTERNET hSession = NULL, hConnect = NULL, hRequest = NULL;
     BOOL bResults = FALSE;
     DWORD dwSize = 0;
     DWORD dwDownloaded = 0;
     DWORD totalRead = 0;
     BOOL success = FALSE;
+
+    // Initialize status code to 0 (unknown)
+    if (outStatusCode) *outStatusCode = 0;
 
     // Initialize buffer
     if (outBufferSize > 0 && outBuffer) {
@@ -19,20 +22,44 @@ BOOL HttpClient_Get(const wchar_t* server, const wchar_t* path, const wchar_t* u
     }
 
     // Open Session
+    // Try WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY (4) first for better system proxy support (Win 8.1+)
     hSession = WinHttpOpen(userAgent,  
-                          WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+                          4, 
                           WINHTTP_NO_PROXY_NAME, 
                           WINHTTP_NO_PROXY_BYPASS, 0);
 
     if (!hSession) {
-        LOG_ERROR("WinHttpOpen failed: %lu", GetLastError());
+        // Fallback to legacy default proxy
+        hSession = WinHttpOpen(userAgent,  
+                              WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+                              WINHTTP_NO_PROXY_NAME, 
+                              WINHTTP_NO_PROXY_BYPASS, 0);
+    }
+
+    if (!hSession) {
+        DWORD err = GetLastError();
+        LOG_ERROR("WinHttpOpen failed: %lu", err);
+        if (outStatusCode) *outStatusCode = err;
         goto cleanup;
     }
+
+    // Set Timeouts (Resolve, Connect, Send, Receive) - 15 seconds each
+    WinHttpSetTimeouts(hSession, 15000, 15000, 15000, 15000);
+
+    // Enable TLS 1.2 and 1.3
+    DWORD protocols = WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_2 | WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_3;
+    WinHttpSetOption(hSession, WINHTTP_OPTION_SECURE_PROTOCOLS, &protocols, sizeof(protocols));
+    
+    // Enable GZIP decompression
+    DWORD decompression = WINHTTP_DECOMPRESSION_FLAG_GZIP | WINHTTP_DECOMPRESSION_FLAG_DEFLATE;
+    WinHttpSetOption(hSession, WINHTTP_OPTION_DECOMPRESSION, &decompression, sizeof(decompression));
 
     // Connect
     hConnect = WinHttpConnect(hSession, server, INTERNET_DEFAULT_HTTPS_PORT, 0);
     if (!hConnect) {
-        LOG_ERROR("WinHttpConnect failed: %lu", GetLastError());
+        DWORD err = GetLastError();
+        LOG_ERROR("WinHttpConnect failed: %lu", err);
+        if (outStatusCode) *outStatusCode = err;
         goto cleanup;
     }
 
@@ -42,7 +69,9 @@ BOOL HttpClient_Get(const wchar_t* server, const wchar_t* path, const wchar_t* u
                                  WINHTTP_DEFAULT_ACCEPT_TYPES, 
                                  WINHTTP_FLAG_SECURE);
     if (!hRequest) {
-        LOG_ERROR("WinHttpOpenRequest failed: %lu", GetLastError());
+        DWORD err = GetLastError();
+        LOG_ERROR("WinHttpOpenRequest failed: %lu", err);
+        if (outStatusCode) *outStatusCode = err;
         goto cleanup;
     }
 
@@ -58,7 +87,9 @@ BOOL HttpClient_Get(const wchar_t* server, const wchar_t* path, const wchar_t* u
     if (bResults) {
         bResults = WinHttpReceiveResponse(hRequest, NULL);
     } else {
-        LOG_ERROR("WinHttpSendRequest failed: %lu", GetLastError());
+        DWORD err = GetLastError();
+        LOG_ERROR("WinHttpSendRequest failed: %lu", err);
+        if (outStatusCode) *outStatusCode = err;
         goto cleanup;
     }
 
@@ -66,9 +97,16 @@ BOOL HttpClient_Get(const wchar_t* server, const wchar_t* path, const wchar_t* u
         // Check status code
         DWORD dwStatusCode = 0;
         DWORD dwSize = sizeof(dwStatusCode);
-        WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER, 
-                           WINHTTP_HEADER_NAME_BY_INDEX, &dwStatusCode, &dwSize, WINHTTP_NO_HEADER_INDEX);
+        if (!WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER, 
+                           WINHTTP_HEADER_NAME_BY_INDEX, &dwStatusCode, &dwSize, WINHTTP_NO_HEADER_INDEX)) {
+             DWORD err = GetLastError();
+             LOG_ERROR("WinHttpQueryHeaders failed: %lu", err);
+             if (outStatusCode) *outStatusCode = err;
+             goto cleanup;
+        }
         
+        if (outStatusCode) *outStatusCode = dwStatusCode;
+
         if (dwStatusCode != 200) {
             LOG_WARNING("HTTP Request returned status code: %lu", dwStatusCode);
             goto cleanup;
@@ -79,7 +117,12 @@ BOOL HttpClient_Get(const wchar_t* server, const wchar_t* path, const wchar_t* u
         while (TRUE) {
             DWORD dataSize = 0;
             if (!WinHttpQueryDataAvailable(hRequest, &dataSize)) {
-                LOG_ERROR("WinHttpQueryDataAvailable failed: %lu", GetLastError());
+                DWORD err = GetLastError();
+                LOG_ERROR("WinHttpQueryDataAvailable failed: %lu", err);
+                // Don't overwrite status code if we already have a 200 OK, but here we failed reading
+                // We could set it to error, but maybe partial data is useless anyway.
+                if (outStatusCode) *outStatusCode = err;
+                success = FALSE; 
                 break;
             }
 
@@ -102,13 +145,19 @@ BOOL HttpClient_Get(const wchar_t* server, const wchar_t* path, const wchar_t* u
                 totalRead += dwDownloaded;
                 outBuffer[totalRead] = '\0';
             } else {
+                DWORD err = GetLastError();
+                if (outStatusCode) *outStatusCode = err;
+                success = FALSE;
                 break;
             }
         }
                               
-        success = (totalRead > 0);
+        // Only success if we read something (or if empty body is allowed? Assuming we expect JSON)
+        if (totalRead > 0) success = TRUE;
     } else {
-        LOG_ERROR("WinHttpReceiveResponse failed: %lu", GetLastError());
+        DWORD err = GetLastError();
+        LOG_ERROR("WinHttpReceiveResponse failed: %lu", err);
+        if (outStatusCode) *outStatusCode = err;
     }
 
 cleanup:

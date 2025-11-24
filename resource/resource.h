@@ -487,6 +487,9 @@
 #define IDC_MONITOR_TEST_BTN 5023       /**< Test fetch button */
 #define IDC_MONITOR_TEST_RESULT 5024    /**< Test result label */
 
+#define IDC_MONITOR_PARAM1_LABEL 5025   /**< Param1 label (Target ID) */
+#define IDC_MONITOR_TOKEN_LABEL 5026    /**< Token label */
+
 /** @brief Monitor menu identifiers */
 #define CLOCK_IDM_MONITOR_CONFIG 6100   /**< Open monitor configuration */
 #define CLOCK_IDM_MONITOR_DISABLE 6101  /**< Disable monitor */

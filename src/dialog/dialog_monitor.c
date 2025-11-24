@@ -20,7 +20,8 @@ static const struct {
     const wchar_t* label;
 } PLATFORMS[] = {
     { MONITOR_PLATFORM_GITHUB, "GitHub", L"GitHub" },
-    { MONITOR_PLATFORM_BILIBILI, "Bilibili", L"Bilibili" }
+    { MONITOR_PLATFORM_BILIBILI_USER, "BilibiliUser", L"Bilibili-User" },
+    { MONITOR_PLATFORM_BILIBILI_VIDEO, "BilibiliVideo", L"Bilibili-Video" }
 };
 
 static void TrimW(wchar_t* str) {
@@ -129,6 +130,70 @@ static BOOL ExtractGitHubRepoFromUrl(const wchar_t* url, wchar_t* outBuf, size_t
     return TRUE;
 }
 
+// Try to extract UID from a Bilibili Space URL
+// e.g. "https://space.bilibili.com/67079745?..." -> "67079745"
+static BOOL ExtractBilibiliUidFromUrl(const wchar_t* url, wchar_t* outBuf, size_t outSize) {
+    if (!url || !outBuf) return FALSE;
+    
+    // Check for space.bilibili.com
+    const wchar_t* host = wcsstr(url, L"space.bilibili.com/");
+    if (!host) return FALSE;
+    
+    const wchar_t* start = host + 19; // skip "space.bilibili.com/"
+    
+    // Copy until end or next slash or question mark
+    size_t len = 0;
+    const wchar_t* p = start;
+    
+    while (*p && *p != L'/' && *p != L'?' && *p != L'#') {
+        if (!iswdigit(*p)) {
+            // UID should be numeric. If we hit non-digit, maybe it's not a clean UID path?
+            // But let's just stop at non-digit if it's like /12345/dynamic
+            break;
+        }
+        len++;
+        p++;
+    }
+    
+    if (len == 0 || len >= outSize) return FALSE;
+    
+    wcsncpy(outBuf, start, len);
+    outBuf[len] = L'\0';
+    return TRUE;
+}
+
+// Try to extract BV ID from a Bilibili Video URL
+// e.g. "https://www.bilibili.com/video/BV1FhWQz4EU3/..." -> "BV1FhWQz4EU3"
+static BOOL ExtractBilibiliBvidFromUrl(const wchar_t* url, wchar_t* outBuf, size_t outSize) {
+    if (!url || !outBuf) return FALSE;
+    
+    // Check for bilibili.com/video/
+    const wchar_t* host = wcsstr(url, L"bilibili.com/video/");
+    if (!host) return FALSE;
+    
+    const wchar_t* start = host + 19; // skip "bilibili.com/video/"
+    
+    // Find end of string, slash, or question mark
+    size_t len = 0;
+    const wchar_t* p = start;
+    
+    while (*p && *p != L'/' && *p != L'?' && *p != L'#') {
+        // BVID is alphanumeric
+        if (!iswalnum(*p)) {
+            break;
+        }
+        len++;
+        p++;
+    }
+    
+    // BVIDs usually start with BV...
+    if (len < 3 || len >= outSize) return FALSE;
+    
+    wcsncpy(outBuf, start, len);
+    outBuf[len] = L'\0';
+    return TRUE;
+}
+
 static void PopulateItemCombo(HWND hDlg, MonitorPlatformType type, const char* selectedValue) {
     HWND hCombo = GetDlgItem(hDlg, IDC_MONITOR_PARAM2_COMBO);
     SendMessage(hCombo, CB_RESETCONTENT, 0, 0);
@@ -152,6 +217,33 @@ static void PopulateItemCombo(HWND hDlg, MonitorPlatformType type, const char* s
     }
 }
 
+static void UpdateLabelsForPlatform(HWND hDlg, MonitorPlatformType type) {
+    HWND hParam1Label = GetDlgItem(hDlg, IDC_MONITOR_PARAM1_LABEL);
+    HWND hTokenLabel = GetDlgItem(hDlg, IDC_MONITOR_TOKEN_LABEL);
+    HWND hTokenEdit = GetDlgItem(hDlg, IDC_MONITOR_TOKEN_EDIT);
+
+    if (type == MONITOR_PLATFORM_GITHUB) {
+        SetWindowTextW(hParam1Label, L"Target ID (e.g. user/repo):");
+        SetWindowTextW(hTokenLabel, L"Token (Optional):");
+        ShowWindow(hTokenLabel, SW_SHOW);
+        ShowWindow(hTokenEdit, SW_SHOW);
+    } else if (type == MONITOR_PLATFORM_BILIBILI_USER) {
+        SetWindowTextW(hParam1Label, L"UID:");
+        // Views removed, Likes use public API, no token needed for now
+        ShowWindow(hTokenLabel, SW_HIDE);
+        ShowWindow(hTokenEdit, SW_HIDE);
+    } else if (type == MONITOR_PLATFORM_BILIBILI_VIDEO) {
+        SetWindowTextW(hParam1Label, L"BV ID (e.g. BV1...):");
+        ShowWindow(hTokenLabel, SW_HIDE);
+        ShowWindow(hTokenEdit, SW_HIDE);
+    } else {
+        SetWindowTextW(hParam1Label, L"Target ID:");
+        ShowWindow(hTokenLabel, SW_SHOW);
+        ShowWindow(hTokenEdit, SW_SHOW);
+    }
+}
+
+// Forward declarations to handle dependencies
 static void UpdateEditFields(HWND hDlg, int index, BOOL skipLabel);
 static BOOL GetConfigFromUI(HWND hDlg, MonitorConfig* outCfg);
 
@@ -161,19 +253,7 @@ static void AutoSaveConfig(HWND hDlg) {
     MonitorConfig cfg;
     if (GetConfigFromUI(hDlg, &cfg)) {
         Monitor_UpdateConfigAt(s_currentSel, &cfg);
-        // Update list item text in case Label changed
-        HWND hList = GetDlgItem(hDlg, IDC_MONITOR_LIST);
-        int count = (int)SendMessage(hList, LB_GETCOUNT, 0, 0);
-        // Simple redraw of list might be needed if text changed, 
-        // but LB doesn't update text automatically unless we delete/add.
-        // For now, just refreshing list is safer but might flicker.
-        // Let's only refresh if Label changed?
-        // Getting old config to compare is expensive (decrypt etc).
-        // Just refresh.
-        // RefreshList(hDlg); // This resets selection, annoying.
-        // Let's manually update the string at index?
-        // ListBox_DeleteString + InsertString is the way, but complex.
-        // For now, let's trust that RefreshList is called explicitly when needed (e.g. label edit killfocus)
+        // Label update is handled by RefreshList in caller
     }
 }
 
@@ -228,6 +308,8 @@ static void UpdateEditFields(HWND hDlg, int index, BOOL skipLabel) {
                     break;
                 }
             }
+            
+            UpdateLabelsForPlatform(hDlg, type);
             
             // Parse Param1 and Param2
             char* p2 = strrchr(p1 + 1, '-');
@@ -415,10 +497,13 @@ static INT_PTR CALLBACK MonitorDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, L
                     wchar_t newText[128];
                     if (wcscmp(previewText, L"...") == 0) {
                         wcscpy(newText, L"Fetching...");
-                    } else if (wcscmp(previewText, L"Error") == 0) {
-                        wcscpy(newText, L"Error / Not Found");
+                    } else if (wcsncmp(previewText, L"Error", 5) == 0) {
+                        // If it's an error (generic or specific), just show it without "Result:" prefix
+                        // e.g. "Error", "Error 403", "Error 12002"
+                        wcscpy(newText, previewText);
                     } else {
-                        swprintf(newText, 128, L"Result: %s", previewText);
+                        // For valid values, also just show the value (cleaner)
+                        swprintf(newText, 128, L"%s", previewText);
                     }
                     
                     if (wcscmp(currentText, newText) != 0) {
@@ -451,6 +536,7 @@ static INT_PTR CALLBACK MonitorDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, L
                         if (idx != CB_ERR) {
                             MonitorPlatformType type = (MonitorPlatformType)SendDlgItemMessage(hDlg, IDC_MONITOR_PLATFORM_COMBO, CB_GETITEMDATA, idx, 0);
                             PopulateItemCombo(hDlg, type, NULL);
+                            UpdateLabelsForPlatform(hDlg, type);
                             TriggerPreview(hDlg);
                         }
                     }
@@ -506,6 +592,30 @@ static INT_PTR CALLBACK MonitorDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, L
                             int count = (int)SendMessage(hPlat, CB_GETCOUNT, 0, 0);
                             for (int i = 0; i < count; i++) {
                                 if ((MonitorPlatformType)SendMessage(hPlat, CB_GETITEMDATA, i, 0) == MONITOR_PLATFORM_GITHUB) {
+                                    SendMessage(hPlat, CB_SETCURSEL, i, 0);
+                                    SendMessage(hDlg, WM_COMMAND, MAKEWPARAM(IDC_MONITOR_PLATFORM_COMBO, CBN_SELCHANGE), (LPARAM)hPlat);
+                                    break;
+                                }
+                            }
+                        } else if (ExtractBilibiliUidFromUrl(text, extracted, 128)) {
+                            SetDlgItemTextW(hDlg, IDC_MONITOR_PARAM1_EDIT, extracted);
+                            
+                            HWND hPlat = GetDlgItem(hDlg, IDC_MONITOR_PLATFORM_COMBO);
+                            int count = (int)SendMessage(hPlat, CB_GETCOUNT, 0, 0);
+                            for (int i = 0; i < count; i++) {
+                                if ((MonitorPlatformType)SendMessage(hPlat, CB_GETITEMDATA, i, 0) == MONITOR_PLATFORM_BILIBILI_USER) {
+                                    SendMessage(hPlat, CB_SETCURSEL, i, 0);
+                                    SendMessage(hDlg, WM_COMMAND, MAKEWPARAM(IDC_MONITOR_PLATFORM_COMBO, CBN_SELCHANGE), (LPARAM)hPlat);
+                                    break;
+                                }
+                            }
+                        } else if (ExtractBilibiliBvidFromUrl(text, extracted, 128)) {
+                            SetDlgItemTextW(hDlg, IDC_MONITOR_PARAM1_EDIT, extracted);
+                            
+                            HWND hPlat = GetDlgItem(hDlg, IDC_MONITOR_PLATFORM_COMBO);
+                            int count = (int)SendMessage(hPlat, CB_GETCOUNT, 0, 0);
+                            for (int i = 0; i < count; i++) {
+                                if ((MonitorPlatformType)SendMessage(hPlat, CB_GETITEMDATA, i, 0) == MONITOR_PLATFORM_BILIBILI_VIDEO) {
                                     SendMessage(hPlat, CB_SETCURSEL, i, 0);
                                     SendMessage(hDlg, WM_COMMAND, MAKEWPARAM(IDC_MONITOR_PLATFORM_COMBO, CBN_SELCHANGE), (LPARAM)hPlat);
                                     break;

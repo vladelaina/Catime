@@ -11,8 +11,9 @@
  * @param additionalHeaders Optional additional headers (can be NULL)
  * @param outBuffer Output buffer
  * @param outBufferSize Size of output buffer
+ * @param outStatusCode Optional pointer to receive HTTP status code (can be NULL)
  * @return BOOL Success or failure
  */
-BOOL HttpClient_Get(const wchar_t* server, const wchar_t* path, const wchar_t* userAgent, const wchar_t* additionalHeaders, char* outBuffer, DWORD outBufferSize);
+BOOL HttpClient_Get(const wchar_t* server, const wchar_t* path, const wchar_t* userAgent, const wchar_t* additionalHeaders, char* outBuffer, DWORD outBufferSize, DWORD* outStatusCode);
 
 #endif
