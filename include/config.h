@@ -362,6 +362,13 @@ void CheckAndCreateAudioFolder();
 void GetAnimationsFolderPath(char* path, size_t size);
 
 /**
+ * @brief Get plugins folder path (auto-creates)
+ * @param path Output buffer (UTF-8)
+ * @param size Buffer size
+ */
+void GetPluginsFolderPath(char* path, size_t size);
+
+/**
  * @brief Write timeout action (atomic, validates enum)
  * @param action Action string (MESSAGE, LOCK, SHUTDOWN, etc.)
  */

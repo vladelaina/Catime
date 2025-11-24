@@ -131,7 +131,8 @@ static void EnsureDefaultResourceSubfolders(void) {
         L"resources",
         L"resources\\audio",
         L"resources\\fonts",
-        L"resources\\animations"
+        L"resources\\animations",
+        L"resources\\plugins"
     };
     for (size_t i = 0; i < sizeof(subfolders)/sizeof(subfolders[0]); ++i) {
         GetResourceSubfolderPathUtf8(subfolders[i], NULL, 0);
@@ -220,6 +221,15 @@ void GetAudioFolderPath(char* path, size_t size) {
 void GetAnimationsFolderPath(char* path, size_t size) {
     if (!path || size == 0) return;
     GetResourceSubfolderPathUtf8(L"resources\\animations", path, size);
+}
+
+
+/**
+ * @brief Get plugins resources folder path and ensure it exists
+ */
+void GetPluginsFolderPath(char* path, size_t size) {
+    if (!path || size == 0) return;
+    GetResourceSubfolderPathUtf8(L"resources\\plugins", path, size);
 }
 
 
