@@ -4,6 +4,7 @@
  */
 
 #include "drawing/drawing_text_stb.h"
+#include "log.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <windows.h>
@@ -17,9 +18,18 @@ static stbtt_fontinfo g_fontInfo;
 static char g_currentFontPath[MAX_PATH] = {0};
 static BOOL g_fontLoaded = FALSE;
 
+/* Fallback font state (Segoe UI Emoji) */
+static unsigned char* g_fallbackFontBuffer = NULL;
+static stbtt_fontinfo g_fallbackFontInfo;
+static BOOL g_fallbackFontLoaded = FALSE;
+
 /* Memory mapping handles */
 static HANDLE g_hFontFile = INVALID_HANDLE_VALUE;
 static HANDLE g_hFontMapping = NULL;
+
+/* Fallback memory mapping handles */
+static HANDLE g_hFallbackFontFile = INVALID_HANDLE_VALUE;
+static HANDLE g_hFallbackFontMapping = NULL;
 
 /* Helper to map file into memory */
 static unsigned char* LoadFontMapping(const char* path, HANDLE* phFile, HANDLE* phMapping) {
@@ -60,6 +70,7 @@ static unsigned char* LoadFontMapping(const char* path, HANDLE* phFile, HANDLE* 
 }
 
 void CleanupFontSTB(void) {
+    /* Cleanup main font */
     if (g_fontBuffer) {
         UnmapViewOfFile(g_fontBuffer);
         g_fontBuffer = NULL;
@@ -73,7 +84,22 @@ void CleanupFontSTB(void) {
         g_hFontFile = INVALID_HANDLE_VALUE;
     }
     
+    /* Cleanup fallback font */
+    if (g_fallbackFontBuffer) {
+        UnmapViewOfFile(g_fallbackFontBuffer);
+        g_fallbackFontBuffer = NULL;
+    }
+    if (g_hFallbackFontMapping) {
+        CloseHandle(g_hFallbackFontMapping);
+        g_hFallbackFontMapping = NULL;
+    }
+    if (g_hFallbackFontFile != INVALID_HANDLE_VALUE) {
+        CloseHandle(g_hFallbackFontFile);
+        g_hFallbackFontFile = INVALID_HANDLE_VALUE;
+    }
+    
     g_fontLoaded = FALSE;
+    g_fallbackFontLoaded = FALSE;
     memset(g_currentFontPath, 0, sizeof(g_currentFontPath));
 }
 
@@ -111,6 +137,52 @@ BOOL InitFontSTB(const char* fontFilePath) {
     g_hFontMapping = hNewMapping;
     strncpy(g_currentFontPath, fontFilePath, MAX_PATH - 1);
     g_fontLoaded = TRUE;
+    
+    LOG_INFO("STB Font loaded successfully: %s", fontFilePath);
+
+    /* Load Fallback Font */
+    /* Priority:
+       1. Microsoft YaHei (msyh.ttc) - Best coverage for CJK, Blocks & BW Emojis
+       2. Microsoft YaHei (msyh.ttf) - Legacy
+       3. Segoe UI Symbol (seguisym.ttf) - Good for blocks
+       4. Segoe UI Emoji (seguiemj.ttf) - Last resort (might render blank in STB)
+    */
+    const char* fallbackPath = "C:\\Windows\\Fonts\\msyh.ttc";
+    HANDLE hFallbackFile = INVALID_HANDLE_VALUE;
+    HANDLE hFallbackMapping = NULL;
+    unsigned char* fallbackBuffer = LoadFontMapping(fallbackPath, &hFallbackFile, &hFallbackMapping);
+    
+    if (!fallbackBuffer) {
+        fallbackPath = "C:\\Windows\\Fonts\\msyh.ttf";
+        fallbackBuffer = LoadFontMapping(fallbackPath, &hFallbackFile, &hFallbackMapping);
+    }
+
+    if (!fallbackBuffer) {
+        fallbackPath = "C:\\Windows\\Fonts\\seguisym.ttf";
+        fallbackBuffer = LoadFontMapping(fallbackPath, &hFallbackFile, &hFallbackMapping);
+    }
+    
+    if (!fallbackBuffer) {
+        fallbackPath = "C:\\Windows\\Fonts\\seguiemj.ttf";
+        fallbackBuffer = LoadFontMapping(fallbackPath, &hFallbackFile, &hFallbackMapping);
+    }
+
+    if (fallbackBuffer) {
+        if (stbtt_InitFont(&g_fallbackFontInfo, fallbackBuffer, stbtt_GetFontOffsetForIndex(fallbackBuffer, 0))) {
+            g_fallbackFontBuffer = fallbackBuffer;
+            g_hFallbackFontFile = hFallbackFile;
+            g_hFallbackFontMapping = hFallbackMapping;
+            g_fallbackFontLoaded = TRUE;
+            LOG_INFO("STB Fallback Font loaded: %s", fallbackPath);
+        } else {
+            UnmapViewOfFile(fallbackBuffer);
+            CloseHandle(hFallbackMapping);
+            CloseHandle(hFallbackFile);
+            LOG_WARNING("Failed to init STB info for fallback font");
+        }
+    } else {
+        LOG_WARNING("Failed to load fallback font (Emoji/Symbol)");
+    }
     
     return TRUE;
 }
@@ -156,38 +228,74 @@ void RenderTextSTB(void* bits, int width, int height, const wchar_t* text,
                    COLORREF color, int fontSize, float fontScale, BOOL editMode) {
     if (!g_fontLoaded || !text || !bits) return;
 
+    /* Main font metrics */
     float scale = stbtt_ScaleForPixelHeight(&g_fontInfo, (float)(fontSize * fontScale));
     int ascent, descent, lineGap;
     stbtt_GetFontVMetrics(&g_fontInfo, &ascent, &descent, &lineGap);
-    
     int baselineOffset = (int)(ascent * scale);
+
+    /* Fallback font metrics */
+    float fallbackScale = 0.0f;
+    if (g_fallbackFontLoaded) {
+        fallbackScale = stbtt_ScaleForPixelHeight(&g_fallbackFontInfo, (float)(fontSize * fontScale));
+    }
     
     /* Calculate total text width to center it */
     int totalWidth = 0;
     size_t len = wcslen(text);
-    int* glyphIndices = (int*)malloc(len * sizeof(int));
-    int* advances = (int*)malloc(len * sizeof(int));
-    int* lsbs = (int*)malloc(len * sizeof(int));
     
-    if (!glyphIndices || !advances || !lsbs) {
-        free(glyphIndices); free(advances); free(lsbs);
+    /* We need to store which font is used for each glyph to avoid re-lookup */
+    typedef struct {
+        int index;
+        BOOL isFallback;
+    } GlyphInfo;
+    
+    GlyphInfo* glyphs = (GlyphInfo*)malloc(len * sizeof(GlyphInfo));
+    int* advances = (int*)malloc(len * sizeof(int));
+    
+    if (!glyphs || !advances) {
+        free(glyphs); free(advances);
         return;
     }
 
     for (size_t i = 0; i < len; i++) {
         int codepoint = (int)text[i]; 
-        glyphIndices[i] = stbtt_FindGlyphIndex(&g_fontInfo, codepoint);
+        
+        /* Try main font first */
+        glyphs[i].index = stbtt_FindGlyphIndex(&g_fontInfo, codepoint);
+        glyphs[i].isFallback = FALSE;
+        
+        /* Try fallback if main failed (index 0 usually means missing glyph) */
+        /* Note: some fonts return 0 for space, but we handle space separately via advance */
+        if (glyphs[i].index == 0 && g_fallbackFontLoaded && codepoint != ' ') {
+            int fallbackIndex = stbtt_FindGlyphIndex(&g_fallbackFontInfo, codepoint);
+            if (fallbackIndex != 0) {
+                glyphs[i].index = fallbackIndex;
+                glyphs[i].isFallback = TRUE;
+            }
+        }
         
         int advance, lsb;
-        stbtt_GetGlyphHMetrics(&g_fontInfo, glyphIndices[i], &advance, &lsb);
-        advances[i] = (int)(advance * scale);
-        lsbs[i] = (int)(lsb * scale);
+        if (glyphs[i].isFallback) {
+            stbtt_GetGlyphHMetrics(&g_fallbackFontInfo, glyphs[i].index, &advance, &lsb);
+            advances[i] = (int)(advance * fallbackScale);
+        } else {
+            stbtt_GetGlyphHMetrics(&g_fontInfo, glyphs[i].index, &advance, &lsb);
+            advances[i] = (int)(advance * scale);
+        }
         
         totalWidth += advances[i];
         
-        if (i < len - 1) {
-            int kern = stbtt_GetGlyphKernAdvance(&g_fontInfo, glyphIndices[i], glyphIndices[i+1]);
-            totalWidth += (int)(kern * scale);
+        /* Kerning only applies if both glyphs are from main font */
+        if (i < len - 1 && !glyphs[i].isFallback) {
+            /* We don't check next glyph here, just optimistic kern lookup */
+            /* Actually we should peek next. But for simplicity, only kern main font pairs */
+             int nextCodepoint = (int)text[i+1];
+             int nextIndex = stbtt_FindGlyphIndex(&g_fontInfo, nextCodepoint);
+             if (nextIndex != 0) {
+                 int kern = stbtt_GetGlyphKernAdvance(&g_fontInfo, glyphs[i].index, nextIndex);
+                 totalWidth += (int)(kern * scale);
+             }
         }
     }
 
@@ -200,12 +308,19 @@ void RenderTextSTB(void* bits, int width, int height, const wchar_t* text,
     int b = GetBValue(color);
 
     for (size_t i = 0; i < len; i++) {
-        if (glyphIndices[i] == 0 && text[i] != ' ') {
-            /* Glyph not found */
+        /* Skip rendering space or missing glyphs (if even fallback failed) */
+        if (glyphs[i].index == 0 && text[i] != ' ') {
+             /* Draw a box for missing glyph? optional. */
         }
 
         int w, h, xoff, yoff;
-        unsigned char* bitmap = stbtt_GetGlyphBitmap(&g_fontInfo, scale, scale, glyphIndices[i], &w, &h, &xoff, &yoff);
+        unsigned char* bitmap = NULL;
+        
+        if (glyphs[i].isFallback) {
+            bitmap = stbtt_GetGlyphBitmap(&g_fallbackFontInfo, fallbackScale, fallbackScale, glyphs[i].index, &w, &h, &xoff, &yoff);
+        } else {
+            bitmap = stbtt_GetGlyphBitmap(&g_fontInfo, scale, scale, glyphs[i].index, &w, &h, &xoff, &yoff);
+        }
         
         if (bitmap) {
             BlendCharBitmap(bits, width, height, x + xoff, y + yoff, bitmap, w, h, r, g, b);
@@ -213,13 +328,18 @@ void RenderTextSTB(void* bits, int width, int height, const wchar_t* text,
         }
 
         x += advances[i];
-        if (i < len - 1) {
-            int kern = stbtt_GetGlyphKernAdvance(&g_fontInfo, glyphIndices[i], glyphIndices[i+1]);
-            x += (int)(kern * scale);
+        
+        /* Apply kerning again for position update */
+        if (i < len - 1 && !glyphs[i].isFallback) {
+             int nextCodepoint = (int)text[i+1];
+             int nextIndex = stbtt_FindGlyphIndex(&g_fontInfo, nextCodepoint);
+             if (nextIndex != 0) {
+                 int kern = stbtt_GetGlyphKernAdvance(&g_fontInfo, glyphs[i].index, nextIndex);
+                 x += (int)(kern * scale);
+             }
         }
     }
 
-    free(glyphIndices);
+    free(glyphs);
     free(advances);
-    free(lsbs);
 }
