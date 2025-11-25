@@ -514,6 +514,7 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
             blockquote->alertType = BLOCKQUOTE_NORMAL;
 
             src += 2;
+            BOOL isAlert = FALSE;
 
             if (*src == L'[' && *(src + 1) == L'!') {
                 const wchar_t* alertStart = src + 2;
@@ -532,6 +533,7 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
                         wcsncpy(dest, prefix, prefixLen);
                         dest += prefixLen;
                         state.currentPos += prefixLen;
+                        isAlert = TRUE;
                     } else if (alertLen == 3 && wcsncmp(alertStart, L"TIP", 3) == 0) {
                         blockquote->alertType = BLOCKQUOTE_TIP;
                         const wchar_t* prefix = L"TIP: ";
@@ -539,6 +541,7 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
                         wcsncpy(dest, prefix, prefixLen);
                         dest += prefixLen;
                         state.currentPos += prefixLen;
+                        isAlert = TRUE;
                     } else if (alertLen == 9 && wcsncmp(alertStart, L"IMPORTANT", 9) == 0) {
                         blockquote->alertType = BLOCKQUOTE_IMPORTANT;
                         const wchar_t* prefix = L"IMPORTANT: ";
@@ -546,6 +549,7 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
                         wcsncpy(dest, prefix, prefixLen);
                         dest += prefixLen;
                         state.currentPos += prefixLen;
+                        isAlert = TRUE;
                     } else if (alertLen == 7 && wcsncmp(alertStart, L"WARNING", 7) == 0) {
                         blockquote->alertType = BLOCKQUOTE_WARNING;
                         const wchar_t* prefix = L"WARNING: ";
@@ -553,6 +557,7 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
                         wcsncpy(dest, prefix, prefixLen);
                         dest += prefixLen;
                         state.currentPos += prefixLen;
+                        isAlert = TRUE;
                     } else if (alertLen == 7 && wcsncmp(alertStart, L"CAUTION", 7) == 0) {
                         blockquote->alertType = BLOCKQUOTE_CAUTION;
                         const wchar_t* prefix = L"CAUTION: ";
@@ -560,17 +565,28 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
                         wcsncpy(dest, prefix, prefixLen);
                         dest += prefixLen;
                         state.currentPos += prefixLen;
+                        isAlert = TRUE;
                     }
 
-                    src = alertEnd + 1;
-                    if (*src == L'\n' || *src == L'\r') {
-                        src++;
-                        if (*src == L'\n' || *src == L'\r') src++;
-                        if (*src == L'>' && *(src + 1) == L' ') {
-                            src += 2;
+                    if (isAlert) {
+                        src = alertEnd + 1;
+                        if (*src == L'\n' || *src == L'\r') {
+                            src++;
+                            if (*src == L'\n' || *src == L'\r') src++;
+                            if (*src == L'>' && *(src + 1) == L' ') {
+                                src += 2;
+                            }
                         }
                     }
                 }
+            }
+
+            if (!isAlert) {
+                const wchar_t* prefix = L"\x258C "; // U+258C Left Half Block
+                size_t prefixLen = wcslen(prefix);
+                wcsncpy(dest, prefix, prefixLen);
+                dest += prefixLen;
+                state.currentPos += prefixLen;
             }
 
             BOOL inBlockquote = TRUE;
