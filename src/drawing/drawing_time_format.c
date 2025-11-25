@@ -177,11 +177,34 @@ void GetTimeText(wchar_t* buffer, size_t bufferSize) {
         TimeComponents tc = GetCurrentTimeComponents(CLOCK_USE_24HOUR);
         
         if (CLOCK_SHOW_SECONDS) {
-            FormatTimeComponentsForDisplay(&tc, finalFormat, finalShowMs, buffer, bufferSize);
+            /** Current time always shows hours (even if 0 in 24-hour mode) */
+            if (finalShowMs) {
+                if (finalFormat == TIME_FORMAT_ZERO_PADDED || finalFormat == TIME_FORMAT_FULL_PADDED) {
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%02d:%02d:%02d.%02d", 
+                            tc.hours, tc.minutes, tc.seconds, tc.centiseconds);
+                } else {
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d:%02d.%02d", 
+                            tc.hours, tc.minutes, tc.seconds, tc.centiseconds);
+                }
+            } else {
+                if (finalFormat == TIME_FORMAT_ZERO_PADDED || finalFormat == TIME_FORMAT_FULL_PADDED) {
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%02d:%02d:%02d", 
+                            tc.hours, tc.minutes, tc.seconds);
+                } else {
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d:%02d", 
+                            tc.hours, tc.minutes, tc.seconds);
+                }
+            }
         } else {
             /** Milliseconds override seconds hiding */
             if (finalShowMs) {
-                FormatTimeComponentsForDisplay(&tc, finalFormat, finalShowMs, buffer, bufferSize);
+                if (finalFormat == TIME_FORMAT_ZERO_PADDED || finalFormat == TIME_FORMAT_FULL_PADDED) {
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%02d:%02d:%02d.%02d", 
+                            tc.hours, tc.minutes, tc.seconds, tc.centiseconds);
+                } else {
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d:%02d.%02d", 
+                            tc.hours, tc.minutes, tc.seconds, tc.centiseconds);
+                }
             } else {
                 if (finalFormat == TIME_FORMAT_ZERO_PADDED || finalFormat == TIME_FORMAT_FULL_PADDED) {
                     _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%02d:%02d", tc.hours, tc.minutes);
