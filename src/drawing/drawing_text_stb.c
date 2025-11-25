@@ -17,35 +17,64 @@ static stbtt_fontinfo g_fontInfo;
 static char g_currentFontPath[MAX_PATH] = {0};
 static BOOL g_fontLoaded = FALSE;
 
-/* Helper to load file into memory */
-static unsigned char* LoadFileToMemory(const char* path) {
-    FILE* f = NULL;
+/* Memory mapping handles */
+static HANDLE g_hFontFile = INVALID_HANDLE_VALUE;
+static HANDLE g_hFontMapping = NULL;
+
+/* Helper to map file into memory */
+static unsigned char* LoadFontMapping(const char* path, HANDLE* phFile, HANDLE* phMapping) {
+    HANDLE hFile = INVALID_HANDLE_VALUE;
+    HANDLE hMapping = NULL;
+    void* pView = NULL;
     
-#ifdef _WIN32
     /* Convert UTF-8 path to Wide Char for Windows Unicode support */
     wchar_t wPath[MAX_PATH];
-    if (MultiByteToWideChar(CP_UTF8, 0, path, -1, wPath, MAX_PATH) > 0) {
-        f = _wfopen(wPath, L"rb");
-    } else {
-        /* Fallback to ANSI if conversion fails (unlikely) */
-        f = fopen(path, "rb");
+    if (MultiByteToWideChar(CP_UTF8, 0, path, -1, wPath, MAX_PATH) == 0) {
+        /* Fallback if conversion fails */
+        return NULL;
     }
-#else
-    f = fopen(path, "rb");
-#endif
 
-    if (!f) return NULL;
-
-    fseek(f, 0, SEEK_END);
-    long size = ftell(f);
-    fseek(f, 0, SEEK_SET);
-
-    unsigned char* buffer = (unsigned char*)malloc(size);
-    if (buffer) {
-        fread(buffer, 1, size, f);
+    hFile = CreateFileW(wPath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile == INVALID_HANDLE_VALUE) {
+        return NULL;
     }
-    fclose(f);
-    return buffer;
+
+    /* Create mapping for the whole file */
+    hMapping = CreateFileMappingW(hFile, NULL, PAGE_READONLY, 0, 0, NULL);
+    if (!hMapping) {
+        CloseHandle(hFile);
+        return NULL;
+    }
+
+    /* Map view of the file */
+    pView = MapViewOfFile(hMapping, FILE_MAP_READ, 0, 0, 0);
+    if (!pView) {
+        CloseHandle(hMapping);
+        CloseHandle(hFile);
+        return NULL;
+    }
+
+    *phFile = hFile;
+    *phMapping = hMapping;
+    return (unsigned char*)pView;
+}
+
+void CleanupFontSTB(void) {
+    if (g_fontBuffer) {
+        UnmapViewOfFile(g_fontBuffer);
+        g_fontBuffer = NULL;
+    }
+    if (g_hFontMapping) {
+        CloseHandle(g_hFontMapping);
+        g_hFontMapping = NULL;
+    }
+    if (g_hFontFile != INVALID_HANDLE_VALUE) {
+        CloseHandle(g_hFontFile);
+        g_hFontFile = INVALID_HANDLE_VALUE;
+    }
+    
+    g_fontLoaded = FALSE;
+    memset(g_currentFontPath, 0, sizeof(g_currentFontPath));
 }
 
 BOOL InitFontSTB(const char* fontFilePath) {
@@ -56,15 +85,20 @@ BOOL InitFontSTB(const char* fontFilePath) {
         return TRUE;
     }
 
-    // Load to temp buffer first to avoid unloading current font on failure
-    unsigned char* newBuffer = LoadFileToMemory(fontFilePath);
+    HANDLE hNewFile = INVALID_HANDLE_VALUE;
+    HANDLE hNewMapping = NULL;
+    
+    // Load to temp buffer (view) first
+    unsigned char* newBuffer = LoadFontMapping(fontFilePath, &hNewFile, &hNewMapping);
     if (!newBuffer) {
         return FALSE;
     }
 
     stbtt_fontinfo newInfo;
     if (!stbtt_InitFont(&newInfo, newBuffer, stbtt_GetFontOffsetForIndex(newBuffer, 0))) {
-        free(newBuffer);
+        UnmapViewOfFile(newBuffer);
+        CloseHandle(hNewMapping);
+        CloseHandle(hNewFile);
         return FALSE;
     }
 
@@ -73,19 +107,12 @@ BOOL InitFontSTB(const char* fontFilePath) {
     
     g_fontBuffer = newBuffer;
     g_fontInfo = newInfo;
+    g_hFontFile = hNewFile;
+    g_hFontMapping = hNewMapping;
     strncpy(g_currentFontPath, fontFilePath, MAX_PATH - 1);
     g_fontLoaded = TRUE;
     
     return TRUE;
-}
-
-void CleanupFontSTB(void) {
-    if (g_fontBuffer) {
-        free(g_fontBuffer);
-        g_fontBuffer = NULL;
-    }
-    g_fontLoaded = FALSE;
-    memset(g_currentFontPath, 0, sizeof(g_currentFontPath));
 }
 
 /**
