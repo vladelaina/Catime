@@ -248,7 +248,12 @@ void BuildColorSubmenu(HMENU hMenu) {
         const char* hexColor = COLOR_OPTIONS[i].hexColor;
         
         wchar_t hexColorW[16];
-        Utf8ToWide(hexColor, hexColorW, 16);
+        if (strcasecmp(hexColor, "CANDY") == 0) {
+            // Use a friendly name for the Candy option
+            wcscpy(hexColorW, L"Candy Gradient");
+        } else {
+            Utf8ToWide(hexColor, hexColorW, 16);
+        }
         
         MENUITEMINFO mii = { sizeof(MENUITEMINFO) };
         mii.fMask = MIIM_STRING | MIIM_ID | MIIM_STATE | MIIM_FTYPE;

@@ -17,7 +17,8 @@ static const char* DEFAULT_COLOR_OPTIONS[] = {
     "#FFFFFF", "#F9DB91", "#F4CAE0", "#FFB6C1",
     "#A8E7DF", "#A3CFB3", "#92CBFC", "#BDA5E7",
     "#9370DB", "#8C92CF", "#72A9A5", "#EB99A7",
-    "#EB96BD", "#FFAE8B", "#FF7F50", "#CA6174"
+    "#EB96BD", "#FFAE8B", "#FF7F50", "#CA6174",
+    "CANDY"
 };
 
 #define DEFAULT_COLOR_OPTIONS_COUNT (sizeof(DEFAULT_COLOR_OPTIONS) / sizeof(DEFAULT_COLOR_OPTIONS[0]))
@@ -62,6 +63,24 @@ static void TrimString(char* str) {
 
 void AddColorOption(const char* hexColor) {
     if (!hexColor || !*hexColor) return;
+
+    /* Special case for Candy mode */
+    if (strcasecmp(hexColor, "CANDY") == 0) {
+        /* Deduplication for special keyword */
+        for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
+            if (strcasecmp(COLOR_OPTIONS[i].hexColor, "CANDY") == 0) {
+                return;
+            }
+        }
+        PredefinedColor* newArray = realloc(COLOR_OPTIONS,
+                                          (COLOR_OPTIONS_COUNT + 1) * sizeof(PredefinedColor));
+        if (newArray) {
+            COLOR_OPTIONS = newArray;
+            COLOR_OPTIONS[COLOR_OPTIONS_COUNT].hexColor = _strdup("CANDY");
+            COLOR_OPTIONS_COUNT++;
+        }
+        return;
+    }
 
     char normalizedColor[COLOR_HEX_BUFFER];
     const char* hex = (hexColor[0] == '#') ? hexColor + 1 : hexColor;
@@ -160,6 +179,18 @@ void LoadColorConfig(void) {
                 AddColorOption(DEFAULT_COLOR_OPTIONS[i]);
             }
         }
+    }
+    
+    /* Always ensure CANDY option exists, even if config file didn't have it */
+    BOOL hasCandy = FALSE;
+    for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
+        if (strcasecmp(COLOR_OPTIONS[i].hexColor, "CANDY") == 0) {
+            hasCandy = TRUE;
+            break;
+        }
+    }
+    if (!hasCandy) {
+        AddColorOption("CANDY");
     }
 }
 

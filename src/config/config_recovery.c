@@ -53,6 +53,11 @@ BOOL ValidateColorConfig(ConfigSnapshot* snapshot) {
     
     BOOL modified = FALSE;
     
+    /* Special case for Candy mode */
+    if (strcasecmp(snapshot->textColor, "CANDY") == 0) {
+        return modified;
+    }
+
     /* Validate text color format */
     if (snapshot->textColor[0] != '#' || strlen(snapshot->textColor) != 7) {
         LOG_WARNING("Invalid text color format '%s', resetting to default",

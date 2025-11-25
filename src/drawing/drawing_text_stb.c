@@ -230,6 +230,63 @@ void BlendCharBitmapSTB(void* destBits, int destWidth, int destHeight,
     }
 }
 
+void BlendCharBitmapGradientSTB(void* destBits, int destWidth, int destHeight, 
+                                int x_pos, int y_pos, 
+                                unsigned char* bitmap, int w, int h, 
+                                int startX, int totalWidth) {
+    DWORD* pixels = (DWORD*)destBits;
+    
+    /* Candy Gradient Colors */
+    /* Pink: #FF5E96 (255, 94, 150) */
+    /* Blue: #56C6FF (86, 198, 255) */
+    const int r1 = 255, g1 = 94, b1 = 150;
+    const int r2 = 86, g2 = 198, b2 = 255;
+
+    for (int j = 0; j < h; ++j) {
+        for (int i = 0; i < w; ++i) {
+            int screen_x = x_pos + i;
+            int screen_y = y_pos + j;
+
+            if (screen_x >= 0 && screen_x < destWidth && screen_y >= 0 && screen_y < destHeight) {
+                unsigned char alpha = bitmap[j * w + i];
+                if (alpha == 0) continue;
+
+                /* Calculate gradient based on X position relative to startX */
+                float t = 0.0f;
+                if (totalWidth > 0) {
+                    t = (float)(screen_x - startX) / (float)totalWidth;
+                }
+                if (t < 0.0f) t = 0.0f;
+                if (t > 1.0f) t = 1.0f;
+
+                int r = (int)(r1 + (r2 - r1) * t);
+                int g = (int)(g1 + (g2 - g1) * t);
+                int b = (int)(b1 + (b2 - b1) * t);
+
+                /* Premultiplied alpha */
+                DWORD finalR = (r * alpha) / 255;
+                DWORD finalG = (g * alpha) / 255;
+                DWORD finalB = (b * alpha) / 255;
+                DWORD finalA = (DWORD)alpha;
+
+                DWORD currentPixel = pixels[screen_y * destWidth + screen_x];
+                DWORD currentA = (currentPixel >> 24) & 0xFF;
+                
+                /* Simple alpha blending with destination */
+                /* Since we are drawing stroke (background), we might be overwritten by fill later. */
+                /* Standard over operator: Src + Dst*(1-SrcA) */
+                /* But here we just use max alpha for simple layering if we draw back-to-front */
+                
+                /* For stroke, we want to overwrite the background (usually transparent). */
+                if (alpha > currentA) {
+                    pixels[screen_y * destWidth + screen_x] = 
+                        (finalA << 24) | (finalR << 16) | (finalG << 8) | finalB;
+                }
+            }
+        }
+    }
+}
+
 void GetCharMetricsSTB(wchar_t c, wchar_t nextC, float scale, float fallbackScale, GlyphMetrics* out) {
     out->index = 0;
     out->isFallback = FALSE;

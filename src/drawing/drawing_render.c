@@ -69,6 +69,7 @@ static RenderContext CreateRenderContext(void) {
     ctx.fontInternalName = fontInternalName;
     ctx.textColor = ParseColorString(colorStr);
     ctx.fontScaleFactor = CLOCK_FONT_SCALE_FACTOR;
+    ctx.isGradientMode = (strcasecmp(colorStr, "CANDY") == 0);
     
     return ctx;
 }
@@ -147,7 +148,8 @@ static BOOL RenderTextMarkdown(HDC hdc, const RECT* rect, const wchar_t* text, c
                              styles, styleCount,
                              ctx->textColor, 
                              (int)(CLOCK_BASE_FONT_SIZE * ctx->fontScaleFactor), 
-                             1.0f); // Internal scale is handled by font size
+                             1.0f,
+                             ctx->isGradientMode); // Internal scale is handled by font size
             return TRUE;
         }
     }

@@ -97,7 +97,7 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                        MarkdownLink* links, int linkCount,
                        MarkdownHeading* headings, int headingCount,
                        MarkdownStyle* styles, int styleCount,
-                       COLORREF color, int fontSize, float fontScale) {
+                       COLORREF color, int fontSize, float fontScale, BOOL isGradientMode) {
     if (!IsFontLoadedSTB() || !text || !bits) return;
 
     stbtt_fontinfo* fontInfo = GetMainFontInfoSTB();
@@ -171,7 +171,7 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                 float scale = baseScale;
                 float fallbackScale = fallbackBaseScale;
                 COLORREF drawColor = color;
-                
+
                 // Heading
                 while (curHeadingIdx < headingCount && j >= headings[curHeadingIdx].endPos) curHeadingIdx++;
                 if (curHeadingIdx < headingCount && j >= headings[curHeadingIdx].startPos) {
@@ -182,20 +182,20 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                 // Link
                 while (curLinkIdx < linkCount && j >= links[curLinkIdx].endPos) curLinkIdx++;
                 if (curLinkIdx < linkCount && j >= links[curLinkIdx].startPos) {
-                    drawColor = RGB(9, 105, 218); // Modern Link Blue (#0969DA)
+                    drawColor = RGB(9, 105, 218); // Link blue
                 }
                 
-                // Style (Bold/Italic/Code)
+                // Style (Code) - only background for now, color override if needed
                 while (curStyleIdx < styleCount && j >= styles[curStyleIdx].endPos) curStyleIdx++;
                 if (curStyleIdx < styleCount && j >= styles[curStyleIdx].startPos) {
                     if (styles[curStyleIdx].type == STYLE_CODE) {
-                        drawColor = RGB(100, 100, 100); // Gray for code
+                        drawColor = RGB(100, 100, 100);
                     }
                 }
 
                 GlyphMetrics gm;
                 GetCharMetricsSTB(text[j], (j < i - 1) ? text[j+1] : 0, scale, fallbackScale, &gm);
-
+                
                 if (gm.index != 0 && text[j] != L' ' && text[j] != L'\t') {
                     int w, h, xoff, yoff;
                     unsigned char* bitmap = NULL;
@@ -207,10 +207,16 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                     }
                     
                     if (bitmap) {
-                        int r = GetRValue(drawColor);
-                        int g = GetGValue(drawColor);
-                        int b = GetBValue(drawColor);
-                        BlendCharBitmapSTB(bits, width, height, currentX + xoff, baselineY + yoff, bitmap, w, h, r, g, b);
+                        if (isGradientMode && drawColor == color) { /* Only apply gradient to default colored text */
+                            BlendCharBitmapGradientSTB(bits, width, height, 
+                                currentX + xoff, baselineY + yoff, 
+                                bitmap, w, h, 0, width); /* Use total width for gradient mapping */
+                        } else {
+                            BlendCharBitmapSTB(bits, width, height, 
+                                currentX + xoff, baselineY + yoff, 
+                                bitmap, w, h, 
+                                GetRValue(drawColor), GetGValue(drawColor), GetBValue(drawColor));
+                        }
                         stbtt_FreeBitmap(bitmap, NULL);
                     }
                 }
