@@ -34,6 +34,12 @@ void BuildColorSubmenu(HMENU hMenu);
 void BuildAnimationSubmenu(HMENU hMenu);
 
 /**
+ * @brief Build plugins submenu
+ * @param hMenu Parent menu handle
+ */
+void BuildPluginsSubmenu(HMENU hMenu);
+
+/**
  * @brief Build help/about submenu
  * @param hMenu Parent menu handle
  */

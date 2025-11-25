@@ -20,7 +20,8 @@
 #include "shortcut_checker.h"
 #include "utils/string_convert.h"
 #include "cache/resource_cache.h"
-#include "plugin_ipc.h"
+#include "plugin/plugin_ipc.h"
+#include "plugin/plugin_manager.h"
 #include <tlhelp32.h>
 
 /* Helper to check if process is elevated */
@@ -222,6 +223,12 @@ BOOL InitializeSubsystems(void) {
     PluginIPC_Init();
     LOG_INFO("Plugin IPC subsystem initialized");
 
+    // Initialize plugin manager
+    PluginManager_Init();
+    PluginManager_ScanPlugins();
+    PluginManager_StartAllPlugins();
+    LOG_INFO("Plugin manager initialized");
+
     return TRUE;
 }
 
@@ -368,6 +375,9 @@ void CleanupResources(HANDLE hMutex) {
 
     LOG_INFO("Preparing to clean up update check thread resources");
     CleanupUpdateThread();
+
+    LOG_INFO("Shutting down plugin manager");
+    PluginManager_Shutdown();
 
     LOG_INFO("Shutting down plugin IPC subsystem");
     PluginIPC_Shutdown();

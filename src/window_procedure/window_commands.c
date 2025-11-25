@@ -28,6 +28,7 @@
 #include "async_update_checker.h"
 #include "window_procedure/window_procedure.h"
 #include "window_procedure/window_menus.h"
+#include "plugin/plugin_manager.h"
 #include "tray/tray_animation_menu.h"
 #include "tray/tray_animation_core.h"
 #include "tray/tray_menu_font.h"
@@ -827,6 +828,25 @@ BOOL DispatchRangeCommand(HWND hwnd, UINT cmd, WPARAM wp, LPARAM lp) {
         int idx = (cmd == CLOCK_IDM_POMODORO_WORK) ? 0 :
                  (cmd == CLOCK_IDM_POMODORO_BREAK) ? 1 : 2;
         return HandlePomodoroTime(hwnd, cmd, idx);
+    }
+
+    /* Handle plugin commands */
+    if (cmd >= CLOCK_IDM_PLUGINS_BASE && cmd < CLOCK_IDM_PLUGINS_SETTINGS_BASE) {
+        int pluginIndex = cmd - CLOCK_IDM_PLUGINS_BASE;
+        PluginManager_TogglePlugin(pluginIndex);
+        return TRUE;
+    }
+
+    /* Handle plugin settings commands */
+    if (cmd >= CLOCK_IDM_PLUGINS_SETTINGS_BASE && cmd < CLOCK_IDM_PLUGINS_REFRESH) {
+        int pluginIndex = cmd - CLOCK_IDM_PLUGINS_SETTINGS_BASE;
+        PluginManager_OpenSettings(pluginIndex);
+        return TRUE;
+    }
+
+    if (cmd == CLOCK_IDM_PLUGINS_REFRESH) {
+        PluginManager_ScanPlugins();
+        return TRUE;
     }
 
     return FALSE;

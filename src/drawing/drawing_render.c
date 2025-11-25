@@ -17,7 +17,7 @@
 #include "menu_preview.h"
 #include "font/font_path_manager.h"
 #include "log.h"
-#include "plugin_ipc.h"
+#include "plugin/plugin_ipc.h"
 
 extern char FONT_FILE_NAME[MAX_PATH];
 extern char FONT_INTERNAL_NAME[MAX_PATH];

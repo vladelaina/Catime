@@ -85,6 +85,10 @@ void ShowColorMenu(HWND hwnd) {
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
+    BuildPluginsSubmenu(hMenu);
+
+    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
+
     BuildHelpSubmenu(hMenu);
 
     /* Exit */

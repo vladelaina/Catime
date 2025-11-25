@@ -17,6 +17,7 @@
 #include "pomodoro.h"
 #include "timer/timer.h"
 #include "config.h"
+#include "plugin/plugin_manager.h"
 #include "../resource/resource.h"
 #include "tray/tray_animation_core.h"
 #include "tray/tray_animation_loader.h"
@@ -304,6 +305,51 @@ void BuildAnimationSubmenu(HMENU hMenu) {
         AppendMenuW(hAnimMenu, MF_STRING, CLOCK_IDM_ANIMATIONS_OPEN_DIR, GetLocalizedString(NULL, L"Open animations folder"));
     }
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hAnimMenu, GetLocalizedString(NULL, L"Tray Icon"));
+}
+
+/**
+ * @brief Build plugins submenu
+ * @param hMenu Parent menu handle
+ */
+void BuildPluginsSubmenu(HMENU hMenu) {
+    HMENU hPluginsMenu = CreatePopupMenu();
+
+    int pluginCount = PluginManager_GetPluginCount();
+
+    if (pluginCount == 0) {
+        AppendMenuW(hPluginsMenu, MF_STRING | MF_GRAYED, 0, L"No plugins found");
+    } else {
+        for (int i = 0; i < pluginCount; i++) {
+            const PluginInfo* plugin = PluginManager_GetPlugin(i);
+            if (plugin) {
+                wchar_t displayName[128];
+                MultiByteToWideChar(CP_UTF8, 0, plugin->displayName, -1, displayName, 128);
+
+                // Create submenu for each plugin
+                HMENU hPluginSubmenu = CreatePopupMenu();
+
+                // Add "Start/Stop" option
+                BOOL isRunning = PluginManager_IsPluginRunning(i);
+                const wchar_t* toggleText = isRunning ? L"Stop" : L"Start";
+                AppendMenuW(hPluginSubmenu, MF_STRING, CLOCK_IDM_PLUGINS_BASE + i, toggleText);
+
+                // Add "Settings" option
+                AppendMenuW(hPluginSubmenu, MF_STRING, CLOCK_IDM_PLUGINS_SETTINGS_BASE + i, L"Settings");
+
+                // Add plugin submenu to main plugins menu
+                UINT flags = MF_POPUP;
+                if (isRunning) {
+                    flags |= MF_CHECKED;
+                }
+                AppendMenuW(hPluginsMenu, flags, (UINT_PTR)hPluginSubmenu, displayName);
+            }
+        }
+    }
+
+    AppendMenuW(hPluginsMenu, MF_SEPARATOR, 0, NULL);
+    AppendMenuW(hPluginsMenu, MF_STRING, CLOCK_IDM_PLUGINS_REFRESH, L"Refresh");
+
+    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hPluginsMenu, L"Plugins");
 }
 
 /**

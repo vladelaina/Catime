@@ -118,6 +118,12 @@
 #define CLOCK_IDM_BROWSE_FILE 131        /**< Browse for file menu item */
 #define CLOCK_IDM_CURRENT_FILE 127       /**< Current file menu item */
 
+/** @brief Plugin menu identifiers */
+#define CLOCK_IDM_PLUGINS 140                /**< Plugins submenu */
+#define CLOCK_IDM_PLUGINS_BASE 3000          /**< Base ID for plugin menu items (3000-3499) */
+#define CLOCK_IDM_PLUGINS_SETTINGS_BASE 3500 /**< Base ID for plugin settings items (3500-3998) */
+#define CLOCK_IDM_PLUGINS_REFRESH 3999       /**< Refresh plugins menu item */
+
 /** @brief Help and application menu identifiers */
 #define CLOCK_IDM_ABOUT 132              /**< About dialog menu item */
 #define CLOCK_IDM_CHECK_UPDATE 133       /**< Check for updates menu item */

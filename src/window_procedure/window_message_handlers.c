@@ -23,7 +23,7 @@
 #include "cache/resource_cache.h"
 #include "../resource/resource.h"
 #include "window_procedure/window_drop_target.h"
-#include "plugin_ipc.h"
+#include "plugin/plugin_ipc.h"
 #include <stdio.h>
 
 /* 50ms menu debounce prevents accidental double-clicks during menu interaction */
