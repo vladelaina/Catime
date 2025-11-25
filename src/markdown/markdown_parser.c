@@ -6,6 +6,7 @@
 #include "markdown/markdown_parser.h"
 #include <stdlib.h>
 #include <string.h>
+#include "log.h"
 
 #define BULLET_POINT L"• "
 
@@ -331,6 +332,14 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
     *blockquotes = NULL;
     *blockquoteCount = 0;
 
+    if (!input || wcslen(input) == 0) return FALSE;
+
+    // Skip BOM if present (double safety)
+    if (*input == 0xFEFF) {
+        input++;
+        if (wcslen(input) == 0) return FALSE;
+    }
+
     size_t inputLen = wcslen(input);
     ParseState state = {0};
 
@@ -417,12 +426,40 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
                 listItem->startPos = state.currentPos;
                 listItem->indentLevel = indentLevel;
 
-                size_t bulletLen = wcslen(BULLET_POINT);
-                wcsncpy(dest, BULLET_POINT, bulletLen);
-                dest += bulletLen;
-                state.currentPos += bulletLen;
+                // Check for Task List (Checkbox)
+                // Syntax: "- [ ] " or "- [x] "
+                // src now points to "-" (or "*")
+                // We need to check relative to 'afterSpaces' which is aligned with src now (since we consumed spaces)
+                // Wait, src was advanced by the while loop above. 
+                // Let's verify: 'afterSpaces' was calculated BEFORE the while loop.
+                // The while loop consumed spaces from 'src'.
+                // So 'src' now points to the first non-space char, which is '-' or '*'.
+                
+                const wchar_t* p = src;
+                wchar_t replacement[8] = {0};
+                int advanceSrc = 0;
 
-                src += 2;
+                if (*p == L'-' && p[1] == L' ' && p[2] == L'[' && p[3] == L' ' && p[4] == L']' && p[5] == L' ') {
+                    // Unchecked: "- [ ] " -> "□ " (Geometric Shape - widely supported)
+                    wcscpy(replacement, L"\x25A1 "); 
+                    advanceSrc = 6;
+                } else if (*p == L'-' && p[1] == L' ' && p[2] == L'[' && (p[3] == L'x' || p[3] == L'X') && p[4] == L']' && p[5] == L' ') {
+                    // Checked: "- [x] " -> "■ " (Black Square - widely supported)
+                    // Alternatively could use checkmark \x2713 or \x2714 but square matches style better
+                    wcscpy(replacement, L"\x25A0 ");
+                    advanceSrc = 6;
+                } else {
+                    // Normal bullet
+                    wcscpy(replacement, BULLET_POINT);
+                    advanceSrc = 2;
+                }
+
+                size_t replLen = wcslen(replacement);
+                wcsncpy(dest, replacement, replLen);
+                dest += replLen;
+                state.currentPos += replLen;
+
+                src += advanceSrc;
 
                 inListItem = TRUE;
                 currentListItemIndex = state.listItemCount;
@@ -457,8 +494,12 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
                 currentHeadingIndex = state.headingCount;
                 state.headingCount++;
 
+                LOG_INFO("MD: Found Heading Level %d at pos %d", level, heading->startPos);
+
                 atLineStart = FALSE;
                 continue;
+            } else {
+                LOG_INFO("MD: Found # at line start but rejected. HashEnd: '%C' Level: %d", *hashEnd, level);
             }
         }
 
@@ -624,6 +665,9 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
     *listItemCount = state.listItemCount;
     *blockquotes = state.blockquotes;
     *blockquoteCount = state.blockquoteCount;
+
+    LOG_INFO("MD Parse Done: DisplayText len %d, Links %d, Headings %d, Styles %d", 
+             wcslen(state.displayText), state.linkCount, state.headingCount, state.styleCount);
 
     return TRUE;
 }

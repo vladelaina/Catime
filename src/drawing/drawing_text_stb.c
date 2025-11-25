@@ -224,122 +224,380 @@ static void BlendCharBitmap(void* destBits, int destWidth, int destHeight,
     }
 }
 
+typedef struct {
+    int index;
+    BOOL isFallback;
+    int advance;
+    int kern;
+} GlyphMetrics;
+
+static void GetCharMetrics(wchar_t c, wchar_t nextC, float scale, float fallbackScale, GlyphMetrics* out) {
+    out->index = 0;
+    out->isFallback = FALSE;
+    out->advance = 0;
+    out->kern = 0;
+
+    if (c == L'\n' || c == L'\r') return;
+    
+    if (c == L'\t') {
+        // Tab = 4 spaces
+        int spaceIdx = stbtt_FindGlyphIndex(&g_fontInfo, ' ');
+        int adv, lsb;
+        stbtt_GetGlyphHMetrics(&g_fontInfo, spaceIdx, &adv, &lsb);
+        out->advance = (int)(adv * scale * 4);
+        return;
+    }
+
+    out->index = stbtt_FindGlyphIndex(&g_fontInfo, (int)c);
+    
+    if (out->index == 0 && g_fallbackFontLoaded && c != L' ') {
+        int fallbackIndex = stbtt_FindGlyphIndex(&g_fallbackFontInfo, (int)c);
+        if (fallbackIndex != 0) {
+            out->index = fallbackIndex;
+            out->isFallback = TRUE;
+        }
+    }
+
+    int adv, lsb;
+    if (out->isFallback) {
+        stbtt_GetGlyphHMetrics(&g_fallbackFontInfo, out->index, &adv, &lsb);
+        out->advance = (int)(adv * fallbackScale);
+    } else {
+        stbtt_GetGlyphHMetrics(&g_fontInfo, out->index, &adv, &lsb);
+        out->advance = (int)(adv * scale);
+        
+        // Kerning
+        if (nextC && nextC != L'\n' && nextC != L'\r') {
+            int nextIdx = stbtt_FindGlyphIndex(&g_fontInfo, (int)nextC);
+            if (nextIdx != 0) {
+                out->kern = (int)(stbtt_GetGlyphKernAdvance(&g_fontInfo, out->index, nextIdx) * scale);
+            }
+        }
+    }
+}
+
+BOOL MeasureTextSTB(const wchar_t* text, int fontSize, int* width, int* height) {
+    if (!g_fontLoaded || !text) return FALSE;
+
+    float scale = stbtt_ScaleForPixelHeight(&g_fontInfo, (float)fontSize);
+    float fallbackScale = g_fallbackFontLoaded ? stbtt_ScaleForPixelHeight(&g_fallbackFontInfo, (float)fontSize) : 0;
+
+    int maxWidth = 0;
+    int curLineWidth = 0;
+    int lineCount = 1;
+    size_t len = wcslen(text);
+
+    for (size_t i = 0; i < len; i++) {
+        if (text[i] == L'\n') {
+            if (curLineWidth > maxWidth) maxWidth = curLineWidth;
+            curLineWidth = 0;
+            lineCount++;
+            continue;
+        }
+        if (text[i] == L'\r') continue;
+
+        GlyphMetrics gm;
+        GetCharMetrics(text[i], (i < len - 1) ? text[i+1] : 0, scale, fallbackScale, &gm);
+        curLineWidth += gm.advance + gm.kern;
+    }
+    if (curLineWidth > maxWidth) maxWidth = curLineWidth;
+
+    int ascent, descent, lineGap;
+    stbtt_GetFontVMetrics(&g_fontInfo, &ascent, &descent, &lineGap);
+    int lineHeight = (int)((ascent - descent + lineGap) * scale);
+
+    if (width) *width = maxWidth;
+    if (height) *height = lineCount * lineHeight;
+    
+    return TRUE;
+}
+
 void RenderTextSTB(void* bits, int width, int height, const wchar_t* text, 
                    COLORREF color, int fontSize, float fontScale, BOOL editMode) {
     if (!g_fontLoaded || !text || !bits) return;
 
-    /* Main font metrics */
     float scale = stbtt_ScaleForPixelHeight(&g_fontInfo, (float)(fontSize * fontScale));
+    float fallbackScale = g_fallbackFontLoaded ? stbtt_ScaleForPixelHeight(&g_fallbackFontInfo, (float)(fontSize * fontScale)) : 0;
+    
     int ascent, descent, lineGap;
     stbtt_GetFontVMetrics(&g_fontInfo, &ascent, &descent, &lineGap);
+    int lineHeight = (int)((ascent - descent + lineGap) * scale);
     int baselineOffset = (int)(ascent * scale);
-
-    /* Fallback font metrics */
-    float fallbackScale = 0.0f;
-    if (g_fallbackFontLoaded) {
-        fallbackScale = stbtt_ScaleForPixelHeight(&g_fallbackFontInfo, (float)(fontSize * fontScale));
-    }
-    
-    /* Calculate total text width to center it */
-    int totalWidth = 0;
-    size_t len = wcslen(text);
-    
-    /* We need to store which font is used for each glyph to avoid re-lookup */
-    typedef struct {
-        int index;
-        BOOL isFallback;
-    } GlyphInfo;
-    
-    GlyphInfo* glyphs = (GlyphInfo*)malloc(len * sizeof(GlyphInfo));
-    int* advances = (int*)malloc(len * sizeof(int));
-    
-    if (!glyphs || !advances) {
-        free(glyphs); free(advances);
-        return;
-    }
-
-    for (size_t i = 0; i < len; i++) {
-        int codepoint = (int)text[i]; 
-        
-        /* Try main font first */
-        glyphs[i].index = stbtt_FindGlyphIndex(&g_fontInfo, codepoint);
-        glyphs[i].isFallback = FALSE;
-        
-        /* Try fallback if main failed (index 0 usually means missing glyph) */
-        /* Note: some fonts return 0 for space, but we handle space separately via advance */
-        if (glyphs[i].index == 0 && g_fallbackFontLoaded && codepoint != ' ') {
-            int fallbackIndex = stbtt_FindGlyphIndex(&g_fallbackFontInfo, codepoint);
-            if (fallbackIndex != 0) {
-                glyphs[i].index = fallbackIndex;
-                glyphs[i].isFallback = TRUE;
-            }
-        }
-        
-        int advance, lsb;
-        if (glyphs[i].isFallback) {
-            stbtt_GetGlyphHMetrics(&g_fallbackFontInfo, glyphs[i].index, &advance, &lsb);
-            advances[i] = (int)(advance * fallbackScale);
-        } else {
-            stbtt_GetGlyphHMetrics(&g_fontInfo, glyphs[i].index, &advance, &lsb);
-            advances[i] = (int)(advance * scale);
-        }
-        
-        totalWidth += advances[i];
-        
-        /* Kerning only applies if both glyphs are from main font */
-        if (i < len - 1 && !glyphs[i].isFallback) {
-            /* We don't check next glyph here, just optimistic kern lookup */
-            /* Actually we should peek next. But for simplicity, only kern main font pairs */
-             int nextCodepoint = (int)text[i+1];
-             int nextIndex = stbtt_FindGlyphIndex(&g_fontInfo, nextCodepoint);
-             if (nextIndex != 0) {
-                 int kern = stbtt_GetGlyphKernAdvance(&g_fontInfo, glyphs[i].index, nextIndex);
-                 totalWidth += (int)(kern * scale);
-             }
-        }
-    }
-
-    /* Calculate starting position */
-    int x = (width - totalWidth) / 2;
-    int y = (height - (int)((ascent - descent) * scale)) / 2 + baselineOffset;
     
     int r = GetRValue(color);
     int g = GetGValue(color);
     int b = GetBValue(color);
 
-    for (size_t i = 0; i < len; i++) {
-        /* Skip rendering space or missing glyphs (if even fallback failed) */
-        if (glyphs[i].index == 0 && text[i] != ' ') {
-             /* Draw a box for missing glyph? optional. */
-        }
+    // Pre-calculate line widths for centering
+    // We can do a quick pass or re-use Measure logic per line
+    size_t len = wcslen(text);
+    int currentY = 0;
+    
+    // Calculate total text height to vertically center the whole block
+    int totalTextHeight = 0;
+    int numLines = 0;
+    {
+        int w, h;
+        MeasureTextSTB(text, (int)(fontSize * fontScale), &w, &h);
+        totalTextHeight = h;
+        numLines = h / lineHeight;
+    }
+    
+    int startY = (height - totalTextHeight) / 2;
+    int currentLineStart = 0;
+    
+    for (size_t i = 0; i <= len; i++) {
+        if (text[i] == L'\n' || text[i] == L'\0') {
+            // Line complete, render it
+            int lineWidth = 0;
+            // Calculate width of this line
+            for (size_t j = currentLineStart; j < i; j++) {
+                if (text[j] == L'\r') continue;
+                GlyphMetrics gm;
+                GetCharMetrics(text[j], (j < i - 1) ? text[j+1] : 0, scale, fallbackScale, &gm);
+                lineWidth += gm.advance + gm.kern;
+            }
+            
+            int currentX = (width - lineWidth) / 2;
+            int lineY = startY + currentY * lineHeight + baselineOffset;
 
-        int w, h, xoff, yoff;
-        unsigned char* bitmap = NULL;
-        
-        if (glyphs[i].isFallback) {
-            bitmap = stbtt_GetGlyphBitmap(&g_fallbackFontInfo, fallbackScale, fallbackScale, glyphs[i].index, &w, &h, &xoff, &yoff);
-        } else {
-            bitmap = stbtt_GetGlyphBitmap(&g_fontInfo, scale, scale, glyphs[i].index, &w, &h, &xoff, &yoff);
-        }
-        
-        if (bitmap) {
-            BlendCharBitmap(bits, width, height, x + xoff, y + yoff, bitmap, w, h, r, g, b);
-            stbtt_FreeBitmap(bitmap, NULL);
-        }
-
-        x += advances[i];
-        
-        /* Apply kerning again for position update */
-        if (i < len - 1 && !glyphs[i].isFallback) {
-             int nextCodepoint = (int)text[i+1];
-             int nextIndex = stbtt_FindGlyphIndex(&g_fontInfo, nextCodepoint);
-             if (nextIndex != 0) {
-                 int kern = stbtt_GetGlyphKernAdvance(&g_fontInfo, glyphs[i].index, nextIndex);
-                 x += (int)(kern * scale);
-             }
+            // Render line
+            for (size_t j = currentLineStart; j < i; j++) {
+                if (text[j] == L'\r') continue;
+                
+                GlyphMetrics gm;
+                GetCharMetrics(text[j], (j < i - 1) ? text[j+1] : 0, scale, fallbackScale, &gm);
+                
+                if (gm.index != 0 && text[j] != L' ' && text[j] != L'\t') {
+                    int w, h, xoff, yoff;
+                    unsigned char* bitmap = NULL;
+                    
+                    if (gm.isFallback) {
+                        bitmap = stbtt_GetGlyphBitmap(&g_fallbackFontInfo, fallbackScale, fallbackScale, gm.index, &w, &h, &xoff, &yoff);
+                    } else {
+                        bitmap = stbtt_GetGlyphBitmap(&g_fontInfo, scale, scale, gm.index, &w, &h, &xoff, &yoff);
+                    }
+                    
+                    if (bitmap) {
+                        BlendCharBitmap(bits, width, height, currentX + xoff, lineY + yoff, bitmap, w, h, r, g, b);
+                        stbtt_FreeBitmap(bitmap, NULL);
+                    }
+                }
+                currentX += gm.advance + gm.kern;
+            }
+            
+            currentY++;
+            currentLineStart = i + 1;
         }
     }
+}
 
-    free(glyphs);
-    free(advances);
+/* Markdown Support */
+
+static float GetScaleForHeading(int level, float baseScale) {
+    switch (level) {
+        case 1: return baseScale * 2.0f;
+        case 2: return baseScale * 1.5f;
+        case 3: return baseScale * 1.25f;
+        case 4: return baseScale * 1.1f;
+        default: return baseScale;
+    }
+}
+
+static int GetLineHeight(float scale) {
+    int ascent, descent, lineGap;
+    stbtt_GetFontVMetrics(&g_fontInfo, &ascent, &descent, &lineGap);
+    return (int)((ascent - descent + lineGap) * scale);
+}
+
+BOOL MeasureMarkdownSTB(const wchar_t* text,
+                        MarkdownHeading* headings, int headingCount,
+                        int fontSize, int* width, int* height) {
+    if (!g_fontLoaded || !text) return FALSE;
+
+    float baseScale = stbtt_ScaleForPixelHeight(&g_fontInfo, (float)fontSize);
+    float fallbackBaseScale = g_fallbackFontLoaded ? stbtt_ScaleForPixelHeight(&g_fallbackFontInfo, (float)fontSize) : 0;
+
+    int maxWidth = 0;
+    int curLineWidth = 0;
+    int totalHeight = 0;
+    int curLineMaxHeight = GetLineHeight(baseScale); // Default to base height
+
+    size_t len = wcslen(text);
+    
+    // Optimization: Track current heading index
+    int curHeadingIdx = 0;
+
+    for (size_t i = 0; i < len; i++) {
+        if (text[i] == L'\n') {
+            if (curLineWidth > maxWidth) maxWidth = curLineWidth;
+            curLineWidth = 0;
+            totalHeight += curLineMaxHeight;
+            curLineMaxHeight = GetLineHeight(baseScale); // Reset to base
+            continue;
+        }
+        if (text[i] == L'\r') continue;
+
+        // Determine style
+        float scale = baseScale;
+        float fallbackScale = fallbackBaseScale;
+        
+        // Check heading
+        while (curHeadingIdx < headingCount && i >= headings[curHeadingIdx].endPos) {
+            curHeadingIdx++;
+        }
+        if (curHeadingIdx < headingCount && i >= headings[curHeadingIdx].startPos) {
+            scale = GetScaleForHeading(headings[curHeadingIdx].level, baseScale);
+            if (g_fallbackFontLoaded) {
+                fallbackScale = GetScaleForHeading(headings[curHeadingIdx].level, fallbackBaseScale);
+            }
+        }
+
+        // Update line height if this char is taller
+        int h = GetLineHeight(scale);
+        if (h > curLineMaxHeight) curLineMaxHeight = h;
+
+        GlyphMetrics gm;
+        GetCharMetrics(text[i], (i < len - 1) ? text[i+1] : 0, scale, fallbackScale, &gm);
+        curLineWidth += gm.advance + gm.kern;
+    }
+    if (curLineWidth > maxWidth) maxWidth = curLineWidth;
+    totalHeight += curLineMaxHeight;
+
+    if (width) *width = maxWidth;
+    if (height) *height = totalHeight;
+    
+    return TRUE;
+}
+
+void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
+                       MarkdownLink* links, int linkCount,
+                       MarkdownHeading* headings, int headingCount,
+                       MarkdownStyle* styles, int styleCount,
+                       COLORREF color, int fontSize, float fontScale) {
+    if (!g_fontLoaded || !text || !bits) return;
+
+    float baseScale = stbtt_ScaleForPixelHeight(&g_fontInfo, (float)(fontSize * fontScale));
+    float fallbackBaseScale = g_fallbackFontLoaded ? stbtt_ScaleForPixelHeight(&g_fallbackFontInfo, (float)(fontSize * fontScale)) : 0;
+    
+    int baseAscent, baseDescent, baseLineGap;
+    stbtt_GetFontVMetrics(&g_fontInfo, &baseAscent, &baseDescent, &baseLineGap);
+
+    // Calculate total layout to center vertically
+    int totalTextHeight = 0;
+    int w_dummy, h_dummy;
+    MeasureMarkdownSTB(text, headings, headingCount, (int)(fontSize * fontScale), &w_dummy, &h_dummy);
+    totalTextHeight = h_dummy;
+    
+    int currentY = (height - totalTextHeight) / 2;
+    
+    size_t len = wcslen(text);
+    int currentLineStart = 0;
+    
+    // State trackers
+    int curHeadingIdx = 0;
+    int curLinkIdx = 0;
+    int curStyleIdx = 0;
+
+    for (size_t i = 0; i <= len; i++) {
+        if (text[i] == L'\n' || text[i] == L'\0') {
+            // 1. Measure this line to center horizontally AND find max height
+            int lineWidth = 0;
+            int lineMaxHeight = GetLineHeight(baseScale);
+            int maxAscent = (int)(baseAscent * baseScale);
+
+            // Temp indices for measurement pass
+            int tmpHeadingIdx = curHeadingIdx;
+
+            for (size_t j = currentLineStart; j < i; j++) {
+                if (text[j] == L'\r') continue;
+                
+                float scale = baseScale;
+                float fallbackScale = fallbackBaseScale;
+
+                while (tmpHeadingIdx < headingCount && j >= headings[tmpHeadingIdx].endPos) tmpHeadingIdx++;
+                if (tmpHeadingIdx < headingCount && j >= headings[tmpHeadingIdx].startPos) {
+                    scale = GetScaleForHeading(headings[tmpHeadingIdx].level, baseScale);
+                    if (g_fallbackFontLoaded) fallbackScale = GetScaleForHeading(headings[tmpHeadingIdx].level, fallbackBaseScale);
+                }
+
+                int h = GetLineHeight(scale);
+                if (h > lineMaxHeight) lineMaxHeight = h;
+                
+                int asc = (int)(baseAscent * scale); // Approximation
+                if (asc > maxAscent) maxAscent = asc;
+
+                GlyphMetrics gm;
+                GetCharMetrics(text[j], (j < i - 1) ? text[j+1] : 0, scale, fallbackScale, &gm);
+                lineWidth += gm.advance + gm.kern;
+            }
+
+            int currentX = (width - lineWidth) / 2;
+            // Baseline align: Y + maxAscent
+            // But currentY is top of line.
+            // Let's use top-align for simplicity or baseline?
+            // Standard is baseline. 
+            int baselineY = currentY + maxAscent;
+
+            // 2. Render this line
+            for (size_t j = currentLineStart; j < i; j++) {
+                if (text[j] == L'\r') continue;
+
+                // Determine styles
+                float scale = baseScale;
+                float fallbackScale = fallbackBaseScale;
+                COLORREF drawColor = color;
+                
+                // Heading
+                while (curHeadingIdx < headingCount && j >= headings[curHeadingIdx].endPos) curHeadingIdx++;
+                if (curHeadingIdx < headingCount && j >= headings[curHeadingIdx].startPos) {
+                    scale = GetScaleForHeading(headings[curHeadingIdx].level, baseScale);
+                    if (g_fallbackFontLoaded) fallbackScale = GetScaleForHeading(headings[curHeadingIdx].level, fallbackBaseScale);
+                }
+
+                // Link
+                while (curLinkIdx < linkCount && j >= links[curLinkIdx].endPos) curLinkIdx++;
+                if (curLinkIdx < linkCount && j >= links[curLinkIdx].startPos) {
+                    drawColor = RGB(9, 105, 218); // Modern Link Blue (#0969DA)
+                    // Update link rect for hit testing (optional, if we want click support later)
+                    // UnionRect logic needed... skip for now (plugin data is usually read-only display)
+                }
+                
+                // Style (Bold/Italic/Code) - For now just color change for Code
+                while (curStyleIdx < styleCount && j >= styles[curStyleIdx].endPos) curStyleIdx++;
+                if (curStyleIdx < styleCount && j >= styles[curStyleIdx].startPos) {
+                    if (styles[curStyleIdx].type == STYLE_CODE) {
+                        drawColor = RGB(100, 100, 100); // Gray for code
+                    }
+                    // Bold/Italic would affect font selection, but we only have one font.
+                }
+
+                GlyphMetrics gm;
+                GetCharMetrics(text[j], (j < i - 1) ? text[j+1] : 0, scale, fallbackScale, &gm);
+
+                if (gm.index != 0 && text[j] != L' ' && text[j] != L'\t') {
+                    int w, h, xoff, yoff;
+                    unsigned char* bitmap = NULL;
+                    
+                    if (gm.isFallback) {
+                        bitmap = stbtt_GetGlyphBitmap(&g_fallbackFontInfo, fallbackScale, fallbackScale, gm.index, &w, &h, &xoff, &yoff);
+                    } else {
+                        bitmap = stbtt_GetGlyphBitmap(&g_fontInfo, scale, scale, gm.index, &w, &h, &xoff, &yoff);
+                    }
+                    
+                    if (bitmap) {
+                        int r = GetRValue(drawColor);
+                        int g = GetGValue(drawColor);
+                        int b = GetBValue(drawColor);
+                        BlendCharBitmap(bits, width, height, currentX + xoff, baselineY + yoff, bitmap, w, h, r, g, b);
+                        stbtt_FreeBitmap(bitmap, NULL);
+                    }
+                }
+                currentX += gm.advance + gm.kern;
+            }
+
+            currentY += lineMaxHeight;
+            currentLineStart = i + 1;
+        }
+    }
 }

@@ -19,6 +19,7 @@
 #include "log.h"
 #include "plugin/plugin_data.h"
 #include "drawing/drawing_image.h"
+#include "markdown/markdown_parser.h"
 
 extern char FONT_FILE_NAME[MAX_PATH];
 extern char FONT_INTERNAL_NAME[MAX_PATH];
@@ -90,39 +91,62 @@ static HFONT CreateTimerFont(const RenderContext* ctx) {
     );
 }
 
-static BOOL RenderText(HDC hdc, const RECT* rect, const wchar_t* text, const RenderContext* ctx, BOOL editMode, void* bits) {
-    // Use STB Truetype for high-quality rendering
-    char absoluteFontPath[MAX_PATH];
-    BOOL pathResolved = FALSE;
-    
+static BOOL ResolveFontPath(const RenderContext* ctx, char* outPath) {
     // Check if the configured path is a managed font path (starts with %LOCALAPPDATA% prefix)
     const char* relPath = ExtractRelativePath(ctx->fontFileName);
     if (relPath) {
         // It has the prefix, so extract the filename part and build full path
-        pathResolved = BuildFullFontPath(relPath, absoluteFontPath, MAX_PATH);
-    } else {
-        // It might be a direct absolute path or a simple filename
-        // First try to expand environment strings
-        if (ExpandEnvironmentStringsA(ctx->fontFileName, absoluteFontPath, MAX_PATH) > 0) {
-            // If it doesn't contain a drive separator, assume it's a filename in fonts folder
-            if (!strchr(absoluteFontPath, ':')) {
-                char simpleName[MAX_PATH];
-                strcpy(simpleName, absoluteFontPath);
-                pathResolved = BuildFullFontPath(simpleName, absoluteFontPath, MAX_PATH);
-            } else {
-                pathResolved = TRUE;
+        return BuildFullFontPath(relPath, outPath, MAX_PATH);
+    }
+    
+    // It might be a direct absolute path or a simple filename
+    // First try to expand environment strings
+    if (ExpandEnvironmentStringsA(ctx->fontFileName, outPath, MAX_PATH) > 0) {
+        // If it doesn't contain a drive separator, assume it's a filename in fonts folder
+        if (!strchr(outPath, ':')) {
+            char simpleName[MAX_PATH];
+            strcpy(simpleName, outPath);
+            return BuildFullFontPath(simpleName, outPath, MAX_PATH);
+        }
+        return TRUE;
+    }
+    return FALSE;
+}
+
+static BOOL MeasureTextMarkdown(const wchar_t* text, const RenderContext* ctx, SIZE* outSize,
+                               MarkdownHeading* headings, int headingCount) {
+    char absoluteFontPath[MAX_PATH];
+    if (ResolveFontPath(ctx, absoluteFontPath)) {
+        if (InitFontSTB(absoluteFontPath)) {
+            int w, h;
+            if (MeasureMarkdownSTB(text, headings, headingCount, 
+                                  (int)(CLOCK_BASE_FONT_SIZE * ctx->fontScaleFactor), &w, &h)) {
+                outSize->cx = w;
+                outSize->cy = h;
+                return TRUE;
             }
         }
     }
+    return FALSE;
+}
+
+static BOOL RenderTextMarkdown(HDC hdc, const RECT* rect, const wchar_t* text, const RenderContext* ctx, BOOL editMode, void* bits,
+                              MarkdownLink* links, int linkCount,
+                              MarkdownHeading* headings, int headingCount,
+                              MarkdownStyle* styles, int styleCount) {
+    // Use STB Truetype for high-quality rendering
+    char absoluteFontPath[MAX_PATH];
     
     // Resolve font path to absolute path for STB
-    if (pathResolved) {
+    if (ResolveFontPath(ctx, absoluteFontPath)) {
         if (InitFontSTB(absoluteFontPath)) {
-            RenderTextSTB(bits, rect->right, rect->bottom, text, 
-                         ctx->textColor, 
-                         (int)(CLOCK_BASE_FONT_SIZE * ctx->fontScaleFactor), 
-                         1.0f, // Internal scale is handled by font size
-                         editMode);
+            RenderMarkdownSTB(bits, rect->right, rect->bottom, text,
+                             links, linkCount,
+                             headings, headingCount,
+                             styles, styleCount,
+                             ctx->textColor, 
+                             (int)(CLOCK_BASE_FONT_SIZE * ctx->fontScaleFactor), 
+                             1.0f); // Internal scale is handled by font size
             return TRUE;
         }
     }
@@ -238,13 +262,44 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     RenderContext ctx = CreateRenderContext();
     HFONT hFont = CreateTimerFont(&ctx);
 
+    // Parse Markdown
+    wchar_t* mdText = NULL;
+    MarkdownLink* links = NULL; int linkCount = 0;
+    MarkdownHeading* headings = NULL; int headingCount = 0;
+    MarkdownStyle* styles = NULL; int styleCount = 0;
+    MarkdownListItem* listItems = NULL; int listItemCount = 0;
+    MarkdownBlockquote* blockquotes = NULL; int blockquoteCount = 0;
+
+    BOOL isMarkdown = ParseMarkdownLinks(timeText, &mdText, 
+                                         &links, &linkCount, 
+                                         &headings, &headingCount, 
+                                         &styles, &styleCount,
+                                         &listItems, &listItemCount,
+                                         &blockquotes, &blockquoteCount);
+                                         
+    const wchar_t* textToRender = isMarkdown ? mdText : timeText;
+
     // Measure text and resize window BEFORE creating the buffer
     // This prevents buffer overflow if the window grows
-    if (wcslen(timeText) > 0) {
-        HFONT oldFontHdc = (HFONT)SelectObject(hdc, hFont);
-        SIZE textSize;
-        GetTextExtentPoint32W(hdc, timeText, (int)wcslen(timeText), &textSize);
-        SelectObject(hdc, oldFontHdc);
+    if (wcslen(textToRender) > 0) {
+        SIZE textSize = {0};
+        BOOL measured = FALSE;
+        
+        // Try to measure using STB (supports multiline & markdown)
+        if (isMarkdown) {
+            measured = MeasureTextMarkdown(textToRender, &ctx, &textSize, headings, headingCount);
+        } else {
+            // Fallback if markdown parse failed (unlikely) or just sanity check
+            // (Old MeasureText logic removed, using MeasureTextMarkdown with no headings is equivalent to MeasureTextSTB)
+             measured = MeasureTextMarkdown(textToRender, &ctx, &textSize, NULL, 0);
+        }
+
+        if (!measured) {
+            // Fallback to GDI measurement (single line usually)
+            HFONT oldFontHdc = (HFONT)SelectObject(hdc, hFont);
+            GetTextExtentPoint32W(hdc, textToRender, (int)wcslen(textToRender), &textSize);
+            SelectObject(hdc, oldFontHdc);
+        }
 
         AdjustWindowSize(hwnd, &textSize, &rect);
     }
@@ -256,6 +311,11 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     // Create buffer with the final correct size
     if (!SetupDoubleBufferDIB(hdc, &rect, &memDC, &memBitmap, &oldBitmap, &pBits)) {
         DeleteObject(hFont);
+        if (isMarkdown) {
+            FreeMarkdownLinks(links, linkCount);
+            free(headings); free(styles); free(listItems); free(blockquotes);
+            free(mdText);
+        }
         return;
     }
     
@@ -283,9 +343,18 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     }
     
     // Skip text rendering during transition to avoid black artifacts
-    if (!g_IsTransitioning && wcslen(timeText) > 0) {
+    if (!g_IsTransitioning && wcslen(textToRender) > 0) {
         // We already have textSize and rect is updated
-        BOOL usedSTB = RenderText(memDC, &rect, timeText, &ctx, CLOCK_EDIT_MODE, pBits);
+        BOOL usedSTB = FALSE;
+        
+        if (isMarkdown) {
+            usedSTB = RenderTextMarkdown(memDC, &rect, textToRender, &ctx, CLOCK_EDIT_MODE, pBits,
+                                        links, linkCount, headings, headingCount, styles, styleCount);
+        } else {
+             // Fallback render plain text if markdown failed (treat as markdown with no metadata)
+             usedSTB = RenderTextMarkdown(memDC, &rect, textToRender, &ctx, CLOCK_EDIT_MODE, pBits,
+                                         NULL, 0, NULL, 0, NULL, 0);
+        }
         
         // If STB was not used (e.g. font load failure), we might need to fix alpha for GDI text
         if (!usedSTB && CLOCK_EDIT_MODE) {
@@ -293,6 +362,12 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
         }
     } else if (CLOCK_EDIT_MODE) {
         FixAlphaChannel(pBits, rect.right, rect.bottom);
+    }
+    
+    if (isMarkdown) {
+        FreeMarkdownLinks(links, linkCount);
+        free(headings); free(styles); free(listItems); free(blockquotes);
+        free(mdText);
     }
     
     HDC hdcScreen = GetDC(NULL);

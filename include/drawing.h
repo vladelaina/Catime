@@ -20,10 +20,10 @@
  * ============================================================================ */
 
 /* Buffer sizes chosen to accommodate:
- * - TIME_TEXT_MAX_LEN: Longest format "123:45:67.89" (14 chars) + alignment spaces + null terminator
+ * - TIME_TEXT_MAX_LEN: Extended to 4096 to support rich Markdown content from plugins
  * - FONT_NAME_MAX_LEN: Maximum font name length per Windows API (LF_FACESIZE = 32, extended for full paths)
  */
-#define TIME_TEXT_MAX_LEN 50
+#define TIME_TEXT_MAX_LEN 4096
 #define FONT_NAME_MAX_LEN 256
 
 /** @brief Multiple passes for bold effect (simulated via offset rendering) */

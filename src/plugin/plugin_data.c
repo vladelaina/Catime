@@ -13,7 +13,7 @@
 #include <string.h>
 
 // Internal data storage
-static wchar_t g_pluginDisplayText[128] = {0};
+static wchar_t g_pluginDisplayText[4096] = {0};
 static wchar_t g_pluginImagePath[MAX_PATH] = {0};
 static BOOL g_hasPluginData = FALSE;
 static CRITICAL_SECTION g_dataCS;
@@ -39,7 +39,16 @@ static BOOL ParseJSON(const char* jsonStr) {
     if (textItem && cJSON_IsString(textItem)) {
         const char* text = cJSON_GetStringValue(textItem);
         if (text) {
-            MultiByteToWideChar(CP_UTF8, 0, text, -1, g_pluginDisplayText, 128);
+            MultiByteToWideChar(CP_UTF8, 0, text, -1, g_pluginDisplayText, 4096);
+            
+            // Check for BOM (0xFEFF) at the beginning and remove it
+            if (g_pluginDisplayText[0] == 0xFEFF) {
+                // Shift string left by one
+                int len = wcslen(g_pluginDisplayText);
+                memmove(g_pluginDisplayText, &g_pluginDisplayText[1], len * sizeof(wchar_t));
+                g_pluginDisplayText[len-1] = L'\0'; // Ensure null termination
+            }
+            
             updated = TRUE;
         }
     } else {
