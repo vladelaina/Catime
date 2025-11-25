@@ -7,71 +7,62 @@
 #define DRAWING_TEXT_STB_H
 
 #include <windows.h>
-#include "markdown/markdown_parser.h"
+#include "../../libs/stb/stb_truetype.h"
 
 /**
- * @brief Initialize STB font engine with a specific font file
- * @param fontFilePath Absolute path to the .ttf/.otf file
- * @return TRUE if loaded successfully
+ * @brief Initialize STB Truetype with a font file
+ * @param fontFilePath Absolute path to the .ttf/.ttc file
+ * @return TRUE if successful
  */
 BOOL InitFontSTB(const char* fontFilePath);
 
 /**
- * @brief Render text to a 32-bit ARGB buffer using STB Truetype
- * @param bits Pointer to the pixel bits (BGRA/ARGB)
- * @param width Width of the bitmap
- * @param height Height of the bitmap
- * @param text Text to render
- * @param color Text color (RGB)
- * @param fontSize Font size in pixels
- * @param fontScale Scale factor (e.g., 1.0, 1.5)
- * @param editMode If TRUE, draws debug outlines or placeholders if needed
+ * @brief Cleanup STB resources
  */
-void RenderTextSTB(void* bits, int width, int height, const wchar_t* text, 
-                   COLORREF color, int fontSize, float fontScale, BOOL editMode);
+void CleanupFontSTB(void);
 
 /**
- * @brief Render Markdown text to a 32-bit ARGB buffer using STB Truetype
- * @param bits Pointer to the pixel bits (BGRA/ARGB)
- * @param width Width of the bitmap
- * @param height Height of the bitmap
- * @param text Clean text to render (from parser)
- * @param links Array of links
- * @param linkCount Number of links
- * @param headings Array of headings
- * @param headingCount Number of headings
- * @param styles Array of inline styles
- * @param styleCount Number of styles
- * @param color Base text color (RGB)
- * @param fontSize Base font size in pixels
- * @param fontScale Base font scale factor
- */
-void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
-                       MarkdownLink* links, int linkCount,
-                       MarkdownHeading* headings, int headingCount,
-                       MarkdownStyle* styles, int styleCount,
-                       COLORREF color, int fontSize, float fontScale);
-
-/**
- * @brief Measure text dimensions using STB font (supports multiline)
- * @param text The text to measure
- * @param fontSize Font size in pixels
- * @param width Output pointer for width
- * @param height Output pointer for height
- * @return TRUE if successful
+ * @brief Measure single-line text dimensions
  */
 BOOL MeasureTextSTB(const wchar_t* text, int fontSize, int* width, int* height);
 
 /**
- * @brief Measure Markdown text dimensions
+ * @brief Render single-line text to a 32-bit DIB buffer
+ * @param bits Pointer to DIB section bits (ARGB)
+ * @param width Width of the buffer
+ * @param height Height of the buffer
+ * @param text Text to render
+ * @param color Text color (COLORREF)
+ * @param fontSize Font size in pixels
+ * @param fontScale DPI scale factor (usually 1.0 or system DPI scale)
+ * @param editMode If TRUE, may render background hints
  */
-BOOL MeasureMarkdownSTB(const wchar_t* text,
-                        MarkdownHeading* headings, int headingCount,
-                        int fontSize, int* width, int* height);
+void RenderTextSTB(void* bits, int width, int height, const wchar_t* text, 
+                   COLORREF color, int fontSize, float fontScale, BOOL editMode);
 
-/**
- * @brief Free cached font resources
- */
-void CleanupFontSTB(void);
+/* ============================================================================
+ * Internal API for Markdown Renderer (Shared Helpers)
+ * ============================================================================ */
 
-#endif /* DRAWING_TEXT_STB_H */
+typedef struct {
+    int index;
+    BOOL isFallback;
+    int advance;
+    int kern;
+} GlyphMetrics;
+
+/* Accessors for Global Font State */
+BOOL IsFontLoadedSTB(void);
+BOOL IsFallbackFontLoadedSTB(void);
+stbtt_fontinfo* GetMainFontInfoSTB(void);
+stbtt_fontinfo* GetFallbackFontInfoSTB(void);
+
+/* Shared Helper Functions */
+void GetCharMetricsSTB(wchar_t c, wchar_t nextC, float scale, float fallbackScale, GlyphMetrics* out);
+
+void BlendCharBitmapSTB(void* destBits, int destWidth, int destHeight, 
+                        int x_pos, int y_pos, 
+                        unsigned char* bitmap, int w, int h, 
+                        int r, int g, int b);
+
+#endif // DRAWING_TEXT_STB_H

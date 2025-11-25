@@ -8,6 +8,7 @@
 #include "drawing/drawing_render.h"
 #include "drawing/drawing_time_format.h"
 #include "drawing/drawing_text_stb.h"
+#include "drawing/drawing_markdown_stb.h"
 #include "drawing.h"
 #include "font.h"
 #include "color/color.h"
