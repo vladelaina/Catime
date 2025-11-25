@@ -20,7 +20,7 @@
 #include "shortcut_checker.h"
 #include "utils/string_convert.h"
 #include "cache/resource_cache.h"
-#include "plugin/plugin_ipc.h"
+#include "plugin/plugin_data.h"
 #include "plugin/plugin_manager.h"
 #include <tlhelp32.h>
 
@@ -219,10 +219,6 @@ BOOL InitializeSubsystems(void) {
         LOG_INFO("Resource cache initialized with background scanning");
     }
 
-    // Initialize plugin IPC subsystem
-    PluginIPC_Init();
-    LOG_INFO("Plugin IPC subsystem initialized");
-
     // Initialize plugin manager
     PluginManager_Init();
     PluginManager_ScanPlugins();
@@ -348,6 +344,9 @@ BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
         }
     }
     
+    // Initialize Plugin Data subsystem (File Watcher)
+    PluginData_Init(hwnd);
+
     return TRUE;
 }
 
@@ -379,8 +378,8 @@ void CleanupResources(HANDLE hMutex) {
     LOG_INFO("Shutting down plugin manager");
     PluginManager_Shutdown();
 
-    LOG_INFO("Shutting down plugin IPC subsystem");
-    PluginIPC_Shutdown();
+    LOG_INFO("Shutting down plugin data subsystem");
+    PluginData_Shutdown();
 
     if (hMutex) {
         CloseHandle(hMutex);

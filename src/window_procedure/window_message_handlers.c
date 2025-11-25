@@ -23,7 +23,7 @@
 #include "cache/resource_cache.h"
 #include "../resource/resource.h"
 #include "window_procedure/window_drop_target.h"
-#include "plugin/plugin_ipc.h"
+#include "plugin/plugin_data.h"
 #include <stdio.h>
 
 /* 50ms menu debounce prevents accidental double-clicks during menu interaction */
@@ -274,11 +274,6 @@ LRESULT HandleCopyData(HWND hwnd, WPARAM wp, LPARAM lp) {
         buf[maxLen] = '\0';
         buf[n] = '\0';
         HandleCliArguments(hwnd, buf);
-        return TRUE;
-    }
-
-    // Handle plugin messages
-    if (PluginIPC_HandleMessage(hwnd, pcds)) {
         return TRUE;
     }
 

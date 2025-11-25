@@ -17,7 +17,7 @@
 #include "menu_preview.h"
 #include "font/font_path_manager.h"
 #include "log.h"
-#include "plugin/plugin_ipc.h"
+#include "plugin/plugin_data.h"
 
 extern char FONT_FILE_NAME[MAX_PATH];
 extern char FONT_INTERNAL_NAME[MAX_PATH];
@@ -226,7 +226,7 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     GetTimeText(timeText, TIME_TEXT_MAX_LEN);
 
     // Check for plugin data
-    if (!PluginIPC_GetDisplayText(timeText, TIME_TEXT_MAX_LEN)) {
+    if (!PluginData_GetText(timeText, TIME_TEXT_MAX_LEN)) {
         // No plugin data, use normal time text (already set above)
     }
 
