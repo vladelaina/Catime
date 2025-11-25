@@ -22,6 +22,7 @@
 #include "cache/resource_cache.h"
 #include "plugin/plugin_data.h"
 #include "plugin/plugin_manager.h"
+#include "drawing/drawing_image.h"
 #include <tlhelp32.h>
 
 /* Helper to check if process is elevated */
@@ -219,6 +220,9 @@ BOOL InitializeSubsystems(void) {
         LOG_INFO("Resource cache initialized with background scanning");
     }
 
+    // Initialize GDI+ for image rendering
+    InitDrawingImage();
+
     // Initialize plugin manager
     PluginManager_Init();
     PluginManager_ScanPlugins();
@@ -380,6 +384,9 @@ void CleanupResources(HANDLE hMutex) {
 
     LOG_INFO("Shutting down plugin data subsystem");
     PluginData_Shutdown();
+
+    LOG_INFO("Shutting down GDI+");
+    ShutdownDrawingImage();
 
     if (hMutex) {
         CloseHandle(hMutex);

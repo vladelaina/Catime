@@ -4,6 +4,7 @@
  */
 
 #include "plugin/plugin_data.h"
+#include "utils/http_downloader.h"
 #include "log.h"
 #include "cJSON.h"
 #include <windows.h>
@@ -13,6 +14,7 @@
 
 // Internal data storage
 static wchar_t g_pluginDisplayText[128] = {0};
+static wchar_t g_pluginImagePath[MAX_PATH] = {0};
 static BOOL g_hasPluginData = FALSE;
 static CRITICAL_SECTION g_dataCS;
 
@@ -28,23 +30,69 @@ static BOOL ParseJSON(const char* jsonStr) {
     cJSON* root = cJSON_Parse(jsonStr);
     if (!root) return FALSE;
 
+    BOOL updated = FALSE;
+
+    EnterCriticalSection(&g_dataCS);
+
+    // Parse "text"
     cJSON* textItem = cJSON_GetObjectItem(root, "text");
-    if (!textItem || !cJSON_IsString(textItem)) {
-        cJSON_Delete(root);
-        return FALSE;
+    if (textItem && cJSON_IsString(textItem)) {
+        const char* text = cJSON_GetStringValue(textItem);
+        if (text) {
+            MultiByteToWideChar(CP_UTF8, 0, text, -1, g_pluginDisplayText, 128);
+            updated = TRUE;
+        }
+    } else {
+        // Field missing: Clear text
+        if (wcslen(g_pluginDisplayText) > 0) {
+            memset(g_pluginDisplayText, 0, sizeof(g_pluginDisplayText));
+            updated = TRUE;
+        }
     }
 
-    const char* text = cJSON_GetStringValue(textItem);
-    if (text) {
-        EnterCriticalSection(&g_dataCS);
-        // Convert UTF-8 to Wide Char for Windows display
-        MultiByteToWideChar(CP_UTF8, 0, text, -1, g_pluginDisplayText, 128);
-        g_hasPluginData = TRUE;
-        LeaveCriticalSection(&g_dataCS);
+    // Parse "image"
+    cJSON* imageItem = cJSON_GetObjectItem(root, "image");
+    if (imageItem && cJSON_IsString(imageItem)) {
+        const char* imgPath = cJSON_GetStringValue(imageItem);
+        if (imgPath) {
+            wchar_t wPath[MAX_PATH];
+            MultiByteToWideChar(CP_UTF8, 0, imgPath, -1, wPath, MAX_PATH);
+            
+            if (IsHttpUrl(wPath)) {
+                // Handle HTTP URL
+                wchar_t cachePath[MAX_PATH];
+                GetLocalCachePath(wPath, cachePath, MAX_PATH);
+                
+                // Check if file exists
+                if (GetFileAttributesW(cachePath) == INVALID_FILE_ATTRIBUTES) {
+                    // File doesn't exist, trigger download
+                    DownloadFileAsync(wPath, cachePath, g_hNotifyWnd);
+                }
+                
+                // Point to cache path (GDI+ will fail until download completes, which is fine)
+                wcscpy(g_pluginImagePath, cachePath);
+            } else {
+                // Local file
+                wcscpy(g_pluginImagePath, wPath);
+            }
+            updated = TRUE;
+        }
+    } else {
+        // Field missing: Clear image path
+        if (wcslen(g_pluginImagePath) > 0) {
+            memset(g_pluginImagePath, 0, sizeof(g_pluginImagePath));
+            updated = TRUE;
+        }
     }
+    
+    if (updated) {
+        g_hasPluginData = TRUE;
+    }
+
+    LeaveCriticalSection(&g_dataCS);
 
     cJSON_Delete(root);
-    return TRUE;
+    return updated;
 }
 
 /**
@@ -112,6 +160,7 @@ void PluginData_Init(HWND hwnd) {
     g_hNotifyWnd = hwnd;
     g_hasPluginData = FALSE;
     memset(g_pluginDisplayText, 0, sizeof(g_pluginDisplayText));
+    memset(g_pluginImagePath, 0, sizeof(g_pluginImagePath));
     g_isRunning = TRUE;
 
     // Use 64KB stack size to reduce memory footprint (default is 1MB)
@@ -148,4 +197,18 @@ BOOL PluginData_GetText(wchar_t* buffer, size_t maxLen) {
     }
     LeaveCriticalSection(&g_dataCS);
     return hasData;
+}
+
+BOOL PluginData_GetImagePath(wchar_t* buffer, size_t maxLen) {
+    if (!buffer || maxLen == 0) return FALSE;
+
+    BOOL hasPath = FALSE;
+    EnterCriticalSection(&g_dataCS);
+    if (g_hasPluginData && wcslen(g_pluginImagePath) > 0) {
+        wcsncpy(buffer, g_pluginImagePath, maxLen - 1);
+        buffer[maxLen - 1] = L'\0';
+        hasPath = TRUE;
+    }
+    LeaveCriticalSection(&g_dataCS);
+    return hasPath;
 }

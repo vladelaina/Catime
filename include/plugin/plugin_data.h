@@ -27,4 +27,12 @@ void PluginData_Shutdown(void);
  */
 BOOL PluginData_GetText(wchar_t* buffer, size_t maxLen);
 
+/**
+ * @brief Get current plugin image path
+ * @param buffer Output buffer
+ * @param maxLen Buffer size
+ * @return TRUE if image path is available
+ */
+BOOL PluginData_GetImagePath(wchar_t* buffer, size_t maxLen);
+
 #endif /* PLUGIN_DATA_H */

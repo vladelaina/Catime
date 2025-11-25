@@ -18,6 +18,7 @@
 #include "font/font_path_manager.h"
 #include "log.h"
 #include "plugin/plugin_data.h"
+#include "drawing/drawing_image.h"
 
 extern char FONT_FILE_NAME[MAX_PATH];
 extern char FONT_INTERNAL_NAME[MAX_PATH];
@@ -271,6 +272,14 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     // Simple loop is fast enough for small window
     for (int i = 0; i < numPixels; i++) {
         pixels[i] = clearColor;
+    }
+
+    // Render Plugin Image (if any)
+    wchar_t imagePath[MAX_PATH];
+    if (PluginData_GetImagePath(imagePath, MAX_PATH)) {
+        // Draw image covering the whole client area
+        // This supports transparent PNGs if the background was cleared to 0
+        RenderImageGDIPlus(memDC, 0, 0, rect.right, rect.bottom, imagePath);
     }
     
     // Skip text rendering during transition to avoid black artifacts
