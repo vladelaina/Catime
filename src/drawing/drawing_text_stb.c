@@ -299,8 +299,27 @@ void BlendCharBitmapGradientSTB(void* destBits, int destWidth, int destHeight,
     int r1 = 0, g1 = 0, b1 = 0;
     int r2 = 0, g2 = 0, b2 = 0;
 
+    /* Animation parameters */
+    float lutStep = 0.0f;
+    
     if (info && info->isAnimated) {
-        if (g_lutType != (GradientType)gradientType) InitializeGradientLUT(info);
+        BOOL needLutUpdate = (g_lutType != (GradientType)gradientType);
+        
+        /* Check for custom gradient updates */
+        if ((GradientType)gradientType == GRADIENT_CUSTOM) {
+            static uint32_t lastCustomVer = 0;
+            uint32_t currVer = GetCustomGradientVersion();
+            if (currVer != lastCustomVer) {
+                needLutUpdate = TRUE;
+                lastCustomVer = currVer;
+            }
+        }
+
+        if (needLutUpdate) InitializeGradientLUT(info);
+
+        if (totalWidth > 0) {
+            lutStep = (float)LUT_SIZE / (float)totalWidth;
+        }
     } else if (info) {
         r1 = GetRValue(info->startColor);
         g1 = GetGValue(info->startColor);
@@ -309,15 +328,6 @@ void BlendCharBitmapGradientSTB(void* destBits, int destWidth, int destHeight,
         r2 = GetRValue(info->endColor);
         g2 = GetGValue(info->endColor);
         b2 = GetBValue(info->endColor);
-    }
-
-    /* Animation parameters */
-    float lutStep = 0.0f;
-    
-    if (info && info->isAnimated) {
-        if (totalWidth > 0) {
-            lutStep = (float)LUT_SIZE / (float)totalWidth;
-        }
     }
 
     for (int j = 0; j < h; ++j) {

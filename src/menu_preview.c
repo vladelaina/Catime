@@ -45,7 +45,7 @@ extern void WriteConfigShowMilliseconds(BOOL showMilliseconds);
 typedef struct {
     PreviewType type;
     union {
-        char colorHex[32];
+        char colorHex[COLOR_HEX_BUFFER];
         struct {
             char fontName[MAX_PATH];
             char internalName[MAX_PATH];

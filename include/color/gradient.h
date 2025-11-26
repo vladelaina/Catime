@@ -7,6 +7,9 @@
 #define COLOR_GRADIENT_H
 
 #include <windows.h>
+#include <stdint.h>
+
+#define MAX_GRADIENT_STOPS 5
 
 typedef enum {
     GRADIENT_NONE = 0,
@@ -14,7 +17,7 @@ typedef enum {
     GRADIENT_BREEZE,
     GRADIENT_SUNSET,
     GRADIENT_STREAMER,
-    /* Add new gradients here */
+    GRADIENT_CUSTOM,  // User-defined custom gradient
     GRADIENT_COUNT
 } GradientType;
 
@@ -63,5 +66,8 @@ void DrawGradientRect(HDC hdc, const RECT* rect, const GradientInfo* info);
 
 /* Helper to check if a gradient needs animation timer */
 BOOL IsGradientAnimated(GradientType type);
+
+/* Custom gradient support */
+uint32_t GetCustomGradientVersion(void);
 
 #endif // COLOR_GRADIENT_H

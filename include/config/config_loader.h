@@ -33,7 +33,7 @@ typedef struct {
     char fontLicenseVersion[16];
     
     /* Display */
-    char textColor[16];
+    char textColor[COLOR_HEX_BUFFER];
     int baseFontSize;
     char fontFileName[MAX_PATH];
     char fontInternalName[256];
