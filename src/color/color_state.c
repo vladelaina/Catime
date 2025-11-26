@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include "color/gradient.h"
 #include "color/color_state.h"
 #include "config.h"
 
@@ -18,7 +19,7 @@ static const char* DEFAULT_COLOR_OPTIONS[] = {
     "#A8E7DF", "#A3CFB3", "#92CBFC", "#BDA5E7",
     "#9370DB", "#8C92CF", "#72A9A5", "#EB99A7",
     "#EB96BD", "#FFAE8B", "#FF7F50", "#CA6174",
-    "CANDY"
+    "#FF5E96_#56C6FF", "#648CFF_#64DC78", "#FF9A56_#56CCBA"
 };
 
 #define DEFAULT_COLOR_OPTIONS_COUNT (sizeof(DEFAULT_COLOR_OPTIONS) / sizeof(DEFAULT_COLOR_OPTIONS[0]))
@@ -64,11 +65,15 @@ static void TrimString(char* str) {
 void AddColorOption(const char* hexColor) {
     if (!hexColor || !*hexColor) return;
 
-    /* Special case for Candy mode */
-    if (strcasecmp(hexColor, "CANDY") == 0) {
+    /* Special case for Gradient modes */
+    GradientType gradType = GetGradientTypeByName(hexColor);
+    if (gradType != GRADIENT_NONE) {
+        const GradientInfo* info = GetGradientInfo(gradType);
+        if (!info) return;
+
         /* Deduplication for special keyword */
         for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
-            if (strcasecmp(COLOR_OPTIONS[i].hexColor, "CANDY") == 0) {
+            if (strcasecmp(COLOR_OPTIONS[i].hexColor, info->name) == 0) {
                 return;
             }
         }
@@ -76,7 +81,8 @@ void AddColorOption(const char* hexColor) {
                                           (COLOR_OPTIONS_COUNT + 1) * sizeof(PredefinedColor));
         if (newArray) {
             COLOR_OPTIONS = newArray;
-            COLOR_OPTIONS[COLOR_OPTIONS_COUNT].hexColor = _strdup("CANDY");
+            /* Always use the canonical internal name from registry */
+            COLOR_OPTIONS[COLOR_OPTIONS_COUNT].hexColor = _strdup(info->name);
             COLOR_OPTIONS_COUNT++;
         }
         return;
@@ -181,16 +187,22 @@ void LoadColorConfig(void) {
         }
     }
     
-    /* Always ensure CANDY option exists, even if config file didn't have it */
-    BOOL hasCandy = FALSE;
-    for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
-        if (strcasecmp(COLOR_OPTIONS[i].hexColor, "CANDY") == 0) {
-            hasCandy = TRUE;
-            break;
+    /* Always ensure all defined gradients exist in options */
+    int gradCount = GetGradientCount();
+    for (int i = 0; i < gradCount; i++) {
+        const GradientInfo* info = GetGradientInfoByIndex(i);
+        if (!info) continue;
+        
+        BOOL hasGradient = FALSE;
+        for (size_t j = 0; j < COLOR_OPTIONS_COUNT; j++) {
+            if (strcasecmp(COLOR_OPTIONS[j].hexColor, info->name) == 0) {
+                hasGradient = TRUE;
+                break;
+            }
         }
-    }
-    if (!hasCandy) {
-        AddColorOption("CANDY");
+        if (!hasGradient) {
+            AddColorOption(info->name);
+        }
     }
 }
 

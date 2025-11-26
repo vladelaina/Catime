@@ -21,10 +21,12 @@
 #include "plugin/plugin_data.h"
 #include "drawing/drawing_image.h"
 #include "markdown/markdown_parser.h"
+#include "color/gradient.h"
+#include "color/color_parser.h"
 
 extern char FONT_FILE_NAME[MAX_PATH];
 extern char FONT_INTERNAL_NAME[MAX_PATH];
-extern char CLOCK_TEXT_COLOR[10];
+extern char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER];
 extern int CLOCK_BASE_FONT_SIZE;
 extern float CLOCK_FONT_SCALE_FACTOR;
 
@@ -57,7 +59,7 @@ static RenderContext CreateRenderContext(void) {
     
     static char fontFileName[MAX_PATH];
     static char fontInternalName[MAX_PATH];
-    static char colorStr[10];
+    static char colorStr[COLOR_HEX_BUFFER];
     
     extern void GetActiveFont(char*, char*, size_t);
     extern void GetActiveColor(char*, size_t);
@@ -69,7 +71,8 @@ static RenderContext CreateRenderContext(void) {
     ctx.fontInternalName = fontInternalName;
     ctx.textColor = ParseColorString(colorStr);
     ctx.fontScaleFactor = CLOCK_FONT_SCALE_FACTOR;
-    ctx.isGradientMode = (strcasecmp(colorStr, "CANDY") == 0);
+    
+    ctx.gradientMode = (int)GetGradientTypeByName(colorStr);
     
     return ctx;
 }
@@ -149,7 +152,7 @@ static BOOL RenderTextMarkdown(HDC hdc, const RECT* rect, const wchar_t* text, c
                              ctx->textColor, 
                              (int)(CLOCK_BASE_FONT_SIZE * ctx->fontScaleFactor), 
                              1.0f,
-                             ctx->isGradientMode); // Internal scale is handled by font size
+                             ctx->gradientMode); // Internal scale is handled by font size
             return TRUE;
         }
     }

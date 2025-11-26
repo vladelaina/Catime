@@ -8,6 +8,7 @@
 #include "config.h"
 #include "log.h"
 #include "window.h"
+#include "color/gradient.h"
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
@@ -53,12 +54,13 @@ BOOL ValidateColorConfig(ConfigSnapshot* snapshot) {
     
     BOOL modified = FALSE;
     
-    /* Special case for Candy mode */
-    if (strcasecmp(snapshot->textColor, "CANDY") == 0) {
-        return modified;
+    /* Check if it's a valid gradient name from the registry */
+    GradientType gradType = GetGradientTypeByName(snapshot->textColor);
+    if (gradType != GRADIENT_NONE) {
+        return modified; /* Valid gradient name, no modification needed */
     }
 
-    /* Validate text color format */
+    /* Validate text color format (must be #RRGGBB) */
     if (snapshot->textColor[0] != '#' || strlen(snapshot->textColor) != 7) {
         LOG_WARNING("Invalid text color format '%s', resetting to default",
                    snapshot->textColor);

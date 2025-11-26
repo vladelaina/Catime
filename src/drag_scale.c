@@ -12,6 +12,8 @@
 #include "drag_scale.h"
 #include "log.h"
 
+#include "color/color_parser.h"
+
 BOOL PREVIOUS_TOPMOST_STATE = FALSE;
 
 static UINT_PTR g_configSaveTimer = 0;
@@ -87,7 +89,7 @@ void EndEditMode(HWND hwnd) {
     SetClickThrough(hwnd, TRUE);
     SaveWindowSettings(hwnd);
     
-    extern char CLOCK_TEXT_COLOR[10];
+    extern char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER];
     extern void WriteConfigColor(const char* color);
     WriteConfigColor(CLOCK_TEXT_COLOR);
     

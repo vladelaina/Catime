@@ -35,6 +35,7 @@
 #include "menu_preview.h"
 #include "utils/time_parser.h"
 #include "../resource/resource.h"
+#include "color/color_parser.h"
 #include <shlobj.h>
 #include <shellapi.h>
 #include <stdio.h>
@@ -45,7 +46,7 @@ extern int time_options[];
 extern int time_options_count;
 extern size_t COLOR_OPTIONS_COUNT;
 extern PredefinedColor* COLOR_OPTIONS;
-extern char CLOCK_TEXT_COLOR[10];
+extern char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER];
 
 
 /* ============================================================================

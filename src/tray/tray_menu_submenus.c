@@ -25,11 +25,13 @@
 #include "startup.h"
 #include "utils/string_convert.h"
 #include "utils/string_format.h"
+#include "color/gradient.h"
+#include "color/color_parser.h"
 
 /* External dependencies from main.c/config.c */
 extern BOOL CLOCK_SHOW_CURRENT_TIME;
 extern BOOL CLOCK_USE_24HOUR;
-extern char CLOCK_TEXT_COLOR[10];
+extern char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER];
 extern wchar_t CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH];
 extern int current_pomodoro_time_index;
 extern POMODORO_PHASE current_pomodoro_phase;
@@ -247,12 +249,18 @@ void BuildColorSubmenu(HMENU hMenu) {
     for (int i = 0; i < COLOR_OPTIONS_COUNT; i++) {
         const char* hexColor = COLOR_OPTIONS[i].hexColor;
         
-        wchar_t hexColorW[16];
-        if (strcasecmp(hexColor, "CANDY") == 0) {
-            // Use a friendly name for the Candy option
-            wcscpy(hexColorW, L"Candy Gradient");
+        wchar_t hexColorW[32];
+        GradientType gradType = GetGradientTypeByName(hexColor);
+        
+        if (gradType != GRADIENT_NONE) {
+            const GradientInfo* info = GetGradientInfo(gradType);
+            if (info && info->displayName) {
+                wcscpy(hexColorW, info->displayName);
+            } else {
+                Utf8ToWide(hexColor, hexColorW, 32);
+            }
         } else {
-            Utf8ToWide(hexColor, hexColorW, 16);
+            Utf8ToWide(hexColor, hexColorW, 32);
         }
         
         MENUITEMINFO mii = { sizeof(MENUITEMINFO) };

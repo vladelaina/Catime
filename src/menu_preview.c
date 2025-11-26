@@ -10,6 +10,7 @@
 #include "config.h"
 #include "font.h"
 #include "color/color.h"
+#include "color/color_parser.h"
 #include "timer/timer.h"
 #include "tray/tray_animation_core.h"
 #include "log.h"
@@ -20,7 +21,7 @@
 
 extern char FONT_FILE_NAME[MAX_PATH];
 extern char FONT_INTERNAL_NAME[MAX_PATH];
-extern char CLOCK_TEXT_COLOR[10];
+extern char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER];
 /** Time format now in g_AppConfig.display.time_format */
 
 /* External Preview State from font_manager.c (used by Drag & Drop) */

@@ -10,12 +10,13 @@
 #include "timer/timer.h"
 #include "window.h"
 #include "color/color.h"
+#include "color/color_parser.h"
 #include "tray/tray_animation_core.h"
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
 
-extern char CLOCK_TEXT_COLOR[10];
+extern char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER];
 extern wchar_t CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH];
 
 /* ============================================================================

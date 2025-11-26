@@ -24,6 +24,7 @@
 #include "../resource/resource.h"
 #include "window_procedure/window_drop_target.h"
 #include "plugin/plugin_data.h"
+#include "color/gradient.h"
 #include <stdio.h>
 
 /* 50ms menu debounce prevents accidental double-clicks during menu interaction */
@@ -334,32 +335,12 @@ LRESULT HandleDrawItem(HWND hwnd, WPARAM wp, LPARAM lp) {
     if (colorIndex < 0 || colorIndex >= (int)COLOR_OPTIONS_COUNT) return FALSE;
 
     const char* hexColor = COLOR_OPTIONS[colorIndex].hexColor;
+    GradientType gradientType = GetGradientTypeByName(hexColor);
     
-    if (strcasecmp(hexColor, "CANDY") == 0) {
-        /* Render Candy Gradient */
-        /* Pink: #FF5E96 (255, 94, 150) */
-        /* Blue: #56C6FF (86, 198, 255) */
-        int r1 = 255, g1 = 94, b1 = 150;
-        int r2 = 86, g2 = 198, b2 = 255;
-        
-        int width = lpdis->rcItem.right - lpdis->rcItem.left;
-        int height = lpdis->rcItem.bottom - lpdis->rcItem.top;
-        
-        for (int x = 0; x < width; x++) {
-            float t = (float)x / (float)width;
-            int r = (int)(r1 + (r2 - r1) * t);
-            int g = (int)(g1 + (g2 - g1) * t);
-            int b = (int)(b1 + (b2 - b1) * t);
-            
-            HPEN hPen = CreatePen(PS_SOLID, 1, RGB(r, g, b));
-            HPEN oldPen = SelectObject(lpdis->hDC, hPen);
-            
-            MoveToEx(lpdis->hDC, lpdis->rcItem.left + x, lpdis->rcItem.top, NULL);
-            LineTo(lpdis->hDC, lpdis->rcItem.left + x, lpdis->rcItem.bottom);
-            
-            SelectObject(lpdis->hDC, oldPen);
-            DeleteObject(hPen);
-        }
+    if (gradientType != GRADIENT_NONE) {
+        const GradientInfo* info = GetGradientInfo(gradientType);
+        if (!info) return FALSE;
+        DrawGradientRect(lpdis->hDC, &lpdis->rcItem, info);
     } else {
         int r, g, b;
         sscanf(hexColor + 1, "%02x%02x%02x", &r, &g, &b);

@@ -97,7 +97,7 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                        MarkdownLink* links, int linkCount,
                        MarkdownHeading* headings, int headingCount,
                        MarkdownStyle* styles, int styleCount,
-                       COLORREF color, int fontSize, float fontScale, BOOL isGradientMode) {
+                       COLORREF color, int fontSize, float fontScale, int gradientMode) {
     if (!IsFontLoadedSTB() || !text || !bits) return;
 
     stbtt_fontinfo* fontInfo = GetMainFontInfoSTB();
@@ -207,10 +207,10 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                     }
                     
                     if (bitmap) {
-                        if (isGradientMode && drawColor == color) { /* Only apply gradient to default colored text */
+                        if (gradientMode != GRADIENT_NONE && drawColor == color) { /* Only apply gradient to default colored text */
                             BlendCharBitmapGradientSTB(bits, width, height, 
                                 currentX + xoff, baselineY + yoff, 
-                                bitmap, w, h, 0, width); /* Use total width for gradient mapping */
+                                bitmap, w, h, 0, width, gradientMode); /* Use total width for gradient mapping */
                         } else {
                             BlendCharBitmapSTB(bits, width, height, 
                                 currentX + xoff, baselineY + yoff, 

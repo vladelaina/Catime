@@ -233,14 +233,19 @@ void BlendCharBitmapSTB(void* destBits, int destWidth, int destHeight,
 void BlendCharBitmapGradientSTB(void* destBits, int destWidth, int destHeight, 
                                 int x_pos, int y_pos, 
                                 unsigned char* bitmap, int w, int h, 
-                                int startX, int totalWidth) {
+                                int startX, int totalWidth, int gradientType) {
     DWORD* pixels = (DWORD*)destBits;
     
-    /* Candy Gradient Colors */
-    /* Pink: #FF5E96 (255, 94, 150) */
-    /* Blue: #56C6FF (86, 198, 255) */
-    const int r1 = 255, g1 = 94, b1 = 150;
-    const int r2 = 86, g2 = 198, b2 = 255;
+    const GradientInfo* info = GetGradientInfo((GradientType)gradientType);
+    if (!info) return; // Should not happen if checked before
+
+    int r1 = GetRValue(info->startColor);
+    int g1 = GetGValue(info->startColor);
+    int b1 = GetBValue(info->startColor);
+    
+    int r2 = GetRValue(info->endColor);
+    int g2 = GetGValue(info->endColor);
+    int b2 = GetBValue(info->endColor);
 
     for (int j = 0; j < h; ++j) {
         for (int i = 0; i < w; ++i) {

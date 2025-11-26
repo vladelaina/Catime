@@ -21,6 +21,7 @@
 #include <string.h>
 
 #include "window_procedure/window_drop_target.h"
+#include "color/color_parser.h"
 
 /* ============================================================================
  * External Declarations
@@ -245,7 +246,7 @@ void ToggleEditMode(HWND hwnd) {
         ShowWindow(hwnd, SW_SHOW);
         SetForegroundWindow(hwnd);
     } else {
-        extern char CLOCK_TEXT_COLOR[10];
+        extern char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER];
         extern int CLOCK_WINDOW_OPACITY;
         
         // 1. Disable visual effect

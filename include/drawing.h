@@ -43,7 +43,7 @@ typedef struct {
     const char* fontInternalName;
     COLORREF textColor;
     float fontScaleFactor;
-    BOOL isGradientMode;
+    int gradientMode;
 } RenderContext;
 
 /* ============================================================================

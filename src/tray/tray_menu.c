@@ -29,11 +29,12 @@
 #include "cache/resource_cache.h"
 #include "tray/tray_menu_font.h"
 #include "tray/tray_menu_submenus.h"
+#include "color/color_parser.h"
 
 /* External dependencies needed for menu display logic */
 extern BOOL CLOCK_SHOW_CURRENT_TIME;
 extern BOOL CLOCK_USE_24HOUR;
-extern char CLOCK_TEXT_COLOR[10];
+extern char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER];
 extern BOOL CLOCK_EDIT_MODE;
 extern BOOL CLOCK_COUNT_UP;
 extern int CLOCK_TOTAL_TIME;

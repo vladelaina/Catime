@@ -8,6 +8,7 @@
 
 #include <windows.h>
 #include "../../libs/stb/stb_truetype.h"
+#include "color/gradient.h"
 
 /**
  * @brief Initialize STB Truetype with a font file
@@ -68,6 +69,6 @@ void BlendCharBitmapSTB(void* destBits, int destWidth, int destHeight,
 void BlendCharBitmapGradientSTB(void* destBits, int destWidth, int destHeight, 
                                 int x_pos, int y_pos, 
                                 unsigned char* bitmap, int w, int h, 
-                                int startX, int totalWidth);
+                                int startX, int totalWidth, int gradientType);
 
 #endif // DRAWING_TEXT_STB_H
