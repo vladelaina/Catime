@@ -29,6 +29,7 @@
 #include "window_procedure/window_procedure.h"
 #include "window_procedure/window_menus.h"
 #include "plugin/plugin_manager.h"
+#include "plugin/plugin_data.h"
 #include "tray/tray_animation_menu.h"
 #include "tray/tray_animation_core.h"
 #include "tray/tray_menu_font.h"
@@ -834,19 +835,85 @@ BOOL DispatchRangeCommand(HWND hwnd, UINT cmd, WPARAM wp, LPARAM lp) {
     /* Handle plugin commands */
     if (cmd >= CLOCK_IDM_PLUGINS_BASE && cmd < CLOCK_IDM_PLUGINS_SETTINGS_BASE) {
         int pluginIndex = cmd - CLOCK_IDM_PLUGINS_BASE;
-        PluginManager_TogglePlugin(pluginIndex);
+        
+        // Check if this specific plugin is already running (Toggle logic)
+        if (PluginManager_IsPluginRunning(pluginIndex)) {
+            // Plugin is running -> Stop it and clear display
+            PluginManager_StopPlugin(pluginIndex);
+            PluginData_Clear();
+            
+            // Switch to "Idle" state (Visible but 00:00)
+            // This fulfills "clear content" without hiding the window
+            TimerModeParams params = {0, TRUE, TRUE, TRUE}; // totalSeconds=0, resetElapsed=TRUE, showWindow=TRUE, resetInterval=TRUE
+            SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
+            
+            // Ensure main timer is stopped (SwitchTimerMode might have started it if we were in SHOW_TIME)
+            KillTimer(hwnd, 1);
+            
+            // Force redraw/update
+            InvalidateRect(hwnd, NULL, TRUE);
+            return TRUE;
+        }
+
+        // Plugin is NOT running -> Start it
+        
+        // Stop internal timer modes to prevent conflict
+        // 1. Stop notification sound if any
+        extern void StopNotificationSound(void);
+        StopNotificationSound();
+        
+        // 2. Reset Timer flags
+        CLOCK_SHOW_CURRENT_TIME = FALSE;
+        CLOCK_COUNT_UP = FALSE;
+        CLOCK_IS_PAUSED = TRUE; // Effectively pause internal logic
+        
+        // 3. Stop internal timer updates (PluginData watcher will drive redraws)
+        KillTimer(hwnd, 1);
+        
+        // 4. Reset Pomodoro if active
+        extern POMODORO_PHASE current_pomodoro_phase;
+        if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
+             current_pomodoro_phase = POMODORO_PHASE_IDLE;
+        }
+
+        // 5. Reset internal timer values to prevent "flash" of old time
+        extern int CLOCK_TOTAL_TIME;
+        extern int countdown_elapsed_time;
+        extern int countup_elapsed_time;
+        CLOCK_TOTAL_TIME = 0;
+        countdown_elapsed_time = 0;
+        countup_elapsed_time = 0;
+
+        // 6. Start target plugin (this will stop other plugins automatically)
+        PluginManager_StartPlugin(pluginIndex);
+        
+        // 7. Show "Loading..." message immediately (AFTER StartPlugin because it calls StopAllPlugins which clears data)
+        const PluginInfo* pluginInfo = PluginManager_GetPlugin(pluginIndex);
+        if (pluginInfo) {
+            wchar_t loadingText[256];
+            wchar_t displayNameW[128];
+            MultiByteToWideChar(CP_UTF8, 0, pluginInfo->displayName, -1, displayNameW, 128);
+            _snwprintf(loadingText, 256, L"Loading %s...", displayNameW);
+            PluginData_SetText(loadingText);  // This also activates plugin mode
+        }
+        
+        // 8. Force immediate redraw to show "Loading..." message
+        // Ensure window is visible (in case we were in hidden mode)
+        if (!IsWindowVisible(hwnd)) {
+            ShowWindow(hwnd, SW_SHOW);
+        }
+        InvalidateRect(hwnd, NULL, TRUE);
+        
         return TRUE;
     }
 
-    /* Handle plugin settings commands */
-    if (cmd >= CLOCK_IDM_PLUGINS_SETTINGS_BASE && cmd < CLOCK_IDM_PLUGINS_REFRESH) {
-        int pluginIndex = cmd - CLOCK_IDM_PLUGINS_SETTINGS_BASE;
-        PluginManager_OpenSettings(pluginIndex);
+    /* Handle plugin settings commands - DEPRECATED / REMOVED from UI but kept for safety */
+    if (cmd >= CLOCK_IDM_PLUGINS_SETTINGS_BASE && cmd < CLOCK_IDM_PLUGINS_OPEN_DIR) {
         return TRUE;
     }
 
-    if (cmd == CLOCK_IDM_PLUGINS_REFRESH) {
-        PluginManager_ScanPlugins();
+    if (cmd == CLOCK_IDM_PLUGINS_OPEN_DIR) {
+        PluginManager_OpenPluginFolder();
         return TRUE;
     }
 

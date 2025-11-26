@@ -22,6 +22,8 @@
 
 #include "window_procedure/window_drop_target.h"
 #include "color/color_parser.h"
+#include "plugin/plugin_manager.h"
+#include "plugin/plugin_data.h"
 
 /* ============================================================================
  * External Declarations
@@ -336,6 +338,11 @@ void CleanupBeforeTimerAction(void) {
     extern void StopNotificationSound(void);
     StopNotificationSound();
     CloseAllNotifications();
+    
+    // Stop all plugins and disable plugin data mode
+    // This ensures switching to any timer mode clears plugin content
+    PluginManager_StopAllPlugins();
+    PluginData_SetActive(FALSE);
 }
 
 BOOL StartCountdownWithTime(HWND hwnd, int seconds) {

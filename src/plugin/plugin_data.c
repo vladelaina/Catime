@@ -16,6 +16,8 @@
 static wchar_t g_pluginDisplayText[4096] = {0};
 static wchar_t g_pluginImagePath[MAX_PATH] = {0};
 static BOOL g_hasPluginData = FALSE;
+static BOOL g_pluginModeActive = FALSE;  // Only TRUE when user explicitly starts a plugin
+static volatile BOOL g_forceNextUpdate = FALSE;  // Force file watcher to re-read
 static CRITICAL_SECTION g_dataCS;
 
 // Watcher thread
@@ -122,6 +124,12 @@ static DWORD WINAPI FileWatcherThread(LPVOID lpParam) {
     char currentContent[4096] = {0};
 
     while (g_isRunning) {
+        // Check if we need to force an update (reset cache)
+        if (g_forceNextUpdate) {
+            g_forceNextUpdate = FALSE;
+            lastContent[0] = '\0';  // Clear cache to force re-read
+        }
+        
         // Use Win32 API for lower overhead (no CRT buffer)
         HANDLE hFile = CreateFileA(
             filePath,
@@ -199,7 +207,8 @@ BOOL PluginData_GetText(wchar_t* buffer, size_t maxLen) {
 
     BOOL hasData = FALSE;
     EnterCriticalSection(&g_dataCS);
-    if (g_hasPluginData && wcslen(g_pluginDisplayText) > 0) {
+    // Only return data if plugin mode is active (user started a plugin)
+    if (g_pluginModeActive && g_hasPluginData && wcslen(g_pluginDisplayText) > 0) {
         wcsncpy(buffer, g_pluginDisplayText, maxLen - 1);
         buffer[maxLen - 1] = L'\0';
         hasData = TRUE;
@@ -213,11 +222,71 @@ BOOL PluginData_GetImagePath(wchar_t* buffer, size_t maxLen) {
 
     BOOL hasPath = FALSE;
     EnterCriticalSection(&g_dataCS);
-    if (g_hasPluginData && wcslen(g_pluginImagePath) > 0) {
+    // Only return data if plugin mode is active (user started a plugin)
+    if (g_pluginModeActive && g_hasPluginData && wcslen(g_pluginImagePath) > 0) {
         wcsncpy(buffer, g_pluginImagePath, maxLen - 1);
         buffer[maxLen - 1] = L'\0';
         hasPath = TRUE;
     }
     LeaveCriticalSection(&g_dataCS);
     return hasPath;
+}
+
+void PluginData_Clear(void) {
+    EnterCriticalSection(&g_dataCS);
+    g_pluginModeActive = FALSE;  // Deactivate plugin mode
+    g_hasPluginData = FALSE;
+    memset(g_pluginDisplayText, 0, sizeof(g_pluginDisplayText));
+    memset(g_pluginImagePath, 0, sizeof(g_pluginImagePath));
+    LeaveCriticalSection(&g_dataCS);
+}
+
+void PluginData_SetText(const wchar_t* text) {
+    if (!text) return;
+    
+    EnterCriticalSection(&g_dataCS);
+    wcsncpy(g_pluginDisplayText, text, 4095);
+    g_pluginDisplayText[4095] = L'\0';
+    g_hasPluginData = TRUE;
+    g_pluginModeActive = TRUE;  // Also activate plugin mode
+    LeaveCriticalSection(&g_dataCS);
+    
+    // Clear the plugin data file to prevent showing stale content from previous plugin
+    char desktopPath[MAX_PATH];
+    if (SHGetSpecialFolderPathA(NULL, desktopPath, CSIDL_DESKTOP, FALSE)) {
+        char filePath[MAX_PATH];
+        snprintf(filePath, sizeof(filePath), "%s\\catime_plugin_debug.txt", desktopPath);
+        
+        // Truncate file to zero length
+        HANDLE hFile = CreateFileA(filePath, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                   NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+        if (hFile != INVALID_HANDLE_VALUE) {
+            CloseHandle(hFile);
+        }
+    }
+    
+    // Force file watcher to re-read on next cycle
+    // This ensures plugin data will be detected even if file content matches previous cache
+    g_forceNextUpdate = TRUE;
+}
+
+void PluginData_SetActive(BOOL active) {
+    EnterCriticalSection(&g_dataCS);
+    g_pluginModeActive = active;
+    if (!active) {
+        // When deactivating, also clear any stale data
+        g_hasPluginData = FALSE;
+        memset(g_pluginDisplayText, 0, sizeof(g_pluginDisplayText));
+        memset(g_pluginImagePath, 0, sizeof(g_pluginImagePath));
+    }
+    LeaveCriticalSection(&g_dataCS);
+    LOG_INFO("PluginData: Mode %s", active ? "ACTIVE" : "INACTIVE");
+}
+
+BOOL PluginData_IsActive(void) {
+    BOOL active;
+    EnterCriticalSection(&g_dataCS);
+    active = g_pluginModeActive;
+    LeaveCriticalSection(&g_dataCS);
+    return active;
 }

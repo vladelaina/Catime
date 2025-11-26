@@ -4,13 +4,16 @@
  */
 
 #include "plugin/plugin_manager.h"
+#include "plugin/plugin_data.h"
 #include "log.h"
 #include <stdio.h>
 #include <string.h>
+#include <shellapi.h>
 
 static PluginInfo g_plugins[MAX_PLUGINS];
 static int g_pluginCount = 0;
 static CRITICAL_SECTION g_pluginCS;
+static HANDLE g_hJob = NULL;
 
 // Structure to pass data to the launcher thread
 typedef struct {
@@ -20,38 +23,74 @@ typedef struct {
 } PluginLauncherArgs;
 
 /**
- * @brief Thread function to launch and debug the plugin process
+ * @brief Thread function to launch and monitor the plugin process
  * 
- * Using the DEBUG_ONLY_THIS_PROCESS flag attaches Catime as a debugger.
- * This guarantees that if Catime crashes or exits, the OS will automatically
- * terminate the debuggee (plugin).
+ * Uses Job Objects to ensure plugin termination when Catime exits.
  */
-static DWORD WINAPI PluginDebugLauncherThread(LPVOID lpParam) {
+static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
     PluginLauncherArgs* args = (PluginLauncherArgs*)lpParam;
     PluginInfo* plugin = args->plugin;
+    
+    LOG_INFO("[DEBUG] Launcher thread started for plugin: %s", plugin->displayName);
+    LOG_INFO("[DEBUG] Target executable path: '%s'", plugin->path);
     
     STARTUPINFOA si = {sizeof(si)};
     si.dwFlags = STARTF_USESHOWWINDOW;
     si.wShowWindow = SW_HIDE;
 
-    // Create process as a debug target
+    // Only support Python scripts
+    char cmdLine[MAX_PATH * 2 + 32];
+    snprintf(cmdLine, sizeof(cmdLine), "pythonw.exe \"%s\"", plugin->path);
+    
+    LOG_INFO("[DEBUG] Launching Python script: %s", cmdLine);
+    
     if (!CreateProcessA(
-        plugin->path,
-        NULL,
+        NULL,           // Let system find pythonw.exe in PATH
+        cmdLine,        // Command line
         NULL,
         NULL,
         FALSE,
-        CREATE_NO_WINDOW | DEBUG_ONLY_THIS_PROCESS,
+        CREATE_NO_WINDOW, // Ensure no window is created
         NULL,
         NULL,
         &si,
         &plugin->pi
     )) {
         DWORD error = GetLastError();
-        LOG_ERROR("Failed to start plugin %s in debug mode, error: %lu", plugin->displayName, error);
+        LOG_ERROR("[DEBUG] CreateProcess failed! Error: %lu (Path: %s)", error, plugin->path);
+        
+        if (error == 2) { // ERROR_FILE_NOT_FOUND
+             LOG_ERROR("Tip: Make sure Python is installed and 'pythonw.exe' is in your PATH.");
+        }
+
         args->success = FALSE;
         SetEvent(args->hReadyEvent);
         return 0;
+    }
+
+    LOG_INFO("[DEBUG] Process created successfully. PID: %lu", plugin->pi.dwProcessId);
+
+    // Duplicate handle for the watcher thread to wait on safely
+    // This ensures that even if StopPlugin closes the original handle, we can still wait safely
+    HANDLE hWaitProcess = NULL;
+    if (!DuplicateHandle(
+        GetCurrentProcess(),
+        plugin->pi.hProcess,
+        GetCurrentProcess(),
+        &hWaitProcess,
+        0,
+        FALSE,
+        DUPLICATE_SAME_ACCESS
+    )) {
+        LOG_ERROR("Failed to duplicate process handle");
+        hWaitProcess = plugin->pi.hProcess; // Fallback (risky but better than nothing)
+    }
+
+    // Assign to Job Object for lifecycle management
+    if (g_hJob) {
+        if (!AssignProcessToJobObject(g_hJob, plugin->pi.hProcess)) {
+            LOG_WARNING("Failed to assign plugin to Job Object, error: %lu", GetLastError());
+        }
     }
 
     // Process created successfully
@@ -59,63 +98,66 @@ static DWORD WINAPI PluginDebugLauncherThread(LPVOID lpParam) {
     args->success = TRUE;
     SetEvent(args->hReadyEvent); // Signal main thread that PI is ready
 
-    // Debug loop - required to keep the process alive and catch exit events
-    DEBUG_EVENT de;
-    BOOL keepRunning = TRUE;
-
-    while (keepRunning && WaitForDebugEvent(&de, INFINITE)) {
-        DWORD continueStatus = DBG_CONTINUE;
-
-        switch (de.dwDebugEventCode) {
-            case EXIT_PROCESS_DEBUG_EVENT:
-                keepRunning = FALSE;
-                break;
-            
-            case EXCEPTION_DEBUG_EVENT:
-                // Pass exceptions to the child process to handle (or crash)
-                if (de.u.Exception.ExceptionRecord.ExceptionCode != EXCEPTION_BREAKPOINT) {
-                    continueStatus = DBG_EXCEPTION_NOT_HANDLED;
-                }
-                break;
-                
-            case RIP_EVENT:
-                // System debugging error
-                keepRunning = FALSE;
-                break;
-        }
-
-        ContinueDebugEvent(de.dwProcessId, de.dwThreadId, continueStatus);
-    }
+    // Monitor process exit using our private handle
+    WaitForSingleObject(hWaitProcess, INFINITE);
     
+    // Process has exited. Now we need to determine if it was a crash or a manual stop.
+    DWORD exitCode = 0;
+    GetExitCodeProcess(hWaitProcess, &exitCode);
+    LOG_INFO("[DEBUG] Plugin process exited (Exit Code: %lu)", exitCode);
+
+    // Clean up our private handle
+    if (hWaitProcess != plugin->pi.hProcess) {
+        CloseHandle(hWaitProcess);
+    }
+
+    // CRITICAL: Check if we need to clean up (Unexpected Exit)
+    EnterCriticalSection(&g_pluginCS);
+    if (plugin->isRunning) {
+        // If isRunning is still TRUE, it means StopPlugin wasn't called.
+        // This is an unexpected crash/exit. We must clean up.
+        LOG_WARNING("Plugin %s exited unexpectedly!", plugin->displayName);
+        
+        if (plugin->pi.hProcess) CloseHandle(plugin->pi.hProcess);
+        if (plugin->pi.hThread) CloseHandle(plugin->pi.hThread);
+        
+        plugin->isRunning = FALSE;
+        memset(&plugin->pi, 0, sizeof(plugin->pi));
+        
+        // Ensure stale data is cleared so UI reverts to clock
+        PluginData_Clear();
+        
+        // Force UI refresh (optional, but good for responsiveness)
+        // We can't easily invalidate rect here without an HWND, but PluginData file watcher might eventually trigger it.
+        // Or we assume the user will notice.
+    } else {
+        // If isRunning is FALSE, StopPlugin handled it. We do nothing.
+        LOG_INFO("Plugin monitor thread detected graceful stop.");
+    }
+    LeaveCriticalSection(&g_pluginCS);
+    
+    LOG_INFO("[DEBUG] Launcher thread exiting for plugin: %s", plugin->displayName);
     return 0;
 }
 
 /**
  * @brief Extract display name from plugin filename
- * @param filename Plugin filename (e.g., "catime_monitor.exe")
+ * @param filename Plugin filename (e.g., "monitor.py")
  * @param displayName Output buffer for display name
  * @param bufferSize Buffer size
  */
 static void ExtractDisplayName(const char* filename, char* displayName, size_t bufferSize) {
-    const char* prefix = "catime_";
-    size_t prefixLen = strlen(prefix);
-
-    if (strncmp(filename, prefix, prefixLen) == 0) {
-        const char* name = filename + prefixLen;
-        const char* ext = strrchr(name, '.');
-        size_t nameLen = ext ? (size_t)(ext - name) : strlen(name);
-
-        if (nameLen > 0 && nameLen < bufferSize) {
-            strncpy(displayName, name, nameLen);
-            displayName[nameLen] = '\0';
-
-            // Capitalize first letter
-            if (displayName[0] >= 'a' && displayName[0] <= 'z') {
-                displayName[0] = displayName[0] - 'a' + 'A';
-            }
-        } else {
-            strncpy(displayName, "Unknown", bufferSize - 1);
-            displayName[bufferSize - 1] = '\0';
+    // Remove file extension to get display name
+    const char* ext = strrchr(filename, '.');
+    size_t nameLen = ext ? (size_t)(ext - filename) : strlen(filename);
+    
+    if (nameLen > 0 && nameLen < bufferSize) {
+        strncpy(displayName, filename, nameLen);
+        displayName[nameLen] = '\0';
+        
+        // Capitalize first letter
+        if (displayName[0] >= 'a' && displayName[0] <= 'z') {
+            displayName[0] = displayName[0] - 'a' + 'A';
         }
     } else {
         strncpy(displayName, filename, bufferSize - 1);
@@ -127,6 +169,21 @@ void PluginManager_Init(void) {
     InitializeCriticalSection(&g_pluginCS);
     memset(g_plugins, 0, sizeof(g_plugins));
     g_pluginCount = 0;
+
+    // Create Job Object for automatic cleanup
+    g_hJob = CreateJobObject(NULL, NULL);
+    if (g_hJob) {
+        JOBOBJECT_EXTENDED_LIMIT_INFORMATION jeli = {0};
+        jeli.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+        if (!SetInformationJobObject(g_hJob, JobObjectExtendedLimitInformation, &jeli, sizeof(jeli))) {
+            LOG_ERROR("Failed to set Job Object info, error: %lu", GetLastError());
+            CloseHandle(g_hJob);
+            g_hJob = NULL;
+        }
+    } else {
+        LOG_ERROR("Failed to create Job Object, error: %lu", GetLastError());
+    }
+
     LOG_INFO("Plugin manager initialized");
 }
 
@@ -137,6 +194,11 @@ void PluginManager_Shutdown(void) {
         if (g_plugins[i].isRunning) {
             PluginManager_StopPlugin(i);
         }
+    }
+
+    if (g_hJob) {
+        CloseHandle(g_hJob);
+        g_hJob = NULL;
     }
 
     LeaveCriticalSection(&g_pluginCS);
@@ -168,56 +230,82 @@ int PluginManager_ScanPlugins(void) {
 
     EnterCriticalSection(&g_pluginCS);
 
-    // Reset plugin list
-    g_pluginCount = 0;
-    memset(g_plugins, 0, sizeof(g_plugins));
+    // Scan into temporary list to preserve state
+    PluginInfo newPlugins[MAX_PLUGINS];
+    int newPluginCount = 0;
+    memset(newPlugins, 0, sizeof(newPlugins));
 
-    // Build search pattern
+    // Build search pattern - scan all .py files
     char searchPath[MAX_PATH];
-    snprintf(searchPath, sizeof(searchPath), "%s\\catime_*.exe", pluginDir);
+    snprintf(searchPath, sizeof(searchPath), "%s\\*.py", pluginDir);
 
     WIN32_FIND_DATAA findData;
     HANDLE hFind = FindFirstFileA(searchPath, &findData);
 
-    if (hFind == INVALID_HANDLE_VALUE) {
+    if (hFind != INVALID_HANDLE_VALUE) {
+        do {
+            if (newPluginCount >= MAX_PLUGINS) {
+                LOG_WARNING("Maximum plugin count reached (%d)", MAX_PLUGINS);
+                break;
+            }
+
+            if (!(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+                PluginInfo* plugin = &newPlugins[newPluginCount];
+
+                // Basic info
+                strncpy(plugin->name, findData.cFileName, sizeof(plugin->name) - 1);
+                plugin->name[sizeof(plugin->name) - 1] = '\0';
+                ExtractDisplayName(findData.cFileName, plugin->displayName, sizeof(plugin->displayName));
+                snprintf(plugin->path, sizeof(plugin->path), "%s\\%s", pluginDir, findData.cFileName);
+                
+                plugin->isRunning = FALSE;
+                memset(&plugin->pi, 0, sizeof(plugin->pi));
+
+                // Preserve state from existing list
+                for (int i = 0; i < g_pluginCount; i++) {
+                    if (strcmp(g_plugins[i].name, plugin->name) == 0) {
+                        plugin->isRunning = g_plugins[i].isRunning;
+                        plugin->pi = g_plugins[i].pi;
+                        break;
+                    }
+                }
+
+                LOG_INFO("Found plugin: %s (%s)", plugin->displayName, plugin->name);
+                newPluginCount++;
+            }
+        } while (FindNextFileA(hFind, &findData));
+        FindClose(hFind);
+    } else {
         DWORD error = GetLastError();
         if (error != ERROR_FILE_NOT_FOUND) {
             LOG_WARNING("Failed to scan plugin directory, error: %lu", error);
         } else {
             LOG_INFO("No plugins found in directory");
         }
-        LeaveCriticalSection(&g_pluginCS);
-        return 0;
     }
 
-    do {
-        if (g_pluginCount >= MAX_PLUGINS) {
-            LOG_WARNING("Maximum plugin count reached (%d)", MAX_PLUGINS);
-            break;
+    // Clean up orphaned plugins (running but file removed)
+    for (int i = 0; i < g_pluginCount; i++) {
+        if (g_plugins[i].isRunning) {
+            BOOL found = FALSE;
+            for (int j = 0; j < newPluginCount; j++) {
+                if (strcmp(g_plugins[i].name, newPlugins[j].name) == 0) {
+                    found = TRUE;
+                    break;
+                }
+            }
+            if (!found) {
+                LOG_INFO("Plugin file %s removed, stopping process", g_plugins[i].name);
+                TerminateProcess(g_plugins[i].pi.hProcess, 0);
+                CloseHandle(g_plugins[i].pi.hProcess);
+                CloseHandle(g_plugins[i].pi.hThread);
+            }
         }
+    }
 
-        if (!(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
-            PluginInfo* plugin = &g_plugins[g_pluginCount];
-
-            // Store plugin name
-            strncpy(plugin->name, findData.cFileName, sizeof(plugin->name) - 1);
-            plugin->name[sizeof(plugin->name) - 1] = '\0';
-
-            // Extract display name
-            ExtractDisplayName(findData.cFileName, plugin->displayName, sizeof(plugin->displayName));
-
-            // Build full path
-            snprintf(plugin->path, sizeof(plugin->path), "%s\\%s", pluginDir, findData.cFileName);
-
-            plugin->isRunning = FALSE;
-            memset(&plugin->pi, 0, sizeof(plugin->pi));
-
-            LOG_INFO("Found plugin: %s (%s)", plugin->displayName, plugin->name);
-            g_pluginCount++;
-        }
-    } while (FindNextFileA(hFind, &findData));
-
-    FindClose(hFind);
+    // Update global list
+    memcpy(g_plugins, newPlugins, sizeof(g_plugins));
+    g_pluginCount = newPluginCount;
 
     LeaveCriticalSection(&g_pluginCS);
 
@@ -247,15 +335,24 @@ BOOL PluginManager_StartPlugin(int index) {
 
     EnterCriticalSection(&g_pluginCS);
 
-    PluginInfo* plugin = &g_plugins[index];
-
-    if (plugin->isRunning) {
-        LOG_WARNING("Plugin %s is already running", plugin->displayName);
-        LeaveCriticalSection(&g_pluginCS);
-        return FALSE;
+    // Exclusive execution: Stop ALL other plugins first
+    for (int i = 0; i < g_pluginCount; i++) {
+        if (g_plugins[i].isRunning) {
+            // If it's the same plugin and it's already running, do nothing (or restart?)
+            // User request implies "Switching", so if I click the same one, maybe just keep it running?
+            // Let's assume clicking an active plugin does nothing or ensures it's running.
+            if (i == index) {
+                LOG_INFO("Plugin %s is already running", g_plugins[index].displayName);
+                LeaveCriticalSection(&g_pluginCS);
+                return TRUE;
+            }
+            // Stop others
+            PluginManager_StopPlugin(i);
+        }
     }
 
-    LOG_INFO("Attempting to start plugin: %s", plugin->displayName);
+    PluginInfo* plugin = &g_plugins[index];
+    LOG_INFO("[DEBUG] StartPlugin requested for: %s (Index: %d)", plugin->displayName, index);
 
     // Prepare arguments for the launcher thread
     PluginLauncherArgs args = {0};
@@ -264,41 +361,44 @@ BOOL PluginManager_StartPlugin(int index) {
     args.success = FALSE;
 
     if (!args.hReadyEvent) {
-        LOG_ERROR("Failed to create synchronization event");
+        LOG_ERROR("[DEBUG] Failed to create synchronization event. Error: %lu", GetLastError());
         LeaveCriticalSection(&g_pluginCS);
         return FALSE;
     }
 
-    // Spawn the debugger thread
+    LOG_INFO("[DEBUG] Creating launcher thread...");
+
+    // Spawn the launcher thread
     // We don't keep the thread handle because it runs its own loop until plugin exit
     HANDLE hThread = CreateThread(
         NULL, 
         0, 
-        PluginDebugLauncherThread, 
+        PluginLauncherThread, 
         &args, 
         0, 
         NULL
     );
 
     if (!hThread) {
-        LOG_ERROR("Failed to create plugin launcher thread");
+        LOG_ERROR("[DEBUG] Failed to create plugin launcher thread. Error: %lu", GetLastError());
         CloseHandle(args.hReadyEvent);
         LeaveCriticalSection(&g_pluginCS);
         return FALSE;
     }
 
     // Wait for the process to be created (or fail)
+    LOG_INFO("[DEBUG] Waiting for plugin process to initialize...");
     WaitForSingleObject(args.hReadyEvent, INFINITE);
     CloseHandle(args.hReadyEvent);
     CloseHandle(hThread); // We don't need to control the thread, let it run
 
     if (!args.success) {
-        LOG_ERROR("Plugin launcher thread failed to start process");
+        LOG_ERROR("[DEBUG] Launcher thread reported failure.");
         LeaveCriticalSection(&g_pluginCS);
         return FALSE;
     }
 
-    LOG_INFO("Started plugin: %s (PID: %lu)", plugin->displayName, plugin->pi.dwProcessId);
+    LOG_INFO("[DEBUG] Plugin started successfully: %s (PID: %lu)", plugin->displayName, plugin->pi.dwProcessId);
 
     LeaveCriticalSection(&g_pluginCS);
     return TRUE;
@@ -333,6 +433,9 @@ BOOL PluginManager_StopPlugin(int index) {
 
     plugin->isRunning = FALSE;
     memset(&plugin->pi, 0, sizeof(plugin->pi));
+
+    // Clear any data generated by this plugin
+    PluginData_Clear();
 
     LOG_INFO("Stopped plugin: %s", plugin->displayName);
 
@@ -382,66 +485,26 @@ BOOL PluginManager_IsPluginRunning(int index) {
     return isRunning;
 }
 
-int PluginManager_StartAllPlugins(void) {
-    int startedCount = 0;
-
-    LOG_INFO("Starting all plugins...");
-
+void PluginManager_StopAllPlugins(void) {
+    EnterCriticalSection(&g_pluginCS);
     for (int i = 0; i < g_pluginCount; i++) {
-        if (!g_plugins[i].isRunning) {
-            if (PluginManager_StartPlugin(i)) {
-                startedCount++;
-            }
+        if (g_plugins[i].isRunning) {
+            PluginManager_StopPlugin(i);
         }
     }
-
-    LOG_INFO("Started %d plugins", startedCount);
-    return startedCount;
+    LeaveCriticalSection(&g_pluginCS);
 }
 
-BOOL PluginManager_OpenSettings(int index) {
-    if (index < 0 || index >= g_pluginCount) {
+BOOL PluginManager_OpenPluginFolder(void) {
+    char pluginDir[MAX_PATH];
+    if (!PluginManager_GetPluginDir(pluginDir, sizeof(pluginDir))) {
         return FALSE;
     }
-
-    EnterCriticalSection(&g_pluginCS);
-
-    PluginInfo* plugin = &g_plugins[index];
-
-    // Build command line with --config argument
-    char cmdLine[MAX_PATH + 20];
-    snprintf(cmdLine, sizeof(cmdLine), "\"%s\" --config", plugin->path);
-
-    STARTUPINFOA si = {sizeof(si)};
-    si.dwFlags = STARTF_USESHOWWINDOW;
-    si.wShowWindow = SW_HIDE;
-    PROCESS_INFORMATION pi = {0};
-
-    // Create process without console window
-    if (!CreateProcessA(
-        NULL,
-        cmdLine,
-        NULL,
-        NULL,
-        FALSE,
-        CREATE_NO_WINDOW,
-        NULL,
-        NULL,
-        &si,
-        &pi
-    )) {
-        DWORD error = GetLastError();
-        LOG_ERROR("Failed to open settings for plugin %s, error: %lu", plugin->displayName, error);
-        LeaveCriticalSection(&g_pluginCS);
-        return FALSE;
-    }
-
-    LOG_INFO("Opened settings for plugin: %s", plugin->displayName);
-
-    // Close handles immediately as we don't need to track this process
-    CloseHandle(pi.hProcess);
-    CloseHandle(pi.hThread);
-
-    LeaveCriticalSection(&g_pluginCS);
+    
+    // Ensure directory exists
+    CreateDirectoryA(pluginDir, NULL);
+    
+    // Open in explorer
+    ShellExecuteA(NULL, "open", pluginDir, NULL, NULL, SW_SHOW);
     return TRUE;
 }

@@ -89,16 +89,14 @@ BOOL PluginManager_IsPluginRunning(int index);
 BOOL PluginManager_GetPluginDir(char* buffer, size_t bufferSize);
 
 /**
- * @brief Start all plugins automatically
- * @return Number of plugins started
+ * @brief Stop all plugins
  */
-int PluginManager_StartAllPlugins(void);
+void PluginManager_StopAllPlugins(void);
 
 /**
- * @brief Open plugin settings dialog
- * @param index Plugin index
- * @return TRUE if settings dialog was opened successfully
+ * @brief Open plugin folder in File Explorer
+ * @return TRUE if successful
  */
-BOOL PluginManager_OpenSettings(int index);
+BOOL PluginManager_OpenPluginFolder(void);
 
 #endif /* PLUGIN_MANAGER_H */

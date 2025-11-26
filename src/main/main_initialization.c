@@ -226,7 +226,6 @@ BOOL InitializeSubsystems(void) {
     // Initialize plugin manager
     PluginManager_Init();
     PluginManager_ScanPlugins();
-    PluginManager_StartAllPlugins();
     LOG_INFO("Plugin manager initialized");
 
     return TRUE;

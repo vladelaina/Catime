@@ -327,6 +327,8 @@ void BuildAnimationSubmenu(HMENU hMenu) {
 void BuildPluginsSubmenu(HMENU hMenu) {
     HMENU hPluginsMenu = CreatePopupMenu();
 
+    // Auto-scan plugins every time menu is opened
+    PluginManager_ScanPlugins();
     int pluginCount = PluginManager_GetPluginCount();
 
     if (pluginCount == 0) {
@@ -338,29 +340,21 @@ void BuildPluginsSubmenu(HMENU hMenu) {
                 wchar_t displayName[128];
                 MultiByteToWideChar(CP_UTF8, 0, plugin->displayName, -1, displayName, 128);
 
-                // Create submenu for each plugin
-                HMENU hPluginSubmenu = CreatePopupMenu();
-
-                // Add "Start/Stop" option
+                // Add plugin item directly (Single selection mode)
                 BOOL isRunning = PluginManager_IsPluginRunning(i);
-                const wchar_t* toggleText = isRunning ? L"Stop" : L"Start";
-                AppendMenuW(hPluginSubmenu, MF_STRING, CLOCK_IDM_PLUGINS_BASE + i, toggleText);
-
-                // Add "Settings" option
-                AppendMenuW(hPluginSubmenu, MF_STRING, CLOCK_IDM_PLUGINS_SETTINGS_BASE + i, L"Settings");
-
-                // Add plugin submenu to main plugins menu
-                UINT flags = MF_POPUP;
+                UINT flags = MF_STRING;
                 if (isRunning) {
                     flags |= MF_CHECKED;
                 }
-                AppendMenuW(hPluginsMenu, flags, (UINT_PTR)hPluginSubmenu, displayName);
+                
+                AppendMenuW(hPluginsMenu, flags, CLOCK_IDM_PLUGINS_BASE + i, displayName);
             }
         }
     }
 
     AppendMenuW(hPluginsMenu, MF_SEPARATOR, 0, NULL);
-    AppendMenuW(hPluginsMenu, MF_STRING, CLOCK_IDM_PLUGINS_REFRESH, L"Refresh");
+    AppendMenuW(hPluginsMenu, MF_STRING, CLOCK_IDM_PLUGINS_OPEN_DIR, 
+                GetLocalizedString(NULL, L"Open plugins folder"));
 
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hPluginsMenu, L"Plugins");
 }
