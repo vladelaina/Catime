@@ -7,10 +7,14 @@
 #include "config.h"
 #include "language.h"
 #include "../resource/resource.h"
+#include "color/gradient.h"
+#include "color/color_parser.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <windows.h>
+
+extern char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER];
 
 #define MAX_POMODORO_TIMES 10
 
@@ -344,6 +348,16 @@ void WriteConfigShowMilliseconds(BOOL showMilliseconds) {
  */
 UINT GetTimerInterval(void) {
     extern BOOL GetActiveShowMilliseconds(void);
+    extern void GetActiveColor(char* outColor, size_t bufferSize);
+    
+    char activeColor[COLOR_HEX_BUFFER];
+    GetActiveColor(activeColor, sizeof(activeColor));
+    
+    /* Check for animated gradient */
+    if (IsGradientAnimated(GetGradientTypeByName(activeColor))) {
+        return 30; /* ~33 FPS for smooth animation */
+    }
+    
     return GetActiveShowMilliseconds() ? 10 : 1000;
 }
 

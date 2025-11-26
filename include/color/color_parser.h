@@ -20,8 +20,8 @@
  * Constants
  * ============================================================================ */
 
-#define COLOR_BUFFER_SIZE 32
-#define COLOR_HEX_BUFFER 32
+#define COLOR_BUFFER_SIZE 64
+#define COLOR_HEX_BUFFER 64
 #define HEX_COLOR_LENGTH 7
 
 /* ============================================================================

@@ -230,64 +230,178 @@ void BlendCharBitmapSTB(void* destBits, int destWidth, int destHeight,
     }
 }
 
+/* Pre-calculated gradient LUT to reduce CPU usage */
+#define LUT_SIZE GRADIENT_LUT_SIZE
+static COLORREF g_gradientLUT[LUT_SIZE];
+static GradientType g_lutType = GRADIENT_NONE;
+
+static void InitializeGradientLUT(const GradientInfo* info) {
+    if (!info) return;
+    
+    /* Fallback logic if palette is invalid but isAnimated is true */
+    if (!info->palette || info->paletteCount < 2) {
+        int r1 = GetRValue(info->startColor);
+        int g1 = GetGValue(info->startColor);
+        int b1 = GetBValue(info->startColor);
+        
+        int r2 = GetRValue(info->endColor);
+        int g2 = GetGValue(info->endColor);
+        int b2 = GetBValue(info->endColor);
+        
+        for (int i = 0; i < LUT_SIZE; i++) {
+            float t = (float)i / (float)(LUT_SIZE - 1);
+            int r = (int)(r1 + (r2 - r1) * t);
+            int g = (int)(g1 + (g2 - g1) * t);
+            int b = (int)(b1 + (b2 - b1) * t);
+            g_gradientLUT[i] = RGB(r, g, b);
+        }
+        g_lutType = info->type;
+        return;
+    }
+    
+    const int colorCount = info->paletteCount;
+    const COLORREF* colors = info->palette;
+    
+    for (int i = 0; i < LUT_SIZE; i++) {
+        float t = (float)i / (float)(LUT_SIZE - 1);
+        
+        /* Standard multi-stop gradient logic */
+        float scaledT = t * (colorCount - 1);
+        int idx = (int)scaledT;
+        int nextIdx = idx + 1;
+        if (nextIdx >= colorCount) nextIdx = colorCount - 1;
+        
+        float frac = scaledT - idx;
+        
+        COLORREF c1 = colors[idx];
+        COLORREF c2 = colors[nextIdx];
+        
+        int r = (int)(GetRValue(c1) + (GetRValue(c2) - GetRValue(c1)) * frac);
+        int g = (int)(GetGValue(c1) + (GetGValue(c2) - GetGValue(c1)) * frac);
+        int b = (int)(GetBValue(c1) + (GetBValue(c2) - GetBValue(c1)) * frac);
+        
+        g_gradientLUT[i] = RGB(r, g, b);
+    }
+    g_lutType = info->type;
+}
+
 void BlendCharBitmapGradientSTB(void* destBits, int destWidth, int destHeight, 
                                 int x_pos, int y_pos, 
                                 unsigned char* bitmap, int w, int h, 
-                                int startX, int totalWidth, int gradientType) {
+                                int startX, int totalWidth, int gradientType,
+                                int timeOffset) {
     DWORD* pixels = (DWORD*)destBits;
     
     const GradientInfo* info = GetGradientInfo((GradientType)gradientType);
-    if (!info) return; // Should not happen if checked before
+    // Allow isAnimated check to gate LUT logic
+    if (!info && !IsGradientAnimated((GradientType)gradientType)) return;
 
-    int r1 = GetRValue(info->startColor);
-    int g1 = GetGValue(info->startColor);
-    int b1 = GetBValue(info->startColor);
+    int r1 = 0, g1 = 0, b1 = 0;
+    int r2 = 0, g2 = 0, b2 = 0;
+
+    if (info && info->isAnimated) {
+        if (g_lutType != (GradientType)gradientType) InitializeGradientLUT(info);
+    } else if (info) {
+        r1 = GetRValue(info->startColor);
+        g1 = GetGValue(info->startColor);
+        b1 = GetBValue(info->startColor);
+        
+        r2 = GetRValue(info->endColor);
+        g2 = GetGValue(info->endColor);
+        b2 = GetBValue(info->endColor);
+    }
+
+    /* Animation parameters */
+    float lutStep = 0.0f;
     
-    int r2 = GetRValue(info->endColor);
-    int g2 = GetGValue(info->endColor);
-    int b2 = GetBValue(info->endColor);
+    if (info && info->isAnimated) {
+        if (totalWidth > 0) {
+            lutStep = (float)LUT_SIZE / (float)totalWidth;
+        }
+    }
 
     for (int j = 0; j < h; ++j) {
-        for (int i = 0; i < w; ++i) {
-            int screen_x = x_pos + i;
-            int screen_y = y_pos + j;
+        /* Compute clipping for Y */
+        int screen_y = y_pos + j;
+        if (screen_y < 0 || screen_y >= destHeight) {
+            /* Skip this row, but must advance gradient state if Animated */
+            if (info && info->isAnimated) {
+                // logic handled by row start calc
+            }
+            continue;
+        }
 
-            if (screen_x >= 0 && screen_x < destWidth && screen_y >= 0 && screen_y < destHeight) {
-                unsigned char alpha = bitmap[j * w + i];
-                if (alpha == 0) continue;
+        /* Compute clipping for X */
+        int start_i = 0;
+        int end_i = w;
+        
+        if (x_pos < 0) start_i = -x_pos;
+        if (x_pos + w > destWidth) end_i = destWidth - x_pos;
+        
+        if (start_i >= end_i) continue;
 
-                /* Calculate gradient based on X position relative to startX */
+        /* Pointers */
+        DWORD* destRow = pixels + (screen_y * destWidth) + (x_pos + start_i);
+        unsigned char* srcRow = bitmap + (j * w) + start_i;
+
+        /* Pre-calculate starting LUT index for this row if Animated */
+        float currentLutIdxFloat = 0.0f;
+        if (info && info->isAnimated) {
+            int rowStartX = (x_pos + start_i) - startX;
+            if (totalWidth > 0) {
+                currentLutIdxFloat = ((float)rowStartX / (float)totalWidth) * LUT_SIZE;
+            }
+        }
+
+        for (int i = start_i; i < end_i; ++i) {
+            unsigned char alpha = *srcRow++;
+            
+            if (alpha == 0) {
+                if (info && info->isAnimated) currentLutIdxFloat += lutStep;
+                destRow++;
+                continue;
+            }
+
+            int r, g, b;
+
+            if (info && info->isAnimated) {
+                /* Optimized LUT Lookup */
+                int lutIdx = (int)currentLutIdxFloat - timeOffset;
+                currentLutIdxFloat += lutStep;
+                
+                /* Optimized wrap-around logic */
+                lutIdx = lutIdx & (LUT_SIZE - 1);
+                
+                COLORREF c = g_gradientLUT[lutIdx];
+                r = GetRValue(c);
+                g = GetGValue(c);
+                b = GetBValue(c);
+            } else {
+                /* Standard Logic */
                 float t = 0.0f;
                 if (totalWidth > 0) {
-                    t = (float)(screen_x - startX) / (float)totalWidth;
+                    t = (float)((x_pos + i) - startX) / (float)totalWidth;
                 }
-                if (t < 0.0f) t = 0.0f;
-                if (t > 1.0f) t = 1.0f;
+                if (t < 0.0f) t = 0.0f; else if (t > 1.0f) t = 1.0f;
 
-                int r = (int)(r1 + (r2 - r1) * t);
-                int g = (int)(g1 + (g2 - g1) * t);
-                int b = (int)(b1 + (b2 - b1) * t);
+                r = (int)(r1 + (r2 - r1) * t);
+                g = (int)(g1 + (g2 - g1) * t);
+                b = (int)(b1 + (b2 - b1) * t);
+            }
 
-                /* Premultiplied alpha */
+            /* Blend */
+            DWORD currentPixel = *destRow;
+            DWORD currentA = (currentPixel >> 24) & 0xFF;
+            
+            if (alpha > currentA) {
                 DWORD finalR = (r * alpha) / 255;
                 DWORD finalG = (g * alpha) / 255;
                 DWORD finalB = (b * alpha) / 255;
                 DWORD finalA = (DWORD)alpha;
-
-                DWORD currentPixel = pixels[screen_y * destWidth + screen_x];
-                DWORD currentA = (currentPixel >> 24) & 0xFF;
                 
-                /* Simple alpha blending with destination */
-                /* Since we are drawing stroke (background), we might be overwritten by fill later. */
-                /* Standard over operator: Src + Dst*(1-SrcA) */
-                /* But here we just use max alpha for simple layering if we draw back-to-front */
-                
-                /* For stroke, we want to overwrite the background (usually transparent). */
-                if (alpha > currentA) {
-                    pixels[screen_y * destWidth + screen_x] = 
-                        (finalA << 24) | (finalR << 16) | (finalG << 8) | finalB;
-                }
+                *destRow = (finalA << 24) | (finalR << 16) | (finalG << 8) | finalB;
             }
+            destRow++;
         }
     }
 }

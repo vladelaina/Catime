@@ -86,6 +86,7 @@ void StartPreview(PreviewType type, const void* data, HWND hwnd) {
             const char* colorHex = (const char*)data;
             strncpy_s(g_previewState.data.colorHex, sizeof(g_previewState.data.colorHex), 
                      colorHex, _TRUNCATE);
+            if (hwnd) ResetTimerWithInterval(hwnd);
             break;
         }
         
@@ -138,7 +139,8 @@ void CancelPreview(HWND hwnd) {
 
     BOOL needsRedraw = (g_previewState.type != PREVIEW_TYPE_ANIMATION &&
                         g_previewState.type != PREVIEW_TYPE_NONE);
-    BOOL needsTimerReset = (g_previewState.type == PREVIEW_TYPE_MILLISECONDS);
+    BOOL needsTimerReset = (g_previewState.type == PREVIEW_TYPE_MILLISECONDS || 
+                            g_previewState.type == PREVIEW_TYPE_COLOR);
     BOOL needsFontReload = (g_previewState.type == PREVIEW_TYPE_FONT);
 
     if (needsFontReload) {
@@ -163,6 +165,7 @@ BOOL ApplyPreview(HWND hwnd) {
             WriteConfigColor(g_previewState.data.colorHex);
             strncpy_s(CLOCK_TEXT_COLOR, sizeof(CLOCK_TEXT_COLOR),
                      g_previewState.data.colorHex, _TRUNCATE);
+            if (hwnd) ResetTimerWithInterval(hwnd);
             break;
             
         case PREVIEW_TYPE_FONT:

@@ -10,6 +10,8 @@
 #include "../../libs/stb/stb_truetype.h"
 #include "color/gradient.h"
 
+#define GRADIENT_LUT_SIZE 2048
+
 /**
  * @brief Initialize STB Truetype with a font file
  * @param fontFilePath Absolute path to the .ttf/.ttc file
@@ -69,6 +71,7 @@ void BlendCharBitmapSTB(void* destBits, int destWidth, int destHeight,
 void BlendCharBitmapGradientSTB(void* destBits, int destWidth, int destHeight, 
                                 int x_pos, int y_pos, 
                                 unsigned char* bitmap, int w, int h, 
-                                int startX, int totalWidth, int gradientType);
+                                int startX, int totalWidth, int gradientType,
+                                int timeOffset);
 
 #endif // DRAWING_TEXT_STB_H

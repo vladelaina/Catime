@@ -479,7 +479,10 @@ LRESULT HandleAppDisplayChanged(HWND hwnd) {
         {CONFIG_TYPE_CUSTOM, CFG_SECTION_DISPLAY, NULL, (void*)&hwnd, 0, NULL, LoadDisplayWindowSettings, FALSE}
     };
     
-    ReloadConfigItems(hwnd, items, sizeof(items) / sizeof(items[0]));
+    if (ReloadConfigItems(hwnd, items, sizeof(items) / sizeof(items[0]))) {
+        /* Color change might require timer interval update (e.g. for Streamer animation) */
+        ResetTimerWithInterval(hwnd);
+    }
     return 0;
 }
 

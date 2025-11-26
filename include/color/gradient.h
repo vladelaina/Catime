@@ -13,6 +13,7 @@ typedef enum {
     GRADIENT_CANDY,
     GRADIENT_BREEZE,
     GRADIENT_SUNSET,
+    GRADIENT_STREAMER,
     /* Add new gradients here */
     GRADIENT_COUNT
 } GradientType;
@@ -23,6 +24,11 @@ typedef struct {
     const wchar_t* displayName; // UI Display name (e.g. "Candy Gradient")
     COLORREF startColor;        // Start color (Top/Left)
     COLORREF endColor;          // End color (Bottom/Right)
+    
+    /* Advanced properties */
+    BOOL isAnimated;            // Requires high-frequency refresh
+    const COLORREF* palette;    // Optional: Multi-stop color array
+    int paletteCount;           // Count of colors in palette
 } GradientInfo;
 
 /**
@@ -54,5 +60,8 @@ const GradientInfo* GetGradientInfoByIndex(int index);
  * @param info Gradient info containing start/end colors
  */
 void DrawGradientRect(HDC hdc, const RECT* rect, const GradientInfo* info);
+
+/* Helper to check if a gradient needs animation timer */
+BOOL IsGradientAnimated(GradientType type);
 
 #endif // COLOR_GRADIENT_H

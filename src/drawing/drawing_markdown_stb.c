@@ -126,6 +126,14 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
     int curLinkIdx = 0;
     int curStyleIdx = 0;
 
+    /* Calculate global time offset for animated gradient once per frame */
+    int timeOffset = 0;
+    if (IsGradientAnimated((GradientType)gradientMode)) {
+        DWORD now = GetTickCount();
+        float progress = (float)(now % 2000) / 2000.0f;
+        timeOffset = (int)(progress * GRADIENT_LUT_SIZE * 2);
+    }
+
     for (size_t i = 0; i <= len; i++) {
         if (text[i] == L'\n' || text[i] == L'\0') {
             // 1. Measure this line to center horizontally AND find max height
@@ -210,10 +218,10 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                         if (gradientMode != GRADIENT_NONE && drawColor == color) { /* Only apply gradient to default colored text */
                             BlendCharBitmapGradientSTB(bits, width, height, 
                                 currentX + xoff, baselineY + yoff, 
-                                bitmap, w, h, 0, width, gradientMode); /* Use total width for gradient mapping */
+                                bitmap, w, h, 0, width, gradientMode, timeOffset); /* Use total width for gradient mapping */
                         } else {
                             BlendCharBitmapSTB(bits, width, height, 
-                                currentX + xoff, baselineY + yoff, 
+                                currentX + xoff, baselineY + yoff,  
                                 bitmap, w, h, 
                                 GetRValue(drawColor), GetGValue(drawColor), GetBValue(drawColor));
                         }
