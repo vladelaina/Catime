@@ -18,9 +18,6 @@ add_definitions(-D_WINDOWS)
 # Collect all source files
 file(GLOB_RECURSE SOURCES "src/*.c")
 
-# Add cJSON library
-set(SOURCES ${SOURCES} libs/cJSON/cJSON.c)
-
 # Collect all header files
 file(GLOB_RECURSE HEADERS "include/*.h")
 
@@ -39,7 +36,6 @@ target_include_directories(catime PRIVATE
     include
     src
     libs/miniaudio
-    libs/cJSON
 )
 
 # Add compile definitions

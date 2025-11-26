@@ -122,6 +122,7 @@
 #define CLOCK_IDM_PLUGINS 140                /**< Plugins submenu */
 #define CLOCK_IDM_PLUGINS_BASE 4000          /**< Base ID for plugin menu items (4000-4499) */
 #define CLOCK_IDM_PLUGINS_SETTINGS_BASE 4500 /**< Base ID for plugin settings items (4500-4998) */
+#define CLOCK_IDM_PLUGINS_SHOW_FILE 4998     /**< Show plugin file content directly */
 #define CLOCK_IDM_PLUGINS_OPEN_DIR 4999      /**< Open plugins folder menu item */
 
 /** @brief Help and application menu identifiers */

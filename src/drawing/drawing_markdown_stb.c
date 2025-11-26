@@ -112,11 +112,11 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
 
     // Calculate total layout to center vertically
     int totalTextHeight = 0;
-    int w_dummy, h_dummy;
-    MeasureMarkdownSTB(text, headings, headingCount, (int)(fontSize * fontScale), &w_dummy, &h_dummy);
-    totalTextHeight = h_dummy;
+    int maxLineWidth = 0;
+    MeasureMarkdownSTB(text, headings, headingCount, (int)(fontSize * fontScale), &maxLineWidth, &totalTextHeight);
     
     int currentY = (height - totalTextHeight) / 2;
+    int blockLeftX = (width - maxLineWidth) / 2;  // Left edge of centered text block
     
     size_t len = wcslen(text);
     int currentLineStart = 0;
@@ -167,7 +167,7 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                 lineWidth += gm.advance + gm.kern;
             }
 
-            int currentX = (width - lineWidth) / 2;
+            int currentX = blockLeftX;  // All lines start from same left edge
             // Baseline align: Y + maxAscent
             int baselineY = currentY + maxAscent;
 

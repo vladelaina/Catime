@@ -257,8 +257,33 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     GetTimeText(timeText, TIME_TEXT_MAX_LEN);
 
     // Check for plugin data
-    if (!PluginData_GetText(timeText, TIME_TEXT_MAX_LEN)) {
-        // No plugin data, use normal time text (already set above)
+    wchar_t pluginText[TIME_TEXT_MAX_LEN] = {0};
+    if (PluginData_GetText(pluginText, TIME_TEXT_MAX_LEN)) {
+        // Check for <catime></catime> tag in plugin text
+        wchar_t* catimeStart = wcsstr(pluginText, L"<catime>");
+        wchar_t* catimeEnd = wcsstr(pluginText, L"</catime>");
+        
+        if (catimeStart && catimeEnd && catimeEnd > catimeStart) {
+            // Replace <catime></catime> with current time text
+            // Build: [before tag] + [time] + [after tag]
+            size_t beforeLen = catimeStart - pluginText;
+            const wchar_t* afterStart = catimeEnd + 9;  // Skip "</catime>"
+            
+            // Copy text before tag
+            wcsncpy(timeText, pluginText, beforeLen);
+            timeText[beforeLen] = L'\0';
+            
+            // Append time (already in timeText from GetTimeText, so save it first)
+            wchar_t savedTime[256];
+            GetTimeText(savedTime, 256);
+            wcscat(timeText, savedTime);
+            
+            // Append text after tag
+            wcscat(timeText, afterStart);
+        } else {
+            // No <catime> tag, use plugin text as-is
+            wcscpy(timeText, pluginText);
+        }
     }
 
     if (wcslen(timeText) == 0) {
@@ -338,14 +363,6 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     // Simple loop is fast enough for small window
     for (int i = 0; i < numPixels; i++) {
         pixels[i] = clearColor;
-    }
-
-    // Render Plugin Image (if any)
-    wchar_t imagePath[MAX_PATH];
-    if (PluginData_GetImagePath(imagePath, MAX_PATH)) {
-        // Draw image covering the whole client area
-        // This supports transparent PNGs if the background was cleared to 0
-        RenderImageGDIPlus(memDC, 0, 0, rect.right, rect.bottom, imagePath);
     }
     
     // Skip text rendering during transition to avoid black artifacts

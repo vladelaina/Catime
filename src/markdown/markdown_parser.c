@@ -340,59 +340,122 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
         if (wcslen(input) == 0) return FALSE;
     }
 
-    size_t inputLen = wcslen(input);
+    // Check for <markdown> tag - only parse content inside tags
+    const wchar_t* mdTagStart = wcsstr(input, L"<markdown>");
+    const wchar_t* mdTagEnd = wcsstr(input, L"</markdown>");
+    
+    // If no <markdown> tags, return plain text without any markdown parsing
+    if (!mdTagStart || !mdTagEnd || mdTagEnd <= mdTagStart) {
+        size_t len = wcslen(input);
+        *displayText = (wchar_t*)malloc((len + 1) * sizeof(wchar_t));
+        if (!*displayText) return FALSE;
+        wcscpy(*displayText, input);
+        return TRUE;  // Success but no markdown elements
+    }
+    
+    // Build text with tags removed:
+    // [text before tag] + [content inside tag] + [text after tag]
+    // Remove the tag lines (tag + its trailing/leading newline)
+    
+    size_t beforeLen = mdTagStart - input;
+    const wchar_t* contentStart = mdTagStart + 10;  // Skip "<markdown>"
+    
+    // Only skip newline after <markdown> if tag is at line start
+    // (preceded by newline or at very beginning)
+    BOOL tagAtLineStart = (beforeLen == 0) || 
+                          (input[beforeLen - 1] == L'\n') || 
+                          (input[beforeLen - 1] == L'\r');
+    if (tagAtLineStart) {
+        if (*contentStart == L'\r') contentStart++;
+        if (*contentStart == L'\n') contentStart++;
+    }
+    
+    size_t contentLen = mdTagEnd - contentStart;
+    
+    // Strip newline before </markdown> tag (remove the tag line)
+    while (contentLen > 0 && (contentStart[contentLen - 1] == L'\n' || contentStart[contentLen - 1] == L'\r')) {
+        contentLen--;
+    }
+    
+    const wchar_t* afterStart = mdTagEnd + 11;  // Skip "</markdown>"
+    // Skip newline after </markdown> tag
+    if (*afterStart == L'\r') afterStart++;
+    if (*afterStart == L'\n') afterStart++;
+    size_t afterLen = wcslen(afterStart);
+    
+    // Calculate offset for markdown positions (text before tag doesn't get parsed)
+    size_t mdStartOffset = beforeLen;
+    
+    // Create a modifiable copy of just the markdown content for parsing
+    wchar_t* mdContent = (wchar_t*)malloc((contentLen + 1) * sizeof(wchar_t));
+    if (!mdContent) return FALSE;
+    wcsncpy(mdContent, contentStart, contentLen);
+    mdContent[contentLen] = L'\0';
+
+    size_t totalLen = beforeLen + contentLen + afterLen;
     ParseState state = {0};
+    state.currentPos = (int)beforeLen;  // Start position offset for markdown content
 
-    state.displayText = (wchar_t*)malloc((inputLen + wcslen(BULLET_POINT) * 200 + 1) * sizeof(wchar_t));
-    if (!state.displayText) return FALSE;
+    state.displayText = (wchar_t*)malloc((totalLen + wcslen(BULLET_POINT) * 200 + 1) * sizeof(wchar_t));
+    if (!state.displayText) { free(mdContent); return FALSE; }
+    
+    // Copy text before tag first (plain text, no markdown parsing)
+    if (beforeLen > 0) {
+        wcsncpy(state.displayText, input, beforeLen);
+    }
 
-    int estimatedLinks = CountMarkdownLinks(input);
+    int estimatedLinks = CountMarkdownLinks(mdContent);
     state.linkCapacity = GetInitialLinkCapacity(estimatedLinks);
     state.links = (MarkdownLink*)malloc(state.linkCapacity * sizeof(MarkdownLink));
 
     if (!state.links) {
         CleanupParseState(&state);
+        free(mdContent);
         return FALSE;
     }
 
-    int estimatedHeadings = CountMarkdownHeadings(input);
+    int estimatedHeadings = CountMarkdownHeadings(mdContent);
     state.headingCapacity = GetInitialHeadingCapacity(estimatedHeadings);
     state.headings = (MarkdownHeading*)malloc(state.headingCapacity * sizeof(MarkdownHeading));
 
     if (!state.headings) {
         CleanupParseState(&state);
+        free(mdContent);
         return FALSE;
     }
 
-    int estimatedStyles = CountMarkdownStyles(input);
+    int estimatedStyles = CountMarkdownStyles(mdContent);
     state.styleCapacity = GetInitialStyleCapacity(estimatedStyles);
     state.styles = (MarkdownStyle*)malloc(state.styleCapacity * sizeof(MarkdownStyle));
 
     if (!state.styles) {
         CleanupParseState(&state);
+        free(mdContent);
         return FALSE;
     }
 
-    int estimatedListItems = CountMarkdownListItems(input);
+    int estimatedListItems = CountMarkdownListItems(mdContent);
     state.listItemCapacity = GetInitialListItemCapacity(estimatedListItems);
     state.listItems = (MarkdownListItem*)malloc(state.listItemCapacity * sizeof(MarkdownListItem));
 
     if (!state.listItems) {
         CleanupParseState(&state);
+        free(mdContent);
         return FALSE;
     }
 
-    int estimatedBlockquotes = CountMarkdownBlockquotes(input);
+    int estimatedBlockquotes = CountMarkdownBlockquotes(mdContent);
     state.blockquoteCapacity = GetInitialBlockquoteCapacity(estimatedBlockquotes);
     state.blockquotes = (MarkdownBlockquote*)malloc(state.blockquoteCapacity * sizeof(MarkdownBlockquote));
 
     if (!state.blockquotes) {
         CleanupParseState(&state);
+        free(mdContent);
         return FALSE;
     }
 
-    const wchar_t* src = input;
-    wchar_t* dest = state.displayText;
+    const wchar_t* src = mdContent;
+    wchar_t* dest = state.displayText + beforeLen;  // Start after the plain text prefix
     BOOL atLineStart = TRUE;
     BOOL inListItem = FALSE;
     int currentListItemIndex = -1;
@@ -411,6 +474,7 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
             if (*afterSpaces == L'-' || (*afterSpaces == L'*' && *(afterSpaces + 1) == L' ')) {
                 if (!EnsureListItemCapacity(&state)) {
                     CleanupParseState(&state);
+                    free(mdContent);
                     return FALSE;
                 }
 
@@ -481,6 +545,7 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
             if (*hashEnd == L' ' && level >= 1 && level <= 4) {
                 if (!EnsureHeadingCapacity(&state)) {
                     CleanupParseState(&state);
+                    free(mdContent);
                     return FALSE;
                 }
 
@@ -506,6 +571,7 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
         if (atLineStart && *src == L'>' && *(src + 1) == L' ') {
             if (!EnsureBlockquoteCapacity(&state)) {
                 CleanupParseState(&state);
+                free(mdContent);
                 return FALSE;
             }
 
@@ -661,6 +727,11 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
         state.currentPos++;
     }
 
+    // Append text after closing tag (plain text, no markdown parsing)
+    if (afterLen > 0) {
+        wcscpy(dest, afterStart);
+        dest += afterLen;
+    }
     *dest = L'\0';
 
     if (inListItem && currentListItemIndex >= 0) {
@@ -685,5 +756,6 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
     LOG_INFO("MD Parse Done: DisplayText len %d, Links %d, Headings %d, Styles %d", 
              wcslen(state.displayText), state.linkCount, state.headingCount, state.styleCount);
 
+    free(mdContent);  // Free temporary markdown content buffer
     return TRUE;
 }

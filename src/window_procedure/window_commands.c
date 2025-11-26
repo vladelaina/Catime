@@ -908,7 +908,71 @@ BOOL DispatchRangeCommand(HWND hwnd, UINT cmd, WPARAM wp, LPARAM lp) {
     }
 
     /* Handle plugin settings commands - DEPRECATED / REMOVED from UI but kept for safety */
-    if (cmd >= CLOCK_IDM_PLUGINS_SETTINGS_BASE && cmd < CLOCK_IDM_PLUGINS_OPEN_DIR) {
+    if (cmd >= CLOCK_IDM_PLUGINS_SETTINGS_BASE && cmd < CLOCK_IDM_PLUGINS_SHOW_FILE) {
+        return TRUE;
+    }
+
+    /* Handle "Show plugin file" command - display file content without running a plugin */
+    if (cmd == CLOCK_IDM_PLUGINS_SHOW_FILE) {
+        // Check if already in "show file" mode (plugin mode active but no plugin running)
+        BOOL isShowFileMode = PluginData_IsActive();
+        BOOL anyPluginRunning = FALSE;
+        int pluginCount = PluginManager_GetPluginCount();
+        for (int i = 0; i < pluginCount; i++) {
+            if (PluginManager_IsPluginRunning(i)) {
+                anyPluginRunning = TRUE;
+                break;
+            }
+        }
+        
+        if (isShowFileMode && !anyPluginRunning) {
+            // Toggle off - check if <catime> tag was present
+            BOOL hadCatimeTag = PluginData_HasCatimeTag();
+            
+            // Clear plugin data
+            PluginData_Clear();
+            
+            if (hadCatimeTag) {
+                // Had <catime> tag - just restore time display, keep timer running
+                // Don't reset timer mode, don't kill timer
+                InvalidateRect(hwnd, NULL, TRUE);
+            } else {
+                // No <catime> tag - switch to idle state
+                TimerModeParams params = {0, TRUE, TRUE, TRUE};
+                SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
+                KillTimer(hwnd, 1);
+                InvalidateRect(hwnd, NULL, TRUE);
+            }
+            return TRUE;
+        }
+        
+        // Stop any running plugins
+        PluginManager_StopAllPlugins();
+        
+        // Activate plugin data mode first - this will read from the file
+        PluginData_SetActive(TRUE);
+        
+        // Check if <catime> tag exists - if so, keep timer for time updates
+        if (!PluginData_HasCatimeTag()) {
+            // No <catime> tag, stop internal timers
+            KillTimer(hwnd, 1);
+            
+            // Reset timer flags
+            extern BOOL CLOCK_SHOW_CURRENT_TIME;
+            extern BOOL CLOCK_COUNT_UP;
+            extern BOOL CLOCK_IS_PAUSED;
+            CLOCK_SHOW_CURRENT_TIME = FALSE;
+            CLOCK_COUNT_UP = FALSE;
+            CLOCK_IS_PAUSED = FALSE;
+        }
+        // If <catime> tag present, keep timer running for live time updates
+        
+        // Ensure window is visible
+        if (!IsWindowVisible(hwnd)) {
+            ShowWindow(hwnd, SW_SHOW);
+        }
+        InvalidateRect(hwnd, NULL, TRUE);
+        
         return TRUE;
     }
 

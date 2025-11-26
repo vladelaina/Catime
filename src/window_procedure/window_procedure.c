@@ -339,10 +339,14 @@ void CleanupBeforeTimerAction(void) {
     StopNotificationSound();
     CloseAllNotifications();
     
-    // Stop all plugins and disable plugin data mode
-    // This ensures switching to any timer mode clears plugin content
-    PluginManager_StopAllPlugins();
-    PluginData_SetActive(FALSE);
+    // Check if plugin text has <catime> tag - if so, keep plugin active
+    // The time will be embedded within the plugin text via the tag
+    if (!PluginData_HasCatimeTag()) {
+        // No <catime> tag, stop all plugins and disable plugin data mode
+        PluginManager_StopAllPlugins();
+        PluginData_SetActive(FALSE);
+    }
+    // If <catime> tag is present, keep plugin running and data active
 }
 
 BOOL StartCountdownWithTime(HWND hwnd, int seconds) {

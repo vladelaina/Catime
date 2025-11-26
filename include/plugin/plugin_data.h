@@ -28,14 +28,6 @@ void PluginData_Shutdown(void);
 BOOL PluginData_GetText(wchar_t* buffer, size_t maxLen);
 
 /**
- * @brief Get current plugin image path
- * @param buffer Output buffer
- * @param maxLen Buffer size
- * @return TRUE if image path is available
- */
-BOOL PluginData_GetImagePath(wchar_t* buffer, size_t maxLen);
-
-/**
  * @brief Clear all plugin data
  */
 void PluginData_Clear(void);
@@ -50,7 +42,7 @@ void PluginData_SetText(const wchar_t* text);
  * @brief Set plugin mode active state
  * @param active TRUE to enable plugin data display, FALSE to disable
  * 
- * When active is FALSE, PluginData_GetText/GetImagePath will return FALSE
+ * When active is FALSE, PluginData_GetText will return FALSE
  * even if the data file contains content. This prevents stale data from
  * previous plugin runs from being displayed on startup.
  */
@@ -61,5 +53,14 @@ void PluginData_SetActive(BOOL active);
  * @return TRUE if plugin mode is active
  */
 BOOL PluginData_IsActive(void);
+
+/**
+ * @brief Check if plugin text contains <catime> tag
+ * @return TRUE if <catime></catime> tag is present in plugin text
+ * 
+ * When TRUE, timer mode switches should not clear plugin data,
+ * as the time will be embedded within the plugin text.
+ */
+BOOL PluginData_HasCatimeTag(void);
 
 #endif /* PLUGIN_DATA_H */

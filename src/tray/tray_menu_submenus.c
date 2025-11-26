@@ -18,6 +18,7 @@
 #include "timer/timer.h"
 #include "config.h"
 #include "plugin/plugin_manager.h"
+#include "plugin/plugin_data.h"
 #include "../resource/resource.h"
 #include "tray/tray_animation_core.h"
 #include "tray/tray_animation_loader.h"
@@ -350,6 +351,25 @@ void BuildPluginsSubmenu(HMENU hMenu) {
                 AppendMenuW(hPluginsMenu, flags, CLOCK_IDM_PLUGINS_BASE + i, displayName);
             }
         }
+    }
+
+    // Add "Show plugin file" option - displays file content without running a plugin
+    {
+        UINT flags = MF_STRING;
+        // Check if plugin mode is active but no plugin process is running
+        BOOL isShowFileMode = PluginData_IsActive();
+        BOOL anyPluginRunning = FALSE;
+        for (int i = 0; i < pluginCount; i++) {
+            if (PluginManager_IsPluginRunning(i)) {
+                anyPluginRunning = TRUE;
+                break;
+            }
+        }
+        if (isShowFileMode && !anyPluginRunning) {
+            flags |= MF_CHECKED;
+        }
+        AppendMenuW(hPluginsMenu, flags, CLOCK_IDM_PLUGINS_SHOW_FILE, 
+                    GetLocalizedString(NULL, L"Show plugin file"));
     }
 
     AppendMenuW(hPluginsMenu, MF_SEPARATOR, 0, NULL);
