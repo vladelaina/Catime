@@ -1,6 +1,9 @@
 /**
  * @file window_config_handlers.c
- * @brief Configuration reload handlers implementation
+ * @brief Configuration reload handlers implementation (simplified)
+ * 
+ * Handles WM_APP_*_CHANGED messages to reload configuration from INI file.
+ * Each handler directly reads and applies configuration changes.
  */
 
 #include "window_procedure/window_config_handlers.h"
@@ -18,371 +21,238 @@
 
 extern char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER];
 extern wchar_t CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH];
+extern int time_options[];
+extern int time_options_count;
 
 /* ============================================================================
- * Configuration Reload Framework
+ * Helper Functions
  * ============================================================================ */
 
-typedef enum {
-    CONFIG_TYPE_STRING,
-    CONFIG_TYPE_INT,
-    CONFIG_TYPE_BOOL,
-    CONFIG_TYPE_FLOAT,
-    CONFIG_TYPE_CUSTOM
-} ConfigItemType;
-
-typedef struct {
-    ConfigItemType type;
-    const char* section;
-    const char* key;
-    void* target;
-    size_t targetSize;
-    const void* defaultValue;
-    BOOL (*customLoader)(const char* section, const char* key, void* target, const void* def);
-    BOOL triggerRedraw;
-} ConfigItem;
-
-static BOOL LoadConfigString(const char* section, const char* key, void* target, size_t size, const char* def) {
+static BOOL LoadAndCompareString(const char* section, const char* key, 
+                                  char* target, size_t size, const char* def) {
     char temp[512];
     ReadConfigStr(section, key, def, temp, sizeof(temp));
-    if (strcmp(temp, (char*)target) != 0) {
+    if (strcmp(temp, target) != 0) {
         strncpy_s(target, size, temp, _TRUNCATE);
         return TRUE;
     }
     return FALSE;
 }
 
-static BOOL LoadConfigInt(const char* section, const char* key, void* target, int def) {
+static BOOL LoadAndCompareInt(const char* section, const char* key, int* target, int def) {
     int temp = ReadConfigInt(section, key, def);
-    if (temp != *(int*)target) {
-        *(int*)target = temp;
+    if (temp != *target) {
+        *target = temp;
         return TRUE;
     }
     return FALSE;
 }
 
-static BOOL LoadConfigBool(const char* section, const char* key, void* target, BOOL def) {
+static BOOL LoadAndCompareBool(const char* section, const char* key, BOOL* target, BOOL def) {
     BOOL temp = ReadConfigBool(section, key, def);
-    if (temp != *(BOOL*)target) {
-        *(BOOL*)target = temp;
+    if (temp != *target) {
+        *target = temp;
         return TRUE;
     }
     return FALSE;
 }
 
-static BOOL LoadConfigFloat(const char* section, const char* key, void* target, float def) {
+static BOOL LoadAndCompareFloat(const char* section, const char* key, float* target) {
     char buffer[32];
     ReadConfigStr(section, key, "", buffer, sizeof(buffer));
     if (buffer[0]) {
         float temp = (float)atof(buffer);
-        if (temp > 0.0f && fabsf(temp - *(float*)target) > 0.0001f) {
-            *(float*)target = temp;
+        if (temp > 0.0f && fabsf(temp - *target) > 0.0001f) {
+            *target = temp;
             return TRUE;
         }
     }
     return FALSE;
 }
 
-static BOOL ReloadConfigItems(HWND hwnd, const ConfigItem* items, size_t count) {
-    BOOL anyChanged = FALSE;
-    BOOL needsRedraw = FALSE;
+/* ============================================================================
+ * Handler Implementations
+ * ============================================================================ */
+
+LRESULT HandleAppDisplayChanged(HWND hwnd) {
+    BOOL changed = FALSE;
     
-    for (size_t i = 0; i < count; i++) {
-        const ConfigItem* item = &items[i];
-        BOOL changed = FALSE;
+    /* Text color */
+    changed |= LoadAndCompareString(CFG_SECTION_DISPLAY, CFG_KEY_TEXT_COLOR, 
+                                    CLOCK_TEXT_COLOR, sizeof(CLOCK_TEXT_COLOR), 
+                                    CLOCK_TEXT_COLOR);
+    
+    /* Font size */
+    changed |= LoadAndCompareInt(CFG_SECTION_DISPLAY, CFG_KEY_BASE_FONT_SIZE, 
+                                 &CLOCK_BASE_FONT_SIZE, CLOCK_BASE_FONT_SIZE);
+    
+    /* Window settings (only if not in edit mode) */
+    if (!CLOCK_EDIT_MODE) {
+        int posX = ReadConfigInt(CFG_SECTION_DISPLAY, CFG_KEY_WINDOW_POS_X, CLOCK_WINDOW_POS_X);
+        int posY = ReadConfigInt(CFG_SECTION_DISPLAY, CFG_KEY_WINDOW_POS_Y, CLOCK_WINDOW_POS_Y);
         
-        if (item->customLoader) {
-            changed = item->customLoader(item->section, item->key, item->target, item->defaultValue);
-        } else {
-            switch (item->type) {
-                case CONFIG_TYPE_STRING:
-                    changed = LoadConfigString(item->section, item->key, item->target, 
-                                              item->targetSize, (const char*)item->defaultValue);
-                    break;
-                    
-                case CONFIG_TYPE_INT:
-                    changed = LoadConfigInt(item->section, item->key, item->target, 
-                                           (int)(intptr_t)item->defaultValue);
-                    break;
-                    
-                case CONFIG_TYPE_BOOL:
-                    changed = LoadConfigBool(item->section, item->key, item->target, 
-                                            (BOOL)(intptr_t)item->defaultValue);
-                    break;
-                    
-                case CONFIG_TYPE_FLOAT:
-                    changed = LoadConfigFloat(item->section, item->key, item->target, 
-                                             *(float*)&item->defaultValue);
-                    break;
-                    
-                default:
-                    break;
-            }
+        char scaleStr[16];
+        ReadConfigStr(CFG_SECTION_DISPLAY, CFG_KEY_WINDOW_SCALE, "1.62", scaleStr, sizeof(scaleStr));
+        float newScale = (float)atof(scaleStr);
+        
+        BOOL newTopmost = ReadConfigBool(CFG_SECTION_DISPLAY, CFG_KEY_WINDOW_TOPMOST, CLOCK_WINDOW_TOPMOST);
+        int newOpacity = ReadConfigInt(CFG_SECTION_DISPLAY, "WINDOW_OPACITY", CLOCK_WINDOW_OPACITY);
+        
+        BOOL posChanged = (posX != CLOCK_WINDOW_POS_X) || (posY != CLOCK_WINDOW_POS_Y);
+        BOOL scaleChanged = (newScale > 0.0f && fabsf(newScale - CLOCK_WINDOW_SCALE) > 0.0001f);
+        
+        if (scaleChanged) {
+            extern float CLOCK_FONT_SCALE_FACTOR;
+            CLOCK_WINDOW_SCALE = newScale;
+            CLOCK_FONT_SCALE_FACTOR = newScale;
+            changed = TRUE;
         }
         
-        if (changed) {
-            anyChanged = TRUE;
-            if (item->triggerRedraw) {
-                needsRedraw = TRUE;
-            }
+        if (posChanged || scaleChanged) {
+            SetWindowPos(hwnd, NULL, posX, posY,
+                        (int)(CLOCK_BASE_WINDOW_WIDTH * CLOCK_WINDOW_SCALE),
+                        (int)(CLOCK_BASE_WINDOW_HEIGHT * CLOCK_WINDOW_SCALE),
+                        SWP_NOZORDER | SWP_NOACTIVATE);
+            CLOCK_WINDOW_POS_X = posX;
+            CLOCK_WINDOW_POS_Y = posY;
+            changed = TRUE;
+        }
+        
+        if (newTopmost != CLOCK_WINDOW_TOPMOST) {
+            SetWindowTopmost(hwnd, newTopmost);
+            changed = TRUE;
+        }
+        
+        if (newOpacity != CLOCK_WINDOW_OPACITY) {
+            if (newOpacity < 0) newOpacity = 0;
+            if (newOpacity > 100) newOpacity = 100;
+            CLOCK_WINDOW_OPACITY = newOpacity;
+            SetBlurBehind(hwnd, TRUE);
+            changed = TRUE;
         }
     }
     
-    if (needsRedraw && hwnd) {
+    if (changed) {
+        ResetTimerWithInterval(hwnd);
         InvalidateRect(hwnd, NULL, TRUE);
     }
     
-    return anyChanged;
+    return 0;
 }
 
-#define CFG_STR(sec, key, var, def) \
-    {CONFIG_TYPE_STRING, sec, key, (void*)var, sizeof(var), (void*)def, NULL, TRUE}
-
-#define CFG_STR_NOREDRAW(sec, key, var, def) \
-    {CONFIG_TYPE_STRING, sec, key, (void*)var, sizeof(var), (void*)def, NULL, FALSE}
-
-#define CFG_INT(sec, key, var, def) \
-    {CONFIG_TYPE_INT, sec, key, (void*)&var, sizeof(var), (void*)(intptr_t)def, NULL, TRUE}
-
-#define CFG_INT_NOREDRAW(sec, key, var, def) \
-    {CONFIG_TYPE_INT, sec, key, (void*)&var, sizeof(var), (void*)(intptr_t)def, NULL, FALSE}
-
-#define CFG_BOOL(sec, key, var, def) \
-    {CONFIG_TYPE_BOOL, sec, key, (void*)&var, sizeof(var), (void*)(intptr_t)def, NULL, TRUE}
-
-#define CFG_BOOL_NOREDRAW(sec, key, var, def) \
-    {CONFIG_TYPE_BOOL, sec, key, (void*)&var, sizeof(var), (void*)(intptr_t)def, NULL, FALSE}
-
-#define CFG_CUSTOM(sec, key, var, def, loader, redraw) \
-    {CONFIG_TYPE_CUSTOM, sec, key, (void*)var, 0, (void*)def, loader, redraw}
-
-/* ============================================================================
- * Custom Loaders
- * ============================================================================ */
-
-static BOOL LoadDisplayWindowSettings(const char* section, const char* key, void* target, const void* def) {
-    (void)section; (void)key; (void)target; (void)def;
-    
-    if (CLOCK_EDIT_MODE) return FALSE;
-    
-    int posX = ReadConfigInt(CFG_SECTION_DISPLAY, CFG_KEY_WINDOW_POS_X, CLOCK_WINDOW_POS_X);
-    int posY = ReadConfigInt(CFG_SECTION_DISPLAY, CFG_KEY_WINDOW_POS_Y, CLOCK_WINDOW_POS_Y);
-    char scaleStr[16];
-    ReadConfigStr(CFG_SECTION_DISPLAY, CFG_KEY_WINDOW_SCALE, "1.62", scaleStr, sizeof(scaleStr));
-    float newScale = (float)atof(scaleStr);
-    BOOL newTopmost = ReadConfigBool(CFG_SECTION_DISPLAY, CFG_KEY_WINDOW_TOPMOST, CLOCK_WINDOW_TOPMOST);
-    int newOpacity = ReadConfigInt(CFG_SECTION_DISPLAY, "WINDOW_OPACITY", CLOCK_WINDOW_OPACITY);
-
+LRESULT HandleAppTimerChanged(HWND hwnd) {
     BOOL changed = FALSE;
-    BOOL posChanged = (posX != CLOCK_WINDOW_POS_X) || (posY != CLOCK_WINDOW_POS_Y);
-    BOOL scaleChanged = (newScale > 0.0f && fabsf(newScale - CLOCK_WINDOW_SCALE) > 0.0001f);
-    BOOL opacityChanged = (newOpacity != CLOCK_WINDOW_OPACITY);
     
-    if (scaleChanged) {
-        extern float CLOCK_FONT_SCALE_FACTOR;
-        CLOCK_WINDOW_SCALE = newScale;
-        CLOCK_FONT_SCALE_FACTOR = newScale;
+    /* Basic timer settings */
+    changed |= LoadAndCompareBool(CFG_SECTION_TIMER, CFG_KEY_USE_24HOUR, 
+                                  &CLOCK_USE_24HOUR, CLOCK_USE_24HOUR);
+    changed |= LoadAndCompareBool(CFG_SECTION_TIMER, CFG_KEY_SHOW_SECONDS, 
+                                  &CLOCK_SHOW_SECONDS, CLOCK_SHOW_SECONDS);
+    
+    /* Time format */
+    char formatBuf[32];
+    ReadConfigStr(CFG_SECTION_TIMER, CFG_KEY_TIME_FORMAT, "DEFAULT", formatBuf, sizeof(formatBuf));
+    TimeFormatType newFormat = TimeFormatType_FromStr(formatBuf);
+    if (newFormat != g_AppConfig.display.time_format.format) {
+        g_AppConfig.display.time_format.format = newFormat;
         changed = TRUE;
     }
     
-    if (posChanged || scaleChanged) {
-        HWND hwnd = *(HWND*)target;
-        SetWindowPos(hwnd, NULL, posX, posY,
-                    (int)(CLOCK_BASE_WINDOW_WIDTH * CLOCK_WINDOW_SCALE),
-                    (int)(CLOCK_BASE_WINDOW_HEIGHT * CLOCK_WINDOW_SCALE),
-                    SWP_NOZORDER | SWP_NOACTIVATE);
-        CLOCK_WINDOW_POS_X = posX;
-        CLOCK_WINDOW_POS_Y = posY;
+    /* Milliseconds display */
+    BOOL newShowMs = ReadConfigBool(CFG_SECTION_TIMER, CFG_KEY_SHOW_MILLISECONDS, FALSE);
+    if (newShowMs != g_AppConfig.display.time_format.show_milliseconds) {
+        g_AppConfig.display.time_format.show_milliseconds = newShowMs;
+        KillTimer(hwnd, 1);
+        ResetTimerWithInterval(hwnd);
         changed = TRUE;
     }
     
-    if (newTopmost != CLOCK_WINDOW_TOPMOST) {
-        SetWindowTopmost(*(HWND*)target, newTopmost);
-        changed = TRUE;
-    }
-
-    if (opacityChanged) {
-        if (newOpacity < 0) newOpacity = 0;
-        if (newOpacity > 100) newOpacity = 100;
-        CLOCK_WINDOW_OPACITY = newOpacity;
-
-        HWND hwnd = *(HWND*)target;
-        
-        // Re-apply acrylic effect with new opacity
-        SetBlurBehind(hwnd, TRUE);
-
-        changed = TRUE;
-    }
-
-    return changed;
-}
-
-static const char* TimeFormatTypeToStr(TimeFormatType val) { 
-    switch(val) {
-        case TIME_FORMAT_DEFAULT: return "DEFAULT";
-        case TIME_FORMAT_ZERO_PADDED: return "ZERO_PADDED";
-        case TIME_FORMAT_FULL_PADDED: return "FULL_PADDED";
-        default: return STR_DEFAULT;
-    }
-}
-
-static TimeFormatType TimeFormatTypeFromStr(const char* str) { 
-    if (!str) return TIME_FORMAT_DEFAULT;
-    if (strcmp(str, "DEFAULT") == 0) return TIME_FORMAT_DEFAULT;
-    if (strcmp(str, "ZERO_PADDED") == 0) return TIME_FORMAT_ZERO_PADDED;
-    if (strcmp(str, "FULL_PADDED") == 0) return TIME_FORMAT_FULL_PADDED;
-    return TIME_FORMAT_DEFAULT;
-}
-
-static const char* TimeoutActionTypeToStr(TimeoutActionType val) {
-    switch(val) {
-        case TIMEOUT_ACTION_MESSAGE: return STR_MESSAGE;
-        case TIMEOUT_ACTION_LOCK: return "LOCK";
-        case TIMEOUT_ACTION_OPEN_FILE: return "OPEN_FILE";
-        case TIMEOUT_ACTION_SHOW_TIME: return "SHOW_TIME";
-        case TIMEOUT_ACTION_COUNT_UP: return "COUNT_UP";
-        case TIMEOUT_ACTION_OPEN_WEBSITE: return "OPEN_WEBSITE";
-        case TIMEOUT_ACTION_SLEEP: return "SLEEP";
-        case TIMEOUT_ACTION_SHUTDOWN: return "SHUTDOWN";
-        case TIMEOUT_ACTION_RESTART: return "RESTART";
-        default: return STR_MESSAGE;
-    }
-}
-
-static TimeoutActionType TimeoutActionTypeFromStr(const char* str) {
-    if (!str) return TIMEOUT_ACTION_MESSAGE;
-    if (strcmp(str, STR_MESSAGE) == 0) return TIMEOUT_ACTION_MESSAGE;
-    if (strcmp(str, "LOCK") == 0) return TIMEOUT_ACTION_LOCK;
-    if (strcmp(str, "OPEN_FILE") == 0) return TIMEOUT_ACTION_OPEN_FILE;
-    if (strcmp(str, "SHOW_TIME") == 0) return TIMEOUT_ACTION_SHOW_TIME;
-    if (strcmp(str, "COUNT_UP") == 0) return TIMEOUT_ACTION_COUNT_UP;
-    if (strcmp(str, "OPEN_WEBSITE") == 0) return TIMEOUT_ACTION_OPEN_WEBSITE;
-    if (strcmp(str, "SLEEP") == 0) return TIMEOUT_ACTION_SLEEP;
-    if (strcmp(str, "SHUTDOWN") == 0) return TIMEOUT_ACTION_SHUTDOWN;
-    if (strcmp(str, "RESTART") == 0) return TIMEOUT_ACTION_RESTART;
-    return TIMEOUT_ACTION_MESSAGE;
-}
-
-static BOOL LoadTimeFormatType(const char* sec, const char* key, void* target, const void* def) {
-    char buf[32];
-    ReadConfigStr(sec, key, (const char*)def, buf, sizeof(buf));
-    TimeFormatType newVal = TimeFormatTypeFromStr(buf);
-    if (newVal != *(TimeFormatType*)target) {
-        *(TimeFormatType*)target = newVal;
-        return TRUE;
-    }
-    return FALSE;
-}
-
-static BOOL LoadTimeoutActionType(const char* sec, const char* key, void* target, const void* def) {
-    TimeoutActionType* currentAction = (TimeoutActionType*)target;
+    /* Timeout settings */
+    LoadAndCompareString(CFG_SECTION_TIMER, CFG_KEY_TIMEOUT_TEXT, 
+                         CLOCK_TIMEOUT_TEXT, sizeof(CLOCK_TIMEOUT_TEXT), "0");
     
-    /* Preserve one-time actions: don't override them from config reload */
-    if (*currentAction == TIMEOUT_ACTION_SHUTDOWN ||
-        *currentAction == TIMEOUT_ACTION_RESTART ||
-        *currentAction == TIMEOUT_ACTION_SLEEP) {
-        return FALSE;
-    }
-    
-    char buf[32];
-    ReadConfigStr(sec, key, (const char*)def, buf, sizeof(buf));
-    TimeoutActionType newVal = TimeoutActionTypeFromStr(buf);
-    if (newVal != *currentAction) {
-        *currentAction = newVal;
-        return TRUE;
-    }
-    return FALSE;
-}
-
-static BOOL LoadShowMilliseconds(const char* section, const char* key, void* target, const void* def) {
-    BOOL temp = ReadConfigBool(section, key, (BOOL)(intptr_t)def);
-    if (temp != *(BOOL*)target) {
-        *(BOOL*)target = temp;
-        HWND hwnd = GetActiveWindow();
-        if (hwnd) {
-            KillTimer(hwnd, 1);
-            ResetTimerWithInterval(hwnd);
+    /* Timeout action (preserve one-time actions) */
+    extern TimeoutActionType CLOCK_TIMEOUT_ACTION;
+    if (CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_SHUTDOWN &&
+        CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_RESTART &&
+        CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_SLEEP) {
+        char actionBuf[32];
+        ReadConfigStr(CFG_SECTION_TIMER, CFG_KEY_TIMEOUT_ACTION, "MESSAGE", actionBuf, sizeof(actionBuf));
+        TimeoutActionType newAction = TimeoutActionType_FromStr(actionBuf);
+        if (newAction != CLOCK_TIMEOUT_ACTION) {
+            CLOCK_TIMEOUT_ACTION = newAction;
         }
-        return TRUE;
     }
-    return FALSE;
-}
-
-static BOOL LoadTimeoutWebsite(const char* section, const char* key, void* target, const void* def) {
-    char buffer[MAX_PATH];
-    ReadConfigStr(section, key, (const char*)def, buffer, sizeof(buffer));
-    WideString ws = ToWide(buffer);
-    if (!ws.valid && buffer[0]) ws.buf[0] = L'\0';
-    if (wcscmp(ws.buf, (wchar_t*)target) != 0) {
-        wcsncpy_s((wchar_t*)target, MAX_PATH, ws.buf, _TRUNCATE);
-        return TRUE;
-    }
-    return FALSE;
-}
-
-static BOOL LoadTimeOptions(const char* sec, const char* key, void* target, const void* def) {
-    (void)target;
-    extern int time_options[];
-    extern int time_options_count;
     
-    char buf[256];
-    ReadConfigStr(sec, key, (const char*)def, buf, sizeof(buf));
+    /* Timeout file and website */
+    LoadAndCompareString(CFG_SECTION_TIMER, CFG_KEY_TIMEOUT_FILE, 
+                         CLOCK_TIMEOUT_FILE_PATH, sizeof(CLOCK_TIMEOUT_FILE_PATH), "");
+    
+    char websiteBuf[MAX_PATH];
+    ReadConfigStr(CFG_SECTION_TIMER, CFG_KEY_TIMEOUT_WEBSITE, "", websiteBuf, sizeof(websiteBuf));
+    WideString ws = ToWide(websiteBuf);
+    if (ws.valid && wcscmp(ws.buf, CLOCK_TIMEOUT_WEBSITE_URL) != 0) {
+        wcsncpy_s(CLOCK_TIMEOUT_WEBSITE_URL, MAX_PATH, ws.buf, _TRUNCATE);
+    }
+    
+    /* Default start time */
+    LoadAndCompareInt(CFG_SECTION_TIMER, CFG_KEY_DEFAULT_START_TIME, 
+                      &g_AppConfig.timer.default_start_time, g_AppConfig.timer.default_start_time);
+    
+    /* Time options */
+    char optionsBuf[256];
+    ReadConfigStr(CFG_SECTION_TIMER, CFG_KEY_TIME_OPTIONS, "1500,600,300", optionsBuf, sizeof(optionsBuf));
     int newArr[MAX_TIME_OPTIONS] = {0}, newCnt = 0;
-    char* tok = strtok(buf, ",");
+    char* tok = strtok(optionsBuf, ",");
     while (tok && newCnt < MAX_TIME_OPTIONS) {
         while (*tok == ' ') tok++;
         newArr[newCnt++] = atoi(tok);
         tok = strtok(NULL, ",");
     }
-    BOOL changed = (newCnt != time_options_count);
-    if (!changed) {
-        for (int i = 0; i < newCnt; i++) {
-            if (newArr[i] != time_options[i]) {
-                changed = TRUE;
-                break;
-            }
-        }
-    }
-    if (changed) {
+    if (newCnt != time_options_count || memcmp(newArr, time_options, newCnt * sizeof(int)) != 0) {
         time_options_count = newCnt;
         memcpy(time_options, newArr, newCnt * sizeof(int));
     }
-    return changed;
+    
+    /* Startup mode */
+    LoadAndCompareString(CFG_SECTION_TIMER, CFG_KEY_STARTUP_MODE, 
+                         CLOCK_STARTUP_MODE, sizeof(CLOCK_STARTUP_MODE), CLOCK_STARTUP_MODE);
+    
+    if (changed) {
+        InvalidateRect(hwnd, NULL, TRUE);
+    }
+    
+    return 0;
 }
 
-static BOOL LoadPomodoroOptions(const char* section, const char* key, void* target, const void* def) {
-    (void)target;
+LRESULT HandleAppPomodoroChanged(HWND hwnd) {
+    (void)hwnd;
     
+    /* Pomodoro time options */
     char buf[128];
-    ReadConfigStr(section, key, (const char*)def, buf, sizeof(buf));
-    int tmp[3] = {g_AppConfig.pomodoro.work_time, g_AppConfig.pomodoro.short_break, g_AppConfig.pomodoro.long_break}, cnt = 0;
+    ReadConfigStr(CFG_SECTION_POMODORO, CFG_KEY_POMODORO_OPTIONS, "1500,300,1500,600", buf, sizeof(buf));
+    int tmp[3] = {g_AppConfig.pomodoro.work_time, g_AppConfig.pomodoro.short_break, g_AppConfig.pomodoro.long_break};
+    int cnt = 0;
     char* tok = strtok(buf, ",");
     while (tok && cnt < 3) {
         while (*tok == ' ') tok++;
         tmp[cnt++] = atoi(tok);
         tok = strtok(NULL, ",");
     }
+    if (cnt > 0) g_AppConfig.pomodoro.work_time = tmp[0];
+    if (cnt > 1) g_AppConfig.pomodoro.short_break = tmp[1];
+    if (cnt > 2) g_AppConfig.pomodoro.long_break = tmp[2];
     
-    BOOL changed = FALSE;
-    if (cnt > 0 && tmp[0] != g_AppConfig.pomodoro.work_time) { g_AppConfig.pomodoro.work_time = tmp[0]; changed = TRUE; }
-    if (cnt > 1 && tmp[1] != g_AppConfig.pomodoro.short_break) { g_AppConfig.pomodoro.short_break = tmp[1]; changed = TRUE; }
-    if (cnt > 2 && tmp[2] != g_AppConfig.pomodoro.long_break) { g_AppConfig.pomodoro.long_break = tmp[2]; changed = TRUE; }
+    /* Loop count */
+    int loopCount = ReadConfigInt(CFG_SECTION_POMODORO, CFG_KEY_POMODORO_LOOP_COUNT, 1);
+    if (loopCount < 1) loopCount = 1;
+    g_AppConfig.pomodoro.loop_count = loopCount;
     
-    return changed;
+    return 0;
 }
 
-static BOOL LoadPomodoroLoopCount(const char* section, const char* key, void* target, const void* def) {
-    int temp = ReadConfigInt(section, key, (int)(intptr_t)def);
-    if (temp < 1) temp = 1;
-    if (temp != *(int*)target) {
-        *(int*)target = temp;
-        return TRUE;
-    }
-    return FALSE;
-}
-
-static BOOL LoadNotificationSettings(const char* section, const char* key, void* target, const void* def) {
-    (void)section; (void)key; (void)target; (void)def;
+LRESULT HandleAppNotificationChanged(HWND hwnd) {
+    (void)hwnd;
     
     ReadNotificationMessagesConfig();
     ReadNotificationTimeoutConfig();
@@ -393,17 +263,16 @@ static BOOL LoadNotificationSettings(const char* section, const char* key, void*
     ReadNotificationDisabledConfig();
     ReadNotificationWindowConfig();
     
-    return FALSE;
+    return 0;
 }
 
-static BOOL LoadHotkeys(const char* section, const char* key, void* target, const void* def) {
-    (void)section; (void)key; (void)def;
-    RegisterGlobalHotkeys(*(HWND*)target);
-    return FALSE;
+LRESULT HandleAppHotkeysChanged(HWND hwnd) {
+    RegisterGlobalHotkeys(hwnd);
+    return 0;
 }
 
-static BOOL LoadRecentFilesConfig(const char* section, const char* key, void* target, const void* def) {
-    (void)section; (void)key; (void)target; (void)def;
+LRESULT HandleAppRecentFilesChanged(HWND hwnd) {
+    (void)hwnd;
     
     extern void LoadRecentFiles(void);
     LoadRecentFiles();
@@ -411,6 +280,7 @@ static BOOL LoadRecentFilesConfig(const char* section, const char* key, void* ta
     extern TimeoutActionType CLOCK_TIMEOUT_ACTION;
     extern char CLOCK_TIMEOUT_FILE_PATH[];
     
+    /* Validate current timeout file against recent files */
     if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE) {
         BOOL match = FALSE;
         for (int i = 0; i < g_AppConfig.recent_files.count; ++i) {
@@ -432,13 +302,12 @@ static BOOL LoadRecentFilesConfig(const char* section, const char* key, void* ta
         }
     }
     
-    return FALSE;
+    return 0;
 }
 
-static BOOL LoadColorOptions(const char* section, const char* key, void* target, const void* def) {
-    (void)target;
+LRESULT HandleAppColorsChanged(HWND hwnd) {
     char buffer[1024];
-    ReadConfigStr(section, key, (const char*)def, buffer, sizeof(buffer));
+    ReadConfigStr(CFG_SECTION_COLORS, "COLOR_OPTIONS", DEFAULT_COLOR_OPTIONS_INI, buffer, sizeof(buffer));
     
     ClearColorOptions();
     char* tok = strtok(buffer, ",");
@@ -451,123 +320,21 @@ static BOOL LoadColorOptions(const char* section, const char* key, void* target,
     ReadPercentIconColorsConfig();
     TrayAnimation_UpdatePercentIconIfNeeded();
     
-    return TRUE;
-}
-
-static BOOL LoadAnimSpeed(const char* section, const char* key, void* target, const void* def) {
-    (void)section; (void)key; (void)target; (void)def;
-    ReloadAnimationSpeedFromConfig();
-    TrayAnimation_RecomputeTimerDelay();
-    return FALSE;
-}
-
-static BOOL LoadAnimPath(const char* section, const char* key, void* target, const void* def) {
-    char buffer[MAX_PATH];
-    ReadConfigStr(section, key, (const char*)def, buffer, sizeof(buffer));
-    ApplyAnimationPathValueNoPersist(buffer);
-    return FALSE;
-}
-
-/* ============================================================================
- * Handler Implementations
- * ============================================================================ */
-
-LRESULT HandleAppDisplayChanged(HWND hwnd) {
-    ConfigItem items[] = {
-        CFG_STR(CFG_SECTION_DISPLAY, CFG_KEY_TEXT_COLOR, CLOCK_TEXT_COLOR, CLOCK_TEXT_COLOR),
-        CFG_INT(CFG_SECTION_DISPLAY, CFG_KEY_BASE_FONT_SIZE, CLOCK_BASE_FONT_SIZE, CLOCK_BASE_FONT_SIZE),
-        {CONFIG_TYPE_CUSTOM, CFG_SECTION_DISPLAY, NULL, (void*)&hwnd, 0, NULL, LoadDisplayWindowSettings, FALSE}
-    };
-    
-    if (ReloadConfigItems(hwnd, items, sizeof(items) / sizeof(items[0]))) {
-        /* Color change might require timer interval update (e.g. for Streamer animation) */
-        ResetTimerWithInterval(hwnd);
-    }
-    return 0;
-}
-
-LRESULT HandleAppTimerChanged(HWND hwnd) {
-    ConfigItem items[] = {
-        CFG_BOOL(CFG_SECTION_TIMER, CFG_KEY_USE_24HOUR, CLOCK_USE_24HOUR, CLOCK_USE_24HOUR),
-        CFG_BOOL(CFG_SECTION_TIMER, CFG_KEY_SHOW_SECONDS, CLOCK_SHOW_SECONDS, CLOCK_SHOW_SECONDS),
-        {CONFIG_TYPE_CUSTOM, CFG_SECTION_TIMER, CFG_KEY_TIME_FORMAT, (void*)&g_AppConfig.display.time_format.format, 0, "DEFAULT", LoadTimeFormatType, TRUE},
-        {CONFIG_TYPE_CUSTOM, CFG_SECTION_TIMER, CFG_KEY_SHOW_MILLISECONDS, (void*)&g_AppConfig.display.time_format.show_milliseconds, 0, (void*)FALSE, LoadShowMilliseconds, TRUE},
-        CFG_STR_NOREDRAW(CFG_SECTION_TIMER, CFG_KEY_TIMEOUT_TEXT, CLOCK_TIMEOUT_TEXT, "0"),
-        {CONFIG_TYPE_CUSTOM, CFG_SECTION_TIMER, CFG_KEY_TIMEOUT_ACTION, (void*)&CLOCK_TIMEOUT_ACTION, 0, "MESSAGE", LoadTimeoutActionType, FALSE},
-        CFG_STR_NOREDRAW(CFG_SECTION_TIMER, CFG_KEY_TIMEOUT_FILE, CLOCK_TIMEOUT_FILE_PATH, ""),
-        {CONFIG_TYPE_CUSTOM, CFG_SECTION_TIMER, CFG_KEY_TIMEOUT_WEBSITE, (void*)CLOCK_TIMEOUT_WEBSITE_URL, 0, "", LoadTimeoutWebsite, FALSE},
-        CFG_INT_NOREDRAW(CFG_SECTION_TIMER, CFG_KEY_DEFAULT_START_TIME, g_AppConfig.timer.default_start_time, g_AppConfig.timer.default_start_time),
-        {CONFIG_TYPE_CUSTOM, CFG_SECTION_TIMER, CFG_KEY_TIME_OPTIONS, (void*)time_options, 0, "1500,600,300", LoadTimeOptions, FALSE},
-        CFG_STR_NOREDRAW(CFG_SECTION_TIMER, CFG_KEY_STARTUP_MODE, CLOCK_STARTUP_MODE, CLOCK_STARTUP_MODE)
-    };
-    
-    ReloadConfigItems(hwnd, items, sizeof(items) / sizeof(items[0]));
-    return 0;
-}
-
-LRESULT HandleAppPomodoroChanged(HWND hwnd) {
-    ConfigItem items[] = {
-        {CONFIG_TYPE_CUSTOM, CFG_SECTION_POMODORO, CFG_KEY_POMODORO_OPTIONS, (void*)g_AppConfig.pomodoro.times, 0, "1500,300,1500,600", LoadPomodoroOptions, FALSE},
-        {CONFIG_TYPE_CUSTOM, CFG_SECTION_POMODORO, CFG_KEY_POMODORO_LOOP_COUNT, (void*)&g_AppConfig.pomodoro.loop_count, 0, (void*)1, LoadPomodoroLoopCount, FALSE}
-    };
-    
-    ReloadConfigItems(hwnd, items, sizeof(items) / sizeof(items[0]));
-    return 0;
-}
-
-LRESULT HandleAppNotificationChanged(HWND hwnd) {
-    ConfigItem items[] = {
-        {CONFIG_TYPE_CUSTOM, NULL, NULL, NULL, 0, NULL, LoadNotificationSettings, FALSE}
-    };
-    
-    ReloadConfigItems(hwnd, items, sizeof(items) / sizeof(items[0]));
-    return 0;
-}
-
-LRESULT HandleAppHotkeysChanged(HWND hwnd) {
-    ConfigItem items[] = {
-        {CONFIG_TYPE_CUSTOM, NULL, NULL, (void*)&hwnd, 0, NULL, LoadHotkeys, FALSE}
-    };
-    
-    ReloadConfigItems(hwnd, items, sizeof(items) / sizeof(items[0]));
-    return 0;
-}
-
-LRESULT HandleAppRecentFilesChanged(HWND hwnd) {
-    ConfigItem items[] = {
-        {CONFIG_TYPE_CUSTOM, NULL, NULL, NULL, 0, NULL, LoadRecentFilesConfig, FALSE}
-    };
-    
-    ReloadConfigItems(hwnd, items, sizeof(items) / sizeof(items[0]));
-    return 0;
-}
-
-LRESULT HandleAppColorsChanged(HWND hwnd) {
-    ConfigItem items[] = {
-        {CONFIG_TYPE_CUSTOM, CFG_SECTION_COLORS, "COLOR_OPTIONS", NULL, 0,
-         DEFAULT_COLOR_OPTIONS_INI,
-         LoadColorOptions, TRUE}
-    };
-    
-    ReloadConfigItems(hwnd, items, sizeof(items) / sizeof(items[0]));
+    InvalidateRect(hwnd, NULL, TRUE);
     return 0;
 }
 
 LRESULT HandleAppAnimSpeedChanged(HWND hwnd) {
-    ConfigItem items[] = {
-        {CONFIG_TYPE_CUSTOM, NULL, NULL, NULL, 0, NULL, LoadAnimSpeed, FALSE}
-    };
-    
-    ReloadConfigItems(hwnd, items, sizeof(items) / sizeof(items[0]));
+    (void)hwnd;
+    ReloadAnimationSpeedFromConfig();
+    TrayAnimation_RecomputeTimerDelay();
     return 0;
 }
 
 LRESULT HandleAppAnimPathChanged(HWND hwnd) {
-    ConfigItem items[] = {
-        {CONFIG_TYPE_CUSTOM, "Animation", "ANIMATION_PATH", NULL, 0, "__logo__", LoadAnimPath, FALSE}
-    };
-    
-    ReloadConfigItems(hwnd, items, sizeof(items) / sizeof(items[0]));
+    (void)hwnd;
+    char buffer[MAX_PATH];
+    ReadConfigStr("Animation", "ANIMATION_PATH", "__logo__", buffer, sizeof(buffer));
+    ApplyAnimationPathValueNoPersist(buffer);
     return 0;
 }
-

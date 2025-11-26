@@ -762,6 +762,26 @@ const char* GetCurrentFontLicenseVersion(void);
  * ============================================================================ */
 
 /**
+ * @brief Convert string to TimeFormatType enum
+ */
+TimeFormatType TimeFormatType_FromStr(const char* str);
+
+/**
+ * @brief Convert TimeFormatType enum to string
+ */
+const char* TimeFormatType_ToStr(TimeFormatType val);
+
+/**
+ * @brief Convert string to TimeoutActionType enum
+ */
+TimeoutActionType TimeoutActionType_FromStr(const char* str);
+
+/**
+ * @brief Convert TimeoutActionType enum to string
+ */
+const char* TimeoutActionType_ToStr(TimeoutActionType val);
+
+/**
  * @brief Write time format (updates UI immediately)
  * @param format Format type
  */

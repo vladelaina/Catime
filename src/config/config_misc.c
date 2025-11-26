@@ -48,6 +48,19 @@ static const EnumStrMap TIME_FORMAT_MAP[] = {
     {-1, NULL}
 };
 
+static const EnumStrMap TIMEOUT_ACTION_MAP[] = {
+    {TIMEOUT_ACTION_MESSAGE,      "MESSAGE"},
+    {TIMEOUT_ACTION_LOCK,         "LOCK"},
+    {TIMEOUT_ACTION_OPEN_FILE,    "OPEN_FILE"},
+    {TIMEOUT_ACTION_SHOW_TIME,    "SHOW_TIME"},
+    {TIMEOUT_ACTION_COUNT_UP,     "COUNT_UP"},
+    {TIMEOUT_ACTION_OPEN_WEBSITE, "OPEN_WEBSITE"},
+    {TIMEOUT_ACTION_SLEEP,        "SLEEP"},
+    {TIMEOUT_ACTION_SHUTDOWN,     "SHUTDOWN"},
+    {TIMEOUT_ACTION_RESTART,      "RESTART"},
+    {-1, NULL}
+};
+
 static const EnumStrMap LANGUAGE_MAP[] = {
     {APP_LANG_CHINESE_SIMP, "Chinese_Simplified"},
     {APP_LANG_CHINESE_TRAD, "Chinese_Traditional"},
@@ -482,6 +495,26 @@ void WriteConfigOpacitySteps(int normal_step, int fast_step) {
 
     WriteIniInt(INI_SECTION_DISPLAY, "OPACITY_STEP_NORMAL", normal_step, config_path);
     WriteIniInt(INI_SECTION_DISPLAY, "OPACITY_STEP_FAST", fast_step, config_path);
+}
+
+/* ============================================================================
+ * Enum Conversion Functions (exported for use by other modules)
+ * ============================================================================ */
+
+TimeFormatType TimeFormatType_FromStr(const char* str) {
+    return (TimeFormatType)StringToEnum(TIME_FORMAT_MAP, str, TIME_FORMAT_DEFAULT);
+}
+
+const char* TimeFormatType_ToStr(TimeFormatType val) {
+    return EnumToString(TIME_FORMAT_MAP, val, "DEFAULT");
+}
+
+TimeoutActionType TimeoutActionType_FromStr(const char* str) {
+    return (TimeoutActionType)StringToEnum(TIMEOUT_ACTION_MAP, str, TIMEOUT_ACTION_MESSAGE);
+}
+
+const char* TimeoutActionType_ToStr(TimeoutActionType val) {
+    return EnumToString(TIMEOUT_ACTION_MAP, val, "MESSAGE");
 }
 
 

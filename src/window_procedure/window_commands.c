@@ -1,6 +1,6 @@
 /**
  * @file window_commands.c
- * @brief Menu command handlers and dispatch system
+ * @brief Menu command handlers and dispatch system (core)
  */
 
 #include "window_procedure/window_commands.h"
@@ -28,13 +28,10 @@
 #include "async_update_checker.h"
 #include "window_procedure/window_procedure.h"
 #include "window_procedure/window_menus.h"
-#include "plugin/plugin_manager.h"
-#include "plugin/plugin_data.h"
 #include "tray/tray_animation_menu.h"
 #include "tray/tray_animation_core.h"
 #include "tray/tray_menu_font.h"
 #include "menu_preview.h"
-#include "utils/time_parser.h"
 #include "../resource/resource.h"
 #include "color/color_parser.h"
 #include <shlobj.h>
@@ -49,46 +46,14 @@ extern size_t COLOR_OPTIONS_COUNT;
 extern PredefinedColor* COLOR_OPTIONS;
 extern char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER];
 
-
 /* ============================================================================
- * Command Handlers
+ * Simple Command Handlers (kept in core)
  * ============================================================================ */
-
-static LRESULT CmdCustomCountdown(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    if (CLOCK_SHOW_CURRENT_TIME) {
-        CLOCK_SHOW_CURRENT_TIME = FALSE;
-        extern time_t CLOCK_LAST_TIME_UPDATE;
-        CLOCK_LAST_TIME_UPDATE = 0;
-        KillTimer(hwnd, 1);
-    }
-    
-    int total_seconds = 0;
-    if (ValidatedTimeInputLoop(hwnd, CLOCK_IDD_DIALOG1, &total_seconds)) {
-        CleanupBeforeTimerAction();
-        StartCountdownWithTime(hwnd, total_seconds);
-    }
-    return 0;
-}
 
 static LRESULT CmdExit(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp; (void)hwnd;
     RemoveTrayIcon();
     PostQuitMessage(0);
-    return 0;
-}
-
-static LRESULT CmdPauseResume(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    TogglePauseResumeTimer(hwnd);
-    return 0;
-}
-
-static LRESULT CmdRestartTimer(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    CleanupBeforeTimerAction();
-    CloseAllNotifications();
-    RestartCurrentTimer(hwnd);
     return 0;
 }
 
@@ -100,48 +65,7 @@ static LRESULT CmdAbout(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 static LRESULT CmdToggleTopmost(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp; (void)hwnd;
-    BOOL newTopmost = !CLOCK_WINDOW_TOPMOST;
-    WriteConfigTopmost(newTopmost ? STR_TRUE : STR_FALSE);
-    return 0;
-}
-
-static LRESULT CmdTimeFormatDefault(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    WriteConfigTimeFormat(TIME_FORMAT_DEFAULT);
-    InvalidateRect(hwnd, NULL, TRUE);
-    return 0;
-}
-
-static LRESULT CmdTimeFormatZeroPadded(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    WriteConfigTimeFormat(TIME_FORMAT_ZERO_PADDED);
-    InvalidateRect(hwnd, NULL, TRUE);
-    return 0;
-}
-
-static LRESULT CmdTimeFormatFullPadded(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    WriteConfigTimeFormat(TIME_FORMAT_FULL_PADDED);
-    InvalidateRect(hwnd, NULL, TRUE);
-    return 0;
-}
-
-static LRESULT CmdToggleMilliseconds(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    WriteConfigShowMilliseconds(!g_AppConfig.display.time_format.show_milliseconds);
-    InvalidateRect(hwnd, NULL, TRUE);
-    return 0;
-}
-
-static LRESULT CmdCountdownReset(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    CleanupBeforeTimerAction();
-    if (CLOCK_COUNT_UP) CLOCK_COUNT_UP = FALSE;
-    ResetTimer();
-    KillTimer(hwnd, 1);
-    ResetTimerWithInterval(hwnd);
-    InvalidateRect(hwnd, NULL, TRUE);
-    HandleWindowReset(hwnd);
+    WriteConfigTopmost(!CLOCK_WINDOW_TOPMOST ? STR_TRUE : STR_FALSE);
     return 0;
 }
 
@@ -173,7 +97,6 @@ static LRESULT CmdCustomizeColor(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 static LRESULT CmdFontLicense(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    
     extern INT_PTR ShowFontLicenseDialog(HWND);
     extern void SetFontLicenseAccepted(BOOL);
     
@@ -187,7 +110,6 @@ static LRESULT CmdFontLicense(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 static LRESULT CmdFontAdvanced(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    
     char configPathUtf8[MAX_PATH];
     GetConfigPath(configPathUtf8, MAX_PATH);
     
@@ -205,94 +127,13 @@ static LRESULT CmdFontAdvanced(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
-static LRESULT CmdShowCurrentTime(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    CleanupBeforeTimerAction();
-    
-    if (!CLOCK_SHOW_CURRENT_TIME) {
-        TimerModeParams params = {0, TRUE, FALSE, TRUE};
-        SwitchTimerMode(hwnd, TIMER_MODE_SHOW_TIME, &params);
-    } else {
-        TimerModeParams params = {0, TRUE, FALSE, TRUE};
-        SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
-    }
-    
-    // Ensure timer is running after mode switch
-    KillTimer(hwnd, 1);
-    ResetTimerWithInterval(hwnd);
-    
-    return 0;
-}
-
-static LRESULT Cmd24HourFormat(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    ToggleConfigBool(hwnd, CFG_KEY_USE_24HOUR, &CLOCK_USE_24HOUR, TRUE);
-    return 0;
-}
-
-static LRESULT CmdShowSeconds(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    ToggleConfigBool(hwnd, CFG_KEY_SHOW_SECONDS, &CLOCK_SHOW_SECONDS, TRUE);
-    return 0;
-}
-
-static LRESULT CmdCountUp(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    CleanupBeforeTimerAction();
-    
-    if (!CLOCK_COUNT_UP) {
-        TimerModeParams params = {0, TRUE, FALSE, TRUE};
-        SwitchTimerMode(hwnd, TIMER_MODE_COUNTUP, &params);
-        
-        // Ensure timer is running
-        KillTimer(hwnd, 1);
-        ResetTimerWithInterval(hwnd);
-    } else {
-        CLOCK_COUNT_UP = FALSE;
-        KillTimer(hwnd, 1);
-        ResetTimerWithInterval(hwnd);
-        InvalidateRect(hwnd, NULL, TRUE);
-    }
-    return 0;
-}
-
-static LRESULT CmdCountUpStart(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    CleanupBeforeTimerAction();
-    
-    if (!CLOCK_COUNT_UP) {
-        TimerModeParams params = {0, TRUE, FALSE, TRUE};
-        SwitchTimerMode(hwnd, TIMER_MODE_COUNTUP, &params);
-        
-        // Ensure timer is running
-        KillTimer(hwnd, 1);
-        ResetTimerWithInterval(hwnd);
-    } else {
-        CLOCK_IS_PAUSED = !CLOCK_IS_PAUSED;
-    }
-    InvalidateRect(hwnd, NULL, TRUE);
-    return 0;
-}
-
-static LRESULT CmdCountUpReset(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    CleanupBeforeTimerAction();
-    ResetTimer();
-    InvalidateRect(hwnd, NULL, TRUE);
-    return 0;
-}
-
 static LRESULT CmdAutoStart(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     BOOL isEnabled = IsAutoStartEnabled();
     if (isEnabled) {
-        if (RemoveShortcut()) {
-            CheckMenuItem(GetMenu(hwnd), CLOCK_IDC_AUTO_START, MF_UNCHECKED);
-        }
+        if (RemoveShortcut()) CheckMenuItem(GetMenu(hwnd), CLOCK_IDC_AUTO_START, MF_UNCHECKED);
     } else {
-        if (CreateShortcut()) {
-            CheckMenuItem(GetMenu(hwnd), CLOCK_IDC_AUTO_START, MF_CHECKED);
-        }
+        if (CreateShortcut()) CheckMenuItem(GetMenu(hwnd), CLOCK_IDC_AUTO_START, MF_CHECKED);
     }
     return 0;
 }
@@ -312,84 +153,8 @@ static LRESULT CmdColorPanel(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
-static LRESULT CmdPomodoroStart(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    CleanupBeforeTimerAction();
-    
-    if (!IsWindowVisible(hwnd)) ShowWindow(hwnd, SW_SHOW);
-    
-    extern void InitializePomodoro(void);
-    InitializePomodoro();
-    
-    CLOCK_SHOW_CURRENT_TIME = FALSE;
-    CLOCK_COUNT_UP = FALSE;
-    CLOCK_IS_PAUSED = FALSE;
-    
-    extern TimeoutActionType CLOCK_TIMEOUT_ACTION;
-    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
-    
-    // Ensure timer is running after starting Pomodoro
-    KillTimer(hwnd, 1);
-    ResetTimerWithInterval(hwnd);
-    
-    InvalidateRect(hwnd, NULL, TRUE);
-    return 0;
-}
-
-static LRESULT CmdPomodoroReset(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    CleanupBeforeTimerAction();
-
-    extern POMODORO_PHASE current_pomodoro_phase;
-    extern int current_pomodoro_time_index, complete_pomodoro_cycles;
-
-    current_pomodoro_phase = POMODORO_PHASE_IDLE;
-    current_pomodoro_time_index = 0;
-    complete_pomodoro_cycles = 0;
-
-    ResetTimer();
-
-    if (CLOCK_TOTAL_TIME == g_AppConfig.pomodoro.work_time ||
-        CLOCK_TOTAL_TIME == g_AppConfig.pomodoro.short_break ||
-        CLOCK_TOTAL_TIME == g_AppConfig.pomodoro.long_break) {
-        KillTimer(hwnd, 1);
-        ResetTimerWithInterval(hwnd);
-    }
-    
-    InvalidateRect(hwnd, NULL, TRUE);
-    HandleWindowReset(hwnd);
-    return 0;
-}
-
-static LRESULT CmdPomodoroLoopCount(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    ShowPomodoroLoopDialog(hwnd);
-    return 0;
-}
-
-static LRESULT CmdPomodoroCombo(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    ShowPomodoroComboDialog(hwnd);
-    return 0;
-}
-
-static LRESULT CmdAnimationSpeedMemory(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    WriteConfigAnimationSpeedMetric(ANIMATION_SPEED_MEMORY);
-    InvalidateRect(hwnd, NULL, TRUE);
-    return 0;
-}
-
-static LRESULT CmdAnimationSpeedCpu(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    WriteConfigAnimationSpeedMetric(ANIMATION_SPEED_CPU);
-    InvalidateRect(hwnd, NULL, TRUE);
-    return 0;
-}
-
-static LRESULT CmdAnimationSpeedTimer(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    WriteConfigAnimationSpeedMetric(ANIMATION_SPEED_TIMER);
+static LRESULT CmdAnimationSpeed(HWND hwnd, AnimationSpeedMetric metric) {
+    WriteConfigAnimationSpeedMetric(metric);
     InvalidateRect(hwnd, NULL, TRUE);
     return 0;
 }
@@ -452,140 +217,6 @@ static LRESULT CmdFeedback(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
-static LRESULT CmdModifyTimeOptions(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-
-    while (1) {
-        ClearInputBuffer(inputText, sizeof(inputText));
-        DialogBoxParamW(GetModuleHandle(NULL), MAKEINTRESOURCEW(CLOCK_IDD_SHORTCUT_DIALOG),
-                       hwnd, DlgProc, (LPARAM)CLOCK_IDD_SHORTCUT_DIALOG);
-        
-        if (isAllSpacesOnly(inputText)) break;
-        
-        Utf8String us = ToUtf8(inputText);
-        char inputTextA[MAX_PATH];
-        strcpy_s(inputTextA, sizeof(inputTextA), us.buf);
-        
-        char* token = strtok(inputTextA, " ");
-        char options[256] = {0};
-        int valid = 1, count = 0;
-        
-        while (token && count < MAX_TIME_OPTIONS) {
-            int seconds = 0;
-            if (!TimeParser_ParseBasic(token, &seconds) || seconds <= 0) {
-                valid = 0;
-                break;
-            }
-            
-            if (count > 0) strcat_s(options, sizeof(options), ",");
-            
-            char secondsStr[32];
-            snprintf(secondsStr, sizeof(secondsStr), "%d", seconds);
-            strcat_s(options, sizeof(options), secondsStr);
-            count++;
-            token = strtok(NULL, " ");
-        }
-        
-        if (valid && count > 0) {
-            CleanupBeforeTimerAction();
-            WriteConfigTimeOptions(options);
-            break;
-        } else {
-            ShowErrorDialog(hwnd);
-        }
-    }
-    return 0;
-}
-
-static LRESULT CmdModifyDefaultTime(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    int total_seconds = 0;
-    if (ValidatedTimeInputLoop(hwnd, CLOCK_IDD_STARTUP_DIALOG, &total_seconds)) {
-        CleanupBeforeTimerAction();
-        WriteConfigDefaultStartTime(total_seconds);
-        WriteConfigStartupMode("COUNTDOWN");
-    }
-    return 0;
-}
-
-static inline LRESULT HandleStartupMode(HWND hwnd, const char* mode) {
-    SetStartupMode(hwnd, mode);
-    return 0;
-}
-
-static LRESULT CmdSetCountdownTime(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    int total_seconds = 0;
-    if (ValidatedTimeInputLoop(hwnd, CLOCK_IDD_STARTUP_DIALOG, &total_seconds)) {
-        WriteConfigDefaultStartTime(total_seconds);
-    }
-    return HandleStartupMode(hwnd, "COUNTDOWN");
-}
-
-static LRESULT CmdStartupShowTime(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    return HandleStartupMode(hwnd, "SHOW_TIME");
-}
-
-static LRESULT CmdStartupCountUp(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    return HandleStartupMode(hwnd, "COUNT_UP");
-}
-
-static LRESULT CmdStartupNoDisplay(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    return HandleStartupMode(hwnd, "NO_DISPLAY");
-}
-
-static LRESULT CmdTimeoutShowTime(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp; (void)hwnd;
-    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SHOW_TIME;
-    WriteConfigTimeoutAction("SHOW_TIME");
-    return 0;
-}
-
-static LRESULT CmdTimeoutCountUp(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp; (void)hwnd;
-    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_COUNT_UP;
-    WriteConfigTimeoutAction("COUNT_UP");
-    return 0;
-}
-
-static LRESULT CmdTimeoutShowMessage(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp; (void)hwnd;
-    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
-    WriteConfigTimeoutAction("MESSAGE");
-    return 0;
-}
-
-static LRESULT CmdTimeoutLockScreen(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp; (void)hwnd;
-    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_LOCK;
-    WriteConfigTimeoutAction("LOCK");
-    return 0;
-}
-
-static LRESULT CmdTimeoutShutdown(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp; (void)hwnd;
-    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SHUTDOWN;
-    WriteConfigTimeoutAction("SHUTDOWN");
-    return 0;
-}
-
-static LRESULT CmdTimeoutRestart(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp; (void)hwnd;
-    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_RESTART;
-    WriteConfigTimeoutAction("RESTART");
-    return 0;
-}
-
-static LRESULT CmdTimeoutSleep(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp; (void)hwnd;
-    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SLEEP;
-    WriteConfigTimeoutAction("SLEEP");
-    return 0;
-}
-
 static LRESULT CmdBrowseFile(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     char utf8Path[MAX_PATH];
@@ -637,101 +268,72 @@ static LRESULT CmdResetDefaults(HWND hwnd, WPARAM wp, LPARAM lp) {
  * Command Dispatch Table
  * ============================================================================ */
 
-typedef LRESULT (*CommandHandler)(HWND hwnd, WPARAM wp, LPARAM lp);
-
 typedef struct {
     UINT cmdId;
     CommandHandler handler;
-    const char* description;
 } CommandDispatchEntry;
 
 static const CommandDispatchEntry COMMAND_DISPATCH_TABLE[] = {
-    {101, CmdCustomCountdown, "Custom countdown"},
-    {109, CmdExit, "Exit application"},
-    {200, CmdResetDefaults, "Reset to defaults"},
+    /* Basic */
+    {101, CmdCustomCountdown},
+    {109, CmdExit},
+    {200, CmdResetDefaults},
     
-    {CLOCK_IDC_MODIFY_TIME_OPTIONS, CmdModifyTimeOptions, "Modify time options"},
-    {CLOCK_IDC_MODIFY_DEFAULT_TIME, CmdModifyDefaultTime, "Modify default time"},
-    {CLOCK_IDC_SET_COUNTDOWN_TIME, CmdSetCountdownTime, "Set countdown time"},
-    {CLOCK_IDC_START_SHOW_TIME, CmdStartupShowTime, "Start show time"},
-    {CLOCK_IDC_START_COUNT_UP, CmdStartupCountUp, "Start count up"},
-    {CLOCK_IDC_START_NO_DISPLAY, CmdStartupNoDisplay, "Start no display"},
-    {CLOCK_IDC_AUTO_START, CmdAutoStart, "Auto-start toggle"},
-    {CLOCK_IDC_EDIT_MODE, CmdEditMode, "Edit mode toggle"},
-    {CLOCK_IDC_TOGGLE_VISIBILITY, CmdToggleVisibility, "Toggle visibility"},
-    {CLOCK_IDC_CUSTOMIZE_LEFT, CmdCustomizeColor, "Customize color"},
-    {CLOCK_IDC_FONT_LICENSE_AGREE, CmdFontLicense, "Font license agree"},
-    {CLOCK_IDC_FONT_ADVANCED, CmdFontAdvanced, "Advanced font selection"},
-    {CLOCK_IDC_COLOR_VALUE, CmdColorDialog, "Color value dialog"},
-    {CLOCK_IDC_COLOR_PANEL, CmdColorPanel, "Color panel"},
-    {CLOCK_IDC_TIMEOUT_BROWSE, CmdBrowseFile, "Browse timeout file"},
+    /* Timer controls */
+    {CLOCK_IDM_TIMER_PAUSE_RESUME, CmdPauseResume},
+    {CLOCK_IDM_TIMER_RESTART, CmdRestartTimer},
+    {CLOCK_IDM_COUNTDOWN_RESET, CmdCountdownReset},
+    {CLOCK_IDM_SHOW_CURRENT_TIME, CmdShowCurrentTime},
+    {CLOCK_IDM_24HOUR_FORMAT, Cmd24HourFormat},
+    {CLOCK_IDM_SHOW_SECONDS, CmdShowSeconds},
+    {CLOCK_IDM_COUNT_UP, CmdCountUp},
+    {CLOCK_IDM_COUNT_UP_START, CmdCountUpStart},
+    {CLOCK_IDM_COUNT_UP_RESET, CmdCountUpReset},
     
-
-    {CLOCK_IDM_TIMER_PAUSE_RESUME, CmdPauseResume, "Pause/Resume"},
-    {CLOCK_IDM_TIMER_RESTART, CmdRestartTimer, "Restart timer"},
-    {CLOCK_IDM_ABOUT, CmdAbout, "About dialog"},
-    {CLOCK_IDM_TOPMOST, CmdToggleTopmost, "Toggle topmost"},
+    /* Time format - handled specially below */
+    {CLOCK_IDM_TIME_FORMAT_SHOW_MILLISECONDS, CmdToggleMilliseconds},
     
-    {CLOCK_IDM_TIME_FORMAT_DEFAULT, CmdTimeFormatDefault, "Time format default"},
-    {CLOCK_IDM_TIME_FORMAT_ZERO_PADDED, CmdTimeFormatZeroPadded, "Time format zero-padded"},
-    {CLOCK_IDM_TIME_FORMAT_FULL_PADDED, CmdTimeFormatFullPadded, "Time format full-padded"},
-    {CLOCK_IDM_TIME_FORMAT_SHOW_MILLISECONDS, CmdToggleMilliseconds, "Toggle milliseconds"},
+    /* Pomodoro */
+    {CLOCK_IDM_POMODORO_START, CmdPomodoroStart},
+    {CLOCK_IDM_POMODORO_RESET, CmdPomodoroReset},
+    {CLOCK_IDM_POMODORO_LOOP_COUNT, CmdPomodoroLoopCount},
+    {CLOCK_IDM_POMODORO_COMBINATION, CmdPomodoroCombo},
     
-    {CLOCK_IDM_COUNTDOWN_RESET, CmdCountdownReset, "Countdown reset"},
-    {CLOCK_IDM_SHOW_CURRENT_TIME, CmdShowCurrentTime, "Show current time"},
-    {CLOCK_IDM_24HOUR_FORMAT, Cmd24HourFormat, "24-hour format"},
-    {CLOCK_IDM_SHOW_SECONDS, CmdShowSeconds, "Show seconds"},
+    /* Settings & options */
+    {CLOCK_IDC_MODIFY_TIME_OPTIONS, CmdModifyTimeOptions},
+    {CLOCK_IDC_MODIFY_DEFAULT_TIME, CmdModifyDefaultTime},
+    {CLOCK_IDC_SET_COUNTDOWN_TIME, CmdSetCountdownTime},
+    {CLOCK_IDC_AUTO_START, CmdAutoStart},
+    {CLOCK_IDC_EDIT_MODE, CmdEditMode},
+    {CLOCK_IDC_TOGGLE_VISIBILITY, CmdToggleVisibility},
+    {CLOCK_IDC_CUSTOMIZE_LEFT, CmdCustomizeColor},
+    {CLOCK_IDC_FONT_LICENSE_AGREE, CmdFontLicense},
+    {CLOCK_IDC_FONT_ADVANCED, CmdFontAdvanced},
+    {CLOCK_IDC_COLOR_VALUE, CmdColorDialog},
+    {CLOCK_IDC_COLOR_PANEL, CmdColorPanel},
+    {CLOCK_IDC_TIMEOUT_BROWSE, CmdBrowseFile},
     
-    {CLOCK_IDM_BROWSE_FILE, CmdBrowseFile, "Browse file"},
-    {CLOCK_IDM_COUNT_UP, CmdCountUp, "Count up"},
-    {CLOCK_IDM_COUNT_UP_START, CmdCountUpStart, "Count up start"},
-    {CLOCK_IDM_COUNT_UP_RESET, CmdCountUpReset, "Count up reset"},
+    /* Menu items */
+    {CLOCK_IDM_ABOUT, CmdAbout},
+    {CLOCK_IDM_TOPMOST, CmdToggleTopmost},
+    {CLOCK_IDM_BROWSE_FILE, CmdBrowseFile},
+    {CLOCK_IDM_CHECK_UPDATE, CmdCheckUpdate},
+    {CLOCK_IDM_OPEN_WEBSITE, CmdOpenWebsite},
+    {CLOCK_IDM_CURRENT_WEBSITE, CmdOpenWebsite},
+    {CLOCK_IDM_NOTIFICATION_CONTENT, CmdNotificationContent},
+    {CLOCK_IDM_NOTIFICATION_DISPLAY, CmdNotificationDisplay},
+    {CLOCK_IDM_NOTIFICATION_SETTINGS, CmdNotificationSettings},
+    {CLOCK_IDM_HOTKEY_SETTINGS, CmdHotkeySettings},
+    {CLOCK_IDM_HELP, CmdHelp},
+    {CLOCK_IDM_SUPPORT, CmdSupport},
+    {CLOCK_IDM_FEEDBACK, CmdFeedback},
     
-    {CLOCK_IDM_POMODORO_START, CmdPomodoroStart, "Pomodoro start"},
-    {CLOCK_IDM_POMODORO_RESET, CmdPomodoroReset, "Pomodoro reset"},
-    {CLOCK_IDM_POMODORO_LOOP_COUNT, CmdPomodoroLoopCount, "Pomodoro loop count"},
-    {CLOCK_IDM_POMODORO_COMBINATION, CmdPomodoroCombo, "Pomodoro combination"},
-    
-    {CLOCK_IDM_TIMEOUT_SHOW_TIME, CmdTimeoutShowTime, "Timeout show time"},
-    {CLOCK_IDM_TIMEOUT_COUNT_UP, CmdTimeoutCountUp, "Timeout count up"},
-    {CLOCK_IDM_SHOW_MESSAGE, CmdTimeoutShowMessage, "Show message"},
-    {CLOCK_IDM_LOCK_SCREEN, CmdTimeoutLockScreen, "Lock screen"},
-    {CLOCK_IDM_SHUTDOWN, CmdTimeoutShutdown, "Shutdown"},
-    {CLOCK_IDM_RESTART, CmdTimeoutRestart, "Restart"},
-    {CLOCK_IDM_SLEEP, CmdTimeoutSleep, "Sleep"},
-    
-    {CLOCK_IDM_CHECK_UPDATE, CmdCheckUpdate, "Check update"},
-    {CLOCK_IDM_OPEN_WEBSITE, CmdOpenWebsite, "Open website"},
-    {CLOCK_IDM_CURRENT_WEBSITE, CmdOpenWebsite, "Current website"},
-    
-    {CLOCK_IDM_NOTIFICATION_CONTENT, CmdNotificationContent, "Notification content"},
-    {CLOCK_IDM_NOTIFICATION_DISPLAY, CmdNotificationDisplay, "Notification display"},
-    {CLOCK_IDM_NOTIFICATION_SETTINGS, CmdNotificationSettings, "Notification settings"},
-
-    {CLOCK_IDM_ANIM_SPEED_MEMORY, CmdAnimationSpeedMemory, "Animation speed by memory"},
-    {CLOCK_IDM_ANIM_SPEED_CPU, CmdAnimationSpeedCpu, "Animation speed by CPU"},
-    {CLOCK_IDM_ANIM_SPEED_TIMER, CmdAnimationSpeedTimer, "Animation speed by timer"},
-
-    {CLOCK_IDM_HOTKEY_SETTINGS, CmdHotkeySettings, "Hotkey settings"},
-    {CLOCK_IDM_HELP, CmdHelp, "Help"},
-    {CLOCK_IDM_SUPPORT, CmdSupport, "Support"},
-    {CLOCK_IDM_FEEDBACK, CmdFeedback, "Feedback"},
-    
-    {0, NULL, NULL}
+    {0, NULL}
 };
 
 /* ============================================================================
  * Range Command Handlers
  * ============================================================================ */
-
-static BOOL HandleQuickCountdown(HWND hwnd, UINT cmd, int index) {
-    (void)cmd;
-    if (index >= 0 && index < time_options_count && time_options[index] > 0) {
-        CleanupBeforeTimerAction();
-        StartCountdownWithTime(hwnd, time_options[index]);
-    }
-    return TRUE;
-}
 
 static BOOL HandleColorSelection(HWND hwnd, UINT cmd, int index) {
     (void)cmd;
@@ -751,6 +353,7 @@ static BOOL HandleRecentFile(HWND hwnd, UINT cmd, int index) {
     if (index >= g_AppConfig.recent_files.count) return TRUE;
     
     if (!ValidateAndSetTimeoutFile(hwnd, g_AppConfig.recent_files.files[index].path)) {
+        extern TimeoutActionType CLOCK_TIMEOUT_ACTION;
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
         WriteConfigKeyValue("CLOCK_TIMEOUT_FILE", "");
         WriteConfigTimeoutAction("MESSAGE");
@@ -765,15 +368,8 @@ static BOOL HandleRecentFile(HWND hwnd, UINT cmd, int index) {
     return TRUE;
 }
 
-static BOOL HandlePomodoroTime(HWND hwnd, UINT cmd, int index) {
-    (void)cmd;
-    HandlePomodoroTimeConfig(hwnd, index);
-    return TRUE;
-}
-
 static BOOL HandleFontSelection(HWND hwnd, UINT cmd, int index) {
     (void)index;
-    
     char foundFontPath[MAX_PATH];
     if (GetFontPathFromMenuId(cmd, foundFontPath, sizeof(foundFontPath))) {
         HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
@@ -784,7 +380,6 @@ static BOOL HandleFontSelection(HWND hwnd, UINT cmd, int index) {
     }
     return TRUE;
 }
-
 
 typedef BOOL (*RangeCommandHandler)(HWND hwnd, UINT cmd, int index);
 
@@ -797,14 +392,37 @@ typedef struct {
 BOOL DispatchRangeCommand(HWND hwnd, UINT cmd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
 
-    /* Handle animation commands first (before range check) */
+    /* Handle animation commands first */
     if (HandleAnimationMenuCommand(hwnd, cmd)) return TRUE;
 
-    /* Animation speed commands should not be handled by range dispatchers */
-    if (cmd == CLOCK_IDM_ANIM_SPEED_MEMORY || cmd == CLOCK_IDM_ANIM_SPEED_CPU || cmd == CLOCK_IDM_ANIM_SPEED_TIMER) {
-        return FALSE;
-    }
+    /* Animation speed commands */
+    if (cmd == CLOCK_IDM_ANIM_SPEED_MEMORY) { CmdAnimationSpeed(hwnd, ANIMATION_SPEED_MEMORY); return TRUE; }
+    if (cmd == CLOCK_IDM_ANIM_SPEED_CPU) { CmdAnimationSpeed(hwnd, ANIMATION_SPEED_CPU); return TRUE; }
+    if (cmd == CLOCK_IDM_ANIM_SPEED_TIMER) { CmdAnimationSpeed(hwnd, ANIMATION_SPEED_TIMER); return TRUE; }
 
+    /* Time format commands */
+    if (cmd == CLOCK_IDM_TIME_FORMAT_DEFAULT) { CmdTimeFormat(hwnd, TIME_FORMAT_DEFAULT); return TRUE; }
+    if (cmd == CLOCK_IDM_TIME_FORMAT_ZERO_PADDED) { CmdTimeFormat(hwnd, TIME_FORMAT_ZERO_PADDED); return TRUE; }
+    if (cmd == CLOCK_IDM_TIME_FORMAT_FULL_PADDED) { CmdTimeFormat(hwnd, TIME_FORMAT_FULL_PADDED); return TRUE; }
+
+    /* Timeout action commands */
+    if (cmd == CLOCK_IDM_TIMEOUT_SHOW_TIME) { CmdSetTimeoutAction(hwnd, TIMEOUT_ACTION_SHOW_TIME); return TRUE; }
+    if (cmd == CLOCK_IDM_TIMEOUT_COUNT_UP) { CmdSetTimeoutAction(hwnd, TIMEOUT_ACTION_COUNT_UP); return TRUE; }
+    if (cmd == CLOCK_IDM_SHOW_MESSAGE) { CmdSetTimeoutAction(hwnd, TIMEOUT_ACTION_MESSAGE); return TRUE; }
+    if (cmd == CLOCK_IDM_LOCK_SCREEN) { CmdSetTimeoutAction(hwnd, TIMEOUT_ACTION_LOCK); return TRUE; }
+    if (cmd == CLOCK_IDM_SHUTDOWN) { CmdSetTimeoutAction(hwnd, TIMEOUT_ACTION_SHUTDOWN); return TRUE; }
+    if (cmd == CLOCK_IDM_RESTART) { CmdSetTimeoutAction(hwnd, TIMEOUT_ACTION_RESTART); return TRUE; }
+    if (cmd == CLOCK_IDM_SLEEP) { CmdSetTimeoutAction(hwnd, TIMEOUT_ACTION_SLEEP); return TRUE; }
+
+    /* Startup mode commands */
+    if (cmd == CLOCK_IDC_START_SHOW_TIME) { CmdSetStartupMode(hwnd, "SHOW_TIME"); return TRUE; }
+    if (cmd == CLOCK_IDC_START_COUNT_UP) { CmdSetStartupMode(hwnd, "COUNT_UP"); return TRUE; }
+    if (cmd == CLOCK_IDC_START_NO_DISPLAY) { CmdSetStartupMode(hwnd, "NO_DISPLAY"); return TRUE; }
+
+    /* Plugin commands */
+    if (HandlePluginCommand(hwnd, cmd)) return TRUE;
+
+    /* Range-based commands */
     RangeCommandDescriptor rangeTable[] = {
         {CMD_QUICK_COUNTDOWN_BASE, CMD_QUICK_COUNTDOWN_END, HandleQuickCountdown},
         {CLOCK_IDM_QUICK_TIME_BASE, CLOCK_IDM_QUICK_TIME_BASE + MAX_TIME_OPTIONS - 1, HandleQuickCountdown},
@@ -822,163 +440,17 @@ BOOL DispatchRangeCommand(HWND hwnd, UINT cmd, WPARAM wp, LPARAM lp) {
         }
     }
 
+    /* Language selection */
     if (cmd >= CLOCK_IDM_LANG_CHINESE && cmd <= CLOCK_IDM_LANG_KOREAN) {
         return HandleLanguageSelection(hwnd, cmd);
     }
+
+    /* Pomodoro phase commands */
     if (cmd == CLOCK_IDM_POMODORO_WORK || cmd == CLOCK_IDM_POMODORO_BREAK ||
         cmd == CLOCK_IDM_POMODORO_LBREAK) {
         int idx = (cmd == CLOCK_IDM_POMODORO_WORK) ? 0 :
                  (cmd == CLOCK_IDM_POMODORO_BREAK) ? 1 : 2;
         return HandlePomodoroTime(hwnd, cmd, idx);
-    }
-
-    /* Handle plugin commands */
-    if (cmd >= CLOCK_IDM_PLUGINS_BASE && cmd < CLOCK_IDM_PLUGINS_SETTINGS_BASE) {
-        int pluginIndex = cmd - CLOCK_IDM_PLUGINS_BASE;
-        
-        // Check if this specific plugin is already running (Toggle logic)
-        if (PluginManager_IsPluginRunning(pluginIndex)) {
-            // Plugin is running -> Stop it and clear display
-            PluginManager_StopPlugin(pluginIndex);
-            PluginData_Clear();
-            
-            // Switch to "Idle" state (Visible but 00:00)
-            // This fulfills "clear content" without hiding the window
-            TimerModeParams params = {0, TRUE, TRUE, TRUE}; // totalSeconds=0, resetElapsed=TRUE, showWindow=TRUE, resetInterval=TRUE
-            SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
-            
-            // Ensure main timer is stopped (SwitchTimerMode might have started it if we were in SHOW_TIME)
-            KillTimer(hwnd, 1);
-            
-            // Force redraw/update
-            InvalidateRect(hwnd, NULL, TRUE);
-            return TRUE;
-        }
-
-        // Plugin is NOT running -> Start it
-        
-        // Stop internal timer modes to prevent conflict
-        // 1. Stop notification sound if any
-        extern void StopNotificationSound(void);
-        StopNotificationSound();
-        
-        // 2. Reset Timer flags
-        CLOCK_SHOW_CURRENT_TIME = FALSE;
-        CLOCK_COUNT_UP = FALSE;
-        CLOCK_IS_PAUSED = TRUE; // Effectively pause internal logic
-        
-        // 3. Stop internal timer updates (PluginData watcher will drive redraws)
-        KillTimer(hwnd, 1);
-        
-        // 4. Reset Pomodoro if active
-        extern POMODORO_PHASE current_pomodoro_phase;
-        if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
-             current_pomodoro_phase = POMODORO_PHASE_IDLE;
-        }
-
-        // 5. Reset internal timer values to prevent "flash" of old time
-        extern int CLOCK_TOTAL_TIME;
-        extern int countdown_elapsed_time;
-        extern int countup_elapsed_time;
-        CLOCK_TOTAL_TIME = 0;
-        countdown_elapsed_time = 0;
-        countup_elapsed_time = 0;
-
-        // 6. Start target plugin (this will stop other plugins automatically)
-        PluginManager_StartPlugin(pluginIndex);
-        
-        // 7. Show "Loading..." message immediately (AFTER StartPlugin because it calls StopAllPlugins which clears data)
-        const PluginInfo* pluginInfo = PluginManager_GetPlugin(pluginIndex);
-        if (pluginInfo) {
-            wchar_t loadingText[256];
-            wchar_t displayNameW[128];
-            MultiByteToWideChar(CP_UTF8, 0, pluginInfo->displayName, -1, displayNameW, 128);
-            _snwprintf(loadingText, 256, L"Loading %s...", displayNameW);
-            PluginData_SetText(loadingText);  // This also activates plugin mode
-        }
-        
-        // 8. Force immediate redraw to show "Loading..." message
-        // Ensure window is visible (in case we were in hidden mode)
-        if (!IsWindowVisible(hwnd)) {
-            ShowWindow(hwnd, SW_SHOW);
-        }
-        InvalidateRect(hwnd, NULL, TRUE);
-        
-        return TRUE;
-    }
-
-    /* Handle plugin settings commands - DEPRECATED / REMOVED from UI but kept for safety */
-    if (cmd >= CLOCK_IDM_PLUGINS_SETTINGS_BASE && cmd < CLOCK_IDM_PLUGINS_SHOW_FILE) {
-        return TRUE;
-    }
-
-    /* Handle "Show plugin file" command - display file content without running a plugin */
-    if (cmd == CLOCK_IDM_PLUGINS_SHOW_FILE) {
-        // Check if already in "show file" mode (plugin mode active but no plugin running)
-        BOOL isShowFileMode = PluginData_IsActive();
-        BOOL anyPluginRunning = FALSE;
-        int pluginCount = PluginManager_GetPluginCount();
-        for (int i = 0; i < pluginCount; i++) {
-            if (PluginManager_IsPluginRunning(i)) {
-                anyPluginRunning = TRUE;
-                break;
-            }
-        }
-        
-        if (isShowFileMode && !anyPluginRunning) {
-            // Toggle off - check if <catime> tag was present
-            BOOL hadCatimeTag = PluginData_HasCatimeTag();
-            
-            // Clear plugin data
-            PluginData_Clear();
-            
-            if (hadCatimeTag) {
-                // Had <catime> tag - just restore time display, keep timer running
-                // Don't reset timer mode, don't kill timer
-                InvalidateRect(hwnd, NULL, TRUE);
-            } else {
-                // No <catime> tag - switch to idle state
-                TimerModeParams params = {0, TRUE, TRUE, TRUE};
-                SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
-                KillTimer(hwnd, 1);
-                InvalidateRect(hwnd, NULL, TRUE);
-            }
-            return TRUE;
-        }
-        
-        // Stop any running plugins
-        PluginManager_StopAllPlugins();
-        
-        // Activate plugin data mode first - this will read from the file
-        PluginData_SetActive(TRUE);
-        
-        // Check if <catime> tag exists - if so, keep timer for time updates
-        if (!PluginData_HasCatimeTag()) {
-            // No <catime> tag, stop internal timers
-            KillTimer(hwnd, 1);
-            
-            // Reset timer flags
-            extern BOOL CLOCK_SHOW_CURRENT_TIME;
-            extern BOOL CLOCK_COUNT_UP;
-            extern BOOL CLOCK_IS_PAUSED;
-            CLOCK_SHOW_CURRENT_TIME = FALSE;
-            CLOCK_COUNT_UP = FALSE;
-            CLOCK_IS_PAUSED = FALSE;
-        }
-        // If <catime> tag present, keep timer running for live time updates
-        
-        // Ensure window is visible
-        if (!IsWindowVisible(hwnd)) {
-            ShowWindow(hwnd, SW_SHOW);
-        }
-        InvalidateRect(hwnd, NULL, TRUE);
-        
-        return TRUE;
-    }
-
-    if (cmd == CLOCK_IDM_PLUGINS_OPEN_DIR) {
-        PluginManager_OpenPluginFolder();
-        return TRUE;
     }
 
     return FALSE;
@@ -1044,49 +516,5 @@ BOOL HandleLanguageSelection(HWND hwnd, UINT menuId) {
             return TRUE;
         }
     }
-    
     return FALSE;
 }
-
-/* ============================================================================
- * Pomodoro Time Configuration
- * ============================================================================ */
-
-BOOL HandlePomodoroTimeConfig(HWND hwnd, int selectedIndex) {
-    if (selectedIndex < 0 || selectedIndex >= g_AppConfig.pomodoro.times_count) {
-        return FALSE;
-    }
-
-    /* Set global variable for dialog to read */
-    extern int g_pomodoroSelectedIndex;
-    g_pomodoroSelectedIndex = selectedIndex;
-
-    memset(inputText, 0, sizeof(inputText));
-    DialogBoxParamW(GetModuleHandle(NULL),
-             MAKEINTRESOURCEW(CLOCK_IDD_POMODORO_TIME_DIALOG),
-             hwnd, DlgProc, (LPARAM)CLOCK_IDD_POMODORO_TIME_DIALOG);
-    
-    if (inputText[0] && !isAllSpacesOnly(inputText)) {
-        int total_seconds = 0;
-
-        char inputTextA[256];
-        WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
-        extern int ParseInput(const char*, int*);
-        if (ParseInput(inputTextA, &total_seconds)) {
-            g_AppConfig.pomodoro.times[selectedIndex] = total_seconds;
-            
-            WriteConfigPomodoroTimeOptions(g_AppConfig.pomodoro.times, g_AppConfig.pomodoro.times_count);
-            
-            if (selectedIndex == 0) g_AppConfig.pomodoro.work_time = total_seconds;
-            else if (selectedIndex == 1) g_AppConfig.pomodoro.short_break = total_seconds;
-            else if (selectedIndex == 2) g_AppConfig.pomodoro.long_break = total_seconds;
-
-            g_pomodoroSelectedIndex = -1;
-            return TRUE;
-        }
-    }
-
-    g_pomodoroSelectedIndex = -1;
-    return FALSE;
-}
-
