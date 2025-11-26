@@ -661,6 +661,12 @@ function translateSupportElements() {
         if (td.textContent === '好用，respect') {
             td.textContent = 'Useful, respect';
         }
+        if (td.textContent === '感谢 catime，好用。') {
+            td.textContent = 'Thanks to Catime, easy to use.';
+        }
+        if (td.textContent === '入股入股，付费使用来自律') {
+            td.textContent = 'Investing, paying for self-discipline.';
+        }
         
         // 为所有留言单元格添加特殊样式，增强可读性
         if (td.parentElement && td.cellIndex === 3) { // 第四列是留言列
