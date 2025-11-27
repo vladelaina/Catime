@@ -225,12 +225,21 @@ BOOL PluginData_GetText(wchar_t* buffer, size_t maxLen) {
 
     BOOL hasData = FALSE;
     EnterCriticalSection(&g_dataCS);
-    // Only return data if plugin mode is active (user started a plugin)
-    if (g_pluginModeActive && g_hasPluginData && g_pluginDisplayText && wcslen(g_pluginDisplayText) > 0) {
-        wcsncpy(buffer, g_pluginDisplayText, maxLen - 1);
-        buffer[maxLen - 1] = L'\0';
-        hasData = TRUE;
+    
+    if (g_pluginModeActive) {
+        if (g_hasPluginData && g_pluginDisplayText && wcslen(g_pluginDisplayText) > 0) {
+            /* Has actual data */
+            wcsncpy(buffer, g_pluginDisplayText, maxLen - 1);
+            buffer[maxLen - 1] = L'\0';
+            hasData = TRUE;
+        } else {
+            /* Plugin mode active but no data yet - show loading */
+            wcsncpy(buffer, L"Loading...", maxLen - 1);
+            buffer[maxLen - 1] = L'\0';
+            hasData = TRUE;
+        }
     }
+    
     LeaveCriticalSection(&g_dataCS);
     return hasData;
 }

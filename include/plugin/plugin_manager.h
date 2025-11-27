@@ -21,6 +21,7 @@ typedef struct {
     char path[MAX_PATH];        // Full path to executable
     BOOL isRunning;             // Is plugin currently running
     PROCESS_INFORMATION pi;     // Process information
+    FILETIME lastModTime;       // Last modification time for hot-reload detection
 } PluginInfo;
 
 /**
@@ -98,5 +99,11 @@ void PluginManager_StopAllPlugins(void);
  * @return TRUE if successful
  */
 BOOL PluginManager_OpenPluginFolder(void);
+
+/**
+ * @brief Set window handle for plugin hot-reload notifications
+ * @param hwnd Window handle to receive redraw notifications
+ */
+void PluginManager_SetNotifyWindow(HWND hwnd);
 
 #endif /* PLUGIN_MANAGER_H */

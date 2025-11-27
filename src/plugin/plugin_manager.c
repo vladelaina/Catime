@@ -15,12 +15,98 @@ static int g_pluginCount = 0;
 static CRITICAL_SECTION g_pluginCS;
 static HANDLE g_hJob = NULL;
 
+/* Hot-reload monitoring */
+static HANDLE g_hHotReloadThread = NULL;
+static HWND g_hNotifyWnd = NULL;
+static volatile BOOL g_hotReloadRunning = FALSE;
+static volatile int g_lastRunningPluginIndex = -1;  /* Track last plugin for continued monitoring */
+
 // Structure to pass data to the launcher thread
 typedef struct {
     PluginInfo* plugin;
     HANDLE hReadyEvent;
     BOOL success;
 } PluginLauncherArgs;
+
+/* Forward declaration */
+static BOOL RestartPluginInternal(int index);
+
+/**
+ * @brief Get file modification time
+ */
+static BOOL GetFileModTime(const char* path, FILETIME* modTime) {
+    HANDLE hFile = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                               NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile == INVALID_HANDLE_VALUE) return FALSE;
+    
+    BOOL result = GetFileTime(hFile, NULL, NULL, modTime);
+    CloseHandle(hFile);
+    return result;
+}
+
+/**
+ * @brief Hot-reload monitoring thread - checks plugin files every 1 second
+ * Also monitors the last running plugin even if it stopped/crashed
+ */
+static DWORD WINAPI HotReloadThread(LPVOID lpParam) {
+    (void)lpParam;
+    LOG_INFO("Hot-reload monitoring thread started");
+    
+    while (g_hotReloadRunning) {
+        Sleep(1000);  // Check every 1 second
+        
+        if (!g_hotReloadRunning) break;
+        
+        EnterCriticalSection(&g_pluginCS);
+        
+        BOOL foundRunning = FALSE;
+        int indexToMonitor = -1;
+        
+        /* First, check for any running plugin */
+        for (int i = 0; i < g_pluginCount; i++) {
+            if (g_plugins[i].isRunning) {
+                foundRunning = TRUE;
+                indexToMonitor = i;
+                g_lastRunningPluginIndex = i;  /* Update last running */
+                break;
+            }
+        }
+        
+        /* If no running plugin, monitor the last one (for crash recovery) */
+        if (!foundRunning && g_lastRunningPluginIndex >= 0 && 
+            g_lastRunningPluginIndex < g_pluginCount) {
+            indexToMonitor = g_lastRunningPluginIndex;
+        }
+        
+        /* Monitor the selected plugin */
+        if (indexToMonitor >= 0) {
+            FILETIME currentModTime;
+            if (GetFileModTime(g_plugins[indexToMonitor].path, &currentModTime)) {
+                if (CompareFileTime(&currentModTime, &g_plugins[indexToMonitor].lastModTime) != 0) {
+                    LOG_INFO("Hot-reload: Plugin '%s' file changed, reloading...", 
+                             g_plugins[indexToMonitor].displayName);
+                    
+                    /* Update mod time first to prevent repeated triggers */
+                    g_plugins[indexToMonitor].lastModTime = currentModTime;
+                    
+                    /* Need to leave CS before restart (which acquires CS) */
+                    int idx = indexToMonitor;
+                    LeaveCriticalSection(&g_pluginCS);
+                    
+                    RestartPluginInternal(idx);
+                    
+                    /* Re-enter to continue loop safely */
+                    EnterCriticalSection(&g_pluginCS);
+                }
+            }
+        }
+        
+        LeaveCriticalSection(&g_pluginCS);
+    }
+    
+    LOG_INFO("Hot-reload monitoring thread stopped");
+    return 0;
+}
 
 /**
  * @brief Thread function to launch and monitor the plugin process
@@ -124,12 +210,14 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
         plugin->isRunning = FALSE;
         memset(&plugin->pi, 0, sizeof(plugin->pi));
         
-        // Ensure stale data is cleared so UI reverts to clock
-        PluginData_Clear();
+        // DON'T call PluginData_Clear() - keep plugin mode active for hot-reload
+        // This will show "Loading..." while waiting for file changes
+        // User can manually stop via menu if needed
         
-        // Force UI refresh (optional, but good for responsiveness)
-        // We can't easily invalidate rect here without an HWND, but PluginData file watcher might eventually trigger it.
-        // Or we assume the user will notice.
+        // Force UI refresh to show "Loading..."
+        if (g_hNotifyWnd) {
+            InvalidateRect(g_hNotifyWnd, NULL, TRUE);
+        }
     } else {
         // If isRunning is FALSE, StopPlugin handled it. We do nothing.
         LOG_INFO("Plugin monitor thread detected graceful stop.");
@@ -184,10 +272,25 @@ void PluginManager_Init(void) {
         LOG_ERROR("Failed to create Job Object, error: %lu", GetLastError());
     }
 
+    /* Start hot-reload monitoring thread */
+    g_hotReloadRunning = TRUE;
+    g_hHotReloadThread = CreateThread(NULL, 0, HotReloadThread, NULL, 0, NULL);
+    if (!g_hHotReloadThread) {
+        LOG_WARNING("Failed to start hot-reload thread");
+    }
+
     LOG_INFO("Plugin manager initialized");
 }
 
 void PluginManager_Shutdown(void) {
+    /* Stop hot-reload thread first */
+    if (g_hHotReloadThread) {
+        g_hotReloadRunning = FALSE;
+        WaitForSingleObject(g_hHotReloadThread, 2000);
+        CloseHandle(g_hHotReloadThread);
+        g_hHotReloadThread = NULL;
+    }
+
     EnterCriticalSection(&g_pluginCS);
 
     for (int i = 0; i < g_pluginCount; i++) {
@@ -303,9 +406,26 @@ int PluginManager_ScanPlugins(void) {
         }
     }
 
+    // Remember old last running plugin name for re-mapping
+    char lastRunningName[64] = {0};
+    if (g_lastRunningPluginIndex >= 0 && g_lastRunningPluginIndex < g_pluginCount) {
+        strncpy(lastRunningName, g_plugins[g_lastRunningPluginIndex].name, sizeof(lastRunningName) - 1);
+    }
+
     // Update global list
     memcpy(g_plugins, newPlugins, sizeof(g_plugins));
     g_pluginCount = newPluginCount;
+    
+    // Re-map g_lastRunningPluginIndex to new list
+    if (lastRunningName[0]) {
+        g_lastRunningPluginIndex = -1;  // Reset first
+        for (int i = 0; i < g_pluginCount; i++) {
+            if (strcmp(g_plugins[i].name, lastRunningName) == 0) {
+                g_lastRunningPluginIndex = i;
+                break;
+            }
+        }
+    }
 
     LeaveCriticalSection(&g_pluginCS);
 
@@ -398,10 +518,44 @@ BOOL PluginManager_StartPlugin(int index) {
         return FALSE;
     }
 
+    /* Record file modification time for hot-reload detection */
+    GetFileModTime(plugin->path, &plugin->lastModTime);
+
     LOG_INFO("[DEBUG] Plugin started successfully: %s (PID: %lu)", plugin->displayName, plugin->pi.dwProcessId);
 
     LeaveCriticalSection(&g_pluginCS);
     return TRUE;
+}
+
+/**
+ * @brief Internal restart function for hot-reload (shows Loading message)
+ */
+static BOOL RestartPluginInternal(int index) {
+    if (index < 0 || index >= g_pluginCount) return FALSE;
+    
+    PluginInfo* plugin = &g_plugins[index];
+    
+    /* Stop the plugin first */
+    PluginManager_StopPlugin(index);
+    
+    /* Show "Loading..." message */
+    wchar_t loadingText[256];
+    wchar_t displayNameW[128];
+    MultiByteToWideChar(CP_UTF8, 0, plugin->displayName, -1, displayNameW, 128);
+    _snwprintf(loadingText, 256, L"Loading %s...", displayNameW);
+    PluginData_SetText(loadingText);
+    PluginData_SetActive(TRUE);
+    
+    /* Force redraw to show loading message */
+    if (g_hNotifyWnd) {
+        InvalidateRect(g_hNotifyWnd, NULL, TRUE);
+    }
+    
+    /* Small delay to ensure process cleanup */
+    Sleep(100);
+    
+    /* Start the plugin again */
+    return PluginManager_StartPlugin(index);
 }
 
 BOOL PluginManager_StopPlugin(int index) {
@@ -436,6 +590,9 @@ BOOL PluginManager_StopPlugin(int index) {
 
     // Clear any data generated by this plugin
     PluginData_Clear();
+    
+    // Reset last running index to stop hot-reload monitoring
+    g_lastRunningPluginIndex = -1;
 
     LOG_INFO("Stopped plugin: %s", plugin->displayName);
 
@@ -507,4 +664,8 @@ BOOL PluginManager_OpenPluginFolder(void) {
     // Open in explorer
     ShellExecuteA(NULL, "open", pluginDir, NULL, NULL, SW_SHOW);
     return TRUE;
+}
+
+void PluginManager_SetNotifyWindow(HWND hwnd) {
+    g_hNotifyWnd = hwnd;
 }

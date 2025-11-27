@@ -349,6 +349,9 @@ BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
     
     // Initialize Plugin Data subsystem (File Watcher)
     PluginData_Init(hwnd);
+    
+    // Set notify window for plugin manager hot-reload
+    PluginManager_SetNotifyWindow(hwnd);
 
     return TRUE;
 }
