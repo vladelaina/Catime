@@ -5,10 +5,15 @@
 
 #include "plugin/plugin_manager.h"
 #include "plugin/plugin_data.h"
+#include "color/gradient.h"
+#include "color/color_parser.h"
 #include "log.h"
 #include <stdio.h>
 #include <string.h>
 #include <shellapi.h>
+
+/* External function for getting active color */
+extern void GetActiveColor(char* outColor, size_t bufferSize);
 
 static PluginInfo g_plugins[MAX_PLUGINS];
 static int g_pluginCount = 0;
@@ -369,6 +374,7 @@ int PluginManager_ScanPlugins(void) {
                     if (strcmp(g_plugins[i].name, plugin->name) == 0) {
                         plugin->isRunning = g_plugins[i].isRunning;
                         plugin->pi = g_plugins[i].pi;
+                        plugin->lastModTime = g_plugins[i].lastModTime;
                         break;
                     }
                 }
@@ -549,6 +555,13 @@ static BOOL RestartPluginInternal(int index) {
     /* Force redraw to show loading message */
     if (g_hNotifyWnd) {
         InvalidateRect(g_hNotifyWnd, NULL, TRUE);
+        
+        /* Check if animated gradient needs timer for smooth animation */
+        char activeColor[COLOR_HEX_BUFFER];
+        GetActiveColor(activeColor, sizeof(activeColor));
+        if (IsGradientAnimated(GetGradientTypeByName(activeColor))) {
+            SetTimer(g_hNotifyWnd, 1, 30, NULL);  /* ~33 FPS for smooth animation */
+        }
     }
     
     /* Small delay to ensure process cleanup */

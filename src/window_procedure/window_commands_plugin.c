@@ -9,10 +9,15 @@
 #include "plugin/plugin_manager.h"
 #include "plugin/plugin_data.h"
 #include "timer/timer.h"
+#include "color/gradient.h"
+#include "color/color_parser.h"
 #include "window.h"
 #include "pomodoro.h"
 #include "notification.h"
 #include <windows.h>
+
+/* External function declarations */
+extern void GetActiveColor(char* outColor, size_t bufferSize);
 
 extern BOOL CLOCK_SHOW_CURRENT_TIME;
 extern BOOL CLOCK_COUNT_UP;
@@ -80,6 +85,13 @@ static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
         PluginData_SetText(loadingText);
     }
     
+    /* Check if animated gradient needs timer for smooth animation */
+    char activeColor[COLOR_HEX_BUFFER];
+    GetActiveColor(activeColor, sizeof(activeColor));
+    if (IsGradientAnimated(GetGradientTypeByName(activeColor))) {
+        SetTimer(hwnd, 1, 30, NULL);  /* ~33 FPS for smooth animation */
+    }
+    
     /* Ensure window visible and redraw */
     if (!IsWindowVisible(hwnd)) {
         ShowWindow(hwnd, SW_SHOW);
@@ -133,6 +145,13 @@ static BOOL HandleShowPluginFile(HWND hwnd) {
         CLOCK_SHOW_CURRENT_TIME = FALSE;
         CLOCK_COUNT_UP = FALSE;
         CLOCK_IS_PAUSED = FALSE;
+    }
+    
+    /* Check if animated gradient needs timer for smooth animation */
+    char activeColor[COLOR_HEX_BUFFER];
+    GetActiveColor(activeColor, sizeof(activeColor));
+    if (IsGradientAnimated(GetGradientTypeByName(activeColor))) {
+        SetTimer(hwnd, 1, 30, NULL);  /* ~33 FPS for smooth animation */
     }
     
     if (!IsWindowVisible(hwnd)) {

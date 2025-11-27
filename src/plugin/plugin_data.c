@@ -6,7 +6,6 @@
 #include "plugin/plugin_data.h"
 #include "log.h"
 #include <windows.h>
-#include <shlobj.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -87,20 +86,51 @@ static BOOL ParseContent(const char* content, size_t contentLen) {
     return len > 0;
 }
 
+/* Plugin output file name */
+#define PLUGIN_OUTPUT_FILENAME "output.txt"
+
+/**
+ * @brief Get plugin output file path
+ * @return TRUE if successful, FALSE otherwise
+ */
+static BOOL GetPluginOutputPath(char* buffer, size_t bufferSize) {
+    DWORD result = ExpandEnvironmentStringsA(
+        "%LOCALAPPDATA%\\Catime\\resources\\plugins\\" PLUGIN_OUTPUT_FILENAME,
+        buffer, (DWORD)bufferSize);
+    return (result > 0 && result < bufferSize);
+}
+
+/**
+ * @brief Ensure plugin output file exists (create empty if missing)
+ */
+static void EnsureOutputFileExists(const char* filePath) {
+    /* Check if file exists */
+    DWORD attrs = GetFileAttributesA(filePath);
+    if (attrs == INVALID_FILE_ATTRIBUTES) {
+        /* File doesn't exist - create empty file */
+        HANDLE hFile = CreateFileA(filePath, GENERIC_WRITE, 0, NULL,
+                                   CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
+        if (hFile != INVALID_HANDLE_VALUE) {
+            CloseHandle(hFile);
+            LOG_INFO("PluginData: Created output file %s", filePath);
+        } else {
+            LOG_WARNING("PluginData: Failed to create output file, error: %lu", GetLastError());
+        }
+    }
+}
+
 /**
  * @brief Background thread to monitor plugin data file
  */
 static DWORD WINAPI FileWatcherThread(LPVOID lpParam) {
     (void)lpParam;
     
-    char desktopPath[MAX_PATH];
-    if (!SHGetSpecialFolderPathA(NULL, desktopPath, CSIDL_DESKTOP, FALSE)) {
-        LOG_WARNING("PluginData: Failed to get desktop path");
+    char filePath[MAX_PATH];
+    if (!GetPluginOutputPath(filePath, sizeof(filePath))) {
+        LOG_WARNING("PluginData: Failed to get output file path");
         return 0;
     }
-
-    char filePath[MAX_PATH];
-    snprintf(filePath, sizeof(filePath), "%s\\catime_plugin_debug.txt", desktopPath);
+    
     LOG_INFO("PluginData: Watching file %s", filePath);
 
     while (g_isRunning) {
@@ -185,6 +215,12 @@ void PluginData_Init(HWND hwnd) {
     g_lastContent = NULL;
     g_lastContentSize = 0;
     g_isRunning = TRUE;
+
+    /* Ensure output file exists on startup */
+    char outputPath[MAX_PATH];
+    if (GetPluginOutputPath(outputPath, sizeof(outputPath))) {
+        EnsureOutputFileExists(outputPath);
+    }
 
     g_hWatchThread = CreateThread(NULL, 0, FileWatcherThread, NULL, 0, NULL);
     if (g_hWatchThread) {
@@ -277,11 +313,8 @@ void PluginData_SetText(const wchar_t* text) {
     LeaveCriticalSection(&g_dataCS);
     
     // Clear the plugin data file to prevent showing stale content from previous plugin
-    char desktopPath[MAX_PATH];
-    if (SHGetSpecialFolderPathA(NULL, desktopPath, CSIDL_DESKTOP, FALSE)) {
-        char filePath[MAX_PATH];
-        snprintf(filePath, sizeof(filePath), "%s\\catime_plugin_debug.txt", desktopPath);
-        
+    char filePath[MAX_PATH];
+    if (GetPluginOutputPath(filePath, sizeof(filePath))) {
         // Truncate file to zero length
         HANDLE hFile = CreateFileA(filePath, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
                                    NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -316,11 +349,8 @@ void PluginData_SetActive(BOOL active) {
     
     // If activating, immediately read the file content (don't wait for watcher)
     if (active) {
-        char desktopPath[MAX_PATH];
-        if (SHGetSpecialFolderPathA(NULL, desktopPath, CSIDL_DESKTOP, FALSE)) {
-            char filePath[MAX_PATH];
-            snprintf(filePath, sizeof(filePath), "%s\\catime_plugin_debug.txt", desktopPath);
-            
+        char filePath[MAX_PATH];
+        if (GetPluginOutputPath(filePath, sizeof(filePath))) {
             HANDLE hFile = CreateFileA(filePath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
                                        NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
             if (hFile != INVALID_HANDLE_VALUE) {
