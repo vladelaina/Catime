@@ -91,11 +91,20 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
 
                 wchar_t* notesW = LocalUtf8ToWideAlloc(versionInfo->releaseNotes);
                 if (notesW && notesW[0]) {
-                    ParseMarkdownLinks(notesW, &g_notesDisplayText, &g_notesLinks, &g_notesLinkCount,
-                                       &g_notesHeadings, &g_notesHeadingCount,
-                                       &g_notesStyles, &g_notesStyleCount,
-                                       &g_notesListItems, &g_notesListItemCount,
-                                       &g_notesBlockquotes, &g_notesBlockquoteCount);
+                    /* Wrap release notes with <md> tags for markdown parsing */
+                    size_t notesLen = wcslen(notesW);
+                    wchar_t* wrappedNotes = (wchar_t*)malloc((notesLen + 16) * sizeof(wchar_t));
+                    if (wrappedNotes) {
+                        wcscpy(wrappedNotes, L"<md>\n");
+                        wcscat(wrappedNotes, notesW);
+                        wcscat(wrappedNotes, L"\n</md>");
+                        ParseMarkdownLinks(wrappedNotes, &g_notesDisplayText, &g_notesLinks, &g_notesLinkCount,
+                                           &g_notesHeadings, &g_notesHeadingCount,
+                                           &g_notesStyles, &g_notesStyleCount,
+                                           &g_notesListItems, &g_notesListItemCount,
+                                           &g_notesBlockquotes, &g_notesBlockquoteCount);
+                        free(wrappedNotes);
+                    }
                     free(notesW);
                 } else {
                     free(notesW);

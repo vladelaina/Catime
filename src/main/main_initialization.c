@@ -23,6 +23,7 @@
 #include "plugin/plugin_data.h"
 #include "plugin/plugin_manager.h"
 #include "drawing/drawing_image.h"
+#include "markdown/markdown_interactive.h"
 #include <tlhelp32.h>
 
 /* Helper to check if process is elevated */
@@ -234,6 +235,9 @@ BOOL InitializeSubsystems(void) {
 BOOL InitializeApplicationSubsystem(HINSTANCE hInstance) {
     LOG_INFO("Starting application initialization...");
     
+    /* Initialize markdown interactive system */
+    InitMarkdownInteractive();
+    
     extern BOOL InitializeApplication(HINSTANCE);
     if (!InitializeApplication(hInstance)) {
         LOG_ERROR("Application initialization failed");
@@ -377,6 +381,9 @@ int RunMessageLoop(HWND hwnd) {
 
 void CleanupResources(HANDLE hMutex) {
     LOG_INFO("Program preparing to exit, starting resource cleanup");
+
+    LOG_INFO("Cleaning up markdown interactive system");
+    CleanupMarkdownInteractive();
 
     LOG_INFO("Preparing to clean up update check thread resources");
     CleanupUpdateThread();

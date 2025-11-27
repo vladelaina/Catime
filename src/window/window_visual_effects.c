@@ -72,14 +72,24 @@ BOOL InitDWMFunctions(void) {
     return FALSE;
 }
 
+/* Global flag for soft click-through (using WM_NCHITTEST instead of WS_EX_TRANSPARENT) */
+static BOOL g_softClickThrough = FALSE;
+
+BOOL IsSoftClickThroughEnabled(void) {
+    return g_softClickThrough;
+}
+
 void SetClickThrough(HWND hwnd, BOOL enable) {
     LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
     exStyle &= ~WS_EX_TRANSPARENT;
 
     if (enable) {
-        exStyle |= WS_EX_TRANSPARENT;
-        LOG_INFO("Click-through enabled");
+        /* Use soft click-through (WM_NCHITTEST returns HTTRANSPARENT) 
+         * instead of WS_EX_TRANSPARENT to allow selective clicking */
+        g_softClickThrough = TRUE;
+        LOG_INFO("Click-through enabled (soft mode)");
     } else {
+        g_softClickThrough = FALSE;
         LOG_INFO("Click-through disabled");
     }
 

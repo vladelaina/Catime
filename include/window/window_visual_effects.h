@@ -17,9 +17,15 @@
  * @param hwnd Window handle
  * @param enable TRUE to enable click-through, FALSE to make window interactive
  * 
- * @details Uses WS_EX_TRANSPARENT to allow clicks to pass through to windows below
+ * @details Uses soft click-through (WM_NCHITTEST) to allow selective clicking
  */
 void SetClickThrough(HWND hwnd, BOOL enable);
+
+/**
+ * @brief Check if soft click-through mode is enabled
+ * @return TRUE if click-through is enabled
+ */
+BOOL IsSoftClickThroughEnabled(void);
 
 /**
  * @brief Toggle blur-behind visual effect

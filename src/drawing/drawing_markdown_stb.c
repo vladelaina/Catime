@@ -5,6 +5,9 @@
 
 #include "drawing/drawing_markdown_stb.h"
 #include "drawing/drawing_text_stb.h"
+#include "markdown/markdown_parser.h"
+#include "markdown/markdown_interactive.h"
+#include "color/gradient.h"
 #include "log.h"
 #include <math.h>
 
@@ -12,10 +15,12 @@
 
 static float GetScaleForHeading(int level, float baseScale) {
     switch (level) {
-        case 1: return baseScale * 2.0f;
-        case 2: return baseScale * 1.5f;
-        case 3: return baseScale * 1.25f;
+        case 1: return baseScale * 1.5f;
+        case 2: return baseScale * 1.35f;
+        case 3: return baseScale * 1.2f;
         case 4: return baseScale * 1.1f;
+        case 5: return baseScale * 1.0f;
+        case 6: return baseScale * 0.9f;
         default: return baseScale;
     }
 }
@@ -25,6 +30,89 @@ static int GetLineHeight(float scale) {
     if (!IsFontLoadedSTB()) return 0;
     stbtt_GetFontVMetrics(GetMainFontInfoSTB(), &ascent, &descent, &lineGap);
     return (int)((ascent - descent + lineGap) * scale);
+}
+
+/* Italic blend with per-row shear */
+static void BlendCharBitmapItalicSTB(void* destBits, int destWidth, int destHeight,
+                                      int x_pos, int y_pos,
+                                      unsigned char* bitmap, int w, int h,
+                                      int r, int g, int b, float slant) {
+    DWORD* pixels = (DWORD*)destBits;
+    for (int j = 0; j < h; ++j) {
+        int shear = (int)((h - j) * slant);  // Top rows shift right more
+        for (int i = 0; i < w; ++i) {
+            int screen_x = x_pos + i + shear;
+            int screen_y = y_pos + j;
+            if (screen_x < 0 || screen_x >= destWidth || screen_y < 0 || screen_y >= destHeight) continue;
+            unsigned char alpha = bitmap[j * w + i];
+            if (alpha == 0) continue;
+            DWORD* dest = &pixels[screen_y * destWidth + screen_x];
+            DWORD existing = *dest;
+            int er = (existing >> 16) & 0xFF;
+            int eg = (existing >> 8) & 0xFF;
+            int eb = existing & 0xFF;
+            int ea = (existing >> 24) & 0xFF;
+            int nr = er + ((r - er) * alpha) / 255;
+            int ng = eg + ((g - eg) * alpha) / 255;
+            int nb = eb + ((b - eb) * alpha) / 255;
+            int na = ea + ((255 - ea) * alpha) / 255;
+            *dest = (na << 24) | (nr << 16) | (ng << 8) | nb;
+        }
+    }
+}
+
+/* Italic blend with gradient and per-row shear */
+static void BlendCharBitmapItalicGradientSTB(void* destBits, int destWidth, int destHeight,
+                                              int x_pos, int y_pos,
+                                              unsigned char* bitmap, int w, int h,
+                                              float slant, int gradientMode, int timeOffset, int totalWidth) {
+    DWORD* pixels = (DWORD*)destBits;
+    const GradientInfo* info = GetGradientInfo((GradientType)gradientMode);
+    if (!info) return;
+    
+    for (int j = 0; j < h; ++j) {
+        int shear = (int)((h - j) * slant);
+        for (int i = 0; i < w; ++i) {
+            int screen_x = x_pos + i + shear;
+            int screen_y = y_pos + j;
+            if (screen_x < 0 || screen_x >= destWidth || screen_y < 0 || screen_y >= destHeight) continue;
+            unsigned char alpha = bitmap[j * w + i];
+            if (alpha == 0) continue;
+            
+            // Calculate gradient color
+            float t = (totalWidth > 0) ? (float)screen_x / (float)totalWidth : 0.0f;
+            if (info->isAnimated) {
+                float animOffset = (float)timeOffset / (float)(GRADIENT_LUT_SIZE * 2);
+                t = t - animOffset;
+                while (t < 0) t += 1.0f;
+                while (t >= 1.0f) t -= 1.0f;
+            }
+            
+            int r, g, b;
+            if (info->palette && info->paletteCount > 2) {
+                float scaledT = t * (info->paletteCount - 1);
+                int idx1 = (int)scaledT;
+                int idx2 = idx1 + 1;
+                if (idx2 >= info->paletteCount) idx2 = 0;
+                float localT = scaledT - idx1;
+                COLORREF c1 = info->palette[idx1];
+                COLORREF c2 = info->palette[idx2];
+                r = (int)(GetRValue(c1) + (GetRValue(c2) - GetRValue(c1)) * localT);
+                g = (int)(GetGValue(c1) + (GetGValue(c2) - GetGValue(c1)) * localT);
+                b = (int)(GetBValue(c1) + (GetBValue(c2) - GetBValue(c1)) * localT);
+            } else {
+                r = (int)(GetRValue(info->startColor) + (GetRValue(info->endColor) - GetRValue(info->startColor)) * t);
+                g = (int)(GetGValue(info->startColor) + (GetGValue(info->endColor) - GetGValue(info->startColor)) * t);
+                b = (int)(GetBValue(info->startColor) + (GetBValue(info->endColor) - GetBValue(info->startColor)) * t);
+            }
+            
+            DWORD* dest = &pixels[screen_y * destWidth + screen_x];
+            DWORD finalR = (r * alpha) / 255;
+            DWORD finalG = (g * alpha) / 255;
+            DWORD finalB = (b * alpha) / 255;
+            *dest = (alpha << 24) | (finalR << 16) | (finalG << 8) | finalB;
+        }
+    }
 }
 
 /* Public API */
@@ -60,6 +148,9 @@ BOOL MeasureMarkdownSTB(const wchar_t* text,
             continue;
         }
         if (text[i] == L'\r') continue;
+        
+        // Skip horizontal rule markers (they span full width, don't affect max width)
+        if (text[i] == L'\x2500') continue;
 
         // Determine style
         float scale = baseScale;
@@ -100,6 +191,9 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                        COLORREF color, int fontSize, float fontScale, int gradientMode) {
     if (!IsFontLoadedSTB() || !text || !bits) return;
 
+    /* Clear previous clickable regions before rendering */
+    ClearClickableRegions();
+
     stbtt_fontinfo* fontInfo = GetMainFontInfoSTB();
     stbtt_fontinfo* fallbackFontInfo = GetFallbackFontInfoSTB();
     BOOL fallbackLoaded = IsFallbackFontLoadedSTB();
@@ -109,6 +203,9 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
     
     int baseAscent, baseDescent, baseLineGap;
     stbtt_GetFontVMetrics(fontInfo, &baseAscent, &baseDescent, &baseLineGap);
+
+    /* Checkbox tracking */
+    int checkboxIndex = 0;
 
     // Calculate total layout to center vertically
     int totalTextHeight = 0;
@@ -171,6 +268,67 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
             // Baseline align: Y + maxAscent
             int baselineY = currentY + maxAscent;
 
+            // Check for horizontal rule (─── = \x2500\x2500\x2500)
+            if (i - currentLineStart >= 3 && 
+                text[currentLineStart] == L'\x2500' && 
+                text[currentLineStart + 1] == L'\x2500' && 
+                text[currentLineStart + 2] == L'\x2500') {
+                // Draw horizontal line within text block area only
+                int lineY = currentY + lineMaxHeight / 2;
+                DWORD* pixels = (DWORD*)bits;
+                
+                int hrLeft = blockLeftX;
+                int hrRight = blockLeftX + maxLineWidth;
+                int hrWidth = hrRight - hrLeft;
+                
+                const GradientInfo* hrGradInfo = (gradientMode != GRADIENT_NONE) ? 
+                    GetGradientInfo((GradientType)gradientMode) : NULL;
+                
+                for (int x = hrLeft; x < hrRight && x < width; x++) {
+                    if (lineY >= 0 && lineY < height && x >= 0) {
+                        DWORD lineColor;
+                        if (hrGradInfo && hrWidth > 0) {
+                            float t = (float)(x - hrLeft) / (float)hrWidth;
+                            int r, g, b;
+                            
+                            if (hrGradInfo->palette && hrGradInfo->paletteCount > 2) {
+                                // Animated multi-color gradient
+                                float animOffset = (float)timeOffset / (float)(GRADIENT_LUT_SIZE * 2);
+                                t = t - animOffset;
+                                while (t < 0) t += 1.0f;
+                                while (t >= 1.0f) t -= 1.0f;
+                                
+                                float scaledT = t * (hrGradInfo->paletteCount - 1);
+                                int idx1 = (int)scaledT;
+                                int idx2 = idx1 + 1;
+                                if (idx2 >= hrGradInfo->paletteCount) idx2 = 0;
+                                float localT = scaledT - idx1;
+                                
+                                COLORREF c1 = hrGradInfo->palette[idx1];
+                                COLORREF c2 = hrGradInfo->palette[idx2];
+                                r = (int)(GetRValue(c1) + (GetRValue(c2) - GetRValue(c1)) * localT);
+                                g = (int)(GetGValue(c1) + (GetGValue(c2) - GetGValue(c1)) * localT);
+                                b = (int)(GetBValue(c1) + (GetBValue(c2) - GetBValue(c1)) * localT);
+                            } else {
+                                // 2-color static gradient using startColor/endColor
+                                COLORREF c1 = hrGradInfo->startColor;
+                                COLORREF c2 = hrGradInfo->endColor;
+                                r = (int)(GetRValue(c1) + (GetRValue(c2) - GetRValue(c1)) * t);
+                                g = (int)(GetGValue(c1) + (GetGValue(c2) - GetGValue(c1)) * t);
+                                b = (int)(GetBValue(c1) + (GetBValue(c2) - GetBValue(c1)) * t);
+                            }
+                            lineColor = 0xFF000000 | (r << 16) | (g << 8) | b;
+                        } else {
+                            lineColor = 0xFF000000 | (GetRValue(color) << 16) | (GetGValue(color) << 8) | GetBValue(color);
+                        }
+                        pixels[lineY * width + x] = lineColor;
+                    }
+                }
+                currentY += lineMaxHeight;
+                currentLineStart = i + 1;
+                continue;
+            }
+
             // 2. Render this line
             for (size_t j = currentLineStart; j < i; j++) {
                 if (text[j] == L'\r') continue;
@@ -187,17 +345,42 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                     if (fallbackLoaded) fallbackScale = GetScaleForHeading(headings[curHeadingIdx].level, fallbackBaseScale);
                 }
 
-                // Link
+                // Link - track region for click detection
+                BOOL inLink = FALSE;
+                int activeLinkIdx = -1;
                 while (curLinkIdx < linkCount && j >= links[curLinkIdx].endPos) curLinkIdx++;
                 if (curLinkIdx < linkCount && j >= links[curLinkIdx].startPos) {
-                    drawColor = RGB(9, 105, 218); // Link blue
+                    drawColor = RGB(0, 175, 255); // Link color #00AFFF
+                    inLink = TRUE;
+                    activeLinkIdx = curLinkIdx;
+                    
+                    /* Update link rect for first char */
+                    if (j == links[curLinkIdx].startPos) {
+                        links[curLinkIdx].linkRect.left = currentX;
+                        links[curLinkIdx].linkRect.top = currentY;
+                        links[curLinkIdx].linkRect.bottom = currentY + lineMaxHeight;
+                    }
+                    links[curLinkIdx].linkRect.right = currentX;
                 }
                 
-                // Style (Code) - only background for now, color override if needed
+                // Style handling
+                BOOL isBold = FALSE;
+                BOOL isItalic = FALSE;
+                BOOL isStrikethrough = FALSE;
                 while (curStyleIdx < styleCount && j >= styles[curStyleIdx].endPos) curStyleIdx++;
                 if (curStyleIdx < styleCount && j >= styles[curStyleIdx].startPos) {
-                    if (styles[curStyleIdx].type == STYLE_CODE) {
+                    MarkdownStyleType styleType = styles[curStyleIdx].type;
+                    if (styleType == STYLE_CODE) {
                         drawColor = RGB(100, 100, 100);
+                    } else if (styleType == STYLE_BOLD) {
+                        isBold = TRUE;
+                    } else if (styleType == STYLE_ITALIC) {
+                        isItalic = TRUE;
+                    } else if (styleType == STYLE_BOLD_ITALIC) {
+                        isBold = TRUE;
+                        isItalic = TRUE;
+                    } else if (styleType == STYLE_STRIKETHROUGH) {
+                        isStrikethrough = TRUE;
                     }
                 }
 
@@ -215,24 +398,122 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                     }
                     
                     if (bitmap) {
-                        if (gradientMode != GRADIENT_NONE && drawColor == color) { /* Only apply gradient to default colored text */
-                            BlendCharBitmapGradientSTB(bits, width, height, 
-                                currentX + xoff, baselineY + yoff, 
-                                bitmap, w, h, 0, width, gradientMode, timeOffset); /* Use total width for gradient mapping */
+                        float slant = isItalic ? 0.35f : 0.0f;
+                        
+                        if (gradientMode != GRADIENT_NONE && drawColor == color) {
+                            if (isItalic) {
+                                // Use proper per-row shear for italic with gradient
+                                BlendCharBitmapItalicGradientSTB(bits, width, height, 
+                                    currentX + xoff, baselineY + yoff, 
+                                    bitmap, w, h, slant, gradientMode, timeOffset, width);
+                                if (isBold) {
+                                    BlendCharBitmapItalicGradientSTB(bits, width, height, 
+                                        currentX + xoff + 1, baselineY + yoff, 
+                                        bitmap, w, h, slant, gradientMode, timeOffset, width);
+                                }
+                            } else {
+                                BlendCharBitmapGradientSTB(bits, width, height, 
+                                    currentX + xoff, baselineY + yoff, 
+                                    bitmap, w, h, 0, width, gradientMode, timeOffset);
+                                if (isBold) {
+                                    BlendCharBitmapGradientSTB(bits, width, height, 
+                                        currentX + xoff + 1, baselineY + yoff, 
+                                        bitmap, w, h, 0, width, gradientMode, timeOffset);
+                                    BlendCharBitmapGradientSTB(bits, width, height, 
+                                        currentX + xoff, baselineY + yoff + 1, 
+                                        bitmap, w, h, 0, width, gradientMode, timeOffset);
+                                }
+                            }
+                        } else if (isItalic) {
+                            // Use proper per-row shear for italic
+                            BlendCharBitmapItalicSTB(bits, width, height, 
+                                currentX + xoff, baselineY + yoff,  
+                                bitmap, w, h, 
+                                GetRValue(drawColor), GetGValue(drawColor), GetBValue(drawColor), slant);
+                            if (isBold) {
+                                BlendCharBitmapItalicSTB(bits, width, height, 
+                                    currentX + xoff + 1, baselineY + yoff,  
+                                    bitmap, w, h, 
+                                    GetRValue(drawColor), GetGValue(drawColor), GetBValue(drawColor), slant);
+                            }
                         } else {
                             BlendCharBitmapSTB(bits, width, height, 
                                 currentX + xoff, baselineY + yoff,  
                                 bitmap, w, h, 
                                 GetRValue(drawColor), GetGValue(drawColor), GetBValue(drawColor));
+                            if (isBold) {
+                                BlendCharBitmapSTB(bits, width, height, 
+                                    currentX + xoff + 1, baselineY + yoff,  
+                                    bitmap, w, h, 
+                                    GetRValue(drawColor), GetGValue(drawColor), GetBValue(drawColor));
+                                BlendCharBitmapSTB(bits, width, height, 
+                                    currentX + xoff, baselineY + yoff + 1,  
+                                    bitmap, w, h, 
+                                    GetRValue(drawColor), GetGValue(drawColor), GetBValue(drawColor));
+                            }
                         }
                         stbtt_FreeBitmap(bitmap, NULL);
+                        
+                        // Draw strikethrough line
+                        if (isStrikethrough) {
+                            int lineY = baselineY - h / 3;  // Position at ~1/3 from baseline
+                            DWORD* pixels = (DWORD*)bits;
+                            
+                            // Get line color from gradient or solid color
+                            DWORD lineColor;
+                            if (gradientMode != GRADIENT_NONE && drawColor == color) {
+                                const GradientInfo* stInfo = GetGradientInfo((GradientType)gradientMode);
+                                if (stInfo && stInfo->palette && stInfo->paletteCount > 0) {
+                                    COLORREF c = stInfo->palette[0];
+                                    lineColor = 0xFF000000 | (GetRValue(c) << 16) | (GetGValue(c) << 8) | GetBValue(c);
+                                } else if (stInfo) {
+                                    lineColor = 0xFF000000 | (GetRValue(stInfo->startColor) << 16) | 
+                                                (GetGValue(stInfo->startColor) << 8) | GetBValue(stInfo->startColor);
+                                } else {
+                                    lineColor = 0xFF000000 | (GetRValue(drawColor) << 16) | 
+                                                (GetGValue(drawColor) << 8) | GetBValue(drawColor);
+                                }
+                            } else {
+                                lineColor = 0xFF000000 | (GetRValue(drawColor) << 16) | 
+                                            (GetGValue(drawColor) << 8) | GetBValue(drawColor);
+                            }
+                            
+                            // Draw horizontal line through character
+                            for (int sx = currentX; sx < currentX + gm.advance && sx < width; sx++) {
+                                if (lineY >= 0 && lineY < height && sx >= 0) {
+                                    pixels[lineY * width + sx] = lineColor;
+                                }
+                            }
+                        }
+                    }
+                    /* Record checkbox region (□ = 0x25A1, ■ = 0x25A0) */
+                    if (text[j] == L'\x25A1' || text[j] == L'\x25A0') {
+                        /* Use character advance width for click area */
+                        RECT cbRect = {
+                            currentX, currentY,
+                            currentX + gm.advance, currentY + lineMaxHeight
+                        };
+                        AddCheckboxRegion(&cbRect, checkboxIndex, text[j] == L'\x25A0');
+                        checkboxIndex++;
                     }
                 }
                 currentX += gm.advance + gm.kern;
+                
+                /* Update link rect right edge after advancing */
+                if (inLink && activeLinkIdx >= 0) {
+                    links[activeLinkIdx].linkRect.right = currentX;
+                }
             }
 
             currentY += lineMaxHeight;
             currentLineStart = i + 1;
+        }
+    }
+    
+    /* Register all link regions for click detection */
+    for (int i = 0; i < linkCount; i++) {
+        if (links[i].linkUrl && links[i].linkRect.right > links[i].linkRect.left) {
+            AddLinkRegion(&links[i].linkRect, links[i].linkUrl);
         }
     }
 }

@@ -40,7 +40,8 @@ typedef enum {
     STYLE_ITALIC = 1,
     STYLE_BOLD = 2,
     STYLE_BOLD_ITALIC = 3,
-    STYLE_CODE = 4
+    STYLE_CODE = 4,
+    STYLE_STRIKETHROUGH = 5
 } MarkdownStyleType;
 
 /**
@@ -291,7 +292,7 @@ BOOL HandleMarkdownClick(MarkdownLink* links, int linkCount, POINT clickPoint);
 #define MARKDOWN_DEFAULT_LINK_COLOR RGB(0, 100, 200)
 #define MARKDOWN_DEFAULT_TEXT_COLOR GetSysColor(COLOR_WINDOWTEXT)
 
-/* Internal API (state management functions) */
+/* Internal API (state management - markdown_state.c) */
 
 BOOL EnsureLinkCapacity(ParseState* state);
 BOOL EnsureHeadingCapacity(ParseState* state);
@@ -304,5 +305,29 @@ int GetInitialHeadingCapacity(int estimatedCount);
 int GetInitialStyleCapacity(int estimatedCount);
 int GetInitialListItemCapacity(int estimatedCount);
 int GetInitialBlockquoteCapacity(int estimatedCount);
+
+/* Internal API (inline elements - markdown_inline.c) */
+
+BOOL ExtractWideString(const wchar_t* start, const wchar_t* end, wchar_t** output);
+int CountMarkdownLinks(const wchar_t* input);
+int CountMarkdownHeadings(const wchar_t* input);
+int CountMarkdownStyles(const wchar_t* input);
+int CountMarkdownListItems(const wchar_t* input);
+int CountMarkdownBlockquotes(const wchar_t* input);
+BOOL ExtractMarkdownLink(const wchar_t** src, ParseState* state);
+BOOL ExtractMarkdownStyle(const wchar_t** src, ParseState* state);
+BOOL ExtractMarkdownCode(const wchar_t** src, ParseState* state);
+BOOL ExtractMarkdownStrikethrough(const wchar_t** src, ParseState* state);
+BOOL ProcessInlineElements(const wchar_t** src, ParseState* state, wchar_t** dest);
+
+/* Internal API (block elements - markdown_block.c) */
+
+BOOL ParseCodeBlock(const wchar_t** src, ParseState* state, wchar_t** dest, BOOL* inCodeBlock);
+BOOL ParseCodeBlockContent(const wchar_t** src, ParseState* state, wchar_t** dest);
+BOOL ParseHorizontalRule(const wchar_t** src, ParseState* state, wchar_t** dest);
+BOOL ParseList(const wchar_t** src, ParseState* state, wchar_t** dest, BOOL* inListItem, int* currentListItemIndex);
+BOOL ParseHeading(const wchar_t** src, ParseState* state, wchar_t** dest, BOOL* inHeading, int* currentHeadingIndex);
+BOOL ParseBlockquote(const wchar_t** src, ParseState* state, wchar_t** dest);
+void ParseBlockquoteContent(const wchar_t** src, ParseState* state, wchar_t** dest, int blockquoteIndex);
 
 #endif // MARKDOWN_PARSER_H

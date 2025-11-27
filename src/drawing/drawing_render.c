@@ -354,11 +354,21 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     HFONT oldFontMem = (HFONT)SelectObject(memDC, hFont);
     
     // Manually clear background
-    // Edit Mode: Alpha=5 to capture mouse click on background (1 might be too low for some hit-tests)
-    // Normal Mode: Alpha=0 for full transparency
+    // Edit Mode: Alpha=5 to capture mouse click on background
+    // Normal Mode with clickable regions: Alpha=1 to enable mouse hit-testing
+    // Normal Mode without clickable: Alpha=0 for full transparency
     int numPixels = rect.right * rect.bottom;
     DWORD* pixels = (DWORD*)pBits;
-    DWORD clearColor = CLOCK_EDIT_MODE ? 0x05000000 : 0x00000000;
+    
+    extern BOOL HasClickableRegions(void);
+    DWORD clearColor;
+    if (CLOCK_EDIT_MODE) {
+        clearColor = 0x05000000;  // Visible for editing
+    } else if (HasClickableRegions()) {
+        clearColor = 0x01000000;  // Minimal alpha for click detection
+    } else {
+        clearColor = 0x00000000;  // Full transparency
+    }
     
     // Simple loop is fast enough for small window
     for (int i = 0; i < numPixels; i++) {

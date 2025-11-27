@@ -373,11 +373,26 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, L
                 L"FontLicenseAgreementText"
             );
 
-            ParseMarkdownLinks(licenseText, &g_displayText, &g_links, &g_linkCount,
-                               &g_headings, &g_headingCount,
-                               &g_styles, &g_styleCount,
-                               &g_listItems, &g_listItemCount,
-                               &g_blockquotes, &g_blockquoteCount);
+            /* Wrap license text with <md> tags for markdown parsing */
+            size_t textLen = wcslen(licenseText);
+            wchar_t* wrappedText = (wchar_t*)malloc((textLen + 16) * sizeof(wchar_t));
+            if (wrappedText) {
+                wcscpy(wrappedText, L"<md>\n");
+                wcscat(wrappedText, licenseText);
+                wcscat(wrappedText, L"\n</md>");
+                ParseMarkdownLinks(wrappedText, &g_displayText, &g_links, &g_linkCount,
+                                   &g_headings, &g_headingCount,
+                                   &g_styles, &g_styleCount,
+                                   &g_listItems, &g_listItemCount,
+                                   &g_blockquotes, &g_blockquoteCount);
+                free(wrappedText);
+            } else {
+                ParseMarkdownLinks(licenseText, &g_displayText, &g_links, &g_linkCount,
+                                   &g_headings, &g_headingCount,
+                                   &g_styles, &g_styleCount,
+                                   &g_listItems, &g_listItemCount,
+                                   &g_blockquotes, &g_blockquoteCount);
+            }
 
             const wchar_t* agreeText = GetLocalizedString(NULL, L"Agree");
             const wchar_t* cancelText = GetLocalizedString(NULL, L"Cancel");

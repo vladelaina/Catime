@@ -96,6 +96,16 @@ static void ProcessMarkdownCharacter(
         return;
     }
 
+    /* Skip emoji and special symbols that commonly show as boxes
+     * Only check characters in problematic ranges, not CJK or common text */
+    if (ch >= 0x1F300 && ch <= 0x1FAFF) {  /* Emoji ranges */
+        WORD glyphIndex = 0;
+        DWORD result = GetGlyphIndicesW(hdc, &ch, 1, &glyphIndex, GGI_MARK_NONEXISTING_GLYPHS);
+        if (result != GDI_ERROR && glyphIndex == 0xFFFF) {
+            return;  /* Skip emoji without valid glyph */
+        }
+    }
+
     int linkIndex = -1;
     BOOL isLink = IsCharacterInLink(links, linkCount, position, &linkIndex);
 
@@ -135,10 +145,12 @@ static void ProcessMarkdownCharacter(
         currentFontWeight = FW_BOLD;
 
         switch (level) {
-            case 1: currentFontHeight = (int)(baseFontHeight * 1.6); break;
-            case 2: currentFontHeight = (int)(baseFontHeight * 1.4); break;
+            case 1: currentFontHeight = (int)(baseFontHeight * 1.5); break;
+            case 2: currentFontHeight = (int)(baseFontHeight * 1.35); break;
             case 3: currentFontHeight = (int)(baseFontHeight * 1.2); break;
             case 4: currentFontHeight = (int)(baseFontHeight * 1.1); break;
+            case 5: currentFontHeight = (int)(baseFontHeight * 1.0); break;
+            case 6: currentFontHeight = (int)(baseFontHeight * 0.9); break;
         }
     }
 
@@ -286,6 +298,25 @@ void RenderMarkdownText(HDC hdc, const wchar_t* displayText,
     int lastBlockquoteIndex = -1;
 
     for (int i = 0; i < textLen; i++) {
+        /* Check for horizontal rule marker (─── = \x2500\x2500\x2500) */
+        if (displayText[i] == L'\x2500' && i + 2 < textLen &&
+            displayText[i + 1] == L'\x2500' && displayText[i + 2] == L'\x2500') {
+            /* Draw horizontal line across full width */
+            int lineY = ctx.y + ctx.lineHeight / 2;
+            HPEN hPen = CreatePen(PS_SOLID, 1, normalColor);
+            HPEN hOldPen = (HPEN)SelectObject(hdc, hPen);
+            MoveToEx(hdc, drawRect.left, lineY, NULL);
+            LineTo(hdc, drawRect.right, lineY);
+            SelectObject(hdc, hOldPen);
+            DeleteObject(hPen);
+            
+            /* Move to next line */
+            ctx.y += ctx.lineHeight;
+            ctx.x = ctx.bounds.left;
+            i += 2;  /* Skip the other two marker chars */
+            continue;
+        }
+        
         ProcessMarkdownCharacter(
             hdc, displayText[i], i, &ctx,
             links, linkCount,
@@ -330,6 +361,15 @@ int CalculateMarkdownTextHeight(HDC hdc, const wchar_t* displayText,
     int lastBlockquoteIndex = -1;
 
     for (int i = 0; i < textLen; i++) {
+        /* Check for horizontal rule marker */
+        if (displayText[i] == L'\x2500' && i + 2 < textLen &&
+            displayText[i + 1] == L'\x2500' && displayText[i + 2] == L'\x2500') {
+            ctx.y += ctx.lineHeight;
+            ctx.x = ctx.bounds.left;
+            i += 2;
+            continue;
+        }
+        
         ProcessMarkdownCharacter(
             hdc, displayText[i], i, &ctx,
             NULL, 0,

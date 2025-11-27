@@ -25,7 +25,9 @@
 #include "window_procedure/window_drop_target.h"
 #include "plugin/plugin_data.h"
 #include "color/gradient.h"
+#include "markdown/markdown_interactive.h"
 #include <stdio.h>
+#include <windowsx.h>
 
 /* 50ms menu debounce prevents accidental double-clicks during menu interaction */
 #define MENU_DEBOUNCE_DELAY_MS 50
@@ -52,6 +54,23 @@ LRESULT HandleCreate(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT HandleSetCursor(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp;
+    
+    /* In non-edit mode, show hand cursor for clickable regions */
+    if (!CLOCK_EDIT_MODE && LOWORD(lp) == HTCLIENT) {
+        POINT pt;
+        GetCursorPos(&pt);
+        
+        RECT rcWindow;
+        GetWindowRect(hwnd, &rcWindow);
+        UpdateRegionPositions(rcWindow.left, rcWindow.top);
+        
+        const ClickableRegion* region = GetClickableRegionAt(pt);
+        if (region) {
+            SetCursor(LoadCursorW(NULL, IDC_HAND));
+            return TRUE;
+        }
+    }
+    
     if (CLOCK_EDIT_MODE && LOWORD(lp) == HTCLIENT) {
         SetCursor(LoadCursorW(NULL, IDC_ARROW));
         return TRUE;
@@ -64,7 +83,25 @@ LRESULT HandleSetCursor(HWND hwnd, WPARAM wp, LPARAM lp) {
 }
 
 LRESULT HandleLButtonDown(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
+    (void)wp;
+    
+    /* In non-edit mode, check for clickable region clicks */
+    if (!CLOCK_EDIT_MODE) {
+        POINT pt;
+        GetCursorPos(&pt);
+        
+        /* Update region positions */
+        RECT rcWindow;
+        GetWindowRect(hwnd, &rcWindow);
+        UpdateRegionPositions(rcWindow.left, rcWindow.top);
+        
+        const ClickableRegion* region = GetClickableRegionAt(pt);
+        if (region) {
+            HandleRegionClick(region, hwnd);
+            return 0;
+        }
+    }
+    
     StartDragWindow(hwnd);
     return 0;
 }

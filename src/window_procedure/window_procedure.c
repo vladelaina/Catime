@@ -19,11 +19,13 @@
 #include "../resource/resource.h"
 #include "log.h"
 #include <string.h>
+#include <windowsx.h>
 
 #include "window_procedure/window_drop_target.h"
 #include "color/color_parser.h"
 #include "plugin/plugin_manager.h"
 #include "plugin/plugin_data.h"
+#include "markdown/markdown_interactive.h"
 
 /* ============================================================================
  * External Declarations
@@ -126,6 +128,34 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         extern void RecreateTaskbarIcon(HWND, HINSTANCE);
         RecreateTaskbarIcon(hwnd, GetModuleHandle(NULL));
         return 0;
+    }
+    
+    /* Handle WM_MOUSEACTIVATE to prevent window activation in non-topmost mode */
+    if (msg == WM_MOUSEACTIVATE) {
+        extern BOOL CLOCK_WINDOW_TOPMOST;
+        if (!CLOCK_EDIT_MODE && !CLOCK_WINDOW_TOPMOST) {
+            return MA_NOACTIVATE;  /* Don't activate window on click */
+        }
+    }
+    
+    /* Handle WM_NCHITTEST for soft click-through mode */
+    if (msg == WM_NCHITTEST) {
+        extern BOOL IsSoftClickThroughEnabled(void);
+        if (IsSoftClickThroughEnabled() && !CLOCK_EDIT_MODE) {
+            POINT pt = { GET_X_LPARAM(lp), GET_Y_LPARAM(lp) };
+            
+            /* Update region positions based on current window position */
+            RECT rcWindow;
+            GetWindowRect(hwnd, &rcWindow);
+            UpdateRegionPositions(rcWindow.left, rcWindow.top);
+            
+            /* Check if cursor is over a clickable region */
+            const ClickableRegion* region = GetClickableRegionAt(pt);
+            if (region) {
+                return HTCLIENT;  /* Allow click */
+            }
+            return HTTRANSPARENT;  /* Pass through */
+        }
     }
     
     if (DispatchAppMessage(hwnd, msg)) {
