@@ -93,4 +93,12 @@ BOOL ToggleCheckboxInOutput(int index, HWND hwnd);
  */
 BOOL HasClickableRegions(void);
 
+/**
+ * @brief Fill clickable regions with minimal alpha for mouse hit-testing
+ * @param pixels Pixel buffer (ARGB format)
+ * @param width Buffer width
+ * @param height Buffer height
+ */
+void FillClickableRegionsAlpha(DWORD* pixels, int width, int height);
+
 #endif /* MARKDOWN_INTERACTIVE_H */

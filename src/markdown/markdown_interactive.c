@@ -140,6 +140,35 @@ BOOL HasClickableRegions(void) {
     return result;
 }
 
+void FillClickableRegionsAlpha(DWORD* pixels, int width, int height) {
+    if (!g_initialized || !pixels) return;
+    EnterCriticalSection(&g_interactiveCS);
+    
+    /* Fill each clickable region with minimal alpha so Windows sends mouse messages */
+    for (int i = 0; i < g_regionCount; i++) {
+        RECT* r = &g_regions[i].rect;
+        
+        /* Clamp to buffer bounds */
+        int left = r->left < 0 ? 0 : r->left;
+        int top = r->top < 0 ? 0 : r->top;
+        int right = r->right > width ? width : r->right;
+        int bottom = r->bottom > height ? height : r->bottom;
+        
+        /* Fill region pixels with minimal alpha if they're transparent */
+        for (int y = top; y < bottom; y++) {
+            for (int x = left; x < right; x++) {
+                DWORD* pixel = &pixels[y * width + x];
+                /* Only set alpha if pixel is fully transparent */
+                if ((*pixel & 0xFF000000) == 0) {
+                    *pixel = 0x01000000;  /* Minimal alpha, invisible */
+                }
+            }
+        }
+    }
+    
+    LeaveCriticalSection(&g_interactiveCS);
+}
+
 /* ============================================================================
  * Click Handling
  * ============================================================================ */

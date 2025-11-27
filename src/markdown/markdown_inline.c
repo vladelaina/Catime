@@ -174,6 +174,93 @@ int CountMarkdownBlockquotes(const wchar_t* input) {
  * Inline Element Extractors
  * ============================================================================ */
 
+/* Helper: Strip style markers from link text and record styles */
+static int StripStyleMarkersWithStyles(const wchar_t* src, int srcLen, wchar_t* dst, int dstSize,
+                                       ParseState* state, int basePos) {
+    int dstPos = 0;
+    int i = 0;
+    
+    /* Track active styles */
+    int boldItalicStart = -1, boldStart = -1, italicStart = -1, strikeStart = -1;
+    
+    while (i < srcLen && dstPos < dstSize - 1) {
+        /* Check for *** or ___ (bold-italic) */
+        if (i + 2 < srcLen && ((src[i] == L'*' && src[i+1] == L'*' && src[i+2] == L'*') || 
+                               (src[i] == L'_' && src[i+1] == L'_' && src[i+2] == L'_'))) {
+            if (boldItalicStart < 0) {
+                boldItalicStart = dstPos;
+            } else {
+                if (state && EnsureStyleCapacity(state)) {
+                    MarkdownStyle* style = &state->styles[state->styleCount];
+                    style->type = STYLE_BOLD_ITALIC;
+                    style->startPos = basePos + boldItalicStart;
+                    style->endPos = basePos + dstPos;
+                    state->styleCount++;
+                }
+                boldItalicStart = -1;
+            }
+            i += 3;
+            continue;
+        }
+        /* Check for ** or __ (bold) */
+        if (i + 1 < srcLen && ((src[i] == L'*' && src[i+1] == L'*') || 
+                               (src[i] == L'_' && src[i+1] == L'_'))) {
+            if (boldStart < 0) {
+                boldStart = dstPos;
+            } else {
+                if (state && EnsureStyleCapacity(state)) {
+                    MarkdownStyle* style = &state->styles[state->styleCount];
+                    style->type = STYLE_BOLD;
+                    style->startPos = basePos + boldStart;
+                    style->endPos = basePos + dstPos;
+                    state->styleCount++;
+                }
+                boldStart = -1;
+            }
+            i += 2;
+            continue;
+        }
+        /* Check for ~~ (strikethrough) */
+        if (i + 1 < srcLen && src[i] == L'~' && src[i+1] == L'~') {
+            if (strikeStart < 0) {
+                strikeStart = dstPos;
+            } else {
+                if (state && EnsureStyleCapacity(state)) {
+                    MarkdownStyle* style = &state->styles[state->styleCount];
+                    style->type = STYLE_STRIKETHROUGH;
+                    style->startPos = basePos + strikeStart;
+                    style->endPos = basePos + dstPos;
+                    state->styleCount++;
+                }
+                strikeStart = -1;
+            }
+            i += 2;
+            continue;
+        }
+        /* Check for single * or _ (italic) */
+        if ((src[i] == L'*' || src[i] == L'_') && 
+            (i + 1 >= srcLen || src[i+1] != src[i])) {
+            if (italicStart < 0) {
+                italicStart = dstPos;
+            } else {
+                if (state && EnsureStyleCapacity(state)) {
+                    MarkdownStyle* style = &state->styles[state->styleCount];
+                    style->type = STYLE_ITALIC;
+                    style->startPos = basePos + italicStart;
+                    style->endPos = basePos + dstPos;
+                    state->styleCount++;
+                }
+                italicStart = -1;
+            }
+            i++;
+            continue;
+        }
+        dst[dstPos++] = src[i++];
+    }
+    dst[dstPos] = L'\0';
+    return dstPos;
+}
+
 BOOL ExtractMarkdownLink(const wchar_t** src, ParseState* state) {
     if (!src || !*src || !state) return FALSE;
 
@@ -204,12 +291,17 @@ BOOL ExtractMarkdownLink(const wchar_t** src, ParseState* state) {
         actualUrlEnd++;
     }
 
-    int textLen = (int)(linkTextEnd - linkTextStart);
+    int rawTextLen = (int)(linkTextEnd - linkTextStart);
     int urlLen = (int)(actualUrlEnd - urlStart);
 
+    /* Strip style markers from link text and record styles */
+    wchar_t cleanText[512];
+    int cleanLen = StripStyleMarkersWithStyles(linkTextStart, rawTextLen, cleanText, 512,
+                                               state, state->currentPos);
+
     if (urlLen == 0) {
-        wcsncpy(state->displayText + state->currentPos, linkTextStart, textLen);
-        state->currentPos += textLen;
+        wcsncpy(state->displayText + state->currentPos, cleanText, cleanLen);
+        state->currentPos += cleanLen;
         *src = urlEnd + 1;
         return TRUE;
     }
@@ -218,9 +310,9 @@ BOOL ExtractMarkdownLink(const wchar_t** src, ParseState* state) {
 
     MarkdownLink* link = &state->links[state->linkCount];
 
-    if (!ExtractWideString(linkTextStart, linkTextEnd, &link->linkText)) {
-        return FALSE;
-    }
+    /* Store clean text (without markers) */
+    link->linkText = _wcsdup(cleanText);
+    if (!link->linkText) return FALSE;
 
     if (!ExtractWideString(urlStart, actualUrlEnd, &link->linkUrl)) {
         free(link->linkText);
@@ -228,11 +320,11 @@ BOOL ExtractMarkdownLink(const wchar_t** src, ParseState* state) {
     }
 
     link->startPos = state->currentPos;
-    link->endPos = state->currentPos + textLen;
+    link->endPos = state->currentPos + cleanLen;
     ZeroMemory(&link->linkRect, sizeof(RECT));
 
-    wcsncpy(state->displayText + state->currentPos, link->linkText, textLen);
-    state->currentPos += textLen;
+    wcsncpy(state->displayText + state->currentPos, cleanText, cleanLen);
+    state->currentPos += cleanLen;
     state->linkCount++;
 
     *src = urlEnd + 1;

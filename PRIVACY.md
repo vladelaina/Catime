@@ -18,39 +18,39 @@ Catime explicitly commits to:
 
 ### Locally Stored Data
 
-Catime only saves the following information locally:
+Catime only saves the following information locally in `%LOCALAPPDATA%\Catime\`:
 
 1. **Configuration Data**
-   Includes interface settings, timer configurations, and user preferences, stored in `%LOCALAPPDATA%\Catime\config.ini`.
+   Includes interface settings, timer configurations, and user preferences, stored in `config.ini`.
 
 2. **Log Information**
-   Saved in the `Catime_Logs.log` file, containing:
+   Saved in `Catime_Logs.log`, containing:
 
    * Basic system information (OS version, CPU architecture, memory capacity, etc.)
    * Program startup and operation records
    * Error and warning logs
-     *All logs are used for local troubleshooting only and are **never** uploaded.*
+   
+   *All logs are used for local troubleshooting only and are **never** uploaded.*
 
-3. **Recent Files List**
-   Stores paths of recently opened files for quick access.
+3. **Resource Files**
+   Optional user resources stored in `resources\` subdirectory:
+   
+   * `fonts\` - Custom font files
+   * `animations\` - Tray icon animations
+   * `audio\` - Notification sounds
+   * `plugins\` - Plugin output files
 
-4. **Secure Credentials**
-   If you use the Data Monitor feature and provide access tokens (e.g., GitHub Token), these are stored securely using the **Windows Credential Manager**. They are encrypted by the operating system and are **never** saved in plain text configuration files.
+4. **Plugin Data**
+   If you use the plugin feature, plugins may read/write data to `resources\plugins\output.txt`. Plugins run locally and Catime does **not** transmit any plugin data over the network.
 
 ### Network Access Information
 
 Catime only accesses the internet in the following circumstances:
 
 * **Update Checking**
-  When you manually check for updates or enable the automatic update feature, the program connects to the GitHub API:
+  Catime automatically checks for updates on startup and also supports manual update checking. The program connects to the GitHub API:
   `https://api.github.com/repos/vladelaina/Catime/releases/latest`
   It only sends basic HTTP requests and the user agent string `"Catime Update Checker"`, **without any personal data**.
-
-* **Data Monitor**
-  If you configure a monitor (e.g., GitHub Stars), the application connects directly to the respective service API (e.g., `api.github.com`) to fetch data.
-  * Requests are made directly from your computer to the service provider.
-  * **All network communications are encrypted using HTTPS (TLS/SSL).**
-  * Authentication tokens are used solely for these requests and are never sent to any other third-party servers.
 
 ## Data Protection and Deletion
 
@@ -74,7 +74,7 @@ If there are significant changes, we will post notifications within the applicat
 
 If you have questions or suggestions about this privacy policy, please contact us through the GitHub project page.
 
-> Last Updated: November 23, 2025
+> Last Updated: November 28, 2025
 
 
 

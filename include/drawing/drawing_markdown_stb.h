@@ -24,6 +24,7 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                        MarkdownLink* links, int linkCount,
                        MarkdownHeading* headings, int headingCount,
                        MarkdownStyle* styles, int styleCount,
+                       MarkdownBlockquote* blockquotes, int blockquoteCount,
                        COLORREF color, int fontSize, float fontScale, int gradientMode);
 
 #endif // DRAWING_MARKDOWN_STB_H

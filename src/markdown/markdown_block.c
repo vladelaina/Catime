@@ -155,6 +155,7 @@ BOOL ParseList(const wchar_t** src, ParseState* state, wchar_t** dest,
     MarkdownListItem* listItem = &state->listItems[state->listItemCount];
     listItem->startPos = state->currentPos;
     listItem->indentLevel = indentLevel;
+    listItem->isChecked = FALSE;
     
     p = *src;
     wchar_t replacement[16] = {0};
@@ -178,6 +179,7 @@ BOOL ParseList(const wchar_t** src, ParseState* state, wchar_t** dest,
         // Checked task: "- [x] "
         wcscpy(replacement, L"\x25A0 ");
         advanceSrc = 6;
+        listItem->isChecked = TRUE;  /* Mark as completed */
     } else {
         // Normal bullet
         wcscpy(replacement, BULLET_POINT);
@@ -277,12 +279,19 @@ BOOL ParseBlockquote(const wchar_t** src, ParseState* state, wchar_t** dest) {
                     isAlert = TRUE;
                     
                     *src = alertEnd + 1;
+                    // Add newline after title so content appears on next line
+                    *(*dest)++ = L'\n';
+                    state->currentPos++;
+                    
+                    // Skip whitespace after [!TYPE]
+                    while (**src == L' ') (*src)++;
                     if (**src == L'\n' || **src == L'\r') {
                         (*src)++;
                         if (**src == L'\n' || **src == L'\r') (*src)++;
-                        if (**src == L'>' && *(*src + 1) == L' ') {
-                            *src += 2;
-                        }
+                    }
+                    // Skip next line's '> ' prefix
+                    if (**src == L'>' && *(*src + 1) == L' ') {
+                        *src += 2;
                     }
                     break;
                 }

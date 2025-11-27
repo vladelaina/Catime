@@ -138,7 +138,8 @@ static BOOL MeasureTextMarkdown(const wchar_t* text, const RenderContext* ctx, S
 static BOOL RenderTextMarkdown(HDC hdc, const RECT* rect, const wchar_t* text, const RenderContext* ctx, BOOL editMode, void* bits,
                               MarkdownLink* links, int linkCount,
                               MarkdownHeading* headings, int headingCount,
-                              MarkdownStyle* styles, int styleCount) {
+                              MarkdownStyle* styles, int styleCount,
+                              MarkdownBlockquote* blockquotes, int blockquoteCount) {
     // Use STB Truetype for high-quality rendering
     char absoluteFontPath[MAX_PATH];
     
@@ -149,6 +150,7 @@ static BOOL RenderTextMarkdown(HDC hdc, const RECT* rect, const wchar_t* text, c
                              links, linkCount,
                              headings, headingCount,
                              styles, styleCount,
+                             blockquotes, blockquoteCount,
                              ctx->textColor, 
                              (int)(CLOCK_BASE_FONT_SIZE * ctx->fontScaleFactor), 
                              1.0f,
@@ -259,31 +261,49 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     // Check for plugin data
     wchar_t pluginText[TIME_TEXT_MAX_LEN] = {0};
     if (PluginData_GetText(pluginText, TIME_TEXT_MAX_LEN)) {
-        // Check for <catime></catime> tag in plugin text
-        wchar_t* catimeStart = wcsstr(pluginText, L"<catime>");
-        wchar_t* catimeEnd = wcsstr(pluginText, L"</catime>");
+        // Get current time text once
+        wchar_t savedTime[256];
+        GetTimeText(savedTime, 256);
         
-        if (catimeStart && catimeEnd && catimeEnd > catimeStart) {
-            // Replace <catime></catime> with current time text
-            // Build: [before tag] + [time] + [after tag]
-            size_t beforeLen = catimeStart - pluginText;
-            const wchar_t* afterStart = catimeEnd + 9;  // Skip "</catime>"
+        // Replace ALL <catime></catime> tags with current time text
+        wchar_t result[TIME_TEXT_MAX_LEN] = {0};
+        wchar_t* src = pluginText;
+        wchar_t* dst = result;
+        size_t remaining = TIME_TEXT_MAX_LEN - 1;
+        
+        while (*src && remaining > 0) {
+            wchar_t* tagStart = wcsstr(src, L"<catime>");
+            wchar_t* tagEnd = tagStart ? wcsstr(tagStart, L"</catime>") : NULL;
             
-            // Copy text before tag
-            wcsncpy(timeText, pluginText, beforeLen);
-            timeText[beforeLen] = L'\0';
-            
-            // Append time (already in timeText from GetTimeText, so save it first)
-            wchar_t savedTime[256];
-            GetTimeText(savedTime, 256);
-            wcscat(timeText, savedTime);
-            
-            // Append text after tag
-            wcscat(timeText, afterStart);
-        } else {
-            // No <catime> tag, use plugin text as-is
-            wcscpy(timeText, pluginText);
+            if (tagStart && tagEnd && tagEnd > tagStart) {
+                // Copy text before tag
+                size_t beforeLen = tagStart - src;
+                if (beforeLen > remaining) beforeLen = remaining;
+                wcsncpy(dst, src, beforeLen);
+                dst += beforeLen;
+                remaining -= beforeLen;
+                
+                // Insert time text
+                size_t timeLen = wcslen(savedTime);
+                if (timeLen > remaining) timeLen = remaining;
+                wcsncpy(dst, savedTime, timeLen);
+                dst += timeLen;
+                remaining -= timeLen;
+                
+                // Move past </catime>
+                src = tagEnd + 9;
+            } else {
+                // No more tags, copy rest of string
+                size_t restLen = wcslen(src);
+                if (restLen > remaining) restLen = remaining;
+                wcsncpy(dst, src, restLen);
+                dst += restLen;
+                break;
+            }
         }
+        *dst = L'\0';
+        
+        wcscpy(timeText, result);
     }
 
     if (wcslen(timeText) == 0) {
@@ -355,20 +375,10 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     
     // Manually clear background
     // Edit Mode: Alpha=5 to capture mouse click on background
-    // Normal Mode with clickable regions: Alpha=1 to enable mouse hit-testing
-    // Normal Mode without clickable: Alpha=0 for full transparency
+    // Normal Mode: Alpha=0 for full transparency (clickable regions filled later)
     int numPixels = rect.right * rect.bottom;
     DWORD* pixels = (DWORD*)pBits;
-    
-    extern BOOL HasClickableRegions(void);
-    DWORD clearColor;
-    if (CLOCK_EDIT_MODE) {
-        clearColor = 0x05000000;  // Visible for editing
-    } else if (HasClickableRegions()) {
-        clearColor = 0x01000000;  // Minimal alpha for click detection
-    } else {
-        clearColor = 0x00000000;  // Full transparency
-    }
+    DWORD clearColor = CLOCK_EDIT_MODE ? 0x05000000 : 0x00000000;
     
     // Simple loop is fast enough for small window
     for (int i = 0; i < numPixels; i++) {
@@ -382,16 +392,23 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
         
         if (isMarkdown) {
             usedSTB = RenderTextMarkdown(memDC, &rect, textToRender, &ctx, CLOCK_EDIT_MODE, pBits,
-                                        links, linkCount, headings, headingCount, styles, styleCount);
+                                        links, linkCount, headings, headingCount, styles, styleCount,
+                                        blockquotes, blockquoteCount);
         } else {
              // Fallback render plain text if markdown failed (treat as markdown with no metadata)
              usedSTB = RenderTextMarkdown(memDC, &rect, textToRender, &ctx, CLOCK_EDIT_MODE, pBits,
-                                         NULL, 0, NULL, 0, NULL, 0);
+                                         NULL, 0, NULL, 0, NULL, 0, NULL, 0);
         }
         
         // If STB was not used (e.g. font load failure), we might need to fix alpha for GDI text
         if (!usedSTB && CLOCK_EDIT_MODE) {
              FixAlphaChannel(pBits, rect.right, rect.bottom);
+        }
+        
+        // Fill clickable regions with minimal alpha for mouse hit-testing (non-edit mode only)
+        if (!CLOCK_EDIT_MODE) {
+            extern void FillClickableRegionsAlpha(DWORD* pixels, int width, int height);
+            FillClickableRegionsAlpha(pixels, rect.right, rect.bottom);
         }
     } else if (CLOCK_EDIT_MODE) {
         FixAlphaChannel(pBits, rect.right, rect.bottom);

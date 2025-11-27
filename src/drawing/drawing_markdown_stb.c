@@ -184,10 +184,31 @@ BOOL MeasureMarkdownSTB(const wchar_t* text,
     return TRUE;
 }
 
+/* Alert type colors (GitHub style) */
+static const struct {
+    BlockquoteAlertType type;
+    COLORREF color;
+    const wchar_t* icon;
+} g_alertColors[] = {
+    {BLOCKQUOTE_NOTE,      RGB(31, 136, 229),  L"\x24D8 "},  /* ⓘ Blue */
+    {BLOCKQUOTE_TIP,       RGB(26, 127, 55),   L"\x1F4A1 "}, /* 💡 Green */
+    {BLOCKQUOTE_IMPORTANT, RGB(130, 80, 223),  L"\x2139 "},  /* ℹ Purple */
+    {BLOCKQUOTE_WARNING,   RGB(191, 135, 0),   L"\x26A0 "},  /* ⚠ Yellow */
+    {BLOCKQUOTE_CAUTION,   RGB(207, 34, 46),   L"\x26D4 "},  /* ⛔ Red */
+};
+
+static COLORREF GetAlertColor(BlockquoteAlertType type) {
+    for (int i = 0; i < sizeof(g_alertColors)/sizeof(g_alertColors[0]); i++) {
+        if (g_alertColors[i].type == type) return g_alertColors[i].color;
+    }
+    return RGB(128, 128, 128);  /* Default gray for normal blockquote */
+}
+
 void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                        MarkdownLink* links, int linkCount,
                        MarkdownHeading* headings, int headingCount,
                        MarkdownStyle* styles, int styleCount,
+                       MarkdownBlockquote* blockquotes, int blockquoteCount,
                        COLORREF color, int fontSize, float fontScale, int gradientMode) {
     if (!IsFontLoadedSTB() || !text || !bits) return;
 
@@ -222,6 +243,7 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
     int curHeadingIdx = 0;
     int curLinkIdx = 0;
     int curStyleIdx = 0;
+    int curBlockquoteIdx = 0;
 
     /* Calculate global time offset for animated gradient once per frame */
     int timeOffset = 0;
@@ -329,6 +351,55 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                 continue;
             }
 
+            // Check if this line is inside a blockquote
+            while (curBlockquoteIdx < blockquoteCount && 
+                   (int)currentLineStart >= blockquotes[curBlockquoteIdx].endPos) {
+                curBlockquoteIdx++;
+            }
+            
+            BlockquoteAlertType activeAlertType = BLOCKQUOTE_NORMAL;
+            BOOL inBlockquote = FALSE;
+            if (curBlockquoteIdx < blockquoteCount && 
+                (int)currentLineStart >= blockquotes[curBlockquoteIdx].startPos) {
+                inBlockquote = TRUE;
+                activeAlertType = blockquotes[curBlockquoteIdx].alertType;
+            }
+            
+            // Draw left colored bar for alert blockquotes only (GitHub style)
+            if (inBlockquote && activeAlertType != BLOCKQUOTE_NORMAL) {
+                COLORREF barColor = GetAlertColor(activeAlertType);
+                DWORD barColorDW = 0xFF000000 | (GetRValue(barColor) << 16) | 
+                                   (GetGValue(barColor) << 8) | GetBValue(barColor);
+                DWORD* pixels = (DWORD*)bits;
+                
+                int barX = blockLeftX - 8;  // 8 pixels left of text
+                int barWidth = 3;           // 3 pixels wide
+                
+                for (int y = currentY; y < currentY + lineMaxHeight && y < height; y++) {
+                    if (y >= 0) {
+                        for (int x = barX; x < barX + barWidth && x >= 0 && x < width; x++) {
+                            pixels[y * width + x] = barColorDW;
+                        }
+                    }
+                }
+            }
+            
+            // Check if this is an alert title line (first line with "NOTE:", etc.)
+            BOOL isAlertTitleLine = FALSE;
+            if (inBlockquote && activeAlertType != BLOCKQUOTE_NORMAL) {
+                const wchar_t* lineText = &text[currentLineStart];
+                if (wcsstr(lineText, L"NOTE:") == lineText ||
+                    wcsstr(lineText, L"TIP:") == lineText ||
+                    wcsstr(lineText, L"IMPORTANT:") == lineText ||
+                    wcsstr(lineText, L"WARNING:") == lineText ||
+                    wcsstr(lineText, L"CAUTION:") == lineText) {
+                    isAlertTitleLine = TRUE;
+                }
+            }
+            
+            // Check if this is a completed todo line (starts with ■)
+            BOOL isCompletedTodo = (text[currentLineStart] == L'\x25A0');
+            
             // 2. Render this line
             for (size_t j = currentLineStart; j < i; j++) {
                 if (text[j] == L'\r') continue;
@@ -343,6 +414,11 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                 if (curHeadingIdx < headingCount && j >= headings[curHeadingIdx].startPos) {
                     scale = GetScaleForHeading(headings[curHeadingIdx].level, baseScale);
                     if (fallbackLoaded) fallbackScale = GetScaleForHeading(headings[curHeadingIdx].level, fallbackBaseScale);
+                }
+                
+                // Apply alert color only to title line (NOTE:, TIP:, etc.)
+                if (isAlertTitleLine) {
+                    drawColor = GetAlertColor(activeAlertType);
                 }
 
                 // Link - track region for click detection
@@ -364,9 +440,15 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                 }
                 
                 // Style handling
-                BOOL isBold = FALSE;
+                BOOL isBold = isAlertTitleLine;  // Alert title is bold
                 BOOL isItalic = FALSE;
                 BOOL isStrikethrough = FALSE;
+                
+                // Apply strikethrough for completed todo (skip checkbox symbol itself)
+                if (isCompletedTodo && j > currentLineStart) {
+                    isStrikethrough = TRUE;
+                }
+                
                 while (curStyleIdx < styleCount && j >= styles[curStyleIdx].endPos) curStyleIdx++;
                 if (curStyleIdx < styleCount && j >= styles[curStyleIdx].startPos) {
                     MarkdownStyleType styleType = styles[curStyleIdx].type;

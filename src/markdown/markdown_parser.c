@@ -224,6 +224,22 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
             continue;
         }
         
+        /* Escape character handling - \* \_ \~ etc. */
+        if (*src == L'\\' && *(src + 1)) {
+            wchar_t next = *(src + 1);
+            /* Check if next char is a special markdown character */
+            if (next == L'*' || next == L'_' || next == L'~' || next == L'#' ||
+                next == L'>' || next == L'-' || next == L'+' || next == L'[' ||
+                next == L']' || next == L'(' || next == L')' || next == L'\\' ||
+                next == L'`' || next == L'!' || next == L'|') {
+                src++;  /* Skip backslash */
+                *dest++ = *src++;  /* Copy the escaped character */
+                state.currentPos++;
+                atLineStart = FALSE;
+                continue;
+            }
+        }
+        
         /* Line break handling */
         if (*src == L'\n' || *src == L'\r') {
             if (inListItem && currentListItemIndex >= 0) {

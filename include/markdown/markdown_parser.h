@@ -60,6 +60,7 @@ typedef struct {
     int startPos;
     int endPos;
     int indentLevel;
+    BOOL isChecked;  /* TRUE if this is a completed todo (- [x]) */
 } MarkdownListItem;
 
 /**
