@@ -99,7 +99,7 @@ static void UpdatePreviewNotificationText(HWND hwndDlg, const wchar_t* newText) 
         wchar_t* newBuffer = (wchar_t*)realloc(data->messageText, newLen * sizeof(wchar_t));
         if (newBuffer) {
             data->messageText = newBuffer;
-            wcscpy(data->messageText, newText);
+            wcscpy_s(data->messageText, newLen, newText);
             InvalidateRect(g_hwndPreviewNotification, NULL, TRUE);
             UpdateWindow(g_hwndPreviewNotification);
         }
@@ -341,7 +341,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                     GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, newText, sizeof(newText)/sizeof(wchar_t));
                     
                     if (newText[0] == L'\0') {
-                        wcscpy(newText, L" ");
+                        wcscpy_s(newText, 256, L" ");
                     }
                     UpdatePreviewNotificationText(hwndDlg, newText);
                 }

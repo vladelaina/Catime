@@ -43,7 +43,7 @@ BOOL GetFontsFolderW(wchar_t* outW, size_t size, BOOL ensureCreate) {
     
     /* Append fonts subfolder path */
     if (wcslen(outW) + 1 + wcslen(L"resources\\fonts") + 1 >= size) return FALSE;
-    wcscat(outW, L"\\resources\\fonts");
+    wcscat_s(outW, size, L"\\resources\\fonts");
     
     /* Create directory if requested */
     if (ensureCreate) {

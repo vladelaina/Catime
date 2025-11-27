@@ -305,7 +305,7 @@ void PluginData_SetText(const wchar_t* text) {
     }
     
     if (g_pluginDisplayText) {
-        wcscpy(g_pluginDisplayText, text);
+        wcscpy_s(g_pluginDisplayText, g_pluginDisplayTextLen, text);
         g_hasPluginData = TRUE;
         g_pluginModeActive = TRUE;
     }

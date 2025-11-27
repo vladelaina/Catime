@@ -196,7 +196,7 @@ static void ProcessMarkdownCharacter(
             lf.lfItalic = currentItalic;
 
             if (currentMonospace) {
-                wcscpy(lf.lfFaceName, L"Consolas");
+                wcscpy_s(lf.lfFaceName, LF_FACESIZE, L"Consolas");
             }
 
             *hCurrentFont = CreateFontIndirect(&lf);

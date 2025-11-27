@@ -59,7 +59,7 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
         size_t len = wcslen(input);
         *displayText = (wchar_t*)malloc((len + 1) * sizeof(wchar_t));
         if (!*displayText) return FALSE;
-        wcscpy(*displayText, input);
+        wcscpy_s(*displayText, len + 1, input);
         return TRUE;  // Success but no markdown elements
     }
     
@@ -266,7 +266,7 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
 
     // Append text after closing tag (plain text, no markdown parsing)
     if (afterLen > 0) {
-        wcscpy(dest, afterStart);
+        wcsncpy(dest, afterStart, afterLen);
         dest += afterLen;
     }
     *dest = L'\0';

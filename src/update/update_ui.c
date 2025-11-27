@@ -93,11 +93,12 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                 if (notesW && notesW[0]) {
                     /* Wrap release notes with <md> tags for markdown parsing */
                     size_t notesLen = wcslen(notesW);
-                    wchar_t* wrappedNotes = (wchar_t*)malloc((notesLen + 16) * sizeof(wchar_t));
+                    size_t bufSize = notesLen + 16;
+                    wchar_t* wrappedNotes = (wchar_t*)malloc(bufSize * sizeof(wchar_t));
                     if (wrappedNotes) {
-                        wcscpy(wrappedNotes, L"<md>\n");
-                        wcscat(wrappedNotes, notesW);
-                        wcscat(wrappedNotes, L"\n</md>");
+                        wcscpy_s(wrappedNotes, bufSize, L"<md>\n");
+                        wcscat_s(wrappedNotes, bufSize, notesW);
+                        wcscat_s(wrappedNotes, bufSize, L"\n</md>");
                         ParseMarkdownLinks(wrappedNotes, &g_notesDisplayText, &g_notesLinks, &g_notesLinkCount,
                                            &g_notesHeadings, &g_notesHeadingCount,
                                            &g_notesStyles, &g_notesStyleCount,

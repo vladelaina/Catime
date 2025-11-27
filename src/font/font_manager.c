@@ -94,7 +94,7 @@ BOOL LoadFontFromFile(const char* fontFilePath) {
     }
     
     /* Save current loaded font */
-    wcscpy(CURRENT_LOADED_FONT_PATH, wFontPath);
+    wcscpy_s(CURRENT_LOADED_FONT_PATH, MAX_PATH, wFontPath);
     FONT_RESOURCE_LOADED = TRUE;
     return TRUE;
 }

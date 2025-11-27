@@ -173,16 +173,16 @@ BOOL ParseList(const wchar_t** src, ParseState* state, wchar_t** dest,
         swprintf(replacement, 16, L"%d. ", num);
     } else if (*p == L'-' && p[1] == L' ' && p[2] == L'[' && p[3] == L' ' && p[4] == L']' && p[5] == L' ') {
         // Unchecked task: "- [ ] "
-        wcscpy(replacement, L"\x25A1 ");
+        wcscpy_s(replacement, 16, L"\x25A1 ");
         advanceSrc = 6;
     } else if (*p == L'-' && p[1] == L' ' && p[2] == L'[' && (p[3] == L'x' || p[3] == L'X') && p[4] == L']' && p[5] == L' ') {
         // Checked task: "- [x] "
-        wcscpy(replacement, L"\x25A0 ");
+        wcscpy_s(replacement, 16, L"\x25A0 ");
         advanceSrc = 6;
         listItem->isChecked = TRUE;  /* Mark as completed */
     } else {
         // Normal bullet
-        wcscpy(replacement, BULLET_POINT);
+        wcscpy_s(replacement, 16, BULLET_POINT);
         advanceSrc = 2;
     }
     

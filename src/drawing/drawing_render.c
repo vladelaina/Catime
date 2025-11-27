@@ -110,7 +110,7 @@ static BOOL ResolveFontPath(const RenderContext* ctx, char* outPath) {
         // If it doesn't contain a drive separator, assume it's a filename in fonts folder
         if (!strchr(outPath, ':')) {
             char simpleName[MAX_PATH];
-            strcpy(simpleName, outPath);
+            strcpy_s(simpleName, MAX_PATH, outPath);
             return BuildFullFontPath(simpleName, outPath, MAX_PATH);
         }
         return TRUE;
@@ -303,7 +303,7 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
         }
         *dst = L'\0';
         
-        wcscpy(timeText, result);
+        wcscpy_s(timeText, TIME_TEXT_MAX_LEN, result);
     }
 
     if (wcslen(timeText) == 0) {

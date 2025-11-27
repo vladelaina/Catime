@@ -90,7 +90,7 @@ BOOL ExtractDirectoryW(const wchar_t* path, wchar_t* dir, size_t dirSize) {
     if (separator) {
         *separator = L'\0';
     } else {
-        wcscpy(dir, L".");
+        wcscpy_s(dir, dirSize, L".");
     }
     
     return TRUE;
@@ -115,7 +115,7 @@ BOOL PathJoinU8(char* base, size_t baseSize, const char* component) {
     
     /* Append component */
     if (len + strlen(component) >= baseSize) return FALSE;
-    strcat(base, component);
+    strcat_s(base, baseSize, component);
 
     return TRUE;
 }
@@ -135,7 +135,7 @@ BOOL PathJoinW(wchar_t* base, size_t baseSize, const wchar_t* component) {
     
     /* Append component */
     if (len + wcslen(component) >= baseSize) return FALSE;
-    wcscat(base, component);
+    wcscat_s(base, baseSize, component);
 
     return TRUE;
 }

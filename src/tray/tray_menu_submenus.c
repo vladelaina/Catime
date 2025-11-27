@@ -256,7 +256,7 @@ void BuildColorSubmenu(HMENU hMenu) {
         if (gradType != GRADIENT_NONE) {
             const GradientInfo* info = GetGradientInfo(gradType);
             if (info && info->displayName) {
-                wcscpy(hexColorW, info->displayName);
+                wcscpy_s(hexColorW, 32, info->displayName);
             } else {
                 Utf8ToWide(hexColor, hexColorW, 32);
             }

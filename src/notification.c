@@ -190,7 +190,7 @@ void ShowModalNotification(HWND hwnd, const wchar_t* message) {
     }
     
     params->hwnd = hwnd;
-    wcscpy(params->message, message);
+    wcscpy_s(params->message, messageLen, message);
     
     HANDLE hThread = CreateThread(NULL, 0, ShowModalDialogThread, params, 0, NULL);
     
@@ -236,7 +236,7 @@ void ShowToastNotificationEx(HWND hwnd, const wchar_t* message, BOOL isPreview) 
         FallbackToTrayNotification(hwnd, message);
         return;
     }
-    wcscpy(notifData->messageText, message);
+    wcscpy_s(notifData->messageText, messageLen, message);
     
     HDC hdc = GetDC(hwnd);
     HFONT contentFont = CreateNotificationFont(NOTIFICATION_CONTENT_FONT_SIZE, FW_NORMAL);

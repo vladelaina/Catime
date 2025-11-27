@@ -354,7 +354,7 @@ static BOOL HandlePomodoroCompletion(HWND hwnd) {
     if (completedIndex < g_AppConfig.pomodoro.times_count) {
         FormatPomodoroTime(g_AppConfig.pomodoro.times[completedIndex], timeStr, sizeof(timeStr)/sizeof(wchar_t));
     } else {
-        wcscpy(timeStr, L"?");
+        wcscpy_s(timeStr, 32, L"?");
     }
     
     if (!AdvancePomodoroState()) {

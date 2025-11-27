@@ -375,11 +375,12 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, L
 
             /* Wrap license text with <md> tags for markdown parsing */
             size_t textLen = wcslen(licenseText);
-            wchar_t* wrappedText = (wchar_t*)malloc((textLen + 16) * sizeof(wchar_t));
+            size_t bufSize = textLen + 16;
+            wchar_t* wrappedText = (wchar_t*)malloc(bufSize * sizeof(wchar_t));
             if (wrappedText) {
-                wcscpy(wrappedText, L"<md>\n");
-                wcscat(wrappedText, licenseText);
-                wcscat(wrappedText, L"\n</md>");
+                wcscpy_s(wrappedText, bufSize, L"<md>\n");
+                wcscat_s(wrappedText, bufSize, licenseText);
+                wcscat_s(wrappedText, bufSize, L"\n</md>");
                 ParseMarkdownLinks(wrappedText, &g_displayText, &g_links, &g_linkCount,
                                    &g_headings, &g_headingCount,
                                    &g_styles, &g_styleCount,
@@ -560,12 +561,4 @@ INT_PTR ShowFontLicenseDialog(HWND hwndParent) {
                      FontLicenseDlgProc);
 }
 
-/* ============================================================================
- * CLI Help Dialog - Implemented in cli.c
- * ============================================================================ */
-
-/* 
- * ShowCliHelpDialog - Implemented in cli.c
- * Kept in CLI module for better cohesion.
- */
 

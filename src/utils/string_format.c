@@ -19,7 +19,7 @@ void TruncateFileName(const wchar_t* fileName, wchar_t* truncated, size_t maxLen
     
     size_t nameLen = wcslen(fileName);
     if (nameLen <= maxLen) {
-        wcscpy(truncated, fileName);
+        wcscpy_s(truncated, maxLen + 1, fileName);
         return;
     }
     
@@ -38,8 +38,8 @@ void TruncateFileName(const wchar_t* fileName, wchar_t* truncated, size_t maxLen
     if (nameNoExtLen <= 27) {
         wcsncpy(truncated, fileName, maxLen - extLen - 3);
         truncated[maxLen - extLen - 3] = L'\0';
-        wcscat(truncated, L"...");
-        wcscat(truncated, ext);
+        wcscat_s(truncated, maxLen + 1, L"...");
+        wcscat_s(truncated, maxLen + 1, ext);
         return;
     }
     
@@ -48,13 +48,13 @@ void TruncateFileName(const wchar_t* fileName, wchar_t* truncated, size_t maxLen
     wcsncpy(buffer, fileName, 12);
     buffer[12] = L'\0';
     
-    wcscat(buffer, L"...");
+    wcscat_s(buffer, MAX_PATH, L"...");
     
     wcsncat(buffer, fileName + nameNoExtLen - 12, 12);
     
-    wcscat(buffer, ext);
+    wcscat_s(buffer, MAX_PATH, ext);
     
-    wcscpy(truncated, buffer);
+    wcscpy_s(truncated, maxLen + 1, buffer);
 }
 
 /**
