@@ -349,6 +349,8 @@ LRESULT HandleAppReregisterHotkeys(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT HandleAnimationPreviewLoaded(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)hwnd; (void)wp; (void)lp;
+    /* Update tray icon after preview animation is loaded */
+    TrayAnimation_HandleUpdateMessage();
     return 0;
 }
 

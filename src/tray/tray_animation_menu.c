@@ -141,6 +141,12 @@ void BuildAnimationMenu(HMENU hMenu, const char* currentAnimationName) {
         flags |= MF_CHECKED;
     }
     AppendMenuW(hMenu, flags, CLOCK_IDM_ANIMATIONS_USE_MEM, L"Memory %");
+
+    flags = MF_STRING;
+    if (currentAnimationName && _stricmp(currentAnimationName, "__none__") == 0) {
+        flags |= MF_CHECKED;
+    }
+    AppendMenuW(hMenu, flags, CLOCK_IDM_ANIMATIONS_USE_NONE, L"None");
     
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
     
@@ -199,6 +205,10 @@ BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id) {
 
     if (id == CLOCK_IDM_ANIMATIONS_USE_MEM) {
         return SetCurrentAnimationName("__mem__");
+    }
+
+    if (id == CLOCK_IDM_ANIMATIONS_USE_NONE) {
+        return SetCurrentAnimationName("__none__");
     }
 
     if (id >= CLOCK_IDM_ANIMATIONS_BASE && id < CLOCK_IDM_ANIMATIONS_END) {

@@ -356,6 +356,7 @@
 #define CLOCK_IDM_ANIMATIONS_USE_LOGO 2202   /**< Use logo animation */
 #define CLOCK_IDM_ANIMATIONS_USE_CPU 2203    /**< Use CPU animation */
 #define CLOCK_IDM_ANIMATIONS_USE_MEM 2204    /**< Use memory animation */
+#define CLOCK_IDM_ANIMATIONS_USE_NONE 2205   /**< Use transparent/hidden icon */
 #define CLOCK_IDM_ANIM_SPEED_MEMORY 2210     /**< Memory-based animation speed */
 #define CLOCK_IDM_ANIM_SPEED_CPU 2211        /**< CPU-based animation speed */
 #define CLOCK_IDM_ANIM_SPEED_TIMER 2212      /**< Timer-based animation speed */

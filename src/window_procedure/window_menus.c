@@ -44,6 +44,11 @@ BOOL DispatchMenuPreview(HWND hwnd, UINT menuId) {
         return TRUE;
     }
 
+    if (menuId == CLOCK_IDM_ANIMATIONS_USE_NONE) {
+        StartAnimationPreview("__none__");
+        return TRUE;
+    }
+
     if (menuId >= CLOCK_IDM_ANIMATIONS_BASE && menuId < CLOCK_IDM_ANIMATIONS_END) {
         char animName[MAX_PATH];
         if (GetAnimationNameFromMenuId(menuId, animName, sizeof(animName))) {

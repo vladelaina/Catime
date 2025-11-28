@@ -62,6 +62,7 @@ AnimationSourceType DetectAnimationSourceType(const char* name) {
     if (_stricmp(name, "__logo__") == 0) return ANIM_SOURCE_LOGO;
     if (_stricmp(name, "__cpu__") == 0) return ANIM_SOURCE_PERCENT;
     if (_stricmp(name, "__mem__") == 0) return ANIM_SOURCE_PERCENT;
+    if (_stricmp(name, "__none__") == 0) return ANIM_SOURCE_UNKNOWN; /* Transparent icon, handled specially */
     if (EndsWithIgnoreCase(name, ".gif")) return ANIM_SOURCE_GIF;
     if (EndsWithIgnoreCase(name, ".webp")) return ANIM_SOURCE_WEBP;
     if (EndsWithIgnoreCase(name, ".ico") || EndsWithIgnoreCase(name, ".png") ||
@@ -225,6 +226,11 @@ BOOL IsValidAnimationSource(const char* name) {
         return TRUE;
     }
     
+    /* __none__ is always valid */
+    if (_stricmp(name, "__none__") == 0) {
+        return TRUE;
+    }
+    
     char fullPath[MAX_PATH] = {0};
     BuildAnimationPath(name, fullPath, sizeof(fullPath));
     
@@ -291,6 +297,13 @@ BOOL LoadAnimationByName(const char* name, LoadedAnimation* anim,
     
     if (type == ANIM_SOURCE_PERCENT) {
         /* Percent icons are generated dynamically, not pre-loaded */
+        anim->count = 0;
+        anim->isAnimated = FALSE;
+        return TRUE;
+    }
+    
+    /* Handle __none__ (transparent icon) - no frames needed */
+    if (_stricmp(name, "__none__") == 0) {
         anim->count = 0;
         anim->isAnimated = FALSE;
         return TRUE;

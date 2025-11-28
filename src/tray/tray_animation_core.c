@@ -190,12 +190,35 @@ static void UpdateTrayIconToCurrentFrame(void) {
     
     LoadedAnimation* currentAnim = g_isPreviewActive ? &g_previewAnimation : &g_mainAnimation;
     int* currentIndex = g_isPreviewActive ? &g_previewIndex : &g_mainIndex;
+    const char* targetName = g_isPreviewActive ? g_previewAnimationName : g_animationName;
+    
+    /* Handle transparent/none icon */
+    if (_stricmp(targetName, "__none__") == 0) {
+        /* Create a fully transparent 16x16 icon */
+        BYTE andMask[32];  /* 16x16 / 8 = 32 bytes, all 1s = transparent */
+        BYTE xorMask[32];  /* All 0s = black, but masked out */
+        memset(andMask, 0xFF, sizeof(andMask));  /* All transparent */
+        memset(xorMask, 0x00, sizeof(xorMask));
+        
+        HICON hIcon = CreateIcon(NULL, 16, 16, 1, 1, andMask, xorMask);
+        if (hIcon) {
+            NOTIFYICONDATAW nid = {0};
+            nid.cbSize = sizeof(nid);
+            nid.hWnd = g_trayHwnd;
+            nid.uID = CLOCK_ID_TRAY_APP_ICON;
+            nid.uFlags = NIF_ICON;
+            nid.hIcon = hIcon;
+            Shell_NotifyIconW(NIM_MODIFY, &nid);
+            DestroyIcon(hIcon);
+            RecordSuccessfulUpdate();
+        }
+        return;
+    }
     
     /* Handle percent icons - both normal and preview mode */
     if (currentAnim->sourceType == ANIM_SOURCE_PERCENT) {
         float cpu = 0.0f, mem = 0.0f;
         SystemMonitor_GetUsage(&cpu, &mem);
-        const char* targetName = g_isPreviewActive ? g_previewAnimationName : g_animationName;
         int p = (_stricmp(targetName, "__cpu__") == 0) ? (int)(cpu + 0.5f) : (int)(mem + 0.5f);
         if (p < 0) p = 0;
         if (p > 100) p = 100;
@@ -289,10 +312,13 @@ static void RequestTrayIconUpdate(void) {
 static void TrayAnimationTimerCallback(void* userData) {
     (void)userData;
     
-    /* Skip logic for percent icons (updated separately) */
-    if ((_stricmp(g_animationName, "__cpu__") == 0 || _stricmp(g_animationName, "__mem__") == 0) 
-        && !g_isPreviewActive) {
-        return;
+    /* Skip logic for percent icons (updated separately) and __none__ (static) */
+    if (!g_isPreviewActive) {
+        if (_stricmp(g_animationName, "__cpu__") == 0 || 
+            _stricmp(g_animationName, "__mem__") == 0 ||
+            _stricmp(g_animationName, "__none__") == 0) {
+            return;
+        }
     }
     
     if (g_criticalSectionInitialized) {
@@ -473,7 +499,8 @@ BOOL SetCurrentAnimationName(const char* name) {
         GetConfigPath(config_path, sizeof(config_path));
         char animPath[MAX_PATH];
         
-        if (_stricmp(name, "__logo__") == 0 || _stricmp(name, "__cpu__") == 0 || _stricmp(name, "__mem__") == 0) {
+        if (_stricmp(name, "__logo__") == 0 || _stricmp(name, "__cpu__") == 0 || 
+            _stricmp(name, "__mem__") == 0 || _stricmp(name, "__none__") == 0) {
             snprintf(animPath, sizeof(animPath), "%s", name);
         } else {
             snprintf(animPath, sizeof(animPath), "%%LOCALAPPDATA%%\\Catime\\resources\\animations\\%s", name);
@@ -518,7 +545,8 @@ BOOL SetCurrentAnimationName(const char* name) {
     GetConfigPath(config_path, sizeof(config_path));
     char animPath[MAX_PATH];
     
-    if (_stricmp(name, "__logo__") == 0 || _stricmp(name, "__cpu__") == 0 || _stricmp(name, "__mem__") == 0) {
+    if (_stricmp(name, "__logo__") == 0 || _stricmp(name, "__cpu__") == 0 || 
+        _stricmp(name, "__mem__") == 0 || _stricmp(name, "__none__") == 0) {
         snprintf(animPath, sizeof(animPath), "%s", name);
     } else {
         snprintf(animPath, sizeof(animPath), "%%LOCALAPPDATA%%\\Catime\\resources\\animations\\%s", name);
@@ -614,8 +642,9 @@ static DWORD WINAPI AsyncLoadPreviewThread(LPVOID param) {
         g_previewIndex = 0;
         g_frameRateCtrl.framePosition = 0.0;
 
-        /* For percent icons (count=0) or regular animations (count>0), activate preview */
-        if (tempAnim.count > 0 || tempAnim.sourceType == ANIM_SOURCE_PERCENT) {
+        /* For percent icons (count=0), __none__ (transparent), or regular animations (count>0), activate preview */
+        if (tempAnim.count > 0 || tempAnim.sourceType == ANIM_SOURCE_PERCENT ||
+            _stricmp(name, "__none__") == 0) {
             strncpy(g_previewAnimationName, name, sizeof(g_previewAnimationName) - 1);
             g_previewAnimationName[sizeof(g_previewAnimationName) - 1] = '\0';
             g_isPreviewActive = TRUE;
@@ -636,6 +665,14 @@ static DWORD WINAPI AsyncLoadPreviewThread(LPVOID param) {
     }
 
     if (g_trayHwnd && IsWindow(g_trayHwnd)) {
+        /* Set pending update flag so TrayAnimation_HandleUpdateMessage will update the icon */
+        if (g_criticalSectionInitialized) {
+            EnterCriticalSection(&g_animCriticalSection);
+            g_pendingTrayUpdate = TRUE;
+            LeaveCriticalSection(&g_animCriticalSection);
+        } else {
+            g_pendingTrayUpdate = TRUE;
+        }
         PostMessage(g_trayHwnd, CLOCK_WM_ANIMATION_PREVIEW_LOADED, 0, 0);
     }
 
@@ -762,6 +799,15 @@ HICON GetInitialAnimationHicon(void) {
         return NULL;
     }
     
+    /* Return transparent icon for __none__ */
+    if (_stricmp(g_animationName, "__none__") == 0) {
+        BYTE andMask[32];
+        BYTE xorMask[32];
+        memset(andMask, 0xFF, sizeof(andMask));
+        memset(xorMask, 0x00, sizeof(xorMask));
+        return CreateIcon(NULL, 16, 16, 1, 1, andMask, xorMask);
+    }
+    
     if (g_mainAnimation.count > 0) {
         return g_mainAnimation.icons[0];
     }
@@ -782,7 +828,8 @@ void ApplyAnimationPathValueNoPersist(const char* value) {
     const char* prefix = "%LOCALAPPDATA%\\Catime\\resources\\animations\\";
     char name[MAX_PATH] = {0};
     
-    if (_stricmp(value, "__logo__") == 0 || _stricmp(value, "__cpu__") == 0 || _stricmp(value, "__mem__") == 0) {
+    if (_stricmp(value, "__logo__") == 0 || _stricmp(value, "__cpu__") == 0 || 
+        _stricmp(value, "__mem__") == 0 || _stricmp(value, "__none__") == 0) {
         strncpy(name, value, sizeof(name) - 1);
     } else if (_strnicmp(value, prefix, (int)strlen(prefix)) == 0) {
         const char* rel = value + strlen(prefix);
