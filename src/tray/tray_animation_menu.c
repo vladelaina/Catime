@@ -155,27 +155,22 @@ void BuildAnimationMenu(HMENU hMenu, const char* currentAnimationName) {
     int cachedCount = 0;
     AnimationCacheStatus status = AnimationCache_GetEntries(&cachedEntries, &cachedCount);
     
-    // If cache is invalid or empty, try to scan immediately (synchronously)
-    // This ensures the menu isn't empty on first open
+    /* Never block UI - if cache invalid, show loading and trigger async refresh */
     if (status != ANIM_CACHE_OK && status != ANIM_CACHE_EXPIRED) {
-        if (AnimationCache_Scan()) {
-            status = AnimationCache_GetEntries(&cachedEntries, &cachedCount);
-        }
+        AppendMenuW(hMenu, MF_STRING | MF_GRAYED, 0, L"(Loading...)");
+        ResourceCache_RequestRefresh();
+        return;
     }
     
-    if (status == ANIM_CACHE_OK || status == ANIM_CACHE_EXPIRED) {
-        BuildAnimationMenuFromCache(hMenu, cachedEntries, cachedCount, currentAnimationName);
-        
-        // If expired, trigger async refresh for next time
-        if (status == ANIM_CACHE_EXPIRED) {
-            ResourceCache_RequestRefresh();
-        }
-        
-        if (cachedEntries) {
-            free(cachedEntries);
-        }
-    } else {
-        AppendMenuW(hMenu, MF_STRING | MF_GRAYED, 0, L"(Loading...)");
+    /* Cache is valid - build menu from cached entries */
+    BuildAnimationMenuFromCache(hMenu, cachedEntries, cachedCount, currentAnimationName);
+    
+    if (cachedEntries) {
+        free(cachedEntries);
+    }
+    
+    /* If expired, trigger async refresh for next time */
+    if (status == ANIM_CACHE_EXPIRED) {
         ResourceCache_RequestRefresh();
     }
 }

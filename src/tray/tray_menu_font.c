@@ -129,23 +129,11 @@ void BuildFontSubmenu(HMENU hMenu) {
         int cachedCount = 0;
         FontCacheStatus cacheStatus = FontCache_GetEntries(&cachedFonts, &cachedCount);
         
-        // If cache is invalid/empty, force a synchronous scan now
+        /* Never block UI - if cache invalid, show loading and trigger async refresh */
         if (cacheStatus != FONT_CACHE_OK && cacheStatus != FONT_CACHE_EXPIRED) {
-            WriteLog(LOG_LEVEL_INFO, "Font cache not ready, forcing synchronous scan");
-            if (FontCache_Scan()) {
-                cacheStatus = FontCache_GetEntries(&cachedFonts, &cachedCount);
-            } else {
-                // Scan failed, maybe try extracting embedded fonts
-                HINSTANCE hInst = GetModuleHandle(NULL);
-                if (ExtractEmbeddedFontsToFolder(hInst)) {
-                    if (FontCache_Scan()) {
-                        cacheStatus = FontCache_GetEntries(&cachedFonts, &cachedCount);
-                    }
-                }
-            }
-        }
-        
-        if (cacheStatus == FONT_CACHE_OK || cacheStatus == FONT_CACHE_EXPIRED) {
+            AppendMenuW(hFontSubMenu, MF_STRING | MF_GRAYED, 0, L"(Loading...)");
+            ResourceCache_RequestRefresh();
+        } else if (cacheStatus == FONT_CACHE_OK || cacheStatus == FONT_CACHE_EXPIRED) {
             if (cachedCount == 0) {
                 AppendMenuW(hFontSubMenu, MF_STRING | MF_GRAYED, 0, 
                            GetLocalizedString(NULL, L"No font files found"));
@@ -164,10 +152,6 @@ void BuildFontSubmenu(HMENU hMenu) {
             if (cacheStatus == FONT_CACHE_EXPIRED) {
                 ResourceCache_RequestRefresh();
             }
-        } else {
-            AppendMenuW(hFontSubMenu, MF_STRING | MF_GRAYED, 0, L"(Loading...)");
-            AppendMenuW(hFontSubMenu, MF_SEPARATOR, 0, NULL);
-            ResourceCache_RequestRefresh();
         }
         
         AppendMenuW(hFontSubMenu, MF_STRING, CLOCK_IDC_FONT_ADVANCED, 
