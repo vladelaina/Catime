@@ -87,6 +87,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
         -Wl,--gc-sections
         -s
         -Wl,--strip-all
+        -static
     )
 else()
     # Debug flags
