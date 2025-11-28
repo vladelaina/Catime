@@ -54,10 +54,10 @@ BOOL ValidateColorConfig(ConfigSnapshot* snapshot) {
     
     BOOL modified = FALSE;
     
-    /* Check if it's a valid gradient name from the registry */
+    /* Check if it's a valid gradient name or custom gradient format */
     GradientType gradType = GetGradientTypeByName(snapshot->textColor);
     if (gradType != GRADIENT_NONE) {
-        return modified; /* Valid gradient name, no modification needed */
+        return modified; /* Valid gradient name or custom gradient, no modification needed */
     }
 
     /* Validate text color format (must be #RRGGBB) */

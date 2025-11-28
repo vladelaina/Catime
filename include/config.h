@@ -43,7 +43,7 @@
 #define ANIMATIONS_PATH_PREFIX         "%LOCALAPPDATA%\\Catime\\resources\\animations\\"
 
 /** @brief Default color values */
-#define DEFAULT_TEXT_COLOR             "#FFB6C1"
+#define DEFAULT_TEXT_COLOR             "#648CFF_#64DC78"
 #define DEFAULT_WHITE_COLOR            "#FFFFFF"
 #define DEFAULT_BLACK_COLOR            "#000000"
 
