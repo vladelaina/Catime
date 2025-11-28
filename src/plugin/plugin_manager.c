@@ -560,7 +560,7 @@ static BOOL RestartPluginInternal(int index) {
         char activeColor[COLOR_HEX_BUFFER];
         GetActiveColor(activeColor, sizeof(activeColor));
         if (IsGradientAnimated(GetGradientTypeByName(activeColor))) {
-            SetTimer(g_hNotifyWnd, 1, 30, NULL);  /* ~33 FPS for smooth animation */
+            SetTimer(g_hNotifyWnd, 1, 66, NULL);  /* 15 FPS for smooth animation */
         }
     }
     

@@ -89,7 +89,7 @@ static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
     char activeColor[COLOR_HEX_BUFFER];
     GetActiveColor(activeColor, sizeof(activeColor));
     if (IsGradientAnimated(GetGradientTypeByName(activeColor))) {
-        SetTimer(hwnd, 1, 30, NULL);  /* ~33 FPS for smooth animation */
+        SetTimer(hwnd, 1, 66, NULL);  /* 15 FPS for smooth animation */
     }
     
     /* Ensure window visible and redraw */
@@ -151,7 +151,7 @@ static BOOL HandleShowPluginFile(HWND hwnd) {
     char activeColor[COLOR_HEX_BUFFER];
     GetActiveColor(activeColor, sizeof(activeColor));
     if (IsGradientAnimated(GetGradientTypeByName(activeColor))) {
-        SetTimer(hwnd, 1, 30, NULL);  /* ~33 FPS for smooth animation */
+        SetTimer(hwnd, 1, 66, NULL);  /* 15 FPS for smooth animation */
     }
     
     if (!IsWindowVisible(hwnd)) {

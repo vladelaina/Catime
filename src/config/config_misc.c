@@ -368,7 +368,7 @@ UINT GetTimerInterval(void) {
     
     /* Check for animated gradient */
     if (IsGradientAnimated(GetGradientTypeByName(activeColor))) {
-        return 30; /* ~33 FPS for smooth animation */
+        return 66; /* 15 FPS - sufficient for smooth gradient animation */
     }
     
     return GetActiveShowMilliseconds() ? 10 : 1000;

@@ -10,7 +10,7 @@
 #include "../../libs/stb/stb_truetype.h"
 #include "color/gradient.h"
 
-#define GRADIENT_LUT_SIZE 2048
+#define GRADIENT_LUT_SIZE 512
 
 /**
  * @brief Initialize STB Truetype with a font file
