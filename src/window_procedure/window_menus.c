@@ -44,7 +44,7 @@ BOOL DispatchMenuPreview(HWND hwnd, UINT menuId) {
         return TRUE;
     }
 
-    if (menuId >= CLOCK_IDM_ANIMATIONS_BASE && menuId < CLOCK_IDM_ANIMATIONS_BASE + 1000) {
+    if (menuId >= CLOCK_IDM_ANIMATIONS_BASE && menuId < CLOCK_IDM_ANIMATIONS_END) {
         char animName[MAX_PATH];
         if (GetAnimationNameFromMenuId(menuId, animName, sizeof(animName))) {
             StartAnimationPreview(animName);
@@ -53,7 +53,7 @@ BOOL DispatchMenuPreview(HWND hwnd, UINT menuId) {
         return FALSE;
     }
 
-    if (menuId >= 2000 && menuId < 3000) {
+    if (menuId >= CMD_FONT_SELECTION_BASE && menuId < CMD_FONT_SELECTION_END) {
         char fontPath[MAX_PATH];
         if (GetFontPathFromMenuId(menuId, fontPath, sizeof(fontPath))) {
             StartPreview(PREVIEW_TYPE_FONT, fontPath, hwnd);
@@ -62,7 +62,7 @@ BOOL DispatchMenuPreview(HWND hwnd, UINT menuId) {
         return FALSE;
     }
 
-    int colorIndex = menuId - 201;
+    int colorIndex = menuId - CMD_COLOR_OPTIONS_BASE;
     if (colorIndex >= 0 && colorIndex < (int)COLOR_OPTIONS_COUNT) {
         StartPreview(PREVIEW_TYPE_COLOR, COLOR_OPTIONS[colorIndex].hexColor, hwnd);
         return TRUE;

@@ -178,6 +178,14 @@
 /** @brief Quick time menu base identifier */
 #define CLOCK_IDM_QUICK_TIME_BASE 800    /**< Base ID for dynamic quick time menus */
 
+/** @brief Basic menu identifiers */
+#define CLOCK_IDM_CUSTOM_COUNTDOWN 101       /**< Custom countdown input */
+#define CLOCK_IDM_EXIT 109                   /**< Exit application */
+
+/** @brief Reset menu identifiers */
+#define CLOCK_IDM_RESET_POSITION 199         /**< Reset window position and size */
+#define CLOCK_IDM_RESET_ALL 200              /**< Reset all settings */
+
 /** @brief Command range base identifiers */
 #define CMD_QUICK_COUNTDOWN_BASE 102         /**< Quick countdown command range start */
 #define CMD_QUICK_COUNTDOWN_END 108          /**< Quick countdown command range end */
@@ -354,6 +362,7 @@
 
 /** @brief Animation menu base identifier */
 #define CLOCK_IDM_ANIMATIONS_BASE 3000       /**< Base ID for dynamic animation menus */
+#define CLOCK_IDM_ANIMATIONS_END 4000        /**< End ID for dynamic animation menus */
 
 /** @brief External notification configuration variables
  * @note NOTIFICATION_MAX_OPACITY and NOTIFICATION_TIMEOUT_MS now in g_AppConfig.notification.display

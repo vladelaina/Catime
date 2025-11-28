@@ -444,13 +444,13 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
         BOOL isColorOrFontPreview = FALSE;
         BOOL isAnimationPreview = FALSE;
 
-        int colorIndex = menuItem - 201;
-        if (colorIndex >= 0 && colorIndex < 100) {
+        int colorIndex = menuItem - CMD_COLOR_OPTIONS_BASE;
+        if (colorIndex >= 0 && colorIndex < (int)COLOR_OPTIONS_COUNT) {
             isColorOrFontPreview = TRUE;
         }
 
 
-        if (menuItem >= 2000 && menuItem < 3000) {
+        if (menuItem >= CMD_FONT_SELECTION_BASE && menuItem < CMD_FONT_SELECTION_END) {
             if (menuItem != CLOCK_IDM_ANIMATIONS_USE_LOGO &&
                 menuItem != CLOCK_IDM_ANIMATIONS_USE_CPU &&
                 menuItem != CLOCK_IDM_ANIMATIONS_USE_MEM) {

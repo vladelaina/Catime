@@ -105,7 +105,7 @@ static void BuildAnimationMenuFromCache(HMENU hRootMenu, const AnimationCacheEnt
                 }
                 
                 // Only add if we haven't exceeded ID range
-                if (nextId < CLOCK_IDM_ANIMATIONS_BASE + 1000) {
+                if (nextId < CLOCK_IDM_ANIMATIONS_END) {
                     AppendMenuW(hCurrent, flags, nextId++, wName);
                 }
             }
@@ -201,7 +201,7 @@ BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id) {
         return SetCurrentAnimationName("__mem__");
     }
 
-    if (id >= CLOCK_IDM_ANIMATIONS_BASE && id < CLOCK_IDM_ANIMATIONS_BASE + 1000) {
+    if (id >= CLOCK_IDM_ANIMATIONS_BASE && id < CLOCK_IDM_ANIMATIONS_END) {
         // Find entry by index logic
         // Since we sorted entries in BuildAnimationMenu, we need to reproduce the order
         // or simpler: Re-sort is fast enough for a click handler (microseconds)
@@ -288,7 +288,7 @@ BOOL GetAnimationNameFromMenuId(UINT id, char* outPath, size_t outPathSize) {
         return TRUE;
     }
     
-    if (id >= CLOCK_IDM_ANIMATIONS_BASE && id < CLOCK_IDM_ANIMATIONS_BASE + 1000) {
+    if (id >= CLOCK_IDM_ANIMATIONS_BASE && id < CLOCK_IDM_ANIMATIONS_END) {
          AnimationCacheEntry* cachedEntries = NULL;
         int cachedCount = 0;
         AnimationCacheStatus status = AnimationCache_GetEntries(&cachedEntries, &cachedCount);

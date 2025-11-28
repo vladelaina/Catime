@@ -242,7 +242,7 @@ void StartDefaultCountDown(HWND hwnd) {
         KillTimer(hwnd, 1);
         ResetTimerWithInterval(hwnd);
     } else {
-        PostMessage(hwnd, WM_COMMAND, 101, 0);
+        PostMessage(hwnd, WM_COMMAND, CLOCK_IDM_CUSTOM_COUNTDOWN, 0);
     }
 }
 

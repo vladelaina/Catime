@@ -226,6 +226,21 @@ static LRESULT CmdBrowseFile(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
+static LRESULT CmdResetPosition(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)hwnd; (void)wp; (void)lp;
+    
+    /* Use default values from config.h */
+    char posX[32], posY[32];
+    snprintf(posX, sizeof(posX), "%d", DEFAULT_WINDOW_POS_X);
+    snprintf(posY, sizeof(posY), "%d", DEFAULT_WINDOW_POS_Y);
+    
+    WriteConfigKeyValue("CLOCK_WINDOW_POS_X", posX);
+    WriteConfigKeyValue("CLOCK_WINDOW_POS_Y", posY);
+    WriteConfigKeyValue("WINDOW_SCALE", DEFAULT_WINDOW_SCALE);
+    
+    return 0;
+}
+
 static LRESULT CmdResetDefaults(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     
@@ -275,9 +290,10 @@ typedef struct {
 
 static const CommandDispatchEntry COMMAND_DISPATCH_TABLE[] = {
     /* Basic */
-    {101, CmdCustomCountdown},
-    {109, CmdExit},
-    {200, CmdResetDefaults},
+    {CLOCK_IDM_CUSTOM_COUNTDOWN, CmdCustomCountdown},
+    {CLOCK_IDM_EXIT, CmdExit},
+    {CLOCK_IDM_RESET_POSITION, CmdResetPosition},
+    {CLOCK_IDM_RESET_ALL, CmdResetDefaults},
     
     /* Timer controls */
     {CLOCK_IDM_TIMER_PAUSE_RESUME, CmdPauseResume},

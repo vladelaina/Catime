@@ -118,7 +118,7 @@ static void BuildFontMenuFromCache(HMENU hRootMenu, const FontCacheEntry* entrie
 void BuildFontSubmenu(HMENU hMenu) {
     HMENU hFontSubMenu = CreatePopupMenu();
     
-    int g_advancedFontId = 2000;
+    int g_advancedFontId = CMD_FONT_SELECTION_BASE;
     
     if (NeedsFontLicenseVersionAcceptance()) {
         AppendMenuW(hFontSubMenu, MF_STRING, CLOCK_IDC_FONT_LICENSE_AGREE, 
@@ -185,7 +185,7 @@ BOOL GetFontPathFromMenuId(UINT id, char* outPath, size_t outPathSize) {
     if (!outPath || outPathSize == 0) return FALSE;
     
     // Base ID check
-    if (id < 2000) return FALSE;
+    if (id < CMD_FONT_SELECTION_BASE) return FALSE;
     
     FontCacheEntry* cachedFonts = NULL;
     int cachedCount = 0;
@@ -214,7 +214,7 @@ BOOL GetFontPathFromMenuId(UINT id, char* outPath, size_t outPathSize) {
     qsort(sortedEntries, cachedCount, sizeof(FontCacheEntry*), CompareFontCacheEntries);
     
     BOOL found = FALSE;
-    int currentId = 2000;
+    int currentId = CMD_FONT_SELECTION_BASE;
     
     for (int i = 0; i < cachedCount; i++) {
         if (currentId == (int)id) {

@@ -268,7 +268,7 @@ void BuildColorSubmenu(HMENU hMenu) {
         mii.fMask = MIIM_STRING | MIIM_ID | MIIM_STATE | MIIM_FTYPE;
         mii.fType = MFT_STRING | MFT_OWNERDRAW;
         mii.fState = strcmp(CLOCK_TEXT_COLOR, hexColor) == 0 ? MFS_CHECKED : MFS_UNCHECKED;
-        mii.wID = 201 + i;
+        mii.wID = CMD_COLOR_OPTIONS_BASE + i;
         mii.dwTypeData = hexColorW;
         
         InsertMenuItem(hColorSubMenu, i, TRUE, &mii);
@@ -426,7 +426,9 @@ void BuildHelpSubmenu(HMENU hMenu) {
     AppendMenuW(hAboutMenu, MF_POPUP, (UINT_PTR)hLangMenu, L"Language");
 
     AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);
-    AppendMenuW(hAboutMenu, MF_STRING, 200,
+    AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_RESET_POSITION,
+                GetLocalizedString(NULL, L"Reset Position"));
+    AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_RESET_ALL,
                 GetLocalizedString(NULL, L"Reset"));
 
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hAboutMenu,

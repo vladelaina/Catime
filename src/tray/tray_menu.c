@@ -93,7 +93,7 @@ void ShowColorMenu(HWND hwnd) {
     BuildHelpSubmenu(hMenu);
 
     /* Exit */
-    AppendMenuW(hMenu, MF_STRING, 109,
+    AppendMenuW(hMenu, MF_STRING, CLOCK_IDM_EXIT,
                 GetLocalizedString(NULL, L"Exit"));
     
     /* Display menu */
@@ -172,7 +172,7 @@ void ShowContextMenu(HWND hwnd) {
                CLOCK_IDM_COUNT_UP_START,
                GetLocalizedString(NULL, L"Count Up"));
 
-    AppendMenuW(hMenu, MF_STRING, 101, 
+    AppendMenuW(hMenu, MF_STRING, CLOCK_IDM_CUSTOM_COUNTDOWN, 
                 GetLocalizedString(NULL, L"Countdown"));
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
