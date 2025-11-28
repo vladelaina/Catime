@@ -151,6 +151,9 @@ void CancelPreview(HWND hwnd) {
         }
     }
 
+    /* Reset preview state */
+    g_previewState.type = PREVIEW_TYPE_NONE;
+
     if (needsTimerReset && hwnd) ResetTimerWithInterval(hwnd);
     if (needsRedraw && hwnd) InvalidateRect(hwnd, NULL, TRUE);
 }

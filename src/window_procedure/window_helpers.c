@@ -284,15 +284,15 @@ void ResetConfigurationFile(void) {
 void ReloadDefaultFont(void) {
     extern BOOL LoadFontByNameAndGetRealName(HINSTANCE, const char*, char*, size_t);
     
-    char actualFontFileName[MAX_PATH];
-    const char* localappdata_prefix = FONTS_PATH_PREFIX;
+    /* Use the default font name, not the current FONT_FILE_NAME */
+    const char* defaultFontName = DEFAULT_FONT_NAME;
     
-    if (_strnicmp(FONT_FILE_NAME, localappdata_prefix, strlen(localappdata_prefix)) == 0) {
-        strncpy(actualFontFileName, FONT_FILE_NAME + strlen(localappdata_prefix), sizeof(actualFontFileName) - 1);
-        actualFontFileName[sizeof(actualFontFileName) - 1] = '\0';
-        LoadFontByNameAndGetRealName(GetModuleHandle(NULL), actualFontFileName, 
-                                     FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
-    }
+    /* Update FONT_FILE_NAME to default */
+    snprintf(FONT_FILE_NAME, sizeof(FONT_FILE_NAME), "%s%s", FONTS_PATH_PREFIX, defaultFontName);
+    
+    /* Load the default font */
+    LoadFontByNameAndGetRealName(GetModuleHandle(NULL), defaultFontName, 
+                                 FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
 }
 
 void RecalculateWindowSize(HWND hwnd) {

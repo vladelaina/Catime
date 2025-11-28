@@ -149,6 +149,7 @@ LRESULT HandleTimer(HWND hwnd, WPARAM wp, LPARAM lp) {
     if (wp == IDT_MENU_DEBOUNCE) {
         KillTimer(hwnd, IDT_MENU_DEBOUNCE);
         CancelPreview(hwnd);
+        RestoreWindowVisibility(hwnd);
         return 0;
     }
     if (wp == IDT_ANIMATION_PREVIEW_DELAY) {
@@ -227,7 +228,6 @@ LRESULT HandleRButtonDown(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT HandleExitMenuLoop(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    RestoreWindowVisibility(hwnd);
     KillTimer(hwnd, IDT_MENU_DEBOUNCE);
     SetTimer(hwnd, IDT_MENU_DEBOUNCE, MENU_DEBOUNCE_DELAY_MS, NULL);
     return 0;
@@ -419,25 +419,18 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
     static BOOL lastWasColorOrFont = FALSE;
     static BOOL lastWasAnimationPreview = FALSE;
 
+    /* Mouse moved outside any menu item - set debounce timer to cancel preview */
     if (menuItem == 0xFFFF) {
-        KillTimer(hwnd, IDT_ANIMATION_PREVIEW_DELAY);
-        g_pendingAnimationPreviewItem = 0;
-        if (lastWasColorOrFont) {
-            CancelPreview(hwnd);
-            RestoreWindowVisibility(hwnd);
-            lastWasColorOrFont = FALSE;
-        }
-        if (lastWasAnimationPreview) {
-            CancelPreview(hwnd);
-            lastWasAnimationPreview = FALSE;
-        }
         KillTimer(hwnd, IDT_MENU_DEBOUNCE);
         SetTimer(hwnd, IDT_MENU_DEBOUNCE, MENU_DEBOUNCE_DELAY_MS, NULL);
         lastMenuItem = 0;
+        lastWasColorOrFont = FALSE;
+        lastWasAnimationPreview = FALSE;
         return 0;
+    } else {
+        KillTimer(hwnd, IDT_MENU_DEBOUNCE);
     }
 
-    KillTimer(hwnd, IDT_MENU_DEBOUNCE);
     if (hMenu == NULL) return 0;
 
     if (!(flags & MF_POPUP)) {
@@ -506,7 +499,7 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
 
             KillTimer(hwnd, IDT_ANIMATION_PREVIEW_DELAY);
             g_pendingAnimationPreviewItem = menuItem;
-            SetTimer(hwnd, IDT_ANIMATION_PREVIEW_DELAY, 150, NULL);
+            SetTimer(hwnd, IDT_ANIMATION_PREVIEW_DELAY, 30, NULL);
         }
     } else {
         KillTimer(hwnd, IDT_ANIMATION_PREVIEW_DELAY);
