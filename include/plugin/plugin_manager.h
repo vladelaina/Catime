@@ -88,6 +88,12 @@ BOOL PluginManager_TogglePlugin(int index);
 BOOL PluginManager_IsPluginRunning(int index);
 
 /**
+ * @brief Get currently active plugin index
+ * @return Active plugin index, or -1 if none
+ */
+int PluginManager_GetActivePluginIndex(void);
+
+/**
  * @brief Get plugin directory path (expanded)
  * @param buffer Output buffer
  * @param bufferSize Buffer size

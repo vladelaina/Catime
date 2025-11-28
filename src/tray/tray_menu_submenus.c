@@ -333,6 +333,8 @@ void BuildPluginsSubmenu(HMENU hMenu) {
     PluginManager_RequestScanAsync();
     int pluginCount = PluginManager_GetPluginCount();
 
+    int activePluginIndex = PluginManager_GetActivePluginIndex();
+    
     if (pluginCount == 0) {
         AppendMenuW(hPluginsMenu, MF_STRING | MF_GRAYED, 0, L"No plugins found");
     } else {
@@ -342,10 +344,9 @@ void BuildPluginsSubmenu(HMENU hMenu) {
                 wchar_t displayName[128];
                 MultiByteToWideChar(CP_UTF8, 0, plugin->displayName, -1, displayName, 128);
 
-                // Add plugin item directly (Single selection mode)
-                BOOL isRunning = PluginManager_IsPluginRunning(i);
+                // Check if this is the active plugin (by user action, not just process state)
                 UINT flags = MF_STRING;
-                if (isRunning) {
+                if (i == activePluginIndex) {
                     flags |= MF_CHECKED;
                 }
                 
@@ -357,16 +358,8 @@ void BuildPluginsSubmenu(HMENU hMenu) {
     // Add "Show plugin file" option - displays file content without running a plugin
     {
         UINT flags = MF_STRING;
-        // Check if plugin mode is active but no plugin process is running
-        BOOL isShowFileMode = PluginData_IsActive();
-        BOOL anyPluginRunning = FALSE;
-        for (int i = 0; i < pluginCount; i++) {
-            if (PluginManager_IsPluginRunning(i)) {
-                anyPluginRunning = TRUE;
-                break;
-            }
-        }
-        if (isShowFileMode && !anyPluginRunning) {
+        // "Show plugin file" is checked if plugin mode is active but no plugin was started
+        if (PluginData_IsActive() && activePluginIndex < 0) {
             flags |= MF_CHECKED;
         }
         AppendMenuW(hPluginsMenu, flags, CLOCK_IDM_PLUGINS_SHOW_FILE, 

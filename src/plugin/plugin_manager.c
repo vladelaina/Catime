@@ -25,6 +25,7 @@ static HANDLE g_hHotReloadThread = NULL;
 static HWND g_hNotifyWnd = NULL;
 static volatile BOOL g_hotReloadRunning = FALSE;
 static volatile int g_lastRunningPluginIndex = -1;  /* Track last plugin for continued monitoring */
+static volatile int g_activePluginIndex = -1;       /* Currently active plugin (set by user action) */
 
 // Structure to pass data to the launcher thread
 typedef struct {
@@ -308,6 +309,11 @@ void PluginManager_Shutdown(void) {
         CloseHandle(g_hJob);
         g_hJob = NULL;
     }
+    
+    // Reset tracking indices
+    g_activePluginIndex = -1;
+    g_lastRunningPluginIndex = -1;
+    g_pluginCount = 0;
 
     LeaveCriticalSection(&g_pluginCS);
     DeleteCriticalSection(&g_pluginCS);
@@ -412,10 +418,14 @@ int PluginManager_ScanPlugins(void) {
         }
     }
 
-    // Remember old last running plugin name for re-mapping
+    // Remember old plugin names for re-mapping indices
     char lastRunningName[64] = {0};
+    char activePluginName[64] = {0};
     if (g_lastRunningPluginIndex >= 0 && g_lastRunningPluginIndex < g_pluginCount) {
         strncpy(lastRunningName, g_plugins[g_lastRunningPluginIndex].name, sizeof(lastRunningName) - 1);
+    }
+    if (g_activePluginIndex >= 0 && g_activePluginIndex < g_pluginCount) {
+        strncpy(activePluginName, g_plugins[g_activePluginIndex].name, sizeof(activePluginName) - 1);
     }
 
     // Update global list
@@ -432,6 +442,17 @@ int PluginManager_ScanPlugins(void) {
             }
         }
     }
+    
+    // Re-map g_activePluginIndex to new list
+    if (activePluginName[0]) {
+        g_activePluginIndex = -1;  // Reset first
+        for (int i = 0; i < g_pluginCount; i++) {
+            if (strcmp(g_plugins[i].name, activePluginName) == 0) {
+                g_activePluginIndex = i;
+                break;
+            }
+        }
+    }
 
     LeaveCriticalSection(&g_pluginCS);
 
@@ -440,13 +461,15 @@ int PluginManager_ScanPlugins(void) {
 }
 
 /* Async scan thread */
+static volatile LONG g_asyncScanPending = 0;
+
 static DWORD WINAPI AsyncScanThread(LPVOID lpParam) {
     (void)lpParam;
     PluginManager_ScanPlugins();
+    // Reset flag after scan completes
+    InterlockedExchange(&g_asyncScanPending, 0);
     return 0;
 }
-
-static volatile LONG g_asyncScanPending = 0;
 
 void PluginManager_RequestScanAsync(void) {
     /* Avoid multiple concurrent scans */
@@ -457,9 +480,10 @@ void PluginManager_RequestScanAsync(void) {
     HANDLE hThread = CreateThread(NULL, 0, AsyncScanThread, NULL, 0, NULL);
     if (hThread) {
         CloseHandle(hThread);
+    } else {
+        // Failed to create thread, reset flag
+        InterlockedExchange(&g_asyncScanPending, 0);
     }
-    
-    InterlockedExchange(&g_asyncScanPending, 0);
 }
 
 int PluginManager_GetPluginCount(void) {
@@ -549,6 +573,9 @@ BOOL PluginManager_StartPlugin(int index) {
 
     /* Record file modification time for hot-reload detection */
     GetFileModTime(plugin->path, &plugin->lastModTime);
+    
+    /* Mark this as the active plugin */
+    g_activePluginIndex = index;
 
     LOG_INFO("[DEBUG] Plugin started successfully: %s (PID: %lu)", plugin->displayName, plugin->pi.dwProcessId);
 
@@ -629,6 +656,9 @@ BOOL PluginManager_StopPlugin(int index) {
     
     // Reset last running index to stop hot-reload monitoring
     g_lastRunningPluginIndex = -1;
+    
+    // Clear active plugin index
+    g_activePluginIndex = -1;
 
     LOG_INFO("Stopped plugin: %s", plugin->displayName);
 
@@ -685,6 +715,8 @@ void PluginManager_StopAllPlugins(void) {
             PluginManager_StopPlugin(i);
         }
     }
+    // Always clear active plugin index (even if no plugin was running)
+    g_activePluginIndex = -1;
     LeaveCriticalSection(&g_pluginCS);
 }
 
@@ -704,4 +736,8 @@ BOOL PluginManager_OpenPluginFolder(void) {
 
 void PluginManager_SetNotifyWindow(HWND hwnd) {
     g_hNotifyWnd = hwnd;
+}
+
+int PluginManager_GetActivePluginIndex(void) {
+    return g_activePluginIndex;
 }

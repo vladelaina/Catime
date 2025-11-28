@@ -73,6 +73,13 @@ static inline BOOL DispatchAppMessage(HWND hwnd, UINT msg) {
     return FALSE;
 }
 
+/* Plugin exit message handler (for <exit> tag) */
+static LRESULT HandlePluginExitMessage(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)wp; (void)lp;
+    HandlePluginExit(hwnd);
+    return 0;
+}
+
 /* ============================================================================
  * Message Dispatch Table
  * ============================================================================ */
@@ -115,6 +122,7 @@ static const MessageDispatchEntry MESSAGE_DISPATCH_TABLE[] = {
     {WM_USER + 100, HandleTrayUpdateIcon, "Tray icon update"},
     {WM_APP + 1, HandleAppReregisterHotkeys, "Hotkey re-registration"},
     {CLOCK_WM_ANIMATION_PREVIEW_LOADED, HandleAnimationPreviewLoaded, "Animation preview loaded"},
+    {CLOCK_WM_PLUGIN_EXIT, HandlePluginExitMessage, "Plugin exit via <exit> tag"},
     {0, NULL, NULL}
 };
 

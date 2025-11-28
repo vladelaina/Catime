@@ -14,6 +14,7 @@
 #include "window.h"
 #include "pomodoro.h"
 #include "notification.h"
+#include "log.h"
 #include <windows.h>
 
 /* External function declarations */
@@ -73,7 +74,17 @@ static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
     countup_elapsed_time = 0;
 
     /* Start plugin */
-    PluginManager_StartPlugin(pluginIndex);
+    BOOL startSuccess = PluginManager_StartPlugin(pluginIndex);
+    
+    if (!startSuccess) {
+        /* Plugin failed to start (e.g., requires admin privileges) */
+        /* Restore to idle state */
+        LOG_WARNING("Plugin failed to start, restoring idle state");
+        TimerModeParams params = {0, TRUE, TRUE, TRUE};
+        SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
+        InvalidateRect(hwnd, NULL, TRUE);
+        return TRUE;
+    }
     
     /* Show loading message */
     const PluginInfo* pluginInfo = PluginManager_GetPlugin(pluginIndex);
@@ -160,6 +171,33 @@ static BOOL HandleShowPluginFile(HWND hwnd) {
     InvalidateRect(hwnd, NULL, TRUE);
     
     return TRUE;
+}
+
+/* ============================================================================
+ * Plugin Exit Handler (for <exit> tag)
+ * ============================================================================ */
+
+/**
+ * @brief Handle plugin exit request (from <exit> tag countdown)
+ * Reuses the same logic as manually clicking to stop a plugin
+ */
+void HandlePluginExit(HWND hwnd) {
+    /* Cancel any pending exit countdown */
+    PluginData_CancelExit();
+    
+    /* Stop all plugins */
+    PluginManager_StopAllPlugins();
+    
+    /* Clear plugin data */
+    PluginData_Clear();
+    
+    /* Switch to idle state (same as HandlePluginToggle stop logic) */
+    TimerModeParams params = {0, TRUE, TRUE, TRUE};
+    SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
+    KillTimer(hwnd, 1);
+    InvalidateRect(hwnd, NULL, TRUE);
+    
+    LOG_INFO("Plugin exit completed via <exit> tag");
 }
 
 /* ============================================================================

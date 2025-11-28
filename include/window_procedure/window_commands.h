@@ -69,6 +69,7 @@ BOOL HandlePomodoroTimeConfig(HWND hwnd, int selectedIndex);
  * ============================================================================ */
 
 BOOL HandlePluginCommand(HWND hwnd, UINT cmd);
+void HandlePluginExit(HWND hwnd);
 
 #endif /* WINDOW_COMMANDS_H */
 
