@@ -91,7 +91,7 @@ LRESULT CmdCountUpStart(HWND hwnd, WPARAM wp, LPARAM lp) {
         KillTimer(hwnd, 1);
         ResetTimerWithInterval(hwnd);
     } else {
-        CLOCK_IS_PAUSED = !CLOCK_IS_PAUSED;
+        TogglePauseTimer();
     }
     InvalidateRect(hwnd, NULL, TRUE);
     return 0;

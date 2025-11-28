@@ -301,6 +301,7 @@ static void HandleTimeoutActions(HWND hwnd) {
                                 countdown_message_shown = FALSE;
                                 countup_message_shown = FALSE;
                                 CLOCK_IS_PAUSED = FALSE;
+                                ResetMillisecondAccumulator();
             KillTimer(hwnd, TIMER_ID_MAIN);
             SetTimer(hwnd, TIMER_ID_MAIN, GetTimerInterval(), NULL);
                                 InvalidateRect(hwnd, NULL, TRUE);
@@ -559,6 +560,7 @@ void InitializePomodoro(void) {
     
     countdown_elapsed_time = 0;
     countdown_message_shown = FALSE;
+    ResetMillisecondAccumulator();
 }
 
 BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {

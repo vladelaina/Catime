@@ -186,6 +186,9 @@ static void ApplyModeConfig(HWND hwnd, const StartupModeConfig* config) {
     countdown_elapsed_time = 0;
     countup_elapsed_time = 0;
     
+    extern void ResetMillisecondAccumulator(void);
+    ResetMillisecondAccumulator();
+    
     if (config->enableTimer) {
         RestartTimer(hwnd, GetTimerInterval());
     } else {
