@@ -41,6 +41,12 @@ void PluginManager_Shutdown(void);
 int PluginManager_ScanPlugins(void);
 
 /**
+ * @brief Request async plugin scan (non-blocking)
+ * Scan runs in background thread, results available on next menu open
+ */
+void PluginManager_RequestScanAsync(void);
+
+/**
  * @brief Get plugin count
  * @return Number of plugins
  */

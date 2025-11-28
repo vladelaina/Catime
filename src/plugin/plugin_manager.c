@@ -439,6 +439,29 @@ int PluginManager_ScanPlugins(void) {
     return g_pluginCount;
 }
 
+/* Async scan thread */
+static DWORD WINAPI AsyncScanThread(LPVOID lpParam) {
+    (void)lpParam;
+    PluginManager_ScanPlugins();
+    return 0;
+}
+
+static volatile LONG g_asyncScanPending = 0;
+
+void PluginManager_RequestScanAsync(void) {
+    /* Avoid multiple concurrent scans */
+    if (InterlockedCompareExchange(&g_asyncScanPending, 1, 0) != 0) {
+        return;
+    }
+    
+    HANDLE hThread = CreateThread(NULL, 0, AsyncScanThread, NULL, 0, NULL);
+    if (hThread) {
+        CloseHandle(hThread);
+    }
+    
+    InterlockedExchange(&g_asyncScanPending, 0);
+}
+
 int PluginManager_GetPluginCount(void) {
     int count;
     EnterCriticalSection(&g_pluginCS);
