@@ -124,7 +124,8 @@ typedef enum {
     ANIM_TYPE_CUSTOM,
     ANIM_TYPE_LOGO,
     ANIM_TYPE_CPU,
-    ANIM_TYPE_MEMORY
+    ANIM_TYPE_MEMORY,
+    ANIM_TYPE_NONE
 } AnimationType;
 
 /** @brief Formatted bytes with unit */
@@ -156,6 +157,7 @@ static AnimationType GetAnimationType(const char* animName) {
     if (_stricmp(animName, "__logo__") == 0) return ANIM_TYPE_LOGO;
     if (_stricmp(animName, "__cpu__") == 0) return ANIM_TYPE_CPU;
     if (_stricmp(animName, "__mem__") == 0) return ANIM_TYPE_MEMORY;
+    if (_stricmp(animName, "__none__") == 0) return ANIM_TYPE_NONE;
     return ANIM_TYPE_CUSTOM;
 }
 
