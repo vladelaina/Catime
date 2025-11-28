@@ -86,11 +86,11 @@ static BOOL InitializeDpiAwareness(void) {
     }
     
     /* Final fallback: basic system DPI awareness (Windows Vista+) */
-    #ifndef _INC_WINUSER
-    WINUSERAPI BOOL WINAPI SetProcessDPIAware(VOID);
-    #endif
+    typedef BOOL(WINAPI* SetProcessDPIAwareFunc)(VOID);
+    SetProcessDPIAwareFunc setDPIAware = 
+        (SetProcessDPIAwareFunc)GetProcAddress(hUser32, "SetProcessDPIAware");
     
-    if (SetProcessDPIAware()) {
+    if (setDPIAware && setDPIAware()) {
         LOG_INFO("DPI awareness: System (legacy)");
         return TRUE;
     }

@@ -39,8 +39,6 @@ typedef struct _WINDOWCOMPOSITIONATTRIBDATA {
     SIZE_T cbData;
 } WINDOWCOMPOSITIONATTRIBDATA;
 
-WINUSERAPI BOOL WINAPI SetWindowCompositionAttribute(HWND hwnd, WINDOWCOMPOSITIONATTRIBDATA* pData);
-
 typedef enum _ACCENT_STATE {
     ACCENT_DISABLED = 0,
     ACCENT_ENABLE_BLURBEHIND = 3,
@@ -54,6 +52,10 @@ typedef struct _ACCENT_POLICY {
     DWORD AnimationId;
 } ACCENT_POLICY;
 
+/* Function pointer for SetWindowCompositionAttribute (undocumented API) */
+typedef BOOL (WINAPI *pfnSetWindowCompositionAttribute)(HWND hwnd, WINDOWCOMPOSITIONATTRIBDATA* pData);
+static pfnSetWindowCompositionAttribute _SetWindowCompositionAttribute = NULL;
+
 /* ============================================================================
  * Implementation
  * ============================================================================ */
@@ -65,10 +67,23 @@ BOOL InitDWMFunctions(void) {
         
         if (_DwmEnableBlurBehindWindow) {
             LOG_INFO("DWM functions loaded successfully");
-            return TRUE;
         }
     }
-    LOG_WARNING("Failed to load DWM functions");
+    
+    /* Load SetWindowCompositionAttribute from user32.dll (undocumented API for acrylic blur) */
+    HMODULE hUser32 = GetModuleHandleW(L"user32.dll");
+    if (hUser32) {
+        _SetWindowCompositionAttribute = (pfnSetWindowCompositionAttribute)GetProcAddress(hUser32, "SetWindowCompositionAttribute");
+        if (_SetWindowCompositionAttribute) {
+            LOG_INFO("SetWindowCompositionAttribute loaded successfully");
+        }
+    }
+    
+    if (_DwmEnableBlurBehindWindow || _SetWindowCompositionAttribute) {
+        return TRUE;
+    }
+    
+    LOG_WARNING("Failed to load DWM/composition functions");
     return FALSE;
 }
 
@@ -117,8 +132,8 @@ static void ApplyAccentPolicy(HWND hwnd, ACCENT_STATE accentState) {
     data.pvData = &policy;
     data.cbData = sizeof(policy);
     
-    if (SetWindowCompositionAttribute) {
-        SetWindowCompositionAttribute(hwnd, &data);
+    if (_SetWindowCompositionAttribute) {
+        _SetWindowCompositionAttribute(hwnd, &data);
     } else if (_DwmEnableBlurBehindWindow) {
         // Fallback for older Windows versions
         DWM_BLURBEHIND bb = {0};
