@@ -15,10 +15,8 @@
  * ============================================================================ */
 
 static const char* DEFAULT_COLOR_OPTIONS[] = {
-    "#FFFFFF", "#F9DB91", "#F4CAE0", "#FFB6C1",
-    "#A8E7DF", "#A3CFB3", "#92CBFC", "#BDA5E7",
-    "#9370DB", "#8C92CF", "#72A9A5", "#EB99A7",
-    "#EB96BD", "#FFAE8B", "#FF7F50", "#CA6174",
+    "#FFFFFF", "#E3E3E5", "#000000",
+    "#F6ABB7", "#22C55E", "#8771C6",
     "#FF5E96_#56C6FF", "#648CFF_#64DC78", "#FF9A56_#56CCBA",
     "#FFA745_#FE869F_#EF7AC8_#A083ED_#43AEFF"
 };

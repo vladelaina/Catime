@@ -329,7 +329,7 @@ void WriteDefaultsToConfig(const char* config_path) {
             fputs("; COLOR_OPTIONS: comma-separated quick color list used by dialogs/menus.\n", f);
             fputs(";   Token format: #RRGGBB or RRGGBB (6 hex digits).\n", f);
             fputs(";   Whitespace is allowed around commas; duplicates are ignored.\n", f);
-            fputs(";   Example: COLOR_OPTIONS=#FFFFFF,#FFB6C1,9370DB,72A9A5\n", f);
+            fputs(";   Example: COLOR_OPTIONS=#FFFFFF,#E3E3E5,#000000,#F6ABB7\n", f);
             fputs(";========================================================\n", f);
         }
     }

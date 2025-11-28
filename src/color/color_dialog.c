@@ -66,28 +66,42 @@ static void ApplyColorPreview(HWND hwndParent, COLORREF color) {
     StartPreview(PREVIEW_TYPE_COLOR, finalColor, hwndParent);
 }
 
+/* Track the actual number of colors loaded */
+static size_t g_loadedColorCount = 0;
+
 /**
  * @brief Populate custom colors from saved palette
  * @param acrCustClr Custom color array
  * @param maxColors Array size
  */
 static void PopulateCustomColors(COLORREF* acrCustClr, size_t maxColors) {
-    for (size_t i = 0; i < COLOR_OPTIONS_COUNT && i < maxColors; i++) {
+    /* Fill all slots with white (empty appearance) */
+    for (size_t i = 0; i < maxColors; i++) {
+        acrCustClr[i] = RGB(255, 255, 255);
+    }
+    
+    size_t custIdx = 0;
+    for (size_t i = 0; i < COLOR_OPTIONS_COUNT && custIdx < maxColors; i++) {
         const char* hexColor = COLOR_OPTIONS[i].hexColor;
+        /* Skip gradient colors (contain underscore) */
+        if (strchr(hexColor, '_') != NULL) continue;
+        
         if (hexColor[0] == '#') {
             int r, g, b;
             if (sscanf(hexColor + 1, "%02x%02x%02x", &r, &g, &b) == 3) {
-                acrCustClr[i] = RGB(r, g, b);
+                acrCustClr[custIdx++] = RGB(r, g, b);
             }
         }
     }
+    g_loadedColorCount = custIdx;
 }
 
 /**
  * @brief Save custom colors to palette
  * @param lpCustColors Custom colors array
  * 
- * @details Automatically saves non-zero colors to configuration
+ * @details Saves modified colors and new non-white colors to configuration.
+ *          Preserves gradient colors from the original palette.
  */
 static void SaveCustomColorsToPalette(COLORREF* lpCustColors) {
     if (!lpCustColors) return;
@@ -95,14 +109,39 @@ static void SaveCustomColorsToPalette(COLORREF* lpCustColors) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
+    /* Save existing gradient colors before clearing */
+    char* savedGradients[32];
+    int gradientCount = 0;
+    for (size_t i = 0; i < COLOR_OPTIONS_COUNT && gradientCount < 32; i++) {
+        if (strchr(COLOR_OPTIONS[i].hexColor, '_') != NULL) {
+            char* dup = _strdup(COLOR_OPTIONS[i].hexColor);
+            if (dup) savedGradients[gradientCount++] = dup;
+        }
+    }
+    
     ClearColorOptions();
     
-    for (int i = 0; i < MAX_CUSTOM_COLORS; i++) {
-        if (lpCustColors[i] != 0) {
+    /* Add colors from dialog */
+    /* First: save colors in original slots (may have been modified) */
+    for (size_t i = 0; i < g_loadedColorCount && i < MAX_CUSTOM_COLORS; i++) {
+        char hexColor[COLOR_HEX_BUFFER];
+        ColorRefToHex(lpCustColors[i], hexColor, sizeof(hexColor));
+        AddColorOption(hexColor);
+    }
+    /* Second: save any new colors added to previously empty slots */
+    for (size_t i = g_loadedColorCount; i < MAX_CUSTOM_COLORS; i++) {
+        /* Skip white in empty slots (default fill) unless it was explicitly added */
+        if (lpCustColors[i] != RGB(255, 255, 255)) {
             char hexColor[COLOR_HEX_BUFFER];
             ColorRefToHex(lpCustColors[i], hexColor, sizeof(hexColor));
             AddColorOption(hexColor);
         }
+    }
+    
+    /* Restore gradient colors */
+    for (int i = 0; i < gradientCount; i++) {
+        AddColorOption(savedGradients[i]);
+        free(savedGradients[i]);
     }
     
     void WriteConfig(const char*);
@@ -117,16 +156,12 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT msg, WPARAM wParam, LPARAM
     static HWND hwndParent = NULL;
     static CHOOSECOLOR* pcc = NULL;
     static BOOL isColorLocked = FALSE;
-    static COLORREF lastCustomColors[MAX_CUSTOM_COLORS] = {0};
 
     switch (msg) {
         case WM_INITDIALOG:
             pcc = (CHOOSECOLOR*)lParam;
             if (pcc) {
                 hwndParent = pcc->hwndOwner;
-                for (int i = 0; i < MAX_CUSTOM_COLORS; i++) {
-                    lastCustomColors[i] = pcc->lpCustColors[i];
-                }
             }
             isColorLocked = FALSE;
             return TRUE;
@@ -154,34 +189,8 @@ UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT msg, WPARAM wParam, LPARAM
             break;
 
         case WM_COMMAND:
-            if (HIWORD(wParam) == BN_CLICKED) {
-                switch (LOWORD(wParam)) {
-                    case IDOK:
-                        /* Preview is already set, will be applied by caller */
-                        break;
-                    
-                    case IDCANCEL:
-                        CancelPreview(hwndParent);
-                        break;
-                }
-            }
-            break;
-
-        case WM_CTLCOLORBTN:
-        case WM_CTLCOLOREDIT:
-        case WM_CTLCOLORSTATIC:
-            if (pcc) {
-                BOOL colorsChanged = FALSE;
-                for (int i = 0; i < MAX_CUSTOM_COLORS; i++) {
-                    if (lastCustomColors[i] != pcc->lpCustColors[i]) {
-                        colorsChanged = TRUE;
-                        lastCustomColors[i] = pcc->lpCustColors[i];
-                    }
-                }
-                
-                if (colorsChanged) {
-                    SaveCustomColorsToPalette(pcc->lpCustColors);
-                }
+            if (HIWORD(wParam) == BN_CLICKED && LOWORD(wParam) == IDCANCEL) {
+                CancelPreview(hwndParent);
             }
             break;
     }
@@ -196,7 +205,7 @@ COLORREF ShowColorDialog(HWND hwnd) {
     CHOOSECOLOR cc = {0};
     static COLORREF acrCustClr[MAX_CUSTOM_COLORS] = {0};
     
-    int r, g, b;
+    int r = 255, g = 255, b = 255;
     if (CLOCK_TEXT_COLOR[0] == '#') {
         sscanf(CLOCK_TEXT_COLOR + 1, "%02x%02x%02x", &r, &g, &b);
     } else {
@@ -213,6 +222,9 @@ COLORREF ShowColorDialog(HWND hwnd) {
     PopulateCustomColors(acrCustClr, MAX_CUSTOM_COLORS);
     
     if (ChooseColor(&cc)) {
+        /* Save custom colors after dialog closes */
+        SaveCustomColorsToPalette(acrCustClr);
+        
         /* Apply preview (saves to config automatically) */
         if (ApplyPreview(hwnd)) {
             /* Success - preview was applied */

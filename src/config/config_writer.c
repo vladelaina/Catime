@@ -17,6 +17,14 @@
 #include <string.h>
 
 /* ============================================================================
+ * Helper: Check if color is a gradient (contains underscore)
+ * ============================================================================ */
+
+static BOOL IsGradientColor(const char* color) {
+    return color && strchr(color, '_') != NULL;
+}
+
+/* ============================================================================
  * Helper: Enum to string mappings
  * ============================================================================ */
 
@@ -339,13 +347,26 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int* count) {
         idx++;
     }
     
-    /* Colors */
+    /* Colors - write single colors first, then gradients */
     safe_strncpy(items[idx].section, INI_SECTION_COLORS, sizeof(items[idx].section));
     safe_strncpy(items[idx].key, "COLOR_OPTIONS", sizeof(items[idx].key));
     items[idx].value[0] = '\0';
-    for (int i = 0; i < COLOR_OPTIONS_COUNT; i++) {
-        if (i > 0) safe_strncat(items[idx].value, ",", sizeof(items[idx].value));
-        safe_strncat(items[idx].value, COLOR_OPTIONS[i].hexColor, sizeof(items[idx].value));
+    BOOL firstColor = TRUE;
+    /* First pass: single colors */
+    for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
+        if (!IsGradientColor(COLOR_OPTIONS[i].hexColor)) {
+            if (!firstColor) safe_strncat(items[idx].value, ",", sizeof(items[idx].value));
+            safe_strncat(items[idx].value, COLOR_OPTIONS[i].hexColor, sizeof(items[idx].value));
+            firstColor = FALSE;
+        }
+    }
+    /* Second pass: gradient colors */
+    for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
+        if (IsGradientColor(COLOR_OPTIONS[i].hexColor)) {
+            if (!firstColor) safe_strncat(items[idx].value, ",", sizeof(items[idx].value));
+            safe_strncat(items[idx].value, COLOR_OPTIONS[i].hexColor, sizeof(items[idx].value));
+            firstColor = FALSE;
+        }
     }
     idx++;
     
