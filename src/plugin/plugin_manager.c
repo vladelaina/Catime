@@ -190,13 +190,19 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
     args->success = TRUE;
     SetEvent(args->hReadyEvent); // Signal main thread that PI is ready
 
+    // Record start time for duration check
+    DWORD startTime = GetTickCount();
+
     // Monitor process exit using our private handle
     WaitForSingleObject(hWaitProcess, INFINITE);
+    
+    // Calculate how long the process ran
+    DWORD runDuration = GetTickCount() - startTime;
     
     // Process has exited. Now we need to determine if it was a crash or a manual stop.
     DWORD exitCode = 0;
     GetExitCodeProcess(hWaitProcess, &exitCode);
-    LOG_INFO("[DEBUG] Plugin process exited (Exit Code: %lu)", exitCode);
+    LOG_INFO("[DEBUG] Plugin process exited (Exit Code: %lu, Duration: %lu ms)", exitCode, runDuration);
 
     // Clean up our private handle
     if (hWaitProcess != plugin->pi.hProcess) {
@@ -207,8 +213,8 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
     EnterCriticalSection(&g_pluginCS);
     if (plugin->isRunning) {
         // If isRunning is still TRUE, it means StopPlugin wasn't called.
-        // This is an unexpected crash/exit. We must clean up.
-        LOG_WARNING("Plugin %s exited unexpectedly!", plugin->displayName);
+        // Plugin exited on its own (finished execution or crashed).
+        LOG_INFO("Plugin %s exited on its own", plugin->displayName);
         
         if (plugin->pi.hProcess) CloseHandle(plugin->pi.hProcess);
         if (plugin->pi.hThread) CloseHandle(plugin->pi.hThread);
@@ -216,11 +222,21 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
         plugin->isRunning = FALSE;
         memset(&plugin->pi, 0, sizeof(plugin->pi));
         
-        // DON'T call PluginData_Clear() - keep plugin mode active for hot-reload
-        // This will show "Loading..." while waiting for file changes
-        // User can manually stop via menu if needed
+        // If process ran for less than 5 seconds, it might be UAC elevation scenario.
+        // Keep hot-reload active so user can retry after granting permission.
+        if (runDuration < 5000) {
+            LOG_INFO("Plugin exited quickly (%lu ms), keeping hot-reload active (possible UAC)", runDuration);
+            // Don't clear indices - hot-reload will restart when file changes
+        } else {
+            // Normal completion - clear tracking indices to stop hot-reload monitoring
+            g_lastRunningPluginIndex = -1;
+            g_activePluginIndex = -1;
+            
+            // Clear plugin data and exit plugin mode
+            PluginData_Clear();
+        }
         
-        // Force UI refresh to show "Loading..."
+        // Force UI refresh
         if (g_hNotifyWnd) {
             InvalidateRect(g_hNotifyWnd, NULL, TRUE);
         }
@@ -715,8 +731,10 @@ void PluginManager_StopAllPlugins(void) {
             PluginManager_StopPlugin(i);
         }
     }
-    // Always clear active plugin index (even if no plugin was running)
+    // Always clear indices (even if no plugin was running)
+    // This handles cases where plugin already exited (e.g., after <exit> tag)
     g_activePluginIndex = -1;
+    g_lastRunningPluginIndex = -1;
     LeaveCriticalSection(&g_pluginCS);
 }
 
