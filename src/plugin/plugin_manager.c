@@ -1,41 +1,31 @@
 /**
  * @file plugin_manager.c
- * @brief Plugin manager implementation
+ * @brief Plugin manager - core plugin lifecycle and state management
  */
 
 #include "plugin/plugin_manager.h"
+#include "plugin/plugin_process.h"
+#include "plugin/plugin_extensions.h"
 #include "plugin/plugin_data.h"
-#include "color/gradient.h"
-#include "color/color_parser.h"
 #include "log.h"
 #include <stdio.h>
 #include <string.h>
 #include <shellapi.h>
 
-/* External function for getting active color */
-extern void GetActiveColor(char* outColor, size_t bufferSize);
-
+/* Plugin state */
 static PluginInfo g_plugins[MAX_PLUGINS];
 static int g_pluginCount = 0;
 static CRITICAL_SECTION g_pluginCS;
-static HANDLE g_hJob = NULL;
 
 /* Hot-reload monitoring */
 static HANDLE g_hHotReloadThread = NULL;
-static HWND g_hNotifyWnd = NULL;
 static volatile BOOL g_hotReloadRunning = FALSE;
-static volatile int g_lastRunningPluginIndex = -1;  /* Track last plugin for continued monitoring */
-static volatile int g_activePluginIndex = -1;       /* Currently active plugin (set by user action) */
+static volatile int g_lastRunningPluginIndex = -1;
+static volatile int g_activePluginIndex = -1;
 
-// Structure to pass data to the launcher thread
-typedef struct {
-    PluginInfo* plugin;
-    HANDLE hReadyEvent;
-    BOOL success;
-} PluginLauncherArgs;
-
-/* Forward declaration */
+/* Forward declarations */
 static BOOL RestartPluginInternal(int index);
+static BOOL GetFileModTime(const char* path, FILETIME* modTime);
 
 /**
  * @brief Get file modification time
@@ -44,64 +34,49 @@ static BOOL GetFileModTime(const char* path, FILETIME* modTime) {
     HANDLE hFile = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
                                NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE) return FALSE;
-    
     BOOL result = GetFileTime(hFile, NULL, NULL, modTime);
     CloseHandle(hFile);
     return result;
 }
 
 /**
- * @brief Hot-reload monitoring thread - checks plugin files every 1 second
- * Also monitors the last running plugin even if it stopped/crashed
+ * @brief Hot-reload monitoring thread
  */
 static DWORD WINAPI HotReloadThread(LPVOID lpParam) {
     (void)lpParam;
-    LOG_INFO("Hot-reload monitoring thread started");
+    LOG_INFO("[HotReload] Thread started");
     
     while (g_hotReloadRunning) {
-        Sleep(1000);  // Check every 1 second
-        
+        Sleep(1000);
         if (!g_hotReloadRunning) break;
         
         EnterCriticalSection(&g_pluginCS);
         
-        BOOL foundRunning = FALSE;
         int indexToMonitor = -1;
         
-        /* First, check for any running plugin */
+        /* Find running plugin or last running */
         for (int i = 0; i < g_pluginCount; i++) {
             if (g_plugins[i].isRunning) {
-                foundRunning = TRUE;
                 indexToMonitor = i;
-                g_lastRunningPluginIndex = i;  /* Update last running */
+                g_lastRunningPluginIndex = i;
                 break;
             }
         }
-        
-        /* If no running plugin, monitor the last one (for crash recovery) */
-        if (!foundRunning && g_lastRunningPluginIndex >= 0 && 
+        if (indexToMonitor < 0 && g_lastRunningPluginIndex >= 0 && 
             g_lastRunningPluginIndex < g_pluginCount) {
             indexToMonitor = g_lastRunningPluginIndex;
         }
         
-        /* Monitor the selected plugin */
+        /* Check file modification */
         if (indexToMonitor >= 0) {
             FILETIME currentModTime;
             if (GetFileModTime(g_plugins[indexToMonitor].path, &currentModTime)) {
                 if (CompareFileTime(&currentModTime, &g_plugins[indexToMonitor].lastModTime) != 0) {
-                    LOG_INFO("Hot-reload: Plugin '%s' file changed, reloading...", 
-                             g_plugins[indexToMonitor].displayName);
-                    
-                    /* Update mod time first to prevent repeated triggers */
+                    LOG_INFO("[HotReload] File changed: %s", g_plugins[indexToMonitor].displayName);
                     g_plugins[indexToMonitor].lastModTime = currentModTime;
-                    
-                    /* Need to leave CS before restart (which acquires CS) */
                     int idx = indexToMonitor;
                     LeaveCriticalSection(&g_pluginCS);
-                    
                     RestartPluginInternal(idx);
-                    
-                    /* Re-enter to continue loop safely */
                     EnterCriticalSection(&g_pluginCS);
                 }
             }
@@ -110,143 +85,7 @@ static DWORD WINAPI HotReloadThread(LPVOID lpParam) {
         LeaveCriticalSection(&g_pluginCS);
     }
     
-    LOG_INFO("Hot-reload monitoring thread stopped");
-    return 0;
-}
-
-/**
- * @brief Thread function to launch and monitor the plugin process
- * 
- * Uses Job Objects to ensure plugin termination when Catime exits.
- */
-static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
-    PluginLauncherArgs* args = (PluginLauncherArgs*)lpParam;
-    PluginInfo* plugin = args->plugin;
-    
-    LOG_INFO("[DEBUG] Launcher thread started for plugin: %s", plugin->displayName);
-    LOG_INFO("[DEBUG] Target executable path: '%s'", plugin->path);
-    
-    STARTUPINFOA si = {sizeof(si)};
-    si.dwFlags = STARTF_USESHOWWINDOW;
-    si.wShowWindow = SW_HIDE;
-
-    // Only support Python scripts
-    char cmdLine[MAX_PATH * 2 + 32];
-    snprintf(cmdLine, sizeof(cmdLine), "pythonw.exe \"%s\"", plugin->path);
-    
-    LOG_INFO("[DEBUG] Launching Python script: %s", cmdLine);
-    
-    if (!CreateProcessA(
-        NULL,           // Let system find pythonw.exe in PATH
-        cmdLine,        // Command line
-        NULL,
-        NULL,
-        FALSE,
-        CREATE_NO_WINDOW, // Ensure no window is created
-        NULL,
-        NULL,
-        &si,
-        &plugin->pi
-    )) {
-        DWORD error = GetLastError();
-        LOG_ERROR("[DEBUG] CreateProcess failed! Error: %lu (Path: %s)", error, plugin->path);
-        
-        if (error == 2) { // ERROR_FILE_NOT_FOUND
-             LOG_ERROR("Tip: Make sure Python is installed and 'pythonw.exe' is in your PATH.");
-        }
-
-        args->success = FALSE;
-        SetEvent(args->hReadyEvent);
-        return 0;
-    }
-
-    LOG_INFO("[DEBUG] Process created successfully. PID: %lu", plugin->pi.dwProcessId);
-
-    // Duplicate handle for the watcher thread to wait on safely
-    // This ensures that even if StopPlugin closes the original handle, we can still wait safely
-    HANDLE hWaitProcess = NULL;
-    if (!DuplicateHandle(
-        GetCurrentProcess(),
-        plugin->pi.hProcess,
-        GetCurrentProcess(),
-        &hWaitProcess,
-        0,
-        FALSE,
-        DUPLICATE_SAME_ACCESS
-    )) {
-        LOG_ERROR("Failed to duplicate process handle");
-        hWaitProcess = plugin->pi.hProcess; // Fallback (risky but better than nothing)
-    }
-
-    // Assign to Job Object for lifecycle management
-    if (g_hJob) {
-        if (!AssignProcessToJobObject(g_hJob, plugin->pi.hProcess)) {
-            LOG_WARNING("Failed to assign plugin to Job Object, error: %lu", GetLastError());
-        }
-    }
-
-    // Process created successfully
-    plugin->isRunning = TRUE;
-    args->success = TRUE;
-    SetEvent(args->hReadyEvent); // Signal main thread that PI is ready
-
-    // Record start time for duration check
-    DWORD startTime = GetTickCount();
-
-    // Monitor process exit using our private handle
-    WaitForSingleObject(hWaitProcess, INFINITE);
-    
-    // Calculate how long the process ran
-    DWORD runDuration = GetTickCount() - startTime;
-    
-    // Process has exited. Now we need to determine if it was a crash or a manual stop.
-    DWORD exitCode = 0;
-    GetExitCodeProcess(hWaitProcess, &exitCode);
-    LOG_INFO("[DEBUG] Plugin process exited (Exit Code: %lu, Duration: %lu ms)", exitCode, runDuration);
-
-    // Clean up our private handle
-    if (hWaitProcess != plugin->pi.hProcess) {
-        CloseHandle(hWaitProcess);
-    }
-
-    // CRITICAL: Check if we need to clean up (Unexpected Exit)
-    EnterCriticalSection(&g_pluginCS);
-    if (plugin->isRunning) {
-        // If isRunning is still TRUE, it means StopPlugin wasn't called.
-        // Plugin exited on its own (finished execution or crashed).
-        LOG_INFO("Plugin %s exited on its own", plugin->displayName);
-        
-        if (plugin->pi.hProcess) CloseHandle(plugin->pi.hProcess);
-        if (plugin->pi.hThread) CloseHandle(plugin->pi.hThread);
-        
-        plugin->isRunning = FALSE;
-        memset(&plugin->pi, 0, sizeof(plugin->pi));
-        
-        // If process ran for less than 5 seconds, it might be UAC elevation scenario.
-        // Keep hot-reload active so user can retry after granting permission.
-        if (runDuration < 5000) {
-            LOG_INFO("Plugin exited quickly (%lu ms), keeping hot-reload active (possible UAC)", runDuration);
-            // Don't clear indices - hot-reload will restart when file changes
-        } else {
-            // Normal completion - clear tracking indices to stop hot-reload monitoring
-            g_lastRunningPluginIndex = -1;
-            g_activePluginIndex = -1;
-            
-            // Clear plugin data and exit plugin mode
-            PluginData_Clear();
-        }
-        
-        // Force UI refresh
-        if (g_hNotifyWnd) {
-            InvalidateRect(g_hNotifyWnd, NULL, TRUE);
-        }
-    } else {
-        // If isRunning is FALSE, StopPlugin handled it. We do nothing.
-        LOG_INFO("Plugin monitor thread detected graceful stop.");
-    }
-    LeaveCriticalSection(&g_pluginCS);
-    
-    LOG_INFO("[DEBUG] Launcher thread exiting for plugin: %s", plugin->displayName);
+    LOG_INFO("[HotReload] Thread stopped");
     return 0;
 }
 
@@ -263,19 +102,8 @@ void PluginManager_Init(void) {
     memset(g_plugins, 0, sizeof(g_plugins));
     g_pluginCount = 0;
 
-    // Create Job Object for automatic cleanup
-    g_hJob = CreateJobObject(NULL, NULL);
-    if (g_hJob) {
-        JOBOBJECT_EXTENDED_LIMIT_INFORMATION jeli = {0};
-        jeli.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
-        if (!SetInformationJobObject(g_hJob, JobObjectExtendedLimitInformation, &jeli, sizeof(jeli))) {
-            LOG_ERROR("Failed to set Job Object info, error: %lu", GetLastError());
-            CloseHandle(g_hJob);
-            g_hJob = NULL;
-        }
-    } else {
-        LOG_ERROR("Failed to create Job Object, error: %lu", GetLastError());
-    }
+    /* Initialize process management */
+    PluginProcess_Init();
 
     /* Start hot-reload monitoring thread */
     g_hotReloadRunning = TRUE;
@@ -288,7 +116,7 @@ void PluginManager_Init(void) {
 }
 
 void PluginManager_Shutdown(void) {
-    /* Stop hot-reload thread first */
+    /* Stop hot-reload thread */
     if (g_hHotReloadThread) {
         g_hotReloadRunning = FALSE;
         WaitForSingleObject(g_hHotReloadThread, 2000);
@@ -304,12 +132,9 @@ void PluginManager_Shutdown(void) {
         }
     }
 
-    if (g_hJob) {
-        CloseHandle(g_hJob);
-        g_hJob = NULL;
-    }
+    /* Shutdown process management */
+    PluginProcess_Shutdown();
     
-    // Reset tracking indices
     g_activePluginIndex = -1;
     g_lastRunningPluginIndex = -1;
     g_pluginCount = 0;
@@ -348,86 +173,10 @@ int PluginManager_ScanPlugins(void) {
     int newPluginCount = 0;
     memset(newPlugins, 0, sizeof(newPlugins));
 
-    // Scan for script files (source-visible, no compiled executables)
-    // Sorted alphabetically by language name
-    const char* extensions[] = {
-        "*.agda",                   // Agda
-        "*.apl",                    // APL
-        "*.applescript",            // AppleScript
-        "*.ahk", "*.ahk2",          // AutoHotkey
-        "*.au3",                    // AutoIt
-        "*.awk",                    // AWK
-        "*.bal",                    // Ballerina
-        "*.bat", "*.cmd",           // Batch
-        "*.boo",                    // Boo
-        "*.ck",                     // ChucK
-        "*.clj", "*.cljs", "*.cljc",// Clojure
-        "*.coffee",                 // CoffeeScript
-        "*.lisp", "*.lsp", "*.cl",  // Common Lisp
-        "*.cr",                     // Crystal
-        "*.d",                      // D
-        "*.dart",                   // Dart
-        "*.ex", "*.exs",            // Elixir
-        "*.elm",                    // Elm
-        "*.el",                     // Emacs Lisp
-        "*.erl", "*.escript",       // Erlang
-        "*.fs", "*.fsx",            // F#
-        "*.factor",                 // Factor
-        "*.fnl",                    // Fennel
-        "*.forth", "*.4th", "*.fth",// Forth
-        "*.go",                     // Go
-        "*.groovy", "*.gvy",        // Groovy
-        "*.hack", "*.hh",           // Hack
-        "*.hs", "*.lhs",            // Haskell
-        "*.hx",                     // Haxe
-        "*.hy",                     // Hy
-        "*.idr",                    // Idris
-        "*.io",                     // Io
-        "*.ijs",                    // J
-        "*.janet",                  // Janet
-        "*.js", "*.mjs", "*.cjs",   // JavaScript
-        "*.jl",                     // Julia
-        "*.k", "*.q",               // K/Q
-        "*.kts",                    // Kotlin Script
-        "*.lean",                   // Lean
-        "*.lua",                    // Lua
-        "*.m", "*.wl",              // MATLAB/Mathematica
-        "*.moon",                   // MoonScript
-        "*.nims", "*.nimble",       // Nim
-        "*.ml", "*.mli",            // OCaml
-        "*.pl", "*.pm", "*.perl",   // Perl
-        "*.p6", "*.pl6", "*.raku",  // Perl 6/Raku
-        "*.php", "*.php5", "*.php7",// PHP
-        "*.pike",                   // Pike
-        "*.pony",                   // Pony
-        "*.ps1",                    // PowerShell
-        "*.pde",                    // Processing
-        "*.pro",                    // Prolog
-        "*.purs",                   // PureScript
-        "*.py", "*.pyw",            // Python
-        "*.r", "*.R", "*.Rscript",  // R
-        "*.rkt", "*.scm", "*.ss",   // Racket/Scheme
-        "*.red", "*.reds",          // Red
-        "*.rexx", "*.rex",          // Rexx
-        "*.rb", "*.rbw",            // Ruby
-        "*.scala", "*.sc",          // Scala
-        "*.sed",                    // sed
-        "*.sh", "*.bash", "*.zsh",  // Shell
-        "*.ksh", "*.csh", "*.fish", // Shell (more)
-        "*.st",                     // Smalltalk
-        "*.sml",                    // Standard ML
-        "*.swift",                  // Swift
-        "*.tcl", "*.tk",            // Tcl/Tk
-        "*.ts", "*.mts",            // TypeScript
-        "*.v", "*.vsh",             // V
-        "*.vbs", "*.wsf",           // VBScript/WSH
-        "*.wren",                   // Wren
-        "*.zig"                     // Zig
-    };
-    int extCount = sizeof(extensions) / sizeof(extensions[0]);
-    for (int ext = 0; ext < extCount; ext++) {
+    /* Scan for all supported script extensions */
+    for (size_t ext = 0; ext < PLUGIN_EXTENSION_COUNT; ext++) {
         char searchPath[MAX_PATH];
-        snprintf(searchPath, sizeof(searchPath), "%s\\%s", pluginDir, extensions[ext]);
+        snprintf(searchPath, sizeof(searchPath), "%s\\%s", pluginDir, PLUGIN_EXTENSIONS[ext]);
 
         WIN32_FIND_DATAA findData;
         HANDLE hFind = FindFirstFileA(searchPath, &findData);
@@ -468,7 +217,7 @@ int PluginManager_ScanPlugins(void) {
         }
     }
 
-    // Clean up orphaned plugins (running but file removed)
+    /* Clean up orphaned plugins (running but file removed) */
     for (int i = 0; i < g_pluginCount; i++) {
         if (g_plugins[i].isRunning) {
             BOOL found = FALSE;
@@ -480,9 +229,7 @@ int PluginManager_ScanPlugins(void) {
             }
             if (!found) {
                 LOG_INFO("Plugin file %s removed, stopping process", g_plugins[i].name);
-                TerminateProcess(g_plugins[i].pi.hProcess, 0);
-                CloseHandle(g_plugins[i].pi.hProcess);
-                CloseHandle(g_plugins[i].pi.hThread);
+                PluginProcess_Terminate(&g_plugins[i]);
             }
         }
     }
@@ -577,83 +324,40 @@ BOOL PluginManager_StartPlugin(int index) {
 
     EnterCriticalSection(&g_pluginCS);
 
-    // Exclusive execution: Stop ALL other plugins first
+    /* Exclusive execution: Stop ALL other plugins first */
     for (int i = 0; i < g_pluginCount; i++) {
         if (g_plugins[i].isRunning) {
-            // If it's the same plugin and it's already running, do nothing (or restart?)
-            // User request implies "Switching", so if I click the same one, maybe just keep it running?
-            // Let's assume clicking an active plugin does nothing or ensures it's running.
             if (i == index) {
                 LOG_INFO("Plugin %s is already running", g_plugins[index].displayName);
                 LeaveCriticalSection(&g_pluginCS);
                 return TRUE;
             }
-            // Stop others
             PluginManager_StopPlugin(i);
         }
     }
 
     PluginInfo* plugin = &g_plugins[index];
-    LOG_INFO("[DEBUG] StartPlugin requested for: %s (Index: %d)", plugin->displayName, index);
+    LOG_INFO("Starting plugin: %s", plugin->displayName);
 
-    // Prepare arguments for the launcher thread
-    PluginLauncherArgs args = {0};
-    args.plugin = plugin;
-    args.hReadyEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-    args.success = FALSE;
-
-    if (!args.hReadyEvent) {
-        LOG_ERROR("[DEBUG] Failed to create synchronization event. Error: %lu", GetLastError());
+    /* Launch via process module */
+    if (!PluginProcess_Launch(plugin)) {
+        LOG_ERROR("Failed to launch plugin: %s", plugin->displayName);
         LeaveCriticalSection(&g_pluginCS);
         return FALSE;
     }
 
-    LOG_INFO("[DEBUG] Creating launcher thread...");
-
-    // Spawn the launcher thread
-    // We don't keep the thread handle because it runs its own loop until plugin exit
-    HANDLE hThread = CreateThread(
-        NULL, 
-        0, 
-        PluginLauncherThread, 
-        &args, 
-        0, 
-        NULL
-    );
-
-    if (!hThread) {
-        LOG_ERROR("[DEBUG] Failed to create plugin launcher thread. Error: %lu", GetLastError());
-        CloseHandle(args.hReadyEvent);
-        LeaveCriticalSection(&g_pluginCS);
-        return FALSE;
-    }
-
-    // Wait for the process to be created (or fail)
-    LOG_INFO("[DEBUG] Waiting for plugin process to initialize...");
-    WaitForSingleObject(args.hReadyEvent, INFINITE);
-    CloseHandle(args.hReadyEvent);
-    CloseHandle(hThread); // We don't need to control the thread, let it run
-
-    if (!args.success) {
-        LOG_ERROR("[DEBUG] Launcher thread reported failure.");
-        LeaveCriticalSection(&g_pluginCS);
-        return FALSE;
-    }
-
-    /* Record file modification time for hot-reload detection */
+    /* Record file modification time for hot-reload */
     GetFileModTime(plugin->path, &plugin->lastModTime);
-    
-    /* Mark this as the active plugin */
     g_activePluginIndex = index;
 
-    LOG_INFO("[DEBUG] Plugin started successfully: %s (PID: %lu)", plugin->displayName, plugin->pi.dwProcessId);
+    LOG_INFO("Plugin started: %s (PID: %lu)", plugin->displayName, plugin->pi.dwProcessId);
 
     LeaveCriticalSection(&g_pluginCS);
     return TRUE;
 }
 
 /**
- * @brief Internal restart function for hot-reload (shows Loading message)
+ * @brief Internal restart function for hot-reload
  */
 static BOOL RestartPluginInternal(int index) {
     if (index < 0 || index >= g_pluginCount) return FALSE;
@@ -671,22 +375,14 @@ static BOOL RestartPluginInternal(int index) {
     PluginData_SetText(loadingText);
     PluginData_SetActive(TRUE);
     
-    /* Force redraw to show loading message */
-    if (g_hNotifyWnd) {
-        InvalidateRect(g_hNotifyWnd, NULL, TRUE);
-        
-        /* Check if animated gradient needs timer for smooth animation */
-        char activeColor[COLOR_HEX_BUFFER];
-        GetActiveColor(activeColor, sizeof(activeColor));
-        if (IsGradientAnimated(GetGradientTypeByName(activeColor))) {
-            SetTimer(g_hNotifyWnd, 1, 66, NULL);  /* 15 FPS for smooth animation */
-        }
+    /* Force redraw */
+    HWND hwnd = PluginProcess_GetNotifyWindow();
+    if (hwnd) {
+        InvalidateRect(hwnd, NULL, TRUE);
     }
     
-    /* Small delay to ensure process cleanup */
     Sleep(100);
     
-    /* Start the plugin again */
     return PluginManager_StartPlugin(index);
 }
 
@@ -705,28 +401,11 @@ BOOL PluginManager_StopPlugin(int index) {
         return FALSE;
     }
 
-    // Try graceful termination first
-    if (!TerminateProcess(plugin->pi.hProcess, 0)) {
-        DWORD error = GetLastError();
-        LOG_WARNING("Failed to terminate plugin %s, error: %lu", plugin->displayName, error);
-    }
-
-    // Wait for process to exit (with timeout)
-    WaitForSingleObject(plugin->pi.hProcess, 2000);
-
-    CloseHandle(plugin->pi.hProcess);
-    CloseHandle(plugin->pi.hThread);
-
-    plugin->isRunning = FALSE;
-    memset(&plugin->pi, 0, sizeof(plugin->pi));
-
-    // Clear any data generated by this plugin
+    /* Terminate via process module */
+    PluginProcess_Terminate(plugin);
     PluginData_Clear();
     
-    // Reset last running index to stop hot-reload monitoring
     g_lastRunningPluginIndex = -1;
-    
-    // Clear active plugin index
     g_activePluginIndex = -1;
 
     LOG_INFO("Stopped plugin: %s", plugin->displayName);
@@ -757,18 +436,9 @@ BOOL PluginManager_IsPluginRunning(int index) {
 
     PluginInfo* plugin = &g_plugins[index];
 
-    if (plugin->isRunning) {
-        // Check if process is still alive
-        DWORD exitCode;
-        if (GetExitCodeProcess(plugin->pi.hProcess, &exitCode)) {
-            if (exitCode != STILL_ACTIVE) {
-                plugin->isRunning = FALSE;
-                CloseHandle(plugin->pi.hProcess);
-                CloseHandle(plugin->pi.hThread);
-                memset(&plugin->pi, 0, sizeof(plugin->pi));
-                LOG_INFO("Plugin %s has exited", plugin->displayName);
-            }
-        }
+    /* Check via process module */
+    if (plugin->isRunning && !PluginProcess_IsAlive(plugin)) {
+        LOG_INFO("Plugin %s has exited", plugin->displayName);
     }
 
     isRunning = plugin->isRunning;
@@ -806,7 +476,7 @@ BOOL PluginManager_OpenPluginFolder(void) {
 }
 
 void PluginManager_SetNotifyWindow(HWND hwnd) {
-    g_hNotifyWnd = hwnd;
+    PluginProcess_SetNotifyWindow(hwnd);
 }
 
 int PluginManager_GetActivePluginIndex(void) {
