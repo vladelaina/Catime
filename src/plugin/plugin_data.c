@@ -37,8 +37,79 @@ static volatile BOOL g_isRunning = FALSE;
 static char* g_lastContent = NULL;
 static size_t g_lastContentSize = 0;
 
+// Dynamic poll interval (controlled by <fps:N> tag)
+#define DEFAULT_POLL_INTERVAL_MS 500
+#define MIN_POLL_INTERVAL_MS 10      // Max 100 fps
+#define MAX_POLL_INTERVAL_MS 5000    // Min 0.2 fps
+static volatile DWORD g_pollIntervalMs = DEFAULT_POLL_INTERVAL_MS;
+
 /* Forward declaration */
 static DWORD WINAPI ExitCountdownThread(LPVOID lpParam);
+
+/**
+ * @brief Parse and remove <fps:N> tag from content, update poll interval
+ * @param content The content to parse (will be modified in place)
+ * @return Pointer to content after fps tag removal (or original if no tag)
+ */
+static const char* ParseFpsTag(const char* content) {
+    if (!content) return content;
+    
+    /* Look for <fps:N> pattern */
+    const char* fpsStart = strstr(content, "<fps:");
+    if (!fpsStart) return content;
+    
+    const char* numStart = fpsStart + 5;  /* Skip "<fps:" */
+    const char* numEnd = numStart;
+    
+    /* Parse number */
+    while (*numEnd >= '0' && *numEnd <= '9') {
+        numEnd++;
+    }
+    
+    /* Check for closing > */
+    if (*numEnd != '>' || numEnd == numStart) {
+        return content;  /* Invalid format */
+    }
+    
+    /* Extract fps value */
+    char numBuf[16] = {0};
+    size_t numLen = numEnd - numStart;
+    if (numLen >= sizeof(numBuf)) numLen = sizeof(numBuf) - 1;
+    strncpy(numBuf, numStart, numLen);
+    
+    int fps = atoi(numBuf);
+    if (fps > 0) {
+        /* Convert fps to poll interval: interval = 1000 / fps */
+        DWORD interval = 1000 / fps;
+        
+        /* Clamp to valid range */
+        if (interval < MIN_POLL_INTERVAL_MS) interval = MIN_POLL_INTERVAL_MS;
+        if (interval > MAX_POLL_INTERVAL_MS) interval = MAX_POLL_INTERVAL_MS;
+        
+        if (g_pollIntervalMs != interval) {
+            g_pollIntervalMs = interval;
+            LOG_INFO("PluginData: FPS set to %d (poll interval: %lu ms)", fps, interval);
+        }
+    }
+    
+    return content;  /* Keep the tag in content for now (or remove if desired) */
+}
+
+/**
+ * @brief Remove <fps:N> tag from wide string for display
+ */
+static void RemoveFpsTagW(wchar_t* text) {
+    if (!text) return;
+    
+    wchar_t* fpsStart = wcsstr(text, L"<fps:");
+    if (!fpsStart) return;
+    
+    wchar_t* fpsEnd = wcschr(fpsStart, L'>');
+    if (!fpsEnd) return;
+    
+    /* Move everything after tag to tag position */
+    memmove(fpsStart, fpsEnd + 1, (wcslen(fpsEnd + 1) + 1) * sizeof(wchar_t));
+}
 
 /**
  * @brief Parse plain text content and update display text
@@ -50,6 +121,9 @@ static DWORD WINAPI ExitCountdownThread(LPVOID lpParam);
  */
 static BOOL ParseContent(const char* content, size_t contentLen) {
     if (!content || contentLen == 0) return FALSE;
+    
+    // Parse <fps:N> tag and update poll interval (before any other processing)
+    ParseFpsTag(content);
     
     // Don't update display if exit countdown is in progress
     // (the countdown thread is managing the display)
@@ -94,6 +168,9 @@ static BOOL ParseContent(const char* content, size_t contentLen) {
                            g_pluginDisplayText[len - 1] == L' ')) {
             g_pluginDisplayText[--len] = L'\0';
         }
+        
+        // Remove <fps:N> tag from display (already parsed above)
+        RemoveFpsTagW(g_pluginDisplayText);
         
         // Pre-process <exit> tag: replace with countdown number and start countdown
         wchar_t* start = wcsstr(g_pluginDisplayText, L"<exit>");
@@ -306,8 +383,8 @@ static DWORD WINAPI FileWatcherThread(LPVOID lpParam) {
             CloseHandle(hFile);
         }
         
-        // Poll frequency: 500ms
-        Sleep(500);
+        // Dynamic poll frequency (controlled by <fps:N> tag, default 500ms)
+        Sleep(g_pollIntervalMs);
     }
     
     return 0;
@@ -406,6 +483,9 @@ BOOL PluginData_GetText(wchar_t* buffer, size_t maxLen) {
 void PluginData_Clear(void) {
     // Cancel any pending exit countdown first
     PluginData_CancelExit();
+    
+    // Reset poll interval to default
+    g_pollIntervalMs = DEFAULT_POLL_INTERVAL_MS;
     
     EnterCriticalSection(&g_dataCS);
     g_pluginModeActive = FALSE;  // Deactivate plugin mode
