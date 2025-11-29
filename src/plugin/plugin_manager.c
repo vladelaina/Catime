@@ -251,19 +251,11 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
 }
 
 /**
- * @brief Extract display name from plugin filename (remove extension only)
+ * @brief Extract display name from plugin filename (keep extension)
  */
 static void ExtractDisplayName(const char* filename, char* displayName, size_t bufferSize) {
-    const char* ext = strrchr(filename, '.');
-    size_t nameLen = ext ? (size_t)(ext - filename) : strlen(filename);
-    
-    if (nameLen > 0 && nameLen < bufferSize) {
-        strncpy(displayName, filename, nameLen);
-        displayName[nameLen] = '\0';
-    } else {
-        strncpy(displayName, filename, bufferSize - 1);
-        displayName[bufferSize - 1] = '\0';
-    }
+    strncpy(displayName, filename, bufferSize - 1);
+    displayName[bufferSize - 1] = '\0';
 }
 
 void PluginManager_Init(void) {
@@ -356,53 +348,123 @@ int PluginManager_ScanPlugins(void) {
     int newPluginCount = 0;
     memset(newPlugins, 0, sizeof(newPlugins));
 
-    // Build search pattern - scan all .py files
-    char searchPath[MAX_PATH];
-    snprintf(searchPath, sizeof(searchPath), "%s\\*.py", pluginDir);
+    // Scan for script files (source-visible, no compiled executables)
+    // Sorted alphabetically by language name
+    const char* extensions[] = {
+        "*.agda",                   // Agda
+        "*.apl",                    // APL
+        "*.applescript",            // AppleScript
+        "*.ahk", "*.ahk2",          // AutoHotkey
+        "*.au3",                    // AutoIt
+        "*.awk",                    // AWK
+        "*.bal",                    // Ballerina
+        "*.bat", "*.cmd",           // Batch
+        "*.boo",                    // Boo
+        "*.ck",                     // ChucK
+        "*.clj", "*.cljs", "*.cljc",// Clojure
+        "*.coffee",                 // CoffeeScript
+        "*.lisp", "*.lsp", "*.cl",  // Common Lisp
+        "*.cr",                     // Crystal
+        "*.d",                      // D
+        "*.dart",                   // Dart
+        "*.ex", "*.exs",            // Elixir
+        "*.elm",                    // Elm
+        "*.el",                     // Emacs Lisp
+        "*.erl", "*.escript",       // Erlang
+        "*.fs", "*.fsx",            // F#
+        "*.factor",                 // Factor
+        "*.fnl",                    // Fennel
+        "*.forth", "*.4th", "*.fth",// Forth
+        "*.go",                     // Go
+        "*.groovy", "*.gvy",        // Groovy
+        "*.hack", "*.hh",           // Hack
+        "*.hs", "*.lhs",            // Haskell
+        "*.hx",                     // Haxe
+        "*.hy",                     // Hy
+        "*.idr",                    // Idris
+        "*.io",                     // Io
+        "*.ijs",                    // J
+        "*.janet",                  // Janet
+        "*.js", "*.mjs", "*.cjs",   // JavaScript
+        "*.jl",                     // Julia
+        "*.k", "*.q",               // K/Q
+        "*.kts",                    // Kotlin Script
+        "*.lean",                   // Lean
+        "*.lua",                    // Lua
+        "*.m", "*.wl",              // MATLAB/Mathematica
+        "*.moon",                   // MoonScript
+        "*.nims", "*.nimble",       // Nim
+        "*.ml", "*.mli",            // OCaml
+        "*.pl", "*.pm", "*.perl",   // Perl
+        "*.p6", "*.pl6", "*.raku",  // Perl 6/Raku
+        "*.php", "*.php5", "*.php7",// PHP
+        "*.pike",                   // Pike
+        "*.pony",                   // Pony
+        "*.ps1",                    // PowerShell
+        "*.pde",                    // Processing
+        "*.pro",                    // Prolog
+        "*.purs",                   // PureScript
+        "*.py", "*.pyw",            // Python
+        "*.r", "*.R", "*.Rscript",  // R
+        "*.rkt", "*.scm", "*.ss",   // Racket/Scheme
+        "*.red", "*.reds",          // Red
+        "*.rexx", "*.rex",          // Rexx
+        "*.rb", "*.rbw",            // Ruby
+        "*.scala", "*.sc",          // Scala
+        "*.sed",                    // sed
+        "*.sh", "*.bash", "*.zsh",  // Shell
+        "*.ksh", "*.csh", "*.fish", // Shell (more)
+        "*.st",                     // Smalltalk
+        "*.sml",                    // Standard ML
+        "*.swift",                  // Swift
+        "*.tcl", "*.tk",            // Tcl/Tk
+        "*.ts", "*.mts",            // TypeScript
+        "*.v", "*.vsh",             // V
+        "*.vbs", "*.wsf",           // VBScript/WSH
+        "*.wren",                   // Wren
+        "*.zig"                     // Zig
+    };
+    int extCount = sizeof(extensions) / sizeof(extensions[0]);
+    for (int ext = 0; ext < extCount; ext++) {
+        char searchPath[MAX_PATH];
+        snprintf(searchPath, sizeof(searchPath), "%s\\%s", pluginDir, extensions[ext]);
 
-    WIN32_FIND_DATAA findData;
-    HANDLE hFind = FindFirstFileA(searchPath, &findData);
+        WIN32_FIND_DATAA findData;
+        HANDLE hFind = FindFirstFileA(searchPath, &findData);
 
-    if (hFind != INVALID_HANDLE_VALUE) {
-        do {
-            if (newPluginCount >= MAX_PLUGINS) {
-                LOG_WARNING("Maximum plugin count reached (%d)", MAX_PLUGINS);
-                break;
-            }
-
-            if (!(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
-                PluginInfo* plugin = &newPlugins[newPluginCount];
-
-                // Basic info
-                strncpy(plugin->name, findData.cFileName, sizeof(plugin->name) - 1);
-                plugin->name[sizeof(plugin->name) - 1] = '\0';
-                ExtractDisplayName(findData.cFileName, plugin->displayName, sizeof(plugin->displayName));
-                snprintf(plugin->path, sizeof(plugin->path), "%s\\%s", pluginDir, findData.cFileName);
-                
-                plugin->isRunning = FALSE;
-                memset(&plugin->pi, 0, sizeof(plugin->pi));
-
-                // Preserve state from existing list
-                for (int i = 0; i < g_pluginCount; i++) {
-                    if (strcmp(g_plugins[i].name, plugin->name) == 0) {
-                        plugin->isRunning = g_plugins[i].isRunning;
-                        plugin->pi = g_plugins[i].pi;
-                        plugin->lastModTime = g_plugins[i].lastModTime;
-                        break;
-                    }
+        if (hFind != INVALID_HANDLE_VALUE) {
+            do {
+                if (newPluginCount >= MAX_PLUGINS) {
+                    LOG_WARNING("Maximum plugin count reached (%d)", MAX_PLUGINS);
+                    break;
                 }
 
-                LOG_INFO("Found plugin: %s (%s)", plugin->displayName, plugin->name);
-                newPluginCount++;
-            }
-        } while (FindNextFileA(hFind, &findData));
-        FindClose(hFind);
-    } else {
-        DWORD error = GetLastError();
-        if (error != ERROR_FILE_NOT_FOUND) {
-            LOG_WARNING("Failed to scan plugin directory, error: %lu", error);
-        } else {
-            LOG_INFO("No plugins found in directory");
+                if (!(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+                    PluginInfo* plugin = &newPlugins[newPluginCount];
+
+                    strncpy(plugin->name, findData.cFileName, sizeof(plugin->name) - 1);
+                    plugin->name[sizeof(plugin->name) - 1] = '\0';
+                    ExtractDisplayName(findData.cFileName, plugin->displayName, sizeof(plugin->displayName));
+                    snprintf(plugin->path, sizeof(plugin->path), "%s\\%s", pluginDir, findData.cFileName);
+                    
+                    plugin->isRunning = FALSE;
+                    memset(&plugin->pi, 0, sizeof(plugin->pi));
+
+                    // Preserve state from existing list
+                    for (int i = 0; i < g_pluginCount; i++) {
+                        if (strcmp(g_plugins[i].name, plugin->name) == 0) {
+                            plugin->isRunning = g_plugins[i].isRunning;
+                            plugin->pi = g_plugins[i].pi;
+                            plugin->lastModTime = g_plugins[i].lastModTime;
+                            break;
+                        }
+                    }
+
+                    LOG_INFO("Found plugin: %s (%s)", plugin->displayName, plugin->name);
+                    newPluginCount++;
+                }
+            } while (FindNextFileA(hFind, &findData));
+            FindClose(hFind);
         }
     }
 
