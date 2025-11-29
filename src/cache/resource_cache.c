@@ -29,9 +29,6 @@ static DWORD WINAPI BackgroundScanThread(LPVOID lpParam) {
     
     WriteLog(LOG_LEVEL_INFO, "Background resource scan started");
     
-    // Small delay to let main window initialize
-    Sleep(100);
-    
     // Check if shutdown requested
     if (g_shutdownRequested) {
         WriteLog(LOG_LEVEL_INFO, "Background scan aborted (shutdown requested)");
@@ -93,19 +90,15 @@ BOOL ResourceCache_Initialize(BOOL startBackgroundScan) {
     g_initialized = TRUE;
     
     if (startBackgroundScan) {
-        InterlockedExchange(&g_refreshInProgress, 1);
-        g_backgroundThread = CreateThread(
-            NULL, 0, BackgroundScanThread, NULL, 0, NULL);
+        // Do initial sync scan to ensure cache is ready before any menu opens
+        // This prevents "Loading..." from ever appearing
+        WriteLog(LOG_LEVEL_INFO, "Performing initial sync scan");
+        FontCache_Scan();
+        AnimationCache_Scan();
+        g_backgroundScanComplete = TRUE;
+        WriteLog(LOG_LEVEL_INFO, "Initial sync scan complete");
         
-        if (g_backgroundThread == NULL) {
-            WriteLog(LOG_LEVEL_ERROR, "Failed to create background scan thread");
-            InterlockedExchange(&g_refreshInProgress, 0);
-            return FALSE;
-        }
-        
-        SetThreadPriority(g_backgroundThread, THREAD_PRIORITY_BELOW_NORMAL);
-        
-        // Start file system watcher (will delay internally to let initial scan complete)
+        // Start file system watcher for subsequent updates
         if (!ResourceWatcher_Start()) {
             WriteLog(LOG_LEVEL_WARNING, "File system watcher failed to start, auto-refresh disabled");
             // Continue anyway, this is not critical
@@ -173,9 +166,8 @@ void ResourceCache_RequestRefresh(void) {
     
     WriteLog(LOG_LEVEL_INFO, "Resource cache refresh requested (async)");
     
-    // Invalidate caches
-    FontCache_Invalidate();
-    AnimationCache_Invalidate();
+    // Don't invalidate - keep old data available while scanning
+    // The scan will atomically replace the data when complete
     
     // Start background rescan
     HANDLE hThread = CreateThread(NULL, 0, BackgroundScanThread, NULL, 0, NULL);

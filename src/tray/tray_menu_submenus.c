@@ -318,9 +318,8 @@ void BuildAnimationSubmenu(HMENU hMenu) {
 void BuildPluginsSubmenu(HMENU hMenu) {
     HMENU hPluginsMenu = CreatePopupMenu();
 
-    // Trigger async scan for next menu open (non-blocking)
-    // Current menu uses cached list, new plugins appear on next open
-    PluginManager_RequestScanAsync();
+    // Sync scan - fast enough for small plugin folders, ensures new plugins appear immediately
+    PluginManager_ScanPlugins();
     int pluginCount = PluginManager_GetPluginCount();
 
     int activePluginIndex = PluginManager_GetActivePluginIndex();

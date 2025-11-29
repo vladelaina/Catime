@@ -284,12 +284,8 @@ AnimationCacheStatus AnimationCache_GetEntries(AnimationCacheEntry** outEntries,
         return ANIM_CACHE_ERROR;
     }
     
-    /* Use TryAcquire to avoid blocking UI when background scan is in progress */
-    if (!TryAcquireSRWLockShared(&g_cache.lock)) {
-        *outEntries = NULL;
-        *outCount = 0;
-        return ANIM_CACHE_INVALID;  /* Scan in progress, caller should show loading */
-    }
+    /* Use blocking acquire - scan is fast (milliseconds), better than showing "Loading" */
+    AcquireSRWLockShared(&g_cache.lock);
     
     AnimationCacheStatus status;
     if (!g_cache.isValid) {
