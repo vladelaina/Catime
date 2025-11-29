@@ -162,6 +162,13 @@ LRESULT HandleTimer(HWND hwnd, WPARAM wp, LPARAM lp) {
         }
         return 0;
     }
+    /* Handle click-through timer for dynamic WS_EX_TRANSPARENT switching */
+    extern UINT GetClickThroughTimerId(void);
+    extern void UpdateClickThroughState(HWND hwnd);
+    if (wp == GetClickThroughTimerId()) {
+        UpdateClickThroughState(hwnd);
+        return 0;
+    }
     HandleTimerEvent(hwnd, wp);
     return 0;
 }

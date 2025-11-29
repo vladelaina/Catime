@@ -87,29 +87,97 @@ BOOL InitDWMFunctions(void) {
     return FALSE;
 }
 
-/* Global flag for soft click-through (using WM_NCHITTEST instead of WS_EX_TRANSPARENT) */
-static BOOL g_softClickThrough = FALSE;
+/* Click-through state */
+static BOOL g_clickThroughEnabled = FALSE;
+static BOOL g_currentlyTransparent = FALSE;
+
+/* Timer ID for mouse position checking */
+#define TIMER_ID_CLICK_THROUGH 201
+#define CLICK_THROUGH_CHECK_INTERVAL 50  /* ms */
 
 BOOL IsSoftClickThroughEnabled(void) {
-    return g_softClickThrough;
+    return g_clickThroughEnabled;
+}
+
+/* Update WS_EX_TRANSPARENT based on mouse position over clickable regions */
+void UpdateClickThroughState(HWND hwnd) {
+    if (!g_clickThroughEnabled || !hwnd) return;
+    
+    extern BOOL CLOCK_EDIT_MODE;
+    if (CLOCK_EDIT_MODE) return;
+    
+    POINT pt;
+    GetCursorPos(&pt);
+    
+    /* Check if mouse is over window */
+    RECT rcWindow;
+    GetWindowRect(hwnd, &rcWindow);
+    if (!PtInRect(&rcWindow, pt)) {
+        /* Mouse outside window - ensure transparent */
+        if (!g_currentlyTransparent) {
+            LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+            exStyle |= WS_EX_TRANSPARENT;
+            SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
+            g_currentlyTransparent = TRUE;
+        }
+        return;
+    }
+    
+    /* Check if mouse is over a clickable region */
+    extern void UpdateRegionPositions(int windowX, int windowY);
+    extern const void* GetClickableRegionAt(POINT pt);
+    
+    UpdateRegionPositions(rcWindow.left, rcWindow.top);
+    const void* region = GetClickableRegionAt(pt);
+    
+    LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+    
+    if (region) {
+        /* Mouse over clickable region - remove WS_EX_TRANSPARENT to allow clicks */
+        if (g_currentlyTransparent) {
+            exStyle &= ~WS_EX_TRANSPARENT;
+            SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
+            g_currentlyTransparent = FALSE;
+        }
+    } else {
+        /* Mouse not over clickable region - add WS_EX_TRANSPARENT to pass through */
+        if (!g_currentlyTransparent) {
+            exStyle |= WS_EX_TRANSPARENT;
+            SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
+            g_currentlyTransparent = TRUE;
+        }
+    }
 }
 
 void SetClickThrough(HWND hwnd, BOOL enable) {
     LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
-    exStyle &= ~WS_EX_TRANSPARENT;
-
+    
     if (enable) {
-        /* Use soft click-through (WM_NCHITTEST returns HTTRANSPARENT) 
-         * instead of WS_EX_TRANSPARENT to allow selective clicking */
-        g_softClickThrough = TRUE;
-        LOG_INFO("Click-through enabled (soft mode)");
+        /* Enable click-through with dynamic switching for clickable regions */
+        exStyle |= WS_EX_TRANSPARENT;
+        g_clickThroughEnabled = TRUE;
+        g_currentlyTransparent = TRUE;
+        
+        /* Start timer to check mouse position */
+        SetTimer(hwnd, TIMER_ID_CLICK_THROUGH, CLICK_THROUGH_CHECK_INTERVAL, NULL);
+        LOG_INFO("Click-through enabled (dynamic mode)");
     } else {
-        g_softClickThrough = FALSE;
+        exStyle &= ~WS_EX_TRANSPARENT;
+        g_clickThroughEnabled = FALSE;
+        g_currentlyTransparent = FALSE;
+        
+        /* Stop timer */
+        KillTimer(hwnd, TIMER_ID_CLICK_THROUGH);
         LOG_INFO("Click-through disabled");
     }
 
     SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
     SetWindowPos(hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+}
+
+/* Get timer ID for external handling */
+UINT GetClickThroughTimerId(void) {
+    return TIMER_ID_CLICK_THROUGH;
 }
 
 static void ApplyAccentPolicy(HWND hwnd, ACCENT_STATE accentState) {

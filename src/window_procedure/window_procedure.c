@@ -146,10 +146,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         }
     }
     
-    /* Handle WM_NCHITTEST for soft click-through mode */
+    /* Handle WM_NCHITTEST for click-through in non-edit mode */
     if (msg == WM_NCHITTEST) {
-        extern BOOL IsSoftClickThroughEnabled(void);
-        if (IsSoftClickThroughEnabled() && !CLOCK_EDIT_MODE) {
+        if (!CLOCK_EDIT_MODE) {
             POINT pt = { GET_X_LPARAM(lp), GET_Y_LPARAM(lp) };
             
             /* Update region positions based on current window position */
