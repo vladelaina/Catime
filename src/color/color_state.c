@@ -10,18 +10,7 @@
 #include "color/color_state.h"
 #include "config.h"
 
-/* ============================================================================
- * Default Color Palette
- * ============================================================================ */
-
-static const char* DEFAULT_COLOR_OPTIONS[] = {
-    "#FFFFFF", "#E3E3E5", "#000000",
-    "#F6ABB7", "#22C55E", "#8771C6",
-    "#FF5E96_#56C6FF", "#648CFF_#64DC78", "#FF9A56_#56CCBA",
-    "#FFA745_#FE869F_#EF7AC8_#A083ED_#43AEFF"
-};
-
-#define DEFAULT_COLOR_OPTIONS_COUNT (sizeof(DEFAULT_COLOR_OPTIONS) / sizeof(DEFAULT_COLOR_OPTIONS[0]))
+/* Default colors are defined in config.h as DEFAULT_COLOR_OPTIONS_INI */
 
 /* ============================================================================
  * Global State Variables
@@ -180,8 +169,13 @@ void LoadColorConfig(void) {
         fclose(file);
 
         if (!found_colors || COLOR_OPTIONS_COUNT == 0) {
-            for (size_t i = 0; i < DEFAULT_COLOR_OPTIONS_COUNT; i++) {
-                AddColorOption(DEFAULT_COLOR_OPTIONS[i]);
+            /* Parse defaults from config.h */
+            char defaults[] = DEFAULT_COLOR_OPTIONS_INI;
+            char* token = strtok(defaults, ",");
+            while (token) {
+                while (*token == ' ') token++;
+                AddColorOption(token);
+                token = strtok(NULL, ",");
             }
         }
     }
