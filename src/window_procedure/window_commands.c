@@ -481,10 +481,11 @@ LRESULT HandleCommand(HWND hwnd, WPARAM wp, LPARAM lp) {
 
     #define IDT_MENU_DEBOUNCE 500
     BOOL isAnimationSelectionCommand =
-        (cmd >= CLOCK_IDM_ANIMATIONS_BASE && cmd < CLOCK_IDM_ANIMATIONS_BASE + 1000) ||
+        (cmd >= CLOCK_IDM_ANIMATIONS_BASE && cmd < CLOCK_IDM_ANIMATIONS_END) ||
         cmd == CLOCK_IDM_ANIMATIONS_USE_LOGO ||
         cmd == CLOCK_IDM_ANIMATIONS_USE_CPU ||
-        cmd == CLOCK_IDM_ANIMATIONS_USE_MEM;
+        cmd == CLOCK_IDM_ANIMATIONS_USE_MEM ||
+        cmd == CLOCK_IDM_ANIMATIONS_USE_NONE;
 
     if (isAnimationSelectionCommand) {
         KillTimer(hwnd, IDT_MENU_DEBOUNCE);

@@ -293,6 +293,12 @@ BOOL GetAnimationNameFromMenuId(UINT id, char* outPath, size_t outPathSize) {
         return TRUE;
     }
     
+    if (id == CLOCK_IDM_ANIMATIONS_USE_NONE) {
+        strncpy(outPath, "__none__", outPathSize - 1);
+        outPath[outPathSize - 1] = '\0';
+        return TRUE;
+    }
+    
     if (id >= CLOCK_IDM_ANIMATIONS_BASE && id < CLOCK_IDM_ANIMATIONS_END) {
          AnimationCacheEntry* cachedEntries = NULL;
         int cachedCount = 0;

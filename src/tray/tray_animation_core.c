@@ -392,7 +392,8 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
     
     if (nameBuf[0] != '\0') {
         const char* prefix = ANIMATIONS_PATH_PREFIX;
-        if (_stricmp(nameBuf, "__logo__") == 0 || _stricmp(nameBuf, "__cpu__") == 0 || _stricmp(nameBuf, "__mem__") == 0) {
+        if (_stricmp(nameBuf, "__logo__") == 0 || _stricmp(nameBuf, "__cpu__") == 0 || 
+            _stricmp(nameBuf, "__mem__") == 0 || _stricmp(nameBuf, "__none__") == 0) {
             strncpy(g_animationName, nameBuf, sizeof(g_animationName) - 1);
         } else if (_strnicmp(nameBuf, prefix, (int)strlen(prefix)) == 0) {
             const char* rel = nameBuf + strlen(prefix);
@@ -769,7 +770,8 @@ void PreloadAnimationFromConfig(void) {
     
     if (nameBuf[0] != '\0') {
         const char* prefix = ANIMATIONS_PATH_PREFIX;
-        if (_stricmp(nameBuf, "__logo__") == 0 || _stricmp(nameBuf, "__cpu__") == 0 || _stricmp(nameBuf, "__mem__") == 0) {
+        if (_stricmp(nameBuf, "__logo__") == 0 || _stricmp(nameBuf, "__cpu__") == 0 || 
+            _stricmp(nameBuf, "__mem__") == 0 || _stricmp(nameBuf, "__none__") == 0) {
             strncpy(g_animationName, nameBuf, sizeof(g_animationName) - 1);
         } else if (_strnicmp(nameBuf, prefix, (int)strlen(prefix)) == 0) {
             const char* rel = nameBuf + strlen(prefix);

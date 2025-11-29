@@ -407,7 +407,8 @@ void WriteConfig(const char* config_path) {
     const char* anim = GetCurrentAnimationName();
     if (anim && anim[0] != '\0') {
         char animPath[MAX_PATH];
-        if (_stricmp(anim, "__logo__") == 0 || _stricmp(anim, "__cpu__") == 0 || _stricmp(anim, "__mem__") == 0) {
+        if (_stricmp(anim, "__logo__") == 0 || _stricmp(anim, "__cpu__") == 0 || 
+            _stricmp(anim, "__mem__") == 0 || _stricmp(anim, "__none__") == 0) {
             snprintf(animPath, sizeof(animPath), "%s", anim);
         } else {
             snprintf(animPath, sizeof(animPath), "%%LOCALAPPDATA%%\\Catime\\resources\\animations\\%s", anim);

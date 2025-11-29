@@ -466,9 +466,8 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 
         if (menuItem >= CMD_FONT_SELECTION_BASE && menuItem < CMD_FONT_SELECTION_END) {
-            if (menuItem != CLOCK_IDM_ANIMATIONS_USE_LOGO &&
-                menuItem != CLOCK_IDM_ANIMATIONS_USE_CPU &&
-                menuItem != CLOCK_IDM_ANIMATIONS_USE_MEM) {
+            /* Exclude all animation menu items (2200-2220) from font preview */
+            if (menuItem < CLOCK_IDM_ANIMATIONS_MENU || menuItem > CLOCK_IDM_ANIM_SPEED_TIMER) {
                 isColorOrFontPreview = TRUE;
             }
         }
@@ -480,19 +479,11 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
             isColorOrFontPreview = TRUE;
         }
 
-        if (menuItem == CLOCK_IDM_ANIMATIONS_USE_LOGO) {
-            isAnimationPreview = TRUE;
-        }
-
-        if (menuItem == CLOCK_IDM_ANIMATIONS_USE_CPU) {
-            isAnimationPreview = TRUE;
-        }
-
-        if (menuItem == CLOCK_IDM_ANIMATIONS_USE_MEM) {
-            isAnimationPreview = TRUE;
-        }
-
-        if (menuItem >= CLOCK_IDM_ANIMATIONS_BASE && menuItem < CLOCK_IDM_ANIMATIONS_BASE + 1000) {
+        if (menuItem == CLOCK_IDM_ANIMATIONS_USE_LOGO ||
+            menuItem == CLOCK_IDM_ANIMATIONS_USE_CPU ||
+            menuItem == CLOCK_IDM_ANIMATIONS_USE_MEM ||
+            menuItem == CLOCK_IDM_ANIMATIONS_USE_NONE ||
+            (menuItem >= CLOCK_IDM_ANIMATIONS_BASE && menuItem < CLOCK_IDM_ANIMATIONS_END)) {
             isAnimationPreview = TRUE;
         }
 
