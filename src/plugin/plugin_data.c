@@ -1,9 +1,10 @@
 /**
  * @file plugin_data.c
- * @brief Plugin data management using file monitoring (replacing IPC)
+ * @brief Plugin data management using file monitoring
  */
 
 #include "plugin/plugin_data.h"
+#include "plugin/plugin_exit.h"
 #include "../resource/resource.h"
 #include "log.h"
 #include <windows.h>
@@ -11,40 +12,36 @@
 #include <string.h>
 #include <stdlib.h>
 
-// Internal data storage - dynamically allocated
-static wchar_t* g_pluginDisplayText = NULL;
-static size_t g_pluginDisplayTextLen = 0;
-static BOOL g_hasPluginData = FALSE;
-static BOOL g_pluginModeActive = FALSE;  // Only TRUE when user explicitly starts a plugin
-static volatile BOOL g_forceNextUpdate = FALSE;  // Force file watcher to re-read
+/* ============================================================================
+ * Shared State (exported for plugin_exit.c)
+ * ============================================================================ */
+
+wchar_t* g_pluginDisplayText = NULL;
+size_t g_pluginDisplayTextLen = 0;
+BOOL g_hasPluginData = FALSE;
+
+/* ============================================================================
+ * Internal State
+ * ============================================================================ */
+
+static BOOL g_pluginModeActive = FALSE;
+static volatile BOOL g_forceNextUpdate = FALSE;
 static CRITICAL_SECTION g_dataCS;
 
-// Exit countdown state
-static volatile int g_exitCountdown = 0;        // Remaining seconds (0 = not exiting)
-static volatile BOOL g_exitInProgress = FALSE;  // Exit countdown is active
-static HANDLE g_exitTimerThread = NULL;
-
-// Exit tag template (content before and after <exit> tag)
-static wchar_t* g_exitPrefix = NULL;   // Text before <exit>
-static wchar_t* g_exitSuffix = NULL;   // Text after </exit>
-
-// Watcher thread
+/* Watcher thread */
 static HANDLE g_hWatchThread = NULL;
 static HWND g_hNotifyWnd = NULL;
 static volatile BOOL g_isRunning = FALSE;
 
-// Cache for change detection
+/* Cache for change detection */
 static char* g_lastContent = NULL;
 static size_t g_lastContentSize = 0;
 
-// Dynamic poll interval (controlled by <fps:N> tag)
+/* Dynamic poll interval (controlled by <fps:N> tag) */
 #define DEFAULT_POLL_INTERVAL_MS 500
-#define MIN_POLL_INTERVAL_MS 10      // Max 100 fps
-#define MAX_POLL_INTERVAL_MS 5000    // Min 0.2 fps
+#define MIN_POLL_INTERVAL_MS 10
+#define MAX_POLL_INTERVAL_MS 5000
 static volatile DWORD g_pollIntervalMs = DEFAULT_POLL_INTERVAL_MS;
-
-/* Forward declaration */
-static DWORD WINAPI ExitCountdownThread(LPVOID lpParam);
 
 /**
  * @brief Parse and remove <fps:N> tag from content, update poll interval
@@ -122,23 +119,22 @@ static void RemoveFpsTagW(wchar_t* text) {
 static BOOL ParseContent(const char* content, size_t contentLen) {
     if (!content || contentLen == 0) return FALSE;
     
-    // Parse <fps:N> tag and update poll interval (before any other processing)
+    /* Parse <fps:N> tag first */
     ParseFpsTag(content);
     
-    // Don't update display if exit countdown is in progress
-    // (the countdown thread is managing the display)
-    if (g_exitInProgress) return TRUE;
+    /* Skip if exit countdown is active */
+    if (PluginExit_IsInProgress()) return TRUE;
 
     EnterCriticalSection(&g_dataCS);
 
-    // Calculate required wide char buffer size
+    /* Calculate required buffer size */
     int requiredLen = MultiByteToWideChar(CP_UTF8, 0, content, (int)contentLen, NULL, 0);
     if (requiredLen <= 0) {
         LeaveCriticalSection(&g_dataCS);
         return FALSE;
     }
 
-    // Reallocate buffer if needed
+    /* Reallocate buffer if needed */
     size_t requiredSize = (size_t)(requiredLen + 1);
     if (g_pluginDisplayText == NULL || g_pluginDisplayTextLen < requiredSize) {
         wchar_t* newBuf = (wchar_t*)realloc(g_pluginDisplayText, requiredSize * sizeof(wchar_t));
@@ -151,121 +147,39 @@ static BOOL ParseContent(const char* content, size_t contentLen) {
         g_pluginDisplayTextLen = requiredSize;
     }
 
-    // Convert UTF-8 content to wide string
-    int len = MultiByteToWideChar(CP_UTF8, 0, content, (int)contentLen, g_pluginDisplayText, (int)g_pluginDisplayTextLen);
+    /* Convert UTF-8 to wide string */
+    int len = MultiByteToWideChar(CP_UTF8, 0, content, (int)contentLen, 
+                                   g_pluginDisplayText, (int)g_pluginDisplayTextLen);
     if (len > 0) {
         g_pluginDisplayText[len] = L'\0';
         
-        // Check for BOM (0xFEFF) at the beginning and remove it
+        /* Remove BOM if present */
         if (g_pluginDisplayText[0] == 0xFEFF) {
             memmove(g_pluginDisplayText, &g_pluginDisplayText[1], len * sizeof(wchar_t));
             len--;
         }
         
-        // Trim trailing whitespace/newlines for cleaner display
+        /* Trim trailing whitespace */
         while (len > 0 && (g_pluginDisplayText[len - 1] == L'\n' || 
                            g_pluginDisplayText[len - 1] == L'\r' ||
                            g_pluginDisplayText[len - 1] == L' ')) {
             g_pluginDisplayText[--len] = L'\0';
         }
         
-        // Remove <fps:N> tag from display (already parsed above)
+        /* Remove <fps:N> tag from display */
         RemoveFpsTagW(g_pluginDisplayText);
         
-        // Pre-process <exit> tag: replace with countdown number and start countdown
-        wchar_t* start = wcsstr(g_pluginDisplayText, L"<exit>");
-        wchar_t* end = wcsstr(g_pluginDisplayText, L"</exit>");
-        if (start && end && end > start) {
-            // Parse the number or use default 3
-            int seconds = 3;
-            wchar_t* numStart = start + 6;
-            BOOL validNumber = TRUE;
-            if (numStart < end) {
-                while (numStart < end && (*numStart == L' ' || *numStart == L'\t')) numStart++;
-                if (numStart < end) {
-                    // Check if it's a valid number
-                    wchar_t* p = numStart;
-                    while (p < end && *p != L' ' && *p != L'\t') {
-                        if (*p < L'0' || *p > L'9') {
-                            validNumber = FALSE;
-                            break;
-                        }
-                        p++;
-                    }
-                    if (validNumber) {
-                        int parsed = _wtoi(numStart);
-                        if (parsed > 0) {
-                            seconds = parsed;
-                        } else {
-                            validNumber = FALSE;
-                        }
-                    }
-                }
-            }
-            
-            if (validNumber) {
-                // Save prefix (text before <exit>)
-                size_t prefixLen = start - g_pluginDisplayText;
-                if (g_exitPrefix) { free(g_exitPrefix); g_exitPrefix = NULL; }
-                if (prefixLen > 0) {
-                    g_exitPrefix = (wchar_t*)malloc((prefixLen + 1) * sizeof(wchar_t));
-                    if (g_exitPrefix) {
-                        wcsncpy(g_exitPrefix, g_pluginDisplayText, prefixLen);
-                        g_exitPrefix[prefixLen] = L'\0';
-                    }
-                }
-                
-                // Save suffix (text after </exit>)
-                wchar_t* suffixStart = end + 7;
-                if (g_exitSuffix) { free(g_exitSuffix); g_exitSuffix = NULL; }
-                if (*suffixStart) {
-                    size_t suffixLen = wcslen(suffixStart);
-                    g_exitSuffix = (wchar_t*)malloc((suffixLen + 1) * sizeof(wchar_t));
-                    if (g_exitSuffix) {
-                        wcscpy(g_exitSuffix, suffixStart);
-                    }
-                }
-                
-                // Replace <exit>N</exit> with just N in the display text
-                wchar_t countdownNum[16];
-                _snwprintf(countdownNum, 16, L"%d", seconds);
-                
-                size_t suffixLen = wcslen(suffixStart);
-                size_t numLen = wcslen(countdownNum);
-                size_t newLen = prefixLen + numLen + suffixLen + 1;
-                
-                if (newLen <= g_pluginDisplayTextLen) {
-                    memmove(start + numLen, suffixStart, (suffixLen + 1) * sizeof(wchar_t));
-                    memcpy(start, countdownNum, numLen * sizeof(wchar_t));
-                }
-                
-                g_hasPluginData = TRUE;
-                
-                // Start countdown thread (do this after releasing CS)
-                g_exitInProgress = TRUE;
-                g_exitCountdown = seconds;
-                
-                LeaveCriticalSection(&g_dataCS);
-                
-                // Start countdown thread
-                g_exitTimerThread = CreateThread(NULL, 0, ExitCountdownThread, 
-                                                  (LPVOID)(intptr_t)seconds, 0, NULL);
-                if (!g_exitTimerThread) {
-                    g_exitInProgress = FALSE;
-                    LOG_ERROR("PluginData: Failed to create exit countdown thread");
-                } else {
-                    LOG_INFO("PluginData: Exit countdown started (%d seconds)", seconds);
-                }
-                
-                return TRUE;  // Already left CS and started countdown
-            }
+        /* Process <exit> tag (releases CS if countdown starts) */
+        if (PluginExit_ParseTag(g_pluginDisplayText, &len, g_pluginDisplayTextLen)) {
+            g_hasPluginData = TRUE;
+            LeaveCriticalSection(&g_dataCS);
+            return TRUE;
         }
         
         g_hasPluginData = TRUE;
     }
 
     LeaveCriticalSection(&g_dataCS);
-
     return len > 0;
 }
 
@@ -400,7 +314,10 @@ void PluginData_Init(HWND hwnd) {
     g_lastContentSize = 0;
     g_isRunning = TRUE;
 
-    /* Ensure output file exists on startup */
+    /* Initialize exit subsystem */
+    PluginExit_Init(hwnd, &g_dataCS);
+
+    /* Ensure output file exists */
     char outputPath[MAX_PATH];
     if (GetPluginOutputPath(outputPath, sizeof(outputPath))) {
         EnsureOutputFileExists(outputPath);
@@ -408,13 +325,14 @@ void PluginData_Init(HWND hwnd) {
 
     g_hWatchThread = CreateThread(NULL, 0, FileWatcherThread, NULL, 0, NULL);
     if (g_hWatchThread) {
-        LOG_INFO("Plugin Data subsystem initialized (File Watcher Mode)");
+        LOG_INFO("PluginData: Initialized");
     } else {
-        LOG_ERROR("Failed to start Plugin Data watcher thread");
+        LOG_ERROR("PluginData: Failed to start watcher thread");
     }
 }
 
 void PluginData_Shutdown(void) {
+    /* Stop watcher thread */
     if (g_hWatchThread) {
         g_isRunning = FALSE;
         WaitForSingleObject(g_hWatchThread, 1000);
@@ -422,15 +340,10 @@ void PluginData_Shutdown(void) {
         g_hWatchThread = NULL;
     }
     
-    // Cancel any pending exit and wait for thread
-    g_exitInProgress = FALSE;
-    if (g_exitTimerThread) {
-        WaitForSingleObject(g_exitTimerThread, 1000);
-        CloseHandle(g_exitTimerThread);
-        g_exitTimerThread = NULL;
-    }
+    /* Shutdown exit subsystem */
+    PluginExit_Shutdown();
     
-    // Free dynamic memory
+    /* Free memory */
     EnterCriticalSection(&g_dataCS);
     if (g_pluginDisplayText) {
         free(g_pluginDisplayText);
@@ -442,18 +355,10 @@ void PluginData_Shutdown(void) {
         g_lastContent = NULL;
         g_lastContentSize = 0;
     }
-    if (g_exitPrefix) {
-        free(g_exitPrefix);
-        g_exitPrefix = NULL;
-    }
-    if (g_exitSuffix) {
-        free(g_exitSuffix);
-        g_exitSuffix = NULL;
-    }
     LeaveCriticalSection(&g_dataCS);
     
     DeleteCriticalSection(&g_dataCS);
-    LOG_INFO("Plugin Data subsystem shutdown");
+    LOG_INFO("PluginData: Shutdown");
 }
 
 BOOL PluginData_GetText(wchar_t* buffer, size_t maxLen) {
@@ -481,10 +386,10 @@ BOOL PluginData_GetText(wchar_t* buffer, size_t maxLen) {
 }
 
 void PluginData_Clear(void) {
-    // Cancel any pending exit countdown first
-    PluginData_CancelExit();
+    /* Cancel any pending exit countdown */
+    PluginExit_Cancel();
     
-    // Reset poll interval to default
+    /* Reset poll interval to default */
     g_pollIntervalMs = DEFAULT_POLL_INTERVAL_MS;
     
     EnterCriticalSection(&g_dataCS);
@@ -601,112 +506,3 @@ BOOL PluginData_HasCatimeTag(void) {
     return hasTag;
 }
 
-/* Forward declaration */
-void PluginManager_StopAllPlugins(void);
-
-/**
- * @brief Exit countdown timer thread
- */
-static DWORD WINAPI ExitCountdownThread(LPVOID lpParam) {
-    int seconds = (int)(intptr_t)lpParam;
-    
-    LOG_INFO("PluginData: Exit countdown started (%d seconds)", seconds);
-    
-    while (seconds > 0 && g_exitInProgress) {
-        g_exitCountdown = seconds;
-        
-        /* Build display text: prefix + countdown + suffix */
-        wchar_t countdownNum[16];
-        _snwprintf(countdownNum, 16, L"%d", seconds);
-        
-        EnterCriticalSection(&g_dataCS);
-        
-        size_t prefixLen = g_exitPrefix ? wcslen(g_exitPrefix) : 0;
-        size_t suffixLen = g_exitSuffix ? wcslen(g_exitSuffix) : 0;
-        size_t numLen = wcslen(countdownNum);
-        size_t totalLen = prefixLen + numLen + suffixLen + 1;
-        
-        if (g_pluginDisplayText == NULL || g_pluginDisplayTextLen < totalLen) {
-            wchar_t* newBuf = (wchar_t*)realloc(g_pluginDisplayText, totalLen * sizeof(wchar_t));
-            if (newBuf) {
-                g_pluginDisplayText = newBuf;
-                g_pluginDisplayTextLen = totalLen;
-            }
-        }
-        if (g_pluginDisplayText) {
-            g_pluginDisplayText[0] = L'\0';
-            if (g_exitPrefix) wcscat(g_pluginDisplayText, g_exitPrefix);
-            wcscat(g_pluginDisplayText, countdownNum);
-            if (g_exitSuffix) wcscat(g_pluginDisplayText, g_exitSuffix);
-            g_hasPluginData = TRUE;
-        }
-        LeaveCriticalSection(&g_dataCS);
-        
-        /* Notify window to repaint */
-        if (g_hNotifyWnd) {
-            InvalidateRect(g_hNotifyWnd, NULL, FALSE);
-        }
-        
-        Sleep(1000);
-        seconds--;
-    }
-    
-    if (g_exitInProgress) {
-        LOG_INFO("PluginData: Exit countdown complete, requesting plugin exit");
-        
-        /* Post message to window to handle exit (reuses HandlePluginToggle logic) */
-        if (g_hNotifyWnd) {
-            PostMessage(g_hNotifyWnd, CLOCK_WM_PLUGIN_EXIT, 0, 0);
-        }
-    }
-    
-    g_exitInProgress = FALSE;
-    g_exitCountdown = 0;
-    
-    return 0;
-}
-
-void PluginData_CheckExitTag(void) {
-    /* NOTE: Exit tag handling is now done in ParseContent() for flicker-free display.
-     * This function is kept for API compatibility but does nothing.
-     * ParseContent() detects <exit> tags and starts countdown immediately. */
-    (void)0;
-}
-
-void PluginData_CancelExit(void) {
-    if (!g_exitInProgress) return;
-    
-    // Signal thread to stop
-    g_exitInProgress = FALSE;
-    g_exitCountdown = 0;
-    
-    // Wait for thread to finish (must complete before freeing memory)
-    BOOL threadExited = FALSE;
-    if (g_exitTimerThread) {
-        // Wait up to 3 seconds for thread to notice g_exitInProgress=FALSE and exit
-        DWORD result = WaitForSingleObject(g_exitTimerThread, 3000);
-        if (result == WAIT_OBJECT_0) {
-            threadExited = TRUE;
-        } else {
-            LOG_ERROR("PluginData: Exit thread did not terminate, memory leak avoided");
-        }
-        CloseHandle(g_exitTimerThread);
-        g_exitTimerThread = NULL;
-    } else {
-        threadExited = TRUE;  // No thread was running
-    }
-    
-    // Only safe to clean up if thread has exited
-    if (threadExited) {
-        if (g_exitPrefix) {
-            free(g_exitPrefix);
-            g_exitPrefix = NULL;
-        }
-        if (g_exitSuffix) {
-            free(g_exitSuffix);
-            g_exitSuffix = NULL;
-        }
-    }
-    
-    LOG_INFO("PluginData: Exit countdown cancelled");
-}

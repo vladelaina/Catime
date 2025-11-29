@@ -63,23 +63,4 @@ BOOL PluginData_IsActive(void);
  */
 BOOL PluginData_HasCatimeTag(void);
 
-/**
- * @brief Check and handle <exit> tag in plugin output
- * 
- * Syntax:
- * - <exit></exit> - Exit after 3 seconds (default)
- * - <exit>5</exit> - Exit after 5 seconds
- * 
- * During countdown, the <exit>N</exit> tag is replaced with the countdown number.
- * Example: "Exiting in <exit>3</exit>s" becomes "Exiting in 3s", "Exiting in 2s", etc.
- * After countdown completes, stops the plugin and exits plugin mode.
- * Invalid values (non-positive or non-numeric) will show raw content for debugging.
- */
-void PluginData_CheckExitTag(void);
-
-/**
- * @brief Cancel any pending exit countdown
- */
-void PluginData_CancelExit(void);
-
 #endif /* PLUGIN_DATA_H */

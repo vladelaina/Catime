@@ -8,6 +8,7 @@
 #include "window_procedure/window_procedure.h"
 #include "plugin/plugin_manager.h"
 #include "plugin/plugin_data.h"
+#include "plugin/plugin_exit.h"
 #include "timer/timer.h"
 #include "color/gradient.h"
 #include "color/color_parser.h"
@@ -183,7 +184,7 @@ static BOOL HandleShowPluginFile(HWND hwnd) {
  */
 void HandlePluginExit(HWND hwnd) {
     /* Cancel any pending exit countdown */
-    PluginData_CancelExit();
+    PluginExit_Cancel();
     
     /* Stop all plugins */
     PluginManager_StopAllPlugins();

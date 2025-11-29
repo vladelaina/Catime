@@ -78,7 +78,9 @@ void HandleWindowDestroy(HWND hwnd) {
     CleanupUpdateThread();
 
     KillTimer(hwnd, TIMER_ID_MAIN);
-    LOG_INFO("Main timer stopped");
+    extern UINT GetClickThroughTimerId(void);
+    KillTimer(hwnd, GetClickThroughTimerId());
+    LOG_INFO("Timers stopped");
     
     RemoveTrayIcon();
     LOG_INFO("Tray icon removed");
