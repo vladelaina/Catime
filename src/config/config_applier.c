@@ -212,7 +212,7 @@ void ApplyColorSettings(const ConfigSnapshot* snapshot) {
     COLOR_OPTIONS_COUNT = 0;
     
     /* Parse new color options */
-    char colorOptionsCopy[1024];
+    char colorOptionsCopy[2048];
     strncpy(colorOptionsCopy, snapshot->colorOptions, sizeof(colorOptionsCopy) - 1);
     colorOptionsCopy[sizeof(colorOptionsCopy) - 1] = '\0';
     

@@ -220,7 +220,9 @@ static BOOL HandleVisibility(HWND hwnd, const char* input) {
 
 static BOOL HandleEditMode(HWND hwnd, const char* input) {
     (void)input;
-    ToggleEditMode(hwnd);
+    /* Use PostMessage to defer execution until message loop is running.
+     * Direct call during startup can cause segfault due to uninitialized resources. */
+    PostMessage(hwnd, WM_HOTKEY, HOTKEY_ID_EDIT_MODE, 0);
     return TRUE;
 }
 

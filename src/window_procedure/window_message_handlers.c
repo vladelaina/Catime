@@ -376,10 +376,14 @@ LRESULT HandleDrawItem(HWND hwnd, WPARAM wp, LPARAM lp) {
     const char* hexColor = COLOR_OPTIONS[colorIndex].hexColor;
     GradientType gradientType = GetGradientTypeByName(hexColor);
     
+    /* Draw color/gradient with space for sequence number */
+    RECT colorRect = lpdis->rcItem;
+    colorRect.left += 28;  /* Leave space for number */
+    
     if (gradientType != GRADIENT_NONE) {
         const GradientInfo* info = GetGradientInfo(gradientType);
         if (!info) return FALSE;
-        DrawGradientRect(lpdis->hDC, &lpdis->rcItem, info);
+        DrawGradientRect(lpdis->hDC, &colorRect, info);
     } else {
         int r, g, b;
         sscanf(hexColor + 1, "%02x%02x%02x", &r, &g, &b);
@@ -390,14 +394,23 @@ LRESULT HandleDrawItem(HWND hwnd, WPARAM wp, LPARAM lp) {
         HGDIOBJ oldBrush = SelectObject(lpdis->hDC, hBrush);
         HGDIOBJ oldPen = SelectObject(lpdis->hDC, hPen);
 
-        Rectangle(lpdis->hDC, lpdis->rcItem.left, lpdis->rcItem.top,
-                 lpdis->rcItem.right, lpdis->rcItem.bottom);
+        Rectangle(lpdis->hDC, colorRect.left, colorRect.top,
+                 colorRect.right, colorRect.bottom);
 
         SelectObject(lpdis->hDC, oldPen);
         SelectObject(lpdis->hDC, oldBrush);
         DeleteObject(hPen);
         DeleteObject(hBrush);
     }
+
+    /* Draw sequence number on left side */
+    wchar_t numStr[8];
+    _snwprintf(numStr, 8, L"%d", colorIndex + 1);
+    RECT numRect = lpdis->rcItem;
+    numRect.right = numRect.left + 26;
+    SetBkMode(lpdis->hDC, TRANSPARENT);
+    SetTextColor(lpdis->hDC, GetSysColor(COLOR_MENUTEXT));
+    DrawTextW(lpdis->hDC, numStr, -1, &numRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 
     if (lpdis->itemState & ODS_SELECTED) {
         DrawFocusRect(lpdis->hDC, &lpdis->rcItem);

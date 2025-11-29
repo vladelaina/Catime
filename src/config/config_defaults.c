@@ -377,7 +377,7 @@ void CreateDefaultConfig(const char* config_path) {
 typedef struct ConfigEntry {
     char section[64];
     char key[64];
-    char value[512];
+    char value[2048];  /* Large enough for COLOR_OPTIONS */
     struct ConfigEntry* next;
 } ConfigEntry;
 

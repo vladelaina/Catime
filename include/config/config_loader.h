@@ -86,7 +86,7 @@ typedef struct {
     int notificationWindowHeight;
     
     /* Colors */
-    char colorOptions[1024];
+    char colorOptions[2048];
     
     /* Hotkeys */
     WORD hotkeyShowTime;

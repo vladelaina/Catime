@@ -306,7 +306,7 @@ LRESULT HandleAppRecentFilesChanged(HWND hwnd) {
 }
 
 LRESULT HandleAppColorsChanged(HWND hwnd) {
-    char buffer[1024];
+    char buffer[2048];
     ReadConfigStr(CFG_SECTION_COLORS, "COLOR_OPTIONS", DEFAULT_COLOR_OPTIONS_INI, buffer, sizeof(buffer));
     
     ClearColorOptions();

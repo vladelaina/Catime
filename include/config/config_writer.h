@@ -19,7 +19,7 @@
 typedef struct {
     char section[64];
     char key[64];
-    char value[256];
+    char value[2048];  /* Large enough for COLOR_OPTIONS */
 } ConfigWriteItem;
 
 /* ============================================================================

@@ -10,28 +10,13 @@
 #include "color/color_state.h"
 #include "config.h"
 
-/* Default colors are defined in config.h as DEFAULT_COLOR_OPTIONS_INI */
-
-/* ============================================================================
- * Global State Variables
- * ============================================================================ */
-
 PredefinedColor* COLOR_OPTIONS = NULL;
 size_t COLOR_OPTIONS_COUNT = 0;
-
 char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER] = "#FFFFFF";
-
-/* ============================================================================
- * External Dependencies
- * ============================================================================ */
 
 void GetConfigPath(char* path, size_t size);
 void CreateDefaultConfig(const char* config_path);
 void WriteConfig(const char* config_path);
-
-/* ============================================================================
- * Internal Helper Functions
- * ============================================================================ */
 
 static void TrimString(char* str) {
     if (!str) return;
@@ -46,64 +31,60 @@ static void TrimString(char* str) {
     }
 }
 
-/* ============================================================================
- * Color Palette Management
- * ============================================================================ */
+static BOOL IsGradientColorString(const char* color) {
+    return color && strchr(color, '_') != NULL;
+}
 
 void AddColorOption(const char* hexColor) {
     if (!hexColor || !*hexColor) return;
 
-    /* Special case for Gradient modes */
+    // Predefined gradient name
     GradientType gradType = GetGradientTypeByName(hexColor);
     if (gradType != GRADIENT_NONE) {
         const GradientInfo* info = GetGradientInfo(gradType);
         if (!info) return;
-
-        /* Deduplication for special keyword */
         for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
-            if (strcasecmp(COLOR_OPTIONS[i].hexColor, info->name) == 0) {
-                return;
-            }
+            if (strcasecmp(COLOR_OPTIONS[i].hexColor, info->name) == 0) return;
         }
-        PredefinedColor* newArray = realloc(COLOR_OPTIONS,
-                                          (COLOR_OPTIONS_COUNT + 1) * sizeof(PredefinedColor));
+        PredefinedColor* newArray = realloc(COLOR_OPTIONS, (COLOR_OPTIONS_COUNT + 1) * sizeof(PredefinedColor));
         if (newArray) {
             COLOR_OPTIONS = newArray;
-            /* Always use the canonical internal name from registry */
-            COLOR_OPTIONS[COLOR_OPTIONS_COUNT].hexColor = _strdup(info->name);
-            COLOR_OPTIONS_COUNT++;
+            COLOR_OPTIONS[COLOR_OPTIONS_COUNT++].hexColor = _strdup(info->name);
         }
         return;
     }
 
-    char normalizedColor[COLOR_HEX_BUFFER];
-    const char* hex = (hexColor[0] == '#') ? hexColor + 1 : hexColor;
+    // Custom gradient
+    if (IsGradientColorString(hexColor)) {
+        for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
+            if (strcasecmp(COLOR_OPTIONS[i].hexColor, hexColor) == 0) return;
+        }
+        PredefinedColor* newArray = realloc(COLOR_OPTIONS, (COLOR_OPTIONS_COUNT + 1) * sizeof(PredefinedColor));
+        if (newArray) {
+            COLOR_OPTIONS = newArray;
+            COLOR_OPTIONS[COLOR_OPTIONS_COUNT++].hexColor = _strdup(hexColor);
+        }
+        return;
+    }
 
-    size_t len = strlen(hex);
-    if (len != 6) return;
-    
-    for (int i = 0; i < 6; i++) {
+    // Solid color
+    char normalized[COLOR_HEX_BUFFER];
+    const char* hex = (hexColor[0] == '#') ? hexColor + 1 : hexColor;
+    if (strlen(hex) != 6) return;
+    for (size_t i = 0; i < 6; i++) {
         if (!isxdigit((unsigned char)hex[i])) return;
     }
-
     unsigned int color;
     if (sscanf(hex, "%x", &color) != 1) return;
+    snprintf(normalized, sizeof(normalized), "#%06X", color);
 
-    snprintf(normalizedColor, sizeof(normalizedColor), "#%06X", color);
-
-    /* Deduplication */
     for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
-        if (strcasecmp(normalizedColor, COLOR_OPTIONS[i].hexColor) == 0) {
-            return;
-        }
+        if (strcasecmp(normalized, COLOR_OPTIONS[i].hexColor) == 0) return;
     }
-
-    PredefinedColor* newArray = realloc(COLOR_OPTIONS,
-                                      (COLOR_OPTIONS_COUNT + 1) * sizeof(PredefinedColor));
+    PredefinedColor* newArray = realloc(COLOR_OPTIONS, (COLOR_OPTIONS_COUNT + 1) * sizeof(PredefinedColor));
     if (newArray) {
         COLOR_OPTIONS = newArray;
-        COLOR_OPTIONS[COLOR_OPTIONS_COUNT].hexColor = _strdup(normalizedColor);
-        COLOR_OPTIONS_COUNT++;
+        COLOR_OPTIONS[COLOR_OPTIONS_COUNT++].hexColor = _strdup(normalized);
     }
 }
 
@@ -134,7 +115,7 @@ void LoadColorConfig(void) {
     }
 
     if (file) {
-        char line[1024];
+        char line[2048];
         BOOL found_colors = FALSE;
 
         while (fgets(line, sizeof(line), file)) {
@@ -169,7 +150,6 @@ void LoadColorConfig(void) {
         fclose(file);
 
         if (!found_colors || COLOR_OPTIONS_COUNT == 0) {
-            /* Parse defaults from config.h */
             char defaults[] = DEFAULT_COLOR_OPTIONS_INI;
             char* token = strtok(defaults, ",");
             while (token) {
@@ -180,32 +160,24 @@ void LoadColorConfig(void) {
         }
     }
     
-    /* Always ensure all defined gradients exist in options */
+    // Ensure predefined gradients exist
     int gradCount = GetGradientCount();
     for (int i = 0; i < gradCount; i++) {
         const GradientInfo* info = GetGradientInfoByIndex(i);
         if (!info) continue;
-        
-        BOOL hasGradient = FALSE;
+        BOOL found = FALSE;
         for (size_t j = 0; j < COLOR_OPTIONS_COUNT; j++) {
             if (strcasecmp(COLOR_OPTIONS[j].hexColor, info->name) == 0) {
-                hasGradient = TRUE;
+                found = TRUE;
                 break;
             }
         }
-        if (!hasGradient) {
-            AddColorOption(info->name);
-        }
+        if (!found) AddColorOption(info->name);
     }
 }
-
-/* ============================================================================
- * Configuration Persistence
- * ============================================================================ */
 
 void WriteConfigColor(const char* color_input) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     WriteIniString(INI_SECTION_DISPLAY, "CLOCK_TEXT_COLOR", color_input, config_path);
 }
-

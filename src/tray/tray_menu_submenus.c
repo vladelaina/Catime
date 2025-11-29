@@ -250,19 +250,9 @@ void BuildColorSubmenu(HMENU hMenu) {
     for (int i = 0; i < COLOR_OPTIONS_COUNT; i++) {
         const char* hexColor = COLOR_OPTIONS[i].hexColor;
         
+        /* Display as sequence number for easier selection */
         wchar_t hexColorW[32];
-        GradientType gradType = GetGradientTypeByName(hexColor);
-        
-        if (gradType != GRADIENT_NONE) {
-            const GradientInfo* info = GetGradientInfo(gradType);
-            if (info && info->displayName) {
-                wcscpy_s(hexColorW, 32, info->displayName);
-            } else {
-                Utf8ToWide(hexColor, hexColorW, 32);
-            }
-        } else {
-            Utf8ToWide(hexColor, hexColorW, 32);
-        }
+        _snwprintf(hexColorW, 32, L"%d", i + 1);
         
         MENUITEMINFO mii = { sizeof(MENUITEMINFO) };
         mii.fMask = MIIM_STRING | MIIM_ID | MIIM_STATE | MIIM_FTYPE;
