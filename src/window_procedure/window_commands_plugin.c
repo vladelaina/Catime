@@ -74,27 +74,28 @@ static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
     countdown_elapsed_time = 0;
     countup_elapsed_time = 0;
 
-    /* Start plugin */
-    BOOL startSuccess = PluginManager_StartPlugin(pluginIndex);
-    
-    if (!startSuccess) {
-        /* Plugin failed to start (e.g., requires admin privileges) */
-        /* Restore to idle state */
-        LOG_WARNING("Plugin failed to start, restoring idle state");
-        TimerModeParams params = {0, TRUE, TRUE, TRUE};
-        SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
-        InvalidateRect(hwnd, NULL, TRUE);
-        return TRUE;
-    }
-    
-    /* Show loading message */
+    /* Clear output.txt BEFORE starting plugin to prevent stale content */
     const PluginInfo* pluginInfo = PluginManager_GetPlugin(pluginIndex);
     if (pluginInfo) {
         wchar_t loadingText[256];
         wchar_t displayNameW[128];
         MultiByteToWideChar(CP_UTF8, 0, pluginInfo->displayName, -1, displayNameW, 128);
         _snwprintf(loadingText, 256, L"Loading %s...", displayNameW);
-        PluginData_SetText(loadingText);
+        PluginData_SetText(loadingText);  /* This clears output.txt */
+    }
+    
+    /* Start plugin (after output.txt is cleared) */
+    BOOL startSuccess = PluginManager_StartPlugin(pluginIndex);
+    
+    if (!startSuccess) {
+        /* Plugin failed to start (e.g., requires admin privileges) */
+        /* Restore to idle state */
+        LOG_WARNING("Plugin failed to start, restoring idle state");
+        PluginData_Clear();
+        TimerModeParams params = {0, TRUE, TRUE, TRUE};
+        SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
+        InvalidateRect(hwnd, NULL, TRUE);
+        return TRUE;
     }
     
     /* Check if animated gradient needs timer for smooth animation */

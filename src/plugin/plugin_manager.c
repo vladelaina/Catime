@@ -317,6 +317,20 @@ const PluginInfo* PluginManager_GetPlugin(int index) {
     return &g_plugins[index];
 }
 
+/**
+ * @brief Internal: terminate plugin process only (no PluginData_Clear)
+ * Used when switching plugins to avoid clearing the "Loading..." message
+ */
+static void TerminatePluginInternal(int index) {
+    if (index < 0 || index >= g_pluginCount) return;
+    
+    PluginInfo* plugin = &g_plugins[index];
+    if (!plugin->isRunning) return;
+    
+    PluginProcess_Terminate(plugin);
+    LOG_INFO("Terminated plugin (internal): %s", plugin->displayName);
+}
+
 BOOL PluginManager_StartPlugin(int index) {
     if (index < 0 || index >= g_pluginCount) {
         return FALSE;
@@ -325,6 +339,7 @@ BOOL PluginManager_StartPlugin(int index) {
     EnterCriticalSection(&g_pluginCS);
 
     /* Exclusive execution: Stop ALL other plugins first */
+    /* Use internal terminate to avoid clearing "Loading..." message set by caller */
     for (int i = 0; i < g_pluginCount; i++) {
         if (g_plugins[i].isRunning) {
             if (i == index) {
@@ -332,9 +347,12 @@ BOOL PluginManager_StartPlugin(int index) {
                 LeaveCriticalSection(&g_pluginCS);
                 return TRUE;
             }
-            PluginManager_StopPlugin(i);
+            TerminatePluginInternal(i);
         }
     }
+    
+    /* Reset indices since we terminated other plugins */
+    g_lastRunningPluginIndex = -1;
 
     PluginInfo* plugin = &g_plugins[index];
     LOG_INFO("Starting plugin: %s", plugin->displayName);
