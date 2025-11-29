@@ -8,6 +8,8 @@
 #include "log.h"
 #include <shellapi.h>
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 /* Job Object for automatic cleanup when Catime exits */
 static HANDLE g_hJob = NULL;
@@ -28,31 +30,24 @@ static const char* GetInterpreter(const char* path) {
     const char* ext = strrchr(path, '.');
     if (!ext) return NULL;
     
-    /* Python - pythonw.exe is the windowless version */
+    /* Python - use pythonw.exe (GUI subsystem, no console) */
     if (_stricmp(ext, ".py") == 0 || _stricmp(ext, ".pyw") == 0) {
         return "pythonw.exe";
     }
-    /* PowerShell */
+    /* PowerShell - use -WindowStyle Hidden for complete hiding */
     if (_stricmp(ext, ".ps1") == 0) {
-        return "powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -File";
+        return "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -NonInteractive -File";
     }
-    /* Batch/CMD */
+    /* Batch/CMD - use wscript to launch hidden (cmd.exe always creates console) */
+    /* Note: CREATE_NO_WINDOW flag handles this, cmd.exe /c is fine */
     if (_stricmp(ext, ".bat") == 0 || _stricmp(ext, ".cmd") == 0) {
         return "cmd.exe /c";
     }
-    /* VBScript - use cscript for console-less execution */
+    /* VBScript - use wscript.exe (GUI host) instead of cscript.exe (console) */
     if (_stricmp(ext, ".vbs") == 0 || _stricmp(ext, ".vbe") == 0) {
-        return "cscript.exe //nologo //B";
+        return "wscript.exe //nologo //B";
     }
-    /* Windows Script Host */
-    if (_stricmp(ext, ".wsf") == 0 || _stricmp(ext, ".wsh") == 0) {
-        return "cscript.exe //nologo //B";
-    }
-    /* JScript (encrypted) */
-    if (_stricmp(ext, ".jse") == 0) {
-        return "cscript.exe //nologo //B";
-    }
-    /* Node.js - .js/.mjs/.cjs all use node.exe */
+    /* Node.js */
     if (_stricmp(ext, ".js") == 0 || _stricmp(ext, ".mjs") == 0 || _stricmp(ext, ".cjs") == 0) {
         return "node.exe";
     }
@@ -60,11 +55,14 @@ static const char* GetInterpreter(const char* path) {
     if (_stricmp(ext, ".lua") == 0) {
         return "lua.exe";
     }
-    /* Ruby */
-    if (_stricmp(ext, ".rb") == 0 || _stricmp(ext, ".rbw") == 0) {
+    /* Ruby - use rubyw.exe if available (GUI subsystem) */
+    if (_stricmp(ext, ".rbw") == 0) {
+        return "rubyw.exe";
+    }
+    if (_stricmp(ext, ".rb") == 0) {
         return "ruby.exe";
     }
-    /* Perl */
+    /* Perl - use wperl.exe if available (GUI subsystem) */
     if (_stricmp(ext, ".pl") == 0 || _stricmp(ext, ".pm") == 0) {
         return "perl.exe";
     }
@@ -72,12 +70,11 @@ static const char* GetInterpreter(const char* path) {
     if (_stricmp(ext, ".php") == 0) {
         return "php.exe";
     }
-    /* Shell scripts (Git Bash) */
+    /* Shell scripts */
     if (_stricmp(ext, ".sh") == 0) {
         return "bash.exe";
     }
     
-    /* Other types - use ShellExecute */
     return NULL;
 }
 
@@ -88,20 +85,27 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
     PluginLauncherArgs* args = (PluginLauncherArgs*)lpParam;
     PluginInfo* plugin = args->plugin;
     
+    LOG_INFO("[Thread] ========== LAUNCH START ==========");
+    LOG_INFO("[Thread] Plugin name: %s", plugin->displayName);
+    LOG_INFO("[Thread] Plugin path: %s", plugin->path);
+    
     /* Extract working directory from plugin path */
     char workDir[MAX_PATH];
     strncpy(workDir, plugin->path, sizeof(workDir) - 1);
     workDir[sizeof(workDir) - 1] = '\0';
     char* lastSlash = strrchr(workDir, '\\');
     if (lastSlash) *lastSlash = '\0';
+    LOG_INFO("[Thread] Work directory: %s", workDir);
     
     HANDLE hProcess = NULL;
+    DWORD dwProcessId = 0;
     const char* interpreter = GetInterpreter(plugin->path);
     
     if (interpreter) {
-        /* Use CreateProcess with specific interpreter */
-        char cmdLine[MAX_PATH * 2 + 128];
+        /* Use CreateProcess with interpreter */
+        char cmdLine[MAX_PATH * 2 + 256];
         snprintf(cmdLine, sizeof(cmdLine), "%s \"%s\"", interpreter, plugin->path);
+        LOG_INFO("[Thread] Command: %s", cmdLine);
         
         STARTUPINFOA si = {0};
         si.cb = sizeof(si);
@@ -110,27 +114,23 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
         
         PROCESS_INFORMATION pi = {0};
         
-        /* CREATE_NO_WINDOW prevents console window for console apps */
-        DWORD creationFlags = CREATE_NO_WINDOW;
-        
+        /* CREATE_NO_WINDOW prevents console window */
         if (!CreateProcessA(NULL, cmdLine, NULL, NULL, FALSE,
-                           creationFlags, NULL, workDir, &si, &pi)) {
+                           CREATE_NO_WINDOW, NULL, workDir, &si, &pi)) {
             DWORD error = GetLastError();
-            LOG_ERROR("[Process] CreateProcess FAILED! Error: %lu", error);
-            LOG_ERROR("[Process] Tip: Make sure '%s' is installed and in PATH", interpreter);
-            
+            LOG_ERROR("[Thread] CreateProcess FAILED! Error: %lu", error);
+            LOG_ERROR("[Thread] Tip: Make sure '%s' is installed and in PATH", interpreter);
             args->success = FALSE;
             SetEvent(args->hReadyEvent);
             return 0;
         }
         
-        LOG_INFO("[Process] Launched with interpreter, PID: %lu", pi.dwProcessId);
-        
+        LOG_INFO("[Thread] CreateProcess SUCCESS! PID: %lu", pi.dwProcessId);
         hProcess = pi.hProcess;
+        dwProcessId = pi.dwProcessId;
         if (pi.hThread) CloseHandle(pi.hThread);
-        plugin->pi.dwProcessId = pi.dwProcessId;
     } else {
-        /* Use ShellExecute for other types */
+        /* Use ShellExecute for unknown types */
         SHELLEXECUTEINFOA sei = {0};
         sei.cbSize = sizeof(sei);
         sei.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_FLAG_NO_UI;
@@ -139,110 +139,91 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
         sei.lpDirectory = workDir;
         sei.nShow = SW_HIDE;
         
-        LOG_INFO("[Process] Launching with ShellExecute: %s", plugin->path);
+        LOG_INFO("[Thread] Using ShellExecute for: %s", plugin->path);
         
         if (!ShellExecuteExA(&sei)) {
             DWORD error = GetLastError();
-            LOG_ERROR("[Process] ShellExecuteEx failed! Error: %lu", error);
-            
-            if (error == ERROR_NO_ASSOCIATION) {
-                LOG_ERROR("Tip: No program associated with this file type");
-            }
-            
+            LOG_ERROR("[Thread] ShellExecuteEx FAILED! Error: %lu", error);
             args->success = FALSE;
             SetEvent(args->hReadyEvent);
             return 0;
         }
         
-        /* ShellExecute may not return a process handle for all file types */
         if (!sei.hProcess) {
-            LOG_WARNING("[Process] ShellExecute succeeded but no process handle returned");
-            LOG_WARNING("[Process] The script may have started but cannot be monitored");
+            LOG_WARNING("[Thread] ShellExecute succeeded but no process handle");
             args->success = FALSE;
             SetEvent(args->hReadyEvent);
             return 0;
         }
         
         hProcess = sei.hProcess;
-        plugin->pi.dwProcessId = GetProcessId(sei.hProcess);
+        dwProcessId = GetProcessId(sei.hProcess);
+        LOG_INFO("[Thread] ShellExecute SUCCESS! PID: %lu", dwProcessId);
     }
     
-    /* Store process handle */
-    plugin->pi.hProcess = hProcess;
-    plugin->pi.hThread = NULL;
-    plugin->pi.dwThreadId = 0;
-    
-    LOG_INFO("[Process] Script launched successfully. PID: %lu", plugin->pi.dwProcessId);
-    
-    /* Duplicate handle for safe waiting - this is important to avoid race conditions */
-    HANDLE hWaitProcess = NULL;
-    BOOL handleDuplicated = DuplicateHandle(GetCurrentProcess(), plugin->pi.hProcess,
-                                            GetCurrentProcess(), &hWaitProcess,
-                                            0, FALSE, DUPLICATE_SAME_ACCESS);
-    if (!handleDuplicated) {
-        LOG_WARNING("[Process] Failed to duplicate handle, using original");
-        hWaitProcess = plugin->pi.hProcess;
-    }
-    
-    /* Assign to Job Object for lifecycle management */
+    /* Assign to Job Object for automatic cleanup */
     if (g_hJob && hProcess) {
-        if (!AssignProcessToJobObject(g_hJob, hProcess)) {
-            LOG_WARNING("[Process] Failed to assign to Job Object, error: %lu", GetLastError());
+        if (AssignProcessToJobObject(g_hJob, hProcess)) {
+            LOG_INFO("[Thread] Process assigned to Job Object");
+        } else {
+            DWORD jobError = GetLastError();
+            if (jobError == 5) {
+                /* Process already in a job - on Windows 8+, processes can be in multiple jobs */
+                LOG_INFO("[Thread] Process already in a job (OK - will terminate via StopPlugin)");
+            } else {
+                LOG_WARNING("[Thread] Failed to assign to Job: %lu (will terminate via StopPlugin)", jobError);
+            }
         }
     }
+    
+    LOG_INFO("[Thread] ========== LAUNCH SUCCESS ==========");
+    
+    /* Store process info */
+    plugin->pi.hProcess = hProcess;
+    plugin->pi.hThread = NULL;
+    plugin->pi.dwProcessId = dwProcessId;
+    plugin->pi.dwThreadId = 0;
     
     /* Signal success */
     plugin->isRunning = TRUE;
     args->success = TRUE;
     SetEvent(args->hReadyEvent);
     
-    /* Record start time */
-    DWORD startTime = GetTickCount();
-    
-    /* Wait for process exit */
-    DWORD waitResult = WaitForSingleObject(hWaitProcess, INFINITE);
-    
-    DWORD runDuration = GetTickCount() - startTime;
-    DWORD exitCode = 0;
-    
-    if (waitResult == WAIT_OBJECT_0) {
-        GetExitCodeProcess(hWaitProcess, &exitCode);
-        LOG_INFO("[Process] Plugin exited (Code: %lu, Duration: %lu ms)", exitCode, runDuration);
-    } else {
-        LOG_WARNING("[Process] Wait failed or handle invalid (Result: %lu, Error: %lu)", 
-                    waitResult, GetLastError());
-    }
-    
-    /* Cleanup duplicate handle - only close if we successfully duplicated */
-    if (handleDuplicated && hWaitProcess) {
-        CloseHandle(hWaitProcess);
-    }
-    
-    /* Handle unexpected exit (plugin crashed or finished on its own) */
-    /* Use memory barrier to ensure we see the latest value */
-    MemoryBarrier();
-    if (plugin->isRunning) {
-        /* Atomically check and clear isRunning to prevent race with Terminate */
-        if (InterlockedCompareExchange((volatile LONG*)&plugin->isRunning, FALSE, TRUE) == TRUE) {
-            LOG_INFO("[Process] Plugin %s exited unexpectedly", plugin->displayName);
-            
-            /* Atomically swap handle to NULL - only one thread can get non-NULL */
-            HANDLE hProc = InterlockedExchangePointer((PVOID*)&plugin->pi.hProcess, NULL);
-            if (hProc) {
-                CloseHandle(hProc);
-            }
-            memset(&plugin->pi, 0, sizeof(plugin->pi));
-            
-            /* Quick exit might indicate missing interpreter */
-            if (runDuration < 5000) {
-                LOG_INFO("[Process] Quick exit (%lu ms), keeping hot-reload active", runDuration);
-            } else {
-                PluginData_Clear();
-            }
-            
-            /* Trigger UI refresh */
-            if (g_hNotifyWnd) {
-                InvalidateRect(g_hNotifyWnd, NULL, TRUE);
+    /* If we have a process handle, wait for it to exit */
+    if (hProcess) {
+        LOG_INFO("[Thread] Monitoring process...");
+        DWORD startTime = GetTickCount();
+        
+        DWORD monitorWaitResult = WaitForSingleObject(hProcess, INFINITE);
+        
+        DWORD runDuration = GetTickCount() - startTime;
+        DWORD scriptExitCode = 0;
+        
+        if (monitorWaitResult == WAIT_OBJECT_0) {
+            GetExitCodeProcess(hProcess, &scriptExitCode);
+            LOG_INFO("[Thread] Script exited (Code: %lu, Duration: %lu ms)", scriptExitCode, runDuration);
+        } else {
+            LOG_WARNING("[Thread] Wait failed (Result: %lu, Error: %lu)", monitorWaitResult, GetLastError());
+        }
+        
+        /* Handle process exit */
+        if (plugin->isRunning) {
+            if (InterlockedCompareExchange((volatile LONG*)&plugin->isRunning, FALSE, TRUE) == TRUE) {
+                LOG_INFO("[Thread] Plugin exited: %s", plugin->displayName);
+                
+                HANDLE hProc = InterlockedExchangePointer((PVOID*)&plugin->pi.hProcess, NULL);
+                if (hProc) {
+                    CloseHandle(hProc);
+                }
+                memset(&plugin->pi, 0, sizeof(plugin->pi));
+                
+                if (runDuration >= 5000) {
+                    PluginData_Clear();
+                }
+                
+                if (g_hNotifyWnd) {
+                    InvalidateRect(g_hNotifyWnd, NULL, TRUE);
+                }
             }
         }
     }
@@ -254,6 +235,9 @@ BOOL PluginProcess_Init(void) {
     g_hJob = CreateJobObject(NULL, NULL);
     if (g_hJob) {
         JOBOBJECT_EXTENDED_LIMIT_INFORMATION jeli = {0};
+        /* KILL_ON_JOB_CLOSE: Kill all processes when Job handle is closed */
+        /* This ensures plugins are killed even if Catime crashes */
+        /* Without BREAKAWAY flags: Child processes inherit Job membership */
         jeli.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
         if (!SetInformationJobObject(g_hJob, JobObjectExtendedLimitInformation, &jeli, sizeof(jeli))) {
             LOG_ERROR("[Process] Failed to configure Job Object, error: %lu", GetLastError());
@@ -261,7 +245,23 @@ BOOL PluginProcess_Init(void) {
             g_hJob = NULL;
             return FALSE;
         }
-        LOG_INFO("[Process] Job Object initialized");
+        
+        /* Add Catime itself to the Job Object */
+        /* This ensures: when Catime exits (normal or crash), Job handle closes, */
+        /* triggering KILL_ON_JOB_CLOSE to terminate all plugin processes */
+        if (!AssignProcessToJobObject(g_hJob, GetCurrentProcess())) {
+            DWORD error = GetLastError();
+            /* Error 5 (Access Denied) means we're already in a job - that's OK on Windows 8+ */
+            if (error != 5) {
+                LOG_WARNING("[Process] Failed to add Catime to Job: %lu", error);
+            } else {
+                LOG_INFO("[Process] Catime already in a job (nested jobs supported on Win8+)");
+            }
+        } else {
+            LOG_INFO("[Process] Catime added to Job Object");
+        }
+        
+        LOG_INFO("[Process] Job Object initialized (plugins will be killed on Catime exit/crash)");
         return TRUE;
     }
     LOG_ERROR("[Process] Failed to create Job Object, error: %lu", GetLastError());
@@ -313,23 +313,29 @@ BOOL PluginProcess_Terminate(PluginInfo* plugin) {
     
     LOG_INFO("[Process] Terminating plugin: %s", plugin->displayName);
     
-    /* Atomically mark as not running to prevent race with launcher thread */
+    /* Atomically mark as not running */
     if (InterlockedCompareExchange((volatile LONG*)&plugin->isRunning, FALSE, TRUE) != TRUE) {
-        /* Already terminated by launcher thread */
+        LOG_INFO("[Process] Already terminated");
         return FALSE;
     }
     
-    /* Atomically get and clear process handle - only one thread can get non-NULL */
+    /* Get and clear process handle atomically */
     HANDLE hProc = InterlockedExchangePointer((PVOID*)&plugin->pi.hProcess, NULL);
     HANDLE hThread = plugin->pi.hThread;
+    DWORD pid = plugin->pi.dwProcessId;
     plugin->pi.hThread = NULL;
     memset(&plugin->pi, 0, sizeof(plugin->pi));
     
     if (hProc) {
+        LOG_INFO("[Process] Terminating process PID: %lu", pid);
         TerminateProcess(hProc, 0);
         WaitForSingleObject(hProc, 2000);
         CloseHandle(hProc);
+        LOG_INFO("[Process] Process terminated");
+    } else {
+        LOG_WARNING("[Process] No process handle available");
     }
+    
     if (hThread) {
         CloseHandle(hThread);
     }
@@ -344,18 +350,17 @@ BOOL PluginProcess_IsAlive(PluginInfo* plugin) {
     
     HANDLE hProc = plugin->pi.hProcess;
     if (!hProc) {
-        return FALSE;
+        /* No handle but marked running - trust the flag */
+        return plugin->isRunning;
     }
     
     DWORD exitCode;
-    /* If GetExitCodeProcess fails, handle may have been closed by another thread */
     if (!GetExitCodeProcess(hProc, &exitCode)) {
         return FALSE;
     }
     
     if (exitCode != STILL_ACTIVE) {
-        /* Process exited - let the launcher thread handle cleanup */
-        LOG_INFO("[Process] IsAlive check: process has exited");
+        LOG_INFO("[Process] IsAlive: process has exited");
         return FALSE;
     }
     return TRUE;
