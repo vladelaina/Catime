@@ -326,7 +326,8 @@ void BuildPluginsSubmenu(HMENU hMenu) {
     int activePluginIndex = PluginManager_GetActivePluginIndex();
     
     if (pluginCount == 0) {
-        AppendMenuW(hPluginsMenu, MF_STRING | MF_GRAYED, 0, L"No plugins found");
+        AppendMenuW(hPluginsMenu, MF_STRING | MF_GRAYED, 0, 
+                    GetLocalizedString(NULL, L"No plugins found"));
     } else {
         for (int i = 0; i < pluginCount; i++) {
             const PluginInfo* plugin = PluginManager_GetPlugin(i);
@@ -345,22 +346,23 @@ void BuildPluginsSubmenu(HMENU hMenu) {
         }
     }
 
-    // Add "Show plugin file" option - displays file content without running a plugin
+    AppendMenuW(hPluginsMenu, MF_SEPARATOR, 0, NULL);
+    
+    // Show plugin file - displays file content without running a plugin
     {
         UINT flags = MF_STRING;
-        // "Show plugin file" is checked if plugin mode is active but no plugin was started
         if (PluginData_IsActive() && activePluginIndex < 0) {
             flags |= MF_CHECKED;
         }
         AppendMenuW(hPluginsMenu, flags, CLOCK_IDM_PLUGINS_SHOW_FILE, 
                     GetLocalizedString(NULL, L"Show plugin file"));
     }
-
     AppendMenuW(hPluginsMenu, MF_SEPARATOR, 0, NULL);
     AppendMenuW(hPluginsMenu, MF_STRING, CLOCK_IDM_PLUGINS_OPEN_DIR, 
                 GetLocalizedString(NULL, L"Open plugins folder"));
 
-    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hPluginsMenu, L"Plugins");
+    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hPluginsMenu, 
+                GetLocalizedString(NULL, L"Plugins"));
 }
 
 /**

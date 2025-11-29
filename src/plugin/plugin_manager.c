@@ -251,24 +251,15 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
 }
 
 /**
- * @brief Extract display name from plugin filename
- * @param filename Plugin filename (e.g., "monitor.py")
- * @param displayName Output buffer for display name
- * @param bufferSize Buffer size
+ * @brief Extract display name from plugin filename (remove extension only)
  */
 static void ExtractDisplayName(const char* filename, char* displayName, size_t bufferSize) {
-    // Remove file extension to get display name
     const char* ext = strrchr(filename, '.');
     size_t nameLen = ext ? (size_t)(ext - filename) : strlen(filename);
     
     if (nameLen > 0 && nameLen < bufferSize) {
         strncpy(displayName, filename, nameLen);
         displayName[nameLen] = '\0';
-        
-        // Capitalize first letter
-        if (displayName[0] >= 'a' && displayName[0] <= 'z') {
-            displayName[0] = displayName[0] - 'a' + 'A';
-        }
     } else {
         strncpy(displayName, filename, bufferSize - 1);
         displayName[bufferSize - 1] = '\0';
