@@ -667,6 +667,9 @@ function translateSupportElements() {
         if (td.textContent === '入股入股，付费使用来自律') {
             td.textContent = 'Investing, paying for self-discipline.';
         }
+        if (td.textContent === '非常好小程序') {
+            td.textContent = 'Very good app';
+        }
         
         // 为所有留言单元格添加特殊样式，增强可读性
         if (td.parentElement && td.cellIndex === 3) { // 第四列是留言列
