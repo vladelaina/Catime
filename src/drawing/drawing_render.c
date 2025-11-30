@@ -21,6 +21,7 @@
 #include "plugin/plugin_data.h"
 #include "drawing/drawing_image.h"
 #include "markdown/markdown_parser.h"
+#include "markdown/markdown_image.h"
 #include "color/gradient.h"
 #include "color/color_parser.h"
 
@@ -260,22 +261,51 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
 
     // Check for plugin data
     wchar_t pluginText[TIME_TEXT_MAX_LEN] = {0};
+    MarkdownImage* images = NULL;
+    int imageCount = 0;
+    
     if (PluginData_GetText(pluginText, TIME_TEXT_MAX_LEN)) {
         // Get current time text once
         wchar_t savedTime[256];
         GetTimeText(savedTime, 256);
         
-        // Replace ALL <catime></catime> tags with current time text
+        // First pass: extract images and count them
+        int imgCapacity = CountMarkdownImages(pluginText);
+        if (imgCapacity > 0) {
+            images = (MarkdownImage*)calloc(imgCapacity, sizeof(MarkdownImage));
+        }
+        
+        // Replace ALL <catime></catime> tags and extract ![](path) images
         wchar_t result[TIME_TEXT_MAX_LEN] = {0};
         wchar_t* src = pluginText;
         wchar_t* dst = result;
         size_t remaining = TIME_TEXT_MAX_LEN - 1;
         
         while (*src && remaining > 0) {
+            // Check for image tag first: ![...](...)
+            if (*src == L'!' && *(src + 1) == L'[' && images && imageCount < imgCapacity) {
+                const wchar_t* imgSrc = src;
+                if (ExtractMarkdownImage(&imgSrc, images, &imageCount, imgCapacity, (int)(dst - result))) {
+                    src = (wchar_t*)imgSrc;
+                    continue;
+                }
+            }
+            
+            // Check for <catime> tag
             wchar_t* tagStart = wcsstr(src, L"<catime>");
             wchar_t* tagEnd = tagStart ? wcsstr(tagStart, L"</catime>") : NULL;
             
-            if (tagStart && tagEnd && tagEnd > tagStart) {
+            if (tagStart && tagEnd && tagEnd > tagStart && tagStart == src) {
+                // Insert time text
+                size_t timeLen = wcslen(savedTime);
+                if (timeLen > remaining) timeLen = remaining;
+                wcsncpy(dst, savedTime, timeLen);
+                dst += timeLen;
+                remaining -= timeLen;
+                
+                // Move past </catime>
+                src = tagEnd + 9;
+            } else if (tagStart && tagEnd && tagEnd > tagStart) {
                 // Copy text before tag
                 size_t beforeLen = tagStart - src;
                 if (beforeLen > remaining) beforeLen = remaining;
@@ -293,12 +323,9 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
                 // Move past </catime>
                 src = tagEnd + 9;
             } else {
-                // No more tags, copy rest of string
-                size_t restLen = wcslen(src);
-                if (restLen > remaining) restLen = remaining;
-                wcsncpy(dst, src, restLen);
-                dst += restLen;
-                break;
+                // Copy single character
+                *dst++ = *src++;
+                remaining--;
             }
         }
         *dst = L'\0';
@@ -332,24 +359,45 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
 
     // Measure text and resize window BEFORE creating the buffer
     // This prevents buffer overflow if the window grows
-    if (wcslen(textToRender) > 0) {
-        SIZE textSize = {0};
+    SIZE textSize = {0};
+    BOOL hasContent = (wcslen(textToRender) > 0) || (images && imageCount > 0);
+    
+    if (hasContent) {
         BOOL measured = FALSE;
         
-        // Try to measure using STB (supports multiline & markdown)
-        if (isMarkdown) {
-            measured = MeasureTextMarkdown(textToRender, &ctx, &textSize, headings, headingCount);
-        } else {
-            // Fallback if markdown parse failed (unlikely) or just sanity check
-            // (Old MeasureText logic removed, using MeasureTextMarkdown with no headings is equivalent to MeasureTextSTB)
-             measured = MeasureTextMarkdown(textToRender, &ctx, &textSize, NULL, 0);
-        }
+        // Measure text if any
+        if (wcslen(textToRender) > 0) {
+            if (isMarkdown) {
+                measured = MeasureTextMarkdown(textToRender, &ctx, &textSize, headings, headingCount);
+            } else {
+                measured = MeasureTextMarkdown(textToRender, &ctx, &textSize, NULL, 0);
+            }
 
-        if (!measured) {
-            // Fallback to GDI measurement (single line usually)
-            HFONT oldFontHdc = (HFONT)SelectObject(hdc, hFont);
-            GetTextExtentPoint32W(hdc, textToRender, (int)wcslen(textToRender), &textSize);
-            SelectObject(hdc, oldFontHdc);
+            if (!measured) {
+                HFONT oldFontHdc = (HFONT)SelectObject(hdc, hFont);
+                GetTextExtentPoint32W(hdc, textToRender, (int)wcslen(textToRender), &textSize);
+                SelectObject(hdc, oldFontHdc);
+            }
+        }
+        
+        // Add image dimensions to total size
+        if (images && imageCount > 0) {
+            textSize.cy += 5;  // Small gap between text and first image
+            
+            for (int i = 0; i < imageCount; i++) {
+                int renderW = 0, renderH = 0;
+                // Use large max values to get natural scaled size (not constrained by window)
+                if (CalculateImageRenderSize(&images[i], 10000, 10000, &renderW, &renderH)) {
+                    renderW += 10;  // Add padding
+                    renderH += 5;
+                    
+                    if (renderW > textSize.cx) textSize.cx = renderW;
+                    textSize.cy += renderH;
+                } else if (images[i].isNetworkImage && !images[i].isDownloaded) {
+                    // Reserve space for "Loading..." text
+                    textSize.cy += 25;  // Approximate height for loading text
+                }
+            }
         }
 
         AdjustWindowSize(hwnd, &textSize, &rect);
@@ -366,6 +414,9 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
             FreeMarkdownLinks(links, linkCount);
             free(headings); free(styles); free(listItems); free(blockquotes);
             free(mdText);
+        }
+        if (images) {
+            FreeMarkdownImages(images, imageCount);
         }
         return;
     }
@@ -385,23 +436,37 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
         pixels[i] = clearColor;
     }
     
-    // Skip text rendering during transition to avoid black artifacts
-    if (!g_IsTransitioning && wcslen(textToRender) > 0) {
-        // We already have textSize and rect is updated
+    // Skip rendering during transition to avoid black artifacts
+    if (!g_IsTransitioning && hasContent) {
         BOOL usedSTB = FALSE;
+        int textHeight = 0;
         
-        if (isMarkdown) {
-            usedSTB = RenderTextMarkdown(memDC, &rect, textToRender, &ctx, CLOCK_EDIT_MODE, pBits,
-                                        links, linkCount, headings, headingCount, styles, styleCount,
-                                        blockquotes, blockquoteCount);
-        } else {
-             // Fallback render plain text if markdown failed (treat as markdown with no metadata)
-             usedSTB = RenderTextMarkdown(memDC, &rect, textToRender, &ctx, CLOCK_EDIT_MODE, pBits,
-                                         NULL, 0, NULL, 0, NULL, 0, NULL, 0);
+        // Render text if any
+        if (wcslen(textToRender) > 0) {
+            // Get text height first
+            SIZE textOnlySize = {0};
+            MeasureTextMarkdown(textToRender, &ctx, &textOnlySize, headings, headingCount);
+            textHeight = textOnlySize.cy;
+            
+            // Create adjusted rect for text rendering (only text area, not including images)
+            RECT textRect = rect;
+            if (images && imageCount > 0) {
+                // Set text area to exactly text height (no extra space = no centering offset)
+                textRect.bottom = textHeight;
+            }
+            
+            if (isMarkdown) {
+                usedSTB = RenderTextMarkdown(memDC, &textRect, textToRender, &ctx, CLOCK_EDIT_MODE, pBits,
+                                            links, linkCount, headings, headingCount, styles, styleCount,
+                                            blockquotes, blockquoteCount);
+            } else {
+                usedSTB = RenderTextMarkdown(memDC, &textRect, textToRender, &ctx, CLOCK_EDIT_MODE, pBits,
+                                            NULL, 0, NULL, 0, NULL, 0, NULL, 0);
+            }
         }
         
         // If STB was not used (e.g. font load failure), we might need to fix alpha for GDI text
-        if (!usedSTB && CLOCK_EDIT_MODE) {
+        if (!usedSTB && CLOCK_EDIT_MODE && wcslen(textToRender) > 0) {
              FixAlphaChannel(pBits, rect.right, rect.bottom);
         }
         
@@ -410,14 +475,66 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
             extern void FillClickableRegionsAlpha(DWORD* pixels, int width, int height);
             FillClickableRegionsAlpha(pixels, rect.right, rect.bottom);
         }
+        
+        // Render images below text (centered horizontally like text)
+        if (images && imageCount > 0) {
+            int imgY = textHeight > 0 ? textHeight + 5 : 5;
+            int maxW = rect.right - 10;
+            if (maxW <= 0) maxW = rect.right;  // Fallback if window too narrow
+            
+            for (int i = 0; i < imageCount; i++) {
+                int maxH = rect.bottom - imgY - 5;
+                if (maxH <= 0) break;  // No more space for images
+                
+                // Check if network image needs async download
+                if (images[i].isNetworkImage && !images[i].isDownloaded && !images[i].isDownloading) {
+                    StartAsyncImageDownload(&images[i], hwnd);
+                }
+                
+                // If downloading, show "Loading..." text
+                if (images[i].isDownloading || (images[i].isNetworkImage && !images[i].isDownloaded)) {
+                    // Draw "Loading..." centered with same color as text
+                    const wchar_t* loadingText = L"Loading...";
+                    SetBkMode(memDC, TRANSPARENT);
+                    SetTextColor(memDC, ParseColorString(CLOCK_TEXT_COLOR));
+                    SIZE textSize;
+                    GetTextExtentPoint32W(memDC, loadingText, (int)wcslen(loadingText), &textSize);
+                    int textX = (rect.right - textSize.cx) / 2;
+                    TextOutW(memDC, textX, imgY, loadingText, (int)wcslen(loadingText));
+                    imgY += textSize.cy + 5;
+                    continue;
+                }
+                
+                // Get render size for centering
+                int imgRenderW = 0, imgRenderH = 0;
+                if (!CalculateImageRenderSize(&images[i], maxW, maxH, &imgRenderW, &imgRenderH)) {
+                    continue;  // Skip this image if calculation fails
+                }
+                
+                // Center horizontally
+                int imgX = (rect.right - imgRenderW) / 2;
+                if (imgX < 5) imgX = 5;
+                
+                int imgHeight = RenderMarkdownImage(memDC, &images[i], imgX, imgY, maxW, maxH);
+                if (imgHeight > 0) {
+                    imgY += imgHeight + 5;
+                }
+            }
+        }
     } else if (CLOCK_EDIT_MODE) {
         FixAlphaChannel(pBits, rect.right, rect.bottom);
     }
     
+    // Free markdown resources
     if (isMarkdown) {
         FreeMarkdownLinks(links, linkCount);
         free(headings); free(styles); free(listItems); free(blockquotes);
         free(mdText);
+    }
+    
+    // Free image resources
+    if (images) {
+        FreeMarkdownImages(images, imageCount);
     }
     
     HDC hdcScreen = GetDC(NULL);

@@ -21,4 +21,13 @@ void ShutdownDrawingImage(void);
  */
 BOOL RenderImageGDIPlus(HDC hdc, int x, int y, int width, int height, const wchar_t* imagePath);
 
+/**
+ * @brief Get image dimensions
+ * @param imagePath Full path to image file
+ * @param outWidth Output width
+ * @param outHeight Output height
+ * @return TRUE on success
+ */
+BOOL GetImageDimensions(const wchar_t* imagePath, int* outWidth, int* outHeight);
+
 #endif

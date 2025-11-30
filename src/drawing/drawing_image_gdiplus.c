@@ -87,8 +87,33 @@ void ShutdownDrawingImage(void) {
     }
 }
 
+BOOL GetImageDimensions(const wchar_t* imagePath, int* outWidth, int* outHeight) {
+    if (!g_gdiplusToken || !imagePath || !outWidth || !outHeight) return FALSE;
+    if (!pGdipCreateBitmapFromFile || !pGdipGetImageWidth || !pGdipGetImageHeight || !pGdipDisposeImage) return FALSE;
+    
+    *outWidth = 0;
+    *outHeight = 0;
+    
+    GpBitmap bitmap = NULL;
+    if (pGdipCreateBitmapFromFile(imagePath, &bitmap) != Ok || !bitmap) {
+        return FALSE;
+    }
+    
+    UINT w = 0, h = 0;
+    pGdipGetImageWidth((GpImage)bitmap, &w);
+    pGdipGetImageHeight((GpImage)bitmap, &h);
+    
+    pGdipDisposeImage((GpImage)bitmap);
+    
+    *outWidth = (int)w;
+    *outHeight = (int)h;
+    return (w > 0 && h > 0);
+}
+
 BOOL RenderImageGDIPlus(HDC hdc, int x, int y, int width, int height, const wchar_t* imagePath) {
     if (!g_gdiplusToken || !hdc || !imagePath) return FALSE;
+    if (!pGdipCreateBitmapFromFile || !pGdipCreateFromHDC || !pGdipDeleteGraphics || 
+        !pGdipGetImageWidth || !pGdipGetImageHeight || !pGdipDrawImageRectI || !pGdipDisposeImage) return FALSE;
 
     GpBitmap bitmap = NULL;
     if (pGdipCreateBitmapFromFile(imagePath, &bitmap) != Ok || !bitmap) {
@@ -113,12 +138,8 @@ BOOL RenderImageGDIPlus(HDC hdc, int x, int y, int width, int height, const wcha
             int drawW = (int)(imgW * scale);
             int drawH = (int)(imgH * scale);
 
-            // Center the image
-            int drawX = x + (width - drawW) / 2;
-            int drawY = y + (height - drawH) / 2;
-
-            // Draw
-            pGdipDrawImageRectI(graphics, (GpImage)bitmap, drawX, drawY, drawW, drawH);
+            // Draw from top-left (no centering)
+            pGdipDrawImageRectI(graphics, (GpImage)bitmap, x, y, drawW, drawH);
         }
         
         pGdipDeleteGraphics(graphics);
