@@ -403,17 +403,26 @@ void WriteConfig(const char* config_path) {
                  currentFirstRun, sizeof(currentFirstRun), config_path);
     WriteIniString(INI_SECTION_GENERAL, "FIRST_RUN", currentFirstRun, config_path);
     
-    /* Write animation settings */
-    const char* anim = GetCurrentAnimationName();
-    if (anim && anim[0] != '\0') {
-        char animPath[MAX_PATH];
-        if (_stricmp(anim, "__logo__") == 0 || _stricmp(anim, "__cpu__") == 0 || 
-            _stricmp(anim, "__mem__") == 0 || _stricmp(anim, "__none__") == 0) {
-            snprintf(animPath, sizeof(animPath), "%s", anim);
-        } else {
-            snprintf(animPath, sizeof(animPath), "%%LOCALAPPDATA%%\\Catime\\resources\\animations\\%s", anim);
+    /* Write animation settings - preserve existing config to avoid overwriting user choice during startup */
+    char existingAnimPath[MAX_PATH] = {0};
+    ReadIniString("Animation", "ANIMATION_PATH", "", existingAnimPath, sizeof(existingAnimPath), config_path);
+    
+    if (existingAnimPath[0] != '\0') {
+        /* Preserve existing animation config from file */
+        WriteIniString("Animation", "ANIMATION_PATH", existingAnimPath, config_path);
+    } else {
+        /* Only write current animation if no config exists */
+        const char* anim = GetCurrentAnimationName();
+        if (anim && anim[0] != '\0') {
+            char animPath[MAX_PATH];
+            if (_stricmp(anim, "__logo__") == 0 || _stricmp(anim, "__cpu__") == 0 || 
+                _stricmp(anim, "__mem__") == 0 || _stricmp(anim, "__none__") == 0) {
+                snprintf(animPath, sizeof(animPath), "%s", anim);
+            } else {
+                snprintf(animPath, sizeof(animPath), "%%LOCALAPPDATA%%\\Catime\\resources\\animations\\%s", anim);
+            }
+            WriteIniString("Animation", "ANIMATION_PATH", animPath, config_path);
         }
-        WriteIniString("Animation", "ANIMATION_PATH", animPath, config_path);
     }
     
     WriteAnimationSpeedToConfig(config_path);
