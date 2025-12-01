@@ -5,6 +5,7 @@
 
 #include "config/config_applier.h"
 #include "config.h"
+#include "config/config_plugin_security.h"
 #include "language.h"
 #include "timer/timer.h"
 #include "window.h"
@@ -58,6 +59,9 @@ void ApplyGeneralSettings(const ConfigSnapshot* snapshot) {
     strncpy(g_AppConfig.font_license.version_accepted, snapshot->fontLicenseVersion,
            sizeof(g_AppConfig.font_license.version_accepted) - 1);
     g_AppConfig.font_license.version_accepted[sizeof(g_AppConfig.font_license.version_accepted) - 1] = '\0';
+    
+    /* Load plugin trust state */
+    LoadPluginTrustFromConfig();
 }
 
 void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {

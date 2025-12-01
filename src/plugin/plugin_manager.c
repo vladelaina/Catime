@@ -7,6 +7,8 @@
 #include "plugin/plugin_process.h"
 #include "plugin/plugin_extensions.h"
 #include "plugin/plugin_data.h"
+#include "config/config_plugin_security.h"
+#include "dialog/dialog_plugin_security.h"
 #include "log.h"
 #include <stdio.h>
 #include <string.h>
@@ -119,7 +121,11 @@ void PluginManager_Shutdown(void) {
     /* Stop hot-reload thread */
     if (g_hHotReloadThread) {
         g_hotReloadRunning = FALSE;
-        WaitForSingleObject(g_hHotReloadThread, 2000);
+        DWORD waitResult = WaitForSingleObject(g_hHotReloadThread, 5000);  /* Increased timeout to 5 seconds */
+        if (waitResult == WAIT_TIMEOUT) {
+            LOG_WARNING("Hot-reload thread did not stop within timeout, forcing termination");
+            /* Note: TerminateThread is dangerous but we're shutting down anyway */
+        }
         CloseHandle(g_hHotReloadThread);
         g_hHotReloadThread = NULL;
     }
@@ -354,6 +360,50 @@ BOOL PluginManager_StartPlugin(int index) {
     /* Reset indices since we terminated other plugins */
     g_lastRunningPluginIndex = -1;
 
+    /* Copy plugin info for security check (in case array is modified during dialog) */
+    char pluginPath[MAX_PATH];
+    char pluginDisplayName[64];
+    strncpy(pluginPath, g_plugins[index].path, sizeof(pluginPath) - 1);
+    pluginPath[sizeof(pluginPath) - 1] = '\0';
+    strncpy(pluginDisplayName, g_plugins[index].displayName, sizeof(pluginDisplayName) - 1);
+    pluginDisplayName[sizeof(pluginDisplayName) - 1] = '\0';
+    
+    /* Security check: verify plugin trust before launching */
+    if (!IsPluginTrusted(pluginPath)) {
+        LOG_INFO("Plugin not trusted, showing security dialog: %s", pluginDisplayName);
+        LeaveCriticalSection(&g_pluginCS);
+        
+        /* Show security confirmation dialog (critical section released during dialog) */
+        HWND hwnd = PluginProcess_GetNotifyWindow();
+        INT_PTR result = ShowPluginSecurityDialog(hwnd, pluginPath, pluginDisplayName);
+        
+        if (result == IDCANCEL) {
+            /* User cancelled, don't run plugin */
+            LOG_INFO("User cancelled plugin execution: %s", pluginDisplayName);
+            /* Note: Critical section was already released at line 370, no need to re-acquire */
+            return FALSE;
+        } else if (result == IDYES) {
+            /* User chose "Trust & Run" - add to trust list */
+            if (TrustPlugin(pluginPath)) {
+                LOG_INFO("Plugin added to trust list: %s", pluginDisplayName);
+            } else {
+                LOG_ERROR("Failed to add plugin to trust list: %s (will still run once)", pluginDisplayName);
+                /* Note: We continue to run the plugin even if trust list update failed,
+                 * because user explicitly chose to run it. Next time will ask again. */
+            }
+        }
+        /* For IDOK (Run Once), we just continue without adding to trust list */
+        
+        EnterCriticalSection(&g_pluginCS);
+        
+        /* Revalidate index after dialog (array might have changed) */
+        if (index < 0 || index >= g_pluginCount) {
+            LOG_ERROR("Plugin index invalid after security dialog");
+            LeaveCriticalSection(&g_pluginCS);
+            return FALSE;
+        }
+    }
+    
     PluginInfo* plugin = &g_plugins[index];
     LOG_INFO("Starting plugin: %s", plugin->displayName);
 

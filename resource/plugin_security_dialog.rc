@@ -1,0 +1,19 @@
+/**
+ * @file plugin_security_dialog.rc
+ * @brief Plugin security confirmation dialog
+ */
+#include <windows.h>
+#include "resource.h"
+
+#pragma code_page(65001)
+
+IDD_PLUGIN_SECURITY_DIALOG DIALOGEX 0, 0, 420, 280
+STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Plugin Security"
+FONT 10, "Segoe UI"
+BEGIN
+    CONTROL         "", IDC_PLUGIN_SECURITY_TEXT, "Static", SS_OWNERDRAW, 0, 0, 420, 238
+    PUSHBUTTON      "Cancel", IDC_PLUGIN_SECURITY_CANCEL_BTN, 250, 242, 50, 32
+    PUSHBUTTON      "Run Once", IDC_PLUGIN_SECURITY_RUN_ONCE_BTN, 305, 242, 55, 32
+    DEFPUSHBUTTON   "Trust && Run", IDC_PLUGIN_SECURITY_TRUST_BTN, 365, 242, 50, 32
+END

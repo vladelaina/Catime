@@ -466,6 +466,14 @@
 #define IDC_FONT_LICENSE_AGREE_BTN 742          /**< Font license agreement button */
 #define IDC_FONT_LICENSE_CANCEL_BTN 743         /**< Font license cancel button */
 
+/** @brief Plugin security dialog identifiers */
+#define IDD_PLUGIN_SECURITY_DIALOG 760          /**< Plugin security confirmation dialog */
+#define IDC_PLUGIN_SECURITY_ICON 761            /**< Plugin security icon control */
+#define IDC_PLUGIN_SECURITY_TEXT 762            /**< Plugin security text control */
+#define IDC_PLUGIN_SECURITY_CANCEL_BTN 764      /**< Plugin security cancel button */
+#define IDC_PLUGIN_SECURITY_RUN_ONCE_BTN 765    /**< Plugin security run once button */
+#define IDC_PLUGIN_SECURITY_TRUST_BTN 766       /**< Plugin security trust button */
+
 /** @brief Font resource identifiers - Special fonts */
 #define IDR_FONT_RECMONO 442            /**< RecMono font resource */
 #define IDR_FONT_DEPARTURE 420          /**< Departure font resource */

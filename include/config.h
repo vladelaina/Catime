@@ -197,6 +197,23 @@ typedef struct {
 } FontLicenseState;
 
 /**
+ * @brief Plugin trust entry
+ */
+typedef struct {
+    char path[MAX_PATH];    /**< Plugin file path */
+    char sha256[65];        /**< SHA256 hash of plugin file (hex string) */
+} PluginTrustEntry;
+
+/**
+ * @brief Plugin trust state
+ */
+#define MAX_TRUSTED_PLUGINS 32
+typedef struct {
+    PluginTrustEntry entries[MAX_TRUSTED_PLUGINS];
+    int count;
+} PluginTrustState;
+
+/**
  * @brief Time display format settings
  */
 typedef struct {
@@ -236,6 +253,7 @@ typedef struct {
     PomodoroConfig pomodoro;
     NotificationConfig notification;
     FontLicenseState font_license;
+    PluginTrustState plugin_trust;
     DisplayConfig display;
     TimerState timer;
     time_t last_config_time;

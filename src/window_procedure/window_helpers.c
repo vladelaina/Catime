@@ -275,6 +275,10 @@ void ResetConfigurationFile(void) {
     
     extern BOOL ExtractEmbeddedFontsToFolder(HINSTANCE);
     ExtractEmbeddedFontsToFolder(GetModuleHandle(NULL));
+    
+    /* Reload plugin trust list from config after reset */
+    extern void LoadPluginTrustFromConfig(void);
+    LoadPluginTrustFromConfig();
 }
 
 void ReloadDefaultFont(void) {

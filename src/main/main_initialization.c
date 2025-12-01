@@ -389,6 +389,10 @@ void CleanupResources(HANDLE hMutex) {
 
     LOG_INFO("Shutting down plugin data subsystem");
     PluginData_Shutdown();
+    
+    LOG_INFO("Cleaning up plugin trust resources");
+    extern void CleanupPluginTrustCS(void);
+    CleanupPluginTrustCS();
 
     LOG_INFO("Shutting down GDI+");
     ShutdownDrawingImage();
