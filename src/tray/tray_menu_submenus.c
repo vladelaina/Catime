@@ -252,7 +252,7 @@ void BuildColorSubmenu(HMENU hMenu) {
         
         /* Display as sequence number for easier selection */
         wchar_t hexColorW[32];
-        _snwprintf(hexColorW, 32, L"%d", i + 1);
+        _snwprintf_s(hexColorW, 32, _TRUNCATE, L"%d", i + 1);
         
         MENUITEMINFO mii = { sizeof(MENUITEMINFO) };
         mii.fMask = MIIM_STRING | MIIM_ID | MIIM_STATE | MIIM_FTYPE;

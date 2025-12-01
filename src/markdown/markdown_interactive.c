@@ -22,24 +22,25 @@ static int g_regionCount = 0;
 static int g_windowOffsetX = 0;
 static int g_windowOffsetY = 0;
 static CRITICAL_SECTION g_interactiveCS;
-static BOOL g_initialized = FALSE;
+static volatile LONG g_initialized = 0;
 
 /* ============================================================================
  * Initialization
  * ============================================================================ */
 
 void InitMarkdownInteractive(void) {
-    if (g_initialized) return;
-    InitializeCriticalSection(&g_interactiveCS);
-    g_regionCount = 0;
-    g_initialized = TRUE;
+    /* Use atomic operation to prevent double initialization */
+    if (InterlockedCompareExchange(&g_initialized, 1, 0) == 0) {
+        InitializeCriticalSection(&g_interactiveCS);
+        g_regionCount = 0;
+    }
 }
 
 void CleanupMarkdownInteractive(void) {
-    if (!g_initialized) return;
+    if (g_initialized != 1) return;
     ClearClickableRegions();
     DeleteCriticalSection(&g_interactiveCS);
-    g_initialized = FALSE;
+    InterlockedExchange(&g_initialized, 0);
 }
 
 /* ============================================================================
@@ -47,7 +48,7 @@ void CleanupMarkdownInteractive(void) {
  * ============================================================================ */
 
 void ClearClickableRegions(void) {
-    if (!g_initialized) return;
+    if (g_initialized != 1) return;
     EnterCriticalSection(&g_interactiveCS);
     
     for (int i = 0; i < g_regionCount; i++) {
@@ -62,7 +63,7 @@ void ClearClickableRegions(void) {
 }
 
 void AddLinkRegion(const RECT* rect, const wchar_t* url) {
-    if (!g_initialized || !rect || !url) return;
+    if (g_initialized != 1 || !rect || !url) return;
     EnterCriticalSection(&g_interactiveCS);
     
     if (g_regionCount < MAX_CLICKABLE_REGIONS) {
@@ -79,7 +80,7 @@ void AddLinkRegion(const RECT* rect, const wchar_t* url) {
 }
 
 void AddCheckboxRegion(const RECT* rect, int index, BOOL isChecked) {
-    if (!g_initialized || !rect) return;
+    if (g_initialized != 1 || !rect) return;
     EnterCriticalSection(&g_interactiveCS);
     
     if (g_regionCount < MAX_CLICKABLE_REGIONS) {
@@ -101,7 +102,7 @@ void AddCheckboxRegion(const RECT* rect, int index, BOOL isChecked) {
 }
 
 void UpdateRegionPositions(int windowX, int windowY) {
-    if (!g_initialized) return;
+    if (g_initialized != 1) return;
     EnterCriticalSection(&g_interactiveCS);
     
     /* Just store window position - regions are in window coords */
@@ -112,7 +113,7 @@ void UpdateRegionPositions(int windowX, int windowY) {
 }
 
 const ClickableRegion* GetClickableRegionAt(POINT pt) {
-    if (!g_initialized) return NULL;
+    if (g_initialized != 1) return NULL;
     
     const ClickableRegion* result = NULL;
     EnterCriticalSection(&g_interactiveCS);
@@ -132,7 +133,7 @@ const ClickableRegion* GetClickableRegionAt(POINT pt) {
 }
 
 BOOL HasClickableRegions(void) {
-    if (!g_initialized) return FALSE;
+    if (g_initialized != 1) return FALSE;
     BOOL result;
     EnterCriticalSection(&g_interactiveCS);
     result = (g_regionCount > 0);
@@ -141,7 +142,7 @@ BOOL HasClickableRegions(void) {
 }
 
 void FillClickableRegionsAlpha(DWORD* pixels, int width, int height) {
-    if (!g_initialized || !pixels) return;
+    if (g_initialized != 1 || !pixels) return;
     EnterCriticalSection(&g_interactiveCS);
     
     /* Fill each clickable region with minimal alpha so Windows sends mouse messages */

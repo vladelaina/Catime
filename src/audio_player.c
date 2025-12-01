@@ -161,9 +161,9 @@ static BOOL CreateTempAudioCopy(const wchar_t* originalPath, wchar_t* tempPath, 
     /* Generate unique temp filename using timestamp */
     SYSTEMTIME st;
     GetLocalTime(&st);
-    _snwprintf(tempPath, tempPathSize, L"%scatime_audio_%04d%02d%02d_%02d%02d%02d_%03d%s",
-              tempDir, st.wYear, st.wMonth, st.wDay, 
-              st.wHour, st.wMinute, st.wSecond, st.wMilliseconds, ext);
+    _snwprintf_s(tempPath, tempPathSize, _TRUNCATE, L"%scatime_audio_%04d%02d%02d_%02d%02d%02d_%03d%s",
+                tempDir, st.wYear, st.wMonth, st.wDay, 
+                st.wHour, st.wMinute, st.wSecond, st.wMilliseconds, ext);
     
     /* Copy file to temp location */
     if (!CopyFileW(originalPath, tempPath, FALSE)) {

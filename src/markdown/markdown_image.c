@@ -32,10 +32,10 @@ BOOL GetImageCacheDirectory(wchar_t* buffer, size_t bufferSize) {
     
     /* Build path: %TEMP%\Catime\images */
     wchar_t catimeDir[MAX_PATH];
-    _snwprintf(catimeDir, MAX_PATH, L"%sCatime", tempDir);
+    _snwprintf_s(catimeDir, MAX_PATH, _TRUNCATE, L"%sCatime", tempDir);
     CreateDirectoryW(catimeDir, NULL);
     
-    _snwprintf(buffer, bufferSize, L"%sCatime\\images", tempDir);
+    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%sCatime\\images", tempDir);
     CreateDirectoryW(buffer, NULL);
     
     return TRUE;
@@ -86,7 +86,7 @@ static void GenerateCacheFilename(const wchar_t* url, wchar_t* filename, size_t 
         }
     }
     
-    _snwprintf(filename, size, L"%08X%s", hash, ext);
+    _snwprintf_s(filename, size, _TRUNCATE, L"%08X%s", hash, ext);
 }
 
 /* ============================================================================
@@ -108,7 +108,7 @@ BOOL DownloadImageToCache(const wchar_t* url, wchar_t* localPath) {
     GenerateCacheFilename(url, filename, 64);
     
     /* Build full cache path */
-    _snwprintf(localPath, MAX_PATH, L"%s\\%s", cacheDir, filename);
+    _snwprintf_s(localPath, MAX_PATH, _TRUNCATE, L"%s\\%s", cacheDir, filename);
     
     /* Check if already cached */
     if (GetFileAttributesW(localPath) != INVALID_FILE_ATTRIBUTES) {
@@ -193,7 +193,7 @@ BOOL IsImageCached(const wchar_t* url, wchar_t* localPath) {
     wchar_t filename[64];
     GenerateCacheFilename(url, filename, 64);
     
-    _snwprintf(localPath, MAX_PATH, L"%s\\%s", cacheDir, filename);
+    _snwprintf_s(localPath, MAX_PATH, _TRUNCATE, L"%s\\%s", cacheDir, filename);
     
     return (GetFileAttributesW(localPath) != INVALID_FILE_ATTRIBUTES);
 }
@@ -392,7 +392,7 @@ BOOL ResolveImagePath(MarkdownImage* image) {
     }
     
     wchar_t fullPath[MAX_PATH];
-    _snwprintf(fullPath, MAX_PATH, L"%s\\%s", pluginsDir, path);
+    _snwprintf_s(fullPath, MAX_PATH, _TRUNCATE, L"%s\\%s", pluginsDir, path);
     
     image->resolvedPath = _wcsdup(fullPath);
     if (!image->resolvedPath) return FALSE;

@@ -94,9 +94,9 @@ void BuildPomodoroMenu(HMENU hMenu) {
     }
 
     wchar_t menuText[64];
-    _snwprintf(menuText, sizeof(menuText)/sizeof(wchar_t),
-              GetLocalizedString(NULL, L"Loop Count: %d"),
-              g_AppConfig.pomodoro.loop_count);
+    _snwprintf_s(menuText, _countof(menuText), _TRUNCATE,
+                GetLocalizedString(NULL, L"Loop Count: %d"),
+                g_AppConfig.pomodoro.loop_count);
     AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_LOOP_COUNT, menuText);
 
     AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);

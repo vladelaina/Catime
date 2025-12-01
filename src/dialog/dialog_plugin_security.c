@@ -31,8 +31,8 @@ static int g_blockquoteCount = 0;
 static char g_pluginPath[MAX_PATH] = {0};
 static char g_pluginName[128] = {0};
 
-/* Reentrancy guard */
-static BOOL g_dialogActive = FALSE;
+/* Reentrancy guard - use atomic for thread safety */
+static volatile LONG g_dialogActive = 0;
 
 /**
  * @brief Set plugin info for dialog
@@ -293,12 +293,12 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
  */
 INT_PTR ShowPluginSecurityDialog(HWND hwndParent, const char* pluginPath, const char* pluginName) {
     /* Prevent reentrancy - only one dialog can be active at a time */
-    if (g_dialogActive) {
+    /* Use atomic compare-exchange to prevent race condition */
+    if (InterlockedCompareExchange(&g_dialogActive, 1, 0) != 0) {
         LOG_WARNING("Plugin security dialog already active, rejecting request");
         return IDCANCEL;
     }
     
-    g_dialogActive = TRUE;
     SetPluginSecurityDialogInfo(pluginPath, pluginName);
     
     INT_PTR result = DialogBoxW(GetModuleHandle(NULL),
@@ -306,7 +306,7 @@ INT_PTR ShowPluginSecurityDialog(HWND hwndParent, const char* pluginPath, const 
                                 hwndParent,
                                 PluginSecurityDlgProc);
     
-    g_dialogActive = FALSE;
+    InterlockedExchange(&g_dialogActive, 0);
     
     /* Check for dialog creation failure */
     if (result == -1) {

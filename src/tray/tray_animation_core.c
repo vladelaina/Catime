@@ -56,7 +56,7 @@ static FrameRateController g_frameRateCtrl;
 
 /* Thread safety */
 static CRITICAL_SECTION g_animCriticalSection;
-static BOOL g_criticalSectionInitialized = FALSE;
+static volatile LONG g_criticalSectionInitialized = 0;
 static BOOL g_pendingTrayUpdate = FALSE;
 
 /* Error recovery:
@@ -367,10 +367,9 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
         g_baseFolderInterval = (UINT)folderMs;
     }
     
-    /* Initialize resources */
-    if (!g_criticalSectionInitialized) {
+    /* Initialize resources - use atomic operation for thread safety */
+    if (InterlockedCompareExchange(&g_criticalSectionInitialized, 1, 0) == 0) {
         InitializeCriticalSection(&g_animCriticalSection);
-        g_criticalSectionInitialized = TRUE;
     }
     
     if (!g_memoryPool) {
@@ -441,9 +440,9 @@ void StopTrayAnimation(HWND hwnd) {
         g_memoryPool = NULL;
     }
 
-    if (g_criticalSectionInitialized) {
+    if (g_criticalSectionInitialized == 1) {
         DeleteCriticalSection(&g_animCriticalSection);
-        g_criticalSectionInitialized = FALSE;
+        InterlockedExchange(&g_criticalSectionInitialized, 0);
     }
 
     g_consecutiveUpdateFailures = 0;

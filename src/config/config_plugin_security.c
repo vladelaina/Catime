@@ -162,7 +162,7 @@ static BOOL CalculateFileSHA256(const char* filePath, char* hashHex) {
         } else {
             /* Convert to hex string - safe because hashLen is validated */
             for (DWORD i = 0; i < 32; i++) {
-                sprintf(hashHex + (i * 2), "%02x", hash[i]);
+                sprintf_s(hashHex + (i * 2), 3, "%02x", hash[i]);
             }
             hashHex[64] = '\0';
         }

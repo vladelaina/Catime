@@ -46,8 +46,8 @@ static BOOL GetFontsFolderPath(wchar_t* outPath, size_t size) {
     size_t dirLen = (size_t)(lastSep - wconfigPath);
     if (dirLen + 20 >= size) return FALSE;
     
-    int written = _snwprintf(outPath, size, L"%.*ls\\resources\\fonts", (int)dirLen, wconfigPath);
-    if (written < 0 || written >= (int)size) return FALSE;
+    int written = _snwprintf_s(outPath, size, _TRUNCATE, L"%.*ls\\resources\\fonts", (int)dirLen, wconfigPath);
+    if (written < 0) return FALSE;
     
     return TRUE;
 }
@@ -141,8 +141,8 @@ static void ScanFontFolderRecursive(const wchar_t* folderPath,
     }
     
     wchar_t searchPath[MAX_PATH];
-    int written = _snwprintf(searchPath, MAX_PATH, L"%s\\*", folderPath);
-    if (written < 0 || written >= MAX_PATH) {
+    int written = _snwprintf_s(searchPath, MAX_PATH, _TRUNCATE, L"%s\\*", folderPath);
+    if (written < 0) {
         WriteLog(LOG_LEVEL_WARNING, "Path too long: %ls", folderPath);
         return;
     }
@@ -162,16 +162,16 @@ static void ScanFontFolderRecursive(const wchar_t* folderPath,
         }
         
         wchar_t fullPath[MAX_PATH];
-        int len1 = _snwprintf(fullPath, MAX_PATH, L"%s\\%s", folderPath, findData.cFileName);
-        if (len1 < 0 || len1 >= MAX_PATH) continue;
+        int len1 = _snwprintf_s(fullPath, MAX_PATH, _TRUNCATE, L"%s\\%s", folderPath, findData.cFileName);
+        if (len1 < 0) continue;
         
         wchar_t newRelativePath[MAX_PATH];
-        if (relativePath[0] == L'\0') {
+        if (!relativePath || relativePath[0] == L'\0') {
             wcsncpy(newRelativePath, findData.cFileName, MAX_PATH - 1);
             newRelativePath[MAX_PATH - 1] = L'\0';
         } else {
-            int len2 = _snwprintf(newRelativePath, MAX_PATH, L"%s\\%s", relativePath, findData.cFileName);
-            if (len2 < 0 || len2 >= MAX_PATH) continue;
+            int len2 = _snwprintf_s(newRelativePath, MAX_PATH, _TRUNCATE, L"%s\\%s", relativePath, findData.cFileName);
+            if (len2 < 0) continue;
         }
         
         if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
