@@ -16,6 +16,7 @@
 #include "drawing.h"
 #include "notification.h"
 #include "../resource/resource.h"
+#include "log.h"
 #include <stdio.h>
 #include <string.h>
 #include <winnls.h>
@@ -207,12 +208,7 @@ BOOL ValidateAndSetTimeoutFile(HWND hwnd, const char* filePathUtf8) {
         SaveRecentFile(filePathUtf8);
         return TRUE;
     } else {
-        if (hwnd) {
-            MessageBoxW(hwnd, 
-                GetLocalizedString(NULL, L"Selected file does not exist"),
-                GetLocalizedString(NULL, L"Error"),
-                MB_ICONERROR);
-        }
+        LOG_WARNING("Selected timeout file does not exist: %s", filePathUtf8);
         return FALSE;
     }
 }

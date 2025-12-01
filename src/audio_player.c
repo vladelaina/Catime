@@ -11,6 +11,7 @@
 #include <strsafe.h>
 #include "../libs/miniaudio/miniaudio.h"
 #include "config.h"
+#include "log.h"
 
 /* Audio polling intervals:
  * - 500ms for miniaudio: Frequent checks detect completion quickly while minimizing overhead
@@ -106,10 +107,6 @@ static BOOL FallbackToSystemBeep(HWND hwnd) {
     StartPlaybackTimer(hwnd, TIMER_ID_SYSTEM_BEEP_DONE, TIMER_INTERVAL_BEEP);
     g_isPlaying = MA_TRUE;
     return TRUE;
-}
-
-static void ShowErrorMessage(HWND hwnd, const wchar_t* errorMsg) {
-    MessageBoxW(hwnd, errorMsg, L"Audio Playback Error", MB_ICONERROR | MB_OK);
 }
 
 /* ============================================================================
@@ -398,18 +395,14 @@ BOOL PlayNotificationSound(HWND hwnd) {
     }
 
     if (!IsValidFilePath(g_AppConfig.notification.sound.sound_file)) {
-        wchar_t errorMsg[MAX_PATH + 64];
-        StringCbPrintfW(errorMsg, sizeof(errorMsg), 
-                       L"Invalid audio file path:\n%hs", g_AppConfig.notification.sound.sound_file);
-        ShowErrorMessage(hwnd, errorMsg);
+        LOG_WARNING("Invalid audio file path (will fallback to system beep): %s", 
+                   g_AppConfig.notification.sound.sound_file);
         return FallbackToSystemBeep(hwnd);
     }
 
     if (!AudioFileExists(g_AppConfig.notification.sound.sound_file)) {
-        wchar_t errorMsg[MAX_PATH + 64];
-        StringCbPrintfW(errorMsg, sizeof(errorMsg), 
-                       L"Cannot find the configured audio file:\n%hs", g_AppConfig.notification.sound.sound_file);
-        ShowErrorMessage(hwnd, errorMsg);
+        LOG_WARNING("Cannot find audio file (will fallback to system beep): %s", 
+                   g_AppConfig.notification.sound.sound_file);
         return FallbackToSystemBeep(hwnd);
     }
 

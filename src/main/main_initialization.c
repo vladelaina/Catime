@@ -191,9 +191,7 @@ BOOL InitializeSubsystems(void) {
     InitCommonControls();
     
     if (!InitializeLogSystem()) {
-        MessageBoxW(NULL, 
-                   L"Log system initialization failed, the program will continue running but will not log.", 
-                   L"Warning", MB_ICONWARNING);
+        /* Log system failed - silently continue without logging capability */
     }
     
     SetupExceptionHandler();
@@ -208,8 +206,7 @@ BOOL InitializeSubsystems(void) {
     
     HRESULT hr = CoInitialize(NULL);
     if (FAILED(hr)) {
-        LOG_ERROR("COM initialization failed, error code: 0x%08X", hr);
-        MessageBoxW(NULL, L"COM initialization failed!", L"Error", MB_ICONERROR);
+        LOG_ERROR("COM initialization failed, error code: 0x%08X. Application cannot continue.", hr);
         return FALSE;
     }
     LOG_INFO("COM initialization successful");
@@ -240,8 +237,7 @@ BOOL InitializeApplicationSubsystem(HINSTANCE hInstance) {
     
     extern BOOL InitializeApplication(HINSTANCE);
     if (!InitializeApplication(hInstance)) {
-        LOG_ERROR("Application initialization failed");
-        MessageBoxW(NULL, L"Application initialization failed!", L"Error", MB_ICONERROR);
+        LOG_ERROR("Application initialization failed. Check log file for details.");
         return FALSE;
     }
 
@@ -321,8 +317,7 @@ BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
     UINT interval = GetTimerInterval();
     
     if (SetTimer(hwnd, 1, interval, NULL) == 0) {
-        LOG_ERROR("Timer creation failed, error code: %lu", GetLastError());
-        MessageBoxW(NULL, L"Timer Creation Failed!", L"Error", MB_ICONEXCLAMATION | MB_OK);
+        LOG_WINDOWS_ERROR("Timer creation failed");
         return FALSE;
     }
     LOG_INFO("Timer set successfully with %ums interval", interval);

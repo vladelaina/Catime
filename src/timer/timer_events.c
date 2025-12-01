@@ -20,6 +20,7 @@
 #include "drag_scale.h"
 #include "tray/tray_animation_core.h"
 #include "utils/string_convert.h"
+#include "log.h"
 
 /* Pomodoro and timer constants:
  * - 1500s = 25 min (standard Pomodoro work duration)
@@ -101,13 +102,8 @@ static BOOL ExecuteSystemAction(HWND hwnd, TimeoutActionType action) {
             
             int result = system(SYSTEM_ACTIONS[i].command);
             if (result != 0) {
-                char errorMsg[256];
-                snprintf(errorMsg, sizeof(errorMsg), 
-                        "System action failed (code: %d). You may need administrator privileges.", 
-                        result);
-                wchar_t wErrorMsg[256];
-                MultiByteToWideChar(CP_UTF8, 0, errorMsg, -1, wErrorMsg, 256);
-                MessageBoxW(hwnd, wErrorMsg, GetLocalizedString(NULL, L"Error"), MB_ICONWARNING);
+                LOG_WARNING("System action '%s' failed (code: %d). May need administrator privileges.", 
+                           SYSTEM_ACTIONS[i].command, result);
             }
             
             CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
@@ -274,10 +270,8 @@ static void HandleTimeoutActions(HWND hwnd) {
                                     
                                     HINSTANCE result = ShellExecuteW(NULL, L"open", wPath, NULL, NULL, SW_SHOWNORMAL);
                                     if ((INT_PTR)result <= 32) {
-                                        MessageBoxW(hwnd, 
-                                            GetLocalizedString(NULL, L"Failed to open file"),
-                                            GetLocalizedString(NULL, L"Error"),
-                                            MB_ICONERROR);
+                                        LOG_WARNING("Failed to open timeout file: %s (ShellExecute error code: %d)", 
+                                                   CLOCK_TIMEOUT_FILE_PATH, (int)(INT_PTR)result);
                                     }
                                 }
                                 break;
@@ -311,10 +305,10 @@ static void HandleTimeoutActions(HWND hwnd) {
                                 if (wcslen(CLOCK_TIMEOUT_WEBSITE_URL) > 0) {
                                     HINSTANCE result = ShellExecuteW(NULL, L"open", CLOCK_TIMEOUT_WEBSITE_URL, NULL, NULL, SW_NORMAL);
                                     if ((INT_PTR)result <= 32) {
-                                        MessageBoxW(hwnd, 
-                                            GetLocalizedString(NULL, L"Failed to open website"),
-                                            GetLocalizedString(NULL, L"Error"),
-                                            MB_ICONERROR);
+                                        char urlUtf8[MAX_PATH];
+                                        WideCharToMultiByte(CP_UTF8, 0, CLOCK_TIMEOUT_WEBSITE_URL, -1, urlUtf8, MAX_PATH, NULL, NULL);
+                                        LOG_WARNING("Failed to open timeout website: %s (ShellExecute error code: %d)", 
+                                                   urlUtf8, (int)(INT_PTR)result);
                                     }
                                 }
                                 break;

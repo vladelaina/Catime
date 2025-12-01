@@ -121,8 +121,7 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
     wc.lpszClassName = WINDOW_CLASS_NAME;
     
     if (!RegisterClassW(&wc)) {
-        LOG_ERROR("Window class registration failed");
-        MessageBoxW(NULL, L"Window Registration Failed!", L"Error", MB_ICONEXCLAMATION | MB_OK);
+        LOG_WINDOWS_ERROR("Window class registration failed");
         return NULL;
     }
     
@@ -146,8 +145,7 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
     );
 
     if (!hwnd) {
-        LOG_ERROR("Window creation failed");
-        MessageBoxW(NULL, L"Window Creation Failed!", L"Error", MB_ICONEXCLAMATION | MB_OK);
+        LOG_WINDOWS_ERROR("Window creation failed");
         return NULL;
     }
 

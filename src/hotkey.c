@@ -297,9 +297,7 @@ LRESULT CALLBACK HotkeyDialogSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LP
 void ShowHotkeySettingsDialog(HWND hwndParent) {
     HINSTANCE hInstance = GetModuleHandle(NULL);
     if (!hInstance) {
-        LOG_ERROR("Failed to get module handle");
-        MessageBoxW(hwndParent, L"Internal error: Failed to get module handle", 
-                   L"Error", MB_ICONERROR | MB_OK);
+        LOG_ERROR("Failed to get module handle for hotkey dialog");
         return;
     }
     
@@ -310,21 +308,7 @@ void ShowHotkeySettingsDialog(HWND hwndParent) {
     
     if (result == -1) {
         DWORD error = GetLastError();
-        LOG_ERROR("Failed to create hotkey dialog. Error code: %lu", error);
-        
-        wchar_t errorMsg[512];
-        _snwprintf_s(errorMsg, 512, _TRUNCATE, L"Failed to open hotkey settings dialog.\n\n"
-                              L"Error code: %lu\n\n"
-                              L"Possible causes:\n"
-                              L"1. Resource loading issue\n"
-                              L"2. The dialog resource was not compiled into the executable\n"
-                              L"3. Memory allocation failure\n\n"
-                              L"Please try:\n"
-                              L"- Restarting the application\n"
-                              L"- Reinstalling Catime\n"
-                              L"- Checking the log file for more details",
-                              error);
-        MessageBoxW(hwndParent, errorMsg, L"Hotkey Settings Error", MB_ICONERROR | MB_OK);
+        LOG_ERROR("Failed to create hotkey dialog. Error code: %lu. Please check log file for details.", error);
     }
 }
 

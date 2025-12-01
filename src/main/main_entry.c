@@ -53,8 +53,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     LOG_INFO("Starting main window creation...");
     HWND hwnd = CreateMainWindow(hInstance, nCmdShow);
     if (!hwnd) {
-        LOG_ERROR("Main window creation failed");
-        MessageBoxW(NULL, L"Window Creation Failed!", L"Error", MB_ICONEXCLAMATION | MB_OK);
+        LOG_ERROR("Main window creation failed. Application cannot continue. Check log file for details.");
         CleanupResources(hMutex);
         return 0;
     }
