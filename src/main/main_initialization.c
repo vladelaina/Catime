@@ -9,6 +9,7 @@
 #include <windows.h>
 #include <commctrl.h>
 #include "main/main_initialization.h"
+#include "main/main_single_instance.h"
 #include "log.h"
 #include "config.h"
 #include "timer/timer.h"
@@ -393,10 +394,16 @@ void CleanupResources(HANDLE hMutex) {
     ShutdownDrawingImage();
 
     if (hMutex) {
+        LOG_INFO("Releasing mutex before exit");
+        ReleaseMutex(hMutex);  /* Release ownership before closing handle */
         CloseHandle(hMutex);
+        
+        /* Clear global mutex handle to prevent double-free in crash scenarios */
+        ClearGlobalMutexHandle();
+        
+        LOG_INFO("Mutex released and closed successfully");
     }
 
     CoUninitialize();
     CleanupLogSystem();
 }
-
