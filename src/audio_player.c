@@ -33,6 +33,7 @@ static ma_bool32 g_isPaused = MA_FALSE;
 static AudioPlaybackCompleteCallback g_audioCompleteCallback = NULL;
 static HWND g_audioCallbackHwnd = NULL;
 static UINT_PTR g_audioTimerId = 0;
+static wchar_t g_tempAudioFile[MAX_PATH] = {0};
 
 static void CALLBACK AudioTimerCallback(HWND hwnd, UINT message, UINT_PTR idEvent, DWORD dwTime);
 static BOOL FallbackToPlaySound(HWND hwnd, const wchar_t* wFilePath);
@@ -68,6 +69,12 @@ static void ResetPlaybackState(void) {
     g_isPlaying = MA_FALSE;
     g_isPaused = MA_FALSE;
     g_audioTimerId = 0;
+    
+    /* Clean up temporary audio file if exists */
+    if (g_tempAudioFile[0] != L'\0') {
+        DeleteFileW(g_tempAudioFile);
+        g_tempAudioFile[0] = L'\0';
+    }
 }
 
 /** One timer at a time (kills previous) */
@@ -138,7 +145,42 @@ static void UninitializeAudioEngine(void) {
  * Path conversion utilities
  * ============================================================================ */
 
-/** UTF-8 → short path (8.3) → ANSI for miniaudio */
+/**
+ * Create temporary copy of audio file with ASCII-safe filename
+ * Used when original filename contains non-ASCII characters (e.g., Cyrillic)
+ * Returns TRUE if temp file created successfully
+ */
+static BOOL CreateTempAudioCopy(const wchar_t* originalPath, wchar_t* tempPath, size_t tempPathSize) {
+    /* Get temp directory */
+    wchar_t tempDir[MAX_PATH];
+    if (GetTempPathW(MAX_PATH, tempDir) == 0) {
+        return FALSE;
+    }
+    
+    /* Extract file extension from original path */
+    const wchar_t* ext = wcsrchr(originalPath, L'.');
+    if (!ext) ext = L"";
+    
+    /* Generate unique temp filename using timestamp */
+    SYSTEMTIME st;
+    GetLocalTime(&st);
+    _snwprintf(tempPath, tempPathSize, L"%scatime_audio_%04d%02d%02d_%02d%02d%02d_%03d%s",
+              tempDir, st.wYear, st.wMonth, st.wDay, 
+              st.wHour, st.wMinute, st.wSecond, st.wMilliseconds, ext);
+    
+    /* Copy file to temp location */
+    if (!CopyFileW(originalPath, tempPath, FALSE)) {
+        return FALSE;
+    }
+    
+    /* Store temp file path for cleanup */
+    wcsncpy(g_tempAudioFile, tempPath, MAX_PATH - 1);
+    g_tempAudioFile[MAX_PATH - 1] = L'\0';
+    
+    return TRUE;
+}
+
+/** UTF-8 → short path (8.3) → ANSI for miniaudio, or create temp copy for non-ASCII names */
 static BOOL ConvertPathForMiniaudio(const char* utf8Path, char* outPath, size_t outPathSize) {
     wchar_t wFilePath[MAX_PATH * 2] = {0};
     
@@ -152,14 +194,45 @@ static BOOL ConvertPathForMiniaudio(const char* utf8Path, char* outPath, size_t 
     DWORD shortPathLen = GetShortPathNameW(wFilePath, shortPath, MAX_PATH);
     
     if (shortPathLen > 0 && shortPathLen < MAX_PATH) {
-        if (WideCharToMultiByte(CP_ACP, 0, shortPath, -1, outPath, (int)outPathSize, NULL, NULL) > 0) {
+        /* Convert short path to ANSI - only if conversion succeeds without data loss */
+        BOOL usedDefaultChar = FALSE;
+        int result = WideCharToMultiByte(CP_ACP, 0, shortPath, -1, outPath, (int)outPathSize, NULL, &usedDefaultChar);
+        
+        if (result > 0 && !usedDefaultChar) {
             return TRUE;
         }
     }
     
-    /* Fallback to UTF-8 encoding */
-    WideCharToMultiByte(CP_UTF8, 0, wFilePath, -1, outPath, (int)outPathSize, NULL, NULL);
-    return TRUE;
+    /* 
+     * Path contains non-ASCII characters that can't be converted safely.
+     * Create a temporary copy with ASCII-safe filename to enable miniaudio playback.
+     * This preserves the original file and allows playback of files with Cyrillic,
+     * Chinese, or other non-ASCII names on any Windows system.
+     */
+    wchar_t tempPath[MAX_PATH];
+    if (CreateTempAudioCopy(wFilePath, tempPath, MAX_PATH)) {
+        /* Try to convert temp path (should always succeed since we use ASCII filename) */
+        DWORD tempShortLen = GetShortPathNameW(tempPath, shortPath, MAX_PATH);
+        if (tempShortLen > 0 && tempShortLen < MAX_PATH) {
+            BOOL usedDefaultChar = FALSE;
+            int result = WideCharToMultiByte(CP_ACP, 0, shortPath, -1, outPath, (int)outPathSize, NULL, &usedDefaultChar);
+            if (result > 0 && !usedDefaultChar) {
+                return TRUE;
+            }
+        }
+        
+        /* If even temp path fails (shouldn't happen), try direct conversion */
+        if (WideCharToMultiByte(CP_ACP, 0, tempPath, -1, outPath, (int)outPathSize, NULL, NULL) > 0) {
+            return TRUE;
+        }
+        
+        /* Cleanup temp file if we can't use it */
+        DeleteFileW(tempPath);
+        g_tempAudioFile[0] = L'\0';
+    }
+    
+    /* All attempts failed - fallback to PlaySound */
+    return FALSE;
 }
 
 static BOOL GetWideCharPath(const char* utf8Path, wchar_t* wPath, size_t wPathSize) {
