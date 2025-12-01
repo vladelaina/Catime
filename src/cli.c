@@ -280,6 +280,12 @@ static const SingleCharCommand g_singleCharCommands[] = {
 };
 
 static BOOL ProcessShortcutCommands(HWND hwnd, const char* input) {
+    /* Ignore command-line flags (double-dash options) to prevent parsing as time */
+    if (input[0] == '-' && input[1] == '-') {
+        LOG_INFO("Ignoring command-line flag: %s", input);
+        return TRUE;  /* Return TRUE to prevent further processing */
+    }
+    
     if ((input[0] == 'p' || input[0] == 'P') && isdigit((unsigned char)input[1])) {
         return HandlePomodoroIndex(hwnd, input);
     }

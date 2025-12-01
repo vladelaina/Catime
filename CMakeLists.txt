@@ -57,37 +57,38 @@ target_compile_definitions(catime PRIVATE
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
     target_compile_definitions(catime PRIVATE NDEBUG)
     
-    # Optimization flags for MinGW
+    # Optimization flags for MinGW (size-optimized)
     target_compile_options(catime PRIVATE
-        -O3
+        -Os                                      # Optimize for size (replaces -O3)
         -mtune=generic
-        -ffunction-sections
-        -fdata-sections
+        -ffunction-sections                      # Enable function-level linking
+        -fdata-sections                          # Enable data-level linking
         -fno-strict-aliasing
-        -flto
-        -fno-exceptions
-        -fomit-frame-pointer
-        -fmerge-all-constants
-        -fno-math-errno
-        -fno-trapping-math
-        -ffast-math
-        -Os
+        -flto                                    # Link-time optimization
+        -fno-exceptions                          # Disable C++ exceptions
+        -fomit-frame-pointer                     # Remove frame pointers
+        -fmerge-all-constants                    # Merge identical constants
+        -fno-math-errno                          # Don't set errno for math functions
+        -fno-trapping-math                       # Allow math optimizations
+        -ffast-math                              # Fast floating-point math
         -finline-small-functions
         -finline-functions-called-once
-        -fno-unwind-tables
-        -fno-asynchronous-unwind-tables
-        -fno-ident
+        -fno-unwind-tables                       # Remove unwind tables
+        -fno-asynchronous-unwind-tables          # Remove async unwind tables
+        -fno-ident                               # Remove compiler identification
+        -fno-stack-protector                     # Disable stack protection (size reduction)
         -Wno-unknown-warning-option
     )
     
     # Link-time optimization and size reduction
     target_link_options(catime PRIVATE
-        -mwindows
-        -flto
-        -Wl,--gc-sections
-        -s
-        -Wl,--strip-all
-        -static
+        -mwindows                                # Windows GUI application
+        -flto                                    # Link-time optimization
+        -Wl,--gc-sections                        # Remove unused sections
+        -Wl,--strip-all                          # Strip all symbols
+        -Wl,--build-id=none                      # Remove build ID section
+        -Wl,--no-insert-timestamp                # Remove PE timestamp for reproducibility
+        -static                                  # Static link CRT
     )
 else()
     # Debug flags
