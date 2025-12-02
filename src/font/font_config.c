@@ -5,6 +5,7 @@
 
 #include "font/font_config.h"
 #include "font/font_path_manager.h"
+#include "log.h"
 #include <stdio.h>
 #include <windows.h>
 
@@ -16,23 +17,18 @@ extern BOOL WriteIniString(const char* section, const char* key, const char* val
 void WriteConfigFont(const char* fontFileName, BOOL shouldReload) {
     if (!fontFileName) return;
     
-    char actualFontPath[MAX_PATH];
     char configFontName[MAX_PATH];
     
-    /* Try to find font and get relative path */
-    if (FindFontInFontsFolder(fontFileName, actualFontPath, MAX_PATH)) {
-        char relativePath[MAX_PATH];
-        if (CalculateRelativePath(actualFontPath, relativePath, MAX_PATH)) {
-            /* Build config-style path */
-            BuildFontConfigPath(relativePath, configFontName, MAX_PATH);
-        } else {
-            /* Fallback: use filename as-is with prefix */
-            BuildFontConfigPath(fontFileName, configFontName, MAX_PATH);
-        }
-    } else {
-        /* File not found: use filename as-is with prefix */
-        BuildFontConfigPath(fontFileName, configFontName, MAX_PATH);
-    }
+    /* CRITICAL FIX: Use the exact relative path provided by user selection!
+     * DO NOT re-search for the file, as recursive search may find a different
+     * file with the same name in a subdirectory, causing incorrect path storage.
+     * 
+     * The fontFileName parameter is already a correct relative path from the cache,
+     * selected by the user from the menu. We just need to add the config prefix.
+     */
+    
+    /* Build config-style path directly from the provided relative path */
+    BuildFontConfigPath(fontFileName, configFontName, MAX_PATH);
     
     /* Write to config */
     char config_path[MAX_PATH];

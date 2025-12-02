@@ -198,21 +198,17 @@ static BOOL GetPluginOutputPath(char* buffer, size_t bufferSize) {
 }
 
 /**
- * @brief Ensure plugin output file exists (create empty if missing)
+ * @brief Ensure plugin output file exists and is empty
+ * @note Always clears file content on startup to prevent stale <exit> tags
  */
 static void EnsureOutputFileExists(const char* filePath) {
-    /* Check if file exists */
-    DWORD attrs = GetFileAttributesA(filePath);
-    if (attrs == INVALID_FILE_ATTRIBUTES) {
-        /* File doesn't exist - create empty file */
-        HANDLE hFile = CreateFileA(filePath, GENERIC_WRITE, 0, NULL,
-                                   CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
-        if (hFile != INVALID_HANDLE_VALUE) {
-            CloseHandle(hFile);
-            LOG_INFO("PluginData: Created output file %s", filePath);
-        } else {
-            LOG_WARNING("PluginData: Failed to create output file, error: %lu", GetLastError());
-        }
+    HANDLE hFile = CreateFileA(filePath, GENERIC_WRITE, 0, NULL,
+                               CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile != INVALID_HANDLE_VALUE) {
+        CloseHandle(hFile);
+        LOG_INFO("PluginData: Cleared output file %s", filePath);
+    } else {
+        LOG_WARNING("PluginData: Failed to clear output file, error: %lu", GetLastError());
     }
 }
 

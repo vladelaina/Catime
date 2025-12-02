@@ -12,6 +12,7 @@
 #include "drawing.h"
 #include "font.h"
 #include "color/color.h"
+#include "color/gradient.h"
 #include "timer/timer.h"
 #include "config.h"
 #include "window_procedure/window_procedure.h"
@@ -38,6 +39,15 @@ extern float CLOCK_FONT_SCALE_FACTOR;
 static COLORREF ParseColorString(const char* colorStr) {
     if (!colorStr || strlen(colorStr) == 0) {
         return RGB(255, 255, 255);
+    }
+    
+    /* Check if it's a gradient name */
+    GradientType gradType = GetGradientTypeByName(colorStr);
+    if (gradType != GRADIENT_NONE) {
+        const GradientInfo* info = GetGradientInfo(gradType);
+        if (info) {
+            return info->startColor;  /* Use gradient start color for GDI */
+        }
     }
     
     int r = 255, g = 255, b = 255;
@@ -78,37 +88,13 @@ static RenderContext CreateRenderContext(void) {
     return ctx;
 }
 
-/**
- * @param ctx Font configuration
- * @return GDI font handle (must be deleted by caller)
- * @note Negative height = character height (not pixel height)
- */
-static HFONT CreateTimerFont(const RenderContext* ctx) {
-    wchar_t fontNameW[FONT_NAME_MAX_LEN];
-    MultiByteToWideChar(CP_UTF8, 0, ctx->fontInternalName, -1, fontNameW, FONT_NAME_MAX_LEN);
-    
-    return CreateFontW(
-        -(int)(CLOCK_BASE_FONT_SIZE * ctx->fontScaleFactor),
-        0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
-        DEFAULT_CHARSET, OUT_TT_PRECIS,
-        CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,
-        VARIABLE_PITCH | FF_SWISS,
-        fontNameW
-    );
-}
-
 static BOOL ResolveFontPath(const RenderContext* ctx, char* outPath) {
-    // Check if the configured path is a managed font path (starts with %LOCALAPPDATA% prefix)
     const char* relPath = ExtractRelativePath(ctx->fontFileName);
     if (relPath) {
-        // It has the prefix, so extract the filename part and build full path
         return BuildFullFontPath(relPath, outPath, MAX_PATH);
     }
     
-    // It might be a direct absolute path or a simple filename
-    // First try to expand environment strings
     if (ExpandEnvironmentStringsA(ctx->fontFileName, outPath, MAX_PATH) > 0) {
-        // If it doesn't contain a drive separator, assume it's a filename in fonts folder
         if (!strchr(outPath, ':')) {
             char simpleName[MAX_PATH];
             strcpy_s(simpleName, MAX_PATH, outPath);
@@ -133,6 +119,7 @@ static BOOL MeasureTextMarkdown(const wchar_t* text, const RenderContext* ctx, S
             }
         }
     }
+    
     return FALSE;
 }
 
@@ -227,6 +214,10 @@ static void FixAlphaChannel(void* bits, int width, int height) {
 
 /** @note Skips resize if size unchanged to reduce SetWindowPos overhead */
 static void AdjustWindowSize(HWND hwnd, const SIZE* textSize, RECT* rect) {
+    if (textSize->cx <= 0 || textSize->cy <= 0) {
+        return;
+    }
+    
     if (textSize->cx == (rect->right - rect->left) && 
         textSize->cy == (rect->bottom - rect->top)) {
         return;
@@ -338,7 +329,6 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     }
 
     RenderContext ctx = CreateRenderContext();
-    HFONT hFont = CreateTimerFont(&ctx);
 
     // Parse Markdown
     wchar_t* mdText = NULL;
@@ -373,10 +363,10 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
                 measured = MeasureTextMarkdown(textToRender, &ctx, &textSize, NULL, 0);
             }
 
+            // If measurement failed, use default size
             if (!measured) {
-                HFONT oldFontHdc = (HFONT)SelectObject(hdc, hFont);
-                GetTextExtentPoint32W(hdc, textToRender, (int)wcslen(textToRender), &textSize);
-                SelectObject(hdc, oldFontHdc);
+                textSize.cx = 100;
+                textSize.cy = 30;
             }
         }
         
@@ -409,7 +399,6 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     
     // Create buffer with the final correct size
     if (!SetupDoubleBufferDIB(hdc, &rect, &memDC, &memBitmap, &oldBitmap, &pBits)) {
-        DeleteObject(hFont);
         if (isMarkdown) {
             FreeMarkdownLinks(links, linkCount);
             free(headings); free(styles); free(listItems); free(blockquotes);
@@ -420,9 +409,6 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
         }
         return;
     }
-    
-    // Select font into memDC for drawing
-    HFONT oldFontMem = (HFONT)SelectObject(memDC, hFont);
     
     // Manually clear background
     // Edit Mode: Alpha=5 to capture mouse click on background
@@ -438,36 +424,31 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     
     // Skip rendering during transition to avoid black artifacts
     if (!g_IsTransitioning && hasContent) {
-        BOOL usedSTB = FALSE;
         int textHeight = 0;
         
         // Render text if any
         if (wcslen(textToRender) > 0) {
-            // Get text height first
-            SIZE textOnlySize = {0};
-            MeasureTextMarkdown(textToRender, &ctx, &textOnlySize, headings, headingCount);
-            textHeight = textOnlySize.cy;
-            
-            // Create adjusted rect for text rendering (only text area, not including images)
             RECT textRect = rect;
-            if (images && imageCount > 0) {
-                // Set text area to exactly text height (no extra space = no centering offset)
-                textRect.bottom = textHeight;
+            SIZE textSizeMeasured = {0};
+            
+            if (isMarkdown) {
+                MeasureTextMarkdown(textToRender, &ctx, &textSizeMeasured, headings, headingCount);
+            } else {
+                MeasureTextMarkdown(textToRender, &ctx, &textSizeMeasured, NULL, 0);
+            }
+            
+            if (textSizeMeasured.cy > 0) {
+                textHeight = textSizeMeasured.cy;
             }
             
             if (isMarkdown) {
-                usedSTB = RenderTextMarkdown(memDC, &textRect, textToRender, &ctx, CLOCK_EDIT_MODE, pBits,
-                                            links, linkCount, headings, headingCount, styles, styleCount,
-                                            blockquotes, blockquoteCount);
+                RenderTextMarkdown(memDC, &textRect, textToRender, &ctx, CLOCK_EDIT_MODE, pBits,
+                                  links, linkCount, headings, headingCount, styles, styleCount,
+                                  blockquotes, blockquoteCount);
             } else {
-                usedSTB = RenderTextMarkdown(memDC, &textRect, textToRender, &ctx, CLOCK_EDIT_MODE, pBits,
-                                            NULL, 0, NULL, 0, NULL, 0, NULL, 0);
+                RenderTextMarkdown(memDC, &textRect, textToRender, &ctx, CLOCK_EDIT_MODE, pBits,
+                                  NULL, 0, NULL, 0, NULL, 0, NULL, 0);
             }
-        }
-        
-        // If STB was not used (e.g. font load failure), we might need to fix alpha for GDI text
-        if (!usedSTB && CLOCK_EDIT_MODE && wcslen(textToRender) > 0) {
-             FixAlphaChannel(pBits, rect.right, rect.bottom);
         }
         
         // Fill clickable regions with minimal alpha for mouse hit-testing (non-edit mode only)
@@ -577,8 +558,6 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     
     ReleaseDC(NULL, hdcScreen);
     
-    SelectObject(memDC, oldFontMem);
-    DeleteObject(hFont);
     SelectObject(memDC, oldBitmap);
     DeleteObject(memBitmap);
     DeleteDC(memDC);

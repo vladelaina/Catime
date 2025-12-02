@@ -471,6 +471,12 @@
 #define IDC_FONT_LICENSE_AGREE_BTN 742          /**< Font license agreement button */
 #define IDC_FONT_LICENSE_CANCEL_BTN 743         /**< Font license cancel button */
 
+/** @brief System font picker dialog identifiers */
+#define IDD_FONT_PICKER_SIMPLE 758              /**< Simple system font picker dialog */
+#define IDC_FONT_LIST_SIMPLE 759                /**< System font list control */
+#define IDC_FONT_PICKER_LABEL 757               /**< Font picker label */
+#define CLOCK_IDM_SYSTEM_FONT_PICKER 3200       /**< System font picker menu item */
+
 /** @brief Plugin security dialog identifiers */
 #define IDD_PLUGIN_SECURITY_DIALOG 760          /**< Plugin security confirmation dialog */
 #define IDC_PLUGIN_SECURITY_ICON 761            /**< Plugin security icon control */

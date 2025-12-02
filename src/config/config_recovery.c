@@ -30,7 +30,8 @@ BOOL ValidateFontConfig(ConfigSnapshot* snapshot) {
     /* Check if font path has valid extension */
     const char* fontExt = strrchr(snapshot->fontFileName, '.');
     if (!fontExt || (strcasecmp(fontExt, ".ttf") != 0 && 
-                     strcasecmp(fontExt, ".otf") != 0)) {
+                     strcasecmp(fontExt, ".otf") != 0 &&
+                     strcasecmp(fontExt, ".ttc") != 0)) {
         LOG_WARNING("Font path missing valid extension, resetting to default");
         strncpy(snapshot->fontFileName, FONTS_PATH_PREFIX DEFAULT_FONT_NAME,
                 sizeof(snapshot->fontFileName) - 1);

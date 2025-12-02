@@ -61,12 +61,22 @@ static void GetCurrentFontRelativePath(char* outPath, size_t size) {
         return;
     }
     
+    WriteLog(LOG_LEVEL_INFO, "FontCache: GetCurrentFontRelativePath() called");
+    WriteLog(LOG_LEVEL_INFO, "FontCache:   FONT_FILE_NAME = '%s'", FONT_FILE_NAME);
+    WriteLog(LOG_LEVEL_INFO, "FontCache:   Prefix = '%s'", prefix);
+    
+    /* Only mark custom fonts (from %LOCALAPPDATA%\Catime\resources\fonts\) as current
+     * System fonts (C:\Windows\Fonts\...) are NOT shown in tray menu, so return empty */
     size_t prefixLen = strlen(prefix);
     if (_strnicmp(FONT_FILE_NAME, prefix, prefixLen) == 0) {
+        /* Extract relative path after prefix */
         strncpy(outPath, FONT_FILE_NAME + prefixLen, size - 1);
         outPath[size - 1] = '\0';
+        WriteLog(LOG_LEVEL_INFO, "FontCache:   ✓ Extracted relative path: '%s'", outPath);
     } else {
+        /* System font or absolute path - not in menu, return empty */
         outPath[0] = '\0';
+        WriteLog(LOG_LEVEL_INFO, "FontCache:   ✗ Not a custom font path, returning empty");
     }
 }
 
@@ -225,15 +235,27 @@ static BOOL ScanFontsInternal(FontCacheInternal* cache) {
     char currentFontRelPath[MAX_PATH];
     GetCurrentFontRelativePath(currentFontRelPath, MAX_PATH);
     
+    WriteLog(LOG_LEVEL_INFO, "FontCache: Current font relative path: '%s'", 
+             currentFontRelPath[0] ? currentFontRelPath : "(empty - system font)");
+    
     if (currentFontRelPath[0] != '\0') {
         wchar_t wCurrentRelPath[MAX_PATH];
         MultiByteToWideChar(CP_UTF8, 0, currentFontRelPath, -1, wCurrentRelPath, MAX_PATH);
         
+        BOOL found = FALSE;
         for (int i = 0; i < cache->count; i++) {
             if (_wcsicmp(cache->entries[i].relativePath, wCurrentRelPath) == 0) {
                 cache->entries[i].isCurrentFont = TRUE;
+                WriteLog(LOG_LEVEL_INFO, "FontCache: ✓ Marked '%S' as current font (index %d)", 
+                         cache->entries[i].displayName, i);
+                found = TRUE;
                 break;
             }
+        }
+        
+        if (!found) {
+            WriteLog(LOG_LEVEL_WARNING, "FontCache: Current font '%s' not found in cache (%d entries scanned)", 
+                     currentFontRelPath, cache->count);
         }
     }
     
@@ -333,20 +355,37 @@ void FontCache_Invalidate(void) {
 void FontCache_UpdateCurrent(const char* fontRelativePath) {
     if (!fontRelativePath) return;
     
+    WriteLog(LOG_LEVEL_INFO, "FontCache: UpdateCurrent called with: '%s'", fontRelativePath);
+    
     wchar_t wRelPath[MAX_PATH];
     MultiByteToWideChar(CP_UTF8, 0, fontRelativePath, -1, wRelPath, MAX_PATH);
     
     AcquireSRWLockExclusive(&g_cache.lock);
     
+    /* Clear all current font markers first */
     for (int i = 0; i < g_cache.count; i++) {
         g_cache.entries[i].isCurrentFont = FALSE;
     }
     
-    for (int i = 0; i < g_cache.count; i++) {
-        if (_wcsicmp(g_cache.entries[i].relativePath, wRelPath) == 0) {
-            g_cache.entries[i].isCurrentFont = TRUE;
-            break;
+    /* Mark the new current font */
+    BOOL found = FALSE;
+    if (wcslen(wRelPath) > 0) {
+        for (int i = 0; i < g_cache.count; i++) {
+            if (_wcsicmp(g_cache.entries[i].relativePath, wRelPath) == 0) {
+                g_cache.entries[i].isCurrentFont = TRUE;
+                WriteLog(LOG_LEVEL_INFO, "FontCache: ✓ Updated current font to '%S' (index %d)", 
+                         g_cache.entries[i].displayName, i);
+                found = TRUE;
+                break;
+            }
         }
+        
+        if (!found) {
+            WriteLog(LOG_LEVEL_WARNING, "FontCache: ✗ Font '%s' not found in cache for update", 
+                     fontRelativePath);
+        }
+    } else {
+        WriteLog(LOG_LEVEL_INFO, "FontCache: Cleared all current font markers (empty path)");
     }
     
     ReleaseSRWLockExclusive(&g_cache.lock);

@@ -357,8 +357,6 @@ BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
 }
 
 int RunMessageLoop(HWND hwnd) {
-    (void)hwnd; // May be used for future enhancements
-    
     LOG_INFO("Entering main message loop");
     
     MSG msg;

@@ -32,6 +32,7 @@
 #include "tray/tray_animation_core.h"
 #include "tray/tray_menu_font.h"
 #include "menu_preview.h"
+#include "dialog/dialog_font_picker.h"
 #include "../resource/resource.h"
 #include "color/color_parser.h"
 #include <shlobj.h>
@@ -124,6 +125,12 @@ static LRESULT CmdFontAdvanced(HWND hwnd, WPARAM wp, LPARAM lp) {
         SHCreateDirectoryExW(NULL, wFontsFolderPath, NULL);
         ShellExecuteW(hwnd, L"open", wFontsFolderPath, NULL, NULL, SW_SHOWNORMAL);
     }
+    return 0;
+}
+
+static LRESULT CmdSystemFontPicker(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)wp; (void)lp;
+    ShowSystemFontDialog(hwnd);
     return 0;
 }
 
@@ -325,6 +332,7 @@ static const CommandDispatchEntry COMMAND_DISPATCH_TABLE[] = {
     {CLOCK_IDC_CUSTOMIZE_LEFT, CmdCustomizeColor},
     {CLOCK_IDC_FONT_LICENSE_AGREE, CmdFontLicense},
     {CLOCK_IDC_FONT_ADVANCED, CmdFontAdvanced},
+    {CLOCK_IDM_SYSTEM_FONT_PICKER, CmdSystemFontPicker},
     {CLOCK_IDC_COLOR_VALUE, CmdColorDialog},
     {CLOCK_IDC_COLOR_PANEL, CmdColorPanel},
     {CLOCK_IDC_TIMEOUT_BROWSE, CmdBrowseFile},
@@ -387,13 +395,19 @@ static BOOL HandleRecentFile(HWND hwnd, UINT cmd, int index) {
 static BOOL HandleFontSelection(HWND hwnd, UINT cmd, int index) {
     (void)index;
     char foundFontPath[MAX_PATH];
+    
     if (GetFontPathFromMenuId(cmd, foundFontPath, sizeof(foundFontPath))) {
         HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
         if (SwitchFont(hInstance, foundFontPath)) {
             InvalidateRect(hwnd, NULL, TRUE);
             UpdateWindow(hwnd);
+        } else {
+            WriteLog(LOG_LEVEL_ERROR, "Failed to switch font: %s", foundFontPath);
         }
+    } else {
+        WriteLog(LOG_LEVEL_ERROR, "Failed to get font path from menu ID: %u", cmd);
     }
+    
     return TRUE;
 }
 

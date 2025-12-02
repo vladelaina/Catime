@@ -214,7 +214,11 @@ BOOL LoadConfigFromFile(const char* config_path, ConfigSnapshot* snapshot) {
                  FONTS_PATH_PREFIX DEFAULT_FONT_NAME,
                  snapshot->fontFileName, sizeof(snapshot->fontFileName), config_path);
     
+    LOG_INFO("ConfigLoader: Read FONT_FILE_NAME from INI: '%s'", snapshot->fontFileName);
+    
     ProcessFontPath(snapshot, config_path);
+    
+    LOG_INFO("ConfigLoader: After ProcessFontPath, fontFileName = '%s'", snapshot->fontFileName);
     
     snapshot->windowPosX = ReadIniInt(INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_X", 
                                      DEFAULT_WINDOW_POS_X, config_path);
