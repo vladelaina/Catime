@@ -111,6 +111,7 @@ static const ConfigItemMeta CONFIG_METADATA[] = {
     {INI_SECTION_HOTKEYS, "HOTKEY_PAUSE_RESUME", "None", CONFIG_TYPE_STRING, "Pause/resume hotkey"},
     {INI_SECTION_HOTKEYS, "HOTKEY_RESTART_TIMER", "None", CONFIG_TYPE_STRING, "Restart timer hotkey"},
     {INI_SECTION_HOTKEYS, "HOTKEY_CUSTOM_COUNTDOWN", "None", CONFIG_TYPE_STRING, "Custom countdown hotkey"},
+    {INI_SECTION_HOTKEYS, "HOTKEY_TOGGLE_MILLISECONDS", "None", CONFIG_TYPE_STRING, "Toggle milliseconds display hotkey"},
     
     /* Colors */
     {INI_SECTION_COLORS, "COLOR_OPTIONS", DEFAULT_COLOR_OPTIONS_INI, CONFIG_TYPE_STRING, "Color palette"},
@@ -316,6 +317,7 @@ void WriteDefaultsToConfig(const char* config_path) {
             fputs(";   HOTKEY_PAUSE_RESUME        - Pause/Resume timer\n", f);
             fputs(";   HOTKEY_RESTART_TIMER       - Restart current timer\n", f);
             fputs(";   HOTKEY_CUSTOM_COUNTDOWN    - Custom countdown\n", f);
+            fputs(";   HOTKEY_TOGGLE_MILLISECONDS - Toggle milliseconds display\n", f);
             fputs(";========================================================\n", f);
         }
 

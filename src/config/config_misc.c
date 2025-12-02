@@ -358,6 +358,14 @@ void WriteConfigShowMilliseconds(BOOL showMilliseconds) {
 
 /**
  * @brief Get appropriate timer interval based on milliseconds display setting
+ * 
+ * @details Performance optimization:
+ * - Milliseconds (centiseconds): 20ms = 50 FPS
+ *   Rationale: Displays 0.01s precision, 50 FPS provides smooth updates
+ *   while being 2x more CPU-efficient than 100 FPS. Imperceptible difference
+ *   to human eye while maintaining accuracy.
+ * - No milliseconds: 1000ms = 1 FPS (sufficient for seconds-only display)
+ * - Animated gradient: 66ms = 15 FPS (smooth animation without excessive CPU)
  */
 UINT GetTimerInterval(void) {
     extern BOOL GetActiveShowMilliseconds(void);
@@ -371,7 +379,8 @@ UINT GetTimerInterval(void) {
         return 66; /* 15 FPS - sufficient for smooth gradient animation */
     }
     
-    return GetActiveShowMilliseconds() ? 10 : 1000;
+    /* Optimized balance: 50 FPS for milliseconds (2x more efficient than 100 FPS) */
+    return GetActiveShowMilliseconds() ? 20 : 1000;
 }
 
 /**

@@ -15,9 +15,9 @@
  * Constants
  * ============================================================================ */
 
-#define HOTKEY_COUNT 12
+#define HOTKEY_COUNT 13
 #define HOTKEY_EDIT_FIRST IDC_HOTKEY_EDIT1
-#define HOTKEY_EDIT_LAST IDC_HOTKEY_EDIT12
+#define HOTKEY_EDIT_LAST IDC_HOTKEY_EDIT13
 
 #define DIALOG_BG_COLOR RGB(0xF3, 0xF3, 0xF3)
 #define BUTTON_BG_COLOR RGB(0xFD, 0xFD, 0xFD)

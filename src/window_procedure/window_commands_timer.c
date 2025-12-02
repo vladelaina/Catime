@@ -144,6 +144,11 @@ LRESULT CmdTimeFormat(HWND hwnd, TimeFormatType format) {
 LRESULT CmdToggleMilliseconds(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     WriteConfigShowMilliseconds(!g_AppConfig.display.time_format.show_milliseconds);
+    
+    /* Reset timer with new interval (10ms for milliseconds, 1000ms without) */
+    extern void ResetTimerWithInterval(HWND hwnd);
+    ResetTimerWithInterval(hwnd);
+    
     InvalidateRect(hwnd, NULL, TRUE);
     return 0;
 }

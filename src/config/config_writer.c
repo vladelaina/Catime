@@ -315,20 +315,21 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int* count) {
     idx++;
     
     /* Hotkeys */
-    WORD hotkeys[12];
+    WORD hotkeys[13];
     ReadConfigHotkeys(&hotkeys[0], &hotkeys[1], &hotkeys[2], &hotkeys[3],
                      &hotkeys[4], &hotkeys[5], &hotkeys[6], &hotkeys[7],
-                     &hotkeys[8], &hotkeys[9], &hotkeys[10]);
+                     &hotkeys[8], &hotkeys[9], &hotkeys[10], &hotkeys[12]);
     ReadCustomCountdownHotkey(&hotkeys[11]);
     
     const char* hotkeyNames[] = {
         "HOTKEY_SHOW_TIME", "HOTKEY_COUNT_UP", "HOTKEY_COUNTDOWN",
         "HOTKEY_QUICK_COUNTDOWN1", "HOTKEY_QUICK_COUNTDOWN2", "HOTKEY_QUICK_COUNTDOWN3",
         "HOTKEY_POMODORO", "HOTKEY_TOGGLE_VISIBILITY", "HOTKEY_EDIT_MODE",
-        "HOTKEY_PAUSE_RESUME", "HOTKEY_RESTART_TIMER", "HOTKEY_CUSTOM_COUNTDOWN"
+        "HOTKEY_PAUSE_RESUME", "HOTKEY_RESTART_TIMER", "HOTKEY_CUSTOM_COUNTDOWN",
+        "HOTKEY_TOGGLE_MILLISECONDS"
     };
     
-    for (int i = 0; i < 12; i++) {
+    for (int i = 0; i < 13; i++) {
         safe_strncpy(items[idx].section, INI_SECTION_HOTKEYS, sizeof(items[idx].section));
         safe_strncpy(items[idx].key, hotkeyNames[i], sizeof(items[idx].key));
         HotkeyToString(hotkeys[i], items[idx].value, sizeof(items[idx].value));

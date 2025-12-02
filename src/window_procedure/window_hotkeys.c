@@ -26,6 +26,7 @@ extern wchar_t inputText[256];
 extern HWND g_hwndInputDialog;
 extern int time_options_count;
 extern int time_options[];
+extern void WriteConfigShowMilliseconds(BOOL showMilliseconds);
 
 /* ============================================================================
  * Hotkey Actions
@@ -45,6 +46,16 @@ static void HotkeyToggleVisibility(HWND hwnd) {
 static void HotkeyRestartTimer(HWND hwnd) {
     CloseAllNotifications();
     RestartCurrentTimer(hwnd);
+}
+
+static void HotkeyToggleMilliseconds(HWND hwnd) {
+    WriteConfigShowMilliseconds(!g_AppConfig.display.time_format.show_milliseconds);
+    
+    /* Reset timer with new interval (10ms for milliseconds, 1000ms without) */
+    extern void ResetTimerWithInterval(HWND hwnd);
+    ResetTimerWithInterval(hwnd);
+    
+    InvalidateRect(hwnd, NULL, TRUE);
 }
 
 static void HotkeyCustomCountdown(HWND hwnd) {
@@ -97,7 +108,8 @@ static const HotkeyDescriptor HOTKEY_DISPATCH_TABLE[] = {
     {HOTKEY_ID_EDIT_MODE, ToggleEditMode},
     {HOTKEY_ID_PAUSE_RESUME, TogglePauseResume},
     {HOTKEY_ID_RESTART_TIMER, HotkeyRestartTimer},
-    {HOTKEY_ID_CUSTOM_COUNTDOWN, HotkeyCustomCountdown}
+    {HOTKEY_ID_CUSTOM_COUNTDOWN, HotkeyCustomCountdown},
+    {HOTKEY_ID_TOGGLE_MILLISECONDS, HotkeyToggleMilliseconds}
 };
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
@@ -135,7 +147,8 @@ BOOL DispatchHotkey(HWND hwnd, int hotkeyId) {
     X(EDIT_MODE, "HOTKEY_EDIT_MODE") \
     X(PAUSE_RESUME, "HOTKEY_PAUSE_RESUME") \
     X(RESTART_TIMER, "HOTKEY_RESTART_TIMER") \
-    X(CUSTOM_COUNTDOWN, "HOTKEY_CUSTOM_COUNTDOWN")
+    X(CUSTOM_COUNTDOWN, "HOTKEY_CUSTOM_COUNTDOWN") \
+    X(TOGGLE_MILLISECONDS, "HOTKEY_TOGGLE_MILLISECONDS")
 
 typedef struct {
     int id;

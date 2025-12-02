@@ -639,12 +639,12 @@ void HotkeyToString(WORD hotkey, char* buffer, size_t bufferSize);
 WORD StringToHotkey(const char* str);
 
 /**
- * @brief Read all 11 hotkeys from config (uses defaults if missing)
+ * @brief Read all 12 hotkeys from config (uses defaults if missing)
  */
 void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdownHotkey,
                       WORD* quickCountdown1Hotkey, WORD* quickCountdown2Hotkey, WORD* quickCountdown3Hotkey,
                       WORD* pomodoroHotkey, WORD* toggleVisibilityHotkey, WORD* editModeHotkey,
-                      WORD* pauseResumeHotkey, WORD* restartTimerHotkey);
+                      WORD* pauseResumeHotkey, WORD* restartTimerHotkey, WORD* toggleMillisecondsHotkey);
 
 /**
  * @brief Read custom countdown hotkey
@@ -653,12 +653,12 @@ void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdow
 void ReadCustomCountdownHotkey(WORD* hotkey);
 
 /**
- * @brief Write all 11 hotkeys atomically (0 = "None")
+ * @brief Write all 12 hotkeys atomically (0 = "None")
  */
 void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownHotkey,
                         WORD quickCountdown1Hotkey, WORD quickCountdown2Hotkey, WORD quickCountdown3Hotkey,
                         WORD pomodoroHotkey, WORD toggleVisibilityHotkey, WORD editModeHotkey,
-                        WORD pauseResumeHotkey, WORD restartTimerHotkey);
+                        WORD pauseResumeHotkey, WORD restartTimerHotkey, WORD toggleMillisecondsHotkey);
 
 /**
  * @brief Write key-value pair (auto-determines section, atomic)

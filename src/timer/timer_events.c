@@ -280,8 +280,9 @@ static void HandleTimeoutActions(HWND hwnd) {
                                 StopNotificationSound();
                                 CLOCK_SHOW_CURRENT_TIME = TRUE;
                                 CLOCK_COUNT_UP = FALSE;
-            KillTimer(hwnd, TIMER_ID_MAIN);
-            SetTimer(hwnd, TIMER_ID_MAIN, GetTimerInterval(), NULL);
+                                ResetMillisecondAccumulator();
+        KillTimer(hwnd, TIMER_ID_MAIN);
+        SetTimer(hwnd, TIMER_ID_MAIN, GetTimerInterval(), NULL);
                                 InvalidateRect(hwnd, NULL, TRUE);
                                 break;
             
@@ -457,6 +458,7 @@ static void HandleCountdownCompletion(HWND hwnd) {
     if (CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_SHOW_TIME &&
                             CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_COUNT_UP) {
         ResetTimerState(0);
+        ResetMillisecondAccumulator();
     }
 }
 

@@ -243,13 +243,13 @@ typedef struct {
 void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdownHotkey,
                        WORD* quickCountdown1Hotkey, WORD* quickCountdown2Hotkey, WORD* quickCountdown3Hotkey,
                        WORD* pomodoroHotkey, WORD* toggleVisibilityHotkey, WORD* editModeHotkey,
-                       WORD* pauseResumeHotkey, WORD* restartTimerHotkey)
+                       WORD* pauseResumeHotkey, WORD* restartTimerHotkey, WORD* toggleMillisecondsHotkey)
 {
     /** Validate all pointers */
     if (!showTimeHotkey || !countUpHotkey || !countdownHotkey || 
         !quickCountdown1Hotkey || !quickCountdown2Hotkey || !quickCountdown3Hotkey ||
         !pomodoroHotkey || !toggleVisibilityHotkey || !editModeHotkey || 
-        !pauseResumeHotkey || !restartTimerHotkey) return;
+        !pauseResumeHotkey || !restartTimerHotkey || !toggleMillisecondsHotkey) return;
     
     /** Data-driven hotkey configuration table */
     HotkeyConfigEntry entries[] = {
@@ -264,6 +264,7 @@ void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdow
         {"HOTKEY_EDIT_MODE",           editModeHotkey},
         {"HOTKEY_PAUSE_RESUME",        pauseResumeHotkey},
         {"HOTKEY_RESTART_TIMER",       restartTimerHotkey},
+        {"HOTKEY_TOGGLE_MILLISECONDS", toggleMillisecondsHotkey},
     };
     
     char config_path[MAX_PATH];
@@ -282,7 +283,7 @@ void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdow
 void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownHotkey,
                         WORD quickCountdown1Hotkey, WORD quickCountdown2Hotkey, WORD quickCountdown3Hotkey,
                         WORD pomodoroHotkey, WORD toggleVisibilityHotkey, WORD editModeHotkey,
-                        WORD pauseResumeHotkey, WORD restartTimerHotkey) {
+                        WORD pauseResumeHotkey, WORD restartTimerHotkey, WORD toggleMillisecondsHotkey) {
     /** Data-driven hotkey configuration table with values */
     struct {
         const char* key;
@@ -299,6 +300,7 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
         {"HOTKEY_EDIT_MODE",           editModeHotkey},
         {"HOTKEY_PAUSE_RESUME",        pauseResumeHotkey},
         {"HOTKEY_RESTART_TIMER",       restartTimerHotkey},
+        {"HOTKEY_TOGGLE_MILLISECONDS", toggleMillisecondsHotkey},
     };
     
     char config_path[MAX_PATH];
