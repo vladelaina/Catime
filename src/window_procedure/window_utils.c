@@ -6,6 +6,7 @@
 #include "window_procedure/window_utils.h"
 #include "config.h"
 #include "language.h"
+#include "log.h"
 #include "utils/string_convert.h"
 #include <string.h>
 #include <ctype.h>
@@ -72,7 +73,17 @@ void ShowError(HWND hwnd, ErrorCode errorCode) {
             message = GetLocalizedString(NULL, L"Unknown error");
     }
     
-    MessageBoxW(hwnd, message, title, MB_ICONERROR);
+    /* Log error instead of showing MessageBox for better UX
+     * Convert wide string to UTF-8 for logging */
+    char errorMsg[512] = {0};
+    WideCharToMultiByte(CP_UTF8, 0, message, -1, errorMsg, sizeof(errorMsg), NULL, NULL);
+    LOG_ERROR("%s (ErrorCode: %d)", errorMsg, errorCode);
+    
+    /* Optionally show non-blocking notification instead of blocking MessageBox
+     * Uncomment if you want to show toast notification:
+     * extern void ShowNotification(HWND hwnd, const wchar_t* message);
+     * ShowNotification(hwnd, message);
+     */
 }
 
 /* ============================================================================

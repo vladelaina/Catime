@@ -64,11 +64,9 @@ static void SignalHandler(int signal) {
         CloseHandle(hMutex);
     }
     
-    MessageBoxW(NULL, 
-                L"The program encountered a serious error. Please check the log file for details.", 
-                L"Fatal Error", 
-                MB_ICONERROR | MB_OK);
-    
+    /* Don't show MessageBox - just log to file and exit silently
+     * This provides better user experience and prevents blocking on error dialogs
+     * Users can check the log file for crash details */
     exit(signal);
 }
 

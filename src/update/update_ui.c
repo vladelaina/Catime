@@ -7,6 +7,7 @@
 #include "dialog/dialog_procedure.h"
 #include "dialog/dialog_language.h"
 #include "language.h"
+#include "log.h"
 #include "utils/string_convert.h"
 #include "../../resource/resource.h"
 #include <strsafe.h>
@@ -376,8 +377,22 @@ int ShowUpdateNotification(HWND hwnd, const char* currentVersion, const char* la
 }
 
 void ShowUpdateErrorDialog(HWND hwnd, const wchar_t* errorMsg) {
+    /* Don't show blocking error dialog for update failures
+     * Update checks should be transparent to the user - failures should be silent
+     * Only log errors for troubleshooting purposes */
+    (void)hwnd;
+    
+    /* Log the error for debugging */
+    char errorMsgUtf8[512] = {0};
+    if (errorMsg) {
+        WideCharToMultiByte(CP_UTF8, 0, errorMsg, -1, errorMsgUtf8, sizeof(errorMsgUtf8), NULL, NULL);
+        LOG_WARNING("Update check failed: %s", errorMsgUtf8);
+    }
+    
+    /* Original blocking dialog implementation commented out:
     DialogBoxParamW(GetModuleHandle(NULL), MAKEINTRESOURCEW(IDD_UPDATE_ERROR_DIALOG), 
                    hwnd, UpdateErrorDlgProc, (LPARAM)errorMsg);
+    */
 }
 
 void ShowNoUpdateDialog(HWND hwnd, const char* currentVersion) {

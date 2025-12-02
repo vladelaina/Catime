@@ -6,13 +6,27 @@
 #include "dialog/dialog_error.h"
 #include "dialog/dialog_common.h"
 #include "language.h"
+#include "log.h"
 #include "../resource/resource.h"
 
 void ShowErrorDialog(HWND hwndParent) {
+    /* Don't show blocking error dialog - use audio feedback and logging instead
+     * This provides much better UX by not interrupting user workflow with modal dialogs
+     * User gets immediate audio feedback and can check logs if needed */
+    (void)hwndParent;
+    
+    /* Audio feedback - non-blocking */
+    MessageBeep(MB_ICONERROR);
+    
+    /* Log the error for troubleshooting */
+    LOG_WARNING("Invalid input format detected - user input validation failed");
+    
+    /* Original modal dialog implementation commented out for reference:
     DialogBoxW(GetModuleHandle(NULL),
               MAKEINTRESOURCE(IDD_ERROR_DIALOG),
               hwndParent,
               ErrorDlgProc);
+    */
 }
 
 INT_PTR CALLBACK ErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
