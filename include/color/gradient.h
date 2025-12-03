@@ -9,7 +9,8 @@
 #include <windows.h>
 #include <stdint.h>
 
-#define MAX_GRADIENT_STOPS 5
+#define MAX_GRADIENT_STOPS 5  /* Legacy preset limit */
+#define MAX_CUSTOM_GRADIENT_COLORS 20  /* Custom gradient limit */
 
 typedef enum {
     GRADIENT_NONE = 0,

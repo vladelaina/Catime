@@ -77,7 +77,7 @@ static GradientInfo g_CustomGradient = {
     FALSE,
     NULL, 0
 };
-static COLORREF g_CustomPalette[MAX_GRADIENT_STOPS];
+static COLORREF g_CustomPalette[MAX_CUSTOM_GRADIENT_COLORS];
 static char g_CustomNameBuffer[COLOR_HEX_BUFFER];
 static uint32_t g_CustomVersion = 0;
 
@@ -109,7 +109,7 @@ static void ParseCustomGradient(const char* name) {
     char* ctx = NULL;
     char* token = strtok_s(tempName, "_", &ctx);
     
-    while (token && count < MAX_GRADIENT_STOPS) {
+    while (token && count < MAX_CUSTOM_GRADIENT_COLORS) {
         g_CustomPalette[count++] = ParseHexColor(token);
         token = strtok_s(NULL, "_", &ctx);
     }

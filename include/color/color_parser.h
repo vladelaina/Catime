@@ -20,8 +20,8 @@
  * Constants
  * ============================================================================ */
 
-#define COLOR_BUFFER_SIZE 64
-#define COLOR_HEX_BUFFER 64
+#define COLOR_BUFFER_SIZE 256  /* Increased to support long gradient strings */
+#define COLOR_HEX_BUFFER 256
 #define HEX_COLOR_LENGTH 7
 
 /* ============================================================================

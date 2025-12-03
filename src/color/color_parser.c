@@ -206,7 +206,7 @@ BOOL isValidColorOrGradient(const char* input) {
         char* token = strtok_s(temp, "_", &context);
         int colorCount = 0;
         
-        while (token != NULL && colorCount < MAX_GRADIENT_STOPS) {
+        while (token != NULL) {
             /* Trim whitespace */
             while (*token && isspace((unsigned char)*token)) token++;
             
@@ -244,8 +244,8 @@ BOOL isValidColorOrGradient(const char* input) {
             token = strtok_s(NULL, "_", &context);
         }
         
-        /* Gradient must have at least 2 colors and not exceed maximum */
-        return (colorCount >= 2 && colorCount <= MAX_GRADIENT_STOPS);
+        /* Gradient must have at least 2 colors */
+        return (colorCount >= 2);
     }
     
     /* Single color: use existing validation */
