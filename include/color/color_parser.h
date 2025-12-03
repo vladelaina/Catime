@@ -55,6 +55,19 @@ void normalizeColor(const char* input, char* output, size_t output_size);
 BOOL isValidColor(const char* input);
 
 /**
+ * @brief Validates color or gradient string
+ * @param input Color string (single color or gradient with underscores)
+ * @return TRUE if valid single color or valid gradient format
+ * 
+ * @details
+ * Supports both single colors and gradients:
+ * - "#FF0000" → TRUE (single color)
+ * - "#FF0000_#00FF00" → TRUE (2-color gradient)
+ * - "#FF0000_#00FF00_#0000FF" → TRUE (multi-color gradient)
+ */
+BOOL isValidColorOrGradient(const char* input);
+
+/**
  * @brief Convert Windows COLORREF to hex string
  * @param color COLORREF value
  * @param output Buffer for hex string (min 10 bytes)

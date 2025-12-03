@@ -9,6 +9,7 @@
 #include <string.h>
 #include <ctype.h>
 #include "color/color_parser.h"
+#include "color/gradient.h"
 
 /* ============================================================================
  * Constants
@@ -188,5 +189,66 @@ BOOL isValidColor(const char* input) {
     }
     
     return TRUE;
+}
+
+BOOL isValidColorOrGradient(const char* input) {
+    if (!input || !*input) return FALSE;
+    
+    /* Check if it contains underscore (gradient format) */
+    if (strchr(input, '_') != NULL) {
+        /* Gradient format: validate each color segment */
+        char temp[COLOR_BUFFER_SIZE];
+        strncpy(temp, input, sizeof(temp) - 1);
+        temp[sizeof(temp) - 1] = '\0';
+        
+        /* Use thread-safe strtok_s (Windows) */
+        char* context = NULL;
+        char* token = strtok_s(temp, "_", &context);
+        int colorCount = 0;
+        
+        while (token != NULL && colorCount < MAX_GRADIENT_STOPS) {
+            /* Trim whitespace */
+            while (*token && isspace((unsigned char)*token)) token++;
+            
+            /* Check for empty segment */
+            if (*token == '\0') {
+                return FALSE;
+            }
+            
+            /* Each segment should be valid hex color */
+            if (*token != '#') {
+                /* Must start with # for gradient colors */
+                return FALSE;
+            }
+            
+            const char* hex = token + 1;
+            size_t len = strlen(hex);
+            
+            /* Trim trailing whitespace from hex */
+            while (len > 0 && isspace((unsigned char)hex[len - 1])) {
+                len--;
+            }
+            
+            /* Accept #RRGGBB (6 digits) */
+            if (len != 6) {
+                return FALSE;
+            }
+            
+            for (size_t i = 0; i < len; i++) {
+                if (!isxdigit((unsigned char)hex[i])) {
+                    return FALSE;
+                }
+            }
+            
+            colorCount++;
+            token = strtok_s(NULL, "_", &context);
+        }
+        
+        /* Gradient must have at least 2 colors and not exceed maximum */
+        return (colorCount >= 2 && colorCount <= MAX_GRADIENT_STOPS);
+    }
+    
+    /* Single color: use existing validation */
+    return isValidColor(input);
 }
 

@@ -4,12 +4,14 @@
  */
 #include <stdio.h>
 #include <ctype.h>
+#include <string.h>
 #include <windows.h>
 #include "color/color_input_dialog.h"
 #include "color/color_parser.h"
 #include "color/color_state.h"
 #include "menu_preview.h"
 #include "dialog/dialog_common.h"
+#include "language.h"
 #include "../resource/resource.h"
 
 /* ============================================================================
@@ -27,6 +29,7 @@ static WNDPROC g_OldEditProc = NULL;
  * @param hwndEdit Edit control handle
  *
  * @details Validates and normalizes input, updates preview on main window
+ * Supports both single colors and gradient colors
  */
 static void UpdateColorPreviewFromEdit(HWND hwndEdit) {
     char color[COLOR_BUFFER_SIZE];
@@ -34,17 +37,28 @@ static void UpdateColorPreviewFromEdit(HWND hwndEdit) {
     GetWindowTextW(hwndEdit, wcolor, sizeof(wcolor) / sizeof(wchar_t));
     WideCharToMultiByte(CP_UTF8, 0, wcolor, -1, color, sizeof(color), NULL, NULL);
 
-    char normalized[COLOR_BUFFER_SIZE];
-    normalizeColor(color, normalized, sizeof(normalized));
-
     HWND hwndMain = GetParent(GetParent(hwndEdit));
 
-    if (normalized[0] == '#') {
-        char finalColor[COLOR_HEX_BUFFER];
-        ReplaceBlackColor(normalized, finalColor, sizeof(finalColor));
-        StartPreview(PREVIEW_TYPE_COLOR, finalColor, hwndMain);
+    /* Check if it's a gradient (contains underscore) */
+    if (strchr(color, '_') != NULL) {
+        /* Gradient color: validate and preview directly */
+        if (isValidColorOrGradient(color)) {
+            StartPreview(PREVIEW_TYPE_COLOR, color, hwndMain);
+        } else {
+            CancelPreview(hwndMain);
+        }
     } else {
-        CancelPreview(hwndMain);
+        /* Single color: normalize first */
+        char normalized[COLOR_BUFFER_SIZE];
+        normalizeColor(color, normalized, sizeof(normalized));
+
+        if (normalized[0] == '#') {
+            char finalColor[COLOR_HEX_BUFFER];
+            ReplaceBlackColor(normalized, finalColor, sizeof(finalColor));
+            StartPreview(PREVIEW_TYPE_COLOR, finalColor, hwndMain);
+        } else {
+            CancelPreview(hwndMain);
+        }
     }
 }
 
@@ -94,6 +108,14 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
 
     switch (msg) {
         case WM_INITDIALOG: {
+            /* Set localized dialog title and button text */
+            SetWindowTextW(hwndDlg, GetLocalizedString(NULL, L"Set Color Value"));
+            SetDlgItemTextW(hwndDlg, CLOCK_IDC_BUTTON_OK, GetLocalizedString(NULL, L"OK"));
+            
+            /* Set localized format help text */
+            SetDlgItemTextW(hwndDlg, IDC_COLOR_FORMAT_HELP, 
+                           GetLocalizedString(NULL, L"ColorFormatHelp"));
+            
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
             if (hwndEdit) {
                 g_OldEditProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC,
@@ -127,7 +149,8 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                     return TRUE;
                 }
 
-                if (isValidColor(color)) {
+                /* Support both single colors and gradients */
+                if (isValidColorOrGradient(color)) {
                     HWND hwndMain = GetParent(hwndDlg);
                     ApplyPreview(hwndMain);
                     EndDialog(hwndDlg, IDOK);

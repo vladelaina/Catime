@@ -8,14 +8,14 @@
 #pragma code_page(65001)
 
 /** @brief Color selection dialog with format documentation */
-CLOCK_IDD_COLOR_DIALOG DIALOGEX 0, 0, 200, 130
+CLOCK_IDD_COLOR_DIALOG DIALOGEX 0, 0, 200, 175
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Set Color Value"
 FONT 9, "Segoe UI"
 BEGIN
-    /** Instructional text showing supported color input formats */
-    LTEXT           "Supported formats:\n\n1. HEX format: #FFB6C1, FFB6C1\n2. RGB format: 255,182,193, 255 182 193\n3. Color names: white, red, black, pink", CLOCK_IDC_STATIC, 10, 10, 180, 50
+    /** Instructional text showing supported color input formats - will be localized */
+    LTEXT           "Supported formats:", IDC_COLOR_FORMAT_HELP, 10, 10, 180, 95
     /** Color value input field accepting multiple formats */
-    EDITTEXT        CLOCK_IDC_EDIT, 10, 75, 180, 20, ES_AUTOHSCROLL | ES_MULTILINE
-    PUSHBUTTON      "OK", CLOCK_IDC_BUTTON_OK, 140, 105, 50, 14
+    EDITTEXT        CLOCK_IDC_EDIT, 10, 110, 180, 20, ES_AUTOHSCROLL | ES_MULTILINE
+    PUSHBUTTON      "OK", CLOCK_IDC_BUTTON_OK, 140, 140, 50, 14
 END 

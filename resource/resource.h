@@ -485,6 +485,9 @@
 #define IDC_PLUGIN_SECURITY_RUN_ONCE_BTN 765    /**< Plugin security run once button */
 #define IDC_PLUGIN_SECURITY_TRUST_BTN 766       /**< Plugin security trust button */
 
+/** @brief Color dialog format help text control */
+#define IDC_COLOR_FORMAT_HELP 767               /**< Color format help text label */
+
 /** @brief Font resource identifiers - Special fonts */
 #define IDR_FONT_RECMONO 442            /**< RecMono font resource */
 #define IDR_FONT_DEPARTURE 420          /**< Departure font resource */
