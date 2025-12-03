@@ -16,9 +16,9 @@
 
 /* Plugin info structure */
 typedef struct {
-    char name[64];              // Plugin name (e.g., "catime_monitor")
-    char displayName[64];       // Display name (e.g., "Monitor")
-    char path[MAX_PATH];        // Full path to executable
+    wchar_t name[64];           // Plugin name (e.g., L"catime_monitor.exe")
+    wchar_t displayName[64];    // Display name (e.g., L"Monitor") - supports Unicode
+    wchar_t path[MAX_PATH];     // Full path to executable - supports Unicode
     BOOL isRunning;             // Is plugin currently running
     PROCESS_INFORMATION pi;     // Process information
     FILETIME lastModTime;       // Last modification time for hot-reload detection

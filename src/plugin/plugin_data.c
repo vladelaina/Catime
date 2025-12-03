@@ -73,6 +73,7 @@ static const char* ParseFpsTag(const char* content) {
     size_t numLen = numEnd - numStart;
     if (numLen >= sizeof(numBuf)) numLen = sizeof(numBuf) - 1;
     strncpy(numBuf, numStart, numLen);
+    numBuf[numLen] = '\0';  /* Ensure null termination */
     
     int fps = atoi(numBuf);
     if (fps > 0) {

@@ -45,7 +45,7 @@ static DWORD WINAPI ExitCountdownThread(LPVOID lpParam) {
     while (seconds > 0 && g_exitInProgress) {
         /* Build display: prefix + number + suffix */
         wchar_t countdownNum[16];
-        _snwprintf(countdownNum, 16, L"%d", seconds);
+        _snwprintf_s(countdownNum, 16, _TRUNCATE, L"%d", seconds);
         
         if (g_dataCS) {
             EnterCriticalSection(g_dataCS);
@@ -192,13 +192,14 @@ BOOL PluginExit_ParseTag(wchar_t* text, int* textLen, size_t maxLen) {
         size_t suffixLen = wcslen(suffixStart);
         g_exitSuffix = (wchar_t*)malloc((suffixLen + 1) * sizeof(wchar_t));
         if (g_exitSuffix) {
-            wcscpy(g_exitSuffix, suffixStart);
+            wcsncpy(g_exitSuffix, suffixStart, suffixLen);
+            g_exitSuffix[suffixLen] = L'\0';
         }
     }
     
     /* Replace <exit>N</exit> with just N */
     wchar_t countdownNum[16];
-    _snwprintf(countdownNum, 16, L"%d", seconds);
+    _snwprintf_s(countdownNum, 16, _TRUNCATE, L"%d", seconds);
     
     size_t suffixLen = wcslen(suffixStart);
     size_t numLen = wcslen(countdownNum);

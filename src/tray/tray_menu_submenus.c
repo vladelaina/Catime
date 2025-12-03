@@ -331,16 +331,14 @@ void BuildPluginsSubmenu(HMENU hMenu) {
         for (int i = 0; i < pluginCount; i++) {
             const PluginInfo* plugin = PluginManager_GetPlugin(i);
             if (plugin) {
-                wchar_t displayName[128];
-                MultiByteToWideChar(CP_UTF8, 0, plugin->displayName, -1, displayName, 128);
-
                 // Check if this is the active plugin (by user action, not just process state)
                 UINT flags = MF_STRING;
                 if (i == activePluginIndex) {
                     flags |= MF_CHECKED;
                 }
                 
-                AppendMenuW(hPluginsMenu, flags, CLOCK_IDM_PLUGINS_BASE + i, displayName);
+                /* plugin->displayName is already wchar_t, use directly */
+                AppendMenuW(hPluginsMenu, flags, CLOCK_IDM_PLUGINS_BASE + i, plugin->displayName);
             }
         }
     }

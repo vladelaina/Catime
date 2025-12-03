@@ -26,53 +26,53 @@ typedef struct {
  * @brief Get interpreter command for script file
  * Returns the interpreter to use, or NULL to use ShellExecute
  */
-static const char* GetInterpreter(const char* path) {
-    const char* ext = strrchr(path, '.');
+static const wchar_t* GetInterpreter(const wchar_t* path) {
+    const wchar_t* ext = wcsrchr(path, L'.');
     if (!ext) return NULL;
     
     /* Python - use pythonw.exe (GUI subsystem, no console) */
-    if (_stricmp(ext, ".py") == 0 || _stricmp(ext, ".pyw") == 0) {
-        return "pythonw.exe";
+    if (_wcsicmp(ext, L".py") == 0 || _wcsicmp(ext, L".pyw") == 0) {
+        return L"pythonw.exe";
     }
     /* PowerShell - use -WindowStyle Hidden for complete hiding */
-    if (_stricmp(ext, ".ps1") == 0) {
-        return "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -NonInteractive -File";
+    if (_wcsicmp(ext, L".ps1") == 0) {
+        return L"powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -NonInteractive -File";
     }
     /* Batch/CMD - use wscript to launch hidden (cmd.exe always creates console) */
     /* Note: CREATE_NO_WINDOW flag handles this, cmd.exe /c is fine */
-    if (_stricmp(ext, ".bat") == 0 || _stricmp(ext, ".cmd") == 0) {
-        return "cmd.exe /c";
+    if (_wcsicmp(ext, L".bat") == 0 || _wcsicmp(ext, L".cmd") == 0) {
+        return L"cmd.exe /c";
     }
     /* VBScript - use wscript.exe (GUI host) instead of cscript.exe (console) */
-    if (_stricmp(ext, ".vbs") == 0 || _stricmp(ext, ".vbe") == 0) {
-        return "wscript.exe //nologo //B";
+    if (_wcsicmp(ext, L".vbs") == 0 || _wcsicmp(ext, L".vbe") == 0) {
+        return L"wscript.exe //nologo //B";
     }
     /* Node.js */
-    if (_stricmp(ext, ".js") == 0 || _stricmp(ext, ".mjs") == 0 || _stricmp(ext, ".cjs") == 0) {
-        return "node.exe";
+    if (_wcsicmp(ext, L".js") == 0 || _wcsicmp(ext, L".mjs") == 0 || _wcsicmp(ext, L".cjs") == 0) {
+        return L"node.exe";
     }
     /* Lua */
-    if (_stricmp(ext, ".lua") == 0) {
-        return "lua.exe";
+    if (_wcsicmp(ext, L".lua") == 0) {
+        return L"lua.exe";
     }
     /* Ruby - use rubyw.exe if available (GUI subsystem) */
-    if (_stricmp(ext, ".rbw") == 0) {
-        return "rubyw.exe";
+    if (_wcsicmp(ext, L".rbw") == 0) {
+        return L"rubyw.exe";
     }
-    if (_stricmp(ext, ".rb") == 0) {
-        return "ruby.exe";
+    if (_wcsicmp(ext, L".rb") == 0) {
+        return L"ruby.exe";
     }
     /* Perl - use wperl.exe if available (GUI subsystem) */
-    if (_stricmp(ext, ".pl") == 0 || _stricmp(ext, ".pm") == 0) {
-        return "perl.exe";
+    if (_wcsicmp(ext, L".pl") == 0 || _wcsicmp(ext, L".pm") == 0) {
+        return L"perl.exe";
     }
     /* PHP */
-    if (_stricmp(ext, ".php") == 0) {
-        return "php.exe";
+    if (_wcsicmp(ext, L".php") == 0) {
+        return L"php.exe";
     }
     /* Shell scripts */
-    if (_stricmp(ext, ".sh") == 0) {
-        return "bash.exe";
+    if (_wcsicmp(ext, L".sh") == 0) {
+        return L"bash.exe";
     }
     
     return NULL;
@@ -86,28 +86,28 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
     PluginInfo* plugin = args->plugin;
     
     LOG_INFO("[Thread] ========== LAUNCH START ==========");
-    LOG_INFO("[Thread] Plugin name: %s", plugin->displayName);
-    LOG_INFO("[Thread] Plugin path: %s", plugin->path);
+    LOG_INFO("[Thread] Plugin name: %ls", plugin->displayName);
+    LOG_INFO("[Thread] Plugin path: %ls", plugin->path);
     
     /* Extract working directory from plugin path */
-    char workDir[MAX_PATH];
-    strncpy(workDir, plugin->path, sizeof(workDir) - 1);
-    workDir[sizeof(workDir) - 1] = '\0';
-    char* lastSlash = strrchr(workDir, '\\');
-    if (lastSlash) *lastSlash = '\0';
-    LOG_INFO("[Thread] Work directory: %s", workDir);
+    wchar_t workDir[MAX_PATH];
+    wcsncpy(workDir, plugin->path, MAX_PATH - 1);
+    workDir[MAX_PATH - 1] = L'\0';
+    wchar_t* lastSlash = wcsrchr(workDir, L'\\');
+    if (lastSlash) *lastSlash = L'\0';
+    LOG_INFO("[Thread] Work directory: %ls", workDir);
     
     HANDLE hProcess = NULL;
     DWORD dwProcessId = 0;
-    const char* interpreter = GetInterpreter(plugin->path);
+    const wchar_t* interpreter = GetInterpreter(plugin->path);
     
     if (interpreter) {
         /* Use CreateProcess with interpreter */
-        char cmdLine[MAX_PATH * 2 + 256];
-        snprintf(cmdLine, sizeof(cmdLine), "%s \"%s\"", interpreter, plugin->path);
-        LOG_INFO("[Thread] Command: %s", cmdLine);
+        wchar_t cmdLine[MAX_PATH * 2 + 256];
+        _snwprintf_s(cmdLine, MAX_PATH * 2 + 256, _TRUNCATE, L"%s \"%s\"", interpreter, plugin->path);
+        LOG_INFO("[Thread] Command: %ls", cmdLine);
         
-        STARTUPINFOA si = {0};
+        STARTUPINFOW si = {0};
         si.cb = sizeof(si);
         si.dwFlags = STARTF_USESHOWWINDOW;
         si.wShowWindow = SW_HIDE;
@@ -115,11 +115,11 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
         PROCESS_INFORMATION pi = {0};
         
         /* CREATE_NO_WINDOW prevents console window */
-        if (!CreateProcessA(NULL, cmdLine, NULL, NULL, FALSE,
+        if (!CreateProcessW(NULL, cmdLine, NULL, NULL, FALSE,
                            CREATE_NO_WINDOW, NULL, workDir, &si, &pi)) {
             DWORD error = GetLastError();
             LOG_ERROR("[Thread] CreateProcess FAILED! Error: %lu", error);
-            LOG_ERROR("[Thread] Tip: Make sure '%s' is installed and in PATH", interpreter);
+            LOG_ERROR("[Thread] Tip: Make sure '%ls' is installed and in PATH", interpreter);
             args->success = FALSE;
             SetEvent(args->hReadyEvent);
             return 0;
@@ -131,17 +131,17 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
         if (pi.hThread) CloseHandle(pi.hThread);
     } else {
         /* Use ShellExecute for unknown types */
-        SHELLEXECUTEINFOA sei = {0};
+        SHELLEXECUTEINFOW sei = {0};
         sei.cbSize = sizeof(sei);
         sei.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_FLAG_NO_UI;
-        sei.lpVerb = "open";
+        sei.lpVerb = L"open";
         sei.lpFile = plugin->path;
         sei.lpDirectory = workDir;
         sei.nShow = SW_HIDE;
         
-        LOG_INFO("[Thread] Using ShellExecute for: %s", plugin->path);
+        LOG_INFO("[Thread] Using ShellExecute for: %ls", plugin->path);
         
-        if (!ShellExecuteExA(&sei)) {
+        if (!ShellExecuteExW(&sei)) {
             DWORD error = GetLastError();
             LOG_ERROR("[Thread] ShellExecuteEx FAILED! Error: %lu", error);
             args->success = FALSE;
@@ -209,7 +209,7 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
         /* Handle process exit */
         if (plugin->isRunning) {
             if (InterlockedCompareExchange((volatile LONG*)&plugin->isRunning, FALSE, TRUE) == TRUE) {
-                LOG_INFO("[Thread] Plugin exited: %s", plugin->displayName);
+                LOG_INFO("[Thread] Plugin exited: %ls", plugin->displayName);
                 
                 HANDLE hProc = InterlockedExchangePointer((PVOID*)&plugin->pi.hProcess, NULL);
                 if (hProc) {
@@ -279,7 +279,7 @@ void PluginProcess_Shutdown(void) {
 BOOL PluginProcess_Launch(PluginInfo* plugin) {
     if (!plugin) return FALSE;
     
-    LOG_INFO("[Process] Launching plugin: %s", plugin->displayName);
+    LOG_INFO("[Process] Launching plugin: %ls", plugin->displayName);
     
     /* Prepare launcher thread arguments */
     PluginLauncherArgs args = {0};
@@ -311,7 +311,7 @@ BOOL PluginProcess_Launch(PluginInfo* plugin) {
 BOOL PluginProcess_Terminate(PluginInfo* plugin) {
     if (!plugin || !plugin->isRunning) return FALSE;
     
-    LOG_INFO("[Process] Terminating plugin: %s", plugin->displayName);
+    LOG_INFO("[Process] Terminating plugin: %ls", plugin->displayName);
     
     /* Atomically mark as not running */
     if (InterlockedCompareExchange((volatile LONG*)&plugin->isRunning, FALSE, TRUE) != TRUE) {

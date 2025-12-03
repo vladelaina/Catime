@@ -78,9 +78,7 @@ static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
     const PluginInfo* pluginInfo = PluginManager_GetPlugin(pluginIndex);
     if (pluginInfo) {
         wchar_t loadingText[256];
-        wchar_t displayNameW[128];
-        MultiByteToWideChar(CP_UTF8, 0, pluginInfo->displayName, -1, displayNameW, 128);
-        _snwprintf(loadingText, 256, L"Loading %s...", displayNameW);
+        _snwprintf_s(loadingText, 256, _TRUNCATE, L"Loading %ls...", pluginInfo->displayName);
         PluginData_SetText(loadingText);  /* This clears output.txt */
     }
     
