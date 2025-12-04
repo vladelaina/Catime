@@ -5,6 +5,7 @@
 
 #include "window/window_multimonitor.h"
 #include "window/window_core.h"
+#include "config.h"
 #include "log.h"
 
 /* ============================================================================
@@ -82,11 +83,11 @@ static BOOL IsWindowVisibleOnMonitor(HWND hwnd, HMONITOR hMonitor) {
 }
 
 /**
- * @brief Center window on specified monitor with boundary clamping
+ * @brief Move window to default position (same as "Reset Position" menu option)
  * @param hwnd Window handle
- * @param hMonitor Target monitor
+ * @param hMonitor Target monitor for bounds checking
  */
-static void CenterWindowOnMonitor(HWND hwnd, HMONITOR hMonitor) {
+static void MoveWindowToDefaultPosition(HWND hwnd, HMONITOR hMonitor) {
     RECT rect;
     if (!GetWindowRect(hwnd, &rect)) return;
     
@@ -97,8 +98,14 @@ static void CenterWindowOnMonitor(HWND hwnd, HMONITOR hMonitor) {
     int width = rect.right - rect.left;
     int height = rect.bottom - rect.top;
     
-    int newX = mi.rcWork.left + (mi.rcWork.right - mi.rcWork.left - width) / 2;
-    int newY = mi.rcWork.top + (mi.rcWork.bottom - mi.rcWork.top - height) / 2;
+    /* Use default position from config.h (right-upper area) */
+    int newX = DEFAULT_WINDOW_POS_X;
+    int newY = DEFAULT_WINDOW_POS_Y;
+    
+    /* Handle sentinel value -1: use top of screen */
+    if (newY < 0) {
+        newY = mi.rcWork.top;
+    }
     
     /* Clamp to work area bounds */
     if (newX < mi.rcWork.left) newX = mi.rcWork.left;
@@ -107,7 +114,7 @@ static void CenterWindowOnMonitor(HWND hwnd, HMONITOR hMonitor) {
     if (newY + height > mi.rcWork.bottom) newY = mi.rcWork.bottom - height;
     
     SetWindowPos(hwnd, NULL, newX, newY, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
-    LOG_INFO("Window centered on monitor at (%d, %d)", newX, newY);
+    LOG_INFO("Window moved to default position at (%d, %d)", newX, newY);
     
     SaveWindowSettings(hwnd);
 }
@@ -133,7 +140,7 @@ void AdjustWindowPosition(HWND hwnd, BOOL forceOnScreen) {
     
     if (needsReposition) {
         HMONITOR hTargetMonitor = FindBestActiveMonitor();
-        CenterWindowOnMonitor(hwnd, hTargetMonitor);
+        MoveWindowToDefaultPosition(hwnd, hTargetMonitor);
     }
 }
 

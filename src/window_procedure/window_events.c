@@ -4,6 +4,7 @@
  */
 #include <windows.h>
 #include "window.h"
+#include "window/window_multimonitor.h"
 #include "tray/tray.h"
 #include "config.h"
 #include "drag_scale.h"
@@ -37,9 +38,9 @@ BOOL HandleWindowCreate(HWND hwnd) {
         LOG_INFO("Parent window enabled");
     }
 
-    /* Skip position validation during window creation - configuration file position is trusted.
-     * Position will be validated on display changes (WM_DISPLAYCHANGE) if needed. */
-    LOG_INFO("Window position validation skipped during creation (trusting config)");
+    /* Validate window position after creation - move to default if off-screen */
+    LOG_INFO("Validating window position after creation");
+    AdjustWindowPosition(hwnd, TRUE);
 
     SetClickThrough(hwnd, !CLOCK_EDIT_MODE);
     LOG_INFO("Click-through mode set: %s", CLOCK_EDIT_MODE ? "disabled" : "enabled");

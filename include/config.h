@@ -53,7 +53,7 @@
 
 /** @brief Default window settings
  * - Position 960: Horizontal center on common 1920px wide displays
- * - Position -1: Sentinel value for automatic vertical centering
+ * - Position -1: Near top of screen (right-upper area)
  */
 #define DEFAULT_WINDOW_SCALE           "1.62"
 #define DEFAULT_WINDOW_POS_X           960

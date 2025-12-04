@@ -22,7 +22,7 @@
  * - Disabled monitor ("Second screen only")
  * - Off-screen position
  * 
- * Centers on best active monitor and saves if repositioned.
+ * Moves to default position (right-upper area) and saves if repositioned.
  */
 void AdjustWindowPosition(HWND hwnd, BOOL forceOnScreen);
 
