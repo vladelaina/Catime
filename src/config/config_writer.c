@@ -138,6 +138,11 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int* count) {
     idx++;
     
     safe_strncpy(items[idx].section, INI_SECTION_DISPLAY, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "PLUGIN_SCALE", sizeof(items[idx].key));
+    snprintf(items[idx].value, sizeof(items[idx].value), "%.2f", PLUGIN_FONT_SCALE_FACTOR);
+    idx++;
+    
+    safe_strncpy(items[idx].section, INI_SECTION_DISPLAY, sizeof(items[idx].section));
     safe_strncpy(items[idx].key, "WINDOW_TOPMOST", sizeof(items[idx].key));
     safe_strncpy(items[idx].value, CLOCK_WINDOW_TOPMOST ? "TRUE" : "FALSE", sizeof(items[idx].value));
     idx++;

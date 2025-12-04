@@ -11,6 +11,7 @@
 #include "config.h"
 #include "drag_scale.h"
 #include "log.h"
+#include "plugin/plugin_data.h"
 
 #include "color/color_parser.h"
 
@@ -148,7 +149,8 @@ BOOL HandleDragWindow(HWND hwnd) {
 BOOL HandleScaleWindow(HWND hwnd, int delta) {
     if (!CLOCK_EDIT_MODE) return FALSE;
     
-    float oldScale = CLOCK_FONT_SCALE_FACTOR;
+    BOOL isPluginMode = PluginData_IsActive();
+    float oldScale = isPluginMode ? PLUGIN_FONT_SCALE_FACTOR : CLOCK_FONT_SCALE_FACTOR;
     
     RECT windowRect;
     GetWindowRect(hwnd, &windowRect);
@@ -169,8 +171,12 @@ BOOL HandleScaleWindow(HWND hwnd, int delta) {
     
     if (newScale == oldScale) return FALSE;
     
-    CLOCK_FONT_SCALE_FACTOR = newScale;
-    CLOCK_WINDOW_SCALE = newScale;
+    if (isPluginMode) {
+        PLUGIN_FONT_SCALE_FACTOR = newScale;
+    } else {
+        CLOCK_FONT_SCALE_FACTOR = newScale;
+        CLOCK_WINDOW_SCALE = newScale;
+    }
     
     float scalingRatio = newScale / oldScale;
     int newWidth = (int)(oldWidth * scalingRatio);

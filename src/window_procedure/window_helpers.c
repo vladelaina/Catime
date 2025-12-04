@@ -281,9 +281,11 @@ void ReloadDefaultFont(void) {
 
 void RecalculateWindowSize(HWND hwnd) {
     extern float CLOCK_FONT_SCALE_FACTOR;
+    extern float PLUGIN_FONT_SCALE_FACTOR;
     
     CLOCK_WINDOW_SCALE = 1.0f;
     CLOCK_FONT_SCALE_FACTOR = 1.0f;
+    PLUGIN_FONT_SCALE_FACTOR = 1.0f;
     
     HDC hdc = GetDC(hwnd);
     

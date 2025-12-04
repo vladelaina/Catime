@@ -31,6 +31,7 @@ extern char FONT_INTERNAL_NAME[MAX_PATH];
 extern char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER];
 extern int CLOCK_BASE_FONT_SIZE;
 extern float CLOCK_FONT_SCALE_FACTOR;
+extern float PLUGIN_FONT_SCALE_FACTOR;
 
 /**
  * @param colorStr "#RRGGBB" or "R,G,B" format
@@ -81,7 +82,9 @@ static RenderContext CreateRenderContext(void) {
     ctx.fontFileName = fontFileName;
     ctx.fontInternalName = fontInternalName;
     ctx.textColor = ParseColorString(colorStr);
-    ctx.fontScaleFactor = CLOCK_FONT_SCALE_FACTOR;
+    
+    /* Use plugin scale when in plugin mode, otherwise use clock scale */
+    ctx.fontScaleFactor = PluginData_IsActive() ? PLUGIN_FONT_SCALE_FACTOR : CLOCK_FONT_SCALE_FACTOR;
     
     ctx.gradientMode = (int)GetGradientTypeByName(colorStr);
     

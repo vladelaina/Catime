@@ -47,6 +47,7 @@ RECT CLOCK_TEXT_RECT = {0, 0, 0, 0};
 BOOL CLOCK_TEXT_RECT_VALID = FALSE;
 
 float CLOCK_FONT_SCALE_FACTOR = 1.0f;
+float PLUGIN_FONT_SCALE_FACTOR = 1.0f;
 int CLOCK_BASE_FONT_SIZE = 24;
 
 /* ============================================================================
@@ -174,20 +175,22 @@ void SaveWindowSettings(HWND hwnd) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
 
-    char posXStr[16], posYStr[16], scaleStr[16];
+    char posXStr[16], posYStr[16], scaleStr[16], pluginScaleStr[16];
     snprintf(posXStr, sizeof(posXStr), "%d", CLOCK_WINDOW_POS_X);
     snprintf(posYStr, sizeof(posYStr), "%d", CLOCK_WINDOW_POS_Y);
     snprintf(scaleStr, sizeof(scaleStr), "%.2f", CLOCK_WINDOW_SCALE);
+    snprintf(pluginScaleStr, sizeof(pluginScaleStr), "%.2f", PLUGIN_FONT_SCALE_FACTOR);
     
     IniKeyValue updates[] = {
         {INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_X", posXStr},
         {INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_Y", posYStr},
-        {INI_SECTION_DISPLAY, "WINDOW_SCALE", scaleStr}
+        {INI_SECTION_DISPLAY, "WINDOW_SCALE", scaleStr},
+        {INI_SECTION_DISPLAY, "PLUGIN_SCALE", pluginScaleStr}
     };
     
-    if (WriteIniMultipleAtomic(config_path, updates, 3)) {
-        LOG_INFO("Window settings saved (batch): pos(%d, %d), scale(%.2f)", 
-                 CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y, CLOCK_WINDOW_SCALE);
+    if (WriteIniMultipleAtomic(config_path, updates, 4)) {
+        LOG_INFO("Window settings saved (batch): pos(%d, %d), scale(%.2f), plugin_scale(%.2f)", 
+                 CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y, CLOCK_WINDOW_SCALE, PLUGIN_FONT_SCALE_FACTOR);
     } else {
         LOG_WARNING("Failed to save window settings");
     }

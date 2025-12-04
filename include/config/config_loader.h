@@ -40,6 +40,7 @@ typedef struct {
     int windowPosX;
     int windowPosY;
     float windowScale;
+    float pluginScale;
     BOOL windowTopmost;
     int windowOpacity;
     int moveStepSmall;

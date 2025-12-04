@@ -174,6 +174,7 @@ void InitializeDefaultSnapshot(ConfigSnapshot* snapshot) {
     snapshot->windowPosX = DEFAULT_WINDOW_POS_X;
     snapshot->windowPosY = DEFAULT_WINDOW_POS_Y;
     snapshot->windowScale = 1.62f;
+    snapshot->pluginScale = 1.0f;
     snapshot->windowTopmost = TRUE;
     snapshot->moveStepSmall = DEFAULT_MOVE_STEP_SMALL;
     snapshot->moveStepLarge = DEFAULT_MOVE_STEP_LARGE;
@@ -229,6 +230,11 @@ BOOL LoadConfigFromFile(const char* config_path, ConfigSnapshot* snapshot) {
     ReadIniString(INI_SECTION_DISPLAY, "WINDOW_SCALE", DEFAULT_WINDOW_SCALE,
                  scaleStr, sizeof(scaleStr), config_path);
     snapshot->windowScale = (float)atof(scaleStr);
+    
+    char pluginScaleStr[16] = {0};
+    ReadIniString(INI_SECTION_DISPLAY, "PLUGIN_SCALE", DEFAULT_PLUGIN_SCALE,
+                 pluginScaleStr, sizeof(pluginScaleStr), config_path);
+    snapshot->pluginScale = (float)atof(pluginScaleStr);
     
     snapshot->windowTopmost = ReadIniBool(INI_SECTION_DISPLAY, "WINDOW_TOPMOST",
                                          TRUE, config_path);

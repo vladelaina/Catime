@@ -102,6 +102,7 @@ void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {
     /* Apply non-position settings first */
     CLOCK_WINDOW_SCALE = snapshot->windowScale;
     CLOCK_FONT_SCALE_FACTOR = snapshot->windowScale;
+    PLUGIN_FONT_SCALE_FACTOR = snapshot->pluginScale;
     CLOCK_WINDOW_TOPMOST = snapshot->windowTopmost;
     CLOCK_WINDOW_OPACITY = snapshot->windowOpacity;
 

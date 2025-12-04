@@ -427,6 +427,7 @@ void WriteConfigKeyValue(const char* key, const char* value) {
            strncmp(key, "FONT_FILE_NAME", 14) == 0 ||
            strncmp(key, "CLOCK_BASE_FONT_SIZE", 20) == 0 ||
            strncmp(key, "WINDOW_SCALE", 12) == 0 ||
+           strncmp(key, "PLUGIN_SCALE", 12) == 0 ||
            strncmp(key, "CLOCK_WINDOW_POS_X", 18) == 0 ||
            strncmp(key, "CLOCK_WINDOW_POS_Y", 18) == 0 ||
            strncmp(key, "WINDOW_TOPMOST", 14) == 0 ||

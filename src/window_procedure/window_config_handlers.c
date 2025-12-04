@@ -95,16 +95,27 @@ LRESULT HandleAppDisplayChanged(HWND hwnd) {
         ReadConfigStr(CFG_SECTION_DISPLAY, CFG_KEY_WINDOW_SCALE, "1.62", scaleStr, sizeof(scaleStr));
         float newScale = (float)atof(scaleStr);
         
+        char pluginScaleStr[16];
+        ReadConfigStr(CFG_SECTION_DISPLAY, "PLUGIN_SCALE", "1.0", pluginScaleStr, sizeof(pluginScaleStr));
+        float newPluginScale = (float)atof(pluginScaleStr);
+        
         BOOL newTopmost = ReadConfigBool(CFG_SECTION_DISPLAY, CFG_KEY_WINDOW_TOPMOST, CLOCK_WINDOW_TOPMOST);
         int newOpacity = ReadConfigInt(CFG_SECTION_DISPLAY, "WINDOW_OPACITY", CLOCK_WINDOW_OPACITY);
         
         BOOL posChanged = (posX != CLOCK_WINDOW_POS_X) || (posY != CLOCK_WINDOW_POS_Y);
         BOOL scaleChanged = (newScale > 0.0f && fabsf(newScale - CLOCK_WINDOW_SCALE) > 0.0001f);
         
+        extern float CLOCK_FONT_SCALE_FACTOR;
+        extern float PLUGIN_FONT_SCALE_FACTOR;
+        
         if (scaleChanged) {
-            extern float CLOCK_FONT_SCALE_FACTOR;
             CLOCK_WINDOW_SCALE = newScale;
             CLOCK_FONT_SCALE_FACTOR = newScale;
+            changed = TRUE;
+        }
+        
+        if (newPluginScale > 0.0f && fabsf(newPluginScale - PLUGIN_FONT_SCALE_FACTOR) > 0.0001f) {
+            PLUGIN_FONT_SCALE_FACTOR = newPluginScale;
             changed = TRUE;
         }
         

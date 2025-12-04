@@ -225,6 +225,20 @@ BOOL ValidateWindowConfig(ConfigSnapshot* snapshot) {
         modified = TRUE;
     }
     
+    /* Validate plugin scale */
+    if (snapshot->pluginScale < MIN_SCALE_FACTOR) {
+        LOG_WARNING("Plugin scale too small (%.2f), setting to %.2f",
+                   snapshot->pluginScale, MIN_SCALE_FACTOR);
+        snapshot->pluginScale = MIN_SCALE_FACTOR;
+        modified = TRUE;
+    }
+    if (snapshot->pluginScale > MAX_SCALE_FACTOR) {
+        LOG_WARNING("Plugin scale too large (%.2f), setting to %.2f",
+                   snapshot->pluginScale, MAX_SCALE_FACTOR);
+        snapshot->pluginScale = MAX_SCALE_FACTOR;
+        modified = TRUE;
+    }
+    
     if (snapshot->windowOpacity < 0) {
         snapshot->windowOpacity = 0;
         modified = TRUE;

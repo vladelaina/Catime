@@ -244,6 +244,7 @@ static LRESULT CmdResetPosition(HWND hwnd, WPARAM wp, LPARAM lp) {
     WriteConfigKeyValue("CLOCK_WINDOW_POS_X", posX);
     WriteConfigKeyValue("CLOCK_WINDOW_POS_Y", posY);
     WriteConfigKeyValue("WINDOW_SCALE", DEFAULT_WINDOW_SCALE);
+    WriteConfigKeyValue("PLUGIN_SCALE", DEFAULT_PLUGIN_SCALE);
     
     return 0;
 }

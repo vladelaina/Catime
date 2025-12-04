@@ -5,6 +5,7 @@
 
 #include "markdown/markdown_image.h"
 #include "drawing/drawing_image.h"
+#include "plugin/plugin_data.h"
 #include "log.h"
 #include <stdlib.h>
 #include <string.h>
@@ -531,8 +532,9 @@ BOOL ExtractMarkdownImage(const wchar_t** src, MarkdownImage* images,
  * Rendering
  * ============================================================================ */
 
-/* External scale factor for edit mode */
+/* External scale factors */
 extern float CLOCK_FONT_SCALE_FACTOR;
+extern float PLUGIN_FONT_SCALE_FACTOR;
 
 BOOL CalculateImageRenderSize(MarkdownImage* image, int maxWidth, int maxHeight,
                               int* outWidth, int* outHeight) {
@@ -553,8 +555,8 @@ BOOL CalculateImageRenderSize(MarkdownImage* image, int maxWidth, int maxHeight,
         return FALSE;
     }
     
-    /* Apply scale factor */
-    float scale = CLOCK_FONT_SCALE_FACTOR;
+    /* Apply scale factor based on current mode */
+    float scale = PluginData_IsActive() ? PLUGIN_FONT_SCALE_FACTOR : CLOCK_FONT_SCALE_FACTOR;
     if (scale < 0.1f) scale = 1.0f;
     
     /* Determine target size */
