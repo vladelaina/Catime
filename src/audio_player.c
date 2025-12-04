@@ -270,7 +270,10 @@ static ma_result StartAudioPlayback(void) {
 static BOOL PlayAudioWithMiniaudio(HWND hwnd, const char* filePath) {
     if (!filePath || filePath[0] == '\0') return FALSE;
     
+    LOG_INFO("Attempting to play audio file: %s", filePath);
+    
     if (!g_engineInitialized && !InitializeAudioEngine()) {
+        LOG_WARNING("Failed to initialize miniaudio engine, will try fallback methods");
         return FALSE;
     }
     
@@ -289,13 +292,16 @@ static BOOL PlayAudioWithMiniaudio(HWND hwnd, const char* filePath) {
     
     ma_result result = LoadAudioFile(convertedPath);
     if (result != MA_SUCCESS) {
+        LOG_WARNING("miniaudio failed to load audio file (error: %d), falling back to PlaySound", result);
         return FallbackToPlaySound(hwnd, wFilePath);
     }
     
     if (StartAudioPlayback() != MA_SUCCESS) {
+        LOG_WARNING("miniaudio playback start failed, falling back to PlaySound");
         return FallbackToPlaySound(hwnd, wFilePath);
     }
     
+    LOG_INFO("Audio playback started successfully using miniaudio engine");
     g_isPlaying = MA_TRUE;
     StartPlaybackTimer(hwnd, TIMER_ID_MINIAUDIO_CHECK, TIMER_INTERVAL_AUDIO_CHECK);
     return TRUE;
@@ -387,10 +393,12 @@ BOOL PlayNotificationSound(HWND hwnd) {
     g_audioCallbackHwnd = hwnd;
 
     if (g_AppConfig.notification.sound.sound_file[0] == '\0') {
+        LOG_INFO("No audio file configured, skipping sound playback");
         return TRUE;
     }
 
     if (strcmp(g_AppConfig.notification.sound.sound_file, "SYSTEM_BEEP") == 0) {
+        LOG_INFO("Playing system beep as configured");
         return FallbackToSystemBeep(hwnd);
     }
 
@@ -410,6 +418,7 @@ BOOL PlayNotificationSound(HWND hwnd) {
         return TRUE;
     }
 
+    LOG_WARNING("All audio playback methods failed, using system beep as final fallback");
     return FallbackToSystemBeep(hwnd);
 }
 

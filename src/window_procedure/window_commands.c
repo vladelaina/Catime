@@ -251,26 +251,34 @@ static LRESULT CmdResetPosition(HWND hwnd, WPARAM wp, LPARAM lp) {
 static LRESULT CmdResetDefaults(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     
+    LOG_INFO("========== User triggered 'Reset All Settings' operation ==========");
+    
     /* Step 1: Clean up active state */
     CleanupBeforeTimerAction();
     KillTimer(hwnd, 1);
     UnregisterGlobalHotkeys(hwnd);
+    LOG_INFO("Reset: Active state cleaned (notifications, timers, hotkeys stopped)");
     
     /* Step 2: Disable redraw to prevent flicker */
     SendMessage(hwnd, WM_SETREDRAW, FALSE, 0);
     
     /* Step 3: Reset runtime timer state (not in config file) */
     ResetTimerStateToDefaults();
+    LOG_INFO("Reset: Runtime timer state reset");
     
     /* Step 4: Delete config file and let ReadConfig recreate it */
     ResetConfigurationFile();
+    LOG_INFO("Reset: Configuration file deleted");
     
     /* Step 5: Reload all configuration (same as startup) */
+    LOG_INFO("Reset: Reloading default configuration...");
     ReadConfig();
+    LOG_INFO("Reset: Configuration reloaded successfully");
     
     /* Step 5.5: Reset UI runtime state (not in config file) */
     CLOCK_EDIT_MODE = FALSE;
     SetClickThrough(hwnd, TRUE);
+    LOG_INFO("Reset: UI runtime state reset");
     
     /* Force timeout action to default (override config's preserve logic) */
     CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
@@ -279,8 +287,14 @@ static LRESULT CmdResetDefaults(HWND hwnd, WPARAM wp, LPARAM lp) {
     if (IsFontsFolderPath(FONT_FILE_NAME)) {
         const char* relativePath = ExtractRelativePath(FONT_FILE_NAME);
         if (relativePath) {
-            LoadFontByNameAndGetRealName(GetModuleHandle(NULL), relativePath,
+            LOG_INFO("Reset: Loading font: %s", FONT_FILE_NAME);
+            BOOL fontLoaded = LoadFontByNameAndGetRealName(GetModuleHandle(NULL), relativePath,
                                         FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
+            if (fontLoaded) {
+                LOG_INFO("Reset: Font loaded successfully: %s", FONT_INTERNAL_NAME);
+            } else {
+                LOG_WARNING("Reset: Font loading failed: %s", FONT_FILE_NAME);
+            }
         }
     }
     
@@ -296,6 +310,7 @@ static LRESULT CmdResetDefaults(HWND hwnd, WPARAM wp, LPARAM lp) {
     /* Step 8: Re-register hotkeys with new config */
     RegisterGlobalHotkeys(hwnd);
     
+    LOG_INFO("========== Reset All Settings operation completed ==========\n");
     return 0;
 }
 
@@ -410,15 +425,17 @@ static BOOL HandleFontSelection(HWND hwnd, UINT cmd, int index) {
     char foundFontPath[MAX_PATH];
     
     if (GetFontPathFromMenuId(cmd, foundFontPath, sizeof(foundFontPath))) {
+        LOG_INFO("User selected font from menu: %s", foundFontPath);
         HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
         if (SwitchFont(hInstance, foundFontPath)) {
+            LOG_INFO("Font switched successfully: %s", foundFontPath);
             InvalidateRect(hwnd, NULL, TRUE);
             UpdateWindow(hwnd);
         } else {
-            WriteLog(LOG_LEVEL_ERROR, "Failed to switch font: %s", foundFontPath);
+            LOG_ERROR("Failed to switch font: %s", foundFontPath);
         }
     } else {
-        WriteLog(LOG_LEVEL_ERROR, "Failed to get font path from menu ID: %u", cmd);
+        LOG_ERROR("Failed to get font path from menu ID: %u", cmd);
     }
     
     return TRUE;

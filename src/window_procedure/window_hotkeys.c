@@ -12,6 +12,7 @@
 #include "dialog/dialog_procedure.h"
 #include "notification.h"
 #include "window_procedure/window_procedure.h"
+#include "log.h"
 #include "../resource/resource.h"
 #include <stdio.h>
 #include <string.h>
@@ -174,6 +175,11 @@ static BOOL RegisterSingleHotkey(HWND hwnd, HotkeyConfig* config) {
     if (mod & HOTKEYF_SHIFT) fsModifiers |= MOD_SHIFT;
     
     if (!RegisterHotKey(hwnd, config->id, fsModifiers, vk)) {
+        extern void HotkeyToString(WORD hotkey, char* out, size_t size);
+        char hotkeyStr[64];
+        HotkeyToString(config->value, hotkeyStr, sizeof(hotkeyStr));
+        LOG_WARNING("Hotkey registration failed [%s]: %s (may conflict with other applications)",
+                   config->configKey, hotkeyStr);
         config->value = 0;
         return FALSE;
     }
@@ -184,6 +190,7 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
     extern WORD StringToHotkey(const char* str);
     extern void HotkeyToString(WORD hotkey, char* out, size_t size);
     
+    LOG_INFO("Registering global hotkeys...");
     UnregisterGlobalHotkeys(hwnd);
     
     char config_path[MAX_PATH];
@@ -198,17 +205,26 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
     
     BOOL anyRegistered = FALSE;
     BOOL configChanged = FALSE;
+    int successCount = 0;
+    int failCount = 0;
     
     for (size_t i = 0; i < ARRAY_SIZE(g_hotkeyConfigs); i++) {
         WORD oldValue = g_hotkeyConfigs[i].value;
         if (RegisterSingleHotkey(hwnd, &g_hotkeyConfigs[i])) {
             anyRegistered = TRUE;
+            successCount++;
+            char hotkeyStr[64];
+            HotkeyToString(g_hotkeyConfigs[i].value, hotkeyStr, sizeof(hotkeyStr));
+            LOG_INFO("Hotkey registered successfully [%s]: %s",
+                    g_hotkeyConfigs[i].configKey, hotkeyStr);
         } else if (oldValue != 0) {
             configChanged = TRUE;
+            failCount++;
         }
     }
     
     if (configChanged) {
+        LOG_INFO("Updating configuration to clear failed hotkeys");
         for (size_t i = 0; i < ARRAY_SIZE(g_hotkeyConfigs); i++) {
             char hotkeyStr[64];
             HotkeyToString(g_hotkeyConfigs[i].value, hotkeyStr, sizeof(hotkeyStr));
@@ -217,6 +233,7 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         }
     }
     
+    LOG_INFO("Hotkey registration completed: %d successful, %d failed\n", successCount, failCount);
     return anyRegistered;
 }
 

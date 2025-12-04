@@ -15,6 +15,7 @@
 #include "config/config_loader.h"
 #include "config/config_applier.h"
 #include "config/config_writer.h"
+#include "log.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -94,9 +95,12 @@ void ReadConfig() {
 
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
+    
+    LOG_INFO("Loading configuration from: %s", config_path);
 
     /* Create default config if missing */
     if (!FileExists(config_path)) {
+        LOG_INFO("Configuration file not found, creating default configuration");
         CreateDefaultConfig(config_path);
     }
 
@@ -108,6 +112,8 @@ void ReadConfig() {
                  version, sizeof(version), config_path);
 
     if (strcmp(version, CATIME_VERSION) != 0) {
+        LOG_INFO("Configuration version mismatch (Config: '%s', Current: '%s'), starting migration",
+                 version[0] ? version : "<empty>", CATIME_VERSION);
         MigrateConfig(config_path);
         needsWriteBack = TRUE;
     }
@@ -116,11 +122,13 @@ void ReadConfig() {
     ConfigSnapshot snapshot;
     if (!LoadConfigFromFile(config_path, &snapshot)) {
         /* Fallback to defaults on load failure */
+        LOG_WARNING("Failed to load configuration file, using default values");
         InitializeDefaultSnapshot(&snapshot);
     }
 
     /* Validate and sanitize - returns TRUE if any values were modified */
     if (ValidateConfigSnapshot(&snapshot)) {
+        LOG_INFO("Configuration validation found issues and auto-corrected them");
         needsWriteBack = TRUE;
     }
 
@@ -129,8 +137,11 @@ void ReadConfig() {
 
     /* Write back if migration occurred or validation modified values */
     if (needsWriteBack) {
+        LOG_INFO("Writing corrected configuration back to file");
         WriteConfig(config_path);
     }
+    
+    LOG_INFO("Configuration loading completed successfully");
 }
 
 /**

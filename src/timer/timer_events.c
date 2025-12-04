@@ -432,6 +432,16 @@ static BOOL HandlePomodoroCompletion(HWND hwnd) {
 }
 
 static void HandleCountdownCompletion(HWND hwnd) {
+    LOG_INFO("========== Countdown timer timeout triggered ==========");
+    
+    const char* actionNames[] = {
+        "MESSAGE", "LOCK", "SHUTDOWN", "RESTART", "SLEEP",
+        "SHOW_TIME", "COUNT_UP", "OPEN_FILE", "OPEN_WEBSITE"
+    };
+    const char* actionName = (CLOCK_TIMEOUT_ACTION >= 0 && CLOCK_TIMEOUT_ACTION < 9) 
+        ? actionNames[CLOCK_TIMEOUT_ACTION] : "UNKNOWN";
+    LOG_INFO("Timeout action configured: %s", actionName);
+    
     BOOL shouldNotify = (CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_OPEN_FILE &&
                         CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_LOCK &&
                         CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_SHUTDOWN &&
@@ -442,6 +452,7 @@ static void HandleCountdownCompletion(HWND hwnd) {
                         CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_OPEN_WEBSITE);
     
     if (shouldNotify) {
+        LOG_INFO("Displaying timeout notification and playing sound");
         ShowTimeoutNotification(hwnd, g_AppConfig.notification.messages.timeout_message, TRUE);
     }
     
@@ -450,6 +461,7 @@ static void HandleCountdownCompletion(HWND hwnd) {
     }
     
     if (ExecuteSystemAction(hwnd, CLOCK_TIMEOUT_ACTION)) {
+        LOG_INFO("System action executed successfully");
         return;
     }
     
@@ -460,6 +472,8 @@ static void HandleCountdownCompletion(HWND hwnd) {
         ResetTimerState(0);
         ResetMillisecondAccumulator();
     }
+    
+    LOG_INFO("========== Countdown timeout handling completed ==========\n");
 }
 
 static BOOL HandleMainTimer(HWND hwnd) {
