@@ -259,26 +259,10 @@ void ResetConfigurationFile(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
+    /* Simply delete the config file - ReadConfig will recreate it */
     wchar_t wconfig_path[MAX_PATH];
     MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
-    
-    FILE* test = _wfopen(wconfig_path, L"r");
-    if (test) {
-        fclose(test);
-        remove(config_path);
-    }
-    
-    CreateDefaultConfig(config_path);
-    
-    extern void ReadNotificationMessagesConfig(void);
-    ReadNotificationMessagesConfig();
-    
-    extern BOOL ExtractEmbeddedFontsToFolder(HINSTANCE);
-    ExtractEmbeddedFontsToFolder(GetModuleHandle(NULL));
-    
-    /* Reload plugin trust list from config after reset */
-    extern void LoadPluginTrustFromConfig(void);
-    LoadPluginTrustFromConfig();
+    DeleteFileW(wconfig_path);
 }
 
 void ReloadDefaultFont(void) {

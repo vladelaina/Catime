@@ -251,36 +251,49 @@ static LRESULT CmdResetPosition(HWND hwnd, WPARAM wp, LPARAM lp) {
 static LRESULT CmdResetDefaults(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     
+    /* Step 1: Clean up active state */
     CleanupBeforeTimerAction();
     KillTimer(hwnd, 1);
     UnregisterGlobalHotkeys(hwnd);
     
+    /* Step 2: Disable redraw to prevent flicker */
+    SendMessage(hwnd, WM_SETREDRAW, FALSE, 0);
+    
+    /* Step 3: Reset runtime timer state (not in config file) */
     ResetTimerStateToDefaults();
     
-    extern TimeoutActionType CLOCK_TIMEOUT_ACTION;
-    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
+    /* Step 4: Delete config file and let ReadConfig recreate it */
+    ResetConfigurationFile();
     
+    /* Step 5: Reload all configuration (same as startup) */
+    ReadConfig();
+    
+    /* Step 5.5: Reset UI runtime state (not in config file) */
     CLOCK_EDIT_MODE = FALSE;
     SetClickThrough(hwnd, TRUE);
-    SendMessage(hwnd, WM_SETREDRAW, FALSE, 0);
-    extern char CLOCK_TIMEOUT_FILE_PATH[];
-    memset(CLOCK_TIMEOUT_FILE_PATH, 0, sizeof(CLOCK_TIMEOUT_FILE_PATH));
     
-    AppLanguage defaultLanguage = DetectSystemLanguage();
-    extern AppLanguage CURRENT_LANGUAGE;
-    if (CURRENT_LANGUAGE != defaultLanguage) {
-        CURRENT_LANGUAGE = defaultLanguage;
+    /* Force timeout action to default (override config's preserve logic) */
+    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
+    
+    /* Step 5.6: Reload font (config sets FONT_FILE_NAME, but font needs to be loaded) */
+    if (IsFontsFolderPath(FONT_FILE_NAME)) {
+        const char* relativePath = ExtractRelativePath(FONT_FILE_NAME);
+        if (relativePath) {
+            LoadFontByNameAndGetRealName(GetModuleHandle(NULL), relativePath,
+                                        FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
+        }
     }
-    ResetConfigurationFile();
-    ReloadDefaultFont();
     
-    InvalidateRect(hwnd, NULL, TRUE);
+    /* Step 6: Refresh UI to match new config */
     RecalculateWindowSize(hwnd);
     ShowWindow(hwnd, SW_SHOW);
     ResetTimerWithInterval(hwnd);
     
+    /* Step 7: Re-enable redraw and refresh display */
     SendMessage(hwnd, WM_SETREDRAW, TRUE, 0);
     RedrawWindow(hwnd, NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
+    
+    /* Step 8: Re-register hotkeys with new config */
     RegisterGlobalHotkeys(hwnd);
     
     return 0;
