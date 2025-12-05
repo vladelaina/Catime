@@ -496,16 +496,6 @@ function initLanguageToggle() {
             
 
 
-        };
-        
-        // 遍历所有文本节点进行翻译
-        translateTextNodes(document.body, translations);
-        
-        // 处理特殊情况：场景描述区域的字符级span
-        handleScenarioDescriptions();
-        
-        // 处理页脚文本
-        handleFooterTranslation();
     }
     
     // 递归翻译文本节点
@@ -705,80 +695,3 @@ function initLanguageToggle() {
         }
     }
 
-    // 处理hero描述区域
-    function handleHeroDescription() {
-        // 获取当前语言
-        const lang = localStorage.getItem('catime-language') || 'zh';
-        
-        // 如果不是英文，不进行替换
-        if (lang !== 'en') return;
-        
-        const heroDescription = document.querySelector('.hero-description');
-        const heroSubtitle = document.querySelector('.hero-subtitle');
-        
-        if (heroSubtitle) {
-            heroSubtitle.innerHTML = 'Time management, just got super kawaii! <span class="cute-emoji">⊂(￣▽￣)⊃</span>';
-        }
-        
-        if (heroDescription) {
-            // 清空现有内容
-            while (heroDescription.firstChild) {
-                heroDescription.removeChild(heroDescription.firstChild);
-            }
-            
-            // 第一行英文内容
-            const line1Words = [
-                'A', 'transparent', 'timer', '&', 'pomodoro', 'clock', 
-                'for', 'Windows', '(Mac', 'coming', 'soon~)', '.'
-            ];
-            
-            // 添加第一行单词
-            line1Words.forEach(word => {
-                const span = document.createElement('span');
-                span.className = 'desc-word';
-                span.textContent = word;
-                heroDescription.appendChild(span);
-            });
-            
-            // 添加换行
-            heroDescription.appendChild(document.createElement('br'));
-            
-            // 第二行英文内容
-            const line2Words = [
-                { text: 'Float', class: 'cat-word' },
-                { text: 'like', class: 'cat-word' },
-                { text: 'a', class: 'cat-word' },
-                { text: 'cat', class: 'cat-word' },
-                { text: ',', class: 'cat-word' },
-                { text: 'stay', class: '' },
-                { text: 'focused', class: '' },
-                { text: ',', class: '' },
-                { text: 'boost', class: 'emp-word' },
-                { text: 'your', class: 'emp-word' },
-                { text: 'efficiency', class: 'emp-word' },
-                { text: '!', class: 'emp-word' }
-            ];
-            
-            // 添加第二行单词并添加特殊类
-            line2Words.forEach(item => {
-                const span = document.createElement('span');
-                span.className = 'desc-word';
-                
-                // 添加额外的类
-                if (item.class) {
-                    span.classList.add(item.class);
-                }
-                
-                span.textContent = item.text;
-                heroDescription.appendChild(span);
-            });
-            
-            // 添加双语提示(小标签)
-            const bilingualHint = document.createElement('div');
-            bilingualHint.className = 'bilingual-hint';
-            bilingualHint.textContent = 'EN';
-            
-            heroDescription.appendChild(bilingualHint);
-        }
-    }
-}
