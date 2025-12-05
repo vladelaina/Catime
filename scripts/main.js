@@ -109,7 +109,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 初始化 Hero 区域的交互效果 (Catime 2.0)
     initHeroInteractions();
+    
+    // 初始化导航栏滚动效果 (Liquid Glass Toggle)
+    initHeaderScroll();
 });
+
+// 导航栏滚动效果
+function initHeaderScroll() {
+    const header = document.querySelector('.main-header');
+    if (!header) return;
+
+    // 检查初始位置
+    if (window.scrollY > 50) {
+        header.classList.add('scrolled');
+    }
+
+    window.addEventListener('scroll', () => {
+        if (window.scrollY > 50) {
+            header.classList.add('scrolled');
+        } else {
+            header.classList.remove('scrolled');
+        }
+    });
+}
 
 // Catime 2.0 - Hero 区域交互效果
 function initHeroInteractions() {

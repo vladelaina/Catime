@@ -98,203 +98,195 @@ img {
     display: block;
 }
 
-/* --- 页头/导航 --- */
+/* --- 页头/导航 (Invisible -> Liquid Glass) --- */
 .main-header {
-    position: sticky;
-    top: 0;
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 1200px;
     z-index: 1000;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    background-color: rgba(242, 244, 255, 0.7); /* 使用 --background-color 的 RGB 近似值 */
-    border-bottom: 1px solid rgba(224, 224, 255, 0.15); /* 使用 --border-color 的 RGB 近似值 */
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
-    padding: 1rem 0;
-    transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+    
+    /* Default: Invisible/Airy */
+    background-color: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 1px solid transparent; /* Placeholder for transition */
+    box-shadow: none;
+    
+    padding: 1rem 1.5rem; /* Spacious */
+    border-radius: 50px;
+    transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
-/* 移动端下滑时隐藏导航栏 */
-@media (max-width: 768px) {
-    .main-header.nav-hidden {
-        transform: translateY(-100%);
-    }
-}
-
-.main-header:hover {
-    background-color: rgba(255, 255, 255, 0.96);
-    box-shadow: 0 2px 20px rgba(122, 162, 247, 0.12);
+/* Scrolled state: Liquid Glass Materializes */
+.main-header.scrolled {
+    top: 10px;
+    padding: 0.6rem 1.5rem;
+    
+    /* Liquid Glass Effect */
+    background-color: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(30px) saturate(180%);
+    -webkit-backdrop-filter: blur(30px) saturate(180%);
+    
+    /* Borders & Highlights */
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-top: 1px solid rgba(255, 255, 255, 0.8);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+    
+    /* Depth & Glow */
+    box-shadow: 
+        0 10px 40px -10px rgba(0, 0, 0, 0.05),
+        inset 0 0 20px rgba(255, 255, 255, 0.5);
 }
 
 .main-header .container {
     display: flex;
-    justify-content: flex-start;
+    justify-content: space-between; /* Distribute space */
     align-items: center;
-    padding: 0 15px; /* 确保左右内边距一致 */
-    gap: 2rem; /* 添加logo和导航项之间的间距 */
+    padding: 0; /* Container padding handled by header */
+    width: 100%;
 }
 
+/* Minimalist Logo */
 .logo {
-    font-size: 1.9rem; /* 增加logo大小 */
-    font-weight: 700;
-    color: var(--primary-color);
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--heading-color);
     text-decoration: none;
     display: flex;
     align-items: center;
-    gap: 0.6rem; /* 增加logo图标和文字的间距 */
-    transition: all 0.4s ease;
-    position: relative;
-    overflow: hidden;
+    gap: 0.5rem;
+    letter-spacing: -0.02em;
+    flex-shrink: 0;
 }
 
 .logo-img {
-    height: 3.4rem; /* 增加logo图标大小 */
+    height: 2.5rem; /* Slightly smaller for capsule */
     width: auto;
-    margin-right: 0.1rem;
-    vertical-align: middle;
-    position: relative;
-    z-index: 2;
-    filter: drop-shadow(0 2px 5px rgba(122, 162, 247, 0.3)); /* 添加微妙的阴影 */
-    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.4s ease;
 }
 
-/* 添加Logo图标的悬停动画 */
-@keyframes logoWiggle {
-    0% { transform: scale(1); }
-    15% { transform: scale(1.05, 0.95); }
-    30% { transform: scale(0.92, 1.08); }
-    45% { transform: scale(1.06, 0.94); }
-    60% { transform: scale(0.95, 1.03); }
-    75% { transform: scale(1.02, 0.98); }
-    100% { transform: scale(1); }
-}
-
-/* Logo整体悬停效果 */
-.logo:hover .logo-img {
-    animation: jelly 0.7s ease;
-    transform-origin: center;
-}
-
-/* 只有图标悬停的效果 */
-.logo-img:hover {
-    animation: jelly 0.7s ease;
-    transform-origin: center;
-}
-
-/* 导航样式 */
+/* Clean Nav Links */
 .nav-links {
     list-style: none;
     display: flex;
     align-items: center;
-    gap: 2rem; /* 增加导航项间距 */
+    gap: 2rem;
+    margin: 0 auto; /* Center the links */
 }
 
 .nav-links a {
     color: var(--text-color);
-    font-weight: 500; /* 增加字重 */
+    font-weight: 600;
     text-decoration: none;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    opacity: 0.7;
     position: relative;
-    padding-bottom: 0.3rem;
-    transition: color 0.3s ease;
-    display: inline-block;
-    font-size: 1.05rem; /* 增加导航文字大小 */
 }
 
 .nav-links a:hover {
-    color: var(--primary-color); /* 导航链接悬停时为蓝色 */
-    animation: jelly 0.6s ease;
+    color: var(--primary-color);
+    opacity: 1;
 }
 
-.nav-links a::after { /* 下划线动画 */
-    content: '';
-    position: absolute;
-    width: 0;
-    height: 2px;
-    bottom: 0;
-    left: 50%;
-    background-color: var(--accent-color); /* 粉色下划线 */
-    transition: all 0.3s ease-out;
-    transform: translateX(-50%);
-    border-radius: 1px;
+.nav-links a::after {
+    display: none; /* Remove old underline */
 }
 
-.nav-links a:hover::after,
-.nav-links a.active::after {
-    width: 60%; /* 较小的下划线，更可爱的感觉 */
-}
-
-/* 操作按钮容器 */
+/* Action Buttons Group */
 .action-buttons {
     display: flex;
+    align-items: center;
     gap: 1rem;
-    margin-left: 1rem;
+    flex-shrink: 0;
 }
 
-.nav-button {
-    background-color: var(--primary-color);
+/* Support Button - Sakura Jelly Style */
+.support-btn {
+    background: linear-gradient(180deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%) !important; /* Candy Gradient */
+    background-image: linear-gradient(to bottom, #ffb7b2 0%, #ff9a9e 100%) !important; /* Stronger Pink */
     color: white !important;
-    padding: 0.6rem 1.5rem; /* 增加内边距 */
-    border-radius: var(--border-radius-pill);
-    text-decoration: none;
-    transition: all 0.3s ease;
-    box-shadow: var(--button-shadow);
-    font-weight: 600;
-    font-size: 1rem; /* 增加字体大小 */
+    border: none;
+    padding: 0.6rem 1.4rem !important;
+    font-weight: 700;
+    font-size: 0.95rem;
+    border-radius: 50px;
     display: flex;
     align-items: center;
-    justify-content: center;
-}
-
-.nav-button i {
-    margin-right: 0.7rem; /* 增加图标和文字的间距 */
-    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.3s ease;
-    display: inline-block;
-    font-size: 1.1em; /* 增加图标大小，相对于按钮文字 */
-}
-
-.nav-button:hover {
-    background-color: var(--primary-hover);
-    color: white !important;
-    text-decoration: none;
-    box-shadow: var(--button-hover-shadow);
-    animation: jelly 0.6s ease;
-    transform: translateY(-3px);
-}
-
-.nav-button::after {
-    display: none;
-}
-
-/* 下载按钮样式 */
-.download-btn {
-    background: linear-gradient(45deg, var(--primary-color), #96b6ff) !important;
-}
-
-.download-btn:hover {
-    background: linear-gradient(45deg, #96b6ff, var(--primary-color)) !important;
-}
-
-/* 支持项目按钮样式 */
-.support-btn {
-    background: linear-gradient(45deg, var(--accent-color), #f799b8) !important;
-    box-shadow: 0 4px 15px rgba(247, 125, 170, 0.3) !important;
+    gap: 0.5rem;
+    white-space: nowrap;
+    
+    /* The Jelly Effect */
+    box-shadow: 
+        inset 0 2px 0 rgba(255, 255, 255, 0.4), /* Top Highlight */
+        inset 0 -2px 0 rgba(0, 0, 0, 0.05),     /* Bottom Shade */
+        0 4px 10px rgba(255, 154, 158, 0.3);     /* Soft Drop Shadow */
+        
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    transform: translateY(0);
 }
 
 .support-btn:hover {
-    background: linear-gradient(45deg, #f799b8, var(--accent-color)) !important;
-    box-shadow: 0 6px 20px rgba(247, 125, 170, 0.4) !important;
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 
+        inset 0 2px 0 rgba(255, 255, 255, 0.6),
+        inset 0 -2px 0 rgba(0, 0, 0, 0.05),
+        0 8px 20px rgba(255, 154, 158, 0.5); /* Stronger Glow */
+    background-image: linear-gradient(to bottom, #ffc3be 0%, #ff9a9e 100%) !important; /* Brighter */
 }
 
 .support-btn i {
-    /* animation: coffeeSteam 2s infinite; Removed default animation */
-    display: inline-block; /* Needed for transform */
-    transition: transform 0.3s ease, opacity 0.3s ease; /* Added transition for smoother hover effect */
-    opacity: 0.8; /* Slightly faded when not animating */
-    transform-origin: bottom center;
+    font-size: 1.1rem;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
+    transition: transform 0.3s ease;
 }
 
-/* Add hover state animation */
 .support-btn:hover i {
-    animation: coffeeSteam 1.5s ease-in-out infinite alternate;
+    animation: heartbeat 1.5s infinite;
 }
+
+/* Download Button - Ocean Jelly Style */
+.download-btn {
+    background: linear-gradient(to bottom, #89f7fe 0%, #66a6ff 100%) !important; /* Blue Candy */
+    background-image: linear-gradient(120deg, #89f7fe 0%, #66a6ff 100%) !important;
+    color: white !important;
+    border: none;
+    padding: 0.6rem 1.6rem !important;
+    font-weight: 700;
+    font-size: 0.95rem;
+    border-radius: 50px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+    
+    /* The Jelly Effect */
+    box-shadow: 
+        inset 0 2px 0 rgba(255, 255, 255, 0.4), /* Top Highlight */
+        inset 0 -2px 0 rgba(0, 0, 0, 0.05),     /* Bottom Shade */
+        0 4px 10px rgba(102, 166, 255, 0.3);     /* Soft Drop Shadow */
+        
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.download-btn::before { display: none; } /* Remove old sheen */
+
+.download-btn:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 
+        inset 0 2px 0 rgba(255, 255, 255, 0.6),
+        inset 0 -2px 0 rgba(0, 0, 0, 0.05),
+        0 8px 20px rgba(102, 166, 255, 0.5); /* Stronger Glow */
+    background-image: linear-gradient(120deg, #a1f9ff 0%, #66a6ff 100%) !important; /* Brighter */
+}
+
+.download-btn i {
+    margin-right: 0.4rem;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
+}
+
 
 @keyframes coffeeSteam {
     0% { transform: translateY(0) rotate(0deg); opacity: 0.6; }
@@ -478,20 +470,76 @@ margin-bottom: 3rem;
     z-index: 0;
 }
 
-/* Editorial Metadata (Vol, Issue, etc.) */
+/* Editorial Metadata - Vertical Flanking Style */
 .editorial-meta {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 100%;
+    max-width: 95%; /* Use percentage to push to edges */
+    min-width: 800px; /* Ensure minimum width so it doesn't overlap text */
     display: flex;
     justify-content: space-between;
-    width: 100%;
-    max-width: 400px;
-    font-family: 'Montserrat', sans-serif;
-    font-size: 0.7rem;
-    letter-spacing: 0.2em;
+    pointer-events: none;
+    z-index: 0; 
+}
+
+.meta-group {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    opacity: 0.5; /* Slightly more subtle */
+    transition: opacity 0.3s ease;
+}
+
+.meta-group:hover {
+    opacity: 1;
+}
+
+.meta-group.left {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg); /* Flip so text reads bottom-to-top */
+    text-align: right;
+    border-right: 1px solid rgba(122, 162, 247, 0.3); /* Decorative line */
+    padding-right: 1rem;
+}
+
+.meta-group.right {
+    writing-mode: vertical-rl;
+    text-align: left;
+    border-left: 1px solid rgba(247, 125, 170, 0.3); /* Decorative line */
+    padding-left: 1rem;
+}
+
+.meta-label {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 0.75rem;
     color: #9aa5ce;
-    opacity: 0.8;
-    margin-bottom: -1rem;
-    z-index: 1;
+    letter-spacing: 0.15em;
     text-transform: uppercase;
+}
+
+.meta-value {
+    font-family: 'JetBrains Mono', 'Consolas', monospace;
+    font-size: 0.65rem;
+    color: #b4c6ef; /* Lighter, more subtle */
+    letter-spacing: 0.1em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Rotate icons for vertical layout */
+.meta-value i {
+    transform: rotate(90deg);
+}
+
+.blink-dot {
+    color: #f77daa;
+    animation: blink 1.5s infinite;
+    font-size: 0.8em;
+    margin-top: 5px;
 }
 
 /* The Big Number - Luxury Serif Style */
@@ -592,10 +640,15 @@ margin-bottom: 3rem;
     background-size: 100% 100%;
 }
 
+@media (max-width: 1024px) {
+    .editorial-meta { display: none; } /* Hide on tablets/mobile */
+    .magazine-layout::before { display: none; }
+}
+
 @media (max-width: 768px) {
     .stat-number { font-size: 5rem; }
-    .editorial-meta { width: 90%; }
-    .magazine-layout::before { display: none; }
+    /* .editorial-meta { width: 90%; }  Removed as it is hidden above */
+    /* .magazine-layout::before { display: none; } Removed duplicate */
     .stat-unit { right: 0; top: 0; transform: none; font-size: 0.8rem; }
 }
 
