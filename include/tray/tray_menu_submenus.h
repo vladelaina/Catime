@@ -28,6 +28,12 @@ void BuildFormatSubmenu(HMENU hMenu);
 void BuildColorSubmenu(HMENU hMenu);
 
 /**
+ * @brief Build style/appearance submenu
+ * @param hMenu Parent menu handle
+ */
+void BuildStyleSubmenu(HMENU hMenu);
+
+/**
  * @brief Build animation/tray icon submenu
  * @param hMenu Parent menu handle
  */

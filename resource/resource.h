@@ -149,6 +149,7 @@
 #define CLOCK_IDM_24HOUR_FORMAT 151      /**< 24-hour format menu item */
 #define CLOCK_IDM_SHOW_SECONDS 152       /**< Show seconds menu item */
 #define CLOCK_IDM_TOPMOST 187            /**< Window topmost menu item */
+#define CLOCK_IDM_GLOW_EFFECT 189        /**< Neon glow effect toggle */
 
 /** @brief Language selection menu identifiers */
 #define CLOCK_IDM_LANGUAGE_MENU 160      /**< Language submenu */

@@ -79,6 +79,7 @@ void ShowColorMenu(HWND hwnd) {
     BuildFormatSubmenu(hMenu);
     BuildFontSubmenu(hMenu);
     BuildColorSubmenu(hMenu);
+    BuildStyleSubmenu(hMenu);
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 

@@ -206,7 +206,7 @@ void BuildPresetManagementSubmenu(HMENU hMenu) {
     AppendMenuW(hTimeOptionsMenu, MF_STRING | (CLOCK_WINDOW_TOPMOST ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDM_TOPMOST,
                 GetLocalizedString(NULL, L"Always on Top"));
-
+    
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeOptionsMenu,
                 GetLocalizedString(NULL, L"Preset Management"));
 }
@@ -276,6 +276,21 @@ void BuildColorSubmenu(HMENU hMenu) {
     
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hColorSubMenu, 
                 GetLocalizedString(NULL, L"Color"));
+}
+
+/**
+ * @brief Build style/appearance submenu
+ * @param hMenu Parent menu handle
+ */
+void BuildStyleSubmenu(HMENU hMenu) {
+    HMENU hStyleMenu = CreatePopupMenu();
+    
+    AppendMenuW(hStyleMenu, MF_STRING | (CLOCK_GLOW_EFFECT ? MF_CHECKED : MF_UNCHECKED),
+                CLOCK_IDM_GLOW_EFFECT,
+                GetLocalizedString(NULL, L"Glow Effect"));
+    
+    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hStyleMenu, 
+                GetLocalizedString(NULL, L"Style"));
 }
 
 /**

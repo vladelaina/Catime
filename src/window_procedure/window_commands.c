@@ -70,6 +70,17 @@ static LRESULT CmdToggleTopmost(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
+static LRESULT CmdToggleGlowEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)wp; (void)lp;
+    CLOCK_GLOW_EFFECT = !CLOCK_GLOW_EFFECT;
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    WriteIniString(INI_SECTION_DISPLAY, "TEXT_GLOW_EFFECT", 
+                   CLOCK_GLOW_EFFECT ? STR_TRUE : STR_FALSE, config_path);
+    InvalidateRect(hwnd, NULL, TRUE);
+    return 0;
+}
+
 static LRESULT CmdEditMode(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     if (CLOCK_EDIT_MODE) EndEditMode(hwnd);
@@ -369,6 +380,7 @@ static const CommandDispatchEntry COMMAND_DISPATCH_TABLE[] = {
     /* Menu items */
     {CLOCK_IDM_ABOUT, CmdAbout},
     {CLOCK_IDM_TOPMOST, CmdToggleTopmost},
+    {CLOCK_IDM_GLOW_EFFECT, CmdToggleGlowEffect},
     {CLOCK_IDM_BROWSE_FILE, CmdBrowseFile},
     {CLOCK_IDM_CHECK_UPDATE, CmdCheckUpdate},
     {CLOCK_IDM_OPEN_WEBSITE, CmdOpenWebsite},

@@ -49,6 +49,7 @@ typedef struct {
     int opacityStepFast;
     int scaleStepNormal;
     int scaleStepFast;
+    BOOL glowEffect;
 
     /* Timer */
     int defaultStartTime;

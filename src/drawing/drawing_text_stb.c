@@ -4,6 +4,7 @@
  */
 
 #include "drawing/drawing_text_stb.h"
+#include "drawing/drawing_effect.h"
 #include "log.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -107,6 +108,9 @@ void CleanupFontSTB(void) {
     g_fontLoaded = FALSE;
     g_fallbackFontLoaded = FALSE;
     memset(g_currentFontPath, 0, sizeof(g_currentFontPath));
+    
+    /* Also cleanup effect buffers */
+    CleanupDrawingEffects();
 }
 
 BOOL InitFontSTB(const char* fontFilePath) {
@@ -193,6 +197,9 @@ BOOL InitFontSTB(const char* fontFilePath) {
     return TRUE;
 }
 
+/* Glow effect global state */
+extern BOOL CLOCK_GLOW_EFFECT;
+
 /**
  * @brief Blend a single character bitmap into the destination buffer
  */
@@ -201,6 +208,11 @@ void BlendCharBitmapSTB(void* destBits, int destWidth, int destHeight,
                           unsigned char* bitmap, int w, int h, 
                           int r, int g, int b) {
     DWORD* pixels = (DWORD*)destBits;
+
+    /* Render glow effect if enabled */
+    if (CLOCK_GLOW_EFFECT) {
+        RenderGlowEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h, r, g, b, NULL, NULL);
+    }
 
     for (int j = 0; j < h; ++j) {
         for (int i = 0; i < w; ++i) {
@@ -234,6 +246,65 @@ void BlendCharBitmapSTB(void* destBits, int destWidth, int destHeight,
 #define LUT_SIZE GRADIENT_LUT_SIZE
 static COLORREF g_gradientLUT[LUT_SIZE];
 static GradientType g_lutType = GRADIENT_NONE;
+
+/* Context for gradient glow callback */
+typedef struct {
+    const GradientInfo* info;
+    int startX;
+    int totalWidth;
+    int timeOffset;
+} GlowGradientContext;
+
+/**
+ * @brief Callback to calculate gradient color for glow effect
+ */
+static void GetGlowGradientColor(int x, int y, int* r, int* g, int* b, void* userData) {
+    GlowGradientContext* ctx = (GlowGradientContext*)userData;
+    (void)y;
+    
+    if (!ctx->info) return;
+
+    if (ctx->info->isAnimated) {
+        /* Animated Gradient Logic (using LUT) */
+        int rowStartX = x - ctx->startX;
+        float currentLutIdxFloat = 0.0f;
+        
+        if (ctx->totalWidth > 0) {
+            currentLutIdxFloat = ((float)rowStartX / (float)ctx->totalWidth) * LUT_SIZE;
+        }
+        
+        int lutIdx = (int)currentLutIdxFloat - ctx->timeOffset;
+        
+        /* Wrap around */
+        lutIdx = lutIdx & (LUT_SIZE - 1);
+        
+        COLORREF c = g_gradientLUT[lutIdx];
+        *r = GetRValue(c);
+        *g = GetGValue(c);
+        *b = GetBValue(c);
+    } else {
+        /* Static Gradient Logic */
+        float t = 0.0f;
+        if (ctx->totalWidth > 0) {
+            t = (float)(x - ctx->startX) / (float)ctx->totalWidth;
+        }
+        
+        if (t < 0.0f) t = 0.0f;
+        else if (t > 1.0f) t = 1.0f;
+
+        int r1 = GetRValue(ctx->info->startColor);
+        int g1 = GetGValue(ctx->info->startColor);
+        int b1 = GetBValue(ctx->info->startColor);
+        
+        int r2 = GetRValue(ctx->info->endColor);
+        int g2 = GetGValue(ctx->info->endColor);
+        int b2 = GetBValue(ctx->info->endColor);
+        
+        *r = (int)(r1 + (r2 - r1) * t);
+        *g = (int)(g1 + (g2 - g1) * t);
+        *b = (int)(b1 + (b2 - b1) * t);
+    }
+}
 
 static void InitializeGradientLUT(const GradientInfo* info) {
     if (!info) return;
@@ -328,6 +399,17 @@ void BlendCharBitmapGradientSTB(void* destBits, int destWidth, int destHeight,
         r2 = GetRValue(info->endColor);
         g2 = GetGValue(info->endColor);
         b2 = GetBValue(info->endColor);
+    }
+
+    /* Render glow effect if enabled - use gradient start color as base but use callback for per-pixel color */
+    if (CLOCK_GLOW_EFFECT && info) {
+        int glowR = GetRValue(info->startColor);
+        int glowG = GetGValue(info->startColor);
+        int glowB = GetBValue(info->startColor);
+        
+        GlowGradientContext ctx = { info, startX, totalWidth, timeOffset };
+        RenderGlowEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h, 
+                         glowR, glowG, glowB, GetGlowGradientColor, &ctx);
     }
 
     for (int j = 0; j < h; ++j) {

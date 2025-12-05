@@ -182,6 +182,7 @@ void InitializeDefaultSnapshot(ConfigSnapshot* snapshot) {
     snapshot->opacityStepFast = 5;
     snapshot->scaleStepNormal = DEFAULT_SCALE_STEP_NORMAL;
     snapshot->scaleStepFast = DEFAULT_SCALE_STEP_FAST;
+    snapshot->glowEffect = FALSE;
     snapshot->defaultStartTime = DEFAULT_START_TIME_SECONDS;
     snapshot->notificationTimeoutMs = DEFAULT_NOTIFICATION_TIMEOUT_MS;
     snapshot->notificationMaxOpacity = DEFAULT_NOTIFICATION_MAX_OPACITY;
@@ -255,6 +256,8 @@ BOOL LoadConfigFromFile(const char* config_path, ConfigSnapshot* snapshot) {
                                           DEFAULT_SCALE_STEP_NORMAL, config_path);
     snapshot->scaleStepFast = ReadIniInt(INI_SECTION_DISPLAY, "SCALE_STEP_FAST",
                                         DEFAULT_SCALE_STEP_FAST, config_path);
+    snapshot->glowEffect = ReadIniBool(INI_SECTION_DISPLAY, "TEXT_GLOW_EFFECT",
+                                       FALSE, config_path);
     
     /* Read Timer section */
     snapshot->defaultStartTime = ReadIniInt(INI_SECTION_TIMER, "CLOCK_DEFAULT_START_TIME", 
