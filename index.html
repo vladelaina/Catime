@@ -35,51 +35,78 @@
     <main>
         <!-- 英雄区域 -->
         <section class="hero" id="home">
+            <!-- Spotlight & Background Text -->
+            <div class="hero-spotlight"></div>
+            <div class="hero-bg-text">CATIME</div>
+
             <div class="container hero-content">
-                <div class="hero-text" data-aos="fade-right">
-                    <h1 class="hero-title" id="intro">Catime</h1>
-                    <p class="hero-subtitle">时间管理，嚯~原来可以这么卡哇伊！ <span class="cute-emoji">⊂(￣▽￣)⊃</span></p>
-                    <p class="hero-description">
-                        <span class="desc-word">为</span>
-                        <span class="desc-word">Windows</span>
-                        <span class="desc-word">(Mac正在筹备中~)</span>
-                        <span class="desc-word">设计</span>
-                        <span class="desc-word">的</span>
-                        <span class="desc-word">透明</span>
-                        <span class="desc-word">计时器</span>
-                        <span class="desc-word">&</span>
-                        <span class="desc-word">番茄钟</span>
-                        <span class="desc-word">。</span>
-                        <br>
-                        <span class="desc-word cat-word">像</span>
-                        <span class="desc-word cat-word">猫咪</span>
-                        <span class="desc-word cat-word">一样</span>
-                        <span class="desc-word cat-word">轻盈</span>
-                        <span class="desc-word cat-word">悬浮</span>
-                        <span class="desc-word cat-word">，</span>
-                        <span class="desc-word">专注</span>
-                        <span class="desc-word">每刻</span>
-                        <span class="desc-word cat-word">，</span>
-                        <span class="desc-word emp-word">效率</span>
-                        <span class="desc-word emp-word">加倍</span>
-                        <span class="desc-word emp-word">！</span>
-                    </p>
-                    <a id="hero-download-btn" href="#" class="cta-button primary" target="_blank" rel="noopener noreferrer">
-                        <i class="fas fa-heart"></i> <span>立即获取</span>
+                <!-- Foreground Typography -->
+                <h1 class="hero-slogan">
+                    时间管理，<br>
+                    <span class="highlight-text" data-text="嚯~原来可以这么卡哇伊！">嚯~原来可以这么卡哇伊！</span>
+                    <div class="ciallo-container">
+                        <span class="ciallo-text">Ciallo～(∠・ω&lt;)⌒★</span>
+                        <div class="ciallo-particles"></div>
+                    </div>
+                </h1>
+                
+                <div class="hero-sub-container magazine-layout">
+                    <div class="editorial-meta">
+                        <span>VOL. 2.0</span>
+                        <span>ISSUE 2025</span>
+                    </div>
+                    <div class="stat-block">
+                        <span class="stat-number">803</span>
+                        <span class="stat-unit">KB</span>
+                    </div>
+                    <div class="tech-spec-line">
+                        PURE C ARCHITECTURE <span class="divider">//</span> ZERO DEPENDENCY <span class="divider">//</span> NATIVE WIN32
+                    </div>
+                    <div class="narrative-line">
+                        全新托盘动画引擎 <span class="dot">·</span> 支持 <b>GIF/WebP</b> <span class="dot">·</span> <b>CPU/内存</b> 实时监控
+                    </div>
+                    <div class="barcode-strip"></div>
+                </div>
+
+                <!-- Magnetic Buttons -->
+                <div class="hero-actions">
+                    <a id="hero-download-btn" href="#" class="btn-magnetic primary" target="_blank" rel="noopener noreferrer">
+                        <span class="btn-content"><i class="fas fa-heart"></i> 立即获取</span>
+                        <span class="btn-glow"></span>
                     </a>
-                    <a href="https://github.com/vladelaina/Catime" class="cta-button secondary" target="_blank" rel="noopener noreferrer">
-                        <i class="fab fa-github"></i> <span>查看源码</span>
+                    <a href="https://github.com/vladelaina/Catime" class="btn-magnetic secondary" target="_blank" rel="noopener noreferrer">
+                        <span class="btn-content"><i class="fab fa-github"></i> 查看源码</span>
                     </a>
                 </div>
-                <div class="hero-visual" data-aos="fade-left" data-aos-delay="200">
-                    <video src="assets/videos/Catime Showcase.mp4" class="hero-screenshot" autoplay muted loop playsinline></video>
+
+                <!-- Immersive 3D Visual -->
+                <div class="hero-visual-container">
+                    <!-- Floating Parallax Elements -->
+                    <img src="assets/catime.webp" class="floating-element float-cat" alt="Catime Logo" data-parallax-speed="0.04">
+                    <div class="floating-element float-icon-1" data-parallax-speed="0.02"><i class="fas fa-stopwatch"></i></div>
+                    <div class="floating-element float-icon-2" data-parallax-speed="0.03"><i class="fas fa-ghost"></i></div>
+                    <div class="floating-element float-icon-c" data-parallax-speed="0.05" title="Written in Pure C">C</div>
+                    
+                    <!-- Ambient Light Behind -->
+                    <div class="ambient-light"></div>
+
+                    <div class="hero-visual-wrapper">
+                        <div class="window-shell-thick">
+                            <div class="window-glass-reflection"></div>
+                            <div class="window-header">
+                                <div class="window-controls">
+                                    <span class="control red"></span>
+                                    <span class="control yellow"></span>
+                                    <span class="control green"></span>
+                                </div>
+                                <div class="window-title">Catime.exe</div>
+                            </div>
+                            <div class="window-content">
+                                <video src="assets/videos/Catime Showcase.mp4" class="hero-video" autoplay muted loop playsinline></video>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-             <!-- 可选: 微妙的背景元素 -->
-            <div class="background-shapes">
-                <div class="shape shape1"></div>
-                <div class="shape shape2"></div>
-                <div class="shape shape3"></div>
             </div>
         </section>
 

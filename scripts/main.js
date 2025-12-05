@@ -106,7 +106,111 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 语言切换功能初始化
     initLanguageToggle();
+
+    // 初始化 Hero 区域的交互效果 (Catime 2.0)
+    initHeroInteractions();
 });
+
+// Catime 2.0 - Hero 区域交互效果
+function initHeroInteractions() {
+    const hero = document.querySelector('.hero');
+    if (!hero) return;
+
+    const heroVisual = document.querySelector('.hero-visual-wrapper');
+    const spotlight = document.querySelector('.hero-spotlight');
+    const parallaxElements = document.querySelectorAll('[data-parallax-speed]');
+    const magneticBtns = document.querySelectorAll('.btn-magnetic');
+
+    // 鼠标移动事件监听
+    hero.addEventListener('mousemove', (e) => {
+        const rect = hero.getBoundingClientRect();
+        const x = e.clientX - rect.left; // 鼠标在 hero 内的 x 坐标
+        const y = e.clientY - rect.top;  // 鼠标在 hero 内的 y 坐标
+        
+        // 1. 聚光灯效果 (Spotlight)
+        // 更新 CSS 变量，让径向渐变跟随鼠标
+        hero.style.setProperty('--mouse-x', `${x}px`);
+        hero.style.setProperty('--mouse-y', `${y}px`);
+
+        // 计算相对中心的坐标 (-1 到 1)
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        const relativeX = (x - centerX) / centerX;
+        const relativeY = (y - centerY) / centerY;
+
+        // 2. 3D 窗口倾斜 (Window Tilt)
+        if (heroVisual) {
+            // 限制最大旋转角度
+            const rotateY = relativeX * 5; // 左右移动导致绕 Y 轴旋转
+            const rotateX = relativeY * -5; // 上下移动导致绕 X 轴旋转 (反向)
+            
+            // 应用变换
+            heroVisual.style.transform = `
+                perspective(1000px)
+                rotateX(${rotateX}deg)
+                rotateY(${rotateY}deg)
+                scale(1.02)
+            `;
+        }
+
+        // 3. 视差滚动 (Parallax)
+        parallaxElements.forEach(el => {
+            const speed = parseFloat(el.getAttribute('data-parallax-speed')) || 0.05;
+            const moveX = -relativeX * speed * 100; // 移动距离
+            const moveY = -relativeY * speed * 100;
+            
+            el.style.transform = `translate3d(${moveX}px, ${moveY}px, 0)`;
+        });
+    });
+
+    // 鼠标离开时复位
+    hero.addEventListener('mouseleave', () => {
+        if (heroVisual) {
+            heroVisual.style.transform = 'perspective(1000px) rotateX(5deg) rotateY(0deg) scale(1)';
+        }
+        
+        parallaxElements.forEach(el => {
+            el.style.transform = 'translate3d(0, 0, 0)';
+        });
+    });
+
+    // 4. 磁吸按钮效果 (Magnetic Buttons)
+    magneticBtns.forEach(btn => {
+        btn.addEventListener('mousemove', (e) => {
+            const rect = btn.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // 计算鼠标相对于按钮中心的偏移
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            
+            // 磁吸强度
+            const strength = 0.3;
+            const deltaX = (x - centerX) * strength;
+            const deltaY = (y - centerY) * strength;
+            
+            // 移动按钮内容 (Content) 和 背景 (Glow)
+            // 按钮整体移动
+            btn.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+            
+            // 让 Glow 跟随鼠标位置移动，创造光影效果
+            const glow = btn.querySelector('.btn-glow');
+            if (glow) {
+                glow.style.transform = `translate(${deltaX * 0.5}px, ${deltaY * 0.5}px)`;
+            }
+        });
+
+        btn.addEventListener('mouseleave', () => {
+            // 复位
+            btn.style.transform = 'translate(0, 0)';
+            const glow = btn.querySelector('.btn-glow');
+            if (glow) {
+                glow.style.transform = 'translate(0, 0)';
+            }
+        });
+    });
+}
 
 // 设置所有下载按钮的URL
 function setDownloadUrls() {
