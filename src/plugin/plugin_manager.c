@@ -9,9 +9,11 @@
 #include "plugin/plugin_data.h"
 #include "config/config_plugin_security.h"
 #include "dialog/dialog_plugin_security.h"
+#include "utils/natural_sort.h"
 #include "log.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include <shellapi.h>
 
 /* Plugin state */
@@ -29,6 +31,15 @@ static volatile int g_activePluginIndex = -1;
 static BOOL RestartPluginInternal(int index);
 static BOOL GetFileModTime(const wchar_t* path, FILETIME* modTime);
 static void StopPluginInternal(int index);
+
+/**
+ * @brief Comparator for plugin sorting (by display name, natural order)
+ */
+static int ComparePluginInfo(const void* a, const void* b) {
+    const PluginInfo* pa = (const PluginInfo*)a;
+    const PluginInfo* pb = (const PluginInfo*)b;
+    return NaturalCompareW(pa->displayName, pb->displayName);
+}
 
 /**
  * @brief Get file modification time
@@ -245,6 +256,11 @@ int PluginManager_ScanPlugins(void) {
                 PluginProcess_Terminate(&g_plugins[i]);
             }
         }
+    }
+
+    // Sort plugins by display name (natural order) for consistent menu ordering
+    if (newPluginCount > 1) {
+        qsort(newPlugins, newPluginCount, sizeof(PluginInfo), ComparePluginInfo);
     }
 
     // Remember old plugin names for re-mapping indices

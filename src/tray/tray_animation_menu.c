@@ -44,12 +44,12 @@ static HMENU EnsureSubMenu(HMENU hParent, const wchar_t* name) {
 }
 
 /**
- * @brief Comparator for animation cache entries (by relative path)
+ * @brief Comparator for animation cache entries (by relative path, files before folders)
  */
 static int CompareAnimationCacheEntries(const void* a, const void* b) {
     const AnimationCacheEntry* ea = *(const AnimationCacheEntry**)a;
     const AnimationCacheEntry* eb = *(const AnimationCacheEntry**)b;
-    return NaturalCompareA(ea->relativePath, eb->relativePath);
+    return NaturalPathCompareA(ea->relativePath, eb->relativePath);
 }
 
 /**

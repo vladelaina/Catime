@@ -70,12 +70,12 @@ static HMENU EnsureSubMenu(HMENU hParent, const wchar_t* name, BOOL shouldCheck)
 }
 
 /**
- * @brief Comparator for font cache entries (by relative path)
+ * @brief Comparator for font cache entries (by relative path, files before folders)
  */
 static int CompareFontCacheEntries(const void* a, const void* b) {
     const FontCacheEntry* ea = *(const FontCacheEntry**)a;
     const FontCacheEntry* eb = *(const FontCacheEntry**)b;
-    return NaturalCompareW(ea->relativePath, eb->relativePath);
+    return NaturalPathCompareW(ea->relativePath, eb->relativePath);
 }
 
 /**

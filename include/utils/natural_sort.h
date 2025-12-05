@@ -33,5 +33,16 @@ int NaturalCompareW(const wchar_t* a, const wchar_t* b);
  */
 int NaturalCompareA(const char* a, const char* b);
 
+/**
+ * @brief Natural path comparison with files before folders (wide char)
+ * @details At each directory level, files are sorted before subdirectories
+ */
+int NaturalPathCompareW(const wchar_t* a, const wchar_t* b);
+
+/**
+ * @brief Natural path comparison with files before folders (narrow char)
+ */
+int NaturalPathCompareA(const char* a, const char* b);
+
 #endif /* UTILS_NATURAL_SORT_H */
 
