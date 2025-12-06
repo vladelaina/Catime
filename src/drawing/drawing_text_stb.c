@@ -199,6 +199,7 @@ BOOL InitFontSTB(const char* fontFilePath) {
 
 /* Glow effect global state */
 extern BOOL CLOCK_GLOW_EFFECT;
+extern BOOL CLOCK_GLASS_EFFECT;
 
 /**
  * @brief Blend a single character bitmap into the destination buffer
@@ -209,9 +210,18 @@ void BlendCharBitmapSTB(void* destBits, int destWidth, int destHeight,
                           int r, int g, int b) {
     DWORD* pixels = (DWORD*)destBits;
 
-    /* Render glow effect if enabled */
+    /* Render glow or glass effect if enabled */
     if (CLOCK_GLOW_EFFECT) {
         RenderGlowEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h, r, g, b, NULL, NULL);
+    } else if (CLOCK_GLASS_EFFECT) {
+        RenderGlassEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h, r, g, b, NULL, NULL);
+        /* 
+           CRITICAL: If Glass Effect is active, it handles the ENTIRE rendering of the character,
+           including the body, highlights, and shadow.
+           We MUST return here to prevent the standard solid text rendering loop below from
+           overwriting the transparent glass effect with an opaque flat color.
+        */
+        return;
     }
 
     for (int j = 0; j < h; ++j) {
@@ -410,6 +420,18 @@ void BlendCharBitmapGradientSTB(void* destBits, int destWidth, int destHeight,
         GlowGradientContext ctx = { info, startX, totalWidth, timeOffset };
         RenderGlowEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h, 
                          glowR, glowG, glowB, GetGlowGradientColor, &ctx);
+    } else if (CLOCK_GLASS_EFFECT && info) {
+        int glassR = GetRValue(info->startColor);
+        int glassG = GetGValue(info->startColor);
+        int glassB = GetBValue(info->startColor);
+        
+        GlowGradientContext ctx = { info, startX, totalWidth, timeOffset };
+        RenderGlassEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h, 
+                         glassR, glassG, glassB, GetGlowGradientColor, &ctx);
+        /* 
+           CRITICAL: Return early to prevent solid gradient overwriting the glass effect.
+        */
+        return;
     }
 
     for (int j = 0; j < h; ++j) {

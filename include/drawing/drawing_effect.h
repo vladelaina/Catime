@@ -38,6 +38,29 @@ void RenderGlowEffect(DWORD* pixels, int destWidth, int destHeight,
                       GlowColorCallback colorCb, void* userData);
 
 /**
+ * @brief Render a glass/liquid crystal effect
+ * 
+ * @param pixels Destination 32-bit pixel buffer (ARGB)
+ * @param destWidth Width of destination buffer
+ * @param destHeight Height of destination buffer
+ * @param x_pos Destination X position
+ * @param y_pos Destination Y position
+ * @param bitmap Source 8-bit alpha bitmap
+ * @param w Source bitmap width
+ * @param h Source bitmap height
+ * @param r Base color Red (0-255)
+ * @param g Base color Green (0-255)
+ * @param b Base color Blue (0-255)
+ * @param colorCb Optional callback for per-pixel color
+ * @param userData User data passed to colorCb
+ */
+void RenderGlassEffect(DWORD* pixels, int destWidth, int destHeight,
+                      int x_pos, int y_pos,
+                      unsigned char* bitmap, int w, int h,
+                      int r, int g, int b,
+                      GlowColorCallback colorCb, void* userData);
+
+/**
  * @brief Apply Gaussian blur approximation to a single-channel bitmap
  * 
  * @param src Source bitmap

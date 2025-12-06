@@ -288,6 +288,10 @@ void BuildStyleSubmenu(HMENU hMenu) {
     AppendMenuW(hStyleMenu, MF_STRING | (CLOCK_GLOW_EFFECT ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDM_GLOW_EFFECT,
                 GetLocalizedString(NULL, L"Glow Effect"));
+
+    AppendMenuW(hStyleMenu, MF_STRING | (CLOCK_GLASS_EFFECT ? MF_CHECKED : MF_UNCHECKED),
+                CLOCK_IDM_GLASS_EFFECT,
+                GetLocalizedString(NULL, L"Glass Effect"));
     
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hStyleMenu, 
                 GetLocalizedString(NULL, L"Style"));

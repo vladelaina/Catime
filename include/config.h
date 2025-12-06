@@ -233,6 +233,8 @@ typedef struct {
     int opacity_step_fast;
     int scale_step_normal;
     int scale_step_fast;
+    BOOL glow_effect;
+    BOOL glass_effect;
 } DisplayConfig;
 
 /**

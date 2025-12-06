@@ -31,6 +31,7 @@ extern float CLOCK_FONT_SCALE_FACTOR;
 extern float PLUGIN_FONT_SCALE_FACTOR;
 extern int CLOCK_BASE_FONT_SIZE;
 extern BOOL CLOCK_GLOW_EFFECT;
+extern BOOL CLOCK_GLASS_EFFECT;
 
 /* ============================================================================
  * Public API
